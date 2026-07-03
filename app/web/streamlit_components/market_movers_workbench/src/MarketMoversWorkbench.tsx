@@ -62,6 +62,27 @@ function MarketMoversWorkbench({ args }: Props) {
           {payload.summary.trust_detail ? <small>{payload.summary.trust_detail}</small> : null}
         </div>
       </div>
+      <div className="mm-workbench__grid" aria-label="Market Movers summary">
+        {payload.summary.items.map((item) => (
+          <div className="mm-workbench__metric" key={`${item.label}-${item.value}`}>
+            <div className="mm-workbench__metric-label">{item.label}</div>
+            <div className="mm-workbench__metric-value">{item.value}</div>
+            {item.detail ? <div className="mm-workbench__metric-detail">{item.detail}</div> : null}
+          </div>
+        ))}
+      </div>
+      <div className="mm-workbench__actions" aria-label="Market Movers actions">
+        {payload.actions.map((action) => (
+          <button
+            className={`mm-workbench__action mm-workbench__action--${action.kind}`}
+            disabled={action.kind === "disabled"}
+            key={action.id}
+            type="button"
+          >
+            {action.label}
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

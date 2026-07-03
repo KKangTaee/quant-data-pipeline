@@ -42,5 +42,5 @@ def render_market_movers_react_workbench(
     component = _declare_market_movers_component()
     if component is None:
         return None
-    value = component(payload=payload, key=key, default=None)
+    value = component(payload=payload, key=key, default={"event": None})
     return value if isinstance(value, dict) else None

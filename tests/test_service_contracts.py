@@ -9749,6 +9749,36 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertTrue((component_root / "src" / "main.tsx").exists())
         self.assertFalse(market_movers_react_component_available(component_root / "missing-dist"))
 
+    def test_market_movers_react_display_pilot_wraps_unified_summary_with_fallback(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/market_movers_react_component.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        vite_source = Path("app/web/streamlit_components/market_movers_workbench/vite.config.ts").read_text(
+            encoding="utf-8"
+        )
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("render_market_movers_react_workbench", helper_source)
+        self.assertIn("def _render_market_movers_react_summary", helper_source)
+        self.assertIn("build_market_movers_react_workbench_payload", helper_source)
+        self.assertIn('render_market_movers_unified_summary(payload["summary"])', helper_source)
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('className="mm-workbench__grid"', react_source)
+        self.assertIn("payload.summary.items.map", react_source)
+        self.assertIn('className="mm-workbench__actions"', react_source)
+        self.assertIn('disabled={action.kind === "disabled"}', react_source)
+        self.assertIn('base: "./"', vite_source)
+        self.assertIn(".mm-workbench__grid", react_style)
+        self.assertIn(".mm-workbench__action", react_style)
+
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("_render_market_movers_react_summary(", render_body)
+        self.assertNotIn("render_market_movers_unified_summary(", render_body)
+
     def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")

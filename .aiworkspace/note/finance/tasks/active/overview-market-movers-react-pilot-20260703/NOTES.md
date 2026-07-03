@@ -10,3 +10,10 @@
 
 - The Python wrapper returns `None` when `component_static/index.html` is missing, allowing the existing Streamlit/HTML renderer to remain the fallback path.
 - The frontend scaffold is intentionally isolated under `app/web/streamlit_components/market_movers_workbench/` so the pilot does not imply a full app migration.
+
+## Phase 2 Display Pilot
+
+- The Market Movers summary now prefers the React custom component and falls back to `render_market_movers_unified_summary` only when the component build is unavailable.
+- The React component renders the same summary contract that the existing HTML UI used: title, context, trust state, trust detail, five metric cells, and the action labels.
+- Phase 2 keeps action buttons display-only. Python action execution and Streamlit rerun handling remain Phase 3 scope.
+- Vite must use `base: "./"` for Streamlit custom components. Without it, the component iframe requests `/assets/...` from the Streamlit root and receives HTML, causing a strict MIME module load failure.

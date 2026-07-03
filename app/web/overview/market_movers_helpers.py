@@ -68,6 +68,7 @@ from app.web.overview.components.market_movers import (
     render_market_refresh_status_bar,
     render_sector_breadth_market_map,
 )
+from app.web.overview.market_movers_react_component import render_market_movers_react_workbench
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
@@ -424,6 +425,25 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
     if action_id == "reload":
         return {"handler": "reload_market_movers"}
     return {"handler": "noop", "action_id": action_id}
+
+
+def _render_market_movers_react_summary(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+) -> dict[str, Any] | None:
+    payload = build_market_movers_react_workbench_payload(
+        snapshot,
+        controls=controls,
+        exploration_mode=_market_mover_mode_label(controls.mode),
+    )
+    event = render_market_movers_react_workbench(
+        payload,
+        key=f"overview_{controls.coverage.lower()}_{controls.period}_market_movers_workbench",
+    )
+    if event is None:
+        render_market_movers_unified_summary(payload["summary"])
+    return event
 
 
 def build_market_movers_empty_state_model(
@@ -2885,13 +2905,7 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         top_n=controls.top_n,
         sector=controls.sector,
     )
-    render_market_movers_unified_summary(
-        build_market_movers_unified_summary_model(
-            snapshot,
-            controls=controls,
-            exploration_mode=_market_mover_mode_label(controls.mode),
-        )
-    )
+    _render_market_movers_react_summary(snapshot, controls=controls)
     _render_market_movers_refresh_bar(
         snapshot,
         universe_code=controls.coverage,
