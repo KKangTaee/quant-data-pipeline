@@ -1061,7 +1061,7 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
   border-top: 3px solid rgba(100, 116, 139, 0.24);
   border-bottom: 1px solid rgba(148, 163, 184, 0.24);
   padding: 0.62rem 0.65rem;
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(148, 163, 184, 0.06);
   min-width: 0;
 }}
 .bt-policy-signal__chip--positive {{ border-top-color: rgba(15, 143, 131, 0.34); }}
@@ -1115,7 +1115,7 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
     <div>
       <div class="bt-policy-signal__verdict">다음 경로: {route_label}</div>
       <div class="bt-policy-signal__route">{next_action}</div>
-      <div class="bt-policy-signal__score">Candidate readiness {score}</div>
+      <div class="bt-policy-signal__score">진입 준비도 {score}</div>
       <div class="bt-policy-signal__chips">{chip_html}</div>
     </div>
     <div class="bt-policy-signal__actions">
@@ -1128,12 +1128,431 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
-    with st.expander("기술 상세 · Technical Policy Meta", expanded=False):
-        st.dataframe(pd.DataFrame(evaluation.get("criteria_rows") or []), use_container_width=True, hide_index=True)
-        st.caption(
-            "세부 blocker / review raw reason은 기술 검토용 근거입니다. "
-            "상단 요약은 같은 원천을 Promotion / 실행 원천 / 검증 원천으로 묶어 보여줍니다."
+def _policy_signal_effect_label(value: Any) -> str:
+    mapping = {
+        "block": "먼저 해결",
+        "review": "2차 확인",
+        "pass": "통과",
+        "context": "참고",
+    }
+    return mapping.get(str(value or "").strip().lower(), str(value or "-"))
+
+
+def _policy_signal_effect_tone(value: Any) -> str:
+    mapping = {
+        "block": "danger",
+        "review": "warning",
+        "pass": "positive",
+        "context": "neutral",
+    }
+    return mapping.get(str(value or "").strip().lower(), "neutral")
+
+
+def _policy_signal_row_sort_key(row: dict[str, Any]) -> tuple[int, str, str]:
+    rank = {"block": 0, "review": 1, "pass": 2, "context": 3}
+    effect = str(row.get("effect") or "").strip().lower()
+    return (
+        rank.get(effect, 4),
+        str(row.get("group") or ""),
+        str(row.get("signal") or ""),
+    )
+
+
+def _policy_signal_display_rows(frame_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "구분": row.get("group") or "-",
+            "신호": row.get("signal") or "-",
+            "상태": row.get("status") or "-",
+            "판정": _policy_signal_effect_label(row.get("effect")),
+            "다음 위치": row.get("next_surface") or "-",
+            "의미": row.get("meaning") or "-",
+        }
+        for row in frame_rows
+    ]
+
+
+def _policy_signal_group_status(rows: list[dict[str, Any]]) -> tuple[str, str]:
+    counts = {
+        "block": sum(1 for row in rows if row.get("effect") == "block"),
+        "review": sum(1 for row in rows if row.get("effect") == "review"),
+        "pass": sum(1 for row in rows if row.get("effect") == "pass"),
+        "context": sum(1 for row in rows if row.get("effect") == "context"),
+    }
+    if counts["block"]:
+        return f"먼저 해결 {counts['block']}", "danger"
+    if counts["review"]:
+        return f"2차 확인 {counts['review']}", "warning"
+    if counts["pass"]:
+        return f"통과 {counts['pass']}", "positive"
+    return f"참고 {counts['context']}", "neutral"
+
+
+def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dict[str, Any]) -> None:
+    sorted_rows = sorted([dict(row or {}) for row in rows], key=_policy_signal_row_sort_key)
+    primary_rows = [row for row in sorted_rows if row.get("effect") in {"block", "review", "pass"}]
+    action_rows = [row for row in sorted_rows if row.get("effect") in {"block", "review"}]
+    group_order = [
+        "Promotion",
+        "Data Trust",
+        "Execution Source",
+        "Execution Review",
+        "Validation Source",
+        "Validation Review",
+    ]
+    grouped_rows: list[tuple[str, list[dict[str, Any]]]] = []
+    seen_groups: set[str] = set()
+    for group in group_order:
+        group_rows = [row for row in primary_rows if row.get("group") == group]
+        if group_rows:
+            grouped_rows.append((group, group_rows))
+            seen_groups.add(group)
+    for group in sorted({str(row.get("group") or "기타") for row in primary_rows} - seen_groups):
+        grouped_rows.append((group, [row for row in primary_rows if str(row.get("group") or "기타") == group]))
+
+    block_count = sum(1 for row in primary_rows if row.get("effect") == "block")
+    review_count = sum(1 for row in primary_rows if row.get("effect") == "review")
+    pass_count = sum(1 for row in primary_rows if row.get("effect") == "pass")
+    context_count = sum(1 for row in sorted_rows if row.get("effect") == "context")
+    entry_ready = bool(evaluation.get("can_enter_practical_validation"))
+    board_tone = "positive" if entry_ready and not review_count else "warning" if entry_ready else "danger"
+    headline = (
+        "2차 진입 가능, 확인 항목이 있습니다."
+        if entry_ready and review_count
+        else "2차 진입 가능합니다."
+        if entry_ready
+        else "2차 진입 전 먼저 해결할 항목이 있습니다."
+    )
+
+    summary_items = [
+        ("2차 진입", "가능" if entry_ready else "보류", str(evaluation.get("route_label") or "-"), board_tone),
+        ("먼저 해결", str(block_count), "source 등록 차단 항목", "danger" if block_count else "positive"),
+        ("2차 확인", str(review_count), "Practical Validation 확인 항목", "warning" if review_count else "positive"),
+        ("통과", str(pass_count), f"참고 {context_count}개 별도 보존", "positive"),
+    ]
+    summary_html = "".join(
+        (
+            f'<div class="bt-policy-gate__metric bt-policy-gate__metric--{escape(tone)}">'
+            f'<span>{escape(label)}</span>'
+            f'<strong>{escape(value)}</strong>'
+            f'<em>{escape(detail)}</em>'
+            "</div>"
         )
+        for label, value, detail, tone in summary_items
+    )
+
+    group_html_parts: list[str] = []
+    for group, group_rows in grouped_rows:
+        group_status, group_tone = _policy_signal_group_status(group_rows)
+        signal_html = "".join(
+            (
+                f'<div class="bt-policy-gate__signal bt-policy-gate__signal--{escape(_policy_signal_effect_tone(row.get("effect")))}">'
+                f'<span>{escape(str(row.get("signal") or "-"))}</span>'
+                f'<strong>{escape(str(row.get("status") or "-"))}</strong>'
+                f'<em>{escape(_policy_signal_effect_label(row.get("effect")))}</em>'
+                "</div>"
+            )
+            for row in group_rows
+        )
+        group_html_parts.append(
+            f'<article class="bt-policy-gate__group bt-policy-gate__group--{escape(group_tone)}">'
+            f'<div class="bt-policy-gate__group-head">'
+            f'<h5>{escape(group)}</h5>'
+            f'<span>{escape(group_status)}</span>'
+            f"</div>"
+            f'<div class="bt-policy-gate__signals">{signal_html}</div>'
+            f"</article>"
+        )
+    group_html = "".join(group_html_parts)
+
+    if action_rows:
+        action_html = "".join(
+            (
+                f'<div class="bt-policy-queue__row bt-policy-queue__row--{escape(_policy_signal_effect_tone(row.get("effect")))}">'
+                f'<div class="bt-policy-queue__state">{escape(_policy_signal_effect_label(row.get("effect")))}</div>'
+                f'<div class="bt-policy-queue__main">'
+                f'<strong>{escape(str(row.get("group") or "-"))} · {escape(str(row.get("signal") or "-"))}</strong>'
+                f'<span>{escape(str(row.get("meaning") or "-"))}</span>'
+                f'</div>'
+                f'<div class="bt-policy-queue__meta">{escape(str(row.get("status") or "-"))}<br>{escape(str(row.get("next_surface") or "-"))}</div>'
+                f"</div>"
+            )
+            for row in action_rows
+        )
+    else:
+        action_html = (
+            '<div class="bt-policy-queue__empty">'
+            "<strong>먼저 해결하거나 2차에서 확인할 항목이 없습니다.</strong>"
+            "<span>현재 policy signal 기준으로는 통과 항목만 남아 있습니다.</span>"
+            "</div>"
+        )
+
+    st.markdown(
+        f"""
+<style>
+.bt-policy-gate {{
+  --gate-accent: #64748b;
+  --gate-soft: rgba(100, 116, 139, 0.08);
+  border-left: 4px solid var(--gate-accent);
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  margin: 1.05rem 0 1rem;
+  padding: 1rem 1.1rem 1.1rem;
+  background: linear-gradient(90deg, var(--gate-soft), rgba(255, 255, 255, 0));
+}}
+.bt-policy-gate--positive {{ --gate-accent: #0f8f83; --gate-soft: rgba(15, 143, 131, 0.09); }}
+.bt-policy-gate--warning {{ --gate-accent: #b45309; --gate-soft: rgba(180, 83, 9, 0.10); }}
+.bt-policy-gate--danger {{ --gate-accent: #b42318; --gate-soft: rgba(180, 35, 24, 0.10); }}
+.bt-policy-gate__head {{
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}}
+.bt-policy-gate__kicker {{
+  color: var(--gate-accent);
+  font-size: 0.84rem;
+  font-weight: 850;
+  margin-bottom: 0.22rem;
+}}
+.bt-policy-gate h4 {{
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.28rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}}
+.bt-policy-gate__score {{
+  flex: 0 0 auto;
+  color: var(--gate-accent);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  border-radius: 999px;
+  padding: 0.38rem 0.76rem;
+  font-size: 0.86rem;
+  font-weight: 850;
+  background: rgba(148, 163, 184, 0.08);
+}}
+.bt-policy-gate__metrics {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 0.95rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.20);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.20);
+}}
+.bt-policy-gate__metric {{
+  min-width: 0;
+  padding: 0.78rem 0.9rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+}}
+.bt-policy-gate__metric:first-child {{ border-left: 0; padding-left: 0; }}
+.bt-policy-gate__metric span {{
+  display: block;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 850;
+}}
+.bt-policy-gate__metric strong {{
+  display: block;
+  color: var(--text-color);
+  margin-top: 0.18rem;
+  font-size: 1.5rem;
+  line-height: 1.12;
+}}
+.bt-policy-gate__metric em {{
+  display: block;
+  color: #667085;
+  margin-top: 0.22rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-style: normal;
+}}
+.bt-policy-gate__metric--positive strong {{ color: #0f8f83; }}
+.bt-policy-gate__metric--warning strong {{ color: #b45309; }}
+.bt-policy-gate__metric--danger strong {{ color: #b42318; }}
+.bt-policy-gate__groups {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.72rem;
+  margin-top: 0.9rem;
+}}
+.bt-policy-gate__group {{
+  min-width: 0;
+  border-top: 3px solid rgba(100, 116, 139, 0.32);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.20);
+  padding: 0.72rem 0.74rem;
+  background: rgba(148, 163, 184, 0.06);
+}}
+.bt-policy-gate__group--positive {{ border-top-color: rgba(15, 143, 131, 0.58); }}
+.bt-policy-gate__group--warning {{ border-top-color: rgba(180, 83, 9, 0.66); }}
+.bt-policy-gate__group--danger {{ border-top-color: rgba(180, 35, 24, 0.66); }}
+.bt-policy-gate__group-head {{
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin-bottom: 0.52rem;
+}}
+.bt-policy-gate__group h5 {{
+  margin: 0;
+  color: var(--text-color);
+  font-size: 0.94rem;
+  line-height: 1.3;
+  letter-spacing: 0;
+}}
+.bt-policy-gate__group-head span {{
+  flex: 0 0 auto;
+  color: #667085;
+  font-size: 0.75rem;
+  font-weight: 850;
+}}
+.bt-policy-gate__signal {{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.36rem 0.6rem;
+  padding: 0.48rem 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}}
+.bt-policy-gate__signal:first-child {{ border-top: 0; }}
+.bt-policy-gate__signal span {{
+  color: var(--text-color);
+  font-weight: 760;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}}
+.bt-policy-gate__signal strong {{
+  color: #667085;
+  font-size: 0.82rem;
+  font-weight: 800;
+}}
+.bt-policy-gate__signal em {{
+  grid-column: 1 / -1;
+  color: #667085;
+  font-size: 0.76rem;
+  font-style: normal;
+}}
+.bt-policy-gate__signal--positive em {{ color: #0f8f83; }}
+.bt-policy-gate__signal--warning em {{ color: #b45309; }}
+.bt-policy-gate__signal--danger em {{ color: #b42318; }}
+.bt-policy-queue {{
+  margin: 0.9rem 0 1.05rem;
+}}
+.bt-policy-queue__title {{
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.20);
+  padding-bottom: 0.52rem;
+}}
+.bt-policy-queue__title strong {{
+  color: var(--text-color);
+  font-size: 1rem;
+}}
+.bt-policy-queue__title span {{
+  color: #667085;
+  font-size: 0.82rem;
+  font-weight: 760;
+}}
+.bt-policy-queue__row {{
+  display: grid;
+  grid-template-columns: 6.8rem minmax(0, 1fr) minmax(8rem, 0.25fr);
+  gap: 0.85rem;
+  align-items: start;
+  padding: 0.76rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}}
+.bt-policy-queue__state {{
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 850;
+}}
+.bt-policy-queue__row--warning .bt-policy-queue__state {{ color: #b45309; }}
+.bt-policy-queue__row--danger .bt-policy-queue__state {{ color: #b42318; }}
+.bt-policy-queue__main strong {{
+  display: block;
+  color: var(--text-color);
+  line-height: 1.35;
+}}
+.bt-policy-queue__main span {{
+  display: block;
+  color: #667085;
+  margin-top: 0.2rem;
+  line-height: 1.45;
+}}
+.bt-policy-queue__meta {{
+  color: #667085;
+  text-align: right;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}}
+.bt-policy-queue__empty {{
+  border-bottom: 1px solid rgba(15, 143, 131, 0.22);
+  padding: 0.82rem 0;
+}}
+.bt-policy-queue__empty strong {{
+  display: block;
+  color: #0f8f83;
+}}
+.bt-policy-queue__empty span {{
+  display: block;
+  color: #667085;
+  margin-top: 0.2rem;
+}}
+@media (max-width: 1000px) {{
+  .bt-policy-gate__metrics,
+  .bt-policy-gate__groups {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+}}
+@media (max-width: 760px) {{
+  .bt-policy-gate__head,
+  .bt-policy-queue__title {{
+    display: block;
+  }}
+  .bt-policy-gate__score {{
+    display: inline-block;
+    margin-top: 0.5rem;
+  }}
+  .bt-policy-gate__metrics,
+  .bt-policy-gate__groups,
+  .bt-policy-queue__row {{
+    grid-template-columns: 1fr;
+  }}
+  .bt-policy-gate__metric {{
+    border-left: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.14);
+    padding-left: 0;
+  }}
+  .bt-policy-gate__metric:first-child {{
+    border-top: 0;
+  }}
+  .bt-policy-queue__meta {{
+    text-align: left;
+  }}
+}}
+</style>
+<section class="bt-policy-gate bt-policy-gate--{board_tone}">
+  <div class="bt-policy-gate__head">
+    <div>
+      <div class="bt-policy-gate__kicker">검증 기준 보드</div>
+      <h4>{escape(headline)}</h4>
+    </div>
+    <div class="bt-policy-gate__score">종합 점수 {escape(f"{float(evaluation.get('score') or 0.0):.1f} / 10")}</div>
+  </div>
+  <div class="bt-policy-gate__metrics">{summary_html}</div>
+  <div class="bt-policy-gate__groups">{group_html}</div>
+</section>
+<section class="bt-policy-queue">
+  <div class="bt-policy-queue__title">
+    <strong>이번 실행 확인 큐</strong>
+    <span>먼저 해결 {block_count} · 2차 확인 {review_count} · 통과 {pass_count}</span>
+  </div>
+  {action_html}
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
@@ -2189,31 +2608,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
     inventory = build_policy_signal_inventory(meta)
     evaluation = build_next_step_readiness_evaluation(meta)
     rows = list(inventory.get("rows") or [])
-    blocker_rows = [row for row in rows if row.get("effect") == "block"]
-    review_rows = [row for row in rows if row.get("effect") == "review"]
     context_rows = [row for row in rows if row.get("effect") == "context"]
-
-    def _effect_label(value: Any) -> str:
-        mapping = {
-            "block": "먼저 해결",
-            "review": "2차 확인",
-            "pass": "통과",
-            "context": "참고",
-        }
-        return mapping.get(str(value or "").strip().lower(), str(value or "-"))
-
-    def _policy_rows(frame_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        return [
-            {
-                "구분": row.get("group") or "-",
-                "신호": row.get("signal") or "-",
-                "상태": row.get("status") or "-",
-                "판정": _effect_label(row.get("effect")),
-                "다음 위치": row.get("next_surface") or "-",
-                "의미": row.get("meaning") or "-",
-            }
-            for row in frame_rows
-        ]
 
     def _value_list_caption(prefix: str, values: list[Any] | tuple[Any, ...] | None) -> None:
         if values:
@@ -2223,54 +2618,11 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         return f"{float(value):.2%}" if value is not None else "-"
 
     _render_policy_signal_summary_panel(meta)
-
-    st.markdown("##### 진입 기준과 2차 확인 항목")
-    st.caption(
-        "이 영역은 버튼을 막는 source blocker와 Practical Validation에서 확인할 review 항목만 남겨 보여줍니다. "
-        "실전 승격 판단, 실행 preview, raw policy 숫자는 아래 상세 근거에 접어 두었습니다."
-    )
-    entry_ready = bool(evaluation.get("can_enter_practical_validation"))
-    entry_tone = "positive" if entry_ready and not review_rows else "warning" if entry_ready else "danger"
-    render_status_card_grid(
-        [
-            {
-                "title": "2차 진입",
-                "value": "가능" if entry_ready else "보류",
-                "detail": str(evaluation.get("route_label") or "-"),
-                "tone": entry_tone,
-            },
-            {
-                "title": "먼저 해결",
-                "value": str(len(blocker_rows)),
-                "detail": "source 등록을 막는 항목",
-                "tone": "danger" if blocker_rows else "positive",
-            },
-            {
-                "title": "2차 확인",
-                "value": str(len(review_rows)),
-                "detail": "Practical Validation에서 볼 항목",
-                "tone": "warning" if review_rows else "positive",
-            },
-            {
-                "title": "참고 신호",
-                "value": str(len(context_rows)),
-                "detail": "버튼을 직접 막지 않는 preview",
-                "tone": "neutral",
-            },
-        ]
-    )
-
-    primary_rows = [row for row in rows if row.get("effect") in {"block", "review", "pass"}]
-    if primary_rows:
-        st.dataframe(pd.DataFrame(_policy_rows(primary_rows)), use_container_width=True, hide_index=True)
-
-    if review_rows:
-        st.markdown("##### Practical Validation에서 먼저 볼 항목")
-        st.dataframe(pd.DataFrame(_policy_rows(review_rows)), use_container_width=True, hide_index=True)
+    _render_policy_signal_gate_board(rows, evaluation)
 
     if context_rows:
-        with st.expander("참고 preview 보기", expanded=False):
-            st.dataframe(pd.DataFrame(_policy_rows(context_rows)), use_container_width=True, hide_index=True)
+        with st.expander("참고 신호 보기", expanded=False):
+            st.dataframe(pd.DataFrame(_policy_signal_display_rows(context_rows)), width="stretch", hide_index=True)
 
     with st.expander("성과 / Benchmark 근거", expanded=False):
         metric_rows: list[dict[str, Any]] = []
@@ -2332,7 +2684,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         _value_list_caption("Guardrail policy signals", meta.get("guardrail_policy_watch_signals"))
 
     with st.expander("기술 원천 보기", expanded=False):
-        st.dataframe(pd.DataFrame(evaluation.get("criteria_rows") or []), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(evaluation.get("criteria_rows") or []), width="stretch", hide_index=True)
         if result_df is not None and "Estimated Cost" in result_df.columns:
             detail_cols = [
                 column
