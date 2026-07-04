@@ -1,0 +1,78 @@
+.bt-react-handoff {
+  --accent: #64748b;
+  --soft: rgba(100, 116, 139, 0.09);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 13rem minmax(0, 1.5fr);
+  gap: 1rem;
+  align-items: center;
+  border-left: 4px solid var(--accent);
+  border-top: 1px solid rgba(148, 163, 184, 0.26);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--soft), rgba(255, 255, 255, 0));
+  color: #1f2937;
+  font-family: inherit;
+  padding: 0.85rem 0.95rem;
+}
+
+.bt-react-handoff--positive {
+  --accent: #0f8f83;
+  --soft: rgba(15, 143, 131, 0.10);
+}
+
+.bt-react-handoff--warning {
+  --accent: #b45309;
+  --soft: rgba(180, 83, 9, 0.10);
+}
+
+.bt-react-handoff--danger {
+  --accent: #b42318;
+  --soft: rgba(180, 35, 24, 0.10);
+}
+
+.bt-react-handoff__summary span,
+.bt-react-handoff__summary em {
+  color: #667085;
+  display: block;
+  font-size: 0.82rem;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.bt-react-handoff__summary strong {
+  color: var(--accent);
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  margin: 0.08rem 0;
+}
+
+.bt-react-handoff__button {
+  background: #ff4b4b;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 800;
+  min-height: 2.5rem;
+}
+
+.bt-react-handoff__button:disabled {
+  background: #e5e7eb;
+  color: #667085;
+  cursor: not-allowed;
+}
+
+.bt-react-handoff p {
+  color: #667085;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .bt-react-handoff {
+    grid-template-columns: 1fr;
+  }
+}

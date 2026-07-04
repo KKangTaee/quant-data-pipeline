@@ -47,3 +47,24 @@ Browser QA:
 ```
 
 Checked `http://localhost:8513/backtest` with Equal Weight / Dividend ETFs. Handoff showed `Source 등록 액션`; Policy Signals showed `검증 기준 상세`.
+
+## V3
+
+RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_handoff_react_component_poc_is_isolated
+```
+
+Expected failure confirmed because `app/web/components/backtest_handoff_action/component.py` did not exist.
+
+GREEN / QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_handoff_react_component_poc_is_isolated tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_uses_single_integrated_action_surface
+.venv/bin/python -m py_compile app/web/components/__init__.py app/web/components/backtest_handoff_action/__init__.py app/web/components/backtest_handoff_action/component.py tests/test_service_contracts.py
+git diff --check
+node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('app/web/components/backtest_handoff_action/frontend/package.json','utf8')); if(!p.dependencies['streamlit-component-lib']) process.exit(1); console.log(p.name + ':' + p.version)"
+```
+
+Result: passed. The React POC is source-only and not wired into production.

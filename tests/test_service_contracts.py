@@ -7756,6 +7756,32 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("2차 확인 항목 상세 테이블", source)
         self.assertIn("can_move_to_compare", source)
 
+    def test_backtest_handoff_react_component_poc_is_isolated(self) -> None:
+        component_root = Path("app/web/components/backtest_handoff_action")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/BacktestHandoffAction.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+        result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("render_backtest_handoff_action", wrapper_source)
+        self.assertIn("BacktestHandoffAction", component_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertNotIn("render_backtest_handoff_action(", result_display_source)
+
     def test_candidate_review_draft_captures_handoff_readiness_snapshot(self) -> None:
         from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_bundle
 
