@@ -184,7 +184,7 @@ function MarketMoversWorkbench({ args }: Props) {
               ))}
             </div>
             {payload.trust_panel.warnings.length > 0 ? (
-              <div className="mm-workbench__trust-warnings" aria-label="Coverage trust warnings">
+              <div className="mm-workbench__trust-warnings" aria-label="커버리지 신뢰 경고">
                 {payload.trust_panel.warnings.map((warning) => (
                   <div className="mm-workbench__trust-warning" key={warning}>
                     {warning}
@@ -192,12 +192,12 @@ function MarketMoversWorkbench({ args }: Props) {
                 ))}
               </div>
             ) : null}
-            <div className="mm-workbench__trust-table" aria-label="Grouped missing diagnostics">
-              <div className="mm-workbench__trust-table-title">Grouped missing diagnostics</div>
+            <div className="mm-workbench__trust-table" aria-label="그룹 누락 진단">
+              <div className="mm-workbench__trust-table-title">그룹 누락 진단</div>
               {payload.trust_panel.grouped_rows.length > 0 ? (
                 <div className="mm-workbench__trust-rows">
                   {payload.trust_panel.grouped_rows.map((row, index) => (
-                    <div className="mm-workbench__trust-row" key={`${row["Missing Reason Group"]}-${index}`}>
+                    <div className="mm-workbench__trust-row" key={`trust-row-${index}`}>
                       {payload.trust_panel.group_columns.map((column) => (
                         <div className="mm-workbench__trust-cell" key={column}>
                           <span>{column}</span>

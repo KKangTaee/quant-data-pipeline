@@ -140,3 +140,21 @@
   - Result: passed; React iframe rendered one `.mm-workbench__trust-panel`, two `.mm-workbench__trust-warning` rows, one grouped diagnostic row, five filter selects, and one action row. Current `8534` console errors were empty.
   - Visual QA initially found low contrast in dark theme for trust metric values; CSS was corrected and the app was reloaded before the final screenshot.
   - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase8.png` (generated/local artifact; not staged).
+
+## Phase 8 Copy Follow-up - 2026-07-04
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_trust_panel_replaces_streamlit_expander_and_alerts`
+  - Result: failed as expected while `Data quality`, `Stale`, English warnings, English grouped diagnostic labels, and `Run Update Daily Snapshot.` still reached the React trust panel payload.
+- GREEN: same focused command.
+  - Result: passed.
+- `uv run python -m unittest` for the 12 Market Movers React pilot tests.
+  - Result: passed.
+- `npm run build`
+  - Result: passed; generated `component_static/index.html`, `component_static/assets/index-m3L6gR-b.css`, and `component_static/assets/index-D8yhdhZ-.js`.
+- `uv run python -m py_compile app/web/overview/market_movers_helpers.py app/web/overview/market_movers_react_component.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+- Browser QA: Streamlit on `http://localhost:8534`, Overview > Market Movers.
+  - Result: passed; `Coverage trust detail` title remained English, while panel kicker/state/warnings/grouped diagnostics/action/boundary text rendered in Korean. Current `8534` console errors were empty.
+  - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-korean-copy.png` (generated/local artifact; not staged).

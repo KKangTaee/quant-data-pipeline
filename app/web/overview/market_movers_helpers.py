@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from html import escape
+import re
 from time import perf_counter
 from typing import Any
 
@@ -298,15 +299,145 @@ def _market_movers_react_filter_controls_config(controls: MarketMoverControls) -
     }
 
 
+TRUST_STATE_LABELS_KO = {
+    "Good": "정상",
+    "Stale": "오래됨",
+    "Partial": "부분 누락",
+    "Missing Quotes": "시세 누락",
+    "Needs Refresh": "갱신 필요",
+    "No Universe": "유니버스 없음",
+}
+
+TRUST_ITEM_LABELS_KO = {
+    "Coverage": "커버리지",
+    "Freshness": "자료 상태",
+    "Universe": "유니버스",
+    "Returnable": "랭킹 가능",
+    "Missing": "누락",
+}
+
+TRUST_GROUP_COLUMNS_KO = {
+    "Missing Reason Group": "누락 사유 그룹",
+    "Likely Cause": "가능한 원인",
+    "Suggested Next Action": "권장 다음 조치",
+    "Affected Count": "영향 종목 수",
+    "Sample Tickers": "예시 티커",
+}
+
+TRUST_EXACT_TEXT_KO = {
+    "Daily quote snapshot gap.": "일중 시세 스냅샷 공백입니다.",
+    "Refresh the daily snapshot.": "일중 스냅샷을 갱신하세요.",
+    "Run Update Daily Snapshot.": "일중 스냅샷 갱신",
+    "Run Update Daily Snapshot for this coverage.": "현재 커버리지의 일중 스냅샷 갱신을 실행하세요.",
+    "Refresh current coverage": "현재 커버리지 갱신",
+    "Open raw diagnostics": "원천 진단 열기",
+    "No action needed": "추가 조치 없음",
+    "No universe": "유니버스 없음",
+    "missing quote row": "시세 행 누락",
+    "missing latest quote": "최신 시세 누락",
+    "missing intraday snapshot row": "일중 스냅샷 행 누락",
+    "Nasdaq Symbol Directory current snapshot is not loaded in DB.": (
+        "Nasdaq Symbol Directory 현재 스냅샷이 DB에 아직 없습니다."
+    ),
+    "Selected universe rows are not available in DB.": "선택한 유니버스 행이 DB에 없습니다.",
+    "Refresh the relevant DB-backed snapshot, then reopen raw diagnostics if the gap repeats.": (
+        "관련 DB 기반 스냅샷을 갱신한 뒤, 공백이 반복되면 원천 진단을 다시 확인하세요."
+    ),
+    "Grouped summary 아래의 raw diagnostics에서 symbol-level evidence를 확인합니다.": (
+        "그룹 요약 아래 원천 진단에서 심볼 단위 근거를 확인합니다."
+    ),
+    "상단 데이터 갱신 control을 사용합니다.": "상단 데이터 갱신 컨트롤을 사용합니다.",
+    "현재 read model 기준의 보조 신뢰 상태입니다.": "현재 읽기 모델 기준의 보조 신뢰 상태입니다.",
+}
+
+
+def _market_movers_trust_text_ko(text: Any) -> str:
+    value = str(text or "").strip()
+    if not value:
+        return ""
+    if value in TRUST_EXACT_TEXT_KO:
+        return TRUST_EXACT_TEXT_KO[value]
+    age_match = re.fullmatch(r"(\d+)m old(?:,\s*(\d+) missing)?", value)
+    if age_match:
+        minutes = int(age_match.group(1))
+        missing = age_match.group(2)
+        if missing is not None:
+            return f"{minutes}분 경과, {int(missing):,}개 누락"
+        return f"{minutes}분 경과"
+    stale_match = re.fullmatch(r"Latest intraday snapshot is (\d+) minutes old\.", value)
+    if stale_match:
+        return f"최신 일중 스냅샷이 {int(stale_match.group(1))}분 경과했습니다."
+    missing_match = re.fullmatch(
+        r"(\d+) symbols in the selected universe are missing returnable price rows\.",
+        value,
+    )
+    if missing_match:
+        return f"선택한 유니버스에서 랭킹 가능한 가격 행이 없는 심볼 {int(missing_match.group(1)):,}개가 있습니다."
+    if value == "Latest raw price date is sparse or unusable; rankings use the latest effective market date.":
+        return "최신 원천 가격일의 자료가 부족하거나 사용할 수 없어, 랭킹은 최신 유효 거래일 기준으로 계산합니다."
+    if value == "Market date window is unavailable.":
+        return "시장 날짜 구간을 확인할 수 없습니다."
+    replacements = (
+        ("history/profile/listing evidence", "가격 이력/프로필/상장 근거"),
+        ("current snapshot", "현재 스냅샷"),
+        ("read model", "읽기 모델"),
+        ("snapshot", "스냅샷"),
+        ("Coverage", "커버리지"),
+        ("coverage", "커버리지"),
+        ("ranking", "랭킹"),
+        ("quote", "시세"),
+        ("row", "행"),
+    )
+    translated = value
+    for source, target in replacements:
+        translated = translated.replace(source, target)
+    return translated
+
+
+def _market_movers_react_trust_items_ko(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    localized: list[dict[str, Any]] = []
+    for item in items:
+        row = dict(item)
+        original_label = str(row.get("label") or "")
+        row["label"] = TRUST_ITEM_LABELS_KO.get(original_label, _market_movers_trust_text_ko(original_label))
+        if original_label == "Freshness":
+            row["value"] = TRUST_STATE_LABELS_KO.get(
+                str(row.get("value") or ""),
+                _market_movers_trust_text_ko(row.get("value")),
+            )
+        else:
+            row["value"] = _market_movers_trust_text_ko(row.get("value")) or str(row.get("value") or "-")
+        if row.get("detail"):
+            row["detail"] = _market_movers_trust_text_ko(row.get("detail"))
+        localized.append(row)
+    return localized
+
+
+def _market_movers_react_grouped_rows_ko(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    localized_rows: list[dict[str, Any]] = []
+    for row in rows:
+        localized: dict[str, Any] = {}
+        for column in COVERAGE_TRUST_GROUP_COLUMNS:
+            ko_column = TRUST_GROUP_COLUMNS_KO[column]
+            value = row.get(column)
+            localized[ko_column] = value if isinstance(value, int) else _market_movers_trust_text_ko(value) or "-"
+        localized_rows.append(localized)
+    return localized_rows
+
+
 def _market_movers_react_trust_warnings(snapshot: dict[str, Any]) -> list[str]:
-    warnings = [str(message) for message in list(snapshot.get("warnings") or []) if str(message or "").strip()]
+    warnings: list[str] = []
+    for message in list(snapshot.get("warnings") or []):
+        translated = _market_movers_trust_text_ko(message)
+        if translated and translated not in warnings:
+            warnings.append(translated)
     coverage = dict(snapshot.get("coverage") or {})
     missing_count = int(coverage.get("missing_count") or 0)
-    missing_message = f"{missing_count} symbols in the selected universe are missing returnable price rows."
+    missing_message = f"선택한 유니버스에서 랭킹 가능한 가격 행이 없는 심볼 {missing_count:,}개가 있습니다."
     if missing_count and missing_message not in warnings:
         warnings.append(missing_message)
     snapshot_stale = coverage.get("snapshot_stale_minutes")
-    stale_message = f"Latest intraday snapshot is {snapshot_stale} minutes old."
+    stale_message = f"최신 일중 스냅샷이 {int(snapshot_stale)}분 경과했습니다." if snapshot_stale is not None else ""
     if snapshot_stale is not None and int(snapshot_stale) > 15 and stale_message not in warnings:
         warnings.append(stale_message)
     return warnings
@@ -330,22 +461,22 @@ def _market_movers_react_trust_panel_config(snapshot: dict[str, Any]) -> dict[st
         "visible": True,
         "default_open": state != "Good",
         "title": "Coverage trust detail",
-        "kicker": "Data quality",
-        "state": state,
+        "kicker": "자료 품질",
+        "state": TRUST_STATE_LABELS_KO.get(state, _market_movers_trust_text_ko(state) or "-"),
         "tone": str(model.get("tone") or "neutral"),
-        "headline": str(model.get("headline") or "-"),
-        "detail": str(model.get("detail") or ""),
-        "items": [dict(item) for item in list(model.get("items") or [])],
+        "headline": _market_movers_trust_text_ko(model.get("headline")) or "-",
+        "detail": _market_movers_trust_text_ko(model.get("detail")),
+        "items": _market_movers_react_trust_items_ko([dict(item) for item in list(model.get("items") or [])]),
         "warnings": _market_movers_react_trust_warnings(snapshot),
-        "grouped_rows": grouped_rows,
-        "group_columns": list(COVERAGE_TRUST_GROUP_COLUMNS),
-        "empty_text": "현재 선택 조건에서 grouped missing diagnostics로 묶을 row가 없습니다.",
+        "grouped_rows": _market_movers_react_grouped_rows_ko(grouped_rows),
+        "group_columns": [TRUST_GROUP_COLUMNS_KO[column] for column in COVERAGE_TRUST_GROUP_COLUMNS],
+        "empty_text": "현재 선택 조건에서 그룹 누락 진단으로 묶을 행이 없습니다.",
         "suggested_action": {
-            "label": str(action.get("label") or "No action needed"),
+            "label": _market_movers_trust_text_ko(action.get("label") or "No action needed"),
             "action_id": str(action.get("action_id") or "none"),
-            "detail": str(action.get("detail") or "Coverage trust는 현재 read model의 보조 설명입니다."),
+            "detail": _market_movers_trust_text_ko(action.get("detail") or "Coverage trust는 현재 read model의 보조 설명입니다."),
         },
-        "boundary_note": str(model.get("boundary_note") or ""),
+        "boundary_note": "현재 Market Movers 화면의 자료 품질을 설명하는 보조 근거입니다. 매매 신호, 검증 게이트, Final Review 결정, 운영 모니터링 신호가 아닙니다.",
     }
 
 

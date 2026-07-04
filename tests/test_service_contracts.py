@@ -9960,7 +9960,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "snapshot_time_utc": "2026-07-02 23:29",
                 "snapshot_stale_minutes": 4257,
                 "price_mode": "Intraday Snapshot",
-                "refresh_state": {"status": "stale", "label": "Stale", "detail": "4257m old, 2 missing"},
+                "refresh_state": {
+                    "status": "stale",
+                    "label": "Stale",
+                    "detail": "4257m old, 2 missing",
+                    "recommended_action": "Run Update Daily Snapshot.",
+                },
             },
             "date_window": {"status": "OK"},
             "missing_rows": pd.DataFrame(
@@ -9996,14 +10001,28 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         trust_panel = payload["trust_panel"]
         self.assertEqual(trust_panel["schema_version"], "market_movers_react_trust_panel_v1")
-        self.assertEqual(trust_panel["state"], "Stale")
-        self.assertEqual(trust_panel["warnings"][0], "2 symbols in the selected universe are missing returnable price rows.")
-        self.assertIn("Latest intraday snapshot is 4257 minutes old.", trust_panel["warnings"])
-        self.assertEqual(trust_panel["grouped_rows"][0]["Affected Count"], 2)
-        self.assertEqual(trust_panel["grouped_rows"][0]["Sample Tickers"], "AAA, BBB")
+        self.assertEqual(trust_panel["title"], "Coverage trust detail")
+        self.assertEqual(trust_panel["kicker"], "자료 품질")
+        self.assertEqual(trust_panel["state"], "오래됨")
+        self.assertEqual(trust_panel["detail"], "4257분 경과, 2개 누락")
+        self.assertEqual(trust_panel["warnings"][0], "선택한 유니버스에서 랭킹 가능한 가격 행이 없는 심볼 2개가 있습니다.")
+        self.assertIn("최신 일중 스냅샷이 4257분 경과했습니다.", trust_panel["warnings"])
+        self.assertEqual(
+            trust_panel["group_columns"],
+            ["누락 사유 그룹", "가능한 원인", "권장 다음 조치", "영향 종목 수", "예시 티커"],
+        )
+        self.assertEqual(trust_panel["grouped_rows"][0]["누락 사유 그룹"], "시세 행 누락")
+        self.assertEqual(trust_panel["grouped_rows"][0]["가능한 원인"], "일중 시세 스냅샷 공백입니다.")
+        self.assertEqual(trust_panel["grouped_rows"][0]["권장 다음 조치"], "일중 스냅샷을 갱신하세요.")
+        self.assertEqual(trust_panel["grouped_rows"][0]["영향 종목 수"], 2)
+        self.assertEqual(trust_panel["grouped_rows"][0]["예시 티커"], "AAA, BBB")
+        self.assertEqual(trust_panel["suggested_action"]["label"], "일중 스냅샷 갱신")
         self.assertEqual(trust_panel["suggested_action"]["action_id"], "use_existing_refresh_bar")
+        self.assertIn("매매 신호", trust_panel["boundary_note"])
+        self.assertNotIn("not a trading signal", trust_panel["boundary_note"])
         self.assertIn("payload.trust_panel.visible", react_source)
         self.assertIn("mm-workbench__trust-panel", react_source)
+        self.assertIn("그룹 누락 진단", react_source)
         self.assertIn(".mm-workbench__trust-panel", react_style)
         self.assertIn(".mm-workbench__trust-warning", react_style)
 

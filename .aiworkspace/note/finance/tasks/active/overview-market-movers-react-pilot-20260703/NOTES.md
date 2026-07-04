@@ -56,3 +56,4 @@
 - Boundary decision: Python builds the coverage trust model and warning list; React receives only a read-only `trust_panel` payload and renders the integrated panel.
 - Fallback decision: when the React component is unavailable, the existing Streamlit coverage trust expander and warnings still render.
 - Browser QA in dark theme exposed low contrast for trust metric values on light cells; the component CSS now pins those values to dark text independent of the surrounding Streamlit theme.
+- Follow-up copy pass: keep the `Coverage trust detail` title as-is, but localize the panel kicker, state, warnings, grouped diagnostic labels/values, suggested action, and boundary copy to Korean in the React payload.
