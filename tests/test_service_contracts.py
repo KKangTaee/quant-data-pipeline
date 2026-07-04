@@ -7702,25 +7702,29 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn('st.markdown("##### 2차 실전성 검증 Handoff")', action_body)
         self.assertNotIn("bt-handoff-card", source)
 
-    def test_policy_signal_tab_prioritizes_grouped_signal_summary(self) -> None:
+    def test_policy_signal_tab_is_evidence_only_after_handoff_summary(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         real_money_start = source.index("def _render_real_money_details")
         real_money_body = source[real_money_start:]
         real_money_body = real_money_body[: real_money_body.index("\ndef ", 1)]
+        handoff_start = source.index("def _render_practical_validation_next_action")
+        handoff_body = source[handoff_start:]
+        handoff_body = handoff_body[: handoff_body.index("\ndef ", 1)]
 
         self.assertIn('tab_labels.append("검증 신호 · Policy Signals")', source)
         self.assertNotIn('tab_labels.append("Policy Signal Meta")', source)
         self.assertIn("def _render_policy_signal_summary_panel", source)
-        self.assertIn("_render_policy_signal_summary_panel(meta)", real_money_body)
+        self.assertIn("_render_practical_validation_handoff_panel(state)", handoff_body)
+        self.assertNotIn("_render_policy_signal_summary_panel(meta)", real_money_body)
         self.assertIn("_render_policy_signal_gate_board(rows, evaluation)", real_money_body)
         self.assertIn("build_policy_signal_inventory(meta)", real_money_body)
         self.assertIn("bt-policy-signal", source)
         self.assertIn("bt-policy-gate", source)
-        self.assertIn("검증 기준 보드", source)
+        self.assertIn("검증 기준 상세", source)
         self.assertIn("1차 처리 결과", source)
         self.assertIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
         self.assertNotIn("이번 실행 확인 큐", source)
-        self.assertIn("진입 준비도", source)
+        self.assertNotIn("진입 준비도", real_money_body)
         self.assertIn("기술 원천 보기", real_money_body)
         self.assertNotIn("render_status_card_grid(", real_money_body)
         self.assertNotIn("st.dataframe(pd.DataFrame(_policy_rows(primary_rows))", real_money_body)

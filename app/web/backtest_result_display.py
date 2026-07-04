@@ -1236,18 +1236,18 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
     entry_ready = bool(evaluation.get("can_enter_practical_validation"))
     board_tone = "positive" if entry_ready and not review_count else "warning" if entry_ready else "danger"
     headline = (
-        "2차 진입 가능, 확인 항목을 함께 넘깁니다."
+        "검증 근거와 2차 확인 큐를 나눠 봅니다."
         if entry_ready and review_count
-        else "2차 진입 가능합니다."
+        else "검증 근거가 모두 통과 상태입니다."
         if entry_ready
-        else "2차 진입 전 먼저 해결할 항목이 있습니다."
+        else "source 등록 전 먼저 해결할 근거가 있습니다."
     )
 
     summary_items = [
-        ("2차 진입", "가능" if entry_ready else "보류", str(evaluation.get("route_label") or "-"), board_tone),
         ("먼저 해결", str(block_count), "source 등록 차단 항목", "danger" if block_count else "positive"),
         ("2차 확인", str(review_count), "source와 함께 2차로 전달", "warning" if review_count else "positive"),
         ("통과", str(pass_count), f"참고 {context_count}개 별도 보존", "positive"),
+        ("상세 근거", str(len(sorted_rows)), "policy signal 전체", "neutral"),
     ]
     summary_html = "".join(
         (
@@ -1577,7 +1577,7 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
 <section class="bt-policy-gate bt-policy-gate--{board_tone}">
   <div class="bt-policy-gate__head">
     <div>
-      <div class="bt-policy-gate__kicker">검증 기준 보드</div>
+      <div class="bt-policy-gate__kicker">검증 기준 상세</div>
       <h4>{escape(headline)}</h4>
     </div>
     <div class="bt-policy-gate__score">종합 점수 {escape(f"{float(evaluation.get('score') or 0.0):.1f} / 10")}</div>
@@ -2659,7 +2659,6 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
     def _optional_pct(value: Any) -> str:
         return f"{float(value):.2%}" if value is not None else "-"
 
-    _render_policy_signal_summary_panel(meta)
     _render_policy_signal_gate_board(rows, evaluation)
 
     if context_rows:
