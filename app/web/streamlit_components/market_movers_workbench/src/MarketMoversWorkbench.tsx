@@ -16,6 +16,25 @@ export type MarketMoverFilterControl = {
   disabled?: boolean;
 };
 
+export type MarketMoversTrustPanel = {
+  schema_version: "market_movers_react_trust_panel_v1";
+  visible: boolean;
+  default_open: boolean;
+  title: string;
+  kicker: string;
+  state: string;
+  tone: string;
+  headline: string;
+  detail?: string;
+  items: Array<{ label: string; value: string; detail?: string }>;
+  warnings: string[];
+  grouped_rows: Array<Record<string, string | number>>;
+  group_columns: string[];
+  empty_text: string;
+  suggested_action: { label: string; action_id: string; detail: string };
+  boundary_note: string;
+};
+
 export type MarketMoversWorkbenchPayload = {
   schema_version: "market_movers_react_workbench_v1";
   component: "MarketMoversWorkbench";
@@ -47,6 +66,7 @@ export type MarketMoversWorkbenchPayload = {
     options: Array<{ value: string; label: string }>;
     disabled: boolean;
   };
+  trust_panel: MarketMoversTrustPanel;
   control_ownership: {
     mode: "python_state_react_ui";
     migrated_controls: string[];
@@ -137,6 +157,70 @@ function MarketMoversWorkbench({ args }: Props) {
           </div>
         ))}
       </div>
+      {payload.trust_panel.visible ? (
+        <details
+          className={`mm-workbench__trust-panel mm-workbench__trust-panel--${payload.trust_panel.tone}`}
+          open={payload.trust_panel.default_open}
+        >
+          <summary className="mm-workbench__trust-summary">
+            <span>
+              <span className="mm-workbench__trust-kicker">{payload.trust_panel.kicker}</span>
+              <strong>{payload.trust_panel.title}</strong>
+            </span>
+            <span className="mm-workbench__trust-state">{payload.trust_panel.state}</span>
+          </summary>
+          <div className="mm-workbench__trust-body">
+            <div className="mm-workbench__trust-copy">
+              <strong>{payload.trust_panel.headline}</strong>
+              {payload.trust_panel.detail ? <span>{payload.trust_panel.detail}</span> : null}
+            </div>
+            <div className="mm-workbench__trust-items">
+              {payload.trust_panel.items.map((item) => (
+                <div className="mm-workbench__trust-item" key={`${item.label}-${item.value}`}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  {item.detail ? <small>{item.detail}</small> : null}
+                </div>
+              ))}
+            </div>
+            {payload.trust_panel.warnings.length > 0 ? (
+              <div className="mm-workbench__trust-warnings" aria-label="Coverage trust warnings">
+                {payload.trust_panel.warnings.map((warning) => (
+                  <div className="mm-workbench__trust-warning" key={warning}>
+                    {warning}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="mm-workbench__trust-table" aria-label="Grouped missing diagnostics">
+              <div className="mm-workbench__trust-table-title">Grouped missing diagnostics</div>
+              {payload.trust_panel.grouped_rows.length > 0 ? (
+                <div className="mm-workbench__trust-rows">
+                  {payload.trust_panel.grouped_rows.map((row, index) => (
+                    <div className="mm-workbench__trust-row" key={`${row["Missing Reason Group"]}-${index}`}>
+                      {payload.trust_panel.group_columns.map((column) => (
+                        <div className="mm-workbench__trust-cell" key={column}>
+                          <span>{column}</span>
+                          <strong>{String(row[column] ?? "-")}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mm-workbench__trust-empty">{payload.trust_panel.empty_text}</div>
+              )}
+            </div>
+            <div className="mm-workbench__trust-action">
+              <strong>{payload.trust_panel.suggested_action.label}</strong>
+              <span>{payload.trust_panel.suggested_action.detail}</span>
+            </div>
+            {payload.trust_panel.boundary_note ? (
+              <div className="mm-workbench__trust-boundary">{payload.trust_panel.boundary_note}</div>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
       <div className="mm-workbench__action-row">
         {payload.refresh_mode.visible ? (
           <label className="mm-workbench__mode">

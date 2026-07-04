@@ -49,3 +49,10 @@
 - Boundary decision: React owns rendering and interaction affordances only. Python owns session-state normalization, dynamic sector options, snapshot loading, provider/job execution, and rerun timing.
 - Fallback decision: if `component_static/index.html` is missing, `_render_market_movers_controls` still renders the legacy Streamlit filter row so local development and degraded component builds remain usable.
 - Coverage changes reset Sector to `All` because sector options are coverage-dependent.
+
+## Phase 8 Coverage Trust Panel Integration
+
+- User feedback identified the remaining Streamlit expander / dataframe / warning boxes as visually separate from the React Market Movers card.
+- Boundary decision: Python builds the coverage trust model and warning list; React receives only a read-only `trust_panel` payload and renders the integrated panel.
+- Fallback decision: when the React component is unavailable, the existing Streamlit coverage trust expander and warnings still render.
+- Browser QA in dark theme exposed low contrast for trust metric values on light cells; the component CSS now pins those values to dark text independent of the surrounding Streamlit theme.

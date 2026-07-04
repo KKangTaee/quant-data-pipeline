@@ -9929,6 +9929,92 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(mock_st.session_state["overview_market_movers_coverage"], "SP500")
         self.assertEqual(mock_st.session_state["overview_market_movers_sector"], "All")
 
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_trust_panel_replaces_streamlit_expander_and_alerts(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "PARTIAL",
+            "universe_code": "SP500",
+            "universe_label": "S&P 500",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 501,
+                "missing_count": 2,
+                "returnable_pct": 99.6,
+                "snapshot_time_utc": "2026-07-02 23:29",
+                "snapshot_stale_minutes": 4257,
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "stale", "label": "Stale", "detail": "4257m old, 2 missing"},
+            },
+            "date_window": {"status": "OK"},
+            "missing_rows": pd.DataFrame(
+                [
+                    {
+                        "Symbol": "AAA",
+                        "Reason": "missing quote row",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                    },
+                    {
+                        "Symbol": "BBB",
+                        "Reason": "missing quote row",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                    },
+                ]
+            ),
+        }
+
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        trust_panel = payload["trust_panel"]
+        self.assertEqual(trust_panel["schema_version"], "market_movers_react_trust_panel_v1")
+        self.assertEqual(trust_panel["state"], "Stale")
+        self.assertEqual(trust_panel["warnings"][0], "2 symbols in the selected universe are missing returnable price rows.")
+        self.assertIn("Latest intraday snapshot is 4257 minutes old.", trust_panel["warnings"])
+        self.assertEqual(trust_panel["grouped_rows"][0]["Affected Count"], 2)
+        self.assertEqual(trust_panel["grouped_rows"][0]["Sample Tickers"], "AAA, BBB")
+        self.assertEqual(trust_panel["suggested_action"]["action_id"], "use_existing_refresh_bar")
+        self.assertIn("payload.trust_panel.visible", react_source)
+        self.assertIn("mm-workbench__trust-panel", react_source)
+        self.assertIn(".mm-workbench__trust-panel", react_style)
+        self.assertIn(".mm-workbench__trust-warning", react_style)
+
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("_render_market_movers_coverage_trust(snapshot, controls=controls)", render_body)
+        self.assertIn("show_warnings=react_event is None", render_body)
+        self.assertLess(
+            render_body.index("if react_event is None:"),
+            render_body.index("_render_market_movers_coverage_trust(snapshot, controls=controls)"),
+        )
+
     def test_market_movers_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
         from app.web.overview.market_movers_react_component import (
             MARKET_MOVERS_REACT_COMPONENT_NAME,

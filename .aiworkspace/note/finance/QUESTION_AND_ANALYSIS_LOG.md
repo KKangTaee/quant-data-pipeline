@@ -8470,3 +8470,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Streamlit 전체를 Next.js로 바꾸지 않고, Market Movers summary/action strip만 custom component로 이관해 시각/상호작용 일관성을 검증해야 함.
 - Analysis result: React component는 summary와 action strip에 적합했고, action execution은 기존 Python facade가 계속 소유하는 구조가 안전했다. 상단 filters는 snapshot 로드 전 입력이라 이번 pilot에서는 `streamlit_owned`로 유지하는 것이 맞다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/`에 있다. 다른 Overview 탭 확장은 이 pilot QA 결과를 확인한 뒤 별도 phase로 잡는다.
+
+### 2026-07-04 - Market Movers React pilot에서 남은 Streamlit UI 조각을 통합한다
+
+- User request: 상단 filters와 coverage trust detail / warning 영역이 Streamlit 기본 UI처럼 따로 보이는 문제를 React component 안으로 개선해 달라고 요청함.
+- Interpreted goal: Market Movers 첫 화면의 controls, summary, data-quality detail, refresh action이 한 workbench처럼 보이게 하되, provider fetch / DB write / session normalization은 Python 경계에 남겨야 함.
+- Analysis result: filters와 refresh mode는 React가 UI만 렌더링하고 Python이 validated session state를 소유하는 구조로 옮길 수 있었다. Coverage trust detail은 Python read model을 `trust_panel` payload로 만들고 React가 read-only drawer로 렌더링하는 것이 가장 안전했다.
+- Follow-up: 6~8차 완료. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다. 다른 Overview 탭 적용은 Market Movers 사용감 확인 후 별도 작업으로 확장한다.

@@ -121,3 +121,22 @@
 - Browser QA: Streamlit on `http://localhost:8533`, Overview > Market Movers.
   - Result: passed; React iframe rendered 5 `.mm-workbench__filter-select` controls, one `.mm-workbench__action-row`, and one `.mm-workbench__mode-select`. Parent text no longer included the old `조건\nCoverage` row or old daily refresh caption. Changing Top N to `30` via the React select rerendered the summary detail to `Top 30`. Current `8533` console errors were empty.
   - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase7.png` (generated/local artifact; not staged).
+
+## Phase 8 - 2026-07-04
+
+- RED: `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_trust_panel_replaces_streamlit_expander_and_alerts`
+  - Result: failed as expected before the workbench payload exposed `trust_panel`.
+- GREEN: same focused command.
+  - Result: passed.
+- `uv run python -m unittest` for the 12 Market Movers React pilot tests.
+  - Result: passed.
+- `npm run build`
+  - Result: passed; generated `component_static/index.html`, `component_static/assets/index-m3L6gR-b.css`, and `component_static/assets/index-Bjc575vs.js`.
+- `uv run python -m py_compile app/web/overview/market_movers_helpers.py app/web/overview/market_movers_react_component.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+- Browser QA: Streamlit on `http://localhost:8534`, Overview > Market Movers.
+  - Result: passed; React iframe rendered one `.mm-workbench__trust-panel`, two `.mm-workbench__trust-warning` rows, one grouped diagnostic row, five filter selects, and one action row. Current `8534` console errors were empty.
+  - Visual QA initially found low contrast in dark theme for trust metric values; CSS was corrected and the app was reloaded before the final screenshot.
+  - Screenshot: `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/browser-qa-market-movers-react-phase8.png` (generated/local artifact; not staged).

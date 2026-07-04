@@ -20,7 +20,10 @@ from app.jobs.overview_actions import (
     run_overview_quote_gap_diagnostics,
     run_overview_sp500_universe,
 )
-from app.services.overview.market_movers import build_market_movers_coverage_trust_model
+from app.services.overview.market_movers import (
+    COVERAGE_TRUST_GROUP_COLUMNS,
+    build_market_movers_coverage_trust_model,
+)
 from app.services.overview.why_it_moved import (
     build_market_mover_metadata_status_strip,
     build_market_mover_research_snapshot,
@@ -295,6 +298,57 @@ def _market_movers_react_filter_controls_config(controls: MarketMoverControls) -
     }
 
 
+def _market_movers_react_trust_warnings(snapshot: dict[str, Any]) -> list[str]:
+    warnings = [str(message) for message in list(snapshot.get("warnings") or []) if str(message or "").strip()]
+    coverage = dict(snapshot.get("coverage") or {})
+    missing_count = int(coverage.get("missing_count") or 0)
+    missing_message = f"{missing_count} symbols in the selected universe are missing returnable price rows."
+    if missing_count and missing_message not in warnings:
+        warnings.append(missing_message)
+    snapshot_stale = coverage.get("snapshot_stale_minutes")
+    stale_message = f"Latest intraday snapshot is {snapshot_stale} minutes old."
+    if snapshot_stale is not None and int(snapshot_stale) > 15 and stale_message not in warnings:
+        warnings.append(stale_message)
+    return warnings
+
+
+def _market_movers_records(frame: Any) -> list[dict[str, Any]]:
+    if isinstance(frame, pd.DataFrame):
+        return [dict(row) for row in frame.to_dict(orient="records")]
+    if isinstance(frame, list):
+        return [dict(row) for row in frame if isinstance(row, dict)]
+    return []
+
+
+def _market_movers_react_trust_panel_config(snapshot: dict[str, Any]) -> dict[str, Any]:
+    model = build_market_movers_coverage_trust_model(snapshot)
+    grouped_rows = _market_movers_records(model.get("grouped_missing_rows"))
+    action = dict(model.get("suggested_action") or {})
+    state = str(model.get("state") or "-")
+    return {
+        "schema_version": "market_movers_react_trust_panel_v1",
+        "visible": True,
+        "default_open": state != "Good",
+        "title": "Coverage trust detail",
+        "kicker": "Data quality",
+        "state": state,
+        "tone": str(model.get("tone") or "neutral"),
+        "headline": str(model.get("headline") or "-"),
+        "detail": str(model.get("detail") or ""),
+        "items": [dict(item) for item in list(model.get("items") or [])],
+        "warnings": _market_movers_react_trust_warnings(snapshot),
+        "grouped_rows": grouped_rows,
+        "group_columns": list(COVERAGE_TRUST_GROUP_COLUMNS),
+        "empty_text": "현재 선택 조건에서 grouped missing diagnostics로 묶을 row가 없습니다.",
+        "suggested_action": {
+            "label": str(action.get("label") or "No action needed"),
+            "action_id": str(action.get("action_id") or "none"),
+            "detail": str(action.get("detail") or "Coverage trust는 현재 read model의 보조 설명입니다."),
+        },
+        "boundary_note": str(model.get("boundary_note") or ""),
+    }
+
+
 def _positive_return_domain(values: pd.Series) -> list[float]:
     numeric = pd.to_numeric(values, errors="coerce").dropna()
     max_value = max(1.0, float(numeric.max()) if not numeric.empty else 1.0)
@@ -519,6 +573,7 @@ def build_market_movers_react_workbench_payload(
         },
         "filter_controls": _market_movers_react_filter_controls_config(controls),
         "refresh_mode": _market_movers_react_refresh_mode_config(controls),
+        "trust_panel": _market_movers_react_trust_panel_config(snapshot),
         "control_ownership": {
             "mode": "python_state_react_ui",
             "migrated_controls": [
@@ -3157,8 +3212,10 @@ def _render_market_movers_snapshot_panel(
     snapshot: dict[str, Any],
     *,
     controls: MarketMoverControls,
+    show_warnings: bool = True,
 ) -> None:
-    _render_snapshot_warnings(snapshot)
+    if show_warnings:
+        _render_snapshot_warnings(snapshot)
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:
@@ -3233,8 +3290,10 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         )
     else:
         _render_market_movers_react_refresh_companion(snapshot, controls=controls)
-    _render_market_movers_coverage_trust(snapshot, controls=controls)
+    if react_event is None:
+        _render_market_movers_coverage_trust(snapshot, controls=controls)
     _render_market_movers_snapshot_panel(
         snapshot,
         controls=controls,
+        show_warnings=react_event is None,
     )

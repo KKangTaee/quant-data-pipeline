@@ -60,3 +60,11 @@
 - Python remains the owner of validated session state, sector-option loading, snapshot loading, provider/job dispatch, and reruns.
 - React only renders select controls and emits `set_control` events with control id, value, and nonce.
 - The legacy Streamlit filter row remains as the fallback path when the React component build is unavailable.
+
+## Phase 8 - Coverage Trust Panel Integration
+
+- Status: complete.
+- Moved Coverage trust detail, grouped missing diagnostics, and coverage warning messages into the React Market Movers workbench card.
+- Python remains the owner of the coverage trust read model, warning construction, DB/provider/job boundaries, and Streamlit fallback.
+- React renders a read-only data-quality drawer with trust metrics, grouped diagnostics, warning rail, suggested action copy, and boundary note.
+- The legacy Streamlit expander / dataframe / warning UI remains only on the React fallback path.
