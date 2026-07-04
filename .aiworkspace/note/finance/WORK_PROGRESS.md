@@ -5456,3 +5456,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Backtest Analysis의 `2차 확인` review focus 상세를 1차 처리 항목처럼 펼치지 않고, compact count / handoff notice로 낮췄다.
   - Practical Validation `1. 선택 후보 확인` 상단에서 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 이어 보게 했다.
   - hard blocker / source 등록 기준은 유지했고, review focus의 책임 위치만 2차 화면으로 옮겼다.
+- Backtest Handoff / Policy Signals action cleanup V1-V4 2026-07-04:
+  - Handoff를 유일한 Practical Validation 진입 판단 / source 등록 action surface로 두고, Policy Signals는 evidence detail surface로 낮췄다.
+  - Streamlit-only production path에서 Handoff action shell을 통합했고, React custom component POC는 `app/web/components/backtest_handoff_action/`에 격리해 두었다.
+  - React POC는 현재 source registration에 연결하지 않고, 반복되는 고급 action-card 수요가 확인될 때만 production wiring 후보로 본다.

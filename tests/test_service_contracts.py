@@ -7782,6 +7782,26 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("from finance", wrapper_source)
         self.assertNotIn("render_backtest_handoff_action(", result_display_source)
 
+    def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
+        flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")
+        selection_doc = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(
+            encoding="utf-8"
+        )
+        progress_doc = Path(".aiworkspace/note/finance/WORK_PROGRESS.md").read_text(encoding="utf-8")
+        question_doc = Path(".aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md").read_text(encoding="utf-8")
+        task_status = Path(
+            ".aiworkspace/note/finance/tasks/active/backtest-handoff-policy-signal-action-v1-v4-20260704/STATUS.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Handoff owns entry judgment and source registration action", flow_doc)
+        self.assertIn("React custom component POC", flow_doc)
+        self.assertIn("production path remains Streamlit-only", flow_doc)
+        self.assertIn("Policy Signals owns evidence detail", selection_doc)
+        self.assertIn("React POC is not wired into source registration", selection_doc)
+        self.assertIn("Backtest Handoff / Policy Signals action cleanup V1-V4", progress_doc)
+        self.assertIn("Streamlit-only production path", question_doc)
+        self.assertIn("V4 complete", task_status)
+
     def test_candidate_review_draft_captures_handoff_readiness_snapshot(self) -> None:
         from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_bundle
 

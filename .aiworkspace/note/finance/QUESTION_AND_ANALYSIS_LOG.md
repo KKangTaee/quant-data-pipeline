@@ -8421,3 +8421,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 1차 화면은 hard blocker / source 등록 가능 여부에 집중하고, hold / caution / watch 같은 review focus 상세는 source evidence로 전달해 Practical Validation에서 이어 확인해야 함.
 - Analysis result: 기존 `entry_gate.review_focus_rows`가 이미 handoff source에 저장되므로 policy 의미를 바꾸지 않고 표시 위치를 옮길 수 있었다. hard blocker는 계속 1차에서 source 등록을 막고, review focus는 2차 확인 큐로 해석한다.
 - Follow-up: Backtest Analysis handoff / Policy Signals는 `2차 확인 항목 N개` 요약만 표시하고, Practical Validation `1. 선택 후보 확인` 상단에서 `Backtest에서 넘어온 2차 확인 항목` 카드와 상세 테이블을 보여준다.
+
+### 2026-07-04 - Handoff와 Policy Signals의 역할을 분리하고 React는 POC로 둔다
+
+- User request: 사용자가 `2차 실전성 검증 Handoff`와 `검증 신호 · Policy Signals`의 `2차 검증 진입 가능` 중복을 정리하고, React custom component로 버튼을 카드 안에 통합할 수 있는지 검토 / 단계별 진행을 요청함.
+- Interpreted goal: Handoff는 action / entry judgment를 소유하고, Policy Signals는 근거 상세만 보여줘야 한다. 버튼 통합은 먼저 Streamlit-only production path로 개선하고, React는 앱 전체 전환이 아니라 고급 action-card POC로 제한해야 함.
+- Analysis result: 같은 `build_handoff_gate_summary()` / `build_next_step_readiness_evaluation()` 결과가 Handoff와 Policy Signals 요약 카드에서 반복되고 있었다. Streamlit HTML과 `st.button`은 DOM 계층이 달라 완전한 HTML 내부 버튼은 어렵지만, Streamlit-only production path로 action shell을 붙일 수 있다.
+- Follow-up: Streamlit-only production path remains active. React custom component POC is isolated under `app/web/components/backtest_handoff_action/` and is not wired into source registration until repeated advanced action-card needs justify it.

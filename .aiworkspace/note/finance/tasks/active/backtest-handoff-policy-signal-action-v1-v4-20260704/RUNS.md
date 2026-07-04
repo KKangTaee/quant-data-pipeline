@@ -68,3 +68,23 @@ node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('app/web/com
 ```
 
 Result: passed. The React POC is source-only and not wired into production.
+
+## V4
+
+RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_handoff_react_adoption_decision_is_documented
+```
+
+Expected failure confirmed because durable docs did not yet state the Handoff / Policy Signals responsibility split or the React POC adoption decision.
+
+GREEN / QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_handoff_react_adoption_decision_is_documented tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_handoff_react_component_poc_is_isolated tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_uses_single_integrated_action_surface tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_tab_is_evidence_only_after_handoff_summary
+.venv/bin/python -m py_compile app/web/backtest_result_display.py app/web/components/backtest_handoff_action/component.py tests/test_service_contracts.py
+git diff --check
+```
+
+Result: passed.
