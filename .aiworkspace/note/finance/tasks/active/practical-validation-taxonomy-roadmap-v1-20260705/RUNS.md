@@ -368,3 +368,56 @@ Outcome:
 - `BacktestRefactorBoundaryTests`: 13 tests passed
 - `PracticalValidationServiceContractTests`: 22 tests passed
 - Browser QA passed for the split workspace panel
+
+## 2026-07-05 - V7 Development And QA
+
+TDD RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_status_display_normalizes_raw_routes
+```
+
+Outcome:
+
+- failed with `ModuleNotFoundError` because `app.web.backtest_practical_validation.status_display` did not exist yet
+
+Implemented:
+
+- `app/web/backtest_practical_validation/status_display.py`
+- shared `validation_status_label()` and `validation_status_tone()`
+- `page.py` imports `validation_status_tone as _status_tone`
+- `workspace_panel.py` uses shared label/tone helpers and passes normalized status to the React Fix Queue component
+
+QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_status_display_normalizes_raw_routes
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py app/web/backtest_practical_validation/status_display.py
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_fix_queue_react_component_is_ui_only tests.test_service_contracts.PracticalValidationServiceContractTests
+git diff --check -- app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py app/web/backtest_practical_validation/status_display.py tests/test_backtest_refactor_boundaries.py
+```
+
+Browser QA:
+
+```bash
+http://localhost:8525/backtest
+```
+
+Checked in browser:
+
+- Practical Validation workflow opens after reload.
+- `practical_validation_fix_queue` iframe still loads.
+- iframe body contains `BLOCKED`.
+- iframe body no longer contains `BLOCKED_FOR_FINAL_REVIEW`.
+- top body text near the first-read Practical Validation surface no longer contains `BLOCKED_FOR_FINAL_REVIEW`.
+- screenshot saved as `backtest-practical-validation-v7-status-display-qa.png`
+
+Outcome:
+
+- focused V7 test passed
+- py_compile passed
+- diff check passed
+- `BacktestRefactorBoundaryTests`: 14 tests passed
+- Practical Validation service plus component contract tests passed: 23 tests
+- Browser QA passed for normalized first-read status display

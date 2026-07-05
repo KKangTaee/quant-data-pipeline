@@ -77,3 +77,7 @@ Browser QA showed known Streamlit relative `_stcore` 404 checks and iframe sandb
 V6 intentionally does not move every Flow 1-5 renderer out of `page.py`. It starts with the Flow 3 first-read workspace surface because that is where V4/V5 created the clearest ownership boundary. Source/profile, replay, evidence, provider action, and handoff renderers are still in `page.py` and can be split later if they become active work.
 
 The workspace panel has a local status tone helper duplicated from `page.py`. V7 should reduce this duplication by introducing a shared display-status helper or otherwise centralizing visible status mapping.
+
+## 2026-07-05 - V7 Residual Risk
+
+V7 normalizes the first-read and common Practical Validation status display, but raw route IDs can still appear in detailed JSON and some technical table columns. That is acceptable for auditability. If future UX pass wants to hide them everywhere, it should preserve the raw values in technical exports or JSON detail.

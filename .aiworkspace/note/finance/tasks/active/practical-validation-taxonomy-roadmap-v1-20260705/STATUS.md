@@ -5,7 +5,7 @@ Last Updated: 2026-07-05
 
 ## Current State
 
-V6 implementation is complete and ready to commit.
+V7 implementation is complete and ready to commit.
 
 Completed in this task:
 
@@ -33,6 +33,9 @@ Completed in this task:
 - Split the Flow 3 first-read surface into `app/web/backtest_practical_validation/workspace_panel.py`.
 - Kept `page.py` responsible for orchestration while the workspace panel owns Fix Queue, core evidence group rendering, and the React component integration.
 - Verified V6 with RED/GREEN boundary tests, py_compile, contract tests, Browser QA, and screenshot.
+- Added a shared Practical Validation status display helper.
+- Normalized user-facing route statuses such as `BLOCKED_FOR_FINAL_REVIEW`, `READY_WITH_REVIEW`, and `READY_FOR_FINAL_REVIEW` into `BLOCKED`, `REVIEW`, and `PASS`.
+- Verified V7 with RED/GREEN status tests, py_compile, contract tests, Browser QA, and screenshot.
 
 ## Current Conclusion
 
@@ -50,14 +53,16 @@ V5 makes the most decision-heavy part of that first-read path feel like one prod
 
 V6 starts the physical split at the highest-value ownership seam: Flow 3's first-read workspace panel moved out of `page.py`. This avoids a giant mechanical refactor while making the React Fix Queue and Streamlit fallback live beside their workspace read-model rendering.
 
+V7 removes the most visible raw route leakage from the first-read Practical Validation surface. Raw route IDs remain available in detailed JSON/technical context, but the primary UI now speaks the standard validation status language.
+
 ## Next Action
 
-V7 should unify user-facing validation status language across the split renderers:
+V8 should close the phase by aligning durable docs and running final integrated QA:
 
-1. Normalize visible status labels around `PASS / REVIEW / NEEDS_INPUT / BLOCKED / NOT_RUN / NOT_APPLICABLE`.
-2. Keep raw route IDs available only in technical/detail surfaces.
-3. Preserve existing gate behavior.
-4. Add focused tests for status mapping and page/panel ownership.
+1. Update durable flow / roadmap / project map docs only where the implemented structure changed.
+2. Update root handoff logs concisely.
+3. Run final focused test and browser QA checks.
+4. Commit the documentation and closeout verification as V8.
 
 ## Verification State
 
@@ -94,6 +99,11 @@ Completed checks:
 - V6 Backtest refactor boundary tests and Practical Validation service contract suite
 - V6 Browser QA against `http://localhost:8525/backtest`
 - V6 screenshot: `backtest-practical-validation-v6-workspace-panel-qa.png`
+- V7 RED/GREEN status display normalization test
+- V7 py_compile and diff check
+- V7 Backtest refactor boundary tests and Practical Validation service contract suite
+- V7 Browser QA against `http://localhost:8525/backtest`
+- V7 screenshot: `backtest-practical-validation-v7-status-display-qa.png`
 
 Browser QA was not run for V1 because no Streamlit UI changed.
 Browser QA was not run for V2 because no Streamlit UI changed.
@@ -101,3 +111,4 @@ Browser QA was not run for V3 because no Streamlit UI changed.
 Browser QA was run for V4.
 Browser QA was run for V5.
 Browser QA was run for V6.
+Browser QA was run for V7.

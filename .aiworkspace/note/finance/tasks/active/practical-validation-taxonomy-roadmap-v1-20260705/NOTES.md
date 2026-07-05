@@ -155,3 +155,15 @@ Moved ownership:
 - Streamlit fallback for the same surface
 
 `page.py` still orchestrates the five flows, session state, source selection, replay execution, save / move controls, and technical detail expanders. This keeps the split behavior-preserving and avoids turning V6 into a broad mechanical rewrite.
+
+## 2026-07-05 - V7 Implementation Note
+
+V7 adds `app/web/backtest_practical_validation/status_display.py`.
+
+The helper maps raw route-like values into user-facing validation status labels:
+
+- `BLOCKED_FOR_FINAL_REVIEW` -> `BLOCKED`
+- `READY_WITH_REVIEW` -> `REVIEW`
+- `READY_FOR_FINAL_REVIEW` -> `PASS`
+
+`page.py` and `workspace_panel.py` now use the same tone mapping. The React Fix Queue card receives the normalized status label, so the first-read card shows `BLOCKED` instead of `BLOCKED_FOR_FINAL_REVIEW`.

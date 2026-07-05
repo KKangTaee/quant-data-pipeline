@@ -9,6 +9,10 @@ from app.web.backtest_practical_validation.components import (
     render_pv_card_grid,
     render_pv_section_header,
 )
+from app.web.backtest_practical_validation.status_display import (
+    validation_status_label,
+    validation_status_tone,
+)
 from app.web.backtest_ui_components import render_badge_strip
 from app.web.components.practical_validation_fix_queue import (
     is_practical_validation_fix_queue_available,
@@ -42,17 +46,6 @@ GATE_FIX_GUIDANCE = {
         "action": "가격 window, provider freshness, lifecycle / survivorship row 중 NEEDS_INPUT 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
     },
 }
-
-
-def _status_tone(status: Any) -> str:
-    status_text = str(status or "").upper()
-    if status_text in {"PASS", "READY", "READY_FOR_FINAL_REVIEW"}:
-        return "positive"
-    if "BLOCKED" in status_text:
-        return "danger"
-    if status_text in {"REVIEW", "NEEDS_INPUT", "READY_WITH_REVIEW"}:
-        return "warning"
-    return "neutral"
 
 
 def _gate_module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -110,7 +103,7 @@ def _render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
                 "status": display_row.get("Fix Location") or "-",
                 "detail": display_row.get("Fix Action") or "-",
                 "meta": display_row.get("Gate Reason") or "",
-                "tone": _status_tone(display_row.get("Status")),
+                "tone": validation_status_tone(display_row.get("Status")),
             }
         )
     render_pv_section_header(
@@ -120,6 +113,10 @@ def _render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
         tone="danger",
     )
     render_pv_card_grid(cards, min_width=260)
+
+
+def render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
+    _render_fix_queue(blocking_modules)
 
 
 def _workspace_group_tone(modules: list[dict[str, Any]]) -> str:
@@ -134,7 +131,7 @@ def _workspace_group_tone(modules: list[dict[str, Any]]) -> str:
 def _workspace_group_status(modules: list[dict[str, Any]]) -> str:
     counts: dict[str, int] = {}
     for module in modules:
-        status = str(module.get("status") or "NOT_RUN").upper()
+        status = validation_status_label(module.get("status") or "NOT_RUN")
         counts[status] = counts.get(status, 0) + 1
     if not counts:
         return "-"
@@ -167,7 +164,7 @@ def _react_fix_queue_items(fix_queue: list[dict[str, Any]]) -> list[dict[str, An
                 "fixLocation": row.get("Fix Location") or "-",
                 "fixAction": row.get("Fix Action") or "-",
                 "gateReason": row.get("Gate Reason") or "",
-                "tone": _status_tone(row.get("Status")),
+                "tone": validation_status_tone(row.get("Status")),
             }
         )
     return items
@@ -200,6 +197,7 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
     core_groups = list(workspace.get("core_evidence_groups") or [])
     conditional_groups = list(workspace.get("conditional_evidence_groups") or [])
     downstream_groups = list(workspace.get("downstream_reference_groups") or [])
+    readiness_status = validation_status_label(gate_summary.get("route"))
 
     render_pv_alert_panel(
         title="2차 검증 결론",
@@ -214,8 +212,8 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
         [
             {
                 "label": "Readiness",
-                "value": gate_summary.get("route") or "-",
-                "tone": _status_tone(gate_summary.get("route")),
+                "value": readiness_status,
+                "tone": validation_status_tone(gate_summary.get("route")),
             },
             {
                 "label": "Final Review Move",
@@ -236,7 +234,7 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
     )
     if is_practical_validation_fix_queue_available():
         render_practical_validation_fix_queue(
-            status_label=str(gate_summary.get("route") or "-"),
+            status_label=readiness_status,
             tone="positive" if gate_summary.get("can_save_and_move") else "danger",
             verdict=str(gate_summary.get("verdict") or "2차 검증 결론"),
             next_action=str(gate_summary.get("next_action") or ""),

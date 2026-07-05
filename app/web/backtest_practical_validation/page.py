@@ -36,7 +36,12 @@ from app.web.backtest_practical_validation.components import (
 )
 from app.web.backtest_practical_validation.workspace_panel import (
     gate_module_display_rows,
+    render_fix_queue,
     render_practical_validation_workspace_overview,
+)
+from app.web.backtest_practical_validation.status_display import (
+    validation_status_label,
+    validation_status_tone as _status_tone,
 )
 from app.web.backtest_ui_components import render_badge_strip
 from app.web.reference_contextual_help import render_reference_contextual_help
@@ -774,17 +779,6 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
     return dict(replay_result) if isinstance(replay_result, dict) else None
 
 
-def _status_tone(status: Any) -> str:
-    status_text = str(status or "").upper()
-    if status_text in {"PASS", "READY", "READY_FOR_FINAL_REVIEW"}:
-        return "positive"
-    if "BLOCKED" in status_text:
-        return "danger"
-    if status_text in {"REVIEW", "NEEDS_INPUT", "READY_WITH_REVIEW"}:
-        return "warning"
-    return "neutral"
-
-
 def _entry_gate_effect_label(effect: Any) -> str:
     mapping = {
         "block": "먼저 해결",
@@ -1076,7 +1070,7 @@ def _render_validation_control_center(
             "아래 Fix Queue에 남은 항목이 없으면 저장 후 Final Review로 이동할 수 있습니다."
         ),
         route_label="Final Review Readiness",
-        route_value=str(gate.get("route") or "-"),
+        route_value=validation_status_label(gate.get("route")),
         route_detail=str(gate.get("verdict") or gate.get("next_action") or ""),
         route_tone=_status_tone(gate.get("route")),
         kpis=[
@@ -1125,7 +1119,7 @@ def _render_validation_control_center(
             {
                 "marker": "4",
                 "title": "Readiness Preview",
-                "detail": gate.get("route") or "-",
+                "detail": validation_status_label(gate.get("route")),
                 "tone": _status_tone(gate.get("route")),
             },
         ]
@@ -1158,7 +1152,7 @@ def _render_validation_control_center(
             },
             {
                 "kicker": "Gate",
-                "title": gate.get("route") or "-",
+                "title": validation_status_label(gate.get("route")),
                 "status": "Move enabled" if gate.get("can_save_and_move") else "Move blocked",
                 "detail": gate.get("verdict") or "",
                 "tone": "positive" if gate.get("can_save_and_move") else "danger",
@@ -1707,7 +1701,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
         [
             {
                 "label": "Gate",
-                "value": gate.get("route") or "-",
+                "value": validation_status_label(gate.get("route")),
                 "tone": _status_tone(gate.get("route")),
             },
             {
@@ -1760,14 +1754,14 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     _render_applied_validation_map(validation_result)
 
     blocking_modules = list(gate.get("blocking_modules") or [])
-    _render_fix_queue(blocking_modules)
+    render_fix_queue(blocking_modules)
     if blocking_modules:
         with st.expander("Fix Queue 상세 테이블", expanded=False):
-            st.dataframe(pd.DataFrame(_gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
+            st.dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
     review_modules = list(gate.get("review_modules") or [])
     if review_modules:
         with st.expander("Final Review에서 확인할 REVIEW 모듈", expanded=False):
-            st.dataframe(pd.DataFrame(_gate_module_display_rows(review_modules)), width="stretch", hide_index=True)
+            st.dataframe(pd.DataFrame(gate_module_display_rows(review_modules)), width="stretch", hide_index=True)
 
     if module_rows:
         required_rows = [row for row in module_rows if row.get("Group") == "Required for Final Review"]
@@ -1816,7 +1810,8 @@ def _render_validation_gate_section(validation_result: dict[str, Any]) -> None:
     profile = dict(validation_result.get("validation_profile") or {})
     gate = dict(validation_result.get("final_review_gate") or {})
     status_counts = dict(dict(validation_result.get("diagnostic_summary") or {}).get("status_counts") or {})
-    route_label = str(gate.get("route") or validation_result.get("validation_route") or "-")
+    route_status = gate.get("route") or validation_result.get("validation_route")
+    route_label = validation_status_label(route_status)
     blocker_count = len(gate.get("blocking_modules") or validation_result.get("hard_blockers") or [])
     render_pv_alert_panel(
         title=f"Gate: {route_label}",
@@ -2431,7 +2426,7 @@ def render_practical_validation_workspace() -> None:
             [
                 {
                     "label": "Gate",
-                    "value": gate.get("route") or validation_result.get("validation_route") or "-",
+                    "value": validation_status_label(gate.get("route") or validation_result.get("validation_route")),
                     "tone": _status_tone(gate.get("route") or validation_result.get("validation_route")),
                 },
                 {

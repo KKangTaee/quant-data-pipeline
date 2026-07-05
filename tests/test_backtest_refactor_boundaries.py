@@ -243,6 +243,28 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("is_practical_validation_fix_queue_available()", panel_source)
         self.assertNotIn("from app.web.backtest_practical_validation.page import", panel_source)
 
+    def test_practical_validation_status_display_normalizes_raw_routes(self) -> None:
+        from app.web.backtest_practical_validation.status_display import (
+            validation_status_label,
+            validation_status_tone,
+        )
+
+        self.assertEqual(validation_status_label("BLOCKED_FOR_FINAL_REVIEW"), "BLOCKED")
+        self.assertEqual(validation_status_label("READY_WITH_REVIEW"), "REVIEW")
+        self.assertEqual(validation_status_label("READY_FOR_FINAL_REVIEW"), "PASS")
+        self.assertEqual(validation_status_label("NOT_APPLICABLE"), "NOT_APPLICABLE")
+        self.assertEqual(validation_status_tone("BLOCKED_FOR_FINAL_REVIEW"), "danger")
+        self.assertEqual(validation_status_tone("READY_WITH_REVIEW"), "warning")
+        self.assertEqual(validation_status_tone("READY_FOR_FINAL_REVIEW"), "positive")
+
+        page_source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
+        panel_source = (PROJECT_ROOT / "app/web/backtest_practical_validation/workspace_panel.py").read_text()
+
+        self.assertIn("validation_status_tone as _status_tone", page_source)
+        self.assertIn("validation_status_label", panel_source)
+        self.assertNotIn("def _status_tone", page_source)
+        self.assertNotIn("def _status_tone", panel_source)
+
 
 if __name__ == "__main__":
     unittest.main()
