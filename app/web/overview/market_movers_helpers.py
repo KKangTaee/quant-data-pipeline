@@ -16,7 +16,6 @@ from app.jobs.overview_actions import (
     run_overview_browser_auto_refresh,
     run_overview_market_intraday_snapshot,
     run_overview_market_liquidity_universe_refresh,
-    run_overview_market_movers_eod_history,
     run_overview_market_mover_statement_refresh,
     run_overview_nasdaq_symbol_directory,
     run_overview_quote_gap_diagnostics,
@@ -666,21 +665,23 @@ def _market_movers_react_actions(*, controls: MarketMoverControls) -> list[dict[
         actions: list[dict[str, Any]] = [
             {"id": "refresh_intraday", "label": "일중 스냅샷 갱신", "kind": "primary"},
         ]
-        if controls.coverage == "SP500":
-            actions.append({"id": "refresh_universe", "label": "유니버스 갱신", "kind": "secondary"})
-        elif controls.coverage == "NASDAQ":
-            actions.append({"id": "refresh_nasdaq_directory", "label": "Nasdaq 목록 갱신", "kind": "secondary"})
-        else:
-            actions.append(
-                {"id": "refresh_liquidity_universe", "label": "유니버스 기준 갱신", "kind": "secondary"}
-            )
+        actions.append(_market_movers_react_universe_basis_action(controls.coverage, kind="secondary"))
         actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
         return actions
 
     return [
-        {"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"},
+        _market_movers_react_universe_basis_action(controls.coverage, kind="primary"),
         {"id": "reload", "label": "화면 새로고침", "kind": "secondary"},
     ]
+
+
+def _market_movers_react_universe_basis_action(coverage: str, *, kind: str) -> dict[str, Any]:
+    normalized = str(coverage or "").strip().upper()
+    if normalized == "SP500":
+        return {"id": "refresh_universe", "label": "유니버스 기준 갱신", "kind": kind}
+    if normalized == "NASDAQ":
+        return {"id": "refresh_nasdaq_directory", "label": "유니버스 기준 갱신", "kind": kind}
+    return {"id": "refresh_liquidity_universe", "label": "유니버스 기준 갱신", "kind": kind}
 
 
 def build_market_movers_react_workbench_payload(
@@ -741,13 +742,6 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
             "handler": "run_overview_market_liquidity_universe_refresh",
             "universe_code": controls.coverage,
             "universe_limit": controls.universe_limit,
-        }
-    if action_id == "refresh_eod_history":
-        return {
-            "handler": "run_overview_market_movers_eod_history",
-            "universe_code": controls.coverage,
-            "universe_limit": controls.universe_limit,
-            "period": controls.period,
         }
     if action_id == "reload":
         return {"handler": "reload_market_movers"}
@@ -901,23 +895,6 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
         st.rerun()
         return True
 
-    if handler == "run_overview_market_movers_eod_history":
-        period = str(plan.get("period") or controls.period)
-        period_label = _market_mover_period_label(period)
-        result_key = f"overview_{universe_code.lower()}_{period}_eod_history_result"
-        with st.spinner(f"{universe_label} {period_label} EOD 가격 이력을 수집하는 중입니다..."):
-            _store_overview_job_result(
-                result_key,
-                run_overview_market_movers_eod_history(
-                    universe_code=universe_code,
-                    universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
-                    period=period,
-                ),
-            )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        st.rerun()
-        return True
-
     if handler == "reload_market_movers":
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
@@ -964,7 +941,7 @@ def build_market_movers_empty_state_model(
         tone = "warning" if status != "OK" else "neutral"
     else:
         title = f"{coverage_label} {period_label} ranking row가 아직 없습니다."
-        primary_action = "가격 이력 갱신"
+        primary_action = "유니버스 기준 갱신"
         tone = "warning" if status != "OK" else "neutral"
     return {
         "schema_version": "market_movers_empty_state_v1",
@@ -2074,12 +2051,28 @@ def _build_market_mover_mode_chart(mode_model: dict[str, Any]) -> alt.Chart:
     return _build_return_bar_chart(rows)
 
 
+def _render_market_movers_universe_result(universe_code: str) -> None:
+    if universe_code == "SP500":
+        _render_market_job_result("overview_sp500_universe_result")
+        return
+    if universe_code == "NASDAQ":
+        st.caption(
+            "Nasdaq coverage는 Nasdaq Symbol Directory current listing snapshot 기준입니다. "
+            "Nasdaq Composite 또는 Nasdaq-100 historical membership proof가 아닙니다."
+        )
+        _render_market_job_result("overview_nasdaq_symbol_directory_result")
+        return
+    if universe_code in {"TOP1000", "TOP2000"}:
+        _render_market_job_result(f"overview_{universe_code.lower()}_liquidity_universe_result")
+
+
 def _render_market_movers_universe_action(container: Any, *, universe_code: str) -> None:
     if universe_code == "SP500":
         if container.button(
-            "유니버스 갱신",
+            "유니버스 기준 갱신",
             key="overview_sp500_universe_refresh",
             use_container_width=True,
+            help="S&P 500 구성 종목 목록을 갱신합니다.",
         ):
             with st.spinner("Refreshing S&P 500 universe..."):
                 _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
@@ -2087,7 +2080,7 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
         return
     if universe_code == "NASDAQ":
         if container.button(
-            "Nasdaq 목록 갱신",
+            "유니버스 기준 갱신",
             key="overview_nasdaq_symbol_directory_refresh",
             use_container_width=True,
             help="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
@@ -2175,14 +2168,7 @@ def _render_market_movers_daily_refresh_bar(
 
     if selected_mode == "auto" and auto_supported:
         _render_market_auto_refresh_summary(universe_code=universe_code)
-    if universe_code == "SP500":
-        _render_market_job_result("overview_sp500_universe_result")
-    if universe_code == "NASDAQ":
-        st.caption(
-            "Nasdaq coverage는 Nasdaq Symbol Directory current listing snapshot 기준입니다. "
-            "Nasdaq Composite 또는 Nasdaq-100 historical membership proof가 아닙니다."
-        )
-        _render_market_job_result("overview_nasdaq_symbol_directory_result")
+    _render_market_movers_universe_result(universe_code)
     _render_market_job_result(intraday_result_key)
 
 
@@ -2213,7 +2199,6 @@ def _render_market_movers_eod_refresh_bar(
 ) -> None:
     period_label = _market_mover_period_label(period)
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
-    eod_result_key = f"overview_{universe_code.lower()}_{period}_eod_history_result"
     coverage = dict(snapshot.get("coverage") or {})
     returnable = coverage.get("returnable_count") or 0
     universe_count = coverage.get("universe_count") or 0
@@ -2229,24 +2214,7 @@ def _render_market_movers_eod_refresh_bar(
         state=_market_movers_eod_refresh_state(snapshot, period=period),
     )
     control_cols = st.columns([1.0, 1.0, 2.0], gap="small", vertical_alignment="bottom")
-    if control_cols[0].button(
-        "가격 이력 갱신",
-        key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
-        use_container_width=True,
-        type="primary",
-        help="기존 OHLCV 수집 pipeline으로 finance_price.nyse_price_history의 EOD 1d 가격 이력을 갱신합니다.",
-    ):
-        with st.spinner(f"{universe_label} {period_label} EOD 가격 이력을 수집하는 중입니다..."):
-            _store_overview_job_result(
-                eod_result_key,
-                run_overview_market_movers_eod_history(
-                    universe_code=universe_code,
-                    universe_limit=universe_limit,
-                    period=period,
-                ),
-            )
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        st.rerun()
+    _render_market_movers_universe_action(control_cols[0], universe_code=universe_code)
     if control_cols[1].button(
         "화면 새로고침",
         key=f"overview_{universe_code.lower()}_{period}_market_movers_reload",
@@ -2254,8 +2222,11 @@ def _render_market_movers_eod_refresh_bar(
     ):
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
-    control_cols[2].caption(f"{period_label}는 저장된 EOD 가격 이력 기준입니다. 자동 갱신은 Daily 일중 스냅샷만 지원합니다.")
-    _render_market_job_result(eod_result_key)
+    control_cols[2].caption(
+        f"{period_label} 결과는 저장된 EOD 가격 기준입니다. "
+        "유니버스 기준 갱신은 coverage 구성 또는 Top 유동성 기준을 다시 저장합니다."
+    )
+    _render_market_movers_universe_result(universe_code)
 
 
 def _render_market_movers_refresh_bar(
@@ -2291,20 +2262,11 @@ def _render_market_movers_react_refresh_companion(
         selected_mode = _market_movers_selected_refresh_mode(controls)
         if selected_mode == "auto" and auto_supported:
             _render_market_auto_refresh_summary(universe_code=controls.coverage)
-        if controls.coverage == "SP500":
-            _render_market_job_result("overview_sp500_universe_result")
-        if controls.coverage == "NASDAQ":
-            st.caption(
-                "Nasdaq coverage는 Nasdaq Symbol Directory current listing snapshot 기준입니다. "
-                "Nasdaq Composite 또는 Nasdaq-100 historical membership proof가 아닙니다."
-            )
-            _render_market_job_result("overview_nasdaq_symbol_directory_result")
-        if controls.coverage in {"TOP1000", "TOP2000"}:
-            _render_market_job_result(f"overview_{controls.coverage.lower()}_liquidity_universe_result")
+        _render_market_movers_universe_result(controls.coverage)
         _render_market_job_result(f"overview_{controls.coverage.lower()}_intraday_result")
         return
 
-    _render_market_job_result(f"overview_{controls.coverage.lower()}_{controls.period}_eod_history_result")
+    _render_market_movers_universe_result(controls.coverage)
 
 
 def _rank_token(value: Any, fallback: int) -> str:

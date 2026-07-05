@@ -42,3 +42,12 @@
   - Result: passed.
 - 2026-07-05: `git diff --check`
   - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_refresh_bar_hides_eod_action_for_non_daily_basic_ui tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_actions_hide_price_history_refresh_for_non_daily`
+  - RED: non-daily Market Movers UI still exposed `가격 이력 갱신` / `refresh_eod_history`.
+  - GREEN: 2 tests passed after routing non-daily refresh actions to coverage-specific `유니버스 기준 갱신`.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests`
+  - Result: 244 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile app/web/overview/market_movers_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.

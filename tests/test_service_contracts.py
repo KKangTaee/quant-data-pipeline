@@ -7518,13 +7518,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(intraday_row["cadence_minutes"], 30)
         self.assertTrue(intraday_row["market_hours_only"])
 
-    def test_overview_market_movers_refresh_bar_renders_eod_action_for_non_daily_without_auto_mode(self) -> None:
+    def test_overview_market_movers_refresh_bar_hides_eod_action_for_non_daily_basic_ui(self) -> None:
         source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
 
-        self.assertIn("run_overview_market_movers_eod_history", source)
         self.assertIn("def _render_market_movers_daily_refresh_bar", source)
         self.assertIn("def _render_market_movers_eod_refresh_bar", source)
-        self.assertIn("run_overview_market_movers_eod_history,", source)
 
         dispatch_body = source[source.index("def _render_market_movers_refresh_bar") :]
         dispatch_body = dispatch_body[: dispatch_body.index("def _rank_token")]
@@ -7533,8 +7531,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         eod_body = source[source.index("def _render_market_movers_eod_refresh_bar") :]
         eod_body = eod_body[: eod_body.index("def _render_market_movers_refresh_bar")]
-        self.assertIn("가격 이력 갱신", eod_body)
-        self.assertIn("run_overview_market_movers_eod_history(", eod_body)
+        self.assertIn("유니버스 기준 갱신", eod_body)
+        self.assertIn("_render_market_movers_universe_action(control_cols[0]", eod_body)
+        self.assertNotIn("가격 이력 갱신", eod_body)
+        self.assertNotIn("run_overview_market_movers_eod_history(", eod_body)
         self.assertNotIn("_select_market_refresh_mode", eod_body)
         self.assertNotIn("_render_market_auto_refresh_summary", eod_body)
 
@@ -9914,6 +9914,39 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["handler"], "run_overview_market_liquidity_universe_refresh")
         self.assertEqual(plan["universe_code"], "TOP1000")
         self.assertEqual(plan["universe_limit"], 1000)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_actions_hide_price_history_refresh_for_non_daily(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="TOP2000",
+            universe_limit=2000,
+            period="monthly",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+
+        payload = build_market_movers_react_workbench_payload(
+            {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}},
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        action_ids = [action["id"] for action in payload["actions"]]
+        action_labels = [action["label"] for action in payload["actions"]]
+        self.assertIn("refresh_liquidity_universe", action_ids)
+        self.assertIn("유니버스 기준 갱신", action_labels)
+        self.assertNotIn("refresh_eod_history", action_ids)
+        self.assertNotIn("가격 이력 갱신", action_labels)
 
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_filters_live_inside_workbench_card(self, mock_st: MagicMock) -> None:
