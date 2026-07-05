@@ -12,6 +12,15 @@
   - Result: passed.
 - 2026-07-05: `git diff --check`
   - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_top_universe_reads_materialized_liquidity_members tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_top_universe_snapshot_defaults_to_materialized_liquidity_members`
+  - RED: service and intraday snapshot still used live market_cap universe paths.
+  - GREEN: materialized read paths passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests tests.test_service_contracts.MarketIntelligenceIngestionContractTests`
+  - Result: 122 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile app/services/overview/market_movers.py finance/data/market_intelligence.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.
 - 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_market_movers_followup_keeps_refresh_actions_in_fixed_slots tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_actions_use_liquidity_universe_refresh_for_top_coverage tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_event_bridge_dispatches_liquidity_universe_refresh_once`
   - RED: helper import/action/dispatch still used disabled Top universe behavior.
   - GREEN: 3 tests passed after wiring `유니버스 기준 갱신`.

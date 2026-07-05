@@ -710,32 +710,42 @@ def _load_universe(
             "finance_meta",
             """
             SELECT
-                p.symbol,
-                COALESCE(NULLIF(p.long_name, ''), s.name) AS long_name,
-                p.sector,
-                p.industry,
-                p.market_cap,
+                m.symbol,
+                COALESCE(NULLIF(p.long_name, ''), NULLIF(m.name, ''), s.name) AS long_name,
+                COALESCE(p.sector, m.sector) AS sector,
+                COALESCE(p.industry, m.industry) AS industry,
+                COALESCE(p.market_cap, m.market_cap) AS market_cap,
                 p.exchange AS profile_exchange,
                 p.status,
                 p.error_msg,
                 p.last_collected_at,
-                NULL AS universe_as_of_date,
-                NULL AS universe_collected_at,
-                'nyse_asset_profile' AS universe_source,
-                NULL AS universe_source_url
-            FROM nyse_asset_profile p
+                m.rank_position AS universe_rank_position,
+                m.avg_dollar_volume_20d,
+                m.dollar_volume_days,
+                m.ranking_window_start_date,
+                m.ranking_end_date AS universe_as_of_date,
+                m.generated_at AS universe_collected_at,
+                m.ranking_source AS universe_source,
+                m.price_source AS universe_price_source,
+                m.listing_source AS universe_listing_source,
+                m.listing_source_url AS universe_listing_source_url,
+                m.listing_source_type AS universe_listing_source_type,
+                m.listing_coverage_status AS universe_listing_coverage_status,
+                m.listing_event_type AS universe_listing_event_type,
+                m.listing_status AS universe_listing_status,
+                m.listing_event_date AS universe_listing_event_date
+            FROM market_liquidity_universe_member m
+            LEFT JOIN nyse_asset_profile p
+              ON p.symbol = m.symbol
+             AND p.kind = %s
             LEFT JOIN nyse_stock s
-              ON s.symbol = p.symbol
-            WHERE p.kind = %s
-              AND p.country = %s
-              AND p.market_cap IS NOT NULL
-              AND p.market_cap > 0
-              AND (p.is_spac IS NULL OR p.is_spac <> 1)
-              AND (p.status IS NULL OR LOWER(p.status) NOT IN ('dilist', 'delist', 'delisted'))
-            ORDER BY p.market_cap DESC, p.symbol ASC
+              ON s.symbol = m.symbol
+            WHERE m.universe_code = %s
+              AND m.active = 1
+            ORDER BY m.rank_position ASC, m.symbol ASC
             LIMIT %s
             """,
-            ["stock", "United States", int(universe_limit)],
+            ["stock", universe_code, int(universe_limit)],
         ),
         sector,
     )
@@ -1904,6 +1914,16 @@ def _universe_metadata(universe: list[dict[str, Any]], *, universe_code: str) ->
             "universe_listing_status": first.get("universe_listing_status") or first.get("listing_status"),
             "universe_caveat": "Nasdaq Symbol Directory is current listing observation only; not historical membership proof.",
             "coverage_basis": "Nasdaq-listed current snapshot",
+        }
+    if universe_code in {"TOP1000", "TOP2000"}:
+        first = universe[0]
+        return {
+            "universe_as_of_date": _iso_date(first.get("universe_as_of_date")),
+            "universe_collected_at": _display_datetime(first.get("universe_collected_at")),
+            "universe_source": first.get("universe_source"),
+            "universe_price_source": first.get("universe_price_source"),
+            "universe_caveat": "Top universe is ranked by recent 20D average dollar volume, not company size.",
+            "coverage_basis": "20D avg dollar volume materialized universe",
         }
     collected = [
         _display_datetime(row.get("last_collected_at"))

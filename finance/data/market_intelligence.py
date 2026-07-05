@@ -3554,7 +3554,7 @@ def collect_and_store_market_intraday_snapshot(
             port=port,
         )
     else:
-        loader = lambda: load_market_cap_universe_members(
+        loader = lambda: load_market_liquidity_universe_members(
             normalized_universe,
             universe_limit=normalized_limit,
             host=host,

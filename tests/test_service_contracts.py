@@ -8993,7 +8993,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "volume_days": 5,
                 },
             ]
-        if "FROM nyse_asset_profile" in sql:
+        if "FROM market_liquidity_universe_member" in sql or "FROM nyse_asset_profile" in sql:
             return [
                 {
                     "symbol": "AAA",
@@ -9001,6 +9001,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Technology",
                     "industry": "Software",
                     "market_cap": 100,
+                    "universe_rank_position": 1,
+                    "avg_dollar_volume_20d": 1200000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
                 {
                     "symbol": "BBB",
@@ -9008,6 +9012,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Technology",
                     "industry": "Software",
                     "market_cap": 300,
+                    "universe_rank_position": 2,
+                    "avg_dollar_volume_20d": 1000000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
                 {
                     "symbol": "CCC",
@@ -9015,6 +9023,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Healthcare",
                     "industry": "Medical Devices",
                     "market_cap": 200,
+                    "universe_rank_position": 3,
+                    "avg_dollar_volume_20d": 900000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
                 {
                     "symbol": "DDD",
@@ -9022,6 +9034,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Energy",
                     "industry": "Oil & Gas",
                     "market_cap": 100,
+                    "universe_rank_position": 4,
+                    "avg_dollar_volume_20d": 800000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
             ]
         if "COALESCE(adj_close, close) AS price" in sql:
@@ -9184,7 +9200,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["universe_code"], "TOP1000")
         self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
-        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "20D avg dollar volume materialized universe")
         self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
         self.assertEqual(snapshot["coverage"]["returnable_pct"], 25.0)
         self.assertEqual(snapshot["coverage"]["refresh_state"]["universe_count"], 4)
@@ -9193,6 +9209,63 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+
+    def test_market_movers_top_universe_reads_materialized_liquidity_members(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        queries: list[str] = []
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            queries.append(sql)
+            if "FROM market_liquidity_universe_member" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "long_name": "AAA Corp",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 100,
+                        "avg_dollar_volume_20d": 1_200_000.0,
+                        "universe_rank_position": 1,
+                        "universe_collected_at": "2026-07-05 05:31:00",
+                        "universe_source": "nyse_price_history.20d_avg_dollar_volume",
+                    }
+                ]
+            if "MAX(snapshot_time_utc) AS snapshot_time_utc" in sql:
+                return [{"snapshot_time_utc": "2026-07-05 05:31:00"}]
+            if "FROM market_intraday_snapshot s" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "interval_code": "5m",
+                        "snapshot_time_utc": "2026-07-05 05:31:00",
+                        "quote_time_utc": "2026-07-05 05:30:00",
+                        "previous_close": 100.0,
+                        "latest_price": 112.0,
+                        "return_pct": 12.0,
+                        "volume": 1000,
+                        "provider_status": "ok",
+                        "error_msg": None,
+                        "source": "yahoo_quote",
+                        "source_ref": "test",
+                    }
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            top_n=5,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "20D avg dollar volume materialized universe")
+        self.assertEqual(snapshot["coverage"]["universe_count"], 1)
+        self.assertTrue(any("FROM market_liquidity_universe_member" in sql for sql in queries))
+        self.assertFalse(any("FROM nyse_asset_profile p" in sql for sql in queries))
 
     def test_market_movers_snapshot_uses_nasdaq_symbol_directory_current_snapshot(self) -> None:
         from app.services.overview.market_movers import build_market_movers_snapshot
@@ -9301,7 +9374,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
-            if "FROM nyse_asset_profile" in sql:
+            if "FROM market_liquidity_universe_member" in sql:
                 return [
                     {
                         "symbol": "AAA",
@@ -9416,7 +9489,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
-            if "FROM nyse_asset_profile" in sql:
+            if "FROM market_liquidity_universe_member" in sql:
                 return [
                     {"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100},
                     {"symbol": "BBB", "long_name": "BBB Corp", "sector": "Technology", "industry": "Software", "market_cap": 300},
@@ -9493,7 +9566,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
-            if "FROM nyse_asset_profile" in sql:
+            if "FROM market_liquidity_universe_member" in sql:
                 return [
                     {"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100},
                     {"symbol": "BBB", "long_name": "BBB Corp", "sector": "Technology", "industry": "Software", "market_cap": 300},
@@ -9635,7 +9708,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
-            if "FROM nyse_asset_profile" in sql:
+            if "FROM market_liquidity_universe_member" in sql:
                 return [{"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100}]
             if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
                 return [{"latest_raw_date": "2026-05-20"}]
@@ -12109,7 +12182,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         observed_sql: dict[str, str] = {}
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
-            if "FROM nyse_asset_profile p" in sql:
+            if "FROM market_liquidity_universe_member m" in sql:
                 observed_sql["universe"] = sql
                 return [
                     {
@@ -12139,7 +12212,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
         self.assertIn("LEFT JOIN nyse_stock", observed_sql["universe"])
-        self.assertIn("COALESCE(NULLIF(p.long_name, ''), s.name)", observed_sql["universe"])
+        self.assertIn("COALESCE(NULLIF(p.long_name, ''), NULLIF(m.name, ''), s.name)", observed_sql["universe"])
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["rows"].iloc[0]["Name"], "BBB LISTING INC")
 
@@ -16730,6 +16803,57 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(result["rows_written"], 2)
         self.assertEqual(written_rows[0]["universe_code"], "TOP1000")
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
+
+    def test_top_universe_snapshot_defaults_to_materialized_liquidity_members(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [{"symbol": "AAA"}, {"symbol": "BBB"}]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912000,
+                    "regularMarketVolume": 1000,
+                },
+                {
+                    "symbol": "BBB",
+                    "regularMarketPrice": 96.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912001,
+                    "regularMarketVolume": 2000,
+                },
+            ]
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "load_market_liquidity_universe_members", return_value=members) as load_liquidity,
+            patch.object(mi, "load_market_cap_universe_members", return_value=[]) as load_market_cap,
+            patch.object(mi, "_load_db_previous_close_map", return_value={}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", return_value=2),
+        ):
+            result = mi.collect_and_store_market_intraday_snapshot(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["rows_written"], 2)
+        load_liquidity.assert_called_once_with(
+            "TOP1000",
+            universe_limit=1000,
+            host="localhost",
+            user="root",
+            password="1234",
+            port=3306,
+        )
+        load_market_cap.assert_not_called()
 
     def test_liquidity_universe_schema_tracks_materialized_rank_contract(self) -> None:
         from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
