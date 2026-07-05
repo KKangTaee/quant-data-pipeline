@@ -228,6 +228,33 @@ body {
   margin-bottom: 10px;
 }
 
+.fm-workbench__flow-tabs {
+  display: inline-grid;
+  gap: 3px;
+  grid-auto-columns: minmax(46px, auto);
+  grid-auto-flow: column;
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+.fm-workbench__flow-tab {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 850;
+  min-height: 30px;
+  padding: 5px 10px;
+}
+
+.fm-workbench__flow-tab--active {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+
 .fm-workbench__flow-grid,
 .fm-workbench__validation-metrics {
   display: grid;

@@ -163,3 +163,59 @@ Result: component available `True`, schema `futures_macro_react_workbench_v1`, 6
 Result: Browser QA confirmed the Futures Macro React iframe renders the workbench payload, `Futures Macro actions`, `과거 점검 불러오기`, lazy validation state, score chips, and 1W flow. The in-app Browser automation did not deliver iframe button clicks to the React handler / Python component return path, so click dispatch was not claimed from Browser QA; nested/direct event parsing and dispatch remain covered by unit contract.
 
 Screenshot: `browser-qa-futures-macro-phase2.png` in this task folder. It is a generated QA artifact and should remain uncommitted unless explicitly requested.
+
+### Phase 3 RED / GREEN
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_workbench_payload_keeps_python_action_boundary \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_component_scaffold_keeps_streamlit_fallback \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_thermometer_builds_flow_context_for_1w_and_1m_moves
+```
+
+RED result: failed because `flow_context` was absent from the macro read model, the React payload had no `default_period` / `periods`, and the component source had no flow period tab controls.
+
+GREEN result: passed after adding `build_macro_flow_context(...)`, carrying `1W` / `1M` periods through the React payload, and rendering period tabs in the custom component.
+
+### Phase 3 Focused QA
+
+```bash
+.venv/bin/python -m py_compile app/services/futures_macro_thermometer.py app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py
+.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests
+```
+
+Result: `py_compile` passed, FuturesMacroThermometer contract class passed 17 tests, and OverviewAutomation contract class passed 144 tests.
+
+```bash
+cd app/web/streamlit_components/futures_macro_workbench
+npm run build
+```
+
+Result: Vite build passed with 170 transformed modules and wrote the checked-in `component_static` bundle.
+
+### Phase 3 Snapshot Smoke
+
+```bash
+.venv/bin/python - <<'PY'
+from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload, load_overview_futures_macro_snapshot
+
+macro = load_overview_futures_macro_snapshot(include_validation=False)
+payload = build_futures_macro_react_workbench_payload(macro, validation={}, confidence={}, validation_loaded_at="")
+flow = payload.get("flow", {})
+print({
+    "component": payload.get("component"),
+    "schema": payload.get("schema_version"),
+    "flow_default": flow.get("default_period"),
+    "flow_periods": [period.get("key") for period in flow.get("periods", [])],
+    "period_titles": [period.get("title") for period in flow.get("periods", [])],
+    "cards": len(flow.get("cards") or []),
+})
+PY
+```
+
+Result: component `FuturesMacroWorkbench`, schema `futures_macro_react_workbench_v1`, default `1W`, periods `['1W', '1M']`, titles `['최근 1주 흐름', '최근 1개월 흐름']`, and 5 default flow cards.
+
+### Phase 3 Browser QA Attempt
+
+Result: Streamlit server on port 8501 responded with HTTP 200, but the Codex In-app Browser tab API timed out when listing or reading tabs during Phase 3. No Phase 3 screenshot was captured. Unit contracts, React build, and snapshot smoke verify the 1W / 1M payload and component source, but iframe visual QA remains a final QA follow-up.

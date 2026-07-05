@@ -13,7 +13,7 @@ Current active task: `.aiworkspace/note/finance/tasks/active/overview-futures-ma
 
 목적: `Workspace > Overview > Futures Macro`를 빠른 첫 진입 화면으로 만들고, historical validation을 명시적 사용자 action으로 분리한 뒤 React custom component 전환, 1W/1M 흐름 확장, mixed subtype refinement, validation cache/materialization 판단, 최종 QA/docs 순서로 닫는다.
 
-현재 상태: 2차 React workbench MVP 완료. 탭 진입은 `include_validation=False` snapshot을 사용하고, `과거 점검 불러오기`가 historical validation과 confidence를 session state에 저장한다. `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다. `app/web/streamlit_components/futures_macro_workbench/` React component가 command strip, macro brief, score chips, 1W flow, validation state, evidence drawer를 렌더링하고, Python이 DB 읽기 / refresh action / validation 계산 / rerun boundary를 계속 소유한다. 다음 차수는 1W / 1M reading-flow expansion이다.
+현재 상태: 3차 1W / 1M reading-flow expansion 완료. 탭 진입은 `include_validation=False` snapshot을 사용하고, `과거 점검 불러오기`가 historical validation과 confidence를 session state에 저장한다. `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다. `app/web/streamlit_components/futures_macro_workbench/` React component가 command strip, macro brief, score chips, 1W / 1M flow tabs, validation state, evidence drawer를 렌더링하고, Python이 DB 읽기 / refresh action / validation 계산 / rerun boundary를 계속 소유한다. 다음 차수는 mixed subtype / confidence interpretation refinement이다.
 
 목적: 재무제표 source migration 1~9차를 닫고, durable docs와 runbook에서 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 saved/history replay용 legacy compatibility로 고정한다.
 

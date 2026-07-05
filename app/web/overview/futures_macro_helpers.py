@@ -279,12 +279,12 @@ def _futures_macro_react_scores(scores: Any) -> list[dict[str, str]]:
     return rows
 
 
-def _futures_macro_react_flow(weekly_context: dict[str, Any]) -> dict[str, Any]:
-    cards: list[dict[str, str]] = []
-    for card in list(weekly_context.get("cards") or []):
+def _futures_macro_react_flow_cards(cards: list[Any]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for card in cards:
         if not isinstance(card, dict):
             continue
-        cards.append(
+        out.append(
             {
                 "label": _display_text(card.get("label")),
                 "value": _display_text(card.get("value")),
@@ -293,11 +293,59 @@ def _futures_macro_react_flow(weekly_context: dict[str, Any]) -> dict[str, Any]:
                 "tone": str(card.get("tone") or "neutral"),
             }
         )
+    return out
+
+
+def _futures_macro_react_flow_period(period: dict[str, Any]) -> dict[str, Any]:
+    key = _display_text(period.get("key"), "1W")
     return {
+        "key": key,
+        "label": _display_text(period.get("label"), key),
+        "title": _display_text(period.get("title"), "최근 1주 흐름"),
+        "basis": _display_text(period.get("basis"), "저장된 1D 선물 OHLCV의 최근 5거래일 변화율"),
+        "summary": _display_text(period.get("summary"), "최근 흐름을 계산할 자료가 부족합니다."),
+        "cards": _futures_macro_react_flow_cards(list(period.get("cards") or [])),
+    }
+
+
+def _futures_macro_react_flow(weekly_context: dict[str, Any], flow_context: dict[str, Any] | None = None) -> dict[str, Any]:
+    periods: list[dict[str, Any]] = []
+    if isinstance(flow_context, dict):
+        for period in list(flow_context.get("periods") or []):
+            if isinstance(period, dict):
+                periods.append(_futures_macro_react_flow_period(period))
+    if periods:
+        default_period = (
+            _display_text(flow_context.get("default_period"), periods[0]["key"])
+            if isinstance(flow_context, dict)
+            else periods[0]["key"]
+        )
+        selected = next((period for period in periods if period["key"] == default_period), periods[0])
+        return {
+            "title": selected["title"],
+            "basis": selected["basis"],
+            "summary": selected["summary"],
+            "cards": selected["cards"],
+            "default_period": default_period,
+            "periods": periods,
+        }
+
+    cards = _futures_macro_react_flow_cards(list(weekly_context.get("cards") or []))
+    fallback_period = {
+        "key": "1W",
+        "label": "1W",
         "title": "최근 1주 흐름",
         "basis": _display_text(weekly_context.get("basis"), "저장된 1D 선물 OHLCV의 최근 5거래일 변화율"),
         "summary": _display_text(weekly_context.get("summary"), "최근 흐름을 계산할 자료가 부족합니다."),
         "cards": cards,
+    }
+    return {
+        "title": fallback_period["title"],
+        "basis": fallback_period["basis"],
+        "summary": fallback_period["summary"],
+        "cards": cards,
+        "default_period": "1W",
+        "periods": [fallback_period],
     }
 
 
@@ -406,7 +454,10 @@ def build_futures_macro_react_workbench_payload(
             ],
         },
         "scores": _futures_macro_react_scores(macro.get("scores")),
-        "flow": _futures_macro_react_flow(dict(macro.get("weekly_context") or {})),
+        "flow": _futures_macro_react_flow(
+            dict(macro.get("weekly_context") or {}),
+            dict(macro.get("flow_context") or {}),
+        ),
         "validation": {
             "title": "과거 점검",
             "state": validation_state["state"],

@@ -5893,6 +5893,43 @@ class OverviewAutomationContractTests(unittest.TestCase):
                     }
                 ],
             },
+            "flow_context": {
+                "default_period": "1W",
+                "periods": [
+                    {
+                        "key": "1W",
+                        "label": "1W",
+                        "title": "최근 1주 흐름",
+                        "summary": "최근 1주 원자재/물가 변화가 가장 두드러집니다.",
+                        "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+                        "cards": [
+                            {
+                                "label": "위험선호",
+                                "value": "+1.09%",
+                                "detail": "지수 선물이 최근 1주 위험자산 선호를 지지합니다.",
+                                "meaning": "ES/NQ/RTY 5D 흐름",
+                                "tone": "positive",
+                            }
+                        ],
+                    },
+                    {
+                        "key": "1M",
+                        "label": "1M",
+                        "title": "최근 1개월 흐름",
+                        "summary": "최근 1개월 안전자산 변화가 가장 두드러집니다.",
+                        "basis": "저장된 1D 선물 OHLCV의 최근 20거래일 변화율",
+                        "cards": [
+                            {
+                                "label": "안전자산",
+                                "value": "+2.88%",
+                                "detail": "금 / 채권 / 엔 쪽 최근 1개월 방어 수요가 보입니다.",
+                                "meaning": "금, 채권선물, 엔 선물을 묶어 방어적 선호를 확인합니다.",
+                                "tone": "warning",
+                            }
+                        ],
+                    },
+                ],
+            },
             "evidence_reading": [
                 {
                     "key": "strong",
@@ -5928,6 +5965,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
         self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 방향성 없음")
         self.assertEqual(payload["scores"][0]["label"], "위험선호")
+        self.assertEqual(payload["flow"]["default_period"], "1W")
+        self.assertEqual([period["key"] for period in payload["flow"]["periods"]], ["1W", "1M"])
+        self.assertEqual(payload["flow"]["periods"][1]["title"], "최근 1개월 흐름")
         self.assertEqual(payload["flow"]["cards"][0]["label"], "위험선호")
         self.assertEqual(payload["evidence"]["sections"][0]["items"][0]["title"], "금리 부담 · ZN=F")
         self.assertEqual(payload["action_boundary"], "python_dispatch_only")
@@ -5968,9 +6008,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
         self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("flowPeriods.map", react_source)
+        self.assertIn("setSelectedFlowKey", react_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("Streamlit.setFrameHeight", react_source)
         self.assertIn(".fm-workbench__scores", react_style)
+        self.assertIn(".fm-workbench__flow-tabs", react_style)
         self.assertIn(".fm-workbench__evidence", react_style)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
@@ -16405,6 +16448,45 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                 )
         return rows
 
+    def _daily_rows_with_recent_flow_moves(
+        self,
+        five_day_moves: dict[str, float],
+        twenty_day_moves: dict[str, float],
+        *,
+        days: int = 260,
+    ) -> list[dict[str, object]]:
+        base = pd.Timestamp(date.today().isoformat(), tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        rows: list[dict[str, object]] = []
+        for symbol_index, (symbol, five_day_move) in enumerate(five_day_moves.items()):
+            price = 100.0 + symbol_index * 7.0
+            twenty_day_move = twenty_day_moves.get(symbol, five_day_move)
+            pre_recent_move = ((1.0 + twenty_day_move) / (1.0 + five_day_move)) - 1.0
+            month_daily_move = (1.0 + pre_recent_move) ** (1 / 15) - 1.0
+            week_daily_move = (1.0 + five_day_move) ** (1 / 5) - 1.0
+            for idx in range(days):
+                daily_move = 0.0002
+                if days - 20 <= idx < days - 5:
+                    daily_move = month_daily_move
+                elif idx >= days - 5:
+                    daily_move = week_daily_move
+                price *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": price * 0.995,
+                        "high": price * 1.005,
+                        "low": price * 0.99,
+                        "close": price,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return rows
+
     def _risk_on_validation_rows(self, *, days: int = 150) -> tuple[list[str], list[dict[str, object]]]:
         symbols = [
             "ES=F",
@@ -16687,6 +16769,82 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertIn("금리 부담", card_by_label)
         self.assertGreater(card_by_label["금리 부담"]["raw_value"], 0)
         self.assertIn("채권선물", card_by_label["금리 부담"]["meaning"])
+
+    def test_macro_thermometer_builds_flow_context_for_1w_and_1m_moves(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "HG=F",
+            "NG=F",
+            "GC=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        five_day_moves = {symbol: 0.001 for symbol in symbols}
+        five_day_moves.update(
+            {
+                "ES=F": 0.023,
+                "NQ=F": 0.031,
+                "RTY=F": 0.018,
+                "ZN=F": -0.015,
+                "ZB=F": -0.018,
+                "CL=F": 0.028,
+                "HG=F": 0.02,
+                "NG=F": 0.015,
+                "6E=F": -0.012,
+                "6A=F": -0.011,
+            }
+        )
+        twenty_day_moves = {symbol: 0.001 for symbol in symbols}
+        twenty_day_moves.update(
+            {
+                "ES=F": -0.042,
+                "NQ=F": -0.035,
+                "RTY=F": -0.05,
+                "ZN=F": 0.024,
+                "ZB=F": 0.026,
+                "GC=F": 0.045,
+                "6J=F": 0.02,
+                "CL=F": -0.015,
+                "HG=F": -0.01,
+                "NG=F": -0.012,
+                "6E=F": 0.012,
+                "6B=F": 0.011,
+                "6A=F": 0.009,
+                "6C=F": 0.008,
+            }
+        )
+        candle_rows = self._daily_rows_with_recent_flow_moves(five_day_moves, twenty_day_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        flow = snapshot["flow_context"]
+
+        self.assertEqual(flow["default_period"], "1W")
+        self.assertEqual([period["key"] for period in flow["periods"]], ["1W", "1M"])
+        period_by_key = {period["key"]: period for period in flow["periods"]}
+        self.assertEqual(period_by_key["1W"]["title"], "최근 1주 흐름")
+        self.assertIn("최근 5거래일", period_by_key["1W"]["basis"])
+        self.assertEqual(period_by_key["1M"]["title"], "최근 1개월 흐름")
+        self.assertIn("최근 20거래일", period_by_key["1M"]["basis"])
+        one_month_cards = {card["label"]: card for card in period_by_key["1M"]["cards"]}
+        self.assertLess(one_month_cards["위험선호"]["raw_value"], 0)
+        self.assertGreater(one_month_cards["안전자산"]["raw_value"], 0)
+        self.assertIn("최근 1개월", one_month_cards["위험선호"]["detail"])
 
     def test_macro_thermometer_returns_current_state_evidence_reading(self) -> None:
         from app.services.futures_macro_thermometer import build_macro_evidence_reading

@@ -131,6 +131,31 @@ WEEKLY_CONTEXT_GROUPS = (
     },
 )
 
+FLOW_CONTEXT_PERIODS = (
+    {
+        "key": "1W",
+        "label": "1W",
+        "title": "최근 1주 흐름",
+        "column": "5D %",
+        "copy_period": "최근 1주",
+        "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+        "missing_summary": "최근 1주 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+        "missing_detail": "최근 1주 변화율을 계산할 일봉 데이터가 부족합니다.",
+        "neutral_detail": "최근 1주 변화는 중립권입니다.",
+    },
+    {
+        "key": "1M",
+        "label": "1M",
+        "title": "최근 1개월 흐름",
+        "column": "20D %",
+        "copy_period": "최근 1개월",
+        "basis": "저장된 1D 선물 OHLCV의 최근 20거래일 변화율",
+        "missing_summary": "최근 1개월 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+        "missing_detail": "최근 1개월 변화율을 계산할 일봉 데이터가 부족합니다.",
+        "neutral_detail": "최근 1개월 변화는 중립권입니다.",
+    },
+)
+
 
 @dataclass(frozen=True)
 class ScoreDefinition:
@@ -849,7 +874,14 @@ def _signed_percent_label(value: float | None) -> str:
     return f"{float(value):+.2f}%"
 
 
-def _weekly_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any]) -> float | None:
+def _flow_period_text(text: Any, period: dict[str, Any]) -> str:
+    value = str(text or "")
+    if str(period.get("key")) == "1M":
+        return value.replace("최근 1주", "최근 1개월").replace("5D", "20D")
+    return value
+
+
+def _flow_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any], column: str) -> float | None:
     if not isinstance(symbol_metrics, pd.DataFrame) or symbol_metrics.empty or "Symbol" not in symbol_metrics:
         return None
     values: list[float] = []
@@ -857,7 +889,7 @@ def _weekly_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any]) -> 
         matches = symbol_metrics[symbol_metrics["Symbol"] == symbol]
         if matches.empty:
             continue
-        value = _safe_float(matches.iloc[0].get("5D %"))
+        value = _safe_float(matches.iloc[0].get(column))
         if value is not None:
             values.append(value * float(group.get("multiplier") or 1.0))
     if not values:
@@ -865,7 +897,7 @@ def _weekly_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any]) -> 
     return _round(sum(values) / len(values), 2)
 
 
-def _weekly_tone(value: float | None, group: dict[str, Any]) -> str:
+def _flow_tone(value: float | None, group: dict[str, Any]) -> str:
     if value is None:
         return "neutral"
     if value >= 0.5:
@@ -875,38 +907,41 @@ def _weekly_tone(value: float | None, group: dict[str, Any]) -> str:
     return "neutral"
 
 
-def _weekly_detail(value: float | None, group: dict[str, Any]) -> str:
+def _flow_detail(value: float | None, group: dict[str, Any], period: dict[str, Any]) -> str:
     if value is None:
-        return "최근 1주 변화율을 계산할 일봉 데이터가 부족합니다."
+        return str(period.get("missing_detail") or "최근 흐름을 계산할 일봉 데이터가 부족합니다.")
     if value >= 0.5:
-        return str(group.get("positive_detail") or "최근 1주 상승 흐름입니다.")
+        return _flow_period_text(group.get("positive_detail") or "최근 1주 상승 흐름입니다.", period)
     if value <= -0.5:
-        return str(group.get("negative_detail") or "최근 1주 하락 흐름입니다.")
-    return "최근 1주 변화는 중립권입니다."
+        return _flow_period_text(group.get("negative_detail") or "최근 1주 하락 흐름입니다.", period)
+    return str(period.get("neutral_detail") or "최근 흐름은 중립권입니다.")
 
 
-def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
+def _build_macro_flow_period(symbol_metrics: pd.DataFrame, period: dict[str, Any]) -> dict[str, Any]:
     cards: list[dict[str, Any]] = []
     for group in WEEKLY_CONTEXT_GROUPS:
-        value = _weekly_group_value(symbol_metrics, group)
+        value = _flow_group_value(symbol_metrics, group, str(period["column"]))
         cards.append(
             {
                 "label": str(group["label"]),
                 "raw_value": value,
                 "value": _signed_percent_label(value),
-                "detail": _weekly_detail(value, group),
-                "meaning": str(group.get("meaning") or ""),
-                "tone": _weekly_tone(value, group),
+                "detail": _flow_detail(value, group, period),
+                "meaning": _flow_period_text(group.get("meaning") or "", period),
+                "tone": _flow_tone(value, group),
                 "symbols": list(group["symbols"]),
             }
         )
     usable = [card for card in cards if card.get("raw_value") is not None]
     if not usable:
         return {
+            "key": str(period["key"]),
+            "label": str(period["label"]),
+            "title": str(period["title"]),
             "status": "MISSING",
-            "summary": "최근 1주 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+            "summary": str(period["missing_summary"]),
             "cards": cards,
-            "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+            "basis": str(period["basis"]),
         }
 
     dominant = max(usable, key=lambda card: abs(float(card.get("raw_value") or 0.0)))
@@ -915,17 +950,39 @@ def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
     rates = by_label.get("금리 부담", {})
     dollar = by_label.get("달러 압력", {})
     summary = (
-        f"최근 1주 기준으로 {dominant.get('label')} 변화가 가장 두드러집니다"
+        f"{period.get('copy_period')} 기준으로 {dominant.get('label')} 변화가 가장 두드러집니다"
         f"({_signed_percent_label(dominant.get('raw_value'))}). "
         f"위험선호 {_signed_percent_label(risk.get('raw_value'))}, "
         f"금리 부담 {_signed_percent_label(rates.get('raw_value'))}, "
         f"달러 압력 {_signed_percent_label(dollar.get('raw_value'))}을 함께 확인합니다."
     )
     return {
+        "key": str(period["key"]),
+        "label": str(period["label"]),
+        "title": str(period["title"]),
         "status": "OK",
         "summary": summary,
         "cards": cards,
-        "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+        "basis": str(period["basis"]),
+    }
+
+
+def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
+    weekly = _build_macro_flow_period(symbol_metrics, FLOW_CONTEXT_PERIODS[0])
+    return {
+        "status": weekly["status"],
+        "summary": weekly["summary"],
+        "cards": weekly["cards"],
+        "basis": weekly["basis"],
+    }
+
+
+def build_macro_flow_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
+    periods = [_build_macro_flow_period(symbol_metrics, period) for period in FLOW_CONTEXT_PERIODS]
+    return {
+        "status": "OK" if any(period.get("status") == "OK" for period in periods) else "MISSING",
+        "default_period": "1W",
+        "periods": periods,
     }
 
 
@@ -1084,6 +1141,7 @@ def build_macro_thermometer_read_model(
     interpretation = generate_market_interpretation(score_rows, symbol_metrics)
     evidence_groups = build_current_evidence_groups(score_rows, component_rows, symbol_metrics)
     weekly_context = build_weekly_macro_context(symbol_metrics)
+    flow_context = build_macro_flow_context(symbol_metrics)
     return {
         "status": _status(coverage, warnings),
         "coverage": coverage,
@@ -1097,6 +1155,7 @@ def build_macro_thermometer_read_model(
         "evidence_groups": evidence_groups,
         "evidence_reading": build_macro_evidence_reading(evidence_groups),
         "weekly_context": weekly_context,
+        "flow_context": flow_context,
         "cautions": list(CAUTION_LINES),
         "source_note": "Uses stored yfinance futures daily OHLCV; scores are standardized by recent 60D daily volatility.",
         "as_of_date": as_of_date or date.today().isoformat(),

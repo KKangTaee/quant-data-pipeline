@@ -8498,3 +8498,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Top universe membership을 화면 조회 때 live market-cap query로 만들지 않고, 명시적 `유니버스 기준 갱신`에서 listing source 후보와 최신 EOD price history를 사용해 materialize해야 함.
 - Analysis result: `market_liquidity_universe_member`를 추가하고 Top1000 / Top2000을 최근 20거래일 평균 `close * volume` 기준으로 저장 / 재사용하게 했다. legacy profile fallback은 제외했고, 신규 상장 ticker는 listing source와 latest EOD row가 모두 있어야 포함된다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-liquidity-universe-v1-20260705/`에 있다. Local DB smoke에서 TOP2000은 1,920개만 ranking 가능했으므로 2,000보다 작아지는 것은 현재 DB coverage 상태로 발생할 수 있다.
+
+### 2026-07-05 - Futures Macro 흐름을 1W / 1M으로 넓힌다
+
+- User request: Futures Macro 탭 개선을 1차부터 6차까지 개발 / QA / 커밋 단위로 진행하되, 임의 브랜치를 만들지 말라고 요청함.
+- Interpreted goal: 3차에서는 기존 최근 1주 흐름을 1개월 흐름까지 넓히되, provider fetch / validation persistence / DB materialization은 만들지 않아야 함.
+- Analysis result: 기존 symbol metrics가 이미 `5D %`와 `20D %`를 제공하므로, `weekly_context` 호환을 유지하고 새 `flow_context.periods`로 1W / 1M을 전달하는 것이 가장 작고 안전했다.
+- Follow-up: 3차 완료. 다음은 4차 mixed subtype / confidence interpretation refinement이며, validation cache/materialization 판단은 5차에 남긴다.

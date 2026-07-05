@@ -20,3 +20,9 @@
   - `build_futures_macro_react_workbench_payload(...)` converts the existing macro snapshot into a JSON contract for command actions, current brief, score chips, 1W flow cards, validation state/metrics, and compact evidence sections.
   - `_handle_futures_macro_react_event(...)` accepts both nested `{"event": ...}` and direct event shapes, deduplicates by nonce/token, and dispatches only to existing Python refresh / reload / validation helpers.
   - Raw score/component/symbol tables and the source-of-truth calculations remain in Python/Streamlit; the React component is a read / action surface, not a trading signal, prediction gate, or data fetcher.
+- Phase 3 implementation:
+  - `compute_symbol_metrics(...)` already produced both `5D %` and `20D %`, so the implementation generalized the existing weekly flow grouping instead of adding new DB reads or materialization.
+  - `build_weekly_macro_context(...)` remains the compatibility contract for existing Streamlit fallback readers.
+  - New `build_macro_flow_context(...)` returns `default_period="1W"` and period payloads for `1W` / `1M`; the same risk appetite, rate burden, dollar pressure, safe-haven, and commodity/inflation groups are interpreted from `5D %` or `20D %` depending on period.
+  - `build_futures_macro_react_workbench_payload(...)` now sends `flow.default_period` and `flow.periods`, while preserving top-level `flow.cards` for the default 1W view.
+  - React renders `1W` / `1M` buttons inside the flow section. This remains read-only period selection inside the iframe and does not call providers, write registries, or change validation state.

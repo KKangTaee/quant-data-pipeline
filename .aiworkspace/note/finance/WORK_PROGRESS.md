@@ -5509,3 +5509,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Overview Market Movers Sector React Follow-up 2026-07-05:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-sector-react-20260705/`에서 React 섹터 breadth 상세표 펼침 시 iframe 높이가 갱신되지 않아 표가 잘리는 문제를 수정했다.
   - `<details>` toggle 시 custom component frame height를 재동기화하고, Browser QA에서 섹터 iframe 높이가 `765 -> 1617`로 늘어나는 것을 확인했다.
+- Overview Futures Macro React UX Phase 3 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 3차 1W / 1M reading-flow 확장을 완료했다.
+  - `flow_context`는 저장된 1D 선물의 `5D %` / `20D %`로 1주 / 1개월 흐름을 만들고, React workbench는 기간 탭으로 렌더링한다.
+  - 다음 차수는 4차 mixed subtype / confidence interpretation refinement다.

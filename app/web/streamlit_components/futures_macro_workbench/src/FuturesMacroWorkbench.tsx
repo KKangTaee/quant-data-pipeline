@@ -33,6 +33,15 @@ export type FuturesMacroFlowCard = {
   tone: string;
 };
 
+export type FuturesMacroFlowPeriod = {
+  key: string;
+  label: string;
+  title: string;
+  basis: string;
+  summary: string;
+  cards: FuturesMacroFlowCard[];
+};
+
 export type FuturesMacroEvidenceItem = {
   title: string;
   impact_label?: string;
@@ -80,6 +89,8 @@ export type FuturesMacroWorkbenchPayload = {
     basis: string;
     summary: string;
     cards: FuturesMacroFlowCard[];
+    default_period?: string;
+    periods?: FuturesMacroFlowPeriod[];
   };
   validation: {
     title: string;
@@ -128,6 +139,7 @@ function syncFrameHeightSoon() {
 function FuturesMacroWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
+  const [selectedFlowKey, setSelectedFlowKey] = useState("");
 
   useEffect(() => {
     syncFrameHeightSoon();
@@ -146,6 +158,19 @@ function FuturesMacroWorkbench({ args }: Props) {
     setPendingActionLabel(action.label);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
+
+  const fallbackFlowPeriod: FuturesMacroFlowPeriod = {
+    key: "1W",
+    label: "1W",
+    title: payload.flow.title,
+    basis: payload.flow.basis,
+    summary: payload.flow.summary,
+    cards: payload.flow.cards,
+  };
+  const flowPeriods = payload.flow.periods && payload.flow.periods.length > 0 ? payload.flow.periods : [fallbackFlowPeriod];
+  const initialFlowKey = payload.flow.default_period || flowPeriods[0]?.key || "1W";
+  const effectiveFlowKey = flowPeriods.some((period) => period.key === selectedFlowKey) ? selectedFlowKey : initialFlowKey;
+  const selectedFlow = flowPeriods.find((period) => period.key === effectiveFlowKey) || flowPeriods[0] || fallbackFlowPeriod;
 
   return (
     <section
@@ -232,14 +257,32 @@ function FuturesMacroWorkbench({ args }: Props) {
       <div className="fm-workbench__flow">
         <div className="fm-workbench__section-head">
           <div>
-            <div className="fm-workbench__section-title">{payload.flow.title}</div>
-            <div className="fm-workbench__section-detail">{payload.flow.basis}</div>
+            <div className="fm-workbench__section-title">{selectedFlow.title}</div>
+            <div className="fm-workbench__section-detail">{selectedFlow.basis}</div>
+            {flowPeriods.length > 1 ? (
+              <div className="fm-workbench__flow-tabs" aria-label="Flow horizon">
+                {flowPeriods.map((period) => (
+                  <button
+                    aria-pressed={period.key === effectiveFlowKey}
+                    className={`fm-workbench__flow-tab${period.key === effectiveFlowKey ? " fm-workbench__flow-tab--active" : ""}`}
+                    key={period.key}
+                    onClick={() => {
+                      setSelectedFlowKey(period.key);
+                      syncFrameHeightSoon();
+                    }}
+                    type="button"
+                  >
+                    {period.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <span>{payload.flow.summary}</span>
+          <span>{selectedFlow.summary}</span>
         </div>
         <div className="fm-workbench__flow-grid">
-          {payload.flow.cards.map((card) => (
-            <div className="fm-workbench__flow-card" key={card.label} style={{ "--fm-tone": toneColor(card.tone) } as React.CSSProperties}>
+          {selectedFlow.cards.map((card) => (
+            <div className="fm-workbench__flow-card" key={`${selectedFlow.key}-${card.label}`} style={{ "--fm-tone": toneColor(card.tone) } as React.CSSProperties}>
               <span>{card.label}</span>
               <strong>{card.value}</strong>
               <small>{card.detail}</small>
