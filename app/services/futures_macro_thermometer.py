@@ -638,7 +638,7 @@ def _mixed_macro_context(
             _component_phrase(symbols, ["GC=F", "ZN=F", "ZB=F", "6J=F"], positive=True),
         ]
     elif risk_on <= -20 and rate_pressure <= -20:
-        sub_scenario = "위험선호 약세 + 금리 부담 완화"
+        sub_scenario = "금리 부담 완화 속 성장 약세"
         regime_hint = "성장주 부담 완화 확인 필요"
         mixed_reason = (
             "주가지수 선물은 약하지만 채권선물 흐름은 금리 부담 완화 쪽이라 "
@@ -648,6 +648,30 @@ def _mixed_macro_context(
             f"{sub_scenario}: Risk-On {risk_on:+d}, Rate Pressure {rate_pressure:+d}",
             _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F"], positive=False),
             _component_phrase(symbols, ["ZN=F", "ZB=F"], positive=True),
+        ]
+    elif dollar_pressure >= 20 and risk_on <= -10:
+        sub_scenario = "달러 압력 Risk-Off 후보"
+        regime_hint = "Risk-off 확인 필요"
+        mixed_reason = (
+            "달러 압력은 높고 위험자산은 약하지만 구리 / 경기민감 흐름까지 충분히 동조하지 않아 "
+            "확정적인 달러 강세 risk-off로 분류하지 않습니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Dollar Pressure {dollar_pressure:+d}, Risk-On {risk_on:+d}",
+            _component_phrase(symbols, ["6E=F", "6B=F", "6A=F", "6C=F"], positive=False),
+            _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F", "HG=F"], positive=False),
+        ]
+    elif risk_on >= 20 and safe_haven >= 20:
+        sub_scenario = "상충 흐름 / 전환 구간"
+        regime_hint = "전환 구간 확인 필요"
+        mixed_reason = (
+            "위험선호와 안전자산 선호가 동시에 강해 한쪽 방향으로 확정하기보다 "
+            "포지션 전환 또는 이벤트 전후의 상충 구간으로 봅니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Risk-On {risk_on:+d}, Safe Haven {safe_haven:+d}",
+            _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F"], positive=True),
+            _component_phrase(symbols, ["GC=F", "ZN=F", "ZB=F", "6J=F"], positive=True),
         ]
     elif dollar_pressure >= 20 and risk_on > -10:
         sub_scenario = "달러/위험자산 충돌"
@@ -662,7 +686,7 @@ def _mixed_macro_context(
             _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F", "HG=F"], positive=False),
         ]
     elif inflation <= -20 and growth <= 0:
-        sub_scenario = "원자재/물가 약세 혼재"
+        sub_scenario = "원자재 약세 + 수요 둔화 후보"
         regime_hint = "수요 둔화 확인 필요"
         mixed_reason = (
             "원자재 / 물가 proxy는 약하지만 성장 둔화, 위험선호, 안전자산 흐름이 한 방향으로 완전히 모이지 않아 "
@@ -674,7 +698,7 @@ def _mixed_macro_context(
             score_line,
         ]
     else:
-        sub_scenario = "저신호 / 방향성 없음"
+        sub_scenario = "저신호 / 관망"
         regime_hint = "관망"
         mixed_reason = (
             "주요 점수가 20점 기준의 방향성 임계값을 충분히 넘지 않아 선물 일봉만으로는 "

@@ -89,6 +89,7 @@ http://localhost:8501
    - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 과거 일관성 점검, 유사 구간, score chip을 보여준다. Futures Macro tab의 React workbench는 command strip, 현재 브리프, score chip, 1W / 1M 흐름, validation state, 근거 drawer를 렌더링한다.
    - Futures Macro tab 첫 진입은 `include_validation=False` snapshot으로 빠르게 렌더링한다. Historical validation은 `과거 점검 불러오기`를 눌렀을 때만 계산되며, `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다.
    - `1W / 1M 흐름`은 저장된 1D 선물의 최근 5거래일 / 20거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
+   - Top-level이 `혼재된 매크로 흐름`이면 subtype / regime hint / mixed reason을 함께 읽는다. `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, `저신호 / 관망` 같은 문구는 충돌 맥락을 설명하기 위한 후보 / 확인 언어이며, directional hit-rate 신호로 승격하지 않는다.
    - `근거 해석 / 원본 데이터`를 열면 `강하게 말하는 근거`, `약한 근거`, `충돌 근거`, `자료 부족`을 먼저 읽고, 그 다음 historical validation / 원본 점수표 / 구성 선물별 기여 / 선물별 일봉 변화 원본을 확인한다.
    - 매크로 일봉이 비어 있거나 근거가 부족하면 `일봉 매크로 데이터 갱신`을 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
    - Historical Validation은 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 시나리오의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. 혼재 시나리오는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.

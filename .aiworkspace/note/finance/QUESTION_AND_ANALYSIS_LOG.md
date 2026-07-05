@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Futures Macro mixed labels should explain conflict without forcing direction
+
+- User request: Futures Macro 탭 개선 4차로 혼재 매크로 흐름을 더 세분화하되, 방향성 신호를 억지로 만들지 말라고 요청함.
+- Interpreted goal: `혼재된 매크로 흐름`은 historical validation compatibility와 no-signal boundary를 유지하고, 사용자가 어떤 충돌인지 읽을 수 있게 subtype / regime hint / reason만 더 구체화해야 한다.
+- Analysis result: `_mixed_macro_context(...)`만 좁게 보강해 금리 부담 완화 속 성장 약세, 달러 압력 Risk-Off 후보, 원자재 약세 + 수요 둔화 후보, 위험선호/안전자산 상충 전환 구간, 저신호 관망을 구분했다. Directional scenario rule과 validation hit-rate boundary는 바꾸지 않았다.
+- Follow-up: 5차에서는 historical validation 재계산 비용을 process cache로 충분히 낮출지, compact persisted summary를 둘지 먼저 판단한다.
+
 ### 2026-07-05 - Futures Macro React workbench should be a UI/action shell, not a calculation owner
 
 - User request: Futures Macro 탭 개선 2차로 React component MVP를 진행하되, Python 계산 / DB / action dispatch 경계를 유지하면서 개발 / QA / 커밋 단위로 닫아 달라고 요청함.

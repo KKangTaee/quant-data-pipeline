@@ -219,3 +219,43 @@ Result: component `FuturesMacroWorkbench`, schema `futures_macro_react_workbench
 ### Phase 3 Browser QA Attempt
 
 Result: Streamlit server on port 8501 responded with HTTP 200, but the Codex In-app Browser tab API timed out when listing or reading tabs during Phase 3. No Phase 3 screenshot was captured. Unit contracts, React build, and snapshot smoke verify the 1W / 1M payload and component source, but iframe visual QA remains a final QA follow-up.
+
+### Phase 4 RED / GREEN
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_risk_weakness_with_easing_rates \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_dollar_pressure_risk_off_candidate \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_commodity_weakness_as_demand_slowdown_candidate \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_conflicting_risk_on_and_safe_haven_as_transition \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_keeps_low_signal_mixed_context_distinct
+```
+
+RED result: failed against the previous implementation because the new subtype labels and new dollar-pressure / transition branches were absent.
+
+GREEN result: passed after refining `_mixed_macro_context(...)` while keeping the top-level `혼재된 매크로 흐름` scenario.
+
+### Phase 4 Focused QA
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_workbench_payload_keeps_python_action_boundary \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_weak_growth_without_safe_haven_confirmation \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_risk_weakness_with_easing_rates \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_dollar_pressure_risk_off_candidate \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_commodity_weakness_as_demand_slowdown_candidate \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_explains_conflicting_risk_on_and_safe_haven_as_transition \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_interpretation_keeps_low_signal_mixed_context_distinct \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_mixed_scenario_confidence_does_not_report_directional_hit_sample
+```
+
+Result: passed 8 tests.
+
+```bash
+.venv/bin/python -m py_compile app/services/futures_macro_thermometer.py tests/test_service_contracts.py
+.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests
+git diff --check
+```
+
+Result: `py_compile` passed, FuturesMacroThermometer contract class passed 20 tests, OverviewAutomation contract class passed 144 tests, and `git diff --check` passed. Existing `edgar` deprecation warnings and Streamlit no-runtime cache warnings were present in the broader unittest output.

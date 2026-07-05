@@ -26,3 +26,8 @@
   - New `build_macro_flow_context(...)` returns `default_period="1W"` and period payloads for `1W` / `1M`; the same risk appetite, rate burden, dollar pressure, safe-haven, and commodity/inflation groups are interpreted from `5D %` or `20D %` depending on period.
   - `build_futures_macro_react_workbench_payload(...)` now sends `flow.default_period` and `flow.periods`, while preserving top-level `flow.cards` for the default 1W view.
   - React renders `1W` / `1M` buttons inside the flow section. This remains read-only period selection inside the iframe and does not call providers, write registries, or change validation state.
+- Phase 4 implementation:
+  - `generate_market_interpretation(...)` still uses the existing directional scenario rules first. The richer mixed labels only apply inside `_mixed_macro_context(...)` after a directional interpretation was not established.
+  - The old broad `혼재된 매크로 흐름` top-level scenario is preserved for validation compatibility and UI stability.
+  - Mixed subtypes now separate `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, and `저신호 / 관망`.
+  - The subtype wording is intentionally candidate / confirmation language. It should help the user read conflict without turning mixed states into a prediction, trading signal, validation gate, or monitoring signal.

@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro React UX 4차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 `혼재된 매크로 흐름`의 top-level compatibility를 유지하면서 subtype / regime hint / mixed reason을 세분화했다.
+  - 새 subtype은 금리 부담 완화 속 성장 약세, 달러 압력 Risk-Off 후보, 원자재 약세 + 수요 둔화 후보, 위험선호/안전자산 상충 전환 구간, 저신호 관망을 구분한다.
+  - FuturesMacroThermometer contract 20개, Overview contract 144개, `py_compile`, `git diff --check`를 통과했다. 다음은 5차 validation cache/materialization decision이다.
 - Overview Futures Macro React UX 2차:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 `futures_macro_workbench` React/Vite component와 Python wrapper를 추가했다.
   - React는 command strip, 현재 macro brief, score chips, 최근 1주 흐름, validation state, evidence drawer를 렌더링하고 Python은 DB 읽기 / validation 계산 / refresh action / raw tables를 계속 소유한다.

@@ -5863,10 +5863,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "summary": {
                 "scenario": "혼재된 매크로 흐름",
                 "summary": "현재 선물 일봉 기준 흐름은 한 방향으로 확정되지 않았습니다.",
-                "sub_scenario": "저신호 / 방향성 없음",
+                "sub_scenario": "저신호 / 관망",
                 "regime_hint": "관망",
                 "mixed_reason": "주요 점수가 방향성 임계값을 충분히 넘지 않았습니다.",
-                "evidence": ["저신호 / 방향성 없음: Risk-On -10"],
+                "evidence": ["저신호 / 관망: Risk-On -10"],
             },
             "scores": pd.DataFrame(
                 [
@@ -5963,7 +5963,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ["daily_refresh", "reload", "load_validation"],
         )
         self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
-        self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 방향성 없음")
+        self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 관망")
         self.assertEqual(payload["scores"][0]["label"], "위험선호")
         self.assertEqual(payload["flow"]["default_period"], "1W")
         self.assertEqual([period["key"] for period in payload["flow"]["periods"]], ["1W", "1M"])
@@ -16682,9 +16682,107 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         )
 
         self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
-        self.assertEqual(interpretation["sub_scenario"], "위험선호 약세 + 금리 부담 완화")
+        self.assertEqual(interpretation["sub_scenario"], "금리 부담 완화 속 성장 약세")
         self.assertEqual(interpretation["regime_hint"], "성장주 부담 완화 확인 필요")
         self.assertIn("금리 부담", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_explains_dollar_pressure_risk_off_candidate(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -12,
+                    "Growth Score": -4,
+                    "Rate Pressure Score": 6,
+                    "Dollar Pressure Score": 34,
+                    "Safe Haven Score": 4,
+                    "Inflation Pressure Score": 2,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": -0.24,
+                    "NQ=F": -0.18,
+                    "RTY=F": -0.34,
+                    "HG=F": -0.20,
+                    "6E=F": -1.12,
+                    "6B=F": -0.91,
+                    "6A=F": -0.86,
+                    "6C=F": -0.73,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "달러 압력 Risk-Off 후보")
+        self.assertEqual(interpretation["regime_hint"], "Risk-off 확인 필요")
+        self.assertIn("달러 압력", interpretation["mixed_reason"])
+        self.assertIn("위험자산", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_explains_commodity_weakness_as_demand_slowdown_candidate(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -6,
+                    "Growth Score": -8,
+                    "Rate Pressure Score": -2,
+                    "Dollar Pressure Score": 3,
+                    "Safe Haven Score": 5,
+                    "Inflation Pressure Score": -31,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "CL=F": -1.12,
+                    "NG=F": -0.82,
+                    "HG=F": -0.74,
+                    "ES=F": -0.08,
+                    "NQ=F": 0.03,
+                    "GC=F": 0.10,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "원자재 약세 + 수요 둔화 후보")
+        self.assertEqual(interpretation["regime_hint"], "수요 둔화 확인 필요")
+        self.assertIn("수요 둔화", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_explains_conflicting_risk_on_and_safe_haven_as_transition(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": 27,
+                    "Growth Score": 6,
+                    "Rate Pressure Score": 3,
+                    "Dollar Pressure Score": -4,
+                    "Safe Haven Score": 25,
+                    "Inflation Pressure Score": 5,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": 1.02,
+                    "NQ=F": 0.88,
+                    "RTY=F": 0.18,
+                    "GC=F": 0.91,
+                    "ZN=F": 0.74,
+                    "ZB=F": 0.66,
+                    "6J=F": 0.53,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "상충 흐름 / 전환 구간")
+        self.assertEqual(interpretation["regime_hint"], "전환 구간 확인 필요")
+        self.assertIn("위험선호", interpretation["mixed_reason"])
+        self.assertIn("안전자산", interpretation["mixed_reason"])
 
     def test_macro_interpretation_keeps_low_signal_mixed_context_distinct(self) -> None:
         from app.services.futures_macro_thermometer import generate_market_interpretation
@@ -16714,7 +16812,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         )
 
         self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
-        self.assertEqual(interpretation["sub_scenario"], "저신호 / 방향성 없음")
+        self.assertEqual(interpretation["sub_scenario"], "저신호 / 관망")
         self.assertEqual(interpretation["regime_hint"], "관망")
         self.assertIn("20점", interpretation["mixed_reason"])
 
