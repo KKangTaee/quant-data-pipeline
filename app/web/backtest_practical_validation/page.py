@@ -843,10 +843,18 @@ def _entry_gate_display_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
             "상태": text(row.get("status")),
             "판정": _entry_gate_effect_label(row.get("effect")),
             "확인 위치": text(row.get("next_surface"), "Practical Validation"),
+            "확인할 것": text(row.get("checked_evidence")),
+            "표시 근거": text(row.get("display_detail") or row.get("meaning")),
             "의미": text(row.get("meaning")),
         }
         for row in rows
     ]
+
+
+def _entry_gate_card_detail(row: dict[str, Any]) -> str:
+    checked = str(row.get("checked_evidence") or "").strip() or "Practical Validation에서 확인할 근거"
+    detail = str(row.get("display_detail") or row.get("meaning") or "").strip() or "2차에서 확인할 review 신호입니다."
+    return f"확인할 것: {checked}. {detail}"
 
 
 def _render_backtest_entry_gate_review_queue(source: dict[str, Any]) -> None:
@@ -926,7 +934,7 @@ def _render_backtest_entry_gate_review_queue(source: dict[str, Any]) -> None:
                     "kicker": row.get("group") or "Review",
                     "title": row.get("signal") or "-",
                     "status": row.get("status") or "-",
-                    "detail": row.get("meaning") or "Practical Validation에서 확인할 review 신호입니다.",
+                    "detail": _entry_gate_card_detail(row),
                     "meta": row.get("next_surface") or "Practical Validation",
                     "tone": _entry_gate_effect_tone(row.get("effect")),
                 }

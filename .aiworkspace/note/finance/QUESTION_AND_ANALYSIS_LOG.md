@@ -8435,3 +8435,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 앱 전체 React 전환은 하지 않고, Handoff처럼 HTML design + real interaction이 필요한 고급 UI에만 React Handoff action card를 production 경로로 연결한다.
 - Analysis result: Streamlit `st.button`과 custom HTML은 서로 다른 DOM/rendering layer라 같은 카드 내부 button처럼 보이기 어렵다. React component가 card + button + submit event를 소유하고 Python이 source registration write / rerun만 담당하는 구조가 의도에 맞다.
 - Follow-up: React Handoff action card를 active source registration path에 연결하고, 기존 Streamlit action shell / visible `st.button` 경로는 제거한다.
+
+### 2026-07-05 - Policy Signals는 1차 기준만 자세히 보여준다
+
+- User request: 사용자가 `검증 기준 상세`에서 1차 확인 항목과 2차 확인 항목이 섞여 보이므로, 현재 위치에는 1차에서 확인할 내용만 노출하고 2차 항목은 Practical Validation에서 보여주는 방향을 검토 / 개발해 달라고 요청함.
+- Interpreted goal: 1차 화면은 source 등록 기준과 hard blocker를 명확히 보여주고, hold / watch / caution 같은 review focus는 source evidence로 2차에 전달해야 함.
+- Analysis result: `entry_gate.review_focus_rows`가 이미 Practical Validation source에 저장되므로, gate math나 저장 경로를 바꾸지 않고 display model만 `first_stage_rows` / `second_stage_review_rows`로 분리할 수 있다.
+- Follow-up: Backtest Analysis `검증 기준 상세`은 React first-stage evidence board로 렌더링하고, Practical Validation `Backtest에서 넘어온 2차 확인 항목`은 각 row의 확인할 것과 표시 근거를 함께 보여준다.

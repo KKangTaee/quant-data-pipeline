@@ -5464,3 +5464,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 사용자 피드백에 따라 Handoff action을 Streamlit shell에서 React Handoff action card production path로 전환했다.
   - 보이는 `2차 실전성 검증 Handoff` card와 버튼은 React component가 함께 렌더링하고, Python은 submit event를 받아 current selection source 등록 / rerun만 수행한다.
   - Policy Signals는 계속 evidence detail만 소유하며, registry / saved / strategy runtime 계약은 변경하지 않았다.
+- Backtest Policy Signal Stage Split V1 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-stage-split-v1-20260705/`에서 `검증 기준 상세`을 1차 source 기준 React board로 정리했다.
+  - 2차 review focus는 Backtest Analysis에서 count / group handoff만 보이고, 상세 row는 Practical Validation `Backtest에서 넘어온 2차 확인 항목`에서 확인한다.
+  - gate math, source registration write, registry / saved / strategy runtime 계약은 변경하지 않았다.

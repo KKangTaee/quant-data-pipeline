@@ -5,6 +5,87 @@ from typing import Any
 
 _PASS_STATUSES = {"", "normal", "ok", "pass", "passed", "fresh"}
 
+_POLICY_SIGNAL_DISPLAY_COPY: dict[str, dict[str, str]] = {
+    "Promotion Decision": {
+        "checked_evidence": "promotion_decision 생성 여부와 source 등록 차단 여부",
+        "pass_note": "Practical Validation source 등록을 막는 promotion blocker가 없습니다.",
+        "review_note": "hold 사유는 source와 함께 Practical Validation의 2차 확인 큐로 전달합니다.",
+        "block_note": "Backtest를 다시 실행하거나 promotion signal 생성 경로를 먼저 확인해야 합니다.",
+    },
+    "Price Freshness": {
+        "checked_evidence": "DB 가격 최신일, 계산 기준일, 결과 기간, 결측 / 비정상 가격 row",
+        "pass_note": "결과가 해석 가능한 최신 가격 범위에서 계산됐습니다.",
+        "review_note": "요청 종료일과 실제 계산 기준일 차이를 Practical Validation에서 이어서 확인합니다.",
+        "block_note": "가격 최신성 또는 결측 가격 row를 먼저 해결해야 source 등록이 가능합니다.",
+    },
+    "Liquidity Policy": {
+        "checked_evidence": "유동성 필터, clean coverage, 실전 해석에 필요한 거래 가능성 근거",
+        "pass_note": "유동성 원천이 source 등록을 막지 않는 상태입니다.",
+        "review_note": "유동성 부담은 Practical Validation에서 provider / coverage 근거와 함께 확인합니다.",
+        "block_note": "유동성 원천이 source 등록을 막는 상태입니다. 가격 / universe 근거를 먼저 보강하세요.",
+    },
+    "ETF Operability": {
+        "checked_evidence": "ETF AUM, spread, provider profile, 운용 가능성 근거 상태",
+        "pass_note": "ETF 운용 가능성 근거가 source 등록을 막지 않습니다.",
+        "review_note": "ETF 운용 가능성은 Practical Validation에서 provider evidence로 확인합니다.",
+        "block_note": "ETF 운용 가능성 근거가 부족해 source 등록 전 보강이 필요합니다.",
+    },
+    "Benchmark Availability": {
+        "checked_evidence": "후속 검증에서 비교할 benchmark curve 존재 여부",
+        "pass_note": "Practical Validation에서 기준선 비교를 이어갈 수 있습니다.",
+        "review_note": "benchmark 비교 가능성은 Practical Validation에서 coverage와 함께 확인합니다.",
+        "block_note": "benchmark curve가 없어 후속 검증 source 등록 전 기준선을 보강해야 합니다.",
+    },
+    "Validation": {
+        "checked_evidence": "benchmark-relative drawdown / underperformance 진단 상태",
+        "pass_note": "기본 validation 진단이 source 등록을 막지 않는 상태입니다.",
+        "review_note": "낙폭 / 부진 구간은 Practical Validation에서 상세 검증으로 이어서 확인합니다.",
+        "block_note": "validation blocker를 해소한 뒤 source 등록을 다시 시도해야 합니다.",
+    },
+    "Benchmark Policy": {
+        "checked_evidence": "benchmark coverage와 net CAGR spread 정책 기준",
+        "pass_note": "benchmark 정책 기준이 source 등록을 막지 않습니다.",
+        "review_note": "benchmark 정책 여유는 Practical Validation에서 기준선 parity와 함께 확인합니다.",
+        "block_note": "benchmark 정책 기준 미충족 항목을 먼저 보강해야 합니다.",
+    },
+    "Validation Policy": {
+        "checked_evidence": "rolling underperformance 정책 기준",
+        "pass_note": "rolling underperformance 정책이 source 등록을 막지 않습니다.",
+        "review_note": "rolling 부진 여부는 Practical Validation의 robustness / temporal 검증에서 확인합니다.",
+        "block_note": "rolling underperformance 정책 blocker를 먼저 해결해야 합니다.",
+    },
+    "Portfolio Guardrail Policy": {
+        "checked_evidence": "전략 낙폭과 benchmark 대비 낙폭 차이의 방어 기준",
+        "pass_note": "낙폭 guardrail이 source 등록을 막지 않습니다.",
+        "review_note": "낙폭 방어 여유는 Practical Validation의 guardrail 근거에서 이어서 확인합니다.",
+        "block_note": "guardrail 기준을 벗어난 낙폭 근거를 먼저 확인해야 합니다.",
+    },
+    "Rolling Review": {
+        "checked_evidence": "최근 구간 성과 약화 여부",
+        "pass_note": "최근 구간 review 신호가 source 등록을 막지 않습니다.",
+        "review_note": "최근 구간 약화 여부를 Practical Validation에서 우선 확인합니다.",
+        "block_note": "최근 구간 blocker를 먼저 확인해야 합니다.",
+    },
+    "Split-Period Check": {
+        "checked_evidence": "전반 / 후반 구간 성과 악화 여부",
+        "pass_note": "전후반 구간 점검이 source 등록을 막지 않습니다.",
+        "review_note": "전후반 구간 악화 여부를 Practical Validation에서 확인합니다.",
+        "block_note": "전후반 구간 blocker를 먼저 확인해야 합니다.",
+    },
+    "Turnover Estimate": {
+        "checked_evidence": "비용 해석에 필요한 holdings 기반 turnover 추정 근거",
+        "pass_note": "turnover 근거가 source 등록을 막지 않습니다.",
+        "review_note": "비용 해석 전에 turnover 추정 근거를 Practical Validation에서 확인합니다.",
+        "block_note": "turnover 근거를 먼저 보강해야 합니다.",
+    },
+    "Cost Curve": {
+        "checked_evidence": "net cost curve 적용 방식과 turnover 추정 결합 여부",
+        "pass_note": "cost curve 근거가 source 등록을 막지 않습니다.",
+        "review_note": "net cost curve가 충분한 turnover 근거와 연결됐는지 Practical Validation에서 확인합니다.",
+        "block_note": "cost curve 근거를 먼저 보강해야 합니다.",
+    },
+}
+
 
 def _source_bucket(
     value: Any,
@@ -38,7 +119,7 @@ def _signal_row(
     source_key: str,
 ) -> dict[str, Any]:
     normalized = str(status or "").strip().lower()
-    return {
+    row = {
         "group": group,
         "signal": signal,
         "status": normalized or "normal",
@@ -48,6 +129,46 @@ def _signal_row(
         "next_surface": next_surface,
         "source_key": source_key,
     }
+    copy = _POLICY_SIGNAL_DISPLAY_COPY.get(signal, {})
+    row.update(
+        {
+            "checked_evidence": copy.get("checked_evidence", meaning),
+            "pass_note": copy.get("pass_note", meaning),
+            "review_note": copy.get("review_note", meaning),
+            "block_note": copy.get("block_note", meaning),
+        }
+    )
+    return row
+
+
+def _policy_signal_stage(row: dict[str, Any]) -> str:
+    role = str(row.get("role") or "")
+    effect = str(row.get("effect") or "")
+    if effect == "context" or role == "context_only":
+        return "context"
+    if effect == "review":
+        return "second_stage"
+    if role == "practical_validation_review":
+        return "second_stage"
+    return "first_stage"
+
+
+def _policy_signal_display_detail(row: dict[str, Any]) -> str:
+    effect = str(row.get("effect") or "")
+    if effect == "block":
+        return str(row.get("block_note") or row.get("meaning") or "")
+    if effect == "review":
+        return str(row.get("review_note") or row.get("meaning") or "")
+    if effect == "pass":
+        return str(row.get("pass_note") or row.get("meaning") or "")
+    return str(row.get("meaning") or "")
+
+
+def _enrich_policy_signal_rows(rows: list[dict[str, Any]]) -> None:
+    for row in rows:
+        stage = _policy_signal_stage(row)
+        row["stage_owner"] = stage
+        row["display_detail"] = _policy_signal_display_detail(row)
 
 
 def _status_signal_effect(
@@ -276,11 +397,20 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
                 )
             )
 
+    _enrich_policy_signal_rows(rows)
+    first_stage_rows = [row for row in rows if row["stage_owner"] == "first_stage"]
+    second_stage_rows = [row for row in rows if row["stage_owner"] == "second_stage"]
+
     counts = {
         "block": sum(1 for row in rows if row["effect"] == "block"),
         "review": sum(1 for row in rows if row["effect"] == "review"),
         "pass": sum(1 for row in rows if row["effect"] == "pass"),
         "context": sum(1 for row in rows if row["effect"] == "context"),
+        "first_stage": len(first_stage_rows),
+        "first_stage_block": sum(1 for row in first_stage_rows if row["effect"] == "block"),
+        "first_stage_pass": sum(1 for row in first_stage_rows if row["effect"] == "pass"),
+        "second_stage": len(second_stage_rows),
+        "second_stage_review": sum(1 for row in second_stage_rows if row["effect"] == "review"),
     }
     return {
         "schema_version": "backtest_policy_signal_inventory_v1",
@@ -289,6 +419,11 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
         "blocker_rows": [row for row in rows if row["effect"] == "block"],
         "review_rows": [row for row in rows if row["effect"] == "review"],
         "context_rows": [row for row in rows if row["effect"] == "context"],
+        "first_stage_rows": first_stage_rows,
+        "first_stage_blocker_rows": [row for row in first_stage_rows if row["effect"] == "block"],
+        "first_stage_pass_rows": [row for row in first_stage_rows if row["effect"] == "pass"],
+        "second_stage_rows": second_stage_rows,
+        "second_stage_review_rows": [row for row in second_stage_rows if row["effect"] == "review"],
     }
 
 

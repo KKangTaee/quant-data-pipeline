@@ -915,6 +915,12 @@ _POLICY_SIGNAL_SNAPSHOT_KEYS = (
     "role",
     "next_surface",
     "meaning",
+    "checked_evidence",
+    "display_detail",
+    "pass_note",
+    "review_note",
+    "block_note",
+    "stage_owner",
     "source_key",
 )
 
@@ -943,13 +949,9 @@ def _handoff_readiness_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, 
     review_rows = [
         row
         for row in signal_rows
-        if row.get("effect") == "review" and row.get("role") != "context_only"
+        if row.get("stage_owner") == "second_stage" and row.get("effect") == "review"
     ]
-    blocker_rows = [
-        row
-        for row in signal_rows
-        if row.get("effect") == "block" and row.get("role") != "context_only"
-    ]
+    blocker_rows = [row for row in signal_rows if row.get("stage_owner") == "first_stage" and row.get("effect") == "block"]
     return {
         "schema_version": "backtest_handoff_readiness_snapshot_v2",
         "policy": "practical_validation_entry_gate_v2",

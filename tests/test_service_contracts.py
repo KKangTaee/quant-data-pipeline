@@ -7627,6 +7627,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(state["status_label"], "조건부 진입 가능")
         self.assertIn("2차 확인 항목 1개가 source와 함께 Practical Validation으로 전달됩니다.", state["display_reasons"])
         self.assertNotIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
+        self.assertEqual(state["first_stage_blocker_count"], 0)
+        self.assertEqual(state["second_stage_review_count"], 1)
         criteria = {row["label"]: row for row in state["criteria"]}
         self.assertEqual(criteria["Promotion"]["value"], "review 1")
 
@@ -7653,6 +7655,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(state["status_label"], "진입 보류")
         self.assertIn("Promotion signal이 비어 있습니다. Backtest 결과를 다시 실행해 promotion signal을 생성하세요.", state["display_reasons"])
         self.assertTrue(any("검증 원천 blocker" in item for item in state["display_reasons"]))
+        self.assertGreaterEqual(state["first_stage_blocker_count"], 1)
 
     def test_practical_validation_handoff_gate_allows_ready_candidates(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state
@@ -7717,6 +7720,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_policy_signal_tab_is_evidence_only_after_handoff_summary(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        component_source = Path(
+            "app/web/components/backtest_policy_signal_board/frontend/src/BacktestPolicySignalBoard.tsx"
+        ).read_text(encoding="utf-8")
         real_money_start = source.index("def _render_real_money_details")
         real_money_body = source[real_money_start:]
         real_money_body = real_money_body[: real_money_body.index("\ndef ", 1)]
@@ -7731,11 +7737,17 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("_render_policy_signal_summary_panel(meta)", real_money_body)
         self.assertIn("_render_policy_signal_gate_board(rows, evaluation)", real_money_body)
         self.assertIn("build_policy_signal_inventory(meta)", real_money_body)
+        self.assertIn("is_backtest_policy_signal_board_available", source)
+        self.assertIn("render_backtest_policy_signal_board(", source)
+        self.assertIn("first_stage_rows", source)
+        self.assertIn("second_stage_review_rows", source)
         self.assertIn("bt-policy-signal", source)
-        self.assertIn("bt-policy-gate", source)
-        self.assertIn("검증 기준 상세", source)
-        self.assertIn("1차 처리 결과", source)
+        self.assertIn("검증 기준 상세", component_source)
         self.assertIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
+        self.assertIn("1차에서 확인한 기준", component_source)
+        self.assertIn("2차로 넘긴 확인 큐", component_source)
+        self.assertNotIn("bt-policy-gate", source)
+        self.assertNotIn("1차 처리 결과", source)
         self.assertNotIn("이번 실행 확인 큐", source)
         self.assertNotIn("진입 준비도", real_money_body)
         self.assertIn("기술 원천 보기", real_money_body)
@@ -7748,6 +7760,67 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("_render_next_step_readiness_box(meta)", real_money_body)
         self.assertNotIn("Candidate Readiness Checkpoint", source)
 
+    def test_policy_signal_inventory_splits_first_stage_and_second_stage_rows(self) -> None:
+        from app.services.backtest_handoff_readiness import build_policy_signal_inventory
+
+        inventory = build_policy_signal_inventory(
+            {
+                "promotion_decision": "hold",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "normal",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "watch",
+                "price_freshness": {"status": "ok"},
+            }
+        )
+
+        first_stage_signals = {row["signal"] for row in inventory["first_stage_rows"]}
+        second_stage_signals = {row["signal"] for row in inventory["second_stage_review_rows"]}
+
+        self.assertIn("Price Freshness", first_stage_signals)
+        self.assertIn("Benchmark Policy", first_stage_signals)
+        self.assertNotIn("Promotion Decision", first_stage_signals)
+        self.assertIn("Promotion Decision", second_stage_signals)
+        self.assertIn("ETF Operability", second_stage_signals)
+        self.assertEqual(inventory["counts"]["first_stage_block"], 0)
+        self.assertGreaterEqual(inventory["counts"]["first_stage_pass"], 1)
+        self.assertGreaterEqual(inventory["counts"]["second_stage_review"], 2)
+        self.assertIn("checked_evidence", inventory["rows"][0])
+        self.assertIn("display_detail", inventory["rows"][0])
+
+    def test_backtest_policy_signal_react_board_component_is_ui_only(self) -> None:
+        component_root = Path("app/web/components/backtest_policy_signal_board")
+        wrapper_path = component_root / "component.py"
+        entry_path = component_root / "frontend/src/BacktestPolicySignalBoard.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("render_backtest_policy_signal_board", wrapper_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertIn("BacktestPolicySignalBoard", component_source)
+        self.assertIn("1차에서 확인한 기준", component_source)
+        self.assertIn("2차로 넘긴 확인 큐", component_source)
+        self.assertIn("checked_evidence", component_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("render_backtest_policy_signal_board(", result_display_source)
+        self.assertIn("first_stage_rows", result_display_source)
+        self.assertIn("second_stage_review_rows", result_display_source)
+
     def test_practical_validation_step1_receives_backtest_review_focus_queue(self) -> None:
         source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
         workspace_start = source.index("def render_practical_validation_workspace")
@@ -7757,6 +7830,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_render_backtest_entry_gate_review_queue(source)", workspace_body)
         self.assertIn("Backtest에서 넘어온 2차 확인 항목", source)
         self.assertIn("review_focus_rows", source)
+        self.assertIn("checked_evidence", source)
+        self.assertIn("display_detail", source)
         self.assertIn("2차 확인 항목 상세 테이블", source)
         self.assertIn("can_move_to_compare", source)
 
