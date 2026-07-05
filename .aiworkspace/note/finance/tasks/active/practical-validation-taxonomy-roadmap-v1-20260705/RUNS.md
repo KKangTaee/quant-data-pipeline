@@ -116,3 +116,41 @@ Outcome:
 - diff check passed
 - `PracticalValidationServiceContractTests`: 22 tests passed
 - Browser QA skipped because V1 did not change visible Streamlit UI
+
+## 2026-07-05 - V2 Development And QA
+
+TDD RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_validation_module_gate_blocks_selected_route_preflight_gaps
+```
+
+Outcome:
+
+- failed because the gate verdict still used old selected-route wording instead of Final Review readiness preview wording
+
+Implemented:
+
+- `app/services/backtest_practical_validation_modules.py`
+- `app/services/backtest_practical_validation_board_registry.py`
+- `app/services/backtest_selected_route_preflight.py`
+- service contract expectations in `tests/test_service_contracts.py`
+
+QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_validation_module_gate_blocks_selected_route_preflight_gaps
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_validation_board_map_marks_single_gtaa_conditional_boards tests.test_service_contracts.PracticalValidationServiceContractTests.test_practical_validation_workspace_groups_stage_two_evidence_before_downstream_references tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_practical_validation_selected_route_preflight_blocks_gross_only_review tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_selected_route_preflight_blocks_equal_weight_missing_net_cost_proof
+.venv/bin/python -m py_compile app/services/backtest_practical_validation_modules.py app/services/backtest_practical_validation_board_registry.py app/services/backtest_selected_route_preflight.py app/services/backtest_practical_validation_workspace.py
+git diff --check -- app/services/backtest_practical_validation_modules.py app/services/backtest_practical_validation_board_registry.py app/services/backtest_selected_route_preflight.py tests/test_service_contracts.py
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests
+```
+
+Outcome:
+
+- selected-route readiness preview contract test passed
+- targeted module / board / preflight tests passed
+- py_compile passed
+- diff check passed
+- `PracticalValidationServiceContractTests`: 22 tests passed
+- Browser QA skipped because V2 did not change visible Streamlit UI

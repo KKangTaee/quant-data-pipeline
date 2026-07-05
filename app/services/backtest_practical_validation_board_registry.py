@@ -23,8 +23,8 @@ MODULE_TYPE_LABELS = {
 BOARD_SPECS = [
     {
         "board_id": "final_review_gate",
-        "label": "Final Review Gate",
-        "board_type": "Gate Summary",
+        "label": "Final Review Readiness Preview",
+        "board_type": "Readiness Preview",
         "surface": "Practical Validation",
         "module_ids": [
             "source_integrity",
@@ -39,7 +39,7 @@ BOARD_SPECS = [
         ],
         "primary_module_ids": [],
         "applies_when": "always",
-        "role": "Final Review 이동 가능 여부를 모듈 gate 결과로 요약합니다.",
+        "role": "Final Review 이동 전 먼저 해결할 evidence gap과 준비 상태를 요약합니다.",
     },
     {
         "board_id": "input_evidence",

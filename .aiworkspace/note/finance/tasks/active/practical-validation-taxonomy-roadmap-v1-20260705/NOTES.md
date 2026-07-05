@@ -97,3 +97,13 @@ The service is intentionally UI-neutral and Streamlit-free. It consumes a Practi
 - `technical_details`
 
 This keeps the existing validation module plan intact while giving V2-V4 a stable screen-oriented contract.
+
+## 2026-07-05 - V2 Implementation Note
+
+V2 changes user-facing stage boundary language:
+
+- `selected_route_preflight` module label becomes `Final Review Readiness Preview`.
+- The board previously labeled `Final Review Gate` becomes `Final Review Readiness Preview`.
+- Gate wording now says the blocker is an evidence gap in Final Review readiness, not an early selected-route decision.
+
+The blocker semantics remain unchanged: deterministic evidence gaps still block Final Review movement.

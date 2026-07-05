@@ -1228,12 +1228,23 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         gate = plan["final_review_gate"]
         self.assertFalse(gate["can_save_and_move"])
         self.assertEqual(gate["route"], "BLOCKED_FOR_FINAL_REVIEW")
-        self.assertIn("selected-route", gate["verdict"])
+        self.assertIn("Final Review 준비 상태", gate["verdict"])
+        self.assertNotIn("selected-route", gate["verdict"].lower())
         self.assertEqual(gate["blocking_modules"][0]["module_id"], "selected_route_preflight")
         modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertEqual(modules["selected_route_preflight"]["label"], "Final Review Readiness Preview")
         self.assertEqual(modules["selected_route_preflight"]["status"], "NEEDS_INPUT")
         self.assertEqual(modules["selected_route_preflight"]["gate_effect"], "Blocks Final Review")
+        self.assertIn("준비 상태", modules["selected_route_preflight"]["reason"])
         self.assertIn("gross-only", modules["selected_route_preflight"]["resolution_action"])
+        self.assertEqual(
+            modules["selected_route_preflight"]["resolution_surface"],
+            "Final Review readiness preview",
+        )
+        display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
+        self.assertIn("Final Review Readiness Preview", display_rows)
+        board_rows = {row["Board ID"]: row for row in plan["board_display_rows"]}
+        self.assertEqual(board_rows["final_review_gate"]["Board"], "Final Review Readiness Preview")
 
     def test_practical_validation_workspace_groups_stage_two_evidence_before_downstream_references(self) -> None:
         from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace

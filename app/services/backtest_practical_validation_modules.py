@@ -639,20 +639,20 @@ def build_validation_module_plan(
         modules.append(
             _module(
                 module_id="selected_route_preflight",
-                label="Selected-route Preflight",
-                group="Required for Final Review",
+                label="Final Review Readiness Preview",
+                group="Final Review Readiness Preview",
                 status="PASS" if preflight_allowed else "NEEDS_INPUT",
                 requirement="REQUIRED",
                 stage_owner="practical_validation",
-                reason="Final Review selected-route gate가 저장을 막을 deterministic evidence gap을 Practical Validation 단계에서 먼저 확인합니다.",
+                reason="Final Review 준비 상태에서 저장을 막을 deterministic evidence gap을 Practical Validation 단계에서 먼저 확인합니다.",
                 next_action=(
                     preflight.get("next_action")
-                    or "Final Review 이동 전에 selected-route preflight의 blocker / review-required 항목을 보강합니다."
+                    or "Final Review 이동 전에 readiness preview의 blocker / review-required 항목을 보강합니다."
                 ),
                 profile_effect=f"selection policy outcome: {preflight_outcome}",
-                resolution_surface="Practical Validation evidence boards / Final Review Gate",
+                resolution_surface="Final Review readiness preview",
                 resolution_action=(
-                    "selected-route policy 통과 상태입니다."
+                    "Final Review readiness preview 통과 상태입니다."
                     if preflight_allowed
                     else preflight_issue
                 ),
@@ -684,10 +684,10 @@ def build_validation_module_plan(
     if blockers:
         gate_route = "BLOCKED_FOR_FINAL_REVIEW"
         if selected_route_preflight_blocked:
-            gate_verdict = "Final Review selected-route 저장을 막을 evidence gap이 있어 Final Review 이동을 막습니다."
+            gate_verdict = "Final Review 준비 상태에서 저장을 막을 evidence gap이 있어 Final Review 이동을 막습니다."
             next_action = (
                 preflight.get("next_action")
-                or "Selected-route Preflight의 blocker / review-required 항목을 먼저 해결합니다."
+                or "Final Review readiness preview의 blocker / review-required 항목을 먼저 해결합니다."
             )
         else:
             gate_verdict = "필수 검증 모듈에 보강이 필요한 항목이 있어 Final Review 이동을 막습니다."

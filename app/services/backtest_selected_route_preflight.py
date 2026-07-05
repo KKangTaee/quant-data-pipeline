@@ -16,7 +16,7 @@ def build_practical_validation_selected_route_preflight(
     paper_observation: dict[str, Any] | None = None,
     decision_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run the Final Review selected-route policy before exposing a validation row."""
+    """Preview Final Review readiness before exposing a validation row."""
 
     validation_row = dict(validation or {})
     source_row = dict(source or {})
@@ -34,7 +34,7 @@ def build_practical_validation_selected_route_preflight(
         decision_row = {
             "route": "READY_FOR_FINAL_DECISION",
             "blockers": [],
-            "verdict": "Practical Validation selected-route preflight checks selection-critical evidence before Final Review.",
+            "verdict": "Practical Validation previews Final Review readiness evidence before handoff.",
             "next_action": "Final Review에서 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다.",
         }
     packet = build_investability_evidence_packet(

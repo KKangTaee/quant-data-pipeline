@@ -49,3 +49,7 @@ V1 implementation started after user approval:
 V1 only creates the workspace read-model contract. The Practical Validation page does not consume it yet, so user-visible duplication remains until V4.
 
 V2 should be careful to change language without weakening deterministic blocker behavior for selected-route evidence gaps.
+
+## 2026-07-05 - V2 Residual Risk
+
+The service-level labels now say `Final Review Readiness Preview`, but some existing UI copy in `app/web/backtest_practical_validation/page.py` still says `Final Review Gate`. That visible screen hierarchy is intentionally left for V4, where the page flow changes happen together with Browser QA.
