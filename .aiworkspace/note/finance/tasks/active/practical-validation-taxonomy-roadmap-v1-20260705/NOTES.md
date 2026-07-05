@@ -141,3 +141,17 @@ Design boundary:
 - `page.py` checks `is_practical_validation_fix_queue_available()` and falls back to the existing Streamlit cards when the frontend build is absent.
 
 This keeps the React pass product-visible without turning the whole Practical Validation page into a second app.
+
+## 2026-07-05 - V6 Implementation Note
+
+V6 moves the Flow 3 first-read surface into `app/web/backtest_practical_validation/workspace_panel.py`.
+
+Moved ownership:
+
+- gate fix guidance
+- Fix Queue display row builder
+- core / conditional / downstream workspace group rendering
+- React Fix Queue availability check and render call
+- Streamlit fallback for the same surface
+
+`page.py` still orchestrates the five flows, session state, source selection, replay execution, save / move controls, and technical detail expanders. This keeps the split behavior-preserving and avoids turning V6 into a broad mechanical rewrite.

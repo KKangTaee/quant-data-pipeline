@@ -316,3 +316,55 @@ Outcome:
 - failed 1 existing policy-signal contract: `test_policy_signal_tab_is_evidence_only_after_handoff_summary` expects `second_stage_review_rows` in `app/web/backtest_result_display.py`
 - the same test file also has `test_backtest_policy_signal_react_board_component_is_ui_only`, which expects `second_stage_review_rows` not to be in `app/web/backtest_result_display.py`
 - current V5 diff does not touch `app/web/backtest_result_display.py`; this is recorded as a pre-existing contract drift, not a V5 blocker
+
+## 2026-07-05 - V6 Development And QA
+
+TDD RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_workspace_panel_owns_first_read_surface
+```
+
+Outcome:
+
+- failed because `app/web/backtest_practical_validation/workspace_panel.py` did not exist yet
+
+Implemented:
+
+- `app/web/backtest_practical_validation/workspace_panel.py`
+- moved Flow 3 workspace overview / Fix Queue / workspace groups / React component integration out of `page.py`
+- kept `gate_module_display_rows()` public for `page.py` Save blocker detail reuse
+- updated V5 component contract test to assert React ownership in `workspace_panel.py`
+
+QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_workspace_panel_owns_first_read_surface tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_page_uses_workspace_first_read_flow tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_fix_queue_react_component_is_ui_only
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py app/web/components/practical_validation_fix_queue/component.py
+git diff --check -- app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests
+```
+
+Browser QA:
+
+```bash
+http://localhost:8525/backtest
+```
+
+Checked in browser:
+
+- Practical Validation workflow opens after reload.
+- Flow 3 text remains visible.
+- `practical_validation_fix_queue` iframe still loads from the split workspace panel path.
+- iframe body still contains `2차 검증 결론 / Fix Queue`, `Final Review 이동 보류`, `Fix Queue 4`, `Review Items 8`, and `Core Evidence 3`.
+- screenshot saved as `backtest-practical-validation-v6-workspace-panel-qa.png`
+
+Outcome:
+
+- focused V6 tests passed
+- py_compile passed
+- diff check passed
+- `BacktestRefactorBoundaryTests`: 13 tests passed
+- `PracticalValidationServiceContractTests`: 22 tests passed
+- Browser QA passed for the split workspace panel

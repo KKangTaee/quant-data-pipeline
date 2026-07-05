@@ -5,7 +5,7 @@ Last Updated: 2026-07-05
 
 ## Current State
 
-V5 implementation is complete and ready to commit.
+V6 implementation is complete and ready to commit.
 
 Completed in this task:
 
@@ -30,6 +30,9 @@ Completed in this task:
 - Added a focused read-only React component for the Practical Validation Fix Queue and core evidence groups.
 - Connected the component behind an availability check while preserving the existing Streamlit fallback.
 - Verified V5 with component build, focused contracts, py_compile, Browser QA, and screenshot.
+- Split the Flow 3 first-read surface into `app/web/backtest_practical_validation/workspace_panel.py`.
+- Kept `page.py` responsible for orchestration while the workspace panel owns Fix Queue, core evidence group rendering, and the React component integration.
+- Verified V6 with RED/GREEN boundary tests, py_compile, contract tests, Browser QA, and screenshot.
 
 ## Current Conclusion
 
@@ -45,14 +48,16 @@ V4 makes that contract visible in the page: the first-read path is now candidate
 
 V5 makes the most decision-heavy part of that first-read path feel like one product surface: Fix Queue, review count, and core evidence groups render together in a read-only React component, while Python still owns validation execution, gate calculation, persistence, and handoff.
 
+V6 starts the physical split at the highest-value ownership seam: Flow 3's first-read workspace panel moved out of `page.py`. This avoids a giant mechanical refactor while making the React Fix Queue and Streamlit fallback live beside their workspace read-model rendering.
+
 ## Next Action
 
-V6 should physically split `page.py` by the 5-flow ownership decided in V4:
+V7 should unify user-facing validation status language across the split renderers:
 
-1. Keep `page.py` as orchestration and top-level state flow.
-2. Move source/profile, replay, gate/workspace, evidence, provider action, and handoff renderers into focused modules.
-3. Preserve the V5 React component as a UI-only optional surface.
-4. Run Browser QA again because visible UI ownership will move.
+1. Normalize visible status labels around `PASS / REVIEW / NEEDS_INPUT / BLOCKED / NOT_RUN / NOT_APPLICABLE`.
+2. Keep raw route IDs available only in technical/detail surfaces.
+3. Preserve existing gate behavior.
+4. Add focused tests for status mapping and page/panel ownership.
 
 ## Verification State
 
@@ -83,9 +88,16 @@ Completed checks:
 - V5 py_compile and diff check
 - V5 Browser QA against `http://localhost:8525/backtest`
 - V5 screenshot: `backtest-practical-validation-v5-react-fix-queue-card-qa.png`
+- V6 RED/GREEN workspace panel ownership boundary test
+- V6 React component contract update for new panel ownership
+- V6 py_compile and diff check
+- V6 Backtest refactor boundary tests and Practical Validation service contract suite
+- V6 Browser QA against `http://localhost:8525/backtest`
+- V6 screenshot: `backtest-practical-validation-v6-workspace-panel-qa.png`
 
 Browser QA was not run for V1 because no Streamlit UI changed.
 Browser QA was not run for V2 because no Streamlit UI changed.
 Browser QA was not run for V3 because no Streamlit UI changed.
 Browser QA was run for V4.
 Browser QA was run for V5.
+Browser QA was run for V6.

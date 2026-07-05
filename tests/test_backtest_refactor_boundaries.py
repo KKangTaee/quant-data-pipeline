@@ -216,8 +216,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
         render_body = source.split("def render_practical_validation_workspace", 1)[1]
 
-        self.assertIn("def _render_practical_validation_workspace_overview", source)
-        self.assertIn('validation_result.get("practical_validation_workspace")', source)
+        self.assertIn("render_practical_validation_workspace_overview(validation_result)", render_body)
         self.assertIn('"title": "후보 / 검증 프로필 확인"', render_body)
         self.assertIn('"title": "실전 검증 실행"', render_body)
         self.assertIn('"title": "2차 검증 결론 / Fix Queue"', render_body)
@@ -225,6 +224,24 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn('"title": "저장 / Final Review 이동"', render_body)
         self.assertNotIn('"marker": "6"', render_body)
         self.assertNotIn('"marker": "7"', render_body)
+
+    def test_practical_validation_workspace_panel_owns_first_read_surface(self) -> None:
+        page_source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
+        panel_path = PROJECT_ROOT / "app/web/backtest_practical_validation/workspace_panel.py"
+
+        self.assertTrue(panel_path.exists())
+        panel_source = panel_path.read_text()
+
+        self.assertIn(
+            "from app.web.backtest_practical_validation.workspace_panel import",
+            page_source,
+        )
+        self.assertIn("render_practical_validation_workspace_overview(validation_result)", page_source)
+        self.assertNotIn("def _render_practical_validation_workspace_overview", page_source)
+        self.assertIn("def render_practical_validation_workspace_overview", panel_source)
+        self.assertIn('validation_result.get("practical_validation_workspace")', panel_source)
+        self.assertIn("is_practical_validation_fix_queue_available()", panel_source)
+        self.assertNotIn("from app.web.backtest_practical_validation.page import", panel_source)
 
 
 if __name__ == "__main__":

@@ -8196,6 +8196,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         style_path = component_root / "frontend/src/style.css"
         build_entry_path = component_root / "frontend/build/index.html"
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        panel_source = Path("app/web/backtest_practical_validation/workspace_panel.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
         self.assertTrue(package_path.exists())
@@ -8222,8 +8223,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("from finance", wrapper_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)
-        self.assertIn("render_practical_validation_fix_queue(", page_source)
-        self.assertIn("is_practical_validation_fix_queue_available()", page_source)
+        self.assertIn("render_practical_validation_workspace_overview(", page_source)
+        self.assertIn("render_practical_validation_fix_queue(", panel_source)
+        self.assertIn("is_practical_validation_fix_queue_available()", panel_source)
 
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
         flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")
