@@ -15,7 +15,7 @@ _POLICY_SIGNAL_DISPLAY_COPY: dict[str, dict[str, Any]] = {
             {"label": "Review Reason", "detail": "hold라면 Practical Validation에 넘겨 확인할 이유"},
         ],
         "pass_note": "Practical Validation source 등록을 막는 promotion blocker가 없습니다.",
-        "review_note": "hold 사유는 source와 함께 Practical Validation의 2차 확인 큐로 전달합니다.",
+        "review_note": "hold 사유는 source와 함께 Practical Validation review focus로 전달합니다.",
         "block_note": "Backtest를 다시 실행하거나 promotion signal 생성 경로를 먼저 확인해야 합니다.",
     },
     "Price Freshness": {
@@ -593,7 +593,7 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
         promotion_judgment = "비교 가능성은 있으나 보수적 확인 필요"
     elif promotion == "hold":
         promotion_score = 1.0
-        promotion_judgment = "2차 검증에서 hold 사유 확인 필요"
+        promotion_judgment = "Practical Validation에서 hold 사유 확인 필요"
     else:
         promotion_score = 0.0
         promotion_judgment = "promotion signal 생성 전에는 source 등록 보류"
@@ -603,7 +603,7 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
         execution_judgment = "실행 원천 blocker가 남아 있음"
     elif entry_execution_reviews:
         execution_score = 2.0
-        execution_judgment = "실행 부담은 검토 가능하지만 확인 항목 있음"
+        execution_judgment = "실행 부담은 검토 가능하지만 후속 확인 항목 있음"
     else:
         execution_score = 3.0
         execution_judgment = "실행 부담 원천 지표가 양호함"
@@ -631,15 +631,15 @@ def build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]
     )
 
     if can_enter_practical_validation and score >= 8.0 and not promotion_reviews:
-        verdict = "후보 검토 진행 가능"
+        verdict = "1차 source 등록 기준 통과"
         tone = "success"
         route_label = "Portfolio Mix Builder 또는 Practical Validation"
         next_action = "Portfolio Mix Builder에서 다른 후보와 조합하거나 Practical Validation으로 보내 검증 근거를 확인합니다."
     elif can_enter_practical_validation:
-        verdict = "2차 검증 진입 가능, 확인 항목 있음"
-        tone = "warning"
+        verdict = "1차 source 등록 기준 통과"
+        tone = "success"
         route_label = "Practical Validation 조건부 진입"
-        next_action = "Practical Validation으로 넘긴 뒤 promotion hold 사유와 review 항목을 먼저 확인합니다."
+        next_action = "Practical Validation으로 넘긴 뒤 실전성 review focus를 확인합니다."
     else:
         verdict = "2차 진입 보류: source blocker 먼저 해결"
         tone = "error"

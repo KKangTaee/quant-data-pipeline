@@ -37,13 +37,10 @@ type GroupedPolicyRows = {
 
 type BacktestPolicySignalBoardArgs = {
   tone?: Tone
-  score?: string
   headline?: string
   subhead?: string
   metrics?: Metric[]
   firstStageRows?: PolicySignalRow[]
-  secondStageCount?: number
-  handoffNote?: string
 }
 
 const GROUP_ORDER = ["Data Trust", "Execution Source", "Validation Source", "Promotion", "Execution Review", "Validation Review"]
@@ -112,7 +109,6 @@ export function BacktestPolicySignalBoard(props: ComponentProps) {
   const boardTone = toneClass(args.tone)
   const metrics = args.metrics ?? []
   const firstRows = args.firstStageRows ?? []
-  const secondStageCount = Number(args.secondStageCount ?? 0)
   const groupedFirstRows = useMemo(() => buildGroupedFirstRows(firstRows), [firstRows])
 
   return (
@@ -123,7 +119,6 @@ export function BacktestPolicySignalBoard(props: ComponentProps) {
           <h4>{compact(args.headline)}</h4>
           <p>{compact(args.subhead, "")}</p>
         </div>
-        <div className="bt-react-policy__score">{compact(args.score)}</div>
       </header>
 
       <div className="bt-react-policy__metrics">
@@ -224,14 +219,6 @@ export function BacktestPolicySignalBoard(props: ComponentProps) {
           </div>
         </div>
 
-        <aside className="bt-react-policy__handoff">
-          <div className="bt-react-policy__handoff-count">
-            <span>2차 확인</span>
-            <strong>{secondStageCount}개</strong>
-          </div>
-          <h5>2차 확인은 Practical Validation에서 계속 확인합니다.</h5>
-          <p>{compact(args.handoffNote)}</p>
-        </aside>
       </div>
     </section>
   )

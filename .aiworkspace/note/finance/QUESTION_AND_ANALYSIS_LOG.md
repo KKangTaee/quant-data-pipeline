@@ -8463,3 +8463,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Backtest Analysis는 1차 데이터 기준과 source 등록 가능 여부만 상세히 보여주고, 실전성 review focus 상세는 Practical Validation으로 넘겨야 함.
 - Analysis result: Data Trust가 `meta["warnings"]`를 `이번 실행 검토 큐` 상세 카드로 펼치고 있었고, Handoff / Policy Signal handoff 문구도 2차 판단 도메인을 1차 화면에서 다시 설명하고 있었다.
 - Follow-up: Data Trust는 excluded ticker / malformed price row 같은 직접 데이터 이슈만 상세 표시하고, `meta["warnings"]`는 `2차 확인 항목` count / 위치 안내로만 표시한다. Practical Validation의 review queue 전달은 유지한다.
+
+### 2026-07-05 - Backtest Analysis는 1차 source 등록 기준만 표시한다
+
+- User request: 사용자가 1차에서 검증하는 것과 2차에서 검증하는 것이 명확히 구별되어 있는지 검토하고, 1차 통과 시 해당 포트폴리오를 2차로 보낼 수 있도록 버튼이 활성화되는 흐름을 바로잡아 달라고 요청함.
+- Interpreted goal: Backtest Analysis는 결과 무결성 / 데이터 기준 / source contract hard blocker만 표시하고, Practical Validation review focus는 1차 화면에서 count나 상세로 노출하지 않아야 함.
+- Analysis result: 기존 코드와 문서는 Data Trust, Handoff, Policy Signals에서 2차 count / notice를 반복해 사용자가 1차 검증 결과로 오해할 수 있었다. 실제 source contract는 `entry_gate.review_focus_rows`로 2차 전달을 이미 지원했다.
+- Follow-up: visible Backtest Analysis에서는 `2차 확인 큐`, `2차 전달`, readiness score를 제거하고, hard blocker가 없으면 React Handoff button을 활성화한다. 2차 상세 항목은 Practical Validation의 `Backtest에서 넘어온 2차 확인 항목`에서만 본다.

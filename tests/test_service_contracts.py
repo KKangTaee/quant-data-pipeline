@@ -7624,8 +7624,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
 
         self.assertTrue(state["can_submit"])
-        self.assertEqual(state["status_label"], "2차 진입 가능")
-        self.assertEqual(state["display_reasons"], ["2차 확인 큐 1개는 Practical Validation에서 이어 확인합니다."])
+        self.assertEqual(state["status_label"], "1차 통과")
+        self.assertEqual(state["display_reasons"], ["Practical Validation에서 실전성 검증을 이어갑니다."])
         self.assertNotIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
         self.assertFalse(any("provider" in reason for reason in state["display_reasons"]))
         self.assertFalse(any("data coverage" in reason for reason in state["display_reasons"]))
@@ -7634,7 +7634,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         entry_cards = {row["label"]: row for row in state["entry_cards"]}
         self.assertEqual(entry_cards["1차 진입 기준"]["value"], "통과")
         self.assertEqual(entry_cards["먼저 해결"]["value"], "0개")
-        self.assertEqual(entry_cards["2차 확인 큐"]["value"], "1개")
+        self.assertEqual(entry_cards["다음 단계"]["value"], "Practical Validation")
+        self.assertNotIn("2차 확인 큐", entry_cards)
         self.assertNotIn("criteria", state)
         self.assertNotIn("score", state)
 
@@ -7686,12 +7687,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
 
         self.assertTrue(state["can_submit"])
-        self.assertEqual(state["status_label"], "2차 진입 가능")
-        self.assertEqual(state["display_reasons"], ["2차 확인 큐 없음"])
+        self.assertEqual(state["status_label"], "1차 통과")
+        self.assertEqual(state["display_reasons"], ["Practical Validation에서 실전성 검증을 이어갑니다."])
         entry_cards = {row["label"]: row for row in state["entry_cards"]}
         self.assertEqual(entry_cards["1차 진입 기준"]["value"], "통과")
         self.assertEqual(entry_cards["먼저 해결"]["value"], "0개")
-        self.assertEqual(entry_cards["2차 확인 큐"]["value"], "0개")
+        self.assertEqual(entry_cards["다음 단계"]["value"], "Practical Validation")
 
     def test_practical_validation_handoff_uses_single_integrated_action_surface(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
@@ -7755,7 +7756,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("second_stage_review_rows", source)
         self.assertIn("bt-policy-signal", source)
         self.assertIn("검증 기준 상세", component_source)
-        self.assertIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
+        self.assertNotIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
         self.assertIn("1차에서 확인한 기준", component_source)
         self.assertIn("2차 확인은 Practical Validation에서 계속 확인합니다.", component_source)
         self.assertNotIn("2차로 넘긴 확인 큐", component_source)
@@ -7865,14 +7866,18 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("groupedFirstRows", component_source)
         self.assertIn("bt-react-policy__help", component_source)
         self.assertIn("aria-expanded", component_source)
-        self.assertIn("secondStageCount", component_source)
+        self.assertNotIn("secondStageCount", component_source)
+        self.assertNotIn("score?:", component_source)
+        self.assertNotIn("bt-react-policy__score", style_source)
+        self.assertNotIn("2차 확인은 Practical Validation에서 계속 확인합니다.", component_source)
+        self.assertNotIn("bt-react-policy__handoff", component_source)
         self.assertIn("checked_evidence", component_source)
         self.assertIn("checked_items", component_source)
         self.assertNotIn("secondGroups.map", component_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("render_backtest_policy_signal_board(", result_display_source)
         self.assertIn("first_stage_rows", result_display_source)
-        self.assertIn("second_stage_review_rows", result_display_source)
+        self.assertNotIn("second_stage_review_rows", result_display_source)
 
     def test_practical_validation_step1_receives_backtest_review_focus_queue(self) -> None:
         source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -7921,7 +7926,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("score", wrapper_source)
         self.assertNotIn("진입 준비도", component_source)
         self.assertIn("1차 진입 기준", result_display_source)
-        self.assertIn("2차 확인 큐", result_display_source)
+        self.assertNotIn("2차 확인 큐", component_source)
+        self.assertNotIn("reviewCount", component_source)
+        self.assertNotIn("2차 확인 큐", result_display_source)
         self.assertIn(".bt-react-handoff {", style_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)
@@ -8079,23 +8086,24 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(brief["status_label"], "2차 확인 항목 있음")
+        self.assertEqual(brief["status_label"], "자료 정상")
         self.assertIn("2026-06-26까지", brief["headline"])
-        self.assertIn("2차에서 이어 확인할 항목 2개", brief["headline"])
+        self.assertNotIn("2차", brief["headline"])
         self.assertIn("요청 종료일 2026-07-01", brief["subtitle"])
         self.assertEqual(
             [item["label"] for item in brief["summary_items"]],
-            ["계산 기준일", "가격 기준", "사용 데이터", "2차 전달"],
+            ["계산 기준일", "가격 기준", "사용 데이터", "1차 데이터 확인"],
         )
         self.assertEqual(brief["summary_items"][1]["value"], "최신성 정상")
         self.assertIn("공통 2026-06-26", brief["summary_items"][1]["detail"])
         self.assertEqual(brief["summary_items"][2]["value"], "4개 종목")
-        self.assertEqual(brief["summary_items"][3]["value"], "2차 확인 2개")
-        self.assertEqual(brief["summary_items"][3]["detail"], "Practical Validation에서 확인합니다.")
+        self.assertEqual(brief["summary_items"][3]["value"], "바로 성과 확인")
+        self.assertEqual(brief["summary_items"][3]["detail"], "아래 성과 metric과 차트를 이어서 봅니다.")
         self.assertNotIn("reading_rows", brief)
         self.assertNotIn("detail_rows", brief)
         self.assertEqual(brief["issue_cards"], [])
-        self.assertEqual(brief["second_stage_review_count"], 2)
+        self.assertEqual(brief["second_stage_review_count"], 0)
+        self.assertEqual(brief["warnings"], [])
 
     def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
@@ -8114,7 +8122,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("data-trust-brief", source)
         self.assertIn("data-trust-brief__section-title", panel_body)
         self.assertIn("data-trust-brief__section-kicker", panel_body)
-        self.assertIn("2차 확인 항목", source)
+        self.assertNotIn("2차 확인 항목", panel_body)
+        self.assertNotIn("2차 전달", panel_body)
         self.assertIn("1차 데이터 확인", source)
         self.assertNotIn("이번 실행 검토 큐", source)
         self.assertNotIn('st.markdown("#### 데이터 기준 요약")', function_body)

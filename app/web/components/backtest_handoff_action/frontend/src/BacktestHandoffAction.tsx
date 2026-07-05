@@ -20,8 +20,6 @@ type BacktestHandoffActionProps = {
   actionText: string
   buttonLabel: string
   disabled: boolean
-  reviewCount: number
-  blockerCount: number
   boundaryText: string
 }
 
@@ -90,9 +88,6 @@ export function BacktestHandoffAction(props: BacktestHandoffActionProps) {
             {props.disabled ? "등록 보류" : "등록 가능"}
           </div>
           <div className="bt-react-handoff__action-text">{props.actionText}</div>
-          <div className="bt-react-handoff__counts">
-            2차 확인 {props.reviewCount} · 먼저 해결 {props.blockerCount}
-          </div>
         </div>
         <button
           className="bt-react-handoff__button"

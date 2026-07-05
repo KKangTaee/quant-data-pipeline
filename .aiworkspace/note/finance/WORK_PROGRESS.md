@@ -5480,3 +5480,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-second-stage-visibility-v1-20260705/`에서 Data Trust와 Handoff의 1차 / 2차 표시 경계를 추가 정리했다.
   - Data Trust는 excluded ticker / malformed price row 같은 1차 데이터 이슈만 상세 표시하고, `meta["warnings"]` review focus는 2차 전달 count로만 남긴다.
   - Practical Validation `Backtest에서 넘어온 2차 확인 항목`의 상세 queue 전달은 유지했고, gate threshold / source registration / registry / strategy runtime은 변경하지 않았다.
+- Backtest Entry Gate Ownership Correction 2026-07-05:
+  - Backtest Analysis visible surface에서 `2차 확인 큐` count / `2차 전달` Data Trust 표시 / readiness score를 제거하고, 1차 source 등록 기준과 버튼 활성화만 남겼다.
+  - `promotion_decision=hold` 등 review focus는 버튼을 막지 않고 source contract `entry_gate.review_focus_rows`로만 Practical Validation에 전달한다.
+  - Practical Validation `Backtest에서 넘어온 2차 확인 항목` 상세 표시와 registry / saved / strategy runtime 계약은 유지했다.

@@ -19,8 +19,6 @@ type StreamlitArgs = {
   actionText?: string
   buttonLabel?: string
   disabled?: boolean
-  reviewCount?: number
-  blockerCount?: number
   boundaryText?: string
 }
 
@@ -40,8 +38,6 @@ function App({ args }: AppProps) {
       actionText={args?.actionText ?? "-"}
       buttonLabel={args?.buttonLabel ?? "Submit"}
       disabled={Boolean(args?.disabled)}
-      reviewCount={Number(args?.reviewCount ?? 0)}
-      blockerCount={Number(args?.blockerCount ?? 0)}
       boundaryText={args?.boundaryText ?? ""}
     />
   )

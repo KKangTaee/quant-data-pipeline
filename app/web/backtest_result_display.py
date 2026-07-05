@@ -154,15 +154,11 @@ def _data_trust_price_status_label(status: str) -> str:
 
 
 def _build_data_trust_issue_cards(
-    warnings: list[str],
     *,
     excluded_tickers: list[Any],
     malformed_price_rows: list[Any],
 ) -> list[dict[str, str]]:
     issue_cards: list[dict[str, str]] = []
-    # `meta["warnings"]` are Practical Validation review cues. Data Trust only
-    # expands direct first-stage data issues that affect result readability.
-    _ = warnings
 
     if excluded_tickers:
         sample = ", ".join(str(ticker) for ticker in excluded_tickers[:8])
@@ -204,7 +200,6 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     status = str(price_freshness.get("status") or "").strip().lower()
     excluded_tickers = list(meta.get("excluded_tickers") or [])
     malformed_price_rows = list(meta.get("malformed_price_rows") or [])
-    warnings = [str(warning) for warning in list(meta.get("warnings") or []) if str(warning).strip()]
     tickers = list(meta.get("tickers") or [])
     requested_end = _display_data_trust_value(meta.get("end"))
     actual_end = _display_data_trust_value(
@@ -219,9 +214,7 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     result_rows = _format_data_trust_count(meta.get("result_rows"))
     symbol_count = len(tickers)
     symbol_label = f"{symbol_count}개 종목" if symbol_count else "종목 수 미상"
-    second_stage_review_count = len(warnings)
     issue_cards = _build_data_trust_issue_cards(
-        warnings,
         excluded_tickers=excluded_tickers,
         malformed_price_rows=malformed_price_rows,
     )
@@ -236,11 +229,6 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         tone = "warning"
         headline = f"백테스트는 {actual_end}까지 계산됐고, 데이터 기준을 함께 확인해야 합니다."
         price_tone = "warning"
-    elif warnings:
-        status_label = "2차 확인 항목 있음"
-        tone = "warning"
-        headline = f"백테스트는 {actual_end}까지 계산됐고, 2차에서 이어 확인할 항목 {len(warnings)}개가 함께 전달됩니다."
-        price_tone = "positive" if status == "ok" else "neutral"
     elif status == "ok":
         status_label = "자료 정상"
         tone = "positive"
@@ -270,10 +258,6 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         next_check_label = "1차 데이터 확인"
         next_check_value = "데이터 보강"
         next_check_detail = "가격 수집 또는 DB 보강 후 다시 실행합니다."
-    elif warnings:
-        next_check_label = "2차 전달"
-        next_check_value = f"2차 확인 {len(warnings)}개"
-        next_check_detail = "Practical Validation에서 확인합니다."
     else:
         next_check_label = "1차 데이터 확인"
         next_check_value = "바로 성과 확인"
@@ -306,26 +290,15 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         "price_message": price_freshness.get("message"),
         "excluded_tickers": excluded_tickers,
         "malformed_price_rows": malformed_price_rows,
-        "warnings": warnings,
-        "second_stage_review_count": second_stage_review_count,
+        "warnings": [],
+        "second_stage_review_count": 0,
         "newest_latest": newest_latest,
     }
 
 
 def _render_data_trust_issue_queue(brief: dict[str, Any]) -> str:
     issue_cards = list(brief.get("issue_cards") or [])
-    second_stage_review_count = int(brief.get("second_stage_review_count") or 0)
     if not issue_cards:
-        if second_stage_review_count:
-            return f"""
-  <div class="data-trust-brief__issues data-trust-brief__issues--empty">
-    <div class="data-trust-brief__issues-head">
-      <span>2차 확인 항목</span>
-      <strong>{second_stage_review_count}개 전달</strong>
-    </div>
-    <p>상세 판단은 Practical Validation의 `Backtest에서 넘어온 2차 확인 항목`에서 확인합니다.</p>
-  </div>
-            """
         return """
   <div class="data-trust-brief__issues data-trust-brief__issues--empty">
     <div class="data-trust-brief__issues-head">
@@ -348,11 +321,6 @@ def _render_data_trust_issue_queue(brief: dict[str, Any]) -> str:
         )
         for card in issue_cards
     )
-    handoff_html = (
-        f'<p class="data-trust-brief__handoff-note">2차 확인 항목 {second_stage_review_count}개는 Practical Validation에서 이어 확인합니다.</p>'
-        if second_stage_review_count
-        else ""
-    )
     return f"""
   <div class="data-trust-brief__issues">
     <div class="data-trust-brief__issues-head">
@@ -360,7 +328,6 @@ def _render_data_trust_issue_queue(brief: dict[str, Any]) -> str:
       <strong>{len(issue_cards)}개 확인</strong>
     </div>
     <div class="data-trust-brief__issue-list">{issue_html}</div>
-    {handoff_html}
   </div>
     """
 
@@ -695,10 +662,10 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         )
 
     if can_submit:
-        status_label = "2차 진입 가능"
+        status_label = "1차 통과"
         tone = "positive"
-        summary = "1차에서 확인할 source 등록 기준은 통과했습니다. 2차 확인 큐는 Practical Validation에서 이어서 검증합니다."
-        action_text = "Practical Validation으로 넘긴 뒤 2차 확인 큐를 확인하세요."
+        summary = "1차 source 등록 기준은 통과했습니다. 다음 단계에서 실전성 검증을 진행합니다."
+        action_text = "Practical Validation에서 실전성, 유동성, 검증 근거를 확인합니다."
         button_label = "2차 검증으로 보내기"
     else:
         status_label = "1차 진입 보류"
@@ -710,12 +677,9 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
     if not can_submit:
         display_reasons = [str(item) for item in list(gate_summary.get("action_items") or [])][:3]
         reason_title = str(gate_summary.get("reason_title") or ("막는 이유" if blocking_reasons else "상태"))
-    elif review_reasons:
-        display_reasons = [f"2차 확인 큐 {second_stage_review_count}개는 Practical Validation에서 이어 확인합니다."]
-        reason_title = "2차 확인 큐 전달"
     else:
-        display_reasons = ["2차 확인 큐 없음"]
-        reason_title = "상태"
+        display_reasons = ["Practical Validation에서 실전성 검증을 이어갑니다."]
+        reason_title = "다음 단계"
     entry_cards = [
         {
             "label": "1차 진입 기준",
@@ -730,10 +694,10 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
             "tone": "danger" if first_stage_blocker_count else "positive",
         },
         {
-            "label": "2차 확인 큐",
-            "value": f"{second_stage_review_count}개",
-            "detail": "Practical Validation에서 확인",
-            "tone": "warning" if second_stage_review_count else "positive",
+            "label": "다음 단계",
+            "value": "Practical Validation",
+            "detail": "실전성 검증",
+            "tone": "neutral",
         },
     ]
 
@@ -1016,18 +980,13 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
     evaluation = dict(gate_summary.get("evaluation") or {})
     can_submit = bool(gate_summary.get("can_submit"))
     tone = "positive" if can_submit and str(evaluation.get("tone") or "") == "success" else "warning" if can_submit else "danger"
-    status = "2차 진입 가능" if can_submit else "기준 확인 필요"
-    score = escape(f"{float(evaluation.get('score') or 0.0):.1f} / 10")
+    status = "1차 통과" if can_submit else "기준 확인 필요"
     route_label = escape(str(evaluation.get("route_label") or "-"))
     verdict = escape(str(evaluation.get("verdict") or "-"))
     next_action = escape(str(evaluation.get("next_action") or "-"))
-    review_count = len(list(evaluation.get("review_reasons") or []))
-    if can_submit and review_count:
-        action_title = "2차 확인 전달"
-        action_items = [f"2차 확인 항목 {review_count}개는 Practical Validation 상단에서 확인합니다."]
-    elif can_submit:
-        action_title = "상태"
-        action_items = ["막는 항목 없음"]
+    if can_submit:
+        action_title = "다음 단계"
+        action_items = ["Practical Validation에서 실전성 검증을 이어갑니다."]
     else:
         action_title = str(gate_summary.get("reason_title") or "상태")
         action_items = [str(item) for item in list(gate_summary.get("action_items") or [])] or ["막는 항목 없음"]
@@ -1115,12 +1074,6 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
   color: #667085;
   line-height: 1.55;
 }}
-.bt-policy-signal__score {{
-  margin-top: 0.55rem;
-  color: var(--ps-accent);
-  font-size: 0.92rem;
-  font-weight: 800;
-}}
 .bt-policy-signal__chips {{
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1185,7 +1138,6 @@ def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
     <div>
       <div class="bt-policy-signal__verdict">다음 경로: {route_label}</div>
       <div class="bt-policy-signal__route">{next_action}</div>
-      <div class="bt-policy-signal__score">진입 준비도 {score}</div>
       <div class="bt-policy-signal__chips">{chip_html}</div>
     </div>
     <div class="bt-policy-signal__actions">
@@ -1277,37 +1229,18 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
             for row in sorted_rows
             if row.get("stage_owner") == "first_stage" and row.get("effect") in {"block", "pass"}
         ]
-    second_stage_rows = sorted(
-        [
-            dict(row or {})
-            for row in list(inventory.get("second_stage_review_rows") or [])
-            if row.get("effect") == "review"
-        ],
-        key=_policy_signal_row_sort_key,
-    )
-    if not second_stage_rows:
-        second_stage_rows = [
-            row
-            for row in sorted_rows
-            if row.get("stage_owner") == "second_stage" and row.get("effect") == "review"
-        ]
-
     first_block_count = sum(1 for row in first_stage_rows if row.get("effect") == "block")
     first_pass_count = sum(1 for row in first_stage_rows if row.get("effect") == "pass")
-    second_review_count = len(second_stage_rows)
     context_count = sum(1 for row in sorted_rows if row.get("effect") == "context")
     entry_ready = bool(evaluation.get("can_enter_practical_validation"))
-    board_tone = "positive" if entry_ready and not second_review_count else "warning" if entry_ready else "danger"
+    board_tone = "positive" if entry_ready else "danger"
     headline = (
-        "1차에서 확인할 기준은 통과했고, 2차 확인 큐를 넘겼습니다."
-        if entry_ready and second_review_count
-        else "1차에서 확인할 기준이 모두 통과 상태입니다."
+        "1차에서 확인할 기준이 모두 통과 상태입니다."
         if entry_ready
         else "source 등록 전 먼저 해결할 1차 기준이 있습니다."
     )
     subhead = (
-        "이 보드는 Backtest Analysis에서 확정 가능한 source 등록 기준만 보여줍니다. "
-        "실전성 판단에 필요한 review 신호는 Practical Validation 상단에서 이어서 확인합니다."
+        "이 보드는 Backtest Analysis에서 확정 가능한 source 등록 기준만 보여줍니다."
     )
     metrics = [
         {
@@ -1323,43 +1256,26 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
             "tone": "positive",
         },
         {
-            "label": "2차 전달",
-            "value": str(second_review_count),
-            "detail": "Practical Validation 확인 큐",
-            "tone": "warning" if second_review_count else "positive",
-        },
-        {
             "label": "기술 근거",
             "value": str(len(sorted_rows)),
             "detail": f"참고 {context_count}개 별도 보존",
             "tone": "neutral",
         },
     ]
-    handoff_note = (
-        f"2차 확인 {second_review_count}개는 Practical Validation으로 전달됩니다. "
-        "Backtest Analysis에서는 항목별 상세 판단을 반복하지 않습니다."
-        if second_review_count
-        else "Practical Validation으로 별도 전달된 review 큐가 없습니다. 아래 결과 근거를 이어서 확인하면 됩니다."
-    )
 
     if is_backtest_policy_signal_board_available():
         render_backtest_policy_signal_board(
             tone=board_tone,
-            score=f"종합 점수 {float(evaluation.get('score') or 0.0):.1f} / 10",
             headline=headline,
             subhead=subhead,
             metrics=metrics,
             first_stage_rows=first_stage_rows,
-            second_stage_count=second_review_count,
-            handoff_note=handoff_note,
             key="backtest_policy_signal_board",
         )
         return
 
     st.warning("Policy Signal React component build를 찾지 못했습니다. 기술 원천 표로 대체 표시합니다.")
     st.dataframe(pd.DataFrame(_policy_signal_display_rows(first_stage_rows)), width="stretch", hide_index=True)
-    if second_review_count:
-        st.caption(f"2차 확인 항목은 Practical Validation 상단에서 확인합니다. 전달 큐: {second_review_count}개")
     return
 
 
@@ -1386,8 +1302,6 @@ def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
         action_text=str(state.get("action_text") or "-"),
         button_label=str(state.get("button_label") or "2차 검증으로 보내기"),
         disabled=not can_submit,
-        review_count=int(state.get("second_stage_review_count") or 0),
-        blocker_count=int(state.get("first_stage_blocker_count") or 0),
         boundary_text=boundary_text,
         key="latest_run_candidate_review_draft_component",
     )

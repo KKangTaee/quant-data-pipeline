@@ -23,13 +23,10 @@ def is_backtest_policy_signal_board_available() -> bool:
 def render_backtest_policy_signal_board(
     *,
     tone: str,
-    score: str,
     headline: str,
     subhead: str,
     metrics: list[dict[str, Any]],
     first_stage_rows: list[dict[str, Any]],
-    second_stage_count: int,
-    handoff_note: str,
     key: str | None = None,
 ) -> None:
     """Render the optional React policy board when its frontend build exists.
@@ -41,13 +38,10 @@ def render_backtest_policy_signal_board(
         return
     _component(
         tone=tone,
-        score=score,
         headline=headline,
         subhead=subhead,
         metrics=metrics,
         firstStageRows=first_stage_rows,
-        secondStageCount=second_stage_count,
-        handoffNote=handoff_note,
         key=key,
         default=None,
     )

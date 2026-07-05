@@ -31,8 +31,6 @@ def render_backtest_handoff_action(
     action_text: str,
     button_label: str,
     disabled: bool,
-    review_count: int,
-    blocker_count: int,
     boundary_text: str,
     key: str | None = None,
 ) -> dict[str, Any] | None:
@@ -53,8 +51,6 @@ def render_backtest_handoff_action(
         actionText=action_text,
         buttonLabel=button_label,
         disabled=disabled,
-        reviewCount=review_count,
-        blockerCount=blocker_count,
         boundaryText=boundary_text,
         key=key,
         default=None,
