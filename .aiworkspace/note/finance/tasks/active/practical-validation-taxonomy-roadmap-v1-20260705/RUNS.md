@@ -154,3 +154,37 @@ Outcome:
 - diff check passed
 - `PracticalValidationServiceContractTests`: 22 tests passed
 - Browser QA skipped because V2 did not change visible Streamlit UI
+
+## 2026-07-05 - V3 Development And QA
+
+TDD RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationDiagnosticsServiceContractTests.test_practical_validation_result_includes_workspace_read_model
+```
+
+Outcome:
+
+- failed with `KeyError: 'practical_validation_workspace'`
+
+Implemented:
+
+- `app/services/backtest_practical_validation_diagnostics.py`
+- diagnostics result contract coverage in `tests/test_service_contracts.py`
+
+QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationDiagnosticsServiceContractTests.test_practical_validation_result_includes_workspace_read_model
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationDiagnosticsServiceContractTests tests.test_service_contracts.PracticalValidationServiceContractTests.test_service_imports_do_not_load_streamlit
+.venv/bin/python -m py_compile app/services/backtest_practical_validation_diagnostics.py app/services/backtest_practical_validation_workspace.py app/services/backtest_practical_validation.py
+git diff --check -- app/services/backtest_practical_validation_diagnostics.py tests/test_service_contracts.py
+```
+
+Outcome:
+
+- result workspace contract test passed
+- diagnostics service contract tests plus service import boundary test passed: 5 tests
+- py_compile passed
+- diff check passed
+- Browser QA skipped because V3 did not change visible Streamlit UI

@@ -3920,6 +3920,71 @@ class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(curve[0]["Total Return"], 0.0)
         self.assertAlmostEqual(curve[1]["Total Return"], -0.02)
 
+    def test_practical_validation_result_includes_workspace_read_model(self) -> None:
+        from app.services import backtest_practical_validation_diagnostics as diagnostics
+
+        source = {
+            "selection_source_id": "source-workspace",
+            "source_kind": "latest_backtest_run",
+            "source_title": "Workspace source",
+            "period": {"start": "2020-01-31", "end": "2020-03-31"},
+            "data_trust": {"status": "ok", "warning_count": 0},
+            "components": [
+                {
+                    "component_id": "core",
+                    "strategy_key": "equal_weight",
+                    "strategy_name": "Equal Weight",
+                    "target_weight": 100.0,
+                    "benchmark": "SPY",
+                    "universe": ["SPY"],
+                    "result_curve": [
+                        {"Date": "2020-01-31", "Total Balance": 100.0},
+                        {"Date": "2020-02-28", "Total Balance": 102.0},
+                        {"Date": "2020-03-31", "Total Balance": 101.0},
+                    ],
+                }
+            ],
+            "result_curve": [
+                {"Date": "2020-01-31", "Total Balance": 100.0},
+                {"Date": "2020-02-28", "Total Balance": 102.0},
+                {"Date": "2020-03-31", "Total Balance": 101.0},
+            ],
+            "benchmark_curve": [
+                {"Date": "2020-01-31", "Total Balance": 100.0},
+                {"Date": "2020-02-28", "Total Balance": 101.0},
+                {"Date": "2020-03-31", "Total Balance": 99.0},
+            ],
+        }
+
+        with (
+            patch.object(
+                diagnostics,
+                "build_provider_context",
+                return_value={"coverage": {}, "display_rows": [], "look_through_board": {}},
+            ),
+            patch.object(diagnostics, "build_db_data_coverage_context", return_value={}),
+            patch.object(diagnostics, "_load_macro_regime_history", return_value=(pd.DataFrame(), None)),
+        ):
+            result = diagnostics.build_practical_validation_result(source)
+
+        workspace = result["practical_validation_workspace"]
+
+        self.assertEqual(workspace["gate_summary"]["route"], result["final_review_gate"]["route"])
+        self.assertEqual(workspace["summary"]["blocker_count"], len(workspace["fix_queue"]))
+        self.assertTrue(workspace["core_evidence_groups"])
+        self.assertTrue(
+            any(
+                module["module_id"] == "source_integrity"
+                for group in workspace["core_evidence_groups"]
+                for module in group["modules"]
+            )
+        )
+        self.assertIn("technical_details", workspace)
+        self.assertEqual(
+            workspace["technical_details"]["board_map"]["summary"],
+            result["validation_board_summary"],
+        )
+
     def test_robustness_lab_board_keeps_compact_evidence_contract(self) -> None:
         from app.services.backtest_practical_validation_stress_sensitivity import build_robustness_lab_board
 

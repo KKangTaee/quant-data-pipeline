@@ -107,3 +107,13 @@ V2 changes user-facing stage boundary language:
 - Gate wording now says the blocker is an evidence gap in Final Review readiness, not an early selected-route decision.
 
 The blocker semantics remain unchanged: deterministic evidence gaps still block Final Review movement.
+
+## 2026-07-05 - V3 Implementation Note
+
+V3 attaches the workspace read model to every built Practical Validation result:
+
+```python
+result["practical_validation_workspace"] = build_practical_validation_workspace(result)
+```
+
+This keeps legacy result keys intact while allowing V4 page work to consume a single grouped contract.

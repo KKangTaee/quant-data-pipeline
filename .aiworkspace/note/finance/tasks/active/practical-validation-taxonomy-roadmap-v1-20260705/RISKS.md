@@ -53,3 +53,7 @@ V2 should be careful to change language without weakening deterministic blocker 
 ## 2026-07-05 - V2 Residual Risk
 
 The service-level labels now say `Final Review Readiness Preview`, but some existing UI copy in `app/web/backtest_practical_validation/page.py` still says `Final Review Gate`. That visible screen hierarchy is intentionally left for V4, where the page flow changes happen together with Browser QA.
+
+## 2026-07-05 - V3 Residual Risk
+
+`practical_validation_workspace` is now available in result payloads, but the page still renders from older lower-level keys. V4 must switch the first-read hierarchy to the workspace contract without hiding existing technical evidence.

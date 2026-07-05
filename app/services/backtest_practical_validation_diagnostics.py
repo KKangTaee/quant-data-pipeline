@@ -28,6 +28,7 @@ from app.services.backtest_practical_validation_curve_context import (
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
 from app.services.backtest_practical_validation_modules import build_validation_module_plan
+from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
 from app.services.backtest_selected_route_preflight import (
     build_practical_validation_selected_route_preflight,
 )
@@ -1710,6 +1711,7 @@ def build_practical_validation_result(
         "allowed": bool(dict(module_plan.get("final_review_gate") or {}).get("can_save_and_move")),
         "module_gate": dict(module_plan.get("final_review_gate") or {}),
     }
+    result["practical_validation_workspace"] = build_practical_validation_workspace(result)
     return result
 
 
