@@ -321,3 +321,36 @@ PY
 ```
 
 Result: 16 symbols, same cached object `True`, first validation `7.312s`, cached same-key validation `0.045s`, status `OK`, validation dates `1,221`, confidence `Low Confidence`.
+
+### Phase 6 Browser QA
+
+```bash
+.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8517 --server.address 127.0.0.1 --server.headless true
+```
+
+Result: current-code Streamlit server started on `127.0.0.1:8517`.
+
+Browser DOM verification on `http://127.0.0.1:8517/?overview_tab=futures-macro` confirmed:
+
+- `선물 매크로` / `매크로 컨텍스트` rendered.
+- React iframe rendered the Futures Macro workbench.
+- `저신호 / 관망` appeared and old `저신호 / 방향성 없음` did not appear.
+- `과거 점검 불러오기`, `1W`, and `1M` controls were present.
+- Validation state on first entry remained `대기`, matching the lazy validation boundary.
+
+Screenshot: `browser-qa-futures-macro-phase6.png` in this task folder. It is generated QA evidence and should remain uncommitted unless explicitly requested.
+
+Iframe click QA note: Playwright located one `과거 점검 불러오기` button inside the custom component iframe, but in-app browser click dispatch failed with an out-of-iframe coordinate. Automated click-through to Python is still covered by unit contracts for nested/direct component event payload parsing, not by Browser QA.
+
+### Phase 6 Final Checks
+
+```bash
+git status --short
+git diff --check
+.venv/bin/python -m py_compile app/services/futures_macro_thermometer.py app/services/futures_macro_validation.py app/web/overview/futures_macro_helpers.py app/web/overview/futures_macro_react_component.py tests/test_service_contracts.py
+.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py
+```
+
+Result: recorded in Phase 6 closeout commit verification. Existing untracked QA screenshots, run history, `.DS_Store`, `.superpowers/`, and market-movers images remain unstaged.

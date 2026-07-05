@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Futures Macro React UX 1차~6차 closeout
+
+- User request: Futures Macro 탭 개선을 1차~6차 개발 / QA / 커밋 단위로 진행하고 현재 `sub-dev` 브랜치에서 임의 브랜치를 만들지 말라고 요청함.
+- Interpreted goal: 빠른 첫 진입, React workbench, 1W / 1M flow, mixed subtype clarity, validation cache decision, final QA/docs를 coherent commit 단위로 닫아야 한다.
+- Analysis result: 1차~6차를 완료했고, Python은 DB read / validation / refresh dispatch를 계속 소유한다. React는 payload render / user action shell이고, historical validation은 DB materialization 없이 process cache로 재사용한다. Browser QA는 current-code iframe render를 확인했지만 iframe click dispatch 자동화는 좌표 제한으로 증명하지 못했다.
+- Follow-up: iframe click bridge가 실제 운영 리스크로 다시 제기되면 수동 QA 또는 더 적합한 iframe 이벤트 도구로 `과거 점검 불러오기` click-to-session update를 재확인한다.
+
 ### 2026-07-05 - Futures Macro validation should be process-cached before materialized
 
 - User request: Futures Macro 탭 개선 5차로 historical validation persistence/cache/materialization 방식을 판단해 달라고 요청함.

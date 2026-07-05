@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro React UX 6차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`의 1차~6차 개선을 완료했다.
+  - 8517 current-code Browser QA에서 React iframe, `저신호 / 관망`, lazy validation `대기`, `1W` / `1M` controls를 확인했다. iframe button click dispatch는 자동화 좌표 제한으로 수동/별도 도구 확인 대상으로 남겼다.
+  - 최종 검증과 hygiene check 후 closeout commit으로 닫았다.
 - Overview Futures Macro React UX 5차:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 historical validation을 DB materialization 없이 process cache로 재사용하도록 정리했다.
   - Cache key는 selected symbols / years / latest futures daily marker / proxy price marker / current summary identity를 포함하고, `일봉 갱신` / `다시 읽기`는 session validation과 process cache를 함께 비운다.

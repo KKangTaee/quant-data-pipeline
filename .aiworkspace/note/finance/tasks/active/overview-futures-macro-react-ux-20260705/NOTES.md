@@ -36,3 +36,7 @@
   - `build_futures_macro_validation_snapshot(...)` now has a process cache with a 15-minute default TTL. The key includes selected symbols, years, min standardized threshold, latest futures daily candle marker, latest proxy target price marker, current summary identity, and the query function identity.
   - `clear_futures_macro_validation_cache()` is a dedicated invalidation hook. Futures Macro `다시 읽기` and `일봉 갱신` now clear session validation state and the process validation cache.
   - This keeps first explicit validation calculation honest while making repeated explicit loads within the same process cheap when the stored data basis has not changed.
+- Phase 6 closeout:
+  - The six-step roadmap is complete in this worktree and branch without creating a new branch.
+  - Current-code Browser QA on port 8517 verified the React workbench render, new mixed subtype copy, lazy validation state, and 1W / 1M controls.
+  - Browser automation still could not click through the iframe custom component button path; this remains a tooling limitation rather than an observed product failure.
