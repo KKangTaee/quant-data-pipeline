@@ -3160,6 +3160,81 @@ def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> No
             st.dataframe(table_rows, width="stretch", hide_index=True)
 
 
+def _render_market_mover_investigation_actions(
+    *,
+    symbol: str,
+    identity: dict[str, Any],
+    metadata_key: str,
+    metadata: dict[str, Any],
+    research_model: dict[str, Any],
+) -> dict[str, Any]:
+    action_cols = st.columns([1.0, 1.0, 1.0, 3.0], gap="small", vertical_alignment="bottom")
+    if action_cols[0].button(
+        "뉴스 메타데이터 조회",
+        key=f"{metadata_key}__fetch_news",
+        help="현재 선택 종목 1개에 대해 세션 전용 뉴스 / 한국어 뉴스 metadata만 조회합니다.",
+        use_container_width=True,
+    ):
+        with st.spinner(f"{symbol} 뉴스 메타데이터를 조회하는 중입니다..."):
+            metadata_update = fetch_market_mover_news_metadata(
+                symbol,
+                name=identity.get("Name"),
+                max_news=3,
+                max_korean_news=3,
+            )
+            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            st.session_state[metadata_key] = metadata
+        st.success("뉴스와 한국어 뉴스 메타데이터를 세션 전용으로 조회했습니다.")
+
+    if action_cols[1].button(
+        "SEC 공시 메타데이터 조회",
+        key=f"{metadata_key}__fetch_sec",
+        help="현재 선택 종목 1개에 대해 세션 전용 SEC filing metadata만 조회합니다.",
+        use_container_width=True,
+    ):
+        with st.spinner(f"{symbol} SEC 공시 메타데이터를 조회하는 중입니다..."):
+            metadata_update = fetch_market_mover_sec_metadata(
+                symbol,
+                max_filings=3,
+            )
+            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            st.session_state[metadata_key] = metadata
+        st.success("SEC 공시 메타데이터를 세션 전용으로 조회했습니다.")
+
+    collection = dict(research_model.get("financial_statement_collection") or {})
+    refresh_target = _market_mover_statement_refresh_target(collection)
+    statement_result_key = _market_mover_statement_refresh_session_key(metadata_key)
+    if refresh_target["enabled"]:
+        if action_cols[2].button(
+            "필요 재무제표 수집",
+            key=f"{metadata_key}__statement_refresh",
+            help="기본 지표에서 받아야 할 연간 또는 분기 재무제표가 있을 때 선택 종목만 EDGAR statement path로 수집합니다.",
+            use_container_width=True,
+        ):
+            started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            t0 = perf_counter()
+            with st.spinner(f"{symbol} {refresh_target['freq_label']} 재무제표를 수집하는 중입니다..."):
+                result = run_overview_market_mover_statement_refresh(
+                    symbol=symbol,
+                    freq=refresh_target["freq"],
+                )
+            finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.session_state[statement_result_key] = {
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "elapsed_sec": perf_counter() - t0,
+                "target": refresh_target,
+                "result": result,
+            }
+            try:
+                record_overview_action_result(result)
+            except Exception as exc:  # pragma: no cover - UI resilience only
+                st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
+    action_cols[3].caption("조회 결과는 아래 조사 단서 탭에 세션 전용으로 반영됩니다.")
+    _render_market_mover_statement_refresh_result(st.session_state.get(statement_result_key))
+    return metadata
+
+
 @st.fragment
 def _render_market_mover_selected_investigation_fragment(
     selected: dict[str, Any],
@@ -3182,11 +3257,9 @@ def _render_market_mover_selected_investigation_fragment(
         detail_model["read_model"] = read_model
         detail_model["status_strip"] = build_market_mover_metadata_status_strip(stored_metadata)
 
-    render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
+    investigation_pane_slot = st.empty()
     identity = dict(read_model.get("identity") or {})
     symbol = str(identity.get("Symbol") or selected.get("symbol") or "").strip().upper()
-
-    render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스, SEC 공시, 외부 검색 시작점")
     metadata = dict(read_model.get("metadata") or {})
     research_snapshot = build_market_mover_research_snapshot(
         mover={
@@ -3196,26 +3269,25 @@ def _render_market_mover_selected_investigation_fragment(
         }
     )
     research_model = build_market_mover_research_snapshot_model(detail_model, research_snapshot=research_snapshot)
+    metadata = _render_market_mover_investigation_actions(
+        symbol=symbol,
+        identity=identity,
+        metadata_key=metadata_key,
+        metadata=metadata,
+        research_model=research_model,
+    )
+    read_model["metadata"] = metadata
+    detail_model["read_model"] = read_model
+    detail_model["status_strip"] = build_market_mover_metadata_status_strip(metadata)
+    with investigation_pane_slot.container():
+        render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
+
+    render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스, SEC 공시, 외부 검색 시작점")
     clue_tabs = st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])
     with clue_tabs[0]:
         render_market_mover_research_snapshot(research_model)
     with clue_tabs[1]:
         st.caption("일반 뉴스와 한국어 뉴스를 같은 탭에서 확인합니다. 원문 본문은 조회하거나 저장하지 않습니다.")
-        if st.button(
-            "뉴스 메타데이터 조회",
-            key=f"{metadata_key}__fetch_news",
-            help="현재 선택 종목 1개에 대해 세션 전용 뉴스 / 한국어 뉴스 metadata만 조회합니다.",
-        ):
-            with st.spinner(f"{symbol} 뉴스 메타데이터를 조회하는 중입니다..."):
-                metadata_update = fetch_market_mover_news_metadata(
-                    symbol,
-                    name=identity.get("Name"),
-                    max_news=3,
-                    max_korean_news=3,
-                )
-                metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
-                st.session_state[metadata_key] = metadata
-            st.success("뉴스와 한국어 뉴스 메타데이터를 세션 전용으로 조회했습니다.")
         st.caption("뉴스 메타데이터")
         _render_market_mover_metadata_table(
             metadata.get("news"),
@@ -3229,59 +3301,12 @@ def _render_market_mover_selected_investigation_fragment(
             "한국어 뉴스 메타데이터는 아직 조회하지 않았습니다. 원문 기사 본문은 수집하거나 저장하지 않습니다.",
         )
     with clue_tabs[2]:
-        st.caption("SEC 공시 메타데이터와 필요한 재무제표 수집을 이 탭에서 처리합니다.")
-        if st.button(
-            "SEC 공시 메타데이터 조회",
-            key=f"{metadata_key}__fetch_sec",
-            help="현재 선택 종목 1개에 대해 세션 전용 SEC filing metadata만 조회합니다.",
-        ):
-            with st.spinner(f"{symbol} SEC 공시 메타데이터를 조회하는 중입니다..."):
-                metadata_update = fetch_market_mover_sec_metadata(
-                    symbol,
-                    max_filings=3,
-                )
-                metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
-                st.session_state[metadata_key] = metadata
-            st.success("SEC 공시 메타데이터를 세션 전용으로 조회했습니다.")
+        st.caption("SEC 공시 메타데이터를 확인합니다. 공시 원문은 공식 링크에서 직접 엽니다.")
         _render_market_mover_metadata_table(
             metadata.get("sec_filings"),
             ["Form", "Filing Date", "Title", "Open"],
             "SEC 공시 메타데이터는 아직 조회하지 않았습니다. 공시 원문은 공식 링크에서 직접 확인합니다.",
         )
-
-        collection = dict(research_model.get("financial_statement_collection") or {})
-        refresh_target = _market_mover_statement_refresh_target(collection)
-        statement_result_key = _market_mover_statement_refresh_session_key(metadata_key)
-        st.markdown("##### 재무제표 수집")
-        st.caption(refresh_target["detail"])
-        if st.button(
-            "필요 재무제표 수집",
-            key=f"{metadata_key}__statement_refresh",
-            disabled=not bool(refresh_target["enabled"]),
-            help="기본 지표에서 받아야 할 연간 또는 분기 재무제표가 있을 때 선택 종목만 EDGAR statement path로 수집합니다.",
-        ):
-            started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            t0 = perf_counter()
-            with st.spinner(f"{symbol} {refresh_target['freq_label']} 재무제표를 수집하는 중입니다..."):
-                result = run_overview_market_mover_statement_refresh(
-                    symbol=symbol,
-                    freq=refresh_target["freq"],
-                )
-            finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            st.session_state[statement_result_key] = {
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "elapsed_sec": perf_counter() - t0,
-                "target": refresh_target,
-                "result": result,
-            }
-            try:
-                record_overview_action_result(result)
-            except Exception as exc:  # pragma: no cover - UI resilience only
-                st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
-        if not refresh_target["enabled"]:
-            st.info("현재 기본 지표 기준으로 받아야 할 재무제표 수집 항목이 없습니다.")
-        _render_market_mover_statement_refresh_result(st.session_state.get(statement_result_key))
     with clue_tabs[3]:
         table_model = _market_mover_external_search_table_model(detail_model["links"])
         st.caption("외부 검색 시작점입니다. 링크를 열어도 앱이 원문을 조회, 파싱, 저장하지 않습니다.")
