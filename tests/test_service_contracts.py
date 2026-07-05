@@ -10687,12 +10687,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["lanes"][0]["sector"], "Technology")
         self.assertEqual(model["lanes"][0]["return_label"], "+2.00%")
         self.assertEqual(model["lanes"][0]["bar_pct"], 100)
+        self.assertEqual(model["lanes"][0]["bar_width_pct"], 100)
         self.assertEqual(model["lanes"][0]["participation_label"], "상승 80%")
         self.assertEqual(model["lanes"][0]["participation_detail"], "상승 8 / 하락 2 · 상승 비중 80%")
         self.assertEqual(model["lanes"][0]["top_gainer_detail"], "상승 상위 AAA +5.50%")
         self.assertEqual(model["lanes"][0]["top_loser_detail"], "하락 상위 BBB -1.10%")
         self.assertEqual(model["lanes"][1]["return_label"], "-1.00%")
+        self.assertEqual(model["lanes"][1]["tone"], "danger")
         self.assertEqual(model["lanes"][1]["bar_pct"], 50)
+        self.assertEqual(model["lanes"][1]["bar_width_pct"], 50)
 
     def test_market_movers_polish_phase5_localizes_sector_context(self) -> None:
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
@@ -10708,6 +10711,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         sector_css = common_source[common_source.index(".ov-sector-breadth-lanes") :]
         self.assertIn("max-height", sector_css)
         self.assertIn("overflow-y: auto", sector_css)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", sector_css)
+        self.assertNotIn("grid-template-columns: repeat(2, minmax(0, 1fr));", sector_css[: sector_css.index(".ov-sector-breadth-lane {")])
+        self.assertNotIn(".ov-sector-breadth-zero", sector_css)
+        self.assertNotIn("right: 50%", sector_css)
 
     def test_market_mover_investigation_pane_model_summarizes_selection(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_investigation_pane_model

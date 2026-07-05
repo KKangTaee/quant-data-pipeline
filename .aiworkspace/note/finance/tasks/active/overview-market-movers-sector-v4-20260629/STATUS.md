@@ -14,3 +14,9 @@
 - Browser QA completed on `localhost:8525` for S&P 500 Daily, S&P 500 Weekly, NASDAQ coverage, and 390px narrow viewport.
 - Screenshot captured at `.aiworkspace/note/finance/run_artifacts/overview-market-movers-sector-v4-qa.png`.
 - Stage intended source/test/task docs/root logs only and commit 4차.
+
+## 2026-07-05 Follow-up
+
+- Adjusted the sector breadth lane layout from 2 columns to a 4-column desktop grid with a 3-column intermediate breakpoint and 1-column mobile fallback.
+- Changed sector lane bars to always grow left-to-right; negative lanes are distinguished by danger/red tone instead of a centered zero split.
+- Confirmed the current detailed `섹터 breadth 상세 표` is still a Streamlit expander outside the sector HTML component. Folding it into the same visual unit is feasible, but a true React treatment requires a separate migration of this sector map from markdown HTML to a React component.

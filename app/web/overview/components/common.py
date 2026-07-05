@@ -2710,7 +2710,7 @@ def overview_ui_css() -> str:
 }
 .ov-sector-breadth-lanes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
   margin-top: 0.56rem;
   max-height: 31rem;
@@ -2746,26 +2746,14 @@ def overview_ui_css() -> str:
   background: rgba(148,163,184,0.18);
   overflow: hidden;
 }
-.ov-sector-breadth-zero {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  background: rgba(100,116,139,0.42);
-}
 .ov-sector-breadth-bar {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 50%;
+  left: 0;
   width: var(--ov-lane-bar, 0%);
   border-radius: var(--ov-mi-radius-pill);
   background: var(--ov-lane-tone, var(--ov-mi-color-neutral));
-}
-.ov-sector-breadth-bar--negative {
-  left: auto;
-  right: 50%;
 }
 .ov-sector-breadth-lane-detail,
 .ov-sector-breadth-lane-foot {
@@ -5185,6 +5173,11 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  border: 1px solid var(--ov-mi-border-faint);
 	  border-radius: var(--ov-mi-radius-card);
 	  background: rgba(248,250,252,0.74);
+	}
+	@media (max-width: 1180px) {
+	  .ov-sector-breadth-lanes {
+	    grid-template-columns: repeat(3, minmax(0, 1fr));
+	  }
 	}
 	@media (max-width: 760px) {
 	  .ov-mm-status-bar {

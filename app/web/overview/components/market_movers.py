@@ -588,7 +588,6 @@ def _sector_breadth_lanes_html(lanes: list[dict[str, Any]]) -> str:
             f'<strong>{escape(_display_value(lane.get("return_label")))}</strong>'
             "</div>"
             '<div class="ov-sector-breadth-lane-track">'
-            '<span class="ov-sector-breadth-zero"></span>'
             f'<span class="ov-sector-breadth-bar ov-sector-breadth-bar--{direction}"></span>'
             "</div>"
             '<div class="ov-sector-breadth-lane-detail">'

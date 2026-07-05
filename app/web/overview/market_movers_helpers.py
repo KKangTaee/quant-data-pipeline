@@ -2478,17 +2478,22 @@ def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any
     for index, row in enumerate(rows, start=1):
         sector_return = _market_movers_sector_float(row.get("market_cap_weighted_return_pct"))
         normalized = int(round((abs(sector_return or 0.0) / max_abs_return) * 100)) if max_abs_return > 0 else 0
+        lane_tone = str(row.get("tone") or "").strip().lower()
+        if (sector_return or 0.0) < 0 or lane_tone == "negative":
+            lane_tone = "danger"
+        elif not lane_tone:
+            lane_tone = "positive"
         participation_label = _market_movers_sector_participation_label(row.get("positive_symbol_share_pct"))
         advancers = _format_count(row.get("advancers"))
         decliners = _format_count(row.get("decliners"))
         lane = {
             "rank": row.get("rank") or index,
             "sector": str(row.get("group") or "Unknown"),
-            "tone": row.get("tone") or ("negative" if (sector_return or 0.0) < 0 else "positive"),
+            "tone": lane_tone,
             "direction": "negative" if (sector_return or 0.0) < 0 else "positive",
             "return_label": _format_signed(sector_return),
             "bar_pct": normalized,
-            "bar_width_pct": round(normalized / 2, 2),
+            "bar_width_pct": normalized,
             "participation_label": f"상승 {participation_label}",
             "participation_detail": f"상승 {advancers} / 하락 {decliners} · 상승 비중 {participation_label}",
             "cap_detail": f"시총비중 {_market_movers_sector_pct_label(row.get('market_cap_share_pct'), decimals=1)}",

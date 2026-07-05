@@ -60,3 +60,26 @@ uv run streamlit run app/web/streamlit_app.py --server.port 8525 --server.headle
 ```
 
 Browser QA result: Overview > Market Movers showed the 4차 sector breadth / heatmap workflow. Verified S&P 500 Daily heatmap, S&P 500 Weekly EOD heatmap, NASDAQ no-universe empty state, and 390px narrow viewport with 11 sector tiles and fallback table present. Screenshot captured at `.aiworkspace/note/finance/run_artifacts/overview-market-movers-sector-v4-qa.png`.
+
+## 2026-07-05 Follow-up
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_sector_map_model_builds_breadth_lanes tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_polish_phase5_localizes_sector_context
+```
+
+Result: passed. Confirms 4-column sector CSS contract, no centered zero marker, left-to-right bar width, and red/danger tone for negative lanes.
+
+```bash
+.venv/bin/python -m py_compile app/web/overview/market_movers_helpers.py app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py
+git diff --check
+```
+
+Result: passed.
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests
+```
+
+Result: passed (`246 OK`).
+
+Browser QA result: Streamlit on `http://localhost:8509`, Overview > Market Movers. Verified `.ov-sector-breadth-lanes` rendered 4 columns at desktop width, all lane bars were left-aligned, `ov-sector-breadth-zero` count was 0, and negative Technology / Communication Services / Consumer Cyclical bars rendered red. Screenshot captured at `market-movers-sector-breadth-grid-qa.png` (generated/local artifact; not staged).
