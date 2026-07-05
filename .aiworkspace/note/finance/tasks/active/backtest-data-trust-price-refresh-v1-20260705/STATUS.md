@@ -9,11 +9,12 @@ Started: 2026-07-05
 
 ## Implementation Notes
 
-- Backtest 화면은 button / session feedback만 소유한다.
+- Backtest 화면은 React component submit event 소비와 session feedback만 소유한다.
 - 실제 수집은 `app/jobs/ingestion_jobs.py::run_collect_ohlcv`를 재사용한다.
 - 최신 기준일 계산은 주말 / NYSE 휴장일을 제외한다.
 - `app/services/backtest_price_refresh.py`가 refresh plan과 실행 wrapper를 소유한다.
-- `app/web/backtest_result_display.py`는 plan을 읽어 조건부 버튼과 실행 결과를 표시한다.
+- `app/web/components/backtest_price_refresh_action/`은 보이는 action card / 버튼을 렌더링한다.
+- `app/web/backtest_result_display.py`는 plan을 읽어 component event를 처리하고 실행 결과를 표시한다.
 
 ## Done Criteria
 
@@ -26,6 +27,6 @@ Started: 2026-07-05
 ## Result
 
 - `데이터 기준 요약` 아래에 조건부 `가격 데이터 업데이트` 액션을 추가했다.
-- 버튼은 현재 백테스트 ticker의 OHLCV만 기존 ingestion job으로 보강한다.
+- 버튼은 React action card 내부에 통합했고, 현재 백테스트 ticker의 OHLCV만 기존 ingestion job으로 보강한다.
 - 최신 기준일은 주말 / NYSE 휴장일을 제외한 마지막 완료 거래일로 계산한다.
 - 업데이트 후 성과 재계산, 후보 등록, 2차 검증 handoff는 자동 실행하지 않고 사용자가 `Run Backtest`를 다시 실행하도록 안내한다.

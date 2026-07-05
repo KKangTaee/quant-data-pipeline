@@ -8475,4 +8475,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: `데이터 기준 요약`에서 OHLCV가 최신이 아니면 현재 기준으로 받을 데이터가 있을 때 바로 업데이트하는 버튼을 추가하고 싶다.
 - Interpreted goal: Backtest Analysis 화면 안에서 현재 결과의 ticker만 대상으로 가격 DB를 보강하되, render path에서 provider를 직접 호출하지 않고 기존 ingestion job wrapper를 재사용한다.
 - Analysis result: 최신 기준일은 주말 / NYSE 휴장일과 장중 미완료 거래일을 제외한 latest completed session으로 계산한다. DB common latest date가 그보다 오래됐을 때만 `가격 데이터 업데이트` action을 노출한다.
-- Follow-up: 업데이트 후 기존 결과는 자동 재계산하지 않으므로 사용자가 `Run Backtest`를 다시 눌러 최신 가격 기준으로 성과를 재계산한다.
+- Follow-up: 업데이트 후 기존 결과는 자동 재계산하지 않으므로 사용자가 `Run Backtest`를 다시 눌러 최신 가격 기준으로 성과를 재계산한다. 후속 UI 보정으로 visible card와 버튼은 React custom component 안에 통합했고, Python path는 submit event와 ingestion side effect만 소유한다.

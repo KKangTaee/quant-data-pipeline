@@ -5489,3 +5489,4 @@ Detailed historical logs were archived on `2026-04-13`.
 - Added Backtest Data Trust price refresh planning / execution path so stale OHLCV can be repaired for the current backtest ticker set.
 - The UI action appears only when DB common latest price date is older than the latest completed NYSE trading day after excluding weekends / holidays.
 - Boundary retained: refresh uses existing `run_collect_ohlcv`; no automatic rerun, source registration, validation handoff, approval, or order behavior.
+- Follow-up UI integration moved the visible price-refresh card and button into `app/web/components/backtest_price_refresh_action/` React custom component, matching the Handoff action pattern while Python keeps the ingestion side effect.

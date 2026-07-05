@@ -30,6 +30,10 @@ from app.web.components.backtest_handoff_action import (
     is_backtest_handoff_action_available,
     render_backtest_handoff_action,
 )
+from app.web.components.backtest_price_refresh_action import (
+    is_backtest_price_refresh_action_available,
+    render_backtest_price_refresh_action,
+)
 from app.web.components.backtest_policy_signal_board import (
     is_backtest_policy_signal_board_available,
     render_backtest_policy_signal_board,
@@ -573,74 +577,75 @@ def _render_data_trust_refresh_job_result(result: dict[str, Any]) -> None:
     st.caption("업데이트 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
 
 
+def _consume_data_trust_refresh_action(
+    action_value: dict[str, Any] | None,
+    meta: dict[str, Any],
+    state_key: str,
+) -> None:
+    """Run the Backtest price refresh once for a React component submit event."""
+    if not isinstance(action_value, dict) or action_value.get("action") != "refresh":
+        return
+    if action_value.get("source") != "backtest_price_refresh_action":
+        return
+    nonce = str(action_value.get("nonce") or "")
+    if not nonce:
+        return
+    consumed_key = f"{state_key}_component_nonce"
+    if st.session_state.get(consumed_key) == nonce:
+        return
+    st.session_state[consumed_key] = nonce
+    with st.spinner("현재 백테스트 ticker의 OHLCV 가격 데이터를 업데이트하는 중입니다...", show_time=True):
+        st.session_state[state_key] = run_backtest_price_refresh(meta)
+    st.rerun()
+
+
 def _render_data_trust_refresh_action(meta: dict[str, Any]) -> None:
     plan = build_backtest_price_refresh_plan(meta)
     if not plan.get("eligible"):
         return
 
     state_key = _data_trust_refresh_state_key(plan)
-    target_end = escape(str(plan.get("target_end") or "-"))
-    current_latest = escape(str(plan.get("current_common_latest") or "-"))
-    collection_start = escape(str(plan.get("collection_start") or "-"))
-    ticker_count = int(plan.get("ticker_count") or 0)
-    summary = escape(str(plan.get("summary") or "가격 데이터 업데이트가 가능합니다."))
-    detail = escape(str(plan.get("detail") or ""))
+    if not is_backtest_price_refresh_action_available():
+        st.error("가격 데이터 업데이트 React component build를 찾지 못했습니다. component build 후 갱신 UI가 표시됩니다.")
+        return
 
-    st.markdown(
-        f"""
-<style>
-.data-trust-refresh-action {{
-  border-left: 4px solid #b45309;
-  border-top: 1px solid rgba(148, 163, 184, 0.24);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
-  background: linear-gradient(90deg, rgba(180, 83, 9, 0.10), rgba(255, 255, 255, 0));
-  margin: -0.35rem 0 0.9rem;
-  padding: 0.88rem 1.2rem;
-}}
-.data-trust-refresh-action__kicker {{
-  color: #b45309;
-  font-size: 0.84rem;
-  font-weight: 850;
-  margin-bottom: 0.24rem;
-}}
-.data-trust-refresh-action__title {{
-  color: var(--text-color);
-  font-size: 1.02rem;
-  font-weight: 850;
-  line-height: 1.35;
-}}
-.data-trust-refresh-action__meta {{
-  color: #667085;
-  font-size: 0.86rem;
-  line-height: 1.45;
-  margin-top: 0.34rem;
-}}
-</style>
-<section class="data-trust-refresh-action">
-  <div class="data-trust-refresh-action__kicker">가격 데이터 업데이트 가능</div>
-  <div class="data-trust-refresh-action__title">{summary}</div>
-  <div class="data-trust-refresh-action__meta">
-    현재 공통 기준일 {current_latest} · 목표 기준일 {target_end} · 수집 시작 {collection_start} · 대상 {ticker_count:,}개 종목<br/>
-    {detail}
-  </div>
-</section>
-        """,
-        unsafe_allow_html=True,
+    metric_items = [
+        {
+            "label": "현재 기준",
+            "value": str(plan.get("current_common_latest") or "-"),
+            "detail": "DB 공통 최신 가격일",
+        },
+        {
+            "label": "목표 기준",
+            "value": str(plan.get("target_end") or "-"),
+            "detail": "주말/휴장일 제외",
+        },
+        {
+            "label": "수집 시작",
+            "value": str(plan.get("collection_start") or "-"),
+            "detail": "부족 구간 시작",
+        },
+        {
+            "label": "대상 종목",
+            "value": f"{int(plan.get('ticker_count') or 0):,}개",
+            "detail": "현재 백테스트 ticker",
+        },
+    ]
+    action_value = render_backtest_price_refresh_action(
+        status_label="업데이트 가능",
+        tone="warning",
+        summary=str(plan.get("summary") or "가격 데이터 업데이트가 가능합니다."),
+        detail=str(plan.get("detail") or ""),
+        metric_items=metric_items,
+        action_text="현재 백테스트 ticker의 OHLCV 가격 데이터를 보강합니다.",
+        button_label=str(plan.get("button_label") or "가격 데이터 업데이트"),
+        action_note=(
+            "이 버튼은 가격 DB만 보강합니다. 백테스트 성과, 후보 등록, 2차 검증 전송은 자동으로 다시 실행하지 않습니다."
+        ),
+        disabled=False,
+        key=f"{state_key}_component",
     )
-    action_cols = st.columns([0.26, 0.74], gap="small", vertical_alignment="center")
-    if action_cols[0].button(
-        str(plan.get("button_label") or "가격 데이터 업데이트"),
-        key=f"{state_key}_button",
-        type="primary",
-        use_container_width=True,
-        help="기존 OHLCV 수집 pipeline으로 현재 백테스트 ticker의 daily 가격 이력을 보강합니다.",
-    ):
-        with st.spinner("현재 백테스트 ticker의 OHLCV 가격 데이터를 업데이트하는 중입니다...", show_time=True):
-            st.session_state[state_key] = run_backtest_price_refresh(meta)
-        st.rerun()
-    action_cols[1].caption(
-        "이 버튼은 가격 DB만 보강합니다. 백테스트 성과, 후보 등록, 2차 검증 전송은 자동으로 다시 실행하지 않습니다."
-    )
+    _consume_data_trust_refresh_action(action_value, meta, state_key)
     result = st.session_state.get(state_key)
     if isinstance(result, dict):
         _render_data_trust_refresh_job_result(result)

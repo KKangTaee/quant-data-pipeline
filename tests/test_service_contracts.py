@@ -7937,6 +7937,59 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("from finance", wrapper_source)
         self.assertIn("render_backtest_handoff_action(", result_display_source)
 
+    def test_data_trust_price_refresh_react_component_is_integrated_action_card(self) -> None:
+        component_root = Path("app/web/components/backtest_price_refresh_action")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/BacktestPriceRefreshAction.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_backtest_price_refresh_action_available", wrapper_source)
+        self.assertIn("render_backtest_price_refresh_action", wrapper_source)
+        self.assertIn("BacktestPriceRefreshAction", component_source)
+        self.assertIn("가격 데이터 업데이트 가능", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertIn("source: \"backtest_price_refresh_action\"", component_source)
+        self.assertIn("Date.now()", component_source)
+        self.assertIn("metricItems", component_source)
+        self.assertIn("actionNote", component_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("render_backtest_price_refresh_action(", result_display_source)
+        self.assertIn("is_backtest_price_refresh_action_available()", result_display_source)
+
+    def test_data_trust_price_refresh_action_does_not_use_separate_streamlit_button_row(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        refresh_start = source.index("def _render_data_trust_refresh_action")
+        refresh_body = source[refresh_start:]
+        refresh_body = refresh_body[: refresh_body.index("\ndef ", 1)]
+
+        self.assertIn("render_backtest_price_refresh_action(", refresh_body)
+        self.assertIn("_consume_data_trust_refresh_action(action_value, meta, state_key)", refresh_body)
+        self.assertNotIn("st.columns(", refresh_body)
+        self.assertNotIn(".button(", refresh_body)
+        self.assertNotIn("action_cols", refresh_body)
+        self.assertNotIn("data-trust-refresh-action", refresh_body)
+
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
         flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")
         selection_doc = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(

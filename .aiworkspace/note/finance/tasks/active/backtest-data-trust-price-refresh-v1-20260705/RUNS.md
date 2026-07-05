@@ -32,3 +32,13 @@
   - Opened `http://localhost:8502/backtest`, ran Equal Weight Backtest, confirmed Data Trust shows `가격 데이터 업데이트 가능` and `가격 데이터 업데이트`.
   - Did not click the update action during QA because it mutates the price DB.
   - Screenshot artifacts: `backtest-data-trust-price-refresh-action-card-qa.png`, `backtest-data-trust-price-refresh-button-qa.png`.
+- Follow-up RED unittest:
+  - `test_data_trust_price_refresh_react_component_is_integrated_action_card`
+  - `test_data_trust_price_refresh_action_does_not_use_separate_streamlit_button_row`
+  - Expected failures confirmed: missing `app/web/components/backtest_price_refresh_action/` and existing `st.columns` / `st.button` action row.
+- Follow-up GREEN unittest:
+  - Same 2 tests passed after adding the React price-refresh action component and switching Data Trust refresh rendering to component event handling.
+- Follow-up focused regression:
+  - Backtest price refresh plan / execution tests, Data Trust summary renderer test, Data Trust React action tests, and Handoff React action contract test passed.
+  - `py_compile` for `app/web/backtest_result_display.py`, `app/web/components/backtest_price_refresh_action/component.py`, and `app/services/backtest_price_refresh.py` passed.
+  - `git diff --check` passed.
