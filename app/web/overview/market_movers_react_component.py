@@ -60,3 +60,11 @@ def render_market_mover_investigation_pane_react(
     key: str = "market_mover_investigation_pane",
 ) -> dict[str, Any] | None:
     return _render_market_movers_react_component(payload, key=key)
+
+
+def render_market_movers_sector_breadth_react(
+    payload: dict[str, Any],
+    *,
+    key: str = "market_movers_sector_breadth",
+) -> dict[str, Any] | None:
+    return _render_market_movers_react_component(payload, key=key)

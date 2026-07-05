@@ -10716,6 +10716,107 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn(".ov-sector-breadth-zero", sector_css)
         self.assertNotIn("right: 50%", sector_css)
 
+    def test_market_movers_sector_breadth_react_payload_includes_map_and_detail_table(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_movers_sector_breadth_react_payload
+
+        source_model = {
+            "status": "OK",
+            "summary": {
+                "headline": "Broad participation, balanced leadership",
+                "detail": "Technology leads the selected universe.",
+            },
+            "coverage": {"freshness": "2026-06-26"},
+            "boundary_note": "Context-only sector breadth.",
+            "heatmap_rows": [
+                {
+                    "rank": 1,
+                    "group": "Technology",
+                    "tone": "positive",
+                    "market_cap_weighted_return_pct": 2.0,
+                    "positive_symbol_share_pct": 80.0,
+                    "advancers": 8,
+                    "decliners": 2,
+                    "market_cap_share_pct": 30.0,
+                    "top_symbol": "AAA",
+                    "top_symbol_return_pct": 5.5,
+                    "top_loser": "BBB",
+                    "top_loser_return_pct": -1.1,
+                },
+                {
+                    "rank": 2,
+                    "group": "Energy",
+                    "tone": "negative",
+                    "market_cap_weighted_return_pct": -1.0,
+                    "positive_symbol_share_pct": 20.0,
+                    "advancers": 1,
+                    "decliners": 4,
+                    "market_cap_share_pct": 10.0,
+                    "top_symbol": "CCC",
+                    "top_symbol_return_pct": 1.0,
+                    "top_loser": "DDD",
+                    "top_loser_return_pct": -4.0,
+                },
+            ],
+            "table_rows": [
+                {"Sector": "Technology", "Return %": 2.0, "Advancers": 8, "Decliners": 2},
+                {"Sector": "Energy", "Return %": -1.0, "Advancers": 1, "Decliners": 4},
+            ],
+        }
+
+        payload = build_market_movers_sector_breadth_react_payload(source_model)
+
+        self.assertEqual(payload["schema_version"], "market_movers_sector_breadth_react_v1")
+        self.assertEqual(payload["component"], "MarketMoversSectorBreadth")
+        self.assertEqual(payload["map"]["schema_version"], "market_movers_sector_map_v1")
+        self.assertEqual(payload["map"]["lanes"][0]["bar_width_pct"], 100)
+        self.assertEqual(payload["map"]["lanes"][1]["tone"], "danger")
+        self.assertEqual(payload["map"]["lanes"][1]["bar_width_pct"], 50)
+        self.assertTrue(payload["detail_table"]["visible"])
+        self.assertFalse(payload["detail_table"]["default_open"])
+        self.assertEqual(payload["detail_table"]["title"], "섹터 breadth 상세 표")
+        self.assertEqual(payload["detail_table"]["columns"], ["Sector", "Return %", "Advancers", "Decliners"])
+        self.assertEqual(payload["detail_table"]["rows"][0]["Sector"], "Technology")
+        self.assertEqual(payload["detail_table"]["empty_text"], "선택한 coverage/period에서 표시할 sector breadth row가 없습니다.")
+
+    def test_market_movers_sector_breadth_uses_react_with_html_fallback(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/market_movers_react_component.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_market_movers_sector_breadth_react", wrapper_source)
+        self.assertIn("build_market_movers_sector_breadth_react_payload", helper_source)
+        self.assertIn("def _render_market_movers_sector_breadth_react", helper_source)
+        self.assertIn("def _render_market_movers_sector_breadth_fallback", helper_source)
+
+        render_body = helper_source[helper_source.index("def _render_market_movers_sector_breadth_context") :]
+        render_body = render_body[: render_body.index("def _consume_market_mover_investigation_react_event")]
+        self.assertIn("_render_market_movers_sector_breadth_react(", render_body)
+        self.assertNotIn('with st.expander("섹터 breadth 상세 표"', render_body)
+
+        fallback_body = helper_source[helper_source.index("def _render_market_movers_sector_breadth_fallback") :]
+        fallback_body = fallback_body[: fallback_body.index("def _render_market_movers_sector_breadth_context")]
+        self.assertIn("render_sector_breadth_market_map(", fallback_body)
+        self.assertIn('with st.expander("섹터 breadth 상세 표"', fallback_body)
+
+    def test_market_movers_sector_breadth_react_component_renders_map_and_detail_drawer(self) -> None:
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("MarketMoversSectorBreadth", react_source)
+        self.assertIn('payload.component === "MarketMoversSectorBreadth"', react_source)
+        self.assertIn('className="mm-sector-breadth"', react_source)
+        self.assertIn('className="mm-sector-breadth__lanes"', react_source)
+        self.assertIn('className="mm-sector-breadth__detail"', react_source)
+        self.assertIn("payload.detail_table.rows.map", react_source)
+        self.assertIn("bar_width_pct", react_source)
+        self.assertIn(".mm-sector-breadth", react_style)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", react_style)
+        self.assertIn(".mm-sector-breadth__bar", react_style)
+        self.assertNotIn("right: 50%", react_style)
+
     def test_market_mover_investigation_pane_model_summarizes_selection(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_investigation_pane_model
 

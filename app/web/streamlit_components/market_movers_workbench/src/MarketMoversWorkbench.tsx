@@ -16,6 +16,45 @@ export type MarketMoverFilterControl = {
   disabled?: boolean;
 };
 
+export type MarketMoversSectorBreadthPayload = {
+  schema_version: "market_movers_sector_breadth_react_v1";
+  component: "MarketMoversSectorBreadth";
+  map: {
+    schema_version: "market_movers_sector_map_v1";
+    tone: string;
+    status: string;
+    headline: string;
+    detail: string;
+    freshness: string;
+    participation: { label: string; value: string; detail: string; rail_pct: number };
+    leadership: { label: string; value: string; detail: string };
+    dispersion: { label: string; value: string; detail: string };
+    lanes: Array<{
+      rank: string | number;
+      sector: string;
+      tone: string;
+      direction: "positive" | "negative";
+      return_label: string;
+      bar_pct: number;
+      bar_width_pct: number;
+      participation_label: string;
+      participation_detail: string;
+      cap_detail: string;
+      top_gainer_detail: string;
+      top_loser_detail: string;
+    }>;
+    boundary_note: string;
+  };
+  detail_table: {
+    visible: boolean;
+    default_open: boolean;
+    title: string;
+    columns: string[];
+    rows: Array<Record<string, string | number | null>>;
+    empty_text: string;
+  };
+};
+
 export type MarketMoversTrustPanel = {
   schema_version: "market_movers_react_trust_panel_v1";
   visible: boolean;
@@ -91,7 +130,10 @@ export type MarketMoverInvestigationPanePayload = {
   note: string;
 };
 
-type MarketMoversPayload = MarketMoversWorkbenchPayload | MarketMoverInvestigationPanePayload;
+type MarketMoversPayload =
+  | MarketMoversWorkbenchPayload
+  | MarketMoverInvestigationPanePayload
+  | MarketMoversSectorBreadthPayload;
 
 type Props = ComponentProps & {
   args: {
@@ -111,6 +153,14 @@ function toneColor(tone: string) {
     return "#dc2626";
   }
   return "#64748b";
+}
+
+function clampPercent(value: number | string | undefined) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, numeric));
 }
 
 type InvestigationProps = {
@@ -174,6 +224,124 @@ function MarketMoverInvestigationPane({ payload, onAction }: InvestigationProps)
   );
 }
 
+function MarketMoversSectorBreadth({ payload }: { payload: MarketMoversSectorBreadthPayload }) {
+  const stats = [payload.map.participation, payload.map.leadership, payload.map.dispersion];
+  const railPct = clampPercent(payload.map.participation.rail_pct);
+
+  return (
+    <section
+      className="mm-sector-breadth"
+      data-schema-version={payload.schema_version}
+      style={
+        {
+          "--mm-sector-tone": toneColor(payload.map.tone),
+          "--mm-sector-rail": `${railPct}%`,
+        } as React.CSSProperties
+      }
+    >
+      <div className="mm-sector-breadth__head">
+        <div>
+          <div className="mm-sector-breadth__kicker">시장 확산 지도</div>
+          <div className="mm-sector-breadth__title">{payload.map.headline}</div>
+          <div className="mm-sector-breadth__detail-copy">
+            {payload.map.detail} · 기준: {payload.map.freshness}
+          </div>
+        </div>
+        <span className="mm-sector-breadth__status">{payload.map.status}</span>
+      </div>
+      <div className="mm-sector-breadth__rail">
+        <span className="mm-sector-breadth__rail-fill" />
+      </div>
+      <div className="mm-sector-breadth__stats">
+        {stats.map((item) => (
+          <div className="mm-sector-breadth__stat" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <small>{item.detail}</small>
+          </div>
+        ))}
+      </div>
+      <div className="mm-sector-breadth__lanes" aria-label="섹터별 확산 맥락">
+        {payload.map.lanes.map((lane) => {
+          const barWidth = clampPercent(lane.bar_width_pct);
+          return (
+            <div
+              className={`mm-sector-breadth__lane mm-sector-breadth__lane--${lane.direction}`}
+              key={`${lane.rank}-${lane.sector}`}
+              style={
+                {
+                  "--mm-sector-lane-tone": toneColor(lane.tone),
+                  "--mm-sector-lane-bar": `${barWidth}%`,
+                } as React.CSSProperties
+              }
+            >
+              <div className="mm-sector-breadth__lane-head">
+                <span>
+                  #{lane.rank} · {lane.sector}
+                </span>
+                <strong>{lane.return_label}</strong>
+              </div>
+              <div className="mm-sector-breadth__track">
+                <span className="mm-sector-breadth__bar" />
+              </div>
+              <div className="mm-sector-breadth__lane-copy">
+                {lane.participation_detail} · {lane.cap_detail}
+              </div>
+              <div className="mm-sector-breadth__lane-foot">
+                {lane.top_gainer_detail} / {lane.top_loser_detail}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {payload.map.boundary_note ? (
+        <div className="mm-sector-breadth__boundary">{payload.map.boundary_note}</div>
+      ) : null}
+      {payload.detail_table.visible ? (
+        <details className="mm-sector-breadth__detail" open={payload.detail_table.default_open}>
+          <summary className="mm-sector-breadth__detail-summary">
+            <span>{payload.detail_table.title}</span>
+            <small>{payload.detail_table.rows.length} rows</small>
+          </summary>
+          {payload.detail_table.rows.length > 0 ? (
+            <div className="mm-sector-breadth__table" aria-label={payload.detail_table.title}>
+              <div
+                className="mm-sector-breadth__table-row mm-sector-breadth__table-row--head"
+                style={
+                  {
+                    "--mm-sector-detail-columns": `repeat(${payload.detail_table.columns.length}, minmax(0, 1fr))`,
+                  } as React.CSSProperties
+                }
+              >
+                {payload.detail_table.columns.map((column) => (
+                  <span key={column}>{column}</span>
+                ))}
+              </div>
+              {payload.detail_table.rows.map((row, index) => (
+                <div
+                  className="mm-sector-breadth__table-row"
+                  key={`sector-detail-${index}`}
+                  style={
+                    {
+                      "--mm-sector-detail-columns": `repeat(${payload.detail_table.columns.length}, minmax(0, 1fr))`,
+                    } as React.CSSProperties
+                  }
+                >
+                  {payload.detail_table.columns.map((column) => (
+                    <span key={column}>{String(row[column] ?? "-")}</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mm-sector-breadth__empty">{payload.detail_table.empty_text}</div>
+          )}
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
 function MarketMoversWorkbench({ args }: Props) {
   const payload = args.payload;
 
@@ -204,6 +372,10 @@ function MarketMoversWorkbench({ args }: Props) {
 
   if (payload.component === "MarketMoverInvestigationPane") {
     return <MarketMoverInvestigationPane payload={payload} onAction={emitAction} />;
+  }
+
+  if (payload.component === "MarketMoversSectorBreadth") {
+    return <MarketMoversSectorBreadth payload={payload} />;
   }
 
   return (

@@ -76,6 +76,7 @@ from app.web.overview.market_movers_react_component import (
     market_movers_react_component_available,
     render_market_mover_investigation_pane_react,
     render_market_movers_react_workbench,
+    render_market_movers_sector_breadth_react,
 )
 
 
@@ -2538,6 +2539,33 @@ def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any
     }
 
 
+def _market_movers_react_table_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return []
+    safe_frame = frame.astype(object).where(pd.notna(frame), None)
+    rows: list[dict[str, Any]] = []
+    for row in safe_frame.to_dict(orient="records"):
+        rows.append({str(key): value for key, value in row.items()})
+    return rows
+
+
+def build_market_movers_sector_breadth_react_payload(model: dict[str, Any]) -> dict[str, Any]:
+    table_rows = _market_mover_sector_breadth_table(model)
+    return {
+        "schema_version": "market_movers_sector_breadth_react_v1",
+        "component": "MarketMoversSectorBreadth",
+        "map": build_market_movers_sector_map_model(model),
+        "detail_table": {
+            "visible": True,
+            "default_open": False,
+            "title": "섹터 breadth 상세 표",
+            "columns": [str(column) for column in list(table_rows.columns)],
+            "rows": _market_movers_react_table_records(table_rows),
+            "empty_text": "선택한 coverage/period에서 표시할 sector breadth row가 없습니다.",
+        },
+    }
+
+
 def _market_mover_tone_style(tone: str) -> tuple[str, str, str]:
     if tone == "success":
         return OVERVIEW_COLOR_POSITIVE, "rgba(24, 130, 84, 0.10)", "rgba(24, 130, 84, 0.28)"
@@ -3182,6 +3210,24 @@ def _market_mover_sector_breadth_table(model: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def _render_market_movers_sector_breadth_fallback(model: dict[str, Any]) -> None:
+    render_sector_breadth_market_map(build_market_movers_sector_map_model(model))
+    table_rows = _market_mover_sector_breadth_table(model)
+    with st.expander("섹터 breadth 상세 표", expanded=False):
+        if table_rows.empty:
+            st.info("선택한 coverage/period에서 표시할 sector breadth row가 없습니다.")
+        else:
+            st.dataframe(table_rows, width="stretch", hide_index=True)
+
+
+def _render_market_movers_sector_breadth_react(model: dict[str, Any]) -> dict[str, Any] | None:
+    payload = build_market_movers_sector_breadth_react_payload(model)
+    return render_market_movers_sector_breadth_react(
+        payload,
+        key="overview_market_movers_sector_breadth",
+    )
+
+
 def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> None:
     model = snapshot.get("sector_breadth")
     if not isinstance(model, dict):
@@ -3190,13 +3236,9 @@ def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> No
         "섹터 / 시장 확산 맥락",
         "선택 coverage의 움직임이 넓게 퍼졌는지, 특정 그룹에 집중됐는지 확인합니다.",
     )
-    render_sector_breadth_market_map(build_market_movers_sector_map_model(model))
-    table_rows = _market_mover_sector_breadth_table(model)
-    with st.expander("섹터 breadth 상세 표", expanded=False):
-        if table_rows.empty:
-            st.info("선택한 coverage/period에서 표시할 sector breadth row가 없습니다.")
-        else:
-            st.dataframe(table_rows, width="stretch", hide_index=True)
+    if _render_market_movers_sector_breadth_react(model) is not None:
+        return
+    _render_market_movers_sector_breadth_fallback(model)
 
 
 def _consume_market_mover_investigation_react_event(event: dict[str, Any] | None, *, metadata_key: str) -> bool:
