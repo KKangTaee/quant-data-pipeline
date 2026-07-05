@@ -47,7 +47,7 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
 |---|---|---|
 | Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
-| Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation source로 넘겨도 되는지 확인한다. `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus이며, Backtest Analysis에서는 상세 review row를 펼치지 않고 count / handoff notice로 표시한다. Portfolio Mix strict compare gate는 별도로 더 보수적으로 읽는다 |
+| Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation source로 넘겨도 되는지 확인한다. `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus이며, Backtest Analysis에서는 상세 review row를 펼치지 않고 count / handoff notice로 표시한다. Data Trust도 `meta["warnings"]` review focus를 1차 상세 issue card로 펼치지 않고 2차 전달 count로만 표시한다. Portfolio Mix strict compare gate는 별도로 더 보수적으로 읽는다 |
 | Practical Evidence | Practical Validation | source traits, 필수 / 조건부 module gate, selected-route preflight, provider, data coverage, realism, robustness, construction risk 검증 |
 | Final Decision Gate | Final Review | selection hard blocker와 open review item을 분리해 최종 관찰 후보로 저장 가능한지 판단 |
 | Monitoring Check | Operations > Portfolio Monitoring | 모니터링 이후 recheck readiness, freshness, provider evidence, review signal 확인 |

@@ -7625,8 +7625,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertTrue(state["can_submit"])
         self.assertEqual(state["status_label"], "2차 진입 가능")
-        self.assertIn("2차 확인 큐 1개는 source와 함께 Practical Validation으로 전달됩니다.", state["display_reasons"])
+        self.assertEqual(state["display_reasons"], ["2차 확인 큐 1개는 Practical Validation에서 이어 확인합니다."])
         self.assertNotIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
+        self.assertFalse(any("provider" in reason for reason in state["display_reasons"]))
+        self.assertFalse(any("data coverage" in reason for reason in state["display_reasons"]))
         self.assertEqual(state["first_stage_blocker_count"], 0)
         self.assertEqual(state["second_stage_review_count"], 1)
         entry_cards = {row["label"]: row for row in state["entry_cards"]}
@@ -8077,21 +8079,23 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(brief["status_label"], "주의사항 있음")
+        self.assertEqual(brief["status_label"], "2차 확인 항목 있음")
         self.assertIn("2026-06-26까지", brief["headline"])
+        self.assertIn("2차에서 이어 확인할 항목 2개", brief["headline"])
         self.assertIn("요청 종료일 2026-07-01", brief["subtitle"])
         self.assertEqual(
             [item["label"] for item in brief["summary_items"]],
-            ["계산 기준일", "가격 기준", "사용 데이터", "검토 큐"],
+            ["계산 기준일", "가격 기준", "사용 데이터", "2차 전달"],
         )
         self.assertEqual(brief["summary_items"][1]["value"], "최신성 정상")
         self.assertIn("공통 2026-06-26", brief["summary_items"][1]["detail"])
         self.assertEqual(brief["summary_items"][2]["value"], "4개 종목")
-        self.assertEqual(brief["summary_items"][3]["value"], "주의사항 2개")
+        self.assertEqual(brief["summary_items"][3]["value"], "2차 확인 2개")
+        self.assertEqual(brief["summary_items"][3]["detail"], "Practical Validation에서 확인합니다.")
         self.assertNotIn("reading_rows", brief)
         self.assertNotIn("detail_rows", brief)
-        self.assertEqual([card["title"] for card in brief["issue_cards"]], ["validation caution", "operability watch"])
-        self.assertEqual(brief["issue_cards"][0]["priority"], "확인 1")
+        self.assertEqual(brief["issue_cards"], [])
+        self.assertEqual(brief["second_stage_review_count"], 2)
 
     def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
@@ -8110,7 +8114,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("data-trust-brief", source)
         self.assertIn("data-trust-brief__section-title", panel_body)
         self.assertIn("data-trust-brief__section-kicker", panel_body)
-        self.assertIn("이번 실행 검토 큐", source)
+        self.assertIn("2차 확인 항목", source)
+        self.assertIn("1차 데이터 확인", source)
+        self.assertNotIn("이번 실행 검토 큐", source)
         self.assertNotIn('st.markdown("#### 데이터 기준 요약")', function_body)
         self.assertNotIn("render_status_card_grid", function_body)
         self.assertNotIn("render_badge_strip", function_body)

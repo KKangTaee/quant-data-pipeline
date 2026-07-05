@@ -8456,3 +8456,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Handoff card는 1차 source 등록 기준 통과 여부와 2차로 전달할 review queue를 분리해야 하며, score는 visible entry gate처럼 보이지 않아야 한다.
 - Analysis result: 버튼 활성화는 이미 `can_enter_practical_validation`이 담당하고 있었고, 혼선은 visible score / Promotion review chip이 같은 Handoff card 안에 노출된 데서 왔다. `promotion_decision=hold`는 source 등록 blocker가 아니라 2차 review focus다.
 - Follow-up: Handoff React card는 `1차 진입 기준 / 먼저 해결 / 2차 확인 큐` entry cards를 표시하고, source registration write / rerun / registry / strategy runtime 계약은 유지한다.
+
+### 2026-07-05 - 2차에서 확인할 warning 상세는 1차 Data Trust에서 펼치지 않는다
+
+- User request: 사용자가 2차에서 검증해야 하는 것은 2차에서 노출하는 것이 맞다며 그렇게 수정 진행을 요청함.
+- Interpreted goal: Backtest Analysis는 1차 데이터 기준과 source 등록 가능 여부만 상세히 보여주고, 실전성 review focus 상세는 Practical Validation으로 넘겨야 함.
+- Analysis result: Data Trust가 `meta["warnings"]`를 `이번 실행 검토 큐` 상세 카드로 펼치고 있었고, Handoff / Policy Signal handoff 문구도 2차 판단 도메인을 1차 화면에서 다시 설명하고 있었다.
+- Follow-up: Data Trust는 excluded ticker / malformed price row 같은 직접 데이터 이슈만 상세 표시하고, `meta["warnings"]`는 `2차 확인 항목` count / 위치 안내로만 표시한다. Practical Validation의 review queue 전달은 유지한다.

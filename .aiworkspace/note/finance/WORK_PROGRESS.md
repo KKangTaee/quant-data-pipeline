@@ -5476,3 +5476,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-handoff-entry-gate-queue-v1-20260705/`에서 Handoff card의 visible `진입 준비도` score를 제거하고 `1차 진입 기준 / 먼저 해결 / 2차 확인 큐`로 바꿨다.
   - `promotion_decision=hold`는 1차 source 등록 blocker가 아니라 Practical Validation으로 전달되는 2차 review queue로 표시한다.
   - React card / button integration은 유지하고, registry / saved / strategy runtime / gate threshold는 변경하지 않았다.
+- Backtest Second Stage Visibility V1 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/backtest-second-stage-visibility-v1-20260705/`에서 Data Trust와 Handoff의 1차 / 2차 표시 경계를 추가 정리했다.
+  - Data Trust는 excluded ticker / malformed price row 같은 1차 데이터 이슈만 상세 표시하고, `meta["warnings"]` review focus는 2차 전달 count로만 남긴다.
+  - Practical Validation `Backtest에서 넘어온 2차 확인 항목`의 상세 queue 전달은 유지했고, gate threshold / source registration / registry / strategy runtime은 변경하지 않았다.

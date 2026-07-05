@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-02
+Last Verified: 2026-07-05
 
 ## Purpose
 
@@ -24,8 +24,8 @@ Last Verified: 2026-07-02
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Backtest Handoff UI Integrated V1 2026-07-02](../tasks/active/backtest-handoff-ui-integrated-v1-20260702/STATUS.md).
-- Latest completed product task: [Backtest Handoff UI Integrated V1 2026-07-02](../tasks/active/backtest-handoff-ui-integrated-v1-20260702/STATUS.md).
+- Latest completed task: [Backtest Second Stage Visibility V1 2026-07-05](../tasks/active/backtest-second-stage-visibility-v1-20260705/STATUS.md).
+- Latest completed product task: [Backtest Second Stage Visibility V1 2026-07-05](../tasks/active/backtest-second-stage-visibility-v1-20260705/STATUS.md).
 - Recent Overview cleanup task: [Overview Legacy Dashboard Removal V17-V24 2026-06-25](../tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/STATUS.md).
 - Recent Overview helper extraction task: [Overview Tab Helper Extraction V11-V16 2026-06-25](../tasks/active/overview-tab-helper-extraction-v11-v16-20260625/STATUS.md).
 - Recent Backtest strategy contract task: [Risk Parity / Dual Momentum 5B 2026-06-10](../tasks/active/risk-parity-dual-momentum-5b-20260610/STATUS.md).

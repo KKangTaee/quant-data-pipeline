@@ -153,16 +153,6 @@ def _data_trust_price_status_label(status: str) -> str:
     return mapping.get(status, "기준 제한")
 
 
-def _split_data_trust_issue(value: str) -> tuple[str, str]:
-    text = str(value or "").strip()
-    for separator in (": ", ":"):
-        if separator in text:
-            title, detail = text.split(separator, 1)
-            if title.strip() and detail.strip():
-                return title.strip(), detail.strip()
-    return text or "검토 필요", "성과를 읽기 전에 함께 확인합니다."
-
-
 def _build_data_trust_issue_cards(
     warnings: list[str],
     *,
@@ -170,16 +160,9 @@ def _build_data_trust_issue_cards(
     malformed_price_rows: list[Any],
 ) -> list[dict[str, str]]:
     issue_cards: list[dict[str, str]] = []
-    for warning in warnings:
-        title, detail = _split_data_trust_issue(warning)
-        issue_cards.append(
-            {
-                "priority": f"확인 {len(issue_cards) + 1}",
-                "title": title,
-                "detail": detail,
-                "tone": "warning",
-            }
-        )
+    # `meta["warnings"]` are Practical Validation review cues. Data Trust only
+    # expands direct first-stage data issues that affect result readability.
+    _ = warnings
 
     if excluded_tickers:
         sample = ", ".join(str(ticker) for ticker in excluded_tickers[:8])
@@ -236,6 +219,7 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     result_rows = _format_data_trust_count(meta.get("result_rows"))
     symbol_count = len(tickers)
     symbol_label = f"{symbol_count}개 종목" if symbol_count else "종목 수 미상"
+    second_stage_review_count = len(warnings)
     issue_cards = _build_data_trust_issue_cards(
         warnings,
         excluded_tickers=excluded_tickers,
@@ -253,9 +237,9 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         headline = f"백테스트는 {actual_end}까지 계산됐고, 데이터 기준을 함께 확인해야 합니다."
         price_tone = "warning"
     elif warnings:
-        status_label = "주의사항 있음"
+        status_label = "2차 확인 항목 있음"
         tone = "warning"
-        headline = f"백테스트는 {actual_end}까지 계산됐고, {len(warnings)}개 검토 큐가 있습니다."
+        headline = f"백테스트는 {actual_end}까지 계산됐고, 2차에서 이어 확인할 항목 {len(warnings)}개가 함께 전달됩니다."
         price_tone = "positive" if status == "ok" else "neutral"
     elif status == "ok":
         status_label = "자료 정상"
@@ -278,16 +262,20 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     else:
         subtitle = "저장 DB의 공통 최신 가격일을 기준으로 결과를 읽습니다."
 
-    if warnings:
-        next_check_value = f"주의사항 {len(warnings)}개"
-        next_check_detail = "검토 큐를 먼저 확인한 뒤 성과를 읽습니다."
-    elif excluded_tickers or malformed_price_rows:
+    if excluded_tickers or malformed_price_rows:
+        next_check_label = "1차 데이터 확인"
         next_check_value = "데이터 이슈 확인"
-        next_check_detail = "검토 큐에서 제외 종목과 결측 row를 확인합니다."
+        next_check_detail = "제외 종목과 결측 row를 확인합니다."
     elif status == "error":
+        next_check_label = "1차 데이터 확인"
         next_check_value = "데이터 보강"
         next_check_detail = "가격 수집 또는 DB 보강 후 다시 실행합니다."
+    elif warnings:
+        next_check_label = "2차 전달"
+        next_check_value = f"2차 확인 {len(warnings)}개"
+        next_check_detail = "Practical Validation에서 확인합니다."
     else:
+        next_check_label = "1차 데이터 확인"
         next_check_value = "바로 성과 확인"
         next_check_detail = "아래 성과 metric과 차트를 이어서 봅니다."
 
@@ -305,7 +293,7 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
             "detail": f"성과 row {result_rows} · 제외 {len(excluded_tickers)}개 · 결측 row {len(malformed_price_rows)}개",
             "tone": "positive" if not excluded_tickers and not malformed_price_rows else "warning",
         },
-        {"label": "검토 큐", "value": next_check_value, "detail": next_check_detail, "tone": tone},
+        {"label": next_check_label, "value": next_check_value, "detail": next_check_detail, "tone": tone},
     ]
 
     return {
@@ -319,17 +307,29 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         "excluded_tickers": excluded_tickers,
         "malformed_price_rows": malformed_price_rows,
         "warnings": warnings,
+        "second_stage_review_count": second_stage_review_count,
         "newest_latest": newest_latest,
     }
 
 
 def _render_data_trust_issue_queue(brief: dict[str, Any]) -> str:
     issue_cards = list(brief.get("issue_cards") or [])
+    second_stage_review_count = int(brief.get("second_stage_review_count") or 0)
     if not issue_cards:
+        if second_stage_review_count:
+            return f"""
+  <div class="data-trust-brief__issues data-trust-brief__issues--empty">
+    <div class="data-trust-brief__issues-head">
+      <span>2차 확인 항목</span>
+      <strong>{second_stage_review_count}개 전달</strong>
+    </div>
+    <p>상세 판단은 Practical Validation의 `Backtest에서 넘어온 2차 확인 항목`에서 확인합니다.</p>
+  </div>
+            """
         return """
   <div class="data-trust-brief__issues data-trust-brief__issues--empty">
     <div class="data-trust-brief__issues-head">
-      <span>이번 실행 검토 큐</span>
+      <span>1차 데이터 확인</span>
       <strong>추가 확인 없음</strong>
     </div>
     <p>현재 데이터 기준에서는 성과를 보기 전에 따로 볼 경고가 없습니다.</p>
@@ -348,13 +348,19 @@ def _render_data_trust_issue_queue(brief: dict[str, Any]) -> str:
         )
         for card in issue_cards
     )
+    handoff_html = (
+        f'<p class="data-trust-brief__handoff-note">2차 확인 항목 {second_stage_review_count}개는 Practical Validation에서 이어 확인합니다.</p>'
+        if second_stage_review_count
+        else ""
+    )
     return f"""
   <div class="data-trust-brief__issues">
     <div class="data-trust-brief__issues-head">
-      <span>이번 실행 검토 큐</span>
+      <span>1차 데이터 확인</span>
       <strong>{len(issue_cards)}개 확인</strong>
     </div>
     <div class="data-trust-brief__issue-list">{issue_html}</div>
+    {handoff_html}
   </div>
     """
 
@@ -705,10 +711,7 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         display_reasons = [str(item) for item in list(gate_summary.get("action_items") or [])][:3]
         reason_title = str(gate_summary.get("reason_title") or ("막는 이유" if blocking_reasons else "상태"))
     elif review_reasons:
-        display_reasons = [
-            f"2차 확인 큐 {second_stage_review_count}개는 source와 함께 Practical Validation으로 전달됩니다.",
-            "Promotion hold와 실전성 review는 2차 화면에서 provider, data coverage, realism, robustness 근거로 확인합니다.",
-        ]
+        display_reasons = [f"2차 확인 큐 {second_stage_review_count}개는 Practical Validation에서 이어 확인합니다."]
         reason_title = "2차 확인 큐 전달"
     else:
         display_reasons = ["2차 확인 큐 없음"]
@@ -1333,8 +1336,8 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
         },
     ]
     handoff_note = (
-        f"2차 확인 {second_review_count}개는 source와 함께 Practical Validation으로 전달됩니다. "
-        "여기서는 상세 판단을 반복하지 않고, 다음 화면에서 provider, data coverage, realism, robustness 근거로 확인합니다."
+        f"2차 확인 {second_review_count}개는 Practical Validation으로 전달됩니다. "
+        "Backtest Analysis에서는 항목별 상세 판단을 반복하지 않습니다."
         if second_review_count
         else "Practical Validation으로 별도 전달된 review 큐가 없습니다. 아래 결과 근거를 이어서 확인하면 됩니다."
     )
