@@ -63,3 +63,11 @@ The service-level labels now say `Final Review Readiness Preview`, but some exis
 The first-read page hierarchy now uses the workspace contract, but the detailed module board still contains legacy table structure inside collapsed technical details. V6 should split ownership after V5 decides which action surfaces need richer components.
 
 Browser QA showed existing Streamlit dataframe serialization warnings in the server log for mixed-type legacy tables. They did not block rendering, and they are outside the V4 flow restructure.
+
+## 2026-07-05 - V5 Residual Risk
+
+V5 introduces another small React component with its own frontend package and build artifacts. This is acceptable for the focused Fix Queue surface, but V6 should avoid multiplying components until `page.py` ownership is physically split.
+
+Browser QA showed known Streamlit relative `_stcore` 404 checks and iframe sandbox warnings. The Practical Validation Fix Queue iframe rendered correctly and the warnings did not block the target view.
+
+`BacktestRuntimeContractTests` has an unrelated policy-signal source contract drift around `second_stage_review_rows`. The V5 targeted tests passed, but the full Backtest runtime contract suite remains blocked by that pre-existing inconsistency until a separate policy-signal cleanup resolves it.

@@ -5,7 +5,7 @@ Last Updated: 2026-07-05
 
 ## Current State
 
-V4 implementation is complete and ready to commit.
+V5 implementation is complete and ready to commit.
 
 Completed in this task:
 
@@ -27,6 +27,9 @@ Completed in this task:
 - Added workspace overview rendering for `2차 검증 결론 / Fix Queue` and core evidence groups.
 - Kept detailed module / board evidence under collapsed technical details.
 - Verified V4 with source contract tests, py_compile, Browser QA, and screenshot.
+- Added a focused read-only React component for the Practical Validation Fix Queue and core evidence groups.
+- Connected the component behind an availability check while preserving the existing Streamlit fallback.
+- Verified V5 with component build, focused contracts, py_compile, Browser QA, and screenshot.
 
 ## Current Conclusion
 
@@ -40,14 +43,16 @@ V3 makes the workspace read model part of the built Practical Validation result,
 
 V4 makes that contract visible in the page: the first-read path is now candidate/profile, practical replay, second-stage conclusion/Fix Queue, evidence workbench, and Final Review handoff.
 
+V5 makes the most decision-heavy part of that first-read path feel like one product surface: Fix Queue, review count, and core evidence groups render together in a read-only React component, while Python still owns validation execution, gate calculation, persistence, and handoff.
+
 ## Next Action
 
-V5 should focus React/custom component work only where it improves action surfaces:
+V6 should physically split `page.py` by the 5-flow ownership decided in V4:
 
-1. Identify whether Control Center / Fix Queue / Provider Action need richer component behavior.
-2. Avoid rewriting the whole page into React.
-3. Preserve the V4 5-flow screen order.
-4. Run Browser QA again because visible UI changes continue.
+1. Keep `page.py` as orchestration and top-level state flow.
+2. Move source/profile, replay, gate/workspace, evidence, provider action, and handoff renderers into focused modules.
+3. Preserve the V5 React component as a UI-only optional surface.
+4. Run Browser QA again because visible UI ownership will move.
 
 ## Verification State
 
@@ -72,8 +77,15 @@ Completed checks:
 - V4 py_compile and diff check
 - V4 Browser QA against `http://localhost:8515/backtest`
 - V4 screenshot: `backtest-practical-validation-v4-five-flow-final-qa.png`
+- V5 RED/GREEN React component contract test
+- V5 frontend build with Vite
+- V5 Practical Validation service contract suite
+- V5 py_compile and diff check
+- V5 Browser QA against `http://localhost:8525/backtest`
+- V5 screenshot: `backtest-practical-validation-v5-react-fix-queue-card-qa.png`
 
 Browser QA was not run for V1 because no Streamlit UI changed.
 Browser QA was not run for V2 because no Streamlit UI changed.
 Browser QA was not run for V3 because no Streamlit UI changed.
 Browser QA was run for V4.
+Browser QA was run for V5.

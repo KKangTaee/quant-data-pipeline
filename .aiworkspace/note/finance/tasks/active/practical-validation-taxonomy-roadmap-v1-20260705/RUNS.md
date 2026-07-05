@@ -240,3 +240,79 @@ Outcome:
 - targeted queue/source contract and refactor boundary tests passed: 13 tests
 - service import boundary test passed
 - Browser QA text checks passed
+
+## 2026-07-05 - V5 Development And QA
+
+TDD RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_fix_queue_react_component_is_ui_only
+```
+
+Outcome:
+
+- failed because `app/web/components/practical_validation_fix_queue/component.py` did not exist yet
+
+Implemented:
+
+- `app/web/components/practical_validation_fix_queue/`
+- read-only `PracticalValidationFixQueue` React component
+- Streamlit component wrapper with no service/runtime imports
+- `page.py` availability check and Streamlit fallback
+- component contract coverage in `tests/test_service_contracts.py`
+
+Build:
+
+```bash
+npm install && npm run build
+```
+
+Outcome:
+
+- Vite build passed
+- `npm install` reported 2 dependency audit warnings in the component frontend package
+
+QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_fix_queue_react_component_is_ui_only
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/components/practical_validation_fix_queue/component.py
+git diff --check
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+```
+
+Browser QA:
+
+```bash
+PYTHONPATH=. .venv/bin/streamlit run app/web/streamlit_app.py --server.port 8525 --server.headless true
+```
+
+Checked in browser:
+
+- `http://localhost:8525/backtest`
+- Practical Validation workflow button opens the updated screen.
+- Streamlit loads the new component iframe at `app.web.components.practical_validation_fix_queue`.
+- iframe body contains `2차 검증 결론 / Fix Queue`, `Final Review 이동 보류`, `Fix Queue 4`, `Review Items 8`, and `Core Evidence 3`.
+- screenshot saved as `backtest-practical-validation-v5-react-fix-queue-card-qa.png`
+
+Outcome:
+
+- focused component contract passed
+- py_compile passed
+- diff check passed
+- `PracticalValidationServiceContractTests`: 22 tests passed
+- `BacktestRefactorBoundaryTests`: 12 tests passed
+- Browser QA passed for the new React Fix Queue surface
+
+Known unrelated verification finding:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests
+```
+
+Outcome:
+
+- failed 1 existing policy-signal contract: `test_policy_signal_tab_is_evidence_only_after_handoff_summary` expects `second_stage_review_rows` in `app/web/backtest_result_display.py`
+- the same test file also has `test_backtest_policy_signal_react_board_component_is_ui_only`, which expects `second_stage_review_rows` not to be in `app/web/backtest_result_display.py`
+- current V5 diff does not touch `app/web/backtest_result_display.py`; this is recorded as a pre-existing contract drift, not a V5 blocker

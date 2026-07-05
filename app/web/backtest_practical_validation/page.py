@@ -34,6 +34,10 @@ from app.web.backtest_practical_validation.components import (
     render_pv_step_rail,
     render_pv_styles,
 )
+from app.web.components.practical_validation_fix_queue import (
+    is_practical_validation_fix_queue_available,
+    render_practical_validation_fix_queue,
+)
 from app.web.backtest_ui_components import render_badge_strip
 from app.web.reference_contextual_help import render_reference_contextual_help
 from app.runtime import (
@@ -1816,6 +1820,42 @@ def _workspace_group_cards(groups: list[dict[str, Any]], *, kicker: str) -> list
     return cards
 
 
+def _react_fix_queue_items(fix_queue: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for row in _gate_module_display_rows(fix_queue):
+        items.append(
+            {
+                "label": row.get("Module") or "-",
+                "status": row.get("Status") or "-",
+                "fixLocation": row.get("Fix Location") or "-",
+                "fixAction": row.get("Fix Action") or "-",
+                "gateReason": row.get("Gate Reason") or "",
+                "tone": _status_tone(row.get("Status")),
+            }
+        )
+    return items
+
+
+def _react_core_group_items(core_groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for group in core_groups:
+        modules = [dict(module or {}) for module in list(group.get("modules") or [])]
+        items.append(
+            {
+                "label": group.get("label") or group.get("group_id") or "-",
+                "status": _workspace_group_status(modules),
+                "purpose": group.get("purpose") or f"{len(modules)} module(s)",
+                "tone": _workspace_group_tone(modules),
+                "modules": [
+                    str(module.get("label") or module.get("module_id") or "-")
+                    for module in modules
+                    if module
+                ],
+            }
+        )
+    return items
+
+
 def _render_practical_validation_workspace_overview(validation_result: dict[str, Any]) -> None:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
@@ -1857,15 +1897,28 @@ def _render_practical_validation_workspace_overview(validation_result: dict[str,
             },
         ]
     )
-    _render_fix_queue(fix_queue)
-    if core_groups:
-        render_pv_section_header(
-            eyebrow="Core Evidence",
-            title="2차 검증 핵심 근거",
-            detail="Final Review로 넘기기 전에 먼저 확인할 source, validation, readiness preview 근거입니다.",
-            tone="neutral",
+    if is_practical_validation_fix_queue_available():
+        render_practical_validation_fix_queue(
+            status_label=str(gate_summary.get("route") or "-"),
+            tone="positive" if gate_summary.get("can_save_and_move") else "danger",
+            verdict=str(gate_summary.get("verdict") or "2차 검증 결론"),
+            next_action=str(gate_summary.get("next_action") or ""),
+            can_save_and_move=bool(gate_summary.get("can_save_and_move")),
+            fix_items=_react_fix_queue_items(fix_queue),
+            core_groups=_react_core_group_items(core_groups),
+            review_count=int(gate_summary.get("review_count") or 0),
+            key="practical_validation_fix_queue_overview",
         )
-        render_pv_card_grid(_workspace_group_cards(core_groups, kicker="Core"), min_width=250)
+    else:
+        _render_fix_queue(fix_queue)
+        if core_groups:
+            render_pv_section_header(
+                eyebrow="Core Evidence",
+                title="2차 검증 핵심 근거",
+                detail="Final Review로 넘기기 전에 먼저 확인할 source, validation, readiness preview 근거입니다.",
+                tone="neutral",
+            )
+            render_pv_card_grid(_workspace_group_cards(core_groups, kicker="Core"), min_width=250)
     if conditional_groups or downstream_groups:
         with st.expander("조건부 근거와 후속 참고", expanded=False):
             if conditional_groups:

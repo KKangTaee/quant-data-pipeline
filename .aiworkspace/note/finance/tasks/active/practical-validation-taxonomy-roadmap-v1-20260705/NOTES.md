@@ -129,3 +129,15 @@ V4 changes the visible Practical Validation page flow:
 5. `저장 / Final Review 이동`
 
 The first-read section now consumes `practical_validation_workspace`. Existing module boards, raw diagnostics, and technical connection maps remain available inside collapsed details.
+
+## 2026-07-05 - V5 Implementation Note
+
+V5 adds `app/web/components/practical_validation_fix_queue` as a focused React component.
+
+Design boundary:
+
+- React renders only the Fix Queue, review count, and core evidence group read surface.
+- Python still owns validation execution, gate calculation, registry writes, save / move controls, and Final Review handoff.
+- `page.py` checks `is_practical_validation_fix_queue_available()` and falls back to the existing Streamlit cards when the frontend build is absent.
+
+This keeps the React pass product-visible without turning the whole Practical Validation page into a second app.

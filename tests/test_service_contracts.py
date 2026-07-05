@@ -8187,6 +8187,44 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("action_cols", refresh_body)
         self.assertNotIn("data-trust-refresh-action", refresh_body)
 
+    def test_practical_validation_fix_queue_react_component_is_ui_only(self) -> None:
+        component_root = Path("app/web/components/practical_validation_fix_queue")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/PracticalValidationFixQueue.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_practical_validation_fix_queue_available", wrapper_source)
+        self.assertIn("render_practical_validation_fix_queue", wrapper_source)
+        self.assertIn("PracticalValidationFixQueue", component_source)
+        self.assertIn("2차 검증 결론 / Fix Queue", component_source)
+        self.assertIn("fixItems", component_source)
+        self.assertIn("coreGroups", component_source)
+        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertIn("render_practical_validation_fix_queue(", page_source)
+        self.assertIn("is_practical_validation_fix_queue_available()", page_source)
+
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
         flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")
         selection_doc = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(
