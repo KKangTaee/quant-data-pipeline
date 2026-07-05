@@ -7654,6 +7654,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         react_source = Path(
             "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
         ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("build_market_mover_investigation_pane_model", helper_source)
         self.assertIn("render_market_mover_investigation_pane", helper_source)
@@ -7673,6 +7676,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('payload.component === "MarketMoverInvestigationPane"', react_source)
         self.assertIn('className="mm-investigation__actions"', react_source)
         self.assertIn("수동 조사 패널", react_source)
+        fallback_pane_block = common_source[
+            common_source.index(".ov-mm-investigation-pane {") : common_source.index(".ov-mm-investigation-head {")
+        ]
+        react_pane_block = react_style[
+            react_style.index(".mm-investigation {") : react_style.index(".mm-investigation__head {")
+        ]
+        self.assertIn("border-radius: 0;", fallback_pane_block)
+        self.assertNotIn("border-radius: var(--ov-mi-radius-panel)", fallback_pane_block)
+        self.assertIn("border-radius: 0;", react_pane_block)
+        self.assertNotIn("border-radius: 8px", react_pane_block)
         self.assertIn("@st.fragment", helper_source)
         self.assertIn('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])', helper_source)
         self.assertNotIn('st.tabs(["기본 지표", "뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])', helper_source)

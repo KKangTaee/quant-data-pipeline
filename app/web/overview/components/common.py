@@ -4861,7 +4861,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  padding: 0.66rem;
 	  border: 1px solid var(--ov-mi-border-faint);
 	  border-left: 4px solid var(--ov-mi-color-primary);
-	  border-radius: var(--ov-mi-radius-panel);
+	  border-radius: 0;
 	  background:
 	    linear-gradient(135deg, color-mix(in srgb, var(--ov-mi-color-primary) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
 	    var(--ov-mi-color-surface);
