@@ -4,3 +4,4 @@
 - The React detail drawer replaces the visible `st.expander`, so Browser QA must verify the drawer is inside the component iframe.
 - Built Vite asset filenames can change; stage only the resulting `component_static` files and avoid local generated screenshots.
 - Residual UI risk: the React custom component is an iframe, so its responsive breakpoint is based on iframe width, not the outer browser viewport. In common local QA width it renders 3 columns; wider iframes render 4.
+- Mitigated follow-up risk: native `<details>` toggles inside the iframe need explicit frame-height resync. Sector detail and workbench trust drawers now call the shared resync helper on toggle.

@@ -30,3 +30,28 @@ git diff --check
 Result: passed (`249 OK` for the combined unittest command).
 
 Browser QA: Streamlit on `http://localhost:8509`, Overview > Market Movers. Verified one `.mm-sector-breadth` React component, 11 `.mm-sector-breadth__lane` nodes, one `.mm-sector-breadth__detail` drawer, zero main-page `.ov-sector-breadth-map` nodes, 3 `.mm-sector-breadth__lane--negative` lanes, first negative style `--mm-sector-lane-tone: #dc2626; --mm-sector-lane-bar: 7%;`, and detail drawer opening to 12 table rows including the header. Screenshot captured at `market-movers-sector-react-qa.png` (generated/local artifact; not staged).
+
+Follow-up detail height bugfix:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_sector_breadth_react_component_renders_map_and_detail_drawer
+```
+
+Result: RED first. The React source did not expose `syncFrameHeightSoon` or attach it to the sector detail drawer toggle.
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_sector_breadth_react_component_renders_map_and_detail_drawer
+```
+
+Result: GREEN after implementation.
+
+```bash
+npm run build
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests
+.venv/bin/python -m py_compile tests/test_service_contracts.py
+git diff --check
+```
+
+Result: passed. Vite rebuilt `component_static/index.html` and the JS bundle as `component_static/assets/index-RUMnpvla.js`.
+
+Browser QA: Streamlit on `http://localhost:8509`, Overview > Market Movers. Before opening the React sector detail drawer the sector component iframe height was `765`; after opening it became `1617`. DOM snapshot showed the opened `섹터 breadth 상세 표` with 11 data rows plus header. Screenshot captured at `market-movers-sector-detail-open-visible-qa.png` (generated/local artifact; not staged).

@@ -163,6 +163,12 @@ function clampPercent(value: number | string | undefined) {
   return Math.max(0, Math.min(100, numeric));
 }
 
+function syncFrameHeightSoon() {
+  Streamlit.setFrameHeight();
+  window.requestAnimationFrame(() => Streamlit.setFrameHeight());
+  window.setTimeout(() => Streamlit.setFrameHeight(), 160);
+}
+
 type InvestigationProps = {
   payload: MarketMoverInvestigationPanePayload;
   onAction: (action: MarketMoverAction) => void;
@@ -298,7 +304,11 @@ function MarketMoversSectorBreadth({ payload }: { payload: MarketMoversSectorBre
         <div className="mm-sector-breadth__boundary">{payload.map.boundary_note}</div>
       ) : null}
       {payload.detail_table.visible ? (
-        <details className="mm-sector-breadth__detail" open={payload.detail_table.default_open}>
+        <details
+          className="mm-sector-breadth__detail"
+          onToggle={syncFrameHeightSoon}
+          open={payload.detail_table.default_open}
+        >
           <summary className="mm-sector-breadth__detail-summary">
             <span>{payload.detail_table.title}</span>
             <small>{payload.detail_table.rows.length} rows</small>
@@ -346,7 +356,7 @@ function MarketMoversWorkbench({ args }: Props) {
   const payload = args.payload;
 
   useEffect(() => {
-    Streamlit.setFrameHeight();
+    syncFrameHeightSoon();
   });
 
   if (!payload) {
@@ -429,6 +439,7 @@ function MarketMoversWorkbench({ args }: Props) {
       {payload.trust_panel.visible ? (
         <details
           className={`mm-workbench__trust-panel mm-workbench__trust-panel--${payload.trust_panel.tone}`}
+          onToggle={syncFrameHeightSoon}
           open={payload.trust_panel.default_open}
         >
           <summary className="mm-workbench__trust-summary">

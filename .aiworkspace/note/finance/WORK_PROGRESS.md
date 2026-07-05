@@ -5498,3 +5498,6 @@ Detailed historical logs were archived on `2026-04-13`.
   - Top1000 / Top2000 기준은 `nyse_asset_profile.market_cap`에서 `market_liquidity_universe_member`의 최근 20거래일 평균 거래대금 materialized membership으로 전환됐다.
   - `유니버스 기준 갱신`은 SP500 구성, Nasdaq Symbol Directory, Top liquidity universe materialize로 분기하며, Market Movers 기본 UI에서는 `가격 이력 갱신` primary action을 숨겼다.
   - Local DB smoke 기준 TOP1000은 1,000개, TOP2000은 1,920개가 저장됐고, Browser QA에서 남은 `by market cap` 문구를 제거했다.
+- Overview Market Movers Sector React Follow-up 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-sector-react-20260705/`에서 React 섹터 breadth 상세표 펼침 시 iframe 높이가 갱신되지 않아 표가 잘리는 문제를 수정했다.
+  - `<details>` toggle 시 custom component frame height를 재동기화하고, Browser QA에서 섹터 iframe 높이가 `765 -> 1617`로 늘어나는 것을 확인했다.
