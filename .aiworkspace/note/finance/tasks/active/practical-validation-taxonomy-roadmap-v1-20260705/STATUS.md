@@ -5,7 +5,7 @@ Last Updated: 2026-07-05
 
 ## Current State
 
-V3 implementation is complete and ready to commit.
+V4 implementation is complete and ready to commit.
 
 Completed in this task:
 
@@ -23,6 +23,10 @@ Completed in this task:
 - Verified V2 with targeted module, board, preflight, py_compile, and service contract checks.
 - Attached `practical_validation_workspace` to `build_practical_validation_result()` output.
 - Verified V3 with diagnostics result contract, import boundary, py_compile, and diff check.
+- Reworked the Practical Validation page first-read flow from 7 steps to 5 flows.
+- Added workspace overview rendering for `2차 검증 결론 / Fix Queue` and core evidence groups.
+- Kept detailed module / board evidence under collapsed technical details.
+- Verified V4 with source contract tests, py_compile, Browser QA, and screenshot.
 
 ## Current Conclusion
 
@@ -34,18 +38,20 @@ V2 keeps selected-route preflight as a safety check, but no longer presents it a
 
 V3 makes the workspace read model part of the built Practical Validation result, so UI work can read grouped evidence directly from one result key.
 
+V4 makes that contract visible in the page: the first-read path is now candidate/profile, practical replay, second-stage conclusion/Fix Queue, evidence workbench, and Final Review handoff.
+
 ## Next Action
 
-V4 should start the visible Practical Validation flow restructure:
+V5 should focus React/custom component work only where it improves action surfaces:
 
-1. Use `practical_validation_workspace` in the page.
-2. Move Gate Summary / Fix Queue / Core Evidence hierarchy earlier.
-3. Keep raw diagnostics and board map under technical details.
-4. Run Browser QA because visible Streamlit UI changes begin in V4.
+1. Identify whether Control Center / Fix Queue / Provider Action need richer component behavior.
+2. Avoid rewriting the whole page into React.
+3. Preserve the V4 5-flow screen order.
+4. Run Browser QA again because visible UI changes continue.
 
 ## Verification State
 
-V1-V3 code changed only in service/test layers; no visible UI changed yet.
+V1-V3 changed service/test layers; V4 changed visible Streamlit UI.
 
 Completed checks:
 
@@ -61,7 +67,13 @@ Completed checks:
 - V3 RED/GREEN result workspace contract test
 - V3 diagnostics service contract tests
 - V3 py_compile and diff check
+- V4 RED/GREEN page source contract test
+- V4 Backtest refactor boundary tests and Practical Validation queue source test
+- V4 py_compile and diff check
+- V4 Browser QA against `http://localhost:8515/backtest`
+- V4 screenshot: `backtest-practical-validation-v4-five-flow-final-qa.png`
 
 Browser QA was not run for V1 because no Streamlit UI changed.
 Browser QA was not run for V2 because no Streamlit UI changed.
 Browser QA was not run for V3 because no Streamlit UI changed.
+Browser QA was run for V4.

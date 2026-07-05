@@ -117,3 +117,15 @@ result["practical_validation_workspace"] = build_practical_validation_workspace(
 ```
 
 This keeps legacy result keys intact while allowing V4 page work to consume a single grouped contract.
+
+## 2026-07-05 - V4 Implementation Note
+
+V4 changes the visible Practical Validation page flow:
+
+1. `후보 / 검증 프로필 확인`
+2. `실전 검증 실행`
+3. `2차 검증 결론 / Fix Queue`
+4. `근거 Workbench`
+5. `저장 / Final Review 이동`
+
+The first-read section now consumes `practical_validation_workspace`. Existing module boards, raw diagnostics, and technical connection maps remain available inside collapsed details.

@@ -212,6 +212,20 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertTrue((PROJECT_ROOT / "app/web/backtest_final_review/page.py").exists())
         self.assertTrue((PROJECT_ROOT / "app/web/backtest_final_review/decision_cockpit.py").exists())
 
+    def test_practical_validation_page_uses_workspace_first_read_flow(self) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
+        render_body = source.split("def render_practical_validation_workspace", 1)[1]
+
+        self.assertIn("def _render_practical_validation_workspace_overview", source)
+        self.assertIn('validation_result.get("practical_validation_workspace")', source)
+        self.assertIn('"title": "후보 / 검증 프로필 확인"', render_body)
+        self.assertIn('"title": "실전 검증 실행"', render_body)
+        self.assertIn('"title": "2차 검증 결론 / Fix Queue"', render_body)
+        self.assertIn('"title": "근거 Workbench"', render_body)
+        self.assertIn('"title": "저장 / Final Review 이동"', render_body)
+        self.assertNotIn('"marker": "6"', render_body)
+        self.assertNotIn('"marker": "7"', render_body)
+
 
 if __name__ == "__main__":
     unittest.main()

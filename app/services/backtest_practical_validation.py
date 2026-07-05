@@ -156,7 +156,7 @@ def build_market_sentiment_context_overlay(
         "evidence_rows": evidence_rows,
         "warnings": list(snapshot.get("warnings") or []),
         "next_action": (
-            f"Sentiment is context only on {surface_label}. Keep Final Review Gate, selected-route preflight, and validation modules as the decision owner."
+            f"Sentiment is context only on {surface_label}. Keep Final Review readiness preview and validation modules as the decision owner."
             if str(snapshot.get("status") or "").upper() == "OK"
             else "Refresh Market Sentiment from Workspace > Overview > Sentiment or Workspace > Ingestion before relying on this context."
         ),

@@ -188,3 +188,55 @@ Outcome:
 - py_compile passed
 - diff check passed
 - Browser QA skipped because V3 did not change visible Streamlit UI
+
+## 2026-07-05 - V4 Development And QA
+
+TDD RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_page_uses_workspace_first_read_flow
+```
+
+Outcome:
+
+- failed because `page.py` did not yet have `_render_practical_validation_workspace_overview` or the 5-flow labels
+
+Implemented:
+
+- `app/web/backtest_practical_validation/page.py`
+- `app/services/backtest_practical_validation.py`
+- page source contract coverage in `tests/test_backtest_refactor_boundaries.py`
+
+QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_page_uses_workspace_first_read_flow
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/components.py app/services/backtest_practical_validation_workspace.py
+git diff --check -- app/web/backtest_practical_validation/page.py tests/test_backtest_refactor_boundaries.py
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_step1_receives_backtest_review_focus_queue tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/services/backtest_practical_validation.py
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_page_uses_workspace_first_read_flow tests.test_service_contracts.PracticalValidationServiceContractTests.test_service_imports_do_not_load_streamlit
+```
+
+Browser QA:
+
+```bash
+.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8515 --server.headless true
+```
+
+Checked in browser:
+
+- `http://localhost:8515/backtest`
+- Practical Validation workflow button opens the updated screen.
+- 5-flow labels are visible.
+- old `Final Review Gate, selected-route preflight` overlay caption is gone after server restart.
+- new `Final Review readiness preview` wording is visible.
+- screenshot saved as `backtest-practical-validation-v4-five-flow-final-qa.png`
+
+Outcome:
+
+- source contract test passed
+- py_compile passed
+- targeted queue/source contract and refactor boundary tests passed: 13 tests
+- service import boundary test passed
+- Browser QA text checks passed

@@ -1096,10 +1096,10 @@ def _render_validation_control_center(
         eyebrow="Decision control",
         title="Practical Validation Control Center",
         detail=(
-            "후보, 검증 프로필, 최신 재검증, Final Review Gate를 한 번에 확인합니다. "
+            "후보, 검증 프로필, 최신 재검증, Final Review 준비 상태를 한 번에 확인합니다. "
             "아래 Fix Queue에 남은 항목이 없으면 저장 후 Final Review로 이동할 수 있습니다."
         ),
-        route_label="Final Review Gate",
+        route_label="Final Review Readiness",
         route_value=str(gate.get("route") or "-"),
         route_detail=str(gate.get("verdict") or gate.get("next_action") or ""),
         route_tone=_status_tone(gate.get("route")),
@@ -1148,7 +1148,7 @@ def _render_validation_control_center(
             },
             {
                 "marker": "4",
-                "title": "Final Review Gate",
+                "title": "Readiness Preview",
                 "detail": gate.get("route") or "-",
                 "tone": _status_tone(gate.get("route")),
             },
@@ -1781,6 +1781,105 @@ def _render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
     render_pv_card_grid(cards, min_width=260)
 
 
+def _workspace_group_tone(modules: list[dict[str, Any]]) -> str:
+    statuses = {str(module.get("status") or "").upper() for module in modules}
+    if statuses & {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}:
+        return "danger"
+    if "REVIEW" in statuses:
+        return "warning"
+    return "positive"
+
+
+def _workspace_group_status(modules: list[dict[str, Any]]) -> str:
+    counts: dict[str, int] = {}
+    for module in modules:
+        status = str(module.get("status") or "NOT_RUN").upper()
+        counts[status] = counts.get(status, 0) + 1
+    if not counts:
+        return "-"
+    return " / ".join(f"{status} {count}" for status, count in sorted(counts.items()))
+
+
+def _workspace_group_cards(groups: list[dict[str, Any]], *, kicker: str) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    for group in groups:
+        modules = [dict(module or {}) for module in list(group.get("modules") or [])]
+        cards.append(
+            {
+                "kicker": kicker,
+                "title": group.get("label") or group.get("group_id") or "-",
+                "status": _workspace_group_status(modules),
+                "detail": group.get("purpose") or f"{len(modules)} module(s)",
+                "tone": _workspace_group_tone(modules),
+            }
+        )
+    return cards
+
+
+def _render_practical_validation_workspace_overview(validation_result: dict[str, Any]) -> None:
+    workspace = dict(validation_result.get("practical_validation_workspace") or {})
+    gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
+    fix_queue = list(workspace.get("fix_queue") or gate_summary.get("blocking_modules") or [])
+    core_groups = list(workspace.get("core_evidence_groups") or [])
+    conditional_groups = list(workspace.get("conditional_evidence_groups") or [])
+    downstream_groups = list(workspace.get("downstream_reference_groups") or [])
+
+    render_pv_alert_panel(
+        title="2차 검증 결론",
+        detail=(
+            f"{gate_summary.get('verdict') or ''} "
+            f"{gate_summary.get('next_action') or ''}"
+        ).strip()
+        or "Practical Validation workspace가 gate와 evidence group을 요약합니다.",
+        tone="positive" if gate_summary.get("can_save_and_move") else "danger",
+    )
+    render_badge_strip(
+        [
+            {
+                "label": "Readiness",
+                "value": gate_summary.get("route") or "-",
+                "tone": _status_tone(gate_summary.get("route")),
+            },
+            {
+                "label": "Final Review Move",
+                "value": "Enabled" if gate_summary.get("can_save_and_move") else "Blocked",
+                "tone": "positive" if gate_summary.get("can_save_and_move") else "danger",
+            },
+            {
+                "label": "Fix Queue",
+                "value": len(fix_queue),
+                "tone": "danger" if fix_queue else "positive",
+            },
+            {
+                "label": "Review Items",
+                "value": gate_summary.get("review_count", 0),
+                "tone": "warning" if gate_summary.get("review_count") else "neutral",
+            },
+        ]
+    )
+    _render_fix_queue(fix_queue)
+    if core_groups:
+        render_pv_section_header(
+            eyebrow="Core Evidence",
+            title="2차 검증 핵심 근거",
+            detail="Final Review로 넘기기 전에 먼저 확인할 source, validation, readiness preview 근거입니다.",
+            tone="neutral",
+        )
+        render_pv_card_grid(_workspace_group_cards(core_groups, kicker="Core"), min_width=250)
+    if conditional_groups or downstream_groups:
+        with st.expander("조건부 근거와 후속 참고", expanded=False):
+            if conditional_groups:
+                render_pv_card_grid(
+                    _workspace_group_cards(conditional_groups, kicker="Conditional"),
+                    min_width=250,
+                )
+            if downstream_groups:
+                render_pv_card_grid(
+                    _workspace_group_cards(downstream_groups, kicker="Reference"),
+                    min_width=250,
+                )
+
+
 def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     gate = dict(validation_result.get("final_review_gate") or {})
     summary = dict(validation_result.get("validation_module_summary") or {})
@@ -1788,7 +1887,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     traits = dict(validation_result.get("source_traits") or {})
     module_rows = list(validation_result.get("validation_module_display_rows") or [])
 
-    st.markdown("##### Final Review Gate")
+    st.markdown("##### Final Review Readiness Preview")
     _render_board_context_badges(validation_result, "final_review_gate")
     render_badge_strip(
         [
@@ -2433,40 +2532,32 @@ def render_practical_validation_workspace() -> None:
 
     render_pv_step_rail(
         [
-            {"marker": "1", "title": "선택 후보", "detail": "Backtest snapshot", "tone": "neutral"},
-            {"marker": "2", "title": "검증 프로필", "detail": "Risk threshold", "tone": "neutral"},
-            {"marker": "3", "title": "최신 재검증", "detail": "Runtime replay", "tone": "warning"},
-            {"marker": "4", "title": "Gate / 모듈", "detail": "Move eligibility", "tone": "neutral"},
-            {"marker": "5", "title": "근거 보드", "detail": "Evidence workspace", "tone": "neutral"},
-            {"marker": "6", "title": "보강 액션", "detail": "Provider gaps", "tone": "warning"},
-            {"marker": "7", "title": "저장 / 이동", "detail": "Final Review handoff", "tone": "neutral"},
+            {"marker": "1", "title": "후보 / 검증 프로필 확인", "detail": "Source + risk threshold", "tone": "neutral"},
+            {"marker": "2", "title": "실전 검증 실행", "detail": "Runtime replay", "tone": "warning"},
+            {"marker": "3", "title": "2차 검증 결론 / Fix Queue", "detail": "Readiness + blockers", "tone": "neutral"},
+            {"marker": "4", "title": "근거 Workbench", "detail": "Evidence + provider actions", "tone": "neutral"},
+            {"marker": "5", "title": "저장 / Final Review 이동", "detail": "Handoff", "tone": "neutral"},
         ]
     )
 
     with st.container(border=True):
         render_pv_section_header(
-            eyebrow="Step 1",
-            title="선택 후보 확인",
-            detail="Practical Validation이 읽는 current selection source와 component snapshot을 먼저 확인합니다.",
+            eyebrow="Flow 1",
+            title="후보 / 검증 프로필 확인",
+            detail="Practical Validation이 읽는 current selection source와 검증 기준을 한 번에 확인합니다.",
             tone="neutral",
         )
         _render_backtest_entry_gate_review_queue(source)
         _render_source_summary(source)
-
-    with st.container(border=True):
-        render_pv_section_header(
-            eyebrow="Step 2",
-            title="검증 프로필",
-            detail="프로필은 검증을 생략하는 옵션이 아니라, 어떤 위험을 더 엄격하게 볼지 정하는 기준입니다.",
-            tone="neutral",
-        )
+        st.markdown("##### 검증 프로필")
+        st.caption("프로필은 검증을 생략하는 옵션이 아니라, 어떤 위험을 더 엄격하게 볼지 정하는 기준입니다.")
         validation_profile = _render_validation_profile_form()
 
     with st.container(border=True):
         render_pv_section_header(
-            eyebrow="Step 3",
-            title="최신 데이터 기준 전략 재검증",
-            detail="Final Review Gate의 Latest Runtime Replay를 해소하는 실행 지점입니다.",
+            eyebrow="Flow 2",
+            title="실전 검증 실행",
+            detail="Final Review 준비 상태의 Latest Runtime Replay를 해소하는 실행 지점입니다.",
             tone="warning",
         )
         replay_result = _render_actual_replay_panel(source)
@@ -2479,9 +2570,9 @@ def render_practical_validation_workspace() -> None:
 
     with st.container(border=True):
         render_pv_section_header(
-            eyebrow="Step 4",
-            title="Final Review Gate / 검증 모듈",
-            detail="이동 가능 여부를 먼저 확인하고, 차단 항목은 Fix Queue에서 해결 위치를 봅니다.",
+            eyebrow="Flow 3",
+            title="2차 검증 결론 / Fix Queue",
+            detail="이동 가능 여부, 차단 항목, 핵심 근거 그룹을 workspace read model 기준으로 먼저 확인합니다.",
             tone=_status_tone(dict(validation_result.get("final_review_gate") or {}).get("route")),
         )
         _render_validation_control_center(
@@ -2489,30 +2580,25 @@ def render_practical_validation_workspace() -> None:
             validation_result=validation_result,
             replay_result=replay_result,
         )
-        _render_validation_gate_section(validation_result)
+        _render_practical_validation_workspace_overview(validation_result)
+        with st.expander("검증 모듈 / 기술 상세", expanded=False):
+            _render_validation_gate_section(validation_result)
 
     with st.container(border=True):
         render_pv_section_header(
-            eyebrow="Step 5",
-            title="검증 근거 보드",
-            detail="검증 module의 결과 근거와 evidence board를 분리해서 보여줍니다.",
+            eyebrow="Flow 4",
+            title="근거 Workbench",
+            detail="검증 근거 보드와 사용자가 바로 실행할 provider 보강 액션을 함께 확인합니다.",
             tone="neutral",
         )
         _render_validation_evidence_boards(validation_result)
-
-    with st.container(border=True):
-        render_pv_section_header(
-            eyebrow="Step 6",
-            title="보강 액션",
-            detail="Provider Data Gaps처럼 사용자가 바로 보강할 수 있는 action board를 검증 목록과 분리합니다.",
-            tone="warning",
-        )
+        st.markdown("##### Provider / Data 보강 액션")
         _render_validation_action_boards(validation_result)
 
     with st.container(border=True):
         render_pv_section_header(
-            eyebrow="Step 7",
-            title="저장 & Final Review 이동",
+            eyebrow="Flow 5",
+            title="저장 / Final Review 이동",
             detail="구조화된 검증 자료를 저장하고, 필수 blocker가 없을 때만 Final Review로 보냅니다.",
             tone="neutral",
         )
@@ -2523,7 +2609,7 @@ def render_practical_validation_workspace() -> None:
             detail=(
                 "검증 결과 저장은 감사용 기록을 남기는 기능입니다. Final Review 이동과 후보 노출은 필수 검증 모듈의 "
                 "BLOCKED / NEEDS_INPUT / NOT_RUN 상태가 해소됐을 때만 가능합니다. "
-                "Final Review의 정식 저장은 selected-route gate까지 통과한 Selected Dashboard 모니터링 후보 선정만 허용합니다."
+                "Final Review의 정식 저장은 Final Review 준비 상태와 Selected Dashboard 모니터링 후보 선정 기준을 통과할 때만 허용합니다."
             ),
             tone="positive" if can_save_and_move else "danger",
         )
@@ -2549,7 +2635,7 @@ def render_practical_validation_workspace() -> None:
         if gate.get("next_action"):
             st.caption(str(gate.get("next_action")))
         if not can_save_and_move:
-            st.caption("Gate 통과 전 저장 기록은 audit trail로만 남고 Final Review 후보 목록에는 노출되지 않습니다.")
+            st.caption("준비 상태 통과 전 저장 기록은 audit trail로만 남고 Final Review 후보 목록에는 노출되지 않습니다.")
         blocking_modules = list(gate.get("blocking_modules") or [])
         if blocking_modules:
             with st.expander("Save blocker 상세", expanded=False):
@@ -2560,7 +2646,7 @@ def render_practical_validation_workspace() -> None:
                 save_practical_validation_result(validation_result)
                 st.success(f"검증 결과 `{validation_result['validation_id']}`를 저장했습니다.")
                 if not can_save_and_move:
-                    st.warning("이 기록은 Final Review Gate를 통과하지 않아 Final Review 후보 목록에는 표시되지 않습니다.")
+                    st.warning("이 기록은 Final Review 준비 상태를 통과하지 않아 Final Review 후보 목록에는 표시되지 않습니다.")
         with action_cols[1]:
             if st.button(
                 "저장하고 Final Review로 이동",

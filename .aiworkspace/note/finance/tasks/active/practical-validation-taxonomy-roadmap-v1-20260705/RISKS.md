@@ -57,3 +57,9 @@ The service-level labels now say `Final Review Readiness Preview`, but some exis
 ## 2026-07-05 - V3 Residual Risk
 
 `practical_validation_workspace` is now available in result payloads, but the page still renders from older lower-level keys. V4 must switch the first-read hierarchy to the workspace contract without hiding existing technical evidence.
+
+## 2026-07-05 - V4 Residual Risk
+
+The first-read page hierarchy now uses the workspace contract, but the detailed module board still contains legacy table structure inside collapsed technical details. V6 should split ownership after V5 decides which action surfaces need richer components.
+
+Browser QA showed existing Streamlit dataframe serialization warnings in the server log for mixed-type legacy tables. They did not block rendering, and they are outside the V4 flow restructure.
