@@ -81,3 +81,9 @@ The workspace panel has a local status tone helper duplicated from `page.py`. V7
 ## 2026-07-05 - V7 Residual Risk
 
 V7 normalizes the first-read and common Practical Validation status display, but raw route IDs can still appear in detailed JSON and some technical table columns. That is acceptable for auditability. If future UX pass wants to hide them everywhere, it should preserve the raw values in technical exports or JSON detail.
+
+## 2026-07-05 - V8 Residual Risk
+
+The V1-V8 task closes the user-facing Practical Validation first-read flow, but `page.py` still owns Flow 1, Flow 2, Flow 4, and Flow 5 render bodies. That is acceptable for this phase because the highest-value Flow 3 surface was split first. A future physical split should be scoped as a separate task with its own QA.
+
+The full Backtest runtime contract suite has a known unrelated policy-signal drift around `second_stage_review_rows`. This task used focused Practical Validation and component contracts for closeout; the policy-signal cleanup should be handled separately.

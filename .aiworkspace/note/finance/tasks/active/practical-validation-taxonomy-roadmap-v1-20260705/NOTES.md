@@ -167,3 +167,15 @@ The helper maps raw route-like values into user-facing validation status labels:
 - `READY_FOR_FINAL_REVIEW` -> `PASS`
 
 `page.py` and `workspace_panel.py` now use the same tone mapping. The React Fix Queue card receives the normalized status label, so the first-read card shows `BLOCKED` instead of `BLOCKED_FOR_FINAL_REVIEW`.
+
+## 2026-07-05 - V8 Closeout Note
+
+V8 does not add new product behavior. It aligns durable docs with the implemented ownership:
+
+- `page.py` owns the 5-flow orchestration and session wiring.
+- `workspace_panel.py` owns Flow 3 first-read workspace rendering.
+- `status_display.py` owns user-facing label / tone normalization.
+- `practical_validation_fix_queue` is a read-only React surface.
+- Python services still own validation execution, gate calculation, provider action planning, registry persistence, save-only audit copy, and Final Review handoff.
+
+The final durable phrasing should avoid presenting selected-route preflight as an early Final Review decision. It is a Final Review readiness preview that can block movement when deterministic evidence gaps exist.

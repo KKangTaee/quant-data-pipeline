@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Practical Validation은 5-flow 검증 workspace로 읽는다
+
+- User request: 사용자가 Practical Validation 개편을 1차부터 8차까지 개발 / QA / 커밋 순서로 단계별 진행해 달라고 요청함.
+- Interpreted goal: 2단계 화면은 Final Review 최종 선정 판단을 앞당겨 보여주는 곳이 아니라, 후보가 Final Review로 넘어갈 만큼 검증 근거를 갖췄는지 빠르게 판단하는 workspace여야 함.
+- Analysis result: diagnostics는 raw evidence, audits는 user-facing evidence rows, validation modules는 gate owner, board map은 technical explanation으로 분리하고, first-read 화면은 workspace read model과 Fix Queue 중심으로 읽는 것이 가장 작고 안전한 구조다.
+- Follow-up: V1-V8에서 workspace read model, Final Review readiness wording, 5-flow page, read-only React Fix Queue, workspace panel split, normalized first-read status, durable docs alignment를 완료했다. Registry / saved / provider collection / threshold / live approval 경계는 변경하지 않았다.
+
 ### 2026-07-05 - Policy Signals 1차 기준은 category help board로 읽는다
 
 - User request: 사용자가 2차로 넘긴 확인 큐는 현재 UI에서 노출하지 않아도 되고, 1차 기준은 `Data Trust`, `Execution Source`, `Validation Source`처럼 카테고리별로 보여주며 각 기준이 무엇을 검증하는지 `?` help / tooltip 형태로 설명해 달라고 요청함.
@@ -8482,4 +8489,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: Backtest Analysis 정리 후 `실전검증 · Practical Validation` 개선을 시작하되, 먼저 현재 검증 taxonomy와 V1-V8 개발 로드맵을 잡아 달라고 요청.
 - Interpreted goal: 사용자는 2단계 Practical Validation을 Final Review 최종판단과 분리하고, diagnostics / audits / modules / board map 반복을 줄인 실제 개발 방향을 원한다.
 - Analysis result: 현재 기능은 풍부하지만 raw diagnostics, audit rows, module gate, board map, selected-route preflight가 모두 peer UI처럼 보여 단계 경계가 흐려진다. `Monitoring Baseline`과 `Tax / Account Scope`는 코드상 이미 downstream reference 성격이므로 2단계 핵심 gate에서 낮추는 것이 맞다.
-- Follow-up: `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에 설계와 roadmap을 작성했다. 구현은 아직 시작하지 않았고, 다음 승인 후 V1은 workspace read model grouping부터 진행한다.
+- Follow-up: `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에 설계와 roadmap을 작성한 뒤, 사용자 승인 후 V1-V8 개발 / QA / 커밋까지 완료했다. 최종 구조는 workspace read model, 5-flow 화면, read-only React Fix Queue, Flow 3 workspace panel, normalized first-read status를 기준으로 한다.

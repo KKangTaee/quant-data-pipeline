@@ -30,9 +30,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Recent Milestones
 
 - Practical Validation Taxonomy Roadmap V1:
-  - `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`를 열어 Practical Validation 개편의 V1 taxonomy / V2-V8 roadmap을 문서화했다.
-  - 현재 결론은 diagnostics는 raw evidence, audits는 user-facing evidence rows, modules는 gate, board map은 technical explanation으로 분리하는 것이다.
-  - 구현은 아직 시작하지 않았다. 다음 승인 후 첫 구현은 workspace read model grouping부터 시작한다.
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에서 Practical Validation 개편 V1-V8을 개발 / QA / 커밋 순서로 완료했다.
+  - 주요 결과는 workspace read model, Final Review readiness wording, 5-flow 화면, read-only React Fix Queue, Flow 3 workspace panel split, first-read status normalization이다.
+  - registry / saved JSONL, provider 수집, validation threshold, Final Review selected-route 저장 정책, live approval / broker / auto rebalance 경계는 변경하지 않았다.
 - Backtest Policy Signal Help Board V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-help-board-v1-20260705/`에서 `검증 기준 상세`을 1차 기준 category board + click help UI로 개선했다.
   - `Data Trust`, `Execution Source`, `Validation Source` 중심으로 무엇을 검증했는지 `plain_explanation` / `checked_items`로 보여준다.

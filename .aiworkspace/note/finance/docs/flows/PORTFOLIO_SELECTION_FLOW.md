@@ -79,15 +79,16 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
 - `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
 - Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.
-- Practical Validation은 source traits와 validation profile을 함께 읽어 필수 검증, 조건부 / 전략별 검증, 후속 참고 검증을 분리한다.
-- Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 먼저 보여준다. 이 queue는 Backtest Analysis에서 상세 노출하지 않은 2차 review focus이며, 각 row는 확인할 것과 표시 근거를 함께 보여준다. 이어 summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history를 확인해 후보의 원래 백테스트 근거와 구성 방식을 빠르게 확인하게 한다.
-- 기존 source처럼 selection history snapshot이 없는 기록은 `3. 최신 데이터 기준 전략 재검증`을 실행하면 가능한 범위에서 runtime replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
-- Practical Validation은 전용 workbench shell의 Control Center에서 후보 / profile / latest replay / gate를 먼저 요약한다.
+- Practical Validation은 source traits와 validation profile을 함께 읽어 필수 검증, 조건부 / 전략별 검증, 후속 참고 검증을 분리하고, 이 결과를 `practical_validation_workspace` read model로 묶어 화면이 바로 읽을 수 있게 한다.
+- Practical Validation은 5-flow로 읽는다: `후보 / 검증 프로필 확인`, `실전 검증 실행`, `2차 검증 결론 / Fix Queue`, `근거 Workbench`, `저장 / Final Review 이동`.
+- Flow 1은 Backtest Analysis가 넘긴 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 보여주고, summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history로 원래 백테스트 근거와 구성 방식을 확인하게 한다.
+- 기존 source처럼 selection history snapshot이 없는 기록은 Flow 2 `실전 검증 실행`에서 최신 runtime replay를 실행하면 가능한 범위에서 replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
+- Flow 3 `2차 검증 결론 / Fix Queue`는 Final Review 이동 가능 여부, blocker / review queue, core evidence groups를 먼저 보여주는 first-read surface다. 이 surface는 `workspace_panel.py`가 소유하고, `practical_validation_fix_queue` React component는 read-only 카드로 Fix Queue와 핵심 근거만 보여준다.
 - Practical Validation의 `시장 심리 Context Overlay`는 저장된 CNN Fear & Greed / AAII sentiment를 risk-on / neutral / risk-off 참고 맥락으로 보여준다. 이 overlay는 `context_only`이며 Final Review Gate, selected-route preflight, PASS / BLOCKER, registry 저장, saved setup, live approval / broker order / auto rebalance에 영향을 주지 않는다.
 - Practical Validation의 각 step은 bordered surface로 분리해 step 경계를 명확히 보여준다.
-- Practical Validation의 `4. Final Review Gate / 검증 모듈`은 통과 / 차단 여부와 적용 module을 먼저 보여주고, blocker는 Fix Queue 카드로 해결 위치와 액션을 같이 보여준다. 화면 board는 검증 module과 1:1 개념이 아니므로 `5. 검증 근거 보드`와 `6. 보강 액션`으로 분리한다.
-- `Applied Validation Map`은 각 board가 어떤 module의 evidence인지, 현재 후보에 적용되는지, 적용되지 않으면 왜 빠졌는지를 보여주는 보조 `검증-근거 연결 지도`이며 기본 상세 영역으로 낮춘다.
-- Practical Validation의 `Latest Runtime Replay`는 별도 audit board가 아니라 `3. 최신 데이터 기준 전략 재검증` 섹션에서 재검증을 실행해 해소한다. 이 결과는 브라우저 세션에서 사용자가 직접 실행한 뒤에만 보이며, Practical Validation 탭에 새로 들어오거나 source를 바꾸면 이전 replay 표시 state를 지운다.
+- Flow 4 `근거 Workbench`는 검증 근거 보드, Applied Validation Map, Provider Action Center, Look-through Board, Robustness Lab, detailed diagnostics를 담는다. 화면 board는 검증 module과 1:1 개념이 아니므로 module gate와 evidence board를 분리해서 읽는다.
+- Practical Validation의 `Latest Runtime Replay`는 별도 audit board가 아니라 Flow 2에서 재검증을 실행해 해소한다. 이 결과는 브라우저 세션에서 사용자가 직접 실행한 뒤에만 보이며, Practical Validation 탭에 새로 들어오거나 source를 바꾸면 이전 replay 표시 state를 지운다.
+- First-read status는 `PASS / REVIEW / NEEDS_INPUT / BLOCKED / NOT_RUN / NOT_APPLICABLE`로 정규화해 보여주고, `BLOCKED_FOR_FINAL_REVIEW` 같은 raw route id는 technical detail / JSON context에 남긴다.
 - Final Review 이동은 필수 검증 module의 `BLOCKED` / `NEEDS_INPUT` / `NOT_RUN`이 해소됐을 때만 가능하다. `REVIEW`는 원칙적으로 Final Review에서 선택 / 보류 / 재검토 판단 근거로 확인하지만, Final Review selected-route policy가 저장 차단으로 해석하는 selection-critical `REVIEW_REQUIRED` gap은 Practical Validation의 `Selected-route Preflight`에서 `NEEDS_INPUT`으로 승격되어 이동을 막는다. Practical Validation module board는 `Gate Effect`와 `Gate Reason`으로 이동 차단, Final Review 확인, 후속 참고를 구분한다. `검증 결과 저장(기록용)`은 audit trail만 남기는 기능이며, Gate 미통과 row는 Final Review 후보 목록에 나타나지 않는다.
 - `Benchmark / Comparator Parity`는 benchmark뿐 아니라 cash, simple baseline, equal-weight baseline, custom comparator 같은 비교 기준과 후보의 기간 / coverage / frequency가 동등한지 보는 필수 검증이다.
 - `NOT_RUN`은 pass가 아니다. 데이터나 구현이 부족해 검증하지 못했다는 뜻이다.

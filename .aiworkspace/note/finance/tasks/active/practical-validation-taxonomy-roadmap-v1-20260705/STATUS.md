@@ -1,11 +1,11 @@
 # Status
 
-Status: Active
+Status: Complete
 Last Updated: 2026-07-05
 
 ## Current State
 
-V7 implementation is complete and ready to commit.
+V8 closeout is complete. V1-V8 were developed, QA'd, and committed as separate implementation units.
 
 Completed in this task:
 
@@ -36,6 +36,8 @@ Completed in this task:
 - Added a shared Practical Validation status display helper.
 - Normalized user-facing route statuses such as `BLOCKED_FOR_FINAL_REVIEW`, `READY_WITH_REVIEW`, and `READY_FOR_FINAL_REVIEW` into `BLOCKED`, `REVIEW`, and `PASS`.
 - Verified V7 with RED/GREEN status tests, py_compile, contract tests, Browser QA, and screenshot.
+- Aligned durable roadmap, flow docs, project map, script structure map, root handoff logs, and this active task bundle with the implemented V1-V8 structure.
+- Verified V8 with final py_compile, focused unittest suites, diff check, and Browser QA.
 
 ## Current Conclusion
 
@@ -55,14 +57,17 @@ V6 starts the physical split at the highest-value ownership seam: Flow 3's first
 
 V7 removes the most visible raw route leakage from the first-read Practical Validation surface. Raw route IDs remain available in detailed JSON/technical context, but the primary UI now speaks the standard validation status language.
 
+V8 closes the task by making durable docs match the code ownership: `page.py` orchestrates the 5-flow screen, `workspace_panel.py` owns Flow 3, the React Fix Queue component is read-only, and Python still owns validation execution, gate calculation, persistence, provider actions, and handoff.
+
 ## Next Action
 
-V8 should close the phase by aligning durable docs and running final integrated QA:
+No immediate follow-up is required for this task.
 
-1. Update durable flow / roadmap / project map docs only where the implemented structure changed.
-2. Update root handoff logs concisely.
-3. Run final focused test and browser QA checks.
-4. Commit the documentation and closeout verification as V8.
+Possible future tasks, if approved separately:
+
+1. Split remaining Flow 1 / Flow 2 / Flow 4 / Flow 5 renderers out of `page.py`.
+2. Clean up the unrelated policy-signal contract drift around `second_stage_review_rows`.
+3. Decide whether any raw route IDs should be hidden from additional technical tables while preserving JSON auditability.
 
 ## Verification State
 
@@ -104,6 +109,13 @@ Completed checks:
 - V7 Backtest refactor boundary tests and Practical Validation service contract suite
 - V7 Browser QA against `http://localhost:8525/backtest`
 - V7 screenshot: `backtest-practical-validation-v7-status-display-qa.png`
+- V8 durable docs alignment
+- V8 py_compile for Practical Validation page, workspace panel, status display, React component wrapper, workspace service, diagnostics service
+- V8 focused Backtest refactor boundary tests
+- V8 Practical Validation service contract tests plus React component UI-only contract
+- V8 git diff check
+- V8 Browser QA against `http://localhost:8525/backtest`
+- V8 screenshot: `backtest-practical-validation-v8-final-qa.png`
 
 Browser QA was not run for V1 because no Streamlit UI changed.
 Browser QA was not run for V2 because no Streamlit UI changed.
@@ -112,3 +124,4 @@ Browser QA was run for V4.
 Browser QA was run for V5.
 Browser QA was run for V6.
 Browser QA was run for V7.
+Browser QA was run for V8.

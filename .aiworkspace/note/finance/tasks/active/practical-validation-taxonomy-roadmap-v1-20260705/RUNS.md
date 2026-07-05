@@ -421,3 +421,48 @@ Outcome:
 - `BacktestRefactorBoundaryTests`: 14 tests passed
 - Practical Validation service plus component contract tests passed: 23 tests
 - Browser QA passed for normalized first-read status display
+
+## 2026-07-05 - V8 Documentation Alignment And Final QA
+
+Updated durable docs:
+
+- `.aiworkspace/note/finance/docs/ROADMAP.md`
+- `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
+- `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`
+
+Final QA commands:
+
+```bash
+.venv/bin/python -m py_compile app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py app/web/backtest_practical_validation/status_display.py app/web/components/practical_validation_fix_queue/component.py app/services/backtest_practical_validation_workspace.py app/services/backtest_practical_validation_diagnostics.py
+.venv/bin/python -m unittest tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_fix_queue_react_component_is_ui_only
+git diff --check
+```
+
+Browser QA:
+
+```bash
+http://localhost:8525/backtest
+```
+
+Checked in browser:
+
+- Practical Validation workflow opens after reload.
+- Flow 3 `2차 검증 결론 / Fix Queue` remains visible.
+- `practical_validation_fix_queue` iframe loads.
+- iframe body contains normalized `BLOCKED`.
+- iframe body does not contain `BLOCKED_FOR_FINAL_REVIEW`.
+- screenshot saved as `backtest-practical-validation-v8-final-qa.png`
+
+Outcome:
+
+- py_compile passed
+- `BacktestRefactorBoundaryTests`: 14 tests passed
+- Practical Validation service plus component contract tests passed: 23 tests
+- `git diff --check` passed
+- Browser QA passed for Flow 3 workspace panel and normalized React Fix Queue status
