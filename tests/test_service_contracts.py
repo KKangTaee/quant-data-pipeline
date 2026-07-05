@@ -5794,6 +5794,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         style_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+        validation_clear_body = futures_helper_source[futures_helper_source.index("def _clear_futures_macro_validation_state") :]
+        validation_clear_body = validation_clear_body[: validation_clear_body.index("def _futures_macro_session_validation")]
         refresh_helper_body = futures_helper_source[futures_helper_source.index("def _refresh_futures_macro_daily_for_ui") :]
         refresh_helper_body = refresh_helper_body[: refresh_helper_body.index("def _render_market_job_result")]
         controls_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_refresh_controls") :]
@@ -5816,6 +5818,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("_reload_futures_macro_snapshot_for_ui()", controls_body)
         self.assertIn("_run_futures_daily_ohlcv_action()", refresh_helper_body)
         self.assertIn("clear_overview_futures_macro_snapshot_cache()", refresh_helper_body)
+        self.assertIn("clear_futures_macro_validation_cache", futures_helper_source)
+        self.assertIn("clear_futures_macro_validation_cache()", validation_clear_body)
         self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
         self.assertIn("ov-futures-macro-action-copy", controls_body)
@@ -17048,6 +17052,128 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertGreaterEqual(risk_on_row["Sample 5D"], 1)
         self.assertIsNotNone(risk_on_row["Hit Rate 5D %"])
         self.assertGreaterEqual(risk_on_row["Hit Rate 5D %"], 50)
+
+    def test_macro_validation_process_cache_reuses_snapshot_until_cleared(self) -> None:
+        import app.services.futures_macro_validation as validation_service
+
+        calls: list[str] = []
+        original_futures_loader = validation_service._load_validation_futures_rows
+        original_proxy_loader = validation_service._load_proxy_price_rows
+        original_instruments = validation_service._instrument_rows
+        original_futures_marker = validation_service._latest_validation_futures_cache_marker
+        original_proxy_marker = validation_service._latest_validation_proxy_cache_marker
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return []
+
+        def fake_futures_loader(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+            del args, kwargs
+            calls.append("futures")
+            return []
+
+        try:
+            validation_service.clear_futures_macro_validation_cache()
+            validation_service._load_validation_futures_rows = fake_futures_loader
+            validation_service._load_proxy_price_rows = lambda *args, **kwargs: []
+            validation_service._instrument_rows = lambda query: []
+            validation_service._latest_validation_futures_cache_marker = lambda query, symbols: "2026-07-03 00:00:00"
+            validation_service._latest_validation_proxy_cache_marker = lambda query, symbols: "2026-07-03"
+
+            first = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            second = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            validation_service.clear_futures_macro_validation_cache()
+            third = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+
+            self.assertIs(first, second)
+            self.assertIsNot(second, third)
+            self.assertEqual(calls, ["futures", "futures"])
+        finally:
+            validation_service._load_validation_futures_rows = original_futures_loader
+            validation_service._load_proxy_price_rows = original_proxy_loader
+            validation_service._instrument_rows = original_instruments
+            validation_service._latest_validation_futures_cache_marker = original_futures_marker
+            validation_service._latest_validation_proxy_cache_marker = original_proxy_marker
+            validation_service.clear_futures_macro_validation_cache()
+
+    def test_macro_validation_process_cache_key_tracks_futures_and_proxy_markers(self) -> None:
+        import app.services.futures_macro_validation as validation_service
+
+        calls: list[str] = []
+        markers = {"futures": "2026-07-03 00:00:00", "proxy": "2026-07-03"}
+        original_futures_loader = validation_service._load_validation_futures_rows
+        original_proxy_loader = validation_service._load_proxy_price_rows
+        original_instruments = validation_service._instrument_rows
+        original_futures_marker = validation_service._latest_validation_futures_cache_marker
+        original_proxy_marker = validation_service._latest_validation_proxy_cache_marker
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return []
+
+        def fake_futures_loader(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+            del args, kwargs
+            calls.append(f"{markers['futures']}|{markers['proxy']}")
+            return []
+
+        try:
+            validation_service.clear_futures_macro_validation_cache()
+            validation_service._load_validation_futures_rows = fake_futures_loader
+            validation_service._load_proxy_price_rows = lambda *args, **kwargs: []
+            validation_service._instrument_rows = lambda query: []
+            validation_service._latest_validation_futures_cache_marker = lambda query, symbols: markers["futures"]
+            validation_service._latest_validation_proxy_cache_marker = lambda query, symbols: markers["proxy"]
+
+            first = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            markers["futures"] = "2026-07-04 00:00:00"
+            second = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            markers["proxy"] = "2026-07-04"
+            third = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+
+            self.assertIsNot(first, second)
+            self.assertIsNot(second, third)
+            self.assertEqual(calls, [
+                "2026-07-03 00:00:00|2026-07-03",
+                "2026-07-04 00:00:00|2026-07-03",
+                "2026-07-04 00:00:00|2026-07-04",
+            ])
+        finally:
+            validation_service._load_validation_futures_rows = original_futures_loader
+            validation_service._load_proxy_price_rows = original_proxy_loader
+            validation_service._instrument_rows = original_instruments
+            validation_service._latest_validation_futures_cache_marker = original_futures_marker
+            validation_service._latest_validation_proxy_cache_marker = original_proxy_marker
+            validation_service.clear_futures_macro_validation_cache()
 
     def test_macro_validation_summary_focuses_current_scenario_before_raw_tables(self) -> None:
         from app.services.futures_macro_validation import build_current_scenario_validation_summary

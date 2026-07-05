@@ -259,3 +259,65 @@ git diff --check
 ```
 
 Result: `py_compile` passed, FuturesMacroThermometer contract class passed 20 tests, OverviewAutomation contract class passed 144 tests, and `git diff --check` passed. Existing `edgar` deprecation warnings and Streamlit no-runtime cache warnings were present in the broader unittest output.
+
+### Phase 5 RED / GREEN
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_validation_process_cache_reuses_snapshot_until_cleared \
+  tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_validation_process_cache_key_tracks_futures_and_proxy_markers
+```
+
+RED result: failed with missing `_latest_validation_futures_cache_marker`, confirming the process validation cache API was absent.
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_tab_exposes_daily_refresh_and_cache_reload
+```
+
+RED result: failed because `futures_macro_helpers.py` did not clear the validation process cache when clearing Futures Macro validation state.
+
+GREEN result: passed after adding process cache helpers to `app/services/futures_macro_validation.py` and clearing that cache from the Futures Macro validation state clear helper.
+
+### Phase 5 Focused QA
+
+```bash
+.venv/bin/python -m py_compile app/services/futures_macro_validation.py app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py
+.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests
+```
+
+Result: `py_compile` passed, FuturesMacroThermometer contract class passed 22 tests, and OverviewAutomation contract class passed 144 tests.
+
+### Phase 5 Cache Smoke
+
+```bash
+.venv/bin/python - <<'PY'
+from time import perf_counter
+from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
+from app.services.futures_macro_validation import build_futures_macro_validation_snapshot, clear_futures_macro_validation_cache
+from app.services.futures_macro_validation import build_interpretation_confidence
+
+macro = load_overview_futures_macro_snapshot(include_validation=False, cache_ttl_seconds=0)
+symbols_frame = macro.get("symbols")
+symbols = list(dict.fromkeys(str(symbol) for symbol in symbols_frame["Symbol"].dropna().tolist()))
+clear_futures_macro_validation_cache()
+t0 = perf_counter()
+first = build_futures_macro_validation_snapshot(symbols=symbols, current_snapshot=macro, cache_ttl_seconds=60)
+first_dt = perf_counter() - t0
+t1 = perf_counter()
+second = build_futures_macro_validation_snapshot(symbols=symbols, current_snapshot=macro, cache_ttl_seconds=60)
+second_dt = perf_counter() - t1
+confidence = build_interpretation_confidence(macro, second)
+print({
+    "symbols": len(symbols),
+    "same_object": first is second,
+    "first_seconds": round(first_dt, 3),
+    "second_seconds": round(second_dt, 3),
+    "status": second.get("status"),
+    "validation_dates": (second.get("coverage") or {}).get("validation_dates"),
+    "confidence": confidence.get("label"),
+})
+PY
+```
+
+Result: 16 symbols, same cached object `True`, first validation `7.312s`, cached same-key validation `0.045s`, status `OK`, validation dates `1,221`, confidence `Low Confidence`.

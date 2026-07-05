@@ -19,6 +19,7 @@ from app.services.futures_macro_validation import (
     build_current_scenario_validation_summary,
     build_futures_macro_validation_snapshot,
     build_interpretation_confidence,
+    clear_futures_macro_validation_cache,
 )
 from app.web.overview.session_helpers import _snapshot_value
 from app.web.overview.components.common import _overview_tone_color
@@ -99,6 +100,7 @@ def _run_futures_daily_ohlcv_action() -> dict[str, Any]:
 
 
 def _clear_futures_macro_validation_state() -> None:
+    clear_futures_macro_validation_cache()
     for key in (
         OVERVIEW_FUTURES_MACRO_VALIDATION_KEY,
         OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY,

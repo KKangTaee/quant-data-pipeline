@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
+from time import monotonic
 from typing import Any
 
 import pandas as pd
@@ -13,6 +14,7 @@ from app.services.futures_macro_thermometer import (
     QueryFn,
     _default_query,
     _instrument_rows,
+    _latest_daily_cache_marker,
     _round,
     _safe_float,
     build_current_evidence_groups,
@@ -29,6 +31,8 @@ MIN_VALIDATION_YEARS = 3
 VALIDATION_HORIZONS = (1, 5, 20)
 VALIDATION_THRESHOLDS = (20, 40, 60)
 PROXY_TARGET_SYMBOLS = ("SPY", "QQQ", "IWM", "TLT", "GLD", "UUP")
+FUTURES_MACRO_VALIDATION_CACHE_TTL_SECONDS = 900
+_FUTURES_MACRO_VALIDATION_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
 
 FUTURES_PROXY_MAP = {
     "ES=F": "SPY",
@@ -108,6 +112,67 @@ def _load_proxy_price_rows(
         )
     except Exception:
         return []
+
+
+def clear_futures_macro_validation_cache() -> None:
+    _FUTURES_MACRO_VALIDATION_CACHE.clear()
+
+
+def _latest_validation_futures_cache_marker(query_fn: QueryFn, symbols: Sequence[str]) -> str | None:
+    return _latest_daily_cache_marker(query_fn, symbols)
+
+
+def _latest_validation_proxy_cache_marker(query_fn: QueryFn, symbols: Sequence[str]) -> str | None:
+    selected_symbols = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
+    if not selected_symbols:
+        return None
+    placeholders = ", ".join(["%s"] * len(selected_symbols))
+    try:
+        rows = query_fn(
+            "finance_price",
+            f"""
+            SELECT MAX(`date`) AS latest_proxy_price
+            FROM nyse_price_history
+            WHERE symbol IN ({placeholders})
+              AND timeframe = %s
+            """,
+            [*selected_symbols, "1d"],
+        )
+    except Exception:
+        return None
+    if not rows:
+        return None
+    value = rows[0].get("latest_proxy_price")
+    return str(value) if value not in (None, "") else None
+
+
+def _validation_current_identity(current_snapshot: dict[str, Any] | None) -> tuple[Any, ...]:
+    summary = dict(current_snapshot.get("summary") or {}) if isinstance(current_snapshot, dict) else {}
+    return (
+        summary.get("scenario"),
+        summary.get("sub_scenario"),
+        summary.get("regime_hint"),
+    )
+
+
+def _validation_cache_key(
+    *,
+    query_fn: QueryFn,
+    symbols: Sequence[str],
+    years: int,
+    min_standardized_symbols: int,
+    current_snapshot: dict[str, Any] | None,
+) -> tuple[Any, ...]:
+    selected_symbols = tuple(str(symbol).strip().upper() for symbol in symbols if str(symbol).strip())
+    return (
+        id(query_fn),
+        selected_symbols,
+        int(max(1, years)),
+        int(min_standardized_symbols),
+        _latest_validation_futures_cache_marker(query_fn, selected_symbols),
+        _latest_validation_proxy_cache_marker(query_fn, PROXY_TARGET_SYMBOLS),
+        _validation_current_identity(current_snapshot),
+    )
 
 
 def _matrix_from_futures_candles(candles: pd.DataFrame) -> pd.DataFrame:
@@ -1010,9 +1075,26 @@ def build_futures_macro_validation_snapshot(
     query_fn: QueryFn | None = None,
     current_snapshot: dict[str, Any] | None = None,
     min_standardized_symbols: int = 8,
+    cache_ttl_seconds: int = FUTURES_MACRO_VALIDATION_CACHE_TTL_SECONDS,
 ) -> dict[str, Any]:
     query = query_fn or _default_query
     selected_symbols = [str(symbol).strip().upper() for symbol in (symbols or DEFAULT_CORE_FUTURES_SYMBOLS) if str(symbol).strip()]
+    cache_key = _validation_cache_key(
+        query_fn=query,
+        symbols=selected_symbols,
+        years=years,
+        min_standardized_symbols=min_standardized_symbols,
+        current_snapshot=current_snapshot,
+    )
+    now = monotonic()
+    cached = _FUTURES_MACRO_VALIDATION_CACHE.get(cache_key)
+    if (
+        cached is not None
+        and cache_ttl_seconds > 0
+        and now - cached[0] <= int(cache_ttl_seconds)
+    ):
+        return cached[1]
+
     lookback_days = int(max(1, years) * 366 + MIN_RECOMMENDED_DAYS + max(VALIDATION_HORIZONS))
     futures_rows = _load_validation_futures_rows(query, symbols=selected_symbols, lookback_days=lookback_days)
     proxy_rows = _load_proxy_price_rows(query, symbols=PROXY_TARGET_SYMBOLS, lookback_days=lookback_days)
@@ -1054,6 +1136,8 @@ def build_futures_macro_validation_snapshot(
         "source_note": "Point-in-time recalculation from stored daily futures OHLCV; ETF rows are used only as labeled proxy targets.",
     }
     snapshot["current_scenario_summary"] = build_current_scenario_validation_summary(snapshot)
+    if cache_ttl_seconds > 0:
+        _FUTURES_MACRO_VALIDATION_CACHE[cache_key] = (now, snapshot)
     return snapshot
 
 

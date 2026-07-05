@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro React UX 5차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 historical validation을 DB materialization 없이 process cache로 재사용하도록 정리했다.
+  - Cache key는 selected symbols / years / latest futures daily marker / proxy price marker / current summary identity를 포함하고, `일봉 갱신` / `다시 읽기`는 session validation과 process cache를 함께 비운다.
+  - DB smoke 기준 첫 validation은 약 7.31초, 같은 key cache hit는 약 0.045초였다. 다음은 6차 final QA/docs closeout이다.
 - Overview Futures Macro React UX 4차:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 `혼재된 매크로 흐름`의 top-level compatibility를 유지하면서 subtype / regime hint / mixed reason을 세분화했다.
   - 새 subtype은 금리 부담 완화 속 성장 약세, 달러 압력 Risk-Off 후보, 원자재 약세 + 수요 둔화 후보, 위험선호/안전자산 상충 전환 구간, 저신호 관망을 구분한다.

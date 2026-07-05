@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Futures Macro validation should be process-cached before materialized
+
+- User request: Futures Macro 탭 개선 5차로 historical validation persistence/cache/materialization 방식을 판단해 달라고 요청함.
+- Interpreted goal: 과거 점검을 매번 7초 이상 재계산하지 않게 하되, 아직 별도 DB table / registry source-of-truth를 만들 정도의 cross-process 요구는 없다.
+- Analysis result: 이번 차수는 process cache가 맞다. Cache key에 latest stored futures daily candle marker, proxy price marker, selected symbols, years, current summary identity를 넣어 데이터 기준이 바뀌면 재계산되게 하고, `일봉 갱신` / `다시 읽기`는 session state와 process cache를 함께 clear한다.
+- Follow-up: app restart / multi-process / 다른 workflow 재사용이 필요해지면 compact materialized validation summary를 별도 retention/source contract와 함께 설계한다.
+
 ### 2026-07-05 - Futures Macro mixed labels should explain conflict without forcing direction
 
 - User request: Futures Macro 탭 개선 4차로 혼재 매크로 흐름을 더 세분화하되, 방향성 신호를 억지로 만들지 말라고 요청함.

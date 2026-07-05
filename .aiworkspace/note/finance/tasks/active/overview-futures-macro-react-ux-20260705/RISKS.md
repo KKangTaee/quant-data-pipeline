@@ -8,4 +8,4 @@
 - React `component_static` is checked in for Streamlit runtime availability. When editing `src/`, always rerun `npm run build` and stage the new static assets with the source change.
 - 1W / 1M flow is computed from already stored 1D candles (`5D %` / `20D %`). It is context only and should not be reframed as a trading signal or validation gate.
 - Phase 4 mixed subtypes are interpretation labels, not directional validation labels. Historical validation should continue to report mixed states as occurrence / N/A hit-rate rather than forcing risk-on or risk-off samples.
-- Phase 5 still needs a deliberate cache/materialization decision; do not add a DB table casually before comparing process cache vs compact materialized summary.
+- Phase 5 chose process cache, not DB materialization. If another workflow later needs validation summaries across app restarts or across machines, revisit compact persisted summary design with explicit retention and source-of-truth semantics.

@@ -88,6 +88,7 @@ http://localhost:8501
    - 상단 `선물 워크스페이스`, `단기 움직임`, `데이터 상태`를 먼저 본다. 최신 candle이 오래됐으면 차트는 latest stored data를 보여주되 `오래됨`과 갱신 안내를 표시한다.
    - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 과거 일관성 점검, 유사 구간, score chip을 보여준다. Futures Macro tab의 React workbench는 command strip, 현재 브리프, score chip, 1W / 1M 흐름, validation state, 근거 drawer를 렌더링한다.
    - Futures Macro tab 첫 진입은 `include_validation=False` snapshot으로 빠르게 렌더링한다. Historical validation은 `과거 점검 불러오기`를 눌렀을 때만 계산되며, `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다.
+   - Historical validation은 DB에 materialize하지 않고 Streamlit process 안에서 latest futures daily marker / proxy price marker 기준으로 캐시한다. 같은 저장 데이터 기준에서 반복해서 `과거 점검 불러오기`를 누르면 재계산 비용을 줄이고, `일봉 갱신` / `다시 읽기`는 이 process cache도 함께 clear한다.
    - `1W / 1M 흐름`은 저장된 1D 선물의 최근 5거래일 / 20거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
    - Top-level이 `혼재된 매크로 흐름`이면 subtype / regime hint / mixed reason을 함께 읽는다. `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, `저신호 / 관망` 같은 문구는 충돌 맥락을 설명하기 위한 후보 / 확인 언어이며, directional hit-rate 신호로 승격하지 않는다.
    - `근거 해석 / 원본 데이터`를 열면 `강하게 말하는 근거`, `약한 근거`, `충돌 근거`, `자료 부족`을 먼저 읽고, 그 다음 historical validation / 원본 점수표 / 구성 선물별 기여 / 선물별 일봉 변화 원본을 확인한다.

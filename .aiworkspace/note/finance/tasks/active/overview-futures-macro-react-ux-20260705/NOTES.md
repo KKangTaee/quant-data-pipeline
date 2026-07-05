@@ -31,3 +31,8 @@
   - The old broad `혼재된 매크로 흐름` top-level scenario is preserved for validation compatibility and UI stability.
   - Mixed subtypes now separate `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, and `저신호 / 관망`.
   - The subtype wording is intentionally candidate / confirmation language. It should help the user read conflict without turning mixed states into a prediction, trading signal, validation gate, or monitoring signal.
+- Phase 5 implementation:
+  - DB materialization was not added. Current validation result is compact enough for process cache, and durable storage semantics for historical validation summaries are not yet needed by another workflow.
+  - `build_futures_macro_validation_snapshot(...)` now has a process cache with a 15-minute default TTL. The key includes selected symbols, years, min standardized threshold, latest futures daily candle marker, latest proxy target price marker, current summary identity, and the query function identity.
+  - `clear_futures_macro_validation_cache()` is a dedicated invalidation hook. Futures Macro `다시 읽기` and `일봉 갱신` now clear session validation state and the process validation cache.
+  - This keeps first explicit validation calculation honest while making repeated explicit loads within the same process cheap when the stored data basis has not changed.
