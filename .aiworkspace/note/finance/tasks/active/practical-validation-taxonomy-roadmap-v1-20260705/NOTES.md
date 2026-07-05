@@ -82,3 +82,18 @@ Provider Actions
 Save / Final Review Handoff
 Technical Details
 ```
+
+## 2026-07-05 - V1 Implementation Note
+
+V1 adds `app/services/backtest_practical_validation_workspace.py`.
+
+The service is intentionally UI-neutral and Streamlit-free. It consumes a Practical Validation result dict and returns:
+
+- `gate_summary`
+- `fix_queue`
+- `core_evidence_groups`
+- `conditional_evidence_groups`
+- `downstream_reference_groups`
+- `technical_details`
+
+This keeps the existing validation module plan intact while giving V2-V4 a stable screen-oriented contract.

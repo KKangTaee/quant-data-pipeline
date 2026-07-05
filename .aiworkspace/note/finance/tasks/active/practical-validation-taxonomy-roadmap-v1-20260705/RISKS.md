@@ -37,9 +37,15 @@ Mitigation: Each implementation version should have its own QA / commit unit.
 
 ## Approval Required Before Implementation
 
-Before V1 implementation starts, confirm:
+V1 implementation started after user approval:
 
 - selected-route preflight should be retained as readiness preview
 - `Monitoring Baseline` should move to downstream reference
 - `Tax / Account Scope` should move to Final Review reference
 - V1 should start with read-model grouping, not visual React work
+
+## 2026-07-05 - V1 Residual Risk
+
+V1 only creates the workspace read-model contract. The Practical Validation page does not consume it yet, so user-visible duplication remains until V4.
+
+V2 should be careful to change language without weakening deterministic blocker behavior for selected-route evidence gaps.

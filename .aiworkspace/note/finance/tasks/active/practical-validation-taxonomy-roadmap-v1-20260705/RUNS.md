@@ -80,3 +80,39 @@ Skipped:
 
 - py_compile: no Python code changed
 - Browser QA: no visible UI changed
+
+## 2026-07-05 - V1 Development And QA
+
+TDD RED:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_practical_validation_workspace_groups_stage_two_evidence_before_downstream_references
+```
+
+Outcome:
+
+- failed with `ModuleNotFoundError: No module named 'app.services.backtest_practical_validation_workspace'`
+
+Implemented:
+
+- `app/services/backtest_practical_validation_workspace.py`
+- service contract coverage in `tests/test_service_contracts.py`
+
+QA:
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_practical_validation_workspace_groups_stage_two_evidence_before_downstream_references
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_service_imports_do_not_load_streamlit
+.venv/bin/python -m py_compile app/services/backtest_practical_validation_workspace.py app/services/backtest_practical_validation_modules.py app/services/backtest_practical_validation_diagnostics.py
+git diff --check -- app/services/backtest_practical_validation_workspace.py tests/test_service_contracts.py
+.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests
+```
+
+Outcome:
+
+- workspace grouping test passed
+- service import boundary test passed
+- py_compile passed
+- diff check passed
+- `PracticalValidationServiceContractTests`: 22 tests passed
+- Browser QA skipped because V1 did not change visible Streamlit UI

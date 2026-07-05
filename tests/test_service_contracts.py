@@ -1235,6 +1235,126 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(modules["selected_route_preflight"]["gate_effect"], "Blocks Final Review")
         self.assertIn("gross-only", modules["selected_route_preflight"]["resolution_action"])
 
+    def test_practical_validation_workspace_groups_stage_two_evidence_before_downstream_references(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        validation = {
+            "validation_modules": [
+                {
+                    "module_id": "source_integrity",
+                    "label": "Source Integrity",
+                    "status": "PASS",
+                    "requirement": "REQUIRED",
+                    "stage_owner": "practical_validation",
+                    "applies": True,
+                },
+                {
+                    "module_id": "latest_replay",
+                    "label": "Latest Runtime Replay",
+                    "status": "NOT_RUN",
+                    "requirement": "REQUIRED",
+                    "stage_owner": "practical_validation",
+                    "applies": True,
+                    "resolution_surface": "3. 최신 데이터 기준 전략 재검증",
+                    "resolution_action": "전략 재검증 실행",
+                },
+                {
+                    "module_id": "risk_contribution",
+                    "label": "Risk Contribution",
+                    "status": "REVIEW",
+                    "requirement": "CONDITIONAL",
+                    "stage_owner": "practical_validation",
+                    "applies": True,
+                },
+                {
+                    "module_id": "construction_risk",
+                    "label": "Construction Risk",
+                    "status": "PASS",
+                    "requirement": "REQUIRED",
+                    "stage_owner": "practical_validation",
+                    "applies": True,
+                },
+                {
+                    "module_id": "monitoring_baseline",
+                    "label": "Monitoring Baseline",
+                    "status": "REVIEW",
+                    "requirement": "REFERENCE",
+                    "stage_owner": "selected_dashboard",
+                    "applies": True,
+                },
+                {
+                    "module_id": "tax_account_scope",
+                    "label": "Tax / Account Scope",
+                    "status": "REVIEW",
+                    "requirement": "REFERENCE",
+                    "stage_owner": "final_review",
+                    "applies": True,
+                },
+                {
+                    "module_id": "selected_route_preflight",
+                    "label": "Selected-route Preflight",
+                    "status": "NEEDS_INPUT",
+                    "requirement": "REQUIRED",
+                    "stage_owner": "practical_validation",
+                    "applies": True,
+                    "resolution_action": "gross-only evidence를 보강합니다.",
+                },
+            ],
+            "final_review_gate": {
+                "route": "BLOCKED_FOR_FINAL_REVIEW",
+                "can_save_and_move": False,
+                "verdict": "Final Review selected-route 저장을 막을 evidence gap이 있습니다.",
+                "next_action": "blocker를 먼저 해결합니다.",
+                "blocking_modules": [
+                    {"module_id": "latest_replay", "label": "Latest Runtime Replay", "status": "NOT_RUN"},
+                    {
+                        "module_id": "selected_route_preflight",
+                        "label": "Selected-route Preflight",
+                        "status": "NEEDS_INPUT",
+                    },
+                ],
+                "review_modules": [
+                    {"module_id": "risk_contribution", "label": "Risk Contribution", "status": "REVIEW"}
+                ],
+            },
+            "diagnostics": [{"domain": "stress_scenario_diagnostics", "status": "PASS"}],
+            "validation_module_display_rows": [{"Module": "Source Integrity"}],
+            "validation_board_display_rows": [{"Board": "Input Evidence"}],
+            "validation_board_map": {"summary": {"applied": 1}},
+        }
+
+        workspace = build_practical_validation_workspace(validation)
+
+        self.assertEqual(workspace["gate_summary"]["route"], "BLOCKED_FOR_FINAL_REVIEW")
+        self.assertEqual(
+            [row["module_id"] for row in workspace["fix_queue"]],
+            ["latest_replay", "selected_route_preflight"],
+        )
+        self.assertEqual(
+            [group["group_id"] for group in workspace["core_evidence_groups"]],
+            ["source_readiness", "validation_readiness", "final_review_readiness_preview"],
+        )
+        self.assertEqual(
+            [
+                module["module_id"]
+                for group in workspace["conditional_evidence_groups"]
+                for module in group["modules"]
+            ],
+            ["risk_contribution"],
+        )
+        self.assertEqual(
+            [
+                module["module_id"]
+                for group in workspace["downstream_reference_groups"]
+                for module in group["modules"]
+            ],
+            ["monitoring_baseline", "tax_account_scope"],
+        )
+        self.assertEqual(workspace["technical_details"]["raw_diagnostics"][0]["domain"], "stress_scenario_diagnostics")
+        self.assertEqual(workspace["technical_details"]["board_display_rows"][0]["Board"], "Input Evidence")
+        self.assertEqual(workspace["summary"]["blocker_count"], 2)
+        self.assertEqual(workspace["summary"]["review_count"], 1)
+
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
 import sys
@@ -1252,6 +1372,7 @@ import app.services.backtest_practical_validation_diagnostics
 import app.services.backtest_practical_validation_board_registry
 import app.services.backtest_practical_validation_modules
 import app.services.backtest_practical_validation
+import app.services.backtest_practical_validation_workspace
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay
 import app.services.backtest_practical_validation_source
