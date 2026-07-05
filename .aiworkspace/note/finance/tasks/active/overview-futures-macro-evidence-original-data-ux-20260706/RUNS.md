@@ -6,3 +6,9 @@
 - Phase 1 GREEN: same focused unittest passed after splitting React `현재 근거` from lower `계산 근거 / 원본 표`.
 - Phase 1 QA: `.venv/bin/python -m py_compile app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py` passed.
 - Phase 1 QA: `git diff --check -- app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py .aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706` passed.
+- Phase 2 RED: `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_validation_summary_focuses_current_scenario_before_raw_tables tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_react_validation_metrics_use_interpretable_labels` failed as expected on old `과거 점검 요약`, `PIT 날짜`, and `유사 구간` labels.
+- Phase 2 RED follow-up: `test_macro_validation_summary_focuses_current_scenario_before_raw_tables` failed as expected until coverage changed from `1212개 PIT 날짜` to `점검 기준 1,212개`.
+- Phase 2 GREEN: same focused tests passed after validation summary and React validation metrics were rewritten.
+- Phase 2 QA: `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_workbench_payload_keeps_python_action_boundary` passed, 24 tests.
+- Phase 2 QA: `.venv/bin/python -m py_compile app/services/futures_macro_validation.py app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py` passed.
+- Phase 2 QA: `git diff --check -- app/services/futures_macro_validation.py app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py` passed.

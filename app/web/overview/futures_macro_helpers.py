@@ -396,17 +396,32 @@ def _futures_macro_react_validation_metrics(validation: dict[str, Any]) -> list[
     if not validation:
         return [
             _react_metric("상태", "아직 불러오지 않음", detail="버튼으로 historical validation 계산", tone="warning"),
-            _react_metric("PIT 날짜", "-", detail="계산 전"),
-            _react_metric("유사 구간", "-", detail="계산 전"),
+            _react_metric("점검 기준", "-", detail="계산 전"),
+            _react_metric("비슷한 상태", "-", detail="계산 전"),
         ]
     coverage = dict(validation.get("coverage") or {})
     current_metrics = dict(validation.get("current_scenario_metrics") or {})
     occurrence = current_metrics.get("Occurrence Count")
-    hit_rule = current_metrics.get("Hit Rule") or current_metrics.get("Target Family")
+    hit_applicable = bool(current_metrics.get("Directional Hit Applicable"))
+    history_span = coverage.get("history_span_years")
+    try:
+        history_span_detail = f"{float(history_span):.2f}년 범위"
+    except (TypeError, ValueError):
+        history_span_detail = "기간 미확인"
+    validation_dates = coverage.get("validation_dates")
+    try:
+        validation_dates_value = f"{int(validation_dates):,}개"
+    except (TypeError, ValueError):
+        validation_dates_value = _snapshot_value(validation_dates)
+    try:
+        occurrence_value = f"{int(occurrence):,}회"
+    except (TypeError, ValueError):
+        occurrence_value = _snapshot_value(occurrence)
+    occurrence_detail = "5D 방향성 적용" if hit_applicable else "방향성 비적용"
     return [
-        _react_metric("상태", validation.get("status") or "OK", detail=f"{coverage.get('history_span_years') or '-'}년", tone="positive"),
-        _react_metric("PIT 날짜", coverage.get("validation_dates"), detail="historical validation dates"),
-        _react_metric("유사 구간", occurrence, detail=hit_rule or "current scenario sample"),
+        _react_metric("상태", validation.get("status") or "OK", detail=history_span_detail, tone="positive"),
+        _react_metric("점검 기준", validation_dates_value, detail=history_span_detail),
+        _react_metric("비슷한 상태", occurrence_value, detail=occurrence_detail),
     ]
 
 
@@ -954,7 +969,7 @@ def _macro_support_items(macro: dict[str, Any]) -> list[dict[str, Any]]:
         {
             "label": "과거 점검",
             "value": _macro_validation_status_label(validation.get("status")),
-            "detail": f"{validation_dates}개 PIT 날짜 · {span or '-'}년",
+            "detail": f"점검 기준 {int(validation_dates):,}개 · {span or '-'}년",
             "tone": "positive" if validation.get("status") == "OK" else "warning",
         },
         {
@@ -1213,7 +1228,7 @@ def _render_macro_evidence_reading(sections: list[dict[str, Any]]) -> None:
 def _render_macro_validation_summary(validation: dict[str, Any], *, confidence_label: str | None = None) -> None:
     summary = build_current_scenario_validation_summary(validation, confidence_label=confidence_label)
     if not summary:
-        st.info("현재 시나리오 기준 과거 점검 요약이 아직 없습니다.")
+        st.info("현재 해석 기준 과거 일관성 요약이 아직 없습니다.")
         return
     metric_html = "".join(
         '<div class="ov-futures-validation-metric">'
@@ -1228,7 +1243,7 @@ def _render_macro_validation_summary(validation: dict[str, Any], *, confidence_l
         <div class="ov-futures-validation-summary">
           <div class="ov-futures-validation-head">
             <div>
-              <div class="ov-futures-validation-title">{escape(str(summary.get("title") or "과거 점검 요약"))}</div>
+              <div class="ov-futures-validation-title">{escape(str(summary.get("title") or "현재 해석의 과거 일관성"))}</div>
               <div class="ov-futures-validation-scenario">현재 시나리오: {escape(str(summary.get("scenario") or "-"))}</div>
             </div>
             <div class="ov-futures-validation-occurrence">

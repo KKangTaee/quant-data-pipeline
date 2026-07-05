@@ -1012,7 +1012,7 @@ def build_current_scenario_validation_summary(
         history_span_label = f"{float(history_span):.2f}년"
     except (TypeError, ValueError):
         history_span_label = "기간 미확인"
-    coverage_label = f"{validation_dates}개 PIT 날짜 · {history_span_label}"
+    coverage_label = f"점검 기준 {validation_dates:,}개 · {history_span_label}"
     confidence_text = str(confidence_label or "").strip()
     confidence_prefix = f"{confidence_text} 판단에서 " if confidence_text else ""
 
@@ -1021,43 +1021,44 @@ def build_current_scenario_validation_summary(
         false_positive = _validation_percent_label(metrics.get("False Positive 5D %"))
         max_adverse = _validation_percent_label(metrics.get("Max Adverse 5D %"), digits=2)
         occurrence = {
-            "label": "5D 표본",
+            "label": "5D 계산 표본",
             "value": _validation_count_label(sample_5d),
-            "detail": f"과거 발생 {_validation_count_label(occurrence_count)} 중 5D 수익률 계산 가능 표본",
+            "detail": f"비슷한 과거 상태 {_validation_count_label(occurrence_count)} 중 5D 이후 수익률 계산 가능 표본",
         }
         interpretation = (
-            f"현재 시나리오는 5D 방향성 점검이 가능한 상태입니다. "
-            f"과거 5D hit-rate {hit_rate}, false-positive {false_positive}, max-adverse {max_adverse}입니다."
+            f"비슷한 과거 상태에서는 5D 방향 일관성 {hit_rate}, 오판 비율 {false_positive}, "
+            f"불리한 최대 5D {max_adverse}로 나타났습니다."
         )
         confidence_effect = (
-            f"{confidence_prefix}현재 confidence를 보조하지만 매수/매도 신호나 검증 gate는 아닙니다."
+            f"{confidence_prefix}이 결과는 보조 근거로만 읽습니다. 매수/매도 신호나 검증 gate는 아닙니다."
         )
         metrics_out = [
-            {"label": "5D hit-rate", "value": hit_rate},
-            {"label": "false-positive", "value": false_positive},
-            {"label": "max-adverse", "value": max_adverse},
+            {"label": "5D 방향 일관성", "value": hit_rate},
+            {"label": "오판 비율", "value": false_positive},
+            {"label": "불리한 최대 5D", "value": max_adverse},
         ]
     else:
         occurrence = {
-            "label": "과거 발생",
+            "label": "비슷한 과거 상태",
             "value": _validation_count_label(occurrence_count),
-            "detail": "방향성 5D hit-rate 대신 현재 상태의 반복 빈도를 확인합니다.",
+            "detail": "방향성 5D 적중률 대신 현재 상태의 반복 빈도를 확인합니다.",
         }
         interpretation = (
-            "자주 나타난 상태지만 방향성 적중률을 강하게 말하기 어려운 혼재 상태입니다. "
-            "이 시나리오는 directional hit-rate로 읽으면 안 됩니다."
+            f"비슷한 과거 상태는 {_validation_count_label(occurrence_count)} 있었지만, "
+            "이 혼재 상태는 5D 방향 적중률로 읽지 않습니다. 반복 빈도는 현재 해석이 드문 상태인지 확인하는 보조 근거입니다."
         )
         confidence_effect = (
-            f"{confidence_prefix}현재 confidence를 보조하지만 매수/매도 신호나 검증 gate는 아닙니다."
+            f"{confidence_prefix}반복 빈도만 보조 근거로 읽고, 방향성 확신을 올리는 근거로 쓰지 않습니다. "
+            "매수/매도 신호나 검증 gate는 아닙니다."
         )
         metrics_out = [
-            {"label": "5D hit-rate", "value": "적용 안 됨"},
-            {"label": "false-positive", "value": "적용 안 됨"},
-            {"label": "max-adverse", "value": "적용 안 됨"},
+            {"label": "5D 방향 일관성", "value": "방향성 없음"},
+            {"label": "오판 비율", "value": "방향성 없음"},
+            {"label": "불리한 최대 5D", "value": "방향성 없음"},
         ]
 
     return {
-        "title": "과거 점검 요약",
+        "title": "현재 해석의 과거 일관성",
         "scenario": scenario,
         "occurrence": occurrence,
         "coverage": coverage_label,

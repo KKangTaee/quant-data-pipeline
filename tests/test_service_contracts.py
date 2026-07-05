@@ -17198,16 +17198,54 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
 
         summary = build_current_scenario_validation_summary(validation, confidence_label="Medium Confidence")
 
-        self.assertEqual(summary["title"], "과거 점검 요약")
+        self.assertEqual(summary["title"], "현재 해석의 과거 일관성")
         self.assertEqual(summary["scenario"], "혼재된 매크로 흐름")
-        self.assertEqual(summary["occurrence"]["label"], "과거 발생")
+        self.assertEqual(summary["occurrence"]["label"], "비슷한 과거 상태")
         self.assertEqual(summary["occurrence"]["value"], "950회")
-        self.assertEqual(summary["coverage"], "1212개 PIT 날짜 · 5.05년")
+        self.assertEqual(summary["coverage"], "점검 기준 1,212개 · 5.05년")
         self.assertFalse(summary["hit_rate_applicable"])
-        self.assertIn("방향성 적중률", summary["interpretation"])
-        self.assertIn("현재 confidence를 보조", summary["confidence_effect"])
+        self.assertIn("5D 방향 적중률로 읽지 않습니다", summary["interpretation"])
+        self.assertIn("반복 빈도만 보조 근거", summary["confidence_effect"])
         self.assertIn("매수/매도 신호", summary["confidence_effect"])
         self.assertIn("아닙니다", summary["confidence_effect"])
+
+    def test_macro_react_validation_metrics_use_interpretable_labels(self) -> None:
+        import pandas as pd
+
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        macro = {
+            "coverage": {"standardized_count": 1, "symbol_count": 1, "latest_daily_date": "2026-07-01"},
+            "summary": {"scenario": "혼재된 매크로 흐름", "summary": "관망"},
+            "scores": pd.DataFrame(),
+            "weekly_context": {},
+            "evidence_reading": [],
+        }
+        validation = {
+            "status": "OK",
+            "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+            "current_scenario_metrics": {
+                "Scenario": "혼재된 매크로 흐름",
+                "Occurrence Count": 950,
+                "Directional Hit Applicable": False,
+            },
+        }
+
+        payload = build_futures_macro_react_workbench_payload(
+            macro,
+            validation=validation,
+            confidence={},
+            validation_loaded_at="2026-07-06 10:00:00",
+        )
+
+        metrics = payload["validation"]["metrics"]
+        self.assertEqual([metric["label"] for metric in metrics], ["상태", "점검 기준", "비슷한 상태"])
+        self.assertEqual(metrics[1]["value"], "1,212개")
+        self.assertEqual(metrics[1]["detail"], "5.05년 범위")
+        self.assertEqual(metrics[2]["value"], "950회")
+        self.assertIn("방향성 비적용", metrics[2]["detail"])
+        self.assertNotIn("PIT 날짜", [metric["label"] for metric in metrics])
+        self.assertNotIn("current scenario sample", " ".join(metric["detail"] for metric in metrics))
 
     def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
         from app.services.futures_macro_validation import build_interpretation_confidence
