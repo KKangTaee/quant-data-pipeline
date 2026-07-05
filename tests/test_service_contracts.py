@@ -7706,12 +7706,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("def _render_market_movers_universe_action", helper_source)
         self.assertIn("_render_market_movers_universe_action(control_cols[2]", daily_body)
-        self.assertIn("overview_{universe_code.lower()}_universe_static", helper_source)
-        self.assertIn("유니버스 기준", helper_source)
-        self.assertIn("disabled=True", helper_source)
+        self.assertIn("run_overview_market_liquidity_universe_refresh", helper_source)
+        self.assertIn("overview_{universe_code.lower()}_liquidity_universe_refresh", helper_source)
+        self.assertIn("유니버스 기준 갱신", helper_source)
+        self.assertNotIn("overview_{universe_code.lower()}_universe_static", helper_source)
+        self.assertNotIn("Top universe는 market-cap", helper_source)
         self.assertNotIn("control_cols[2].caption", daily_body)
         self.assertNotIn("Top universe는", daily_body)
-        self.assertIn("_universe_static", common_source)
+        self.assertIn("_liquidity_universe_refresh", common_source)
+        self.assertNotIn("_universe_static", common_source)
 
     def test_market_movers_followup_removes_duplicate_sector_leader_strip_from_main_map(self) -> None:
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
@@ -9702,7 +9705,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("render_market_movers_unified_summary", component_source)
         self.assertIn("ov-mm-unified-summary", common_source)
         render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
-        self.assertIn("build_market_movers_unified_summary_model", render_body)
+        self.assertIn("_render_market_movers_react_summary(", render_body)
         self.assertNotIn("render_market_movers_command_strip(", render_body)
         trust_body = helper_source[helper_source.index("def _render_market_movers_coverage_trust") :]
         trust_body = trust_body[: trust_body.index("def _render_missing_diagnostics")]
@@ -9800,6 +9803,44 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["handler"], "run_overview_market_intraday_snapshot")
         self.assertEqual(plan["universe_code"], "SP500")
         self.assertEqual(plan["universe_limit"], 500)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_actions_use_liquidity_universe_refresh_for_top_coverage(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+            market_movers_react_action_plan,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+
+        payload = build_market_movers_react_workbench_payload(
+            {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}},
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        self.assertIn(
+            {"id": "refresh_liquidity_universe", "label": "유니버스 기준 갱신", "kind": "secondary"},
+            payload["actions"],
+        )
+        self.assertNotIn("universe_static", [action["id"] for action in payload["actions"]])
+
+        plan = market_movers_react_action_plan("refresh_liquidity_universe", controls=controls)
+        self.assertEqual(plan["handler"], "run_overview_market_liquidity_universe_refresh")
+        self.assertEqual(plan["universe_code"], "TOP1000")
+        self.assertEqual(plan["universe_limit"], 1000)
 
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_filters_live_inside_workbench_card(self, mock_st: MagicMock) -> None:
@@ -10193,6 +10234,43 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("nonce: Date.now()", react_source)
         self.assertIn("onClick={() => emitAction(action)}", react_source)
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.run_overview_market_liquidity_universe_refresh")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_event_bridge_dispatches_liquidity_universe_refresh_once(
+        self,
+        mock_st: MagicMock,
+        mock_run_refresh: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "refresh_liquidity_universe", "nonce": 223}}
+        mock_st.session_state = {}
+        mock_run_refresh.return_value = {"status": "success", "rows_written": 998}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+
+        mock_run_refresh.assert_called_once_with(universe_code="TOP1000", universe_limit=1000)
+        mock_store_result.assert_called_once_with(
+            "overview_top1000_liquidity_universe_result",
+            mock_run_refresh.return_value,
+        )
+        mock_st.rerun.assert_called_once()
 
     def test_market_movers_react_action_strip_replaces_legacy_buttons_when_rendered(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")

@@ -12,6 +12,15 @@
   - Result: passed.
 - 2026-07-05: `git diff --check`
   - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_market_movers_followup_keeps_refresh_actions_in_fixed_slots tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_actions_use_liquidity_universe_refresh_for_top_coverage tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_event_bridge_dispatches_liquidity_universe_refresh_once`
+  - RED: helper import/action/dispatch still used disabled Top universe behavior.
+  - GREEN: 3 tests passed after wiring `유니버스 기준 갱신`.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests`
+  - Result: 242 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile app/web/overview/market_movers_helpers.py app/web/overview/components/common.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.
 - 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_collect_liquidity_universe_materializes_computed_dollar_volume_members tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_liquidity_universe_refresh_updates_eod_then_materializes_top_universe`
   - RED: missing materialize and Overview action functions.
 - 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_candidate_loader_reads_current_lifecycle_listing_sources tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_dollar_volume_universe_query_excludes_symbols_missing_latest_price_row`

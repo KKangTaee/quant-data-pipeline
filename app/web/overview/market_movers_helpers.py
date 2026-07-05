@@ -15,6 +15,7 @@ from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_browser_auto_refresh,
     run_overview_market_intraday_snapshot,
+    run_overview_market_liquidity_universe_refresh,
     run_overview_market_movers_eod_history,
     run_overview_market_mover_statement_refresh,
     run_overview_nasdaq_symbol_directory,
@@ -670,7 +671,9 @@ def _market_movers_react_actions(*, controls: MarketMoverControls) -> list[dict[
         elif controls.coverage == "NASDAQ":
             actions.append({"id": "refresh_nasdaq_directory", "label": "Nasdaq 목록 갱신", "kind": "secondary"})
         else:
-            actions.append({"id": "universe_static", "label": "유니버스 기준", "kind": "disabled"})
+            actions.append(
+                {"id": "refresh_liquidity_universe", "label": "유니버스 기준 갱신", "kind": "secondary"}
+            )
         actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
         return actions
 
@@ -733,6 +736,12 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
         return {"handler": "run_overview_sp500_universe", "universe_code": controls.coverage}
     if action_id == "refresh_nasdaq_directory":
         return {"handler": "run_overview_nasdaq_symbol_directory", "universe_code": controls.coverage}
+    if action_id == "refresh_liquidity_universe":
+        return {
+            "handler": "run_overview_market_liquidity_universe_refresh",
+            "universe_code": controls.coverage,
+            "universe_limit": controls.universe_limit,
+        }
     if action_id == "refresh_eod_history":
         return {
             "handler": "run_overview_market_movers_eod_history",
@@ -875,6 +884,20 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 "overview_nasdaq_symbol_directory_result",
                 run_overview_nasdaq_symbol_directory(),
             )
+        st.rerun()
+        return True
+
+    if handler == "run_overview_market_liquidity_universe_refresh":
+        result_key = f"overview_{universe_code.lower()}_liquidity_universe_result"
+        with st.spinner(f"{universe_label} 유니버스 기준을 20D 평균 거래대금으로 갱신하는 중입니다..."):
+            _store_overview_job_result(
+                result_key,
+                run_overview_market_liquidity_universe_refresh(
+                    universe_code=universe_code,
+                    universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
+                ),
+            )
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
         return True
 
@@ -2076,13 +2099,26 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
                 )
             st.rerun()
         return
-    container.button(
-        "유니버스 기준",
-        key=f"overview_{universe_code.lower()}_universe_static",
+    if container.button(
+        "유니버스 기준 갱신",
+        key=f"overview_{universe_code.lower()}_liquidity_universe_refresh",
         use_container_width=True,
-        disabled=True,
-        help="Top universe는 market-cap ranked asset profile 기준입니다.",
-    )
+        help=(
+            "상장 source 후보를 기준으로 1개월 EOD 가격 이력을 보강한 뒤, "
+            "nyse_price_history의 최근 20거래일 평균 거래대금으로 Top universe를 다시 저장합니다."
+        ),
+    ):
+        universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+        with st.spinner(f"{universe_label} 유니버스 기준을 20D 평균 거래대금으로 갱신하는 중입니다..."):
+            _store_overview_job_result(
+                f"overview_{universe_code.lower()}_liquidity_universe_result",
+                run_overview_market_liquidity_universe_refresh(
+                    universe_code=universe_code,
+                    universe_limit=_universe_limit(universe_code),
+                ),
+            )
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
 
 
 def _render_market_movers_daily_refresh_bar(
@@ -2263,6 +2299,8 @@ def _render_market_movers_react_refresh_companion(
                 "Nasdaq Composite 또는 Nasdaq-100 historical membership proof가 아닙니다."
             )
             _render_market_job_result("overview_nasdaq_symbol_directory_result")
+        if controls.coverage in {"TOP1000", "TOP2000"}:
+            _render_market_job_result(f"overview_{controls.coverage.lower()}_liquidity_universe_result")
         _render_market_job_result(f"overview_{controls.coverage.lower()}_intraday_result")
         return
 
