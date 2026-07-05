@@ -1313,14 +1313,6 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
             "tone": "neutral",
         },
     ]
-    second_group_counts: dict[str, int] = {}
-    for row in second_stage_rows:
-        group = str(row.get("group") or "Review")
-        second_group_counts[group] = second_group_counts.get(group, 0) + 1
-    second_stage_groups = [
-        {"label": group, "count": count}
-        for group, count in sorted(second_group_counts.items(), key=lambda item: item[0])
-    ]
     handoff_note = (
         f"2차 확인 {second_review_count}개는 source와 함께 Practical Validation으로 전달됩니다. "
         "여기서는 상세 판단을 반복하지 않고, 다음 화면에서 provider, data coverage, realism, robustness 근거로 확인합니다."
@@ -1336,7 +1328,7 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
             subhead=subhead,
             metrics=metrics,
             first_stage_rows=first_stage_rows,
-            second_stage_groups=second_stage_groups,
+            second_stage_count=second_review_count,
             handoff_note=handoff_note,
             key="backtest_policy_signal_board",
         )

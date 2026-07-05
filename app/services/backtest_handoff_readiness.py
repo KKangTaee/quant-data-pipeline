@@ -5,57 +5,111 @@ from typing import Any
 
 _PASS_STATUSES = {"", "normal", "ok", "pass", "passed", "fresh"}
 
-_POLICY_SIGNAL_DISPLAY_COPY: dict[str, dict[str, str]] = {
+_POLICY_SIGNAL_DISPLAY_COPY: dict[str, dict[str, Any]] = {
     "Promotion Decision": {
         "checked_evidence": "promotion_decision 생성 여부와 source 등록 차단 여부",
+        "plain_explanation": "이 결과를 2차 검증 source로 넘길지, 아니면 승격 전 보강이 필요한지 구분합니다.",
+        "checked_items": [
+            {"label": "Promotion Decision", "detail": "runtime이 만든 승격 판단 값"},
+            {"label": "Entry Blocker", "detail": "source 등록을 즉시 막는 hard blocker 여부"},
+            {"label": "Review Reason", "detail": "hold라면 Practical Validation에 넘겨 확인할 이유"},
+        ],
         "pass_note": "Practical Validation source 등록을 막는 promotion blocker가 없습니다.",
         "review_note": "hold 사유는 source와 함께 Practical Validation의 2차 확인 큐로 전달합니다.",
         "block_note": "Backtest를 다시 실행하거나 promotion signal 생성 경로를 먼저 확인해야 합니다.",
     },
     "Price Freshness": {
         "checked_evidence": "DB 가격 최신일, 계산 기준일, 결과 기간, 결측 / 비정상 가격 row",
+        "plain_explanation": "백테스트 성과가 해석 가능한 최신 가격 범위에서 계산됐는지 확인합니다.",
+        "checked_items": [
+            {"label": "Effective Trading End", "detail": "결과가 실제로 계산된 마지막 거래일"},
+            {"label": "Common Latest Price", "detail": "구성 종목이 함께 가진 공통 최신 가격일"},
+            {"label": "Malformed / Missing Rows", "detail": "가격 결측이나 비정상 row로 해석이 깨지는지"},
+        ],
         "pass_note": "결과가 해석 가능한 최신 가격 범위에서 계산됐습니다.",
         "review_note": "요청 종료일과 실제 계산 기준일 차이를 Practical Validation에서 이어서 확인합니다.",
         "block_note": "가격 최신성 또는 결측 가격 row를 먼저 해결해야 source 등록이 가능합니다.",
     },
     "Liquidity Policy": {
         "checked_evidence": "유동성 필터, clean coverage, 실전 해석에 필요한 거래 가능성 근거",
+        "plain_explanation": "이 전략이 고른 종목들이 너무 거래가 얇아서 실전 운용 해석이 깨지지 않는가를 봅니다.",
+        "checked_items": [
+            {"label": "Min Avg Dollar Volume 20D", "detail": "최근 20거래일 평균 거래대금 필터"},
+            {"label": "Liquidity Clean Coverage", "detail": "리밸런싱 시점 중 유동성 문제 없이 통과한 비율"},
+            {"label": "Liquidity Excluded Rows", "detail": "유동성 필터 때문에 제외된 리밸런싱 row 수"},
+        ],
         "pass_note": "유동성 원천이 source 등록을 막지 않는 상태입니다.",
         "review_note": "유동성 부담은 Practical Validation에서 provider / coverage 근거와 함께 확인합니다.",
         "block_note": "유동성 원천이 source 등록을 막는 상태입니다. 가격 / universe 근거를 먼저 보강하세요.",
     },
     "ETF Operability": {
         "checked_evidence": "ETF AUM, spread, provider profile, 운용 가능성 근거 상태",
+        "plain_explanation": "ETF를 실제 운용 후보로 볼 때 AUM, 스프레드, provider 근거가 부족하지 않은지 봅니다.",
+        "checked_items": [
+            {"label": "ETF AUM", "detail": "운용자산 규모가 최소 선호 기준보다 낮은지"},
+            {"label": "Spread / Tradability", "detail": "매수매도 스프레드와 거래 가능성 근거"},
+            {"label": "Provider Profile", "detail": "운용사 / ETF 기본 정보가 충분히 연결됐는지"},
+        ],
         "pass_note": "ETF 운용 가능성 근거가 source 등록을 막지 않습니다.",
         "review_note": "ETF 운용 가능성은 Practical Validation에서 provider evidence로 확인합니다.",
         "block_note": "ETF 운용 가능성 근거가 부족해 source 등록 전 보강이 필요합니다.",
     },
     "Benchmark Availability": {
         "checked_evidence": "후속 검증에서 비교할 benchmark curve 존재 여부",
+        "plain_explanation": "전략이 잘한 것인지 비교하려면 같은 기간에 비교할 benchmark curve가 있는지 확인합니다.",
+        "checked_items": [
+            {"label": "Benchmark Ticker", "detail": "전략과 비교할 기준 ticker 또는 후보 benchmark"},
+            {"label": "Benchmark Curve", "detail": "비교 가능한 benchmark equity curve 존재 여부"},
+            {"label": "Period Match", "detail": "후속 검증에서 같은 기간으로 비교할 수 있는지"},
+        ],
         "pass_note": "Practical Validation에서 기준선 비교를 이어갈 수 있습니다.",
         "review_note": "benchmark 비교 가능성은 Practical Validation에서 coverage와 함께 확인합니다.",
         "block_note": "benchmark curve가 없어 후속 검증 source 등록 전 기준선을 보강해야 합니다.",
     },
     "Validation": {
         "checked_evidence": "benchmark-relative drawdown / underperformance 진단 상태",
+        "plain_explanation": "성과가 좋아 보여도 benchmark 대비 낙폭이나 반복 부진 구간이 과한지 먼저 봅니다.",
+        "checked_items": [
+            {"label": "Relative Drawdown", "detail": "benchmark와 비교했을 때 낙폭이 과한지"},
+            {"label": "Underperformance", "detail": "반복적으로 benchmark에 밀리는 구간이 있는지"},
+            {"label": "Validation Status", "detail": "runtime이 요약한 기본 검증 상태"},
+        ],
         "pass_note": "기본 validation 진단이 source 등록을 막지 않는 상태입니다.",
         "review_note": "낙폭 / 부진 구간은 Practical Validation에서 상세 검증으로 이어서 확인합니다.",
         "block_note": "validation blocker를 해소한 뒤 source 등록을 다시 시도해야 합니다.",
     },
     "Benchmark Policy": {
         "checked_evidence": "benchmark coverage와 net CAGR spread 정책 기준",
+        "plain_explanation": "benchmark와 비교할 데이터가 충분하고, 비용 반영 후 초과 성과가 최소 기준을 넘는지 봅니다.",
+        "checked_items": [
+            {"label": "Benchmark Row Coverage", "detail": "전략 결과 기간 중 benchmark 비교 가능 row 비율"},
+            {"label": "Net CAGR Spread", "detail": "비용 반영 후 benchmark 대비 연환산 수익률 차이"},
+            {"label": "Policy Threshold", "detail": "비교 가능성과 초과 성과의 최소 정책 기준"},
+        ],
         "pass_note": "benchmark 정책 기준이 source 등록을 막지 않습니다.",
         "review_note": "benchmark 정책 여유는 Practical Validation에서 기준선 parity와 함께 확인합니다.",
         "block_note": "benchmark 정책 기준 미충족 항목을 먼저 보강해야 합니다.",
     },
     "Validation Policy": {
         "checked_evidence": "rolling underperformance 정책 기준",
+        "plain_explanation": "특정 짧은 구간만 좋은 전략인지 보기 위해 rolling 부진 비율과 최악 구간을 확인합니다.",
+        "checked_items": [
+            {"label": "Rolling Underperformance Share", "detail": "rolling 구간 중 benchmark에 밀린 비율"},
+            {"label": "Worst Rolling Excess Return", "detail": "가장 나빴던 rolling 초과 수익률"},
+            {"label": "Observation Count", "detail": "rolling 판단에 사용된 표본 수"},
+        ],
         "pass_note": "rolling underperformance 정책이 source 등록을 막지 않습니다.",
         "review_note": "rolling 부진 여부는 Practical Validation의 robustness / temporal 검증에서 확인합니다.",
         "block_note": "rolling underperformance 정책 blocker를 먼저 해결해야 합니다.",
     },
     "Portfolio Guardrail Policy": {
         "checked_evidence": "전략 낙폭과 benchmark 대비 낙폭 차이의 방어 기준",
+        "plain_explanation": "전략의 최대 낙폭과 benchmark 대비 낙폭 차이가 방어 기준 안에 있는지 확인합니다.",
+        "checked_items": [
+            {"label": "Strategy Maximum Drawdown", "detail": "전략 자체의 최대 낙폭"},
+            {"label": "Drawdown Gap vs Benchmark", "detail": "benchmark 대비 낙폭 차이"},
+            {"label": "Guardrail Threshold", "detail": "낙폭이 허용 범위 안에 있는지 보는 정책 기준"},
+        ],
         "pass_note": "낙폭 guardrail이 source 등록을 막지 않습니다.",
         "review_note": "낙폭 방어 여유는 Practical Validation의 guardrail 근거에서 이어서 확인합니다.",
         "block_note": "guardrail 기준을 벗어난 낙폭 근거를 먼저 확인해야 합니다.",
@@ -130,9 +184,18 @@ def _signal_row(
         "source_key": source_key,
     }
     copy = _POLICY_SIGNAL_DISPLAY_COPY.get(signal, {})
+    checked_items = copy.get("checked_items")
     row.update(
         {
             "checked_evidence": copy.get("checked_evidence", meaning),
+            "plain_explanation": copy.get("plain_explanation", meaning),
+            "checked_items": [
+                dict(item)
+                for item in checked_items
+                if isinstance(item, dict)
+            ]
+            if isinstance(checked_items, list)
+            else [],
             "pass_note": copy.get("pass_note", meaning),
             "review_note": copy.get("review_note", meaning),
             "block_note": copy.get("block_note", meaning),

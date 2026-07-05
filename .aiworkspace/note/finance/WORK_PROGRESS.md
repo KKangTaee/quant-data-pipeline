@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Policy Signal Help Board V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-help-board-v1-20260705/`에서 `검증 기준 상세`을 1차 기준 category board + click help UI로 개선했다.
+  - `Data Trust`, `Execution Source`, `Validation Source` 중심으로 무엇을 검증했는지 `plain_explanation` / `checked_items`로 보여준다.
+  - 2차 review focus 상세 목록은 Backtest Analysis에서 제거하고, Practical Validation source snapshot / entry gate로 이어서 확인한다.
 - Backtest Policy Signal Gate V7-V11:
   - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-gate-v7-v11-20260703/`에서 `검증 신호 · Policy Signals`와 `2차 실전성 검증 Handoff`의 gate 의미를 정리했다.
   - Practical Validation entry gate와 Portfolio Mix strict compare gate를 분리했고, `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus로 보존한다.

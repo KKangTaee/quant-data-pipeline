@@ -28,7 +28,7 @@ def render_backtest_policy_signal_board(
     subhead: str,
     metrics: list[dict[str, Any]],
     first_stage_rows: list[dict[str, Any]],
-    second_stage_groups: list[dict[str, Any]],
+    second_stage_count: int,
     handoff_note: str,
     key: str | None = None,
 ) -> None:
@@ -46,7 +46,7 @@ def render_backtest_policy_signal_board(
         subhead=subhead,
         metrics=metrics,
         firstStageRows=first_stage_rows,
-        secondStageGroups=second_stage_groups,
+        secondStageCount=second_stage_count,
         handoffNote=handoff_note,
         key=key,
         default=None,

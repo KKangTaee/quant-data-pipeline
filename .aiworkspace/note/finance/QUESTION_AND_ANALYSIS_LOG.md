@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Policy Signals 1차 기준은 category help board로 읽는다
+
+- User request: 사용자가 2차로 넘긴 확인 큐는 현재 UI에서 노출하지 않아도 되고, 1차 기준은 `Data Trust`, `Execution Source`, `Validation Source`처럼 카테고리별로 보여주며 각 기준이 무엇을 검증하는지 `?` help / tooltip 형태로 설명해 달라고 요청함.
+- Interpreted goal: Backtest Analysis는 1차에서 확정 가능한 기준과 source blocker만 명확히 보여주고, 2차 review focus는 Practical Validation에서 이어 확인해야 함.
+- Analysis result: 기존 `first_stage_rows` / `second_stage_review_rows` 분리는 유지하되, service row에 `plain_explanation`과 `checked_items`를 추가하면 UI와 Practical Validation source snapshot이 같은 설명 데이터를 재사용할 수 있다.
+- Follow-up: `검증 기준 상세` React board를 category board + click help UI로 개편했고, 2차 review queue 상세 목록은 Backtest Analysis에서 제거해 count / handoff notice만 남겼다.
+
 ### 2026-07-03 - Policy Signal gate separates 2차 entry from strict compare readiness
 
 - User request: `검증 신호 · Policy Signal`의 여러 탭 / 근거 / 승격 판단이 2차 실전성 검증에 필요한 기준인지, 중복이나 과보수 조건이 없는지 검토하고 V7부터 V11까지 개발 / QA / 커밋 순으로 진행 요청.

@@ -916,6 +916,8 @@ _POLICY_SIGNAL_SNAPSHOT_KEYS = (
     "next_surface",
     "meaning",
     "checked_evidence",
+    "plain_explanation",
+    "checked_items",
     "display_detail",
     "pass_note",
     "review_note",

@@ -7745,7 +7745,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("검증 기준 상세", component_source)
         self.assertIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
         self.assertIn("1차에서 확인한 기준", component_source)
-        self.assertIn("2차로 넘긴 확인 큐", component_source)
+        self.assertIn("2차 확인은 Practical Validation에서 계속 확인합니다.", component_source)
+        self.assertNotIn("2차로 넘긴 확인 큐", component_source)
         self.assertNotIn("bt-policy-gate", source)
         self.assertNotIn("1차 처리 결과", source)
         self.assertNotIn("이번 실행 확인 큐", source)
@@ -7791,6 +7792,41 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("checked_evidence", inventory["rows"][0])
         self.assertIn("display_detail", inventory["rows"][0])
 
+    def test_policy_signal_inventory_includes_plain_help_for_first_stage_rows(self) -> None:
+        from app.services.backtest_handoff_readiness import build_policy_signal_inventory
+
+        inventory = build_policy_signal_inventory(
+            {
+                "promotion_decision": "production_candidate",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "normal",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "normal",
+                "price_freshness": {"status": "ok"},
+            }
+        )
+
+        first_stage_by_signal = {row["signal"]: row for row in inventory["first_stage_rows"]}
+        liquidity = first_stage_by_signal["Liquidity Policy"]
+        liquidity_item_labels = {item["label"] for item in liquidity["checked_items"]}
+
+        self.assertIn("너무 거래가 얇아서", liquidity["plain_explanation"])
+        self.assertIn("Min Avg Dollar Volume 20D", liquidity_item_labels)
+        self.assertIn("Liquidity Clean Coverage", liquidity_item_labels)
+        self.assertIn("Liquidity Excluded Rows", liquidity_item_labels)
+        for signal in [
+            "Price Freshness",
+            "Benchmark Availability",
+            "Benchmark Policy",
+            "Validation Policy",
+            "Portfolio Guardrail Policy",
+        ]:
+            self.assertIn("plain_explanation", first_stage_by_signal[signal])
+            self.assertTrue(first_stage_by_signal[signal]["checked_items"])
+
     def test_backtest_policy_signal_react_board_component_is_ui_only(self) -> None:
         component_root = Path("app/web/components/backtest_policy_signal_board")
         wrapper_path = component_root / "component.py"
@@ -7814,8 +7850,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("from app.runtime", wrapper_source)
         self.assertIn("BacktestPolicySignalBoard", component_source)
         self.assertIn("1차에서 확인한 기준", component_source)
-        self.assertIn("2차로 넘긴 확인 큐", component_source)
+        self.assertIn("groupedFirstRows", component_source)
+        self.assertIn("bt-react-policy__help", component_source)
+        self.assertIn("aria-expanded", component_source)
+        self.assertIn("secondStageCount", component_source)
         self.assertIn("checked_evidence", component_source)
+        self.assertIn("checked_items", component_source)
+        self.assertNotIn("secondGroups.map", component_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("render_backtest_policy_signal_board(", result_display_source)
         self.assertIn("first_stage_rows", result_display_source)
