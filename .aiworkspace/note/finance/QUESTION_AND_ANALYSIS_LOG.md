@@ -8476,3 +8476,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Backtest Analysis 화면 안에서 현재 결과의 ticker만 대상으로 가격 DB를 보강하되, render path에서 provider를 직접 호출하지 않고 기존 ingestion job wrapper를 재사용한다.
 - Analysis result: 최신 기준일은 주말 / NYSE 휴장일과 장중 미완료 거래일을 제외한 latest completed session으로 계산한다. DB common latest date가 그보다 오래됐을 때만 `가격 데이터 업데이트` action을 노출한다.
 - Follow-up: 업데이트 후 기존 결과는 자동 재계산하지 않으므로 사용자가 `Run Backtest`를 다시 눌러 최신 가격 기준으로 성과를 재계산한다. 후속 UI 보정으로 visible card와 버튼은 React custom component 안에 통합했고, Python path는 submit event와 ingestion side effect만 소유한다.
+
+### 2026-07-05 - Practical Validation 개편은 taxonomy와 roadmap부터 고정한다
+
+- User request: Backtest Analysis 정리 후 `실전검증 · Practical Validation` 개선을 시작하되, 먼저 현재 검증 taxonomy와 V1-V8 개발 로드맵을 잡아 달라고 요청.
+- Interpreted goal: 사용자는 2단계 Practical Validation을 Final Review 최종판단과 분리하고, diagnostics / audits / modules / board map 반복을 줄인 실제 개발 방향을 원한다.
+- Analysis result: 현재 기능은 풍부하지만 raw diagnostics, audit rows, module gate, board map, selected-route preflight가 모두 peer UI처럼 보여 단계 경계가 흐려진다. `Monitoring Baseline`과 `Tax / Account Scope`는 코드상 이미 downstream reference 성격이므로 2단계 핵심 gate에서 낮추는 것이 맞다.
+- Follow-up: `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에 설계와 roadmap을 작성했다. 구현은 아직 시작하지 않았고, 다음 승인 후 V1은 workspace read model grouping부터 진행한다.

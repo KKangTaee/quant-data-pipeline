@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-06-25
+Last Verified: 2026-07-05
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| _none_ | - | 새 active task는 user-approved scope가 정해지면 연다. |
+| `practical-validation-taxonomy-roadmap-v1-20260705` | Active | Practical Validation V1 taxonomy / V2-V8 roadmap planning. No code implementation yet; current output is design, stage boundary, duplicate UI triage, and implementation direction. |
 
 ## Recent Completed / Retained Current Work
 
