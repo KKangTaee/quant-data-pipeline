@@ -4076,7 +4076,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 }
 .ov-futures-evidence-state,
 .ov-futures-validation-summary,
-.ov-futures-data-management {
+.ov-futures-data-management,
+.ov-futures-raw-map {
   margin: 0.45rem 0 0.85rem 0;
   padding: 0.72rem 0.78rem;
   border: 1px solid var(--ov-mi-border-faint);
@@ -4085,14 +4086,16 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 }
 .ov-futures-evidence-title,
 .ov-futures-validation-title,
-.ov-futures-data-management-title {
+.ov-futures-data-management-title,
+.ov-futures-raw-map-title {
   color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-title);
   font-weight: var(--ov-mi-weight-heading);
   line-height: 1.2;
 }
 .ov-futures-evidence-summary,
-.ov-futures-validation-coverage {
+.ov-futures-validation-coverage,
+.ov-futures-raw-map-flow {
   color: var(--ov-mi-color-text-subtle);
   font-size: var(--ov-mi-font-caption);
   font-weight: var(--ov-mi-weight-label);
@@ -4180,7 +4183,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 }
 .ov-futures-validation-occurrence span,
 .ov-futures-validation-metric span,
-.ov-futures-data-management-grid span {
+.ov-futures-data-management-grid span,
+.ov-futures-raw-map-grid span {
   display: block;
   color: var(--ov-mi-color-text-muted);
   font-size: var(--ov-mi-font-xs);
@@ -4189,7 +4193,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 }
 .ov-futures-validation-occurrence strong,
 .ov-futures-validation-metric strong,
-.ov-futures-data-management-grid strong {
+.ov-futures-data-management-grid strong,
+.ov-futures-raw-map-grid strong {
   display: block;
   color: var(--ov-mi-color-text);
   font-size: var(--ov-mi-font-value);
@@ -4198,14 +4203,19 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
   margin-top: 0.13rem;
 }
 .ov-futures-validation-metrics,
-.ov-futures-data-management-grid {
+.ov-futures-data-management-grid,
+.ov-futures-raw-map-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ov-mi-gap-sm);
   margin-top: 0.58rem;
 }
+.ov-futures-raw-map-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .ov-futures-validation-metric,
-.ov-futures-data-management-grid > div {
+.ov-futures-data-management-grid > div,
+.ov-futures-raw-map-grid > div {
   min-width: 0;
   padding: 0.48rem 0.56rem;
   border: 1px solid var(--ov-mi-border-faint);
@@ -5488,7 +5498,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
   .ov-futures-refresh-sources,
   .ov-futures-evidence-grid,
   .ov-futures-validation-metrics,
-  .ov-futures-data-management-grid {
+  .ov-futures-data-management-grid,
+  .ov-futures-raw-map-grid {
     grid-template-columns: 1fr;
   }
   .ov-futures-refresh-head,

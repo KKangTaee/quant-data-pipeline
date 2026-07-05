@@ -1279,7 +1279,7 @@ def _render_macro_validation_raw_tables(validation: dict[str, Any]) -> None:
             "Hit Rate 20D %",
             "Max Adverse 5D %",
         ]
-        with st.expander("전체 시나리오 원본 표", expanded=False):
+        with st.expander("과거 시나리오 표본", expanded=False):
             st.dataframe(
                 scenario_summary[[col for col in preferred_cols if col in scenario_summary.columns]],
                 width="stretch",
@@ -1288,11 +1288,37 @@ def _render_macro_validation_raw_tables(validation: dict[str, Any]) -> None:
     relationships = validation.get("relationships")
     threshold_sensitivity = validation.get("threshold_sensitivity")
     if isinstance(relationships, pd.DataFrame) and not relationships.empty:
-        with st.expander("점수와 이후 수익률 관계 원본", expanded=False):
+        with st.expander("점수-이후수익 관계", expanded=False):
             st.dataframe(relationships, width="stretch", hide_index=True)
     if isinstance(threshold_sensitivity, pd.DataFrame) and not threshold_sensitivity.empty:
-        with st.expander("점수 기준 민감도 원본", expanded=False):
+        with st.expander("기준값 민감도", expanded=False):
             st.dataframe(threshold_sensitivity, width="stretch", hide_index=True)
+
+
+def _render_futures_raw_table_map(*, validation_available: bool) -> None:
+    steps = [
+        ("현재 점수", "6개 macro score의 최종값"),
+        ("구성 기여", "score를 밀어낸 선물별 z-score"),
+        ("선물 일봉 변화", "1D / 5D / 20D 변화와 표준화 움직임"),
+        ("과거 표본", "현재 시나리오와 비슷한 과거 상태" if validation_available else "과거점검을 불러오면 표시"),
+    ]
+    items = "".join(
+        "<div>"
+        f"<span>{escape(title)}</span>"
+        f"<strong>{escape(detail)}</strong>"
+        "</div>"
+        for title, detail in steps
+    )
+    st.markdown(
+        f"""
+        <div class="ov-futures-raw-map">
+          <div class="ov-futures-raw-map-title">계산 순서</div>
+          <div class="ov-futures-raw-map-flow">현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본</div>
+          <div class="ov-futures-raw-map-grid">{items}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _render_futures_macro_data_management(macro: dict[str, Any]) -> None:
@@ -1324,15 +1350,16 @@ def _render_futures_macro_raw_tables(
     validation: dict[str, Any],
     cautions: list[str],
 ) -> None:
-    _render_futures_section_header("원본 표", "상세 분석자가 확인할 수 있는 계산 원본")
+    _render_futures_section_header("원본 표", "현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본")
+    _render_futures_raw_table_map(validation_available=bool(validation))
     if isinstance(scores, pd.DataFrame) and not scores.empty:
-        with st.expander("원본 점수 표", expanded=False):
+        with st.expander("현재 점수 원본", expanded=False):
             st.dataframe(scores.drop(columns=["Tone"], errors="ignore"), width="stretch", hide_index=True)
     if isinstance(components, pd.DataFrame) and not components.empty:
-        with st.expander("구성 선물별 기여", expanded=False):
+        with st.expander("점수 구성 기여", expanded=False):
             st.dataframe(components, width="stretch", hide_index=True)
     if isinstance(symbols, pd.DataFrame) and not symbols.empty:
-        with st.expander("선물별 일봉 변화 원본", expanded=False):
+        with st.expander("선물 일봉 변화", expanded=False):
             st.dataframe(symbols, width="stretch", hide_index=True)
     _render_macro_validation_raw_tables(validation)
     if cautions:

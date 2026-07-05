@@ -6025,6 +6025,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".fm-workbench__flow-tabs", react_style)
         self.assertIn(".fm-workbench__evidence", react_style)
 
+    def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
+        helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("_render_futures_raw_table_map(", helper_source)
+        self.assertIn('현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본', helper_source)
+        self.assertIn('with st.expander("현재 점수 원본"', helper_source)
+        self.assertIn('with st.expander("점수 구성 기여"', helper_source)
+        self.assertIn('with st.expander("선물 일봉 변화"', helper_source)
+        self.assertIn('with st.expander("과거 시나리오 표본"', helper_source)
+        self.assertIn('with st.expander("점수-이후수익 관계"', helper_source)
+        self.assertIn('with st.expander("기준값 민감도"', helper_source)
+        self.assertNotIn('with st.expander("원본 점수 표"', helper_source)
+        self.assertNotIn('with st.expander("전체 시나리오 원본 표"', helper_source)
+
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
         render_body = source[source.index("def render_overview_dashboard"):]

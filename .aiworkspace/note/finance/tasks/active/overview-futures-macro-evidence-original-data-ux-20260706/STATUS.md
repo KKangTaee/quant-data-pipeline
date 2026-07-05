@@ -8,4 +8,6 @@
 - Phase 1 QA complete: RED/GREEN focused unittest, `py_compile`, and `git diff --check` passed.
 - Phase 2 status: complete. Historical validation summary now reads as `현재 해석의 과거 일관성`, uses `비슷한 과거 상태`, separates directional applicability, and removes `과거 발생` / `과거 점검 요약` / `PIT 날짜` from user-facing app copy.
 - Phase 2 QA complete: RED/GREEN focused tests, FuturesMacroThermometer contract class, React payload contract check, `py_compile`, and `git diff --check` passed.
-- Current status: 3차 pending.
+- Phase 3 status: complete. Raw tables now read in calculation order: `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본`, with matching expander names and a compact raw-table map above the dataframes.
+- Phase 3 QA complete: RED/GREEN source contract, scaffold contract, FuturesMacroThermometer contract class, `py_compile`, and `git diff --check` passed.
+- Current status: 4차 pending.
