@@ -8470,3 +8470,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Backtest Analysis는 결과 무결성 / 데이터 기준 / source contract hard blocker만 표시하고, Practical Validation review focus는 1차 화면에서 count나 상세로 노출하지 않아야 함.
 - Analysis result: 기존 코드와 문서는 Data Trust, Handoff, Policy Signals에서 2차 count / notice를 반복해 사용자가 1차 검증 결과로 오해할 수 있었다. 실제 source contract는 `entry_gate.review_focus_rows`로 2차 전달을 이미 지원했다.
 - Follow-up: visible Backtest Analysis에서는 `2차 확인 큐`, `2차 전달`, readiness score를 제거하고, hard blocker가 없으면 React Handoff button을 활성화한다. 2차 상세 항목은 Practical Validation의 `Backtest에서 넘어온 2차 확인 항목`에서만 본다.
+## 2026-07-05 - Data Trust에서 가격 데이터 업데이트를 직접 실행할 수 있는가?
+
+- User request: `데이터 기준 요약`에서 OHLCV가 최신이 아니면 현재 기준으로 받을 데이터가 있을 때 바로 업데이트하는 버튼을 추가하고 싶다.
+- Interpreted goal: Backtest Analysis 화면 안에서 현재 결과의 ticker만 대상으로 가격 DB를 보강하되, render path에서 provider를 직접 호출하지 않고 기존 ingestion job wrapper를 재사용한다.
+- Analysis result: 최신 기준일은 주말 / NYSE 휴장일과 장중 미완료 거래일을 제외한 latest completed session으로 계산한다. DB common latest date가 그보다 오래됐을 때만 `가격 데이터 업데이트` action을 노출한다.
+- Follow-up: 업데이트 후 기존 결과는 자동 재계산하지 않으므로 사용자가 `Run Backtest`를 다시 눌러 최신 가격 기준으로 성과를 재계산한다.

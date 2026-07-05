@@ -5484,3 +5484,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Backtest Analysis visible surface에서 `2차 확인 큐` count / `2차 전달` Data Trust 표시 / readiness score를 제거하고, 1차 source 등록 기준과 버튼 활성화만 남겼다.
   - `promotion_decision=hold` 등 review focus는 버튼을 막지 않고 source contract `entry_gate.review_focus_rows`로만 Practical Validation에 전달한다.
   - Practical Validation `Backtest에서 넘어온 2차 확인 항목` 상세 표시와 registry / saved / strategy runtime 계약은 유지했다.
+## 2026-07-05 - Backtest Data Trust Price Refresh V1
+
+- Added Backtest Data Trust price refresh planning / execution path so stale OHLCV can be repaired for the current backtest ticker set.
+- The UI action appears only when DB common latest price date is older than the latest completed NYSE trading day after excluding weekends / holidays.
+- Boundary retained: refresh uses existing `run_collect_ohlcv`; no automatic rerun, source registration, validation handoff, approval, or order behavior.

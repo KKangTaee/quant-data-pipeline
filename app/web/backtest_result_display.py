@@ -17,6 +17,10 @@ from app.services.backtest_handoff_readiness import (
     build_next_step_readiness_evaluation,
     build_policy_signal_inventory,
 )
+from app.services.backtest_price_refresh import (
+    build_backtest_price_refresh_plan,
+    run_backtest_price_refresh,
+)
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_ui_components import (
     render_badge_strip,
@@ -544,10 +548,110 @@ def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
     )
 
 
+def _data_trust_refresh_state_key(plan: dict[str, Any]) -> str:
+    tickers_key = "_".join(str(symbol) for symbol in list(plan.get("tickers") or [])[:12])
+    safe_tickers = "".join(ch if ch.isalnum() else "_" for ch in tickers_key)[:96]
+    current = str(plan.get("current_common_latest") or "none").replace("-", "")
+    target = str(plan.get("target_end") or "none").replace("-", "")
+    return f"backtest_data_trust_price_refresh_result_{safe_tickers}_{current}_{target}"
+
+
+def _render_data_trust_refresh_job_result(result: dict[str, Any]) -> None:
+    status = str(result.get("status") or "").strip().lower()
+    rows_written = result.get("rows_written")
+    message = str(result.get("message") or "가격 데이터 업데이트 실행 결과가 없습니다.")
+    if status == "success":
+        st.success(f"{message} 저장 rows: {rows_written or 0:,}")
+    elif status == "partial_success":
+        failed = ", ".join(str(symbol) for symbol in list(result.get("failed_symbols") or [])[:8])
+        suffix = f" 확인 필요: {failed}" if failed else ""
+        st.warning(f"{message} 저장 rows: {rows_written or 0:,}.{suffix}")
+    elif status == "skipped":
+        st.info(message)
+    else:
+        st.error(message)
+    st.caption("업데이트 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
+
+
+def _render_data_trust_refresh_action(meta: dict[str, Any]) -> None:
+    plan = build_backtest_price_refresh_plan(meta)
+    if not plan.get("eligible"):
+        return
+
+    state_key = _data_trust_refresh_state_key(plan)
+    target_end = escape(str(plan.get("target_end") or "-"))
+    current_latest = escape(str(plan.get("current_common_latest") or "-"))
+    collection_start = escape(str(plan.get("collection_start") or "-"))
+    ticker_count = int(plan.get("ticker_count") or 0)
+    summary = escape(str(plan.get("summary") or "가격 데이터 업데이트가 가능합니다."))
+    detail = escape(str(plan.get("detail") or ""))
+
+    st.markdown(
+        f"""
+<style>
+.data-trust-refresh-action {{
+  border-left: 4px solid #b45309;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  background: linear-gradient(90deg, rgba(180, 83, 9, 0.10), rgba(255, 255, 255, 0));
+  margin: -0.35rem 0 0.9rem;
+  padding: 0.88rem 1.2rem;
+}}
+.data-trust-refresh-action__kicker {{
+  color: #b45309;
+  font-size: 0.84rem;
+  font-weight: 850;
+  margin-bottom: 0.24rem;
+}}
+.data-trust-refresh-action__title {{
+  color: var(--text-color);
+  font-size: 1.02rem;
+  font-weight: 850;
+  line-height: 1.35;
+}}
+.data-trust-refresh-action__meta {{
+  color: #667085;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  margin-top: 0.34rem;
+}}
+</style>
+<section class="data-trust-refresh-action">
+  <div class="data-trust-refresh-action__kicker">가격 데이터 업데이트 가능</div>
+  <div class="data-trust-refresh-action__title">{summary}</div>
+  <div class="data-trust-refresh-action__meta">
+    현재 공통 기준일 {current_latest} · 목표 기준일 {target_end} · 수집 시작 {collection_start} · 대상 {ticker_count:,}개 종목<br/>
+    {detail}
+  </div>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+    action_cols = st.columns([0.26, 0.74], gap="small", vertical_alignment="center")
+    if action_cols[0].button(
+        str(plan.get("button_label") or "가격 데이터 업데이트"),
+        key=f"{state_key}_button",
+        type="primary",
+        use_container_width=True,
+        help="기존 OHLCV 수집 pipeline으로 현재 백테스트 ticker의 daily 가격 이력을 보강합니다.",
+    ):
+        with st.spinner("현재 백테스트 ticker의 OHLCV 가격 데이터를 업데이트하는 중입니다...", show_time=True):
+            st.session_state[state_key] = run_backtest_price_refresh(meta)
+        st.rerun()
+    action_cols[1].caption(
+        "이 버튼은 가격 DB만 보강합니다. 백테스트 성과, 후보 등록, 2차 검증 전송은 자동으로 다시 실행하지 않습니다."
+    )
+    result = st.session_state.get(state_key)
+    if isinstance(result, dict):
+        _render_data_trust_refresh_job_result(result)
+
+
 def _render_data_trust_summary(meta: dict[str, Any]) -> None:
     brief = _build_data_trust_brief(meta)
 
     _render_data_trust_brief_panel(brief)
+    _render_data_trust_refresh_action(meta)
+
 
 def _data_trust_status_label(status: str | None) -> str:
     return data_trust_status_label(status)

@@ -61,6 +61,7 @@ Last Verified: 2026-06-25
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Runtime runner ownership catalog | `app/runtime/backtest/runner_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
+| Backtest Data Trust price refresh service | `app/services/backtest_price_refresh.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
