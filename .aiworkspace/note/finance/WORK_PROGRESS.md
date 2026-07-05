@@ -5472,3 +5472,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-stage-split-v1-20260705/`에서 `검증 기준 상세`을 1차 source 기준 React board로 정리했다.
   - 2차 review focus는 Backtest Analysis에서 count / group handoff만 보이고, 상세 row는 Practical Validation `Backtest에서 넘어온 2차 확인 항목`에서 확인한다.
   - gate math, source registration write, registry / saved / strategy runtime 계약은 변경하지 않았다.
+- Backtest Handoff Entry Gate Queue V1 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-entry-gate-queue-v1-20260705/`에서 Handoff card의 visible `진입 준비도` score를 제거하고 `1차 진입 기준 / 먼저 해결 / 2차 확인 큐`로 바꿨다.
+  - `promotion_decision=hold`는 1차 source 등록 blocker가 아니라 Practical Validation으로 전달되는 2차 review queue로 표시한다.
+  - React card / button integration은 유지하고, registry / saved / strategy runtime / gate threshold는 변경하지 않았다.

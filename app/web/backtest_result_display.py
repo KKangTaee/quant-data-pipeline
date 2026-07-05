@@ -676,31 +676,29 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
     evaluation = build_next_step_readiness_evaluation(meta)
     gate_summary = build_handoff_gate_summary(meta)
     can_submit = bool(evaluation.get("can_enter_practical_validation"))
-    score = float(evaluation.get("score") or 0.0)
     blocking_reasons = [str(reason) for reason in list(evaluation.get("blocking_reasons") or [])]
     review_reasons = [str(reason) for reason in list(evaluation.get("review_reasons") or [])]
     inventory = dict(evaluation.get("policy_signal_inventory") or {})
     inventory_counts = dict(inventory.get("counts") or {})
     first_stage_blocker_count = int(inventory_counts.get("first_stage_block") or 0)
     second_stage_review_count = int(inventory_counts.get("second_stage_review") or len(review_reasons))
+    if not can_submit:
+        first_stage_blocker_count = max(
+            first_stage_blocker_count,
+            len(list(evaluation.get("entry_blocking_reasons") or [])),
+        )
 
-    if can_submit and score >= 8.0:
-        status_label = "진입 가능"
+    if can_submit:
+        status_label = "2차 진입 가능"
         tone = "positive"
-        summary = "1차 후보 판단을 통과했습니다."
-        action_text = "이 결과를 2차 실전성 검증 입력 후보로 등록할 수 있습니다."
-        button_label = "2차 검증으로 보내기"
-    elif can_submit:
-        status_label = "조건부 진입 가능"
-        tone = "warning"
-        summary = "1차 후보 판단은 통과했지만, 다음 단계에서 확인할 review 신호가 있습니다."
-        action_text = "Practical Validation으로 넘긴 뒤 표시된 review 신호를 우선 확인하세요."
+        summary = "1차에서 확인할 source 등록 기준은 통과했습니다. 2차 확인 큐는 Practical Validation에서 이어서 검증합니다."
+        action_text = "Practical Validation으로 넘긴 뒤 2차 확인 큐를 확인하세요."
         button_label = "2차 검증으로 보내기"
     else:
-        status_label = "진입 보류"
+        status_label = "1차 진입 보류"
         tone = "danger"
-        summary = "아직 1차 후보 판단을 통과하지 못했습니다."
-        action_text = "버튼을 활성화하려면 Promotion / 실행 원천 / 검증 원천 blocker를 먼저 해결하세요."
+        summary = "1차 source 등록 기준에 blocker가 있습니다."
+        action_text = "먼저 해결 항목을 정리한 뒤 다시 실행하세요."
         button_label = "진입 기준 확인 필요"
 
     if not can_submit:
@@ -708,14 +706,33 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         reason_title = str(gate_summary.get("reason_title") or ("막는 이유" if blocking_reasons else "상태"))
     elif review_reasons:
         display_reasons = [
-            f"2차 확인 항목 {second_stage_review_count}개가 source와 함께 Practical Validation으로 전달됩니다.",
-            "상세 항목은 2차 화면의 선택 후보 확인에서 이어서 봅니다.",
+            f"2차 확인 큐 {second_stage_review_count}개는 source와 함께 Practical Validation으로 전달됩니다.",
+            "Promotion hold와 실전성 review는 2차 화면에서 provider, data coverage, realism, robustness 근거로 확인합니다.",
         ]
-        reason_title = "2차 확인 전달"
+        reason_title = "2차 확인 큐 전달"
     else:
-        display_reasons = ["막는 항목 없음"]
+        display_reasons = ["2차 확인 큐 없음"]
         reason_title = "상태"
-    criteria = list(gate_summary.get("gate_groups") or [])
+    entry_cards = [
+        {
+            "label": "1차 진입 기준",
+            "value": "통과" if can_submit else "보류",
+            "detail": "source 등록 가능" if can_submit else "source 등록 차단",
+            "tone": "positive" if can_submit else "danger",
+        },
+        {
+            "label": "먼저 해결",
+            "value": f"{first_stage_blocker_count}개",
+            "detail": "1차 blocker",
+            "tone": "danger" if first_stage_blocker_count else "positive",
+        },
+        {
+            "label": "2차 확인 큐",
+            "value": f"{second_stage_review_count}개",
+            "detail": "Practical Validation에서 확인",
+            "tone": "warning" if second_stage_review_count else "positive",
+        },
+    ]
 
     return {
         "can_submit": can_submit,
@@ -724,10 +741,9 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         "summary": summary,
         "action_text": action_text,
         "button_label": button_label,
-        "score": score,
         "reason_title": reason_title,
         "display_reasons": display_reasons,
-        "criteria": criteria,
+        "entry_cards": entry_cards,
         "evaluation": evaluation,
         "first_stage_blocker_count": first_stage_blocker_count,
         "second_stage_review_count": second_stage_review_count,
@@ -739,10 +755,9 @@ def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
     status = escape(str(state.get("status_label") or "-"))
     summary = escape(str(state.get("summary") or "-"))
     action_text = escape(str(state.get("action_text") or "-"))
-    score = escape(f"{float(state.get('score') or 0.0):.1f} / 10")
     reason_title = escape(str(state.get("reason_title") or "상태"))
     reasons = list(state.get("display_reasons") or [])
-    criteria = list(state.get("criteria") or [])
+    entry_cards = list(state.get("entry_cards") or [])
     action_label = "등록 가능" if bool(state.get("can_submit")) else "기준 확인 필요"
     action_detail = (
         "아래 버튼을 누르면 이 결과를 Practical Validation이 읽는 current selection source로 등록합니다."
@@ -750,16 +765,18 @@ def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
         else "막는 항목이 남아 있으면 source 등록 버튼은 비활성화됩니다."
     )
     reason_items = "".join(f"<li>{escape(str(reason))}</li>" for reason in reasons)
-    criteria_items = "".join(
+    entry_items = "".join(
         '<div class="bt-handoff-chip bt-handoff-chip-{tone}">'
         '<span class="bt-handoff-chip-label">{label}</span>'
         '<span class="bt-handoff-chip-value">{value}</span>'
+        '<small class="bt-handoff-chip-detail">{detail}</small>'
         "</div>".format(
             tone=escape(str(item.get("tone") or "neutral")),
             label=escape(str(item.get("label") or "-")),
             value=escape(str(item.get("value") or "-")),
+            detail=escape(str(item.get("detail") or "")),
         )
-        for item in criteria
+        for item in entry_cards
     )
     st.markdown(
         """
@@ -829,11 +846,6 @@ def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
             color: var(--text-color);
             opacity: 0.74;
           }
-          .bt-handoff-score {
-            margin-top: 0.58rem;
-            font-weight: 800;
-            color: var(--text-color);
-          }
           .bt-handoff-chips {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -866,6 +878,14 @@ def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
             font-weight: 800;
             color: var(--text-color);
             overflow-wrap: anywhere;
+          }
+          .bt-handoff-chip-detail {
+            display: block;
+            margin-top: 0.12rem;
+            color: var(--text-color);
+            opacity: 0.62;
+            font-size: 0.72rem;
+            line-height: 1.3;
           }
           .bt-handoff-reasons {
             border-radius: 8px;
@@ -956,8 +976,7 @@ def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
         f"</div>"
         f'<div class="bt-handoff-main">'
         f'<div><div class="bt-handoff-summary">{summary}</div>'
-        f'<div class="bt-handoff-score">진입 준비도 {score}</div>'
-        f'<div class="bt-handoff-chips">{criteria_items}</div></div>'
+        f'<div class="bt-handoff-chips">{entry_items}</div></div>'
         f'<div class="bt-handoff-reasons"><div class="bt-handoff-reason-title">{reason_title}</div>'
         f"<ul>{reason_items}</ul></div>"
         f"</div>"
@@ -1358,10 +1377,9 @@ def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
         status_label=str(state.get("status_label") or "-"),
         tone=str(state.get("tone") or "neutral"),
         summary=str(state.get("summary") or "-"),
-        score=f"{float(state.get('score') or 0.0):.1f} / 10",
         reason_title=str(state.get("reason_title") or "상태"),
         reasons=[str(item) for item in list(state.get("display_reasons") or [])],
-        criteria=[dict(item) for item in list(state.get("criteria") or [])],
+        entry_cards=[dict(item) for item in list(state.get("entry_cards") or [])],
         action_text=str(state.get("action_text") or "-"),
         button_label=str(state.get("button_label") or "2차 검증으로 보내기"),
         disabled=not can_submit,

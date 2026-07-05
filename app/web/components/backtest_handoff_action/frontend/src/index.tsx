@@ -8,12 +8,12 @@ type StreamlitArgs = {
   statusLabel?: string
   tone?: "positive" | "warning" | "danger" | "neutral"
   summary?: string
-  score?: string
   reasonTitle?: string
   reasons?: string[]
-  criteria?: Array<{
+  entryCards?: Array<{
     label?: string
     value?: string
+    detail?: string
     tone?: "positive" | "warning" | "danger" | "neutral"
   }>
   actionText?: string
@@ -34,10 +34,9 @@ function App({ args }: AppProps) {
       statusLabel={args?.statusLabel ?? "-"}
       tone={args?.tone ?? "neutral"}
       summary={args?.summary ?? "-"}
-      score={args?.score ?? "-"}
       reasonTitle={args?.reasonTitle ?? "상태"}
       reasons={Array.isArray(args?.reasons) ? args.reasons : []}
-      criteria={Array.isArray(args?.criteria) ? args.criteria : []}
+      entryCards={Array.isArray(args?.entryCards) ? args.entryCards : []}
       actionText={args?.actionText ?? "-"}
       buttonLabel={args?.buttonLabel ?? "Submit"}
       disabled={Boolean(args?.disabled)}

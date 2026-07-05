@@ -11,7 +11,7 @@ body {
   --accent: #64748b;
   --soft: rgba(100, 116, 139, 0.08);
   --border: rgba(148, 163, 184, 0.24);
-  background: linear-gradient(90deg, var(--soft), rgba(255, 255, 255, 0));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.99));
   border-left: 4px solid var(--accent);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -84,14 +84,6 @@ body {
   margin: 0;
 }
 
-.bt-react-handoff__summary strong {
-  color: #2f3140;
-  display: block;
-  font-size: 0.98rem;
-  line-height: 1.4;
-  margin-top: 0.55rem;
-}
-
 .bt-react-handoff__chips {
   display: grid;
   gap: 0.5rem;
@@ -134,6 +126,14 @@ body {
   font-size: 0.96rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.bt-react-handoff__chip small {
+  color: #667085;
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.32;
+  margin-top: 0.14rem;
 }
 
 .bt-react-handoff__reasons {

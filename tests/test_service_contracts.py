@@ -7624,13 +7624,17 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
 
         self.assertTrue(state["can_submit"])
-        self.assertEqual(state["status_label"], "조건부 진입 가능")
-        self.assertIn("2차 확인 항목 1개가 source와 함께 Practical Validation으로 전달됩니다.", state["display_reasons"])
+        self.assertEqual(state["status_label"], "2차 진입 가능")
+        self.assertIn("2차 확인 큐 1개는 source와 함께 Practical Validation으로 전달됩니다.", state["display_reasons"])
         self.assertNotIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
         self.assertEqual(state["first_stage_blocker_count"], 0)
         self.assertEqual(state["second_stage_review_count"], 1)
-        criteria = {row["label"]: row for row in state["criteria"]}
-        self.assertEqual(criteria["Promotion"]["value"], "review 1")
+        entry_cards = {row["label"]: row for row in state["entry_cards"]}
+        self.assertEqual(entry_cards["1차 진입 기준"]["value"], "통과")
+        self.assertEqual(entry_cards["먼저 해결"]["value"], "0개")
+        self.assertEqual(entry_cards["2차 확인 큐"]["value"], "1개")
+        self.assertNotIn("criteria", state)
+        self.assertNotIn("score", state)
 
     def test_practical_validation_handoff_gate_still_blocks_missing_source_basis(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state
@@ -7652,10 +7656,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
 
         self.assertFalse(state["can_submit"])
-        self.assertEqual(state["status_label"], "진입 보류")
+        self.assertEqual(state["status_label"], "1차 진입 보류")
         self.assertIn("Promotion signal이 비어 있습니다. Backtest 결과를 다시 실행해 promotion signal을 생성하세요.", state["display_reasons"])
         self.assertTrue(any("검증 원천 blocker" in item for item in state["display_reasons"]))
         self.assertGreaterEqual(state["first_stage_blocker_count"], 1)
+        entry_cards = {row["label"]: row for row in state["entry_cards"]}
+        self.assertEqual(entry_cards["1차 진입 기준"]["value"], "보류")
+        self.assertEqual(entry_cards["먼저 해결"]["tone"], "danger")
 
     def test_practical_validation_handoff_gate_allows_ready_candidates(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state
@@ -7677,11 +7684,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
 
         self.assertTrue(state["can_submit"])
-        self.assertEqual(state["status_label"], "진입 가능")
-        self.assertEqual(state["display_reasons"], ["막는 항목 없음"])
-        criteria = {row["label"]: row for row in state["criteria"]}
-        self.assertEqual(criteria["실행 원천"]["value"], "통과")
-        self.assertEqual(criteria["검증 원천"]["value"], "통과")
+        self.assertEqual(state["status_label"], "2차 진입 가능")
+        self.assertEqual(state["display_reasons"], ["2차 확인 큐 없음"])
+        entry_cards = {row["label"]: row for row in state["entry_cards"]}
+        self.assertEqual(entry_cards["1차 진입 기준"]["value"], "통과")
+        self.assertEqual(entry_cards["먼저 해결"]["value"], "0개")
+        self.assertEqual(entry_cards["2차 확인 큐"]["value"], "0개")
 
     def test_practical_validation_handoff_uses_single_integrated_action_surface(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
@@ -7709,6 +7717,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("bt-handoff-boundary", panel_body)
         self.assertIn("2차 단계 진입 판단", panel_body)
         self.assertIn("검증 source 등록만 수행합니다", panel_body)
+        self.assertIn("entry_cards", source)
+        self.assertNotIn("진입 준비도", panel_body)
         self.assertNotIn("_render_practical_validation_handoff_card(state)", action_body)
         self.assertNotIn("with st.container(border=True)", action_body)
         self.assertNotIn("handoff_cols = st.columns", action_body)
@@ -7903,9 +7913,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("2차 실전성 검증 Handoff", component_source)
         self.assertIn("Streamlit.setComponentValue", component_source)
         self.assertIn("Date.now()", component_source)
-        self.assertIn("criteria", wrapper_source)
+        self.assertIn("entry_cards", wrapper_source)
+        self.assertIn("entryCards", component_source)
         self.assertIn("reasons", wrapper_source)
-        self.assertIn("score", wrapper_source)
+        self.assertNotIn("score", wrapper_source)
+        self.assertNotIn("진입 준비도", component_source)
+        self.assertIn("1차 진입 기준", result_display_source)
+        self.assertIn("2차 확인 큐", result_display_source)
         self.assertIn(".bt-react-handoff {", style_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)

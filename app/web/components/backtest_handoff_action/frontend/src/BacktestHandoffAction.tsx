@@ -3,9 +3,10 @@ import { Streamlit } from "streamlit-component-lib"
 
 type Tone = "positive" | "warning" | "danger" | "neutral"
 
-type HandoffCriterion = {
+type HandoffEntryCard = {
   label?: string
   value?: string
+  detail?: string
   tone?: Tone
 }
 
@@ -13,10 +14,9 @@ type BacktestHandoffActionProps = {
   statusLabel: string
   tone: Tone
   summary: string
-  score: string
   reasonTitle: string
   reasons: string[]
-  criteria: HandoffCriterion[]
+  entryCards: HandoffEntryCard[]
   actionText: string
   buttonLabel: string
   disabled: boolean
@@ -44,7 +44,8 @@ export function BacktestHandoffAction(props: BacktestHandoffActionProps) {
 
   const tone = toneClass(props.tone)
   const reasons = props.reasons.length > 0 ? props.reasons : ["막는 항목 없음"]
-  const criteria = props.criteria.length > 0 ? props.criteria : [{ label: "상태", value: "-", tone: "neutral" }]
+  const entryCards =
+    props.entryCards.length > 0 ? props.entryCards : [{ label: "1차 진입 기준", value: "-", tone: "neutral" }]
 
   return (
     <section className={`bt-react-handoff bt-react-handoff--${tone}`}>
@@ -59,15 +60,15 @@ export function BacktestHandoffAction(props: BacktestHandoffActionProps) {
       <div className="bt-react-handoff__body">
         <div className="bt-react-handoff__summary">
           <p>{props.summary}</p>
-          <strong>진입 준비도 {props.score}</strong>
           <div className="bt-react-handoff__chips">
-            {criteria.map((criterion, index) => (
+            {entryCards.map((entryCard, index) => (
               <div
-                className={`bt-react-handoff__chip bt-react-handoff__chip--${toneClass(criterion.tone)}`}
-                key={`${criterion.label ?? "criterion"}-${index}`}
+                className={`bt-react-handoff__chip bt-react-handoff__chip--${toneClass(entryCard.tone)}`}
+                key={`${entryCard.label ?? "entry"}-${index}`}
               >
-                <span>{criterion.label ?? "-"}</span>
-                <b>{criterion.value ?? "-"}</b>
+                <span>{entryCard.label ?? "-"}</span>
+                <b>{entryCard.value ?? "-"}</b>
+                {entryCard.detail ? <small>{entryCard.detail}</small> : null}
               </div>
             ))}
           </div>

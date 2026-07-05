@@ -8449,3 +8449,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 1차 화면은 source 등록 기준과 hard blocker를 명확히 보여주고, hold / watch / caution 같은 review focus는 source evidence로 2차에 전달해야 함.
 - Analysis result: `entry_gate.review_focus_rows`가 이미 Practical Validation source에 저장되므로, gate math나 저장 경로를 바꾸지 않고 display model만 `first_stage_rows` / `second_stage_review_rows`로 분리할 수 있다.
 - Follow-up: Backtest Analysis `검증 기준 상세`은 React first-stage evidence board로 렌더링하고, Practical Validation `Backtest에서 넘어온 2차 확인 항목`은 각 row의 확인할 것과 표시 근거를 함께 보여준다.
+
+### 2026-07-05 - Handoff는 1차 gate와 2차 queue를 분리해 보여준다
+
+- User request: 사용자가 `진입 준비도 5.0 / 10`과 promotion hold 표시 때문에 2차로 보낼 수 있는데도 1차에서 덜 통과한 것처럼 보인다고 지적하고, 1차 / 2차 검증 리스트를 명확히 구분해 달라고 요청함.
+- Interpreted goal: Handoff card는 1차 source 등록 기준 통과 여부와 2차로 전달할 review queue를 분리해야 하며, score는 visible entry gate처럼 보이지 않아야 한다.
+- Analysis result: 버튼 활성화는 이미 `can_enter_practical_validation`이 담당하고 있었고, 혼선은 visible score / Promotion review chip이 같은 Handoff card 안에 노출된 데서 왔다. `promotion_decision=hold`는 source 등록 blocker가 아니라 2차 review focus다.
+- Follow-up: Handoff React card는 `1차 진입 기준 / 먼저 해결 / 2차 확인 큐` entry cards를 표시하고, source registration write / rerun / registry / strategy runtime 계약은 유지한다.
