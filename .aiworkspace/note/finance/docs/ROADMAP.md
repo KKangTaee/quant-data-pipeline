@@ -9,6 +9,12 @@ Last Verified: 2026-06-30
 
 Latest completed task: `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`
 
+Current active task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`
+
+목적: `Workspace > Overview > Futures Macro`를 빠른 첫 진입 화면으로 만들고, historical validation을 명시적 사용자 action으로 분리한 뒤 React custom component 전환, 1W/1M 흐름 확장, mixed subtype refinement, validation cache/materialization 판단, 최종 QA/docs 순서로 닫는다.
+
+현재 상태: 1차 fast entry / lazy validation 완료. 탭 진입은 `include_validation=False` snapshot을 사용하고, `과거 점검 불러오기`가 historical validation과 confidence를 session state에 저장한다. `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다.
+
 목적: 재무제표 source migration 1~9차를 닫고, durable docs와 runbook에서 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 saved/history replay용 legacy compatibility로 고정한다.
 
 주요 변경: Market Movers annual financial snapshot, strict annual factor backtest family, Ingestion financial statement refresh, statement coverage QA, and docs now use EDGAR detailed statements / statement shadow as the primary source contract. Quarterly consumers remain gated to `10-Q` / `10-Q/A`; `10-K` / FY full-year flow values are not treated as quarterly values.

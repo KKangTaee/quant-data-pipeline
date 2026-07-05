@@ -15,7 +15,11 @@ from app.services.futures_macro_thermometer import (
     clear_overview_futures_macro_snapshot_cache,
     load_overview_futures_macro_snapshot,
 )
-from app.services.futures_macro_validation import build_current_scenario_validation_summary
+from app.services.futures_macro_validation import (
+    build_current_scenario_validation_summary,
+    build_futures_macro_validation_snapshot,
+    build_interpretation_confidence,
+)
 from app.web.overview.session_helpers import _snapshot_value
 from app.web.overview.components.common import _overview_tone_color
 
@@ -67,6 +71,9 @@ MACRO_EVIDENCE_TEXT_LABELS = {
     "Safe Haven": "안전자산",
     "Inflation": "물가 압력",
 }
+OVERVIEW_FUTURES_MACRO_VALIDATION_KEY = "overview_futures_macro_validation_snapshot"
+OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY = "overview_futures_macro_validation_confidence"
+OVERVIEW_FUTURES_MACRO_VALIDATION_LOADED_AT_KEY = "overview_futures_macro_validation_loaded_at"
 
 
 def render_futures_macro_header() -> None:
@@ -84,6 +91,37 @@ def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
 
 def _run_futures_daily_ohlcv_action() -> dict[str, Any]:
     return run_overview_futures_daily_ohlcv()
+
+
+def _clear_futures_macro_validation_state() -> None:
+    for key in (
+        OVERVIEW_FUTURES_MACRO_VALIDATION_KEY,
+        OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY,
+        OVERVIEW_FUTURES_MACRO_VALIDATION_LOADED_AT_KEY,
+    ):
+        st.session_state.pop(key, None)
+
+
+def _futures_macro_session_validation() -> tuple[dict[str, Any], dict[str, Any], str]:
+    validation = st.session_state.get(OVERVIEW_FUTURES_MACRO_VALIDATION_KEY)
+    confidence = st.session_state.get(OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY)
+    loaded_at = st.session_state.get(OVERVIEW_FUTURES_MACRO_VALIDATION_LOADED_AT_KEY)
+    return (
+        dict(validation) if isinstance(validation, dict) else {},
+        dict(confidence) if isinstance(confidence, dict) else {},
+        str(loaded_at or ""),
+    )
+
+
+def _load_futures_macro_validation_for_session(macro: dict[str, Any]) -> None:
+    validation = build_futures_macro_validation_snapshot(
+        symbols=_futures_selected_symbols(macro),
+        current_snapshot=macro,
+    )
+    confidence = build_interpretation_confidence(macro, validation)
+    st.session_state[OVERVIEW_FUTURES_MACRO_VALIDATION_KEY] = validation
+    st.session_state[OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY] = confidence
+    st.session_state[OVERVIEW_FUTURES_MACRO_VALIDATION_LOADED_AT_KEY] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _render_market_job_result(result_key: str) -> None:
@@ -172,7 +210,14 @@ def _futures_metric_for_symbol(rows: Any, symbol: str) -> dict[str, Any]:
 
 
 def _futures_selected_symbols(snapshot: dict[str, Any]) -> list[str]:
-    symbols = [str(symbol) for symbol in snapshot.get("symbols") or [] if str(symbol).strip()]
+    raw_symbols = snapshot.get("symbols")
+    if isinstance(raw_symbols, pd.DataFrame):
+        if raw_symbols.empty or "Symbol" not in raw_symbols:
+            symbols = []
+        else:
+            symbols = [str(symbol) for symbol in raw_symbols["Symbol"].dropna().tolist() if str(symbol).strip()]
+    else:
+        symbols = [str(symbol) for symbol in (raw_symbols or []) if str(symbol).strip()]
     ordered: list[str] = []
     for symbol in symbols:
         if symbol and symbol not in ordered:
@@ -1029,6 +1074,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
                 _run_futures_daily_ohlcv_action(),
             )
             clear_overview_futures_macro_snapshot_cache()
+            _clear_futures_macro_validation_state()
             st.session_state["overview_futures_macro_daily_refreshed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
     if cols[2].button(
@@ -1038,13 +1084,53 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         help="수집 job은 실행하지 않고 현재 DB 기준으로 매크로 snapshot cache만 비운 뒤 다시 읽습니다.",
     ):
         clear_overview_futures_macro_snapshot_cache()
+        _clear_futures_macro_validation_state()
         st.session_state["overview_futures_macro_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
     st.markdown('<div class="ov-futures-macro-action-rule"></div>', unsafe_allow_html=True)
 
 
+def _render_futures_macro_validation_controls(
+    macro: dict[str, Any],
+    *,
+    validation: dict[str, Any],
+    loaded_at: str,
+) -> None:
+    state = "불러옴" if validation else "대기"
+    detail = (
+        f"과거 점검 기준: {loaded_at}"
+        if validation and loaded_at
+        else "탭 첫 진입은 현재 매크로만 빠르게 읽고, 과거 점검은 필요할 때 계산합니다."
+    )
+    cols = st.columns([1, 0.22], gap="small", vertical_alignment="center")
+    cols[0].markdown(
+        f"""
+        <div class="ov-futures-validation-action-copy">
+          <div class="ov-futures-validation-action-title">과거 점검</div>
+          <div class="ov-futures-validation-action-meta">{escape(state)} · {escape(detail)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if cols[1].button(
+        "과거 점검 불러오기",
+        key="overview_futures_macro_validation_load",
+        use_container_width=True,
+        help="저장된 선물 일봉과 proxy 가격으로 historical validation을 계산합니다. 첫 실행은 수 초 걸릴 수 있습니다.",
+    ):
+        with st.spinner("과거 점검을 계산하는 중입니다..."):
+            _load_futures_macro_validation_for_session(macro)
+        st.rerun()
+
+
 def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
-    macro = load_overview_futures_macro_snapshot()
+    macro = load_overview_futures_macro_snapshot(include_validation=False)
+    session_validation, session_confidence, validation_loaded_at = _futures_macro_session_validation()
+    if session_validation:
+        macro = dict(macro)
+        macro["validation"] = session_validation
+        if session_confidence:
+            macro["confidence"] = session_confidence
     coverage = dict(macro.get("coverage") or {})
     scores = macro.get("scores")
     components = macro.get("score_components")
@@ -1058,6 +1144,11 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
             f" · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}"
         ),
     )
+    _render_futures_macro_validation_controls(
+        macro,
+        validation=validation,
+        loaded_at=validation_loaded_at,
+    )
     _render_futures_market_brief(macro)
     _render_weekly_macro_context(dict(macro.get("weekly_context") or {}))
     _render_macro_score_lane(scores)
@@ -1070,7 +1161,10 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     cautions.extend(_macro_caution_label(item) for item in validation.get("caveats") or [] if str(item).strip())
     with st.expander("근거 해석 / 원본 데이터", expanded=detail_expanded):
         _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
-        _render_macro_validation_summary(validation, confidence_label=str(confidence.get("label") or ""))
+        if validation:
+            _render_macro_validation_summary(validation, confidence_label=str(confidence.get("label") or ""))
+        else:
+            st.info("과거 점검은 아직 불러오지 않았습니다. 상단의 `과거 점검 불러오기`를 누르면 historical validation을 계산합니다.")
         _render_futures_macro_data_management(macro)
         _render_futures_macro_raw_tables(
             scores=scores,

@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro React UX 1차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 Futures Macro 첫 진입 병목을 historical validation 동기 계산으로 확인하고 lazy/on-demand 경계로 분리했다.
+  - 탭 진입은 `include_validation=False` snapshot만 읽고, `과거 점검 불러오기`가 validation / confidence를 session state에 저장한다.
+  - `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다. 다음은 2차 React component MVP다.
 - Overview Market Movers Tab Actions / Statement Refresh:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-tab-actions-statement-refresh-20260702/`에서 선택 종목 조사 탭 액션을 분리했다.
   - News 탭은 뉴스 / 한국어 뉴스 metadata만, SEC 공시 탭은 SEC metadata와 필요한 재무제표 수집 action을 소유한다.

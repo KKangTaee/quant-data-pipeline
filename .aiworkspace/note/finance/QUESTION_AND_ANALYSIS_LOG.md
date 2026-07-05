@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Futures Macro first entry should not compute historical validation synchronously
+
+- User request: Futures Macro 탭 개선을 1차~6차 개발 / QA / 커밋 단위로 진행하되, 먼저 첫 진입 병목을 분리하고 React 전환은 그 다음 차수로 진행해 달라고 요청함.
+- Interpreted goal: Futures Macro는 첫 화면에서 현재 매크로 해석을 빠르게 보여주고, 과거 점검은 숨기는 것이 아니라 사용자가 필요할 때 명시적으로 계산해야 한다.
+- Analysis result: 병목은 React / HTML 렌더링이 아니라 `load_overview_futures_macro_snapshot()` 기본 `include_validation=True` 경로의 historical validation 동기 계산이다. 따라서 1차는 tab entry를 `include_validation=False`로 바꾸고 `과거 점검 불러오기` 버튼에서 validation / confidence를 session state에 저장하는 경계가 맞다.
+- Follow-up: 2차는 React component MVP이며, 5차에서 process cache 강화와 compact DB materialization 중 어떤 방식이 맞는지 별도 판단한다.
+
 ### 2026-07-02 - Market Movers metadata and filing collection actions should follow tab ownership
 
 - User request: 기본 지표에서 받아야 할 재무제표가 보이면 하단 `뉴스`, `SEC 공시`, `메타` 탭의 조회 기능을 각 탭에 맞게 분리하고, SEC 공시 탭에서 해당 재무제표를 수집할 수 있게 해 달라고 승인함.

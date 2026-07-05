@@ -3775,13 +3775,32 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
   margin-top: 0.12rem;
   overflow-wrap: anywhere;
 }
+.ov-futures-validation-action-copy {
+  min-width: 0;
+  padding: 0.04rem 0 0.46rem 0;
+}
+.ov-futures-validation-action-title {
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-body);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.18;
+}
+.ov-futures-validation-action-meta {
+  color: var(--ov-mi-color-text-muted);
+  font-size: var(--ov-mi-font-caption);
+  font-weight: var(--ov-mi-weight-label);
+  line-height: 1.28;
+  margin-top: 0.1rem;
+  overflow-wrap: anywhere;
+}
 .ov-futures-macro-action-rule {
   height: 1px;
   margin: 0.04rem 0 0.62rem 0;
   border-bottom: 1px solid var(--ov-mi-border-faint);
 }
 .st-key-overview_futures_macro_tab_daily_refresh button,
-.st-key-overview_futures_macro_tab_reload button {
+.st-key-overview_futures_macro_tab_reload button,
+.st-key-overview_futures_macro_validation_load button {
   min-height: 2.35rem;
   padding: 0.36rem 0.7rem;
   border-radius: var(--ov-mi-radius-card);
@@ -3809,6 +3828,16 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 .st-key-overview_futures_macro_tab_reload button:hover {
   border-color: color-mix(in srgb, var(--ov-mi-color-primary) 34%, var(--ov-mi-border-control));
   background: color-mix(in srgb, var(--ov-mi-color-primary) 7%, rgba(255,255,255,0.9));
+  color: var(--ov-mi-color-text);
+}
+.st-key-overview_futures_macro_validation_load button {
+  border: 1px solid color-mix(in srgb, var(--ov-mi-color-primary) 54%, var(--ov-mi-border-control));
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 8%, rgba(255,255,255,0.92));
+  color: var(--ov-mi-color-text);
+}
+.st-key-overview_futures_macro_validation_load button:hover {
+  border-color: color-mix(in srgb, var(--ov-mi-color-primary) 72%, var(--ov-mi-border-control));
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 12%, rgba(255,255,255,0.96));
   color: var(--ov-mi-color-text);
 }
 .ov-futures-brief {

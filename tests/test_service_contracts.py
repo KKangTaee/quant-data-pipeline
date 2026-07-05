@@ -4939,7 +4939,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "forbidden": "_legacy._render_futures_macro_tab",
                 "required": [
                     "render_futures_macro_header()",
-                    "render_futures_macro_fragment(detail_expanded=True)",
+                    "render_futures_macro_fragment(detail_expanded=False)",
                 ],
             },
             "app/web/overview/sentiment.py": {
@@ -5784,7 +5784,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
         self.assertIn("def render_futures_macro_tab", futures_source)
-        self.assertIn("render_futures_macro_fragment(detail_expanded=True)", futures_source)
+        self.assertIn("render_futures_macro_fragment(detail_expanded=False)", futures_source)
         self.assertNotIn("legacy_dashboard", futures_helper_source)
         self.assertNotIn("_legacy.", futures_helper_source)
         self.assertIn("_render_futures_macro_panel(detail_expanded=detail_expanded)", futures_helper_source)
@@ -5800,10 +5800,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         panel_body = panel_body[: panel_body.index("def render_futures_macro_fragment")]
         tab_body = futures_source[futures_source.index("def render_futures_macro_tab") :]
 
-        self.assertIn("render_futures_macro_fragment(detail_expanded=True)", tab_body)
+        self.assertIn("render_futures_macro_fragment(detail_expanded=False)", tab_body)
         self.assertNotIn("_legacy._render_futures_macro_refresh_controls()", tab_body)
         self.assertNotIn("legacy_dashboard", futures_helper_source)
         self.assertNotIn("_legacy.", futures_helper_source)
+        self.assertIn("OVERVIEW_FUTURES_MACRO_VALIDATION_KEY", futures_helper_source)
+        self.assertIn("load_overview_futures_macro_snapshot(include_validation=False)", panel_body)
+        self.assertIn("_render_futures_macro_validation_controls(", panel_body)
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
         self.assertIn("section_detail=", panel_body)
         self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
@@ -5822,8 +5825,29 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('"다시 읽기"', controls_body)
         self.assertIn(".ov-futures-macro-action-title", style_source)
         self.assertIn(".ov-futures-macro-action-rule", style_source)
+        self.assertIn(".ov-futures-validation-action-title", style_source)
+        self.assertIn(".st-key-overview_futures_macro_validation_load button", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
+
+    def test_futures_macro_symbol_extraction_accepts_snapshot_dataframe(self) -> None:
+        import pandas as pd
+
+        from app.web.overview.futures_macro_helpers import _futures_selected_symbols
+
+        symbols = _futures_selected_symbols(
+            {
+                "symbols": pd.DataFrame(
+                    [
+                        {"Symbol": "ES=F"},
+                        {"Symbol": "NQ=F"},
+                        {"Symbol": "ES=F"},
+                    ]
+                )
+            }
+        )
+
+        self.assertEqual(symbols, ["ES=F", "NQ=F"])
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
