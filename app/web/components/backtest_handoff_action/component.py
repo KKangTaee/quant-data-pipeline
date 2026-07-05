@@ -16,10 +16,20 @@ _component = (
 )
 
 
+def is_backtest_handoff_action_available() -> bool:
+    return _component is not None
+
+
 def render_backtest_handoff_action(
     *,
     status_label: str,
     tone: str,
+    summary: str,
+    score: str,
+    reason_title: str,
+    reasons: list[str],
+    criteria: list[dict[str, Any]],
+    action_text: str,
     button_label: str,
     disabled: bool,
     review_count: int,
@@ -37,6 +47,12 @@ def render_backtest_handoff_action(
     value = _component(
         statusLabel=status_label,
         tone=tone,
+        summary=summary,
+        score=score,
+        reasonTitle=reason_title,
+        reasons=reasons,
+        criteria=criteria,
+        actionText=action_text,
         buttonLabel=button_label,
         disabled=disabled,
         reviewCount=review_count,

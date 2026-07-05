@@ -7,6 +7,16 @@ import "./style.css"
 type StreamlitArgs = {
   statusLabel?: string
   tone?: "positive" | "warning" | "danger" | "neutral"
+  summary?: string
+  score?: string
+  reasonTitle?: string
+  reasons?: string[]
+  criteria?: Array<{
+    label?: string
+    value?: string
+    tone?: "positive" | "warning" | "danger" | "neutral"
+  }>
+  actionText?: string
   buttonLabel?: string
   disabled?: boolean
   reviewCount?: number
@@ -23,6 +33,12 @@ function App({ args }: AppProps) {
     <BacktestHandoffAction
       statusLabel={args?.statusLabel ?? "-"}
       tone={args?.tone ?? "neutral"}
+      summary={args?.summary ?? "-"}
+      score={args?.score ?? "-"}
+      reasonTitle={args?.reasonTitle ?? "상태"}
+      reasons={Array.isArray(args?.reasons) ? args.reasons : []}
+      criteria={Array.isArray(args?.criteria) ? args.criteria : []}
+      actionText={args?.actionText ?? "-"}
       buttonLabel={args?.buttonLabel ?? "Submit"}
       disabled={Boolean(args?.disabled)}
       reviewCount={Number(args?.reviewCount ?? 0)}

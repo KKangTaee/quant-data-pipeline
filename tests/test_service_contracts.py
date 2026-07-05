@@ -7682,31 +7682,35 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_practical_validation_handoff_uses_single_integrated_action_surface(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        self.assertIn("is_backtest_handoff_action_available", source)
+        self.assertIn("render_backtest_handoff_action", source)
         self.assertIn("def _render_practical_validation_handoff_panel", source)
-        self.assertIn("def _render_practical_validation_handoff_action_shell", source)
+        self.assertNotIn("def _render_practical_validation_handoff_action_shell", source)
 
         panel_start = source.index("def _render_practical_validation_handoff_panel")
         panel_body = source[panel_start:]
         panel_body = panel_body[: panel_body.index("\ndef ", 1)]
-        shell_start = source.index("def _render_practical_validation_handoff_action_shell")
-        shell_body = source[shell_start:]
-        shell_body = shell_body[: shell_body.index("\ndef ", 1)]
         action_start = source.index("def _render_practical_validation_next_action")
         action_body = source[action_start:]
         action_body = action_body[: action_body.index("\ndef ", 1)]
 
-        self.assertIn("_render_practical_validation_handoff_panel(state)", action_body)
-        self.assertIn("_render_practical_validation_handoff_action_shell(state)", action_body)
+        self.assertIn("render_backtest_handoff_action(", action_body)
+        self.assertIn("is_backtest_handoff_action_available()", action_body)
+        self.assertIn("_consume_practical_validation_handoff_action(action_value, bundle)", action_body)
+        self.assertNotIn("_render_practical_validation_handoff_panel(state)", action_body)
+        self.assertNotIn("_render_practical_validation_handoff_action_shell(state)", action_body)
+        self.assertNotIn("st.button(", action_body)
+        self.assertNotIn("st.columns(", action_body)
         self.assertIn("bt-handoff-panel", panel_body)
         self.assertIn("bt-handoff-action", panel_body)
         self.assertIn("bt-handoff-boundary", panel_body)
-        self.assertIn("bt-handoff-submit-shell", shell_body)
-        self.assertIn("bt-handoff-submit-boundary", shell_body)
         self.assertIn("2차 단계 진입 판단", panel_body)
         self.assertIn("검증 source 등록만 수행합니다", panel_body)
         self.assertNotIn("_render_practical_validation_handoff_card(state)", action_body)
         self.assertNotIn("with st.container(border=True)", action_body)
         self.assertNotIn("handoff_cols = st.columns", action_body)
+        self.assertNotIn("bt-handoff-submit-shell", source)
+        self.assertNotIn("Source 등록 액션", source)
         self.assertNotIn("bt-handoff-action-hint", action_body)
         self.assertNotIn('st.markdown("##### 2차 실전성 검증 Handoff")', action_body)
         self.assertNotIn("bt-handoff-card", source)
@@ -7723,7 +7727,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn('tab_labels.append("검증 신호 · Policy Signals")', source)
         self.assertNotIn('tab_labels.append("Policy Signal Meta")', source)
         self.assertIn("def _render_policy_signal_summary_panel", source)
-        self.assertIn("_render_practical_validation_handoff_panel(state)", handoff_body)
+        self.assertIn("render_backtest_handoff_action(", handoff_body)
         self.assertNotIn("_render_policy_signal_summary_panel(meta)", real_money_body)
         self.assertIn("_render_policy_signal_gate_board(rows, evaluation)", real_money_body)
         self.assertIn("build_policy_signal_inventory(meta)", real_money_body)
@@ -7756,17 +7760,19 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("2차 확인 항목 상세 테이블", source)
         self.assertIn("can_move_to_compare", source)
 
-    def test_backtest_handoff_react_component_poc_is_isolated(self) -> None:
+    def test_backtest_handoff_react_component_is_production_action_card(self) -> None:
         component_root = Path("app/web/components/backtest_handoff_action")
         wrapper_path = component_root / "component.py"
         package_path = component_root / "frontend/package.json"
         entry_path = component_root / "frontend/src/BacktestHandoffAction.tsx"
         index_path = component_root / "frontend/src/index.tsx"
+        build_entry_path = component_root / "frontend/build/index.html"
 
         self.assertTrue(wrapper_path.exists())
         self.assertTrue(package_path.exists())
         self.assertTrue(entry_path.exists())
         self.assertTrue(index_path.exists())
+        self.assertTrue(build_entry_path.exists())
 
         wrapper_source = wrapper_path.read_text(encoding="utf-8")
         component_source = entry_path.read_text(encoding="utf-8")
@@ -7774,13 +7780,20 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
 
         self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_backtest_handoff_action_available", wrapper_source)
         self.assertIn("render_backtest_handoff_action", wrapper_source)
         self.assertIn("BacktestHandoffAction", component_source)
+        self.assertIn("2차 실전성 검증 Handoff", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertIn("Date.now()", component_source)
+        self.assertIn("criteria", wrapper_source)
+        self.assertIn("reasons", wrapper_source)
+        self.assertIn("score", wrapper_source)
         self.assertIn("streamlit-component-lib", package_source)
         self.assertNotIn("from app.services", wrapper_source)
         self.assertNotIn("from app.runtime", wrapper_source)
         self.assertNotIn("from finance", wrapper_source)
-        self.assertNotIn("render_backtest_handoff_action(", result_display_source)
+        self.assertIn("render_backtest_handoff_action(", result_display_source)
 
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
         flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")
@@ -7794,12 +7807,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("Handoff owns entry judgment and source registration action", flow_doc)
-        self.assertIn("React custom component POC", flow_doc)
-        self.assertIn("production path remains Streamlit-only", flow_doc)
+        self.assertIn("React custom component", flow_doc)
+        self.assertIn("source registration button inside the Handoff panel", flow_doc)
         self.assertIn("Policy Signals owns evidence detail", selection_doc)
-        self.assertIn("React POC is not wired into source registration", selection_doc)
+        self.assertIn("React custom component owns the visible Handoff card and button", selection_doc)
         self.assertIn("Backtest Handoff / Policy Signals action cleanup V1-V4", progress_doc)
-        self.assertIn("Streamlit-only production path", question_doc)
+        self.assertIn("React Handoff action card", question_doc)
         self.assertIn("V4 complete", task_status)
 
     def test_candidate_review_draft_captures_handoff_readiness_snapshot(self) -> None:

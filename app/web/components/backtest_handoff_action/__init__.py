@@ -1,5 +1,5 @@
-"""Backtest Handoff action-card React component POC."""
+"""Backtest Handoff action-card React component."""
 
-from .component import render_backtest_handoff_action
+from .component import is_backtest_handoff_action_available, render_backtest_handoff_action
 
-__all__ = ["render_backtest_handoff_action"]
+__all__ = ["is_backtest_handoff_action_available", "render_backtest_handoff_action"]

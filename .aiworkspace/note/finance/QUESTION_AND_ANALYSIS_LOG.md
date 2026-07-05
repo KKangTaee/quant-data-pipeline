@@ -8428,3 +8428,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Handoff는 action / entry judgment를 소유하고, Policy Signals는 근거 상세만 보여줘야 한다. 버튼 통합은 먼저 Streamlit-only production path로 개선하고, React는 앱 전체 전환이 아니라 고급 action-card POC로 제한해야 함.
 - Analysis result: 같은 `build_handoff_gate_summary()` / `build_next_step_readiness_evaluation()` 결과가 Handoff와 Policy Signals 요약 카드에서 반복되고 있었다. Streamlit HTML과 `st.button`은 DOM 계층이 달라 완전한 HTML 내부 버튼은 어렵지만, Streamlit-only production path로 action shell을 붙일 수 있다.
 - Follow-up: Streamlit-only production path remains active. React custom component POC is isolated under `app/web/components/backtest_handoff_action/` and is not wired into source registration until repeated advanced action-card needs justify it.
+
+### 2026-07-05 - Handoff 버튼을 React card 내부 action으로 연결한다
+
+- User request: 사용자가 이전 구현이 원하는 방식이 아니며, `st.button`을 남기는 것이 아니라 React custom component로 `2차 실전성 검증 Handoff` 박스 안에 실제 버튼을 넣어야 한다고 정정함.
+- Interpreted goal: 앱 전체 React 전환은 하지 않고, Handoff처럼 HTML design + real interaction이 필요한 고급 UI에만 React Handoff action card를 production 경로로 연결한다.
+- Analysis result: Streamlit `st.button`과 custom HTML은 서로 다른 DOM/rendering layer라 같은 카드 내부 button처럼 보이기 어렵다. React component가 card + button + submit event를 소유하고 Python이 source registration write / rerun만 담당하는 구조가 의도에 맞다.
+- Follow-up: React Handoff action card를 active source registration path에 연결하고, 기존 Streamlit action shell / visible `st.button` 경로는 제거한다.

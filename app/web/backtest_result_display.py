@@ -22,6 +22,10 @@ from app.web.backtest_ui_components import (
     render_badge_strip,
     render_status_card_grid,
 )
+from app.web.components.backtest_handoff_action import (
+    is_backtest_handoff_action_available,
+    render_backtest_handoff_action,
+)
 
 
 def _render_compare_altair_chart(
@@ -960,96 +964,19 @@ def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
     )
 
 
-def _render_practical_validation_handoff_action_shell(state: dict[str, Any]) -> bool:
-    tone = str(state.get("tone") or "neutral")
-    can_submit = bool(state.get("can_submit"))
-    button_label = str(state.get("button_label") or "2차 검증으로 보내기")
-    boundary_text = (
-        "이 버튼은 결과를 Practical Validation이 읽는 current selection source로 등록합니다. "
-        "최종 선택, 투자 추천, live 승인, 주문 지시는 발생하지 않습니다."
-        if can_submit
-        else "source 등록을 막는 항목이 남아 있어 버튼이 비활성화되어 있습니다. "
-        "먼저 Handoff 카드의 blocker를 해소한 뒤 다시 실행하세요."
-    )
-    st.markdown(
-        """
-        <style>
-          .bt-handoff-submit-shell {
-            --bt-submit-accent: #64748b;
-            --bt-submit-soft: rgba(100, 116, 139, 0.09);
-          }
-          .bt-handoff-submit-shell--positive {
-            --bt-submit-accent: #0f8f83;
-            --bt-submit-soft: rgba(15, 143, 131, 0.10);
-          }
-          .bt-handoff-submit-shell--warning {
-            --bt-submit-accent: #b45309;
-            --bt-submit-soft: rgba(180, 83, 9, 0.10);
-          }
-          .bt-handoff-submit-shell--danger {
-            --bt-submit-accent: #b42318;
-            --bt-submit-soft: rgba(180, 35, 24, 0.10);
-          }
-          .bt-handoff-submit-heading {
-            color: var(--bt-submit-accent);
-            font-size: 0.88rem;
-            font-weight: 850;
-            margin-bottom: 0.16rem;
-          }
-          .bt-handoff-submit-title {
-            color: var(--text-color);
-            font-size: 1.02rem;
-            font-weight: 850;
-            line-height: 1.35;
-          }
-          .bt-handoff-submit-boundary {
-            border-left: 4px solid var(--bt-submit-accent);
-            background: var(--bt-submit-soft);
-            border-radius: 8px;
-            padding: 0.68rem 0.78rem;
-            color: #667085;
-            line-height: 1.48;
-            min-height: 3rem;
-            display: flex;
-            align-items: center;
-          }
-          .bt-handoff-submit-button-note {
-            color: #667085;
-            font-size: 0.78rem;
-            line-height: 1.35;
-            margin-top: 0.35rem;
-          }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    with st.container(border=True):
-        st.markdown(
-            f'<div class="bt-handoff-submit-shell bt-handoff-submit-shell--{escape(tone)}">'
-            '<div class="bt-handoff-submit-heading">Source 등록 액션</div>'
-            '<div class="bt-handoff-submit-title">Practical Validation으로 넘긴 뒤 2차 확인 큐를 이어서 봅니다.</div>'
-            "</div>",
-            unsafe_allow_html=True,
-        )
-        action_cols = st.columns([0.30, 0.70], gap="medium")
-        with action_cols[0]:
-            submitted = st.button(
-                button_label,
-                key="latest_run_candidate_review_draft",
-                width="stretch",
-                disabled=not can_submit,
-                type="primary" if can_submit else "secondary",
-            )
-            st.markdown(
-                '<div class="bt-handoff-submit-button-note">버튼은 source 등록만 수행합니다.</div>',
-                unsafe_allow_html=True,
-            )
-        with action_cols[1]:
-            st.markdown(
-                f'<div class="bt-handoff-submit-boundary">{escape(boundary_text)}</div>',
-                unsafe_allow_html=True,
-            )
-    return submitted
+def _consume_practical_validation_handoff_action(action_value: dict[str, Any] | None, bundle: dict[str, Any]) -> None:
+    """Handle the React card submit event without duplicating the source write on rerun."""
+    if not isinstance(action_value, dict) or action_value.get("action") != "submit":
+        return
+    nonce = str(action_value.get("nonce") or "")
+    if not nonce:
+        return
+    consumed_key = "latest_run_candidate_review_draft_component_nonce"
+    if st.session_state.get(consumed_key) == nonce:
+        return
+    st.session_state[consumed_key] = nonce
+    _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+    st.rerun()
 
 
 def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
@@ -1691,11 +1618,34 @@ def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dic
 
 def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
     state = _build_practical_validation_handoff_state(bundle)
-    _render_practical_validation_handoff_panel(state)
-
-    if _render_practical_validation_handoff_action_shell(state):
-        _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
-        st.rerun()
+    if not is_backtest_handoff_action_available():
+        st.error("Handoff React component build를 찾지 못했습니다. component build 후 source 등록 UI가 표시됩니다.")
+        return
+    can_submit = bool(state.get("can_submit"))
+    boundary_text = (
+        "이 버튼은 결과를 Practical Validation이 읽는 current selection source로 등록합니다. "
+        "최종 선택, 투자 추천, live 승인, 주문 지시는 발생하지 않습니다."
+        if can_submit
+        else "source 등록을 막는 항목이 남아 있어 버튼이 비활성화되어 있습니다. "
+        "먼저 Handoff 카드의 blocker를 해소한 뒤 다시 실행하세요."
+    )
+    action_value = render_backtest_handoff_action(
+        status_label=str(state.get("status_label") or "-"),
+        tone=str(state.get("tone") or "neutral"),
+        summary=str(state.get("summary") or "-"),
+        score=f"{float(state.get('score') or 0.0):.1f} / 10",
+        reason_title=str(state.get("reason_title") or "상태"),
+        reasons=[str(item) for item in list(state.get("display_reasons") or [])],
+        criteria=[dict(item) for item in list(state.get("criteria") or [])],
+        action_text=str(state.get("action_text") or "-"),
+        button_label=str(state.get("button_label") or "2차 검증으로 보내기"),
+        disabled=not can_submit,
+        review_count=len(list(dict(state.get("evaluation") or {}).get("review_reasons") or [])),
+        blocker_count=len(list(dict(state.get("evaluation") or {}).get("blocking_reasons") or [])),
+        boundary_text=boundary_text,
+        key="latest_run_candidate_review_draft_component",
+    )
+    _consume_practical_validation_handoff_action(action_value, bundle)
 
 
 def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:

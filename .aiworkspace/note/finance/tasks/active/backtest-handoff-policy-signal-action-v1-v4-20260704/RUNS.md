@@ -88,3 +88,33 @@ git diff --check
 ```
 
 Result: passed.
+
+## 2026-07-05 correction
+
+RED / environment note:
+
+```bash
+.venv/bin/python -m pytest tests/test_service_contracts.py -k "handoff_uses_single_integrated_action_surface or handoff_react_component_is_production_action_card or handoff_react_adoption_decision"
+python3 -m pytest tests/test_service_contracts.py -k "handoff_uses_single_integrated_action_surface or handoff_react_component_is_production_action_card or handoff_react_adoption_decision"
+```
+
+Result: local environment has no `pytest` module, so focused `unittest` methods were used for executable contract checks.
+
+GREEN / QA:
+
+```bash
+npm install
+npm run build
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_uses_single_integrated_action_surface tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_handoff_react_component_is_production_action_card tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_handoff_react_adoption_decision_is_documented
+.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests
+.venv/bin/python -m py_compile app/web/backtest_result_display.py app/web/components/backtest_handoff_action/component.py tests/test_service_contracts.py
+git diff --check
+```
+
+Browser QA:
+
+```bash
+.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8514 --server.headless true --server.runOnSave false --server.fileWatcherType none
+```
+
+Checked `http://localhost:8514/backtest` with Equal Weight / Dividend ETFs. The React iframe rendered `2차 실전성 검증 Handoff` and the `2차 검증으로 보내기` button inside the same Handoff card. Initial Browser QA exposed Vite absolute `/assets/...` paths; `vite.config.ts` now uses `base: "./"` and the rebuilt component loads relative assets correctly.

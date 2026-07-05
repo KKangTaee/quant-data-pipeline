@@ -74,7 +74,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - 사용자는 Backtest Analysis에서 후보를 만들고 Practical Validation으로 보낸다.
 - `Operations > Operations Overview`는 선정 후 monitoring / system health의 Operations Console 입구이며, Backtest 후보 생성 단계가 아니다. Today action queue는 검토 우선순위만 안내하고 주문 / 자동 리밸런싱을 만들지 않는다. Backtest Run History와 Candidate Library archive 화면은 현재 Operations 상단 탭에 노출하지 않는다.
 - Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다. hard blocker는 1차 source 등록을 막고, `2차 확인` review focus는 source의 `entry_gate.review_focus_rows`로 Practical Validation에 전달한다.
-- Backtest Analysis의 Handoff panel이 source 등록 action과 entry judgment를 소유한다. Policy Signals owns evidence detail and does not repeat the same entry-readiness hero. React POC is not wired into source registration; production source handoff remains the Streamlit/Python path.
+- Backtest Analysis의 Handoff panel이 source 등록 action과 entry judgment를 소유한다. Policy Signals owns evidence detail and does not repeat the same entry-readiness hero. React custom component owns the visible Handoff card and button, while Python keeps the source registration write / rerun path.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
 - `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
 - Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.

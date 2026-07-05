@@ -5460,3 +5460,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Handoff를 유일한 Practical Validation 진입 판단 / source 등록 action surface로 두고, Policy Signals는 evidence detail surface로 낮췄다.
   - Streamlit-only production path에서 Handoff action shell을 통합했고, React custom component POC는 `app/web/components/backtest_handoff_action/`에 격리해 두었다.
   - React POC는 현재 source registration에 연결하지 않고, 반복되는 고급 action-card 수요가 확인될 때만 production wiring 후보로 본다.
+- Backtest Handoff React action card correction 2026-07-05:
+  - 사용자 피드백에 따라 Handoff action을 Streamlit shell에서 React Handoff action card production path로 전환했다.
+  - 보이는 `2차 실전성 검증 Handoff` card와 버튼은 React component가 함께 렌더링하고, Python은 submit event를 받아 current selection source 등록 / rerun만 수행한다.
+  - Policy Signals는 계속 evidence detail만 소유하며, registry / saved / strategy runtime 계약은 변경하지 않았다.

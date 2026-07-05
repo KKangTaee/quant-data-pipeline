@@ -1,50 +1,179 @@
+:root {
+  color: #2f3140;
+  font-family: "Source Sans Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
 .bt-react-handoff {
   --accent: #64748b;
-  --soft: rgba(100, 116, 139, 0.09);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 13rem minmax(0, 1.5fr);
-  gap: 1rem;
-  align-items: center;
-  border-left: 4px solid var(--accent);
-  border-top: 1px solid rgba(148, 163, 184, 0.26);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.26);
-  border-radius: 8px;
+  --soft: rgba(100, 116, 139, 0.08);
+  --border: rgba(148, 163, 184, 0.24);
   background: linear-gradient(90deg, var(--soft), rgba(255, 255, 255, 0));
-  color: #1f2937;
-  font-family: inherit;
-  padding: 0.85rem 0.95rem;
+  border-left: 4px solid var(--accent);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px;
+  color: #2f3140;
+  padding: 1.08rem 1.14rem;
 }
 
 .bt-react-handoff--positive {
   --accent: #0f8f83;
-  --soft: rgba(15, 143, 131, 0.10);
+  --soft: rgba(15, 143, 131, 0.1);
 }
 
 .bt-react-handoff--warning {
   --accent: #b45309;
-  --soft: rgba(180, 83, 9, 0.10);
+  --soft: rgba(180, 83, 9, 0.1);
 }
 
 .bt-react-handoff--danger {
   --accent: #b42318;
-  --soft: rgba(180, 35, 24, 0.10);
+  --soft: rgba(180, 35, 24, 0.1);
 }
 
-.bt-react-handoff__summary span,
-.bt-react-handoff__summary em {
-  color: #667085;
-  display: block;
-  font-size: 0.82rem;
-  font-style: normal;
+.bt-react-handoff__head {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.85rem;
+  justify-content: space-between;
+  margin-bottom: 0.95rem;
+}
+
+.bt-react-handoff__kicker,
+.bt-react-handoff__reason-title,
+.bt-react-handoff__action-label {
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.32;
+}
+
+.bt-react-handoff h4 {
+  color: #2f3140;
+  font-size: 1.28rem;
   line-height: 1.35;
+  margin: 0.26rem 0 0;
+}
+
+.bt-react-handoff__status {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  flex: 0 0 auto;
+  font-size: 0.88rem;
+  font-weight: 850;
+  padding: 0.34rem 0.76rem;
+}
+
+.bt-react-handoff__body {
+  align-items: stretch;
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: minmax(220px, 0.95fr) minmax(260px, 1.05fr);
+}
+
+.bt-react-handoff__summary p {
+  color: #667085;
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 0;
 }
 
 .bt-react-handoff__summary strong {
-  color: var(--accent);
+  color: #2f3140;
   display: block;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  margin-top: 0.55rem;
+}
+
+.bt-react-handoff__chips {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.78rem;
+}
+
+.bt-react-handoff__chip {
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 0.62rem 0.68rem;
+}
+
+.bt-react-handoff__chip--positive {
+  border-top-color: rgba(15, 143, 131, 0.42);
+}
+
+.bt-react-handoff__chip--warning {
+  border-top-color: rgba(180, 83, 9, 0.42);
+}
+
+.bt-react-handoff__chip--danger {
+  border-top-color: rgba(180, 35, 24, 0.42);
+}
+
+.bt-react-handoff__chip span {
+  color: #667085;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+}
+
+.bt-react-handoff__chip b {
+  color: #2f3140;
+  display: block;
+  font-size: 0.96rem;
   line-height: 1.35;
-  margin: 0.08rem 0;
+  overflow-wrap: anywhere;
+}
+
+.bt-react-handoff__reasons {
+  background: rgba(248, 250, 252, 0.86);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  padding: 0.76rem 0.86rem;
+}
+
+.bt-react-handoff__reasons ul {
+  color: #667085;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0.4rem 0 0;
+  padding-left: 1.05rem;
+}
+
+.bt-react-handoff__action {
+  align-items: center;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(12rem, 0.32fr) minmax(260px, 1.05fr);
+  margin-top: 0.95rem;
+  padding-top: 0.9rem;
+}
+
+.bt-react-handoff__action-text {
+  color: #2f3140;
+  font-size: 1.02rem;
+  font-weight: 850;
+  line-height: 1.35;
+  margin-top: 0.18rem;
+}
+
+.bt-react-handoff__counts {
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  margin-top: 0.32rem;
 }
 
 .bt-react-handoff__button {
@@ -53,9 +182,14 @@
   border-radius: 8px;
   color: #ffffff;
   cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 800;
-  min-height: 2.5rem;
+  font-size: 0.96rem;
+  font-weight: 850;
+  min-height: 2.72rem;
+  padding: 0 1rem;
+}
+
+.bt-react-handoff__button:hover:not(:disabled) {
+  background: #e83f3f;
 }
 
 .bt-react-handoff__button:disabled {
@@ -64,15 +198,29 @@
   cursor: not-allowed;
 }
 
-.bt-react-handoff p {
+.bt-react-handoff__action p {
   color: #667085;
-  font-size: 0.88rem;
-  line-height: 1.45;
+  font-size: 0.9rem;
+  line-height: 1.48;
   margin: 0;
 }
 
 @media (max-width: 760px) {
-  .bt-react-handoff {
+  .bt-react-handoff__head,
+  .bt-react-handoff__body,
+  .bt-react-handoff__action {
     grid-template-columns: 1fr;
+  }
+
+  .bt-react-handoff__head {
+    display: grid;
+  }
+
+  .bt-react-handoff__chips {
+    grid-template-columns: 1fr;
+  }
+
+  .bt-react-handoff__button {
+    width: 100%;
   }
 }
