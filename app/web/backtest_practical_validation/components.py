@@ -24,22 +24,22 @@ def render_pv_styles() -> None:
         """
         <style>
           :root {
-            --pv-bg: #f4f6f8;
-            --pv-ink: #121826;
-            --pv-muted: #667085;
-            --pv-subtle: #8a96a8;
-            --pv-panel: #0b111c;
-            --pv-panel-2: #111a28;
-            --pv-panel-3: #162033;
-            --pv-line: rgba(148, 163, 184, 0.24);
-            --pv-line-strong: rgba(203, 213, 225, 0.28);
-            --pv-text: #eef4fb;
-            --pv-text-muted: #a7b4c7;
+            --pv-bg: #ffffff;
+            --pv-ink: #111827;
+            --pv-muted: #4b5563;
+            --pv-subtle: #6b7280;
+            --pv-panel: #ffffff;
+            --pv-panel-2: #ffffff;
+            --pv-panel-3: #f3f4f6;
+            --pv-line: rgba(17, 24, 39, 0.12);
+            --pv-line-strong: rgba(17, 24, 39, 0.18);
+            --pv-text: #111827;
+            --pv-text-muted: #4b5563;
             --pv-positive: #22c55e;
             --pv-warning: #f59e0b;
             --pv-danger: #ef4444;
-            --pv-neutral: #7f8ea3;
-            --pv-cyan: #22d3ee;
+            --pv-neutral: #6b7280;
+            --pv-cyan: #0891b2;
           }
           .pv-shell,
           .pv-shell * {
@@ -57,9 +57,9 @@ def render_pv_styles() -> None:
             align-items: stretch;
             padding: 1rem;
             border: 1px solid var(--pv-line-strong);
-            border-radius: 8px;
+            border-radius: 0;
             background: var(--pv-panel);
-            box-shadow: 0 12px 28px rgba(12, 18, 28, 0.16);
+            box-shadow: none;
           }
           .pv-command-main {
             display: grid;
@@ -104,7 +104,7 @@ def render_pv_styles() -> None:
             padding: 0.9rem;
             border: 1px solid var(--pv-line);
             border-left: 4px solid var(--pv-neutral);
-            border-radius: 8px;
+            border-radius: 0;
             background: var(--pv-panel-2);
           }
           .pv-route-positive,
@@ -159,7 +159,7 @@ def render_pv_styles() -> None:
             min-height: 82px;
             padding: 0.72rem 0.76rem;
             border: 1px solid var(--pv-line);
-            border-radius: 8px;
+            border-radius: 0;
             background: var(--pv-panel-2);
           }
           .pv-kpi-label {
@@ -194,7 +194,7 @@ def render_pv_styles() -> None:
             padding: 0.76rem 0.82rem;
             border: 1px solid var(--pv-line);
             border-left: 4px solid var(--pv-neutral);
-            border-radius: 8px;
+            border-radius: 0;
             background: var(--pv-panel-2);
             color: var(--pv-text);
           }
@@ -205,9 +205,9 @@ def render_pv_styles() -> None:
             align-items: center;
             justify-content: center;
             margin-bottom: 0.45rem;
-            border-radius: 999px;
+            border-radius: 0;
             background: var(--pv-panel-3);
-            color: #ffffff;
+            color: var(--pv-text);
             font-size: 0.78rem;
             font-weight: 820;
           }
@@ -230,7 +230,7 @@ def render_pv_styles() -> None:
             padding: 0.85rem 0.95rem;
             border: 1px solid var(--pv-line);
             border-left: 4px solid var(--pv-neutral);
-            border-radius: 8px;
+            border-radius: 0;
             background: var(--pv-panel-2);
             color: var(--pv-text);
           }
@@ -260,7 +260,7 @@ def render_pv_styles() -> None:
             padding: 0.86rem 0.92rem;
             border: 1px solid var(--pv-line);
             border-left: 4px solid var(--pv-neutral);
-            border-radius: 8px;
+            border-radius: 0;
             background: var(--pv-panel-2);
             color: var(--pv-text);
           }
@@ -277,7 +277,7 @@ def render_pv_styles() -> None:
             margin-top: 0.52rem;
             padding: 0.2rem 0.52rem;
             border: 1px solid rgba(17, 24, 39, 0.1);
-            border-radius: 999px;
+            border-radius: 0;
             background: rgba(127, 142, 163, 0.2);
             color: var(--pv-text);
             font-size: 0.75rem;
@@ -285,9 +285,9 @@ def render_pv_styles() -> None:
             font-weight: 780;
             overflow-wrap: anywhere;
           }
-          .pv-card-positive .pv-card-status { background: rgba(34, 197, 94, 0.18); color: #bbf7d0; }
-          .pv-card-warning .pv-card-status { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
-          .pv-card-danger .pv-card-status { background: rgba(239, 68, 68, 0.18); color: #fecaca; }
+          .pv-card-positive .pv-card-status { background: rgba(34, 197, 94, 0.12); color: #166534; }
+          .pv-card-warning .pv-card-status { background: rgba(245, 158, 11, 0.14); color: #92400e; }
+          .pv-card-danger .pv-card-status { background: rgba(239, 68, 68, 0.12); color: #991b1b; }
           .pv-card-detail {
             margin-top: 0.56rem;
             font-size: 0.84rem;
@@ -307,7 +307,7 @@ def render_pv_styles() -> None:
             padding: 0.96rem;
             border: 1px solid var(--pv-line-strong);
             border-left: 4px solid var(--pv-danger);
-            border-radius: 8px;
+            border-radius: 0;
             background: var(--pv-panel);
             color: var(--pv-text);
           }
@@ -330,11 +330,11 @@ def render_pv_styles() -> None:
           }
           div[data-testid="stDataFrame"] {
             border: 1px solid rgba(17, 24, 39, 0.12);
-            border-radius: 8px;
+            border-radius: 0;
             overflow: hidden;
           }
           div[data-testid="stExpander"] details {
-            border-radius: 8px;
+            border-radius: 0;
           }
           @media (max-width: 760px) {
             .pv-command {

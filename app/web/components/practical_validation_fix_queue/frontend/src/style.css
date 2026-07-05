@@ -11,7 +11,7 @@ body {
   --accent: #475569;
   --soft: rgba(71, 85, 105, 0.08);
   --border: rgba(148, 163, 184, 0.25);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  background: #ffffff;
   border-left: 4px solid var(--accent);
   border-radius: 0;
   border-bottom: 1px solid var(--border);
@@ -67,7 +67,7 @@ body {
 
 .pv-react-fix__status {
   border: 1px solid var(--accent);
-  border-radius: 8px;
+  border-radius: 0;
   color: var(--accent);
   flex: 0 0 13rem;
   padding: 0.55rem 0.7rem;
@@ -99,7 +99,7 @@ body {
 .pv-react-fix__metric {
   background: var(--soft);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 0.62rem 0.7rem;
 }
 
@@ -130,10 +130,10 @@ body {
 
 .pv-react-fix__item,
 .pv-react-fix__group {
-  background: rgba(255, 255, 255, 0.86);
+  background: #ffffff;
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  border-radius: 8px;
+  border-radius: 0;
   padding: 0.74rem 0.78rem;
 }
 

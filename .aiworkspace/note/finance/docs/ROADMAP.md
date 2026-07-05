@@ -7,11 +7,11 @@ Last Verified: 2026-07-05
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-entry-simplification-v1-20260705/`다.
 
-- 목적: Practical Validation을 diagnostics / audits / validation modules / board map / selected-route readiness가 뒤섞인 화면에서, 5-flow 검증 workspace로 재구성한다.
-- 완료 범위: V1-V7에서 workspace read model, Final Review readiness wording, result attachment, 5-flow page, read-only React Fix Queue, workspace panel split, normalized status display를 개발 / QA / 커밋했다. V8은 durable docs alignment와 통합 QA closeout이다.
-- 변경하지 않은 경계: registry / saved JSONL rewrite, provider snapshot 수집 실행, validation threshold / gate policy 의미, Final Review selected-route 저장 정책, live approval / broker order / auto rebalance는 건드리지 않는다.
+- 목적: Practical Validation 첫 진입 화면에서 Reference help와 context-only 시장 심리 overlay를 제거하고, 검증 상태 / 보강 action 중심의 흰색 직선형 surface로 정리한다.
+- 현재 범위: `app/web/backtest_practical_validation/page.py`, Practical Validation HTML/CSS helper, Fix Queue React component style, focused QA와 Browser QA.
+- 변경하지 않는 경계: sentiment service / loader 삭제, Final Review / Portfolio Monitoring sentiment context, registry / saved JSONL rewrite, provider 수집, validation threshold / gate policy 의미, live approval / broker order / auto rebalance.
 
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 

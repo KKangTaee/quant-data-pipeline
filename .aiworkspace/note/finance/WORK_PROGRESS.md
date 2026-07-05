@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Entry Simplification V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-entry-simplification-v1-20260705/`에서 Practical Validation 첫 진입 화면을 정리했다.
+  - 기본 진입에서 Reference help와 context-only 시장 심리 overlay를 제거하고, command title을 `Final Review 이동 전 검증 상태`로 바꿨다.
+  - Practical Validation HTML/CSS helper와 Fix Queue React component를 흰색 직선형 surface로 맞췄다. Validation gate / registry / provider / sentiment service 의미는 변경하지 않았다.
 - Practical Validation Taxonomy Roadmap V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에서 Practical Validation 개편 V1-V8을 개발 / QA / 커밋 순서로 완료했다.
   - 주요 결과는 workspace read model, Final Review readiness wording, 5-flow 화면, read-only React Fix Queue, Flow 3 workspace panel split, first-read status normalization이다.

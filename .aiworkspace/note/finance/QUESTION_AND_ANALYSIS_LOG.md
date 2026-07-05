@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Practical Validation 첫 진입은 검증 상태만 먼저 보여준다
+
+- User request: 사용자가 Practical Validation 탭의 Reference help, `검증 근거를 위한 후보 통제 화면`, 시장 심리 overlay, 검은 둥근 카드가 실제 검증 흐름에 필요한지 묻고 단계적으로 정리하자고 요청함.
+- Interpreted goal: 첫 진입 화면은 도움말이나 context-only 시장 배경이 아니라 Final Review 이동 전 검증 상태, 막힌 항목, 보강 action을 먼저 보여줘야 함.
+- Analysis result: Reference help는 기본 진입에서 불필요하고, 시장 심리는 Practical Validation gate 입력이 아니므로 기본 렌더에서 제거하는 것이 맞다. 검은 둥근 HTML/CSS card는 product surface보다 장식성이 강해 흰색 직선 surface로 낮춘다.
+- Follow-up: `practical-validation-entry-simplification-v1-20260705`에서 기본 Reference help / sentiment overlay를 제거하고, command title과 Practical Validation custom card / React Fix Queue style을 정리했다.
+
 ### 2026-07-05 - Practical Validation은 5-flow 검증 workspace로 읽는다
 
 - User request: 사용자가 Practical Validation 개편을 1차부터 8차까지 개발 / QA / 커밋 순서로 단계별 진행해 달라고 요청함.

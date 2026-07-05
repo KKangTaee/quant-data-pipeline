@@ -265,6 +265,40 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("def _status_tone", page_source)
         self.assertNotIn("def _status_tone", panel_source)
 
+    def test_practical_validation_entry_surface_removes_context_only_distractions(self) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
+        render_body = source.split("def render_practical_validation_workspace", 1)[1]
+
+        self.assertNotIn('render_reference_contextual_help("practical_validation")', render_body)
+        self.assertNotIn("_render_market_sentiment_context_overlay()", render_body)
+        self.assertNotIn("검증 근거를 위한 후보 통제 화면", render_body)
+        self.assertIn("Final Review 이동 전 검증 상태", render_body)
+        self.assertIn("막힌 항목과 필요한 보강을 먼저 확인합니다.", render_body)
+
+    def test_practical_validation_visual_shell_uses_light_square_surfaces(self) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_practical_validation/components.py").read_text()
+
+        self.assertIn("--pv-panel: #ffffff;", source)
+        self.assertIn("--pv-panel-2: #ffffff;", source)
+        self.assertIn("--pv-panel-3: #f3f4f6;", source)
+        self.assertIn("--pv-text: #111827;", source)
+        self.assertNotIn("--pv-panel: #0b111c;", source)
+        self.assertNotIn("--pv-panel-2: #111a28;", source)
+        self.assertNotIn("border-radius: 8px;", source)
+        self.assertIn(".pv-command {", source)
+        self.assertIn("border-radius: 0;", source)
+
+    def test_practical_validation_fix_queue_react_surface_is_square(self) -> None:
+        source = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_fix_queue/frontend/src/style.css"
+        ).read_text()
+
+        self.assertIn(".pv-react-fix {", source)
+        self.assertIn("background: #ffffff;", source)
+        self.assertNotIn("border-radius: 8px;", source)
+        self.assertIn("border-radius: 0;", source)
+
 
 if __name__ == "__main__":
     unittest.main()
