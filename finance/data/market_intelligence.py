@@ -199,6 +199,12 @@ def sync_market_intelligence_tables(
         )
         sync_table_schema(
             meta_db,
+            "market_liquidity_universe_member",
+            MARKET_INTELLIGENCE_SCHEMAS["market_liquidity_universe_member"],
+            DB_META,
+        )
+        sync_table_schema(
+            meta_db,
             "market_event_calendar",
             MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
             DB_META,
@@ -2093,6 +2099,173 @@ def load_market_universe_members(
             ORDER BY symbol ASC
             """,
             [universe_code],
+        )
+    finally:
+        db.close()
+
+
+def _market_liquidity_universe_row(
+    row: dict[str, Any],
+    *,
+    universe_code: str,
+    rank_position: int,
+    generated_at: str,
+) -> dict[str, Any] | None:
+    symbol = _normalize_symbol(row.get("symbol"))
+    if not symbol:
+        return None
+    return {
+        "universe_code": universe_code,
+        "symbol": symbol,
+        "rank_position": _safe_int(row.get("rank_position")) or rank_position,
+        "source_symbol": _normalize_symbol(row.get("source_symbol") or row.get("symbol")) or symbol,
+        "name": row.get("name") or row.get("long_name"),
+        "sector": row.get("sector"),
+        "industry": row.get("industry"),
+        "market_cap": _safe_int(row.get("market_cap")),
+        "avg_dollar_volume_20d": _safe_float(row.get("avg_dollar_volume_20d")),
+        "dollar_volume_days": _safe_int(row.get("dollar_volume_days")),
+        "ranking_window_start_date": row.get("ranking_window_start_date"),
+        "ranking_end_date": row.get("ranking_end_date"),
+        "ranking_source": row.get("ranking_source") or "nyse_price_history.20d_avg_dollar_volume",
+        "price_source": row.get("price_source") or "finance_price.nyse_price_history",
+        "listing_source": row.get("listing_source") or row.get("source"),
+        "listing_source_url": row.get("listing_source_url") or row.get("source_url"),
+        "listing_source_type": row.get("listing_source_type"),
+        "listing_coverage_status": row.get("listing_coverage_status"),
+        "listing_event_type": row.get("listing_event_type"),
+        "listing_status": row.get("listing_status"),
+        "listing_event_date": row.get("listing_event_date") or row.get("as_of_date"),
+        "listing_collected_at": row.get("listing_collected_at") or row.get("collected_at"),
+        "generated_at": generated_at,
+        "active": _safe_int(row.get("active")) if row.get("active") is not None else 1,
+        "error_msg": row.get("error_msg"),
+    }
+
+
+def upsert_market_liquidity_universe_members(
+    rows: list[dict[str, Any]],
+    *,
+    universe_code: str = "TOP1000",
+    generated_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    normalized_code, _ = _normalize_intraday_universe(universe_code)
+    generated_at_value = generated_at or _timestamp_str()
+    normalized_rows = [
+        normalized
+        for index, row in enumerate(rows, start=1)
+        if (
+            normalized := _market_liquidity_universe_row(
+                row,
+                universe_code=normalized_code,
+                rank_position=index,
+                generated_at=generated_at_value,
+            )
+        )
+    ]
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_liquidity_universe_member",
+            MARKET_INTELLIGENCE_SCHEMAS["market_liquidity_universe_member"],
+            DB_META,
+        )
+        if not normalized_rows:
+            return 0
+        sql = """
+        INSERT INTO market_liquidity_universe_member (
+          universe_code, symbol, rank_position, source_symbol, name, sector, industry, market_cap,
+          avg_dollar_volume_20d, dollar_volume_days, ranking_window_start_date, ranking_end_date,
+          ranking_source, price_source,
+          listing_source, listing_source_url, listing_source_type, listing_coverage_status,
+          listing_event_type, listing_status, listing_event_date, listing_collected_at,
+          generated_at, active, error_msg
+        ) VALUES (
+          %(universe_code)s, %(symbol)s, %(rank_position)s, %(source_symbol)s, %(name)s, %(sector)s, %(industry)s, %(market_cap)s,
+          %(avg_dollar_volume_20d)s, %(dollar_volume_days)s, %(ranking_window_start_date)s, %(ranking_end_date)s,
+          %(ranking_source)s, %(price_source)s,
+          %(listing_source)s, %(listing_source_url)s, %(listing_source_type)s, %(listing_coverage_status)s,
+          %(listing_event_type)s, %(listing_status)s, %(listing_event_date)s, %(listing_collected_at)s,
+          %(generated_at)s, %(active)s, %(error_msg)s
+        )
+        ON DUPLICATE KEY UPDATE
+          rank_position = VALUES(rank_position),
+          source_symbol = VALUES(source_symbol),
+          name = VALUES(name),
+          sector = VALUES(sector),
+          industry = VALUES(industry),
+          market_cap = VALUES(market_cap),
+          avg_dollar_volume_20d = VALUES(avg_dollar_volume_20d),
+          dollar_volume_days = VALUES(dollar_volume_days),
+          ranking_window_start_date = VALUES(ranking_window_start_date),
+          ranking_end_date = VALUES(ranking_end_date),
+          ranking_source = VALUES(ranking_source),
+          price_source = VALUES(price_source),
+          listing_source = VALUES(listing_source),
+          listing_source_url = VALUES(listing_source_url),
+          listing_source_type = VALUES(listing_source_type),
+          listing_coverage_status = VALUES(listing_coverage_status),
+          listing_event_type = VALUES(listing_event_type),
+          listing_status = VALUES(listing_status),
+          listing_event_date = VALUES(listing_event_date),
+          listing_collected_at = VALUES(listing_collected_at),
+          generated_at = VALUES(generated_at),
+          active = VALUES(active),
+          error_msg = VALUES(error_msg)
+        """
+        db.executemany(sql, normalized_rows)
+        symbols = [row["symbol"] for row in normalized_rows if row.get("symbol")]
+        placeholders = ",".join(["%s"] * len(symbols))
+        db.execute(
+            f"""
+            UPDATE market_liquidity_universe_member
+            SET active = 0
+            WHERE universe_code = %s
+              AND symbol NOT IN ({placeholders})
+            """,
+            [normalized_code] + symbols,
+        )
+        return len(normalized_rows)
+    finally:
+        db.close()
+
+
+def load_market_liquidity_universe_members(
+    universe_code: str = "TOP1000",
+    *,
+    universe_limit: int | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    limit = int(universe_limit or normalized_limit)
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        return db.query(
+            """
+            SELECT
+                universe_code, symbol, rank_position, source_symbol, name, sector, industry, market_cap,
+                avg_dollar_volume_20d, dollar_volume_days, ranking_window_start_date, ranking_end_date,
+                ranking_source, price_source,
+                listing_source, listing_source_url, listing_source_type, listing_coverage_status,
+                listing_event_type, listing_status, listing_event_date, listing_collected_at,
+                generated_at, active, error_msg
+            FROM market_liquidity_universe_member
+            WHERE universe_code = %s
+              AND active = 1
+            ORDER BY rank_position ASC, symbol ASC
+            LIMIT %s
+            """,
+            [normalized_code, limit],
         )
     finally:
         db.close()

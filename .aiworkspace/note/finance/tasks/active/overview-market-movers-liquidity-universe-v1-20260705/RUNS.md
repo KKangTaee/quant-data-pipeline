@@ -1,0 +1,14 @@
+# Runs
+
+- 2026-07-05: `pwd && git branch --show-current && git status --short && git log --oneline -5`
+  - branch: `codex/sub-dev`
+  - note: generated/local artifacts remain dirty and are not part of this task.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_schema_tracks_materialized_rank_contract tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_upsert_materializes_ranked_members_and_deactivates_old_rows tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_loader_reads_active_rows_in_rank_order`
+  - RED: missing schema key and missing writer/reader functions.
+  - GREEN: 3 tests passed after 1차 implementation.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests`
+  - Result: 31 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile finance/data/db/schema.py finance/data/market_intelligence.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.

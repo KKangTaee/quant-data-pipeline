@@ -329,6 +329,48 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           KEY ix_symbol (symbol)
         );
     """,
+    "market_liquidity_universe_member": """
+        CREATE TABLE IF NOT EXISTS market_liquidity_universe_member (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          universe_code VARCHAR(32) NOT NULL,
+          symbol VARCHAR(20) NOT NULL,
+          rank_position INT NOT NULL,
+          source_symbol VARCHAR(32) NULL,
+          name VARCHAR(255) NULL,
+          sector VARCHAR(100) NULL,
+          industry VARCHAR(150) NULL,
+          market_cap BIGINT NULL,
+
+          avg_dollar_volume_20d DOUBLE NULL,
+          dollar_volume_days INT NULL,
+          ranking_window_start_date DATE NULL,
+          ranking_end_date DATE NULL,
+          ranking_source VARCHAR(128) NOT NULL,
+          price_source VARCHAR(128) NULL,
+
+          listing_source VARCHAR(64) NULL,
+          listing_source_url VARCHAR(1024) NULL,
+          listing_source_type VARCHAR(64) NULL,
+          listing_coverage_status VARCHAR(32) NULL,
+          listing_event_type VARCHAR(64) NULL,
+          listing_status VARCHAR(32) NULL,
+          listing_event_date DATE NULL,
+          listing_collected_at TIMESTAMP NULL,
+
+          generated_at TIMESTAMP NOT NULL,
+          active TINYINT(1) NOT NULL DEFAULT 1,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_liquidity_universe_symbol (universe_code, symbol),
+          KEY ix_liquidity_universe_rank (universe_code, active, rank_position),
+          KEY ix_liquidity_universe_ranking_date (universe_code, ranking_end_date),
+          KEY ix_liquidity_universe_symbol (symbol)
+        );
+    """,
     "market_intraday_snapshot": """
         CREATE TABLE IF NOT EXISTS market_intraday_snapshot (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,

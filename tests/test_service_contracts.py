@@ -16589,6 +16589,137 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(written_rows[0]["universe_code"], "TOP1000")
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
 
+    def test_liquidity_universe_schema_tracks_materialized_rank_contract(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_liquidity_universe_member"]
+
+        for column in [
+            "universe_code",
+            "symbol",
+            "rank_position",
+            "avg_dollar_volume_20d",
+            "dollar_volume_days",
+            "ranking_window_start_date",
+            "ranking_end_date",
+            "ranking_source",
+            "price_source",
+            "listing_source",
+            "listing_source_type",
+            "listing_coverage_status",
+            "listing_event_type",
+            "listing_status",
+            "generated_at",
+            "active",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_liquidity_universe_symbol", schema_sql)
+        self.assertIn("KEY ix_liquidity_universe_rank", schema_sql)
+
+    def test_liquidity_universe_upsert_materializes_ranked_members_and_deactivates_old_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.executemany_calls: list[tuple[str, list[dict[str, object]]]] = []
+                self.executes: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+                self.executemany_calls.append((sql, rows))
+
+            def execute(self, sql: str, params=None) -> None:
+                self.executes.append((sql, list(params or [])))
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            rows_written = mi.upsert_market_liquidity_universe_members(
+                [
+                    {
+                        "symbol": "aaa",
+                        "name": "AAA Corp",
+                        "rank_position": 2,
+                        "avg_dollar_volume_20d": "1200000.5",
+                        "dollar_volume_days": "20",
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                        "listing_source": "nasdaq_symdir_nasdaqlisted",
+                        "listing_source_type": "current_listing_snapshot",
+                        "listing_coverage_status": "partial",
+                        "listing_event_type": "listing_observed",
+                        "listing_status": "active",
+                    },
+                    {
+                        "symbol": "bbb",
+                        "rank_position": 1,
+                        "avg_dollar_volume_20d": 2500000,
+                        "dollar_volume_days": 20,
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                    },
+                ],
+                universe_code="TOP1000",
+                generated_at="2026-07-05 05:31:00",
+            )
+
+        self.assertEqual(rows_written, 2)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sync_schema.assert_called_once()
+        _, captured_rows = fake_db.executemany_calls[0]
+        self.assertEqual([row["symbol"] for row in captured_rows], ["AAA", "BBB"])
+        self.assertEqual([row["rank_position"] for row in captured_rows], [2, 1])
+        self.assertEqual(captured_rows[0]["generated_at"], "2026-07-05 05:31:00")
+        self.assertEqual(captured_rows[0]["avg_dollar_volume_20d"], 1200000.5)
+        self.assertEqual(captured_rows[0]["dollar_volume_days"], 20)
+        self.assertEqual(captured_rows[0]["ranking_source"], "nyse_price_history.20d_avg_dollar_volume")
+        self.assertEqual(fake_db.executes[0][1], ["TOP1000", "AAA", "BBB"])
+        self.assertTrue(fake_db.closed)
+
+    def test_liquidity_universe_loader_reads_active_rows_in_rank_order(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [
+                    {"symbol": "BBB", "rank_position": 1, "avg_dollar_volume_20d": 2500000.0},
+                    {"symbol": "AAA", "rank_position": 2, "avg_dollar_volume_20d": 1200000.5},
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with patch.object(mi, "_db", return_value=fake_db):
+            rows = mi.load_market_liquidity_universe_members("TOP1000", universe_limit=1000)
+
+        self.assertEqual([row["symbol"] for row in rows], ["BBB", "AAA"])
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sql, params = fake_db.queries[0]
+        self.assertIn("FROM market_liquidity_universe_member", sql)
+        self.assertIn("ORDER BY rank_position ASC, symbol ASC", sql)
+        self.assertIn("LIMIT %s", sql)
+        self.assertEqual(params, ["TOP1000", 1000])
+        self.assertTrue(fake_db.closed)
+
     def test_quote_gap_diagnostics_explain_batch_only_gap(self) -> None:
         from finance.data import market_intelligence as mi
 
