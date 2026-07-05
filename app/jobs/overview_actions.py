@@ -5,7 +5,9 @@ from typing import Any, Callable, Iterable
 
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 from finance.data.market_intelligence import (
+    collect_and_store_market_liquidity_universe,
     load_market_cap_universe_members,
+    load_market_liquidity_universe_candidate_symbols,
     load_market_universe_members,
     load_nasdaq_symbol_directory_universe_members,
 )
@@ -266,6 +268,96 @@ def run_overview_market_movers_eod_history(
     prefix = f"{normalized_period.title()} Market Movers 가격 이력 갱신"
     result["message"] = f"{prefix}: {base_message}" if base_message else f"{prefix}을 실행했습니다."
     return result
+
+
+def run_overview_market_liquidity_universe_refresh(
+    *,
+    universe_code: str,
+    universe_limit: int,
+    price_history_period: str = "1mo",
+) -> JobResult:
+    """Refresh EOD history, then materialize Top universe membership by 20D dollar volume."""
+    normalized_universe = str(universe_code or "TOP1000").strip().upper()
+    if normalized_universe not in {"TOP1000", "TOP2000"}:
+        raise ValueError(f"Unsupported liquidity universe refresh target: {universe_code!r}")
+
+    candidate_rows = load_market_liquidity_universe_candidate_symbols(normalized_universe)
+    symbols = _normalize_action_symbols(row.get("symbol") for row in candidate_rows)
+    if not symbols:
+        now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": "overview_market_liquidity_universe_refresh",
+            "status": "failed",
+            "started_at": now_text,
+            "finished_at": now_text,
+            "rows_written": 0,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "failed_symbols": [],
+            "message": "Top universe 기준 갱신 후보가 없습니다. listing source를 먼저 갱신해야 합니다.",
+            "details": {
+                "universe_code": normalized_universe,
+                "universe_limit": universe_limit,
+                "coverage_basis": "20D avg dollar volume from nyse_price_history",
+                "candidate_source": "nyse_symbol_lifecycle current listing snapshots",
+                "fallback_policy": "no legacy profile fallback",
+                "target_tables": [
+                    "finance_price.nyse_price_history",
+                    "finance_meta.market_liquidity_universe_member",
+                ],
+            },
+        }
+
+    eod_result = dict(
+        run_collect_ohlcv(
+            symbols,
+            period=price_history_period,
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+    )
+    materialized = collect_and_store_market_liquidity_universe(
+        universe_code=normalized_universe,
+        universe_limit=universe_limit,
+        candidate_rows=candidate_rows,
+    )
+
+    details = dict(eod_result.get("details") or {})
+    details.update(
+        {
+            "universe_code": normalized_universe,
+            "universe_limit": universe_limit,
+            "coverage_basis": "20D avg dollar volume from nyse_price_history",
+            "candidate_source": "nyse_symbol_lifecycle current listing snapshots",
+            "fallback_policy": "no legacy profile fallback",
+            "price_history_period": price_history_period,
+            "interval": "1d",
+            "symbols_requested": len(symbols),
+            "symbols_sample": symbols[:10],
+            "materialized": materialized,
+            "target_tables": [
+                "finance_price.nyse_price_history",
+                "finance_meta.market_liquidity_universe_member",
+            ],
+            "source": "listing lifecycle + yfinance OHLCV + nyse_price_history 20D dollar volume",
+            "purpose": "Overview Market Movers Top universe basis refresh",
+        }
+    )
+    status = "success" if str(eod_result.get("status") or "success").lower() == "success" and materialized["rows_written"] else "failed"
+    return {
+        **eod_result,
+        "job_name": "overview_market_liquidity_universe_refresh",
+        "status": status,
+        "rows_written": materialized["rows_written"],
+        "symbols_requested": len(symbols),
+        "symbols_processed": eod_result.get("symbols_processed", len(symbols)),
+        "failed_symbols": eod_result.get("failed_symbols", []),
+        "message": (
+            f"{normalized_universe} 유니버스 기준 갱신: "
+            f"{materialized['rows_written']}개를 20D 평균 거래대금 기준으로 저장했습니다."
+        ),
+        "details": details,
+    }
 
 
 def run_overview_market_mover_statement_refresh(

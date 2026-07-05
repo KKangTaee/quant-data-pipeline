@@ -7361,6 +7361,70 @@ class OverviewAutomationContractTests(unittest.TestCase):
             execution_profile="managed_safe",
         )
 
+    def test_overview_market_liquidity_universe_refresh_updates_eod_then_materializes_top_universe(self) -> None:
+        from app.jobs import overview_actions
+
+        action = getattr(overview_actions, "run_overview_market_liquidity_universe_refresh", None)
+        if not callable(action):
+            self.fail("Overview action facade should expose run_overview_market_liquidity_universe_refresh.")
+
+        candidate_rows = [{"symbol": "BBB"}, {"symbol": "AAA"}, {"symbol": "BBB"}]
+        with (
+            patch.object(
+                overview_actions,
+                "load_market_liquidity_universe_candidate_symbols",
+                return_value=candidate_rows,
+            ) as load_candidates,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={
+                    "job_name": "collect_ohlcv",
+                    "status": "success",
+                    "rows_written": 42,
+                    "symbols_processed": 2,
+                    "failed_symbols": [],
+                    "message": "OHLCV collection completed.",
+                    "details": {"target_tables": ["finance_price.nyse_price_history"]},
+                },
+            ) as collect_eod,
+            patch.object(
+                overview_actions,
+                "collect_and_store_market_liquidity_universe",
+                return_value={
+                    "universe_code": "TOP1000",
+                    "universe_limit": 1000,
+                    "rows_written": 2,
+                    "symbols": ["BBB", "AAA"],
+                    "ranking_source": "nyse_price_history.20d_avg_dollar_volume",
+                    "ranking_end_date": "2026-06-26",
+                },
+            ) as materialize,
+        ):
+            result = action(universe_code="TOP1000", universe_limit=1000)
+
+        self.assertEqual(result["job_name"], "overview_market_liquidity_universe_refresh")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols_requested"], 2)
+        self.assertEqual(
+            result["details"]["target_tables"],
+            ["finance_price.nyse_price_history", "finance_meta.market_liquidity_universe_member"],
+        )
+        self.assertEqual(result["details"]["coverage_basis"], "20D avg dollar volume from nyse_price_history")
+        load_candidates.assert_called_once_with("TOP1000")
+        collect_eod.assert_called_once_with(
+            ["BBB", "AAA"],
+            period="1mo",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+        materialize.assert_called_once_with(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            candidate_rows=candidate_rows,
+        )
+
     def test_overview_market_movers_refresh_action_uses_nasdaq_directory_loader(self) -> None:
         from app.jobs import overview_actions
 
@@ -16718,6 +16782,157 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertIn("ORDER BY rank_position ASC, symbol ASC", sql)
         self.assertIn("LIMIT %s", sql)
         self.assertEqual(params, ["TOP1000", 1000])
+        self.assertTrue(fake_db.closed)
+
+    def test_collect_liquidity_universe_materializes_computed_dollar_volume_members(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        computed_rows = [
+            {
+                "symbol": "BBB",
+                "rank_position": 1,
+                "avg_dollar_volume_20d": 2500000.0,
+                "dollar_volume_days": 20,
+                "ranking_end_date": "2026-06-26",
+            },
+            {
+                "symbol": "AAA",
+                "rank_position": 2,
+                "avg_dollar_volume_20d": 1200000.5,
+                "dollar_volume_days": 20,
+                "ranking_end_date": "2026-06-26",
+            },
+        ]
+        with (
+            patch.object(mi, "load_market_dollar_volume_universe_members", return_value=computed_rows) as load_members,
+            patch.object(mi, "upsert_market_liquidity_universe_members", return_value=2) as upsert_members,
+        ):
+            result = mi.collect_and_store_market_liquidity_universe(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                generated_at="2026-07-05 05:31:00",
+            )
+
+        self.assertEqual(result["universe_code"], "TOP1000")
+        self.assertEqual(result["universe_limit"], 1000)
+        self.assertEqual(result["ranking_source"], "nyse_price_history.20d_avg_dollar_volume")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols"], ["BBB", "AAA"])
+        load_members.assert_called_once_with(
+            "TOP1000",
+            universe_limit=1000,
+            candidate_rows=None,
+            host="localhost",
+            user="root",
+            password="1234",
+            port=3306,
+        )
+        upsert_members.assert_called_once_with(
+            computed_rows,
+            universe_code="TOP1000",
+            generated_at="2026-07-05 05:31:00",
+            host="localhost",
+            user="root",
+            password="1234",
+            port=3306,
+        )
+
+    def test_liquidity_universe_candidate_loader_reads_current_lifecycle_listing_sources(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [
+                    {"symbol": "AAA", "listing_source": "nasdaq_symdir_nasdaqlisted"},
+                    {"symbol": "AAA", "listing_source": "sec_company_tickers_exchange"},
+                    {"symbol": "BBB", "listing_source": "nyse_listings_directory"},
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with patch.object(mi, "_db", return_value=fake_db):
+            rows = mi.load_market_liquidity_universe_candidate_symbols("TOP1000")
+
+        self.assertEqual([row["symbol"] for row in rows], ["AAA", "BBB"])
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sql, params = fake_db.queries[0]
+        self.assertIn("FROM nyse_symbol_lifecycle l", sql)
+        self.assertIn("current_listing_snapshot", params)
+        self.assertIn("listing_observed", params)
+        self.assertIn("nyse_listings_directory", params)
+        self.assertTrue(fake_db.closed)
+
+    def test_dollar_volume_universe_query_excludes_symbols_missing_latest_price_row(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        candidate_rows = [
+            {"symbol": "AAA", "name": "AAA Corp", "listing_source": "nasdaq_symdir_nasdaqlisted"},
+            {"symbol": "BBB", "name": "BBB Corp", "listing_source": "nyse_listings_directory"},
+        ]
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                if "MAX(`date`) AS latest_price_date" in sql:
+                    return [{"latest_price_date": "2026-06-26"}]
+                return [
+                    {
+                        "symbol": "BBB",
+                        "avg_dollar_volume_20d": 2500000.0,
+                        "dollar_volume_days": 20,
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                    },
+                    {
+                        "symbol": "AAA",
+                        "avg_dollar_volume_20d": 1200000.5,
+                        "dollar_volume_days": 20,
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                    },
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with patch.object(mi, "_db", return_value=fake_db):
+            rows = mi.load_market_dollar_volume_universe_members(
+                "TOP1000",
+                universe_limit=1000,
+                candidate_rows=candidate_rows,
+            )
+
+        self.assertEqual([row["symbol"] for row in rows], ["BBB", "AAA"])
+        self.assertEqual([row["rank_position"] for row in rows], [1, 2])
+        self.assertEqual(rows[0]["name"], "BBB Corp")
+        self.assertEqual(rows[0]["ranking_source"], "nyse_price_history.20d_avg_dollar_volume")
+        self.assertEqual(fake_db.used_dbs, ["finance_price"])
+        latest_sql, latest_params = fake_db.queries[0]
+        ranking_sql, ranking_params = fake_db.queries[1]
+        self.assertIn("MAX(`date`) AS latest_price_date", latest_sql)
+        self.assertIn("AVG(COALESCE(adj_close, close) * volume)", ranking_sql)
+        self.assertIn("MAX(p.`date`) = %s", ranking_sql)
+        self.assertEqual(ranking_params[-2:], ["2026-06-26", 1000])
         self.assertTrue(fake_db.closed)
 
     def test_quote_gap_diagnostics_explain_batch_only_gap(self) -> None:

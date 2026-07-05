@@ -12,3 +12,15 @@
   - Result: passed.
 - 2026-07-05: `git diff --check`
   - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_collect_liquidity_universe_materializes_computed_dollar_volume_members tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_liquidity_universe_refresh_updates_eod_then_materializes_top_universe`
+  - RED: missing materialize and Overview action functions.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_candidate_loader_reads_current_lifecycle_listing_sources tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_dollar_volume_universe_query_excludes_symbols_missing_latest_price_row`
+  - RED: missing candidate loader and 20D dollar-volume loader.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_collect_liquidity_universe_materializes_computed_dollar_volume_members tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_candidate_loader_reads_current_lifecycle_listing_sources tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_dollar_volume_universe_query_excludes_symbols_missing_latest_price_row tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_liquidity_universe_refresh_updates_eod_then_materializes_top_universe`
+  - GREEN: 4 tests passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 154 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile finance/data/market_intelligence.py app/jobs/overview_actions.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.

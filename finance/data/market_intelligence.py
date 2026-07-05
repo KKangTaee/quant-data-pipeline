@@ -51,6 +51,14 @@ VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
 MARKET_CAP_UNIVERSE_LIMITS = {"TOP1000": 1000, "TOP2000": 2000}
 NASDAQ_SYMBOL_DIRECTORY_SOURCE = "nasdaq_symdir_nasdaqlisted"
 NASDAQ_SYMBOL_DIRECTORY_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
+LIQUIDITY_UNIVERSE_RANKING_SOURCE = "nyse_price_history.20d_avg_dollar_volume"
+LIQUIDITY_UNIVERSE_PRICE_SOURCE = "finance_price.nyse_price_history"
+LIQUIDITY_UNIVERSE_LISTING_SOURCES = (
+    "nasdaq_symdir_nasdaqlisted",
+    "nasdaq_symdir_otherlisted",
+    "nyse_listings_directory",
+    "sec_company_tickers_exchange",
+)
 MARKET_UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
@@ -2127,8 +2135,8 @@ def _market_liquidity_universe_row(
         "dollar_volume_days": _safe_int(row.get("dollar_volume_days")),
         "ranking_window_start_date": row.get("ranking_window_start_date"),
         "ranking_end_date": row.get("ranking_end_date"),
-        "ranking_source": row.get("ranking_source") or "nyse_price_history.20d_avg_dollar_volume",
-        "price_source": row.get("price_source") or "finance_price.nyse_price_history",
+        "ranking_source": row.get("ranking_source") or LIQUIDITY_UNIVERSE_RANKING_SOURCE,
+        "price_source": row.get("price_source") or LIQUIDITY_UNIVERSE_PRICE_SOURCE,
         "listing_source": row.get("listing_source") or row.get("source"),
         "listing_source_url": row.get("listing_source_url") or row.get("source_url"),
         "listing_source_type": row.get("listing_source_type"),
@@ -2269,6 +2277,259 @@ def load_market_liquidity_universe_members(
         )
     finally:
         db.close()
+
+
+def _dedupe_liquidity_candidate_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        symbol = _normalize_symbol(row.get("symbol"))
+        if not symbol or symbol in seen:
+            continue
+        seen.add(symbol)
+        item = dict(row)
+        item["symbol"] = symbol
+        item["source_symbol"] = _normalize_symbol(row.get("source_symbol") or symbol) or symbol
+        item["name"] = row.get("name") or row.get("long_name")
+        item["listing_source"] = row.get("listing_source") or row.get("source")
+        item["listing_source_url"] = row.get("listing_source_url") or row.get("source_url") or row.get("source_ref")
+        deduped.append(item)
+    return deduped
+
+
+def load_market_liquidity_universe_candidate_symbols(
+    universe_code: str = "TOP1000",
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    _normalize_intraday_universe(universe_code)
+    source_placeholders = ",".join(["%s"] * len(LIQUIDITY_UNIVERSE_LISTING_SOURCES))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        rows = db.query(
+            f"""
+            SELECT
+                l.symbol,
+                l.symbol AS source_symbol,
+                COALESCE(NULLIF(p.long_name, ''), NULLIF(l.name, ''), s.name) AS name,
+                p.sector,
+                p.industry,
+                p.market_cap,
+                l.source AS listing_source,
+                l.source_ref AS listing_source_url,
+                l.source_type AS listing_source_type,
+                l.coverage_status AS listing_coverage_status,
+                l.event_type AS listing_event_type,
+                l.listing_status AS listing_status,
+                l.event_date AS listing_event_date,
+                l.collected_at AS listing_collected_at,
+                l.error_msg
+            FROM nyse_symbol_lifecycle l
+            LEFT JOIN nyse_asset_profile p
+              ON p.symbol = l.symbol
+             AND p.kind = l.kind
+            LEFT JOIN nyse_stock s
+              ON s.symbol = l.symbol
+            WHERE l.source IN ({source_placeholders})
+              AND l.source_type = %s
+              AND l.event_type = %s
+              AND l.kind = %s
+              AND l.listing_status = %s
+              AND COALESCE(l.event_date, DATE(l.collected_at)) = (
+                    SELECT MAX(COALESCE(latest.event_date, DATE(latest.collected_at)))
+                    FROM nyse_symbol_lifecycle latest
+                    WHERE latest.source = l.source
+                      AND latest.source_type = %s
+                      AND latest.event_type = %s
+                      AND latest.kind = %s
+                      AND latest.listing_status = %s
+              )
+              AND (p.is_spac IS NULL OR p.is_spac <> 1)
+              AND (p.status IS NULL OR LOWER(p.status) NOT IN ('dilist', 'delist', 'delisted'))
+            ORDER BY
+              l.symbol ASC,
+              CASE l.source
+                WHEN 'nasdaq_symdir_nasdaqlisted' THEN 1
+                WHEN 'nasdaq_symdir_otherlisted' THEN 2
+                WHEN 'nyse_listings_directory' THEN 3
+                WHEN 'sec_company_tickers_exchange' THEN 4
+                ELSE 9
+              END ASC
+            """,
+            list(LIQUIDITY_UNIVERSE_LISTING_SOURCES)
+            + [
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+            ],
+        )
+        return _dedupe_liquidity_candidate_rows(rows)
+    finally:
+        db.close()
+
+
+def load_market_dollar_volume_universe_members(
+    universe_code: str = "TOP1000",
+    *,
+    universe_limit: int | None = None,
+    candidate_rows: list[dict[str, Any]] | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    limit = int(universe_limit or normalized_limit)
+    candidates = _dedupe_liquidity_candidate_rows(
+        candidate_rows
+        if candidate_rows is not None
+        else load_market_liquidity_universe_candidate_symbols(
+            normalized_code,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    symbols = [_normalize_symbol(row.get("symbol")) for row in candidates if row.get("symbol")]
+    symbols = [symbol for symbol in symbols if symbol]
+    if not symbols:
+        return []
+
+    symbol_meta = {str(row["symbol"]): row for row in candidates if row.get("symbol")}
+    placeholders = ",".join(["%s"] * len(symbols))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_PRICE)
+        latest_rows = db.query(
+            f"""
+            SELECT MAX(`date`) AS latest_price_date
+            FROM nyse_price_history
+            WHERE symbol IN ({placeholders})
+              AND timeframe = %s
+              AND COALESCE(adj_close, close) IS NOT NULL
+              AND volume IS NOT NULL
+              AND volume > 0
+            """,
+            symbols + ["1d"],
+        )
+        latest_price_date = _event_date_str((latest_rows[0] or {}).get("latest_price_date")) if latest_rows else None
+        if not latest_price_date:
+            return []
+        ranking_rows = db.query(
+            f"""
+            WITH recent_dates AS (
+                SELECT DISTINCT `date`
+                FROM nyse_price_history
+                WHERE symbol IN ({placeholders})
+                  AND timeframe = %s
+                  AND `date` <= %s
+                  AND COALESCE(adj_close, close) IS NOT NULL
+                  AND volume IS NOT NULL
+                  AND volume > 0
+                ORDER BY `date` DESC
+                LIMIT 20
+            )
+            SELECT
+                p.symbol,
+                AVG(COALESCE(adj_close, close) * volume) AS avg_dollar_volume_20d,
+                COUNT(*) AS dollar_volume_days,
+                MIN(p.`date`) AS ranking_window_start_date,
+                MAX(p.`date`) AS ranking_end_date
+            FROM nyse_price_history p
+            JOIN recent_dates rd
+              ON rd.`date` = p.`date`
+            WHERE p.symbol IN ({placeholders})
+              AND p.timeframe = %s
+              AND COALESCE(p.adj_close, p.close) IS NOT NULL
+              AND p.volume IS NOT NULL
+              AND p.volume > 0
+            GROUP BY p.symbol
+            HAVING MAX(p.`date`) = %s
+            ORDER BY avg_dollar_volume_20d DESC, p.symbol ASC
+            LIMIT %s
+            """,
+            symbols + ["1d", latest_price_date] + symbols + ["1d", latest_price_date, limit],
+        )
+    finally:
+        db.close()
+
+    out: list[dict[str, Any]] = []
+    for rank, row in enumerate(ranking_rows[:limit], start=1):
+        symbol = _normalize_symbol(row.get("symbol"))
+        if not symbol:
+            continue
+        meta = symbol_meta.get(symbol, {})
+        out.append(
+            {
+                **meta,
+                "universe_code": normalized_code,
+                "symbol": symbol,
+                "rank_position": rank,
+                "avg_dollar_volume_20d": _safe_float(row.get("avg_dollar_volume_20d")),
+                "dollar_volume_days": _safe_int(row.get("dollar_volume_days")),
+                "ranking_window_start_date": _event_date_str(row.get("ranking_window_start_date")),
+                "ranking_end_date": _event_date_str(row.get("ranking_end_date")) or latest_price_date,
+                "ranking_source": LIQUIDITY_UNIVERSE_RANKING_SOURCE,
+                "price_source": LIQUIDITY_UNIVERSE_PRICE_SOURCE,
+            }
+        )
+    return out
+
+
+def collect_and_store_market_liquidity_universe(
+    *,
+    universe_code: str = "TOP1000",
+    universe_limit: int | None = None,
+    candidate_rows: list[dict[str, Any]] | None = None,
+    generated_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    rows = load_market_dollar_volume_universe_members(
+        normalized_code,
+        universe_limit=normalized_limit,
+        candidate_rows=candidate_rows,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    generated_at_value = generated_at or _timestamp_str()
+    rows_written = upsert_market_liquidity_universe_members(
+        rows,
+        universe_code=normalized_code,
+        generated_at=generated_at_value,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    ranking_dates = [row.get("ranking_end_date") for row in rows if row.get("ranking_end_date")]
+    return {
+        "universe_code": normalized_code,
+        "universe_limit": normalized_limit,
+        "rows_computed": len(rows),
+        "rows_written": rows_written,
+        "symbols": [row["symbol"] for row in rows if row.get("symbol")],
+        "ranking_source": LIQUIDITY_UNIVERSE_RANKING_SOURCE,
+        "price_source": LIQUIDITY_UNIVERSE_PRICE_SOURCE,
+        "ranking_end_date": max(ranking_dates) if ranking_dates else None,
+        "generated_at": generated_at_value,
+        "target_table": "finance_meta.market_liquidity_universe_member",
+    }
 
 
 def load_market_cap_universe_members(
