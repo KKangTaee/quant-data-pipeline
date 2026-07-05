@@ -363,6 +363,9 @@ def _futures_macro_react_evidence_sections(macro: dict[str, Any]) -> list[dict[s
             items.append(
                 {
                     "title": _display_text(item.get("title")),
+                    "score_label": _display_text(item.get("score_label"), ""),
+                    "symbol": _display_text(item.get("symbol"), ""),
+                    "contribution_z": _display_text(item.get("contribution_z"), ""),
                     "impact_label": _display_text(item.get("impact_label"), ""),
                     "meaning": _display_text(item.get("meaning"), ""),
                 }

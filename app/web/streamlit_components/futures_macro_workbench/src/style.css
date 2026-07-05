@@ -373,6 +373,15 @@ body {
   margin-top: 2px;
 }
 
+.fm-workbench__evidence-meta {
+  color: #475569;
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 760;
+  line-height: 1.22;
+  margin-top: 3px;
+}
+
 @media (max-width: 760px) {
   .fm-workbench__command,
   .fm-workbench__brief,

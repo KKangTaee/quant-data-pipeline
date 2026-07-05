@@ -5943,6 +5943,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
                     "items": [
                         {
                             "title": "금리 부담 · ZN=F",
+                            "score_label": "금리 부담",
+                            "symbol": "ZN=F",
+                            "contribution_z": "+1.85z",
                             "impact_label": "영향 강함",
                             "meaning": "채권선물 가격 하락은 금리 상승 부담으로 뒤집어 해석합니다.",
                         }
@@ -5974,7 +5977,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(payload["flow"]["periods"][1]["title"], "최근 1개월 흐름")
         self.assertEqual(payload["flow"]["cards"][0]["label"], "위험선호")
         self.assertEqual(payload["evidence"]["title"], "현재 근거")
-        self.assertEqual(payload["evidence"]["sections"][0]["items"][0]["title"], "금리 부담 · ZN=F")
+        evidence_item = payload["evidence"]["sections"][0]["items"][0]
+        self.assertEqual(evidence_item["title"], "금리 부담 · ZN=F")
+        self.assertEqual(evidence_item["score_label"], "금리 부담")
+        self.assertEqual(evidence_item["symbol"], "ZN=F")
+        self.assertEqual(evidence_item["contribution_z"], "+1.85z")
         self.assertEqual(payload["action_boundary"], "python_dispatch_only")
 
     def test_futures_macro_react_event_payload_accepts_nested_and_direct_shapes(self) -> None:
@@ -6018,6 +6025,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
         self.assertIn("payload.command.actions.map", react_source)
         self.assertIn("flowPeriods.map", react_source)
+        self.assertIn("item.score_label", react_source)
+        self.assertIn("item.contribution_z", react_source)
+        self.assertIn("fm-workbench__evidence-meta", react_source)
         self.assertIn("setSelectedFlowKey", react_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("Streamlit.setFrameHeight", react_source)

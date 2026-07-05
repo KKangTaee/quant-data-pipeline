@@ -7,3 +7,4 @@
 - User concern is not lack of a guide. The target is to make the information itself carry enough context: what the row/section is, what it says, and how it connects to current interpretation.
 - Phase 2 wording decision: avoid treating occurrence count as a signal. Use `비슷한 과거 상태` for historical frequency and explicitly say whether 5D directional consistency is applicable.
 - Phase 3 raw table decision: preserve every dataframe, but rename disclosures around calculation steps so the user can connect current score, score contributors, actual daily moves, and historical sample tables.
+- Phase 4 React linkage decision: keep evidence item metadata compact. The drawer shows score label / symbol / z-score as a meta line, while the detailed dataframe remains the source for full raw values.

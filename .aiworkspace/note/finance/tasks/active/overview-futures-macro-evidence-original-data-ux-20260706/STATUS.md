@@ -10,4 +10,6 @@
 - Phase 2 QA complete: RED/GREEN focused tests, FuturesMacroThermometer contract class, React payload contract check, `py_compile`, and `git diff --check` passed.
 - Phase 3 status: complete. Raw tables now read in calculation order: `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본`, with matching expander names and a compact raw-table map above the dataframes.
 - Phase 3 QA complete: RED/GREEN source contract, scaffold contract, FuturesMacroThermometer contract class, `py_compile`, and `git diff --check` passed.
-- Current status: 4차 pending.
+- Phase 4 status: complete. React evidence items now preserve and render `score_label`, `symbol`, and `contribution_z`, so top evidence can be compared with lower score-contribution/raw tables.
+- Phase 4 QA complete: RED/GREEN payload and React source contracts, evidence service contracts, `py_compile`, `git diff --check`, and React `npm run build` passed.
+- Current status: 5차 pending.
