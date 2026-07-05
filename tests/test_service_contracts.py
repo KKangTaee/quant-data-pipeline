@@ -7776,6 +7776,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         wrapper_source = wrapper_path.read_text(encoding="utf-8")
         component_source = entry_path.read_text(encoding="utf-8")
+        style_source = (component_root / "frontend/src/style.css").read_text(encoding="utf-8")
         package_source = package_path.read_text(encoding="utf-8")
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
 
@@ -7789,6 +7790,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("criteria", wrapper_source)
         self.assertIn("reasons", wrapper_source)
         self.assertIn("score", wrapper_source)
+        self.assertIn(".bt-react-handoff {", style_source)
+        self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)
         self.assertNotIn("from app.services", wrapper_source)
         self.assertNotIn("from app.runtime", wrapper_source)

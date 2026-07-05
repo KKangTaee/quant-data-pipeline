@@ -15,7 +15,7 @@ body {
   border-left: 4px solid var(--accent);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   color: #2f3140;
   padding: 1.08rem 1.14rem;
 }
