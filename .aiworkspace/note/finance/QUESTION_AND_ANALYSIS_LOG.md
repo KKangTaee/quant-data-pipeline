@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-05 - Futures Macro React workbench should be a UI/action shell, not a calculation owner
+
+- User request: Futures Macro 탭 개선 2차로 React component MVP를 진행하되, Python 계산 / DB / action dispatch 경계를 유지하면서 개발 / QA / 커밋 단위로 닫아 달라고 요청함.
+- Interpreted goal: React는 사용자가 현재 macro 상태, score, 최근 흐름, validation state, 근거를 더 빨리 읽고 action을 선택하는 workbench를 맡고, 금융 계산이나 provider / DB 호출을 소유하면 안 된다.
+- Analysis result: `futures_macro_workbench` custom component는 JSON payload를 렌더링하고 event만 보낸다. `build_futures_macro_react_workbench_payload(...)`와 `_handle_futures_macro_react_event(...)`는 Python 경계에 남겨 DB read, refresh, cache clear, historical validation, rerun을 계속 소유한다.
+- Follow-up: 3차는 1W / 1M reading-flow expansion이다. Browser 자동화가 iframe button dispatch를 Python까지 증명하지 못했으므로, 이후 QA에서는 실제 사용자 클릭 또는 더 적합한 iframe 이벤트 도구로 재확인한다.
+
 ### 2026-07-05 - Futures Macro first entry should not compute historical validation synchronously
 
 - User request: Futures Macro 탭 개선을 1차~6차 개발 / QA / 커밋 단위로 진행하되, 먼저 첫 진입 병목을 분리하고 React 전환은 그 다음 차수로 진행해 달라고 요청함.

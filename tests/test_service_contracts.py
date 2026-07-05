@@ -5794,6 +5794,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
         style_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+        refresh_helper_body = futures_helper_source[futures_helper_source.index("def _refresh_futures_macro_daily_for_ui") :]
+        refresh_helper_body = refresh_helper_body[: refresh_helper_body.index("def _render_market_job_result")]
         controls_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_refresh_controls") :]
         controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
         panel_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_panel") :]
@@ -5810,8 +5812,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
         self.assertIn("section_detail=", panel_body)
         self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
-        self.assertIn("_run_futures_daily_ohlcv_action()", controls_body)
-        self.assertIn("clear_overview_futures_macro_snapshot_cache()", controls_body)
+        self.assertIn("_refresh_futures_macro_daily_for_ui()", controls_body)
+        self.assertIn("_reload_futures_macro_snapshot_for_ui()", controls_body)
+        self.assertIn("_run_futures_daily_ohlcv_action()", refresh_helper_body)
+        self.assertIn("clear_overview_futures_macro_snapshot_cache()", refresh_helper_body)
         self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
         self.assertIn("ov-futures-macro-action-copy", controls_body)
@@ -5848,6 +5852,126 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
         self.assertEqual(symbols, ["ES=F", "NQ=F"])
+
+    def test_futures_macro_react_workbench_payload_keeps_python_action_boundary(self) -> None:
+        import pandas as pd
+
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        macro = {
+            "coverage": {"standardized_count": 2, "symbol_count": 2, "latest_daily_date": "2026-07-01"},
+            "summary": {
+                "scenario": "혼재된 매크로 흐름",
+                "summary": "현재 선물 일봉 기준 흐름은 한 방향으로 확정되지 않았습니다.",
+                "sub_scenario": "저신호 / 방향성 없음",
+                "regime_hint": "관망",
+                "mixed_reason": "주요 점수가 방향성 임계값을 충분히 넘지 않았습니다.",
+                "evidence": ["저신호 / 방향성 없음: Risk-On -10"],
+            },
+            "scores": pd.DataFrame(
+                [
+                    {
+                        "Score": "Risk-On Score",
+                        "Value": -10,
+                        "Direction": "Mixed",
+                        "Coverage": "4/4",
+                        "Tone": "neutral",
+                        "Description": "미국 주가지수 선물 기반 위험선호 점수",
+                    }
+                ]
+            ),
+            "weekly_context": {
+                "summary": "최근 1주 원자재/물가 변화가 가장 두드러집니다.",
+                "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+                "cards": [
+                    {
+                        "label": "위험선호",
+                        "value": "+1.09%",
+                        "detail": "지수 선물이 최근 1주 위험자산 선호를 지지합니다.",
+                        "meaning": "ES/NQ/RTY 5D 흐름",
+                        "tone": "positive",
+                    }
+                ],
+            },
+            "evidence_reading": [
+                {
+                    "key": "strong",
+                    "label": "강한 근거",
+                    "description": "현재 macro 해석을 직접 강화하는 표준화 움직임입니다.",
+                    "count": 1,
+                    "items": [
+                        {
+                            "title": "금리 부담 · ZN=F",
+                            "impact_label": "영향 강함",
+                            "meaning": "채권선물 가격 하락은 금리 상승 부담으로 뒤집어 해석합니다.",
+                        }
+                    ],
+                    "empty_label": "강한 근거 없음",
+                }
+            ],
+        }
+
+        payload = build_futures_macro_react_workbench_payload(
+            macro,
+            validation={},
+            confidence={},
+            validation_loaded_at="",
+        )
+
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v1")
+        self.assertEqual(payload["component"], "FuturesMacroWorkbench")
+        self.assertEqual(payload["command"]["validation_state"]["state"], "대기")
+        self.assertEqual(
+            [action["id"] for action in payload["command"]["actions"]],
+            ["daily_refresh", "reload", "load_validation"],
+        )
+        self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
+        self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 방향성 없음")
+        self.assertEqual(payload["scores"][0]["label"], "위험선호")
+        self.assertEqual(payload["flow"]["cards"][0]["label"], "위험선호")
+        self.assertEqual(payload["evidence"]["sections"][0]["items"][0]["title"], "금리 부담 · ZN=F")
+        self.assertEqual(payload["action_boundary"], "python_dispatch_only")
+
+    def test_futures_macro_react_event_payload_accepts_nested_and_direct_shapes(self) -> None:
+        from app.web.overview.futures_macro_helpers import _futures_macro_react_event_payload
+
+        self.assertEqual(
+            _futures_macro_react_event_payload({"event": {"id": "load_validation", "nonce": 101}}),
+            {"id": "load_validation", "nonce": 101},
+        )
+        self.assertEqual(
+            _futures_macro_react_event_payload({"id": "load_validation", "nonce": 102}),
+            {"id": "load_validation", "nonce": 102},
+        )
+
+    def test_futures_macro_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.futures_macro_react_component import (
+            FUTURES_MACRO_REACT_COMPONENT_NAME,
+            futures_macro_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/futures_macro_workbench")
+        helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/futures_macro_react_component.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertEqual(FUTURES_MACRO_REACT_COMPONENT_NAME, "futures_macro_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "index.html").exists())
+        self.assertTrue((component_root / "src" / "FuturesMacroWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(futures_macro_react_component_available(component_root / "missing-dist"))
+        self.assertIn("render_futures_macro_react_workbench", helper_source)
+        self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
+        self.assertIn("_handle_futures_macro_react_event(", helper_source)
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
+        self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("Streamlit.setFrameHeight", react_source)
+        self.assertIn(".fm-workbench__scores", react_style)
+        self.assertIn(".fm-workbench__evidence", react_style)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")

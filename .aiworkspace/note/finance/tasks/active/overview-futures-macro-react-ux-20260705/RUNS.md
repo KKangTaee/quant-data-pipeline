@@ -84,3 +84,82 @@ Result: fast snapshot `0.216s`, no validation payload in the fast snapshot, on-d
 Result: Browser QA confirmed Futures Macro tab shows `대기 · 탭 첫 진입은 현재 매크로만 빠르게 읽고...`, `과거 점검 불러오기` loads timestamped validation with 1,221 PIT dates, and `다시 읽기` clears the loaded session validation back to `대기`.
 
 Screenshot: `browser-qa-futures-macro-phase1.png` in this task folder. It is a generated QA artifact and should remain uncommitted unless explicitly requested.
+
+### Phase 2 RED / GREEN
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_workbench_payload_keeps_python_action_boundary \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_component_scaffold_keeps_streamlit_fallback
+```
+
+RED result: initially failed because the React source did not contain the explicit positive `payload.component === "FuturesMacroWorkbench"` guard expected by the scaffold contract.
+
+GREEN result: passed after making the identity guard explicit.
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_component_scaffold_keeps_streamlit_fallback
+```
+
+RED result: failed after adding the `index.html` expectation because the Vite entry file was absent. `npm run build` also failed with `Could not resolve entry module "index.html"`.
+
+GREEN result: passed after adding `app/web/streamlit_components/futures_macro_workbench/index.html`; `npm run build` then produced `component_static/index.html`, CSS, and JS assets.
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_event_payload_accepts_nested_and_direct_shapes
+```
+
+RED result: failed for direct event shape. GREEN result: passed after matching the existing Market Movers React bridge behavior and accepting nested or direct event payloads.
+
+### Phase 2 Focused QA
+
+```bash
+cd app/web/streamlit_components/futures_macro_workbench
+npm install
+npm run build
+```
+
+Result: install audited 108 packages with 0 vulnerabilities. Build passed with 170 transformed modules and wrote `component_static/index.html`, `assets/index-VxsTOpyz.css`, and `assets/index-DCU9uHUo.js`.
+
+```bash
+.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests
+.venv/bin/python -m py_compile app/web/overview/futures_macro.py app/web/overview/futures_macro_helpers.py app/web/overview/futures_macro_react_component.py app/web/overview/components/common.py tests/test_service_contracts.py
+git diff --check
+```
+
+Result: Overview contract class passed 144 tests. `py_compile` and `git diff --check` passed.
+
+### Phase 2 Snapshot Smoke
+
+```bash
+.venv/bin/python - <<'PY'
+from app.services.futures_macro_thermometer import load_overview_futures_macro_snapshot
+from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+from app.web.overview.futures_macro_react_component import futures_macro_react_component_available
+
+macro = load_overview_futures_macro_snapshot(include_validation=False)
+payload = build_futures_macro_react_workbench_payload(macro, validation={}, confidence={}, validation_loaded_at="")
+print({
+    "component_available": futures_macro_react_component_available(),
+    "schema": payload["schema_version"],
+    "scores": len(payload["scores"]),
+    "flow_cards": len(payload["flow"]["cards"]),
+    "evidence_sections": len(payload["evidence"]["sections"]),
+    "validation_state": payload["validation"]["state"],
+})
+PY
+```
+
+Result: component available `True`, schema `futures_macro_react_workbench_v1`, 6 score chips, 5 flow cards, 4 evidence sections, validation state `대기`.
+
+### Phase 2 Browser QA
+
+```bash
+.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8517 --server.headless true
+```
+
+Result: Browser QA confirmed the Futures Macro React iframe renders the workbench payload, `Futures Macro actions`, `과거 점검 불러오기`, lazy validation state, score chips, and 1W flow. The in-app Browser automation did not deliver iframe button clicks to the React handler / Python component return path, so click dispatch was not claimed from Browser QA; nested/direct event parsing and dispatch remain covered by unit contract.
+
+Screenshot: `browser-qa-futures-macro-phase2.png` in this task folder. It is a generated QA artifact and should remain uncommitted unless explicitly requested.

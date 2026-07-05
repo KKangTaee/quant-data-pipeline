@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro React UX 2차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 `futures_macro_workbench` React/Vite component와 Python wrapper를 추가했다.
+  - React는 command strip, 현재 macro brief, score chips, 최근 1주 흐름, validation state, evidence drawer를 렌더링하고 Python은 DB 읽기 / validation 계산 / refresh action / raw tables를 계속 소유한다.
+  - Overview contract 144개, `py_compile`, `npm run build`, snapshot payload smoke, `git diff --check`를 통과했다. 다음은 3차 1W / 1M reading-flow expansion이다.
 - Overview Futures Macro React UX 1차:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 Futures Macro 첫 진입 병목을 historical validation 동기 계산으로 확인하고 lazy/on-demand 경계로 분리했다.
   - 탭 진입은 `include_validation=False` snapshot만 읽고, `과거 점검 불러오기`가 validation / confidence를 session state에 저장한다.

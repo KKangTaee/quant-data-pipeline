@@ -86,7 +86,8 @@ http://localhost:8501
    - `데이터 갱신` popover에서 `수동` 또는 `60초 자동 확인`을 고른다. `선택 선물 1분봉 갱신`은 현재 선택한 선물만 수집하고, `화면만 다시 읽기`는 DB state를 다시 읽는다.
    - 60초 자동 확인은 브라우저 세션이 열려 있을 때만 동작하며 provider를 매초 호출하지 않는다. 20초 fast mode는 이 화면의 기본 선택지로 노출하지 않는다.
    - 상단 `선물 워크스페이스`, `단기 움직임`, `데이터 상태`를 먼저 본다. 최신 candle이 오래됐으면 차트는 latest stored data를 보여주되 `오래됨`과 갱신 안내를 표시한다.
-   - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 과거 일관성 점검, 유사 구간, score chip을 보여준다.
+   - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 과거 일관성 점검, 유사 구간, score chip을 보여준다. Futures Macro tab의 React workbench는 command strip, 현재 브리프, score chip, 최근 1주 흐름, validation state, 근거 drawer를 렌더링한다.
+   - Futures Macro tab 첫 진입은 `include_validation=False` snapshot으로 빠르게 렌더링한다. Historical validation은 `과거 점검 불러오기`를 눌렀을 때만 계산되며, `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다.
    - `최근 1주 흐름`은 저장된 1D 선물의 최근 5거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
    - `근거 해석 / 원본 데이터`를 열면 `강하게 말하는 근거`, `약한 근거`, `충돌 근거`, `자료 부족`을 먼저 읽고, 그 다음 historical validation / 원본 점수표 / 구성 선물별 기여 / 선물별 일봉 변화 원본을 확인한다.
    - 매크로 일봉이 비어 있거나 근거가 부족하면 `일봉 매크로 데이터 갱신`을 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.

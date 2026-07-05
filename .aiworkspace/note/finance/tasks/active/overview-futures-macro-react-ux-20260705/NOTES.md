@@ -14,3 +14,9 @@
   - `과거 점검 불러오기` runs `build_futures_macro_validation_snapshot(...)` and `build_interpretation_confidence(...)` only on click, then stores the validation / confidence / loaded timestamp in session state.
   - `일봉 갱신` and `다시 읽기` clear the session validation keys along with the snapshot cache boundary.
   - The snapshot `symbols` payload is a pandas DataFrame in this path, so the on-demand validation action must extract unique values from its `Symbol` column instead of using `macro.get("symbols") or []`.
+- Phase 2 implementation:
+  - `app/web/overview/futures_macro_react_component.py` declares the `futures_macro_workbench` Streamlit component and falls back to the Streamlit renderer when `component_static/index.html` is absent.
+  - `app/web/streamlit_components/futures_macro_workbench/` owns the React/Vite source and checked-in `component_static` build used by Streamlit.
+  - `build_futures_macro_react_workbench_payload(...)` converts the existing macro snapshot into a JSON contract for command actions, current brief, score chips, 1W flow cards, validation state/metrics, and compact evidence sections.
+  - `_handle_futures_macro_react_event(...)` accepts both nested `{"event": ...}` and direct event shapes, deduplicates by nonce/token, and dispatches only to existing Python refresh / reload / validation helpers.
+  - Raw score/component/symbol tables and the source-of-truth calculations remain in Python/Streamlit; the React component is a read / action surface, not a trading signal, prediction gate, or data fetcher.

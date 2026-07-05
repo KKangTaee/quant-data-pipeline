@@ -22,6 +22,10 @@ from app.services.futures_macro_validation import (
 )
 from app.web.overview.session_helpers import _snapshot_value
 from app.web.overview.components.common import _overview_tone_color
+from app.web.overview.futures_macro_react_component import (
+    futures_macro_react_component_available,
+    render_futures_macro_react_workbench,
+)
 
 
 FUTURES_GROUP_LABELS = {
@@ -74,6 +78,7 @@ MACRO_EVIDENCE_TEXT_LABELS = {
 OVERVIEW_FUTURES_MACRO_VALIDATION_KEY = "overview_futures_macro_validation_snapshot"
 OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY = "overview_futures_macro_validation_confidence"
 OVERVIEW_FUTURES_MACRO_VALIDATION_LOADED_AT_KEY = "overview_futures_macro_validation_loaded_at"
+OVERVIEW_FUTURES_MACRO_REACT_EVENT_KEY = "overview_futures_macro_react_last_event"
 
 
 def render_futures_macro_header() -> None:
@@ -122,6 +127,22 @@ def _load_futures_macro_validation_for_session(macro: dict[str, Any]) -> None:
     st.session_state[OVERVIEW_FUTURES_MACRO_VALIDATION_KEY] = validation
     st.session_state[OVERVIEW_FUTURES_MACRO_VALIDATION_CONFIDENCE_KEY] = confidence
     st.session_state[OVERVIEW_FUTURES_MACRO_VALIDATION_LOADED_AT_KEY] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _reload_futures_macro_snapshot_for_ui() -> None:
+    clear_overview_futures_macro_snapshot_cache()
+    _clear_futures_macro_validation_state()
+    st.session_state["overview_futures_macro_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _refresh_futures_macro_daily_for_ui() -> None:
+    _store_overview_job_result(
+        "overview_futures_daily_ohlcv_result",
+        _run_futures_daily_ohlcv_action(),
+    )
+    clear_overview_futures_macro_snapshot_cache()
+    _clear_futures_macro_validation_state()
+    st.session_state["overview_futures_macro_daily_refreshed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _render_market_job_result(result_key: str) -> None:
@@ -223,6 +244,215 @@ def _futures_selected_symbols(snapshot: dict[str, Any]) -> list[str]:
         if symbol and symbol not in ordered:
             ordered.append(symbol)
     return ordered
+
+
+def _display_text(value: Any, default: str = "-") -> str:
+    text = str(value or "").strip()
+    return text if text else default
+
+
+def _react_metric(label: str, value: Any, *, detail: Any = None, tone: str = "neutral") -> dict[str, str]:
+    return {
+        "label": str(label),
+        "value": _snapshot_value(value),
+        "detail": "" if detail in (None, "") else str(detail),
+        "tone": str(tone or "neutral"),
+    }
+
+
+def _futures_macro_react_scores(scores: Any) -> list[dict[str, str]]:
+    if not isinstance(scores, pd.DataFrame) or scores.empty:
+        return []
+    rows: list[dict[str, str]] = []
+    for row in scores.to_dict("records"):
+        score_name = str(row.get("Score") or "")
+        rows.append(
+            {
+                "label": MACRO_SCORE_LABELS.get(score_name, score_name),
+                "value": _snapshot_value(row.get("Value")),
+                "direction": _display_text(row.get("Direction")),
+                "coverage": _display_text(row.get("Coverage")),
+                "tone": str(row.get("Tone") or "neutral"),
+                "description": _display_text(row.get("Description"), ""),
+            }
+        )
+    return rows
+
+
+def _futures_macro_react_flow(weekly_context: dict[str, Any]) -> dict[str, Any]:
+    cards: list[dict[str, str]] = []
+    for card in list(weekly_context.get("cards") or []):
+        if not isinstance(card, dict):
+            continue
+        cards.append(
+            {
+                "label": _display_text(card.get("label")),
+                "value": _display_text(card.get("value")),
+                "detail": _display_text(card.get("detail"), ""),
+                "meaning": _display_text(card.get("meaning"), ""),
+                "tone": str(card.get("tone") or "neutral"),
+            }
+        )
+    return {
+        "title": "최근 1주 흐름",
+        "basis": _display_text(weekly_context.get("basis"), "저장된 1D 선물 OHLCV의 최근 5거래일 변화율"),
+        "summary": _display_text(weekly_context.get("summary"), "최근 흐름을 계산할 자료가 부족합니다."),
+        "cards": cards,
+    }
+
+
+def _futures_macro_react_evidence_sections(macro: dict[str, Any]) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+    for section in list(macro.get("evidence_reading") or []):
+        if not isinstance(section, dict):
+            continue
+        items: list[dict[str, str]] = []
+        for item in list(section.get("items") or [])[:6]:
+            if not isinstance(item, dict):
+                continue
+            items.append(
+                {
+                    "title": _display_text(item.get("title")),
+                    "impact_label": _display_text(item.get("impact_label"), ""),
+                    "meaning": _display_text(item.get("meaning"), ""),
+                }
+            )
+        sections.append(
+            {
+                "key": _display_text(section.get("key")),
+                "label": _display_text(section.get("label")),
+                "description": _display_text(section.get("description"), ""),
+                "count": int(section.get("count") or len(items)),
+                "empty_label": _display_text(section.get("empty_label"), "표시할 근거가 없습니다."),
+                "items": items,
+            }
+        )
+    return sections
+
+
+def _futures_macro_react_validation_state(validation: dict[str, Any], loaded_at: str) -> dict[str, str]:
+    if validation:
+        detail = f"과거 점검 기준: {loaded_at}" if loaded_at else "과거 점검을 불러왔습니다."
+        return {"state": "불러옴", "detail": detail, "tone": "positive", "loaded_at": loaded_at}
+    return {
+        "state": "대기",
+        "detail": "탭 첫 진입은 현재 매크로만 빠르게 읽고, 과거 점검은 필요할 때 계산합니다.",
+        "tone": "warning",
+        "loaded_at": "",
+    }
+
+
+def _futures_macro_react_validation_metrics(validation: dict[str, Any]) -> list[dict[str, str]]:
+    if not validation:
+        return [
+            _react_metric("상태", "아직 불러오지 않음", detail="버튼으로 historical validation 계산", tone="warning"),
+            _react_metric("PIT 날짜", "-", detail="계산 전"),
+            _react_metric("유사 구간", "-", detail="계산 전"),
+        ]
+    coverage = dict(validation.get("coverage") or {})
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    occurrence = current_metrics.get("Occurrence Count")
+    hit_rule = current_metrics.get("Hit Rule") or current_metrics.get("Target Family")
+    return [
+        _react_metric("상태", validation.get("status") or "OK", detail=f"{coverage.get('history_span_years') or '-'}년", tone="positive"),
+        _react_metric("PIT 날짜", coverage.get("validation_dates"), detail="historical validation dates"),
+        _react_metric("유사 구간", occurrence, detail=hit_rule or "current scenario sample"),
+    ]
+
+
+def build_futures_macro_react_workbench_payload(
+    macro: dict[str, Any],
+    *,
+    validation: dict[str, Any],
+    confidence: dict[str, Any],
+    validation_loaded_at: str,
+) -> dict[str, Any]:
+    coverage = dict(macro.get("coverage") or {})
+    summary = dict(macro.get("summary") or {})
+    confidence_label = str(confidence.get("label") or "")
+    confidence_display = MACRO_CONFIDENCE_SHORT_LABELS.get(confidence_label) or MACRO_CONFIDENCE_LABELS.get(confidence_label) or "근거 점검 대기"
+    confidence_detail = " / ".join(str(item) for item in list(confidence.get("reasons") or [])[:2] if str(item).strip())
+    validation_state = _futures_macro_react_validation_state(validation, validation_loaded_at)
+    validation_metrics = _futures_macro_react_validation_metrics(validation)
+    latest_daily = _snapshot_value(coverage.get("latest_daily_date"))
+    standardized = coverage.get("standardized_count") or 0
+    symbol_count = coverage.get("symbol_count") or 0
+    return {
+        "schema_version": "futures_macro_react_workbench_v1",
+        "component": "FuturesMacroWorkbench",
+        "command": {
+            "title": "매크로 컨텍스트",
+            "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily}",
+            "validation_state": validation_state,
+            "actions": [
+                {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집합니다."},
+                {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "현재 DB 기준으로 snapshot cache를 비운 뒤 다시 읽습니다."},
+                {"id": "load_validation", "label": "과거 점검 불러오기", "kind": "secondary", "detail": "historical validation을 명시적으로 계산합니다."},
+            ],
+        },
+        "brief": {
+            "kicker": "오늘 기준 시장 브리프",
+            "title": _display_text(summary.get("scenario"), "매크로 흐름 미확인"),
+            "sub_scenario": _display_text(summary.get("sub_scenario"), ""),
+            "regime_hint": _display_text(summary.get("regime_hint"), ""),
+            "summary": _display_text(summary.get("summary"), "현재 매크로 해석을 만들 자료가 부족합니다."),
+            "reason": _display_text(summary.get("mixed_reason"), ""),
+            "confidence_label": confidence_display,
+            "confidence_detail": confidence_detail or "과거 점검은 명시적으로 불러올 때 계산합니다.",
+            "evidence": [str(item) for item in list(summary.get("evidence") or []) if str(item).strip()],
+            "metrics": [
+                _react_metric("자료 기준", f"{standardized}/{symbol_count}개", detail=f"기준일 {latest_daily}"),
+                _react_metric("과거 점검", validation_state["state"], detail=validation_state["detail"], tone=validation_state["tone"]),
+            ],
+        },
+        "scores": _futures_macro_react_scores(macro.get("scores")),
+        "flow": _futures_macro_react_flow(dict(macro.get("weekly_context") or {})),
+        "validation": {
+            "title": "과거 점검",
+            "state": validation_state["state"],
+            "detail": validation_state["detail"],
+            "metrics": validation_metrics,
+        },
+        "evidence": {
+            "title": "근거 해석",
+            "default_open": False,
+            "sections": _futures_macro_react_evidence_sections(macro),
+        },
+        "action_boundary": "python_dispatch_only",
+        "boundary_note": "계산, DB 읽기, 수집 action은 Python / Overview action facade가 소유합니다. 이 화면은 매수매도 신호가 아닙니다.",
+    }
+
+
+def _futures_macro_react_event_payload(event: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {}
+    nested = event.get("event")
+    if isinstance(nested, dict):
+        return dict(nested)
+    return event
+
+
+def _handle_futures_macro_react_event(event: dict[str, Any] | None, macro: dict[str, Any]) -> None:
+    payload = _futures_macro_react_event_payload(event)
+    action_id = str(payload.get("id") or payload.get("action_id") or "")
+    if not action_id:
+        return
+    nonce = payload.get("nonce") or payload.get("token") or action_id
+    event_key = f"{action_id}:{nonce}"
+    if st.session_state.get(OVERVIEW_FUTURES_MACRO_REACT_EVENT_KEY) == event_key:
+        return
+    st.session_state[OVERVIEW_FUTURES_MACRO_REACT_EVENT_KEY] = event_key
+    if action_id == "daily_refresh":
+        with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
+            _refresh_futures_macro_daily_for_ui()
+        st.rerun()
+    if action_id == "reload":
+        _reload_futures_macro_snapshot_for_ui()
+        st.rerun()
+    if action_id == "load_validation":
+        with st.spinner("과거 점검을 계산하는 중입니다..."):
+            _load_futures_macro_validation_for_session(macro)
+        st.rerun()
 
 
 def _futures_symbols_with_candles(snapshot: dict[str, Any], selected_symbols: list[str] | None = None) -> list[str]:
@@ -1069,13 +1299,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         help="저장된 주요 선물 5년 1D OHLCV를 다시 수집하고 매크로 snapshot cache를 비웁니다.",
     ):
         with st.spinner("선물 5년 일봉을 yfinance에서 수집하는 중입니다..."):
-            _store_overview_job_result(
-                "overview_futures_daily_ohlcv_result",
-                _run_futures_daily_ohlcv_action(),
-            )
-            clear_overview_futures_macro_snapshot_cache()
-            _clear_futures_macro_validation_state()
-            st.session_state["overview_futures_macro_daily_refreshed_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            _refresh_futures_macro_daily_for_ui()
         st.rerun()
     if cols[2].button(
         "다시 읽기",
@@ -1083,9 +1307,7 @@ def _render_futures_macro_refresh_controls(*, section_detail: str) -> None:
         use_container_width=True,
         help="수집 job은 실행하지 않고 현재 DB 기준으로 매크로 snapshot cache만 비운 뒤 다시 읽습니다.",
     ):
-        clear_overview_futures_macro_snapshot_cache()
-        _clear_futures_macro_validation_state()
-        st.session_state["overview_futures_macro_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _reload_futures_macro_snapshot_for_ui()
         st.rerun()
     st.markdown('<div class="ov-futures-macro-action-rule"></div>', unsafe_allow_html=True)
 
@@ -1137,21 +1359,32 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     symbols = macro.get("symbols")
     confidence = dict(macro.get("confidence") or {})
     validation = dict(macro.get("validation") or {})
+    react_available = futures_macro_react_component_available()
 
-    _render_futures_macro_refresh_controls(
-        section_detail=(
-            f"일봉 {coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개"
-            f" · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}"
-        ),
-    )
-    _render_futures_macro_validation_controls(
-        macro,
-        validation=validation,
-        loaded_at=validation_loaded_at,
-    )
-    _render_futures_market_brief(macro)
-    _render_weekly_macro_context(dict(macro.get("weekly_context") or {}))
-    _render_macro_score_lane(scores)
+    if react_available:
+        payload = build_futures_macro_react_workbench_payload(
+            macro,
+            validation=validation,
+            confidence=confidence,
+            validation_loaded_at=validation_loaded_at,
+        )
+        react_event = render_futures_macro_react_workbench(payload, key="overview_futures_macro_workbench")
+        _handle_futures_macro_react_event(react_event, macro)
+    else:
+        _render_futures_macro_refresh_controls(
+            section_detail=(
+                f"일봉 {coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개"
+                f" · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}"
+            ),
+        )
+        _render_futures_macro_validation_controls(
+            macro,
+            validation=validation,
+            loaded_at=validation_loaded_at,
+        )
+        _render_futures_market_brief(macro)
+        _render_weekly_macro_context(dict(macro.get("weekly_context") or {}))
+        _render_macro_score_lane(scores)
     warnings = list(macro.get("warnings") or [])
     warnings.extend(str(item) for item in validation.get("warnings") or [])
     if warnings:
@@ -1160,7 +1393,10 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     cautions = [_macro_caution_label(item) for item in macro.get("cautions") or [] if str(item).strip()]
     cautions.extend(_macro_caution_label(item) for item in validation.get("caveats") or [] if str(item).strip())
     with st.expander("근거 해석 / 원본 데이터", expanded=detail_expanded):
-        _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
+        if react_available:
+            st.caption("상단 React 근거 drawer가 해석 근거를 표시합니다. 이 영역은 상세 validation / 원본 표 확인용입니다.")
+        else:
+            _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
         if validation:
             _render_macro_validation_summary(validation, confidence_label=str(confidence.get("label") or ""))
         else:
