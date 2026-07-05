@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-06-22
+Last Verified: 2026-07-05
 
 ## Purpose
 
@@ -36,8 +36,9 @@ http://localhost:8501
 
 1. `Workspace > Ingestion > Overview Market Snapshot`
    - `Collect S&P 500 Universe`를 먼저 실행해 current S&P 500 membership을 갱신한다.
-   - Nasdaq coverage가 필요하면 `Workspace > Ingestion > 상장 / 상폐 근거 > Nasdaq Symbol Directory current snapshot` 또는 Overview Market Movers의 `Nasdaq 목록 갱신`을 실행해 latest `nasdaq_symdir_nasdaqlisted` row를 `finance_meta.nyse_symbol_lifecycle`에 저장한다.
-   - `Collect Market Intraday Snapshot`으로 `SP500`, 필요하면 `TOP1000`, `TOP2000` snapshot을 갱신한다.
+   - Nasdaq coverage가 필요하면 `Workspace > Ingestion > 상장 / 상폐 근거 > Nasdaq Symbol Directory current snapshot` 또는 Overview Market Movers의 `유니버스 기준 갱신`을 실행해 latest `nasdaq_symdir_nasdaqlisted` row를 `finance_meta.nyse_symbol_lifecycle`에 저장한다.
+   - Top1000 / Top2000 coverage가 필요하면 먼저 listing source를 최신화하고, EOD 1d price / volume row를 확보한 다음, Overview Market Movers의 `유니버스 기준 갱신`으로 `market_liquidity_universe_member`를 다시 materialize한다.
+   - `Collect Market Intraday Snapshot`으로 `SP500`, 필요하면 `TOP1000`, `TOP2000` snapshot을 갱신한다. Top coverage의 intraday snapshot은 저장된 liquidity universe membership을 읽는다.
    - Nasdaq-listed daily movers가 필요하면 `NASDAQ` intraday snapshot을 갱신한다. 이 coverage는 Nasdaq Symbol Directory current listing observation 기준이며 Nasdaq Composite / Nasdaq-100 membership proof가 아니다.
    - daily movers는 `finance_price.market_intraday_snapshot`의 latest snapshot을 읽는다.
 
@@ -45,7 +46,10 @@ http://localhost:8501
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
    - daily period의 `데이터 갱신` 패널에서 `수동 갱신` 또는 `자동 갱신`을 선택한다.
    - `수동 갱신`에서는 `일중 스냅샷 갱신`을 눌러 새 snapshot을 저장하고, `화면 새로고침`으로 stored DB state를 다시 읽는다.
-   - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `Nasdaq 목록 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
+   - `유니버스 기준 갱신`은 선택 coverage의 membership 기준을 다시 저장한다. `SP500`은 S&P 500 구성 목록, `NASDAQ`은 Nasdaq Symbol Directory current snapshot, `TOP1000` / `TOP2000`은 최근 20거래일 평균 거래대금 ranking membership을 갱신한다.
+   - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `유니버스 기준 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
+   - Top1000 / Top2000에서 universe 수가 1000 / 2000보다 작으면 listing source 후보 수, 최신 EOD 가격 row coverage, provider price 누락을 순서대로 확인한다. 최신 거래일 price row가 없는 ticker는 ranking 가능한 후보에서 제외된다.
+   - Weekly / Monthly / Yearly 결과는 저장된 EOD 가격 기준이다. Market Movers 기본 화면에서는 별도 `가격 이력 갱신` 버튼을 노출하지 않고, 먼저 `유니버스 기준 갱신`과 `화면 새로고침`으로 membership 기준과 stored DB state를 명확히 분리한다.
    - `자동 갱신`은 현재 선택한 daily coverage 하나만 확인한다. S&P 500은 `browser_safe` / `sp500_intraday`, Top1000은 `intraday` / `top1000_intraday`, Top2000은 `intraday` / `top2000_intraday` job filter를 사용한다.
    - CLI / scheduler dry-run에서는 Nasdaq-listed snapshot도 `standard` profile plan에 표시되며, 단일 job 확인은 `--profile intraday --job nasdaq_intraday --dry-run`으로 한다. 실제 자동 실행은 미국 장중 guard와 cadence를 따른다.
    - 자동 cadence는 S&P 500 5분, Top1000 15분, Top2000 30분 기준이며 Overview가 열려 있는 브라우저 세션에서만 heartbeat가 돈다.
@@ -213,6 +217,18 @@ print(load_latest_intraday_mover_symbols(universe_code="SP500", top_n=5))
 PY
 ```
 
+Top1000 / Top2000 liquidity universe 저장 상태 확인:
+
+```bash
+uv run python - <<'PY'
+from finance.data.market_intelligence import load_market_liquidity_universe_members
+for code in ("TOP1000", "TOP2000"):
+    rows = load_market_liquidity_universe_members(code)
+    latest = rows[0]["as_of_date"] if rows else None
+    print(code, len(rows), latest, [row["symbol"] for row in rows[:5]])
+PY
+```
+
 BEA GDP macro calendar smoke:
 
 ```bash
@@ -238,6 +254,8 @@ PY
 
 - Market Movers Coverage includes `S&P 500`, `Top 1000`, `Top 2000`, and `Nasdaq-listed current snapshot`.
 - Nasdaq-listed coverage shows `coverage_basis=Nasdaq-listed current snapshot`, `universe_source=nasdaq_symdir_nasdaqlisted`, current snapshot caveat, and Symbol Directory refresh guidance when no lifecycle rows exist.
+- Top1000 / Top2000 coverage shows a 20D average dollar volume basis, not market-cap basis. The materialized membership is stored in `finance_meta.market_liquidity_universe_member` and reused by Overview read model and intraday snapshot refresh.
+- New listing tickers appear in Top1000 / Top2000 only after the listing source contains the symbol and `finance_price.nyse_price_history` has latest EOD close / volume rows for ranking.
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
 - Market Movers daily `데이터 갱신` status / action bar shows coverage ratio / percent, next check time, refresh mode, and the recommended next action for SP500 / TOP1000 / TOP2000.

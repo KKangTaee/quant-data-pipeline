@@ -96,19 +96,41 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - current universe snapshot table이다.
 - source는 Wikipedia S&P 500 constituents table이며, ticker는 Yahoo Finance 호환을 위해 `.`을 `-`로 정규화한다.
-- Top1000 / Top2000 coverage는 이 table이 아니라 `nyse_asset_profile.market_cap` current snapshot을 직접 사용한다.
+- Top1000 / Top2000 coverage는 이 table이 아니라 `market_liquidity_universe_member` materialized membership을 사용한다.
 
 주의:
 
 - historical S&P 500 membership이나 point-in-time constituent truth가 아니다.
 - 상장폐지 / 편입변경의 과거 재현이 필요한 backtest universe로 바로 쓰면 survivorship bias가 생길 수 있다.
 
+## `market_liquidity_universe_member`
+
+역할:
+
+- Market Movers Top1000 / Top2000 current membership을 저장한다.
+- `nyse_symbol_lifecycle` / `nyse_stock` 등 listing source에서 후보 ticker를 읽고, `nyse_price_history`의 최근 거래일 row가 있는 후보만 ranking 대상으로 삼는다.
+- ranking 기준은 최근 20거래일 `close * volume` 평균 거래대금이다.
+
+성격:
+
+- materialized current universe snapshot table이다.
+- `rank_position`, `avg_dollar_volume`, `lookback_trading_days`, `as_of_date`, `ranking_source`, `price_source`, `listing_source`를 함께 저장해 UI와 snapshot refresh가 같은 membership을 재사용하게 한다.
+- Top1000 / Top2000은 더 이상 `nyse_asset_profile.market_cap` snapshot으로 순위를 정하지 않는다. `nyse_asset_profile`은 회사명, sector, industry 같은 보조 metadata join에만 사용한다.
+- listing source fallback이 비어 있으면 legacy profile fallback으로 자동 대체하지 않는다. 이 경우 universe 기준 갱신 결과가 실패 / 확인 필요 상태로 남아 listing source 갱신을 먼저 요구한다.
+
+주의:
+
+- 이 table은 "가장 큰 기업" 순위가 아니라 "최근 거래대금이 큰 종목" 순위다.
+- 신규 상장 ticker는 current listing source에 들어오고, 이후 `nyse_price_history`에 최신 EOD 가격 / 거래량 row가 저장되어야 포함될 수 있다.
+- 최신 거래일 price row가 없는 ticker는 ranking 가능한 후보에서 제외된다. 이는 stale listing, provider 누락, delisted ticker, 거래 정지 가능성을 모두 포함하는 보수적 처리다.
+- current snapshot이므로 historical point-in-time membership이나 survivorship control PASS 근거가 아니다.
+
 ## `market_intraday_snapshot`
 
 역할:
 
 - Overview Market Movers의 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 coverage별로 저장한다.
-- 현재 coverage는 `SP500`, `TOP1000`, `TOP2000`이다.
+- 현재 coverage는 `SP500`, `TOP1000`, `TOP2000`, `NASDAQ`이다.
 
 성격:
 
@@ -116,14 +138,14 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 기본 source는 yfinance 세션을 통한 Yahoo quote batch이고, 실패 시 yfinance 5m OHLCV fallback을 사용할 수 있다.
 - `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 이 table의 최신 snapshot을 읽는다.
-- `TOP1000` / `TOP2000`은 `nyse_asset_profile.market_cap` current snapshot으로 universe를 구성해 저장한다.
+- `TOP1000` / `TOP2000`은 `market_liquidity_universe_member`의 active membership을 기본 universe로 읽어 저장한다.
 
 주의:
 
 - 무료 provider 기반이므로 지연, rate limit, ticker별 missing이 발생할 수 있다.
 - `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
 - Market Movers quote gap diagnosis는 이 table의 missing row를 대상으로 추가 evidence를 조회해 job result로 보여주고, 반복 추적용으로 `market_data_issue`에도 누적 저장한다.
-- `TOP1000` / `TOP2000` UI refresh는 quote fast path만 사용하고, 광범위한 yfinance OHLCV fallback은 오래 걸릴 수 있어 자동 fallback하지 않는다.
+- `TOP1000` / `TOP2000` 일중 스냅샷 갱신은 이미 materialize된 liquidity universe를 읽는다. Universe 기준 자체를 바꾸려면 Market Movers의 `유니버스 기준 갱신`을 먼저 실행한다.
 
 ## `market_data_issue`
 

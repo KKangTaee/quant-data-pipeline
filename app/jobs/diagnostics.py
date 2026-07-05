@@ -331,8 +331,8 @@ SUPPORTED_QUARTERLY_FORMS = {"10-Q", "10-Q/A", "10-K", "10-K/A"}
 FOREIGN_OR_NONSTANDARD_FORMS = {"20-F", "20-F/A", "6-K", "6-K/A", "40-F", "40-F/A"}
 STATEMENT_UNIVERSE_LABELS = {
     "SP500": "S&P 500",
-    "TOP1000": "Top 1000 by market cap",
-    "TOP2000": "Top 2000 by market cap",
+    "TOP1000": "Top 1000 by 20D avg dollar volume",
+    "TOP2000": "Top 2000 by 20D avg dollar volume",
     "NASDAQ": "Nasdaq-listed current snapshot",
 }
 

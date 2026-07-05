@@ -6,4 +6,5 @@
 - 3차 완료: Top1000 / Top2000 daily UI에서 `유니버스 기준 갱신` action을 활성화하고 React/fallback dispatch를 action facade에 연결했다.
 - 4차 완료: Market Movers read model과 intraday snapshot 기본 loader를 materialized liquidity universe로 전환했다.
 - 5차 완료: Market Movers 기본/React UI에서 `가격 이력 갱신` primary action을 숨기고, coverage별 `유니버스 기준 갱신` action으로 통일했다.
-- 현재 차수: 6차 대기.
+- 6차 완료: durable data / architecture / runbook 문서를 정렬하고, 남아 있던 `by market cap` coverage label을 20D 평균 거래대금 기준으로 교체했다.
+- 현재 차수: 1~6차 완료.

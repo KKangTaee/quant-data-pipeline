@@ -51,3 +51,26 @@
   - Result: passed.
 - 2026-07-05: `git diff --check`
   - Result: passed.
+- 2026-07-05: `.venv/bin/python - <<'PY' ... load_market_liquidity_universe_members ... PY`
+  - Initial result: `finance_meta.market_liquidity_universe_member` did not exist in local DB.
+- 2026-07-05: `.venv/bin/python - <<'PY' ... sync_market_intelligence_tables() ... PY`
+  - Result: local market intelligence schema sync passed.
+- 2026-07-05: `.venv/bin/python - <<'PY' ... run_overview_market_liquidity_universe_refresh(TOP1000) ... PY`
+  - Result: stopped after 6+ minutes because full provider EOD refresh was too heavy for a closeout smoke.
+- 2026-07-05: `.venv/bin/python -u - <<'PY' ... SQL-only liquidity universe compute/store ... PY`
+  - TOP1000: candidates `6012`, rankable `1000`, stored `1000`, ranking end date `2026-07-02`, sample `MU, NVDA, SNDK, AAPL, TSLA`.
+  - TOP2000: candidates `6012`, rankable `1920`, stored `1920`, ranking end date `2026-07-02`, sample `MU, NVDA, SNDK, AAPL, TSLA`.
+- 2026-07-05: Browser QA on `http://localhost:8503`
+  - Verified Market Movers action strip exposes `일중 스냅샷 갱신`, `유니버스 기준 갱신`, `화면 새로고침`.
+  - Found and fixed stale `Top 2000 by market cap` text in trust detail / service labels.
+  - Rechecked Top2000: `hasMarketCap=false`, `has20D=true`, universe `1,920`, returnable `1,208`, missing `712`.
+  - Screenshot artifact: `market-movers-liquidity-universe-top2000-qa.png` (generated, not staged).
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_catalyst_links_include_context_without_fetching_articles tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_why_it_moved_read_model_includes_context_links_and_pending_metadata`
+  - RED: service labels still said `Top 1000 by market cap`.
+  - GREEN: labels now say `Top 1000 by 20D avg dollar volume`.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests`
+  - Result: 261 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile finance/data/db/schema.py finance/data/market_intelligence.py app/jobs/overview_actions.py app/jobs/diagnostics.py app/services/overview/market_movers.py app/services/overview/why_it_moved.py app/web/overview/market_movers_helpers.py app/web/overview/components/common.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.

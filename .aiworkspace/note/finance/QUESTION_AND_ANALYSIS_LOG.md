@@ -8477,3 +8477,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Market Movers 첫 화면의 controls, summary, data-quality detail, refresh action이 한 workbench처럼 보이게 하되, provider fetch / DB write / session normalization은 Python 경계에 남겨야 함.
 - Analysis result: filters와 refresh mode는 React가 UI만 렌더링하고 Python이 validated session state를 소유하는 구조로 옮길 수 있었다. Coverage trust detail은 Python read model을 `trust_panel` payload로 만들고 React가 read-only drawer로 렌더링하는 것이 가장 안전했다.
 - Follow-up: 6~8차 완료. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다. 다른 Overview 탭 적용은 Market Movers 사용감 확인 후 별도 작업으로 확장한다.
+
+### 2026-07-05 - Market Movers Top universe 기준을 시가총액에서 20D 평균 거래대금으로 바꾼다
+
+- User request: Top1000 / Top2000 universe가 stale `nyse_asset_profile.market_cap`에 묶여 있고 신규 상장 / EOD / listing refresh 흐름이 헷갈리므로, 별도 작업 흐름에서 1~6차 개발 / QA / commit으로 개선해 달라고 요청함.
+- Interpreted goal: Top universe membership을 화면 조회 때 live market-cap query로 만들지 않고, 명시적 `유니버스 기준 갱신`에서 listing source 후보와 최신 EOD price history를 사용해 materialize해야 함.
+- Analysis result: `market_liquidity_universe_member`를 추가하고 Top1000 / Top2000을 최근 20거래일 평균 `close * volume` 기준으로 저장 / 재사용하게 했다. legacy profile fallback은 제외했고, 신규 상장 ticker는 listing source와 latest EOD row가 모두 있어야 포함된다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-liquidity-universe-v1-20260705/`에 있다. Local DB smoke에서 TOP2000은 1,920개만 ranking 가능했으므로 2,000보다 작아지는 것은 현재 DB coverage 상태로 발생할 수 있다.

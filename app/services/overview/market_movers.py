@@ -49,8 +49,8 @@ MARKET_INTRADAY_STALE_MINUTES = 15
 
 UNIVERSE_LABELS = {
     "SP500": "S&P 500",
-    "TOP1000": "Top 1000 by market cap",
-    "TOP2000": "Top 2000 by market cap",
+    "TOP1000": "Top 1000 by 20D avg dollar volume",
+    "TOP2000": "Top 2000 by 20D avg dollar volume",
     "NASDAQ": "Nasdaq-listed current snapshot",
 }
 
