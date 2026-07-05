@@ -74,6 +74,7 @@ from app.web.overview.components.market_movers import (
 )
 from app.web.overview.market_movers_react_component import (
     market_movers_react_component_available,
+    render_market_mover_investigation_pane_react,
     render_market_movers_react_workbench,
 )
 
@@ -2702,6 +2703,39 @@ def build_market_mover_investigation_pane_model(detail_model: dict[str, Any]) ->
     }
 
 
+def _market_mover_investigation_react_actions(refresh_target: dict[str, Any]) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = [
+        {"id": "fetch_news_metadata", "label": "뉴스 메타데이터 조회", "kind": "secondary"},
+        {"id": "fetch_sec_metadata", "label": "SEC 공시 메타데이터 조회", "kind": "secondary"},
+    ]
+    if refresh_target["enabled"]:
+        actions.append({"id": "refresh_statement", "label": "필요 재무제표 수집", "kind": "primary"})
+    return actions
+
+
+def build_market_mover_investigation_react_pane_payload(
+    pane_model: dict[str, Any],
+    *,
+    symbol: str,
+    actions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "schema_version": "market_mover_investigation_react_pane_v1",
+        "component": "MarketMoverInvestigationPane",
+        "symbol": symbol,
+        "panel": {
+            "title": str(pane_model.get("title") or "-"),
+            "subtitle": str(pane_model.get("subtitle") or "-"),
+            "rank_badge": str(pane_model.get("rank_badge") or "-"),
+            "facts": [dict(item) for item in list(pane_model.get("facts") or [])],
+            "status_items": [dict(item) for item in list(pane_model.get("status_items") or [])],
+            "boundary_note": str(pane_model.get("boundary_note") or ""),
+        },
+        "actions": actions,
+        "note": "조회 결과는 아래 조사 단서 탭에 세션 전용으로 반영됩니다.",
+    }
+
+
 def _format_korean_money(value: Any, *, currency: str = "달러") -> str:
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -3160,6 +3194,82 @@ def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> No
             st.dataframe(table_rows, width="stretch", hide_index=True)
 
 
+def _consume_market_mover_investigation_react_event(event: dict[str, Any] | None, *, metadata_key: str) -> bool:
+    token = _market_movers_react_event_token(event)
+    if not token:
+        return False
+    state_key = f"{metadata_key}__last_react_event_token"
+    if st.session_state.get(state_key) == token:
+        return False
+    st.session_state[state_key] = token
+    return True
+
+
+def _dispatch_market_mover_investigation_react_event(
+    event: dict[str, Any] | None,
+    *,
+    symbol: str,
+    identity: dict[str, Any],
+    metadata_key: str,
+    metadata: dict[str, Any],
+    refresh_target: dict[str, Any],
+) -> dict[str, Any]:
+    action_id = _market_movers_react_event_action_id(event)
+    if action_id not in {"fetch_news_metadata", "fetch_sec_metadata", "refresh_statement"}:
+        return metadata
+    if action_id == "refresh_statement" and not refresh_target["enabled"]:
+        return metadata
+    if not _consume_market_mover_investigation_react_event(event, metadata_key=metadata_key):
+        return metadata
+
+    if action_id == "fetch_news_metadata":
+        with st.spinner(f"{symbol} 뉴스 메타데이터를 조회하는 중입니다..."):
+            metadata_update = fetch_market_mover_news_metadata(
+                symbol,
+                name=identity.get("Name"),
+                max_news=3,
+                max_korean_news=3,
+            )
+            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            st.session_state[metadata_key] = metadata
+        st.rerun()
+        return metadata
+
+    if action_id == "fetch_sec_metadata":
+        with st.spinner(f"{symbol} SEC 공시 메타데이터를 조회하는 중입니다..."):
+            metadata_update = fetch_market_mover_sec_metadata(
+                symbol,
+                max_filings=3,
+            )
+            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            st.session_state[metadata_key] = metadata
+        st.rerun()
+        return metadata
+
+    statement_result_key = _market_mover_statement_refresh_session_key(metadata_key)
+    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    t0 = perf_counter()
+    with st.spinner(f"{symbol} {refresh_target['freq_label']} 재무제표를 수집하는 중입니다..."):
+        result = run_overview_market_mover_statement_refresh(
+            symbol=symbol,
+            freq=refresh_target["freq"],
+        )
+    finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.session_state[statement_result_key] = {
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "elapsed_sec": perf_counter() - t0,
+        "target": refresh_target,
+        "result": result,
+    }
+    try:
+        record_overview_action_result(result)
+    except Exception as exc:  # pragma: no cover - UI resilience only
+        st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
+    st.rerun()
+    return metadata
+
+
 def _render_market_mover_investigation_actions(
     *,
     symbol: str,
@@ -3167,7 +3277,32 @@ def _render_market_mover_investigation_actions(
     metadata_key: str,
     metadata: dict[str, Any],
     research_model: dict[str, Any],
+    pane_model: dict[str, Any],
 ) -> dict[str, Any]:
+    collection = dict(research_model.get("financial_statement_collection") or {})
+    refresh_target = _market_mover_statement_refresh_target(collection)
+    statement_result_key = _market_mover_statement_refresh_session_key(metadata_key)
+    if market_movers_react_component_available():
+        payload = build_market_mover_investigation_react_pane_payload(
+            pane_model,
+            symbol=symbol,
+            actions=_market_mover_investigation_react_actions(refresh_target),
+        )
+        react_event = render_market_mover_investigation_pane_react(
+            payload,
+            key=f"{metadata_key}__investigation_pane",
+        )
+        metadata = _dispatch_market_mover_investigation_react_event(
+            react_event,
+            symbol=symbol,
+            identity=identity,
+            metadata_key=metadata_key,
+            metadata=metadata,
+            refresh_target=refresh_target,
+        )
+        _render_market_mover_statement_refresh_result(st.session_state.get(statement_result_key))
+        return metadata
+
     action_cols = st.columns([1.0, 1.0, 1.0, 3.0], gap="small", vertical_alignment="bottom")
     if action_cols[0].button(
         "뉴스 메타데이터 조회",
@@ -3201,9 +3336,6 @@ def _render_market_mover_investigation_actions(
             st.session_state[metadata_key] = metadata
         st.success("SEC 공시 메타데이터를 세션 전용으로 조회했습니다.")
 
-    collection = dict(research_model.get("financial_statement_collection") or {})
-    refresh_target = _market_mover_statement_refresh_target(collection)
-    statement_result_key = _market_mover_statement_refresh_session_key(metadata_key)
     if refresh_target["enabled"]:
         if action_cols[2].button(
             "필요 재무제표 수집",
@@ -3257,7 +3389,8 @@ def _render_market_mover_selected_investigation_fragment(
         detail_model["read_model"] = read_model
         detail_model["status_strip"] = build_market_mover_metadata_status_strip(stored_metadata)
 
-    investigation_pane_slot = st.empty()
+    react_investigation_pane = market_movers_react_component_available()
+    investigation_pane_slot = None if react_investigation_pane else st.empty()
     identity = dict(read_model.get("identity") or {})
     symbol = str(identity.get("Symbol") or selected.get("symbol") or "").strip().upper()
     metadata = dict(read_model.get("metadata") or {})
@@ -3269,18 +3402,21 @@ def _render_market_mover_selected_investigation_fragment(
         }
     )
     research_model = build_market_mover_research_snapshot_model(detail_model, research_snapshot=research_snapshot)
+    pane_model = build_market_mover_investigation_pane_model(detail_model)
     metadata = _render_market_mover_investigation_actions(
         symbol=symbol,
         identity=identity,
         metadata_key=metadata_key,
         metadata=metadata,
         research_model=research_model,
+        pane_model=pane_model,
     )
     read_model["metadata"] = metadata
     detail_model["read_model"] = read_model
     detail_model["status_strip"] = build_market_mover_metadata_status_strip(metadata)
-    with investigation_pane_slot.container():
-        render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
+    if investigation_pane_slot is not None:
+        with investigation_pane_slot.container():
+            render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
 
     render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스, SEC 공시, 외부 검색 시작점")
     clue_tabs = st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])

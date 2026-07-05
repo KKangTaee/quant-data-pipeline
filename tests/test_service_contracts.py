@@ -7651,6 +7651,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
         common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
 
         self.assertIn("build_market_mover_investigation_pane_model", helper_source)
         self.assertIn("render_market_mover_investigation_pane", helper_source)
@@ -7664,18 +7667,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("필요 재무제표 수집", helper_source)
         self.assertIn("run_overview_market_mover_statement_refresh", helper_source)
         self.assertIn("def _render_market_mover_investigation_actions", helper_source)
+        self.assertIn("render_market_mover_investigation_pane_react", helper_source)
+        self.assertIn("build_market_mover_investigation_react_pane_payload", helper_source)
+        self.assertIn('"component": "MarketMoverInvestigationPane"', helper_source)
+        self.assertIn('payload.component === "MarketMoverInvestigationPane"', react_source)
+        self.assertIn('className="mm-investigation__actions"', react_source)
+        self.assertIn("수동 조사 패널", react_source)
         self.assertIn("@st.fragment", helper_source)
         self.assertIn('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])', helper_source)
         self.assertNotIn('st.tabs(["기본 지표", "뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])', helper_source)
         self.assertNotIn("뉴스·공시 메타데이터 조회", helper_source)
         action_body = helper_source[helper_source.index("def _render_market_mover_investigation_actions") :]
         action_body = action_body[: action_body.index("def _render_market_mover_selected_investigation_fragment")]
+        self.assertIn("render_market_mover_investigation_pane_react", action_body)
+        self.assertIn("_dispatch_market_mover_investigation_react_event", action_body)
         self.assertIn("metadata_update = fetch_market_mover_news_metadata", action_body)
         self.assertIn("metadata_update = fetch_market_mover_sec_metadata", action_body)
         self.assertIn("run_overview_market_mover_statement_refresh(", action_body)
         self.assertIn('if refresh_target["enabled"]:', action_body)
         self.assertNotIn("disabled=not bool(refresh_target", action_body)
-        panel_index = helper_source.index("render_market_mover_investigation_pane")
+        panel_index = helper_source.index("build_market_mover_investigation_pane_model")
         action_call_index = helper_source.index("_render_market_mover_investigation_actions(", panel_index)
         divider_index = helper_source.index('render_market_movers_section_divider("조사 단서"', panel_index)
         self.assertLess(action_call_index, divider_index)
@@ -7694,6 +7705,95 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("st.rerun()", sec_tab_body)
         self.assertIn("ov-mm-investigation-pane", common_source)
         self.assertIn("ov-mm-research-snapshot", common_source)
+
+    @patch("app.web.overview.market_movers_helpers.fetch_market_mover_news_metadata")
+    @patch("app.web.overview.market_movers_helpers.merge_market_mover_metadata")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_mover_investigation_react_event_dispatches_news_metadata_once(
+        self,
+        mock_st: MagicMock,
+        mock_merge: MagicMock,
+        mock_fetch_news: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            _dispatch_market_mover_investigation_react_event,
+        )
+
+        mock_st.session_state = {}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+        mock_fetch_news.return_value = {"news": [{"Title": "AXON news"}]}
+        mock_merge.return_value = {"news": [{"Title": "AXON news"}]}
+
+        event = {"event": {"id": "fetch_news_metadata", "nonce": 123}}
+        metadata = _dispatch_market_mover_investigation_react_event(
+            event,
+            symbol="AXON",
+            identity={"Name": "AXON ENTERPRISE INC"},
+            metadata_key="overview_market_mover_metadata__AXON",
+            metadata={},
+            refresh_target={"enabled": False},
+        )
+
+        mock_fetch_news.assert_called_once_with(
+            "AXON",
+            name="AXON ENTERPRISE INC",
+            max_news=3,
+            max_korean_news=3,
+        )
+        mock_merge.assert_called_once_with(None, mock_fetch_news.return_value)
+        self.assertEqual(metadata, {"news": [{"Title": "AXON news"}]})
+        self.assertEqual(mock_st.session_state["overview_market_mover_metadata__AXON"], metadata)
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertEqual(
+            _dispatch_market_mover_investigation_react_event(
+                event,
+                symbol="AXON",
+                identity={"Name": "AXON ENTERPRISE INC"},
+                metadata_key="overview_market_mover_metadata__AXON",
+                metadata=metadata,
+                refresh_target={"enabled": False},
+            ),
+            metadata,
+        )
+        mock_st.rerun.assert_not_called()
+
+    def test_market_mover_investigation_react_payload_hides_statement_action_when_current(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            _market_mover_investigation_react_actions,
+            build_market_mover_investigation_react_pane_payload,
+        )
+
+        pane_model = {
+            "schema_version": "market_mover_investigation_pane_v1",
+            "title": "AXON · AXON ENTERPRISE INC",
+            "subtitle": "Industrials · Aerospace & Defense",
+            "rank_badge": "상승 #1",
+            "facts": [],
+            "status_items": [],
+            "boundary_note": "Manual investigation starter only.",
+        }
+
+        current_actions = _market_mover_investigation_react_actions({"enabled": False})
+        self.assertEqual(
+            [action["id"] for action in current_actions],
+            ["fetch_news_metadata", "fetch_sec_metadata"],
+        )
+
+        due_actions = _market_mover_investigation_react_actions({"enabled": True})
+        self.assertIn("refresh_statement", [action["id"] for action in due_actions])
+
+        payload = build_market_mover_investigation_react_pane_payload(
+            pane_model,
+            symbol="AXON",
+            actions=due_actions,
+        )
+        self.assertEqual(payload["schema_version"], "market_mover_investigation_react_pane_v1")
+        self.assertEqual(payload["component"], "MarketMoverInvestigationPane")
+        self.assertEqual(payload["panel"]["title"], "AXON · AXON ENTERPRISE INC")
+        self.assertEqual(payload["actions"][-1]["label"], "필요 재무제표 수집")
 
     def test_market_movers_redesign_v2_phase6_uses_compact_data_trust_strip(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")

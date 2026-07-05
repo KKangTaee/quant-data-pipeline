@@ -34,13 +34,29 @@ def _declare_market_movers_component():
     return _market_movers_component
 
 
-def render_market_movers_react_workbench(
+def _render_market_movers_react_component(
     payload: dict[str, Any],
     *,
-    key: str = "market_movers_workbench",
+    key: str,
 ) -> dict[str, Any] | None:
     component = _declare_market_movers_component()
     if component is None:
         return None
     value = component(payload=payload, key=key, default={"event": None})
     return value if isinstance(value, dict) else None
+
+
+def render_market_movers_react_workbench(
+    payload: dict[str, Any],
+    *,
+    key: str = "market_movers_workbench",
+) -> dict[str, Any] | None:
+    return _render_market_movers_react_component(payload, key=key)
+
+
+def render_market_mover_investigation_pane_react(
+    payload: dict[str, Any],
+    *,
+    key: str = "market_mover_investigation_pane",
+) -> dict[str, Any] | None:
+    return _render_market_movers_react_component(payload, key=key)

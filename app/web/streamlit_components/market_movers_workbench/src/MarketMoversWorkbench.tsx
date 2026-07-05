@@ -75,11 +75,104 @@ export type MarketMoversWorkbenchPayload = {
   actions: MarketMoverAction[];
 };
 
+export type MarketMoverInvestigationPanePayload = {
+  schema_version: "market_mover_investigation_react_pane_v1";
+  component: "MarketMoverInvestigationPane";
+  symbol: string;
+  panel: {
+    title: string;
+    subtitle: string;
+    rank_badge: string;
+    facts: Array<{ label: string; value: string; detail?: string }>;
+    status_items: Array<{ label: string; value: string; tone: string }>;
+    boundary_note: string;
+  };
+  actions: MarketMoverAction[];
+  note: string;
+};
+
+type MarketMoversPayload = MarketMoversWorkbenchPayload | MarketMoverInvestigationPanePayload;
+
 type Props = ComponentProps & {
   args: {
-    payload?: MarketMoversWorkbenchPayload;
+    payload?: MarketMoversPayload;
   };
 };
+
+function toneColor(tone: string) {
+  const normalized = String(tone || "neutral").toLowerCase();
+  if (normalized === "positive") {
+    return "#0f766e";
+  }
+  if (normalized === "warning") {
+    return "#b45309";
+  }
+  if (normalized === "danger") {
+    return "#dc2626";
+  }
+  return "#64748b";
+}
+
+type InvestigationProps = {
+  payload: MarketMoverInvestigationPanePayload;
+  onAction: (action: MarketMoverAction) => void;
+};
+
+function MarketMoverInvestigationPane({ payload, onAction }: InvestigationProps) {
+  return (
+    <section
+      className="mm-investigation"
+      data-schema-version={payload.schema_version}
+      data-symbol={payload.symbol}
+    >
+      <div className="mm-investigation__head">
+        <div>
+          <div className="mm-investigation__kicker">수동 조사 패널</div>
+          <div className="mm-investigation__title">{payload.panel.title}</div>
+          <div className="mm-investigation__subtitle">{payload.panel.subtitle}</div>
+        </div>
+        <span className="mm-investigation__rank">{payload.panel.rank_badge}</span>
+      </div>
+      <div className="mm-investigation__facts">
+        {payload.panel.facts.map((fact) => (
+          <div className="mm-investigation__fact" key={`${fact.label}-${fact.value}`}>
+            <span>{fact.label}</span>
+            <strong>{fact.value}</strong>
+            {fact.detail ? <small>{fact.detail}</small> : null}
+          </div>
+        ))}
+      </div>
+      <div className="mm-investigation__status">
+        {payload.panel.status_items.map((item) => (
+          <span
+            className="mm-investigation__status-item"
+            key={`${item.label}-${item.value}`}
+            style={{ "--mm-status-tone": toneColor(item.tone) } as React.CSSProperties}
+          >
+            {item.label} · {item.value}
+          </span>
+        ))}
+      </div>
+      <div className="mm-investigation__action-row">
+        <div className="mm-investigation__actions" aria-label="Market mover investigation actions">
+          {payload.actions.map((action) => (
+            <button
+              className={`mm-workbench__action mm-workbench__action--${action.kind}`}
+              disabled={action.kind === "disabled"}
+              key={action.id}
+              onClick={() => onAction(action)}
+              type="button"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+        <span>{payload.note}</span>
+      </div>
+      <div className="mm-investigation__boundary">{payload.panel.boundary_note}</div>
+    </section>
+  );
+}
 
 function MarketMoversWorkbench({ args }: Props) {
   const payload = args.payload;
@@ -108,6 +201,10 @@ function MarketMoversWorkbench({ args }: Props) {
       event: { id: "set_control", control: control.id, value, nonce: Date.now() },
     });
   };
+
+  if (payload.component === "MarketMoverInvestigationPane") {
+    return <MarketMoverInvestigationPane payload={payload} onAction={emitAction} />;
+  }
 
   return (
     <section
