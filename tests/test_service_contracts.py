@@ -5973,6 +5973,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual([period["key"] for period in payload["flow"]["periods"]], ["1W", "1M"])
         self.assertEqual(payload["flow"]["periods"][1]["title"], "최근 1개월 흐름")
         self.assertEqual(payload["flow"]["cards"][0]["label"], "위험선호")
+        self.assertEqual(payload["evidence"]["title"], "현재 근거")
         self.assertEqual(payload["evidence"]["sections"][0]["items"][0]["title"], "금리 부담 · ZN=F")
         self.assertEqual(payload["action_boundary"], "python_dispatch_only")
 
@@ -6009,6 +6010,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("render_futures_macro_react_workbench", helper_source)
         self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
         self.assertIn("_handle_futures_macro_react_event(", helper_source)
+        self.assertIn('with st.expander("계산 근거 / 원본 표"', helper_source)
+        self.assertNotIn('with st.expander("근거 해석 / 원본 데이터"', helper_source)
+        self.assertIn('"title": "현재 근거"', helper_source)
+        self.assertNotIn('"title": "근거 해석"', helper_source)
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
         self.assertIn("payload.command.actions.map", react_source)

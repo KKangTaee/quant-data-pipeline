@@ -467,7 +467,7 @@ def build_futures_macro_react_workbench_payload(
             "metrics": validation_metrics,
         },
         "evidence": {
-            "title": "근거 해석",
+            "title": "현재 근거",
             "default_open": False,
             "sections": _futures_macro_react_evidence_sections(macro),
         },
@@ -1445,9 +1445,9 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
 
     cautions = [_macro_caution_label(item) for item in macro.get("cautions") or [] if str(item).strip()]
     cautions.extend(_macro_caution_label(item) for item in validation.get("caveats") or [] if str(item).strip())
-    with st.expander("근거 해석 / 원본 데이터", expanded=detail_expanded):
+    with st.expander("계산 근거 / 원본 표", expanded=detail_expanded):
         if react_available:
-            st.caption("상단 React 근거 drawer가 해석 근거를 표시합니다. 이 영역은 상세 validation / 원본 표 확인용입니다.")
+            st.caption("과거점검 · 자료 기준 · 점수 계산표 · 선물 일봉 원본")
         else:
             _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
         if validation:
