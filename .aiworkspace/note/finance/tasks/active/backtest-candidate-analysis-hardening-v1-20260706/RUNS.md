@@ -23,3 +23,18 @@
   - Result: pass.
 - `.venv/bin/python -m unittest tests.test_service_contracts -v`
   - Result: pass, 486 tests.
+- `npm install`
+  - Working directory: `app/web/components/backtest_price_freshness_preflight/frontend`.
+  - Result: pass.
+  - Note: npm audit reported 2 dependency advisories in the standard Vite/React component dependency set; no forced upgrade applied in this task scope.
+- `npm run build`
+  - Working directory: `app/web/components/backtest_price_freshness_preflight/frontend`.
+  - Result: pass.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_price_freshness_preflight_model_builds_react_payload tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_price_freshness_preflight_react_component_is_ui_only -v`
+  - Result: pass, 2 tests.
+- `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/components/backtest_price_freshness_preflight/component.py tests/test_service_contracts.py`
+  - Result: pass.
+- `git diff --check`
+  - Result: pass.
+- `.venv/bin/python -m unittest tests.test_service_contracts -v`
+  - Result: pass, 488 tests.

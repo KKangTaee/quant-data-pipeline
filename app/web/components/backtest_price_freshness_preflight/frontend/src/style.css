@@ -1,0 +1,183 @@
+:root {
+  color: #2f3140;
+  font-family: "Source Sans Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.bt-react-freshness {
+  --accent: #64748b;
+  --soft: rgba(100, 116, 139, 0.08);
+  --border: rgba(148, 163, 184, 0.28);
+  background: linear-gradient(90deg, var(--soft), rgba(255, 255, 255, 0.99));
+  border-left: 4px solid var(--accent);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: #2f3140;
+  padding: 1.05rem 1.14rem;
+}
+
+.bt-react-freshness--positive {
+  --accent: #0f8f83;
+  --soft: rgba(15, 143, 131, 0.08);
+}
+
+.bt-react-freshness--warning {
+  --accent: #b45309;
+  --soft: rgba(180, 83, 9, 0.1);
+}
+
+.bt-react-freshness--danger {
+  --accent: #b42318;
+  --soft: rgba(180, 35, 24, 0.08);
+}
+
+.bt-react-freshness__head {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.85rem;
+  justify-content: space-between;
+}
+
+.bt-react-freshness__kicker {
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.32;
+}
+
+.bt-react-freshness h4 {
+  color: #2f3140;
+  font-size: 1.16rem;
+  line-height: 1.36;
+  margin: 0.26rem 0 0;
+}
+
+.bt-react-freshness__head p,
+.bt-react-freshness__detail,
+.bt-react-freshness__footer span {
+  color: #667085;
+  font-size: 0.92rem;
+  line-height: 1.48;
+}
+
+.bt-react-freshness__head p,
+.bt-react-freshness__detail {
+  margin: 0.42rem 0 0;
+}
+
+.bt-react-freshness__status {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  flex: 0 0 auto;
+  font-size: 0.84rem;
+  font-weight: 850;
+  padding: 0.32rem 0.7rem;
+}
+
+.bt-react-freshness__metrics {
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 0.9rem;
+}
+
+.bt-react-freshness__metric {
+  border-right: 1px solid var(--border);
+  min-width: 0;
+  padding: 0.7rem 0.74rem;
+}
+
+.bt-react-freshness__metric:last-child {
+  border-right: 0;
+}
+
+.bt-react-freshness__metric span,
+.bt-react-freshness__issue span {
+  color: var(--accent);
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.3;
+  margin-bottom: 0.18rem;
+}
+
+.bt-react-freshness__metric b,
+.bt-react-freshness__issue strong,
+.bt-react-freshness__footer strong {
+  color: #2f3140;
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.bt-react-freshness__metric small,
+.bt-react-freshness__issue p {
+  color: #667085;
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.38;
+  margin: 0.16rem 0 0;
+}
+
+.bt-react-freshness__issues {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0.72rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.1rem;
+  padding-top: 0.82rem;
+}
+
+.bt-react-freshness__issue {
+  --issue: var(--accent);
+  background: rgba(255, 255, 255, 0.66);
+  border-left: 3px solid var(--issue);
+  min-width: 0;
+  padding: 0.68rem 0.78rem;
+}
+
+.bt-react-freshness__issue--positive {
+  --issue: #0f8f83;
+}
+
+.bt-react-freshness__issue--warning {
+  --issue: #b45309;
+}
+
+.bt-react-freshness__issue--danger {
+  --issue: #b42318;
+}
+
+.bt-react-freshness__footer {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0.18rem;
+  margin-top: 0.88rem;
+  padding-top: 0.82rem;
+}
+
+@media (max-width: 860px) {
+  .bt-react-freshness__head {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .bt-react-freshness__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bt-react-freshness__metric:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .bt-react-freshness__issues {
+    grid-template-columns: 1fr;
+  }
+}

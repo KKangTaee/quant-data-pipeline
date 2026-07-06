@@ -217,6 +217,76 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("_render_strict_preset_status_note(qss_compare_preset", compare_source)
         self.assertIn("_render_strict_preset_status_note(vss_compare_preset", compare_source)
 
+    def test_price_freshness_preflight_model_builds_react_payload(self) -> None:
+        from app.web.backtest_common import build_strict_price_freshness_preflight_model
+
+        model = build_strict_price_freshness_preflight_model(
+            {
+                "status": "warning",
+                "message": "2 symbols are stale.",
+                "details": {
+                    "requested_count": 5,
+                    "covered_count": 4,
+                    "common_latest_date": "2026-06-28",
+                    "newest_latest_date": "2026-07-02",
+                    "spread_days": 4,
+                    "stale_count": 2,
+                    "missing_count": 1,
+                    "stale_symbols": ["AAA", "BBB"],
+                    "missing_symbols": ["CCC"],
+                    "effective_end_date": "2026-07-02",
+                },
+            },
+            strategy_label="Quality Snapshot (Strict Annual)",
+        )
+
+        self.assertEqual(model["tone"], "warning")
+        self.assertEqual(model["status_label"], "WARNING")
+        self.assertIn("Quality Snapshot", model["headline"])
+        self.assertIn("2 symbols are stale.", model["summary"])
+        self.assertIn("metric_items", model)
+        self.assertGreaterEqual(len(model["metric_items"]), 5)
+        self.assertTrue(model["issue_rows"])
+        self.assertIn("Daily Market Update", model["next_action"])
+
+    def test_price_freshness_preflight_react_component_is_ui_only(self) -> None:
+        component_root = Path("app/web/components/backtest_price_freshness_preflight")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/BacktestPriceFreshnessPreflight.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_backtest_price_freshness_preflight_available", wrapper_source)
+        self.assertIn("render_backtest_price_freshness_preflight", wrapper_source)
+        self.assertIn("BacktestPriceFreshnessPreflight", component_source)
+        self.assertIn("Price Freshness Preflight", component_source)
+        self.assertIn("issueRows", component_source)
+        self.assertIn("metricItems", component_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("render_backtest_price_freshness_preflight(", common_source)
+        self.assertIn("is_backtest_price_freshness_preflight_available()", common_source)
+
 
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
     def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:

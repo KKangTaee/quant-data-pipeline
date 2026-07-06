@@ -24,3 +24,5 @@ Started: 2026-07-06
 - 2026-07-06: 2차 구현 완료. strict Quality / Value preset 기준을 `nyse_asset_profile` 기반 US stock market-cap order로 명시하고, S&P 최신 구성원 기준이 아님을 화면 note로 노출했다.
 - 2026-07-06: 2차 구현 완료. preset target count와 실제 loaded count mismatch, staged 500/1000 preset, static fallback 가능성을 읽기 모델과 UI note로 표시했다.
 - 2026-07-06: 2차 QA 완료. focused tests, `py_compile`, `git diff --check`, `tests.test_service_contracts` 전체 486개 통과.
+- 2026-07-06: 3차 구현 완료. `Price Freshness Preflight`를 display-only React component로 추가하고, strict preflight report를 React payload로 변환하는 읽기 모델을 붙였다.
+- 2026-07-06: 3차 QA 완료. React build, focused tests, `py_compile`, `git diff --check`, `tests.test_service_contracts` 전체 488개 통과.

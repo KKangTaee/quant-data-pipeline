@@ -85,6 +85,10 @@ from app.web.backtest_workflow_routes import (
     _route_target_to_stage_and_mode,
     _valid_backtest_route_targets,
 )
+from app.web.components.backtest_price_freshness_preflight import (
+    is_backtest_price_freshness_preflight_available,
+    render_backtest_price_freshness_preflight,
+)
 from app.web.backtest_candidate_review_helpers import (
     CANDIDATE_REVIEW_DECISION_OPTIONS,
     CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
@@ -1900,6 +1904,132 @@ def _build_daily_market_update_refresh_payload(details: dict[str, Any]) -> dict[
     }
 
 
+def _price_freshness_preflight_tone(status: str | None) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "ok":
+        return "positive"
+    if normalized == "warning":
+        return "warning"
+    if normalized in {"error", "failed", "missing"}:
+        return "danger"
+    return "neutral"
+
+
+def _format_preflight_value(value: Any, fallback: str = "-") -> str:
+    if value is None:
+        return fallback
+    text = str(value).strip()
+    return text or fallback
+
+
+def _symbol_sample(symbols: list[Any], limit: int = 8) -> str:
+    normalized = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
+    if not normalized:
+        return ""
+    sample = ", ".join(normalized[:limit])
+    remaining = len(normalized) - limit
+    if remaining > 0:
+        sample += f" (+{remaining} more)"
+    return sample
+
+
+def build_strict_price_freshness_preflight_model(
+    report: dict[str, Any],
+    *,
+    strategy_label: str,
+) -> dict[str, Any]:
+    """Build the display-only payload for the strict price freshness React component."""
+    details = dict(report.get("details") or {})
+    status = str(report.get("status") or "unknown").strip().lower()
+    tone = _price_freshness_preflight_tone(status)
+    stale_count = int(details.get("stale_count") or 0)
+    missing_count = int(details.get("missing_count") or 0)
+    selected_end = details.get("selected_end_date")
+    effective_end = details.get("effective_end_date")
+    summary = str(report.get("message") or "").strip() or "가격 최신성 사전 점검 결과입니다."
+
+    metric_items = [
+        {
+            "label": "Requested",
+            "value": _format_preflight_value(details.get("requested_count"), "0"),
+            "detail": "검사 대상",
+        },
+        {
+            "label": "Covered",
+            "value": _format_preflight_value(details.get("covered_count"), "0"),
+            "detail": "DB 가격 보유",
+        },
+        {
+            "label": "Common Latest",
+            "value": _format_preflight_value(details.get("common_latest_date")),
+            "detail": "공통 최신일",
+        },
+        {
+            "label": "Newest Latest",
+            "value": _format_preflight_value(details.get("newest_latest_date")),
+            "detail": "가장 최신 가격일",
+        },
+        {
+            "label": "Spread",
+            "value": f"{int(details.get('spread_days') or 0)}d",
+            "detail": "종목 간 최신일 차이",
+        },
+    ]
+
+    issue_rows: list[dict[str, str]] = []
+    if stale_count:
+        issue_rows.append(
+            {
+                "label": "Stale Symbols",
+                "value": str(stale_count),
+                "detail": _symbol_sample(list(details.get("stale_symbols") or [])) or "최신 가격일이 기준일보다 이전입니다.",
+                "tone": "warning",
+            }
+        )
+    if missing_count:
+        issue_rows.append(
+            {
+                "label": "Missing Symbols",
+                "value": str(missing_count),
+                "detail": _symbol_sample(list(details.get("missing_symbols") or [])) or "DB 가격 row가 없습니다.",
+                "tone": "danger",
+            }
+        )
+    reason_counts = details.get("reason_counts") or {}
+    for reason, count in sorted(reason_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0]))):
+        issue_rows.append(
+            {
+                "label": "Reason",
+                "value": f"{reason}: {count}",
+                "detail": "stale / missing 분류 보조 근거입니다.",
+                "tone": "neutral",
+            }
+        )
+
+    if stale_count or missing_count:
+        next_action = "Daily Market Update로 lagging/missing 가격을 먼저 보강한 뒤 백테스트를 실행합니다."
+    elif tone == "positive":
+        next_action = "가격 최신성 기준은 통과했습니다. 현재 설정으로 백테스트를 실행할 수 있습니다."
+    else:
+        next_action = "가격 기준을 확인한 뒤 실행 여부를 결정합니다."
+
+    detail = "`Stale`은 해당 종목의 DB 최신 가격일이 이 점검의 유효 거래 종료일보다 이전이라는 뜻입니다."
+    if selected_end and effective_end and selected_end != effective_end:
+        detail += f" 선택 종료일 `{selected_end}`은 유효 거래 종료일 `{effective_end}` 기준으로 비교됩니다."
+
+    return {
+        "status_label": status.upper(),
+        "tone": tone,
+        "headline": f"{strategy_label} price data check",
+        "summary": summary,
+        "detail": detail,
+        "metric_items": metric_items,
+        "issue_rows": issue_rows,
+        "next_action": next_action,
+        "footnote": "이 사전 점검은 실행 전 DB 가격 coverage를 읽는 화면이며, 가격 수집은 별도 Ingestion / refresh flow가 수행합니다.",
+    }
+
+
 def _render_market_regime_overlay_inputs(
     *,
     key_prefix: str,
@@ -2933,6 +3063,25 @@ def _render_strict_price_freshness_preflight(
         timeframe=timeframe,
     )
     details = report.get("details") or {}
+    display_model = build_strict_price_freshness_preflight_model(report, strategy_label=strategy_label)
+    if is_backtest_price_freshness_preflight_available():
+        component_key = (
+            "strict_price_freshness_preflight_"
+            + "".join(ch.lower() if ch.isalnum() else "_" for ch in strategy_label).strip("_")
+        )
+        render_backtest_price_freshness_preflight(
+            status_label=str(display_model["status_label"]),
+            tone=str(display_model["tone"]),
+            headline=str(display_model["headline"]),
+            summary=str(display_model["summary"]),
+            detail=str(display_model["detail"]),
+            metric_items=list(display_model["metric_items"]),
+            issue_rows=list(display_model["issue_rows"]),
+            next_action=str(display_model["next_action"]),
+            footnote=str(display_model["footnote"]),
+            key=component_key,
+        )
+        return
 
     title_col, help_col = st.columns([0.92, 0.08], gap="small")
     with title_col:
