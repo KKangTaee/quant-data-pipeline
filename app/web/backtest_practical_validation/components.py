@@ -442,12 +442,19 @@ def render_pv_styles() -> None:
             align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
+            padding-top: 0.72rem;
+            border-top: 3px solid rgba(100, 116, 139, 0.46);
             margin-bottom: 0.58rem;
+          }
+          .pv-criteria-group:first-child .pv-criteria-group-head {
+            padding-top: 0;
+            border-top: 0;
           }
           .pv-criteria-group-head strong {
             display: block;
             color: var(--pv-text);
-            font-size: 0.98rem;
+            font-size: 1.08rem;
+            font-weight: 900;
             line-height: 1.35;
             overflow-wrap: anywhere;
           }
@@ -461,9 +468,14 @@ def render_pv_styles() -> None:
             overflow-wrap: anywhere;
           }
           .pv-criteria-group-head b {
-            color: var(--pv-text-muted);
             flex: 0 0 auto;
+            padding: 0.18rem 0.46rem;
+            border: 1px solid rgba(148, 163, 184, 0.34);
+            border-radius: 4px;
+            color: var(--pv-text-muted);
+            background: rgba(248, 250, 252, 0.82);
             font-size: 0.82rem;
+            font-weight: 860;
             line-height: 1.35;
           }
           .pv-criteria-status-grid {

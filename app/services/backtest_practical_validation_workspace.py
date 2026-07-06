@@ -140,7 +140,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "후보 source 계약 불완전",
         "current_problem": "source id, active component, target weight, Data Trust, curve evidence 중 연결되지 않은 항목이 있으면 어떤 후보를 검증하는지 추적하기 어렵습니다.",
         "completion_criteria": "Source Integrity가 PASS 상태이고 후보 source / component / weight / curve evidence가 같은 계약으로 연결되어야 합니다.",
-        "fix_location": "Backtest Analysis handoff / 후보 source contract",
+        "fix_location": "Flow 1 · 후보 Source 확인",
         "impact_summary": "source 계약이 불완전하면 Final Review가 같은 후보를 안정적으로 다시 읽을 수 없습니다.",
     },
     "latest_replay": {
@@ -148,7 +148,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "최신 runtime 재검증 미실행",
         "current_problem": "현재 세션에서 최신 DB 기준 재검증이 실행되지 않았거나 replay curve와 coverage가 충분히 확인되지 않았습니다.",
         "completion_criteria": "Flow 2 재검증 결과가 PASS 또는 Final Review 확인 상태이고 coverage가 Final Review 이동을 막지 않아야 합니다.",
-        "fix_location": "Flow 2 · 전략 재검증 실행",
+        "fix_location": "Flow 2 · 실전 재검증 실행",
         "impact_summary": "최신 데이터로 재현되지 않은 후보는 Final Review에서 실전 검증 완료 후보로 보기 어렵습니다.",
     },
     "benchmark_parity": {
@@ -156,7 +156,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "비교 기준 동등성 부족",
         "current_problem": "benchmark, cash, simple baseline, custom comparator의 기간 / frequency / coverage가 후보와 맞지 않으면 비교가 왜곡됩니다.",
         "completion_criteria": "Benchmark / Comparator Parity가 PASS 상태이고 후보와 비교 기준이 같은 기간 / frequency / coverage로 정렬되어야 합니다.",
-        "fix_location": "Input Evidence / Curve / Recheck Evidence",
+        "fix_location": "검증 기준 상세 · 핵심 입력 근거",
         "impact_summary": "비교 조건이 다르면 후보 성과가 좋아 보이는 이유를 공정하게 판단하기 어렵습니다.",
     },
     "validation_efficacy": {
@@ -164,23 +164,23 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "검증 효력 근거 부족",
         "current_problem": "walk-forward / OOS / regime / PIT / survivorship 근거 중 일부가 비어 있거나 보강 필요 상태입니다.",
         "completion_criteria": "Validation Efficacy 핵심 항목이 PASS 또는 Final Review 확인 상태가 되어야 합니다.",
-        "fix_location": "Flow 4 · Validation Efficacy Audit",
+        "fix_location": "검증 기준 상세 · 검증 강도 / 강건성",
         "impact_summary": "이 근거가 부족하면 성과가 특정 기간에만 우연히 좋았는지 구분하기 어렵습니다.",
     },
     "data_coverage": {
         "display_label": "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가",
-        "issue_title": "데이터 coverage 부족",
+        "issue_title": "데이터 커버리지 부족",
         "current_problem": "가격 window, provider freshness, lifecycle, survivorship evidence 중 비어 있거나 오래된 데이터가 있습니다.",
-        "completion_criteria": "Data Coverage 핵심 항목이 PASS 또는 Final Review 확인 상태이고 provider gap이 Final Review 이동을 막지 않아야 합니다.",
-        "fix_location": "Flow 4 · Data Coverage Audit / Provider Data Gaps",
-        "impact_summary": "데이터 coverage가 부족하면 검증 결과가 일부 ticker나 현재 snapshot에만 기대게 됩니다.",
+        "completion_criteria": "데이터 커버리지 핵심 항목이 PASS 또는 Final Review 확인 상태이고 provider gap이 Final Review 이동을 막지 않아야 합니다.",
+        "fix_location": "검증 기준 상세 · 데이터 품질 / Provider 보강",
+        "impact_summary": "데이터 커버리지가 부족하면 검증 결과가 일부 ticker나 현재 snapshot에만 기대게 됩니다.",
     },
     "construction_risk": {
         "display_label": "구성 / 집중 위험을 설명할 근거가 있는가",
         "issue_title": "구성 / 집중 위험 근거 부족",
         "current_problem": "ETF 내부 보유 / exposure coverage나 concentration evidence가 부족하면 실제 구성 위험을 설명하기 어렵습니다.",
         "completion_criteria": "Construction Risk가 PASS 또는 Final Review 확인 상태이고 집중 / overlap / unknown exposure가 판단 근거로 정리되어야 합니다.",
-        "fix_location": "Flow 4 · Construction Risk Audit",
+        "fix_location": "검증 기준 상세 · 포트폴리오 구성 근거",
         "impact_summary": "구성 위험을 설명하지 못하면 좋은 백테스트라도 실제 운용 위험을 판단하기 어렵습니다.",
     },
     "backtest_realism": {
@@ -188,7 +188,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "실전 운용 현실성 근거 부족",
         "current_problem": "비용 적용, turnover, liquidity, net curve 근거가 없으면 백테스트 성과가 실전 운용 성과와 달라질 수 있습니다.",
         "completion_criteria": "Backtest Realism 핵심 항목이 PASS 또는 Final Review 확인 상태이고 cost / turnover / liquidity blocker가 없어야 합니다.",
-        "fix_location": "Flow 4 · Backtest Realism Audit",
+        "fix_location": "검증 기준 상세 · 실전 운용 현실성",
         "impact_summary": "비용과 거래 현실성이 빠지면 실전 성과가 백테스트보다 크게 달라질 수 있습니다.",
     },
     "stress_robustness": {
@@ -196,7 +196,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "강건성 근거 부족",
         "current_problem": "stress / rolling / sensitivity / overfit 근거 중 실행되지 않았거나 부족한 항목이 있습니다.",
         "completion_criteria": "Stress / Robustness가 PASS 또는 Final Review 확인 상태이고 미실행 핵심 항목이 없어야 합니다.",
-        "fix_location": "Flow 4 · Robustness Lab",
+        "fix_location": "검증 기준 상세 · 강건성 검증",
         "impact_summary": "강건성 근거가 약하면 특정 조건에 과최적화된 후보일 수 있습니다.",
     },
     "selected_route_preflight": {
@@ -204,7 +204,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "Final Review 저장 전 필수 gap",
         "current_problem": "Final Review 저장 전에 필요한 evidence packet, selected-route policy, review-required gap이 남아 있습니다.",
         "completion_criteria": "Selected-route Preflight가 PASS 또는 Final Review 확인 상태이고 저장 차단 gap이 없어야 합니다.",
-        "fix_location": "Flow 4 · Final Review readiness preview",
+        "fix_location": "Final Review 이동 요약",
         "impact_summary": "여기서 gap을 확인하지 않으면 Final Review로 넘어가도 저장 단계에서 다시 막힐 수 있습니다.",
     },
     "provider_investability": {
@@ -212,7 +212,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "ETF provider 근거 부족",
         "current_problem": "provider snapshot이나 holdings / exposure 근거가 없으면 ETF 내부 노출과 운용 가능성을 판단하기 어렵습니다.",
         "completion_criteria": "ETF Provider Investability가 PASS 또는 Final Review 확인 상태이고 provider snapshot gap이 보강되어야 합니다.",
-        "fix_location": "Flow 4 · Provider Action Center",
+        "fix_location": "Provider / Data 보강 액션",
         "impact_summary": "provider 근거가 약하면 ETF 내부 노출과 실전 운용 가능성을 판단하기 어렵습니다.",
     },
     "risk_contribution": {
@@ -220,7 +220,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "위험 기여 설명 부족",
         "current_problem": "component matrix나 risk contribution evidence가 없으면 weighted mix 위험이 한쪽으로 쏠렸는지 설명하기 어렵습니다.",
         "completion_criteria": "Risk Contribution이 PASS 또는 Final Review 확인 상태이고 component matrix / correlation / drop-one 근거가 있어야 합니다.",
-        "fix_location": "Flow 4 · Risk Contribution Audit",
+        "fix_location": "검증 기준 상세 · 포트폴리오 구성 근거",
         "impact_summary": "위험 기여가 설명되지 않으면 여러 component를 섞은 이유를 Final Review에서 판단하기 어렵습니다.",
     },
     "component_role_weight": {
@@ -228,7 +228,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "component 역할 / 비중 근거 부족",
         "current_problem": "component role이나 weight rationale이 없으면 mix 구성 의도가 부족합니다.",
         "completion_criteria": "Component Role / Weight가 PASS 또는 Final Review 확인 상태이고 role source와 weight rationale이 정리되어야 합니다.",
-        "fix_location": "Flow 4 · Component Role / Weight Audit",
+        "fix_location": "검증 기준 상세 · 포트폴리오 구성 근거",
         "impact_summary": "역할과 비중 이유가 없으면 좋은 결과가 우연한 조합인지 판단하기 어렵습니다.",
     },
 }

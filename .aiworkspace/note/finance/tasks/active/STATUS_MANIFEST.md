@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `practical-validation-flow3-conclusion-summary-v1-20260706`
+- `practical-validation-flow4-labels-v1-20260706`
 
 Latest completed docs cleanup task:
 
@@ -47,6 +47,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-flow4-labels-v1-20260706`: Practical Validation Flow 4 is now labeled `검증 기준 상세`; category headings are visually emphasized, and user-facing fix locations use screen-oriented names such as `검증 기준 상세 · 데이터 품질 / Provider 보강` instead of internal audit/workbench labels.
 - `practical-validation-flow3-conclusion-summary-v1-20260706`: Practical Validation Flow 3 is now a compact validation conclusion summary. It shows Final Review movement state plus category-level pass / fail / review only, and moves detailed causes / module tables to Flow 4.
 - `practical-validation-category-results-v1-20260706`: Practical Validation Flow 4 category-first validation result grouping. selected-route preflight is separated from validation categories, stress / robustness missing evidence is review by default, construction risk applies only to ETF-like or weighted mix candidates, and sentiment context no longer drives macro gate status.
 - `distinct-strategy-portfolio-discovery-20260609`: unique strategy family constraint / SPY superior GTAA U3 85% + GRS Compact 10% + Risk Parity Trend 5% portfolio / Final Review and Monitoring registration

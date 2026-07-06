@@ -1034,7 +1034,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertIn("전략 재검증", gate["blocking_modules"][0]["gate_reason"])
         self.assertEqual(
             gate["blocking_modules"][0]["resolution_surface"],
-            "3. 최신 데이터 기준 전략 재검증",
+            "Flow 2 · 실전 재검증 실행",
         )
         self.assertIn("전략 재검증 실행", gate["blocking_modules"][0]["resolution_action"])
         modules = {row["module_id"]: row for row in plan["modules"]}
@@ -1044,7 +1044,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
         self.assertEqual(
             display_rows["Latest Runtime Replay"]["Fix Location"],
-            "3. 최신 데이터 기준 전략 재검증",
+            "Flow 2 · 실전 재검증 실행",
         )
 
     def test_validation_board_map_marks_single_gtaa_conditional_boards(self) -> None:
@@ -1113,7 +1113,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(display_rows["Risk Contribution"]["Module Type"], "Conditional")
         self.assertEqual(display_rows["Risk Contribution"]["Applies"], "No")
         self.assertIn("Risk Contribution Audit", display_rows["Risk Contribution"]["Evidence Boards"])
-        self.assertEqual(display_rows["Risk Contribution"]["Fix Location"], "Risk Contribution Audit")
+        self.assertEqual(display_rows["Risk Contribution"]["Fix Location"], "검증 기준 상세 · 포트폴리오 구성 근거")
 
         board_rows = {row["Board"]: row for row in plan["board_display_rows"]}
         self.assertEqual(board_rows["Provider Coverage"]["Applies"], "Yes")
@@ -1393,7 +1393,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertIn("gross-only", modules["selected_route_preflight"]["resolution_action"])
         self.assertEqual(
             modules["selected_route_preflight"]["resolution_surface"],
-            "Final Review readiness preview",
+            "Final Review 이동 요약",
         )
         display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
         self.assertIn("Final Review Readiness Preview", display_rows)
@@ -1420,7 +1420,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
                     "requirement": "REQUIRED",
                     "stage_owner": "practical_validation",
                     "applies": True,
-                    "resolution_surface": "3. 최신 데이터 기준 전략 재검증",
+                    "resolution_surface": "Flow 2 · 실전 재검증 실행",
                     "resolution_action": "전략 재검증 실행",
                 },
                 {
@@ -8519,7 +8519,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                             "label": "Data Coverage",
                             "status": "NEEDS_INPUT",
                             "gate_reason": "가격 window 보강 필요",
-                            "resolution_surface": "Data Coverage Audit",
+                            "resolution_surface": "검증 기준 상세 · 데이터 품질 / Provider 보강",
                             "resolution_action": "가격 window를 확인합니다.",
                         }
                     ],
@@ -8548,7 +8548,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "applies": True,
                         "reason": "가격 window와 survivorship evidence를 확인합니다.",
                         "gate_reason": "가격 window 보강 필요",
-                        "resolution_surface": "Data Coverage Audit",
+                        "resolution_surface": "검증 기준 상세 · 데이터 품질 / Provider 보강",
                         "resolution_action": "가격 window를 확인합니다.",
                     },
                     {
@@ -8558,7 +8558,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "applies": True,
                         "reason": "Final Review 저장 전에 deterministic gap을 확인합니다.",
                         "gate_reason": "Final Review evidence gap",
-                        "resolution_surface": "Final Review readiness preview",
+                        "resolution_surface": "Final Review 이동 요약",
                     },
                 ],
             }
@@ -8579,13 +8579,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(data_card["label"], "Data Coverage")
         self.assertEqual(data_card["status"], "NEEDS_INPUT")
         self.assertEqual(data_card["status_label"], "근거 보강 필요")
-        self.assertEqual(data_card["resolution_surface"], "Data Coverage Audit")
+        self.assertEqual(data_card["resolution_surface"], "검증 기준 상세 · 데이터 품질 / Provider 보강")
         self.assertIn("가격 window 보강 필요", data_card["evidence"])
         self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가")
         self.assertIn("가격", data_card["current_problem"])
         self.assertIn("PASS", data_card["completion_criteria"])
-        self.assertIn("Provider Data Gaps", data_card["fix_location"])
-        self.assertIn("데이터 coverage", data_card["impact_summary"])
+        self.assertIn("데이터 품질 / Provider 보강", data_card["fix_location"])
+        self.assertIn("데이터 커버리지", data_card["impact_summary"])
         self.assertEqual(data_group["passed_criteria"], [])
         self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
         self.assertIn("보강 필요", data_group["decision_summary"])
@@ -8610,7 +8610,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                             "label": "Validation Efficacy",
                             "status": "NEEDS_INPUT",
                             "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
-                            "resolution_surface": "Validation Efficacy Audit",
+                            "resolution_surface": "검증 기준 상세 · 검증 강도 / 강건성",
                             "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
                         }
                     ],
@@ -8623,7 +8623,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "applies": True,
                         "reason": "walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
                         "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
-                        "resolution_surface": "Validation Efficacy Audit",
+                        "resolution_surface": "검증 기준 상세 · 검증 강도 / 강건성",
                         "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
                     }
                 ],
@@ -8637,7 +8637,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(fix_item["issue_title"], "검증 효력 근거 부족")
         self.assertIn("walk-forward", fix_item["current_problem"])
         self.assertIn("PASS", fix_item["completion_criteria"])
-        self.assertIn("Validation Efficacy Audit", fix_item["fix_location"])
+        self.assertIn("검증 강도 / 강건성", fix_item["fix_location"])
         self.assertIn("성과가 특정 기간에만 우연히", fix_item["impact_summary"])
         self.assertNotIn("NEEDS_INPUT row", fix_item["current_problem"])
         self.assertNotIn("NEEDS_INPUT row", fix_item["completion_criteria"])
@@ -8651,7 +8651,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
         self.assertIn("_render_validation_evidence_boards(validation_result)", flow4_body)
         self.assertIn("카테고리별 검증 결과", page_source)
-        self.assertIn("검증한 category별 통과 상태와 보강 상태", page_source)
+        self.assertIn("카테고리별 통과 상태와 보강 상태", page_source)
+        self.assertIn("검증 기준 상세", flow4_body)
         self.assertIn("Final Review 이동 요약", page_source)
         self.assertNotIn("검증 근거 보드", page_source)
         self.assertNotIn("Evidence workspace", page_source)

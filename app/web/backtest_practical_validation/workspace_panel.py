@@ -20,28 +20,28 @@ from app.web.components.practical_validation_fix_queue import (
 
 GATE_FIX_GUIDANCE = {
     "latest_replay": {
-        "location": "3. 최신 데이터 기준 전략 재검증",
+        "location": "Flow 2 · 실전 재검증 실행",
         "action": "`전략 재검증 실행` 버튼을 누른 뒤 Recheck가 PASS 또는 REVIEW이고 Coverage가 PASS인지 확인합니다.",
     },
     "Latest Runtime Replay": {
-        "location": "3. 최신 데이터 기준 전략 재검증",
+        "location": "Flow 2 · 실전 재검증 실행",
         "action": "`전략 재검증 실행` 버튼을 누른 뒤 Recheck가 PASS 또는 REVIEW이고 Coverage가 PASS인지 확인합니다.",
     },
     "validation_efficacy": {
-        "location": "Validation Efficacy Audit",
-        "action": "Validation Efficacy Audit 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
+        "location": "검증 기준 상세 · 검증 강도 / 강건성",
+        "action": "검증 강도 / 강건성 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
     },
     "Validation Efficacy": {
-        "location": "Validation Efficacy Audit",
-        "action": "Validation Efficacy Audit 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
+        "location": "검증 기준 상세 · 검증 강도 / 강건성",
+        "action": "검증 강도 / 강건성 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
     },
     "data_coverage": {
-        "location": "Data Coverage Audit / Provider Data Gaps",
-        "action": "가격 window, provider freshness, lifecycle / survivorship 근거 중 부족한 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+        "location": "검증 기준 상세 · 데이터 품질 / Provider 보강",
+        "action": "데이터 품질 / Provider 보강에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 데이터 보강을 진행합니다.",
     },
     "Data Coverage": {
-        "location": "Data Coverage Audit / Provider Data Gaps",
-        "action": "가격 window, provider freshness, lifecycle / survivorship 근거 중 부족한 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+        "location": "검증 기준 상세 · 데이터 품질 / Provider 보강",
+        "action": "데이터 품질 / Provider 보강에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 데이터 보강을 진행합니다.",
     },
 }
 

@@ -1142,8 +1142,8 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         min_width=220,
     )
 
-    st.markdown("##### Provider Data Gaps")
-    with st.expander("Provider Data Gaps 상세", expanded=bool(actionable_rows)):
+    st.markdown("##### Provider 부족 근거")
+    with st.expander("Provider 부족 근거 상세", expanded=bool(actionable_rows)):
         _render_board_context_badges(validation_result, "provider_data_gaps")
         st.caption(
             "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지 보여줍니다. "
@@ -1326,7 +1326,7 @@ def _render_robustness_lab_board(
     validation_result: dict[str, Any] | None = None,
 ) -> None:
     metrics = dict(board.get("metrics") or {})
-    st.markdown("##### Robustness Lab")
+    st.markdown("##### 강건성 검증")
     if validation_result is not None:
         _render_board_context_badges(validation_result, "robustness_lab")
     st.caption(
@@ -1811,11 +1811,11 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
             _render_curve_evidence(validation_result)
         _render_validation_alerts(validation_result)
     with data_tab:
-        with st.expander("Data Coverage Audit 상세", expanded=False):
+        with st.expander("데이터 품질 / 편향 통제 상세", expanded=False):
             _render_data_coverage_audit(validation_result)
         provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
         if provider_rows:
-            st.markdown("##### Provider Coverage")
+            st.markdown("##### Provider 근거 상태")
             _render_board_context_badges(validation_result, "provider_coverage")
             st.caption(
                 "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
@@ -1834,24 +1834,24 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
                 ],
                 min_width=240,
             )
-            with st.expander("Provider Coverage 상세", expanded=False):
+            with st.expander("Provider 근거 상세", expanded=False):
                 _render_display_dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
             _render_provider_look_through_board(validation_result)
     with construction_tab:
-        with st.expander("Construction Risk Audit 상세", expanded=False):
+        with st.expander("포트폴리오 구성 근거 상세", expanded=False):
             _render_construction_risk_audit(validation_result)
-        with st.expander("Risk Contribution Audit 상세", expanded=False):
+        with st.expander("위험 기여 상세", expanded=False):
             _render_risk_contribution_audit(validation_result)
-        with st.expander("Component Role / Weight Audit 상세", expanded=False):
+        with st.expander("Component 역할 / 비중 상세", expanded=False):
             _render_component_role_weight_audit(validation_result)
     with realism_tab:
-        with st.expander("Validation Efficacy Audit 상세", expanded=False):
+        with st.expander("검증 강도 / 강건성 상세", expanded=False):
             _render_validation_efficacy_audit(validation_result)
-        with st.expander("Backtest Realism Audit 상세", expanded=False):
+        with st.expander("실전 운용 현실성 상세", expanded=False):
             _render_backtest_realism_audit(validation_result)
         _render_practical_diagnostics_summary(validation_result)
     with robustness_tab:
-        with st.expander("Robustness Lab 상세", expanded=False):
+        with st.expander("Stress / sensitivity 상세", expanded=False):
             _render_stress_sensitivity_interpretation(validation_result)
     with raw_tab:
         _render_diagnostic_detail_expanders(validation_result)
@@ -1937,7 +1937,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
                 "</div>"
                 "<footer>"
                 f"<span>기술 기준: {escape(str(card.get('technical_label') or card.get('module_type') or '-'))}</span>"
-                f"<span>{escape(str(card.get('resolution_surface') or '-'))}</span>"
+                f"<span>기준 범위: {escape(str(card.get('module_type') or '-'))}</span>"
                 "</footer>"
                 "</article>"
             )
@@ -2020,7 +2020,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
         f'<section class="pv-criteria-board pv-criteria-board-{tone}">'
         '<div class="pv-criteria-kicker">검증 기준 상세</div>'
         f'<div class="pv-criteria-title">카테고리별 검증 결과</div>'
-        f'<div class="pv-criteria-detail">{escape(headline)} 검증한 category별 통과 상태와 보강 상태를 요약합니다. Final Review 이동 가능성은 아래 이동 요약으로 분리해서 확인합니다.</div>'
+        f'<div class="pv-criteria-detail">{escape(headline)} 카테고리별 통과 상태와 보강 상태를 요약합니다. Final Review 이동 가능성은 아래 이동 요약으로 분리해서 확인합니다.</div>'
         f'<div class="pv-criteria-metrics">{metric_html}</div>'
         f'<div class="pv-criteria-groups">{"".join(group_html)}{handoff_html}</div>'
         "</section></div>",
@@ -2035,7 +2035,7 @@ def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None
         return
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
-    st.markdown("##### Validation Efficacy Audit")
+    st.markdown("##### 검증 강도 / 강건성")
     _render_board_context_badges(validation_result, "validation_efficacy_audit")
     render_badge_strip(
         [
@@ -2067,7 +2067,7 @@ def _render_backtest_realism_audit(validation_result: dict[str, Any]) -> None:
         return
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
-    st.markdown("##### Backtest Realism Audit")
+    st.markdown("##### 실전 운용 현실성")
     _render_board_context_badges(validation_result, "backtest_realism_audit")
     render_badge_strip(
         [
@@ -2099,7 +2099,7 @@ def _render_construction_risk_audit(validation_result: dict[str, Any]) -> None:
         return
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
-    st.markdown("##### Construction Risk Audit")
+    st.markdown("##### 포트폴리오 구성 근거")
     _render_board_context_badges(validation_result, "construction_risk_audit")
     render_badge_strip(
         [
@@ -2125,7 +2125,7 @@ def _render_construction_risk_audit(validation_result: dict[str, Any]) -> None:
 
 
 def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
-    if _render_not_applicable_board(validation_result, "risk_contribution_audit", "Risk Contribution Audit"):
+    if _render_not_applicable_board(validation_result, "risk_contribution_audit", "위험 기여"):
         return
     audit = dict(validation_result.get("risk_contribution_audit") or {})
     rows = list(validation_result.get("risk_contribution_display_rows") or audit.get("rows") or [])
@@ -2133,7 +2133,7 @@ def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
         return
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
-    st.markdown("##### Risk Contribution Audit")
+    st.markdown("##### 위험 기여")
     _render_board_context_badges(validation_result, "risk_contribution_audit")
     render_badge_strip(
         [
@@ -2167,7 +2167,7 @@ def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
 
 
 def _render_component_role_weight_audit(validation_result: dict[str, Any]) -> None:
-    if _render_not_applicable_board(validation_result, "component_role_weight_audit", "Component Role / Weight Audit"):
+    if _render_not_applicable_board(validation_result, "component_role_weight_audit", "Component 역할 / 비중"):
         return
     audit = dict(validation_result.get("component_role_weight_audit") or {})
     rows = list(validation_result.get("component_role_weight_display_rows") or audit.get("rows") or [])
@@ -2175,7 +2175,7 @@ def _render_component_role_weight_audit(validation_result: dict[str, Any]) -> No
         return
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
-    st.markdown("##### Component Role / Weight Audit")
+    st.markdown("##### Component 역할 / 비중")
     _render_board_context_badges(validation_result, "component_role_weight_audit")
     render_badge_strip(
         [
@@ -2216,7 +2216,7 @@ def _render_data_coverage_audit(validation_result: dict[str, Any]) -> None:
         return
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
-    st.markdown("##### Data Coverage Audit")
+    st.markdown("##### 데이터 품질 / 편향 통제")
     _render_board_context_badges(validation_result, "data_coverage_audit")
     render_badge_strip(
         [
@@ -2346,8 +2346,8 @@ def render_practical_validation_workspace() -> None:
     with st.container(border=True):
         render_pv_section_header(
             eyebrow="Flow 4",
-            title="근거 Workbench",
-            detail="카테고리별 검증 결과를 먼저 보고, 필요한 상세 근거와 provider 보강 액션을 이어서 확인합니다.",
+            title="검증 기준 상세",
+            detail="카테고리별 통과 / 보강 필요 / 확인 항목을 먼저 보고, 필요한 상세 근거와 provider 보강 액션을 이어서 확인합니다.",
             tone="neutral",
         )
         _render_validation_criteria_detail_board(validation_result)

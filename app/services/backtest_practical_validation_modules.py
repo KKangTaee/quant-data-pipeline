@@ -426,7 +426,7 @@ def build_validation_module_plan(
             reason="Backtest Analysis에서 넘어온 source가 식별 가능하고 active component, target weight, Data Trust, execution boundary, curve evidence를 갖춘 검증 가능한 후보인지 확인합니다.",
             next_action="source 자격이 부족하면 Backtest Analysis에서 source를 다시 구성하거나 handoff evidence를 보강합니다.",
             profile_effect=profile_label,
-            resolution_surface="1. 선택 후보 확인 / Backtest Analysis handoff",
+            resolution_surface="Flow 1 · 후보 Source 확인",
             resolution_action="source id, active component, target weight, Data Trust, curve evidence를 확인하고 부족하면 Backtest Analysis에서 후보를 다시 보냅니다.",
         ),
         _module(
@@ -439,7 +439,7 @@ def build_validation_module_plan(
             reason="저장 당시 성과가 아니라 현재 DB 최신 시장일까지 같은 전략이 재현되는지 확인합니다.",
             next_action="Practical Validation의 전략 재검증을 실행하고 runtime period coverage를 확인합니다.",
             profile_effect="all profiles require current replay evidence",
-            resolution_surface="3. 최신 데이터 기준 전략 재검증",
+            resolution_surface="Flow 2 · 실전 재검증 실행",
             resolution_action="`전략 재검증 실행` 버튼을 누른 뒤 Recheck가 PASS 또는 REVIEW이고 Coverage가 PASS인지 확인합니다.",
         ),
         _module(
@@ -452,7 +452,7 @@ def build_validation_module_plan(
             reason="후보와 benchmark, cash, simple baseline, custom comparator 같은 비교 기준이 같은 기간 / frequency / coverage로 비교되는지 확인합니다.",
             next_action="비교 기준 curve coverage가 부족하면 source comparator나 replay evidence를 보강합니다.",
             profile_effect=profile_label,
-            resolution_surface="Input Evidence / Curve / Recheck Evidence",
+            resolution_surface="검증 기준 상세 · 핵심 입력 근거",
             resolution_action="benchmark 또는 comparator curve가 후보와 같은 기간 / coverage / frequency로 만들어졌는지 확인합니다.",
         ),
         _module(
@@ -465,8 +465,8 @@ def build_validation_module_plan(
             reason="walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
             next_action="검증 효력에서 보강이 필요한 근거를 채우고 REVIEW 근거는 Final Review 판단 근거로 넘깁니다.",
             profile_effect=profile_label,
-            resolution_surface="Validation Efficacy Audit",
-            resolution_action="Validation Efficacy Audit 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
+            resolution_surface="검증 기준 상세 · 검증 강도 / 강건성",
+            resolution_action="검증 강도 / 강건성 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
         ),
         _module(
             module_id="data_coverage",
@@ -478,8 +478,8 @@ def build_validation_module_plan(
             reason="최신 가격, provider freshness, PIT window, universe / survivorship coverage가 Practical Validation 판단에 충분한지 확인합니다.",
             next_action="가격 / provider / lifecycle / replay coverage 부족분을 보강합니다.",
             profile_effect=profile_label,
-            resolution_surface="Data Coverage Audit / Provider Data Gaps",
-            resolution_action="가격 window, provider freshness, lifecycle / survivorship 근거 중 부족한 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+            resolution_surface="검증 기준 상세 · 데이터 품질 / Provider 보강",
+            resolution_action="데이터 품질 / Provider 보강에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 데이터 보강을 진행합니다.",
         ),
         _module(
             module_id="construction_risk",
@@ -497,7 +497,7 @@ def build_validation_module_plan(
                 if construction_applies
                 else "ETF-like 또는 weighted mix 후보가 아니므로 구성 / look-through 검증은 Flow 4 core 기준에서 제외합니다."
             ),
-            resolution_surface="Construction Risk Audit / Look-through Exposure Board",
+            resolution_surface="검증 기준 상세 · 포트폴리오 구성 근거",
             resolution_action="비중 집중, holdings / exposure coverage, top holding, overlap, unknown exposure row를 확인합니다.",
         ),
         _module(
@@ -510,7 +510,7 @@ def build_validation_module_plan(
             reason="비용, turnover, liquidity, net performance, rebalance timing이 실전 해석에 충분한지 확인합니다.",
             next_action="비용 / turnover / 유동성 / net curve evidence가 부족하면 보강하고 assumption-only row는 Final Review review 근거로 넘깁니다.",
             profile_effect=profile_label,
-            resolution_surface="Backtest Realism Audit",
+            resolution_surface="검증 기준 상세 · 실전 운용 현실성",
             resolution_action="cost / turnover / liquidity / net performance / rebalance timing row 중 blocker를 보강합니다.",
         ),
         _module(
@@ -523,7 +523,7 @@ def build_validation_module_plan(
             reason="최소 실전 stress window, rolling, sensitivity, overfit warning 근거가 있는지 확인합니다.",
             next_action="최소 stress / rolling / sensitivity 근거가 부족하면 보강하고 고급 parameter perturbation은 REVIEW 또는 후속 검증으로 남깁니다.",
             profile_effect="stricter for defensive / tactical profiles",
-            resolution_surface="Robustness Lab",
+            resolution_surface="검증 기준 상세 · 강건성 검증",
             resolution_action="stress, rolling, sensitivity, overfit summary에서 미실행 또는 보강 필요 항목을 확인합니다.",
         ),
         _module(
@@ -542,7 +542,7 @@ def build_validation_module_plan(
                 if traits.get("is_etf_like")
                 else "ETF-like source가 아니므로 provider 전용 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Provider Coverage / Provider Data Gaps",
+            resolution_surface="Provider / Data 보강 액션",
             resolution_action="ETF provider operability / holdings / exposure gap을 확인하고 수집 가능한 부족분을 보강합니다.",
         ),
         _module(
@@ -563,7 +563,7 @@ def build_validation_module_plan(
                 if traits.get("has_leveraged_or_inverse_symbols")
                 else "현재 universe에 레버리지 / 인버스 ticker가 없어 이 조건부 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Practical Diagnostics / Final Review",
+            resolution_surface="Final Review 확인 항목",
             resolution_action="레버리지 / 인버스 노출이 있으면 목적, 보유기간, 손실 감내 기준을 Final Review 판단 근거로 남깁니다.",
         ),
         _module(
@@ -582,7 +582,7 @@ def build_validation_module_plan(
                 if traits.get("is_weighted_mix")
                 else "single component 후보이므로 component 간 risk contribution 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Risk Contribution Audit",
+            resolution_surface="검증 기준 상세 · 포트폴리오 구성 근거",
             resolution_action="weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency row를 확인합니다.",
         ),
         _module(
@@ -601,7 +601,7 @@ def build_validation_module_plan(
                 if traits.get("is_weighted_mix")
                 else "single component 후보이므로 mix role / weight 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Component Role / Weight Audit",
+            resolution_surface="검증 기준 상세 · 포트폴리오 구성 근거",
             resolution_action="weighted mix의 role source, target weight, profile intent, weight rationale row를 확인합니다.",
         ),
         _module(
@@ -620,7 +620,7 @@ def build_validation_module_plan(
                 if traits.get("is_tactical") or profile_id == "hedged_tactical"
                 else "전술형 source가 아니므로 macro / regime 조건부 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Practical Diagnostics / Macro / Regime",
+            resolution_surface="검증 기준 상세 · 후보 특성별 추가 근거",
             resolution_action=(
                 "macro regime, FRED snapshot, regime split evidence를 확인합니다. "
                 f"sentiment context status는 {sentiment_context_status}이며 gate에는 반영하지 않습니다."
@@ -636,7 +636,7 @@ def build_validation_module_plan(
             reason="선정 이후 recheck / monitoring seed를 구성합니다.",
             next_action="Final Review 이후 Selected Dashboard에서 운영 확인 근거로 사용합니다.",
             profile_effect="downstream",
-            resolution_surface="Selected Portfolio Dashboard",
+            resolution_surface="Operations > Portfolio Monitoring",
             resolution_action="Final Review 이후 recheck / monitoring baseline으로 확인합니다.",
         ),
         _module(
@@ -672,9 +672,9 @@ def build_validation_module_plan(
                     or "Final Review 이동 전에 readiness preview의 blocker / review-required 항목을 보강합니다."
                 ),
                 profile_effect=f"selection policy outcome: {preflight_outcome}",
-                resolution_surface="Final Review readiness preview",
+                resolution_surface="Final Review 이동 요약",
                 resolution_action=(
-                    "Final Review readiness preview 통과 상태입니다."
+                    "Final Review 이동 요약 통과 상태입니다."
                     if preflight_allowed
                     else preflight_issue
                 ),
@@ -709,7 +709,7 @@ def build_validation_module_plan(
             gate_verdict = "Final Review 준비 상태에서 저장을 막을 evidence gap이 있어 Final Review 이동을 막습니다."
             next_action = (
                 preflight.get("next_action")
-                or "Final Review readiness preview의 blocker / review-required 항목을 먼저 해결합니다."
+                or "Final Review 이동 요약의 blocker / review-required 항목을 먼저 해결합니다."
             )
         else:
             gate_verdict = "필수 검증 모듈에 보강이 필요한 항목이 있어 Final Review 이동을 막습니다."

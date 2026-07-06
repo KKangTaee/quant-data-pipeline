@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow 4 Labels V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-labels-v1-20260706/`에서 Flow 4 이름을 `근거 Workbench`에서 `검증 기준 상세`으로 정리했다.
+  - 카테고리 title emphasis를 강화하고, `보강 위치`를 내부 audit 이름이 아니라 `검증 기준 상세 · 데이터 품질 / Provider 보강` 같은 화면 기준 위치명으로 통일했다.
+  - Validation threshold / replay / provider collection / registry / Final Review policy / live approval 경계는 변경하지 않았다.
 - Practical Validation Flow 3 Conclusion Summary V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-conclusion-summary-v1-20260706/`에서 Flow 3을 Fix Queue가 아니라 `검증 결론` first-read surface로 전환했다.
   - Flow 3은 Final Review 이동 가능 / 보류와 카테고리별 `통과 / 실패 / 확인 필요`만 compact하게 보여주고, 상세 원인 / 보강 기준 / module table은 Flow 4로 낮췄다.

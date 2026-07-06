@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-06 - Practical Validation Flow 4 보강위치는 화면 기준 이름이어야 한다
+
+- User request: 사용자가 Flow 4 `근거 Workbench` 이름이 어색하고, `보강 위치`가 `Flow 4 · Data Coverage Audit / Provider Data Gaps`처럼 실제 화면명과 맞지 않는다고 지적하며 전체 보강위치를 정리해 달라고 요청함.
+- Interpreted goal: Flow 4는 내부 audit taxonomy를 보여주는 개발자 화면이 아니라, 사용자가 카테고리별 검증 결과와 보강 위치를 찾는 `검증 기준 상세` 화면이어야 함.
+- Analysis result: `Data Coverage Audit`, `Validation Efficacy Audit`, `Provider Data Gaps` 같은 이름은 내부 module / board taxonomy로 유지할 수 있지만, user-facing `보강 위치`에는 `검증 기준 상세 · 데이터 품질 / Provider 보강`, `검증 기준 상세 · 검증 강도 / 강건성`, `Flow 2 · 실전 재검증 실행`처럼 화면 기준 위치를 써야 한다.
+- Follow-up: `practical-validation-flow4-labels-v1-20260706`에서 Flow 4 title, category heading emphasis, fix-location mapping, Flow docs, and tests를 정리했다.
+
 ### 2026-07-06 - Practical Validation Flow 3은 Fix Queue가 아니라 검증 결론이다
 
 - User request: 사용자가 Flow 3은 fix queue가 아니라 검증 결론만 알려주는 영역으로 바꾸는 것이 맞는지 확인했고, 이어서 그렇게 개발 진행을 승인함.
