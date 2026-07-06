@@ -8428,6 +8428,51 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("검증 모듈 / 기술 상세", flow3_body)
         self.assertIn("_react_criteria_group_items", panel_source)
 
+    def test_practical_validation_source_tables_are_arrow_safe_display_tables(self) -> None:
+        import pyarrow as pa
+
+        from app.web.backtest_practical_validation import page as practical_page
+
+        source = {
+            "summary": {"cagr": 0.1234, "mdd": -0.1, "sharpe": 1.2, "end_balance": 12345.67},
+            "period": {"start": "2024-01-01", "end": "2024-12-31"},
+            "data_trust": {"result_rows": 12},
+            "construction": {"target_weight_total": 100.0},
+        }
+        summary_rows = practical_page._source_backtest_summary_rows(source)
+
+        self.assertTrue(summary_rows)
+        self.assertTrue(all(isinstance(row["Value"], str) for row in summary_rows))
+        self.assertIn("12", {row["Value"] for row in summary_rows})
+        pa.Table.from_pandas(pd.DataFrame(summary_rows))
+
+        selection_df = practical_page._format_selection_history_table(
+            [
+                {"date": "2024-01-31", "selected_count": 2, "selected_tickers": ["SPY", "QQQ"]},
+                {"date": "2024-02-29", "selected_count": 0, "selected_tickers": []},
+                {"date": "2024-02-29", "selected_tickers": []},
+            ]
+        )
+
+        self.assertEqual(selection_df["Selected Count"].tolist(), ["2", "0", "-"])
+        self.assertTrue(all(isinstance(value, str) for value in selection_df["Selected Count"].tolist()))
+        pa.Table.from_pandas(selection_df)
+
+        mixed_display_df = practical_page._arrow_safe_display_dataframe(
+            [
+                {"Metric": "Benchmark present", "Value": True, "Threshold": "-"},
+                {"Metric": "Active component count", "Value": 2, "Threshold": ">= 1"},
+                {"Metric": "Worst rolling MDD", "Value": -0.32, "Threshold": -0.25},
+            ]
+        )
+
+        self.assertTrue(all(isinstance(value, str) for value in mixed_display_df["Value"].tolist()))
+        self.assertTrue(all(isinstance(value, str) for value in mixed_display_df["Threshold"].tolist()))
+        pa.Table.from_pandas(mixed_display_df)
+
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        self.assertNotIn("st.altair_chart(chart, use_container_width=True)", page_source)
+
     def test_practical_validation_workspace_model_builds_criteria_detail_groups(self) -> None:
         from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
 

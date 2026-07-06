@@ -181,6 +181,34 @@ def _format_weight_list(value: Any) -> str:
     return ", ".join(weights) if weights else "-"
 
 
+def _format_display_scalar(value: Any) -> str:
+    if value is None:
+        return "-"
+    if isinstance(value, str) and not value.strip():
+        return "-"
+    if isinstance(value, float) and pd.isna(value):
+        return "-"
+    if isinstance(value, (list, tuple, set)):
+        return _format_list_value(value)
+    if isinstance(value, dict):
+        return ", ".join(f"{key}: {item}" for key, item in value.items()) or "-"
+    return str(value)
+
+
+def _arrow_safe_display_dataframe(data: Any) -> pd.DataFrame:
+    display_df = data.copy() if isinstance(data, pd.DataFrame) else pd.DataFrame(data)
+    if display_df.empty:
+        return display_df
+    for column in display_df.columns:
+        if display_df[column].dtype == "object":
+            display_df[column] = display_df[column].map(_format_display_scalar)
+    return display_df
+
+
+def _render_display_dataframe(data: Any, **kwargs: Any) -> None:
+    st.dataframe(_arrow_safe_display_dataframe(data), **kwargs)
+
+
 def _component_settings(source: dict[str, Any], component: dict[str, Any]) -> dict[str, Any]:
     source_settings = dict(dict(source.get("source_snapshot") or {}).get("settings_snapshot") or {})
     replay_contract = dict(component.get("replay_contract") or {})
@@ -287,7 +315,7 @@ def _render_source_strategy_brief(source: dict[str, Any]) -> None:
         min_width=230,
     )
     if component_rows:
-        st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+        _render_display_dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
 
 
 def _format_number_value(value: Any) -> str:
@@ -358,20 +386,24 @@ def _source_backtest_summary_rows(source: dict[str, Any]) -> list[dict[str, Any]
         {
             "Area": "Contract",
             "Metric": "Benchmark",
-            "Value": settings.get("benchmark_ticker")
-            or next(
-                (
-                    str(component.get("benchmark"))
-                    for component in list(source.get("components") or [])
-                    if component.get("benchmark")
-                ),
-                "-",
+            "Value": _format_display_scalar(
+                settings.get("benchmark_ticker")
+                or next(
+                    (
+                        str(component.get("benchmark"))
+                        for component in list(source.get("components") or [])
+                        if component.get("benchmark")
+                    ),
+                    "-",
+                )
             ),
         },
         {
             "Area": "Data",
             "Metric": "Result Rows",
-            "Value": data_trust.get("result_rows") or len(source.get("result_curve") or []),
+            "Value": _format_display_scalar(
+                data_trust.get("result_rows") or len(source.get("result_curve") or [])
+            ),
         },
         {
             "Area": "Construction",
@@ -429,7 +461,7 @@ def _format_selection_history_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
                     max_items=12,
                 ),
                 "Target Weights": _format_weight_list(row_dict.get("target_weights") or row_dict.get("Target Weights")),
-                "Selected Count": row_dict.get("selected_count") or "-",
+                "Selected Count": _format_display_scalar(row_dict.get("selected_count")),
                 "Raw Selected": _format_list_value(row_dict.get("raw_selected_tickers"), max_items=12),
                 "Overlay Rejected": _format_list_value(row_dict.get("overlay_rejected_tickers"), max_items=12),
                 "Cash Share": _format_weight_percent_value(row_dict.get("cash_share")),
@@ -465,7 +497,7 @@ def _render_source_equity_curve(source: dict[str, Any]) -> None:
         )
         .properties(height=320)
     )
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width="stretch")
     if benchmark_df.empty:
         st.caption("Benchmark curve snapshot이 없어 후보 equity curve만 표시합니다.")
 
@@ -513,7 +545,7 @@ def _render_source_backtest_snapshot(source: dict[str, Any]) -> None:
             ],
             min_width=220,
         )
-        st.dataframe(pd.DataFrame(_source_backtest_summary_rows(source)), width="stretch", hide_index=True)
+        _render_display_dataframe(pd.DataFrame(_source_backtest_summary_rows(source)), width="stretch", hide_index=True)
     with curve_tab:
         _render_source_equity_curve(source)
     with table_tab:
@@ -521,22 +553,22 @@ def _render_source_backtest_snapshot(source: dict[str, Any]) -> None:
             st.info("표시할 saved result table snapshot이 없습니다.")
         else:
             st.markdown("##### Performance Result")
-            st.dataframe(_format_source_result_table(result_curve_df), width="stretch", hide_index=True)
+            _render_display_dataframe(_format_source_result_table(result_curve_df), width="stretch", hide_index=True)
         if selection_rows:
             st.markdown("##### Monthly Selection / Holdings")
-            st.dataframe(_format_selection_history_table(selection_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(_format_selection_history_table(selection_rows), width="stretch", hide_index=True)
         else:
             st.info("이 source에는 월별 선택 종목 snapshot이 저장되어 있지 않습니다. 기존 source라면 Step 3 replay 실행 후 재검증 결과에서 확인하세요.")
     with component_tab:
         if component_df.empty:
             st.info("선택된 source에 component snapshot이 없습니다.")
         else:
-            st.dataframe(_format_component_summary_df(component_df), width="stretch", hide_index=True)
+            _render_display_dataframe(_format_component_summary_df(component_df), width="stretch", hide_index=True)
     with selection_tab:
         if not selection_rows:
             st.info("표시할 selection history snapshot이 없습니다.")
         else:
-            st.dataframe(_format_selection_history_table(selection_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(_format_selection_history_table(selection_rows), width="stretch", hide_index=True)
 
 
 def _render_source_summary(source: dict[str, Any]) -> None:
@@ -749,7 +781,7 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
             st.caption(str(period_coverage.get("summary")))
         component_rows = list(replay_result.get("component_results") or [])
         if component_rows:
-            st.dataframe(
+            _render_display_dataframe(
                 pd.DataFrame(
                     [
                         {
@@ -772,7 +804,7 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
             )
         coverage_rows = list(period_coverage.get("component_rows") or [])
         if coverage_rows:
-            st.dataframe(pd.DataFrame(coverage_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(coverage_rows), width="stretch", hide_index=True)
         replay_selection_rows: list[dict[str, Any]] = []
         for row in component_rows:
             component_title = row.get("title") or row.get("component_id")
@@ -784,7 +816,7 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
                 replay_selection_rows.append(selection_row)
         if replay_selection_rows:
             with st.expander("Runtime replay monthly selection / holdings", expanded=False):
-                st.dataframe(_format_selection_history_table(replay_selection_rows), width="stretch", hide_index=True)
+                _render_display_dataframe(_format_selection_history_table(replay_selection_rows), width="stretch", hide_index=True)
     else:
         st.info("이 탭의 현재 세션에서는 아직 최신 runtime 재검증을 실행하지 않았습니다. 버튼을 눌러야 결과가 표시됩니다.")
     return dict(replay_result) if isinstance(replay_result, dict) else None
@@ -924,7 +956,7 @@ def _render_backtest_entry_gate_review_queue(source: dict[str, Any]) -> None:
             min_width=250,
         )
         with st.expander("2차 확인 항목 상세 테이블", expanded=False):
-            st.dataframe(pd.DataFrame(_entry_gate_display_rows(review_rows)), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(_entry_gate_display_rows(review_rows)), width="stretch", hide_index=True)
     elif not blocker_rows:
         st.success("Backtest에서 넘어온 2차 확인 항목이 없습니다. 아래 source snapshot과 최신 재검증을 이어서 확인하세요.")
 
@@ -1052,7 +1084,7 @@ def _render_provider_gap_collection_results(results: list[dict[str, Any]]) -> No
     if not results:
         return
     st.markdown("###### 최근 Provider 데이터 수집 결과")
-    st.dataframe(
+    _render_display_dataframe(
         pd.DataFrame(
             [
                 {
@@ -1128,7 +1160,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
             "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지 보여줍니다. "
             "부족 데이터는 이 화면에서 바로 수집할 수 있고, source mapping이 없는 ETF는 connector 보강이 필요합니다."
         )
-        st.dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
+        _render_display_dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
     if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
         st.success("현재 ETF provider gap은 없습니다.")
         return True
@@ -1199,7 +1231,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         min_width=250,
     )
     with st.expander("보강 작업 상세 테이블", expanded=False):
-        st.dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
+        _render_display_dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
 
     result_key = provider_gap_state_key(validation_result)
     latest_results = st.session_state.get(result_key)
@@ -1261,31 +1293,31 @@ def _render_provider_look_through_board(validation_result: dict[str, Any]) -> No
     st.caption(str(board.get("summary") or "-"))
     summary_rows = list(board.get("summary_rows") or [])
     if summary_rows:
-        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+        _render_display_dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
 
     tabs = st.tabs(["Asset Buckets", "Top Holdings", "Fund Coverage", "Exposure Detail"])
     with tabs[0]:
         asset_rows = list(board.get("asset_bucket_rows") or [])
         if asset_rows:
-            st.dataframe(pd.DataFrame(asset_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(asset_rows), width="stretch", hide_index=True)
         else:
             st.info("표시할 asset bucket exposure가 없습니다.")
     with tabs[1]:
         holding_rows = list(board.get("top_holding_rows") or [])
         if holding_rows:
-            st.dataframe(pd.DataFrame(holding_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(holding_rows), width="stretch", hide_index=True)
         else:
             st.info("표시할 top holdings row가 없습니다.")
     with tabs[2]:
         fund_rows = list(board.get("fund_coverage_rows") or [])
         if fund_rows:
-            st.dataframe(pd.DataFrame(fund_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(fund_rows), width="stretch", hide_index=True)
         else:
             st.info("표시할 ETF별 coverage row가 없습니다.")
     with tabs[3]:
         exposure_rows = list(board.get("exposure_detail_rows") or [])
         if exposure_rows:
-            st.dataframe(pd.DataFrame(exposure_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(exposure_rows), width="stretch", hide_index=True)
         else:
             st.info("표시할 exposure detail row가 없습니다.")
 
@@ -1338,25 +1370,25 @@ def _render_robustness_lab_board(
     with summary_tab:
         summary_rows = list(board.get("summary_rows") or [])
         if summary_rows:
-            st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
         else:
             st.info("표시할 robustness summary row가 없습니다.")
     with stress_tab:
         stress_rows = list(board.get("stress_rows") or [])
         if stress_rows:
-            st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
         else:
             st.info("표시할 stress detail row가 없습니다.")
     with sensitivity_tab:
         sensitivity_rows = list(board.get("sensitivity_rows") or [])
         if sensitivity_rows:
-            st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
         else:
             st.info("표시할 sensitivity detail row가 없습니다.")
     with follow_up_tab:
         follow_up_rows = list(board.get("follow_up_rows") or [])
         if follow_up_rows:
-            st.dataframe(pd.DataFrame(follow_up_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(follow_up_rows), width="stretch", hide_index=True)
         else:
             st.success("즉시 follow-up으로 남은 robustness row가 없습니다.")
 
@@ -1394,7 +1426,7 @@ def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any])
         st.caption(str(stress.get("summary") or "-"))
         stress_rows = list(stress.get("rows") or [])
         if stress_rows:
-            st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
     with sensitivity_tab:
         render_badge_strip(
             [
@@ -1407,7 +1439,7 @@ def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any])
         st.caption(str(sensitivity.get("summary") or "-"))
         sensitivity_rows = list(sensitivity.get("rows") or [])
         if sensitivity_rows:
-            st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
 
 
 def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
@@ -1442,7 +1474,7 @@ def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
         map_tab, skipped_tab, module_tab = st.tabs(["적용 보드", "비적용 보드", "모듈 연결"])
         with map_tab:
             if applied_rows:
-                st.dataframe(
+                _render_display_dataframe(
                     pd.DataFrame(applied_rows)[
                         [
                             "Board",
@@ -1460,7 +1492,7 @@ def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
                 st.info("현재 후보에 적용되는 보드가 없습니다.")
         with skipped_tab:
             if skipped_rows:
-                st.dataframe(
+                _render_display_dataframe(
                     pd.DataFrame(skipped_rows)[
                         [
                             "Board",
@@ -1477,7 +1509,7 @@ def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
                 st.success("현재 후보에서 제외되는 조건부 보드가 없습니다.")
         with module_tab:
             if module_rows:
-                st.dataframe(
+                _render_display_dataframe(
                     pd.DataFrame(module_rows)[
                         [
                             "Module",
@@ -1562,11 +1594,11 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     render_fix_queue(blocking_modules)
     if blocking_modules:
         with st.expander("이동 보류 모듈 상세 테이블", expanded=False):
-            st.dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
     review_modules = list(gate.get("review_modules") or [])
     if review_modules:
         with st.expander("Final Review에서 확인할 REVIEW 모듈", expanded=False):
-            st.dataframe(pd.DataFrame(gate_module_display_rows(review_modules)), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(gate_module_display_rows(review_modules)), width="stretch", hide_index=True)
 
     if module_rows:
         required_rows = [row for row in module_rows if row.get("Group") == "Required for Final Review"]
@@ -1601,11 +1633,11 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
         with st.expander("검증 모듈 상세", expanded=False):
             required_tab, conditional_tab, reference_tab = st.tabs(["필수 검증", "조건부 검증", "후속 참고"])
             with required_tab:
-                st.dataframe(pd.DataFrame(required_rows), width="stretch", hide_index=True)
+                _render_display_dataframe(pd.DataFrame(required_rows), width="stretch", hide_index=True)
             with conditional_tab:
-                st.dataframe(pd.DataFrame(conditional_rows), width="stretch", hide_index=True)
+                _render_display_dataframe(pd.DataFrame(conditional_rows), width="stretch", hide_index=True)
             with reference_tab:
-                st.dataframe(pd.DataFrame(reference_rows), width="stretch", hide_index=True)
+                _render_display_dataframe(pd.DataFrame(reference_rows), width="stretch", hide_index=True)
 
     with st.expander("Source traits", expanded=False):
         st.json(traits)
@@ -1655,7 +1687,7 @@ def _render_validation_alerts(validation_result: dict[str, Any]) -> None:
     not_run_critical = list(validation_result.get("not_run_critical_domains") or [])
     if not_run_critical:
         st.info("아래 NOT_RUN 항목은 Final Review에서 선택/보류/재검토 판단 근거로 확인해야 합니다.")
-        st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
+        _render_display_dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
 
 
 def _render_curve_evidence(validation_result: dict[str, Any]) -> None:
@@ -1678,7 +1710,7 @@ def _render_curve_evidence(validation_result: dict[str, Any]) -> None:
     )
     component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
     if component_curve_rows:
-        st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
+        _render_display_dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
     benchmark_parity = dict(curve_evidence.get("benchmark_parity") or {})
     if benchmark_parity:
         render_badge_strip(
@@ -1707,7 +1739,7 @@ def _render_curve_evidence(validation_result: dict[str, Any]) -> None:
         )
         parity_rows = list(benchmark_parity.get("rows") or [])
         if parity_rows:
-            st.dataframe(pd.DataFrame(parity_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(parity_rows), width="stretch", hide_index=True)
     curve_provenance = dict(curve_evidence.get("curve_provenance") or {})
     if curve_provenance:
         with st.expander("Curve provenance", expanded=False):
@@ -1731,14 +1763,14 @@ def _render_diagnostic_detail_expanders(validation_result: dict[str, Any]) -> No
             st.caption(str(diagnostic.get("summary") or "-"))
             evidence_rows = list(diagnostic.get("evidence_rows") or [])
             if evidence_rows:
-                st.dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
+                _render_display_dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
             limitations = list(diagnostic.get("limitations") or [])
             if limitations:
                 st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
     profile_score_rows = list(validation_result.get("profile_score_rows") or [])
     if profile_score_rows:
         with st.expander("Profile-aware score breakdown", expanded=False):
-            st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
 
 
 def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> None:
@@ -1759,7 +1791,7 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
             min_width=240,
         )
         with st.expander("Practical Diagnostics 상세", expanded=False):
-            st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
     else:
         st.info("표시할 diagnostic row가 없습니다.")
 
@@ -1805,7 +1837,7 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
             min_width=240,
         )
         with st.expander("Input Evidence 상세", expanded=False):
-            st.dataframe(pd.DataFrame(checks), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(checks), width="stretch", hide_index=True)
         with st.expander("Curve / Recheck Evidence", expanded=False):
             _render_curve_evidence(validation_result)
         _render_validation_alerts(validation_result)
@@ -1834,7 +1866,7 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
                 min_width=240,
             )
             with st.expander("Provider Coverage 상세", expanded=False):
-                st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+                _render_display_dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
             _render_provider_look_through_board(validation_result)
     with construction_tab:
         with st.expander("Construction Risk Audit 상세", expanded=False):
@@ -2054,7 +2086,7 @@ def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None
             },
         ]
     )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    _render_display_dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))
 
@@ -2086,7 +2118,7 @@ def _render_backtest_realism_audit(validation_result: dict[str, Any]) -> None:
             },
         ]
     )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    _render_display_dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))
 
@@ -2118,7 +2150,7 @@ def _render_construction_risk_audit(validation_result: dict[str, Any]) -> None:
             },
         ]
     )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    _render_display_dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))
 
@@ -2156,11 +2188,11 @@ def _render_risk_contribution_audit(validation_result: dict[str, Any]) -> None:
             },
         ]
     )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    _render_display_dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     component_rows = list(audit.get("component_rows") or [])
     if component_rows:
         with st.expander("Risk contribution component rows", expanded=False):
-            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))
 
@@ -2199,11 +2231,11 @@ def _render_component_role_weight_audit(validation_result: dict[str, Any]) -> No
             },
         ]
     )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    _render_display_dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     component_rows = list(audit.get("component_rows") or [])
     if component_rows:
         with st.expander("Component role / weight rows", expanded=False):
-            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
+            _render_display_dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))
 
@@ -2235,7 +2267,7 @@ def _render_data_coverage_audit(validation_result: dict[str, Any]) -> None:
             },
         ]
     )
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    _render_display_dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     if audit.get("conclusion"):
         st.caption(str(audit.get("conclusion")))
 
@@ -2409,7 +2441,7 @@ def render_practical_validation_workspace() -> None:
         blocking_modules = list(gate.get("blocking_modules") or [])
         if blocking_modules:
             with st.expander("Save blocker 상세", expanded=False):
-                st.dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
+                _render_display_dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
         action_cols = st.columns(2, gap="small")
         with action_cols[0]:
             if st.button("검증 결과 저장(기록용)", key="practical_validation_save_result", width="stretch"):
