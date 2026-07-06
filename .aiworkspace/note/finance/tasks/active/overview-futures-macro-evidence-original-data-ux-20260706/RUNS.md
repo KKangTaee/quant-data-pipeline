@@ -42,3 +42,5 @@
 - 1D flow QA: `.venv/bin/python -m py_compile app/services/futures_macro_thermometer.py tests/test_service_contracts.py` passed.
 - 1D flow QA: `git diff --check` passed.
 - 1D flow Browser QA: restarted Streamlit on `http://localhost:8518/?overview_tab=futures-macro`; screenshot confirmed React flow tabs render `1D`, `1W`, `1M`, with `1D` active by default and the lower flow title reading `최근 1일 흐름`. Screenshot saved to `browser-qa-futures-macro-1d-flow-tab.png`.
+- Historical validation UX Phase 1 RED: `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_react_validation_metrics_use_interpretable_labels` failed as expected because `payload["validation"]["insight"]` did not exist.
+- Historical validation UX Phase 1 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests.test_macro_react_validation_metrics_use_interpretable_labels tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_workbench_payload_keeps_python_action_boundary` passed after adding the validation insight payload contract.

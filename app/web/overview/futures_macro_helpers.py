@@ -437,6 +437,64 @@ def _futures_macro_react_validation_metrics(validation: dict[str, Any]) -> list[
     ]
 
 
+def _futures_macro_react_validation_insight(
+    macro: dict[str, Any],
+    validation: dict[str, Any],
+    *,
+    confidence_label: str = "",
+) -> dict[str, Any]:
+    coverage = dict(macro.get("coverage") or {})
+    summary = dict(macro.get("summary") or {})
+    scenario = _display_text(summary.get("scenario"), "현재 상태 미확인")
+    standardized = int(coverage.get("standardized_count") or 0)
+    symbol_count = int(coverage.get("symbol_count") or 0)
+    basis = (
+        f"현재 1D 선물 {standardized}/{symbol_count}개 움직임을 같은 계산식으로 과거 날짜에 다시 적용합니다."
+    )
+    if not validation:
+        return {
+            "purpose": "오늘과 비슷했던 과거 상태 확인",
+            "basis": basis,
+            "current_state": {"label": "현재 상태 이름", "value": scenario, "detail": "아직 과거 표본과 비교하지 않았습니다."},
+            "sample": {"label": "과거에 비슷했던 날", "value": "계산 전", "detail": "과거 일관성 계산 전입니다."},
+            "directionality": {"label": "이후 흐름 해석", "value": "계산 전", "detail": "계산 후 방향성 적용 여부를 표시합니다."},
+            "confidence_effect": "예측 신호가 아니라 현재 해석을 보수적으로 볼지 확인하는 보조 근거입니다.",
+        }
+
+    validation_summary = build_current_scenario_validation_summary(validation, confidence_label=confidence_label)
+    occurrence = dict(validation_summary.get("occurrence") or {})
+    hit_applicable = bool(validation_summary.get("hit_rate_applicable"))
+    direction_value = "5D 이후 방향성 참고" if hit_applicable else "방향성으로 읽지 않음"
+    direction_detail = (
+        "비슷했던 과거 상태 이후 5D 흐름이 현재 해석 방향과 맞았는지 확인합니다."
+        if hit_applicable
+        else "혼재 또는 저신호 상태는 상승/하락 적중률보다 반복 빈도와 해석 강도를 봅니다."
+    )
+    return {
+        "purpose": "오늘과 비슷했던 과거 상태 확인",
+        "basis": basis,
+        "current_state": {
+            "label": "현재 상태 이름",
+            "value": scenario,
+            "detail": _display_text(summary.get("sub_scenario") or summary.get("regime_hint"), "선물 일봉 점수 조합으로 붙인 상태입니다."),
+        },
+        "sample": {
+            "label": "과거에 비슷했던 날",
+            "value": _display_text(occurrence.get("value"), "0회"),
+            "detail": _display_text(validation_summary.get("coverage"), "점검 기준 미확인"),
+        },
+        "directionality": {
+            "label": "이후 흐름 해석",
+            "value": direction_value,
+            "detail": direction_detail,
+        },
+        "confidence_effect": (
+            "예측 신호가 아니라 현재 해석을 얼마나 보수적으로 읽을지 확인합니다. "
+            f"{_display_text(validation_summary.get('confidence_effect'), '')}"
+        ).strip(),
+    }
+
+
 def build_futures_macro_react_workbench_payload(
     macro: dict[str, Any],
     *,
@@ -491,6 +549,11 @@ def build_futures_macro_react_workbench_payload(
             "title": "과거 점검",
             "state": validation_state["state"],
             "detail": validation_state["detail"],
+            "insight": _futures_macro_react_validation_insight(
+                macro,
+                validation,
+                confidence_label=confidence_label,
+            ),
             "metrics": validation_metrics,
         },
         "evidence": {

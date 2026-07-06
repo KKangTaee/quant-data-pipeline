@@ -17305,6 +17305,18 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             validation_loaded_at="2026-07-06 10:00:00",
         )
 
+        insight = payload["validation"]["insight"]
+        self.assertEqual(insight["purpose"], "오늘과 비슷했던 과거 상태 확인")
+        self.assertIn("현재 1D 선물 1/1개", insight["basis"])
+        self.assertEqual(insight["current_state"]["label"], "현재 상태 이름")
+        self.assertEqual(insight["current_state"]["value"], "혼재된 매크로 흐름")
+        self.assertEqual(insight["sample"]["label"], "과거에 비슷했던 날")
+        self.assertEqual(insight["sample"]["value"], "950회")
+        self.assertIn("점검 기준 1,212개", insight["sample"]["detail"])
+        self.assertEqual(insight["directionality"]["label"], "이후 흐름 해석")
+        self.assertEqual(insight["directionality"]["value"], "방향성으로 읽지 않음")
+        self.assertIn("예측 신호가 아니라", insight["confidence_effect"])
+
         metrics = payload["validation"]["metrics"]
         self.assertEqual([metric["label"] for metric in metrics], ["상태", "점검 기준", "비슷한 상태"])
         self.assertEqual(metrics[1]["value"], "1,212개")
