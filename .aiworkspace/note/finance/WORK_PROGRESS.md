@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow 3 Conclusion Summary V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-conclusion-summary-v1-20260706/`에서 Flow 3을 Fix Queue가 아니라 `검증 결론` first-read surface로 전환했다.
+  - Flow 3은 Final Review 이동 가능 / 보류와 카테고리별 `통과 / 실패 / 확인 필요`만 compact하게 보여주고, 상세 원인 / 보강 기준 / module table은 Flow 4로 낮췄다.
+  - React component compatibility path와 Streamlit fallback을 함께 갱신했고, 반복 안전 문구와 guide-like `현재 문제 / 완료 기준 / 보강 위치` block은 Flow 3에서 제거했다.
 - Practical Validation Category Results V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-category-results-v1-20260706/`에서 Flow 4를 `카테고리별 검증 결과` 중심으로 바꿨다.
   - `selected_route_preflight`는 검증 category가 아니라 `Final Review 이동 요약`으로 분리했고, stress / construction / sentiment gate severity를 후보 특성에 맞게 낮췄다.
@@ -39,12 +43,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - 유지할 core blocker는 source / latest replay / benchmark / PIT / survivorship / cost / liquidity이고, stress / construction / provider / macro / sentiment는 후보 특성에 맞춰 review 또는 조건부로 낮추는 방향이다.
 - Practical Validation Issue Summary V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-issue-summary-v1-20260706/`에서 Flow 3 / Flow 4의 guide-like 설명을 issue / criteria summary 중심으로 다시 정리했다.
-  - Flow 3 React Fix Queue는 `Final Review 이동을 막는 이슈`와 `현재 문제 / 완료 기준 / 보강 위치 / 영향`을 먼저 보여준다.
+  - 당시 Flow 3 React surface는 이슈 / 보강 기준을 먼저 보여줬으나, 이후 `practical-validation-flow3-conclusion-summary-v1-20260706`에서 `검증 결론` 요약으로 대체했다.
   - Flow 4 criteria board는 기준별 `상태 / 통과한 기준 / 남은 문제 / 판정`을 먼저 요약하고, 기술 기준 상세는 뒤로 낮췄다.
   - Gate threshold / replay execution / provider collection / registry persistence / live approval 경계는 변경하지 않았다.
 - Practical Validation Flow 3 Clarity V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-clarity-v1-20260706/`에서 Flow 3 중복 요약을 정리했다.
-  - Flow 3의 별도 validation control center와 alert / badge 반복을 제거하고, React Fix Queue를 `Final Review 이동 판단 -> 먼저 해결할 일 -> 근거 요약` first-read surface로 바꿨다.
+  - Flow 3의 별도 validation control center와 alert / badge 반복을 제거했다. 당시 first-read surface는 `Final Review 이동 판단 -> 먼저 해결할 일 -> 근거 요약`이었고, 이후 Conclusion Summary V1에서 카테고리별 결론만 남겼다.
   - Validation gate / registry / provider 수집 / Final Review handoff persistence / live approval 경계는 변경하지 않았다.
 - Practical Validation Entry Simplification V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-entry-simplification-v1-20260705/`에서 Practical Validation 첫 진입 화면을 정리했다.

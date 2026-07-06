@@ -165,7 +165,7 @@ body {
   border-top: 1px solid rgba(148, 163, 184, 0.24);
   display: grid;
   gap: 0.9rem;
-  grid-template-columns: minmax(220px, 0.42fr) minmax(280px, 1fr);
+  grid-template-columns: 1fr;
   margin-top: 0.95rem;
   padding-top: 0.9rem;
 }
@@ -192,6 +192,10 @@ body {
   margin-top: 0.95rem;
 }
 
+.pv-react-fix__body--single {
+  grid-template-columns: 1fr;
+}
+
 .pv-react-fix__lane-title {
   margin-bottom: 0.48rem;
 }
@@ -200,6 +204,10 @@ body {
 .pv-react-fix__groups {
   display: grid;
   gap: 0.62rem;
+}
+
+.pv-react-fix__groups--compact {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .pv-react-fix__item,
@@ -234,6 +242,12 @@ body {
   justify-content: space-between;
 }
 
+.pv-react-fix__group div {
+  display: grid;
+  gap: 0.3rem;
+  grid-template-columns: 1fr;
+}
+
 .pv-react-fix h5 {
   color: #243042;
   font-size: 0.98rem;
@@ -251,6 +265,11 @@ body {
   line-height: 1.35;
 }
 
+.pv-react-fix__group span {
+  justify-self: start;
+  white-space: normal;
+}
+
 .pv-react-fix__item p,
 .pv-react-fix__group p,
 .pv-react-fix__item small,
@@ -262,6 +281,11 @@ body {
   line-height: 1.45;
   margin: 0.35rem 0 0;
   overflow-wrap: anywhere;
+}
+
+.pv-react-fix__group p b {
+  color: #243042;
+  font-weight: 880;
 }
 
 .pv-react-fix__item em {

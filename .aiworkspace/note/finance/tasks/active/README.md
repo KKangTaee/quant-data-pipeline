@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `practical-validation-flow3-clarity-v1-20260706` closeout. |
+| none | - | No active task after `practical-validation-flow3-conclusion-summary-v1-20260706` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-flow3-conclusion-summary-v1-20260706` | Completed record | Practical Validation Flow 3 now reads as a compact validation conclusion summary. Detailed issue cause / module details moved to Flow 4. |
 | `practical-validation-category-results-v1-20260706` | Completed record | Practical Validation Flow 4 now reads as category-first validation results. Selected-route preflight is separated into handoff summary, stress / construction / sentiment gate severity is reduced where appropriate. |
 | `practical-validation-flow3-clarity-v1-20260706` | Completed record | Practical Validation Flow 3 first-read surface cleanup. Removed duplicate control center / alert / badge layers and made the React Fix Queue focus on Final Review movement judgment, first fix work, and compact evidence summary. |
 | `practical-validation-entry-simplification-v1-20260705` | Completed record | Practical Validation default entry removed contextual Reference help and context-only sentiment overlay, renamed the command center, and changed custom cards / Fix Queue React surfaces to white square surfaces. |

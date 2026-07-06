@@ -1421,7 +1421,7 @@ def _render_applied_validation_map(validation_result: dict[str, Any]) -> None:
     with st.expander("검증-근거 연결 지도", expanded=False):
         st.caption(
             "이 표는 화면 보드가 어떤 검증 모듈의 근거인지 보여주는 보조 지도입니다. "
-            "Final Review 이동 판단은 위 Gate와 Fix Queue가 기준입니다."
+            "Final Review 이동 판단은 검증 결론과 Gate 상태를 함께 봅니다."
         )
         render_badge_strip(
             [
@@ -1561,7 +1561,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     blocking_modules = list(gate.get("blocking_modules") or [])
     render_fix_queue(blocking_modules)
     if blocking_modules:
-        with st.expander("Fix Queue 상세 테이블", expanded=False):
+        with st.expander("이동 보류 모듈 상세 테이블", expanded=False):
             st.dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
     review_modules = list(gate.get("review_modules") or [])
     if review_modules:
@@ -2308,7 +2308,7 @@ def render_practical_validation_workspace() -> None:
         [
             {"marker": "1", "title": "후보 / 검증 프로필 확인", "detail": "Source + risk threshold", "tone": "neutral"},
             {"marker": "2", "title": "실전 검증 실행", "detail": "Runtime replay", "tone": "warning"},
-            {"marker": "3", "title": "2차 검증 결론 / Fix Queue", "detail": "Readiness + blockers", "tone": "neutral"},
+            {"marker": "3", "title": "검증 결론", "detail": "Conclusion summary", "tone": "neutral"},
             {"marker": "4", "title": "근거 Workbench", "detail": "Evidence + provider actions", "tone": "neutral"},
             {"marker": "5", "title": "저장 / Final Review 이동", "detail": "Handoff", "tone": "neutral"},
         ]
@@ -2345,13 +2345,11 @@ def render_practical_validation_workspace() -> None:
     with st.container(border=True):
         render_pv_section_header(
             eyebrow="Flow 3",
-            title="2차 검증 결론 / Fix Queue",
-            detail="이동 가능 여부, 차단 항목, 핵심 근거 그룹을 workspace read model 기준으로 먼저 확인합니다.",
+            title="검증 결론",
+            detail="카테고리별 통과 / 실패만 요약합니다. 자세한 원인과 보강 기준은 Flow 4에서 확인합니다.",
             tone=_status_tone(dict(validation_result.get("final_review_gate") or {}).get("route")),
         )
         render_practical_validation_workspace_overview(validation_result)
-        with st.expander("검증 모듈 / 기술 상세", expanded=False):
-            _render_validation_gate_section(validation_result)
 
     with st.container(border=True):
         render_pv_section_header(
@@ -2362,6 +2360,8 @@ def render_practical_validation_workspace() -> None:
         )
         _render_validation_criteria_detail_board(validation_result)
         _render_validation_evidence_boards(validation_result)
+        with st.expander("검증 모듈 / 기술 상세", expanded=False):
+            _render_validation_gate_section(validation_result)
         st.markdown("##### Provider / Data 보강 액션")
         _render_validation_action_boards(validation_result)
 

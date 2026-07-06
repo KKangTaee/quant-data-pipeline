@@ -92,10 +92,10 @@ def _render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
         render_pv_card_grid(
             [
                 {
-                    "kicker": "Fix Queue",
-                    "title": "필수 보강 항목 없음",
-                    "status": "Ready",
-                    "detail": "Final Review로 이동하기 전에 즉시 막는 필수 검증 blocker가 없습니다.",
+                    "kicker": "검증 결론",
+                    "title": "이동 보류 항목 없음",
+                    "status": "PASS",
+                    "detail": "Final Review 이동을 즉시 막는 검증 카테고리가 없습니다.",
                     "tone": "positive",
                 }
             ],
@@ -116,9 +116,9 @@ def _render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
             }
         )
     render_pv_section_header(
-        eyebrow="Fix Queue",
-        title=f"Final Review 이동 전 해결할 항목 {len(blocking_modules)}개",
-        detail="각 카드의 Fix Location에서 보강한 뒤 Gate가 다시 계산됩니다.",
+        eyebrow="검증 결론",
+        title=f"이동 보류 항목 {len(blocking_modules)}개",
+        detail="Flow 3에서는 결론만 요약합니다. 상세 원인과 보강 기준은 Flow 4에서 확인합니다.",
         tone="danger",
     )
     render_pv_card_grid(cards, min_width=260)
@@ -254,6 +254,55 @@ def _react_criteria_group_items(criteria_groups: list[dict[str, Any]]) -> list[d
     return items
 
 
+def _conclusion_group_detail(group: dict[str, Any]) -> tuple[str, str, str]:
+    remaining = [str(item) for item in list(group.get("remaining_issues") or []) if str(item).strip()]
+    review = [str(item) for item in list(group.get("review_criteria") or []) if str(item).strip()]
+    passed = [str(item) for item in list(group.get("passed_criteria") or []) if str(item).strip()]
+    if remaining:
+        return "실패", " / ".join(remaining), "danger"
+    if review:
+        return "확인 필요", " / ".join(review), "warning"
+    if passed:
+        return "통과", " / ".join(passed), "positive"
+    return "확인 필요", str(group.get("decision_summary") or "-"), str(group.get("tone") or "neutral")
+
+
+def _render_validation_conclusion_summary(
+    *,
+    gate_summary: dict[str, Any],
+    criteria_groups: list[dict[str, Any]],
+) -> None:
+    cards: list[dict[str, Any]] = []
+    for group in criteria_groups:
+        label, detail, tone = _conclusion_group_detail(dict(group or {}))
+        cards.append(
+            {
+                "kicker": label,
+                "title": group.get("display_label") or group.get("label") or group.get("group_id") or "-",
+                "status": group.get("status") or "-",
+                "detail": detail,
+                "tone": tone,
+            }
+        )
+    if not cards:
+        cards = [
+            {
+                "kicker": "검증 결론",
+                "title": "검증 카테고리 없음",
+                "status": "-",
+                "detail": "workspace read model에 표시할 카테고리별 검증 요약이 없습니다.",
+                "tone": "neutral",
+            }
+        ]
+    render_pv_section_header(
+        eyebrow="검증 결론",
+        title=str(gate_summary.get("verdict") or "Practical Validation 검증 결론"),
+        detail="카테고리별 통과 / 실패만 요약합니다. 자세한 원인과 보강 기준은 Flow 4에서 확인합니다.",
+        tone="positive" if gate_summary.get("can_save_and_move") else "danger",
+    )
+    render_pv_card_grid(cards, min_width=250)
+
+
 def render_practical_validation_workspace_overview(validation_result: dict[str, Any]) -> None:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
@@ -278,15 +327,10 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
             key="practical_validation_fix_queue_overview",
         )
     else:
-        _render_fix_queue(fix_queue)
-        if core_groups:
-            render_pv_section_header(
-                eyebrow="Core Evidence",
-                title="2차 검증 핵심 근거",
-                detail="Final Review로 넘기기 전에 먼저 확인할 source, validation, readiness preview 근거입니다.",
-                tone="neutral",
-            )
-            render_pv_card_grid(_workspace_group_cards(core_groups, kicker="Core"), min_width=250)
+        _render_validation_conclusion_summary(
+            gate_summary=gate_summary,
+            criteria_groups=criteria_groups,
+        )
     if conditional_groups or downstream_groups:
         with st.expander("조건부 근거와 후속 참고", expanded=False):
             if conditional_groups:

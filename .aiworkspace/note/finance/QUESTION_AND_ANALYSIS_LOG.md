@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-06 - Practical Validation Flow 3은 Fix Queue가 아니라 검증 결론이다
+
+- User request: 사용자가 Flow 3은 fix queue가 아니라 검증 결론만 알려주는 영역으로 바꾸는 것이 맞는지 확인했고, 이어서 그렇게 개발 진행을 승인함.
+- Interpreted goal: Flow 3은 사용자가 Final Review로 넘어갈 수 있는지 한눈에 판단하는 compact conclusion surface여야 하며, 무엇을 어떻게 보강할지는 Flow 4의 상세 원인 분석에서 확인해야 함.
+- Analysis result: Flow 3에 `현재 문제 / 완료 기준 / 보강 위치`를 직접 노출하면 다시 가이드 / 작업 목록처럼 읽히고, 카테고리별 검증 결과와 Final Review 이동 보류 정보가 분산된다. 따라서 Flow 3은 이동 상태와 카테고리별 `통과 / 실패 / 확인 필요`만 요약하고, 실패 원인 / 보강 기준 / module table은 Flow 4로 내리는 것이 맞다.
+- Follow-up: `practical-validation-flow3-conclusion-summary-v1-20260706`에서 React surface와 Streamlit fallback을 `검증 결론` / `카테고리별 검증 요약`으로 전환하고, 반복 안전 문구와 Flow 3의 guide-like 상세 block을 제거했다.
+
 ### 2026-07-06 - Practical Validation Flow 4는 카테고리별 검증 결과가 먼저다
 
 - User request: 사용자가 Flow 4에서 `Final Review로 넘기기 전 확인 기준`을 먼저 노출하는 것이 맞는지 재질문했고, 실제로는 카테고리별로 무엇을 검증했는지, 몇 개가 통과 / 실패했는지, 실패 항목이 무엇인지 보여주는 것이 맞지 않느냐고 지적함. 또한 Practical Validation 검증들이 신빙성 있고 과하지 않은지 리뷰하고 불필요한 검증은 제외하고 싶다고 요청함.

@@ -24,8 +24,8 @@ Last Verified: 2026-07-06
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Practical Validation Category Results V1 2026-07-06](../tasks/active/practical-validation-category-results-v1-20260706/STATUS.md).
-- Previous completed task: [Practical Validation Issue Summary V1 2026-07-06](../tasks/active/practical-validation-issue-summary-v1-20260706/STATUS.md).
+- Latest completed task: [Practical Validation Flow 3 Conclusion Summary V1 2026-07-06](../tasks/active/practical-validation-flow3-conclusion-summary-v1-20260706/STATUS.md).
+- Previous completed task: [Practical Validation Category Results V1 2026-07-06](../tasks/active/practical-validation-category-results-v1-20260706/STATUS.md).
 - Latest completed product task: [Practical Validation Taxonomy Roadmap V1 2026-07-05](../tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/STATUS.md).
 - Recent Overview cleanup task: [Overview Legacy Dashboard Removal V17-V24 2026-06-25](../tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/STATUS.md).
 - Recent Overview helper extraction task: [Overview Tab Helper Extraction V11-V16 2026-06-25](../tasks/active/overview-tab-helper-extraction-v11-v16-20260625/STATUS.md).
