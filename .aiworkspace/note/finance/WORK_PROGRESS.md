@@ -35,6 +35,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `과거 점검`은 최근 흐름 / 현재 근거 사이의 독립 카드형 섹션으로 분리했고, 설명 / 상태 / CTA / 결과 타일을 한 surface 안에서 관리한다.
   - Futures Macro React workbench는 하나의 iframe을 유지하면서 내부를 `매크로 컨텍스트`, `최근 흐름`, `과거 점검` 카드 섹션으로 분리했다.
   - 원본표는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 재명명했고, React evidence item은 score label / symbol / z-score metadata를 보존한다.
+  - 후속으로 `현재 근거`를 `CurrentEvidencePanel`로 분리해 `매크로 컨텍스트` 내부에 배치했고, 하단 disclosure를 `원본 데이터 / 계산 추적`으로 바꿔 세 React 섹션을 검산하는 raw appendix로 정리했다.
 - Overview Futures Macro React UX 6차:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`의 1차~6차 개선을 완료했다.
   - 8517 current-code Browser QA에서 React iframe, `저신호 / 관망`, lazy validation `대기`, `1W` / `1M` controls를 확인했다. iframe button click dispatch는 자동화 좌표 제한으로 수동/별도 도구 확인 대상으로 남겼다.

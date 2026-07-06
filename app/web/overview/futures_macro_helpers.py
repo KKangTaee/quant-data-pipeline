@@ -1434,10 +1434,10 @@ def _render_macro_validation_raw_tables(validation: dict[str, Any]) -> None:
 
 def _render_futures_raw_table_map(*, validation_available: bool) -> None:
     steps = [
-        ("현재 점수", "6개 macro score의 최종값"),
-        ("구성 기여", "score를 밀어낸 선물별 z-score"),
-        ("선물 일봉 변화", "1D / 5D / 20D 변화와 표준화 움직임"),
-        ("과거 표본", "현재 시나리오와 비슷한 과거 상태" if validation_available else "과거점검을 불러오면 표시"),
+        ("매크로 컨텍스트", "현재 점수 원본 · 점수 구성 기여"),
+        ("최근 흐름", "선물 일봉 변화"),
+        ("과거 점검", "과거 시나리오 표본" if validation_available else "과거 점검을 불러오면 표시"),
+        ("검산 순서", "현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본"),
     ]
     items = "".join(
         "<div>"
@@ -1449,8 +1449,8 @@ def _render_futures_raw_table_map(*, validation_available: bool) -> None:
     st.markdown(
         f"""
         <div class="ov-futures-raw-map">
-          <div class="ov-futures-raw-map-title">계산 순서</div>
-          <div class="ov-futures-raw-map-flow">현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본</div>
+          <div class="ov-futures-raw-map-title">화면 섹션별 원본 연결</div>
+          <div class="ov-futures-raw-map-flow">이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다.</div>
           <div class="ov-futures-raw-map-grid">{items}</div>
         </div>
         """,
@@ -1487,7 +1487,7 @@ def _render_futures_macro_raw_tables(
     validation: dict[str, Any],
     cautions: list[str],
 ) -> None:
-    _render_futures_section_header("원본 표", "현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본")
+    _render_futures_section_header("원본 데이터", "매크로 컨텍스트 · 최근 흐름 · 과거 점검의 계산 추적")
     _render_futures_raw_table_map(validation_available=bool(validation))
     if isinstance(scores, pd.DataFrame) and not scores.empty:
         with st.expander("현재 점수 원본", expanded=False):
@@ -1624,9 +1624,9 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
 
     cautions = [_macro_caution_label(item) for item in macro.get("cautions") or [] if str(item).strip()]
     cautions.extend(_macro_caution_label(item) for item in validation.get("caveats") or [] if str(item).strip())
-    with st.expander("계산 근거 / 원본 표", expanded=detail_expanded):
+    with st.expander("원본 데이터 / 계산 추적", expanded=detail_expanded):
         if react_available:
-            st.caption("과거 점검 요약은 상단 React 패널에서 확인하고, 이 영역은 자료 기준 · 점수 계산표 · 선물 일봉 원본을 추적합니다.")
+            st.caption("이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다. 자료 기준, 점수 계산표, 선물 일봉 변화, 과거 표본을 순서대로 확인합니다.")
         else:
             _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
         if validation and not react_available:

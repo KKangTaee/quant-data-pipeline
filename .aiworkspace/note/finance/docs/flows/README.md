@@ -29,9 +29,9 @@ Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation 
 - Workbench context bar: 관찰 범위, 시간/봉/차트 범위, 데이터 상태, 다음 행동을 한 줄로 요약한다.
 - 자료 갱신 module: 실제 갱신 행동을 소유한다. 실시간 차트 자료는 선택 선물 1분봉 / 최신 candle age / 60초 자동 확인 대상을 보여주고, 매크로 일봉 자료는 1D OHLCV / macro context 기준일 / daily coverage를 보여준다.
 - Compact watch strip: 선택 심볼의 이름, 계약 설명, 15m/60m 움직임, symbol-level stale state만 보여준다. 심볼 선택 multiselect는 `관찰 대상 편집` disclosure 안에 둔다.
-- Macro Context: 오늘 기준 시장 브리프, 근거 강도 / 과거 일관성 / 비슷한 과거 상태 / 자료 기준, 1W / 1M flow, score chip.
+- Macro Context: 오늘 기준 시장 브리프, 근거 강도 / 자료 기준, score chip, 현재 score evidence를 한 카드에서 읽는다.
 - Chart workspace: “이 차트에서 확인할 것”을 먼저 말하고, 차트 범위와 symbol-level 상태를 이어서 보여준다. Page-level provider run rows / latest candle details는 반복하지 않는다.
-- Disclosure: React `현재 근거`는 현재 score evidence를 맡고, 하단 `계산 근거 / 원본 표`는 `현재 해석의 과거 일관성 -> 자료 관리 -> 현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다. 진단 / Provider 근거는 별도 접힌 상세로 둔다.
+- Disclosure: React `현재 근거`는 `매크로 컨텍스트` 내부에서 현재 score evidence를 맡고, 하단 `원본 데이터 / 계산 추적`은 `매크로 컨텍스트 -> 최근 흐름 -> 과거 점검`의 화면 섹션별 원본 연결과 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다. 진단 / Provider 근거는 별도 접힌 상세로 둔다.
 
 ## Backtest Selection Flow
 

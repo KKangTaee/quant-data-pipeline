@@ -11,9 +11,9 @@ Latest completed task: `.aiworkspace/note/finance/tasks/active/fundamental-sourc
 
 Current active task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`
 
-목적: `Workspace > Overview > Futures Macro`의 React 근거와 하단 `계산 근거 / 원본 표`를 분리하고, historical validation / raw table 문구를 사용자가 판단 재료로 연결해 읽을 수 있게 정리한다.
+목적: `Workspace > Overview > Futures Macro`의 React 현재 근거와 하단 `원본 데이터 / 계산 추적`을 분리하고, historical validation / raw table 문구를 사용자가 판단 재료로 연결해 읽을 수 있게 정리한다.
 
-현재 상태: 1차~5차 완료. React workbench는 하나의 custom component / iframe 안에서 `MacroContextSection`, `RecentFlowSection`, `HistoricalValidationPanel`로 내부 분리되어, 화면상 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 별도 카드처럼 읽게 한다. Historical validation은 현재 16개 선물 일봉 상태를 과거 동일 계산식으로 다시 찾아보는 보조 검산이며, `오늘과 비슷했던 과거 상태 확인` action은 `과거 점검` 섹션 안에 있다. 하단 `계산 근거 / 원본 표`는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서의 raw table 추적만 맡는다. 그래프는 아직 렌더링하지 않지만 payload에는 발생 빈도 / 이후 흐름 분포 후보 메타데이터를 준비했다.
+현재 상태: 1차~5차와 후속 카드 정리 완료. React workbench는 하나의 custom component / iframe 안에서 `MacroContextSection`, `RecentFlowSection`, `HistoricalValidationPanel`로 내부 분리되어, 화면상 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 별도 카드처럼 읽게 한다. `CurrentEvidencePanel`은 `MacroContextSection` 안에서 현재 score evidence를 맡으므로 현재 근거가 과거 점검과 분리되어 읽힌다. Historical validation은 현재 16개 선물 일봉 상태를 과거 동일 계산식으로 다시 찾아보는 보조 검산이며, `오늘과 비슷했던 과거 상태 확인` action은 `과거 점검` 섹션 안에 있다. 하단 `원본 데이터 / 계산 추적`은 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 검산하는 raw table 부록이며, `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서의 원본 추적만 맡는다. 그래프는 아직 렌더링하지 않지만 payload에는 발생 빈도 / 이후 흐름 분포 후보 메타데이터를 준비했다.
 
 최근 완료 task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`
 
@@ -102,7 +102,7 @@ Workspace > Ingestion
 - 이번 차수에서 하지 않은 일: futures / sector service 또는 renderer helper 물리 삭제, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Earlier completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
 - 목적: `Workspace > Overview > Futures Monitor`의 Workbench V1 후속으로, prototype-like lower evidence / validation / refresh 영역을 제품형 read-only market context 흐름으로 정리했다.
-- 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. 이후 Futures Macro React 후속에서는 React `현재 근거`와 하단 `계산 근거 / 원본 표`로 역할을 분리했고, 원본표는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다.
+- 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. 이후 Futures Macro React 후속에서는 React `현재 근거`와 하단 `원본 데이터 / 계산 추적`으로 역할을 분리했고, 원본표는 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 검산하는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다.
 - 이번 차수에서 하지 않은 일: provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/`

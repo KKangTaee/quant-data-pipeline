@@ -1,12 +1,14 @@
 import type { CSSProperties } from "react";
+import CurrentEvidencePanel from "./CurrentEvidencePanel";
 import type { FuturesMacroWorkbenchPayload } from "./FuturesMacroWorkbench";
 
 type MacroContextSectionProps = {
   payload: FuturesMacroWorkbenchPayload;
   toneColor: (tone: string | undefined) => string;
+  onHeightChange: () => void;
 };
 
-function MacroContextSection({ payload, toneColor }: MacroContextSectionProps) {
+function MacroContextSection({ payload, toneColor, onHeightChange }: MacroContextSectionProps) {
   return (
     <section className="fm-workbench__macro-section fm-workbench__section-card" aria-label="매크로 컨텍스트">
       <div className="fm-workbench__brief">
@@ -61,6 +63,12 @@ function MacroContextSection({ payload, toneColor }: MacroContextSectionProps) {
           </div>
         ))}
       </div>
+
+      <CurrentEvidencePanel
+        boundaryNote={payload.boundary_note}
+        evidence={payload.evidence}
+        onHeightChange={onHeightChange}
+      />
     </section>
   );
 }

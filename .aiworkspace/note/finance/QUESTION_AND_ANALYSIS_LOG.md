@@ -8558,6 +8558,6 @@ Detailed historical analysis was archived on `2026-04-13`.
 ### 2026-07-06 - Futures Macro 과거 점검은 오늘과 비슷했던 과거 상태 확인으로 읽는다
 
 - User request: `과거 점검`이 정확히 무엇을 하는 기능인지 이해한 뒤, 위에서 정리한 1차~5차 개선을 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
-- Interpreted goal: 사용자가 과거 점검을 예측 기능이나 원본표 부속물로 오해하지 않고, 현재 16개 선물 일봉 상태를 과거 동일 계산식과 비교하는 보조 검산으로 읽게 해야 함.
-- Analysis result: 현재 상태 이름은 16개 선물의 1D 표준화 움직임을 6개 macro score로 번역한 classification이며, historical validation은 과거 날짜에도 같은 classification을 적용해 비슷한 상태 발생 빈도와 방향성 적용 가능 여부를 확인한다.
-- Follow-up: React에 `오늘과 비슷했던 과거 상태 확인` 패널과 action을 만들고, 현재근거 연결 카드와 그래프 후보 메타데이터를 추가했다. 하단 disclosure는 원본 표 추적 역할로 낮췄다.
+- Interpreted goal: 현재 16개 선물 일봉 상태를 같은 계산식으로 과거 날짜에 적용해 비슷한 상태를 찾고, 그 결과를 예측 신호가 아니라 현재 해석 보조 검산으로 읽게 해야 함.
+- Analysis result: `과거 점검`은 독립 React 카드로 두되, `현재 근거`는 현재 macro score evidence이므로 `매크로 컨텍스트` 내부 panel로 흡수하는 것이 더 자연스럽다. 하단 원본표는 특정 섹션 근거가 아니라 세 React 섹션을 검산하는 raw appendix다.
+- Follow-up: `CurrentEvidencePanel`을 `MacroContextSection` 안으로 옮기고, 하단 disclosure를 `원본 데이터 / 계산 추적`으로 바꿔 화면 섹션별 원본 연결을 표시했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에 있다.

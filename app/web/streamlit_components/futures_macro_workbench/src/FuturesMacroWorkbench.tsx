@@ -213,46 +213,11 @@ function FuturesMacroWorkbench({ args }: Props) {
         </div>
       </div>
 
-      <MacroContextSection payload={payload} toneColor={toneColor} />
+      <MacroContextSection payload={payload} onHeightChange={syncFrameHeightSoon} toneColor={toneColor} />
 
       <RecentFlowSection flow={payload.flow} onHeightChange={syncFrameHeightSoon} toneColor={toneColor} />
 
       <HistoricalValidationPanel validation={payload.validation} onAction={emitAction} />
-
-      <details className="fm-workbench__evidence" onToggle={syncFrameHeightSoon} open={payload.evidence.default_open}>
-        <summary>
-          <span>{payload.evidence.title}</span>
-          <small>{payload.boundary_note}</small>
-        </summary>
-        <div className="fm-workbench__evidence-sections">
-          {payload.evidence.sections.map((section) => (
-            <div className="fm-workbench__evidence-section" key={section.key}>
-              <div className="fm-workbench__evidence-section-head">
-                <strong>{section.label}</strong>
-                <span>{section.count}</span>
-              </div>
-              <p>{section.description}</p>
-              {section.items.length > 0 ? (
-                <div className="fm-workbench__evidence-items">
-                  {section.items.map((item) => {
-                    const evidenceMeta = [item.score_label, item.symbol, item.contribution_z].filter(Boolean).join(" · ");
-                    return (
-                      <div className="fm-workbench__evidence-item" key={item.title}>
-                        <strong>{item.title}</strong>
-                        {evidenceMeta ? <small className="fm-workbench__evidence-meta">{evidenceMeta}</small> : null}
-                        {item.impact_label ? <span>{item.impact_label}</span> : null}
-                        <p>{item.meaning}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="fm-workbench__empty">{section.empty_label}</div>
-              )}
-            </div>
-          ))}
-        </div>
-      </details>
     </section>
   );
 }

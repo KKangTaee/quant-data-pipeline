@@ -387,9 +387,9 @@ body {
 }
 
 .fm-workbench__evidence {
-  border-bottom: 1px solid #e5e7eb;
   border-top: 1px solid #e5e7eb;
-  margin-top: 14px;
+  margin-top: 16px;
+  padding-top: 2px;
 }
 
 .fm-workbench__evidence summary {
