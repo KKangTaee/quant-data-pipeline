@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-06 - Futures Macro evidence and original data should have separate reading roles
+
+- User request: Futures Macro React 보드의 `근거해석`과 하단 `근거해석/원본데이터` 중복을 정리하고, `과거발생`, `과거점검 요약`, 원본표가 무엇을 말하는지 더 명확하게 개선해 달라고 요청함.
+- Interpreted goal: 가이드 문구를 늘리는 것이 아니라, 현재 해석 근거, 과거 일관성, raw calculation table이 각각 어떤 판단 재료인지 화면 구조와 label 자체로 드러나야 한다.
+- Analysis result: React는 `현재 근거`를 맡고, 하단 Streamlit disclosure는 `계산 근거 / 원본 표`를 맡는다. Historical validation은 `현재 해석의 과거 일관성`, `비슷한 과거 상태`, `5D 방향성 적용/비적용`으로 정리하고, 원본표는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다.
+- Follow-up: 추가 UX가 필요하면 raw dataframe 자체를 숨기기보다 column display names / compact derived rows를 더 정교하게 다듬는다. Historical validation은 여전히 prediction guarantee, trading signal, validation gate, monitoring signal이 아니다.
+
 ### 2026-07-05 - Futures Macro React UX 1차~6차 closeout
 
 - User request: Futures Macro 탭 개선을 1차~6차 개발 / QA / 커밋 단위로 진행하고 현재 `sub-dev` 브랜치에서 임의 브랜치를 만들지 말라고 요청함.

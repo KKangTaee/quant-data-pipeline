@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Futures Macro Evidence / Original Data UX:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에서 1차~5차 후속 개선을 진행했다.
+  - React `현재 근거`와 하단 `계산 근거 / 원본 표`의 역할을 분리했고, historical validation은 `현재 해석의 과거 일관성` / `비슷한 과거 상태` / 방향성 적용 여부로 읽게 정리했다.
+  - 원본표는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 재명명했고, React evidence item은 score label / symbol / z-score metadata를 보존한다.
 - Overview Futures Macro React UX 6차:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`의 1차~6차 개선을 완료했다.
   - 8517 current-code Browser QA에서 React iframe, `저신호 / 관망`, lazy validation `대기`, `1W` / `1M` controls를 확인했다. iframe button click dispatch는 자동화 좌표 제한으로 수동/별도 도구 확인 대상으로 남겼다.

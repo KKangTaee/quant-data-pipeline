@@ -91,7 +91,8 @@ http://localhost:8501
    - Historical validation은 DB에 materialize하지 않고 Streamlit process 안에서 latest futures daily marker / proxy price marker 기준으로 캐시한다. 같은 저장 데이터 기준에서 반복해서 `과거 점검 불러오기`를 누르면 재계산 비용을 줄이고, `일봉 갱신` / `다시 읽기`는 이 process cache도 함께 clear한다.
    - `1W / 1M 흐름`은 저장된 1D 선물의 최근 5거래일 / 20거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
    - Top-level이 `혼재된 매크로 흐름`이면 subtype / regime hint / mixed reason을 함께 읽는다. `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, `저신호 / 관망` 같은 문구는 충돌 맥락을 설명하기 위한 후보 / 확인 언어이며, directional hit-rate 신호로 승격하지 않는다.
-   - `근거 해석 / 원본 데이터`를 열면 `강하게 말하는 근거`, `약한 근거`, `충돌 근거`, `자료 부족`을 먼저 읽고, 그 다음 historical validation / 원본 점수표 / 구성 선물별 기여 / 선물별 일봉 변화 원본을 확인한다.
+   - React `현재 근거` drawer는 현재 macro 해석을 강화하거나 약화시키는 score evidence를 보여준다. 각 근거 item은 score label / symbol / z-score를 함께 보존해 하단 원본표와 대조할 수 있다.
+   - `계산 근거 / 원본 표`를 열면 `현재 해석의 과거 일관성`, 자료 기준, `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, `과거 시나리오 표본`, `점수-이후수익 관계`, `기준값 민감도`를 확인한다. `비슷한 과거 상태`는 반복 빈도 또는 5D 방향성 적용 여부를 확인하는 read-only context이며, 매수/매도 신호가 아니다.
    - 매크로 일봉이 비어 있거나 근거가 부족하면 `일봉 매크로 데이터 갱신`을 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
    - Historical Validation은 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 시나리오의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. 혼재 시나리오는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
    - `실시간 선물 차트`에서 선택 symbol을 포함한 최대 6개 미니 캔들 차트를 본다. 더 넓게 보려면 `차트 범위`를 `데이터 있는 전체`로 바꾼다.

@@ -23,3 +23,10 @@
 - Phase 4 QA: `.venv/bin/python -m py_compile app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py` passed.
 - Phase 4 QA: `git diff --check -- app/web/overview/futures_macro_helpers.py app/web/streamlit_components/futures_macro_workbench/src/FuturesMacroWorkbench.tsx app/web/streamlit_components/futures_macro_workbench/src/style.css tests/test_service_contracts.py` passed.
 - Phase 4 QA: `npm run build` in `app/web/streamlit_components/futures_macro_workbench` passed and refreshed tracked `component_static` assets.
+- Phase 5 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_workbench_payload_keeps_python_action_boundary tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_futures_macro_raw_tables_are_named_by_calculation_step tests.test_service_contracts.FuturesMacroThermometerContractTests` passed, 26 tests.
+- Phase 5 QA: `.venv/bin/python -m py_compile app/services/futures_macro_validation.py app/web/overview/futures_macro_helpers.py app/web/overview/components/common.py tests/test_service_contracts.py` passed.
+- Phase 5 QA: `npm run build` in `app/web/streamlit_components/futures_macro_workbench` passed.
+- Phase 5 QA: `git diff --check` passed.
+- Phase 5 Browser QA: started Streamlit on `http://localhost:8518/?overview_tab=futures-macro`. DOM confirmed React iframe rendered `현재 근거`, `점검 기준`, `비슷한 상태`, and lower `계산 근거 / 원본 표`.
+- Phase 5 Browser QA: opened lower `계산 근거 / 원본 표`; DOM confirmed `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본`, `현재 점수 원본`, `점수 구성 기여`, and `선물 일봉 변화`.
+- Phase 5 Browser QA caveat: React iframe `현재 근거` details click still hits the known in-app browser coordinate translation limit. Source contract, payload contract, and React build verify the metadata render path. Screenshot saved to `browser-qa-futures-macro-evidence-original-data-phase5.png`.

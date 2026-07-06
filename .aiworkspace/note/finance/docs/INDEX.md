@@ -23,7 +23,7 @@ Last Verified: 2026-06-30
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: [Overview Futures Macro React UX 2026-07-05](../tasks/active/overview-futures-macro-react-ux-20260705/STATUS.md).
+- Current active task: [Overview Futures Macro Evidence / Original Data UX 2026-07-06](../tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/STATUS.md).
 - Latest completed task: [Fundamental Source Migration P8 Final Docs / Runbook Alignment](../tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/STATUS.md).
 - Latest completed product task: [Fundamental Source Migration P8 Final Docs / Runbook Alignment](../tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/STATUS.md).
 - Recent data-source migration: [Fundamental Source Migration P0-P8 research / implementation records](../researches/active/2026-06-fundamental-source-migration/DEVELOPMENT_GUIDE.md). Canonical financial statement source is EDGAR detailed statements plus statement shadow tables; broad yfinance fundamentals / factors are legacy compatibility only.

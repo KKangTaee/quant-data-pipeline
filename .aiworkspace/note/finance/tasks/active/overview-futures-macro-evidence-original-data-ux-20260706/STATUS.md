@@ -12,4 +12,6 @@
 - Phase 3 QA complete: RED/GREEN source contract, scaffold contract, FuturesMacroThermometer contract class, `py_compile`, and `git diff --check` passed.
 - Phase 4 status: complete. React evidence items now preserve and render `score_label`, `symbol`, and `contribution_z`, so top evidence can be compared with lower score-contribution/raw tables.
 - Phase 4 QA complete: RED/GREEN payload and React source contracts, evidence service contracts, `py_compile`, `git diff --check`, and React `npm run build` passed.
-- Current status: 5차 pending.
+- Phase 5 status: complete. Final QA/docs updated ROADMAP, PROJECT_MAP, flows README, Overview runbook, root handoff logs, and task records.
+- Phase 5 QA complete: final focused contract suite, `py_compile`, React `npm run build`, `git diff --check`, and Browser QA passed for rendered React validation labels plus opened lower `계산 근거 / 원본 표` DOM. Screenshot saved as `browser-qa-futures-macro-evidence-original-data-phase5.png` and left uncommitted as generated QA artifact.
+- Final state: 1차~5차 complete. Remaining follow-up is only optional improved iframe click automation for opening the React `현재 근거` details; DOM/source/build contracts cover the metadata render path.

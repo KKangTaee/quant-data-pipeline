@@ -9,9 +9,15 @@ Last Verified: 2026-06-30
 
 Latest completed task: `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`
 
-Current active task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`
+Current active task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`
 
-목적: `Workspace > Overview > Futures Macro`를 빠른 첫 진입 화면으로 만들고, historical validation을 명시적 사용자 action으로 분리한 뒤 React custom component 전환, 1W/1M 흐름 확장, mixed subtype refinement, validation cache/materialization 판단, 최종 QA/docs 순서로 닫는다.
+목적: `Workspace > Overview > Futures Macro`의 React 근거와 하단 `계산 근거 / 원본 표`를 분리하고, historical validation / raw table 문구를 사용자가 판단 재료로 연결해 읽을 수 있게 정리한다.
+
+현재 상태: 1차~5차 진행 중. 1차~4차는 완료되어 React drawer는 `현재 근거`, 하단 expander는 `계산 근거 / 원본 표`를 맡는다. Historical validation summary는 `현재 해석의 과거 일관성` / `비슷한 과거 상태` / `5D 방향성 적용 여부` 중심으로 읽고, raw tables는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 확인한다. React evidence item은 score label / symbol / z-score metadata를 보존해 하단 구성 기여 표와 연결된다. 5차는 최종 Browser QA와 문서 closeout이다.
+
+최근 완료 task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`
+
+목적: `Workspace > Overview > Futures Macro`를 빠른 첫 진입 화면으로 만들고, historical validation을 명시적 사용자 action으로 분리한 뒤 React custom component 전환, 1W/1M 흐름 확장, mixed subtype refinement, validation cache/materialization 판단, 최종 QA/docs 순서로 닫았다.
 
 현재 상태: 1차~6차 완료. 탭 진입은 `include_validation=False` snapshot을 사용하고, `과거 점검 불러오기`가 historical validation과 confidence를 session state에 저장한다. `일봉 갱신` / `다시 읽기`는 session validation state와 validation process cache를 clear한다. `app/web/streamlit_components/futures_macro_workbench/` React component가 command strip, macro brief, score chips, 1W / 1M flow tabs, validation state, evidence drawer를 렌더링하고, Python이 DB 읽기 / refresh action / validation 계산 / rerun boundary를 계속 소유한다. `혼재된 매크로 흐름`은 top-level compatibility를 유지하되 rate-easing growth weakness, dollar-pressure risk-off candidate, commodity weakness / demand slowdown candidate, transition zone, low-signal watch 같은 subtype으로 설명한다. Historical validation은 아직 DB materialization 없이 latest futures/proxy marker 기반 process cache로만 재사용한다. 남은 후속은 필요 시 iframe click dispatch 수동 QA 또는 별도 automation 보강이다.
 
@@ -96,7 +102,7 @@ Workspace > Ingestion
 - 이번 차수에서 하지 않은 일: futures / sector service 또는 renderer helper 물리 삭제, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Earlier completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
 - 목적: `Workspace > Overview > Futures Monitor`의 Workbench V1 후속으로, prototype-like lower evidence / validation / refresh 영역을 제품형 read-only market context 흐름으로 정리했다.
-- 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. `근거 해석 / 원본 데이터`는 `현재 근거 상태 -> 과거 점검 요약 -> 자료 관리 -> 원본 표` 순서로 읽히며, raw scenario / relationship / sensitivity tables는 접힌 원본 상세로 낮췄다.
+- 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. 이후 Futures Macro React 후속에서는 React `현재 근거`와 하단 `계산 근거 / 원본 표`로 역할을 분리했고, 원본표는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다.
 - 이번 차수에서 하지 않은 일: provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/`
