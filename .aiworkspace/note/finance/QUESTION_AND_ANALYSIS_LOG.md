@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-06 - Futures Macro past-check should be an on-screen section, not only a code component
+
+- User request: 사용자가 `과거 점검`을 React 파일로만 분리한 것이 아니라, 예시처럼 화면에서도 독립 박스 섹션으로 관리할 수 있는지 확인하고 진행을 승인함.
+- Interpreted goal: `과거 점검`은 현재 흐름 / 현재 근거 사이에 섞인 타일 묶음이 아니라, 무엇을 점검하고 어떤 action을 실행하며 어떤 결과를 보여주는지 한 surface 안에서 읽혀야 한다.
+- Analysis result: `HistoricalValidationPanel.tsx`는 독립 `과거 점검` 카드 섹션을 렌더링하고, Python action / DB / 계산 경계는 유지한다. 하단 `계산 근거 / 원본 표`는 raw table 추적 역할로 남긴다.
+- Follow-up: 그래프는 아직 렌더링하지 않는다. 발생 빈도 / 이후 흐름 분포 후보 payload는 후속 시각화 작업에서 이 섹션 안에 붙일 수 있다.
+
 ### 2026-07-06 - Futures Macro evidence and original data should have separate reading roles
 
 - User request: Futures Macro React 보드의 `근거해석`과 하단 `근거해석/원본데이터` 중복을 정리하고, `과거발생`, `과거점검 요약`, 원본표가 무엇을 말하는지 더 명확하게 개선해 달라고 요청함.

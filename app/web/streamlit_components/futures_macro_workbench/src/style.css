@@ -40,6 +40,9 @@ body {
 .fm-workbench__section-detail,
 .fm-workbench__reason,
 .fm-workbench__validation-pill strong,
+.fm-workbench__validation-state strong,
+.fm-workbench__validation-summary p,
+.fm-workbench__validation-control small,
 .fm-workbench__brief-copy p,
 .fm-workbench__flow .fm-workbench__section-head > span {
   color: #64748b;
@@ -56,6 +59,8 @@ body {
 }
 
 .fm-workbench__validation-pill span,
+.fm-workbench__validation-state span,
+.fm-workbench__validation-eyebrow,
 .fm-workbench__metric span,
 .fm-workbench__score span,
 .fm-workbench__flow-card span {
@@ -69,6 +74,13 @@ body {
 .fm-workbench__validation-pill strong {
   display: block;
   margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.fm-workbench__validation-state strong {
+  color: #111827;
+  display: block;
+  margin-top: 4px;
   overflow-wrap: anywhere;
 }
 
@@ -225,8 +237,7 @@ body {
   color: var(--fm-tone, #111827);
 }
 
-.fm-workbench__flow,
-.fm-workbench__validation {
+.fm-workbench__flow {
   padding-top: 14px;
 }
 
@@ -266,10 +277,10 @@ body {
 }
 
 .fm-workbench__flow-grid,
-.fm-workbench__validation-insight,
-.fm-workbench__validation-metrics {
+.fm-workbench__validation-status-grid,
+.fm-workbench__validation-result-grid {
   display: grid;
-  gap: 1px;
+  gap: 8px;
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
@@ -280,26 +291,74 @@ body {
   padding: 10px;
 }
 
-.fm-workbench__validation {
+.fm-workbench__validation-card {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.fm-workbench__validation-header {
+  align-items: flex-start;
+  border-bottom: 1px solid #e5e7eb;
+  border-left: 4px solid #64748b;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.34fr);
+  padding: 2px 0 14px 14px;
+}
+
+.fm-workbench__validation-eyebrow {
+  margin-bottom: 4px;
+}
+
+.fm-workbench__validation-state {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.fm-workbench__validation-summary {
+  padding: 12px 0;
+}
+
+.fm-workbench__validation-summary p {
+  color: #475569;
+  margin: 0;
+}
+
+.fm-workbench__validation-status-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fm-workbench__validation-result-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.fm-workbench__validation-status-grid .fm-workbench__metric,
+.fm-workbench__validation-result-grid .fm-workbench__metric {
+  border: 1px solid #e5e7eb;
+}
+
+.fm-workbench__validation-control {
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
   border-top: 1px solid #e5e7eb;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 0.52fr) minmax(0, 1fr);
-  margin-top: 14px;
+  grid-template-columns: minmax(14rem, 0.34fr) minmax(0, 1fr);
+  margin: 12px 0;
+  padding: 12px 0;
 }
 
-.fm-workbench__validation-copy {
-  display: grid;
-  gap: 10px;
-  grid-row: span 2;
-}
-
-.fm-workbench__validation-copy p {
-  color: #475569;
-  font-size: 0.78rem;
-  font-weight: 650;
-  line-height: 1.48;
-  margin: 0;
+.fm-workbench__validation-control small {
+  color: #64748b;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .fm-workbench__validation-action {
@@ -315,16 +374,11 @@ body {
   justify-content: center;
   min-height: 36px;
   padding: 8px 12px;
-  width: min(100%, 260px);
+  width: 100%;
 }
 
 .fm-workbench__validation-action:hover {
   background: #1e293b;
-}
-
-.fm-workbench__validation-insight,
-.fm-workbench__validation-metrics {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .fm-workbench__evidence {
@@ -436,7 +490,8 @@ body {
   .fm-workbench__command,
   .fm-workbench__brief,
   .fm-workbench__section-head,
-  .fm-workbench__validation {
+  .fm-workbench__validation-header,
+  .fm-workbench__validation-control {
     grid-template-columns: 1fr;
   }
 
@@ -453,8 +508,8 @@ body {
 
   .fm-workbench__scores,
   .fm-workbench__flow-grid,
-  .fm-workbench__validation-insight,
-  .fm-workbench__validation-metrics {
+  .fm-workbench__validation-status-grid,
+  .fm-workbench__validation-result-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

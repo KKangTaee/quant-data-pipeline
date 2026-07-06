@@ -13,7 +13,7 @@ Current active task: `.aiworkspace/note/finance/tasks/active/overview-futures-ma
 
 목적: `Workspace > Overview > Futures Macro`의 React 근거와 하단 `계산 근거 / 원본 표`를 분리하고, historical validation / raw table 문구를 사용자가 판단 재료로 연결해 읽을 수 있게 정리한다.
 
-현재 상태: 1차~5차 완료. React workbench는 `현재 근거`와 `오늘과 비슷했던 과거 상태 확인` 패널을 맡고, historical validation을 현재 16개 선물 일봉 상태를 과거 동일 계산식으로 다시 찾아보는 보조 검산으로 설명한다. `과거 점검 불러오기` action은 이 패널 안에 있고, 하단 `계산 근거 / 원본 표`는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서의 raw table 추적만 맡는다. 그래프는 아직 렌더링하지 않지만 payload에는 발생 빈도 / 이후 흐름 분포 후보 메타데이터를 준비했다.
+현재 상태: 1차~5차 완료. React workbench는 `현재 근거`와 독립 카드형 `과거 점검` 섹션을 맡고, historical validation을 현재 16개 선물 일봉 상태를 과거 동일 계산식으로 다시 찾아보는 보조 검산으로 설명한다. `오늘과 비슷했던 과거 상태 확인` action은 이 섹션 안에 있고, 하단 `계산 근거 / 원본 표`는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서의 raw table 추적만 맡는다. 그래프는 아직 렌더링하지 않지만 payload에는 발생 빈도 / 이후 흐름 분포 후보 메타데이터를 준비했다.
 
 최근 완료 task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`
 

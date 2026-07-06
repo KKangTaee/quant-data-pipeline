@@ -24,11 +24,30 @@ function HistoricalValidationPanel({ validation, onAction }: HistoricalValidatio
   ];
 
   return (
-    <div className="fm-workbench__validation">
-      <div className="fm-workbench__validation-copy">
-        <div className="fm-workbench__section-title">{validation.insight.purpose || validation.title}</div>
-        <div className="fm-workbench__section-detail">{validation.insight.basis || validation.detail}</div>
+    <section className="fm-workbench__validation-card" aria-label="과거 점검">
+      <div className="fm-workbench__validation-header">
+        <div>
+          <div className="fm-workbench__validation-eyebrow">과거 점검</div>
+          <div className="fm-workbench__section-title">{validation.insight.purpose || validation.title}</div>
+          <div className="fm-workbench__section-detail">{validation.insight.basis || validation.detail}</div>
+        </div>
+        <div className="fm-workbench__validation-state">
+          <span>{validation.state}</span>
+          <strong>{validation.detail}</strong>
+        </div>
+      </div>
+
+      <div className="fm-workbench__validation-summary">
         <p>{validation.insight.confidence_effect}</p>
+      </div>
+
+      <div className="fm-workbench__validation-status-grid">
+        {validation.metrics.map((item) => (
+          <MetricTile item={item} key={`${item.label}-${item.value}`} />
+        ))}
+      </div>
+
+      <div className="fm-workbench__validation-control">
         <button
           className="fm-workbench__validation-action"
           onClick={() => onAction(validation.action)}
@@ -37,18 +56,15 @@ function HistoricalValidationPanel({ validation, onAction }: HistoricalValidatio
         >
           {validation.action.label}
         </button>
+        {validation.action.detail ? <small>{validation.action.detail}</small> : null}
       </div>
-      <div className="fm-workbench__validation-insight">
+
+      <div className="fm-workbench__validation-result-grid">
         {insightTiles.map((item) => (
           <MetricTile item={item} key={`${item.label}-${item.value}`} />
         ))}
       </div>
-      <div className="fm-workbench__validation-metrics">
-        {validation.metrics.map((item) => (
-          <MetricTile item={item} key={`${item.label}-${item.value}`} />
-        ))}
-      </div>
-    </div>
+    </section>
   );
 }
 
