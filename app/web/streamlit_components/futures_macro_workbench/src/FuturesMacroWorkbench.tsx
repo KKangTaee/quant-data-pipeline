@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
+import HistoricalValidationPanel from "./HistoricalValidationPanel";
 import "./style.css";
 
 export type FuturesMacroAction = {
@@ -314,39 +315,7 @@ function FuturesMacroWorkbench({ args }: Props) {
         </div>
       </div>
 
-      <div className="fm-workbench__validation">
-        <div className="fm-workbench__validation-copy">
-          <div className="fm-workbench__section-title">{payload.validation.insight.purpose || payload.validation.title}</div>
-          <div className="fm-workbench__section-detail">{payload.validation.insight.basis || payload.validation.detail}</div>
-          <p>{payload.validation.insight.confidence_effect}</p>
-          <button
-            className="fm-workbench__validation-action"
-            onClick={() => emitAction(payload.validation.action)}
-            title={payload.validation.action.detail}
-            type="button"
-          >
-            {payload.validation.action.label}
-          </button>
-        </div>
-        <div className="fm-workbench__validation-insight">
-          {[payload.validation.insight.current_state, payload.validation.insight.sample, payload.validation.insight.directionality, payload.validation.insight.evidence_bridge].map((item) => (
-            <div className="fm-workbench__metric" key={`${item.label}-${item.value}`}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              {item.detail ? <small>{item.detail}</small> : null}
-            </div>
-          ))}
-        </div>
-        <div className="fm-workbench__validation-metrics">
-          {payload.validation.metrics.map((item) => (
-            <div className="fm-workbench__metric" key={`${item.label}-${item.value}`}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              {item.detail ? <small>{item.detail}</small> : null}
-            </div>
-          ))}
-        </div>
-      </div>
+      <HistoricalValidationPanel validation={payload.validation} onAction={emitAction} />
 
       <details className="fm-workbench__evidence" onToggle={syncFrameHeightSoon} open={payload.evidence.default_open}>
         <summary>
