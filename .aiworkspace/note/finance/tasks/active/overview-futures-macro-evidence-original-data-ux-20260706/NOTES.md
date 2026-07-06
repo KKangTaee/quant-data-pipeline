@@ -8,3 +8,5 @@
 - Phase 2 wording decision: avoid treating occurrence count as a signal. Use `비슷한 과거 상태` for historical frequency and explicitly say whether 5D directional consistency is applicable.
 - Phase 3 raw table decision: preserve every dataframe, but rename disclosures around calculation steps so the user can connect current score, score contributors, actual daily moves, and historical sample tables.
 - Phase 4 React linkage decision: keep evidence item metadata compact. The drawer shows score label / symbol / z-score as a meta line, while the detailed dataframe remains the source for full raw values.
+- Follow-up decision: the top daily date should not read like a stale KST calendar date. Label it as `CME/yfinance 일봉 세션 기준` wherever the React command / data-basis card exposes the latest futures daily date.
+- Follow-up decision: score signs are directional macro-pressure scores, not universal good/bad ratings. React score chips now include compact polarity hints per score family, e.g. risk-on `+` means stronger risk appetite while rate pressure `+` means higher rate burden.

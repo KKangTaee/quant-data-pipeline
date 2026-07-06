@@ -180,6 +180,12 @@ body {
   overflow-wrap: anywhere;
 }
 
+.fm-workbench__score-hint {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
 .fm-workbench__confidence strong,
 .fm-workbench__metric strong,
 .fm-workbench__score strong,

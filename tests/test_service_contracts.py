@@ -5881,6 +5881,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
                         "Coverage": "4/4",
                         "Tone": "neutral",
                         "Description": "미국 주가지수 선물 기반 위험선호 점수",
+                    },
+                    {
+                        "Score": "Rate Pressure Score",
+                        "Value": 24,
+                        "Direction": "Rate pressure up",
+                        "Coverage": "2/2",
+                        "Tone": "danger",
+                        "Description": "채권선물 가격 하락을 금리 상승 부담으로 변환한 점수",
                     }
                 ]
             ),
@@ -5965,13 +5973,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v1")
         self.assertEqual(payload["component"], "FuturesMacroWorkbench")
         self.assertEqual(payload["command"]["validation_state"]["state"], "대기")
+        self.assertIn("CME/yfinance 일봉 세션 기준", payload["command"]["detail"])
         self.assertEqual(
             [action["id"] for action in payload["command"]["actions"]],
             ["daily_refresh", "reload", "load_validation"],
         )
         self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
         self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 관망")
+        self.assertIn("CME/yfinance 일봉 세션 기준일", payload["brief"]["metrics"][0]["detail"])
         self.assertEqual(payload["scores"][0]["label"], "위험선호")
+        self.assertEqual(payload["scores"][0]["polarity"], "+ 위험선호 강화 · - 위험회피")
+        self.assertEqual(payload["scores"][1]["label"], "금리")
+        self.assertEqual(payload["scores"][1]["polarity"], "+ 금리 부담 확대 · - 금리 부담 완화")
         self.assertEqual(payload["flow"]["default_period"], "1W")
         self.assertEqual([period["key"] for period in payload["flow"]["periods"]], ["1W", "1M"])
         self.assertEqual(payload["flow"]["periods"][1]["title"], "최근 1개월 흐름")
@@ -6028,10 +6041,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("item.score_label", react_source)
         self.assertIn("item.contribution_z", react_source)
         self.assertIn("fm-workbench__evidence-meta", react_source)
+        self.assertIn("score.polarity", react_source)
+        self.assertIn("fm-workbench__score-hint", react_source)
         self.assertIn("setSelectedFlowKey", react_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("Streamlit.setFrameHeight", react_source)
         self.assertIn(".fm-workbench__scores", react_style)
+        self.assertIn(".fm-workbench__score-hint", react_style)
         self.assertIn(".fm-workbench__flow-tabs", react_style)
         self.assertIn(".fm-workbench__evidence", react_style)
 
@@ -6040,6 +6056,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn("_render_futures_raw_table_map(", helper_source)
         self.assertIn('현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본', helper_source)
+        self.assertIn("CME/yfinance 일봉 세션 기준", helper_source)
+        self.assertIn("CME/yfinance 일봉 세션 기준일", helper_source)
         self.assertIn('with st.expander("현재 점수 원본"', helper_source)
         self.assertIn('with st.expander("점수 구성 기여"', helper_source)
         self.assertIn('with st.expander("선물 일봉 변화"', helper_source)

@@ -68,6 +68,14 @@ MACRO_SCORE_LABELS = {
     "Safe Haven Score": "안전자산",
     "Inflation Pressure Score": "물가",
 }
+MACRO_SCORE_POLARITY_LABELS = {
+    "Risk-On Score": "+ 위험선호 강화 · - 위험회피",
+    "Growth Score": "+ 성장 기대 강화 · - 성장 우려",
+    "Rate Pressure Score": "+ 금리 부담 확대 · - 금리 부담 완화",
+    "Dollar Pressure Score": "+ 달러 압력 확대 · - 달러 압력 완화",
+    "Safe Haven Score": "+ 방어 수요 강화 · - 방어 수요 약화",
+    "Inflation Pressure Score": "+ 물가 압력 확대 · - 물가 압력 완화",
+}
 MACRO_EVIDENCE_TEXT_LABELS = {
     "Risk-On": "위험선호",
     "Growth": "성장",
@@ -275,6 +283,7 @@ def _futures_macro_react_scores(scores: Any) -> list[dict[str, str]]:
                 "direction": _display_text(row.get("Direction")),
                 "coverage": _display_text(row.get("Coverage")),
                 "tone": str(row.get("Tone") or "neutral"),
+                "polarity": MACRO_SCORE_POLARITY_LABELS.get(score_name, "+ 강화 · - 약화"),
                 "description": _display_text(row.get("Description"), ""),
             }
         )
@@ -450,7 +459,7 @@ def build_futures_macro_react_workbench_payload(
         "component": "FuturesMacroWorkbench",
         "command": {
             "title": "매크로 컨텍스트",
-            "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily}",
+            "detail": f"일봉 {standardized}/{symbol_count}개 · 기준일 {latest_daily} · CME/yfinance 일봉 세션 기준",
             "validation_state": validation_state,
             "actions": [
                 {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집합니다."},
@@ -469,7 +478,7 @@ def build_futures_macro_react_workbench_payload(
             "confidence_detail": confidence_detail or "과거 점검은 명시적으로 불러올 때 계산합니다.",
             "evidence": [str(item) for item in list(summary.get("evidence") or []) if str(item).strip()],
             "metrics": [
-                _react_metric("자료 기준", f"{standardized}/{symbol_count}개", detail=f"기준일 {latest_daily}"),
+                _react_metric("자료 기준", f"{standardized}/{symbol_count}개", detail=f"CME/yfinance 일봉 세션 기준일 {latest_daily}"),
                 _react_metric("과거 점검", validation_state["state"], detail=validation_state["detail"], tone=validation_state["tone"]),
             ],
         },
@@ -998,7 +1007,7 @@ def _futures_market_brief_model(macro: dict[str, Any]) -> dict[str, Any]:
         {
             "label": "자료 기준",
             "value": f"{coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개",
-            "detail": f"기준일 {_snapshot_value(coverage.get('latest_daily_date'))}",
+            "detail": f"CME/yfinance 일봉 세션 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}",
             "tone": "neutral",
         }
     )
@@ -1334,7 +1343,7 @@ def _render_futures_macro_data_management(macro: dict[str, Any]) -> None:
         <div class="ov-futures-data-management">
           <div class="ov-futures-data-management-title">자료 관리</div>
           <div class="ov-futures-data-management-grid">
-            <div><span>매크로 일봉 기준일</span><strong>{escape(latest_daily)}</strong></div>
+            <div><span>CME/yfinance 일봉 세션 기준일</span><strong>{escape(latest_daily)}</strong></div>
             <div><span>daily coverage</span><strong>{escape(coverage_label)}</strong></div>
             <div><span>저장 row</span><strong>{raw_rows:,}</strong></div>
           </div>
@@ -1472,7 +1481,7 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
         _render_futures_macro_refresh_controls(
             section_detail=(
                 f"일봉 {coverage.get('standardized_count') or 0}/{coverage.get('symbol_count') or 0}개"
-                f" · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))}"
+                f" · 기준일 {_snapshot_value(coverage.get('latest_daily_date'))} · CME/yfinance 일봉 세션 기준"
             ),
         )
         _render_futures_macro_validation_controls(

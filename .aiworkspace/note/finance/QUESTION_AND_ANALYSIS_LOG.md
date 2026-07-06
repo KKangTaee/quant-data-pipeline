@@ -8533,3 +8533,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 3차에서는 기존 최근 1주 흐름을 1개월 흐름까지 넓히되, provider fetch / validation persistence / DB materialization은 만들지 않아야 함.
 - Analysis result: 기존 symbol metrics가 이미 `5D %`와 `20D %`를 제공하므로, `weekly_context` 호환을 유지하고 새 `flow_context.periods`로 1W / 1M을 전달하는 것이 가장 작고 안전했다.
 - Follow-up: 3차 완료. 다음은 4차 mixed subtype / confidence interpretation refinement이며, validation cache/materialization 판단은 5차에 남긴다.
+
+### 2026-07-06 - Futures Macro 기준일과 score 부호 의미를 명확히 한다
+
+- User request: 선물시장이 열린 시간인데 일봉 기준일이 `2026-07-05`로 보이는 이유와 score 카드의 양수 / 음수 의미를 확인하고, 화면 문구를 바꿔 달라고 요청함.
+- Interpreted goal: `기준일`이 KST 달력일이 아니라 CME/yfinance futures daily session date임을 드러내고, score sign이 보편적 good/bad가 아니라 각 score family의 방향성임을 UI에서 바로 읽히게 해야 함.
+- Analysis result: daily collector / DB는 `1d` 최신 candle을 정상 갱신하고 있었고, `1m` stale 상태는 별도 intraday path였다. Score는 standardized move를 score family별 부호/가중치로 변환한 directional pressure value다.
+- Follow-up: React command / data-basis card에 `CME/yfinance 일봉 세션 기준`을 추가하고, score chips에 polarity hint를 표시했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에 있다.

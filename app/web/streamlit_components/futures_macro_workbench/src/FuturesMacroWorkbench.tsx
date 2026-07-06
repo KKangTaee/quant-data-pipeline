@@ -22,6 +22,7 @@ export type FuturesMacroScore = {
   direction: string;
   coverage: string;
   tone: string;
+  polarity?: string;
   description?: string;
 };
 
@@ -253,6 +254,7 @@ function FuturesMacroWorkbench({ args }: Props) {
             <span>{score.label}</span>
             <strong>{score.value}</strong>
             <small>{score.direction} · {score.coverage}</small>
+            {score.polarity ? <small className="fm-workbench__score-hint">{score.polarity}</small> : null}
           </div>
         ))}
       </div>
