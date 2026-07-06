@@ -32,7 +32,6 @@ from app.web.backtest_practical_validation.components import (
     render_pv_command_center,
     render_pv_profile_summary_strip,
     render_pv_section_header,
-    render_pv_step_rail,
     render_pv_styles,
 )
 from app.web.backtest_practical_validation.workspace_panel import (
@@ -989,27 +988,6 @@ def _audit_status_summary(rows: list[dict[str, Any]]) -> str:
     return " / ".join(parts) if parts else f"{len(rows)} rows"
 
 
-def _board_summary_cards(validation_result: dict[str, Any], board_ids: list[str]) -> list[dict[str, Any]]:
-    cards: list[dict[str, Any]] = []
-    for board_id in board_ids:
-        row = _validation_board_row(validation_result, board_id)
-        if not row:
-            continue
-        applies = str(row.get("Applies") or "").lower() == "yes"
-        status = row.get("Status") if applies else "NOT_APPLICABLE"
-        cards.append(
-            {
-                "kicker": row.get("Board Type") or "Evidence Board",
-                "title": row.get("Board") or board_id,
-                "status": status,
-                "detail": row.get("Why It Appears") or row.get("Applicability") or "",
-                "meta": f"Feeds: {row.get('Feeds Modules') or '-'}",
-                "tone": _status_tone(status) if applies else "neutral",
-            }
-        )
-    return cards
-
-
 def _validation_board_row(validation_result: dict[str, Any], board_id: str) -> dict[str, Any]:
     target = str(board_id or "").strip()
     for row in list(validation_result.get("validation_board_display_rows") or []):
@@ -1808,26 +1786,6 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
 
 
 def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
-    render_pv_section_header(
-        eyebrow="Evidence workspace",
-        title="검증 근거 보드",
-        detail="요약 카드로 먼저 판단하고, 상세 테이블과 raw evidence는 필요한 탭에서 펼쳐 확인합니다.",
-        tone="neutral",
-    )
-    render_pv_card_grid(
-        _board_summary_cards(
-            validation_result,
-            [
-                "input_evidence",
-                "validation_efficacy_audit",
-                "data_coverage_audit",
-                "construction_risk_audit",
-                "backtest_realism_audit",
-                "robustness_lab",
-            ],
-        ),
-        min_width=230,
-    )
     summary_tab, data_tab, construction_tab, realism_tab, robustness_tab, raw_tab = st.tabs(
         ["핵심 근거", "데이터", "구성 / 리스크", "실전성", "강건성", "Raw Evidence"]
     )
@@ -2347,16 +2305,6 @@ def render_practical_validation_workspace() -> None:
         _clear_practical_validation_replay_state()
         st.session_state.practical_validation_active_source_id = selected_source_id
 
-    render_pv_step_rail(
-        [
-            {"marker": "1", "title": "후보 Source 확인", "detail": "Source snapshot", "tone": "neutral"},
-            {"marker": "2", "title": "검증 기준 / 재검증 실행", "detail": "Profile + runtime replay", "tone": "warning"},
-            {"marker": "3", "title": "검증 결론", "detail": "Conclusion summary", "tone": "neutral"},
-            {"marker": "4", "title": "근거 Workbench", "detail": "Evidence + provider actions", "tone": "neutral"},
-            {"marker": "5", "title": "저장 / Final Review 이동", "detail": "Handoff", "tone": "neutral"},
-        ]
-    )
-
     with st.container(border=True):
         render_pv_section_header(
             eyebrow="Flow 1",
@@ -2399,7 +2347,7 @@ def render_practical_validation_workspace() -> None:
         render_pv_section_header(
             eyebrow="Flow 4",
             title="근거 Workbench",
-            detail="검증 근거 보드와 사용자가 바로 실행할 provider 보강 액션을 함께 확인합니다.",
+            detail="카테고리별 검증 결과를 먼저 보고, 필요한 상세 근거와 provider 보강 액션을 이어서 확인합니다.",
             tone="neutral",
         )
         _render_validation_criteria_detail_board(validation_result)

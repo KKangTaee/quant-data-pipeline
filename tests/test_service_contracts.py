@@ -8420,6 +8420,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         flow3_body = page_source.split('eyebrow="Flow 3"', 1)[1]
         flow3_body = flow3_body.split('eyebrow="Flow 4"', 1)[0]
 
+        self.assertNotIn("render_pv_step_rail(", page_source)
         self.assertIn('title="검증 결론"', flow3_body)
         self.assertIn("카테고리별 통과 / 실패만 요약", flow3_body)
         self.assertIn("자세한 원인과 보강 기준은 Flow 4", flow3_body)
@@ -8648,9 +8649,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertIn("def _render_validation_criteria_detail_board", page_source)
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
+        self.assertIn("_render_validation_evidence_boards(validation_result)", flow4_body)
         self.assertIn("카테고리별 검증 결과", page_source)
         self.assertIn("검증한 category별 통과 상태와 보강 상태", page_source)
         self.assertIn("Final Review 이동 요약", page_source)
+        self.assertNotIn("검증 근거 보드", page_source)
+        self.assertNotIn("Evidence workspace", page_source)
+        self.assertNotIn("_board_summary_cards", page_source)
         self.assertNotIn("Final Review로 넘기기 전 확인 기준", page_source)
         self.assertIn("상태", page_source)
         self.assertIn("통과한 기준", page_source)
