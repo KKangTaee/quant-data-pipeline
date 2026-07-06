@@ -69,9 +69,13 @@ DIAGNOSTIC_EXPLANATIONS = {
 
 
 FLOW4_CRITERIA_GROUP_HINTS = (
-    "Source Readiness",
-    "Validation Readiness",
-    "Final Review Readiness Preview",
+    "Source & Replay",
+    "Data Quality / Bias Control",
+    "Comparison Validity",
+    "Realism / Tradability",
+    "Validation Strength / Robustness",
+    "Portfolio Construction",
+    "Conditional Evidence",
 )
 
 
@@ -1496,7 +1500,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     traits = dict(validation_result.get("source_traits") or {})
     module_rows = list(validation_result.get("validation_module_display_rows") or [])
 
-    st.markdown("##### Final Review Readiness Preview")
+    st.markdown("##### Final Review 이동 요약")
     _render_board_context_badges(validation_result, "final_review_gate")
     render_badge_strip(
         [
@@ -1864,6 +1868,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
     summary = dict(workspace.get("summary") or {})
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
     groups = [dict(group or {}) for group in list(workspace.get("criteria_detail_groups") or [])]
+    handoff_groups = [dict(group or {}) for group in list(workspace.get("handoff_summary_groups") or [])]
     if not groups:
         return
     group_order = {label: index for index, label in enumerate(FLOW4_CRITERIA_GROUP_HINTS)}
@@ -1875,17 +1880,17 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
     evidence_count = int(summary.get("criteria_card_count") or 0)
     tone = _status_tone(gate_summary.get("route") or validation_result.get("validation_route"))
     if blocker_count:
-        headline = f"Final Review로 넘기기 전에 보강할 기준 {blocker_count}개가 남아 있습니다."
+        headline = f"보강이 필요한 검증 항목 {blocker_count}개가 남아 있습니다."
     elif review_count:
         headline = f"Final Review에서 확인할 기준 {review_count}개가 남아 있습니다."
     else:
-        headline = "Final Review로 넘기기 전 확인 기준이 모두 통과 상태입니다."
+        headline = "카테고리별 검증 결과가 모두 통과 상태입니다."
 
     metric_rows = [
-        ("먼저 해결", str(blocker_count), "Flow 3 Fix Queue"),
+        ("보강 필요", str(blocker_count), "검증 항목"),
         ("통과", str(pass_count), "PASS 기준"),
         ("Final Review 확인", str(review_count), "REVIEW 기준"),
-        ("기술 근거", str(evidence_count), "criteria cards"),
+        ("검증 항목", str(evidence_count), "criteria cards"),
     ]
     metric_html = "".join(
         '<div class="pv-criteria-metric">'
@@ -1969,14 +1974,54 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             "</section>"
         )
 
+    handoff_html = ""
+    if handoff_groups:
+        handoff_cards: list[str] = []
+        for group in handoff_groups:
+            modules = [dict(module or {}) for module in list(group.get("modules") or [])]
+            status_text = " / ".join(
+                str(module.get("status_label") or module.get("status") or "-")
+                for module in modules
+                if module
+            ) or "-"
+            issue_text = " / ".join(
+                str(module.get("current_problem") or module.get("gate_reason") or module.get("resolution_action") or "-")
+                for module in modules
+                if module
+            ) or "Final Review 저장 전에 막힐 별도 gap이 없습니다."
+            action_text = " / ".join(
+                str(module.get("completion_criteria") or module.get("resolution_action") or "-")
+                for module in modules
+                if module
+            ) or "-"
+            handoff_cards.append(
+                '<article class="pv-criteria-status-cell pv-criteria-status-cell-wide">'
+                "<span>Final Review 이동 요약</span>"
+                f"<strong>{escape(status_text)}</strong>"
+                f"<p>{escape(issue_text)}</p>"
+                f"<p>{escape(action_text)}</p>"
+                "</article>"
+            )
+        handoff_html = (
+            '<section class="pv-criteria-group pv-criteria-group-handoff">'
+            '<header class="pv-criteria-group-head">'
+            "<div>"
+            "<strong>Final Review 이동 요약</strong>"
+            "<span>검증 category가 아니라 Final Review 저장 전에 막힐 gap을 따로 요약합니다.</span>"
+            "</div>"
+            "</header>"
+            f'<div class="pv-criteria-status-grid">{"".join(handoff_cards)}</div>'
+            "</section>"
+        )
+
     st.markdown(
         '<div class="pv-shell">'
         f'<section class="pv-criteria-board pv-criteria-board-{tone}">'
         '<div class="pv-criteria-kicker">검증 기준 상세</div>'
-        f'<div class="pv-criteria-title">Final Review로 넘기기 전 확인 기준</div>'
-        f'<div class="pv-criteria-detail">{escape(headline)} Flow 3 결론의 기준별 통과 상태와 보강 상태를 요약합니다.</div>'
+        f'<div class="pv-criteria-title">카테고리별 검증 결과</div>'
+        f'<div class="pv-criteria-detail">{escape(headline)} 검증한 category별 통과 상태와 보강 상태를 요약합니다. Final Review 이동 가능성은 아래 이동 요약으로 분리해서 확인합니다.</div>'
         f'<div class="pv-criteria-metrics">{metric_html}</div>'
-        f'<div class="pv-criteria-groups">{"".join(group_html)}</div>'
+        f'<div class="pv-criteria-groups">{"".join(group_html)}{handoff_html}</div>'
         "</section></div>",
         unsafe_allow_html=True,
     )

@@ -181,6 +181,17 @@ def _row_statuses(rows: list[dict[str, Any]], *, exclude: set[str] | None = None
     return statuses
 
 
+def _review_unless_blocked(status: Any) -> str:
+    normalized = _status(status)
+    if normalized == "BLOCKED":
+        return "BLOCKED"
+    if normalized in PASS_STATUSES:
+        return "PASS"
+    if normalized == "NOT_APPLICABLE":
+        return "NOT_APPLICABLE"
+    return "REVIEW"
+
+
 def _module(
     *,
     module_id: str,
@@ -376,12 +387,17 @@ def build_validation_module_plan(
     realism_status = _worst_status(
         _row_statuses(backtest_realism_rows, exclude={"Tax / account scope"})
     )
-    robustness_status = _worst_status(
-        [
-            diagnostic_status("stress_scenario_diagnostics"),
-            diagnostic_status("robustness_sensitivity_overfit"),
-        ]
+    robustness_status = _review_unless_blocked(
+        _worst_status(
+            [
+                diagnostic_status("stress_scenario_diagnostics"),
+                diagnostic_status("robustness_sensitivity_overfit"),
+            ]
+        )
     )
+    construction_applies = bool(traits.get("is_etf_like") or traits.get("is_weighted_mix"))
+    macro_status = diagnostic_status("regime_macro_suitability")
+    sentiment_context_status = diagnostic_status("sentiment_risk_on_off_overlay")
     provider_status = _worst_status(
         [
             check_status("Provider coverage"),
@@ -393,9 +409,6 @@ def build_validation_module_plan(
     leverage_status = diagnostic_status("leveraged_inverse_etf_suitability")
     risk_contribution_status = _worst_status(_row_statuses(risk_contribution_rows))
     role_weight_status = _worst_status(_row_statuses(component_role_weight_rows))
-    macro_status = _worst_status(
-        [diagnostic_status("regime_macro_suitability"), diagnostic_status("sentiment_risk_on_off_overlay")]
-    )
     monitoring_status = diagnostic_status("monitoring_baseline_seed")
     tax_scope_status = next(
         (_status(row.get("Status")) for row in backtest_realism_rows if row.get("Criteria") == "Tax / account scope"),
@@ -475,9 +488,15 @@ def build_validation_module_plan(
             status=construction_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="단일 후보와 mix 후보 모두 실제 보유 관점의 비중 집중, look-through, top holding, overlap, asset bucket exposure를 확인합니다.",
+            applies=construction_applies,
+            reason="ETF-like 또는 weighted mix 후보에서 실제 보유 관점의 비중 집중, look-through, top holding, overlap, asset bucket exposure를 확인합니다.",
             next_action="REVIEW row는 Final Review에서 선택 근거 또는 보류 근거로 확인합니다.",
             profile_effect=f"max weight {traits.get('max_component_weight')}%",
+            applicability_reason=(
+                "ETF-like 또는 weighted mix 후보이므로 구성 / 집중 위험을 확인합니다."
+                if construction_applies
+                else "ETF-like 또는 weighted mix 후보가 아니므로 구성 / look-through 검증은 Flow 4 core 기준에서 제외합니다."
+            ),
             resolution_surface="Construction Risk Audit / Look-through Exposure Board",
             resolution_action="비중 집중, holdings / exposure coverage, top holding, overlap, unknown exposure row를 확인합니다.",
         ),
@@ -594,7 +613,7 @@ def build_validation_module_plan(
             stage_owner="practical_validation",
             applies=bool(traits.get("is_tactical") or profile_id == "hedged_tactical"),
             reason="전술 / 헤지형 source에서 macro regime과 risk-on/off context를 확인합니다.",
-            next_action="전술형이면 FRED macro snapshot과 historical regime split을 함께 확인합니다.",
+            next_action="전술형이면 FRED macro snapshot과 historical regime split을 함께 확인합니다. Sentiment risk-on/off overlay는 gate가 아니라 context로만 둡니다.",
             profile_effect="tactical source" if traits.get("is_tactical") else profile_label,
             applicability_reason=(
                 "전술형 source 또는 전술 / 헤지 profile이므로 macro / regime fit을 확인합니다."
@@ -602,7 +621,10 @@ def build_validation_module_plan(
                 else "전술형 source가 아니므로 macro / regime 조건부 검증은 적용하지 않습니다."
             ),
             resolution_surface="Practical Diagnostics / Macro / Regime",
-            resolution_action="macro regime, risk-on/off context, FRED snapshot, regime split evidence를 확인합니다.",
+            resolution_action=(
+                "macro regime, FRED snapshot, regime split evidence를 확인합니다. "
+                f"sentiment context status는 {sentiment_context_status}이며 gate에는 반영하지 않습니다."
+            ),
         ),
         _module(
             module_id="monitoring_baseline",

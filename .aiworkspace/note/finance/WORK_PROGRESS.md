@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Category Results V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-category-results-v1-20260706/`에서 Flow 4를 `카테고리별 검증 결과` 중심으로 바꿨다.
+  - `selected_route_preflight`는 검증 category가 아니라 `Final Review 이동 요약`으로 분리했고, stress / construction / sentiment gate severity를 후보 특성에 맞게 낮췄다.
+  - Service contract와 Flow 3 / Flow 4 source contract tests, Backtest refactor boundary tests를 통과했다.
 - Practical Validation Validation Audit:
   - `.aiworkspace/note/finance/researches/active/2026-07-practical-validation-validation-audit/`에서 현재 Practical Validation module / board / gate 구조를 감사했다.
   - 결론은 Flow 4 메인을 `Final Review로 넘기기 전 확인 기준`이 아니라 `카테고리별 검증 결과`로 바꾸고, Final Review 이동 가능성은 파생 handoff summary로 낮추는 것이다.

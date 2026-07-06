@@ -1178,6 +1178,160 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertIn("Benchmark / Comparator Parity", display_rows)
         self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Gate Effect"], "Ready")
 
+    def test_validation_module_gate_reviews_missing_default_robustness_without_blocking(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        checks = [
+            {"Criteria": "Selection source", "Ready": True},
+            {"Criteria": "Active components", "Ready": True},
+            {"Criteria": "Target weight total", "Ready": True},
+            {"Criteria": "Data Trust", "Ready": True},
+            {"Criteria": "Execution boundary", "Ready": True},
+            {"Criteria": "Curve evidence", "Ready": True},
+            {"Criteria": "Runtime recheck", "Ready": True},
+            {"Criteria": "Runtime period coverage", "Ready": True},
+            {"Criteria": "Benchmark parity", "Ready": True},
+            {"Criteria": "Provider coverage", "Ready": True},
+        ]
+        diagnostics = [
+            {"domain": "stress_scenario_diagnostics", "status": "NOT_RUN"},
+            {"domain": "robustness_sensitivity_overfit", "status": "NOT_RUN"},
+            {"domain": "leveraged_inverse_etf_suitability", "status": "PASS"},
+            {"domain": "asset_allocation_fit", "status": "PASS"},
+            {"domain": "concentration_overlap_exposure", "status": "PASS"},
+            {"domain": "operability_cost_liquidity", "status": "PASS"},
+            {"domain": "regime_macro_suitability", "status": "PASS"},
+            {"domain": "sentiment_risk_on_off_overlay", "status": "NOT_RUN"},
+        ]
+        pass_row = [{"Criteria": "row", "Status": "PASS"}]
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [{"strategy_key": "equal_weight", "target_weight": 100.0, "universe": ["SPY", "TLT"]}],
+            },
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            checks=checks,
+            diagnostics=diagnostics,
+            validation_efficacy_rows=pass_row,
+            data_coverage_rows=pass_row,
+            construction_risk_rows=pass_row,
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=pass_row,
+        )
+
+        gate = plan["final_review_gate"]
+        modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertTrue(gate["can_save_and_move"])
+        self.assertEqual(gate["route"], "READY_WITH_REVIEW")
+        self.assertEqual(gate["blocking_modules"], [])
+        self.assertEqual(modules["stress_robustness"]["status"], "REVIEW")
+        self.assertEqual(modules["stress_robustness"]["gate_effect"], "Final Review review")
+
+    def test_validation_module_gate_skips_construction_risk_for_single_factor_source(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        checks = [
+            {"Criteria": "Selection source", "Ready": True},
+            {"Criteria": "Active components", "Ready": True},
+            {"Criteria": "Target weight total", "Ready": True},
+            {"Criteria": "Data Trust", "Ready": True},
+            {"Criteria": "Execution boundary", "Ready": True},
+            {"Criteria": "Curve evidence", "Ready": True},
+            {"Criteria": "Runtime recheck", "Ready": True},
+            {"Criteria": "Runtime period coverage", "Ready": True},
+            {"Criteria": "Benchmark parity", "Ready": True},
+            {"Criteria": "Provider coverage", "Ready": True},
+        ]
+        diagnostics = [
+            {"domain": "stress_scenario_diagnostics", "status": "PASS"},
+            {"domain": "robustness_sensitivity_overfit", "status": "PASS"},
+            {"domain": "leveraged_inverse_etf_suitability", "status": "PASS"},
+            {"domain": "asset_allocation_fit", "status": "PASS"},
+            {"domain": "concentration_overlap_exposure", "status": "PASS"},
+            {"domain": "operability_cost_liquidity", "status": "PASS"},
+        ]
+        pass_row = [{"Criteria": "row", "Status": "PASS"}]
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [
+                    {
+                        "strategy_key": "strict_quality_value",
+                        "target_weight": 100.0,
+                        "universe": ["AAPL", "MSFT"],
+                    }
+                ],
+            },
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            checks=checks,
+            diagnostics=diagnostics,
+            validation_efficacy_rows=pass_row,
+            data_coverage_rows=pass_row,
+            construction_risk_rows=[{"Criteria": "Provider look-through coverage", "Status": "NEEDS_INPUT"}],
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=pass_row,
+        )
+
+        gate = plan["final_review_gate"]
+        modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertTrue(gate["can_save_and_move"])
+        self.assertEqual(gate["route"], "READY_FOR_FINAL_REVIEW")
+        self.assertFalse(modules["construction_risk"]["applies"])
+        self.assertEqual(modules["construction_risk"]["status"], "NOT_APPLICABLE")
+        self.assertEqual(modules["construction_risk"]["gate_effect"], "Not applicable")
+
+    def test_validation_module_gate_uses_macro_regime_without_sentiment_context_status(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        checks = [
+            {"Criteria": "Selection source", "Ready": True},
+            {"Criteria": "Active components", "Ready": True},
+            {"Criteria": "Target weight total", "Ready": True},
+            {"Criteria": "Data Trust", "Ready": True},
+            {"Criteria": "Execution boundary", "Ready": True},
+            {"Criteria": "Curve evidence", "Ready": True},
+            {"Criteria": "Runtime recheck", "Ready": True},
+            {"Criteria": "Runtime period coverage", "Ready": True},
+            {"Criteria": "Benchmark parity", "Ready": True},
+            {"Criteria": "Provider coverage", "Ready": True},
+        ]
+        diagnostics = [
+            {"domain": "stress_scenario_diagnostics", "status": "PASS"},
+            {"domain": "robustness_sensitivity_overfit", "status": "PASS"},
+            {"domain": "leveraged_inverse_etf_suitability", "status": "PASS"},
+            {"domain": "asset_allocation_fit", "status": "PASS"},
+            {"domain": "concentration_overlap_exposure", "status": "PASS"},
+            {"domain": "operability_cost_liquidity", "status": "PASS"},
+            {"domain": "regime_macro_suitability", "status": "PASS"},
+            {"domain": "sentiment_risk_on_off_overlay", "status": "NOT_RUN"},
+        ]
+        pass_row = [{"Criteria": "row", "Status": "PASS"}]
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "construction": {"source": "single_strategy"},
+                "components": [{"strategy_key": "gtaa", "target_weight": 100.0, "universe": ["SPY", "TLT"]}],
+            },
+            validation_profile={"profile_id": "hedged_tactical", "profile_label": "전술형"},
+            checks=checks,
+            diagnostics=diagnostics,
+            validation_efficacy_rows=pass_row,
+            data_coverage_rows=pass_row,
+            construction_risk_rows=pass_row,
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=pass_row,
+        )
+
+        modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertTrue(modules["macro_regime"]["applies"])
+        self.assertEqual(modules["macro_regime"]["status"], "PASS")
+        self.assertEqual(modules["macro_regime"]["gate_effect"], "Ready")
+
     def test_validation_module_gate_blocks_selected_route_preflight_gaps(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
 
@@ -8209,6 +8363,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         component_source = entry_path.read_text(encoding="utf-8")
         style_source = style_path.read_text(encoding="utf-8")
         package_source = package_path.read_text(encoding="utf-8")
+        build_source = "".join(
+            path.read_text(encoding="utf-8")
+            for path in build_entry_path.parent.glob("assets/*.js")
+        )
 
         self.assertIn("declare_component", wrapper_source)
         self.assertIn("is_practical_validation_fix_queue_available", wrapper_source)
@@ -8216,7 +8374,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("PracticalValidationFixQueue", component_source)
         self.assertIn("Final Review 이동 판단", component_source)
         self.assertIn("Final Review 이동을 막는 이슈", component_source)
-        self.assertIn("Final Review로 넘기기 전 확인 기준", component_source)
+        self.assertIn("카테고리별 검증 결과", component_source)
+        self.assertNotIn("Final Review로 넘기기 전 확인 기준", component_source)
+        self.assertIn("카테고리별 검증 결과", build_source)
+        self.assertNotIn("Final Review로 넘기기 전 확인 기준", build_source)
         self.assertIn("현재 문제", component_source)
         self.assertIn("완료 기준", component_source)
         self.assertIn("보강 위치", component_source)
@@ -8310,14 +8471,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         summary = workspace["summary"]
         self.assertEqual(summary["fix_item_count"], 1)
-        self.assertEqual(summary["criteria_group_count"], 3)
+        self.assertEqual(summary["criteria_group_count"], 2)
         self.assertEqual(summary["criteria_pass_count"], 1)
-        self.assertEqual(summary["criteria_blocker_count"], 2)
+        self.assertEqual(summary["criteria_blocker_count"], 1)
 
         groups = workspace["criteria_detail_groups"]
         labels = [group["label"] for group in groups]
-        self.assertEqual(labels, ["Source Readiness", "Validation Readiness", "Final Review Readiness Preview"])
-        data_group = next(group for group in groups if group["label"] == "Validation Readiness")
+        self.assertEqual(labels, ["Source & Replay", "Data Quality / Bias Control"])
+        self.assertNotIn("Final Review Readiness Preview", labels)
+        data_group = next(group for group in groups if group["label"] == "Data Quality / Bias Control")
         data_card = data_group["criteria_cards"][0]
         self.assertEqual(data_card["label"], "Data Coverage")
         self.assertEqual(data_card["status"], "NEEDS_INPUT")
@@ -8332,6 +8494,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(data_group["passed_criteria"], [])
         self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
         self.assertIn("보강 필요", data_group["decision_summary"])
+        self.assertEqual(
+            workspace["handoff_summary_groups"][0]["modules"][0]["module_id"],
+            "selected_route_preflight",
+        )
 
     def test_practical_validation_workspace_model_builds_issue_queue_items(self) -> None:
         from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
@@ -8388,8 +8554,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertIn("def _render_validation_criteria_detail_board", page_source)
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
-        self.assertIn("Final Review로 넘기기 전 확인 기준", page_source)
-        self.assertIn("Flow 3 결론의 기준별 통과 상태와 보강 상태", page_source)
+        self.assertIn("카테고리별 검증 결과", page_source)
+        self.assertIn("검증한 category별 통과 상태와 보강 상태", page_source)
+        self.assertIn("Final Review 이동 요약", page_source)
+        self.assertNotIn("Final Review로 넘기기 전 확인 기준", page_source)
         self.assertIn("상태", page_source)
         self.assertIn("통과한 기준", page_source)
         self.assertIn("남은 문제", page_source)
@@ -8397,9 +8565,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("무엇을 확인했나", page_source)
         self.assertNotIn("부족한 점", page_source)
         self.assertNotIn("해야 할 일", page_source)
-        self.assertIn("Source Readiness", page_source)
-        self.assertIn("Validation Readiness", page_source)
-        self.assertIn("Final Review Readiness Preview", page_source)
+        self.assertIn("Source & Replay", page_source)
+        self.assertIn("Data Quality / Bias Control", page_source)
+        self.assertIn("Validation Strength / Robustness", page_source)
+        self.assertNotIn("Validation Readiness", flow4_body)
+        self.assertNotIn("Final Review Readiness Preview", flow4_body)
         self.assertIn("pv-criteria-board", page_source)
         self.assertLess(
             flow4_body.index("_render_validation_criteria_detail_board(validation_result)"),

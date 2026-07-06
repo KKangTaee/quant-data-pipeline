@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `practical-validation-flow3-clarity-v1-20260706`
+- `practical-validation-category-results-v1-20260706`
 
 Latest completed docs cleanup task:
 
@@ -47,6 +47,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-category-results-v1-20260706`: Practical Validation Flow 4 category-first validation result grouping. selected-route preflight is separated from validation categories, stress / robustness missing evidence is review by default, construction risk applies only to ETF-like or weighted mix candidates, and sentiment context no longer drives macro gate status.
 - `distinct-strategy-portfolio-discovery-20260609`: unique strategy family constraint / SPY superior GTAA U3 85% + GRS Compact 10% + Risk Parity Trend 5% portfolio / Final Review and Monitoring registration
 - `portfolio-discovery-final-review-monitoring-20260608`: current strategy catalog exploration / all-ETF Final Review selected decision / Portfolio Monitoring registration
 

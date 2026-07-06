@@ -31,6 +31,50 @@ DOWNSTREAM_STAGE_OWNERS = {
     "final_review",
     "selected_dashboard",
 }
+FLOW4_CATEGORY_GROUP_SPECS = [
+    {
+        "group_id": "source_replay",
+        "label": "Source & Replay",
+        "purpose": "후보 source 계약과 최신 runtime replay가 같은 후보를 재현하는지 확인합니다.",
+        "module_ids": ("source_integrity", "latest_replay"),
+    },
+    {
+        "group_id": "data_bias_control",
+        "label": "Data Quality / Bias Control",
+        "purpose": "가격, 기간, PIT, 생존편향 근거가 검증 결과를 왜곡하지 않는지 확인합니다.",
+        "module_ids": ("data_coverage",),
+    },
+    {
+        "group_id": "comparison_validity",
+        "label": "Comparison Validity",
+        "purpose": "benchmark와 comparator가 후보와 같은 조건으로 비교되는지 확인합니다.",
+        "module_ids": ("benchmark_parity",),
+    },
+    {
+        "group_id": "realism_tradability",
+        "label": "Realism / Tradability",
+        "purpose": "비용, turnover, liquidity, net curve, rebalance timing이 실전 해석에 충분한지 확인합니다.",
+        "module_ids": ("backtest_realism",),
+    },
+    {
+        "group_id": "validation_strength",
+        "label": "Validation Strength / Robustness",
+        "purpose": "성과가 특정 구간이나 설정에만 기대지 않는지 확인합니다.",
+        "module_ids": ("validation_efficacy", "stress_robustness"),
+    },
+    {
+        "group_id": "portfolio_construction",
+        "label": "Portfolio Construction",
+        "purpose": "ETF-like 또는 weighted mix 후보의 구성, 집중, 위험 기여, 역할 / 비중 근거를 확인합니다.",
+        "module_ids": ("construction_risk", "risk_contribution", "component_role_weight"),
+    },
+    {
+        "group_id": "conditional_context",
+        "label": "Conditional Evidence",
+        "purpose": "ETF provider, 레버리지 / 인버스, macro 조건처럼 후보 특성에 따라 필요한 추가 근거를 확인합니다.",
+        "module_ids": ("provider_investability", "leverage_inverse", "macro_regime"),
+    },
+]
 STATUS_LABELS = {
     "PASS": "통과",
     "READY": "통과",
@@ -53,9 +97,41 @@ GROUP_DISPLAY_TEXT = {
         "display_label": "Final Review 저장 전에 막힐 gap이 없는가",
         "purpose": "Final Review 후보로 넘겼을 때 저장을 막을 deterministic evidence gap을 미리 확인합니다.",
     },
+    "source_replay": {
+        "display_label": "후보 source / 최신 재검증",
+        "purpose": "Backtest Analysis에서 넘어온 후보가 같은 계약으로 최신 데이터에서도 재현되는지 확인합니다.",
+    },
+    "data_bias_control": {
+        "display_label": "데이터 품질 / 편향 통제",
+        "purpose": "가격, 기간, point-in-time, 생존편향 근거가 검증 결과를 왜곡하지 않는지 확인합니다.",
+    },
+    "comparison_validity": {
+        "display_label": "비교 기준 동등성",
+        "purpose": "후보와 benchmark / comparator가 같은 기간, frequency, coverage로 비교되는지 확인합니다.",
+    },
+    "realism_tradability": {
+        "display_label": "실전 운용 현실성",
+        "purpose": "비용, turnover, liquidity, net curve, rebalance timing이 실전 해석에 충분한지 확인합니다.",
+    },
+    "validation_strength": {
+        "display_label": "검증 강도 / 강건성",
+        "purpose": "walk-forward, OOS, regime, stress, sensitivity 근거가 결과 해석에 충분한지 확인합니다.",
+    },
+    "portfolio_construction": {
+        "display_label": "포트폴리오 구성 근거",
+        "purpose": "구성 집중, look-through, 위험 기여, component 역할 / 비중 근거를 확인합니다.",
+    },
     "conditional_evidence": {
         "display_label": "후보 특성별 추가 근거가 필요한가",
         "purpose": "ETF, weighted mix, tactical source처럼 후보 특성에 따라 필요한 추가 검증을 확인합니다.",
+    },
+    "conditional_context": {
+        "display_label": "후보 특성별 추가 근거",
+        "purpose": "ETF provider, 레버리지 / 인버스, macro 조건처럼 해당 후보에만 필요한 근거를 확인합니다.",
+    },
+    "final_review_handoff_summary": {
+        "display_label": "Final Review 이동 요약",
+        "purpose": "검증 category가 아니라 Final Review 저장 전에 막힐 gap을 요약합니다.",
     },
 }
 MODULE_DISPLAY_TEXT = {
@@ -191,15 +267,17 @@ def _normalize_module(module: dict[str, Any], *, workspace_role: str) -> dict[st
 
 def _ordered_modules(
     modules: list[dict[str, Any]],
-    module_ids: set[str],
+    module_ids: set[str] | tuple[str, ...],
     *,
     workspace_role: str,
 ) -> list[dict[str, Any]]:
-    order = {module_id: index for index, module_id in enumerate(module_ids)}
+    module_order = list(module_ids)
+    module_id_set = set(module_order)
+    order = {module_id: index for index, module_id in enumerate(module_order)}
     rows = [
         _normalize_module(module, workspace_role=workspace_role)
         for module in modules
-        if _module_id(module) in module_ids and _module_applies(module)
+        if _module_id(module) in module_id_set and _module_applies(module)
     ]
     return sorted(rows, key=lambda module: order.get(_module_id(module), len(order)))
 
@@ -437,6 +515,25 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+def _category_result_groups(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups: list[dict[str, Any]] = []
+    for spec in FLOW4_CATEGORY_GROUP_SPECS:
+        category_modules = _ordered_modules(
+            modules,
+            tuple(spec.get("module_ids") or ()),
+            workspace_role="validation_category",
+        )
+        group = _group(
+            group_id=str(spec.get("group_id") or ""),
+            label=str(spec.get("label") or ""),
+            purpose=str(spec.get("purpose") or ""),
+            modules=category_modules,
+        )
+        if group is not None:
+            groups.append(group)
+    return groups
+
+
 def _fallback_fix_queue(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for module in modules:
@@ -548,8 +645,21 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     ]
     fix_queue = _fix_queue(validation_row, modules)
     review_rows = _dict_list(gate.get("review_modules"))
-    criteria_groups = _criteria_detail_groups(core_groups + conditional_groups)
+    category_groups = _category_result_groups(modules)
+    criteria_groups = _criteria_detail_groups(category_groups)
     criteria_summary = _criteria_summary(criteria_groups)
+    handoff_summary_groups = [
+        group
+        for group in [
+            _group(
+                group_id="final_review_handoff_summary",
+                label="Final Review Handoff Summary",
+                purpose="검증 category가 아니라 Final Review 저장 전에 막힐 deterministic gap을 요약합니다.",
+                modules=final_review_preview,
+            )
+        ]
+        if group is not None
+    ]
 
     gate_summary = {
         "route": gate.get("route") or "-",
@@ -568,6 +678,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
             "core_group_count": len(core_groups),
             "conditional_group_count": len(conditional_groups),
             "downstream_reference_group_count": len(downstream_groups),
+            "handoff_summary_group_count": len(handoff_summary_groups),
         },
         "gate_summary": gate_summary,
         "fix_queue": fix_queue,
@@ -575,6 +686,8 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "conditional_evidence_groups": conditional_groups,
         "downstream_reference_groups": downstream_groups,
         "criteria_detail_groups": criteria_groups,
+        "category_result_groups": category_groups,
+        "handoff_summary_groups": handoff_summary_groups,
         "technical_details": {
             "raw_diagnostics": _dict_list(validation_row.get("diagnostics")),
             "module_display_rows": _dict_list(validation_row.get("validation_module_display_rows")),

@@ -124,7 +124,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
       ]
     : [
         "아래 이슈의 완료 기준을 먼저 맞춘 뒤 Flow 5에서 저장 / 이동을 다시 시도합니다.",
-        "Flow 4의 확인 기준 요약에서 통과한 기준과 남은 문제를 함께 확인합니다.",
+        "Flow 4의 카테고리별 검증 결과에서 통과한 기준과 남은 문제를 함께 확인합니다.",
       ]
 
   return (
@@ -143,9 +143,9 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
       </header>
 
       <div className="pv-react-fix__decision">
-        <div className="pv-react-fix__summary" aria-label="Final Review로 넘기기 전 확인 기준 요약">
+        <div className="pv-react-fix__summary" aria-label="카테고리별 검증 결과 요약">
           <span>
-            <b>{props.statusLabel}</b> 이동 기준
+            <b>{props.statusLabel}</b> 검증 결과
           </span>
           <span>
             <b>{props.fixItems.length}</b> 막는 이슈
@@ -154,7 +154,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
             <b>{props.reviewCount}</b> Final Review 확인
           </span>
           <span>
-            <b>{criteriaGroups.length || coreGroups.length}</b> 핵심 근거
+            <b>{criteriaGroups.length || coreGroups.length}</b> 검증 카테고리
           </span>
         </div>
 
@@ -206,13 +206,13 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
               </article>
             ))}
             {hiddenFixCount > 0 ? (
-              <div className="pv-react-fix__more">나머지 {hiddenFixCount}개는 Flow 4 기준 상세에서 이어서 확인합니다.</div>
+              <div className="pv-react-fix__more">나머지 {hiddenFixCount}개는 Flow 4 카테고리별 검증 결과에서 이어서 확인합니다.</div>
             ) : null}
           </div>
         </section>
 
         <section className="pv-react-fix__lane pv-react-fix__criteria-preview">
-          <div className="pv-react-fix__lane-title">Final Review로 넘기기 전 확인 기준</div>
+          <div className="pv-react-fix__lane-title">카테고리별 검증 결과</div>
           <div className="pv-react-fix__groups">
             {visibleCriteriaGroups.map((group, index) => (
               <article
@@ -245,7 +245,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                   <h5>기준 상세 그룹 없음</h5>
                   <span>-</span>
                 </div>
-                <p>workspace read model에 표시할 Final Review로 넘기기 전 확인 기준이 없습니다.</p>
+                <p>workspace read model에 표시할 카테고리별 검증 결과가 없습니다.</p>
               </article>
             ) : null}
           </div>
