@@ -8434,15 +8434,24 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         flow1_body = flow1_body.split('eyebrow="Flow 2"', 1)[0]
         flow2_body = page_source.split('eyebrow="Flow 2"', 1)[1]
         flow2_body = flow2_body.split('eyebrow="Flow 3"', 1)[0]
+        profile_form_body = page_source.split("def _render_validation_profile_form()", 1)[1]
+        profile_form_body = profile_form_body.split("def _replay_state_key", 1)[0]
 
         self.assertIn('title="후보 Source 확인"', flow1_body)
         self.assertNotIn("_render_validation_profile_form()", flow1_body)
         self.assertNotIn("##### 검증 프로필", flow1_body)
         self.assertIn('title="검증 기준 설정 / 실전 재검증 실행"', flow2_body)
         self.assertIn("##### 검증 기준", flow2_body)
+        self.assertIn("render_pv_profile_summary_strip", profile_form_body)
+        self.assertIn("선택한 검증 기준", page_source)
+        self.assertIn("필수 근거", page_source)
         self.assertIn("세부 기준 조정", page_source)
         self.assertNotIn("프로필 기준 상세", page_source)
         self.assertNotIn("Profile Focus", page_source)
+        self.assertLess(
+            profile_form_body.index("render_pv_profile_summary_strip"),
+            profile_form_body.index("세부 기준 조정"),
+        )
         self.assertLess(
             flow2_body.index("_render_validation_profile_form()"),
             flow2_body.index("_render_actual_replay_panel(source)"),

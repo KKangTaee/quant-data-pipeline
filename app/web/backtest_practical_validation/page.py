@@ -30,6 +30,7 @@ from app.web.backtest_practical_validation.components import (
     render_pv_alert_panel,
     render_pv_card_grid,
     render_pv_command_center,
+    render_pv_profile_summary_strip,
     render_pv_section_header,
     render_pv_step_rail,
     render_pv_styles,
@@ -611,6 +612,55 @@ def _render_validation_profile_form() -> dict[str, Any]:
     )
     answers: dict[str, str] = {}
     question_items = list(VALIDATION_PROFILE_QUESTIONS.items())
+    for question_key, question in question_items:
+        options = list(dict(question.get("options") or {}).keys())
+        if not options:
+            continue
+        default_value = question.get("default") if question.get("default") in options else options[0]
+        state_key = f"practical_validation_profile_answer_{question_key}"
+        state_value = st.session_state.get(state_key, default_value)
+        answers[question_key] = state_value if state_value in options else default_value
+
+    profile = build_validation_profile(profile_id, answers)
+    thresholds = dict(profile.get("thresholds") or {})
+    profile_option = dict(VALIDATION_PROFILE_OPTIONS.get(profile_id) or {})
+    render_pv_profile_summary_strip(
+        [
+            {
+                "label": "프로필",
+                "value": profile.get("profile_label") or "-",
+                "detail": profile_option.get("description") or "선택한 위험 기준으로 판정",
+                "tone": "neutral",
+            },
+            {
+                "label": "Rolling",
+                "value": f"{thresholds.get('rolling_window_months')}M",
+                "detail": "최근 구간 안정성 판정",
+                "tone": "neutral",
+            },
+            {
+                "label": "거래비용",
+                "value": f"{thresholds.get('one_way_cost_bps')} bps",
+                "detail": "비용 반영 후 성과 확인",
+                "tone": "neutral",
+            },
+            {
+                "label": "MDD Line",
+                "value": _format_percent_value((thresholds.get("mdd_review_line") or 0.0) / 100.0),
+                "detail": "이 선부터 보류 / 재검토 신호",
+                "tone": "neutral",
+            },
+            {
+                "label": "필수 근거",
+                "value": "항상 확인",
+                "detail": "최신 재검증 / 데이터 / 비용·유동성",
+                "tone": "neutral",
+            },
+        ],
+        title="선택한 검증 기준",
+        min_width=145,
+    )
+
     with st.expander("세부 기준 조정", expanded=False):
         st.caption("목적, 허용 손실, 운용 기간, 상품 복잡도, 비교 기준을 조정하면 같은 replay 결과도 다른 엄격도로 판정합니다.")
         for start in range(0, len(question_items), 2):
@@ -626,30 +676,9 @@ def _render_validation_profile_form() -> dict[str, Any]:
                         str(question.get("label") or question_key),
                         options=options,
                         format_func=lambda option, labels=labels: labels.get(option, option),
-                        index=options.index(question.get("default")) if question.get("default") in options else 0,
+                        index=options.index(answers.get(question_key)) if answers.get(question_key) in options else 0,
                         key=f"practical_validation_profile_answer_{question_key}",
                     )
-    profile = build_validation_profile(profile_id, answers)
-    thresholds = dict(profile.get("thresholds") or {})
-    profile_option = dict(VALIDATION_PROFILE_OPTIONS.get(profile_id) or {})
-    render_badge_strip(
-        [
-            {"label": "Profile", "value": profile.get("profile_label") or "-", "tone": "neutral"},
-            {"label": "Rolling", "value": f"{thresholds.get('rolling_window_months')}M", "tone": "neutral"},
-            {"label": "Cost", "value": f"{thresholds.get('one_way_cost_bps')} bps", "tone": "neutral"},
-            {
-                "label": "MDD Line",
-                "value": _format_percent_value((thresholds.get("mdd_review_line") or 0.0) / 100.0),
-                "tone": "neutral",
-            },
-        ]
-    )
-    st.caption(
-        f"{profile_option.get('label') or profile.get('profile_label') or '선택한 프로필'} 기준은 "
-        f"{profile_option.get('description') or '선택한 위험 기준'}에 맞춰 결과를 판정합니다. "
-        f"MDD 약화 신호는 {_format_percent_value((thresholds.get('mdd_review_line') or 0.0) / 100.0)}부터 보며, "
-        "최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 어떤 프로필에서도 생략하지 않습니다."
-    )
     return {"profile_id": profile_id, "answers": answers}
 
 

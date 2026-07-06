@@ -302,6 +302,55 @@ def render_pv_styles() -> None:
             color: var(--pv-text-muted);
             overflow-wrap: anywhere;
           }
+          .pv-profile-summary-title {
+            margin: 0.58rem 0 0.42rem 0;
+            color: var(--pv-text);
+            font-size: 0.9rem;
+            font-weight: 820;
+            line-height: 1.3;
+            overflow-wrap: anywhere;
+          }
+          .pv-profile-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--pv-profile-card-min, 150px)), 1fr));
+            gap: 0.62rem;
+            margin: 0.25rem 0 0.72rem 0;
+          }
+          .pv-profile-summary-card {
+            min-height: 104px;
+            padding: 0.72rem 0.78rem;
+            border: 1px solid var(--pv-line);
+            border-top: 4px solid var(--pv-neutral);
+            border-radius: 0;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+            color: var(--pv-text);
+          }
+          .pv-profile-summary-card-positive { border-top-color: #0f8f83; }
+          .pv-profile-summary-card-warning { border-top-color: #b45309; }
+          .pv-profile-summary-card-danger { border-top-color: #b42318; }
+          .pv-profile-summary-card-neutral { border-top-color: var(--pv-neutral); }
+          .pv-profile-summary-label {
+            color: var(--pv-text-muted);
+            font-size: 0.78rem;
+            font-weight: 800;
+            line-height: 1.22;
+            overflow-wrap: anywhere;
+          }
+          .pv-profile-summary-value {
+            margin-top: 0.28rem;
+            color: var(--pv-text);
+            font-size: 1.12rem;
+            font-weight: 860;
+            line-height: 1.18;
+            overflow-wrap: anywhere;
+          }
+          .pv-profile-summary-detail {
+            margin-top: 0.34rem;
+            color: var(--pv-text-muted);
+            font-size: 0.78rem;
+            line-height: 1.34;
+            overflow-wrap: anywhere;
+          }
           .pv-criteria-board {
             margin: 0.35rem 0 1rem 0;
             padding: 1rem;
@@ -652,6 +701,44 @@ def render_pv_card_grid(cards: list[dict[str, Any]], *, min_width: int = 220) ->
         '<div class="pv-shell">'
         f'<div class="pv-card-grid" style="--pv-card-min: {int(min_width)}px;">'
         f'{"".join(html_cards)}'
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_pv_profile_summary_strip(
+    items: list[dict[str, Any]],
+    *,
+    title: str = "선택한 검증 기준",
+    min_width: int = 150,
+) -> None:
+    render_pv_styles()
+    html_items: list[str] = []
+    for item in items:
+        tone = _safe_tone(item.get("tone"))
+        label = str(item.get("label") or "")
+        value = _display_value(item.get("value"))
+        detail = str(item.get("detail") or "")
+        detail_html = (
+            f'<div class="pv-profile-summary-detail">{escape(detail)}</div>'
+            if detail
+            else ""
+        )
+        html_items.append(
+            f'<div class="pv-profile-summary-card pv-profile-summary-card-{tone}">'
+            f'<div class="pv-profile-summary-label">{escape(label)}</div>'
+            f'<div class="pv-profile-summary-value">{escape(value)}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    title_html = (
+        f'<div class="pv-profile-summary-title">{escape(title)}</div>' if title else ""
+    )
+    st.markdown(
+        '<div class="pv-shell">'
+        f"{title_html}"
+        f'<div class="pv-profile-summary-grid" style="--pv-profile-card-min: {int(min_width)}px;">'
+        f'{"".join(html_items)}'
         "</div></div>",
         unsafe_allow_html=True,
     )
