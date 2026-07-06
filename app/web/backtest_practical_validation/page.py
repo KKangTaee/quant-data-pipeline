@@ -597,8 +597,7 @@ def _render_source_summary(source: dict[str, Any]) -> None:
 
 def _render_validation_profile_form() -> dict[str, Any]:
     st.caption(
-        "검증 프로필은 증거를 생략하는 설정이 아니라, 어떤 위험을 더 엄격하게 볼지 정하는 기준입니다. "
-        "공격적 프로필은 손실 허용선이 넓지만 최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 계속 필요합니다."
+        "검증 프로필은 전략을 다시 만드는 설정이 아니라, 재검증 결과를 어떤 위험 기준으로 판정할지 정합니다."
     )
     profile_options = list(VALIDATION_PROFILE_OPTIONS.keys())
     profile_id = st.selectbox(
@@ -612,22 +611,24 @@ def _render_validation_profile_form() -> dict[str, Any]:
     )
     answers: dict[str, str] = {}
     question_items = list(VALIDATION_PROFILE_QUESTIONS.items())
-    for start in range(0, len(question_items), 2):
-        cols = st.columns(2, gap="small")
-        for offset, col in enumerate(cols):
-            if start + offset >= len(question_items):
-                continue
-            question_key, question = question_items[start + offset]
-            options = list(dict(question.get("options") or {}).keys())
-            labels = dict(question.get("options") or {})
-            with col:
-                answers[question_key] = st.selectbox(
-                    str(question.get("label") or question_key),
-                    options=options,
-                    format_func=lambda option, labels=labels: labels.get(option, option),
-                    index=options.index(question.get("default")) if question.get("default") in options else 0,
-                    key=f"practical_validation_profile_answer_{question_key}",
-                )
+    with st.expander("세부 기준 조정", expanded=False):
+        st.caption("목적, 허용 손실, 운용 기간, 상품 복잡도, 비교 기준을 조정하면 같은 replay 결과도 다른 엄격도로 판정합니다.")
+        for start in range(0, len(question_items), 2):
+            cols = st.columns(2, gap="small")
+            for offset, col in enumerate(cols):
+                if start + offset >= len(question_items):
+                    continue
+                question_key, question = question_items[start + offset]
+                options = list(dict(question.get("options") or {}).keys())
+                labels = dict(question.get("options") or {})
+                with col:
+                    answers[question_key] = st.selectbox(
+                        str(question.get("label") or question_key),
+                        options=options,
+                        format_func=lambda option, labels=labels: labels.get(option, option),
+                        index=options.index(question.get("default")) if question.get("default") in options else 0,
+                        key=f"practical_validation_profile_answer_{question_key}",
+                    )
     profile = build_validation_profile(profile_id, answers)
     render_badge_strip(
         [
@@ -641,33 +642,35 @@ def _render_validation_profile_form() -> dict[str, Any]:
             },
         ]
     )
+    st.caption("최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 어떤 프로필에서도 생략하지 않습니다.")
     thresholds = dict(profile.get("thresholds") or {})
-    render_pv_card_grid(
-        [
-            {
-                "kicker": "Profile Focus",
-                "title": profile.get("profile_label") or profile_id,
-                "status": VALIDATION_PROFILE_OPTIONS[profile_id]["label"],
-                "detail": VALIDATION_PROFILE_OPTIONS[profile_id]["description"],
-                "tone": "neutral",
-            },
-            {
-                "kicker": "Risk Line",
-                "title": "Drawdown tolerance",
-                "status": _format_percent_value((thresholds.get("mdd_review_line") or 0.0) / 100.0),
-                "detail": "이 선을 넘는 약화 신호는 Final Review에서 보류 또는 재검토 근거로 확인합니다.",
-                "tone": "warning",
-            },
-            {
-                "kicker": "Required Evidence",
-                "title": "Replay / Coverage / Cost",
-                "status": "Always required",
-                "detail": "공격적 프로필이어도 최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 생략하지 않습니다.",
-                "tone": "positive",
-            },
-        ],
-        min_width=190,
-    )
+    with st.expander("프로필 기준 상세", expanded=False):
+        render_pv_card_grid(
+            [
+                {
+                    "kicker": "Profile Focus",
+                    "title": profile.get("profile_label") or profile_id,
+                    "status": VALIDATION_PROFILE_OPTIONS[profile_id]["label"],
+                    "detail": VALIDATION_PROFILE_OPTIONS[profile_id]["description"],
+                    "tone": "neutral",
+                },
+                {
+                    "kicker": "Risk Line",
+                    "title": "Drawdown tolerance",
+                    "status": _format_percent_value((thresholds.get("mdd_review_line") or 0.0) / 100.0),
+                    "detail": "이 선을 넘는 약화 신호는 Final Review에서 보류 또는 재검토 근거로 확인합니다.",
+                    "tone": "warning",
+                },
+                {
+                    "kicker": "Required Evidence",
+                    "title": "Replay / Coverage / Cost",
+                    "status": "Always required",
+                    "detail": "공격적 프로필이어도 최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 생략하지 않습니다.",
+                    "tone": "positive",
+                },
+            ],
+            min_width=190,
+        )
     return {"profile_id": profile_id, "answers": answers}
 
 
@@ -2338,8 +2341,8 @@ def render_practical_validation_workspace() -> None:
 
     render_pv_step_rail(
         [
-            {"marker": "1", "title": "후보 / 검증 프로필 확인", "detail": "Source + risk threshold", "tone": "neutral"},
-            {"marker": "2", "title": "실전 검증 실행", "detail": "Runtime replay", "tone": "warning"},
+            {"marker": "1", "title": "후보 Source 확인", "detail": "Source snapshot", "tone": "neutral"},
+            {"marker": "2", "title": "검증 기준 / 재검증 실행", "detail": "Profile + runtime replay", "tone": "warning"},
             {"marker": "3", "title": "검증 결론", "detail": "Conclusion summary", "tone": "neutral"},
             {"marker": "4", "title": "근거 Workbench", "detail": "Evidence + provider actions", "tone": "neutral"},
             {"marker": "5", "title": "저장 / Final Review 이동", "detail": "Handoff", "tone": "neutral"},
@@ -2349,23 +2352,24 @@ def render_practical_validation_workspace() -> None:
     with st.container(border=True):
         render_pv_section_header(
             eyebrow="Flow 1",
-            title="후보 / 검증 프로필 확인",
-            detail="Practical Validation이 읽는 current selection source와 검증 기준을 한 번에 확인합니다.",
+            title="후보 Source 확인",
+            detail="Backtest Analysis에서 넘어온 current selection source와 저장된 백테스트 근거를 확인합니다.",
             tone="neutral",
         )
         _render_backtest_entry_gate_review_queue(source)
         _render_source_summary(source)
-        st.markdown("##### 검증 프로필")
-        st.caption("프로필은 검증을 생략하는 옵션이 아니라, 어떤 위험을 더 엄격하게 볼지 정하는 기준입니다.")
-        validation_profile = _render_validation_profile_form()
 
     with st.container(border=True):
         render_pv_section_header(
             eyebrow="Flow 2",
-            title="실전 검증 실행",
-            detail="Final Review 준비 상태의 Latest Runtime Replay를 해소하는 실행 지점입니다.",
+            title="검증 기준 설정 / 실전 재검증 실행",
+            detail="Final Review 이동 전 적용할 판정 기준을 고르고 Latest Runtime Replay를 해소합니다.",
             tone="warning",
         )
+        st.markdown("##### 검증 기준")
+        validation_profile = _render_validation_profile_form()
+        st.divider()
+        st.markdown("##### 실전 재검증 실행")
         replay_result = _render_actual_replay_panel(source)
 
     validation_result = build_practical_validation_result(

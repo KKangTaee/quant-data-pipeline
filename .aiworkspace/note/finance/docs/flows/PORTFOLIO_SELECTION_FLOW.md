@@ -80,9 +80,9 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
 - Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.
 - Practical Validation은 source traits와 validation profile을 함께 읽어 필수 검증, 조건부 / 전략별 검증, 후속 참고 검증을 분리하고, 이 결과를 `practical_validation_workspace` read model로 묶어 화면이 바로 읽을 수 있게 한다.
-- Practical Validation은 5-flow로 읽는다: `후보 / 검증 프로필 확인`, `실전 검증 실행`, `검증 결론`, `근거 Workbench`, `저장 / Final Review 이동`.
+- Practical Validation은 5-flow로 읽는다: `후보 Source 확인`, `검증 기준 설정 / 실전 재검증 실행`, `검증 결론`, `근거 Workbench`, `저장 / Final Review 이동`.
 - Flow 1은 Backtest Analysis가 넘긴 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 보여주고, summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history로 원래 백테스트 근거와 구성 방식을 확인하게 한다.
-- 기존 source처럼 selection history snapshot이 없는 기록은 Flow 2 `실전 검증 실행`에서 최신 runtime replay를 실행하면 가능한 범위에서 replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
+- Flow 2는 검증 프로필을 먼저 고른 뒤 최신 runtime replay를 실행하는 지점이다. 기존 source처럼 selection history snapshot이 없는 기록은 Flow 2에서 최신 runtime replay를 실행하면 가능한 범위에서 replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
 - Flow 3 `검증 결론`은 Final Review 이동 가능 / 보류와 카테고리별 `통과 / 실패 / 확인 필요`만 compact하게 보여주는 first-read surface다. 이 surface는 `workspace_panel.py`가 소유하고, `practical_validation_fix_queue` React component는 compatibility path를 유지하되 visible copy는 `검증 결론` / `카테고리별 검증 요약`으로 렌더링한다. `현재 문제 / 완료 기준 / 보강 위치`, 검증 모듈 table, raw status 상세는 Flow 4에서 확인한다. 저장 / 이동 button은 Flow 5가 소유하므로 Flow 3에는 만들지 않는다.
 - Practical Validation 기본 진입 화면은 저장된 CNN Fear & Greed / AAII sentiment overlay를 렌더링하지 않는다. 이 sentiment context는 검증 요소가 아니며, Final Review / Monitoring의 market backdrop으로만 읽는다.
 - Practical Validation의 각 step은 bordered surface로 분리해 step 경계를 명확히 보여준다.

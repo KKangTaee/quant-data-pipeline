@@ -8428,6 +8428,23 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("검증 모듈 / 기술 상세", flow3_body)
         self.assertIn("_react_criteria_group_items", panel_source)
 
+    def test_practical_validation_profile_belongs_to_flow2_execution_setup(self) -> None:
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        flow1_body = page_source.split('eyebrow="Flow 1"', 1)[1]
+        flow1_body = flow1_body.split('eyebrow="Flow 2"', 1)[0]
+        flow2_body = page_source.split('eyebrow="Flow 2"', 1)[1]
+        flow2_body = flow2_body.split('eyebrow="Flow 3"', 1)[0]
+
+        self.assertIn('title="후보 Source 확인"', flow1_body)
+        self.assertNotIn("_render_validation_profile_form()", flow1_body)
+        self.assertNotIn("##### 검증 프로필", flow1_body)
+        self.assertIn('title="검증 기준 설정 / 실전 재검증 실행"', flow2_body)
+        self.assertIn("##### 검증 기준", flow2_body)
+        self.assertLess(
+            flow2_body.index("_render_validation_profile_form()"),
+            flow2_body.index("_render_actual_replay_panel(source)"),
+        )
+
     def test_practical_validation_source_tables_are_arrow_safe_display_tables(self) -> None:
         import pyarrow as pa
 

@@ -5533,3 +5533,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - Flow 3 `먼저 해결할 일`은 `무엇을 검증했나 / 부족한 점 / 해야 할 일 / 왜 중요한가`를 먼저 보여주고, `NEEDS_INPUT` / `NOT_RUN`은 `기술 기준` tag로 낮춘다.
 - Flow 4는 `Final Review로 넘기기 전 확인 기준`으로 renamed / clarified됐고, 새 검증 단계가 아니라 Flow 3 결론의 기준 상세로 읽힌다.
 - Gate threshold, replay 실행, provider 수집, registry / saved JSONL, Final Review persistence, live approval / broker order / auto rebalance 경계는 바꾸지 않았다.
+
+## 2026-07-06 - Practical Validation Flow 1/2 Profile Placement
+
+- Practical Validation Flow 1을 `후보 Source 확인`으로 좁히고, 검증 프로필은 Flow 2 `검증 기준 설정 / 실전 재검증 실행` 상단으로 이동했다.
+- Flow 2는 `검증 기준 선택 -> 실전 재검증 실행` 순서로 읽히며, 세부 프로필 질문과 기준 카드는 접힌 상세로 낮췄다.
+- Replay, provider 수집, gate threshold, registry / saved JSONL, Final Review persistence 경계는 변경하지 않았다.

@@ -8539,3 +8539,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow 3은 실제로 Final Review 이동을 막는 이슈 큐가 되어야 하고, Flow 4는 Final Review로 넘기기 전 어떤 기준이 통과했고 무엇이 남았는지 요약해야 함.
 - Analysis result: 같은 evidence를 유지하되 first-read field를 `현재 문제 / 완료 기준 / 보강 위치 / 영향`과 `상태 / 통과한 기준 / 남은 문제 / 판정`으로 바꾸는 것이 가장 작고 안전하다.
 - Follow-up: workspace read model, Flow 3 React Fix Queue, Flow 4 criteria detail board를 issue / criteria status summary 계약으로 갱신했다. Gate policy, provider 수집, replay 실행, registry persistence, live approval / order boundary는 변경하지 않았다.
+
+### 2026-07-06 - 검증 프로필은 Flow 1 후보 확인이 아니라 Flow 2 실행 기준이다
+
+- User request: 사용자가 Practical Validation의 `검증 프로필`이 Flow 1 하단이 아니라 Flow 2 `실전검증실행`에 있어야 하는지 검토하고 진행을 승인함.
+- Interpreted goal: Flow 1은 Backtest에서 넘어온 source와 저장된 근거 확인에 집중하고, Flow 2는 검증 기준 선택과 latest runtime replay 실행을 함께 소유해야 함.
+- Analysis result: `validation_profile`은 `build_practical_validation_result()`에서 replay 결과와 함께 판정 기준으로 쓰이므로 후보 source 자체보다 검증 실행 기준에 가깝다.
+- Follow-up: Flow 1을 `후보 Source 확인`으로 정리하고, Flow 2 상단에 compact 검증 프로필 선택 / 세부 기준 조정 / 실전 재검증 실행 순서를 배치했다.
