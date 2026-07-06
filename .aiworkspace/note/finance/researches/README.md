@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-07-practical-validation-validation-audit/` | Practical Validation Flow 4를 Final Review 이동 기준 중심이 아니라 카테고리별 검증 결과 중심으로 재정리하기 위한 현행 module / gate / evidence 감사와 구현 가이드 |
 | `active/2026-06-futures-monitor-ui-benchmark/` | Workspace > Overview > Futures Monitor를 완성형 제품 UI로 재설계하기 위한 TradingView / Koyfin / IBKR / Datadog / Grafana / Stripe / Linear / Toss Securities 벤치마킹과 구현 가이드 |
 | `active/2026-06-market-context-visual-benchmark/` | Overview > Market Context를 카드 중심이 아닌 금융 UI pattern으로 재정리하기 위한 Koyfin / TradingView / OpenBB / Bloomberg 벤치마킹과 layout 선택지 |
 | `active/2026-06-backtest-analysis-commercial-ux/` | Backtest Analysis의 과도한 안내 / reference / readiness 흐름을 줄이고 상용형 backtest workbench UX로 재정리하기 위한 현재 제품 audit, 외부 benchmark, 단계별 개발 가이드 |

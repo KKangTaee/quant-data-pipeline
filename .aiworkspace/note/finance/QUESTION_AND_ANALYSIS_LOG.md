@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-06 - Practical Validation Flow 4는 카테고리별 검증 결과가 먼저다
+
+- User request: 사용자가 Flow 4에서 `Final Review로 넘기기 전 확인 기준`을 먼저 노출하는 것이 맞는지 재질문했고, 실제로는 카테고리별로 무엇을 검증했는지, 몇 개가 통과 / 실패했는지, 실패 항목이 무엇인지 보여주는 것이 맞지 않느냐고 지적함. 또한 Practical Validation 검증들이 신빙성 있고 과하지 않은지 리뷰하고 불필요한 검증은 제외하고 싶다고 요청함.
+- Interpreted goal: Practical Validation의 검증 category와 Final Review 이동 route 판단을 분리하고, core blocker / conditional evidence / review evidence / downstream reference를 다시 분류해야 함.
+- Analysis result: source, latest replay, benchmark parity, PIT / survivorship, price coverage, cost / liquidity는 core validation으로 유지해야 한다. 반면 stress / robustness, walk-forward / OOS / regime, construction risk, provider freshness, macro / sentiment는 후보 특성에 따라 review 또는 조건부로 낮춰야 하며, selected-route preflight는 검증 category가 아니라 Final Review handoff summary다.
+- Follow-up: `2026-07-practical-validation-validation-audit` research에 현행 module / board / gate audit과 다음 구현 가이드를 남겼다. 다음 개발은 Flow 4를 `카테고리별 검증 결과` 중심으로 재구성하고 Final Review 이동 요약을 보조 위치로 낮춘다.
+
 ### 2026-07-06 - Practical Validation Flow 3은 결론과 먼저 해결할 일만 먼저 보여준다
 
 - User request: 사용자가 Flow 3 화면이 정보는 많고 UI는 괜찮지만 1/2/3/4 번호 카드와 중복 결론 때문에 정리가 덜 된 느낌이라고 지적하고, Flow 3이 검증 결론 / 먼저 해결할 일을 노출하는 곳이라면 더 명확하고 간결하게 보여줄 수 있는지 분석 후 진행을 승인함.

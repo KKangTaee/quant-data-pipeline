@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Validation Audit:
+  - `.aiworkspace/note/finance/researches/active/2026-07-practical-validation-validation-audit/`에서 현재 Practical Validation module / board / gate 구조를 감사했다.
+  - 결론은 Flow 4 메인을 `Final Review로 넘기기 전 확인 기준`이 아니라 `카테고리별 검증 결과`로 바꾸고, Final Review 이동 가능성은 파생 handoff summary로 낮추는 것이다.
+  - 유지할 core blocker는 source / latest replay / benchmark / PIT / survivorship / cost / liquidity이고, stress / construction / provider / macro / sentiment는 후보 특성에 맞춰 review 또는 조건부로 낮추는 방향이다.
 - Practical Validation Issue Summary V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-issue-summary-v1-20260706/`에서 Flow 3 / Flow 4의 guide-like 설명을 issue / criteria summary 중심으로 다시 정리했다.
   - Flow 3 React Fix Queue는 `Final Review 이동을 막는 이슈`와 `현재 문제 / 완료 기준 / 보강 위치 / 영향`을 먼저 보여준다.
