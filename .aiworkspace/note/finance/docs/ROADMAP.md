@@ -1,17 +1,19 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-05
+Last Verified: 2026-07-06
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-entry-simplification-v1-20260705/`다.
+현재 active task는 없다.
 
-- 목적: Practical Validation 첫 진입 화면에서 Reference help와 context-only 시장 심리 overlay를 제거하고, 검증 상태 / 보강 action 중심의 흰색 직선형 surface로 정리한다.
-- 현재 범위: `app/web/backtest_practical_validation/page.py`, Practical Validation HTML/CSS helper, Fix Queue React component style, focused QA와 Browser QA.
-- 변경하지 않는 경계: sentiment service / loader 삭제, Final Review / Portfolio Monitoring sentiment context, registry / saved JSONL rewrite, provider 수집, validation threshold / gate policy 의미, live approval / broker order / auto rebalance.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-clarity-v1-20260706/`다.
+
+- 목적: Practical Validation Flow 3를 Final Review 이동 판단, 먼저 해결할 일, 근거 요약 중심의 단일 first-read surface로 정리했다.
+- 주요 변경: `app/web/backtest_practical_validation/page.py`의 Flow 3 control center 반복을 제거하고, `workspace_panel.py` / Practical Validation Fix Queue React component를 compact first-read surface로 정리했다.
+- 변경하지 않은 경계: validation threshold / gate policy 의미, registry / saved JSONL rewrite, provider 수집, replay 실행 로직, Final Review handoff persistence, live approval / broker order / auto rebalance.
 
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 

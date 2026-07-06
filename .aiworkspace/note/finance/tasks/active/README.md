@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-05
+Last Verified: 2026-07-06
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,15 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `practical-validation-taxonomy-roadmap-v1-20260705` | Active | Practical Validation V1 taxonomy / V2-V8 roadmap planning. No code implementation yet; current output is design, stage boundary, duplicate UI triage, and implementation direction. |
+| none | - | No active task after `practical-validation-flow3-clarity-v1-20260706` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-flow3-clarity-v1-20260706` | Completed record | Practical Validation Flow 3 first-read surface cleanup. Removed duplicate control center / alert / badge layers and made the React Fix Queue focus on Final Review movement judgment, first fix work, and compact evidence summary. |
+| `practical-validation-entry-simplification-v1-20260705` | Completed record | Practical Validation default entry removed contextual Reference help and context-only sentiment overlay, renamed the command center, and changed custom cards / Fix Queue React surfaces to white square surfaces. |
+| `practical-validation-taxonomy-roadmap-v1-20260705` | Completed record | Practical Validation V1-V8 taxonomy and implementation round. Workspace read model, 5-flow page, read-only React Fix Queue, Flow 3 workspace panel, normalized status display, and durable docs alignment were completed. |
 | `overview-legacy-dashboard-removal-v17-v24-20260625` | Completed record | `Workspace > Overview` V17-V24. Remaining helper ownership was moved into `app/web/overview/*_helpers.py`, `app/web/overview/legacy_dashboard.py` was deleted, and `overview_dashboard.py` now keeps explicit compatibility exports. QA passed with py_compile, Overview contract tests, legacy import scan, and Browser QA. |
 | `overview-tab-helper-extraction-v11-v16-20260625` | Completed record | `Workspace > Overview` V11-V16. Market Context, Events, Futures Macro, Market Movers, and Sentiment entry modules now call tab-local helper bridge modules instead of importing `legacy_dashboard.py` directly. |
 | `overview-legacy-cleanup-v6-v10-20260625` | Completed record | `Workspace > Overview` V6-V10. Navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |

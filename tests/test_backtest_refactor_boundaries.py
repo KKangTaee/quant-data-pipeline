@@ -222,6 +222,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn('"title": "2차 검증 결론 / Fix Queue"', render_body)
         self.assertIn('"title": "근거 Workbench"', render_body)
         self.assertIn('"title": "저장 / Final Review 이동"', render_body)
+        self.assertNotIn("_render_validation_control_center(", render_body)
         self.assertNotIn('"marker": "6"', render_body)
         self.assertNotIn('"marker": "7"', render_body)
 
@@ -241,6 +242,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("def render_practical_validation_workspace_overview", panel_source)
         self.assertIn('validation_result.get("practical_validation_workspace")', panel_source)
         self.assertIn("is_practical_validation_fix_queue_available()", panel_source)
+        self.assertNotIn("render_pv_alert_panel", panel_source)
+        self.assertNotIn("render_badge_strip", panel_source)
         self.assertNotIn("from app.web.backtest_practical_validation.page import", panel_source)
 
     def test_practical_validation_status_display_normalizes_raw_routes(self) -> None:

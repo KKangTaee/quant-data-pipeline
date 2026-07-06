@@ -53,41 +53,43 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
           },
         ]
   const coreGroups = props.coreGroups.length > 0 ? props.coreGroups : []
+  const visibleFixItems = fixItems.slice(0, 3)
+  const hiddenFixCount = Math.max(fixItems.length - visibleFixItems.length, 0)
+  const visibleCoreGroups = coreGroups.slice(0, 3)
+  const hiddenCoreGroupCount = Math.max(coreGroups.length - visibleCoreGroups.length, 0)
 
   return (
     <section className={`pv-react-fix pv-react-fix--${tone}`}>
       <header className="pv-react-fix__head">
         <div>
-          <div className="pv-react-fix__kicker">2차 검증 결론 / Fix Queue</div>
+          <div className="pv-react-fix__kicker">Final Review 이동 판단</div>
           <h4>{props.verdict}</h4>
           {props.nextAction ? <p>{props.nextAction}</p> : null}
         </div>
         <div className="pv-react-fix__status">
           <span>{props.statusLabel}</span>
           <b>{props.canSaveAndMove ? "Final Review 이동 가능" : "Final Review 이동 보류"}</b>
+          <small>{props.fixItems.length > 0 ? `먼저 해결 ${props.fixItems.length}` : "즉시 막는 항목 없음"}</small>
         </div>
       </header>
 
-      <div className="pv-react-fix__metrics">
-        <div className="pv-react-fix__metric">
-          <span>Fix Queue</span>
-          <b>{props.fixItems.length}</b>
-        </div>
-        <div className="pv-react-fix__metric">
-          <span>Review Items</span>
-          <b>{props.reviewCount}</b>
-        </div>
-        <div className="pv-react-fix__metric">
-          <span>Core Evidence</span>
-          <b>{coreGroups.length}</b>
-        </div>
+      <div className="pv-react-fix__summary" aria-label="검증 요약">
+        <span>
+          <b>{props.fixItems.length}</b> 먼저 해결
+        </span>
+        <span>
+          <b>{props.reviewCount}</b> Final Review 확인
+        </span>
+        <span>
+          <b>{coreGroups.length}</b> 근거 그룹
+        </span>
       </div>
 
       <div className="pv-react-fix__body">
         <section className="pv-react-fix__lane">
-          <div className="pv-react-fix__lane-title">먼저 해결할 항목</div>
+          <div className="pv-react-fix__lane-title">먼저 해결할 일</div>
           <div className="pv-react-fix__items">
-            {fixItems.map((item, index) => (
+            {visibleFixItems.map((item, index) => (
               <article
                 className={`pv-react-fix__item pv-react-fix__item--${toneClass(item.tone)}`}
                 key={`${item.label ?? "fix"}-${index}`}
@@ -101,13 +103,16 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                 {item.gateReason ? <em>{item.gateReason}</em> : null}
               </article>
             ))}
+            {hiddenFixCount > 0 ? (
+              <div className="pv-react-fix__more">나머지 {hiddenFixCount}개는 기술 상세에서 이어서 확인합니다.</div>
+            ) : null}
           </div>
         </section>
 
         <section className="pv-react-fix__lane">
-          <div className="pv-react-fix__lane-title">핵심 근거 그룹</div>
+          <div className="pv-react-fix__lane-title">근거 요약</div>
           <div className="pv-react-fix__groups">
-            {coreGroups.map((group, index) => (
+            {visibleCoreGroups.map((group, index) => (
               <article
                 className={`pv-react-fix__group pv-react-fix__group--${toneClass(group.tone)}`}
                 key={`${group.label ?? "core"}-${index}`}
@@ -122,6 +127,9 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                 ) : null}
               </article>
             ))}
+            {hiddenCoreGroupCount > 0 ? (
+              <div className="pv-react-fix__more">추가 근거 그룹 {hiddenCoreGroupCount}개는 Flow 4에서 확인합니다.</div>
+            ) : null}
             {coreGroups.length === 0 ? (
               <article className="pv-react-fix__group pv-react-fix__group--neutral">
                 <div>

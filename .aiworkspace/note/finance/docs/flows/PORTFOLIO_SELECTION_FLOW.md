@@ -83,7 +83,7 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 - Practical Validation은 5-flow로 읽는다: `후보 / 검증 프로필 확인`, `실전 검증 실행`, `2차 검증 결론 / Fix Queue`, `근거 Workbench`, `저장 / Final Review 이동`.
 - Flow 1은 Backtest Analysis가 넘긴 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 보여주고, summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history로 원래 백테스트 근거와 구성 방식을 확인하게 한다.
 - 기존 source처럼 selection history snapshot이 없는 기록은 Flow 2 `실전 검증 실행`에서 최신 runtime replay를 실행하면 가능한 범위에서 replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
-- Flow 3 `2차 검증 결론 / Fix Queue`는 Final Review 이동 가능 여부, blocker / review queue, core evidence groups를 먼저 보여주는 first-read surface다. 이 surface는 `workspace_panel.py`가 소유하고, `practical_validation_fix_queue` React component는 read-only 카드로 Fix Queue와 핵심 근거만 보여준다.
+- Flow 3 `2차 검증 결론 / Fix Queue`는 Final Review 이동 가능 여부, 먼저 해결할 blocker, compact evidence summary를 먼저 보여주는 first-read surface다. 이 surface는 `workspace_panel.py`가 소유하고, `practical_validation_fix_queue` React component는 read-only 카드로 Final Review 이동 판단 / top fix items / 근거 요약만 보여준다.
 - Practical Validation 기본 진입 화면은 저장된 CNN Fear & Greed / AAII sentiment overlay를 렌더링하지 않는다. 이 sentiment context는 검증 요소가 아니며, Final Review / Monitoring의 market backdrop으로만 읽는다.
 - Practical Validation의 각 step은 bordered surface로 분리해 step 경계를 명확히 보여준다.
 - Flow 4 `근거 Workbench`는 검증 근거 보드, Applied Validation Map, Provider Action Center, Look-through Board, Robustness Lab, detailed diagnostics를 담는다. 화면 board는 검증 module과 1:1 개념이 아니므로 module gate와 evidence board를 분리해서 읽는다.

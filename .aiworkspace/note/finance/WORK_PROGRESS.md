@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow 3 Clarity V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-clarity-v1-20260706/`에서 Flow 3 중복 요약을 정리했다.
+  - Flow 3의 별도 validation control center와 alert / badge 반복을 제거하고, React Fix Queue를 `Final Review 이동 판단 -> 먼저 해결할 일 -> 근거 요약` first-read surface로 바꿨다.
+  - Validation gate / registry / provider 수집 / Final Review handoff persistence / live approval 경계는 변경하지 않았다.
 - Practical Validation Entry Simplification V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-entry-simplification-v1-20260705/`에서 Practical Validation 첫 진입 화면을 정리했다.
   - 기본 진입에서 Reference help와 context-only 시장 심리 overlay를 제거하고, command title을 `Final Review 이동 전 검증 상태`로 바꿨다.

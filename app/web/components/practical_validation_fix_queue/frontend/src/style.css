@@ -10,8 +10,9 @@ body {
 .pv-react-fix {
   --accent: #475569;
   --soft: rgba(71, 85, 105, 0.08);
+  --surface: rgba(71, 85, 105, 0.05);
   --border: rgba(148, 163, 184, 0.25);
-  background: #ffffff;
+  background: linear-gradient(90deg, var(--surface) 0%, #ffffff 36%, #ffffff 100%);
   border-left: 4px solid var(--accent);
   border-radius: 0;
   border-bottom: 1px solid var(--border);
@@ -23,16 +24,19 @@ body {
 .pv-react-fix--positive {
   --accent: #0f8f83;
   --soft: rgba(15, 143, 131, 0.1);
+  --surface: rgba(15, 143, 131, 0.08);
 }
 
 .pv-react-fix--warning {
   --accent: #b45309;
   --soft: rgba(180, 83, 9, 0.1);
+  --surface: rgba(180, 83, 9, 0.08);
 }
 
 .pv-react-fix--danger {
   --accent: #b42318;
   --soft: rgba(180, 35, 24, 0.1);
+  --surface: rgba(180, 35, 24, 0.08);
 }
 
 .pv-react-fix__head {
@@ -44,7 +48,7 @@ body {
 
 .pv-react-fix__kicker,
 .pv-react-fix__lane-title,
-.pv-react-fix__metric span {
+.pv-react-fix__summary span {
   color: var(--accent);
   font-size: 0.84rem;
   font-weight: 850;
@@ -74,7 +78,8 @@ body {
 }
 
 .pv-react-fix__status span,
-.pv-react-fix__status b {
+.pv-react-fix__status b,
+.pv-react-fix__status small {
   display: block;
   line-height: 1.35;
 }
@@ -89,26 +94,33 @@ body {
   margin-top: 0.16rem;
 }
 
-.pv-react-fix__metrics {
-  display: grid;
-  gap: 0.58rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 0.95rem;
+.pv-react-fix__status small {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 750;
+  margin-top: 0.22rem;
 }
 
-.pv-react-fix__metric {
-  background: var(--soft);
+.pv-react-fix__summary {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--border);
   border-radius: 0;
-  padding: 0.62rem 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.95rem;
+  padding: 0.52rem 0.68rem;
 }
 
-.pv-react-fix__metric b {
-  color: #243042;
-  display: block;
-  font-size: 1.12rem;
-  line-height: 1.3;
-  margin-top: 0.1rem;
+.pv-react-fix__summary span {
+  color: #64748b;
+}
+
+.pv-react-fix__summary b {
+  color: var(--accent);
+  font-size: 0.95rem;
+  margin-right: 0.18rem;
 }
 
 .pv-react-fix__body {
@@ -195,10 +207,20 @@ body {
   font-style: normal;
 }
 
+.pv-react-fix__more {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px dashed var(--border);
+  border-radius: 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.4;
+  padding: 0.55rem 0.68rem;
+}
+
 @media (max-width: 760px) {
   .pv-react-fix__head,
-  .pv-react-fix__body,
-  .pv-react-fix__metrics {
+  .pv-react-fix__body {
     display: grid;
     grid-template-columns: 1fr;
   }

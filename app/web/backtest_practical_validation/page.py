@@ -954,124 +954,6 @@ def _board_summary_cards(validation_result: dict[str, Any], board_ids: list[str]
     return cards
 
 
-def _replay_status_from_result(replay_result: dict[str, Any] | None) -> str:
-    if not isinstance(replay_result, dict) or not replay_result:
-        return "NOT_RUN"
-    return str(replay_result.get("status") or "NOT_RUN")
-
-
-def _render_validation_control_center(
-    *,
-    source: dict[str, Any],
-    validation_result: dict[str, Any],
-    replay_result: dict[str, Any] | None,
-) -> None:
-    gate = dict(validation_result.get("final_review_gate") or {})
-    profile = dict(validation_result.get("validation_profile") or {})
-    summary = dict(validation_result.get("validation_module_summary") or {})
-    traits = dict(validation_result.get("source_traits") or {})
-    status_counts = dict(summary.get("status_counts") or {})
-    replay_status = _replay_status_from_result(replay_result)
-    render_pv_command_center(
-        eyebrow="Decision control",
-        title="Practical Validation Control Center",
-        detail=(
-            "후보, 검증 프로필, 최신 재검증, Final Review 준비 상태를 한 번에 확인합니다. "
-            "아래 Fix Queue에 남은 항목이 없으면 저장 후 Final Review로 이동할 수 있습니다."
-        ),
-        route_label="Final Review Readiness",
-        route_value=validation_status_label(gate.get("route")),
-        route_detail=str(gate.get("verdict") or gate.get("next_action") or ""),
-        route_tone=_status_tone(gate.get("route")),
-        kpis=[
-            {
-                "label": "Candidate",
-                "value": source.get("source_title") or source.get("selection_source_id") or "-",
-                "detail": f"{traits.get('active_component_count', 0)} components",
-            },
-            {
-                "label": "Profile",
-                "value": profile.get("profile_label") or "-",
-                "detail": "Threshold policy",
-            },
-            {
-                "label": "Latest Replay",
-                "value": replay_status,
-                "detail": "Required gate input",
-            },
-            {
-                "label": "Module Health",
-                "value": f"PASS {status_counts.get('PASS', 0)} / REVIEW {status_counts.get('REVIEW', 0)}",
-                "detail": f"NEEDS_INPUT {status_counts.get('NEEDS_INPUT', 0)} / NOT_RUN {status_counts.get('NOT_RUN', 0)}",
-            },
-        ],
-    )
-    render_pv_step_rail(
-        [
-            {
-                "marker": "1",
-                "title": "Source",
-                "detail": source.get("source_title") or source.get("selection_source_id") or "-",
-                "tone": "positive",
-            },
-            {
-                "marker": "2",
-                "title": "Profile",
-                "detail": profile.get("profile_label") or "-",
-                "tone": "neutral",
-            },
-            {
-                "marker": "3",
-                "title": "Latest Replay",
-                "detail": replay_status,
-                "tone": _status_tone(replay_status),
-            },
-            {
-                "marker": "4",
-                "title": "Readiness Preview",
-                "detail": validation_status_label(gate.get("route")),
-                "tone": _status_tone(gate.get("route")),
-            },
-        ]
-    )
-    render_pv_card_grid(
-        [
-            {
-                "kicker": "Candidate Traits",
-                "title": " / ".join(
-                    label
-                    for label, enabled in [
-                        ("ETF-like", traits.get("is_etf_like")),
-                        ("Tactical", traits.get("is_tactical")),
-                        ("Weighted Mix", traits.get("is_weighted_mix")),
-                        ("Factor", traits.get("is_factor_equity")),
-                    ]
-                    if enabled
-                )
-                or "Basic",
-                "status": f"{traits.get('active_component_count', 0)} components",
-                "detail": f"{traits.get('symbol_count', 0)} symbols, weight total {traits.get('target_weight_total', 0)}%",
-                "tone": "neutral",
-            },
-            {
-                "kicker": "Module Health",
-                "title": "Required / Conditional checks",
-                "status": f"PASS {status_counts.get('PASS', 0)} / REVIEW {status_counts.get('REVIEW', 0)}",
-                "detail": f"NEEDS_INPUT {status_counts.get('NEEDS_INPUT', 0)}, NOT_RUN {status_counts.get('NOT_RUN', 0)}",
-                "tone": "warning" if status_counts.get("NEEDS_INPUT") or status_counts.get("NOT_RUN") else "positive",
-            },
-            {
-                "kicker": "Gate",
-                "title": validation_status_label(gate.get("route")),
-                "status": "Move enabled" if gate.get("can_save_and_move") else "Move blocked",
-                "detail": gate.get("verdict") or "",
-                "tone": "positive" if gate.get("can_save_and_move") else "danger",
-            },
-        ],
-        min_width=230,
-    )
-
-
 def _validation_board_row(validation_result: dict[str, Any], board_id: str) -> dict[str, Any]:
     target = str(board_id or "").strip()
     for row in list(validation_result.get("validation_board_display_rows") or []):
@@ -2289,11 +2171,6 @@ def render_practical_validation_workspace() -> None:
             title="2차 검증 결론 / Fix Queue",
             detail="이동 가능 여부, 차단 항목, 핵심 근거 그룹을 workspace read model 기준으로 먼저 확인합니다.",
             tone=_status_tone(dict(validation_result.get("final_review_gate") or {}).get("route")),
-        )
-        _render_validation_control_center(
-            source=source,
-            validation_result=validation_result,
-            replay_result=replay_result,
         )
         render_practical_validation_workspace_overview(validation_result)
         with st.expander("검증 모듈 / 기술 상세", expanded=False):

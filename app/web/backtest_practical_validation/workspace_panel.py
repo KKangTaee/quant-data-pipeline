@@ -5,7 +5,6 @@ from typing import Any
 import streamlit as st
 
 from app.web.backtest_practical_validation.components import (
-    render_pv_alert_panel,
     render_pv_card_grid,
     render_pv_section_header,
 )
@@ -13,7 +12,6 @@ from app.web.backtest_practical_validation.status_display import (
     validation_status_label,
     validation_status_tone,
 )
-from app.web.backtest_ui_components import render_badge_strip
 from app.web.components.practical_validation_fix_queue import (
     is_practical_validation_fix_queue_available,
     render_practical_validation_fix_queue,
@@ -199,39 +197,6 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
     downstream_groups = list(workspace.get("downstream_reference_groups") or [])
     readiness_status = validation_status_label(gate_summary.get("route"))
 
-    render_pv_alert_panel(
-        title="2차 검증 결론",
-        detail=(
-            f"{gate_summary.get('verdict') or ''} "
-            f"{gate_summary.get('next_action') or ''}"
-        ).strip()
-        or "Practical Validation workspace가 gate와 evidence group을 요약합니다.",
-        tone="positive" if gate_summary.get("can_save_and_move") else "danger",
-    )
-    render_badge_strip(
-        [
-            {
-                "label": "Readiness",
-                "value": readiness_status,
-                "tone": validation_status_tone(gate_summary.get("route")),
-            },
-            {
-                "label": "Final Review Move",
-                "value": "Enabled" if gate_summary.get("can_save_and_move") else "Blocked",
-                "tone": "positive" if gate_summary.get("can_save_and_move") else "danger",
-            },
-            {
-                "label": "Fix Queue",
-                "value": len(fix_queue),
-                "tone": "danger" if fix_queue else "positive",
-            },
-            {
-                "label": "Review Items",
-                "value": gate_summary.get("review_count", 0),
-                "tone": "warning" if gate_summary.get("review_count") else "neutral",
-            },
-        ]
-    )
     if is_practical_validation_fix_queue_available():
         render_practical_validation_fix_queue(
             status_label=readiness_status,

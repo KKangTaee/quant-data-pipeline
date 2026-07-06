@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-06 - Practical Validation Flow 3은 결론과 먼저 해결할 일만 먼저 보여준다
+
+- User request: 사용자가 Flow 3 화면이 정보는 많고 UI는 괜찮지만 1/2/3/4 번호 카드와 중복 결론 때문에 정리가 덜 된 느낌이라고 지적하고, Flow 3이 검증 결론 / 먼저 해결할 일을 노출하는 곳이라면 더 명확하고 간결하게 보여줄 수 있는지 분석 후 진행을 승인함.
+- Interpreted goal: Flow 3은 source/profile/replay/context 요약을 반복하는 곳이 아니라 Final Review 이동 가능 여부, 막는 blocker, 먼저 해결할 action을 바로 읽는 first-read surface여야 함.
+- Analysis result: 기존 `page.py` control center, `workspace_panel.py` alert / badge strip, React Fix Queue가 같은 결론을 세 번 반복해 hierarchy가 흐려졌다. Flow 3은 workspace read model과 React component 한 층으로 단일화하고 상세 근거는 Flow 4 / 기술 상세로 낮추는 것이 맞다.
+- Follow-up: `practical-validation-flow3-clarity-v1-20260706`에서 Flow 3 control center와 alert / badge 반복을 제거하고 React Fix Queue를 `Final Review 이동 판단`, `먼저 해결할 일`, `근거 요약` 구조로 정리했다.
+
 ### 2026-07-05 - Practical Validation 첫 진입은 검증 상태만 먼저 보여준다
 
 - User request: 사용자가 Practical Validation 탭의 Reference help, `검증 근거를 위한 후보 통제 화면`, 시장 심리 overlay, 검은 둥근 카드가 실제 검증 흐름에 필요한지 묻고 단계적으로 정리하자고 요청함.
