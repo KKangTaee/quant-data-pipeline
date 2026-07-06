@@ -1,6 +1,6 @@
 # Backtest Strategy Detail React V1 Status
 
-Status: Active
+Status: Done
 Started: 2026-07-07
 
 ## Why
@@ -20,3 +20,4 @@ Quality / Value strict strategy 화면에서 Price Freshness Preflight React com
 - 2026-07-07: 0차 Price Freshness Preflight blank iframe hotfix implemented and Browser QA passed.
 - 2026-07-07: 1차 strategy detail read-model implemented and focused service tests passed.
 - 2026-07-07: 2차 React Strategy Detail Panel implemented, wired into Single Strategy, and Browser QA passed.
+- 2026-07-07: 3차 durable docs / root handoff / final verification completed.

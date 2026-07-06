@@ -8560,3 +8560,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow 1은 Backtest에서 넘어온 source와 저장된 근거 확인에 집중하고, Flow 2는 검증 기준 선택과 latest runtime replay 실행을 함께 소유해야 함.
 - Analysis result: `validation_profile`은 `build_practical_validation_result()`에서 replay 결과와 함께 판정 기준으로 쓰이므로 후보 source 자체보다 검증 실행 기준에 가깝다.
 - Follow-up: Flow 1을 `후보 Source 확인`으로 정리하고, Flow 2 상단에 compact 검증 프로필 선택 / 세부 기준 조정 / 실전 재검증 실행 순서를 배치했다.
+
+### 2026-07-07 - Strategy 선택 직후 상세와 strict preflight blank block을 정리한다
+
+- User request: 사용자가 Quality Snapshot에서 Price Freshness Preflight 영역이 빈 네모 블럭으로 반짝이고, 전략 선택 후 상세보기 영역도 React component 형태로 더 시각적으로 개선하길 요청함.
+- Interpreted goal: 먼저 blank React component의 실제 원인을 고치고, 전략별 advanced input / preflight 차이를 입력 state를 건드리지 않는 read-only detail panel로 정리해야 함.
+- Analysis result: Price Freshness Preflight component build가 root `/assets/...` path를 사용해 Streamlit iframe 안에서 JS MIME error가 났다. 전략 상세는 family variant별로 annual strict / quarterly prototype / ETF price-only capability가 달라 Python read model에서 먼저 구조화하는 것이 안전했다.
+- Follow-up: Preflight Vite build를 relative asset으로 고치고, `app/services/backtest_strategy_detail.py` + `app/web/components/backtest_strategy_detail_panel/`을 추가했다. Form controls / execution / registry / Practical Validation gate는 기존 경계를 유지한다.

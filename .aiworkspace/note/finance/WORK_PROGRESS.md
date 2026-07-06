@@ -5548,3 +5548,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - Practical Validation Flow 1을 `후보 Source 확인`으로 좁히고, 검증 프로필은 Flow 2 `검증 기준 설정 / 실전 재검증 실행` 상단으로 이동했다.
 - Flow 2는 `검증 기준 선택 -> 실전 재검증 실행` 순서로 읽히며, 세부 프로필 질문과 기준 카드는 접힌 상세로 낮췄다.
 - Replay, provider 수집, gate threshold, registry / saved JSONL, Final Review persistence 경계는 변경하지 않았다.
+
+## 2026-07-07 - Backtest Strategy Detail React V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707/`에서 Quality / Value strict Price Freshness Preflight blank iframe을 수정했다.
+- Single Strategy 선택 직후 `app/services/backtest_strategy_detail.py` read model과 `app/web/components/backtest_strategy_detail_panel/` React panel로 strategy / variant 상세를 먼저 보여준다.
+- 실제 form input, backtest execution, registry / saved JSONL, Practical Validation gate policy는 변경하지 않았다.

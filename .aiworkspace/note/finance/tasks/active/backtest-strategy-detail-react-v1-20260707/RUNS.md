@@ -29,3 +29,9 @@ Commands and QA evidence will be appended per task.
 - Compile: `.venv/bin/python -m py_compile app/services/backtest_strategy_detail.py app/web/backtest_single_strategy.py app/web/backtest_single_forms/__init__.py app/web/components/backtest_strategy_detail_panel/component.py` completed successfully.
 - Browser QA: Selenium confirmed `Strategy Detail` panel renders for Equal Weight and Quality Strict Annual, Quality includes `Run Strict Annual Quality Backtest`, and Price Freshness Preflight still renders. No component asset MIME errors were logged.
 - Screenshot: `backtest-strategy-detail-panel-qa.png` generated locally and not intended for commit.
+
+## 2026-07-07 3차 Documentation Sync / Final Verification
+
+- Docs: updated durable project map, script structure map, Backtest UI flow, roadmap/index, task status, and root handoff logs.
+- Final verification: 7 focused `BacktestCandidateAnalysisHardeningTests` passed, relevant modules passed `py_compile`, and `git diff --check` passed.
+- `git status --short` shows only intended tracked documentation updates plus pre-existing generated local artifacts / QA screenshots left uncommitted.

@@ -55,6 +55,8 @@ Last Verified: 2026-07-06
 | Finance workspace path constants | `app/workspace_paths.py` |
 | Backtest page | `app/web/backtest_page.py` |
 | Backtest workflow state boundary | `app/web/backtest_state.py` |
+| Backtest Single Strategy detail read model service | `app/services/backtest_strategy_detail.py` |
+| Backtest Strategy Detail React component | `app/web/components/backtest_strategy_detail_panel/` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
 | Single Backtest payload normalization service | `app/services/backtest_single_payload.py` |
 | Manual Compare execution service | `app/services/backtest_compare_execution.py` |
@@ -62,6 +64,7 @@ Last Verified: 2026-07-06
 | Runtime runner ownership catalog | `app/runtime/backtest/runner_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
 | Backtest Data Trust price refresh service | `app/services/backtest_price_refresh.py` |
+| Backtest strict price freshness preflight React component | `app/web/components/backtest_price_freshness_preflight/` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |

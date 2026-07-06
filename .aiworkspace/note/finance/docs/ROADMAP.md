@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-06
+Last Verified: 2026-07-07
 
 ## Current State After Master Merge
 
@@ -9,13 +9,19 @@ Last Verified: 2026-07-06
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-labels-v1-20260706/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707/`다.
+
+- 목적: Quality / Value strict strategy의 blank Price Freshness Preflight React block을 고치고, 전략 선택 직후 전략별 advanced input / preflight 차이를 read-only React detail panel로 먼저 읽게 했다.
+- 주요 변경: price freshness preflight component Vite asset path를 relative build로 보정했다. `app/services/backtest_strategy_detail.py`가 strategy / variant detail read model을 만들고, `app/web/components/backtest_strategy_detail_panel/`이 Single Strategy form 위에 summary / inputs / advanced sections / preflight sections를 렌더링한다.
+- 이번 차수에서 하지 않은 일: actual form controls React 이관, strategy runtime / result bundle / registry / saved JSONL / Practical Validation gate policy 변경, provider 수집 로직 변경, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-labels-v1-20260706/`다.
 
 - 목적: Practical Validation Flow 4가 내부 `Workbench` / audit taxonomy가 아니라 사용자가 찾을 수 있는 `검증 기준 상세` 화면으로 읽히게 했다.
 - 주요 변경: Flow 4 title을 `검증 기준 상세`으로 바꾸고, category title emphasis를 강화했으며, `보강 위치`를 `검증 기준 상세 · 데이터 품질 / Provider 보강`, `검증 기준 상세 · 검증 강도 / 강건성`, `Flow 2 · 실전 재검증 실행` 같은 화면 기준 위치명으로 통일했다.
 - 이번 차수에서 하지 않은 일: validation threshold 변경, replay 실행 로직 변경, provider 수집 로직 변경, registry / saved JSONL rewrite, Final Review selected-route 정책 변경, live approval / broker order / auto rebalance 의미 추가.
 
-Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-conclusion-summary-v1-20260706/`다.
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-conclusion-summary-v1-20260706/`다.
 
 - 목적: Practical Validation Flow 3을 Fix Queue / 보강 가이드가 아니라 `검증 결론` compact summary로 읽히게 했다.
 - 주요 변경: Flow 3은 Final Review 이동 가능 / 보류와 카테고리별 통과 / 실패 / 확인 필요만 요약한다. `현재 문제 / 완료 기준 / 보강 위치` 같은 상세 설명과 검증 모듈 기술 상세는 Flow 4로 이동했다. 반복 안전 문구도 Flow 3 React surface에서 제거했다.
