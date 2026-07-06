@@ -10,6 +10,7 @@ from finance.data.market_intelligence import (
     load_market_liquidity_universe_candidate_symbols,
     load_market_universe_members,
     load_nasdaq_symbol_directory_universe_members,
+    upsert_market_symbol_aliases,
 )
 
 from app.jobs.ingestion_jobs import (
@@ -183,6 +184,81 @@ def _normalize_action_symbols(symbols: Iterable[str]) -> list[str]:
         seen.add(value)
         normalized.append(value)
     return normalized
+
+
+def _normalize_symbol_alias_candidates(candidates: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for row in candidates:
+        source_symbol = str(row.get("source_symbol") or row.get("symbol") or "").strip().upper()
+        alias_symbol = str(row.get("alias_symbol") or "").strip().upper()
+        if not source_symbol or not alias_symbol or source_symbol == alias_symbol:
+            continue
+        key = (source_symbol, alias_symbol)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(
+            {
+                **dict(row),
+                "source_symbol": source_symbol,
+                "symbol": source_symbol,
+                "alias_symbol": alias_symbol,
+                "alias_type": str(row.get("alias_type") or "ticker_change"),
+                "status": "active",
+            }
+        )
+    return normalized
+
+
+def run_overview_market_symbol_alias_repair(
+    *,
+    universe_code: str,
+    candidates: Iterable[dict[str, Any]],
+) -> JobResult:
+    """Apply reviewed ticker-change aliases for Market Movers quote repair."""
+    normalized_universe = str(universe_code or "SP500").strip().upper()
+    started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    rows = _normalize_symbol_alias_candidates(candidates)
+    if not rows:
+        return {
+            "job_name": "overview_market_symbol_alias_repair",
+            "status": "failed",
+            "started_at": started_at,
+            "finished_at": started_at,
+            "rows_written": 0,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "failed_symbols": [],
+            "message": "적용할 티커 변경 후보가 없습니다.",
+            "details": {
+                "universe_code": normalized_universe,
+                "target_table": "finance_meta.market_symbol_alias",
+                "next_action": "후보를 다시 확인한 뒤 일중 스냅샷을 갱신하세요.",
+            },
+        }
+    rows_written = upsert_market_symbol_aliases(rows, status="active", applied_at=started_at)
+    finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    source_symbols = [row["source_symbol"] for row in rows]
+    alias_pairs = [f"{row['source_symbol']}->{row['alias_symbol']}" for row in rows]
+    return {
+        "job_name": "overview_market_symbol_alias_repair",
+        "status": "success" if rows_written else "failed",
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "rows_written": rows_written,
+        "symbols_requested": len(rows),
+        "symbols_processed": rows_written,
+        "failed_symbols": [] if rows_written else source_symbols,
+        "message": f"티커 변경 복구 {rows_written}건을 적용했습니다. 이제 일중 스냅샷을 다시 갱신하세요.",
+        "details": {
+            "universe_code": normalized_universe,
+            "alias_pairs": alias_pairs,
+            "target_table": "finance_meta.market_symbol_alias",
+            "next_action": "일중 스냅샷 갱신",
+            "purpose": "Market Movers quote lookup should use active replacement ticker while keeping universe symbols stable.",
+        },
+    }
 
 
 def _load_market_movers_eod_universe_symbols(*, universe_code: str, universe_limit: int) -> tuple[list[str], str]:

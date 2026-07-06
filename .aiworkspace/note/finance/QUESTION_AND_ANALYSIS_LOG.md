@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-07 - Market Movers ticker-change gaps should be repaired by explicit alias application
+
+- User request: Top1000 / Top2000에서 `SATS`, `VSCO`처럼 ticker 변경 때문에 quote 누락이 생길 때마다 수동 조사 없이 해결할 기능을 1차~5차로 개발해 달라고 요청함.
+- Interpreted goal: `유니버스 기준 갱신`에 무거운 자동 조사를 숨기지 않고, missing quote row에서 replacement ticker 후보를 감지한 뒤 사용자가 명시적으로 적용하고 snapshot을 다시 갱신하는 workflow가 필요하다.
+- Analysis result: `market_symbol_alias`는 candidate / active alias를 저장한다. Active alias는 future intraday quote lookup ticker만 바꾸며, universe symbol identity는 유지하고 `market_intraday_snapshot.quote_symbol`에 근거를 남긴다.
+- Follow-up: candidate-only 버튼은 current DB에 후보가 있을 때만 나타난다. 적용 후에도 반드시 `일중 스냅샷 갱신`을 다시 실행해야 누락 row가 제거된다.
+
 ### 2026-07-06 - Futures Macro past-check should be an on-screen section, not only a code component
 
 - User request: 사용자가 `과거 점검`을 React 파일로만 분리한 것이 아니라, 예시처럼 화면에서도 독립 박스 섹션으로 관리할 수 있는지 확인하고 진행을 승인함.

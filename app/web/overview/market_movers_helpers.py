@@ -17,6 +17,7 @@ from app.jobs.overview_actions import (
     run_overview_market_intraday_snapshot,
     run_overview_market_liquidity_universe_refresh,
     run_overview_market_mover_statement_refresh,
+    run_overview_market_symbol_alias_repair,
     run_overview_nasdaq_symbol_directory,
     run_overview_quote_gap_diagnostics,
     run_overview_sp500_universe,
@@ -470,6 +471,7 @@ def _market_movers_react_trust_panel_config(snapshot: dict[str, Any]) -> dict[st
         "detail": _market_movers_trust_text_ko(model.get("detail")),
         "items": _market_movers_react_trust_items_ko([dict(item) for item in list(model.get("items") or [])]),
         "warnings": _market_movers_react_trust_warnings(snapshot),
+        "ticker_alias_candidates": _market_movers_records(snapshot.get("ticker_alias_candidates")),
         "grouped_rows": _market_movers_react_grouped_rows_ko(grouped_rows),
         "group_columns": [TRUST_GROUP_COLUMNS_KO[column] for column in COVERAGE_TRUST_GROUP_COLUMNS],
         "empty_text": "현재 선택 조건에서 그룹 누락 진단으로 묶을 행이 없습니다.",
@@ -662,11 +664,17 @@ def build_market_movers_unified_summary_model(
     }
 
 
-def _market_movers_react_actions(*, controls: MarketMoverControls) -> list[dict[str, Any]]:
+def _market_movers_ticker_alias_session_key(coverage: str) -> str:
+    return f"overview_market_movers_ticker_alias_candidates_{str(coverage or '').strip().upper()}"
+
+
+def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     if controls.period == "daily":
         actions: list[dict[str, Any]] = [
             {"id": "refresh_intraday", "label": "일중 스냅샷 갱신", "kind": "primary"},
         ]
+        if snapshot.get("ticker_alias_candidates"):
+            actions.append({"id": "apply_ticker_alias_repair", "label": "티커 변경 복구 적용", "kind": "secondary"})
         actions.append(_market_movers_react_universe_basis_action(controls.coverage, kind="secondary"))
         actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
         return actions
@@ -692,6 +700,9 @@ def build_market_movers_react_workbench_payload(
     controls: MarketMoverControls,
     exploration_mode: str,
 ) -> dict[str, Any]:
+    st.session_state[_market_movers_ticker_alias_session_key(controls.coverage)] = _market_movers_records(
+        snapshot.get("ticker_alias_candidates")
+    )
     return {
         "schema_version": "market_movers_react_workbench_v1",
         "component": "MarketMoversWorkbench",
@@ -724,7 +735,7 @@ def build_market_movers_react_workbench_payload(
             ],
             "deferred_controls": [],
         },
-        "actions": _market_movers_react_actions(controls=controls),
+        "actions": _market_movers_react_actions(controls=controls, snapshot=snapshot),
     }
 
 
@@ -742,6 +753,12 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
     if action_id == "refresh_liquidity_universe":
         return {
             "handler": "run_overview_market_liquidity_universe_refresh",
+            "universe_code": controls.coverage,
+            "universe_limit": controls.universe_limit,
+        }
+    if action_id == "apply_ticker_alias_repair":
+        return {
+            "handler": "run_overview_market_symbol_alias_repair",
             "universe_code": controls.coverage,
             "universe_limit": controls.universe_limit,
         }
@@ -894,6 +911,20 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 ),
             )
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+        return True
+
+    if handler == "run_overview_market_symbol_alias_repair":
+        result_key = f"overview_{universe_code.lower()}_ticker_alias_repair_result"
+        candidates = list(st.session_state.get(_market_movers_ticker_alias_session_key(universe_code)) or [])
+        with st.spinner(f"{universe_label} 티커 변경 복구를 적용하는 중입니다..."):
+            _store_overview_job_result(
+                result_key,
+                run_overview_market_symbol_alias_repair(
+                    universe_code=universe_code,
+                    candidates=candidates,
+                ),
+            )
         st.rerun()
         return True
 

@@ -10392,6 +10392,50 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["universe_limit"], 1000)
 
     @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_actions_include_ticker_alias_repair_when_candidates_exist(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+            market_movers_react_action_plan,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "OK",
+            "coverage": {"refresh_state": {"label": "Partial"}},
+            "ticker_alias_candidates": [
+                {"symbol": "SATS", "alias_symbol": "ECHO", "confidence": 0.96},
+                {"symbol": "VSCO", "alias_symbol": "VSXY", "confidence": 0.95},
+            ],
+        }
+
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        self.assertIn(
+            {"id": "apply_ticker_alias_repair", "label": "티커 변경 복구 적용", "kind": "secondary"},
+            payload["actions"],
+        )
+        self.assertEqual(payload["trust_panel"]["ticker_alias_candidates"][0]["symbol"], "SATS")
+        plan = market_movers_react_action_plan("apply_ticker_alias_repair", controls=controls)
+        self.assertEqual(plan["handler"], "run_overview_market_symbol_alias_repair")
+        self.assertEqual(plan["universe_code"], "TOP1000")
+
+    @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_actions_hide_price_history_refresh_for_non_daily(
         self,
         mock_st: MagicMock,
@@ -10851,6 +10895,54 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         mock_store_result.assert_called_once_with(
             "overview_top1000_liquidity_universe_result",
             mock_run_refresh.return_value,
+        )
+        mock_st.rerun.assert_called_once()
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.run_overview_market_symbol_alias_repair")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_event_bridge_dispatches_ticker_alias_repair_once(
+        self,
+        mock_st: MagicMock,
+        mock_run_repair: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "apply_ticker_alias_repair", "nonce": 224}}
+        mock_st.session_state = {
+            "overview_market_movers_ticker_alias_candidates_TOP1000": [
+                {"symbol": "SATS", "alias_symbol": "ECHO", "confidence": 0.96},
+                {"symbol": "VSCO", "alias_symbol": "VSXY", "confidence": 0.95},
+            ]
+        }
+        mock_run_repair.return_value = {"status": "success", "rows_written": 2}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+
+        mock_run_repair.assert_called_once_with(
+            universe_code="TOP1000",
+            candidates=[
+                {"symbol": "SATS", "alias_symbol": "ECHO", "confidence": 0.96},
+                {"symbol": "VSCO", "alias_symbol": "VSXY", "confidence": 0.95},
+            ],
+        )
+        mock_store_result.assert_called_once_with(
+            "overview_top1000_ticker_alias_repair_result",
+            mock_run_repair.return_value,
         )
         mock_st.rerun.assert_called_once()
 
@@ -17950,6 +18042,199 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
             port=3306,
         )
         load_market_cap.assert_not_called()
+
+    def test_market_symbol_alias_schema_tracks_ticker_change_repair_contract(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"]
+
+        for column in [
+            "source_symbol",
+            "alias_symbol",
+            "alias_type",
+            "status",
+            "confidence",
+            "evidence_json",
+            "detected_at",
+            "applied_at",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_market_symbol_alias", schema_sql)
+        self.assertIn("KEY ix_market_symbol_alias_active", schema_sql)
+
+    def test_market_symbol_alias_upsert_and_loader_are_idempotent(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.executemany_calls: list[tuple[str, list[dict[str, object]]]] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+                self.executemany_calls.append((sql, rows))
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [
+                    {
+                        "source_symbol": "SATS",
+                        "alias_symbol": "ECHO",
+                        "alias_type": "ticker_change",
+                        "status": "active",
+                        "confidence": 0.96,
+                    }
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            rows_written = mi.upsert_market_symbol_aliases(
+                [
+                    {
+                        "source_symbol": "sats",
+                        "alias_symbol": "echo",
+                        "alias_type": "ticker_change",
+                        "confidence": "0.96",
+                        "evidence": {"reason": "official ticker change"},
+                    }
+                ],
+                applied_at="2026-07-07 09:00:00",
+            )
+            aliases = mi.load_active_market_symbol_aliases(["SATS", "VSCO"])
+
+        self.assertEqual(rows_written, 1)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta", "finance_meta"])
+        sync_schema.assert_called()
+        _, captured_rows = fake_db.executemany_calls[0]
+        self.assertEqual(captured_rows[0]["source_symbol"], "SATS")
+        self.assertEqual(captured_rows[0]["alias_symbol"], "ECHO")
+        self.assertEqual(captured_rows[0]["status"], "active")
+        self.assertEqual(captured_rows[0]["applied_at"], "2026-07-07 09:00:00")
+        self.assertIn("evidence_json", captured_rows[0])
+        self.assertEqual(aliases["SATS"]["alias_symbol"], "ECHO")
+        self.assertTrue(fake_db.closed)
+
+    def test_ticker_alias_candidates_are_detected_from_missing_quote_rows(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name, sql, params=None):
+            del db_name, params
+            if "FROM market_liquidity_universe_member m" in sql:
+                return [
+                    {
+                        "symbol": "SATS",
+                        "long_name": "EchoStar Corporation",
+                        "sector": "Communication Services",
+                        "industry": "Telecom Services",
+                        "market_cap": 1,
+                        "rank_position": 1,
+                    }
+                ]
+            if "MAX(snapshot_time_utc)" in sql:
+                return [{"snapshot_time_utc": "2026-07-06 21:57:00"}]
+            if "FROM market_intraday_snapshot s" in sql:
+                return [
+                    {
+                        "symbol": "SATS",
+                        "interval_code": "5m",
+                        "snapshot_time_utc": "2026-07-06 21:57:00",
+                        "quote_time_utc": "2026-07-06 21:57:00",
+                        "previous_close": 101.5,
+                        "latest_price": None,
+                        "return_pct": None,
+                        "volume": None,
+                        "provider_status": "missing",
+                        "error_msg": "missing quote row",
+                        "source": "yahoo_quote",
+                        "source_ref": "yahoo_quote_v7;previous_close=db_previous_close",
+                    }
+                ]
+            if "FROM market_data_issue" in sql:
+                return []
+            if "FROM market_symbol_alias" in sql:
+                return []
+            if "FROM nyse_price_history" in sql:
+                return []
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            query_fn=query_fn,
+            alias_probe_fn=lambda symbols, **kwargs: [
+                {
+                    "symbol": "SATS",
+                    "alias_symbol": "ECHO",
+                    "alias_type": "ticker_change",
+                    "confidence": 0.96,
+                    "reason": "old ticker missing, replacement quote active",
+                }
+            ],
+        )
+
+        self.assertEqual(snapshot["coverage"]["missing_count"], 1)
+        self.assertEqual(snapshot["ticker_alias_candidates"][0]["symbol"], "SATS")
+        self.assertEqual(snapshot["ticker_alias_candidates"][0]["alias_symbol"], "ECHO")
+        grouped = snapshot["coverage_trust"]["grouped_missing_rows"]
+        self.assertEqual(grouped[0]["Missing Reason Group"], "Ticker change candidate")
+
+    def test_top_universe_snapshot_uses_active_alias_for_quote_lookup_but_keeps_universe_symbol(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [{"symbol": "SATS"}]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["ECHO"])
+            return [
+                {
+                    "symbol": "ECHO",
+                    "regularMarketPrice": 98.29,
+                    "regularMarketPreviousClose": 101.5,
+                    "regularMarketTime": 1783368001,
+                    "regularMarketVolume": 5201562,
+                }
+            ]
+
+        written_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "load_active_market_symbol_aliases", return_value={"SATS": {"alias_symbol": "ECHO"}}),
+            patch.object(mi, "_load_db_previous_close_map", return_value={"SATS": {"previous_close": 101.5}}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_market_intraday_snapshot(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                universe_loader=lambda: members,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["failed_symbols"], [])
+        self.assertEqual(written_rows[0]["symbol"], "SATS")
+        self.assertEqual(written_rows[0]["quote_symbol"], "ECHO")
+        self.assertIn("alias_symbol=ECHO", written_rows[0]["source_ref"])
+        self.assertAlmostEqual(float(written_rows[0]["latest_price"]), 98.29)
 
     def test_liquidity_universe_schema_tracks_materialized_rank_contract(self) -> None:
         from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS

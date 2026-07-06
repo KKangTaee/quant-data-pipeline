@@ -125,6 +125,26 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 최신 거래일 price row가 없는 ticker는 ranking 가능한 후보에서 제외된다. 이는 stale listing, provider 누락, delisted ticker, 거래 정지 가능성을 모두 포함하는 보수적 처리다.
 - current snapshot이므로 historical point-in-time membership이나 survivorship control PASS 근거가 아니다.
 
+## `market_symbol_alias`
+
+역할:
+
+- Market Movers daily snapshot에서 old ticker가 더 이상 Yahoo quote row를 반환하지 않을 때 replacement ticker 후보와 적용 상태를 저장한다.
+- `SATS -> ECHO`, `VSCO -> VSXY` 같은 ticker-change repair를 반복 조사 없이 재사용하게 한다.
+
+성격:
+
+- alias mapping / repair state table이다.
+- `status=candidate` row는 자동 탐지 또는 화면 read-model이 제안한 후보이며, quote lookup에는 아직 적용하지 않는다.
+- `status=active` row는 사용자가 `티커 변경 복구 적용` action으로 승인한 alias이며, 이후 `market_intraday_snapshot` 수집에서 source universe symbol의 quote lookup symbol을 바꾼다.
+- `evidence_json`은 official 확인, search / quote verification 같은 compact 근거를 담는다. Full external page나 provider raw response를 저장하는 테이블이 아니다.
+
+주의:
+
+- 이 table은 universe membership 자체를 교체하지 않는다. 예를 들어 Top1000 universe row는 `SATS`로 남을 수 있고, quote lookup만 `ECHO`를 사용한다.
+- ticker change 후보는 provider/search evidence 기반 운영 복구 힌트이며, corporate action의 최종 official master가 아니다.
+- active alias 적용 후에도 `일중 스냅샷 갱신`을 다시 실행해야 `market_intraday_snapshot` missing row가 실제 가격 row로 대체된다.
+
 ## `market_intraday_snapshot`
 
 역할:
@@ -137,6 +157,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - provider snapshot table이다.
 - 기본 source는 yfinance 세션을 통한 Yahoo quote batch이고, 실패 시 yfinance 5m OHLCV fallback을 사용할 수 있다.
 - `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
+- `quote_symbol`은 실제 provider quote 조회에 사용한 ticker다. ticker-change repair가 적용되면 `symbol`은 universe member ticker를 유지하고 `quote_symbol`만 replacement ticker가 될 수 있다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 이 table의 최신 snapshot을 읽는다.
 - `TOP1000` / `TOP2000`은 `market_liquidity_universe_member`의 active membership을 기본 universe로 읽어 저장한다.
 
@@ -146,6 +167,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
 - Market Movers quote gap diagnosis는 이 table의 missing row를 대상으로 추가 evidence를 조회해 job result로 보여주고, 반복 추적용으로 `market_data_issue`에도 누적 저장한다.
 - `TOP1000` / `TOP2000` 일중 스냅샷 갱신은 이미 materialize된 liquidity universe를 읽는다. Universe 기준 자체를 바꾸려면 Market Movers의 `유니버스 기준 갱신`을 먼저 실행한다.
+- active ticker alias가 있으면 quote lookup은 alias를 사용하지만 ranking / display symbol은 universe symbol을 유지한다. Source ref에 `alias_symbol=<ticker>`가 남는다.
 
 ## `market_data_issue`
 

@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers Ticker Change Repair 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-ticker-change-repair-20260707/`에서 1차~5차를 완료했다.
+  - `market_symbol_alias` candidate / active alias store, Market Movers `티커 변경 복구 적용` action, and intraday `quote_symbol` alias lookup were added.
+  - 운영 순서는 `티커 변경 복구 적용` 후 `일중 스냅샷 갱신`이다. Active alias는 quote lookup만 바꾸고 universe symbol은 유지한다.
+  - 검증은 focused RED/GREEN contracts, `py_compile`, `git diff --check`, Browser QA로 기록했다.
 - Overview Futures Macro Evidence / Original Data UX:
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에서 1차~5차 후속 개선을 진행했다.
   - React `현재 근거`와 하단 `계산 근거 / 원본 표`의 역할을 분리했고, historical validation은 `현재 해석의 과거 일관성` / `비슷한 과거 상태` / 방향성 적용 여부로 읽게 정리했다.

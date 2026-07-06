@@ -67,6 +67,10 @@ http://localhost:8501
    - 조회 결과는 Streamlit session state에만 남는다. DB schema, workflow registry JSONL, saved setup JSONL, run history에는 쓰지 않는다. DB-backed compact metadata는 retention / freshness / replay semantics가 승인된 후속 V2 조건으로만 검토한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
    - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
+   - `Coverage trust detail` 또는 상단 action bar에 `티커 변경 복구 적용`이 보이면 old ticker가 Yahoo quote row를 반환하지 않고 replacement ticker 후보가 탐지된 상태다.
+   - `티커 변경 복구 적용`을 누르면 candidate alias가 `finance_meta.market_symbol_alias`에 active로 저장된다. 이 버튼은 가격 row를 즉시 다시 쓰지 않는다.
+   - 복구 적용 후 `일중 스냅샷 갱신`을 다시 실행한다. 새 snapshot은 universe symbol은 유지하고 quote lookup만 active alias ticker를 사용해 `finance_price.market_intraday_snapshot.quote_symbol`에 남긴다.
+   - 복구 후에도 missing이 남으면 `Diagnose Missing Quotes`로 provider coverage, listing evidence, previous-close coverage를 다시 확인한다.
    - daily intraday missing row는 `Diagnose Missing Quotes`로 원인 후보를 확인한다. 결과는 `finance_meta.market_data_issue`에 반복 issue로 누적된다.
 
 3. `Workspace > Overview > Sector / Industry`

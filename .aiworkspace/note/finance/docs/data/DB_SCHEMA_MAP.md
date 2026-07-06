@@ -28,6 +28,7 @@ Last Verified: 2026-07-05
 | `nyse_asset_profile` | stock / ETF profile, universe filter, current ETF operability metadata |
 | `market_universe_member` | Overview market intelligence용 current universe membership. 초기 구현은 S&P 500 current constituents |
 | `market_liquidity_universe_member` | Market Movers Top1000 / Top2000용 current liquidity universe membership. listing source 후보 중 `nyse_price_history` 최신 거래일 row가 있는 종목을 최근 20거래일 평균 거래대금으로 ranking해 저장 |
+| `market_symbol_alias` | Market Movers ticker-change repair alias store. Quote-missing old ticker와 replacement ticker 후보 / 적용 상태를 저장해 future intraday quote lookup에서 사용 |
 | `market_event_calendar` | Overview Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
 | `market_data_issue` | Overview Market Movers quote gap 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
 | `futures_instrument` | Overview Futures Monitor용 선물 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
@@ -75,6 +76,7 @@ Phase 8 source migration closeout 기준으로 production financial statement so
 | lifecycle evidence | symbol lifecycle / delisting / historical membership evidence | `nyse_symbol_lifecycle` |
 | profile | 현재 snapshot 성격의 profile metadata | `nyse_asset_profile` |
 | materialized universe | UI / refresh job이 반복해서 읽는 계산된 current membership snapshot | `market_universe_member`, `market_liquidity_universe_member` |
+| alias mapping | provider quote ticker drift를 명시적으로 복구하기 위한 current alias state | `market_symbol_alias` |
 | connector metadata | provider endpoint / parser mapping cache | `etf_provider_source_map` |
 | provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation`, `market_intraday_snapshot`, `market_event_calendar`, `futures_ohlcv`, `futures_market_monitor_run` |
 | issue tracking | 반복되는 수집 / coverage 이슈를 운영 판단용으로 누적 | `market_data_issue` |

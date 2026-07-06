@@ -371,12 +371,34 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           KEY ix_liquidity_universe_symbol (symbol)
         );
     """,
+    "market_symbol_alias": """
+        CREATE TABLE IF NOT EXISTS market_symbol_alias (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          source_symbol VARCHAR(20) NOT NULL,
+          alias_symbol VARCHAR(20) NOT NULL,
+          alias_type VARCHAR(64) NOT NULL DEFAULT 'ticker_change',
+          status ENUM('candidate','active','rejected') NOT NULL DEFAULT 'candidate',
+          confidence DOUBLE NULL,
+          evidence_json JSON NULL,
+          detected_at TIMESTAMP NOT NULL,
+          applied_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_market_symbol_alias (source_symbol, alias_symbol, alias_type),
+          KEY ix_market_symbol_alias_active (source_symbol, status),
+          KEY ix_market_symbol_alias_status (status, detected_at)
+        );
+    """,
     "market_intraday_snapshot": """
         CREATE TABLE IF NOT EXISTS market_intraday_snapshot (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,
 
           universe_code VARCHAR(32) NOT NULL,
           symbol VARCHAR(20) NOT NULL,
+          quote_symbol VARCHAR(20) NULL,
           interval_code VARCHAR(10) NOT NULL,
           snapshot_time_utc DATETIME NOT NULL,
           quote_time_utc DATETIME NULL,

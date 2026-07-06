@@ -213,6 +213,12 @@ def sync_market_intelligence_tables(
         )
         sync_table_schema(
             meta_db,
+            "market_symbol_alias",
+            MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"],
+            DB_META,
+        )
+        sync_table_schema(
+            meta_db,
             "market_event_calendar",
             MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
             DB_META,
@@ -2279,6 +2285,268 @@ def load_market_liquidity_universe_members(
         db.close()
 
 
+def _market_symbol_alias_row(
+    row: dict[str, Any],
+    *,
+    status: str,
+    detected_at: str,
+    applied_at: str | None,
+) -> dict[str, Any] | None:
+    source_symbol = _normalize_symbol(row.get("source_symbol") or row.get("symbol"))
+    alias_symbol = _normalize_symbol(row.get("alias_symbol") or row.get("replacement_symbol"))
+    if not source_symbol or not alias_symbol or source_symbol == alias_symbol:
+        return None
+    row_status = str(row.get("status") or status or "candidate").strip().lower()
+    if row_status not in {"candidate", "active", "rejected"}:
+        row_status = "candidate"
+    evidence = row.get("evidence_json") if row.get("evidence_json") is not None else row.get("evidence")
+    return {
+        "source_symbol": source_symbol,
+        "alias_symbol": alias_symbol,
+        "alias_type": str(row.get("alias_type") or "ticker_change").strip() or "ticker_change",
+        "status": row_status,
+        "confidence": _safe_float(row.get("confidence")),
+        "evidence_json": _json_payload(evidence),
+        "detected_at": row.get("detected_at") or detected_at,
+        "applied_at": row.get("applied_at") or applied_at,
+    }
+
+
+def upsert_market_symbol_aliases(
+    rows: list[dict[str, Any]],
+    *,
+    status: str | None = None,
+    detected_at: str | None = None,
+    applied_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    effective_status = status or ("active" if applied_at else "candidate")
+    detected_at_value = detected_at or _timestamp_str()
+    normalized_rows = [
+        normalized
+        for row in rows
+        if (
+            normalized := _market_symbol_alias_row(
+                row,
+                status=effective_status,
+                detected_at=detected_at_value,
+                applied_at=applied_at,
+            )
+        )
+    ]
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_symbol_alias",
+            MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"],
+            DB_META,
+        )
+        if not normalized_rows:
+            return 0
+        sql = """
+        INSERT INTO market_symbol_alias (
+          source_symbol, alias_symbol, alias_type, status, confidence,
+          evidence_json, detected_at, applied_at
+        ) VALUES (
+          %(source_symbol)s, %(alias_symbol)s, %(alias_type)s, %(status)s, %(confidence)s,
+          %(evidence_json)s, %(detected_at)s, %(applied_at)s
+        )
+        ON DUPLICATE KEY UPDATE
+          status = VALUES(status),
+          confidence = VALUES(confidence),
+          evidence_json = VALUES(evidence_json),
+          detected_at = VALUES(detected_at),
+          applied_at = VALUES(applied_at)
+        """
+        db.executemany(sql, normalized_rows)
+        return len(normalized_rows)
+    finally:
+        db.close()
+
+
+def load_active_market_symbol_aliases(
+    symbols: Sequence[Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, dict[str, Any]]:
+    normalized_symbols = sorted({_normalize_symbol(symbol) for symbol in symbols if _normalize_symbol(symbol)})
+    if not normalized_symbols:
+        return {}
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_symbol_alias",
+            MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"],
+            DB_META,
+        )
+        placeholders = ",".join(["%s"] * len(normalized_symbols))
+        rows = db.query(
+            f"""
+            SELECT
+                source_symbol, alias_symbol, alias_type, status, confidence,
+                evidence_json, detected_at, applied_at
+            FROM market_symbol_alias
+            WHERE source_symbol IN ({placeholders})
+              AND status = %s
+            ORDER BY confidence DESC, applied_at DESC, detected_at DESC
+            """,
+            normalized_symbols + ["active"],
+        )
+    finally:
+        db.close()
+
+    aliases: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        source_symbol = _normalize_symbol(row.get("source_symbol"))
+        alias_symbol = _normalize_symbol(row.get("alias_symbol"))
+        if not source_symbol or not alias_symbol or source_symbol in aliases:
+            continue
+        normalized = dict(row)
+        normalized["source_symbol"] = source_symbol
+        normalized["alias_symbol"] = alias_symbol
+        aliases[source_symbol] = normalized
+    return aliases
+
+
+def _normalized_company_name(value: Any) -> str:
+    text = re.sub(r"[^A-Z0-9]+", " ", str(value or "").upper())
+    suffixes = {
+        "INC",
+        "INCORPORATED",
+        "CORP",
+        "CORPORATION",
+        "CO",
+        "COMPANY",
+        "LTD",
+        "PLC",
+        "HOLDING",
+        "HOLDINGS",
+        "GROUP",
+        "CLASS",
+        "COMMON",
+        "STOCK",
+    }
+    tokens = [token for token in text.split() if token and token not in suffixes]
+    return " ".join(tokens)
+
+
+def _default_symbol_alias_search(query: str, *, max_results: int = 8) -> list[dict[str, Any]]:
+    try:
+        search = yf.Search(query, max_results=max_results)
+        quotes = getattr(search, "quotes", None)
+        return list(quotes or [])
+    except Exception:
+        return []
+
+
+def _symbol_alias_candidate_score(
+    *,
+    source_name: str,
+    candidate: dict[str, Any],
+    expected_exchange: str | None,
+) -> float:
+    candidate_name = candidate.get("longname") or candidate.get("shortname") or candidate.get("name")
+    source_normalized = _normalized_company_name(source_name)
+    candidate_normalized = _normalized_company_name(candidate_name)
+    if not source_normalized or not candidate_normalized:
+        score = 0.55
+    elif source_normalized == candidate_normalized:
+        score = 0.96
+    elif source_normalized in candidate_normalized or candidate_normalized in source_normalized:
+        score = 0.88
+    else:
+        source_tokens = set(source_normalized.split())
+        candidate_tokens = set(candidate_normalized.split())
+        overlap = len(source_tokens & candidate_tokens) / max(len(source_tokens), 1)
+        score = 0.62 + min(0.2, overlap * 0.2)
+    exchange = str(candidate.get("exchange") or candidate.get("exchDisp") or "").strip().upper()
+    if expected_exchange and exchange and exchange != str(expected_exchange).strip().upper():
+        score -= 0.05
+    if str(candidate.get("quoteType") or "").strip().upper() not in {"", "EQUITY"}:
+        score -= 0.1
+    return max(0.0, min(0.99, score))
+
+
+def detect_market_symbol_alias_candidates(
+    symbols: Sequence[Any],
+    *,
+    metadata_by_symbol: dict[str, dict[str, Any]] | None = None,
+    quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    search_fn: Callable[..., list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
+    """Suggest replacement tickers for quote-missing universe symbols without applying them."""
+    fetcher = quote_fetcher or _fetch_yahoo_quote_rows
+    search = search_fn or _default_symbol_alias_search
+    metadata_by_symbol = metadata_by_symbol or {}
+    candidates: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for raw_symbol in symbols:
+        source_symbol = _normalize_symbol(raw_symbol)
+        if not source_symbol:
+            continue
+        metadata = metadata_by_symbol.get(source_symbol) or {}
+        source_name = str(metadata.get("long_name") or metadata.get("name") or "").strip()
+        if not source_name:
+            continue
+        expected_exchange = metadata.get("profile_exchange") or metadata.get("exchange")
+        search_rows = search(source_name, max_results=8)
+        ranked: list[tuple[float, dict[str, Any]]] = []
+        for row in search_rows:
+            alias_symbol = _normalize_symbol(row.get("symbol"))
+            if not alias_symbol or alias_symbol == source_symbol:
+                continue
+            score = _symbol_alias_candidate_score(
+                source_name=source_name,
+                candidate=row,
+                expected_exchange=expected_exchange,
+            )
+            ranked.append((score, row))
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        for score, row in ranked[:3]:
+            alias_symbol = _normalize_symbol(row.get("symbol"))
+            if not alias_symbol or (source_symbol, alias_symbol) in seen:
+                continue
+            quote_rows = fetcher([alias_symbol])
+            quote_map = {
+                _normalize_symbol(quote.get("symbol")): quote
+                for quote in quote_rows
+                if _normalize_symbol(quote.get("symbol"))
+            }
+            if alias_symbol not in quote_map:
+                continue
+            seen.add((source_symbol, alias_symbol))
+            candidates.append(
+                {
+                    "symbol": source_symbol,
+                    "source_symbol": source_symbol,
+                    "alias_symbol": alias_symbol,
+                    "alias_type": "ticker_change",
+                    "status": "candidate",
+                    "confidence": round(score, 2),
+                    "reason": "old ticker missing, replacement quote active",
+                    "evidence": {
+                        "source_name": source_name,
+                        "search_symbol": row.get("symbol"),
+                        "search_name": row.get("longname") or row.get("shortname"),
+                        "search_exchange": row.get("exchange") or row.get("exchDisp"),
+                        "quote_provider": "yahoo_quote_v7",
+                    },
+                }
+            )
+            break
+    return candidates
+
+
 def _dedupe_liquidity_candidate_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     deduped: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -3285,6 +3553,7 @@ def _build_quote_snapshot_row(
     *,
     universe_code: str,
     symbol: str,
+    quote_symbol: str | None = None,
     interval_code: str,
     snapshot_time_utc: str,
     quote_row: dict[str, Any] | None,
@@ -3292,6 +3561,7 @@ def _build_quote_snapshot_row(
 ) -> dict[str, Any]:
     quote_row = dict(quote_row or {})
     db_previous_close = dict(db_previous_close or {})
+    normalized_quote_symbol = _normalize_symbol(quote_symbol or symbol) or symbol
     latest_price = _safe_float(quote_row.get("regularMarketPrice"))
     previous_close = _safe_float(quote_row.get("regularMarketPreviousClose"))
     previous_source = "quote"
@@ -3319,11 +3589,14 @@ def _build_quote_snapshot_row(
 
     market_state = quote_row.get("marketState") or ""
     source_ref = f"yahoo_quote_v7;previous_close={previous_source}"
+    if normalized_quote_symbol != symbol:
+        source_ref += f";alias_symbol={normalized_quote_symbol}"
     if market_state:
         source_ref += f";market_state={market_state}"
     return {
         "universe_code": universe_code,
         "symbol": symbol,
+        "quote_symbol": normalized_quote_symbol,
         "interval_code": interval_code,
         "snapshot_time_utc": snapshot_time_utc,
         "quote_time_utc": quote_time_utc,
@@ -3372,6 +3645,7 @@ def _build_snapshot_row(
     return {
         "universe_code": universe_code,
         "symbol": symbol,
+        "quote_symbol": symbol,
         "interval_code": interval_code,
         "snapshot_time_utc": snapshot_time_utc,
         "quote_time_utc": quote_time_utc,
@@ -3395,15 +3669,22 @@ def _collect_quote_snapshot_rows(
     quote_batch_size: int,
     quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
     previous_close_map: dict[str, dict[str, Any]] | None = None,
+    alias_map: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:
     fetcher = quote_fetcher or _fetch_yahoo_quote_rows
     previous_close_map = previous_close_map or {}
+    alias_map = alias_map or {}
     rows: list[dict[str, Any]] = []
     failed_symbols: list[str] = []
     batches: list[dict[str, Any]] = []
     for batch in _chunked(symbols, max(1, int(quote_batch_size))):
         batch_started = datetime.now(UTC)
-        quote_rows = fetcher(batch)
+        quote_symbols_by_source = {
+            symbol: _normalize_symbol(dict(alias_map.get(symbol) or {}).get("alias_symbol") or symbol) or symbol
+            for symbol in batch
+        }
+        quote_request_symbols = list(dict.fromkeys(quote_symbols_by_source.values()))
+        quote_rows = fetcher(quote_request_symbols)
         quote_map = {
             _normalize_symbol(row.get("symbol")): row
             for row in quote_rows
@@ -3412,17 +3693,20 @@ def _collect_quote_snapshot_rows(
         batches.append(
             {
                 "requested": len(batch),
+                "quote_requested": len(quote_request_symbols),
                 "returned": len(quote_map),
                 "duration_sec": round((datetime.now(UTC) - batch_started).total_seconds(), 3),
             }
         )
         for symbol in batch:
+            quote_symbol = quote_symbols_by_source.get(symbol) or symbol
             row = _build_quote_snapshot_row(
                 universe_code=universe_code,
                 symbol=symbol,
+                quote_symbol=quote_symbol,
                 interval_code=interval_code,
                 snapshot_time_utc=snapshot_time,
-                quote_row=quote_map.get(symbol),
+                quote_row=quote_map.get(quote_symbol),
                 db_previous_close=previous_close_map.get(symbol),
             )
             if row["provider_status"] != "ok":
@@ -3489,15 +3773,16 @@ def upsert_intraday_snapshot_rows(
         )
         sql = """
         INSERT INTO market_intraday_snapshot (
-          universe_code, symbol, interval_code, snapshot_time_utc, quote_time_utc,
+          universe_code, symbol, quote_symbol, interval_code, snapshot_time_utc, quote_time_utc,
           source, source_ref, previous_close, latest_price, return_pct, volume,
           provider_status, error_msg
         ) VALUES (
-          %(universe_code)s, %(symbol)s, %(interval_code)s, %(snapshot_time_utc)s, %(quote_time_utc)s,
+          %(universe_code)s, %(symbol)s, %(quote_symbol)s, %(interval_code)s, %(snapshot_time_utc)s, %(quote_time_utc)s,
           %(source)s, %(source_ref)s, %(previous_close)s, %(latest_price)s, %(return_pct)s, %(volume)s,
           %(provider_status)s, %(error_msg)s
         )
         ON DUPLICATE KEY UPDATE
+          quote_symbol = VALUES(quote_symbol),
           quote_time_utc = VALUES(quote_time_utc),
           source = VALUES(source),
           source_ref = VALUES(source_ref),
@@ -3566,6 +3851,11 @@ def collect_and_store_market_intraday_snapshot(
     if not members and normalized_universe == "SP500":
         collect_and_store_sp500_universe(host=host, user=user, password=password, port=port)
         members = loader()
+    metadata_by_symbol = {
+        symbol: dict(row)
+        for row in members
+        if (symbol := _normalize_symbol(row.get("symbol")))
+    }
     symbols = [_normalize_symbol(row.get("symbol")) for row in members if row.get("symbol")]
     symbols = sorted({symbol for symbol in symbols if symbol})
     if not symbols:
@@ -3587,12 +3877,22 @@ def collect_and_store_market_intraday_snapshot(
         "universe_code": normalized_universe,
         "universe_limit": normalized_limit,
     }
+    active_aliases: dict[str, dict[str, Any]] = {}
+    ticker_alias_candidates: list[dict[str, Any]] = []
     snapshot_rows: list[dict[str, Any]]
     failed_symbols: list[str]
     source = "yfinance"
     method_used = "yfinance_5m"
 
     if normalized_method == "quote_fast" and price_downloader is None:
+        active_aliases = load_active_market_symbol_aliases(
+            symbols,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+        diagnostics["active_symbol_alias_count"] = len(active_aliases)
         previous_close_map = _load_db_previous_close_map(
             symbols,
             host=host,
@@ -3609,10 +3909,45 @@ def collect_and_store_market_intraday_snapshot(
                 quote_batch_size=quote_batch_size,
                 quote_fetcher=quote_fetcher,
                 previous_close_map=previous_close_map,
+                alias_map=active_aliases,
             )
             diagnostics.update(quote_diagnostics)
             source = "yahoo_quote"
             method_used = "quote_fast"
+            missing_quote_symbols = [
+                symbol
+                for symbol in failed_symbols
+                if str(
+                    next(
+                        (
+                            row.get("error_msg")
+                            for row in snapshot_rows
+                            if row.get("symbol") == symbol and row.get("provider_status") != "ok"
+                        ),
+                        "",
+                    )
+                ).lower()
+                == "missing quote row"
+            ]
+            if missing_quote_symbols:
+                try:
+                    ticker_alias_candidates = detect_market_symbol_alias_candidates(
+                        missing_quote_symbols,
+                        metadata_by_symbol=metadata_by_symbol,
+                        quote_fetcher=quote_fetcher,
+                    )
+                    if ticker_alias_candidates:
+                        upsert_market_symbol_aliases(
+                            ticker_alias_candidates,
+                            status="candidate",
+                            host=host,
+                            user=user,
+                            password=password,
+                            port=port,
+                        )
+                except Exception as exc:
+                    diagnostics["ticker_alias_candidate_error"] = str(exc)
+            diagnostics["ticker_alias_candidate_count"] = len(ticker_alias_candidates)
         except Exception as exc:
             diagnostics["quote_fast_error"] = str(exc)
             if not fallback_to_yfinance:
@@ -3657,6 +3992,11 @@ def collect_and_store_market_intraday_snapshot(
         "interval": normalized_interval,
         "source": source,
         "method": method_used,
+        "active_symbol_aliases": [
+            {"source_symbol": source_symbol, "alias_symbol": alias.get("alias_symbol")}
+            for source_symbol, alias in sorted(active_aliases.items())
+        ],
+        "ticker_alias_candidates": ticker_alias_candidates,
         "duration_sec": round((datetime.now(UTC) - started_at).total_seconds(), 3),
         "diagnostics": diagnostics,
         "message": f"{universe_label} intraday snapshot completed.",

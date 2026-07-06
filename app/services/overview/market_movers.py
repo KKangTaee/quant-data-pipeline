@@ -1119,6 +1119,121 @@ def _enrich_missing_rows(
         )
     return missing_rows
 
+
+def _load_market_symbol_alias_candidates(
+    symbols: list[str],
+    *,
+    query_fn: QueryFn,
+) -> list[dict[str, Any]]:
+    normalized_symbols = sorted({str(symbol or "").strip().upper() for symbol in symbols if str(symbol or "").strip()})
+    if not normalized_symbols:
+        return []
+    placeholders = ",".join(["%s"] * len(normalized_symbols))
+    try:
+        rows = query_fn(
+            "finance_meta",
+            f"""
+            SELECT
+                source_symbol,
+                alias_symbol,
+                alias_type,
+                status,
+                confidence,
+                evidence_json,
+                detected_at,
+                applied_at
+            FROM market_symbol_alias
+            WHERE source_symbol IN ({placeholders})
+              AND status = %s
+            ORDER BY confidence DESC, detected_at DESC
+            """,
+            normalized_symbols + ["candidate"],
+        )
+    except Exception:
+        return []
+    candidates: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        source_symbol = str(row.get("source_symbol") or row.get("symbol") or "").strip().upper()
+        alias_symbol = str(row.get("alias_symbol") or "").strip().upper()
+        if not source_symbol or not alias_symbol or source_symbol in seen:
+            continue
+        item = dict(row)
+        item["symbol"] = source_symbol
+        item["source_symbol"] = source_symbol
+        item["alias_symbol"] = alias_symbol
+        item.setdefault("alias_type", "ticker_change")
+        candidates.append(item)
+        seen.add(source_symbol)
+    return candidates
+
+
+def _ticker_alias_candidate_rows(
+    *,
+    missing_rows: list[dict[str, Any]],
+    universe: list[dict[str, Any]],
+    query_fn: QueryFn,
+    alias_probe_fn: Callable[..., list[dict[str, Any]]] | None,
+) -> list[dict[str, Any]]:
+    missing_symbols = [
+        str(row.get("Symbol") or "").strip().upper()
+        for row in missing_rows
+        if "quote" in str(row.get("Reason") or "").lower()
+    ]
+    missing_symbols = sorted({symbol for symbol in missing_symbols if symbol})
+    if not missing_symbols:
+        return []
+    metadata_by_symbol = {
+        str(row.get("symbol") or "").strip().upper(): dict(row)
+        for row in universe
+        if row.get("symbol")
+    }
+    if alias_probe_fn is not None:
+        candidates = alias_probe_fn(missing_symbols, metadata_by_symbol=metadata_by_symbol)
+    else:
+        candidates = _load_market_symbol_alias_candidates(missing_symbols, query_fn=query_fn)
+    normalized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in candidates or []:
+        source_symbol = str(row.get("source_symbol") or row.get("symbol") or "").strip().upper()
+        alias_symbol = str(row.get("alias_symbol") or "").strip().upper()
+        if not source_symbol or not alias_symbol or source_symbol not in missing_symbols or source_symbol in seen:
+            continue
+        item = dict(row)
+        item["symbol"] = source_symbol
+        item["source_symbol"] = source_symbol
+        item["alias_symbol"] = alias_symbol
+        item.setdefault("alias_type", "ticker_change")
+        item.setdefault("reason", "old ticker missing, replacement quote active")
+        normalized.append(item)
+        seen.add(source_symbol)
+    return normalized
+
+
+def _apply_ticker_alias_candidate_context(
+    missing_rows: list[dict[str, Any]],
+    candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not candidates:
+        return missing_rows
+    candidate_by_symbol = {
+        str(row.get("symbol") or row.get("source_symbol") or "").strip().upper(): row
+        for row in candidates
+    }
+    for row in missing_rows:
+        symbol = str(row.get("Symbol") or "").strip().upper()
+        candidate = candidate_by_symbol.get(symbol)
+        if not candidate:
+            continue
+        alias_symbol = str(candidate.get("alias_symbol") or "").strip().upper()
+        row["Reason"] = "Ticker change candidate"
+        row["Likely Cause"] = f"Old ticker no longer returns a current quote; {alias_symbol} is an active replacement candidate."
+        row["Recommended Action"] = "티커 변경 복구 적용 후 일중 스냅샷을 다시 갱신하세요."
+        row["Evidence Summary"] = f"{symbol} quote missing; {alias_symbol} replacement quote candidate detected."
+        row["Next Check"] = "Apply ticker alias repair, then rerun intraday snapshot."
+    return missing_rows
+
+
 def _missing_recommended_action(reason: str) -> str:
     normalized = str(reason or "").lower()
     if "intraday snapshot row" in normalized:
@@ -1888,6 +2003,16 @@ def build_market_movers_coverage_trust_model(snapshot: dict[str, Any]) -> dict[s
             "it is not a trading signal, validation gate, Final Review decision, or operations monitoring signal."
         ),
     }
+
+
+def _serializable_coverage_trust_model(snapshot: dict[str, Any]) -> dict[str, Any]:
+    model = dict(build_market_movers_coverage_trust_model(snapshot))
+    for key in ("grouped_missing_rows", "raw_missing_rows"):
+        value = model.get(key)
+        if isinstance(value, pd.DataFrame):
+            model[key] = value.to_dict(orient="records")
+    return model
+
 
 def _universe_metadata(universe: list[dict[str, Any]], *, universe_code: str) -> dict[str, Any]:
     if not universe:
@@ -2901,6 +3026,7 @@ def _build_intraday_return_payload(
     min_price_rows: int,
     today: date | None,
     query_fn: QueryFn,
+    alias_probe_fn: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any] | None:
     snapshot_time = _latest_intraday_snapshot_time(universe_code=universe_code, interval=interval, query_fn=query_fn)
     if not snapshot_time:
@@ -3026,6 +3152,13 @@ def _build_intraday_return_payload(
         universe_code=universe_code,
         query_fn=query_fn,
     )
+    ticker_alias_candidates = _ticker_alias_candidate_rows(
+        missing_rows=missing_rows,
+        universe=universe,
+        query_fn=query_fn,
+        alias_probe_fn=alias_probe_fn,
+    )
+    missing_rows = _apply_ticker_alias_candidate_context(missing_rows, ticker_alias_candidates)
     relative_volume_dates = (
         _relative_volume_baseline_dates(
             previous_date_window,
@@ -3047,6 +3180,7 @@ def _build_intraday_return_payload(
         "relative_volume_baselines": relative_volume_baselines,
         "date_window": date_window,
         "coverage": coverage,
+        "ticker_alias_candidates": ticker_alias_candidates,
     }
 
 def _build_intraday_movers_snapshot(
@@ -3061,6 +3195,7 @@ def _build_intraday_movers_snapshot(
     today: date | None,
     interval: str,
     query_fn: QueryFn,
+    alias_probe_fn: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any] | None:
     payload = _build_intraday_return_payload(
         universe=universe,
@@ -3070,6 +3205,7 @@ def _build_intraday_movers_snapshot(
         min_price_rows=min_price_rows,
         today=today,
         query_fn=query_fn,
+        alias_probe_fn=alias_probe_fn,
     )
     if payload is None:
         return None
@@ -3088,7 +3224,7 @@ def _build_intraday_movers_snapshot(
         coverage=coverage,
         date_window=date_window,
     )
-    return {
+    snapshot = {
         "status": "OK",
         "period": period,
         "period_label": PERIOD_LABELS[period],
@@ -3105,7 +3241,10 @@ def _build_intraday_movers_snapshot(
         "date_window": date_window,
         "coverage": coverage,
         "warnings": _coverage_warnings(coverage, date_window=date_window),
+        "ticker_alias_candidates": list(payload.get("ticker_alias_candidates") or []),
     }
+    snapshot["coverage_trust"] = _serializable_coverage_trust_model(snapshot)
+    return snapshot
 
 def build_market_movers_snapshot(
     *,
@@ -3120,6 +3259,7 @@ def build_market_movers_snapshot(
     prefer_intraday: bool = True,
     intraday_interval: str = "5m",
     query_fn: QueryFn | None = None,
+    alias_probe_fn: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     normalized_period = str(period or "daily").strip().lower()
     normalized_top_n = _normalize_limit(top_n, default=20, min_value=5, max_value=100)
@@ -3169,6 +3309,7 @@ def build_market_movers_snapshot(
                 today=today,
                 interval=intraday_interval,
                 query_fn=query,
+                alias_probe_fn=alias_probe_fn,
             )
             if intraday_snapshot is not None:
                 return intraday_snapshot
