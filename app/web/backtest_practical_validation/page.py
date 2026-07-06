@@ -630,47 +630,26 @@ def _render_validation_profile_form() -> dict[str, Any]:
                         key=f"practical_validation_profile_answer_{question_key}",
                     )
     profile = build_validation_profile(profile_id, answers)
+    thresholds = dict(profile.get("thresholds") or {})
+    profile_option = dict(VALIDATION_PROFILE_OPTIONS.get(profile_id) or {})
     render_badge_strip(
         [
             {"label": "Profile", "value": profile.get("profile_label") or "-", "tone": "neutral"},
-            {"label": "Rolling", "value": f"{dict(profile.get('thresholds') or {}).get('rolling_window_months')}M", "tone": "neutral"},
-            {"label": "Cost", "value": f"{dict(profile.get('thresholds') or {}).get('one_way_cost_bps')} bps", "tone": "neutral"},
+            {"label": "Rolling", "value": f"{thresholds.get('rolling_window_months')}M", "tone": "neutral"},
+            {"label": "Cost", "value": f"{thresholds.get('one_way_cost_bps')} bps", "tone": "neutral"},
             {
                 "label": "MDD Line",
-                "value": _format_percent_value((dict(profile.get("thresholds") or {}).get("mdd_review_line") or 0.0) / 100.0),
+                "value": _format_percent_value((thresholds.get("mdd_review_line") or 0.0) / 100.0),
                 "tone": "neutral",
             },
         ]
     )
-    st.caption("최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 어떤 프로필에서도 생략하지 않습니다.")
-    thresholds = dict(profile.get("thresholds") or {})
-    with st.expander("프로필 기준 상세", expanded=False):
-        render_pv_card_grid(
-            [
-                {
-                    "kicker": "Profile Focus",
-                    "title": profile.get("profile_label") or profile_id,
-                    "status": VALIDATION_PROFILE_OPTIONS[profile_id]["label"],
-                    "detail": VALIDATION_PROFILE_OPTIONS[profile_id]["description"],
-                    "tone": "neutral",
-                },
-                {
-                    "kicker": "Risk Line",
-                    "title": "Drawdown tolerance",
-                    "status": _format_percent_value((thresholds.get("mdd_review_line") or 0.0) / 100.0),
-                    "detail": "이 선을 넘는 약화 신호는 Final Review에서 보류 또는 재검토 근거로 확인합니다.",
-                    "tone": "warning",
-                },
-                {
-                    "kicker": "Required Evidence",
-                    "title": "Replay / Coverage / Cost",
-                    "status": "Always required",
-                    "detail": "공격적 프로필이어도 최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 생략하지 않습니다.",
-                    "tone": "positive",
-                },
-            ],
-            min_width=190,
-        )
+    st.caption(
+        f"{profile_option.get('label') or profile.get('profile_label') or '선택한 프로필'} 기준은 "
+        f"{profile_option.get('description') or '선택한 위험 기준'}에 맞춰 결과를 판정합니다. "
+        f"MDD 약화 신호는 {_format_percent_value((thresholds.get('mdd_review_line') or 0.0) / 100.0)}부터 보며, "
+        "최신 재검증, 데이터 커버리지, 비용 / 유동성 근거는 어떤 프로필에서도 생략하지 않습니다."
+    )
     return {"profile_id": profile_id, "answers": answers}
 
 

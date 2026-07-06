@@ -8440,6 +8440,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("##### 검증 프로필", flow1_body)
         self.assertIn('title="검증 기준 설정 / 실전 재검증 실행"', flow2_body)
         self.assertIn("##### 검증 기준", flow2_body)
+        self.assertIn("세부 기준 조정", page_source)
+        self.assertNotIn("프로필 기준 상세", page_source)
+        self.assertNotIn("Profile Focus", page_source)
         self.assertLess(
             flow2_body.index("_render_validation_profile_form()"),
             flow2_body.index("_render_actual_replay_panel(source)"),
