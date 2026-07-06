@@ -67,19 +67,19 @@ Run focused helper tests and `py_compile app/web/backtest_common.py`.
 - Modify: `app/web/backtest_single_forms/strict_factor.py`
 - Modify: `tests/test_service_contracts.py`
 
-- [ ] **Step 1: Add static form contract tests**
+- [x] **Step 1: Add static form contract tests**
 
 Assert strict annual and quarterly forms keep `Price Freshness Preflight`, keep statement coverage preview where relevant, avoid the removed Strategy Detail panel, and expose concise helper calls around preset/preflight.
 
-- [ ] **Step 2: Clean strict annual form surface**
+- [x] **Step 2: Clean strict annual form surface**
 
 Reduce top guide noise, keep required data requirements collapsed, render preset explanation compactly, keep price preflight immediately before date/top-N inputs, and keep advanced contracts collapsed.
 
-- [ ] **Step 3: Clean strict quarterly prototype form surface**
+- [x] **Step 3: Clean strict quarterly prototype form surface**
 
 Make prototype status clear without making the page feel like a research memo. Keep coverage preview and quarterly caveats, but group them as pre-run checks.
 
-- [ ] **Step 4: Browser QA and commit**
+- [x] **Step 4: Browser QA and commit**
 
 Use Browser QA on Quality Strict Annual and Value Strict Quarterly Prototype. Commit the single-strategy strict form cleanup.
 

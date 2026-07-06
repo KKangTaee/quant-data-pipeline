@@ -4,6 +4,33 @@ from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_single_runner import _handle_backtest_run
 from app.web.backtest_single_forms import _apply_single_strategy_prefill
 
+
+def _render_strict_factor_data_readiness_note(
+    *,
+    family_label: str,
+    statement_freq: str,
+    mode_label: str,
+    prototype: bool = False,
+    combined_factor: bool = False,
+) -> None:
+    freq_label = str(statement_freq).strip().lower()
+    status_label = "research-only prototype" if prototype else "public candidate"
+    coverage_note = (
+        "quality + value factor가 동시에 필요하므로 usable history를 더 보수적으로 봅니다."
+        if combined_factor
+        else "선택 universe의 statement shadow factor coverage가 실제 시작 가능 구간을 결정합니다."
+    )
+    with st.expander("데이터 준비 기준", expanded=False):
+        st.markdown(
+            f"- **가격**: `Daily Market Update` 또는 OHLCV 수집이 먼저 필요합니다.\n"
+            f"- **재무제표**: `Extended Statement Refresh`를 **{freq_label}** 기준으로 준비합니다.\n"
+            "- **Factor**: 저장된 statement shadow factor를 읽고, 리밸런싱 시점에 사용 가능한 종목만 평가합니다.\n"
+            f"- **상태**: `{family_label}`은 현재 **{status_label}** 경로입니다.\n"
+            f"- **주의**: {coverage_note}"
+        )
+        st.caption(f"Current mode: `{mode_label}`")
+
+
 def _render_quality_snapshot_form() -> None:
     st.markdown("### Quality Snapshot")
     st.caption("Research-oriented quality snapshot strategy using broad-research factor snapshots. This first pass ranks quality factors and holds top names equally between monthly rebalances.")
@@ -132,16 +159,11 @@ def _render_quality_snapshot_form() -> None:
 def _render_quality_snapshot_strict_annual_form() -> None:
     st.markdown("### Quality Snapshot (Strict Annual)")
     st.caption("Strict annual statement-driven quality strategy. This public candidate ranks annual statement shadow factors, then by default holds the top names equally between monthly rebalances.")
-    _render_quality_family_guide("quality_strict")
-    with st.expander("Data Requirements", expanded=False):
-        st.markdown(
-            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- `Extended Statement Refresh`를 **annual** 기준으로 먼저 채워야 합니다.\n"
-            "- 이 경로는 현재 **strict annual statement shadow factors**를 사용합니다.\n"
-            "- wider annual coverage 검증은 **US / EDGAR-friendly top-300 stock universe** 기준으로 확인되었습니다.\n"
-            "- 현재는 stock-oriented path이며, ETF 중심 universe에는 적합하지 않습니다."
-        )
-        st.caption("Current public candidate mode: `strict_statement_annual` + `shadow_factors`")
+    _render_strict_factor_data_readiness_note(
+        family_label="Quality Snapshot (Strict Annual)",
+        statement_freq="annual",
+        mode_label="strict_statement_annual + shadow_factors",
+    )
     _apply_single_strategy_prefill("quality_snapshot_strict_annual")
 
     universe_mode = st.radio(
@@ -398,14 +420,13 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
     _render_strict_quarterly_productionization_note(family_label="Quality Snapshot (Strict Quarterly Prototype)")
     _apply_single_strategy_prefill("quality_snapshot_strict_quarterly_prototype")
 
-    with st.expander("Data Requirements", expanded=False):
-        st.markdown(
-            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- `Extended Statement Refresh`와 statement shadow factor rebuild가 **quarterly** 기준으로 준비되어 있어야 합니다.\n"
-            "- 이 경로는 현재 **research-only quarterly strict prototype** 입니다.\n"
-            "- annual strict public family와 달리, coverage / freshness / runtime 검증이 이번 Phase 7에서 함께 진행됩니다."
-        )
-        st.caption("Current prototype mode: `strict_statement_quarterly` + `shadow_factors` + `research_only`")
+    _render_strict_factor_data_readiness_note(
+        family_label="Quality Snapshot (Strict Quarterly Prototype)",
+        statement_freq="quarterly",
+        mode_label="strict_statement_quarterly + shadow_factors + research_only",
+        prototype=True,
+    )
+    with st.expander("Quarterly prototype caveat", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
             "Phase 7 first pass 이후 `US Statement Coverage 100` 기본 preset은 다시 2016 부근부터 열리지만, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦을 수 있습니다."
@@ -612,14 +633,13 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         "Research-only quarterly strict value strategy. This Phase 8 path ranks quarterly statement shadow value factors and holds the cheapest names equally between monthly rebalances."
     )
     _render_strict_quarterly_productionization_note(family_label="Value Snapshot (Strict Quarterly Prototype)")
-    with st.expander("Data Requirements", expanded=False):
-        st.markdown(
-            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- `Extended Statement Refresh`와 statement shadow factor rebuild가 **quarterly** 기준으로 준비되어 있어야 합니다.\n"
-            "- 이 경로는 현재 **research-only quarterly strict value prototype** 입니다.\n"
-            "- annual strict value public candidate와 달리, coverage / freshness / interpretation parity를 이번 Phase 8에서 함께 검증합니다."
-        )
-        st.caption("Current prototype mode: `strict_statement_quarterly` + `shadow_factors` + `research_only`")
+    _render_strict_factor_data_readiness_note(
+        family_label="Value Snapshot (Strict Quarterly Prototype)",
+        statement_freq="quarterly",
+        mode_label="strict_statement_quarterly + shadow_factors + research_only",
+        prototype=True,
+    )
+    with st.expander("Quarterly prototype caveat", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
             "`US Statement Coverage 100` 기본 preset은 검증용 anchor일 뿐이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
@@ -825,16 +845,11 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
 def _render_value_snapshot_strict_annual_form() -> None:
     st.markdown("### Value Snapshot (Strict Annual)")
     st.caption("Strict annual statement-driven value strategy. This public candidate ranks precomputed annual statement shadow factors and by default holds the cheapest names equally between monthly rebalances.")
-    _render_quality_family_guide("value_strict")
-    with st.expander("Data Requirements", expanded=False):
-        st.markdown(
-            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- `Extended Statement Refresh`를 **annual** 기준으로 먼저 채워야 합니다.\n"
-            "- 현재 value strict path는 **statement shadow factors**를 사용합니다.\n"
-            "- valuation 계열은 statement + nearest-period shares fallback hybrid 의미를 가질 수 있습니다.\n"
-            "- wider annual coverage 검증은 **US / EDGAR-friendly top-300 stock universe** 기준으로 확인되었습니다."
-        )
-        st.caption("Current public candidate mode: `strict_statement_annual` + `shadow_factors`")
+    _render_strict_factor_data_readiness_note(
+        family_label="Value Snapshot (Strict Annual)",
+        statement_freq="annual",
+        mode_label="strict_statement_annual + shadow_factors",
+    )
     _apply_single_strategy_prefill("value_snapshot_strict_annual")
 
     universe_mode = st.radio(
@@ -1092,14 +1107,14 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         "Research-only quarterly strict multi-factor strategy. This Phase 8 path blends quarterly quality and value shadow factors, then holds the combined top names equally between monthly rebalances."
     )
     _render_strict_quarterly_productionization_note(family_label="Quality + Value Snapshot (Strict Quarterly Prototype)")
-    with st.expander("Data Requirements", expanded=False):
-        st.markdown(
-            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- `Extended Statement Refresh`와 statement shadow factor rebuild가 **quarterly** 기준으로 준비되어 있어야 합니다.\n"
-            "- 이 경로는 현재 **research-only quarterly strict multi-factor prototype** 입니다.\n"
-            "- quality + value availability가 동시에 필요하므로 quarterly quality/value 단독 경로보다 usable history가 조금 더 보수적으로 보일 수 있습니다."
-        )
-        st.caption("Current prototype mode: `strict_statement_quarterly` + `shadow_factors` + `quality_value_blend` + `research_only`")
+    _render_strict_factor_data_readiness_note(
+        family_label="Quality + Value Snapshot (Strict Quarterly Prototype)",
+        statement_freq="quarterly",
+        mode_label="strict_statement_quarterly + shadow_factors + quality_value_blend + research_only",
+        prototype=True,
+        combined_factor=True,
+    )
+    with st.expander("Quarterly prototype caveat", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
             "`US Statement Coverage 100` 기본 preset은 검증 anchor이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
@@ -1316,16 +1331,12 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "Strict annual multi-factor strategy. This public candidate blends coverage-first quality signals "
         "with annual statement-driven valuation factors, then by default holds the combined top names equally between monthly rebalances."
     )
-    _render_quality_family_guide("quality_value_strict")
-    with st.expander("Data Requirements", expanded=False):
-        st.markdown(
-            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- `Extended Statement Refresh`를 **annual** 기준으로 먼저 채워야 합니다.\n"
-            "- 현재 multi-factor strict path는 **statement shadow factors**를 사용합니다.\n"
-            "- quality + value factor availability가 동시에 필요하므로 usable history는 quality strict보다 조금 더 보수적으로 보셔야 합니다.\n"
-            "- wider annual coverage 검증은 **US / EDGAR-friendly stock universe** 기준으로 진행합니다."
-        )
-        st.caption("Current public candidate mode: `strict_statement_annual` + `shadow_factors` + `quality_value_blend`")
+    _render_strict_factor_data_readiness_note(
+        family_label="Quality + Value Snapshot (Strict Annual)",
+        statement_freq="annual",
+        mode_label="strict_statement_annual + shadow_factors + quality_value_blend",
+        combined_factor=True,
+    )
     _apply_single_strategy_prefill("quality_value_snapshot_strict_annual")
 
     universe_mode = st.radio(

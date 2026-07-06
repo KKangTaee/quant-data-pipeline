@@ -237,6 +237,23 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("_render_strict_preset_status_note(qss_compare_preset", compare_source)
         self.assertIn("_render_strict_preset_status_note(vss_compare_preset", compare_source)
 
+    def test_strict_factor_single_forms_keep_guidance_inside_form_surface(self) -> None:
+        source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+        quality_annual_body = source.split("def _render_quality_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        value_annual_body = source.split("def _render_value_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_value_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+
+        self.assertIn("def _render_strict_factor_data_readiness_note", source)
+        self.assertIn("_render_strict_factor_data_readiness_note(", quality_annual_body)
+        self.assertIn("_render_strict_factor_data_readiness_note(", value_annual_body)
+        self.assertNotIn("_render_quality_family_guide", quality_annual_body)
+        self.assertNotIn("_render_quality_family_guide", value_annual_body)
+        self.assertIn("_render_strict_price_freshness_preflight(", quality_annual_body)
+        self.assertIn("_render_strict_price_freshness_preflight(", value_annual_body)
+
     def test_price_freshness_preflight_model_builds_react_payload(self) -> None:
         from app.web.backtest_common import build_strict_price_freshness_preflight_model
 
