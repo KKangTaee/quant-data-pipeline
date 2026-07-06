@@ -275,6 +275,7 @@ def _strict_factor_detail(
     factor_items: list[str],
     family_badge: str,
     top_label: str,
+    run_button_label: str,
     quarterly: bool = False,
     annual_promotion: bool = True,
 ) -> dict[str, Any]:
@@ -311,7 +312,7 @@ def _strict_factor_detail(
         ],
         "advanced_sections": advanced_sections,
         "preflight_sections": preflight_sections,
-        "run_button_label": f"Run {display_name.replace(' Snapshot', '').replace(' (', ' ').replace(')', '')} Backtest",
+        "run_button_label": run_button_label,
     }
 
 
@@ -323,6 +324,7 @@ _DETAILS_BY_DISPLAY_NAME.update(
             factor_items=["Quality Factors"],
             family_badge="quality",
             top_label="Number of top ranked strict annual quality names to hold.",
+            run_button_label="Run Strict Annual Quality Backtest",
         ),
         "Quality Snapshot (Strict Quarterly Prototype)": _strict_factor_detail(
             display_name="Quality Snapshot (Strict Quarterly Prototype)",
@@ -330,6 +332,7 @@ _DETAILS_BY_DISPLAY_NAME.update(
             factor_items=["Quality Factors"],
             family_badge="quality",
             top_label="Number of top ranked strict quarterly quality names to hold.",
+            run_button_label="Run Strict Quarterly Quality Prototype",
             quarterly=True,
             annual_promotion=False,
         ),
@@ -339,6 +342,7 @@ _DETAILS_BY_DISPLAY_NAME.update(
             factor_items=["Value Factors"],
             family_badge="value",
             top_label="Number of cheapest strict annual value names to hold.",
+            run_button_label="Run Strict Annual Value Backtest",
         ),
         "Value Snapshot (Strict Quarterly Prototype)": _strict_factor_detail(
             display_name="Value Snapshot (Strict Quarterly Prototype)",
@@ -346,6 +350,7 @@ _DETAILS_BY_DISPLAY_NAME.update(
             factor_items=["Value Factors"],
             family_badge="value",
             top_label="Number of cheapest strict quarterly value names to hold.",
+            run_button_label="Run Strict Quarterly Value Prototype",
             quarterly=True,
             annual_promotion=False,
         ),
@@ -355,6 +360,7 @@ _DETAILS_BY_DISPLAY_NAME.update(
             factor_items=["Quality Factors", "Value Factors"],
             family_badge="quality-value",
             top_label="Number of top ranked strict annual blended names to hold.",
+            run_button_label="Run Strict Annual Quality + Value Backtest",
         ),
         "Quality + Value Snapshot (Strict Quarterly Prototype)": _strict_factor_detail(
             display_name="Quality + Value Snapshot (Strict Quarterly Prototype)",
@@ -362,6 +368,7 @@ _DETAILS_BY_DISPLAY_NAME.update(
             factor_items=["Quality Factors", "Value Factors"],
             family_badge="quality-value",
             top_label="Number of top ranked strict quarterly blended names to hold.",
+            run_button_label="Run Strict Quarterly Quality + Value Prototype",
             quarterly=True,
             annual_promotion=False,
         ),

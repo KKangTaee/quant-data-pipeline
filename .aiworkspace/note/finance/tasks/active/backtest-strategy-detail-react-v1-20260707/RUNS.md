@@ -17,3 +17,15 @@ Commands and QA evidence will be appended per task.
 - GREEN: focused read-model tests passed after adding `build_backtest_strategy_detail_model`.
 - Compile: `.venv/bin/python -m py_compile app/services/backtest_strategy_detail.py` completed successfully.
 - Diff check: `git diff --check -- app/services/backtest_strategy_detail.py tests/test_service_contracts.py .aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707` completed successfully.
+
+## 2026-07-07 2차 Strategy Detail React Panel
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_backtest_strategy_detail_panel_react_component_is_ui_only -v` failed because `app/web/components/backtest_strategy_detail_panel/component.py` did not exist yet.
+- Build setup: `npm install` in `app/web/components/backtest_strategy_detail_panel/frontend` completed with npm audit warnings already typical of this Vite dependency family; no dependency upgrade was applied.
+- Build: `npm run build` in `app/web/components/backtest_strategy_detail_panel/frontend` completed successfully.
+- GREEN: component contract test passed after wrapper/frontend/build/wiring were added.
+- RED/GREEN polish: strict factor run-action label tests first failed on generated labels, then passed after explicit button labels were added to `app/services/backtest_strategy_detail.py`.
+- Focused verification: 7 relevant `BacktestCandidateAnalysisHardeningTests` passed.
+- Compile: `.venv/bin/python -m py_compile app/services/backtest_strategy_detail.py app/web/backtest_single_strategy.py app/web/backtest_single_forms/__init__.py app/web/components/backtest_strategy_detail_panel/component.py` completed successfully.
+- Browser QA: Selenium confirmed `Strategy Detail` panel renders for Equal Weight and Quality Strict Annual, Quality includes `Run Strict Annual Quality Backtest`, and Price Freshness Preflight still renders. No component asset MIME errors were logged.
+- Screenshot: `backtest-strategy-detail-panel-qa.png` generated locally and not intended for commit.

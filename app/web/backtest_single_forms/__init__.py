@@ -3,18 +3,19 @@ from __future__ import annotations
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_single_runner import _handle_backtest_run
 
-def _render_single_strategy_family_form(strategy_choice: str) -> None:
+def _render_single_strategy_family_form(strategy_choice: str, selected_variant: str | None = None) -> None:
     variant_key = _single_family_variant_session_key(strategy_choice)
     variant_options = family_variant_options(strategy_choice)
     if not variant_key or not variant_options:
         return
 
-    st.caption("이 카테고리 안에서 실행 variant를 선택합니다.")
-    selected_variant = st.selectbox(
-        f"{strategy_choice} Variant",
-        options=variant_options,
-        key=variant_key,
-    )
+    if selected_variant not in variant_options:
+        st.caption("이 카테고리 안에서 실행 variant를 선택합니다.")
+        selected_variant = st.selectbox(
+            f"{strategy_choice} Variant",
+            options=variant_options,
+            key=variant_key,
+        )
     concrete_strategy_name = resolve_concrete_strategy_display_name(strategy_choice, selected_variant)
 
     if concrete_strategy_name == "Quality Snapshot":
