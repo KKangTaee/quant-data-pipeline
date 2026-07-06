@@ -254,7 +254,13 @@ function FuturesMacroWorkbench({ args }: Props) {
             <span>{score.label}</span>
             <strong>{score.value}</strong>
             <small>{score.direction} · {score.coverage}</small>
-            {score.polarity ? <small className="fm-workbench__score-hint">{score.polarity}</small> : null}
+            {score.polarity ? (
+              <small className="fm-workbench__score-hint">
+                {score.polarity.split(" · ").map((line) => (
+                  <span className="fm-workbench__score-hint-line" key={line}>{line}</span>
+                ))}
+              </small>
+            ) : null}
           </div>
         ))}
       </div>

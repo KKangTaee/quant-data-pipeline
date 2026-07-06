@@ -186,6 +186,10 @@ body {
   font-weight: 750;
 }
 
+.fm-workbench__score-hint-line {
+  display: block;
+}
+
 .fm-workbench__confidence strong,
 .fm-workbench__metric strong,
 .fm-workbench__score strong,
