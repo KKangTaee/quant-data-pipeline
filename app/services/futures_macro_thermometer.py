@@ -133,6 +133,17 @@ WEEKLY_CONTEXT_GROUPS = (
 
 FLOW_CONTEXT_PERIODS = (
     {
+        "key": "1D",
+        "label": "1D",
+        "title": "최근 1일 흐름",
+        "column": "1D %",
+        "copy_period": "최근 1일",
+        "basis": "저장된 1D 선물 OHLCV의 최근 1거래일 변화율",
+        "missing_summary": "최근 1일 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+        "missing_detail": "최근 1일 변화율을 계산할 일봉 데이터가 부족합니다.",
+        "neutral_detail": "최근 1일 변화는 중립권입니다.",
+    },
+    {
         "key": "1W",
         "label": "1W",
         "title": "최근 1주 흐름",
@@ -900,6 +911,8 @@ def _signed_percent_label(value: float | None) -> str:
 
 def _flow_period_text(text: Any, period: dict[str, Any]) -> str:
     value = str(text or "")
+    if str(period.get("key")) == "1D":
+        return value.replace("최근 1주", "최근 1일").replace("5D", "1D")
     if str(period.get("key")) == "1M":
         return value.replace("최근 1주", "최근 1개월").replace("5D", "20D")
     return value
@@ -991,8 +1004,15 @@ def _build_macro_flow_period(symbol_metrics: pd.DataFrame, period: dict[str, Any
     }
 
 
+def _flow_period_definition(key: str) -> dict[str, Any]:
+    for period in FLOW_CONTEXT_PERIODS:
+        if str(period.get("key")) == key:
+            return period
+    return FLOW_CONTEXT_PERIODS[0]
+
+
 def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
-    weekly = _build_macro_flow_period(symbol_metrics, FLOW_CONTEXT_PERIODS[0])
+    weekly = _build_macro_flow_period(symbol_metrics, _flow_period_definition("1W"))
     return {
         "status": weekly["status"],
         "summary": weekly["summary"],
@@ -1005,7 +1025,7 @@ def build_macro_flow_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
     periods = [_build_macro_flow_period(symbol_metrics, period) for period in FLOW_CONTEXT_PERIODS]
     return {
         "status": "OK" if any(period.get("status") == "OK" for period in periods) else "MISSING",
-        "default_period": "1W",
+        "default_period": "1D",
         "periods": periods,
     }
 

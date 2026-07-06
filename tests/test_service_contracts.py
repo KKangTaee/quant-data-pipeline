@@ -5906,8 +5906,24 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 ],
             },
             "flow_context": {
-                "default_period": "1W",
+                "default_period": "1D",
                 "periods": [
+                    {
+                        "key": "1D",
+                        "label": "1D",
+                        "title": "최근 1일 흐름",
+                        "summary": "최근 1일 금리 부담 변화가 가장 두드러집니다.",
+                        "basis": "저장된 1D 선물 OHLCV의 최근 1거래일 변화율",
+                        "cards": [
+                            {
+                                "label": "금리 부담",
+                                "value": "-0.32%",
+                                "detail": "채권선물 가격 상승이 최근 1일 금리 부담 완화처럼 읽힙니다.",
+                                "meaning": "채권선물은 가격과 금리가 반대로 움직이므로 1D 변화율을 뒤집어 봅니다.",
+                                "tone": "positive",
+                            }
+                        ],
+                    },
                     {
                         "key": "1W",
                         "label": "1W",
@@ -5985,10 +6001,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(payload["scores"][0]["polarity"], "+ 위험선호 강화 · - 위험회피")
         self.assertEqual(payload["scores"][1]["label"], "금리")
         self.assertEqual(payload["scores"][1]["polarity"], "+ 금리 부담 확대 · - 금리 부담 완화")
-        self.assertEqual(payload["flow"]["default_period"], "1W")
-        self.assertEqual([period["key"] for period in payload["flow"]["periods"]], ["1W", "1M"])
-        self.assertEqual(payload["flow"]["periods"][1]["title"], "최근 1개월 흐름")
-        self.assertEqual(payload["flow"]["cards"][0]["label"], "위험선호")
+        self.assertEqual(payload["flow"]["default_period"], "1D")
+        self.assertEqual([period["key"] for period in payload["flow"]["periods"]], ["1D", "1W", "1M"])
+        self.assertEqual(payload["flow"]["periods"][0]["title"], "최근 1일 흐름")
+        self.assertIn("최근 1거래일", payload["flow"]["periods"][0]["basis"])
+        self.assertEqual(payload["flow"]["periods"][2]["title"], "최근 1개월 흐름")
+        self.assertEqual(payload["flow"]["cards"][0]["label"], "금리 부담")
         self.assertEqual(payload["evidence"]["title"], "현재 근거")
         evidence_item = payload["evidence"]["sections"][0]["items"][0]
         self.assertEqual(evidence_item["title"], "금리 부담 · ZN=F")
@@ -16922,7 +16940,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertGreater(card_by_label["금리 부담"]["raw_value"], 0)
         self.assertIn("채권선물", card_by_label["금리 부담"]["meaning"])
 
-    def test_macro_thermometer_builds_flow_context_for_1w_and_1m_moves(self) -> None:
+    def test_macro_thermometer_builds_flow_context_for_1d_1w_and_1m_moves(self) -> None:
         from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
 
         symbols = [
@@ -16986,9 +17004,13 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
         flow = snapshot["flow_context"]
 
-        self.assertEqual(flow["default_period"], "1W")
-        self.assertEqual([period["key"] for period in flow["periods"]], ["1W", "1M"])
+        self.assertEqual(flow["default_period"], "1D")
+        self.assertEqual([period["key"] for period in flow["periods"]], ["1D", "1W", "1M"])
         period_by_key = {period["key"]: period for period in flow["periods"]}
+        self.assertEqual(period_by_key["1D"]["title"], "최근 1일 흐름")
+        self.assertIn("최근 1거래일", period_by_key["1D"]["basis"])
+        self.assertIn("최근 1일", period_by_key["1D"]["summary"])
+        self.assertIn("1D", period_by_key["1D"]["cards"][0]["meaning"])
         self.assertEqual(period_by_key["1W"]["title"], "최근 1주 흐름")
         self.assertIn("최근 5거래일", period_by_key["1W"]["basis"])
         self.assertEqual(period_by_key["1M"]["title"], "최근 1개월 흐름")

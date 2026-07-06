@@ -8540,3 +8540,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `기준일`이 KST 달력일이 아니라 CME/yfinance futures daily session date임을 드러내고, score sign이 보편적 good/bad가 아니라 각 score family의 방향성임을 UI에서 바로 읽히게 해야 함.
 - Analysis result: daily collector / DB는 `1d` 최신 candle을 정상 갱신하고 있었고, `1m` stale 상태는 별도 intraday path였다. Score는 standardized move를 score family별 부호/가중치로 변환한 directional pressure value다.
 - Follow-up: React command / data-basis card에 `CME/yfinance 일봉 세션 기준`을 추가하고, score chips에 polarity hint를 표시했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에 있다.
+
+### 2026-07-06 - Futures Macro에 1D 흐름을 추가해 score와 기간 흐름을 비교한다
+
+- User request: 현재 금리 score와 1W 흐름이 다르게 보이므로 `최근 1일 흐름` 탭을 추가하면 어떨지 물었고 진행을 승인함.
+- Interpreted goal: top score의 latest standardized 1D signal과 raw 1D / 1W / 1M 흐름을 나란히 비교하게 해야 함.
+- Analysis result: `1D`는 raw 1거래일 변화율, top score는 같은 최신 일봉을 변동성 표준화한 값이므로 수치는 같지 않지만 방향 비교에 유용하다.
+- Follow-up: `flow_context`에 `1D`를 추가하고 default period를 `1D`로 변경했다. 기존 `weekly_context`는 1W를 유지한다.

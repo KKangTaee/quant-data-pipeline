@@ -5533,3 +5533,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/` 후속으로 React 기준일 표기를 `CME/yfinance 일봉 세션 기준`으로 바꿨다.
   - Score chips는 `+ 위험선호 강화 · - 위험회피`, `+ 금리 부담 확대 · - 금리 부담 완화` 같은 polarity hint를 보여줘 양수 / 음수가 보편적 good/bad가 아니라 score-family 방향임을 드러낸다.
   - QA는 focused contracts, FuturesMacroThermometer contracts, `py_compile`, React build, Browser QA로 완료했다.
+- Overview Futures Macro 1D Flow Tab 2026-07-06:
+  - `Futures Macro` React flow tabs now use `1D / 1W / 1M`, defaulting to 1D so the current standardized score can be compared with raw one-day moves before weekly / monthly context.
+  - Existing 1W `weekly_context` compatibility remains pinned to 1W; DB collection, schema, and provider refresh boundaries are unchanged.
+  - QA covered RED/GREEN contracts, the focused 26-test Futures Macro suite, `py_compile`, `git diff --check`, and Browser QA.
