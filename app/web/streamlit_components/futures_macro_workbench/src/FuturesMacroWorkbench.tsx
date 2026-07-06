@@ -158,10 +158,18 @@ function syncFrameHeightSoon() {
 function FuturesMacroWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
+  const [pendingActionId, setPendingActionId] = useState("");
 
   useEffect(() => {
     syncFrameHeightSoon();
   });
+
+  useEffect(() => {
+    if (payload?.command.validation_state.state === "불러옴") {
+      setPendingActionId("");
+      setPendingActionLabel("");
+    }
+  }, [payload?.command.validation_state.loaded_at, payload?.command.validation_state.state]);
 
   if (!payload) {
     return null;
@@ -174,6 +182,7 @@ function FuturesMacroWorkbench({ args }: Props) {
 
   const emitAction = (action: FuturesMacroAction) => {
     setPendingActionLabel(action.label);
+    setPendingActionId(action.id);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
 
@@ -217,7 +226,11 @@ function FuturesMacroWorkbench({ args }: Props) {
 
       <RecentFlowSection flow={payload.flow} onHeightChange={syncFrameHeightSoon} toneColor={toneColor} />
 
-      <HistoricalValidationPanel validation={payload.validation} onAction={emitAction} />
+      <HistoricalValidationPanel
+        pendingValidation={pendingActionId === "load_validation"}
+        validation={payload.validation}
+        onAction={emitAction}
+      />
     </section>
   );
 }

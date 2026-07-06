@@ -5995,10 +5995,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ["daily_refresh", "reload"],
         )
         self.assertEqual(payload["validation"]["action"]["id"], "load_validation")
-        self.assertEqual(payload["validation"]["action"]["label"], "오늘과 비슷했던 과거 상태 확인")
+        self.assertEqual(payload["validation"]["action"]["label"], "오늘과 비슷한 과거 흐름 확인")
         bridge = payload["validation"]["insight"]["evidence_bridge"]
-        self.assertEqual(bridge["label"], "현재근거와 연결")
-        self.assertEqual(bridge["value"], "현재 근거를 과거 표본으로 검산")
+        self.assertEqual(bridge["label"], "자산군 해석")
+        self.assertEqual(bridge["value"], "계산 전")
         self.assertIn("강한 근거 1개", bridge["detail"])
         visual_candidates = payload["validation"]["visual_candidates"]
         self.assertEqual([item["key"] for item in visual_candidates], ["similar_state_frequency", "forward_return_distribution"])
@@ -6085,6 +6085,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('import RecentFlowSection from "./RecentFlowSection"', react_source)
         self.assertIn('import HistoricalValidationPanel from "./HistoricalValidationPanel"', react_source)
         self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn('setPendingActionId("")', react_source)
         self.assertIn("<MacroContextSection", react_source)
         self.assertIn("<RecentFlowSection", react_source)
         self.assertIn("<HistoricalValidationPanel", react_source)
@@ -6112,6 +6113,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("validation.insight.evidence_bridge", validation_panel_source)
         self.assertIn("validation.action", validation_panel_source)
         self.assertIn("onAction(validation.action)", validation_panel_source)
+        self.assertIn("pendingValidation", validation_panel_source)
         self.assertIn('className="fm-workbench__validation-card"', validation_panel_source)
         self.assertIn('className="fm-workbench__validation-eyebrow">과거 점검', validation_panel_source)
         self.assertIn('className="fm-workbench__validation-summary"', validation_panel_source)
@@ -6119,6 +6121,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('className="fm-workbench__validation-status-grid"', validation_panel_source)
         self.assertIn('className="fm-workbench__validation-result-grid"', validation_panel_source)
         self.assertIn("fm-workbench__validation-action", validation_panel_source)
+        self.assertIn("fm-workbench__validation-loading", validation_panel_source)
+        self.assertLess(
+            validation_panel_source.index('className="fm-workbench__validation-control"'),
+            validation_panel_source.index('className="fm-workbench__validation-status-grid"'),
+        )
         self.assertIn(".fm-workbench__section-card", react_style)
         self.assertIn(".fm-workbench__macro-section", react_style)
         self.assertIn(".fm-workbench__flow-section", react_style)
@@ -6131,8 +6138,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".fm-workbench__validation-status-grid", react_style)
         self.assertIn(".fm-workbench__validation-result-grid", react_style)
         self.assertIn(".fm-workbench__validation-action", react_style)
+        self.assertIn(".fm-workbench__validation-loading", react_style)
         self.assertIn(".fm-workbench__flow-tabs", react_style)
         self.assertIn(".fm-workbench__evidence", react_style)
+        react_event_body = helper_source[helper_source.index('if action_id == "load_validation"') :]
+        react_event_body = react_event_body[: react_event_body.index("def _futures_symbols_with_candles")]
+        self.assertNotIn('st.spinner("과거 점검을 계산하는 중입니다..."', react_event_body)
 
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
@@ -17374,16 +17385,24 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         )
 
         insight = payload["validation"]["insight"]
-        self.assertEqual(insight["purpose"], "오늘과 비슷했던 과거 상태 확인")
+        self.assertEqual(insight["purpose"], "오늘과 비슷한 과거 흐름 확인")
         self.assertIn("현재 1D 선물 1/1개", insight["basis"])
-        self.assertEqual(insight["current_state"]["label"], "현재 상태 이름")
-        self.assertEqual(insight["current_state"]["value"], "혼재된 매크로 흐름")
-        self.assertEqual(insight["sample"]["label"], "과거에 비슷했던 날")
-        self.assertEqual(insight["sample"]["value"], "950회")
-        self.assertIn("점검 기준 1,212개", insight["sample"]["detail"])
-        self.assertEqual(insight["directionality"]["label"], "이후 흐름 해석")
-        self.assertEqual(insight["directionality"]["value"], "방향성으로 읽지 않음")
-        self.assertIn("예측 신호가 아니라", insight["confidence_effect"])
+        self.assertEqual(insight["current_state"]["label"], "판정")
+        self.assertEqual(insight["current_state"]["value"], "방향성 보류")
+        self.assertIn("혼재된 매크로 흐름", insight["current_state"]["detail"])
+        self.assertEqual(insight["sample"]["label"], "5거래일 표본")
+        self.assertEqual(insight["sample"]["value"], "방향성 없음")
+        self.assertIn("5D 적중률로 읽지 않습니다", insight["sample"]["detail"])
+        self.assertEqual(insight["directionality"]["label"], "20거래일 표본")
+        self.assertEqual(insight["directionality"]["value"], "방향성 없음")
+        self.assertEqual(insight["evidence_bridge"]["label"], "자산군 해석")
+        self.assertEqual(insight["evidence_bridge"]["value"], "중립 / 관망")
+        self.assertIn("Target Family: Mixed", insight["evidence_bridge"]["detail"])
+        self.assertIn("비슷한 과거 상태 950회", insight["confidence_effect"])
+        self.assertIn("상승/하락 확률로 읽지 않습니다", insight["confidence_effect"])
+        self.assertIn("계산된 표본 통계만 사용", insight["confidence_effect"])
+        self.assertNotIn("현재 상태 이름", str(insight))
+        self.assertNotIn("과거에 비슷했던 날", str(insight))
 
         metrics = payload["validation"]["metrics"]
         self.assertEqual([metric["label"] for metric in metrics], ["상태", "점검 기준", "비슷한 상태"])
@@ -17397,6 +17416,66 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertEqual([item["key"] for item in visual_candidates], ["similar_state_frequency", "forward_return_distribution"])
         self.assertEqual(visual_candidates[0]["status"], "ready")
         self.assertEqual(visual_candidates[1]["status"], "not_applicable")
+
+        directional_validation = {
+            "status": "OK",
+            "coverage": {"validation_dates": 100, "history_span_years": 4.0},
+            "current_scenario_metrics": {
+                "Scenario": "좋은 risk-on",
+                "Occurrence Count": 90,
+                "Target Family": "Risk Asset",
+                "Hit Rule": "risk asset forward return > 0",
+                "Sample 5D": 80,
+                "Mean 5D %": 1.25,
+                "Hit Rate 5D %": 61.0,
+                "Sample 20D": 75,
+                "Mean 20D %": -0.45,
+                "Hit Rate 20D %": 47.0,
+                "Directional Hit Applicable": True,
+            },
+        }
+        directional_payload = build_futures_macro_react_workbench_payload(
+            {**macro, "summary": {"scenario": "좋은 risk-on", "summary": "risk-on"}},
+            validation=directional_validation,
+            confidence={},
+            validation_loaded_at="2026-07-06 10:00:00",
+        )
+        directional_insight = directional_payload["validation"]["insight"]
+        self.assertEqual(directional_insight["current_state"]["value"], "방향성 참고 가능")
+        self.assertEqual(directional_insight["sample"]["value"], "+1.25%")
+        self.assertIn("표본 80회", directional_insight["sample"]["detail"])
+        self.assertIn("방향 일관성 61.0%", directional_insight["sample"]["detail"])
+        self.assertEqual(directional_insight["directionality"]["value"], "-0.45%")
+        self.assertIn("표본 75회", directional_insight["directionality"]["detail"])
+        self.assertEqual(directional_insight["evidence_bridge"]["value"], "위험자산 우위")
+        self.assertIn("risk asset forward return > 0", directional_insight["evidence_bridge"]["detail"])
+        self.assertIn("5D 평균 +1.25%", directional_insight["confidence_effect"])
+        self.assertIn("방향 일관성 61.0%", directional_insight["confidence_effect"])
+
+        sparse_directional_validation = {
+            "status": "OK",
+            "coverage": {"validation_dates": pd.NA, "history_span_years": pd.NA},
+            "current_scenario_metrics": {
+                "Scenario": "좋은 risk-on",
+                "Occurrence Count": pd.NA,
+                "Target Family": "Risk Asset",
+                "Hit Rule": "risk asset forward return > 0",
+                "Sample 5D": pd.NA,
+                "Mean 5D %": pd.NA,
+                "Hit Rate 5D %": pd.NA,
+                "Directional Hit Applicable": True,
+            },
+        }
+        sparse_payload = build_futures_macro_react_workbench_payload(
+            {**macro, "summary": {"scenario": "좋은 risk-on", "summary": "risk-on"}},
+            validation=sparse_directional_validation,
+            confidence={},
+            validation_loaded_at="2026-07-06 10:00:00",
+        )
+        sparse_insight = sparse_payload["validation"]["insight"]
+        self.assertEqual(sparse_insight["sample"]["value"], "표본 부족")
+        self.assertIn("계산 가능 표본 0회", sparse_insight["sample"]["detail"])
+        self.assertIn("비슷한 과거 상태 0회", sparse_insight["confidence_effect"])
 
     def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
         from app.services.futures_macro_validation import build_interpretation_confidence

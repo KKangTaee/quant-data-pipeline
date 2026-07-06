@@ -949,9 +949,9 @@ def _coverage(
 
 def _status_and_warnings(coverage: dict[str, Any], records: pd.DataFrame) -> tuple[str, list[str]]:
     warnings: list[str] = []
-    if int(coverage.get("futures_raw_rows") or 0) <= 0:
+    if _validation_int_value(coverage.get("futures_raw_rows")) <= 0:
         return "MISSING", ["Stored futures daily OHLCV rows are not available for historical validation."]
-    if int(coverage.get("validation_dates") or 0) <= 0:
+    if _validation_int_value(coverage.get("validation_dates")) <= 0:
         return "MISSING", ["No point-in-time validation dates had enough score history and forward return targets."]
     span_years = _safe_float(coverage.get("history_span_years"))
     if span_years is None or span_years < MIN_VALIDATION_YEARS:
@@ -984,6 +984,15 @@ def _validation_count_label(value: Any) -> str:
         return "0회"
 
 
+def _validation_int_value(value: Any) -> int:
+    try:
+        if value is None or pd.isna(value):
+            return 0
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _validation_percent_label(value: Any, *, digits: int = 1) -> str:
     try:
         if value is None or pd.isna(value):
@@ -1003,10 +1012,10 @@ def build_current_scenario_validation_summary(
         return {}
     coverage = dict(validation_snapshot.get("coverage") or {})
     scenario = str(metrics.get("Scenario") or "현재 시나리오")
-    occurrence_count = int(metrics.get("Occurrence Count") or 0)
-    sample_5d = int(metrics.get("Sample 5D") or 0)
+    occurrence_count = _validation_int_value(metrics.get("Occurrence Count"))
+    sample_5d = _validation_int_value(metrics.get("Sample 5D"))
     hit_applicable = bool(metrics.get("Directional Hit Applicable"))
-    validation_dates = int(coverage.get("validation_dates") or 0)
+    validation_dates = _validation_int_value(coverage.get("validation_dates"))
     history_span = coverage.get("history_span_years")
     try:
         history_span_label = f"{float(history_span):.2f}년"
@@ -1172,8 +1181,8 @@ def build_interpretation_confidence(
             "label": "Not Enough History",
             "tone": "warning",
             "score": 0,
-            "sample_size": int(current_metrics.get("Sample 5D") or 0),
-            "occurrence_count": int(current_metrics.get("Occurrence Count") or 0),
+            "sample_size": _validation_int_value(current_metrics.get("Sample 5D")),
+            "occurrence_count": _validation_int_value(current_metrics.get("Occurrence Count")),
             "hit_rate_5d": current_metrics.get("Hit Rate 5D %"),
             "hit_applicable": bool(current_metrics.get("Directional Hit Applicable")),
             "latest_candle_age_days": latest_age,
@@ -1182,7 +1191,7 @@ def build_interpretation_confidence(
                 "symbol_count": symbol_count,
                 "standardized_count": standardized_count,
                 "min_data_days": min_data_days,
-                "validation_dates": int(validation_coverage.get("validation_dates") or 0),
+                "validation_dates": _validation_int_value(validation_coverage.get("validation_dates")),
             },
         }
 
@@ -1231,9 +1240,9 @@ def build_interpretation_confidence(
         score -= 1
         reasons.append(f"Latest daily candle is {latest_age} days old.")
 
-    validation_dates = int(validation_coverage.get("validation_dates") or 0)
-    scenario_sample = int(current_metrics.get("Sample 5D") or 0)
-    occurrence_count = int(current_metrics.get("Occurrence Count") or 0)
+    validation_dates = _validation_int_value(validation_coverage.get("validation_dates"))
+    scenario_sample = _validation_int_value(current_metrics.get("Sample 5D"))
+    occurrence_count = _validation_int_value(current_metrics.get("Occurrence Count"))
     hit_rate = _safe_float(current_metrics.get("Hit Rate 5D %"))
     hit_applicable = bool(current_metrics.get("Directional Hit Applicable")) and hit_rate is not None and scenario_sample > 0
     if validation_dates <= 0:

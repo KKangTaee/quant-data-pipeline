@@ -421,20 +421,126 @@ def _futures_macro_react_validation_metrics(validation: dict[str, Any]) -> list[
     except (TypeError, ValueError):
         history_span_detail = "기간 미확인"
     validation_dates = coverage.get("validation_dates")
-    try:
-        validation_dates_value = f"{int(validation_dates):,}개"
-    except (TypeError, ValueError):
-        validation_dates_value = _snapshot_value(validation_dates)
-    try:
-        occurrence_value = f"{int(occurrence):,}회"
-    except (TypeError, ValueError):
-        occurrence_value = _snapshot_value(occurrence)
+    validation_dates_value = f"{_validation_int_value(validation_dates):,}개"
+    occurrence_value = f"{_validation_int_value(occurrence):,}회"
     occurrence_detail = "5D 방향성 적용" if hit_applicable else "방향성 비적용"
     return [
         _react_metric("상태", validation.get("status") or "OK", detail=history_span_detail, tone="positive"),
         _react_metric("점검 기준", validation_dates_value, detail=history_span_detail),
         _react_metric("비슷한 상태", occurrence_value, detail=occurrence_detail),
     ]
+
+
+def _validation_count_label(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "0회"
+        return f"{int(value):,}회"
+    except (TypeError, ValueError):
+        return "0회"
+
+
+def _validation_int_value(value: Any) -> int:
+    try:
+        if value is None or pd.isna(value):
+            return 0
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _validation_signed_percent_label(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):+.2f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _validation_plain_percent_label(value: Any) -> str:
+    try:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{float(value):.1f}%"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _validation_horizon_metric(
+    metrics: dict[str, Any],
+    *,
+    horizon: int,
+    hit_applicable: bool,
+    occurrence_count: int,
+) -> dict[str, str]:
+    if not hit_applicable:
+        return {
+            "label": f"{horizon}거래일 표본",
+            "value": "방향성 없음",
+            "detail": (
+                f"비슷한 과거 상태 {_validation_count_label(occurrence_count)} · "
+                f"이 상태는 {horizon}D 적중률로 읽지 않습니다."
+            ),
+        }
+    sample = _validation_int_value(metrics.get(f"Sample {horizon}D"))
+    mean_value = _validation_signed_percent_label(metrics.get(f"Mean {horizon}D %"))
+    hit_rate = _validation_plain_percent_label(metrics.get(f"Hit Rate {horizon}D %"))
+    if sample <= 0 or mean_value == "-":
+        return {
+            "label": f"{horizon}거래일 표본",
+            "value": "표본 부족",
+            "detail": f"계산 가능 표본 {_validation_count_label(sample)} · 방향 일관성 {hit_rate}",
+        }
+    return {
+        "label": f"{horizon}거래일 표본",
+        "value": mean_value,
+        "detail": f"표본 {_validation_count_label(sample)} · 방향 일관성 {hit_rate}",
+    }
+
+
+def _validation_asset_reading(metrics: dict[str, Any], *, hit_applicable: bool) -> dict[str, str]:
+    family = _display_text(metrics.get("Target Family"), "Mixed")
+    rule = _display_text(metrics.get("Hit Rule"), "mixed scenario; no forced directional hit rule")
+    if not hit_applicable:
+        return {
+            "label": "자산군 해석",
+            "value": "중립 / 관망",
+            "detail": f"Target Family: {family} · 방향성 hit rule 없음",
+        }
+    family_label = {
+        "Risk Asset": "위험자산",
+        "Growth Asset": "성장자산",
+        "Safe Haven": "방어자산",
+        "Dollar": "달러",
+    }.get(family, family)
+    if "> 0" in rule:
+        value = f"{family_label} 우위"
+    elif "< 0" in rule:
+        value = f"{family_label} 약세"
+    else:
+        value = f"{family_label} 방향성 참고"
+    return {
+        "label": "자산군 해석",
+        "value": value,
+        "detail": f"Target Family: {family} · Hit Rule: {rule}",
+    }
+
+
+def _validation_confidence_effect(metrics: dict[str, Any], *, hit_applicable: bool, occurrence_count: int) -> str:
+    if not hit_applicable:
+        return (
+            f"비슷한 과거 상태 {_validation_count_label(occurrence_count)}였지만 이 상태는 상승/하락 확률로 읽지 않습니다. "
+            "계산된 표본 통계만 사용하며, 매수/매도 신호가 아니라 현재 해석을 보수적으로 볼지 확인하는 근거입니다."
+        )
+    sample_5d = _validation_int_value(metrics.get("Sample 5D"))
+    mean_5d = _validation_signed_percent_label(metrics.get("Mean 5D %"))
+    hit_rate_5d = _validation_plain_percent_label(metrics.get("Hit Rate 5D %"))
+    return (
+        f"비슷한 과거 상태 {_validation_count_label(occurrence_count)} 중 5D 계산 표본 {_validation_count_label(sample_5d)}에서 "
+        f"5D 평균 {mean_5d}, 방향 일관성 {hit_rate_5d}입니다. "
+        "계산된 표본 통계만 사용하며, 매수/매도 신호가 아니라 현재 해석을 보수적으로 볼지 확인하는 근거입니다."
+    )
 
 
 def _futures_macro_react_validation_insight(
@@ -457,57 +563,60 @@ def _futures_macro_react_validation_insight(
         if key in evidence_counts:
             evidence_counts[key] = int(section.get("count") or 0)
     evidence_bridge = {
-        "label": "현재근거와 연결",
-        "value": "현재 근거를 과거 표본으로 검산",
+        "label": "자산군 해석",
+        "value": "계산 전",
         "detail": (
-            f"강한 근거 {evidence_counts['strong']}개 · "
-            f"약한 근거 {evidence_counts['weak']}개 · "
-            f"충돌 근거 {evidence_counts['conflicting']}개"
+            f"현재 근거: 강한 근거 {evidence_counts['strong']}개 · "
+            f"약한 근거 {evidence_counts['weak']}개 · 충돌 근거 {evidence_counts['conflicting']}개"
         ),
     }
     if not validation:
         return {
-            "purpose": "오늘과 비슷했던 과거 상태 확인",
+            "purpose": "오늘과 비슷한 과거 흐름 확인",
             "basis": basis,
-            "current_state": {"label": "현재 상태 이름", "value": scenario, "detail": "아직 과거 표본과 비교하지 않았습니다."},
-            "sample": {"label": "과거에 비슷했던 날", "value": "계산 전", "detail": "과거 일관성 계산 전입니다."},
-            "directionality": {"label": "이후 흐름 해석", "value": "계산 전", "detail": "계산 후 방향성 적용 여부를 표시합니다."},
+            "current_state": {"label": "판정", "value": "계산 전", "detail": f"현재 상태: {scenario}"},
+            "sample": {"label": "5거래일 표본", "value": "계산 전", "detail": "과거 표본 계산 전입니다."},
+            "directionality": {"label": "20거래일 표본", "value": "계산 전", "detail": "과거 표본 계산 전입니다."},
             "evidence_bridge": evidence_bridge,
-            "confidence_effect": "예측 신호가 아니라 현재 해석을 보수적으로 볼지 확인하는 보조 근거입니다.",
+            "confidence_effect": "버튼을 눌러 과거 표본 통계를 계산합니다. 결과 문구는 계산된 표본 통계만 사용합니다.",
         }
 
     validation_summary = build_current_scenario_validation_summary(validation, confidence_label=confidence_label)
-    occurrence = dict(validation_summary.get("occurrence") or {})
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    occurrence_count = _validation_int_value(current_metrics.get("Occurrence Count"))
     hit_applicable = bool(validation_summary.get("hit_rate_applicable"))
-    direction_value = "5D 이후 방향성 참고" if hit_applicable else "방향성으로 읽지 않음"
-    direction_detail = (
-        "비슷했던 과거 상태 이후 5D 흐름이 현재 해석 방향과 맞았는지 확인합니다."
-        if hit_applicable
-        else "혼재 또는 저신호 상태는 상승/하락 적중률보다 반복 빈도와 해석 강도를 봅니다."
+    state_value = "방향성 참고 가능" if hit_applicable else "방향성 보류"
+    five_day = _validation_horizon_metric(
+        current_metrics,
+        horizon=5,
+        hit_applicable=hit_applicable,
+        occurrence_count=occurrence_count,
     )
+    twenty_day = _validation_horizon_metric(
+        current_metrics,
+        horizon=20,
+        hit_applicable=hit_applicable,
+        occurrence_count=occurrence_count,
+    )
+    asset_reading = _validation_asset_reading(current_metrics, hit_applicable=hit_applicable)
     return {
-        "purpose": "오늘과 비슷했던 과거 상태 확인",
+        "purpose": "오늘과 비슷한 과거 흐름 확인",
         "basis": basis,
         "current_state": {
-            "label": "현재 상태 이름",
-            "value": scenario,
-            "detail": _display_text(summary.get("sub_scenario") or summary.get("regime_hint"), "선물 일봉 점수 조합으로 붙인 상태입니다."),
+            "label": "판정",
+            "value": state_value,
+            "detail": (
+                f"{scenario} · {_display_text(summary.get('sub_scenario') or summary.get('regime_hint'), '현재 상태')}"
+            ),
         },
-        "sample": {
-            "label": "과거에 비슷했던 날",
-            "value": _display_text(occurrence.get("value"), "0회"),
-            "detail": _display_text(validation_summary.get("coverage"), "점검 기준 미확인"),
-        },
-        "directionality": {
-            "label": "이후 흐름 해석",
-            "value": direction_value,
-            "detail": direction_detail,
-        },
-        "evidence_bridge": evidence_bridge,
-        "confidence_effect": (
-            "예측 신호가 아니라 현재 해석을 얼마나 보수적으로 읽을지 확인합니다. "
-            f"{_display_text(validation_summary.get('confidence_effect'), '')}"
-        ).strip(),
+        "sample": five_day,
+        "directionality": twenty_day,
+        "evidence_bridge": asset_reading,
+        "confidence_effect": _validation_confidence_effect(
+            current_metrics,
+            hit_applicable=hit_applicable,
+            occurrence_count=occurrence_count,
+        ),
     }
 
 
@@ -526,10 +635,10 @@ def _futures_macro_react_validation_visual_candidates(validation: dict[str, Any]
                 "status": "pending",
                 "detail": "방향성 적용 가능 여부를 확인한 뒤 시각화 여부를 결정합니다.",
             },
-        ]
+    ]
     current_metrics = dict(validation.get("current_scenario_metrics") or {})
-    occurrence_count = int(current_metrics.get("Occurrence Count") or 0)
-    sample_5d = int(current_metrics.get("Sample 5D") or 0)
+    occurrence_count = _validation_int_value(current_metrics.get("Occurrence Count"))
+    sample_5d = _validation_int_value(current_metrics.get("Sample 5D"))
     hit_applicable = bool(current_metrics.get("Directional Hit Applicable"))
     return [
         {
@@ -611,7 +720,7 @@ def build_futures_macro_react_workbench_payload(
             ),
             "action": {
                 "id": "load_validation",
-                "label": "오늘과 비슷했던 과거 상태 확인",
+                "label": "오늘과 비슷한 과거 흐름 확인",
                 "kind": "secondary",
                 "detail": "현재 16개 선물 일봉 상태를 과거 날짜에도 같은 방식으로 계산해 비슷했던 상태를 확인합니다.",
             },
@@ -655,8 +764,7 @@ def _handle_futures_macro_react_event(event: dict[str, Any] | None, macro: dict[
         _reload_futures_macro_snapshot_for_ui()
         st.rerun()
     if action_id == "load_validation":
-        with st.spinner("과거 점검을 계산하는 중입니다..."):
-            _load_futures_macro_validation_for_session(macro)
+        _load_futures_macro_validation_for_session(macro)
         st.rerun()
 
 
@@ -1086,15 +1194,17 @@ def _macro_support_items(macro: dict[str, Any]) -> list[dict[str, Any]]:
     current_metrics = dict(validation.get("current_scenario_metrics") or {})
     sample = confidence.get("sample_size")
     if sample is None:
-        sample = current_metrics.get("Sample 5D") or 0
+        sample = current_metrics.get("Sample 5D")
+    sample = _validation_int_value(sample)
     occurrence_count = confidence.get("occurrence_count")
     if occurrence_count is None:
-        occurrence_count = current_metrics.get("Occurrence Count") or 0
+        occurrence_count = current_metrics.get("Occurrence Count")
+    occurrence_count = _validation_int_value(occurrence_count)
     hit_rate = confidence.get("hit_rate_5d")
     if hit_rate is None:
         hit_rate = current_metrics.get("Hit Rate 5D %")
     hit_applicable = bool(confidence.get("hit_applicable"))
-    validation_dates = validation_coverage.get("validation_dates") or 0
+    validation_dates = _validation_int_value(validation_coverage.get("validation_dates"))
     span = validation_coverage.get("history_span_years")
     return [
         {
@@ -1106,7 +1216,7 @@ def _macro_support_items(macro: dict[str, Any]) -> list[dict[str, Any]]:
         {
             "label": "과거 점검",
             "value": _macro_validation_status_label(validation.get("status")),
-            "detail": f"점검 기준 {int(validation_dates):,}개 · {span or '-'}년",
+            "detail": f"점검 기준 {validation_dates:,}개 · {span or '-'}년",
             "tone": "positive" if validation.get("status") == "OK" else "warning",
         },
         {

@@ -1,6 +1,7 @@
 import type { FuturesMacroAction, FuturesMacroMetric, FuturesMacroWorkbenchPayload } from "./FuturesMacroWorkbench";
 
 type HistoricalValidationPanelProps = {
+  pendingValidation: boolean;
   validation: FuturesMacroWorkbenchPayload["validation"];
   onAction: (action: FuturesMacroAction) => void;
 };
@@ -15,7 +16,7 @@ function MetricTile({ item }: { item: FuturesMacroMetric }) {
   );
 }
 
-function HistoricalValidationPanel({ validation, onAction }: HistoricalValidationPanelProps) {
+function HistoricalValidationPanel({ pendingValidation, validation, onAction }: HistoricalValidationPanelProps) {
   const insightTiles = [
     validation.insight.current_state,
     validation.insight.sample,
@@ -41,15 +42,10 @@ function HistoricalValidationPanel({ validation, onAction }: HistoricalValidatio
         <p>{validation.insight.confidence_effect}</p>
       </div>
 
-      <div className="fm-workbench__validation-status-grid">
-        {validation.metrics.map((item) => (
-          <MetricTile item={item} key={`${item.label}-${item.value}`} />
-        ))}
-      </div>
-
       <div className="fm-workbench__validation-control">
         <button
           className="fm-workbench__validation-action"
+          disabled={pendingValidation}
           onClick={() => onAction(validation.action)}
           title={validation.action.detail}
           type="button"
@@ -57,6 +53,18 @@ function HistoricalValidationPanel({ validation, onAction }: HistoricalValidatio
           {validation.action.label}
         </button>
         {validation.action.detail ? <small>{validation.action.detail}</small> : null}
+        {pendingValidation ? (
+          <div className="fm-workbench__validation-loading" role="status">
+            <span />
+            과거 표본 계산 중...
+          </div>
+        ) : null}
+      </div>
+
+      <div className="fm-workbench__validation-status-grid">
+        {validation.metrics.map((item) => (
+          <MetricTile item={item} key={`${item.label}-${item.value}`} />
+        ))}
       </div>
 
       <div className="fm-workbench__validation-result-grid">
