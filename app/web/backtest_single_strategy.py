@@ -13,6 +13,61 @@ from app.web.backtest_single_forms import (
 )
 
 
+def _last_run_matches_strategy_selection(
+    bundle: dict | None,
+    strategy_choice: str | None,
+    selected_variant: str | None = None,
+) -> bool:
+    """Return whether the last result bundle belongs to the currently selected strategy."""
+    if not bundle:
+        return True
+    meta = dict(bundle.get("meta") or {})
+    bundle_choice, bundle_variant = strategy_key_to_selection(meta.get("strategy_key"))
+    if not bundle_choice:
+        bundle_choice, bundle_variant = display_name_to_selection(
+            bundle.get("strategy_name") or meta.get("strategy_name")
+        )
+    if bundle_choice != strategy_choice:
+        return False
+    if selected_variant is not None:
+        return bundle_variant == selected_variant
+    return True
+
+
+def _selected_strategy_variant(strategy_choice: str | None) -> str | None:
+    variant_key = _single_family_variant_session_key(strategy_choice)
+    if not variant_key:
+        return None
+    value = st.session_state.get(variant_key)
+    return str(value) if value else None
+
+
+def _selection_signature(strategy_choice: str | None, selected_variant: str | None) -> str:
+    return f"{strategy_choice or '-'}::{selected_variant or '-'}"
+
+
+def _clear_last_run_if_strategy_selection_changed(
+    strategy_choice: str | None,
+    selected_variant: str | None = None,
+) -> None:
+    bundle = st.session_state.get("backtest_last_bundle")
+    current_signature = _selection_signature(strategy_choice, selected_variant)
+    previous_signature = st.session_state.get("backtest_last_strategy_selection_signature")
+    should_clear = bool(bundle) and (
+        not _last_run_matches_strategy_selection(bundle, strategy_choice, selected_variant)
+        or (previous_signature is not None and previous_signature != current_signature)
+    )
+    if should_clear:
+        st.session_state.backtest_last_bundle = None
+        st.session_state.backtest_last_error = None
+        st.session_state.backtest_last_error_kind = None
+        st.session_state.backtest_last_result_reset_notice = (
+            "전략 선택이 바뀌어 이전 백테스트 결과를 숨겼습니다. "
+            "현재 선택한 전략의 결과를 보려면 `Run Backtest`를 다시 실행하세요."
+        )
+    st.session_state.backtest_last_strategy_selection_signature = current_signature
+
+
 # Render and operate the Single Strategy workspace.
 def render_single_strategy_workspace() -> None:
     prefill_notice = st.session_state.get("backtest_prefill_notice")
@@ -75,6 +130,12 @@ def render_single_strategy_workspace() -> None:
     else:
         _render_single_strategy_family_form(strategy_choice)
     st.divider()
+    selected_variant = _selected_strategy_variant(strategy_choice)
+    _clear_last_run_if_strategy_selection_changed(strategy_choice, selected_variant)
+    reset_notice = st.session_state.get("backtest_last_result_reset_notice")
+    if reset_notice:
+        st.info(str(reset_notice))
+        st.session_state.backtest_last_result_reset_notice = None
     _render_last_run()
 
 __all__ = ["render_single_strategy_workspace"]

@@ -266,6 +266,10 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
         next_check_label = "1차 데이터 확인"
         next_check_value = "데이터 보강"
         next_check_detail = "가격 수집 또는 DB 보강 후 다시 실행합니다."
+    elif status != "ok":
+        next_check_label = "1차 데이터 확인"
+        next_check_value = "데이터 기준 확인"
+        next_check_detail = "자료 제한 또는 최신성 경고가 있어 다시 실행하거나 데이터 기준을 확인합니다."
     else:
         next_check_label = "1차 데이터 확인"
         next_check_value = "바로 성과 확인"

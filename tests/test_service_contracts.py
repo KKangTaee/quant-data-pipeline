@@ -130,6 +130,56 @@ class BacktestPresetCatalogContractTests(unittest.TestCase):
         )
 
 
+class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
+    def test_last_run_mismatch_is_hidden_when_strategy_selection_changes(self) -> None:
+        from app.web.backtest_single_strategy import _last_run_matches_strategy_selection
+
+        bundle = {"meta": {"strategy_key": "gtaa"}}
+
+        self.assertTrue(_last_run_matches_strategy_selection(bundle, "GTAA"))
+        self.assertFalse(_last_run_matches_strategy_selection(bundle, "Equal Weight"))
+
+    def test_last_run_mismatch_is_hidden_when_family_variant_changes(self) -> None:
+        from app.web.backtest_single_strategy import _last_run_matches_strategy_selection
+
+        bundle = {"meta": {"strategy_key": "quality_snapshot_strict_annual"}}
+
+        self.assertTrue(_last_run_matches_strategy_selection(bundle, "Quality", "Strict Annual"))
+        self.assertFalse(
+            _last_run_matches_strategy_selection(
+                bundle,
+                "Quality",
+                "Strict Quarterly Prototype",
+            )
+        )
+
+    def test_limited_data_trust_blocks_practical_validation_handoff(self) -> None:
+        from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation
+
+        base_meta = {
+            "promotion_decision": "production_candidate",
+            "benchmark_available": True,
+            "validation_status": "ok",
+            "benchmark_policy_status": "ok",
+            "validation_policy_status": "ok",
+            "guardrail_policy_status": "ok",
+            "liquidity_policy_status": "ok",
+            "etf_operability_status": "ok",
+        }
+
+        missing_status = build_next_step_readiness_evaluation({**base_meta, "price_freshness": {}})
+        warning_status = build_next_step_readiness_evaluation(
+            {**base_meta, "price_freshness": {"status": "warning"}}
+        )
+        clean_status = build_next_step_readiness_evaluation(
+            {**base_meta, "price_freshness": {"status": "ok"}}
+        )
+
+        self.assertFalse(missing_status["can_enter_practical_validation"])
+        self.assertFalse(warning_status["can_enter_practical_validation"])
+        self.assertTrue(clean_status["can_enter_practical_validation"])
+
+
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
     def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:
         from finance.indicators import add_atr
@@ -8104,12 +8154,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("is_backtest_policy_signal_board_available", source)
         self.assertIn("render_backtest_policy_signal_board(", source)
         self.assertIn("first_stage_rows", source)
-        self.assertIn("second_stage_review_rows", source)
+        self.assertNotIn("second_stage_review_rows", source)
         self.assertIn("bt-policy-signal", source)
         self.assertIn("검증 기준 상세", component_source)
         self.assertNotIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
         self.assertIn("1차에서 확인한 기준", component_source)
-        self.assertIn("2차 확인은 Practical Validation에서 계속 확인합니다.", component_source)
+        self.assertNotIn("2차 확인은 Practical Validation에서 계속 확인합니다.", component_source)
         self.assertNotIn("2차로 넘긴 확인 큐", component_source)
         self.assertNotIn("bt-policy-gate", source)
         self.assertNotIn("1차 처리 결과", source)

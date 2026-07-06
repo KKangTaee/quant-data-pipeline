@@ -252,6 +252,22 @@ def _status_signal_effect(
     return "pass"
 
 
+def _price_freshness_entry_status(meta: dict[str, Any]) -> str:
+    freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
+    if not freshness_status:
+        return "limited"
+    return freshness_status
+
+
+def _price_freshness_entry_effect(meta: dict[str, Any]) -> str:
+    status = _price_freshness_entry_status(meta)
+    excluded_tickers = list(meta.get("excluded_tickers") or [])
+    malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+    if status in {"ok", "pass", "passed", "fresh", "normal"} and not excluded_tickers and not malformed_price_rows:
+        return "pass"
+    return "block"
+
+
 def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
     """Classify Backtest policy signals by how they should be used in the workflow."""
     promotion = str(meta.get("promotion_decision") or "").strip().lower()
@@ -284,13 +300,14 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
         {
             "group": "Data Trust",
             "signal": "Price Freshness",
-            "status": freshness_status,
+            "status": _price_freshness_entry_status(meta),
             "role": "entry_gate",
             "unavailable_blocks": False,
             "caution_blocks": False,
             "meaning": "결과가 해석 가능한 최신 가격 범위에서 계산됐는지 확인",
             "next_surface": "Backtest Analysis",
             "source_key": "price_freshness.status",
+            "effect": _price_freshness_entry_effect(meta),
         },
         {
             "group": "Execution Source",
@@ -395,7 +412,7 @@ def build_policy_signal_inventory(meta: dict[str, Any]) -> dict[str, Any]:
 
     for spec in status_specs:
         status = spec["status"]
-        effect = _status_signal_effect(
+        effect = spec.get("effect") or _status_signal_effect(
             status,
             unavailable_blocks=bool(spec["unavailable_blocks"]),
             caution_blocks=bool(spec["caution_blocks"]),
