@@ -19,3 +19,4 @@ The previous Strategy Detail React panel over-interpreted the request. The inten
 
 - 2026-07-07: task opened after user clarified the intended UX scope.
 - 2026-07-07: 1차 removed the overbuilt active Strategy Detail panel and stale panel artifacts while keeping Price Freshness Preflight.
+- 2026-07-07: 2차 added compact strict preset display model and renderer copy for current basis / caveat / update path.

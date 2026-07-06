@@ -45,19 +45,19 @@ Run focused tests, `py_compile`, and commit the correction. Keep the Price Fresh
 - Modify: `app/web/backtest_common.py`
 - Modify: `tests/test_service_contracts.py`
 
-- [ ] **Step 1: Add helper contract tests**
+- [x] **Step 1: Add helper contract tests**
 
 Add tests for strict preset basis model copy and display model shape: source basis, not-S&P caveat, loaded/target count, refresh guidance, and staged preset warning.
 
-- [ ] **Step 2: Implement compact display model**
+- [x] **Step 2: Implement compact display model**
 
 Create or adjust Streamlit-free helper output so the UI can render `현재 기준`, `주의`, and `업데이트 방법` without long mixed-language captions.
 
-- [ ] **Step 3: Update renderer**
+- [x] **Step 3: Update renderer**
 
 Change `_render_strict_preset_status_note` to use concise grouped copy. Do not add new data fetches.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run focused helper tests and `py_compile app/web/backtest_common.py`.
 

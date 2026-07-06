@@ -465,23 +465,75 @@ def build_strict_preset_basis_model(
     is_managed = requested_limit is not None
     has_shortfall = bool(is_managed and requested_limit is not None and actual_count < requested_limit)
     is_staged_operator_preset = name in STRICT_PRESET_STAGED_OPERATOR_PRESETS
+    target_text = str(requested_limit) if requested_limit is not None else "manual/static"
 
     if not is_managed:
         source_basis = "manual/static smoke preset"
-        operator_note = "이 preset은 managed US statement coverage ladder가 아니라 빠른 smoke run용 고정 목록입니다."
+        operator_note = "Managed coverage ladder가 아니라 빠른 smoke run용 고정 목록입니다."
     elif has_shortfall:
         source_basis = STRICT_PRESET_BASIS_SOURCE
         operator_note = (
-            f"Requested {requested_limit} symbols but currently loaded {actual_count}. "
-            "DB asset-profile coverage가 부족하거나 static fallback을 사용 중일 수 있으므로, "
-            "asset profile 수집을 최신화한 뒤 preset cache를 다시 열면 확장될 수 있습니다."
+            f"Target {requested_limit}개 중 현재 {actual_count}개만 로드됐습니다. "
+            "asset profile 수집 상태나 fallback 여부를 확인하세요."
         )
     else:
         source_basis = STRICT_PRESET_BASIS_SOURCE
         operator_note = (
-            f"현재 loaded count가 requested {requested_limit}과 일치합니다. "
-            "asset profile이 최신화되면 market-cap order 기준으로 구성도 함께 바뀔 수 있습니다."
+            f"현재 loaded count가 target {requested_limit}과 일치합니다. "
+            "asset profile이 최신화되면 market-cap 순서 기준 구성도 함께 바뀔 수 있습니다."
         )
+
+    if name == "US Statement Coverage 300":
+        preset_role = "public_default"
+        role_note = "현재 strict annual 공개 기본값입니다. coverage depth, runtime, 운영 안정성의 균형을 우선합니다."
+    elif name == "US Statement Coverage 100":
+        preset_role = "fast_compare"
+        role_note = "빠른 compare / smoke run용 경량 preset입니다."
+    elif is_staged_operator_preset:
+        preset_role = "staged_operator"
+        role_note = "확장 검증용 staged operator preset입니다. 공식 public default로 보지 않습니다."
+    elif name == "Big Tech Strict Trial":
+        preset_role = "smoke_trial"
+        role_note = "빠른 strict annual smoke check용 고정 trial preset입니다."
+    elif is_managed:
+        preset_role = "managed_asset_profile"
+        role_note = "US stock asset profile 기반 managed preset입니다."
+    else:
+        preset_role = "manual_static"
+        role_note = operator_note
+
+    if has_shortfall or is_staged_operator_preset:
+        preset_tone = "warning"
+    elif preset_role == "public_default":
+        preset_tone = "info"
+    else:
+        preset_tone = "neutral"
+
+    display_items = [
+        {
+            "label": "현재 기준",
+            "value": (
+                f"finance_meta.nyse_asset_profile의 미국 stock asset profile을 market_cap_desc 순서로 읽고, "
+                f"현재 {actual_count} / Target {target_text}개를 로드했습니다."
+                if is_managed
+                else f"{name or 'Manual'} 고정 목록에서 현재 {actual_count}개를 사용합니다."
+            ),
+        },
+        {
+            "label": "주의",
+            "value": (
+                "S&P 500 최신 구성원, index point-in-time membership, fixed official index snapshot 기준이 아닙니다."
+            ),
+        },
+        {
+            "label": "업데이트 방법",
+            "value": (
+                "Ingestion에서 asset profile을 다시 수집하고 Streamlit session/cache를 새로 열면 market_cap_desc 순서가 preset에 반영됩니다."
+                if is_managed
+                else "고정 smoke preset은 managed coverage ladder 최신화 대상이 아닙니다."
+            ),
+        },
+    ]
 
     return {
         "preset_name": name,
@@ -494,6 +546,10 @@ def build_strict_preset_basis_model(
         "is_staged_operator_preset": bool(is_staged_operator_preset),
         "has_shortfall": bool(has_shortfall),
         "operator_note": operator_note,
+        "preset_role": preset_role,
+        "preset_tone": preset_tone,
+        "role_note": role_note,
+        "display_items": display_items,
         "refresh_guidance": (
             "최신화 방향: Ingestion에서 asset profile을 다시 수집하고, Streamlit session/cache를 새로 열면 "
             "nyse_asset_profile의 market_cap_desc 순서가 preset에 반영됩니다."
@@ -1368,34 +1424,24 @@ def _render_strict_preset_status_note(
     tickers: list[str] | tuple[str, ...] | None = None,
 ) -> None:
     model = build_strict_preset_basis_model(preset_name, tickers)
-    requested = model["requested_limit"]
-    actual = model["actual_count"]
-    requested_text = str(requested) if requested is not None else "manual/static"
-    basis_caption = (
-        f"Preset 기준: `{model['source_basis']}`. "
-        f"S&P 최신 구성원 기준이 아니며, `{model['not_basis']}`로 보지 않습니다. "
-        f"Loaded `{actual}` / Target `{requested_text}`."
-    )
-    if preset_name == "US Statement Coverage 300":
-        st.info(
-            "This is the current strict annual public default. It has the best balance today between "
-            "coverage depth, runtime, and operator stability."
-        )
-    elif preset_name == "US Statement Coverage 100":
-        st.caption("This lighter preset is mainly intended for compare mode and faster strict annual smoke runs.")
-    elif preset_name in {"US Statement Coverage 500", "US Statement Coverage 1000"}:
-        st.warning(
-            "This wider preset is currently a staged operator preset. It is useful for coverage expansion work, "
-            "but it is not the official strict annual public default yet."
-        )
-    elif preset_name == "Big Tech Strict Trial":
-        st.caption("This preset is still useful for strict annual smoke checks and fast architecture validation.")
-    st.caption(basis_caption)
-    if model["has_shortfall"] or model["is_staged_operator_preset"]:
-        st.warning(str(model["operator_note"]))
-    else:
-        st.caption(str(model["operator_note"]))
-    st.caption(str(model["refresh_guidance"]))
+    tone = str(model.get("preset_tone") or "neutral")
+    role_note = str(model.get("role_note") or "")
+    if tone == "warning":
+        st.warning(role_note)
+    elif tone == "info":
+        st.info(role_note)
+    elif role_note:
+        st.caption(role_note)
+
+    st.caption("Preset 기준 요약")
+    for item in model.get("display_items") or []:
+        st.caption(f"{item.get('label')}: {item.get('value')}")
+    operator_note = str(model.get("operator_note") or "")
+    if operator_note and operator_note != role_note:
+        if tone == "warning":
+            st.warning(operator_note)
+        else:
+            st.caption(operator_note)
 
 
 def _render_historical_universe_help_popover() -> None:

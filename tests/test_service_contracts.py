@@ -194,6 +194,11 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("S&P 500", model["not_basis"])
         self.assertFalse(model["is_static_sp500_membership"])
         self.assertTrue(model["has_shortfall"])
+        self.assertEqual([item["label"] for item in model["display_items"]], ["현재 기준", "주의", "업데이트 방법"])
+        self.assertEqual(model["preset_tone"], "warning")
+        self.assertIn("asset profile", model["display_items"][0]["value"])
+        self.assertIn("S&P 500 최신 구성원", model["display_items"][1]["value"])
+        self.assertIn("Ingestion", model["display_items"][2]["value"])
 
     def test_strict_preset_basis_model_flags_staged_wide_fallback(self) -> None:
         from app.web.backtest_common import build_strict_preset_basis_model
@@ -208,6 +213,21 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertTrue(model["is_staged_operator_preset"])
         self.assertTrue(model["has_shortfall"])
         self.assertIn("300", model["operator_note"])
+        self.assertEqual(model["preset_tone"], "warning")
+        self.assertEqual(model["preset_role"], "staged_operator")
+
+    def test_strict_preset_basis_model_marks_public_default_cleanly(self) -> None:
+        from app.web.backtest_common import build_strict_preset_basis_model
+
+        model = build_strict_preset_basis_model(
+            "US Statement Coverage 300",
+            [f"T{i:03d}" for i in range(300)],
+        )
+
+        self.assertEqual(model["preset_role"], "public_default")
+        self.assertEqual(model["preset_tone"], "info")
+        self.assertFalse(model["has_shortfall"])
+        self.assertIn("공개 기본값", model["role_note"])
 
     def test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms(self) -> None:
         single_source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
