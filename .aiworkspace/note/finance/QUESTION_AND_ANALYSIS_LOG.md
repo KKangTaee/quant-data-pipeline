@@ -8518,3 +8518,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 같은 gate evidence를 유지하되, Flow 3 / Flow 4가 사용자의 질문인 `무엇을 검증했나`, `무엇이 부족한가`, `어디서 보강하나`에 먼저 답해야 함.
 - Analysis result: `NEEDS_INPUT row` 같은 표현은 기술 status로는 필요하지만 first-read blocker copy로는 부적절하다. 사용자-facing explanation field를 workspace read model에서 만들고, raw status는 `기술 기준` tag로 낮추는 방식이 맞다.
 - Follow-up: Flow 3 Fix Queue와 Flow 4 criteria board를 user-language blocker model로 변경했다. Gate threshold, persistence, provider / replay execution, live approval / order boundary는 바꾸지 않았다.
+
+### 2026-07-06 - Practical Validation Flow 3/4는 가이드가 아니라 이슈와 기준 상태를 보여준다
+
+- User request: 사용자가 Flow 3 / Flow 4의 `무엇을 검증했나 / 부족한 점 / 해야 할 일` 카드가 가이드처럼 보이고, 실제 무엇을 수정해야 하는지와 Final Review 전 통과 상태가 분명하지 않다고 지적함.
+- Interpreted goal: Flow 3은 실제로 Final Review 이동을 막는 이슈 큐가 되어야 하고, Flow 4는 Final Review로 넘기기 전 어떤 기준이 통과했고 무엇이 남았는지 요약해야 함.
+- Analysis result: 같은 evidence를 유지하되 first-read field를 `현재 문제 / 완료 기준 / 보강 위치 / 영향`과 `상태 / 통과한 기준 / 남은 문제 / 판정`으로 바꾸는 것이 가장 작고 안전하다.
+- Follow-up: workspace read model, Flow 3 React Fix Queue, Flow 4 criteria detail board를 issue / criteria status summary 계약으로 갱신했다. Gate policy, provider 수집, replay 실행, registry persistence, live approval / order boundary는 변경하지 않았다.

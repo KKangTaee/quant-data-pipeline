@@ -417,6 +417,60 @@ def render_pv_styles() -> None:
             font-size: 0.82rem;
             line-height: 1.35;
           }
+          .pv-criteria-status-grid {
+            display: grid;
+            grid-template-columns: minmax(140px, 0.7fr) minmax(180px, 1fr) minmax(180px, 1fr);
+            gap: 0;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(255, 255, 255, 0.72);
+          }
+          .pv-criteria-status-cell {
+            min-width: 0;
+            padding: 0.65rem 0.72rem;
+            border-left: 1px solid rgba(148, 163, 184, 0.18);
+          }
+          .pv-criteria-status-cell:first-child,
+          .pv-criteria-status-cell-wide {
+            border-left: 0;
+          }
+          .pv-criteria-status-cell-wide {
+            grid-column: 1 / -1;
+            border-top: 1px solid rgba(148, 163, 184, 0.18);
+          }
+          .pv-criteria-status-cell span {
+            display: block;
+            color: var(--pv-text-muted);
+            font-size: 0.76rem;
+            font-weight: 840;
+            line-height: 1.35;
+          }
+          .pv-criteria-status-cell strong,
+          .pv-criteria-status-cell p {
+            display: block;
+            margin: 0.2rem 0 0;
+            color: var(--pv-text);
+            font-size: 0.88rem;
+            font-weight: 780;
+            line-height: 1.42;
+            overflow-wrap: anywhere;
+          }
+          .pv-criteria-status-cell p {
+            color: var(--pv-muted);
+            font-weight: 650;
+          }
+          .pv-criteria-technical-detail {
+            margin-top: 0.62rem;
+          }
+          .pv-criteria-technical-detail summary {
+            cursor: pointer;
+            color: var(--pv-text-muted);
+            font-size: 0.78rem;
+            font-weight: 840;
+            line-height: 1.35;
+          }
+          .pv-criteria-technical-detail .pv-criteria-cards {
+            margin-top: 0.58rem;
+          }
           .pv-criteria-cards {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -528,8 +582,17 @@ def render_pv_styles() -> None:
               min-height: auto;
             }
             .pv-criteria-metrics,
+            .pv-criteria-status-grid,
             .pv-criteria-cards {
               grid-template-columns: 1fr;
+            }
+            .pv-criteria-status-cell,
+            .pv-criteria-status-cell-wide {
+              border-left: 0;
+              border-top: 1px solid rgba(148, 163, 184, 0.18);
+            }
+            .pv-criteria-status-cell:first-child {
+              border-top: 0;
             }
           }
         </style>

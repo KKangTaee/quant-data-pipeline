@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Issue Summary V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-issue-summary-v1-20260706/`에서 Flow 3 / Flow 4의 guide-like 설명을 issue / criteria summary 중심으로 다시 정리했다.
+  - Flow 3 React Fix Queue는 `Final Review 이동을 막는 이슈`와 `현재 문제 / 완료 기준 / 보강 위치 / 영향`을 먼저 보여준다.
+  - Flow 4 criteria board는 기준별 `상태 / 통과한 기준 / 남은 문제 / 판정`을 먼저 요약하고, 기술 기준 상세는 뒤로 낮췄다.
+  - Gate threshold / replay execution / provider collection / registry persistence / live approval 경계는 변경하지 않았다.
 - Practical Validation Flow 3 Clarity V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-clarity-v1-20260706/`에서 Flow 3 중복 요약을 정리했다.
   - Flow 3의 별도 validation control center와 alert / badge 반복을 제거하고, React Fix Queue를 `Final Review 이동 판단 -> 먼저 해결할 일 -> 근거 요약` first-read surface로 바꿨다.

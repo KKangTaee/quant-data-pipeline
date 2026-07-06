@@ -1899,30 +1899,35 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
     group_html: list[str] = []
     for group in groups:
         cards = [dict(card or {}) for card in list(group.get("criteria_cards") or [])]
+        passed = [str(item) for item in list(group.get("passed_criteria") or []) if str(item).strip()]
+        remaining = [str(item) for item in list(group.get("remaining_issues") or []) if str(item).strip()]
+        decision = str(group.get("decision_summary") or "-")
+        passed_text = " / ".join(passed) if passed else "없음"
+        remaining_text = " / ".join(remaining) if remaining else "없음"
         card_html: list[str] = []
         for card in cards:
             card_tone = _status_tone(card.get("status"))
             card_html.append(
                 f'<article class="pv-criteria-card pv-criteria-card-{card_tone}">'
                 '<div class="pv-criteria-card-head">'
-                f"<h5>{escape(str(card.get('display_label') or card.get('label') or '-'))}</h5>"
+                f"<h5>{escape(str(card.get('issue_title') or card.get('display_label') or card.get('label') or '-'))}</h5>"
                 f'<div class="pv-criteria-card-status">{escape(str(card.get("status_label") or card.get("status") or "-"))}</div>'
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>무엇을 확인했나</span>"
-                f"<p>{escape(str(card.get('checked_evidence') or card.get('explanation') or '-'))}</p>"
+                "<span>현재 문제</span>"
+                f"<p>{escape(str(card.get('current_problem') or card.get('evidence') or '-'))}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>부족한 점</span>"
-                f"<p>{escape(str(card.get('missing_evidence') or card.get('evidence') or '-'))}</p>"
+                "<span>완료 기준</span>"
+                f"<p>{escape(str(card.get('completion_criteria') or card.get('resolution_action') or '-'))}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>해야 할 일</span>"
-                f"<p>{escape(str(card.get('action_label') or card.get('resolution_action') or '-'))}</p>"
+                "<span>보강 위치</span>"
+                f"<p>{escape(str(card.get('fix_location') or card.get('resolution_surface') or '-'))}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>왜 중요한가</span>"
-                f"<p>{escape(str(card.get('why_it_matters') or '-'))}</p>"
+                "<span>영향</span>"
+                f"<p>{escape(str(card.get('impact_summary') or '-'))}</p>"
                 "</div>"
                 "<footer>"
                 f"<span>기술 기준: {escape(str(card.get('technical_label') or card.get('module_type') or '-'))}</span>"
@@ -1939,7 +1944,28 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             "</div>"
             f"<b>{escape(str(group.get('module_count') or len(cards)))}개</b>"
             "</header>"
+            '<div class="pv-criteria-status-grid">'
+            '<div class="pv-criteria-status-cell">'
+            "<span>상태</span>"
+            f"<strong>{escape(str(group.get('status') or '-'))}</strong>"
+            "</div>"
+            '<div class="pv-criteria-status-cell">'
+            "<span>통과한 기준</span>"
+            f"<p>{escape(passed_text)}</p>"
+            "</div>"
+            '<div class="pv-criteria-status-cell">'
+            "<span>남은 문제</span>"
+            f"<p>{escape(remaining_text)}</p>"
+            "</div>"
+            '<div class="pv-criteria-status-cell pv-criteria-status-cell-wide">'
+            "<span>판정</span>"
+            f"<p>{escape(decision)}</p>"
+            "</div>"
+            "</div>"
+            '<details class="pv-criteria-technical-detail">'
+            "<summary>기술 기준 상세</summary>"
             f'<div class="pv-criteria-cards">{"".join(card_html)}</div>'
+            "</details>"
             "</section>"
         )
 
@@ -1948,7 +1974,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
         f'<section class="pv-criteria-board pv-criteria-board-{tone}">'
         '<div class="pv-criteria-kicker">검증 기준 상세</div>'
         f'<div class="pv-criteria-title">Final Review로 넘기기 전 확인 기준</div>'
-        f'<div class="pv-criteria-detail">{escape(headline)} 이 보드는 새 검증 단계가 아니라 Flow 3 결론이 어떤 확인 기준에서 나왔는지, 무엇이 부족한지, 어디서 보강할지를 풀어쓴 기준 상세입니다.</div>'
+        f'<div class="pv-criteria-detail">{escape(headline)} Flow 3 결론의 기준별 통과 상태와 보강 상태를 요약합니다.</div>'
         f'<div class="pv-criteria-metrics">{metric_html}</div>'
         f'<div class="pv-criteria-groups">{"".join(group_html)}</div>'
         "</section></div>",

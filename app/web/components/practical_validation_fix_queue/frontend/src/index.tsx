@@ -11,6 +11,10 @@ type FixItem = {
   status?: string
   statusLabel?: string
   displayLabel?: string
+  issueTitle?: string
+  currentProblem?: string
+  completionCriteria?: string
+  impactSummary?: string
   checkedEvidence?: string
   missingEvidence?: string
   actionLabel?: string
@@ -33,12 +37,17 @@ type CoreGroup = {
 type CriteriaCard = {
   label?: string
   displayLabel?: string
+  issueTitle?: string
   status?: string
   statusLabel?: string
   technicalLabel?: string
   tone?: Tone
   explanation?: string
   evidence?: string
+  currentProblem?: string
+  completionCriteria?: string
+  fixLocation?: string
+  impactSummary?: string
   checkedEvidence?: string
   missingEvidence?: string
   actionLabel?: string
@@ -51,6 +60,10 @@ type CriteriaGroup = {
   displayLabel?: string
   status?: string
   purpose?: string
+  passedCriteria?: string[]
+  remainingIssues?: string[]
+  reviewCriteria?: string[]
+  decisionSummary?: string
   tone?: Tone
   criteriaCards?: CriteriaCard[]
 }

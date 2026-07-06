@@ -275,7 +275,16 @@ body {
   margin: 0.52rem 0 0;
 }
 
-.pv-react-fix__readable dt {
+.pv-react-fix__criteria-summary {
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  display: grid;
+  gap: 0.34rem;
+  margin: 0.56rem 0 0;
+  padding-top: 0.5rem;
+}
+
+.pv-react-fix__readable dt,
+.pv-react-fix__criteria-summary dt {
   color: #243042;
   font-size: 0.78rem;
   font-weight: 860;
@@ -283,7 +292,8 @@ body {
   margin: 0.14rem 0 0;
 }
 
-.pv-react-fix__readable dd {
+.pv-react-fix__readable dd,
+.pv-react-fix__criteria-summary dd {
   color: #64748b;
   font-size: 0.86rem;
   line-height: 1.45;

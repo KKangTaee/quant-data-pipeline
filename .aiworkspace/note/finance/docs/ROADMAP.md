@@ -9,13 +9,13 @@ Last Verified: 2026-07-06
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-readable-fix-queue-v1-20260706/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-issue-summary-v1-20260706/`다.
 
-- 목적: Practical Validation Flow 3 / Flow 4의 blocker 설명을 내부 audit 용어가 아니라 `무엇을 검증했나 / 부족한 점 / 해야 할 일 / 왜 중요한가`로 읽히게 했다.
-- 주요 변경: workspace read model이 module별 user-facing explanation field를 만들고, Flow 3 React Fix Queue와 Flow 4 criteria board는 `Final Review로 넘기기 전 확인 기준`을 사용자 언어로 먼저 보여준다. `NEEDS_INPUT`, `NOT_RUN`, `REVIEW` 같은 raw status는 `기술 기준` tag로 낮춘다.
+- 목적: Practical Validation Flow 3 / Flow 4의 blocker 설명이 가이드 문단처럼 보이지 않게 하고, 사용자가 실제로 무엇을 보강해야 하는지 바로 읽게 했다.
+- 주요 변경: workspace read model이 module별 `현재 문제 / 완료 기준 / 보강 위치 / 영향` field와 criteria group별 `통과한 기준 / 남은 문제 / 판정` summary를 만든다. Flow 3 React Fix Queue는 `Final Review 이동을 막는 이슈` 큐로, Flow 4 criteria board는 `Final Review로 넘기기 전 확인 기준` 상태 요약으로 표시한다. `NEEDS_INPUT`, `NOT_RUN`, `REVIEW` 같은 raw status는 first-read label이 아니라 기술 tag로 낮춘다.
 - 변경하지 않은 경계: validation threshold / gate policy 의미, registry / saved JSONL rewrite, provider 수집, replay 실행 로직, Final Review handoff persistence, live approval / broker order / auto rebalance.
 
-Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-flow4-handoff-style-v2-20260706/`다.
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-readable-fix-queue-v1-20260706/`다.
 
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 

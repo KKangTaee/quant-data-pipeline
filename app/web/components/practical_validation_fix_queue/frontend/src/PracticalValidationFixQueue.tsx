@@ -8,6 +8,10 @@ type FixItem = {
   status?: string
   statusLabel?: string
   displayLabel?: string
+  issueTitle?: string
+  currentProblem?: string
+  completionCriteria?: string
+  impactSummary?: string
   checkedEvidence?: string
   missingEvidence?: string
   actionLabel?: string
@@ -30,12 +34,17 @@ type CoreGroup = {
 type CriteriaCard = {
   label?: string
   displayLabel?: string
+  issueTitle?: string
   status?: string
   statusLabel?: string
   technicalLabel?: string
   tone?: Tone
   explanation?: string
   evidence?: string
+  currentProblem?: string
+  completionCriteria?: string
+  fixLocation?: string
+  impactSummary?: string
   checkedEvidence?: string
   missingEvidence?: string
   actionLabel?: string
@@ -48,6 +57,10 @@ type CriteriaGroup = {
   displayLabel?: string
   status?: string
   purpose?: string
+  passedCriteria?: string[]
+  remainingIssues?: string[]
+  reviewCriteria?: string[]
+  decisionSummary?: string
   tone?: Tone
   criteriaCards?: CriteriaCard[]
 }
@@ -87,11 +100,11 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
             status: "Ready",
             statusLabel: "통과",
             displayLabel: "필수 보강 항목 없음",
+            issueTitle: "Final Review 이동을 막는 이슈 없음",
             fixLocation: "Flow 5",
-            checkedEvidence: "무엇을 검증했나: Final Review 이동 전에 즉시 막는 필수 기준이 있는지 확인했습니다.",
-            missingEvidence: "부족한 점: 현재 기준에서 즉시 막는 부족분은 없습니다.",
-            actionLabel: "Flow 5에서 저장 / 이동 전에 핵심 기준만 한 번 더 확인합니다.",
-            whyItMatters: "필수 blocker가 없으면 Final Review에서 최종 판단과 모니터링 후보 가능 여부를 확인할 수 있습니다.",
+            currentProblem: "현재 기준에서 Final Review 이동을 즉시 막는 이슈가 없습니다.",
+            completionCriteria: "Flow 5에서 저장 / 이동 전에 핵심 기준만 한 번 더 확인합니다.",
+            impactSummary: "필수 blocker가 없으면 Final Review에서 최종 판단과 모니터링 후보 가능 여부를 확인할 수 있습니다.",
             tone: "positive" as Tone,
           },
         ]
@@ -110,8 +123,8 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         "Final Review에서 최종 판단과 모니터링 후보 저장 가능 여부를 확인합니다.",
       ]
     : [
-        "먼저 해결할 일에서 무엇을 검증했고 무엇이 부족한지 확인합니다.",
-        "Flow 4의 확인 기준 상세에서 보강 위치와 기술 근거를 이어 봅니다.",
+        "아래 이슈의 완료 기준을 먼저 맞춘 뒤 Flow 5에서 저장 / 이동을 다시 시도합니다.",
+        "Flow 4의 확인 기준 요약에서 통과한 기준과 남은 문제를 함께 확인합니다.",
       ]
 
   return (
@@ -135,7 +148,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
             <b>{props.statusLabel}</b> 이동 기준
           </span>
           <span>
-            <b>{props.fixItems.length}</b> 먼저 해결
+            <b>{props.fixItems.length}</b> 막는 이슈
           </span>
           <span>
             <b>{props.reviewCount}</b> Final Review 확인
@@ -162,15 +175,12 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
           </div>
           <div className="pv-react-fix__action-text">{flowAction}</div>
         </div>
-        <p>
-          이 보드는 새 검증 단계가 아니라 Final Review로 넘기기 전 확인 기준을 사람이 읽기 쉽게
-          풀어쓴 판정판입니다. 최종 선택, 투자 추천, live 승인, 주문 지시는 만들지 않습니다.
-        </p>
+        <p>최종 선택, 투자 추천, live 승인, 주문 지시는 만들지 않습니다.</p>
       </footer>
 
       <div className="pv-react-fix__body">
         <section className="pv-react-fix__lane">
-          <div className="pv-react-fix__lane-title">먼저 해결할 일</div>
+          <div className="pv-react-fix__lane-title">Final Review 이동을 막는 이슈</div>
           <div className="pv-react-fix__items">
             {visibleFixItems.map((item, index) => (
               <article
@@ -179,17 +189,19 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
               >
                 <div>
                   <span>{item.statusLabel ?? item.status ?? "-"}</span>
-                  <h5>{item.displayLabel ?? item.label ?? "-"}</h5>
+                  <h5>{item.issueTitle ?? item.displayLabel ?? item.label ?? "-"}</h5>
                 </div>
                 <dl className="pv-react-fix__readable">
-                  <dt>무엇을 검증했나</dt>
-                  <dd>{item.checkedEvidence ?? item.gateReason ?? "-"}</dd>
-                  <dt>부족한 점</dt>
-                  <dd>{item.missingEvidence ?? item.gateReason ?? "-"}</dd>
-                  <dt>해야 할 일</dt>
-                  <dd>{item.actionLabel ?? item.fixAction ?? "-"}</dd>
+                  <dt>현재 문제</dt>
+                  <dd>{item.currentProblem ?? item.gateReason ?? item.missingEvidence ?? "-"}</dd>
+                  <dt>완료 기준</dt>
+                  <dd>{item.completionCriteria ?? item.actionLabel ?? item.fixAction ?? "-"}</dd>
+                  <dt>보강 위치</dt>
+                  <dd>{item.fixLocation ?? "-"}</dd>
                 </dl>
-                {item.whyItMatters ? <p className="pv-react-fix__why">{item.whyItMatters}</p> : null}
+                {item.impactSummary || item.whyItMatters ? (
+                  <p className="pv-react-fix__why">{item.impactSummary ?? item.whyItMatters}</p>
+                ) : null}
                 <small>기술 기준: {item.technicalLabel ?? `${item.label ?? "-"} · ${item.status ?? "-"}`}</small>
               </article>
             ))}
@@ -212,14 +224,16 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                   <span>{compact(group.status)}</span>
                 </div>
                 <p>{compact(group.purpose)}</p>
-                {group.criteriaCards && group.criteriaCards.length > 0 ? (
-                  <small>
-                    {group.criteriaCards
-                      .slice(0, 4)
-                      .map((card) => `${compact(card.displayLabel ?? card.label)} ${compact(card.statusLabel ?? card.status)}`)
-                      .join(" / ")}
-                  </small>
-                ) : null}
+                <dl className="pv-react-fix__criteria-summary">
+                  <dt>상태</dt>
+                  <dd>{compact(group.status)}</dd>
+                  <dt>통과한 기준</dt>
+                  <dd>{group.passedCriteria && group.passedCriteria.length > 0 ? group.passedCriteria.join(" / ") : "없음"}</dd>
+                  <dt>남은 문제</dt>
+                  <dd>{group.remainingIssues && group.remainingIssues.length > 0 ? group.remainingIssues.join(" / ") : "없음"}</dd>
+                  <dt>판정</dt>
+                  <dd>{compact(group.decisionSummary)}</dd>
+                </dl>
               </article>
             ))}
             {hiddenCriteriaGroupCount > 0 ? (
