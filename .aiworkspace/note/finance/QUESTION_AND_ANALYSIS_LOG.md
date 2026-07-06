@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-06 - Backtest 후보분석은 stale result와 Data Trust gate를 먼저 막아야 한다
+
+- User request: 사용자가 Backtest 후보분석에서 전략 변경 후 이전 결과가 남는 문제, Data Trust가 자료제한인데 2차 검증으로 넘어가는 문제, Quality / Value preset 기준 불명확성, 가격 업데이트 후 화면이 갱신되지 않는 문제를 1차~4차로 개발 / QA / 커밋해 달라고 요청함.
+- Interpreted goal: 후보분석은 diagnostic 값을 더 보여주는 화면이 아니라, 사용자가 잘못된 결과를 현재 결과로 읽거나 잘못 2차 검증에 넘기는 행동을 막는 workflow여야 함.
+- Analysis result: `backtest_last_bundle`은 선택 전략 / variant와 결합해 stale 여부를 확인해야 하고, `price_freshness.status` missing / warning / error는 Practical Validation 진입 blocker로 봐야 한다. Strict preset 100/300/500/1000은 S&P 최신 구성원이 아니라 `finance_meta.nyse_asset_profile`의 US stock market-cap order 기반 managed universe이며, DB coverage 부족 시 static fallback / staged preset 의미를 표시해야 한다. 가격 업데이트는 기존 OHLCV ingestion job으로 `finance_price.nyse_price_history`에 저장하되, 저장 row가 생기면 기존 백테스트 결과를 숨기고 재실행을 요구해야 한다.
+- Follow-up: `backtest-candidate-analysis-hardening-v1-20260706`에서 1차~4차를 완료했다. Service contract 490개와 Browser QA route / Quality Strict 화면 확인을 통과했고, 상세 QA 로그는 task `RUNS.md`에 남겼다.
+
 ### 2026-07-06 - Practical Validation Flow 4 보강위치는 화면 기준 이름이어야 한다
 
 - User request: 사용자가 Flow 4 `근거 Workbench` 이름이 어색하고, `보강 위치`가 `Flow 4 · Data Coverage Audit / Provider Data Gaps`처럼 실제 화면명과 맞지 않는다고 지적하며 전체 보강위치를 정리해 달라고 요청함.

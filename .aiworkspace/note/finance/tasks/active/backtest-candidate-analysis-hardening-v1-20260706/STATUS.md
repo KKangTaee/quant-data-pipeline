@@ -1,6 +1,6 @@
 # Backtest Candidate Analysis Hardening V1 Status
 
-Status: Active
+Status: Complete
 Started: 2026-07-06
 
 ## 이걸 하는 이유?

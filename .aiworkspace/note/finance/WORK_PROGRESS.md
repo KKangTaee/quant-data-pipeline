@@ -29,6 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Candidate Analysis Hardening V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-candidate-analysis-hardening-v1-20260706/`에서 1차~4차를 개발 / QA / 커밋 순서로 완료했다.
+  - 전략 / variant 변경 시 이전 백테스트 결과를 숨기고, Data Trust가 limited / warning / error면 Practical Validation 진입을 차단한다.
+  - Quality / Value strict preset 기준을 `finance_meta.nyse_asset_profile` 기반 US stock market-cap order로 명시했고, Price Freshness Preflight를 React component로 전환했다.
+  - 가격 업데이트가 `finance_price.nyse_price_history`에 OHLCV row를 저장하면 기존 결과를 stale로 숨기고 같은 설정의 `Run Backtest` 재실행을 요구한다.
 - Practical Validation Flow 4 Labels V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-labels-v1-20260706/`에서 Flow 4 이름을 `근거 Workbench`에서 `검증 기준 상세`으로 정리했다.
   - 카테고리 title emphasis를 강화하고, `보강 위치`를 내부 audit 이름이 아니라 `검증 기준 상세 · 데이터 품질 / Provider 보강` 같은 화면 기준 위치명으로 통일했다.

@@ -46,3 +46,9 @@
   - Result: pass.
 - `.venv/bin/python -m unittest tests.test_service_contracts -v`
   - Result: pass, 490 tests.
+- `.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8510 --server.headless true`
+  - Result: pass, local app served at `http://localhost:8510`.
+- Selenium Browser QA: `http://localhost:8510/backtest`
+  - Result: pass for route load, Backtest Analysis default render, Strategy switch to Quality / Strict Annual, and strict preset basis note visibility.
+  - Screenshot: `backtest-candidate-hardening-browser-qa.png` (generated local artifact, not staged).
+  - Note: Playwright MCP was unavailable due an existing browser lock; Selenium was used instead.
