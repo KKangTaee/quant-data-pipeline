@@ -23,6 +23,24 @@ type CoreGroup = {
   modules?: string[]
 }
 
+type CriteriaCard = {
+  label?: string
+  status?: string
+  statusLabel?: string
+  tone?: Tone
+  explanation?: string
+  evidence?: string
+  resolutionSurface?: string
+}
+
+type CriteriaGroup = {
+  label?: string
+  status?: string
+  purpose?: string
+  tone?: Tone
+  criteriaCards?: CriteriaCard[]
+}
+
 type StreamlitArgs = {
   statusLabel?: string
   tone?: Tone
@@ -31,6 +49,7 @@ type StreamlitArgs = {
   canSaveAndMove?: boolean
   fixItems?: FixItem[]
   coreGroups?: CoreGroup[]
+  criteriaGroups?: CriteriaGroup[]
   reviewCount?: number
 }
 
@@ -48,6 +67,7 @@ function App({ args }: AppProps) {
       canSaveAndMove={Boolean(args?.canSaveAndMove)}
       fixItems={Array.isArray(args?.fixItems) ? args.fixItems : []}
       coreGroups={Array.isArray(args?.coreGroups) ? args.coreGroups : []}
+      criteriaGroups={Array.isArray(args?.criteriaGroups) ? args.criteriaGroups : []}
       reviewCount={Number(args?.reviewCount ?? 0)}
     />
   )

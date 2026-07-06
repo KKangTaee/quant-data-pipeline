@@ -5502,3 +5502,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - The UI action appears only when DB common latest price date is older than the latest completed NYSE trading day after excluding weekends / holidays.
 - Boundary retained: refresh uses existing `run_collect_ohlcv`; no automatic rerun, source registration, validation handoff, approval, or order behavior.
 - Follow-up UI integration moved the visible price-refresh card and button into `app/web/components/backtest_price_refresh_action/` React custom component, matching the Handoff action pattern while Python keeps the ingestion side effect.
+
+## 2026-07-06 - Practical Validation Flow 3/4 Handoff Style V2
+
+- `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-flow4-handoff-style-v2-20260706/`에서 Flow 3/4를 Practical Validation에 맞게 다시 정리했다.
+- Flow 3 React Fix Queue는 Final Review 이동 판단 / 다음 단계 / 먼저 해결할 일 / 기준 요약을 보여주는 read-only first-read board가 됐다.
+- Flow 4는 `Final Review 이동 기준 상세` board를 먼저 보여주고 Source Readiness / Validation Readiness / Final Review Readiness Preview의 판정 근거와 보강 위치를 정리한다.
+- Gate threshold, replay 실행, provider 수집, registry / saved JSONL, Final Review persistence, live approval / broker order / auto rebalance 경계는 바꾸지 않았다.

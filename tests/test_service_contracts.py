@@ -8216,7 +8216,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("PracticalValidationFixQueue", component_source)
         self.assertIn("Final Review 이동 판단", component_source)
         self.assertIn("먼저 해결할 일", component_source)
-        self.assertIn("근거 요약", component_source)
+        self.assertIn("Final Review 이동 기준", component_source)
+        self.assertIn("다음 단계", component_source)
+        self.assertIn("Flow 5에서 저장 / 이동", component_source)
+        self.assertIn("criteriaGroups", component_source)
         self.assertNotIn("2차 검증 결론 / Fix Queue", component_source)
         self.assertIn("fixItems", component_source)
         self.assertIn("coreGroups", component_source)
@@ -8229,6 +8232,108 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("render_practical_validation_workspace_overview(", page_source)
         self.assertIn("render_practical_validation_fix_queue(", panel_source)
         self.assertIn("is_practical_validation_fix_queue_available()", panel_source)
+        self.assertIn("criteria_groups", wrapper_source)
+        self.assertIn("criteriaGroups", wrapper_source)
+        self.assertIn("_react_criteria_group_items", panel_source)
+
+    def test_practical_validation_workspace_model_builds_criteria_detail_groups(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "final_review_gate": {
+                    "route": "BLOCKED_FOR_FINAL_REVIEW",
+                    "can_save_and_move": False,
+                    "verdict": "Final Review 이동 보류",
+                    "next_action": "먼저 evidence gap을 보강합니다.",
+                    "blocking_modules": [
+                        {
+                            "module_id": "data_coverage",
+                            "label": "Data Coverage",
+                            "status": "NEEDS_INPUT",
+                            "gate_reason": "가격 window 보강 필요",
+                            "resolution_surface": "Data Coverage Audit",
+                            "resolution_action": "가격 window를 확인합니다.",
+                        }
+                    ],
+                    "review_modules": [
+                        {
+                            "module_id": "construction_risk",
+                            "label": "Construction Risk",
+                            "status": "REVIEW",
+                        }
+                    ],
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "source_integrity",
+                        "label": "Source Integrity",
+                        "status": "PASS",
+                        "applies": True,
+                        "reason": "source id와 active component가 있습니다.",
+                        "gate_reason": "필수 이동 기준을 충족했습니다.",
+                        "resolution_surface": "후보 확인",
+                    },
+                    {
+                        "module_id": "data_coverage",
+                        "label": "Data Coverage",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "reason": "가격 window와 survivorship evidence를 확인합니다.",
+                        "gate_reason": "가격 window 보강 필요",
+                        "resolution_surface": "Data Coverage Audit",
+                        "resolution_action": "가격 window를 확인합니다.",
+                    },
+                    {
+                        "module_id": "selected_route_preflight",
+                        "label": "Selected-route Preflight",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "reason": "Final Review 저장 전에 deterministic gap을 확인합니다.",
+                        "gate_reason": "Final Review evidence gap",
+                        "resolution_surface": "Final Review readiness preview",
+                    },
+                ],
+            }
+        )
+
+        summary = workspace["summary"]
+        self.assertEqual(summary["fix_item_count"], 1)
+        self.assertEqual(summary["criteria_group_count"], 3)
+        self.assertEqual(summary["criteria_pass_count"], 1)
+        self.assertEqual(summary["criteria_blocker_count"], 2)
+
+        groups = workspace["criteria_detail_groups"]
+        labels = [group["label"] for group in groups]
+        self.assertEqual(labels, ["Source Readiness", "Validation Readiness", "Final Review Readiness Preview"])
+        data_group = next(group for group in groups if group["label"] == "Validation Readiness")
+        data_card = data_group["criteria_cards"][0]
+        self.assertEqual(data_card["label"], "Data Coverage")
+        self.assertEqual(data_card["status"], "NEEDS_INPUT")
+        self.assertEqual(data_card["status_label"], "보강 필요")
+        self.assertEqual(data_card["resolution_surface"], "Data Coverage Audit")
+        self.assertIn("가격 window 보강 필요", data_card["evidence"])
+
+    def test_practical_validation_flow4_uses_criteria_detail_board(self) -> None:
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        flow4_body = page_source.split('eyebrow="Flow 4"', 1)[1]
+        flow4_body = flow4_body.split('eyebrow="Flow 5"', 1)[0]
+
+        self.assertIn("def _render_validation_criteria_detail_board", page_source)
+        self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
+        self.assertIn("Final Review 이동 기준 상세", page_source)
+        self.assertIn("Source Readiness", page_source)
+        self.assertIn("Validation Readiness", page_source)
+        self.assertIn("Final Review Readiness Preview", page_source)
+        self.assertIn("pv-criteria-board", page_source)
+        self.assertLess(
+            flow4_body.index("_render_validation_criteria_detail_board(validation_result)"),
+            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
+        )
+        self.assertLess(
+            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
+            flow4_body.index("_render_validation_action_boards(validation_result)"),
+        )
 
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
         flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")

@@ -9,11 +9,13 @@ Last Verified: 2026-07-06
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-clarity-v1-20260706/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-flow4-handoff-style-v2-20260706/`다.
 
-- 목적: Practical Validation Flow 3를 Final Review 이동 판단, 먼저 해결할 일, 근거 요약 중심의 단일 first-read surface로 정리했다.
-- 주요 변경: `app/web/backtest_practical_validation/page.py`의 Flow 3 control center 반복을 제거하고, `workspace_panel.py` / Practical Validation Fix Queue React component를 compact first-read surface로 정리했다.
+- 목적: Practical Validation Flow 3/4를 Backtest Analysis Handoff 계열의 읽기 순서를 참고하되, Practical Validation에 맞게 `결론 / 먼저 해결할 일`과 `기준별 판정 근거`로 분리했다.
+- 주요 변경: workspace read model에 `criteria_detail_groups`를 추가하고, Flow 3 React Fix Queue를 Final Review 이동 판단 / next step / top fix items / 기준 요약 중심으로 재구성했다. Flow 4에는 `Final Review 이동 기준 상세` board를 추가해 Source Readiness / Validation Readiness / Final Review Readiness Preview를 먼저 보여준다.
 - 변경하지 않은 경계: validation threshold / gate policy 의미, registry / saved JSONL rewrite, provider 수집, replay 실행 로직, Final Review handoff persistence, live approval / broker order / auto rebalance.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow3-clarity-v1-20260706/`다.
 
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 

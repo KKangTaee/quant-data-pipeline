@@ -8504,3 +8504,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 사용자는 2단계 Practical Validation을 Final Review 최종판단과 분리하고, diagnostics / audits / modules / board map 반복을 줄인 실제 개발 방향을 원한다.
 - Analysis result: 현재 기능은 풍부하지만 raw diagnostics, audit rows, module gate, board map, selected-route preflight가 모두 peer UI처럼 보여 단계 경계가 흐려진다. `Monitoring Baseline`과 `Tax / Account Scope`는 코드상 이미 downstream reference 성격이므로 2단계 핵심 gate에서 낮추는 것이 맞다.
 - Follow-up: `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에 설계와 roadmap을 작성한 뒤, 사용자 승인 후 V1-V8 개발 / QA / 커밋까지 완료했다. 최종 구조는 workspace read model, 5-flow 화면, read-only React Fix Queue, Flow 3 workspace panel, normalized first-read status를 기준으로 한다.
+
+### 2026-07-06 - Practical Validation Flow 3/4는 같은 UI를 복제하지 않고 역할에 맞게 나눈다
+
+- User request: 사용자가 Backtest Analysis의 Handoff / 기준 상세 UI를 참고해 Practical Validation Flow 3/4를 더 명확하고 간결하게 개선할지 판단하고 진행해 달라고 요청.
+- Interpreted goal: Flow 3은 Final Review 이동 결론과 먼저 해결할 일을 빠르게 읽는 판정판이어야 하고, Flow 4는 그 판단의 기준별 근거와 보강 위치를 확인하는 상세 보드여야 한다.
+- Analysis result: Backtest Analysis UI를 그대로 복제하면 1차 source 등록과 2차 Final Review 이동 판단이 섞일 수 있다. 따라서 visual grammar만 빌리고, Flow 3에는 save / move action을 두지 않으며, Flow 4 첫 board에서 Source / Validation / Final Review readiness criteria를 자세히 보여주는 것이 맞다.
+- Follow-up: Flow 3 React Fix Queue와 Flow 4 criteria detail board를 구현했다. Gate policy, replay execution, provider collection, persistence semantics는 바꾸지 않았다.

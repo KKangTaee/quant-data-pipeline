@@ -96,6 +96,125 @@ def _group(
     }
 
 
+def _status_tone(status: Any) -> str:
+    normalized = normalize_validation_status(status)
+    if normalized in {"PASS", "READY"}:
+        return "positive"
+    if normalized == "REVIEW":
+        return "warning"
+    if normalized in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}:
+        return "danger"
+    return "neutral"
+
+
+def _status_label(status: Any) -> str:
+    return normalize_validation_status(status)
+
+
+def _criteria_status_label(status: Any) -> str:
+    normalized = normalize_validation_status(status)
+    if normalized in {"PASS", "READY"}:
+        return "통과"
+    if normalized == "REVIEW":
+        return "Final Review 확인"
+    if normalized == "NEEDS_INPUT":
+        return "보강 필요"
+    if normalized == "NOT_RUN":
+        return "미실행"
+    if normalized == "BLOCKED":
+        return "차단"
+    if normalized == "NOT_APPLICABLE":
+        return "비적용"
+    return normalized
+
+
+def _group_status(modules: list[dict[str, Any]]) -> str:
+    counts: dict[str, int] = {}
+    for module in modules:
+        status = _status_label(module.get("status") or "NOT_RUN")
+        counts[status] = counts.get(status, 0) + 1
+    if not counts:
+        return "-"
+    return " / ".join(f"{status} {count}" for status, count in sorted(counts.items()))
+
+
+def _group_tone(modules: list[dict[str, Any]]) -> str:
+    statuses = {normalize_validation_status(module.get("status")) for module in modules}
+    if statuses & {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}:
+        return "danger"
+    if "REVIEW" in statuses:
+        return "warning"
+    return "positive"
+
+
+def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
+    status = _status_label(module.get("status") or "NOT_RUN")
+    evidence = (
+        module.get("gate_reason")
+        or module.get("evidence")
+        or module.get("reason")
+        or module.get("next_action")
+        or "-"
+    )
+    explanation = module.get("reason") or module.get("profile_effect") or "-"
+    return {
+        "module_id": module.get("module_id") or "-",
+        "label": module.get("label") or module.get("module_id") or "-",
+        "status": status,
+        "status_label": _criteria_status_label(status),
+        "tone": _status_tone(status),
+        "explanation": explanation,
+        "evidence": evidence,
+        "gate_effect": module.get("gate_effect") or "-",
+        "resolution_surface": module.get("resolution_surface") or "-",
+        "resolution_action": module.get("resolution_action") or module.get("next_action") or "-",
+        "module_type": module.get("module_type") or module.get("requirement") or "-",
+    }
+
+
+def _criteria_detail_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    detail_groups: list[dict[str, Any]] = []
+    for group in groups:
+        modules = [dict(module or {}) for module in list(group.get("modules") or [])]
+        cards = [_criteria_card(module) for module in modules if module]
+        if not cards:
+            continue
+        detail_groups.append(
+            {
+                "group_id": group.get("group_id") or "-",
+                "label": group.get("label") or group.get("group_id") or "-",
+                "purpose": group.get("purpose") or f"{len(cards)} criteria",
+                "status": _group_status(modules),
+                "tone": _group_tone(modules),
+                "module_count": len(cards),
+                "criteria_cards": cards,
+            }
+        )
+    return detail_groups
+
+
+def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, int]:
+    cards = [
+        dict(card or {})
+        for group in groups
+        for card in list(group.get("criteria_cards") or [])
+        if isinstance(card, dict)
+    ]
+    return {
+        "criteria_group_count": len(groups),
+        "criteria_card_count": len(cards),
+        "criteria_pass_count": len([card for card in cards if card.get("status") in {"PASS", "READY"}]),
+        "criteria_review_count": len([card for card in cards if card.get("status") == "REVIEW"]),
+        "criteria_blocker_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
+            ]
+        ),
+    }
+
+
 def _fallback_fix_queue(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for module in modules:
@@ -207,6 +326,8 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     ]
     fix_queue = _fix_queue(validation_row, modules)
     review_rows = _dict_list(gate.get("review_modules"))
+    criteria_groups = _criteria_detail_groups(core_groups + conditional_groups)
+    criteria_summary = _criteria_summary(criteria_groups)
 
     gate_summary = {
         "route": gate.get("route") or "-",
@@ -220,6 +341,8 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     return {
         "summary": {
             **gate_summary,
+            **criteria_summary,
+            "fix_item_count": len(fix_queue),
             "core_group_count": len(core_groups),
             "conditional_group_count": len(conditional_groups),
             "downstream_reference_group_count": len(downstream_groups),
@@ -229,6 +352,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "core_evidence_groups": core_groups,
         "conditional_evidence_groups": conditional_groups,
         "downstream_reference_groups": downstream_groups,
+        "criteria_detail_groups": criteria_groups,
         "technical_details": {
             "raw_diagnostics": _dict_list(validation_row.get("diagnostics")),
             "module_display_rows": _dict_list(validation_row.get("validation_module_display_rows")),

@@ -188,6 +188,34 @@ def _react_core_group_items(core_groups: list[dict[str, Any]]) -> list[dict[str,
     return items
 
 
+def _react_criteria_group_items(criteria_groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for group in criteria_groups:
+        cards = [dict(card or {}) for card in list(group.get("criteria_cards") or [])]
+        items.append(
+            {
+                "label": group.get("label") or group.get("group_id") or "-",
+                "status": group.get("status") or "-",
+                "purpose": group.get("purpose") or f"{len(cards)} criteria",
+                "tone": group.get("tone") or "neutral",
+                "criteriaCards": [
+                    {
+                        "label": card.get("label") or "-",
+                        "status": card.get("status") or "-",
+                        "statusLabel": card.get("status_label") or card.get("status") or "-",
+                        "tone": card.get("tone") or "neutral",
+                        "explanation": card.get("explanation") or "-",
+                        "evidence": card.get("evidence") or "-",
+                        "resolutionSurface": card.get("resolution_surface") or "-",
+                    }
+                    for card in cards
+                    if card
+                ],
+            }
+        )
+    return items
+
+
 def render_practical_validation_workspace_overview(validation_result: dict[str, Any]) -> None:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
@@ -195,6 +223,7 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
     core_groups = list(workspace.get("core_evidence_groups") or [])
     conditional_groups = list(workspace.get("conditional_evidence_groups") or [])
     downstream_groups = list(workspace.get("downstream_reference_groups") or [])
+    criteria_groups = list(workspace.get("criteria_detail_groups") or [])
     readiness_status = validation_status_label(gate_summary.get("route"))
 
     if is_practical_validation_fix_queue_available():
@@ -206,6 +235,7 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
             can_save_and_move=bool(gate_summary.get("can_save_and_move")),
             fix_items=_react_fix_queue_items(fix_queue),
             core_groups=_react_core_group_items(core_groups),
+            criteria_groups=_react_criteria_group_items(criteria_groups),
             review_count=int(gate_summary.get("review_count") or 0),
             key="practical_validation_fix_queue_overview",
         )

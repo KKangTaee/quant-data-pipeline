@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from typing import Any
 
 import altair as alt
@@ -65,6 +66,14 @@ DIAGNOSTIC_EXPLANATIONS = {
     "robustness_sensitivity_overfit": "기간, 구성요소, 비중 변화에 결과가 과도하게 흔들리거나 과최적화된 흔적이 있는지 확인합니다.",
     "monitoring_baseline_seed": "모니터링에서 추적할 benchmark, component, review trigger의 기본 seed가 충분한지 확인합니다.",
 }
+
+
+FLOW4_CRITERIA_GROUP_HINTS = (
+    "Source Readiness",
+    "Validation Readiness",
+    "Final Review Readiness Preview",
+)
+
 
 def _diagnostic_explanation(diagnostic: dict[str, Any]) -> str:
     domain = str(diagnostic.get("domain") or "").strip()
@@ -1850,6 +1859,96 @@ def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:
         st.info("현재 후보에서 실행할 provider 보강 액션이 없습니다.")
 
 
+def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) -> None:
+    workspace = dict(validation_result.get("practical_validation_workspace") or {})
+    summary = dict(workspace.get("summary") or {})
+    gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
+    groups = [dict(group or {}) for group in list(workspace.get("criteria_detail_groups") or [])]
+    if not groups:
+        return
+    group_order = {label: index for index, label in enumerate(FLOW4_CRITERIA_GROUP_HINTS)}
+    groups.sort(key=lambda group: group_order.get(str(group.get("label") or ""), len(group_order)))
+
+    blocker_count = int(summary.get("criteria_blocker_count") or summary.get("fix_item_count") or 0)
+    review_count = int(summary.get("criteria_review_count") or gate_summary.get("review_count") or 0)
+    pass_count = int(summary.get("criteria_pass_count") or 0)
+    evidence_count = int(summary.get("criteria_card_count") or 0)
+    tone = _status_tone(gate_summary.get("route") or validation_result.get("validation_route"))
+    if blocker_count:
+        headline = f"Final Review 이동을 막는 기준 {blocker_count}개가 남아 있습니다."
+    elif review_count:
+        headline = f"Final Review에서 확인할 기준 {review_count}개가 남아 있습니다."
+    else:
+        headline = "Final Review 이동 기준이 모두 통과 상태입니다."
+
+    metric_rows = [
+        ("먼저 해결", str(blocker_count), "Flow 3 Fix Queue"),
+        ("통과", str(pass_count), "PASS 기준"),
+        ("Final Review 확인", str(review_count), "REVIEW 기준"),
+        ("기술 근거", str(evidence_count), "criteria cards"),
+    ]
+    metric_html = "".join(
+        '<div class="pv-criteria-metric">'
+        f"<span>{escape(label)}</span>"
+        f"<strong>{escape(value)}</strong>"
+        f"<span>{escape(detail)}</span>"
+        "</div>"
+        for label, value, detail in metric_rows
+    )
+
+    group_html: list[str] = []
+    for group in groups:
+        cards = [dict(card or {}) for card in list(group.get("criteria_cards") or [])]
+        card_html: list[str] = []
+        for card in cards:
+            card_tone = _status_tone(card.get("status"))
+            card_html.append(
+                f'<article class="pv-criteria-card pv-criteria-card-{card_tone}">'
+                '<div class="pv-criteria-card-head">'
+                f"<h5>{escape(str(card.get('label') or '-'))}</h5>"
+                f'<div class="pv-criteria-card-status">{escape(str(card.get("status_label") or card.get("status") or "-"))}</div>'
+                "</div>"
+                f"<p>{escape(str(card.get('explanation') or '-'))}</p>"
+                '<div class="pv-criteria-row">'
+                "<span>판정 근거</span>"
+                f"<p>{escape(str(card.get('evidence') or '-'))}</p>"
+                "</div>"
+                '<div class="pv-criteria-row">'
+                "<span>보강 / 확인 위치</span>"
+                f"<p>{escape(str(card.get('resolution_action') or '-'))}</p>"
+                "</div>"
+                "<footer>"
+                f"<span>{escape(str(card.get('module_type') or '-'))}</span>"
+                f"<span>{escape(str(card.get('resolution_surface') or '-'))}</span>"
+                "</footer>"
+                "</article>"
+            )
+        group_html.append(
+            '<section class="pv-criteria-group">'
+            '<header class="pv-criteria-group-head">'
+            "<div>"
+            f"<strong>{escape(str(group.get('label') or '-'))}</strong>"
+            f"<span>{escape(str(group.get('purpose') or '-'))}</span>"
+            "</div>"
+            f"<b>{escape(str(group.get('module_count') or len(cards)))}개</b>"
+            "</header>"
+            f'<div class="pv-criteria-cards">{"".join(card_html)}</div>'
+            "</section>"
+        )
+
+    st.markdown(
+        '<div class="pv-shell">'
+        f'<section class="pv-criteria-board pv-criteria-board-{tone}">'
+        '<div class="pv-criteria-kicker">검증 기준 상세</div>'
+        f'<div class="pv-criteria-title">Final Review 이동 기준 상세</div>'
+        f'<div class="pv-criteria-detail">{escape(headline)} Flow 3은 결론과 먼저 해결할 일을 보여주고, 이 보드는 기준별 판정 근거와 보강 위치만 정리합니다.</div>'
+        f'<div class="pv-criteria-metrics">{metric_html}</div>'
+        f'<div class="pv-criteria-groups">{"".join(group_html)}</div>'
+        "</section></div>",
+        unsafe_allow_html=True,
+    )
+
+
 def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None:
     audit = dict(validation_result.get("validation_efficacy_audit") or {})
     rows = list(validation_result.get("validation_efficacy_display_rows") or audit.get("rows") or [])
@@ -2183,6 +2282,7 @@ def render_practical_validation_workspace() -> None:
             detail="검증 근거 보드와 사용자가 바로 실행할 provider 보강 액션을 함께 확인합니다.",
             tone="neutral",
         )
+        _render_validation_criteria_detail_board(validation_result)
         _render_validation_evidence_boards(validation_result)
         st.markdown("##### Provider / Data 보강 액션")
         _render_validation_action_boards(validation_result)

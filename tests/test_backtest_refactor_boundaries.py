@@ -298,6 +298,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         ).read_text()
 
         self.assertIn(".pv-react-fix {", source)
+        self.assertIn(".pv-react-fix__decision", source)
+        self.assertIn(".pv-react-fix__criteria-preview", source)
         self.assertIn("background: #ffffff;", source)
         self.assertNotIn("border-radius: 8px;", source)
         self.assertIn("border-radius: 0;", source)
