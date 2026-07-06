@@ -14,3 +14,12 @@
   - Result: pass.
 - `.venv/bin/python -m unittest tests.test_service_contracts -v`
   - Result: pass, 483 tests.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests -v`
+  - Result: pass, 6 tests.
+  - Note: validates preset basis model and single/compare display wiring.
+- `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py app/web/backtest_compare/page.py tests/test_service_contracts.py`
+  - Result: pass.
+- `git diff --check`
+  - Result: pass.
+- `.venv/bin/python -m unittest tests.test_service_contracts -v`
+  - Result: pass, 486 tests.

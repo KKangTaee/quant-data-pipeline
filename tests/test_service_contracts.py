@@ -179,6 +179,44 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertFalse(warning_status["can_enter_practical_validation"])
         self.assertTrue(clean_status["can_enter_practical_validation"])
 
+    def test_strict_preset_basis_model_names_current_dynamic_source(self) -> None:
+        from app.web.backtest_common import build_strict_preset_basis_model
+
+        model = build_strict_preset_basis_model(
+            "US Statement Coverage 100",
+            ["AAPL", "MSFT", "AAPL"],
+        )
+
+        self.assertEqual(model["requested_limit"], 100)
+        self.assertEqual(model["actual_count"], 2)
+        self.assertIn("finance_meta.nyse_asset_profile", model["source_basis"])
+        self.assertIn("market_cap_desc", model["source_basis"])
+        self.assertIn("S&P 500", model["not_basis"])
+        self.assertFalse(model["is_static_sp500_membership"])
+        self.assertTrue(model["has_shortfall"])
+
+    def test_strict_preset_basis_model_flags_staged_wide_fallback(self) -> None:
+        from app.web.backtest_common import build_strict_preset_basis_model
+
+        model = build_strict_preset_basis_model(
+            "US Statement Coverage 500",
+            [f"T{i:03d}" for i in range(300)],
+        )
+
+        self.assertEqual(model["requested_limit"], 500)
+        self.assertEqual(model["actual_count"], 300)
+        self.assertTrue(model["is_staged_operator_preset"])
+        self.assertTrue(model["has_shortfall"])
+        self.assertIn("300", model["operator_note"])
+
+    def test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms(self) -> None:
+        single_source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+        compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
+
+        self.assertIn("_render_strict_preset_status_note(preset_name, tickers)", single_source)
+        self.assertIn("_render_strict_preset_status_note(qss_compare_preset", compare_source)
+        self.assertIn("_render_strict_preset_status_note(vss_compare_preset", compare_source)
+
 
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
     def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:

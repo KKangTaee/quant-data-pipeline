@@ -430,6 +430,74 @@ QUALITY_STRICT_PRESETS = _load_managed_strict_annual_presets()
 
 VALUE_STRICT_PRESETS = QUALITY_STRICT_PRESETS
 
+STRICT_PRESET_BASIS_SOURCE = (
+    "finance_meta.nyse_asset_profile / kind=stock / country=United States / "
+    "on_filter=True / order_by=market_cap_desc"
+)
+STRICT_PRESET_NOT_BASIS = (
+    "S&P 500 latest constituents, index point-in-time membership, or a fixed official index snapshot"
+)
+STRICT_PRESET_STAGED_OPERATOR_PRESETS = {"US Statement Coverage 500", "US Statement Coverage 1000"}
+
+
+def _unique_upper_tickers(tickers: list[str] | tuple[str, ...] | None) -> list[str]:
+    seen: dict[str, None] = {}
+    for ticker in tickers or []:
+        symbol = str(ticker or "").strip().upper()
+        if symbol:
+            seen.setdefault(symbol, None)
+    return list(seen.keys())
+
+
+def build_strict_preset_basis_model(
+    preset_name: str | None,
+    tickers: list[str] | tuple[str, ...] | None,
+) -> dict[str, Any]:
+    """Describe what a strict managed preset represents without querying UI state."""
+    name = str(preset_name or "").strip()
+    unique_tickers = _unique_upper_tickers(tickers)
+    requested_limit = STRICT_ANNUAL_MANAGED_PRESET_SPECS.get(name)
+    actual_count = len(unique_tickers)
+    is_managed = requested_limit is not None
+    has_shortfall = bool(is_managed and requested_limit is not None and actual_count < requested_limit)
+    is_staged_operator_preset = name in STRICT_PRESET_STAGED_OPERATOR_PRESETS
+
+    if not is_managed:
+        source_basis = "manual/static smoke preset"
+        operator_note = "이 preset은 managed US statement coverage ladder가 아니라 빠른 smoke run용 고정 목록입니다."
+    elif has_shortfall:
+        source_basis = STRICT_PRESET_BASIS_SOURCE
+        operator_note = (
+            f"Requested {requested_limit} symbols but currently loaded {actual_count}. "
+            "DB asset-profile coverage가 부족하거나 static fallback을 사용 중일 수 있으므로, "
+            "asset profile 수집을 최신화한 뒤 preset cache를 다시 열면 확장될 수 있습니다."
+        )
+    else:
+        source_basis = STRICT_PRESET_BASIS_SOURCE
+        operator_note = (
+            f"현재 loaded count가 requested {requested_limit}과 일치합니다. "
+            "asset profile이 최신화되면 market-cap order 기준으로 구성도 함께 바뀔 수 있습니다."
+        )
+
+    return {
+        "preset_name": name,
+        "requested_limit": int(requested_limit) if requested_limit is not None else None,
+        "actual_count": int(actual_count),
+        "source_basis": source_basis,
+        "not_basis": STRICT_PRESET_NOT_BASIS,
+        "is_managed_asset_profile_preset": bool(is_managed),
+        "is_static_sp500_membership": False,
+        "is_staged_operator_preset": bool(is_staged_operator_preset),
+        "has_shortfall": bool(has_shortfall),
+        "operator_note": operator_note,
+        "refresh_guidance": (
+            "최신화 방향: Ingestion에서 asset profile을 다시 수집하고, Streamlit session/cache를 새로 열면 "
+            "nyse_asset_profile의 market_cap_desc 순서가 preset에 반영됩니다."
+            if is_managed
+            else "고정 smoke preset은 managed coverage ladder 최신화 대상이 아닙니다."
+        ),
+    }
+
 SINGLE_FAMILY_VARIANT_SESSION_KEYS = {
     "Quality": "single_quality_variant",
     "Value": "single_value_variant",
@@ -1291,7 +1359,19 @@ def _render_global_relative_strength_universe_inputs(
     return ("preset" if universe_mode_label == "Preset" else "manual_tickers"), preset_name, tickers
 
 
-def _render_strict_preset_status_note(preset_name: str | None) -> None:
+def _render_strict_preset_status_note(
+    preset_name: str | None,
+    tickers: list[str] | tuple[str, ...] | None = None,
+) -> None:
+    model = build_strict_preset_basis_model(preset_name, tickers)
+    requested = model["requested_limit"]
+    actual = model["actual_count"]
+    requested_text = str(requested) if requested is not None else "manual/static"
+    basis_caption = (
+        f"Preset 기준: `{model['source_basis']}`. "
+        f"S&P 최신 구성원 기준이 아니며, `{model['not_basis']}`로 보지 않습니다. "
+        f"Loaded `{actual}` / Target `{requested_text}`."
+    )
     if preset_name == "US Statement Coverage 300":
         st.info(
             "This is the current strict annual public default. It has the best balance today between "
@@ -1306,6 +1386,12 @@ def _render_strict_preset_status_note(preset_name: str | None) -> None:
         )
     elif preset_name == "Big Tech Strict Trial":
         st.caption("This preset is still useful for strict annual smoke checks and fast architecture validation.")
+    st.caption(basis_caption)
+    if model["has_shortfall"] or model["is_staged_operator_preset"]:
+        st.warning(str(model["operator_note"]))
+    else:
+        st.caption(str(model["operator_note"]))
+    st.caption(str(model["refresh_guidance"]))
 
 
 def _render_historical_universe_help_popover() -> None:

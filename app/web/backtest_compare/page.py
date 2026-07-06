@@ -4886,6 +4886,7 @@ def _render_strategy_compare_workspace() -> None:
                     )
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
+                    _render_strict_preset_status_note(qss_compare_preset, QUALITY_STRICT_PRESETS[qss_compare_preset])
                     compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
                         "preset_name": qss_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qss_compare_preset],
@@ -5057,6 +5058,7 @@ def _render_strategy_compare_workspace() -> None:
                     )
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qsqp_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
+                    _render_strict_preset_status_note(qsqp_compare_preset, QUALITY_STRICT_PRESETS[qsqp_compare_preset])
                     compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"] = {
                         "preset_name": qsqp_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qsqp_compare_preset],
@@ -5171,6 +5173,7 @@ def _render_strategy_compare_workspace() -> None:
                     )
                     _render_ticker_preview(VALUE_STRICT_PRESETS[vss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
+                    _render_strict_preset_status_note(vss_compare_preset, VALUE_STRICT_PRESETS[vss_compare_preset])
                     compare_strategy_overrides["Value Snapshot (Strict Annual)"] = {
                         "preset_name": vss_compare_preset,
                         "tickers": VALUE_STRICT_PRESETS[vss_compare_preset],
@@ -5342,6 +5345,7 @@ def _render_strategy_compare_workspace() -> None:
                     )
                     _render_ticker_preview(VALUE_STRICT_PRESETS[vsqp_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
+                    _render_strict_preset_status_note(vsqp_compare_preset, VALUE_STRICT_PRESETS[vsqp_compare_preset])
                     compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"] = {
                         "preset_name": vsqp_compare_preset,
                         "tickers": VALUE_STRICT_PRESETS[vsqp_compare_preset],
@@ -5456,6 +5460,7 @@ def _render_strategy_compare_workspace() -> None:
                     )
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qvss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
+                    _render_strict_preset_status_note(qvss_compare_preset, QUALITY_STRICT_PRESETS[qvss_compare_preset])
                     compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"] = {
                         "preset_name": qvss_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qvss_compare_preset],
@@ -5633,6 +5638,7 @@ def _render_strategy_compare_workspace() -> None:
                     )
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qvqp_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
+                    _render_strict_preset_status_note(qvqp_compare_preset, QUALITY_STRICT_PRESETS[qvqp_compare_preset])
                     compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"] = {
                         "preset_name": qvqp_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qvqp_compare_preset],

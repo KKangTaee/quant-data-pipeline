@@ -164,7 +164,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         tickers = QUALITY_STRICT_PRESETS[preset_name]
         _render_ticker_preview(tickers)
         _render_historical_universe_caption()
-        _render_strict_preset_status_note(preset_name)
+        _render_strict_preset_status_note(preset_name, tickers)
     else:
         manual_tickers = st.text_input(
             "Tickers",
@@ -857,7 +857,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         tickers = VALUE_STRICT_PRESETS[preset_name]
         _render_ticker_preview(tickers)
         _render_historical_universe_caption()
-        _render_strict_preset_status_note(preset_name)
+        _render_strict_preset_status_note(preset_name, tickers)
     else:
         manual_tickers = st.text_input(
             "Tickers",
@@ -1348,7 +1348,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         tickers = QUALITY_STRICT_PRESETS[preset_name]
         _render_ticker_preview(tickers)
         _render_historical_universe_caption()
-        _render_strict_preset_status_note(preset_name)
+        _render_strict_preset_status_note(preset_name, tickers)
     else:
         manual_tickers = st.text_input(
             "Tickers",
