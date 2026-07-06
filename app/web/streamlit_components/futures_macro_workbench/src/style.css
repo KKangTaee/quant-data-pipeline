@@ -266,6 +266,7 @@ body {
 }
 
 .fm-workbench__flow-grid,
+.fm-workbench__validation-insight,
 .fm-workbench__validation-metrics {
   display: grid;
   gap: 1px;
@@ -283,8 +284,47 @@ body {
   border-top: 1px solid #e5e7eb;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 0.5fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.52fr) minmax(0, 1fr);
   margin-top: 14px;
+}
+
+.fm-workbench__validation-copy {
+  display: grid;
+  gap: 10px;
+  grid-row: span 2;
+}
+
+.fm-workbench__validation-copy p {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.48;
+  margin: 0;
+}
+
+.fm-workbench__validation-action {
+  align-items: center;
+  background: #111827;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 850;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  width: min(100%, 260px);
+}
+
+.fm-workbench__validation-action:hover {
+  background: #1e293b;
+}
+
+.fm-workbench__validation-insight,
+.fm-workbench__validation-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .fm-workbench__evidence {
@@ -413,6 +453,7 @@ body {
 
   .fm-workbench__scores,
   .fm-workbench__flow-grid,
+  .fm-workbench__validation-insight,
   .fm-workbench__validation-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

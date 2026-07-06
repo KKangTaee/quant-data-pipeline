@@ -61,6 +61,15 @@ export type FuturesMacroEvidenceSection = {
   items: FuturesMacroEvidenceItem[];
 };
 
+export type FuturesMacroValidationInsight = {
+  purpose: string;
+  basis: string;
+  current_state: FuturesMacroMetric;
+  sample: FuturesMacroMetric;
+  directionality: FuturesMacroMetric;
+  confidence_effect: string;
+};
+
 export type FuturesMacroWorkbenchPayload = {
   schema_version: "futures_macro_react_workbench_v1";
   component: "FuturesMacroWorkbench";
@@ -100,6 +109,8 @@ export type FuturesMacroWorkbenchPayload = {
     title: string;
     state: string;
     detail: string;
+    insight: FuturesMacroValidationInsight;
+    action: FuturesMacroAction;
     metrics: FuturesMacroMetric[];
   };
   evidence: {
@@ -303,9 +314,27 @@ function FuturesMacroWorkbench({ args }: Props) {
       </div>
 
       <div className="fm-workbench__validation">
-        <div>
-          <div className="fm-workbench__section-title">{payload.validation.title}</div>
-          <div className="fm-workbench__section-detail">{payload.validation.detail}</div>
+        <div className="fm-workbench__validation-copy">
+          <div className="fm-workbench__section-title">{payload.validation.insight.purpose || payload.validation.title}</div>
+          <div className="fm-workbench__section-detail">{payload.validation.insight.basis || payload.validation.detail}</div>
+          <p>{payload.validation.insight.confidence_effect}</p>
+          <button
+            className="fm-workbench__validation-action"
+            onClick={() => emitAction(payload.validation.action)}
+            title={payload.validation.action.detail}
+            type="button"
+          >
+            {payload.validation.action.label}
+          </button>
+        </div>
+        <div className="fm-workbench__validation-insight">
+          {[payload.validation.insight.current_state, payload.validation.insight.sample, payload.validation.insight.directionality].map((item) => (
+            <div className="fm-workbench__metric" key={`${item.label}-${item.value}`}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              {item.detail ? <small>{item.detail}</small> : null}
+            </div>
+          ))}
         </div>
         <div className="fm-workbench__validation-metrics">
           {payload.validation.metrics.map((item) => (

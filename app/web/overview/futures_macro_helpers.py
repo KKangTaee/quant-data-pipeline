@@ -522,7 +522,6 @@ def build_futures_macro_react_workbench_payload(
             "actions": [
                 {"id": "daily_refresh", "label": "일봉 갱신", "kind": "primary", "detail": "저장된 주요 선물 5년 1D OHLCV를 다시 수집합니다."},
                 {"id": "reload", "label": "다시 읽기", "kind": "secondary", "detail": "현재 DB 기준으로 snapshot cache를 비운 뒤 다시 읽습니다."},
-                {"id": "load_validation", "label": "과거 점검 불러오기", "kind": "secondary", "detail": "historical validation을 명시적으로 계산합니다."},
             ],
         },
         "brief": {
@@ -554,6 +553,12 @@ def build_futures_macro_react_workbench_payload(
                 validation,
                 confidence_label=confidence_label,
             ),
+            "action": {
+                "id": "load_validation",
+                "label": "오늘과 비슷했던 과거 상태 확인",
+                "kind": "secondary",
+                "detail": "현재 16개 선물 일봉 상태를 과거 날짜에도 같은 방식으로 계산해 비슷했던 상태를 확인합니다.",
+            },
             "metrics": validation_metrics,
         },
         "evidence": {

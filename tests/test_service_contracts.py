@@ -5992,8 +5992,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("CME/yfinance 일봉 세션 기준", payload["command"]["detail"])
         self.assertEqual(
             [action["id"] for action in payload["command"]["actions"]],
-            ["daily_refresh", "reload", "load_validation"],
+            ["daily_refresh", "reload"],
         )
+        self.assertEqual(payload["validation"]["action"]["id"], "load_validation")
+        self.assertEqual(payload["validation"]["action"]["label"], "오늘과 비슷했던 과거 상태 확인")
         self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
         self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 관망")
         self.assertIn("CME/yfinance 일봉 세션 기준일", payload["brief"]["metrics"][0]["detail"])
@@ -6055,6 +6057,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
         self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("payload.validation.action", react_source)
+        self.assertIn("fm-workbench__validation-action", react_source)
         self.assertIn("flowPeriods.map", react_source)
         self.assertIn("item.score_label", react_source)
         self.assertIn("item.contribution_z", react_source)
@@ -6069,6 +6073,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".fm-workbench__scores", react_style)
         self.assertIn(".fm-workbench__score-hint", react_style)
         self.assertIn(".fm-workbench__score-hint-line", react_style)
+        self.assertIn(".fm-workbench__validation-action", react_style)
         self.assertIn(".fm-workbench__flow-tabs", react_style)
         self.assertIn(".fm-workbench__evidence", react_style)
 
