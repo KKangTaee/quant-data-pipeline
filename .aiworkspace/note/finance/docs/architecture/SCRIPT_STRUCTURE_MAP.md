@@ -42,14 +42,14 @@
 | `app/web/overview/legacy_dashboard.py` | 삭제됨. V17-V24에서 남은 helper body를 tab-local helper modules로 옮기고 compatibility wrapper를 explicit export로 바꾼 뒤 파일을 제거했다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 cached market intelligence service wrapper. Market Context, Market Movers, Events, Sentiment, Data Health, IA read model service imports를 제공한다. Candidate Ops overview snapshot helpers는 V9에서 제거했고 Candidate Ops는 Overview tab이 아니다 |
 | `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner renderer body. Active Overview page / tab은 가능한 경우 `app/web/overview/components/*` domain surface를 통해 이 renderer를 호출한다 |
-| `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑. Single Strategy detail read model이 이 catalog를 기준으로 현재 선택 / variant를 정규화한다 |
+| `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_page.py` | Backtest page shell, `Backtest Analysis -> Practical Validation -> Final Review` workflow navigation, stage dispatch entry. Native Streamlit `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / strategy input / real-money contract / guardrail input / legacy compatibility helper. 신규 호출은 가능한 경우 더 좁은 `backtest_state.py`, `backtest_formatters.py`, service boundary를 먼저 사용한다 |
 | `app/web/backtest_state.py` | Backtest page shell이 쓰는 workflow state boundary. 기존 `backtest_common.py`의 session state / stage request helper를 compatibility wrapper로 제공해 page entry가 common module을 직접 확장하지 않게 한다 |
 | `app/web/backtest_formatters.py` | Streamlit-free Backtest formatting / manual ticker parsing helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
 | `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Portfolio Mix Builder를 submode로 렌더링하는 wrapper |
-| `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / family variant 선택 / Strategy Detail React panel / prefill notice / form dispatch / latest result 연결 |
+| `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / family variant 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms/` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
 | `app/web/backtest_single_runner.py` | Single Strategy service-facing payload 표시, execution service 호출, latest bundle state 저장, run history append |
 | `app/web/backtest_compare/page.py` | `Backtest > Portfolio Mix Builder` 화면 orchestration, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff, preset catalog assembly |
@@ -61,7 +61,6 @@
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel, legacy product card / stepper helper |
 | `app/web/components/backtest_price_refresh_action/` | Backtest Data Trust 가격 업데이트용 React action card. 보이는 `가격 데이터 업데이트` 카드 / 버튼 / submit event만 담당하고, OHLCV 수집 실행과 session feedback은 Python path가 소유한다 |
 | `app/web/components/backtest_price_freshness_preflight/` | Strict Quality / Value 계열 form-level 가격 최신성 preflight React panel. 보이는 price freshness 요약만 담당하며, Vite build asset은 Streamlit component iframe 안에서 동작하도록 relative path를 사용해야 한다 |
-| `app/web/components/backtest_strategy_detail_panel/` | Single Strategy 선택 직후의 read-only React detail panel. strategy / variant 요약, primary inputs, advanced sections, preflight sections를 보여주며 실제 입력 state와 submit은 `backtest_single_forms/`와 Python path가 소유한다 |
 | `app/web/backtest_practical_validation/components.py` | Practical Validation 전용 visual shell. White square Command Center, section header, card grid, step rail, alert panel CSS / HTML helper를 제공하며 service/gate 로직은 포함하지 않는다 |
 | `app/web/backtest_practical_validation/page.py` | `Backtest > Practical Validation` 5-flow 화면 orchestration. 후보 Source 확인, 검증 기준 설정 / 실전 재검증 실행, 검증 기준 상세, 저장 / Final Review 이동, source / validation profile / replay / provider action session state wiring을 소유한다 |
 | `app/web/backtest_practical_validation/workspace_panel.py` | Practical Validation Flow 3 first-read workspace render. Final Review 이동 가능 / 보류 결론과 카테고리별 통과 / 실패 / 확인 필요 요약, React component availability, Streamlit fallback을 소유한다 |
@@ -82,7 +81,6 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `app/services/backtest_single_payload.py` | Streamlit-free Single Strategy payload normalization helper. UI form payload를 execution service-facing payload로 복사 / JSON-ready 변환한다 |
-| `app/services/backtest_strategy_detail.py` | Streamlit-free Single Strategy detail read model. strategy catalog와 family variant를 읽어 React detail panel이 사용할 summary / input sections / strict annual vs prototype capability 차이를 만든다 |
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. runtime dispatch, elapsed timing, input/data/system error normalization, runtime runner catalog metadata update를 담당 |
 | `app/services/ingestion_diagnostics.py` | Streamlit-free Ingestion read-only diagnostics facade. Price window preflight, Price Stale Diagnosis, Statement Coverage Diagnosis, Statement PIT Inspection의 loader/job/source inspection calls를 UI 대신 담당 |
 | `app/services/backtest_compare_execution.py` | Streamlit-free manual Compare execution service. multi-strategy execution loop, elapsed timing, input/data/system error normalization을 담당 |

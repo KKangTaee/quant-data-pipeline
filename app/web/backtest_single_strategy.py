@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_strategy_catalog import is_family_strategy
-from app.web.components.backtest_strategy_detail_panel import (
-    is_backtest_strategy_detail_panel_available,
-    render_backtest_strategy_detail_panel,
-)
 from app.web.backtest_result_display import _render_last_run
 from app.web.backtest_single_forms import (
     _render_dual_momentum_form,
@@ -50,36 +45,6 @@ def _selected_strategy_variant(strategy_choice: str | None) -> str | None:
 
 def _selection_signature(strategy_choice: str | None, selected_variant: str | None) -> str:
     return f"{strategy_choice or '-'}::{selected_variant or '-'}"
-
-
-def _strategy_detail_component_key(model: dict) -> str:
-    key_source = str(model.get("strategy_key") or model.get("display_name") or "strategy").strip()
-    return "backtest_strategy_detail_" + "".join(
-        ch.lower() if ch.isalnum() else "_"
-        for ch in key_source
-    ).strip("_")
-
-
-def _render_strategy_detail_panel(strategy_choice: str | None, selected_variant: str | None) -> None:
-    model = build_backtest_strategy_detail_model(strategy_choice, selected_variant)
-    if is_backtest_strategy_detail_panel_available():
-        render_backtest_strategy_detail_panel(
-            detail_model=model,
-            key=_strategy_detail_component_key(model),
-        )
-        return
-
-    with st.container(border=True):
-        st.markdown(f"#### {model.get('display_name') or strategy_choice or 'Selected Strategy'}")
-        st.caption(str(model.get("summary") or ""))
-        fact_cols = st.columns(3)
-        fact_cols[0].caption("Data Source")
-        fact_cols[0].markdown(f"**{model.get('data_source') or '-'}**")
-        fact_cols[1].caption("Timing")
-        fact_cols[1].markdown(f"**{model.get('timing') or '-'}**")
-        fact_cols[2].caption("Universe")
-        universe_modes = " / ".join(str(item) for item in model.get("universe_modes") or []) or "-"
-        fact_cols[2].markdown(f"**{universe_modes}**")
 
 
 def _clear_last_run_if_strategy_selection_changed(
@@ -164,7 +129,6 @@ def render_single_strategy_workspace() -> None:
                 key=variant_key,
             )
     st.divider()
-    _render_strategy_detail_panel(strategy_choice, selected_variant)
     if strategy_choice == "Equal Weight":
         _render_equal_weight_form()
     elif strategy_choice == "GTAA":

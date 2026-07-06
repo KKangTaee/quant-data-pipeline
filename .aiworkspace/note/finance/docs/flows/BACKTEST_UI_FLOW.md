@@ -396,7 +396,7 @@ Phase 30 third work unit status:
 - Portfolio Proposal은 `app/web/backtest_portfolio_proposal.py`와 `app/web/backtest_portfolio_proposal_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper만 남아 있다.
 - Final Review는 `app/web/backtest_final_review/page.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
 - Phase35 보정 이후 Post-Selection Guide module과 panel dispatch는 제거했다. Final Review가 현재 workflow의 마지막 active panel이다.
-- Single Strategy는 `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms/`, `app/web/backtest_single_runner.py`로 분리되어, form render와 runtime dispatch를 page shell에서 제거했다. 2026-07-07 V1부터 선택된 strategy / family variant는 `app/services/backtest_strategy_detail.py`의 read model을 거쳐 `app/web/components/backtest_strategy_detail_panel/` read-only React panel로 먼저 보이고, 실제 입력 / submit은 기존 form renderer가 계속 소유한다.
+- Single Strategy는 `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms/`, `app/web/backtest_single_runner.py`로 분리되어, form render와 runtime dispatch를 page shell에서 제거했다. strategy selector와 family variant selector는 Streamlit이 소유하고, 선택이 바뀌면 바로 해당 strategy-specific form을 렌더링한다.
 - Portfolio Mix Builder는 `app/web/backtest_compare/page.py`로 분리되어, component 실행 / weighted portfolio service 호출, saved portfolio replay / load, current-candidate prefill을 page shell에서 제거했다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
 - 공용 preset, session state, 입력 컴포넌트, status label은 `app/web/backtest_common.py`가 담당한다. 이 파일은 다음 리팩토링에서 더 잘게 나눌 수 있는 transitional shared module이다.
@@ -407,7 +407,6 @@ Phase 30 third work unit status:
 ```text
 strategy 선택
   -> family strategy면 variant 선택
-  -> Strategy Detail read-only React panel 확인
   -> strategy-specific form 입력
   -> _handle_backtest_run(...)
   -> app/runtime/backtest/ run_*_backtest_from_db(...)
@@ -421,7 +420,6 @@ strategy 선택
 - `Load Into Form`은 입력값만 복원한다.
 - 복원 후 결과를 갱신하려면 사용자가 다시 실행해야 한다.
 - selection history가 있는 전략은 latest result의 `Selection History Table` / `Interpretation Summary`에서 상세를 본다. 5A 이후 Global Relative Strength도 기존 Selection History 뷰에서 리밸런싱별 raw selected / final selected / cash-retained slot을 확인한다.
-- Strategy Detail panel은 선택된 전략 / variant의 목적, 데이터 source, universe mode, primary input, advanced section, preflight section을 읽는 설명면이다. React component는 form 값을 변경하지 않고 Python으로 event를 돌려보내지 않는다.
 
 ## Stage / Checkpoint 용어 기준
 
@@ -545,12 +543,12 @@ component별 상세 결과는 weight를 정하기 위한 근거로 남기고, Pr
 
 ## Strategy Box 보조 설명 경계
 
-2026-06-30 cleanup 이후 `Single Strategy`와 `Portfolio Mix Builder`의 strategy box에는 strategy capability 보조 표를 기본 노출하지 않았다. 2026-07-07 V1부터 `Single Strategy`는 별도 보조 표 대신 strategy 선택 직후 read-only `Strategy Detail` React panel을 보여준다.
+2026-06-30 cleanup 이후 `Single Strategy`와 `Portfolio Mix Builder`의 strategy box에는 strategy capability 보조 표를 기본 노출하지 않는다.
 
 현재 기준:
 
-- 전략별 cadence, data trust, selection history, Real-Money / Guardrail, history / replay 지원 차이는 `Strategy Detail` panel, 각 전략 입력 그룹, Latest Backtest Run의 조건부 결과 탭, Practical Validation / Final Review gate에서 필요할 때 확인한다.
-- annual strict, quarterly strict prototype, price-only ETF 전략의 차이는 `app/services/backtest_strategy_detail.py` read model에서 section / badge로 구분한다. quarterly prototype은 annual promotion policy gate를 가진 것처럼 표시하지 않는다.
+- 전략별 cadence, data trust, selection history, Real-Money / Guardrail, history / replay 지원 차이는 각 전략 입력 그룹, Latest Backtest Run의 조건부 결과 탭, Practical Validation / Final Review gate에서 필요할 때 확인한다.
+- annual strict, quarterly strict prototype, price-only ETF 전략의 차이는 각 strategy-specific form의 preset / preflight / advanced input group에서 필요한 만큼만 보여준다.
 - 이 변경은 strategy runtime, result bundle, registry / saved setup, Practical Validation / Final Review 저장 정책을 바꾸지 않는다.
 
 ## Data Trust Summary 흐름

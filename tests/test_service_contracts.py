@@ -296,111 +296,13 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("render_backtest_price_freshness_preflight(", common_source)
         self.assertIn("is_backtest_price_freshness_preflight_available()", common_source)
 
-    def test_backtest_strategy_detail_model_describes_equal_weight_inputs(self) -> None:
-        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
-
-        model = build_backtest_strategy_detail_model("Equal Weight")
-
-        self.assertEqual(model["strategy_key"], "equal_weight")
-        self.assertEqual(model["display_name"], "Equal Weight")
-        self.assertEqual(model["family"], "")
-        self.assertIn("Preset", model["universe_modes"])
-        self.assertIn("Manual", model["universe_modes"])
-        self.assertIn("Start Date", [item["label"] for item in model["primary_inputs"]])
-        self.assertIn("Advanced Inputs", [section["title"] for section in model["advanced_sections"]])
-        self.assertIn("Promotion Policy Signal", [section["title"] for section in model["advanced_sections"]])
-        self.assertEqual(model["run_button_label"], "Run Equal Weight Backtest")
-
-    def test_backtest_strategy_detail_model_keeps_strict_annual_capabilities(self) -> None:
-        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
-
-        model = build_backtest_strategy_detail_model("Quality", "Strict Annual")
-
-        self.assertEqual(model["strategy_key"], "quality_snapshot_strict_annual")
-        self.assertEqual(model["family"], "Quality")
-        self.assertEqual(model["variant"], "Strict Annual")
-        self.assertIn("strict", model["badges"])
-        self.assertIn("annual", model["badges"])
-        self.assertIn("Price Freshness Preflight", [section["title"] for section in model["preflight_sections"]])
-        self.assertIn("Promotion Policy Signal", [section["title"] for section in model["advanced_sections"]])
-        self.assertIn("Guardrails", [section["title"] for section in model["advanced_sections"]])
-        self.assertFalse(model["is_prototype"])
-        self.assertEqual(model["run_button_label"], "Run Strict Annual Quality Backtest")
-
-    def test_backtest_strategy_detail_model_marks_quarterly_prototype_limits(self) -> None:
-        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
-
-        model = build_backtest_strategy_detail_model("Value", "Strict Quarterly Prototype")
-
-        self.assertEqual(model["strategy_key"], "value_snapshot_strict_quarterly_prototype")
-        self.assertTrue(model["is_prototype"])
-        self.assertIn("quarterly", model["badges"])
-        self.assertIn("prototype", model["badges"])
-        self.assertIn("Statement Shadow Coverage Preview", [section["title"] for section in model["preflight_sections"]])
-        self.assertNotIn("Promotion Policy Signal", [section["title"] for section in model["advanced_sections"]])
-        self.assertIn("Portfolio Handling & Defensive Rules", [section["title"] for section in model["advanced_sections"]])
-        self.assertEqual(model["run_button_label"], "Run Strict Quarterly Value Prototype")
-
-    def test_backtest_strategy_detail_model_describes_risk_on_momentum_sections(self) -> None:
-        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
-
-        model = build_backtest_strategy_detail_model("Risk-On Momentum 5D")
-
-        self.assertEqual(model["strategy_key"], "risk_on_momentum_5d")
-        self.assertIn("stock swing", model["summary"].lower())
-        self.assertEqual(model["universe_modes"], ["Top1000", "Top2000", "S&P 500", "Manual"])
-        section_titles = [section["title"] for section in model["advanced_sections"]]
-        self.assertIn("Execution / Exit", section_titles)
-        self.assertIn("Macro / Candidate Filters", section_titles)
-        self.assertIn("Cost / Comparison", section_titles)
-
-    def test_backtest_strategy_detail_model_is_streamlit_free(self) -> None:
-        source = Path("app/services/backtest_strategy_detail.py").read_text(encoding="utf-8")
-
-        self.assertNotIn("import streamlit", source)
-        self.assertNotIn("from app.web", source)
-
-    def test_backtest_strategy_detail_panel_react_component_is_ui_only(self) -> None:
-        component_root = Path("app/web/components/backtest_strategy_detail_panel")
-        wrapper_path = component_root / "component.py"
-        package_path = component_root / "frontend/package.json"
-        vite_config_path = component_root / "frontend/vite.config.ts"
-        entry_path = component_root / "frontend/src/BacktestStrategyDetailPanel.tsx"
-        index_path = component_root / "frontend/src/index.tsx"
-        style_path = component_root / "frontend/src/style.css"
-        build_entry_path = component_root / "frontend/build/index.html"
+    def test_single_strategy_workspace_does_not_render_strategy_detail_panel(self) -> None:
         single_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")
 
-        self.assertTrue(wrapper_path.exists())
-        self.assertTrue(package_path.exists())
-        self.assertTrue(vite_config_path.exists())
-        self.assertTrue(entry_path.exists())
-        self.assertTrue(index_path.exists())
-        self.assertTrue(style_path.exists())
-        self.assertTrue(build_entry_path.exists())
-
-        wrapper_source = wrapper_path.read_text(encoding="utf-8")
-        component_source = entry_path.read_text(encoding="utf-8")
-        style_source = style_path.read_text(encoding="utf-8")
-        package_source = package_path.read_text(encoding="utf-8")
-        vite_config_source = vite_config_path.read_text(encoding="utf-8")
-        build_entry_source = build_entry_path.read_text(encoding="utf-8")
-
-        self.assertIn("declare_component", wrapper_source)
-        self.assertIn("render_backtest_strategy_detail_panel", wrapper_source)
-        self.assertIn("BacktestStrategyDetailPanel", component_source)
-        self.assertIn("Strategy Detail", component_source)
-        self.assertIn("detailModel", component_source)
-        self.assertIn("advancedSections", component_source)
-        self.assertIn("border-radius: 8px;", style_source)
-        self.assertIn("streamlit-component-lib", package_source)
-        self.assertIn('base: "./"', vite_config_source)
-        self.assertIn('src="./assets/', build_entry_source)
-        self.assertNotIn("Streamlit.setComponentValue", component_source)
-        self.assertNotIn("from app.services", wrapper_source)
-        self.assertNotIn("from app.runtime", wrapper_source)
-        self.assertIn("build_backtest_strategy_detail_model", single_source)
-        self.assertIn("render_backtest_strategy_detail_panel", single_source)
+        self.assertNotIn("backtest_strategy_detail", single_source)
+        self.assertNotIn("render_backtest_strategy_detail_panel", single_source)
+        self.assertFalse(Path("app/services/backtest_strategy_detail.py").exists())
+        self.assertFalse(Path("app/web/components/backtest_strategy_detail_panel").exists())
 
 
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
