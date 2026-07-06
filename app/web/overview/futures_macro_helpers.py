@@ -467,6 +467,27 @@ def _validation_plain_percent_label(value: Any) -> str:
         return "-"
 
 
+def _validation_frequency_reading(occurrence_count: int, validation_dates: int) -> dict[str, str]:
+    if validation_dates <= 0:
+        return {
+            "value": "확인 부족",
+            "detail": "점검 기준일이 없어 빈도를 계산하지 못했습니다.",
+        }
+    ratio = max(0.0, min(1.0, float(occurrence_count) / float(validation_dates)))
+    if ratio >= 0.5:
+        value = "자주 발생"
+    elif ratio >= 0.15:
+        value = "반복 확인"
+    elif occurrence_count > 0:
+        value = "드문 상태"
+    else:
+        value = "확인 부족"
+    return {
+        "value": value,
+        "detail": f"빈도 표본 {_validation_plain_percent_label(ratio * 100.0)} · 방향성 적중률 표본과 구분합니다.",
+    }
+
+
 def _validation_horizon_metric(
     metrics: dict[str, Any],
     *,
@@ -541,6 +562,53 @@ def _validation_confidence_effect(metrics: dict[str, Any], *, hit_applicable: bo
         f"5D 평균 {mean_5d}, 방향 일관성 {hit_rate_5d}입니다. "
         "계산된 표본 통계만 사용하며, 매수/매도 신호가 아니라 현재 해석을 보수적으로 볼지 확인하는 근거입니다."
     )
+
+
+def _futures_macro_react_validation_conclusion(
+    macro: dict[str, Any],
+    validation: dict[str, Any],
+) -> list[dict[str, str]]:
+    if not validation:
+        return [
+            {"label": "비슷한 상태", "value": "계산 전", "detail": "과거 표본 계산 전입니다."},
+            {"label": "상태 빈도", "value": "계산 전", "detail": "과거 표본 계산 후 표시합니다."},
+            {"label": "방향성 판정", "value": "대기", "detail": "계산 후 hit rule 적용 여부를 표시합니다."},
+            {"label": "판정 이유", "value": "계산 전", "detail": "Target Family / Hit Rule 계산 전입니다."},
+        ]
+
+    coverage = dict(validation.get("coverage") or {})
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    summary = dict(macro.get("summary") or {})
+    scenario = _display_text(current_metrics.get("Scenario") or summary.get("scenario"), "현재 상태")
+    occurrence_count = _validation_int_value(current_metrics.get("Occurrence Count"))
+    validation_dates = _validation_int_value(coverage.get("validation_dates"))
+    hit_applicable = bool(current_metrics.get("Directional Hit Applicable"))
+    family = _display_text(current_metrics.get("Target Family"), "Mixed")
+    rule = _display_text(current_metrics.get("Hit Rule"), "mixed scenario; no forced directional hit rule")
+    frequency = _validation_frequency_reading(occurrence_count, validation_dates)
+    similar_value = (
+        f"{_validation_count_label(occurrence_count)} / {validation_dates:,}일"
+        if validation_dates > 0
+        else f"{_validation_count_label(occurrence_count)} / 점검 기준 미확인"
+    )
+    if hit_applicable:
+        direction_value = "적용 가능"
+        direction_detail = f"Hit Rule: {rule}"
+        reason_value = family
+    else:
+        direction_value = "보류"
+        direction_detail = "혼재/관망 상태라 특정 자산 상승/하락 적중률로 채점하지 않습니다."
+        reason_value = "Hit rule 없음"
+    return [
+        {
+            "label": "비슷한 상태",
+            "value": similar_value,
+            "detail": f"현재 상태: {scenario} · 과거 빈도 표본입니다.",
+        },
+        {"label": "상태 빈도", "value": frequency["value"], "detail": frequency["detail"]},
+        {"label": "방향성 판정", "value": direction_value, "detail": direction_detail},
+        {"label": "판정 이유", "value": reason_value, "detail": f"Target Family: {family} · Hit Rule: {rule}"},
+    ]
 
 
 def _futures_macro_react_validation_insight(
@@ -718,6 +786,7 @@ def build_futures_macro_react_workbench_payload(
                 validation,
                 confidence_label=confidence_label,
             ),
+            "conclusion": _futures_macro_react_validation_conclusion(macro, validation),
             "action": {
                 "id": "load_validation",
                 "label": "오늘과 비슷한 과거 흐름 확인",

@@ -114,6 +114,7 @@ export type FuturesMacroWorkbenchPayload = {
     state: string;
     detail: string;
     insight: FuturesMacroValidationInsight;
+    conclusion: FuturesMacroMetric[];
     action: FuturesMacroAction;
     metrics: FuturesMacroMetric[];
   };

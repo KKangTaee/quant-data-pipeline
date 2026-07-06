@@ -8561,3 +8561,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 16개 선물 일봉 상태를 같은 계산식으로 과거 날짜에 적용해 비슷한 상태를 찾고, 그 결과를 예측 신호가 아니라 현재 해석 보조 검산으로 읽게 해야 함.
 - Analysis result: `과거 점검`은 독립 React 카드로 두되, `현재 근거`는 현재 macro score evidence이므로 `매크로 컨텍스트` 내부 panel로 흡수하는 것이 더 자연스럽다. 하단 원본표는 특정 섹션 근거가 아니라 세 React 섹션을 검산하는 raw appendix다. 결과 해석은 사용자가 준 예시 문구를 상상으로 만들지 않고, 표본 수 / 평균 수익률 / 방향 일관성 / target family / hit rule처럼 계산된 값이 있을 때만 표시해야 한다.
 - Follow-up: `CurrentEvidencePanel`을 `MacroContextSection` 안으로 옮기고, 하단 disclosure를 `원본 데이터 / 계산 추적`으로 바꿔 화면 섹션별 원본 연결을 표시했다. 과거 점검 action은 `오늘과 비슷한 과거 흐름 확인`으로 정리했고, 결과 타일은 `판정`, `5거래일 표본`, `20거래일 표본`, `자산군 해석`으로 바꿨다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에 있다.
+
+### 2026-07-06 - Futures Macro 과거 점검은 빈도와 방향성 판정을 분리해 읽는다
+
+- User request: 비슷한 과거 상태가 961회인데도 5D / 20D가 `방향성 없음`으로 나오는 이유를 물었고, 개선안 중 1번만 진행해 달라고 요청함.
+- Interpreted goal: `961회`가 충분한 빈도 표본이라는 점과, 혼재 / 관망 상태에는 특정 자산 상승 / 하락 hit rule이 없어 방향성 판정을 보류한다는 점을 UI 첫 결론에서 분리해 보여줘야 함.
+- Analysis result: 현재 DB 기준 `혼재된 매크로 흐름`은 961회 / 1,225일로 자주 발생했지만 `Target Family=Mixed`, `Hit Rule 없음`, `Directional Hit Applicable=False`다.
+- Follow-up: `과거 점검` 카드에 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유` 결론 grid를 추가하고, 기존 5D / 20D 상세 타일과 분포 / 그래프 계산은 건드리지 않았다.

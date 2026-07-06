@@ -67,6 +67,12 @@ function HistoricalValidationPanel({ pendingValidation, validation, onAction }: 
         ))}
       </div>
 
+      <div className="fm-workbench__validation-conclusion-grid">
+        {validation.conclusion.map((item) => (
+          <MetricTile item={item} key={`${item.label}-${item.value}`} />
+        ))}
+      </div>
+
       <div className="fm-workbench__validation-result-grid">
         {insightTiles.map((item) => (
           <MetricTile item={item} key={`${item.label}-${item.value}`} />

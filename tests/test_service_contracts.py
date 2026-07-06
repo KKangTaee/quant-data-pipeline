@@ -5996,6 +5996,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
         self.assertEqual(payload["validation"]["action"]["id"], "load_validation")
         self.assertEqual(payload["validation"]["action"]["label"], "오늘과 비슷한 과거 흐름 확인")
+        conclusion = payload["validation"]["conclusion"]
+        self.assertEqual([item["label"] for item in conclusion], ["비슷한 상태", "상태 빈도", "방향성 판정", "판정 이유"])
+        self.assertEqual(conclusion[0]["value"], "계산 전")
+        self.assertEqual(conclusion[2]["value"], "대기")
         bridge = payload["validation"]["insight"]["evidence_bridge"]
         self.assertEqual(bridge["label"], "자산군 해석")
         self.assertEqual(bridge["value"], "계산 전")
@@ -6111,6 +6115,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("Streamlit.setFrameHeight", react_source)
         self.assertIn("function MetricTile", validation_panel_source)
         self.assertIn("validation.insight.evidence_bridge", validation_panel_source)
+        self.assertIn("validation.conclusion", validation_panel_source)
         self.assertIn("validation.action", validation_panel_source)
         self.assertIn("onAction(validation.action)", validation_panel_source)
         self.assertIn("pendingValidation", validation_panel_source)
@@ -6118,6 +6123,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('className="fm-workbench__validation-eyebrow">과거 점검', validation_panel_source)
         self.assertIn('className="fm-workbench__validation-summary"', validation_panel_source)
         self.assertIn('className="fm-workbench__validation-control"', validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-conclusion-grid"', validation_panel_source)
         self.assertIn('className="fm-workbench__validation-status-grid"', validation_panel_source)
         self.assertIn('className="fm-workbench__validation-result-grid"', validation_panel_source)
         self.assertIn("fm-workbench__validation-action", validation_panel_source)
@@ -6125,6 +6131,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(
             validation_panel_source.index('className="fm-workbench__validation-control"'),
             validation_panel_source.index('className="fm-workbench__validation-status-grid"'),
+        )
+        self.assertLess(
+            validation_panel_source.index('className="fm-workbench__validation-conclusion-grid"'),
+            validation_panel_source.index('className="fm-workbench__validation-result-grid"'),
         )
         self.assertIn(".fm-workbench__section-card", react_style)
         self.assertIn(".fm-workbench__macro-section", react_style)
@@ -6135,6 +6145,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".fm-workbench__validation-card", react_style)
         self.assertIn(".fm-workbench__validation-header", react_style)
         self.assertIn(".fm-workbench__validation-control", react_style)
+        self.assertIn(".fm-workbench__validation-conclusion-grid", react_style)
         self.assertIn(".fm-workbench__validation-status-grid", react_style)
         self.assertIn(".fm-workbench__validation-result-grid", react_style)
         self.assertIn(".fm-workbench__validation-action", react_style)
@@ -17387,6 +17398,16 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         insight = payload["validation"]["insight"]
         self.assertEqual(insight["purpose"], "오늘과 비슷한 과거 흐름 확인")
         self.assertIn("현재 1D 선물 1/1개", insight["basis"])
+        conclusion = payload["validation"]["conclusion"]
+        self.assertEqual([item["label"] for item in conclusion], ["비슷한 상태", "상태 빈도", "방향성 판정", "판정 이유"])
+        self.assertEqual(conclusion[0]["value"], "950회 / 1,212일")
+        self.assertIn("빈도 표본", conclusion[0]["detail"])
+        self.assertEqual(conclusion[1]["value"], "자주 발생")
+        self.assertIn("78.4%", conclusion[1]["detail"])
+        self.assertEqual(conclusion[2]["value"], "보류")
+        self.assertIn("상승/하락 적중률로 채점하지 않습니다", conclusion[2]["detail"])
+        self.assertEqual(conclusion[3]["value"], "Hit rule 없음")
+        self.assertIn("Target Family: Mixed", conclusion[3]["detail"])
         self.assertEqual(insight["current_state"]["label"], "판정")
         self.assertEqual(insight["current_state"]["value"], "방향성 보류")
         self.assertIn("혼재된 매크로 흐름", insight["current_state"]["detail"])
@@ -17441,6 +17462,11 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             validation_loaded_at="2026-07-06 10:00:00",
         )
         directional_insight = directional_payload["validation"]["insight"]
+        directional_conclusion = directional_payload["validation"]["conclusion"]
+        self.assertEqual(directional_conclusion[0]["value"], "90회 / 100일")
+        self.assertEqual(directional_conclusion[2]["value"], "적용 가능")
+        self.assertIn("risk asset forward return > 0", directional_conclusion[2]["detail"])
+        self.assertEqual(directional_conclusion[3]["value"], "Risk Asset")
         self.assertEqual(directional_insight["current_state"]["value"], "방향성 참고 가능")
         self.assertEqual(directional_insight["sample"]["value"], "+1.25%")
         self.assertIn("표본 80회", directional_insight["sample"]["detail"])

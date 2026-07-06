@@ -291,6 +291,7 @@ body {
 
 .fm-workbench__flow-grid,
 .fm-workbench__validation-status-grid,
+.fm-workbench__validation-conclusion-grid,
 .fm-workbench__validation-result-grid {
   display: grid;
   gap: 8px;
@@ -343,9 +344,20 @@ body {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.fm-workbench__validation-conclusion-grid {
+  border-bottom: 1px solid #e5e7eb;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-bottom: 12px;
+}
+
 .fm-workbench__validation-status-grid .fm-workbench__metric,
+.fm-workbench__validation-conclusion-grid .fm-workbench__metric,
 .fm-workbench__validation-result-grid .fm-workbench__metric {
   border: 1px solid #e5e7eb;
+}
+
+.fm-workbench__validation-conclusion-grid .fm-workbench__metric {
+  background: #f8fafc;
 }
 
 .fm-workbench__validation-control {
@@ -555,6 +567,7 @@ body {
   .fm-workbench__scores,
   .fm-workbench__flow-grid,
   .fm-workbench__validation-status-grid,
+  .fm-workbench__validation-conclusion-grid,
   .fm-workbench__validation-result-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
