@@ -256,6 +256,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         entry_path = component_root / "frontend/src/BacktestPriceFreshnessPreflight.tsx"
         index_path = component_root / "frontend/src/index.tsx"
         style_path = component_root / "frontend/src/style.css"
+        vite_config_path = component_root / "frontend/vite.config.ts"
         build_entry_path = component_root / "frontend/build/index.html"
         common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
 
@@ -264,12 +265,15 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertTrue(entry_path.exists())
         self.assertTrue(index_path.exists())
         self.assertTrue(style_path.exists())
+        self.assertTrue(vite_config_path.exists())
         self.assertTrue(build_entry_path.exists())
 
         wrapper_source = wrapper_path.read_text(encoding="utf-8")
         component_source = entry_path.read_text(encoding="utf-8")
         style_source = style_path.read_text(encoding="utf-8")
         package_source = package_path.read_text(encoding="utf-8")
+        vite_config_source = vite_config_path.read_text(encoding="utf-8")
+        build_entry_source = build_entry_path.read_text(encoding="utf-8")
 
         self.assertIn("declare_component", wrapper_source)
         self.assertIn("is_backtest_price_freshness_preflight_available", wrapper_source)
@@ -280,6 +284,11 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("metricItems", component_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)
+        self.assertIn('base: "./"', vite_config_source)
+        self.assertIn('src="./assets/', build_entry_source)
+        self.assertIn('href="./assets/', build_entry_source)
+        self.assertNotIn('src="/assets/', build_entry_source)
+        self.assertNotIn('href="/assets/', build_entry_source)
         self.assertNotIn("Streamlit.setComponentValue", component_source)
         self.assertNotIn("from app.services", wrapper_source)
         self.assertNotIn("from app.runtime", wrapper_source)
