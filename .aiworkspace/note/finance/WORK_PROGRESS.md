@@ -5537,3 +5537,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Futures Macro` React flow tabs now use `1D / 1W / 1M`, defaulting to 1D so the current standardized score can be compared with raw one-day moves before weekly / monthly context.
   - Existing 1W `weekly_context` compatibility remains pinned to 1W; DB collection, schema, and provider refresh boundaries are unchanged.
   - QA covered RED/GREEN contracts, the focused 26-test Futures Macro suite, `py_compile`, `git diff --check`, and Browser QA.
+- Overview Futures Macro Historical Validation UX 2026-07-06:
+  - `과거 점검` is now framed as `오늘과 비슷했던 과거 상태 확인`: the current 16-futures daily score state is compared against historical dates computed with the same classification method.
+  - The React panel owns the historical-validation explanation and action; lower `계산 근거 / 원본 표` now stays focused on raw score / contribution / daily futures / historical sample tables.
+  - Graph rendering is not added yet, but the payload now carries visual candidate metadata for similar-state frequency and forward-return distribution.

@@ -6000,6 +6000,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(bridge["label"], "현재근거와 연결")
         self.assertEqual(bridge["value"], "현재 근거를 과거 표본으로 검산")
         self.assertIn("강한 근거 1개", bridge["detail"])
+        visual_candidates = payload["validation"]["visual_candidates"]
+        self.assertEqual([item["key"] for item in visual_candidates], ["similar_state_frequency", "forward_return_distribution"])
+        self.assertEqual(visual_candidates[0]["status"], "pending")
+        self.assertEqual(visual_candidates[1]["status"], "pending")
         self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
         self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 관망")
         self.assertIn("CME/yfinance 일봉 세션 기준일", payload["brief"]["metrics"][0]["detail"])
@@ -17336,6 +17340,10 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertIn("방향성 비적용", metrics[2]["detail"])
         self.assertNotIn("PIT 날짜", [metric["label"] for metric in metrics])
         self.assertNotIn("current scenario sample", " ".join(metric["detail"] for metric in metrics))
+        visual_candidates = payload["validation"]["visual_candidates"]
+        self.assertEqual([item["key"] for item in visual_candidates], ["similar_state_frequency", "forward_return_distribution"])
+        self.assertEqual(visual_candidates[0]["status"], "ready")
+        self.assertEqual(visual_candidates[1]["status"], "not_applicable")
 
     def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
         from app.services.futures_macro_validation import build_interpretation_confidence

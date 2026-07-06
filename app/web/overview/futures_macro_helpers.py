@@ -511,6 +511,46 @@ def _futures_macro_react_validation_insight(
     }
 
 
+def _futures_macro_react_validation_visual_candidates(validation: dict[str, Any]) -> list[dict[str, str]]:
+    if not validation:
+        return [
+            {
+                "key": "similar_state_frequency",
+                "label": "비슷했던 날 분포",
+                "status": "pending",
+                "detail": "과거 점검 계산 후 현재 상태가 과거에 얼마나 자주 나왔는지 시각화할 수 있습니다.",
+            },
+            {
+                "key": "forward_return_distribution",
+                "label": "이후 흐름 분포",
+                "status": "pending",
+                "detail": "방향성 적용 가능 여부를 확인한 뒤 시각화 여부를 결정합니다.",
+            },
+        ]
+    current_metrics = dict(validation.get("current_scenario_metrics") or {})
+    occurrence_count = int(current_metrics.get("Occurrence Count") or 0)
+    sample_5d = int(current_metrics.get("Sample 5D") or 0)
+    hit_applicable = bool(current_metrics.get("Directional Hit Applicable"))
+    return [
+        {
+            "key": "similar_state_frequency",
+            "label": "비슷했던 날 분포",
+            "status": "ready" if occurrence_count > 0 else "insufficient",
+            "detail": f"현재 상태와 같은 과거 분류 {occurrence_count:,}회를 기간별 빈도로 보여줄 수 있습니다.",
+        },
+        {
+            "key": "forward_return_distribution",
+            "label": "이후 흐름 분포",
+            "status": "ready" if hit_applicable and sample_5d > 0 else "not_applicable",
+            "detail": (
+                f"방향성 표본 {sample_5d:,}회의 5D 이후 흐름 분포를 보여줄 수 있습니다."
+                if hit_applicable and sample_5d > 0
+                else "혼재 또는 저신호 상태는 이후 방향성 분포보다 발생 빈도 시각화가 우선입니다."
+            ),
+        },
+    ]
+
+
 def build_futures_macro_react_workbench_payload(
     macro: dict[str, Any],
     *,
@@ -576,6 +616,7 @@ def build_futures_macro_react_workbench_payload(
                 "detail": "현재 16개 선물 일봉 상태를 과거 날짜에도 같은 방식으로 계산해 비슷했던 상태를 확인합니다.",
             },
             "metrics": validation_metrics,
+            "visual_candidates": _futures_macro_react_validation_visual_candidates(validation),
         },
         "evidence": {
             "title": "현재 근거",

@@ -8547,3 +8547,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: top score의 latest standardized 1D signal과 raw 1D / 1W / 1M 흐름을 나란히 비교하게 해야 함.
 - Analysis result: `1D`는 raw 1거래일 변화율, top score는 같은 최신 일봉을 변동성 표준화한 값이므로 수치는 같지 않지만 방향 비교에 유용하다.
 - Follow-up: `flow_context`에 `1D`를 추가하고 default period를 `1D`로 변경했다. 기존 `weekly_context`는 1W를 유지한다.
+
+### 2026-07-06 - Futures Macro 과거 점검은 오늘과 비슷했던 과거 상태 확인으로 읽는다
+
+- User request: `과거 점검`이 정확히 무엇을 하는 기능인지 이해한 뒤, 위에서 정리한 1차~5차 개선을 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: 사용자가 과거 점검을 예측 기능이나 원본표 부속물로 오해하지 않고, 현재 16개 선물 일봉 상태를 과거 동일 계산식과 비교하는 보조 검산으로 읽게 해야 함.
+- Analysis result: 현재 상태 이름은 16개 선물의 1D 표준화 움직임을 6개 macro score로 번역한 classification이며, historical validation은 과거 날짜에도 같은 classification을 적용해 비슷한 상태 발생 빈도와 방향성 적용 가능 여부를 확인한다.
+- Follow-up: React에 `오늘과 비슷했던 과거 상태 확인` 패널과 action을 만들고, 현재근거 연결 카드와 그래프 후보 메타데이터를 추가했다. 하단 disclosure는 원본 표 추적 역할로 낮췄다.
