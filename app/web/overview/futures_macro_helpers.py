@@ -1585,12 +1585,12 @@ def _render_futures_macro_panel(*, detail_expanded: bool = False) -> None:
     cautions.extend(_macro_caution_label(item) for item in validation.get("caveats") or [] if str(item).strip())
     with st.expander("계산 근거 / 원본 표", expanded=detail_expanded):
         if react_available:
-            st.caption("과거점검 · 자료 기준 · 점수 계산표 · 선물 일봉 원본")
+            st.caption("과거 점검 요약은 상단 React 패널에서 확인하고, 이 영역은 자료 기준 · 점수 계산표 · 선물 일봉 원본을 추적합니다.")
         else:
             _render_macro_evidence_reading(list(macro.get("evidence_reading") or []))
-        if validation:
+        if validation and not react_available:
             _render_macro_validation_summary(validation, confidence_label=str(confidence.get("label") or ""))
-        else:
+        elif not validation and not react_available:
             st.info("과거 점검은 아직 불러오지 않았습니다. 상단의 `과거 점검 불러오기`를 누르면 historical validation을 계산합니다.")
         _render_futures_macro_data_management(macro)
         _render_futures_macro_raw_tables(

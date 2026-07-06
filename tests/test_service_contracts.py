@@ -6088,6 +6088,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본', helper_source)
         self.assertIn("CME/yfinance 일봉 세션 기준", helper_source)
         self.assertIn("CME/yfinance 일봉 세션 기준일", helper_source)
+        self.assertIn("과거 점검 요약은 상단 React 패널에서 확인", helper_source)
+        self.assertIn("if validation and not react_available:", helper_source)
         self.assertIn('with st.expander("현재 점수 원본"', helper_source)
         self.assertIn('with st.expander("점수 구성 기여"', helper_source)
         self.assertIn('with st.expander("선물 일봉 변화"', helper_source)
