@@ -685,7 +685,7 @@ REFERENCE_PLAYBOOK_DETAILS: dict[str, dict[str, Any]] = {
             },
             {
                 "order": "2",
-                "check": "selected-route blocker, critical NOT_RUN, NEEDS_INPUT row가 남아 있는지 봅니다.",
+                "check": "selected-route blocker, critical 미실행 / 근거 보강 필요 항목이 남아 있는지 봅니다.",
                 "owner_screen": "Backtest > Final Review",
                 "pass_signal": "후보 미노출 원인이 specific blocker로 표시됨",
             },

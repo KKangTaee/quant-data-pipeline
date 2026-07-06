@@ -450,10 +450,10 @@ def build_validation_module_plan(
             requirement="REQUIRED",
             stage_owner="practical_validation",
             reason="walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
-            next_action="검증 효력의 NEEDS_INPUT row를 보강하고 REVIEW row는 Final Review 판단 근거로 넘깁니다.",
+            next_action="검증 효력에서 보강이 필요한 근거를 채우고 REVIEW 근거는 Final Review 판단 근거로 넘깁니다.",
             profile_effect=profile_label,
             resolution_surface="Validation Efficacy Audit",
-            resolution_action="NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+            resolution_action="Validation Efficacy Audit 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
         ),
         _module(
             module_id="data_coverage",
@@ -466,7 +466,7 @@ def build_validation_module_plan(
             next_action="가격 / provider / lifecycle / replay coverage 부족분을 보강합니다.",
             profile_effect=profile_label,
             resolution_surface="Data Coverage Audit / Provider Data Gaps",
-            resolution_action="가격 window, provider freshness, lifecycle / survivorship row 중 NEEDS_INPUT 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+            resolution_action="가격 window, provider freshness, lifecycle / survivorship 근거 중 부족한 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
         ),
         _module(
             module_id="construction_risk",
@@ -505,7 +505,7 @@ def build_validation_module_plan(
             next_action="최소 stress / rolling / sensitivity 근거가 부족하면 보강하고 고급 parameter perturbation은 REVIEW 또는 후속 검증으로 남깁니다.",
             profile_effect="stricter for defensive / tactical profiles",
             resolution_surface="Robustness Lab",
-            resolution_action="stress, rolling, sensitivity, overfit summary에서 NOT_RUN / NEEDS_INPUT row를 확인합니다.",
+            resolution_action="stress, rolling, sensitivity, overfit summary에서 미실행 또는 보강 필요 항목을 확인합니다.",
         ),
         _module(
             module_id="provider_investability",

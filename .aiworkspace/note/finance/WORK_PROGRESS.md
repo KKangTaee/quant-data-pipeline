@@ -5509,3 +5509,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Flow 3 React Fix Queue는 Final Review 이동 판단 / 다음 단계 / 먼저 해결할 일 / 기준 요약을 보여주는 read-only first-read board가 됐다.
 - Flow 4는 `Final Review 이동 기준 상세` board를 먼저 보여주고 Source Readiness / Validation Readiness / Final Review Readiness Preview의 판정 근거와 보강 위치를 정리한다.
 - Gate threshold, replay 실행, provider 수집, registry / saved JSONL, Final Review persistence, live approval / broker order / auto rebalance 경계는 바꾸지 않았다.
+
+## 2026-07-06 - Practical Validation Readable Fix Queue V1
+
+- `.aiworkspace/note/finance/tasks/active/practical-validation-readable-fix-queue-v1-20260706/`에서 Flow 3 / Flow 4 blocker copy를 사용자 언어로 바꿨다.
+- Flow 3 `먼저 해결할 일`은 `무엇을 검증했나 / 부족한 점 / 해야 할 일 / 왜 중요한가`를 먼저 보여주고, `NEEDS_INPUT` / `NOT_RUN`은 `기술 기준` tag로 낮춘다.
+- Flow 4는 `Final Review로 넘기기 전 확인 기준`으로 renamed / clarified됐고, 새 검증 단계가 아니라 Flow 3 결론의 기준 상세로 읽힌다.
+- Gate threshold, replay 실행, provider 수집, registry / saved JSONL, Final Review persistence, live approval / broker order / auto rebalance 경계는 바꾸지 않았다.

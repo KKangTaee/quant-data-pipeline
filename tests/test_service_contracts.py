@@ -8216,10 +8216,14 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("PracticalValidationFixQueue", component_source)
         self.assertIn("Final Review 이동 판단", component_source)
         self.assertIn("먼저 해결할 일", component_source)
-        self.assertIn("Final Review 이동 기준", component_source)
+        self.assertIn("Final Review로 넘기기 전 확인 기준", component_source)
+        self.assertIn("무엇을 검증했나", component_source)
+        self.assertIn("부족한 점", component_source)
+        self.assertIn("기술 기준", component_source)
         self.assertIn("다음 단계", component_source)
         self.assertIn("Flow 5에서 저장 / 이동", component_source)
         self.assertIn("criteriaGroups", component_source)
+        self.assertNotIn("NEEDS_INPUT row", component_source)
         self.assertNotIn("2차 검증 결론 / Fix Queue", component_source)
         self.assertIn("fixItems", component_source)
         self.assertIn("coreGroups", component_source)
@@ -8310,9 +8314,59 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         data_card = data_group["criteria_cards"][0]
         self.assertEqual(data_card["label"], "Data Coverage")
         self.assertEqual(data_card["status"], "NEEDS_INPUT")
-        self.assertEqual(data_card["status_label"], "보강 필요")
+        self.assertEqual(data_card["status_label"], "근거 보강 필요")
         self.assertEqual(data_card["resolution_surface"], "Data Coverage Audit")
         self.assertIn("가격 window 보강 필요", data_card["evidence"])
+        self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가")
+        self.assertIn("무엇을 확인", data_card["checked_evidence"])
+        self.assertIn("가격", data_card["missing_evidence"])
+
+    def test_practical_validation_workspace_model_explains_fix_items_in_user_language(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "final_review_gate": {
+                    "route": "BLOCKED_FOR_FINAL_REVIEW",
+                    "can_save_and_move": False,
+                    "verdict": "Final Review 이동 보류",
+                    "next_action": "검증 효력 근거를 보강합니다.",
+                    "blocking_modules": [
+                        {
+                            "module_id": "validation_efficacy",
+                            "label": "Validation Efficacy",
+                            "status": "NEEDS_INPUT",
+                            "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
+                            "resolution_surface": "Validation Efficacy Audit",
+                            "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+                        }
+                    ],
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Efficacy",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "reason": "walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
+                        "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
+                        "resolution_surface": "Validation Efficacy Audit",
+                        "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+                    }
+                ],
+            }
+        )
+
+        fix_item = workspace["fix_queue"][0]
+        self.assertEqual(fix_item["status"], "NEEDS_INPUT")
+        self.assertEqual(fix_item["status_label"], "근거 보강 필요")
+        self.assertEqual(fix_item["technical_status"], "NEEDS_INPUT")
+        self.assertEqual(fix_item["display_label"], "검증이 우연한 좋은 구간에만 기대지 않는가")
+        self.assertIn("무엇을 확인", fix_item["checked_evidence"])
+        self.assertIn("walk-forward", fix_item["missing_evidence"])
+        self.assertIn("Validation Efficacy Audit 상세", fix_item["action_label"])
+        self.assertIn("우연히", fix_item["why_it_matters"])
+        self.assertNotIn("NEEDS_INPUT row", fix_item["action_label"])
 
     def test_practical_validation_flow4_uses_criteria_detail_board(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -8321,7 +8375,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertIn("def _render_validation_criteria_detail_board", page_source)
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
-        self.assertIn("Final Review 이동 기준 상세", page_source)
+        self.assertIn("Final Review로 넘기기 전 확인 기준", page_source)
+        self.assertIn("새 검증 단계가 아니라", page_source)
+        self.assertIn("무엇을 확인했나", page_source)
+        self.assertIn("부족한 점", page_source)
+        self.assertIn("해야 할 일", page_source)
         self.assertIn("Source Readiness", page_source)
         self.assertIn("Validation Readiness", page_source)
         self.assertIn("Final Review Readiness Preview", page_source)

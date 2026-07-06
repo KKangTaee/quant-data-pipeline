@@ -1875,11 +1875,11 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
     evidence_count = int(summary.get("criteria_card_count") or 0)
     tone = _status_tone(gate_summary.get("route") or validation_result.get("validation_route"))
     if blocker_count:
-        headline = f"Final Review 이동을 막는 기준 {blocker_count}개가 남아 있습니다."
+        headline = f"Final Review로 넘기기 전에 보강할 기준 {blocker_count}개가 남아 있습니다."
     elif review_count:
         headline = f"Final Review에서 확인할 기준 {review_count}개가 남아 있습니다."
     else:
-        headline = "Final Review 이동 기준이 모두 통과 상태입니다."
+        headline = "Final Review로 넘기기 전 확인 기준이 모두 통과 상태입니다."
 
     metric_rows = [
         ("먼저 해결", str(blocker_count), "Flow 3 Fix Queue"),
@@ -1905,20 +1905,27 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             card_html.append(
                 f'<article class="pv-criteria-card pv-criteria-card-{card_tone}">'
                 '<div class="pv-criteria-card-head">'
-                f"<h5>{escape(str(card.get('label') or '-'))}</h5>"
+                f"<h5>{escape(str(card.get('display_label') or card.get('label') or '-'))}</h5>"
                 f'<div class="pv-criteria-card-status">{escape(str(card.get("status_label") or card.get("status") or "-"))}</div>'
                 "</div>"
-                f"<p>{escape(str(card.get('explanation') or '-'))}</p>"
                 '<div class="pv-criteria-row">'
-                "<span>판정 근거</span>"
-                f"<p>{escape(str(card.get('evidence') or '-'))}</p>"
+                "<span>무엇을 확인했나</span>"
+                f"<p>{escape(str(card.get('checked_evidence') or card.get('explanation') or '-'))}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>보강 / 확인 위치</span>"
-                f"<p>{escape(str(card.get('resolution_action') or '-'))}</p>"
+                "<span>부족한 점</span>"
+                f"<p>{escape(str(card.get('missing_evidence') or card.get('evidence') or '-'))}</p>"
+                "</div>"
+                '<div class="pv-criteria-row">'
+                "<span>해야 할 일</span>"
+                f"<p>{escape(str(card.get('action_label') or card.get('resolution_action') or '-'))}</p>"
+                "</div>"
+                '<div class="pv-criteria-row">'
+                "<span>왜 중요한가</span>"
+                f"<p>{escape(str(card.get('why_it_matters') or '-'))}</p>"
                 "</div>"
                 "<footer>"
-                f"<span>{escape(str(card.get('module_type') or '-'))}</span>"
+                f"<span>기술 기준: {escape(str(card.get('technical_label') or card.get('module_type') or '-'))}</span>"
                 f"<span>{escape(str(card.get('resolution_surface') or '-'))}</span>"
                 "</footer>"
                 "</article>"
@@ -1927,7 +1934,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             '<section class="pv-criteria-group">'
             '<header class="pv-criteria-group-head">'
             "<div>"
-            f"<strong>{escape(str(group.get('label') or '-'))}</strong>"
+            f"<strong>{escape(str(group.get('display_label') or group.get('label') or '-'))}</strong>"
             f"<span>{escape(str(group.get('purpose') or '-'))}</span>"
             "</div>"
             f"<b>{escape(str(group.get('module_count') or len(cards)))}개</b>"
@@ -1940,8 +1947,8 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
         '<div class="pv-shell">'
         f'<section class="pv-criteria-board pv-criteria-board-{tone}">'
         '<div class="pv-criteria-kicker">검증 기준 상세</div>'
-        f'<div class="pv-criteria-title">Final Review 이동 기준 상세</div>'
-        f'<div class="pv-criteria-detail">{escape(headline)} Flow 3은 결론과 먼저 해결할 일을 보여주고, 이 보드는 기준별 판정 근거와 보강 위치만 정리합니다.</div>'
+        f'<div class="pv-criteria-title">Final Review로 넘기기 전 확인 기준</div>'
+        f'<div class="pv-criteria-detail">{escape(headline)} 이 보드는 새 검증 단계가 아니라 Flow 3 결론이 어떤 확인 기준에서 나왔는지, 무엇이 부족한지, 어디서 보강할지를 풀어쓴 기준 상세입니다.</div>'
         f'<div class="pv-criteria-metrics">{metric_html}</div>'
         f'<div class="pv-criteria-groups">{"".join(group_html)}</div>'
         "</section></div>",

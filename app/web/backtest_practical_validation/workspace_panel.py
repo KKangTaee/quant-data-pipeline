@@ -29,19 +29,19 @@ GATE_FIX_GUIDANCE = {
     },
     "validation_efficacy": {
         "location": "Validation Efficacy Audit",
-        "action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+        "action": "Validation Efficacy Audit 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
     },
     "Validation Efficacy": {
         "location": "Validation Efficacy Audit",
-        "action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+        "action": "Validation Efficacy Audit 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
     },
     "data_coverage": {
         "location": "Data Coverage Audit / Provider Data Gaps",
-        "action": "가격 window, provider freshness, lifecycle / survivorship row 중 NEEDS_INPUT 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+        "action": "가격 window, provider freshness, lifecycle / survivorship 근거 중 부족한 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
     },
     "Data Coverage": {
         "location": "Data Coverage Audit / Provider Data Gaps",
-        "action": "가격 window, provider freshness, lifecycle / survivorship row 중 NEEDS_INPUT 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
+        "action": "가격 window, provider freshness, lifecycle / survivorship 근거 중 부족한 항목을 확인하고 provider gap 수집 또는 데이터 보강을 진행합니다.",
     },
 }
 
@@ -63,6 +63,13 @@ def _gate_module_display_rows(modules: list[dict[str, Any]]) -> list[dict[str, A
             {
                 "Module": label,
                 "Status": row.get("status") or "-",
+                "Status Label": row.get("status_label") or validation_status_label(row.get("status") or "-"),
+                "Display Label": row.get("display_label") or label,
+                "Checked Evidence": row.get("checked_evidence") or row.get("reason") or "-",
+                "Missing Evidence": row.get("missing_evidence") or row.get("gate_reason") or "-",
+                "Action Label": row.get("action_label") or fix_action,
+                "Why It Matters": row.get("why_it_matters") or row.get("gate_effect") or "-",
+                "Technical Label": row.get("technical_label") or f"{label} · {row.get('status') or '-'}",
                 "Fix Location": fix_location,
                 "Fix Action": fix_action,
                 "Gate Effect": row.get("gate_effect") or "-",
@@ -159,6 +166,13 @@ def _react_fix_queue_items(fix_queue: list[dict[str, Any]]) -> list[dict[str, An
             {
                 "label": row.get("Module") or "-",
                 "status": row.get("Status") or "-",
+                "statusLabel": row.get("Status Label") or row.get("Status") or "-",
+                "displayLabel": row.get("Display Label") or row.get("Module") or "-",
+                "checkedEvidence": row.get("Checked Evidence") or "-",
+                "missingEvidence": row.get("Missing Evidence") or "-",
+                "actionLabel": row.get("Action Label") or row.get("Fix Action") or "-",
+                "whyItMatters": row.get("Why It Matters") or "",
+                "technicalLabel": row.get("Technical Label") or "",
                 "fixLocation": row.get("Fix Location") or "-",
                 "fixAction": row.get("Fix Action") or "-",
                 "gateReason": row.get("Gate Reason") or "",
@@ -195,17 +209,24 @@ def _react_criteria_group_items(criteria_groups: list[dict[str, Any]]) -> list[d
         items.append(
             {
                 "label": group.get("label") or group.get("group_id") or "-",
+                "displayLabel": group.get("display_label") or group.get("label") or group.get("group_id") or "-",
                 "status": group.get("status") or "-",
                 "purpose": group.get("purpose") or f"{len(cards)} criteria",
                 "tone": group.get("tone") or "neutral",
                 "criteriaCards": [
                     {
                         "label": card.get("label") or "-",
+                        "displayLabel": card.get("display_label") or card.get("label") or "-",
                         "status": card.get("status") or "-",
                         "statusLabel": card.get("status_label") or card.get("status") or "-",
+                        "technicalLabel": card.get("technical_label") or "",
                         "tone": card.get("tone") or "neutral",
                         "explanation": card.get("explanation") or "-",
                         "evidence": card.get("evidence") or "-",
+                        "checkedEvidence": card.get("checked_evidence") or "-",
+                        "missingEvidence": card.get("missing_evidence") or "-",
+                        "actionLabel": card.get("action_label") or "-",
+                        "whyItMatters": card.get("why_it_matters") or "",
                         "resolutionSurface": card.get("resolution_surface") or "-",
                     }
                     for card in cards

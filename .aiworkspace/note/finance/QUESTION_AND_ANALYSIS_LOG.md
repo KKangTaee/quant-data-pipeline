@@ -8511,3 +8511,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow 3은 Final Review 이동 결론과 먼저 해결할 일을 빠르게 읽는 판정판이어야 하고, Flow 4는 그 판단의 기준별 근거와 보강 위치를 확인하는 상세 보드여야 한다.
 - Analysis result: Backtest Analysis UI를 그대로 복제하면 1차 source 등록과 2차 Final Review 이동 판단이 섞일 수 있다. 따라서 visual grammar만 빌리고, Flow 3에는 save / move action을 두지 않으며, Flow 4 첫 board에서 Source / Validation / Final Review readiness criteria를 자세히 보여주는 것이 맞다.
 - Follow-up: Flow 3 React Fix Queue와 Flow 4 criteria detail board를 구현했다. Gate policy, replay execution, provider collection, persistence semantics는 바꾸지 않았다.
+
+### 2026-07-06 - Practical Validation blocker는 내부 audit 용어보다 먼저 행동 언어로 읽혀야 한다
+
+- User request: 사용자가 `NEEDS_INPUT`, `Validation Efficacy Audit`, `Final Review 이동 기준`이 무엇을 수정하라는 뜻인지 알기 어렵다고 지적하고 개선을 승인함.
+- Interpreted goal: 같은 gate evidence를 유지하되, Flow 3 / Flow 4가 사용자의 질문인 `무엇을 검증했나`, `무엇이 부족한가`, `어디서 보강하나`에 먼저 답해야 함.
+- Analysis result: `NEEDS_INPUT row` 같은 표현은 기술 status로는 필요하지만 first-read blocker copy로는 부적절하다. 사용자-facing explanation field를 workspace read model에서 만들고, raw status는 `기술 기준` tag로 낮추는 방식이 맞다.
+- Follow-up: Flow 3 Fix Queue와 Flow 4 criteria board를 user-language blocker model로 변경했다. Gate threshold, persistence, provider / replay execution, live approval / order boundary는 바꾸지 않았다.

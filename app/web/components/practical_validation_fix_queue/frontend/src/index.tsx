@@ -9,6 +9,13 @@ type Tone = "positive" | "warning" | "danger" | "neutral"
 type FixItem = {
   label?: string
   status?: string
+  statusLabel?: string
+  displayLabel?: string
+  checkedEvidence?: string
+  missingEvidence?: string
+  actionLabel?: string
+  whyItMatters?: string
+  technicalLabel?: string
   fixLocation?: string
   fixAction?: string
   gateReason?: string
@@ -25,16 +32,23 @@ type CoreGroup = {
 
 type CriteriaCard = {
   label?: string
+  displayLabel?: string
   status?: string
   statusLabel?: string
+  technicalLabel?: string
   tone?: Tone
   explanation?: string
   evidence?: string
+  checkedEvidence?: string
+  missingEvidence?: string
+  actionLabel?: string
+  whyItMatters?: string
   resolutionSurface?: string
 }
 
 type CriteriaGroup = {
   label?: string
+  displayLabel?: string
   status?: string
   purpose?: string
   tone?: Tone

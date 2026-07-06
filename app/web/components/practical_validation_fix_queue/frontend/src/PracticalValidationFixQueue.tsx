@@ -6,6 +6,13 @@ type Tone = "positive" | "warning" | "danger" | "neutral"
 type FixItem = {
   label?: string
   status?: string
+  statusLabel?: string
+  displayLabel?: string
+  checkedEvidence?: string
+  missingEvidence?: string
+  actionLabel?: string
+  whyItMatters?: string
+  technicalLabel?: string
   fixLocation?: string
   fixAction?: string
   gateReason?: string
@@ -22,16 +29,23 @@ type CoreGroup = {
 
 type CriteriaCard = {
   label?: string
+  displayLabel?: string
   status?: string
   statusLabel?: string
+  technicalLabel?: string
   tone?: Tone
   explanation?: string
   evidence?: string
+  checkedEvidence?: string
+  missingEvidence?: string
+  actionLabel?: string
+  whyItMatters?: string
   resolutionSurface?: string
 }
 
 type CriteriaGroup = {
   label?: string
+  displayLabel?: string
   status?: string
   purpose?: string
   tone?: Tone
@@ -71,8 +85,13 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
           {
             label: "필수 보강 항목 없음",
             status: "Ready",
+            statusLabel: "통과",
+            displayLabel: "필수 보강 항목 없음",
             fixLocation: "Flow 5",
-            fixAction: "Flow 5에서 저장 / 이동 전에 핵심 기준만 한 번 더 확인합니다.",
+            checkedEvidence: "무엇을 검증했나: Final Review 이동 전에 즉시 막는 필수 기준이 있는지 확인했습니다.",
+            missingEvidence: "부족한 점: 현재 기준에서 즉시 막는 부족분은 없습니다.",
+            actionLabel: "Flow 5에서 저장 / 이동 전에 핵심 기준만 한 번 더 확인합니다.",
+            whyItMatters: "필수 blocker가 없으면 Final Review에서 최종 판단과 모니터링 후보 가능 여부를 확인할 수 있습니다.",
             tone: "positive" as Tone,
           },
         ]
@@ -91,8 +110,8 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         "Final Review에서 최종 판단과 모니터링 후보 저장 가능 여부를 확인합니다.",
       ]
     : [
-        "먼저 해결할 일을 보강한 뒤 Gate를 다시 확인합니다.",
-        "Flow 4의 기준 상세에서 막힌 판정 근거와 보강 위치를 확인합니다.",
+        "먼저 해결할 일에서 무엇을 검증했고 무엇이 부족한지 확인합니다.",
+        "Flow 4의 확인 기준 상세에서 보강 위치와 기술 근거를 이어 봅니다.",
       ]
 
   return (
@@ -111,7 +130,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
       </header>
 
       <div className="pv-react-fix__decision">
-        <div className="pv-react-fix__summary" aria-label="Final Review 이동 기준 요약">
+        <div className="pv-react-fix__summary" aria-label="Final Review로 넘기기 전 확인 기준 요약">
           <span>
             <b>{props.statusLabel}</b> 이동 기준
           </span>
@@ -144,8 +163,8 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
           <div className="pv-react-fix__action-text">{flowAction}</div>
         </div>
         <p>
-          이 보드는 Final Review 후보 노출 가능성을 먼저 읽는 판정판입니다. 최종 선택, 투자 추천,
-          live 승인, 주문 지시는 만들지 않습니다.
+          이 보드는 새 검증 단계가 아니라 Final Review로 넘기기 전 확인 기준을 사람이 읽기 쉽게
+          풀어쓴 판정판입니다. 최종 선택, 투자 추천, live 승인, 주문 지시는 만들지 않습니다.
         </p>
       </footer>
 
@@ -159,12 +178,19 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                 key={`${item.label ?? "fix"}-${index}`}
               >
                 <div>
-                  <span>{item.status ?? "-"}</span>
-                  <h5>{item.label ?? "-"}</h5>
+                  <span>{item.statusLabel ?? item.status ?? "-"}</span>
+                  <h5>{item.displayLabel ?? item.label ?? "-"}</h5>
                 </div>
-                <p>{item.fixAction ?? "-"}</p>
-                <small>{item.fixLocation ?? "-"}</small>
-                {item.gateReason ? <em>{item.gateReason}</em> : null}
+                <dl className="pv-react-fix__readable">
+                  <dt>무엇을 검증했나</dt>
+                  <dd>{item.checkedEvidence ?? item.gateReason ?? "-"}</dd>
+                  <dt>부족한 점</dt>
+                  <dd>{item.missingEvidence ?? item.gateReason ?? "-"}</dd>
+                  <dt>해야 할 일</dt>
+                  <dd>{item.actionLabel ?? item.fixAction ?? "-"}</dd>
+                </dl>
+                {item.whyItMatters ? <p className="pv-react-fix__why">{item.whyItMatters}</p> : null}
+                <small>기술 기준: {item.technicalLabel ?? `${item.label ?? "-"} · ${item.status ?? "-"}`}</small>
               </article>
             ))}
             {hiddenFixCount > 0 ? (
@@ -174,7 +200,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         </section>
 
         <section className="pv-react-fix__lane pv-react-fix__criteria-preview">
-          <div className="pv-react-fix__lane-title">Final Review 이동 기준</div>
+          <div className="pv-react-fix__lane-title">Final Review로 넘기기 전 확인 기준</div>
           <div className="pv-react-fix__groups">
             {visibleCriteriaGroups.map((group, index) => (
               <article
@@ -182,7 +208,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                 key={`${group.label ?? "criteria"}-${index}`}
               >
                 <div>
-                  <h5>{compact(group.label)}</h5>
+                  <h5>{compact(group.displayLabel ?? group.label)}</h5>
                   <span>{compact(group.status)}</span>
                 </div>
                 <p>{compact(group.purpose)}</p>
@@ -190,7 +216,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                   <small>
                     {group.criteriaCards
                       .slice(0, 4)
-                      .map((card) => `${compact(card.label)} ${compact(card.statusLabel ?? card.status)}`)
+                      .map((card) => `${compact(card.displayLabel ?? card.label)} ${compact(card.statusLabel ?? card.status)}`)
                       .join(" / ")}
                   </small>
                 ) : null}
@@ -205,7 +231,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
                   <h5>기준 상세 그룹 없음</h5>
                   <span>-</span>
                 </div>
-                <p>workspace read model에 표시할 Final Review 이동 기준이 없습니다.</p>
+                <p>workspace read model에 표시할 Final Review로 넘기기 전 확인 기준이 없습니다.</p>
               </article>
             ) : null}
           </div>
