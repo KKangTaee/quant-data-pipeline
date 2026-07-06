@@ -324,7 +324,7 @@ body {
 
 .fm-workbench__validation-insight,
 .fm-workbench__validation-metrics {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .fm-workbench__evidence {

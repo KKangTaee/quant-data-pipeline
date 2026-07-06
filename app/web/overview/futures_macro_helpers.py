@@ -451,6 +451,20 @@ def _futures_macro_react_validation_insight(
     basis = (
         f"현재 1D 선물 {standardized}/{symbol_count}개 움직임을 같은 계산식으로 과거 날짜에 다시 적용합니다."
     )
+    evidence_counts = {"strong": 0, "weak": 0, "conflicting": 0, "missing": 0}
+    for section in list(macro.get("evidence_reading") or []):
+        key = str(section.get("key") or "")
+        if key in evidence_counts:
+            evidence_counts[key] = int(section.get("count") or 0)
+    evidence_bridge = {
+        "label": "현재근거와 연결",
+        "value": "현재 근거를 과거 표본으로 검산",
+        "detail": (
+            f"강한 근거 {evidence_counts['strong']}개 · "
+            f"약한 근거 {evidence_counts['weak']}개 · "
+            f"충돌 근거 {evidence_counts['conflicting']}개"
+        ),
+    }
     if not validation:
         return {
             "purpose": "오늘과 비슷했던 과거 상태 확인",
@@ -458,6 +472,7 @@ def _futures_macro_react_validation_insight(
             "current_state": {"label": "현재 상태 이름", "value": scenario, "detail": "아직 과거 표본과 비교하지 않았습니다."},
             "sample": {"label": "과거에 비슷했던 날", "value": "계산 전", "detail": "과거 일관성 계산 전입니다."},
             "directionality": {"label": "이후 흐름 해석", "value": "계산 전", "detail": "계산 후 방향성 적용 여부를 표시합니다."},
+            "evidence_bridge": evidence_bridge,
             "confidence_effect": "예측 신호가 아니라 현재 해석을 보수적으로 볼지 확인하는 보조 근거입니다.",
         }
 
@@ -488,6 +503,7 @@ def _futures_macro_react_validation_insight(
             "value": direction_value,
             "detail": direction_detail,
         },
+        "evidence_bridge": evidence_bridge,
         "confidence_effect": (
             "예측 신호가 아니라 현재 해석을 얼마나 보수적으로 읽을지 확인합니다. "
             f"{_display_text(validation_summary.get('confidence_effect'), '')}"

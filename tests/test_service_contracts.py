@@ -5996,6 +5996,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
         self.assertEqual(payload["validation"]["action"]["id"], "load_validation")
         self.assertEqual(payload["validation"]["action"]["label"], "오늘과 비슷했던 과거 상태 확인")
+        bridge = payload["validation"]["insight"]["evidence_bridge"]
+        self.assertEqual(bridge["label"], "현재근거와 연결")
+        self.assertEqual(bridge["value"], "현재 근거를 과거 표본으로 검산")
+        self.assertIn("강한 근거 1개", bridge["detail"])
         self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
         self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 관망")
         self.assertIn("CME/yfinance 일봉 세션 기준일", payload["brief"]["metrics"][0]["detail"])

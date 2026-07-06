@@ -67,6 +67,7 @@ export type FuturesMacroValidationInsight = {
   current_state: FuturesMacroMetric;
   sample: FuturesMacroMetric;
   directionality: FuturesMacroMetric;
+  evidence_bridge: FuturesMacroMetric;
   confidence_effect: string;
 };
 
@@ -328,7 +329,7 @@ function FuturesMacroWorkbench({ args }: Props) {
           </button>
         </div>
         <div className="fm-workbench__validation-insight">
-          {[payload.validation.insight.current_state, payload.validation.insight.sample, payload.validation.insight.directionality].map((item) => (
+          {[payload.validation.insight.current_state, payload.validation.insight.sample, payload.validation.insight.directionality, payload.validation.insight.evidence_bridge].map((item) => (
             <div className="fm-workbench__metric" key={`${item.label}-${item.value}`}>
               <span>{item.label}</span>
               <strong>{item.value}</strong>
