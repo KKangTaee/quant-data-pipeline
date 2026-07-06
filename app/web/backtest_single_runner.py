@@ -28,6 +28,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
     st.session_state.backtest_last_bundle = bundle
     st.session_state.backtest_last_error = None
     st.session_state.backtest_last_error_kind = None
+    st.session_state.backtest_last_result_requires_rerun = False
+    st.session_state.backtest_last_result_refresh_result = None
     append_backtest_run_history(bundle=bundle, run_kind="single_strategy")
     st.success(f"{strategy_name} backtest execution completed in {result.elapsed_seconds:.3f}s.")
     return True

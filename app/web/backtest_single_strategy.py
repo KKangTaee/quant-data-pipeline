@@ -61,6 +61,8 @@ def _clear_last_run_if_strategy_selection_changed(
         st.session_state.backtest_last_bundle = None
         st.session_state.backtest_last_error = None
         st.session_state.backtest_last_error_kind = None
+        st.session_state.backtest_last_result_requires_rerun = False
+        st.session_state.backtest_last_result_refresh_result = None
         st.session_state.backtest_last_result_reset_notice = (
             "전략 선택이 바뀌어 이전 백테스트 결과를 숨겼습니다. "
             "현재 선택한 전략의 결과를 보려면 `Run Backtest`를 다시 실행하세요."

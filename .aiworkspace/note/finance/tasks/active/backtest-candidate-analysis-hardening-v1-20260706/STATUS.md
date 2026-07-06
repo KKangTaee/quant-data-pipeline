@@ -26,3 +26,6 @@ Started: 2026-07-06
 - 2026-07-06: 2차 QA 완료. focused tests, `py_compile`, `git diff --check`, `tests.test_service_contracts` 전체 486개 통과.
 - 2026-07-06: 3차 구현 완료. `Price Freshness Preflight`를 display-only React component로 추가하고, strict preflight report를 React payload로 변환하는 읽기 모델을 붙였다.
 - 2026-07-06: 3차 QA 완료. React build, focused tests, `py_compile`, `git diff --check`, `tests.test_service_contracts` 전체 488개 통과.
+- 2026-07-06: 4차 구현 완료. 가격 업데이트가 OHLCV DB row를 저장하면 이전 백테스트 결과를 stale로 표시하고, 재실행 전까지 결과 / 2차 진입 판단 / tabs 렌더링을 숨긴다.
+- 2026-07-06: 4차 구현 완료. 가격 업데이트 실행 경로는 기존 `run_collect_ohlcv` ingestion job을 사용하며, 목표 테이블은 `finance_price.nyse_price_history`다.
+- 2026-07-06: 4차 QA 완료. focused tests, `py_compile`, `git diff --check`, `tests.test_service_contracts` 전체 490개 통과.

@@ -9114,6 +9114,52 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(result["details"]["purpose"], "Backtest Data Trust price freshness repair")
         self.assertIn("Backtest 가격 데이터 업데이트", result["message"])
 
+    def test_backtest_price_refresh_saved_rows_require_backtest_rerun(self) -> None:
+        from app.services.backtest_price_refresh import price_refresh_result_requires_backtest_rerun
+
+        self.assertTrue(
+            price_refresh_result_requires_backtest_rerun(
+                {"status": "success", "rows_written": 12}
+            )
+        )
+        self.assertTrue(
+            price_refresh_result_requires_backtest_rerun(
+                {"status": "partial_success", "rows_written": 1, "failed_symbols": ["AAA"]}
+            )
+        )
+        self.assertFalse(
+            price_refresh_result_requires_backtest_rerun(
+                {"status": "success", "rows_written": 0}
+            )
+        )
+        self.assertFalse(
+            price_refresh_result_requires_backtest_rerun(
+                {"status": "skipped", "rows_written": 0}
+            )
+        )
+
+    def test_price_refresh_hides_stale_backtest_result_until_rerun(self) -> None:
+        result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        runner_source = Path("app/web/backtest_single_runner.py").read_text(encoding="utf-8")
+        strategy_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")
+
+        consume_body = result_display_source[result_display_source.index("def _consume_data_trust_refresh_action"):]
+        consume_body = consume_body[: consume_body.index("\ndef ", 1)]
+        last_run_body = result_display_source[result_display_source.index("def _render_last_run"):]
+        last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
+
+        self.assertIn("price_refresh_result_requires_backtest_rerun", result_display_source)
+        self.assertIn("_mark_backtest_result_requires_rerun_after_price_refresh(result)", consume_body)
+        self.assertIn("backtest_last_result_requires_rerun", result_display_source)
+        self.assertIn("_render_backtest_rerun_required_notice", last_run_body)
+        self.assertIn("backtest_last_result_refresh_result", result_display_source)
+        self.assertIn("backtest_last_result_requires_rerun = False", runner_source)
+        self.assertIn("backtest_last_result_requires_rerun = False", strategy_source)
+        self.assertLess(
+            last_run_body.index("_render_backtest_rerun_required_notice"),
+            last_run_body.index("_render_backtest_result_header(bundle, summary_df)"),
+        )
+
     def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         function_body = source[source.index("def _render_data_trust_summary"):]

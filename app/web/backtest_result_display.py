@@ -19,6 +19,7 @@ from app.services.backtest_handoff_readiness import (
 )
 from app.services.backtest_price_refresh import (
     build_backtest_price_refresh_plan,
+    price_refresh_result_requires_backtest_rerun,
     run_backtest_price_refresh,
 )
 from app.web.backtest_common import *  # noqa: F401,F403
@@ -581,6 +582,13 @@ def _render_data_trust_refresh_job_result(result: dict[str, Any]) -> None:
     st.caption("업데이트 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
 
 
+def _mark_backtest_result_requires_rerun_after_price_refresh(result: dict[str, Any]) -> None:
+    if not price_refresh_result_requires_backtest_rerun(result):
+        return
+    st.session_state.backtest_last_result_requires_rerun = True
+    st.session_state.backtest_last_result_refresh_result = result
+
+
 def _consume_data_trust_refresh_action(
     action_value: dict[str, Any] | None,
     meta: dict[str, Any],
@@ -599,7 +607,9 @@ def _consume_data_trust_refresh_action(
         return
     st.session_state[consumed_key] = nonce
     with st.spinner("현재 백테스트 ticker의 OHLCV 가격 데이터를 업데이트하는 중입니다...", show_time=True):
-        st.session_state[state_key] = run_backtest_price_refresh(meta)
+        result = run_backtest_price_refresh(meta)
+        st.session_state[state_key] = result
+        _mark_backtest_result_requires_rerun_after_price_refresh(result)
     st.rerun()
 
 
@@ -1818,6 +1828,40 @@ def _render_backtest_result_header(bundle: dict[str, Any], summary_df: pd.DataFr
     )
 
 
+def _render_backtest_rerun_required_notice(bundle: dict[str, Any] | None, result: dict[str, Any] | None) -> None:
+    meta = dict((bundle or {}).get("meta") or {})
+    strategy_name = str((bundle or {}).get("strategy_name") or meta.get("strategy_name") or "현재 전략")
+    rows_written = 0
+    if isinstance(result, dict):
+        try:
+            rows_written = int(result.get("rows_written") or 0)
+        except (TypeError, ValueError):
+            rows_written = 0
+    details = dict((result or {}).get("details") or {}) if isinstance(result, dict) else {}
+    plan = dict(details.get("plan") or {})
+    target_end = str(plan.get("target_end") or plan.get("collection_end") or "-")
+    collection_start = str(plan.get("collection_start") or "-")
+    ticker_count = int(plan.get("ticker_count") or len(plan.get("tickers") or []) or 0)
+    message = str((result or {}).get("message") or "가격 데이터 업데이트가 완료되었습니다.") if isinstance(result, dict) else "가격 데이터 업데이트가 완료되었습니다."
+    st.warning(
+        "가격 데이터가 업데이트되어 이전 백테스트 결과를 숨겼습니다. "
+        "최신 가격 기준 성과와 2차 단계 진입 판단을 보려면 같은 설정으로 `Run Backtest`를 다시 실행하세요."
+    )
+    notice_df = pd.DataFrame(
+        [
+            {
+                "Strategy": strategy_name,
+                "Refresh Message": message,
+                "Saved Rows": rows_written,
+                "Target End": target_end,
+                "Collection Start": collection_start,
+                "Tickers": ticker_count,
+            }
+        ]
+    )
+    st.dataframe(notice_df, use_container_width=True, hide_index=True)
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -1833,6 +1877,11 @@ def _render_last_run() -> None:
             st.error(error)
 
     if not bundle:
+        return
+
+    if st.session_state.get("backtest_last_result_requires_rerun"):
+        refresh_result = st.session_state.get("backtest_last_result_refresh_result")
+        _render_backtest_rerun_required_notice(bundle, refresh_result if isinstance(refresh_result, dict) else None)
         return
 
     summary_df = bundle["summary_df"]

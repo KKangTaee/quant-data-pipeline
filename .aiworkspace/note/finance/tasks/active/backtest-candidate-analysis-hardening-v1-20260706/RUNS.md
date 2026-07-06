@@ -38,3 +38,11 @@
   - Result: pass.
 - `.venv/bin/python -m unittest tests.test_service_contracts -v`
   - Result: pass, 488 tests.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_price_refresh_saved_rows_require_backtest_rerun tests.test_service_contracts.BacktestRuntimeContractTests.test_price_refresh_hides_stale_backtest_result_until_rerun -v`
+  - Result: pass, 2 tests.
+- `.venv/bin/python -m py_compile app/services/backtest_price_refresh.py app/web/backtest_result_display.py app/web/backtest_single_runner.py app/web/backtest_single_strategy.py tests/test_service_contracts.py`
+  - Result: pass.
+- `git diff --check`
+  - Result: pass.
+- `.venv/bin/python -m unittest tests.test_service_contracts -v`
+  - Result: pass, 490 tests.

@@ -274,3 +274,17 @@ def run_backtest_price_refresh(
         else "Backtest 가격 데이터 업데이트를 실행했습니다."
     )
     return result
+
+
+def price_refresh_result_requires_backtest_rerun(result: Mapping[str, Any] | None) -> bool:
+    """Return whether a price refresh changed stored OHLCV enough to stale the current result."""
+    if not result:
+        return False
+    status = str(result.get("status") or "").strip().lower()
+    if status not in {"success", "partial_success"}:
+        return False
+    try:
+        rows_written = int(result.get("rows_written") or 0)
+    except (TypeError, ValueError):
+        rows_written = 0
+    return rows_written > 0
