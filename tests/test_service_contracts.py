@@ -296,6 +296,68 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("render_backtest_price_freshness_preflight(", common_source)
         self.assertIn("is_backtest_price_freshness_preflight_available()", common_source)
 
+    def test_backtest_strategy_detail_model_describes_equal_weight_inputs(self) -> None:
+        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
+
+        model = build_backtest_strategy_detail_model("Equal Weight")
+
+        self.assertEqual(model["strategy_key"], "equal_weight")
+        self.assertEqual(model["display_name"], "Equal Weight")
+        self.assertEqual(model["family"], "")
+        self.assertIn("Preset", model["universe_modes"])
+        self.assertIn("Manual", model["universe_modes"])
+        self.assertIn("Start Date", [item["label"] for item in model["primary_inputs"]])
+        self.assertIn("Advanced Inputs", [section["title"] for section in model["advanced_sections"]])
+        self.assertIn("Promotion Policy Signal", [section["title"] for section in model["advanced_sections"]])
+        self.assertEqual(model["run_button_label"], "Run Equal Weight Backtest")
+
+    def test_backtest_strategy_detail_model_keeps_strict_annual_capabilities(self) -> None:
+        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
+
+        model = build_backtest_strategy_detail_model("Quality", "Strict Annual")
+
+        self.assertEqual(model["strategy_key"], "quality_snapshot_strict_annual")
+        self.assertEqual(model["family"], "Quality")
+        self.assertEqual(model["variant"], "Strict Annual")
+        self.assertIn("strict", model["badges"])
+        self.assertIn("annual", model["badges"])
+        self.assertIn("Price Freshness Preflight", [section["title"] for section in model["preflight_sections"]])
+        self.assertIn("Promotion Policy Signal", [section["title"] for section in model["advanced_sections"]])
+        self.assertIn("Guardrails", [section["title"] for section in model["advanced_sections"]])
+        self.assertFalse(model["is_prototype"])
+
+    def test_backtest_strategy_detail_model_marks_quarterly_prototype_limits(self) -> None:
+        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
+
+        model = build_backtest_strategy_detail_model("Value", "Strict Quarterly Prototype")
+
+        self.assertEqual(model["strategy_key"], "value_snapshot_strict_quarterly_prototype")
+        self.assertTrue(model["is_prototype"])
+        self.assertIn("quarterly", model["badges"])
+        self.assertIn("prototype", model["badges"])
+        self.assertIn("Statement Shadow Coverage Preview", [section["title"] for section in model["preflight_sections"]])
+        self.assertNotIn("Promotion Policy Signal", [section["title"] for section in model["advanced_sections"]])
+        self.assertIn("Portfolio Handling & Defensive Rules", [section["title"] for section in model["advanced_sections"]])
+
+    def test_backtest_strategy_detail_model_describes_risk_on_momentum_sections(self) -> None:
+        from app.services.backtest_strategy_detail import build_backtest_strategy_detail_model
+
+        model = build_backtest_strategy_detail_model("Risk-On Momentum 5D")
+
+        self.assertEqual(model["strategy_key"], "risk_on_momentum_5d")
+        self.assertIn("stock swing", model["summary"].lower())
+        self.assertEqual(model["universe_modes"], ["Top1000", "Top2000", "S&P 500", "Manual"])
+        section_titles = [section["title"] for section in model["advanced_sections"]]
+        self.assertIn("Execution / Exit", section_titles)
+        self.assertIn("Macro / Candidate Filters", section_titles)
+        self.assertIn("Cost / Comparison", section_titles)
+
+    def test_backtest_strategy_detail_model_is_streamlit_free(self) -> None:
+        source = Path("app/services/backtest_strategy_detail.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("import streamlit", source)
+        self.assertNotIn("from app.web", source)
+
 
 class RiskOnMomentumSwingContractTests(unittest.TestCase):
     def test_risk_on_momentum_atr_indicator_uses_simple_true_range_mean(self) -> None:
