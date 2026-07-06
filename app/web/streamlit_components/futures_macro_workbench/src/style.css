@@ -124,7 +124,7 @@ body {
   display: grid;
   gap: 16px;
   grid-template-columns: minmax(0, 1.3fr) minmax(16rem, 0.72fr);
-  padding: 16px 0 14px;
+  padding: 0 0 14px;
 }
 
 .fm-workbench__title {
@@ -237,8 +237,21 @@ body {
   color: var(--fm-tone, #111827);
 }
 
-.fm-workbench__flow {
-  padding-top: 14px;
+.fm-workbench__section-card,
+.fm-workbench__validation-card {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.fm-workbench__macro-section {
+  margin-top: 14px;
+}
+
+.fm-workbench__flow-section .fm-workbench__flow {
+  padding-top: 0;
 }
 
 .fm-workbench__section-head {
@@ -289,14 +302,6 @@ body {
   background: #f8fafc;
   min-width: 0;
   padding: 10px;
-}
-
-.fm-workbench__validation-card {
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  margin-top: 16px;
-  padding: 16px;
 }
 
 .fm-workbench__validation-header {

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
 import HistoricalValidationPanel from "./HistoricalValidationPanel";
+import MacroContextSection from "./MacroContextSection";
+import RecentFlowSection from "./RecentFlowSection";
 import "./style.css";
 
 export type FuturesMacroAction = {
@@ -156,7 +158,6 @@ function syncFrameHeightSoon() {
 function FuturesMacroWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
-  const [selectedFlowKey, setSelectedFlowKey] = useState("");
 
   useEffect(() => {
     syncFrameHeightSoon();
@@ -175,19 +176,6 @@ function FuturesMacroWorkbench({ args }: Props) {
     setPendingActionLabel(action.label);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
-
-  const fallbackFlowPeriod: FuturesMacroFlowPeriod = {
-    key: "1W",
-    label: "1W",
-    title: payload.flow.title,
-    basis: payload.flow.basis,
-    summary: payload.flow.summary,
-    cards: payload.flow.cards,
-  };
-  const flowPeriods = payload.flow.periods && payload.flow.periods.length > 0 ? payload.flow.periods : [fallbackFlowPeriod];
-  const initialFlowKey = payload.flow.default_period || flowPeriods[0]?.key || "1W";
-  const effectiveFlowKey = flowPeriods.some((period) => period.key === selectedFlowKey) ? selectedFlowKey : initialFlowKey;
-  const selectedFlow = flowPeriods.find((period) => period.key === effectiveFlowKey) || flowPeriods[0] || fallbackFlowPeriod;
 
   return (
     <section
@@ -225,95 +213,9 @@ function FuturesMacroWorkbench({ args }: Props) {
         </div>
       </div>
 
-      <div className="fm-workbench__brief">
-        <div className="fm-workbench__brief-copy">
-          <div className="fm-workbench__kicker">{payload.brief.kicker}</div>
-          <div className="fm-workbench__title">{payload.brief.title}</div>
-          {payload.brief.sub_scenario ? (
-            <div className="fm-workbench__subscenario">
-              {payload.brief.sub_scenario}
-              {payload.brief.regime_hint ? ` · ${payload.brief.regime_hint}` : ""}
-            </div>
-          ) : null}
-          <p>{payload.brief.summary}</p>
-          {payload.brief.reason ? <p className="fm-workbench__reason">{payload.brief.reason}</p> : null}
-          {payload.brief.evidence.length > 0 ? (
-            <div className="fm-workbench__evidence-line">
-              {payload.brief.evidence.slice(0, 2).map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div className="fm-workbench__brief-side">
-          <div className="fm-workbench__confidence">
-            <span>근거 강도</span>
-            <strong>{payload.brief.confidence_label}</strong>
-            <small>{payload.brief.confidence_detail}</small>
-          </div>
-          {payload.brief.metrics.map((item) => (
-            <div className="fm-workbench__metric" key={`${item.label}-${item.value}`} style={{ "--fm-tone": toneColor(item.tone) } as React.CSSProperties}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              {item.detail ? <small>{item.detail}</small> : null}
-            </div>
-          ))}
-        </div>
-      </div>
+      <MacroContextSection payload={payload} toneColor={toneColor} />
 
-      <div className="fm-workbench__scores" aria-label="Futures Macro score chips">
-        {payload.scores.map((score) => (
-          <div className="fm-workbench__score" key={score.label} style={{ "--fm-tone": toneColor(score.tone) } as React.CSSProperties}>
-            <span>{score.label}</span>
-            <strong>{score.value}</strong>
-            <small>{score.direction} · {score.coverage}</small>
-            {score.polarity ? (
-              <small className="fm-workbench__score-hint">
-                {score.polarity.split(" · ").map((line) => (
-                  <span className="fm-workbench__score-hint-line" key={line}>{line}</span>
-                ))}
-              </small>
-            ) : null}
-          </div>
-        ))}
-      </div>
-
-      <div className="fm-workbench__flow">
-        <div className="fm-workbench__section-head">
-          <div>
-            <div className="fm-workbench__section-title">{selectedFlow.title}</div>
-            <div className="fm-workbench__section-detail">{selectedFlow.basis}</div>
-            {flowPeriods.length > 1 ? (
-              <div className="fm-workbench__flow-tabs" aria-label="Flow horizon">
-                {flowPeriods.map((period) => (
-                  <button
-                    aria-pressed={period.key === effectiveFlowKey}
-                    className={`fm-workbench__flow-tab${period.key === effectiveFlowKey ? " fm-workbench__flow-tab--active" : ""}`}
-                    key={period.key}
-                    onClick={() => {
-                      setSelectedFlowKey(period.key);
-                      syncFrameHeightSoon();
-                    }}
-                    type="button"
-                  >
-                    {period.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <span>{selectedFlow.summary}</span>
-        </div>
-        <div className="fm-workbench__flow-grid">
-          {selectedFlow.cards.map((card) => (
-            <div className="fm-workbench__flow-card" key={`${selectedFlow.key}-${card.label}`} style={{ "--fm-tone": toneColor(card.tone) } as React.CSSProperties}>
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-              <small>{card.detail}</small>
-            </div>
-          ))}
-        </div>
-      </div>
+      <RecentFlowSection flow={payload.flow} onHeightChange={syncFrameHeightSoon} toneColor={toneColor} />
 
       <HistoricalValidationPanel validation={payload.validation} onAction={emitAction} />
 

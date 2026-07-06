@@ -29,7 +29,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 - User request: 사용자가 `과거 점검`을 React 파일로만 분리한 것이 아니라, 예시처럼 화면에서도 독립 박스 섹션으로 관리할 수 있는지 확인하고 진행을 승인함.
 - Interpreted goal: `과거 점검`은 현재 흐름 / 현재 근거 사이에 섞인 타일 묶음이 아니라, 무엇을 점검하고 어떤 action을 실행하며 어떤 결과를 보여주는지 한 surface 안에서 읽혀야 한다.
-- Analysis result: `HistoricalValidationPanel.tsx`는 독립 `과거 점검` 카드 섹션을 렌더링하고, Python action / DB / 계산 경계는 유지한다. 하단 `계산 근거 / 원본 표`는 raw table 추적 역할로 남긴다.
+- Analysis result: `HistoricalValidationPanel.tsx`는 독립 `과거 점검` 카드 섹션을 렌더링하고, Python action / DB / 계산 경계는 유지한다. 후속으로 하나의 React workbench / iframe 안에서 `MacroContextSection`, `RecentFlowSection`, `HistoricalValidationPanel`을 분리해 화면상 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`이 별도 블록처럼 읽히게 했다. 하단 `계산 근거 / 원본 표`는 raw table 추적 역할로 남긴다.
 - Follow-up: 그래프는 아직 렌더링하지 않는다. 발생 빈도 / 이후 흐름 분포 후보 payload는 후속 시각화 작업에서 이 섹션 안에 붙일 수 있다.
 
 ### 2026-07-06 - Futures Macro evidence and original data should have separate reading roles
