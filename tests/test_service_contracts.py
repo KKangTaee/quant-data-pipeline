@@ -4335,6 +4335,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             "run_collect_fomc_calendar",
             "run_collect_earnings_calendar",
             "run_collect_macro_calendar",
+            "run_collect_market_structure_calendar",
             "run_import_bls_macro_calendar_ics",
             "run_metadata_refresh",
             "run_collect_asset_profiles",
@@ -4378,6 +4379,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
 
         self.assertIn("collect_futures_ohlcv", PROGRESS_ENABLED_ACTIONS)
         self.assertIn("collect_fomc_calendar", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("collect_market_structure_calendar", PROGRESS_ENABLED_ACTIONS)
         self.assertIn("collect_asset_profiles", PROGRESS_ENABLED_ACTIONS)
         self.assertIn("diagnose_price_stale", PROGRESS_ENABLED_ACTIONS)
 
@@ -19777,6 +19779,119 @@ END:VCALENDAR
         self.assertEqual(rows[0]["source"], mi.TREASURY_AUCTIONS_SOURCE)
         self.assertEqual(rows[0]["source_authority"], "official")
         self.assertEqual(rows[0]["universe_scope"], "official_macro")
+
+    def test_parse_nasdaq_market_holiday_calendar_events(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.parse_nasdaq_market_holiday_calendar_events_from_html(
+            """
+            <table>
+              <tr><th>Holiday</th><th>Date</th><th>NYSE</th><th>Nasdaq</th></tr>
+              <tr><td>New Year's Day</td><td>Thursday, January 1, 2026</td><td>Closed</td><td>Closed</td></tr>
+              <tr><td>Day after Thanksgiving</td><td>Friday, November 27, 2026</td><td>Early Close 1:00 p.m.</td><td>Early Close 1:00 p.m.</td></tr>
+            </table>
+            """,
+            source_url="https://www.nasdaqtrader.test/calendar",
+            years=[2026],
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MARKET_HOLIDAY", "EARLY_CLOSE"])
+        self.assertEqual(rows[0]["event_date"], "2026-01-01")
+        self.assertEqual(rows[0]["event_family"], "market_structure")
+        self.assertEqual(rows[0]["event_subtype"], "market_holiday")
+        self.assertEqual(rows[0]["universe_scope"], "all_us")
+        self.assertEqual(rows[0]["source_authority"], "official")
+        self.assertEqual(rows[1]["event_time_label"], "Early close 13:00 ET")
+
+    def test_build_options_expiration_calendar_events_adjusts_holidays(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.build_options_expiration_calendar_events(
+            years=[2026],
+            exchange_holidays={"2026-06-19"},
+            source_url_template="https://www.cboe.test/{year}/calendar.pdf",
+        )
+
+        june = [row for row in rows if row["event_date"].startswith("2026-06")][0]
+        self.assertEqual(june["event_date"], "2026-06-18")
+        self.assertEqual(june["event_type"], "OPTIONS_EXPIRATION")
+        self.assertEqual(june["event_family"], "market_structure")
+        self.assertEqual(june["event_subtype"], "triple_witch")
+        self.assertEqual(june["source_authority"], "official")
+        self.assertIn("holiday_adjusted", june["raw_payload"])
+
+    def test_parse_russell_reconstitution_calendar_events(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.parse_russell_reconstitution_events_from_html(
+            """
+            <main>
+              <p>2026 Russell US Indexes Reconstitution calendar</p>
+              <p>Rank Day falls on Thursday, April 30.</p>
+              <p>Beginning on May 22, preliminary membership lists are posted to the market.</p>
+              <p>Updates are provided on May 29, June 5, June 12, and June 18.</p>
+              <p>The newly reconstituted indexes take effect after the market close on June 26.</p>
+            </main>
+            """,
+            source_url="https://www.lseg.test/russell-reconstitution",
+            years=[2026],
+        )
+
+        self.assertEqual(rows[0]["event_date"], "2026-04-30")
+        self.assertEqual(rows[0]["event_type"], "RUSSELL_RECONSTITUTION")
+        self.assertEqual(rows[0]["event_subtype"], "russell_rank_day")
+        self.assertEqual(rows[-1]["event_date"], "2026-06-26")
+        self.assertEqual(rows[-1]["event_time_label"], "After market close ET")
+        self.assertEqual(rows[-1]["universe_scope"], "all_us")
+
+    def test_collect_market_structure_calendar_writes_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        def fake_fetcher(**kwargs):
+            self.assertEqual(kwargs["years"], (2026,))
+            return {
+                "source": mi.MARKET_STRUCTURE_CALENDAR_SOURCE,
+                "source_url": mi.NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+                "event_type": "MARKET_STRUCTURE",
+                "events": [
+                    {
+                        "event_date": "2026-06-26",
+                        "event_type": "RUSSELL_RECONSTITUTION",
+                        "event_family": "market_structure",
+                        "event_subtype": "russell_reconstitution",
+                        "universe_scope": "all_us",
+                        "source_authority": "official",
+                        "title": "Russell US Index Reconstitution Effective",
+                        "source": mi.FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        "source_type": "official",
+                        "validation_status": "official",
+                        "event_status": "active",
+                        "source_url": "https://www.lseg.test/russell-reconstitution",
+                        "confidence": 0.95,
+                        "raw_payload": {"source": mi.FTSE_RUSSELL_RECONSTITUTION_SOURCE},
+                    }
+                ],
+                "events_found": 1,
+                "failed_sources": [],
+            }
+
+        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+            result = mi.collect_and_store_market_structure_calendar(
+                years=[2026],
+                market_structure_fetcher=fake_fetcher,
+            )
+
+        self.assertEqual(result["source"], mi.MARKET_STRUCTURE_CALENDAR_SOURCE)
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_types"], ["RUSSELL_RECONSTITUTION"])
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
 
     def test_collect_macro_calendar_writes_events_and_reports_failed_sources(self) -> None:
         from finance.data import market_intelligence as mi

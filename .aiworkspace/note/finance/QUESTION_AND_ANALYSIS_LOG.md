@@ -8617,3 +8617,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 4차에서는 Earnings 일정이 어떤 symbol universe에서 수집됐고 provider estimate / cross-check 상태가 무엇인지 row contract에 남겨야 함.
 - Analysis result: 기존 yfinance + Nasdaq cross-check는 유지하되 `universe_scope`와 `source_authority`를 row와 raw payload에 채우는 것이 React workbench 전환 전 가장 작은 안정화 단계다.
 - Follow-up: 4차 완료. 다음은 Cboe / S&P Dow Jones / Nasdaq / Russell류 market-structure calendar를 수집 계약에 추가한다.
+
+### 2026-07-07 - Events market-structure dates should be background, not signals
+
+- User request: 주식/매크로/퀀트 투자자가 반드시 확인할 이벤트를 더 수집하고 전체 Events 개선을 진행해 달라고 요청함.
+- Interpreted goal: 휴장, 조기폐장, options expiration, index reconstitution처럼 일정 밀도에 영향을 주는 이벤트를 market background로 저장해야 함.
+- Analysis result: 공식/1차 source 기준으로 Nasdaq Trader holiday page, Cboe options expiration calendar, FTSE Russell reconstitution schedule을 먼저 추가하는 것이 현재 schema와 UX 목표에 맞다.
+- Follow-up: 5차 완료. 이 row들은 `market_structure` family / `all_us` universe / `official` authority로 저장되며, 다음은 React payload service 구조화다.

@@ -5578,3 +5578,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 Earnings 수집 row에 taxonomy 필드와 universe/source-authority contract를 채웠다.
   - S&P 500 / large-cap batch는 canonical source로 저장되고, portfolio / watchlist / Nasdaq-100은 explicit symbol loader boundary로 열었다.
   - 다음 차수는 market-structure 일정 수집이며 generated screenshots / run history는 계속 커밋 제외한다.
+- Overview Events Calendar 5차 Market Structure 2026-07-07:
+  - Nasdaq Trader holiday / early close, Cboe options expiration, FTSE Russell reconstitution calendar를 market-structure background event로 수집하는 경계를 추가했다.
+  - Ingestion의 시장 이벤트 캘린더 수집에 `시장 구조 일정` 탭과 `collect_market_structure_calendar` job을 연결했다.
+  - 다음 차수는 Python service가 React workbench용 hero / rail / trust / chart payload를 구조화하는 작업이다.

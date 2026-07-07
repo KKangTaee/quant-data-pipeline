@@ -19,6 +19,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_fomc_calendar,
     run_collect_futures_ohlcv,
     run_collect_macro_calendar,
+    run_collect_market_structure_calendar,
     run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
     run_collect_ohlcv,
@@ -152,6 +153,10 @@ def run_overview_earnings_calendar() -> JobResult:
 
 def run_overview_macro_calendar(*, years: Iterable[int]) -> JobResult:
     return run_collect_macro_calendar(years=years)
+
+
+def run_overview_market_structure_calendar(*, years: Iterable[int]) -> JobResult:
+    return run_collect_market_structure_calendar(years=years)
 
 
 def run_overview_sp500_universe() -> JobResult:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import hashlib
 import json
 import re
@@ -42,6 +43,16 @@ ISM_REPORT_CALENDAR_SOURCE = "ism_report_calendar"
 TREASURY_AUCTIONS_SOURCE_URL = "https://www.treasurydirect.gov/auctions/upcoming/"
 TREASURY_AUCTIONS_SOURCE = "treasurydirect_auction_calendar"
 MACRO_CALENDAR_SOURCE = "official_macro_release_schedules"
+NASDAQ_MARKET_HOLIDAY_SOURCE_URL = "https://www.nasdaqtrader.com/trader.aspx?id=calendar"
+NASDAQ_MARKET_HOLIDAY_SOURCE = "nasdaqtrader_equity_options_holiday_calendar"
+CBOE_OPTIONS_EXPIRATION_SOURCE_URL_TEMPLATE = "https://cdn.cboe.com/resources/options/Cboe{year}OPTIONSCalendar.pdf"
+CBOE_OPTIONS_EXPIRATION_SOURCE = "cboe_options_expiration_calendar"
+FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL = (
+    "https://www.lseg.com/en/media-centre/press-releases/ftse-russell/2026/"
+    "russell-reconstitution-2026-schedule"
+)
+FTSE_RUSSELL_RECONSTITUTION_SOURCE = "ftse_russell_reconstitution_schedule"
+MARKET_STRUCTURE_CALENDAR_SOURCE = "official_market_structure_calendars"
 EARNINGS_CALENDAR_SOURCE = "yfinance_calendar"
 EARNINGS_CALENDAR_SOURCE_URL = "https://finance.yahoo.com/calendar/earnings"
 NASDAQ_EARNINGS_CALENDAR_SOURCE = "nasdaq_earnings_calendar"
@@ -1581,6 +1592,280 @@ def parse_treasury_auction_calendar_events_from_html(
     return events
 
 
+def _market_structure_event_row(
+    *,
+    event_date: str,
+    event_type: str,
+    title: str,
+    source: str,
+    source_url: str,
+    event_subtype: str | None = None,
+    event_time_label: str | None = None,
+    release_time_et: str | None = None,
+    confidence: float = 0.95,
+    raw_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "event_date": event_date,
+        "event_type": event_type,
+        "event_family": "market_structure",
+        "event_subtype": event_subtype or _event_subtype_from_type(event_type),
+        "event_time_label": event_time_label,
+        "event_datetime_utc": _event_datetime_utc_from_eastern_time(event_date, release_time_et),
+        "universe_scope": "all_us",
+        "source_authority": "official",
+        "title": title,
+        "source": source,
+        "source_type": "official",
+        "validation_status": "official",
+        "event_status": "active",
+        "source_url": source_url,
+        "confidence": confidence,
+        "raw_payload": raw_payload or {},
+    }
+
+
+def _holiday_status_from_text(text: str) -> tuple[str | None, str | None, str | None]:
+    normalized = text.lower()
+    if "early close" in normalized or "1:00" in normalized or "1 p.m" in normalized or "1pm" in normalized:
+        return "EARLY_CLOSE", "Early close 13:00 ET", "13:00"
+    if "closed" in normalized:
+        return "MARKET_HOLIDAY", "Closed", None
+    return None, None, None
+
+
+def parse_nasdaq_market_holiday_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        values = [_clean_text(value) for value in record.values() if _clean_text(value)]
+        if not values:
+            continue
+        event_date = None
+        date_text = ""
+        for value in values:
+            try:
+                parsed = _event_date_str(re.sub(r"^[A-Za-z]+,\s*", "", value))
+            except Exception:
+                parsed = None
+            if parsed:
+                event_date = parsed
+                date_text = value
+                break
+        if not event_date:
+            continue
+        event_year = int(event_date[:4])
+        if year_filter and event_year not in year_filter:
+            continue
+        row_text = " ".join(values)
+        event_type, event_time_label, release_time = _holiday_status_from_text(row_text)
+        if not event_type:
+            continue
+        title_candidates = [
+            value
+            for value in values
+            if value != date_text and not _holiday_status_from_text(value)[0]
+        ]
+        holiday_title = title_candidates[0] if title_candidates else "US Equity and Options Markets"
+        title_prefix = "US Market Early Close" if event_type == "EARLY_CLOSE" else "US Market Holiday"
+        events.append(
+            _market_structure_event_row(
+                event_date=event_date,
+                event_type=event_type,
+                title=f"{title_prefix}: {holiday_title}",
+                source=NASDAQ_MARKET_HOLIDAY_SOURCE,
+                source_url=source_url,
+                event_subtype="early_close" if event_type == "EARLY_CLOSE" else "market_holiday",
+                event_time_label=event_time_label,
+                release_time_et=release_time,
+                raw_payload={
+                    "exchange": "Nasdaq Trader",
+                    "calendar_year": event_year,
+                    "holiday": holiday_title,
+                    "market_status": event_time_label,
+                    "source_row": record,
+                },
+            )
+        )
+    return events
+
+
+def _previous_business_day(value: date, *, exchange_holidays: set[str]) -> date:
+    current = value
+    while current.weekday() >= 5 or current.isoformat() in exchange_holidays:
+        current -= timedelta(days=1)
+    return current
+
+
+def _third_friday(year: int, month: int) -> date:
+    fridays = [
+        week[calendar.FRIDAY]
+        for week in calendar.monthcalendar(year, month)
+        if week[calendar.FRIDAY]
+    ]
+    return date(year, month, fridays[2])
+
+
+def build_options_expiration_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    exchange_holidays: set[str] | Sequence[str] | None = None,
+    source_url_template: str = CBOE_OPTIONS_EXPIRATION_SOURCE_URL_TEMPLATE,
+) -> list[dict[str, Any]]:
+    target_years = [int(year) for year in years] if years else [datetime.now(UTC).year]
+    holiday_set = {str(item) for item in exchange_holidays or []}
+    events: list[dict[str, Any]] = []
+    for year in target_years:
+        source_url = source_url_template.format(year=year)
+        for month in range(1, 13):
+            scheduled = _third_friday(year, month)
+            adjusted = _previous_business_day(scheduled, exchange_holidays=holiday_set)
+            is_quarter_month = month in {3, 6, 9, 12}
+            events.append(
+                _market_structure_event_row(
+                    event_date=adjusted.isoformat(),
+                    event_type="OPTIONS_EXPIRATION",
+                    title=(
+                        "Quarterly Options Expiration / Triple Witch"
+                        if is_quarter_month
+                        else "Monthly Options Expiration"
+                    ),
+                    source=CBOE_OPTIONS_EXPIRATION_SOURCE,
+                    source_url=source_url,
+                    event_subtype="triple_witch" if is_quarter_month else "options_expiration",
+                    event_time_label="Market close ET",
+                    release_time_et="16:00",
+                    confidence=0.9,
+                    raw_payload={
+                        "exchange": "Cboe",
+                        "calendar_year": year,
+                        "scheduled_expiration_date": scheduled.isoformat(),
+                        "holiday_adjusted": adjusted != scheduled,
+                        "calculation_basis": "third_friday_standard_options_expiration",
+                        "source_url_template": source_url_template,
+                    },
+                )
+            )
+    return events
+
+
+def _month_day_dates_from_text(text: str, *, year: int) -> list[str]:
+    patterns = [
+        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?[,]?\s*([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?",
+        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?[,]?\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)",
+    ]
+    dates: list[str] = []
+    seen: set[str] = set()
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            first, second = match.groups()
+            if first.isdigit():
+                day = int(first)
+                month_name = second
+            else:
+                month_name = first
+                day = int(second)
+            month = MONTH_NAME_TO_NUMBER.get(month_name.upper())
+            if not month:
+                continue
+            try:
+                parsed = date(year, month, day).isoformat()
+            except ValueError:
+                continue
+            if parsed not in seen:
+                seen.add(parsed)
+                dates.append(parsed)
+    return dates
+
+
+def parse_russell_reconstitution_events_from_html(
+    html: str,
+    *,
+    source_url: str = FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    text = _clean_text(BeautifulSoup(html, "html.parser").get_text(" "))
+    detected_years = sorted({int(item) for item in re.findall(r"\b(20\d{2})\b", text)})
+    target_years = [int(year) for year in years] if years else detected_years or [datetime.now(UTC).year]
+    events: list[dict[str, Any]] = []
+    for year in target_years:
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        for sentence in sentences:
+            normalized = sentence.lower()
+            dates = _month_day_dates_from_text(sentence, year=year)
+            if not dates:
+                continue
+            if "rank day" in normalized:
+                events.append(
+                    _market_structure_event_row(
+                        event_date=dates[0],
+                        event_type="RUSSELL_RECONSTITUTION",
+                        title="Russell US Index Rank Day",
+                        source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        source_url=source_url,
+                        event_subtype="russell_rank_day",
+                        raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                    )
+                )
+            elif "preliminary" in normalized and ("list" in normalized or "membership" in normalized):
+                events.append(
+                    _market_structure_event_row(
+                        event_date=dates[0],
+                        event_type="RUSSELL_RECONSTITUTION",
+                        title="Russell US Index Preliminary Additions/Deletions",
+                        source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        source_url=source_url,
+                        event_subtype="russell_preliminary_lists",
+                        event_time_label="After market close ET",
+                        release_time_et="18:00",
+                        raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                    )
+                )
+            elif "update" in normalized and ("provided" in normalized or "post" in normalized or "list" in normalized):
+                for event_date in dates:
+                    events.append(
+                        _market_structure_event_row(
+                            event_date=event_date,
+                            event_type="RUSSELL_RECONSTITUTION",
+                            title="Russell US Index Reconstitution Update",
+                            source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                            source_url=source_url,
+                            event_subtype="russell_update",
+                            event_time_label="After market close ET",
+                            release_time_et="18:00",
+                            raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                        )
+                    )
+            elif "take effect" in normalized or "effective" in normalized or "reconstituted indexes" in normalized:
+                events.append(
+                    _market_structure_event_row(
+                        event_date=dates[-1],
+                        event_type="RUSSELL_RECONSTITUTION",
+                        title="Russell US Index Reconstitution Effective",
+                        source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        source_url=source_url,
+                        event_subtype="russell_reconstitution",
+                        event_time_label="After market close ET",
+                        release_time_et="16:00",
+                        raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                    )
+                )
+    deduped: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, str]] = set()
+    for row in sorted(events, key=lambda item: (str(item.get("event_date") or ""), str(item.get("event_subtype") or ""))):
+        key = (str(row.get("event_date") or ""), str(row.get("event_subtype") or ""))
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        deduped.append(row)
+    return deduped
+
+
 def fetch_bls_macro_calendar_events(
     *,
     years: Sequence[int] | None = None,
@@ -1667,6 +1952,89 @@ def fetch_treasury_auction_calendar_events(
         year_text = f" for years {list(years)}" if years else ""
         raise RuntimeError(f"No Treasury auction calendar events were parsed{year_text}.")
     return events
+
+
+def fetch_nasdaq_market_holiday_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_nasdaq_market_holiday_calendar_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No Nasdaq Trader market holiday events were parsed{year_text}.")
+    return events
+
+
+def fetch_russell_reconstitution_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_russell_reconstitution_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No Russell reconstitution events were parsed{year_text}.")
+    return events
+
+
+def fetch_market_structure_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    include_holidays: bool = True,
+    include_options_expiration: bool = True,
+    include_russell: bool = True,
+    holiday_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    russell_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    options_builder: Callable[..., list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    target_years = tuple(int(year) for year in years) if years else (datetime.now(UTC).year,)
+    events: list[dict[str, Any]] = []
+    failed_sources: list[str] = []
+    exchange_holidays: set[str] = set()
+
+    if include_holidays:
+        try:
+            fetcher = holiday_fetcher or fetch_nasdaq_market_holiday_calendar_events
+            holiday_events = fetcher(years=target_years)
+            events.extend(holiday_events)
+            exchange_holidays = {
+                str(row.get("event_date"))
+                for row in holiday_events
+                if row.get("event_type") == "MARKET_HOLIDAY" and row.get("event_date")
+            }
+        except Exception as exc:
+            failed_sources.append(f"Nasdaq Trader: {exc}")
+    if include_options_expiration:
+        try:
+            builder = options_builder or build_options_expiration_calendar_events
+            events.extend(builder(years=target_years, exchange_holidays=exchange_holidays))
+        except Exception as exc:
+            failed_sources.append(f"Cboe: {exc}")
+    if include_russell:
+        try:
+            fetcher = russell_fetcher or fetch_russell_reconstitution_events
+            events.extend(fetcher(years=target_years))
+        except Exception as exc:
+            failed_sources.append(f"FTSE Russell: {exc}")
+
+    return {
+        "source": MARKET_STRUCTURE_CALENDAR_SOURCE,
+        "source_url": NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+        "event_type": "MARKET_STRUCTURE",
+        "method": "official_market_structure_calendar_sources",
+        "years": list(target_years),
+        "include_holidays": include_holidays,
+        "include_options_expiration": include_options_expiration,
+        "include_russell": include_russell,
+        "events": events,
+        "events_found": len(events),
+        "failed_sources": failed_sources,
+    }
 
 
 def fetch_macro_calendar_events(
@@ -1786,6 +2154,44 @@ def collect_and_store_macro_calendar(
         "include_census": include_census,
         "include_ism": include_ism,
         "include_treasury": include_treasury,
+        "collected_at": collected_at,
+    }
+
+
+def collect_and_store_market_structure_calendar(
+    *,
+    years: Sequence[int] | None = None,
+    include_holidays: bool = True,
+    include_options_expiration: bool = True,
+    include_russell: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    market_structure_fetcher: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect market-structure dates that explain trading-calendar density, not signals."""
+    collected_at = _timestamp_str()
+    target_years = tuple(int(year) for year in years) if years else None
+    fetcher = market_structure_fetcher or fetch_market_structure_calendar_events
+    result = fetcher(
+        years=target_years,
+        include_holidays=include_holidays,
+        include_options_expiration=include_options_expiration,
+        include_russell=include_russell,
+    )
+    events = [{**row, "collected_at": collected_at} for row in result.get("events", [])]
+    rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
+    event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
+    event_types = sorted({str(row["event_type"]) for row in events if row.get("event_type")})
+    return {
+        **result,
+        "rows_written": rows_written,
+        "event_dates": event_dates,
+        "event_types": event_types,
+        "include_holidays": include_holidays,
+        "include_options_expiration": include_options_expiration,
+        "include_russell": include_russell,
         "collected_at": collected_at,
     }
 

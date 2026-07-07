@@ -74,6 +74,14 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "caveats": ["BLS 자동 요청은 차단될 수 있으며, 실패 시 BLS .ics import를 사용합니다."],
         "next_action": "partial_success면 실패 source를 확인하고 BLS .ics fallback을 실행하세요.",
     },
+    "collect_market_structure_calendar": {
+        "title": "시장 구조 일정 수집",
+        "purpose": "Nasdaq Trader / Cboe / FTSE Russell calendar에서 휴장, 조기폐장, options expiration, Russell reconstitution 일정을 수집합니다.",
+        "targets": ["finance_meta.market_event_calendar"],
+        "used_by": ["Workspace > Overview > Events"],
+        "caveats": ["일정 밀도와 자료 상태 근거이며 매매 신호나 monitoring action이 아닙니다."],
+        "next_action": "partial_success면 실패 source를 확인하고 성공 row만 Events에서 먼저 확인하세요.",
+    },
     "import_bls_macro_calendar_ics": {
         "title": "BLS 공식 .ics 일정 가져오기",
         "purpose": "브라우저로 받은 BLS 공식 calendar 파일에서 CPI / PPI / Jobs 발표 일정을 가져옵니다.",
@@ -305,6 +313,7 @@ ETF_PROVIDER_JOBS = {
 EVENT_CALENDAR_JOBS = {
     "collect_fomc_calendar",
     "collect_macro_calendar",
+    "collect_market_structure_calendar",
     "import_bls_macro_calendar_ics",
     "collect_earnings_calendar",
 }

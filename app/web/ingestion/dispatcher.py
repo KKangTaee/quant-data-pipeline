@@ -11,6 +11,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_fomc_calendar,
     run_collect_futures_ohlcv,
     run_collect_macro_calendar,
+    run_collect_market_structure_calendar,
     run_collect_market_sentiment,
     run_collect_sec_company_ticker_crosscheck,
     run_import_bls_macro_calendar_ics,
@@ -220,6 +221,9 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "collect_macro_calendar":
         params["progress_callback"] = progress_callback
         return run_collect_macro_calendar(**params)
+    if action == "collect_market_structure_calendar":
+        params["progress_callback"] = progress_callback
+        return run_collect_market_structure_calendar(**params)
     if action == "import_bls_macro_calendar_ics":
         params["progress_callback"] = progress_callback
         return run_import_bls_macro_calendar_ics(**params)

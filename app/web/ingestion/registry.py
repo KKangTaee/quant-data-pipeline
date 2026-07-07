@@ -114,6 +114,15 @@ INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "target_tables": ["finance_meta.market_event_calendar"],
         "progress": "stage",
     },
+    "collect_market_structure_calendar": {
+        "section": INGESTION_COLLECTION_OPERATIONAL,
+        "mode": "operational_low_frequency",
+        "active": True,
+        "compatibility": False,
+        "write_behavior": "db_write",
+        "target_tables": ["finance_meta.market_event_calendar"],
+        "progress": "stage",
+    },
     "import_bls_macro_calendar_ics": {
         "section": INGESTION_COLLECTION_OPERATIONAL,
         "mode": "manual_official_file_import",

@@ -40,6 +40,7 @@ from finance.data.market_intelligence import (
     collect_and_store_earnings_calendar,
     collect_and_store_fomc_calendar,
     collect_and_store_macro_calendar,
+    collect_and_store_market_structure_calendar,
     collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
     diagnose_market_quote_gaps,
@@ -1009,6 +1010,72 @@ def run_collect_macro_calendar(
                 "years": list(years or []),
                 "include_bls": include_bls,
                 "include_bea": include_bea,
+            },
+        )
+
+
+def run_collect_market_structure_calendar(
+    *,
+    years: Iterable[int] | None = None,
+    include_holidays: bool = True,
+    include_options_expiration: bool = True,
+    include_russell: bool = True,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    job_name = "collect_market_structure_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        normalized_years = tuple(int(year) for year in years) if years else None
+        _emit_stage_progress(progress_callback, event="stage_start", stage="market_structure_calendar")
+        result = collect_and_store_market_structure_calendar(
+            years=normalized_years,
+            include_holidays=include_holidays,
+            include_options_expiration=include_options_expiration,
+            include_russell=include_russell,
+        )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="market_structure_calendar")
+        rows_written = int(result.get("rows_written") or 0)
+        events_found = int(result.get("events_found") or 0)
+        failed_sources = [str(item) for item in result.get("failed_sources") or []]
+        finished_at = _now_str()
+        if rows_written > 0 and not failed_sources:
+            status = "success"
+        elif rows_written > 0:
+            status = "partial_success"
+        else:
+            status = "failed"
+        message = (
+            f"Market-structure calendar collected {events_found} event dates."
+            if rows_written > 0
+            else "Market-structure calendar collection wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            failed_symbols=failed_sources,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Market-structure calendar collection failed: {exc}",
+            details={
+                "years": list(years or []),
+                "include_holidays": include_holidays,
+                "include_options_expiration": include_options_expiration,
+                "include_russell": include_russell,
             },
         )
 

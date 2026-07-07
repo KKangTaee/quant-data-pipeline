@@ -454,10 +454,12 @@ def render_operational_section() -> Any:
         st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
         st.caption(
             "현재 구현 대상: Federal Reserve FOMC, BLS/BEA macro release schedule, "
-            "yfinance + Nasdaq cross-check 기반 earnings estimate."
+            "Nasdaq/Cboe/Russell market-structure calendar, yfinance + Nasdaq cross-check 기반 earnings estimate."
         )
         st.caption("저장 테이블: `finance_meta.market_event_calendar`")
-        fomc_tab, macro_event_tab, earnings_tab = st.tabs(["FOMC 일정", "매크로 발표", "실적 발표"])
+        fomc_tab, macro_event_tab, market_structure_tab, earnings_tab = st.tabs(
+            ["FOMC 일정", "매크로 발표", "시장 구조 일정", "실적 발표"]
+        )
         with fomc_tab:
             _render_job_brief("collect_fomc_calendar")
             current_year = date.today().year
@@ -623,6 +625,74 @@ def render_operational_section() -> Any:
                             ),
                         }
                     )
+        with market_structure_tab:
+            _render_job_brief("collect_market_structure_calendar")
+            current_year = date.today().year
+            structure_year_options = list(range(current_year - 1, current_year + 3))
+            structure_years = st.multiselect(
+                "Market Structure Calendar Years",
+                options=structure_year_options,
+                default=[current_year, current_year + 1],
+                key="overview_market_structure_calendar_years",
+                help="Nasdaq Trader holiday calendar, Cboe standard options expiration calendar, FTSE Russell reconstitution schedule을 수집합니다.",
+            )
+            structure_source_cols = st.columns(3, gap="small")
+            structure_include_holidays = structure_source_cols[0].checkbox(
+                "Holidays / early closes",
+                value=True,
+                key="overview_market_structure_include_holidays",
+            )
+            structure_include_options = structure_source_cols[1].checkbox(
+                "Options expiration",
+                value=True,
+                key="overview_market_structure_include_options",
+            )
+            structure_include_russell = structure_source_cols[2].checkbox(
+                "Russell reconstitution",
+                value=True,
+                key="overview_market_structure_include_russell",
+            )
+            st.caption(
+                "이 일정은 거래 신호가 아니라 휴장, 조기폐장, 만기, 지수 재구성처럼 일정 밀도와 자료 상태를 설명하는 시장 배경입니다."
+            )
+            if st.button(
+                "시장 구조 일정 수집",
+                use_container_width=True,
+                disabled=_has_running_job()
+                or not (
+                    structure_include_holidays
+                    or structure_include_options
+                    or structure_include_russell
+                ),
+            ):
+                _schedule_job(
+                    {
+                        "action": "collect_market_structure_calendar",
+                        "job_name": "collect_market_structure_calendar",
+                        "spinner_text": "Collecting market-structure calendar dates from official sources...",
+                        "params": {
+                            "years": tuple(structure_years) if structure_years else None,
+                            "include_holidays": structure_include_holidays,
+                            "include_options_expiration": structure_include_options,
+                            "include_russell": structure_include_russell,
+                        },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="overview_market_event_calendar",
+                            execution_mode="operational_low_frequency",
+                            symbol_source="official market-structure calendar sources",
+                            symbol_count=None,
+                            execution_context=(
+                                "Overview Events 탭에서 일정 밀도 근거로 사용할 휴장, 조기폐장, options expiration, Russell reconstitution calendar를 저장합니다."
+                            ),
+                            input_params={
+                                "years": tuple(structure_years) if structure_years else None,
+                                "include_holidays": structure_include_holidays,
+                                "include_options_expiration": structure_include_options,
+                                "include_russell": structure_include_russell,
+                            },
+                        ),
+                    }
+                )
         with earnings_tab:
             _render_job_brief("collect_earnings_calendar")
             earnings_source_mode = st.selectbox(
@@ -770,6 +840,7 @@ def render_operational_section() -> Any:
         event_progress_labels = {
             "collect_fomc_calendar": "FOMC Calendar Collection",
             "collect_macro_calendar": "Macro Calendar Collection",
+            "collect_market_structure_calendar": "Market Structure Calendar Collection",
             "import_bls_macro_calendar_ics": "BLS Calendar ICS Import",
             "collect_earnings_calendar": "Earnings Calendar Collection",
         }
@@ -782,6 +853,7 @@ def render_operational_section() -> Any:
         _render_inline_last_completed_result(
             "collect_fomc_calendar",
             "collect_macro_calendar",
+            "collect_market_structure_calendar",
             "import_bls_macro_calendar_ics",
             "collect_earnings_calendar",
         )

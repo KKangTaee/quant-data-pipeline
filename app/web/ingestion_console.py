@@ -68,6 +68,8 @@ def __getattr__(name: str):
 #     params["progress_callback"] = progress_callback
 # if action == "collect_macro_calendar":
 #     params["progress_callback"] = progress_callback
+# if action == "collect_market_structure_calendar":
+#     params["progress_callback"] = progress_callback
 # if action == "import_bls_macro_calendar_ics":
 #     params["progress_callback"] = progress_callback
 # if action == "collect_asset_profiles":

@@ -46,3 +46,8 @@
 - 2026-07-07: 4차 QA - `MarketIntelligenceEventCalendarContractTests`, 24 tests - PASS.
 - 2026-07-07: 4차 QA - `py_compile finance/data/market_intelligence.py app/web/ingestion/sections.py tests/test_service_contracts.py` - PASS.
 - 2026-07-07: 4차 QA - `git diff --check` - PASS.
+- 2026-07-07: 5차 RED - new market-structure tests failed before implementation on missing Nasdaq holiday parser, Cboe options expiration builder, Russell reconstitution parser, and market-structure collector.
+- 2026-07-07: 5차 GREEN - focused market-structure parser/builder/collector tests - PASS, 4 tests.
+- 2026-07-07: 5차 QA - `MarketIntelligenceEventCalendarContractTests` plus progress signature/allowlist checks - PASS, 30 tests.
+- 2026-07-07: 5차 QA - `py_compile` for market intelligence, ingestion jobs/dispatcher/guides/registry/sections, Events helpers/service, overview actions, and tests - PASS.
+- 2026-07-07: 5차 QA - `git diff --check` - PASS.

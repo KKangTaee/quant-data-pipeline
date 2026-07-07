@@ -32,6 +32,7 @@ def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
         "collect_fomc_calendar": "overview_fomc_calendar_collection",
         "collect_earnings_calendar": "overview_earnings_calendar_collection",
         "collect_macro_calendar": "overview_macro_calendar_collection",
+        "collect_market_structure_calendar": "overview_market_structure_calendar_collection",
         "import_bls_macro_calendar_ics": "overview_macro_calendar_collection",
         "diagnose_market_quote_gaps": "overview_market_snapshot_diagnostics",
     }
@@ -72,6 +73,10 @@ def _infer_execution_context(record: dict[str, Any]) -> str | None:
         "overview_fomc_calendar_collection": "Overview FOMC calendar refresh from the official Fed page.",
         "overview_earnings_calendar_collection": "Overview bounded earnings calendar refresh for active event intelligence.",
         "overview_macro_calendar_collection": "Overview macro calendar refresh from official BLS and BEA release schedules.",
+        "overview_market_structure_calendar_collection": (
+            "Overview market-structure calendar refresh for holidays, early closes, "
+            "options expiration, and index reconstitution background dates."
+        ),
         "overview_market_snapshot_diagnostics": "Overview market movers quote gap diagnostic run for missing daily snapshot symbols.",
     }
     return mapping.get(pipeline_type)

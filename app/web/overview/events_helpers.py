@@ -165,6 +165,13 @@ def _event_type_label(value: Any) -> str:
         "MACRO_ISM_MANUFACTURING_PMI": "ISM Mfg PMI",
         "MACRO_ISM_SERVICES_PMI": "ISM Services PMI",
         "TREASURY_AUCTION": "Treasury Auction",
+        "MARKET_HOLIDAY": "Market Holiday",
+        "EARLY_CLOSE": "Early Close",
+        "OPTIONS_EXPIRATION": "Options Expiration",
+        "RUSSELL_RECONSTITUTION": "Russell Reconstitution",
+        "INDEX_REBALANCE": "Index Rebalance",
+        "SP500_REBALANCE": "S&P Rebalance",
+        "NASDAQ100_RECONSTITUTION": "Nasdaq-100 Reconstitution",
     }
     return labels.get(str(value or ""), str(value or "-").replace("_", " ").title())
 
@@ -179,6 +186,16 @@ def _event_importance_from_type(value: Any) -> str:
     ):
         return "High"
     if event_type == "EARNINGS":
+        return "Medium"
+    if event_type in {
+        "MARKET_HOLIDAY",
+        "EARLY_CLOSE",
+        "OPTIONS_EXPIRATION",
+        "RUSSELL_RECONSTITUTION",
+        "INDEX_REBALANCE",
+        "SP500_REBALANCE",
+        "NASDAQ100_RECONSTITUTION",
+    }:
         return "Medium"
     return "Low"
 

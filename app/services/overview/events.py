@@ -586,6 +586,8 @@ def _event_importance_label(row: dict[str, Any]) -> str:
         return "High"
     if event_type == "EARNINGS":
         return "Medium"
+    if event_type in MARKET_STRUCTURE_EVENT_TYPES:
+        return "Medium"
     return "Low"
 
 def _event_focus_label(row: dict[str, Any], *, today: date) -> str:
