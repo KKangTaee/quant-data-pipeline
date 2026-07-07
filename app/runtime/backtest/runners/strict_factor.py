@@ -26,13 +26,16 @@ from finance.loaders import (
     load_asset_profile_status_summary,
     load_factor_snapshot,
     load_latest_market_date,
+    load_pit_universe_membership_snapshots,
     load_price_freshness_summary,
     load_price_history,
     load_statement_factor_snapshot_shadow,
     load_statement_snapshot_strict,
 )
+from finance.data.pit_universe import normalize_pit_universe_code
 from finance.sample import (
     HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+    PIT_MONTHLY_SNAPSHOT_UNIVERSE,
     QUALITY_STRICT_DEFAULT_FACTORS,
     STATIC_MANAGED_RESEARCH_UNIVERSE,
     STRICT_DEFAULT_DEFENSIVE_TICKERS,
@@ -191,6 +194,84 @@ def _dynamic_universe_warning(statement_freq: str) -> str:
         "관리 대상 후보 pool에서 재구성하며, 리밸런싱일 종가와 당시까지 확인된 "
         f"`{normalized_freq}` shares_outstanding을 사용해 근사 PIT membership을 만듭니다."
     )
+
+
+def _pit_monthly_universe_warning(universe_code: str | None) -> str:
+    return (
+        "PIT Monthly Snapshot Universe 방식입니다: 백테스트는 현재 Top-N을 과거에 고정하지 않고, "
+        f"사전에 저장된 `{universe_code or 'PIT monthly'}` 월말 universe snapshot을 리밸런싱 날짜별로 읽습니다. "
+        "이 V1 snapshot은 DB 가격과 latest-known statement shares 기반의 근사 PIT이며 공식 지수 membership은 아닙니다."
+    )
+
+
+def _resolve_pit_monthly_universe_inputs(
+    *,
+    start: str | None,
+    end: str | None,
+    target_size: int,
+    universe_code: str | None = None,
+) -> tuple[list[str], dict[str, list[str]], str]:
+    resolved_code = universe_code or normalize_pit_universe_code(target_size)
+    snapshots = load_pit_universe_membership_snapshots(
+        resolved_code,
+        start=start,
+        end=end,
+        target_size=target_size,
+    )
+    if not snapshots:
+        raise _data_error(
+            f"No PIT monthly universe snapshots were found for `{resolved_code}` in the requested date range. "
+            "Build the monthly PIT universe snapshots before running this contract."
+        )
+
+    symbols: list[str] = []
+    seen: set[str] = set()
+    for members in snapshots.values():
+        for symbol in members:
+            normalized = str(symbol or "").strip().upper()
+            if normalized and normalized not in seen:
+                symbols.append(normalized)
+                seen.add(normalized)
+    if not symbols:
+        raise _data_error(
+            f"PIT monthly universe snapshots for `{resolved_code}` do not contain any included members."
+        )
+    return symbols, snapshots, resolved_code
+
+
+def _resolve_strict_universe_contract_inputs(
+    *,
+    normalized_tickers: list[str],
+    universe_contract: str,
+    dynamic_candidate_tickers: Sequence[str] | None,
+    dynamic_target_size: int | None,
+    start: str | None,
+    end: str | None,
+) -> tuple[list[str], int | None, dict[str, list[str]] | None, str | None]:
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
+        return universe_input_tickers, dynamic_target_size, None, None
+    if universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        target_size = int(dynamic_target_size or len(normalized_tickers))
+        symbols, snapshots, universe_code = _resolve_pit_monthly_universe_inputs(
+            start=start,
+            end=end,
+            target_size=target_size,
+        )
+        return symbols, target_size, snapshots, universe_code
+    return normalized_tickers, dynamic_target_size, None, None
+
+
+def _strict_universe_builder_scope(
+    *,
+    universe_contract: str,
+    statement_freq: str,
+) -> str | None:
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        return f"{statement_freq}_first_pass"
+    if universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        return f"{statement_freq}_pit_monthly_snapshot"
+    return None
 
 
 def _preflight_quality_snapshot_data(
@@ -756,9 +837,19 @@ def _run_statement_quality_bundle(
         guardrail_reference_ticker,
     )
     strict_label = f"strict {statement_freq}"
-    universe_input_tickers = normalized_tickers
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
-        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
+    (
+        universe_input_tickers,
+        dynamic_target_size,
+        pit_membership_snapshots,
+        pit_universe_code,
+    ) = _resolve_strict_universe_contract_inputs(
+        normalized_tickers=normalized_tickers,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        start=start,
+        end=end,
+    )
 
     normalized_factors = [
         str(name).strip()
@@ -775,7 +866,7 @@ def _run_statement_quality_bundle(
     )
 
     dynamic_price_pool = None
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+    if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
         dynamic_price_pool = _inspect_dynamic_universe_price_pool(
             tickers=universe_input_tickers,
             end=end,
@@ -865,6 +956,8 @@ def _run_statement_quality_bundle(
             universe_contract=universe_contract,
             dynamic_candidate_tickers=universe_input_tickers,
             dynamic_target_size=dynamic_target_size,
+            pit_membership_snapshots=pit_membership_snapshots,
+            pit_universe_code=pit_universe_code,
             return_details=True,
         )
         result_df = result_payload["result_df"]
@@ -905,6 +998,8 @@ def _run_statement_quality_bundle(
                 f"{dynamic_price_pool['missing_count']}개 후보 symbol은 선택한 종료일까지 DB 가격 이력이 없어 "
                 f"근사 PIT membership 구성에서 자연스럽게 제외되었습니다: {preview}{more}"
             )
+    elif universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        warnings.append(_pit_monthly_universe_warning(pit_universe_code))
     if price_freshness["status"] == "warning":
         warnings.append(
             "가격 최신성 사전 점검: "
@@ -963,10 +1058,10 @@ def _run_statement_quality_bundle(
         "dynamic_target_size": dynamic_target_size,
         "dynamic_candidate_count": len(universe_input_tickers),
         "dynamic_candidate_preview": universe_input_tickers[:20],
-        "universe_builder_scope": (
-            f"{statement_freq}_first_pass"
-            if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE
-            else None
+        "pit_universe_code": pit_universe_code,
+        "universe_builder_scope": _strict_universe_builder_scope(
+            universe_contract=universe_contract,
+            statement_freq=statement_freq,
         ),
         "universe_debug": universe_debug,
     }
@@ -1314,9 +1409,19 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         benchmark_ticker,
         guardrail_reference_ticker,
     )
-    universe_input_tickers = normalized_tickers
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
-        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
+    (
+        universe_input_tickers,
+        dynamic_target_size,
+        pit_membership_snapshots,
+        pit_universe_code,
+    ) = _resolve_strict_universe_contract_inputs(
+        normalized_tickers=normalized_tickers,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        start=start,
+        end=end,
+    )
 
     normalized_factors = [
         str(name).strip()
@@ -1333,7 +1438,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     )
 
     dynamic_price_pool = None
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+    if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
         dynamic_price_pool = _inspect_dynamic_universe_price_pool(
             tickers=universe_input_tickers,
             end=end,
@@ -1424,6 +1529,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
+        pit_membership_snapshots=pit_membership_snapshots,
+        pit_universe_code=pit_universe_code,
         return_details=True,
     )
     result_df = result_payload["result_df"]
@@ -1446,6 +1553,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
                 f"{dynamic_price_pool['missing_count']}개 후보 symbol은 선택한 종료일까지 DB 가격 이력이 없어 "
                 f"근사 PIT membership 구성에서 자연스럽게 제외되었습니다: {preview}{more}"
             )
+    elif universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        warnings.append(_pit_monthly_universe_warning(pit_universe_code))
     if price_freshness["status"] == "warning":
         warnings.append(
             "가격 최신성 사전 점검: "
@@ -1524,7 +1633,11 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "dynamic_target_size": dynamic_target_size,
             "dynamic_candidate_count": len(universe_input_tickers),
             "dynamic_candidate_preview": universe_input_tickers[:20],
-            "universe_builder_scope": ("annual_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "pit_universe_code": pit_universe_code,
+            "universe_builder_scope": _strict_universe_builder_scope(
+                universe_contract=universe_contract,
+                statement_freq="annual",
+            ),
             "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
@@ -1645,9 +1758,19 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
         rejected_slot_handling_mode
     )
-    universe_input_tickers = normalized_tickers
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
-        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
+    (
+        universe_input_tickers,
+        dynamic_target_size,
+        pit_membership_snapshots,
+        pit_universe_code,
+    ) = _resolve_strict_universe_contract_inputs(
+        normalized_tickers=normalized_tickers,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        start=start,
+        end=end,
+    )
 
     normalized_factors = [
         str(name).strip()
@@ -1664,7 +1787,7 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     )
 
     dynamic_price_pool = None
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+    if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
         dynamic_price_pool = _inspect_dynamic_universe_price_pool(
             tickers=universe_input_tickers,
             end=end,
@@ -1729,6 +1852,8 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
+        pit_membership_snapshots=pit_membership_snapshots,
+        pit_universe_code=pit_universe_code,
         return_details=True,
     )
     result_df = result_payload["result_df"]
@@ -1751,6 +1876,8 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
                 f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
                 f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
             )
+    elif universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        warnings.append(_pit_monthly_universe_warning(pit_universe_code))
     if price_freshness["status"] == "warning":
         warnings.append(
             "Price freshness preflight: "
@@ -1800,7 +1927,11 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "dynamic_target_size": dynamic_target_size,
             "dynamic_candidate_count": len(universe_input_tickers),
             "dynamic_candidate_preview": universe_input_tickers[:20],
-            "universe_builder_scope": ("quarterly_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "pit_universe_code": pit_universe_code,
+            "universe_builder_scope": _strict_universe_builder_scope(
+                universe_contract=universe_contract,
+                statement_freq="quarterly",
+            ),
             "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
@@ -1908,9 +2039,19 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         benchmark_ticker,
         guardrail_reference_ticker,
     )
-    universe_input_tickers = normalized_tickers
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
-        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
+    (
+        universe_input_tickers,
+        dynamic_target_size,
+        pit_membership_snapshots,
+        pit_universe_code,
+    ) = _resolve_strict_universe_contract_inputs(
+        normalized_tickers=normalized_tickers,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        start=start,
+        end=end,
+    )
 
     normalized_quality_factors = [
         str(name).strip()
@@ -1937,7 +2078,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     )
 
     dynamic_price_pool = None
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+    if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
         dynamic_price_pool = _inspect_dynamic_universe_price_pool(
             tickers=universe_input_tickers,
             end=end,
@@ -2029,6 +2170,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
+        pit_membership_snapshots=pit_membership_snapshots,
+        pit_universe_code=pit_universe_code,
         return_details=True,
     )
     result_df = result_payload["result_df"]
@@ -2051,6 +2194,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
                 f"{dynamic_price_pool['missing_count']}개 후보 symbol은 선택한 종료일까지 DB 가격 이력이 없어 "
                 f"근사 PIT membership 구성에서 자연스럽게 제외되었습니다: {preview}{more}"
             )
+    elif universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        warnings.append(_pit_monthly_universe_warning(pit_universe_code))
     if price_freshness["status"] == "warning":
         warnings.append(
             "가격 최신성 사전 점검: "
@@ -2130,7 +2275,11 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "dynamic_target_size": dynamic_target_size,
             "dynamic_candidate_count": len(universe_input_tickers),
             "dynamic_candidate_preview": universe_input_tickers[:20],
-            "universe_builder_scope": ("annual_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "pit_universe_code": pit_universe_code,
+            "universe_builder_scope": _strict_universe_builder_scope(
+                universe_contract=universe_contract,
+                statement_freq="annual",
+            ),
             "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
@@ -2252,9 +2401,19 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
         rejected_slot_handling_mode
     )
-    universe_input_tickers = normalized_tickers
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
-        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
+    (
+        universe_input_tickers,
+        dynamic_target_size,
+        pit_membership_snapshots,
+        pit_universe_code,
+    ) = _resolve_strict_universe_contract_inputs(
+        normalized_tickers=normalized_tickers,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        start=start,
+        end=end,
+    )
 
     normalized_quality_factors = [
         str(name).strip()
@@ -2281,7 +2440,7 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     )
 
     dynamic_price_pool = None
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+    if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
         dynamic_price_pool = _inspect_dynamic_universe_price_pool(
             tickers=universe_input_tickers,
             end=end,
@@ -2347,6 +2506,8 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
+        pit_membership_snapshots=pit_membership_snapshots,
+        pit_universe_code=pit_universe_code,
         return_details=True,
     )
     result_df = result_payload["result_df"]
@@ -2369,6 +2530,8 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
                 f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
                 f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
             )
+    elif universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        warnings.append(_pit_monthly_universe_warning(pit_universe_code))
     if price_freshness["status"] == "warning":
         warnings.append(
             "Price freshness preflight: "
@@ -2419,7 +2582,11 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "dynamic_target_size": dynamic_target_size,
             "dynamic_candidate_count": len(universe_input_tickers),
             "dynamic_candidate_preview": universe_input_tickers[:20],
-            "universe_builder_scope": ("quarterly_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "pit_universe_code": pit_universe_code,
+            "universe_builder_scope": _strict_universe_builder_scope(
+                universe_contract=universe_contract,
+                statement_freq="quarterly",
+            ),
             "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),

@@ -123,6 +123,7 @@ STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD = -0.35
 STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD = 0.08
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
+PIT_MONTHLY_SNAPSHOT_UNIVERSE = "pit_monthly_snapshot"
 GTAA_DEFAULT_SIGNAL_INTERVAL = 1
 GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS = [1, 3, 6, 12]
 GTAA_SCORE_RETURN_COLUMNS = tuple(f"{months}MReturn" for months in GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS)
@@ -1957,6 +1958,94 @@ def _apply_universe_membership_to_snapshot_map(
     return filtered_map
 
 
+def _resolve_pit_membership_map_for_rebalance_dates(
+    pit_membership_snapshots: dict[str, list[str]],
+    *,
+    rebalance_dates: list[pd.Timestamp],
+    target_size: int,
+    universe_code: str | None = None,
+    max_lag_days: int = 45,
+) -> tuple[dict[pd.Timestamp, list[str]], dict[str, object], list[dict[str, object]]]:
+    parsed_snapshots: list[tuple[pd.Timestamp, list[str]]] = []
+    for raw_date, raw_members in (pit_membership_snapshots or {}).items():
+        snapshot_date = pd.to_datetime(raw_date, errors="coerce")
+        if pd.isna(snapshot_date):
+            continue
+        members = _normalize_symbol_list(raw_members)
+        parsed_snapshots.append((pd.Timestamp(snapshot_date).normalize(), members))
+    parsed_snapshots.sort(key=lambda item: item[0])
+
+    membership_map: dict[pd.Timestamp, list[str]] = {}
+    snapshot_rows: list[dict[str, object]] = []
+    membership_counts: list[int] = []
+    turnover_counts: list[int] = []
+    prev_members: set[str] = set()
+    resolved_code = universe_code or "PIT_MONTHLY_SNAPSHOT"
+
+    for raw_rebalance_date in rebalance_dates:
+        rebalance_date = pd.Timestamp(raw_rebalance_date).normalize()
+        source_snapshot: tuple[pd.Timestamp, list[str]] | None = None
+        for snapshot_date, members in parsed_snapshots:
+            if snapshot_date <= rebalance_date:
+                source_snapshot = (snapshot_date, members)
+            else:
+                break
+
+        if source_snapshot is None:
+            members = []
+            source_date = None
+            lag_days = None
+        else:
+            source_date, source_members = source_snapshot
+            lag_days = int((rebalance_date - source_date).days)
+            members = source_members if lag_days <= int(max_lag_days) else []
+            if lag_days > int(max_lag_days):
+                source_date = None
+
+        membership_map[rebalance_date] = members
+        current_members = set(members)
+        turnover_count = 0 if not prev_members else len(current_members.symmetric_difference(prev_members))
+        if members:
+            prev_members = current_members
+        else:
+            prev_members = set()
+        membership_counts.append(len(members))
+        turnover_counts.append(turnover_count)
+        snapshot_rows.append(
+            {
+                "date": rebalance_date.strftime("%Y-%m-%d"),
+                "source_as_of_date": source_date.strftime("%Y-%m-%d") if source_date is not None else None,
+                "members": members,
+                "membership_count": len(members),
+                "target_size": int(target_size),
+                "snapshot_lag_days": lag_days,
+            }
+        )
+
+    avg_membership_count = float(sum(membership_counts) / len(membership_counts)) if membership_counts else 0.0
+    avg_turnover_count = (
+        float(sum(turnover_counts[1:]) / max(1, len(turnover_counts) - 1))
+        if len(turnover_counts) > 1
+        else 0.0
+    )
+    debug = {
+        "contract": PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+        "universe_code": resolved_code,
+        "target_size": int(target_size),
+        "membership_dates": len(rebalance_dates),
+        "snapshot_dates": len(parsed_snapshots),
+        "first_membership_count": int(membership_counts[0]) if membership_counts else 0,
+        "last_membership_count": int(membership_counts[-1]) if membership_counts else 0,
+        "min_membership_count": int(min(membership_counts)) if membership_counts else 0,
+        "max_membership_count": int(max(membership_counts)) if membership_counts else 0,
+        "avg_membership_count": round(avg_membership_count, 2),
+        "avg_turnover_count": round(avg_turnover_count, 2),
+        "avg_turnover_pct": round((avg_turnover_count / target_size) if target_size else 0.0, 4),
+        "per_date_rows": snapshot_rows[:120],
+    }
+    return membership_map, debug, snapshot_rows
+
+
 def _resolve_guardrail_reference_ticker(
     benchmark_ticker: str | None,
     guardrail_reference_ticker: str | None,
@@ -2005,6 +2094,8 @@ def _run_statement_shadow_snapshot_from_db(
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
+    pit_membership_snapshots: dict[str, list[str]] | None = None,
+    pit_universe_code: str | None = None,
     return_details: bool = False,
 ):
     requested_tickers = _normalize_symbol_list(
@@ -2014,7 +2105,7 @@ def _run_statement_shadow_snapshot_from_db(
         raise ValueError("At least one ticker is required for statement shadow snapshot execution.")
 
     candidate_tickers = requested_tickers
-    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+    if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
         candidate_tickers = _normalize_symbol_list(dynamic_candidate_tickers or requested_tickers)
         if not candidate_tickers:
             candidate_tickers = requested_tickers
@@ -2128,6 +2219,20 @@ def _run_statement_shadow_snapshot_from_db(
             membership_date: len(members)
             for membership_date, members in membership_map.items()
         }
+    elif universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        target = int(dynamic_target_size or len(requested_tickers))
+        membership_map, universe_debug, universe_snapshot_rows = _resolve_pit_membership_map_for_rebalance_dates(
+            pit_membership_snapshots or {},
+            rebalance_dates=rebalance_dates,
+            target_size=target,
+            universe_code=pit_universe_code,
+        )
+        snapshot_by_date = _apply_universe_membership_to_snapshot_map(snapshot_by_date, membership_map)
+        membership_count_map = {
+            membership_date: len(members)
+            for membership_date, members in membership_map.items()
+        }
+        candidate_status_rows = []
     else:
         universe_snapshot_rows = []
         candidate_status_rows = []
@@ -2250,6 +2355,8 @@ def get_statement_quality_snapshot_shadow_from_db(
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
+    pit_membership_snapshots: dict[str, list[str]] | None = None,
+    pit_universe_code: str | None = None,
     return_details: bool = False,
 ):
     if quality_factors is None:
@@ -2299,6 +2406,8 @@ def get_statement_quality_snapshot_shadow_from_db(
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
+        pit_membership_snapshots=pit_membership_snapshots,
+        pit_universe_code=pit_universe_code,
         return_details=return_details,
     )
 
@@ -2340,6 +2449,8 @@ def get_statement_value_snapshot_shadow_from_db(
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
+    pit_membership_snapshots: dict[str, list[str]] | None = None,
+    pit_universe_code: str | None = None,
     return_details: bool = False,
 ):
     if value_factors is None:
@@ -2389,6 +2500,8 @@ def get_statement_value_snapshot_shadow_from_db(
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
+        pit_membership_snapshots=pit_membership_snapshots,
+        pit_universe_code=pit_universe_code,
         return_details=return_details,
     )
 
@@ -2431,6 +2544,8 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
+    pit_membership_snapshots: dict[str, list[str]] | None = None,
+    pit_universe_code: str | None = None,
     return_details: bool = False,
 ):
     if quality_factors is None:
@@ -2499,6 +2614,8 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
+        pit_membership_snapshots=pit_membership_snapshots,
+        pit_universe_code=pit_universe_code,
         return_details=return_details,
     )
 

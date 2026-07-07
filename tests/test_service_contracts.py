@@ -551,6 +551,75 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(result["member_rows"], 2)
         self.assertEqual(result["universe_code"], "US_LARGE_1_MCAP_PIT_MONTHLY")
 
+    def test_pit_membership_snapshots_map_to_rebalance_dates_by_previous_snapshot(self) -> None:
+        from finance.sample import (
+            PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+            _resolve_pit_membership_map_for_rebalance_dates,
+        )
+
+        membership_map, debug, snapshot_rows = _resolve_pit_membership_map_for_rebalance_dates(
+            {
+                "2026-01-30": ["AAA", "BBB"],
+                "2026-02-27": ["CCC", "AAA"],
+            },
+            rebalance_dates=[
+                pd.Timestamp("2026-01-30"),
+                pd.Timestamp("2026-02-27"),
+                pd.Timestamp("2026-03-31"),
+            ],
+            target_size=2,
+            universe_code="US_LARGE_2_MCAP_PIT_MONTHLY",
+        )
+
+        self.assertEqual(debug["contract"], PIT_MONTHLY_SNAPSHOT_UNIVERSE)
+        self.assertEqual(debug["target_size"], 2)
+        self.assertEqual(debug["first_membership_count"], 2)
+        self.assertEqual(debug["last_membership_count"], 2)
+        self.assertEqual(membership_map[pd.Timestamp("2026-01-30")], ["AAA", "BBB"])
+        self.assertEqual(membership_map[pd.Timestamp("2026-02-27")], ["CCC", "AAA"])
+        self.assertEqual(membership_map[pd.Timestamp("2026-03-31")], ["CCC", "AAA"])
+        self.assertEqual(snapshot_rows[-1]["source_as_of_date"], "2026-02-27")
+
+    def test_strict_runner_resolves_pit_monthly_universe_inputs_from_loader(self) -> None:
+        from app.runtime.backtest.runners import strict_factor as runtime
+
+        with patch.object(
+            runtime,
+            "load_pit_universe_membership_snapshots",
+            return_value={
+                "2026-01-30": ["AAA", "BBB"],
+                "2026-02-27": ["CCC", "AAA"],
+            },
+        ) as loader:
+            symbols, snapshots, universe_code = runtime._resolve_pit_monthly_universe_inputs(
+                start="2026-01-01",
+                end="2026-02-28",
+                target_size=2,
+            )
+
+        loader.assert_called_once_with(
+            "US_LARGE_2_MCAP_PIT_MONTHLY",
+            start="2026-01-01",
+            end="2026-02-28",
+            target_size=2,
+        )
+        self.assertEqual(symbols, ["AAA", "BBB", "CCC"])
+        self.assertEqual(snapshots["2026-02-27"], ["CCC", "AAA"])
+        self.assertEqual(universe_code, "US_LARGE_2_MCAP_PIT_MONTHLY")
+
+    def test_strict_runner_wires_pit_membership_to_statement_shadow_samples(self) -> None:
+        source = Path("app/runtime/backtest/runners/strict_factor.py").read_text(encoding="utf-8")
+
+        self.assertIn("PIT_MONTHLY_SNAPSHOT_UNIVERSE", source)
+        self.assertIn("_resolve_pit_monthly_universe_inputs(", source)
+        self.assertGreaterEqual(source.count("pit_membership_snapshots=pit_membership_snapshots"), 5)
+        self.assertGreaterEqual(source.count("pit_universe_code=pit_universe_code"), 5)
+        self.assertGreaterEqual(
+            source.count("universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}"),
+            5,
+        )
+        self.assertGreaterEqual(source.count("_strict_universe_builder_scope("), 6)
+
     def test_dynamic_runnable_coverage_overrides_candidate_pool_warning_when_target_filled(self) -> None:
         from app.runtime.backtest.runners.strict_factor import _apply_dynamic_runnable_coverage_price_status
         from finance.sample import HISTORICAL_DYNAMIC_PIT_UNIVERSE
