@@ -117,3 +117,9 @@
 - 2026-07-07: Calendar polish 2차 GREEN - same contract PASS after clickable day cells, selected-date state, fixed detail panel, detail cards, and richer tooltip list implementation.
 - 2026-07-07: Calendar polish 2차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
 - 2026-07-07: Calendar polish 2차 QA - `git diff --check` for changed source/test files - PASS.
+- 2026-07-07: Calendar polish 3차 RED - focused service contract failed before implementation on missing density `week_end`; focused React source contract failed on missing `densityRangeLabel`.
+- 2026-07-07: Calendar polish 3차 GREEN - both focused contracts PASS after service density week range labels and React weekly-density copy/legend implementation.
+- 2026-07-07: Calendar polish 3차 QA - `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: Calendar polish 3차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: Calendar polish 3차 QA - `git diff --check` for changed code/test/task files - PASS.
+- 2026-07-07: Calendar polish 3차 Browser QA at `http://localhost:8515/?overview_tab=events` - PASS. Desktop DOM confirmed `2026년 7월`, selected-month summary, selected-date detail after clicking `2026-07-14`, and weekly density labels such as `7/27-8/2`, `주간 합계 47건`, `총 47건`. Mobile 390px DOM confirmed the same weekly-density copy and totals. Screenshot `browser-qa-events-calendar-density-final.png` is generated and uncommitted.

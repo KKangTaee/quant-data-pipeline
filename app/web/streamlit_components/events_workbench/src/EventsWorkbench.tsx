@@ -117,6 +117,8 @@ type CalendarCell = CalendarDay & {
 
 type DensityBucket = {
   week_start: string;
+  week_end?: string;
+  label?: string;
   count: number;
   review_count: number;
   stale_count: number;
@@ -373,6 +375,18 @@ function formatMonthTitle(monthText: string): string {
     return "월 선택";
   }
   return `${current.getFullYear()}년 ${current.getMonth() + 1}월`;
+}
+
+function densityRangeLabel(bucket: DensityBucket): string {
+  if (bucket.label) {
+    return bucket.label;
+  }
+  const start = dateFromText(bucket.week_start);
+  const end = bucket.week_end ? dateFromText(bucket.week_end) : start ? addDays(start, 6) : null;
+  if (!start || !end) {
+    return bucket.week_start;
+  }
+  return `${start.getMonth() + 1}/${start.getDate()}-${end.getMonth() + 1}/${end.getDate()}`;
 }
 
 function monthOptionsFromDays(days: CalendarDay[], today?: string): string[] {
@@ -922,10 +936,23 @@ function EventsWorkbench({ args }: ComponentProps) {
         </div>
 
         <div className="events-workbench__density">
+          <div className="events-workbench__density-head">
+            <div>
+              <span className="events-workbench__eyebrow">주간 밀집도</span>
+              <h3>주간 일정 밀집도</h3>
+              <p>막대와 우측 숫자는 하루가 아니라 해당 주 전체 이벤트 수입니다.</p>
+            </div>
+            <div className="events-workbench__density-legend" aria-label="일정 타입 색상">
+              <span><i className="events-workbench__density-segment--fomc" />FOMC</span>
+              <span><i className="events-workbench__density-segment--macro" />매크로</span>
+              <span><i className="events-workbench__density-segment--earnings" />실적</span>
+              <span><i className="events-workbench__density-segment--structure" />시장 구조</span>
+            </div>
+          </div>
           {filteredDensity.slice(0, 12).map((bucket) => (
             <div className="events-workbench__density-row" key={bucket.week_start}>
-              <span>{bucket.week_start}</span>
-              <div className="events-workbench__density-bar" title={`이벤트 ${bucket.count}개 · 확인 필요 ${bucket.review_count}개`}>
+              <span>{densityRangeLabel(bucket)}</span>
+              <div className="events-workbench__density-bar" title={`주간 합계 ${bucket.count}건 · 확인 필요 ${bucket.review_count}건 · 오래된 추정 ${bucket.stale_count}건`}>
                 <div className="events-workbench__density-fill" style={{ width: `${Math.max(8, (bucket.count / maxDensityCount) * 100)}%` }}>
                   {Object.entries(bucket.by_family || {}).map(([family, count]) => (
                     <i
@@ -936,7 +963,7 @@ function EventsWorkbench({ args }: ComponentProps) {
                   ))}
                 </div>
               </div>
-              <strong>{bucket.count}</strong>
+              <strong>총 {bucket.count}건</strong>
             </div>
           ))}
         </div>

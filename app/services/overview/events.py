@@ -1036,6 +1036,21 @@ def _workbench_week_start(date_text: str) -> str | None:
         return None
     return (day - timedelta(days=day.weekday())).isoformat()
 
+def _workbench_week_end(week_start: str) -> str | None:
+    try:
+        start = date.fromisoformat(week_start)
+    except (TypeError, ValueError):
+        return None
+    return (start + timedelta(days=6)).isoformat()
+
+def _workbench_week_label(week_start: str, week_end: str | None = None) -> str:
+    try:
+        start = date.fromisoformat(week_start)
+        end = date.fromisoformat(week_end) if week_end else start + timedelta(days=6)
+    except (TypeError, ValueError):
+        return week_start
+    return f"{start.month}/{start.day}-{end.month}/{end.day}"
+
 def _events_workbench_calendar(records: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
     by_day: dict[str, list[dict[str, Any]]] = {}
     for record in records:
@@ -1073,9 +1088,12 @@ def _events_workbench_calendar(records: list[dict[str, Any]], *, today: date) ->
 
     density = []
     for week_start, bucket in sorted(weekly.items()):
+        week_end = _workbench_week_end(week_start)
         density.append(
             {
                 "week_start": week_start,
+                "week_end": week_end,
+                "label": _workbench_week_label(week_start, week_end),
                 "count": int(bucket["count"]),
                 "review_count": int(bucket["review_count"]),
                 "stale_count": int(bucket["stale_count"]),
