@@ -199,9 +199,13 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 성격:
 
 - provider snapshot table이다.
-- `event_date`, `event_type`, `symbol`, `title`, `source`, `source_type`, `validation_status`, `event_status`, `source_url`, `confidence`, `collected_at`, `raw_payload_json`을 공통 컬럼으로 둔다.
+- `event_date`, `event_type`, `event_family`, `event_subtype`, `event_time_label`, `event_datetime_utc`, `universe_scope`, `source_authority`, `symbol`, `title`, `source`, `source_type`, `validation_status`, `event_status`, `source_url`, `confidence`, `collected_at`, `raw_payload_json`을 공통 컬럼으로 둔다.
 - `event_key`는 반복 수집이 같은 event row를 UPSERT하도록 만든 내부 business key다.
 - UI는 정상 render 때 외부 페이지를 직접 파싱하지 않고 이 table을 읽는다.
+- `event_family`는 `central_bank`, `macro`, `earnings`, `fixed_income`, `market_structure`, `corporate_action`, `other` 같은 표시/필터용 대분류다.
+- `event_subtype`은 `cpi`, `ppi`, `employment`, `gdp`, `fomc_meeting`, `options_expiration`, `index_rebalance`, `earnings`처럼 source-neutral detail을 담는다.
+- `universe_scope`는 `official_macro`, `all_us`, `sp500`, `nasdaq100`, `portfolio`, `watchlist`, `latest_movers`, `major_cap` 등 이벤트가 적용되는 universe를 나타낸다.
+- `source_authority`는 `official`, `issuer_confirmed`, `provider_estimate`, `cross_checked`, `not_confirmed`, `conflict`, `unknown`으로 읽는다. `cross_checked`는 여전히 official confirmation이 아니다.
 - FOMC row의 `source`는 `federal_reserve_fomc_calendar`, `event_type`은 `FOMC_MEETING`이다.
 - FOMC meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장한다. 예: `June 16-17*`는 `2026-06-17`로 저장한다.
 - Macro row는 공식 release schedule에서 온 event timing metadata다.
@@ -214,6 +218,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 날짜가 변경된 같은 symbol/source의 이전 active earnings estimate는 `event_status=superseded`로 남긴다.
 - 요청 ticker 중 저장 row가 없는 symbol의 missing / failure reason은 `market_event_calendar`에 별도 row로 쓰지 않고 job result의 `symbol_diagnostics`와 generated failure CSV에 남긴다.
 - Overview read model은 `Validation`, `Freshness`, `Quality Action`을 계산해 estimate-only / not-confirmed / stale row의 다음 조치를 표시한다.
+- Overview read model은 legacy row에 taxonomy column이 비어 있어도 `event_type`, `source_type`, `validation_status`, `source`에서 `Event Family`, `Event Subtype`, `Universe Scope`, `Source Authority`를 보수적으로 추론한다.
 
 주의:
 
@@ -221,6 +226,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FOMC의 `*` 표시는 Summary of Economic Projections 관련 meeting 의미이며 `raw_payload_json.has_summary_of_economic_projections`에 보존한다.
 - BLS schedule page는 공식 source지만 자동 요청이 HTTP 403으로 차단될 수 있다. 이 경우 macro collector는 가능한 source만 저장하고 partial failure를 job result에 남기며, BLS `.ics` import fallback으로 CPI / PPI / Jobs row를 보강한다.
 - earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 yfinance-only row는 `confidence=0.65`, Nasdaq cross-checked row는 `confidence=0.75`를 사용한다.
+- S&P 500 / Nasdaq-100 / portfolio / watchlist earnings coverage는 후속 collector 확장 대상이다. 이 table schema는 먼저 그 coverage를 받을 수 있게 확장되었지만, row가 저장되기 전까지 coverage가 존재한다는 뜻은 아니다.
 - `symbol_diagnostics.reason`의 주요 값은 `no_provider_earnings_date`, `outside_window`, `provider_error`다. 이는 수집 운영 진단이며 event calendar fact row는 아니다.
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.

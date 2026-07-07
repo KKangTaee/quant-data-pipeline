@@ -300,6 +300,15 @@ def _normalize_event_symbol(value: Any) -> str | None:
     return symbol or None
 
 
+def _normalize_event_taxonomy_value(value: Any) -> str | None:
+    normalized = str(value or "").strip().lower().replace(" ", "_")
+    return normalized or None
+
+
+def _normalize_event_datetime_utc(value: Any) -> str | None:
+    return _to_utc_naive(value)
+
+
 def _normalize_source_type(value: Any, *, event_type: str, source: str) -> str:
     normalized = str(value or "").strip().lower().replace(" ", "_")
     if normalized in {"official", "provider_estimate", "unknown"}:
@@ -423,6 +432,12 @@ def normalize_market_event_rows(
         row = {
             "event_date": event_date,
             "event_type": event_type,
+            "event_family": _normalize_event_taxonomy_value(item.get("event_family")),
+            "event_subtype": _normalize_event_taxonomy_value(item.get("event_subtype")),
+            "event_time_label": str(item.get("event_time_label") or "").strip() or None,
+            "event_datetime_utc": _normalize_event_datetime_utc(item.get("event_datetime_utc")),
+            "universe_scope": _normalize_event_taxonomy_value(item.get("universe_scope")),
+            "source_authority": _normalize_event_taxonomy_value(item.get("source_authority")),
             "symbol": _normalize_event_symbol(item.get("symbol")),
             "title": title,
             "source": source,
@@ -463,11 +478,13 @@ def upsert_market_event_rows(
         )
         sql = """
         INSERT INTO market_event_calendar (
-          event_key, event_date, event_type, symbol, title,
+          event_key, event_date, event_type, event_family, event_subtype, event_time_label,
+          event_datetime_utc, universe_scope, source_authority, symbol, title,
           source, source_type, validation_status, event_status, superseded_by_event_key, superseded_at,
           source_url, confidence, collected_at, raw_payload_json
         ) VALUES (
-          %(event_key)s, %(event_date)s, %(event_type)s, %(symbol)s, %(title)s,
+          %(event_key)s, %(event_date)s, %(event_type)s, %(event_family)s, %(event_subtype)s, %(event_time_label)s,
+          %(event_datetime_utc)s, %(universe_scope)s, %(source_authority)s, %(symbol)s, %(title)s,
           %(source)s, %(source_type)s, %(validation_status)s, %(event_status)s,
           %(superseded_by_event_key)s, %(superseded_at)s,
           %(source_url)s, %(confidence)s, %(collected_at)s, %(raw_payload_json)s
@@ -475,6 +492,12 @@ def upsert_market_event_rows(
         ON DUPLICATE KEY UPDATE
           event_date = VALUES(event_date),
           event_type = VALUES(event_type),
+          event_family = VALUES(event_family),
+          event_subtype = VALUES(event_subtype),
+          event_time_label = VALUES(event_time_label),
+          event_datetime_utc = VALUES(event_datetime_utc),
+          universe_scope = VALUES(universe_scope),
+          source_authority = VALUES(source_authority),
           symbol = VALUES(symbol),
           title = VALUES(title),
           source = VALUES(source),
@@ -663,6 +686,12 @@ def load_market_event_calendar(
                 event_key,
                 event_date,
                 event_type,
+                event_family,
+                event_subtype,
+                event_time_label,
+                event_datetime_utc,
+                universe_scope,
+                source_authority,
                 symbol,
                 title,
                 source,

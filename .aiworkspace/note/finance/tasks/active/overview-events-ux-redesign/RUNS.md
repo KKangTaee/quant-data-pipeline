@@ -22,3 +22,17 @@
 - 2026-05-30: Browser smoke at 1500px and 1000px viewports - PASS; source mini cards rendered without card clipping, no horizontal overflow, no leaked HTML, console errors 0.
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
 - 2026-05-30: `git diff --check` - PASS.
+- 2026-07-07: `git status --short --branch` - current worktree confirmed as `codex/sub-dev` without creating a new branch; dirty state includes existing `.DS_Store`, run history, and generated QA screenshots that must stay out of this task commit.
+- 2026-07-07: Read `AGENTS.md`, docs index/roadmap/project map, existing Events task docs, Events UI/service/data/job/schema files, React workbench wrappers, and focused Events tests for 1차 analysis.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_events_snapshot_exposes_taxonomy_contract_for_expanded_calendar` - RED before implementation; failed on missing `schema_version`.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests.test_market_event_schema_contains_required_columns tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests.test_market_event_upsert_normalizes_payload_and_business_key` - RED before implementation; failed on missing schema/upsert taxonomy fields.
+- 2026-07-07: Same three focused taxonomy tests - PASS after schema/upsert/read-model implementation.
+- 2026-07-07: `.venv/bin/python -m unittest ...` event-focused Overview tests, 7 tests - PASS.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests` - PASS, 18 tests.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_events_snapshot_derives_taxonomy_for_legacy_event_rows` - RED before compatibility fix; `Source Authority` fell back to `unknown`.
+- 2026-07-07: Same legacy taxonomy derivation test - PASS after `Source Authority` reused legacy source-type inference.
+- 2026-07-07: DB smoke `build_market_events_snapshot(event_type=None, horizon_days=60, limit=20)` - PASS; `schema_version=market_events_snapshot_v2`, taxonomy columns present, legacy earnings rows inferred as `family_counts={'earnings': 20}`, `source_authority_counts={'provider_estimate': 20}`, `universe_scope_counts={'latest_movers': 20}`.
+- 2026-07-07: `.venv/bin/python -m py_compile app/services/overview/events.py finance/data/market_intelligence.py finance/data/db/schema.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: Event-focused Overview unittest subset, 9 tests - PASS.
+- 2026-07-07: `MarketIntelligenceEventCalendarContractTests`, 18 tests - PASS.
+- 2026-07-07: `git diff --check` - PASS.

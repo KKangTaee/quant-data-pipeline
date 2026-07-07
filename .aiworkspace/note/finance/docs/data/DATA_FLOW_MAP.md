@@ -168,11 +168,13 @@ BLS / BEA official release schedules or BLS .ics import
 
 - `market_event_calendar`는 event collector별 normalized output을 저장하는 공통 table이다.
 - 반복 수집은 `event_key` 기준 UPSERT로 같은 event row를 갱신한다.
+- `event_family`, `event_subtype`, `universe_scope`, `source_authority`는 FOMC / macro / earnings / market-structure / fixed-income / corporate-action 후보를 같은 UI/read-model contract로 읽기 위한 taxonomy 필드다.
+- 기존 row에 taxonomy 필드가 없으면 Overview read model은 `event_type`, `source_type`, `validation_status`, `source`에서 보수적으로 추론한다.
 - FOMC collector는 Fed 공식 `.gov` calendar page를 파싱한다. meeting range의 마지막 날을 `event_date`로 저장하고, 원본 month/date text와 link evidence는 `raw_payload_json`에 남긴다.
 - Earnings collector는 yfinance ticker `calendar` field에서 upcoming `Earnings Date`를 읽고 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장한다.
 - 선택적으로 Nasdaq earnings calendar web endpoint로 같은 symbol/date를 cross-check하고, 결과를 `validation_status`와 `raw_payload_json.source_validation`에 남긴다.
 - 날짜가 바뀐 같은 symbol/source의 이전 active estimate는 `event_status=superseded`로 남겨 audit trail을 유지한다.
-- Earnings 수집 대상은 manual symbol list 또는 최신 S&P 500 movers snapshot 일부로 제한한다. Coverage 1000/2000 전체 earnings scan은 rate-limit 위험 때문에 production화 전까지 기본 path가 아니다.
+- Earnings 수집 대상은 현재 manual symbol list 또는 최신 S&P 500 movers snapshot 일부가 기본이다. S&P 500 / Nasdaq-100 / portfolio / watchlist / major-cap earnings는 후속 collector 확장 대상이며, 저장 시 `universe_scope`로 구분한다.
 - Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, `app/jobs/overview_actions.py` facade를 거쳐 ingestion job wrapper로 DB에 저장한 뒤 service read model로 읽는다.
 - Macro calendar collector는 official BLS / BEA schedules를 사용한다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
 

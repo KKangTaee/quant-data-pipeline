@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-07 - Events calendar should include macro, earnings universe, and market-structure coverage
+
+- User request: 주식 / 매크로 / 퀀트 투자에서 반드시 확인해야 할 이벤트가 현재 Events 범위보다 더 넓은지, S&P 500 / 우량기업 실적도 일정 확인 대상인지 웹 시장조사 후 가이드를 요청함.
+- Interpreted goal: Events는 거래 신호가 아니라 시장 배경 달력이어야 하며, 공식 일정과 provider estimate를 명확히 분리한 수집 범위가 필요하다.
+- Analysis result: S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings는 first-class coverage가 맞다. P0는 official macro/Fed, S&P/major earnings, holidays/OPEX/index rebalance, Treasury auctions를 포함하고, earnings는 official/issuer-confirmed/provider-estimate/cross-checked/not-confirmed 상태를 표시해야 한다. 2차 구현으로 `market_event_calendar`와 `build_market_events_snapshot()`에 taxonomy contract를 추가했다.
+- Follow-up: 상세 리서치는 `.aiworkspace/note/finance/researches/active/2026-07-events-calendar-scope/`에 남겼다. 다음 구현 차수는 official macro / fixed-income calendar collector expansion이다.
+
 ### 2026-07-07 - Market Movers ticker-change gaps should be repaired by explicit alias application
 
 - User request: Top1000 / Top2000에서 `SATS`, `VSCO`처럼 ticker 변경 때문에 quote 누락이 생길 때마다 수동 조사 없이 해결할 기능을 1차~5차로 개발해 달라고 요청함.

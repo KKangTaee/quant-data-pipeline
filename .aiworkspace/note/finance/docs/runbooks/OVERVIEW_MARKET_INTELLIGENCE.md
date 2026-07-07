@@ -118,12 +118,14 @@ http://localhost:8501
 6. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
+   - Events read model은 legacy row라도 `event_family=central_bank`, `universe_scope=official_macro`, `source_authority=official`로 읽을 수 있게 추론한다.
 
 7. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
    - BLS source는 CPI / PPI / Employment Situation release schedule을 읽어 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
    - BEA source는 national GDP release schedule을 읽어 `MACRO_GDP`로 저장한다.
    - 결과는 모두 `source_type=official`, `validation_status=official`로 저장된다.
+   - 후속 확장 macro / fixed-income calendar row는 같은 table에 `event_family`, `event_subtype`, `universe_scope`, `source_authority` taxonomy로 구분해 저장한다.
    - BLS가 HTTP 403 등으로 차단되면 BEA가 성공하더라도 job은 `partial_success`가 될 수 있다.
    - BLS 자동 요청이 막히면 BLS 공식 release schedule `.ics` 파일을 브라우저로 내려받아 `BLS Calendar .ics File`에 업로드하고 `Import BLS .ics Calendar`를 실행한다.
    - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.
@@ -136,7 +138,9 @@ http://localhost:8501
    - latest movers mode는 stored S&P 500 intraday snapshot이 먼저 있어야 한다.
    - 특정 ticker 확인이 필요하면 `Manual Symbols`를 사용한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장된다.
+   - S&P 500 / Nasdaq-100 / portfolio / watchlist / major-cap earnings coverage는 후속 확장 대상이며, 저장 row는 `universe_scope`로 구분한다.
    - yfinance-only estimate는 `validation_status=estimate_only`, Nasdaq 확인 row는 `validation_status=cross_checked`, Nasdaq에서 확인하지 못한 row는 `validation_status=not_confirmed`가 된다.
+   - `source_authority=provider_estimate` 또는 `cross_checked`는 공식 실적 일정 확인이 아니다. 회사 IR / SEC / issuer-confirmed source가 붙은 경우만 official/issuer-confirmed로 올린다.
    - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
    - 수집 결과에는 `symbol_diagnostics`가 포함되며 `no_provider_earnings_date`, `outside_window`, `provider_error` 같은 missing / failure reason을 확인할 수 있다.
    - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.

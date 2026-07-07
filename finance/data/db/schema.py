@@ -430,6 +430,12 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           event_key CHAR(64) NOT NULL,
           event_date DATE NOT NULL,
           event_type VARCHAR(32) NOT NULL,
+          event_family VARCHAR(32) NULL,
+          event_subtype VARCHAR(64) NULL,
+          event_time_label VARCHAR(64) NULL,
+          event_datetime_utc TIMESTAMP NULL,
+          universe_scope VARCHAR(64) NULL,
+          source_authority VARCHAR(32) NULL,
           symbol VARCHAR(20) NULL,
           title VARCHAR(512) NOT NULL,
 
@@ -449,6 +455,8 @@ MARKET_INTELLIGENCE_SCHEMAS = {
 
           UNIQUE KEY uk_market_event_key (event_key),
           KEY ix_event_date_type (event_date, event_type),
+          KEY ix_event_family_date (event_family, event_date),
+          KEY ix_event_universe_date (universe_scope, event_date),
           KEY ix_event_symbol_date (symbol, event_date),
           KEY ix_event_status (event_type, event_status),
           KEY ix_event_source (source)

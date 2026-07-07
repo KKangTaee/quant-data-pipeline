@@ -13717,6 +13717,148 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(earnings_row["Freshness"], "Current estimate")
         self.assertEqual(earnings_row["Quality Action"], "Enable cross-check or refresh closer to date")
 
+    def test_market_events_snapshot_exposes_taxonomy_contract_for_expanded_calendar(self) -> None:
+        from app.services.overview.events import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return [
+                {
+                    "event_date": "2026-07-29",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: July 28-29, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_type": "provider_estimate",
+                    "validation_status": "not_confirmed",
+                    "event_status": "active",
+                    "event_family": "earnings",
+                    "event_subtype": "earnings",
+                    "event_time_label": "After Close",
+                    "event_datetime_utc": "2026-07-30 20:00:00",
+                    "universe_scope": "sp500",
+                    "source_authority": "provider_estimate",
+                    "source_url": "https://finance.yahoo.com/calendar/earnings",
+                    "confidence": 0.6,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+                {
+                    "event_date": "2026-08-21",
+                    "event_type": "OPTIONS_EXPIRATION",
+                    "symbol": None,
+                    "title": "Standard equity options expiration",
+                    "source": "cboe_options_calendar",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://cdn.cboe.com/resources/options/Cboe2026OPTIONSCalendar.pdf",
+                    "confidence": 0.95,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+
+        rows = snapshot["rows"]
+        self.assertEqual(snapshot["schema_version"], "market_events_snapshot_v2")
+        self.assertIn("market_structure", snapshot["taxonomy"]["event_families"])
+        self.assertIn("source_authorities", snapshot["taxonomy"])
+        for column in [
+            "Event Family",
+            "Event Subtype",
+            "Universe Scope",
+            "Source Authority",
+            "Event Time",
+            "Event Datetime UTC",
+        ]:
+            self.assertIn(column, rows.columns)
+        fomc_row = rows[rows["Type"] == "FOMC_MEETING"].iloc[0]
+        earnings_row = rows[rows["Type"] == "EARNINGS"].iloc[0]
+        options_row = rows[rows["Type"] == "OPTIONS_EXPIRATION"].iloc[0]
+        self.assertEqual(fomc_row["Event Family"], "central_bank")
+        self.assertEqual(fomc_row["Universe Scope"], "official_macro")
+        self.assertEqual(fomc_row["Source Authority"], "official")
+        self.assertEqual(earnings_row["Event Family"], "earnings")
+        self.assertEqual(earnings_row["Event Subtype"], "earnings")
+        self.assertEqual(earnings_row["Universe Scope"], "sp500")
+        self.assertEqual(earnings_row["Source Authority"], "provider_estimate")
+        self.assertEqual(earnings_row["Event Time"], "After Close")
+        self.assertEqual(earnings_row["Event Datetime UTC"], "2026-07-30 20:00")
+        self.assertEqual(options_row["Event Family"], "market_structure")
+        self.assertEqual(options_row["Event Subtype"], "options_expiration")
+        self.assertEqual(options_row["Universe Scope"], "all_us")
+        self.assertEqual(snapshot["coverage"]["family_counts"]["central_bank"], 1)
+        self.assertEqual(snapshot["coverage"]["family_counts"]["earnings"], 1)
+        self.assertEqual(snapshot["coverage"]["family_counts"]["market_structure"], 1)
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["official"], 2)
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["provider_estimate"], 1)
+        self.assertEqual(snapshot["coverage"]["universe_scope_counts"]["sp500"], 1)
+
+    def test_market_events_snapshot_derives_taxonomy_for_legacy_event_rows(self) -> None:
+        from app.services.overview.events import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return [
+                {
+                    "event_date": "2026-07-29",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_url": "https://finance.yahoo.com/calendar/earnings",
+                    "confidence": 0.65,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+
+        rows = snapshot["rows"]
+        fomc_row = rows[rows["Type"] == "FOMC_MEETING"].iloc[0]
+        earnings_row = rows[rows["Type"] == "EARNINGS"].iloc[0]
+        self.assertEqual(fomc_row["Event Family"], "central_bank")
+        self.assertEqual(fomc_row["Source Authority"], "official")
+        self.assertEqual(fomc_row["Universe Scope"], "official_macro")
+        self.assertEqual(earnings_row["Event Family"], "earnings")
+        self.assertEqual(earnings_row["Source Authority"], "provider_estimate")
+        self.assertEqual(earnings_row["Universe Scope"], "latest_movers")
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["official"], 1)
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["provider_estimate"], 1)
+
     def test_market_events_snapshot_macro_filter_reads_macro_prefix_rows(self) -> None:
         from app.services.overview.events import build_market_events_snapshot
 
@@ -19207,6 +19349,12 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         for column in [
             "event_date",
             "event_type",
+            "event_family",
+            "event_subtype",
+            "event_time_label",
+            "event_datetime_utc",
+            "universe_scope",
+            "source_authority",
             "symbol",
             "title",
             "source",
@@ -19222,6 +19370,8 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         ]:
             self.assertIn(column, schema_sql)
         self.assertIn("UNIQUE KEY uk_market_event_key", schema_sql)
+        self.assertIn("KEY ix_event_family_date", schema_sql)
+        self.assertIn("KEY ix_event_universe_date", schema_sql)
 
     def test_market_data_issue_schema_tracks_repeated_quote_gaps(self) -> None:
         from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
@@ -19797,6 +19947,12 @@ END:VCALENDAR
                         "event_type": "fomc meeting",
                         "symbol": "",
                         "title": "FOMC Meeting",
+                        "event_family": "central_bank",
+                        "event_subtype": "fomc_meeting",
+                        "event_time_label": "14:00 ET",
+                        "event_datetime_utc": "2026-06-17 18:00:00",
+                        "universe_scope": "official_macro",
+                        "source_authority": "official",
                         "source": "federal_reserve",
                         "source_url": "https://example.test/fomc",
                         "confidence": "0.95",
@@ -19812,6 +19968,12 @@ END:VCALENDAR
         captured = captured_rows[0]
         self.assertEqual(captured["event_date"], "2026-06-17")
         self.assertEqual(captured["event_type"], "FOMC_MEETING")
+        self.assertEqual(captured["event_family"], "central_bank")
+        self.assertEqual(captured["event_subtype"], "fomc_meeting")
+        self.assertEqual(captured["event_time_label"], "14:00 ET")
+        self.assertEqual(captured["event_datetime_utc"], "2026-06-17 18:00:00")
+        self.assertEqual(captured["universe_scope"], "official_macro")
+        self.assertEqual(captured["source_authority"], "official")
         self.assertIsNone(captured["symbol"])
         self.assertEqual(captured["source_type"], "unknown")
         self.assertEqual(captured["validation_status"], "unknown")
@@ -19819,6 +19981,8 @@ END:VCALENDAR
         self.assertEqual(captured["confidence"], 0.95)
         self.assertEqual(captured["raw_payload_json"], '{"meeting":"June"}')
         self.assertEqual(len(str(captured["event_key"])), 64)
+        self.assertIn("event_family", fake_db.executemany_calls[0][0])
+        self.assertIn("source_authority", fake_db.executemany_calls[0][0])
         self.assertTrue(fake_db.closed)
 
     def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:

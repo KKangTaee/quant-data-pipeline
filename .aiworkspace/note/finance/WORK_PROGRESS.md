@@ -29,6 +29,14 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Events calendar scope research 2026-07-07:
+  - `.aiworkspace/note/finance/researches/active/2026-07-events-calendar-scope/`에 Events 수집 범위 리서치를 추가했다.
+  - 결론은 S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings를 Events의 first-class coverage로 올리고, official macro / market structure calendar와 분리해 표시하는 것이다.
+  - 구현은 진행하지 않았다. 후속 Events UX 구현은 기존 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/` 차수 계획과 연결한다.
+- Overview Events calendar taxonomy 2차 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 2차 taxonomy/schema/read-model contract를 완료했다.
+  - `market_event_calendar`는 nullable taxonomy fields를 받고, Events snapshot은 `market_events_snapshot_v2` with family/source-authority/universe count maps를 제공한다.
+  - 다음 차수는 official macro / fixed-income calendar collector expansion이다.
 - Overview Market Movers Ticker Change Repair 2026-07-07:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-ticker-change-repair-20260707/`에서 1차~5차를 완료했다.
   - `market_symbol_alias` candidate / active alias store, Market Movers `티커 변경 복구 적용` action, and intraday `quote_symbol` alias lookup were added.

@@ -8,6 +8,7 @@ import re
 
 import urllib.request
 
+from collections import Counter
 from collections.abc import Callable, Sequence
 
 from datetime import date, datetime, timezone, timedelta
@@ -43,11 +44,76 @@ MAJOR_MACRO_EVENT_TYPES = {
     "MACRO_GDP",
 }
 
+EVENT_TAXONOMY = {
+    "event_families": [
+        "central_bank",
+        "macro",
+        "earnings",
+        "fixed_income",
+        "market_structure",
+        "corporate_action",
+        "other",
+    ],
+    "source_authorities": [
+        "official",
+        "issuer_confirmed",
+        "provider_estimate",
+        "cross_checked",
+        "not_confirmed",
+        "conflict",
+        "unknown",
+    ],
+    "universe_scopes": [
+        "official_macro",
+        "all_us",
+        "sp500",
+        "nasdaq100",
+        "portfolio",
+        "watchlist",
+        "latest_movers",
+        "major_cap",
+        "unknown",
+    ],
+}
+
+MARKET_STRUCTURE_EVENT_TYPES = {
+    "MARKET_HOLIDAY",
+    "TRADING_HOLIDAY",
+    "EXCHANGE_HOLIDAY",
+    "EARLY_CLOSE",
+    "OPTIONS_EXPIRATION",
+    "OPEX",
+    "INDEX_REBALANCE",
+    "RUSSELL_RECONSTITUTION",
+    "SP500_REBALANCE",
+    "NASDAQ100_RECONSTITUTION",
+}
+
+CORPORATE_ACTION_EVENT_TYPES = {
+    "DIVIDEND",
+    "SPLIT",
+    "STOCK_SPLIT",
+    "IPO",
+    "SPO",
+    "INVESTOR_DAY",
+}
+
+FIXED_INCOME_EVENT_TYPES = {
+    "TREASURY_AUCTION",
+    "TREASURY_REFUNDING",
+}
+
 EVENT_COLUMNS = [
     "Date",
     "Days Until",
     "Window",
     "Type",
+    "Event Family",
+    "Event Subtype",
+    "Universe Scope",
+    "Source Authority",
+    "Event Time",
+    "Event Datetime UTC",
     "Symbol",
     "Title",
     "Importance",
@@ -95,6 +161,10 @@ def _safe_float(value: Any) -> float | None:
     if pd.isna(numeric):
         return None
     return numeric
+
+def _normalize_taxonomy_value(value: Any) -> str | None:
+    normalized = str(value or "").strip().lower().replace(" ", "_")
+    return normalized or None
 
 def _iso_date(value: Any) -> str | None:
     if value in (None, ""):
@@ -154,13 +224,124 @@ def _empty_events_snapshot(
             "recent_high_importance_count": 0,
             "upcoming_high_importance_count": 0,
             "superseded_count": 0,
+            "family_counts": {},
+            "source_authority_counts": {},
+            "universe_scope_counts": {},
         },
+        "schema_version": "market_events_snapshot_v2",
+        "taxonomy": EVENT_TAXONOMY,
         "warnings": [message] if message else [],
     }
 
 def _normalize_event_type_value(value: str | None) -> str | None:
     normalized = str(value or "").strip().upper().replace(" ", "_")
     return normalized or None
+
+def _raw_payload(row: dict[str, Any]) -> dict[str, Any]:
+    value = row.get("raw_payload_json")
+    if isinstance(value, dict):
+        return value
+    if value in (None, ""):
+        return {}
+    try:
+        parsed = json.loads(str(value))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+def _event_family(row: dict[str, Any]) -> str:
+    persisted = _normalize_taxonomy_value(row.get("event_family"))
+    if persisted in EVENT_TAXONOMY["event_families"]:
+        return persisted
+    event_type = _normalize_event_type_value(row.get("event_type"))
+    if event_type in {"FOMC_MEETING", "FOMC"}:
+        return "central_bank"
+    if event_type == "MACRO" or str(event_type or "").startswith("MACRO_"):
+        return "macro"
+    if event_type == "EARNINGS":
+        return "earnings"
+    if event_type in FIXED_INCOME_EVENT_TYPES:
+        return "fixed_income"
+    if event_type in MARKET_STRUCTURE_EVENT_TYPES:
+        return "market_structure"
+    if event_type in CORPORATE_ACTION_EVENT_TYPES:
+        return "corporate_action"
+    return "other"
+
+def _event_subtype(row: dict[str, Any]) -> str:
+    persisted = _normalize_taxonomy_value(row.get("event_subtype"))
+    if persisted:
+        return persisted
+    event_type = _normalize_event_type_value(row.get("event_type"))
+    if not event_type:
+        return "unknown"
+    if event_type.startswith("MACRO_"):
+        return event_type.replace("MACRO_", "").lower()
+    return event_type.lower()
+
+def _event_universe_scope(row: dict[str, Any]) -> str:
+    persisted = _normalize_taxonomy_value(row.get("universe_scope"))
+    if persisted:
+        return persisted
+    payload = _raw_payload(row)
+    payload_scope = _normalize_taxonomy_value(payload.get("universe_scope"))
+    if payload_scope:
+        return payload_scope
+    family = _event_family(row)
+    if family in {"central_bank", "macro", "fixed_income"}:
+        return "official_macro"
+    if family == "market_structure":
+        return "all_us"
+    if family == "earnings":
+        return "latest_movers"
+    return "unknown"
+
+def _event_source_authority(row: dict[str, Any]) -> str:
+    persisted = _normalize_taxonomy_value(row.get("source_authority"))
+    if persisted in EVENT_TAXONOMY["source_authorities"]:
+        return persisted
+    validation = str(row.get("validation_status") or "").strip().lower()
+    source_type = str(row.get("source_type") or "").strip().lower()
+    source = str(row.get("source") or "").strip().lower()
+    inferred_source_type = _event_source_type(row)
+    if validation == "conflict":
+        return "conflict"
+    if validation == "cross_checked":
+        return "cross_checked"
+    if validation == "not_confirmed":
+        return "not_confirmed"
+    if source_type == "official" or validation == "official" or inferred_source_type == "Official":
+        if "company_ir" in source:
+            return "issuer_confirmed"
+        return "official"
+    if (
+        source_type == "provider_estimate"
+        or validation == "estimate_only"
+        or inferred_source_type == "Provider Estimate"
+    ):
+        return "provider_estimate"
+    return "unknown"
+
+def _event_time_label(row: dict[str, Any]) -> str:
+    value = str(row.get("event_time_label") or "").strip()
+    if value:
+        return value
+    payload = _raw_payload(row)
+    for key in ("event_time_label", "release_time_et", "report_time", "time_label"):
+        payload_value = str(payload.get(key) or "").strip()
+        if payload_value:
+            return payload_value
+    return "-"
+
+def _event_datetime_utc_label(row: dict[str, Any]) -> str:
+    value = row.get("event_datetime_utc")
+    if value not in (None, ""):
+        return _display_datetime(value) or "-"
+    payload = _raw_payload(row)
+    payload_value = payload.get("event_datetime_utc")
+    if payload_value not in (None, ""):
+        return _display_datetime(payload_value) or "-"
+    return "-"
 
 def _load_market_event_rows(
     *,
@@ -190,6 +371,12 @@ def _load_market_event_rows(
             SELECT
                 event_date,
                 event_type,
+                event_family,
+                event_subtype,
+                event_time_label,
+                event_datetime_utc,
+                universe_scope,
+                source_authority,
                 symbol,
                 title,
                 source,
@@ -200,7 +387,8 @@ def _load_market_event_rows(
                 superseded_at,
                 source_url,
                 confidence,
-                collected_at
+                collected_at,
+                raw_payload_json
             FROM market_event_calendar
             WHERE {" AND ".join(active_conditions)}
             ORDER BY event_date ASC, event_type ASC, COALESCE(symbol, '') ASC, title ASC
@@ -410,6 +598,9 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date, recent_days: int
     statuses = [_event_status_label(row) for row in rows]
     importance = [_event_importance_label(row) for row in rows]
     focus = [_event_focus_label(row, today=today) for row in rows]
+    family_counts = Counter(_event_family(row) for row in rows)
+    source_authority_counts = Counter(_event_source_authority(row) for row in rows)
+    universe_scope_counts = Counter(_event_universe_scope(row) for row in rows)
     days_until = [_event_days_until(row, today=today) for row in rows]
     upcoming_pairs = [(row, days) for row, days in zip(rows, days_until) if days is not None and days >= 0]
     recent_pairs = [
@@ -460,6 +651,9 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date, recent_days: int
         "recent_high_importance_count": len(recent_major_pairs),
         "upcoming_high_importance_count": len(upcoming_major_pairs),
         "superseded_count": statuses.count("Superseded"),
+        "family_counts": dict(sorted(family_counts.items())),
+        "source_authority_counts": dict(sorted(source_authority_counts.items())),
+        "universe_scope_counts": dict(sorted(universe_scope_counts.items())),
     }
 
 def _event_warnings(coverage: dict[str, Any]) -> list[str]:
@@ -489,6 +683,12 @@ def _event_rows_frame(
             "Days Until": _event_days_until(row, today=today),
             "Window": _event_window_label(row, today=today, recent_days=recent_days),
             "Type": row.get("event_type") or "-",
+            "Event Family": _event_family(row),
+            "Event Subtype": _event_subtype(row),
+            "Universe Scope": _event_universe_scope(row),
+            "Source Authority": _event_source_authority(row),
+            "Event Time": _event_time_label(row),
+            "Event Datetime UTC": _event_datetime_utc_label(row),
             "Symbol": row.get("symbol") or "-",
             "Title": row.get("title") or "-",
             "Importance": _event_importance_label(row),
@@ -548,11 +748,13 @@ def build_market_events_snapshot(
         rows = _prioritize_event_rows(rows, today=today_value, recent_days=bounded_recent_days)
         coverage = _event_coverage(rows, today=today_value, recent_days=bounded_recent_days)
         return {
+            "schema_version": "market_events_snapshot_v2",
             "status": "OK",
             "event_type": normalized_type or "All",
             "rows": _event_rows_frame(rows, today=today_value, recent_days=bounded_recent_days),
             "date_window": {"start_date": normalized_start, "end_date": normalized_end},
             "coverage": coverage,
+            "taxonomy": EVENT_TAXONOMY,
             "warnings": _event_warnings(coverage),
         }
     except Exception as exc:
