@@ -8645,3 +8645,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: React가 이미 대체한 summary / source lane / macro week lane / refresh popover는 기본 화면에서 제거하되, raw/detail evidence와 build-missing fallback은 유지해야 함.
 - Analysis result: React build가 available이면 Events tab entrypoint에서 Streamlit legacy lanes를 숨기고, detailed Streamlit tabs는 collapsed `상세 표 / 전체 근거` 섹션으로 낮추는 것이 가장 작은 안전한 정리다.
 - Follow-up: 후속 cleanup 완료. React props mutation도 함께 제거했고, desktop/mobile Browser QA에서 duplicate legacy lane 부재와 collapsed evidence 상태를 확인했다.
+
+### 2026-07-07 - Events feedback requires one React control surface
+
+- User request: 상단 `일정 타입`과 `Refresh Results`가 따로 놀고, Events Next의 Type/refresh buttons/rails/trust/calendar가 더 통합되어야 한다고 지적함.
+- Interpreted goal: React가 Events의 primary control surface가 되어야 하며, Streamlit selector/result expander는 fallback-only가 되어야 한다. Trust는 예측 신뢰가 아니라 일정 확정성으로 설명되어야 하고, calendar는 active-date grid가 아니라 월간 달력이어야 한다.
+- Analysis result: Python service가 filters / rail tabs / trust copy / today-current-week metadata / earnings universe 기준을 payload로 내려주고, React는 display-only filter/tab/month-grid interaction만 담당하는 구조가 기존 ownership boundary와 맞다.
+- Follow-up: follow-up 1~6차 완료. 전체 일정 갱신은 Python facade에서 순차 실행하고, desktop/mobile Browser QA에서 React brief, command, rail tabs, trust, month calendar, legacy expander 부재를 확인했다.

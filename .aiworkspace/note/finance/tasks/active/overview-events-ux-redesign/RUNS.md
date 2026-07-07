@@ -91,3 +91,14 @@
 - 2026-07-07: legacy cleanup QA - `npm install` / `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.
 - 2026-07-07: legacy cleanup QA - `git diff --check` - PASS.
 - 2026-07-07: legacy cleanup Browser QA desktop/mobile at `http://localhost:8503/?overview_tab=events` - PASS. React brief / command rendered, duplicate legacy `Next Event` / `stored rows` lanes absent, top Streamlit refresh popover absent, `상세 표 / 전체 근거` remained collapsed. Screenshots `browser-qa-events-legacy-cleanup.png` and `browser-qa-events-legacy-cleanup-mobile.png` are generated artifacts and stay uncommitted.
+- 2026-07-07: follow-up 1~6차 RED - focused Events tests failed before implementation on old React gating contract, missing `refresh_all`, missing `rail_tabs`, missing Korean trust labels, and missing calendar today/current-week metadata.
+- 2026-07-07: follow-up 1~6차 GREEN - focused Events React/source/action/service tests, 5 tests - PASS after React-first toolbar removal, refresh result payload adapter, all-refresh facade, rail tabs, Korean trust copy, and month calendar metadata.
+- 2026-07-07: follow-up QA - `npm install` / `npm run build` for `app/web/streamlit_components/events_workbench` - PASS; build emitted `component_static/assets/index-BYNrMhGG.css` and `component_static/assets/index-iTMiB4bu.js`; generated `node_modules` removed after QA.
+- 2026-07-07: follow-up QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py app/jobs/overview_actions.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: follow-up QA - focused Events contract tests, 5 tests - PASS.
+- 2026-07-07: follow-up QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: follow-up QA - `OverviewAutomationContractTests`, 155 tests - PASS after updating prior static contract to the new fallback-only toolbar structure.
+- 2026-07-07: follow-up QA - `MarketIntelligenceEventCalendarContractTests`, 28 tests - PASS.
+- 2026-07-07: follow-up Browser QA desktop at `http://localhost:8504/?overview_tab=events` - PASS. React brief / `전체 일정 갱신` / earnings-universe note / rail tabs / schedule-confirmation section / month calendar rendered; top-level legacy `일정 타입` and `Refresh Results` were absent. Screenshot `browser-qa-events-followup-calendar-desktop.png` is generated and uncommitted.
+- 2026-07-07: follow-up Browser QA mobile 390px - PASS. Brief, filters, `전체 일정 갱신`, rail tabs, trust, and calendar were present; `Refresh Results` absent. Screenshot `browser-qa-events-followup-calendar-mobile.png` is generated and uncommitted.
+- 2026-07-07: follow-up QA - `git diff --check` - PASS.

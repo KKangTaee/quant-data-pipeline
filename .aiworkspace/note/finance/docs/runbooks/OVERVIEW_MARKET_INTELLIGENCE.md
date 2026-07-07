@@ -149,11 +149,12 @@ http://localhost:8501
 
 9. `Workspace > Overview > Events`
    - React `다가오는 시장 이벤트 브리프` workbench가 available이면 next event, today / this week / next 30D counts, official vs provider-estimate counts, stale estimate count, and context-only boundary를 먼저 확인한다.
-   - `화면 / 수집 갱신` command band에서 `화면 새로고침`은 stored DB rows를 다시 읽고, FOMC / Macro / Market Structure / Earnings refresh는 `app/jobs/overview_actions.py` facade를 통해 provider/job collection을 실행한다.
-   - React type filter는 `All`, `FOMC`, `Macro`, `Earnings`, `Market Structure`를 display-only로 좁힌다. Source-state filter는 `All`, `Review`, `Official`, `Estimate`를 display-only로 좁힌다.
-   - Event rails는 `Recent major`, `Today`, `This Week`, `Next 30D`, `Later` 순서로 읽는다. Badge는 official / provider estimate / cross-checked / stale / not confirmed 같은 source-state를 구분한다.
-   - `자료 신뢰 / 추정 일정 확인`에서 stale estimates, not confirmed, estimate only, conflict sections를 확인한다. Earnings provider estimate는 official macro/FOMC/market-structure row와 다르게 읽는다.
-   - `그래프로 보는 일정 근거` calendar day buckets와 weekly density bars는 날짜별 event count, major title, stale/review count, family mix를 보여준다. Hover tooltip은 일정 밀도와 자료 상태 근거이며 예측/신호가 아니다.
+   - `화면 / 수집 갱신` command band에서 `화면 새로고침`은 stored DB rows를 다시 읽고, `전체 일정 갱신`은 FOMC / Macro / Market Structure / Earnings collectors를 `app/jobs/overview_actions.py` facade에서 순차 실행한다. 개별 refresh도 같은 Python facade를 통과한다.
+   - `실적 예상 일정 갱신`은 최근 S&P 500 movers snapshot 상위 최대 20개 후보를 기준으로 하며 provider 호출은 최대 50개 symbol / 120일 lookahead로 제한한다. 이 일정은 issuer-confirmed source가 붙기 전까지 provider estimate다.
+   - React `일정 타입` filter는 `전체`, `FOMC`, `매크로`, `실적`, `시장 구조`를 display-only로 좁힌다. `자료 상태` filter는 `전체`, `확인 필요`, `공식 / 확인됨`, `추정 / 미확정`을 display-only로 좁힌다.
+   - Event rails는 row 5개를 한 번에 펼치지 않고 `최근 중요`, `오늘 / 이번 주`, `30일 내`, `나중` 탭으로 읽는다. Badge는 공식 일정 / 제공사 추정 / 교차 확인 / 오래된 추정 / 미확정 같은 source-state를 구분한다.
+   - `일정 확정성 / 추정 일정 점검`에서 오래된 추정 일정, 미확정 일정, 추정만 있음, 일정 충돌 sections를 확인한다. 이 섹션의 신뢰는 예측 신뢰가 아니라 source authority / freshness / confirmation 상태다.
+   - `캘린더로 보는 일정 근거`는 월간 7열 calendar grid와 weekly density bars를 보여준다. 오늘과 이번 주는 별도 색으로 표시되며, hover tooltip은 날짜별 event count, major title, stale/review count, family mix를 보여준다. 이 정보는 일정 밀도와 자료 상태 근거이며 예측/신호가 아니다.
    - `원본 / 상세 근거`는 collapsed appendix다. 펼치면 Source URL, Source Authority, Collected At 등 service-provided evidence rows를 확인한다.
    - React build가 없으면 기존 Streamlit summary/source lane과 `Agenda`, `Calendar`, `Quality`, `Raw` tabs가 fallback으로 남는다.
    - 하단 Streamlit detail filters인 `Window`, `Source Type`, `Validation`, `Importance`로 캘린더 범위와 source quality를 더 좁힐 수 있다.
@@ -306,9 +307,9 @@ PY
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
-- Overview Events starts with the React workbench when the component build exists: brief, command boundary, local display filters, event rails, trust review, calendar day buckets, weekly density, and collapsed raw evidence appendix.
+- Overview Events starts with the React workbench when the component build exists: brief, command boundary with last refresh results, local display filters, tabbed event rails, schedule-confirmation review, monthly calendar grid, weekly density, and collapsed raw evidence appendix.
 - Overview Events read model includes `Days Until`, `Importance`, taxonomy, quality / validation fields, source status summaries, and workbench payload sections; FOMC / macro / fixed-income rows are high-context official rows, earnings rows remain estimates until confirmed, and rows with source / validation action show `Needs Review`.
-- Overview Events calendar/density visuals show schedule clustering and stale/review evidence only. They do not create validation gates, trade signals, monitoring signals, or automated actions.
+- Overview Events calendar/density visuals show schedule clustering and stale/review evidence only. Today and the current week can be highlighted in the month grid, but they do not create validation gates, trade signals, monitoring signals, or automated actions.
 - Overview Events keeps existing Streamlit `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters as fallback and lower evidence sections.
 - Overview Events `Latest Collection` / freshness updates after a successful collector run.
 - Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: phase / headline / summary, freshness, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, refresh / reload actions, context-only boundary, CNN / AAII cross-read, recent range percentile / min-max, divergence axes, service-owned analysis steps, driver lanes, component explanations, CNN component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored row evidence.

@@ -4959,7 +4959,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "forbidden": "_legacy._render_events_tab",
                 "required": [
                     "render_events_header()",
-                    "render_event_refresh_toolbar(show_refresh=not react_available)",
+                    'event_filter = "ALL"',
+                    "render_event_refresh_toolbar()",
                     "load_event_snapshot_context(",
                     "render_events_overview_lanes(",
                 ],
@@ -6213,15 +6214,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("render_events_react_workbench", helper_source)
         self.assertIn("build_events_workbench_payload", helper_source)
         self.assertIn("react_available = events_react_workbench_available()", events_tab_source)
-        self.assertIn("render_event_refresh_toolbar(show_refresh=not react_available)", events_tab_source)
+        self.assertIn('event_filter = "ALL"', events_tab_source)
+        self.assertNotIn("render_event_refresh_toolbar(show_refresh=not react_available)", events_tab_source)
         self.assertIn("react_rendered = render_events_react_workbench_section(context) if react_available else False", events_tab_source)
         self.assertIn("if not react_rendered:", events_tab_source)
+        self.assertGreater(
+            events_tab_source.index("render_event_refresh_results()"),
+            events_tab_source.index("if not react_rendered:"),
+        )
         self.assertIn("render_events_overview_lanes(context)", events_tab_source)
         self.assertIn("render_events_streamlit_evidence_section(context, expanded=False)", events_tab_source)
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn('payload.schema_version === "events_workbench_v1"', react_source)
         self.assertIn("payload.brief", react_source)
-        self.assertIn("rails.map", react_source)
+        self.assertIn("railTabs.tabs.map", react_source)
         self.assertIn("payload.trust_review", react_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("Streamlit.setFrameHeight", react_source)
@@ -6239,11 +6245,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('if action_id == "refresh_macro"', helper_source)
         self.assertIn('if action_id == "refresh_market_structure"', helper_source)
         self.assertIn('if action_id == "refresh_earnings"', helper_source)
+        self.assertIn('if action_id == "refresh_all"', helper_source)
+        self.assertIn("run_overview_event_calendars_refresh_all", helper_source)
         self.assertIn("run_overview_market_structure_calendar", helper_source)
+        self.assertIn("_events_refresh_results_payload", helper_source)
+        self.assertIn('"last_results"', helper_source)
         self.assertIn("commandActions.map", react_source)
         self.assertIn("setPendingActionId", react_source)
         self.assertIn("events-workbench__command", react_source)
         self.assertIn("refresh_boundary", react_source)
+        self.assertIn("lastResults", react_source)
+        self.assertIn("실적 예상 일정 기준", react_source)
 
     def test_events_react_workbench_renders_filters_calendar_trust_and_evidence(self) -> None:
         component_root = Path("app/web/streamlit_components/events_workbench")
@@ -6253,10 +6265,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("familyOptions.map", react_source)
         self.assertIn("setFamilyFilter", react_source)
         self.assertIn("setReviewFilter", react_source)
-        self.assertIn("filteredRails", react_source)
+        self.assertIn("railTabs.tabs.map", react_source)
+        self.assertIn("activeRailKey", react_source)
         self.assertIn("trustSections.map", react_source)
         self.assertIn("calendarDays", react_source)
         self.assertIn("calendarDensity", react_source)
+        self.assertIn("calendarMonthDays", react_source)
         self.assertNotIn("payload.rails =", react_source)
         self.assertNotIn("payload.command =", react_source)
         self.assertNotIn("payload.calendar =", react_source)
@@ -6264,8 +6278,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("events-workbench__day-tooltip", react_source)
         self.assertIn("setExpandedEvidence", react_source)
         self.assertIn("events-workbench__evidence-table", react_source)
+        self.assertIn("일정 타입", react_source)
+        self.assertIn("일정 확정성", react_source)
         self.assertIn(".events-workbench__filterbar", react_style)
-        self.assertIn(".events-workbench__calendar-grid", react_style)
+        self.assertIn(".events-workbench__rail-tabs", react_style)
+        self.assertIn(".events-workbench__month-grid", react_style)
+        self.assertIn(".events-workbench__day--today", react_style)
+        self.assertIn(".events-workbench__day--current-week", react_style)
         self.assertIn(".events-workbench__day-tooltip", react_style)
         self.assertIn(".events-workbench__density-bar", react_style)
 
@@ -6605,7 +6624,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertLess(react_index, lane_guard_index)
         self.assertLess(lane_guard_index, evidence_index)
-        self.assertIn("render_event_refresh_toolbar(show_refresh=not react_available)", tab_body)
+        self.assertIn('event_filter = "ALL"', tab_body)
+        self.assertNotIn("render_event_refresh_toolbar(show_refresh=not react_available)", tab_body)
+        self.assertGreater(
+            tab_body.index("render_event_refresh_results()"),
+            tab_body.index("if not react_rendered:"),
+        )
         self.assertIn("with st.expander(\"상세 표 / 전체 근거\"", helper_source)
         self.assertIn("filter_event_calendar_rows(context)", helper_source)
         self.assertIn("load_overview_macro_week_lane(context.snapshot)", helper_source)
@@ -8550,6 +8574,57 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("run_overview_nasdaq_symbol_directory()", helper_source)
         self.assertNotIn("상장폐지 확정", helper_source)
         self.assertNotIn("거래정지 확정", helper_source)
+
+    def test_overview_action_facade_runs_events_calendar_refresh_all(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str, status: str = "success") -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": status, "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+            patch.object(
+                overview_actions,
+                "run_overview_market_structure_calendar",
+                side_effect=lambda **_: _result("market_structure_calendar"),
+            ) as market_structure,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar", status="partial_success"),
+            ) as earnings,
+        ):
+            summary = overview_actions.run_overview_event_calendars_refresh_all(years=(2026, 2027))
+
+        self.assertEqual(summary["job_name"], "overview_event_calendars_refresh_all")
+        self.assertEqual(summary["status"], "partial_success")
+        self.assertEqual(summary["jobs_run"], 4)
+        self.assertEqual(summary["jobs_failed"], 0)
+        self.assertEqual(
+            calls,
+            [
+                "fomc_calendar",
+                "macro_calendar",
+                "market_structure_calendar",
+                "earnings_calendar",
+            ],
+        )
+        fomc.assert_called_once_with(years=(2026, 2027))
+        macro.assert_called_once_with(years=(2026, 2027))
+        market_structure.assert_called_once_with(years=(2026, 2027))
+        earnings.assert_called_once_with()
 
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
@@ -14115,11 +14190,29 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertTrue(payload["brief"]["freshness_summary"]["has_stale_estimates"])
         self.assertEqual(payload["command"]["actions"][0]["id"], "reload")
         self.assertIn("DB", payload["command"]["actions"][0]["detail"])
+        self.assertIn("refresh_all", [action["id"] for action in payload["command"]["actions"]])
         self.assertIn("provider/job", payload["command"]["refresh_boundary"])
+        self.assertEqual(payload["command"]["earnings_universe"]["symbol_source"], "latest_movers")
+        self.assertEqual(payload["command"]["earnings_universe"]["top_movers_limit"], 20)
+        self.assertEqual(payload["command"]["earnings_universe"]["max_symbols"], 50)
+        self.assertEqual(payload["filters"]["family"]["label"], "일정 타입")
+        self.assertEqual(payload["filters"]["source_state"]["label"], "자료 상태")
         self.assertEqual(payload["rails"][0]["key"], "recent_major")
         self.assertEqual(payload["rails"][1]["items"][0]["symbol"], "MSFT")
+        self.assertEqual(payload["rail_tabs"]["default_key"], "near_term")
+        self.assertEqual(payload["rail_tabs"]["tabs"][1]["label"], "오늘 / 이번 주")
+        self.assertEqual(payload["rail_tabs"]["tabs"][1]["items"][0]["symbol"], "MSFT")
+        self.assertIn("최근 중요", [tab["label"] for tab in payload["rail_tabs"]["tabs"]])
+        self.assertEqual(payload["trust_review"]["eyebrow"], "자료 상태")
+        self.assertIn("일정 확정성", payload["trust_review"]["title"])
+        self.assertIn("공식 일정", payload["trust_review"]["source_boundary"])
+        self.assertIn("제공사 추정", payload["trust_review"]["source_boundary"])
+        self.assertEqual(payload["trust_review"]["sections"][0]["label"], "오래된 추정 일정")
         self.assertEqual(payload["trust_review"]["not_confirmed_count"], 1)
         self.assertEqual(payload["trust_review"]["stale_estimate_count"], 1)
+        self.assertEqual(payload["calendar"]["today"], "2026-07-07")
+        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
         self.assertEqual(payload["calendar"]["days"][1]["date"], "2026-07-07")
         self.assertEqual(payload["calendar"]["days"][1]["review_count"], 1)
         self.assertTrue(payload["calendar"]["density"])

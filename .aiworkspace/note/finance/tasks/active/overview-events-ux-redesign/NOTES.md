@@ -25,3 +25,8 @@
 - 2026-07-07 9차: React filters are display-only filters over service-provided event items. They do not change the DB query, create signals, or reinterpret raw rows.
 - Calendar day hover and weekly density bars use `payload.calendar.days` / `payload.calendar.density`; they show schedule clustering and stale/review counts only.
 - The raw evidence appendix is collapsed by default and uses the service evidence rows so Source URL, confidence-adjacent authority, and collected-at fields remain reachable without making raw table the main surface.
+- 2026-07-07 follow-up 1~6차: React build가 available이면 Events tab은 Streamlit `일정 타입` selector와 separate `Refresh Results` expander를 더 이상 상단에 렌더하지 않는다. React payload는 full event rows를 받아 local filter를 수행하고, helper는 refresh result를 `command.last_results`로 붙인다.
+- `전체 일정 갱신`은 React action id만 emits하고 Python `run_overview_event_calendars_refresh_all()` facade가 FOMC -> Macro -> Market Structure -> Earnings 순서로 collector bundle을 실행한다. 이 button은 자동 action이나 schedule이 아니라 user-triggered refresh다.
+- Rails는 service `rail_tabs`의 `최근 중요`, `오늘 / 이번 주`, `30일 내`, `나중` 탭으로 읽는다. 기존 non-overlapping `rails` list는 compatibility payload로 유지한다.
+- `일정 확정성 / 추정 일정 점검`은 prediction trust가 아니라 source authority / confirmation / freshness review다. Label과 explanatory copy는 service payload가 소유한다.
+- React calendar는 active-date grid가 아니라 월간 7열 calendar로 렌더한다. Today / current-week highlight 기준은 service `calendar.today`, `current_week_start`, `current_week_end`에서 온다.

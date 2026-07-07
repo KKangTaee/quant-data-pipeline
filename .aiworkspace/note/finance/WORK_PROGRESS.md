@@ -5606,3 +5606,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - React workbench build가 있으면 Events 탭은 중복 Streamlit summary / source / macro-week lanes와 상단 Refresh popover를 숨기고, React command band를 refresh entry로 사용한다.
   - Streamlit Agenda / Calendar / Quality / Raw는 삭제하지 않고 하단 `상세 표 / 전체 근거` collapsed fallback/evidence section으로 낮췄다.
   - React component는 incoming payload를 직접 mutate하지 않도록 기본값을 파생 상수로 정리했다. 상세 QA 기록은 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/RUNS.md`를 본다.
+- Overview Events feedback follow-up 1~6차 2026-07-07:
+  - 상단 Streamlit `일정 타입` / separate `Refresh Results`를 React-first path에서 제거하고, refresh 결과는 React command band의 last results로 통합했다.
+  - React는 `전체 일정 갱신`, 실적 예상 일정 기준, 탭형 event rails, `일정 확정성 / 추정 일정 점검`, 오늘/current-week highlight가 있는 월간 calendar grid를 렌더한다.
+  - QA와 commit handoff는 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/STATUS.md` / `RUNS.md`를 본다. Browser screenshots는 generated artifact로 커밋 제외한다.

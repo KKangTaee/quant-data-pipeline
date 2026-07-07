@@ -189,7 +189,8 @@ finance_meta.market_event_calendar
 - Macro calendar collector는 official BLS / BEA / Census / ISM / Treasury schedules를 사용할 수 있다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
 - Treasury auction rows are fixed-income calendar context and stay in the same Events table with `event_family=fixed_income`; they are not trade signals or monitoring triggers.
 - Market-structure rows use official source evidence for holidays, early closes, options expiration, and Russell reconstitution context. They are schedule-density background and are not validation gates, trading signals, monitoring signals, or automated actions.
-- `build_events_workbench_payload()` owns the React-ready Events brief, command boundary, rails, trust review, calendar day buckets, weekly density, and evidence rows. React filters and hover interactions are display-only over that payload.
+- `build_events_workbench_payload()` owns the React-ready Events brief, command boundary, filter labels, rail tabs, trust review, calendar day buckets, weekly density, and evidence rows. React filters, tabs, month-grid rendering, and hover interactions are display-only over that payload.
+- React-first Events hides the legacy Streamlit Type selector and refresh result expander when the component build is available. The helper still owns refresh side effects and attaches last refresh results to `command.last_results`; the old Streamlit toolbar remains fallback-only.
 
 ## Overview futures monitor 흐름
 

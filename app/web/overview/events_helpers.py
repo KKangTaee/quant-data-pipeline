@@ -14,6 +14,7 @@ from app.services.overview.events import build_events_workbench_payload
 from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_earnings_calendar,
+    run_overview_event_calendars_refresh_all,
     run_overview_fomc_calendar,
     run_overview_macro_calendar,
     run_overview_market_structure_calendar,
@@ -59,6 +60,14 @@ EVENT_TYPE_LABELS = {
     "EARNINGS": "Earnings",
     "MACRO": "Macro",
 }
+
+EVENT_REFRESH_RESULT_KEYS = [
+    ("overview_events_all_calendar_result", "전체 일정 갱신"),
+    ("overview_fomc_calendar_result", "FOMC 공식 일정"),
+    ("overview_macro_calendar_result", "매크로 공식 일정"),
+    ("overview_market_structure_calendar_result", "시장 구조 일정"),
+    ("overview_earnings_calendar_result", "실적 예상 일정"),
+]
 
 
 @dataclass(frozen=True)
@@ -331,12 +340,7 @@ def _render_market_job_result(result_key: str) -> None:
 def _has_event_refresh_result() -> bool:
     return any(
         isinstance(st.session_state.get(key), dict)
-        for key in [
-            "overview_fomc_calendar_result",
-            "overview_earnings_calendar_result",
-            "overview_macro_calendar_result",
-            "overview_market_structure_calendar_result",
-        ]
+        for key, _label in EVENT_REFRESH_RESULT_KEYS
     )
 
 
@@ -344,10 +348,47 @@ def render_event_refresh_results() -> None:
     if not _has_event_refresh_result():
         return
     with st.expander("Refresh Results", expanded=False):
-        _render_market_job_result("overview_fomc_calendar_result")
-        _render_market_job_result("overview_earnings_calendar_result")
-        _render_market_job_result("overview_macro_calendar_result")
-        _render_market_job_result("overview_market_structure_calendar_result")
+        for result_key, _label in EVENT_REFRESH_RESULT_KEYS:
+            _render_market_job_result(result_key)
+
+
+def _events_refresh_result_payload(result_key: str, label: str) -> dict[str, Any] | None:
+    result = st.session_state.get(result_key)
+    if not isinstance(result, dict):
+        return None
+    details = dict(result.get("details") or {})
+    return {
+        "key": result_key,
+        "label": label,
+        "status": result.get("status") or "unknown",
+        "message": result.get("message") or "",
+        "rows_written": result.get("rows_written"),
+        "events_found": details.get("events_found"),
+        "source": details.get("source"),
+        "method": details.get("method") or details.get("method_requested"),
+        "duration_sec": result.get("duration_sec"),
+        "jobs_run": result.get("jobs_run"),
+        "jobs_failed": result.get("jobs_failed"),
+        "finished_at": result.get("finished_at"),
+        "sub_results": [
+            {
+                "label": row.get("label") or row.get("job_name") or "-",
+                "status": row.get("status") or "unknown",
+                "message": row.get("message") or "",
+            }
+            for row in list(result.get("results") or [])[:6]
+            if isinstance(row, dict)
+        ],
+    }
+
+
+def _events_refresh_results_payload() -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    for result_key, label in EVENT_REFRESH_RESULT_KEYS:
+        payload = _events_refresh_result_payload(result_key, label)
+        if payload is not None:
+            payloads.append(payload)
+    return payloads
 
 
 def _events_react_event_payload(value: Any) -> dict[str, Any] | None:
@@ -378,6 +419,13 @@ def _handle_events_react_event(event: dict[str, Any], context: EventSnapshotCont
     st.session_state["overview_events_react_event_token"] = event_token
     current_year = datetime.now().year
     if action_id == "reload":
+        st.rerun()
+    if action_id == "refresh_all":
+        with st.spinner("Collecting all Events calendar sources sequentially..."):
+            _store_overview_job_result(
+                "overview_events_all_calendar_result",
+                run_overview_event_calendars_refresh_all(years=(current_year, current_year + 1)),
+            )
         st.rerun()
     if action_id == "refresh_fomc":
         with st.spinner("Collecting FOMC calendar from the official Fed page..."):
@@ -412,7 +460,10 @@ def _handle_events_react_event(event: dict[str, Any], context: EventSnapshotCont
 def render_events_react_workbench_section(context: EventSnapshotContext) -> bool:
     if not events_react_component_available():
         return False
-    payload = build_events_workbench_payload(context.snapshot)
+    payload = dict(build_events_workbench_payload(context.snapshot))
+    command = dict(payload.get("command") or {})
+    command["last_results"] = _events_refresh_results_payload()
+    payload["command"] = command
     react_event = render_events_react_workbench(
         payload,
         key=f"overview_events_workbench_{context.event_filter}",

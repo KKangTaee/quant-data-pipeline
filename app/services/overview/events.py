@@ -87,6 +87,67 @@ EVENT_TAXONOMY = {
     ],
 }
 
+EVENT_FAMILY_LABELS_KO = {
+    "all": "전체",
+    "central_bank": "FOMC",
+    "macro": "매크로",
+    "earnings": "실적",
+    "fixed_income": "국채 / 금리",
+    "market_structure": "시장 구조",
+    "corporate_action": "기업 이벤트",
+    "other": "기타",
+    "unknown": "미분류",
+}
+
+EVENT_SOURCE_STATE_LABELS_KO = {
+    "all": "전체",
+    "review": "확인 필요",
+    "official": "공식 / 확인됨",
+    "estimate": "추정 / 미확정",
+}
+
+EVENT_SOURCE_AUTHORITY_LABELS_KO = {
+    "official": "공식 일정",
+    "issuer_confirmed": "기업 확인",
+    "provider_estimate": "제공사 추정",
+    "cross_checked": "교차 확인",
+    "not_confirmed": "미확정",
+    "conflict": "충돌",
+    "unknown": "출처 미확인",
+}
+
+EVENT_UNIVERSE_SCOPE_LABELS_KO = {
+    "official_macro": "공식 매크로",
+    "all_us": "미국 시장 전체",
+    "sp500": "S&P 500",
+    "nasdaq100": "Nasdaq-100",
+    "portfolio": "포트폴리오",
+    "watchlist": "관심목록",
+    "latest_movers": "최근 Movers",
+    "major_cap": "대형주",
+    "unknown": "범위 미확인",
+}
+
+EVENT_VALIDATION_LABELS_KO = {
+    "official": "공식 일정",
+    "estimate_only": "추정만 있음",
+    "cross_checked": "교차 확인",
+    "not_confirmed": "미확정",
+    "conflict": "일정 충돌",
+    "unknown": "확인 상태 미상",
+}
+
+EVENT_FRESHNESS_LABELS_KO = {
+    "official": "공식 일정",
+    "current_estimate": "최근 추정",
+    "stale_estimate": "오래된 추정",
+    "estimate_age_unknown": "추정 수집일 미상",
+    "current_source": "최근 수집",
+    "stale_source": "오래된 수집",
+    "collection_age_unknown": "수집일 미상",
+    "superseded": "대체된 일정",
+}
+
 MARKET_STRUCTURE_EVENT_TYPES = {
     "MARKET_HOLIDAY",
     "TRADING_HOLIDAY",
@@ -835,6 +896,15 @@ def _workbench_row_needs_review(record: dict[str, Any]) -> bool:
         return True
     return "stale" in freshness or validation in {"not confirmed", "estimate only", "conflict"}
 
+def _display_key(value: Any) -> str:
+    return str(value or "").strip().lower().replace(" ", "_").replace("-", "_")
+
+def _display_label(mapping: dict[str, str], value: Any, *, fallback: str = "-") -> str:
+    key = _display_key(value)
+    if not key:
+        return fallback
+    return mapping.get(key, str(value or fallback).replace("_", " ").title())
+
 def _workbench_item(record: dict[str, Any]) -> dict[str, Any]:
     days_until = _workbench_days_until(record)
     family = str(record.get("Event Family") or "unknown")
@@ -843,14 +913,14 @@ def _workbench_item(record: dict[str, Any]) -> dict[str, Any]:
     freshness = str(record.get("Freshness") or "Unknown")
     validation = str(record.get("Validation") or "Unknown")
     badges = [
-        {"label": family.replace("_", " ").title(), "kind": "family"},
-        {"label": source_authority.replace("_", " ").title(), "kind": "source_authority"},
-        {"label": universe_scope.replace("_", " ").title(), "kind": "universe_scope"},
+        {"label": _display_label(EVENT_FAMILY_LABELS_KO, family), "kind": "family"},
+        {"label": _display_label(EVENT_SOURCE_AUTHORITY_LABELS_KO, source_authority), "kind": "source_authority"},
+        {"label": _display_label(EVENT_UNIVERSE_SCOPE_LABELS_KO, universe_scope), "kind": "universe_scope"},
     ]
     if "stale" in freshness.lower():
-        badges.append({"label": freshness, "kind": "freshness"})
+        badges.append({"label": _display_label(EVENT_FRESHNESS_LABELS_KO, freshness), "kind": "freshness"})
     if validation not in {"Official", "Unknown"}:
-        badges.append({"label": validation, "kind": "validation"})
+        badges.append({"label": _display_label(EVENT_VALIDATION_LABELS_KO, validation), "kind": "validation"})
     return {
         "date": str(record.get("Date") or "-"),
         "days_until": days_until,
@@ -889,6 +959,58 @@ def _workbench_rail(key: str, label: str, records: list[dict[str, Any]]) -> dict
         "items": items,
     }
 
+def _events_workbench_filters() -> dict[str, Any]:
+    return {
+        "family": {
+            "label": "일정 타입",
+            "options": [
+                {"id": key, "label": label}
+                for key, label in [
+                    ("all", "전체"),
+                    ("central_bank", "FOMC"),
+                    ("macro", "매크로"),
+                    ("earnings", "실적"),
+                    ("market_structure", "시장 구조"),
+                ]
+            ],
+        },
+        "source_state": {
+            "label": "자료 상태",
+            "options": [
+                {"id": key, "label": label}
+                for key, label in [
+                    ("all", "전체"),
+                    ("review", "확인 필요"),
+                    ("official", "공식 / 확인됨"),
+                    ("estimate", "추정 / 미확정"),
+                ]
+            ],
+        },
+    }
+
+def _events_workbench_rail_tabs(
+    *,
+    recent_major_records: list[dict[str, Any]],
+    today_records: list[dict[str, Any]],
+    this_week_records: list[dict[str, Any]],
+    next_30d_records: list[dict[str, Any]],
+    later_records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    tabs = [
+        _workbench_rail("recent_major", "최근 중요", recent_major_records),
+        _workbench_rail("near_term", "오늘 / 이번 주", today_records + this_week_records),
+        _workbench_rail("next_30d", "30일 내", next_30d_records),
+        _workbench_rail("later", "나중", later_records),
+    ]
+    default_key = "near_term"
+    if not any(tab["key"] == default_key and tab["count"] for tab in tabs):
+        default_key = next((tab["key"] for tab in tabs if tab["count"]), "near_term")
+    return {
+        "default_key": default_key,
+        "tabs": tabs,
+        "empty_text": "선택한 조건에 맞는 일정이 없습니다.",
+    }
+
 def _workbench_week_start(date_text: str) -> str | None:
     try:
         day = pd.Timestamp(date_text).date()
@@ -898,7 +1020,7 @@ def _workbench_week_start(date_text: str) -> str | None:
         return None
     return (day - timedelta(days=day.weekday())).isoformat()
 
-def _events_workbench_calendar(records: list[dict[str, Any]]) -> dict[str, Any]:
+def _events_workbench_calendar(records: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
     by_day: dict[str, list[dict[str, Any]]] = {}
     for record in records:
         date_text = str(record.get("Date") or "")
@@ -944,7 +1066,16 @@ def _events_workbench_calendar(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "by_family": dict(sorted(bucket["by_family"].items())),
             }
         )
-    return {"days": days, "density": density}
+    current_week_start = today - timedelta(days=today.weekday())
+    current_week_end = current_week_start + timedelta(days=6)
+    return {
+        "today": today.isoformat(),
+        "current_week_start": current_week_start.isoformat(),
+        "current_week_end": current_week_end.isoformat(),
+        "days": days,
+        "density": density,
+        "weekday_labels": ["월", "화", "수", "목", "금", "토", "일"],
+    }
 
 def _events_workbench_trust_review(
     records: list[dict[str, Any]],
@@ -963,7 +1094,12 @@ def _events_workbench_trust_review(
         _workbench_item(record) for record in records if str(record.get("Validation") or "").strip() == "Conflict"
     ]
     return {
-        "title": "자료 신뢰 / 추정 일정 확인",
+        "eyebrow": "자료 상태",
+        "title": "일정 확정성 / 추정 일정 점검",
+        "description": (
+            "이 섹션은 일정이 공식 발표인지, 제공사 추정인지, 오래된 추정인지 확인하는 곳입니다. "
+            "시장 배경 근거이며 매수/매도 신호가 아닙니다."
+        ),
         "official_count": int(coverage.get("official_count") or 0),
         "provider_estimate_count": int(coverage.get("estimate_count") or 0),
         "estimate_only_count": int(coverage.get("estimate_only_count") or 0),
@@ -975,14 +1111,14 @@ def _events_workbench_trust_review(
         "universe_scope_counts": dict(coverage.get("universe_scope_counts") or {}),
         "warnings": list(warnings),
         "sections": [
-            {"key": "stale_estimates", "label": "Stale estimates", "count": len(stale_items), "items": stale_items},
-            {"key": "not_confirmed", "label": "Not confirmed", "count": len(not_confirmed_items), "items": not_confirmed_items},
-            {"key": "estimate_only", "label": "Estimate only", "count": len(estimate_only_items), "items": estimate_only_items},
-            {"key": "conflicts", "label": "Conflicts", "count": len(conflict_items), "items": conflict_items},
+            {"key": "stale_estimates", "label": "오래된 추정 일정", "count": len(stale_items), "items": stale_items},
+            {"key": "not_confirmed", "label": "미확정 일정", "count": len(not_confirmed_items), "items": not_confirmed_items},
+            {"key": "estimate_only", "label": "추정만 있음", "count": len(estimate_only_items), "items": estimate_only_items},
+            {"key": "conflicts", "label": "일정 충돌", "count": len(conflict_items), "items": conflict_items},
         ],
         "source_boundary": (
-            "Official macro/FOMC/market-structure rows and provider-estimate earnings rows are shown together, "
-            "but provider estimates remain unconfirmed until cross-checked or issuer-confirmed."
+            "공식 일정인 매크로/FOMC/시장 구조 일정과 제공사 추정 실적 일정은 한 화면에서 함께 보이지만, "
+            "제공사 추정은 교차 확인 또는 기업 확인 전까지 미확정 일정으로 봅니다."
         ),
     }
 
@@ -999,6 +1135,12 @@ def _events_workbench_command() -> dict[str, Any]:
                 "label": "화면 새로고침",
                 "kind": "secondary",
                 "detail": "DB에 저장된 이벤트 rows를 다시 읽습니다.",
+            },
+            {
+                "id": "refresh_all",
+                "label": "전체 일정 갱신",
+                "kind": "primary",
+                "detail": "FOMC, 매크로, 시장 구조, 실적 추정 일정 collector를 순차 실행합니다.",
             },
             {
                 "id": "refresh_fomc",
@@ -1025,6 +1167,20 @@ def _events_workbench_command() -> dict[str, Any]:
                 "detail": "S&P 500 movers 기반 earnings estimate provider/job을 실행합니다.",
             },
         ],
+        "earnings_universe": {
+            "label": "실적 예상 일정 기준",
+            "symbol_source": "latest_movers",
+            "universe_code": "SP500",
+            "description": (
+                "최근 S&P 500 movers snapshot의 상위 최대 20개 후보를 기준으로 삼고, "
+                "provider 호출은 최대 50개 symbol까지 제한합니다."
+            ),
+            "top_movers_limit": 20,
+            "max_symbols": 50,
+            "lookahead_days": 120,
+            "cross_check": "Nasdaq calendar cross-check 사용",
+        },
+        "last_results": [],
     }
 
 def build_events_workbench_payload(
@@ -1112,15 +1268,23 @@ def build_events_workbench_payload(
             "family_counts": dict(coverage.get("family_counts") or {}),
         },
         "rails": [
-            _workbench_rail("recent_major", "Recent major", recent_major_records),
-            _workbench_rail("today", "Today", today_records),
-            _workbench_rail("this_week", "This Week", this_week_records),
-            _workbench_rail("next_30d", "Next 30D", next_30d_records),
-            _workbench_rail("later", "Later", later_records),
+            _workbench_rail("recent_major", "최근 중요", recent_major_records),
+            _workbench_rail("today", "오늘", today_records),
+            _workbench_rail("this_week", "이번 주", this_week_records),
+            _workbench_rail("next_30d", "30일 내", next_30d_records),
+            _workbench_rail("later", "나중", later_records),
         ],
+        "rail_tabs": _events_workbench_rail_tabs(
+            recent_major_records=recent_major_records,
+            today_records=today_records,
+            this_week_records=this_week_records,
+            next_30d_records=next_30d_records,
+            later_records=later_records,
+        ),
+        "filters": _events_workbench_filters(),
         "command": _events_workbench_command(),
         "trust_review": _events_workbench_trust_review(records, coverage=coverage, warnings=warnings),
-        "calendar": _events_workbench_calendar(records),
+        "calendar": _events_workbench_calendar(records, today=today_value),
         "evidence": {
             "raw_fields": list(EVENT_COLUMNS),
             "rows": records[: max(1, int(limit or 500))],
