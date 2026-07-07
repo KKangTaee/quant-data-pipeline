@@ -45,6 +45,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - Earnings universe, market-structure calendar, service-owned workbench payload, React scaffold, and brief/refresh command UX까지 완료했다.
   - Events React command band는 DB 화면 새로고침과 provider/job 수집 갱신을 분리하고, Python helper가 FOMC/Macro/Market Structure/Earnings refresh action을 계속 소유한다.
   - 다음 차수는 9차 이벤트 레일 / 자료 신뢰 / calendar hover-density 개선이다.
+- Overview Events React workbench 9차 2026-07-07:
+  - React workbench에 type/source-state display filters, filtered event rails, trust sections, hoverable calendar day buckets, weekly density bars, and collapsed raw evidence appendix를 추가했다.
+  - Calendar / density는 일정 밀도와 stale/review 상태 근거만 보여주며 신호나 action으로 해석하지 않는다.
+  - 다음 차수는 10차 final docs sync / Browser QA / commit hygiene closeout이다.
 - Overview Market Movers Ticker Change Repair 2026-07-07:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-ticker-change-repair-20260707/`에서 1차~5차를 완료했다.
   - `market_symbol_alias` candidate / active alias store, Market Movers `티커 변경 복구 적용` action, and intraday `quote_symbol` alias lookup were added.

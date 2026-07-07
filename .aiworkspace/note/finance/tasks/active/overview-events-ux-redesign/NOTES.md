@@ -22,3 +22,6 @@
 - 2026-07-07 8차: Refresh UX is a command boundary, not a new diagnostic panel. `reload` only reruns the screen against stored DB rows, while refresh actions call the existing Python overview job facades and may change DB rows through provider/job collection.
 - React emits only action ids plus a nonce. `_handle_events_react_event()` owns dispatch and deduplicates repeated component values through session state to avoid rerun loops.
 - The legacy Refresh popover remains available and now includes Market Structure so users without the React build still have the same collection path.
+- 2026-07-07 9차: React filters are display-only filters over service-provided event items. They do not change the DB query, create signals, or reinterpret raw rows.
+- Calendar day hover and weekly density bars use `payload.calendar.days` / `payload.calendar.density`; they show schedule clustering and stale/review counts only.
+- The raw evidence appendix is collapsed by default and uses the service evidence rows so Source URL, confidence-adjacent authority, and collected-at fields remain reachable without making raw table the main surface.

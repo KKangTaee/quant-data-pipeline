@@ -6242,6 +6242,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("events-workbench__command", react_source)
         self.assertIn("refresh_boundary", react_source)
 
+    def test_events_react_workbench_renders_filters_calendar_trust_and_evidence(self) -> None:
+        component_root = Path("app/web/streamlit_components/events_workbench")
+        react_source = (component_root / "src" / "EventsWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("familyOptions.map", react_source)
+        self.assertIn("setFamilyFilter", react_source)
+        self.assertIn("setReviewFilter", react_source)
+        self.assertIn("filteredRails", react_source)
+        self.assertIn("trust.sections.map", react_source)
+        self.assertIn("payload.calendar.days", react_source)
+        self.assertIn("payload.calendar.density", react_source)
+        self.assertIn("events-workbench__day-tooltip", react_source)
+        self.assertIn("setExpandedEvidence", react_source)
+        self.assertIn("events-workbench__evidence-table", react_source)
+        self.assertIn(".events-workbench__filterbar", react_style)
+        self.assertIn(".events-workbench__calendar-grid", react_style)
+        self.assertIn(".events-workbench__day-tooltip", react_style)
+        self.assertIn(".events-workbench__density-bar", react_style)
+
     def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")

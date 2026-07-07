@@ -67,3 +67,10 @@
 - 2026-07-07: 8차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
 - 2026-07-07: 8차 QA - `npm install` for `app/web/streamlit_components/events_workbench` - PASS.
 - 2026-07-07: 8차 QA - `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: 9차 RED - `OverviewAutomationContractTests.test_events_react_workbench_renders_filters_calendar_trust_and_evidence` failed before implementation on missing `familyOptions.map`.
+- 2026-07-07: 9차 GREEN - same React workbench filter/calendar/trust/evidence contract - PASS.
+- 2026-07-07: 9차 QA - `npm install` for `events_workbench` - PASS.
+- 2026-07-07: 9차 QA - `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: 9차 QA - scaffold / refresh dispatch / filter-calendar-trust-evidence focused tests, 3 tests - PASS.
+- 2026-07-07: 9차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 9차 QA - `git diff --check` - PASS.
