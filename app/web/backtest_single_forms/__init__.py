@@ -348,9 +348,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["qss_option"] = payload.get("option") or "month_end"
         st.session_state["qss_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
-        st.session_state["qss_universe_contract"] = next(
-            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
-            "Static Managed Research Universe",
+        st.session_state["qss_universe_contract"] = strict_universe_contract_label_for_input(
+            payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
         )
         st.session_state["qss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
@@ -450,9 +449,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qsqp_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["qsqp_option"] = payload.get("option") or "month_end"
         st.session_state["qsqp_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
-        st.session_state["qsqp_universe_contract"] = next(
-            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
-            "Static Managed Research Universe",
+        st.session_state["qsqp_universe_contract"] = strict_universe_contract_label_for_input(
+            payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
         )
         st.session_state["qsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
@@ -497,9 +495,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["vss_option"] = payload.get("option") or "month_end"
         st.session_state["vss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
-        st.session_state["vss_universe_contract"] = next(
-            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
-            "Static Managed Research Universe",
+        st.session_state["vss_universe_contract"] = strict_universe_contract_label_for_input(
+            payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
         )
         st.session_state["vss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
@@ -599,9 +596,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vsqp_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["vsqp_option"] = payload.get("option") or "month_end"
         st.session_state["vsqp_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
-        st.session_state["vsqp_universe_contract"] = next(
-            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
-            "Static Managed Research Universe",
+        st.session_state["vsqp_universe_contract"] = strict_universe_contract_label_for_input(
+            payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
         )
         st.session_state["vsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
@@ -647,9 +643,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_option"] = payload.get("option") or "month_end"
         st.session_state["qvss_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
         st.session_state["qvss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
-        st.session_state["qvss_universe_contract"] = next(
-            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
-            "Static Managed Research Universe",
+        st.session_state["qvss_universe_contract"] = strict_universe_contract_label_for_input(
+            payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
         )
         st.session_state["qvss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
@@ -750,9 +745,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvqp_option"] = payload.get("option") or "month_end"
         st.session_state["qvqp_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
         st.session_state["qvqp_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
-        st.session_state["qvqp_universe_contract"] = next(
-            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
-            "Static Managed Research Universe",
+        st.session_state["qvqp_universe_contract"] = strict_universe_contract_label_for_input(
+            payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
         )
         st.session_state["qvqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)

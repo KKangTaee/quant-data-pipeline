@@ -3938,7 +3938,7 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         st.session_state[f"compare_{key_prefix}_preset"] = preset_name
     st.session_state[f"compare_{key_prefix}_top_n"] = int(override.get("top_n") or (10 if "Value" in strategy_name or "Multi-Factor" in strategy_name else 2))
     st.session_state[f"compare_{key_prefix}_rebalance_interval"] = int(override.get("rebalance_interval") or 1)
-    st.session_state[f"compare_{key_prefix}_universe_contract"] = _universe_contract_value_to_label(
+    st.session_state[f"compare_{key_prefix}_universe_contract"] = strict_universe_contract_label_for_input(
         override.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
     )
     st.session_state[f"compare_{key_prefix}_trend_filter_enabled"] = bool(
@@ -4885,10 +4885,8 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_qss_preset",
                     )
-                    qss_compare_contract_label = st.selectbox(
+                    qss_compare_contract_label = _render_strict_universe_contract_selectbox(
                         "Strict Annual Quality Universe Contract",
-                        options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                        index=0,
                         key="compare_qss_universe_contract",
                         help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
@@ -5057,10 +5055,8 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                         key="compare_qsqp_preset",
                     )
-                    qsqp_compare_contract_label = st.selectbox(
+                    qsqp_compare_contract_label = _render_strict_universe_contract_selectbox(
                         "Strict Quarterly Quality Universe Contract",
-                        options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                        index=0,
                         key="compare_qsqp_universe_contract",
                         help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
@@ -5174,10 +5170,8 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_vss_preset",
                     )
-                    vss_compare_contract_label = st.selectbox(
+                    vss_compare_contract_label = _render_strict_universe_contract_selectbox(
                         "Strict Annual Value Universe Contract",
-                        options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                        index=0,
                         key="compare_vss_universe_contract",
                         help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
@@ -5346,10 +5340,8 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                         key="compare_vsqp_preset",
                     )
-                    vsqp_compare_contract_label = st.selectbox(
+                    vsqp_compare_contract_label = _render_strict_universe_contract_selectbox(
                         "Strict Quarterly Value Universe Contract",
-                        options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                        index=0,
                         key="compare_vsqp_universe_contract",
                         help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
@@ -5463,10 +5455,8 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_qvss_preset",
                     )
-                    qvss_compare_contract_label = st.selectbox(
+                    qvss_compare_contract_label = _render_strict_universe_contract_selectbox(
                         "Strict Annual Multi-Factor Universe Contract",
-                        options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                        index=0,
                         key="compare_qvss_universe_contract",
                         help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
@@ -5641,10 +5631,8 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                         key="compare_qvqp_preset",
                     )
-                    qvqp_compare_contract_label = st.selectbox(
+                    qvqp_compare_contract_label = _render_strict_universe_contract_selectbox(
                         "Strict Quarterly Multi-Factor Universe Contract",
-                        options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                        index=0,
                         key="compare_qvqp_universe_contract",
                         help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )

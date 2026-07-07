@@ -340,16 +340,15 @@ STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 PIT_MONTHLY_SNAPSHOT_UNIVERSE = "pit_monthly_snapshot"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
-    "Static Managed Research Universe": STATIC_MANAGED_RESEARCH_UNIVERSE,
     "PIT Monthly Snapshot Universe": PIT_MONTHLY_SNAPSHOT_UNIVERSE,
 }
 STRICT_UNIVERSE_CONTRACT_HELP = (
-    "Static은 현재 managed preset을 실행 기간 동안 고정합니다. "
-    "PIT Monthly Snapshot은 사전에 저장된 월말 universe snapshot을 읽습니다."
+    "사전에 저장된 월말 universe snapshot을 읽습니다. snapshot이 없거나 요청 기간을 덮지 못하면 실행 전 확인이 필요합니다."
 )
 STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY = (
-    "Universe Contract: Static은 현재 Base Universe 고정, PIT Monthly Snapshot은 사전 저장된 월말 snapshot 사용."
+    "Universe Contract: PIT Monthly Snapshot은 사전 저장된 월말 snapshot 사용."
 )
+DEFAULT_STRICT_UNIVERSE_CONTRACT_LABEL = "PIT Monthly Snapshot Universe"
 STRICT_BENCHMARK_CONTRACT_LABELS = {
     "Ticker Benchmark": STRICT_BENCHMARK_CONTRACT_TICKER,
     "Candidate Universe Equal-Weight": STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
@@ -3688,12 +3687,12 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         lines.append(f"Score Horizons: `{', '.join(selected_horizons)}`")
 
     contract = payload.get("universe_contract")
-    if contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
-        lines.append("Universe Contract: `Historical Dynamic PIT Universe`")
-    elif contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
-        lines.append("Universe Contract: `PIT Monthly Snapshot Universe`")
-    elif contract == STATIC_MANAGED_RESEARCH_UNIVERSE:
-        lines.append("Universe Contract: `Static Managed Research Universe`")
+    if contract in {
+        HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+        PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+        STATIC_MANAGED_RESEARCH_UNIVERSE,
+    }:
+        lines.append(f"Universe Contract: `{_universe_contract_value_to_label(contract)}`")
 
     factor_freq = payload.get("factor_freq")
     snapshot_mode = payload.get("snapshot_mode")
@@ -3705,19 +3704,44 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
 
     return lines
 
+
 def _universe_contract_value_to_label(value: str | None) -> str:
     for label, contract_value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items():
         if contract_value == value:
             return label
+    if value == STATIC_MANAGED_RESEARCH_UNIVERSE:
+        return "Static Managed Research Universe (Legacy)"
     if value == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         return "Historical Dynamic PIT Universe (Legacy)"
-    return "Static Managed Research Universe"
+    return DEFAULT_STRICT_UNIVERSE_CONTRACT_LABEL
+
+
+def strict_universe_contract_label_for_input(value: str | None) -> str:
+    if value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS:
+        return str(value)
+    for label, contract_value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items():
+        if contract_value == value:
+            return label
+    return DEFAULT_STRICT_UNIVERSE_CONTRACT_LABEL
+
+
+def _render_strict_universe_contract_selectbox(label: str, *, key: str, help: str | None = None) -> str:
+    if key in st.session_state:
+        st.session_state[key] = strict_universe_contract_label_for_input(st.session_state.get(key))
+    return st.selectbox(
+        label,
+        options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+        key=key,
+        help=help,
+    )
+
 
 def _benchmark_contract_value_to_label(value: str | None) -> str:
     for label, contract_value in STRICT_BENCHMARK_CONTRACT_LABELS.items():
         if contract_value == value:
             return label
     return "Ticker Benchmark"
+
 
 def _shortlist_status_value_to_label(value: str | None) -> str:
     mapping = {

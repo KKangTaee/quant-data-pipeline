@@ -236,10 +236,8 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="qss_rebalance_interval",
             )
-            universe_contract_label = st.selectbox(
+            universe_contract_label = _render_strict_universe_contract_selectbox(
                 "Universe Contract",
-                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                index=0,
                 key="qss_universe_contract",
                 help=STRICT_UNIVERSE_CONTRACT_HELP,
             )
@@ -507,10 +505,8 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="qsqp_rebalance_interval",
             )
-            universe_contract_label = st.selectbox(
+            universe_contract_label = _render_strict_universe_contract_selectbox(
                 "Universe Contract",
-                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                index=0,
                 key="qsqp_universe_contract",
                 help=STRICT_UNIVERSE_CONTRACT_HELP,
             )
@@ -722,10 +718,8 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="vsqp_rebalance_interval",
             )
-            universe_contract_label = st.selectbox(
+            universe_contract_label = _render_strict_universe_contract_selectbox(
                 "Universe Contract",
-                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                index=0,
                 key="vsqp_universe_contract",
                 help=STRICT_UNIVERSE_CONTRACT_HELP,
             )
@@ -925,10 +919,8 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="vss_rebalance_interval",
             )
-            universe_contract_label = st.selectbox(
+            universe_contract_label = _render_strict_universe_contract_selectbox(
                 "Universe Contract",
-                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                index=0,
                 key="vss_universe_contract",
                 help=STRICT_UNIVERSE_CONTRACT_HELP,
             )
@@ -1199,10 +1191,8 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="qvqp_rebalance_interval",
             )
-            universe_contract_label = st.selectbox(
+            universe_contract_label = _render_strict_universe_contract_selectbox(
                 "Universe Contract",
-                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                index=0,
                 key="qvqp_universe_contract",
                 help=STRICT_UNIVERSE_CONTRACT_HELP,
             )
@@ -1414,10 +1404,8 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="qvss_rebalance_interval",
             )
-            universe_contract_label = st.selectbox(
+            universe_contract_label = _render_strict_universe_contract_selectbox(
                 "Universe Contract",
-                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-                index=0,
                 key="qvss_universe_contract",
                 help=STRICT_UNIVERSE_CONTRACT_HELP,
             )

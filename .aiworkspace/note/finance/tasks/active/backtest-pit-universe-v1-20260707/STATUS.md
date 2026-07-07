@@ -10,3 +10,4 @@
 - 3차 complete: wired PIT monthly membership snapshots into strict Quality / Value / Quality+Value statement shadow runners, including annual public paths and quarterly prototypes.
 - 4차 complete: exposed `PIT Monthly Snapshot Universe` in Single Strategy / Portfolio Mix strict forms, preserved saved mix replay target size, and verified the UI option list in Browser QA.
 - 5차 complete: synced durable data / architecture / UI flow docs, roadmap / index / root logs, and reran focused PIT universe contract QA before closeout.
+- Follow-up complete: user-facing strict Quality / Value `Universe Contract` now exposes only `PIT Monthly Snapshot Universe`; `Static Managed Research Universe` and `Historical Dynamic PIT Universe` remain legacy internal values for old saved payload / run replay compatibility.

@@ -46,3 +46,15 @@ Command logs for this task.
 - Compile: `.venv/bin/python -m py_compile finance/data/pit_universe.py finance/loaders/universe.py finance/loaders/__init__.py finance/data/db/schema.py finance/sample.py app/runtime/backtest/runners/strict_factor.py app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py app/web/backtest_compare/page.py tests/test_service_contracts.py`
 - Diff hygiene: `git diff --check`
 - Doc path smoke: `find .aiworkspace/note/finance -maxdepth 3 -type f | sort >/dev/null`
+
+## Follow-up: PIT-only Visible Universe Contract
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_ui_exposes_pit_monthly_snapshot_universe_contract`
+  - Expected failure: `Static Managed Research Universe` was still part of `STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS`.
+- GREEN: same focused test passed after the visible label map was narrowed to `PIT Monthly Snapshot Universe`, while Static / Historical labels remain legacy display fallbacks.
+- Focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_ui_exposes_pit_monthly_snapshot_universe_contract tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_dynamic_runnable_coverage_overrides_candidate_pool_warning_when_target_filled tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_runner_wires_pit_membership_to_statement_shadow_samples`
+  - Result: 3 tests passed.
+- Compile: `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/__init__.py app/web/backtest_single_forms/strict_factor.py app/web/backtest_compare/page.py tests/test_service_contracts.py`
+- Diff hygiene: `git diff --check`
+- Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8514 --server.headless true --server.runOnSave false --server.fileWatcherType none`; verified Backtest > Single Strategy > Quality > Strict Annual > Advanced Inputs opens `Universe Contract` with only `PIT Monthly Snapshot Universe`; DOM text check returned Static/Historical false and PIT true.
+  - Screenshot artifact: `backtest-universe-contract-pit-only-qa.png` (generated, not committed).

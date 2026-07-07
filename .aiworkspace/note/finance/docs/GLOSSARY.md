@@ -61,8 +61,8 @@ strict annual에서는 선택한 Base Universe 크기를 target으로 두고, ma
 
 ### 왜 사용되는지
 저장 monthly snapshot이 생기기 전 first-pass 근사 PIT 경로로 쓰였다.
-현재 Backtest UI의 visible `Universe Contract` 선택지는 `Static Managed Research Universe`와 `PIT Monthly Snapshot Universe` 두 개이며,
-이 경로는 기존 saved payload / old run replay 호환용 internal path로만 유지한다.
+현재 Backtest UI의 visible `Universe Contract` 선택지는 `PIT Monthly Snapshot Universe` 하나이며,
+이 경로는 `Static Managed Research Universe`와 함께 기존 saved payload / old run replay 호환용 internal path로만 유지한다.
 
 ### 예시 / 필요 상황
 - 과거 run history나 saved setup이 `historical_dynamic_pit` 값을 갖고 있어 같은 설정으로 재현해야 하는 경우

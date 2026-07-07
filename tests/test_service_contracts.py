@@ -732,12 +732,18 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(common.PIT_MONTHLY_SNAPSHOT_UNIVERSE, "pit_monthly_snapshot")
         self.assertEqual(
             list(common.STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
-            ["Static Managed Research Universe", "PIT Monthly Snapshot Universe"],
+            ["PIT Monthly Snapshot Universe"],
+        )
+        self.assertNotIn(
+            "Static Managed Research Universe",
+            common.STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS,
         )
         self.assertNotIn(
             "Historical Dynamic PIT Universe",
             common.STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS,
         )
+        self.assertNotIn("Static Managed", common.STRICT_UNIVERSE_CONTRACT_HELP)
+        self.assertNotIn("Static은", common.STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY)
         self.assertNotIn("Historical Dynamic PIT", common.STRICT_UNIVERSE_CONTRACT_HELP)
         self.assertNotIn("Historical Dynamic PIT", common.STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY)
         self.assertEqual(
@@ -750,8 +756,20 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             "PIT Monthly Snapshot Universe",
         )
         self.assertEqual(
+            common._universe_contract_value_to_label(common.STATIC_MANAGED_RESEARCH_UNIVERSE),
+            "Static Managed Research Universe (Legacy)",
+        )
+        self.assertEqual(
             common._universe_contract_value_to_label(common.HISTORICAL_DYNAMIC_PIT_UNIVERSE),
             "Historical Dynamic PIT Universe (Legacy)",
+        )
+        self.assertEqual(
+            common.strict_universe_contract_label_for_input(common.STATIC_MANAGED_RESEARCH_UNIVERSE),
+            "PIT Monthly Snapshot Universe",
+        )
+        self.assertEqual(
+            common.strict_universe_contract_label_for_input("Static Managed Research Universe"),
+            "PIT Monthly Snapshot Universe",
         )
 
         candidate_tickers, target_size = common._resolve_strict_dynamic_universe_inputs(
@@ -770,6 +788,13 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             },
         )
         self.assertIn("Universe Contract: `PIT Monthly Snapshot Universe`", run_lines)
+        legacy_run_lines = common._build_prefill_summary_lines(
+            {
+                "strategy_key": "quality_snapshot_strict_annual",
+                "universe_contract": common.STATIC_MANAGED_RESEARCH_UNIVERSE,
+            },
+        )
+        self.assertIn("Universe Contract: `Static Managed Research Universe (Legacy)`", legacy_run_lines)
 
         replay_params = _resolve_saved_portfolio_dynamic_inputs(
             strategy_name="Quality Snapshot (Strict Annual)",

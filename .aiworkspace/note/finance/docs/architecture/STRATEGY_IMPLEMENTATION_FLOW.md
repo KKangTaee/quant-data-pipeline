@@ -138,8 +138,8 @@ strict annual family는 현재 여러 operator-facing contract를 가진다.
 
 중요한 구분:
 
-- `Universe Contract = Static Managed Research Universe`는 현재 managed preset / manual ticker pool을 실행 기간 동안 고정한다. 각 리밸런싱 날짜에서 사용할 수 없는 가격 / factor row는 제외될 수 있지만, base universe 자체는 현재 기준이다.
-- `Universe Contract = PIT Monthly Snapshot Universe`는 `finance_meta.equity_universe_snapshot` / `equity_universe_member`에 사전 저장된 월말 membership을 읽는다. 2016년 리밸런싱은 2016년 당시 월말 snapshot에 매핑되지만, V1은 DB 가격과 statement shadow shares 기반 근사 PIT이며 공식 historical index membership이 아니다.
+- `Universe Contract = PIT Monthly Snapshot Universe`는 현재 Backtest UI에 노출되는 유일한 strict universe contract다. `finance_meta.equity_universe_snapshot` / `equity_universe_member`에 사전 저장된 월말 membership을 읽는다. 2016년 리밸런싱은 2016년 당시 월말 snapshot에 매핑되지만, V1은 DB 가격과 statement shadow shares 기반 근사 PIT이며 공식 historical index membership이 아니다.
+- `Universe Contract = Static Managed Research Universe`는 현재 managed preset / manual ticker pool을 실행 기간 동안 고정하는 legacy internal path다. 각 리밸런싱 날짜에서 사용할 수 없는 가격 / factor row는 제외될 수 있지만, base universe 자체는 현재 기준이다. 현재 Backtest UI 선택지에는 노출하지 않고, 기존 saved payload / old run replay 호환을 위해 유지한다.
 - `Universe Contract = Historical Dynamic PIT Universe`는 선택한 candidate pool 안에서 리밸런싱 날짜별 `price * latest-known statement shares`로 membership을 즉석 근사 계산하는 legacy internal path다. 현재 Backtest UI 선택지에는 노출하지 않고, 기존 saved payload / old run replay 호환을 위해 유지한다.
 - `Rejected Slot Handling Contract`는 일부 종목만 trend filter에서 빠지는 상황을 다룬다.
 - `Risk-Off Contract`는 market regime이나 guardrail 때문에 포트폴리오 전체를 쉬게 하는 상황을 다룬다.

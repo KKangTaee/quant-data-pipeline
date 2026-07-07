@@ -8609,3 +8609,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow 4 상세 카드는 위치 안내가 아니라 사용자가 실제로 무엇을 보강하고 어떤 상태가 되면 통과인지 알려주는 해결 guide가 되어야 함.
 - Analysis result: 기존 위치 문구는 사용자가 화면을 찾는 데는 도움이 되지만, 어떤 항목이 실패했고 무엇을 실행해야 하며 어떤 기준이 되면 해결인지까지는 부족했다.
 - Follow-up: Criteria card를 `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`로 재구성하고, 위치는 해결 guide의 보조 정보로 낮췄다.
+
+### 2026-07-07 - Static Managed Research Universe는 사용자 선택지에서 제거한다
+
+- User request: 사용자가 Quality Snapshot의 `Static Managed Research Universe`가 coverage refresh 이후에도 계속 `coverage 최신화 가능`을 만들면 사용자 옵션으로 필요 없는 것 아니냐고 물었고 제거를 승인함.
+- Interpreted goal: Quality / Value strict 사용자는 현재 기준 universe를 고정하는 Static path가 아니라, 월말 snapshot 기반 PIT path만 선택하게 해야 함.
+- Analysis result: Static은 현재 Base Universe 300 전체를 실행 기간에 고정하기 때문에 CUK / BK 같은 stale symbol이 refresh 후에도 provider 한계로 남으면 같은 경고가 반복된다. 이 path는 old payload 재현용으로만 의미가 있다.
+- Follow-up: visible `Universe Contract`는 `PIT Monthly Snapshot Universe` 하나로 줄이고, Static / Historical Dynamic PIT는 legacy internal label과 runtime compatibility만 유지한다.
