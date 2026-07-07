@@ -1852,7 +1852,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(display_rows["Risk Contribution"]["Module Type"], "Conditional")
         self.assertEqual(display_rows["Risk Contribution"]["Applies"], "No")
         self.assertIn("Risk Contribution Audit", display_rows["Risk Contribution"]["Evidence Boards"])
-        self.assertEqual(display_rows["Risk Contribution"]["Fix Location"], "검증 기준 상세 · 포트폴리오 구성 근거")
+        self.assertEqual(display_rows["Risk Contribution"]["Fix Location"], "Flow4 > 구성 / 리스크 > 위험 기여 상세")
 
         board_rows = {row["Board"]: row for row in plan["board_display_rows"]}
         self.assertEqual(board_rows["Provider Coverage"]["Applies"], "Yes")
@@ -9291,7 +9291,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                             "label": "Data Coverage",
                             "status": "NEEDS_INPUT",
                             "gate_reason": "가격 window 보강 필요",
-                            "resolution_surface": "검증 기준 상세 · 데이터 품질 / Provider 보강",
+                            "resolution_surface": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
                             "resolution_action": "가격 window를 확인합니다.",
                         }
                     ],
@@ -9320,7 +9320,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "applies": True,
                         "reason": "가격 window와 survivorship evidence를 확인합니다.",
                         "gate_reason": "가격 window 보강 필요",
-                        "resolution_surface": "검증 기준 상세 · 데이터 품질 / Provider 보강",
+                        "resolution_surface": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
                         "resolution_action": "가격 window를 확인합니다.",
                     },
                     {
@@ -9331,6 +9331,20 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "reason": "Final Review 저장 전에 deterministic gap을 확인합니다.",
                         "gate_reason": "Final Review evidence gap",
                         "resolution_surface": "Final Review 이동 요약",
+                    },
+                ],
+                "data_coverage_display_rows": [
+                    {
+                        "Criteria": "Price DB window coverage",
+                        "Status": "NEEDS_INPUT",
+                        "Evidence": "stored window is short",
+                        "Next Action": "가격 window를 최신 DB 기준으로 보강합니다.",
+                    },
+                    {
+                        "Criteria": "Provider / freshness evidence",
+                        "Status": "REVIEW",
+                        "Evidence": "provider freshness review",
+                        "Next Action": "provider freshness를 Final Review에서 확인합니다.",
                     },
                 ],
             }
@@ -9351,13 +9365,19 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(data_card["label"], "Data Coverage")
         self.assertEqual(data_card["status"], "NEEDS_INPUT")
         self.assertEqual(data_card["status_label"], "근거 보강 필요")
-        self.assertEqual(data_card["resolution_surface"], "검증 기준 상세 · 데이터 품질 / Provider 보강")
+        self.assertEqual(data_card["resolution_surface"], "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세")
         self.assertIn("가격 window 보강 필요", data_card["evidence"])
         self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가")
         self.assertIn("가격", data_card["current_problem"])
         self.assertIn("PASS", data_card["completion_criteria"])
-        self.assertIn("데이터 품질 / Provider 보강", data_card["fix_location"])
+        self.assertIn("데이터 품질 / 편향 통제", data_card["fix_location"])
         self.assertIn("데이터 커버리지", data_card["impact_summary"])
+        self.assertEqual(data_card["resolution_guide"]["type"], "fix")
+        self.assertEqual(data_card["resolution_guide"]["issue_label"], "부족한 것")
+        self.assertIn("Price DB window coverage", data_card["resolution_guide"]["missing"])
+        self.assertIn("가격 window를 최신 DB 기준으로 보강", data_card["resolution_guide"]["next_action"])
+        self.assertIn("Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세", data_card["resolution_guide"]["location"])
+        self.assertIn("Provider / Data 보강 액션", data_card["resolution_guide"]["location"])
         self.assertEqual(data_group["passed_criteria"], [])
         self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
         self.assertIn("보강 필요", data_group["decision_summary"])
@@ -9382,7 +9402,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                             "label": "Validation Efficacy",
                             "status": "NEEDS_INPUT",
                             "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
-                            "resolution_surface": "검증 기준 상세 · 검증 강도 / 강건성",
+                            "resolution_surface": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
                             "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
                         }
                     ],
@@ -9395,8 +9415,16 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "applies": True,
                         "reason": "walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
                         "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
-                        "resolution_surface": "검증 기준 상세 · 검증 강도 / 강건성",
+                        "resolution_surface": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
                         "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+                    }
+                ],
+                "validation_efficacy_display_rows": [
+                    {
+                        "Criteria": "Walk-forward temporal validation",
+                        "Status": "NEEDS_INPUT",
+                        "Evidence": "walk-forward missing",
+                        "Next Action": "walk-forward evidence를 보강합니다.",
                     }
                 ],
             }
@@ -9411,6 +9439,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("PASS", fix_item["completion_criteria"])
         self.assertIn("검증 강도 / 강건성", fix_item["fix_location"])
         self.assertIn("성과가 특정 기간에만 우연히", fix_item["impact_summary"])
+        self.assertEqual(fix_item["resolution_guide"]["type"], "fix")
+        self.assertIn("Walk-forward temporal validation", fix_item["resolution_guide"]["missing"])
+        self.assertIn("walk-forward evidence를 보강", fix_item["resolution_guide"]["next_action"])
+        self.assertIn("Flow4 > 실전성 > 검증 강도 / 강건성 상세", fix_item["resolution_guide"]["location"])
         self.assertNotIn("NEEDS_INPUT row", fix_item["current_problem"])
         self.assertNotIn("NEEDS_INPUT row", fix_item["completion_criteria"])
 
@@ -9434,9 +9466,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("통과한 기준", page_source)
         self.assertIn("남은 문제", page_source)
         self.assertIn("판정", page_source)
+        self.assertIn("검증한 것", page_source)
+        self.assertIn("부족한 것", page_source)
+        self.assertIn("해야 할 일", page_source)
+        self.assertIn("확인 위치", page_source)
         self.assertNotIn("무엇을 확인했나", page_source)
         self.assertNotIn("부족한 점", page_source)
-        self.assertNotIn("해야 할 일", page_source)
         self.assertIn("Source & Replay", page_source)
         self.assertIn("Data Quality / Bias Control", page_source)
         self.assertIn("Validation Strength / Robustness", page_source)

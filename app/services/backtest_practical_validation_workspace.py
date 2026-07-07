@@ -156,7 +156,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "비교 기준 동등성 부족",
         "current_problem": "benchmark, cash, simple baseline, custom comparator의 기간 / frequency / coverage가 후보와 맞지 않으면 비교가 왜곡됩니다.",
         "completion_criteria": "Benchmark / Comparator Parity가 PASS 상태이고 후보와 비교 기준이 같은 기간 / frequency / coverage로 정렬되어야 합니다.",
-        "fix_location": "검증 기준 상세 · 핵심 입력 근거",
+        "fix_location": "Flow4 > 핵심 근거 > Input Evidence / Curve·Recheck Evidence",
         "impact_summary": "비교 조건이 다르면 후보 성과가 좋아 보이는 이유를 공정하게 판단하기 어렵습니다.",
     },
     "validation_efficacy": {
@@ -164,7 +164,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "검증 효력 근거 부족",
         "current_problem": "walk-forward / OOS / regime / PIT / survivorship 근거 중 일부가 비어 있거나 보강 필요 상태입니다.",
         "completion_criteria": "Validation Efficacy 핵심 항목이 PASS 또는 Final Review 확인 상태가 되어야 합니다.",
-        "fix_location": "검증 기준 상세 · 검증 강도 / 강건성",
+        "fix_location": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
         "impact_summary": "이 근거가 부족하면 성과가 특정 기간에만 우연히 좋았는지 구분하기 어렵습니다.",
     },
     "data_coverage": {
@@ -172,7 +172,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "데이터 커버리지 부족",
         "current_problem": "가격 window, provider freshness, lifecycle, survivorship evidence 중 비어 있거나 오래된 데이터가 있습니다.",
         "completion_criteria": "데이터 커버리지 핵심 항목이 PASS 또는 Final Review 확인 상태이고 provider gap이 Final Review 이동을 막지 않아야 합니다.",
-        "fix_location": "검증 기준 상세 · 데이터 품질 / Provider 보강",
+        "fix_location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
         "impact_summary": "데이터 커버리지가 부족하면 검증 결과가 일부 ticker나 현재 snapshot에만 기대게 됩니다.",
     },
     "construction_risk": {
@@ -180,7 +180,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "구성 / 집중 위험 근거 부족",
         "current_problem": "ETF 내부 보유 / exposure coverage나 concentration evidence가 부족하면 실제 구성 위험을 설명하기 어렵습니다.",
         "completion_criteria": "Construction Risk가 PASS 또는 Final Review 확인 상태이고 집중 / overlap / unknown exposure가 판단 근거로 정리되어야 합니다.",
-        "fix_location": "검증 기준 상세 · 포트폴리오 구성 근거",
+        "fix_location": "Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
         "impact_summary": "구성 위험을 설명하지 못하면 좋은 백테스트라도 실제 운용 위험을 판단하기 어렵습니다.",
     },
     "backtest_realism": {
@@ -188,7 +188,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "실전 운용 현실성 근거 부족",
         "current_problem": "비용 적용, turnover, liquidity, net curve 근거가 없으면 백테스트 성과가 실전 운용 성과와 달라질 수 있습니다.",
         "completion_criteria": "Backtest Realism 핵심 항목이 PASS 또는 Final Review 확인 상태이고 cost / turnover / liquidity blocker가 없어야 합니다.",
-        "fix_location": "검증 기준 상세 · 실전 운용 현실성",
+        "fix_location": "Flow4 > 실전성 > 실전 운용 현실성 상세",
         "impact_summary": "비용과 거래 현실성이 빠지면 실전 성과가 백테스트보다 크게 달라질 수 있습니다.",
     },
     "stress_robustness": {
@@ -196,7 +196,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "강건성 근거 부족",
         "current_problem": "stress / rolling / sensitivity / overfit 근거 중 실행되지 않았거나 부족한 항목이 있습니다.",
         "completion_criteria": "Stress / Robustness가 PASS 또는 Final Review 확인 상태이고 미실행 핵심 항목이 없어야 합니다.",
-        "fix_location": "검증 기준 상세 · 강건성 검증",
+        "fix_location": "Flow4 > 강건성 > Stress / sensitivity 상세",
         "impact_summary": "강건성 근거가 약하면 특정 조건에 과최적화된 후보일 수 있습니다.",
     },
     "selected_route_preflight": {
@@ -212,15 +212,23 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "ETF provider 근거 부족",
         "current_problem": "provider snapshot이나 holdings / exposure 근거가 없으면 ETF 내부 노출과 운용 가능성을 판단하기 어렵습니다.",
         "completion_criteria": "ETF Provider Investability가 PASS 또는 Final Review 확인 상태이고 provider snapshot gap이 보강되어야 합니다.",
-        "fix_location": "Provider / Data 보강 액션",
+        "fix_location": "Flow4 > Provider / Data 보강 액션",
         "impact_summary": "provider 근거가 약하면 ETF 내부 노출과 실전 운용 가능성을 판단하기 어렵습니다.",
+    },
+    "leverage_inverse": {
+        "display_label": "레버리지 / 인버스 노출이 목적과 맞는가",
+        "issue_title": "레버리지 / 인버스 적합성 확인 필요",
+        "current_problem": "레버리지 / 인버스 ticker가 포함되면 일간 목표 상품 특성과 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 별도 확인이 필요합니다.",
+        "completion_criteria": "노출 목적, 보유 기간, 손실 허용 기준이 Final Review 판단 근거로 정리되어야 합니다.",
+        "fix_location": "Final Review 확인 항목",
+        "impact_summary": "레버리지 / 인버스 노출은 장기 보유 목적과 충돌하거나 손실 확대 위험을 만들 수 있습니다.",
     },
     "risk_contribution": {
         "display_label": "weighted mix의 위험 기여가 한쪽으로 쏠리지 않는가",
         "issue_title": "위험 기여 설명 부족",
         "current_problem": "component matrix나 risk contribution evidence가 없으면 weighted mix 위험이 한쪽으로 쏠렸는지 설명하기 어렵습니다.",
         "completion_criteria": "Risk Contribution이 PASS 또는 Final Review 확인 상태이고 component matrix / correlation / drop-one 근거가 있어야 합니다.",
-        "fix_location": "검증 기준 상세 · 포트폴리오 구성 근거",
+        "fix_location": "Flow4 > 구성 / 리스크 > 위험 기여 상세",
         "impact_summary": "위험 기여가 설명되지 않으면 여러 component를 섞은 이유를 Final Review에서 판단하기 어렵습니다.",
     },
     "component_role_weight": {
@@ -228,9 +236,112 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "component 역할 / 비중 근거 부족",
         "current_problem": "component role이나 weight rationale이 없으면 mix 구성 의도가 부족합니다.",
         "completion_criteria": "Component Role / Weight가 PASS 또는 Final Review 확인 상태이고 role source와 weight rationale이 정리되어야 합니다.",
-        "fix_location": "검증 기준 상세 · 포트폴리오 구성 근거",
+        "fix_location": "Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
         "impact_summary": "역할과 비중 이유가 없으면 좋은 결과가 우연한 조합인지 판단하기 어렵습니다.",
     },
+    "macro_regime": {
+        "display_label": "전술형 전략의 macro / regime 근거가 있는가",
+        "issue_title": "macro / regime 근거 확인 필요",
+        "current_problem": "전술형 또는 헤지형 후보는 macro regime과 risk-on/off context가 전략 약점과 충돌하지 않는지 확인해야 합니다.",
+        "completion_criteria": "macro snapshot, regime split, risk-on/off context가 Final Review 판단 근거로 정리되어야 합니다.",
+        "fix_location": "Flow4 > Raw Evidence > Practical Diagnostics",
+        "impact_summary": "macro / regime 근거가 없으면 전술형 전략의 성과가 특정 시장 환경에만 기대는지 판단하기 어렵습니다.",
+    },
+}
+MODULE_RESOLUTION_GUIDES = {
+    "source_integrity": {
+        "checked_summary": "후보 source id, active component, target weight, Data Trust, curve evidence가 같은 후보 계약으로 연결되는지 확인합니다.",
+        "missing_summary": "source 계약 중 연결되지 않은 항목",
+        "next_action_summary": "Flow 1에서 source snapshot을 확인하고 부족하면 Backtest Analysis에서 후보를 다시 구성합니다.",
+        "location": "Flow1 > 후보 Source 확인",
+    },
+    "latest_replay": {
+        "checked_summary": "저장 당시 성과가 아니라 현재 DB 최신 시장일까지 같은 전략이 재현되는지 확인합니다.",
+        "missing_summary": "현재 세션의 latest runtime replay 또는 coverage 확인",
+        "next_action_summary": "`전략 재검증 실행`을 누른 뒤 Recheck와 Coverage가 Final Review 이동을 막지 않는지 확인합니다.",
+        "location": "Flow2 > 검증 기준 설정 / 실전 재검증 실행",
+    },
+    "benchmark_parity": {
+        "checked_summary": "후보와 benchmark / cash / simple baseline / custom comparator가 같은 기간, frequency, coverage로 비교됐는지 확인합니다.",
+        "missing_summary": "비교 기준 curve의 기간, frequency, coverage 정렬 근거",
+        "next_action_summary": "핵심 근거 탭에서 comparator curve와 recheck evidence를 확인하고 부족한 비교 기준 근거를 보강합니다.",
+        "location": "Flow4 > 핵심 근거 > Input Evidence / Curve·Recheck Evidence",
+    },
+    "validation_efficacy": {
+        "checked_summary": "walk-forward, OOS, regime, PIT, survivorship 근거가 성과 해석에 충분한지 확인합니다.",
+        "missing_summary": "walk-forward / OOS / regime / PIT / survivorship 중 보강 필요 항목",
+        "next_action_summary": "검증 강도 / 강건성 상세에서 non-PASS row를 확인하고 부족한 temporal / bias-control 근거를 보강합니다.",
+        "location": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
+    },
+    "data_coverage": {
+        "checked_summary": "가격 window, provider freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",
+        "missing_summary": "가격 window / provider freshness / lifecycle / survivorship 중 비어 있거나 오래된 항목",
+        "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
+        "action_location": "Flow4 > Provider / Data 보강 액션",
+    },
+    "construction_risk": {
+        "checked_summary": "ETF-like 또는 weighted mix 후보의 구성 집중, look-through, top holding, overlap, unknown exposure를 확인합니다.",
+        "missing_summary": "구성 집중, holdings / exposure coverage, overlap, unknown exposure 근거",
+        "next_action_summary": "포트폴리오 구성 근거 상세에서 non-PASS row를 확인하고 provider look-through 근거를 보강합니다.",
+        "location": "Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
+    },
+    "backtest_realism": {
+        "checked_summary": "거래비용, turnover, liquidity, net curve, rebalance timing이 실전 해석에 반영됐는지 확인합니다.",
+        "missing_summary": "cost / turnover / liquidity / net performance / rebalance timing 중 부족한 근거",
+        "next_action_summary": "실전 운용 현실성 상세에서 non-PASS row를 확인하고 비용 / 거래 현실성 근거를 보강합니다.",
+        "location": "Flow4 > 실전성 > 실전 운용 현실성 상세",
+    },
+    "stress_robustness": {
+        "checked_summary": "stress window, rolling, sensitivity, overfit warning 근거가 있는지 확인합니다.",
+        "missing_summary": "stress / rolling / sensitivity / overfit 중 미실행 또는 보강 필요 항목",
+        "next_action_summary": "Stress / sensitivity 상세에서 non-PASS row와 follow-up을 확인합니다.",
+        "location": "Flow4 > 강건성 > Stress / sensitivity 상세",
+    },
+    "selected_route_preflight": {
+        "checked_summary": "Final Review 저장 전에 selected-route policy가 막을 deterministic evidence gap이 있는지 확인합니다.",
+        "missing_summary": "Final Review 저장을 막는 selected-route blocker 또는 review-required gap",
+        "next_action_summary": "Final Review 이동 요약의 blocker를 해소한 뒤 저장 / 이동을 다시 확인합니다.",
+        "location": "Flow4 > 카테고리별 검증 결과 > Final Review 이동 요약",
+    },
+    "provider_investability": {
+        "checked_summary": "ETF provider operability, holdings, exposure, provider freshness가 충분한지 확인합니다.",
+        "missing_summary": "ETF provider snapshot, holdings, exposure, operability gap",
+        "next_action_summary": "Provider / Data 보강 액션에서 수집 가능한 provider gap을 먼저 보강합니다.",
+        "location": "Flow4 > Provider / Data 보강 액션",
+    },
+    "leverage_inverse": {
+        "checked_summary": "레버리지 / 인버스 노출의 목적, 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 확인합니다.",
+        "missing_summary": "노출 목적, 보유 기간, 손실 허용 기준",
+        "next_action_summary": "Final Review에서 레버리지 / 인버스 노출을 선택 근거 또는 보류 근거로 확인합니다.",
+        "location": "Final Review 확인 항목",
+    },
+    "risk_contribution": {
+        "checked_summary": "weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency를 확인합니다.",
+        "missing_summary": "component matrix, correlation, risk contribution, drop-one dependency 근거",
+        "next_action_summary": "위험 기여 상세에서 non-PASS row를 확인하고 component risk 근거를 보강합니다.",
+        "location": "Flow4 > 구성 / 리스크 > 위험 기여 상세",
+    },
+    "component_role_weight": {
+        "checked_summary": "weighted mix의 component role, target weight, profile intent, weight rationale을 확인합니다.",
+        "missing_summary": "component 역할, 비중 의도, weight rationale 근거",
+        "next_action_summary": "Component 역할 / 비중 상세에서 non-PASS row를 확인하고 역할 / 비중 근거를 보강합니다.",
+        "location": "Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
+    },
+    "macro_regime": {
+        "checked_summary": "전술형 / 헤지형 후보의 macro regime, risk-on/off context, regime split 근거를 확인합니다.",
+        "missing_summary": "macro snapshot, regime split, risk-on/off context 근거",
+        "next_action_summary": "Raw Evidence의 Practical Diagnostics에서 macro / regime row를 확인하고 Final Review 판단 근거로 넘깁니다.",
+        "location": "Flow4 > Raw Evidence > Practical Diagnostics",
+    },
+}
+MODULE_EVIDENCE_ROW_KEYS = {
+    "validation_efficacy": ("validation_efficacy_display_rows", "validation_efficacy_audit.rows"),
+    "data_coverage": ("data_coverage_display_rows", "data_coverage_audit.rows"),
+    "construction_risk": ("construction_risk_display_rows", "construction_risk_audit.rows"),
+    "backtest_realism": ("backtest_realism_display_rows", "backtest_realism_audit.rows"),
+    "risk_contribution": ("risk_contribution_display_rows", "risk_contribution_audit.rows"),
+    "component_role_weight": ("component_role_weight_display_rows", "component_role_weight_audit.rows"),
 }
 
 
@@ -256,12 +367,17 @@ def _module_stage_owner(module: dict[str, Any]) -> str:
     return str(module.get("stage_owner") or "").strip().lower()
 
 
-def _normalize_module(module: dict[str, Any], *, workspace_role: str) -> dict[str, Any]:
+def _normalize_module(
+    module: dict[str, Any],
+    *,
+    workspace_role: str,
+    evidence_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     row = dict(module or {})
     row["module_id"] = _module_id(row)
     row["status"] = normalize_validation_status(row.get("status"))
     row["workspace_role"] = workspace_role
-    row.update(_module_display_fields(row))
+    row.update(_module_display_fields(row, evidence_rows=evidence_rows))
     return row
 
 
@@ -270,12 +386,17 @@ def _ordered_modules(
     module_ids: set[str] | tuple[str, ...],
     *,
     workspace_role: str,
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]] | None = None,
 ) -> list[dict[str, Any]]:
     module_order = list(module_ids)
     module_id_set = set(module_order)
     order = {module_id: index for index, module_id in enumerate(module_order)}
     rows = [
-        _normalize_module(module, workspace_role=workspace_role)
+        _normalize_module(
+            module,
+            workspace_role=workspace_role,
+            evidence_rows=(evidence_rows_by_module or {}).get(_module_id(module)),
+        )
         for module in modules
         if _module_id(module) in module_id_set and _module_applies(module)
     ]
@@ -335,7 +456,152 @@ def _clean_issue_text(value: Any) -> str:
     return text
 
 
-def _module_display_fields(module: dict[str, Any]) -> dict[str, Any]:
+def _nested_rows(value: dict[str, Any], key_path: str) -> list[dict[str, Any]]:
+    current: Any = value
+    for key in key_path.split("."):
+        if not isinstance(current, dict):
+            return []
+        current = current.get(key)
+    return _dict_list(current)
+
+
+def _module_evidence_row_map(validation: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    rows_by_module: dict[str, list[dict[str, Any]]] = {}
+    for module_id, key_paths in MODULE_EVIDENCE_ROW_KEYS.items():
+        rows: list[dict[str, Any]] = []
+        for key_path in key_paths:
+            rows.extend(_nested_rows(validation, key_path))
+        rows_by_module[module_id] = rows
+    return rows_by_module
+
+
+def _evidence_row_status(row: dict[str, Any]) -> str:
+    return normalize_validation_status(
+        row.get("Status")
+        or row.get("Diagnostic Status")
+        or row.get("Coverage")
+        or row.get("Result Status")
+        or row.get("Policy Status")
+    )
+
+
+def _evidence_row_label(row: dict[str, Any]) -> str:
+    for key in ("Criteria", "Area", "Check", "Module", "Board", "Route"):
+        text = _clean_issue_text(row.get(key))
+        if text and text != "-":
+            return text
+    return "-"
+
+
+def _evidence_row_action(row: dict[str, Any]) -> str:
+    for key in ("Next Action", "Required Action", "Action", "Recommended Action"):
+        text = _clean_issue_text(row.get(key))
+        if text and text not in {"-", "none", "No action", "조치 없음"}:
+            return text
+    return ""
+
+
+def _join_limited(items: list[str], *, limit: int = 4) -> str:
+    clean = []
+    for item in items:
+        text = _clean_issue_text(item)
+        if text and text not in clean and text != "-":
+            clean.append(text)
+    if not clean:
+        return ""
+    visible = clean[:limit]
+    suffix = f" 외 {len(clean) - limit}개" if len(clean) > limit else ""
+    return " / ".join(visible) + suffix
+
+
+def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, str]:
+    missing: list[str] = []
+    actions: list[str] = []
+    review: list[str] = []
+    for row in evidence_rows:
+        status = _evidence_row_status(row)
+        if status in {"PASS", "READY", "NOT_APPLICABLE"}:
+            continue
+        label = _evidence_row_label(row)
+        if status == "REVIEW":
+            review.append(label)
+        else:
+            missing.append(label)
+        action = _evidence_row_action(row)
+        if action:
+            actions.append(action)
+    return {
+        "missing": _join_limited(missing),
+        "review": _join_limited(review),
+        "actions": _join_limited(actions, limit=3),
+    }
+
+
+def _resolution_guide(
+    module: dict[str, Any],
+    *,
+    status: str,
+    checked_summary: str,
+    missing_summary: str,
+    next_action: str,
+    fix_location: str,
+    evidence_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    module_id = str(module.get("module_id") or "").strip()
+    guide = dict(MODULE_RESOLUTION_GUIDES.get(module_id) or {})
+    row_summary = _non_pass_row_summary(evidence_rows)
+
+    checked = guide.get("checked_summary") or checked_summary
+    missing = row_summary.get("missing") or row_summary.get("review") or guide.get("missing_summary") or missing_summary
+    action = row_summary.get("actions") or guide.get("next_action_summary") or next_action
+    location = guide.get("location") or fix_location
+    action_location = guide.get("action_location") or ""
+
+    if status in {"PASS", "READY"}:
+        guide_type = "evidence"
+        issue_label = "통과 근거"
+        action_label = "다음 행동"
+        location_label = "확인 위치"
+        missing = "현재 기준에서 부족한 항목은 없습니다."
+        action = "추가 보강 없이 Final Review 판단 근거로 사용할 수 있습니다."
+    elif status == "REVIEW":
+        guide_type = "review"
+        issue_label = "확인할 것"
+        action_label = "Final Review에서 볼 것"
+        location_label = "확인 위치"
+        missing = row_summary.get("review") or missing
+        action = row_summary.get("actions") or action or "Final Review에서 review 항목을 판단 근거로 확인합니다."
+    elif status == "NOT_APPLICABLE":
+        guide_type = "none"
+        issue_label = "적용 여부"
+        action_label = "다음 행동"
+        location_label = "확인 위치"
+        missing = "현재 후보에는 적용되지 않는 기준입니다."
+        action = "별도 보강이 필요하지 않습니다."
+    else:
+        guide_type = "fix"
+        issue_label = "부족한 것"
+        action_label = "해야 할 일"
+        location_label = "보강 위치"
+
+    if action_location and action_location not in location:
+        location = f"{location} / 실행: {action_location}"
+
+    return {
+        "type": guide_type,
+        "checked_label": "검증한 것",
+        "checked": checked or "-",
+        "issue_label": issue_label,
+        "missing": missing or "-",
+        "action_label": action_label,
+        "next_action": action or "-",
+        "location_label": location_label,
+        "location": location or "-",
+        "action_location": action_location,
+    }
+
+
+def _module_display_fields(module: dict[str, Any], evidence_rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     module_id = str(module.get("module_id") or "").strip()
     label = str(module.get("label") or module_id or "-").strip()
     status = normalize_validation_status(module.get("status"))
@@ -362,6 +628,15 @@ def _module_display_fields(module: dict[str, Any]) -> dict[str, Any]:
         reading.get("impact_summary")
         or "이 기준이 해결되지 않으면 Final Review 이동 또는 저장 단계에서 다시 보류될 수 있습니다."
     )
+    resolution_guide = _resolution_guide(
+        module,
+        status=status,
+        checked_summary=reason or current_problem,
+        missing_summary=evidence or current_problem,
+        next_action=action or completion_criteria,
+        fix_location=fix_location,
+        evidence_rows=list(evidence_rows or []),
+    )
     return {
         "display_label": reading.get("display_label") or label,
         "issue_title": reading.get("issue_title") or reading.get("display_label") or label,
@@ -376,6 +651,11 @@ def _module_display_fields(module: dict[str, Any]) -> dict[str, Any]:
         "missing_evidence": current_problem,
         "action_label": completion_criteria,
         "why_it_matters": impact_summary,
+        "resolution_guide": resolution_guide,
+        "checked_summary": resolution_guide.get("checked"),
+        "missing_summary": resolution_guide.get("missing"),
+        "next_action_summary": resolution_guide.get("next_action"),
+        "location_summary": resolution_guide.get("location"),
     }
 
 
@@ -410,6 +690,7 @@ def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
     explanation = module.get("reason") or module.get("profile_effect") or "-"
     current_problem = module.get("current_problem") or evidence
     completion_criteria = module.get("completion_criteria") or module.get("resolution_action") or "-"
+    resolution_guide = dict(module.get("resolution_guide") or {})
     return {
         "module_id": module.get("module_id") or "-",
         "label": module.get("label") or module.get("module_id") or "-",
@@ -434,6 +715,11 @@ def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
         "resolution_surface": module.get("resolution_surface") or "-",
         "resolution_action": module.get("resolution_action") or module.get("next_action") or "-",
         "module_type": module.get("module_type") or module.get("requirement") or "-",
+        "resolution_guide": resolution_guide,
+        "checked_summary": resolution_guide.get("checked") or module.get("checked_summary") or current_problem,
+        "missing_summary": resolution_guide.get("missing") or module.get("missing_summary") or current_problem,
+        "next_action_summary": resolution_guide.get("next_action") or module.get("next_action_summary") or completion_criteria,
+        "location_summary": resolution_guide.get("location") or module.get("location_summary") or module.get("fix_location") or "-",
     }
 
 
@@ -515,13 +801,17 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
-def _category_result_groups(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _category_result_groups(
+    modules: list[dict[str, Any]],
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
     groups: list[dict[str, Any]] = []
     for spec in FLOW4_CATEGORY_GROUP_SPECS:
         category_modules = _ordered_modules(
             modules,
             tuple(spec.get("module_ids") or ()),
             workspace_role="validation_category",
+            evidence_rows_by_module=evidence_rows_by_module,
         )
         group = _group(
             group_id=str(spec.get("group_id") or ""),
@@ -534,17 +824,30 @@ def _category_result_groups(modules: list[dict[str, Any]]) -> list[dict[str, Any
     return groups
 
 
-def _fallback_fix_queue(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _fallback_fix_queue(
+    modules: list[dict[str, Any]],
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for module in modules:
         status = normalize_validation_status(module.get("status"))
         gate_effect = str(module.get("gate_effect") or "")
         if status in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"} or gate_effect == "Blocks Final Review":
-            rows.append(_normalize_module(module, workspace_role="fix_queue"))
+            rows.append(
+                _normalize_module(
+                    module,
+                    workspace_role="fix_queue",
+                    evidence_rows=(evidence_rows_by_module or {}).get(_module_id(module)),
+                )
+            )
     return rows
 
 
-def _fix_queue(validation: dict[str, Any], modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _fix_queue(
+    validation: dict[str, Any],
+    modules: list[dict[str, Any]],
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
     gate = dict(validation.get("final_review_gate") or {})
     blocking_rows = _dict_list(gate.get("blocking_modules"))
     if blocking_rows:
@@ -553,9 +856,15 @@ def _fix_queue(validation: dict[str, Any], modules: list[dict[str, Any]]) -> lis
         for row in blocking_rows:
             module_id = _module_id(row)
             merged = {**dict(module_by_id.get(module_id) or {}), **row}
-            merged_rows.append(_normalize_module(merged, workspace_role="fix_queue"))
+            merged_rows.append(
+                _normalize_module(
+                    merged,
+                    workspace_role="fix_queue",
+                    evidence_rows=(evidence_rows_by_module or {}).get(module_id),
+                )
+            )
         return merged_rows
-    return _fallback_fix_queue(modules)
+    return _fallback_fix_queue(modules, evidence_rows_by_module=evidence_rows_by_module)
 
 
 def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str, Any]:
@@ -564,29 +873,38 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     validation_row = dict(validation or {})
     modules = _dict_list(validation_row.get("validation_modules"))
     gate = dict(validation_row.get("final_review_gate") or {})
+    evidence_rows_by_module = _module_evidence_row_map(validation_row)
 
     source_readiness = _ordered_modules(
         modules,
         SOURCE_READINESS_MODULE_IDS,
         workspace_role="core_evidence",
+        evidence_rows_by_module=evidence_rows_by_module,
     )
     validation_readiness = _ordered_modules(
         modules,
         VALIDATION_READINESS_MODULE_IDS,
         workspace_role="core_evidence",
+        evidence_rows_by_module=evidence_rows_by_module,
     )
     final_review_preview = _ordered_modules(
         modules,
         FINAL_REVIEW_READINESS_PREVIEW_MODULE_IDS,
         workspace_role="final_review_readiness_preview",
+        evidence_rows_by_module=evidence_rows_by_module,
     )
     conditional_evidence = _ordered_modules(
         modules,
         CONDITIONAL_EVIDENCE_MODULE_IDS,
         workspace_role="conditional_evidence",
+        evidence_rows_by_module=evidence_rows_by_module,
     )
     downstream_references = [
-        _normalize_module(module, workspace_role="downstream_reference")
+        _normalize_module(
+            module,
+            workspace_role="downstream_reference",
+            evidence_rows=evidence_rows_by_module.get(_module_id(module)),
+        )
         for module in modules
         if _module_applies(module)
         and (
@@ -643,9 +961,9 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         ]
         if group is not None
     ]
-    fix_queue = _fix_queue(validation_row, modules)
+    fix_queue = _fix_queue(validation_row, modules, evidence_rows_by_module=evidence_rows_by_module)
     review_rows = _dict_list(gate.get("review_modules"))
-    category_groups = _category_result_groups(modules)
+    category_groups = _category_result_groups(modules, evidence_rows_by_module=evidence_rows_by_module)
     criteria_groups = _criteria_detail_groups(category_groups)
     criteria_summary = _criteria_summary(criteria_groups)
     handoff_summary_groups = [

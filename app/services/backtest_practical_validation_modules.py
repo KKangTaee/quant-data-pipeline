@@ -452,8 +452,8 @@ def build_validation_module_plan(
             reason="후보와 benchmark, cash, simple baseline, custom comparator 같은 비교 기준이 같은 기간 / frequency / coverage로 비교되는지 확인합니다.",
             next_action="비교 기준 curve coverage가 부족하면 source comparator나 replay evidence를 보강합니다.",
             profile_effect=profile_label,
-            resolution_surface="검증 기준 상세 · 핵심 입력 근거",
-            resolution_action="benchmark 또는 comparator curve가 후보와 같은 기간 / coverage / frequency로 만들어졌는지 확인합니다.",
+            resolution_surface="Flow4 > 핵심 근거 > Input Evidence / Curve·Recheck Evidence",
+            resolution_action="핵심 근거 탭에서 benchmark 또는 comparator curve가 후보와 같은 기간 / coverage / frequency로 만들어졌는지 확인합니다.",
         ),
         _module(
             module_id="validation_efficacy",
@@ -465,7 +465,7 @@ def build_validation_module_plan(
             reason="walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
             next_action="검증 효력에서 보강이 필요한 근거를 채우고 REVIEW 근거는 Final Review 판단 근거로 넘깁니다.",
             profile_effect=profile_label,
-            resolution_surface="검증 기준 상세 · 검증 강도 / 강건성",
+            resolution_surface="Flow4 > 실전성 > 검증 강도 / 강건성 상세",
             resolution_action="검증 강도 / 강건성 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
         ),
         _module(
@@ -478,8 +478,8 @@ def build_validation_module_plan(
             reason="최신 가격, provider freshness, PIT window, universe / survivorship coverage가 Practical Validation 판단에 충분한지 확인합니다.",
             next_action="가격 / provider / lifecycle / replay coverage 부족분을 보강합니다.",
             profile_effect=profile_label,
-            resolution_surface="검증 기준 상세 · 데이터 품질 / Provider 보강",
-            resolution_action="데이터 품질 / Provider 보강에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 데이터 보강을 진행합니다.",
+            resolution_surface="Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
+            resolution_action="데이터 품질 / 편향 통제 상세에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 provider gap은 Provider / Data 보강 액션에서 수집합니다.",
         ),
         _module(
             module_id="construction_risk",
@@ -497,8 +497,8 @@ def build_validation_module_plan(
                 if construction_applies
                 else "ETF-like 또는 weighted mix 후보가 아니므로 구성 / look-through 검증은 Flow 4 core 기준에서 제외합니다."
             ),
-            resolution_surface="검증 기준 상세 · 포트폴리오 구성 근거",
-            resolution_action="비중 집중, holdings / exposure coverage, top holding, overlap, unknown exposure row를 확인합니다.",
+            resolution_surface="Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
+            resolution_action="포트폴리오 구성 근거 상세에서 비중 집중, holdings / exposure coverage, top holding, overlap, unknown exposure row를 확인합니다.",
         ),
         _module(
             module_id="backtest_realism",
@@ -510,8 +510,8 @@ def build_validation_module_plan(
             reason="비용, turnover, liquidity, net performance, rebalance timing이 실전 해석에 충분한지 확인합니다.",
             next_action="비용 / turnover / 유동성 / net curve evidence가 부족하면 보강하고 assumption-only row는 Final Review review 근거로 넘깁니다.",
             profile_effect=profile_label,
-            resolution_surface="검증 기준 상세 · 실전 운용 현실성",
-            resolution_action="cost / turnover / liquidity / net performance / rebalance timing row 중 blocker를 보강합니다.",
+            resolution_surface="Flow4 > 실전성 > 실전 운용 현실성 상세",
+            resolution_action="실전 운용 현실성 상세에서 cost / turnover / liquidity / net performance / rebalance timing row 중 blocker를 보강합니다.",
         ),
         _module(
             module_id="stress_robustness",
@@ -523,8 +523,8 @@ def build_validation_module_plan(
             reason="최소 실전 stress window, rolling, sensitivity, overfit warning 근거가 있는지 확인합니다.",
             next_action="최소 stress / rolling / sensitivity 근거가 부족하면 보강하고 고급 parameter perturbation은 REVIEW 또는 후속 검증으로 남깁니다.",
             profile_effect="stricter for defensive / tactical profiles",
-            resolution_surface="검증 기준 상세 · 강건성 검증",
-            resolution_action="stress, rolling, sensitivity, overfit summary에서 미실행 또는 보강 필요 항목을 확인합니다.",
+            resolution_surface="Flow4 > 강건성 > Stress / sensitivity 상세",
+            resolution_action="Stress / sensitivity 상세에서 stress, rolling, sensitivity, overfit summary의 미실행 또는 보강 필요 항목을 확인합니다.",
         ),
         _module(
             module_id="provider_investability",
@@ -542,7 +542,7 @@ def build_validation_module_plan(
                 if traits.get("is_etf_like")
                 else "ETF-like source가 아니므로 provider 전용 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Provider / Data 보강 액션",
+            resolution_surface="Flow4 > Provider / Data 보강 액션",
             resolution_action="ETF provider operability / holdings / exposure gap을 확인하고 수집 가능한 부족분을 보강합니다.",
         ),
         _module(
@@ -582,8 +582,8 @@ def build_validation_module_plan(
                 if traits.get("is_weighted_mix")
                 else "single component 후보이므로 component 간 risk contribution 검증은 적용하지 않습니다."
             ),
-            resolution_surface="검증 기준 상세 · 포트폴리오 구성 근거",
-            resolution_action="weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency row를 확인합니다.",
+            resolution_surface="Flow4 > 구성 / 리스크 > 위험 기여 상세",
+            resolution_action="위험 기여 상세에서 weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency row를 확인합니다.",
         ),
         _module(
             module_id="component_role_weight",
@@ -601,8 +601,8 @@ def build_validation_module_plan(
                 if traits.get("is_weighted_mix")
                 else "single component 후보이므로 mix role / weight 검증은 적용하지 않습니다."
             ),
-            resolution_surface="검증 기준 상세 · 포트폴리오 구성 근거",
-            resolution_action="weighted mix의 role source, target weight, profile intent, weight rationale row를 확인합니다.",
+            resolution_surface="Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
+            resolution_action="Component 역할 / 비중 상세에서 weighted mix의 role source, target weight, profile intent, weight rationale row를 확인합니다.",
         ),
         _module(
             module_id="macro_regime",
@@ -620,9 +620,9 @@ def build_validation_module_plan(
                 if traits.get("is_tactical") or profile_id == "hedged_tactical"
                 else "전술형 source가 아니므로 macro / regime 조건부 검증은 적용하지 않습니다."
             ),
-            resolution_surface="검증 기준 상세 · 후보 특성별 추가 근거",
+            resolution_surface="Flow4 > Raw Evidence > Practical Diagnostics",
             resolution_action=(
-                "macro regime, FRED snapshot, regime split evidence를 확인합니다. "
+                "Raw Evidence의 Practical Diagnostics에서 macro regime, FRED snapshot, regime split evidence를 확인합니다. "
                 f"sentiment context status는 {sentiment_context_status}이며 gate에는 반영하지 않습니다."
             ),
         ),

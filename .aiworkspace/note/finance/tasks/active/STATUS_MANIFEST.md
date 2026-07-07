@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-06
+Last Verified: 2026-07-07
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `practical-validation-flow4-labels-v1-20260706`
+- `practical-validation-flow4-resolution-guide-v1-20260707`
 
 Latest completed docs cleanup task:
 
@@ -47,6 +47,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-flow4-resolution-guide-v1-20260707`: Practical Validation Flow 4 criteria cards now show `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치` instead of only a broad `보강 위치`. Audit rows with non-PASS criteria feed the missing/action copy, while gate policy and provider execution semantics are unchanged.
 - `practical-validation-flow4-labels-v1-20260706`: Practical Validation Flow 4 is now labeled `검증 기준 상세`; category headings are visually emphasized, and user-facing fix locations use screen-oriented names such as `검증 기준 상세 · 데이터 품질 / Provider 보강` instead of internal audit/workbench labels.
 - `practical-validation-flow3-conclusion-summary-v1-20260706`: Practical Validation Flow 3 is now a compact validation conclusion summary. It shows Final Review movement state plus category-level pass / fail / review only, and moves detailed causes / module tables to Flow 4.
 - `practical-validation-category-results-v1-20260706`: Practical Validation Flow 4 category-first validation result grouping. selected-route preflight is separated from validation categories, stress / robustness missing evidence is review by default, construction risk applies only to ETF-like or weighted mix candidates, and sentiment context no longer drives macro gate status.

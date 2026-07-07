@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow 4 Resolution Guide V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/`에서 Flow 4 `보강 위치`를 구조화된 resolution guide로 바꿨다.
+  - Criteria card는 이제 `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치`를 보여주며, audit row의 non-PASS `Criteria`와 `Next Action`을 우선 사용한다.
+  - Validation threshold / replay / provider ingestion / registry / Final Review policy / live approval 경계는 변경하지 않았다.
 - Backtest PIT Universe V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`에서 1차~5차를 개발 / QA / 커밋 순서로 완료했다.
   - Quality / Value strict coverage에 `PIT Monthly Snapshot Universe`를 추가해 사전 저장된 월말 membership을 리밸런싱일별로 읽게 했다.

@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-07 - Practical Validation Flow 4 보강위치는 조치 가이드가 되어야 한다
+
+- User request: 사용자가 Flow 4의 `보강 위치`가 틀리거나, 위치만으로는 무엇을 수정하고 개선해야 하는지 알기 어렵다고 지적하고 합리적인 개선 방향을 요청한 뒤 진행을 승인함.
+- Interpreted goal: Flow 4는 단순 화면 위치 안내가 아니라 `무엇을 검증했는지`, `무엇이 부족한지`, `무엇을 해야 하는지`, `어디서 확인 / 실행하는지`를 한 카드 안에서 답해야 함.
+- Analysis result: 기존 `fix_location`, `resolution_action`, `current_problem`, audit row가 흩어져 있어 사용자가 action을 재구성해야 했다. 따라서 `resolution_guide` contract를 추가하고, audit row의 non-PASS `Criteria`와 `Next Action`을 우선해 실제 부족 항목과 조치 문구를 만든다.
+- Follow-up: `practical-validation-flow4-resolution-guide-v1-20260707`에서 Flow 4 criteria card를 `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치` 구조로 변경했다. Gate policy, provider ingestion, replay execution, registry persistence 경계는 바꾸지 않았다.
+
 ### 2026-07-07 - Quality / Value coverage needs monthly PIT snapshots, not only current Top-N
 
 - User request: 사용자가 Quality / Value coverage 100 / 300 / 500이 현재 날짜 기준 Top-N이면 2016년부터의 백테스트에서 당시 300개 기업으로 선정되지 않는 문제가 있는지 질문했고, 월말 market-cap snapshot을 사전에 저장해 쓰는 방향이 맞는지 확인함.

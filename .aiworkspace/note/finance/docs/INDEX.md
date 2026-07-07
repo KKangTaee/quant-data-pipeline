@@ -24,8 +24,9 @@ Last Verified: 2026-07-07
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Backtest PIT Universe V1 2026-07-07](../tasks/active/backtest-pit-universe-v1-20260707/STATUS.md).
-- Previous completed task: [Backtest Strategy Form Cleanup V1 2026-07-07](../tasks/active/backtest-strategy-form-cleanup-v1-20260707/STATUS.md).
+- Latest completed task: [Practical Validation Flow 4 Resolution Guide V1 2026-07-07](../tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/STATUS.md).
+- Previous completed task: [Backtest PIT Universe V1 2026-07-07](../tasks/active/backtest-pit-universe-v1-20260707/STATUS.md).
+- Earlier completed task: [Backtest Strategy Form Cleanup V1 2026-07-07](../tasks/active/backtest-strategy-form-cleanup-v1-20260707/STATUS.md).
 - Earlier completed task: [Backtest Strategy Detail React V1 2026-07-07](../tasks/active/backtest-strategy-detail-react-v1-20260707/STATUS.md) was superseded by the form cleanup task; the overbuilt Strategy Detail panel is no longer an active flow.
 - Earlier completed task: [Practical Validation Flow 4 Labels V1 2026-07-06](../tasks/active/practical-validation-flow4-labels-v1-20260706/STATUS.md).
 - Latest completed product task: [Practical Validation Taxonomy Roadmap V1 2026-07-05](../tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/STATUS.md).

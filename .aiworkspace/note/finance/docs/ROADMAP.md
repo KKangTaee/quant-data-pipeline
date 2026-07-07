@@ -9,7 +9,13 @@ Last Verified: 2026-07-07
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/`다.
+
+- 목적: Practical Validation Flow 4의 `보강 위치`가 단순 위치 문자열이라 사용자가 실제 부족 항목과 해야 할 일을 파악하기 어려운 문제를 해결했다.
+- 주요 변경: workspace read model에 `resolution_guide`를 추가하고, Flow 4 criteria card를 `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치` 구조로 렌더링한다. Data Coverage / Validation Efficacy 등 audit row가 있는 기준은 non-PASS `Criteria`와 `Next Action`을 우선 사용한다. 위치명은 `Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세`, `Flow4 > Provider / Data 보강 액션`처럼 실제 화면 경로로 세분화했다.
+- 이번 차수에서 하지 않은 일: validation threshold 변경, replay 실행 로직 변경, provider ingestion orchestration 변경, registry / saved JSONL rewrite, Final Review selected-route 정책 변경, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`다.
 
 - 목적: Quality / Value strict coverage가 현재 market-cap Top-N을 과거 전체 기간에 고정해 쓰는 look-ahead / survivorship 위험을 줄이고, 사용자가 2016년부터 실행할 때 당시 월말 기준 근사 universe를 선택할 수 있게 한다.
 - 주요 변경: `finance_meta.equity_universe_snapshot` / `equity_universe_member` schema와 builder / upsert / loader를 추가했다. Strict Quality / Value / Quality+Value annual and quarterly prototype runners는 `PIT Monthly Snapshot Universe`를 선택하면 사전 저장 monthly membership을 읽고, 각 리밸런싱일에는 가장 가까운 이전 snapshot을 적용한다. Backtest Single Strategy와 Portfolio Mix Builder strict form은 Static / PIT Monthly 두 계약만 visible option으로 노출한다. Historical Dynamic PIT는 저장 snapshot 도입 전 first-pass 경로이므로 기존 saved payload / old run 호환용 legacy internal path로만 유지한다.

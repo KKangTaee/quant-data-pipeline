@@ -1913,6 +1913,17 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
         card_html: list[str] = []
         for card in cards:
             card_tone = _status_tone(card.get("status"))
+            guide = dict(card.get("resolution_guide") or {})
+            checked_label = str(guide.get("checked_label") or "검증한 것")
+            checked_text = str(guide.get("checked") or card.get("checked_summary") or card.get("current_problem") or "-")
+            issue_label = str(guide.get("issue_label") or "부족한 것")
+            missing_text = str(guide.get("missing") or card.get("missing_summary") or card.get("current_problem") or "-")
+            action_label = str(guide.get("action_label") or "해야 할 일")
+            next_action_text = str(
+                guide.get("next_action") or card.get("next_action_summary") or card.get("completion_criteria") or "-"
+            )
+            location_label = str(guide.get("location_label") or "확인 위치")
+            location_text = str(guide.get("location") or card.get("location_summary") or card.get("fix_location") or "-")
             card_html.append(
                 f'<article class="pv-criteria-card pv-criteria-card-{card_tone}">'
                 '<div class="pv-criteria-card-head">'
@@ -1920,20 +1931,20 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
                 f'<div class="pv-criteria-card-status">{escape(str(card.get("status_label") or card.get("status") or "-"))}</div>'
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>현재 문제</span>"
-                f"<p>{escape(str(card.get('current_problem') or card.get('evidence') or '-'))}</p>"
+                f"<span>{escape(checked_label)}</span>"
+                f"<p>{escape(checked_text)}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>완료 기준</span>"
-                f"<p>{escape(str(card.get('completion_criteria') or card.get('resolution_action') or '-'))}</p>"
+                f"<span>{escape(issue_label)}</span>"
+                f"<p>{escape(missing_text)}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>보강 위치</span>"
-                f"<p>{escape(str(card.get('fix_location') or card.get('resolution_surface') or '-'))}</p>"
+                f"<span>{escape(action_label)}</span>"
+                f"<p>{escape(next_action_text)}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
-                "<span>영향</span>"
-                f"<p>{escape(str(card.get('impact_summary') or '-'))}</p>"
+                f"<span>{escape(location_label)}</span>"
+                f"<p>{escape(location_text)}</p>"
                 "</div>"
                 "<footer>"
                 f"<span>기술 기준: {escape(str(card.get('technical_label') or card.get('module_type') or '-'))}</span>"
