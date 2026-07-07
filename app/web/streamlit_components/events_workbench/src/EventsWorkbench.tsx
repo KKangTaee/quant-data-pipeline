@@ -334,6 +334,40 @@ function addDays(value: Date, days: number): Date {
   return next;
 }
 
+function isMonthText(monthText: string): boolean {
+  return /^\d{4}-\d{2}$/.test(monthText || "");
+}
+
+function dateFromMonthText(monthText: string): Date | null {
+  if (!isMonthText(monthText)) {
+    return null;
+  }
+  const [yearText, monthNumberText] = monthText.split("-");
+  return new Date(Number(yearText), Number(monthNumberText) - 1, 1);
+}
+
+function monthTextFromDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function moveCalendarMonthValue(monthText: string, offset: number): string {
+  const current = dateFromMonthText(monthText);
+  if (!current) {
+    return monthText;
+  }
+  return monthTextFromDate(new Date(current.getFullYear(), current.getMonth() + offset, 1));
+}
+
+function formatMonthTitle(monthText: string): string {
+  const current = dateFromMonthText(monthText);
+  if (!current) {
+    return "월 선택";
+  }
+  return `${current.getFullYear()}년 ${current.getMonth() + 1}월`;
+}
+
 function monthOptionsFromDays(days: CalendarDay[], today?: string): string[] {
   const options = Array.from(new Set(days.map((day) => day.date.slice(0, 7)).filter(Boolean))).sort();
   const todayMonth = (today || "").slice(0, 7);
@@ -353,6 +387,10 @@ function defaultMonthFromDays(days: CalendarDay[], today?: string): string {
     return todayMonth;
   }
   return options[0];
+}
+
+function monthSelectOptions(monthOptions: string[], activeMonth: string): string[] {
+  return Array.from(new Set([activeMonth, ...monthOptions].filter(Boolean))).sort();
 }
 
 function buildCalendarMonthDays(
@@ -510,8 +548,11 @@ function EventsWorkbench({ args }: ComponentProps) {
     .filter((day) => day.count > 0);
   const filteredDayMap = new Map(filteredCalendarDays.map((day) => [day.date, day]));
   const monthOptions = monthOptionsFromDays(filteredCalendarDays, calendar.today);
-  const activeCalendarMonth = monthOptions.includes(calendarMonth) ? calendarMonth : defaultMonthFromDays(filteredCalendarDays, calendar.today);
+  const activeCalendarMonth = isMonthText(calendarMonth) ? calendarMonth : defaultMonthFromDays(filteredCalendarDays, calendar.today);
   const calendarMonthDays = buildCalendarMonthDays(activeCalendarMonth, filteredDayMap, calendar);
+  const calendarMonthEventDays = calendarMonthDays.filter((day) => day.in_month && day.count > 0);
+  const calendarMonthEventCount = calendarMonthEventDays.reduce((total, day) => total + day.count, 0);
+  const visibleMonthOptions = monthSelectOptions(monthOptions, activeCalendarMonth);
   const filteredDensity = calendarDensity.filter((bucket) => weekMatchesFilter(bucket, familyFilter, reviewFilter));
   const maxDensityCount = Math.max(1, ...filteredDensity.map((bucket) => bucket.count || 0));
 
@@ -536,14 +577,18 @@ function EventsWorkbench({ args }: ComponentProps) {
 
   useEffect(() => {
     const nextDefaultMonth = defaultMonthFromDays(filteredCalendarDays, calendar.today);
-    if (!monthOptions.includes(calendarMonth)) {
+    if (!isMonthText(calendarMonth)) {
       setCalendarMonth(nextDefaultMonth);
     }
-  }, [calendar.today, calendarMonth, filteredCalendarDays, monthOptions]);
+  }, [calendar.today, calendarMonth, filteredCalendarDays]);
 
   const emitEvent = (id: string) => {
     setPendingActionId(id);
     Streamlit.setComponentValue({ event: { id, nonce: `${Date.now()}-${Math.random()}` } });
+  };
+
+  const moveCalendarMonth = (offset: number) => {
+    setCalendarMonth(moveCalendarMonthValue(activeCalendarMonth, offset));
   };
 
   if (!isPayloadReady) {
@@ -736,9 +781,20 @@ function EventsWorkbench({ args }: ComponentProps) {
             <h3>캘린더로 보는 일정 근거</h3>
           </div>
           <div className="events-workbench__month-control">
-            <span>{filteredCalendarDays.length}개 날짜</span>
-            <select value={activeCalendarMonth} onChange={(event) => setCalendarMonth(event.target.value)}>
-              {(monthOptions.length ? monthOptions : [activeCalendarMonth]).map((month) => (
+            <div className="events-workbench__month-nav" aria-label="월 이동">
+              <button aria-label="이전 달" onClick={() => moveCalendarMonth(-1)} type="button">
+                ‹
+              </button>
+              <strong className="events-workbench__month-title">{formatMonthTitle(activeCalendarMonth)}</strong>
+              <button aria-label="다음 달" onClick={() => moveCalendarMonth(1)} type="button">
+                ›
+              </button>
+            </div>
+            <span className="events-workbench__month-summary">
+              이벤트 날짜 {calendarMonthEventDays.length}일 · 이벤트 {calendarMonthEventCount}건
+            </span>
+            <select className="events-workbench__month-select" value={activeCalendarMonth} onChange={(event) => setCalendarMonth(event.target.value)}>
+              {visibleMonthOptions.map((month) => (
                 <option key={month} value={month}>
                   {month}
                 </option>
@@ -754,7 +810,7 @@ function EventsWorkbench({ args }: ComponentProps) {
             <div
               className={[
                 "events-workbench__day",
-                day.in_month ? "" : "events-workbench__day--muted",
+                day.in_month ? "" : "events-workbench__day--outside-month",
                 day.is_today ? "events-workbench__day--today" : "",
                 day.is_current_week ? "events-workbench__day--current-week" : "",
                 day.count ? "events-workbench__day--has-events" : "",

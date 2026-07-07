@@ -109,3 +109,7 @@
 - 2026-07-07: calendar-week QA - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` - PASS, 117 tests. Existing third-party deprecation and Streamlit no-runtime warnings were non-failing.
 - 2026-07-07: calendar-week QA - `git diff --check -- app/services/overview/events.py tests/test_service_contracts.py` - PASS.
 - 2026-07-07: calendar-week Browser QA at `http://localhost:8514/?overview_tab=events` - PASS. DOM confirmed `오늘 / 이번 주 0 · 0 확인`, `30일 내 106 · 90 확인`, and 2026-07-14 JPM under the `30일 내` article list. Screenshot `browser-qa-events-calendar-week-bucket-fresh-top.png` is generated and uncommitted.
+- 2026-07-07: Calendar polish 1차 RED - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_events_react_workbench_renders_filters_calendar_trust_and_evidence` failed before implementation on missing `formatMonthTitle`.
+- 2026-07-07: Calendar polish 1차 GREEN - same focused React source contract PASS after month title/navigation/month-summary/outside-month styling implementation.
+- 2026-07-07: Calendar polish 1차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: Calendar polish 1차 QA - `git diff --check` for changed source/test/task files - PASS.

@@ -556,10 +556,58 @@ body {
 .events-workbench__month-control {
   align-items: center;
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  justify-content: flex-end;
 }
 
-.events-workbench__month-control select {
+.events-workbench__month-nav {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 2px;
+  min-height: 34px;
+  padding: 2px;
+}
+
+.events-workbench__month-nav button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 900;
+  height: 28px;
+  line-height: 1;
+  min-width: 28px;
+}
+
+.events-workbench__month-nav button:hover {
+  background: #e2e8f0;
+}
+
+.events-workbench__month-title {
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 900;
+  line-height: 1;
+  min-width: 5.8rem;
+  text-align: center;
+}
+
+.events-workbench__month-summary {
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.events-workbench__month-control select,
+.events-workbench__month-select {
   appearance: none;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
@@ -596,9 +644,19 @@ body {
   position: relative;
 }
 
-.events-workbench__day--muted {
+.events-workbench__day--outside-month {
   background: #f1f5f9;
-  opacity: 0.7;
+  border-color: #e5e7eb;
+}
+
+.events-workbench__day--outside-month .events-workbench__day-head strong,
+.events-workbench__day--outside-month .events-workbench__day-meta {
+  color: #94a3b8;
+}
+
+.events-workbench__day--outside-month .events-workbench__family-dot,
+.events-workbench__day--outside-month .events-workbench__day-head span {
+  opacity: 0.45;
 }
 
 .events-workbench__day--current-week {
