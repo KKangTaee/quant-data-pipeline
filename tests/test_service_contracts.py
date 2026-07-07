@@ -883,6 +883,92 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertTrue(model["issue_rows"])
         self.assertIn("Daily Market Update", model["next_action"])
 
+    def test_strict_factor_readiness_model_separates_base_price_statement_and_actions(self) -> None:
+        from app.web.backtest_common import build_strict_factor_readiness_panel_model
+
+        model = build_strict_factor_readiness_panel_model(
+            preset_name="US Statement Coverage 300",
+            tickers=["AAPL", "BK", "CUK"],
+            strategy_label="Quality Snapshot (Strict Annual)",
+            statement_freq="annual",
+            price_report={
+                "status": "warning",
+                "message": "2 symbols stop before the effective trading end.",
+                "details": {
+                    "requested_count": 3,
+                    "covered_count": 3,
+                    "common_latest_date": "2026-07-02",
+                    "newest_latest_date": "2026-07-06",
+                    "spread_days": 4,
+                    "stale_count": 2,
+                    "missing_count": 0,
+                    "stale_symbols": ["BK", "CUK"],
+                    "reason_counts": {"minor_source_lag": 1, "persistent_source_gap_or_symbol_issue": 1},
+                    "effective_end_date": "2026-07-06",
+                },
+            },
+            statement_summary={
+                "requested_count": 3,
+                "covered_count": 2,
+                "row_count": 20,
+                "min_period_end": "2016-12-31",
+                "max_period_end": "2025-12-31",
+                "missing_symbols": ["CUK"],
+                "raw_missing_symbols": ["CUK"],
+                "shadow_missing_symbols": [],
+            },
+        )
+
+        self.assertEqual(model["schema_version"], "strict_factor_readiness_panel_v1")
+        self.assertEqual(model["status"], "needs_action")
+        self.assertEqual(model["tone"], "warning")
+        self.assertIn("실행 전", model["headline"])
+        self.assertEqual([check["id"] for check in model["checks"]], ["base_universe", "price_freshness", "statement_shadow"])
+        self.assertIn("후보군", model["checks"][0]["summary"])
+        self.assertIn("BK", model["checks"][1]["issues"][0]["detail"])
+        self.assertIn("provider", " ".join(action["label"] + " " + action["detail"] for action in model["actions"]).lower())
+        self.assertIn("Extended Statement Refresh", " ".join(action["label"] + " " + action["detail"] for action in model["actions"]))
+        self.assertFalse(model["run_recommended"])
+
+    def test_strict_factor_readiness_model_marks_ready_when_price_and_statement_pass(self) -> None:
+        from app.web.backtest_common import build_strict_factor_readiness_panel_model
+
+        model = build_strict_factor_readiness_panel_model(
+            preset_name="US Statement Coverage 100",
+            tickers=["AAPL", "MSFT"],
+            strategy_label="Value Snapshot (Strict Annual)",
+            statement_freq="annual",
+            price_report={
+                "status": "ok",
+                "message": "Price freshness passed.",
+                "details": {
+                    "requested_count": 2,
+                    "covered_count": 2,
+                    "common_latest_date": "2026-07-06",
+                    "newest_latest_date": "2026-07-06",
+                    "spread_days": 0,
+                    "stale_count": 0,
+                    "missing_count": 0,
+                    "effective_end_date": "2026-07-06",
+                },
+            },
+            statement_summary={
+                "requested_count": 2,
+                "covered_count": 2,
+                "row_count": 18,
+                "min_period_end": "2017-12-31",
+                "max_period_end": "2025-12-31",
+                "missing_symbols": [],
+                "raw_missing_symbols": [],
+                "shadow_missing_symbols": [],
+            },
+        )
+
+        self.assertEqual(model["status"], "ready")
+        self.assertEqual(model["tone"], "positive")
+        self.assertTrue(model["run_recommended"])
+        self.assertEqual(model["actions"][0]["label"], "현재 설정으로 실행")
+
     def test_price_freshness_preflight_react_component_is_ui_only(self) -> None:
         component_root = Path("app/web/components/backtest_price_freshness_preflight")
         wrapper_path = component_root / "component.py"

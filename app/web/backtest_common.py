@@ -2147,6 +2147,236 @@ def build_strict_price_freshness_preflight_model(
     }
 
 
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        if value is None or value == "":
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _readiness_status_from_tone(tone: str) -> str:
+    normalized = str(tone or "").strip().lower()
+    if normalized == "positive":
+        return "pass"
+    if normalized == "danger":
+        return "blocked"
+    if normalized == "warning":
+        return "review"
+    return "info"
+
+
+def build_strict_factor_readiness_panel_model(
+    *,
+    preset_name: str | None,
+    tickers: list[str] | tuple[str, ...] | None,
+    strategy_label: str,
+    statement_freq: str = "annual",
+    price_report: dict[str, Any] | None = None,
+    statement_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a compact first-read readiness model for strict factor setup forms."""
+    normalized_tickers = _unique_upper_tickers(list(tickers or []))
+    preset_model = build_strict_preset_basis_model(preset_name, normalized_tickers)
+    price_report = dict(price_report or {})
+    price_details = dict(price_report.get("details") or {})
+    statement_summary = dict(statement_summary or {})
+
+    price_tone = _price_freshness_preflight_tone(price_report.get("status"))
+    stale_count = _safe_int(price_details.get("stale_count"))
+    missing_price_count = _safe_int(price_details.get("missing_count"))
+    price_issue_count = stale_count + missing_price_count
+    stale_symbols = _unique_upper_tickers(price_details.get("stale_symbols") or [])
+    missing_price_symbols = _unique_upper_tickers(price_details.get("missing_symbols") or [])
+    reason_counts = dict(price_details.get("reason_counts") or {})
+    provider_gap_count = sum(
+        _safe_int(count)
+        for reason, count in reason_counts.items()
+        if any(marker in str(reason).lower() for marker in ("persistent", "provider", "symbol_issue", "no_data"))
+    )
+    provider_gap_symbols = _unique_upper_tickers(
+        price_details.get("provider_gap_symbols")
+        or price_details.get("provider_no_data_symbols")
+        or price_details.get("post_refresh_unresolved_symbols")
+        or []
+    )
+    if provider_gap_count and not provider_gap_symbols:
+        provider_gap_symbols = (stale_symbols + missing_price_symbols)[: max(1, provider_gap_count)]
+
+    statement_requested = _safe_int(statement_summary.get("requested_count"), len(normalized_tickers))
+    statement_covered = _safe_int(statement_summary.get("covered_count"))
+    statement_missing_count = max(0, statement_requested - statement_covered)
+    statement_missing_symbols = _unique_upper_tickers(
+        statement_summary.get("missing_symbols")
+        or list(statement_summary.get("raw_missing_symbols") or [])
+        + list(statement_summary.get("shadow_missing_symbols") or [])
+    )
+    statement_tone = "positive" if statement_requested > 0 and statement_missing_count == 0 else "warning"
+
+    base_tone = str(preset_model.get("preset_tone") or "neutral")
+    base_check_tone = "warning" if base_tone == "warning" else "neutral"
+    base_check = {
+        "id": "base_universe",
+        "title": "Base Universe",
+        "status": _readiness_status_from_tone(base_check_tone),
+        "tone": base_check_tone,
+        "summary": (
+            f"{preset_model.get('display_name') or preset_name or 'Manual'} 후보군 {len(normalized_tickers)}개를 선택했습니다. "
+            "이 값은 실행 가능 coverage가 아니라 factor 평가 전 후보군입니다."
+        ),
+        "detail": str(preset_model.get("source_basis") or ""),
+        "metrics": [
+            {"label": "Loaded", "value": str(preset_model.get("actual_count") or 0), "detail": "후보군"},
+            {"label": "Target", "value": str(preset_model.get("requested_limit") or "manual"), "detail": "preset 목표"},
+        ],
+        "issues": [
+            {
+                "label": "주의",
+                "value": "후보군 기준",
+                "detail": str(preset_model.get("role_note") or preset_model.get("operator_note") or ""),
+                "tone": base_check_tone,
+            }
+        ],
+    }
+
+    price_issues: list[dict[str, str]] = []
+    if stale_count:
+        price_issues.append(
+            {
+                "label": "Stale",
+                "value": str(stale_count),
+                "detail": _symbol_sample(stale_symbols) or "기준 거래일보다 오래된 가격 row가 있습니다.",
+                "tone": "warning",
+            }
+        )
+    if missing_price_count:
+        price_issues.append(
+            {
+                "label": "Missing",
+                "value": str(missing_price_count),
+                "detail": _symbol_sample(missing_price_symbols) or "DB 가격 row가 없는 종목이 있습니다.",
+                "tone": "danger",
+            }
+        )
+    if provider_gap_count:
+        price_issues.append(
+            {
+                "label": "Provider Gap",
+                "value": str(provider_gap_count),
+                "detail": (
+                    f"{_symbol_sample(provider_gap_symbols) or '일부 종목'}은 provider가 최신 row를 주지 않는 source gap일 수 있습니다."
+                ),
+                "tone": "warning",
+            }
+        )
+    price_check = {
+        "id": "price_freshness",
+        "title": "Price Freshness",
+        "status": _readiness_status_from_tone(price_tone),
+        "tone": price_tone,
+        "summary": str(price_report.get("message") or "가격 최신성 점검 결과입니다."),
+        "detail": (
+            f"공통 최신일 {price_details.get('common_latest_date') or '-'} / "
+            f"목표 기준 {price_details.get('effective_end_date') or '-'} / "
+            f"spread {price_details.get('spread_days') or 0}d"
+        ),
+        "metrics": [
+            {"label": "Requested", "value": str(price_details.get("requested_count") or len(normalized_tickers)), "detail": "검사 대상"},
+            {"label": "Covered", "value": str(price_details.get("covered_count") or 0), "detail": "가격 보유"},
+            {"label": "Common Latest", "value": str(price_details.get("common_latest_date") or "-"), "detail": "공통 기준"},
+        ],
+        "issues": price_issues,
+    }
+
+    statement_issues: list[dict[str, str]] = []
+    if statement_missing_count:
+        statement_issues.append(
+            {
+                "label": "Statement Gap",
+                "value": str(statement_missing_count),
+                "detail": _symbol_sample(statement_missing_symbols) or "일부 종목의 statement shadow factor coverage가 부족합니다.",
+                "tone": "warning",
+            }
+        )
+    statement_check = {
+        "id": "statement_shadow",
+        "title": "Statement Shadow",
+        "status": _readiness_status_from_tone(statement_tone),
+        "tone": statement_tone,
+        "summary": (
+            f"{statement_freq} statement shadow coverage {statement_covered}/{statement_requested}개입니다."
+        ),
+        "detail": (
+            f"기간 {statement_summary.get('min_period_end') or '-'} -> {statement_summary.get('max_period_end') or '-'} / "
+            f"rows {statement_summary.get('row_count') or 0}"
+        ),
+        "metrics": [
+            {"label": "Requested", "value": str(statement_requested), "detail": "factor 대상"},
+            {"label": "Covered", "value": str(statement_covered), "detail": "shadow 보유"},
+            {"label": "Missing", "value": str(statement_missing_count), "detail": "보강 필요"},
+        ],
+        "issues": statement_issues,
+    }
+
+    actions: list[dict[str, str]] = []
+    if provider_gap_count:
+        actions.append(
+            {
+                "label": "Provider gap 확인",
+                "detail": (
+                    "Coverage 최신화를 반복하기 전에 provider no-data / symbol issue인지 확인하고, "
+                    "필요하면 universe를 조정하거나 Data Trust에서 대체 소스를 검토합니다."
+                ),
+                "tone": "warning",
+            }
+        )
+    if price_issue_count and not provider_gap_count:
+        actions.append(
+            {
+                "label": "Coverage 최신화",
+                "detail": "stale/missing 가격 row를 목표 거래일까지 보강한 뒤 다시 백테스트를 실행합니다.",
+                "tone": "warning" if stale_count else "danger",
+            }
+        )
+    if statement_missing_count:
+        actions.append(
+            {
+                "label": "Extended Statement Refresh",
+                "detail": f"{statement_freq} statement shadow factor coverage를 먼저 보강합니다.",
+                "tone": "warning",
+            }
+        )
+    if not actions:
+        actions.append(
+            {
+                "label": "현재 설정으로 실행",
+                "detail": "Base Universe와 실행 전 데이터 기준이 현재 선택 기준에서 통과 상태입니다.",
+                "tone": "positive",
+            }
+        )
+
+    needs_action = bool(price_issue_count or provider_gap_count or statement_missing_count)
+    tone = "positive" if not needs_action else "warning"
+    return {
+        "schema_version": "strict_factor_readiness_panel_v1",
+        "strategy_label": strategy_label,
+        "status": "ready" if not needs_action else "needs_action",
+        "tone": tone,
+        "headline": (
+            "현재 설정으로 백테스트를 실행할 수 있습니다."
+            if not needs_action
+            else "실행 전 데이터 기준을 먼저 확인하세요."
+        ),
+        "summary": (
+            "이 패널은 Base Universe 후보군, 가격 최신성, statement shadow factor coverage를 함께 읽습니다."
+        ),
+        "run_recommended": not needs_action,
+        "checks": [base_check, price_check, statement_check],
+        "actions": actions,
+    }
+
+
 def _render_market_regime_overlay_inputs(
     *,
     key_prefix: str,
