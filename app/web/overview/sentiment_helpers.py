@@ -23,6 +23,13 @@ from app.web.overview.components.common import (
     OVERVIEW_COLOR_WARNING,
     OVERVIEW_SERIES_COLORS,
 )
+from app.web.overview.sentiment_react_component import (
+    render_sentiment_react_workbench,
+    sentiment_react_component_available,
+)
+
+
+OVERVIEW_SENTIMENT_REACT_EVENT_KEY = "overview_sentiment_react_last_event"
 
 
 def _safe_float(value: Any) -> float | None:
@@ -82,19 +89,14 @@ def render_sentiment_controls() -> None:
         use_container_width=True,
         type="primary",
     ):
-        with st.spinner("Refreshing CNN Fear & Greed / AAII sentiment..."):
-            _store_overview_job_result(
-                "overview_market_sentiment_result",
-                run_overview_market_sentiment(),
-            )
-            load_overview_market_sentiment_snapshot.clear()
+        _refresh_sentiment_for_ui()
         st.rerun()
     if control_cols[1].button(
         "화면 새로고침",
         key="overview_market_sentiment_reload",
         use_container_width=True,
     ):
-        load_overview_market_sentiment_snapshot.clear()
+        _reload_sentiment_snapshot_for_ui()
         st.rerun()
     control_cols[2].caption("CNN / AAII 저장 데이터 기준")
 
@@ -105,6 +107,46 @@ def render_sentiment_job_result() -> None:
 
 def load_sentiment_snapshot() -> dict[str, Any]:
     return load_overview_market_sentiment_snapshot()
+
+
+def _refresh_sentiment_for_ui() -> None:
+    with st.spinner("Refreshing CNN Fear & Greed / AAII sentiment..."):
+        _store_overview_job_result(
+            "overview_market_sentiment_result",
+            run_overview_market_sentiment(),
+        )
+        load_overview_market_sentiment_snapshot.clear()
+
+
+def _reload_sentiment_snapshot_for_ui() -> None:
+    load_overview_market_sentiment_snapshot.clear()
+
+
+def _sentiment_react_event_payload(event: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {}
+    nested = event.get("event")
+    if isinstance(nested, dict):
+        return dict(nested)
+    return event
+
+
+def _handle_sentiment_react_event(event: dict[str, Any] | None) -> None:
+    payload = _sentiment_react_event_payload(event)
+    action_id = str(payload.get("id") or payload.get("action_id") or "")
+    if not action_id:
+        return
+    nonce = payload.get("nonce") or payload.get("token") or action_id
+    event_key = f"{action_id}:{nonce}"
+    if st.session_state.get(OVERVIEW_SENTIMENT_REACT_EVENT_KEY) == event_key:
+        return
+    st.session_state[OVERVIEW_SENTIMENT_REACT_EVENT_KEY] = event_key
+    if action_id == "refresh":
+        _refresh_sentiment_for_ui()
+        st.rerun()
+    if action_id == "reload":
+        _reload_sentiment_snapshot_for_ui()
+        st.rerun()
 
 
 def _sentiment_status_tone(status: Any) -> str:
@@ -372,6 +414,17 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
         "action_boundary": "python_dispatch_only",
         "boundary_note": "시장 배경 / 조사 단서입니다. 매수/매도 신호, validation gate, monitoring signal, 자동 action이 아닙니다.",
     }
+
+
+def render_sentiment_react_workbench_section(snapshot: dict[str, Any]) -> bool:
+    if not sentiment_react_component_available():
+        return False
+    react_event = render_sentiment_react_workbench(
+        build_sentiment_react_workbench_payload(snapshot),
+        key="overview_sentiment_workbench",
+    )
+    _handle_sentiment_react_event(react_event)
+    return True
 
 
 def _sentiment_trend_chart(rows: pd.DataFrame) -> alt.Chart:

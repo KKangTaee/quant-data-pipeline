@@ -6156,6 +6156,36 @@ class OverviewAutomationContractTests(unittest.TestCase):
         react_event_body = react_event_body[: react_event_body.index("def _futures_symbols_with_candles")]
         self.assertNotIn('st.spinner("과거 점검을 계산하는 중입니다..."', react_event_body)
 
+    def test_sentiment_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.sentiment_react_component import (
+            SENTIMENT_REACT_COMPONENT_NAME,
+            sentiment_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        helper_source = Path("app/web/overview/sentiment_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/sentiment_react_component.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertEqual(SENTIMENT_REACT_COMPONENT_NAME, "sentiment_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "index.html").exists())
+        self.assertTrue((component_root / "src" / "SentimentWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(sentiment_react_component_available(component_root / "missing-dist"))
+        self.assertIn("render_sentiment_react_workbench", helper_source)
+        self.assertIn("build_sentiment_react_workbench_payload", helper_source)
+        self.assertIn("_handle_sentiment_react_event(", helper_source)
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('payload.component === "SentimentWorkbench"', react_source)
+        self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("sentiment-workbench__command", react_source)
+        self.assertIn("sentiment-workbench__fallback-note", react_source)
+        self.assertIn(".sentiment-workbench__command", react_style)
+        self.assertIn("@media (max-width: 760px)", react_style)
+
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
 
