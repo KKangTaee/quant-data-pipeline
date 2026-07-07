@@ -640,8 +640,27 @@ body {
   border-radius: 8px;
   min-height: 104px;
   min-width: 0;
-  padding: 8px;
+  padding: 0;
   position: relative;
+}
+
+.events-workbench__day-button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  height: 100%;
+  min-height: 104px;
+  padding: 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.events-workbench__day-button:disabled {
+  cursor: default;
 }
 
 .events-workbench__day--outside-month {
@@ -666,6 +685,11 @@ body {
 
 .events-workbench__day--today {
   box-shadow: inset 0 0 0 2px #0f766e;
+}
+
+.events-workbench__day--selected {
+  border-color: #2563eb;
+  box-shadow: inset 0 0 0 2px #2563eb;
 }
 
 .events-workbench__day--has-events {
@@ -695,8 +719,8 @@ body {
   font-weight: 860;
   height: 20px;
   justify-content: center;
-  min-width: 20px;
-  padding: 0 6px;
+  min-width: 28px;
+  padding: 0 8px;
 }
 
 .events-workbench__day-families {
@@ -763,6 +787,12 @@ body {
   z-index: 10;
 }
 
+.events-workbench__day-tooltip-list {
+  display: grid;
+  gap: 3px;
+  margin-top: 2px;
+}
+
 .events-workbench__day:hover .events-workbench__day-tooltip {
   display: grid;
 }
@@ -778,6 +808,82 @@ body {
 .events-workbench__day-tooltip span,
 .events-workbench__day-tooltip em {
   color: #cbd5e1;
+}
+
+.events-workbench__date-detail {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.events-workbench__date-detail-head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.events-workbench__date-detail-head > span {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.events-workbench__date-detail-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+.events-workbench__date-detail-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #64748b;
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.events-workbench__date-detail-card--fomc {
+  border-left-color: #0f766e;
+}
+
+.events-workbench__date-detail-card--macro {
+  border-left-color: #2563eb;
+}
+
+.events-workbench__date-detail-card--earnings {
+  border-left-color: #d97706;
+}
+
+.events-workbench__date-detail-card--structure {
+  border-left-color: #7c3aed;
+}
+
+.events-workbench__date-detail-card strong {
+  color: #111827;
+  font-size: 0.78rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.events-workbench__date-detail-card span,
+.events-workbench__date-detail-card a {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.events-workbench__date-detail-card a {
+  color: #2563eb;
+  text-decoration: none;
 }
 
 .events-workbench__density {
@@ -892,7 +998,8 @@ body {
 @media (max-width: 960px) {
   .events-workbench__counts,
   .events-workbench__rail-items,
-  .events-workbench__trust-sections {
+  .events-workbench__trust-sections,
+  .events-workbench__date-detail-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -945,6 +1052,10 @@ body {
 
   .events-workbench__day {
     min-height: 76px;
+  }
+
+  .events-workbench__day-button {
+    min-height: 76px;
     padding: 5px;
   }
 
@@ -959,6 +1070,10 @@ body {
 
   .events-workbench__evidence-table {
     overflow-x: auto;
+  }
+
+  .events-workbench__date-detail-list {
+    grid-template-columns: 1fr;
   }
 
   .events-workbench__evidence-head,

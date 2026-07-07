@@ -108,6 +108,13 @@ type CalendarDay = {
   items?: EventItem[];
 };
 
+type CalendarCell = CalendarDay & {
+  in_month: boolean;
+  is_today: boolean;
+  is_current_week: boolean;
+  day_number: number;
+};
+
 type DensityBucket = {
   week_start: string;
   count: number;
@@ -397,7 +404,7 @@ function buildCalendarMonthDays(
   monthText: string,
   dayMap: Map<string, CalendarDay>,
   calendar: EventsPayload["calendar"],
-): Array<CalendarDay & { in_month: boolean; is_today: boolean; is_current_week: boolean; day_number: number }> {
+): CalendarCell[] {
   const [yearText, monthNumberText] = (monthText || "").split("-");
   const year = Number(yearText);
   const monthNumber = Number(monthNumberText);
@@ -486,6 +493,16 @@ function dayTooltipText(day: CalendarDay): string {
   return `${day.date} · 이벤트 ${day.count}개 · 확인 필요 ${day.review_count}개 · 오래된 추정 ${day.stale_count}개${titles ? ` · ${titles}` : ""}`;
 }
 
+function eventStatusText(item: EventItem): string {
+  return [item.type, item.freshness, item.validation].map((value) => valueText(value, "")).filter(Boolean).join(" · ");
+}
+
+function eventSourceText(item: EventItem): string {
+  const source = valueText(item.source_authority || item.source_type, "출처 미확인");
+  const collectedAt = valueText(item.collected_at, "수집일 미상");
+  return `${source} · 수집 ${collectedAt}`;
+}
+
 function rawValue(row: Record<string, unknown>, key: string): string {
   return valueText(row[key]);
 }
@@ -517,6 +534,7 @@ function EventsWorkbench({ args }: ComponentProps) {
   const [reviewFilter, setReviewFilter] = useState("all");
   const [activeRailKey, setActiveRailKey] = useState(railTabs.default_key || railTabs.tabs?.[0]?.key || "");
   const [calendarMonth, setCalendarMonth] = useState(defaultMonthFromDays(calendarDays, calendar.today));
+  const [selectedDate, setSelectedDate] = useState("");
   const [expandedEvidence, setExpandedEvidence] = useState(false);
   const isPayloadReady = payload.schema_version === "events_workbench_v1";
 
@@ -553,6 +571,7 @@ function EventsWorkbench({ args }: ComponentProps) {
   const calendarMonthEventDays = calendarMonthDays.filter((day) => day.in_month && day.count > 0);
   const calendarMonthEventCount = calendarMonthEventDays.reduce((total, day) => total + day.count, 0);
   const visibleMonthOptions = monthSelectOptions(monthOptions, activeCalendarMonth);
+  const selectedCalendarDay = calendarMonthDays.find((day) => day.date === selectedDate && day.count > 0) || null;
   const filteredDensity = calendarDensity.filter((bucket) => weekMatchesFilter(bucket, familyFilter, reviewFilter));
   const maxDensityCount = Math.max(1, ...filteredDensity.map((bucket) => bucket.count || 0));
 
@@ -562,7 +581,7 @@ function EventsWorkbench({ args }: ComponentProps) {
 
   useEffect(() => {
     Streamlit.setFrameHeight();
-  }, [familyFilter, reviewFilter, activeRailKey, calendarMonth, expandedEvidence, pendingActionId]);
+  }, [familyFilter, reviewFilter, activeRailKey, calendarMonth, expandedEvidence, pendingActionId, selectedDate]);
 
   useEffect(() => {
     setPendingActionId("");
@@ -581,6 +600,12 @@ function EventsWorkbench({ args }: ComponentProps) {
       setCalendarMonth(nextDefaultMonth);
     }
   }, [calendar.today, calendarMonth, filteredCalendarDays]);
+
+  useEffect(() => {
+    if (selectedDate && !calendarMonthDays.some((day) => day.date === selectedDate && day.count > 0)) {
+      setSelectedDate("");
+    }
+  }, [calendarMonthDays, selectedDate]);
 
   const emitEvent = (id: string) => {
     setPendingActionId(id);
@@ -814,39 +839,86 @@ function EventsWorkbench({ args }: ComponentProps) {
                 day.is_today ? "events-workbench__day--today" : "",
                 day.is_current_week ? "events-workbench__day--current-week" : "",
                 day.count ? "events-workbench__day--has-events" : "",
+                day.date === selectedDate ? "events-workbench__day--selected" : "",
               ].filter(Boolean).join(" ")}
               key={day.date}
               title={dayTooltipText(day)}
             >
-              <div className="events-workbench__day-head">
-                <strong>{day.day_number}</strong>
-                {day.count ? <span>{day.count}</span> : null}
-              </div>
-              {day.count ? (
-                <div className="events-workbench__day-families">
-                  {Object.entries(day.by_family || {}).map(([family, count]) => (
-                  <span className={`events-workbench__family-dot events-workbench__family-dot--${familyTone(family)}`} key={family}>
-                    {familyLabel(family)} {count}
-                  </span>
-                  ))}
+              <button
+                aria-label={`${day.date} 일정 ${day.count}건 보기`}
+                className="events-workbench__day-button"
+                disabled={!day.count}
+                onClick={() => day.count && setSelectedDate(day.date)}
+                type="button"
+              >
+                <div className="events-workbench__day-head">
+                  <strong>{day.day_number}</strong>
+                  {day.count ? <span>총 {day.count}</span> : null}
                 </div>
-              ) : null}
-              {day.count ? (
-                <div className="events-workbench__day-meta">
-                  확인 {day.review_count} · 오래된 추정 {day.stale_count}
-                </div>
-              ) : null}
-              {day.count ? (
-                <div className="events-workbench__day-tooltip" role="tooltip">
-                  <strong>{day.date}</strong>
-                  <span>이벤트 {day.count}개 · 확인 필요 {day.review_count}개 · 오래된 추정 {day.stale_count}개</span>
-                  {(day.top_titles || []).slice(0, 3).map((title) => (
-                    <em key={`${day.date}-${title}`}>{title}</em>
-                  ))}
-                </div>
-              ) : null}
+                {day.count ? (
+                  <div className="events-workbench__day-families">
+                    {Object.entries(day.by_family || {}).map(([family, count]) => (
+                      <span className={`events-workbench__family-dot events-workbench__family-dot--${familyTone(family)}`} key={family}>
+                        {familyLabel(family)} {count}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {day.count ? (
+                  <div className="events-workbench__day-meta">
+                    확인 {day.review_count} · 오래된 추정 {day.stale_count}
+                  </div>
+                ) : null}
+                {day.count ? (
+                  <div className="events-workbench__day-tooltip" role="tooltip">
+                    <strong>{day.date}</strong>
+                    <span>총 {day.count}건 · 확인 필요 {day.review_count}건 · 오래된 추정 {day.stale_count}건</span>
+                    <div className="events-workbench__day-tooltip-list">
+                      {Object.entries(day.by_family || {}).map(([family, count]) => (
+                        <em key={`${day.date}-tooltip-${family}`}>{familyLabel(family)} {count}건</em>
+                      ))}
+                      {(day.top_titles || []).slice(0, 3).map((title) => (
+                        <em key={`${day.date}-${title}`}>{title}</em>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </button>
             </div>
           ))}
+        </div>
+
+        <div className="events-workbench__date-detail">
+          {selectedCalendarDay ? (
+            <>
+              <div className="events-workbench__date-detail-head">
+                <div>
+                  <span className="events-workbench__eyebrow">선택 날짜</span>
+                  <h3>{selectedCalendarDay.date}</h3>
+                </div>
+                <span>총 {selectedCalendarDay.count}건 · 확인 필요 {selectedCalendarDay.review_count}건</span>
+              </div>
+              <div className="events-workbench__date-detail-list">
+                {(selectedCalendarDay.items || []).slice(0, 6).map((item) => (
+                  <article className={`events-workbench__date-detail-card events-workbench__date-detail-card--${familyTone(item.family)}`} key={`${selectedCalendarDay.date}-${item.type}-${item.symbol || item.title}`}>
+                    <strong>{item.symbol ? `${item.symbol} · ${item.title}` : item.title}</strong>
+                    <span>{eventStatusText(item)}</span>
+                    <span>{eventSourceText(item)}</span>
+                    {item.source_url && item.source_url.startsWith("http") ? (
+                      <a href={item.source_url} rel="noreferrer" target="_blank">출처 열기</a>
+                    ) : null}
+                  </article>
+                ))}
+                {(selectedCalendarDay.items || []).length > 6 ? (
+                  <div className="events-workbench__empty events-workbench__empty--compact">
+                    외 {(selectedCalendarDay.items || []).length - 6}건은 원본 / 상세 근거에서 확인할 수 있습니다.
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="events-workbench__empty events-workbench__empty--compact">날짜를 선택하면 해당 날짜의 일정과 자료 상태를 고정해서 확인할 수 있습니다.</div>
+          )}
         </div>
 
         <div className="events-workbench__density">

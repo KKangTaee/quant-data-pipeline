@@ -113,3 +113,7 @@
 - 2026-07-07: Calendar polish 1차 GREEN - same focused React source contract PASS after month title/navigation/month-summary/outside-month styling implementation.
 - 2026-07-07: Calendar polish 1차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
 - 2026-07-07: Calendar polish 1차 QA - `git diff --check` for changed source/test/task files - PASS.
+- 2026-07-07: Calendar polish 2차 RED - focused React source contract failed before implementation on missing `selectedDate`.
+- 2026-07-07: Calendar polish 2차 GREEN - same contract PASS after clickable day cells, selected-date state, fixed detail panel, detail cards, and richer tooltip list implementation.
+- 2026-07-07: Calendar polish 2차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: Calendar polish 2차 QA - `git diff --check` for changed source/test files - PASS.
