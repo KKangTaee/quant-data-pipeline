@@ -2488,8 +2488,14 @@ def _render_strict_annual_real_money_inputs(
     )
     if float(min_avg_dollar_volume_20d_m_filter or 0.0) > 0.0:
         st.caption(
-            "`Min Avg Dollar Volume 20D ($M)`는 최근 20거래일 평균 거래대금이 충분히 큰 종목만 남겨서 "
-            "실제로 사고팔기 너무 어려운 후보를 줄이기 위한 필터입니다."
+            "`Min Avg Dollar Volume 20D ($M)`는 Base Universe를 고르는 기준이 아니라, "
+            "Base Universe / Dynamic PIT membership 이후 각 리밸런싱 날짜의 후보를 한 번 더 거르는 optional Liquidity Layer입니다. "
+            "DB OHLCV의 `close × volume` 20거래일 평균이 이 값보다 낮으면 그 날짜 후보에서 제외됩니다."
+        )
+    else:
+        st.caption(
+            "`Min Avg Dollar Volume 20D ($M)`가 `0.0M`이면 optional Liquidity Layer는 꺼진 상태입니다. "
+            "이 경우 Base Universe / Dynamic PIT coverage는 확인할 수 있지만 liquidity policy는 승격 판단 근거로 쓰기 어렵습니다."
         )
     st.caption(
         "`Benchmark Policy`는 benchmark overlay가 있더라도 커버리지와 상대 CAGR이 너무 약하면 "

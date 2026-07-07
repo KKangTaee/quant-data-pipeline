@@ -5,7 +5,7 @@ Started: 2026-07-07
 
 ## Current
 
-- 4차 완료: Static 기본 실행은 유지하되 Dynamic PIT 선택 시 managed preset보다 넓은 backfill pool을 읽고, 실행 membership target이 채워지면 Data Trust 기준을 runnable coverage OK로 해석하게 했다.
+- 5차 완료: 20D 거래대금 기준을 Base Universe가 아니라 optional Liquidity Layer로 명확히 정의하고, runtime meta / strict form / result display가 같은 `liquidity_layer_v1` 계약을 읽게 했다.
 
 ## Roadmap
 
@@ -13,4 +13,4 @@ Started: 2026-07-07
 - 2차: Data Trust issue queue 정합성 - Done
 - 3차: Coverage refresh action 정리 - Done
 - 4차: Runnable coverage backfill - Done
-- 5차: optional 20D dollar-volume liquidity layer
+- 5차: optional 20D dollar-volume liquidity layer - Done

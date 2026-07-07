@@ -8143,6 +8143,39 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertTrue(result.ok, result.error_message)
         self.assertEqual(runner.call_args.kwargs["min_avg_dollar_volume_20d_m_filter"], 20.0)
 
+    def test_liquidity_layer_model_documents_optional_adv20_filter(self) -> None:
+        from app.runtime.backtest.real_money import _build_liquidity_layer_model
+
+        layer = _build_liquidity_layer_model(
+            {
+                "min_avg_dollar_volume_20d_m_filter": 20.0,
+                "promotion_min_liquidity_clean_coverage": 0.9,
+                "liquidity_clean_coverage": 0.95,
+                "liquidity_policy_status": "normal",
+                "liquidity_policy_clean_coverage_pass": True,
+                "liquidity_excluded_total": 3,
+                "liquidity_excluded_active_rows": 1,
+                "liquidity_rebalance_rows": 20,
+            }
+        )
+
+        self.assertEqual(layer["contract_version"], "liquidity_layer_v1")
+        self.assertTrue(layer["enabled"])
+        self.assertEqual(layer["lookback_trading_days"], 20)
+        self.assertEqual(layer["source"], "db_ohlcv_close_times_volume_rolling_20_trading_days")
+        self.assertEqual(layer["scope"], "rebalance_candidate_filter_after_base_universe")
+        self.assertEqual(layer["clean_coverage"], 0.95)
+        self.assertTrue(layer["clean_coverage_pass"])
+
+    def test_liquidity_layer_copy_is_connected_to_strict_form_and_result_display(self) -> None:
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+        result_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertIn("optional Liquidity Layer", common_source)
+        self.assertIn("Base Universe / Dynamic PIT membership", common_source)
+        self.assertIn("liquidity_layer", result_source)
+        self.assertIn("Base Universe / Dynamic PIT membership 이후 적용되는 선택형 필터", result_source)
+
     def test_execution_preview_ignores_later_stage_probation_monitoring_fields(self) -> None:
         from app.runtime.backtest import _build_deployment_readiness_contract
 

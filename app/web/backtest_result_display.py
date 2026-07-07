@@ -3398,6 +3398,7 @@ def _render_real_money_details_legacy(bundle: dict[str, Any]) -> None:
                 "유동성 때문에 실제 운용 해석이 가능한지 보는 섹션입니다. "
                 "특히 `unavailable`이면 현재 설정만으로는 유동성 검증을 아예 하지 못하고 있다는 뜻입니다.",
             ):
+                liquidity_layer = dict(meta.get("liquidity_layer") or {})
                 liquidity_policy_status = str(meta.get("liquidity_policy_status") or "unavailable").lower()
                 liquidity_policy_cols = st.columns(5, gap="small")
                 liquidity_policy_cols[0].metric("Policy Status", liquidity_policy_status.upper())
@@ -3426,6 +3427,17 @@ def _render_real_money_details_legacy(bundle: dict[str, Any]) -> None:
                     "`Min Avg Dollar Volume 20D`는 최근 20거래일 평균 거래대금 기준이고, "
                     "`Liquidity Clean Coverage`는 리밸런싱 시점 중 유동성 제외 없이 지나간 비율입니다."
                 )
+                if liquidity_layer:
+                    layer_scope = str(
+                        liquidity_layer.get("scope") or "rebalance_candidate_filter_after_base_universe"
+                    )
+                    layer_source = str(
+                        liquidity_layer.get("source") or "db_ohlcv_close_times_volume_rolling_20_trading_days"
+                    )
+                    st.caption(
+                        "`Liquidity Layer`: Base Universe / Dynamic PIT membership 이후 적용되는 선택형 필터입니다. "
+                        f"Scope `{layer_scope}`, source `{layer_source}`."
+                    )
 
                 liquidity_policy_signals = [
                     _liquidity_policy_signal_to_korean_label(item)

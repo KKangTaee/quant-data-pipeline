@@ -1296,6 +1296,42 @@ def _build_liquidity_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_liquidity_layer_model(meta: dict[str, Any]) -> dict[str, Any]:
+    min_avg_dollar_volume = float(meta.get("min_avg_dollar_volume_20d_m_filter") or 0.0)
+    min_clean_coverage_raw = meta.get("promotion_min_liquidity_clean_coverage")
+    min_clean_coverage = (
+        float(min_clean_coverage_raw)
+        if min_clean_coverage_raw is not None
+        else None
+    )
+    clean_coverage = meta.get("liquidity_clean_coverage")
+    policy_status = str(meta.get("liquidity_policy_status") or "").strip().lower()
+    if not policy_status:
+        if min_avg_dollar_volume <= 0.0:
+            policy_status = "disabled"
+        elif clean_coverage is None:
+            policy_status = "unavailable"
+        else:
+            policy_status = "normal"
+
+    return {
+        "contract_version": "liquidity_layer_v1",
+        "status": policy_status,
+        "enabled": bool(min_avg_dollar_volume > 0.0),
+        "source": "db_ohlcv_close_times_volume_rolling_20_trading_days",
+        "scope": "rebalance_candidate_filter_after_base_universe",
+        "lookback_trading_days": 20,
+        "min_avg_dollar_volume_20d_m": min_avg_dollar_volume,
+        "min_clean_coverage": min_clean_coverage,
+        "clean_coverage": float(clean_coverage) if clean_coverage is not None else None,
+        "clean_coverage_pass": meta.get("liquidity_policy_clean_coverage_pass"),
+        "excluded_total": int(meta.get("liquidity_excluded_total") or 0),
+        "excluded_active_rows": int(meta.get("liquidity_excluded_active_rows") or 0),
+        "rebalance_rows": int(meta.get("liquidity_rebalance_rows") or 0),
+        "watch_signals": list(meta.get("liquidity_policy_watch_signals") or []),
+    }
+
+
 def _build_validation_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     max_share_raw = meta.get("promotion_max_underperformance_share")
     min_worst_raw = meta.get("promotion_min_worst_rolling_excess_return")
@@ -1890,6 +1926,7 @@ def _apply_real_money_hardening(
             )
         if liquidity_policy_signals:
             meta["liquidity_policy_watch_signals"] = liquidity_policy_signals
+    meta["liquidity_layer"] = _build_liquidity_layer_model(meta)
 
     validation_policy_surface = _build_validation_policy_surface(meta)
     if validation_policy_surface:
