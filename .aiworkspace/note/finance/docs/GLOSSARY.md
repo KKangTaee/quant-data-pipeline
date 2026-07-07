@@ -1,7 +1,7 @@
 # Finance Glossary
 
 Status: Active
-Last Verified: 2026-05-31
+Last Verified: 2026-07-07
 
 ## 목적
 이 문서는 퀀트, 백테스트, 실전형 전략 문서에서 반복해서 나오는 용어를
@@ -29,9 +29,9 @@ Last Verified: 2026-05-31
 그래서 전략 자체와 별개로 모집군 규칙을 명확히 분리해서 봐야 한다.
 
 ### 예시 / 필요 상황
-- `Coverage 1000`을 쓴다고 해도
-  - 현재 기준 1000개를 고정해서 쓰는지
-  - 매 리밸런싱 날짜마다 그 시점 기준 1000개를 다시 뽑는지
+- `US Base Universe 1000`을 쓴다고 해도
+  - 현재 asset profile 기준 1000개를 고정해서 쓰는지
+  - 더 넓은 후보 pool에서 매 리밸런싱 날짜마다 그 시점 기준 1000개를 다시 뽑는지
   결과가 달라질 수 있다.
 
 ---
@@ -40,12 +40,14 @@ Last Verified: 2026-05-31
 
 ### 기본 설명
 현재 시점 기준으로 정해진 종목 묶음을 run 전체에서 고정해서 사용하는 연구용 모집군 방식이다.
+Backtest UI의 `US Base Universe 100 / 300 / 500 / 1000`은 이 계층의 후보군 크기를 뜻하며,
+가격 최신성, statement shadow coverage, liquidity를 모두 통과한 실행 가능 coverage 보장은 아니다.
 
 ### 왜 사용되는지
 빠르게 전략 아이디어를 비교하거나 프로토타입을 시험할 때 구현과 운영이 단순하기 때문이다.
 
 ### 예시 / 필요 상황
-- `US Statement Coverage 1000`을 현재 기준으로 정해두고,
+- `US Base Universe 1000`을 현재 기준으로 정해두고,
   과거 기간 전체를 같은 후보 집합으로 테스트할 때 사용한다.
 
 ---
@@ -54,6 +56,8 @@ Last Verified: 2026-05-31
 
 ### 기본 설명
 리밸런싱 날짜마다 그 시점 기준으로 후보 종목 집합을 다시 계산하는 모집군 방식이다.
+strict annual에서는 선택한 Base Universe 크기를 target으로 두고, managed preset보다 넓은 backfill pool에서
+가격과 statement shadow를 사용할 수 있는 후보를 다시 구성할 수 있다.
 
 ### 왜 사용되는지
 실전 투자에 더 가까운 검증을 하려면, 과거 시점의 실제 후보군 변화가 반영되어야 하기 때문이다.
@@ -61,6 +65,21 @@ Last Verified: 2026-05-31
 ### 예시 / 필요 상황
 - 2019년 1월 리밸런싱 때의 후보군과
   2024년 1월 리밸런싱 때의 후보군을 다르게 잡고 싶은 경우
+
+---
+
+## Liquidity Layer
+
+### 기본 설명
+Base Universe 또는 Dynamic PIT membership 이후, 각 리밸런싱 날짜의 후보를 거래 가능성 기준으로 한 번 더 거르는 선택형 필터다.
+현재 strict annual의 1차 기준은 DB OHLCV의 `close * volume`으로 만든 최근 20거래일 평균 거래대금이다.
+
+### 왜 사용되는지
+가격과 재무제표 coverage가 있어도 거래대금이 너무 작은 종목은 실전 운용 해석이 어려울 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `Min Avg Dollar Volume 20D ($M) = 20`이면 각 리밸런싱 날짜에 최근 20거래일 평균 거래대금이 20M 달러보다 낮은 종목은 후보에서 제외한다.
+- 이 값이 `0`이면 liquidity layer는 꺼진 상태이며, liquidity policy는 승격 판단 근거로 쓰기 어렵다.
 
 ---
 

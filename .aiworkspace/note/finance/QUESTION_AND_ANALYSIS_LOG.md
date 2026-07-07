@@ -8574,3 +8574,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 Streamlit selector와 strategy-specific form switching은 유지하고, 과하게 추가된 Strategy Detail panel은 제거한다. Quality / Value strict preset과 Price Freshness Preflight, ETF-like form copy, Portfolio Mix Builder 영향만 단계별로 정리한다.
 - Analysis result: 일반 전략 상세 panel은 Single Strategy / Portfolio Mix Builder 양쪽의 실제 form controls와 중복되고, 사용자가 말한 `3번째 이미지`의 문제인 form 내부 정리와 다른 방향이었다. Price Freshness Preflight는 좁은 React component로 유지하되, 전략 선택 상세는 Streamlit-owned form surface 안에서 정리하는 것이 맞다.
 - Follow-up: 1차 panel 제거, 2차 strict preset helper 정리, 3차 Quality / Value strict form cleanup, 4차 ETF-like form copy cleanup, 5차 Portfolio Mix Builder strict section QA와 durable docs sync를 완료했다.
+
+### 2026-07-07 - strict coverage preset은 실행 가능 coverage가 아니라 Base Universe다
+
+- User request: 사용자가 CUK / BK 같은 stale 또는 missing ticker가 왜 Coverage 300에 들어가는지, 커버리지 100/300/500 선별 기준과 개선 방향을 물었고 1차~5차 개발을 승인함.
+- Interpreted goal: `finance_meta.nyse_asset_profile` market-cap 기반 후보군, price freshness, statement shadow coverage, 20D liquidity filter를 한 화면에서 혼동하지 않게 분리하고, 갱신 / backfill / gate 동작을 일관되게 만들어야 함.
+- Analysis result: 기존 `US Statement Coverage N`은 S&P 구성원이나 실행 가능 coverage가 아니라 현재 asset_profile 상위 N개 후보군이었다. 따라서 stale/missing 가격 문제는 Coverage 최신화와 Dynamic PIT backfill로 다루고, 20D 거래대금은 Base Universe 선별 기준이 아니라 리밸런싱 후보를 거르는 optional Liquidity Layer로 보는 것이 맞다.
+- Follow-up: 1차 Base Universe copy, 2차 Data Trust issue queue, 3차 Coverage 최신화 action, 4차 Dynamic PIT runnable backfill, 5차 `liquidity_layer_v1` meta/UI/docs 정리를 완료했다.

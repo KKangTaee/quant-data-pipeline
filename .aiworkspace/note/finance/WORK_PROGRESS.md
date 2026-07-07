@@ -5560,3 +5560,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - `.aiworkspace/note/finance/tasks/active/backtest-strategy-form-cleanup-v1-20260707/`에서 1차~5차로 과한 Strategy Detail panel 제거, strict preset copy, strict factor form, ETF-like form, Portfolio Mix Builder 영향 확인을 완료했다.
 - Backtest Analysis의 Strategy dropdown / Single Strategy form switching과 Portfolio Mix Builder strategy multiselect / variant controls는 Streamlit-owned 흐름으로 유지한다.
 - React는 Price Freshness Preflight 같은 좁은 form-level component에만 남겼고, runtime / result bundle / registry / saved JSONL / Practical Validation gate policy는 변경하지 않았다.
+
+## 2026-07-07 - Backtest Strict Coverage Refresh V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-strict-coverage-refresh-v1-20260707/`에서 strict Quality / Value coverage 1차~5차를 완료했다.
+- `US Statement Coverage N`은 표시상 `US Base Universe N`으로 정리했고, 실행 가능 coverage 보장값이 아니라 asset_profile 기반 후보군으로 문서화했다.
+- Data Trust 가격 최신화는 stale/missing ticker 중심의 `Coverage 최신화`로 바뀌었고, Dynamic PIT는 더 넓은 backfill pool에서 target membership을 채우면 candidate-pool stale/missing을 non-blocking context로 보존한다.
+- 20D 거래대금 기준은 Base Universe 선별이 아니라 Base Universe / Dynamic PIT membership 이후 적용되는 optional `liquidity_layer_v1`로 정리했다.
