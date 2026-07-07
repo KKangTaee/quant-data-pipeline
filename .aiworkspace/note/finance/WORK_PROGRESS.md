@@ -5574,3 +5574,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `지표 합의 상태` framing을 제거하고 React heading을 `엇갈리는 지점`으로 바꿨다.
   - CNN headline / CNN components / AAII survey axis cards는 metric 정의가 아니라 service-owned current interpretation copy를 보여준다.
   - QA와 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`의 `STATUS.md` / `RUNS.md`를 본다.
+- Overview Events Calendar 4차 Earnings Universe 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 Earnings 수집 row에 taxonomy 필드와 universe/source-authority contract를 채웠다.
+  - S&P 500 / large-cap batch는 canonical source로 저장되고, portfolio / watchlist / Nasdaq-100은 explicit symbol loader boundary로 열었다.
+  - 다음 차수는 market-structure 일정 수집이며 generated screenshots / run history는 계속 커밋 제외한다.

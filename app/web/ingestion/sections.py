@@ -627,7 +627,13 @@ def render_operational_section() -> Any:
             _render_job_brief("collect_earnings_calendar")
             earnings_source_mode = st.selectbox(
                 "Symbol Source",
-                ["Latest S&P 500 Movers", "S&P 500 Universe Batch", "Top1000 Batch", "Top2000 Batch", "Manual Symbols"],
+                [
+                    "Latest S&P 500 Movers",
+                    "S&P 500 Universe Batch",
+                    "Large-cap Top1000 Batch",
+                    "Large-cap Top2000 Batch",
+                    "Manual Symbols",
+                ],
                 index=0,
                 key="overview_earnings_symbol_source",
             )
@@ -699,7 +705,7 @@ def render_operational_section() -> Any:
                     key="overview_earnings_manual_symbols",
                 )
             st.caption(
-                "Latest movers mode uses the latest stored S&P 500 intraday snapshot. Universe batch modes are low-frequency sweeps; keep Max Symbols bounded and use Batch Offset to continue later."
+                "Latest movers uses the latest stored S&P 500 intraday snapshot. S&P 500 and large-cap batch modes are low-frequency sweeps; keep Max Symbols bounded and use Batch Offset to continue later."
             )
             if st.button(
                 "실적 발표 예상 일정 수집",
@@ -710,8 +716,8 @@ def render_operational_section() -> Any:
                 symbol_source = {
                     "Latest S&P 500 Movers": "latest_movers",
                     "S&P 500 Universe Batch": "sp500_universe",
-                    "Top1000 Batch": "top1000",
-                    "Top2000 Batch": "top2000",
+                    "Large-cap Top1000 Batch": "top1000",
+                    "Large-cap Top2000 Batch": "top2000",
                     "Manual Symbols": "manual",
                 }[earnings_source_mode]
                 earnings_universe_code = {

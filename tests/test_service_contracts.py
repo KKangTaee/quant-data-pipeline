@@ -19846,6 +19846,7 @@ END:VCALENDAR
             ["AAA", "BBB"],
             start_date="2026-05-28",
             lookahead_days=120,
+            universe_scope="sp500",
             ticker_factory=FakeTicker,
         )
 
@@ -19857,9 +19858,14 @@ END:VCALENDAR
         self.assertEqual(row["event_date"], "2026-07-30")
         self.assertEqual(row["symbol"], "AAA")
         self.assertEqual(row["event_type"], "EARNINGS")
+        self.assertEqual(row["event_family"], "earnings")
+        self.assertEqual(row["event_subtype"], "earnings_release")
+        self.assertEqual(row["universe_scope"], "sp500")
+        self.assertEqual(row["source_authority"], "provider_estimate")
         self.assertEqual(row["confidence"], 0.65)
         self.assertEqual(row["source_type"], "provider_estimate")
         self.assertEqual(row["validation_status"], "estimate_only")
+        self.assertEqual(row["raw_payload"]["universe_scope"], "sp500")
         self.assertEqual(row["raw_payload"]["provider_calendar"]["Earnings Average"], 1.23)
         self.assertEqual(result["symbols_with_events"], 1)
         self.assertEqual(result["missing_reason_counts"], {"no_provider_earnings_date": 1})
@@ -19928,8 +19934,10 @@ END:VCALENDAR
         row = result["events"][0]
         self.assertEqual(result["validation_source"], mi.NASDAQ_EARNINGS_CALENDAR_SOURCE)
         self.assertEqual(row["validation_status"], "cross_checked")
+        self.assertEqual(row["source_authority"], "cross_checked")
         self.assertEqual(row["confidence"], 0.75)
         self.assertTrue(row["raw_payload"]["source_validation"]["fallback_order"][1]["matched"])
+        self.assertEqual(row["raw_payload"]["source_validation"]["source_authority"], "cross_checked")
 
     def test_collect_earnings_calendar_writes_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -19944,6 +19952,7 @@ END:VCALENDAR
         def fake_fetcher(symbols, **kwargs):
             self.assertEqual(symbols, ["AAA", "BBB"])
             self.assertEqual(kwargs["lookahead_days"], 90)
+            self.assertEqual(kwargs["universe_scope"], "sp500")
             return {
                 "source": mi.EARNINGS_CALENDAR_SOURCE,
                 "source_url": mi.EARNINGS_CALENDAR_SOURCE_URL,
@@ -19978,14 +19987,16 @@ END:VCALENDAR
             patch.object(mi, "mark_stale_earnings_estimates", return_value=0),
         ):
             result = mi.collect_and_store_earnings_calendar(
-                symbols=["AAA", "BBB"],
+                symbol_source="sp500_universe",
+                source_symbols_loader=lambda: ["AAA", "BBB"],
                 lookahead_days=90,
                 earnings_fetcher=fake_fetcher,
             )
 
         self.assertEqual(result["source"], mi.EARNINGS_CALENDAR_SOURCE)
         self.assertEqual(result["event_type"], "EARNINGS")
-        self.assertEqual(result["symbol_source"], "manual")
+        self.assertEqual(result["symbol_source"], "sp500")
+        self.assertEqual(result["universe_scope"], "sp500")
         self.assertEqual(result["events_found"], 1)
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_dates"], ["2026-07-30"])
@@ -19993,6 +20004,10 @@ END:VCALENDAR
         self.assertEqual(result["superseded_rows_marked"], 0)
         self.assertEqual(result["stale_rows_marked"], 0)
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+        self.assertEqual(captured_rows[0]["event_family"], "earnings")
+        self.assertEqual(captured_rows[0]["event_subtype"], "earnings_release")
+        self.assertEqual(captured_rows[0]["universe_scope"], "sp500")
+        self.assertEqual(captured_rows[0]["source_authority"], "provider_estimate")
 
     def test_resolve_earnings_collection_symbols_supports_universe_batches(self) -> None:
         from finance.data import market_intelligence as mi
@@ -20006,6 +20021,22 @@ END:VCALENDAR
 
         self.assertEqual(source, "top1000")
         self.assertEqual(symbols, ["BBB", "CCC"])
+
+    def test_resolve_earnings_collection_symbols_supports_named_source_loaders(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        symbols, source = mi.resolve_earnings_collection_symbols(
+            symbol_source="Nasdaq 100",
+            max_symbols=2,
+            source_symbol_loaders={
+                "nasdaq100": lambda: ["MSFT", "AAPL", "NVDA"],
+            },
+        )
+
+        self.assertEqual(source, "nasdaq100")
+        self.assertEqual(symbols, ["MSFT", "AAPL"])
+        self.assertEqual(mi.earnings_universe_scope_for_source("top2000"), "major_cap")
+        self.assertEqual(mi.earnings_universe_scope_for_source("manual"), "watchlist")
 
     def test_mark_superseded_earnings_events_marks_prior_active_rows(self) -> None:
         from finance.data import market_intelligence as mi

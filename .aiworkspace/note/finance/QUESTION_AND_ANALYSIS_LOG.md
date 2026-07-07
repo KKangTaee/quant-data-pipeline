@@ -8610,3 +8610,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 합의/불일치 자체를 추상적으로 말하지 말고, CNN headline / CNN components / AAII survey가 현재 서로 어떻게 엇갈리는지를 service-owned copy로 설명해야 함.
 - Analysis result: React label은 `엇갈리는 지점` 정도의 구조 문구로 충분하고, 실제 판단 문장은 `app/services/overview/sentiment.py`에서 headline 방향, component driver count, AAII bearish / spread 값을 사용해 만들어야 한다.
 - Follow-up: service divergence axis detail과 React heading을 수정했다. Browser QA DOM에서 새 문구와 old phrase 제거를 확인했고, screenshot attempts는 generated artifact로 남긴다.
+
+### 2026-07-07 - Events Earnings rows need universe and authority context
+
+- User request: Events 개선을 2차부터 10차까지 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: 4차에서는 Earnings 일정이 어떤 symbol universe에서 수집됐고 provider estimate / cross-check 상태가 무엇인지 row contract에 남겨야 함.
+- Analysis result: 기존 yfinance + Nasdaq cross-check는 유지하되 `universe_scope`와 `source_authority`를 row와 raw payload에 채우는 것이 React workbench 전환 전 가장 작은 안정화 단계다.
+- Follow-up: 4차 완료. 다음은 Cboe / S&P Dow Jones / Nasdaq / Russell류 market-structure calendar를 수집 계약에 추가한다.

@@ -41,3 +41,8 @@
 - 2026-07-07: 3차 QA - `py_compile` for market intelligence, ingestion jobs/sections, Events helpers/service, tests - PASS.
 - 2026-07-07: 3차 QA - `MarketIntelligenceEventCalendarContractTests`, 23 tests - PASS.
 - 2026-07-07: 3차 QA - focused Overview Events read-model tests, 5 tests - PASS.
+- 2026-07-07: 4차 RED - new Earnings universe/source-authority tests failed before implementation on missing `universe_scope` argument, missing row `source_authority`, missing collector fetch kwarg, and missing `source_symbol_loaders` resolver boundary.
+- 2026-07-07: 4차 GREEN - focused Earnings tests for yfinance row taxonomy, Nasdaq cross-check source authority, collector universe scope propagation, and named source loaders - PASS, 4 tests.
+- 2026-07-07: 4차 QA - `MarketIntelligenceEventCalendarContractTests`, 24 tests - PASS.
+- 2026-07-07: 4차 QA - `py_compile finance/data/market_intelligence.py app/web/ingestion/sections.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 4차 QA - `git diff --check` - PASS.
