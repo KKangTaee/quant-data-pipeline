@@ -731,6 +731,16 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
 
         self.assertEqual(common.PIT_MONTHLY_SNAPSHOT_UNIVERSE, "pit_monthly_snapshot")
         self.assertEqual(
+            list(common.STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+            ["Static Managed Research Universe", "PIT Monthly Snapshot Universe"],
+        )
+        self.assertNotIn(
+            "Historical Dynamic PIT Universe",
+            common.STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS,
+        )
+        self.assertNotIn("Historical Dynamic PIT", common.STRICT_UNIVERSE_CONTRACT_HELP)
+        self.assertNotIn("Historical Dynamic PIT", common.STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY)
+        self.assertEqual(
             common.STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS["PIT Monthly Snapshot Universe"],
             common.PIT_MONTHLY_SNAPSHOT_UNIVERSE,
         )
@@ -738,6 +748,10 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(
             common._universe_contract_value_to_label(common.PIT_MONTHLY_SNAPSHOT_UNIVERSE),
             "PIT Monthly Snapshot Universe",
+        )
+        self.assertEqual(
+            common._universe_contract_value_to_label(common.HISTORICAL_DYNAMIC_PIT_UNIVERSE),
+            "Historical Dynamic PIT Universe (Legacy)",
         )
 
         candidate_tickers, target_size = common._resolve_strict_dynamic_universe_inputs(

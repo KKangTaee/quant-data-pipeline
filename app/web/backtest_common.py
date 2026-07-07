@@ -341,17 +341,14 @@ HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 PIT_MONTHLY_SNAPSHOT_UNIVERSE = "pit_monthly_snapshot"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
     "Static Managed Research Universe": STATIC_MANAGED_RESEARCH_UNIVERSE,
-    "Historical Dynamic PIT Universe": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
     "PIT Monthly Snapshot Universe": PIT_MONTHLY_SNAPSHOT_UNIVERSE,
 }
 STRICT_UNIVERSE_CONTRACT_HELP = (
     "Static은 현재 managed preset을 실행 기간 동안 고정합니다. "
-    "Historical Dynamic PIT는 선택한 candidate pool에서 리밸런싱 날짜별 membership을 즉석 근사 계산합니다. "
     "PIT Monthly Snapshot은 사전에 저장된 월말 universe snapshot을 읽습니다."
 )
 STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY = (
-    "Universe Contract: Static은 현재 Base Universe 고정, Historical Dynamic PIT는 실행 중 근사 재계산, "
-    "PIT Monthly Snapshot은 사전 저장된 월말 snapshot 사용."
+    "Universe Contract: Static은 현재 Base Universe 고정, PIT Monthly Snapshot은 사전 저장된 월말 snapshot 사용."
 )
 STRICT_BENCHMARK_CONTRACT_LABELS = {
     "Ticker Benchmark": STRICT_BENCHMARK_CONTRACT_TICKER,
@@ -3712,6 +3709,8 @@ def _universe_contract_value_to_label(value: str | None) -> str:
     for label, contract_value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items():
         if contract_value == value:
             return label
+    if value == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        return "Historical Dynamic PIT Universe (Legacy)"
     return "Static Managed Research Universe"
 
 def _benchmark_contract_value_to_label(value: str | None) -> str:

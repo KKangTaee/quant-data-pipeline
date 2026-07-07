@@ -12,7 +12,7 @@ Last Verified: 2026-07-07
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`다.
 
 - 목적: Quality / Value strict coverage가 현재 market-cap Top-N을 과거 전체 기간에 고정해 쓰는 look-ahead / survivorship 위험을 줄이고, 사용자가 2016년부터 실행할 때 당시 월말 기준 근사 universe를 선택할 수 있게 한다.
-- 주요 변경: `finance_meta.equity_universe_snapshot` / `equity_universe_member` schema와 builder / upsert / loader를 추가했다. Strict Quality / Value / Quality+Value annual and quarterly prototype runners는 `PIT Monthly Snapshot Universe`를 선택하면 사전 저장 monthly membership을 읽고, 각 리밸런싱일에는 가장 가까운 이전 snapshot을 적용한다. Backtest Single Strategy와 Portfolio Mix Builder strict form은 Static / Historical Dynamic PIT / PIT Monthly 계약을 같은 Streamlit form surface 안에 노출한다.
+- 주요 변경: `finance_meta.equity_universe_snapshot` / `equity_universe_member` schema와 builder / upsert / loader를 추가했다. Strict Quality / Value / Quality+Value annual and quarterly prototype runners는 `PIT Monthly Snapshot Universe`를 선택하면 사전 저장 monthly membership을 읽고, 각 리밸런싱일에는 가장 가까운 이전 snapshot을 적용한다. Backtest Single Strategy와 Portfolio Mix Builder strict form은 Static / PIT Monthly 두 계약만 visible option으로 노출한다. Historical Dynamic PIT는 저장 snapshot 도입 전 first-pass 경로이므로 기존 saved payload / old run 호환용 legacy internal path로만 유지한다.
 - 이번 차수에서 하지 않은 일: paid official historical Russell / S&P membership ingestion, float-adjusted market cap feed, broker execution, live approval / order / auto rebalance, 기존 Strategy selector의 React 이관.
 - 중요한 한계: V1 PIT monthly universe는 DB 가격과 latest-known statement shares 기반 근사 large-cap membership이다. 공식 지수 편입 이력이나 완전한 historical float-adjusted market cap이 필요하면 별도 provider / collector phase가 필요하다.
 

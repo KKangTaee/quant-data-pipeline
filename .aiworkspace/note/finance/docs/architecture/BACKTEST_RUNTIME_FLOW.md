@@ -84,7 +84,7 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 | `app/runtime/backtest/__init__.py` / `facade.py` | UI payload를 DB-backed runtime 실행으로 변환하는 public compatibility facade. Price-only ETF runtime wrappers를 소유하고, split module runner / helper를 re-export한다 |
 | `app/runtime/backtest/runners/risk_on_momentum.py` | Risk-On Momentum 5D DB runtime implementation. `app.runtime.backtest`가 기존 public import path를 위해 runner를 re-export한다 |
 | `app/runtime/backtest/real_money.py` | Real-money / guardrail / benchmark / deployment readiness helper implementation. `app.runtime.backtest`가 기존 public import path를 위해 constants and helper functions를 re-export한다 |
-| `app/runtime/backtest/runners/strict_factor.py` | Strict quality / value / quality-value annual and quarterly runtime implementation. Static / Historical Dynamic PIT / PIT Monthly Snapshot universe contract를 해석하고, `app.runtime.backtest`가 기존 public import path를 위해 runner and strict helper functions를 re-export한다 |
+| `app/runtime/backtest/runners/strict_factor.py` | Strict quality / value / quality-value annual and quarterly runtime implementation. Static / PIT Monthly Snapshot visible contract와 Historical Dynamic PIT legacy contract를 해석하고, `app.runtime.backtest`가 기존 public import path를 위해 runner and strict helper functions를 re-export한다 |
 | `app/runtime/backtest/result_bundle.py` | runtime 결과를 UI-facing result bundle / summary / chart / metadata contract로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
 | `finance/data/pit_universe.py` / `finance/loaders/universe.py` | monthly PIT-like equity universe snapshot build / read path. Quality / Value strict family의 `PIT Monthly Snapshot Universe`가 이 membership을 읽는다 |
@@ -119,8 +119,8 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 Strict Quality / Value universe contract:
 
 - `Static Managed Research Universe`: current managed preset / manual ticker pool을 실행 기간 동안 base universe로 고정한다.
-- `Historical Dynamic PIT Universe`: 선택 candidate pool에서 리밸런싱 날짜별 approximate market cap membership을 runtime 중 계산한다.
 - `PIT Monthly Snapshot Universe`: 사전 생성된 `equity_universe_snapshot` / `equity_universe_member` monthly membership을 loader로 읽고, 각 rebalance date에 가장 가까운 이전 snapshot을 적용한다. V1은 official historical index membership이 아니라 DB 기반 근사 PIT다.
+- `Historical Dynamic PIT Universe`: 선택 candidate pool에서 리밸런싱 날짜별 approximate market cap membership을 runtime 중 계산하는 legacy internal contract다. 현재 UI 선택지에는 노출하지 않으며, 기존 saved payload / old run replay 호환을 위해 유지한다.
 
 ## Boundary Summary
 
