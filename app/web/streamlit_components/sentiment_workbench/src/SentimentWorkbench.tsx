@@ -307,6 +307,7 @@ function SentimentWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
   const [hoveredHistoryPoint, setHoveredHistoryPoint] = useState<HoveredHistoryPoint | null>(null);
+  const [chartTab, setChartTab] = useState<"history" | "components">("history");
 
   useEffect(() => {
     syncFrameHeightSoon();
@@ -341,24 +342,30 @@ function SentimentWorkbench({ args }: Props) {
   const historyRange = historyDomainMax === historyDomainMin ? 1 : historyDomainMax - historyDomainMin;
   const historyDates = Array.from(new Set(plottableHistory.map((point) => point.date))).sort();
   const historySeriesNames = Array.from(new Set(plottableHistory.map((point) => point.series)));
-  const chartWidth = 320;
-  const chartHeight = 136;
-  const chartPaddingX = 38;
-  const chartPaddingY = 16;
-  const chartInnerWidth = chartWidth - chartPaddingX * 2;
-  const chartInnerHeight = chartHeight - chartPaddingY * 2;
+  const chartWidth = 720;
+  const chartHeight = 280;
+  const chartPaddingLeft = 64;
+  const chartPaddingRight = 28;
+  const chartPaddingTop = 22;
+  const chartPaddingBottom = 44;
+  const chartInnerWidth = chartWidth - chartPaddingLeft - chartPaddingRight;
+  const chartInnerHeight = chartHeight - chartPaddingTop - chartPaddingBottom;
   const chartPalette = ["#0f766e", "#b45309", "#2563eb", "#7c3aed", "#dc2626"];
   const xForDate = (date: string) => {
     const index = Math.max(0, historyDates.indexOf(date));
     const divisor = Math.max(1, historyDates.length - 1);
-    return chartPaddingX + (index / divisor) * chartInnerWidth;
+    return chartPaddingLeft + (index / divisor) * chartInnerWidth;
   };
-  const yForValue = (value: number) => chartPaddingY + (1 - (value - historyDomainMin) / historyRange) * chartInnerHeight;
+  const yForValue = (value: number) => chartPaddingTop + (1 - (value - historyDomainMin) / historyRange) * chartInnerHeight;
   const historyTicks = [historyDomainMax, historyDomainMin + historyRange / 2, historyDomainMin].map((value) => ({
     value,
     label: value.toLocaleString(undefined, { maximumFractionDigits: 1 }),
     y: yForValue(value),
   }));
+  const historyDateTicks =
+    historyDates.length > 2
+      ? [historyDates[0], historyDates[Math.floor((historyDates.length - 1) / 2)], historyDates[historyDates.length - 1]]
+      : historyDates;
   const plottedHistoryPoints = plottableHistory.map((point) => {
     const numeric = point.numericValue as number;
     const seriesIndex = Math.max(0, historySeriesNames.indexOf(point.series));
@@ -454,27 +461,6 @@ function SentimentWorkbench({ args }: Props) {
             ) : null}
           </div>
         </aside>
-      </div>
-
-      <div className="sentiment-workbench__metric-grid">
-        {payload.summary.metrics.map((metric) => (
-          <div
-            className="sentiment-workbench__metric-card"
-            key={`${metric.label}-${metric.value}`}
-            style={{ "--metric-tone": toneColor(metric.tone) } as React.CSSProperties}
-          >
-            <div className="sentiment-workbench__metric-label">{metric.label}</div>
-            <div className="sentiment-workbench__metric-value">{metric.value}</div>
-            {metric.detail ? <div className="sentiment-workbench__metric-detail">{metric.detail}</div> : null}
-          </div>
-        ))}
-        {payload.summary.metrics.length === 0 ? (
-          <div className="sentiment-workbench__metric-card sentiment-workbench__metric-card--empty">
-            <div className="sentiment-workbench__metric-label">Data</div>
-            <div className="sentiment-workbench__metric-value">-</div>
-            <div className="sentiment-workbench__metric-detail">저장된 sentiment metric이 없습니다.</div>
-          </div>
-        ) : null}
       </div>
 
       <section className="sentiment-workbench__cross-read">
@@ -649,137 +635,188 @@ function SentimentWorkbench({ args }: Props) {
           <span>그래프로 보는 근거</span>
           <small>{payload.charts.history.basis}</small>
         </div>
-        <div className="sentiment-workbench__chart-grid">
-          <div className="sentiment-workbench__line-chart">
-            <div className="sentiment-workbench__chart-title">
-              <span>{payload.charts.history.title}</span>
-              <strong>{plottableHistory.length}</strong>
-            </div>
-            <div className="sentiment-workbench__line-chart-plot">
-              <svg
-                aria-label={payload.charts.history.title}
-                onMouseLeave={() => setHoveredHistoryPoint(null)}
-                onMouseMove={handleHistoryHover}
-                role="img"
-                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              >
-                {historyTicks.map((tick) => (
-                  <g key={tick.label}>
-                    <line
-                      className="sentiment-workbench__chart-gridline"
-                      x1={chartPaddingX}
-                      x2={chartWidth - chartPaddingX}
-                      y1={tick.y}
-                      y2={tick.y}
+        <div className="sentiment-workbench__chart-tabs" role="tablist" aria-label="Sentiment evidence views">
+          <button
+            aria-selected={chartTab === "history"}
+            className={`sentiment-workbench__chart-tab ${chartTab === "history" ? "sentiment-workbench__chart-tab--active" : ""}`}
+            onClick={() => setChartTab("history")}
+            role="tab"
+            type="button"
+          >
+            그래프
+          </button>
+          <button
+            aria-selected={chartTab === "components"}
+            className={`sentiment-workbench__chart-tab ${chartTab === "components" ? "sentiment-workbench__chart-tab--active" : ""}`}
+            onClick={() => setChartTab("components")}
+            role="tab"
+            type="button"
+          >
+            CNN 구성요소
+          </button>
+        </div>
+        <div className="sentiment-workbench__chart-panel">
+          {chartTab === "history" ? (
+            <div className="sentiment-workbench__line-chart">
+              <div className="sentiment-workbench__chart-title">
+                <span>{payload.charts.history.title}</span>
+                <strong>{plottableHistory.length}</strong>
+              </div>
+              <div className="sentiment-workbench__line-chart-plot">
+                <svg
+                  aria-label={payload.charts.history.title}
+                  onMouseLeave={() => setHoveredHistoryPoint(null)}
+                  onMouseMove={handleHistoryHover}
+                  role="img"
+                  viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                >
+                  {historyTicks.map((tick) => (
+                    <g key={tick.label}>
+                      <line
+                        className="sentiment-workbench__chart-gridline"
+                        x1={chartPaddingLeft}
+                        x2={chartWidth - chartPaddingRight}
+                        y1={tick.y}
+                        y2={tick.y}
+                      />
+                      <text
+                        className="sentiment-workbench__chart-y-label"
+                        textAnchor="end"
+                        x={chartPaddingLeft - 10}
+                        y={tick.y + 3}
+                      >
+                        {tick.label}
+                      </text>
+                    </g>
+                  ))}
+                  {historyDateTicks.map((date) => (
+                    <g key={date}>
+                      <line
+                        className="sentiment-workbench__chart-x-tick"
+                        x1={xForDate(date)}
+                        x2={xForDate(date)}
+                        y1={chartHeight - chartPaddingBottom}
+                        y2={chartHeight - chartPaddingBottom + 5}
+                      />
+                      <text
+                        className="sentiment-workbench__chart-x-label"
+                        textAnchor={date === firstHistoryDate ? "start" : date === lastHistoryDate ? "end" : "middle"}
+                        x={xForDate(date)}
+                        y={chartHeight - 16}
+                      >
+                        {date}
+                      </text>
+                    </g>
+                  ))}
+                  <text className="sentiment-workbench__chart-axis-label" textAnchor="middle" x={chartWidth / 2} y={chartHeight - 2}>
+                    Date
+                  </text>
+                  <text
+                    className="sentiment-workbench__chart-axis-label"
+                    textAnchor="middle"
+                    transform={`translate(14 ${chartHeight / 2}) rotate(-90)`}
+                  >
+                    Value
+                  </text>
+                  <line className="sentiment-workbench__chart-axis" x1={chartPaddingLeft} x2={chartWidth - chartPaddingRight} y1={chartHeight - chartPaddingBottom} y2={chartHeight - chartPaddingBottom} />
+                  <line className="sentiment-workbench__chart-axis" x1={chartPaddingLeft} x2={chartPaddingLeft} y1={chartPaddingTop} y2={chartHeight - chartPaddingBottom} />
+                  {historySeriesNames.map((seriesName, seriesIndex) => {
+                    const points = plottedHistoryPoints
+                      .filter((point) => point.series === seriesName)
+                      .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+                      .join(" ");
+                    return (
+                      <polyline
+                        className="sentiment-workbench__chart-line"
+                        fill="none"
+                        key={seriesName}
+                        points={points}
+                        stroke={chartPalette[seriesIndex % chartPalette.length]}
+                      />
+                    );
+                  })}
+                  {plottedHistoryPoints.map((point) => (
+                    <circle
+                      className="sentiment-workbench__chart-point"
+                      cx={point.x}
+                      cy={point.y}
+                      fill={point.color}
+                      key={`${point.series}-${point.date}`}
+                      r="1.6"
                     />
-                    <text
-                      className="sentiment-workbench__chart-y-label"
-                      textAnchor="end"
-                      x={chartPaddingX - 8}
-                      y={tick.y + 3}
-                    >
-                      {tick.label}
-                    </text>
-                  </g>
+                  ))}
+                  {hoveredHistoryPoint ? (
+                    <>
+                      <line
+                        className="sentiment-workbench__chart-hover-guide"
+                        x1={hoveredHistoryPoint.x}
+                        x2={hoveredHistoryPoint.x}
+                        y1={chartPaddingTop}
+                        y2={chartHeight - chartPaddingBottom}
+                      />
+                      <circle
+                        className="sentiment-workbench__chart-focus-dot"
+                        cx={hoveredHistoryPoint.x}
+                        cy={hoveredHistoryPoint.y}
+                        fill={hoveredHistoryPoint.color}
+                        r="4.2"
+                      />
+                    </>
+                  ) : null}
+                </svg>
+                {hoveredHistoryPoint ? (
+                  <div className="sentiment-workbench__chart-tooltip" style={{ left: tooltipLeft, top: tooltipTop }}>
+                    <strong>{hoveredHistoryPoint.date}</strong>
+                    <span>{hoveredHistoryPoint.series}</span>
+                    <b>{hoveredHistoryPoint.valueLabel}</b>
+                    {hoveredHistoryPoint.source ? <small>{hoveredHistoryPoint.source}</small> : null}
+                  </div>
+                ) : null}
+              </div>
+              <div className="sentiment-workbench__chart-meta">
+                <span>{firstHistoryDate}</span>
+                <span>{lastHistoryDate}</span>
+              </div>
+              <div className="sentiment-workbench__chart-legend">
+                {historySeriesNames.map((seriesName, seriesIndex) => (
+                  <span key={seriesName} style={{ "--metric-tone": chartPalette[seriesIndex % chartPalette.length] } as React.CSSProperties}>
+                    {seriesName}
+                  </span>
                 ))}
-                <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartWidth - chartPaddingX} y1={chartHeight - chartPaddingY} y2={chartHeight - chartPaddingY} />
-                <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartPaddingX} y1={chartPaddingY} y2={chartHeight - chartPaddingY} />
-                {historySeriesNames.map((seriesName, seriesIndex) => {
-                  const points = plottedHistoryPoints
-                    .filter((point) => point.series === seriesName)
-                    .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
-                    .join(" ");
+              </div>
+            </div>
+          ) : (
+            <div className="sentiment-workbench__component-bars">
+              <div className="sentiment-workbench__chart-title">
+                <span>{payload.charts.components.title}</span>
+                <strong>{payload.charts.components.items.length}</strong>
+              </div>
+              <div className="sentiment-workbench__component-bar-list">
+                {payload.charts.components.items.map((item) => {
+                  const score = numericValue(item.score);
+                  const width = `${Math.max(0, Math.min(100, score ?? 0))}%`;
                   return (
-                    <polyline
-                      className="sentiment-workbench__chart-line"
-                      fill="none"
-                      key={seriesName}
-                      points={points}
-                      stroke={chartPalette[seriesIndex % chartPalette.length]}
-                    />
+                    <div className="sentiment-workbench__component-bar-row" key={item.series}>
+                      <div className="sentiment-workbench__component-bar-label">
+                        <span>{item.series}</span>
+                        <strong>{displayValue(item.score ?? undefined)}</strong>
+                      </div>
+                      <div className="sentiment-workbench__component-bar-track">
+                        <div
+                          className="sentiment-workbench__component-bar-fill"
+                          style={{
+                            "--metric-tone": toneColor(item.tone),
+                            width,
+                          } as React.CSSProperties}
+                        />
+                      </div>
+                      {item.rating ? <small>{item.rating}</small> : null}
+                    </div>
                   );
                 })}
-                {plottedHistoryPoints.map((point) => (
-                  <circle
-                    className="sentiment-workbench__chart-point"
-                    cx={point.x}
-                    cy={point.y}
-                    fill={point.color}
-                    key={`${point.series}-${point.date}`}
-                    r="1.6"
-                  />
-                ))}
-                {hoveredHistoryPoint ? (
-                  <>
-                    <line
-                      className="sentiment-workbench__chart-hover-guide"
-                      x1={hoveredHistoryPoint.x}
-                      x2={hoveredHistoryPoint.x}
-                      y1={chartPaddingY}
-                      y2={chartHeight - chartPaddingY}
-                    />
-                    <circle
-                      className="sentiment-workbench__chart-focus-dot"
-                      cx={hoveredHistoryPoint.x}
-                      cy={hoveredHistoryPoint.y}
-                      fill={hoveredHistoryPoint.color}
-                      r="4.2"
-                    />
-                  </>
-                ) : null}
-              </svg>
-              {hoveredHistoryPoint ? (
-                <div className="sentiment-workbench__chart-tooltip" style={{ left: tooltipLeft, top: tooltipTop }}>
-                  <strong>{hoveredHistoryPoint.date}</strong>
-                  <span>{hoveredHistoryPoint.series}</span>
-                  <b>{hoveredHistoryPoint.valueLabel}</b>
-                  {hoveredHistoryPoint.source ? <small>{hoveredHistoryPoint.source}</small> : null}
-                </div>
-              ) : null}
+              </div>
             </div>
-            <div className="sentiment-workbench__chart-meta">
-              <span>{firstHistoryDate}</span>
-              <span>{lastHistoryDate}</span>
-            </div>
-            <div className="sentiment-workbench__chart-legend">
-              {historySeriesNames.map((seriesName, seriesIndex) => (
-                <span key={seriesName} style={{ "--metric-tone": chartPalette[seriesIndex % chartPalette.length] } as React.CSSProperties}>
-                  {seriesName}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="sentiment-workbench__component-bars">
-            <div className="sentiment-workbench__chart-title">
-              <span>{payload.charts.components.title}</span>
-              <strong>{payload.charts.components.items.length}</strong>
-            </div>
-            <div className="sentiment-workbench__component-bar-list">
-              {payload.charts.components.items.map((item) => {
-                const score = numericValue(item.score);
-                const width = `${Math.max(0, Math.min(100, score ?? 0))}%`;
-                return (
-                  <div className="sentiment-workbench__component-bar-row" key={item.series}>
-                    <div className="sentiment-workbench__component-bar-label">
-                      <span>{item.series}</span>
-                      <strong>{displayValue(item.score ?? undefined)}</strong>
-                    </div>
-                    <div className="sentiment-workbench__component-bar-track">
-                      <div
-                        className="sentiment-workbench__component-bar-fill"
-                        style={{
-                          "--metric-tone": toneColor(item.tone),
-                          width,
-                        } as React.CSSProperties}
-                      />
-                    </div>
-                    {item.rating ? <small>{item.rating}</small> : null}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          )}
         </div>
       </section>
 

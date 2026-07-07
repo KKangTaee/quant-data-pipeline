@@ -268,7 +268,6 @@ body {
 .sentiment-workbench__range-card {
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-left: 4px solid var(--metric-tone, #64748b);
   border-radius: 8px;
   min-width: 0;
   padding: 10px 11px;
@@ -624,10 +623,41 @@ body {
   overflow-wrap: anywhere;
 }
 
-.sentiment-workbench__chart-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
+.sentiment-workbench__chart-tabs {
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.sentiment-workbench__chart-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.2;
+  margin-bottom: -1px;
+  min-height: 38px;
+  padding: 8px 2px 10px;
+}
+
+.sentiment-workbench__chart-tab--active {
+  border-bottom-color: #ef4444;
+  color: #ef4444;
+}
+
+.sentiment-workbench__chart-tab:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.42);
+  outline-offset: 3px;
+}
+
+.sentiment-workbench__chart-panel {
+  min-width: 0;
 }
 
 .sentiment-workbench__line-chart,
@@ -670,7 +700,7 @@ body {
 
 .sentiment-workbench__line-chart svg {
   display: block;
-  min-height: 180px;
+  min-height: 300px;
   width: 100%;
 }
 
@@ -690,14 +720,32 @@ body {
 
 .sentiment-workbench__chart-y-label {
   fill: #64748b;
-  font-size: 8px;
+  font-size: 13px;
+  font-weight: 840;
+}
+
+.sentiment-workbench__chart-x-label,
+.sentiment-workbench__chart-axis-label {
+  fill: #64748b;
+  font-size: 12px;
   font-weight: 800;
+}
+
+.sentiment-workbench__chart-axis-label {
+  fill: #94a3b8;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.sentiment-workbench__chart-x-tick {
+  stroke: #cbd5e1;
+  stroke-width: 1;
 }
 
 .sentiment-workbench__chart-line {
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.4;
+  stroke-width: 3;
 }
 
 .sentiment-workbench__chart-point {
