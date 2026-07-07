@@ -8665,3 +8665,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: quarterly Quality / Value / Quality+Value가 prototype 표시 없이 동일한 실행 계약, 결과 evidence, post-run readiness, history/replay surface를 갖도록 해야 함.
 - Analysis result: `_prototype` strategy key는 saved payload 호환 때문에 유지해야 하지만, user-facing maturity는 `Strict Quarterly`로 승격할 수 있다. Quarterly는 filing lag와 statement shadow gap이 annual보다 민감하므로 post-run Factor Readiness를 완료 조건으로 두는 것이 안전하다.
 - Follow-up: quarterly runner와 dispatch에 annual-like investability / benchmark / guardrail inputs를 연결하고, result meta에 statement shadow coverage를 저장했다. UI/catalog/evidence는 `Strict Quarterly`로 승격했고, quarterly strict form에도 5-year factor window guard를 적용했다.
+
+### 2026-07-08 - Backtest Factor Readiness에서 ticker change repair가 필요하다
+
+- User request: 사용자가 `codex/sub-dev`의 Market Movers ticker repair commit을 참고하되 직접 merge하지 말고, Backtest Quality / Value Factor Readiness용 공용 Symbol Resolver / Ticker Change Repair 흐름을 만들라고 요청함.
+- Interpreted goal: BK -> BNY를 하드코딩 fixture가 아닌 대표 케이스로 두고, stale/missing price ticker가 단순 refresh 대상인지 symbol identity issue인지 구분해야 함.
+- Analysis result: 새 `market_symbol_alias` table보다 기존 `nyse_symbol_lifecycle(event_type=ticker_change, related_symbol, related_cik)`를 공용 source로 쓰는 것이 Backtest / Data Coverage 경계와 맞다.
+- Follow-up: Symbol Resolver V1은 candidate / active repair를 분리하고, 승인 action 후 source ticker는 유지한 채 collection ticker만 resolved symbol로 바꾼다. PIT effective-date split과 official corporate-action ingestion은 후속 차수로 남겼다.

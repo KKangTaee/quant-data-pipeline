@@ -63,6 +63,7 @@ external source
 | `finance/data/sec_company_tickers.py` | SEC `company_tickers_exchange.json` current CIK / ticker / exchange association을 `nyse_symbol_lifecycle` listing_observed row로 UPSERT |
 | `finance/data/symbol_directory.py` | Nasdaq public Symbol Directory `nasdaqlisted.txt` / `otherlisted.txt` current snapshot을 `nyse_symbol_lifecycle` listing_observed row로 UPSERT |
 | `finance/data/computed_lifecycle.py` | 기존 current snapshot lifecycle rows를 읽어 repeated observation window를 `computed_from_snapshots` partial row로 요약 |
+| `finance/data/symbol_resolver.py` | 사용자가 Factor Readiness에서 승인한 ticker-change repair를 `nyse_symbol_lifecycle`에 `resolution_status=active` row로 UPSERT |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, Nasdaq-listed Symbol Directory current snapshot read helper, S&P 500 / Top1000 / Top2000 / Nasdaq-listed intraday previous-close snapshot, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
 | `finance/data/futures_market.py` | Overview Futures Monitor 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. `app/services/futures_market_monitoring.py`는 저장된 최신 candle 기준으로 표시 window를 읽고 stale 여부를 별도 계산한다. Macro Thermometer validation is read-only and does not create a new table |
@@ -85,6 +86,7 @@ external source
 | 파일 | 역할 |
 |---|---|
 | `finance/loaders/universe.py` | universe, asset profile status, symbol lifecycle coverage summary, prebuilt PIT monthly equity universe membership 조회 |
+| `finance/loaders/symbol_resolver.py` | `nyse_symbol_lifecycle`의 ticker-change evidence와 price freshness를 결합해 symbol identity 후보 / active repair map을 읽는다 |
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
@@ -133,6 +135,9 @@ external source
   Form 25 row는 delisting evidence이며, Form 25 부재를 active proof로 해석하지 않는다.
   `symbol-lifecycle-event-fields-v1`부터 lifecycle row는 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있다.
   NYSE current listing row는 `event_type=listing_observed`, SEC Form 25 row는 `event_type=delisting`으로 저장해 future ticker change / merger source와 같은 row contract를 쓴다.
+  `backtest-symbol-resolver-v1`부터 Backtest strict Factor Readiness는 stale/missing price ticker를 `event_type=ticker_change` lifecycle row와 대조해 symbol identity 후보를 보여준다.
+  사용자가 repair action을 승인하면 `finance/data/symbol_resolver.py`가 같은 table에 `resolution_status=active`로 저장하고, price refresh는 source ticker를 유지한 채 collection ticker만 `related_symbol`로 바꾼다.
+  1차 구현은 current refresh repair이며, PIT effective-date split / official corporate-action ingestion 확장은 별도 후속 범위다.
   `symbol-directory-snapshot-ingestion-v1`부터 `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 읽어
   `source=nasdaq_symdir_nasdaqlisted` / `nasdaq_symdir_otherlisted`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장한다.
   이 row는 current snapshot evidence이며 historical membership PASS 근거가 아니다.

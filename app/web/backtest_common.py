@@ -95,6 +95,7 @@ from app.web.components.backtest_factor_readiness_panel import (
 )
 from app.jobs import run_extended_statement_refresh
 from app.services.backtest_price_refresh import run_backtest_price_refresh
+from finance.data.symbol_resolver import upsert_ticker_change_resolutions
 from app.web.backtest_candidate_review_helpers import (
     CANDIDATE_REVIEW_DECISION_OPTIONS,
     CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
@@ -2271,6 +2272,81 @@ def _strict_provider_gap_symbols(price_details: dict[str, Any], refresh_symbols:
     return []
 
 
+def _strict_symbol_identity_candidates(price_details: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw_candidate in list(price_details.get("symbol_identity_issue_candidates") or []):
+        if not isinstance(raw_candidate, dict):
+            continue
+        source_symbols = _unique_upper_tickers(
+            [
+                raw_candidate.get("source_symbol")
+                or raw_candidate.get("symbol")
+            ]
+        )
+        resolved_symbols = _unique_upper_tickers(
+            [
+                raw_candidate.get("resolved_symbol")
+                or raw_candidate.get("related_symbol")
+            ]
+        )
+        if not source_symbols or not resolved_symbols:
+            continue
+        source_symbol = source_symbols[0]
+        resolved_symbol = resolved_symbols[0]
+        if source_symbol == resolved_symbol or source_symbol in seen:
+            continue
+        candidate = dict(raw_candidate)
+        candidate["source_symbol"] = source_symbol
+        candidate["resolved_symbol"] = resolved_symbol
+        candidate["issue_type"] = candidate.get("issue_type") or "symbol_identity_issue"
+        candidate["alias_type"] = candidate.get("alias_type") or "ticker_change"
+        candidate["resolution_status"] = candidate.get("resolution_status") or "candidate"
+        candidates.append(candidate)
+        seen.add(source_symbol)
+    return candidates
+
+
+def _symbol_identity_issue_check(candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not candidates:
+        return None
+    source_symbols = _unique_upper_tickers([candidate.get("source_symbol") for candidate in candidates])
+    enabled = any(
+        str(candidate.get("confidence_level") or "").strip().upper() in {"HIGH", "MEDIUM"}
+        for candidate in candidates
+    )
+    diagnostics: list[dict[str, str]] = []
+    for candidate in candidates[:8]:
+        pair = f"{candidate.get('source_symbol')} -> {candidate.get('resolved_symbol')}"
+        detail_parts = [
+            str(candidate.get("confidence_level") or "-"),
+            str(candidate.get("effective_date") or candidate.get("event_date") or "-"),
+        ]
+        evidence = str(candidate.get("evidence_summary") or "").strip()
+        if evidence:
+            detail_parts.append(evidence)
+        diagnostics.append({"label": "후보", "value": f"{pair} · {' · '.join(detail_parts)}"})
+    check = _readiness_problem_check(
+        check_id="symbol_identity_issue",
+        title="티커 변경 후보",
+        problem=f"{len(source_symbols)}개 종목은 오래된 source ticker일 가능성이 있습니다.",
+        symbols=source_symbols,
+        solution="버튼으로 검토된 ticker-change lifecycle row를 active로 반영하고, 대체 ticker의 가격 데이터를 보강한 뒤 readiness를 다시 확인하세요.",
+        action=_readiness_action(
+            action_id="apply_ticker_change_repair",
+            label="티커 변경 반영 후 데이터 보강",
+            detail="선택된 source ticker는 유지하고, 가격 수집은 resolved ticker로 실행합니다.",
+            enabled=enabled,
+            tone="warning",
+            symbols=source_symbols,
+        ),
+        tone="warning",
+        diagnostics=diagnostics,
+    )
+    check["candidates"] = candidates
+    return check
+
+
 def _readiness_action(
     *,
     action_id: str,
@@ -2345,9 +2421,22 @@ def build_strict_factor_readiness_panel_model(
     statement_summary = dict(statement_summary or {})
 
     refresh_symbols = _strict_price_refresh_symbols(price_details)
-    provider_gap_symbols = _strict_provider_gap_symbols(price_details, refresh_symbols)
+    symbol_identity_candidates = _strict_symbol_identity_candidates(price_details)
+    symbol_identity_source_set = {
+        str(candidate.get("source_symbol") or "").strip().upper()
+        for candidate in symbol_identity_candidates
+    }
+    provider_gap_symbols = [
+        symbol
+        for symbol in _strict_provider_gap_symbols(price_details, refresh_symbols)
+        if symbol not in symbol_identity_source_set
+    ]
     provider_gap_symbol_set = set(provider_gap_symbols)
-    refreshable_price_symbols = [symbol for symbol in refresh_symbols if symbol not in provider_gap_symbol_set]
+    refreshable_price_symbols = [
+        symbol
+        for symbol in refresh_symbols
+        if symbol not in provider_gap_symbol_set and symbol not in symbol_identity_source_set
+    ]
     stale_count = _safe_int(price_details.get("stale_count"))
     missing_price_count = _safe_int(price_details.get("missing_count"))
 
@@ -2361,6 +2450,10 @@ def build_strict_factor_readiness_panel_model(
     )
 
     checks: list[dict[str, Any]] = []
+    symbol_identity_check = _symbol_identity_issue_check(symbol_identity_candidates)
+    if symbol_identity_check:
+        checks.append(symbol_identity_check)
+
     if refreshable_price_symbols:
         issue_count = len(refreshable_price_symbols)
         problem = f"{issue_count}개 종목의 가격 데이터가 목표 기준일보다 오래되었습니다."
@@ -2649,9 +2742,22 @@ def build_post_run_factor_readiness_panel_model(bundle: dict[str, Any] | None) -
         statement_summary.get("statement_freq") or meta.get("factor_freq") or "annual"
     ).strip().lower() or "annual"
     refresh_symbols = _strict_price_refresh_symbols(price_details)
-    provider_gap_symbols = _strict_provider_gap_symbols(price_details, refresh_symbols)
+    symbol_identity_candidates = _strict_symbol_identity_candidates(price_details)
+    symbol_identity_source_set = {
+        str(candidate.get("source_symbol") or "").strip().upper()
+        for candidate in symbol_identity_candidates
+    }
+    provider_gap_symbols = [
+        symbol
+        for symbol in _strict_provider_gap_symbols(price_details, refresh_symbols)
+        if symbol not in symbol_identity_source_set
+    ]
     provider_gap_symbol_set = set(provider_gap_symbols)
-    refreshable_price_symbols = [symbol for symbol in refresh_symbols if symbol not in provider_gap_symbol_set]
+    refreshable_price_symbols = [
+        symbol
+        for symbol in refresh_symbols
+        if symbol not in provider_gap_symbol_set and symbol not in symbol_identity_source_set
+    ]
     history_excluded_symbols = _collect_result_symbols(result_df, "History Excluded Ticker")
     liquidity_excluded_symbols = _collect_result_symbols(result_df, "Liquidity Excluded Ticker")
     statement_requested = _safe_int(statement_summary.get("requested_count"))
@@ -2667,6 +2773,10 @@ def build_post_run_factor_readiness_panel_model(bundle: dict[str, Any] | None) -
     )
 
     checks: list[dict[str, Any]] = []
+    symbol_identity_check = _symbol_identity_issue_check(symbol_identity_candidates)
+    if symbol_identity_check:
+        checks.append(symbol_identity_check)
+
     if refreshable_price_symbols:
         checks.append(
             _readiness_problem_check(
@@ -4071,6 +4181,103 @@ def _model_action_symbols(model: dict[str, Any], action_id: str) -> list[str]:
     return []
 
 
+def _model_symbol_identity_candidates(
+    model: dict[str, Any],
+    symbols: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    selected_symbol_set = set(_unique_upper_tickers(symbols or []))
+    candidates: list[dict[str, Any]] = []
+    for check in list(model.get("checks") or []):
+        if check.get("id") != "symbol_identity_issue":
+            continue
+        candidates.extend(candidate for candidate in list(check.get("candidates") or []) if isinstance(candidate, dict))
+    normalized = _strict_symbol_identity_candidates({"symbol_identity_issue_candidates": candidates})
+    if selected_symbol_set:
+        normalized = [
+            candidate
+            for candidate in normalized
+            if str(candidate.get("source_symbol") or "").strip().upper() in selected_symbol_set
+        ]
+    return normalized
+
+
+def _filter_factor_readiness_price_report_for_symbols(
+    price_report: dict[str, Any],
+    symbols: list[str],
+) -> dict[str, Any]:
+    selected_symbols = _unique_upper_tickers(symbols)
+    selected_symbol_set = set(selected_symbols)
+    filtered_report = dict(price_report or {})
+    details = dict(filtered_report.get("details") or {})
+    for key in [
+        "refresh_symbols_all",
+        "stale_symbols_all",
+        "missing_symbols_all",
+        "stale_symbols",
+        "missing_symbols",
+        "provider_gap_symbols",
+        "provider_no_data_symbols",
+        "post_refresh_unresolved_symbols",
+    ]:
+        if key not in details:
+            continue
+        details[key] = [
+            symbol
+            for symbol in _unique_upper_tickers(details.get(key) or [])
+            if symbol in selected_symbol_set
+        ]
+    details["refresh_symbols_all"] = selected_symbols
+    details["classification_rows"] = [
+        row
+        for row in list(details.get("classification_rows") or [])
+        if isinstance(row, dict)
+        and str(row.get("symbol") or "").strip().upper() in selected_symbol_set
+    ]
+    details["symbol_identity_issue_candidates"] = [
+        candidate
+        for candidate in _strict_symbol_identity_candidates(details)
+        if str(candidate.get("source_symbol") or "").strip().upper() in selected_symbol_set
+    ]
+    filtered_report["details"] = details
+    return filtered_report
+
+
+def _run_ticker_change_repair_job(
+    *,
+    candidates: list[dict[str, Any]],
+    meta: dict[str, Any],
+) -> dict[str, Any]:
+    if not candidates:
+        return {
+            "job_name": "backtest_ticker_change_repair",
+            "status": "failed",
+            "message": "티커 변경 반영 대상 후보가 없어 실행하지 않았습니다.",
+            "rows_written": 0,
+            "details": {},
+        }
+    source_symbols = _unique_upper_tickers([candidate.get("source_symbol") for candidate in candidates])
+    active_map = {str(candidate["source_symbol"]): candidate for candidate in candidates}
+    rows_written = upsert_ticker_change_resolutions(candidates, status="active")
+    result = dict(run_backtest_price_refresh(meta, active_symbol_resolutions=active_map))
+    details = dict(result.get("details") or {})
+    details.update(
+        {
+            "ticker_change_rows_written": rows_written,
+            "ticker_change_source_symbols": source_symbols,
+            "ticker_change_candidates": candidates,
+        }
+    )
+    result["details"] = details
+    result["job_name"] = "backtest_ticker_change_repair"
+    base_message = str(result.get("message") or "").strip()
+    result["message"] = (
+        f"티커 변경 {len(candidates)}개를 active로 반영했습니다. {base_message}"
+        if base_message
+        else f"티커 변경 {len(candidates)}개를 active로 반영하고 가격 보강을 실행했습니다."
+    )
+    return result
+
+
 def _consume_strict_factor_readiness_action(
     action_value: dict[str, Any] | None,
     *,
@@ -4088,7 +4295,7 @@ def _consume_strict_factor_readiness_action(
     if action_value.get("source") != "backtest_factor_readiness_panel":
         return
     action_id = str(action_value.get("action") or "").strip()
-    if action_id not in {"refresh_prices", "refresh_statement_shadow"}:
+    if action_id not in {"refresh_prices", "refresh_statement_shadow", "apply_ticker_change_repair"}:
         return
     nonce = str(action_value.get("nonce") or "")
     if not nonce:
@@ -4100,6 +4307,32 @@ def _consume_strict_factor_readiness_action(
     result_key = _strict_factor_readiness_action_result_key(component_key)
 
     action_symbols = _unique_upper_tickers(action_value.get("symbols") or []) or _model_action_symbols(model, action_id)
+    if action_id == "apply_ticker_change_repair":
+        candidates = _model_symbol_identity_candidates(model, action_symbols)
+        source_symbols = _unique_upper_tickers([candidate.get("source_symbol") for candidate in candidates])
+        meta = {
+            "tickers": list(tickers),
+            "symbols": list(tickers),
+            "start": _date_value_to_iso(start_value),
+            "end": _date_value_to_iso(end_value),
+            "price_freshness": _filter_factor_readiness_price_report_for_symbols(price_report, source_symbols),
+        }
+        with st.spinner("티커 변경을 반영하고 대체 ticker 가격을 보강하는 중입니다...", show_time=True):
+            try:
+                st.session_state[result_key] = _run_ticker_change_repair_job(
+                    candidates=candidates,
+                    meta=meta,
+                )
+            except Exception as exc:
+                st.session_state[result_key] = {
+                    "job_name": "backtest_ticker_change_repair",
+                    "status": "failed",
+                    "message": f"티커 변경 반영 중 오류가 발생했습니다: {exc}",
+                    "rows_written": 0,
+                    "details": {"error": str(exc)},
+                }
+        st.rerun()
+
     if action_id == "refresh_prices":
         meta = {
             "tickers": list(tickers),

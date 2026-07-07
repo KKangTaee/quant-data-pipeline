@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from app.jobs.ingestion_jobs import JobResult, run_collect_ohlcv
+from finance.loaders.symbol_resolver import load_active_symbol_resolutions
 
 
 US_EASTERN_TZ = ZoneInfo("America/New_York")
@@ -52,19 +53,52 @@ def _provider_gap_symbols_from_price_freshness(freshness_details: Mapping[str, A
     return _normalize_symbols(provider_gap_symbols)
 
 
-def _refresh_symbols_from_price_freshness(
-    meta: Mapping[str, Any],
-    coverage_tickers: list[str],
-) -> tuple[list[str], str, bool, list[str]]:
-    price_freshness = meta.get("price_freshness") or {}
-    freshness_details = price_freshness.get("details") or {}
-    refresh_symbols = _normalize_symbols(
+def _raw_refresh_symbols_from_price_freshness(freshness_details: Mapping[str, Any]) -> list[str]:
+    return _normalize_symbols(
         freshness_details.get("refresh_symbols_all")
         or list(freshness_details.get("stale_symbols_all") or [])
         + list(freshness_details.get("missing_symbols_all") or [])
         or list(freshness_details.get("stale_symbols") or [])
         + list(freshness_details.get("missing_symbols") or [])
     )
+
+
+def _normalize_active_symbol_resolutions(
+    resolutions: Mapping[str, Mapping[str, Any]] | None,
+) -> dict[str, dict[str, Any]]:
+    normalized: dict[str, dict[str, Any]] = {}
+    for key, value in dict(resolutions or {}).items():
+        if not isinstance(value, Mapping):
+            continue
+        source_candidates = _normalize_symbols([value.get("source_symbol") or value.get("symbol") or key])
+        resolved_candidates = _normalize_symbols([value.get("resolved_symbol") or value.get("related_symbol")])
+        if not source_candidates or not resolved_candidates:
+            continue
+        source_symbol = source_candidates[0]
+        resolved_symbol = resolved_candidates[0]
+        if source_symbol == resolved_symbol:
+            continue
+        item = dict(value)
+        item["source_symbol"] = source_symbol
+        item["resolved_symbol"] = resolved_symbol
+        normalized[source_symbol] = item
+    return normalized
+
+
+def _load_active_symbol_resolutions_safely(symbols: Iterable[Any] | None) -> dict[str, dict[str, Any]]:
+    try:
+        return _normalize_active_symbol_resolutions(load_active_symbol_resolutions(symbols))
+    except Exception:
+        return {}
+
+
+def _refresh_symbols_from_price_freshness(
+    meta: Mapping[str, Any],
+    coverage_tickers: list[str],
+) -> tuple[list[str], str, bool, list[str]]:
+    price_freshness = meta.get("price_freshness") or {}
+    freshness_details = price_freshness.get("details") or {}
+    refresh_symbols = _raw_refresh_symbols_from_price_freshness(freshness_details)
     if refresh_symbols:
         refresh_symbol_set = set(refresh_symbols)
         provider_gap_symbols = [
@@ -218,13 +252,72 @@ def _current_common_latest_date(meta: Mapping[str, Any]) -> date | None:
     return None
 
 
-def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime | None = None) -> dict[str, Any]:
+def build_backtest_price_refresh_plan(
+    meta: Mapping[str, Any],
+    *,
+    now: datetime | None = None,
+    active_symbol_resolutions: Mapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Return the Backtest coverage-refresh action model without running ingestion."""
     coverage_tickers = _normalize_symbols(meta.get("tickers") or meta.get("symbols"))
+    freshness_details = dict((meta.get("price_freshness") or {}).get("details") or {})
+    raw_refresh_symbols = _raw_refresh_symbols_from_price_freshness(freshness_details)
     tickers, refresh_scope, has_missing_symbols, provider_gap_symbols = _refresh_symbols_from_price_freshness(
         meta,
         coverage_tickers,
     )
+    lookup_symbols = raw_refresh_symbols or coverage_tickers
+    if active_symbol_resolutions is None:
+        active_resolution_map = _load_active_symbol_resolutions_safely(lookup_symbols)
+    else:
+        active_resolution_map = _normalize_active_symbol_resolutions(active_symbol_resolutions)
+    source_tickers = list(tickers)
+    symbol_resolutions: list[dict[str, Any]] = []
+    if active_resolution_map:
+        source_candidates = raw_refresh_symbols or tickers or coverage_tickers
+        refreshable_symbol_set = set(tickers)
+        resolved_sources: set[str] = set()
+        collection_tickers: list[str] = []
+        collection_sources: list[str] = []
+        for source_symbol in source_candidates:
+            resolution = active_resolution_map.get(source_symbol)
+            if resolution:
+                resolved_symbol = str(resolution.get("resolved_symbol") or "").strip().upper()
+                if resolved_symbol:
+                    collection_tickers.append(resolved_symbol)
+                    collection_sources.append(source_symbol)
+                    resolved_sources.add(source_symbol)
+                    symbol_resolutions.append(
+                        {
+                            "source_symbol": source_symbol,
+                            "resolved_symbol": resolved_symbol,
+                            "alias_type": resolution.get("alias_type") or "ticker_change",
+                            "effective_date": resolution.get("effective_date"),
+                            "confidence": resolution.get("confidence"),
+                            "resolution_status": resolution.get("resolution_status") or "active",
+                            "source": resolution.get("source"),
+                            "source_ref": resolution.get("source_ref"),
+                        }
+                    )
+                    continue
+            if not refreshable_symbol_set or source_symbol in refreshable_symbol_set:
+                collection_tickers.append(source_symbol)
+                collection_sources.append(source_symbol)
+        if symbol_resolutions:
+            tickers = _normalize_symbols(collection_tickers)
+            source_tickers = _normalize_symbols(collection_sources)
+            provider_gap_symbols = [symbol for symbol in provider_gap_symbols if symbol not in resolved_sources]
+            missing_symbols = set(
+                _normalize_symbols(
+                    freshness_details.get("missing_symbols_all")
+                    or freshness_details.get("missing_symbols")
+                    or []
+                )
+            )
+            if any(symbol in missing_symbols for symbol in resolved_sources):
+                has_missing_symbols = True
+    else:
+        source_tickers = list(tickers)
     target_end = _target_end_date(meta, now=now)
     current_latest = _current_common_latest_date(meta)
     current_latest_text = current_latest.isoformat() if current_latest else "-"
@@ -233,6 +326,10 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
     base = {
         "tickers": tickers,
         "ticker_count": len(tickers),
+        "source_tickers": source_tickers,
+        "source_ticker_count": len(source_tickers),
+        "symbol_resolutions": symbol_resolutions,
+        "resolved_ticker_count": len(symbol_resolutions),
         "coverage_tickers": coverage_tickers,
         "coverage_ticker_count": len(coverage_tickers),
         "provider_gap_symbols": provider_gap_symbols,
@@ -313,6 +410,15 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
         provider_gap_note = (
             f" provider/source gap {len(provider_gap_symbols)}개는 refresh 대상에서 제외했습니다: {sample}."
         )
+    resolution_note = ""
+    if symbol_resolutions:
+        sample = ", ".join(
+            f"{item['source_symbol']} -> {item['resolved_symbol']}"
+            for item in symbol_resolutions[:8]
+        )
+        if len(symbol_resolutions) > 8:
+            sample = f"{sample} (+{len(symbol_resolutions) - 8} more)"
+        resolution_note = f" Active ticker repair: {sample}."
     return {
         **base,
         "eligible": True,
@@ -322,7 +428,7 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
         "detail": (
             f"Base Universe {len(coverage_tickers)}개 중 refresh 대상은 {len(tickers)}개입니다. "
             f"주말/휴장일 제외 최신 기준일은 {target_end_text}이며, 현재 공통 기준일은 {current_latest_text}입니다."
-            f"{provider_gap_note}"
+            f"{provider_gap_note}{resolution_note}"
         ),
     }
 
@@ -331,11 +437,16 @@ def run_backtest_price_refresh(
     meta: Mapping[str, Any],
     *,
     now: datetime | None = None,
+    active_symbol_resolutions: Mapping[str, Mapping[str, Any]] | None = None,
     runner: Callable[..., JobResult] | None = None,
     freshness_inspector: Callable[..., Mapping[str, Any]] | None = None,
 ) -> JobResult:
     """Refresh stale or missing Backtest coverage prices through the existing OHLCV ingestion job."""
-    plan = build_backtest_price_refresh_plan(meta, now=now)
+    plan = build_backtest_price_refresh_plan(
+        meta,
+        now=now,
+        active_symbol_resolutions=active_symbol_resolutions,
+    )
     if not plan.get("eligible"):
         now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return {
@@ -350,6 +461,8 @@ def run_backtest_price_refresh(
                 "message": str(plan.get("summary") or "Coverage 최신화 대상이 없습니다."),
             "details": {
                 "plan": plan,
+                "source_symbols": list(plan.get("source_tickers") or []),
+                "symbol_resolutions": list(plan.get("symbol_resolutions") or []),
                 "target_tables": ["finance_price.nyse_price_history"],
                 "source": "yfinance OHLCV",
                 "purpose": "Backtest Coverage price freshness repair",
@@ -373,6 +486,8 @@ def run_backtest_price_refresh(
         {
             "plan": plan,
             "symbols": list(plan["tickers"]),
+            "source_symbols": list(plan.get("source_tickers") or []),
+            "symbol_resolutions": list(plan.get("symbol_resolutions") or []),
             "collection_start": plan.get("collection_start"),
             "collection_end": plan.get("collection_end"),
             "interval": "1d",

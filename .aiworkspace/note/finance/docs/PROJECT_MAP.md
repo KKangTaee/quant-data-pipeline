@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-07
+Last Verified: 2026-07-08
 
 ## Project Summary
 
@@ -61,8 +61,8 @@ Last Verified: 2026-07-07
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Runtime runner ownership catalog | `app/runtime/backtest/runner_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
-| Backtest Data Trust price refresh service | `app/services/backtest_price_refresh.py` |
-| Backtest strict preset / factor readiness / price freshness form helpers | `app/web/backtest_common.py`, `app/web/components/backtest_factor_readiness_panel/`, `app/web/components/backtest_price_freshness_preflight/` |
+| Backtest Data Trust price refresh service | `app/services/backtest_price_refresh.py`; active ticker-change repair가 있으면 source ticker를 유지하고 collection ticker만 resolved symbol로 바꾼다 |
+| Backtest strict preset / factor readiness / price freshness form helpers | `app/web/backtest_common.py`, `app/web/components/backtest_factor_readiness_panel/`, `app/web/components/backtest_price_freshness_preflight/`; Factor Readiness ticker-change repair action glue 포함 |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
@@ -119,6 +119,8 @@ Last Verified: 2026-07-07
 | SEC CIK / ticker exchange crosscheck collector | `finance/data/sec_company_tickers.py` |
 | Nasdaq Symbol Directory snapshot collector | `finance/data/symbol_directory.py` |
 | Computed snapshot lifecycle collector | `finance/data/computed_lifecycle.py` |
+| Backtest symbol resolver persistence | `finance/data/symbol_resolver.py` |
+| Backtest symbol resolver loader | `finance/loaders/symbol_resolver.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
 | Market sentiment loader | `finance/loaders/sentiment.py` |
@@ -219,6 +221,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Risk-On Momentum 5D 수정 | `finance/swing.py`, `finance/indicators.py`, `finance/swing_macro.py`, `finance/swing_analysis.py`, `finance/transform.py`, `finance/loaders/futures.py`, `app/runtime/backtest/runners/risk_on_momentum.py`, `app/runtime/backtest/__init__.py` compatibility facade, `app/web/backtest_single_forms/`, `app/web/backtest_result_display.py` |
 | Backtest real-money / guardrail / deployment readiness helper 수정 | `app/runtime/backtest/real_money.py`, `app/runtime/backtest/__init__.py` compatibility facade, `app/web/backtest_common.py`, `app/web/backtest_result_display.py`, `app/web/backtest_history_helpers.py`, related `app/services/backtest_*` replay / execution callers |
 | Strict quality / value / quality-value runtime wrapper 수정 | `app/runtime/backtest/runners/strict_factor.py`, `app/runtime/backtest/__init__.py` compatibility facade, `finance/loaders/factors.py`, `finance/loaders/financial_statements.py`, `app/services/backtest_execution.py`, `app/services/backtest_compare_catalog.py`, `app/web/backtest_single_forms/` |
+| Backtest ticker-change repair / symbol identity resolver 수정 | `finance/loaders/symbol_resolver.py`, `finance/data/symbol_resolver.py`, `finance/data/db/schema.py`, `app/services/backtest_price_refresh.py`, `app/web/backtest_common.py`, `app/web/backtest_result_display.py`, `app/runtime/backtest/runners/strict_factor.py` |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |

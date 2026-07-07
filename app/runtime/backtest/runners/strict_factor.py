@@ -669,6 +669,20 @@ def inspect_strict_annual_price_freshness(
         "classification_rows": classification_rows[:50],
         "classification_scope": "heuristic",
     }
+    if classification_symbols:
+        try:
+            from finance.loaders.symbol_resolver import diagnose_symbol_identity_issues_from_db
+
+            symbol_identity = diagnose_symbol_identity_issues_from_db(
+                classification_symbols,
+                price_details=details,
+            )
+            identity_candidates = list(symbol_identity.get("candidates") or [])
+            if identity_candidates:
+                details["symbol_identity_issue_candidates"] = identity_candidates
+                details["symbol_identity_issue_count"] = len(identity_candidates)
+        except Exception as exc:
+            details["symbol_identity_issue_error"] = str(exc)
 
     if not missing_symbols and len(stale_df) == 0 and spread_days == 0:
         if effective_shift_days > 0 and end_ts is not None:

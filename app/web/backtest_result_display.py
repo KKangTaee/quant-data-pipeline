@@ -872,7 +872,7 @@ def _consume_post_run_factor_readiness_action(
     if action_value.get("source") != "backtest_factor_readiness_panel":
         return
     action_id = str(action_value.get("action") or "").strip()
-    if action_id not in {"refresh_prices", "refresh_statement_shadow"}:
+    if action_id not in {"refresh_prices", "refresh_statement_shadow", "apply_ticker_change_repair"}:
         return
     nonce = str(action_value.get("nonce") or "")
     if not nonce:
@@ -882,6 +882,32 @@ def _consume_post_run_factor_readiness_action(
         return
     st.session_state[consumed_key] = nonce
     action_symbols = _unique_upper_tickers(action_value.get("symbols") or []) or _model_action_symbols(model, action_id)
+    if action_id == "apply_ticker_change_repair":
+        candidates = _model_symbol_identity_candidates(model, action_symbols)
+        source_symbols = _unique_upper_tickers([candidate.get("source_symbol") for candidate in candidates])
+        refresh_meta = _filter_post_run_price_refresh_meta(meta, source_symbols)
+        refresh_meta["price_freshness"] = _filter_factor_readiness_price_report_for_symbols(
+            dict(refresh_meta.get("price_freshness") or {}),
+            source_symbols,
+        )
+        with st.spinner("실제 결과에서 확인된 티커 변경을 반영하고 대체 ticker 가격을 보강하는 중입니다...", show_time=True):
+            try:
+                result = _run_ticker_change_repair_job(
+                    candidates=candidates,
+                    meta=refresh_meta,
+                )
+            except Exception as exc:
+                result = {
+                    "job_name": "backtest_ticker_change_repair",
+                    "status": "failed",
+                    "message": f"티커 변경 반영 중 오류가 발생했습니다: {exc}",
+                    "rows_written": 0,
+                    "details": {"error": str(exc)},
+                }
+            st.session_state[state_key] = result
+            _mark_backtest_result_requires_rerun_after_price_refresh(result)
+        st.rerun()
+
     if not action_symbols:
         job_name = (
             "backtest_post_run_statement_refresh"

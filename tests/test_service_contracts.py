@@ -822,6 +822,52 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(model["checks"][2]["symbols"], ["BK"])
         self.assertEqual(model["checks"][3]["symbols"], ["XYZ"])
 
+    def test_strict_factor_post_run_readiness_model_prioritizes_ticker_change_candidate(self) -> None:
+        from app.web.backtest_common import build_post_run_factor_readiness_panel_model
+
+        model = build_post_run_factor_readiness_panel_model(
+            {
+                "strategy_name": "Quality Snapshot (Strict Annual)",
+                "meta": {
+                    "strategy_key": "quality_snapshot_strict_annual",
+                    "start": "2021-07-07",
+                    "end": "2026-07-07",
+                    "price_freshness": {
+                        "status": "warning",
+                        "details": {
+                            "effective_end_date": "2026-07-02",
+                            "common_latest_date": "2026-05-20",
+                            "spread_days": 43,
+                            "refresh_symbols_all": ["BK", "ALLY"],
+                            "stale_symbols_all": ["BK", "ALLY"],
+                            "classification_rows": [
+                                {"symbol": "BK", "reason": "persistent_source_gap_or_symbol_issue"},
+                                {"symbol": "ALLY", "reason": "minor_source_lag"},
+                            ],
+                            "symbol_identity_issue_candidates": [
+                                {
+                                    "source_symbol": "BK",
+                                    "resolved_symbol": "BNY",
+                                    "confidence_level": "HIGH",
+                                    "confidence": 0.97,
+                                    "effective_date": "2026-05-21",
+                                    "evidence_summary": "same CIK; resolved ticker has current price",
+                                }
+                            ],
+                        },
+                    },
+                },
+                "result_df": pd.DataFrame({"Date": ["2026-07-07"]}),
+            }
+        )
+
+        checks_by_id = {check["id"]: check for check in model["checks"]}
+        self.assertEqual([check["id"] for check in model["checks"][:2]], ["symbol_identity_issue", "price_freshness"])
+        self.assertEqual(checks_by_id["symbol_identity_issue"]["symbols"], ["BK"])
+        self.assertEqual(checks_by_id["symbol_identity_issue"]["action"]["id"], "apply_ticker_change_repair")
+        self.assertEqual(checks_by_id["price_freshness"]["symbols"], ["ALLY"])
+        self.assertNotIn("BK", checks_by_id["price_freshness"]["action"]["symbols"])
+
     def test_backtest_result_display_renders_post_run_factor_readiness_before_handoff(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         last_run_body = source.split("def _render_last_run", 1)[1].split("def ", 1)[0]
@@ -1304,6 +1350,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("run_extended_statement_refresh", common_source)
         self.assertIn("refresh_prices", common_source)
         self.assertIn("refresh_statement_shadow", common_source)
+        self.assertIn("apply_ticker_change_repair", common_source)
         consume_body = common_source[common_source.index("def _consume_strict_factor_readiness_action"):]
         consume_body = consume_body[: consume_body.index("\ndef ", 1)]
         self.assertIn("st.rerun()", consume_body)
@@ -10321,6 +10368,136 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(plan["tickers"], [])
         self.assertEqual(plan["provider_gap_symbols"], ["BK"])
         self.assertIn("업데이트로 해결하기 어려운", plan["summary"])
+
+    def test_symbol_resolver_scores_bk_bny_lifecycle_candidate_without_hardcoding(self) -> None:
+        from finance.loaders.symbol_resolver import diagnose_symbol_identity_issues
+
+        diagnosis = diagnose_symbol_identity_issues(
+            ["BK"],
+            price_details={
+                "effective_end_date": "2026-07-02",
+                "refresh_symbols_all": ["BK"],
+                "stale_symbols_all": ["BK"],
+                "classification_rows": [
+                    {
+                        "symbol": "BK",
+                        "latest_date": "2026-05-20",
+                        "lag_days": 43,
+                        "reason": "persistent_source_gap_or_symbol_issue",
+                    }
+                ],
+            },
+            lifecycle_rows=[
+                {
+                    "symbol": "BK",
+                    "kind": "stock",
+                    "event_type": "ticker_change",
+                    "event_date": "2026-05-21",
+                    "related_symbol": "BNY",
+                    "related_cik": 1390777,
+                    "coverage_status": "actual",
+                    "resolution_status": "candidate",
+                    "confidence": 0.97,
+                    "name": "The Bank of New York Mellon Corporation",
+                    "source": "company_press_release",
+                    "source_ref": "https://www.bny.com/corporate/global/en/about-us/newsroom/press-release/bny-announces-planned-change-of-stock-ticker-symbol-to-bny-130465.html",
+                }
+            ],
+            resolved_price_rows=[
+                {"symbol": "BNY", "latest_date": "2026-07-02", "row_count": 25},
+            ],
+        )
+
+        self.assertEqual(diagnosis["issue_count"], 1)
+        candidate = diagnosis["candidates"][0]
+        self.assertEqual(candidate["source_symbol"], "BK")
+        self.assertEqual(candidate["resolved_symbol"], "BNY")
+        self.assertEqual(candidate["issue_type"], "symbol_identity_issue")
+        self.assertEqual(candidate["confidence_level"], "HIGH")
+        self.assertEqual(candidate["effective_date"], "2026-05-21")
+        self.assertIn("same CIK", candidate["evidence_summary"])
+        self.assertIn("resolved ticker has current price", candidate["evidence_summary"])
+
+    def test_factor_readiness_model_prioritizes_ticker_change_candidate_over_bk_refresh(self) -> None:
+        from app.web.backtest_common import build_strict_factor_readiness_panel_model
+
+        model = build_strict_factor_readiness_panel_model(
+            preset_name="US Base Universe 300",
+            tickers=["BK", "ALLY"],
+            strategy_label="Quality Snapshot (Strict Annual)",
+            price_report={
+                "status": "warning",
+                "details": {
+                    "effective_end_date": "2026-07-02",
+                    "common_latest_date": "2026-05-20",
+                    "refresh_symbols_all": ["BK", "ALLY"],
+                    "stale_symbols_all": ["BK", "ALLY"],
+                    "symbol_identity_issue_candidates": [
+                        {
+                            "source_symbol": "BK",
+                            "resolved_symbol": "BNY",
+                            "confidence_level": "HIGH",
+                            "confidence": 0.97,
+                            "effective_date": "2026-05-21",
+                            "evidence_summary": "same CIK; resolved ticker has current price",
+                        }
+                    ],
+                },
+            },
+            statement_summary={
+                "requested_count": 2,
+                "covered_count": 2,
+                "missing_symbols": [],
+            },
+        )
+
+        checks_by_id = {check["id"]: check for check in model["checks"]}
+        self.assertIn("symbol_identity_issue", checks_by_id)
+        self.assertEqual(checks_by_id["symbol_identity_issue"]["symbols"], ["BK"])
+        self.assertEqual(checks_by_id["symbol_identity_issue"]["action"]["id"], "apply_ticker_change_repair")
+        self.assertEqual(checks_by_id["symbol_identity_issue"]["action"]["symbols"], ["BK"])
+        self.assertEqual(checks_by_id["price_freshness"]["symbols"], ["ALLY"])
+        self.assertNotIn("BK", checks_by_id["price_freshness"]["action"]["symbols"])
+
+    def test_backtest_price_refresh_plan_uses_active_alias_for_collection_without_rewriting_source_symbol(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import build_backtest_price_refresh_plan
+
+        plan = build_backtest_price_refresh_plan(
+            {
+                "tickers": ["AAA", "BK"],
+                "start": "2016-01-01",
+                "end": "2026-07-07",
+                "actual_result_end": "2026-05-20",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "effective_end_date": "2026-07-02",
+                        "common_latest_date": "2026-05-20",
+                        "refresh_symbols_all": ["BK"],
+                        "stale_symbols_all": ["BK"],
+                    },
+                },
+            },
+            now=datetime(2026, 7, 7, 8, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+            active_symbol_resolutions={
+                "BK": {
+                    "source_symbol": "BK",
+                    "resolved_symbol": "BNY",
+                    "effective_date": "2026-05-21",
+                    "confidence": 0.97,
+                    "resolution_status": "active",
+                }
+            },
+        )
+
+        self.assertTrue(plan["eligible"])
+        self.assertEqual(plan["tickers"], ["BNY"])
+        self.assertEqual(plan["source_tickers"], ["BK"])
+        self.assertEqual(plan["symbol_resolutions"][0]["source_symbol"], "BK")
+        self.assertEqual(plan["symbol_resolutions"][0]["resolved_symbol"], "BNY")
+        self.assertIn("BK -> BNY", plan["detail"])
 
     def test_backtest_price_refresh_plan_hides_action_when_prices_are_current(self) -> None:
         from zoneinfo import ZoneInfo

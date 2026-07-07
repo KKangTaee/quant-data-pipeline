@@ -210,6 +210,8 @@ NYSE_SCHEMAS = {
           event_date DATE NULL,
           related_symbol VARCHAR(20) NULL,
           related_cik BIGINT NULL,
+          resolution_status ENUM('candidate','active','rejected','unknown') NOT NULL DEFAULT 'unknown',
+          confidence DOUBLE NULL,
 
           name VARCHAR(255) NULL,
           source_ref VARCHAR(1024) NULL,
@@ -225,6 +227,7 @@ NYSE_SCHEMAS = {
           KEY ix_source_type (source_type),
           KEY ix_listing_status (listing_status),
           KEY ix_event_type (event_type),
+          KEY ix_resolution_status (resolution_status),
           KEY ix_event_date (event_date),
           KEY ix_lifecycle_dates (first_seen_date, last_seen_date)
         );

@@ -5630,3 +5630,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Quarterly result bundle은 post-run Factor Readiness가 가격 / statement shadow gap을 실제 실행 결과 기준으로 보여주고, 필요한 경우 targeted refresh action을 제공한다.
 - User-facing label은 `Strict Quarterly`로 승격했고 legacy `_prototype` key는 saved replay 호환용으로 유지한다.
 - Browser QA 후 `Research-only defaults` residual copy 제거와 quarterly 5-year window guard 보정을 추가했다.
+
+## 2026-07-08 - Backtest Symbol Resolver V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-symbol-resolver-v1-20260708/`에서 Backtest Quality / Value Factor Readiness용 ticker-change repair 1차를 구현했다.
+- `nyse_symbol_lifecycle` 기반 resolver를 추가해 `event_type=ticker_change` 후보를 보여주고, 승인 시 `resolution_status=active`로 저장한다.
+- 가격 refresh는 source ticker를 유지하되 active repair가 있으면 collection ticker만 resolved symbol로 바꾼다.
+- 남은 차수는 official corporate-action source scoring, PIT effective-date split, UX polish / browser QA 확장이다.
