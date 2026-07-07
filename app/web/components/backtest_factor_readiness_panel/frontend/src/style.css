@@ -1,0 +1,224 @@
+:root {
+  color: #2f3140;
+  font-family: "Source Sans Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.bt-factor-readiness {
+  --accent: #64748b;
+  --accent-soft: rgba(100, 116, 139, 0.08);
+  --border: rgba(148, 163, 184, 0.32);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  color: #2f3140;
+  padding: 1rem;
+}
+
+.bt-factor-readiness--positive {
+  --accent: #0f8f83;
+  --accent-soft: rgba(15, 143, 131, 0.08);
+}
+
+.bt-factor-readiness--warning {
+  --accent: #b45309;
+  --accent-soft: rgba(180, 83, 9, 0.1);
+}
+
+.bt-factor-readiness--danger {
+  --accent: #b42318;
+  --accent-soft: rgba(180, 35, 24, 0.08);
+}
+
+.bt-factor-readiness__head {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.bt-factor-readiness__kicker,
+.bt-factor-readiness__check-head span,
+.bt-factor-readiness__metric span,
+.bt-factor-readiness__issue span,
+.bt-factor-readiness__action span {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.28;
+}
+
+.bt-factor-readiness h4 {
+  font-size: 1.16rem;
+  line-height: 1.34;
+  margin: 0.22rem 0 0;
+}
+
+.bt-factor-readiness p,
+.bt-factor-readiness small {
+  color: #667085;
+  font-size: 0.9rem;
+  line-height: 1.48;
+}
+
+.bt-factor-readiness p {
+  margin: 0.32rem 0 0;
+}
+
+.bt-factor-readiness small {
+  display: block;
+  margin-top: 0.28rem;
+}
+
+.bt-factor-readiness__state {
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 8.4rem;
+  padding: 0.56rem 0.68rem;
+  text-align: right;
+}
+
+.bt-factor-readiness__state span {
+  color: #667085;
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.bt-factor-readiness__state b,
+.bt-factor-readiness__check-head b,
+.bt-factor-readiness__metric b,
+.bt-factor-readiness__issue b {
+  color: #2f3140;
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.bt-factor-readiness__checks {
+  display: grid;
+  gap: 0.72rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.9rem;
+}
+
+.bt-factor-readiness__check {
+  --check-accent: #64748b;
+  background: #fcfcfd;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--check-accent);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 0.72rem;
+}
+
+.bt-factor-readiness__check--positive {
+  --check-accent: #0f8f83;
+}
+
+.bt-factor-readiness__check--warning {
+  --check-accent: #b45309;
+}
+
+.bt-factor-readiness__check--danger {
+  --check-accent: #b42318;
+}
+
+.bt-factor-readiness__check-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.bt-factor-readiness__metrics {
+  display: grid;
+  gap: 0.42rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.62rem;
+}
+
+.bt-factor-readiness__metric {
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 0.5rem;
+}
+
+.bt-factor-readiness__issues {
+  display: grid;
+  gap: 0.42rem;
+  margin-top: 0.62rem;
+}
+
+.bt-factor-readiness__issue {
+  background: #fff;
+  border-left: 3px solid #64748b;
+  padding: 0.46rem 0.56rem;
+}
+
+.bt-factor-readiness__issue--positive {
+  border-left-color: #0f8f83;
+}
+
+.bt-factor-readiness__issue--warning {
+  border-left-color: #b45309;
+}
+
+.bt-factor-readiness__issue--danger {
+  border-left-color: #b42318;
+}
+
+.bt-factor-readiness__actions {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0.54rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.9rem;
+  padding-top: 0.78rem;
+}
+
+.bt-factor-readiness__action {
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 0.62rem 0.72rem;
+}
+
+.bt-factor-readiness__action p {
+  margin-top: 0.2rem;
+}
+
+@media (max-width: 960px) {
+  .bt-factor-readiness__head,
+  .bt-factor-readiness__checks,
+  .bt-factor-readiness__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .bt-factor-readiness__head {
+    display: grid;
+  }
+
+  .bt-factor-readiness__state {
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .bt-factor-readiness__metrics {
+    grid-template-columns: 1fr;
+  }
+}
+

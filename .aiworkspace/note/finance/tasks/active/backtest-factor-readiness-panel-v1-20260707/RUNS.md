@@ -10,3 +10,11 @@
   - Passed.
 - Compile: `.venv/bin/python -m py_compile app/web/backtest_common.py tests/test_service_contracts.py`
   - Passed.
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_factor_readiness_panel_react_component_is_ui_only -v`
+  - Expected failure confirmed: component wrapper did not exist.
+- Build: `npm install && npm run build` in `app/web/components/backtest_factor_readiness_panel/frontend`
+  - Passed. npm audit reported 1 moderate and 1 high dev dependency vulnerability in the Vite dependency set.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_factor_readiness_panel_react_component_is_ui_only -v`
+  - Passed.
+- Compile: `.venv/bin/python -m py_compile app/web/components/backtest_factor_readiness_panel/component.py tests/test_service_contracts.py`
+  - Passed.

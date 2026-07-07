@@ -11,3 +11,4 @@ Started: 2026-07-07
 
 - Created `build_strict_factor_readiness_panel_model` in `app/web/backtest_common.py`.
 - Added focused service contracts for mixed issue and ready states.
+- Added UI-only `backtest_factor_readiness_panel` React component and build asset.

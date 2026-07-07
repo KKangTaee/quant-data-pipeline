@@ -1016,6 +1016,51 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("render_backtest_price_freshness_preflight(", common_source)
         self.assertIn("is_backtest_price_freshness_preflight_available()", common_source)
 
+    def test_factor_readiness_panel_react_component_is_ui_only(self) -> None:
+        component_root = Path("app/web/components/backtest_factor_readiness_panel")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/BacktestFactorReadinessPanel.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        vite_config_path = component_root / "frontend/vite.config.ts"
+        build_entry_path = component_root / "frontend/build/index.html"
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(vite_config_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+        vite_config_source = vite_config_path.read_text(encoding="utf-8")
+        build_entry_source = build_entry_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_backtest_factor_readiness_panel_available", wrapper_source)
+        self.assertIn("render_backtest_factor_readiness_panel", wrapper_source)
+        self.assertIn("BacktestFactorReadinessPanel", component_source)
+        self.assertIn("Factor Readiness", component_source)
+        self.assertIn("checks", component_source)
+        self.assertIn("actions", component_source)
+        self.assertIn("runRecommended", component_source)
+        self.assertIn("border-radius: 8px;", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertIn('base: "./"', vite_config_source)
+        self.assertIn('src="./assets/', build_entry_source)
+        self.assertIn('href="./assets/', build_entry_source)
+        self.assertNotIn('src="/assets/', build_entry_source)
+        self.assertNotIn('href="/assets/', build_entry_source)
+        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+
     def test_single_strategy_workspace_does_not_render_strategy_detail_panel(self) -> None:
         single_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")
 
