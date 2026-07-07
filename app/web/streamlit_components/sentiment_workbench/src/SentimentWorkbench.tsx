@@ -228,6 +228,17 @@ function rangePercentileWidth(value: number | string | null | undefined) {
   return `${Math.max(0, Math.min(100, percentile))}%`;
 }
 
+function componentChangeLabel(item: SentimentComponentHistoryItem) {
+  const change = displayValue(item.change);
+  if (change === "-") {
+    return "-";
+  }
+  if (String(item.change_direction || "").toLowerCase() === "up" && !String(change).startsWith("+")) {
+    return `+${change}`;
+  }
+  return change;
+}
+
 function rowColumns(rows: SentimentEvidenceRows) {
   const columns: string[] = [];
   rows.forEach((row) => {
@@ -615,6 +626,35 @@ function SentimentWorkbench({ args }: Props) {
           ))}
         </div>
       </section>
+
+      {payload.interpretation.component_history.length ? (
+        <section className="sentiment-workbench__component-history">
+          <div className="sentiment-workbench__section-heading">
+            <span>CNN 구성요소 변화</span>
+            <small>latest vs previous</small>
+          </div>
+          <div className="sentiment-workbench__component-history-grid">
+            {payload.interpretation.component_history.map((item) => (
+              <article
+                className="sentiment-workbench__component-history-card"
+                key={item.series}
+                style={{ "--metric-tone": toneColor(item.tone) } as React.CSSProperties}
+              >
+                <div className="sentiment-workbench__component-history-title">
+                  <span>{item.label_ko || item.series}</span>
+                  <strong>{displayValue(item.latest)}</strong>
+                </div>
+                <div className="sentiment-workbench__component-history-delta">{componentChangeLabel(item)}</div>
+                <div className="sentiment-workbench__component-history-dates">
+                  <span>{item.previous_date || "-"}</span>
+                  <span>{item.latest_date || "-"}</span>
+                </div>
+                {item.detail ? <p>{item.detail}</p> : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="sentiment-workbench__chart-section">
         <div className="sentiment-workbench__section-heading">

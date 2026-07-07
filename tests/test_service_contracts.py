@@ -6273,6 +6273,27 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__divergence-panel", react_style)
         self.assertIn(".sentiment-workbench__divergence-axis", react_style)
 
+    def test_sentiment_react_component_history_surface_shows_recent_changes(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("SentimentComponentHistoryItem", react_source)
+        self.assertIn("payload.interpretation.component_history.map", react_source)
+        self.assertIn("sentiment-workbench__component-history", react_source)
+        self.assertIn("sentiment-workbench__component-history-grid", react_source)
+        self.assertIn("sentiment-workbench__component-history-card", react_source)
+        self.assertIn("sentiment-workbench__component-history-delta", react_source)
+        self.assertIn("componentChangeLabel", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__component-history"'),
+            react_source.index('className="sentiment-workbench__chart-section"'),
+        )
+        self.assertIn(".sentiment-workbench__component-history", react_style)
+        self.assertIn(".sentiment-workbench__component-history-grid", react_style)
+        self.assertIn(".sentiment-workbench__component-history-card", react_style)
+        self.assertIn(".sentiment-workbench__component-history-delta", react_style)
+
     def test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         entry_source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")

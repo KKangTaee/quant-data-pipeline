@@ -219,6 +219,7 @@ body {
 .sentiment-workbench__cross-read,
 .sentiment-workbench__driver-section,
 .sentiment-workbench__component-section,
+.sentiment-workbench__component-history,
 .sentiment-workbench__chart-section,
 .sentiment-workbench__evidence-details {
   border-top: 1px solid #e5e7eb;
@@ -570,6 +571,70 @@ body {
   overflow-wrap: anywhere;
 }
 
+.sentiment-workbench__component-history-grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sentiment-workbench__component-history-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-top: 3px solid var(--metric-tone, #64748b);
+  border-radius: 8px;
+  min-width: 0;
+  padding: 10px 11px;
+}
+
+.sentiment-workbench__component-history-title,
+.sentiment-workbench__component-history-dates {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.sentiment-workbench__component-history-title span {
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 840;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.sentiment-workbench__component-history-title strong {
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 880;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.sentiment-workbench__component-history-delta {
+  color: var(--metric-tone, #64748b);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.15;
+  margin-top: 7px;
+}
+
+.sentiment-workbench__component-history-dates {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 760;
+  line-height: 1.2;
+  margin-top: 5px;
+}
+
+.sentiment-workbench__component-history-card p {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 620;
+  line-height: 1.38;
+  margin: 7px 0 0;
+  overflow-wrap: anywhere;
+}
+
 .sentiment-workbench__chart-grid {
   display: grid;
   gap: 12px;
@@ -861,6 +926,7 @@ body {
   .sentiment-workbench__metric-grid,
   .sentiment-workbench__range-context,
   .sentiment-workbench__component-list,
+  .sentiment-workbench__component-history-grid,
   .sentiment-workbench__chart-grid,
   .sentiment-workbench__evidence-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -885,6 +951,7 @@ body {
   .sentiment-workbench__cross-metrics,
   .sentiment-workbench__range-context,
   .sentiment-workbench__component-list,
+  .sentiment-workbench__component-history-grid,
   .sentiment-workbench__chart-grid,
   .sentiment-workbench__evidence-grid {
     grid-template-columns: 1fr;
