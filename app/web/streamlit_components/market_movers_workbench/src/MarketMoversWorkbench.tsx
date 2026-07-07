@@ -59,6 +59,7 @@ export type MarketMoversTrustPanel = {
   schema_version: "market_movers_react_trust_panel_v1";
   visible: boolean;
   default_open: boolean;
+  has_issues: boolean;
   title: string;
   kicker: string;
   state: string;
@@ -388,6 +389,8 @@ function MarketMoversWorkbench({ args }: Props) {
     return <MarketMoversSectorBreadth payload={payload} />;
   }
 
+  const trustHasIssues = Boolean(payload.trust_panel.has_issues);
+
   return (
     <section
       className="mm-workbench"
@@ -438,14 +441,20 @@ function MarketMoversWorkbench({ args }: Props) {
       </div>
       {payload.trust_panel.visible ? (
         <details
-          className={`mm-workbench__trust-panel mm-workbench__trust-panel--${payload.trust_panel.tone}`}
+          className={`mm-workbench__trust-panel mm-workbench__trust-panel--${payload.trust_panel.tone}${
+            trustHasIssues ? " mm-workbench__trust-panel--has-issues" : ""
+          }`}
+          data-has-issues={trustHasIssues}
           onToggle={syncFrameHeightSoon}
           open={payload.trust_panel.default_open}
         >
           <summary className="mm-workbench__trust-summary">
             <span>
               <span className="mm-workbench__trust-kicker">{payload.trust_panel.kicker}</span>
-              <strong>{payload.trust_panel.title}</strong>
+              <strong className="mm-workbench__trust-title">
+                {trustHasIssues ? <span aria-label="자료 품질 확인 필요" className="mm-workbench__trust-issue-dot" /> : null}
+                {payload.trust_panel.title}
+              </strong>
             </span>
             <span className="mm-workbench__trust-state">{payload.trust_panel.state}</span>
           </summary>

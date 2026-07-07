@@ -16,6 +16,7 @@ from app.jobs.overview_actions import (
     run_overview_browser_auto_refresh,
     run_overview_market_intraday_snapshot,
     run_overview_market_liquidity_universe_refresh,
+    run_overview_market_movers_eod_history,
     run_overview_market_mover_statement_refresh,
     run_overview_market_symbol_alias_repair,
     run_overview_nasdaq_symbol_directory,
@@ -459,10 +460,13 @@ def _market_movers_react_trust_panel_config(snapshot: dict[str, Any]) -> dict[st
     grouped_rows = _market_movers_records(model.get("grouped_missing_rows"))
     action = dict(model.get("suggested_action") or {})
     state = str(model.get("state") or "-")
+    warnings = _market_movers_react_trust_warnings(snapshot)
+    has_issues = state != "Good" or bool(warnings) or bool(grouped_rows)
     return {
         "schema_version": "market_movers_react_trust_panel_v1",
         "visible": True,
-        "default_open": state != "Good",
+        "default_open": False,
+        "has_issues": has_issues,
         "title": "Coverage trust detail",
         "kicker": "자료 품질",
         "state": TRUST_STATE_LABELS_KO.get(state, _market_movers_trust_text_ko(state) or "-"),
@@ -470,7 +474,7 @@ def _market_movers_react_trust_panel_config(snapshot: dict[str, Any]) -> dict[st
         "headline": _market_movers_trust_text_ko(model.get("headline")) or "-",
         "detail": _market_movers_trust_text_ko(model.get("detail")),
         "items": _market_movers_react_trust_items_ko([dict(item) for item in list(model.get("items") or [])]),
-        "warnings": _market_movers_react_trust_warnings(snapshot),
+        "warnings": warnings,
         "ticker_alias_candidates": _market_movers_records(snapshot.get("ticker_alias_candidates")),
         "grouped_rows": _market_movers_react_grouped_rows_ko(grouped_rows),
         "group_columns": [TRUST_GROUP_COLUMNS_KO[column] for column in COVERAGE_TRUST_GROUP_COLUMNS],
@@ -680,7 +684,8 @@ def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dic
         return actions
 
     return [
-        _market_movers_react_universe_basis_action(controls.coverage, kind="primary"),
+        {"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"},
+        _market_movers_react_universe_basis_action(controls.coverage, kind="secondary"),
         {"id": "reload", "label": "화면 새로고침", "kind": "secondary"},
     ]
 
@@ -745,6 +750,13 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
             "handler": "run_overview_market_intraday_snapshot",
             "universe_code": controls.coverage,
             "universe_limit": controls.universe_limit,
+        }
+    if action_id == "refresh_eod_history":
+        return {
+            "handler": "run_overview_market_movers_eod_history",
+            "universe_code": controls.coverage,
+            "universe_limit": controls.universe_limit,
+            "period": controls.period,
         }
     if action_id == "refresh_universe":
         return {"handler": "run_overview_sp500_universe", "universe_code": controls.coverage}
@@ -874,42 +886,67 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
 
     if handler == "run_overview_market_intraday_snapshot":
         result_key = f"overview_{universe_code.lower()}_intraday_result"
-        with st.spinner(f"Updating {universe_label} quote snapshot..."):
-            _store_overview_job_result(
-                result_key,
-                run_overview_market_intraday_snapshot(
-                    universe_code=universe_code,
-                    universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
-                ),
-            )
+        _run_market_movers_job_with_progress(
+            result_key=result_key,
+            label=f"{universe_label} 일중 스냅샷 갱신",
+            detail="Provider quote를 수집해 DB에 새 일중 스냅샷을 저장합니다.",
+            run_job=lambda: run_overview_market_intraday_snapshot(
+                universe_code=universe_code,
+                universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
+            ),
+        )
+        st.rerun()
+        return True
+
+    if handler == "run_overview_market_movers_eod_history":
+        period = str(plan.get("period") or controls.period)
+        period_label = _market_mover_period_label(period)
+        result_key = _market_movers_eod_history_result_key(universe_code, period)
+        _run_market_movers_job_with_progress(
+            result_key=result_key,
+            label=f"{universe_label} {period_label} 가격 이력 갱신",
+            detail="비-Daily 랭킹 산출에 필요한 저장 EOD 가격 이력을 갱신합니다.",
+            run_job=lambda: run_overview_market_movers_eod_history(
+                universe_code=universe_code,
+                universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
+                period=period,
+            ),
+        )
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
         return True
 
     if handler == "run_overview_sp500_universe":
-        with st.spinner("Refreshing S&P 500 universe..."):
-            _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
+        _run_market_movers_job_with_progress(
+            result_key="overview_sp500_universe_result",
+            label="S&P 500 유니버스 기준 갱신",
+            detail="S&P 500 구성 종목 목록을 갱신합니다.",
+            run_job=run_overview_sp500_universe,
+        )
         st.rerun()
         return True
 
     if handler == "run_overview_nasdaq_symbol_directory":
-        with st.spinner("Refreshing Nasdaq Symbol Directory current snapshot..."):
-            _store_overview_job_result(
-                "overview_nasdaq_symbol_directory_result",
-                run_overview_nasdaq_symbol_directory(),
-            )
+        _run_market_movers_job_with_progress(
+            result_key="overview_nasdaq_symbol_directory_result",
+            label="Nasdaq 유니버스 기준 갱신",
+            detail="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
+            run_job=run_overview_nasdaq_symbol_directory,
+        )
         st.rerun()
         return True
 
     if handler == "run_overview_market_liquidity_universe_refresh":
         result_key = f"overview_{universe_code.lower()}_liquidity_universe_result"
-        with st.spinner(f"{universe_label} 유니버스 기준을 20D 평균 거래대금으로 갱신하는 중입니다..."):
-            _store_overview_job_result(
-                result_key,
-                run_overview_market_liquidity_universe_refresh(
-                    universe_code=universe_code,
-                    universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
-                ),
-            )
+        _run_market_movers_job_with_progress(
+            result_key=result_key,
+            label=f"{universe_label} 유니버스 기준 갱신",
+            detail="20D 평균 거래대금 기준으로 Top universe를 다시 저장합니다.",
+            run_job=lambda: run_overview_market_liquidity_universe_refresh(
+                universe_code=universe_code,
+                universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
+            ),
+        )
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
         return True
@@ -917,14 +954,15 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
     if handler == "run_overview_market_symbol_alias_repair":
         result_key = f"overview_{universe_code.lower()}_ticker_alias_repair_result"
         candidates = list(st.session_state.get(_market_movers_ticker_alias_session_key(universe_code)) or [])
-        with st.spinner(f"{universe_label} 티커 변경 복구를 적용하는 중입니다..."):
-            _store_overview_job_result(
-                result_key,
-                run_overview_market_symbol_alias_repair(
-                    universe_code=universe_code,
-                    candidates=candidates,
-                ),
-            )
+        _run_market_movers_job_with_progress(
+            result_key=result_key,
+            label=f"{universe_label} 티커 변경 복구",
+            detail="검토된 ticker-change alias 후보를 Market Movers quote repair 경로에 적용합니다.",
+            run_job=lambda: run_overview_market_symbol_alias_repair(
+                universe_code=universe_code,
+                candidates=candidates,
+            ),
+        )
         st.rerun()
         return True
 
@@ -974,7 +1012,7 @@ def build_market_movers_empty_state_model(
         tone = "warning" if status != "OK" else "neutral"
     else:
         title = f"{coverage_label} {period_label} ranking row가 아직 없습니다."
-        primary_action = "유니버스 기준 갱신"
+        primary_action = "가격 이력 갱신"
         tone = "warning" if status != "OK" else "neutral"
     return {
         "schema_version": "market_movers_empty_state_v1",
@@ -1007,6 +1045,57 @@ def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
         st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
 
 
+def _market_movers_job_elapsed_key(result_key: str) -> str:
+    return f"{result_key}__ui_elapsed_sec"
+
+
+def _market_movers_job_completed_key(result_key: str) -> str:
+    return f"{result_key}__ui_completed_at"
+
+
+def _market_movers_eod_history_result_key(universe_code: str, period: str) -> str:
+    return f"overview_{str(universe_code).lower()}_{str(period).lower()}_eod_history_result"
+
+
+def _run_market_movers_job_with_progress(
+    *,
+    result_key: str,
+    label: str,
+    detail: str,
+    run_job,
+) -> None:
+    started_at = datetime.now()
+    started_label = started_at.strftime("%H:%M:%S")
+    t0 = perf_counter()
+    status_factory = getattr(st, "status", None)
+
+    def _finish(result: dict[str, Any]) -> None:
+        elapsed = perf_counter() - t0
+        st.session_state[_market_movers_job_elapsed_key(result_key)] = round(elapsed, 3)
+        st.session_state[_market_movers_job_completed_key(result_key)] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _store_overview_job_result(result_key, result)
+
+    if callable(status_factory):
+        with status_factory(f"{label} 진행 중", expanded=True) as status:
+            status.write(f"시작 {started_label}")
+            if detail:
+                status.write(detail)
+            try:
+                result = run_job()
+            except Exception:
+                elapsed = perf_counter() - t0
+                status.update(label=f"{label} 실패 · {elapsed:.1f}s", state="error", expanded=True)
+                raise
+            _finish(result)
+            elapsed = st.session_state.get(_market_movers_job_elapsed_key(result_key))
+            status.update(label=f"{label} 완료 · {_snapshot_value(elapsed)}s", state="complete", expanded=False)
+        return
+
+    with st.spinner(f"{label} 진행 중..."):
+        result = run_job()
+    _finish(result)
+
+
 def _render_market_job_result(result_key: str) -> None:
     result = st.session_state.get(result_key)
     if not isinstance(result, dict):
@@ -1024,6 +1113,8 @@ def _render_market_job_result(result_key: str) -> None:
         source = details.get("source") or "-"
         method = details.get("method") or details.get("method_requested") or "-"
         duration = result.get("duration_sec")
+        if duration is None:
+            duration = st.session_state.get(_market_movers_job_elapsed_key(result_key))
         if result.get("symbols_requested") is None and result.get("symbols_processed") is None:
             st.caption(
                 "Rows: "
@@ -1601,8 +1692,8 @@ def _render_market_movers_coverage_trust(snapshot: dict[str, Any], *, controls: 
     if not isinstance(grouped_rows, pd.DataFrame):
         grouped_rows = pd.DataFrame()
     action = dict(model.get("suggested_action") or {})
-    expanded = str(model.get("state") or "") not in {"Good"}
-    with st.expander("Coverage trust detail", expanded=expanded):
+    issue_suffix = " · 확인 필요" if str(model.get("state") or "") not in {"Good"} else ""
+    with st.expander(f"Coverage trust detail{issue_suffix}", expanded=False):
         st.caption("Grouped missing diagnostics")
         if grouped_rows.empty:
             st.caption("현재 선택 조건에서 grouped missing diagnostics로 묶을 row가 없습니다.")
@@ -2099,6 +2190,34 @@ def _render_market_movers_universe_result(universe_code: str) -> None:
         _render_market_job_result(f"overview_{universe_code.lower()}_liquidity_universe_result")
 
 
+def _market_movers_universe_result_keys(universe_code: str) -> list[str]:
+    if universe_code == "SP500":
+        return ["overview_sp500_universe_result"]
+    if universe_code == "NASDAQ":
+        return ["overview_nasdaq_symbol_directory_result"]
+    if universe_code in {"TOP1000", "TOP2000"}:
+        return [f"overview_{universe_code.lower()}_liquidity_universe_result"]
+    return []
+
+
+def _has_market_movers_job_result(result_key: str) -> bool:
+    return isinstance(st.session_state.get(result_key), dict)
+
+
+def _render_market_movers_recent_refresh_results(
+    *,
+    universe_code: str,
+    result_keys: list[str],
+) -> None:
+    all_keys = _market_movers_universe_result_keys(universe_code) + result_keys
+    if not any(_has_market_movers_job_result(key) for key in all_keys):
+        return
+    with st.expander("최근 갱신 결과", expanded=False):
+        _render_market_movers_universe_result(universe_code)
+        for result_key in result_keys:
+            _render_market_job_result(result_key)
+
+
 def _render_market_movers_universe_action(container: Any, *, universe_code: str) -> None:
     if universe_code == "SP500":
         if container.button(
@@ -2107,8 +2226,12 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
             use_container_width=True,
             help="S&P 500 구성 종목 목록을 갱신합니다.",
         ):
-            with st.spinner("Refreshing S&P 500 universe..."):
-                _store_overview_job_result("overview_sp500_universe_result", run_overview_sp500_universe())
+            _run_market_movers_job_with_progress(
+                result_key="overview_sp500_universe_result",
+                label="S&P 500 유니버스 기준 갱신",
+                detail="S&P 500 구성 종목 목록을 갱신합니다.",
+                run_job=run_overview_sp500_universe,
+            )
             st.rerun()
         return
     if universe_code == "NASDAQ":
@@ -2118,11 +2241,12 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
             use_container_width=True,
             help="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
         ):
-            with st.spinner("Refreshing Nasdaq Symbol Directory current snapshot..."):
-                _store_overview_job_result(
-                    "overview_nasdaq_symbol_directory_result",
-                    run_overview_nasdaq_symbol_directory(),
-                )
+            _run_market_movers_job_with_progress(
+                result_key="overview_nasdaq_symbol_directory_result",
+                label="Nasdaq 유니버스 기준 갱신",
+                detail="Nasdaq Symbol Directory current snapshot을 lifecycle evidence table에 저장합니다.",
+                run_job=run_overview_nasdaq_symbol_directory,
+            )
             st.rerun()
         return
     if container.button(
@@ -2135,14 +2259,15 @@ def _render_market_movers_universe_action(container: Any, *, universe_code: str)
         ),
     ):
         universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
-        with st.spinner(f"{universe_label} 유니버스 기준을 20D 평균 거래대금으로 갱신하는 중입니다..."):
-            _store_overview_job_result(
-                f"overview_{universe_code.lower()}_liquidity_universe_result",
-                run_overview_market_liquidity_universe_refresh(
-                    universe_code=universe_code,
-                    universe_limit=_universe_limit(universe_code),
-                ),
-            )
+        _run_market_movers_job_with_progress(
+            result_key=f"overview_{universe_code.lower()}_liquidity_universe_result",
+            label=f"{universe_label} 유니버스 기준 갱신",
+            detail="20D 평균 거래대금 기준으로 Top universe를 다시 저장합니다.",
+            run_job=lambda: run_overview_market_liquidity_universe_refresh(
+                universe_code=universe_code,
+                universe_limit=_universe_limit(universe_code),
+            ),
+        )
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
 
@@ -2184,11 +2309,15 @@ def _render_market_movers_daily_refresh_bar(
         type="primary",
         help="Provider quote를 수집해 DB에 새 일중 스냅샷을 저장합니다.",
     ):
-        with st.spinner(f"Updating {universe_label} quote snapshot..."):
-            _store_overview_job_result(
-                intraday_result_key,
-                run_overview_market_intraday_snapshot(universe_code=universe_code, universe_limit=universe_limit),
-            )
+        _run_market_movers_job_with_progress(
+            result_key=intraday_result_key,
+            label=f"{universe_label} 일중 스냅샷 갱신",
+            detail="Provider quote를 수집해 DB에 새 일중 스냅샷을 저장합니다.",
+            run_job=lambda: run_overview_market_intraday_snapshot(
+                universe_code=universe_code,
+                universe_limit=universe_limit,
+            ),
+        )
         st.rerun()
     _render_market_movers_universe_action(control_cols[2], universe_code=universe_code)
     if control_cols[3].button(
@@ -2232,6 +2361,7 @@ def _render_market_movers_eod_refresh_bar(
 ) -> None:
     period_label = _market_mover_period_label(period)
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    eod_result_key = _market_movers_eod_history_result_key(universe_code, period)
     coverage = dict(snapshot.get("coverage") or {})
     returnable = coverage.get("returnable_count") or 0
     universe_count = coverage.get("universe_count") or 0
@@ -2246,20 +2376,40 @@ def _render_market_movers_eod_refresh_bar(
         next_check_text="수동",
         state=_market_movers_eod_refresh_state(snapshot, period=period),
     )
-    control_cols = st.columns([1.0, 1.0, 2.0], gap="small", vertical_alignment="bottom")
-    _render_market_movers_universe_action(control_cols[0], universe_code=universe_code)
-    if control_cols[1].button(
+    control_cols = st.columns([1.0, 1.0, 1.0, 1.6], gap="small", vertical_alignment="bottom")
+    if control_cols[0].button(
+        "가격 이력 갱신",
+        key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
+        use_container_width=True,
+        type="primary",
+        help=f"{period_label} 랭킹 산출에 필요한 저장 EOD 가격 이력을 기존 OHLCV 경로로 갱신합니다.",
+    ):
+        _run_market_movers_job_with_progress(
+            result_key=eod_result_key,
+            label=f"{universe_label} {period_label} 가격 이력 갱신",
+            detail="비-Daily 랭킹 산출에 필요한 저장 EOD 가격 이력을 갱신합니다.",
+            run_job=lambda: run_overview_market_movers_eod_history(
+                universe_code=universe_code,
+                universe_limit=universe_limit,
+                period=period,
+            ),
+        )
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.rerun()
+    _render_market_movers_universe_action(control_cols[1], universe_code=universe_code)
+    if control_cols[2].button(
         "화면 새로고침",
         key=f"overview_{universe_code.lower()}_{period}_market_movers_reload",
         use_container_width=True,
     ):
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
-    control_cols[2].caption(
+    control_cols[3].caption(
         f"{period_label} 결과는 저장된 EOD 가격 기준입니다. "
-        "유니버스 기준 갱신은 coverage 구성 또는 Top 유동성 기준을 다시 저장합니다."
+        "가격 이력 갱신은 시세를 보강하고, 유니버스 기준 갱신은 coverage 구성 또는 Top 유동성 기준을 다시 저장합니다."
     )
     _render_market_movers_universe_result(universe_code)
+    _render_market_job_result(eod_result_key)
 
 
 def _render_market_movers_refresh_bar(
@@ -2295,11 +2445,16 @@ def _render_market_movers_react_refresh_companion(
         selected_mode = _market_movers_selected_refresh_mode(controls)
         if selected_mode == "auto" and auto_supported:
             _render_market_auto_refresh_summary(universe_code=controls.coverage)
-        _render_market_movers_universe_result(controls.coverage)
-        _render_market_job_result(f"overview_{controls.coverage.lower()}_intraday_result")
+        _render_market_movers_recent_refresh_results(
+            universe_code=controls.coverage,
+            result_keys=[f"overview_{controls.coverage.lower()}_intraday_result"],
+        )
         return
 
-    _render_market_movers_universe_result(controls.coverage)
+    _render_market_movers_recent_refresh_results(
+        universe_code=controls.coverage,
+        result_keys=[_market_movers_eod_history_result_key(controls.coverage, controls.period)],
+    )
 
 
 def _rank_token(value: Any, fallback: int) -> str:

@@ -176,6 +176,22 @@ body {
   line-height: 1.2;
 }
 
+.mm-workbench__trust-title {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.mm-workbench__trust-issue-dot {
+  background: #dc2626;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 8px;
+  width: 8px;
+}
+
 .mm-workbench__trust-kicker {
   color: #64748b;
   font-size: 0.72rem;
