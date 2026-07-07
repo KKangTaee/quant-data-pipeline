@@ -62,7 +62,7 @@ Last Verified: 2026-07-07
 | Runtime runner ownership catalog | `app/runtime/backtest/runner_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
 | Backtest Data Trust price refresh service | `app/services/backtest_price_refresh.py` |
-| Backtest strict preset / price freshness form helpers | `app/web/backtest_common.py`, `app/web/components/backtest_price_freshness_preflight/` |
+| Backtest strict preset / factor readiness / price freshness form helpers | `app/web/backtest_common.py`, `app/web/components/backtest_factor_readiness_panel/`, `app/web/components/backtest_price_freshness_preflight/` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |

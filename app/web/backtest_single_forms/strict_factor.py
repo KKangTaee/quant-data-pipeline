@@ -200,6 +200,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
 
     _render_strict_factor_readiness_panel(
         tickers=tickers,
+        start_value=st.session_state.get("qss_start", _default_strict_factor_start_date()),
         end_value=st.session_state.get("qss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qss_timeframe", "1d"),
         strategy_label="Quality Snapshot (Strict Annual)",
@@ -890,6 +891,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
 
     _render_strict_factor_readiness_panel(
         tickers=tickers,
+        start_value=st.session_state.get("vss_start", _default_strict_factor_start_date()),
         end_value=st.session_state.get("vss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("vss_timeframe", "1d"),
         strategy_label="Value Snapshot (Strict Annual)",
@@ -1382,6 +1384,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
 
     _render_strict_factor_readiness_panel(
         tickers=tickers,
+        start_value=st.session_state.get("qvss_start", _default_strict_factor_start_date()),
         end_value=st.session_state.get("qvss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qvss_timeframe", "1d"),
         strategy_label="Quality + Value Snapshot (Strict Annual)",

@@ -4901,6 +4901,7 @@ def _render_strategy_compare_workspace() -> None:
                     _render_strict_preset_status_note(qss_compare_preset, QUALITY_STRICT_PRESETS[qss_compare_preset])
                     _render_strict_factor_readiness_panel(
                         tickers=QUALITY_STRICT_PRESETS[qss_compare_preset],
+                        start_value=compare_start,
                         end_value=compare_end,
                         timeframe=compare_timeframe,
                         strategy_label="Quality Snapshot (Strict Annual)",
@@ -5194,6 +5195,7 @@ def _render_strategy_compare_workspace() -> None:
                     _render_strict_preset_status_note(vss_compare_preset, VALUE_STRICT_PRESETS[vss_compare_preset])
                     _render_strict_factor_readiness_panel(
                         tickers=VALUE_STRICT_PRESETS[vss_compare_preset],
+                        start_value=compare_start,
                         end_value=compare_end,
                         timeframe=compare_timeframe,
                         strategy_label="Value Snapshot (Strict Annual)",
@@ -5487,6 +5489,7 @@ def _render_strategy_compare_workspace() -> None:
                     _render_strict_preset_status_note(qvss_compare_preset, QUALITY_STRICT_PRESETS[qvss_compare_preset])
                     _render_strict_factor_readiness_panel(
                         tickers=QUALITY_STRICT_PRESETS[qvss_compare_preset],
+                        start_value=compare_start,
                         end_value=compare_end,
                         timeframe=compare_timeframe,
                         strategy_label="Quality + Value Snapshot (Strict Annual)",

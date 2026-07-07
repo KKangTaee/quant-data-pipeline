@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-07 - Factor Readiness는 진단표가 아니라 문제 해결 패널이어야 한다
+
+- User request: 사용자가 Factor Readiness와 preset 설명이 `INFO / REVIEW`, `Requested / Covered`, 후보군 안내 중심이라 무엇이 문제이고 어떤 ticker를 어떻게 해결해야 하는지 알기 어렵다고 지적함.
+- Interpreted goal: Quality / Value strict form은 Base Universe 기준 설명보다 실행 전 막히는 데이터 이슈, 영향받는 ticker, 해결 action을 먼저 보여줘야 한다.
+- Analysis result: 기존 panel은 base universe, price freshness, statement shadow를 같은 진단 card로 보여주고 action은 footer text로만 뒀다. 따라서 base universe는 후보군 context로 낮추고, refreshable price issue / provider gap / statement shadow gap을 별도 problem contract로 분리해야 한다.
+- Follow-up: `backtest-factor-readiness-action-ui-v1-20260707`에서 React panel을 문제 해결 중심으로 바꾸고 가격 / statement 보강 action을 연결했다. provider/source gap은 반복 update가 아니라 수동 확인으로 표시한다.
+
 ### 2026-07-07 - Coverage 최신화 no-row provider gap은 반복 클릭 대상이 아니다
 
 - User request: 사용자가 Quality Snapshot Coverage 최신화 버튼을 눌러도 BK가 해결되지 않고 같은 문제가 계속 남는다고 보고함.

@@ -9,7 +9,13 @@ Last Verified: 2026-07-07
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-coverage-provider-gap-refresh-v1-20260707/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-factor-readiness-action-ui-v1-20260707/`다.
+
+- 목적: Quality / Value strict form의 Factor Readiness가 내부 진단값 중심으로 보여 사용자가 `무엇이 문제인지 / 어떤 티커인지 / 어떻게 해결할지`를 바로 알기 어려운 문제를 줄인다.
+- 주요 변경: strict preset 안내는 후보군 선택 정보만 짧게 남기고, Factor Readiness React panel은 문제 / 영향받는 티커 / 해결 방법 / action button 중심 contract로 바꿨다. 가격 문제는 Backtest OHLCV refresh service, statement gap은 targeted Extended Statement Refresh로 연결하고, provider/source gap은 반복 업데이트가 아니라 수동 확인 문제로 표시한다.
+- 이번 차수에서 하지 않은 일: OHLCV provider 교체, DB schema 변경, universe 선정 정책 변경, factor/runtime 계산 변경, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/backtest-coverage-provider-gap-refresh-v1-20260707/`다.
 
 - 목적: Backtest Data Trust의 Coverage 최신화가 provider no-data / persistent source gap 심볼을 계속 해결 가능한 버튼으로 보여주는 문제를 막는다.
 - 주요 변경: price refresh plan이 명백한 provider/source gap 심볼을 refresh 대상에서 제외하고, 실행 후 rows_written=0 + unresolved 심볼이 남으면 같은 화면에서 retry action card를 다시 렌더링하지 않는다.

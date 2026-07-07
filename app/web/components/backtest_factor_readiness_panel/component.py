@@ -31,11 +31,11 @@ def render_backtest_factor_readiness_panel(
     checks: list[dict[str, Any]],
     actions: list[dict[str, Any]],
     key: str | None = None,
-) -> None:
+) -> dict[str, Any] | None:
     """Render the optional strict factor readiness React panel when its frontend build exists."""
     if _component is None:
-        return
-    _component(
+        return None
+    value = _component(
         status=status,
         tone=tone,
         headline=headline,
@@ -47,4 +47,4 @@ def render_backtest_factor_readiness_panel(
         key=key,
         default=None,
     )
-
+    return value if isinstance(value, dict) else None

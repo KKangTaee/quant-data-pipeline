@@ -200,12 +200,11 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertTrue(model["has_shortfall"])
         self.assertEqual(
             [item["label"] for item in model["display_items"]],
-            ["Base Universe 기준", "실행 가능 Coverage 아님", "후보군 최신화", "실행 전 확인"],
+            ["선택 후보군", "선정 기준"],
         )
         self.assertEqual(model["preset_tone"], "warning")
-        self.assertIn("asset profile", model["display_items"][0]["value"])
-        self.assertIn("runnable coverage", model["display_items"][1]["value"])
-        self.assertIn("Ingestion", model["display_items"][2]["value"])
+        self.assertIn("2 / Target 100", model["display_items"][0]["value"])
+        self.assertIn("asset profile", model["display_items"][1]["value"])
 
     def test_strict_preset_basis_model_flags_staged_wide_fallback(self) -> None:
         from app.web.backtest_common import build_strict_preset_basis_model
@@ -967,7 +966,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertTrue(model["issue_rows"])
         self.assertIn("Daily Market Update", model["next_action"])
 
-    def test_strict_factor_readiness_model_separates_base_price_statement_and_actions(self) -> None:
+    def test_strict_factor_readiness_model_prioritizes_problem_tickers_and_actions(self) -> None:
         from app.web.backtest_common import build_strict_factor_readiness_panel_model
 
         model = build_strict_factor_readiness_panel_model(
@@ -986,6 +985,12 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
                     "spread_days": 4,
                     "stale_count": 2,
                     "missing_count": 0,
+                    "refresh_symbols_all": ["BK", "CUK"],
+                    "stale_symbols_all": ["BK", "CUK"],
+                    "classification_rows": [
+                        {"symbol": "BK", "reason": "persistent_source_gap_or_symbol_issue"},
+                        {"symbol": "CUK", "reason": "minor_source_lag"},
+                    ],
                     "stale_symbols": ["BK", "CUK"],
                     "reason_counts": {"minor_source_lag": 1, "persistent_source_gap_or_symbol_issue": 1},
                     "effective_end_date": "2026-07-06",
@@ -1003,15 +1008,27 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             },
         )
 
-        self.assertEqual(model["schema_version"], "strict_factor_readiness_panel_v1")
+        self.assertEqual(model["schema_version"], "strict_factor_readiness_panel_v2")
         self.assertEqual(model["status"], "needs_action")
         self.assertEqual(model["tone"], "warning")
-        self.assertIn("실행 전", model["headline"])
-        self.assertEqual([check["id"] for check in model["checks"]], ["base_universe", "price_freshness", "statement_shadow"])
-        self.assertIn("후보군", model["checks"][0]["summary"])
-        self.assertIn("BK", model["checks"][1]["issues"][0]["detail"])
-        self.assertIn("provider", " ".join(action["label"] + " " + action["detail"] for action in model["actions"]).lower())
-        self.assertIn("Extended Statement Refresh", " ".join(action["label"] + " " + action["detail"] for action in model["actions"]))
+        self.assertIn("해결할 데이터 이슈", model["headline"])
+        self.assertEqual([check["id"] for check in model["checks"]], ["price_freshness", "provider_gap", "statement_shadow"])
+        for check in model["checks"]:
+            self.assertIn("problem", check)
+            self.assertIn("symbols", check)
+            self.assertIn("solution", check)
+            self.assertNotIn(str(check.get("status")).upper(), {"INFO", "REVIEW"})
+        self.assertEqual(model["checks"][0]["symbols"], ["CUK"])
+        self.assertEqual(model["checks"][0]["action"]["id"], "refresh_prices")
+        self.assertTrue(model["checks"][0]["action"]["enabled"])
+        self.assertEqual(model["checks"][1]["symbols"], ["BK"])
+        self.assertFalse(model["checks"][1]["action"]["enabled"])
+        self.assertEqual(model["checks"][2]["symbols"], ["CUK"])
+        self.assertEqual(model["checks"][2]["action"]["id"], "refresh_statement_shadow")
+        self.assertTrue(model["checks"][2]["action"]["enabled"])
+        action_ids = [action["id"] for action in model["actions"]]
+        self.assertIn("refresh_prices", action_ids)
+        self.assertIn("refresh_statement_shadow", action_ids)
         self.assertFalse(model["run_recommended"])
 
     def test_strict_factor_readiness_model_marks_ready_when_price_and_statement_pass(self) -> None:
@@ -1051,7 +1068,9 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(model["status"], "ready")
         self.assertEqual(model["tone"], "positive")
         self.assertTrue(model["run_recommended"])
-        self.assertEqual(model["actions"][0]["label"], "현재 설정으로 실행")
+        self.assertIn("실행 전 데이터 이슈가 없습니다", model["headline"])
+        self.assertEqual(model["checks"], [])
+        self.assertEqual(model["actions"][0]["label"], "백테스트 실행 가능")
 
     def test_price_freshness_preflight_react_component_is_ui_only(self) -> None:
         component_root = Path("app/web/components/backtest_price_freshness_preflight")
@@ -1100,7 +1119,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("render_backtest_price_freshness_preflight(", common_source)
         self.assertIn("is_backtest_price_freshness_preflight_available()", common_source)
 
-    def test_factor_readiness_panel_react_component_is_ui_only(self) -> None:
+    def test_factor_readiness_panel_react_component_is_action_oriented(self) -> None:
         component_root = Path("app/web/components/backtest_factor_readiness_panel")
         wrapper_path = component_root / "component.py"
         package_path = component_root / "frontend/package.json"
@@ -1130,6 +1149,9 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("render_backtest_factor_readiness_panel", wrapper_source)
         self.assertIn("BacktestFactorReadinessPanel", component_source)
         self.assertIn("Factor Readiness", component_source)
+        self.assertIn("문제", component_source)
+        self.assertIn("영향받는 티커", component_source)
+        self.assertIn("해결 방법", component_source)
         self.assertIn("checks", component_source)
         self.assertIn("actions", component_source)
         self.assertIn("runRecommended", component_source)
@@ -1140,10 +1162,27 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn('href="./assets/', build_entry_source)
         self.assertNotIn('src="/assets/', build_entry_source)
         self.assertNotIn('href="/assets/', build_entry_source)
-        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertIn('source: "backtest_factor_readiness_panel"', component_source)
+        self.assertIn("action.id", component_source)
+        self.assertIn("<button", component_source)
+        self.assertNotIn("compact(check.status).toUpperCase()", component_source)
+        self.assertNotIn("INFO", component_source)
+        self.assertNotIn("REVIEW", component_source)
         self.assertNotIn("from app.services", wrapper_source)
         self.assertNotIn("from app.runtime", wrapper_source)
         self.assertNotIn("from finance", wrapper_source)
+
+    def test_strict_factor_readiness_actions_wire_price_and_statement_refresh(self) -> None:
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        self.assertIn("run_backtest_price_refresh", common_source)
+        self.assertIn("run_extended_statement_refresh", common_source)
+        self.assertIn("refresh_prices", common_source)
+        self.assertIn("refresh_statement_shadow", common_source)
+        consume_body = common_source[common_source.index("def _consume_strict_factor_readiness_action"):]
+        consume_body = consume_body[: consume_body.index("\ndef ", 1)]
+        self.assertIn("st.rerun()", consume_body)
 
     def test_single_strategy_workspace_does_not_render_strategy_detail_panel(self) -> None:
         single_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")

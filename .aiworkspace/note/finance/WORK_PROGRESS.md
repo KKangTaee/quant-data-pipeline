@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Factor Readiness Action UI V1:
+  - Quality / Value strict form의 Factor Readiness를 내부 진단값 카드에서 `문제 / 티커 / 해결 방법 / action` 중심 React panel로 바꿨다.
+  - 가격 보강은 Backtest OHLCV refresh service, statement gap은 targeted Extended Statement Refresh로 연결했다.
+  - 자세한 기록: [task status](./tasks/active/backtest-factor-readiness-action-ui-v1-20260707/STATUS.md)
 - Backtest Coverage Provider Gap Refresh V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-coverage-provider-gap-refresh-v1-20260707/`에서 Coverage 최신화 no-row provider gap 반복 클릭 문제를 수정했다.
   - 명백한 persistent provider/source gap 심볼은 refresh plan에서 제외하고, rows_written=0 + unresolved 결과는 retry action card를 다시 렌더링하지 않는다.

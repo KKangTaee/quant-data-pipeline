@@ -93,6 +93,8 @@ from app.web.components.backtest_factor_readiness_panel import (
     is_backtest_factor_readiness_panel_available,
     render_backtest_factor_readiness_panel,
 )
+from app.jobs import run_extended_statement_refresh
+from app.services.backtest_price_refresh import run_backtest_price_refresh
 from app.web.backtest_candidate_review_helpers import (
     CANDIDATE_REVIEW_DECISION_OPTIONS,
     CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
@@ -598,34 +600,19 @@ def build_strict_preset_basis_model(
 
     display_items = [
         {
-            "label": "Base Universe 기준",
+            "label": "선택 후보군",
             "value": (
-                f"finance_meta.nyse_asset_profile의 미국 stock asset profile을 market_cap_desc 순서로 읽고, "
-                f"현재 {actual_count} / Target {target_text}개 후보군을 로드했습니다."
+                f"{display_name} · {actual_count} / Target {target_text}"
                 if is_managed
-                else f"{name or 'Manual'} 고정 목록에서 현재 {actual_count}개를 사용합니다."
+                else f"{display_name} · {actual_count}개"
             ),
         },
         {
-            "label": "실행 가능 Coverage 아님",
+            "label": "선정 기준",
             "value": (
-                "이 값은 후보군 크기입니다. 가격 최신성, statement shadow factor coverage, liquidity를 통과한 runnable coverage 보장은 아닙니다."
-            ),
-        },
-        {
-            "label": "후보군 최신화",
-            "value": (
-                "Ingestion에서 asset profile을 다시 수집하고 Streamlit session/cache를 새로 열면 market_cap_desc 순서가 preset에 반영됩니다."
+                "asset profile market_cap_desc"
                 if is_managed
-                else "고정 smoke preset은 managed base-universe ladder 최신화 대상이 아닙니다."
-            ),
-        },
-        {
-            "label": "실행 전 확인",
-            "value": (
-                "백테스트 실행 전 Price Freshness Preflight와 Statement Shadow Coverage Preview로 runnable coverage를 따로 확인합니다."
-                if is_managed
-                else "수동 목록도 가격과 statement shadow coverage를 별도로 확인해야 합니다."
+                else "manual/static ticker list"
             ),
         },
     ]
@@ -1522,24 +1509,12 @@ def _render_strict_preset_status_note(
     tickers: list[str] | tuple[str, ...] | None = None,
 ) -> None:
     model = build_strict_preset_basis_model(preset_name, tickers)
-    tone = str(model.get("preset_tone") or "neutral")
-    role_note = str(model.get("role_note") or "")
-    if tone == "warning":
-        st.warning(role_note)
-    elif tone == "info":
-        st.info(role_note)
-    elif role_note:
-        st.caption(role_note)
-
-    st.caption(f"Base Universe 기준 요약 · {model.get('display_name') or model.get('preset_name') or '-'}")
-    for item in model.get("display_items") or []:
-        st.caption(f"{item.get('label')}: {item.get('value')}")
-    operator_note = str(model.get("operator_note") or "")
-    if operator_note and operator_note != role_note:
-        if tone == "warning":
-            st.warning(operator_note)
-        else:
-            st.caption(operator_note)
+    items = list(model.get("display_items") or [])
+    summary = " · ".join(str(item.get("value") or "") for item in items if item.get("value"))
+    if summary:
+        st.caption(f"Base Universe: {summary}")
+    if model.get("has_shortfall"):
+        st.caption("후보군 수가 preset 목표보다 적습니다. 실제 실행 가능 여부는 아래 Factor Readiness에서 확인합니다.")
 
 
 def _render_historical_universe_help_popover() -> None:
@@ -2231,6 +2206,117 @@ def _readiness_status_from_tone(tone: str) -> str:
     return "info"
 
 
+STRICT_PRICE_PROVIDER_GAP_REASON_MARKERS = (
+    "persistent_source_gap",
+    "provider_source_gap",
+    "provider_no_data",
+    "likely_delisted",
+    "symbol_changed",
+    "symbol_issue",
+    "asset_profile_error",
+    "unavailable_from_provider",
+    "no_data",
+)
+
+
+def _strict_price_refresh_symbols(price_details: dict[str, Any]) -> list[str]:
+    raw_symbols = price_details.get("refresh_symbols_all")
+    if not raw_symbols:
+        raw_symbols = list(price_details.get("stale_symbols_all") or []) + list(price_details.get("missing_symbols_all") or [])
+    if not raw_symbols:
+        raw_symbols = list(price_details.get("stale_symbols") or []) + list(price_details.get("missing_symbols") or [])
+    return _unique_upper_tickers(raw_symbols or [])
+
+
+def _strict_provider_gap_symbols(price_details: dict[str, Any], refresh_symbols: list[str]) -> list[str]:
+    explicit_symbols = _unique_upper_tickers(
+        price_details.get("provider_gap_symbols")
+        or price_details.get("provider_no_data_symbols")
+        or price_details.get("post_refresh_unresolved_symbols")
+        or []
+    )
+    if explicit_symbols:
+        return explicit_symbols
+
+    row_symbols: list[Any] = []
+    for row in list(price_details.get("classification_rows") or []):
+        if not isinstance(row, dict):
+            continue
+        reason = str(row.get("reason") or "").strip().lower()
+        if any(marker in reason for marker in STRICT_PRICE_PROVIDER_GAP_REASON_MARKERS):
+            row_symbols.append(row.get("symbol"))
+    classified = _unique_upper_tickers(row_symbols)
+    if classified:
+        return classified
+
+    reason_counts = dict(price_details.get("reason_counts") or {})
+    provider_gap_count = sum(
+        _safe_int(count)
+        for reason, count in reason_counts.items()
+        if any(marker in str(reason).lower() for marker in STRICT_PRICE_PROVIDER_GAP_REASON_MARKERS)
+    )
+    if provider_gap_count and refresh_symbols:
+        return refresh_symbols[:provider_gap_count]
+    return []
+
+
+def _readiness_action(
+    *,
+    action_id: str,
+    label: str,
+    detail: str,
+    enabled: bool,
+    tone: str = "warning",
+    symbols: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "id": action_id,
+        "label": label,
+        "detail": detail,
+        "enabled": bool(enabled),
+        "tone": tone,
+        "symbols": list(symbols or []),
+    }
+
+
+def _readiness_problem_check(
+    *,
+    check_id: str,
+    title: str,
+    problem: str,
+    symbols: list[str],
+    solution: str,
+    action: dict[str, Any],
+    tone: str = "warning",
+    diagnostics: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    status_label = "수동 확인" if not action.get("enabled") else "해결 가능"
+    return {
+        "id": check_id,
+        "title": title,
+        "status": "manual_check" if not action.get("enabled") else "needs_action",
+        "status_label": status_label,
+        "tone": tone,
+        "problem": problem,
+        "symbols": list(symbols),
+        "symbol_sample": _symbol_sample(list(symbols), limit=12),
+        "solution": solution,
+        "action": action,
+        "summary": problem,
+        "detail": solution,
+        "diagnostics": list(diagnostics or []),
+        "metrics": [],
+        "issues": [
+            {
+                "label": "영향받는 티커",
+                "value": str(len(symbols)),
+                "detail": _symbol_sample(list(symbols), limit=12),
+                "tone": tone,
+            }
+        ],
+    }
+
+
 def build_strict_factor_readiness_panel_model(
     *,
     preset_name: str | None,
@@ -2240,33 +2326,19 @@ def build_strict_factor_readiness_panel_model(
     price_report: dict[str, Any] | None = None,
     statement_summary: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a compact first-read readiness model for strict factor setup forms."""
+    """Build an action-oriented readiness model for strict factor setup forms."""
     normalized_tickers = _unique_upper_tickers(list(tickers or []))
     preset_model = build_strict_preset_basis_model(preset_name, normalized_tickers)
     price_report = dict(price_report or {})
     price_details = dict(price_report.get("details") or {})
     statement_summary = dict(statement_summary or {})
 
-    price_tone = _price_freshness_preflight_tone(price_report.get("status"))
+    refresh_symbols = _strict_price_refresh_symbols(price_details)
+    provider_gap_symbols = _strict_provider_gap_symbols(price_details, refresh_symbols)
+    provider_gap_symbol_set = set(provider_gap_symbols)
+    refreshable_price_symbols = [symbol for symbol in refresh_symbols if symbol not in provider_gap_symbol_set]
     stale_count = _safe_int(price_details.get("stale_count"))
     missing_price_count = _safe_int(price_details.get("missing_count"))
-    price_issue_count = stale_count + missing_price_count
-    stale_symbols = _unique_upper_tickers(price_details.get("stale_symbols") or [])
-    missing_price_symbols = _unique_upper_tickers(price_details.get("missing_symbols") or [])
-    reason_counts = dict(price_details.get("reason_counts") or {})
-    provider_gap_count = sum(
-        _safe_int(count)
-        for reason, count in reason_counts.items()
-        if any(marker in str(reason).lower() for marker in ("persistent", "provider", "symbol_issue", "no_data"))
-    )
-    provider_gap_symbols = _unique_upper_tickers(
-        price_details.get("provider_gap_symbols")
-        or price_details.get("provider_no_data_symbols")
-        or price_details.get("post_refresh_unresolved_symbols")
-        or []
-    )
-    if provider_gap_count and not provider_gap_symbols:
-        provider_gap_symbols = (stale_symbols + missing_price_symbols)[: max(1, provider_gap_count)]
 
     statement_requested = _safe_int(statement_summary.get("requested_count"), len(normalized_tickers))
     statement_covered = _safe_int(statement_summary.get("covered_count"))
@@ -2276,167 +2348,132 @@ def build_strict_factor_readiness_panel_model(
         or list(statement_summary.get("raw_missing_symbols") or [])
         + list(statement_summary.get("shadow_missing_symbols") or [])
     )
-    statement_tone = "positive" if statement_requested > 0 and statement_missing_count == 0 else "warning"
 
-    base_tone = str(preset_model.get("preset_tone") or "neutral")
-    base_check_tone = "warning" if base_tone == "warning" else "neutral"
-    base_check = {
-        "id": "base_universe",
-        "title": "Base Universe",
-        "status": _readiness_status_from_tone(base_check_tone),
-        "tone": base_check_tone,
-        "summary": (
-            f"{preset_model.get('display_name') or preset_name or 'Manual'} 후보군 {len(normalized_tickers)}개를 선택했습니다. "
-            "이 값은 실행 가능 coverage가 아니라 factor 평가 전 후보군입니다."
-        ),
-        "detail": str(preset_model.get("source_basis") or ""),
-        "metrics": [
-            {"label": "Loaded", "value": str(preset_model.get("actual_count") or 0), "detail": "후보군"},
-            {"label": "Target", "value": str(preset_model.get("requested_limit") or "manual"), "detail": "preset 목표"},
-        ],
-        "issues": [
-            {
-                "label": "주의",
-                "value": "후보군 기준",
-                "detail": str(preset_model.get("role_note") or preset_model.get("operator_note") or ""),
-                "tone": base_check_tone,
-            }
-        ],
-    }
+    checks: list[dict[str, Any]] = []
+    if refreshable_price_symbols:
+        issue_count = len(refreshable_price_symbols)
+        problem = f"{issue_count}개 종목의 가격 데이터가 목표 기준일보다 오래되었습니다."
+        if missing_price_count:
+            problem = f"{issue_count}개 종목의 가격 데이터가 없거나 목표 기준일보다 오래되었습니다."
+        action = _readiness_action(
+            action_id="refresh_prices",
+            label="가격 데이터 최신화",
+            detail="해당 종목의 OHLCV 가격을 목표 거래일까지 보강하고 readiness를 다시 확인합니다.",
+            enabled=True,
+            tone="warning",
+            symbols=refreshable_price_symbols,
+        )
+        checks.append(
+            _readiness_problem_check(
+                check_id="price_freshness",
+                title="가격 데이터 문제",
+                problem=problem,
+                symbols=refreshable_price_symbols,
+                solution="버튼으로 가격 데이터를 최신화한 뒤 아래 Run Backtest를 다시 실행하세요.",
+                action=action,
+                tone="warning",
+                diagnostics=[
+                    {"label": "목표 기준일", "value": str(price_details.get("effective_end_date") or "-")},
+                    {"label": "공통 최신일", "value": str(price_details.get("common_latest_date") or "-")},
+                    {"label": "최신일 차이", "value": f"{price_details.get('spread_days') or 0}d"},
+                ],
+            )
+        )
 
-    price_issues: list[dict[str, str]] = []
-    if stale_count:
-        price_issues.append(
-            {
-                "label": "Stale",
-                "value": str(stale_count),
-                "detail": _symbol_sample(stale_symbols) or "기준 거래일보다 오래된 가격 row가 있습니다.",
-                "tone": "warning",
-            }
+    if provider_gap_symbols:
+        action = _readiness_action(
+            action_id="review_provider_gap",
+            label="Provider gap 확인",
+            detail="업데이트를 반복해도 해결되지 않을 수 있어 Data Trust에서 symbol/provider 상태를 확인합니다.",
+            enabled=False,
+            tone="warning",
+            symbols=provider_gap_symbols,
         )
-    if missing_price_count:
-        price_issues.append(
-            {
-                "label": "Missing",
-                "value": str(missing_price_count),
-                "detail": _symbol_sample(missing_price_symbols) or "DB 가격 row가 없는 종목이 있습니다.",
-                "tone": "danger",
-            }
+        checks.append(
+            _readiness_problem_check(
+                check_id="provider_gap",
+                title="Provider/source gap",
+                problem=f"{len(provider_gap_symbols)}개 종목은 provider가 최신 가격 row를 주지 않는 상태일 수 있습니다.",
+                symbols=provider_gap_symbols,
+                solution="Coverage 최신화 반복 대신 Data Trust에서 symbol lifecycle/provider no-data를 확인하고, 필요하면 universe에서 제외하거나 대체 소스를 검토하세요.",
+                action=action,
+                tone="warning",
+                diagnostics=[
+                    {"label": "분류", "value": "provider/source gap"},
+                    {"label": "자동 업데이트", "value": "비활성"},
+                ],
+            )
         )
-    if provider_gap_count:
-        price_issues.append(
-            {
-                "label": "Provider Gap",
-                "value": str(provider_gap_count),
-                "detail": (
-                    f"{_symbol_sample(provider_gap_symbols) or '일부 종목'}은 provider가 최신 row를 주지 않는 source gap일 수 있습니다."
-                ),
-                "tone": "warning",
-            }
-        )
-    price_check = {
-        "id": "price_freshness",
-        "title": "Price Freshness",
-        "status": _readiness_status_from_tone(price_tone),
-        "tone": price_tone,
-        "summary": str(price_report.get("message") or "가격 최신성 점검 결과입니다."),
-        "detail": (
-            f"공통 최신일 {price_details.get('common_latest_date') or '-'} / "
-            f"목표 기준 {price_details.get('effective_end_date') or '-'} / "
-            f"spread {price_details.get('spread_days') or 0}d"
-        ),
-        "metrics": [
-            {"label": "Requested", "value": str(price_details.get("requested_count") or len(normalized_tickers)), "detail": "검사 대상"},
-            {"label": "Covered", "value": str(price_details.get("covered_count") or 0), "detail": "가격 보유"},
-            {"label": "Common Latest", "value": str(price_details.get("common_latest_date") or "-"), "detail": "공통 기준"},
-        ],
-        "issues": price_issues,
-    }
 
-    statement_issues: list[dict[str, str]] = []
     if statement_missing_count:
-        statement_issues.append(
-            {
-                "label": "Statement Gap",
-                "value": str(statement_missing_count),
-                "detail": _symbol_sample(statement_missing_symbols) or "일부 종목의 statement shadow factor coverage가 부족합니다.",
-                "tone": "warning",
-            }
+        statement_action_enabled = bool(statement_missing_symbols)
+        action = _readiness_action(
+            action_id="refresh_statement_shadow",
+            label="Statement 데이터 보강",
+            detail=f"{statement_freq} Extended Statement Refresh를 targeted symbols로 실행합니다.",
+            enabled=statement_action_enabled,
+            tone="warning",
+            symbols=statement_missing_symbols,
         )
-    statement_check = {
-        "id": "statement_shadow",
-        "title": "Statement Shadow",
-        "status": _readiness_status_from_tone(statement_tone),
-        "tone": statement_tone,
-        "summary": (
-            f"{statement_freq} statement shadow coverage {statement_covered}/{statement_requested}개입니다."
-        ),
-        "detail": (
-            f"기간 {statement_summary.get('min_period_end') or '-'} -> {statement_summary.get('max_period_end') or '-'} / "
-            f"rows {statement_summary.get('row_count') or 0}"
-        ),
-        "metrics": [
-            {"label": "Requested", "value": str(statement_requested), "detail": "factor 대상"},
-            {"label": "Covered", "value": str(statement_covered), "detail": "shadow 보유"},
-            {"label": "Missing", "value": str(statement_missing_count), "detail": "보강 필요"},
-        ],
-        "issues": statement_issues,
-    }
-
-    actions: list[dict[str, str]] = []
-    if provider_gap_count:
-        actions.append(
-            {
-                "label": "Provider gap 확인",
-                "detail": (
-                    "Coverage 최신화를 반복하기 전에 provider no-data / symbol issue인지 확인하고, "
-                    "필요하면 universe를 조정하거나 Data Trust에서 대체 소스를 검토합니다."
+        checks.append(
+            _readiness_problem_check(
+                check_id="statement_shadow",
+                title="Statement 데이터 부족",
+                problem=f"{statement_missing_count}개 종목의 statement shadow factor coverage가 부족합니다.",
+                symbols=statement_missing_symbols,
+                solution=(
+                    "버튼으로 statement 원천 데이터와 shadow factor를 보강한 뒤 readiness를 다시 확인하세요."
+                    if statement_action_enabled
+                    else "누락 ticker 목록을 먼저 확인한 뒤 Ingestion의 Extended Statement Refresh를 실행하세요."
                 ),
-                "tone": "warning",
-            }
+                action=action,
+                tone="warning",
+                diagnostics=[
+                    {"label": "보유", "value": f"{statement_covered}/{statement_requested}"},
+                    {"label": "기간", "value": f"{statement_summary.get('min_period_end') or '-'} -> {statement_summary.get('max_period_end') or '-'}"},
+                    {"label": "rows", "value": str(statement_summary.get("row_count") or 0)},
+                ],
+            )
         )
-    if price_issue_count and not provider_gap_count:
-        actions.append(
-            {
-                "label": "Coverage 최신화",
-                "detail": "stale/missing 가격 row를 목표 거래일까지 보강한 뒤 다시 백테스트를 실행합니다.",
-                "tone": "warning" if stale_count else "danger",
-            }
-        )
-    if statement_missing_count:
-        actions.append(
-            {
-                "label": "Extended Statement Refresh",
-                "detail": f"{statement_freq} statement shadow factor coverage를 먼저 보강합니다.",
-                "tone": "warning",
-            }
-        )
+
+    actions = [dict(check["action"]) for check in checks]
+    needs_action = bool(checks)
+    tone = "positive" if not needs_action else "warning"
     if not actions:
         actions.append(
-            {
-                "label": "현재 설정으로 실행",
-                "detail": "Base Universe와 실행 전 데이터 기준이 현재 선택 기준에서 통과 상태입니다.",
-                "tone": "positive",
-            }
+            _readiness_action(
+                action_id="run_backtest_ready",
+                label="백테스트 실행 가능",
+                detail="가격 최신성과 statement shadow coverage가 현재 선택 기준에서 통과했습니다. 아래 Run Backtest 버튼으로 실행하세요.",
+                enabled=False,
+                tone="positive",
+            )
         )
-
-    needs_action = bool(price_issue_count or provider_gap_count or statement_missing_count)
-    tone = "positive" if not needs_action else "warning"
+    issue_summary = " / ".join(f"{check['title']} {len(check.get('symbols') or [])}개" for check in checks)
     return {
-        "schema_version": "strict_factor_readiness_panel_v1",
+        "schema_version": "strict_factor_readiness_panel_v2",
         "strategy_label": strategy_label,
         "status": "ready" if not needs_action else "needs_action",
         "tone": tone,
         "headline": (
-            "현재 설정으로 백테스트를 실행할 수 있습니다."
+            "실행 전 데이터 이슈가 없습니다."
             if not needs_action
-            else "실행 전 데이터 기준을 먼저 확인하세요."
+            else f"해결할 데이터 이슈 {len(checks)}개"
         ),
         "summary": (
-            "이 패널은 Base Universe 후보군, 가격 최신성, statement shadow factor coverage를 함께 읽습니다."
+            "아래 항목을 처리한 뒤 다시 백테스트를 실행하세요."
+            if needs_action
+            else "현재 선택한 후보군은 가격 최신성과 statement shadow coverage 기준을 통과했습니다."
         ),
+        "issue_summary": issue_summary,
+        "context": {
+            "preset_name": preset_name,
+            "preset_display_name": preset_model.get("display_name"),
+            "base_universe_count": len(normalized_tickers),
+            "requested_limit": preset_model.get("requested_limit"),
+        },
         "run_recommended": not needs_action,
-        "checks": [base_check, price_check, statement_check],
+        "checks": checks,
         "actions": actions,
     }
 
@@ -3597,6 +3634,149 @@ def _render_strict_price_freshness_preflight(
                 )
 
 
+def _date_value_to_iso(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, date):
+        return value.isoformat()
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return parsed.date().isoformat()
+
+
+def _strict_factor_readiness_action_result_key(component_key: str) -> str:
+    return f"{component_key}_action_result"
+
+
+def _strict_price_refresh_result_blocks_retry(result: dict[str, Any] | None) -> bool:
+    if not isinstance(result, dict):
+        return False
+    try:
+        rows_written = int(result.get("rows_written") or 0)
+    except (TypeError, ValueError):
+        rows_written = 0
+    details = dict(result.get("details") or {})
+    unresolved = [symbol for symbol in list(details.get("post_refresh_unresolved_symbols") or []) if str(symbol).strip()]
+    return str(result.get("job_name") or "") == "backtest_data_trust_ohlcv_refresh" and rows_written <= 0 and bool(unresolved)
+
+
+def _apply_strict_readiness_retry_block(model: dict[str, Any], result: dict[str, Any] | None) -> None:
+    if not _strict_price_refresh_result_blocks_retry(result):
+        return
+    details = dict((result or {}).get("details") or {})
+    unresolved_symbols = _unique_upper_tickers(details.get("post_refresh_unresolved_symbols") or [])
+    for check in list(model.get("checks") or []):
+        action = dict(check.get("action") or {})
+        if action.get("id") != "refresh_prices":
+            continue
+        action["enabled"] = False
+        action["id"] = "review_provider_gap"
+        action["label"] = "Provider gap 확인"
+        action["detail"] = "방금 가격 업데이트가 새 row를 쓰지 못했습니다. Data Trust에서 provider/source 상태를 확인하세요."
+        check["action"] = action
+        check["status"] = "manual_check"
+        check["status_label"] = "수동 확인"
+        check["problem"] = (
+            f"{len(unresolved_symbols)}개 종목은 가격 업데이트로 해결되지 않았습니다."
+            if unresolved_symbols
+            else "가격 업데이트가 새 row를 쓰지 못했습니다."
+        )
+        check["symbols"] = unresolved_symbols or list(check.get("symbols") or [])
+        check["symbol_sample"] = _symbol_sample(list(check.get("symbols") or []), limit=12)
+        check["solution"] = "Coverage 최신화를 반복하지 말고 provider no-data / symbol lifecycle을 확인하거나 universe 조정을 검토하세요."
+        check["detail"] = check["solution"]
+
+
+def _render_strict_factor_readiness_action_result(result: dict[str, Any] | None) -> None:
+    if not isinstance(result, dict):
+        return
+    status = str(result.get("status") or "").strip().lower()
+    message = str(result.get("message") or "").strip() or "데이터 보강 작업이 끝났습니다."
+    if status in {"success", "partial_success"}:
+        st.success(message)
+    elif status == "skipped":
+        st.info(message)
+    else:
+        st.error(message)
+    details = dict(result.get("details") or {})
+    unresolved = _unique_upper_tickers(details.get("post_refresh_unresolved_symbols") or [])
+    if unresolved:
+        st.warning(f"아직 가격 최신성 문제가 남은 종목 {len(unresolved)}개가 있습니다: {_symbol_sample(unresolved, limit=12)}")
+
+
+def _model_action_symbols(model: dict[str, Any], action_id: str) -> list[str]:
+    for action in list(model.get("actions") or []):
+        if action.get("id") == action_id:
+            return _unique_upper_tickers(action.get("symbols") or [])
+    for check in list(model.get("checks") or []):
+        action = dict(check.get("action") or {})
+        if action.get("id") == action_id:
+            return _unique_upper_tickers(action.get("symbols") or check.get("symbols") or [])
+    return []
+
+
+def _consume_strict_factor_readiness_action(
+    action_value: dict[str, Any] | None,
+    *,
+    model: dict[str, Any],
+    tickers: list[str],
+    start_value: date | None,
+    end_value: date,
+    timeframe: str,
+    statement_freq: str,
+    price_report: dict[str, Any],
+    component_key: str,
+) -> None:
+    if not isinstance(action_value, dict):
+        return
+    if action_value.get("source") != "backtest_factor_readiness_panel":
+        return
+    action_id = str(action_value.get("action") or "").strip()
+    if action_id not in {"refresh_prices", "refresh_statement_shadow"}:
+        return
+    nonce = str(action_value.get("nonce") or "")
+    if not nonce:
+        return
+    consumed_key = f"{component_key}_action_nonce"
+    if st.session_state.get(consumed_key) == nonce:
+        return
+    st.session_state[consumed_key] = nonce
+    result_key = _strict_factor_readiness_action_result_key(component_key)
+
+    action_symbols = _unique_upper_tickers(action_value.get("symbols") or []) or _model_action_symbols(model, action_id)
+    if action_id == "refresh_prices":
+        meta = {
+            "tickers": list(tickers),
+            "symbols": list(tickers),
+            "start": _date_value_to_iso(start_value),
+            "end": _date_value_to_iso(end_value),
+            "price_freshness": price_report,
+        }
+        with st.spinner("가격 데이터를 최신화하는 중입니다...", show_time=True):
+            st.session_state[result_key] = run_backtest_price_refresh(meta)
+        st.rerun()
+
+    if action_id == "refresh_statement_shadow":
+        if not action_symbols:
+            st.session_state[result_key] = {
+                "job_name": "extended_statement_refresh",
+                "status": "failed",
+                "message": "Statement 보강 대상 ticker가 없어 실행하지 않았습니다.",
+                "rows_written": 0,
+                "details": {},
+            }
+            st.rerun()
+        with st.spinner("Statement 데이터와 shadow factor를 보강하는 중입니다...", show_time=True):
+            st.session_state[result_key] = run_extended_statement_refresh(
+                action_symbols,
+                freq=statement_freq,
+                periods=0,
+                period=statement_freq,
+            )
+        st.rerun()
+
+
 def _render_strict_factor_readiness_panel(
     *,
     tickers: list[str],
@@ -3605,6 +3785,7 @@ def _render_strict_factor_readiness_panel(
     strategy_label: str,
     preset_name: str | None = None,
     statement_freq: str = "annual",
+    start_value: date | None = None,
 ) -> None:
     if not tickers:
         return
@@ -3654,8 +3835,14 @@ def _render_strict_factor_readiness_panel(
         "strict_factor_readiness_panel_"
         + "".join(ch.lower() if ch.isalnum() else "_" for ch in strategy_label).strip("_")
     )
+    result_key = _strict_factor_readiness_action_result_key(component_key)
+    last_action_result = st.session_state.get(result_key)
+    if isinstance(last_action_result, dict):
+        _apply_strict_readiness_retry_block(model, last_action_result)
+        _render_strict_factor_readiness_action_result(last_action_result)
+
     if is_backtest_factor_readiness_panel_available():
-        render_backtest_factor_readiness_panel(
+        action_value = render_backtest_factor_readiness_panel(
             status=str(model["status"]),
             tone=str(model["tone"]),
             headline=str(model["headline"]),
@@ -3666,6 +3853,17 @@ def _render_strict_factor_readiness_panel(
             actions=list(model["actions"]),
             key=component_key,
         )
+        _consume_strict_factor_readiness_action(
+            action_value,
+            model=model,
+            tickers=tickers,
+            start_value=start_value,
+            end_value=end_value,
+            timeframe=timeframe,
+            statement_freq=statement_freq,
+            price_report=price_report,
+            component_key=component_key,
+        )
         return
 
     if model["tone"] == "positive":
@@ -3675,15 +3873,9 @@ def _render_strict_factor_readiness_panel(
     st.caption(model["summary"])
     for check in model["checks"]:
         with st.expander(str(check.get("title") or "Readiness Check"), expanded=False):
-            st.markdown(f"**{check.get('summary') or ''}**")
-            if check.get("detail"):
-                st.caption(str(check["detail"]))
-            metrics = check.get("metrics") or []
-            if metrics:
-                st.dataframe(pd.DataFrame(metrics), use_container_width=True, hide_index=True)
-            issues = check.get("issues") or []
-            if issues:
-                st.dataframe(pd.DataFrame(issues), use_container_width=True, hide_index=True)
+            st.markdown(f"**문제**: {check.get('problem') or check.get('summary') or ''}")
+            st.markdown(f"**영향받는 티커**: {check.get('symbol_sample') or '-'}")
+            st.markdown(f"**해결 방법**: {check.get('solution') or check.get('detail') or ''}")
     if model.get("actions"):
         st.markdown("**다음 행동**")
         for action in model["actions"]:
