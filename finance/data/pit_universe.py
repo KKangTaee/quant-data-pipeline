@@ -6,11 +6,15 @@ from typing import Any
 
 import pandas as pd
 
+from finance.data.db.mysql import MySQLClient
+from finance.data.db.schema import PIT_UNIVERSE_SCHEMAS, sync_table_schema
+
 
 PIT_UNIVERSE_METHOD_VERSION = "pit_universe_snapshot_v1"
 PIT_UNIVERSE_SOURCE_BASIS = (
     "db_price_close * latest_known_statement_shares_outstanding"
 )
+DB_META = "finance_meta"
 
 
 def normalize_pit_universe_code(target_size: int, *, frequency: str = "monthly") -> str:
@@ -285,3 +289,268 @@ def build_equity_universe_snapshot_payload(
         ),
     }
     return {"snapshot": snapshot, "members": rows}
+
+
+def _month_end_price_dates(
+    price_rows: pd.DataFrame,
+    *,
+    start: str,
+    end: str,
+) -> list[pd.Timestamp]:
+    if price_rows.empty:
+        return []
+    start_ts = pd.Timestamp(start).normalize()
+    end_ts = pd.Timestamp(end).normalize()
+    working = price_rows.copy()
+    working["date"] = pd.to_datetime(working["date"], errors="coerce").dt.normalize()
+    working = working[
+        working["date"].notna()
+        & (working["date"] >= start_ts)
+        & (working["date"] <= end_ts)
+    ].copy()
+    if working.empty:
+        return []
+    working["month"] = working["date"].dt.to_period("M")
+    return [
+        pd.Timestamp(value).normalize()
+        for value in working.groupby("month", sort=True)["date"].max().tolist()
+    ]
+
+
+def build_monthly_equity_universe_snapshot_payloads(
+    *,
+    start: str,
+    end: str,
+    target_size: int,
+    price_rows: pd.DataFrame | Sequence[dict[str, Any]],
+    statement_rows: pd.DataFrame | Sequence[dict[str, Any]],
+    asset_profile_rows: pd.DataFrame | Sequence[dict[str, Any]] | None = None,
+    candidate_symbols: Sequence[str] | None = None,
+    universe_code: str | None = None,
+    method_version: str = PIT_UNIVERSE_METHOD_VERSION,
+    min_avg_dollar_volume_20d: float = 0.0,
+) -> list[dict[str, Any]]:
+    """Build one PIT universe payload per observed month-end trading date."""
+    price_df = _frame(price_rows)
+    statement_df = _frame(statement_rows)
+    profile_df = _frame(asset_profile_rows)
+    payloads: list[dict[str, Any]] = []
+    for as_of_ts in _month_end_price_dates(price_df, start=start, end=end):
+        payloads.append(
+            build_equity_universe_snapshot_payload(
+                as_of_date=as_of_ts.strftime("%Y-%m-%d"),
+                target_size=target_size,
+                price_rows=price_df,
+                statement_rows=statement_df,
+                asset_profile_rows=profile_df,
+                candidate_symbols=candidate_symbols,
+                universe_code=universe_code,
+                method_version=method_version,
+                min_avg_dollar_volume_20d=min_avg_dollar_volume_20d,
+            )
+        )
+    return payloads
+
+
+def ensure_pit_universe_schema(db: Any) -> None:
+    db.use_db(DB_META)
+    for table_name, create_sql in PIT_UNIVERSE_SCHEMAS.items():
+        sync_table_schema(db, table_name, create_sql, DB_META)
+
+
+def _db_bool(value: object) -> int:
+    return 1 if bool(value) else 0
+
+
+def _snapshot_db_params(snapshot: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "universe_code": snapshot.get("universe_code"),
+        "as_of_date": snapshot.get("as_of_date"),
+        "frequency": snapshot.get("frequency") or "monthly",
+        "target_size": int(snapshot.get("target_size") or 0),
+        "method_version": snapshot.get("method_version") or PIT_UNIVERSE_METHOD_VERSION,
+        "source_basis": snapshot.get("source_basis") or PIT_UNIVERSE_SOURCE_BASIS,
+        "candidate_count": int(snapshot.get("candidate_count") or 0),
+        "eligible_count": int(snapshot.get("eligible_count") or 0),
+        "member_count": int(snapshot.get("member_count") or 0),
+        "excluded_count": int(snapshot.get("excluded_count") or 0),
+        "max_rank": snapshot.get("max_rank"),
+        "status": snapshot.get("status") or "empty",
+        "warning_json": snapshot.get("warning_json"),
+    }
+
+
+def _member_db_params(member: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "universe_code": member.get("universe_code"),
+        "as_of_date": member.get("as_of_date"),
+        "symbol": member.get("symbol"),
+        "rank_no": member.get("rank_no"),
+        "eligible": _db_bool(member.get("eligible")),
+        "included": _db_bool(member.get("included")),
+        "excluded_reason": member.get("excluded_reason"),
+        "price_date": member.get("price_date"),
+        "close": member.get("close"),
+        "shares_outstanding": member.get("shares_outstanding"),
+        "shares_source": member.get("shares_source"),
+        "approx_market_cap": member.get("approx_market_cap"),
+        "avg_dollar_volume_20d": member.get("avg_dollar_volume_20d"),
+        "listing_status": member.get("listing_status"),
+        "lifecycle_source": member.get("lifecycle_source"),
+        "method_version": member.get("method_version") or PIT_UNIVERSE_METHOD_VERSION,
+        "evidence_json": member.get("evidence_json"),
+    }
+
+
+def upsert_equity_universe_snapshot_payload(
+    payload: dict[str, Any],
+    *,
+    db: Any | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Persist one PIT universe snapshot payload idempotently."""
+    owns_db = db is None
+    active_db = db or MySQLClient(host, user, password, port)
+    try:
+        ensure_pit_universe_schema(active_db)
+        snapshot = _snapshot_db_params(dict(payload.get("snapshot") or {}))
+        members = [_member_db_params(dict(row)) for row in payload.get("members") or []]
+
+        active_db.execute(
+            """
+            INSERT INTO equity_universe_snapshot (
+              universe_code, as_of_date, frequency, target_size, method_version, source_basis,
+              candidate_count, eligible_count, member_count, excluded_count, max_rank, status, warning_json
+            ) VALUES (
+              %(universe_code)s, %(as_of_date)s, %(frequency)s, %(target_size)s, %(method_version)s, %(source_basis)s,
+              %(candidate_count)s, %(eligible_count)s, %(member_count)s, %(excluded_count)s, %(max_rank)s, %(status)s, %(warning_json)s
+            )
+            ON DUPLICATE KEY UPDATE
+              frequency = VALUES(frequency),
+              target_size = VALUES(target_size),
+              source_basis = VALUES(source_basis),
+              candidate_count = VALUES(candidate_count),
+              eligible_count = VALUES(eligible_count),
+              member_count = VALUES(member_count),
+              excluded_count = VALUES(excluded_count),
+              max_rank = VALUES(max_rank),
+              status = VALUES(status),
+              warning_json = VALUES(warning_json)
+            """,
+            snapshot,
+        )
+        if members:
+            active_db.executemany(
+                """
+                INSERT INTO equity_universe_member (
+                  universe_code, as_of_date, symbol, rank_no, eligible, included, excluded_reason,
+                  price_date, close, shares_outstanding, shares_source, approx_market_cap,
+                  avg_dollar_volume_20d, listing_status, lifecycle_source, method_version, evidence_json
+                ) VALUES (
+                  %(universe_code)s, %(as_of_date)s, %(symbol)s, %(rank_no)s, %(eligible)s, %(included)s, %(excluded_reason)s,
+                  %(price_date)s, %(close)s, %(shares_outstanding)s, %(shares_source)s, %(approx_market_cap)s,
+                  %(avg_dollar_volume_20d)s, %(listing_status)s, %(lifecycle_source)s, %(method_version)s, %(evidence_json)s
+                )
+                ON DUPLICATE KEY UPDATE
+                  rank_no = VALUES(rank_no),
+                  eligible = VALUES(eligible),
+                  included = VALUES(included),
+                  excluded_reason = VALUES(excluded_reason),
+                  price_date = VALUES(price_date),
+                  close = VALUES(close),
+                  shares_outstanding = VALUES(shares_outstanding),
+                  shares_source = VALUES(shares_source),
+                  approx_market_cap = VALUES(approx_market_cap),
+                  avg_dollar_volume_20d = VALUES(avg_dollar_volume_20d),
+                  listing_status = VALUES(listing_status),
+                  lifecycle_source = VALUES(lifecycle_source),
+                  evidence_json = VALUES(evidence_json)
+                """,
+                members,
+            )
+        return {
+            "universe_code": snapshot["universe_code"],
+            "as_of_date": snapshot["as_of_date"],
+            "snapshot_rows": 1,
+            "member_rows": len(members),
+        }
+    finally:
+        if owns_db:
+            active_db.close()
+
+
+def build_and_store_monthly_equity_universe_snapshots(
+    *,
+    candidate_symbols: Sequence[str],
+    start: str,
+    end: str,
+    target_size: int,
+    universe_code: str | None = None,
+    method_version: str = PIT_UNIVERSE_METHOD_VERSION,
+    statement_freq: str = "annual",
+    min_avg_dollar_volume_20d: float = 0.0,
+    db: Any | None = None,
+) -> dict[str, Any]:
+    """
+    Read existing DB source rows, build monthly PIT universe payloads, and persist them.
+
+    This orchestration intentionally does not collect external data. Operators must
+    refresh prices, statement shadow rows, and lifecycle/profile data through the
+    ingestion flow before running it.
+    """
+    symbols = _normalize_symbols(candidate_symbols)
+    if not symbols:
+        raise ValueError("candidate_symbols must not be empty.")
+
+    from finance.loaders import (  # local import avoids loader -> data circular import
+        load_asset_profile_status_summary,
+        load_price_history,
+        load_statement_fundamentals_shadow,
+    )
+
+    price_rows = load_price_history(
+        symbols=symbols,
+        start=start,
+        end=end,
+        timeframe="1d",
+    )
+    statement_rows = load_statement_fundamentals_shadow(
+        symbols=symbols,
+        freq=statement_freq,
+        end=end,
+    )
+    asset_profile_rows = load_asset_profile_status_summary(symbols)
+    payloads = build_monthly_equity_universe_snapshot_payloads(
+        start=start,
+        end=end,
+        target_size=target_size,
+        price_rows=price_rows,
+        statement_rows=statement_rows,
+        asset_profile_rows=asset_profile_rows,
+        candidate_symbols=symbols,
+        universe_code=universe_code,
+        method_version=method_version,
+        min_avg_dollar_volume_20d=min_avg_dollar_volume_20d,
+    )
+
+    total_member_rows = 0
+    persisted: list[dict[str, Any]] = []
+    for payload in payloads:
+        write_result = upsert_equity_universe_snapshot_payload(payload, db=db)
+        persisted.append(write_result)
+        total_member_rows += int(write_result.get("member_rows") or 0)
+
+    resolved_code = universe_code or normalize_pit_universe_code(target_size)
+    return {
+        "universe_code": resolved_code,
+        "method_version": method_version,
+        "candidate_count": len(symbols),
+        "snapshots_built": len(payloads),
+        "snapshots_persisted": len(persisted),
+        "member_rows": total_member_rows,
+        "first_as_of_date": payloads[0]["snapshot"]["as_of_date"] if payloads else None,
+        "last_as_of_date": payloads[-1]["snapshot"]["as_of_date"] if payloads else None,
+    }

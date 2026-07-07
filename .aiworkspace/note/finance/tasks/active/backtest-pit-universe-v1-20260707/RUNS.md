@@ -11,3 +11,13 @@ Command logs for this task.
   - Expected failure: `load_pit_universe_membership_snapshots` missing.
 - GREEN: focused loader tests passed after adding loader helpers and public export.
 - Compile: `.venv/bin/python -m py_compile finance/data/pit_universe.py finance/loaders/universe.py finance/loaders/__init__.py finance/data/db/schema.py tests/test_service_contracts.py`
+
+## 2차 Monthly Builder
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_monthly_pit_universe_builder_recomputes_rank_per_month_end tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_universe_upsert_syncs_schema_and_writes_snapshot_members`
+  - Expected failure: monthly builder / upsert helpers missing.
+- GREEN: monthly payload and upsert helper tests passed after adding `build_monthly_equity_universe_snapshot_payloads` and `upsert_equity_universe_snapshot_payload`.
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_universe_build_and_store_reads_db_sources_once`
+  - Expected failure: source orchestration helper missing.
+- GREEN: orchestration test passed after adding `build_and_store_monthly_equity_universe_snapshots`.
+- Compile: `.venv/bin/python -m py_compile finance/data/pit_universe.py tests/test_service_contracts.py`

@@ -398,6 +398,159 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("load_pit_universe_membership_snapshots", loaders.__all__)
         self.assertTrue(callable(loaders.load_pit_universe_membership_snapshots))
 
+    def test_monthly_pit_universe_builder_recomputes_rank_per_month_end(self) -> None:
+        from finance.data.pit_universe import build_monthly_equity_universe_snapshot_payloads
+
+        price_rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "date": "2026-01-30", "close": 10.0, "volume": 1_000_000},
+                {"symbol": "BBB", "date": "2026-01-30", "close": 20.0, "volume": 1_000_000},
+                {"symbol": "CCC", "date": "2026-01-30", "close": 4.0, "volume": 1_000_000},
+                {"symbol": "AAA", "date": "2026-02-27", "close": 10.0, "volume": 1_000_000},
+                {"symbol": "BBB", "date": "2026-02-27", "close": 20.0, "volume": 1_000_000},
+                {"symbol": "CCC", "date": "2026-02-27", "close": 30.0, "volume": 1_000_000},
+            ]
+        )
+        statement_rows = pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "period_end": "2025-12-31",
+                    "latest_available_at": "2026-01-15",
+                    "shares_outstanding": 10_000_000,
+                },
+                {
+                    "symbol": "BBB",
+                    "period_end": "2025-12-31",
+                    "latest_available_at": "2026-01-15",
+                    "shares_outstanding": 2_000_000,
+                },
+                {
+                    "symbol": "CCC",
+                    "period_end": "2025-12-31",
+                    "latest_available_at": "2026-01-15",
+                    "shares_outstanding": 20_000_000,
+                },
+            ]
+        )
+        profile_rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "kind": "stock", "country": "United States", "status": "active"},
+                {"symbol": "BBB", "kind": "stock", "country": "United States", "status": "active"},
+                {"symbol": "CCC", "kind": "stock", "country": "United States", "status": "active"},
+            ]
+        )
+
+        payloads = build_monthly_equity_universe_snapshot_payloads(
+            start="2026-01-01",
+            end="2026-02-28",
+            target_size=1,
+            price_rows=price_rows,
+            statement_rows=statement_rows,
+            asset_profile_rows=profile_rows,
+        )
+
+        self.assertEqual([payload["snapshot"]["as_of_date"] for payload in payloads], ["2026-01-30", "2026-02-27"])
+        self.assertEqual(
+            [[row["symbol"] for row in payload["members"] if row["included"]] for payload in payloads],
+            [["AAA"], ["CCC"]],
+        )
+
+    def test_pit_universe_upsert_syncs_schema_and_writes_snapshot_members(self) -> None:
+        from finance.data.pit_universe import (
+            build_equity_universe_snapshot_payload,
+            upsert_equity_universe_snapshot_payload,
+        )
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.used_db: str | None = None
+                self.executed: list[tuple[str, dict[str, Any]]] = []
+                self.executemany_calls: list[tuple[str, list[dict[str, Any]]]] = []
+
+            def use_db(self, db_name: str) -> None:
+                self.used_db = db_name
+
+            def execute(self, sql: str, params: dict[str, Any] | None = None) -> None:
+                self.executed.append((sql, dict(params or {})))
+
+            def executemany(self, sql: str, params: list[dict[str, Any]]) -> None:
+                self.executemany_calls.append((sql, params))
+
+        payload = build_equity_universe_snapshot_payload(
+            as_of_date="2026-01-31",
+            target_size=1,
+            price_rows=pd.DataFrame([{"symbol": "AAA", "date": "2026-01-30", "close": 10.0, "volume": 1_000_000}]),
+            statement_rows=pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "period_end": "2025-12-31",
+                        "latest_available_at": "2026-01-15",
+                        "shares_outstanding": 10_000_000,
+                    }
+                ]
+            ),
+            asset_profile_rows=pd.DataFrame([{"symbol": "AAA", "kind": "stock", "country": "United States"}]),
+        )
+        fake_db = FakeDB()
+
+        with patch("finance.data.pit_universe.sync_table_schema") as sync_schema:
+            result = upsert_equity_universe_snapshot_payload(payload, db=fake_db)
+
+        self.assertEqual(fake_db.used_db, "finance_meta")
+        self.assertEqual([call.args[1] for call in sync_schema.call_args_list], ["equity_universe_snapshot", "equity_universe_member"])
+        self.assertIn("INSERT INTO equity_universe_snapshot", fake_db.executed[0][0])
+        self.assertIn("INSERT INTO equity_universe_member", fake_db.executemany_calls[0][0])
+        self.assertEqual(result["member_rows"], 1)
+        self.assertEqual(fake_db.executemany_calls[0][1][0]["symbol"], "AAA")
+
+    def test_pit_universe_build_and_store_reads_db_sources_once(self) -> None:
+        from finance.data.pit_universe import build_and_store_monthly_equity_universe_snapshots
+
+        price_rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "date": "2026-01-30", "close": 10.0, "volume": 1_000_000},
+                {"symbol": "AAA", "date": "2026-02-27", "close": 11.0, "volume": 1_000_000},
+            ]
+        )
+        statement_rows = pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "period_end": "2025-12-31",
+                    "latest_available_at": "2026-01-15",
+                    "shares_outstanding": 10_000_000,
+                }
+            ]
+        )
+        profile_rows = pd.DataFrame([{"symbol": "AAA", "kind": "stock", "country": "United States"}])
+
+        with (
+            patch("finance.loaders.load_price_history", return_value=price_rows) as load_price,
+            patch("finance.loaders.load_statement_fundamentals_shadow", return_value=statement_rows) as load_statement,
+            patch("finance.loaders.load_asset_profile_status_summary", return_value=profile_rows) as load_profile,
+            patch("finance.data.pit_universe.upsert_equity_universe_snapshot_payload") as upsert_payload,
+        ):
+            upsert_payload.side_effect = [
+                {"snapshot_rows": 1, "member_rows": 1, "as_of_date": "2026-01-30"},
+                {"snapshot_rows": 1, "member_rows": 1, "as_of_date": "2026-02-27"},
+            ]
+            result = build_and_store_monthly_equity_universe_snapshots(
+                candidate_symbols=["AAA"],
+                start="2026-01-01",
+                end="2026-02-28",
+                target_size=1,
+            )
+
+        load_price.assert_called_once()
+        load_statement.assert_called_once()
+        load_profile.assert_called_once_with(["AAA"])
+        self.assertEqual(upsert_payload.call_count, 2)
+        self.assertEqual(result["snapshots_built"], 2)
+        self.assertEqual(result["member_rows"], 2)
+        self.assertEqual(result["universe_code"], "US_LARGE_1_MCAP_PIT_MONTHLY")
+
     def test_dynamic_runnable_coverage_overrides_candidate_pool_warning_when_target_filled(self) -> None:
         from app.runtime.backtest.runners.strict_factor import _apply_dynamic_runnable_coverage_price_status
         from finance.sample import HISTORICAL_DYNAMIC_PIT_UNIVERSE
