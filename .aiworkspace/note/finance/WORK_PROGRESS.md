@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow 4 Action Steps V3:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-steps-v3-20260707/`에서 Flow 4 `해결 방법`을 slash-joined 문단이 아니라 번호형 `action_steps`로 바꿨다.
+  - Audit row의 non-PASS `Next Action`은 구체 단계로 우선 사용하고, provider / DB 보강과 Flow 2 재검증 같은 후속 조치는 별도 단계로 보여준다.
+  - Validation threshold / replay / provider ingestion / registry / Final Review policy / live approval 경계는 변경하지 않았다.
 - Practical Validation Flow 4 Resolution Guide V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/`에서 Flow 4 `보강 위치`를 구조화된 resolution guide로 바꿨다.
   - Criteria card는 이제 `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치`를 보여주며, audit row의 non-PASS `Criteria`와 `Next Action`을 우선 사용한다.

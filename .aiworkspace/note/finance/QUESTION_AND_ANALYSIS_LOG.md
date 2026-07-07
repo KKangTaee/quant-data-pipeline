@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-07 - Practical Validation Flow 4 해결 방법은 단계 목록이어야 한다
+
+- User request: 사용자가 Flow 4 `해결 방법`이 내용을 한 줄에 붙여 넣은 것처럼 보이며, 이 방식이 최선인지 질문하고 개선을 승인함.
+- Interpreted goal: `해결 방법`은 설명 문단이 아니라 사용자가 실제로 처리할 수 있는 순서형 action이어야 하며, 부족 항목 확인 / 보강 실행 / 재검증 확인이 분리되어 보여야 함.
+- Analysis result: 기존 workspace read model은 row별 `Next Action`을 slash-joined `next_action` 문자열로 만들었고, UI가 이를 그대로 문단 렌더링했다. 따라서 `resolution_guide.action_steps`를 별도 contract로 추가하고 Flow 4에서는 번호형 목록으로 렌더링해야 한다.
+- Follow-up: `practical-validation-flow4-action-steps-v3-20260707`에서 action steps contract와 Flow 4 list UI를 추가했다. Gate policy, provider ingestion, replay execution, registry persistence 경계는 바꾸지 않았다.
+
 ### 2026-07-07 - Practical Validation Flow 4 보강위치는 조치 가이드가 되어야 한다
 
 - User request: 사용자가 Flow 4의 `보강 위치`가 틀리거나, 위치만으로는 무엇을 수정하고 개선해야 하는지 알기 어렵다고 지적하고 합리적인 개선 방향을 요청한 뒤 진행을 승인함.

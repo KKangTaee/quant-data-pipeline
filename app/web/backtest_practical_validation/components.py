@@ -592,6 +592,18 @@ def render_pv_styles() -> None:
             line-height: 1.45;
             overflow-wrap: anywhere;
           }
+          .pv-criteria-steps {
+            margin: 0.3rem 0 0;
+            padding-left: 1.1rem;
+            color: var(--pv-muted);
+            font-size: 0.86rem;
+            line-height: 1.45;
+          }
+          .pv-criteria-steps li {
+            margin: 0.18rem 0;
+            padding-left: 0.1rem;
+            overflow-wrap: anywhere;
+          }
           .pv-criteria-card footer {
             display: flex;
             justify-content: space-between;

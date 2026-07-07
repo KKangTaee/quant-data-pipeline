@@ -253,30 +253,54 @@ MODULE_RESOLUTION_GUIDES = {
         "checked_summary": "후보 source id, active component, target weight, Data Trust, curve evidence가 같은 후보 계약으로 연결되는지 확인합니다.",
         "missing_summary": "source 계약 중 연결되지 않은 항목",
         "next_action_summary": "Flow 1에서 source snapshot을 확인하고 부족하면 Backtest Analysis에서 후보를 다시 구성합니다.",
+        "action_steps": [
+            "Flow 1의 source snapshot에서 source id, active component, target weight가 같은 후보를 가리키는지 확인합니다.",
+            "Data Trust 또는 curve evidence가 빠졌으면 Backtest Analysis에서 후보를 다시 구성한 뒤 Practical Validation으로 넘깁니다.",
+        ],
         "location": "Flow1 > 후보 Source 확인",
     },
     "latest_replay": {
         "checked_summary": "저장 당시 성과가 아니라 현재 DB 최신 시장일까지 같은 전략이 재현되는지 확인합니다.",
         "missing_summary": "현재 세션의 latest runtime replay 또는 coverage 확인",
         "next_action_summary": "`전략 재검증 실행`을 누른 뒤 Recheck와 Coverage가 Final Review 이동을 막지 않는지 확인합니다.",
+        "action_steps": [
+            "Flow 2에서 `전략 재검증 실행`을 눌러 현재 DB 최신 시장일까지 replay를 실행합니다.",
+            "Recheck End와 coverage가 저장 시점 이후 기간을 포함하는지 확인합니다.",
+            "재검증 후 같은 기준 카드가 PASS 또는 Final Review 확인 상태로 바뀌었는지 확인합니다.",
+        ],
         "location": "Flow2 > 검증 기준 설정 / 실전 재검증 실행",
     },
     "benchmark_parity": {
         "checked_summary": "후보와 benchmark / cash / simple baseline / custom comparator가 같은 기간, frequency, coverage로 비교됐는지 확인합니다.",
         "missing_summary": "비교 기준 curve의 기간, frequency, coverage 정렬 근거",
         "next_action_summary": "핵심 근거 탭에서 comparator curve와 recheck evidence를 확인하고 부족한 비교 기준 근거를 보강합니다.",
+        "action_steps": [
+            "비교 기준 curve가 후보와 같은 기간, frequency, coverage로 만들어졌는지 확인합니다.",
+            "비교 기준이 빠졌으면 핵심 근거의 comparator evidence를 보강합니다.",
+            "후보 성과가 cash / benchmark / simple baseline과 같은 조건에서 비교되는지 다시 확인합니다.",
+        ],
         "location": "Flow4 > 핵심 근거 > Input Evidence / Curve·Recheck Evidence",
     },
     "validation_efficacy": {
         "checked_summary": "walk-forward, OOS, regime, PIT, survivorship 근거가 성과 해석에 충분한지 확인합니다.",
         "missing_summary": "walk-forward / OOS / regime / PIT / survivorship 중 보강 필요 항목",
         "next_action_summary": "검증 강도 / 강건성 상세에서 non-PASS row를 확인하고 부족한 temporal / bias-control 근거를 보강합니다.",
+        "action_steps": [
+            "검증 강도 / 강건성 상세에서 non-PASS 기준이 walk-forward, OOS, regime, PIT, survivorship 중 무엇인지 확인합니다.",
+            "부족한 temporal 또는 bias-control 근거를 보강합니다.",
+            "보강 후 Flow 2 재검증으로 해당 기준이 PASS 또는 Final Review 확인 상태인지 확인합니다.",
+        ],
         "location": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
     },
     "data_coverage": {
         "checked_summary": "가격 window, provider freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",
         "missing_summary": "가격 window / provider freshness / lifecycle / survivorship 중 비어 있거나 오래된 항목",
         "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "action_steps": [
+            "provider gap은 Provider / Data 보강 액션에서 수집하고, 가격 window gap은 DB price ingestion으로 보강합니다.",
+            "보강 후 Flow 2 재검증을 다시 실행해 coverage blocker가 해소됐는지 확인합니다.",
+            "그래도 막히면 데이터 품질 / 편향 통제 상세에서 lifecycle 또는 survivorship 기준까지 확인합니다.",
+        ],
         "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
         "action_location": "Flow4 > Provider / Data 보강 액션",
     },
@@ -284,54 +308,96 @@ MODULE_RESOLUTION_GUIDES = {
         "checked_summary": "ETF-like 또는 weighted mix 후보의 구성 집중, look-through, top holding, overlap, unknown exposure를 확인합니다.",
         "missing_summary": "구성 집중, holdings / exposure coverage, overlap, unknown exposure 근거",
         "next_action_summary": "포트폴리오 구성 근거 상세에서 non-PASS row를 확인하고 provider look-through 근거를 보강합니다.",
+        "action_steps": [
+            "포트폴리오 구성 근거 상세에서 집중, holdings coverage, overlap, unknown exposure 중 막힌 기준을 확인합니다.",
+            "ETF 또는 mix 구성의 look-through / top holding / exposure 근거를 보강합니다.",
+            "구성 위험이 설명 가능한 수준인지 Final Review 판단 근거로 다시 확인합니다.",
+        ],
         "location": "Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
     },
     "backtest_realism": {
         "checked_summary": "거래비용, turnover, liquidity, net curve, rebalance timing이 실전 해석에 반영됐는지 확인합니다.",
         "missing_summary": "cost / turnover / liquidity / net performance / rebalance timing 중 부족한 근거",
         "next_action_summary": "실전 운용 현실성 상세에서 non-PASS row를 확인하고 비용 / 거래 현실성 근거를 보강합니다.",
+        "action_steps": [
+            "실전 운용 현실성 상세에서 비용, turnover, liquidity, net curve, rebalance timing 중 막힌 기준을 확인합니다.",
+            "비용 반영 또는 거래 가능성 근거가 빠졌으면 해당 evidence를 보강합니다.",
+            "보강된 net performance가 후보 성과 해석을 바꾸는지 확인합니다.",
+        ],
         "location": "Flow4 > 실전성 > 실전 운용 현실성 상세",
     },
     "stress_robustness": {
         "checked_summary": "stress window, rolling, sensitivity, overfit warning 근거가 있는지 확인합니다.",
         "missing_summary": "stress / rolling / sensitivity / overfit 중 미실행 또는 보강 필요 항목",
         "next_action_summary": "Stress / sensitivity 상세에서 non-PASS row와 follow-up을 확인합니다.",
+        "action_steps": [
+            "Stress / sensitivity 상세에서 stress, rolling, sensitivity, overfit 중 non-PASS 기준을 확인합니다.",
+            "민감도 또는 특정 구간 의존성이 과하면 Final Review에서 보류 근거로 남깁니다.",
+            "추가 stress evidence가 필요하면 재검증 후 결과가 안정적인지 다시 확인합니다.",
+        ],
         "location": "Flow4 > 강건성 > Stress / sensitivity 상세",
     },
     "selected_route_preflight": {
         "checked_summary": "Final Review 저장 전에 selected-route policy가 막을 deterministic evidence gap이 있는지 확인합니다.",
         "missing_summary": "Final Review 저장을 막는 selected-route blocker 또는 review-required gap",
         "next_action_summary": "Final Review 이동 요약의 blocker를 해소한 뒤 저장 / 이동을 다시 확인합니다.",
+        "action_steps": [
+            "Final Review 이동 요약에서 저장을 막는 deterministic blocker가 남아 있는지 확인합니다.",
+            "blocker가 Flow4 검증 기준에서 발생했다면 해당 기준의 해결 방법을 먼저 처리합니다.",
+            "blocker가 사라진 뒤 Flow 5 저장 / Final Review 이동을 다시 실행합니다.",
+        ],
         "location": "Flow4 > 카테고리별 검증 결과 > Final Review 이동 요약",
     },
     "provider_investability": {
         "checked_summary": "ETF provider operability, holdings, exposure, provider freshness가 충분한지 확인합니다.",
         "missing_summary": "ETF provider snapshot, holdings, exposure, operability gap",
         "next_action_summary": "Provider / Data 보강 액션에서 수집 가능한 provider gap을 먼저 보강합니다.",
+        "action_steps": [
+            "Provider / Data 보강 액션에서 holdings, exposure, provider freshness 중 수집 가능한 gap을 확인합니다.",
+            "provider evidence를 보강한 뒤 데이터 품질 / 구성 기준의 blocker가 해소됐는지 확인합니다.",
+        ],
         "location": "Flow4 > Provider / Data 보강 액션",
     },
     "leverage_inverse": {
         "checked_summary": "레버리지 / 인버스 노출의 목적, 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 확인합니다.",
         "missing_summary": "노출 목적, 보유 기간, 손실 허용 기준",
         "next_action_summary": "Final Review에서 레버리지 / 인버스 노출을 선택 근거 또는 보류 근거로 확인합니다.",
+        "action_steps": [
+            "레버리지 / 인버스 노출의 목적과 보유 기간이 후보 목적과 맞는지 확인합니다.",
+            "손실 허용 기준을 넘을 가능성이 있으면 Final Review에서 보류 근거로 남깁니다.",
+        ],
         "location": "Final Review 확인 항목",
     },
     "risk_contribution": {
         "checked_summary": "weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency를 확인합니다.",
         "missing_summary": "component matrix, correlation, risk contribution, drop-one dependency 근거",
         "next_action_summary": "위험 기여 상세에서 non-PASS row를 확인하고 component risk 근거를 보강합니다.",
+        "action_steps": [
+            "위험 기여 상세에서 component matrix, correlation, risk contribution, drop-one 중 부족한 기준을 확인합니다.",
+            "mix 성과가 특정 component 하나에 과도하게 의존하는지 근거를 보강합니다.",
+            "보강 후 component risk가 후보 구성 의도를 설명하는지 다시 확인합니다.",
+        ],
         "location": "Flow4 > 구성 / 리스크 > 위험 기여 상세",
     },
     "component_role_weight": {
         "checked_summary": "weighted mix의 component role, target weight, profile intent, weight rationale을 확인합니다.",
         "missing_summary": "component 역할, 비중 의도, weight rationale 근거",
         "next_action_summary": "Component 역할 / 비중 상세에서 non-PASS row를 확인하고 역할 / 비중 근거를 보강합니다.",
+        "action_steps": [
+            "Component 역할 / 비중 상세에서 역할 설명, target weight, profile intent, weight rationale 중 부족한 기준을 확인합니다.",
+            "각 component가 왜 포함됐고 왜 그 비중인지 설명 근거를 보강합니다.",
+            "보강 후 mix 구성이 후보 목적과 맞는지 Final Review 판단 근거로 확인합니다.",
+        ],
         "location": "Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
     },
     "macro_regime": {
         "checked_summary": "전술형 / 헤지형 후보의 macro regime, risk-on/off context, regime split 근거를 확인합니다.",
         "missing_summary": "macro snapshot, regime split, risk-on/off context 근거",
         "next_action_summary": "Raw Evidence의 Practical Diagnostics에서 macro / regime row를 확인하고 Final Review 판단 근거로 넘깁니다.",
+        "action_steps": [
+            "Raw Evidence의 Practical Diagnostics에서 macro snapshot, regime split, risk-on/off context를 확인합니다.",
+            "전술형 성과가 특정 regime에 과도하게 의존하면 Final Review에서 선택 리스크로 남깁니다.",
+        ],
         "location": "Flow4 > Raw Evidence > Practical Diagnostics",
     },
 }
@@ -514,7 +580,28 @@ def _join_limited(items: list[str], *, limit: int = 4) -> str:
     return " / ".join(visible) + suffix
 
 
-def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, str]:
+def _clean_limited_items(items: list[str], *, limit: int = 4) -> list[str]:
+    clean: list[str] = []
+    for item in items:
+        text = _clean_issue_text(item)
+        if text and text not in clean and text != "-":
+            clean.append(text)
+    return clean[:limit]
+
+
+def _merge_action_steps(*groups: list[str], limit: int = 4) -> list[str]:
+    steps: list[str] = []
+    for group in groups:
+        for item in group:
+            text = _clean_issue_text(item)
+            if text and text not in steps and text != "-":
+                steps.append(text)
+            if len(steps) >= limit:
+                return steps
+    return steps
+
+
+def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, Any]:
     missing: list[str] = []
     actions: list[str] = []
     review: list[str] = []
@@ -534,6 +621,9 @@ def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, str]
         "missing": _join_limited(missing),
         "review": _join_limited(review),
         "actions": _join_limited(actions, limit=3),
+        "missing_items": _clean_limited_items(missing),
+        "review_items": _clean_limited_items(review),
+        "action_items": _clean_limited_items(actions, limit=3),
     }
 
 
@@ -557,6 +647,12 @@ def _resolution_guide(
     action = row_summary.get("actions") or guide.get("next_action_summary") or next_action
     location = guide.get("location") or fix_location
     action_location = guide.get("action_location") or ""
+    configured_action_steps = [
+        str(item).strip()
+        for item in list(guide.get("action_steps") or [])
+        if str(item).strip()
+    ]
+    row_action_steps = list(row_summary.get("action_items") or [])
 
     if status in {"PASS", "READY"}:
         guide_type = "evidence"
@@ -566,6 +662,7 @@ def _resolution_guide(
         location_label = "위치"
         missing = "현재 기준에서 부족한 항목은 없습니다."
         action = "추가 보강 없이 Final Review 판단 근거로 사용할 수 있습니다."
+        action_steps = [action]
         pass_criteria = pass_criteria or "현재 기준이 통과 상태입니다."
     elif status == "REVIEW":
         guide_type = "review"
@@ -575,6 +672,11 @@ def _resolution_guide(
         location_label = "확인 위치"
         missing = row_summary.get("review") or missing
         action = row_summary.get("actions") or action or "Final Review에서 review 항목을 판단 근거로 확인합니다."
+        action_steps = _merge_action_steps(
+            row_action_steps,
+            configured_action_steps,
+            [action or "Final Review에서 review 항목을 판단 근거로 확인합니다."],
+        )
         pass_criteria = pass_criteria or "Final Review에서 확인할 근거와 판단 사유가 남아 있어야 합니다."
     elif status == "NOT_APPLICABLE":
         guide_type = "none"
@@ -584,6 +686,7 @@ def _resolution_guide(
         location_label = "위치"
         missing = "현재 후보에는 적용되지 않는 기준입니다."
         action = "별도 보강이 필요하지 않습니다."
+        action_steps = [action]
         pass_criteria = "현재 후보에는 적용되지 않는 기준입니다."
     else:
         guide_type = "fix"
@@ -591,7 +694,11 @@ def _resolution_guide(
         action_label = "해결 방법"
         outcome_label = "통과 기준"
         location_label = "위치"
+        action_steps = _merge_action_steps(row_action_steps, configured_action_steps, [action])
         pass_criteria = pass_criteria or "필수 기준이 PASS 또는 Final Review 확인 상태가 되어야 합니다."
+
+    if action_steps:
+        action = action_steps[0]
 
     if action_location and action_location not in location:
         location = f"{location} / 실행: {action_location}"
@@ -604,6 +711,7 @@ def _resolution_guide(
         "missing": missing or "-",
         "action_label": action_label,
         "next_action": action or "-",
+        "action_steps": action_steps,
         "outcome_label": outcome_label,
         "pass_criteria": pass_criteria or "-",
         "location_label": location_label,

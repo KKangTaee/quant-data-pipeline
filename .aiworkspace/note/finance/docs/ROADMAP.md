@@ -9,13 +9,19 @@ Last Verified: 2026-07-07
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-guide-v2-20260707/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-steps-v3-20260707/`다.
+
+- 목적: Practical Validation Flow 4의 `해결 방법`이 여러 Next Action을 한 줄에 이어 붙인 설명처럼 보이지 않게 하고, 사용자가 처리 순서를 바로 읽을 수 있게 했다.
+- 주요 변경: `resolution_guide`에 UI용 `action_steps` list를 추가하고, Flow 4 criteria card가 이를 번호형 목록으로 렌더링한다. non-PASS audit row의 `Next Action`은 구체 단계로 우선 노출하고, 기준별 기본 action guide는 보강 / 재검증 같은 후속 단계로 붙인다.
+- 이번 차수에서 하지 않은 일: validation threshold 변경, module severity 변경, replay 실행 로직 변경, provider ingestion orchestration 변경, registry / saved JSONL rewrite, Final Review selected-route 정책 변경, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-guide-v2-20260707/`다.
 
 - 목적: Practical Validation Flow 4의 상세 카드가 위치 안내에 머물지 않고, 사용자가 실제로 무엇을 보강하면 통과되는지 판단할 수 있게 했다.
 - 주요 변경: `resolution_guide`에 `통과 기준`을 추가하고, criteria card를 `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치` 구조로 재구성했다. Audit row의 non-PASS `Criteria`와 `Next Action`은 계속 우선 사용하며, 위치는 실행 위치 보조 정보로 낮췄다.
 - 이번 차수에서 하지 않은 일: validation threshold 변경, replay 실행 로직 변경, provider ingestion orchestration 변경, registry / saved JSONL rewrite, Final Review selected-route 정책 변경, live approval / broker order / auto rebalance 의미 추가.
 
-Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/`다.
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/`다.
 
 - 목적: Practical Validation Flow 4의 `보강 위치`가 단순 위치 문자열이라 사용자가 실제 부족 항목과 해야 할 일을 파악하기 어려운 문제를 해결했다.
 - 주요 변경: workspace read model에 `resolution_guide`를 추가하고, Flow 4 criteria card를 `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치` 구조로 렌더링한다. Data Coverage / Validation Efficacy 등 audit row가 있는 기준은 non-PASS `Criteria`와 `Next Action`을 우선 사용한다. 위치명은 `Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세`, `Flow4 > Provider / Data 보강 액션`처럼 실제 화면 경로로 세분화했다.

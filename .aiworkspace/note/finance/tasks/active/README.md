@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-06
+Last Verified: 2026-07-07
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,15 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `practical-validation-flow3-conclusion-summary-v1-20260706` closeout. |
+| none | - | No active task after `practical-validation-flow4-action-steps-v3-20260707` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-flow4-action-steps-v3-20260707` | Completed record | Practical Validation Flow 4 `해결 방법` now renders numbered action steps instead of a slash-joined paragraph. |
+| `practical-validation-flow4-action-guide-v2-20260707` | Completed record | Practical Validation Flow 4 criteria cards show `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`, with location demoted to supporting context. |
+| `practical-validation-flow4-resolution-guide-v1-20260707` | Completed record | Practical Validation Flow 4 introduced `resolution_guide` so location-only guidance became a user-facing action guide. |
 | `practical-validation-flow3-conclusion-summary-v1-20260706` | Completed record | Practical Validation Flow 3 now reads as a compact validation conclusion summary. Detailed issue cause / module details moved to Flow 4. |
 | `practical-validation-category-results-v1-20260706` | Completed record | Practical Validation Flow 4 now reads as category-first validation results. Selected-route preflight is separated into handoff summary, stress / construction / sentiment gate severity is reduced where appropriate. |
 | `practical-validation-flow3-clarity-v1-20260706` | Completed record | Practical Validation Flow 3 first-read surface cleanup. Removed duplicate control center / alert / badge layers and made the React Fix Queue focus on Final Review movement judgment, first fix work, and compact evidence summary. |

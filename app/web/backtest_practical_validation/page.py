@@ -1922,6 +1922,19 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             next_action_text = str(
                 guide.get("next_action") or card.get("next_action_summary") or card.get("completion_criteria") or "-"
             )
+            action_steps = [
+                str(step).strip()
+                for step in list(guide.get("action_steps") or [])
+                if str(step).strip()
+            ]
+            if action_steps:
+                action_body = (
+                    '<ol class="pv-criteria-steps">'
+                    + "".join(f"<li>{escape(step)}</li>" for step in action_steps)
+                    + "</ol>"
+                )
+            else:
+                action_body = f"<p>{escape(next_action_text)}</p>"
             outcome_label = str(guide.get("outcome_label") or "통과 기준")
             pass_criteria_text = str(
                 guide.get("pass_criteria") or card.get("pass_criteria_summary") or card.get("completion_criteria") or "-"
@@ -1944,7 +1957,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
                 "</div>"
                 '<div class="pv-criteria-row">'
                 f"<span>{escape(action_label)}</span>"
-                f"<p>{escape(next_action_text)}</p>"
+                f"{action_body}"
                 "</div>"
                 '<div class="pv-criteria-row">'
                 f"<span>{escape(outcome_label)}</span>"
