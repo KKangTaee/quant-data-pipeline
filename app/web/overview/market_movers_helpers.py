@@ -12,6 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from app.jobs.overview_actions import (
+    build_market_movers_eod_refresh_preflight,
     record_overview_action_result,
     run_overview_browser_auto_refresh,
     run_overview_market_intraday_snapshot,
@@ -460,7 +461,14 @@ def _market_movers_react_trust_panel_config(snapshot: dict[str, Any]) -> dict[st
     grouped_rows = _market_movers_records(model.get("grouped_missing_rows"))
     action = dict(model.get("suggested_action") or {})
     state = str(model.get("state") or "-")
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
     warnings = _market_movers_react_trust_warnings(snapshot)
+    if _safe_int(preflight.get("selected_symbols_count")) > 0:
+        range_text = _market_movers_eod_preflight_range_text(preflight)
+        warnings.append(
+            f"화면 랭킹 계산은 가능하지만 가격 이력 갱신 대상 {int(preflight.get('selected_symbols_count') or 0):,}개가 있습니다."
+            + (f" {range_text}" if range_text else "")
+        )
     has_issues = state != "Good" or bool(warnings) or bool(grouped_rows)
     return {
         "schema_version": "market_movers_react_trust_panel_v1",
@@ -589,9 +597,15 @@ def _command_strip_tone(snapshot: dict[str, Any], coverage: dict[str, Any]) -> s
     status = str(snapshot.get("status") or "").strip().upper()
     refresh_status = str(dict(coverage.get("refresh_state") or {}).get("status") or "").strip().lower()
     missing_count = _safe_int(coverage.get("missing_count"))
+    eod_due_count = _safe_int(dict(snapshot.get("eod_refresh_preflight") or {}).get("selected_symbols_count"))
     if status in {"ERROR"} or refresh_status in {"failed", "stale"}:
         return "danger"
-    if status in {"NO_UNIVERSE", "INSUFFICIENT_DATA"} or refresh_status in {"partial", "due"} or missing_count:
+    if (
+        status in {"NO_UNIVERSE", "INSUFFICIENT_DATA"}
+        or refresh_status in {"partial", "due"}
+        or missing_count
+        or eod_due_count > 0
+    ):
         return "warning"
     if status == "OK":
         return "positive"
@@ -609,6 +623,9 @@ def build_market_movers_command_strip_model(
     period_label = _market_mover_period_label(controls.period)
     sector_label = controls.sector if controls.sector and controls.sector != "All" else "All sectors"
     freshness = _freshness_label(snapshot, coverage)
+    eod_due_count = _safe_int(dict(snapshot.get("eod_refresh_preflight") or {}).get("selected_symbols_count"))
+    if eod_due_count > 0:
+        freshness = "계산 가능 · 이력 보강 필요"
     returnable_pct = coverage.get("returnable_pct")
     return {
         "schema_version": "market_movers_command_strip_v1",
@@ -645,13 +662,20 @@ def build_market_movers_unified_summary_model(
     sector_label = controls.sector if controls.sector and controls.sector != "All" else "All sectors"
     freshness = _freshness_label(snapshot, coverage)
     returnable_pct = coverage.get("returnable_pct")
-    action_label = "정상" if _command_strip_tone(snapshot, coverage) == "positive" else "갱신 확인"
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
+    eod_due_count = _safe_int(preflight.get("selected_symbols_count"))
+    if eod_due_count > 0:
+        freshness = "계산 가능 · 이력 보강 필요"
+    action_label = "가격 이력 확인" if eod_due_count > 0 else "정상" if _command_strip_tone(snapshot, coverage) == "positive" else "갱신 확인"
+    trust_detail = _freshness_detail(coverage)
+    if eod_due_count > 0:
+        trust_detail = f"{trust_detail} · 가격 이력 보강 {eod_due_count:,}개"
     return {
         "schema_version": "market_movers_unified_summary_v1",
         "title": "변동 종목",
         "context": f"{coverage_label} · {period_label} · {sector_label}",
         "trust_state": freshness,
-        "trust_detail": _freshness_detail(coverage),
+        "trust_detail": trust_detail,
         "tone": _command_strip_tone(snapshot, coverage),
         "action_label": action_label,
         "items": [
@@ -672,6 +696,88 @@ def _market_movers_ticker_alias_session_key(coverage: str) -> str:
     return f"overview_market_movers_ticker_alias_candidates_{str(coverage or '').strip().upper()}"
 
 
+def _market_movers_eod_history_as_of_key(universe_code: str, period: str) -> str:
+    return f"overview_{str(universe_code).lower()}_{str(period).lower()}_eod_history_as_of_date"
+
+
+def _market_movers_snapshot_effective_as_of_date(snapshot: dict[str, Any]) -> str:
+    date_window = dict(snapshot.get("date_window") or {})
+    coverage = dict(snapshot.get("coverage") or {})
+    for value in (
+        date_window.get("effective_end_date"),
+        coverage.get("effective_end_date"),
+        coverage.get("latest_raw_date"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _market_movers_eod_preflight_range_text(preflight: dict[str, Any]) -> str:
+    range_start = str(preflight.get("range_start") or "").strip()
+    range_end = str(preflight.get("range_end") or "").strip()
+    if range_start and range_end:
+        return f"{range_start}~{range_end}"
+    collection_period = str(preflight.get("collection_period") or "").strip()
+    if collection_period:
+        return f"{collection_period} window"
+    return ""
+
+
+def _market_movers_eod_action_detail(preflight: dict[str, Any]) -> str:
+    selected = _safe_int(preflight.get("selected_symbols_count"))
+    skipped = _safe_int(preflight.get("skipped_current_count"))
+    if selected <= 0:
+        if skipped > 0:
+            return f"최신 {skipped:,}개 스킵 가능"
+        return "수집 대상 확인 후 실행"
+    range_text = _market_movers_eod_preflight_range_text(preflight)
+    reason = str(preflight.get("range_reason") or "").strip()
+    detail = f"수집 대상 {selected:,}개"
+    if range_text:
+        detail = f"{detail} · {range_text}"
+    if reason:
+        detail = f"{detail} · {reason}"
+    return detail
+
+
+def _market_movers_attach_eod_preflight(
+    snapshot: dict[str, Any],
+    *,
+    controls: MarketMoverControls,
+) -> dict[str, Any]:
+    if controls.period == "daily":
+        return snapshot
+    prepared = dict(snapshot)
+    preflight = dict(prepared.get("eod_refresh_preflight") or {})
+    as_of_date = str(preflight.get("as_of_date") or _market_movers_snapshot_effective_as_of_date(prepared)).strip()
+    if not preflight:
+        try:
+            preflight = build_market_movers_eod_refresh_preflight(
+                universe_code=controls.coverage,
+                universe_limit=controls.universe_limit,
+                period=controls.period,
+                as_of_date=as_of_date or None,
+            )
+        except Exception as exc:  # pragma: no cover - UI resilience only
+            preflight = {
+                "schema_version": "market_movers_eod_refresh_preflight_v1",
+                "status": "unknown",
+                "status_label": "가격 이력 범위 확인 실패",
+                "tone": "warning",
+                "selected_symbols_count": 0,
+                "skipped_current_count": 0,
+                "range_reason": f"가격 이력 갱신 범위를 미리 계산하지 못했습니다: {exc}",
+                "as_of_date": as_of_date,
+            }
+    prepared["eod_refresh_preflight"] = preflight
+    preflight_as_of = str(preflight.get("as_of_date") or as_of_date).strip()
+    if preflight_as_of:
+        st.session_state[_market_movers_eod_history_as_of_key(controls.coverage, controls.period)] = preflight_as_of
+    return prepared
+
+
 def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     if controls.period == "daily":
         actions: list[dict[str, Any]] = [
@@ -683,8 +789,14 @@ def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dic
         actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
         return actions
 
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
     return [
-        {"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"},
+        {
+            "id": "refresh_eod_history",
+            "label": "가격 이력 갱신",
+            "kind": "primary",
+            "detail": _market_movers_eod_action_detail(preflight),
+        },
         _market_movers_react_universe_basis_action(controls.coverage, kind="secondary"),
         {"id": "reload", "label": "화면 새로고침", "kind": "secondary"},
     ]
@@ -705,10 +817,11 @@ def build_market_movers_react_workbench_payload(
     controls: MarketMoverControls,
     exploration_mode: str,
 ) -> dict[str, Any]:
+    snapshot = _market_movers_attach_eod_preflight(snapshot, controls=controls)
     st.session_state[_market_movers_ticker_alias_session_key(controls.coverage)] = _market_movers_records(
         snapshot.get("ticker_alias_candidates")
     )
-    return {
+    payload = {
         "schema_version": "market_movers_react_workbench_v1",
         "component": "MarketMoversWorkbench",
         "summary": build_market_movers_unified_summary_model(
@@ -742,6 +855,9 @@ def build_market_movers_react_workbench_payload(
         },
         "actions": _market_movers_react_actions(controls=controls, snapshot=snapshot),
     }
+    if controls.period != "daily":
+        payload["eod_refresh_preflight"] = dict(snapshot.get("eod_refresh_preflight") or {})
+    return payload
 
 
 def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverControls) -> dict[str, Any]:
@@ -757,6 +873,7 @@ def market_movers_react_action_plan(action_id: str, *, controls: MarketMoverCont
             "universe_code": controls.coverage,
             "universe_limit": controls.universe_limit,
             "period": controls.period,
+            "as_of_date": st.session_state.get(_market_movers_eod_history_as_of_key(controls.coverage, controls.period)),
         }
     if action_id == "refresh_universe":
         return {"handler": "run_overview_sp500_universe", "universe_code": controls.coverage}
@@ -902,6 +1019,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
         period = str(plan.get("period") or controls.period)
         period_label = _market_mover_period_label(period)
         result_key = _market_movers_eod_history_result_key(universe_code, period)
+        as_of_date = str(plan.get("as_of_date") or "").strip() or None
         _run_market_movers_job_with_progress(
             result_key=result_key,
             label=f"{universe_label} {period_label} 가격 이력 갱신",
@@ -910,6 +1028,7 @@ def _dispatch_market_movers_react_event(event: dict[str, Any] | None, *, control
                 universe_code=universe_code,
                 universe_limit=int(plan.get("universe_limit") or controls.universe_limit),
                 period=period,
+                as_of_date=as_of_date,
             ),
         )
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -2579,6 +2698,12 @@ def _render_market_movers_eod_refresh_bar(
                 universe_code=universe_code,
                 universe_limit=universe_limit,
                 period=period,
+                as_of_date=str(
+                    dict(snapshot.get("eod_refresh_preflight") or {}).get("as_of_date")
+                    or _market_movers_snapshot_effective_as_of_date(snapshot)
+                    or ""
+                )
+                or None,
             ),
         )
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -3991,6 +4116,7 @@ def render_market_movers_snapshot(controls: MarketMoverControls) -> None:
         top_n=controls.top_n,
         sector=controls.sector,
     )
+    snapshot = _market_movers_attach_eod_preflight(snapshot, controls=controls)
     react_event = _render_market_movers_react_summary(snapshot, controls=controls)
     _dispatch_market_movers_react_event(react_event, controls=controls)
     if react_event is None:

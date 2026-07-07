@@ -5614,3 +5614,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Weekly / Monthly / Yearly 가격 이력 갱신은 freshness preflight로 최신 종목을 스킵하고 stale 종목은 delta, missing / insufficient coverage 종목은 full fallback window로 보강한다.
   - latest close / volume 이상값은 quality repair 대상으로 포함하며, UI result caption은 갱신 대상 / 최신 스킵 / Delta / Full window / 품질 보강 수를 요약한다.
   - 상세 QA와 한계는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-smart-eod-refresh-20260707/`를 본다. Browser screenshots / run history는 커밋 제외한다.
+- Overview Market Movers EOD refresh scope 1~4차 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-eod-refresh-scope-20260708/`에서 Top1000 weekly refresh가 반복해서 길어지는 원인을 action as-of / universe / batch 범위 불일치로 정리하고 수정했다.
+  - Top1000 / Top2000 가격 이력 갱신은 화면과 같은 materialized liquidity universe를 쓰고, 화면 effective EOD date를 `as_of_date`로 넘겨 KST 하루 차이로 current symbols가 stale 처리되지 않게 했다.
+  - Preflight와 React action detail은 수집 대상 수, 범위, 시작일 이유를 클릭 전 보여주며, 상태는 `계산 가능 · 이력 보강 필요`로 화면 계산 정상과 refresh debt를 분리한다.

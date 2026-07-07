@@ -8109,6 +8109,156 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ]
         )
 
+    def test_overview_market_movers_eod_history_accepts_effective_as_of_date_to_skip_current_symbols(
+        self,
+    ) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["AAA", "BBB"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "AAA": {"latest_date": date(2026, 7, 7), "row_count": 120, "close": 10, "volume": 1000},
+                    "BBB": {"latest_date": date(2026, 7, 7), "row_count": 120, "close": 20, "volume": 1000},
+                },
+                create=True,
+            ),
+            patch.object(overview_actions, "_market_movers_today", return_value=date(2026, 7, 8), create=True),
+            patch.object(overview_actions, "run_collect_ohlcv") as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+                as_of_date="2026-07-07",
+            )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 0)
+        self.assertEqual(result["details"]["as_of_date"], "2026-07-07")
+        self.assertEqual(result["details"]["symbols_selected"], 0)
+        self.assertEqual(result["details"]["symbols_skipped_current"], 2)
+        collect.assert_not_called()
+
+    def test_overview_market_movers_eod_history_batches_delta_by_start_date(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["OLD", "AAA", "BBB"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "OLD": {"latest_date": date(2026, 1, 30), "row_count": 120, "close": 10, "volume": 1000},
+                    "AAA": {"latest_date": date(2026, 7, 6), "row_count": 120, "close": 20, "volume": 1000},
+                    "BBB": {"latest_date": date(2026, 7, 6), "row_count": 120, "close": 30, "volume": 1000},
+                },
+                create=True,
+            ),
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                side_effect=[
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 110,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Old delta completed.",
+                    },
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 4,
+                        "symbols_requested": 2,
+                        "symbols_processed": 2,
+                        "failed_symbols": [],
+                        "message": "Recent delta completed.",
+                    },
+                ],
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+                as_of_date="2026-07-07",
+            )
+
+        self.assertEqual(result["rows_written"], 114)
+        self.assertEqual(result["details"]["delta_symbols_count"], 3)
+        self.assertEqual(result["details"]["delta_batch_count"], 2)
+        self.assertEqual(result["details"]["range_start"], "2026-01-31")
+        self.assertEqual(result["details"]["range_end"], "2026-07-08")
+        self.assertIn("OLD", result["details"]["range_driver_symbols"])
+        collect.assert_has_calls(
+            [
+                call(
+                    ["OLD"],
+                    start="2026-01-31",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+                call(
+                    ["AAA", "BBB"],
+                    start="2026-07-07",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+            ]
+        )
+
+    def test_market_movers_eod_refresh_preflight_explains_collection_scope(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["OLD", "CUR"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "OLD": {"latest_date": date(2026, 1, 30), "row_count": 120, "close": 10, "volume": 1000},
+                    "CUR": {"latest_date": date(2026, 7, 7), "row_count": 120, "close": 20, "volume": 1000},
+                },
+                create=True,
+            ),
+        ):
+            preflight = overview_actions.build_market_movers_eod_refresh_preflight(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                period="weekly",
+                as_of_date="2026-07-07",
+            )
+
+        self.assertEqual(preflight["schema_version"], "market_movers_eod_refresh_preflight_v1")
+        self.assertEqual(preflight["status"], "due")
+        self.assertEqual(preflight["selected_symbols_count"], 1)
+        self.assertEqual(preflight["skipped_current_count"], 1)
+        self.assertEqual(preflight["range_start"], "2026-01-31")
+        self.assertEqual(preflight["range_end"], "2026-07-08")
+        self.assertIn("OLD", preflight["range_driver_symbols"])
+        self.assertIn("가장 오래된 stale", preflight["range_reason"])
+
     def test_overview_market_movers_eod_history_repairs_bad_or_partial_current_symbols(self) -> None:
         from app.jobs import overview_actions
 
@@ -8258,7 +8408,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(rows["BAD"]["adj_close"], 100.0)
         self.assertEqual(rows["BAD"]["volume"], 0)
 
-    def test_overview_market_movers_refresh_action_uses_large_universe_loader_for_top1000(self) -> None:
+    def test_overview_market_movers_refresh_action_uses_liquidity_universe_loader_for_top1000(self) -> None:
         from app.jobs import overview_actions
 
         action = getattr(overview_actions, "run_overview_market_movers_eod_history", None)
@@ -8268,7 +8418,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         with (
             patch.object(
                 overview_actions,
-                "load_market_cap_universe_members",
+                "load_market_liquidity_universe_members",
                 return_value=[{"symbol": "AAA"}, {"symbol": "CCC"}],
             ) as load_universe,
             patch.object(
@@ -8290,7 +8440,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             )
 
         self.assertEqual(result["details"]["collection_period"], "1y")
-        self.assertEqual(result["details"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        self.assertEqual(result["details"]["coverage_basis"], "20D avg dollar volume materialized universe")
         load_universe.assert_called_once_with("TOP1000", universe_limit=1000)
         collect.assert_called_once_with(
             ["AAA", "CCC"],
@@ -11154,7 +11304,23 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
         payload = build_market_movers_react_workbench_payload(
-            {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}},
+            {
+                "status": "OK",
+                "date_window": {"effective_end_date": "2026-07-07"},
+                "coverage": {"refresh_state": {"label": "Fresh"}},
+                "eod_refresh_preflight": {
+                    "schema_version": "market_movers_eod_refresh_preflight_v1",
+                    "status": "due",
+                    "status_label": "가격 이력 보강 필요",
+                    "selected_symbols_count": 12,
+                    "skipped_current_count": 1988,
+                    "range_start": "2026-06-28",
+                    "range_end": "2026-07-08",
+                    "range_reason": "가장 오래된 stale 종목 AAA의 다음 거래일부터 보강합니다.",
+                    "range_driver_symbols": ["AAA"],
+                    "as_of_date": "2026-07-07",
+                },
+            },
             controls=controls,
             exploration_mode="상승",
         )
@@ -11165,12 +11331,20 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("유니버스 기준 갱신", action_labels)
         self.assertEqual(action_ids[0], "refresh_eod_history")
         self.assertIn("가격 이력 갱신", action_labels)
+        self.assertEqual(payload["summary"]["trust_state"], "계산 가능 · 이력 보강 필요")
+        self.assertEqual(payload["summary"]["tone"], "warning")
+        self.assertEqual(payload["summary"]["action_label"], "가격 이력 확인")
+        self.assertEqual(payload["eod_refresh_preflight"]["selected_symbols_count"], 12)
+        self.assertEqual(payload["eod_refresh_preflight"]["range_start"], "2026-06-28")
+        self.assertIn("수집 대상 12개", payload["actions"][0]["detail"])
+        self.assertIn("2026-06-28", payload["actions"][0]["detail"])
 
         plan = market_movers_react_action_plan("refresh_eod_history", controls=controls)
         self.assertEqual(plan["handler"], "run_overview_market_movers_eod_history")
         self.assertEqual(plan["universe_code"], "TOP2000")
         self.assertEqual(plan["universe_limit"], 2000)
         self.assertEqual(plan["period"], "monthly")
+        self.assertEqual(plan["as_of_date"], "2026-07-07")
 
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_filters_live_inside_workbench_card(self, mock_st: MagicMock) -> None:
@@ -11629,12 +11803,17 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             mode="top_gainers",
         )
         event = {"event": {"id": "refresh_eod_history", "nonce": 225}}
-        mock_st.session_state = {}
+        mock_st.session_state = {"overview_top2000_weekly_eod_history_as_of_date": "2026-07-07"}
         mock_run_refresh.return_value = {"status": "success", "rows_written": 4000}
 
         self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
 
-        mock_run_refresh.assert_called_once_with(universe_code="TOP2000", universe_limit=2000, period="weekly")
+        mock_run_refresh.assert_called_once_with(
+            universe_code="TOP2000",
+            universe_limit=2000,
+            period="weekly",
+            as_of_date="2026-07-07",
+        )
         mock_store_result.assert_called_once_with(
             "overview_top2000_weekly_eod_history_result",
             mock_run_refresh.return_value,

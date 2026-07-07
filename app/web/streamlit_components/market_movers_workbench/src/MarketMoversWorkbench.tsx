@@ -6,6 +6,7 @@ export type MarketMoverAction = {
   id: string;
   label: string;
   kind: "primary" | "secondary" | "disabled";
+  detail?: string;
 };
 
 export type MarketMoverFilterControl = {
@@ -107,6 +108,7 @@ export type MarketMoversWorkbenchPayload = {
     disabled: boolean;
   };
   trust_panel: MarketMoversTrustPanel;
+  eod_refresh_preflight?: Record<string, unknown>;
   control_ownership: {
     mode: "python_state_react_ui";
     migrated_controls: string[];
@@ -220,7 +222,8 @@ function MarketMoverInvestigationPane({ payload, onAction }: InvestigationProps)
               onClick={() => onAction(action)}
               type="button"
             >
-              {action.label}
+              <span className="mm-workbench__action-label">{action.label}</span>
+              {action.detail ? <span className="mm-workbench__action-detail">{action.detail}</span> : null}
             </button>
           ))}
         </div>
@@ -539,7 +542,8 @@ function MarketMoversWorkbench({ args }: Props) {
               onClick={() => emitAction(action)}
               type="button"
             >
-              {action.label}
+              <span className="mm-workbench__action-label">{action.label}</span>
+              {action.detail ? <span className="mm-workbench__action-detail">{action.detail}</span> : null}
             </button>
           ))}
         </div>

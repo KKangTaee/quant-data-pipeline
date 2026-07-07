@@ -424,17 +424,38 @@ body {
 }
 
 .mm-workbench__action {
+  align-items: center;
   appearance: none;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 999px;
   color: #334155;
   cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
   font: inherit;
   font-size: 0.84rem;
   font-weight: 800;
+  justify-content: center;
   min-height: 32px;
+  max-width: min(100%, 360px);
   padding: 6px 12px;
+  text-align: center;
+}
+
+.mm-workbench__action-label,
+.mm-workbench__action-detail {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.mm-workbench__action-detail {
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 2px;
+  opacity: 0.84;
 }
 
 .mm-workbench__action:not(:disabled):hover {

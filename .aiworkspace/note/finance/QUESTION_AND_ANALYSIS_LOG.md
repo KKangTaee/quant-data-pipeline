@@ -8659,3 +8659,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: non-Daily Market Movers refresh should remain Python-owned ingestion/action logic, but it should preflight DB freshness before calling yfinance OHLCV collection.
 - Analysis result: 최신 심볼은 스킵하고, stale 심볼은 latest date 다음 날부터 delta 수집하며, missing / insufficient row coverage는 기존 full fallback window로 보강하는 것이 기존 collection period 의미를 유지하면서 시간을 줄이는 가장 작은 안전한 변경이다.
 - Follow-up: latest close / volume 이상값은 quality repair로 포함하고, UI result caption은 selected / skipped / delta / full-window / quality counts를 보여준다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-smart-eod-refresh-20260707/`에 있다.
+
+### 2026-07-08 - Market Movers Top1000 weekly refresh still stays wide after prior collection
+
+- User request: Top1000 / weekly `가격 이력 갱신`이 990개 수집 후 다음 실행도 길게 잡히는 이유와, `자료정상` 표시 / 수집 범위 / start 이유를 단계별로 고쳐 달라고 요청함.
+- Interpreted goal: 화면 기준 최신 EOD와 refresh action 기준일 / universe / batch scope를 일치시키고, 클릭 전 수집 대상과 range driver를 보여줘야 함.
+- Analysis result: 기존 action은 KST local today를 as-of로 쓰고 Top universe는 asset-profile market-cap loader를 사용했다. 따라서 화면의 latest effective EOD / materialized liquidity universe와 달라져 current symbols가 stale로 다시 잡힐 수 있었다. 또한 stale 전체를 가장 오래된 1개 start로 묶어 범위가 과확장됐다.
+- Follow-up: 1~4차 완료. `build_market_movers_eod_refresh_preflight`, action `as_of_date`, liquidity universe loader, start-date batch split, React preflight detail / `계산 가능 · 이력 보강 필요` 상태를 추가했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-eod-refresh-scope-20260708/`에 있다.
