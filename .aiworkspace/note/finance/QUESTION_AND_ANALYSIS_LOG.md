@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-07 - Quality / Value coverage needs monthly PIT snapshots, not only current Top-N
+
+- User request: 사용자가 Quality / Value coverage 100 / 300 / 500이 현재 날짜 기준 Top-N이면 2016년부터의 백테스트에서 당시 300개 기업으로 선정되지 않는 문제가 있는지 질문했고, 월말 market-cap snapshot을 사전에 저장해 쓰는 방향이 맞는지 확인함.
+- Interpreted goal: 현재 `nyse_asset_profile` 기반 static coverage를 계속 최신 현재 universe로만 쓰면 과거 구간에 look-ahead / survivorship bias가 남으므로, 최소한 리밸런싱일 이전 월말 기준 universe membership을 읽는 선택지를 만들어야 함.
+- Analysis result: 가장 작은 안전한 1차 해법은 월말 snapshot table을 만들고, DB 가격과 statement shares로 approximate market cap rank를 계산해 `equity_universe_snapshot` / `equity_universe_member`에 저장한 뒤, strict Quality / Value runner가 각 리밸런싱일의 이전 snapshot을 적용하는 것이다. 다만 V1은 official historical S&P / Russell membership이나 float-adjusted market cap이 아니므로 완전한 benchmark membership PIT로 표현하면 안 된다.
+- Follow-up: `backtest-pit-universe-v1-20260707`에서 1차~5차를 완료했다. UI에는 `Static Managed Research Universe`, `Historical Dynamic PIT Universe`, `PIT Monthly Snapshot Universe` 계약을 구분해 노출하며, 후속 개선은 공식 membership / float-adjusted market cap provider phase로 둔다.
+
 ### 2026-07-06 - Backtest 후보분석은 stale result와 Data Trust gate를 먼저 막아야 한다
 
 - User request: 사용자가 Backtest 후보분석에서 전략 변경 후 이전 결과가 남는 문제, Data Trust가 자료제한인데 2차 검증으로 넘어가는 문제, Quality / Value preset 기준 불명확성, 가격 업데이트 후 화면이 갱신되지 않는 문제를 1차~4차로 개발 / QA / 커밋해 달라고 요청함.

@@ -9,13 +9,20 @@ Last Verified: 2026-07-07
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-form-cleanup-v1-20260707/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`다.
+
+- 목적: Quality / Value strict coverage가 현재 market-cap Top-N을 과거 전체 기간에 고정해 쓰는 look-ahead / survivorship 위험을 줄이고, 사용자가 2016년부터 실행할 때 당시 월말 기준 근사 universe를 선택할 수 있게 한다.
+- 주요 변경: `finance_meta.equity_universe_snapshot` / `equity_universe_member` schema와 builder / upsert / loader를 추가했다. Strict Quality / Value / Quality+Value annual and quarterly prototype runners는 `PIT Monthly Snapshot Universe`를 선택하면 사전 저장 monthly membership을 읽고, 각 리밸런싱일에는 가장 가까운 이전 snapshot을 적용한다. Backtest Single Strategy와 Portfolio Mix Builder strict form은 Static / Historical Dynamic PIT / PIT Monthly 계약을 같은 Streamlit form surface 안에 노출한다.
+- 이번 차수에서 하지 않은 일: paid official historical Russell / S&P membership ingestion, float-adjusted market cap feed, broker execution, live approval / order / auto rebalance, 기존 Strategy selector의 React 이관.
+- 중요한 한계: V1 PIT monthly universe는 DB 가격과 latest-known statement shares 기반 근사 large-cap membership이다. 공식 지수 편입 이력이나 완전한 historical float-adjusted market cap이 필요하면 별도 provider / collector phase가 필요하다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-form-cleanup-v1-20260707/`다.
 
 - 목적: 사용자가 요청한 맥락대로 기존 Strategy dropdown과 strategy-specific Streamlit form switching은 유지하고, 과하게 추가된 Strategy Detail panel을 제거한 뒤 각 전략 form 내부의 preset / preflight / advanced input 설명만 정리했다.
 - 주요 변경: active Strategy Detail service / React component / render path를 제거했다. strict preset 설명은 `현재 기준 / 주의 / 업데이트 방법` compact model로 바꿨고, Quality / Value strict form은 `데이터 준비 기준`, compact preset basis, Price Freshness Preflight 순서로 읽히게 했다. Equal Weight / ETF-like form은 기존 layout을 유지하고 혼란스러운 `runtime wrapper` copy만 줄였으며, Portfolio Mix Builder는 Streamlit-owned strict settings와 같은 preset helper를 계속 사용한다.
 - 이번 차수에서 하지 않은 일: Strategy selector / actual form controls의 React 이관, strategy runtime / result bundle / registry / saved JSONL / Practical Validation gate policy 변경, provider 수집 로직 변경, live approval / broker order / auto rebalance 의미 추가.
 
-Previous completed task record는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707/`다. 이 작업의 Price Freshness Preflight asset fix는 유지하지만, Strategy Detail panel은 latest cleanup task에서 제거되어 active product flow가 아니다.
+Earlier completed task record는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707/`다. 이 작업의 Price Freshness Preflight asset fix는 유지하지만, Strategy Detail panel은 latest cleanup task에서 제거되어 active product flow가 아니다.
 
 Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-labels-v1-20260706/`다.
 

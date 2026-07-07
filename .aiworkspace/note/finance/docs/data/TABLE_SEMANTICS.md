@@ -64,6 +64,28 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `status`, `is_spac`, country filter 등은 유용하지만 완전한 point-in-time truth는 아니다.
 - ETF AUM / bid-ask field는 current-operability 판단에 쓰이며, strict annual stock strategy의 PIT liquidity 판단과는 다른 층위다.
 
+## `equity_universe_snapshot`, `equity_universe_member`
+
+역할:
+
+- Quality / Value strict annual and quarterly family가 현재 Top-N을 과거 전체 기간에 고정하지 않도록, 월말 기준 prebuilt equity universe membership을 저장한다.
+- `equity_universe_snapshot`은 `universe_code`, `as_of_date`, target size, source basis, method version 같은 snapshot header를 저장한다.
+- `equity_universe_member`는 snapshot별 symbol, rank, included 여부, approximate market cap, latest price / shares evidence, liquidity proxy, exclusion reason을 저장한다.
+
+성격:
+
+- derived PIT-like universe snapshot이다.
+- V1 source basis는 DB `nyse_price_history`의 월말 가격과 statement shadow / available shares evidence, 그리고 `nyse_asset_profile`의 current profile filter다.
+- UPSERT key는 stable snapshot code / date / symbol 조합이며, 같은 기준을 다시 빌드해도 같은 snapshot을 갱신하는 idempotent path다.
+- strict factor runtime은 `finance/loaders/universe.py::load_pit_universe_membership_snapshots`를 통해 included member만 읽고, 각 rebalance date는 가장 가까운 이전 월말 snapshot membership에 매핑된다.
+
+주의:
+
+- S&P 500 / Russell 같은 공식 historical index membership이 아니다.
+- free/provider DB 기반 근사 PIT이며, shares evidence가 latest-known 또는 shadow fallback이면 완전한 filing-time float-adjusted market cap truth가 아니다.
+- monthly snapshot table이 비어 있거나 requested period를 덮지 않으면 `PIT Monthly Snapshot Universe` 계약은 실행 전에 막혀야 한다.
+- 이 table은 survivorship risk를 줄이는 장치지만, delisting / ticker change / official historical membership source를 완전히 대체하지 않는다.
+
 ## `etf_provider_source_map`
 
 역할:

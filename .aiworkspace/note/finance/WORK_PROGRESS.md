@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest PIT Universe V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`에서 1차~5차를 개발 / QA / 커밋 순서로 완료했다.
+  - Quality / Value strict coverage에 `PIT Monthly Snapshot Universe`를 추가해 사전 저장된 월말 membership을 리밸런싱일별로 읽게 했다.
+  - V1은 DB price와 latest-known statement shares 기반 근사 PIT large-cap universe이며, 공식 지수 편입 이력 / float-adjusted market cap feed는 후속 provider phase로 남겼다.
 - Backtest Candidate Analysis Hardening V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-candidate-analysis-hardening-v1-20260706/`에서 1차~4차를 개발 / QA / 커밋 순서로 완료했다.
   - 전략 / variant 변경 시 이전 백테스트 결과를 숨기고, Data Trust가 limited / warning / error면 Practical Validation 진입을 차단한다.

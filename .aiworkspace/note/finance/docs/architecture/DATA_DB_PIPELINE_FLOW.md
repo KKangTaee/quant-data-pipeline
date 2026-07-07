@@ -72,6 +72,7 @@ external source
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
+| `finance/data/pit_universe.py` | Quality / Value strict family용 monthly equity universe snapshot build / UPSERT helper. DB price, statement shadow shares evidence, asset profile filter를 읽어 `equity_universe_snapshot` / `equity_universe_member`에 idempotent하게 저장한다 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 approved action facade에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
 | `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 승인된 market intelligence / futures / events / sentiment / quote-gap diagnostics job 호출과 run-history 기록을 맡는다. Market Context historical analog coverage gap은 같은 facade에서 기존 OHLCV collection job을 managed-safe profile로 호출해 `finance_price.nyse_price_history`를 보강한다 |
@@ -83,7 +84,7 @@ external source
 
 | 파일 | 역할 |
 |---|---|
-| `finance/loaders/universe.py` | universe, asset profile status, symbol lifecycle coverage summary 조회 |
+| `finance/loaders/universe.py` | universe, asset profile status, symbol lifecycle coverage summary, prebuilt PIT monthly equity universe membership 조회 |
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
@@ -97,6 +98,7 @@ external source
 
 - broad `nyse_factors` / `nyse_fundamentals` 계층은 research convenience layer로 본다.
 - strict annual / quarterly factor strategy는 statement shadow / PIT snapshot 계층을 더 중요하게 본다.
+- Quality / Value strict family의 `PIT Monthly Snapshot Universe` 계약은 `equity_universe_snapshot` / `equity_universe_member`를 loader로 읽고, 각 rebalance date를 가장 가까운 이전 월말 snapshot membership에 매핑한다. 이는 현재 Top-N 고정보다 낫지만 official historical index membership은 아니다.
 - 가격 기반 ETF 전략은 price loader와 `BacktestEngine` warmup / slice 경로가 중심이다.
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
 - Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,

@@ -8,7 +8,7 @@ Last Verified: 2026-07-07
 이 문서는 Streamlit Backtest 화면의 single strategy, Portfolio Mix Builder, Practical Validation, Final Review, Operations Console, Portfolio Monitoring 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
 
-2026-07-07 form cleanup 기준으로, Backtest Analysis의 `Single Strategy` 전략 선택과 `Portfolio Mix Builder` 전략 선택 / variant 선택은 Streamlit-owned 흐름을 유지한다. 별도 `Strategy Detail` React panel은 active flow가 아니며, 정리 대상은 각 전략 form 내부의 preset 기준, preflight, advanced input grouping이다. React는 `Price Freshness Preflight`, Handoff action 같은 좁은 interaction / visual component에만 사용한다.
+2026-07-07 form cleanup 기준으로, Backtest Analysis의 `Single Strategy` 전략 선택과 `Portfolio Mix Builder` 전략 선택 / variant 선택은 Streamlit-owned 흐름을 유지한다. 별도 `Strategy Detail` React panel은 active flow가 아니며, 정리 대상은 각 전략 form 내부의 preset 기준, preflight, advanced input grouping이다. React는 `Price Freshness Preflight`, Handoff action 같은 좁은 interaction / visual component에만 사용한다. Quality / Value strict form은 `Static Managed Research Universe`, `Historical Dynamic PIT Universe`, `PIT Monthly Snapshot Universe` 계약을 같은 form surface 안에서 고르게 하며, PIT Monthly는 사전 생성된 DB monthly snapshot을 읽는 근사 PIT 경로이고 공식 index membership이 아니다.
 
 ## 핵심 파일
 

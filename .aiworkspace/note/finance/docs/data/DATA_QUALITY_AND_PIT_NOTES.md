@@ -54,6 +54,9 @@
   Phase 8-5에서는 `coverage_status=partial`로 저장하며, missing snapshot을 delisting proof로 해석하지 않는다.
 - Data Coverage Audit은 lifecycle evidence를 current snapshot, SEC identity cross-check, computed partial, actual coverage, delisting actual로 분리해 표시한다.
   이 분리는 operator 해석을 돕기 위한 read-only scoring이며, partial evidence를 PASS로 승격하지 않는다.
+- `equity_universe_snapshot` / `equity_universe_member`는 Quality / Value strict family의 `PIT Monthly Snapshot Universe` 계약에서 쓰는 monthly prebuilt universe snapshot이다.
+  이 path는 현재 Top-N을 과거 전체 기간에 고정하는 문제를 줄이지만, V1 source가 DB 가격과 latest-known statement shares 기반 근사값이므로 official historical index membership이나 float-adjusted market cap truth는 아니다.
+  snapshot coverage가 requested backtest period를 덮지 않으면 runtime은 실행 전에 막아야 하며, partial snapshot coverage를 survivorship PASS 근거로 승격하지 않는다.
 - `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
 - P2-2B official row는 iShares / SSGA / Invesco page의 current snapshot을 normalize한 것이다.
   다만 Invesco QQQ는 현재 expense ratio / inception만 확보되어 `partial`이며,

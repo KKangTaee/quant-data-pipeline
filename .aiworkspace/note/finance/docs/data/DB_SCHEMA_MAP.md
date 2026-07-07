@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-07-07
 
 ## 목적
 
@@ -26,6 +26,8 @@ Last Verified: 2026-06-07
 | `nyse_etf` | NYSE ETF listing master |
 | `nyse_symbol_lifecycle` | symbol lifecycle / historical universe / delisting evidence. current listing snapshot은 partial `listing_observed` event이고 computed snapshot row도 partial observed-window 요약이며, SEC Form 25 같은 delisting source는 actual `delisting` event지만 complete membership proof는 아니다 |
 | `nyse_asset_profile` | stock / ETF profile, universe filter, current ETF operability metadata |
+| `equity_universe_snapshot` | Quality / Value strict family용 prebuilt monthly PIT-like equity universe snapshot header. V1은 DB price와 latest-known statement shares 기반 근사 market-cap universe다 |
+| `equity_universe_member` | `equity_universe_snapshot`별 included / excluded member, rank, approximate market cap, liquidity / exclusion reason evidence |
 | `market_universe_member` | Overview market intelligence용 current universe membership. 초기 구현은 S&P 500 current constituents |
 | `market_event_calendar` | Overview Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
 | `market_data_issue` | Overview Market Movers quote gap 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
@@ -71,6 +73,7 @@ Last Verified: 2026-06-07
 | master | universe / symbol master | `nyse_stock`, `nyse_etf` |
 | lifecycle evidence | symbol lifecycle / delisting / historical membership evidence | `nyse_symbol_lifecycle` |
 | profile | 현재 snapshot 성격의 profile metadata | `nyse_asset_profile` |
+| derived PIT universe snapshot | DB price와 statement shadow 기반으로 만든 monthly equity universe snapshot | `equity_universe_snapshot`, `equity_universe_member` |
 | connector metadata | provider endpoint / parser mapping cache | `etf_provider_source_map` |
 | provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation`, `market_intraday_snapshot`, `market_event_calendar`, `futures_ohlcv`, `futures_market_monitor_run` |
 | issue tracking | 반복되는 수집 / coverage 이슈를 운영 판단용으로 누적 | `market_data_issue` |

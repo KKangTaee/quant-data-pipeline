@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-07-07
 
 ## Purpose
 
@@ -36,6 +36,8 @@ Last Verified: 2026-06-07
 | `nyse_etf` | NYSE ETF listing master |
 | `nyse_symbol_lifecycle` | symbol lifecycle / historical universe / delisting evidence table. SEC Form 25 collector가 official delisting evidence를 저장할 수 있다 |
 | `nyse_asset_profile` | stock / ETF profile and bridge metadata |
+| `equity_universe_snapshot` | Quality / Value strict family가 읽는 prebuilt monthly PIT-like equity universe snapshot header. V1은 DB price와 latest-known statement shares 기반 근사 market-cap universe다 |
+| `equity_universe_member` | monthly equity universe snapshot별 included / excluded member, rank, approximate market cap, liquidity / exclusion evidence |
 | `nyse_price_history` | OHLCV price ledger |
 | `market_universe_member` | Overview market intelligence current universe membership |
 | `market_intraday_snapshot` | Overview daily market movers and Sector / Industry daily leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage |
