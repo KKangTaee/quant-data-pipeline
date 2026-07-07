@@ -690,7 +690,27 @@ def _render_data_trust_refresh_job_result(result: dict[str, Any]) -> None:
     if unresolved:
         sample = _sample_symbols_for_data_trust(unresolved)
         st.warning(f"아직 가격 최신성 문제가 남은 종목 {len(unresolved)}개가 있습니다: {sample}")
-    st.caption("Coverage 최신화 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
+    if unresolved and not price_refresh_result_requires_backtest_rerun(result):
+        st.caption("업데이트로 해결되지 않은 종목은 provider/source gap 또는 symbol lifecycle 이슈로 보고 Data Trust에서 확인하세요.")
+    else:
+        st.caption("Coverage 최신화 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
+
+
+def _price_refresh_result_blocks_retry(result: dict[str, Any] | None) -> bool:
+    """Return whether a no-row refresh result should stop the same button from reappearing."""
+    if not isinstance(result, dict):
+        return False
+    try:
+        rows_written = int(result.get("rows_written") or 0)
+    except (TypeError, ValueError):
+        rows_written = 0
+    details = dict(result.get("details") or {})
+    unresolved = [
+        symbol
+        for symbol in list(details.get("post_refresh_unresolved_symbols") or [])
+        if str(symbol).strip()
+    ]
+    return rows_written <= 0 and bool(unresolved)
 
 
 def _mark_backtest_result_requires_rerun_after_price_refresh(result: dict[str, Any]) -> None:
@@ -727,9 +747,17 @@ def _consume_data_trust_refresh_action(
 def _render_data_trust_refresh_action(meta: dict[str, Any]) -> None:
     plan = build_backtest_price_refresh_plan(meta)
     if not plan.get("eligible"):
+        if plan.get("status") == "provider_gap_only":
+            st.warning(str(plan.get("summary") or "가격 업데이트로 해결하기 어려운 provider/source gap이 남았습니다."))
+            st.caption(str(plan.get("detail") or "Coverage 최신화를 반복하기보다 Data Trust에서 provider/source 상태를 확인하세요."))
         return
 
     state_key = _data_trust_refresh_state_key(plan)
+    result = st.session_state.get(state_key)
+    if isinstance(result, dict) and _price_refresh_result_blocks_retry(result):
+        _render_data_trust_refresh_job_result(result)
+        return
+
     if not is_backtest_price_refresh_action_available():
         st.error("Coverage 최신화 React component build를 찾지 못했습니다. component build 후 갱신 UI가 표시됩니다.")
         return

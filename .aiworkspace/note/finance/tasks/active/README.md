@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `practical-validation-flow4-action-steps-v3-20260707` closeout. |
+| none | - | No active task after `backtest-coverage-provider-gap-refresh-v1-20260707` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `backtest-coverage-provider-gap-refresh-v1-20260707` | Completed record | Backtest Data Trust Coverage 최신화 no-row provider gap result no longer re-renders the retry action card; persistent provider/source gap symbols are excluded from refresh targets. |
 | `practical-validation-flow4-action-steps-v3-20260707` | Completed record | Practical Validation Flow 4 `해결 방법` now renders numbered action steps instead of a slash-joined paragraph. |
 | `practical-validation-flow4-action-guide-v2-20260707` | Completed record | Practical Validation Flow 4 criteria cards show `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`, with location demoted to supporting context. |
 | `practical-validation-flow4-resolution-guide-v1-20260707` | Completed record | Practical Validation Flow 4 introduced `resolution_guide` so location-only guidance became a user-facing action guide. |

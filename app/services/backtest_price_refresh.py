@@ -27,7 +27,35 @@ def _normalize_symbols(symbols: Iterable[Any] | None) -> list[str]:
     return out
 
 
-def _refresh_symbols_from_price_freshness(meta: Mapping[str, Any], coverage_tickers: list[str]) -> tuple[list[str], str, bool]:
+_PROVIDER_GAP_REASON_MARKERS = (
+    "persistent_source_gap",
+    "provider_source_gap",
+    "provider_no_data",
+    "likely_delisted",
+    "symbol_changed",
+    "asset_profile_error",
+    "unavailable_from_provider",
+)
+
+
+def _provider_gap_symbols_from_price_freshness(freshness_details: Mapping[str, Any]) -> list[str]:
+    rows = freshness_details.get("classification_rows") or []
+    provider_gap_symbols: list[Any] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        reason = str(row.get("reason") or "").strip().lower()
+        if not reason:
+            continue
+        if any(marker in reason for marker in _PROVIDER_GAP_REASON_MARKERS):
+            provider_gap_symbols.append(row.get("symbol"))
+    return _normalize_symbols(provider_gap_symbols)
+
+
+def _refresh_symbols_from_price_freshness(
+    meta: Mapping[str, Any],
+    coverage_tickers: list[str],
+) -> tuple[list[str], str, bool, list[str]]:
     price_freshness = meta.get("price_freshness") or {}
     freshness_details = price_freshness.get("details") or {}
     refresh_symbols = _normalize_symbols(
@@ -38,6 +66,16 @@ def _refresh_symbols_from_price_freshness(meta: Mapping[str, Any], coverage_tick
         + list(freshness_details.get("missing_symbols") or [])
     )
     if refresh_symbols:
+        refresh_symbol_set = set(refresh_symbols)
+        provider_gap_symbols = [
+            symbol
+            for symbol in _provider_gap_symbols_from_price_freshness(freshness_details)
+            if symbol in refresh_symbol_set
+        ]
+        provider_gap_symbol_set = set(provider_gap_symbols)
+        refreshable_symbols = [
+            symbol for symbol in refresh_symbols if symbol not in provider_gap_symbol_set
+        ]
         missing_symbols = set(
             _normalize_symbols(
                 freshness_details.get("missing_symbols_all")
@@ -45,9 +83,9 @@ def _refresh_symbols_from_price_freshness(meta: Mapping[str, Any], coverage_tick
                 or []
             )
         )
-        has_missing = any(symbol in missing_symbols for symbol in refresh_symbols)
-        return refresh_symbols, "stale_or_missing_symbols", has_missing
-    return coverage_tickers, "full_current_backtest_universe", False
+        has_missing = any(symbol in missing_symbols for symbol in refreshable_symbols)
+        return refreshable_symbols, "stale_or_missing_symbols", has_missing, provider_gap_symbols
+    return coverage_tickers, "full_current_backtest_universe", False, []
 
 
 def _nth_weekday(year: int, month: int, weekday: int, occurrence: int) -> date:
@@ -183,7 +221,10 @@ def _current_common_latest_date(meta: Mapping[str, Any]) -> date | None:
 def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime | None = None) -> dict[str, Any]:
     """Return the Backtest coverage-refresh action model without running ingestion."""
     coverage_tickers = _normalize_symbols(meta.get("tickers") or meta.get("symbols"))
-    tickers, refresh_scope, has_missing_symbols = _refresh_symbols_from_price_freshness(meta, coverage_tickers)
+    tickers, refresh_scope, has_missing_symbols, provider_gap_symbols = _refresh_symbols_from_price_freshness(
+        meta,
+        coverage_tickers,
+    )
     target_end = _target_end_date(meta, now=now)
     current_latest = _current_common_latest_date(meta)
     current_latest_text = current_latest.isoformat() if current_latest else "-"
@@ -194,6 +235,8 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
         "ticker_count": len(tickers),
         "coverage_tickers": coverage_tickers,
         "coverage_ticker_count": len(coverage_tickers),
+        "provider_gap_symbols": provider_gap_symbols,
+        "provider_gap_count": len(provider_gap_symbols),
         "refresh_scope": refresh_scope,
         "current_common_latest": current_latest_text,
         "target_end": target_end_text,
@@ -214,6 +257,24 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
         }
 
     if not tickers:
+        if provider_gap_symbols:
+            sample = ", ".join(provider_gap_symbols[:8])
+            if len(provider_gap_symbols) > 8:
+                sample = f"{sample} (+{len(provider_gap_symbols) - 8} more)"
+            return {
+                **base,
+                "eligible": False,
+                "status": "provider_gap_only",
+                "collection_start": None,
+                "summary": (
+                    "가격 업데이트로 해결하기 어려운 "
+                    f"provider/source gap {len(provider_gap_symbols)}개가 남았습니다: {sample}"
+                ),
+                "detail": (
+                    "provider가 최신 OHLCV row를 주지 않거나 symbol lifecycle 확인이 필요한 대상입니다. "
+                    "Coverage 최신화를 반복하기보다 Data Trust에서 provider/source 상태를 확인하거나 universe를 조정하세요."
+                ),
+            }
         return {
             **base,
             "eligible": False,
@@ -244,6 +305,14 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
         collection_start = requested_start.isoformat() if requested_start else None
 
     scope_label = "stale/missing 가격 대상" if refresh_scope == "stale_or_missing_symbols" else "현재 백테스트 전체 종목"
+    provider_gap_note = ""
+    if provider_gap_symbols:
+        sample = ", ".join(provider_gap_symbols[:8])
+        if len(provider_gap_symbols) > 8:
+            sample = f"{sample} (+{len(provider_gap_symbols) - 8} more)"
+        provider_gap_note = (
+            f" provider/source gap {len(provider_gap_symbols)}개는 refresh 대상에서 제외했습니다: {sample}."
+        )
     return {
         **base,
         "eligible": True,
@@ -253,6 +322,7 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
         "detail": (
             f"Base Universe {len(coverage_tickers)}개 중 refresh 대상은 {len(tickers)}개입니다. "
             f"주말/휴장일 제외 최신 기준일은 {target_end_text}이며, 현재 공통 기준일은 {current_latest_text}입니다."
+            f"{provider_gap_note}"
         ),
     }
 

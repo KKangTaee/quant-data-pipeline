@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-07 - Coverage 최신화 no-row provider gap은 반복 클릭 대상이 아니다
+
+- User request: 사용자가 Quality Snapshot Coverage 최신화 버튼을 눌러도 BK가 해결되지 않고 같은 문제가 계속 남는다고 보고함.
+- Interpreted goal: 사용자가 같은 버튼을 반복 클릭하게 만들지 말고, provider가 최신 OHLCV row를 주지 않는 심볼은 Data Trust 확인 / universe 조정 대상으로 명확히 전환해야 함.
+- Analysis result: `refresh_symbols_all`은 전부 refresh 가능 대상으로 들어가고, `run_collect_ohlcv`가 rows_written=0 / missing provider data를 반환해도 렌더링 순서상 action card가 다시 표시됐다. 따라서 plan 단계에서 명백한 provider/source gap을 제외하고, 실행 후 no-row unresolved 결과는 retry-block 상태로 읽어야 한다.
+- Follow-up: `backtest-coverage-provider-gap-refresh-v1-20260707`에서 provider gap exclusion과 no-row unresolved retry-block을 추가했다. OHLCV provider, DB schema, universe 선정 정책은 변경하지 않았다.
+
 ### 2026-07-07 - Practical Validation Flow 4 해결 방법은 단계 목록이어야 한다
 
 - User request: 사용자가 Flow 4 `해결 방법`이 내용을 한 줄에 붙여 넣은 것처럼 보이며, 이 방식이 최선인지 질문하고 개선을 승인함.

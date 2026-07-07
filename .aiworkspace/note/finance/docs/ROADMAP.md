@@ -9,7 +9,13 @@ Last Verified: 2026-07-07
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-steps-v3-20260707/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-coverage-provider-gap-refresh-v1-20260707/`다.
+
+- 목적: Backtest Data Trust의 Coverage 최신화가 provider no-data / persistent source gap 심볼을 계속 해결 가능한 버튼으로 보여주는 문제를 막는다.
+- 주요 변경: price refresh plan이 명백한 provider/source gap 심볼을 refresh 대상에서 제외하고, 실행 후 rows_written=0 + unresolved 심볼이 남으면 같은 화면에서 retry action card를 다시 렌더링하지 않는다.
+- 이번 차수에서 하지 않은 일: OHLCV provider 교체, DB schema 변경, universe 선정 정책 변경, factor/runtime 결과 계산 변경, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-steps-v3-20260707/`다.
 
 - 목적: Practical Validation Flow 4의 `해결 방법`이 여러 Next Action을 한 줄에 이어 붙인 설명처럼 보이지 않게 하고, 사용자가 처리 순서를 바로 읽을 수 있게 했다.
 - 주요 변경: `resolution_guide`에 UI용 `action_steps` list를 추가하고, Flow 4 criteria card가 이를 번호형 목록으로 렌더링한다. non-PASS audit row의 `Next Action`은 구체 단계로 우선 노출하고, 기준별 기본 action guide는 보강 / 재검증 같은 후속 단계로 붙인다.

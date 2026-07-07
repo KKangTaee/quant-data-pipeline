@@ -9393,6 +9393,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertIn("render_backtest_price_refresh_action(", refresh_body)
         self.assertIn("_consume_data_trust_refresh_action(action_value, meta, state_key)", refresh_body)
+        self.assertIn("_price_refresh_result_blocks_retry(result)", refresh_body)
+        self.assertLess(
+            refresh_body.index("_price_refresh_result_blocks_retry(result)"),
+            refresh_body.index("render_backtest_price_refresh_action("),
+        )
         self.assertNotIn("st.columns(", refresh_body)
         self.assertNotIn(".button(", refresh_body)
         self.assertNotIn("action_cols", refresh_body)
@@ -10075,6 +10080,85 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Base Universe 4개", plan["detail"])
         self.assertIn("1개 stale/missing", plan["summary"])
 
+    def test_backtest_price_refresh_plan_excludes_provider_gap_symbols(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import build_backtest_price_refresh_plan
+
+        plan = build_backtest_price_refresh_plan(
+            {
+                "tickers": ["AAA", "BK", "ALLY"],
+                "start": "2016-01-01",
+                "end": "2026-07-07",
+                "actual_result_end": "2026-07-02",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "effective_end_date": "2026-07-06",
+                        "common_latest_date": "2026-07-02",
+                        "newest_latest_date": "2026-07-06",
+                        "refresh_symbols_all": ["BK", "ALLY"],
+                        "stale_symbols_all": ["BK", "ALLY"],
+                        "classification_rows": [
+                            {
+                                "symbol": "BK",
+                                "reason": "persistent_source_gap_or_symbol_issue",
+                            },
+                            {
+                                "symbol": "ALLY",
+                                "reason": "minor_source_lag",
+                            },
+                        ],
+                    },
+                },
+            },
+            now=datetime(2026, 7, 7, 8, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+        )
+
+        self.assertTrue(plan["eligible"])
+        self.assertEqual(plan["status"], "refresh_available")
+        self.assertEqual(plan["tickers"], ["ALLY"])
+        self.assertEqual(plan["provider_gap_symbols"], ["BK"])
+        self.assertEqual(plan["provider_gap_count"], 1)
+        self.assertIn("provider/source gap", plan["detail"])
+
+    def test_backtest_price_refresh_plan_blocks_provider_gap_only_action(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import build_backtest_price_refresh_plan
+
+        plan = build_backtest_price_refresh_plan(
+            {
+                "tickers": ["AAA", "BK"],
+                "start": "2016-01-01",
+                "end": "2026-07-07",
+                "actual_result_end": "2026-07-02",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "effective_end_date": "2026-07-06",
+                        "common_latest_date": "2026-07-02",
+                        "newest_latest_date": "2026-07-06",
+                        "refresh_symbols_all": ["BK"],
+                        "stale_symbols_all": ["BK"],
+                        "classification_rows": [
+                            {
+                                "symbol": "BK",
+                                "reason": "persistent_source_gap_or_symbol_issue",
+                            },
+                        ],
+                    },
+                },
+            },
+            now=datetime(2026, 7, 7, 8, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+        )
+
+        self.assertFalse(plan["eligible"])
+        self.assertEqual(plan["status"], "provider_gap_only")
+        self.assertEqual(plan["tickers"], [])
+        self.assertEqual(plan["provider_gap_symbols"], ["BK"])
+        self.assertIn("업데이트로 해결하기 어려운", plan["summary"])
+
     def test_backtest_price_refresh_plan_hides_action_when_prices_are_current(self) -> None:
         from zoneinfo import ZoneInfo
 
@@ -10211,6 +10295,37 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(result["details"]["post_refresh_unresolved_symbols"], ["CUK"])
         self.assertEqual(result["details"]["post_refresh_unresolved_count"], 1)
         self.assertIn("미해결 가격 대상 1개", result["message"])
+
+    def test_data_trust_price_refresh_result_blocks_retry_after_no_rows_unresolved(self) -> None:
+        from app.web.backtest_result_display import _price_refresh_result_blocks_retry
+
+        self.assertTrue(
+            _price_refresh_result_blocks_retry(
+                {
+                    "status": "failed",
+                    "rows_written": 0,
+                    "details": {"post_refresh_unresolved_symbols": ["BK"]},
+                }
+            )
+        )
+        self.assertFalse(
+            _price_refresh_result_blocks_retry(
+                {
+                    "status": "success",
+                    "rows_written": 8,
+                    "details": {"post_refresh_unresolved_symbols": ["BK"]},
+                }
+            )
+        )
+        self.assertFalse(
+            _price_refresh_result_blocks_retry(
+                {
+                    "status": "failed",
+                    "rows_written": 0,
+                    "details": {"post_refresh_unresolved_symbols": []},
+                }
+            )
+        )
 
     def test_backtest_price_refresh_saved_rows_require_backtest_rerun(self) -> None:
         from app.services.backtest_price_refresh import price_refresh_result_requires_backtest_rerun

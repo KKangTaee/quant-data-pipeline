@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `practical-validation-flow4-action-steps-v3-20260707`
+- `backtest-coverage-provider-gap-refresh-v1-20260707`
 
 Latest completed docs cleanup task:
 
@@ -47,6 +47,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `backtest-coverage-provider-gap-refresh-v1-20260707`: Backtest Data Trust Coverage 최신화가 provider no-data / persistent source gap 심볼을 반복 클릭 대상으로 남기지 않도록 수정했다. 명백한 provider/source gap은 refresh plan에서 제외하고, rows_written=0 + unresolved 결과는 같은 화면에서 retry action card를 다시 렌더링하지 않는다.
 - `practical-validation-flow4-action-steps-v3-20260707`: Practical Validation Flow 4 `해결 방법` now renders numbered `action_steps` instead of a slash-joined paragraph. Row-level audit `Next Action` remains the most specific first step, followed by provider / DB / Flow 2 recheck guidance where relevant.
 - `practical-validation-flow4-action-guide-v2-20260707`: Practical Validation Flow 4 criteria cards now show `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`. Location remains visible but is no longer the primary answer; the card now explains what to fix, how to fix it, and what state counts as resolved.
 - `practical-validation-flow4-resolution-guide-v1-20260707`: Practical Validation Flow 4 criteria cards now show `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치` instead of only a broad `보강 위치`. Audit rows with non-PASS criteria feed the missing/action copy, while gate policy and provider execution semantics are unchanged.

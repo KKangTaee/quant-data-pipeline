@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Backtest Coverage Provider Gap Refresh V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-coverage-provider-gap-refresh-v1-20260707/`에서 Coverage 최신화 no-row provider gap 반복 클릭 문제를 수정했다.
+  - 명백한 persistent provider/source gap 심볼은 refresh plan에서 제외하고, rows_written=0 + unresolved 결과는 retry action card를 다시 렌더링하지 않는다.
+  - OHLCV provider / DB schema / universe 선정 정책 / registry / saved JSONL 경계는 변경하지 않았다.
 - Practical Validation Flow 4 Action Steps V3:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-steps-v3-20260707/`에서 Flow 4 `해결 방법`을 slash-joined 문단이 아니라 번호형 `action_steps`로 바꿨다.
   - Audit row의 non-PASS `Next Action`은 구체 단계로 우선 사용하고, provider / DB 보강과 Flow 2 재검증 같은 후속 조치는 별도 단계로 보여준다.
