@@ -986,6 +986,47 @@ def _events_workbench_trust_review(
         ),
     }
 
+def _events_workbench_command() -> dict[str, Any]:
+    return {
+        "title": "화면 / 수집 갱신",
+        "refresh_boundary": (
+            "화면 새로고침은 DB에 저장된 이벤트 rows를 다시 읽습니다. "
+            "수집 갱신은 provider/job을 실행해 DB rows를 새로 저장할 수 있습니다."
+        ),
+        "actions": [
+            {
+                "id": "reload",
+                "label": "화면 새로고침",
+                "kind": "secondary",
+                "detail": "DB에 저장된 이벤트 rows를 다시 읽습니다.",
+            },
+            {
+                "id": "refresh_fomc",
+                "label": "FOMC 공식 일정 갱신",
+                "kind": "secondary",
+                "detail": "Federal Reserve 공식 calendar provider/job을 실행합니다.",
+            },
+            {
+                "id": "refresh_macro",
+                "label": "매크로 공식 일정 갱신",
+                "kind": "secondary",
+                "detail": "BLS/BEA/Census/ISM/Treasury calendar provider/job을 실행합니다.",
+            },
+            {
+                "id": "refresh_market_structure",
+                "label": "시장 구조 일정 갱신",
+                "kind": "secondary",
+                "detail": "Nasdaq/Cboe/Russell market-structure provider/job을 실행합니다.",
+            },
+            {
+                "id": "refresh_earnings",
+                "label": "실적 예상 일정 갱신",
+                "kind": "secondary",
+                "detail": "S&P 500 movers 기반 earnings estimate provider/job을 실행합니다.",
+            },
+        ],
+    }
+
 def build_events_workbench_payload(
     events_snapshot: dict[str, Any] | None = None,
     *,
@@ -1077,6 +1118,7 @@ def build_events_workbench_payload(
             _workbench_rail("next_30d", "Next 30D", next_30d_records),
             _workbench_rail("later", "Later", later_records),
         ],
+        "command": _events_workbench_command(),
         "trust_review": _events_workbench_trust_review(records, coverage=coverage, warnings=warnings),
         "calendar": _events_workbench_calendar(records),
         "evidence": {

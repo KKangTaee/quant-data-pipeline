@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Streamlit, withStreamlitConnection, ComponentProps } from "streamlit-component-lib";
 import "./style.css";
 
@@ -31,6 +31,13 @@ type EventRail = {
   items: EventItem[];
 };
 
+type EventAction = {
+  id: string;
+  label: string;
+  kind?: string;
+  detail?: string;
+};
+
 type EventsPayload = {
   schema_version?: string;
   status?: string;
@@ -56,6 +63,11 @@ type EventsPayload = {
     not_confirmed_count?: number;
     stale_estimate_count?: number;
     warnings?: string[];
+  };
+  command?: {
+    title?: string;
+    refresh_boundary?: string;
+    actions?: EventAction[];
   };
 };
 
@@ -98,19 +110,27 @@ function EventCard({ item }: { item: EventItem }) {
 function EventsWorkbench({ args }: ComponentProps) {
   const payload = ((args || {}).payload || {}) as EventsPayload;
   payload.rails = payload.rails || [];
+  payload.command = payload.command || { actions: [] };
+  payload.command.actions = payload.command.actions || [];
   const brief = payload.brief || {};
   const counts = brief.counts || {};
   const sourceSummary = brief.source_summary || {};
   const freshness = brief.freshness_summary || {};
   const trust = payload.trust_review || {};
+  const [pendingActionId, setPendingActionId] = useState("");
   const isPayloadReady = payload.schema_version === "events_workbench_v1";
 
   useEffect(() => {
     Streamlit.setFrameHeight();
   }, [payload]);
 
+  useEffect(() => {
+    setPendingActionId("");
+  }, [payload.schema_version, brief.freshness_summary?.latest_collected_at]);
+
   const emitEvent = (id: string) => {
-    Streamlit.setComponentValue({ event: { id } });
+    setPendingActionId(id);
+    Streamlit.setComponentValue({ event: { id, nonce: `${Date.now()}-${Math.random()}` } });
   };
 
   if (!isPayloadReady) {
@@ -144,6 +164,28 @@ function EventsWorkbench({ args }: ComponentProps) {
         <CountTile label="Estimates" value={sourceSummary.provider_estimate} />
         <CountTile label="Stale" value={freshness.stale_estimate_count} />
       </div>
+
+      <section className="events-workbench__command">
+        <div className="events-workbench__command-copy">
+          <span className="events-workbench__eyebrow">Refresh</span>
+          <h3>{payload.command.title || "화면 / 수집 갱신"}</h3>
+          <p>{payload.command.refresh_boundary}</p>
+        </div>
+        <div className="events-workbench__actions">
+          {payload.command.actions.map((action) => (
+            <button
+              className={`events-workbench__action events-workbench__action--${action.kind || "secondary"}`}
+              disabled={pendingActionId === action.id}
+              key={action.id}
+              onClick={() => emitEvent(action.id)}
+              title={action.detail || action.label}
+              type="button"
+            >
+              {pendingActionId === action.id ? "실행 중" : action.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="events-workbench__rails">
         {payload.rails.map((rail) => (

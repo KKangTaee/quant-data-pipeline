@@ -6226,6 +6226,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".events-workbench__hero", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
 
+    def test_events_react_refresh_actions_are_python_dispatched(self) -> None:
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+        react_source = Path("app/web/streamlit_components/events_workbench/src/EventsWorkbench.tsx").read_text(encoding="utf-8")
+
+        self.assertIn("_handle_events_react_event(", helper_source)
+        self.assertIn('if action_id == "reload"', helper_source)
+        self.assertIn('if action_id == "refresh_fomc"', helper_source)
+        self.assertIn('if action_id == "refresh_macro"', helper_source)
+        self.assertIn('if action_id == "refresh_market_structure"', helper_source)
+        self.assertIn('if action_id == "refresh_earnings"', helper_source)
+        self.assertIn("run_overview_market_structure_calendar", helper_source)
+        self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("setPendingActionId", react_source)
+        self.assertIn("events-workbench__command", react_source)
+        self.assertIn("refresh_boundary", react_source)
+
     def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
@@ -14064,6 +14080,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["brief"]["counts"]["next_30d"], 3)
         self.assertEqual(payload["brief"]["source_summary"]["official"], 3)
         self.assertTrue(payload["brief"]["freshness_summary"]["has_stale_estimates"])
+        self.assertEqual(payload["command"]["actions"][0]["id"], "reload")
+        self.assertIn("DB", payload["command"]["actions"][0]["detail"])
+        self.assertIn("provider/job", payload["command"]["refresh_boundary"])
         self.assertEqual(payload["rails"][0]["key"], "recent_major")
         self.assertEqual(payload["rails"][1]["items"][0]["symbol"], "MSFT")
         self.assertEqual(payload["trust_review"]["not_confirmed_count"], 1)

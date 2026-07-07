@@ -61,3 +61,9 @@
 - 2026-07-07: 7차 QA - `py_compile app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
 - 2026-07-07: 7차 QA - `npm install && npm run build` for `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` left uncommitted.
 - 2026-07-07: 7차 QA - rerun `npm run build` for `events_workbench` - PASS.
+- 2026-07-07: 8차 RED - `OverviewMarketIntelligenceServiceContractTests.test_events_workbench_payload_groups_brief_trust_calendar_and_evidence` failed on missing `payload["command"]`.
+- 2026-07-07: 8차 RED - `OverviewAutomationContractTests.test_events_react_refresh_actions_are_python_dispatched` failed on missing `_handle_events_react_event`.
+- 2026-07-07: 8차 GREEN - both focused command/dispatch tests - PASS.
+- 2026-07-07: 8차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 8차 QA - `npm install` for `app/web/streamlit_components/events_workbench` - PASS.
+- 2026-07-07: 8차 QA - `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.

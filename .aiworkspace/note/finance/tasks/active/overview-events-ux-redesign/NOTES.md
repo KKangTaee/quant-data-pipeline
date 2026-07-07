@@ -19,3 +19,6 @@
 - Workbench rails are intentionally non-overlapping for display (`Recent major`, `Today`, `This Week`, `Next 30D`, `Later`), while hero counts keep user-facing cumulative counts for today / this week / next 30 days.
 - 2026-07-07 7차: The first React scaffold is deliberately additive. It appears above the existing Streamlit details when the build is present, and does not remove Agenda / Calendar / Quality / Raw fallback yet.
 - `events_workbench/node_modules/` is local build dependency output and must stay uncommitted. Commit only source files, package lock, and `component_static` build assets matching the existing component pattern.
+- 2026-07-07 8차: Refresh UX is a command boundary, not a new diagnostic panel. `reload` only reruns the screen against stored DB rows, while refresh actions call the existing Python overview job facades and may change DB rows through provider/job collection.
+- React emits only action ids plus a nonce. `_handle_events_react_event()` owns dispatch and deduplicates repeated component values through session state to avoid rerun loops.
+- The legacy Refresh popover remains available and now includes Market Structure so users without the React build still have the same collection path.

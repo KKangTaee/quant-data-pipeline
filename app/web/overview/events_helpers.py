@@ -16,6 +16,7 @@ from app.jobs.overview_actions import (
     run_overview_earnings_calendar,
     run_overview_fomc_calendar,
     run_overview_macro_calendar,
+    run_overview_market_structure_calendar,
 )
 from app.web.overview.events_react_component import (
     events_react_component_available,
@@ -145,6 +146,19 @@ def render_event_refresh_toolbar() -> str:
                 _store_overview_job_result(
                     "overview_macro_calendar_result",
                     run_overview_macro_calendar(years=(current_year, current_year + 1)),
+                )
+            st.rerun()
+        if st.button(
+            "Market Structure",
+            key="overview_events_refresh_market_structure",
+            use_container_width=True,
+            help="Collects official market holiday, early close, options expiration, and index event dates.",
+        ):
+            current_year = datetime.now().year
+            with st.spinner("Collecting official market structure calendars..."):
+                _store_overview_job_result(
+                    "overview_market_structure_calendar_result",
+                    run_overview_market_structure_calendar(years=(current_year, current_year + 1)),
                 )
             st.rerun()
     return event_filter
@@ -310,6 +324,7 @@ def _has_event_refresh_result() -> bool:
             "overview_fomc_calendar_result",
             "overview_earnings_calendar_result",
             "overview_macro_calendar_result",
+            "overview_market_structure_calendar_result",
         ]
     )
 
@@ -321,6 +336,66 @@ def render_event_refresh_results() -> None:
         _render_market_job_result("overview_fomc_calendar_result")
         _render_market_job_result("overview_earnings_calendar_result")
         _render_market_job_result("overview_macro_calendar_result")
+        _render_market_job_result("overview_market_structure_calendar_result")
+
+
+def _events_react_event_payload(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    event = value.get("event")
+    if isinstance(event, dict):
+        return event
+    if value.get("id") or value.get("action_id"):
+        return value
+    return None
+
+
+def _events_react_event_token(event: dict[str, Any]) -> str:
+    action_id = str(event.get("id") or event.get("action_id") or "").strip()
+    nonce = str(event.get("nonce") or event.get("ts") or "").strip()
+    return f"{action_id}:{nonce}" if nonce else action_id
+
+
+def _handle_events_react_event(event: dict[str, Any], context: EventSnapshotContext) -> None:
+    del context
+    action_id = str(event.get("id") or event.get("action_id") or "").strip()
+    if not action_id:
+        return
+    event_token = _events_react_event_token(event)
+    if st.session_state.get("overview_events_react_event_token") == event_token:
+        return
+    st.session_state["overview_events_react_event_token"] = event_token
+    current_year = datetime.now().year
+    if action_id == "reload":
+        st.rerun()
+    if action_id == "refresh_fomc":
+        with st.spinner("Collecting FOMC calendar from the official Fed page..."):
+            _store_overview_job_result(
+                "overview_fomc_calendar_result",
+                run_overview_fomc_calendar(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_macro":
+        with st.spinner("Collecting official macro and Treasury calendars..."):
+            _store_overview_job_result(
+                "overview_macro_calendar_result",
+                run_overview_macro_calendar(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_market_structure":
+        with st.spinner("Collecting official market structure calendars..."):
+            _store_overview_job_result(
+                "overview_market_structure_calendar_result",
+                run_overview_market_structure_calendar(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_earnings":
+        with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
+            _store_overview_job_result(
+                "overview_earnings_calendar_result",
+                run_overview_earnings_calendar(),
+            )
+        st.rerun()
 
 
 def render_events_react_workbench_section(context: EventSnapshotContext) -> bool:
@@ -331,8 +406,10 @@ def render_events_react_workbench_section(context: EventSnapshotContext) -> bool
         payload,
         key=f"overview_events_workbench_{context.event_filter}",
     )
-    if isinstance(react_event, dict) and react_event.get("event"):
-        st.session_state["overview_events_react_event"] = react_event.get("event")
+    event_payload = _events_react_event_payload(react_event)
+    if event_payload:
+        st.session_state["overview_events_react_event"] = event_payload
+        _handle_events_react_event(event_payload, context)
     return True
 
 

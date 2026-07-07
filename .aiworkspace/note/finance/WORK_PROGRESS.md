@@ -41,6 +41,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - `collect_macro_calendar`가 BLS JOLTS/ECI, BEA PCE, Census indicators, ISM PMI, Treasury auctions까지 official event row로 저장할 수 있게 확장됐다.
   - Treasury auction은 fixed-income calendar context이며 Events source evidence일 뿐 signal/action으로 해석하지 않는다.
   - 다음 차수는 S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings universe expansion이다.
+- Overview Events React workbench 4차~8차 2026-07-07:
+  - Earnings universe, market-structure calendar, service-owned workbench payload, React scaffold, and brief/refresh command UX까지 완료했다.
+  - Events React command band는 DB 화면 새로고침과 provider/job 수집 갱신을 분리하고, Python helper가 FOMC/Macro/Market Structure/Earnings refresh action을 계속 소유한다.
+  - 다음 차수는 9차 이벤트 레일 / 자료 신뢰 / calendar hover-density 개선이다.
 - Overview Market Movers Ticker Change Repair 2026-07-07:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-ticker-change-repair-20260707/`에서 1차~5차를 완료했다.
   - `market_symbol_alias` candidate / active alias store, Market Movers `티커 변경 복구 적용` action, and intraday `quote_symbol` alias lookup were added.
