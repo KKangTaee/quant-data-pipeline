@@ -5558,3 +5558,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 같은 task에서 CNN / AAII 최근 range percentile, CNN headline / component / AAII divergence, CNN component latest-vs-previous change context를 service read model에 추가했다.
   - React workbench는 range cards, divergence panel, component-history section으로 표시하고, Browser QA에서 range 3개 / divergence axis 3개 / component history 7개 렌더링을 확인했다.
   - 새 screenshot은 generated artifact로 남기고 커밋하지 않는다. 다음에 이어 볼 위치는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`이다.
+- Overview Sentiment divergence copy follow-up 2026-07-07:
+  - `지표 합의 상태` framing을 제거하고 React heading을 `엇갈리는 지점`으로 바꿨다.
+  - CNN headline / CNN components / AAII survey axis cards는 metric 정의가 아니라 service-owned current interpretation copy를 보여준다.
+  - QA와 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`의 `STATUS.md` / `RUNS.md`를 본다.

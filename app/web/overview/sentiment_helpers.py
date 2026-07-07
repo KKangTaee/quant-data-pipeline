@@ -365,7 +365,7 @@ def _sentiment_divergence_payload(analysis: dict[str, Any]) -> dict[str, Any]:
             {
                 "label": _display_text(item.get("label")),
                 "direction": _display_text(item.get("direction"), ""),
-                "direction_label": _display_text(item.get("direction_label"), ""),
+                "direction_label": _display_text(item.get("direction_label") or item.get("status"), ""),
                 "detail": _display_text(item.get("detail"), ""),
                 "tone": _sentiment_tone(item.get("tone") or "neutral"),
             }

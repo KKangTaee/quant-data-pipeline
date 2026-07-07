@@ -8596,3 +8596,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: React가 새 판단 문구를 만들지 않고 `app/services/overview/sentiment.py`가 계산한 range context, divergence context, component history를 표시해야 함.
 - Analysis result: latest CNN / AAII context와 stored history만으로 최근 percentile / min-max, headline-component-AAII divergence, component latest-vs-previous change를 계산할 수 있다. 이 정보는 시장 배경 / 조사 단서이며 trade signal, validation gate, monitoring signal이 아니다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에 있다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.
+
+### 2026-07-07 - Sentiment divergence copy should explain the split, not define metrics
+
+- User request: `지표 합의 상태`와 세 축 카드의 내용이 무엇을 말하려는지 모르겠고, `headline score 기준입니다` 같은 문장이 이상하다고 지적함.
+- Interpreted goal: 합의/불일치 자체를 추상적으로 말하지 말고, CNN headline / CNN components / AAII survey가 현재 서로 어떻게 엇갈리는지를 service-owned copy로 설명해야 함.
+- Analysis result: React label은 `엇갈리는 지점` 정도의 구조 문구로 충분하고, 실제 판단 문장은 `app/services/overview/sentiment.py`에서 headline 방향, component driver count, AAII bearish / spread 값을 사용해 만들어야 한다.
+- Follow-up: service divergence axis detail과 React heading을 수정했다. Browser QA DOM에서 새 문구와 old phrase 제거를 확인했고, screenshot attempts는 generated artifact로 남긴다.

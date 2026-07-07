@@ -456,6 +456,64 @@ def _direction_label(direction: str) -> str:
         "mixed": "혼합",
     }.get(direction, "중립")
 
+
+def _direction_tone(direction: str) -> str:
+    if direction == "greed":
+        return "positive"
+    if direction in {"fear", "mixed"}:
+        return "warning"
+    return "neutral"
+
+
+def _format_divergence_value(value: float | None, suffix: str = "") -> str:
+    if value is None:
+        return "-"
+    return f"{value:.1f}{suffix}"
+
+
+def _headline_divergence_detail(direction: str, label: str) -> str:
+    if direction == "greed":
+        return f"CNN headline은 {label} 쪽입니다. headline만 보면 위험선호가 우세합니다."
+    if direction == "fear":
+        return f"CNN headline은 {label} 쪽입니다. headline만 보면 방어적 심리가 우세합니다."
+    return f"CNN headline은 {label}입니다. 공포나 탐욕 어느 쪽도 강하게 밀지 않습니다."
+
+
+def _component_divergence_detail(direction: str, driver_summary: dict[str, int]) -> str:
+    greed_count = int(driver_summary.get("greed_count") or 0)
+    fear_count = int(driver_summary.get("fear_count") or 0)
+    neutral_count = int(driver_summary.get("neutral_count") or 0)
+    if direction == "mixed":
+        neutral_tail = f" 중립 {neutral_count}개도 있어" if neutral_count else ""
+        return (
+            f"CNN 구성요소는 탐욕 {greed_count}개와 공포 {fear_count}개가 함께 나와"
+            f"{neutral_tail} 내부가 갈라져 있습니다. headline을 한 방향으로 단정하기 어렵게 만드는 부분입니다."
+        )
+    if direction == "greed":
+        return f"CNN 구성요소는 탐욕 {greed_count}개가 우세해 위험선호 쪽 압력이 더 많이 보입니다."
+    if direction == "fear":
+        return f"CNN 구성요소는 공포 {fear_count}개가 우세해 방어적 심리 쪽 압력이 더 많이 보입니다."
+    return f"CNN 구성요소는 중립 {neutral_count}개 중심이라 내부 쏠림이 강하지 않습니다."
+
+
+def _aaii_divergence_detail(direction: str, *, bearish: float | None, spread: float | None) -> str:
+    bearish_text = _format_divergence_value(bearish, "%")
+    spread_text = _format_divergence_value(spread, "pp")
+    if direction == "fear":
+        return (
+            f"AAII는 bearish {bearish_text}, bull-bear spread {spread_text} 기준으로 비관 쪽입니다. "
+            "설문 심리는 headline보다 방어적으로 읽힙니다."
+        )
+    if direction == "greed":
+        return (
+            f"AAII는 bearish {bearish_text}, bull-bear spread {spread_text} 기준으로 낙관 쪽입니다. "
+            "설문 심리는 위험선호가 우세합니다."
+        )
+    return (
+        f"AAII는 bearish {bearish_text}, bull-bear spread {spread_text} 기준으로 중립권입니다. "
+        "설문 심리만으로 한 방향을 단정하기 어렵습니다."
+    )
+
 def _build_sentiment_divergence(
     *,
     cnn_bucket: dict[str, str],
@@ -467,6 +525,12 @@ def _build_sentiment_divergence(
     component_direction = _component_balance_direction(driver_summary)
     aaii_direction = _aaii_direction(bearish=aaii_bearish, spread=aaii_spread)
     directions = {headline_direction, component_direction, aaii_direction}
+    headline_label = cnn_bucket.get("label_ko") or _direction_label(headline_direction)
+    component_label = (
+        f"탐욕 {int(driver_summary.get('greed_count') or 0)} / "
+        f"공포 {int(driver_summary.get('fear_count') or 0)} / "
+        f"중립 {int(driver_summary.get('neutral_count') or 0)}"
+    )
     if component_direction == "mixed" or len(directions) >= 3:
         status = "뚜렷한 엇갈림"
         tone = "warning"
@@ -490,24 +554,26 @@ def _build_sentiment_divergence(
             {
                 "label": "CNN headline",
                 "direction": headline_direction,
-                "status": cnn_bucket.get("label_ko") or _direction_label(headline_direction),
-                "detail": "CNN Fear & Greed headline score 기준입니다.",
+                "status": headline_label,
+                "direction_label": headline_label,
+                "tone": _direction_tone(headline_direction),
+                "detail": _headline_divergence_detail(headline_direction, headline_label),
             },
             {
                 "label": "CNN components",
                 "direction": component_direction,
-                "status": (
-                    f"탐욕 {int(driver_summary.get('greed_count') or 0)} / "
-                    f"공포 {int(driver_summary.get('fear_count') or 0)} / "
-                    f"중립 {int(driver_summary.get('neutral_count') or 0)}"
-                ),
-                "detail": "CNN 7개 구성요소의 방향 분포입니다.",
+                "status": component_label,
+                "direction_label": component_label,
+                "tone": _direction_tone(component_direction),
+                "detail": _component_divergence_detail(component_direction, driver_summary),
             },
             {
                 "label": "AAII survey",
                 "direction": aaii_direction,
                 "status": _direction_label(aaii_direction),
-                "detail": "AAII bearish와 bull-bear spread를 함께 본 설문 방향입니다.",
+                "direction_label": _direction_label(aaii_direction),
+                "tone": _direction_tone(aaii_direction),
+                "detail": _aaii_divergence_detail(aaii_direction, bearish=aaii_bearish, spread=aaii_spread),
             },
         ],
     }

@@ -516,7 +516,7 @@ function SentimentWorkbench({ args }: Props) {
           >
             <div className="sentiment-workbench__divergence-summary">
               <div className="sentiment-workbench__divergence-heading">
-                <span>지표 합의 상태</span>
+                <span>엇갈리는 지점</span>
                 {divergenceContext.status ? (
                   <strong className="sentiment-workbench__divergence-status">{divergenceContext.status}</strong>
                 ) : null}

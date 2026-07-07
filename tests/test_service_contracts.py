@@ -6271,7 +6271,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("sentiment-workbench__divergence-panel", react_source)
         self.assertIn("sentiment-workbench__divergence-heading", react_source)
         self.assertIn("sentiment-workbench__divergence-status", react_source)
-        self.assertIn("지표 합의 상태", react_source)
+        self.assertIn("엇갈리는 지점", react_source)
+        self.assertNotIn("지표 합의 상태", react_source)
         self.assertIn("sentiment-workbench__divergence-axis", react_source)
         self.assertLess(
             react_source.index('className="sentiment-workbench__range-context"'),
@@ -14368,6 +14369,17 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(divergence["component_direction"], "mixed")
         self.assertEqual(divergence["aaii_direction"], "fear")
         self.assertIn("서로 다르게", divergence["summary"])
+        divergence_items = {item["label"]: item for item in divergence["items"]}
+        self.assertIn("중립", divergence_items["CNN headline"]["detail"])
+        self.assertIn("강하게 밀지", divergence_items["CNN headline"]["detail"])
+        self.assertIn("탐욕 1개와 공포 1개", divergence_items["CNN components"]["detail"])
+        self.assertIn("내부가 갈라", divergence_items["CNN components"]["detail"])
+        self.assertIn("비관", divergence_items["AAII survey"]["detail"])
+        self.assertIn("42.0", divergence_items["AAII survey"]["detail"])
+        self.assertIn("-12.0", divergence_items["AAII survey"]["detail"])
+        self.assertNotIn("headline score 기준", divergence_items["CNN headline"]["detail"])
+        self.assertNotIn("방향 분포입니다", divergence_items["CNN components"]["detail"])
+        self.assertNotIn("함께 본 설문 방향", divergence_items["AAII survey"]["detail"])
 
         history_by_series = {item["series"]: item for item in analysis["component_history"]}
         self.assertEqual(history_by_series["Market Momentum"]["latest"], 65.0)
