@@ -22,3 +22,4 @@
 - Feature expansion 2차 status: complete. Added a tested React payload `interpretation` contract carrying service-owned `range_context`, `divergence`, and `component_history` without adding frontend-generated interpretation copy.
 - Feature expansion 3차 status: complete. Added React UI for recent percentile/range cards and the CNN headline / CNN component / AAII divergence panel inside the cross-read flow. The panel displays service-owned status, summary, and axis details.
 - Feature expansion 4차 status: complete. Added a React component-history section that shows each CNN component's latest value, previous/latest dates, change, and service-owned change detail before the graph/evidence section.
+- Feature expansion 5차 status: complete. Browser QA confirmed the React iframe rendered 3 range cards, 3 divergence axes, and 7 component-history cards. Durable docs and root handoff logs were synced; QA screenshots remain generated artifacts and are not committed.

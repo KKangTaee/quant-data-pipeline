@@ -5554,3 +5554,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Sentiment는 React workbench로 phase/headline/summary, freshness/action, CNN / AAII cross-read, driver lanes, component explanations, hover-readable history line chart, component bars, stored evidence tables를 렌더링한다.
   - 후속 피드백으로 기본 화면의 next-check cards는 제거했고, history graph hover tooltip은 날짜 / 시리즈 / 값 / source를 보여준다.
   - Python service/helper가 DB read, refresh action, interpretation text를 계속 소유하고 React는 표시/dispatch만 맡는다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.
+- Overview Sentiment context-depth follow-up 2026-07-07:
+  - 같은 task에서 CNN / AAII 최근 range percentile, CNN headline / component / AAII divergence, CNN component latest-vs-previous change context를 service read model에 추가했다.
+  - React workbench는 range cards, divergence panel, component-history section으로 표시하고, Browser QA에서 range 3개 / divergence axis 3개 / component history 7개 렌더링을 확인했다.
+  - 새 screenshot은 generated artifact로 남기고 커밋하지 않는다. 다음에 이어 볼 위치는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`이다.

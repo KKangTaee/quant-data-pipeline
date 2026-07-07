@@ -8589,3 +8589,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 다음 행동 카드는 기본 판단 흐름에서 빼고, graph evidence는 정확한 날짜 / 시리즈 / 값 / source를 즉시 확인할 수 있어야 한다.
 - Analysis result: next-check content는 service payload에는 남겨도 React 기본 화면에서는 숨기는 것이 가장 안전하다. History SVG는 기존 `charts.history` payload만 사용해 y축 눈금, hover guide, tooltip을 렌더링하면 된다.
 - Follow-up: tooltip Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다. 추가 기능 후보는 service-owned read model 확장을 전제로 별도 후속 차수에서 다룬다.
+
+### 2026-07-07 - Sentiment should show range, divergence, and CNN component changes
+
+- User request: 공포탐욕 탭에 현재값이 최근 범위에서 얼마나 특이한지, CNN / AAII 해석이 엇갈리는지, CNN 구성요소가 최근 어떻게 변했는지 추가해 달라고 요청함.
+- Interpreted goal: React가 새 판단 문구를 만들지 않고 `app/services/overview/sentiment.py`가 계산한 range context, divergence context, component history를 표시해야 함.
+- Analysis result: latest CNN / AAII context와 stored history만으로 최근 percentile / min-max, headline-component-AAII divergence, component latest-vs-previous change를 계산할 수 있다. 이 정보는 시장 배경 / 조사 단서이며 trade signal, validation gate, monitoring signal이 아니다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에 있다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.
