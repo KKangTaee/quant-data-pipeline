@@ -325,10 +325,6 @@ function SentimentWorkbench({ args }: Props) {
     setPendingActionLabel(action.label);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
-  const metricByLabel = (label: string) => payload.summary.metrics.find((metric) => metric.label === label);
-  const cnnMetric = metricByLabel("CNN Fear & Greed");
-  const aaiiBearishMetric = metricByLabel("AAII Bearish");
-  const bullBearSpreadMetric = metricByLabel("Bull-Bear Spread");
   const visibleAnalysisSteps = payload.analysis_steps.filter((step) => !step.title.includes("다음 확인"));
   const divergenceContext = payload.interpretation.divergence;
   const historyPoints = payload.charts.history.series.map((point) => ({
@@ -485,19 +481,6 @@ function SentimentWorkbench({ args }: Props) {
         <div className="sentiment-workbench__section-heading">
           <span>CNN / AAII 같이 보기</span>
           <small>service analysis</small>
-        </div>
-        <div className="sentiment-workbench__cross-metrics">
-          {[cnnMetric, aaiiBearishMetric, bullBearSpreadMetric].filter(Boolean).map((metric) => (
-            <div
-              className="sentiment-workbench__cross-metric"
-              key={metric!.label}
-              style={{ "--metric-tone": toneColor(metric!.tone) } as React.CSSProperties}
-            >
-              <span>{metric!.label}</span>
-              <strong>{metric!.value}</strong>
-              {metric!.detail ? <small>{metric!.detail}</small> : null}
-            </div>
-          ))}
         </div>
         <div className="sentiment-workbench__range-context">
           {payload.interpretation.range_context.map((item) => (
