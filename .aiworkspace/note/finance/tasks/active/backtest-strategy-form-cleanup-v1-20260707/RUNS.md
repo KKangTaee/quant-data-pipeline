@@ -31,3 +31,11 @@ Commands and QA evidence will be appended per task.
 - Diff check: `git diff --check` completed successfully.
 - Browser QA: Selenium opened `/backtest`, confirmed Equal Weight and GTAA show form-first controls, no `Strategy Detail`, visible `Advanced Inputs`, and the expected run buttons.
 - Screenshot: `backtest-etf-like-form-cleanup-v1-qa.png` generated locally and not intended for commit.
+
+## 2026-07-07 5차 Portfolio Mix Builder Impact / Docs Closeout
+
+- Focused contract: `test_portfolio_mix_builder_remains_streamlit_owned_with_strict_preset_copy` passed and confirms compare mode does not depend on the removed Strategy Detail panel.
+- Compile: `.venv/bin/python -m py_compile app/web/backtest_compare/page.py` completed successfully.
+- Browser QA: Selenium opened `/backtest`, switched to `Portfolio Mix Builder`, confirmed no `Strategy Detail`, then added `Quality` to the strategy multiselect and confirmed `Quality Snapshot (Strict Annual)` plus compact `현재 기준 / 업데이트 방법` preset copy rendered.
+- Screenshots: `backtest-portfolio-mix-form-cleanup-v1-qa.png` and `backtest-portfolio-mix-strict-form-cleanup-v1-qa.png` generated locally and not intended for commit.
+- Docs sync: updated docs index, roadmap, project map, script structure map, Backtest UI flow, root progress log, and question / analysis log.

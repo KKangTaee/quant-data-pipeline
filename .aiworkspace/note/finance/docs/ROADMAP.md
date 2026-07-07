@@ -9,13 +9,15 @@ Last Verified: 2026-07-07
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-form-cleanup-v1-20260707/`다.
 
-- 목적: Quality / Value strict strategy의 blank Price Freshness Preflight React block을 고치고, 전략 선택 직후 전략별 advanced input / preflight 차이를 read-only React detail panel로 먼저 읽게 했다.
-- 주요 변경: price freshness preflight component Vite asset path를 relative build로 보정했다. `app/services/backtest_strategy_detail.py`가 strategy / variant detail read model을 만들고, `app/web/components/backtest_strategy_detail_panel/`이 Single Strategy form 위에 summary / inputs / advanced sections / preflight sections를 렌더링한다.
-- 이번 차수에서 하지 않은 일: actual form controls React 이관, strategy runtime / result bundle / registry / saved JSONL / Practical Validation gate policy 변경, provider 수집 로직 변경, live approval / broker order / auto rebalance 의미 추가.
+- 목적: 사용자가 요청한 맥락대로 기존 Strategy dropdown과 strategy-specific Streamlit form switching은 유지하고, 과하게 추가된 Strategy Detail panel을 제거한 뒤 각 전략 form 내부의 preset / preflight / advanced input 설명만 정리했다.
+- 주요 변경: active Strategy Detail service / React component / render path를 제거했다. strict preset 설명은 `현재 기준 / 주의 / 업데이트 방법` compact model로 바꿨고, Quality / Value strict form은 `데이터 준비 기준`, compact preset basis, Price Freshness Preflight 순서로 읽히게 했다. Equal Weight / ETF-like form은 기존 layout을 유지하고 혼란스러운 `runtime wrapper` copy만 줄였으며, Portfolio Mix Builder는 Streamlit-owned strict settings와 같은 preset helper를 계속 사용한다.
+- 이번 차수에서 하지 않은 일: Strategy selector / actual form controls의 React 이관, strategy runtime / result bundle / registry / saved JSONL / Practical Validation gate policy 변경, provider 수집 로직 변경, live approval / broker order / auto rebalance 의미 추가.
 
-Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-labels-v1-20260706/`다.
+Previous completed task record는 `.aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707/`다. 이 작업의 Price Freshness Preflight asset fix는 유지하지만, Strategy Detail panel은 latest cleanup task에서 제거되어 active product flow가 아니다.
+
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-labels-v1-20260706/`다.
 
 - 목적: Practical Validation Flow 4가 내부 `Workbench` / audit taxonomy가 아니라 사용자가 찾을 수 있는 `검증 기준 상세` 화면으로 읽히게 했다.
 - 주요 변경: Flow 4 title을 `검증 기준 상세`으로 바꾸고, category title emphasis를 강화했으며, `보강 위치`를 `검증 기준 상세 · 데이터 품질 / Provider 보강`, `검증 기준 상세 · 검증 강도 / 강건성`, `Flow 2 · 실전 재검증 실행` 같은 화면 기준 위치명으로 통일했다.

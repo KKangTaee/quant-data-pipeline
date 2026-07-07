@@ -5552,5 +5552,11 @@ Detailed historical logs were archived on `2026-04-13`.
 ## 2026-07-07 - Backtest Strategy Detail React V1
 
 - `.aiworkspace/note/finance/tasks/active/backtest-strategy-detail-react-v1-20260707/`에서 Quality / Value strict Price Freshness Preflight blank iframe을 수정했다.
-- Single Strategy 선택 직후 `app/services/backtest_strategy_detail.py` read model과 `app/web/components/backtest_strategy_detail_panel/` React panel로 strategy / variant 상세를 먼저 보여준다.
+- Single Strategy 선택 직후 `app/services/backtest_strategy_detail.py` read model과 `app/web/components/backtest_strategy_detail_panel/` React panel로 strategy / variant 상세를 먼저 보여주는 시도는 후속 form cleanup에서 제거됐다.
 - 실제 form input, backtest execution, registry / saved JSONL, Practical Validation gate policy는 변경하지 않았다.
+
+## 2026-07-07 - Backtest Strategy Form Cleanup V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-strategy-form-cleanup-v1-20260707/`에서 1차~5차로 과한 Strategy Detail panel 제거, strict preset copy, strict factor form, ETF-like form, Portfolio Mix Builder 영향 확인을 완료했다.
+- Backtest Analysis의 Strategy dropdown / Single Strategy form switching과 Portfolio Mix Builder strategy multiselect / variant controls는 Streamlit-owned 흐름으로 유지한다.
+- React는 Price Freshness Preflight 같은 좁은 form-level component에만 남겼고, runtime / result bundle / registry / saved JSONL / Practical Validation gate policy는 변경하지 않았다.

@@ -270,6 +270,18 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             self.assertNotIn("runtime wrapper", source)
             self.assertIn('with st.expander("Advanced Inputs", expanded=False)', source)
 
+    def test_portfolio_mix_builder_remains_streamlit_owned_with_strict_preset_copy(self) -> None:
+        source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Strategy Detail", source)
+        self.assertNotIn("backtest_strategy_detail", source)
+        self.assertIn("Portfolio Mix Builder", source)
+        self.assertIn("Strategy selection updates the strategy-specific sections immediately.", source)
+        self.assertIn("Annual / Quarterly variant는 각 전략 박스 안에서 선택합니다.", source)
+        self.assertIn("_render_strict_preset_status_note(qss_compare_preset", source)
+        self.assertIn("_render_strict_preset_status_note(vss_compare_preset", source)
+        self.assertIn("_render_strict_preset_status_note(qvss_compare_preset", source)
+
     def test_price_freshness_preflight_model_builds_react_payload(self) -> None:
         from app.web.backtest_common import build_strict_price_freshness_preflight_model
 

@@ -1,6 +1,6 @@
 # Backtest Strategy Form Cleanup V1 Status
 
-Status: Active
+Status: Done
 Started: 2026-07-07
 
 ## Why
@@ -22,3 +22,4 @@ The previous Strategy Detail React panel over-interpreted the request. The inten
 - 2026-07-07: 2차 added compact strict preset display model and renderer copy for current basis / caveat / update path.
 - 2026-07-07: 3차 cleaned strict annual / quarterly Single Strategy form guidance and Browser QA confirmed Quality / Value strict flows.
 - 2026-07-07: 4차 kept ETF-like strategy forms as Streamlit form-first flows, removed confusing runtime-wrapper copy, and Browser QA confirmed Equal Weight / GTAA switching.
+- 2026-07-07: 5차 confirmed Portfolio Mix Builder remains Streamlit-owned, renders Quality strict settings with compact preset basis, synced durable docs, and closed the task.

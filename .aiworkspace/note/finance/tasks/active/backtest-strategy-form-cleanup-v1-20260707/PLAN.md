@@ -108,18 +108,18 @@ Verify Equal Weight and GTAA still render as existing form-first flows.
 - Modify if needed: `app/web/backtest_compare/page.py`
 - Modify durable docs and root logs.
 
-- [ ] **Step 1: Check Portfolio Mix Builder strict sections**
+- [x] **Step 1: Check Portfolio Mix Builder strict sections**
 
 Ensure compare mode stays Streamlit-owned and does not rely on the removed Strategy Detail panel. Apply compact strict preset copy if the same helper is used.
 
-- [ ] **Step 2: Browser QA**
+- [x] **Step 2: Browser QA**
 
 Verify Portfolio Mix Builder can show a strict Quality/Value component settings section without the removed panel.
 
-- [ ] **Step 3: Docs sync**
+- [x] **Step 3: Docs sync**
 
 Update project map, script structure map, Backtest UI flow, roadmap/index, root handoff logs, and this task status.
 
-- [ ] **Step 4: Final verification and commit**
+- [x] **Step 4: Final verification and commit**
 
 Run focused tests, `py_compile`, `git diff --check`, and commit documentation / closeout.

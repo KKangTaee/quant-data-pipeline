@@ -8567,3 +8567,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 먼저 blank React component의 실제 원인을 고치고, 전략별 advanced input / preflight 차이를 입력 state를 건드리지 않는 read-only detail panel로 정리해야 함.
 - Analysis result: Price Freshness Preflight component build가 root `/assets/...` path를 사용해 Streamlit iframe 안에서 JS MIME error가 났다. 전략 상세는 family variant별로 annual strict / quarterly prototype / ETF price-only capability가 달라 Python read model에서 먼저 구조화하는 것이 안전했다.
 - Follow-up: Preflight Vite build를 relative asset으로 고치고, `app/services/backtest_strategy_detail.py` + `app/web/components/backtest_strategy_detail_panel/`을 추가했다. Form controls / execution / registry / Practical Validation gate는 기존 경계를 유지한다.
+
+### 2026-07-07 - 전략 상세 React panel은 요청 맥락과 달라 제거한다
+
+- User request: 사용자가 전략 dropdown과 form switching 전체를 React로 바꾸자는 뜻이 아니라, 각 전략별 form 내부 advanced input / preset / preflight 정리를 원했다고 정정하고 1차~5차 진행을 승인함.
+- Interpreted goal: 기존 Streamlit selector와 strategy-specific form switching은 유지하고, 과하게 추가된 Strategy Detail panel은 제거한다. Quality / Value strict preset과 Price Freshness Preflight, ETF-like form copy, Portfolio Mix Builder 영향만 단계별로 정리한다.
+- Analysis result: 일반 전략 상세 panel은 Single Strategy / Portfolio Mix Builder 양쪽의 실제 form controls와 중복되고, 사용자가 말한 `3번째 이미지`의 문제인 form 내부 정리와 다른 방향이었다. Price Freshness Preflight는 좁은 React component로 유지하되, 전략 선택 상세는 Streamlit-owned form surface 안에서 정리하는 것이 맞다.
+- Follow-up: 1차 panel 제거, 2차 strict preset helper 정리, 3차 Quality / Value strict form cleanup, 4차 ETF-like form copy cleanup, 5차 Portfolio Mix Builder strict section QA와 durable docs sync를 완료했다.

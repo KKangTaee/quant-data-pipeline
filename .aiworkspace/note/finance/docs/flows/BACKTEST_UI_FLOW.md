@@ -1,12 +1,14 @@
 # Web Backtest UI Flow
 
 Status: Active
-Last Verified: 2026-06-09
+Last Verified: 2026-07-07
 
 ## 목적
 
 이 문서는 Streamlit Backtest 화면의 single strategy, Portfolio Mix Builder, Practical Validation, Final Review, Operations Console, Portfolio Monitoring 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
+
+2026-07-07 form cleanup 기준으로, Backtest Analysis의 `Single Strategy` 전략 선택과 `Portfolio Mix Builder` 전략 선택 / variant 선택은 Streamlit-owned 흐름을 유지한다. 별도 `Strategy Detail` React panel은 active flow가 아니며, 정리 대상은 각 전략 form 내부의 preset 기준, preflight, advanced input grouping이다. React는 `Price Freshness Preflight`, Handoff action 같은 좁은 interaction / visual component에만 사용한다.
 
 ## 핵심 파일
 
@@ -22,14 +24,14 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/overview_ui_components.py` | Overview 전용 visual token, Market Context 2~3문장 narrative cockpit / reading-flow section renderer, `다음 맥락 체크` / historical reference gap panel / source evidence summary strip renderer, hybrid tape / sector pressure map / event timeline / evidence-row renderer, Market Movers refresh surface / metadata strip, Events summary/source/agenda/calendar/quality components, market session banner render |
 | `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, Why It Moved manual investigation read model / session-only compact metadata helper, Sector / Industry leadership ranking/trend/ticker leaders, breadth heatmap, macro week lane, intraday snapshot read path, event / sentiment / macro next-context cue rows, missing diagnostics, event calendar snapshot, collection ops snapshot을 만든다 |
 | `app/services/overview_market_context_analog.py` | Streamlit-free Market Context historical analog read model. Current sector leadership을 sector ETF proxy로 매핑하고, 충분한 DB price coverage가 있으면 5D / 20D / 60D historical reference rows를 만들며, coverage가 부족하면 부족 ticker / row 기준 / bounded repair action metadata를 반환한다 |
-| `app/web/backtest_common.py` | Backtest 공용 preset, universe / real-money / guardrail input, legacy compatibility helper. Page shell은 신규 `backtest_state.py` boundary를 우선 사용한다 |
+| `app/web/backtest_common.py` | Backtest 공용 preset, universe / real-money / guardrail input, strict preset basis display model, Price Freshness Preflight model, legacy compatibility helper. Page shell은 신규 `backtest_state.py` boundary를 우선 사용한다 |
 | `app/web/backtest_state.py` | Backtest workflow state boundary. page entry의 session state 초기화 / panel request / workflow selector callback을 감싼다 |
 | `app/web/backtest_formatters.py` | Streamlit-free Backtest formatting / manual ticker parsing helper |
 | `app/web/backtest_workflow_routes.py` | `Backtest Analysis`, `Practical Validation`, `Final Review` visible stage와 legacy panel route mapping |
 | `app/services/backtest_strategy_catalog.py` | Streamlit-free strategy catalog owner. display name / strategy key / family variant mapping을 제공 |
 | `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. Single Strategy와 Portfolio Mix Builder를 먼저 렌더링한다. Reference help / Strategy Evidence / Bridge / Governance / ETF evidence / current-anchor / rerun matrix 보조 패널은 현재 기본 Backtest Analysis render path에서 제외되어 있다 |
-| `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. strategy 선택, prefill notice, form dispatch, latest result 연결 |
-| `app/web/backtest_single_forms/` | Single Strategy strategy-specific form render. Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Risk-On Momentum 5D, Quality / Value 계열 |
+| `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. Strategy dropdown, prefill notice, form dispatch, latest result 연결을 소유한다. 전략 변경 시 하단 form이 바뀌며, 별도 Strategy Detail panel은 렌더링하지 않는다 |
+| `app/web/backtest_single_forms/` | Single Strategy strategy-specific form render. Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Risk-On Momentum 5D, Quality / Value 계열. Quality / Value strict form은 data readiness note, compact preset basis, Price Freshness Preflight, date/top-N, collapsed advanced contracts 순서로 읽는다 |
 | `app/web/backtest_single_runner.py` | Single Strategy service-facing payload 표시, execution service 호출, latest bundle state 저장, run history append |
 | `app/services/backtest_single_payload.py` | Streamlit-free Single Strategy payload normalization helper |
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. DB-backed runtime dispatch, input/data/system error normalization, runtime owner metadata attach 담당 |
@@ -46,7 +48,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_etf_rerun_matrix.py` | Streamlit-free ETF rerun matrix workbench service. GRS / Risk Parity / Dual Momentum의 session-only rerun scenario plan을 만들고, 선택한 전략만 버튼 실행해 compact result evidence를 session state로 돌려준다. registry / saved setup / run history / validation result / current candidate promotion artifact는 쓰지 않는다 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. component 실행 결과 bundle을 weighted portfolio result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun / weighted bundle / replay context 조립 담당 |
-| `app/web/backtest_compare/page.py` | `Portfolio Mix Builder` 화면 orchestration, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff |
+| `app/web/backtest_compare/page.py` | `Portfolio Mix Builder` 화면 orchestration, component portfolio 실행 / weighted portfolio / saved replay service 호출, saved portfolio load, mix candidate handoff. Strategy multiselect와 annual / quarterly variant controls는 Streamlit-owned이며, strict Quality / Value component settings는 공통 strict preset basis helper를 사용한다 |
 | `app/web/backtest_compare/components.py` | Portfolio Mix Builder visual shell. CSS, flow stepper, section heading, component result card render를 담당하며 compare 실행 / 저장 / handoff 로직은 포함하지 않는다 |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display. summary, chart, data trust, real-money detail, selection history, swing detail, compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |

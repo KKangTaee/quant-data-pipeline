@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-06
+Last Verified: 2026-07-07
 
 ## Project Summary
 
@@ -62,7 +62,7 @@ Last Verified: 2026-07-06
 | Runtime runner ownership catalog | `app/runtime/backtest/runner_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
 | Backtest Data Trust price refresh service | `app/services/backtest_price_refresh.py` |
-| Backtest strict price freshness preflight React component | `app/web/components/backtest_price_freshness_preflight/` |
+| Backtest strict preset / price freshness form helpers | `app/web/backtest_common.py`, `app/web/components/backtest_price_freshness_preflight/` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
@@ -102,7 +102,7 @@ Last Verified: 2026-07-06
 | Overview futures monitor ingestion | `finance/data/futures_market.py` |
 | Overview market sentiment ingestion | `finance/data/sentiment.py` |
 | Overview bounded refresh action facade | `app/jobs/overview_actions.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help entry point |
+| Backtest Analysis | `app/web/backtest_analysis.py`; includes contextual Reference help entry point. Single Strategy keeps Streamlit strategy selection / form dispatch; Portfolio Mix Builder keeps Streamlit strategy multiselect / variant controls. The removed Strategy Detail panel is not an active flow |
 | Practical Validation | `app/web/backtest_practical_validation/page.py`; orchestrates the 5-flow Practical Validation screen. The default entry path does not render contextual Reference help or context-only sentiment overlay |
 | Practical Validation UI components | `app/web/backtest_practical_validation/components.py` |
 | Practical Validation workspace panel | `app/web/backtest_practical_validation/workspace_panel.py`; owns Flow 3 single first-read workspace, Final Review move judgment, issue queue, compact criteria status summary, user-facing blocker fields, and React fallback boundary |
