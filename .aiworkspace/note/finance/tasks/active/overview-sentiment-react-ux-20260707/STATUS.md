@@ -20,3 +20,4 @@
 - Follow-up QA: focused RED/GREEN UI contract tests, Vite production build, Browser QA hover check, screenshot inspection, compile, focused regression, and `git diff --check` passed.
 - Feature expansion 1차 status: complete. Extended the service read model with recent range context, CNN / AAII divergence context, and CNN component history change context. React/UI display is not changed in this phase.
 - Feature expansion 2차 status: complete. Added a tested React payload `interpretation` contract carrying service-owned `range_context`, `divergence`, and `component_history` without adding frontend-generated interpretation copy.
+- Feature expansion 3차 status: complete. Added React UI for recent percentile/range cards and the CNN headline / CNN component / AAII divergence panel inside the cross-read flow. The panel displays service-owned status, summary, and axis details.

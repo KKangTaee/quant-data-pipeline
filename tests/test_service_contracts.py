@@ -6248,6 +6248,31 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__component-list", react_style)
         self.assertNotIn(".sentiment-workbench__next-checks", react_style)
 
+    def test_sentiment_react_context_surface_shows_recent_range_and_divergence(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("SentimentRangeContextItem", react_source)
+        self.assertIn("SentimentDivergenceContext", react_source)
+        self.assertIn("payload.interpretation.range_context.map", react_source)
+        self.assertIn("sentiment-workbench__range-context", react_source)
+        self.assertIn("sentiment-workbench__range-card", react_source)
+        self.assertIn("sentiment-workbench__range-track", react_source)
+        self.assertIn("rangePercentileWidth", react_source)
+        self.assertIn("payload.interpretation.divergence.items.map", react_source)
+        self.assertIn("sentiment-workbench__divergence-panel", react_source)
+        self.assertIn("sentiment-workbench__divergence-axis", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__range-context"'),
+            react_source.index('className="sentiment-workbench__driver-section"'),
+        )
+        self.assertIn(".sentiment-workbench__range-context", react_style)
+        self.assertIn(".sentiment-workbench__range-card", react_style)
+        self.assertIn(".sentiment-workbench__range-track", react_style)
+        self.assertIn(".sentiment-workbench__divergence-panel", react_style)
+        self.assertIn(".sentiment-workbench__divergence-axis", react_style)
+
     def test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         entry_source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")

@@ -23,6 +23,52 @@ type SentimentAnalysisStep = {
   tone?: string;
 };
 
+type SentimentRangeContextItem = {
+  series_id?: string;
+  series: string;
+  latest_value?: number | string | null;
+  sample_count?: number;
+  min_value?: number | string | null;
+  max_value?: number | string | null;
+  median_value?: number | string | null;
+  percentile?: number | string | null;
+  position_label?: string;
+  tone?: string;
+  detail?: string;
+};
+
+type SentimentDivergenceAxis = {
+  label: string;
+  direction?: string;
+  direction_label?: string;
+  detail?: string;
+  tone?: string;
+};
+
+type SentimentDivergenceContext = {
+  status: string;
+  tone?: string;
+  headline_direction?: string;
+  component_direction?: string;
+  aaii_direction?: string;
+  summary?: string;
+  items: SentimentDivergenceAxis[];
+};
+
+type SentimentComponentHistoryItem = {
+  series_id?: string;
+  series: string;
+  label_ko?: string;
+  latest?: number | string | null;
+  latest_date?: string;
+  previous?: number | string | null;
+  previous_date?: string;
+  change?: number | string | null;
+  change_direction?: string;
+  tone?: string;
+  detail?: string;
+};
+
 type SentimentDriverItem = {
   series: string;
   label_ko: string;
@@ -108,6 +154,11 @@ type SentimentWorkbenchPayload = {
   drivers: {
     lanes: SentimentDriverLane[];
   };
+  interpretation: {
+    range_context: SentimentRangeContextItem[];
+    divergence: SentimentDivergenceContext;
+    component_history: SentimentComponentHistoryItem[];
+  };
   component_explanations: SentimentComponentExplanation[];
   charts: {
     history: {
@@ -151,7 +202,7 @@ function toneColor(tone: string | undefined) {
   return "#64748b";
 }
 
-function displayValue(value: number | string | undefined) {
+function displayValue(value: number | string | null | undefined) {
   if (value === undefined || value === null || value === "") {
     return "-";
   }
@@ -167,6 +218,14 @@ function numericValue(value: number | string | null | undefined) {
   }
   const numeric = typeof value === "number" ? value : Number.parseFloat(String(value));
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function rangePercentileWidth(value: number | string | null | undefined) {
+  const percentile = numericValue(value);
+  if (percentile === null) {
+    return "0%";
+  }
+  return `${Math.max(0, Math.min(100, percentile))}%`;
 }
 
 function rowColumns(rows: SentimentEvidenceRows) {
@@ -260,6 +319,7 @@ function SentimentWorkbench({ args }: Props) {
   const aaiiBearishMetric = metricByLabel("AAII Bearish");
   const bullBearSpreadMetric = metricByLabel("Bull-Bear Spread");
   const visibleAnalysisSteps = payload.analysis_steps.filter((step) => !step.title.includes("다음 확인"));
+  const divergenceContext = payload.interpretation.divergence;
   const historyPoints = payload.charts.history.series.map((point) => ({
     ...point,
     numericValue: numericValue(point.value),
@@ -428,6 +488,57 @@ function SentimentWorkbench({ args }: Props) {
             </div>
           ))}
         </div>
+        <div className="sentiment-workbench__range-context">
+          {payload.interpretation.range_context.map((item) => (
+            <article
+              className="sentiment-workbench__range-card"
+              key={item.series}
+              style={{ "--metric-tone": toneColor(item.tone) } as React.CSSProperties}
+            >
+              <div className="sentiment-workbench__range-card-top">
+                <span>{item.series}</span>
+                {item.position_label ? <strong>{item.position_label}</strong> : null}
+              </div>
+              <div className="sentiment-workbench__range-value">{displayValue(item.latest_value)}</div>
+              <div className="sentiment-workbench__range-track" aria-label={`${item.series} percentile`}>
+                <div
+                  className="sentiment-workbench__range-fill"
+                  style={{ width: rangePercentileWidth(item.percentile) } as React.CSSProperties}
+                />
+              </div>
+              <div className="sentiment-workbench__range-meta">
+                <span>min {displayValue(item.min_value)}</span>
+                <span>pctl {displayValue(item.percentile)}</span>
+                <span>max {displayValue(item.max_value)}</span>
+              </div>
+              {item.detail ? <p>{item.detail}</p> : null}
+            </article>
+          ))}
+        </div>
+        {divergenceContext.status || divergenceContext.summary || divergenceContext.items.length ? (
+          <div
+            className="sentiment-workbench__divergence-panel"
+            style={{ "--metric-tone": toneColor(divergenceContext.tone) } as React.CSSProperties}
+          >
+            <div className="sentiment-workbench__divergence-summary">
+              {divergenceContext.status ? <strong>{divergenceContext.status}</strong> : null}
+              {divergenceContext.summary ? <p>{divergenceContext.summary}</p> : null}
+            </div>
+            <div className="sentiment-workbench__divergence-axes">
+              {payload.interpretation.divergence.items.map((item) => (
+                <article
+                  className="sentiment-workbench__divergence-axis"
+                  key={`${item.label}-${item.direction || ""}`}
+                  style={{ "--metric-tone": toneColor(item.tone) } as React.CSSProperties}
+                >
+                  <span>{item.label}</span>
+                  {item.direction_label ? <strong>{item.direction_label}</strong> : null}
+                  {item.detail ? <p>{item.detail}</p> : null}
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="sentiment-workbench__analysis-steps">
           {visibleAnalysisSteps.map((step) => (
             <article
