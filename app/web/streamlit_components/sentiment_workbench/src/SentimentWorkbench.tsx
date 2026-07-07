@@ -515,7 +515,12 @@ function SentimentWorkbench({ args }: Props) {
             style={{ "--metric-tone": toneColor(divergenceContext.tone) } as React.CSSProperties}
           >
             <div className="sentiment-workbench__divergence-summary">
-              {divergenceContext.status ? <strong>{divergenceContext.status}</strong> : null}
+              <div className="sentiment-workbench__divergence-heading">
+                <span>지표 합의 상태</span>
+                {divergenceContext.status ? (
+                  <strong className="sentiment-workbench__divergence-status">{divergenceContext.status}</strong>
+                ) : null}
+              </div>
               {divergenceContext.summary ? <p>{divergenceContext.summary}</p> : null}
             </div>
             <div className="sentiment-workbench__divergence-axes">

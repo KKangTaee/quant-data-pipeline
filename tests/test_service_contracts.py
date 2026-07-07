@@ -6247,6 +6247,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn(".sentiment-workbench__cross-metrics", react_style)
         self.assertNotIn(".sentiment-workbench__cross-metric", react_style)
         self.assertIn(".sentiment-workbench__analysis-steps", react_style)
+        self.assertIn("flex-wrap: wrap;", react_style)
+        self.assertIn("flex: 1 1 12.5rem;", react_style)
+        self.assertIn("box-sizing: border-box;", react_style)
         self.assertIn(".sentiment-workbench__driver-lanes", react_style)
         self.assertIn(".sentiment-workbench__driver-card", react_style)
         self.assertIn(".sentiment-workbench__component-list", react_style)
@@ -6266,6 +6269,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("rangePercentileWidth", react_source)
         self.assertIn("payload.interpretation.divergence.items.map", react_source)
         self.assertIn("sentiment-workbench__divergence-panel", react_source)
+        self.assertIn("sentiment-workbench__divergence-heading", react_source)
+        self.assertIn("sentiment-workbench__divergence-status", react_source)
+        self.assertIn("지표 합의 상태", react_source)
         self.assertIn("sentiment-workbench__divergence-axis", react_source)
         self.assertLess(
             react_source.index('className="sentiment-workbench__range-context"'),
@@ -6275,6 +6281,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__range-card", react_style)
         self.assertIn(".sentiment-workbench__range-track", react_style)
         self.assertIn(".sentiment-workbench__divergence-panel", react_style)
+        self.assertIn(".sentiment-workbench__divergence-heading", react_style)
+        self.assertIn(".sentiment-workbench__divergence-status", react_style)
         self.assertIn(".sentiment-workbench__divergence-axis", react_style)
 
     def test_sentiment_react_component_history_surface_shows_recent_changes(self) -> None:
