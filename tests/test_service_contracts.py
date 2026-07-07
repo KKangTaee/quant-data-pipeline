@@ -6186,6 +6186,33 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__command", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
 
+    def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("sentiment-workbench__hero", react_source)
+        self.assertIn("sentiment-workbench__phase-pill", react_source)
+        self.assertIn("payload.summary.phase_label", react_source)
+        self.assertIn("sentiment-workbench__headline", react_source)
+        self.assertIn("payload.summary.headline", react_source)
+        self.assertIn("sentiment-workbench__summary-copy", react_source)
+        self.assertIn("payload.summary.summary", react_source)
+        self.assertIn("payload.summary.metrics.map", react_source)
+        self.assertIn("sentiment-workbench__metric-grid", react_source)
+        self.assertIn("sentiment-workbench__metric-card", react_source)
+        self.assertIn("sentiment-workbench__freshness-panel", react_source)
+        self.assertIn("payload.freshness.detail", react_source)
+        self.assertIn("payload.boundary_note", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__hero"'),
+            react_source.index('className="sentiment-workbench__fallback-note"'),
+        )
+        self.assertIn(".sentiment-workbench__hero", react_style)
+        self.assertIn(".sentiment-workbench__metric-grid", react_style)
+        self.assertIn(".sentiment-workbench__metric-card", react_style)
+        self.assertIn(".sentiment-workbench__freshness-panel", react_style)
+
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
 

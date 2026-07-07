@@ -27,3 +27,16 @@
 - Phase 2 diff check: `git diff --check`
   - Result: exit 0.
 - Cleanup: removed untracked `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 3 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness`
+  - Result: failed because the scaffold did not yet expose `sentiment-workbench__hero`, phase/headline/summary, metric cards, or freshness panel.
+- Phase 3 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness`
+  - Result: `Ran 1 test ... OK`.
+- Phase 3 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets.
+- Phase 3 cleanup: removed `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 3 focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 3 tests ... OK`.
+- Phase 3 compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`
+  - Result: exit 0.
+- Phase 3 diff check: `git diff --check`
+  - Result: exit 0.

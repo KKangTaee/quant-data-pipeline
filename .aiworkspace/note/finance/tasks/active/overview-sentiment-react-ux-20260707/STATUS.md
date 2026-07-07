@@ -10,3 +10,5 @@
 - 1차 QA: focused RED/GREEN payload test, existing Sentiment snapshot contract test, Sentiment `py_compile`, and `git diff --check` passed.
 - 2차 status: complete. Added the `sentiment_workbench` Streamlit custom component scaffold, Python wrapper, optional React render path, and React action event bridge for refresh / reload. Existing Streamlit controls remain as fallback when the component build is unavailable.
 - 2차 QA: focused RED/GREEN scaffold test, payload contract test, Sentiment `py_compile`, `npm install`, `npm run build`, and `git diff --check` passed. `node_modules` was removed from the worktree after build and must not be committed.
+- 3차 status: complete. Reworked the React first viewport around service-owned phase/headline/summary, core metric cards, freshness counts, and refresh/reload actions tied to the stored data basis.
+- 3차 QA: focused RED/GREEN summary/freshness surface test and Vite production build passed. New build assets replaced the previous scaffold bundle; `node_modules` was removed again after build.
