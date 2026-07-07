@@ -122,10 +122,12 @@ http://localhost:8501
 
 7. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
-   - BLS source는 CPI / PPI / Employment Situation release schedule을 읽어 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
-   - BEA source는 national GDP release schedule을 읽어 `MACRO_GDP`로 저장한다.
-   - 결과는 모두 `source_type=official`, `validation_status=official`로 저장된다.
-   - 후속 확장 macro / fixed-income calendar row는 같은 table에 `event_family`, `event_subtype`, `universe_scope`, `source_authority` taxonomy로 구분해 저장한다.
+   - BLS source는 CPI / PPI / Employment Situation / JOLTS / ECI release schedule을 읽어 official macro row로 저장한다.
+   - BEA source는 national GDP와 Personal Income and Outlays / PCE release schedule을 official macro row로 저장한다.
+   - Census source는 retail sales, durable goods, housing, construction, trade 관련 economic indicator release row를 저장한다.
+   - ISM source는 Manufacturing / Services PMI release row를 저장한다.
+   - TreasuryDirect source는 Treasury auction calendar row를 `event_family=fixed_income`, `event_type=TREASURY_AUCTION`으로 저장한다.
+   - 결과는 모두 `source_type=official`, `validation_status=official`, `source_authority=official`로 저장된다.
    - BLS가 HTTP 403 등으로 차단되면 BEA가 성공하더라도 job은 `partial_success`가 될 수 있다.
    - BLS 자동 요청이 막히면 BLS 공식 release schedule `.ics` 파일을 브라우저로 내려받아 `BLS Calendar .ics File`에 업로드하고 `Import BLS .ics Calendar`를 실행한다.
    - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.

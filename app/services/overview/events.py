@@ -42,6 +42,17 @@ MAJOR_MACRO_EVENT_TYPES = {
     "MACRO_PPI",
     "MACRO_EMPLOYMENT",
     "MACRO_GDP",
+    "MACRO_JOLTS",
+    "MACRO_ECI",
+    "MACRO_PCE",
+    "MACRO_RETAIL_SALES",
+    "MACRO_DURABLE_GOODS",
+    "MACRO_HOUSING",
+    "MACRO_CONSTRUCTION_SPENDING",
+    "MACRO_TRADE",
+    "MACRO_ISM_MANUFACTURING_PMI",
+    "MACRO_ISM_SERVICES_PMI",
+    "TREASURY_AUCTION",
 }
 
 EVENT_TAXONOMY = {
@@ -571,6 +582,8 @@ def _event_importance_label(row: dict[str, Any]) -> str:
     event_type = _normalize_event_type_value(row.get("event_type"))
     if event_type == "FOMC_MEETING" or event_type == "MACRO" or str(event_type or "").startswith("MACRO_"):
         return "High"
+    if str(event_type or "").startswith("TREASURY_"):
+        return "High"
     if event_type == "EARNINGS":
         return "Medium"
     return "Low"
@@ -794,6 +807,24 @@ def _macro_week_cluster_label(event_type: Any) -> str:
         return "Employment"
     if normalized in {"MACRO_GDP", "GDP"}:
         return "GDP"
+    if normalized in {"MACRO_PCE", "PCE"}:
+        return "PCE"
+    if normalized in {"MACRO_JOLTS", "JOLTS"}:
+        return "JOLTS"
+    if normalized in {"MACRO_ECI", "ECI"}:
+        return "ECI"
+    if normalized in {"MACRO_RETAIL_SALES", "RETAIL_SALES"}:
+        return "Retail Sales"
+    if normalized in {"MACRO_DURABLE_GOODS", "DURABLE_GOODS"}:
+        return "Durable Goods"
+    if normalized in {"MACRO_HOUSING", "HOUSING"}:
+        return "Housing"
+    if normalized in {"MACRO_ISM_MANUFACTURING_PMI", "ISM_MANUFACTURING"}:
+        return "ISM Mfg"
+    if normalized in {"MACRO_ISM_SERVICES_PMI", "ISM_SERVICES"}:
+        return "ISM Services"
+    if normalized in {"TREASURY_AUCTION", "TREASURY"}:
+        return "Treasury"
     if normalized in {"EARNINGS", "EARNINGS CALENDAR"}:
         return "Earnings"
     if normalized.startswith("MACRO_"):
@@ -816,12 +847,12 @@ def _macro_week_item_tone(row: dict[str, Any]) -> str:
     cluster = _macro_week_cluster_label(row.get("Type"))
     if cluster == "Earnings":
         return "earnings"
-    if cluster in {"FOMC", "CPI", "PPI", "Employment", "GDP"}:
+    if cluster != "Other":
         return "macro"
     return "neutral"
 
 def _macro_week_is_major_macro(row: dict[str, Any]) -> bool:
-    return _macro_week_cluster_label(row.get("Type")) in {"FOMC", "CPI", "PPI", "Employment", "GDP"}
+    return _macro_week_cluster_label(row.get("Type")) not in {"Earnings", "Other"}
 
 def _macro_week_item_from_row(row: dict[str, Any], *, days_until: int | None, window: str) -> dict[str, Any]:
     return {
@@ -937,7 +968,21 @@ def build_overview_macro_week_lane(
     near_rows = pd.concat([recent_rows, upcoming_rows], ignore_index=True)
     recent_items: list[dict[str, Any]] = []
     upcoming_items: list[dict[str, Any]] = []
-    cluster_order = ["FOMC", "CPI", "PPI", "Employment", "GDP", "Earnings", "Other"]
+    cluster_order = [
+        "FOMC",
+        "CPI",
+        "PPI",
+        "Employment",
+        "GDP",
+        "PCE",
+        "JOLTS",
+        "ECI",
+        "ISM Mfg",
+        "ISM Services",
+        "Treasury",
+        "Earnings",
+        "Other",
+    ]
     clusters: dict[str, dict[str, Any]] = {
         label: {"label": label, "count": 0, "review_count": 0, "next_date": None, "tone": "neutral"}
         for label in cluster_order

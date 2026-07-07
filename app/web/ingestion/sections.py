@@ -507,47 +507,75 @@ def render_operational_section() -> Any:
                 key="overview_macro_calendar_years",
                 help="BLS는 선택 연도별 schedule page를, BEA는 full release schedule에서 일치하는 연도를 수집합니다.",
             )
-            macro_source_cols = st.columns(2, gap="small")
+            macro_source_cols = st.columns(5, gap="small")
             macro_include_bls = macro_source_cols[0].checkbox(
-                "BLS CPI / PPI / Jobs",
+                "BLS inflation / labor",
                 value=True,
                 key="overview_macro_include_bls",
             )
             macro_include_bea = macro_source_cols[1].checkbox(
-                "BEA GDP",
+                "BEA GDP / PCE",
                 value=True,
                 key="overview_macro_include_bea",
             )
+            macro_include_census = macro_source_cols[2].checkbox(
+                "Census indicators",
+                value=True,
+                key="overview_macro_include_census",
+            )
+            macro_include_ism = macro_source_cols[3].checkbox(
+                "ISM PMI",
+                value=True,
+                key="overview_macro_include_ism",
+            )
+            macro_include_treasury = macro_source_cols[4].checkbox(
+                "Treasury auctions",
+                value=True,
+                key="overview_macro_include_treasury",
+            )
             st.caption(
-                "BLS request는 네트워크/정책에 따라 차단될 수 있습니다. 실패하면 job result와 Data Health에서 확인합니다."
+                "공식 source request는 네트워크/정책에 따라 차단될 수 있습니다. 실패하면 job result와 Data Health에서 확인합니다."
             )
             if st.button(
                 "공식 매크로 발표 일정 수집",
                 use_container_width=True,
-                disabled=_has_running_job() or not (macro_include_bls or macro_include_bea),
+                disabled=_has_running_job()
+                or not (
+                    macro_include_bls
+                    or macro_include_bea
+                    or macro_include_census
+                    or macro_include_ism
+                    or macro_include_treasury
+                ),
             ):
                 _schedule_job(
                     {
                         "action": "collect_macro_calendar",
                         "job_name": "collect_macro_calendar",
-                        "spinner_text": "Collecting CPI / PPI / Jobs / GDP release dates from official schedules...",
+                        "spinner_text": "Collecting official macro and Treasury calendar dates...",
                         "params": {
                             "years": tuple(macro_years) if macro_years else None,
                             "include_bls": macro_include_bls,
                             "include_bea": macro_include_bea,
+                            "include_census": macro_include_census,
+                            "include_ism": macro_include_ism,
+                            "include_treasury": macro_include_treasury,
                         },
                         "run_metadata": _job_metadata(
                             pipeline_type="overview_market_event_calendar",
                             execution_mode="operational_low_frequency",
-                            symbol_source="BLS and BEA official release schedules",
+                            symbol_source="official macro and Treasury calendar sources",
                             symbol_count=None,
                             execution_context=(
-                                "Overview Events 탭에서 사용할 CPI, PPI, Employment Situation, GDP release calendar를 공식 HTML schedule에서 파싱해 DB에 저장합니다."
+                                "Overview Events 탭에서 사용할 BLS / BEA / Census / ISM / Treasury calendar를 공식 source에서 파싱해 DB에 저장합니다."
                             ),
                             input_params={
                                 "years": tuple(macro_years) if macro_years else None,
                                 "include_bls": macro_include_bls,
                                 "include_bea": macro_include_bea,
+                                "include_census": macro_include_census,
+                                "include_ism": macro_include_ism,
+                                "include_treasury": macro_include_treasury,
                             },
                         ),
                     }

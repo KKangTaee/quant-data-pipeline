@@ -949,6 +949,9 @@ def run_collect_macro_calendar(
     years: Iterable[int] | None = None,
     include_bls: bool = True,
     include_bea: bool = True,
+    include_census: bool = True,
+    include_ism: bool = True,
+    include_treasury: bool = True,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_macro_calendar"
@@ -961,6 +964,9 @@ def run_collect_macro_calendar(
             years=normalized_years,
             include_bls=include_bls,
             include_bea=include_bea,
+            include_census=include_census,
+            include_ism=include_ism,
+            include_treasury=include_treasury,
         )
         _emit_stage_progress(progress_callback, event="stage_complete", stage="macro_calendar")
         rows_written = int(result.get("rows_written") or 0)

@@ -36,3 +36,8 @@
 - 2026-07-07: Event-focused Overview unittest subset, 9 tests - PASS.
 - 2026-07-07: `MarketIntelligenceEventCalendarContractTests`, 18 tests - PASS.
 - 2026-07-07: `git diff --check` - PASS.
+- 2026-07-07: 3차 RED - new parser tests for BLS JOLTS/ECI, BEA PCE, Census indicators, ISM PMI, Treasury auctions failed before implementation with missing parser functions / unmatched BLS types.
+- 2026-07-07: 3차 GREEN - focused parser/collector tests, 8 tests - PASS.
+- 2026-07-07: 3차 QA - `py_compile` for market intelligence, ingestion jobs/sections, Events helpers/service, tests - PASS.
+- 2026-07-07: 3차 QA - `MarketIntelligenceEventCalendarContractTests`, 23 tests - PASS.
+- 2026-07-07: 3차 QA - focused Overview Events read-model tests, 5 tests - PASS.

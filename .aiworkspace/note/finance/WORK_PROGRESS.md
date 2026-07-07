@@ -37,6 +37,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 2차 taxonomy/schema/read-model contract를 완료했다.
   - `market_event_calendar`는 nullable taxonomy fields를 받고, Events snapshot은 `market_events_snapshot_v2` with family/source-authority/universe count maps를 제공한다.
   - 다음 차수는 official macro / fixed-income calendar collector expansion이다.
+- Overview Events official macro / fixed-income 3차 2026-07-07:
+  - `collect_macro_calendar`가 BLS JOLTS/ECI, BEA PCE, Census indicators, ISM PMI, Treasury auctions까지 official event row로 저장할 수 있게 확장됐다.
+  - Treasury auction은 fixed-income calendar context이며 Events source evidence일 뿐 signal/action으로 해석하지 않는다.
+  - 다음 차수는 S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings universe expansion이다.
 - Overview Market Movers Ticker Change Repair 2026-07-07:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-ticker-change-repair-20260707/`에서 1차~5차를 완료했다.
   - `market_symbol_alias` candidate / active alias store, Market Movers `티커 변경 복구 적용` action, and intraday `quote_symbol` alias lookup were added.

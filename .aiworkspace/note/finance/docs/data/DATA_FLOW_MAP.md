@@ -158,7 +158,7 @@ Yahoo / yfinance ticker calendar, bounded symbols
   -> finance_meta.market_event_calendar
   -> Workspace > Overview > Events
 
-BLS / BEA official release schedules or BLS .ics import
+BLS / BEA / Census / ISM / Treasury official schedules or BLS .ics import
   -> finance.data.market_intelligence.collect_and_store_macro_calendar()
   -> finance_meta.market_event_calendar
   -> Workspace > Overview > Events
@@ -176,7 +176,8 @@ BLS / BEA official release schedules or BLS .ics import
 - 날짜가 바뀐 같은 symbol/source의 이전 active estimate는 `event_status=superseded`로 남겨 audit trail을 유지한다.
 - Earnings 수집 대상은 현재 manual symbol list 또는 최신 S&P 500 movers snapshot 일부가 기본이다. S&P 500 / Nasdaq-100 / portfolio / watchlist / major-cap earnings는 후속 collector 확장 대상이며, 저장 시 `universe_scope`로 구분한다.
 - Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, `app/jobs/overview_actions.py` facade를 거쳐 ingestion job wrapper로 DB에 저장한 뒤 service read model로 읽는다.
-- Macro calendar collector는 official BLS / BEA schedules를 사용한다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
+- Macro calendar collector는 official BLS / BEA / Census / ISM / Treasury schedules를 사용할 수 있다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
+- Treasury auction rows are fixed-income calendar context and stay in the same Events table with `event_family=fixed_income`; they are not trade signals or monitoring triggers.
 
 ## Overview futures monitor 흐름
 

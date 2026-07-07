@@ -133,10 +133,10 @@ def render_event_refresh_toolbar() -> str:
             "Macro",
             key="overview_events_refresh_macro",
             use_container_width=True,
-            help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
+            help="Collects official macro release, PMI, Treasury auction, and related calendar dates.",
         ):
             current_year = datetime.now().year
-            with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
+            with st.spinner("Collecting official macro and Treasury calendars..."):
                 _store_overview_job_result(
                     "overview_macro_calendar_result",
                     run_overview_macro_calendar(years=(current_year, current_year + 1)),
@@ -154,13 +154,29 @@ def _event_type_label(value: Any) -> str:
         "MACRO_PPI": "PPI",
         "MACRO_EMPLOYMENT": "Jobs",
         "MACRO_GDP": "GDP",
+        "MACRO_JOLTS": "JOLTS",
+        "MACRO_ECI": "ECI",
+        "MACRO_PCE": "PCE",
+        "MACRO_RETAIL_SALES": "Retail Sales",
+        "MACRO_DURABLE_GOODS": "Durable Goods",
+        "MACRO_HOUSING": "Housing",
+        "MACRO_CONSTRUCTION_SPENDING": "Construction Spending",
+        "MACRO_TRADE": "Trade",
+        "MACRO_ISM_MANUFACTURING_PMI": "ISM Mfg PMI",
+        "MACRO_ISM_SERVICES_PMI": "ISM Services PMI",
+        "TREASURY_AUCTION": "Treasury Auction",
     }
     return labels.get(str(value or ""), str(value or "-").replace("_", " ").title())
 
 
 def _event_importance_from_type(value: Any) -> str:
     event_type = str(value or "").upper()
-    if event_type == "FOMC_MEETING" or event_type == "MACRO" or event_type.startswith("MACRO_"):
+    if (
+        event_type == "FOMC_MEETING"
+        or event_type == "MACRO"
+        or event_type.startswith("MACRO_")
+        or event_type.startswith("TREASURY_")
+    ):
         return "High"
     if event_type == "EARNINGS":
         return "Medium"

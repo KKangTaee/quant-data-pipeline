@@ -19489,10 +19489,42 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
 
         self.assertEqual([row["event_type"] for row in rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
         self.assertEqual(rows[0]["event_date"], "2026-06-10")
+        self.assertEqual(rows[0]["event_family"], "macro")
+        self.assertEqual(rows[0]["event_subtype"], "cpi")
+        self.assertEqual(rows[0]["event_time_label"], "08:30 ET")
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-06-10 12:30:00")
         self.assertEqual(rows[0]["source_type"], "official")
+        self.assertEqual(rows[0]["source_authority"], "official")
+        self.assertEqual(rows[0]["universe_scope"], "official_macro")
         self.assertEqual(rows[0]["validation_status"], "official")
         self.assertEqual(rows[0]["raw_payload"]["reference_period"], "May 2026")
         self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+
+    def test_bls_macro_calendar_parser_builds_jolts_and_eci_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Date Time</th><th>Release</th></tr></thead>
+          <tbody>
+            <tr><td>Tuesday, June 30, 2026 10:00 AM</td><td>Job Openings and Labor Turnover Survey for May 2026</td></tr>
+            <tr><td>Friday, July 31, 2026 08:30 AM</td><td>Employment Cost Index for 2nd Quarter 2026</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bls_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bls.gov/schedule/2026/",
+            year=2026,
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_JOLTS", "MACRO_ECI"])
+        self.assertEqual(rows[0]["event_subtype"], "jolts")
+        self.assertEqual(rows[0]["event_time_label"], "10:00 ET")
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-06-30 14:00:00")
+        self.assertEqual(rows[1]["event_subtype"], "eci")
+        self.assertEqual(rows[1]["event_datetime_utc"], "2026-07-31 12:30:00")
 
     def test_bls_macro_calendar_ics_parser_builds_official_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -19645,6 +19677,107 @@ END:VCALENDAR
         self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
         self.assertIsNone(rows[0]["raw_payload"]["source_row"]["Unnamed: 3"])
 
+    def test_bea_macro_calendar_parser_builds_gdp_and_pce_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Year 2026</th><th>Type</th><th>Release</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>June 25 8:30 AM</td><td>News</td><td>Gross Domestic Product, 1st Quarter 2026 (Third Estimate)</td><td></td></tr>
+            <tr><td>June 26 8:30 AM</td><td>News</td><td>Personal Income and Outlays, May 2026</td><td>View</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bea_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bea.gov/news/schedule",
+            years=[2026],
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_GDP", "MACRO_PCE"])
+        self.assertEqual(rows[1]["event_family"], "macro")
+        self.assertEqual(rows[1]["event_subtype"], "pce")
+        self.assertEqual(rows[1]["event_time_label"], "08:30 ET")
+        self.assertEqual(rows[1]["event_datetime_utc"], "2026-06-26 12:30:00")
+
+    def test_census_macro_calendar_parser_builds_retail_durable_and_housing_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Release Date</th><th>Time</th><th>Indicator Name</th></tr></thead>
+          <tbody>
+            <tr><td>July 16, 2026</td><td>8:30 AM</td><td>Advance Monthly Sales for Retail and Food Services</td></tr>
+            <tr><td>July 27, 2026</td><td>8:30 AM</td><td>Advance Report on Durable Goods Manufacturers' Shipments, Inventories and Orders</td></tr>
+            <tr><td>July 17, 2026</td><td>8:30 AM</td><td>New Residential Construction</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_census_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.census.gov/economic-indicators/calendar-listview.html",
+            years=[2026],
+        )
+
+        self.assertEqual(
+            [row["event_type"] for row in rows],
+            ["MACRO_RETAIL_SALES", "MACRO_DURABLE_GOODS", "MACRO_HOUSING"],
+        )
+        self.assertEqual(rows[0]["source"], mi.CENSUS_ECONOMIC_INDICATORS_SOURCE)
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-07-16 12:30:00")
+
+    def test_ism_macro_calendar_parser_builds_pmi_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Report</th><th>Release Date</th><th>Release Time</th></tr></thead>
+          <tbody>
+            <tr><td>Manufacturing PMI</td><td>July 1, 2026</td><td>10:00 AM ET</td></tr>
+            <tr><td>Services PMI</td><td>July 6, 2026</td><td>10:00 AM ET</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_ism_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+            years=[2026],
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_ISM_MANUFACTURING_PMI", "MACRO_ISM_SERVICES_PMI"])
+        self.assertEqual(rows[0]["event_subtype"], "ism_manufacturing_pmi")
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-07-01 14:00:00")
+
+    def test_treasury_auction_calendar_parser_builds_fixed_income_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Security Type</th><th>Term</th><th>Auction Date</th><th>Issue Date</th></tr></thead>
+          <tbody>
+            <tr><td>Note</td><td>10-Year</td><td>July 8, 2026</td><td>July 15, 2026</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_treasury_auction_calendar_events_from_html(
+            html,
+            source_url="https://www.treasurydirect.gov/auctions/upcoming/",
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["event_type"], "TREASURY_AUCTION")
+        self.assertEqual(rows[0]["event_family"], "fixed_income")
+        self.assertEqual(rows[0]["event_subtype"], "treasury_auction")
+        self.assertEqual(rows[0]["source"], mi.TREASURY_AUCTIONS_SOURCE)
+        self.assertEqual(rows[0]["source_authority"], "official")
+        self.assertEqual(rows[0]["universe_scope"], "official_macro")
+
     def test_collect_macro_calendar_writes_events_and_reports_failed_sources(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -19657,6 +19790,7 @@ END:VCALENDAR
 
         def fake_fetcher(**kwargs):
             self.assertEqual(kwargs["years"], [2026])
+            self.assertTrue(kwargs["include_treasury"])
             return {
                 "source": mi.MACRO_CALENDAR_SOURCE,
                 "source_url": "https://example.test/macro",
@@ -19679,7 +19813,11 @@ END:VCALENDAR
             }
 
         with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
-            result = mi.collect_and_store_macro_calendar(years=[2026], macro_fetcher=fake_fetcher)
+            result = mi.collect_and_store_macro_calendar(
+                years=[2026],
+                include_treasury=True,
+                macro_fetcher=fake_fetcher,
+            )
 
         self.assertEqual(result["source"], mi.MACRO_CALENDAR_SOURCE)
         self.assertEqual(result["event_type"], "MACRO")

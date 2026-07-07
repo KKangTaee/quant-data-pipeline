@@ -209,9 +209,13 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FOMC row의 `source`는 `federal_reserve_fomc_calendar`, `event_type`은 `FOMC_MEETING`이다.
 - FOMC meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장한다. 예: `June 16-17*`는 `2026-06-17`로 저장한다.
 - Macro row는 공식 release schedule에서 온 event timing metadata다.
-- BLS source row는 `source=bureau_labor_statistics_release_schedule`이며 CPI / PPI / Employment Situation을 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
+- BLS source row는 `source=bureau_labor_statistics_release_schedule`이며 CPI / PPI / Employment Situation / JOLTS / ECI를 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, `MACRO_JOLTS`, `MACRO_ECI`로 저장한다.
 - BLS 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있고, 이 row는 같은 source와 `raw_payload_json.import_method=official_ics_file`로 저장된다.
-- BEA source row는 `source=bureau_economic_analysis_release_schedule`이며 national GDP release를 `MACRO_GDP`로 저장한다.
+- BEA source row는 `source=bureau_economic_analysis_release_schedule`이며 national GDP / Personal Income and Outlays releases를 `MACRO_GDP`, `MACRO_PCE`로 저장한다.
+- Census source row는 `source=census_economic_indicators_calendar`이며 retail sales, durable goods, housing, construction, and trade indicator releases를 macro subtype으로 저장할 수 있다.
+- ISM source row는 `source=ism_report_calendar`이며 Manufacturing / Services PMI releases를 `MACRO_ISM_MANUFACTURING_PMI`, `MACRO_ISM_SERVICES_PMI`로 저장한다.
+- TreasuryDirect source row는 `source=treasurydirect_auction_calendar`, `event_family=fixed_income`, `event_type=TREASURY_AUCTION`으로 저장한다.
+- Official macro/fixed-income rows may populate `event_time_label` and `event_datetime_utc` when the source provides an ET release time.
 - Earnings row의 primary `source`는 `yfinance_calendar`, `event_type`은 `EARNINGS`, `source_type`은 `provider_estimate`이다.
 - Earnings row는 manual symbol list, latest S&P 500 movers, 또는 S&P 500 / Top1000 / Top2000 low-frequency batch에서 파생된 bounded symbol set을 대상으로 한다.
 - Nasdaq earnings calendar는 같은 symbol/date를 확인하는 alternate free provider cross-check로만 사용한다. `validation_status=cross_checked`는 official row를 뜻하지 않는다.
