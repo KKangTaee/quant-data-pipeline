@@ -8624,3 +8624,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 휴장, 조기폐장, options expiration, index reconstitution처럼 일정 밀도에 영향을 주는 이벤트를 market background로 저장해야 함.
 - Analysis result: 공식/1차 source 기준으로 Nasdaq Trader holiday page, Cboe options expiration calendar, FTSE Russell reconstitution schedule을 먼저 추가하는 것이 현재 schema와 UX 목표에 맞다.
 - Follow-up: 5차 완료. 이 row들은 `market_structure` family / `all_us` universe / `official` authority로 저장되며, 다음은 React payload service 구조화다.
+
+### 2026-07-07 - Events React should receive a Python-owned workbench payload
+
+- User request: React custom component를 추가하되 DB 읽기 / 갱신 action / 해석 read model은 Python service가 소유하게 해 달라고 요청함.
+- Interpreted goal: React 전환 전에 hero, rails, trust, chart, evidence에 필요한 구조와 문구를 service contract로 고정해야 함.
+- Analysis result: 기존 `build_market_events_snapshot()` rows/coverage/warnings를 재사용해 `build_events_workbench_payload()`를 만들면 React는 local filter / layout / hover interaction만 담당할 수 있다.
+- Follow-up: 6차 완료. 다음은 React scaffold와 Streamlit wrapper/fallback 연결이다.

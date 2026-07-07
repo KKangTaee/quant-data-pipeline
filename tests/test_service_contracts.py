@@ -13942,6 +13942,100 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Age Days"], 27)
         self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
 
+    def test_events_workbench_payload_groups_brief_trust_calendar_and_evidence(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-06",
+                "event_type": "MACRO_CPI",
+                "title": "CPI: Consumer Price Index",
+                "source": "bureau_labor_statistics_release_schedule",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "macro",
+                "event_subtype": "cpi",
+                "universe_scope": "official_macro",
+                "source_authority": "official",
+                "confidence": 0.95,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-07",
+                "event_type": "EARNINGS",
+                "symbol": "MSFT",
+                "title": "MSFT Earnings Release",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "validation_status": "not_confirmed",
+                "event_family": "earnings",
+                "event_subtype": "earnings_release",
+                "universe_scope": "sp500",
+                "source_authority": "not_confirmed",
+                "source_url": "https://finance.yahoo.com/quote/MSFT/analysis",
+                "confidence": 0.6,
+                "collected_at": "2026-06-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-10",
+                "event_type": "OPTIONS_EXPIRATION",
+                "title": "Monthly Options Expiration",
+                "source": "cboe_options_expiration_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "options_expiration",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "confidence": 0.9,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-29",
+                "event_type": "FOMC_MEETING",
+                "title": "FOMC Meeting",
+                "source": "federal_reserve_fomc_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "central_bank",
+                "event_subtype": "fomc_meeting",
+                "universe_scope": "official_macro",
+                "source_authority": "official",
+                "confidence": 1.0,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return rows
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
+
+        self.assertEqual(payload["schema_version"], "events_workbench_v1")
+        self.assertIn("거래 신호가 아니라", payload["brief"]["boundary_note"])
+        self.assertEqual(payload["brief"]["next_event"]["date"], "2026-07-07")
+        self.assertEqual(payload["brief"]["counts"]["today"], 1)
+        self.assertEqual(payload["brief"]["counts"]["this_week"], 2)
+        self.assertEqual(payload["brief"]["counts"]["next_30d"], 3)
+        self.assertEqual(payload["brief"]["source_summary"]["official"], 3)
+        self.assertTrue(payload["brief"]["freshness_summary"]["has_stale_estimates"])
+        self.assertEqual(payload["rails"][0]["key"], "recent_major")
+        self.assertEqual(payload["rails"][1]["items"][0]["symbol"], "MSFT")
+        self.assertEqual(payload["trust_review"]["not_confirmed_count"], 1)
+        self.assertEqual(payload["trust_review"]["stale_estimate_count"], 1)
+        self.assertEqual(payload["calendar"]["days"][1]["date"], "2026-07-07")
+        self.assertEqual(payload["calendar"]["days"][1]["review_count"], 1)
+        self.assertTrue(payload["calendar"]["density"])
+        self.assertIn("raw_fields", payload["evidence"])
+        self.assertEqual(payload["evidence"]["rows"][1]["Source Authority"], "not_confirmed")
+
     def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
         from app.services.overview.data_health import build_collection_ops_snapshot
 

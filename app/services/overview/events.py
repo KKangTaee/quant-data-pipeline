@@ -797,6 +797,297 @@ def _cockpit_int(value: Any) -> int:
     except (TypeError, ValueError):
         return 0
 
+def _workbench_records(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    frame = _cockpit_frame(snapshot)
+    if frame.empty:
+        return []
+    records: list[dict[str, Any]] = []
+    for _, row in frame.iterrows():
+        record: dict[str, Any] = {}
+        for key, value in row.to_dict().items():
+            if isinstance(value, float) and pd.isna(value):
+                record[key] = None
+            else:
+                record[key] = value
+        records.append(record)
+    return sorted(
+        records,
+        key=lambda item: (
+            str(item.get("Date") or ""),
+            _cockpit_int(item.get("Days Until")) if item.get("Days Until") is not None else 9999,
+            str(item.get("Type") or ""),
+            str(item.get("Symbol") or ""),
+            str(item.get("Title") or ""),
+        ),
+    )
+
+def _workbench_days_until(record: dict[str, Any]) -> int | None:
+    value = _safe_float(record.get("Days Until"))
+    if value is None:
+        return None
+    return int(value)
+
+def _workbench_row_needs_review(record: dict[str, Any]) -> bool:
+    action = str(record.get("Quality Action") or "").strip()
+    freshness = str(record.get("Freshness") or "").strip().lower()
+    validation = str(record.get("Validation") or "").strip().lower()
+    if action and action != "No action":
+        return True
+    return "stale" in freshness or validation in {"not confirmed", "estimate only", "conflict"}
+
+def _workbench_item(record: dict[str, Any]) -> dict[str, Any]:
+    days_until = _workbench_days_until(record)
+    family = str(record.get("Event Family") or "unknown")
+    source_authority = str(record.get("Source Authority") or "unknown")
+    universe_scope = str(record.get("Universe Scope") or "unknown")
+    freshness = str(record.get("Freshness") or "Unknown")
+    validation = str(record.get("Validation") or "Unknown")
+    badges = [
+        {"label": family.replace("_", " ").title(), "kind": "family"},
+        {"label": source_authority.replace("_", " ").title(), "kind": "source_authority"},
+        {"label": universe_scope.replace("_", " ").title(), "kind": "universe_scope"},
+    ]
+    if "stale" in freshness.lower():
+        badges.append({"label": freshness, "kind": "freshness"})
+    if validation not in {"Official", "Unknown"}:
+        badges.append({"label": validation, "kind": "validation"})
+    return {
+        "date": str(record.get("Date") or "-"),
+        "days_until": days_until,
+        "window": str(record.get("Window") or "-"),
+        "type": str(record.get("Type") or "-"),
+        "family": family,
+        "subtype": str(record.get("Event Subtype") or "unknown"),
+        "symbol": "" if str(record.get("Symbol") or "-") == "-" else str(record.get("Symbol") or ""),
+        "title": str(record.get("Title") or "-"),
+        "importance": str(record.get("Importance") or "Low"),
+        "focus": str(record.get("Focus") or "-"),
+        "source_type": str(record.get("Source Type") or "-"),
+        "source_authority": source_authority,
+        "universe_scope": universe_scope,
+        "validation": validation,
+        "freshness": freshness,
+        "quality_action": str(record.get("Quality Action") or "No action"),
+        "event_status": str(record.get("Event Status") or "-"),
+        "event_time": str(record.get("Event Time") or "-"),
+        "event_datetime_utc": str(record.get("Event Datetime UTC") or "-"),
+        "source": str(record.get("Source") or "-"),
+        "source_url": str(record.get("Source URL") or "-"),
+        "confidence": record.get("Confidence"),
+        "collected_at": str(record.get("Collected At") or "-"),
+        "needs_review": _workbench_row_needs_review(record),
+        "badges": badges,
+    }
+
+def _workbench_rail(key: str, label: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+    items = [_workbench_item(record) for record in records]
+    return {
+        "key": key,
+        "label": label,
+        "count": len(items),
+        "review_count": sum(1 for item in items if item["needs_review"]),
+        "items": items,
+    }
+
+def _workbench_week_start(date_text: str) -> str | None:
+    try:
+        day = pd.Timestamp(date_text).date()
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(pd.Timestamp(day)):
+        return None
+    return (day - timedelta(days=day.weekday())).isoformat()
+
+def _events_workbench_calendar(records: list[dict[str, Any]]) -> dict[str, Any]:
+    by_day: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        date_text = str(record.get("Date") or "")
+        if not date_text or date_text == "-":
+            continue
+        by_day.setdefault(date_text, []).append(record)
+
+    days: list[dict[str, Any]] = []
+    weekly: dict[str, dict[str, Any]] = {}
+    for date_text, day_records in sorted(by_day.items()):
+        families = Counter(str(record.get("Event Family") or "unknown") for record in day_records)
+        stale_count = sum(1 for record in day_records if "stale" in str(record.get("Freshness") or "").lower())
+        review_count = sum(1 for record in day_records if _workbench_row_needs_review(record))
+        day_payload = {
+            "date": date_text,
+            "count": len(day_records),
+            "by_family": dict(sorted(families.items())),
+            "review_count": review_count,
+            "stale_count": stale_count,
+            "top_titles": [str(record.get("Title") or "-") for record in day_records[:3]],
+            "items": [_workbench_item(record) for record in day_records],
+        }
+        days.append(day_payload)
+        week_start = _workbench_week_start(date_text)
+        if week_start:
+            bucket = weekly.setdefault(
+                week_start,
+                {"week_start": week_start, "count": 0, "review_count": 0, "stale_count": 0, "by_family": Counter()},
+            )
+            bucket["count"] += len(day_records)
+            bucket["review_count"] += review_count
+            bucket["stale_count"] += stale_count
+            bucket["by_family"].update(families)
+
+    density = []
+    for week_start, bucket in sorted(weekly.items()):
+        density.append(
+            {
+                "week_start": week_start,
+                "count": int(bucket["count"]),
+                "review_count": int(bucket["review_count"]),
+                "stale_count": int(bucket["stale_count"]),
+                "by_family": dict(sorted(bucket["by_family"].items())),
+            }
+        )
+    return {"days": days, "density": density}
+
+def _events_workbench_trust_review(
+    records: list[dict[str, Any]],
+    *,
+    coverage: dict[str, Any],
+    warnings: list[str],
+) -> dict[str, Any]:
+    stale_items = [_workbench_item(record) for record in records if "stale" in str(record.get("Freshness") or "").lower()]
+    not_confirmed_items = [
+        _workbench_item(record) for record in records if str(record.get("Validation") or "").strip() == "Not confirmed"
+    ]
+    estimate_only_items = [
+        _workbench_item(record) for record in records if str(record.get("Validation") or "").strip() == "Estimate only"
+    ]
+    conflict_items = [
+        _workbench_item(record) for record in records if str(record.get("Validation") or "").strip() == "Conflict"
+    ]
+    return {
+        "title": "자료 신뢰 / 추정 일정 확인",
+        "official_count": int(coverage.get("official_count") or 0),
+        "provider_estimate_count": int(coverage.get("estimate_count") or 0),
+        "estimate_only_count": int(coverage.get("estimate_only_count") or 0),
+        "cross_checked_count": int(coverage.get("cross_checked_count") or 0),
+        "not_confirmed_count": int(coverage.get("not_confirmed_count") or 0),
+        "stale_estimate_count": int(coverage.get("stale_estimate_count") or 0),
+        "conflict_count": len(conflict_items),
+        "source_authority_counts": dict(coverage.get("source_authority_counts") or {}),
+        "universe_scope_counts": dict(coverage.get("universe_scope_counts") or {}),
+        "warnings": list(warnings),
+        "sections": [
+            {"key": "stale_estimates", "label": "Stale estimates", "count": len(stale_items), "items": stale_items},
+            {"key": "not_confirmed", "label": "Not confirmed", "count": len(not_confirmed_items), "items": not_confirmed_items},
+            {"key": "estimate_only", "label": "Estimate only", "count": len(estimate_only_items), "items": estimate_only_items},
+            {"key": "conflicts", "label": "Conflicts", "count": len(conflict_items), "items": conflict_items},
+        ],
+        "source_boundary": (
+            "Official macro/FOMC/market-structure rows and provider-estimate earnings rows are shown together, "
+            "but provider estimates remain unconfirmed until cross-checked or issuer-confirmed."
+        ),
+    }
+
+def build_events_workbench_payload(
+    events_snapshot: dict[str, Any] | None = None,
+    *,
+    today: date | None = None,
+    horizon_days: int = 90,
+    recent_days: int = EVENT_RECENT_WINDOW_DAYS,
+    limit: int = 500,
+) -> dict[str, Any]:
+    """Build a React-ready Events payload while keeping interpretation in Python."""
+    today_value = today or date.today()
+    snapshot = events_snapshot or build_market_events_snapshot(
+        event_type=None,
+        today=today_value,
+        horizon_days=horizon_days,
+        recent_days=recent_days,
+        limit=limit,
+    )
+    records = _workbench_records(snapshot)
+    coverage = dict(snapshot.get("coverage") or {})
+    warnings = list(snapshot.get("warnings") or [])
+    items = [_workbench_item(record) for record in records]
+    upcoming_items = [item for item in items if item["days_until"] is not None and item["days_until"] >= 0]
+    next_event = upcoming_items[0] if upcoming_items else None
+
+    recent_major_records = [
+        record
+        for record in records
+        if (_workbench_days_until(record) is not None and _workbench_days_until(record) < 0)
+        and str(record.get("Importance") or "") == "High"
+    ]
+    today_records = [record for record in records if _workbench_days_until(record) == 0]
+    this_week_records = [
+        record
+        for record in records
+        if (_workbench_days_until(record) is not None and 1 <= _workbench_days_until(record) <= 7)
+    ]
+    next_30d_records = [
+        record
+        for record in records
+        if (_workbench_days_until(record) is not None and 8 <= _workbench_days_until(record) <= 30)
+    ]
+    later_records = [
+        record
+        for record in records
+        if (_workbench_days_until(record) is None or _workbench_days_until(record) > 30)
+    ]
+
+    today_count = len(today_records)
+    this_week_count = sum(
+        1 for item in items if item["days_until"] is not None and 0 <= item["days_until"] <= 7
+    )
+    next_30d_count = sum(
+        1 for item in items if item["days_until"] is not None and 0 <= item["days_until"] <= 30
+    )
+    freshness_summary = {
+        "latest_collected_at": coverage.get("latest_collected_at"),
+        "stale_estimate_count": int(coverage.get("stale_estimate_count") or 0),
+        "has_stale_estimates": int(coverage.get("stale_estimate_count") or 0) > 0,
+        "warning_count": len(warnings),
+    }
+
+    return {
+        "schema_version": "events_workbench_v1",
+        "status": snapshot.get("status") or "UNKNOWN",
+        "date_window": dict(snapshot.get("date_window") or {}),
+        "brief": {
+            "title": "다가오는 시장 이벤트 브리프",
+            "boundary_note": "이 화면은 거래 신호가 아니라 시장 배경 확인용입니다.",
+            "next_event": next_event,
+            "counts": {
+                "today": today_count,
+                "this_week": this_week_count,
+                "next_30d": next_30d_count,
+                "total": len(items),
+            },
+            "source_summary": {
+                "official": int(coverage.get("official_count") or 0),
+                "provider_estimate": int(coverage.get("estimate_count") or 0),
+                "cross_checked": int(coverage.get("cross_checked_count") or 0),
+                "not_confirmed": int(coverage.get("not_confirmed_count") or 0),
+            },
+            "freshness_summary": freshness_summary,
+            "family_counts": dict(coverage.get("family_counts") or {}),
+        },
+        "rails": [
+            _workbench_rail("recent_major", "Recent major", recent_major_records),
+            _workbench_rail("today", "Today", today_records),
+            _workbench_rail("this_week", "This Week", this_week_records),
+            _workbench_rail("next_30d", "Next 30D", next_30d_records),
+            _workbench_rail("later", "Later", later_records),
+        ],
+        "trust_review": _events_workbench_trust_review(records, coverage=coverage, warnings=warnings),
+        "calendar": _events_workbench_calendar(records),
+        "evidence": {
+            "raw_fields": list(EVENT_COLUMNS),
+            "rows": records[: max(1, int(limit or 500))],
+            "row_count": len(records),
+        },
+        "warnings": warnings,
+        "taxonomy": dict(snapshot.get("taxonomy") or EVENT_TAXONOMY),
+    }
+
 def _macro_week_cluster_label(event_type: Any) -> str:
     normalized = str(event_type or "").strip().upper()
     if normalized in {"FOMC_MEETING", "FOMC"}:
@@ -1063,6 +1354,7 @@ def build_overview_macro_week_lane(
     }
 
 __all__ = [
+    "build_events_workbench_payload",
     "build_market_events_snapshot",
     "build_overview_macro_week_lane",
 ]

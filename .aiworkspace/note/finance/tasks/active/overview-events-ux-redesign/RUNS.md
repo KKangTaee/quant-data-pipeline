@@ -51,3 +51,8 @@
 - 2026-07-07: 5차 QA - `MarketIntelligenceEventCalendarContractTests` plus progress signature/allowlist checks - PASS, 30 tests.
 - 2026-07-07: 5차 QA - `py_compile` for market intelligence, ingestion jobs/dispatcher/guides/registry/sections, Events helpers/service, overview actions, and tests - PASS.
 - 2026-07-07: 5차 QA - `git diff --check` - PASS.
+- 2026-07-07: 6차 RED - new `build_events_workbench_payload()` service contract failed before implementation with missing import.
+- 2026-07-07: 6차 GREEN - workbench payload groups brief, trust review, calendar buckets, density, and evidence rows - PASS.
+- 2026-07-07: 6차 QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: 6차 QA - `py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 6차 QA - `git diff --check` - PASS.

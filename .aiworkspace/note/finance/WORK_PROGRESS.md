@@ -5582,3 +5582,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Nasdaq Trader holiday / early close, Cboe options expiration, FTSE Russell reconstitution calendar를 market-structure background event로 수집하는 경계를 추가했다.
   - Ingestion의 시장 이벤트 캘린더 수집에 `시장 구조 일정` 탭과 `collect_market_structure_calendar` job을 연결했다.
   - 다음 차수는 Python service가 React workbench용 hero / rail / trust / chart payload를 구조화하는 작업이다.
+- Overview Events Calendar 6차 Workbench Payload 2026-07-07:
+  - `app/services/overview/events.py`에 `build_events_workbench_payload()`를 추가해 hero brief, rails, trust review, calendar / density, evidence rows를 Python-owned contract로 만들었다.
+  - React는 다음 차수부터 이 payload만 렌더링하고, 거래 신호 / validation gate / monitoring action 문구를 만들지 않는다.
+  - 다음 차수는 `app/web/streamlit_components/events_workbench`와 `app/web/overview/events_react_component.py` scaffold다.
