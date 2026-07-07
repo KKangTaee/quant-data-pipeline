@@ -162,6 +162,16 @@ BLS / BEA / Census / ISM / Treasury official schedules or BLS .ics import
   -> finance.data.market_intelligence.collect_and_store_macro_calendar()
   -> finance_meta.market_event_calendar
   -> Workspace > Overview > Events
+
+Nasdaq Trader / Cboe / FTSE Russell market-structure calendars
+  -> finance.data.market_intelligence.collect_and_store_market_structure_calendar()
+  -> finance_meta.market_event_calendar
+  -> Workspace > Overview > Events
+
+finance_meta.market_event_calendar
+  -> app.services.overview.events.build_market_events_snapshot()
+  -> app.services.overview.events.build_events_workbench_payload()
+  -> app/web/streamlit_components/events_workbench React display
 ```
 
 의미:
@@ -174,10 +184,12 @@ BLS / BEA / Census / ISM / Treasury official schedules or BLS .ics import
 - Earnings collector는 yfinance ticker `calendar` field에서 upcoming `Earnings Date`를 읽고 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장한다.
 - 선택적으로 Nasdaq earnings calendar web endpoint로 같은 symbol/date를 cross-check하고, 결과를 `validation_status`와 `raw_payload_json.source_validation`에 남긴다.
 - 날짜가 바뀐 같은 symbol/source의 이전 active estimate는 `event_status=superseded`로 남겨 audit trail을 유지한다.
-- Earnings 수집 대상은 현재 manual symbol list 또는 최신 S&P 500 movers snapshot 일부가 기본이다. S&P 500 / Nasdaq-100 / portfolio / watchlist / major-cap earnings는 후속 collector 확장 대상이며, 저장 시 `universe_scope`로 구분한다.
+- Earnings 수집 대상은 manual symbol list, latest movers, S&P 500, large-cap batch 등 bounded universe로 제한한다. Portfolio / watchlist / Nasdaq-100 source는 injected loader boundary로 열려 있으며, 저장 시 `universe_scope`로 구분한다.
 - Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, `app/jobs/overview_actions.py` facade를 거쳐 ingestion job wrapper로 DB에 저장한 뒤 service read model로 읽는다.
 - Macro calendar collector는 official BLS / BEA / Census / ISM / Treasury schedules를 사용할 수 있다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
 - Treasury auction rows are fixed-income calendar context and stay in the same Events table with `event_family=fixed_income`; they are not trade signals or monitoring triggers.
+- Market-structure rows use official source evidence for holidays, early closes, options expiration, and Russell reconstitution context. They are schedule-density background and are not validation gates, trading signals, monitoring signals, or automated actions.
+- `build_events_workbench_payload()` owns the React-ready Events brief, command boundary, rails, trust review, calendar day buckets, weekly density, and evidence rows. React filters and hover interactions are display-only over that payload.
 
 ## Overview futures monitor 흐름
 

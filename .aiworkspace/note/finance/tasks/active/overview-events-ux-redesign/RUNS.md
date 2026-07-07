@@ -74,3 +74,12 @@
 - 2026-07-07: 9차 QA - scaffold / refresh dispatch / filter-calendar-trust-evidence focused tests, 3 tests - PASS.
 - 2026-07-07: 9차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
 - 2026-07-07: 9차 QA - `git diff --check` - PASS.
+- 2026-07-07: 10차 Browser QA - existing `:8501` server rendered legacy Events only, so current code was verified on fresh `:8502` Streamlit server.
+- 2026-07-07: 10차 Browser QA desktop - `http://localhost:8502/?overview_tab=events` PASS; React iframe rendered, brief / refresh boundary / trust review / calendar evidence / raw evidence / fallback tabs present. Screenshot: `browser-qa-events-react-workbench-phase10.png` (generated, uncommitted).
+- 2026-07-07: 10차 Browser QA mobile - 390px viewport PASS; React iframe rendered, type/source filters present, day tooltip displayed as `grid` on hover, Market Structure / Official filter interaction worked, density section remained visible. Screenshot: `browser-qa-events-react-workbench-mobile-phase10.png` (generated, uncommitted).
+- 2026-07-07: 10차 QA - `MarketIntelligenceEventCalendarContractTests`, 28 tests - PASS.
+- 2026-07-07: 10차 QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: 10차 QA - `OverviewAutomationContractTests`, 154 tests - PASS.
+- 2026-07-07: 10차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py finance/data/market_intelligence.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 10차 QA - final `npm install` / `npm run build` for `events_workbench` - PASS with unchanged `index-BTbfZ49w.css` / `index-BfCDl3_6.js`; generated `node_modules` removed.
+- 2026-07-07: 10차 QA - `git diff --check` - PASS.

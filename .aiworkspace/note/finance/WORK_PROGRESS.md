@@ -49,6 +49,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - React workbench에 type/source-state display filters, filtered event rails, trust sections, hoverable calendar day buckets, weekly density bars, and collapsed raw evidence appendix를 추가했다.
   - Calendar / density는 일정 밀도와 stale/review 상태 근거만 보여주며 신호나 action으로 해석하지 않는다.
   - 다음 차수는 10차 final docs sync / Browser QA / commit hygiene closeout이다.
+- Overview Events React workbench 10차 closeout 2026-07-07:
+  - Project Map, Data Flow Map, Overview Market Intelligence runbook에 Events React workbench ownership, service payload boundary, refresh command split, and QA procedure를 반영했다.
+  - Final QA passed: Events/event calendar contract classes, OverviewAutomationContractTests, py_compile, React build, diff check, desktop/mobile Browser QA on `localhost:8502`.
+  - Browser QA screenshots are local generated artifacts and remain uncommitted.
 - Overview Market Movers Ticker Change Repair 2026-07-07:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-ticker-change-repair-20260707/`에서 1차~5차를 완료했다.
   - `market_symbol_alias` candidate / active alias store, Market Movers `티커 변경 복구 적용` action, and intraday `quote_symbol` alias lookup were added.

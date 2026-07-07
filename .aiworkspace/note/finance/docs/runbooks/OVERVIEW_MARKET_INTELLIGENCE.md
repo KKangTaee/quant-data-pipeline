@@ -148,18 +148,16 @@ http://localhost:8501
    - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
 
 9. `Workspace > Overview > Events`
-   - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
-   - `Window`, `Source Type`, `Validation`, `Importance` filter로 캘린더 범위와 source quality를 좁힌다.
-   - 상단 summary strip에서 next event, this week, next 30D, needs review counts를 먼저 확인한다.
-   - source lane의 FOMC / Earnings / Macro mini card에서 row count, latest collection, review count를 확인한다.
-   - `Refresh` popover에서 FOMC / Earnings / Macro refresh button을 실행한다.
-   - `Agenda` 탭에서 upcoming / needs review / high impact row를 먼저 확인한다.
-   - `Calendar` 탭에서 월별 calendar grid와 event type별 marker를 확인한다.
-   - `Quality` 탭에서 source / validation issue와 next action을 확인한다.
-   - `Raw` 탭에서 DB row-level detail을 확인한다.
-   - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
-   - `Importance`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
-   - Overview의 refresh buttons는 `app/jobs/overview_actions.py` facade를 통해 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
+   - React `다가오는 시장 이벤트 브리프` workbench가 available이면 next event, today / this week / next 30D counts, official vs provider-estimate counts, stale estimate count, and context-only boundary를 먼저 확인한다.
+   - `화면 / 수집 갱신` command band에서 `화면 새로고침`은 stored DB rows를 다시 읽고, FOMC / Macro / Market Structure / Earnings refresh는 `app/jobs/overview_actions.py` facade를 통해 provider/job collection을 실행한다.
+   - React type filter는 `All`, `FOMC`, `Macro`, `Earnings`, `Market Structure`를 display-only로 좁힌다. Source-state filter는 `All`, `Review`, `Official`, `Estimate`를 display-only로 좁힌다.
+   - Event rails는 `Recent major`, `Today`, `This Week`, `Next 30D`, `Later` 순서로 읽는다. Badge는 official / provider estimate / cross-checked / stale / not confirmed 같은 source-state를 구분한다.
+   - `자료 신뢰 / 추정 일정 확인`에서 stale estimates, not confirmed, estimate only, conflict sections를 확인한다. Earnings provider estimate는 official macro/FOMC/market-structure row와 다르게 읽는다.
+   - `그래프로 보는 일정 근거` calendar day buckets와 weekly density bars는 날짜별 event count, major title, stale/review count, family mix를 보여준다. Hover tooltip은 일정 밀도와 자료 상태 근거이며 예측/신호가 아니다.
+   - `원본 / 상세 근거`는 collapsed appendix다. 펼치면 Source URL, Source Authority, Collected At 등 service-provided evidence rows를 확인한다.
+   - React build가 없으면 기존 Streamlit summary/source lane과 `Agenda`, `Calendar`, `Quality`, `Raw` tabs가 fallback으로 남는다.
+   - 하단 Streamlit detail filters인 `Window`, `Source Type`, `Validation`, `Importance`로 캘린더 범위와 source quality를 더 좁힐 수 있다.
+   - Overview Events는 UI render 중 직접 외부 source를 scraping하지 않는다. External source fetch는 ingestion job wrapper가 DB에 저장한 뒤 service read model이 읽는다.
 
 10. Data Health ownership
    - `Data Health`는 V22부터 `Workspace > Overview` top-level tab이 아니다.
@@ -308,11 +306,11 @@ PY
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
-- Overview Events displays summary cards, source mini cards, refresh popover, and `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters.
-- Overview Events read model includes `Days Until`, `Importance`, quality / validation fields, and source status summaries; FOMC / macro rows are `High`, earnings rows are `Medium`, and rows with source / validation action show `Needs Review`.
-- Overview Events calendar is a month grid with event type markers; agenda and quality views stay available for list/detail inspection.
-- Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
-- Overview Events `Latest Collection` updates after a successful collector run.
+- Overview Events starts with the React workbench when the component build exists: brief, command boundary, local display filters, event rails, trust review, calendar day buckets, weekly density, and collapsed raw evidence appendix.
+- Overview Events read model includes `Days Until`, `Importance`, taxonomy, quality / validation fields, source status summaries, and workbench payload sections; FOMC / macro / fixed-income rows are high-context official rows, earnings rows remain estimates until confirmed, and rows with source / validation action show `Needs Review`.
+- Overview Events calendar/density visuals show schedule clustering and stale/review evidence only. They do not create validation gates, trade signals, monitoring signals, or automated actions.
+- Overview Events keeps existing Streamlit `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters as fallback and lower evidence sections.
+- Overview Events `Latest Collection` / freshness updates after a successful collector run.
 - Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: phase / headline / summary, freshness, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, refresh / reload actions, context-only boundary, CNN / AAII cross-read, recent range percentile / min-max, divergence axes, service-owned analysis steps, driver lanes, component explanations, CNN component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored row evidence.
 - Overview Sentiment keeps Python services as owner of DB reads, refresh actions, and interpretation text. React only displays and dispatches the existing refresh / reload events, and the fallback Streamlit detail sections remain available when the React build is missing.
 - Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Operations > System / Data Health` for detailed operational diagnostics.
