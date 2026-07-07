@@ -725,6 +725,48 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("_render_strict_preset_status_note(vss_compare_preset", source)
         self.assertIn("_render_strict_preset_status_note(qvss_compare_preset", source)
 
+    def test_strict_ui_exposes_pit_monthly_snapshot_universe_contract(self) -> None:
+        from app.web import backtest_common as common
+        from app.web.backtest_compare.page import _resolve_saved_portfolio_dynamic_inputs
+
+        self.assertEqual(common.PIT_MONTHLY_SNAPSHOT_UNIVERSE, "pit_monthly_snapshot")
+        self.assertEqual(
+            common.STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS["PIT Monthly Snapshot Universe"],
+            common.PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+        )
+        self.assertIn("PIT Monthly Snapshot", common.STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY)
+        self.assertEqual(
+            common._universe_contract_value_to_label(common.PIT_MONTHLY_SNAPSHOT_UNIVERSE),
+            "PIT Monthly Snapshot Universe",
+        )
+
+        candidate_tickers, target_size = common._resolve_strict_dynamic_universe_inputs(
+            tickers=["AAA", "BBB"],
+            preset_name="US Statement Coverage 300",
+            universe_contract=common.PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+            statement_freq="annual",
+        )
+        self.assertEqual(candidate_tickers, [])
+        self.assertEqual(target_size, 300)
+
+        run_lines = common._build_prefill_summary_lines(
+            {
+                "strategy_key": "quality_snapshot_strict_annual",
+                "universe_contract": common.PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+            },
+        )
+        self.assertIn("Universe Contract: `PIT Monthly Snapshot Universe`", run_lines)
+
+        replay_params = _resolve_saved_portfolio_dynamic_inputs(
+            strategy_name="Quality Snapshot (Strict Annual)",
+            override={
+                "tickers": ["AAA", "BBB"],
+                "preset_name": "US Statement Coverage 500",
+                "universe_contract": common.PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+            },
+        )
+        self.assertEqual(replay_params["dynamic_target_size"], 500)
+
     def test_price_freshness_preflight_model_builds_react_payload(self) -> None:
         from app.web.backtest_common import build_strict_price_freshness_preflight_model
 

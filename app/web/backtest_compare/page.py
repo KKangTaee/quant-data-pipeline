@@ -4191,6 +4191,19 @@ def _resolve_saved_portfolio_dynamic_inputs(
 ) -> dict[str, Any]:
     params = dict(override)
     universe_contract = params.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
+    if universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        tickers = list(params.get("tickers") or [])
+        preset_name = params.get("preset_name")
+        statement_freq = "quarterly" if "Quarterly Prototype" in strategy_name else "annual"
+        _, dynamic_target_size = _resolve_strict_dynamic_universe_inputs(
+            tickers=tickers,
+            preset_name=preset_name,
+            universe_contract=universe_contract,
+            statement_freq=statement_freq,
+        )
+        params["dynamic_candidate_tickers"] = []
+        params["dynamic_target_size"] = dynamic_target_size
+        return params
     if universe_contract != HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         return params
 
@@ -4877,7 +4890,7 @@ def _render_strategy_compare_workspace() -> None:
                         options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
                         index=0,
                         key="compare_qss_universe_contract",
-                        help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict compare에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
                     qss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qss_compare_contract_label]
                     qss_dynamic_candidate_tickers, qss_dynamic_target_size = _render_strict_annual_universe_contract_note(
@@ -5049,7 +5062,7 @@ def _render_strategy_compare_workspace() -> None:
                         options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
                         index=0,
                         key="compare_qsqp_universe_contract",
-                        help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
                     qsqp_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qsqp_compare_contract_label]
                     qsqp_dynamic_candidate_tickers, qsqp_dynamic_target_size = _render_strict_dynamic_universe_contract_note(
@@ -5166,7 +5179,7 @@ def _render_strategy_compare_workspace() -> None:
                         options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
                         index=0,
                         key="compare_vss_universe_contract",
-                        help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict compare에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
                     vss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[vss_compare_contract_label]
                     vss_dynamic_candidate_tickers, vss_dynamic_target_size = _render_strict_annual_universe_contract_note(
@@ -5338,7 +5351,7 @@ def _render_strategy_compare_workspace() -> None:
                         options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
                         index=0,
                         key="compare_vsqp_universe_contract",
-                        help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
                     vsqp_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[vsqp_compare_contract_label]
                     vsqp_dynamic_candidate_tickers, vsqp_dynamic_target_size = _render_strict_dynamic_universe_contract_note(
@@ -5455,7 +5468,7 @@ def _render_strategy_compare_workspace() -> None:
                         options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
                         index=0,
                         key="compare_qvss_universe_contract",
-                        help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict compare에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
                     qvss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qvss_compare_contract_label]
                     qvss_dynamic_candidate_tickers, qvss_dynamic_target_size = _render_strict_annual_universe_contract_note(
@@ -5633,7 +5646,7 @@ def _render_strategy_compare_workspace() -> None:
                         options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
                         index=0,
                         key="compare_qvqp_universe_contract",
-                        help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        help=STRICT_UNIVERSE_CONTRACT_HELP,
                     )
                     qvqp_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qvqp_compare_contract_label]
                     qvqp_dynamic_candidate_tickers, qvqp_dynamic_target_size = _render_strict_dynamic_universe_contract_note(

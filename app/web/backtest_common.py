@@ -338,10 +338,21 @@ BACKTEST_PANEL_OPTIONS = list(BACKTEST_STAGE_OPTIONS) + [
 BACKTEST_WORKFLOW_PANEL_OPTIONS = list(BACKTEST_STAGE_OPTIONS)
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
+PIT_MONTHLY_SNAPSHOT_UNIVERSE = "pit_monthly_snapshot"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
     "Static Managed Research Universe": STATIC_MANAGED_RESEARCH_UNIVERSE,
     "Historical Dynamic PIT Universe": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+    "PIT Monthly Snapshot Universe": PIT_MONTHLY_SNAPSHOT_UNIVERSE,
 }
+STRICT_UNIVERSE_CONTRACT_HELP = (
+    "Static은 현재 managed preset을 실행 기간 동안 고정합니다. "
+    "Historical Dynamic PIT는 선택한 candidate pool에서 리밸런싱 날짜별 membership을 즉석 근사 계산합니다. "
+    "PIT Monthly Snapshot은 사전에 저장된 월말 universe snapshot을 읽습니다."
+)
+STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY = (
+    "Universe Contract: Static은 현재 Base Universe 고정, Historical Dynamic PIT는 실행 중 근사 재계산, "
+    "PIT Monthly Snapshot은 사전 저장된 월말 snapshot 사용."
+)
 STRICT_BENCHMARK_CONTRACT_LABELS = {
     "Ticker Benchmark": STRICT_BENCHMARK_CONTRACT_TICKER,
     "Candidate Universe Equal-Weight": STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
@@ -1492,10 +1503,12 @@ def _resolve_strict_dynamic_universe_inputs(
     universe_contract: str,
     statement_freq: str = "annual",
 ) -> tuple[list[str], int | None]:
+    target_size = STRICT_ANNUAL_MANAGED_PRESET_SPECS.get(preset_name or "", len(tickers))
+    if universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        return [], int(target_size)
     if universe_contract != HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         return [], None
 
-    target_size = STRICT_ANNUAL_MANAGED_PRESET_SPECS.get(preset_name or "", len(tickers))
     pool_size = min(
         STRICT_ANNUAL_DYNAMIC_BACKFILL_MAX_POOL_SIZE,
         max(int(target_size), int(target_size) * 2),
@@ -1532,6 +1545,7 @@ def _render_strict_dynamic_universe_contract_note(
         universe_contract=universe_contract,
         statement_freq=statement_freq,
     )
+    st.caption(STRICT_UNIVERSE_CONTRACT_MODE_SUMMARY)
 
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         freq_label = str(statement_freq).strip().lower()
@@ -1549,6 +1563,16 @@ def _render_strict_dynamic_universe_contract_note(
             f"Dynamic candidate pool: `{len(dynamic_candidate_tickers)}` symbols | "
             f"target membership: `{dynamic_target_size}` | "
             f"현재는 `{freq_label}` strict family first pass이며, 선택한 preset/manual candidate pool을 기준으로 membership를 다시 계산합니다."
+        )
+    elif universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        freq_label = str(statement_freq).strip().lower()
+        st.info(
+            "PIT Monthly Snapshot Universe mode입니다. 현재 preset Top-N을 과거 전체 기간에 고정하지 않고, "
+            "사전에 저장된 월말 universe snapshot을 리밸런싱 날짜별로 읽습니다."
+        )
+        st.caption(
+            f"Snapshot target membership: `{dynamic_target_size}` | statement family: `{freq_label}` | "
+            "월말 snapshot 테이블이 먼저 생성되어 있어야 실행할 수 있으며, V1은 DB 가격과 latest-known statement shares 기반 근사 PIT입니다."
         )
 
     return dynamic_candidate_tickers, dynamic_target_size
@@ -3669,6 +3693,8 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
     contract = payload.get("universe_contract")
     if contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         lines.append("Universe Contract: `Historical Dynamic PIT Universe`")
+    elif contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
+        lines.append("Universe Contract: `PIT Monthly Snapshot Universe`")
     elif contract == STATIC_MANAGED_RESEARCH_UNIVERSE:
         lines.append("Universe Contract: `Static Managed Research Universe`")
 

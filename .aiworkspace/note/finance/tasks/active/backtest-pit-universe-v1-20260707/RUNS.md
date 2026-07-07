@@ -25,6 +25,15 @@ Command logs for this task.
 ## 3차 Strict Runner Wiring
 
 - RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_runner_wires_pit_membership_to_statement_shadow_samples`
-  - Expected failure: only the Quality shared runner passed `pit_membership_snapshots`; Value and Quality+Value runners were still dynamic-only.
+- Expected failure: only the Quality shared runner passed `pit_membership_snapshots`; Value and Quality+Value runners were still dynamic-only.
 - GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_membership_snapshots_map_to_rebalance_dates_by_previous_snapshot tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_runner_resolves_pit_monthly_universe_inputs_from_loader tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_runner_wires_pit_membership_to_statement_shadow_samples`
 - Compile: `.venv/bin/python -m py_compile finance/sample.py app/runtime/backtest/runners/strict_factor.py tests/test_service_contracts.py`
+
+## 4차 UI / Data Trust Contract Surface
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_ui_exposes_pit_monthly_snapshot_universe_contract`
+  - Expected failure: Backtest UI common contract did not expose `PIT_MONTHLY_SNAPSHOT_UNIVERSE`.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_ui_exposes_pit_monthly_snapshot_universe_contract tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_forms_keep_guidance_inside_form_surface tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_portfolio_mix_builder_remains_streamlit_owned_with_strict_preset_copy`
+- Compile: `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py app/web/backtest_compare/page.py tests/test_service_contracts.py`
+- Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8512 --server.headless true --server.runOnSave false --server.fileWatcherType none`; verified Backtest > Quality > Advanced Inputs shows the three Universe Contract options and the always-visible PIT Monthly summary.
+  - Screenshot artifact: `backtest-pit-monthly-universe-ui-qa.png` (generated, not committed).
