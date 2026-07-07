@@ -14387,6 +14387,70 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                         "current_reading": "지수 추세: 지수 자체의 추세가 강합니다.",
                     }
                 ],
+                "range_context": [
+                    {
+                        "series": "CNN Fear & Greed",
+                        "latest_value": 54.7,
+                        "sample_count": 40,
+                        "min_value": 22.0,
+                        "max_value": 78.0,
+                        "median_value": 51.0,
+                        "percentile": 62.5,
+                        "position_label": "중간권",
+                        "tone": "neutral",
+                        "detail": "CNN Fear & Greed 현재값 54.7은 최근 40개 관측치 중 62.5 percentile입니다.",
+                    },
+                    {
+                        "series": "AAII Bearish",
+                        "latest_value": 37.0,
+                        "sample_count": 40,
+                        "min_value": 18.0,
+                        "max_value": 52.0,
+                        "median_value": 31.0,
+                        "percentile": 76.0,
+                        "position_label": "높은 편",
+                        "tone": "warning",
+                        "detail": "AAII Bearish 현재값 37.0은 최근 40개 관측치 중 76.0 percentile입니다.",
+                    },
+                ],
+                "divergence": {
+                    "status": "뚜렷한 엇갈림",
+                    "tone": "warning",
+                    "headline_direction": "neutral",
+                    "component_direction": "mixed",
+                    "aaii_direction": "fear",
+                    "summary": "CNN 헤드라인, 구성요소, AAII 설문이 서로 다르게 읽힙니다.",
+                    "items": [
+                        {
+                            "label": "CNN headline",
+                            "direction": "neutral",
+                            "direction_label": "중립",
+                            "detail": "CNN Fear & Greed headline은 중립으로 읽힙니다.",
+                            "tone": "neutral",
+                        },
+                        {
+                            "label": "AAII survey",
+                            "direction": "fear",
+                            "direction_label": "공포",
+                            "detail": "AAII bearish와 bull-bear spread는 공포로 읽힙니다.",
+                            "tone": "warning",
+                        },
+                    ],
+                },
+                "component_history": [
+                    {
+                        "series": "Market Momentum",
+                        "label_ko": "지수 추세",
+                        "latest": 93.8,
+                        "latest_date": "2026-06-04",
+                        "previous": 84.0,
+                        "previous_date": "2026-06-03",
+                        "change": 9.8,
+                        "change_direction": "up",
+                        "tone": "positive",
+                        "detail": "지수 추세는 직전 84.0에서 93.8로 +9.8 움직였습니다.",
+                    }
+                ],
                 "next_checks": [
                     {
                         "target": "Market Movers breadth",
@@ -14449,6 +14513,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["drivers"]["summary"]["greed_count"], 1)
         self.assertEqual(payload["drivers"]["lanes"][0]["key"], "greed")
         self.assertEqual(payload["drivers"]["lanes"][0]["items"][0]["current_reading"], "지수 추세: 지수 자체의 추세가 강합니다.")
+        self.assertEqual(payload["interpretation"]["range_context"][0]["series"], "CNN Fear & Greed")
+        self.assertEqual(payload["interpretation"]["range_context"][0]["percentile"], 62.5)
+        self.assertEqual(payload["interpretation"]["divergence"]["status"], "뚜렷한 엇갈림")
+        self.assertEqual(payload["interpretation"]["divergence"]["items"][1]["direction_label"], "공포")
+        self.assertEqual(payload["interpretation"]["component_history"][0]["series"], "Market Momentum")
+        self.assertEqual(payload["interpretation"]["component_history"][0]["change_direction"], "up")
         self.assertEqual(payload["next_checks"][0]["target"], "Market Movers breadth")
         self.assertEqual(payload["charts"]["history"]["series"][0]["series"], "CNN Fear & Greed")
         self.assertEqual(payload["charts"]["components"]["items"][0]["series"], "Market Momentum")

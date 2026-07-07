@@ -330,6 +330,80 @@ def _sentiment_component_chart_payload(component_rows: list[dict[str, Any]], ana
     return {"title": "CNN 구성요소", "basis": "CNN Fear & Greed 7 component scores", "items": items}
 
 
+def _sentiment_range_context_payload(analysis: dict[str, Any]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for item in list(analysis.get("range_context") or []):
+        if not isinstance(item, dict):
+            continue
+        items.append(
+            {
+                "series_id": _display_text(item.get("series_id"), ""),
+                "series": _display_text(item.get("series")),
+                "latest_value": _json_safe_value(item.get("latest_value")),
+                "sample_count": int(item.get("sample_count") or 0),
+                "min_value": _json_safe_value(item.get("min_value")),
+                "max_value": _json_safe_value(item.get("max_value")),
+                "median_value": _json_safe_value(item.get("median_value")),
+                "percentile": _json_safe_value(item.get("percentile")),
+                "position_label": _display_text(item.get("position_label"), ""),
+                "tone": _sentiment_tone(item.get("tone") or "neutral"),
+                "detail": _display_text(item.get("detail"), ""),
+            }
+        )
+    return items
+
+
+def _sentiment_divergence_payload(analysis: dict[str, Any]) -> dict[str, Any]:
+    divergence = analysis.get("divergence")
+    if not isinstance(divergence, dict):
+        divergence = {}
+    items: list[dict[str, str]] = []
+    for item in list(divergence.get("items") or []):
+        if not isinstance(item, dict):
+            continue
+        items.append(
+            {
+                "label": _display_text(item.get("label")),
+                "direction": _display_text(item.get("direction"), ""),
+                "direction_label": _display_text(item.get("direction_label"), ""),
+                "detail": _display_text(item.get("detail"), ""),
+                "tone": _sentiment_tone(item.get("tone") or "neutral"),
+            }
+        )
+    return {
+        "status": _display_text(divergence.get("status"), ""),
+        "tone": _sentiment_tone(divergence.get("tone") or "neutral"),
+        "headline_direction": _display_text(divergence.get("headline_direction"), ""),
+        "component_direction": _display_text(divergence.get("component_direction"), ""),
+        "aaii_direction": _display_text(divergence.get("aaii_direction"), ""),
+        "summary": _display_text(divergence.get("summary"), ""),
+        "items": items,
+    }
+
+
+def _sentiment_component_history_payload(analysis: dict[str, Any]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for item in list(analysis.get("component_history") or []):
+        if not isinstance(item, dict):
+            continue
+        items.append(
+            {
+                "series_id": _display_text(item.get("series_id"), ""),
+                "series": _display_text(item.get("series")),
+                "label_ko": _display_text(item.get("label_ko") or item.get("series")),
+                "latest": _json_safe_value(item.get("latest")),
+                "latest_date": _display_text(item.get("latest_date"), ""),
+                "previous": _json_safe_value(item.get("previous")),
+                "previous_date": _display_text(item.get("previous_date"), ""),
+                "change": _json_safe_value(item.get("change")),
+                "change_direction": _display_text(item.get("change_direction"), "flat"),
+                "tone": _sentiment_tone(item.get("tone") or "neutral"),
+                "detail": _display_text(item.get("detail"), ""),
+            }
+        )
+    return items
+
+
 def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[str, Any]:
     """Adapt the service-owned sentiment snapshot into a serializable React display payload."""
     coverage = dict(snapshot.get("coverage") or {})
@@ -397,6 +471,11 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
         "drivers": {
             "summary": dict(analysis.get("driver_summary") or {}),
             "lanes": _sentiment_driver_lanes(analysis),
+        },
+        "interpretation": {
+            "range_context": _sentiment_range_context_payload(analysis),
+            "divergence": _sentiment_divergence_payload(analysis),
+            "component_history": _sentiment_component_history_payload(analysis),
         },
         "component_explanations": [
             dict(item) for item in list(analysis.get("component_explanations") or []) if isinstance(item, dict)

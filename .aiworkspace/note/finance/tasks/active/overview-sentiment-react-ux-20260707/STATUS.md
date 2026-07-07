@@ -19,3 +19,4 @@
 - Follow-up status: complete. Removed the default next-check card surface from the React workbench and hid next-check analysis steps from the first-pass reading flow. Added history chart y-axis labels, hover guide, focus dot, and tooltip with date / series / value / source.
 - Follow-up QA: focused RED/GREEN UI contract tests, Vite production build, Browser QA hover check, screenshot inspection, compile, focused regression, and `git diff --check` passed.
 - Feature expansion 1차 status: complete. Extended the service read model with recent range context, CNN / AAII divergence context, and CNN component history change context. React/UI display is not changed in this phase.
+- Feature expansion 2차 status: complete. Added a tested React payload `interpretation` contract carrying service-owned `range_context`, `divergence`, and `component_history` without adding frontend-generated interpretation copy.

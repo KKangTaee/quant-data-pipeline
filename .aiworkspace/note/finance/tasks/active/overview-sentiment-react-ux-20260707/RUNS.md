@@ -101,3 +101,9 @@
   - Result: `Ran 2 tests ... OK`.
 - Feature expansion 1차 compile / hygiene: `.venv/bin/python -m py_compile app/services/overview/sentiment.py finance/loaders/sentiment.py`; `git diff --check`
   - Result: compile exit 0, diff check exit 0.
+- Feature expansion 2차 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: failed with `KeyError: 'interpretation'`, as expected before wiring the new service-owned context fields into the React payload.
+- Feature expansion 2차 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 1 test ... OK`.
+- Feature expansion 2차 focused regression / compile: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/web/overview/sentiment_helpers.py`
+  - Result: focused tests `Ran 2 tests ... OK`; compile exit 0.
