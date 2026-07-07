@@ -180,24 +180,31 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertTrue(clean_status["can_enter_practical_validation"])
 
     def test_strict_preset_basis_model_names_current_dynamic_source(self) -> None:
-        from app.web.backtest_common import build_strict_preset_basis_model
+        from app.web.backtest_common import build_strict_preset_basis_model, strict_preset_display_label
 
         model = build_strict_preset_basis_model(
             "US Statement Coverage 100",
             ["AAPL", "MSFT", "AAPL"],
         )
 
+        self.assertEqual(strict_preset_display_label("US Statement Coverage 100"), "US Base Universe 100")
+        self.assertEqual(model["display_name"], "US Base Universe 100")
         self.assertEqual(model["requested_limit"], 100)
         self.assertEqual(model["actual_count"], 2)
         self.assertIn("finance_meta.nyse_asset_profile", model["source_basis"])
         self.assertIn("market_cap_desc", model["source_basis"])
         self.assertIn("S&P 500", model["not_basis"])
+        self.assertEqual(model["universe_layer"], "base_universe")
+        self.assertFalse(model["is_runnable_coverage_snapshot"])
         self.assertFalse(model["is_static_sp500_membership"])
         self.assertTrue(model["has_shortfall"])
-        self.assertEqual([item["label"] for item in model["display_items"]], ["현재 기준", "주의", "업데이트 방법"])
+        self.assertEqual(
+            [item["label"] for item in model["display_items"]],
+            ["Base Universe 기준", "실행 가능 Coverage 아님", "후보군 최신화", "실행 전 확인"],
+        )
         self.assertEqual(model["preset_tone"], "warning")
         self.assertIn("asset profile", model["display_items"][0]["value"])
-        self.assertIn("S&P 500 최신 구성원", model["display_items"][1]["value"])
+        self.assertIn("runnable coverage", model["display_items"][1]["value"])
         self.assertIn("Ingestion", model["display_items"][2]["value"])
 
     def test_strict_preset_basis_model_flags_staged_wide_fallback(self) -> None:
@@ -212,6 +219,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(model["actual_count"], 300)
         self.assertTrue(model["is_staged_operator_preset"])
         self.assertTrue(model["has_shortfall"])
+        self.assertIn("Base Universe target", model["operator_note"])
         self.assertIn("300", model["operator_note"])
         self.assertEqual(model["preset_tone"], "warning")
         self.assertEqual(model["preset_role"], "staged_operator")
@@ -227,13 +235,15 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(model["preset_role"], "public_default")
         self.assertEqual(model["preset_tone"], "info")
         self.assertFalse(model["has_shortfall"])
-        self.assertIn("공개 기본값", model["role_note"])
+        self.assertIn("공개 기본 Base Universe", model["role_note"])
 
     def test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms(self) -> None:
         single_source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
         compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
 
         self.assertIn("_render_strict_preset_status_note(preset_name, tickers)", single_source)
+        self.assertIn("format_func=strict_preset_display_label", single_source)
+        self.assertIn("format_func=strict_preset_display_label", compare_source)
         self.assertIn("_render_strict_preset_status_note(qss_compare_preset", compare_source)
         self.assertIn("_render_strict_preset_status_note(vss_compare_preset", compare_source)
 

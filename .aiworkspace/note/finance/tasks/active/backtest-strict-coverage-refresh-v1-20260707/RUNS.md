@@ -1,0 +1,6 @@
+# Runs
+
+## 2026-07-07
+
+- GREEN: `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py app/web/backtest_compare/page.py tests/test_service_contracts.py`
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_preset_basis_model_names_current_dynamic_source tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_preset_basis_model_flags_staged_wide_fallback tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_preset_basis_model_marks_public_default_cleanly tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms`

@@ -386,6 +386,12 @@ STRICT_ANNUAL_MANAGED_PRESET_SPECS = {
     "US Statement Coverage 500": 500,
     "US Statement Coverage 1000": 1000,
 }
+STRICT_ANNUAL_MANAGED_PRESET_DISPLAY_LABELS = {
+    "US Statement Coverage 100": "US Base Universe 100",
+    "US Statement Coverage 300": "US Base Universe 300",
+    "US Statement Coverage 500": "US Base Universe 500",
+    "US Statement Coverage 1000": "US Base Universe 1000",
+}
 STRICT_ANNUAL_SINGLE_DEFAULT_PRESET = "US Statement Coverage 300"
 STRICT_ANNUAL_COMPARE_DEFAULT_PRESET = "US Statement Coverage 100"
 STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET = "US Statement Coverage 100"
@@ -444,6 +450,11 @@ STRICT_PRESET_NOT_BASIS = (
 STRICT_PRESET_STAGED_OPERATOR_PRESETS = {"US Statement Coverage 500", "US Statement Coverage 1000"}
 
 
+def strict_preset_display_label(preset_name: str | None) -> str:
+    name = str(preset_name or "").strip()
+    return STRICT_ANNUAL_MANAGED_PRESET_DISPLAY_LABELS.get(name, name or "Manual")
+
+
 def _unique_upper_tickers(tickers: list[str] | tuple[str, ...] | None) -> list[str]:
     seen: dict[str, None] = {}
     for ticker in tickers or []:
@@ -457,8 +468,9 @@ def build_strict_preset_basis_model(
     preset_name: str | None,
     tickers: list[str] | tuple[str, ...] | None,
 ) -> dict[str, Any]:
-    """Describe what a strict managed preset represents without querying UI state."""
+    """Describe the strict managed base-universe preset without implying runnable coverage."""
     name = str(preset_name or "").strip()
+    display_name = strict_preset_display_label(name)
     unique_tickers = _unique_upper_tickers(tickers)
     requested_limit = STRICT_ANNUAL_MANAGED_PRESET_SPECS.get(name)
     actual_count = len(unique_tickers)
@@ -469,35 +481,38 @@ def build_strict_preset_basis_model(
 
     if not is_managed:
         source_basis = "manual/static smoke preset"
-        operator_note = "Managed coverage ladder가 아니라 빠른 smoke run용 고정 목록입니다."
+        operator_note = "Managed base-universe ladder가 아니라 빠른 smoke run용 고정 목록입니다."
     elif has_shortfall:
         source_basis = STRICT_PRESET_BASIS_SOURCE
         operator_note = (
-            f"Target {requested_limit}개 중 현재 {actual_count}개만 로드됐습니다. "
+            f"Base Universe target {requested_limit}개 중 현재 {actual_count}개만 로드됐습니다. "
             "asset profile 수집 상태나 fallback 여부를 확인하세요."
         )
     else:
         source_basis = STRICT_PRESET_BASIS_SOURCE
         operator_note = (
-            f"현재 loaded count가 target {requested_limit}과 일치합니다. "
-            "asset profile이 최신화되면 market-cap 순서 기준 구성도 함께 바뀔 수 있습니다."
+            f"현재 Base Universe loaded count가 target {requested_limit}과 일치합니다. "
+            "asset profile이 최신화되면 market-cap 순서 기준 후보군도 함께 바뀔 수 있습니다."
         )
 
     if name == "US Statement Coverage 300":
         preset_role = "public_default"
-        role_note = "현재 strict annual 공개 기본값입니다. coverage depth, runtime, 운영 안정성의 균형을 우선합니다."
+        role_note = (
+            "현재 strict annual 공개 기본 Base Universe입니다. "
+            "실행 가능 coverage는 가격 최신성, statement shadow coverage, liquidity 확인 후 별도로 판정합니다."
+        )
     elif name == "US Statement Coverage 100":
         preset_role = "fast_compare"
-        role_note = "빠른 compare / smoke run용 경량 preset입니다."
+        role_note = "빠른 compare / smoke run용 경량 Base Universe입니다."
     elif is_staged_operator_preset:
         preset_role = "staged_operator"
-        role_note = "확장 검증용 staged operator preset입니다. 공식 public default로 보지 않습니다."
+        role_note = "확장 검증용 staged operator Base Universe입니다. 공식 public default로 보지 않습니다."
     elif name == "Big Tech Strict Trial":
         preset_role = "smoke_trial"
         role_note = "빠른 strict annual smoke check용 고정 trial preset입니다."
     elif is_managed:
         preset_role = "managed_asset_profile"
-        role_note = "US stock asset profile 기반 managed preset입니다."
+        role_note = "US stock asset profile 기반 managed Base Universe입니다."
     else:
         preset_role = "manual_static"
         role_note = operator_note
@@ -511,36 +526,47 @@ def build_strict_preset_basis_model(
 
     display_items = [
         {
-            "label": "현재 기준",
+            "label": "Base Universe 기준",
             "value": (
                 f"finance_meta.nyse_asset_profile의 미국 stock asset profile을 market_cap_desc 순서로 읽고, "
-                f"현재 {actual_count} / Target {target_text}개를 로드했습니다."
+                f"현재 {actual_count} / Target {target_text}개 후보군을 로드했습니다."
                 if is_managed
                 else f"{name or 'Manual'} 고정 목록에서 현재 {actual_count}개를 사용합니다."
             ),
         },
         {
-            "label": "주의",
+            "label": "실행 가능 Coverage 아님",
             "value": (
-                "S&P 500 최신 구성원, index point-in-time membership, fixed official index snapshot 기준이 아닙니다."
+                "이 값은 후보군 크기입니다. 가격 최신성, statement shadow factor coverage, liquidity를 통과한 runnable coverage 보장은 아닙니다."
             ),
         },
         {
-            "label": "업데이트 방법",
+            "label": "후보군 최신화",
             "value": (
                 "Ingestion에서 asset profile을 다시 수집하고 Streamlit session/cache를 새로 열면 market_cap_desc 순서가 preset에 반영됩니다."
                 if is_managed
-                else "고정 smoke preset은 managed coverage ladder 최신화 대상이 아닙니다."
+                else "고정 smoke preset은 managed base-universe ladder 최신화 대상이 아닙니다."
+            ),
+        },
+        {
+            "label": "실행 전 확인",
+            "value": (
+                "백테스트 실행 전 Price Freshness Preflight와 Statement Shadow Coverage Preview로 runnable coverage를 따로 확인합니다."
+                if is_managed
+                else "수동 목록도 가격과 statement shadow coverage를 별도로 확인해야 합니다."
             ),
         },
     ]
 
     return {
         "preset_name": name,
+        "display_name": display_name,
         "requested_limit": int(requested_limit) if requested_limit is not None else None,
         "actual_count": int(actual_count),
         "source_basis": source_basis,
         "not_basis": STRICT_PRESET_NOT_BASIS,
+        "universe_layer": "base_universe",
+        "is_runnable_coverage_snapshot": False,
         "is_managed_asset_profile_preset": bool(is_managed),
         "is_static_sp500_membership": False,
         "is_staged_operator_preset": bool(is_staged_operator_preset),
@@ -551,10 +577,10 @@ def build_strict_preset_basis_model(
         "role_note": role_note,
         "display_items": display_items,
         "refresh_guidance": (
-            "최신화 방향: Ingestion에서 asset profile을 다시 수집하고, Streamlit session/cache를 새로 열면 "
-            "nyse_asset_profile의 market_cap_desc 순서가 preset에 반영됩니다."
+            "Base Universe 최신화 방향: Ingestion에서 asset profile을 다시 수집하고, Streamlit session/cache를 새로 열면 "
+            "nyse_asset_profile의 market_cap_desc 순서가 후보군에 반영됩니다. 실행 가능 coverage는 가격 / statement shadow / liquidity를 다시 점검해야 합니다."
             if is_managed
-            else "고정 smoke preset은 managed coverage ladder 최신화 대상이 아닙니다."
+            else "고정 smoke preset은 managed base-universe ladder 최신화 대상이 아닙니다."
         ),
     }
 
@@ -1433,7 +1459,7 @@ def _render_strict_preset_status_note(
     elif role_note:
         st.caption(role_note)
 
-    st.caption("Preset 기준 요약")
+    st.caption(f"Base Universe 기준 요약 · {model.get('display_name') or model.get('preset_name') or '-'}")
     for item in model.get("display_items") or []:
         st.caption(f"{item.get('label')}: {item.get('value')}")
     operator_note = str(model.get("operator_note") or "")
@@ -1447,13 +1473,13 @@ def _render_strict_preset_status_note(
 def _render_historical_universe_help_popover() -> None:
     _render_inline_help_popover(
         "히스토리컬 백테스트 모집군",
-        "Preset 종목군은 실행 전체 기간 동안 고정됩니다. 종료일 기준으로 stale 종목을 다른 종목으로 교체하지 않습니다. 대신 각 리밸런싱 날짜마다 그 날짜에 가격과 팩터 데이터를 사용할 수 있는 종목만 후보로 평가합니다.",
+        "Base Universe 종목군은 실행 전체 기간 동안 고정됩니다. 종료일 기준으로 stale 종목을 다른 종목으로 교체하지 않습니다. 대신 각 리밸런싱 날짜마다 그 날짜에 가격과 팩터 데이터를 사용할 수 있는 종목만 후보로 평가합니다.",
     )
 
 
 def _render_historical_universe_caption() -> None:
     st.caption(
-        "히스토리컬 모드: preset 종목군은 실행 동안 고정됩니다. "
+        "히스토리컬 모드: Base Universe 종목군은 실행 동안 고정됩니다. "
         "각 리밸런싱 날짜마다 가격과 팩터 데이터를 사용할 수 있는 종목만 후보가 됩니다."
     )
 
@@ -1566,19 +1592,19 @@ def _render_quality_family_guide(current_strategy: str) -> None:
             st.info(
                 "Use `Quality Snapshot (Strict Annual)` when we want the stricter annual statement path. "
                 "It is slower than broad quality, but it now supports wider US stock universes with long history. "
-                "Today the public default stays on `US Statement Coverage 300`; wider presets remain staged operator options."
+                "Today the public default stays on `US Base Universe 300`; wider base-universe presets remain staged operator options."
             )
         elif current_strategy == "value_strict":
             st.info(
                 "Use `Value Snapshot (Strict Annual)` when we want the strict annual valuation family. "
                 "It shares the same annual statement shadow source, but usable history can begin later than quality. "
-                "It currently follows the same managed-universe ladder, with `300` as the main public default."
+                "It currently follows the same managed base-universe ladder, with `300` as the main public default."
             )
         elif current_strategy == "quality_value_strict":
             st.info(
                 "Use `Quality + Value Snapshot (Strict Annual)` when we want a blended strict annual family. "
                 "It keeps the same annual statement shadow source, but combines coverage-first quality inputs with valuation discipline. "
-                "This is the first strict multi-factor public candidate, built on the same `300` default universe."
+                "This is the first strict multi-factor public candidate, built on the same `300` default Base Universe."
             )
 
 

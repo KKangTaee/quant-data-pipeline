@@ -4864,10 +4864,11 @@ def _render_strategy_compare_workspace() -> None:
             if quality_compare_strategy_name == "Quality Snapshot (Strict Annual)" and quality_compare_settings_container is not None:
                 with quality_compare_settings_container:
                     st.markdown("##### Quality Snapshot (Strict Annual)")
-                    st.caption("Portfolio Mix Builder keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                    st.caption("Portfolio Mix Builder keeps the strict annual default lighter with `US Base Universe 100` so multi-strategy runs stay responsive.")
                     qss_compare_preset = st.selectbox(
                         "Strict Annual Quality Preset",
                         options=list(QUALITY_STRICT_PRESETS.keys()),
+                        format_func=strict_preset_display_label,
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_qss_preset",
                     )
@@ -5035,10 +5036,11 @@ def _render_strategy_compare_workspace() -> None:
             if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)" and quality_compare_settings_container is not None:
                 with quality_compare_settings_container:
                     st.markdown("##### Quality Snapshot (Strict Quarterly Prototype)")
-                    st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` to keep quarterly family validation tractable.")
+                    st.caption("Research-only compare path. Default preset stays at `US Base Universe 100` to keep quarterly family validation tractable.")
                     qsqp_compare_preset = st.selectbox(
                         "Strict Quarterly Quality Preset",
                         options=list(QUALITY_STRICT_PRESETS.keys()),
+                        format_func=strict_preset_display_label,
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                         key="compare_qsqp_preset",
                     )
@@ -5151,10 +5153,11 @@ def _render_strategy_compare_workspace() -> None:
             if value_compare_strategy_name == "Value Snapshot (Strict Annual)" and value_compare_settings_container is not None:
                 with value_compare_settings_container:
                     st.markdown("##### Value Snapshot (Strict Annual)")
-                    st.caption("Portfolio Mix Builder keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
+                    st.caption("Portfolio Mix Builder keeps the strict annual value default lighter with `US Base Universe 100` for responsiveness.")
                     vss_compare_preset = st.selectbox(
                         "Strict Annual Value Preset",
                         options=list(VALUE_STRICT_PRESETS.keys()),
+                        format_func=strict_preset_display_label,
                         index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_vss_preset",
                     )
@@ -5322,10 +5325,11 @@ def _render_strategy_compare_workspace() -> None:
             if value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)" and value_compare_settings_container is not None:
                 with value_compare_settings_container:
                     st.markdown("##### Value Snapshot (Strict Quarterly Prototype)")
-                    st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly value history is being validated.")
+                    st.caption("Research-only compare path. Default preset stays at `US Base Universe 100` while quarterly value history is being validated.")
                     vsqp_compare_preset = st.selectbox(
                         "Strict Quarterly Value Preset",
                         options=list(VALUE_STRICT_PRESETS.keys()),
+                        format_func=strict_preset_display_label,
                         index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                         key="compare_vsqp_preset",
                     )
@@ -5438,10 +5442,11 @@ def _render_strategy_compare_workspace() -> None:
             if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)" and quality_value_compare_settings_container is not None:
                 with quality_value_compare_settings_container:
                     st.markdown("##### Quality + Value Snapshot (Strict Annual)")
-                    st.caption("Portfolio Mix Builder keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                    st.caption("Portfolio Mix Builder keeps the strict annual multi-factor default lighter with `US Base Universe 100` so multi-strategy runs stay responsive.")
                     qvss_compare_preset = st.selectbox(
                         "Strict Annual Multi-Factor Preset",
                         options=list(QUALITY_STRICT_PRESETS.keys()),
+                        format_func=strict_preset_display_label,
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_qvss_preset",
                     )
@@ -5615,10 +5620,11 @@ def _render_strategy_compare_workspace() -> None:
             if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)" and quality_value_compare_settings_container is not None:
                 with quality_value_compare_settings_container:
                     st.markdown("##### Quality + Value Snapshot (Strict Quarterly Prototype)")
-                    st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly blended history is being validated.")
+                    st.caption("Research-only compare path. Default preset stays at `US Base Universe 100` while quarterly blended history is being validated.")
                     qvqp_compare_preset = st.selectbox(
                         "Strict Quarterly Multi-Factor Preset",
                         options=list(QUALITY_STRICT_PRESETS.keys()),
+                        format_func=strict_preset_display_label,
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                         key="compare_qvqp_preset",
                     )

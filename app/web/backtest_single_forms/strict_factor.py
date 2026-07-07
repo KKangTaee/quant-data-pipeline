@@ -180,6 +180,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         preset_name = st.selectbox(
             "Preset",
             options=list(QUALITY_STRICT_PRESETS.keys()),
+            format_func=strict_preset_display_label,
             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_SINGLE_DEFAULT_PRESET),
             key="qss_preset",
         )
@@ -429,14 +430,14 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
     with st.expander("Quarterly prototype caveat", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
-            "Phase 7 first pass 이후 `US Statement Coverage 100` 기본 preset은 다시 2016 부근부터 열리지만, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦을 수 있습니다."
+            "Phase 7 first pass 이후 `US Base Universe 100` 기본 preset은 다시 2016 부근부터 열리지만, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦을 수 있습니다."
         )
 
     universe_mode = st.radio(
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="quarterly prototype first pass는 검증 비용을 낮추기 위해 `US Statement Coverage 100`을 기본 preset으로 둡니다.",
+        help="quarterly prototype first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
         key="qsqp_universe_mode",
     )
 
@@ -446,6 +447,7 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
         preset_name = st.selectbox(
             "Preset",
             options=list(QUALITY_STRICT_PRESETS.keys()),
+            format_func=strict_preset_display_label,
             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
             key="qsqp_preset",
         )
@@ -642,7 +644,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
     with st.expander("Quarterly prototype caveat", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
-            "`US Statement Coverage 100` 기본 preset은 검증용 anchor일 뿐이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
+            "`US Base Universe 100` 기본 preset은 검증용 anchor일 뿐이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
         )
     _apply_single_strategy_prefill("value_snapshot_strict_quarterly_prototype")
 
@@ -650,7 +652,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="quarterly strict value prototype first pass는 검증 비용을 낮추기 위해 `US Statement Coverage 100`을 기본 preset으로 둡니다.",
+        help="quarterly strict value prototype first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
         key="vsqp_universe_mode",
     )
 
@@ -660,6 +662,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         preset_name = st.selectbox(
             "Preset",
             options=list(VALUE_STRICT_PRESETS.keys()),
+            format_func=strict_preset_display_label,
             index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
             key="vsqp_preset",
         )
@@ -866,6 +869,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         preset_name = st.selectbox(
             "Preset",
             options=list(VALUE_STRICT_PRESETS.keys()),
+            format_func=strict_preset_display_label,
             index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_SINGLE_DEFAULT_PRESET),
             key="vss_preset",
         )
@@ -1117,7 +1121,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
     with st.expander("Quarterly prototype caveat", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
-            "`US Statement Coverage 100` 기본 preset은 검증 anchor이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
+            "`US Base Universe 100` 기본 preset은 검증 anchor이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
         )
     _apply_single_strategy_prefill("quality_value_snapshot_strict_quarterly_prototype")
 
@@ -1125,7 +1129,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="quarterly strict multi-factor prototype first pass는 검증 비용을 낮추기 위해 `US Statement Coverage 100`을 기본 preset으로 둡니다.",
+        help="quarterly strict multi-factor prototype first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
         key="qvqp_universe_mode",
     )
 
@@ -1135,6 +1139,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         preset_name = st.selectbox(
             "Preset",
             options=list(QUALITY_STRICT_PRESETS.keys()),
+            format_func=strict_preset_display_label,
             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
             key="qvqp_preset",
         )
@@ -1353,6 +1358,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         preset_name = st.selectbox(
             "Preset",
             options=list(QUALITY_STRICT_PRESETS.keys()),
+            format_func=strict_preset_display_label,
             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_SINGLE_DEFAULT_PRESET),
             key="qvss_preset",
         )
