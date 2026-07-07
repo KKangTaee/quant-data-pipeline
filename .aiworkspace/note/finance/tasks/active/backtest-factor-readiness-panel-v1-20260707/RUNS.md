@@ -26,3 +26,13 @@
   - Passed. Streamlit bare-mode and edgar deprecation warnings appeared during imports.
 - Compile: `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py tests/test_service_contracts.py`
   - Passed.
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_window_limit_blocks_more_than_five_years tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_annual_forms_apply_five_year_window_guard -v`
+  - Expected failures confirmed: five-year helper functions did not exist and annual strict forms still defaulted to 2016-01-01.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_window_limit_blocks_more_than_five_years tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_annual_forms_apply_five_year_window_guard -v`
+  - Passed. Streamlit bare-mode and edgar deprecation warnings appeared during imports.
+- Regression: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_annual_forms_use_combined_readiness_panel tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_forms_keep_guidance_inside_form_surface tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_readiness_model_separates_base_price_statement_and_actions tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_readiness_model_marks_ready_when_price_and_statement_pass tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_factor_readiness_panel_react_component_is_ui_only -v`
+  - Passed. Streamlit bare-mode and edgar deprecation warnings appeared during imports.
+- Compile: `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py tests/test_service_contracts.py`
+  - Passed.
+- Diff check: `git diff --check`
+  - Passed.

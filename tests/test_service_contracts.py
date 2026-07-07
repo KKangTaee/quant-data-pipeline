@@ -766,6 +766,46 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertNotIn("_render_strict_price_freshness_preflight(", value_annual_body)
         self.assertNotIn("_render_strict_price_freshness_preflight(", quality_value_annual_body)
 
+    def test_strict_factor_window_limit_blocks_more_than_five_years(self) -> None:
+        from app.web.backtest_common import (
+            _default_strict_factor_start_date,
+            strict_factor_max_start_date,
+            validate_strict_factor_backtest_window,
+        )
+
+        self.assertEqual(strict_factor_max_start_date(date(2026, 7, 7)), date(2021, 7, 7))
+        self.assertEqual(_default_strict_factor_start_date(date(2026, 7, 7)), date(2021, 7, 7))
+        self.assertIsNone(
+            validate_strict_factor_backtest_window(
+                date(2021, 7, 7),
+                date(2026, 7, 7),
+                strategy_label="Quality Snapshot (Strict Annual)",
+            )
+        )
+        error = validate_strict_factor_backtest_window(
+            date(2016, 1, 1),
+            date(2026, 7, 7),
+            strategy_label="Quality Snapshot (Strict Annual)",
+        )
+        self.assertIsNotNone(error)
+        self.assertIn("최대 5년", str(error))
+        self.assertIn("2021-07-07", str(error))
+
+    def test_strict_factor_single_annual_forms_apply_five_year_window_guard(self) -> None:
+        source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+        quality_annual_body = source.split("def _render_quality_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        value_annual_body = source.split("def _render_value_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_value_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        quality_value_annual_body = source.split("def _render_quality_value_snapshot_strict_annual_form", 1)[1]
+
+        for body in (quality_annual_body, value_annual_body, quality_value_annual_body):
+            self.assertIn("_default_strict_factor_start_date()", body)
+            self.assertIn("validate_strict_factor_backtest_window(", body)
+            self.assertNotIn("value=date(2016, 1, 1)", body)
+
     def test_etf_like_single_forms_stay_form_first_without_runtime_wrapper_copy(self) -> None:
         form_paths = [
             Path("app/web/backtest_single_forms/equal_weight.py"),

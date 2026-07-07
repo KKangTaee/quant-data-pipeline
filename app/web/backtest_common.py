@@ -336,6 +336,7 @@ STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 DEFAULT_BACKTEST_END_DATE = date.today()
 CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
 CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
+STRICT_FACTOR_MAX_BACKTEST_YEARS = 5
 BACKTEST_PANEL_OPTIONS = list(BACKTEST_STAGE_OPTIONS) + [
     panel for panel in BACKTEST_LEGACY_PANEL_OPTIONS if panel not in set(BACKTEST_STAGE_OPTIONS)
 ]
@@ -407,6 +408,58 @@ STRICT_ANNUAL_MANAGED_PRESET_DISPLAY_LABELS = {
 STRICT_ANNUAL_SINGLE_DEFAULT_PRESET = "US Statement Coverage 300"
 STRICT_ANNUAL_COMPARE_DEFAULT_PRESET = "US Statement Coverage 100"
 STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET = "US Statement Coverage 100"
+
+
+def _coerce_backtest_date(value: Any | None, fallback: date) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if value is None:
+        return fallback
+    text_value = str(value).strip()
+    if not text_value:
+        return fallback
+    try:
+        return date.fromisoformat(text_value[:10])
+    except ValueError:
+        return fallback
+
+
+def strict_factor_max_start_date(end_value: date | datetime | str | None = None) -> date:
+    end_date = _coerce_backtest_date(end_value, DEFAULT_BACKTEST_END_DATE)
+    try:
+        return end_date.replace(year=end_date.year - STRICT_FACTOR_MAX_BACKTEST_YEARS)
+    except ValueError:
+        return end_date.replace(
+            year=end_date.year - STRICT_FACTOR_MAX_BACKTEST_YEARS,
+            month=2,
+            day=28,
+        )
+
+
+def _default_strict_factor_start_date(end_value: date | datetime | str | None = None) -> date:
+    return strict_factor_max_start_date(end_value)
+
+
+def validate_strict_factor_backtest_window(
+    start_value: date | datetime | str | None,
+    end_value: date | datetime | str | None,
+    *,
+    strategy_label: str,
+) -> str | None:
+    start_date = _coerce_backtest_date(start_value, DEFAULT_BACKTEST_END_DATE)
+    end_date = _coerce_backtest_date(end_value, DEFAULT_BACKTEST_END_DATE)
+    if start_date > end_date:
+        return "Start Date must be earlier than or equal to End Date."
+    max_start = strict_factor_max_start_date(end_date)
+    if start_date < max_start:
+        return (
+            f"{strategy_label}은 factor 계산 비용과 데이터 coverage 안정성을 위해 최대 "
+            f"{STRICT_FACTOR_MAX_BACKTEST_YEARS}년까지만 실행합니다. "
+            f"Start Date를 {max_start.isoformat()} 이후로 조정하세요."
+        )
+    return None
 
 
 @lru_cache(maxsize=1)

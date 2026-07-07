@@ -210,7 +210,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
     with st.form("quality_snapshot_strict_annual_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qss_start")
+            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qss_start")
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qss_end")
         with col3:
@@ -352,8 +352,13 @@ def _render_quality_snapshot_strict_annual_form() -> None:
     validation_errors: list[str] = []
     if not tickers:
         validation_errors.append("At least one ticker is required.")
-    if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    window_error = validate_strict_factor_backtest_window(
+        start_date,
+        end_date,
+        strategy_label="Quality Snapshot (Strict Annual)",
+    )
+    if window_error:
+        validation_errors.append(window_error)
     if not quality_factors:
         validation_errors.append("Select at least one quality factor.")
 
@@ -895,7 +900,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
     with st.form("value_snapshot_strict_annual_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="vss_start")
+            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="vss_start")
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="vss_end")
         with col3:
@@ -1037,8 +1042,13 @@ def _render_value_snapshot_strict_annual_form() -> None:
     validation_errors: list[str] = []
     if not tickers:
         validation_errors.append("At least one ticker is required.")
-    if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    window_error = validate_strict_factor_backtest_window(
+        start_date,
+        end_date,
+        strategy_label="Value Snapshot (Strict Annual)",
+    )
+    if window_error:
+        validation_errors.append(window_error)
     if not value_factors:
         validation_errors.append("Select at least one value factor.")
 
@@ -1382,7 +1392,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
     with st.form("quality_value_snapshot_strict_annual_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qvss_start")
+            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qvss_start")
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qvss_end")
         with col3:
@@ -1529,8 +1539,13 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
     validation_errors: list[str] = []
     if not tickers:
         validation_errors.append("At least one ticker is required.")
-    if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    window_error = validate_strict_factor_backtest_window(
+        start_date,
+        end_date,
+        strategy_label="Quality + Value Snapshot (Strict Annual)",
+    )
+    if window_error:
+        validation_errors.append(window_error)
     if not quality_factors:
         validation_errors.append("Select at least one quality factor.")
     if not value_factors:
