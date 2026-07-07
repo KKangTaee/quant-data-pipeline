@@ -93,3 +93,11 @@
   - Result: `Ran 6 tests ... OK`.
 - Follow-up final compile / hygiene: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py finance/data/sentiment.py finance/loaders/sentiment.py`, `git diff --check`, and `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`
   - Result: compile exit 0, diff check exit 0, `node_modules absent`.
+- Feature expansion 1차 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: failed with `KeyError: 'range_context'`, as expected before service read-model expansion.
+- Feature expansion 1차 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: `Ran 1 test ... OK`.
+- Feature expansion 1차 focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: `Ran 2 tests ... OK`.
+- Feature expansion 1차 compile / hygiene: `.venv/bin/python -m py_compile app/services/overview/sentiment.py finance/loaders/sentiment.py`; `git diff --check`
+  - Result: compile exit 0, diff check exit 0.

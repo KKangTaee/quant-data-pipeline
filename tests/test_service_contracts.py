@@ -14181,6 +14181,143 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("시장 폭", breadth["current_reading"])
         self.assertIn("Market Movers", analysis["next_checks"][0]["target"])
 
+    def test_market_sentiment_snapshot_adds_range_divergence_and_component_history(self) -> None:
+        from app.services.overview.sentiment import build_market_sentiment_snapshot
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 54.7,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "neutral"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html_table",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 42.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html_table",
+                    "series_name": "AAII Bull-Bear Spread",
+                    "category": "sentiment_survey",
+                    "units": "percentage_point",
+                    "value": -12.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_MARKET_MOMENTUM_SP500",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Market Momentum",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 65.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_STOCK_PRICE_BREADTH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Stock Price Breadth",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 22.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "extreme fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+        history_rows = pd.DataFrame(
+            [
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-01"), "source": "cnn_fear_greed", "value": 40.0},
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-02"), "source": "cnn_fear_greed", "value": 50.0},
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-03"), "source": "cnn_fear_greed", "value": 70.0},
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-04"), "source": "cnn_fear_greed", "value": 54.7},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-01"), "source": "aaii_sentiment_survey", "value": 25.0},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-02"), "source": "aaii_sentiment_survey", "value": 30.0},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-03"), "source": "aaii_sentiment_survey", "value": 38.0},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-04"), "source": "aaii_sentiment_survey", "value": 42.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-01"), "source": "aaii_sentiment_survey", "value": 12.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-02"), "source": "aaii_sentiment_survey", "value": 2.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-03"), "source": "aaii_sentiment_survey", "value": -4.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-04"), "source": "aaii_sentiment_survey", "value": -12.0},
+                {"series_id": "CNN_FNG_MARKET_MOMENTUM_SP500", "observation_date": pd.Timestamp("2026-06-03"), "source": "cnn_fear_greed", "value": 55.0},
+                {"series_id": "CNN_FNG_MARKET_MOMENTUM_SP500", "observation_date": pd.Timestamp("2026-06-04"), "source": "cnn_fear_greed", "value": 65.0},
+                {"series_id": "CNN_FNG_STOCK_PRICE_BREADTH", "observation_date": pd.Timestamp("2026-06-03"), "source": "cnn_fear_greed", "value": 30.0},
+                {"series_id": "CNN_FNG_STOCK_PRICE_BREADTH", "observation_date": pd.Timestamp("2026-06-04"), "source": "cnn_fear_greed", "value": 22.0},
+            ]
+        )
+
+        snapshot = build_market_sentiment_snapshot(
+            snapshot_rows=snapshot_rows,
+            history_rows=history_rows,
+            today=date(2026, 6, 5),
+        )
+
+        analysis = snapshot["analysis"]
+        range_by_series = {item["series"]: item for item in analysis["range_context"]}
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["sample_count"], 4)
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["min_value"], 40.0)
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["max_value"], 70.0)
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["percentile"], 75.0)
+        self.assertIn("최근", range_by_series["AAII Bearish"]["detail"])
+        self.assertEqual(range_by_series["AAII Bull-Bear Spread"]["position_label"], "낮은 편")
+
+        divergence = analysis["divergence"]
+        self.assertEqual(divergence["status"], "뚜렷한 엇갈림")
+        self.assertEqual(divergence["headline_direction"], "neutral")
+        self.assertEqual(divergence["component_direction"], "mixed")
+        self.assertEqual(divergence["aaii_direction"], "fear")
+        self.assertIn("서로 다르게", divergence["summary"])
+
+        history_by_series = {item["series"]: item for item in analysis["component_history"]}
+        self.assertEqual(history_by_series["Market Momentum"]["latest"], 65.0)
+        self.assertEqual(history_by_series["Market Momentum"]["previous"], 55.0)
+        self.assertEqual(history_by_series["Market Momentum"]["change"], 10.0)
+        self.assertEqual(history_by_series["Market Momentum"]["change_direction"], "up")
+        self.assertEqual(history_by_series["Stock Price Breadth"]["change_direction"], "down")
+
     def test_market_sentiment_react_payload_uses_existing_snapshot_fields(self) -> None:
         from app.web.overview.sentiment_helpers import build_sentiment_react_workbench_payload
 

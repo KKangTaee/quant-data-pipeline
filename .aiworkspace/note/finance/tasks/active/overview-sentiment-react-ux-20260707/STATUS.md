@@ -18,3 +18,4 @@
 - 5차 QA: focused RED/GREEN evidence-surface test, Vite production build, Browser QA, contrast fix, docs sync, and final regression checks passed. Browser QA screenshots were saved as generated artifacts under this task directory and are intentionally uncommitted.
 - Follow-up status: complete. Removed the default next-check card surface from the React workbench and hid next-check analysis steps from the first-pass reading flow. Added history chart y-axis labels, hover guide, focus dot, and tooltip with date / series / value / source.
 - Follow-up QA: focused RED/GREEN UI contract tests, Vite production build, Browser QA hover check, screenshot inspection, compile, focused regression, and `git diff --check` passed.
+- Feature expansion 1차 status: complete. Extended the service read model with recent range context, CNN / AAII divergence context, and CNN component history change context. React/UI display is not changed in this phase.

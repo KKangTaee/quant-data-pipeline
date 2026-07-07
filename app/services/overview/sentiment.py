@@ -69,6 +69,8 @@ SENTIMENT_SERIES_LABELS = {
     "CNN_FNG_SAFE_HAVEN_DEMAND": "Safe Haven Demand",
 }
 
+SENTIMENT_SERIES_IDS_BY_LABEL = {label: series_id for series_id, label in SENTIMENT_SERIES_LABELS.items()}
+
 AAII_HISTORICAL_AVERAGES = {
     "bullish": 38.0,
     "neutral": 31.5,
@@ -160,6 +162,17 @@ def _empty_sentiment_analysis(*, status: str, message: str) -> dict[str, Any]:
         },
         "driver_summary": {"greed_count": 0, "fear_count": 0, "neutral_count": 0},
         "driver_groups": {"greed": [], "fear": [], "neutral": []},
+        "range_context": [],
+        "divergence": {
+            "status": "데이터 없음",
+            "tone": "warning",
+            "headline_direction": "neutral",
+            "component_direction": "neutral",
+            "aaii_direction": "neutral",
+            "summary": message,
+            "items": [],
+        },
+        "component_history": [],
         "analysis_steps": [
             {
                 "title": "데이터 상태",
@@ -340,6 +353,221 @@ def _sentiment_component_explanations(component_rows: list[dict[str, Any]]) -> l
         )
     return explanations
 
+def _sentiment_history_observations(frame: pd.DataFrame | None, series_ids: Sequence[str]) -> pd.DataFrame:
+    columns = ["series_id", "observation_date", "value", "source"]
+    if not isinstance(frame, pd.DataFrame) or frame.empty or "series_id" not in frame:
+        return pd.DataFrame(columns=columns)
+    rows = frame.copy()
+    rows["series_id"] = rows["series_id"].astype(str).str.upper()
+    rows = rows[rows["series_id"].isin({str(series_id).upper() for series_id in series_ids})].copy()
+    if rows.empty:
+        return pd.DataFrame(columns=columns)
+    rows["observation_date"] = pd.to_datetime(rows.get("observation_date"), errors="coerce")
+    rows["value"] = pd.to_numeric(rows.get("value"), errors="coerce")
+    rows["source"] = rows.get("source", pd.Series(dtype=str))
+    return rows.dropna(subset=["observation_date", "value"]).sort_values(["series_id", "observation_date"])
+
+def _round_metric(value: float | None) -> float | None:
+    return None if value is None else round(float(value), 2)
+
+def _recent_range_position_label(percentile: float | None) -> str:
+    if percentile is None:
+        return "자료 부족"
+    if percentile <= 25:
+        return "낮은 편"
+    if percentile >= 75:
+        return "높은 편"
+    return "중간권"
+
+def _build_sentiment_range_context(
+    history_frame: pd.DataFrame | None,
+    coverage: dict[str, Any],
+) -> list[dict[str, Any]]:
+    current_values = {
+        "CNN_FEAR_GREED": _safe_float(coverage.get("cnn_score")),
+        "AAII_BEARISH": _safe_float(coverage.get("aaii_bearish")),
+        "AAII_BULL_BEAR_SPREAD": _safe_float(coverage.get("aaii_bull_bear_spread")),
+    }
+    history = _sentiment_history_observations(history_frame, tuple(current_values))
+    rows: list[dict[str, Any]] = []
+    for series_id, current_value in current_values.items():
+        label = SENTIMENT_SERIES_LABELS.get(series_id, series_id)
+        series_history = history[history["series_id"] == series_id]
+        values = list(series_history["value"].dropna())
+        latest_value = current_value if current_value is not None else (float(values[-1]) if values else None)
+        sample_count = len(values)
+        percentile = None
+        min_value = max_value = median_value = None
+        if sample_count and latest_value is not None:
+            percentile = round((sum(1 for value in values if value <= latest_value) / sample_count) * 100, 1)
+            min_value = round(float(min(values)), 2)
+            max_value = round(float(max(values)), 2)
+            median_value = round(float(pd.Series(values).median()), 2)
+        position_label = _recent_range_position_label(percentile)
+        if sample_count and latest_value is not None:
+            detail = (
+                f"최근 {sample_count}개 관측 기준 {position_label}입니다. "
+                f"범위 {min_value:g}~{max_value:g}, 중앙값 {median_value:g}, 현재 {latest_value:g}."
+            )
+        else:
+            detail = "최근 범위를 계산할 history가 부족합니다."
+        rows.append(
+            {
+                "series_id": series_id,
+                "series": label,
+                "latest_value": _round_metric(latest_value),
+                "sample_count": sample_count,
+                "min_value": min_value,
+                "max_value": max_value,
+                "median_value": median_value,
+                "percentile": percentile,
+                "position_label": position_label,
+                "tone": "neutral" if percentile is None or 25 < percentile < 75 else "warning",
+                "detail": detail,
+            }
+        )
+    return rows
+
+def _aaii_direction(*, bearish: float | None, spread: float | None) -> str:
+    if bearish is None:
+        return "neutral"
+    if bearish >= 35 or (spread is not None and spread < 0):
+        return "fear"
+    if bearish <= 25 and spread is not None and spread > 10:
+        return "greed"
+    return "neutral"
+
+def _component_balance_direction(driver_summary: dict[str, int]) -> str:
+    greed_count = int(driver_summary.get("greed_count") or 0)
+    fear_count = int(driver_summary.get("fear_count") or 0)
+    if greed_count and fear_count:
+        return "mixed"
+    if greed_count > fear_count:
+        return "greed"
+    if fear_count > greed_count:
+        return "fear"
+    return "neutral"
+
+def _direction_label(direction: str) -> str:
+    return {
+        "greed": "탐욕",
+        "fear": "공포",
+        "neutral": "중립",
+        "mixed": "혼합",
+    }.get(direction, "중립")
+
+def _build_sentiment_divergence(
+    *,
+    cnn_bucket: dict[str, str],
+    aaii_bearish: float | None,
+    aaii_spread: float | None,
+    driver_summary: dict[str, int],
+) -> dict[str, Any]:
+    headline_direction = cnn_bucket.get("direction") or "neutral"
+    component_direction = _component_balance_direction(driver_summary)
+    aaii_direction = _aaii_direction(bearish=aaii_bearish, spread=aaii_spread)
+    directions = {headline_direction, component_direction, aaii_direction}
+    if component_direction == "mixed" or len(directions) >= 3:
+        status = "뚜렷한 엇갈림"
+        tone = "warning"
+        summary = "CNN headline, CNN 구성요소, AAII 설문이 서로 다르게 말합니다. 한 방향으로 단정하기보다 어떤 축이 갈라지는지 보는 구간입니다."
+    elif len(directions) == 2:
+        status = "부분 엇갈림"
+        tone = "neutral"
+        summary = "주요 심리 축 일부가 다른 방향을 가리킵니다. headline만 단독으로 읽지 않는 편이 안전합니다."
+    else:
+        status = "대체로 같은 방향"
+        tone = "positive" if headline_direction == "greed" else "warning" if headline_direction == "fear" else "neutral"
+        summary = "CNN headline, 구성요소, AAII 설문이 대체로 같은 방향입니다. 그래도 이 화면은 시장 배경 확인용입니다."
+    return {
+        "status": status,
+        "tone": tone,
+        "headline_direction": headline_direction,
+        "component_direction": component_direction,
+        "aaii_direction": aaii_direction,
+        "summary": summary,
+        "items": [
+            {
+                "label": "CNN headline",
+                "direction": headline_direction,
+                "status": cnn_bucket.get("label_ko") or _direction_label(headline_direction),
+                "detail": "CNN Fear & Greed headline score 기준입니다.",
+            },
+            {
+                "label": "CNN components",
+                "direction": component_direction,
+                "status": (
+                    f"탐욕 {int(driver_summary.get('greed_count') or 0)} / "
+                    f"공포 {int(driver_summary.get('fear_count') or 0)} / "
+                    f"중립 {int(driver_summary.get('neutral_count') or 0)}"
+                ),
+                "detail": "CNN 7개 구성요소의 방향 분포입니다.",
+            },
+            {
+                "label": "AAII survey",
+                "direction": aaii_direction,
+                "status": _direction_label(aaii_direction),
+                "detail": "AAII bearish와 bull-bear spread를 함께 본 설문 방향입니다.",
+            },
+        ],
+    }
+
+def _build_component_history_context(
+    history_frame: pd.DataFrame | None,
+    component_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    history = _sentiment_history_observations(history_frame, CNN_COMPONENT_SERIES)
+    rows: list[dict[str, Any]] = []
+    for row in component_rows:
+        series = str(row.get("Series") or "")
+        series_id = SENTIMENT_SERIES_IDS_BY_LABEL.get(series, series)
+        note = _cnn_component_note(series)
+        series_history = history[history["series_id"] == series_id].sort_values("observation_date")
+        latest = _safe_float(row.get("Score"))
+        latest_date = str(row.get("Observation Date") or "-")
+        previous = None
+        previous_date = "-"
+        if len(series_history) >= 2:
+            latest_history = series_history.iloc[-1]
+            previous_history = series_history.iloc[-2]
+            latest = _safe_float(latest_history.get("value")) if latest is None else latest
+            latest_date = _iso_date(latest_history.get("observation_date")) or latest_date
+            previous = _safe_float(previous_history.get("value"))
+            previous_date = _iso_date(previous_history.get("observation_date")) or "-"
+        elif len(series_history) == 1 and latest is None:
+            latest_history = series_history.iloc[-1]
+            latest = _safe_float(latest_history.get("value"))
+            latest_date = _iso_date(latest_history.get("observation_date")) or latest_date
+        change = None if latest is None or previous is None else round(latest - previous, 2)
+        if change is None:
+            change_direction = "flat"
+            detail = "이전 관측값이 부족해 변화폭을 계산하지 못했습니다."
+        elif change > 0:
+            change_direction = "up"
+            detail = f"이전 관측 대비 +{change:g}p 높아졌습니다."
+        elif change < 0:
+            change_direction = "down"
+            detail = f"이전 관측 대비 {change:g}p 낮아졌습니다."
+        else:
+            change_direction = "flat"
+            detail = "이전 관측과 같은 수준입니다."
+        rows.append(
+            {
+                "series": series,
+                "series_id": series_id,
+                "label_ko": note.get("label_ko") or series,
+                "latest": _round_metric(latest),
+                "latest_date": latest_date,
+                "previous": _round_metric(previous),
+                "previous_date": previous_date,
+                "change": change,
+                "change_direction": change_direction,
+                "tone": "positive" if change_direction == "up" else "warning" if change_direction == "down" else "neutral",
+                "detail": detail,
+            }
+        )
+    return rows
+
 def _aaii_pessimism_status(*, bearish: float | None, spread: float | None) -> dict[str, str]:
     if bearish is None:
         return {
@@ -442,6 +670,7 @@ def _build_market_sentiment_analysis(
     *,
     coverage: dict[str, Any],
     component_rows: list[dict[str, Any]],
+    history_rows: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     cnn_score = _safe_float(coverage.get("cnn_score"))
     aaii_bearish = _safe_float(coverage.get("aaii_bearish"))
@@ -459,6 +688,12 @@ def _build_market_sentiment_analysis(
     )
     cnn_bucket = _sentiment_score_bucket(cnn_score)
     aaii_status = _aaii_pessimism_status(bearish=aaii_bearish, spread=aaii_spread)
+    divergence = _build_sentiment_divergence(
+        cnn_bucket=cnn_bucket,
+        aaii_bearish=aaii_bearish,
+        aaii_spread=aaii_spread,
+        driver_summary=driver_summary,
+    )
     data_confidence = {
         "status": "High" if missing_count == 0 and stale_count == 0 else "Review",
         "tone": "positive" if missing_count == 0 and stale_count == 0 else "warning",
@@ -516,6 +751,9 @@ def _build_market_sentiment_analysis(
         "driver_summary": driver_summary,
         "driver_groups": driver_groups,
         "component_explanations": _sentiment_component_explanations(component_rows),
+        "range_context": _build_sentiment_range_context(history_rows, coverage),
+        "divergence": divergence,
+        "component_history": _build_component_history_context(history_rows, component_rows),
         "analysis_steps": analysis_steps,
         "next_checks": [
             {
@@ -560,7 +798,7 @@ def build_market_sentiment_snapshot(
             history_rows.copy()
             if isinstance(history_rows, pd.DataFrame)
             else load_market_sentiment_history(
-                series_ids=("CNN_FEAR_GREED", "AAII_BEARISH", "AAII_BULL_BEAR_SPREAD"),
+                series_ids=("CNN_FEAR_GREED", "AAII_BEARISH", "AAII_BULL_BEAR_SPREAD", *CNN_COMPONENT_SERIES),
                 start=start_date,
                 end=end_date,
             )
@@ -653,7 +891,11 @@ def build_market_sentiment_snapshot(
         "component_rows": pd.DataFrame(component_rows, columns=SENTIMENT_COMPONENT_COLUMNS),
         "history_rows": history_out,
         "coverage": coverage,
-        "analysis": _build_market_sentiment_analysis(coverage=coverage, component_rows=component_rows),
+        "analysis": _build_market_sentiment_analysis(
+            coverage=coverage,
+            component_rows=component_rows,
+            history_rows=history_frame,
+        ),
         "warnings": warnings,
     }
 
