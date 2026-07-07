@@ -52,6 +52,12 @@ def run_gtaa_backtest_from_db(
     normalized_tickers = _normalize_tickers(tickers)
     benchmark_ticker = str(benchmark_ticker or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     _validate_backtest_date_range(start, end)
+    price_freshness = _runtime_hook("inspect_strict_annual_price_freshness", inspect_strict_annual_price_freshness, __name__)(
+        tickers=normalized_tickers,
+        end=end,
+        timeframe=timeframe,
+        context_label="GTAA universe",
+    )
     _runtime_hook("_preflight_price_strategy_data", _preflight_price_strategy_data, __name__)(
         tickers=normalized_tickers,
         start=start,
@@ -133,6 +139,14 @@ def run_gtaa_backtest_from_db(
         drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
     )
 
+    warnings: list[str] = []
+    if price_freshness["status"] == "warning":
+        warnings.append(
+            "가격 최신성 점검에서 주의가 필요합니다. "
+            + price_freshness["message"]
+            + " 결과 기간이 요청 종료일보다 짧아질 수 있으므로 `Data Trust Summary`와 원본 가격 데이터를 함께 확인하세요."
+        )
+
     bundle = build_backtest_result_bundle(
         result_df,
         strategy_name="GTAA",
@@ -175,7 +189,9 @@ def run_gtaa_backtest_from_db(
             "preset_name": preset_name,
         },
         summary_freq=_summary_frequency(option, timeframe),
+        warnings=warnings,
     )
+    bundle["meta"]["price_freshness"] = price_freshness
     bundle = _runtime_hook("_apply_real_money_hardening", _apply_real_money_hardening, __name__)(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
