@@ -198,11 +198,13 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         tickers = _parse_manual_tickers(manual_tickers)
         _render_ticker_preview(tickers)
 
-    _render_strict_price_freshness_preflight(
+    _render_strict_factor_readiness_panel(
         tickers=tickers,
         end_value=st.session_state.get("qss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qss_timeframe", "1d"),
         strategy_label="Quality Snapshot (Strict Annual)",
+        preset_name=preset_name,
+        statement_freq="annual",
     )
 
     with st.form("quality_snapshot_strict_annual_backtest_form", clear_on_submit=False):
@@ -881,11 +883,13 @@ def _render_value_snapshot_strict_annual_form() -> None:
         tickers = _parse_manual_tickers(manual_tickers)
         _render_ticker_preview(tickers)
 
-    _render_strict_price_freshness_preflight(
+    _render_strict_factor_readiness_panel(
         tickers=tickers,
         end_value=st.session_state.get("vss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("vss_timeframe", "1d"),
         strategy_label="Value Snapshot (Strict Annual)",
+        preset_name=preset_name,
+        statement_freq="annual",
     )
 
     with st.form("value_snapshot_strict_annual_backtest_form", clear_on_submit=False):
@@ -1366,11 +1370,13 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         tickers = _parse_manual_tickers(manual_tickers)
         _render_ticker_preview(tickers)
 
-    _render_strict_price_freshness_preflight(
+    _render_strict_factor_readiness_panel(
         tickers=tickers,
         end_value=st.session_state.get("qvss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qvss_timeframe", "1d"),
         strategy_label="Quality + Value Snapshot (Strict Annual)",
+        preset_name=preset_name,
+        statement_freq="annual",
     )
 
     with st.form("quality_value_snapshot_strict_annual_backtest_form", clear_on_submit=False):

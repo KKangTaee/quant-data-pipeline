@@ -89,6 +89,10 @@ from app.web.components.backtest_price_freshness_preflight import (
     is_backtest_price_freshness_preflight_available,
     render_backtest_price_freshness_preflight,
 )
+from app.web.components.backtest_factor_readiness_panel import (
+    is_backtest_factor_readiness_panel_available,
+    render_backtest_factor_readiness_panel,
+)
 from app.web.backtest_candidate_review_helpers import (
     CANDIDATE_REVIEW_DECISION_OPTIONS,
     CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
@@ -3531,6 +3535,99 @@ def _render_strict_price_freshness_preflight(
                     height=120,
                     key=f"strict_refresh_symbols_{strategy_label}",
                 )
+
+
+def _render_strict_factor_readiness_panel(
+    *,
+    tickers: list[str],
+    end_value: date,
+    timeframe: str,
+    strategy_label: str,
+    preset_name: str | None = None,
+    statement_freq: str = "annual",
+) -> None:
+    if not tickers:
+        return
+
+    try:
+        price_report = inspect_strict_annual_price_freshness(
+            tickers=tickers,
+            end=end_value.isoformat(),
+            timeframe=timeframe,
+        )
+    except Exception as exc:
+        price_report = {
+            "status": "error",
+            "message": f"가격 최신성 점검을 읽지 못했습니다: {exc}",
+            "details": {
+                "requested_count": len(tickers),
+                "covered_count": 0,
+                "effective_end_date": end_value.isoformat(),
+                "common_latest_date": None,
+                "spread_days": 0,
+                "missing_count": len(tickers),
+                "missing_symbols": list(tickers),
+            },
+        }
+    try:
+        statement_summary = _load_statement_shadow_coverage_preview(tuple(tickers), statement_freq)
+    except Exception as exc:
+        statement_summary = {
+            "requested_count": len(tickers),
+            "covered_count": 0,
+            "row_count": 0,
+            "min_period_end": None,
+            "max_period_end": None,
+            "missing_symbols": list(tickers),
+            "error": str(exc),
+        }
+
+    model = build_strict_factor_readiness_panel_model(
+        preset_name=preset_name,
+        tickers=tickers,
+        strategy_label=strategy_label,
+        statement_freq=statement_freq,
+        price_report=price_report,
+        statement_summary=statement_summary,
+    )
+    component_key = (
+        "strict_factor_readiness_panel_"
+        + "".join(ch.lower() if ch.isalnum() else "_" for ch in strategy_label).strip("_")
+    )
+    if is_backtest_factor_readiness_panel_available():
+        render_backtest_factor_readiness_panel(
+            status=str(model["status"]),
+            tone=str(model["tone"]),
+            headline=str(model["headline"]),
+            summary=str(model["summary"]),
+            strategy_label=str(model["strategy_label"]),
+            run_recommended=bool(model["run_recommended"]),
+            checks=list(model["checks"]),
+            actions=list(model["actions"]),
+            key=component_key,
+        )
+        return
+
+    if model["tone"] == "positive":
+        st.success(model["headline"])
+    else:
+        st.warning(model["headline"])
+    st.caption(model["summary"])
+    for check in model["checks"]:
+        with st.expander(str(check.get("title") or "Readiness Check"), expanded=False):
+            st.markdown(f"**{check.get('summary') or ''}**")
+            if check.get("detail"):
+                st.caption(str(check["detail"]))
+            metrics = check.get("metrics") or []
+            if metrics:
+                st.dataframe(pd.DataFrame(metrics), use_container_width=True, hide_index=True)
+            issues = check.get("issues") or []
+            if issues:
+                st.dataframe(pd.DataFrame(issues), use_container_width=True, hide_index=True)
+    if model.get("actions"):
+        st.markdown("**다음 행동**")
+        for action in model["actions"]:
+            st.markdown(f"- **{action.get('label')}**: {action.get('detail')}")
 
 def _strategy_key_to_display_name(strategy_key: str | None) -> str | None:
     return catalog_strategy_key_to_display_name(strategy_key)

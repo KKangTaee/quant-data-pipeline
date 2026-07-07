@@ -18,3 +18,11 @@
   - Passed.
 - Compile: `.venv/bin/python -m py_compile app/web/components/backtest_factor_readiness_panel/component.py tests/test_service_contracts.py`
   - Passed.
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_annual_forms_use_combined_readiness_panel tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_forms_keep_guidance_inside_form_surface -v`
+  - Expected failures confirmed: Single Strategy strict annual forms still called the old price-only preflight and `backtest_common` did not import/render the new factor readiness component.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_annual_forms_use_combined_readiness_panel tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_forms_keep_guidance_inside_form_surface -v`
+  - Passed.
+- Regression: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_readiness_model_separates_base_price_statement_and_actions tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_readiness_model_marks_ready_when_price_and_statement_pass tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_factor_readiness_panel_react_component_is_ui_only tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_price_freshness_preflight_react_component_is_ui_only -v`
+  - Passed. Streamlit bare-mode and edgar deprecation warnings appeared during imports.
+- Compile: `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py tests/test_service_contracts.py`
+  - Passed.

@@ -739,8 +739,32 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("_render_strict_factor_data_readiness_note(", value_annual_body)
         self.assertNotIn("_render_quality_family_guide", quality_annual_body)
         self.assertNotIn("_render_quality_family_guide", value_annual_body)
-        self.assertIn("_render_strict_price_freshness_preflight(", quality_annual_body)
-        self.assertIn("_render_strict_price_freshness_preflight(", value_annual_body)
+        self.assertIn("_render_strict_factor_readiness_panel(", quality_annual_body)
+        self.assertIn("_render_strict_factor_readiness_panel(", value_annual_body)
+        self.assertNotIn("_render_strict_price_freshness_preflight(", quality_annual_body)
+        self.assertNotIn("_render_strict_price_freshness_preflight(", value_annual_body)
+
+    def test_strict_factor_single_annual_forms_use_combined_readiness_panel(self) -> None:
+        source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+        quality_annual_body = source.split("def _render_quality_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        value_annual_body = source.split("def _render_value_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_value_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        quality_value_annual_body = source.split("def _render_quality_value_snapshot_strict_annual_form", 1)[1]
+
+        self.assertIn("render_backtest_factor_readiness_panel", common_source)
+        self.assertIn("build_strict_factor_readiness_panel_model(", common_source)
+        self.assertIn("inspect_strict_annual_price_freshness(", common_source)
+        self.assertIn("_load_statement_shadow_coverage_preview(", common_source)
+        self.assertIn("_render_strict_factor_readiness_panel(", quality_annual_body)
+        self.assertIn("_render_strict_factor_readiness_panel(", value_annual_body)
+        self.assertIn("_render_strict_factor_readiness_panel(", quality_value_annual_body)
+        self.assertNotIn("_render_strict_price_freshness_preflight(", quality_annual_body)
+        self.assertNotIn("_render_strict_price_freshness_preflight(", value_annual_body)
+        self.assertNotIn("_render_strict_price_freshness_preflight(", quality_value_annual_body)
 
     def test_etf_like_single_forms_stay_form_first_without_runtime_wrapper_copy(self) -> None:
         form_paths = [
