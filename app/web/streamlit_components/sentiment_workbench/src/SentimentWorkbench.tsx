@@ -303,6 +303,18 @@ function syncFrameHeightSoon() {
   window.setTimeout(() => Streamlit.setFrameHeight(), 160);
 }
 
+function buildHistoryDateTicks(historyDates: string[], maxTickCount = 6) {
+  if (historyDates.length <= maxTickCount) {
+    return historyDates;
+  }
+  const lastIndex = historyDates.length - 1;
+  const ticks = Array.from({ length: maxTickCount }, (_, tickIndex) => {
+    const dateIndex = Math.round((tickIndex / Math.max(1, maxTickCount - 1)) * lastIndex);
+    return historyDates[dateIndex];
+  });
+  return ticks.filter((date, index) => ticks.indexOf(date) === index);
+}
+
 function SentimentWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
@@ -362,10 +374,7 @@ function SentimentWorkbench({ args }: Props) {
     label: value.toLocaleString(undefined, { maximumFractionDigits: 1 }),
     y: yForValue(value),
   }));
-  const historyDateTicks =
-    historyDates.length > 2
-      ? [historyDates[0], historyDates[Math.floor((historyDates.length - 1) / 2)], historyDates[historyDates.length - 1]]
-      : historyDates;
+  const historyDateTicks = buildHistoryDateTicks(historyDates);
   const plottedHistoryPoints = plottableHistory.map((point) => {
     const numeric = point.numericValue as number;
     const seriesIndex = Math.max(0, historySeriesNames.indexOf(point.series));
