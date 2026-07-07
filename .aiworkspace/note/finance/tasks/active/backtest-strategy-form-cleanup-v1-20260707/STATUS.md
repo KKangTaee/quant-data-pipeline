@@ -21,3 +21,4 @@ The previous Strategy Detail React panel over-interpreted the request. The inten
 - 2026-07-07: 1차 removed the overbuilt active Strategy Detail panel and stale panel artifacts while keeping Price Freshness Preflight.
 - 2026-07-07: 2차 added compact strict preset display model and renderer copy for current basis / caveat / update path.
 - 2026-07-07: 3차 cleaned strict annual / quarterly Single Strategy form guidance and Browser QA confirmed Quality / Value strict flows.
+- 2026-07-07: 4차 kept ETF-like strategy forms as Streamlit form-first flows, removed confusing runtime-wrapper copy, and Browser QA confirmed Equal Weight / GTAA switching.

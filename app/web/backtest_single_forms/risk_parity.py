@@ -6,7 +6,7 @@ from app.web.backtest_single_forms import _apply_single_strategy_prefill
 
 def _render_risk_parity_form() -> None:
     st.markdown("### Risk Parity Trend")
-    st.caption("DB-backed risk-parity trend execution using the third public runtime wrapper.")
+    st.caption("선택 ETF universe의 변동성을 기준으로 비중을 조정하고, 추세 조건과 리밸런싱 주기를 함께 적용합니다.")
     _apply_single_strategy_prefill("risk_parity_trend")
 
     with st.form("risk_parity_backtest_form", clear_on_submit=False):
@@ -136,4 +136,3 @@ def _render_risk_parity_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="Risk Parity Trend")
-

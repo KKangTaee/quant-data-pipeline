@@ -254,6 +254,22 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("_render_strict_price_freshness_preflight(", quality_annual_body)
         self.assertIn("_render_strict_price_freshness_preflight(", value_annual_body)
 
+    def test_etf_like_single_forms_stay_form_first_without_runtime_wrapper_copy(self) -> None:
+        form_paths = [
+            Path("app/web/backtest_single_forms/equal_weight.py"),
+            Path("app/web/backtest_single_forms/gtaa.py"),
+            Path("app/web/backtest_single_forms/global_relative_strength.py"),
+            Path("app/web/backtest_single_forms/risk_parity.py"),
+            Path("app/web/backtest_single_forms/dual_momentum.py"),
+        ]
+
+        for path in form_paths:
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn("Strategy Detail", source)
+            self.assertNotIn("backtest_strategy_detail", source)
+            self.assertNotIn("runtime wrapper", source)
+            self.assertIn('with st.expander("Advanced Inputs", expanded=False)', source)
+
     def test_price_freshness_preflight_model_builds_react_payload(self) -> None:
         from app.web.backtest_common import build_strict_price_freshness_preflight_model
 

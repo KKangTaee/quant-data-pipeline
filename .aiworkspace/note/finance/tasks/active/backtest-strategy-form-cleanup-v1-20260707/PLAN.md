@@ -90,15 +90,15 @@ Use Browser QA on Quality Strict Annual and Value Strict Quarterly Prototype. Co
 - Modify if needed: `app/web/backtest_single_forms/gtaa.py`, `global_relative_strength.py`, `risk_parity.py`, `dual_momentum.py`
 - Modify: `tests/test_service_contracts.py`
 
-- [ ] **Step 1: Add form consistency checks**
+- [x] **Step 1: Add form consistency checks**
 
 Add static tests that simple ETF-like forms do not depend on the removed Strategy Detail panel and keep advanced / promotion / guardrail controls collapsed.
 
-- [ ] **Step 2: Adjust only visible copy if needed**
+- [x] **Step 2: Adjust only visible copy if needed**
 
 Keep the existing layout and remove only confusing or redundant captions. Do not add new panels.
 
-- [ ] **Step 3: Browser QA and commit**
+- [x] **Step 3: Browser QA and commit**
 
 Verify Equal Weight and GTAA still render as existing form-first flows.
 

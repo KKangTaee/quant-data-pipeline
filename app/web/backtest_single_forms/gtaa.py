@@ -6,7 +6,7 @@ from app.web.backtest_single_forms import _apply_single_strategy_prefill
 
 def _render_gtaa_form() -> None:
     st.markdown("### GTAA")
-    st.caption("DB-backed GTAA execution using the second public runtime wrapper.")
+    st.caption("자산군 ETF의 상대강도와 추세를 기준으로 상위 자산을 선택하고, 필요하면 방어 sleeve로 전환합니다.")
     _apply_single_strategy_prefill("gtaa")
 
     _universe_mode, preset_name, tickers = _render_gtaa_universe_inputs(
@@ -148,4 +148,3 @@ def _render_gtaa_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="GTAA")
-

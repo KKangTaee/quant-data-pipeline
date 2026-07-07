@@ -6,7 +6,7 @@ from app.web.backtest_single_forms import _apply_single_strategy_prefill
 
 def _render_dual_momentum_form() -> None:
     st.markdown("### Dual Momentum")
-    st.caption("DB-backed dual momentum execution using the fourth public runtime wrapper.")
+    st.caption("상대 / 절대 모멘텀 기준으로 상위 ETF를 선택하고, 모멘텀이 약하면 방어 자산으로 전환합니다.")
     _apply_single_strategy_prefill("dual_momentum")
 
     with st.form("dual_momentum_backtest_form", clear_on_submit=False):
@@ -136,5 +136,4 @@ def _render_dual_momentum_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="Dual Momentum")
-
 

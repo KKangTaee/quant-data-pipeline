@@ -6,7 +6,7 @@ from app.web.backtest_single_forms import _apply_single_strategy_prefill
 
 def _render_equal_weight_form() -> None:
     st.markdown("### Equal Weight")
-    st.caption("DB-backed equal-weight portfolio execution using the first public runtime wrapper.")
+    st.caption("선택한 ETF / 자산 universe를 동일 비중으로 보유하고 지정한 주기로 리밸런싱합니다.")
     _apply_single_strategy_prefill("equal_weight")
 
     _universe_mode, preset_name, tickers = _render_equal_weight_universe_inputs(
@@ -79,4 +79,3 @@ def _render_equal_weight_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="Equal Weight")
-
