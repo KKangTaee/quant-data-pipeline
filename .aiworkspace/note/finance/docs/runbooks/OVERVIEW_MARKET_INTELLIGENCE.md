@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-05
+Last Verified: 2026-07-07
 
 ## Purpose
 
@@ -107,9 +107,12 @@ http://localhost:8501
 5. `Workspace > Overview > Sentiment`
    - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집해 `finance_meta.macro_series_observation`에 저장한다.
    - 같은 수집은 `Workspace > Ingestion > 시장 심리 수집`에서도 실행할 수 있으며, CNN / AAII source를 개별 checkbox로 켜고 끌 수 있다.
-   - 상단 카드에서 `Sentiment Status`, CNN score / rating, AAII bearish %, AAII bull-bear spread를 먼저 확인한다.
-   - `Trend` 탭은 stored CNN score / AAII bearish / bull-bear spread history를 보여주고, `CNN Components`는 CNN component score를 보여준다.
-   - `Table` 탭은 source, observation date, staleness, status를 함께 보여준다.
+   - React workbench가 available이면 첫 화면에서 service-owned phase / headline / summary, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, data freshness, `시장 심리 갱신` / `화면 다시 읽기` action을 함께 확인한다. React build가 없으면 기존 Streamlit controls / overview / detail sections로 fallback한다.
+   - `CNN / AAII 같이 보기`는 `analysis_steps`와 core metrics를 표시한다. 프론트엔드는 AAII / CNN divergence나 추천 문구를 새로 만들지 않고 `app/services/overview/sentiment.py`가 제공한 해석만 보여준다.
+   - `무엇이 이 심리를 만들었나`에서 CNN 7개 구성요소를 탐욕 / 공포 / 중립 driver lane으로 읽고, `CNN 구성요소 상세`에서 각 component가 무엇을 보는지와 현재 읽기를 확인한다.
+   - `다음에 확인할 것`에서 Market Movers breadth, Futures Macro Thermometer, Events calendar 같은 follow-up context를 확인한다.
+   - `그래프로 보는 근거`는 stored CNN score / AAII bearish / bull-bear spread history line chart와 CNN component bar chart를 보여준다.
+   - `원본 / 상세 근거`는 source, observation date, staleness, status, component rows, history rows를 하단 근거 table로 보여준다.
    - 이 화면은 시장 심리 context이며 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance로 해석하지 않는다.
    - AAII official page가 automated backend request를 차단하면 job result와 Overview status에 failed / missing state를 남기고 값을 임의 생성하지 않는다.
 
@@ -305,8 +308,8 @@ PY
 - Overview Events calendar is a month grid with event type markers; agenda and quality views stay available for list/detail inspection.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
-- Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then `시장 심리 읽기 - 6단계` covering current conclusion, why it reads that way, strong signals, weak signals, combined interpretation, and next checks.
-- Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, CNN component learning notes, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
+- Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: phase / headline / summary, freshness, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, refresh / reload actions, context-only boundary, CNN / AAII cross-read, service-owned analysis steps, driver lanes, component explanations, next checks, history line chart, component bar chart, and stored row evidence.
+- Overview Sentiment keeps Python services as owner of DB reads, refresh actions, and interpretation text. React only displays and dispatches the existing refresh / reload events, and the fallback Streamlit detail sections remain available when the React build is missing.
 - Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Operations > System / Data Health` for detailed operational diagnostics.
 - Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.

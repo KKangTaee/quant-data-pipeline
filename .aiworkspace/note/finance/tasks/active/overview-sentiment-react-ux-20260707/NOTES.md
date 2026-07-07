@@ -6,4 +6,5 @@
 - Collection / loader boundary: `finance/data/sentiment.py`, `finance/loaders/sentiment.py`.
 - Existing service already provides `analysis`, `driver_groups`, `component_explanations`, `next_checks`, `rows`, `component_rows`, `history_rows`.
 - React must render existing service interpretation only. It must not invent new recommendation or trading language.
-
+- Browser QA found Streamlit dark theme made the transparent iframe hard to read; the React workbench now owns a light panel background and white internal cards for stable contrast.
+- Graph improvement is implemented inside React using the existing `charts.history` and `charts.components` payload: SVG history line chart plus CNN component bars. Raw rows remain visible in lower evidence tables.

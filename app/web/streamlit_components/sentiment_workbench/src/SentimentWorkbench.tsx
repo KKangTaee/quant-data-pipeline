@@ -59,6 +59,25 @@ type SentimentNextCheck = {
   tone?: string;
 };
 
+type SentimentHistoryPoint = {
+  date: string;
+  series: string;
+  value?: number | string | null;
+  source?: string;
+};
+
+type SentimentComponentChartItem = {
+  series: string;
+  score?: number | string | null;
+  rating?: string;
+  tone?: string;
+  direction?: string;
+  observation_date?: string;
+  current_reading?: string;
+};
+
+type SentimentEvidenceRows = Record<string, number | string | null | undefined>[];
+
 type SentimentWorkbenchPayload = {
   schema_version: "sentiment_react_workbench_v1";
   component: "SentimentWorkbench";
@@ -88,6 +107,24 @@ type SentimentWorkbenchPayload = {
   };
   component_explanations: SentimentComponentExplanation[];
   next_checks: SentimentNextCheck[];
+  charts: {
+    history: {
+      title: string;
+      basis: string;
+      series: SentimentHistoryPoint[];
+    };
+    components: {
+      title: string;
+      basis: string;
+      items: SentimentComponentChartItem[];
+    };
+  };
+  evidence: {
+    raw_rows: SentimentEvidenceRows;
+    component_rows: SentimentEvidenceRows;
+    history_rows: SentimentEvidenceRows;
+    warnings: string[];
+  };
   boundary_note: string;
   action_boundary: "python_dispatch_only";
 };
@@ -122,6 +159,72 @@ function displayValue(value: number | string | undefined) {
   return value;
 }
 
+function numericValue(value: number | string | null | undefined) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  const numeric = typeof value === "number" ? value : Number.parseFloat(String(value));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function rowColumns(rows: SentimentEvidenceRows) {
+  const columns: string[] = [];
+  rows.forEach((row) => {
+    Object.keys(row).forEach((key) => {
+      if (!columns.includes(key)) {
+        columns.push(key);
+      }
+    });
+  });
+  return columns.slice(0, 7);
+}
+
+function formatCell(value: number | string | null | undefined) {
+  if (value === undefined || value === null || value === "") {
+    return "-";
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "-";
+  }
+  return String(value);
+}
+
+function EvidenceTable({ rows, title }: { rows: SentimentEvidenceRows; title: string }) {
+  const columns = rowColumns(rows);
+  return (
+    <div className="sentiment-workbench__evidence-table">
+      <div className="sentiment-workbench__evidence-table-title">
+        <span>{title}</span>
+        <strong>{rows.length}</strong>
+      </div>
+      {rows.length === 0 || columns.length === 0 ? (
+        <div className="sentiment-workbench__evidence-empty">근거 row가 없습니다.</div>
+      ) : (
+        <div className="sentiment-workbench__evidence-scroll">
+          <table>
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th key={column}>{column}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={`${title}-${rowIndex}`}>
+                  {columns.map((column) => (
+                    <td key={`${title}-${rowIndex}-${column}`}>{formatCell(row[column])}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
   window.requestAnimationFrame(() => Streamlit.setFrameHeight());
@@ -153,6 +256,32 @@ function SentimentWorkbench({ args }: Props) {
   const cnnMetric = metricByLabel("CNN Fear & Greed");
   const aaiiBearishMetric = metricByLabel("AAII Bearish");
   const bullBearSpreadMetric = metricByLabel("Bull-Bear Spread");
+  const historyPoints = payload.charts.history.series.map((point) => ({
+    ...point,
+    numericValue: numericValue(point.value),
+  }));
+  const plottableHistory = historyPoints.filter((point) => point.numericValue !== null);
+  const historyValues = plottableHistory.map((point) => point.numericValue as number);
+  const historyMin = historyValues.length ? Math.min(...historyValues) : 0;
+  const historyMax = historyValues.length ? Math.max(...historyValues) : 1;
+  const historyRange = historyMax === historyMin ? 1 : historyMax - historyMin;
+  const historyDates = Array.from(new Set(plottableHistory.map((point) => point.date))).sort();
+  const historySeriesNames = Array.from(new Set(plottableHistory.map((point) => point.series)));
+  const chartWidth = 320;
+  const chartHeight = 136;
+  const chartPaddingX = 18;
+  const chartPaddingY = 16;
+  const chartInnerWidth = chartWidth - chartPaddingX * 2;
+  const chartInnerHeight = chartHeight - chartPaddingY * 2;
+  const chartPalette = ["#0f766e", "#b45309", "#2563eb", "#7c3aed", "#dc2626"];
+  const xForDate = (date: string) => {
+    const index = Math.max(0, historyDates.indexOf(date));
+    const divisor = Math.max(1, historyDates.length - 1);
+    return chartPaddingX + (index / divisor) * chartInnerWidth;
+  };
+  const yForValue = (value: number) => chartPaddingY + (1 - (value - historyMin) / historyRange) * chartInnerHeight;
+  const firstHistoryDate = historyDates[0] || "-";
+  const lastHistoryDate = historyDates[historyDates.length - 1] || "-";
 
   return (
     <section
@@ -347,6 +476,101 @@ function SentimentWorkbench({ args }: Props) {
               {check.watch_for ? <small>{check.watch_for}</small> : null}
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="sentiment-workbench__chart-section">
+        <div className="sentiment-workbench__section-heading">
+          <span>그래프로 보는 근거</span>
+          <small>{payload.charts.history.basis}</small>
+        </div>
+        <div className="sentiment-workbench__chart-grid">
+          <div className="sentiment-workbench__line-chart">
+            <div className="sentiment-workbench__chart-title">
+              <span>{payload.charts.history.title}</span>
+              <strong>{plottableHistory.length}</strong>
+            </div>
+            <svg aria-label={payload.charts.history.title} role="img" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
+              <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartWidth - chartPaddingX} y1={chartHeight - chartPaddingY} y2={chartHeight - chartPaddingY} />
+              <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartPaddingX} y1={chartPaddingY} y2={chartHeight - chartPaddingY} />
+              {historySeriesNames.map((seriesName, seriesIndex) => {
+                const points = plottableHistory
+                  .filter((point) => point.series === seriesName)
+                  .map((point) => `${xForDate(point.date).toFixed(1)},${yForValue(point.numericValue as number).toFixed(1)}`)
+                  .join(" ");
+                return (
+                  <polyline
+                    className="sentiment-workbench__chart-line"
+                    fill="none"
+                    key={seriesName}
+                    points={points}
+                    stroke={chartPalette[seriesIndex % chartPalette.length]}
+                  />
+                );
+              })}
+            </svg>
+            <div className="sentiment-workbench__chart-meta">
+              <span>{firstHistoryDate}</span>
+              <span>{lastHistoryDate}</span>
+            </div>
+            <div className="sentiment-workbench__chart-legend">
+              {historySeriesNames.map((seriesName, seriesIndex) => (
+                <span key={seriesName} style={{ "--metric-tone": chartPalette[seriesIndex % chartPalette.length] } as React.CSSProperties}>
+                  {seriesName}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="sentiment-workbench__component-bars">
+            <div className="sentiment-workbench__chart-title">
+              <span>{payload.charts.components.title}</span>
+              <strong>{payload.charts.components.items.length}</strong>
+            </div>
+            <div className="sentiment-workbench__component-bar-list">
+              {payload.charts.components.items.map((item) => {
+                const score = numericValue(item.score);
+                const width = `${Math.max(0, Math.min(100, score ?? 0))}%`;
+                return (
+                  <div className="sentiment-workbench__component-bar-row" key={item.series}>
+                    <div className="sentiment-workbench__component-bar-label">
+                      <span>{item.series}</span>
+                      <strong>{displayValue(item.score ?? undefined)}</strong>
+                    </div>
+                    <div className="sentiment-workbench__component-bar-track">
+                      <div
+                        className="sentiment-workbench__component-bar-fill"
+                        style={{
+                          "--metric-tone": toneColor(item.tone),
+                          width,
+                        } as React.CSSProperties}
+                      />
+                    </div>
+                    {item.rating ? <small>{item.rating}</small> : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="sentiment-workbench__evidence-details">
+        <div className="sentiment-workbench__section-heading">
+          <span>원본 / 상세 근거</span>
+          <small>stored rows</small>
+        </div>
+        {payload.evidence.warnings.length ? (
+          <div className="sentiment-workbench__evidence-warnings">
+            {payload.evidence.warnings.map((warning) => (
+              <span key={warning}>{warning}</span>
+            ))}
+          </div>
+        ) : null}
+        <div className="sentiment-workbench__evidence-grid">
+          <EvidenceTable rows={payload.evidence.raw_rows} title="Sentiment rows" />
+          <EvidenceTable rows={payload.evidence.component_rows} title="Component rows" />
+          <EvidenceTable rows={payload.evidence.history_rows} title="History rows" />
         </div>
       </section>
     </section>

@@ -8575,3 +8575,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `961회`가 충분한 빈도 표본이라는 점과, 혼재 / 관망 상태에는 특정 자산 상승 / 하락 hit rule이 없어 방향성 판정을 보류한다는 점을 UI 첫 결론에서 분리해 보여줘야 함.
 - Analysis result: 현재 DB 기준 `혼재된 매크로 흐름`은 961회 / 1,225일로 자주 발생했지만 `Target Family=Mixed`, `Hit Rule 없음`, `Directional Hit Applicable=False`다.
 - Follow-up: `과거 점검` 카드에 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유` 결론 grid를 추가하고, 기존 5D / 20D 상세 타일과 분포 / 그래프 계산은 건드리지 않았다.
+
+### 2026-07-07 - Sentiment 탭을 React workbench 흐름으로 개선한다
+
+- User request: `Workspace > Overview > Sentiment`를 Futures Macro처럼 React 기반 프로토타입으로 개선하되, branch 생성 없이 AGENTS.md를 확인하고 1차~5차 개발 / QA / commit 순서로 진행해 달라고 요청함. 그래프 개선도 포함되는지 확인함.
+- Interpreted goal: Sentiment를 raw status / table 중심이 아니라 현재 심리 상태, 만든 요인, freshness, 다음 확인, 하단 근거/그래프 순서로 읽게 하되, Python service가 모든 해석 문구와 refresh action을 소유해야 함.
+- Analysis result: `app/services/overview/sentiment.py`의 `analysis`, `driver_groups`, `component_explanations`, `next_checks`, rows payload만 React에 전달하고, React는 summary/freshness, CNN / AAII cross-read, driver lanes, component explanations, next checks, history line chart, component bars, evidence tables를 렌더링하는 구조가 맞다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에 있다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.

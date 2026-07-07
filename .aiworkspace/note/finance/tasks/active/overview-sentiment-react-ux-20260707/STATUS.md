@@ -14,3 +14,5 @@
 - 3차 QA: focused RED/GREEN summary/freshness surface test and Vite production build passed. New build assets replaced the previous scaffold bundle; `node_modules` was removed again after build.
 - 4차 status: complete. Added React sections for CNN / AAII cross-read, service-owned analysis steps, driver lanes, CNN component explanations, and next checks. The frontend displays existing service text and fields without inventing new recommendations.
 - 4차 QA: focused RED/GREEN driver/payload tests and Vite production build passed. New build assets replaced the 3차 bundle; `node_modules` was removed after build.
+- 5차 status: complete. Added React evidence / graph sections for history line chart, CNN component bars, and stored raw/component/history evidence tables. React-rendered Sentiment no longer duplicates the old Streamlit detail sections; fallback remains available when the component build is absent.
+- 5차 QA: focused RED/GREEN evidence-surface test, Vite production build, Browser QA, contrast fix, docs sync, and final regression checks passed. Browser QA screenshots were saved as generated artifacts under this task directory and are intentionally uncommitted.

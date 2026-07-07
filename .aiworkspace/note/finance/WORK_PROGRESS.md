@@ -5549,3 +5549,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `과거 점검` is now framed as `오늘과 비슷한 과거 흐름 확인`: the current 16-futures daily score state is compared against historical dates computed with the same classification method.
   - The React panel owns the historical-validation action, inline loading state, and metric-backed result tiles for `판정`, `5거래일 표본`, `20거래일 표본`, and `자산군 해석`.
   - The panel now shows first-read conclusion tiles for `비슷한 상태`, `상태 빈도`, `방향성 판정`, and `판정 이유` before detailed 5D / 20D tiles. Lower `원본 데이터 / 계산 추적` stays focused on raw score / contribution / daily futures / historical sample tables; validation prose uses only computed sample / mean-return / hit-rate metrics and does not create recommendation copy.
+- Overview Sentiment React UX 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에서 1~5차 개발 / QA / 커밋 흐름을 완료했다.
+  - Sentiment는 React workbench로 phase/headline/summary, freshness/action, CNN / AAII cross-read, driver lanes, component explanations, next checks, history line chart, component bars, stored evidence tables를 렌더링한다.
+  - Python service/helper가 DB read, refresh action, interpretation text를 계속 소유하고 React는 표시/dispatch만 맡는다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.

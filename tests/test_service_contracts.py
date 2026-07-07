@@ -6209,6 +6209,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
             react_source.index('className="sentiment-workbench__fallback-note"'),
         )
         self.assertIn(".sentiment-workbench__hero", react_style)
+        self.assertIn("background: #f8fafc;", react_style)
+        self.assertIn("background: #ffffff;", react_style)
         self.assertIn(".sentiment-workbench__metric-grid", react_style)
         self.assertIn(".sentiment-workbench__metric-card", react_style)
         self.assertIn(".sentiment-workbench__freshness-panel", react_style)
@@ -6243,6 +6245,35 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__driver-card", react_style)
         self.assertIn(".sentiment-workbench__component-list", react_style)
         self.assertIn(".sentiment-workbench__next-checks", react_style)
+
+    def test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        entry_source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("payload.charts.history.series.map", react_source)
+        self.assertIn("sentiment-workbench__chart-section", react_source)
+        self.assertIn("sentiment-workbench__line-chart", react_source)
+        self.assertIn("<polyline", react_source)
+        self.assertIn("payload.charts.components.items.map", react_source)
+        self.assertIn("sentiment-workbench__component-bars", react_source)
+        self.assertIn("sentiment-workbench__component-bar-fill", react_source)
+        self.assertIn("payload.evidence.raw_rows", react_source)
+        self.assertIn("payload.evidence.component_rows", react_source)
+        self.assertIn("payload.evidence.history_rows", react_source)
+        self.assertIn("sentiment-workbench__evidence-details", react_source)
+        self.assertIn("sentiment-workbench__evidence-table", react_source)
+        self.assertIn("if not react_rendered:", entry_source)
+        self.assertLess(
+            entry_source.index("if not react_rendered:"),
+            entry_source.index("render_sentiment_detail_sections(snapshot)"),
+        )
+        self.assertIn(".sentiment-workbench__chart-section", react_style)
+        self.assertIn(".sentiment-workbench__line-chart", react_style)
+        self.assertIn(".sentiment-workbench__component-bars", react_style)
+        self.assertIn(".sentiment-workbench__evidence-details", react_style)
+        self.assertIn(".sentiment-workbench__evidence-table", react_style)
 
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")

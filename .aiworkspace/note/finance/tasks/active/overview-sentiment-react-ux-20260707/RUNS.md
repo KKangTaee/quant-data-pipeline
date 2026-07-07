@@ -57,3 +57,25 @@
   - Result: exit 0.
 - Phase 4 diff check: `git diff --check`
   - Result: exit 0.
+- Phase 5 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: failed because React did not yet render chart / evidence sections and the entrypoint still duplicated Streamlit detail sections after React render.
+- Phase 5 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: `Ran 1 test ... OK`.
+- Phase 5 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets.
+- Phase 5 focused regression / compile: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail` and `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`
+  - Result: focused tests `Ran 2 tests ... OK`; compile exit 0.
+- Phase 5 Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8508 --server.headless true --server.runOnSave false --server.fileWatcherType none`
+  - Result: `Workspace > Overview > Sentiment` rendered the React workbench. DOM confirmed summary/freshness, CNN / AAII cross-read, driver lanes, next checks, graph section, and stored-row evidence tables.
+- Phase 5 Browser QA screenshot: `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-react-contrast-summary.png`
+  - Result: top summary/freshness view captured after contrast fix. Screenshot is generated QA artifact and must not be committed.
+- Phase 5 Browser QA screenshot: `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-react-graphs.png`
+  - Result: history line chart, component bars, and stored evidence tables captured. Screenshot is generated QA artifact and must not be committed.
+- Phase 5 docs sync: updated `docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md`, `docs/flows/BACKTEST_UI_FLOW.md`, and `docs/ROADMAP.md`.
+- Phase 5 cleanup: removed `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 5 final focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 6 tests ... OK`.
+- Phase 5 final compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py finance/data/sentiment.py finance/loaders/sentiment.py`
+  - Result: exit 0.
+- Phase 5 final diff check: `git diff --check`
+  - Result: exit 0.

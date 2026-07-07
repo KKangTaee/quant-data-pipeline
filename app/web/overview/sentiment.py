@@ -29,4 +29,5 @@ def render_sentiment_tab() -> None:
         render_sentiment_empty_state()
         return
 
-    render_sentiment_detail_sections(snapshot)
+    if not react_rendered:
+        render_sentiment_detail_sections(snapshot)
