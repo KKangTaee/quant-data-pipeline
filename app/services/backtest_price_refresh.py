@@ -27,6 +27,29 @@ def _normalize_symbols(symbols: Iterable[Any] | None) -> list[str]:
     return out
 
 
+def _refresh_symbols_from_price_freshness(meta: Mapping[str, Any], coverage_tickers: list[str]) -> tuple[list[str], str, bool]:
+    price_freshness = meta.get("price_freshness") or {}
+    freshness_details = price_freshness.get("details") or {}
+    refresh_symbols = _normalize_symbols(
+        freshness_details.get("refresh_symbols_all")
+        or list(freshness_details.get("stale_symbols_all") or [])
+        + list(freshness_details.get("missing_symbols_all") or [])
+        or list(freshness_details.get("stale_symbols") or [])
+        + list(freshness_details.get("missing_symbols") or [])
+    )
+    if refresh_symbols:
+        missing_symbols = set(
+            _normalize_symbols(
+                freshness_details.get("missing_symbols_all")
+                or freshness_details.get("missing_symbols")
+                or []
+            )
+        )
+        has_missing = any(symbol in missing_symbols for symbol in refresh_symbols)
+        return refresh_symbols, "stale_or_missing_symbols", has_missing
+    return coverage_tickers, "full_current_backtest_universe", False
+
+
 def _nth_weekday(year: int, month: int, weekday: int, occurrence: int) -> date:
     current = date(year, month, 1)
     days_until_weekday = (weekday - current.weekday()) % 7
@@ -158,8 +181,9 @@ def _current_common_latest_date(meta: Mapping[str, Any]) -> date | None:
 
 
 def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime | None = None) -> dict[str, Any]:
-    """Return the Backtest Data Trust price-refresh action model without running ingestion."""
-    tickers = _normalize_symbols(meta.get("tickers") or meta.get("symbols"))
+    """Return the Backtest coverage-refresh action model without running ingestion."""
+    coverage_tickers = _normalize_symbols(meta.get("tickers") or meta.get("symbols"))
+    tickers, refresh_scope, has_missing_symbols = _refresh_symbols_from_price_freshness(meta, coverage_tickers)
     target_end = _target_end_date(meta, now=now)
     current_latest = _current_common_latest_date(meta)
     current_latest_text = current_latest.isoformat() if current_latest else "-"
@@ -168,15 +192,18 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
     base = {
         "tickers": tickers,
         "ticker_count": len(tickers),
+        "coverage_tickers": coverage_tickers,
+        "coverage_ticker_count": len(coverage_tickers),
+        "refresh_scope": refresh_scope,
         "current_common_latest": current_latest_text,
         "target_end": target_end_text,
         "collection_end": target_end_text,
-        "button_label": "가격 데이터 업데이트",
+        "button_label": "Coverage 최신화",
         "interval": "1d",
         "target_table": "finance_price.nyse_price_history",
     }
 
-    if not tickers:
+    if not coverage_tickers:
         return {
             **base,
             "eligible": False,
@@ -186,30 +213,47 @@ def build_backtest_price_refresh_plan(meta: Mapping[str, Any], *, now: datetime 
             "detail": "백테스트 meta에 구성 종목이 없어 가격 갱신 대상을 만들 수 없습니다.",
         }
 
-    if current_latest is not None and current_latest >= target_end:
+    if not tickers:
         return {
             **base,
             "eligible": False,
             "status": "up_to_date",
             "collection_start": None,
-            "summary": f"이미 최신 가격 기준입니다. 기준일 {target_end_text}",
+            "summary": "Coverage 최신화 대상이 없습니다.",
+            "detail": "가격 최신성 점검에서 stale/missing 대상이 확인되지 않았습니다.",
+        }
+
+    if current_latest is not None and current_latest >= target_end and refresh_scope != "stale_or_missing_symbols":
+        return {
+            **base,
+            "eligible": False,
+            "status": "up_to_date",
+            "collection_start": None,
+            "summary": f"이미 최신 coverage 가격 기준입니다. 기준일 {target_end_text}",
             "detail": "주말/휴장일 제외 기준으로 추가 수집할 일봉 OHLCV가 없습니다.",
         }
 
     collection_start = None
-    if current_latest is not None:
+    if has_missing_symbols:
+        requested_start = _coerce_date(meta.get("start"))
+        collection_start = requested_start.isoformat() if requested_start else None
+    elif current_latest is not None:
         collection_start = (current_latest + timedelta(days=1)).isoformat()
     else:
         requested_start = _coerce_date(meta.get("start"))
         collection_start = requested_start.isoformat() if requested_start else None
 
+    scope_label = "stale/missing 가격 대상" if refresh_scope == "stale_or_missing_symbols" else "현재 백테스트 전체 종목"
     return {
         **base,
         "eligible": True,
         "status": "refresh_available",
         "collection_start": collection_start,
-        "summary": f"{len(tickers)}개 종목의 가격 데이터를 {target_end_text}까지 업데이트할 수 있습니다.",
-        "detail": f"주말/휴장일 제외 최신 기준일은 {target_end_text}이며, 현재 공통 기준일은 {current_latest_text}입니다.",
+        "summary": f"{len(tickers)}개 {scope_label}의 가격 데이터를 {target_end_text}까지 최신화할 수 있습니다.",
+        "detail": (
+            f"Base Universe {len(coverage_tickers)}개 중 refresh 대상은 {len(tickers)}개입니다. "
+            f"주말/휴장일 제외 최신 기준일은 {target_end_text}이며, 현재 공통 기준일은 {current_latest_text}입니다."
+        ),
     }
 
 
@@ -218,8 +262,9 @@ def run_backtest_price_refresh(
     *,
     now: datetime | None = None,
     runner: Callable[..., JobResult] | None = None,
+    freshness_inspector: Callable[..., Mapping[str, Any]] | None = None,
 ) -> JobResult:
-    """Refresh the current Backtest ticker set through the existing OHLCV ingestion job."""
+    """Refresh stale or missing Backtest coverage prices through the existing OHLCV ingestion job."""
     plan = build_backtest_price_refresh_plan(meta, now=now)
     if not plan.get("eligible"):
         now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -232,12 +277,12 @@ def run_backtest_price_refresh(
             "symbols_requested": plan.get("ticker_count") or 0,
             "symbols_processed": 0,
             "failed_symbols": [],
-            "message": str(plan.get("summary") or "가격 데이터 업데이트 대상이 없습니다."),
+                "message": str(plan.get("summary") or "Coverage 최신화 대상이 없습니다."),
             "details": {
                 "plan": plan,
                 "target_tables": ["finance_price.nyse_price_history"],
                 "source": "yfinance OHLCV",
-                "purpose": "Backtest Data Trust price freshness repair",
+                "purpose": "Backtest Coverage price freshness repair",
             },
         }
 
@@ -263,15 +308,42 @@ def run_backtest_price_refresh(
             "interval": "1d",
             "target_tables": ["finance_price.nyse_price_history"],
             "source": "yfinance OHLCV",
-            "purpose": "Backtest Data Trust price freshness repair",
+            "purpose": "Backtest Coverage price freshness repair",
         }
     )
+    selected_inspector = freshness_inspector
+    if selected_inspector is None:
+        try:
+            from app.runtime.backtest.runners.strict_factor import inspect_strict_annual_price_freshness
+
+            selected_inspector = inspect_strict_annual_price_freshness
+        except Exception:
+            selected_inspector = None
+    if selected_inspector is not None:
+        try:
+            post_refresh = dict(
+                selected_inspector(
+                    tickers=list(plan["tickers"]),
+                    end=plan.get("collection_end"),
+                    timeframe=plan.get("interval") or "1d",
+                    context_label="coverage refresh targets",
+                )
+            )
+            details["post_refresh_price_freshness"] = post_refresh
+            post_details = dict(post_refresh.get("details") or {})
+            unresolved = _normalize_symbols(post_details.get("refresh_symbols_all") or [])
+            details["post_refresh_unresolved_symbols"] = unresolved
+            details["post_refresh_unresolved_count"] = len(unresolved)
+        except Exception as exc:
+            details["post_refresh_price_freshness_error"] = str(exc)
     result["details"] = details
     base_message = str(result.get("message") or "").strip()
+    unresolved_count = int(details.get("post_refresh_unresolved_count") or 0)
+    unresolved_note = f" 미해결 가격 대상 {unresolved_count}개는 Data Trust에서 계속 확인하세요." if unresolved_count else ""
     result["message"] = (
-        f"Backtest 가격 데이터 업데이트: {base_message}"
+        f"Backtest Coverage 최신화: {base_message}{unresolved_note}"
         if base_message
-        else "Backtest 가격 데이터 업데이트를 실행했습니다."
+        else f"Backtest Coverage 최신화를 실행했습니다.{unresolved_note}"
     )
     return result
 

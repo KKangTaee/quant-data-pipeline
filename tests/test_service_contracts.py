@@ -8564,7 +8564,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("is_backtest_price_refresh_action_available", wrapper_source)
         self.assertIn("render_backtest_price_refresh_action", wrapper_source)
         self.assertIn("BacktestPriceRefreshAction", component_source)
-        self.assertIn("가격 데이터 업데이트 가능", component_source)
+        self.assertIn("Coverage 최신화 가능", component_source)
         self.assertIn("Streamlit.setComponentValue", component_source)
         self.assertIn("source: \"backtest_price_refresh_action\"", component_source)
         self.assertIn("Date.now()", component_source)
@@ -9169,8 +9169,45 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(plan["collection_start"], "2026-06-27")
         self.assertEqual(plan["collection_end"], "2026-07-02")
         self.assertEqual(plan["tickers"], ["VIG", "SCHD", "DGRO", "GLD"])
+        self.assertEqual(plan["coverage_ticker_count"], 4)
+        self.assertEqual(plan["refresh_scope"], "full_current_backtest_universe")
+        self.assertEqual(plan["button_label"], "Coverage 최신화")
         self.assertIn("주말/휴장일 제외", plan["detail"])
-        self.assertIn("4개 종목", plan["summary"])
+        self.assertIn("4개 현재 백테스트 전체 종목", plan["summary"])
+
+    def test_backtest_price_refresh_plan_targets_stale_or_missing_symbols(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import build_backtest_price_refresh_plan
+
+        plan = build_backtest_price_refresh_plan(
+            {
+                "tickers": ["AAA", "BBB", "CCC", "DDD"],
+                "start": "2016-01-01",
+                "end": "2026-07-07",
+                "actual_result_end": "2026-07-06",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "effective_end_date": "2026-07-06",
+                        "common_latest_date": "2026-07-06",
+                        "newest_latest_date": "2026-07-06",
+                        "refresh_symbols_all": ["CCC"],
+                        "missing_symbols_all": ["CCC"],
+                    },
+                },
+            },
+            now=datetime(2026, 7, 7, 8, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+        )
+
+        self.assertTrue(plan["eligible"])
+        self.assertEqual(plan["tickers"], ["CCC"])
+        self.assertEqual(plan["coverage_tickers"], ["AAA", "BBB", "CCC", "DDD"])
+        self.assertEqual(plan["coverage_ticker_count"], 4)
+        self.assertEqual(plan["refresh_scope"], "stale_or_missing_symbols")
+        self.assertEqual(plan["collection_start"], "2016-01-01")
+        self.assertIn("Base Universe 4개", plan["detail"])
+        self.assertIn("1개 stale/missing", plan["summary"])
 
     def test_backtest_price_refresh_plan_hides_action_when_prices_are_current(self) -> None:
         from zoneinfo import ZoneInfo
@@ -9246,8 +9283,68 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(result["job_name"], "backtest_data_trust_ohlcv_refresh")
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["details"]["source"], "yfinance OHLCV")
-        self.assertEqual(result["details"]["purpose"], "Backtest Data Trust price freshness repair")
-        self.assertIn("Backtest 가격 데이터 업데이트", result["message"])
+        self.assertEqual(result["details"]["purpose"], "Backtest Coverage price freshness repair")
+        self.assertIn("Backtest Coverage 최신화", result["message"])
+
+    def test_backtest_price_refresh_records_post_refresh_unresolved_symbols(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import run_backtest_price_refresh
+
+        calls: list[dict[str, Any]] = []
+
+        def fake_runner(symbols: list[str], **kwargs: Any) -> dict[str, Any]:
+            calls.append({"symbols": symbols, **kwargs})
+            return {
+                "job_name": "collect_ohlcv",
+                "status": "success",
+                "rows_written": 0,
+                "symbols_requested": len(symbols),
+                "symbols_processed": len(symbols),
+                "failed_symbols": [],
+                "message": "OHLCV collection completed with no new provider rows.",
+                "details": {},
+            }
+
+        def fake_inspector(**kwargs: Any) -> dict[str, Any]:
+            calls.append({"inspector": kwargs})
+            return {
+                "status": "warning",
+                "message": "1 symbol remains stale.",
+                "details": {
+                    "refresh_symbols_all": ["CUK"],
+                    "stale_symbols_all": ["CUK"],
+                    "target_end_date": "2026-07-06",
+                },
+            }
+
+        result = run_backtest_price_refresh(
+            {
+                "tickers": ["AAA", "CUK"],
+                "start": "2016-01-01",
+                "end": "2026-07-07",
+                "actual_result_end": "2026-05-07",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "effective_end_date": "2026-07-06",
+                        "common_latest_date": "2026-05-07",
+                        "refresh_symbols_all": ["CUK"],
+                        "stale_symbols_all": ["CUK"],
+                    },
+                },
+            },
+            now=datetime(2026, 7, 7, 8, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+            runner=fake_runner,
+            freshness_inspector=fake_inspector,
+        )
+
+        self.assertEqual(calls[0]["symbols"], ["CUK"])
+        self.assertEqual(calls[0]["start"], "2026-05-08")
+        self.assertEqual(calls[1]["inspector"]["tickers"], ["CUK"])
+        self.assertEqual(result["details"]["post_refresh_unresolved_symbols"], ["CUK"])
+        self.assertEqual(result["details"]["post_refresh_unresolved_count"], 1)
+        self.assertIn("미해결 가격 대상 1개", result["message"])
 
     def test_backtest_price_refresh_saved_rows_require_backtest_rerun(self) -> None:
         from app.services.backtest_price_refresh import price_refresh_result_requires_backtest_rerun
@@ -9310,7 +9407,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_render_data_trust_refresh_action", function_body)
         self.assertIn("build_backtest_price_refresh_plan", source)
         self.assertIn("run_backtest_price_refresh", source)
-        self.assertIn("가격 데이터 업데이트", source)
+        self.assertIn("Coverage 최신화", source)
         self.assertIn("_render_data_trust_issue_queue", source)
         self.assertIn("데이터 기준 요약", source)
         self.assertIn("data-trust-brief", source)

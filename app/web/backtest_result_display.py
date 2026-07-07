@@ -674,7 +674,7 @@ def _data_trust_refresh_state_key(plan: dict[str, Any]) -> str:
 def _render_data_trust_refresh_job_result(result: dict[str, Any]) -> None:
     status = str(result.get("status") or "").strip().lower()
     rows_written = result.get("rows_written")
-    message = str(result.get("message") or "가격 데이터 업데이트 실행 결과가 없습니다.")
+    message = str(result.get("message") or "Coverage 최신화 실행 결과가 없습니다.")
     if status == "success":
         st.success(f"{message} 저장 rows: {rows_written or 0:,}")
     elif status == "partial_success":
@@ -685,7 +685,12 @@ def _render_data_trust_refresh_job_result(result: dict[str, Any]) -> None:
         st.info(message)
     else:
         st.error(message)
-    st.caption("업데이트 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
+    details = dict(result.get("details") or {})
+    unresolved = list(details.get("post_refresh_unresolved_symbols") or [])
+    if unresolved:
+        sample = _sample_symbols_for_data_trust(unresolved)
+        st.warning(f"아직 가격 최신성 문제가 남은 종목 {len(unresolved)}개가 있습니다: {sample}")
+    st.caption("Coverage 최신화 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
 
 
 def _mark_backtest_result_requires_rerun_after_price_refresh(result: dict[str, Any]) -> None:
@@ -712,7 +717,7 @@ def _consume_data_trust_refresh_action(
     if st.session_state.get(consumed_key) == nonce:
         return
     st.session_state[consumed_key] = nonce
-    with st.spinner("현재 백테스트 ticker의 OHLCV 가격 데이터를 업데이트하는 중입니다...", show_time=True):
+    with st.spinner("현재 백테스트 coverage의 stale/missing 가격 데이터를 최신화하는 중입니다...", show_time=True):
         result = run_backtest_price_refresh(meta)
         st.session_state[state_key] = result
         _mark_backtest_result_requires_rerun_after_price_refresh(result)
@@ -726,7 +731,7 @@ def _render_data_trust_refresh_action(meta: dict[str, Any]) -> None:
 
     state_key = _data_trust_refresh_state_key(plan)
     if not is_backtest_price_refresh_action_available():
-        st.error("가격 데이터 업데이트 React component build를 찾지 못했습니다. component build 후 갱신 UI가 표시됩니다.")
+        st.error("Coverage 최신화 React component build를 찾지 못했습니다. component build 후 갱신 UI가 표시됩니다.")
         return
 
     metric_items = [
@@ -748,19 +753,19 @@ def _render_data_trust_refresh_action(meta: dict[str, Any]) -> None:
         {
             "label": "대상 종목",
             "value": f"{int(plan.get('ticker_count') or 0):,}개",
-            "detail": "현재 백테스트 ticker",
+            "detail": str(plan.get("refresh_scope") or "refresh 대상"),
         },
     ]
     action_value = render_backtest_price_refresh_action(
         status_label="업데이트 가능",
         tone="warning",
-        summary=str(plan.get("summary") or "가격 데이터 업데이트가 가능합니다."),
+        summary=str(plan.get("summary") or "Coverage 최신화가 가능합니다."),
         detail=str(plan.get("detail") or ""),
         metric_items=metric_items,
-        action_text="현재 백테스트 ticker의 OHLCV 가격 데이터를 보강합니다.",
-        button_label=str(plan.get("button_label") or "가격 데이터 업데이트"),
+        action_text="현재 백테스트 coverage의 stale/missing OHLCV 가격 데이터를 보강합니다.",
+        button_label=str(plan.get("button_label") or "Coverage 최신화"),
         action_note=(
-            "이 버튼은 가격 DB만 보강합니다. 백테스트 성과, 후보 등록, 2차 검증 전송은 자동으로 다시 실행하지 않습니다."
+            "이 버튼은 가격 DB를 보강하고 미해결 대상을 다시 확인합니다. 백테스트 성과, 후보 등록, 2차 검증 전송은 자동으로 다시 실행하지 않습니다."
         ),
         disabled=False,
         key=f"{state_key}_component",
@@ -1948,7 +1953,7 @@ def _render_backtest_rerun_required_notice(bundle: dict[str, Any] | None, result
     target_end = str(plan.get("target_end") or plan.get("collection_end") or "-")
     collection_start = str(plan.get("collection_start") or "-")
     ticker_count = int(plan.get("ticker_count") or len(plan.get("tickers") or []) or 0)
-    message = str((result or {}).get("message") or "가격 데이터 업데이트가 완료되었습니다.") if isinstance(result, dict) else "가격 데이터 업데이트가 완료되었습니다."
+    message = str((result or {}).get("message") or "Coverage 최신화가 완료되었습니다.") if isinstance(result, dict) else "Coverage 최신화가 완료되었습니다."
     st.warning(
         "가격 데이터가 업데이트되어 이전 백테스트 결과를 숨겼습니다. "
         "최신 가격 기준 성과와 2차 단계 진입 판단을 보려면 같은 설정으로 `Run Backtest`를 다시 실행하세요."

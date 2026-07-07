@@ -45,7 +45,7 @@ export function BacktestPriceRefreshAction(props: BacktestPriceRefreshActionProp
     <section className={`bt-react-price-refresh bt-react-price-refresh--${tone}`}>
       <header className="bt-react-price-refresh__head">
         <div>
-          <div className="bt-react-price-refresh__kicker">가격 데이터 업데이트 가능</div>
+          <div className="bt-react-price-refresh__kicker">Coverage 최신화 가능</div>
           <h4>{props.summary}</h4>
           <p>{props.detail}</p>
         </div>
@@ -65,7 +65,7 @@ export function BacktestPriceRefreshAction(props: BacktestPriceRefreshActionProp
       <footer className="bt-react-price-refresh__action">
         <div>
           <div className="bt-react-price-refresh__action-label">
-            {props.disabled ? "업데이트 보류" : "업데이트 가능"}
+            {props.disabled ? "최신화 보류" : "최신화 가능"}
           </div>
           <div className="bt-react-price-refresh__action-text">{props.actionText}</div>
         </div>
