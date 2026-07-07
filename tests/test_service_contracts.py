@@ -11,7 +11,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pandas as pd
 
@@ -7985,6 +7985,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ) as load_universe,
             patch.object(
                 overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={},
+                create=True,
+            ),
+            patch.object(
+                overview_actions,
                 "run_collect_ohlcv",
                 return_value={
                     "job_name": "collect_ohlcv",
@@ -8014,6 +8020,86 @@ class OverviewAutomationContractTests(unittest.TestCase):
             execution_profile="managed_safe",
         )
 
+    def test_overview_market_movers_eod_history_uses_delta_refresh_for_stale_symbols(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["AAA", "BBB", "CCC"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "AAA": {"latest_date": date(2026, 7, 7), "row_count": 120},
+                    "BBB": {"latest_date": date(2026, 7, 3), "row_count": 117},
+                },
+                create=True,
+            ),
+            patch.object(overview_actions, "_market_movers_today", return_value=date(2026, 7, 7), create=True),
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                side_effect=[
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 2,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Delta completed.",
+                    },
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 63,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Full window completed.",
+                    },
+                ],
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+            )
+
+        self.assertEqual(result["job_name"], "overview_market_movers_eod_history")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 65)
+        self.assertEqual(result["details"]["refresh_strategy"], "smart_delta")
+        self.assertEqual(result["details"]["symbols_requested"], 3)
+        self.assertEqual(result["details"]["symbols_selected"], 2)
+        self.assertEqual(result["details"]["symbols_skipped_current"], 1)
+        self.assertEqual(result["details"]["delta_symbols_count"], 1)
+        self.assertEqual(result["details"]["missing_symbols_count"], 1)
+        self.assertEqual(result["details"]["delta_start"], "2026-07-04")
+        self.assertEqual(result["details"]["delta_end"], "2026-07-08")
+        collect.assert_has_calls(
+            [
+                call(
+                    ["BBB"],
+                    start="2026-07-04",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+                call(
+                    ["CCC"],
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+            ]
+        )
+
     def test_overview_market_movers_refresh_action_uses_large_universe_loader_for_top1000(self) -> None:
         from app.jobs import overview_actions
 
@@ -8027,6 +8113,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "load_market_cap_universe_members",
                 return_value=[{"symbol": "AAA"}, {"symbol": "CCC"}],
             ) as load_universe,
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={},
+                create=True,
+            ),
             patch.object(
                 overview_actions,
                 "run_collect_ohlcv",
@@ -8122,6 +8214,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "load_nasdaq_symbol_directory_universe_members",
                 return_value=[{"symbol": "AAPL"}, {"symbol": "MSFT"}, {"symbol": "AAPL"}],
             ) as load_universe,
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={},
+                create=True,
+            ),
             patch.object(
                 overview_actions,
                 "run_collect_ohlcv",

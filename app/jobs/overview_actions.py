@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, Iterable
 
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
@@ -12,6 +12,7 @@ from finance.data.market_intelligence import (
     load_nasdaq_symbol_directory_universe_members,
     upsert_market_symbol_aliases,
 )
+from finance.loaders.price import load_price_freshness_summary
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -36,6 +37,10 @@ MARKET_MOVERS_EOD_COLLECTION_PERIODS = {
     "monthly": "1y",
     "yearly": "3y",
 }
+
+
+def _market_movers_today() -> date:
+    return datetime.now().date()
 
 
 def record_overview_action_result(result: JobResult) -> None:
@@ -306,11 +311,165 @@ def _load_market_movers_eod_universe_symbols(*, universe_code: str, universe_lim
     return _normalize_action_symbols(row.get("symbol") for row in rows), coverage_basis
 
 
+def _coerce_market_movers_date(value: Any) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if hasattr(value, "date") and callable(value.date):
+        try:
+            parsed = value.date()
+            if isinstance(parsed, date):
+                return parsed
+        except Exception:
+            return None
+    parsed_ts = _market_movers_to_datetime(value)
+    if parsed_ts is None:
+        return None
+    return parsed_ts.date()
+
+
+def _market_movers_to_datetime(value: Any) -> datetime | None:
+    try:
+        from pandas import isna, to_datetime
+
+        parsed = to_datetime(value, errors="coerce")
+    except Exception:
+        return None
+    if parsed is None or bool(isna(parsed)):
+        return None
+    if hasattr(parsed, "to_pydatetime"):
+        return parsed.to_pydatetime()
+    if isinstance(parsed, datetime):
+        return parsed
+    return None
+
+
+def _load_market_movers_eod_freshness(symbols: list[str]) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    frame = load_price_freshness_summary(symbols=symbols, timeframe="1d")
+    if frame.empty:
+        return {}
+    rows: dict[str, dict[str, Any]] = {}
+    for row in frame.to_dict("records"):
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if not symbol:
+            continue
+        latest_date = _coerce_market_movers_date(row.get("latest_date"))
+        rows[symbol] = {
+            "latest_date": latest_date,
+            "row_count": int(row.get("row_count") or 0),
+        }
+    return rows
+
+
+def _market_movers_eod_refresh_plan(
+    symbols: list[str],
+    freshness: dict[str, dict[str, Any]],
+    *,
+    as_of_date: date,
+) -> dict[str, Any]:
+    current_symbols: list[str] = []
+    stale_symbols: list[str] = []
+    missing_symbols: list[str] = []
+    stale_starts: list[date] = []
+
+    for symbol in symbols:
+        row = freshness.get(symbol) or {}
+        latest_date = _coerce_market_movers_date(row.get("latest_date"))
+        if latest_date is None:
+            missing_symbols.append(symbol)
+        elif latest_date >= as_of_date:
+            current_symbols.append(symbol)
+        else:
+            stale_symbols.append(symbol)
+            stale_starts.append(latest_date + timedelta(days=1))
+
+    delta_start = min(stale_starts) if stale_starts else None
+    delta_end = as_of_date + timedelta(days=1)
+    return {
+        "current_symbols": current_symbols,
+        "stale_symbols": stale_symbols,
+        "missing_symbols": missing_symbols,
+        "delta_start": delta_start,
+        "delta_end": delta_end if stale_symbols else None,
+    }
+
+
+def _market_movers_result_int(result: dict[str, Any], key: str) -> int:
+    try:
+        return int(result.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _merge_market_movers_eod_results(results: list[dict[str, Any]], *, now_text: str) -> dict[str, Any]:
+    if not results:
+        return {
+            "job_name": "collect_ohlcv",
+            "status": "success",
+            "started_at": now_text,
+            "finished_at": now_text,
+            "rows_written": 0,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "failed_symbols": [],
+            "message": "",
+            "details": {},
+        }
+    if len(results) == 1:
+        return dict(results[0])
+
+    statuses = [str(result.get("status") or "").lower() for result in results]
+    if any(status in {"failed", "error"} for status in statuses):
+        status = "failed"
+    elif any(status in {"partial", "warning"} for status in statuses):
+        status = "partial"
+    else:
+        status = "success"
+
+    failed_symbols: list[str] = []
+    messages: list[str] = []
+    for result in results:
+        failed_symbols.extend(str(symbol) for symbol in result.get("failed_symbols") or [])
+        message = str(result.get("message") or "").strip()
+        if message:
+            messages.append(message)
+
+    details = {
+        "collect_parts": [
+            {
+                "status": result.get("status"),
+                "rows_written": result.get("rows_written"),
+                "symbols_requested": result.get("symbols_requested"),
+                "symbols_processed": result.get("symbols_processed"),
+            }
+            for result in results
+        ]
+    }
+    return {
+        "job_name": "collect_ohlcv",
+        "status": status,
+        "started_at": results[0].get("started_at") or now_text,
+        "finished_at": results[-1].get("finished_at") or now_text,
+        "rows_written": sum(_market_movers_result_int(result, "rows_written") for result in results),
+        "symbols_requested": sum(_market_movers_result_int(result, "symbols_requested") for result in results),
+        "symbols_processed": sum(_market_movers_result_int(result, "symbols_processed") for result in results),
+        "failed_symbols": failed_symbols,
+        "message": " / ".join(messages),
+        "details": details,
+    }
+
+
 def run_overview_market_movers_eod_history(
     *,
     universe_code: str,
     universe_limit: int,
     period: str,
+    force_full_refresh: bool = False,
 ) -> JobResult:
     """Refresh EOD price history for non-daily Market Movers through the existing OHLCV job."""
     normalized_universe = str(universe_code or "SP500").strip().upper()
@@ -320,8 +479,9 @@ def run_overview_market_movers_eod_history(
         universe_code=normalized_universe,
         universe_limit=universe_limit,
     )
+    as_of_date = _market_movers_today()
+    now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if not symbols:
-        now_text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return {
             "job_name": "overview_market_movers_eod_history",
             "status": "failed",
@@ -345,16 +505,64 @@ def run_overview_market_movers_eod_history(
             },
         }
 
-    result = dict(
-        run_collect_ohlcv(
-            symbols,
-            period=collection_period,
-            interval="1d",
-            execution_profile="managed_safe",
-        )
-    )
+    freshness_error = ""
+    freshness: dict[str, dict[str, Any]] = {}
+    if not force_full_refresh:
+        try:
+            freshness = _load_market_movers_eod_freshness(symbols)
+        except Exception as exc:
+            freshness_error = str(exc)
+            freshness = {}
+    plan = _market_movers_eod_refresh_plan(symbols, freshness, as_of_date=as_of_date)
+    stale_symbols = plan["stale_symbols"]
+    missing_symbols = symbols if force_full_refresh else plan["missing_symbols"]
+    current_symbols = [] if force_full_refresh else plan["current_symbols"]
+    selected_symbols = list(dict.fromkeys([*stale_symbols, *missing_symbols]))
+
+    if not selected_symbols:
+        result = {
+            "job_name": "overview_market_movers_eod_history",
+            "status": "success",
+            "started_at": now_text,
+            "finished_at": now_text,
+            "rows_written": 0,
+            "symbols_requested": 0,
+            "symbols_processed": 0,
+            "failed_symbols": [],
+            "message": f"{normalized_period.title()} Market Movers 가격 이력은 이미 최신입니다.",
+            "details": {},
+        }
+    else:
+        collect_results: list[dict[str, Any]] = []
+        if stale_symbols and plan["delta_start"] is not None and plan["delta_end"] is not None:
+            collect_results.append(
+                dict(
+                    run_collect_ohlcv(
+                        stale_symbols,
+                        start=plan["delta_start"].strftime("%Y-%m-%d"),
+                        end=plan["delta_end"].strftime("%Y-%m-%d"),
+                        period=collection_period,
+                        interval="1d",
+                        execution_profile="managed_safe",
+                    )
+                )
+            )
+        if missing_symbols:
+            collect_results.append(
+                dict(
+                    run_collect_ohlcv(
+                        missing_symbols,
+                        period=collection_period,
+                        interval="1d",
+                        execution_profile="managed_safe",
+                    )
+                )
+            )
+        result = _merge_market_movers_eod_results(collect_results, now_text=now_text)
+
     result["job_name"] = "overview_market_movers_eod_history"
     details = dict(result.get("details") or {})
+    refresh_strategy = "full_window_forced" if force_full_refresh else "smart_delta"
     details.update(
         {
             "universe_code": normalized_universe,
@@ -363,16 +571,30 @@ def run_overview_market_movers_eod_history(
             "market_mover_period": normalized_period,
             "collection_period": collection_period,
             "interval": "1d",
+            "refresh_strategy": refresh_strategy,
+            "as_of_date": as_of_date.strftime("%Y-%m-%d"),
             "symbols_requested": len(symbols),
+            "symbols_selected": len(selected_symbols),
+            "symbols_skipped_current": len(current_symbols),
+            "delta_symbols_count": len(stale_symbols),
+            "missing_symbols_count": len(missing_symbols),
+            "delta_start": plan["delta_start"].strftime("%Y-%m-%d") if plan["delta_start"] else None,
+            "delta_end": plan["delta_end"].strftime("%Y-%m-%d") if plan["delta_end"] else None,
             "symbols_sample": symbols[:10],
+            "selected_symbols_sample": selected_symbols[:10],
             "target_tables": ["finance_price.nyse_price_history"],
             "source": "yfinance OHLCV",
             "purpose": "Overview Market Movers non-daily EOD price history refresh",
         }
     )
+    if freshness_error:
+        details["refresh_preflight_error"] = freshness_error
+        details["refresh_fallback_reason"] = "freshness preflight failed; full-window refresh selected"
     result["details"] = details
     base_message = str(result.get("message") or "").strip()
     prefix = f"{normalized_period.title()} Market Movers 가격 이력 갱신"
+    if selected_symbols and len(current_symbols) > 0:
+        prefix = f"{prefix} ({len(selected_symbols)}개 갱신, {len(current_symbols)}개 최신 스킵)"
     result["message"] = f"{prefix}: {base_message}" if base_message else f"{prefix}을 실행했습니다."
     return result
 
