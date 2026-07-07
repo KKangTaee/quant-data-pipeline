@@ -5593,3 +5593,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Single Strategy와 Portfolio Mix Builder의 strict form 입력값은 과거 Static 세션값을 PIT Monthly로 보정한다.
 - 후속 오류 수정: PIT-only 실행 시 기존 로컬 DB에 `equity_universe_member`가 없어 MySQL 1146이 노출되던 문제를 loader readiness 처리로 낮췄다.
 - 로컬 테스트 DB에는 100 / 300 / 500 / 1000 기본 coverage의 monthly PIT snapshot을 생성했다.
+
+## 2026-07-07 - Backtest Factor Readiness Panel V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-factor-readiness-panel-v1-20260707/`에서 1차~5차 개발을 완료했다.
+- strict annual Quality / Value / Quality + Value setup은 Base Universe, Price Freshness, Statement Shadow를 하나의 React `Factor Readiness` panel로 읽는다.
+- Single Strategy는 기본 시작일과 submit guard를 최대 5년으로 제한했고, Portfolio Mix Builder는 선택된 annual strict factor component에 대해서만 같은 window guard를 적용한다.
+- Browser QA는 `http://localhost:8515/backtest`의 Single Strategy Quality Strict Annual 화면에서 빈 iframe 없이 panel 렌더링과 `2021/07/07` start default를 확인했다.

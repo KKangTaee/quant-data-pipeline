@@ -337,6 +337,13 @@ DEFAULT_BACKTEST_END_DATE = date.today()
 CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
 CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
 STRICT_FACTOR_MAX_BACKTEST_YEARS = 5
+STRICT_FACTOR_WINDOW_LIMITED_STRATEGY_NAMES = frozenset(
+    {
+        "Quality Snapshot (Strict Annual)",
+        "Value Snapshot (Strict Annual)",
+        "Quality + Value Snapshot (Strict Annual)",
+    }
+)
 BACKTEST_PANEL_OPTIONS = list(BACKTEST_STAGE_OPTIONS) + [
     panel for panel in BACKTEST_LEGACY_PANEL_OPTIONS if panel not in set(BACKTEST_STAGE_OPTIONS)
 ]

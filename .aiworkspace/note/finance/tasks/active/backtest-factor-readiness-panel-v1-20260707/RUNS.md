@@ -36,3 +36,18 @@
   - Passed.
 - Diff check: `git diff --check`
   - Passed.
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_portfolio_mix_strict_annual_forms_use_readiness_and_window_guard -v`
+  - Expected failure confirmed: Portfolio Mix Builder strict annual factor sections did not render the new readiness panel or window guard.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_portfolio_mix_strict_annual_forms_use_readiness_and_window_guard -v`
+  - Passed.
+- Regression: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_portfolio_mix_builder_remains_streamlit_owned_with_strict_preset_copy tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_annual_forms_use_combined_readiness_panel tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_forms_keep_guidance_inside_form_surface tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_single_annual_forms_apply_five_year_window_guard tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_window_limit_blocks_more_than_five_years tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_factor_readiness_panel_react_component_is_ui_only tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_readiness_model_separates_base_price_statement_and_actions tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_readiness_model_marks_ready_when_price_and_statement_pass -v`
+  - Passed. Streamlit bare-mode and edgar deprecation warnings appeared during imports.
+- Compile: `.venv/bin/python -m py_compile app/web/backtest_common.py app/web/backtest_single_forms/strict_factor.py app/web/backtest_compare/page.py tests/test_service_contracts.py`
+  - Passed.
+- Diff check: `git diff --check`
+  - Passed.
+- Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8515 --server.headless true --server.runOnSave false --server.fileWatcherType none`
+  - Opened `http://localhost:8515/backtest`, selected Single Strategy `Quality` / `Strict Annual`.
+  - Confirmed the React `Factor Readiness` iframe renders Base Universe, Price Freshness, Statement Shadow, and next actions instead of a blank block.
+  - Confirmed strict annual default Start Date is `2021/07/07` for End Date `2026/07/07`.
+  - Screenshot saved at `backtest-factor-readiness-panel-v1-qa.png`.

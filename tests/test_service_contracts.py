@@ -834,6 +834,26 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("_render_strict_preset_status_note(vss_compare_preset", source)
         self.assertIn("_render_strict_preset_status_note(qvss_compare_preset", source)
 
+    def test_portfolio_mix_strict_annual_forms_use_readiness_and_window_guard(self) -> None:
+        source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
+        quality_annual_body = source.split('quality_compare_strategy_name == "Quality Snapshot (Strict Annual)"', 1)[1].split(
+            'quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)"', 1
+        )[0]
+        value_annual_body = source.split('value_compare_strategy_name == "Value Snapshot (Strict Annual)"', 1)[1].split(
+            'value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)"', 1
+        )[0]
+        quality_value_annual_body = source.split(
+            'quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)"', 1
+        )[1].split(
+            'quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)"', 1
+        )[0]
+
+        for body in (quality_annual_body, value_annual_body, quality_value_annual_body):
+            self.assertIn("_render_strict_factor_readiness_panel(", body)
+            self.assertNotIn("_render_strict_price_freshness_preflight(", body)
+        self.assertIn("STRICT_FACTOR_WINDOW_LIMITED_STRATEGY_NAMES", source)
+        self.assertIn("validate_strict_factor_backtest_window(", source)
+
     def test_strict_ui_exposes_pit_monthly_snapshot_universe_contract(self) -> None:
         from app.web import backtest_common as common
         from app.web.backtest_compare.page import _resolve_saved_portfolio_dynamic_inputs

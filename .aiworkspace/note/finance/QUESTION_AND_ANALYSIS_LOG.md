@@ -8623,3 +8623,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 새 PIT Monthly Snapshot 기본 경로가 DB 초기화 전 상태에서도 raw system error를 노출하지 않아야 하고, 현재 로컬 테스트 DB는 기본 snapshot을 생성해야 함.
 - Analysis result: schema 정의와 upsert path는 존재하지만, runtime loader가 `equity_universe_member`를 바로 SELECT하면서 기존 DB의 missing table 상태를 방어하지 않았다. PIT-only 전환 후 이 missing-table 상태가 바로 실행 blocker로 노출됐다.
 - Follow-up: loader는 missing table을 empty readiness state로 낮추고 runtime은 `BacktestDataError`로 스냅샷 생성 필요를 보고한다. 현재 로컬 DB에는 기본 100 / 300 / 500 / 1000 monthly PIT snapshot을 생성했다.
+
+### 2026-07-07 - strict factor setup은 가격만이 아니라 실행 준비 상태를 함께 보여야 한다
+
+- User request: 사용자가 Quality / Value preset 영역이 난잡하고, 가격 업데이트 후에도 CUK / BK 같은 provider/source gap이 반복되어 무엇을 해야 하는지 알기 어렵다고 지적하고 1차~5차 개발을 승인함.
+- Interpreted goal: Streamlit selector/form 구조는 유지하되, strict annual factor setup 안에서 Base Universe 후보군, 가격 최신성, statement shadow coverage, 다음 행동을 한 번에 읽게 해야 함.
+- Analysis result: 기존 `Price Freshness Preflight`만으로는 `Coverage 최신화`로 해결 가능한 stale lag와 provider no-data / statement shadow gap을 구분하기 어렵다. 따라서 read-model과 React panel은 세 가지 check를 함께 보여주고, 실행 가능 coverage가 아닌 Base Universe를 명확히 낮춰야 한다.
+- Follow-up: `backtest_factor_readiness_panel` React component와 shared readiness model을 추가하고, Single Strategy / Portfolio Mix Builder annual strict factor 화면에 연결했다. strict annual factor backtest window는 최대 5년으로 제한했다.

@@ -4899,6 +4899,14 @@ def _render_strategy_compare_workspace() -> None:
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(qss_compare_preset, QUALITY_STRICT_PRESETS[qss_compare_preset])
+                    _render_strict_factor_readiness_panel(
+                        tickers=QUALITY_STRICT_PRESETS[qss_compare_preset],
+                        end_value=compare_end,
+                        timeframe=compare_timeframe,
+                        strategy_label="Quality Snapshot (Strict Annual)",
+                        preset_name=qss_compare_preset,
+                        statement_freq="annual",
+                    )
                     compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
                         "preset_name": qss_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qss_compare_preset],
@@ -5184,6 +5192,14 @@ def _render_strategy_compare_workspace() -> None:
                     _render_ticker_preview(VALUE_STRICT_PRESETS[vss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(vss_compare_preset, VALUE_STRICT_PRESETS[vss_compare_preset])
+                    _render_strict_factor_readiness_panel(
+                        tickers=VALUE_STRICT_PRESETS[vss_compare_preset],
+                        end_value=compare_end,
+                        timeframe=compare_timeframe,
+                        strategy_label="Value Snapshot (Strict Annual)",
+                        preset_name=vss_compare_preset,
+                        statement_freq="annual",
+                    )
                     compare_strategy_overrides["Value Snapshot (Strict Annual)"] = {
                         "preset_name": vss_compare_preset,
                         "tickers": VALUE_STRICT_PRESETS[vss_compare_preset],
@@ -5469,6 +5485,14 @@ def _render_strategy_compare_workspace() -> None:
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qvss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(qvss_compare_preset, QUALITY_STRICT_PRESETS[qvss_compare_preset])
+                    _render_strict_factor_readiness_panel(
+                        tickers=QUALITY_STRICT_PRESETS[qvss_compare_preset],
+                        end_value=compare_end,
+                        timeframe=compare_timeframe,
+                        strategy_label="Quality + Value Snapshot (Strict Annual)",
+                        preset_name=qvss_compare_preset,
+                        statement_freq="annual",
+                    )
                     compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"] = {
                         "preset_name": qvss_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qvss_compare_preset],
@@ -5759,6 +5783,18 @@ def _render_strategy_compare_workspace() -> None:
                 selected_strategy_execution_names.append(quality_value_compare_strategy_name)
         else:
             selected_strategy_execution_names.append(strategy_name)
+    strict_factor_window_error = next(
+        (
+            validate_strict_factor_backtest_window(
+                compare_start,
+                compare_end,
+                strategy_label=strategy_name,
+            )
+            for strategy_name in selected_strategy_execution_names
+            if strategy_name in STRICT_FACTOR_WINDOW_LIMITED_STRATEGY_NAMES
+        ),
+        None,
+    )
     if compare_submitted:
         st.session_state.backtest_saved_portfolio_replay_id = None
         st.session_state.backtest_compare_source_context = {
@@ -5774,6 +5810,10 @@ def _render_strategy_compare_workspace() -> None:
             st.session_state.backtest_compare_bundles = None
             st.session_state.backtest_compare_error_kind = "input"
             st.session_state.backtest_compare_error = "Start Date must be earlier than or equal to End Date."
+        elif strict_factor_window_error:
+            st.session_state.backtest_compare_bundles = None
+            st.session_state.backtest_compare_error_kind = "input"
+            st.session_state.backtest_compare_error = strict_factor_window_error
         elif (
             "Equal Weight" in selected_strategies
             and not (compare_strategy_overrides.get("Equal Weight", {}).get("tickers") or [])
