@@ -811,6 +811,127 @@ def _render_data_trust_summary(meta: dict[str, Any]) -> None:
     _render_data_trust_refresh_action(meta)
 
 
+def _post_run_factor_readiness_state_key(model: dict[str, Any]) -> str:
+    context = dict(model.get("context") or {})
+    strategy_key = str(context.get("strategy_key") or "strict_factor")
+    start = str(context.get("start") or "none").replace("-", "")
+    end = str(context.get("end") or "none").replace("-", "")
+    return f"post_run_factor_readiness_{strategy_key}_{start}_{end}"
+
+
+def _filter_post_run_price_refresh_meta(meta: dict[str, Any], symbols: list[str]) -> dict[str, Any]:
+    selected_symbols = _unique_upper_tickers(symbols)
+    selected_symbol_set = set(selected_symbols)
+    price_report = dict(meta.get("price_freshness") or {})
+    details = dict(price_report.get("details") or {})
+    for key in [
+        "refresh_symbols_all",
+        "stale_symbols_all",
+        "missing_symbols_all",
+        "stale_symbols",
+        "missing_symbols",
+    ]:
+        if key not in details:
+            continue
+        details[key] = [
+            symbol
+            for symbol in _unique_upper_tickers(details.get(key) or [])
+            if symbol in selected_symbol_set
+        ]
+    details["refresh_symbols_all"] = selected_symbols
+    details["classification_rows"] = [
+        row
+        for row in list(details.get("classification_rows") or [])
+        if isinstance(row, dict) and str(row.get("symbol") or "").strip().upper() in selected_symbol_set
+    ]
+    price_report["details"] = details
+    refresh_meta = dict(meta)
+    refresh_meta["tickers"] = selected_symbols
+    refresh_meta["symbols"] = selected_symbols
+    refresh_meta["price_freshness"] = price_report
+    return refresh_meta
+
+
+def _consume_post_run_factor_readiness_action(
+    action_value: dict[str, Any] | None,
+    *,
+    model: dict[str, Any],
+    meta: dict[str, Any],
+    state_key: str,
+) -> None:
+    if not isinstance(action_value, dict):
+        return
+    if action_value.get("source") != "backtest_factor_readiness_panel":
+        return
+    action_id = str(action_value.get("action") or "").strip()
+    if action_id != "refresh_prices":
+        return
+    nonce = str(action_value.get("nonce") or "")
+    if not nonce:
+        return
+    consumed_key = f"{state_key}_action_nonce"
+    if st.session_state.get(consumed_key) == nonce:
+        return
+    st.session_state[consumed_key] = nonce
+    action_symbols = _unique_upper_tickers(action_value.get("symbols") or []) or _model_action_symbols(model, action_id)
+    if not action_symbols:
+        st.session_state[state_key] = {
+            "job_name": "backtest_post_run_price_refresh",
+            "status": "skipped",
+            "message": "가격 데이터 최신화 대상 ticker가 없어 실행하지 않았습니다.",
+            "rows_written": 0,
+            "details": {},
+        }
+        st.rerun()
+    refresh_meta = _filter_post_run_price_refresh_meta(meta, action_symbols)
+    with st.spinner("실제 결과에서 확인된 가격 문제 티커를 최신화하는 중입니다...", show_time=True):
+        result = run_backtest_price_refresh(refresh_meta)
+        st.session_state[state_key] = result
+        _mark_backtest_result_requires_rerun_after_price_refresh(result)
+    st.rerun()
+
+
+def _render_post_run_factor_readiness_panel(bundle: dict[str, Any]) -> None:
+    model = build_post_run_factor_readiness_panel_model(bundle)
+    if not dict(model.get("context") or {}).get("is_strict_factor"):
+        return
+    state_key = _post_run_factor_readiness_state_key(model)
+    result = st.session_state.get(state_key)
+    if isinstance(result, dict):
+        _apply_strict_readiness_retry_block(model, result)
+        _render_strict_factor_readiness_action_result(result)
+
+    if is_backtest_factor_readiness_panel_available():
+        action_value = render_backtest_factor_readiness_panel(
+            status=str(model["status"]),
+            tone=str(model["tone"]),
+            headline=str(model["headline"]),
+            summary=str(model["summary"]),
+            strategy_label=str(model["strategy_label"]),
+            run_recommended=bool(model["run_recommended"]),
+            checks=list(model["checks"]),
+            actions=list(model["actions"]),
+            key=f"{state_key}_component",
+        )
+        _consume_post_run_factor_readiness_action(
+            action_value,
+            model=model,
+            meta=dict(bundle.get("meta") or {}),
+            state_key=state_key,
+        )
+        return
+
+    if model["tone"] == "positive":
+        st.success(model["headline"])
+    else:
+        st.warning(model["headline"])
+    st.caption(model["summary"])
+    for check in list(model.get("checks") or []):
+        st.markdown(f"**{check.get('title')}**")
+        st.caption(str(check.get("problem") or ""))
+        st.caption(f"티커: {check.get('symbol_sample') or '-'}")
+
+
 def _data_trust_status_label(status: str | None) -> str:
     return data_trust_status_label(status)
 
@@ -2043,6 +2164,7 @@ def _render_last_run() -> None:
 
     _render_backtest_result_header(bundle, summary_df)
     _render_data_trust_summary(meta)
+    _render_post_run_factor_readiness_panel(bundle)
     _render_practical_validation_next_action(bundle)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]

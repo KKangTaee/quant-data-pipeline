@@ -198,13 +198,17 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         tickers = _parse_manual_tickers(manual_tickers)
         _render_ticker_preview(tickers)
 
-    _render_strict_factor_readiness_panel(
+    universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
+        key="qss_universe_contract",
         tickers=tickers,
-        start_value=st.session_state.get("qss_start", _default_strict_factor_start_date()),
-        end_value=st.session_state.get("qss_end", DEFAULT_BACKTEST_END_DATE),
-        timeframe=st.session_state.get("qss_timeframe", "1d"),
+        preset_name=preset_name,
+        statement_freq="annual",
+    )
+    _render_strict_factor_prerun_preview(
+        tickers=tickers,
         strategy_label="Quality Snapshot (Strict Annual)",
         preset_name=preset_name,
+        universe_contract=universe_contract,
         statement_freq="annual",
     )
 
@@ -238,17 +242,6 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 step=1,
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="qss_rebalance_interval",
-            )
-            universe_contract_label = _render_strict_universe_contract_selectbox(
-                "Universe Contract",
-                key="qss_universe_contract",
-                help=STRICT_UNIVERSE_CONTRACT_HELP,
-            )
-            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
-            dynamic_candidate_tickers, dynamic_target_size = _render_strict_annual_universe_contract_note(
-                universe_contract=universe_contract,
-                tickers=tickers,
-                preset_name=preset_name,
             )
             quality_factors = st.multiselect(
                 "Quality Factors",
@@ -889,13 +882,17 @@ def _render_value_snapshot_strict_annual_form() -> None:
         tickers = _parse_manual_tickers(manual_tickers)
         _render_ticker_preview(tickers)
 
-    _render_strict_factor_readiness_panel(
+    universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
+        key="vss_universe_contract",
         tickers=tickers,
-        start_value=st.session_state.get("vss_start", _default_strict_factor_start_date()),
-        end_value=st.session_state.get("vss_end", DEFAULT_BACKTEST_END_DATE),
-        timeframe=st.session_state.get("vss_timeframe", "1d"),
+        preset_name=preset_name,
+        statement_freq="annual",
+    )
+    _render_strict_factor_prerun_preview(
+        tickers=tickers,
         strategy_label="Value Snapshot (Strict Annual)",
         preset_name=preset_name,
+        universe_contract=universe_contract,
         statement_freq="annual",
     )
 
@@ -929,17 +926,6 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 step=1,
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="vss_rebalance_interval",
-            )
-            universe_contract_label = _render_strict_universe_contract_selectbox(
-                "Universe Contract",
-                key="vss_universe_contract",
-                help=STRICT_UNIVERSE_CONTRACT_HELP,
-            )
-            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
-            dynamic_candidate_tickers, dynamic_target_size = _render_strict_annual_universe_contract_note(
-                universe_contract=universe_contract,
-                tickers=tickers,
-                preset_name=preset_name,
             )
             value_factors = st.multiselect(
                 "Value Factors",
@@ -1382,13 +1368,17 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         tickers = _parse_manual_tickers(manual_tickers)
         _render_ticker_preview(tickers)
 
-    _render_strict_factor_readiness_panel(
+    universe_contract, dynamic_candidate_tickers, dynamic_target_size = _render_strict_universe_contract_setup(
+        key="qvss_universe_contract",
         tickers=tickers,
-        start_value=st.session_state.get("qvss_start", _default_strict_factor_start_date()),
-        end_value=st.session_state.get("qvss_end", DEFAULT_BACKTEST_END_DATE),
-        timeframe=st.session_state.get("qvss_timeframe", "1d"),
+        preset_name=preset_name,
+        statement_freq="annual",
+    )
+    _render_strict_factor_prerun_preview(
+        tickers=tickers,
         strategy_label="Quality + Value Snapshot (Strict Annual)",
         preset_name=preset_name,
+        universe_contract=universe_contract,
         statement_freq="annual",
     )
 
@@ -1422,17 +1412,6 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 step=1,
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="qvss_rebalance_interval",
-            )
-            universe_contract_label = _render_strict_universe_contract_selectbox(
-                "Universe Contract",
-                key="qvss_universe_contract",
-                help=STRICT_UNIVERSE_CONTRACT_HELP,
-            )
-            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
-            dynamic_candidate_tickers, dynamic_target_size = _render_strict_annual_universe_contract_note(
-                universe_contract=universe_contract,
-                tickers=tickers,
-                preset_name=preset_name,
             )
             quality_factors = st.multiselect(
                 "Quality Factors",

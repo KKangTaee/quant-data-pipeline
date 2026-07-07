@@ -5608,3 +5608,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - strict annual Quality / Value / Quality + Value setup은 Base Universe, Price Freshness, Statement Shadow를 하나의 React `Factor Readiness` panel로 읽는다.
 - Single Strategy는 기본 시작일과 submit guard를 최대 5년으로 제한했고, Portfolio Mix Builder는 선택된 annual strict factor component에 대해서만 같은 window guard를 적용한다.
 - Browser QA는 `http://localhost:8515/backtest`의 Single Strategy Quality Strict Annual 화면에서 빈 iframe 없이 panel 렌더링과 `2021/07/07` start default를 확인했다.
+
+## 2026-07-07 - Backtest Post-Run Factor Readiness V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-post-run-factor-readiness-v1-20260707/`에서 pre-run 후보군 검증을 post-run 실제 결과 기준 readiness로 전환했다.
+- Single Strategy / Portfolio Mix Builder strict annual factor form은 `Preset -> Universe 기준 -> Run 이후 readiness preview -> form inputs` 순서로 읽힌다.
+- 결과 화면은 strict factor bundle의 `price_freshness`, `History Excluded Ticker`, `Liquidity Excluded Ticker`로 문제 / 티커 / 해결 방법을 구성하고, 가격 refresh는 실제 refresh 가능한 티커만 대상으로 제한한다.
+- QA: py_compile, `tests.test_service_contracts` 529개, Browser QA(`http://localhost:8524/backtest`) 완료. Screenshot artifact는 `backtest-post-run-factor-readiness-v1-qa.png`로 남겼고 커밋 대상은 아니다.

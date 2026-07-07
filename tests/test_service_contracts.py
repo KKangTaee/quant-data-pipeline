@@ -738,12 +738,107 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("_render_strict_factor_data_readiness_note(", value_annual_body)
         self.assertNotIn("_render_quality_family_guide", quality_annual_body)
         self.assertNotIn("_render_quality_family_guide", value_annual_body)
-        self.assertIn("_render_strict_factor_readiness_panel(", quality_annual_body)
-        self.assertIn("_render_strict_factor_readiness_panel(", value_annual_body)
+        self.assertIn("_render_strict_factor_prerun_preview(", quality_annual_body)
+        self.assertIn("_render_strict_factor_prerun_preview(", value_annual_body)
+        self.assertNotIn("_render_strict_factor_readiness_panel(", quality_annual_body)
+        self.assertNotIn("_render_strict_factor_readiness_panel(", value_annual_body)
         self.assertNotIn("_render_strict_price_freshness_preflight(", quality_annual_body)
         self.assertNotIn("_render_strict_price_freshness_preflight(", value_annual_body)
 
-    def test_strict_factor_single_annual_forms_use_combined_readiness_panel(self) -> None:
+    def test_strict_factor_single_annual_forms_put_universe_contract_before_prerun_preview(self) -> None:
+        source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+        quality_annual_body = source.split("def _render_quality_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        value_annual_body = source.split("def _render_value_snapshot_strict_annual_form", 1)[1].split(
+            "def _render_quality_value_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        quality_value_annual_body = source.split("def _render_quality_value_snapshot_strict_annual_form", 1)[1]
+
+        self.assertIn("_render_strict_universe_contract_setup(", common_source)
+        self.assertIn("build_strict_factor_prerun_preview_model(", common_source)
+        for body in (quality_annual_body, value_annual_body, quality_value_annual_body):
+            self.assertIn("_render_strict_universe_contract_setup(", body)
+            self.assertIn("_render_strict_factor_prerun_preview(", body)
+            self.assertLess(
+                body.index("_render_strict_universe_contract_setup("),
+                body.index("_render_strict_factor_prerun_preview("),
+            )
+            self.assertLess(
+                body.index("_render_strict_factor_prerun_preview("),
+                body.index("with st.form("),
+            )
+            advanced_body = body.split('with st.expander("Advanced Inputs"', 1)[1].split(
+                "submitted = st.form_submit_button", 1
+            )[0]
+            self.assertNotIn("_render_strict_universe_contract_selectbox(", advanced_body)
+
+    def test_strict_factor_post_run_readiness_model_uses_actual_result_evidence(self) -> None:
+        from app.web.backtest_common import build_post_run_factor_readiness_panel_model
+
+        model = build_post_run_factor_readiness_panel_model(
+            {
+                "strategy_name": "Quality Snapshot (Strict Annual)",
+                "meta": {
+                    "strategy_key": "quality_snapshot_strict_annual",
+                    "start": "2021-07-07",
+                    "end": "2026-07-07",
+                    "universe_contract": "pit_monthly_snapshot",
+                    "price_freshness": {
+                        "status": "warning",
+                        "details": {
+                            "effective_end_date": "2026-07-07",
+                            "common_latest_date": "2026-05-07",
+                            "spread_days": 61,
+                            "refresh_symbols_all": ["BK", "CUK"],
+                            "classification_rows": [
+                                {"symbol": "BK", "reason": "minor_source_lag"},
+                                {"symbol": "CUK", "reason": "persistent_source_gap_or_symbol_issue"},
+                            ],
+                        },
+                    },
+                },
+                "result_df": pd.DataFrame(
+                    {
+                        "Date": ["2026-06-30", "2026-07-07"],
+                        "History Excluded Ticker": [["BK"], []],
+                        "History Excluded Count": [1, 0],
+                        "Liquidity Excluded Ticker": [[], ["XYZ"]],
+                        "Liquidity Excluded Count": [0, 1],
+                    }
+                ),
+            }
+        )
+
+        self.assertEqual(model["schema_version"], "strict_factor_readiness_panel_v2")
+        self.assertIn("실행 결과", model["headline"])
+        self.assertFalse(model["run_recommended"])
+        self.assertEqual([check["id"] for check in model["checks"]], ["price_freshness", "provider_gap", "history_excluded", "liquidity_excluded"])
+        self.assertEqual(model["checks"][0]["symbols"], ["BK"])
+        self.assertEqual(model["checks"][0]["action"]["id"], "refresh_prices")
+        self.assertEqual(model["checks"][1]["symbols"], ["CUK"])
+        self.assertFalse(model["checks"][1]["action"]["enabled"])
+        self.assertEqual(model["checks"][2]["symbols"], ["BK"])
+        self.assertEqual(model["checks"][3]["symbols"], ["XYZ"])
+
+    def test_backtest_result_display_renders_post_run_factor_readiness_before_handoff(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        last_run_body = source.split("def _render_last_run", 1)[1].split("def ", 1)[0]
+
+        self.assertIn("build_post_run_factor_readiness_panel_model", source)
+        self.assertIn("render_backtest_factor_readiness_panel", source)
+        self.assertIn("_render_post_run_factor_readiness_panel(bundle)", last_run_body)
+        self.assertLess(
+            last_run_body.index("_render_data_trust_summary(meta)"),
+            last_run_body.index("_render_post_run_factor_readiness_panel(bundle)"),
+        )
+        self.assertLess(
+            last_run_body.index("_render_post_run_factor_readiness_panel(bundle)"),
+            last_run_body.index("_render_practical_validation_next_action(bundle)"),
+        )
+
+    def test_strict_factor_single_annual_forms_use_post_run_readiness_panel(self) -> None:
         source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
         common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
         quality_annual_body = source.split("def _render_quality_snapshot_strict_annual_form", 1)[1].split(
@@ -758,9 +853,9 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertIn("build_strict_factor_readiness_panel_model(", common_source)
         self.assertIn("inspect_strict_annual_price_freshness(", common_source)
         self.assertIn("_load_statement_shadow_coverage_preview(", common_source)
-        self.assertIn("_render_strict_factor_readiness_panel(", quality_annual_body)
-        self.assertIn("_render_strict_factor_readiness_panel(", value_annual_body)
-        self.assertIn("_render_strict_factor_readiness_panel(", quality_value_annual_body)
+        self.assertNotIn("_render_strict_factor_readiness_panel(", quality_annual_body)
+        self.assertNotIn("_render_strict_factor_readiness_panel(", value_annual_body)
+        self.assertNotIn("_render_strict_factor_readiness_panel(", quality_value_annual_body)
         self.assertNotIn("_render_strict_price_freshness_preflight(", quality_annual_body)
         self.assertNotIn("_render_strict_price_freshness_preflight(", value_annual_body)
         self.assertNotIn("_render_strict_price_freshness_preflight(", quality_value_annual_body)
@@ -848,7 +943,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         )[0]
 
         for body in (quality_annual_body, value_annual_body, quality_value_annual_body):
-            self.assertIn("_render_strict_factor_readiness_panel(", body)
+            self.assertIn("_render_strict_factor_prerun_preview(", body)
             self.assertNotIn("_render_strict_price_freshness_preflight(", body)
         self.assertIn("STRICT_FACTOR_WINDOW_LIMITED_STRATEGY_NAMES", source)
         self.assertIn("validate_strict_factor_backtest_window(", source)

@@ -244,6 +244,16 @@ SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS = {
     "quality_value_snapshot_strict_annual",
     "quality_value_snapshot_strict_quarterly_prototype",
 }
+STRICT_FACTOR_POST_RUN_READINESS_STRATEGY_KEYS = frozenset(
+    {
+        "quality_snapshot_strict_annual",
+        "quality_snapshot_strict_quarterly_prototype",
+        "value_snapshot_strict_annual",
+        "value_snapshot_strict_quarterly_prototype",
+        "quality_value_snapshot_strict_annual",
+        "quality_value_snapshot_strict_quarterly_prototype",
+    }
+)
 GTAA_SCORE_WEIGHT_LABELS = [
     ("1MReturn", "1M"),
     ("3MReturn", "3M"),
@@ -1618,12 +1628,13 @@ def _render_strict_annual_universe_contract_note(
     universe_contract: str,
     tickers: list[str],
     preset_name: str | None,
+    statement_freq: str = "annual",
 ) -> tuple[list[str], int | None]:
     return _render_strict_dynamic_universe_contract_note(
         universe_contract=universe_contract,
         tickers=tickers,
         preset_name=preset_name,
-        statement_freq="annual",
+        statement_freq=statement_freq,
     )
 
 
@@ -2471,6 +2482,302 @@ def build_strict_factor_readiness_panel_model(
             "preset_display_name": preset_model.get("display_name"),
             "base_universe_count": len(normalized_tickers),
             "requested_limit": preset_model.get("requested_limit"),
+        },
+        "run_recommended": not needs_action,
+        "checks": checks,
+        "actions": actions,
+    }
+
+
+def build_strict_factor_prerun_preview_model(
+    *,
+    preset_name: str | None,
+    tickers: list[str] | tuple[str, ...] | None,
+    strategy_label: str,
+    universe_contract: str | None,
+    statement_freq: str = "annual",
+) -> dict[str, Any]:
+    """Describe the selected strict factor setup before running without presenting it as a gate."""
+    normalized_tickers = _unique_upper_tickers(list(tickers or []))
+    preset_model = build_strict_preset_basis_model(preset_name, normalized_tickers)
+    contract_label = _universe_contract_value_to_label(universe_contract)
+    return {
+        "schema_version": "strict_factor_prerun_preview_v1",
+        "strategy_label": strategy_label,
+        "headline": "Run 이후 실제 사용 데이터 기준으로 Factor Readiness를 확인합니다.",
+        "summary": (
+            f"{strict_preset_display_label(preset_name)} 후보군 {len(normalized_tickers):,}개와 "
+            f"{contract_label} 기준으로 백테스트를 실행합니다."
+        ),
+        "context": {
+            "preset_name": preset_name,
+            "preset_display_name": preset_model.get("display_name"),
+            "base_universe_count": len(normalized_tickers),
+            "requested_limit": preset_model.get("requested_limit"),
+            "universe_contract": universe_contract,
+            "universe_contract_label": contract_label,
+            "statement_freq": statement_freq,
+        },
+        "items": [
+            {
+                "label": "후보군",
+                "value": f"{len(normalized_tickers):,}개",
+                "detail": str(preset_model.get("source_basis") or "-"),
+            },
+            {
+                "label": "Universe 기준",
+                "value": contract_label,
+                "detail": "실제 실행 기간의 월말 snapshot/membership 기준으로 판단합니다.",
+            },
+            {
+                "label": "Readiness 위치",
+                "value": "Run 결과 하단",
+                "detail": "가격/statement/liquidity 이슈는 실제 결과 기준으로 표시합니다.",
+            },
+        ],
+    }
+
+
+def _render_strict_factor_prerun_preview(
+    *,
+    preset_name: str | None,
+    tickers: list[str],
+    strategy_label: str,
+    universe_contract: str | None,
+    statement_freq: str = "annual",
+) -> None:
+    if not tickers:
+        return
+    model = build_strict_factor_prerun_preview_model(
+        preset_name=preset_name,
+        tickers=tickers,
+        strategy_label=strategy_label,
+        universe_contract=universe_contract,
+        statement_freq=statement_freq,
+    )
+    st.info(str(model["headline"]))
+    item_text = " · ".join(
+        f"{item['label']}: `{item['value']}`" for item in list(model.get("items") or [])
+    )
+    if item_text:
+        st.caption(item_text)
+
+
+def _render_strict_universe_contract_setup(
+    *,
+    key: str,
+    tickers: list[str],
+    preset_name: str | None,
+    statement_freq: str = "annual",
+) -> tuple[str, list[str], int | None]:
+    universe_contract_label = _render_strict_universe_contract_selectbox(
+        "Universe 기준",
+        key=key,
+        help=STRICT_UNIVERSE_CONTRACT_HELP,
+    )
+    universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+    dynamic_candidate_tickers, dynamic_target_size = _render_strict_annual_universe_contract_note(
+        universe_contract=universe_contract,
+        tickers=tickers,
+        preset_name=preset_name,
+        statement_freq=statement_freq,
+    )
+    return universe_contract, dynamic_candidate_tickers, dynamic_target_size
+
+
+def _result_cell_to_symbols(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, float) and pd.isna(value):
+        return []
+    if isinstance(value, (list, tuple, set, pd.Series, np.ndarray)):
+        return _unique_upper_tickers(list(value))
+    text = str(value or "").strip()
+    if not text or text.lower() in {"nan", "none", "null", "[]"}:
+        return []
+    cleaned = text
+    for old, new in (("[", ""), ("]", ""), ("'", ""), ('"', ""), ("|", ","), (";", ","), ("\n", ",")):
+        cleaned = cleaned.replace(old, new)
+    return _unique_upper_tickers([part.strip() for part in cleaned.split(",")])
+
+
+def _collect_result_symbols(result_df: Any, column_name: str) -> list[str]:
+    if not isinstance(result_df, pd.DataFrame) or column_name not in result_df.columns:
+        return []
+    symbols: list[str] = []
+    for value in result_df[column_name].tolist():
+        symbols.extend(_result_cell_to_symbols(value))
+    return _unique_upper_tickers(symbols)
+
+
+def _strategy_label_from_bundle(bundle: dict[str, Any], meta: dict[str, Any]) -> str:
+    strategy_label = str(bundle.get("strategy_name") or meta.get("strategy_name") or "").strip()
+    if strategy_label:
+        return strategy_label
+    strategy_key = str(meta.get("strategy_key") or "").strip()
+    if strategy_key:
+        return catalog_strategy_key_to_display_name(strategy_key)
+    return "Strict Factor Backtest"
+
+
+def build_post_run_factor_readiness_panel_model(bundle: dict[str, Any] | None) -> dict[str, Any]:
+    """Build Factor Readiness from the actual strict factor backtest result evidence."""
+    bundle = dict(bundle or {})
+    meta = dict(bundle.get("meta") or {})
+    strategy_key = str(meta.get("strategy_key") or "").strip()
+    strategy_label = _strategy_label_from_bundle(bundle, meta)
+    if strategy_key not in STRICT_FACTOR_POST_RUN_READINESS_STRATEGY_KEYS:
+        return {
+            "schema_version": "strict_factor_readiness_panel_v2",
+            "strategy_label": strategy_label,
+            "status": "not_applicable",
+            "tone": "neutral",
+            "headline": "Factor Readiness 대상 전략이 아닙니다.",
+            "summary": "",
+            "issue_summary": "",
+            "context": {"is_strict_factor": False, "strategy_key": strategy_key},
+            "run_recommended": True,
+            "checks": [],
+            "actions": [],
+        }
+
+    result_df = bundle.get("result_df")
+    price_report = dict(meta.get("price_freshness") or {})
+    price_details = dict(price_report.get("details") or {})
+    refresh_symbols = _strict_price_refresh_symbols(price_details)
+    provider_gap_symbols = _strict_provider_gap_symbols(price_details, refresh_symbols)
+    provider_gap_symbol_set = set(provider_gap_symbols)
+    refreshable_price_symbols = [symbol for symbol in refresh_symbols if symbol not in provider_gap_symbol_set]
+    history_excluded_symbols = _collect_result_symbols(result_df, "History Excluded Ticker")
+    liquidity_excluded_symbols = _collect_result_symbols(result_df, "Liquidity Excluded Ticker")
+
+    checks: list[dict[str, Any]] = []
+    if refreshable_price_symbols:
+        checks.append(
+            _readiness_problem_check(
+                check_id="price_freshness",
+                title="가격 데이터 문제",
+                problem=f"{len(refreshable_price_symbols)}개 종목의 가격 데이터가 실제 실행 기준 종료일보다 오래되었습니다.",
+                symbols=refreshable_price_symbols,
+                solution="버튼으로 해당 티커의 가격 데이터를 보강한 뒤 같은 설정으로 Run Backtest를 다시 실행하세요.",
+                action=_readiness_action(
+                    action_id="refresh_prices",
+                    label="가격 데이터 최신화",
+                    detail="실제 결과에서 확인된 stale/missing 가격 티커만 보강합니다.",
+                    enabled=True,
+                    tone="warning",
+                    symbols=refreshable_price_symbols,
+                ),
+                tone="warning",
+                diagnostics=[
+                    {"label": "목표 기준일", "value": str(price_details.get("effective_end_date") or "-")},
+                    {"label": "공통 최신일", "value": str(price_details.get("common_latest_date") or "-")},
+                    {"label": "최신일 차이", "value": f"{price_details.get('spread_days') or 0}d"},
+                ],
+            )
+        )
+
+    if provider_gap_symbols:
+        checks.append(
+            _readiness_problem_check(
+                check_id="provider_gap",
+                title="Provider/source gap",
+                problem=f"{len(provider_gap_symbols)}개 종목은 가격 업데이트를 반복해도 provider가 최신 row를 주지 않을 수 있습니다.",
+                symbols=provider_gap_symbols,
+                solution="Data Trust에서 symbol lifecycle/provider no-data를 확인하고, 필요하면 universe에서 제외하거나 대체 소스를 검토하세요.",
+                action=_readiness_action(
+                    action_id="review_provider_gap",
+                    label="Provider gap 확인",
+                    detail="자동 보강 대상이 아니며 Data Trust 확인이 필요합니다.",
+                    enabled=False,
+                    tone="warning",
+                    symbols=provider_gap_symbols,
+                ),
+                tone="warning",
+                diagnostics=[
+                    {"label": "분류", "value": "provider/source gap"},
+                    {"label": "자동 업데이트", "value": "비활성"},
+                ],
+            )
+        )
+
+    if history_excluded_symbols:
+        checks.append(
+            _readiness_problem_check(
+                check_id="history_excluded",
+                title="가격 이력 부족",
+                problem=f"{len(history_excluded_symbols)}개 종목이 실제 리밸런싱 과정에서 최소 가격 이력 조건을 통과하지 못했습니다.",
+                symbols=history_excluded_symbols,
+                solution="실행 기간을 늦추거나, Universe 기준을 PIT snapshot으로 유지한 채 해당 티커의 장기 가격 이력/상장일을 확인하세요.",
+                action=_readiness_action(
+                    action_id="review_history_gap",
+                    label="가격 이력 확인",
+                    detail="가격 최신화만으로 해결되지 않을 수 있어 수동 확인이 필요합니다.",
+                    enabled=False,
+                    tone="warning",
+                    symbols=history_excluded_symbols,
+                ),
+                tone="warning",
+                diagnostics=[{"label": "출처", "value": "History Excluded Ticker"}],
+            )
+        )
+
+    if liquidity_excluded_symbols:
+        checks.append(
+            _readiness_problem_check(
+                check_id="liquidity_excluded",
+                title="유동성 기준 미달",
+                problem=f"{len(liquidity_excluded_symbols)}개 종목이 실제 리밸런싱 과정에서 유동성 기준을 통과하지 못했습니다.",
+                symbols=liquidity_excluded_symbols,
+                solution="유동성 기준을 완화할지, 해당 종목을 universe에서 제외할지 검토하세요.",
+                action=_readiness_action(
+                    action_id="review_liquidity_gap",
+                    label="유동성 기준 확인",
+                    detail="데이터 보강보다 투자 가능성 기준 조정/검토 대상입니다.",
+                    enabled=False,
+                    tone="warning",
+                    symbols=liquidity_excluded_symbols,
+                ),
+                tone="warning",
+                diagnostics=[{"label": "출처", "value": "Liquidity Excluded Ticker"}],
+            )
+        )
+
+    needs_action = bool(checks)
+    actions = [dict(check["action"]) for check in checks]
+    if not actions:
+        actions.append(
+            _readiness_action(
+                action_id="run_backtest_ready",
+                label="데이터 기준 통과",
+                detail="이번 실행 결과 기준으로 추가 보강 대상이 없습니다.",
+                enabled=False,
+                tone="positive",
+            )
+        )
+    issue_summary = " / ".join(f"{check['title']} {len(check.get('symbols') or [])}개" for check in checks)
+    return {
+        "schema_version": "strict_factor_readiness_panel_v2",
+        "strategy_label": strategy_label,
+        "status": "ready" if not needs_action else "needs_action",
+        "tone": "positive" if not needs_action else "warning",
+        "headline": (
+            "실행 결과 기준 데이터 이슈가 없습니다."
+            if not needs_action
+            else f"실행 결과 기준 확인할 문제 {len(checks)}개"
+        ),
+        "summary": (
+            "이번 백테스트가 실제로 사용한 기간/티커 기준으로 문제, 영향받는 티커, 해결 방법을 정리했습니다."
+            if needs_action
+            else "이번 백테스트의 실제 결과 기준으로 가격/이력/유동성 보강 대상이 없습니다."
+        ),
+        "issue_summary": issue_summary,
+        "context": {
+            "is_strict_factor": True,
+            "strategy_key": strategy_key,
+            "universe_contract": meta.get("universe_contract"),
+            "start": meta.get("start"),
+            "end": meta.get("end"),
         },
         "run_recommended": not needs_action,
         "checks": checks,

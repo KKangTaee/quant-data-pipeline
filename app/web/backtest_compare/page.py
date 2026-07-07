@@ -4885,27 +4885,20 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_qss_preset",
                     )
-                    qss_compare_contract_label = _render_strict_universe_contract_selectbox(
-                        "Strict Annual Quality Universe Contract",
+                    qss_compare_universe_contract, qss_dynamic_candidate_tickers, qss_dynamic_target_size = _render_strict_universe_contract_setup(
                         key="compare_qss_universe_contract",
-                        help=STRICT_UNIVERSE_CONTRACT_HELP,
-                    )
-                    qss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qss_compare_contract_label]
-                    qss_dynamic_candidate_tickers, qss_dynamic_target_size = _render_strict_annual_universe_contract_note(
-                        universe_contract=qss_compare_universe_contract,
                         tickers=QUALITY_STRICT_PRESETS[qss_compare_preset],
                         preset_name=qss_compare_preset,
+                        statement_freq="annual",
                     )
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(qss_compare_preset, QUALITY_STRICT_PRESETS[qss_compare_preset])
-                    _render_strict_factor_readiness_panel(
+                    _render_strict_factor_prerun_preview(
                         tickers=QUALITY_STRICT_PRESETS[qss_compare_preset],
-                        start_value=compare_start,
-                        end_value=compare_end,
-                        timeframe=compare_timeframe,
                         strategy_label="Quality Snapshot (Strict Annual)",
                         preset_name=qss_compare_preset,
+                        universe_contract=qss_compare_universe_contract,
                         statement_freq="annual",
                     )
                     compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
@@ -5179,27 +5172,20 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_vss_preset",
                     )
-                    vss_compare_contract_label = _render_strict_universe_contract_selectbox(
-                        "Strict Annual Value Universe Contract",
+                    vss_compare_universe_contract, vss_dynamic_candidate_tickers, vss_dynamic_target_size = _render_strict_universe_contract_setup(
                         key="compare_vss_universe_contract",
-                        help=STRICT_UNIVERSE_CONTRACT_HELP,
-                    )
-                    vss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[vss_compare_contract_label]
-                    vss_dynamic_candidate_tickers, vss_dynamic_target_size = _render_strict_annual_universe_contract_note(
-                        universe_contract=vss_compare_universe_contract,
                         tickers=VALUE_STRICT_PRESETS[vss_compare_preset],
                         preset_name=vss_compare_preset,
+                        statement_freq="annual",
                     )
                     _render_ticker_preview(VALUE_STRICT_PRESETS[vss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(vss_compare_preset, VALUE_STRICT_PRESETS[vss_compare_preset])
-                    _render_strict_factor_readiness_panel(
+                    _render_strict_factor_prerun_preview(
                         tickers=VALUE_STRICT_PRESETS[vss_compare_preset],
-                        start_value=compare_start,
-                        end_value=compare_end,
-                        timeframe=compare_timeframe,
                         strategy_label="Value Snapshot (Strict Annual)",
                         preset_name=vss_compare_preset,
+                        universe_contract=vss_compare_universe_contract,
                         statement_freq="annual",
                     )
                     compare_strategy_overrides["Value Snapshot (Strict Annual)"] = {
@@ -5473,27 +5459,20 @@ def _render_strategy_compare_workspace() -> None:
                         index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                         key="compare_qvss_preset",
                     )
-                    qvss_compare_contract_label = _render_strict_universe_contract_selectbox(
-                        "Strict Annual Multi-Factor Universe Contract",
+                    qvss_compare_universe_contract, qvss_dynamic_candidate_tickers, qvss_dynamic_target_size = _render_strict_universe_contract_setup(
                         key="compare_qvss_universe_contract",
-                        help=STRICT_UNIVERSE_CONTRACT_HELP,
-                    )
-                    qvss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qvss_compare_contract_label]
-                    qvss_dynamic_candidate_tickers, qvss_dynamic_target_size = _render_strict_annual_universe_contract_note(
-                        universe_contract=qvss_compare_universe_contract,
                         tickers=QUALITY_STRICT_PRESETS[qvss_compare_preset],
                         preset_name=qvss_compare_preset,
+                        statement_freq="annual",
                     )
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qvss_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(qvss_compare_preset, QUALITY_STRICT_PRESETS[qvss_compare_preset])
-                    _render_strict_factor_readiness_panel(
+                    _render_strict_factor_prerun_preview(
                         tickers=QUALITY_STRICT_PRESETS[qvss_compare_preset],
-                        start_value=compare_start,
-                        end_value=compare_end,
-                        timeframe=compare_timeframe,
                         strategy_label="Quality + Value Snapshot (Strict Annual)",
                         preset_name=qvss_compare_preset,
+                        universe_contract=qvss_compare_universe_contract,
                         statement_freq="annual",
                     )
                     compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"] = {

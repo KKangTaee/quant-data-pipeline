@@ -8644,3 +8644,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Streamlit selector/form 구조는 유지하되, strict annual factor setup 안에서 Base Universe 후보군, 가격 최신성, statement shadow coverage, 다음 행동을 한 번에 읽게 해야 함.
 - Analysis result: 기존 `Price Freshness Preflight`만으로는 `Coverage 최신화`로 해결 가능한 stale lag와 provider no-data / statement shadow gap을 구분하기 어렵다. 따라서 read-model과 React panel은 세 가지 check를 함께 보여주고, 실행 가능 coverage가 아닌 Base Universe를 명확히 낮춰야 한다.
 - Follow-up: `backtest_factor_readiness_panel` React component와 shared readiness model을 추가하고, Single Strategy / Portfolio Mix Builder annual strict factor 화면에 연결했다. strict annual factor backtest window는 최대 5년으로 제한했다.
+
+### 2026-07-07 - strict Factor Readiness는 실행 전 전체 후보군보다 실행 후 실제 결과 기준이어야 한다
+
+- User request: 사용자가 PIT Monthly universe에서는 preset 300개 자체가 오래된 현재 후보군일 수 있으므로, Run 전 Factor Readiness가 아니라 Run 후 실제 백테스트 기간 / 티커 기준으로 문제와 보강 버튼을 보여주는 방향을 제안하고 개발을 승인함.
+- Interpreted goal: Universe 기준을 먼저 명시하고, pre-run은 preview로 낮추며, post-run 결과 화면에서 실제 문제 / 영향 티커 / 해결 방법을 React panel로 보여줘야 함.
+- Analysis result: 현재 runtime은 successful strict factor bundle에 `price_freshness`와 result-level excluded ticker evidence를 남긴다. 따라서 V1은 월별 PIT 전체 audit 대신 실제 결과 evidence 기반으로 시작하는 것이 가장 작고 안전하다.
+- Follow-up: `build_post_run_factor_readiness_panel_model()`과 결과 화면 연결을 추가했다. 가격 보강은 refresh 가능한 티커만 실행하고, provider/source gap은 반복 refresh가 아니라 Data Trust / universe 조정 확인 대상으로 분리했다.
