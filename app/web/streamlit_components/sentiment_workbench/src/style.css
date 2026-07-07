@@ -219,7 +219,6 @@ body {
 .sentiment-workbench__cross-read,
 .sentiment-workbench__driver-section,
 .sentiment-workbench__component-section,
-.sentiment-workbench__next-checks,
 .sentiment-workbench__chart-section,
 .sentiment-workbench__evidence-details {
   border-top: 1px solid #e5e7eb;
@@ -267,7 +266,6 @@ body {
 
 .sentiment-workbench__cross-metric span,
 .sentiment-workbench__driver-rating,
-.sentiment-workbench__next-check small,
 .sentiment-workbench__component-item small {
   color: #64748b;
   font-size: 0.78rem;
@@ -313,8 +311,7 @@ body {
 
 .sentiment-workbench__analysis-title,
 .sentiment-workbench__driver-lane-header span,
-.sentiment-workbench__component-title span,
-.sentiment-workbench__next-check-target {
+.sentiment-workbench__component-title span {
   color: #111827;
   font-size: 0.88rem;
   font-weight: 850;
@@ -332,8 +329,7 @@ body {
 
 .sentiment-workbench__analysis-step p,
 .sentiment-workbench__driver-card p,
-.sentiment-workbench__component-item p,
-.sentiment-workbench__next-check p {
+.sentiment-workbench__component-item p {
   color: #475569;
   font-size: 0.82rem;
   font-weight: 620;
@@ -378,8 +374,7 @@ body {
 }
 
 .sentiment-workbench__driver-card,
-.sentiment-workbench__component-item,
-.sentiment-workbench__next-check {
+.sentiment-workbench__component-item {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -452,21 +447,10 @@ body {
   min-width: 0;
 }
 
-.sentiment-workbench__component-item small,
-.sentiment-workbench__next-check small {
+.sentiment-workbench__component-item small {
   display: block;
   margin-top: 6px;
   overflow-wrap: anywhere;
-}
-
-.sentiment-workbench__next-check-list {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.sentiment-workbench__next-check {
-  border-left: 4px solid var(--metric-tone, #64748b);
 }
 
 .sentiment-workbench__chart-grid {
@@ -519,15 +503,86 @@ body {
   width: 100%;
 }
 
+.sentiment-workbench__line-chart-plot {
+  position: relative;
+}
+
 .sentiment-workbench__chart-axis {
   stroke: #cbd5e1;
   stroke-width: 1;
+}
+
+.sentiment-workbench__chart-gridline {
+  stroke: #e5e7eb;
+  stroke-width: 0.8;
+}
+
+.sentiment-workbench__chart-y-label {
+  fill: #64748b;
+  font-size: 8px;
+  font-weight: 800;
 }
 
 .sentiment-workbench__chart-line {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.4;
+}
+
+.sentiment-workbench__chart-point {
+  opacity: 0.36;
+  pointer-events: none;
+}
+
+.sentiment-workbench__chart-hover-guide {
+  stroke: #94a3b8;
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.sentiment-workbench__chart-focus-dot {
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.sentiment-workbench__chart-tooltip {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
+  color: #ffffff;
+  display: grid;
+  gap: 3px;
+  min-width: 8rem;
+  padding: 8px 10px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 3;
+}
+
+.sentiment-workbench__chart-tooltip strong,
+.sentiment-workbench__chart-tooltip b,
+.sentiment-workbench__chart-tooltip span,
+.sentiment-workbench__chart-tooltip small {
+  line-height: 1.18;
+}
+
+.sentiment-workbench__chart-tooltip strong {
+  font-size: 0.74rem;
+  font-weight: 860;
+}
+
+.sentiment-workbench__chart-tooltip span,
+.sentiment-workbench__chart-tooltip small {
+  color: #cbd5e1;
+  font-size: 0.68rem;
+  font-weight: 720;
+}
+
+.sentiment-workbench__chart-tooltip b {
+  font-size: 0.88rem;
+  font-weight: 900;
 }
 
 .sentiment-workbench__chart-meta,
@@ -688,7 +743,6 @@ body {
 
   .sentiment-workbench__metric-grid,
   .sentiment-workbench__component-list,
-  .sentiment-workbench__next-check-list,
   .sentiment-workbench__chart-grid,
   .sentiment-workbench__evidence-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -712,7 +766,6 @@ body {
   .sentiment-workbench__metric-grid,
   .sentiment-workbench__cross-metrics,
   .sentiment-workbench__component-list,
-  .sentiment-workbench__next-check-list,
   .sentiment-workbench__chart-grid,
   .sentiment-workbench__evidence-grid {
     grid-template-columns: 1fr;

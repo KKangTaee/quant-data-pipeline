@@ -8582,3 +8582,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Sentiment를 raw status / table 중심이 아니라 현재 심리 상태, 만든 요인, freshness, 다음 확인, 하단 근거/그래프 순서로 읽게 하되, Python service가 모든 해석 문구와 refresh action을 소유해야 함.
 - Analysis result: `app/services/overview/sentiment.py`의 `analysis`, `driver_groups`, `component_explanations`, `next_checks`, rows payload만 React에 전달하고, React는 summary/freshness, CNN / AAII cross-read, driver lanes, component explanations, next checks, history line chart, component bars, evidence tables를 렌더링하는 구조가 맞다.
 - Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에 있다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.
+
+### 2026-07-07 - Sentiment graph hover should expose exact evidence values
+
+- User request: React Sentiment 화면이 좋아졌지만 하단 `다음에 확인할 것`은 필요 없으면 제거하고, `그래프로 보는 근거`는 hover 시 x/y 값이 보이게 하며, 공포탐욕 탭의 약점과 추가 기능 후보를 리뷰해 달라고 요청함.
+- Interpreted goal: 다음 행동 카드는 기본 판단 흐름에서 빼고, graph evidence는 정확한 날짜 / 시리즈 / 값 / source를 즉시 확인할 수 있어야 한다.
+- Analysis result: next-check content는 service payload에는 남겨도 React 기본 화면에서는 숨기는 것이 가장 안전하다. History SVG는 기존 `charts.history` payload만 사용해 y축 눈금, hover guide, tooltip을 렌더링하면 된다.
+- Follow-up: tooltip Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다. 추가 기능 후보는 service-owned read model 확장을 전제로 별도 후속 차수에서 다룬다.

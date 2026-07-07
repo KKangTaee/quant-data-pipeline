@@ -52,13 +52,6 @@ type SentimentComponentExplanation = {
   current_reading?: string;
 };
 
-type SentimentNextCheck = {
-  target: string;
-  reason?: string;
-  watch_for?: string;
-  tone?: string;
-};
-
 type SentimentHistoryPoint = {
   date: string;
   series: string;
@@ -77,6 +70,16 @@ type SentimentComponentChartItem = {
 };
 
 type SentimentEvidenceRows = Record<string, number | string | null | undefined>[];
+
+type HoveredHistoryPoint = {
+  date: string;
+  series: string;
+  source?: string;
+  valueLabel: string;
+  x: number;
+  y: number;
+  color: string;
+};
 
 type SentimentWorkbenchPayload = {
   schema_version: "sentiment_react_workbench_v1";
@@ -106,7 +109,6 @@ type SentimentWorkbenchPayload = {
     lanes: SentimentDriverLane[];
   };
   component_explanations: SentimentComponentExplanation[];
-  next_checks: SentimentNextCheck[];
   charts: {
     history: {
       title: string;
@@ -234,6 +236,7 @@ function syncFrameHeightSoon() {
 function SentimentWorkbench({ args }: Props) {
   const payload = args.payload;
   const [pendingActionLabel, setPendingActionLabel] = useState("");
+  const [hoveredHistoryPoint, setHoveredHistoryPoint] = useState<HoveredHistoryPoint | null>(null);
 
   useEffect(() => {
     syncFrameHeightSoon();
@@ -256,6 +259,7 @@ function SentimentWorkbench({ args }: Props) {
   const cnnMetric = metricByLabel("CNN Fear & Greed");
   const aaiiBearishMetric = metricByLabel("AAII Bearish");
   const bullBearSpreadMetric = metricByLabel("Bull-Bear Spread");
+  const visibleAnalysisSteps = payload.analysis_steps.filter((step) => !step.title.includes("다음 확인"));
   const historyPoints = payload.charts.history.series.map((point) => ({
     ...point,
     numericValue: numericValue(point.value),
@@ -264,12 +268,15 @@ function SentimentWorkbench({ args }: Props) {
   const historyValues = plottableHistory.map((point) => point.numericValue as number);
   const historyMin = historyValues.length ? Math.min(...historyValues) : 0;
   const historyMax = historyValues.length ? Math.max(...historyValues) : 1;
-  const historyRange = historyMax === historyMin ? 1 : historyMax - historyMin;
+  const historyDomainPadding = historyMax === historyMin ? 1 : 0;
+  const historyDomainMin = historyMin - historyDomainPadding;
+  const historyDomainMax = historyMax + historyDomainPadding;
+  const historyRange = historyDomainMax === historyDomainMin ? 1 : historyDomainMax - historyDomainMin;
   const historyDates = Array.from(new Set(plottableHistory.map((point) => point.date))).sort();
   const historySeriesNames = Array.from(new Set(plottableHistory.map((point) => point.series)));
   const chartWidth = 320;
   const chartHeight = 136;
-  const chartPaddingX = 18;
+  const chartPaddingX = 38;
   const chartPaddingY = 16;
   const chartInnerWidth = chartWidth - chartPaddingX * 2;
   const chartInnerHeight = chartHeight - chartPaddingY * 2;
@@ -279,9 +286,48 @@ function SentimentWorkbench({ args }: Props) {
     const divisor = Math.max(1, historyDates.length - 1);
     return chartPaddingX + (index / divisor) * chartInnerWidth;
   };
-  const yForValue = (value: number) => chartPaddingY + (1 - (value - historyMin) / historyRange) * chartInnerHeight;
+  const yForValue = (value: number) => chartPaddingY + (1 - (value - historyDomainMin) / historyRange) * chartInnerHeight;
+  const historyTicks = [historyDomainMax, historyDomainMin + historyRange / 2, historyDomainMin].map((value) => ({
+    value,
+    label: value.toLocaleString(undefined, { maximumFractionDigits: 1 }),
+    y: yForValue(value),
+  }));
+  const plottedHistoryPoints = plottableHistory.map((point) => {
+    const numeric = point.numericValue as number;
+    const seriesIndex = Math.max(0, historySeriesNames.indexOf(point.series));
+    return {
+      date: point.date,
+      series: point.series,
+      source: point.source,
+      valueLabel: numeric.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+      x: xForDate(point.date),
+      y: yForValue(numeric),
+      color: chartPalette[seriesIndex % chartPalette.length],
+    };
+  });
+  const handleHistoryHover = (event: React.MouseEvent<SVGSVGElement>) => {
+    if (!plottedHistoryPoints.length) {
+      setHoveredHistoryPoint(null);
+      return;
+    }
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const pointerX = ((event.clientX - bounds.left) / Math.max(1, bounds.width)) * chartWidth;
+    const pointerY = ((event.clientY - bounds.top) / Math.max(1, bounds.height)) * chartHeight;
+    const nearest = plottedHistoryPoints.reduce((best, point) => {
+      const pointDistance = Math.hypot(point.x - pointerX, point.y - pointerY);
+      const bestDistance = Math.hypot(best.x - pointerX, best.y - pointerY);
+      return pointDistance < bestDistance ? point : best;
+    });
+    setHoveredHistoryPoint(nearest);
+  };
   const firstHistoryDate = historyDates[0] || "-";
   const lastHistoryDate = historyDates[historyDates.length - 1] || "-";
+  const tooltipLeft = hoveredHistoryPoint
+    ? `${Math.min(90, Math.max(12, (hoveredHistoryPoint.x / chartWidth) * 100))}%`
+    : "0%";
+  const tooltipTop = hoveredHistoryPoint
+    ? `${Math.min(90, Math.max(12, (hoveredHistoryPoint.y / chartHeight) * 100))}%`
+    : "0%";
 
   return (
     <section
@@ -383,7 +429,7 @@ function SentimentWorkbench({ args }: Props) {
           ))}
         </div>
         <div className="sentiment-workbench__analysis-steps">
-          {payload.analysis_steps.map((step) => (
+          {visibleAnalysisSteps.map((step) => (
             <article
               className="sentiment-workbench__analysis-step"
               key={`${step.title}-${step.status || ""}`}
@@ -459,26 +505,6 @@ function SentimentWorkbench({ args }: Props) {
         </div>
       </section>
 
-      <section className="sentiment-workbench__next-checks">
-        <div className="sentiment-workbench__section-heading">
-          <span>다음에 확인할 것</span>
-          <small>next checks</small>
-        </div>
-        <div className="sentiment-workbench__next-check-list">
-          {payload.next_checks.map((check) => (
-            <article
-              className="sentiment-workbench__next-check"
-              key={`${check.target}-${check.reason || ""}`}
-              style={{ "--metric-tone": toneColor(check.tone) } as React.CSSProperties}
-            >
-              <div className="sentiment-workbench__next-check-target">{check.target}</div>
-              {check.reason ? <p>{check.reason}</p> : null}
-              {check.watch_for ? <small>{check.watch_for}</small> : null}
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section className="sentiment-workbench__chart-section">
         <div className="sentiment-workbench__section-heading">
           <span>그래프로 보는 근거</span>
@@ -490,25 +516,88 @@ function SentimentWorkbench({ args }: Props) {
               <span>{payload.charts.history.title}</span>
               <strong>{plottableHistory.length}</strong>
             </div>
-            <svg aria-label={payload.charts.history.title} role="img" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
-              <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartWidth - chartPaddingX} y1={chartHeight - chartPaddingY} y2={chartHeight - chartPaddingY} />
-              <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartPaddingX} y1={chartPaddingY} y2={chartHeight - chartPaddingY} />
-              {historySeriesNames.map((seriesName, seriesIndex) => {
-                const points = plottableHistory
-                  .filter((point) => point.series === seriesName)
-                  .map((point) => `${xForDate(point.date).toFixed(1)},${yForValue(point.numericValue as number).toFixed(1)}`)
-                  .join(" ");
-                return (
-                  <polyline
-                    className="sentiment-workbench__chart-line"
-                    fill="none"
-                    key={seriesName}
-                    points={points}
-                    stroke={chartPalette[seriesIndex % chartPalette.length]}
+            <div className="sentiment-workbench__line-chart-plot">
+              <svg
+                aria-label={payload.charts.history.title}
+                onMouseLeave={() => setHoveredHistoryPoint(null)}
+                onMouseMove={handleHistoryHover}
+                role="img"
+                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+              >
+                {historyTicks.map((tick) => (
+                  <g key={tick.label}>
+                    <line
+                      className="sentiment-workbench__chart-gridline"
+                      x1={chartPaddingX}
+                      x2={chartWidth - chartPaddingX}
+                      y1={tick.y}
+                      y2={tick.y}
+                    />
+                    <text
+                      className="sentiment-workbench__chart-y-label"
+                      textAnchor="end"
+                      x={chartPaddingX - 8}
+                      y={tick.y + 3}
+                    >
+                      {tick.label}
+                    </text>
+                  </g>
+                ))}
+                <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartWidth - chartPaddingX} y1={chartHeight - chartPaddingY} y2={chartHeight - chartPaddingY} />
+                <line className="sentiment-workbench__chart-axis" x1={chartPaddingX} x2={chartPaddingX} y1={chartPaddingY} y2={chartHeight - chartPaddingY} />
+                {historySeriesNames.map((seriesName, seriesIndex) => {
+                  const points = plottedHistoryPoints
+                    .filter((point) => point.series === seriesName)
+                    .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+                    .join(" ");
+                  return (
+                    <polyline
+                      className="sentiment-workbench__chart-line"
+                      fill="none"
+                      key={seriesName}
+                      points={points}
+                      stroke={chartPalette[seriesIndex % chartPalette.length]}
+                    />
+                  );
+                })}
+                {plottedHistoryPoints.map((point) => (
+                  <circle
+                    className="sentiment-workbench__chart-point"
+                    cx={point.x}
+                    cy={point.y}
+                    fill={point.color}
+                    key={`${point.series}-${point.date}`}
+                    r="1.6"
                   />
-                );
-              })}
-            </svg>
+                ))}
+                {hoveredHistoryPoint ? (
+                  <>
+                    <line
+                      className="sentiment-workbench__chart-hover-guide"
+                      x1={hoveredHistoryPoint.x}
+                      x2={hoveredHistoryPoint.x}
+                      y1={chartPaddingY}
+                      y2={chartHeight - chartPaddingY}
+                    />
+                    <circle
+                      className="sentiment-workbench__chart-focus-dot"
+                      cx={hoveredHistoryPoint.x}
+                      cy={hoveredHistoryPoint.y}
+                      fill={hoveredHistoryPoint.color}
+                      r="4.2"
+                    />
+                  </>
+                ) : null}
+              </svg>
+              {hoveredHistoryPoint ? (
+                <div className="sentiment-workbench__chart-tooltip" style={{ left: tooltipLeft, top: tooltipTop }}>
+                  <strong>{hoveredHistoryPoint.date}</strong>
+                  <span>{hoveredHistoryPoint.series}</span>
+                  <b>{hoveredHistoryPoint.valueLabel}</b>
+                  {hoveredHistoryPoint.source ? <small>{hoveredHistoryPoint.source}</small> : null}
+                </div>
+              ) : null}
+            </div>
             <div className="sentiment-workbench__chart-meta">
               <span>{firstHistoryDate}</span>
               <span>{lastHistoryDate}</span>

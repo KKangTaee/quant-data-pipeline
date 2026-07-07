@@ -6215,12 +6215,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__metric-card", react_style)
         self.assertIn(".sentiment-workbench__freshness-panel", react_style)
 
-    def test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks(self) -> None:
+    def test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
         react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("payload.analysis_steps.map", react_source)
+        self.assertIn("visibleAnalysisSteps", react_source)
+        self.assertIn("visibleAnalysisSteps.map", react_source)
+        self.assertIn("다음 확인", react_source)
         self.assertIn("sentiment-workbench__analysis-steps", react_source)
         self.assertIn("metricByLabel(\"CNN Fear & Greed\")", react_source)
         self.assertIn("metricByLabel(\"AAII Bearish\")", react_source)
@@ -6233,18 +6235,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("payload.component_explanations.map", react_source)
         self.assertIn("sentiment-workbench__component-section", react_source)
         self.assertIn("sentiment-workbench__component-list", react_source)
-        self.assertIn("payload.next_checks.map", react_source)
-        self.assertIn("sentiment-workbench__next-checks", react_source)
         self.assertLess(
             react_source.index('className="sentiment-workbench__driver-section"'),
-            react_source.index('className="sentiment-workbench__next-checks"'),
+            react_source.index('className="sentiment-workbench__chart-section"'),
         )
+        self.assertNotIn("payload.next_checks.map", react_source)
+        self.assertNotIn('className="sentiment-workbench__next-checks"', react_source)
         self.assertIn(".sentiment-workbench__cross-read", react_style)
         self.assertIn(".sentiment-workbench__analysis-steps", react_style)
         self.assertIn(".sentiment-workbench__driver-lanes", react_style)
         self.assertIn(".sentiment-workbench__driver-card", react_style)
         self.assertIn(".sentiment-workbench__component-list", react_style)
-        self.assertIn(".sentiment-workbench__next-checks", react_style)
+        self.assertNotIn(".sentiment-workbench__next-checks", react_style)
 
     def test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
@@ -6255,6 +6257,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("payload.charts.history.series.map", react_source)
         self.assertIn("sentiment-workbench__chart-section", react_source)
         self.assertIn("sentiment-workbench__line-chart", react_source)
+        self.assertIn("handleHistoryHover", react_source)
+        self.assertIn("onMouseMove={handleHistoryHover}", react_source)
+        self.assertIn("hoveredHistoryPoint", react_source)
+        self.assertIn("sentiment-workbench__chart-tooltip", react_source)
+        self.assertIn("sentiment-workbench__chart-focus-dot", react_source)
+        self.assertIn("sentiment-workbench__chart-y-label", react_source)
+        self.assertIn("sentiment-workbench__chart-gridline", react_source)
         self.assertIn("<polyline", react_source)
         self.assertIn("payload.charts.components.items.map", react_source)
         self.assertIn("sentiment-workbench__component-bars", react_source)
@@ -6271,6 +6280,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
         self.assertIn(".sentiment-workbench__chart-section", react_style)
         self.assertIn(".sentiment-workbench__line-chart", react_style)
+        self.assertIn(".sentiment-workbench__chart-tooltip", react_style)
+        self.assertIn(".sentiment-workbench__chart-focus-dot", react_style)
+        self.assertIn(".sentiment-workbench__chart-y-label", react_style)
         self.assertIn(".sentiment-workbench__component-bars", react_style)
         self.assertIn(".sentiment-workbench__evidence-details", react_style)
         self.assertIn(".sentiment-workbench__evidence-table", react_style)

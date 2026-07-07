@@ -79,3 +79,17 @@
   - Result: exit 0.
 - Phase 5 final diff check: `git diff --check`
   - Result: exit 0.
+- Follow-up RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: failed before implementation because React still rendered next-check cards and the history chart had no hover tooltip / y-axis labels.
+- Follow-up GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: `Ran 2 tests ... OK`.
+- Follow-up component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets. `node_modules` was removed after build.
+- Follow-up Browser QA: `Workspace > Overview > Sentiment` on `localhost:8508`
+  - Result: DOM confirmed no visible `다음 확인` text in the React iframe, 3 y-axis labels on the history chart, and hover tooltip text `2026-05-06 / AAII Bearish / 33 / aaii_sentiment_survey`.
+- Follow-up Browser QA screenshot: `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-react-graph-tooltip.png`
+  - Result: history chart tooltip / focus guide captured. Screenshot is generated QA artifact and must not be committed.
+- Follow-up final focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 6 tests ... OK`.
+- Follow-up final compile / hygiene: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py finance/data/sentiment.py finance/loaders/sentiment.py`, `git diff --check`, and `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`
+  - Result: compile exit 0, diff check exit 0, `node_modules absent`.
