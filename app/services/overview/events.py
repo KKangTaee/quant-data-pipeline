@@ -246,6 +246,17 @@ def _iso_date(value: Any) -> str | None:
         return None
     return ts.strftime("%Y-%m-%d")
 
+def _date_value(value: Any) -> date | None:
+    if value in (None, ""):
+        return None
+    try:
+        ts = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(ts):
+        return None
+    return ts.date()
+
 def _display_datetime(value: Any) -> str | None:
     if value in (None, ""):
         return None
@@ -661,7 +672,9 @@ def _event_focus_label(row: dict[str, Any], *, today: date) -> str:
         return "Past"
     if days_until == 0:
         return "Today"
-    if days_until <= 7:
+    event_day = _date_value(row.get("event_date"))
+    current_week_end = today - timedelta(days=today.weekday()) + timedelta(days=6)
+    if event_day is not None and today < event_day <= current_week_end:
         return "This Week"
     if days_until <= 30:
         return "Next 30D"
@@ -887,6 +900,9 @@ def _workbench_days_until(record: dict[str, Any]) -> int | None:
     if value is None:
         return None
     return int(value)
+
+def _workbench_event_date(record: dict[str, Any]) -> date | None:
+    return _date_value(record.get("Date"))
 
 def _workbench_row_needs_review(record: dict[str, Any]) -> bool:
     action = str(record.get("Quality Action") or "").strip()
@@ -1206,6 +1222,9 @@ def build_events_workbench_payload(
     items = [_workbench_item(record) for record in records]
     upcoming_items = [item for item in items if item["days_until"] is not None and item["days_until"] >= 0]
     next_event = upcoming_items[0] if upcoming_items else None
+    current_week_start = today_value - timedelta(days=today_value.weekday())
+    current_week_end = current_week_start + timedelta(days=6)
+    next_30d_end = today_value + timedelta(days=30)
 
     recent_major_records = [
         record
@@ -1213,29 +1232,48 @@ def build_events_workbench_payload(
         if (_workbench_days_until(record) is not None and _workbench_days_until(record) < 0)
         and str(record.get("Importance") or "") == "High"
     ]
-    today_records = [record for record in records if _workbench_days_until(record) == 0]
+    today_records = [
+        record
+        for record in records
+        if _workbench_event_date(record) == today_value or _workbench_days_until(record) == 0
+    ]
     this_week_records = [
         record
         for record in records
-        if (_workbench_days_until(record) is not None and 1 <= _workbench_days_until(record) <= 7)
+        if (
+            _workbench_event_date(record) is not None
+            and today_value < _workbench_event_date(record) <= current_week_end
+        )
     ]
     next_30d_records = [
         record
         for record in records
-        if (_workbench_days_until(record) is not None and 8 <= _workbench_days_until(record) <= 30)
+        if (
+            _workbench_event_date(record) is not None
+            and current_week_end < _workbench_event_date(record) <= next_30d_end
+        )
     ]
     later_records = [
         record
         for record in records
-        if (_workbench_days_until(record) is None or _workbench_days_until(record) > 30)
+        if (
+            _workbench_event_date(record) is None
+            or _workbench_event_date(record) > next_30d_end
+        )
     ]
 
     today_count = len(today_records)
     this_week_count = sum(
-        1 for item in items if item["days_until"] is not None and 0 <= item["days_until"] <= 7
+        1
+        for record in records
+        if _workbench_event_date(record) is not None
+        and today_value <= _workbench_event_date(record) <= current_week_end
     )
     next_30d_count = sum(
-        1 for item in items if item["days_until"] is not None and 0 <= item["days_until"] <= 30
+        1
+        for record in records
+        if _workbench_event_date(record) is not None
+        and today_value <= _workbench_event_date(record) <= next_30d_end
     )
     freshness_summary = {
         "latest_collected_at": coverage.get("latest_collected_at"),

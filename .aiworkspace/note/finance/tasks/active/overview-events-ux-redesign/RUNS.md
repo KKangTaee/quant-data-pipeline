@@ -102,3 +102,10 @@
 - 2026-07-07: follow-up Browser QA desktop at `http://localhost:8504/?overview_tab=events` - PASS. React brief / `전체 일정 갱신` / earnings-universe note / rail tabs / schedule-confirmation section / month calendar rendered; top-level legacy `일정 타입` and `Refresh Results` were absent. Screenshot `browser-qa-events-followup-calendar-desktop.png` is generated and uncommitted.
 - 2026-07-07: follow-up Browser QA mobile 390px - PASS. Brief, filters, `전체 일정 갱신`, rail tabs, trust, and calendar were present; `Refresh Results` absent. Screenshot `browser-qa-events-followup-calendar-mobile.png` is generated and uncommitted.
 - 2026-07-07: follow-up QA - `git diff --check` - PASS.
+- 2026-07-07: calendar-week bugfix RED - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_events_workbench_near_term_uses_calendar_week_not_rolling_seven_days` failed before implementation because `this_week` counted 2026-07-14 as rolling 7D.
+- 2026-07-07: calendar-week bugfix GREEN - same regression test PASS after calendar-week classification moved to actual current week boundaries.
+- 2026-07-07: calendar-week QA - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_events_workbench_payload_groups_brief_trust_calendar_and_evidence` - PASS.
+- 2026-07-07: calendar-week QA - `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: calendar-week QA - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` - PASS, 117 tests. Existing third-party deprecation and Streamlit no-runtime warnings were non-failing.
+- 2026-07-07: calendar-week QA - `git diff --check -- app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: calendar-week Browser QA at `http://localhost:8514/?overview_tab=events` - PASS. DOM confirmed `오늘 / 이번 주 0 · 0 확인`, `30일 내 106 · 90 확인`, and 2026-07-14 JPM under the `30일 내` article list. Screenshot `browser-qa-events-calendar-week-bucket-fresh-top.png` is generated and uncommitted.

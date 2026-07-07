@@ -14219,6 +14219,65 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("raw_fields", payload["evidence"])
         self.assertEqual(payload["evidence"]["rows"][1]["Source Authority"], "not_confirmed")
 
+    def test_events_workbench_near_term_uses_calendar_week_not_rolling_seven_days(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-10",
+                "event_type": "MACRO_PPI",
+                "title": "PPI: Producer Price Index",
+                "source": "bureau_labor_statistics_release_schedule",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "macro",
+                "event_subtype": "ppi",
+                "universe_scope": "official_macro",
+                "source_authority": "official",
+                "confidence": 0.95,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-14",
+                "event_type": "EARNINGS",
+                "symbol": "JPM",
+                "title": "JPM Earnings Release",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "validation_status": "cross_checked",
+                "event_family": "earnings",
+                "event_subtype": "earnings_release",
+                "universe_scope": "sp500",
+                "source_authority": "provider_estimate",
+                "confidence": 0.65,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return rows
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
+
+        near_term_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "near_term")
+        next_30d_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "next_30d")
+        near_term_dates = [item["date"] for item in near_term_tab["items"]]
+        next_30d_dates = [item["date"] for item in next_30d_tab["items"]]
+
+        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
+        self.assertEqual(payload["brief"]["counts"]["this_week"], 1)
+        self.assertIn("2026-07-10", near_term_dates)
+        self.assertNotIn("2026-07-14", near_term_dates)
+        self.assertIn("2026-07-14", next_30d_dates)
+
     def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
         from app.services.overview.data_health import build_collection_ops_snapshot
 
