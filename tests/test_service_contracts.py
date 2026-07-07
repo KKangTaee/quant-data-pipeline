@@ -11667,6 +11667,50 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(_format_market_movers_stopwatch(149.975), "02:30")
         mock_store_result.assert_called_once_with("overview_sp500_weekly_eod_history_result", result)
 
+    @patch("app.web.overview.market_movers_react_component._declare_market_movers_component")
+    def test_market_movers_react_component_sanitizes_datetime_payload_before_render(
+        self,
+        mock_declare_component: MagicMock,
+    ) -> None:
+        import app.web.overview.market_movers_react_component as react_component
+
+        rendered_payload: dict[str, Any] = {}
+
+        def fake_component(**kwargs: Any) -> dict[str, Any]:
+            rendered_payload.update(kwargs["payload"])
+            json.dumps(kwargs["payload"], ensure_ascii=False)
+            return {"event": None}
+
+        mock_declare_component.return_value = fake_component
+        payload = {
+            "schema_version": "market_movers_react_workbench_v1",
+            "coverage": {
+                "snapshot_time": datetime(2026, 7, 7, 13, 26),
+                "snapshot_time_utc": datetime(2026, 7, 7, 4, 26, tzinfo=timezone.utc),
+                "market_date": date(2026, 7, 7),
+                "universe_collected_at": pd.Timestamp("2026-07-07 13:25:00"),
+                "missing_since": pd.NaT,
+                "returnable_pct": Decimal("99.75"),
+                "bad_numeric": float("nan"),
+            },
+            "trust_panel": {
+                "grouped_rows": [
+                    {"symbol": "ABC", "last_seen_at": datetime(2026, 7, 6, 9, 30)},
+                ]
+            },
+        }
+
+        result = react_component.render_market_movers_react_workbench(payload, key="market_movers_json_safe_test")
+
+        self.assertEqual(result, {"event": None})
+        self.assertEqual(rendered_payload["coverage"]["snapshot_time"], "2026-07-07T13:26:00")
+        self.assertEqual(rendered_payload["coverage"]["snapshot_time_utc"], "2026-07-07T04:26:00+00:00")
+        self.assertEqual(rendered_payload["coverage"]["market_date"], "2026-07-07")
+        self.assertEqual(rendered_payload["coverage"]["universe_collected_at"], "2026-07-07T13:25:00")
+        self.assertIsNone(rendered_payload["coverage"]["missing_since"])
+        self.assertEqual(rendered_payload["coverage"]["returnable_pct"], 99.75)
+        self.assertIsNone(rendered_payload["coverage"]["bad_numeric"])
+
     @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
     @patch("app.web.overview.market_movers_helpers.run_overview_market_symbol_alias_repair")
     @patch("app.web.overview.market_movers_helpers.st")
