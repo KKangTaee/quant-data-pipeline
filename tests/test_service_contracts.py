@@ -14050,6 +14050,132 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("시장 폭", breadth["current_reading"])
         self.assertIn("Market Movers", analysis["next_checks"][0]["target"])
 
+    def test_market_sentiment_react_payload_uses_existing_snapshot_fields(self) -> None:
+        from app.web.overview.sentiment_helpers import build_sentiment_react_workbench_payload
+
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "cnn_score": 54.7,
+                "cnn_rating": "neutral",
+                "aaii_bearish": 37.0,
+                "aaii_bull_bear_spread": -0.7,
+                "source_count": 2,
+                "stale_count": 0,
+                "missing_count": 0,
+            },
+            "analysis": {
+                "phase": "MIXED_NEUTRAL",
+                "phase_label": "혼합 중립",
+                "tone": "neutral",
+                "headline": "중립이지만 내부는 엇갈린 시장 심리입니다.",
+                "summary": "헤드라인 점수는 중립권이지만 CNN 구성요소는 탐욕과 공포가 갈립니다.",
+                "data_confidence": {
+                    "status": "High",
+                    "tone": "positive",
+                    "detail": "2개 source 준비, missing 0, stale 0.",
+                },
+                "driver_summary": {"greed_count": 1, "fear_count": 1, "neutral_count": 0},
+                "driver_groups": {
+                    "greed": [
+                        {
+                            "series": "Market Momentum",
+                            "label_ko": "지수 추세",
+                            "score": 93.8,
+                            "rating_label_ko": "극단적 탐욕",
+                            "tone": "positive",
+                            "direction": "greed",
+                            "current_reading": "지수 추세: 지수 자체의 추세가 강합니다.",
+                        }
+                    ],
+                    "fear": [
+                        {
+                            "series": "Stock Price Breadth",
+                            "label_ko": "시장 폭",
+                            "score": 31.4,
+                            "rating_label_ko": "공포",
+                            "tone": "warning",
+                            "direction": "fear",
+                            "current_reading": "시장 폭: 상승 참여 폭이 약합니다.",
+                        }
+                    ],
+                    "neutral": [],
+                },
+                "component_explanations": [
+                    {
+                        "series": "Market Momentum",
+                        "label_ko": "지수 추세",
+                        "score": 93.8,
+                        "rating_label_ko": "극단적 탐욕",
+                        "tone": "positive",
+                        "current_reading": "지수 추세: 지수 자체의 추세가 강합니다.",
+                    }
+                ],
+                "next_checks": [
+                    {
+                        "target": "Market Movers breadth",
+                        "reason": "상승 종목 비중이 넓은지 확인합니다.",
+                        "watch_for": "Stock Price Breadth와 같은 방향인지 확인",
+                        "tone": "neutral",
+                    }
+                ],
+            },
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Series": "CNN Fear & Greed",
+                        "Value": "54.7",
+                        "Label": "neutral",
+                        "Observation Date": "2026-06-04",
+                        "Staleness Days": 1.0,
+                        "Status": "OK",
+                        "Source": "cnn_fear_greed",
+                    }
+                ]
+            ),
+            "component_rows": pd.DataFrame(
+                [
+                    {
+                        "Series": "Market Momentum",
+                        "Score": 93.8,
+                        "Rating": "extreme greed",
+                        "Observation Date": "2026-06-04",
+                        "Status": "OK",
+                    }
+                ]
+            ),
+            "history_rows": pd.DataFrame(
+                [
+                    {"Date": "2026-06-03", "Series": "CNN Fear & Greed", "Value": 54.0, "Source": "cnn_fear_greed"},
+                    {"Date": "2026-06-04", "Series": "CNN Fear & Greed", "Value": 54.7, "Source": "cnn_fear_greed"},
+                ]
+            ),
+            "warnings": [],
+        }
+
+        payload = build_sentiment_react_workbench_payload(snapshot)
+
+        self.assertEqual(payload["schema_version"], "sentiment_react_workbench_v1")
+        self.assertEqual(payload["component"], "SentimentWorkbench")
+        self.assertEqual(payload["action_boundary"], "python_dispatch_only")
+        self.assertEqual([action["id"] for action in payload["command"]["actions"]], ["refresh", "reload"])
+        self.assertEqual(payload["summary"]["phase_label"], "혼합 중립")
+        self.assertEqual(payload["summary"]["headline"], "중립이지만 내부는 엇갈린 시장 심리입니다.")
+        self.assertIn("시장 배경", payload["boundary_note"])
+        self.assertIn(
+            {"label": "CNN Fear & Greed", "value": "54.7", "detail": "neutral", "tone": "neutral"},
+            payload["summary"]["metrics"],
+        )
+        self.assertEqual(payload["freshness"]["latest_observation_date"], "2026-06-04")
+        self.assertEqual(payload["freshness"]["source_count"], 2)
+        self.assertEqual(payload["drivers"]["summary"]["greed_count"], 1)
+        self.assertEqual(payload["drivers"]["lanes"][0]["key"], "greed")
+        self.assertEqual(payload["drivers"]["lanes"][0]["items"][0]["current_reading"], "지수 추세: 지수 자체의 추세가 강합니다.")
+        self.assertEqual(payload["next_checks"][0]["target"], "Market Movers breadth")
+        self.assertEqual(payload["charts"]["history"]["series"][0]["series"], "CNN Fear & Greed")
+        self.assertEqual(payload["charts"]["components"]["items"][0]["series"], "Market Momentum")
+        self.assertEqual(payload["evidence"]["raw_rows"][0]["Series"], "CNN Fear & Greed")
+
     def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:
         from app.services.overview.data_health import build_collection_ops_snapshot
 

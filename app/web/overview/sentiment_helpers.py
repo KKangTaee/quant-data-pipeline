@@ -125,6 +125,255 @@ def _sentiment_tone(value: Any) -> str:
     return _sentiment_status_tone(value)
 
 
+def _display_text(value: Any, default: str = "-") -> str:
+    text = str(value or "").strip()
+    return text if text else default
+
+
+def _json_safe_value(value: Any) -> Any:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, pd.Timestamp):
+        return value.strftime("%Y-%m-%d")
+    return value
+
+
+def _records_from_frame(frame: Any) -> list[dict[str, Any]]:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return []
+    records: list[dict[str, Any]] = []
+    for row in frame.to_dict("records"):
+        records.append({str(key): _json_safe_value(value) for key, value in row.items()})
+    return records
+
+
+def _sentiment_metric(label: str, value: Any, *, detail: Any = "", tone: str = "neutral") -> dict[str, str]:
+    return {
+        "label": label,
+        "value": _display_text(value),
+        "detail": _display_text(detail, ""),
+        "tone": _sentiment_tone(tone),
+    }
+
+
+def _format_sentiment_score(value: Any) -> str:
+    numeric = _safe_float(value)
+    return "-" if numeric is None else f"{numeric:.1f}"
+
+
+def _format_sentiment_percent(value: Any) -> str:
+    numeric = _safe_float(value)
+    return "-" if numeric is None else f"{numeric:.1f}%"
+
+
+def _format_sentiment_pp(value: Any) -> str:
+    numeric = _safe_float(value)
+    return "-" if numeric is None else f"{numeric:+.1f} pp"
+
+
+def _latest_observation_date(rows: list[dict[str, Any]]) -> str:
+    dates = [
+        str(row.get("Observation Date") or "").strip()
+        for row in rows
+        if str(row.get("Observation Date") or "").strip() and str(row.get("Observation Date") or "").strip() != "-"
+    ]
+    return max(dates) if dates else "-"
+
+
+def _sentiment_core_metrics(coverage: dict[str, Any], analysis: dict[str, Any]) -> list[dict[str, str]]:
+    confidence = dict(analysis.get("data_confidence") or {})
+    cnn_score = _safe_float(coverage.get("cnn_score"))
+    aaii_bearish = _safe_float(coverage.get("aaii_bearish"))
+    bull_bear_spread = _safe_float(coverage.get("aaii_bull_bear_spread"))
+    return [
+        _sentiment_metric(
+            "CNN Fear & Greed",
+            _format_sentiment_score(cnn_score),
+            detail=coverage.get("cnn_rating") or "-",
+            tone="positive" if cnn_score is not None and cnn_score >= 55 else "warning" if cnn_score is not None and cnn_score < 45 else "neutral",
+        ),
+        _sentiment_metric(
+            "AAII Bearish",
+            _format_sentiment_percent(aaii_bearish),
+            detail="weekly bearish sentiment",
+            tone="warning" if aaii_bearish is not None and aaii_bearish >= 35 else "neutral",
+        ),
+        _sentiment_metric(
+            "Bull-Bear Spread",
+            _format_sentiment_pp(bull_bear_spread),
+            detail="AAII bullish minus bearish",
+            tone="positive" if bull_bear_spread is not None and bull_bear_spread > 0 else "warning" if bull_bear_spread is not None else "neutral",
+        ),
+        _sentiment_metric(
+            "Data Confidence",
+            confidence.get("status") or "-",
+            detail=confidence.get("detail") or "",
+            tone=confidence.get("tone") or "neutral",
+        ),
+    ]
+
+
+def _sentiment_driver_lanes(analysis: dict[str, Any]) -> list[dict[str, Any]]:
+    groups = dict(analysis.get("driver_groups") or {})
+    labels = [
+        ("greed", "탐욕 드라이버", "positive"),
+        ("fear", "공포 드라이버", "warning"),
+        ("neutral", "중립 드라이버", "neutral"),
+    ]
+    lanes: list[dict[str, Any]] = []
+    for key, label, tone in labels:
+        items = []
+        for item in list(groups.get(key) or []):
+            if not isinstance(item, dict):
+                continue
+            items.append(
+                {
+                    "series": _display_text(item.get("series")),
+                    "label_ko": _display_text(item.get("label_ko") or item.get("series")),
+                    "score": _format_sentiment_score(item.get("score")),
+                    "rating": _display_text(item.get("rating_label_ko") or item.get("rating")),
+                    "tone": _sentiment_tone(item.get("tone") or tone),
+                    "direction": _display_text(item.get("direction"), key),
+                    "current_reading": _display_text(item.get("current_reading"), ""),
+                }
+            )
+        lanes.append({"key": key, "label": label, "tone": tone, "count": len(items), "items": items})
+    return lanes
+
+
+def _sentiment_history_chart_payload(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    series = []
+    for row in rows:
+        series.append(
+            {
+                "date": _display_text(row.get("Date")),
+                "series": _display_text(row.get("Series")),
+                "value": _json_safe_value(row.get("Value")),
+                "source": _display_text(row.get("Source"), ""),
+            }
+        )
+    return {
+        "title": "심리 흐름",
+        "basis": "Stored CNN Fear & Greed / AAII bearish / bull-bear spread history",
+        "series": series,
+    }
+
+
+def _sentiment_component_chart_payload(component_rows: list[dict[str, Any]], analysis: dict[str, Any]) -> dict[str, Any]:
+    explanations = {
+        str(item.get("series") or ""): dict(item)
+        for item in list(analysis.get("component_explanations") or [])
+        if isinstance(item, dict)
+    }
+    items = []
+    for row in component_rows:
+        series = _display_text(row.get("Series"))
+        explanation = explanations.get(series, {})
+        items.append(
+            {
+                "series": series,
+                "score": _json_safe_value(row.get("Score")),
+                "rating": _display_text(explanation.get("rating_label_ko") or row.get("Rating")),
+                "tone": _sentiment_tone(explanation.get("tone") or row.get("Status")),
+                "direction": _display_text(explanation.get("direction"), "neutral"),
+                "observation_date": _display_text(row.get("Observation Date")),
+                "current_reading": _display_text(explanation.get("current_reading"), ""),
+            }
+        )
+    return {"title": "CNN 구성요소", "basis": "CNN Fear & Greed 7 component scores", "items": items}
+
+
+def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Adapt the service-owned sentiment snapshot into a serializable React display payload."""
+    coverage = dict(snapshot.get("coverage") or {})
+    analysis = dict(snapshot.get("analysis") or {})
+    rows = _records_from_frame(snapshot.get("rows"))
+    component_rows = _records_from_frame(snapshot.get("component_rows"))
+    history_rows = _records_from_frame(snapshot.get("history_rows"))
+    data_confidence = dict(analysis.get("data_confidence") or {})
+    latest_date = _latest_observation_date(rows)
+    stale_count = int(coverage.get("stale_count") or 0)
+    missing_count = int(coverage.get("missing_count") or 0)
+    freshness_tone = "positive" if stale_count == 0 and missing_count == 0 else "warning"
+    return {
+        "schema_version": "sentiment_react_workbench_v1",
+        "component": "SentimentWorkbench",
+        "command": {
+            "title": "시장 심리 컨텍스트",
+            "detail": "CNN Fear & Greed / AAII 저장 데이터 기준",
+            "actions": [
+                {
+                    "id": "refresh",
+                    "label": "시장 심리 갱신",
+                    "kind": "primary",
+                    "detail": "CNN Fear & Greed와 AAII sentiment를 수집해 DB에 저장합니다.",
+                },
+                {
+                    "id": "reload",
+                    "label": "화면 다시 읽기",
+                    "kind": "secondary",
+                    "detail": "외부 수집 없이 현재 DB snapshot cache를 비우고 다시 읽습니다.",
+                },
+            ],
+        },
+        "summary": {
+            "phase": _display_text(analysis.get("phase"), "DATA_REVIEW"),
+            "phase_label": _display_text(analysis.get("phase_label"), "데이터 확인"),
+            "tone": _sentiment_tone(analysis.get("tone") or snapshot.get("status")),
+            "headline": _display_text(analysis.get("headline"), "시장 심리 해석을 확인할 수 없습니다."),
+            "summary": _display_text(analysis.get("summary"), ""),
+            "data_confidence": {
+                "status": _display_text(data_confidence.get("status"), snapshot.get("status") or "-"),
+                "detail": _display_text(data_confidence.get("detail"), ""),
+                "tone": _sentiment_tone(data_confidence.get("tone") or snapshot.get("status")),
+            },
+            "metrics": _sentiment_core_metrics(coverage, analysis),
+        },
+        "freshness": {
+            "latest_observation_date": latest_date,
+            "source_count": int(coverage.get("source_count") or 0),
+            "stale_count": stale_count,
+            "missing_count": missing_count,
+            "tone": freshness_tone,
+            "detail": f"latest {latest_date} · missing {missing_count} · stale {stale_count}",
+        },
+        "drivers": {
+            "summary": dict(analysis.get("driver_summary") or {}),
+            "lanes": _sentiment_driver_lanes(analysis),
+        },
+        "component_explanations": [
+            dict(item) for item in list(analysis.get("component_explanations") or []) if isinstance(item, dict)
+        ],
+        "next_checks": [
+            {
+                "target": _display_text(item.get("target")),
+                "reason": _display_text(item.get("reason"), ""),
+                "watch_for": _display_text(item.get("watch_for"), ""),
+                "tone": _sentiment_tone(item.get("tone") or "neutral"),
+            }
+            for item in list(analysis.get("next_checks") or [])
+            if isinstance(item, dict)
+        ],
+        "charts": {
+            "history": _sentiment_history_chart_payload(history_rows),
+            "components": _sentiment_component_chart_payload(component_rows, analysis),
+        },
+        "evidence": {
+            "raw_rows": rows,
+            "component_rows": component_rows,
+            "history_rows": history_rows,
+            "warnings": [str(warning) for warning in list(snapshot.get("warnings") or []) if str(warning).strip()],
+        },
+        "action_boundary": "python_dispatch_only",
+        "boundary_note": "시장 배경 / 조사 단서입니다. 매수/매도 신호, validation gate, monitoring signal, 자동 action이 아닙니다.",
+    }
+
+
 def _sentiment_trend_chart(rows: pd.DataFrame) -> alt.Chart:
     if rows.empty:
         rows = pd.DataFrame([{"Date": date.today().isoformat(), "Series": "No Data", "Value": 0.0, "Source": "-"}])
