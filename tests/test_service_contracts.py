@@ -11333,6 +11333,41 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         mock_st.rerun.assert_called_once()
 
     @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_refresh_progress_uses_bar_and_stopwatch_not_status_expander(
+        self,
+        mock_st: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            _format_market_movers_stopwatch,
+            _run_market_movers_job_with_progress,
+        )
+
+        mock_st.session_state = {}
+        mock_status = MagicMock()
+        mock_st.status.return_value.__enter__.return_value = mock_status
+        mock_st.status.return_value.__exit__.return_value = None
+        result = {"status": "success", "message": "Weekly refresh completed."}
+
+        _run_market_movers_job_with_progress(
+            result_key="overview_sp500_weekly_eod_history_result",
+            label="S&P 500 Weekly 가격 이력 갱신",
+            detail="비-Daily 랭킹 산출에 필요한 저장 EOD 가격 이력을 갱신합니다.",
+            run_job=lambda: result,
+        )
+
+        mock_st.status.assert_not_called()
+        mock_st.html.assert_called_once()
+        self.assertTrue(mock_st.html.call_args.kwargs["unsafe_allow_javascript"])
+        progress_html = mock_st.html.call_args.args[0]
+        self.assertIn("ov-mm-job-progress", progress_html)
+        self.assertIn("setInterval", progress_html)
+        self.assertIn("경과", progress_html)
+        self.assertEqual(_format_market_movers_stopwatch(149.975), "02:30")
+        mock_store_result.assert_called_once_with("overview_sp500_weekly_eod_history_result", result)
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
     @patch("app.web.overview.market_movers_helpers.run_overview_market_symbol_alias_repair")
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_event_bridge_dispatches_ticker_alias_repair_once(

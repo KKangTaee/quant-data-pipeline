@@ -1057,6 +1057,150 @@ def _market_movers_eod_history_result_key(universe_code: str, period: str) -> st
     return f"overview_{str(universe_code).lower()}_{str(period).lower()}_eod_history_result"
 
 
+def _format_market_movers_stopwatch(value: Any) -> str:
+    try:
+        total_seconds = max(0, int(round(float(value))))
+    except (TypeError, ValueError):
+        total_seconds = 0
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
+
+
+def _market_movers_duration_detail(value: Any) -> str:
+    if value in (None, ""):
+        return "-"
+    return f"{_format_market_movers_stopwatch(value)} ({_snapshot_value(value)}s)"
+
+
+def _render_market_movers_running_progress_card(
+    *,
+    label: str,
+    detail: str,
+    started_at: datetime,
+) -> None:
+    started_label = started_at.strftime("%H:%M:%S")
+    started_epoch_ms = int(started_at.timestamp() * 1000)
+    timer_id = f"ov_mm_job_elapsed_{started_epoch_ms}"
+    detail_html = f'<div class="ov-mm-job-detail">{escape(detail)}</div>' if detail else ""
+    st.html(
+        f"""
+<section class="ov-mm-job-progress" data-started-at="{started_epoch_ms}">
+  <style>
+    .ov-mm-job-progress {{
+      box-sizing: border-box;
+      width: 100%;
+      border: 1px solid #d7dee8;
+      border-radius: 10px;
+      padding: 16px 18px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #111827;
+      background: #ffffff;
+    }}
+    .ov-mm-job-head {{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }}
+    .ov-mm-job-title {{
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.3;
+    }}
+    .ov-mm-job-meta {{
+      margin-top: 5px;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 650;
+    }}
+    .ov-mm-job-timer {{
+      min-width: 92px;
+      text-align: right;
+      color: #0f766e;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }}
+    .ov-mm-job-timer span {{
+      display: block;
+      color: #64748b;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .ov-mm-job-timer strong {{
+      font-size: 22px;
+      line-height: 1.1;
+    }}
+    .ov-mm-job-track {{
+      position: relative;
+      overflow: hidden;
+      height: 10px;
+      border-radius: 999px;
+      background: #edf2f7;
+    }}
+    .ov-mm-job-bar {{
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 42%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #0f766e, #14b8a6, #0f766e);
+      animation: ovMmJobProgress 1.15s ease-in-out infinite alternate;
+    }}
+    .ov-mm-job-detail {{
+      margin-top: 10px;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.45;
+    }}
+    @keyframes ovMmJobProgress {{
+      from {{ transform: translateX(-18%); }}
+      to {{ transform: translateX(156%); }}
+    }}
+  </style>
+  <div class="ov-mm-job-head">
+    <div>
+      <div class="ov-mm-job-title">{escape(label)}</div>
+      <div class="ov-mm-job-meta">진행 중 · 시작 {escape(started_label)}</div>
+    </div>
+    <div class="ov-mm-job-timer">
+      <span>경과</span>
+      <strong id="{timer_id}">00:00</strong>
+    </div>
+  </div>
+  <div class="ov-mm-job-track" aria-label="가격 이력 갱신 진행률">
+    <div class="ov-mm-job-bar"></div>
+  </div>
+  {detail_html}
+  <script>
+    (() => {{
+      const root = document.currentScript.closest(".ov-mm-job-progress");
+      const timer = document.getElementById("{timer_id}");
+      const startedAt = Number(root.dataset.startedAt || Date.now());
+      const pad = (value) => String(value).padStart(2, "0");
+      const renderElapsed = () => {{
+        const elapsedSeconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+        const hours = Math.floor(elapsedSeconds / 3600);
+        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+        const seconds = elapsedSeconds % 60;
+        timer.textContent = hours > 0
+          ? `${{pad(hours)}}:${{pad(minutes)}}:${{pad(seconds)}}`
+          : `${{pad(minutes)}}:${{pad(seconds)}}`;
+      }};
+      renderElapsed();
+      window.setInterval(renderElapsed, 250);
+    }})();
+</script>
+</section>
+""",
+        unsafe_allow_javascript=True,
+    )
+
+
 def _run_market_movers_job_with_progress(
     *,
     result_key: str,
@@ -1065,9 +1209,7 @@ def _run_market_movers_job_with_progress(
     run_job,
 ) -> None:
     started_at = datetime.now()
-    started_label = started_at.strftime("%H:%M:%S")
     t0 = perf_counter()
-    status_factory = getattr(st, "status", None)
 
     def _finish(result: dict[str, Any]) -> None:
         elapsed = perf_counter() - t0
@@ -1075,25 +1217,17 @@ def _run_market_movers_job_with_progress(
         st.session_state[_market_movers_job_completed_key(result_key)] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         _store_overview_job_result(result_key, result)
 
-    if callable(status_factory):
-        with status_factory(f"{label} 진행 중", expanded=True) as status:
-            status.write(f"시작 {started_label}")
-            if detail:
-                status.write(detail)
-            try:
-                result = run_job()
-            except Exception:
-                elapsed = perf_counter() - t0
-                status.update(label=f"{label} 실패 · {elapsed:.1f}s", state="error", expanded=True)
-                raise
-            _finish(result)
-            elapsed = st.session_state.get(_market_movers_job_elapsed_key(result_key))
-            status.update(label=f"{label} 완료 · {_snapshot_value(elapsed)}s", state="complete", expanded=False)
-        return
-
-    with st.spinner(f"{label} 진행 중..."):
+    _render_market_movers_running_progress_card(label=label, detail=detail, started_at=started_at)
+    try:
         result = run_job()
+    except Exception:
+        elapsed = perf_counter() - t0
+        st.session_state[_market_movers_job_elapsed_key(result_key)] = round(elapsed, 3)
+        st.error(f"{label} 실패 · {_market_movers_duration_detail(elapsed)}")
+        raise
     _finish(result)
+    elapsed = st.session_state.get(_market_movers_job_elapsed_key(result_key))
+    st.success(f"{label} 완료 · {_market_movers_duration_detail(elapsed)}")
 
 
 def _render_market_job_result(result_key: str) -> None:
@@ -1115,19 +1249,20 @@ def _render_market_job_result(result_key: str) -> None:
         duration = result.get("duration_sec")
         if duration is None:
             duration = st.session_state.get(_market_movers_job_elapsed_key(result_key))
+        duration_detail = _market_movers_duration_detail(duration)
         if result.get("symbols_requested") is None and result.get("symbols_processed") is None:
             st.caption(
                 "Rows: "
                 f"{result.get('rows_written') or 0}, "
                 f"Events: {details.get('events_found') or '-'}, "
-                f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
+                f"Source: {source}, Method: {method}, Duration: {duration_detail}"
             )
         else:
             st.caption(
                 "Rows: "
                 f"{result.get('rows_written') or 0}, "
                 f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}, "
-                f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
+                f"Source: {source}, Method: {method}, Duration: {duration_detail}"
             )
 
 
