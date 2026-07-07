@@ -10,11 +10,16 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from app.services.overview.events import build_events_workbench_payload
 from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_earnings_calendar,
     run_overview_fomc_calendar,
     run_overview_macro_calendar,
+)
+from app.web.overview.events_react_component import (
+    events_react_component_available,
+    render_events_react_workbench,
 )
 from app.web.overview.components.events import (
     render_event_agenda_sections,
@@ -316,6 +321,19 @@ def render_event_refresh_results() -> None:
         _render_market_job_result("overview_fomc_calendar_result")
         _render_market_job_result("overview_earnings_calendar_result")
         _render_market_job_result("overview_macro_calendar_result")
+
+
+def render_events_react_workbench_section(context: EventSnapshotContext) -> bool:
+    if not events_react_component_available():
+        return False
+    payload = build_events_workbench_payload(context.snapshot)
+    react_event = render_events_react_workbench(
+        payload,
+        key=f"overview_events_workbench_{context.event_filter}",
+    )
+    if isinstance(react_event, dict) and react_event.get("event"):
+        st.session_state["overview_events_react_event"] = react_event.get("event")
+    return True
 
 
 def _event_tone(value: Any) -> str:

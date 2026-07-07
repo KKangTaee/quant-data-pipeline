@@ -5586,3 +5586,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `app/services/overview/events.py`에 `build_events_workbench_payload()`를 추가해 hero brief, rails, trust review, calendar / density, evidence rows를 Python-owned contract로 만들었다.
   - React는 다음 차수부터 이 payload만 렌더링하고, 거래 신호 / validation gate / monitoring action 문구를 만들지 않는다.
   - 다음 차수는 `app/web/streamlit_components/events_workbench`와 `app/web/overview/events_react_component.py` scaffold다.
+- Overview Events Calendar 7차 React Scaffold 2026-07-07:
+  - `events_workbench` Vite component, static build, Python wrapper, Events tab integration을 추가했다.
+  - React는 현재 additive scaffold로 기존 Streamlit lanes / detail tabs 위에 렌더링되며 fallback을 제거하지 않았다.
+  - 다음 차수는 hero brief / freshness / refresh UX를 React 쪽에서 제품 흐름으로 다듬는 작업이다.

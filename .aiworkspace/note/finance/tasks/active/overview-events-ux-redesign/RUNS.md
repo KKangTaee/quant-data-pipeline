@@ -56,3 +56,8 @@
 - 2026-07-07: 6차 QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
 - 2026-07-07: 6차 QA - `py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
 - 2026-07-07: 6차 QA - `git diff --check` - PASS.
+- 2026-07-07: 7차 RED - new Events React scaffold test failed before implementation with missing `events_react_component` module.
+- 2026-07-07: 7차 GREEN - Events React wrapper/source/fallback scaffold contract - PASS.
+- 2026-07-07: 7차 QA - `py_compile app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 7차 QA - `npm install && npm run build` for `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` left uncommitted.
+- 2026-07-07: 7차 QA - rerun `npm run build` for `events_workbench` - PASS.

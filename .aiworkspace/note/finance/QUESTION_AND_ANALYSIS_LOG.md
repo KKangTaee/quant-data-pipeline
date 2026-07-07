@@ -8631,3 +8631,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: React 전환 전에 hero, rails, trust, chart, evidence에 필요한 구조와 문구를 service contract로 고정해야 함.
 - Analysis result: 기존 `build_market_events_snapshot()` rows/coverage/warnings를 재사용해 `build_events_workbench_payload()`를 만들면 React는 local filter / layout / hover interaction만 담당할 수 있다.
 - Follow-up: 6차 완료. 다음은 React scaffold와 Streamlit wrapper/fallback 연결이다.
+
+### 2026-07-07 - Events React scaffold should be additive first
+
+- User request: React custom component를 추가하되 기존 Streamlit detail fallback을 유지해 달라고 요청함.
+- Interpreted goal: build가 있으면 React를 보여주되, scaffold 단계에서 Agenda / Calendar / Quality / Raw를 제거하면 안 됨.
+- Analysis result: `render_events_react_workbench_section(context)`를 `render_events_overview_lanes(context)` 앞에 두면 React가 먼저 보이고 기존 fallback은 그대로 남는다.
+- Follow-up: 7차 완료. 다음은 React hero/freshness/refresh UX를 실제 첫 화면 중심으로 개선한다.

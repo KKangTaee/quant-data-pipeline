@@ -6188,6 +6188,44 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__command", react_style)
         self.assertIn("@media (max-width: 760px)", react_style)
 
+    def test_events_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.events_react_component import (
+            EVENTS_REACT_COMPONENT_NAME,
+            events_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/events_workbench")
+        events_tab_source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/events_react_component.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "EventsWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertEqual(EVENTS_REACT_COMPONENT_NAME, "events_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "index.html").exists())
+        self.assertTrue((component_root / "src" / "EventsWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(events_react_component_available(component_root / "missing-dist"))
+        self.assertIn("render_events_react_workbench", helper_source)
+        self.assertIn("build_events_workbench_payload", helper_source)
+        self.assertIn("render_events_react_workbench_section(context)", events_tab_source)
+        self.assertIn("render_events_overview_lanes(context)", events_tab_source)
+        self.assertLess(
+            events_tab_source.index("render_events_react_workbench_section(context)"),
+            events_tab_source.index("render_events_overview_lanes(context)"),
+        )
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('payload.schema_version === "events_workbench_v1"', react_source)
+        self.assertIn("payload.brief", react_source)
+        self.assertIn("payload.rails.map", react_source)
+        self.assertIn("payload.trust_review", react_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("Streamlit.setFrameHeight", react_source)
+        self.assertIn("events-workbench__fallback-note", react_source)
+        self.assertIn(".events-workbench__hero", react_style)
+        self.assertIn("@media (max-width: 760px)", react_style)
+
     def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
         component_root = Path("app/web/streamlit_components/sentiment_workbench")
         react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
