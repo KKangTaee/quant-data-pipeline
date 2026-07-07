@@ -153,6 +153,28 @@ def _format_latest_date_spread(value: Any) -> str:
         return f"{value}d"
 
 
+def _sample_symbols_for_data_trust(symbols: list[Any], *, limit: int = 8) -> str:
+    normalized = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
+    if not normalized:
+        return "-"
+    sample = ", ".join(normalized[:limit])
+    remaining = len(normalized) - limit
+    if remaining > 0:
+        sample = f"{sample} (+{remaining} more)"
+    return sample
+
+
+def _format_reason_counts_for_data_trust(reason_counts: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for reason, count in sorted(reason_counts.items(), key=lambda item: str(item[0])):
+        try:
+            count_text = f"{int(count)}"
+        except (TypeError, ValueError):
+            count_text = str(count)
+        parts.append(f"{reason}: {count_text}")
+    return ", ".join(parts)
+
+
 def _data_trust_price_status_label(status: str) -> str:
     mapping = {
         "ok": "최신성 정상",
@@ -166,17 +188,19 @@ def _build_data_trust_issue_cards(
     *,
     excluded_tickers: list[Any],
     malformed_price_rows: list[Any],
+    price_freshness: dict[str, Any],
 ) -> list[dict[str, str]]:
     issue_cards: list[dict[str, str]] = []
+    freshness_details = dict(price_freshness.get("details") or {})
+    freshness_status = str(price_freshness.get("status") or "").strip().lower()
 
     if excluded_tickers:
-        sample = ", ".join(str(ticker) for ticker in excluded_tickers[:8])
-        suffix = "..." if len(excluded_tickers) > 8 else ""
+        sample = _sample_symbols_for_data_trust(excluded_tickers)
         issue_cards.append(
             {
                 "priority": f"확인 {len(issue_cards) + 1}",
                 "title": "제외 종목",
-                "detail": f"{len(excluded_tickers)}개 ticker가 이번 계산에서 빠졌습니다: {sample}{suffix}",
+                "detail": f"{len(excluded_tickers)}개 ticker가 이번 계산에서 빠졌습니다: {sample}",
                 "tone": "warning",
             }
         )
@@ -197,6 +221,87 @@ def _build_data_trust_issue_cards(
                 "title": "결측 가격 row",
                 "detail": detail,
                 "tone": "warning",
+            }
+            )
+
+    missing_symbols = list(
+        freshness_details.get("missing_symbols_all")
+        or freshness_details.get("missing_symbols")
+        or []
+    )
+    stale_symbols = list(
+        freshness_details.get("stale_symbols_all")
+        or freshness_details.get("stale_symbols")
+        or []
+    )
+    reason_counts = dict(freshness_details.get("reason_counts") or {})
+    classification_rows = list(freshness_details.get("classification_rows") or [])
+    target_end = _display_data_trust_value(
+        freshness_details.get("target_end_date")
+        or freshness_details.get("effective_end_date")
+        or freshness_details.get("selected_end_date")
+    )
+    common_latest = _display_data_trust_value(freshness_details.get("common_latest_date"))
+    newest_latest = _display_data_trust_value(freshness_details.get("newest_latest_date"))
+    spread_days = freshness_details.get("spread_days")
+
+    if missing_symbols:
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "가격 데이터 없음",
+                "detail": (
+                    f"{len(missing_symbols)}개 ticker에 DB 일봉 가격 row가 없습니다. "
+                    f"먼저 볼 ticker: {_sample_symbols_for_data_trust(missing_symbols)}"
+                ),
+                "tone": "danger" if freshness_status == "error" else "warning",
+            }
+        )
+
+    if stale_symbols:
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "가격 최신성 지연",
+                "detail": (
+                    f"{len(stale_symbols)}개 ticker가 기준 거래일 {target_end}보다 이전 가격에서 멈춰 있습니다. "
+                    f"먼저 볼 ticker: {_sample_symbols_for_data_trust(stale_symbols)}"
+                ),
+                "tone": "warning",
+            }
+        )
+
+    if reason_counts:
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "가격 지연 원인 분류",
+                "detail": _format_reason_counts_for_data_trust(reason_counts),
+                "tone": "warning",
+            }
+        )
+    elif classification_rows:
+        row_symbols = [row.get("symbol") for row in classification_rows if isinstance(row, dict)]
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "가격 지연 원인 후보",
+                "detail": f"분류가 필요한 ticker: {_sample_symbols_for_data_trust(row_symbols)}",
+                "tone": "warning",
+            }
+        )
+
+    if not missing_symbols and not stale_symbols and freshness_status in {"warning", "error"}:
+        message = str(price_freshness.get("message") or "").strip()
+        detail = message or "가격 최신성 상태가 정상 통과가 아니므로 DB 가격 기준을 확인해야 합니다."
+        if spread_days is not None and common_latest != "-" and newest_latest != "-":
+            detail = f"{detail} 공통 {common_latest} / 최신 {newest_latest} / 차이 {_format_latest_date_spread(spread_days)}."
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "가격 기준 확인",
+                "detail": detail,
+                "tone": "danger" if freshness_status == "error" else "warning",
             }
         )
 
@@ -226,6 +331,7 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     issue_cards = _build_data_trust_issue_cards(
         excluded_tickers=excluded_tickers,
         malformed_price_rows=malformed_price_rows,
+        price_freshness=dict(price_freshness),
     )
 
     if status == "error":
@@ -259,10 +365,10 @@ def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     else:
         subtitle = "저장 DB의 공통 최신 가격일을 기준으로 결과를 읽습니다."
 
-    if excluded_tickers or malformed_price_rows:
+    if issue_cards:
         next_check_label = "1차 데이터 확인"
         next_check_value = "데이터 이슈 확인"
-        next_check_detail = "제외 종목과 결측 row를 확인합니다."
+        next_check_detail = f"{len(issue_cards)}개 항목을 먼저 확인합니다."
     elif status == "error":
         next_check_label = "1차 데이터 확인"
         next_check_value = "데이터 보강"

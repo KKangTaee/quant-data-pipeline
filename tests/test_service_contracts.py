@@ -9098,6 +9098,49 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(brief["second_stage_review_count"], 0)
         self.assertEqual(brief["warnings"], [])
 
+    def test_data_trust_brief_lists_price_freshness_issues_when_warning(self) -> None:
+        from app.web.backtest_result_display import _build_data_trust_brief
+
+        brief = _build_data_trust_brief(
+            {
+                "strategy_name": "Quality Snapshot (Strict Annual)",
+                "tickers": ["AAA", "BBB", "CCC"],
+                "end": "2026-07-07",
+                "actual_result_end": "2026-07-06",
+                "result_rows": 120,
+                "excluded_tickers": [],
+                "malformed_price_rows": [],
+                "price_freshness": {
+                    "status": "warning",
+                    "message": "2 symbols stop before the effective trading end `2026-07-06`.",
+                    "details": {
+                        "effective_end_date": "2026-07-06",
+                        "target_end_date": "2026-07-06",
+                        "common_latest_date": "2026-05-07",
+                        "newest_latest_date": "2026-07-06",
+                        "spread_days": 60,
+                        "stale_symbols_all": ["AAA", "BBB"],
+                        "missing_symbols_all": ["CCC"],
+                        "reason_counts": {
+                            "minor_source_lag": 1,
+                            "persistent_source_gap_or_symbol_issue": 1,
+                        },
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(brief["status_label"], "확인 필요")
+        self.assertEqual(brief["summary_items"][3]["value"], "데이터 이슈 확인")
+        self.assertIn("3개 항목", brief["summary_items"][3]["detail"])
+        self.assertGreaterEqual(len(brief["issue_cards"]), 3)
+        issue_titles = [card["title"] for card in brief["issue_cards"]]
+        self.assertIn("가격 데이터 없음", issue_titles)
+        self.assertIn("가격 최신성 지연", issue_titles)
+        self.assertIn("가격 지연 원인 분류", issue_titles)
+        self.assertIn("CCC", brief["issue_cards"][0]["detail"])
+        self.assertIn("AAA", brief["issue_cards"][1]["detail"])
+
     def test_backtest_price_refresh_plan_uses_latest_completed_trading_day(self) -> None:
         from zoneinfo import ZoneInfo
 

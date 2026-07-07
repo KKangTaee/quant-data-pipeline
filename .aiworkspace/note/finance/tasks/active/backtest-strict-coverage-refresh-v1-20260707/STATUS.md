@@ -5,12 +5,12 @@ Started: 2026-07-07
 
 ## Current
 
-- 1차 완료: strict preset의 내부 key는 유지하되 사용자 표시와 basis model을 `Base Universe` 후보군으로 정리했다.
+- 2차 완료: Data Trust summary가 `확인 필요`일 때 price freshness stale / missing / reason detail이 `1차 데이터 확인` issue queue에도 보이게 했다.
 
 ## Roadmap
 
 - 1차: Base Universe copy/model 정리 - Done
-- 2차: Data Trust issue queue 정합성
+- 2차: Data Trust issue queue 정합성 - Done
 - 3차: Coverage refresh action 정리
 - 4차: Runnable coverage backfill
 - 5차: optional 20D dollar-volume liquidity layer
