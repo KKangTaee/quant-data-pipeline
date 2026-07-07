@@ -5575,3 +5575,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - `US Statement Coverage N`은 표시상 `US Base Universe N`으로 정리했고, 실행 가능 coverage 보장값이 아니라 asset_profile 기반 후보군으로 문서화했다.
 - Data Trust 가격 최신화는 stale/missing ticker 중심의 `Coverage 최신화`로 바뀌었고, Dynamic PIT는 더 넓은 backfill pool에서 target membership을 채우면 candidate-pool stale/missing을 non-blocking context로 보존한다.
 - 20D 거래대금 기준은 Base Universe 선별이 아니라 Base Universe / Dynamic PIT membership 이후 적용되는 optional `liquidity_layer_v1`로 정리했다.
+
+## 2026-07-07 - Practical Validation Flow4 Action Guide V2
+
+- `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-guide-v2-20260707/`에서 Flow 4 criteria card를 해결 중심 구조로 바꿨다.
+- `부족한 것 / 해야 할 일 / 보강 위치` 분리 대신 `해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`로 표시한다.
+- Gate policy, replay execution, provider ingestion orchestration, registry / saved JSONL, live approval / order semantics는 변경하지 않았다.

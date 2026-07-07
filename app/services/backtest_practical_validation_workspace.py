@@ -544,6 +544,7 @@ def _resolution_guide(
     checked_summary: str,
     missing_summary: str,
     next_action: str,
+    pass_criteria: str,
     fix_location: str,
     evidence_rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -559,30 +560,38 @@ def _resolution_guide(
 
     if status in {"PASS", "READY"}:
         guide_type = "evidence"
-        issue_label = "통과 근거"
+        issue_label = "현재 상태"
         action_label = "다음 행동"
-        location_label = "확인 위치"
+        outcome_label = "통과 기준"
+        location_label = "위치"
         missing = "현재 기준에서 부족한 항목은 없습니다."
         action = "추가 보강 없이 Final Review 판단 근거로 사용할 수 있습니다."
+        pass_criteria = pass_criteria or "현재 기준이 통과 상태입니다."
     elif status == "REVIEW":
         guide_type = "review"
-        issue_label = "확인할 것"
-        action_label = "Final Review에서 볼 것"
+        issue_label = "확인할 항목"
+        action_label = "확인 방법"
+        outcome_label = "완료 기준"
         location_label = "확인 위치"
         missing = row_summary.get("review") or missing
         action = row_summary.get("actions") or action or "Final Review에서 review 항목을 판단 근거로 확인합니다."
+        pass_criteria = pass_criteria or "Final Review에서 확인할 근거와 판단 사유가 남아 있어야 합니다."
     elif status == "NOT_APPLICABLE":
         guide_type = "none"
         issue_label = "적용 여부"
         action_label = "다음 행동"
-        location_label = "확인 위치"
+        outcome_label = "완료 기준"
+        location_label = "위치"
         missing = "현재 후보에는 적용되지 않는 기준입니다."
         action = "별도 보강이 필요하지 않습니다."
+        pass_criteria = "현재 후보에는 적용되지 않는 기준입니다."
     else:
         guide_type = "fix"
-        issue_label = "부족한 것"
-        action_label = "해야 할 일"
-        location_label = "보강 위치"
+        issue_label = "해결해야 할 항목"
+        action_label = "해결 방법"
+        outcome_label = "통과 기준"
+        location_label = "위치"
+        pass_criteria = pass_criteria or "필수 기준이 PASS 또는 Final Review 확인 상태가 되어야 합니다."
 
     if action_location and action_location not in location:
         location = f"{location} / 실행: {action_location}"
@@ -595,6 +604,8 @@ def _resolution_guide(
         "missing": missing or "-",
         "action_label": action_label,
         "next_action": action or "-",
+        "outcome_label": outcome_label,
+        "pass_criteria": pass_criteria or "-",
         "location_label": location_label,
         "location": location or "-",
         "action_location": action_location,
@@ -634,6 +645,7 @@ def _module_display_fields(module: dict[str, Any], evidence_rows: list[dict[str,
         checked_summary=reason or current_problem,
         missing_summary=evidence or current_problem,
         next_action=action or completion_criteria,
+        pass_criteria=completion_criteria,
         fix_location=fix_location,
         evidence_rows=list(evidence_rows or []),
     )
@@ -655,6 +667,7 @@ def _module_display_fields(module: dict[str, Any], evidence_rows: list[dict[str,
         "checked_summary": resolution_guide.get("checked"),
         "missing_summary": resolution_guide.get("missing"),
         "next_action_summary": resolution_guide.get("next_action"),
+        "pass_criteria_summary": resolution_guide.get("pass_criteria"),
         "location_summary": resolution_guide.get("location"),
     }
 
@@ -719,6 +732,7 @@ def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
         "checked_summary": resolution_guide.get("checked") or module.get("checked_summary") or current_problem,
         "missing_summary": resolution_guide.get("missing") or module.get("missing_summary") or current_problem,
         "next_action_summary": resolution_guide.get("next_action") or module.get("next_action_summary") or completion_criteria,
+        "pass_criteria_summary": resolution_guide.get("pass_criteria") or module.get("pass_criteria_summary") or completion_criteria,
         "location_summary": resolution_guide.get("location") or module.get("location_summary") or module.get("fix_location") or "-",
     }
 

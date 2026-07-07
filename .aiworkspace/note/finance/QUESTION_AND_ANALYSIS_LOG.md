@@ -8595,3 +8595,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: `finance_meta.nyse_asset_profile` market-cap 기반 후보군, price freshness, statement shadow coverage, 20D liquidity filter를 한 화면에서 혼동하지 않게 분리하고, 갱신 / backfill / gate 동작을 일관되게 만들어야 함.
 - Analysis result: 기존 `US Statement Coverage N`은 S&P 구성원이나 실행 가능 coverage가 아니라 현재 asset_profile 상위 N개 후보군이었다. 따라서 stale/missing 가격 문제는 Coverage 최신화와 Dynamic PIT backfill로 다루고, 20D 거래대금은 Base Universe 선별 기준이 아니라 리밸런싱 후보를 거르는 optional Liquidity Layer로 보는 것이 맞다.
 - Follow-up: 1차 Base Universe copy, 2차 Data Trust issue queue, 3차 Coverage 최신화 action, 4차 Dynamic PIT runnable backfill, 5차 `liquidity_layer_v1` meta/UI/docs 정리를 완료했다.
+
+### 2026-07-07 - Flow4 보강 위치만으로는 해결할 수 없다
+
+- User request: 사용자가 Flow 4의 `보강 위치`만 보고 실제 이슈 해결과 통과가 가능한지 물었고, `부족한 것 / 해야 할 일 / 보강 위치`를 통합 또는 개선하자고 요청함.
+- Interpreted goal: Flow 4 상세 카드는 위치 안내가 아니라 사용자가 실제로 무엇을 보강하고 어떤 상태가 되면 통과인지 알려주는 해결 guide가 되어야 함.
+- Analysis result: 기존 위치 문구는 사용자가 화면을 찾는 데는 도움이 되지만, 어떤 항목이 실패했고 무엇을 실행해야 하며 어떤 기준이 되면 해결인지까지는 부족했다.
+- Follow-up: Criteria card를 `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`로 재구성하고, 위치는 해결 guide의 보조 정보로 낮췄다.

@@ -1916,13 +1916,17 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             guide = dict(card.get("resolution_guide") or {})
             checked_label = str(guide.get("checked_label") or "검증한 것")
             checked_text = str(guide.get("checked") or card.get("checked_summary") or card.get("current_problem") or "-")
-            issue_label = str(guide.get("issue_label") or "부족한 것")
+            issue_label = str(guide.get("issue_label") or "해결해야 할 항목")
             missing_text = str(guide.get("missing") or card.get("missing_summary") or card.get("current_problem") or "-")
-            action_label = str(guide.get("action_label") or "해야 할 일")
+            action_label = str(guide.get("action_label") or "해결 방법")
             next_action_text = str(
                 guide.get("next_action") or card.get("next_action_summary") or card.get("completion_criteria") or "-"
             )
-            location_label = str(guide.get("location_label") or "확인 위치")
+            outcome_label = str(guide.get("outcome_label") or "통과 기준")
+            pass_criteria_text = str(
+                guide.get("pass_criteria") or card.get("pass_criteria_summary") or card.get("completion_criteria") or "-"
+            )
+            location_label = str(guide.get("location_label") or "위치")
             location_text = str(guide.get("location") or card.get("location_summary") or card.get("fix_location") or "-")
             card_html.append(
                 f'<article class="pv-criteria-card pv-criteria-card-{card_tone}">'
@@ -1943,6 +1947,10 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
                 f"<p>{escape(next_action_text)}</p>"
                 "</div>"
                 '<div class="pv-criteria-row">'
+                f"<span>{escape(outcome_label)}</span>"
+                f"<p>{escape(pass_criteria_text)}</p>"
+                "</div>"
+                '<div class="pv-criteria-row pv-criteria-row-location">'
                 f"<span>{escape(location_label)}</span>"
                 f"<p>{escape(location_text)}</p>"
                 "</div>"
