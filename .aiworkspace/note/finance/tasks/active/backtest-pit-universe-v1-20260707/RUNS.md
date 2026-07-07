@@ -58,3 +58,19 @@ Command logs for this task.
 - Diff hygiene: `git diff --check`
 - Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8514 --server.headless true --server.runOnSave false --server.fileWatcherType none`; verified Backtest > Single Strategy > Quality > Strict Annual > Advanced Inputs opens `Universe Contract` with only `PIT Monthly Snapshot Universe`; DOM text check returned Static/Historical false and PIT true.
   - Screenshot artifact: `backtest-universe-contract-pit-only-qa.png` (generated, not committed).
+
+## Follow-up: Missing PIT DB Table Runtime Guard
+
+- Root cause: after the UI became PIT-only, strict Quality / Value runtime read `finance_meta.equity_universe_member` through the loader, but local DBs created before the PIT task did not have the new table yet. The loader leaked raw MySQL 1146 as a system failure.
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_universe_loader_treats_missing_member_table_as_empty tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_runner_reports_missing_pit_snapshots_as_data_issue`
+  - Expected failure: missing `equity_universe_member` exception escaped the loader.
+- GREEN: same 2 tests passed after the loader converted missing member table into an empty PIT member frame and runtime reported missing snapshots as `BacktestDataError`.
+- Local DB bootstrap for immediate testing:
+  - 300: `snapshots_built=127`, `member_rows=38100`, range `2016-01-29 -> 2026-07-06`.
+  - 100 / 500 / 1000: generated the same 127 monthly snapshots for each visible coverage preset.
+  - DB check: `equity_universe_snapshot=508`, `equity_universe_member=241300`.
+- Runtime smoke: `run_quality_snapshot_strict_annual_backtest_from_db(... universe_contract=pit_monthly_snapshot, dynamic_target_size=300 ...)` returned a result bundle with `summary_df` shape `(1, 9)`.
+- Focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_universe_loader_groups_included_members_by_snapshot_date tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_universe_loader_treats_missing_member_table_as_empty tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_runner_reports_missing_pit_snapshots_as_data_issue tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_runner_resolves_pit_monthly_universe_inputs_from_loader tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_ui_exposes_pit_monthly_snapshot_universe_contract`
+  - Result: 5 tests passed.
+- Compile: `.venv/bin/python -m py_compile finance/loaders/universe.py tests/test_service_contracts.py`
+- Diff hygiene: `git diff --check`

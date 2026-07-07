@@ -11,3 +11,4 @@
 - 4차 complete: exposed `PIT Monthly Snapshot Universe` in Single Strategy / Portfolio Mix strict forms, preserved saved mix replay target size, and verified the UI option list in Browser QA.
 - 5차 complete: synced durable data / architecture / UI flow docs, roadmap / index / root logs, and reran focused PIT universe contract QA before closeout.
 - Follow-up complete: user-facing strict Quality / Value `Universe Contract` now exposes only `PIT Monthly Snapshot Universe`; `Static Managed Research Universe` and `Historical Dynamic PIT Universe` remain legacy internal values for old saved payload / run replay compatibility.
+- Follow-up fix complete: PIT loader now treats missing `equity_universe_member` as empty readiness state instead of leaking raw MySQL 1146, and the local DB has baseline 100 / 300 / 500 / 1000 monthly PIT snapshots generated for immediate Quality / Value testing.

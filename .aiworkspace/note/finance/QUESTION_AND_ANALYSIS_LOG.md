@@ -8616,3 +8616,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Quality / Value strict 사용자는 현재 기준 universe를 고정하는 Static path가 아니라, 월말 snapshot 기반 PIT path만 선택하게 해야 함.
 - Analysis result: Static은 현재 Base Universe 300 전체를 실행 기간에 고정하기 때문에 CUK / BK 같은 stale symbol이 refresh 후에도 provider 한계로 남으면 같은 경고가 반복된다. 이 path는 old payload 재현용으로만 의미가 있다.
 - Follow-up: visible `Universe Contract`는 `PIT Monthly Snapshot Universe` 하나로 줄이고, Static / Historical Dynamic PIT는 legacy internal label과 runtime compatibility만 유지한다.
+
+### 2026-07-07 - PIT-only 실행에서 equity_universe_member missing table 오류가 발생한다
+
+- User request: 사용자가 Quality / Value strict 테스트 실행 중 `Table 'finance_meta.equity_universe_member' doesn't exist` 오류가 발생한다고 보고함.
+- Interpreted goal: 새 PIT Monthly Snapshot 기본 경로가 DB 초기화 전 상태에서도 raw system error를 노출하지 않아야 하고, 현재 로컬 테스트 DB는 기본 snapshot을 생성해야 함.
+- Analysis result: schema 정의와 upsert path는 존재하지만, runtime loader가 `equity_universe_member`를 바로 SELECT하면서 기존 DB의 missing table 상태를 방어하지 않았다. PIT-only 전환 후 이 missing-table 상태가 바로 실행 blocker로 노출됐다.
+- Follow-up: loader는 missing table을 empty readiness state로 낮추고 runtime은 `BacktestDataError`로 스냅샷 생성 필요를 보고한다. 현재 로컬 DB에는 기본 100 / 300 / 500 / 1000 monthly PIT snapshot을 생성했다.

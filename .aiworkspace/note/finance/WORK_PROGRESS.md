@@ -5591,3 +5591,5 @@ Detailed historical logs were archived on `2026-04-13`.
 - `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/` 후속으로 strict Quality / Value form의 사용자-facing `Universe Contract`를 `PIT Monthly Snapshot Universe` 하나로 정리했다.
 - `Static Managed Research Universe`와 `Historical Dynamic PIT Universe`는 old saved payload / run replay 호환용 legacy internal path로만 유지한다.
 - Single Strategy와 Portfolio Mix Builder의 strict form 입력값은 과거 Static 세션값을 PIT Monthly로 보정한다.
+- 후속 오류 수정: PIT-only 실행 시 기존 로컬 DB에 `equity_universe_member`가 없어 MySQL 1146이 노출되던 문제를 loader readiness 처리로 낮췄다.
+- 로컬 테스트 DB에는 100 / 300 / 500 / 1000 기본 coverage의 monthly PIT snapshot을 생성했다.

@@ -9,6 +9,37 @@ from finance.data.db.mysql import MySQLClient
 
 from ._common import normalize_date_range, parse_symbol_list, resolve_loader_symbols
 
+PIT_UNIVERSE_MEMBER_COLUMNS = [
+    "universe_code",
+    "as_of_date",
+    "symbol",
+    "rank_no",
+    "eligible",
+    "included",
+    "excluded_reason",
+    "price_date",
+    "close",
+    "shares_outstanding",
+    "shares_source",
+    "approx_market_cap",
+    "avg_dollar_volume_20d",
+    "listing_status",
+    "lifecycle_source",
+    "method_version",
+    "evidence_json",
+]
+
+
+def _empty_pit_universe_member_frame() -> pd.DataFrame:
+    return pd.DataFrame(columns=PIT_UNIVERSE_MEMBER_COLUMNS)
+
+
+def _is_missing_table_error(exc: Exception, table_name: str) -> bool:
+    message = str(exc).lower()
+    return table_name.lower() in message and (
+        "doesn't exist" in message or "unknown table" in message or "1146" in message
+    )
+
 
 def load_universe(
     source: str | None = None,
@@ -271,13 +302,18 @@ def load_pit_universe_members(
     db = MySQLClient("localhost", "root", "1234", 3306)
     try:
         db.use_db("finance_meta")
-        rows = db.query(sql, params)
+        try:
+            rows = db.query(sql, params)
+        except Exception as exc:
+            if _is_missing_table_error(exc, "equity_universe_member"):
+                return _empty_pit_universe_member_frame()
+            raise
     finally:
         db.close()
 
     df = pd.DataFrame(rows)
     if df.empty:
-        return df
+        return _empty_pit_universe_member_frame()
     for column in ["as_of_date", "price_date"]:
         if column in df.columns:
             df[column] = pd.to_datetime(df[column], errors="coerce")

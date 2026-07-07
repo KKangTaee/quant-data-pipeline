@@ -392,6 +392,51 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(snapshots["2026-01-31"], ["AAA", "CCC"])
         self.assertEqual(snapshots["2026-02-28"], ["BBB", "AAA"])
 
+    def test_pit_universe_loader_treats_missing_member_table_as_empty(self) -> None:
+        from finance.loaders.universe import load_pit_universe_members
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.used_db: str | None = None
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_db = db_name
+
+            def query(self, sql: str, params: list[Any]) -> list[dict[str, Any]]:
+                raise Exception("(1146, \"Table 'finance_meta.equity_universe_member' doesn't exist\")")
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDB()
+        with patch("finance.loaders.universe.MySQLClient", return_value=fake_db):
+            members = load_pit_universe_members(
+                "US_LARGE_300_MCAP_PIT_MONTHLY",
+                start="2016-01-01",
+                end="2026-07-07",
+                target_size=300,
+            )
+
+        self.assertEqual(fake_db.used_db, "finance_meta")
+        self.assertTrue(fake_db.closed)
+        self.assertTrue(members.empty)
+
+    def test_strict_runner_reports_missing_pit_snapshots_as_data_issue(self) -> None:
+        from app.runtime.backtest.common import BacktestDataError
+        from app.runtime.backtest.runners import strict_factor as runtime
+
+        with patch.object(runtime, "load_pit_universe_membership_snapshots", return_value={}):
+            with self.assertRaises(BacktestDataError) as ctx:
+                runtime._resolve_pit_monthly_universe_inputs(
+                    start="2016-01-01",
+                    end="2026-07-07",
+                    target_size=300,
+                )
+
+        self.assertIn("No PIT monthly universe snapshots", str(ctx.exception))
+        self.assertIn("US_LARGE_300_MCAP_PIT_MONTHLY", str(ctx.exception))
+
     def test_pit_universe_loader_is_public_loader_contract(self) -> None:
         import finance.loaders as loaders
 
