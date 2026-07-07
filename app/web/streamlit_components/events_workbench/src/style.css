@@ -760,6 +760,21 @@ body {
   background: #7c3aed;
 }
 
+.events-workbench__family-dot--holiday,
+.events-workbench__density-segment--holiday {
+  background: #9333ea;
+}
+
+.events-workbench__family-dot--expiration,
+.events-workbench__density-segment--expiration {
+  background: #be123c;
+}
+
+.events-workbench__family-dot--reconstitution,
+.events-workbench__density-segment--reconstitution {
+  background: #0891b2;
+}
+
 .events-workbench__family-dot--unknown,
 .events-workbench__density-segment--unknown {
   background: #64748b;
@@ -770,44 +785,6 @@ body {
   font-size: 0.68rem;
   font-weight: 720;
   margin-top: 8px;
-}
-
-.events-workbench__day-tooltip {
-  background: #111827;
-  border-radius: 8px;
-  bottom: calc(100% + 8px);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
-  color: #ffffff;
-  display: none;
-  gap: 4px;
-  left: 0;
-  min-width: 220px;
-  padding: 9px 10px;
-  position: absolute;
-  z-index: 10;
-}
-
-.events-workbench__day-tooltip-list {
-  display: grid;
-  gap: 3px;
-  margin-top: 2px;
-}
-
-.events-workbench__day:hover .events-workbench__day-tooltip {
-  display: grid;
-}
-
-.events-workbench__day-tooltip strong,
-.events-workbench__day-tooltip span,
-.events-workbench__day-tooltip em {
-  font-size: 0.72rem;
-  font-style: normal;
-  line-height: 1.35;
-}
-
-.events-workbench__day-tooltip span,
-.events-workbench__day-tooltip em {
-  color: #cbd5e1;
 }
 
 .events-workbench__date-detail {
@@ -839,6 +816,12 @@ body {
   margin-top: 10px;
 }
 
+.events-workbench__date-detail-list--scroll {
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .events-workbench__date-detail-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -864,6 +847,18 @@ body {
 
 .events-workbench__date-detail-card--structure {
   border-left-color: #7c3aed;
+}
+
+.events-workbench__date-detail-card--holiday {
+  border-left-color: #9333ea;
+}
+
+.events-workbench__date-detail-card--expiration {
+  border-left-color: #be123c;
+}
+
+.events-workbench__date-detail-card--reconstitution {
+  border-left-color: #0891b2;
 }
 
 .events-workbench__date-detail-card strong {

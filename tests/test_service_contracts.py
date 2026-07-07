@@ -6275,7 +6275,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("payload.command =", react_source)
         self.assertNotIn("payload.calendar =", react_source)
         self.assertNotIn("payload.evidence =", react_source)
-        self.assertIn("events-workbench__day-tooltip", react_source)
+        self.assertNotIn("events-workbench__day-tooltip", react_source)
+        self.assertNotIn("dayTooltipText", react_source)
         self.assertIn("setExpandedEvidence", react_source)
         self.assertIn("events-workbench__evidence-table", react_source)
         self.assertIn("formatMonthTitle", react_source)
@@ -6290,7 +6291,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("events-workbench__day--selected", react_source)
         self.assertIn("events-workbench__date-detail", react_source)
         self.assertIn("events-workbench__date-detail-card", react_source)
-        self.assertIn("events-workbench__day-tooltip-list", react_source)
+        self.assertIn("(selectedCalendarDay.items || []).map((item)", react_source)
+        self.assertIn("events-workbench__date-detail-list--scroll", react_source)
+        self.assertNotIn(".slice(0, 6).map((item)", react_source)
+        self.assertNotIn("원본 / 상세 근거에서 확인할 수 있습니다", react_source)
+        self.assertIn("eventFamilyKey", react_source)
+        self.assertIn("display_family", react_source)
+        self.assertIn("미국 공휴일", react_source)
+        self.assertIn("옵션 만기", react_source)
         self.assertIn("densityRangeLabel", react_source)
         self.assertIn("주간 일정 밀집도", react_source)
         self.assertIn("주간 합계", react_source)
@@ -6308,12 +6316,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".events-workbench__day--selected", react_style)
         self.assertIn(".events-workbench__date-detail", react_style)
         self.assertIn(".events-workbench__date-detail-card", react_style)
-        self.assertIn(".events-workbench__day-tooltip-list", react_style)
+        self.assertIn(".events-workbench__date-detail-list--scroll", react_style)
+        self.assertIn("overflow-y: auto", react_style)
         self.assertIn(".events-workbench__density-head", react_style)
         self.assertIn(".events-workbench__density-legend", react_style)
         self.assertIn(".events-workbench__day--today", react_style)
         self.assertIn(".events-workbench__day--current-week", react_style)
-        self.assertIn(".events-workbench__day-tooltip", react_style)
+        self.assertNotIn(".events-workbench__day-tooltip", react_style)
         self.assertIn(".events-workbench__density-bar", react_style)
 
     def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
@@ -14655,6 +14664,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["command"]["earnings_universe"]["top_movers_limit"], 20)
         self.assertEqual(payload["command"]["earnings_universe"]["max_symbols"], 50)
         self.assertEqual(payload["filters"]["family"]["label"], "일정 타입")
+        self.assertIn("옵션 만기", [option["label"] for option in payload["filters"]["family"]["options"]])
+        self.assertIn("미국 공휴일", [option["label"] for option in payload["filters"]["family"]["options"]])
         self.assertEqual(payload["filters"]["source_state"]["label"], "자료 상태")
         self.assertEqual(payload["rails"][0]["key"], "recent_major")
         self.assertEqual(payload["rails"][1]["items"][0]["symbol"], "MSFT")
@@ -14674,12 +14685,86 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
         self.assertEqual(payload["calendar"]["days"][1]["date"], "2026-07-07")
         self.assertEqual(payload["calendar"]["days"][1]["review_count"], 1)
+        options_day = next(day for day in payload["calendar"]["days"] if day["date"] == "2026-07-10")
+        self.assertIn("options_expiration", options_day["by_family"])
+        self.assertNotIn("market_structure", options_day["by_family"])
+        self.assertEqual(options_day["items"][0]["display_family"], "options_expiration")
+        self.assertEqual(options_day["items"][0]["display_family_label"], "옵션 만기")
+        self.assertEqual(options_day["items"][0]["badges"][0]["label"], "옵션 만기")
         self.assertTrue(payload["calendar"]["density"])
         self.assertEqual(payload["calendar"]["density"][0]["week_start"], "2026-07-06")
         self.assertEqual(payload["calendar"]["density"][0]["week_end"], "2026-07-12")
         self.assertEqual(payload["calendar"]["density"][0]["label"], "7/6-7/12")
         self.assertIn("raw_fields", payload["evidence"])
         self.assertEqual(payload["evidence"]["rows"][1]["Source Authority"], "not_confirmed")
+
+    def test_events_workbench_market_structure_subtypes_display_separately(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-03",
+                "event_type": "MARKET_HOLIDAY",
+                "title": "US Market Holiday",
+                "source": "nasdaq_market_holiday_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "market_holiday",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-17",
+                "event_type": "OPTIONS_EXPIRATION",
+                "title": "Monthly Options Expiration",
+                "source": "cboe_options_expiration_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "options_expiration",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-24",
+                "event_type": "RUSSELL_RECONSTITUTION",
+                "title": "Russell Reconstitution",
+                "source": "ftse_russell_reconstitution_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "russell_reconstitution",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "collected_at": "2026-07-01 01:00:00",
+            },
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return rows
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 1),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 1))
+
+        by_date = {day["date"]: day for day in payload["calendar"]["days"]}
+        self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family"], "market_holiday")
+        self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family_label"], "미국 공휴일")
+        self.assertIn("market_holiday", by_date["2026-07-03"]["by_family"])
+        self.assertEqual(by_date["2026-07-17"]["items"][0]["display_family"], "options_expiration")
+        self.assertEqual(by_date["2026-07-17"]["items"][0]["display_family_label"], "옵션 만기")
+        self.assertIn("options_expiration", by_date["2026-07-17"]["by_family"])
+        self.assertEqual(by_date["2026-07-24"]["items"][0]["display_family"], "market_reconstitution")
+        self.assertEqual(by_date["2026-07-24"]["items"][0]["display_family_label"], "지수 재구성")
+        self.assertIn("market_reconstitution", by_date["2026-07-24"]["by_family"])
 
     def test_events_workbench_near_term_uses_calendar_week_not_rolling_seven_days(self) -> None:
         from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot

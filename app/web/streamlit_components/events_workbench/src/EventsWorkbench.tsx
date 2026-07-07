@@ -12,6 +12,9 @@ type EventItem = {
   days_until?: number | null;
   type: string;
   family: string;
+  subtype?: string;
+  display_family?: string;
+  display_family_label?: string;
   symbol?: string;
   title: string;
   importance?: string;
@@ -185,7 +188,10 @@ const FAMILY_OPTIONS = [
   { id: "central_bank", label: "FOMC" },
   { id: "macro", label: "매크로" },
   { id: "earnings", label: "실적" },
-  { id: "market_structure", label: "시장 구조" },
+  { id: "market_holiday", label: "미국 공휴일" },
+  { id: "options_expiration", label: "옵션 만기" },
+  { id: "market_reconstitution", label: "지수 재구성" },
+  { id: "market_structure", label: "기타 시장 일정" },
 ];
 
 const REVIEW_OPTIONS = [
@@ -215,8 +221,17 @@ function familyLabel(value: unknown): string {
   if (family === "central_bank") {
     return "FOMC";
   }
+  if (family === "market_holiday") {
+    return "미국 공휴일";
+  }
+  if (family === "options_expiration") {
+    return "옵션 만기";
+  }
+  if (family === "market_reconstitution") {
+    return "지수 재구성";
+  }
   if (family === "market_structure") {
-    return "시장 구조";
+    return "기타 시장 일정";
   }
   if (family === "fixed_income") {
     return "국채 / 금리";
@@ -230,6 +245,10 @@ function familyLabel(value: unknown): string {
   return valueText(value, "미분류").replace(/_/g, " ");
 }
 
+function eventFamilyKey(item: EventItem): string {
+  return valueText(item.display_family || item.family, "unknown");
+}
+
 function familyTone(value: unknown): string {
   const family = normalizedText(value);
   if (family === "central_bank") {
@@ -237,6 +256,15 @@ function familyTone(value: unknown): string {
   }
   if (family === "market_structure") {
     return "structure";
+  }
+  if (family === "market_holiday") {
+    return "holiday";
+  }
+  if (family === "options_expiration") {
+    return "expiration";
+  }
+  if (family === "market_reconstitution") {
+    return "reconstitution";
   }
   if (family === "fixed_income") {
     return "macro";
@@ -249,7 +277,11 @@ function matchesFamily(item: EventItem, familyFilter: string): boolean {
     return true;
   }
   const family = normalizedText(item.family);
+  const displayFamily = normalizedText(item.display_family || item.family);
   const type = normalizedText(item.type);
+  if (["market_holiday", "options_expiration", "market_reconstitution", "market_structure"].includes(familyFilter)) {
+    return displayFamily === familyFilter;
+  }
   if (familyFilter === "central_bank") {
     return family === "central_bank" || type.includes("fomc");
   }
@@ -287,7 +319,7 @@ function filterItems(items: EventItem[], familyFilter: string, reviewFilter: str
 
 function aggregateFamilies(items: EventItem[]): Record<string, number> {
   return items.reduce<Record<string, number>>((acc, item) => {
-    const family = item.family || "unknown";
+    const family = eventFamilyKey(item);
     acc[family] = (acc[family] || 0) + 1;
     return acc;
   }, {});
@@ -465,7 +497,7 @@ function CountTile({ label, value }: { label: string; value: unknown }) {
 function EventCard({ item }: { item: EventItem }) {
   const title = item.symbol ? `${item.symbol} · ${item.title}` : item.title;
   return (
-    <article className={`events-workbench__event-card events-workbench__event-card--${familyTone(item.family)}`}>
+    <article className={`events-workbench__event-card events-workbench__event-card--${familyTone(eventFamilyKey(item))}`}>
       <div className="events-workbench__event-date">
         {item.date}
         {item.event_time && item.event_time !== "-" ? <span>{item.event_time}</span> : null}
@@ -500,11 +532,6 @@ function TrustItem({ item }: { item: EventItem }) {
       </span>
     </div>
   );
-}
-
-function dayTooltipText(day: CalendarDay): string {
-  const titles = (day.top_titles || []).slice(0, 3).join(" / ");
-  return `${day.date} · 이벤트 ${day.count}개 · 확인 필요 ${day.review_count}개 · 오래된 추정 ${day.stale_count}개${titles ? ` · ${titles}` : ""}`;
 }
 
 function eventStatusText(item: EventItem): string {
@@ -856,7 +883,6 @@ function EventsWorkbench({ args }: ComponentProps) {
                 day.date === selectedDate ? "events-workbench__day--selected" : "",
               ].filter(Boolean).join(" ")}
               key={day.date}
-              title={dayTooltipText(day)}
             >
               <button
                 aria-label={`${day.date} 일정 ${day.count}건 보기`}
@@ -883,20 +909,6 @@ function EventsWorkbench({ args }: ComponentProps) {
                     확인 {day.review_count} · 오래된 추정 {day.stale_count}
                   </div>
                 ) : null}
-                {day.count ? (
-                  <div className="events-workbench__day-tooltip" role="tooltip">
-                    <strong>{day.date}</strong>
-                    <span>총 {day.count}건 · 확인 필요 {day.review_count}건 · 오래된 추정 {day.stale_count}건</span>
-                    <div className="events-workbench__day-tooltip-list">
-                      {Object.entries(day.by_family || {}).map(([family, count]) => (
-                        <em key={`${day.date}-tooltip-${family}`}>{familyLabel(family)} {count}건</em>
-                      ))}
-                      {(day.top_titles || []).slice(0, 3).map((title) => (
-                        <em key={`${day.date}-${title}`}>{title}</em>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
               </button>
             </div>
           ))}
@@ -912,9 +924,9 @@ function EventsWorkbench({ args }: ComponentProps) {
                 </div>
                 <span>총 {selectedCalendarDay.count}건 · 확인 필요 {selectedCalendarDay.review_count}건</span>
               </div>
-              <div className="events-workbench__date-detail-list">
-                {(selectedCalendarDay.items || []).slice(0, 6).map((item) => (
-                  <article className={`events-workbench__date-detail-card events-workbench__date-detail-card--${familyTone(item.family)}`} key={`${selectedCalendarDay.date}-${item.type}-${item.symbol || item.title}`}>
+              <div className="events-workbench__date-detail-list events-workbench__date-detail-list--scroll">
+                {(selectedCalendarDay.items || []).map((item) => (
+                  <article className={`events-workbench__date-detail-card events-workbench__date-detail-card--${familyTone(eventFamilyKey(item))}`} key={`${selectedCalendarDay.date}-${item.type}-${item.symbol || item.title}`}>
                     <strong>{item.symbol ? `${item.symbol} · ${item.title}` : item.title}</strong>
                     <span>{eventStatusText(item)}</span>
                     <span>{eventSourceText(item)}</span>
@@ -923,11 +935,6 @@ function EventsWorkbench({ args }: ComponentProps) {
                     ) : null}
                   </article>
                 ))}
-                {(selectedCalendarDay.items || []).length > 6 ? (
-                  <div className="events-workbench__empty events-workbench__empty--compact">
-                    외 {(selectedCalendarDay.items || []).length - 6}건은 원본 / 상세 근거에서 확인할 수 있습니다.
-                  </div>
-                ) : null}
               </div>
             </>
           ) : (
@@ -946,7 +953,9 @@ function EventsWorkbench({ args }: ComponentProps) {
               <span><i className="events-workbench__density-segment--fomc" />FOMC</span>
               <span><i className="events-workbench__density-segment--macro" />매크로</span>
               <span><i className="events-workbench__density-segment--earnings" />실적</span>
-              <span><i className="events-workbench__density-segment--structure" />시장 구조</span>
+              <span><i className="events-workbench__density-segment--holiday" />미국 공휴일</span>
+              <span><i className="events-workbench__density-segment--expiration" />옵션 만기</span>
+              <span><i className="events-workbench__density-segment--reconstitution" />지수 재구성</span>
             </div>
           </div>
           {filteredDensity.slice(0, 12).map((bucket) => (

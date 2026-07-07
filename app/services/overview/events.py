@@ -99,6 +99,14 @@ EVENT_FAMILY_LABELS_KO = {
     "unknown": "미분류",
 }
 
+EVENT_DISPLAY_FAMILY_LABELS_KO = {
+    **EVENT_FAMILY_LABELS_KO,
+    "market_holiday": "미국 공휴일",
+    "options_expiration": "옵션 만기",
+    "market_reconstitution": "지수 재구성",
+    "market_structure": "기타 시장 일정",
+}
+
 EVENT_SOURCE_STATE_LABELS_KO = {
     "all": "전체",
     "review": "확인 필요",
@@ -921,15 +929,33 @@ def _display_label(mapping: dict[str, str], value: Any, *, fallback: str = "-") 
         return fallback
     return mapping.get(key, str(value or fallback).replace("_", " ").title())
 
+def _workbench_display_family(family: str, subtype: str, event_type: str) -> str:
+    family_key = _display_key(family)
+    subtype_key = _display_key(subtype)
+    event_type_key = str(event_type or "").strip().upper()
+    if family_key != "market_structure":
+        return family_key or "unknown"
+    if subtype_key in {"market_holiday", "market_early_close", "early_close", "holiday"} or "HOLIDAY" in event_type_key:
+        return "market_holiday"
+    if subtype_key in {"options_expiration", "triple_witch"} or "OPTIONS_EXPIRATION" in event_type_key:
+        return "options_expiration"
+    if "reconstitution" in subtype_key or "russell" in subtype_key:
+        return "market_reconstitution"
+    return "market_structure"
+
 def _workbench_item(record: dict[str, Any]) -> dict[str, Any]:
     days_until = _workbench_days_until(record)
     family = str(record.get("Event Family") or "unknown")
+    subtype = str(record.get("Event Subtype") or "unknown")
+    event_type = str(record.get("Type") or "-")
+    display_family = _workbench_display_family(family, subtype, event_type)
+    display_family_label = _display_label(EVENT_DISPLAY_FAMILY_LABELS_KO, display_family)
     source_authority = str(record.get("Source Authority") or "unknown")
     universe_scope = str(record.get("Universe Scope") or "unknown")
     freshness = str(record.get("Freshness") or "Unknown")
     validation = str(record.get("Validation") or "Unknown")
     badges = [
-        {"label": _display_label(EVENT_FAMILY_LABELS_KO, family), "kind": "family"},
+        {"label": display_family_label, "kind": "family"},
         {"label": _display_label(EVENT_SOURCE_AUTHORITY_LABELS_KO, source_authority), "kind": "source_authority"},
         {"label": _display_label(EVENT_UNIVERSE_SCOPE_LABELS_KO, universe_scope), "kind": "universe_scope"},
     ]
@@ -941,9 +967,11 @@ def _workbench_item(record: dict[str, Any]) -> dict[str, Any]:
         "date": str(record.get("Date") or "-"),
         "days_until": days_until,
         "window": str(record.get("Window") or "-"),
-        "type": str(record.get("Type") or "-"),
+        "type": event_type,
         "family": family,
-        "subtype": str(record.get("Event Subtype") or "unknown"),
+        "subtype": subtype,
+        "display_family": display_family,
+        "display_family_label": display_family_label,
         "symbol": "" if str(record.get("Symbol") or "-") == "-" else str(record.get("Symbol") or ""),
         "title": str(record.get("Title") or "-"),
         "importance": str(record.get("Importance") or "Low"),
@@ -986,7 +1014,10 @@ def _events_workbench_filters() -> dict[str, Any]:
                     ("central_bank", "FOMC"),
                     ("macro", "매크로"),
                     ("earnings", "실적"),
-                    ("market_structure", "시장 구조"),
+                    ("market_holiday", "미국 공휴일"),
+                    ("options_expiration", "옵션 만기"),
+                    ("market_reconstitution", "지수 재구성"),
+                    ("market_structure", "기타 시장 일정"),
                 ]
             ],
         },
@@ -1062,7 +1093,8 @@ def _events_workbench_calendar(records: list[dict[str, Any]], *, today: date) ->
     days: list[dict[str, Any]] = []
     weekly: dict[str, dict[str, Any]] = {}
     for date_text, day_records in sorted(by_day.items()):
-        families = Counter(str(record.get("Event Family") or "unknown") for record in day_records)
+        items = [_workbench_item(record) for record in day_records]
+        families = Counter(str(item.get("display_family") or item.get("family") or "unknown") for item in items)
         stale_count = sum(1 for record in day_records if "stale" in str(record.get("Freshness") or "").lower())
         review_count = sum(1 for record in day_records if _workbench_row_needs_review(record))
         day_payload = {
@@ -1072,7 +1104,7 @@ def _events_workbench_calendar(records: list[dict[str, Any]], *, today: date) ->
             "review_count": review_count,
             "stale_count": stale_count,
             "top_titles": [str(record.get("Title") or "-") for record in day_records[:3]],
-            "items": [_workbench_item(record) for record in day_records],
+            "items": items,
         }
         days.append(day_payload)
         week_start = _workbench_week_start(date_text)
