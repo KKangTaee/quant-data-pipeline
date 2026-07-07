@@ -276,6 +276,128 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(target_size, 300)
         self.assertEqual(candidate_tickers, selected)
 
+    def test_pit_universe_schema_and_payload_contract_rank_month_end_members(self) -> None:
+        from finance.data.db.schema import PIT_UNIVERSE_SCHEMAS
+        from finance.data.pit_universe import (
+            PIT_UNIVERSE_METHOD_VERSION,
+            build_equity_universe_snapshot_payload,
+            normalize_pit_universe_code,
+        )
+
+        self.assertIn("equity_universe_snapshot", PIT_UNIVERSE_SCHEMAS)
+        self.assertIn("equity_universe_member", PIT_UNIVERSE_SCHEMAS)
+        self.assertIn("approx_market_cap", PIT_UNIVERSE_SCHEMAS["equity_universe_member"])
+        self.assertEqual(normalize_pit_universe_code(300), "US_LARGE_300_MCAP_PIT_MONTHLY")
+
+        price_rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "date": "2026-01-30", "close": 10.0, "volume": 1_000_000},
+                {"symbol": "BBB", "date": "2026-01-30", "close": 20.0, "volume": 1_000_000},
+                {"symbol": "CCC", "date": "2026-01-30", "close": 5.0, "volume": 1_000_000},
+                {"symbol": "DDD", "date": "2026-01-30", "close": 30.0, "volume": 1_000_000},
+            ]
+        )
+        statement_rows = pd.DataFrame(
+            [
+                {
+                    "symbol": "AAA",
+                    "period_end": "2025-12-31",
+                    "latest_available_at": "2026-01-15",
+                    "shares_outstanding": 10_000_000,
+                    "shares_outstanding_source": "statement",
+                },
+                {
+                    "symbol": "BBB",
+                    "period_end": "2025-12-31",
+                    "latest_available_at": "2026-01-15",
+                    "shares_outstanding": 2_000_000,
+                    "shares_outstanding_source": "statement",
+                },
+                {
+                    "symbol": "CCC",
+                    "period_end": "2025-12-31",
+                    "latest_available_at": "2026-01-15",
+                    "shares_outstanding": 20_000_000,
+                    "shares_outstanding_source": "statement",
+                },
+            ]
+        )
+        profile_rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "kind": "stock", "country": "United States", "status": "active"},
+                {"symbol": "BBB", "kind": "stock", "country": "United States", "status": "active"},
+                {"symbol": "CCC", "kind": "stock", "country": "United States", "status": "active"},
+                {"symbol": "DDD", "kind": "stock", "country": "United States", "status": "active"},
+            ]
+        )
+
+        payload = build_equity_universe_snapshot_payload(
+            as_of_date="2026-01-31",
+            target_size=2,
+            price_rows=price_rows,
+            statement_rows=statement_rows,
+            asset_profile_rows=profile_rows,
+        )
+
+        snapshot = payload["snapshot"]
+        members = payload["members"]
+        included = [row["symbol"] for row in members if row["included"]]
+        excluded_by_symbol = {row["symbol"]: row["excluded_reason"] for row in members if row["excluded_reason"]}
+
+        self.assertEqual(snapshot["universe_code"], "US_LARGE_2_MCAP_PIT_MONTHLY")
+        self.assertEqual(snapshot["method_version"], PIT_UNIVERSE_METHOD_VERSION)
+        self.assertEqual(snapshot["candidate_count"], 4)
+        self.assertEqual(snapshot["eligible_count"], 3)
+        self.assertEqual(snapshot["member_count"], 2)
+        self.assertEqual(included, ["AAA", "CCC"])
+        self.assertEqual(excluded_by_symbol["DDD"], "missing_statement_shares")
+        self.assertEqual(excluded_by_symbol["BBB"], "below_rank_cutoff")
+        self.assertEqual([row["rank_no"] for row in members if row["included"]], [1, 2])
+
+    def test_pit_universe_loader_groups_included_members_by_snapshot_date(self) -> None:
+        from finance.loaders.universe import load_pit_universe_membership_snapshots
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.used_db: str | None = None
+                self.params: list[Any] | None = None
+
+            def use_db(self, db_name: str) -> None:
+                self.used_db = db_name
+
+            def query(self, sql: str, params: list[Any]) -> list[dict[str, Any]]:
+                self.params = list(params)
+                self.sql = sql
+                return [
+                    {"as_of_date": date(2026, 1, 31), "symbol": "AAA", "rank_no": 1},
+                    {"as_of_date": date(2026, 1, 31), "symbol": "CCC", "rank_no": 2},
+                    {"as_of_date": date(2026, 2, 28), "symbol": "BBB", "rank_no": 1},
+                    {"as_of_date": date(2026, 2, 28), "symbol": "AAA", "rank_no": 2},
+                ]
+
+            def close(self) -> None:
+                pass
+
+        fake_db = FakeDB()
+        with patch("finance.loaders.universe.MySQLClient", return_value=fake_db):
+            snapshots = load_pit_universe_membership_snapshots(
+                "US_LARGE_2_MCAP_PIT_MONTHLY",
+                start="2026-01-01",
+                end="2026-02-28",
+                target_size=2,
+            )
+
+        self.assertEqual(fake_db.used_db, "finance_meta")
+        self.assertEqual(fake_db.params[0], "US_LARGE_2_MCAP_PIT_MONTHLY")
+        self.assertEqual(snapshots["2026-01-31"], ["AAA", "CCC"])
+        self.assertEqual(snapshots["2026-02-28"], ["BBB", "AAA"])
+
+    def test_pit_universe_loader_is_public_loader_contract(self) -> None:
+        import finance.loaders as loaders
+
+        self.assertIn("load_pit_universe_membership_snapshots", loaders.__all__)
+        self.assertTrue(callable(loaders.load_pit_universe_membership_snapshots))
+
     def test_dynamic_runnable_coverage_overrides_candidate_pool_warning_when_target_filled(self) -> None:
         from app.runtime.backtest.runners.strict_factor import _apply_dynamic_runnable_coverage_price_status
         from finance.sample import HISTORICAL_DYNAMIC_PIT_UNIVERSE

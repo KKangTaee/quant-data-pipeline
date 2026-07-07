@@ -301,6 +301,68 @@ PRICE_SCHEMAS = {
     """
 }
 
+PIT_UNIVERSE_SCHEMAS = {
+    "equity_universe_snapshot": """
+        CREATE TABLE IF NOT EXISTS equity_universe_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          universe_code VARCHAR(64) NOT NULL,
+          as_of_date DATE NOT NULL,
+          frequency ENUM('monthly','weekly','daily','adhoc') NOT NULL DEFAULT 'monthly',
+          target_size INT NOT NULL,
+          method_version VARCHAR(64) NOT NULL,
+          source_basis VARCHAR(255) NOT NULL,
+
+          candidate_count INT NOT NULL DEFAULT 0,
+          eligible_count INT NOT NULL DEFAULT 0,
+          member_count INT NOT NULL DEFAULT 0,
+          excluded_count INT NOT NULL DEFAULT 0,
+          max_rank INT NULL,
+          status ENUM('ok','partial','empty','error') NOT NULL DEFAULT 'ok',
+          warning_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_universe_asof_method (universe_code, as_of_date, method_version),
+          KEY ix_universe_asof (universe_code, as_of_date),
+          KEY ix_asof (as_of_date)
+        );
+    """,
+    "equity_universe_member": """
+        CREATE TABLE IF NOT EXISTS equity_universe_member (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          universe_code VARCHAR(64) NOT NULL,
+          as_of_date DATE NOT NULL,
+          symbol VARCHAR(20) NOT NULL,
+          rank_no INT NULL,
+          eligible TINYINT(1) NOT NULL DEFAULT 0,
+          included TINYINT(1) NOT NULL DEFAULT 0,
+          excluded_reason VARCHAR(128) NULL,
+
+          price_date DATE NULL,
+          close DOUBLE NULL,
+          shares_outstanding BIGINT NULL,
+          shares_source VARCHAR(128) NULL,
+          approx_market_cap DOUBLE NULL,
+          avg_dollar_volume_20d DOUBLE NULL,
+
+          listing_status VARCHAR(32) NULL,
+          lifecycle_source VARCHAR(64) NULL,
+          method_version VARCHAR(64) NOT NULL,
+          evidence_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_universe_asof_symbol_method (universe_code, as_of_date, symbol, method_version),
+          KEY ix_universe_rank (universe_code, as_of_date, included, rank_no),
+          KEY ix_symbol_asof (symbol, as_of_date)
+        );
+    """,
+}
+
 
 MARKET_INTELLIGENCE_SCHEMAS = {
     "market_universe_member": """

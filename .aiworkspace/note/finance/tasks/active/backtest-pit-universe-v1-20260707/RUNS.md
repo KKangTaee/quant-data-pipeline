@@ -1,0 +1,13 @@
+# Runs
+
+Command logs for this task.
+
+## 1차 Schema / Loader
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_universe_schema_and_payload_contract_rank_month_end_members`
+  - Expected failure: `PIT_UNIVERSE_SCHEMAS` missing.
+- GREEN: same focused test passed after adding `finance/data/pit_universe.py` and schema constants.
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_pit_universe_loader_groups_included_members_by_snapshot_date`
+  - Expected failure: `load_pit_universe_membership_snapshots` missing.
+- GREEN: focused loader tests passed after adding loader helpers and public export.
+- Compile: `.venv/bin/python -m py_compile finance/data/pit_universe.py finance/loaders/universe.py finance/loaders/__init__.py finance/data/db/schema.py tests/test_service_contracts.py`

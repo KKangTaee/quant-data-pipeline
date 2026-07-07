@@ -4,6 +4,7 @@ from collections.abc import Iterable
 
 import pandas as pd
 
+from finance.data.pit_universe import PIT_UNIVERSE_METHOD_VERSION
 from finance.data.db.mysql import MySQLClient
 
 from ._common import normalize_date_range, parse_symbol_list, resolve_loader_symbols
@@ -207,3 +208,107 @@ def load_symbol_lifecycle_coverage_summary(
     df["requested_start"] = start_ts.strftime("%Y-%m-%d") if start_ts is not None else None
     df["requested_end"] = end_ts.strftime("%Y-%m-%d") if end_ts is not None else None
     return df
+
+
+def load_pit_universe_members(
+    universe_code: str,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    method_version: str = PIT_UNIVERSE_METHOD_VERSION,
+    target_size: int | None = None,
+    included_only: bool = True,
+) -> pd.DataFrame:
+    """
+    Load prebuilt point-in-time universe member rows from finance_meta.
+
+    The loader is read-only. It expects ingestion/build jobs to create
+    `equity_universe_member` rows ahead of backtest execution.
+    """
+    normalized_code = str(universe_code or "").strip().upper()
+    if not normalized_code:
+        raise ValueError("universe_code is required.")
+
+    start_ts, end_ts = normalize_date_range(start=start, end=end)
+    where = ["universe_code = %s", "method_version = %s"]
+    params: list[object] = [normalized_code, method_version]
+    if included_only:
+        where.append("included = 1")
+    if start_ts is not None:
+        where.append("as_of_date >= %s")
+        params.append(start_ts.strftime("%Y-%m-%d"))
+    if end_ts is not None:
+        where.append("as_of_date <= %s")
+        params.append(end_ts.strftime("%Y-%m-%d"))
+    if target_size is not None:
+        where.append("(rank_no IS NULL OR rank_no <= %s)")
+        params.append(int(target_size))
+
+    sql = f"""
+        SELECT
+            universe_code,
+            as_of_date,
+            symbol,
+            rank_no,
+            eligible,
+            included,
+            excluded_reason,
+            price_date,
+            close,
+            shares_outstanding,
+            shares_source,
+            approx_market_cap,
+            avg_dollar_volume_20d,
+            listing_status,
+            lifecycle_source,
+            method_version,
+            evidence_json
+        FROM equity_universe_member
+        WHERE {" AND ".join(where)}
+        ORDER BY as_of_date ASC, rank_no ASC, symbol ASC
+    """
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_meta")
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    for column in ["as_of_date", "price_date"]:
+        if column in df.columns:
+            df[column] = pd.to_datetime(df[column], errors="coerce")
+    if "symbol" in df.columns:
+        df["symbol"] = df["symbol"].astype(str).str.upper()
+    return df
+
+
+def load_pit_universe_membership_snapshots(
+    universe_code: str,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    method_version: str = PIT_UNIVERSE_METHOD_VERSION,
+    target_size: int | None = None,
+) -> dict[str, list[str]]:
+    """Return included PIT members grouped by snapshot date in rank order."""
+    members = load_pit_universe_members(
+        universe_code,
+        start=start,
+        end=end,
+        method_version=method_version,
+        target_size=target_size,
+        included_only=True,
+    )
+    if members.empty:
+        return {}
+
+    grouped: dict[str, list[str]] = {}
+    working = members.sort_values(["as_of_date", "rank_no", "symbol"]).copy()
+    for as_of_date, group in working.groupby("as_of_date", sort=True):
+        key = pd.Timestamp(as_of_date).strftime("%Y-%m-%d")
+        grouped[key] = [str(symbol).upper() for symbol in group["symbol"].tolist()]
+    return grouped
