@@ -489,6 +489,113 @@ def inspect_strict_annual_price_freshness(
     }
 
 
+def _latest_result_date_string(result_df: pd.DataFrame) -> str | None:
+    if result_df is None or result_df.empty or "Date" not in result_df.columns:
+        return None
+    result_dates = pd.to_datetime(result_df["Date"], errors="coerce").dropna()
+    if result_dates.empty:
+        return None
+    return pd.Timestamp(result_dates.max()).normalize().strftime("%Y-%m-%d")
+
+
+def _apply_dynamic_runnable_coverage_price_status(
+    bundle: dict[str, Any],
+    *,
+    price_freshness: dict[str, Any],
+    universe_debug: dict[str, Any] | None,
+    result_df: pd.DataFrame,
+) -> None:
+    """Mark Dynamic PIT backfilled coverage as the effective data-trust basis."""
+    debug = dict(universe_debug or {})
+    if debug.get("contract") != HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        return
+
+    target_size = int(debug.get("target_size") or 0)
+    latest_membership_count = int(debug.get("last_membership_count") or 0)
+    candidate_pool_count = int(debug.get("candidate_pool_count") or 0)
+    if target_size <= 0:
+        return
+
+    status = "ok" if latest_membership_count >= target_size else "warning"
+    actual_end = _latest_result_date_string(result_df)
+    original_details = dict(price_freshness.get("details") or {})
+    runnable_coverage = {
+        "status": status,
+        "contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+        "target_size": target_size,
+        "latest_membership_count": latest_membership_count,
+        "min_membership_count": int(debug.get("min_membership_count") or 0),
+        "max_membership_count": int(debug.get("max_membership_count") or 0),
+        "candidate_pool_count": candidate_pool_count,
+        "candidate_pool_price_status": str(price_freshness.get("status") or "").strip().lower() or None,
+        "candidate_pool_missing_count": int(original_details.get("missing_count") or 0),
+        "candidate_pool_stale_count": int(original_details.get("stale_count") or 0),
+    }
+
+    bundle.setdefault("meta", {})["runnable_coverage"] = runnable_coverage
+    if status != "ok":
+        return
+
+    effective_end = (
+        actual_end
+        or original_details.get("effective_end_date")
+        or original_details.get("target_end_date")
+        or original_details.get("common_latest_date")
+        or original_details.get("selected_end_date")
+    )
+    selected_end = original_details.get("selected_end_date") or effective_end
+    warning_prefixes = ("가격 최신성 사전 점검:", "Price freshness preflight:")
+    existing_warnings = [
+        str(warning)
+        for warning in bundle["meta"].get("warnings") or []
+        if not str(warning).startswith(warning_prefixes)
+    ]
+    existing_warnings.append(
+        "Dynamic PIT runnable coverage backfill: "
+        f"target {target_size} was filled from {candidate_pool_count} candidate symbols. "
+        "Candidate-pool stale/missing symbols are non-blocking unless runnable membership drops below target."
+    )
+    bundle["meta"]["warnings"] = existing_warnings
+    bundle["meta"]["candidate_pool_price_freshness"] = price_freshness
+    bundle["meta"]["price_freshness"] = {
+        "status": "ok",
+        "message": (
+            f"Dynamic PIT backfill filled the runnable coverage target "
+            f"({latest_membership_count}/{target_size}) through `{effective_end}`. "
+            "Candidate-pool stale or missing symbols are retained as non-blocking context."
+        ),
+        "details": {
+            "requested_count": target_size,
+            "covered_count": latest_membership_count,
+            "missing_count": 0,
+            "missing_symbols": [],
+            "missing_symbols_all": [],
+            "selected_end_date": selected_end,
+            "target_end_date": effective_end,
+            "effective_end_date": effective_end,
+            "effective_end_shift_days": original_details.get("effective_end_shift_days", 0),
+            "effective_end_basis": original_details.get("effective_end_basis"),
+            "common_latest_date": effective_end,
+            "newest_latest_date": effective_end,
+            "spread_days": 0,
+            "stale_count": 0,
+            "stale_symbols": [],
+            "stale_symbols_all": [],
+            "lagging_count": 0,
+            "lagging_symbols": [],
+            "lagging_symbols_all": [],
+            "refresh_symbols_all": [],
+            "runnable_coverage_status": status,
+            "runnable_coverage_target_size": target_size,
+            "runnable_coverage_latest_membership_count": latest_membership_count,
+            "candidate_pool_count": candidate_pool_count,
+            "candidate_pool_price_status": runnable_coverage["candidate_pool_price_status"],
+            "candidate_pool_missing_count": runnable_coverage["candidate_pool_missing_count"],
+            "candidate_pool_stale_count": runnable_coverage["candidate_pool_stale_count"],
+        },
+    }
+
+
 def run_quality_snapshot_backtest_from_db(
     *,
     tickers: Sequence[str] | None = None,
@@ -910,6 +1017,12 @@ def _run_statement_quality_bundle(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    _apply_dynamic_runnable_coverage_price_status(
+        bundle,
+        price_freshness=price_freshness,
+        universe_debug=universe_debug,
+        result_df=result_df,
+    )
     if "Defensive Sleeve Count" in result_df.columns:
         defensive_sleeve_active = result_df["Defensive Sleeve Count"].fillna(0).astype(float) > 0
         bundle["meta"]["defensive_sleeve_active_count"] = int(defensive_sleeve_active.sum())
@@ -1419,6 +1532,12 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    _apply_dynamic_runnable_coverage_price_status(
+        bundle,
+        price_freshness=price_freshness,
+        universe_debug=universe_debug,
+        result_df=result_df,
+    )
     if "Defensive Sleeve Count" in result_df.columns:
         defensive_sleeve_active = result_df["Defensive Sleeve Count"].fillna(0).astype(float) > 0
         bundle["meta"]["defensive_sleeve_active_count"] = int(defensive_sleeve_active.sum())
@@ -1689,6 +1808,12 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    _apply_dynamic_runnable_coverage_price_status(
+        bundle,
+        price_freshness=price_freshness,
+        universe_debug=universe_debug,
+        result_df=result_df,
+    )
     if trend_filter_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             _build_strict_rejected_slot_handling_warning(
@@ -2013,6 +2138,12 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    _apply_dynamic_runnable_coverage_price_status(
+        bundle,
+        price_freshness=price_freshness,
+        universe_debug=universe_debug,
+        result_df=result_df,
+    )
     if "Defensive Sleeve Count" in result_df.columns:
         defensive_sleeve_active = result_df["Defensive Sleeve Count"].fillna(0).astype(float) > 0
         bundle["meta"]["defensive_sleeve_active_count"] = int(defensive_sleeve_active.sum())
@@ -2296,6 +2427,12 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    _apply_dynamic_runnable_coverage_price_status(
+        bundle,
+        price_freshness=price_freshness,
+        universe_debug=universe_debug,
+        result_df=result_df,
+    )
     if trend_filter_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             _build_strict_rejected_slot_handling_warning(

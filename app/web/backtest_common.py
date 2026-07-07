@@ -386,6 +386,7 @@ STRICT_ANNUAL_MANAGED_PRESET_SPECS = {
     "US Statement Coverage 500": 500,
     "US Statement Coverage 1000": 1000,
 }
+STRICT_ANNUAL_DYNAMIC_BACKFILL_MAX_POOL_SIZE = 1000
 STRICT_ANNUAL_MANAGED_PRESET_DISPLAY_LABELS = {
     "US Statement Coverage 100": "US Base Universe 100",
     "US Statement Coverage 300": "US Base Universe 300",
@@ -1495,7 +1496,25 @@ def _resolve_strict_dynamic_universe_inputs(
         return [], None
 
     target_size = STRICT_ANNUAL_MANAGED_PRESET_SPECS.get(preset_name or "", len(tickers))
-    candidate_tickers = tickers
+    pool_size = min(
+        STRICT_ANNUAL_DYNAMIC_BACKFILL_MAX_POOL_SIZE,
+        max(int(target_size), int(target_size) * 2),
+    )
+    candidate_tickers = list(tickers)
+    if (preset_name or "") in STRICT_ANNUAL_MANAGED_PRESET_SPECS and pool_size > len(candidate_tickers):
+        try:
+            expanded = load_top_symbols_from_asset_profile(
+                "stock",
+                country="United States",
+                on_filter=True,
+                limit=pool_size,
+                order_by="market_cap_desc",
+            )
+        except Exception:
+            expanded = []
+        expanded_tickers = _unique_upper_tickers(expanded)
+        if len(expanded_tickers) >= int(target_size):
+            candidate_tickers = expanded_tickers
 
     return candidate_tickers, int(target_size)
 
@@ -1516,9 +1535,15 @@ def _render_strict_dynamic_universe_contract_note(
 
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         freq_label = str(statement_freq).strip().lower()
+        backfill_note = (
+            "선택한 Base Universe보다 넓은 backfill pool을 읽고, 실행 membership 목표 수는 선택 preset 크기로 고정합니다. "
+            if len(dynamic_candidate_tickers) > int(dynamic_target_size or 0)
+            else ""
+        )
         st.info(
-            "Phase 10 first pass dynamic PIT mode입니다. 현재 선택한 candidate pool 안에서 "
-            f"각 리밸런싱 날짜 기준 `price * latest-known {freq_label} shares_outstanding`로 top-N 모집군을 다시 구성합니다."
+            "Phase 10 first pass dynamic PIT mode입니다. "
+            + backfill_note
+            + f"각 리밸런싱 날짜 기준 `price * latest-known {freq_label} shares_outstanding`로 top-N 모집군을 다시 구성합니다."
         )
         st.caption(
             f"Dynamic candidate pool: `{len(dynamic_candidate_tickers)}` symbols | "

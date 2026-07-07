@@ -237,6 +237,95 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertFalse(model["has_shortfall"])
         self.assertIn("공개 기본 Base Universe", model["role_note"])
 
+    def test_strict_dynamic_universe_expands_managed_preset_pool_for_backfill(self) -> None:
+        from app.web.backtest_common import (
+            HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+            _resolve_strict_dynamic_universe_inputs,
+        )
+
+        selected = [f"S{i:03d}" for i in range(300)]
+        expanded = [f"E{i:03d}" for i in range(600)]
+
+        with patch("app.web.backtest_common.load_top_symbols_from_asset_profile", return_value=expanded) as loader:
+            candidate_tickers, target_size = _resolve_strict_dynamic_universe_inputs(
+                tickers=selected,
+                preset_name="US Statement Coverage 300",
+                universe_contract=HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+            )
+
+        loader.assert_called_once()
+        self.assertEqual(loader.call_args.kwargs["limit"], 600)
+        self.assertEqual(target_size, 300)
+        self.assertEqual(candidate_tickers, expanded)
+
+    def test_strict_dynamic_universe_keeps_selected_pool_when_backfill_loader_fails(self) -> None:
+        from app.web.backtest_common import (
+            HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+            _resolve_strict_dynamic_universe_inputs,
+        )
+
+        selected = [f"S{i:03d}" for i in range(300)]
+
+        with patch("app.web.backtest_common.load_top_symbols_from_asset_profile", side_effect=RuntimeError("db down")):
+            candidate_tickers, target_size = _resolve_strict_dynamic_universe_inputs(
+                tickers=selected,
+                preset_name="US Statement Coverage 300",
+                universe_contract=HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+            )
+
+        self.assertEqual(target_size, 300)
+        self.assertEqual(candidate_tickers, selected)
+
+    def test_dynamic_runnable_coverage_overrides_candidate_pool_warning_when_target_filled(self) -> None:
+        from app.runtime.backtest.runners.strict_factor import _apply_dynamic_runnable_coverage_price_status
+        from finance.sample import HISTORICAL_DYNAMIC_PIT_UNIVERSE
+
+        bundle = {
+            "meta": {
+                "warnings": [
+                    "가격 최신성 사전 점검: 52 symbols are stale.",
+                    "Strict annual statement 경로입니다.",
+                ]
+            }
+        }
+        price_freshness = {
+            "status": "warning",
+            "message": "52 symbols are stale.",
+            "details": {
+                "requested_count": 600,
+                "missing_count": 1,
+                "stale_count": 51,
+                "selected_end_date": "2026-07-07",
+                "effective_end_date": "2026-07-06",
+                "common_latest_date": "2026-05-07",
+                "newest_latest_date": "2026-07-06",
+                "spread_days": 60,
+            },
+        }
+
+        _apply_dynamic_runnable_coverage_price_status(
+            bundle,
+            price_freshness=price_freshness,
+            universe_debug={
+                "contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+                "target_size": 300,
+                "candidate_pool_count": 600,
+                "last_membership_count": 300,
+                "min_membership_count": 260,
+                "max_membership_count": 300,
+            },
+            result_df=pd.DataFrame({"Date": ["2026-07-06"]}),
+        )
+
+        meta = bundle["meta"]
+        self.assertEqual(meta["runnable_coverage"]["status"], "ok")
+        self.assertEqual(meta["price_freshness"]["status"], "ok")
+        self.assertEqual(meta["price_freshness"]["details"]["stale_count"], 0)
+        self.assertEqual(meta["price_freshness"]["details"]["candidate_pool_stale_count"], 51)
+        self.assertEqual(meta["candidate_pool_price_freshness"]["status"], "warning")
+        self.assertNotIn("가격 최신성 사전 점검", "\n".join(meta["warnings"]))
+        self.assertIn("Dynamic PIT runnable coverage backfill", "\n".join(meta["warnings"]))
+
     def test_strict_preset_basis_note_is_rendered_in_single_and_compare_forms(self) -> None:
         single_source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
         compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
