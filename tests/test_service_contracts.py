@@ -149,7 +149,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             _last_run_matches_strategy_selection(
                 bundle,
                 "Quality",
-                "Strict Quarterly Prototype",
+                "Strict Quarterly",
             )
         )
 
@@ -900,6 +900,26 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             self.assertIn("validate_strict_factor_backtest_window(", body)
             self.assertNotIn("value=date(2016, 1, 1)", body)
 
+    def test_strict_factor_single_quarterly_forms_apply_five_year_window_guard(self) -> None:
+        source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+        quality_quarterly_body = source.split("def _render_quality_snapshot_strict_quarterly_prototype_form", 1)[1].split(
+            "def _render_value_snapshot_strict_quarterly_prototype_form", 1
+        )[0]
+        value_quarterly_body = source.split("def _render_value_snapshot_strict_quarterly_prototype_form", 1)[1].split(
+            "def _render_value_snapshot_strict_annual_form", 1
+        )[0]
+        quality_value_quarterly_body = source.split(
+            "def _render_quality_value_snapshot_strict_quarterly_prototype_form", 1
+        )[1].split(
+            "def _render_quality_value_snapshot_strict_annual_form", 1
+        )[0]
+
+        for body in (quality_quarterly_body, value_quarterly_body, quality_value_quarterly_body):
+            self.assertIn("_default_strict_factor_start_date()", body)
+            self.assertIn("validate_strict_factor_backtest_window(", body)
+            self.assertNotIn("value=date(2016, 1, 1)", body)
+            self.assertNotIn("Research-only defaults", body)
+
     def test_etf_like_single_forms_stay_form_first_without_runtime_wrapper_copy(self) -> None:
         form_paths = [
             Path("app/web/backtest_single_forms/equal_weight.py"),
@@ -931,15 +951,15 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
     def test_portfolio_mix_strict_annual_forms_use_readiness_and_window_guard(self) -> None:
         source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
         quality_annual_body = source.split('quality_compare_strategy_name == "Quality Snapshot (Strict Annual)"', 1)[1].split(
-            'quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)"', 1
+            'quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly)"', 1
         )[0]
         value_annual_body = source.split('value_compare_strategy_name == "Value Snapshot (Strict Annual)"', 1)[1].split(
-            'value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)"', 1
+            'value_compare_strategy_name == "Value Snapshot (Strict Quarterly)"', 1
         )[0]
         quality_value_annual_body = source.split(
             'quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)"', 1
         )[1].split(
-            'quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)"', 1
+            'quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly)"', 1
         )[0]
 
         for body in (quality_annual_body, value_annual_body, quality_value_annual_body):
@@ -1028,6 +1048,15 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             },
         )
         self.assertEqual(replay_params["dynamic_target_size"], 500)
+        quarterly_replay_params = _resolve_saved_portfolio_dynamic_inputs(
+            strategy_name="Quality Snapshot (Strict Quarterly)",
+            override={
+                "tickers": ["AAA", "BBB"],
+                "preset_name": "US Statement Coverage 100",
+                "universe_contract": common.PIT_MONTHLY_SNAPSHOT_UNIVERSE,
+            },
+        )
+        self.assertEqual(quarterly_replay_params["dynamic_target_size"], 100)
 
     def test_price_freshness_preflight_model_builds_react_payload(self) -> None:
         from app.web.backtest_common import build_strict_price_freshness_preflight_model

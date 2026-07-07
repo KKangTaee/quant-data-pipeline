@@ -23,9 +23,9 @@ STRATEGY_FAMILY_VARIANTS = {
                 },
             ),
             (
-                "Strict Quarterly Prototype",
+                "Strict Quarterly",
                 {
-                    "display_name": "Quality Snapshot (Strict Quarterly Prototype)",
+                    "display_name": "Quality Snapshot (Strict Quarterly)",
                     "strategy_key": "quality_snapshot_strict_quarterly_prototype",
                 },
             ),
@@ -41,9 +41,9 @@ STRATEGY_FAMILY_VARIANTS = {
                 },
             ),
             (
-                "Strict Quarterly Prototype",
+                "Strict Quarterly",
                 {
-                    "display_name": "Value Snapshot (Strict Quarterly Prototype)",
+                    "display_name": "Value Snapshot (Strict Quarterly)",
                     "strategy_key": "value_snapshot_strict_quarterly_prototype",
                 },
             ),
@@ -59,9 +59,9 @@ STRATEGY_FAMILY_VARIANTS = {
                 },
             ),
             (
-                "Strict Quarterly Prototype",
+                "Strict Quarterly",
                 {
-                    "display_name": "Quality + Value Snapshot (Strict Quarterly Prototype)",
+                    "display_name": "Quality + Value Snapshot (Strict Quarterly)",
                     "strategy_key": "quality_value_snapshot_strict_quarterly_prototype",
                 },
             ),

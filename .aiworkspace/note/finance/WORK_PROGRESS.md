@@ -5575,6 +5575,14 @@ Detailed historical logs were archived on `2026-04-13`.
 - Single Strategy 선택 직후 `app/services/backtest_strategy_detail.py` read model과 `app/web/components/backtest_strategy_detail_panel/` React panel로 strategy / variant 상세를 먼저 보여주는 시도는 후속 form cleanup에서 제거됐다.
 - 실제 form input, backtest execution, registry / saved JSONL, Practical Validation gate policy는 변경하지 않았다.
 
+## 2026-07-08 - Backtest Quarterly Productionization V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-quarterly-productionization-v1-20260708/`에서 strict quarterly Quality / Value / Quality+Value의 1차~5차 정식화 작업을 완료했다.
+- User-facing catalog / runner catalog / forms / compare / history / evidence inventory는 `Strict Quarterly`로 표시하며, legacy `_prototype` strategy key는 saved payload / old run replay 호환용으로 유지한다.
+- Strict quarterly runtime wrappers는 annual-like investability, benchmark, promotion, underperformance/drawdown guardrail inputs를 받고, result bundle은 post-run `statement_shadow_coverage` metadata를 남긴다.
+- Post-run Factor Readiness는 실제 실행 결과 기준으로 가격 / statement shadow 문제 ticker와 보강 action을 보여주며, 보강 성공 후에는 기존 결과를 stale로 보고 재실행을 요구한다.
+- QA: py_compile, quarterly productionization tests, evidence/bridge tests, `tests.test_service_contracts` 529개 통과.
+
 ## 2026-07-07 - Backtest Strategy Form Cleanup V1
 
 - `.aiworkspace/note/finance/tasks/active/backtest-strategy-form-cleanup-v1-20260707/`에서 1차~5차로 과한 Strategy Detail panel 제거, strict preset copy, strict factor form, ETF-like form, Portfolio Mix Builder 영향 확인을 완료했다.
@@ -5615,3 +5623,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Single Strategy / Portfolio Mix Builder strict annual factor form은 `Preset -> Universe 기준 -> Run 이후 readiness preview -> form inputs` 순서로 읽힌다.
 - 결과 화면은 strict factor bundle의 `price_freshness`, `History Excluded Ticker`, `Liquidity Excluded Ticker`로 문제 / 티커 / 해결 방법을 구성하고, 가격 refresh는 실제 refresh 가능한 티커만 대상으로 제한한다.
 - QA: py_compile, `tests.test_service_contracts` 529개, Browser QA(`http://localhost:8524/backtest`) 완료. Screenshot artifact는 `backtest-post-run-factor-readiness-v1-qa.png`로 남겼고 커밋 대상은 아니다.
+
+## 2026-07-08 - Strict Quarterly Productionization V1
+
+- `.aiworkspace/note/finance/tasks/active/backtest-quarterly-productionization-v1-20260708/`에서 strict quarterly Quality / Value / Quality+Value의 1차~5차 정식화 작업을 완료했다.
+- Quarterly result bundle은 post-run Factor Readiness가 가격 / statement shadow gap을 실제 실행 결과 기준으로 보여주고, 필요한 경우 targeted refresh action을 제공한다.
+- User-facing label은 `Strict Quarterly`로 승격했고 legacy `_prototype` key는 saved replay 호환용으로 유지한다.
+- Browser QA 후 `Research-only defaults` residual copy 제거와 quarterly 5-year window guard 보정을 추가했다.

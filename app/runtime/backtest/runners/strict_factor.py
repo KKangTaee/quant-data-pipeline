@@ -29,7 +29,9 @@ from finance.loaders import (
     load_pit_universe_membership_snapshots,
     load_price_freshness_summary,
     load_price_history,
+    load_statement_coverage_summary,
     load_statement_factor_snapshot_shadow,
+    load_statement_shadow_coverage_summary,
     load_statement_snapshot_strict,
 )
 from finance.data.pit_universe import normalize_pit_universe_code
@@ -352,6 +354,147 @@ def _preflight_statement_quality_shadow_data(
             "No statement-driven shadow factor snapshot rows were found for the requested tickers and end date. "
             "Run Extended Statement Refresh and rebuild statement shadow factors first."
         )
+
+
+def _timestamp_to_iso(value: Any) -> str | None:
+    if value is None:
+        return None
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if pd.isna(timestamp):
+        return None
+    return timestamp.strftime("%Y-%m-%d")
+
+
+def _build_statement_shadow_coverage_summary(
+    *,
+    tickers: Sequence[str] | None,
+    statement_freq: str,
+    factor_names: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    symbols = _normalize_tickers(tickers)
+    base = {
+        "status": "ok",
+        "statement_freq": str(statement_freq or "annual").strip().lower() or "annual",
+        "factor_names": [str(name).strip() for name in (factor_names or []) if str(name).strip()],
+        "requested_count": len(symbols),
+        "covered_count": 0,
+        "missing_count": len(symbols),
+        "row_count": 0,
+        "min_period_end": None,
+        "max_period_end": None,
+        "min_available_at": None,
+        "max_available_at": None,
+        "covered_symbols": [],
+        "missing_symbols": list(symbols),
+        "raw_present_missing_count": 0,
+        "raw_present_missing_symbols": [],
+        "no_raw_missing_count": len(symbols),
+        "no_raw_missing_symbols": list(symbols),
+        "missing_rows": [],
+    }
+    if not symbols:
+        return {**base, "missing_count": 0, "no_raw_missing_count": 0, "no_raw_missing_symbols": []}
+
+    try:
+        shadow_summary = load_statement_shadow_coverage_summary(symbols=symbols, freq=base["statement_freq"])
+    except Exception as exc:
+        return {**base, "status": "error", "error": str(exc)}
+
+    if not shadow_summary.empty:
+        working = shadow_summary.copy()
+        working["symbol"] = working["symbol"].astype(str).str.upper()
+        working["min_period_end"] = pd.to_datetime(working["min_period_end"], errors="coerce")
+        working["max_period_end"] = pd.to_datetime(working["max_period_end"], errors="coerce")
+        working["min_available_at"] = pd.to_datetime(working["min_available_at"], errors="coerce")
+        working["max_available_at"] = pd.to_datetime(working["max_available_at"], errors="coerce")
+    else:
+        working = pd.DataFrame(
+            columns=[
+                "symbol",
+                "shadow_rows",
+                "min_period_end",
+                "max_period_end",
+                "min_available_at",
+                "max_available_at",
+            ]
+        )
+
+    covered_symbols = (
+        sorted(working["symbol"].dropna().astype(str).str.upper().unique().tolist())
+        if not working.empty
+        else []
+    )
+    covered_symbol_set = set(covered_symbols)
+    missing_symbols = [symbol for symbol in symbols if symbol not in covered_symbol_set]
+
+    raw_summary = pd.DataFrame()
+    if missing_symbols:
+        try:
+            raw_summary = load_statement_coverage_summary(symbols=missing_symbols, freq=base["statement_freq"])
+        except Exception as exc:
+            return {**base, "status": "error", "error": str(exc)}
+    if not raw_summary.empty:
+        raw_summary = raw_summary.copy()
+        raw_summary["symbol"] = raw_summary["symbol"].astype(str).str.upper()
+        raw_summary["min_period_end"] = pd.to_datetime(raw_summary["min_period_end"], errors="coerce")
+        raw_summary["max_period_end"] = pd.to_datetime(raw_summary["max_period_end"], errors="coerce")
+        raw_summary["min_available_at"] = pd.to_datetime(raw_summary["min_available_at"], errors="coerce")
+        raw_summary["max_available_at"] = pd.to_datetime(raw_summary["max_available_at"], errors="coerce")
+
+    raw_map = {
+        str(row["symbol"]).upper(): row
+        for _, row in raw_summary.iterrows()
+        if row.get("symbol") is not None
+    }
+    raw_present_missing_symbols: list[str] = []
+    no_raw_missing_symbols: list[str] = []
+    missing_rows: list[dict[str, Any]] = []
+    for symbol in missing_symbols:
+        raw_row = raw_map.get(symbol)
+        has_raw = raw_row is not None
+        if has_raw:
+            raw_present_missing_symbols.append(symbol)
+            diagnosis = "raw_statement_present_but_shadow_missing"
+            recommended_action = "statement shadow factor rebuild"
+        else:
+            no_raw_missing_symbols.append(symbol)
+            diagnosis = "no_raw_statement_coverage"
+            recommended_action = "extended statement refresh"
+        missing_rows.append(
+            {
+                "symbol": symbol,
+                "coverage_gap_status": diagnosis,
+                "raw_strict_rows": int(raw_row["strict_rows"]) if has_raw and pd.notna(raw_row.get("strict_rows")) else 0,
+                "raw_earliest_period": _timestamp_to_iso(raw_row.get("min_period_end")) if has_raw else None,
+                "raw_latest_period": _timestamp_to_iso(raw_row.get("max_period_end")) if has_raw else None,
+                "raw_latest_available": _timestamp_to_iso(raw_row.get("max_available_at")) if has_raw else None,
+                "recommended_action": recommended_action,
+            }
+        )
+
+    rows_per_symbol = (
+        pd.to_numeric(working["shadow_rows"], errors="coerce")
+        if not working.empty and "shadow_rows" in working.columns
+        else pd.Series(dtype="int64")
+    )
+    return {
+        **base,
+        "status": "warning" if missing_symbols else "ok",
+        "covered_count": len(covered_symbols),
+        "missing_count": len(missing_symbols),
+        "row_count": int(rows_per_symbol.fillna(0).sum()) if not rows_per_symbol.empty else 0,
+        "min_period_end": _timestamp_to_iso(working["min_period_end"].min()) if not working.empty else None,
+        "max_period_end": _timestamp_to_iso(working["max_period_end"].max()) if not working.empty else None,
+        "min_available_at": _timestamp_to_iso(working["min_available_at"].min()) if not working.empty else None,
+        "max_available_at": _timestamp_to_iso(working["max_available_at"].max()) if not working.empty else None,
+        "covered_symbols": covered_symbols,
+        "missing_symbols": missing_symbols,
+        "raw_present_missing_count": len(raw_present_missing_symbols),
+        "raw_present_missing_symbols": raw_present_missing_symbols,
+        "no_raw_missing_count": len(no_raw_missing_symbols),
+        "no_raw_missing_symbols": no_raw_missing_symbols,
+        "missing_rows": missing_rows,
+    }
 
 
 def inspect_strict_annual_price_freshness(
@@ -864,6 +1007,11 @@ def _run_statement_quality_bundle(
         end=end,
         timeframe=timeframe,
     )
+    statement_shadow_coverage = _build_statement_shadow_coverage_summary(
+        tickers=universe_input_tickers,
+        statement_freq=statement_freq,
+        factor_names=normalized_factors,
+    )
 
     dynamic_price_pool = None
     if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
@@ -1112,6 +1260,7 @@ def _run_statement_quality_bundle(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    bundle["meta"]["statement_shadow_coverage"] = statement_shadow_coverage
     _apply_dynamic_runnable_coverage_price_status(
         bundle,
         price_freshness=price_freshness,
@@ -1436,6 +1585,11 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         end=end,
         timeframe=timeframe,
     )
+    statement_shadow_coverage = _build_statement_shadow_coverage_summary(
+        tickers=universe_input_tickers,
+        statement_freq="annual",
+        factor_names=normalized_factors,
+    )
 
     dynamic_price_pool = None
     if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
@@ -1645,6 +1799,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    bundle["meta"]["statement_shadow_coverage"] = statement_shadow_coverage
     _apply_dynamic_runnable_coverage_price_status(
         bundle,
         price_freshness=price_freshness,
@@ -1731,6 +1886,20 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     value_factors: Sequence[str] | None = None,
     top_n: int = 10,
     rebalance_interval: int = 1,
+    min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+    transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
+    benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
@@ -1742,6 +1911,13 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
@@ -1757,6 +1933,10 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     )
     rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
         rejected_slot_handling_mode
+    )
+    effective_guardrail_reference_ticker = _resolve_guardrail_reference_ticker(
+        benchmark_ticker,
+        guardrail_reference_ticker,
     )
     (
         universe_input_tickers,
@@ -1784,6 +1964,11 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         tickers=universe_input_tickers,
         end=end,
         timeframe=timeframe,
+    )
+    statement_shadow_coverage = _build_statement_shadow_coverage_summary(
+        tickers=universe_input_tickers,
+        statement_freq="quarterly",
+        factor_names=normalized_factors,
     )
 
     dynamic_price_pool = None
@@ -1821,6 +2006,20 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
                 end=end,
                 timeframe=timeframe,
             )
+    if underperformance_guardrail_enabled and effective_guardrail_reference_ticker:
+        _preflight_price_strategy_data(
+            tickers=[effective_guardrail_reference_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
+    if drawdown_guardrail_enabled and effective_guardrail_reference_ticker:
+        _preflight_price_strategy_data(
+            tickers=[effective_guardrail_reference_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     _preflight_statement_quality_shadow_data(
         tickers=universe_input_tickers,
         end=end,
@@ -1838,6 +2037,9 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         value_factors=normalized_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        min_price=float(min_price_filter or 0.0),
+        min_history_months=int(min_history_months_filter or 0),
+        min_avg_dollar_volume_20d_m=float(min_avg_dollar_volume_20d_m_filter or 0.0),
         weighting_mode=weighting_mode,
         rejected_slot_handling_mode=rejected_slot_handling_mode,
         rejected_slot_fill_enabled=rejected_slot_fill_enabled,
@@ -1849,6 +2051,15 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -1862,7 +2073,7 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
-        "Research-only quarterly value prototype: ranks quarterly statement shadow value factors and is intended for quarterly family validation rather than public default use.",
+        "Strict quarterly value 경로입니다: quarterly statement shadow factor로 value snapshot을 순위화하고 post-run Factor Readiness로 실제 coverage를 확인합니다.",
     ]
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         warnings.append(_dynamic_universe_warning("quarterly"))
@@ -1882,7 +2093,7 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         warnings.append(
             "Price freshness preflight: "
             + price_freshness["message"]
-            + " Wider quarterly prototype runs can degrade in the final month until lagging symbols are refreshed."
+            + " Wider quarterly strict runs can degrade in the final month until lagging symbols are refreshed."
         )
     if start:
         active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
@@ -1893,10 +2104,20 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
                     "No usable quarterly statement shadow rows were available at the requested start date. "
                     f"The strategy stayed in cash until `{first_active_date}`."
                 )
+    if min_history_months_filter:
+        warnings.append(
+            "Minimum price history filter enabled: candidates need at least "
+            f"`{int(min_history_months_filter)} months` of DB price history before each rebalance."
+        )
+    if min_avg_dollar_volume_20d_m_filter:
+        warnings.append(
+            "Liquidity filter enabled: candidates need at least "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M USD` 20-day average dollar volume before each rebalance."
+        )
 
     bundle = build_backtest_result_bundle(
         result_df,
-        strategy_name="Value Snapshot (Strict Quarterly Prototype)",
+        strategy_name="Value Snapshot (Strict Quarterly)",
         strategy_key="value_snapshot_strict_quarterly_prototype",
         input_params={
             "tickers": normalized_tickers,
@@ -1906,6 +2127,20 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "option": option,
             "top": top_n,
             "rebalance_interval": rebalance_interval,
+            "min_price_filter": min_price_filter,
+            "min_history_months_filter": int(min_history_months_filter or 0),
+            "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
+            "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_contract": benchmark_contract,
+            "benchmark_ticker": benchmark_ticker,
+            "guardrail_reference_ticker": effective_guardrail_reference_ticker,
+            "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
+            "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
+            "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
+            "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
+            "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
+            "promotion_max_strategy_drawdown": float(promotion_max_strategy_drawdown),
+            "promotion_max_drawdown_gap_vs_benchmark": float(promotion_max_drawdown_gap_vs_benchmark),
             "factor_freq": "quarterly",
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
@@ -1919,6 +2154,13 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
             "market_regime_benchmark": market_regime_benchmark,
+            "underperformance_guardrail_enabled": underperformance_guardrail_enabled,
+            "underperformance_guardrail_window_months": underperformance_guardrail_window_months,
+            "underperformance_guardrail_threshold": underperformance_guardrail_threshold,
+            "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+            "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
+            "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
+            "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
             "snapshot_mode": "strict_statement_quarterly",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -1939,6 +2181,7 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    bundle["meta"]["statement_shadow_coverage"] = statement_shadow_coverage
     _apply_dynamic_runnable_coverage_price_status(
         bundle,
         price_freshness=price_freshness,
@@ -1973,7 +2216,23 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
     if dynamic_candidate_status_rows:
         bundle["dynamic_candidate_status_rows"] = dynamic_candidate_status_rows
-    return bundle
+    return _apply_real_money_hardening(
+        bundle,
+        summary_freq=_summary_frequency(option, timeframe),
+        min_price_filter=min_price_filter,
+        transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=benchmark_contract,
+        benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
+        benchmark_universe_tickers=universe_input_tickers,
+        promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
+        promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
+        promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
+        promotion_max_underperformance_share=promotion_max_underperformance_share,
+        promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
+        promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
+        promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
+    )
 
 
 def run_quality_value_snapshot_strict_annual_backtest_from_db(
@@ -2075,6 +2334,11 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         tickers=universe_input_tickers,
         end=end,
         timeframe=timeframe,
+    )
+    statement_shadow_coverage = _build_statement_shadow_coverage_summary(
+        tickers=universe_input_tickers,
+        statement_freq="annual",
+        factor_names=normalized_factor_names,
     )
 
     dynamic_price_pool = None
@@ -2287,6 +2551,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    bundle["meta"]["statement_shadow_coverage"] = statement_shadow_coverage
     _apply_dynamic_runnable_coverage_price_status(
         bundle,
         price_freshness=price_freshness,
@@ -2374,6 +2639,20 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     value_factors: Sequence[str] | None = None,
     top_n: int = 10,
     rebalance_interval: int = 1,
+    min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+    transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
+    benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
@@ -2385,6 +2664,13 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
@@ -2400,6 +2686,10 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     )
     rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
         rejected_slot_handling_mode
+    )
+    effective_guardrail_reference_ticker = _resolve_guardrail_reference_ticker(
+        benchmark_ticker,
+        guardrail_reference_ticker,
     )
     (
         universe_input_tickers,
@@ -2438,6 +2728,11 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         end=end,
         timeframe=timeframe,
     )
+    statement_shadow_coverage = _build_statement_shadow_coverage_summary(
+        tickers=universe_input_tickers,
+        statement_freq="quarterly",
+        factor_names=normalized_factor_names,
+    )
 
     dynamic_price_pool = None
     if universe_contract in {HISTORICAL_DYNAMIC_PIT_UNIVERSE, PIT_MONTHLY_SNAPSHOT_UNIVERSE}:
@@ -2474,6 +2769,20 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
                 end=end,
                 timeframe=timeframe,
             )
+    if underperformance_guardrail_enabled and effective_guardrail_reference_ticker:
+        _preflight_price_strategy_data(
+            tickers=[effective_guardrail_reference_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
+    if drawdown_guardrail_enabled and effective_guardrail_reference_ticker:
+        _preflight_price_strategy_data(
+            tickers=[effective_guardrail_reference_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     _preflight_statement_quality_shadow_data(
         tickers=universe_input_tickers,
         end=end,
@@ -2492,6 +2801,9 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         value_factors=normalized_value_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        min_price=float(min_price_filter or 0.0),
+        min_history_months=int(min_history_months_filter or 0),
+        min_avg_dollar_volume_20d_m=float(min_avg_dollar_volume_20d_m_filter or 0.0),
         weighting_mode=weighting_mode,
         rejected_slot_handling_mode=rejected_slot_handling_mode,
         rejected_slot_fill_enabled=rejected_slot_fill_enabled,
@@ -2503,6 +2815,15 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -2516,7 +2837,7 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
-        "Research-only quarterly multi-factor prototype: combines quarterly quality and value shadow factors for family-level validation, not public default use.",
+        "Strict quarterly quality/value 경로입니다: quarterly statement shadow factor로 multi-factor snapshot을 순위화하고 post-run Factor Readiness로 실제 coverage를 확인합니다.",
     ]
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         warnings.append(_dynamic_universe_warning("quarterly"))
@@ -2536,7 +2857,7 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         warnings.append(
             "Price freshness preflight: "
             + price_freshness["message"]
-            + " Wider quarterly prototype runs can degrade in the final month until lagging symbols are refreshed."
+            + " Wider quarterly strict runs can degrade in the final month until lagging symbols are refreshed."
         )
     if start:
         active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
@@ -2547,10 +2868,20 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
                     "No usable quarterly multi-factor snapshot rows were available at the requested start date. "
                     f"The strategy stayed in cash until `{first_active_date}`."
                 )
+    if min_history_months_filter:
+        warnings.append(
+            "Minimum price history filter enabled: candidates need at least "
+            f"`{int(min_history_months_filter)} months` of DB price history before each rebalance."
+        )
+    if min_avg_dollar_volume_20d_m_filter:
+        warnings.append(
+            "Liquidity filter enabled: candidates need at least "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M USD` 20-day average dollar volume before each rebalance."
+        )
 
     bundle = build_backtest_result_bundle(
         result_df,
-        strategy_name="Quality + Value Snapshot (Strict Quarterly Prototype)",
+        strategy_name="Quality + Value Snapshot (Strict Quarterly)",
         strategy_key="quality_value_snapshot_strict_quarterly_prototype",
         input_params={
             "tickers": normalized_tickers,
@@ -2560,6 +2891,20 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "option": option,
             "top": top_n,
             "rebalance_interval": rebalance_interval,
+            "min_price_filter": min_price_filter,
+            "min_history_months_filter": int(min_history_months_filter or 0),
+            "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
+            "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_contract": benchmark_contract,
+            "benchmark_ticker": benchmark_ticker,
+            "guardrail_reference_ticker": effective_guardrail_reference_ticker,
+            "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
+            "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
+            "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
+            "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
+            "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
+            "promotion_max_strategy_drawdown": float(promotion_max_strategy_drawdown),
+            "promotion_max_drawdown_gap_vs_benchmark": float(promotion_max_drawdown_gap_vs_benchmark),
             "factor_freq": "quarterly",
             "quality_factors": normalized_quality_factors,
             "value_factors": normalized_value_factors,
@@ -2574,6 +2919,13 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
             "market_regime_benchmark": market_regime_benchmark,
+            "underperformance_guardrail_enabled": underperformance_guardrail_enabled,
+            "underperformance_guardrail_window_months": underperformance_guardrail_window_months,
+            "underperformance_guardrail_threshold": underperformance_guardrail_threshold,
+            "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+            "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
+            "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
+            "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
             "snapshot_mode": "strict_statement_quarterly",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -2594,6 +2946,7 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    bundle["meta"]["statement_shadow_coverage"] = statement_shadow_coverage
     _apply_dynamic_runnable_coverage_price_status(
         bundle,
         price_freshness=price_freshness,
@@ -2628,7 +2981,23 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
     if dynamic_candidate_status_rows:
         bundle["dynamic_candidate_status_rows"] = dynamic_candidate_status_rows
-    return bundle
+    return _apply_real_money_hardening(
+        bundle,
+        summary_freq=_summary_frequency(option, timeframe),
+        min_price_filter=min_price_filter,
+        transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=benchmark_contract,
+        benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
+        benchmark_universe_tickers=universe_input_tickers,
+        promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
+        promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
+        promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
+        promotion_max_underperformance_share=promotion_max_underperformance_share,
+        promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
+        promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
+        promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
+    )
 
 
 def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
@@ -2641,6 +3010,20 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
     quality_factors: Sequence[str] | None = None,
     top_n: int = 2,
     rebalance_interval: int = 1,
+    min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+    transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
+    benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
@@ -2652,6 +3035,13 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
@@ -2659,7 +3049,7 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
     dynamic_target_size: int | None = None,
 ) -> dict[str, Any]:
     return _run_statement_quality_bundle(
-        strategy_name="Quality Snapshot (Strict Quarterly Prototype)",
+        strategy_name="Quality Snapshot (Strict Quarterly)",
         strategy_key="quality_snapshot_strict_quarterly_prototype",
         tickers=tickers,
         start=start,
@@ -2670,6 +3060,20 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
         quality_factors=quality_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        min_price_filter=min_price_filter,
+        min_history_months_filter=min_history_months_filter,
+        min_avg_dollar_volume_20d_m_filter=min_avg_dollar_volume_20d_m_filter,
+        transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=benchmark_contract,
+        benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=guardrail_reference_ticker,
+        promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
+        promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
+        promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
+        promotion_max_underperformance_share=promotion_max_underperformance_share,
+        promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
+        promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
+        promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
@@ -2681,6 +3085,13 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_mode=universe_mode,
         preset_name=preset_name,
         universe_contract=universe_contract,
@@ -2688,6 +3099,6 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
         dynamic_target_size=dynamic_target_size,
         snapshot_source="shadow_factors",
         static_warnings=[
-            "Research-only quarterly strict prototype: ranks quarterly statement shadow factors and is intended for Phase 6 entry/validation rather than public default use.",
+            "Strict quarterly statement 경로입니다: quarterly statement shadow factor로 quality snapshot을 순위화하고 post-run Factor Readiness로 실제 coverage를 확인합니다.",
         ],
     )

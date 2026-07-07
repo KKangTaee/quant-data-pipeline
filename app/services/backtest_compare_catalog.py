@@ -12,6 +12,7 @@ from app.runtime.backtest import (
     ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    STRICT_DEFAULT_BENCHMARK_CONTRACT,
     STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
     STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
@@ -136,11 +137,11 @@ def run_compare_strategy(
             preset_name = None
     elif strategy_name in {
         "Quality Snapshot (Strict Annual)",
-        "Quality Snapshot (Strict Quarterly Prototype)",
+        "Quality Snapshot (Strict Quarterly)",
         "Value Snapshot (Strict Annual)",
-        "Value Snapshot (Strict Quarterly Prototype)",
+        "Value Snapshot (Strict Quarterly)",
         "Quality + Value Snapshot (Strict Annual)",
-        "Quality + Value Snapshot (Strict Quarterly Prototype)",
+        "Quality + Value Snapshot (Strict Quarterly)",
     }:
         tickers, preset_name = _resolve_compare_strategy_universe(
             strategy_name,
@@ -345,16 +346,13 @@ def _strategy_compare_defaults(
             "runner": run_quality_snapshot_strict_annual_backtest_from_db,
             "extra": _strict_factor_extra("quality"),
         }
-    if strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
+    if strategy_name == "Quality Snapshot (Strict Quarterly)":
         default_preset = preset_catalog.strict_quarterly_prototype_default_preset
         return {
             "tickers": list(preset_catalog.quality_strict_presets[default_preset]),
             "preset_name": default_preset,
             "runner": run_quality_snapshot_strict_quarterly_prototype_backtest_from_db,
-            "extra": {
-                "quality_factors": list(QUALITY_STRICT_DEFAULT_FACTORS),
-                "top_n": 2,
-            },
+            "extra": _strict_factor_extra("quality"),
         }
     if strategy_name == "Value Snapshot (Strict Annual)":
         default_preset = preset_catalog.strict_annual_compare_default_preset
@@ -364,16 +362,13 @@ def _strategy_compare_defaults(
             "runner": run_value_snapshot_strict_annual_backtest_from_db,
             "extra": _strict_factor_extra("value"),
         }
-    if strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
+    if strategy_name == "Value Snapshot (Strict Quarterly)":
         default_preset = preset_catalog.strict_quarterly_prototype_default_preset
         return {
             "tickers": list(preset_catalog.value_strict_presets[default_preset]),
             "preset_name": default_preset,
             "runner": run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
-            "extra": {
-                "value_factors": list(VALUE_STRICT_DEFAULT_FACTORS),
-                "top_n": 10,
-            },
+            "extra": _strict_factor_extra("value"),
         }
     if strategy_name == "Quality + Value Snapshot (Strict Annual)":
         default_preset = preset_catalog.strict_annual_compare_default_preset
@@ -383,17 +378,13 @@ def _strategy_compare_defaults(
             "runner": run_quality_value_snapshot_strict_annual_backtest_from_db,
             "extra": _strict_factor_extra("quality_value"),
         }
-    if strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
+    if strategy_name == "Quality + Value Snapshot (Strict Quarterly)":
         default_preset = preset_catalog.strict_quarterly_prototype_default_preset
         return {
             "tickers": list(preset_catalog.quality_strict_presets[default_preset]),
             "preset_name": default_preset,
             "runner": run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db,
-            "extra": {
-                "quality_factors": list(QUALITY_STRICT_DEFAULT_FACTORS),
-                "value_factors": list(VALUE_STRICT_DEFAULT_FACTORS),
-                "top_n": 10,
-            },
+            "extra": _strict_factor_extra("quality_value"),
         }
     raise BacktestInputError(f"Unsupported compare strategy: {strategy_name}")
 
@@ -423,7 +414,9 @@ def _strict_factor_extra(kind: str) -> dict[str, Any]:
         "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
         "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
         "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+        "benchmark_contract": STRICT_DEFAULT_BENCHMARK_CONTRACT,
         "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+        "guardrail_reference_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         "promotion_min_benchmark_coverage": STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
         "promotion_min_net_cagr_spread": STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
         "promotion_min_liquidity_clean_coverage": STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
@@ -455,15 +448,15 @@ def _resolve_compare_strategy_universe(
 ) -> tuple[list[str], str | None]:
     if strategy_name in {
         "Quality Snapshot (Strict Annual)",
-        "Quality Snapshot (Strict Quarterly Prototype)",
+        "Quality Snapshot (Strict Quarterly)",
         "Quality + Value Snapshot (Strict Annual)",
-        "Quality + Value Snapshot (Strict Quarterly Prototype)",
+        "Quality + Value Snapshot (Strict Quarterly)",
     }:
         if preset_name in preset_catalog.quality_strict_presets:
             return list(preset_catalog.quality_strict_presets[preset_name]), preset_name
     elif strategy_name in {
         "Value Snapshot (Strict Annual)",
-        "Value Snapshot (Strict Quarterly Prototype)",
+        "Value Snapshot (Strict Quarterly)",
     }:
         if preset_name in preset_catalog.value_strict_presets:
             return list(preset_catalog.value_strict_presets[preset_name]), preset_name

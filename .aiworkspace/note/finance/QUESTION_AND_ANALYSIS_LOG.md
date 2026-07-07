@@ -8617,6 +8617,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 기존 `US Statement Coverage N`은 S&P 구성원이나 실행 가능 coverage가 아니라 현재 asset_profile 상위 N개 후보군이었다. 따라서 stale/missing 가격 문제는 Coverage 최신화와 Dynamic PIT backfill로 다루고, 20D 거래대금은 Base Universe 선별 기준이 아니라 리밸런싱 후보를 거르는 optional Liquidity Layer로 보는 것이 맞다.
 - Follow-up: 1차 Base Universe copy, 2차 Data Trust issue queue, 3차 Coverage 최신화 action, 4차 Dynamic PIT runnable backfill, 5차 `liquidity_layer_v1` meta/UI/docs 정리를 완료했다.
 
+### 2026-07-08 - strict quarterly를 annual처럼 정식화하려면 어떻게 해야 하는가
+
+- User request: 사용자가 annual은 정식인데 quarterly는 prototype으로 남아 있는 이유를 묻고, 1차~5차로 strict quarterly Quality / Value / Quality+Value 정식화를 승인함.
+- Interpreted goal: 표시명만 바꾸는 것이 아니라 post-run readiness, statement/price repair, annual-like runtime contract, validation evidence, catalog/UI/docs 승격을 한 번에 맞춰야 함.
+- Analysis result: quarterly는 filing lag와 statement shadow coverage가 annual보다 민감하지만, runtime / compare / history 계약을 annual-like surface로 확장하고 실행 후 실제 결과 기준 readiness를 통과시키면 formal candidate path로 둘 수 있다.
+- Follow-up: quarterly wrappers, execution dispatch, post-run Factor Readiness, statement repair action, strategy catalog / runner catalog / evidence inventory / forms / compare / history docs를 정리했고, legacy `_prototype` key는 호환용으로 유지했다.
+
 ### 2026-07-07 - Flow4 보강 위치만으로는 해결할 수 없다
 
 - User request: 사용자가 Flow 4의 `보강 위치`만 보고 실제 이슈 해결과 통과가 가능한지 물었고, `부족한 것 / 해야 할 일 / 보강 위치`를 통합 또는 개선하자고 요청함.
@@ -8651,3 +8658,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Universe 기준을 먼저 명시하고, pre-run은 preview로 낮추며, post-run 결과 화면에서 실제 문제 / 영향 티커 / 해결 방법을 React panel로 보여줘야 함.
 - Analysis result: 현재 runtime은 successful strict factor bundle에 `price_freshness`와 result-level excluded ticker evidence를 남긴다. 따라서 V1은 월별 PIT 전체 audit 대신 실제 결과 evidence 기반으로 시작하는 것이 가장 작고 안전하다.
 - Follow-up: `build_post_run_factor_readiness_panel_model()`과 결과 화면 연결을 추가했다. 가격 보강은 refresh 가능한 티커만 실행하고, provider/source gap은 반복 refresh가 아니라 Data Trust / universe 조정 확인 대상으로 분리했다.
+
+### 2026-07-08 - strict quarterly를 annual처럼 정식화할 수 있는가
+
+- User request: 사용자가 annual은 정식이고 quarterly는 prototype으로 표시되는 이유를 묻고, 1차~5차 개발로 정식화 가능한지 확인한 뒤 진행을 승인함.
+- Interpreted goal: quarterly Quality / Value / Quality+Value가 prototype 표시 없이 동일한 실행 계약, 결과 evidence, post-run readiness, history/replay surface를 갖도록 해야 함.
+- Analysis result: `_prototype` strategy key는 saved payload 호환 때문에 유지해야 하지만, user-facing maturity는 `Strict Quarterly`로 승격할 수 있다. Quarterly는 filing lag와 statement shadow gap이 annual보다 민감하므로 post-run Factor Readiness를 완료 조건으로 두는 것이 안전하다.
+- Follow-up: quarterly runner와 dispatch에 annual-like investability / benchmark / guardrail inputs를 연결하고, result meta에 statement shadow coverage를 저장했다. UI/catalog/evidence는 `Strict Quarterly`로 승격했고, quarterly strict form에도 5-year factor window guard를 적용했다.

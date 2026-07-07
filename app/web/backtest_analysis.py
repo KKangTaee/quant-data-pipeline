@@ -217,7 +217,7 @@ def _render_strategy_evidence_direction_panel() -> None:
         metric_cols = st.columns(4)
         metric_cols[0].metric("Catalog 전략", summary["strategy_count"])
         metric_cols[1].metric("근거 성숙 후보", summary["first_evidence_mature_count"])
-        metric_cols[2].metric("Quarterly prototype", summary["quarterly_prototype_count"])
+        metric_cols[2].metric("Quarterly formal", summary["quarterly_formal_count"])
         metric_cols[3].metric("Risk-On governance", summary["risk_on_governance_status"])
 
         st.markdown("**첫 근거 성숙 후보군**")

@@ -720,6 +720,14 @@ def _mark_backtest_result_requires_rerun_after_price_refresh(result: dict[str, A
     st.session_state.backtest_last_result_refresh_result = result
 
 
+def _mark_backtest_result_requires_rerun_after_statement_refresh(result: dict[str, Any]) -> None:
+    status = str(result.get("status") or "").strip().lower()
+    if status not in {"success", "partial_success"}:
+        return
+    st.session_state.backtest_last_result_requires_rerun = True
+    st.session_state.backtest_last_result_refresh_result = result
+
+
 def _consume_data_trust_refresh_action(
     action_value: dict[str, Any] | None,
     meta: dict[str, Any],
@@ -864,7 +872,7 @@ def _consume_post_run_factor_readiness_action(
     if action_value.get("source") != "backtest_factor_readiness_panel":
         return
     action_id = str(action_value.get("action") or "").strip()
-    if action_id != "refresh_prices":
+    if action_id not in {"refresh_prices", "refresh_statement_shadow"}:
         return
     nonce = str(action_value.get("nonce") or "")
     if not nonce:
@@ -875,14 +883,40 @@ def _consume_post_run_factor_readiness_action(
     st.session_state[consumed_key] = nonce
     action_symbols = _unique_upper_tickers(action_value.get("symbols") or []) or _model_action_symbols(model, action_id)
     if not action_symbols:
+        job_name = (
+            "backtest_post_run_statement_refresh"
+            if action_id == "refresh_statement_shadow"
+            else "backtest_post_run_price_refresh"
+        )
+        message = (
+            "Statement 데이터 보강 대상 ticker가 없어 실행하지 않았습니다."
+            if action_id == "refresh_statement_shadow"
+            else "가격 데이터 최신화 대상 ticker가 없어 실행하지 않았습니다."
+        )
         st.session_state[state_key] = {
-            "job_name": "backtest_post_run_price_refresh",
+            "job_name": job_name,
             "status": "skipped",
-            "message": "가격 데이터 최신화 대상 ticker가 없어 실행하지 않았습니다.",
+            "message": message,
             "rows_written": 0,
             "details": {},
         }
         st.rerun()
+    if action_id == "refresh_statement_shadow":
+        context = dict(model.get("context") or {})
+        statement_freq = str(
+            context.get("statement_freq") or meta.get("factor_freq") or meta.get("statement_freq") or "annual"
+        ).strip().lower() or "annual"
+        with st.spinner("실제 결과에서 확인된 Statement 문제 티커를 보강하는 중입니다...", show_time=True):
+            result = run_extended_statement_refresh(
+                action_symbols,
+                freq=statement_freq,
+                periods=0,
+                period=statement_freq,
+            )
+            st.session_state[state_key] = result
+            _mark_backtest_result_requires_rerun_after_statement_refresh(result)
+        st.rerun()
+
     refresh_meta = _filter_post_run_price_refresh_meta(meta, action_symbols)
     with st.spinner("실제 결과에서 확인된 가격 문제 티커를 최신화하는 중입니다...", show_time=True):
         result = run_backtest_price_refresh(refresh_meta)

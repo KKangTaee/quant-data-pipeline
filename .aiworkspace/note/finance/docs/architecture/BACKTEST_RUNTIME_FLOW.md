@@ -114,7 +114,7 @@ Practical Validation / Final Review / Portfolio Monitoring daily signal governan
 - `run_quality_snapshot_strict_annual_backtest_from_db(...)` via `app/runtime/backtest/runners/strict_factor.py`
 - `run_value_snapshot_strict_annual_backtest_from_db(...)` via `app/runtime/backtest/runners/strict_factor.py`
 - `run_quality_value_snapshot_strict_annual_backtest_from_db(...)` via `app/runtime/backtest/runners/strict_factor.py`
-- quarterly prototype strict family runtime 함수들 via `app/runtime/backtest/runners/strict_factor.py`
+- strict quarterly factor runtime 함수들 via `app/runtime/backtest/runners/strict_factor.py`
 
 Strict Quality / Value universe contract:
 
@@ -181,7 +181,7 @@ Phase 28 이후 Real-Money / Guardrail parity는 별도의 성과 계산 로직�
 이미 result bundle meta나 saved portfolio override에 남아 있는 값을 읽어 scope table로 보여준다.
 
 - annual strict: benchmark / investability / promotion / guardrail 입력을 full strict surface로 해석한다.
-- strict quarterly prototype: portfolio handling과 risk-off contract는 저장하지만, promotion guardrail surface는 deferred로 해석한다.
+- strict quarterly: annual-like investability / benchmark / promotion / guardrail inputs are accepted and preserved, but post-run Factor Readiness must clear price and statement coverage before Practical Validation / promotion interpretation.
 - ETF 전략군: Equal Weight / GTAA / Global Relative Strength / Risk Parity Trend / Dual Momentum의 ETF operability, cost, benchmark, ETF guardrail first pass를 strategy별 지원 범위로 해석한다.
 
 이 scope table은 runtime result를 바꾸지 않는다.

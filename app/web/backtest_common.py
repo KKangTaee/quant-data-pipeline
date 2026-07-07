@@ -1872,9 +1872,9 @@ def _render_strict_portfolio_handling_contracts_intro() -> None:
 
 def _render_strict_quarterly_productionization_note(*, family_label: str) -> None:
     st.info(
-        f"Phase 23 기준으로 `{family_label}`는 실행 / compare / history 재현성을 제품 기능 수준으로 끌어올리는 중입니다. "
-        "아직 모니터링 후보 승격이나 promotion policy signal 단계는 아니며, 이번 화면에서는 quarterly cadence와 portfolio handling contract가 "
-        "같은 payload로 저장되고 재실행되는지를 먼저 확인합니다."
+        f"`{family_label}`는 formal strict quarterly 경로입니다. "
+        "quarterly filing lag와 statement shadow coverage가 annual보다 민감하므로, 실행 후 Factor Readiness에서 "
+        "가격 / statement 누락 티커를 먼저 해결한 뒤 Practical Validation으로 넘깁니다."
     )
 
 
@@ -2644,12 +2644,27 @@ def build_post_run_factor_readiness_panel_model(bundle: dict[str, Any] | None) -
     result_df = bundle.get("result_df")
     price_report = dict(meta.get("price_freshness") or {})
     price_details = dict(price_report.get("details") or {})
+    statement_summary = dict(meta.get("statement_shadow_coverage") or {})
+    statement_freq = str(
+        statement_summary.get("statement_freq") or meta.get("factor_freq") or "annual"
+    ).strip().lower() or "annual"
     refresh_symbols = _strict_price_refresh_symbols(price_details)
     provider_gap_symbols = _strict_provider_gap_symbols(price_details, refresh_symbols)
     provider_gap_symbol_set = set(provider_gap_symbols)
     refreshable_price_symbols = [symbol for symbol in refresh_symbols if symbol not in provider_gap_symbol_set]
     history_excluded_symbols = _collect_result_symbols(result_df, "History Excluded Ticker")
     liquidity_excluded_symbols = _collect_result_symbols(result_df, "Liquidity Excluded Ticker")
+    statement_requested = _safe_int(statement_summary.get("requested_count"))
+    statement_covered = _safe_int(statement_summary.get("covered_count"))
+    statement_missing_count = _safe_int(
+        statement_summary.get("missing_count"),
+        max(0, statement_requested - statement_covered),
+    )
+    statement_missing_symbols = _unique_upper_tickers(
+        statement_summary.get("missing_symbols")
+        or list(statement_summary.get("raw_present_missing_symbols") or [])
+        + list(statement_summary.get("no_raw_missing_symbols") or [])
+    )
 
     checks: list[dict[str, Any]] = []
     if refreshable_price_symbols:
@@ -2697,6 +2712,38 @@ def build_post_run_factor_readiness_panel_model(bundle: dict[str, Any] | None) -
                 diagnostics=[
                     {"label": "분류", "value": "provider/source gap"},
                     {"label": "자동 업데이트", "value": "비활성"},
+                ],
+            )
+        )
+
+    if statement_missing_count or statement_missing_symbols:
+        affected_count = max(statement_missing_count, len(statement_missing_symbols))
+        statement_action_enabled = bool(statement_missing_symbols)
+        checks.append(
+            _readiness_problem_check(
+                check_id="statement_shadow",
+                title="Statement 데이터 부족",
+                problem=f"{affected_count}개 종목의 statement shadow factor coverage가 부족합니다.",
+                symbols=statement_missing_symbols,
+                solution=(
+                    "Statement 데이터 보강 버튼으로 원천 statement와 shadow factor를 보강한 뒤 같은 설정으로 Run Backtest를 다시 실행하세요."
+                    if statement_action_enabled
+                    else "statement 누락 ticker 목록이 결과 메타에 없어 Data Trust에서 coverage를 먼저 확인하세요."
+                ),
+                action=_readiness_action(
+                    action_id="refresh_statement_shadow",
+                    label="Statement 데이터 보강",
+                    detail=f"실제 결과에서 확인된 {statement_freq} statement/shadow 누락 티커만 보강합니다.",
+                    enabled=statement_action_enabled,
+                    tone="warning",
+                    symbols=statement_missing_symbols,
+                ),
+                tone="warning",
+                diagnostics=[
+                    {"label": "보유", "value": f"{statement_covered}/{statement_requested}"},
+                    {"label": "기간", "value": f"{statement_summary.get('min_period_end') or '-'} -> {statement_summary.get('max_period_end') or '-'}"},
+                    {"label": "raw 있음/shadow 없음", "value": str(statement_summary.get("raw_present_missing_count") or 0)},
+                    {"label": "raw 없음", "value": str(statement_summary.get("no_raw_missing_count") or 0)},
                 ],
             )
         )
@@ -2778,6 +2825,7 @@ def build_post_run_factor_readiness_panel_model(bundle: dict[str, Any] | None) -
             "universe_contract": meta.get("universe_contract"),
             "start": meta.get("start"),
             "end": meta.get("end"),
+            "statement_freq": statement_freq,
         },
         "run_recommended": not needs_action,
         "checks": checks,
@@ -4269,12 +4317,12 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
             },
         ]
 
-    if name.endswith("(Strict Quarterly Prototype)"):
+    if name.endswith("(Strict Quarterly)"):
         return [
             {
                 "확인 영역": "Cadence / 데이터",
-                "현재 상태": "Quarterly statement shadow factor 기반 prototype",
-                "확인 포인트": "분기 재무제표 cadence를 쓰지만, 아직 annual strict와 같은 성숙도로 보지 않습니다.",
+                "현재 상태": "Quarterly statement shadow factor 기반 formal 후보",
+                "확인 포인트": "분기 재무제표 cadence를 쓰며, 실행 후 Factor Readiness로 가격과 statement coverage를 다시 확인합니다.",
             },
             {
                 "확인 영역": "Data Trust",
@@ -4284,12 +4332,12 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
             {
                 "확인 영역": "선택 기록",
                 "현재 상태": "Selection History / Interpretation 지원",
-                "확인 포인트": "quarterly 선택 기록이 annual처럼 잘못 읽히지 않는지 봅니다.",
+                "확인 포인트": "quarterly 선택 기록의 filing lag와 statement coverage 민감도를 함께 봅니다.",
             },
             {
                 "확인 영역": "Portfolio Handling",
                 "현재 상태": "Weighting / Rejected Slot / Risk-Off contract 지원",
-                "확인 포인트": "단, promotion policy / Guardrail 판단은 아직 annual strict 중심입니다.",
+                "확인 포인트": "Real-Money / Guardrail 입력은 annual strict와 같은 surface로 저장하고 재실행합니다.",
             },
             {
                 "확인 영역": "저장 / 재실행",

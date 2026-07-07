@@ -550,7 +550,7 @@ component별 상세 결과는 weight를 정하기 위한 근거로 남기고, Pr
 현재 기준:
 
 - 전략별 cadence, data trust, selection history, Real-Money / Guardrail, history / replay 지원 차이는 각 전략 입력 그룹, Latest Backtest Run의 조건부 결과 탭, Practical Validation / Final Review gate에서 필요할 때 확인한다.
-- annual strict, quarterly strict prototype, price-only ETF 전략의 차이는 각 strategy-specific form의 preset / preflight / advanced input group에서 필요한 만큼만 보여준다.
+- annual strict, quarterly strict, price-only ETF 전략의 차이는 각 strategy-specific form의 preset / preflight / advanced input group에서 필요한 만큼만 보여준다.
 - 이 변경은 strategy runtime, result bundle, registry / saved setup, Practical Validation / Final Review 저장 정책을 바꾸지 않는다.
 
 ## Data Trust Summary 흐름
@@ -787,7 +787,7 @@ Phase 28 이후 compare, history, saved portfolio에는
 현재 기준:
 
 - annual strict는 full strict equity promotion policy / Guardrail 기준 surface다.
-- strict quarterly prototype은 cadence / replay / portfolio handling 검증 단계이며, annual strict 수준의 promotion surface로 보지 않는다.
+- strict quarterly는 formal strict factor candidate surface다. 다만 quarterly filing lag와 statement shadow coverage가 민감하므로 post-run Factor Readiness를 통과한 뒤 Practical Validation으로 넘긴다.
 - Global Relative Strength는 ETF operability + cost / benchmark first pass이며, dedicated ETF underperformance / drawdown guardrail은 아직 없다.
 - GTAA, Risk Parity Trend, Dual Momentum은 ETF promotion policy + ETF guardrail first pass로 본다.
 - Equal Weight는 baseline 성격의 static ETF basket이지만, Phase35 이후 ETF operability, cost, benchmark 기반 promotion policy first pass와 saved replay 입력 보존을 지원한다.

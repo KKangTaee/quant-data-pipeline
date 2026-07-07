@@ -121,7 +121,7 @@ def _render_history_replay_parity_snapshot(record: dict[str, Any]) -> None:
         ],
         title="History Real-Money / Guardrail Scope",
         caption=(
-            "이 저장 기록이 annual strict 실전 검증 기록인지, quarterly prototype 기록인지, "
+            "이 저장 기록이 annual strict 실전 검증 기록인지, quarterly strict 기록인지, "
             "또는 ETF first-pass 기록인지 구분합니다."
         ),
     )

@@ -102,7 +102,7 @@ _VALIDATION_CHECKLIST = [
     "Review concentration, factor overlap, and role / weight discipline before treating the group as a portfolio bridge.",
     "Check drawdown, rolling underperformance, and temporal validation before Final Review.",
     "Check cost / turnover / net-cost proof in Backtest Realism before selected-route decisions.",
-    "Keep Risk-On Momentum and quarterly prototypes out of this bridge until their separate governance or maturation tasks are approved.",
+    "Keep Risk-On Momentum out of this bridge; strict quarterly candidates use their own post-run Factor Readiness path before portfolio bridge decisions.",
 ]
 
 _NEXT_WORKFLOW_STEPS = [

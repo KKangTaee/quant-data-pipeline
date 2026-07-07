@@ -491,11 +491,11 @@ def _real_money_guardrail_scope_for_strategy(
             "guardrail_scope": "Underperformance / Drawdown guardrails + Guardrail Reference Ticker",
             "interpretation": "Phase 28 기준 실전 검증 surface의 기준선입니다. history/replay에서 benchmark, investability, promotion, guardrail 입력이 유지되어야 합니다.",
         }
-    if name.endswith("(Strict Quarterly Prototype)") or key in quarterly_keys:
+    if name.endswith("(Strict Quarterly)") or name.endswith("(Strict Quarterly Prototype)") or key in quarterly_keys:
         return {
-            "real_money_scope": "Deferred: quarterly prototype은 아직 promotion 대상 아님",
-            "guardrail_scope": "Portfolio handling risk-off는 지원, Real-Money guardrail surface는 보류",
-            "interpretation": "quarterly는 cadence/replay 검증 단계입니다. annual strict와 같은 실전 승격 후보로 읽지 않습니다.",
+            "real_money_scope": "Formal strict quarterly Real-Money surface",
+            "guardrail_scope": "Underperformance / Drawdown guardrails + post-run Factor Readiness",
+            "interpretation": "quarterly는 filing lag와 statement coverage가 더 민감하므로, replay 후 post-run Factor Readiness를 통과해야 실전 검증 후보로 해석합니다.",
         }
     if name == "Global Relative Strength" or key == "global_relative_strength":
         return {
@@ -561,12 +561,28 @@ def _real_money_guardrail_replay_fields_for_strategy(
             "underperformance_guardrail_enabled",
             "drawdown_guardrail_enabled",
         ]
-    if name.endswith("(Strict Quarterly Prototype)") or key in {
+    if name.endswith("(Strict Quarterly)") or name.endswith("(Strict Quarterly Prototype)") or key in {
         "quality_snapshot_strict_quarterly_prototype",
         "value_snapshot_strict_quarterly_prototype",
         "quality_value_snapshot_strict_quarterly_prototype",
     }:
         return [
+            "benchmark_contract",
+            "benchmark_ticker",
+            "guardrail_reference_ticker",
+            "min_price_filter",
+            "min_history_months_filter",
+            "min_avg_dollar_volume_20d_m_filter",
+            "transaction_cost_bps",
+            "promotion_min_benchmark_coverage",
+            "promotion_min_net_cagr_spread",
+            "promotion_min_liquidity_clean_coverage",
+            "promotion_max_underperformance_share",
+            "promotion_min_worst_rolling_excess_return",
+            "promotion_max_strategy_drawdown",
+            "promotion_max_drawdown_gap_vs_benchmark",
+            "underperformance_guardrail_enabled",
+            "drawdown_guardrail_enabled",
             "weighting_mode",
             "rejected_slot_handling_mode",
             "risk_off_mode",
@@ -753,7 +769,7 @@ def _build_history_replay_parity_rows(record: dict[str, Any]) -> list[dict[str, 
         add(
             "Statement cadence / factor",
             ["factor_freq", "rebalance_freq", "snapshot_mode", "quality_factors", "value_factors"],
-            "annual과 quarterly prototype이 서로 다른 cadence로 저장됐는지 확인합니다.",
+            "annual과 quarterly가 서로 다른 statement cadence로 저장됐는지 확인합니다.",
         )
         add(
             "Universe Contract",
@@ -818,13 +834,35 @@ def _build_history_replay_parity_rows(record: dict[str, Any]) -> list[dict[str, 
                 required=False,
             )
         elif strategy_key in quarterly_keys:
-            rows.append(
-                {
-                    "확인 영역": "Real-Money / Guardrail",
-                    "저장 상태": "prototype 범위",
-                    "저장된 값": "quarterly prototype은 annual strict 수준의 Real-Money / Guardrail surface가 아직 아닙니다.",
-                    "왜 중요한가": "quarterly 결과를 annual strict와 같은 실전 검증 완료 상태로 오해하지 않기 위한 구분입니다.",
-                }
+            add(
+                "Real-Money / Guardrail",
+                [
+                    "benchmark_contract",
+                    "benchmark_ticker",
+                    "guardrail_reference_ticker",
+                    "min_price_filter",
+                    "min_history_months_filter",
+                    "min_avg_dollar_volume_20d_m_filter",
+                    "transaction_cost_bps",
+                    "underperformance_guardrail_enabled",
+                    "drawdown_guardrail_enabled",
+                ],
+                "quarterly strict의 실전 검증 입력과 guardrail 설정이 재진입 과정에서 유지되는지 확인합니다.",
+                required=False,
+            )
+            add(
+                "Promotion 기준",
+                [
+                    "promotion_min_benchmark_coverage",
+                    "promotion_min_net_cagr_spread",
+                    "promotion_min_liquidity_clean_coverage",
+                    "promotion_max_underperformance_share",
+                    "promotion_min_worst_rolling_excess_return",
+                    "promotion_max_strategy_drawdown",
+                    "promotion_max_drawdown_gap_vs_benchmark",
+                ],
+                "quarterly는 post-run Factor Readiness까지 통과해야 같은 설정의 promotion 기준을 해석합니다.",
+                required=False,
             )
 
     elif strategy_key == "global_relative_strength":

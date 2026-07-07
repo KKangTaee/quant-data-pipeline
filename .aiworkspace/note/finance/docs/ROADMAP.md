@@ -33,6 +33,12 @@ Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-val
 - 주요 변경: `resolution_guide`에 `통과 기준`을 추가하고, criteria card를 `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치` 구조로 재구성했다. Audit row의 non-PASS `Criteria`와 `Next Action`은 계속 우선 사용하며, 위치는 실행 위치 보조 정보로 낮췄다.
 - 이번 차수에서 하지 않은 일: validation threshold 변경, replay 실행 로직 변경, provider ingestion orchestration 변경, registry / saved JSONL rewrite, Final Review selected-route 정책 변경, live approval / broker order / auto rebalance 의미 추가.
 
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-quarterly-productionization-v1-20260708/`다.
+
+- 목적: Strict quarterly Quality / Value / Quality+Value를 prototype 표시가 아닌 formal `Strict Quarterly` 후보로 정식화하되, quarterly filing lag와 statement shadow coverage 민감성은 post-run Factor Readiness에서 확인하게 한다.
+- 주요 변경: strict quarterly runtime wrappers가 annual-like investability / benchmark / promotion / guardrail inputs를 받도록 확장했고, result bundle에 statement shadow coverage metadata를 남긴다. post-run Factor Readiness는 실제 실행 결과 기준으로 가격 / statement 문제 티커와 해결 버튼을 보여준다. Strategy catalog / runner catalog / evidence inventory / forms / compare / history helper는 user-facing `Strict Quarterly` label을 사용하고 legacy `_prototype` key는 replay 호환용으로 유지한다.
+- 이번 차수에서 하지 않은 일: official historical index membership ingestion, provider no-data 대체 소스 구축, live approval / broker order / auto rebalance, 기존 saved/run history JSONL 재작성.
+
 Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/`다.
 
 - 목적: Practical Validation Flow 4의 `보강 위치`가 단순 위치 문자열이라 사용자가 실제 부족 항목과 해야 할 일을 파악하기 어려운 문제를 해결했다.
@@ -42,7 +48,7 @@ Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-vali
 Earlier completed task는 `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`다.
 
 - 목적: Quality / Value strict coverage가 현재 market-cap Top-N을 과거 전체 기간에 고정해 쓰는 look-ahead / survivorship 위험을 줄이고, 사용자가 2016년부터 실행할 때 당시 월말 기준 근사 universe를 선택할 수 있게 한다.
-- 주요 변경: `finance_meta.equity_universe_snapshot` / `equity_universe_member` schema와 builder / upsert / loader를 추가했다. Strict Quality / Value / Quality+Value annual and quarterly prototype runners는 `PIT Monthly Snapshot Universe`를 선택하면 사전 저장 monthly membership을 읽고, 각 리밸런싱일에는 가장 가까운 이전 snapshot을 적용한다. Backtest Single Strategy와 Portfolio Mix Builder strict form은 `PIT Monthly Snapshot Universe`만 visible option으로 노출한다. Static Managed Research와 Historical Dynamic PIT는 기존 saved payload / old run 호환용 legacy internal path로만 유지한다.
+- 주요 변경: `finance_meta.equity_universe_snapshot` / `equity_universe_member` schema와 builder / upsert / loader를 추가했다. Strict Quality / Value / Quality+Value annual and quarterly strict runners는 `PIT Monthly Snapshot Universe`를 선택하면 사전 저장 monthly membership을 읽고, 각 리밸런싱일에는 가장 가까운 이전 snapshot을 적용한다. Backtest Single Strategy와 Portfolio Mix Builder strict form은 `PIT Monthly Snapshot Universe`만 visible option으로 노출한다. Static Managed Research와 Historical Dynamic PIT는 기존 saved payload / old run 호환용 legacy internal path로만 유지한다.
 - 이번 차수에서 하지 않은 일: paid official historical Russell / S&P membership ingestion, float-adjusted market cap feed, broker execution, live approval / order / auto rebalance, 기존 Strategy selector의 React 이관.
 - 중요한 한계: V1 PIT monthly universe는 DB 가격과 latest-known statement shares 기반 근사 large-cap membership이다. 공식 지수 편입 이력이나 완전한 historical float-adjusted market cap이 필요하면 별도 provider / collector phase가 필요하다.
 

@@ -415,28 +415,27 @@ def _render_quality_snapshot_strict_annual_form() -> None:
     _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Annual)")
 
 def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
-    st.markdown("### Quality Snapshot (Strict Quarterly Prototype)")
-    st.caption("Research-only quarterly strict quality strategy. This Phase 7 path ranks quarterly statement shadow factors and keeps the top names equally between monthly rebalances.")
-    _render_strict_quarterly_productionization_note(family_label="Quality Snapshot (Strict Quarterly Prototype)")
+    st.markdown("### Quality Snapshot (Strict Quarterly)")
+    st.caption("Strict quarterly quality strategy. This formal path ranks quarterly statement shadow factors and keeps the top names equally between monthly rebalances.")
+    _render_strict_quarterly_productionization_note(family_label="Quality Snapshot (Strict Quarterly)")
     _apply_single_strategy_prefill("quality_snapshot_strict_quarterly_prototype")
 
     _render_strict_factor_data_readiness_note(
-        family_label="Quality Snapshot (Strict Quarterly Prototype)",
+        family_label="Quality Snapshot (Strict Quarterly)",
         statement_freq="quarterly",
-        mode_label="strict_statement_quarterly + shadow_factors + research_only",
-        prototype=True,
+        mode_label="strict_statement_quarterly + shadow_factors + post_run_readiness",
     )
-    with st.expander("Quarterly prototype caveat", expanded=False):
+    with st.expander("Quarterly data readiness", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
-            "Phase 7 first pass 이후 `US Base Universe 100` 기본 preset은 다시 2016 부근부터 열리지만, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦을 수 있습니다."
+            "Factor 기반 strict 전략은 실행 비용과 coverage 안정성을 위해 한 번에 최대 5년 범위로 실행합니다."
         )
 
     universe_mode = st.radio(
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="quarterly prototype first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
+        help="quarterly strict first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
         key="qsqp_universe_mode",
     )
 
@@ -467,18 +466,18 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
         tickers=tickers,
         end_value=st.session_state.get("qsqp_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qsqp_timeframe", "1d"),
-        strategy_label="Quality Snapshot (Strict Quarterly Prototype)",
+        strategy_label="Quality Snapshot (Strict Quarterly)",
     )
     _render_statement_shadow_coverage_preview(
         tickers=tickers,
         freq="quarterly",
-        strategy_label="Quality Snapshot (Strict Quarterly Prototype)",
+        strategy_label="Quality Snapshot (Strict Quarterly)",
     )
 
     with st.form("quality_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qsqp_start")
+            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qsqp_start")
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qsqp_end")
         with col3:
@@ -492,7 +491,7 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                 key="qsqp_top_n",
             )
 
-        st.caption("Research-only defaults in this first pass: `quarterly statement snapshots`, `monthly rebalance`, `equal-weight holding`.")
+        st.caption("Defaults: `quarterly statement snapshots`, `monthly rebalance`, `equal-weight holding`.")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qsqp_timeframe")
@@ -523,10 +522,10 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
                 default=QUALITY_STRICT_DEFAULT_FACTORS,
                 key="qsqp_quality_factors",
-                help="first-pass quarterly prototype도 quality strict와 같은 coverage-first 팩터 조합을 기본값으로 사용합니다.",
+                help="first-pass quarterly strict도 quality strict와 같은 coverage-first 팩터 조합을 기본값으로 사용합니다.",
             )
             _render_advanced_group_caption(
-                "Phase 23에서는 quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
+                "Quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
             with st.expander("Overlay", expanded=False):
                 _render_strict_overlay_section_intro()
@@ -572,11 +571,11 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                     label_prefix="Strict Quarterly Quality",
                 )
                 st.caption(
-                    "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
-                    "Promotion Policy Signal 판단은 아직 annual strict 중심으로 유지합니다."
+                    "이 contract들은 quarterly payload와 replay surface에 저장됩니다. "
+                    "실제 데이터 문제는 Run 이후 Factor Readiness에서 가격 / statement 기준으로 다시 확인합니다."
                 )
 
-        submitted = st.form_submit_button("Run Strict Quarterly Quality Prototype", use_container_width=True)
+        submitted = st.form_submit_button("Run Strict Quarterly Quality Backtest", use_container_width=True)
 
     if not submitted:
         return
@@ -584,8 +583,13 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
     validation_errors: list[str] = []
     if not tickers:
         validation_errors.append("At least one ticker is required.")
-    if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    window_error = validate_strict_factor_backtest_window(
+        start_date,
+        end_date,
+        strategy_label="Quality Snapshot (Strict Quarterly)",
+    )
+    if window_error:
+        validation_errors.append(window_error)
     if not quality_factors:
         validation_errors.append("Select at least one quality factor.")
 
@@ -624,21 +628,20 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
         "preset_name": preset_name,
     }
 
-    _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Quarterly Prototype)")
+    _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Quarterly)")
 
 def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
-    st.markdown("### Value Snapshot (Strict Quarterly Prototype)")
+    st.markdown("### Value Snapshot (Strict Quarterly)")
     st.caption(
-        "Research-only quarterly strict value strategy. This Phase 8 path ranks quarterly statement shadow value factors and holds the cheapest names equally between monthly rebalances."
+        "Strict quarterly value strategy. This Phase 8 path ranks quarterly statement shadow value factors and holds the cheapest names equally between monthly rebalances."
     )
-    _render_strict_quarterly_productionization_note(family_label="Value Snapshot (Strict Quarterly Prototype)")
+    _render_strict_quarterly_productionization_note(family_label="Value Snapshot (Strict Quarterly)")
     _render_strict_factor_data_readiness_note(
-        family_label="Value Snapshot (Strict Quarterly Prototype)",
+        family_label="Value Snapshot (Strict Quarterly)",
         statement_freq="quarterly",
-        mode_label="strict_statement_quarterly + shadow_factors + research_only",
-        prototype=True,
+        mode_label="strict_statement_quarterly + shadow_factors + post_run_readiness",
     )
-    with st.expander("Quarterly prototype caveat", expanded=False):
+    with st.expander("Quarterly data readiness", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
             "`US Base Universe 100` 기본 preset은 검증용 anchor일 뿐이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
@@ -649,7 +652,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="quarterly strict value prototype first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
+        help="quarterly strict value는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
         key="vsqp_universe_mode",
     )
 
@@ -680,18 +683,18 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         tickers=tickers,
         end_value=st.session_state.get("vsqp_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("vsqp_timeframe", "1d"),
-        strategy_label="Value Snapshot (Strict Quarterly Prototype)",
+        strategy_label="Value Snapshot (Strict Quarterly)",
     )
     _render_statement_shadow_coverage_preview(
         tickers=tickers,
         freq="quarterly",
-        strategy_label="Value Snapshot (Strict Quarterly Prototype)",
+        strategy_label="Value Snapshot (Strict Quarterly)",
     )
 
     with st.form("value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="vsqp_start")
+            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="vsqp_start")
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="vsqp_end")
         with col3:
@@ -705,7 +708,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                 key="vsqp_top_n",
             )
 
-        st.caption("Research-only defaults in this first pass: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
+        st.caption("Defaults: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vsqp_timeframe")
@@ -736,10 +739,10 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                 options=VALUE_STRICT_FACTOR_OPTIONS,
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="vsqp_value_factors",
-                help="quarterly prototype도 yield / book-to-market 중심의 coverage-first 기본 조합을 사용합니다.",
+                help="quarterly strict도 yield / book-to-market 중심의 coverage-first 기본 조합을 사용합니다.",
             )
             _render_advanced_group_caption(
-                "Phase 23에서는 quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
+                "Quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
             with st.expander("Overlay", expanded=False):
                 _render_strict_overlay_section_intro()
@@ -785,11 +788,11 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                     label_prefix="Strict Quarterly Value",
                 )
                 st.caption(
-                    "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
-                    "Promotion Policy Signal 판단은 아직 annual strict 중심으로 유지합니다."
+                    "이 contract들은 quarterly payload와 replay surface에 저장됩니다. "
+                    "실제 데이터 문제는 Run 이후 Factor Readiness에서 가격 / statement 기준으로 다시 확인합니다."
                 )
 
-        submitted = st.form_submit_button("Run Strict Quarterly Value Prototype", use_container_width=True)
+        submitted = st.form_submit_button("Run Strict Quarterly Value Backtest", use_container_width=True)
 
     if not submitted:
         return
@@ -797,8 +800,13 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
     validation_errors: list[str] = []
     if not tickers:
         validation_errors.append("At least one ticker is required.")
-    if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    window_error = validate_strict_factor_backtest_window(
+        start_date,
+        end_date,
+        strategy_label="Value Snapshot (Strict Quarterly)",
+    )
+    if window_error:
+        validation_errors.append(window_error)
     if not value_factors:
         validation_errors.append("Select at least one value factor.")
 
@@ -838,7 +846,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         "preset_name": preset_name,
     }
 
-    _handle_backtest_run(payload, strategy_name="Value Snapshot (Strict Quarterly Prototype)")
+    _handle_backtest_run(payload, strategy_name="Value Snapshot (Strict Quarterly)")
 
 def _render_value_snapshot_strict_annual_form() -> None:
     st.markdown("### Value Snapshot (Strict Annual)")
@@ -1100,19 +1108,18 @@ def _render_value_snapshot_strict_annual_form() -> None:
     _handle_backtest_run(payload, strategy_name="Value Snapshot (Strict Annual)")
 
 def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
-    st.markdown("### Quality + Value Snapshot (Strict Quarterly Prototype)")
+    st.markdown("### Quality + Value Snapshot (Strict Quarterly)")
     st.caption(
-        "Research-only quarterly strict multi-factor strategy. This Phase 8 path blends quarterly quality and value shadow factors, then holds the combined top names equally between monthly rebalances."
+        "Strict quarterly multi-factor strategy. This Phase 8 path blends quarterly quality and value shadow factors, then holds the combined top names equally between monthly rebalances."
     )
-    _render_strict_quarterly_productionization_note(family_label="Quality + Value Snapshot (Strict Quarterly Prototype)")
+    _render_strict_quarterly_productionization_note(family_label="Quality + Value Snapshot (Strict Quarterly)")
     _render_strict_factor_data_readiness_note(
-        family_label="Quality + Value Snapshot (Strict Quarterly Prototype)",
+        family_label="Quality + Value Snapshot (Strict Quarterly)",
         statement_freq="quarterly",
-        mode_label="strict_statement_quarterly + shadow_factors + quality_value_blend + research_only",
-        prototype=True,
+        mode_label="strict_statement_quarterly + shadow_factors + quality_value_blend + post_run_readiness",
         combined_factor=True,
     )
-    with st.expander("Quarterly prototype caveat", expanded=False):
+    with st.expander("Quarterly data readiness", expanded=False):
         st.caption(
             "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
             "`US Base Universe 100` 기본 preset은 검증 anchor이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
@@ -1123,7 +1130,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="quarterly strict multi-factor prototype first pass는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
+        help="quarterly strict multi-factor는 검증 비용을 낮추기 위해 `US Base Universe 100`을 기본 preset으로 둡니다.",
         key="qvqp_universe_mode",
     )
 
@@ -1154,18 +1161,18 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         tickers=tickers,
         end_value=st.session_state.get("qvqp_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qvqp_timeframe", "1d"),
-        strategy_label="Quality + Value Snapshot (Strict Quarterly Prototype)",
+        strategy_label="Quality + Value Snapshot (Strict Quarterly)",
     )
     _render_statement_shadow_coverage_preview(
         tickers=tickers,
         freq="quarterly",
-        strategy_label="Quality + Value Snapshot (Strict Quarterly Prototype)",
+        strategy_label="Quality + Value Snapshot (Strict Quarterly)",
     )
 
     with st.form("quality_value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qvqp_start")
+            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qvqp_start")
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qvqp_end")
         with col3:
@@ -1179,7 +1186,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                 key="qvqp_top_n",
             )
 
-        st.caption("Research-only defaults in this first pass: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
+        st.caption("Defaults: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvqp_timeframe")
@@ -1218,7 +1225,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                 key="qvqp_value_factors",
             )
             _render_advanced_group_caption(
-                "Phase 23에서는 quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
+                "Quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
             with st.expander("Overlay", expanded=False):
                 _render_strict_overlay_section_intro()
@@ -1264,11 +1271,11 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                     label_prefix="Strict Quarterly Multi-Factor",
                 )
                 st.caption(
-                    "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
-                    "Promotion Policy Signal 판단은 아직 annual strict 중심으로 유지합니다."
+                    "이 contract들은 quarterly payload와 replay surface에 저장됩니다. "
+                    "실제 데이터 문제는 Run 이후 Factor Readiness에서 가격 / statement 기준으로 다시 확인합니다."
                 )
 
-        submitted = st.form_submit_button("Run Strict Quarterly Quality + Value Prototype", use_container_width=True)
+        submitted = st.form_submit_button("Run Strict Quarterly Quality + Value Backtest", use_container_width=True)
 
     if not submitted:
         return
@@ -1276,8 +1283,13 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
     validation_errors: list[str] = []
     if not tickers:
         validation_errors.append("At least one ticker is required.")
-    if start_date > end_date:
-        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    window_error = validate_strict_factor_backtest_window(
+        start_date,
+        end_date,
+        strategy_label="Quality + Value Snapshot (Strict Quarterly)",
+    )
+    if window_error:
+        validation_errors.append(window_error)
     if not quality_factors:
         validation_errors.append("Select at least one quality factor.")
     if not value_factors:
@@ -1320,7 +1332,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         "preset_name": preset_name,
     }
 
-    _handle_backtest_run(payload, strategy_name="Quality + Value Snapshot (Strict Quarterly Prototype)")
+    _handle_backtest_run(payload, strategy_name="Quality + Value Snapshot (Strict Quarterly)")
 
 def _render_quality_value_snapshot_strict_annual_form() -> None:
     st.markdown("### Quality + Value Snapshot (Strict Annual)")

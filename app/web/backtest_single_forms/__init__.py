@@ -22,15 +22,15 @@ def _render_single_strategy_family_form(strategy_choice: str, selected_variant: 
         _render_quality_snapshot_form()
     elif concrete_strategy_name == "Quality Snapshot (Strict Annual)":
         _render_quality_snapshot_strict_annual_form()
-    elif concrete_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
+    elif concrete_strategy_name == "Quality Snapshot (Strict Quarterly)":
         _render_quality_snapshot_strict_quarterly_prototype_form()
     elif concrete_strategy_name == "Value Snapshot (Strict Annual)":
         _render_value_snapshot_strict_annual_form()
-    elif concrete_strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
+    elif concrete_strategy_name == "Value Snapshot (Strict Quarterly)":
         _render_value_snapshot_strict_quarterly_prototype_form()
     elif concrete_strategy_name == "Quality + Value Snapshot (Strict Annual)":
         _render_quality_value_snapshot_strict_annual_form()
-    elif concrete_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
+    elif concrete_strategy_name == "Quality + Value Snapshot (Strict Quarterly)":
         _render_quality_value_snapshot_strict_quarterly_prototype_form()
 
 def _apply_single_strategy_prefill(strategy_key: str) -> None:

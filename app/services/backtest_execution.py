@@ -124,6 +124,78 @@ def _dynamic_etf_promotion_policy_kwargs(payload: Mapping[str, Any]) -> dict[str
     }
 
 
+def _strict_factor_contract_kwargs(payload: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "min_price_filter": _payload_or_default(payload, "min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+        "min_history_months_filter": _payload_or_default(
+            payload,
+            "min_history_months_filter",
+            STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+        ),
+        "min_avg_dollar_volume_20d_m_filter": _payload_or_default(
+            payload,
+            "min_avg_dollar_volume_20d_m_filter",
+            STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+        ),
+        "transaction_cost_bps": _payload_or_default(
+            payload,
+            "transaction_cost_bps",
+            ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+        ),
+        "benchmark_contract": _payload_or_default(
+            payload,
+            "benchmark_contract",
+            STRICT_DEFAULT_BENCHMARK_CONTRACT,
+        ),
+        "benchmark_ticker": _payload_or_default(
+            payload,
+            "benchmark_ticker",
+            ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+        ),
+        "guardrail_reference_ticker": _payload_or_default(
+            payload,
+            "guardrail_reference_ticker",
+            payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+        ),
+        **_dynamic_etf_promotion_policy_kwargs(payload),
+        "underperformance_guardrail_enabled": _payload_or_default(
+            payload,
+            "underperformance_guardrail_enabled",
+            STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+        ),
+        "underperformance_guardrail_window_months": _payload_or_default(
+            payload,
+            "underperformance_guardrail_window_months",
+            STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+        ),
+        "underperformance_guardrail_threshold": _payload_or_default(
+            payload,
+            "underperformance_guardrail_threshold",
+            STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+        ),
+        "drawdown_guardrail_enabled": _payload_or_default(
+            payload,
+            "drawdown_guardrail_enabled",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+        ),
+        "drawdown_guardrail_window_months": _payload_or_default(
+            payload,
+            "drawdown_guardrail_window_months",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+        ),
+        "drawdown_guardrail_strategy_threshold": _payload_or_default(
+            payload,
+            "drawdown_guardrail_strategy_threshold",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+        ),
+        "drawdown_guardrail_gap_threshold": _payload_or_default(
+            payload,
+            "drawdown_guardrail_gap_threshold",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
+        ),
+    }
+
+
 def execute_single_backtest(
     payload: Mapping[str, Any],
     *,
@@ -576,6 +648,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
             quality_factors=payload["quality_factors"],
             top_n=payload["top"],
             rebalance_interval=payload.get("rebalance_interval", 1),
+            **_strict_factor_contract_kwargs(payload),
             trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
             trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
             weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
@@ -714,6 +787,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
             value_factors=payload["value_factors"],
             top_n=payload["top"],
             rebalance_interval=payload.get("rebalance_interval", 1),
+            **_strict_factor_contract_kwargs(payload),
             trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
             trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
             weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
@@ -854,6 +928,7 @@ def _dispatch_single_backtest(payload: Mapping[str, Any]) -> dict[str, Any]:
             value_factors=payload["value_factors"],
             top_n=payload["top"],
             rebalance_interval=payload.get("rebalance_interval", 1),
+            **_strict_factor_contract_kwargs(payload),
             trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
             trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
             weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),

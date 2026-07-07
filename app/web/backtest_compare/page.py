@@ -1984,7 +1984,7 @@ def _saved_portfolio_present_count(source: dict[str, Any], fields: list[str]) ->
     return sum(1 for field in fields if _saved_portfolio_value_is_present(source.get(field)))
 
 def _saved_portfolio_strategy_expected_fields(strategy_name: str) -> tuple[list[str], str]:
-    if strategy_name.endswith("(Strict Annual)") or strategy_name.endswith("(Strict Quarterly Prototype)"):
+    if strategy_name.endswith("(Strict Annual)") or strategy_name.endswith("(Strict Quarterly)"):
         fields = [
             "universe_mode",
             "preset_name",
@@ -2247,7 +2247,7 @@ def _render_saved_portfolio_replay_parity_snapshot(record: dict[str, Any]) -> No
         title="Saved Portfolio Real-Money / Guardrail Scope",
         caption=(
             "저장 포트폴리오 안의 각 전략이 어떤 Real-Money / Guardrail 범위로 다시 열리는지 확인합니다. "
-            "quarterly prototype과 ETF first-pass를 annual strict full surface로 오해하지 않기 위한 표입니다."
+            "quarterly strict과 ETF first-pass를 annual strict full surface로 오해하지 않기 위한 표입니다."
         ),
     )
 
@@ -3923,11 +3923,11 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
 
     strict_compare_key_map = {
         "Quality Snapshot (Strict Annual)": "qss",
-        "Quality Snapshot (Strict Quarterly Prototype)": "qsqp",
+        "Quality Snapshot (Strict Quarterly)": "qsqp",
         "Value Snapshot (Strict Annual)": "vss",
-        "Value Snapshot (Strict Quarterly Prototype)": "vsqp",
+        "Value Snapshot (Strict Quarterly)": "vsqp",
         "Quality + Value Snapshot (Strict Annual)": "qvss",
-        "Quality + Value Snapshot (Strict Quarterly Prototype)": "qvqp",
+        "Quality + Value Snapshot (Strict Quarterly)": "qvqp",
     }
     key_prefix = strict_compare_key_map.get(strategy_name)
     if not key_prefix:
@@ -4191,10 +4191,15 @@ def _resolve_saved_portfolio_dynamic_inputs(
 ) -> dict[str, Any]:
     params = dict(override)
     universe_contract = params.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
+    strategy_name_text = str(strategy_name)
+    statement_freq = (
+        "quarterly"
+        if "Strict Quarterly" in strategy_name_text or "Quarterly Prototype" in strategy_name_text
+        else "annual"
+    )
     if universe_contract == PIT_MONTHLY_SNAPSHOT_UNIVERSE:
         tickers = list(params.get("tickers") or [])
         preset_name = params.get("preset_name")
-        statement_freq = "quarterly" if "Quarterly Prototype" in strategy_name else "annual"
         _, dynamic_target_size = _resolve_strict_dynamic_universe_inputs(
             tickers=tickers,
             preset_name=preset_name,
@@ -4209,7 +4214,6 @@ def _resolve_saved_portfolio_dynamic_inputs(
 
     tickers = list(params.get("tickers") or [])
     preset_name = params.get("preset_name")
-    statement_freq = "quarterly" if "Quarterly Prototype" in strategy_name else "annual"
     dynamic_candidate_tickers, dynamic_target_size = _resolve_strict_dynamic_universe_inputs(
         tickers=tickers,
         preset_name=preset_name,
@@ -5046,9 +5050,9 @@ def _render_strategy_compare_workspace() -> None:
                             drawdown_guardrail_enabled=compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
                         )
 
-            if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)" and quality_compare_settings_container is not None:
+            if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly)" and quality_compare_settings_container is not None:
                 with quality_compare_settings_container:
-                    st.markdown("##### Quality Snapshot (Strict Quarterly Prototype)")
+                    st.markdown("##### Quality Snapshot (Strict Quarterly)")
                     st.caption("Research-only compare path. Default preset stays at `US Base Universe 100` to keep quarterly family validation tractable.")
                     qsqp_compare_preset = st.selectbox(
                         "Strict Quarterly Quality Preset",
@@ -5072,7 +5076,7 @@ def _render_strategy_compare_workspace() -> None:
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qsqp_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(qsqp_compare_preset, QUALITY_STRICT_PRESETS[qsqp_compare_preset])
-                    compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"] = {
+                    compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"] = {
                         "preset_name": qsqp_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qsqp_compare_preset],
                         "universe_mode": "preset",
@@ -5114,12 +5118,12 @@ def _render_strategy_compare_workspace() -> None:
                             st.markdown("##### Strict Quarterly Quality Trend Filter")
                         with trend_help_col:
                             _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["trend_filter_enabled"] = st.checkbox(
                             "Enable",
                             value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                             key="compare_qsqp_trend_filter_enabled",
                         )
-                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["trend_filter_window"] = int(
                             st.number_input(
                                 "Strict Quarterly Quality Trend Filter Window",
                                 min_value=20,
@@ -5130,32 +5134,32 @@ def _render_strategy_compare_workspace() -> None:
                             )
                         )
                         (
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["market_regime_window"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["market_regime_benchmark"],
                         ) = _render_market_regime_overlay_inputs(
                             key_prefix="compare_qsqp",
                             label_prefix="Strict Quarterly Quality ",
                         )
                     with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
                         _render_strict_portfolio_handling_contracts_intro()
-                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
+                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
                             key_prefix="compare_qsqp",
                             label_prefix="Strict Quarterly Quality",
                         )
                         (
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["rejected_slot_fill_enabled"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["partial_cash_retention_enabled"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["rejected_slot_fill_enabled"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["partial_cash_retention_enabled"],
                         ) = strict_rejection_handling_mode_to_flags(
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"]
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["rejected_slot_handling_mode"]
                         )
-                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
                             key_prefix="compare_qsqp",
                             label_prefix="Strict Quarterly Quality",
                         )
                         (
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["risk_off_mode"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["defensive_tickers"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["risk_off_mode"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly)"]["defensive_tickers"],
                         ) = _render_strict_defensive_sleeve_contract_inputs(
                             key_prefix="compare_qsqp",
                             label_prefix="Strict Quarterly Quality",
@@ -5333,9 +5337,9 @@ def _render_strategy_compare_workspace() -> None:
                             drawdown_guardrail_enabled=compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
                         )
 
-            if value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)" and value_compare_settings_container is not None:
+            if value_compare_strategy_name == "Value Snapshot (Strict Quarterly)" and value_compare_settings_container is not None:
                 with value_compare_settings_container:
-                    st.markdown("##### Value Snapshot (Strict Quarterly Prototype)")
+                    st.markdown("##### Value Snapshot (Strict Quarterly)")
                     st.caption("Research-only compare path. Default preset stays at `US Base Universe 100` while quarterly value history is being validated.")
                     vsqp_compare_preset = st.selectbox(
                         "Strict Quarterly Value Preset",
@@ -5359,7 +5363,7 @@ def _render_strategy_compare_workspace() -> None:
                     _render_ticker_preview(VALUE_STRICT_PRESETS[vsqp_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(vsqp_compare_preset, VALUE_STRICT_PRESETS[vsqp_compare_preset])
-                    compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"] = {
+                    compare_strategy_overrides["Value Snapshot (Strict Quarterly)"] = {
                         "preset_name": vsqp_compare_preset,
                         "tickers": VALUE_STRICT_PRESETS[vsqp_compare_preset],
                         "universe_mode": "preset",
@@ -5401,12 +5405,12 @@ def _render_strategy_compare_workspace() -> None:
                             st.markdown("##### Strict Quarterly Value Trend Filter")
                         with trend_help_col:
                             _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                        compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["trend_filter_enabled"] = st.checkbox(
                             "Enable",
                             value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                             key="compare_vsqp_trend_filter_enabled",
                         )
-                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                        compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["trend_filter_window"] = int(
                             st.number_input(
                                 "Strict Quarterly Value Trend Filter Window",
                                 min_value=20,
@@ -5417,32 +5421,32 @@ def _render_strategy_compare_workspace() -> None:
                             )
                         )
                         (
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["market_regime_window"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["market_regime_benchmark"],
                         ) = _render_market_regime_overlay_inputs(
                             key_prefix="compare_vsqp",
                             label_prefix="Strict Quarterly Value ",
                         )
                     with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
                         _render_strict_portfolio_handling_contracts_intro()
-                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
+                        compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
                             key_prefix="compare_vsqp",
                             label_prefix="Strict Quarterly Value",
                         )
                         (
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_fill_enabled"],
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["partial_cash_retention_enabled"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["rejected_slot_fill_enabled"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["partial_cash_retention_enabled"],
                         ) = strict_rejection_handling_mode_to_flags(
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"]
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["rejected_slot_handling_mode"]
                         )
-                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                        compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
                             key_prefix="compare_vsqp",
                             label_prefix="Strict Quarterly Value",
                         )
                         (
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["risk_off_mode"],
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["defensive_tickers"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["risk_off_mode"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly)"]["defensive_tickers"],
                         ) = _render_strict_defensive_sleeve_contract_inputs(
                             key_prefix="compare_vsqp",
                             label_prefix="Strict Quarterly Value",
@@ -5626,9 +5630,9 @@ def _render_strategy_compare_workspace() -> None:
                             drawdown_guardrail_enabled=compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
                         )
 
-            if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)" and quality_value_compare_settings_container is not None:
+            if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly)" and quality_value_compare_settings_container is not None:
                 with quality_value_compare_settings_container:
-                    st.markdown("##### Quality + Value Snapshot (Strict Quarterly Prototype)")
+                    st.markdown("##### Quality + Value Snapshot (Strict Quarterly)")
                     st.caption("Research-only compare path. Default preset stays at `US Base Universe 100` while quarterly blended history is being validated.")
                     qvqp_compare_preset = st.selectbox(
                         "Strict Quarterly Multi-Factor Preset",
@@ -5652,7 +5656,7 @@ def _render_strategy_compare_workspace() -> None:
                     _render_ticker_preview(QUALITY_STRICT_PRESETS[qvqp_compare_preset], preview_count=8, tail_count=3)
                     _render_historical_universe_caption()
                     _render_strict_preset_status_note(qvqp_compare_preset, QUALITY_STRICT_PRESETS[qvqp_compare_preset])
-                    compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"] = {
+                    compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"] = {
                         "preset_name": qvqp_compare_preset,
                         "tickers": QUALITY_STRICT_PRESETS[qvqp_compare_preset],
                         "universe_mode": "preset",
@@ -5700,12 +5704,12 @@ def _render_strategy_compare_workspace() -> None:
                             st.markdown("##### Strict Quarterly Multi-Factor Trend Filter")
                         with trend_help_col:
                             _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["trend_filter_enabled"] = st.checkbox(
                             "Enable",
                             value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
                             key="compare_qvqp_trend_filter_enabled",
                         )
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["trend_filter_window"] = int(
                             st.number_input(
                                 "Strict Quarterly Multi-Factor Trend Filter Window",
                                 min_value=20,
@@ -5716,32 +5720,32 @@ def _render_strategy_compare_workspace() -> None:
                             )
                         )
                         (
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["market_regime_window"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["market_regime_benchmark"],
                         ) = _render_market_regime_overlay_inputs(
                             key_prefix="compare_qvqp",
                             label_prefix="Strict Quarterly Multi-Factor ",
                         )
                     with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
                         _render_strict_portfolio_handling_contracts_intro()
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
                             key_prefix="compare_qvqp",
                             label_prefix="Strict Quarterly Multi-Factor",
                         )
                         (
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_fill_enabled"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["partial_cash_retention_enabled"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["rejected_slot_fill_enabled"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["partial_cash_retention_enabled"],
                         ) = strict_rejection_handling_mode_to_flags(
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"]
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["rejected_slot_handling_mode"]
                         )
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
                             key_prefix="compare_qvqp",
                             label_prefix="Strict Quarterly Multi-Factor",
                         )
                         (
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["risk_off_mode"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["defensive_tickers"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["risk_off_mode"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly)"]["defensive_tickers"],
                         ) = _render_strict_defensive_sleeve_contract_inputs(
                             key_prefix="compare_qvqp",
                             label_prefix="Strict Quarterly Multi-Factor",

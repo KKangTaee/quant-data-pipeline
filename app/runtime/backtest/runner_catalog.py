@@ -84,7 +84,7 @@ _RUNNER_DEFINITIONS = [
     ),
     BacktestRunnerDefinition(
         "quality_snapshot_strict_quarterly_prototype",
-        "Quality Snapshot (Strict Quarterly Prototype)",
+        "Quality Snapshot (Strict Quarterly)",
         "app.runtime.backtest.runners.strict_factor",
         "factor_strategy",
         "run_quality_snapshot_strict_quarterly_prototype_backtest_from_db",
@@ -100,7 +100,7 @@ _RUNNER_DEFINITIONS = [
     ),
     BacktestRunnerDefinition(
         "value_snapshot_strict_quarterly_prototype",
-        "Value Snapshot (Strict Quarterly Prototype)",
+        "Value Snapshot (Strict Quarterly)",
         "app.runtime.backtest.runners.strict_factor",
         "factor_strategy",
         "run_value_snapshot_strict_quarterly_prototype_backtest_from_db",
@@ -116,7 +116,7 @@ _RUNNER_DEFINITIONS = [
     ),
     BacktestRunnerDefinition(
         "quality_value_snapshot_strict_quarterly_prototype",
-        "Quality + Value Snapshot (Strict Quarterly Prototype)",
+        "Quality + Value Snapshot (Strict Quarterly)",
         "app.runtime.backtest.runners.strict_factor",
         "factor_strategy",
         "run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db",

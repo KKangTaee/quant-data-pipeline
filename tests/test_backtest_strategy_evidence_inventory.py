@@ -36,7 +36,7 @@ class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
             ):
                 self.assertTrue(row[required_field], f"{strategy_key} missing {required_field}")
 
-    def test_research_lane_and_prototype_labels_are_explicit(self) -> None:
+    def test_research_lane_and_quarterly_formal_labels_are_explicit(self) -> None:
         from app.services.backtest_strategy_evidence_inventory import build_strategy_evidence_inventory
 
         rows_by_key = {row["strategy_key"]: row for row in build_strategy_evidence_inventory()}
@@ -53,9 +53,10 @@ class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
         }
         for strategy_key in quarterly_keys:
             row = rows_by_key[strategy_key]
-            self.assertEqual(row["maturity_label"], "Prototype / contract-smoke")
-            self.assertIn("prototype", row["validation_readiness"].lower())
-            self.assertIn("quarterly maturation", row["next_action"].lower())
+            self.assertEqual(row["maturity_label"], "Formal strict quarterly")
+            self.assertEqual(row["maturity_group"], "Evidence mature")
+            self.assertIn("Practical Validation", row["validation_readiness"])
+            self.assertIn("post-run", row["next_action"].lower())
 
     def test_first_evidence_mature_candidate_group_is_fixed(self) -> None:
         from app.services.backtest_strategy_evidence_inventory import build_strategy_evidence_inventory
