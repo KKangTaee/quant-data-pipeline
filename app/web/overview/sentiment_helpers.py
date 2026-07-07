@@ -384,6 +384,16 @@ def build_sentiment_react_workbench_payload(snapshot: dict[str, Any]) -> dict[st
             "tone": freshness_tone,
             "detail": f"latest {latest_date} · missing {missing_count} · stale {stale_count}",
         },
+        "analysis_steps": [
+            {
+                "title": _display_text(item.get("title")),
+                "status": _display_text(item.get("status"), ""),
+                "detail": _display_text(item.get("detail"), ""),
+                "tone": _sentiment_tone(item.get("tone") or "neutral"),
+            }
+            for item in list(analysis.get("analysis_steps") or [])
+            if isinstance(item, dict)
+        ],
         "drivers": {
             "summary": dict(analysis.get("driver_summary") or {}),
             "lanes": _sentiment_driver_lanes(analysis),

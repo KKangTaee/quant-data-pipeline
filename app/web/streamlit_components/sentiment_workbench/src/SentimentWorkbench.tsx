@@ -16,6 +16,49 @@ type SentimentMetric = {
   tone?: string;
 };
 
+type SentimentAnalysisStep = {
+  title: string;
+  status?: string;
+  detail?: string;
+  tone?: string;
+};
+
+type SentimentDriverItem = {
+  series: string;
+  label_ko: string;
+  score?: string;
+  rating?: string;
+  tone?: string;
+  direction?: string;
+  current_reading?: string;
+};
+
+type SentimentDriverLane = {
+  key: string;
+  label: string;
+  tone?: string;
+  count: number;
+  items: SentimentDriverItem[];
+};
+
+type SentimentComponentExplanation = {
+  series: string;
+  label_ko: string;
+  score?: number | string;
+  rating_label_ko?: string;
+  tone?: string;
+  direction?: string;
+  what_it_checks?: string;
+  current_reading?: string;
+};
+
+type SentimentNextCheck = {
+  target: string;
+  reason?: string;
+  watch_for?: string;
+  tone?: string;
+};
+
 type SentimentWorkbenchPayload = {
   schema_version: "sentiment_react_workbench_v1";
   component: "SentimentWorkbench";
@@ -39,6 +82,12 @@ type SentimentWorkbenchPayload = {
     detail: string;
     tone: string;
   };
+  analysis_steps: SentimentAnalysisStep[];
+  drivers: {
+    lanes: SentimentDriverLane[];
+  };
+  component_explanations: SentimentComponentExplanation[];
+  next_checks: SentimentNextCheck[];
   boundary_note: string;
   action_boundary: "python_dispatch_only";
 };
@@ -61,6 +110,16 @@ function toneColor(tone: string | undefined) {
     return "#dc2626";
   }
   return "#64748b";
+}
+
+function displayValue(value: number | string | undefined) {
+  if (value === undefined || value === null || value === "") {
+    return "-";
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value.toFixed(1) : "-";
+  }
+  return value;
 }
 
 function syncFrameHeightSoon() {
@@ -90,6 +149,10 @@ function SentimentWorkbench({ args }: Props) {
     setPendingActionLabel(action.label);
     Streamlit.setComponentValue({ event: { id: action.id, nonce: Date.now() } });
   };
+  const metricByLabel = (label: string) => payload.summary.metrics.find((metric) => metric.label === label);
+  const cnnMetric = metricByLabel("CNN Fear & Greed");
+  const aaiiBearishMetric = metricByLabel("AAII Bearish");
+  const bullBearSpreadMetric = metricByLabel("Bull-Bear Spread");
 
   return (
     <section
@@ -171,6 +234,121 @@ function SentimentWorkbench({ args }: Props) {
           </div>
         ) : null}
       </div>
+
+      <section className="sentiment-workbench__cross-read">
+        <div className="sentiment-workbench__section-heading">
+          <span>CNN / AAII 같이 보기</span>
+          <small>service analysis</small>
+        </div>
+        <div className="sentiment-workbench__cross-metrics">
+          {[cnnMetric, aaiiBearishMetric, bullBearSpreadMetric].filter(Boolean).map((metric) => (
+            <div
+              className="sentiment-workbench__cross-metric"
+              key={metric!.label}
+              style={{ "--metric-tone": toneColor(metric!.tone) } as React.CSSProperties}
+            >
+              <span>{metric!.label}</span>
+              <strong>{metric!.value}</strong>
+              {metric!.detail ? <small>{metric!.detail}</small> : null}
+            </div>
+          ))}
+        </div>
+        <div className="sentiment-workbench__analysis-steps">
+          {payload.analysis_steps.map((step) => (
+            <article
+              className="sentiment-workbench__analysis-step"
+              key={`${step.title}-${step.status || ""}`}
+              style={{ "--metric-tone": toneColor(step.tone) } as React.CSSProperties}
+            >
+              <div className="sentiment-workbench__analysis-title">{step.title}</div>
+              {step.status ? <div className="sentiment-workbench__analysis-status">{step.status}</div> : null}
+              {step.detail ? <p>{step.detail}</p> : null}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="sentiment-workbench__driver-section">
+        <div className="sentiment-workbench__section-heading">
+          <span>무엇이 이 심리를 만들었나</span>
+          <small>CNN 구성요소 grouping</small>
+        </div>
+        <div className="sentiment-workbench__driver-lanes">
+          {payload.drivers.lanes.map((lane) => (
+            <div
+              className="sentiment-workbench__driver-lane"
+              key={lane.key}
+              style={{ "--metric-tone": toneColor(lane.tone) } as React.CSSProperties}
+            >
+              <div className="sentiment-workbench__driver-lane-header">
+                <span>{lane.label}</span>
+                <strong>{lane.count}</strong>
+              </div>
+              <div className="sentiment-workbench__driver-cards">
+                {lane.items.map((item) => (
+                  <article className="sentiment-workbench__driver-card" key={`${lane.key}-${item.series}`}>
+                    <div className="sentiment-workbench__driver-card-top">
+                      <span>{item.label_ko || item.series}</span>
+                      <strong>{displayValue(item.score)}</strong>
+                    </div>
+                    {item.rating ? <div className="sentiment-workbench__driver-rating">{item.rating}</div> : null}
+                    {item.current_reading ? <p>{item.current_reading}</p> : null}
+                  </article>
+                ))}
+                {lane.items.length === 0 ? (
+                  <div className="sentiment-workbench__driver-empty">해당 방향의 구성요소가 없습니다.</div>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="sentiment-workbench__component-section">
+        <div className="sentiment-workbench__section-heading">
+          <span>CNN 구성요소 상세</span>
+          <small>component explanations</small>
+        </div>
+        <div className="sentiment-workbench__component-list">
+          {payload.component_explanations.map((component) => (
+            <article
+              className="sentiment-workbench__component-item"
+              key={component.series}
+              style={{ "--metric-tone": toneColor(component.tone) } as React.CSSProperties}
+            >
+              <div className="sentiment-workbench__component-score">{displayValue(component.score)}</div>
+              <div className="sentiment-workbench__component-copy">
+                <div className="sentiment-workbench__component-title">
+                  <span>{component.label_ko || component.series}</span>
+                  {component.rating_label_ko ? <strong>{component.rating_label_ko}</strong> : null}
+                </div>
+                {component.what_it_checks ? <p>{component.what_it_checks}</p> : null}
+                {component.current_reading ? <small>{component.current_reading}</small> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="sentiment-workbench__next-checks">
+        <div className="sentiment-workbench__section-heading">
+          <span>다음에 확인할 것</span>
+          <small>next checks</small>
+        </div>
+        <div className="sentiment-workbench__next-check-list">
+          {payload.next_checks.map((check) => (
+            <article
+              className="sentiment-workbench__next-check"
+              key={`${check.target}-${check.reason || ""}`}
+              style={{ "--metric-tone": toneColor(check.tone) } as React.CSSProperties}
+            >
+              <div className="sentiment-workbench__next-check-target">{check.target}</div>
+              {check.reason ? <p>{check.reason}</p> : null}
+              {check.watch_for ? <small>{check.watch_for}</small> : null}
+            </article>
+          ))}
+        </div>
+      </section>
     </section>
   );
 }

@@ -12,3 +12,5 @@
 - 2차 QA: focused RED/GREEN scaffold test, payload contract test, Sentiment `py_compile`, `npm install`, `npm run build`, and `git diff --check` passed. `node_modules` was removed from the worktree after build and must not be committed.
 - 3차 status: complete. Reworked the React first viewport around service-owned phase/headline/summary, core metric cards, freshness counts, and refresh/reload actions tied to the stored data basis.
 - 3차 QA: focused RED/GREEN summary/freshness surface test and Vite production build passed. New build assets replaced the previous scaffold bundle; `node_modules` was removed again after build.
+- 4차 status: complete. Added React sections for CNN / AAII cross-read, service-owned analysis steps, driver lanes, CNN component explanations, and next checks. The frontend displays existing service text and fields without inventing new recommendations.
+- 4차 QA: focused RED/GREEN driver/payload tests and Vite production build passed. New build assets replaced the 3차 bundle; `node_modules` was removed after build.

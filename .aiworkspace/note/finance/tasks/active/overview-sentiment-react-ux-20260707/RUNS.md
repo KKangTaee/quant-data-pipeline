@@ -40,3 +40,20 @@
   - Result: exit 0.
 - Phase 3 diff check: `git diff --check`
   - Result: exit 0.
+- Phase 4 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks`
+  - Result: failed because React did not yet render `analysis_steps`, CNN / AAII cross-read, driver lanes, component explanations, or next checks.
+- Phase 4 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: failed with `KeyError: 'analysis_steps'`, as expected before preserving service-owned analysis steps in the payload.
+- Phase 4 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks`
+  - Result: `Ran 1 test ... OK`.
+- Phase 4 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 1 test ... OK`.
+- Phase 4 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets.
+- Phase 4 cleanup: removed `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 4 focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 5 tests ... OK`.
+- Phase 4 compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py`
+  - Result: exit 0.
+- Phase 4 diff check: `git diff --check`
+  - Result: exit 0.

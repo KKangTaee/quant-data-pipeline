@@ -6213,6 +6213,37 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".sentiment-workbench__metric-card", react_style)
         self.assertIn(".sentiment-workbench__freshness-panel", react_style)
 
+    def test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("payload.analysis_steps.map", react_source)
+        self.assertIn("sentiment-workbench__analysis-steps", react_source)
+        self.assertIn("metricByLabel(\"CNN Fear & Greed\")", react_source)
+        self.assertIn("metricByLabel(\"AAII Bearish\")", react_source)
+        self.assertIn("metricByLabel(\"Bull-Bear Spread\")", react_source)
+        self.assertIn("sentiment-workbench__cross-read", react_source)
+        self.assertIn("payload.drivers.lanes.map", react_source)
+        self.assertIn("sentiment-workbench__driver-section", react_source)
+        self.assertIn("sentiment-workbench__driver-lanes", react_source)
+        self.assertIn("sentiment-workbench__driver-card", react_source)
+        self.assertIn("payload.component_explanations.map", react_source)
+        self.assertIn("sentiment-workbench__component-section", react_source)
+        self.assertIn("sentiment-workbench__component-list", react_source)
+        self.assertIn("payload.next_checks.map", react_source)
+        self.assertIn("sentiment-workbench__next-checks", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__driver-section"'),
+            react_source.index('className="sentiment-workbench__next-checks"'),
+        )
+        self.assertIn(".sentiment-workbench__cross-read", react_style)
+        self.assertIn(".sentiment-workbench__analysis-steps", react_style)
+        self.assertIn(".sentiment-workbench__driver-lanes", react_style)
+        self.assertIn(".sentiment-workbench__driver-card", react_style)
+        self.assertIn(".sentiment-workbench__component-list", react_style)
+        self.assertIn(".sentiment-workbench__next-checks", react_style)
+
     def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
         helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
 
@@ -14132,6 +14163,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "tone": "positive",
                     "detail": "2개 source 준비, missing 0, stale 0.",
                 },
+                "analysis_steps": [
+                    {
+                        "title": "왜 이렇게 보나",
+                        "status": "CNN 54.7 · AAII spread -0.7pp",
+                        "tone": "neutral",
+                        "detail": "CNN 헤드라인은 중립권이고, Bearish 37.0%는 장기 평균보다 +6.5pp 높습니다.",
+                    }
+                ],
                 "driver_summary": {"greed_count": 1, "fear_count": 1, "neutral_count": 0},
                 "driver_groups": {
                     "greed": [
@@ -14225,6 +14264,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
         self.assertEqual(payload["freshness"]["latest_observation_date"], "2026-06-04")
         self.assertEqual(payload["freshness"]["source_count"], 2)
+        self.assertEqual(payload["analysis_steps"][0]["title"], "왜 이렇게 보나")
+        self.assertIn("AAII spread", payload["analysis_steps"][0]["status"])
         self.assertEqual(payload["drivers"]["summary"]["greed_count"], 1)
         self.assertEqual(payload["drivers"]["lanes"][0]["key"], "greed")
         self.assertEqual(payload["drivers"]["lanes"][0]["items"][0]["current_reading"], "지수 추세: 지수 자체의 추세가 강합니다.")
