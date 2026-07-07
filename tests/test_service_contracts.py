@@ -8326,6 +8326,39 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("_select_market_refresh_mode", eod_body)
         self.assertNotIn("_render_market_auto_refresh_summary", eod_body)
 
+    def test_market_movers_eod_refresh_result_caption_explains_smart_scope(self) -> None:
+        from app.web.overview import market_movers_helpers
+
+        helper = getattr(market_movers_helpers, "_market_movers_refresh_scope_detail", None)
+        self.assertTrue(callable(helper), "Market Movers job result should expose a smart refresh scope helper.")
+
+        detail = helper(
+            {
+                "details": {
+                    "refresh_strategy": "smart_delta",
+                    "symbols_requested": 503,
+                    "symbols_selected": 18,
+                    "symbols_skipped_current": 485,
+                    "delta_symbols_count": 12,
+                    "missing_symbols_count": 6,
+                    "delta_start": "2026-07-03",
+                    "delta_end": "2026-07-08",
+                }
+            }
+        )
+
+        self.assertIn("스마트 갱신", detail)
+        self.assertIn("18개 갱신", detail)
+        self.assertIn("485개 최신 스킵", detail)
+        self.assertIn("Delta 12개", detail)
+        self.assertIn("2026-07-03~2026-07-08", detail)
+        self.assertIn("Full window 6개", detail)
+
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        result_body = source[source.index("def _render_market_job_result") :]
+        result_body = result_body[: result_body.index("def _auto_refresh_reason_label")]
+        self.assertIn("_market_movers_refresh_scope_detail(result)", result_body)
+
     def test_market_movers_empty_snapshot_replaces_stale_why_it_moved_panel(self) -> None:
         source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
 

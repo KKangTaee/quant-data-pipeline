@@ -1075,6 +1075,42 @@ def _market_movers_duration_detail(value: Any) -> str:
     return f"{_format_market_movers_stopwatch(value)} ({_snapshot_value(value)}s)"
 
 
+def _market_movers_refresh_scope_detail(result: dict[str, Any]) -> str:
+    details = dict(result.get("details") or {})
+    strategy = str(details.get("refresh_strategy") or "").strip()
+    if strategy not in {"smart_delta", "full_window_forced"}:
+        return ""
+
+    requested = _safe_int(details.get("symbols_requested"))
+    selected = _safe_int(details.get("symbols_selected"))
+    skipped = _safe_int(details.get("symbols_skipped_current"))
+    delta_count = _safe_int(details.get("delta_symbols_count"))
+    missing_count = _safe_int(details.get("missing_symbols_count"))
+    parts: list[str] = []
+
+    if strategy == "full_window_forced":
+        parts.append(f"전체 갱신: {selected:,}개 종목을 full window로 다시 확인")
+    elif requested > 0:
+        parts.append(f"스마트 갱신: {selected:,}개 갱신 / {requested:,}개 중 {skipped:,}개 최신 스킵")
+    else:
+        parts.append(f"스마트 갱신: {selected:,}개 갱신, {skipped:,}개 최신 스킵")
+
+    delta_start = str(details.get("delta_start") or "").strip()
+    delta_end = str(details.get("delta_end") or "").strip()
+    if delta_count > 0:
+        if delta_start and delta_end:
+            parts.append(f"Delta {delta_count:,}개 ({delta_start}~{delta_end})")
+        else:
+            parts.append(f"Delta {delta_count:,}개")
+    if missing_count > 0:
+        parts.append(f"Full window {missing_count:,}개")
+
+    fallback = str(details.get("refresh_fallback_reason") or "").strip()
+    if fallback:
+        parts.append(f"Fallback: {fallback}")
+    return " · ".join(parts)
+
+
 def _render_market_movers_running_progress_card(
     *,
     label: str,
@@ -1264,6 +1300,9 @@ def _render_market_job_result(result_key: str) -> None:
                 f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}, "
                 f"Source: {source}, Method: {method}, Duration: {duration_detail}"
             )
+        scope_detail = _market_movers_refresh_scope_detail(result)
+        if scope_detail:
+            st.caption(scope_detail)
 
 
 def _auto_refresh_reason_label(value: Any) -> str:
@@ -2517,12 +2556,15 @@ def _render_market_movers_eod_refresh_bar(
         key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
         use_container_width=True,
         type="primary",
-        help=f"{period_label} 랭킹 산출에 필요한 저장 EOD 가격 이력을 기존 OHLCV 경로로 갱신합니다.",
+        help=(
+            f"{period_label} 랭킹 산출에 필요한 저장 EOD 가격 이력을 기존 OHLCV 경로로 갱신합니다. "
+            "이미 최신인 종목은 건너뛰고 누락되었거나 오래된 종목을 우선 보강합니다."
+        ),
     ):
         _run_market_movers_job_with_progress(
             result_key=eod_result_key,
             label=f"{universe_label} {period_label} 가격 이력 갱신",
-            detail="비-Daily 랭킹 산출에 필요한 저장 EOD 가격 이력을 갱신합니다.",
+            detail="저장된 최신 날짜를 먼저 확인한 뒤 최신 종목은 건너뛰고 누락/오래된 가격 이력만 보강합니다.",
             run_job=lambda: run_overview_market_movers_eod_history(
                 universe_code=universe_code,
                 universe_limit=universe_limit,
