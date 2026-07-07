@@ -4959,7 +4959,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "forbidden": "_legacy._render_events_tab",
                 "required": [
                     "render_events_header()",
-                    "render_event_refresh_toolbar()",
+                    "render_event_refresh_toolbar(show_refresh=not react_available)",
                     "load_event_snapshot_context(",
                     "render_events_overview_lanes(",
                 ],
@@ -5358,6 +5358,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "load_event_snapshot_context",
             "render_event_refresh_results",
             "render_events_overview_lanes",
+            "render_events_streamlit_evidence_section",
+            "events_react_workbench_available",
             "has_event_rows",
             "filter_event_calendar_rows",
             "render_event_detail_tabs",
@@ -6207,18 +6209,19 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertTrue((component_root / "src" / "EventsWorkbench.tsx").exists())
         self.assertTrue((component_root / "src" / "main.tsx").exists())
         self.assertFalse(events_react_component_available(component_root / "missing-dist"))
+        self.assertIn("events_react_workbench_available", helper_source)
         self.assertIn("render_events_react_workbench", helper_source)
         self.assertIn("build_events_workbench_payload", helper_source)
-        self.assertIn("render_events_react_workbench_section(context)", events_tab_source)
+        self.assertIn("react_available = events_react_workbench_available()", events_tab_source)
+        self.assertIn("render_event_refresh_toolbar(show_refresh=not react_available)", events_tab_source)
+        self.assertIn("react_rendered = render_events_react_workbench_section(context) if react_available else False", events_tab_source)
+        self.assertIn("if not react_rendered:", events_tab_source)
         self.assertIn("render_events_overview_lanes(context)", events_tab_source)
-        self.assertLess(
-            events_tab_source.index("render_events_react_workbench_section(context)"),
-            events_tab_source.index("render_events_overview_lanes(context)"),
-        )
+        self.assertIn("render_events_streamlit_evidence_section(context, expanded=False)", events_tab_source)
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn('payload.schema_version === "events_workbench_v1"', react_source)
         self.assertIn("payload.brief", react_source)
-        self.assertIn("payload.rails.map", react_source)
+        self.assertIn("rails.map", react_source)
         self.assertIn("payload.trust_review", react_source)
         self.assertIn("Streamlit.setComponentValue", react_source)
         self.assertIn("Streamlit.setFrameHeight", react_source)
@@ -6237,7 +6240,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('if action_id == "refresh_market_structure"', helper_source)
         self.assertIn('if action_id == "refresh_earnings"', helper_source)
         self.assertIn("run_overview_market_structure_calendar", helper_source)
-        self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("commandActions.map", react_source)
         self.assertIn("setPendingActionId", react_source)
         self.assertIn("events-workbench__command", react_source)
         self.assertIn("refresh_boundary", react_source)
@@ -6251,9 +6254,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("setFamilyFilter", react_source)
         self.assertIn("setReviewFilter", react_source)
         self.assertIn("filteredRails", react_source)
-        self.assertIn("trust.sections.map", react_source)
-        self.assertIn("payload.calendar.days", react_source)
-        self.assertIn("payload.calendar.density", react_source)
+        self.assertIn("trustSections.map", react_source)
+        self.assertIn("calendarDays", react_source)
+        self.assertIn("calendarDensity", react_source)
+        self.assertNotIn("payload.rails =", react_source)
+        self.assertNotIn("payload.command =", react_source)
+        self.assertNotIn("payload.calendar =", react_source)
+        self.assertNotIn("payload.evidence =", react_source)
         self.assertIn("events-workbench__day-tooltip", react_source)
         self.assertIn("setExpandedEvidence", react_source)
         self.assertIn("events-workbench__evidence-table", react_source)
@@ -6587,14 +6594,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn('"Sector / Industry"', render_body)
         self.assertIn("build_overview_breadth_heatmap_summary", Path("app/services/overview/market_movers.py").read_text(encoding="utf-8"))
 
-    def test_overview_events_tab_renders_macro_week_lane_before_calendar_filters(self) -> None:
+    def test_overview_events_tab_demotes_streamlit_legacy_when_react_renders(self) -> None:
         source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
         tab_body = source[source.index("def render_events_tab"):]
-        lane_index = tab_body.index("render_events_overview_lanes(")
-        filter_index = tab_body.index("filter_event_calendar_rows(")
 
-        self.assertLess(lane_index, filter_index)
+        react_index = tab_body.index("react_rendered = render_events_react_workbench_section")
+        lane_guard_index = tab_body.index("if not react_rendered:")
+        evidence_index = tab_body.index("render_events_streamlit_evidence_section(context, expanded=False)")
+
+        self.assertLess(react_index, lane_guard_index)
+        self.assertLess(lane_guard_index, evidence_index)
+        self.assertIn("render_event_refresh_toolbar(show_refresh=not react_available)", tab_body)
+        self.assertIn("with st.expander(\"상세 표 / 전체 근거\"", helper_source)
+        self.assertIn("filter_event_calendar_rows(context)", helper_source)
         self.assertIn("load_overview_macro_week_lane(context.snapshot)", helper_source)
         self.assertNotIn("_legacy.load_overview_macro_week_lane", helper_source)
 

@@ -8638,3 +8638,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: build가 있으면 React를 보여주되, scaffold 단계에서 Agenda / Calendar / Quality / Raw를 제거하면 안 됨.
 - Analysis result: `render_events_react_workbench_section(context)`를 `render_events_overview_lanes(context)` 앞에 두면 React가 먼저 보이고 기존 fallback은 그대로 남는다.
 - Follow-up: 7차 완료. 다음은 React hero/freshness/refresh UX를 실제 첫 화면 중심으로 개선한다.
+
+### 2026-07-07 - Events legacy UI should be demoted after React workbench
+
+- User request: React 컴포넌트 전환 후 불필요한 레거시는 가능한 정리하고 싶다고 요청함.
+- Interpreted goal: React가 이미 대체한 summary / source lane / macro week lane / refresh popover는 기본 화면에서 제거하되, raw/detail evidence와 build-missing fallback은 유지해야 함.
+- Analysis result: React build가 available이면 Events tab entrypoint에서 Streamlit legacy lanes를 숨기고, detailed Streamlit tabs는 collapsed `상세 표 / 전체 근거` 섹션으로 낮추는 것이 가장 작은 안전한 정리다.
+- Follow-up: 후속 cleanup 완료. React props mutation도 함께 제거했고, desktop/mobile Browser QA에서 duplicate legacy lane 부재와 collapsed evidence 상태를 확인했다.

@@ -94,9 +94,17 @@ def render_events_header() -> None:
     st.markdown("### Events")
 
 
-def render_event_refresh_toolbar() -> str:
+def events_react_workbench_available() -> bool:
+    return events_react_component_available()
+
+
+def render_event_refresh_toolbar(*, show_refresh: bool = True) -> str:
     render_overview_toolbar_label("일정 타입")
-    controls = st.columns([0.95, 2.9, 0.9], gap="small", vertical_alignment="bottom")
+    controls = (
+        st.columns([0.95, 2.9, 0.9], gap="small", vertical_alignment="bottom")
+        if show_refresh
+        else st.columns([0.95, 3.8], gap="small", vertical_alignment="bottom")
+    )
     event_options = list(EVENT_TYPE_LABELS.keys())
     event_filter = str(
         controls[0].selectbox(
@@ -110,6 +118,9 @@ def render_event_refresh_toolbar() -> str:
             key="overview_events_type_filter",
         )
     )
+    if not show_refresh:
+        return event_filter
+
     with controls[2].popover(
         "Refresh",
         icon=":material/sync:",
@@ -1210,3 +1221,9 @@ def render_event_detail_tabs(filtered_rows: Any) -> None:
             width="stretch",
             hide_index=True,
         )
+
+
+def render_events_streamlit_evidence_section(context: EventSnapshotContext, *, expanded: bool = False) -> None:
+    with st.expander("상세 표 / 전체 근거", expanded=expanded):
+        filtered_rows = filter_event_calendar_rows(context)
+        render_event_detail_tabs(filtered_rows)

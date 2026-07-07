@@ -83,3 +83,11 @@
 - 2026-07-07: 10차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py finance/data/market_intelligence.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py tests/test_service_contracts.py` - PASS.
 - 2026-07-07: 10차 QA - final `npm install` / `npm run build` for `events_workbench` - PASS with unchanged `index-BTbfZ49w.css` / `index-BfCDl3_6.js`; generated `node_modules` removed.
 - 2026-07-07: 10차 QA - `git diff --check` - PASS.
+- 2026-07-07: legacy cleanup RED - focused Events React/fallback contract tests failed before implementation on missing `events_react_workbench_available`, missing React-gated entrypoint flow, and existing React prop mutation.
+- 2026-07-07: legacy cleanup GREEN - focused Events React/fallback contract tests, 5 tests - PASS after React availability gating, collapsed Streamlit evidence fallback, and props defaulting cleanup.
+- 2026-07-07: legacy cleanup QA - `py_compile app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: legacy cleanup QA - `OverviewAutomationContractTests`, 154 tests - PASS.
+- 2026-07-07: legacy cleanup QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: legacy cleanup QA - `npm install` / `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: legacy cleanup QA - `git diff --check` - PASS.
+- 2026-07-07: legacy cleanup Browser QA desktop/mobile at `http://localhost:8503/?overview_tab=events` - PASS. React brief / command rendered, duplicate legacy `Next Event` / `stored rows` lanes absent, top Streamlit refresh popover absent, `상세 표 / 전체 근거` remained collapsed. Screenshots `browser-qa-events-legacy-cleanup.png` and `browser-qa-events-legacy-cleanup-mobile.png` are generated artifacts and stay uncommitted.

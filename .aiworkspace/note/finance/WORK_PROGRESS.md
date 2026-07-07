@@ -5602,3 +5602,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `events_workbench` Vite component, static build, Python wrapper, Events tab integration을 추가했다.
   - React는 현재 additive scaffold로 기존 Streamlit lanes / detail tabs 위에 렌더링되며 fallback을 제거하지 않았다.
   - 다음 차수는 hero brief / freshness / refresh UX를 React 쪽에서 제품 흐름으로 다듬는 작업이다.
+- Overview Events legacy cleanup follow-up 2026-07-07:
+  - React workbench build가 있으면 Events 탭은 중복 Streamlit summary / source / macro-week lanes와 상단 Refresh popover를 숨기고, React command band를 refresh entry로 사용한다.
+  - Streamlit Agenda / Calendar / Quality / Raw는 삭제하지 않고 하단 `상세 표 / 전체 근거` collapsed fallback/evidence section으로 낮췄다.
+  - React component는 incoming payload를 직접 mutate하지 않도록 기본값을 파생 상수로 정리했다. 상세 QA 기록은 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/RUNS.md`를 본다.

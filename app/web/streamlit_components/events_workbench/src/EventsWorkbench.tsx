@@ -298,20 +298,20 @@ function rawValue(row: Record<string, unknown>, key: string): string {
 
 function EventsWorkbench({ args }: ComponentProps) {
   const payload = ((args || {}).payload || {}) as EventsPayload;
-  payload.rails = payload.rails || [];
-  payload.command = payload.command || { actions: [] };
-  payload.command.actions = payload.command.actions || [];
-  payload.calendar = payload.calendar || { days: [], density: [] };
-  payload.calendar.days = payload.calendar.days || [];
-  payload.calendar.density = payload.calendar.density || [];
-  payload.evidence = payload.evidence || { rows: [] };
-  payload.evidence.rows = payload.evidence.rows || [];
+  const rails = payload.rails || [];
+  const command = payload.command || { actions: [] };
+  const commandActions = command.actions || [];
+  const calendar = payload.calendar || { days: [], density: [] };
+  const calendarDays = calendar.days || [];
+  const calendarDensity = calendar.density || [];
+  const evidence = payload.evidence || { rows: [] };
+  const evidenceRows = evidence.rows || [];
   const brief = payload.brief || {};
   const counts = brief.counts || {};
   const sourceSummary = brief.source_summary || {};
   const freshness = brief.freshness_summary || {};
   const trust = payload.trust_review || {};
-  trust.sections = trust.sections || [];
+  const trustSections = trust.sections || [];
   const [pendingActionId, setPendingActionId] = useState("");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [reviewFilter, setReviewFilter] = useState("all");
@@ -320,7 +320,7 @@ function EventsWorkbench({ args }: ComponentProps) {
 
   const familyOptions = FAMILY_OPTIONS;
   const reviewOptions = REVIEW_OPTIONS;
-  const filteredRails = payload.rails.map((rail) => {
+  const filteredRails = rails.map((rail) => {
     const items = filterItems(rail.items || [], familyFilter, reviewFilter);
     return {
       ...rail,
@@ -329,7 +329,7 @@ function EventsWorkbench({ args }: ComponentProps) {
       items,
     };
   });
-  const filteredCalendarDays = payload.calendar.days
+  const filteredCalendarDays = calendarDays
     .map((day) => {
       const items = filterItems(day.items || [], familyFilter, reviewFilter);
       return {
@@ -343,9 +343,8 @@ function EventsWorkbench({ args }: ComponentProps) {
       };
     })
     .filter((day) => day.count > 0);
-  const filteredDensity = payload.calendar.density.filter((bucket) => weekMatchesFilter(bucket, familyFilter, reviewFilter));
+  const filteredDensity = calendarDensity.filter((bucket) => weekMatchesFilter(bucket, familyFilter, reviewFilter));
   const maxDensityCount = Math.max(1, ...filteredDensity.map((bucket) => bucket.count || 0));
-  const evidenceRows = payload.evidence.rows;
 
   useEffect(() => {
     Streamlit.setFrameHeight();
@@ -399,11 +398,11 @@ function EventsWorkbench({ args }: ComponentProps) {
       <section className="events-workbench__command">
         <div className="events-workbench__command-copy">
           <span className="events-workbench__eyebrow">Refresh</span>
-          <h3>{payload.command.title || "화면 / 수집 갱신"}</h3>
-          <p>{payload.command.refresh_boundary}</p>
+          <h3>{command.title || "화면 / 수집 갱신"}</h3>
+          <p>{command.refresh_boundary}</p>
         </div>
         <div className="events-workbench__actions">
-          {payload.command.actions.map((action) => (
+          {commandActions.map((action) => (
             <button
               className={`events-workbench__action events-workbench__action--${action.kind || "secondary"}`}
               disabled={pendingActionId === action.id}
@@ -482,7 +481,7 @@ function EventsWorkbench({ args }: ComponentProps) {
             <CountTile label="Stale Estimate" value={trust.stale_estimate_count} />
           </div>
           <div className="events-workbench__trust-sections">
-            {trust.sections.map((section) => {
+            {trustSections.map((section) => {
               const items = filterItems(section.items || [], familyFilter, reviewFilter);
               return (
                 <section className="events-workbench__trust-section" key={section.key}>
@@ -573,7 +572,7 @@ function EventsWorkbench({ args }: ComponentProps) {
             <h3>원본 / 상세 근거</h3>
           </div>
           <button type="button" onClick={() => setExpandedEvidence(!expandedEvidence)}>
-            {expandedEvidence ? "접기" : `${valueText(payload.evidence.row_count, "0")} rows`}
+            {expandedEvidence ? "접기" : `${valueText(evidence.row_count, "0")} rows`}
           </button>
         </div>
         {expandedEvidence ? (
