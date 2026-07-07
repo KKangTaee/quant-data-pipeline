@@ -5610,3 +5610,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 상단 Streamlit `일정 타입` / separate `Refresh Results`를 React-first path에서 제거하고, refresh 결과는 React command band의 last results로 통합했다.
   - React는 `전체 일정 갱신`, 실적 예상 일정 기준, 탭형 event rails, `일정 확정성 / 추정 일정 점검`, 오늘/current-week highlight가 있는 월간 calendar grid를 렌더한다.
   - QA와 commit handoff는 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/STATUS.md` / `RUNS.md`를 본다. Browser screenshots는 generated artifact로 커밋 제외한다.
+- Overview Market Movers smart EOD refresh 1~3차 2026-07-07:
+  - Weekly / Monthly / Yearly 가격 이력 갱신은 freshness preflight로 최신 종목을 스킵하고 stale 종목은 delta, missing / insufficient coverage 종목은 full fallback window로 보강한다.
+  - latest close / volume 이상값은 quality repair 대상으로 포함하며, UI result caption은 갱신 대상 / 최신 스킵 / Delta / Full window / 품질 보강 수를 요약한다.
+  - 상세 QA와 한계는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-smart-eod-refresh-20260707/`를 본다. Browser screenshots / run history는 커밋 제외한다.

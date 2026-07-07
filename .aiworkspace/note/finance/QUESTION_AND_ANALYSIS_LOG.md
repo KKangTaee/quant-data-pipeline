@@ -8652,3 +8652,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: React가 Events의 primary control surface가 되어야 하며, Streamlit selector/result expander는 fallback-only가 되어야 한다. Trust는 예측 신뢰가 아니라 일정 확정성으로 설명되어야 하고, calendar는 active-date grid가 아니라 월간 달력이어야 한다.
 - Analysis result: Python service가 filters / rail tabs / trust copy / today-current-week metadata / earnings universe 기준을 payload로 내려주고, React는 display-only filter/tab/month-grid interaction만 담당하는 구조가 기존 ownership boundary와 맞다.
 - Follow-up: follow-up 1~6차 완료. 전체 일정 갱신은 Python facade에서 순차 실행하고, desktop/mobile Browser QA에서 React brief, command, rail tabs, trust, month calendar, legacy expander 부재를 확인했다.
+
+### 2026-07-07 - Market Movers non-daily refresh should skip current symbols
+
+- User request: Weekly / Monthly / Yearly 가격 이력 갱신이 이미 받은 데이터를 매번 크게 다시 받는 것 같으니, 이미 받은 것은 덜 받고 잘못 받았거나 다시 받아야 하는 것 위주로 갱신해 달라고 요청함.
+- Interpreted goal: non-Daily Market Movers refresh should remain Python-owned ingestion/action logic, but it should preflight DB freshness before calling yfinance OHLCV collection.
+- Analysis result: 최신 심볼은 스킵하고, stale 심볼은 latest date 다음 날부터 delta 수집하며, missing / insufficient row coverage는 기존 full fallback window로 보강하는 것이 기존 collection period 의미를 유지하면서 시간을 줄이는 가장 작은 안전한 변경이다.
+- Follow-up: latest close / volume 이상값은 quality repair로 포함하고, UI result caption은 selected / skipped / delta / full-window / quality counts를 보여준다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-smart-eod-refresh-20260707/`에 있다.

@@ -8100,6 +8100,155 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ]
         )
 
+    def test_overview_market_movers_eod_history_repairs_bad_or_partial_current_symbols(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["GOOD", "BAD", "ZERO", "THIN"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "GOOD": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 63,
+                        "close": 100.0,
+                        "adj_close": 100.0,
+                        "volume": 1200,
+                    },
+                    "BAD": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 63,
+                        "close": None,
+                        "adj_close": 100.0,
+                        "volume": 1200,
+                    },
+                    "ZERO": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 63,
+                        "close": 50.0,
+                        "adj_close": 50.0,
+                        "volume": 0,
+                    },
+                    "THIN": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 4,
+                        "close": 25.0,
+                        "adj_close": 25.0,
+                        "volume": 800,
+                    },
+                },
+                create=True,
+            ),
+            patch.object(overview_actions, "_market_movers_today", return_value=date(2026, 7, 7), create=True),
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                side_effect=[
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 2,
+                        "symbols_requested": 2,
+                        "symbols_processed": 2,
+                        "failed_symbols": [],
+                        "message": "Quality repair completed.",
+                    },
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 63,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Full window completed.",
+                    },
+                ],
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+            )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 65)
+        self.assertEqual(result["details"]["symbols_selected"], 3)
+        self.assertEqual(result["details"]["symbols_skipped_current"], 1)
+        self.assertEqual(result["details"]["quality_symbols_count"], 3)
+        self.assertEqual(result["details"]["bad_latest_symbols_count"], 2)
+        self.assertEqual(result["details"]["insufficient_window_symbols_count"], 1)
+        self.assertEqual(
+            result["details"]["quality_reason_counts"],
+            {"bad_latest_price": 1, "zero_latest_volume": 1, "insufficient_window_rows": 1},
+        )
+        collect.assert_has_calls(
+            [
+                call(
+                    ["BAD", "ZERO"],
+                    start="2026-07-07",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+                call(
+                    ["THIN"],
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+            ]
+        )
+
+    def test_market_movers_eod_freshness_merges_latest_price_quality_fields(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_price_freshness_summary",
+                return_value=pd.DataFrame(
+                    [
+                        {
+                            "symbol": "BAD",
+                            "latest_date": pd.Timestamp("2026-07-07"),
+                            "row_count": 63,
+                        }
+                    ]
+                ),
+            ),
+            patch.object(
+                overview_actions,
+                "load_latest_prices",
+                return_value=pd.DataFrame(
+                    [
+                        {
+                            "symbol": "BAD",
+                            "latest_date": pd.Timestamp("2026-07-07"),
+                            "price": None,
+                            "close": None,
+                            "adj_close": 100.0,
+                            "volume": 0,
+                        }
+                    ]
+                ),
+                create=True,
+            ),
+        ):
+            rows = overview_actions._load_market_movers_eod_freshness(["BAD"])
+
+        self.assertEqual(rows["BAD"]["latest_date"], date(2026, 7, 7))
+        self.assertEqual(rows["BAD"]["row_count"], 63)
+        self.assertIsNone(rows["BAD"]["close"])
+        self.assertEqual(rows["BAD"]["adj_close"], 100.0)
+        self.assertEqual(rows["BAD"]["volume"], 0)
+
     def test_overview_market_movers_refresh_action_uses_large_universe_loader_for_top1000(self) -> None:
         from app.jobs import overview_actions
 
@@ -8353,6 +8502,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("Delta 12개", detail)
         self.assertIn("2026-07-03~2026-07-08", detail)
         self.assertIn("Full window 6개", detail)
+
+        quality_detail = helper(
+            {
+                "details": {
+                    "refresh_strategy": "smart_delta",
+                    "symbols_requested": 503,
+                    "symbols_selected": 18,
+                    "symbols_skipped_current": 485,
+                    "delta_symbols_count": 12,
+                    "missing_symbols_count": 6,
+                    "quality_symbols_count": 3,
+                    "bad_latest_symbols_count": 2,
+                    "insufficient_window_symbols_count": 1,
+                }
+            }
+        )
+
+        self.assertIn("품질 보강 3개", quality_detail)
+        self.assertIn("값 이상 2개", quality_detail)
+        self.assertIn("이력 부족 1개", quality_detail)
 
         source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
         result_body = source[source.index("def _render_market_job_result") :]

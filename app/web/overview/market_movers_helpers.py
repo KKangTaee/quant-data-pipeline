@@ -1086,6 +1086,9 @@ def _market_movers_refresh_scope_detail(result: dict[str, Any]) -> str:
     skipped = _safe_int(details.get("symbols_skipped_current"))
     delta_count = _safe_int(details.get("delta_symbols_count"))
     missing_count = _safe_int(details.get("missing_symbols_count"))
+    quality_count = _safe_int(details.get("quality_symbols_count"))
+    bad_latest_count = _safe_int(details.get("bad_latest_symbols_count"))
+    insufficient_count = _safe_int(details.get("insufficient_window_symbols_count"))
     parts: list[str] = []
 
     if strategy == "full_window_forced":
@@ -1104,6 +1107,13 @@ def _market_movers_refresh_scope_detail(result: dict[str, Any]) -> str:
             parts.append(f"Delta {delta_count:,}개")
     if missing_count > 0:
         parts.append(f"Full window {missing_count:,}개")
+    if quality_count > 0:
+        quality_parts = [f"품질 보강 {quality_count:,}개"]
+        if bad_latest_count > 0:
+            quality_parts.append(f"값 이상 {bad_latest_count:,}개")
+        if insufficient_count > 0:
+            quality_parts.append(f"이력 부족 {insufficient_count:,}개")
+        parts.append(" / ".join(quality_parts))
 
     fallback = str(details.get("refresh_fallback_reason") or "").strip()
     if fallback:

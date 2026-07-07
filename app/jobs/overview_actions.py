@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections import Counter
 from datetime import date, datetime, timedelta
+from math import isfinite
 from typing import Any, Callable, Iterable
 
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
@@ -12,7 +14,7 @@ from finance.data.market_intelligence import (
     load_nasdaq_symbol_directory_universe_members,
     upsert_market_symbol_aliases,
 )
-from finance.loaders.price import load_price_freshness_summary
+from finance.loaders.price import load_latest_prices, load_price_freshness_summary
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -36,6 +38,11 @@ MARKET_MOVERS_EOD_COLLECTION_PERIODS = {
     "weekly": "3mo",
     "monthly": "1y",
     "yearly": "3y",
+}
+MARKET_MOVERS_EOD_MIN_PRICE_ROWS = {
+    "weekly": 10,
+    "monthly": 45,
+    "yearly": 180,
 }
 
 
@@ -351,19 +358,54 @@ def _load_market_movers_eod_freshness(symbols: list[str]) -> dict[str, dict[str,
     if not symbols:
         return {}
     frame = load_price_freshness_summary(symbols=symbols, timeframe="1d")
-    if frame.empty:
-        return {}
     rows: dict[str, dict[str, Any]] = {}
-    for row in frame.to_dict("records"):
-        symbol = str(row.get("symbol") or "").strip().upper()
-        if not symbol:
-            continue
-        latest_date = _coerce_market_movers_date(row.get("latest_date"))
-        rows[symbol] = {
-            "latest_date": latest_date,
-            "row_count": int(row.get("row_count") or 0),
-        }
+    if not frame.empty:
+        for row in frame.to_dict("records"):
+            symbol = str(row.get("symbol") or "").strip().upper()
+            if not symbol:
+                continue
+            latest_date = _coerce_market_movers_date(row.get("latest_date"))
+            rows[symbol] = {
+                "latest_date": latest_date,
+                "row_count": int(row.get("row_count") or 0),
+            }
+    latest_frame = load_latest_prices(symbols=symbols, timeframe="1d", field="close")
+    if not latest_frame.empty:
+        for row in latest_frame.to_dict("records"):
+            symbol = str(row.get("symbol") or "").strip().upper()
+            if not symbol:
+                continue
+            target = rows.setdefault(symbol, {})
+            target["latest_date"] = _coerce_market_movers_date(row.get("latest_date")) or target.get("latest_date")
+            for field in ("price", "close", "adj_close", "volume"):
+                if field in row:
+                    target[field] = row.get(field)
     return rows
+
+
+def _market_movers_positive_number(value: Any) -> bool:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return False
+    return isfinite(numeric) and numeric > 0
+
+
+def _market_movers_quality_reasons(row: dict[str, Any], *, period: str) -> list[str]:
+    reasons: list[str] = []
+    latest_date = _coerce_market_movers_date(row.get("latest_date"))
+    if latest_date is not None and "close" in row and not _market_movers_positive_number(row.get("close")):
+        reasons.append("bad_latest_price")
+    if latest_date is not None and "volume" in row and not _market_movers_positive_number(row.get("volume")):
+        reasons.append("zero_latest_volume")
+    min_rows = MARKET_MOVERS_EOD_MIN_PRICE_ROWS.get(period, 0)
+    try:
+        row_count = int(row.get("row_count") or 0)
+    except (TypeError, ValueError):
+        row_count = 0
+    if latest_date is not None and min_rows > 0 and row_count < min_rows:
+        reasons.append("insufficient_window_rows")
+    return reasons
 
 
 def _market_movers_eod_refresh_plan(
@@ -371,17 +413,29 @@ def _market_movers_eod_refresh_plan(
     freshness: dict[str, dict[str, Any]],
     *,
     as_of_date: date,
+    period: str,
 ) -> dict[str, Any]:
     current_symbols: list[str] = []
     stale_symbols: list[str] = []
+    repair_symbols: list[str] = []
     missing_symbols: list[str] = []
     stale_starts: list[date] = []
+    repair_starts: list[date] = []
+    quality_reasons_by_symbol: dict[str, list[str]] = {}
 
     for symbol in symbols:
         row = freshness.get(symbol) or {}
         latest_date = _coerce_market_movers_date(row.get("latest_date"))
+        quality_reasons = _market_movers_quality_reasons(row, period=period)
         if latest_date is None:
             missing_symbols.append(symbol)
+        elif "insufficient_window_rows" in quality_reasons:
+            missing_symbols.append(symbol)
+            quality_reasons_by_symbol[symbol] = quality_reasons
+        elif quality_reasons:
+            repair_symbols.append(symbol)
+            repair_starts.append(latest_date)
+            quality_reasons_by_symbol[symbol] = quality_reasons
         elif latest_date >= as_of_date:
             current_symbols.append(symbol)
         else:
@@ -389,13 +443,20 @@ def _market_movers_eod_refresh_plan(
             stale_starts.append(latest_date + timedelta(days=1))
 
     delta_start = min(stale_starts) if stale_starts else None
+    repair_start = min(repair_starts) if repair_starts else None
     delta_end = as_of_date + timedelta(days=1)
+    reason_counts = Counter(reason for reasons in quality_reasons_by_symbol.values() for reason in reasons)
     return {
         "current_symbols": current_symbols,
         "stale_symbols": stale_symbols,
+        "repair_symbols": repair_symbols,
         "missing_symbols": missing_symbols,
         "delta_start": delta_start,
+        "repair_start": repair_start,
         "delta_end": delta_end if stale_symbols else None,
+        "repair_end": delta_end if repair_symbols else None,
+        "quality_reasons_by_symbol": quality_reasons_by_symbol,
+        "quality_reason_counts": dict(reason_counts),
     }
 
 
@@ -513,11 +574,12 @@ def run_overview_market_movers_eod_history(
         except Exception as exc:
             freshness_error = str(exc)
             freshness = {}
-    plan = _market_movers_eod_refresh_plan(symbols, freshness, as_of_date=as_of_date)
+    plan = _market_movers_eod_refresh_plan(symbols, freshness, as_of_date=as_of_date, period=normalized_period)
     stale_symbols = plan["stale_symbols"]
+    repair_symbols = plan["repair_symbols"]
     missing_symbols = symbols if force_full_refresh else plan["missing_symbols"]
     current_symbols = [] if force_full_refresh else plan["current_symbols"]
-    selected_symbols = list(dict.fromkeys([*stale_symbols, *missing_symbols]))
+    selected_symbols = list(dict.fromkeys([*stale_symbols, *repair_symbols, *missing_symbols]))
 
     if not selected_symbols:
         result = {
@@ -541,6 +603,19 @@ def run_overview_market_movers_eod_history(
                         stale_symbols,
                         start=plan["delta_start"].strftime("%Y-%m-%d"),
                         end=plan["delta_end"].strftime("%Y-%m-%d"),
+                        period=collection_period,
+                        interval="1d",
+                        execution_profile="managed_safe",
+                    )
+                )
+            )
+        if repair_symbols and plan["repair_start"] is not None and plan["repair_end"] is not None:
+            collect_results.append(
+                dict(
+                    run_collect_ohlcv(
+                        repair_symbols,
+                        start=plan["repair_start"].strftime("%Y-%m-%d"),
+                        end=plan["repair_end"].strftime("%Y-%m-%d"),
                         period=collection_period,
                         interval="1d",
                         execution_profile="managed_safe",
@@ -577,9 +652,24 @@ def run_overview_market_movers_eod_history(
             "symbols_selected": len(selected_symbols),
             "symbols_skipped_current": len(current_symbols),
             "delta_symbols_count": len(stale_symbols),
+            "repair_symbols_count": len(repair_symbols),
             "missing_symbols_count": len(missing_symbols),
+            "quality_symbols_count": len(plan["quality_reasons_by_symbol"]),
+            "bad_latest_symbols_count": sum(
+                1
+                for reasons in plan["quality_reasons_by_symbol"].values()
+                if "bad_latest_price" in reasons or "zero_latest_volume" in reasons
+            ),
+            "insufficient_window_symbols_count": sum(
+                1
+                for reasons in plan["quality_reasons_by_symbol"].values()
+                if "insufficient_window_rows" in reasons
+            ),
+            "quality_reason_counts": plan["quality_reason_counts"],
             "delta_start": plan["delta_start"].strftime("%Y-%m-%d") if plan["delta_start"] else None,
             "delta_end": plan["delta_end"].strftime("%Y-%m-%d") if plan["delta_end"] else None,
+            "repair_start": plan["repair_start"].strftime("%Y-%m-%d") if plan["repair_start"] else None,
+            "repair_end": plan["repair_end"].strftime("%Y-%m-%d") if plan["repair_end"] else None,
             "symbols_sample": symbols[:10],
             "selected_symbols_sample": selected_symbols[:10],
             "target_tables": ["finance_price.nyse_price_history"],

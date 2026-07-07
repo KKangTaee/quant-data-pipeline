@@ -122,7 +122,8 @@ def load_latest_prices(
             ph.`date` AS latest_date,
             ph.{normalized_field} AS price,
             ph.close,
-            ph.adj_close
+            ph.adj_close,
+            ph.volume
         FROM nyse_price_history ph
         INNER JOIN (
             SELECT symbol, MAX(`date`) AS latest_date
@@ -144,7 +145,7 @@ def load_latest_prices(
         return df
 
     df["latest_date"] = pd.to_datetime(df["latest_date"], errors="coerce")
-    return df[["symbol", "latest_date", "price", "close", "adj_close"]]
+    return df[["symbol", "latest_date", "price", "close", "adj_close", "volume"]]
 
 
 def load_price_freshness_summary(
