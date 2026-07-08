@@ -429,12 +429,18 @@ def _financial_snapshot_from_row(
     shares = _coerce_optional_float(row.get("shares_outstanding"))
     eps = (net_income / shares) if net_income is not None and shares and shares > 0 else None
     per = (latest_price / eps) if latest_price is not None and eps and eps > 0 else None
-    if net_income is None and eps is None and per is None:
+    current_assets = _coerce_optional_float(row.get("current_assets"))
+    current_liabilities = _coerce_optional_float(row.get("current_liabilities"))
+    current_ratio = _coerce_optional_float(row.get("current_ratio"))
+    if current_ratio is None and current_assets is not None and current_liabilities and current_liabilities > 0:
+        current_ratio = current_assets / current_liabilities
+    free_cash_flow = _coerce_optional_float(row.get("free_cash_flow"))
+    if net_income is None and eps is None and per is None and current_ratio is None and free_cash_flow is None:
         return {
             "status": "UNAVAILABLE",
             "freq": freq,
             "period_end": _iso_date_label(row.get("period_end")),
-            "reason": "net_income / shares_outstanding 필드가 부족합니다.",
+            "reason": "net_income / shares_outstanding / current_assets / current_liabilities / free_cash_flow 필드가 부족합니다.",
             "fallback_used": bool(fallback_used),
             "fallback_reason": fallback_reason,
             **source_payload,
@@ -447,6 +453,10 @@ def _financial_snapshot_from_row(
         "shares_outstanding": shares,
         "eps": eps,
         "per": per,
+        "current_assets": current_assets,
+        "current_liabilities": current_liabilities,
+        "current_ratio": current_ratio,
+        "free_cash_flow": free_cash_flow,
         "basis": f"latest {freq} DB fundamental snapshot",
         "fallback_used": bool(fallback_used),
         "fallback_reason": fallback_reason,
@@ -580,6 +590,86 @@ def _market_mover_statement_fundamental_snapshot(
         freq=freq,
         latest_price=latest_price,
         source_payload=source_payload,
+    )
+
+
+def _financial_trend_rows_from_frame(
+    frame: pd.DataFrame,
+    *,
+    as_of_date: str,
+    freq: str,
+    latest_price: float | None,
+    default_source_payload: dict[str, Any],
+    require_quarterly_10q: bool = False,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    if not isinstance(frame, pd.DataFrame) or frame.empty:
+        return []
+    work = frame.copy()
+    if "period_end" in work.columns:
+        work["period_end"] = pd.to_datetime(work["period_end"], errors="coerce")
+    if "available_at" in work.columns:
+        work["available_at"] = pd.to_datetime(work["available_at"], errors="coerce")
+        as_of_ts = pd.Timestamp(as_of_date)
+        work = work[(work["available_at"].isna()) | (work["available_at"] <= as_of_ts)].copy()
+    if work.empty:
+        return []
+    sort_columns = [column for column in ["period_end", "available_at", "accession_no"] if column in work.columns]
+    if sort_columns:
+        work = work.sort_values(sort_columns)
+    rows = work.tail(max(1, int(limit))).to_dict(orient="records")
+    trend_rows: list[dict[str, Any]] = []
+    for row in rows:
+        source_payload = _source_payload_from_financial_row(
+            dict(row),
+            default_source=str(default_source_payload.get("financial_source") or SEC_EDGAR_STATEMENT_SHADOW_SOURCE),
+            default_mode=str(default_source_payload.get("financial_source_mode") or "statement_shadow"),
+            default_table=str(default_source_payload.get("source_table") or "finance_fundamental.nyse_fundamentals_statement"),
+            default_detail=default_source_payload.get("source_detail"),
+        )
+        form_type = str(source_payload.get("form_type") or "").upper()
+        if require_quarterly_10q and form_type not in {"10-Q", "10-Q/A"}:
+            continue
+        snapshot = _financial_snapshot_from_row(
+            dict(row),
+            freq=freq,
+            latest_price=latest_price,
+            source_payload=source_payload,
+        )
+        if str(snapshot.get("status") or "").upper() == "OK":
+            trend_rows.append(snapshot)
+    return trend_rows
+
+
+def _market_mover_statement_fundamental_trends(
+    symbol: str,
+    *,
+    as_of_date: str,
+    freq: str,
+    latest_price: float | None,
+    statement_fundamentals_loader: Callable[..., pd.DataFrame],
+    require_quarterly_10q: bool = False,
+) -> list[dict[str, Any]]:
+    default_payload = {
+        "financial_source": SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+        "financial_source_mode": "statement_shadow",
+        "source_table": "finance_fundamental.nyse_fundamentals_statement",
+        "source_detail": "SEC EDGAR filing ledger rebuilt statement shadow",
+        "available_at": None,
+        "form_type": None,
+        "accession_no": None,
+    }
+    try:
+        frame = statement_fundamentals_loader(symbols=symbol, freq=freq, end=as_of_date)
+    except Exception:
+        return []
+    return _financial_trend_rows_from_frame(
+        frame,
+        as_of_date=as_of_date,
+        freq=freq,
+        latest_price=latest_price,
+        default_source_payload=default_payload,
+        require_quarterly_10q=require_quarterly_10q,
     )
 
 
@@ -925,6 +1015,7 @@ def build_market_mover_research_snapshot(
             "ytd_return": {"status": "UNAVAILABLE", "reason": "선택 symbol이 없습니다."},
             "annual_financials": {"status": "UNAVAILABLE", "freq": "annual", "reason": "선택 symbol이 없습니다."},
             "quarterly_financials": {"status": "UNAVAILABLE", "freq": "quarterly", "reason": "선택 symbol이 없습니다."},
+            "financial_trends": {"annual": [], "quarterly": []},
             "financial_statement_collection": {
                 "status": "UNKNOWN",
                 "headline": "재무제표 수집 상태 확인 불가",
@@ -974,6 +1065,25 @@ def build_market_mover_research_snapshot(
         statement_fundamentals_loader=statement_loader,
         require_quarterly_10q=True,
     )
+    annual_trends = _market_mover_statement_fundamental_trends(
+        symbol,
+        as_of_date=effective_as_of,
+        freq="annual",
+        latest_price=latest_price,
+        statement_fundamentals_loader=statement_loader,
+    )
+    quarterly_trends = _market_mover_statement_fundamental_trends(
+        symbol,
+        as_of_date=effective_as_of,
+        freq="quarterly",
+        latest_price=latest_price,
+        statement_fundamentals_loader=statement_loader,
+        require_quarterly_10q=True,
+    )
+    if not annual_trends and str(annual_financials.get("status") or "").upper() == "OK":
+        annual_trends = [annual_financials]
+    if not quarterly_trends and str(quarterly_financials.get("status") or "").upper() == "OK":
+        quarterly_trends = [quarterly_financials]
     collection_status = _build_financial_statement_collection_status(
         symbol=symbol,
         as_of_date=effective_as_of,
@@ -991,6 +1101,7 @@ def build_market_mover_research_snapshot(
         "ytd_return": ytd_return,
         "annual_financials": annual_financials,
         "quarterly_financials": quarterly_financials,
+        "financial_trends": {"annual": annual_trends, "quarterly": quarterly_trends},
         "financial_statement_collection": collection_status,
         "boundary_note": "Context-only fundamentals snapshot; no trading signal or recommendation is produced.",
     }

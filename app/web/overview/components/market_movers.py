@@ -402,6 +402,81 @@ def _market_mover_research_collection_html(model: dict[str, Any]) -> str:
     )
 
 
+def _chart_numeric_value(value: Any) -> float | None:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric
+
+
+def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str) -> str:
+    frequency_label = "분기" if frequency == "quarterly" else "연간"
+    points = [
+        dict(point)
+        for point in list(dict(chart.get("series") or {}).get(frequency) or [])
+        if isinstance(point, dict) and _chart_numeric_value(point.get("value")) is not None
+    ]
+    if not points:
+        return (
+            '<div class="ov-mm-research-chart is-empty">'
+            f"표시할 {escape(frequency_label)} 데이터가 없습니다"
+            "</div>"
+        )
+    values = [_chart_numeric_value(point.get("value")) or 0.0 for point in points]
+    max_abs = max(abs(value) for value in values) or 1.0
+    rows: list[str] = []
+    for point, value in zip(points, values):
+        width = max(3.0, min(100.0, (abs(value) / max_abs) * 100.0))
+        direction_class = "is-negative" if value < 0 else "is-positive"
+        disclosure = _display_value(point.get("disclosure_date"))
+        period_end = _display_value(point.get("period_end"))
+        details = [f"회계기간 {period_end}" if period_end not in ("", "-") else ""]
+        if disclosure not in ("", "-"):
+            details.append(f"공시 {disclosure}")
+        rows.append(
+            '<div class="ov-mm-research-chart-row">'
+            f'<div class="ov-mm-research-chart-label">{escape(_display_value(point.get("label")))}</div>'
+            '<div class="ov-mm-research-chart-track">'
+            f'<span class="ov-mm-research-chart-bar {direction_class}" style="width:{width:.2f}%;"></span>'
+            "</div>"
+            f'<strong class="ov-mm-research-chart-value">{escape(_display_value(point.get("display_value")))}</strong>'
+            f'<small class="ov-mm-research-chart-detail">{escape(" · ".join(part for part in details if part))}</small>'
+            "</div>"
+        )
+    return (
+        '<div class="ov-mm-research-chart">'
+        f'<div class="ov-mm-research-chart-title">{escape(_display_value(chart.get("label")))} · {escape(frequency_label)}</div>'
+        f'<div class="ov-mm-research-chart-bars">{"".join(rows)}</div>'
+        "</div>"
+    )
+
+
+def _render_market_mover_research_metric_charts(charts: list[dict[str, Any]]) -> None:
+    charts = [dict(chart) for chart in charts if isinstance(chart, dict)]
+    if not charts:
+        return
+    st.markdown(
+        overview_ui_css()
+        + """
+<div class="ov-mm-research-chart-shell">
+  <div class="ov-mm-research-chart-head">
+    <div class="ov-mm-research-chart-kicker">기본 지표 그래프</div>
+    <div class="ov-mm-research-chart-copy">표는 그대로 두고, 같은 재무제표 snapshot을 막대로 비교합니다.</div>
+  </div>
+</div>""",
+        unsafe_allow_html=True,
+    )
+    metric_tabs = st.tabs([chart["label"] for chart in charts])
+    for metric_tab, chart in zip(metric_tabs, charts):
+        with metric_tab:
+            frequency_tabs = st.tabs(["연간", "분기"])
+            with frequency_tabs[0]:
+                st.markdown(_market_mover_research_bar_chart_html(chart, "annual"), unsafe_allow_html=True)
+            with frequency_tabs[1]:
+                st.markdown(_market_mover_research_bar_chart_html(chart, "quarterly"), unsafe_allow_html=True)
+
+
 def render_market_mover_research_snapshot(model: dict[str, Any]) -> None:
     st.markdown(
         overview_ui_css()
@@ -421,6 +496,7 @@ def render_market_mover_research_snapshot(model: dict[str, Any]) -> None:
 </section>""",
         unsafe_allow_html=True,
     )
+    _render_market_mover_research_metric_charts(list(model.get("metric_charts") or []))
 
 
 def _data_trust_strip_items_html(items: list[dict[str, Any]]) -> str:

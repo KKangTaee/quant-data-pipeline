@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - Market Movers basic indicator charts should extend, not replace, the table
+
+- User request: 변동종목 조사단서의 기본 지표 UI는 그대로 두고, 하단에 PER / EPS / 당기순이익 / 유동비율 / FCF를 막대 그래프로 볼 수 있게 해 달라고 승인함.
+- Interpreted goal: 기존 annual / quarterly 숫자 표를 없애지 않고, 같은 재무제표 근거를 지표 탭과 연간 / 분기 탭으로 빠르게 비교해야 한다.
+- Analysis result: 차트 payload는 `why_it_moved` selected-symbol research snapshot에서 만들고, UI는 그 payload만 렌더링한다. 유동비율은 current assets/current liabilities에서 계산하고, FCF는 statement row의 free cash flow를 쓴다. 차트는 context-only 기본 지표 시각화이며 trading signal이나 validation gate가 아니다.
+- Follow-up: 실제 DB row가 적은 종목은 빈 상태 또는 단일 막대로 보일 수 있다. 후속 개선은 chart scale / negative value 표현 polish 정도로 분리한다.
+
 ### 2026-07-07 - Events calendar should include macro, earnings universe, and market-structure coverage
 
 - User request: 주식 / 매크로 / 퀀트 투자에서 반드시 확인해야 할 이벤트가 현재 Events 범위보다 더 넓은지, S&P 500 / 우량기업 실적도 일정 확인 대상인지 웹 시장조사 후 가이드를 요청함.

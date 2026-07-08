@@ -5206,6 +5206,105 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  line-height: 1.16;
 	  overflow-wrap: anywhere;
 	}
+	.ov-mm-research-chart-shell {
+	  margin: 0.42rem 0 0.22rem 0;
+	  padding: 0.54rem 0.62rem;
+	  border: 1px solid var(--ov-mi-border-faint);
+	  border-radius: var(--ov-mi-radius-panel);
+	  background: var(--ov-mi-color-surface);
+	}
+	.ov-mm-research-chart-head {
+	  display: flex;
+	  align-items: baseline;
+	  justify-content: space-between;
+	  gap: var(--ov-mi-gap-md);
+	  min-width: 0;
+	}
+	.ov-mm-research-chart-kicker {
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-body);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.14;
+	}
+	.ov-mm-research-chart-copy {
+	  color: var(--ov-mi-color-text-subtle);
+	  font-size: var(--ov-mi-font-caption);
+	  line-height: 1.22;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-chart {
+	  margin-top: 0.26rem;
+	  padding: 0.54rem 0.6rem;
+	  border: 1px solid var(--ov-mi-border-faint);
+	  border-radius: var(--ov-mi-radius-card);
+	  background: rgba(248,250,252,0.62);
+	}
+	.ov-mm-research-chart.is-empty {
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-caption);
+	  line-height: 1.2;
+	}
+	.ov-mm-research-chart-title {
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-caption);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.12;
+	}
+	.ov-mm-research-chart-bars {
+	  display: grid;
+	  gap: 0.32rem;
+	  margin-top: 0.46rem;
+	}
+	.ov-mm-research-chart-row {
+	  display: grid;
+	  grid-template-columns: minmax(3.2rem, 0.42fr) minmax(8rem, 1fr) minmax(5.5rem, 0.42fr);
+	  gap: 0.42rem;
+	  align-items: center;
+	  min-width: 0;
+	}
+	.ov-mm-research-chart-label,
+	.ov-mm-research-chart-value,
+	.ov-mm-research-chart-detail {
+	  min-width: 0;
+	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-chart-label {
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-caption);
+	  font-weight: var(--ov-mi-weight-label);
+	  line-height: 1.12;
+	}
+	.ov-mm-research-chart-track {
+	  position: relative;
+	  min-width: 0;
+	  height: 0.82rem;
+	  border-radius: var(--ov-mi-radius-pill);
+	  background: var(--ov-mi-track-fill);
+	  overflow: hidden;
+	}
+	.ov-mm-research-chart-bar {
+	  display: block;
+	  height: 100%;
+	  border-radius: var(--ov-mi-radius-pill);
+	  background: var(--ov-mi-color-positive);
+	}
+	.ov-mm-research-chart-bar.is-negative {
+	  background: var(--ov-mi-color-negative);
+	}
+	.ov-mm-research-chart-value {
+	  color: var(--ov-mi-color-text);
+	  font-size: var(--ov-mi-font-caption);
+	  font-weight: var(--ov-mi-weight-heading);
+	  line-height: 1.12;
+	  text-align: right;
+	}
+	.ov-mm-research-chart-detail {
+	  grid-column: 2 / 4;
+	  margin-top: -0.24rem;
+	  color: var(--ov-mi-color-text-muted);
+	  font-size: var(--ov-mi-font-xs);
+	  line-height: 1.15;
+	}
 	.ov-mm-research-boundary {
 	  margin-top: 0.48rem;
 	  padding: 0.38rem 0.46rem;
@@ -5275,6 +5374,20 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	    border-left: 0;
 	    border-top: 1px solid var(--ov-mi-border-faint);
 	    padding-top: 0.24rem;
+	  }
+	  .ov-mm-research-chart-head {
+	    align-items: flex-start;
+	    flex-direction: column;
+	  }
+	  .ov-mm-research-chart-row {
+	    grid-template-columns: minmax(2.8rem, 0.36fr) minmax(0, 1fr);
+	  }
+	  .ov-mm-research-chart-value {
+	    grid-column: 2;
+	    text-align: left;
+	  }
+	  .ov-mm-research-chart-detail {
+	    grid-column: 2;
 	  }
 		  .ov-mm-research-grid {
 		    grid-template-columns: 1fr;

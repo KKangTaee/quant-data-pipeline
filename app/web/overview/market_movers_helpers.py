@@ -5,7 +5,7 @@ from datetime import datetime
 from html import escape
 import re
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable
 
 import altair as alt
 import pandas as pd
@@ -3435,6 +3435,114 @@ def _income_row(item: dict[str, Any], period_label: str) -> dict[str, str] | Non
     }
 
 
+def _format_current_ratio(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"{float(numeric):.2f}x"
+
+
+def _financial_chart_period_label(value: Any, *, freq: str) -> str:
+    label = _financial_date_label(value)
+    if label == "-":
+        return "-"
+    timestamp = pd.to_datetime(label, errors="coerce")
+    if pd.isna(timestamp):
+        return label
+    if freq == "quarterly":
+        return f"{timestamp.year} Q{int(((timestamp.month - 1) // 3) + 1)}"
+    return str(timestamp.year)
+
+
+def _financial_chart_numeric_value(value: Any) -> float | None:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return None
+    return float(numeric)
+
+
+def _financial_chart_point(
+    item: dict[str, Any],
+    *,
+    metric: str,
+    formatter: Callable[[Any], str],
+    freq: str,
+) -> dict[str, Any] | None:
+    if str(item.get("status") or "").upper() != "OK":
+        return None
+    value = _financial_chart_numeric_value(item.get(metric))
+    if value is None:
+        return None
+    period_end = _financial_period_label(item, "-")
+    return {
+        "label": _financial_chart_period_label(period_end, freq=freq),
+        "period_end": period_end,
+        "disclosure_date": _financial_disclosure_date_label(item),
+        "form_type": str(item.get("form_type") or ""),
+        "value": value,
+        "display_value": formatter(value),
+    }
+
+
+def _financial_trend_source_items(
+    snapshot: dict[str, Any],
+    *,
+    freq: str,
+    fallback: dict[str, Any],
+) -> list[dict[str, Any]]:
+    trends = dict(snapshot.get("financial_trends") or {})
+    rows = [dict(item) for item in list(trends.get(freq) or []) if isinstance(item, dict)]
+    if rows:
+        return rows
+    if fallback:
+        return [dict(fallback)]
+    return []
+
+
+def _financial_metric_charts_model(
+    snapshot: dict[str, Any],
+    *,
+    annual: dict[str, Any],
+    quarterly: dict[str, Any],
+) -> list[dict[str, Any]]:
+    annual_rows = _financial_trend_source_items(snapshot, freq="annual", fallback=annual)
+    quarterly_rows = _financial_trend_source_items(snapshot, freq="quarterly", fallback=quarterly)
+    metric_specs: list[tuple[str, str, Callable[[Any], str]]] = [
+        ("per", "PER", _format_per),
+        ("eps", "EPS", _format_eps),
+        ("net_income", "당기순이익", _format_korean_money),
+        ("current_ratio", "유동비율", _format_current_ratio),
+        ("free_cash_flow", "FCF", _format_korean_money),
+    ]
+    charts: list[dict[str, Any]] = []
+    for metric, label, formatter in metric_specs:
+        charts.append(
+            {
+                "metric": metric,
+                "label": label,
+                "series": {
+                    "annual": [
+                        point
+                        for point in (
+                            _financial_chart_point(item, metric=metric, formatter=formatter, freq="annual")
+                            for item in annual_rows
+                        )
+                        if point
+                    ],
+                    "quarterly": [
+                        point
+                        for point in (
+                            _financial_chart_point(item, metric=metric, formatter=formatter, freq="quarterly")
+                            for item in quarterly_rows
+                        )
+                        if point
+                    ],
+                },
+            }
+        )
+    return charts
+
+
 def _financial_statement_collection_model(collection: dict[str, Any]) -> dict[str, Any]:
     if not collection:
         return {}
@@ -3566,6 +3674,7 @@ def build_market_mover_research_snapshot_model(
         "subtitle": f"{symbol} · {context.get('Coverage') or '-'} · {context.get('Period') or '-'}",
         "as_of_label": str(snapshot.get("as_of_date") or "현재 선택 기준"),
         "items": items,
+        "metric_charts": _financial_metric_charts_model(snapshot, annual=annual, quarterly=quarterly),
         "financial_statement_collection": collection,
         "boundary_note": str(
             snapshot.get("boundary_note")

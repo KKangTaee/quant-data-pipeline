@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers 기본지표 그래프 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/`에서 1차~4차를 완료했다.
+  - 기존 PER / EPS / 당기순이익 표는 유지하고, 하단에 PER / EPS / 당기순이익 / 유동비율 / FCF 지표 탭과 연간 / 분기 막대 그래프를 추가했다.
+  - 차트는 `why_it_moved` research snapshot payload를 렌더링하며 UI가 DB/provider를 직접 읽지 않는다. Focused tests, py_compile, diff check, Browser QA를 통과했다.
 - Overview Events calendar scope research 2026-07-07:
   - `.aiworkspace/note/finance/researches/active/2026-07-events-calendar-scope/`에 Events 수집 범위 리서치를 추가했다.
   - 결론은 S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings를 Events의 first-class coverage로 올리고, official macro / market structure calendar와 분리해 표시하는 것이다.
