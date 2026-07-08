@@ -9992,6 +9992,55 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "selected_route_preflight",
         )
 
+    def test_practical_validation_flow4_keeps_final_review_items_as_handoff_reference(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "final_review_gate": {
+                    "route": "READY_WITH_REVIEW",
+                    "can_save_and_move": True,
+                    "verdict": "Final Review에서 확인할 항목이 있습니다.",
+                    "review_modules": [
+                        {
+                            "module_id": "stress_robustness",
+                            "label": "Stress / Robustness",
+                            "status": "REVIEW",
+                        }
+                    ],
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "source_integrity",
+                        "label": "Source Integrity",
+                        "status": "PASS",
+                        "applies": True,
+                    },
+                    {
+                        "module_id": "stress_robustness",
+                        "label": "Stress / Robustness",
+                        "status": "REVIEW",
+                        "applies": True,
+                        "gate_reason": "Final Review에서 stress evidence를 해석합니다.",
+                    },
+                ],
+            }
+        )
+
+        summary = workspace["summary"]
+        self.assertEqual(summary["criteria_review_count"], 1)
+        self.assertEqual(summary["final_review_reference_count"], 1)
+        self.assertEqual(summary["overall_outcome_key"], "pass")
+        self.assertEqual(summary["overall_outcome_label"], "통과")
+
+        stress_group = next(group for group in workspace["criteria_detail_groups"] if group["label"] == "Stress / Robustness")
+        self.assertEqual(stress_group["remaining_issues"], [])
+        self.assertEqual(stress_group["final_review_reference_count"], 1)
+        self.assertEqual(
+            stress_group["decision_summary"],
+            "Practical Validation에서 보강할 항목은 없습니다. Final Review에서 해석할 참고 항목 1개는 넘깁니다.",
+        )
+
     def test_practical_validation_module_plan_preserves_review_input_checks(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
 
@@ -10159,7 +10208,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
         self.assertIn("_render_validation_evidence_boards(validation_result)", flow4_body)
         self.assertIn("카테고리별 검증 결과", page_source)
-        self.assertIn("통과 / 보강 후 재검증 / Final Review 판단 / 실전 사용 어려움", page_source)
+        self.assertIn("통과 / 보강 후 재검증 / 실전 사용 어려움", page_source)
+        self.assertIn("Final Review 참고", page_source)
+        self.assertIn("final_review_reference_count", page_source)
         self.assertIn("검증 기준 상세", flow4_body)
         self.assertIn("Final Review 이동 요약", page_source)
         self.assertIn("실전 검증 센터", page_source)
@@ -10176,6 +10227,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("통과한 기준", page_source)
         self.assertIn("남은 문제", page_source)
         self.assertIn("판정", page_source)
+        self.assertNotIn("<span>Final Review 판단</span>", page_source)
         self.assertIn("검증한 것", page_source)
         self.assertIn("해결해야 할 항목", page_source)
         self.assertIn("해결 방법", page_source)

@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow4 Final Review Handoff V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/`에서 Flow 4가 Final Review 판단 항목을 상세 문제처럼 보여주는 중복을 줄였다.
+  - Flow 4 main board는 `통과 / 보강 후 재검증 / 실전 사용 어려움` 중심으로 읽고, REVIEW 항목은 `Final Review 참고` count로만 넘긴다.
+  - Final Review 화면 재구성, gate threshold, registry / saved JSONL, provider ingestion, live approval / order semantics는 변경하지 않았다.
 - Practical Validation Flow4 Outcome Taxonomy V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/`에서 Flow 4 outcome layer와 `Current=REVIEW` 보존 회귀를 구현했다.
   - Flow 4는 이제 `통과 / 보강 후 재검증 / Final Review 판단 / 실전 사용 어려움`을 먼저 보여주며, 최신 replay가 REVIEW이면 NEEDS_INPUT으로 강등하지 않는다.

@@ -948,15 +948,29 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
     elif repair:
         decision = f"보강 필요: 재검증할 기준 {len(repair)}개가 남아 있습니다."
     elif review:
-        decision = f"Final Review에서 확인할 기준 {len(review)}개가 남아 있습니다."
+        decision = (
+            "Practical Validation에서 보강할 항목은 없습니다. "
+            f"Final Review에서 해석할 참고 항목 {len(review)}개는 넘깁니다."
+        )
     else:
         decision = "이 기준 그룹은 현재 통과 상태입니다."
+    if not_practical:
+        display_status = f"실전 사용 어려움 {len(not_practical)}"
+    elif repair:
+        display_status = f"보강 필요 {len(repair)}"
+    elif passed:
+        display_status = f"통과 {len(passed)}"
+    else:
+        display_status = "보강 항목 없음"
     return {
         "passed_criteria": passed,
         "remaining_issues": remaining,
         "repair_criteria": repair,
         "not_practical_criteria": not_practical,
         "review_criteria": review,
+        "final_review_reference_criteria": review,
+        "final_review_reference_count": len(review),
+        "display_status": display_status,
         "decision_summary": decision,
     }
 
@@ -964,16 +978,12 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
 def _overall_outcome_summary(summary: dict[str, int]) -> dict[str, Any]:
     not_practical_count = int(summary.get("criteria_not_practical_count") or 0)
     repair_count = int(summary.get("criteria_repair_count") or 0)
-    review_count = int(summary.get("criteria_review_count") or 0)
     if not_practical_count:
         key = "not_practical"
         count = not_practical_count
     elif repair_count:
         key = "repair_required"
         count = repair_count
-    elif review_count:
-        key = "review_required"
-        count = review_count
     else:
         key = "pass"
         count = int(summary.get("criteria_pass_count") or 0)
@@ -1028,6 +1038,7 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
         "criteria_card_count": len(cards),
         "criteria_pass_count": len([card for card in cards if card.get("status") in {"PASS", "READY"}]),
         "criteria_review_count": len([card for card in cards if card.get("status") == "REVIEW"]),
+        "final_review_reference_count": len([card for card in cards if card.get("status") == "REVIEW"]),
         "criteria_repair_count": repair_count,
         "criteria_not_practical_count": not_practical_count,
         "criteria_blocker_count": len(

@@ -24,7 +24,8 @@ Last Verified: 2026-07-08
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Practical Validation Flow4 Outcome Taxonomy V1 2026-07-08](../tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/STATUS.md).
+- Latest completed task: [Practical Validation Flow4 Final Review Handoff V1 2026-07-08](../tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/STATUS.md).
+- Previous completed task: [Practical Validation Flow4 Outcome Taxonomy V1 2026-07-08](../tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Required Taxonomy Refactor V1 2026-07-08](../tasks/active/practical-validation-required-taxonomy-refactor-v1-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Required Taxonomy Audit V1 2026-07-08](../tasks/active/practical-validation-required-taxonomy-audit-v1-20260708/STATUS.md).
 - Previous completed task: [Backtest Symbol Resolver V1 2026-07-08](../tasks/active/backtest-symbol-resolver-v1-20260708/STATUS.md).

@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/`다.
+
+- 목적: Practical Validation Flow 4가 Final Review에서 해석할 REVIEW 항목을 카테고리별 상세 문제처럼 보여 사용자가 현재 보강해야 할 항목과 최종 판단 항목을 혼동하는 문제를 줄였다.
+- 주요 변경: Flow 4 main board는 `통과`, `보강 후 재검증 필요`, `실전 사용 어려움`을 먼저 보여주며, REVIEW 항목은 `Final Review 참고` handoff count로만 남긴다. REVIEW만 남은 상태는 Practical Validation 관점에서 보강 필요가 아니라 Final Review 판단으로 넘긴다.
+- 이번 차수에서 하지 않은 일: Final Review evidence 화면 재구성, gate threshold 변경, registry / saved JSONL rewrite, provider ingestion, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/`다.
 
 - 목적: Practical Validation Flow 4가 raw status 중심으로 보여 `REVIEW`, `NEEDS_INPUT`, `BLOCKED`의 실제 행동 의미를 구분하기 어려운 문제를 줄였다.
 - 주요 변경: Flow 4 criteria summary는 `통과`, `보강 후 재검증 필요`, `Final Review 판단 필요`, `실전 사용 어려움` outcome layer를 먼저 보여준다. `READY`는 통과로 읽고, `Current=REVIEW`인 input check는 `NEEDS_INPUT`으로 강등하지 않아 최신 replay / coverage review가 Final Review 판단 항목으로 남는다.
