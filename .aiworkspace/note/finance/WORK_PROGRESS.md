@@ -5912,3 +5912,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Price refresh는 source ticker를 유지하되 active repair가 있으면 collection ticker만 resolved symbol로 바꾸며, plan/details에 metadata-only `source_range` / `resolved_range` / `split_status`를 남긴다.
 - Factor Readiness는 후보쌍 / 신뢰도 / 기간 경계 / 다음 행동을 보여주고, repair 후 readiness 재확인과 백테스트 재실행을 안내한다.
 - 후속 범위: official corporate-action feed 신규 수집과 실제 old/new ticker price series stitching.
+
+## 2026-07-09 - Market Movers Analyst Interest Multi-Source V1
+
+- `.aiworkspace/note/finance/tasks/active/overview-market-interest-analyst-multisource-20260709/`에서 Market Movers 선택 종목의 `애널리스트 관심`을 link-only에서 yfinance 구조화 세션 단서로 보강했다.
+- `시장 관심 근거 확인`은 선택 종목 1개에 대해 news / Korean news / SEC metadata / yfinance analyst metadata를 세션 전용으로 조회한다.
+- 화면은 최근 애널리스트 액션, 목표가 요약, 의견 분포, Nasdaq / WSJ / MarketWatch / Yahoo 원문 교차확인 링크를 보여준다.
+- Nasdaq / WSJ / MarketWatch HTML scraping, DB 저장, 추천/점수화/매매 신호, paid API, broker 연결은 추가하지 않았다.

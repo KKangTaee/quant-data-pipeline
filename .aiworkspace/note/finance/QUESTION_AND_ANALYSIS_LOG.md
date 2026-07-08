@@ -9122,3 +9122,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: BK -> BNY를 하드코딩 fixture가 아닌 대표 케이스로 두고, stale/missing price ticker가 단순 refresh 대상인지 symbol identity issue인지 구분해야 함.
 - Analysis result: 새 `market_symbol_alias` table보다 기존 `nyse_symbol_lifecycle(event_type=ticker_change, related_symbol, related_cik)`를 공용 source로 쓰는 것이 Backtest / Data Coverage 경계와 맞다.
 - Follow-up: Symbol Resolver V1 1차~5차에서 candidate / active repair, source evidence scoring, LOW-confidence 수동 확인, metadata-only PIT split contract, Factor Readiness UX / action feedback, docs / QA closeout을 완료했다. 실제 old/new ticker price series stitching과 official corporate-action feed 신규 수집은 후속 범위다.
+
+### 2026-07-09 - Market Movers 애널리스트 관심은 무료/공개 출처로 어디까지 가능한가
+
+- User request: 사용자가 Nasdaq.com, WSJ Markets, Yahoo Finance, MarketWatch의 애널리스트 평가를 선택 종목 버튼 방식으로 여러 출처에서 보여줄 수 있는지 묻고 개발을 승인함.
+- Interpreted goal: 상용화가 아니더라도 전체 자동 수집이 아니라 선택 종목 조사 보조 흐름으로 analyst action / target / source cross-check를 보여줘야 함.
+- Analysis result: yfinance는 구조화 selected-symbol metadata로 먼저 연결하고, Nasdaq / WSJ / MarketWatch는 provider / terms 제약 때문에 자동 HTML scraping 없이 원문 교차확인 링크로 두는 것이 안전하다.
+- Follow-up: Market Interest Analyst Multi-Source V1에서 yfinance action / target / opinion distribution을 세션 전용으로 표시하고, Yahoo / MarketWatch / WSJ / Nasdaq source links를 같은 섹션에 묶었다.

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Callable
 from urllib.parse import quote_plus
 
 import pandas as pd
 
 MARKET_INTEREST_LINK_COLUMNS = ["Source", "Lane", "Policy", "Evidence", "Caveat", "URL"]
+YFINANCE_ANALYST_SOURCE = "Yahoo Finance / yfinance"
 SEC_FORM_DISPLAY_TITLES = {
     "144": "SEC Form 144 · 제한/지배주식 매각 예정 통지",
     "8-K": "SEC Form 8-K · 주요 이벤트 공시",
@@ -39,6 +41,22 @@ def _google_search_url(query: str) -> str:
 
 def _stockanalysis_forecast_url(symbol: str) -> str:
     return f"https://stockanalysis.com/stocks/{symbol.lower()}/forecast/"
+
+
+def _yahoo_analysis_url(symbol: str) -> str:
+    return f"https://finance.yahoo.com/quote/{quote_plus(symbol)}/analysis/"
+
+
+def _marketwatch_analyst_url(symbol: str) -> str:
+    return f"https://www.marketwatch.com/investing/stock/{quote_plus(symbol.lower())}/analystestimates"
+
+
+def _wsj_research_url(symbol: str) -> str:
+    return f"https://www.wsj.com/market-data/quotes/{quote_plus(symbol.upper())}/research-ratings"
+
+
+def _nasdaq_analyst_url(symbol: str) -> str:
+    return f"https://www.nasdaq.com/market-activity/stocks/{quote_plus(symbol.lower())}/analyst-research"
 
 
 def build_market_interest_original_links(*, symbol: str, name: str | None = None) -> pd.DataFrame:
@@ -80,10 +98,34 @@ def build_market_interest_original_links(*, symbol: str, name: str | None = None
             {
                 "Source": "Yahoo Finance Analysis",
                 "Lane": "애널리스트 관심",
+                "Policy": "session_structured_lead",
+                "Evidence": "Quote analysis page plus yfinance selected-symbol metadata",
+                "Caveat": "Explicit-click, session-only personal research lead; no durable storage.",
+                "URL": _yahoo_analysis_url(normalized_symbol),
+            },
+            {
+                "Source": "MarketWatch Analyst Estimates",
+                "Lane": "애널리스트 관심",
                 "Policy": "external_research_link",
-                "Evidence": "Quote analysis page destination",
-                "Caveat": "Dynamic public page; no article/report body collection.",
-                "URL": f"https://finance.yahoo.com/quote/{quote_plus(normalized_symbol)}/analysis/",
+                "Evidence": "Analyst estimates / targets / upgrades destination",
+                "Caveat": "FactSet / Dow Jones sourced page; no automatic scraping in this scope.",
+                "URL": _marketwatch_analyst_url(normalized_symbol),
+            },
+            {
+                "Source": "WSJ Markets Research & Ratings",
+                "Lane": "애널리스트 관심",
+                "Policy": "external_research_link",
+                "Evidence": "Research & ratings / price target destination",
+                "Caveat": "Dow Jones / FactSet sourced page; use as original cross-check link.",
+                "URL": _wsj_research_url(normalized_symbol),
+            },
+            {
+                "Source": "Nasdaq Analyst Research",
+                "Lane": "애널리스트 관심",
+                "Policy": "external_research_link",
+                "Evidence": "Analyst rating / target destination",
+                "Caveat": "Nasdaq page may use third-party data such as TipRanks; no page capture in this scope.",
+                "URL": _nasdaq_analyst_url(normalized_symbol),
             },
             {
                 "Source": "SEC Company Search",
@@ -131,6 +173,247 @@ def build_market_interest_original_links(*, symbol: str, name: str | None = None
             },
         ]
     )
+
+
+def _as_records_frame(value: Any) -> pd.DataFrame:
+    if isinstance(value, pd.DataFrame):
+        return value.copy()
+    if isinstance(value, pd.Series):
+        return value.to_frame().T
+    if isinstance(value, dict):
+        return pd.DataFrame([value])
+    if isinstance(value, list):
+        return pd.DataFrame(value)
+    return pd.DataFrame()
+
+
+def _date_label(value: Any) -> str:
+    if value in (None, ""):
+        return "-"
+    timestamp = pd.to_datetime(value, errors="coerce", utc=False)
+    if not pd.isna(timestamp):
+        return timestamp.strftime("%Y-%m-%d")
+    text = str(value).strip()
+    return text[:10] if text else "-"
+
+
+def _money_label(value: Any) -> str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return f"${float(numeric):,.2f}"
+
+
+def _integer_or_dash(value: Any) -> int | str:
+    numeric = pd.to_numeric(value, errors="coerce")
+    if pd.isna(numeric):
+        return "-"
+    return int(numeric)
+
+
+def _first_present(row: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in row:
+            value = row.get(key)
+            if _clean_text(value) is not None:
+                return value
+    return None
+
+
+def _yfinance_action_label(value: Any) -> str:
+    text = (_clean_text(value) or "").lower()
+    mapping = {
+        "up": "Upgrade",
+        "upgrade": "Upgrade",
+        "down": "Downgrade",
+        "downgrade": "Downgrade",
+        "init": "Initiates",
+        "initiates": "Initiates",
+        "main": "Maintains",
+        "maint": "Maintains",
+        "maintains": "Maintains",
+        "reit": "Reiterates",
+        "reiterates": "Reiterates",
+    }
+    return mapping.get(text, _clean_text(value) or "-")
+
+
+def _target_action_label(value: Any) -> str:
+    text = (_clean_text(value) or "").lower()
+    mapping = {
+        "up": "Raised",
+        "raise": "Raised",
+        "raised": "Raised",
+        "down": "Lowered",
+        "lower": "Lowered",
+        "lowered": "Lowered",
+        "maintains": "Unchanged",
+        "main": "Unchanged",
+        "reit": "Unchanged",
+        "none": "Unchanged",
+    }
+    return mapping.get(text, _clean_text(value) or "-")
+
+
+def _get_ticker_value(ticker: Any, method_name: str, attr_name: str) -> Any:
+    method = getattr(ticker, method_name, None)
+    if callable(method):
+        return method()
+    return getattr(ticker, attr_name, None)
+
+
+def _normalize_yfinance_action_rows(value: Any, *, symbol: str, max_actions: int) -> list[dict[str, Any]]:
+    frame = _as_records_frame(value)
+    if frame.empty:
+        return []
+    work = frame.reset_index()
+    if "GradeDate" in work.columns:
+        date_column = "GradeDate"
+    elif "Date" in work.columns:
+        date_column = "Date"
+    else:
+        date_column = "index"
+    work["_sort_date"] = pd.to_datetime(work[date_column], errors="coerce")
+    if work["_sort_date"].notna().any():
+        work = work.sort_values("_sort_date", ascending=False)
+    source_url = _yahoo_analysis_url(symbol)
+    rows: list[dict[str, Any]] = []
+    for raw in work.head(max_actions).drop(columns=["_sort_date"], errors="ignore").to_dict("records"):
+        row = dict(raw)
+        rows.append(
+            {
+                "Date": _date_label(_first_present(row, "GradeDate", "Date", "index")),
+                "Firm": _clean_text(_first_present(row, "Firm", "firm")) or "-",
+                "Action": _yfinance_action_label(_first_present(row, "Action", "action")),
+                "From": _clean_text(_first_present(row, "FromGrade", "fromGrade", "From", "from")) or "-",
+                "To": _clean_text(_first_present(row, "ToGrade", "toGrade", "To", "to")) or "-",
+                "Target Change": _target_action_label(
+                    _first_present(row, "priceTargetAction", "PriceTargetAction", "Target Change")
+                ),
+                "Prior Target": _money_label(_first_present(row, "priorPriceTarget", "PriorPriceTarget")),
+                "Current Target": _money_label(_first_present(row, "currentPriceTarget", "CurrentPriceTarget")),
+                "Source": YFINANCE_ANALYST_SOURCE,
+                "URL": source_url,
+            }
+        )
+    return rows
+
+
+def _normalize_yfinance_target_rows(value: Any, *, symbol: str) -> list[dict[str, Any]]:
+    if isinstance(value, pd.Series):
+        data = value.to_dict()
+    elif isinstance(value, dict):
+        data = dict(value)
+    else:
+        frame = _as_records_frame(value)
+        data = dict(frame.iloc[0].to_dict()) if not frame.empty else {}
+    if not data:
+        return []
+    normalized_data = {str(key).lower(): val for key, val in data.items()}
+    source_url = _yahoo_analysis_url(symbol)
+    rows: list[dict[str, Any]] = []
+    for key, label in [
+        ("mean", "평균 목표가"),
+        ("median", "중앙 목표가"),
+        ("high", "최고 목표가"),
+        ("low", "최저 목표가"),
+        ("current", "현재가"),
+    ]:
+        value_for_key = normalized_data.get(key)
+        if _clean_text(value_for_key) is None:
+            continue
+        rows.append({"Metric": label, "Value": _money_label(value_for_key), "Source": YFINANCE_ANALYST_SOURCE, "URL": source_url})
+    return rows
+
+
+def _normalize_yfinance_recommendation_rows(value: Any, *, symbol: str) -> list[dict[str, Any]]:
+    frame = _as_records_frame(value)
+    if frame.empty:
+        return []
+    source_url = _yahoo_analysis_url(symbol)
+    rows: list[dict[str, Any]] = []
+    for raw in frame.head(4).to_dict("records"):
+        row = {str(key): val for key, val in dict(raw).items()}
+        rows.append(
+            {
+                "Period": _clean_text(_first_present(row, "period", "Period")) or "-",
+                "Strong Buy": _integer_or_dash(_first_present(row, "strongBuy", "Strong Buy", "strong_buy")),
+                "Buy": _integer_or_dash(_first_present(row, "buy", "Buy")),
+                "Hold": _integer_or_dash(_first_present(row, "hold", "Hold")),
+                "Sell": _integer_or_dash(_first_present(row, "sell", "Sell")),
+                "Strong Sell": _integer_or_dash(_first_present(row, "strongSell", "Strong Sell", "strong_sell")),
+                "Source": YFINANCE_ANALYST_SOURCE,
+                "URL": source_url,
+            }
+        )
+    return rows
+
+
+def fetch_yfinance_analyst_interest_metadata(
+    symbol: str,
+    *,
+    max_actions: int = 5,
+    ticker_factory: Callable[[str], Any] | None = None,
+) -> dict[str, Any]:
+    """Fetch selected-symbol yfinance analyst metadata for session-only investigation display."""
+
+    normalized_symbol = _clean_text(symbol, upper=True) or ""
+    if not normalized_symbol:
+        return {
+            "status": "NO_SYMBOL",
+            "provider_status": "NO_DATA",
+            "source": YFINANCE_ANALYST_SOURCE,
+            "source_url": "",
+            "action_rows": [],
+            "target_rows": [],
+            "recommendation_rows": [],
+        }
+    source_url = _yahoo_analysis_url(normalized_symbol)
+    try:
+        if ticker_factory is None:
+            import yfinance as yf
+
+            ticker_factory = yf.Ticker
+        ticker = ticker_factory(normalized_symbol)
+        actions_value = _get_ticker_value(ticker, "get_upgrades_downgrades", "upgrades_downgrades")
+        targets_value = _get_ticker_value(ticker, "get_analyst_price_targets", "analyst_price_targets")
+        recommendations_value = _get_ticker_value(ticker, "get_recommendations_summary", "recommendations_summary")
+        action_rows = _normalize_yfinance_action_rows(
+            actions_value,
+            symbol=normalized_symbol,
+            max_actions=max_actions,
+        )
+        target_rows = _normalize_yfinance_target_rows(targets_value, symbol=normalized_symbol)
+        recommendation_rows = _normalize_yfinance_recommendation_rows(recommendations_value, symbol=normalized_symbol)
+    except Exception as exc:  # pragma: no cover - provider/network resilience
+        return {
+            "status": "ERROR",
+            "provider_status": "ERROR",
+            "source": YFINANCE_ANALYST_SOURCE,
+            "source_url": source_url,
+            "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "action_rows": [],
+            "target_rows": [],
+            "recommendation_rows": [],
+            "error": str(exc),
+        }
+
+    has_rows = bool(action_rows or target_rows or recommendation_rows)
+    return {
+        "status": "OK" if has_rows else "NO_DATA",
+        "provider_status": "SESSION_READY" if has_rows else "NO_DATA",
+        "source": YFINANCE_ANALYST_SOURCE,
+        "source_url": source_url,
+        "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "action_rows": action_rows,
+        "target_rows": target_rows,
+        "recommendation_rows": recommendation_rows,
+        "summary": {
+            "action_count": len(action_rows),
+            "target_metric_count": len(target_rows),
+            "recommendation_period_count": len(recommendation_rows),
+        },
+    }
 
 
 def _count_rows(value: Any) -> int:
@@ -230,6 +513,32 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
     name = _clean_text(row.get("Name") or row.get("name")) or normalized_symbol or ""
     links = build_market_interest_original_links(symbol=normalized_symbol or "", name=name)
     payload = dict(metadata or {})
+    analyst_payload = dict(payload.get("analyst_interest") or {})
+    analyst_rows = _records(analyst_payload.get("action_rows"))
+    analyst_target_rows = _records(analyst_payload.get("target_rows"))
+    analyst_recommendation_rows = _records(analyst_payload.get("recommendation_rows"))
+    analyst_provider_status = _clean_text(analyst_payload.get("provider_status"), upper=True) or "DISCONNECTED"
+    analyst_status = _clean_text(analyst_payload.get("status"), upper=True) or ""
+    if analyst_rows:
+        analyst_state = f"애널리스트 {len(analyst_rows)}건"
+        analyst_detail = "Yahoo/yfinance 세션 조회로 최근 등급/목표가 변경 단서를 표시합니다."
+        analyst_tone = "success"
+        analyst_description = "선택 종목 1개에 대해 yfinance 구조화 단서와 공개 원문 교차확인 링크를 함께 보여줍니다."
+    elif analyst_payload and analyst_status == "ERROR":
+        analyst_state = "조회 실패"
+        analyst_detail = "Yahoo/yfinance 세션 조회가 실패했습니다. 원문 링크로 교차확인하세요."
+        analyst_tone = "warning"
+        analyst_description = "구조화 조회가 실패해 공개 원문 링크 중심으로 확인합니다."
+    elif analyst_payload:
+        analyst_state = "구조화 단서 없음"
+        analyst_detail = "선택 종목에서 yfinance analyst rows를 찾지 못했습니다."
+        analyst_tone = "neutral"
+        analyst_description = "구조화 rows가 없으면 공개 원문 링크로 교차확인합니다."
+    else:
+        analyst_state = "구조화 소스 미연결"
+        analyst_detail = "API key/약관 승인 전이라 애널리스트 action은 외부 확인 링크만 제공합니다."
+        analyst_tone = "neutral"
+        analyst_description = "업그레이드/다운그레이드와 목표가 변경은 구조화 source 승인 전까지 외부 링크로만 확인합니다."
     us_news_count = _count_rows(payload.get("news"))
     korean_news_count = _count_rows(payload.get("korean_news"))
     news_count = us_news_count + korean_news_count
@@ -246,9 +555,9 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
         {
             "id": "analyst_interest",
             "label": "애널리스트 관심",
-            "state": "구조화 소스 미연결",
-            "detail": "API key/약관 승인 전이라 애널리스트 action은 외부 확인 링크만 제공합니다.",
-            "tone": "neutral",
+            "state": analyst_state,
+            "detail": analyst_detail,
+            "tone": analyst_tone,
         },
         {
             "id": "news_catalysts",
@@ -283,10 +592,12 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
         {
             "id": "analyst_interest",
             "title": "애널리스트 관심",
-            "state": "구조화 소스 미연결",
-            "provider_status": "DISCONNECTED",
-            "description": "업그레이드/다운그레이드와 목표가 변경은 구조화 source 승인 전까지 외부 링크로만 확인합니다.",
-            "rows": [],
+            "state": analyst_state,
+            "provider_status": analyst_provider_status,
+            "description": analyst_description,
+            "rows": analyst_rows,
+            "target_rows": analyst_target_rows,
+            "recommendation_rows": analyst_recommendation_rows,
             "source_rows": _links_for_lane(links, "애널리스트 관심"),
         },
         {
@@ -353,4 +664,5 @@ __all__ = [
     "MARKET_INTEREST_LINK_COLUMNS",
     "build_market_interest_original_links",
     "build_market_interest_read_model",
+    "fetch_yfinance_analyst_interest_metadata",
 ]

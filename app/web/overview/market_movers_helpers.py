@@ -28,7 +28,10 @@ from app.services.overview.market_movers import (
     COVERAGE_TRUST_GROUP_COLUMNS,
     build_market_movers_coverage_trust_model,
 )
-from app.services.overview.market_interest import build_market_interest_read_model
+from app.services.overview.market_interest import (
+    build_market_interest_read_model,
+    fetch_yfinance_analyst_interest_metadata,
+)
 from app.services.overview.why_it_moved import (
     build_market_mover_metadata_status_strip,
     build_market_mover_research_snapshot,
@@ -3737,6 +3740,17 @@ def _market_mover_market_interest_session_key(metadata_key: str) -> str:
     return f"{metadata_key}__market_interest"
 
 
+def _merge_market_mover_metadata_for_investigation(
+    existing: dict[str, Any] | None,
+    update: dict[str, Any] | None,
+) -> dict[str, Any]:
+    merged = merge_market_mover_metadata(existing, update)
+    analyst_interest = dict(existing or {}).get("analyst_interest")
+    if analyst_interest is not None and "analyst_interest" not in dict(update or {}):
+        merged["analyst_interest"] = analyst_interest
+    return merged
+
+
 def _format_elapsed_seconds(value: Any) -> str:
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -3891,8 +3905,52 @@ def _render_market_mover_market_interest(model: dict[str, Any], *, requested: bo
     analyst_section = _market_interest_section(section_model, "analyst_interest")
     st.markdown("##### 애널리스트 관심")
     st.caption(str(analyst_section.get("description") or "업그레이드/다운그레이드와 목표가 변경은 외부 source에서 확인합니다."))
-    if str(analyst_section.get("provider_status") or "") == "DISCONNECTED":
-        st.info("FMP/Finnhub 같은 구조화 analyst source는 API key/약관 승인 후 연결합니다. 현재는 외부 확인 링크만 제공합니다.")
+    analyst_rows = _market_interest_rows_frame(analyst_section.get("rows"))
+    st.markdown("###### 최근 애널리스트 액션")
+    _render_market_mover_metadata_table(
+        analyst_rows,
+        [
+            "Date",
+            "Firm",
+            "Action",
+            "From",
+            "To",
+            "Target Change",
+            "Prior Target",
+            "Current Target",
+            "Source",
+            "Open",
+        ],
+        "구조화 analyst rows가 없으면 아래 공개 페이지 교차확인 링크로 원문을 확인하세요.",
+    )
+
+    target_rows = _market_interest_rows_frame(analyst_section.get("target_rows"))
+    if not target_rows.empty:
+        st.markdown("###### 목표가 요약")
+        _render_market_mover_metadata_table(
+            target_rows,
+            ["Metric", "Value", "Source", "Open"],
+            "목표가 요약이 없습니다.",
+        )
+
+    recommendation_rows = _market_interest_rows_frame(analyst_section.get("recommendation_rows"))
+    if not recommendation_rows.empty:
+        st.markdown("###### 의견 분포")
+        st.caption("분포는 출처가 제공한 집계값을 그대로 보여주는 조사 단서이며 앱의 판단이나 점수화가 아닙니다.")
+        _render_market_mover_metadata_table(
+            recommendation_rows,
+            ["Period", "Strong Buy", "Buy", "Hold", "Sell", "Strong Sell", "Source", "Open"],
+            "의견 분포가 없습니다.",
+        )
+
+    analyst_source_rows = _market_interest_rows_frame(analyst_section.get("source_rows"))
+    with st.expander("공개 페이지 교차확인", expanded=analyst_rows.empty):
+        st.caption("Nasdaq / WSJ / MarketWatch는 원문 교차확인 링크로 제공합니다. 이 단계에서는 해당 HTML을 자동 수집하지 않습니다.")
+        _render_market_mover_metadata_table(
+            analyst_source_rows,
+            ["Source", "Policy", "Evidence", "Caveat", "Open"],
+            "교차확인 링크가 없습니다.",
+        )
 
     news_section = _market_interest_section(section_model, "news_catalysts")
     st.markdown("##### 뉴스 리스트")
@@ -3999,14 +4057,17 @@ def _fetch_market_mover_market_interest_metadata(
             max_news=3,
             max_korean_news=3,
         )
-        metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), news_update)
+        metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), news_update)
         st.session_state[metadata_key] = metadata
 
         sec_update = fetch_market_mover_sec_metadata(
             symbol,
             max_filings=3,
         )
-        metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), sec_update)
+        metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), sec_update)
+        analyst_update = fetch_yfinance_analyst_interest_metadata(symbol, max_actions=5)
+        metadata = dict(metadata)
+        metadata["analyst_interest"] = analyst_update
         st.session_state[metadata_key] = metadata
         st.session_state[interest_key] = build_market_interest_read_model(
             mover={"Symbol": symbol, "Name": identity.get("Name")},
@@ -4040,7 +4101,7 @@ def _dispatch_market_mover_investigation_react_event(
                 max_news=3,
                 max_korean_news=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
         st.rerun()
         return metadata
@@ -4051,7 +4112,7 @@ def _dispatch_market_mover_investigation_react_event(
                 symbol,
                 max_filings=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
         st.rerun()
         return metadata
@@ -4136,7 +4197,7 @@ def _render_market_mover_investigation_actions(
                 max_news=3,
                 max_korean_news=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
         st.success("뉴스와 한국어 뉴스 메타데이터를 세션 전용으로 조회했습니다.")
 
@@ -4151,7 +4212,7 @@ def _render_market_mover_investigation_actions(
                 symbol,
                 max_filings=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
         st.success("SEC 공시 메타데이터를 세션 전용으로 조회했습니다.")
 

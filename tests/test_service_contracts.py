@@ -17563,6 +17563,147 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("매수", model["boundary_note"])
         self.assertNotIn("score", model["boundary_note"].lower())
 
+    def test_market_interest_fetches_yfinance_analyst_metadata_with_session_only_rows(self) -> None:
+        from app.services.overview.market_interest import fetch_yfinance_analyst_interest_metadata
+
+        class FakeTicker:
+            def get_upgrades_downgrades(self) -> pd.DataFrame:
+                rows = pd.DataFrame(
+                    [
+                        {
+                            "Firm": "Evercore ISI",
+                            "ToGrade": "Outperform",
+                            "FromGrade": "Outperform",
+                            "Action": "reit",
+                            "priceTargetAction": "up",
+                            "currentPriceTarget": 280.0,
+                            "priorPriceTarget": 250.0,
+                        },
+                        {
+                            "Firm": "KGI Securities",
+                            "ToGrade": "Neutral",
+                            "FromGrade": "Outperform",
+                            "Action": "down",
+                            "priceTargetAction": "down",
+                            "currentPriceTarget": 230.0,
+                            "priorPriceTarget": 260.0,
+                        },
+                    ],
+                    index=pd.to_datetime(["2026-06-25", "2026-06-22"]),
+                )
+                rows.index.name = "GradeDate"
+                return rows
+
+            def get_analyst_price_targets(self) -> dict[str, float]:
+                return {"current": 313.39, "high": 400.0, "low": 215.0, "mean": 317.88, "median": 325.0}
+
+            def get_recommendations_summary(self) -> pd.DataFrame:
+                return pd.DataFrame(
+                    [
+                        {
+                            "period": "0m",
+                            "strongBuy": 9,
+                            "buy": 23,
+                            "hold": 16,
+                            "sell": 2,
+                            "strongSell": 0,
+                        }
+                    ]
+                )
+
+        result = fetch_yfinance_analyst_interest_metadata(
+            "AAPL",
+            max_actions=2,
+            ticker_factory=lambda symbol: FakeTicker(),
+        )
+
+        self.assertEqual(result["status"], "OK")
+        self.assertEqual(result["provider_status"], "SESSION_READY")
+        self.assertEqual(result["source"], "Yahoo Finance / yfinance")
+        self.assertEqual(result["source_url"], "https://finance.yahoo.com/quote/AAPL/analysis/")
+        self.assertEqual(len(result["action_rows"]), 2)
+        first = result["action_rows"][0]
+        self.assertEqual(first["Date"], "2026-06-25")
+        self.assertEqual(first["Firm"], "Evercore ISI")
+        self.assertEqual(first["Action"], "Reiterates")
+        self.assertEqual(first["From"], "Outperform")
+        self.assertEqual(first["To"], "Outperform")
+        self.assertEqual(first["Target Change"], "Raised")
+        self.assertEqual(first["Prior Target"], "$250.00")
+        self.assertEqual(first["Current Target"], "$280.00")
+        target_metrics = {row["Metric"]: row["Value"] for row in result["target_rows"]}
+        self.assertEqual(target_metrics["평균 목표가"], "$317.88")
+        self.assertEqual(target_metrics["최고 목표가"], "$400.00")
+        self.assertEqual(result["recommendation_rows"][0]["Period"], "0m")
+        self.assertEqual(result["recommendation_rows"][0]["Hold"], 16)
+        self.assertNotIn("body", str(result).lower())
+        self.assertNotIn("report", str(result).lower())
+
+    def test_market_interest_read_model_embeds_structured_analyst_rows_and_source_cards(self) -> None:
+        from app.services.overview.market_interest import build_market_interest_read_model
+
+        metadata = {
+            "status": "OK",
+            "analyst_interest": {
+                "status": "OK",
+                "provider_status": "SESSION_READY",
+                "source": "Yahoo Finance / yfinance",
+                "source_url": "https://finance.yahoo.com/quote/AAPL/analysis/",
+                "action_rows": [
+                    {
+                        "Date": "2026-06-25",
+                        "Firm": "Evercore ISI",
+                        "Action": "Reiterates",
+                        "From": "Outperform",
+                        "To": "Outperform",
+                        "Target Change": "Raised",
+                        "Prior Target": "$250.00",
+                        "Current Target": "$280.00",
+                        "Source": "Yahoo Finance / yfinance",
+                        "URL": "https://finance.yahoo.com/quote/AAPL/analysis/",
+                    },
+                    {
+                        "Date": "2026-06-22",
+                        "Firm": "KGI Securities",
+                        "Action": "Downgrade",
+                        "From": "Outperform",
+                        "To": "Neutral",
+                        "Target Change": "Lowered",
+                        "Prior Target": "$260.00",
+                        "Current Target": "$230.00",
+                        "Source": "Yahoo Finance / yfinance",
+                        "URL": "https://finance.yahoo.com/quote/AAPL/analysis/",
+                    },
+                ],
+                "target_rows": [{"Metric": "평균 목표가", "Value": "$317.88", "Source": "Yahoo Finance / yfinance"}],
+                "recommendation_rows": [{"Period": "0m", "Strong Buy": 9, "Buy": 23, "Hold": 16, "Sell": 2}],
+            },
+            "news": pd.DataFrame([], columns=["Title", "Source", "Published At", "URL"]),
+            "korean_news": pd.DataFrame([], columns=["Title", "Source", "Published At", "Snippet", "URL"]),
+            "sec_filings": pd.DataFrame([], columns=["Form", "Filing Date", "Title", "URL"]),
+        }
+
+        model = build_market_interest_read_model(
+            mover={"Symbol": "AAPL", "Name": "Apple Inc"},
+            metadata=metadata,
+        )
+
+        summaries = {item["id"]: item for item in model["summary_items"]}
+        self.assertEqual(summaries["analyst_interest"]["state"], "애널리스트 2건")
+        self.assertEqual(summaries["analyst_interest"]["tone"], "success")
+        sections = {section["id"]: section for section in model["evidence_sections"]}
+        analyst = sections["analyst_interest"]
+        self.assertEqual(analyst["provider_status"], "SESSION_READY")
+        self.assertEqual(len(analyst["rows"]), 2)
+        self.assertEqual(analyst["target_rows"][0]["Metric"], "평균 목표가")
+        source_names = {row["Source"] for row in analyst["source_rows"]}
+        self.assertIn("Yahoo Finance Analysis", source_names)
+        self.assertIn("MarketWatch Analyst Estimates", source_names)
+        self.assertIn("WSJ Markets Research & Ratings", source_names)
+        self.assertIn("Nasdaq Analyst Research", source_names)
+        self.assertNotIn("기관이 지금 사고", str(model))
+        self.assertNotIn("confidence score", str(model).lower())
+
     def test_market_interest_summary_uses_conservative_statuses_from_existing_metadata(self) -> None:
         from app.services.overview.market_interest import build_market_interest_read_model
 
@@ -17600,7 +17741,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(summary["news_catalysts"]["state"], "뉴스 1건")
         self.assertEqual(summary["sec_filing_catalysts"]["state"], "공시 1건")
         self.assertEqual(summary["institutional_context"]["state"], "13F 지연 자료")
-        self.assertEqual(summary["sources"]["state"], "출처 9개")
+        self.assertEqual(summary["sources"]["state"], "출처 12개")
         self.assertEqual(summary["news_catalysts"]["detail"], "US 1건 · KR 0건")
         self.assertEqual(summary["sec_filing_catalysts"]["detail"], "SEC issuer filing 1건")
         self.assertFalse(any("buy" in str(item).lower() for item in model["summary_items"]))
@@ -17799,8 +17940,30 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("sec_filing_catalysts", render_body)
         self.assertIn("기관 보유 배경 · 13F 지연 자료", render_body)
         self.assertIn("출처/원문 링크", render_body)
-        self.assertIn("FMP/Finnhub", render_body)
         self.assertNotIn('st.markdown("##### 원문 확인")', render_body)
+
+    def test_market_interest_renderer_shows_structured_analyst_evidence_and_source_cards(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        render_body = source[source.index("def _render_market_mover_market_interest") :]
+        render_body = render_body[: render_body.index("def _market_mover_sector_breadth_table")]
+
+        self.assertIn("최근 애널리스트 액션", render_body)
+        self.assertIn("목표가 요약", render_body)
+        self.assertIn("의견 분포", render_body)
+        self.assertIn("공개 페이지 교차확인", render_body)
+        self.assertIn("Target Change", render_body)
+        self.assertIn("Current Target", render_body)
+        self.assertIn("Strong Buy", render_body)
+        self.assertNotIn("현재는 외부 확인 링크만 제공합니다.", render_body)
+
+    def test_market_mover_market_interest_fetch_includes_yfinance_analyst_metadata(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        fetch_body = source[source.index("def _fetch_market_mover_market_interest_metadata") :]
+        fetch_body = fetch_body[: fetch_body.index("def _dispatch_market_mover_investigation_react_event")]
+
+        self.assertIn("fetch_yfinance_analyst_interest_metadata", source)
+        self.assertIn('"analyst_interest"', fetch_body)
+        self.assertIn("max_actions=5", fetch_body)
 
     def test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded(self) -> None:
         from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
@@ -18345,6 +18508,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(hasattr(market_intelligence, "fetch_market_mover_sec_filing_preview"))
         self.assertFalse(hasattr(market_intelligence, "parse_market_mover_sec_filing_preview"))
 
+    @patch("app.web.overview.market_movers_helpers.fetch_yfinance_analyst_interest_metadata")
     @patch("app.web.overview.market_movers_helpers.fetch_market_mover_sec_metadata")
     @patch("app.web.overview.market_movers_helpers.fetch_market_mover_news_metadata")
     @patch("app.web.overview.market_movers_helpers.merge_market_mover_metadata")
@@ -18355,6 +18519,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         mock_merge: MagicMock,
         mock_fetch_news: MagicMock,
         mock_fetch_sec: MagicMock,
+        mock_fetch_analyst: MagicMock,
     ) -> None:
         from app.web.overview.market_movers_helpers import _dispatch_market_mover_investigation_react_event
 
@@ -18368,10 +18533,19 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         sec_update = {
             "sec_filings": pd.DataFrame([{"Form": "8-K", "Filing Date": "2026-07-07", "Title": "Current report"}])
         }
+        analyst_update = {
+            "status": "OK",
+            "provider_status": "SESSION_READY",
+            "action_rows": [{"Date": "2026-07-08", "Firm": "Desk", "Action": "Reiterates"}],
+            "target_rows": [],
+            "recommendation_rows": [],
+        }
         merged_news = dict(news_update)
         merged_all = {**merged_news, **sec_update}
+        merged_all_with_analyst = {**merged_all, "analyst_interest": analyst_update}
         mock_fetch_news.return_value = news_update
         mock_fetch_sec.return_value = sec_update
+        mock_fetch_analyst.return_value = analyst_update
         mock_merge.side_effect = [merged_news, merged_all]
         metadata: dict[str, object] = {}
         result = _dispatch_market_mover_investigation_react_event(
@@ -18385,13 +18559,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         mock_fetch_news.assert_called_once_with("NET", name="Cloudflare Inc", max_news=3, max_korean_news=3)
         mock_fetch_sec.assert_called_once_with("NET", max_filings=3)
+        mock_fetch_analyst.assert_called_once_with("NET", max_actions=5)
         self.assertEqual(mock_merge.call_count, 2)
-        self.assertEqual(result, merged_all)
-        self.assertEqual(mock_st.session_state["overview_market_mover_metadata__NET"], merged_all)
+        self.assertEqual(result, merged_all_with_analyst)
+        self.assertEqual(mock_st.session_state["overview_market_mover_metadata__NET"], merged_all_with_analyst)
         self.assertIn("overview_market_mover_metadata__NET__market_interest", mock_st.session_state)
         model = mock_st.session_state["overview_market_mover_metadata__NET__market_interest"]
         self.assertEqual(model["symbol"], "NET")
         summary = {item["id"]: item for item in model["summary_items"]}
+        self.assertEqual(summary["analyst_interest"]["state"], "애널리스트 1건")
         self.assertEqual(summary["news_catalysts"]["state"], "뉴스 2건")
         self.assertEqual(summary["sec_filing_catalysts"]["state"], "공시 1건")
         mock_st.rerun.assert_called_once()
