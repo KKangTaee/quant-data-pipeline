@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-symbol-resolver-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-audit-v1-20260708/`다.
+
+- 목적: Practical Validation의 1차 필수 검증이 여러 module 안에서 같은 검증을 반복 소유하는 문제를 막기 위해 현재 audit row inventory와 `check_id -> owner_module` taxonomy를 정리했다.
+- 주요 결론: `validation_efficacy`는 source / replay / benchmark / provider / PIT / survivorship / robustness를 다시 보는 umbrella audit이 아니라 walk-forward / OOS / regime split 중심의 `validation_method_strength`로 축소해야 한다. replay, benchmark, PIT, survivorship, provider freshness, stress/robustness는 각각 `latest_replay`, `comparison_basis`, `data_bias_control`, `stress_robustness` owner가 단독 소유한다.
+- 이번 차수에서 하지 않은 일: Python service refactor, gate threshold 변경, Flow 4 UI 변경, registry / saved JSONL rewrite, provider ingestion, Final Review selected-route policy 변경, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/backtest-symbol-resolver-v1-20260708/`다.
 
 - 목적: Backtest Quality / Value Factor Readiness에서 stale/missing price ticker가 단순 가격 지연인지 ticker-change symbol identity 문제인지 구분하고, 사용자가 검토 후 repair를 실행할 수 있게 한다.
 - 주요 변경: `nyse_symbol_lifecycle(event_type=ticker_change)` 기반 resolver / active repair 저장 path를 추가했다. 후보는 same CIK, lifecycle coverage, source reference, resolved ticker price freshness를 `evidence_factors`로 설명하고 LOW confidence는 자동 반영하지 않는다. Active repair는 source ticker를 rewrite하지 않고 collection ticker만 resolved symbol로 바꾸며, price refresh plan/details에 `source_range` / `resolved_range` / `split_status` metadata-only PIT split contract를 남긴다. Factor Readiness는 후보쌍 / 신뢰도 / 기간 경계 / 다음 행동을 보여주고 repair 후 readiness 재확인과 백테스트 재실행을 안내한다.

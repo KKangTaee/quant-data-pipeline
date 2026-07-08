@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - Practical Validation 1차 필수 검증은 owner matrix로 재분류해야 한다
+
+- User request: 사용자가 1차 필수 검증 안에서 특정 모듈 내부 검증과 외부 검증이 중복되는 것 같고, 각 모듈의 검증을 다시 파악해 카테고리와 모듈을 재그루핑하고 싶다고 요청함.
+- Interpreted goal: Practical Validation은 같은 실패를 여러 모듈에서 반복 차단하지 않고, 각 검증 항목이 하나의 owner module만 갖는 구조로 바뀌어야 한다.
+- Analysis result: `validation_efficacy`가 source contract, Data Trust, runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT, survivorship, execution boundary를 모두 다시 읽고 있어 중복의 중심이다. 이 모듈은 walk-forward / OOS / regime split 중심의 `validation_method_strength`로 축소하고, replay / benchmark / data bias / robustness는 각 owner module이 단독 소유해야 한다.
+- Follow-up: `practical-validation-required-taxonomy-audit-v1-20260708`에 current row inventory, duplicate ownership matrix, target taxonomy, next code refactor plan을 남겼다. 이번 task는 코드 동작을 바꾸지 않았다.
+
 ### 2026-07-07 - Factor Readiness는 진단표가 아니라 문제 해결 패널이어야 한다
 
 - User request: 사용자가 Factor Readiness와 preset 설명이 `INFO / REVIEW`, `Requested / Covered`, 후보군 안내 중심이라 무엇이 문제이고 어떤 ticker를 어떻게 해결해야 하는지 알기 어렵다고 지적함.

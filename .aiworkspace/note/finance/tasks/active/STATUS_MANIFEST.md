@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-07
+Last Verified: 2026-07-08
 
 ## Current State
 
@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `backtest-coverage-provider-gap-refresh-v1-20260707`
+- `practical-validation-required-taxonomy-audit-v1-20260708`
 
 Latest completed docs cleanup task:
 
@@ -47,6 +47,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-required-taxonomy-audit-v1-20260708`: Practical Validation 1차 필수 검증의 현재 module / audit row inventory를 점검하고, `check_id -> owner_module` 기준 taxonomy를 정의했다. 핵심 결론은 `validation_efficacy`를 walk-forward / OOS / regime 중심의 `validation_method_strength`로 축소하고, replay / benchmark / PIT / survivorship / provider freshness / robustness는 각 owner module이 단독 소유하게 하는 것이다. 이번 task는 코드 동작을 바꾸지 않은 설계 / handoff record다.
 - `backtest-coverage-provider-gap-refresh-v1-20260707`: Backtest Data Trust Coverage 최신화가 provider no-data / persistent source gap 심볼을 반복 클릭 대상으로 남기지 않도록 수정했다. 명백한 provider/source gap은 refresh plan에서 제외하고, rows_written=0 + unresolved 결과는 같은 화면에서 retry action card를 다시 렌더링하지 않는다.
 - `practical-validation-flow4-action-steps-v3-20260707`: Practical Validation Flow 4 `해결 방법` now renders numbered `action_steps` instead of a slash-joined paragraph. Row-level audit `Next Action` remains the most specific first step, followed by provider / DB / Flow 2 recheck guidance where relevant.
 - `practical-validation-flow4-action-guide-v2-20260707`: Practical Validation Flow 4 criteria cards now show `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`. Location remains visible but is no longer the primary answer; the card now explains what to fix, how to fix it, and what state counts as resolved.

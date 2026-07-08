@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Required Taxonomy Audit V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-audit-v1-20260708/`에서 1차 필수 검증의 current row inventory와 owner matrix를 정리했다.
+  - 핵심 결론은 `validation_efficacy`가 source / replay / benchmark / provider / PIT / survivorship / robustness를 중복 소유하고 있으므로, 다음 코드 작업에서 walk-forward / OOS / regime 중심의 method-strength module로 축소해야 한다는 것이다.
+  - 이번 task는 설계 / handoff 기록이며 Python service, gate threshold, UI, registry / saved JSONL은 변경하지 않았다.
 - Backtest Factor Readiness Action UI V1:
   - Quality / Value strict form의 Factor Readiness를 내부 진단값 카드에서 `문제 / 티커 / 해결 방법 / action` 중심 React panel로 바꿨다.
   - 가격 보강은 Backtest OHLCV refresh service, statement gap은 targeted Extended Statement Refresh로 연결했다.

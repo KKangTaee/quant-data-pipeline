@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-07
+Last Verified: 2026-07-08
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `backtest-coverage-provider-gap-refresh-v1-20260707` closeout. |
+| none | - | No active task after `practical-validation-required-taxonomy-audit-v1-20260708` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-required-taxonomy-audit-v1-20260708` | Completed record | Practical Validation 1차 필수 검증의 current row inventory와 owner matrix를 정리했다. `validation_efficacy` 중복 소유권을 확인했고, 다음 코드 작업은 method-strength 축소와 owner-module gate refactor다. |
 | `backtest-coverage-provider-gap-refresh-v1-20260707` | Completed record | Backtest Data Trust Coverage 최신화 no-row provider gap result no longer re-renders the retry action card; persistent provider/source gap symbols are excluded from refresh targets. |
 | `practical-validation-flow4-action-steps-v3-20260707` | Completed record | Practical Validation Flow 4 `해결 방법` now renders numbered action steps instead of a slash-joined paragraph. |
 | `practical-validation-flow4-action-guide-v2-20260707` | Completed record | Practical Validation Flow 4 criteria cards show `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`, with location demoted to supporting context. |
