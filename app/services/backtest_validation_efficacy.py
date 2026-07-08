@@ -319,6 +319,17 @@ def _regime_split_row(validation: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
+def _missing_method_row(*, criteria: str, next_action: str, meaning: str) -> dict[str, Any]:
+    return _row(
+        criteria=criteria,
+        status="REVIEW",
+        current="NOT_RUN",
+        evidence="method evidence not attached",
+        next_action=next_action,
+        meaning=meaning,
+    )
+
+
 def _provider_display_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
     rows = [dict(row or {}) for row in _as_list(validation.get("provider_coverage_display_rows")) if isinstance(row, dict)]
     if rows:
@@ -527,32 +538,29 @@ def _route_from_rows(rows: list[dict[str, Any]]) -> str:
 
 
 def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any]:
-    """Summarize whether Practical Validation evidence is strong enough for final selection."""
+    """Summarize method-strength evidence without re-owning source, replay, or data checks."""
 
     validation = dict(validation or {})
-    checks = [dict(row or {}) for row in _as_list(validation.get("checks")) if isinstance(row, dict)]
     rows = [
-        _source_contract_row(validation, checks),
-        _data_trust_row(checks),
-        _runtime_replay_row(validation, checks),
-        _period_coverage_row(validation, checks),
-        _benchmark_parity_row(validation, checks),
-        _provider_coverage_row(validation, checks),
-        _robustness_row(validation),
-        _pit_guard_row(validation),
-        _survivorship_row(validation),
-        _execution_boundary_row(validation),
+        _walkforward_temporal_row(validation)
+        or _missing_method_row(
+            criteria="Walk-forward temporal validation",
+            next_action="walk-forward window evidence를 보강하거나 Final Review 판단 사유에 미실행 사유를 남깁니다.",
+            meaning="rolling window 기준으로 benchmark 대비 성과와 drawdown gap이 유지되는지 확인합니다.",
+        ),
+        _oos_holdout_row(validation)
+        or _missing_method_row(
+            criteria="OOS holdout validation",
+            next_action="in-sample / out-of-sample 분리 검증 evidence를 보강하거나 미실행 사유를 남깁니다.",
+            meaning="뒤쪽 holdout 구간에서 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
+        ),
+        _regime_split_row(validation)
+        or _missing_method_row(
+            criteria="Regime split validation",
+            next_action="macro regime bucket별 검증 evidence를 보강하거나 미실행 사유를 남깁니다.",
+            meaning="macro regime bucket별로 benchmark 대비 성과와 drawdown이 유지되는지 확인합니다.",
+        ),
     ]
-    temporal_row = _walkforward_temporal_row(validation)
-    if temporal_row is not None:
-        rows.insert(5, temporal_row)
-    oos_row = _oos_holdout_row(validation)
-    if oos_row is not None:
-        rows.insert(6 if temporal_row is not None else 5, oos_row)
-    regime_row = _regime_split_row(validation)
-    if regime_row is not None:
-        insert_at = 5 + int(temporal_row is not None) + int(oos_row is not None)
-        rows.insert(insert_at, regime_row)
     route = _route_from_rows(rows)
     status_counts = {
         status: sum(1 for row in rows if row.get("Status") == status)
@@ -561,17 +569,17 @@ def build_validation_efficacy_audit(validation: dict[str, Any]) -> dict[str, Any
     total = len(rows)
     ready = status_counts["PASS"]
     if route == VALIDATION_EFFICACY_READY:
-        conclusion = "검증 효력 audit 기준으로 즉시 차단되는 공백이 없습니다."
-        next_action = "Final Review에서 operator 판단과 gate policy를 함께 확인합니다."
+        conclusion = "검증 방법론 근거가 Final Review 판단에 사용할 수 있는 상태입니다."
+        next_action = "Final Review에서 방법론 근거를 operator 판단과 함께 확인합니다."
     elif route == VALIDATION_EFFICACY_BLOCKED:
-        conclusion = "검증 효력 audit에서 차단 항목이 발견됐습니다."
-        next_action = "BLOCKED 항목을 먼저 해소한 뒤 Final Review 선택 판단을 진행합니다."
+        conclusion = "검증 방법론 근거에서 차단 항목이 발견됐습니다."
+        next_action = "BLOCKED 방법론 항목을 먼저 해소한 뒤 Final Review 선택 판단을 진행합니다."
     elif route == VALIDATION_EFFICACY_NEEDS_INPUT:
-        conclusion = "검증 효력을 판단하기 위해 추가 evidence가 필요합니다."
-        next_action = "runtime replay, provider snapshot, benchmark parity, robustness evidence를 우선 보강합니다."
+        conclusion = "검증 방법론 강도를 판단하기 위해 추가 evidence가 필요합니다."
+        next_action = "walk-forward, OOS holdout, regime split evidence 중 NEEDS_INPUT 항목을 보강합니다."
     else:
-        conclusion = "검증 효력은 확인 가능하지만 REVIEW 항목이 남아 있습니다."
-        next_action = "REVIEW 항목을 최종 판단 사유에 명시하거나 evidence를 보강합니다."
+        conclusion = "검증 방법론 근거는 확인 가능하지만 REVIEW 항목이 남아 있습니다."
+        next_action = "REVIEW 방법론 항목을 최종 판단 사유에 명시하거나 evidence를 보강합니다."
     return {
         "schema_version": VALIDATION_EFFICACY_AUDIT_SCHEMA_VERSION,
         "route": route,

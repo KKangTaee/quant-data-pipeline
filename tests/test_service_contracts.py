@@ -3358,8 +3358,22 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
             }
         )
 
+        row_criteria = [row["Criteria"] for row in audit["rows"]]
         self.assertEqual(audit["route"], VALIDATION_EFFICACY_READY)
-        self.assertEqual(audit["metrics"]["pass"], 13)
+        self.assertEqual(
+            row_criteria,
+            [
+                "Walk-forward temporal validation",
+                "OOS holdout validation",
+                "Regime split validation",
+            ],
+        )
+        self.assertEqual(audit["metrics"]["pass"], 3)
+        self.assertEqual(audit["metrics"]["total_rows"], 3)
+        self.assertNotIn("Runtime replay evidence", row_criteria)
+        self.assertNotIn("Benchmark parity", row_criteria)
+        self.assertNotIn("Provider / freshness evidence", row_criteria)
+        self.assertNotIn("Survivorship / universe guard", row_criteria)
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
@@ -3601,9 +3615,9 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         self.assertEqual(proxy_evidence["status"], "REVIEW")
         self.assertTrue(proxy_evidence["metrics"]["proxy_evidence"])
 
-    def test_missing_runtime_and_provider_evidence_are_not_passed(self) -> None:
+    def test_missing_method_evidence_is_review_not_runtime_provider_gap(self) -> None:
         from app.services.backtest_validation_efficacy import (
-            VALIDATION_EFFICACY_NEEDS_INPUT,
+            VALIDATION_EFFICACY_REVIEW,
             build_validation_efficacy_audit,
         )
 
@@ -3629,12 +3643,23 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         )
 
         rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
-        self.assertEqual(audit["route"], VALIDATION_EFFICACY_NEEDS_INPUT)
-        self.assertEqual(rows_by_criteria["Runtime replay evidence"]["Status"], "NEEDS_INPUT")
-        self.assertEqual(rows_by_criteria["Provider / freshness evidence"]["Status"], "NEEDS_INPUT")
-        self.assertEqual(rows_by_criteria["Survivorship / universe guard"]["Status"], "REVIEW")
+        self.assertEqual(audit["route"], VALIDATION_EFFICACY_REVIEW)
+        self.assertEqual(
+            set(rows_by_criteria),
+            {
+                "Walk-forward temporal validation",
+                "OOS holdout validation",
+                "Regime split validation",
+            },
+        )
+        self.assertEqual(rows_by_criteria["Walk-forward temporal validation"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["OOS holdout validation"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Regime split validation"]["Status"], "REVIEW")
+        self.assertNotIn("Runtime replay evidence", rows_by_criteria)
+        self.assertNotIn("Provider / freshness evidence", rows_by_criteria)
+        self.assertNotIn("Survivorship / universe guard", rows_by_criteria)
 
-    def test_survivorship_guard_uses_data_coverage_lifecycle_evidence(self) -> None:
+    def test_survivorship_guard_is_owned_by_data_coverage_not_validation_efficacy(self) -> None:
         from app.services.backtest_validation_efficacy import (
             VALIDATION_EFFICACY_READY,
             build_validation_efficacy_audit,
@@ -3677,6 +3702,21 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
                     "robustness_route": "READY_FOR_STRESS_SWEEP",
                     "robustness_lab_board": {"status": "PASS", "summary": "stress / rolling / sensitivity attached"},
                 },
+                "temporal_validation": {
+                    "status": "PASS",
+                    "summary": "walk-forward pass",
+                    "metrics": {"window_count": 12, "portfolio_curve_source": "actual_runtime_replay"},
+                },
+                "oos_holdout_validation": {
+                    "status": "PASS",
+                    "summary": "OOS pass",
+                    "metrics": {"in_sample_months": 30, "out_sample_months": 30},
+                },
+                "regime_split_validation": {
+                    "status": "PASS",
+                    "summary": "regime pass",
+                    "metrics": {"regime_bucket_count": 3, "common_months": 59},
+                },
                 "data_coverage_audit": {
                     "rows": [
                         {
@@ -3692,7 +3732,7 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
 
         rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
         self.assertEqual(audit["route"], VALIDATION_EFFICACY_READY)
-        self.assertEqual(rows_by_criteria["Survivorship / universe guard"]["Status"], "PASS")
+        self.assertNotIn("Survivorship / universe guard", rows_by_criteria)
 
 
 class BacktestRealismAuditContractTests(unittest.TestCase):
