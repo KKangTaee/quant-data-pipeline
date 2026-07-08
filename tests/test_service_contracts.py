@@ -18575,11 +18575,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             "validation_efficacy_audit": self._gate_audit(
                 route="VALIDATION_EFFICACY_READY",
                 label="Ready",
-                criteria="Runtime replay evidence",
+                criteria="Walk-forward temporal validation",
                 status="PASS",
                 ready=True,
-                current="PASS",
-                meaning="runtime replay attached",
+                current="PASS / windows=12",
+                meaning="walk-forward method evidence attached",
             ),
             "data_coverage_audit": self._gate_audit(
                 route="DATA_COVERAGE_READY",
@@ -19100,11 +19100,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "validation_efficacy_audit": {
                     "rows": [
                         {
-                            "Criteria": "Runtime replay evidence",
+                            "Criteria": "Walk-forward temporal validation",
                             "Status": "NEEDS_INPUT",
                             "Ready": False,
-                            "Current": "NOT_RUN",
-                            "Meaning": "runtime replay gap",
+                            "Current": "windows=0",
+                            "Meaning": "walk-forward method evidence gap",
                         }
                     ]
                 },
@@ -19168,7 +19168,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             [
                 "Final Review Evidence",
                 "Validation",
-                "Validation Efficacy",
+                "Validation Method Strength",
                 "Data Coverage",
                 "Backtest Realism",
                 "Look-through Exposure",
@@ -19180,7 +19180,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[0]["Criteria"], "Evidence route")
         self.assertTrue(rows[0]["Ready"])
         self.assertEqual(rows[1]["Current"], "REVIEW")
-        self.assertEqual(rows[2]["Criteria"], "Runtime replay evidence")
+        self.assertEqual(rows[2]["Criteria"], "Walk-forward temporal validation")
         self.assertFalse(rows[2]["Ready"])
         self.assertEqual(rows[3]["Criteria"], "Price DB window coverage")
         self.assertFalse(rows[3]["Ready"])
@@ -19220,11 +19220,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "route_label": "Ready",
                 "rows": [
                     {
-                        "Criteria": "Runtime replay evidence",
+                        "Criteria": "Walk-forward temporal validation",
                         "Status": "PASS",
                         "Ready": True,
-                        "Current": "PASS",
-                        "Meaning": "runtime replay attached",
+                        "Current": "PASS / windows=12",
+                        "Meaning": "walk-forward method evidence attached",
                     }
                 ],
             },
@@ -19272,7 +19272,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
         self.assertTrue(packet["gate_policy_snapshot"]["select_allowed"])
         sections = [row["Section"] for row in packet["checks"]]
-        self.assertIn("Validation Efficacy Audit", sections)
+        self.assertIn("Validation Method Strength Audit", sections)
         self.assertIn("Data Coverage Audit", sections)
         self.assertIn("Construction Risk Audit", sections)
         self.assertIn("Risk Contribution Audit", sections)
@@ -19313,6 +19313,18 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(packet["gate_policy_snapshot"]["select_allowed"])
         self.assertFalse(packet["gate_policy_snapshot"]["waiver_supported"])
         severities = self._gate_policy_severities(packet)
+        method_policy_row = next(
+            row
+            for row in packet["gate_policy_snapshot"]["policy_rows"]
+            if row["Group"] == "validation_efficacy"
+        )
+        self.assertEqual(method_policy_row["Criteria"], "Validation Method Strength")
+        self.assertIn("walk-forward", method_policy_row["Required Action"])
+        self.assertIn("OOS", method_policy_row["Required Action"])
+        self.assertIn("regime", method_policy_row["Required Action"])
+        self.assertNotIn("runtime replay", method_policy_row["Required Action"].lower())
+        self.assertNotIn("provider", method_policy_row["Required Action"].lower())
+        self.assertNotIn("survivorship", method_policy_row["Required Action"].lower())
         self.assertEqual(severities["validation_efficacy"], "PASS")
         self.assertEqual(severities["data_coverage"], "PASS")
         self.assertEqual(severities["construction_risk"], "PASS")
@@ -19345,11 +19357,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         validation["validation_efficacy_audit"] = self._gate_audit(
             route="VALIDATION_EFFICACY_REVIEW",
             label="Review Required",
-            criteria="PIT / look-ahead boundary",
+            criteria="Walk-forward temporal validation",
             status="REVIEW",
             ready=False,
-            current="needs review",
-            meaning="PIT boundary needs review",
+            current="windows=6 / negative share=0.33",
+            meaning="rolling excess return is unstable",
         )
         validation["data_coverage_audit"] = self._gate_audit(
             route="DATA_COVERAGE_REVIEW",
@@ -19421,11 +19433,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         validation["validation_efficacy_audit"] = self._gate_audit(
             route="VALIDATION_EFFICACY_NEEDS_INPUT",
             label="Evidence Input Needed",
-            criteria="Runtime replay evidence",
+            criteria="Walk-forward temporal validation",
             status="NEEDS_INPUT",
             ready=False,
-            current="NOT_RUN",
-            meaning="runtime replay missing",
+            current="windows=0",
+            meaning="walk-forward method evidence missing",
         )
         validation["data_coverage_audit"] = self._gate_audit(
             route="DATA_COVERAGE_NEEDS_INPUT",
@@ -19707,11 +19719,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     "route_label": "Evidence Input Needed",
                     "rows": [
                         {
-                            "Criteria": "Runtime replay evidence",
+                            "Criteria": "Walk-forward temporal validation",
                             "Status": "NEEDS_INPUT",
                             "Ready": False,
-                            "Current": "NOT_RUN",
-                            "Meaning": "runtime replay missing",
+                            "Current": "windows=0",
+                            "Meaning": "walk-forward method evidence missing",
                         }
                     ],
                 },
@@ -19927,11 +19939,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     "route_label": "Ready",
                     "rows": [
                         {
-                            "Criteria": "Runtime replay evidence",
+                            "Criteria": "Walk-forward temporal validation",
                             "Status": "PASS",
                             "Ready": True,
-                            "Current": "PASS",
-                            "Meaning": "validation efficacy ready",
+                            "Current": "PASS / windows=12",
+                            "Meaning": "walk-forward method evidence ready",
                         }
                     ],
                 },
@@ -20022,11 +20034,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     "route_label": "Ready",
                     "rows": [
                         {
-                            "Criteria": "Runtime replay evidence",
+                            "Criteria": "Walk-forward temporal validation",
                             "Status": "PASS",
                             "Ready": True,
-                            "Current": "PASS",
-                            "Meaning": "validation efficacy ready",
+                            "Current": "PASS / windows=12",
+                            "Meaning": "walk-forward method evidence ready",
                         }
                     ],
                 },
@@ -20117,11 +20129,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     "route_label": "Ready",
                     "rows": [
                         {
-                            "Criteria": "Runtime replay evidence",
+                            "Criteria": "Walk-forward temporal validation",
                             "Status": "PASS",
                             "Ready": True,
-                            "Current": "PASS",
-                            "Meaning": "validation efficacy ready",
+                            "Current": "PASS / windows=12",
+                            "Meaning": "walk-forward method evidence ready",
                         }
                     ],
                 },
@@ -20212,11 +20224,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     "route_label": "Ready",
                     "rows": [
                         {
-                            "Criteria": "Runtime replay evidence",
+                            "Criteria": "Walk-forward temporal validation",
                             "Status": "PASS",
                             "Ready": True,
-                            "Current": "PASS",
-                            "Meaning": "validation efficacy ready",
+                            "Current": "PASS / windows=12",
+                            "Meaning": "walk-forward method evidence ready",
                         }
                     ],
                 },

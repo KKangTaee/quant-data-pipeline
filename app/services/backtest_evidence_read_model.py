@@ -88,7 +88,7 @@ GATE_POLICY_GROUP_LABELS = {
     "leveraged_inverse": "Leveraged / Inverse Suitability",
     "paper_observation": "Paper Observation",
     "final_review_evidence": "Final Review Evidence",
-    "validation_efficacy": "Validation Efficacy",
+    "validation_efficacy": "Validation Method Strength",
     "data_coverage": "Data Coverage",
     "construction_risk": "Construction Risk",
     "risk_contribution": "Risk Contribution",
@@ -103,7 +103,7 @@ GATE_POLICY_GROUP_ACTIONS = {
     "leveraged_inverse": "leveraged / inverse 노출 목적, 보유 기간, 위험 한계를 명시합니다.",
     "paper_observation": "관찰 benchmark, active component, review trigger를 보강합니다.",
     "final_review_evidence": "Final Review evidence route가 ready가 되도록 validation / robustness / observation blocker를 해소합니다.",
-    "validation_efficacy": "runtime replay, benchmark parity, walk-forward / OOS / regime, provider freshness, robustness, PIT / survivorship evidence gap을 보강합니다.",
+    "validation_efficacy": "walk-forward / OOS / regime split 방법론 evidence gap을 보강합니다.",
     "data_coverage": "DB price window, provider freshness, PIT replay, universe / survivorship evidence gap을 보강합니다.",
     "construction_risk": "component weight, provider look-through coverage, top holding / overlap, asset exposure evidence gap을 보강합니다.",
     "risk_contribution": "component return matrix, correlation, risk contribution, drop-one dependency evidence gap을 보강합니다.",
@@ -234,14 +234,13 @@ _SELECTION_STATUS_BLOCKING_GROUPS = {
     "leveraged_inverse",
 }
 _SELECTION_VALIDATION_EFFICACY_BLOCKING_TERMS = {
-    "runtime replay",
-    "runtime period",
-    "period coverage",
-    "benchmark parity",
-    "pit",
-    "look-ahead",
-    "lookahead",
-    "survivorship",
+    "walk-forward",
+    "walkforward",
+    "temporal validation",
+    "oos",
+    "holdout",
+    "regime",
+    "method",
 }
 _SELECTION_DATA_COVERAGE_BLOCKING_TERMS = {
     "price db window",
@@ -1104,14 +1103,14 @@ def build_investability_evidence_packet(
             "Meaning": "critical NOT_RUN, hard blocker, evidence blocker가 선택을 막는지 봅니다.",
         },
         {
-            "Section": "Validation Efficacy Audit",
+            "Section": "Validation Method Strength Audit",
             "Ready": validation_efficacy_route == "VALIDATION_EFFICACY_READY",
             "Current": (
                 f"{validation_efficacy_audit.get('route_label')} / {validation_efficacy_route}"
                 if validation_efficacy_audit.get("route_label") and validation_efficacy_route
                 else validation_efficacy_route or validation_efficacy_audit.get("route_label") or "-"
             ),
-            "Meaning": "walk-forward / OOS / regime / PIT / replay / benchmark / provider / robustness evidence gap을 최종 선택 전에 분리해서 봅니다.",
+            "Meaning": "walk-forward / OOS / regime split 방법론 evidence gap을 최종 선택 전에 분리해서 봅니다.",
         },
         {
             "Section": "Data Coverage Audit",
@@ -1618,7 +1617,7 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
                 "Critical Gaps": metrics.get("critical_gaps", 0),
                 "NOT_RUN": summary.get("not_run", 0),
                 "Provider": summary.get("provider_status") or "-",
-                "Validation Efficacy": summary.get("validation_efficacy_route") or "-",
+                "Validation Method Strength": summary.get("validation_efficacy_route") or "-",
                 "Data Coverage": summary.get("data_coverage_route") or "-",
                 "Backtest Realism": summary.get("backtest_realism_route") or "-",
                 "Packet Score": packet.get("score"),
@@ -1904,7 +1903,7 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     _append_check_rows(display_rows, area="Investability Packet", checks=list(packet.get("checks") or []))
     _append_check_rows(display_rows, area="Gate Policy", checks=list(gate_policy.get("policy_rows") or []))
     _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
-    _append_check_rows(display_rows, area="Validation Efficacy", checks=list(validation_efficacy.get("rows") or []))
+    _append_check_rows(display_rows, area="Validation Method Strength", checks=list(validation_efficacy.get("rows") or []))
     _append_check_rows(display_rows, area="Data Coverage", checks=list(data_coverage.get("rows") or []))
     _append_check_rows(display_rows, area="Construction Risk", checks=list(construction_risk.get("rows") or []))
     _append_check_rows(display_rows, area="Risk Contribution", checks=list(risk_contribution.get("rows") or []))
