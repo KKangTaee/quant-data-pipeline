@@ -10604,6 +10604,100 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(plan["symbol_resolutions"][0]["resolved_symbol"], "BNY")
         self.assertIn("BK -> BNY", plan["detail"])
 
+    def test_backtest_price_refresh_plan_exposes_pit_split_contract_for_active_alias(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import build_backtest_price_refresh_plan
+
+        plan = build_backtest_price_refresh_plan(
+            {
+                "tickers": ["AAA", "BK"],
+                "start": "2016-01-01",
+                "end": "2026-07-02",
+                "actual_result_end": "2026-05-20",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "effective_end_date": "2026-07-02",
+                        "common_latest_date": "2026-05-20",
+                        "refresh_symbols_all": ["BK"],
+                        "stale_symbols_all": ["BK"],
+                    },
+                },
+            },
+            now=datetime(2026, 7, 8, 12, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+            active_symbol_resolutions={
+                "BK": {
+                    "source_symbol": "BK",
+                    "resolved_symbol": "BNY",
+                    "effective_date": "2026-05-21",
+                    "confidence": 0.97,
+                    "resolution_status": "active",
+                }
+            },
+        )
+
+        resolution = plan["symbol_resolutions"][0]
+        self.assertEqual(plan["symbol_resolution_split_count"], 1)
+        self.assertEqual(resolution["split_status"], "ready")
+        self.assertEqual(resolution["stitching_status"], "metadata_only")
+        self.assertEqual(
+            resolution["source_range"],
+            {"symbol": "BK", "start": "2016-01-01", "end": "2026-05-20"},
+        )
+        self.assertEqual(
+            resolution["resolved_range"],
+            {"symbol": "BNY", "start": "2026-05-21", "end": "2026-07-02"},
+        )
+
+    def test_backtest_price_refresh_result_details_include_pit_split_contract(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import run_backtest_price_refresh
+
+        def fake_runner(symbols: list[str], **kwargs: Any) -> dict[str, Any]:
+            return {
+                "status": "success",
+                "message": f"collected {','.join(symbols)}",
+                "rows_written": 3,
+                "details": {"runner_kwargs": kwargs},
+            }
+
+        result = run_backtest_price_refresh(
+            {
+                "tickers": ["AAA", "BK"],
+                "start": "2016-01-01",
+                "end": "2026-07-02",
+                "actual_result_end": "2026-05-20",
+                "price_freshness": {
+                    "status": "warning",
+                    "details": {
+                        "effective_end_date": "2026-07-02",
+                        "common_latest_date": "2026-05-20",
+                        "refresh_symbols_all": ["BK"],
+                        "stale_symbols_all": ["BK"],
+                    },
+                },
+            },
+            now=datetime(2026, 7, 8, 12, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+            active_symbol_resolutions={
+                "BK": {
+                    "source_symbol": "BK",
+                    "resolved_symbol": "BNY",
+                    "effective_date": "2026-05-21",
+                    "resolution_status": "active",
+                }
+            },
+            runner=fake_runner,
+            freshness_inspector=None,
+        )
+
+        resolution = result["details"]["symbol_resolutions"][0]
+        self.assertEqual(result["details"]["plan"]["symbol_resolution_split_count"], 1)
+        self.assertEqual(resolution["split_status"], "ready")
+        self.assertEqual(resolution["source_range"]["end"], "2026-05-20")
+        self.assertEqual(resolution["resolved_range"]["start"], "2026-05-21")
+
     def test_backtest_price_refresh_plan_hides_action_when_prices_are_current(self) -> None:
         from zoneinfo import ZoneInfo
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping, Sequence
+from datetime import timedelta
 from typing import Any
 
 import pandas as pd
@@ -80,6 +81,58 @@ def _classify_confidence(score: float) -> str:
     if score >= 0.65:
         return "MEDIUM"
     return "LOW"
+
+
+def build_symbol_resolution_split_contract(
+    resolution: Mapping[str, Any],
+    *,
+    window_start: Any = None,
+    window_end: Any = None,
+) -> dict[str, Any]:
+    """Describe old/new ticker PIT ranges without stitching price series."""
+    source_symbol = _normalize_symbol(resolution.get("source_symbol") or resolution.get("symbol"))
+    resolved_symbol = _normalize_symbol(resolution.get("resolved_symbol") or resolution.get("related_symbol"))
+    effective_date = _date_text(resolution.get("effective_date") or resolution.get("event_date"))
+    window_start_text = _date_text(window_start)
+    window_end_text = _date_text(window_end)
+    contract: dict[str, Any] = {
+        "source_symbol": source_symbol,
+        "resolved_symbol": resolved_symbol,
+        "effective_date": effective_date,
+        "split_status": "ready" if source_symbol and resolved_symbol and effective_date else "missing_effective_date",
+        "stitching_status": "metadata_only",
+    }
+    if not source_symbol or not resolved_symbol:
+        contract["split_status"] = "invalid_symbols"
+        contract["source_range"] = None
+        contract["resolved_range"] = None
+        return contract
+    if not effective_date:
+        contract["source_range"] = {
+            "symbol": source_symbol,
+            "start": window_start_text,
+            "end": None,
+        }
+        contract["resolved_range"] = {
+            "symbol": resolved_symbol,
+            "start": None,
+            "end": window_end_text,
+        }
+        return contract
+
+    effective = pd.to_datetime(effective_date).date()
+    source_end = (effective - timedelta(days=1)).isoformat()
+    contract["source_range"] = {
+        "symbol": source_symbol,
+        "start": window_start_text,
+        "end": source_end,
+    }
+    contract["resolved_range"] = {
+        "symbol": resolved_symbol,
+        "start": effective_date,
+        "end": window_end_text,
+    }
+    return contract
 
 
 def _parse_evidence_json(value: Any) -> dict[str, Any]:

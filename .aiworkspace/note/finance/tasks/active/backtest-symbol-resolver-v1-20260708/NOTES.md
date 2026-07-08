@@ -10,6 +10,8 @@
 - 2차부터 candidate confidence는 단일 숫자만 보지 않고 same CIK, lifecycle coverage, resolved ticker price freshness, official/source reference를 `evidence_factors`로 함께 설명한다.
 - `recommended_action=apply_ticker_change_repair`는 HIGH/MEDIUM confidence candidate에만 부여하고, LOW는 `review_symbol_identity`로 남긴다.
 - DB 저장 시 `evidence_json`은 summary/status뿐 아니라 source quality, review note, evidence factor list를 보존한다.
+- 3차 split contract는 runtime stitching이 아니라 metadata contract다. `source_range`는 source ticker가 유효했던 구간, `resolved_range`는 effective date 이후 resolved ticker 구간을 표현한다.
+- `split_status=ready`는 source/resolved/effective_date가 모두 있는 경우에만 붙인다. effective date가 없으면 future PIT stitching이 안전하게 진행할 수 없으므로 ready로 간주하지 않는다.
 
 ## Open Notes
 

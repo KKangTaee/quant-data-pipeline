@@ -8,7 +8,10 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from app.jobs.ingestion_jobs import JobResult, run_collect_ohlcv
-from finance.loaders.symbol_resolver import load_active_symbol_resolutions
+from finance.loaders.symbol_resolver import (
+    build_symbol_resolution_split_contract,
+    load_active_symbol_resolutions,
+)
 
 
 US_EASTERN_TZ = ZoneInfo("America/New_York")
@@ -266,6 +269,10 @@ def build_backtest_price_refresh_plan(
         meta,
         coverage_tickers,
     )
+    target_end = _target_end_date(meta, now=now)
+    current_latest = _current_common_latest_date(meta)
+    current_latest_text = current_latest.isoformat() if current_latest else "-"
+    target_end_text = target_end.isoformat()
     lookup_symbols = raw_refresh_symbols or coverage_tickers
     if active_symbol_resolutions is None:
         active_resolution_map = _load_active_symbol_resolutions_safely(lookup_symbols)
@@ -287,18 +294,24 @@ def build_backtest_price_refresh_plan(
                     collection_tickers.append(resolved_symbol)
                     collection_sources.append(source_symbol)
                     resolved_sources.add(source_symbol)
-                    symbol_resolutions.append(
-                        {
-                            "source_symbol": source_symbol,
-                            "resolved_symbol": resolved_symbol,
-                            "alias_type": resolution.get("alias_type") or "ticker_change",
-                            "effective_date": resolution.get("effective_date"),
-                            "confidence": resolution.get("confidence"),
-                            "resolution_status": resolution.get("resolution_status") or "active",
-                            "source": resolution.get("source"),
-                            "source_ref": resolution.get("source_ref"),
-                        }
+                    resolution_item = {
+                        "source_symbol": source_symbol,
+                        "resolved_symbol": resolved_symbol,
+                        "alias_type": resolution.get("alias_type") or "ticker_change",
+                        "effective_date": resolution.get("effective_date"),
+                        "confidence": resolution.get("confidence"),
+                        "resolution_status": resolution.get("resolution_status") or "active",
+                        "source": resolution.get("source"),
+                        "source_ref": resolution.get("source_ref"),
+                    }
+                    resolution_item.update(
+                        build_symbol_resolution_split_contract(
+                            resolution_item,
+                            window_start=meta.get("start"),
+                            window_end=target_end_text,
+                        )
                     )
+                    symbol_resolutions.append(resolution_item)
                     continue
             if not refreshable_symbol_set or source_symbol in refreshable_symbol_set:
                 collection_tickers.append(source_symbol)
@@ -318,10 +331,11 @@ def build_backtest_price_refresh_plan(
                 has_missing_symbols = True
     else:
         source_tickers = list(tickers)
-    target_end = _target_end_date(meta, now=now)
-    current_latest = _current_common_latest_date(meta)
-    current_latest_text = current_latest.isoformat() if current_latest else "-"
-    target_end_text = target_end.isoformat()
+    symbol_resolution_split_count = sum(
+        1
+        for resolution in symbol_resolutions
+        if str(resolution.get("split_status") or "").strip() == "ready"
+    )
 
     base = {
         "tickers": tickers,
@@ -330,6 +344,8 @@ def build_backtest_price_refresh_plan(
         "source_ticker_count": len(source_tickers),
         "symbol_resolutions": symbol_resolutions,
         "resolved_ticker_count": len(symbol_resolutions),
+        "symbol_resolution_split_count": symbol_resolution_split_count,
+        "symbol_resolution_contract_version": "symbol_resolution_split_v1",
         "coverage_tickers": coverage_tickers,
         "coverage_ticker_count": len(coverage_tickers),
         "provider_gap_symbols": provider_gap_symbols,

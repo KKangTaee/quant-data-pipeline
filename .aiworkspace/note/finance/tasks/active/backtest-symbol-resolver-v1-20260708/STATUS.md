@@ -1,14 +1,14 @@
 # Backtest Symbol Resolver V1 Status
 
-Status: Phase 2 complete, phase 3 pending
+Status: Phase 3 complete, phase 4 pending
 
 ## Current Step
 
-- 2026-07-08: 2차 Source Evidence Scoring 구현 및 focused QA 통과. 커밋 준비 중.
+- 2026-07-08: 3차 PIT effective-date split contract 구현 및 focused QA 통과. 커밋 준비 중.
 
 ## Next
 
-- 3차 PIT effective-date split 계약: old/source ticker 구간과 resolved ticker 구간 metadata를 refresh plan/details에 노출한다.
+- 4차 Factor Readiness UX / action feedback polish: 후보쌍, 신뢰도, 기간 경계, 적용 후 재확인 안내를 화면에서 더 명확하게 보이게 한다.
 
 ## Completed
 
@@ -20,3 +20,5 @@ Status: Phase 2 complete, phase 3 pending
 - 2차에서 ticker-change candidate에 `evidence_factors`, `source_quality`, `review_note`, `recommended_action`을 붙였다.
 - low-confidence candidate는 readiness 화면에 남기되 `apply_ticker_change_repair` 자동 반영 대상에서 제외하고 `review_symbol_identity` 수동 확인 action으로 표시한다.
 - active repair 저장 시 source evidence factor payload를 `nyse_symbol_lifecycle.evidence_json`에 보존한다.
+- 3차에서 active ticker repair에 `source_range`, `resolved_range`, `split_status`, `stitching_status=metadata_only`를 붙여 future PIT stitching이 읽을 수 있는 metadata contract를 만들었다.
+- Backtest price refresh plan과 실행 result details는 동일한 `symbol_resolutions` split contract를 보존한다.
