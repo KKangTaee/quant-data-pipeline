@@ -1,14 +1,14 @@
 # Backtest Symbol Resolver V1 Status
 
-Status: Phase 4 complete, phase 5 pending
+Status: Complete
 
 ## Current Step
 
-- 2026-07-08: 4차 Factor Readiness UX / action feedback polish 구현, frontend build, Browser QA 통과. 커밋 준비 중.
+- 2026-07-08: 1차~5차 개발 / QA / 문서 동기화 완료. 최종 closeout 커밋 준비 중.
 
 ## Next
 
-- 5차 docs / regression QA / closeout: durable docs와 root handoff log를 정렬하고 최종 회귀 QA 후 closeout commit을 만든다.
+- 후속 범위는 official corporate-action feed 신규 수집과 실제 old/new ticker price series stitching이다.
 
 ## Completed
 
@@ -25,3 +25,4 @@ Status: Phase 4 complete, phase 5 pending
 - 4차에서 Factor Readiness ticker-change diagnostics를 후보쌍 / 신뢰도 / 기간 경계 / 근거 / 다음 행동으로 분리했다.
 - ticker-change repair action result는 `next_step=rerun_factor_readiness`와 Factor Readiness 재확인 / 백테스트 재실행 안내를 남긴다.
 - Browser QA screenshot: `backtest-symbol-resolver-v4-browser-qa.png` (generated, not staged).
+- 5차에서 durable docs, root handoff logs, active task status/runs를 closeout 기준으로 동기화했다.

@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-07
+Last Verified: 2026-07-08
 
 ## Current State After Master Merge
 
@@ -9,7 +9,13 @@ Last Verified: 2026-07-07
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-factor-readiness-action-ui-v1-20260707/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-symbol-resolver-v1-20260708/`다.
+
+- 목적: Backtest Quality / Value Factor Readiness에서 stale/missing price ticker가 단순 가격 지연인지 ticker-change symbol identity 문제인지 구분하고, 사용자가 검토 후 repair를 실행할 수 있게 한다.
+- 주요 변경: `nyse_symbol_lifecycle(event_type=ticker_change)` 기반 resolver / active repair 저장 path를 추가했다. 후보는 same CIK, lifecycle coverage, source reference, resolved ticker price freshness를 `evidence_factors`로 설명하고 LOW confidence는 자동 반영하지 않는다. Active repair는 source ticker를 rewrite하지 않고 collection ticker만 resolved symbol로 바꾸며, price refresh plan/details에 `source_range` / `resolved_range` / `split_status` metadata-only PIT split contract를 남긴다. Factor Readiness는 후보쌍 / 신뢰도 / 기간 경계 / 다음 행동을 보여주고 repair 후 readiness 재확인과 백테스트 재실행을 안내한다.
+- 이번 차수에서 하지 않은 일: official corporate-action feed 신규 수집, 실제 old/new ticker price series stitching, universe 선정 정책 변경, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/backtest-factor-readiness-action-ui-v1-20260707/`다.
 
 - 목적: Quality / Value strict form의 Factor Readiness가 내부 진단값 중심으로 보여 사용자가 `무엇이 문제인지 / 어떤 티커인지 / 어떻게 해결할지`를 바로 알기 어려운 문제를 줄인다.
 - 주요 변경: strict preset 안내는 후보군 선택 정보만 짧게 남기고, Factor Readiness React panel은 문제 / 영향받는 티커 / 해결 방법 / action button 중심 contract로 바꿨다. 가격 문제는 Backtest OHLCV refresh service, statement gap은 targeted Extended Statement Refresh로 연결하고, provider/source gap은 반복 업데이트가 아니라 수동 확인 문제로 표시한다.

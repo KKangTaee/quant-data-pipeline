@@ -26,3 +26,6 @@
 - 4차 py_compile: `.venv/bin/python -m py_compile app/web/backtest_common.py tests/test_service_contracts.py`: PASS.
 - 4차 `git diff --check`: PASS.
 - 4차 Browser QA: `streamlit run app/web/streamlit_app.py --server.port 8532 --server.headless true`, opened `http://localhost:8532/backtest`, selected Quality / Strict Annual, confirmed Backtest / Quality / Strict Annual / Factor Readiness text present and fatal error text absent. Screenshot artifact: `backtest-symbol-resolver-v4-browser-qa.png` (generated, not staged).
+- 5차 final regression: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests tests.test_service_contracts.BacktestCandidateAnalysisHardeningTests.test_strict_factor_post_run_readiness_model_prioritizes_ticker_change_candidate`: PASS (66 tests).
+- 5차 py_compile: `.venv/bin/python -m py_compile finance/loaders/symbol_resolver.py finance/data/symbol_resolver.py app/services/backtest_price_refresh.py app/web/backtest_common.py tests/test_service_contracts.py`: PASS.
+- 5차 `git diff --check`: PASS.

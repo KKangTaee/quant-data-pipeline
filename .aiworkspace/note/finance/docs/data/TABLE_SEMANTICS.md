@@ -37,7 +37,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
   이 필드는 ticker change / merger / delisting / membership event를 source-neutral하게 읽기 위한 nullable event semantics다.
 - Backtest Symbol Resolver V1부터 `event_type=ticker_change` row는 `related_symbol`을 resolved ticker 후보로 읽을 수 있다.
   `resolution_status=candidate`는 Factor Readiness가 보여주는 검토 후보, `resolution_status=active`는 user-approved repair로서 가격 수집 ticker만 resolved symbol로 바꾸는 근거다.
-  `confidence`는 identity 후보 점수이며, source universe symbol을 자동 rewrite하거나 PIT effective-date split을 자동 수행한다는 뜻은 아니다.
+  `confidence`는 identity 후보 점수이며, `evidence_json`은 `source_quality`, `review_note`, `evidence_factors`, `recommended_action` 같은 compact source evidence를 보존할 수 있다.
+  Active repair를 읽은 price refresh plan은 `source_range`, `resolved_range`, `split_status`를 metadata-only PIT split contract로 노출할 수 있지만, source universe symbol을 자동 rewrite하거나 실제 old/new ticker price series stitching을 수행한다는 뜻은 아니다.
 - `finance/data/nyse_db.py`는 기존 NYSE listing CSV 적재 시 current snapshot row를 idempotent하게 UPSERT할 수 있다.
 - `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 idempotent하게 UPSERT할 수 있다.
 - `finance/data/sec_company_tickers.py`는 SEC current CIK / ticker / exchange association을 idempotent하게 UPSERT할 수 있다.

@@ -5633,7 +5633,8 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## 2026-07-08 - Backtest Symbol Resolver V1
 
-- `.aiworkspace/note/finance/tasks/active/backtest-symbol-resolver-v1-20260708/`에서 Backtest Quality / Value Factor Readiness용 ticker-change repair 1차를 구현했다.
-- `nyse_symbol_lifecycle` 기반 resolver를 추가해 `event_type=ticker_change` 후보를 보여주고, 승인 시 `resolution_status=active`로 저장한다.
-- 가격 refresh는 source ticker를 유지하되 active repair가 있으면 collection ticker만 resolved symbol로 바꾼다.
-- 남은 차수는 official corporate-action source scoring, PIT effective-date split, UX polish / browser QA 확장이다.
+- `.aiworkspace/note/finance/tasks/active/backtest-symbol-resolver-v1-20260708/`에서 Backtest Quality / Value Factor Readiness용 ticker-change repair 1차~5차를 완료했다.
+- `nyse_symbol_lifecycle(event_type=ticker_change)` 기반 후보 / active repair 저장 path를 추가했고, source evidence factor / confidence / LOW 수동 확인 계약을 붙였다.
+- Price refresh는 source ticker를 유지하되 active repair가 있으면 collection ticker만 resolved symbol로 바꾸며, plan/details에 metadata-only `source_range` / `resolved_range` / `split_status`를 남긴다.
+- Factor Readiness는 후보쌍 / 신뢰도 / 기간 경계 / 다음 행동을 보여주고, repair 후 readiness 재확인과 백테스트 재실행을 안내한다.
+- 후속 범위: official corporate-action feed 신규 수집과 실제 old/new ticker price series stitching.

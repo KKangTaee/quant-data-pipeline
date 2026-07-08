@@ -136,8 +136,9 @@ external source
   `symbol-lifecycle-event-fields-v1`부터 lifecycle row는 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있다.
   NYSE current listing row는 `event_type=listing_observed`, SEC Form 25 row는 `event_type=delisting`으로 저장해 future ticker change / merger source와 같은 row contract를 쓴다.
   `backtest-symbol-resolver-v1`부터 Backtest strict Factor Readiness는 stale/missing price ticker를 `event_type=ticker_change` lifecycle row와 대조해 symbol identity 후보를 보여준다.
-  사용자가 repair action을 승인하면 `finance/data/symbol_resolver.py`가 같은 table에 `resolution_status=active`로 저장하고, price refresh는 source ticker를 유지한 채 collection ticker만 `related_symbol`로 바꾼다.
-  1차 구현은 current refresh repair이며, PIT effective-date split / official corporate-action ingestion 확장은 별도 후속 범위다.
+  후보 confidence는 same CIK, lifecycle coverage, source reference, resolved ticker price freshness 같은 source evidence factor로 설명하며, LOW confidence 후보는 자동 반영 대상에서 제외한다.
+  사용자가 repair action을 승인하면 `finance/data/symbol_resolver.py`가 같은 table에 `resolution_status=active`와 compact evidence payload를 저장하고, price refresh는 source ticker를 유지한 채 collection ticker만 `related_symbol`로 바꾼다.
+  Active repair의 `effective_date`는 price refresh plan/details에서 `source_range` / `resolved_range` / `split_status` metadata-only split contract로 노출된다. 이는 future PIT stitching 입력 계약이며 실제 price series 합성이나 official corporate-action ingestion은 별도 후속 범위다.
   `symbol-directory-snapshot-ingestion-v1`부터 `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 읽어
   `source=nasdaq_symdir_nasdaqlisted` / `nasdaq_symdir_otherlisted`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장한다.
   이 row는 current snapshot evidence이며 historical membership PASS 근거가 아니다.

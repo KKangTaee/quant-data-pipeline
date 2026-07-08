@@ -8671,4 +8671,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: 사용자가 `codex/sub-dev`의 Market Movers ticker repair commit을 참고하되 직접 merge하지 말고, Backtest Quality / Value Factor Readiness용 공용 Symbol Resolver / Ticker Change Repair 흐름을 만들라고 요청함.
 - Interpreted goal: BK -> BNY를 하드코딩 fixture가 아닌 대표 케이스로 두고, stale/missing price ticker가 단순 refresh 대상인지 symbol identity issue인지 구분해야 함.
 - Analysis result: 새 `market_symbol_alias` table보다 기존 `nyse_symbol_lifecycle(event_type=ticker_change, related_symbol, related_cik)`를 공용 source로 쓰는 것이 Backtest / Data Coverage 경계와 맞다.
-- Follow-up: Symbol Resolver V1은 candidate / active repair를 분리하고, 승인 action 후 source ticker는 유지한 채 collection ticker만 resolved symbol로 바꾼다. PIT effective-date split과 official corporate-action ingestion은 후속 차수로 남겼다.
+- Follow-up: Symbol Resolver V1 1차~5차에서 candidate / active repair, source evidence scoring, LOW-confidence 수동 확인, metadata-only PIT split contract, Factor Readiness UX / action feedback, docs / QA closeout을 완료했다. 실제 old/new ticker price series stitching과 official corporate-action feed 신규 수집은 후속 범위다.
