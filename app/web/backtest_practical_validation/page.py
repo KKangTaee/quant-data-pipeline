@@ -1876,23 +1876,33 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
     group_order = {label: index for index, label in enumerate(FLOW4_CRITERIA_GROUP_HINTS)}
     groups.sort(key=lambda group: group_order.get(str(group.get("label") or ""), len(group_order)))
 
+    repair_count = int(summary.get("criteria_repair_count") or 0)
+    not_practical_count = int(summary.get("criteria_not_practical_count") or 0)
     blocker_count = int(summary.get("criteria_blocker_count") or summary.get("fix_item_count") or 0)
     review_count = int(summary.get("criteria_review_count") or gate_summary.get("review_count") or 0)
     pass_count = int(summary.get("criteria_pass_count") or 0)
     evidence_count = int(summary.get("criteria_card_count") or 0)
-    tone = _status_tone(gate_summary.get("route") or validation_result.get("validation_route"))
-    if blocker_count:
-        headline = f"보강이 필요한 검증 항목 {blocker_count}개가 남아 있습니다."
-    elif review_count:
-        headline = f"Final Review에서 확인할 기준 {review_count}개가 남아 있습니다."
-    else:
-        headline = "카테고리별 검증 결과가 모두 통과 상태입니다."
+    tone = str(summary.get("overall_outcome_tone") or _status_tone(gate_summary.get("route") or validation_result.get("validation_route")))
+    headline = str(summary.get("overall_outcome_headline") or "")
+    if not headline:
+        if not_practical_count:
+            headline = f"현재 상태로 실전 사용이 어려운 검증 항목 {not_practical_count}개가 있습니다."
+        elif repair_count:
+            headline = f"보강 후 재검증할 항목 {repair_count}개가 남아 있습니다."
+        elif review_count:
+            headline = f"Final Review에서 판단할 기준 {review_count}개가 남아 있습니다."
+        else:
+            headline = "카테고리별 검증 결과가 모두 통과 상태입니다."
+    outcome_label = str(summary.get("overall_outcome_label") or "검증 결론")
+    outcome_detail = str(summary.get("overall_outcome_detail") or "")
 
     metric_rows = [
-        ("보강 필요", str(blocker_count), "검증 항목"),
-        ("통과", str(pass_count), "PASS 기준"),
-        ("Final Review 확인", str(review_count), "REVIEW 기준"),
-        ("검증 항목", str(evidence_count), "criteria cards"),
+        ("현재 결론", outcome_label, outcome_detail or "카테고리별 검증 결론"),
+        ("통과", str(pass_count), "검증 기준"),
+        ("보강 후 재검증", str(repair_count), "자료 / 근거 / 실행 gap"),
+        ("Final Review 판단", str(review_count), "REVIEW"),
+        ("실전 사용 어려움", str(not_practical_count), "BLOCKED"),
+        ("전체 기준", str(evidence_count), "카테고리 기준"),
     ]
     metric_html = "".join(
         '<div class="pv-criteria-metric">'
@@ -1908,9 +1918,11 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
         cards = [dict(card or {}) for card in list(group.get("criteria_cards") or [])]
         passed = [str(item) for item in list(group.get("passed_criteria") or []) if str(item).strip()]
         remaining = [str(item) for item in list(group.get("remaining_issues") or []) if str(item).strip()]
+        review_items = [str(item) for item in list(group.get("review_criteria") or []) if str(item).strip()]
         decision = str(group.get("decision_summary") or "-")
         passed_text = " / ".join(passed) if passed else "없음"
         remaining_text = " / ".join(remaining) if remaining else "없음"
+        review_text = " / ".join(review_items) if review_items else "없음"
         card_html: list[str] = []
         for card in cards:
             card_tone = _status_tone(card.get("status"))
@@ -1942,11 +1954,18 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             )
             location_label = str(guide.get("location_label") or "위치")
             location_text = str(guide.get("location") or card.get("location_summary") or card.get("fix_location") or "-")
+            technical_status = str(card.get("technical_status") or card.get("status") or "-")
+            outcome_label_text = str(card.get("outcome_label") or card.get("status_label") or card.get("status") or "-")
+            status_display = (
+                f"{outcome_label_text} · REVIEW"
+                if technical_status == "REVIEW" and "REVIEW" not in outcome_label_text
+                else outcome_label_text
+            )
             card_html.append(
                 f'<article class="pv-criteria-card pv-criteria-card-{card_tone}">'
                 '<div class="pv-criteria-card-head">'
                 f"<h5>{escape(str(card.get('issue_title') or card.get('display_label') or card.get('label') or '-'))}</h5>"
-                f'<div class="pv-criteria-card-status">{escape(str(card.get("status_label") or card.get("status") or "-"))}</div>'
+                f'<div class="pv-criteria-card-status">{escape(status_display)}</div>'
                 "</div>"
                 '<div class="pv-criteria-row">'
                 f"<span>{escape(checked_label)}</span>"
@@ -1995,6 +2014,10 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             '<div class="pv-criteria-status-cell">'
             "<span>남은 문제</span>"
             f"<p>{escape(remaining_text)}</p>"
+            "</div>"
+            '<div class="pv-criteria-status-cell">'
+            "<span>Final Review 판단</span>"
+            f"<p>{escape(review_text)}</p>"
             "</div>"
             '<div class="pv-criteria-status-cell pv-criteria-status-cell-wide">'
             "<span>판정</span>"
@@ -2053,7 +2076,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
         f'<section class="pv-criteria-board pv-criteria-board-{tone}">'
         '<div class="pv-criteria-kicker">검증 기준 상세</div>'
         f'<div class="pv-criteria-title">카테고리별 검증 결과</div>'
-        f'<div class="pv-criteria-detail">{escape(headline)} 카테고리별 통과 상태와 보강 상태를 요약합니다. Final Review 이동 가능성은 아래 이동 요약으로 분리해서 확인합니다.</div>'
+        f'<div class="pv-criteria-detail">{escape(headline)} 통과 / 보강 후 재검증 / Final Review 판단 / 실전 사용 어려움을 분리해서 요약합니다.</div>'
         f'<div class="pv-criteria-metrics">{metric_html}</div>'
         f'<div class="pv-criteria-groups">{"".join(group_html)}{handoff_html}</div>'
         "</section></div>",

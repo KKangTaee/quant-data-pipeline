@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-refactor-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/`다.
+
+- 목적: Practical Validation Flow 4가 raw status 중심으로 보여 `REVIEW`, `NEEDS_INPUT`, `BLOCKED`의 실제 행동 의미를 구분하기 어려운 문제를 줄였다.
+- 주요 변경: Flow 4 criteria summary는 `통과`, `보강 후 재검증 필요`, `Final Review 판단 필요`, `실전 사용 어려움` outcome layer를 먼저 보여준다. `READY`는 통과로 읽고, `Current=REVIEW`인 input check는 `NEEDS_INPUT`으로 강등하지 않아 최신 replay / coverage review가 Final Review 판단 항목으로 남는다.
+- 이번 차수에서 하지 않은 일: registry / saved JSONL rewrite, provider ingestion, 새 DB schema, Final Review selected-route threshold 전면 변경, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-refactor-v1-20260708/`다.
 
 - 목적: Practical Validation의 1차 필수 검증에서 같은 검증이 여러 module 안에 반복되는 문제를 줄이고, `validation_efficacy`를 방법론 검증 전용으로 축소했다.
 - 주요 변경: `app/services/backtest_validation_efficacy.py`는 walk-forward / OOS / regime split row만 생성한다. module planner / board registry / workspace는 `Validation Method Strength`와 `Stress / Robustness`를 분리해 보여주며, Flow 4 copy는 `검증 방법론`, `강건성`, `실전성 진단`처럼 사용자-facing 업무명으로 정리했다. Final Review gate와 evidence read model도 `Validation Method Strength` label과 method-only blocker 문구를 사용한다.

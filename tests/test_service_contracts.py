@@ -9935,6 +9935,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(summary["criteria_group_count"], 4)
         self.assertEqual(summary["criteria_pass_count"], 2)
         self.assertEqual(summary["criteria_blocker_count"], 1)
+        self.assertEqual(summary["criteria_repair_count"], 1)
+        self.assertEqual(summary["criteria_review_count"], 1)
+        self.assertEqual(summary["criteria_not_practical_count"], 0)
+        self.assertEqual(summary["overall_outcome_key"], "repair_required")
+        self.assertEqual(summary["overall_outcome_label"], "보강 후 재검증 필요")
 
         groups = workspace["criteria_detail_groups"]
         labels = [group["label"] for group in groups]
@@ -9948,6 +9953,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(data_card["label"], "Data Coverage")
         self.assertEqual(data_card["status"], "NEEDS_INPUT")
         self.assertEqual(data_card["status_label"], "근거 보강 필요")
+        self.assertEqual(data_card["outcome_key"], "repair_required")
+        self.assertEqual(data_card["outcome_label"], "보강 후 재검증 필요")
         self.assertEqual(data_card["resolution_surface"], "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세")
         self.assertIn("가격 window 보강 필요", data_card["evidence"])
         self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가")
@@ -9975,10 +9982,106 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(data_group["passed_criteria"], [])
         self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
         self.assertIn("보강 필요", data_group["decision_summary"])
+        stress_group = next(group for group in groups if group["label"] == "Stress / Robustness")
+        stress_card = stress_group["criteria_cards"][0]
+        self.assertEqual(stress_card["outcome_key"], "review_required")
+        self.assertEqual(stress_card["outcome_label"], "Final Review 판단 필요")
+        self.assertIn("설정 변화", stress_group["review_criteria"][0])
         self.assertEqual(
             workspace["handoff_summary_groups"][0]["modules"][0]["module_id"],
             "selected_route_preflight",
         )
+
+    def test_practical_validation_module_plan_preserves_review_input_checks(self) -> None:
+        from app.services.backtest_practical_validation_modules import build_validation_module_plan
+
+        module_plan = build_validation_module_plan(
+            source={
+                "selection_source_id": "source-1",
+                "source_kind": "weighted_portfolio_mix",
+                "components": [
+                    {
+                        "component_id": "c1",
+                        "strategy_key": "gtaa",
+                        "target_weight": 100.0,
+                        "universe": ["SPY", "QQQ"],
+                    }
+                ],
+            },
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            checks=[
+                {"Criteria": "Selection source", "Ready": True, "Current": "source-1"},
+                {"Criteria": "Active components", "Ready": True, "Current": "1"},
+                {"Criteria": "Target weight total", "Ready": True, "Current": "100.00%"},
+                {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                {"Criteria": "Execution boundary", "Ready": True, "Current": "disabled"},
+                {"Criteria": "Curve evidence", "Ready": True, "Current": "actual_runtime_latest_recheck"},
+                {"Criteria": "Runtime recheck", "Ready": True, "Current": "REVIEW"},
+                {"Criteria": "Runtime period coverage", "Ready": False, "Current": "REVIEW"},
+                {"Criteria": "Benchmark parity", "Ready": False, "Current": "REVIEW"},
+                {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+            ],
+            diagnostics=[],
+            validation_efficacy_rows=[{"Criteria": "Walk-forward temporal validation", "Status": "PASS"}],
+            data_coverage_rows=[{"Criteria": "Price DB window coverage", "Status": "PASS"}],
+            construction_risk_rows=[{"Criteria": "Holdings / exposure coverage", "Status": "PASS"}],
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=[{"Criteria": "Transaction cost model", "Status": "PASS"}],
+            selected_route_preflight={"status": "PASS", "select_allowed": True},
+        )
+
+        modules = {module["module_id"]: module for module in module_plan["modules"]}
+        self.assertEqual(modules["latest_replay"]["status"], "REVIEW")
+        self.assertEqual(modules["benchmark_parity"]["status"], "REVIEW")
+        self.assertEqual(module_plan["final_review_gate"]["route"], "READY_WITH_REVIEW")
+        self.assertFalse(module_plan["final_review_gate"]["blocking_modules"])
+        self.assertIn("latest_replay", [module["module_id"] for module in module_plan["final_review_gate"]["review_modules"]])
+
+    def test_practical_validation_workspace_distinguishes_blocked_from_repairable_gap(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "final_review_gate": {
+                    "route": "BLOCKED_FOR_FINAL_REVIEW",
+                    "can_save_and_move": False,
+                    "blocking_modules": [
+                        {
+                            "module_id": "source_integrity",
+                            "label": "Source Integrity",
+                            "status": "BLOCKED",
+                        }
+                    ],
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "source_integrity",
+                        "label": "Source Integrity",
+                        "status": "BLOCKED",
+                        "applies": True,
+                        "reason": "source 계약이 깨졌습니다.",
+                    },
+                    {
+                        "module_id": "latest_replay",
+                        "label": "Latest Runtime Replay",
+                        "status": "NOT_RUN",
+                        "applies": True,
+                        "reason": "재검증이 필요합니다.",
+                    },
+                ],
+            }
+        )
+
+        summary = workspace["summary"]
+        self.assertEqual(summary["criteria_not_practical_count"], 1)
+        self.assertEqual(summary["criteria_repair_count"], 1)
+        self.assertEqual(summary["overall_outcome_key"], "not_practical")
+        self.assertEqual(summary["overall_outcome_label"], "실전 사용 어려움")
+        source_group = next(group for group in workspace["criteria_detail_groups"] if group["label"] == "Source & Replay")
+        cards = {card["module_id"]: card for card in source_group["criteria_cards"]}
+        self.assertEqual(cards["source_integrity"]["outcome_label"], "실전 사용 어려움")
+        self.assertEqual(cards["latest_replay"]["outcome_label"], "보강 후 재검증 필요")
 
     def test_practical_validation_workspace_model_builds_issue_queue_items(self) -> None:
         from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
@@ -10056,7 +10159,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
         self.assertIn("_render_validation_evidence_boards(validation_result)", flow4_body)
         self.assertIn("카테고리별 검증 결과", page_source)
-        self.assertIn("카테고리별 통과 상태와 보강 상태", page_source)
+        self.assertIn("통과 / 보강 후 재검증 / Final Review 판단 / 실전 사용 어려움", page_source)
         self.assertIn("검증 기준 상세", flow4_body)
         self.assertIn("Final Review 이동 요약", page_source)
         self.assertIn("실전 검증 센터", page_source)

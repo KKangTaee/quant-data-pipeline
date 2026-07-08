@@ -152,13 +152,19 @@ def infer_validation_source_traits(source: dict[str, Any]) -> dict[str, Any]:
 
 
 def _check_status(row: dict[str, Any]) -> str:
-    if bool(row.get("Ready")):
-        return "PASS"
     current = str(row.get("Current") or "").upper()
     if "BLOCK" in current:
         return "BLOCKED"
+    if "NEEDS_INPUT" in current:
+        return "NEEDS_INPUT"
     if "NOT_RUN" in current:
         return "NOT_RUN"
+    if "REVIEW" in current:
+        return "REVIEW"
+    if "READY" in current or "PASS" in current:
+        return "PASS"
+    if bool(row.get("Ready")):
+        return "PASS"
     return "NEEDS_INPUT"
 
 

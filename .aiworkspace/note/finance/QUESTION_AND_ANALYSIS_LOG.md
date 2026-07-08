@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - Practical Validation Flow4는 raw status보다 사용자 행동 결론을 먼저 보여준다
+
+- User request: 사용자가 Practical Validation의 `PASS / READY / REVIEW / NEEDS_INPUT / BLOCKED` 의미와 자료 부족 vs 실전 사용 불가를 어떻게 개선할지 종합 방향을 물었고 진행을 승인함.
+- Interpreted goal: Flow 4는 status dump가 아니라 `통과`, `보강 후 재검증 필요`, `Final Review 판단 필요`, `실전 사용 어려움`을 구분해 사용자가 다음 행동을 바로 판단하게 해야 한다.
+- Analysis result: `READY`는 사용자-facing 통과로 접고, `REVIEW`는 보강 실패가 아니라 Final Review에서 판단할 근거로 유지한다. `NEEDS_INPUT / NOT_RUN`은 보강 후 재검증 대상이고, `BLOCKED`는 현재 상태로 실전 후보 사용이 어려운 차단 상태다. `Current=REVIEW` input check를 `NEEDS_INPUT`으로 강등하면 최신 replay coverage REVIEW가 잘못된 보강 실패처럼 보인다.
+- Follow-up: `practical-validation-flow4-outcome-taxonomy-v1-20260708`에서 workspace outcome summary, Flow 4 board 문구, module planner review preservation, tests, Browser QA를 완료했다. Registry / saved JSONL, provider ingestion, Final Review selected-route threshold 전면 변경, live approval / order / auto rebalance 의미는 추가하지 않았다.
+
 ### 2026-07-08 - Practical Validation validation_efficacy는 방법론 검증만 소유한다
 
 - User request: 사용자가 1차 필수 검증의 중복 소유를 정리한 뒤 2차부터 6차까지 개발 / QA / 커밋 순서로 진행해 달라고 요청함.

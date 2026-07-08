@@ -90,6 +90,38 @@ STATUS_LABELS = {
     "BLOCKED": "이동 차단",
     "NOT_APPLICABLE": "비적용",
 }
+OUTCOME_TEXT = {
+    "pass": {
+        "label": "통과",
+        "detail": "현재 기준에서 Final Review 이동을 막는 항목은 없습니다.",
+        "headline": "카테고리별 검증 결과가 통과 상태입니다.",
+        "tone": "positive",
+    },
+    "repair_required": {
+        "label": "보강 후 재검증 필요",
+        "detail": "자료, 근거, 실행 gap을 보강한 뒤 다시 검증해야 합니다.",
+        "headline": "보강 후 재검증할 항목이 남아 있습니다.",
+        "tone": "warning",
+    },
+    "review_required": {
+        "label": "Final Review 판단 필요",
+        "detail": "자동 차단은 아니지만 Final Review에서 판단 근거로 확인해야 합니다.",
+        "headline": "Final Review에서 판단할 REVIEW 항목이 남아 있습니다.",
+        "tone": "warning",
+    },
+    "not_practical": {
+        "label": "실전 사용 어려움",
+        "detail": "현재 상태로는 포트폴리오를 실전 후보로 사용하기 어렵습니다.",
+        "headline": "현재 상태로는 실전 사용이 어렵습니다.",
+        "tone": "danger",
+    },
+    "not_applicable": {
+        "label": "비적용",
+        "detail": "현재 후보에는 적용되지 않는 기준입니다.",
+        "headline": "현재 후보에 적용되지 않는 기준입니다.",
+        "tone": "neutral",
+    },
+}
 GROUP_DISPLAY_TEXT = {
     "source_readiness": {
         "display_label": "후보 source가 검증 가능한가",
@@ -155,9 +187,9 @@ MODULE_DISPLAY_TEXT = {
     },
     "latest_replay": {
         "display_label": "최신 데이터로 전략을 다시 돌렸는가",
-        "issue_title": "최신 runtime 재검증 미실행",
-        "current_problem": "현재 세션에서 최신 DB 기준 재검증이 실행되지 않았거나 replay curve와 coverage가 충분히 확인되지 않았습니다.",
-        "completion_criteria": "Flow 2 재검증 결과가 PASS 또는 Final Review 확인 상태이고 coverage가 Final Review 이동을 막지 않아야 합니다.",
+        "issue_title": "최신 재검증 / 기간 coverage 확인 필요",
+        "current_problem": "현재 세션에서 최신 DB 기준 재검증이 실행되지 않았거나 요청 종료일까지 replay curve가 충분히 따라왔는지 확인이 필요합니다.",
+        "completion_criteria": "Flow 2 재검증 결과가 PASS 또는 REVIEW이고, 미실행 / 보강 필요 상태가 없어야 합니다.",
         "fix_location": "Flow 2 · 실전 재검증 실행",
         "impact_summary": "최신 데이터로 재현되지 않은 후보는 Final Review에서 실전 검증 완료 후보로 보기 어렵습니다.",
     },
@@ -517,6 +549,29 @@ def _criteria_status_label(status: Any) -> str:
     return STATUS_LABELS.get(normalized, normalized)
 
 
+def _criteria_outcome(status: Any) -> dict[str, str]:
+    normalized = normalize_validation_status(status)
+    if normalized == "BLOCKED":
+        key = "not_practical"
+    elif normalized in {"NEEDS_INPUT", "NOT_RUN"}:
+        key = "repair_required"
+    elif normalized == "REVIEW":
+        key = "review_required"
+    elif normalized in {"PASS", "READY"}:
+        key = "pass"
+    elif normalized == "NOT_APPLICABLE":
+        key = "not_applicable"
+    else:
+        key = "repair_required"
+    text = OUTCOME_TEXT[key]
+    return {
+        "outcome_key": key,
+        "outcome_label": text["label"],
+        "outcome_detail": text["detail"],
+        "outcome_tone": text["tone"],
+    }
+
+
 def _clean_issue_text(value: Any) -> str:
     text = str(value or "").strip()
     if not text:
@@ -752,6 +807,7 @@ def _module_display_fields(module: dict[str, Any], evidence_rows: list[dict[str,
     if status in {"PASS", "READY"}:
         current_problem = "현재 기준에서 Final Review 이동을 즉시 막는 문제는 없습니다."
         completion_criteria = f"{label} 기준이 통과 상태입니다."
+    outcome = _criteria_outcome(status)
     fix_location = reading.get("fix_location") or module.get("resolution_surface") or "Flow 4 기준 상세"
     impact_summary = (
         reading.get("impact_summary")
@@ -773,6 +829,7 @@ def _module_display_fields(module: dict[str, Any], evidence_rows: list[dict[str,
         "status_label": _criteria_status_label(status),
         "technical_status": status,
         "technical_label": f"{label} · {status}",
+        **outcome,
         "current_problem": current_problem,
         "completion_criteria": completion_criteria,
         "fix_location": fix_location,
@@ -811,6 +868,7 @@ def _group_tone(modules: list[dict[str, Any]]) -> str:
 
 def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
     status = _status_label(module.get("status") or "NOT_RUN")
+    outcome = _criteria_outcome(status)
     evidence = (
         module.get("gate_reason")
         or module.get("evidence")
@@ -830,6 +888,10 @@ def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
         "status_label": module.get("status_label") or _criteria_status_label(status),
         "technical_status": module.get("technical_status") or status,
         "technical_label": module.get("technical_label") or f"{module.get('label') or module.get('module_id') or '-'} · {status}",
+        "outcome_key": module.get("outcome_key") or outcome["outcome_key"],
+        "outcome_label": module.get("outcome_label") or outcome["outcome_label"],
+        "outcome_detail": module.get("outcome_detail") or outcome["outcome_detail"],
+        "outcome_tone": module.get("outcome_tone") or outcome["outcome_tone"],
         "tone": _status_tone(status),
         "explanation": explanation,
         "evidence": evidence,
@@ -866,13 +928,25 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
         for card in cards
         if card.get("status") in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
     ]
+    repair = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") in {"NEEDS_INPUT", "NOT_RUN"}
+    ]
+    not_practical = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "BLOCKED"
+    ]
     review = [
         str(card.get("display_label") or card.get("label") or "-")
         for card in cards
         if card.get("status") == "REVIEW"
     ]
-    if remaining:
-        decision = f"보강 필요 {len(remaining)}개가 남아 있어 Final Review 이동 전 확인이 필요합니다."
+    if not_practical:
+        decision = f"현재 상태로 실전 사용이 어려운 기준 {len(not_practical)}개가 있습니다."
+    elif repair:
+        decision = f"보강 필요: 재검증할 기준 {len(repair)}개가 남아 있습니다."
     elif review:
         decision = f"Final Review에서 확인할 기준 {len(review)}개가 남아 있습니다."
     else:
@@ -880,8 +954,37 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "passed_criteria": passed,
         "remaining_issues": remaining,
+        "repair_criteria": repair,
+        "not_practical_criteria": not_practical,
         "review_criteria": review,
         "decision_summary": decision,
+    }
+
+
+def _overall_outcome_summary(summary: dict[str, int]) -> dict[str, Any]:
+    not_practical_count = int(summary.get("criteria_not_practical_count") or 0)
+    repair_count = int(summary.get("criteria_repair_count") or 0)
+    review_count = int(summary.get("criteria_review_count") or 0)
+    if not_practical_count:
+        key = "not_practical"
+        count = not_practical_count
+    elif repair_count:
+        key = "repair_required"
+        count = repair_count
+    elif review_count:
+        key = "review_required"
+        count = review_count
+    else:
+        key = "pass"
+        count = int(summary.get("criteria_pass_count") or 0)
+    text = OUTCOME_TEXT[key]
+    return {
+        "overall_outcome_key": key,
+        "overall_outcome_label": text["label"],
+        "overall_outcome_detail": text["detail"],
+        "overall_outcome_headline": text["headline"],
+        "overall_outcome_tone": text["tone"],
+        "overall_outcome_count": count,
     }
 
 
@@ -911,18 +1014,22 @@ def _criteria_detail_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]
     return detail_groups
 
 
-def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, int]:
+def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
     cards = [
         dict(card or {})
         for group in groups
         for card in list(group.get("criteria_cards") or [])
         if isinstance(card, dict)
     ]
-    return {
+    repair_count = len([card for card in cards if card.get("status") in {"NEEDS_INPUT", "NOT_RUN"}])
+    not_practical_count = len([card for card in cards if card.get("status") == "BLOCKED"])
+    summary = {
         "criteria_group_count": len(groups),
         "criteria_card_count": len(cards),
         "criteria_pass_count": len([card for card in cards if card.get("status") in {"PASS", "READY"}]),
         "criteria_review_count": len([card for card in cards if card.get("status") == "REVIEW"]),
+        "criteria_repair_count": repair_count,
+        "criteria_not_practical_count": not_practical_count,
         "criteria_blocker_count": len(
             [
                 card
@@ -931,6 +1038,7 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, int]:
             ]
         ),
     }
+    return {**summary, **_overall_outcome_summary(summary)}
 
 
 def _category_result_groups(

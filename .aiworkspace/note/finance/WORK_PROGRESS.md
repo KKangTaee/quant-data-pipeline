@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow4 Outcome Taxonomy V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/`에서 Flow 4 outcome layer와 `Current=REVIEW` 보존 회귀를 구현했다.
+  - Flow 4는 이제 `통과 / 보강 후 재검증 / Final Review 판단 / 실전 사용 어려움`을 먼저 보여주며, 최신 replay가 REVIEW이면 NEEDS_INPUT으로 강등하지 않는다.
+  - BacktestRuntimeContractTests 67개, py_compile, diff check, Browser QA를 통과했다. Registry / saved JSONL, provider ingestion, live approval / order / auto rebalance 경계는 변경하지 않았다.
 - Practical Validation Required Taxonomy Refactor V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-refactor-v1-20260708/`에서 2차~6차를 개발 / QA / 커밋 순서로 진행했다.
   - `validation_efficacy` service는 walk-forward / OOS / regime split 방법론 검증만 소유하고, replay / benchmark / provider / PIT / survivorship / robustness는 각 owner module로 분리했다.
