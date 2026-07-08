@@ -30,9 +30,13 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers 시장 관심 뉴스 / SEC 분리:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-news-sec-split-20260709/`에서 선택 종목 `시장 관심` 패널의 `뉴스 리스트`와 `SEC 공시 촉매`를 별도 evidence section으로 분리했다.
+  - Form 144처럼 제목이 form명뿐인 SEC metadata는 `SEC Form 144 · 제한/지배주식 매각 예정 통지`로 표시해 뉴스 기사와 혼동하지 않게 했다.
+  - 13F는 계속 `기관 보유 배경 · 13F 지연 자료`로 분리하며, 추천 / 점수화 / 매매 신호 / body 저장 / DB schema 변경은 추가하지 않았다.
 - Overview Market Movers 시장 관심 근거 V2:
   - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v2-20260708/`에서 1차~5차 follow-up을 진행했다.
-  - `시장 관심 근거 확인`이 선택 종목 뉴스 / 한국어 뉴스 / SEC metadata를 함께 조회하고, `시장 관심` 탭 안에서 `애널리스트 관심`, `뉴스/공시 촉매`, `기관 보유 배경 · 13F 지연 자료`, `출처/원문 링크`를 구분해 보여준다.
+  - `시장 관심 근거 확인`이 선택 종목 뉴스 / 한국어 뉴스 / SEC metadata를 함께 조회하고, `시장 관심` 탭 안에서 `애널리스트 관심`, `뉴스 리스트`, `SEC 공시 촉매`, `기관 보유 배경 · 13F 지연 자료`, `출처/원문 링크`를 구분해 보여준다.
   - FMP/Finnhub/Naver API credential integration, 13F DB ingestion, body 저장, 추천 / 점수화 / 매매 신호는 추가하지 않았다.
 - Overview Market Movers 시장 관심 근거 V1:
   - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v1-20260708/`에서 1차~4차 selected-symbol 조사 보조 패널을 개발했다.

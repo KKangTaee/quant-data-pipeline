@@ -26,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-09 - Market Interest 뉴스와 SEC 공시는 같은 리스트가 아니다
+
+- User request: 사용자가 `뉴스/공시 촉매` 한 표에 뉴스와 SEC 공시가 섞여 있어 같은 종류처럼 보인다고 지적하고, 뉴스 리스트와 공시 촉매 리스트 분리를 제안함.
+- Interpreted goal: 선택 종목 `시장 관심`은 같은 패널 안에서도 뉴스 article metadata와 SEC issuer filing metadata의 성격을 분리해 보여줘야 한다.
+- Analysis result: read model을 `news_catalysts`와 `sec_filing_catalysts`로 분리하고, Form 144처럼 title이 form명뿐인 공시는 설명형 SEC form label로 표시한다. 13F는 issuer filing이 아니라 delayed institutional context이므로 별도 섹션에 남긴다.
+- Follow-up: `overview-market-interest-news-sec-split-20260709`에서 focused tests, renderer 분리, Browser QA, commit 단위로 닫는다.
+
 ### 2026-07-08 - Market Interest V2는 링크 허브가 아니라 evidence 패널이어야 한다
 
 - User request: 사용자가 V1을 테스트한 뒤 모든 카드가 `원문 확인`처럼 보이고, 뉴스/공시 촉매를 눌러도 뉴스가 나오지 않으며, 13F와 SEC 공시 및 원문 확인의 역할이 헷갈린다고 지적하고 1차~5차 개발 / QA / 커밋을 요청함.

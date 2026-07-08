@@ -17553,7 +17553,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             metadata=None,
         )
 
-        self.assertEqual(model["schema_version"], "market_interest_evidence_v2")
+        self.assertEqual(model["schema_version"], "market_interest_evidence_v3")
         self.assertEqual(model["status"], "NOT_REQUESTED")
         self.assertEqual(model["symbol"], "NET")
         policies = {row["Source"]: row["Policy"] for row in model["source_disclosure"]["rows"]}
@@ -17597,13 +17597,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         summary = {item["id"]: item for item in model["summary_items"]}
         self.assertEqual(summary["analyst_interest"]["state"], "구조화 소스 미연결")
-        self.assertEqual(summary["news_sec"]["state"], "뉴스 1건 / 공시 1건")
+        self.assertEqual(summary["news_catalysts"]["state"], "뉴스 1건")
+        self.assertEqual(summary["sec_filing_catalysts"]["state"], "공시 1건")
         self.assertEqual(summary["institutional_context"]["state"], "13F 지연 자료")
         self.assertEqual(summary["sources"]["state"], "출처 9개")
-        self.assertEqual(summary["news_sec"]["detail"], "US 1건 · KR 0건 · SEC 1건")
+        self.assertEqual(summary["news_catalysts"]["detail"], "US 1건 · KR 0건")
+        self.assertEqual(summary["sec_filing_catalysts"]["detail"], "SEC issuer filing 1건")
         self.assertFalse(any("buy" in str(item).lower() for item in model["summary_items"]))
 
-    def test_market_interest_v2_builds_evidence_sections_from_existing_metadata(self) -> None:
+    def test_market_interest_v3_builds_separate_news_and_sec_evidence_sections(self) -> None:
         from app.services.overview.market_interest import build_market_interest_read_model
 
         metadata = {
@@ -17646,18 +17648,51 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             metadata=metadata,
         )
 
-        self.assertEqual(model["schema_version"], "market_interest_evidence_v2")
+        self.assertEqual(model["schema_version"], "market_interest_evidence_v3")
         summaries = {item["id"]: item for item in model["summary_items"]}
-        self.assertEqual(summaries["news_sec"]["state"], "뉴스 2건 / 공시 1건")
+        self.assertEqual(summaries["news_catalysts"]["state"], "뉴스 2건")
+        self.assertEqual(summaries["sec_filing_catalysts"]["state"], "공시 1건")
         self.assertEqual(summaries["analyst_interest"]["state"], "구조화 소스 미연결")
         self.assertEqual(summaries["institutional_context"]["state"], "13F 지연 자료")
         sections = {section["id"]: section for section in model["evidence_sections"]}
         self.assertEqual(sections["analyst_interest"]["provider_status"], "DISCONNECTED")
-        self.assertEqual(len(sections["news_sec"]["rows"]), 3)
-        self.assertEqual(sections["news_sec"]["rows"][1]["Region"], "KR")
-        self.assertEqual(sections["news_sec"]["rows"][2]["Kind"], "SEC Filing")
+        self.assertEqual(len(sections["news_catalysts"]["rows"]), 2)
+        self.assertEqual(sections["news_catalysts"]["rows"][1]["Region"], "KR")
+        self.assertEqual(len(sections["sec_filing_catalysts"]["rows"]), 1)
+        self.assertEqual(sections["sec_filing_catalysts"]["rows"][0]["Kind"], "SEC Filing")
+        self.assertNotIn("news_sec", sections)
         self.assertTrue(model["source_disclosure"]["rows"])
         self.assertNotIn("기관이 지금 사고", str(model))
+
+    def test_market_interest_v3_labels_form_144_as_sec_filing_not_news(self) -> None:
+        from app.services.overview.market_interest import build_market_interest_read_model
+
+        model = build_market_interest_read_model(
+            mover={"Symbol": "NET", "Name": "Cloudflare Inc"},
+            metadata={
+                "status": "OK",
+                "news": pd.DataFrame([], columns=["Title", "Source", "Published At", "URL"]),
+                "korean_news": pd.DataFrame([], columns=["Title", "Source", "Published At", "Snippet", "URL"]),
+                "sec_filings": pd.DataFrame(
+                    [
+                        {
+                            "Form": "144",
+                            "Filing Date": "2026-07-08",
+                            "Title": "144",
+                            "URL": "https://www.sec.gov/Archives/form144",
+                        }
+                    ]
+                ),
+            },
+        )
+
+        sections = {section["id"]: section for section in model["evidence_sections"]}
+        self.assertEqual(sections["news_catalysts"]["rows"], [])
+        sec_row = sections["sec_filing_catalysts"]["rows"][0]
+        self.assertEqual(sec_row["Kind"], "SEC Filing")
+        self.assertEqual(sec_row["Form"], "144")
+        self.assertEqual(sec_row["Title"], "SEC Form 144 · 제한/지배주식 매각 예정 통지")
+        self.assertNotIn("News", str(sec_row))
 
     def test_market_movers_detail_panel_model_integrates_selected_mode_and_status_strip(self) -> None:
         from app.web.overview.market_movers_helpers import _market_mover_detail_panel_model
@@ -17712,7 +17747,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("조사 단서", source)
         self.assertIn("기본 지표", source)
         self.assertIn('"시장 관심"', source)
-        self.assertIn("뉴스/공시 촉매", source)
+        self.assertIn("뉴스 리스트", source)
+        self.assertIn("SEC 공시 촉매", source)
         self.assertIn("뉴스 메타데이터", source)
         self.assertIn("한국어 뉴스", source)
         self.assertIn("SEC 공시", source)
@@ -17720,7 +17756,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("SEC 공시 메타데이터 조회", source)
         self.assertIn("필요 재무제표 수집", source)
         self.assertNotIn("뉴스·공시 메타데이터 조회", source)
-        self.assertIn("선택 종목의 뉴스와 SEC issuer filing metadata", source)
+        self.assertIn("선택 종목의 뉴스 metadata입니다.", source)
+        self.assertIn("선택 종목의 최근 SEC issuer filing metadata입니다.", source)
         self.assertNotIn("선택 종목 원천 detail 표", source)
         self.assertNotIn("간단 메타데이터 조회", source)
         self.assertNotIn("catalyst score", source.lower())
@@ -17756,7 +17793,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         render_body = render_body[: render_body.index("def _market_mover_sector_breadth_table")]
 
         self.assertIn("evidence_sections", render_body)
-        self.assertIn("뉴스/공시 촉매", render_body)
+        self.assertIn("뉴스 리스트", render_body)
+        self.assertIn("SEC 공시 촉매", render_body)
+        self.assertIn("news_catalysts", render_body)
+        self.assertIn("sec_filing_catalysts", render_body)
         self.assertIn("기관 보유 배경 · 13F 지연 자료", render_body)
         self.assertIn("출처/원문 링크", render_body)
         self.assertIn("FMP/Finnhub", render_body)
@@ -18351,7 +18391,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("overview_market_mover_metadata__NET__market_interest", mock_st.session_state)
         model = mock_st.session_state["overview_market_mover_metadata__NET__market_interest"]
         self.assertEqual(model["symbol"], "NET")
-        self.assertEqual(model["summary_items"][1]["state"], "뉴스 2건 / 공시 1건")
+        summary = {item["id"]: item for item in model["summary_items"]}
+        self.assertEqual(summary["news_catalysts"]["state"], "뉴스 2건")
+        self.assertEqual(summary["sec_filing_catalysts"]["state"], "공시 1건")
         mock_st.rerun.assert_called_once()
 
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:

@@ -3894,14 +3894,24 @@ def _render_market_mover_market_interest(model: dict[str, Any], *, requested: bo
     if str(analyst_section.get("provider_status") or "") == "DISCONNECTED":
         st.info("FMP/Finnhub 같은 구조화 analyst source는 API key/약관 승인 후 연결합니다. 현재는 외부 확인 링크만 제공합니다.")
 
-    news_sec_section = _market_interest_section(section_model, "news_sec")
-    st.markdown("##### 뉴스/공시 촉매")
-    st.caption(str(news_sec_section.get("description") or "선택 종목의 뉴스와 SEC issuer filing metadata입니다."))
-    news_sec_rows = _market_interest_rows_frame(news_sec_section.get("rows"))
+    news_section = _market_interest_section(section_model, "news_catalysts")
+    st.markdown("##### 뉴스 리스트")
+    st.caption(str(news_section.get("description") or "선택 종목의 뉴스 metadata입니다."))
+    news_rows = _market_interest_rows_frame(news_section.get("rows"))
     _render_market_mover_metadata_table(
-        news_sec_rows,
-        ["Kind", "Region", "Title", "Source", "Published At", "Form", "Snippet", "Open"],
-        "뉴스/공시 촉매 metadata는 아직 조회하지 않았습니다. `시장 관심 근거 확인`을 눌러 현재 선택 종목만 조회하세요.",
+        news_rows,
+        ["Region", "Title", "Source", "Published At", "Snippet", "Open"],
+        "뉴스 metadata는 아직 조회하지 않았습니다. `시장 관심 근거 확인`을 눌러 현재 선택 종목만 조회하세요.",
+    )
+
+    sec_section = _market_interest_section(section_model, "sec_filing_catalysts")
+    st.markdown("##### SEC 공시 촉매")
+    st.caption(str(sec_section.get("description") or "선택 종목의 최근 SEC issuer filing metadata입니다."))
+    sec_rows = _market_interest_rows_frame(sec_section.get("rows"))
+    _render_market_mover_metadata_table(
+        sec_rows,
+        ["Form", "Title", "Source", "Published At", "Open"],
+        "SEC 공시 metadata는 아직 조회하지 않았습니다. `시장 관심 근거 확인`을 눌러 현재 선택 종목만 조회하세요.",
     )
 
     institution_section = _market_interest_section(section_model, "institutional_context")
@@ -4156,7 +4166,7 @@ def _render_market_mover_investigation_actions(
             identity=identity,
             metadata_key=metadata_key,
         )
-        st.success("시장 관심 근거와 뉴스/공시 메타데이터를 세션 전용으로 준비했습니다.")
+        st.success("시장 관심 근거와 뉴스 / SEC 공시 메타데이터를 세션 전용으로 준비했습니다.")
 
     if refresh_target["enabled"]:
         if action_cols[3].button(

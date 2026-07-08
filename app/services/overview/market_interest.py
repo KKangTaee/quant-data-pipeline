@@ -6,6 +6,13 @@ from urllib.parse import quote_plus
 import pandas as pd
 
 MARKET_INTEREST_LINK_COLUMNS = ["Source", "Lane", "Policy", "Evidence", "Caveat", "URL"]
+SEC_FORM_DISPLAY_TITLES = {
+    "144": "SEC Form 144 · 제한/지배주식 매각 예정 통지",
+    "8-K": "SEC Form 8-K · 주요 이벤트 공시",
+    "10-Q": "SEC Form 10-Q · 분기 보고서",
+    "10-K": "SEC Form 10-K · 연간 보고서",
+    "4": "SEC Form 4 · 내부자 거래 보고",
+}
 
 
 def _clean_text(value: Any, *, upper: bool = False) -> str | None:
@@ -80,7 +87,7 @@ def build_market_interest_original_links(*, symbol: str, name: str | None = None
             },
             {
                 "Source": "SEC Company Search",
-                "Lane": "뉴스/공시 촉매",
+                "Lane": "SEC 공시 촉매",
                 "Policy": "official_session_lookup",
                 "Evidence": "Official company filing search destination",
                 "Caveat": "Metadata and source links only unless a separate SEC digest scope is approved.",
@@ -154,7 +161,7 @@ def _links_for_lane(frame: pd.DataFrame, lane: str) -> list[dict[str, Any]]:
     return _link_records(frame[frame["Lane"] == lane])
 
 
-def _news_evidence_rows(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+def _news_catalyst_rows(metadata: dict[str, Any]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for row in _records(metadata.get("news")):
         rows.append(
@@ -182,14 +189,29 @@ def _news_evidence_rows(metadata: dict[str, Any]) -> list[dict[str, Any]]:
                 "URL": _clean_text(row.get("URL")) or "",
             }
         )
+    return rows
+
+
+def _sec_filing_display_title(*, form: str, title: str | None) -> str:
+    clean_form = _clean_text(form, upper=True) or "-"
+    clean_title = _clean_text(title)
+    fallback = SEC_FORM_DISPLAY_TITLES.get(clean_form, f"SEC Form {clean_form}" if clean_form != "-" else "SEC Filing")
+    if not clean_title:
+        return fallback
+    if clean_title.strip().upper() == clean_form:
+        return fallback
+    return clean_title
+
+
+def _sec_filing_catalyst_rows(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for row in _records(metadata.get("sec_filings")):
         form = _clean_text(row.get("Form")) or "-"
-        title = _clean_text(row.get("Title")) or form
         rows.append(
             {
                 "Kind": "SEC Filing",
                 "Region": "US",
-                "Title": title,
+                "Title": _sec_filing_display_title(form=form, title=_clean_text(row.get("Title"))),
                 "Source": "SEC EDGAR",
                 "Published At": _clean_text(row.get("Filing Date")) or "-",
                 "Snippet": "",
@@ -212,11 +234,14 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
     korean_news_count = _count_rows(payload.get("korean_news"))
     news_count = us_news_count + korean_news_count
     sec_count = _count_rows(payload.get("sec_filings"))
-    news_sec_state = f"뉴스 {news_count}건 / 공시 {sec_count}건" if news_count or sec_count else "조회 전"
-    news_sec_detail = f"US {us_news_count}건 · KR {korean_news_count}건 · SEC {sec_count}건"
     status = "READY" if payload and str(payload.get("status") or "").upper() != "NOT_REQUESTED" else "NOT_REQUESTED"
+    news_state = f"뉴스 {news_count}건" if news_count else ("뉴스 없음" if status == "READY" else "조회 전")
+    sec_state = f"공시 {sec_count}건" if sec_count else ("공시 없음" if status == "READY" else "조회 전")
+    news_detail = f"US {us_news_count}건 · KR {korean_news_count}건"
+    sec_detail = f"SEC issuer filing {sec_count}건"
     source_rows = _link_records(links)
-    news_sec_rows = _news_evidence_rows(payload)
+    news_rows = _news_catalyst_rows(payload)
+    sec_rows = _sec_filing_catalyst_rows(payload)
     summary_items = [
         {
             "id": "analyst_interest",
@@ -226,11 +251,18 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
             "tone": "neutral",
         },
         {
-            "id": "news_sec",
-            "label": "뉴스/공시 촉매",
-            "state": news_sec_state,
-            "detail": news_sec_detail,
-            "tone": "success" if news_count or sec_count else "neutral",
+            "id": "news_catalysts",
+            "label": "뉴스 리스트",
+            "state": news_state,
+            "detail": news_detail,
+            "tone": "success" if news_count else "neutral",
+        },
+        {
+            "id": "sec_filing_catalysts",
+            "label": "SEC 공시 촉매",
+            "state": sec_state,
+            "detail": sec_detail,
+            "tone": "success" if sec_count else "neutral",
         },
         {
             "id": "institutional_context",
@@ -258,12 +290,20 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
             "source_rows": _links_for_lane(links, "애널리스트 관심"),
         },
         {
-            "id": "news_sec",
-            "title": "뉴스/공시 촉매",
-            "state": news_sec_state,
-            "description": "선택 종목에 대해 세션 전용으로 조회한 미국 뉴스, 한국어 뉴스, SEC issuer filing metadata입니다.",
-            "rows": news_sec_rows,
-            "source_rows": _links_for_lane(links, "뉴스/공시 촉매"),
+            "id": "news_catalysts",
+            "title": "뉴스 리스트",
+            "state": news_state,
+            "description": "선택 종목의 뉴스 metadata입니다.",
+            "rows": news_rows,
+            "source_rows": [],
+        },
+        {
+            "id": "sec_filing_catalysts",
+            "title": "SEC 공시 촉매",
+            "state": sec_state,
+            "description": "선택 종목의 최근 SEC issuer filing metadata입니다.",
+            "rows": sec_rows,
+            "source_rows": _links_for_lane(links, "SEC 공시 촉매"),
         },
         {
             "id": "institutional_context",
@@ -282,7 +322,7 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
         },
     ]
     return {
-        "schema_version": "market_interest_evidence_v2",
+        "schema_version": "market_interest_evidence_v3",
         "status": status,
         "symbol": normalized_symbol,
         "name": name,
