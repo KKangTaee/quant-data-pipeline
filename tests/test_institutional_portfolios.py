@@ -228,6 +228,123 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(model["holders"][0]["weight_pct"], 42.5)
         self.assertTrue(any("CUSIP-symbol mapping" in caveat for caveat in model["caveats"]))
 
+    def test_visual_workbench_payload_prioritizes_portfolio_chart_and_change_boards(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        latest_holdings = pd.DataFrame(
+            [
+                {
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "reported_value": 1500,
+                    "shares_or_principal_amount": 15,
+                    "sector": "Technology",
+                    "industry": "Consumer Electronics",
+                },
+                {
+                    "cusip": "060505104",
+                    "holding_symbol": "BAC",
+                    "issuer_name": "BANK OF AMERICA CORP",
+                    "reported_value": 900,
+                    "shares_or_principal_amount": 30,
+                    "sector": "Financial Services",
+                    "industry": "Banks",
+                },
+                {
+                    "cusip": "594918104",
+                    "holding_symbol": "MSFT",
+                    "issuer_name": "MICROSOFT CORP",
+                    "reported_value": 600,
+                    "shares_or_principal_amount": 6,
+                    "sector": "Technology",
+                    "industry": "Software",
+                },
+            ]
+        )
+        previous_holdings = pd.DataFrame(
+            [
+                {
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "reported_value": 1000,
+                    "shares_or_principal_amount": 10,
+                    "sector": "Technology",
+                    "industry": "Consumer Electronics",
+                },
+                {
+                    "cusip": "594918104",
+                    "holding_symbol": "MICROSOFT CORP",
+                    "issuer_name": "MICROSOFT CORP",
+                    "reported_value": 800,
+                    "shares_or_principal_amount": 8,
+                    "sector": "Technology",
+                    "industry": "Software",
+                },
+                {
+                    "cusip": "459200101",
+                    "holding_symbol": "IBM",
+                    "issuer_name": "IBM",
+                    "reported_value": 400,
+                    "shares_or_principal_amount": 4,
+                    "sector": "Technology",
+                    "industry": "IT Services",
+                },
+            ]
+        )
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={
+                "accession_number": "0001067983-26-000001",
+                "period_of_report": "2026-03-31",
+                "filing_date": "2026-05-15",
+                "source_ref": "https://www.sec.gov/Archives/edgar/data/1067983/000106798326000001/",
+            },
+            latest_holdings=latest_holdings,
+            previous_filing={"period_of_report": "2025-12-31", "filing_date": "2026-02-14"},
+            previous_holdings=previous_holdings,
+        )
+
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[
+                {"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC", "latest_report_period": "2026-03-31"},
+                {"cik": "0001336528", "manager_name": "PERSHING SQUARE CAPITAL MANAGEMENT", "latest_report_period": "2026-03-31"},
+            ],
+            selected_cik="0001067983",
+            interest_model=None,
+            mode="live",
+            allocation_limit=2,
+        )
+
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v1")
+        self.assertEqual(payload["component"], "InstitutionalPortfoliosWorkbench")
+        self.assertEqual(payload["mode"], "live")
+        self.assertEqual(payload["hero"]["manager_name"], "BERKSHIRE HATHAWAY INC")
+        self.assertGreaterEqual(len(payload["allocation"]["segments"]), 3)
+        self.assertEqual(payload["allocation"]["segments"][0]["symbol"], "AAPL")
+        self.assertIn("Other", {segment["label"] for segment in payload["allocation"]["segments"]})
+        self.assertEqual(payload["change_board"]["groups"]["increased"]["count"], 1)
+        self.assertEqual(payload["change_board"]["groups"]["reduced"]["count"], 1)
+        self.assertEqual(payload["change_board"]["groups"]["no_longer_reported"]["count"], 1)
+        self.assertEqual(payload["sector_exposure"]["bars"][0]["sector"], "Technology")
+        self.assertTrue(payload["source_caveats"]["visible"])
+        self.assertFalse(payload["boundary"]["trade_signal"])
+
+    def test_preview_workbench_payload_is_labeled_and_not_live_data(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_preview_workbench_payload
+
+        payload = build_institutional_preview_workbench_payload(message="Local 13F DB is empty.")
+
+        self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v1")
+        self.assertEqual(payload["mode"], "preview")
+        self.assertTrue(payload["data_state"]["is_preview"])
+        self.assertIn("preview", payload["data_state"]["label"].lower())
+        self.assertTrue(payload["allocation"]["segments"])
+        self.assertFalse(payload["boundary"]["trade_signal"])
+        self.assertFalse(payload["boundary"]["live_trading"])
+
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
     def test_workspace_navigation_adds_institutional_portfolios_without_operations(self) -> None:
@@ -257,6 +374,13 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("collect_sec_13f_dataset", active_ingestion_actions())
         self.assertIn("collect_sec_13f_dataset", PROGRESS_ENABLED_ACTIONS)
         self.assertIn("SEC Form 13F", JOB_GUIDE["collect_sec_13f_dataset"]["title"])
+
+    def test_institutional_portfolios_page_mounts_react_workbench_before_detail_tables(self) -> None:
+        source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_institutional_portfolios_workbench", source)
+        self.assertIn("build_institutional_workbench_payload", source)
+        self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("st.dataframe"))
 
 
 if __name__ == "__main__":

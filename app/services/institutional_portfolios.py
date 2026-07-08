@@ -23,6 +23,33 @@ CHANGE_ORDER = {
     "unchanged": 3,
     "no_longer_reported": 4,
 }
+CHANGE_LABELS = {
+    "reported_new": "New",
+    "increased": "Increased",
+    "reduced": "Reduced",
+    "no_longer_reported": "Sold out candidate",
+    "unchanged": "Unchanged",
+}
+CHANGE_DESCRIPTIONS = {
+    "reported_new": "이번 보고서에 새로 등장한 보유 종목",
+    "increased": "이전 보고 분기 대비 수량 또는 보고가치가 증가",
+    "reduced": "이전 보고 분기 대비 수량 또는 보고가치가 감소",
+    "no_longer_reported": "최신 보고서에는 더 이상 보이지 않는 종목",
+    "unchanged": "주식 수와 보고가치 변화가 거의 없는 종목",
+}
+WORKBENCH_COLORS = [
+    "#2563eb",
+    "#14b8a6",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#22c55e",
+    "#0ea5e9",
+    "#f97316",
+    "#64748b",
+    "#d946ef",
+    "#94a3b8",
+]
 
 
 def _text(value: Any) -> str | None:
@@ -44,6 +71,21 @@ def _num(value: Any, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _money_label(value: Any) -> str:
+    numeric = _num(value)
+    if abs(numeric) >= 1_000_000_000:
+        return f"{numeric / 1_000_000_000:.1f}B"
+    if abs(numeric) >= 1_000_000:
+        return f"{numeric / 1_000_000:.1f}M"
+    if abs(numeric) >= 1_000:
+        return f"{numeric / 1_000:.1f}K"
+    return f"{numeric:,.0f}"
+
+
+def _pct_label(value: Any) -> str:
+    return f"{_num(value):.1f}%"
 
 
 def _date_label(value: Any) -> str | None:
@@ -192,6 +234,376 @@ def _sector_exposure(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         row["weight_pct"] = round(_num(row["weight_pct"]), 4)
     out.sort(key=lambda row: row["weight_pct"], reverse=True)
     return out
+
+
+def _manager_picker_items(managers: list[dict[str, Any]], selected_cik: str | None) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for row in managers[:24]:
+        cik = _text(row.get("cik"))
+        latest_period = _date_label(row.get("latest_report_period")) or _text(row.get("latest_report_period")) or "-"
+        items.append(
+            {
+                "cik": cik,
+                "manager_name": _text(row.get("manager_name")) or "Unknown manager",
+                "latest_report_period": latest_period,
+                "selected": bool(cik and selected_cik and cik == selected_cik),
+            }
+        )
+    return items
+
+
+def _allocation_segments(holdings: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+    visible = holdings[: max(1, limit)]
+    segments: list[dict[str, Any]] = []
+    for idx, row in enumerate(visible):
+        symbol = _text(row.get("holding_symbol"))
+        issuer = _text(row.get("issuer_name")) or "-"
+        label = symbol or issuer
+        segments.append(
+            {
+                "key": _text(row.get("cusip")) or symbol or issuer,
+                "label": label,
+                "symbol": symbol,
+                "issuer_name": issuer,
+                "weight_pct": round(_num(row.get("weight_pct")), 4),
+                "weight_label": _pct_label(row.get("weight_pct")),
+                "reported_value": _num(row.get("reported_value")),
+                "value_label": _money_label(row.get("reported_value")),
+                "color": WORKBENCH_COLORS[idx % len(WORKBENCH_COLORS)],
+                "drilldown_query": symbol or _text(row.get("cusip")) or issuer,
+            }
+        )
+
+    remaining = holdings[max(1, limit) :]
+    other_weight = sum(_num(row.get("weight_pct")) for row in remaining)
+    other_value = sum(_num(row.get("reported_value")) for row in remaining)
+    if remaining and other_weight > 0:
+        segments.append(
+            {
+                "key": "other",
+                "label": "Other",
+                "symbol": None,
+                "issuer_name": f"{len(remaining)} remaining holdings",
+                "weight_pct": round(other_weight, 4),
+                "weight_label": _pct_label(other_weight),
+                "reported_value": round(other_value, 4),
+                "value_label": _money_label(other_value),
+                "color": WORKBENCH_COLORS[-1],
+                "drilldown_query": "",
+            }
+        )
+    return segments
+
+
+def _top_holding_rows(holdings: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for idx, row in enumerate(holdings[:limit]):
+        symbol = _text(row.get("holding_symbol"))
+        issuer = _text(row.get("issuer_name")) or "-"
+        rows.append(
+            {
+                "key": _text(row.get("cusip")) or symbol or issuer,
+                "rank": idx + 1,
+                "symbol": symbol,
+                "issuer_name": issuer,
+                "label": symbol or issuer,
+                "cusip": _text(row.get("cusip")),
+                "sector": _text(row.get("sector")) or "Unmapped",
+                "weight_pct": round(_num(row.get("weight_pct")), 4),
+                "weight_label": _pct_label(row.get("weight_pct")),
+                "reported_value": _num(row.get("reported_value")),
+                "value_label": _money_label(row.get("reported_value")),
+                "drilldown_query": symbol or _text(row.get("cusip")) or issuer,
+                "color": WORKBENCH_COLORS[idx % len(WORKBENCH_COLORS)],
+            }
+        )
+    return rows
+
+
+def _change_groups(changes: list[dict[str, Any]], *, limit: int) -> dict[str, dict[str, Any]]:
+    groups: dict[str, dict[str, Any]] = {}
+    for change_type in ["reported_new", "increased", "reduced", "no_longer_reported"]:
+        rows = [row for row in changes if row.get("change_type") == change_type]
+        groups[change_type] = {
+            "label": CHANGE_LABELS[change_type],
+            "description": CHANGE_DESCRIPTIONS[change_type],
+            "count": len(rows),
+            "items": [
+                {
+                    "label": _text(row.get("holding_symbol")) or _text(row.get("issuer_name")) or "-",
+                    "issuer_name": _text(row.get("issuer_name")) or "-",
+                    "symbol": _text(row.get("holding_symbol")),
+                    "weight_label": _pct_label(row.get("weight_pct")),
+                    "value_delta": _num(row.get("value_delta")),
+                    "value_delta_label": _money_label(row.get("value_delta")),
+                    "drilldown_query": _text(row.get("holding_symbol")) or _text(row.get("cusip")) or _text(row.get("issuer_name")) or "",
+                }
+                for row in rows[:limit]
+            ],
+        }
+    return groups
+
+
+def _sector_bars(exposure: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+    max_weight = max((_num(row.get("weight_pct")) for row in exposure), default=0.0)
+    bars: list[dict[str, Any]] = []
+    for idx, row in enumerate(exposure[:limit]):
+        weight = _num(row.get("weight_pct"))
+        bars.append(
+            {
+                "sector": _text(row.get("sector")) or "Unmapped",
+                "weight_pct": round(weight, 4),
+                "weight_label": _pct_label(weight),
+                "reported_value": _num(row.get("reported_value")),
+                "value_label": _money_label(row.get("reported_value")),
+                "holding_count": int(_num(row.get("holding_count"))),
+                "bar_width_pct": round((weight / max_weight) * 100.0, 2) if max_weight > 0 else 0.0,
+                "color": WORKBENCH_COLORS[idx % len(WORKBENCH_COLORS)],
+            }
+        )
+    return bars
+
+
+def _workbench_holdings_rows(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "issuer_name": row.get("issuer_name"),
+            "symbol": row.get("holding_symbol"),
+            "cusip": row.get("cusip"),
+            "sector": row.get("sector") or "Unmapped",
+            "industry": row.get("industry"),
+            "weight_pct": row.get("weight_pct"),
+            "weight_label": _pct_label(row.get("weight_pct")),
+            "reported_value": row.get("reported_value"),
+            "value_label": _money_label(row.get("reported_value")),
+            "shares_or_principal_amount": row.get("shares_or_principal_amount"),
+            "drilldown_query": row.get("holding_symbol") or row.get("cusip") or row.get("issuer_name"),
+        }
+        for row in holdings
+    ]
+
+
+def _interest_payload(interest_model: dict[str, Any] | None) -> dict[str, Any]:
+    model = dict(interest_model or {})
+    holders = [
+        {
+            "manager_name": row.get("manager_name"),
+            "cik": row.get("cik"),
+            "period_of_report": row.get("period_of_report"),
+            "filing_date": row.get("filing_date"),
+            "issuer_name": row.get("issuer_name"),
+            "symbol": row.get("holding_symbol"),
+            "cusip": row.get("cusip"),
+            "weight_label": _pct_label(row.get("weight_pct")),
+            "reported_value": row.get("reported_value"),
+            "value_label": _money_label(row.get("reported_value")),
+            "source_ref": row.get("source_ref"),
+        }
+        for row in list(model.get("holders") or [])[:50]
+    ]
+    return {
+        "query": model.get("query") or "",
+        "holder_count": int(model.get("holder_count") or len(holders)),
+        "holders": holders,
+        "empty_text": "종목을 클릭하거나 검색하면 최신 저장 13F 기준 보유 기관을 보여줍니다.",
+    }
+
+
+def build_institutional_workbench_payload(
+    *,
+    model: dict[str, Any],
+    managers: list[dict[str, Any]] | None,
+    selected_cik: str | None,
+    interest_model: dict[str, Any] | None,
+    mode: str = "live",
+    data_message: str = "",
+    allocation_limit: int = 10,
+    row_limit: int = 12,
+) -> dict[str, Any]:
+    summary = dict(model.get("summary") or {})
+    holdings = list(model.get("holdings") or [])
+    changes = list(model.get("changes") or [])
+    sector_exposure = list(model.get("sector_exposure") or [])
+    manager_name = _text(summary.get("manager_name")) or "Unknown manager"
+    report_period = _text(summary.get("latest_report_period")) or "-"
+    previous_period = _text(summary.get("previous_report_period")) or "-"
+    filing_date = _text(summary.get("latest_filing_date")) or "-"
+    total_value = _num(summary.get("total_reported_value"))
+    is_preview = mode == "preview"
+    data_state_label = "Preview sample" if is_preview else "Stored SEC 13F snapshot"
+    data_state_message = data_message or (
+        "샘플 데이터입니다. 실제 13F 수집 후 저장 DB 기준 화면으로 바뀝니다."
+        if is_preview
+        else "SEC Form 13F 저장 snapshot 기준입니다. 최신 거래 의도가 아닙니다."
+    )
+
+    return {
+        "schema_version": "institutional_portfolios_workbench_v1",
+        "component": "InstitutionalPortfoliosWorkbench",
+        "mode": mode,
+        "data_state": {
+            "label": data_state_label,
+            "message": data_state_message,
+            "is_preview": is_preview,
+            "as_of_label": report_period,
+        },
+        "manager_picker": {
+            "selected_cik": selected_cik,
+            "items": _manager_picker_items(list(managers or []), selected_cik),
+        },
+        "hero": {
+            "manager_name": manager_name,
+            "cik": _text(summary.get("cik")) or selected_cik,
+            "latest_report_period": report_period,
+            "latest_filing_date": filing_date,
+            "previous_report_period": previous_period,
+            "total_reported_value": total_value,
+            "total_reported_value_label": _money_label(total_value),
+            "holding_count": int(_num(summary.get("holding_count"))),
+            "source_ref": _text(summary.get("source_ref")),
+            "facts": [
+                {"label": "Report period", "value": report_period},
+                {"label": "Filing date", "value": filing_date},
+                {"label": "Holdings", "value": f"{int(_num(summary.get('holding_count'))):,}"},
+                {"label": "Reported value", "value": _money_label(total_value)},
+            ],
+            "caveat": "13F는 분기 지연 자료이며 실시간 매수/매도 신호가 아닙니다.",
+        },
+        "allocation": {
+            "title": "Portfolio Allocation",
+            "subtitle": "Top holdings by reported value, grouped with Other for scanability.",
+            "total_label": _money_label(total_value),
+            "segments": _allocation_segments(holdings, limit=allocation_limit),
+            "top_holdings": _top_holding_rows(holdings, limit=row_limit),
+        },
+        "change_board": {
+            "title": "Reported Quarter Changes",
+            "subtitle": f"{previous_period} -> {report_period}",
+            "groups": _change_groups(changes, limit=5),
+        },
+        "sector_exposure": {
+            "title": "Sector Exposure",
+            "subtitle": "Best-effort sector mapping from stored symbol metadata.",
+            "bars": _sector_bars(sector_exposure, limit=8),
+        },
+        "holdings_table": {
+            "columns": ["issuer_name", "symbol", "weight_label", "value_label", "sector", "cusip"],
+            "rows": _workbench_holdings_rows(holdings),
+        },
+        "interest": _interest_payload(interest_model),
+        "source_caveats": {
+            "visible": True,
+            "items": list(model.get("caveats") or INSTITUTIONAL_PORTFOLIO_CAVEATS),
+        },
+        "boundary": dict(
+            model.get("boundary")
+            or {
+                "recommendation": False,
+                "trade_signal": False,
+                "live_trading": False,
+                "registry_write": False,
+                "saved_portfolio_write": False,
+            }
+        ),
+    }
+
+
+def build_institutional_preview_workbench_payload(message: str = "") -> dict[str, Any]:
+    preview_model = build_institutional_portfolio_model(
+        manager={"cik": "PREVIEW", "manager_name": "Sample Superinvestor Portfolio"},
+        latest_filing={
+            "period_of_report": "Sample quarter",
+            "filing_date": "Not filed",
+            "source_ref": None,
+        },
+        latest_holdings=pd.DataFrame(
+            [
+                {
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "reported_value": 44000,
+                    "shares_or_principal_amount": 100,
+                    "sector": "Technology",
+                    "industry": "Consumer Electronics",
+                },
+                {
+                    "cusip": "060505104",
+                    "holding_symbol": "BAC",
+                    "issuer_name": "BANK OF AMERICA CORP",
+                    "reported_value": 32000,
+                    "shares_or_principal_amount": 100,
+                    "sector": "Financial Services",
+                    "industry": "Banks",
+                },
+                {
+                    "cusip": "023135106",
+                    "holding_symbol": "AMZN",
+                    "issuer_name": "AMAZON COM INC",
+                    "reported_value": 16000,
+                    "shares_or_principal_amount": 50,
+                    "sector": "Consumer Cyclical",
+                    "industry": "Internet Retail",
+                },
+                {
+                    "cusip": "594918104",
+                    "holding_symbol": "MSFT",
+                    "issuer_name": "MICROSOFT CORP",
+                    "reported_value": 8000,
+                    "shares_or_principal_amount": 30,
+                    "sector": "Technology",
+                    "industry": "Software",
+                },
+            ]
+        ),
+        previous_filing={"period_of_report": "Previous sample quarter", "filing_date": "Not filed"},
+        previous_holdings=pd.DataFrame(
+            [
+                {
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "reported_value": 40000,
+                    "shares_or_principal_amount": 95,
+                    "sector": "Technology",
+                    "industry": "Consumer Electronics",
+                },
+                {
+                    "cusip": "060505104",
+                    "holding_symbol": "BAC",
+                    "issuer_name": "BANK OF AMERICA CORP",
+                    "reported_value": 34000,
+                    "shares_or_principal_amount": 120,
+                    "sector": "Financial Services",
+                    "industry": "Banks",
+                },
+                {
+                    "cusip": "459200101",
+                    "holding_symbol": "IBM",
+                    "issuer_name": "IBM",
+                    "reported_value": 5000,
+                    "shares_or_principal_amount": 20,
+                    "sector": "Technology",
+                    "industry": "IT Services",
+                },
+            ]
+        ),
+    )
+    payload = build_institutional_workbench_payload(
+        model=preview_model,
+        managers=[
+            {"cik": "PREVIEW", "manager_name": "Sample Superinvestor Portfolio", "latest_report_period": "Sample"},
+            {"cik": "0001067983", "manager_name": "Berkshire Hathaway", "latest_report_period": "after SEC load"},
+            {"cik": "0001336528", "manager_name": "Pershing Square", "latest_report_period": "after SEC load"},
+        ],
+        selected_cik="PREVIEW",
+        interest_model=None,
+        mode="preview",
+        data_message=message or "Local 13F DB is empty. This preview shows the intended visual layout, not live or current holdings.",
+        allocation_limit=3,
+    )
+    payload["data_state"]["label"] = "Preview sample - not live data"
+    return payload
 
 
 def build_institutional_portfolio_model(

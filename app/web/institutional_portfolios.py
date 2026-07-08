@@ -8,9 +8,15 @@ import streamlit as st
 
 from app.services.institutional_portfolios import (
     INSTITUTIONAL_PORTFOLIO_CAVEATS,
+    build_institutional_preview_workbench_payload,
+    build_institutional_workbench_payload,
     load_institutional_interest_model,
     load_institutional_manager_choices,
     load_institutional_portfolio_model,
+)
+from app.web.institutional_portfolios_react_component import (
+    institutional_portfolios_react_component_available,
+    render_institutional_portfolios_workbench,
 )
 
 
@@ -178,6 +184,51 @@ def _render_diagnostic_detail(message: str | None) -> None:
         st.caption(str(message))
 
 
+def _selected_manager(managers: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not managers:
+        return None
+    selected_cik = str(st.session_state.get("institutional_portfolios_selected_cik") or "")
+    for row in managers:
+        if str(row.get("cik") or "") == selected_cik:
+            return row
+    first = managers[0]
+    st.session_state["institutional_portfolios_selected_cik"] = str(first.get("cik") or "")
+    return first
+
+
+def _handle_workbench_event(event: dict[str, Any] | None) -> None:
+    if not event:
+        return
+    event_name = event.get("event")
+    if event_name == "select_manager":
+        cik = str(event.get("cik") or "")
+        if cik and cik != st.session_state.get("institutional_portfolios_selected_cik"):
+            st.session_state["institutional_portfolios_selected_cik"] = cik
+            st.rerun()
+    if event_name == "drilldown":
+        query = str(event.get("query") or "").strip()
+        if query and query != st.session_state.get("institutional_interest_query"):
+            st.session_state["institutional_interest_query"] = query
+            st.rerun()
+
+
+def _render_workbench_or_fallback(payload: dict[str, Any], *, key: str) -> None:
+    if institutional_portfolios_react_component_available():
+        event = render_institutional_portfolios_workbench(payload, key=key)
+        _handle_workbench_event(event)
+        return
+
+    st.info("React workbench build is unavailable. Run the component build step to render the visual portfolio explorer.")
+    st.json(
+        {
+            "mode": payload.get("mode"),
+            "manager": (payload.get("hero") or {}).get("manager_name"),
+            "allocation": payload.get("allocation"),
+            "change_board": payload.get("change_board"),
+        }
+    )
+
+
 def render_institutional_portfolios_page(
     *,
     runtime_marker: str | None = None,
@@ -187,67 +238,80 @@ def render_institutional_portfolios_page(
 ) -> None:
     st.title("Institutional Portfolios")
     st.caption(
-        "Explore delayed SEC Form 13F institutional portfolio filings by manager and holding. "
-        "This workspace is separate from Market Movers and does not create recommendations."
+        "Explore delayed SEC Form 13F portfolios by manager, allocation, reported change, and holder lookup. "
+        "This is a read-only research workspace, separate from Market Movers."
     )
 
-    _render_caveats()
     if render_runtime_snapshot is not None:
         with st.expander("Runtime / Build", expanded=False):
             render_runtime_snapshot()
     elif runtime_marker or loaded_at or git_sha:
         st.caption(f"Runtime: {runtime_marker or '-'} · Loaded: {loaded_at or '-'} · Git: {git_sha or '-'}")
 
-    with st.container(border=True):
-        st.markdown("### Manager Search")
-        search = st.text_input(
-            "Manager / Institution",
-            value="",
-            key="institutional_portfolios_manager_search",
-            placeholder="Berkshire Hathaway, Pershing Square, BlackRock",
+    search = st.text_input(
+        "Search manager / institution",
+        value="",
+        key="institutional_portfolios_manager_search",
+        placeholder="Berkshire Hathaway, Pershing Square, BlackRock",
+    )
+    manager_result = load_institutional_manager_choices(search, limit=24)
+    if manager_result["status"] != "ok":
+        payload = build_institutional_preview_workbench_payload(
+            "Local 13F data is not ready yet. This preview shows the visual portfolio workflow before official SEC rows are loaded."
         )
-        result = load_institutional_manager_choices(search, limit=100)
-        if result["status"] != "ok":
-            st.warning(
-                "Institutional 13F DB tables are not ready yet. "
-                "Run `Workspace > Ingestion > SEC Form 13F 데이터셋 수집` first."
-            )
-            _render_diagnostic_detail(result.get("message"))
-            _render_reverse_lookup()
-            return
+        _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_error")
+        with st.expander("Source caveats and setup", expanded=False):
+            _render_caveats()
+            _render_diagnostic_detail(manager_result.get("message"))
+        return
 
-        managers = list(result.get("managers") or [])
-        if not managers:
-            st.info("No institutional 13F manager rows are available. Run the SEC Form 13F dataset collection first.")
-            _render_reverse_lookup()
-            return
-
-        label_to_manager = {_manager_label(row): row for row in managers}
-        selected_label = st.selectbox(
-            "Select Manager",
-            options=list(label_to_manager.keys()),
-            index=0,
-            key="institutional_portfolios_selected_manager",
-        )
-        selected_manager = label_to_manager[selected_label]
+    managers = list(manager_result.get("managers") or [])
+    selected_manager = _selected_manager(managers)
+    if selected_manager is None:
+        payload = build_institutional_preview_workbench_payload("Local 13F DB has no manager rows yet. Preview mode is shown until data is collected.")
+        _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_empty")
+        with st.expander("Source caveats and setup", expanded=False):
+            _render_caveats()
+        return
 
     portfolio_result = load_institutional_portfolio_model(str(selected_manager.get("cik") or ""))
     if portfolio_result["status"] != "ok":
-        st.warning("Portfolio model is unavailable for this manager.")
-        _render_diagnostic_detail(portfolio_result.get("message"))
-        _render_reverse_lookup()
+        payload = build_institutional_preview_workbench_payload(
+            "The selected manager portfolio is not available in the local 13F snapshot. Preview mode shows the intended visual workflow."
+        )
+        _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_model_error")
+        with st.expander("Source caveats and setup", expanded=False):
+            _render_caveats()
+            _render_diagnostic_detail(portfolio_result.get("message"))
         return
 
     model = dict(portfolio_result.get("model") or {})
-    _render_summary(model)
-    holdings_tab, changes_tab, exposure_tab, lookup_tab = st.tabs(
-        ["Holdings", "Reported Changes", "Sector Exposure", "Institutional Interest"]
+    interest_query = str(st.session_state.get("institutional_interest_query") or "").strip()
+    interest_model: dict[str, Any] | None = None
+    if interest_query:
+        interest_result = load_institutional_interest_model(interest_query, limit=100)
+        if interest_result["status"] == "ok":
+            interest_model = dict(interest_result.get("model") or {})
+
+    payload = build_institutional_workbench_payload(
+        model=model,
+        managers=managers,
+        selected_cik=str(selected_manager.get("cik") or ""),
+        interest_model=interest_model,
+        mode="live",
     )
-    with holdings_tab:
-        _render_holdings(model)
-    with changes_tab:
-        _render_changes(model)
-    with exposure_tab:
-        _render_exposure(model)
-    with lookup_tab:
-        _render_reverse_lookup()
+    _render_workbench_or_fallback(payload, key=f"institutional_portfolios_{selected_manager.get('cik') or 'unknown'}")
+
+    with st.expander("Detailed filings / table fallback", expanded=False):
+        _render_summary(model)
+        holdings_tab, changes_tab, exposure_tab, lookup_tab = st.tabs(
+            ["Holdings", "Reported Changes", "Sector Exposure", "Institutional Interest"]
+        )
+        with holdings_tab:
+            _render_holdings(model)
+        with changes_tab:
+            _render_changes(model)
+        with exposure_tab:
+            _render_exposure(model)
+        with lookup_tab:
+            _render_reverse_lookup()

@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 ## Current State After Master Merge
 
@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-workspace-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-react-workbench-v1-20260709/`다.
+
+- 목적: 기존 `Workspace > Institutional Portfolios` V1이 SEC 13F ingestion / DB 조회 중심으로 보여 실제 투자 대가 / 기관 포트폴리오를 시각적으로 탐색하는 제품 경험이 약했던 문제를 해결했다.
+- 주요 변경: `app/web/streamlit_components/institutional_portfolios_workbench/` React workbench를 추가하고, Python service에 visual payload / preview payload contract를 만들었다. 첫 화면은 manager rail, allocation donut, top holdings, reported quarter change board, sector exposure, holdings tab, institutional interest drill-down을 보여준다. DB empty 상태는 clearly labeled preview로 표시하고 raw DB error는 setup expander에만 둔다.
+- 이번 차수에서 하지 않은 일: 새 provider / paid API integration, Dataroma / WhaleWisdom scraping, broker / live trading / auto rebalance 연동, 완전한 security master 수준 CUSIP-symbol mapping.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-workspace-v1-20260708/`다.
 
 - 목적: Market Movers의 선택 종목 조사단서와 분리해, 투자 대가 / 기관별 전체 SEC Form 13F portfolio와 reported holdings change를 Workspace에서 탐색하는 read-only surface를 만들었다.
 - 주요 변경: `Workspace > Institutional Portfolios` navigation, SEC 13F official data set ingestion action, `finance_meta.institutional_13f_*` schema, parser / loader / service read model, holdings / reported changes / sector exposure / reverse lookup UI, source caveat / runbook / flow docs를 추가했다.

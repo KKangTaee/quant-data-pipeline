@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 ## Purpose
 
@@ -24,8 +24,9 @@ Last Verified: 2026-07-08
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Institutional Portfolios Workspace V1 2026-07-08](../tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
-- Previous completed task: [Post-Merge Docs / Code Flow Refresh 2026-07-08](../tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
+- Latest completed task: [Institutional Portfolios React Workbench V1 2026-07-09](../tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
+- Previous completed task: [Institutional Portfolios Workspace V1 2026-07-08](../tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
+- Earlier completed task: [Post-Merge Docs / Code Flow Refresh 2026-07-08](../tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Boundary Cleanup V1 2026-07-08](../tasks/active/practical-validation-boundary-cleanup-v1-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Flow4 Final Review Handoff V1 2026-07-08](../tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Flow4 Outcome Taxonomy V1 2026-07-08](../tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/STATUS.md).

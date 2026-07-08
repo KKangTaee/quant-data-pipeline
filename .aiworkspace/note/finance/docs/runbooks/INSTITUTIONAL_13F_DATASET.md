@@ -1,7 +1,7 @@
 # Institutional 13F Dataset Runbook
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 ## Purpose
 
@@ -47,6 +47,7 @@ SEC Form 13F ZIP
   -> finance/loaders/institutional_13f.py
   -> app/services/institutional_portfolios.py
   -> app/web/institutional_portfolios.py
+  -> app/web/streamlit_components/institutional_portfolios_workbench
 ```
 
 ## QA
@@ -55,6 +56,7 @@ SEC Form 13F ZIP
 git diff --check
 .venv/bin/python tests/test_institutional_portfolios.py
 .venv/bin/python -m py_compile finance/data/institutional_13f.py finance/loaders/institutional_13f.py app/services/institutional_portfolios.py app/web/institutional_portfolios.py
+(cd app/web/streamlit_components/institutional_portfolios_workbench && npm run build)
 ```
 
 If UI changes are present, run Browser QA against `Workspace > Institutional Portfolios` and keep screenshots out of the commit.

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-workspace-v1-20260708](./tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
+  - Latest completed task is [institutional-portfolios-react-workbench-v1-20260709](./tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-09 - Institutional Portfolios must be a visual portfolio explorer, not an ingestion console
+
+- User request: 사용자가 기존 `Workspace > Institutional Portfolios`가 대가 / 기관 포트폴리오를 시각적으로 보여주는 화면이 아니라 ingestion / raw DB 조회처럼 보인다고 지적하고, Upbit / Toss Securities 같은 금융 UI benchmark를 참고해 React component 기반으로 UI와 Python engine을 분리해 달라고 요청함.
+- Interpreted goal: SEC 13F ingestion / DB / loader 경계는 유지하되 첫 화면의 주인공을 수집 안내가 아니라 manager 선택, allocation donut, top holdings, reported quarter change, sector exposure, institutional interest drill-down으로 바꾼다.
+- Analysis result: `Workspace` 위치는 유지한다. `Operations`는 사용자 portfolio monitoring, `Reference`는 static guidance에 가까워 이 기능의 primary IA로 맞지 않다. React component가 visual layout과 click event를 맡고, Python service가 visual payload / caveat / DB read model을 만든다.
+- Follow-up: `institutional-portfolios-react-workbench-v1-20260709`에서 React workbench, Streamlit component bridge, visual payload / preview payload, page shell, docs sync, Browser QA를 진행했다. Preview data는 clearly labeled sample이며 official current holdings로 표현하지 않는다.
 
 ### 2026-07-08 - Institutional Portfolios belongs in Workspace, not Market Movers or Operations
 

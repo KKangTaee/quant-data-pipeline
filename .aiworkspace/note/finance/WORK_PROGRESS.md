@@ -23,13 +23,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-workspace-v1-20260708](./tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
+  - Latest completed task is [institutional-portfolios-react-workbench-v1-20260709](./tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
 
+- Institutional Portfolios React Workbench V1 2026-07-09:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-react-workbench-v1-20260709/`에서 1차~6차 scope를 진행했다.
+  - `Workspace > Institutional Portfolios`를 table-first / ingestion-like 화면에서 React visual workbench로 바꿨다. 첫 화면은 manager rail, allocation donut, top holdings, reported quarter changes, sector exposure를 보여주고, holdings click은 institutional interest drill-down event로 연결한다.
+  - DB empty 상태는 clearly labeled preview로 표시하며, raw DB error는 setup expander에만 둔다. 13F delayed / no trade signal / no live workflow boundary는 유지했다.
 - Institutional Portfolios Workspace V1 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-workspace-v1-20260708/`에서 1차~6차 scope를 진행했다.
   - `Workspace > Institutional Portfolios`를 Market Movers와 분리된 delayed SEC Form 13F research surface로 추가하고, SEC official dataset ingestion / schema / loader / service / UI / docs / runbook을 연결했다.
