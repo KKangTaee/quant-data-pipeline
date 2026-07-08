@@ -7,8 +7,11 @@
 - BK -> BNY는 일반화 테스트 fixture이며, production logic에 하드코딩하지 않는다.
 - `resolution_status=candidate`는 UI가 보여주는 검토 후보, `resolution_status=active`는 사용자가 버튼으로 승인한 repair로 둔다.
 - active repair는 Backtest source ticker를 rewrite하지 않고 OHLCV collection ticker만 resolved ticker로 바꾼다.
+- 2차부터 candidate confidence는 단일 숫자만 보지 않고 same CIK, lifecycle coverage, resolved ticker price freshness, official/source reference를 `evidence_factors`로 함께 설명한다.
+- `recommended_action=apply_ticker_change_repair`는 HIGH/MEDIUM confidence candidate에만 부여하고, LOW는 `review_symbol_identity`로 남긴다.
+- DB 저장 시 `evidence_json`은 summary/status뿐 아니라 source quality, review note, evidence factor list를 보존한다.
 
 ## Open Notes
 
-- 후속 차수에서 SEC / Nasdaq / official corporate-action source를 후보 점수화에 더 깊게 연결해야 한다.
+- SEC / Nasdaq / official corporate-action source feed 자체를 새로 수집하는 작업은 이번 2차 scope가 아니다. 현재는 existing lifecycle row의 `source`, `source_ref`, `evidence_json`을 structured evidence로 해석한다.
 - 후속 PIT integration 전까지는 effective_date 이후 old/new ticker split을 자동으로 백테스트 가격 series에 합성하지 않는다.

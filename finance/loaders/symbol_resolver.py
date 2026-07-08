@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
@@ -81,24 +82,90 @@ def _classify_confidence(score: float) -> str:
     return "LOW"
 
 
-def _candidate_score(row: Mapping[str, Any], resolved_price: Mapping[str, Any] | None, target_end: str | None) -> tuple[float, list[str]]:
-    evidence: list[str] = []
+def _parse_evidence_json(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    if value in (None, ""):
+        return {}
+    if not isinstance(value, str):
+        return {}
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+    return dict(parsed) if isinstance(parsed, Mapping) else {}
+
+
+def _evidence_factor(
+    label: str,
+    *,
+    score: float | None = None,
+    detail: Any = None,
+    source: Any = None,
+) -> dict[str, Any]:
+    factor: dict[str, Any] = {"label": label}
+    if score is not None:
+        factor["score"] = round(float(score), 4)
+    detail_text = str(detail or "").strip()
+    if detail_text:
+        factor["detail"] = detail_text
+    source_text = str(source or "").strip()
+    if source_text:
+        factor["source"] = source_text
+    return factor
+
+
+def _infer_source_quality(row: Mapping[str, Any], evidence: Mapping[str, Any]) -> str:
+    explicit = str(evidence.get("source_quality") or "").strip()
+    if explicit:
+        return explicit
+    source_ref = str(row.get("source_ref") or "").strip()
+    source = str(row.get("source") or "").strip().lower()
+    source_type = str(row.get("source_type") or "").strip().lower()
+    if source_ref and any(marker in f"{source} {source_type}" for marker in ["press", "exchange", "sec", "historical_listing"]):
+        return "official_corporate_action"
+    if source_ref:
+        return "referenced_lifecycle"
+    if row.get("related_cik"):
+        return "identity_crosscheck"
+    return "lifecycle_row"
+
+
+def _candidate_score(
+    row: Mapping[str, Any],
+    resolved_price: Mapping[str, Any] | None,
+    target_end: str | None,
+) -> tuple[float, list[dict[str, Any]], dict[str, Any]]:
+    evidence_payload = _parse_evidence_json(row.get("evidence_json"))
+    evidence_factors: list[dict[str, Any]] = []
     score = _safe_float(row.get("confidence"))
     if score is None:
         score = 0.6
+    else:
+        evidence_factors.append(_evidence_factor("lifecycle row confidence", score=score))
     if row.get("related_cik"):
         score = max(score, 0.86)
-        evidence.append("same CIK")
+        evidence_factors.append(_evidence_factor("same CIK", score=0.86, detail=row.get("related_cik")))
     if str(row.get("coverage_status") or "").strip().lower() == "actual":
         score = max(score, 0.82)
-        evidence.append("lifecycle evidence")
+        evidence_factors.append(_evidence_factor("lifecycle evidence", score=0.82))
     latest_date = _date_text((resolved_price or {}).get("latest_date"))
     if latest_date and (target_end is None or latest_date >= target_end):
         score = max(score, 0.9)
-        evidence.append("resolved ticker has current price")
+        evidence_factors.append(_evidence_factor("resolved ticker has current price", score=0.9, detail=latest_date))
     if row.get("source_ref"):
-        evidence.append("official/source reference")
-    return min(score, 0.99), evidence
+        score = max(score, 0.88)
+        evidence_factors.append(_evidence_factor("official/source reference", score=0.88, source=row.get("source_ref")))
+    source_quality = _infer_source_quality(row, evidence_payload)
+    if source_quality == "official_corporate_action":
+        score = max(score, 0.9)
+    review_note = str(evidence_payload.get("review_note") or evidence_payload.get("summary") or "").strip()
+    evidence_payload["source_quality"] = source_quality
+    if review_note:
+        evidence_payload["review_note"] = review_note
+    if evidence_factors:
+        evidence_payload["evidence_factors"] = evidence_factors
+    return min(score, 0.99), evidence_factors, evidence_payload
 
 
 def diagnose_symbol_identity_issues(
@@ -134,8 +201,17 @@ def diagnose_symbol_identity_issues(
         if str(row.get("event_type") or "").strip().lower() != "ticker_change":
             continue
         resolved_price = resolved_price_by_symbol.get(resolved_symbol)
-        score, evidence = _candidate_score(row, resolved_price, target_end)
-        evidence_summary = "; ".join(evidence) if evidence else "ticker-change lifecycle row"
+        score, evidence_factors, evidence_payload = _candidate_score(row, resolved_price, target_end)
+        evidence_labels = [str(factor.get("label")) for factor in evidence_factors if factor.get("label")]
+        evidence_summary = "; ".join(evidence_labels) if evidence_labels else "ticker-change lifecycle row"
+        confidence_level = _classify_confidence(score)
+        recommended_action = (
+            "apply_ticker_change_repair"
+            if confidence_level in {"HIGH", "MEDIUM"}
+            else "review_symbol_identity"
+        )
+        evidence_payload["summary"] = evidence_summary
+        evidence_payload["recommended_action"] = recommended_action
         candidates.append(
             {
                 "issue_type": "symbol_identity_issue",
@@ -146,9 +222,15 @@ def diagnose_symbol_identity_issues(
                 "effective_date": _date_text(row.get("event_date")),
                 "related_cik": row.get("related_cik"),
                 "confidence": round(score, 4),
-                "confidence_level": _classify_confidence(score),
+                "confidence_level": confidence_level,
                 "resolution_status": str(row.get("resolution_status") or "candidate").strip().lower() or "candidate",
                 "evidence_summary": evidence_summary,
+                "evidence_factors": evidence_factors,
+                "evidence": evidence_payload,
+                "source_quality": evidence_payload.get("source_quality"),
+                "review_note": evidence_payload.get("review_note"),
+                "recommended_action": recommended_action,
+                "review_required": recommended_action != "apply_ticker_change_repair",
                 "source": row.get("source"),
                 "source_ref": row.get("source_ref"),
                 "name": row.get("name"),

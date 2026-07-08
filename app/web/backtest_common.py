@@ -2302,6 +2302,13 @@ def _strict_symbol_identity_candidates(price_details: dict[str, Any]) -> list[di
         candidate["issue_type"] = candidate.get("issue_type") or "symbol_identity_issue"
         candidate["alias_type"] = candidate.get("alias_type") or "ticker_change"
         candidate["resolution_status"] = candidate.get("resolution_status") or "candidate"
+        confidence_level = str(candidate.get("confidence_level") or "").strip().upper()
+        if not candidate.get("recommended_action"):
+            candidate["recommended_action"] = (
+                "apply_ticker_change_repair"
+                if confidence_level in {"HIGH", "MEDIUM"}
+                else "review_symbol_identity"
+            )
         candidates.append(candidate)
         seen.add(source_symbol)
     return candidates
@@ -2311,9 +2318,25 @@ def _symbol_identity_issue_check(candidates: list[dict[str, Any]]) -> dict[str, 
     if not candidates:
         return None
     source_symbols = _unique_upper_tickers([candidate.get("source_symbol") for candidate in candidates])
-    enabled = any(
-        str(candidate.get("confidence_level") or "").strip().upper() in {"HIGH", "MEDIUM"}
+    apply_candidates = [
+        candidate
         for candidate in candidates
+        if str(candidate.get("recommended_action") or "").strip() == "apply_ticker_change_repair"
+        or str(candidate.get("confidence_level") or "").strip().upper() in {"HIGH", "MEDIUM"}
+    ]
+    apply_symbols = _unique_upper_tickers([candidate.get("source_symbol") for candidate in apply_candidates])
+    enabled = bool(apply_symbols)
+    action_id = "apply_ticker_change_repair" if enabled else "review_symbol_identity"
+    action_label = "티커 변경 반영 후 데이터 보강" if enabled else "티커 변경 근거 수동 확인"
+    action_detail = (
+        "선택된 source ticker는 유지하고, 가격 수집은 resolved ticker로 실행합니다."
+        if enabled
+        else "신뢰도가 낮아 자동 반영하지 않습니다. source evidence를 확인한 뒤 후보를 보강하세요."
+    )
+    solution = (
+        "버튼으로 검토된 ticker-change lifecycle row를 active로 반영하고, 대체 ticker의 가격 데이터를 보강한 뒤 readiness를 다시 확인하세요."
+        if enabled
+        else "후보 근거가 낮은 티커 변경은 자동 반영하지 않습니다. source evidence를 확인하고 lifecycle row를 보강한 뒤 readiness를 다시 확인하세요."
     )
     diagnostics: list[dict[str, str]] = []
     for candidate in candidates[:8]:
@@ -2331,14 +2354,14 @@ def _symbol_identity_issue_check(candidates: list[dict[str, Any]]) -> dict[str, 
         title="티커 변경 후보",
         problem=f"{len(source_symbols)}개 종목은 오래된 source ticker일 가능성이 있습니다.",
         symbols=source_symbols,
-        solution="버튼으로 검토된 ticker-change lifecycle row를 active로 반영하고, 대체 ticker의 가격 데이터를 보강한 뒤 readiness를 다시 확인하세요.",
+        solution=solution,
         action=_readiness_action(
-            action_id="apply_ticker_change_repair",
-            label="티커 변경 반영 후 데이터 보강",
-            detail="선택된 source ticker는 유지하고, 가격 수집은 resolved ticker로 실행합니다.",
+            action_id=action_id,
+            label=action_label,
+            detail=action_detail,
             enabled=enabled,
             tone="warning",
-            symbols=source_symbols,
+            symbols=apply_symbols if enabled else source_symbols,
         ),
         tone="warning",
         diagnostics=diagnostics,

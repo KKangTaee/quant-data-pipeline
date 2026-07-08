@@ -30,6 +30,18 @@ def _json_payload(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
 
 
+def _evidence_payload(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    if value in (None, "") or not isinstance(value, str):
+        return {}
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {}
+    return dict(parsed) if isinstance(parsed, Mapping) else {}
+
+
 def _timestamp() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -42,9 +54,16 @@ def _ticker_change_row(candidate: Mapping[str, Any], *, status: str, collected_a
     normalized_status = str(candidate.get("resolution_status") or status or "active").strip().lower()
     if normalized_status not in {"candidate", "active", "rejected", "unknown"}:
         normalized_status = "unknown"
-    evidence = dict(candidate.get("evidence") or {})
+    evidence = _evidence_payload(candidate.get("evidence"))
+    if not evidence:
+        evidence = _evidence_payload(candidate.get("evidence_json"))
     if candidate.get("evidence_summary") and "summary" not in evidence:
         evidence["summary"] = candidate.get("evidence_summary")
+    for key in ["source_quality", "review_note", "recommended_action", "evidence_factors"]:
+        value = candidate.get(key)
+        if value in (None, "", []):
+            continue
+        evidence[key] = value
     evidence["status"] = normalized_status
     return {
         "symbol": source_symbol,

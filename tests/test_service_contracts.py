@@ -10418,6 +10418,111 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("same CIK", candidate["evidence_summary"])
         self.assertIn("resolved ticker has current price", candidate["evidence_summary"])
 
+    def test_symbol_resolver_exposes_source_evidence_factors_and_review_action(self) -> None:
+        from finance.loaders.symbol_resolver import diagnose_symbol_identity_issues
+
+        diagnosis = diagnose_symbol_identity_issues(
+            ["OLD"],
+            price_details={
+                "effective_end_date": "2026-07-02",
+                "refresh_symbols_all": ["OLD"],
+                "stale_symbols_all": ["OLD"],
+            },
+            lifecycle_rows=[
+                {
+                    "symbol": "OLD",
+                    "event_type": "ticker_change",
+                    "event_date": "2026-06-10",
+                    "related_symbol": "NEW",
+                    "related_cik": 123456,
+                    "coverage_status": "actual",
+                    "source_type": "historical_listing",
+                    "source": "company_press_release",
+                    "source_ref": "https://example.com/company/old-to-new",
+                    "evidence_json": '{"source_quality":"official_corporate_action","review_note":"issuer press release"}',
+                }
+            ],
+            resolved_price_rows=[
+                {"symbol": "NEW", "latest_date": "2026-07-02", "row_count": 16},
+            ],
+        )
+
+        candidate = diagnosis["candidates"][0]
+        factor_labels = [factor["label"] for factor in candidate["evidence_factors"]]
+        self.assertEqual(candidate["source_quality"], "official_corporate_action")
+        self.assertEqual(candidate["recommended_action"], "apply_ticker_change_repair")
+        self.assertIn("same CIK", factor_labels)
+        self.assertIn("official/source reference", factor_labels)
+        self.assertIn("resolved ticker has current price", factor_labels)
+        self.assertIn("issuer press release", candidate["review_note"])
+
+    def test_factor_readiness_model_excludes_low_confidence_symbol_identity_from_apply_action(self) -> None:
+        from app.web.backtest_common import build_strict_factor_readiness_panel_model
+
+        model = build_strict_factor_readiness_panel_model(
+            preset_name="US Base Universe 300",
+            tickers=["OLD", "ALLY"],
+            strategy_label="Quality Snapshot (Strict Annual)",
+            price_report={
+                "status": "warning",
+                "details": {
+                    "effective_end_date": "2026-07-02",
+                    "common_latest_date": "2026-05-20",
+                    "refresh_symbols_all": ["OLD", "ALLY"],
+                    "stale_symbols_all": ["OLD", "ALLY"],
+                    "symbol_identity_issue_candidates": [
+                        {
+                            "source_symbol": "OLD",
+                            "resolved_symbol": "NEW",
+                            "confidence_level": "LOW",
+                            "confidence": 0.58,
+                            "effective_date": "2026-06-10",
+                            "evidence_summary": "ticker-change lifecycle row",
+                            "recommended_action": "review_symbol_identity",
+                        }
+                    ],
+                },
+            },
+            statement_summary={
+                "requested_count": 2,
+                "covered_count": 2,
+                "missing_symbols": [],
+            },
+        )
+
+        symbol_check = {check["id"]: check for check in model["checks"]}["symbol_identity_issue"]
+        self.assertEqual(symbol_check["symbols"], ["OLD"])
+        self.assertFalse(symbol_check["action"]["enabled"])
+        self.assertEqual(symbol_check["action"]["id"], "review_symbol_identity")
+        self.assertEqual(symbol_check["status_label"], "수동 확인")
+
+    def test_ticker_change_resolution_persists_evidence_factors(self) -> None:
+        from finance.data.symbol_resolver import _ticker_change_row
+
+        row = _ticker_change_row(
+            {
+                "source_symbol": "OLD",
+                "resolved_symbol": "NEW",
+                "effective_date": "2026-06-10",
+                "confidence": 0.92,
+                "source_quality": "official_corporate_action",
+                "review_note": "issuer press release",
+                "evidence_factors": [
+                    {"label": "same CIK", "score": 0.86},
+                    {"label": "resolved ticker has current price", "score": 0.9},
+                ],
+            },
+            status="active",
+            collected_at="2026-07-08 09:00:00",
+        )
+
+        self.assertIsNotNone(row)
+        payload = json.loads(row["evidence_json"])
+        self.assertEqual(payload["source_quality"], "official_corporate_action")
+        self.assertEqual(payload["review_note"], "issuer press release")
+        self.assertEqual(payload["evidence_factors"][0]["label"], "same CIK")
+        self.assertEqual(payload["status"], "active")
+
     def test_factor_readiness_model_prioritizes_ticker_change_candidate_over_bk_refresh(self) -> None:
         from app.web.backtest_common import build_strict_factor_readiness_panel_model
 
