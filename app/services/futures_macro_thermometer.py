@@ -131,6 +131,42 @@ WEEKLY_CONTEXT_GROUPS = (
     },
 )
 
+FLOW_CONTEXT_PERIODS = (
+    {
+        "key": "1D",
+        "label": "1D",
+        "title": "최근 1일 흐름",
+        "column": "1D %",
+        "copy_period": "최근 1일",
+        "basis": "저장된 1D 선물 OHLCV의 최근 1거래일 변화율",
+        "missing_summary": "최근 1일 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+        "missing_detail": "최근 1일 변화율을 계산할 일봉 데이터가 부족합니다.",
+        "neutral_detail": "최근 1일 변화는 중립권입니다.",
+    },
+    {
+        "key": "1W",
+        "label": "1W",
+        "title": "최근 1주 흐름",
+        "column": "5D %",
+        "copy_period": "최근 1주",
+        "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+        "missing_summary": "최근 1주 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+        "missing_detail": "최근 1주 변화율을 계산할 일봉 데이터가 부족합니다.",
+        "neutral_detail": "최근 1주 변화는 중립권입니다.",
+    },
+    {
+        "key": "1M",
+        "label": "1M",
+        "title": "최근 1개월 흐름",
+        "column": "20D %",
+        "copy_period": "최근 1개월",
+        "basis": "저장된 1D 선물 OHLCV의 최근 20거래일 변화율",
+        "missing_summary": "최근 1개월 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+        "missing_detail": "최근 1개월 변화율을 계산할 일봉 데이터가 부족합니다.",
+        "neutral_detail": "최근 1개월 변화는 중립권입니다.",
+    },
+)
+
 
 @dataclass(frozen=True)
 class ScoreDefinition:
@@ -613,7 +649,7 @@ def _mixed_macro_context(
             _component_phrase(symbols, ["GC=F", "ZN=F", "ZB=F", "6J=F"], positive=True),
         ]
     elif risk_on <= -20 and rate_pressure <= -20:
-        sub_scenario = "위험선호 약세 + 금리 부담 완화"
+        sub_scenario = "금리 부담 완화 속 성장 약세"
         regime_hint = "성장주 부담 완화 확인 필요"
         mixed_reason = (
             "주가지수 선물은 약하지만 채권선물 흐름은 금리 부담 완화 쪽이라 "
@@ -623,6 +659,30 @@ def _mixed_macro_context(
             f"{sub_scenario}: Risk-On {risk_on:+d}, Rate Pressure {rate_pressure:+d}",
             _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F"], positive=False),
             _component_phrase(symbols, ["ZN=F", "ZB=F"], positive=True),
+        ]
+    elif dollar_pressure >= 20 and risk_on <= -10:
+        sub_scenario = "달러 압력 Risk-Off 후보"
+        regime_hint = "Risk-off 확인 필요"
+        mixed_reason = (
+            "달러 압력은 높고 위험자산은 약하지만 구리 / 경기민감 흐름까지 충분히 동조하지 않아 "
+            "확정적인 달러 강세 risk-off로 분류하지 않습니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Dollar Pressure {dollar_pressure:+d}, Risk-On {risk_on:+d}",
+            _component_phrase(symbols, ["6E=F", "6B=F", "6A=F", "6C=F"], positive=False),
+            _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F", "HG=F"], positive=False),
+        ]
+    elif risk_on >= 20 and safe_haven >= 20:
+        sub_scenario = "상충 흐름 / 전환 구간"
+        regime_hint = "전환 구간 확인 필요"
+        mixed_reason = (
+            "위험선호와 안전자산 선호가 동시에 강해 한쪽 방향으로 확정하기보다 "
+            "포지션 전환 또는 이벤트 전후의 상충 구간으로 봅니다."
+        )
+        evidence = [
+            f"{sub_scenario}: Risk-On {risk_on:+d}, Safe Haven {safe_haven:+d}",
+            _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F"], positive=True),
+            _component_phrase(symbols, ["GC=F", "ZN=F", "ZB=F", "6J=F"], positive=True),
         ]
     elif dollar_pressure >= 20 and risk_on > -10:
         sub_scenario = "달러/위험자산 충돌"
@@ -637,7 +697,7 @@ def _mixed_macro_context(
             _component_phrase(symbols, ["ES=F", "NQ=F", "RTY=F", "HG=F"], positive=False),
         ]
     elif inflation <= -20 and growth <= 0:
-        sub_scenario = "원자재/물가 약세 혼재"
+        sub_scenario = "원자재 약세 + 수요 둔화 후보"
         regime_hint = "수요 둔화 확인 필요"
         mixed_reason = (
             "원자재 / 물가 proxy는 약하지만 성장 둔화, 위험선호, 안전자산 흐름이 한 방향으로 완전히 모이지 않아 "
@@ -649,7 +709,7 @@ def _mixed_macro_context(
             score_line,
         ]
     else:
-        sub_scenario = "저신호 / 방향성 없음"
+        sub_scenario = "저신호 / 관망"
         regime_hint = "관망"
         mixed_reason = (
             "주요 점수가 20점 기준의 방향성 임계값을 충분히 넘지 않아 선물 일봉만으로는 "
@@ -849,7 +909,16 @@ def _signed_percent_label(value: float | None) -> str:
     return f"{float(value):+.2f}%"
 
 
-def _weekly_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any]) -> float | None:
+def _flow_period_text(text: Any, period: dict[str, Any]) -> str:
+    value = str(text or "")
+    if str(period.get("key")) == "1D":
+        return value.replace("최근 1주", "최근 1일").replace("5D", "1D")
+    if str(period.get("key")) == "1M":
+        return value.replace("최근 1주", "최근 1개월").replace("5D", "20D")
+    return value
+
+
+def _flow_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any], column: str) -> float | None:
     if not isinstance(symbol_metrics, pd.DataFrame) or symbol_metrics.empty or "Symbol" not in symbol_metrics:
         return None
     values: list[float] = []
@@ -857,7 +926,7 @@ def _weekly_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any]) -> 
         matches = symbol_metrics[symbol_metrics["Symbol"] == symbol]
         if matches.empty:
             continue
-        value = _safe_float(matches.iloc[0].get("5D %"))
+        value = _safe_float(matches.iloc[0].get(column))
         if value is not None:
             values.append(value * float(group.get("multiplier") or 1.0))
     if not values:
@@ -865,7 +934,7 @@ def _weekly_group_value(symbol_metrics: pd.DataFrame, group: dict[str, Any]) -> 
     return _round(sum(values) / len(values), 2)
 
 
-def _weekly_tone(value: float | None, group: dict[str, Any]) -> str:
+def _flow_tone(value: float | None, group: dict[str, Any]) -> str:
     if value is None:
         return "neutral"
     if value >= 0.5:
@@ -875,38 +944,41 @@ def _weekly_tone(value: float | None, group: dict[str, Any]) -> str:
     return "neutral"
 
 
-def _weekly_detail(value: float | None, group: dict[str, Any]) -> str:
+def _flow_detail(value: float | None, group: dict[str, Any], period: dict[str, Any]) -> str:
     if value is None:
-        return "최근 1주 변화율을 계산할 일봉 데이터가 부족합니다."
+        return str(period.get("missing_detail") or "최근 흐름을 계산할 일봉 데이터가 부족합니다.")
     if value >= 0.5:
-        return str(group.get("positive_detail") or "최근 1주 상승 흐름입니다.")
+        return _flow_period_text(group.get("positive_detail") or "최근 1주 상승 흐름입니다.", period)
     if value <= -0.5:
-        return str(group.get("negative_detail") or "최근 1주 하락 흐름입니다.")
-    return "최근 1주 변화는 중립권입니다."
+        return _flow_period_text(group.get("negative_detail") or "최근 1주 하락 흐름입니다.", period)
+    return str(period.get("neutral_detail") or "최근 흐름은 중립권입니다.")
 
 
-def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
+def _build_macro_flow_period(symbol_metrics: pd.DataFrame, period: dict[str, Any]) -> dict[str, Any]:
     cards: list[dict[str, Any]] = []
     for group in WEEKLY_CONTEXT_GROUPS:
-        value = _weekly_group_value(symbol_metrics, group)
+        value = _flow_group_value(symbol_metrics, group, str(period["column"]))
         cards.append(
             {
                 "label": str(group["label"]),
                 "raw_value": value,
                 "value": _signed_percent_label(value),
-                "detail": _weekly_detail(value, group),
-                "meaning": str(group.get("meaning") or ""),
-                "tone": _weekly_tone(value, group),
+                "detail": _flow_detail(value, group, period),
+                "meaning": _flow_period_text(group.get("meaning") or "", period),
+                "tone": _flow_tone(value, group),
                 "symbols": list(group["symbols"]),
             }
         )
     usable = [card for card in cards if card.get("raw_value") is not None]
     if not usable:
         return {
+            "key": str(period["key"]),
+            "label": str(period["label"]),
+            "title": str(period["title"]),
             "status": "MISSING",
-            "summary": "최근 1주 흐름을 계산할 일봉 선물 데이터가 부족합니다.",
+            "summary": str(period["missing_summary"]),
             "cards": cards,
-            "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+            "basis": str(period["basis"]),
         }
 
     dominant = max(usable, key=lambda card: abs(float(card.get("raw_value") or 0.0)))
@@ -915,17 +987,46 @@ def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
     rates = by_label.get("금리 부담", {})
     dollar = by_label.get("달러 압력", {})
     summary = (
-        f"최근 1주 기준으로 {dominant.get('label')} 변화가 가장 두드러집니다"
+        f"{period.get('copy_period')} 기준으로 {dominant.get('label')} 변화가 가장 두드러집니다"
         f"({_signed_percent_label(dominant.get('raw_value'))}). "
         f"위험선호 {_signed_percent_label(risk.get('raw_value'))}, "
         f"금리 부담 {_signed_percent_label(rates.get('raw_value'))}, "
         f"달러 압력 {_signed_percent_label(dollar.get('raw_value'))}을 함께 확인합니다."
     )
     return {
+        "key": str(period["key"]),
+        "label": str(period["label"]),
+        "title": str(period["title"]),
         "status": "OK",
         "summary": summary,
         "cards": cards,
-        "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+        "basis": str(period["basis"]),
+    }
+
+
+def _flow_period_definition(key: str) -> dict[str, Any]:
+    for period in FLOW_CONTEXT_PERIODS:
+        if str(period.get("key")) == key:
+            return period
+    return FLOW_CONTEXT_PERIODS[0]
+
+
+def build_weekly_macro_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
+    weekly = _build_macro_flow_period(symbol_metrics, _flow_period_definition("1W"))
+    return {
+        "status": weekly["status"],
+        "summary": weekly["summary"],
+        "cards": weekly["cards"],
+        "basis": weekly["basis"],
+    }
+
+
+def build_macro_flow_context(symbol_metrics: pd.DataFrame) -> dict[str, Any]:
+    periods = [_build_macro_flow_period(symbol_metrics, period) for period in FLOW_CONTEXT_PERIODS]
+    return {
+        "status": "OK" if any(period.get("status") == "OK" for period in periods) else "MISSING",
+        "default_period": "1D",
+        "periods": periods,
     }
 
 
@@ -1084,6 +1185,7 @@ def build_macro_thermometer_read_model(
     interpretation = generate_market_interpretation(score_rows, symbol_metrics)
     evidence_groups = build_current_evidence_groups(score_rows, component_rows, symbol_metrics)
     weekly_context = build_weekly_macro_context(symbol_metrics)
+    flow_context = build_macro_flow_context(symbol_metrics)
     return {
         "status": _status(coverage, warnings),
         "coverage": coverage,
@@ -1097,6 +1199,7 @@ def build_macro_thermometer_read_model(
         "evidence_groups": evidence_groups,
         "evidence_reading": build_macro_evidence_reading(evidence_groups),
         "weekly_context": weekly_context,
+        "flow_context": flow_context,
         "cautions": list(CAUTION_LINES),
         "source_note": "Uses stored yfinance futures daily OHLCV; scores are standardized by recent 60D daily volatility.",
         "as_of_date": as_of_date or date.today().isoformat(),

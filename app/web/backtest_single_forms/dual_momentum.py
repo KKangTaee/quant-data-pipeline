@@ -136,4 +136,3 @@ def _render_dual_momentum_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="Dual Momentum")
-

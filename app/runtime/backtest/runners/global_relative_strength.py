@@ -196,4 +196,3 @@ def run_global_relative_strength_backtest_from_db(
         promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
         **promotion_policy,
     )
-

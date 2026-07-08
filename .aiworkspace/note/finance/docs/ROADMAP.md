@@ -122,6 +122,27 @@ Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-val
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-readable-fix-queue-v1-20260706/`다.
 
+Recent Backtest handoff task는 `.aiworkspace/note/finance/tasks/active/backtest-second-stage-visibility-v1-20260705/`다.
+
+- 목적: Backtest Analysis의 Data Trust / Handoff가 2차 Practical Validation review focus를 1차 상세 검토처럼 보여주는 혼선을 줄였다.
+- 주요 변경: Data Trust는 excluded ticker / malformed price row 같은 직접 데이터 이슈만 상세 표시하고, `meta["warnings"]` 기반 review focus는 2차 전달 count / 위치 안내로 낮췄다. Handoff / Policy Signals도 2차 상세 판단 문구를 반복하지 않는다.
+- 이번 차수에서 하지 않은 일: source registration write, Practical Validation review queue 저장, registry / saved JSONL / strategy runtime / gate threshold 변경.
+
+Recent Overview / Market Movers task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/`다.
+
+- 목적: `Workspace > Overview > Market Movers` selected-symbol 조사단서의 PER / EPS / 당기순이익 / 유동비율 / FCF chart payload와 UI를 보강해 연간 / 분기 추세를 함께 읽게 한다.
+- 주요 변경: 분기 chart 이력을 연간보다 짧게 잘라 보이던 제한을 늘리고, 금액 문자열 formatter가 comma 단위 숫자와 억 / 천 달러 단위를 안정적으로 표시하도록 보강했다.
+
+Recent Overview Futures Macro task는 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`다.
+
+- 목적: `Workspace > Overview > Futures Macro`의 React 현재 근거와 하단 `원본 데이터 / 계산 추적`을 분리하고, historical validation / raw table 문구를 사용자가 판단 재료로 연결해 읽을 수 있게 정리한다.
+- 현재 상태: 1차~5차와 후속 카드 정리 완료. React workbench는 하나의 custom component / iframe 안에서 `MacroContextSection`, `RecentFlowSection`, `HistoricalValidationPanel`로 내부 분리되어, 화면상 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 별도 카드처럼 읽게 한다. `CurrentEvidencePanel`은 `MacroContextSection` 안에서 현재 score evidence를 맡으므로 현재 근거가 과거 점검과 분리되어 읽힌다. Historical validation은 현재 16개 선물 일봉 상태를 과거 동일 계산식으로 다시 찾아보는 보조 검산이며, `오늘과 비슷한 과거 흐름 확인` action은 `과거 점검` 섹션 안에 있다. 결과는 먼저 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유` 결론 타일로 읽고, 상세 타일은 `판정`, `5거래일 표본`, `20거래일 표본`, `자산군 해석`으로 확인한다. 하단 `원본 데이터 / 계산 추적`은 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 검산하는 raw table 부록이다.
+
+Recent data-source migration task는 `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`다.
+
+- 목적: 재무제표 source migration 1~9차를 닫고, durable docs와 runbook에서 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 saved/history replay용 legacy compatibility로 고정한다.
+- 주요 변경: Market Movers annual financial snapshot, strict annual factor backtest family, Ingestion financial statement refresh, statement coverage QA, and docs now use EDGAR detailed statements / statement shadow as the primary source contract. Quarterly consumers remain gated to `10-Q` / `10-Q/A`; `10-K` / FY full-year flow values are not treated as quarterly values.
+
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 
 ```text
@@ -143,11 +164,26 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/backtest-second-stage-visibility-v1-20260705/`
-- 목적: Backtest Analysis의 Data Trust / Handoff가 2차 Practical Validation review focus를 1차 상세 검토처럼 보여주는 혼선을 줄인다.
-- 주요 변경: Data Trust는 excluded ticker / malformed price row 같은 직접 데이터 이슈만 상세 표시하고, `meta["warnings"]` 기반 review focus는 2차 전달 count / 위치 안내로 낮췄다. Handoff / Policy Signals도 2차 상세 판단 문구를 반복하지 않는다.
-- 이번 차수에서 하지 않은 일: source registration write, Practical Validation review queue 저장, registry / saved JSONL / strategy runtime / gate threshold 변경.
-- Recent Overview cleanup task: `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`
+- Recent GTAA cadence task: `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`
+- 목적: GTAA `interval`을 결과 row thinning이 아니라 strategy-owned rebalance cadence로 해석하고, 비리밸런싱월에도 최신 후보 신호 / valuation row를 볼 수 있게 한다.
+- 주요 변경: GTAA sample / runtime path는 strategy 실행 전에 `.interval(...)`로 입력 row를 줄이지 않는다. `GTAA3Strategy(rebalance_interval=...)`가 실제 holdings 변경 cadence를 소유하고, month-end row 뒤에는 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
+- 이번 차수에서 하지 않은 일: 가격 데이터 coverage refresh, provider / DB schema / registry / saved JSONL 변경, Practical Validation / Final Review / Monitoring behavior 변경, live trading / broker order / auto rebalance semantics 추가.
+- Recent Overview Market Movers UX redesign task: `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`
+- 목적: Overview > Market Movers가 metric-card / prototype pattern처럼 보이는 문제를 Toss Securities / Upbit / StockAnalysis / TradingView / Finviz benchmark 기반의 market-board UX로 1~6차 재설계한다.
+- 1차 범위: user-facing language / IA reset. `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리하고 새 provider / schema / UI external fetch / trade signal은 추가하지 않는다.
+- 후속: 2차 compact mover tape / list, 3차 chart workspace, 4차 sector breadth visual, 5차 selected-symbol investigation pane, 6차 data trust / empty state hardening.
+- Recent completed Overview task: `.aiworkspace/note/finance/tasks/active/overview-final-cleanup-v33-v36-20260629/`
+- 목적: Overview refactor의 남은 1순위~4순위 cleanup을 닫고, UI component body / dashboard wrapper / old service facade / Data Health scope ambiguity를 정리한다.
+- 주요 변경: renderer body를 `app/web/overview/components/*`로 옮기고 `overview_ui_components.py`를 thin facade로 축소했다. `overview_dashboard.py`는 `render_overview_dashboard`만 re-export한다. `app/services/overview_market_intelligence.py`는 삭제했고 internal imports는 `app/services/overview/*` domain modules로 이동했다. `data_health.py`는 unused import를 제거하고 direct Market Context vs reference context `Scope` / coverage counts를 제공한다.
+- 이번 차수에서 하지 않은 일: Overview 화면 레이아웃 / UX 재설계, 새 provider / DB schema / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Previous completed Overview task: `.aiworkspace/note/finance/tasks/active/overview-service-split-v25-v32-20260629/`
+- 목적: Overview read-model service monolith를 domain-owned service modules로 나눠 향후 tab / 기능 추가 시 계산 위치를 명확히 한다.
+- 주요 변경: Sentiment, Events, Data Health, Market Movers, Market Context, Why It Moved 구현 본문을 `app/services/overview/*`로 분리했다. Market Context는 split domain services를 조립하고, old aggregate path는 final cleanup 전까지 compatibility facade로 축소했다.
+- 이번 차수에서 하지 않은 일: Overview 화면 레이아웃 / UX 재설계, 새 provider / DB schema / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
+- Previous completed Overview task: `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`
+- 목적: `Workspace > Overview`의 남은 `legacy_dashboard.py` dependency를 helper cluster 단위로 제거하고, active page / tab / helper ownership을 명시적 모듈 구조로 닫는다.
+- 주요 변경: Market Context / Events / Sentiment / Market Movers / Futures Macro helper ownership을 `app/web/overview/*_helpers.py`로 옮기고, `app/web/overview/legacy_dashboard.py`를 삭제했다. `app/web/overview_dashboard.py`는 필요한 compatibility export만 명시적으로 제공한다.
+- 이번 차수에서 하지 않은 일: Overview product flow 재설계, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Previous completed structure task: `.aiworkspace/note/finance/tasks/active/overview-tab-helper-extraction-v11-v16-20260625/`
 - 목적: Overview primary tab entrypoint가 직접 legacy helper를 호출하지 않도록, Market Context / Events / Futures Macro / Market Movers / Sentiment 각각의 tab-local helper bridge를 만든다.
 - 주요 변경: `app/web/overview/{market_context,events,futures_macro,market_movers,sentiment}_helpers.py`를 추가하고 active tab entry modules가 semantic helper functions를 호출하게 했다.
@@ -182,7 +218,7 @@ Workspace > Ingestion
 - 이번 차수에서 하지 않은 일: futures / sector service 또는 renderer helper 물리 삭제, provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Earlier completed task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
 - 목적: `Workspace > Overview > Futures Monitor`의 Workbench V1 후속으로, prototype-like lower evidence / validation / refresh 영역을 제품형 read-only market context 흐름으로 정리했다.
-- 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. `근거 해석 / 원본 데이터`는 `현재 근거 상태 -> 과거 점검 요약 -> 자료 관리 -> 원본 표` 순서로 읽히며, raw scenario / relationship / sensitivity tables는 접힌 원본 상세로 낮췄다.
+- 주요 변경: context bar는 상태만 요약하고, `자료 갱신` module이 1분봉 / 일봉 매크로 / 화면 reload / 확인 방식을 소유한다. 이후 Futures Macro React 후속에서는 React `현재 근거`와 하단 `원본 데이터 / 계산 추적`으로 역할을 분리했고, 원본표는 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 검산하는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다.
 - 이번 차수에서 하지 않은 일: provider / schema / DB / registry / saved JSONL 변경, UI render 중 external provider fetch, trading signal / 추천 / validation gate / monitoring signal / broker order / auto rebalance semantics 추가.
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-v1_1-20260623/`
 - Previous completed product task: `.aiworkspace/note/finance/tasks/active/futures-monitor-workbench-layout-v1-20260623/`
@@ -367,6 +403,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Overview Market Context Macro Polish V17 | Complete | Macro conditioned comparison now shows the meaning of each narrowing step inside the basis bar: broad sector ETF vs SPY analog pool, current-like GLD bucket, then current-like ZN=F / ZB=F rate-pressure bucket. Reference-only T10Y3M / VIXCLS / BAA10Y backdrop now renders as Korean state badges, current value, same-state ratio bars, and compact source labels. |
 | Overview Market Context Macro Matrix V16 | Complete | Macro conditioned comparison now uses the same visual language as historical analog: a basis bar for broad -> GLD -> futures narrowing, a compact asset x `기본 / 조건 후 / 변화` matrix, collapsed verbose condition source details, and Korean-first labels for current Macro backdrop. |
 | Overview Market Context Macro Labels V15 | Complete | Macro conditioned comparison now names the visible narrowing stages as broad basis, GLD condition, and rate-pressure futures condition. It explains `81회 -> 37회 -> 6회` as broad anchors narrowed by current-like GLD and futures states, and current Macro backdrop cards include Korean descriptions plus broad-sample same-state counts. |
+| Overview Sentiment React UX V1 | Complete | Sentiment now renders a React workbench when the component build is available: service-owned phase/headline/summary first, freshness-tied refresh/reload actions, CNN / AAII cross-read, recent range percentile / min-max cards, CNN headline / component / AAII divergence panel, analysis steps, driver lanes, CNN component explanations, component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored-row evidence tables. Python services still own DB reads, refresh actions, and all interpretation text; React does not create trade signals, validation gates, monitoring signals, or recommendations. |
 | Overview Market Sentiment V1 | 1차~3차 complete | CNN Fear & Greed / AAII collect into `finance_meta.macro_series_observation`. Overview Sentiment, Practical Validation, Final Review, and Portfolio Monitoring read it as context-only market backdrop. |
 | Operations Overview IA / Operations Console V2-V5 | V2 closeout complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path and now starts with Portfolio Monitoring Status plus Evidence Health before a priority/evidence ordered review queue. Closeout QA and routing diagnostic are documented in `docs/runbooks/OPERATIONS_OVERVIEW_QA.md`; Backtest Runs / Candidate Library data deletion is deferred. |
 | Risk Parity / Dual Momentum 5B | Complete | Risk Parity Trend now exposes volatility window, eligible universe, inverse-vol weights, cash-only reasons, guardrail cash-only state, and low-vol overweight diagnostics. Dual Momentum now retains trend-rejected top-N slots as cash proxy and exposes selected / rejected / unfilled counts, cash proxy return, concentration, and selection-change / whipsaw diagnostics. Both reuse existing Selection History and result bundle meta without adding a new panel. |
@@ -375,6 +412,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Backtest Analysis Direction Reset 4C | Complete | Backtest Analysis returned to execution-first strategy run / comparison / candidate creation. Reference help and 3A-4B evidence / governance / ETF workbench panels are now historical / auxiliary surfaces outside the default Backtest Analysis render path. |
 | Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |
 | Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
+| Overview Market Movers Workbench V1-V5 | Complete | Market Movers now renders as a context-only workbench with command strip, Top Gainers / Top Losers / Volume Leaders / Unusual Volume / Sector Leaders modes, selected-symbol investigation, sector breadth/heatmap context, and coverage trust UX. Coverage trust uses Good / Stale / Partial / Needs Refresh / No Universe / Missing Quotes language, grouped missing diagnostics first, raw diagnostics collapsed, and existing Overview action facade refreshes only. |
 | Overview Market Movers Second Pass / Why It Moved | Current V1 complete; period refresh V1 complete; V2 decision pending | Return / Volume rank, previous-period context, manual investigation board, keyless Google News KR RSS metadata/snippet, compact SEC metadata table. Weekly / Monthly / Yearly now expose a manual EOD price-history refresh action through the existing Overview action facade / OHLCV job boundary. No article body, filing body, AI summary, catalyst classifier, DB schema, registry, saved setup write. |
 | Overview Macro Context Cockpit V1 | Complete | Overview opens with a summary-first cockpit that synthesizes existing DB-backed movers, sector breadth, futures macro thermometer, CNN / AAII sentiment, event calendar, and data-health evidence. It remains context-only and adds no provider, schema, registry, saved setup, validation gate, monitoring signal, or trading action. |
 | Overview Data Health Ingestion Handoff V1 | Superseded as primary Overview tab | The read model remains a historical / helper artifact, but V22 removes `Data Health` from Overview top-level navigation. Market Context source / refresh evidence and Operations / Ingestion now own the user-facing data-health path. |

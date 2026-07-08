@@ -119,4 +119,3 @@ def run_equal_weight_backtest_from_db(
         promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
         promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
     )
-

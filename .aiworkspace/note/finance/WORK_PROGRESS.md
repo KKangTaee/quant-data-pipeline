@@ -107,6 +107,97 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에서 Practical Validation 개편 V1-V8을 개발 / QA / 커밋 순서로 완료했다.
   - 주요 결과는 workspace read model, Final Review readiness wording, 5-flow 화면, read-only React Fix Queue, Flow 3 workspace panel split, first-read status normalization이다.
   - registry / saved JSONL, provider 수집, validation threshold, Final Review selected-route 저장 정책, live approval / broker / auto rebalance 경계는 변경하지 않았다.
+- Overview Market Movers 기본지표 그래프 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/`에서 1차~4차를 완료했다.
+  - 기존 PER / EPS / 당기순이익 표는 유지하고, 하단에 PER / EPS / 당기순이익 / 유동비율 / FCF 지표 탭과 연간 / 분기 막대 그래프를 추가했다.
+  - 차트는 `why_it_moved` research snapshot payload를 렌더링하며 UI가 DB/provider를 직접 읽지 않는다. Focused tests, py_compile, diff check, Browser QA를 통과했다.
+- Overview Events calendar scope research 2026-07-07:
+  - `.aiworkspace/note/finance/researches/active/2026-07-events-calendar-scope/`에 Events 수집 범위 리서치를 추가했다.
+  - 결론은 S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings를 Events의 first-class coverage로 올리고, official macro / market structure calendar와 분리해 표시하는 것이다.
+  - 구현은 진행하지 않았다. 후속 Events UX 구현은 기존 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/` 차수 계획과 연결한다.
+- Overview Events calendar taxonomy 2차 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 2차 taxonomy/schema/read-model contract를 완료했다.
+  - `market_event_calendar`는 nullable taxonomy fields를 받고, Events snapshot은 `market_events_snapshot_v2` with family/source-authority/universe count maps를 제공한다.
+  - 다음 차수는 official macro / fixed-income calendar collector expansion이다.
+- Overview Events official macro / fixed-income 3차 2026-07-07:
+  - `collect_macro_calendar`가 BLS JOLTS/ECI, BEA PCE, Census indicators, ISM PMI, Treasury auctions까지 official event row로 저장할 수 있게 확장됐다.
+  - Treasury auction은 fixed-income calendar context이며 Events source evidence일 뿐 signal/action으로 해석하지 않는다.
+  - 다음 차수는 S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings universe expansion이다.
+- Overview Events React workbench 4차~8차 2026-07-07:
+  - Earnings universe, market-structure calendar, service-owned workbench payload, React scaffold, and brief/refresh command UX까지 완료했다.
+  - Events React command band는 DB 화면 새로고침과 provider/job 수집 갱신을 분리하고, Python helper가 FOMC/Macro/Market Structure/Earnings refresh action을 계속 소유한다.
+  - 다음 차수는 9차 이벤트 레일 / 자료 신뢰 / calendar hover-density 개선이다.
+- Overview Events React workbench 9차 2026-07-07:
+  - React workbench에 type/source-state display filters, filtered event rails, trust sections, hoverable calendar day buckets, weekly density bars, and collapsed raw evidence appendix를 추가했다.
+  - Calendar / density는 일정 밀도와 stale/review 상태 근거만 보여주며 신호나 action으로 해석하지 않는다.
+  - 다음 차수는 10차 final docs sync / Browser QA / commit hygiene closeout이다.
+- Overview Events React workbench 10차 closeout 2026-07-07:
+  - Project Map, Data Flow Map, Overview Market Intelligence runbook에 Events React workbench ownership, service payload boundary, refresh command split, and QA procedure를 반영했다.
+  - Final QA passed: Events/event calendar contract classes, OverviewAutomationContractTests, py_compile, React build, diff check, desktop/mobile Browser QA on `localhost:8502`.
+  - Browser QA screenshots are local generated artifacts and remain uncommitted.
+- Overview Market Movers Ticker Change Repair 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-ticker-change-repair-20260707/`에서 1차~5차를 완료했다.
+  - `market_symbol_alias` candidate / active alias store, Market Movers `티커 변경 복구 적용` action, and intraday `quote_symbol` alias lookup were added.
+  - 운영 순서는 `티커 변경 복구 적용` 후 `일중 스냅샷 갱신`이다. Active alias는 quote lookup만 바꾸고 universe symbol은 유지한다.
+  - 검증은 focused RED/GREEN contracts, `py_compile`, `git diff --check`, Browser QA로 기록했다.
+- Overview Futures Macro Evidence / Original Data UX:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에서 1차~5차 후속 개선을 진행했다.
+  - React `현재 근거`와 하단 `계산 근거 / 원본 표`의 역할을 분리했고, historical validation은 `현재 해석의 과거 일관성` / `비슷한 과거 상태` / 방향성 적용 여부로 읽게 정리했다.
+  - `과거 점검`은 최근 흐름 / 현재 근거 사이의 독립 카드형 섹션으로 분리했고, 설명 / 상태 / CTA / 결과 타일을 한 surface 안에서 관리한다.
+  - Futures Macro React workbench는 하나의 iframe을 유지하면서 내부를 `매크로 컨텍스트`, `최근 흐름`, `과거 점검` 카드 섹션으로 분리했다.
+  - 원본표는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 재명명했고, React evidence item은 score label / symbol / z-score metadata를 보존한다.
+  - 후속으로 `현재 근거`를 `CurrentEvidencePanel`로 분리해 `매크로 컨텍스트` 내부에 배치했고, 하단 disclosure를 `원본 데이터 / 계산 추적`으로 바꿔 세 React 섹션을 검산하는 raw appendix로 정리했다.
+- Overview Futures Macro React UX 6차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`의 1차~6차 개선을 완료했다.
+  - 8517 current-code Browser QA에서 React iframe, `저신호 / 관망`, lazy validation `대기`, `1W` / `1M` controls를 확인했다. iframe button click dispatch는 자동화 좌표 제한으로 수동/별도 도구 확인 대상으로 남겼다.
+  - 최종 검증과 hygiene check 후 closeout commit으로 닫았다.
+- Overview Futures Macro React UX 5차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 historical validation을 DB materialization 없이 process cache로 재사용하도록 정리했다.
+  - Cache key는 selected symbols / years / latest futures daily marker / proxy price marker / current summary identity를 포함하고, `일봉 갱신` / `다시 읽기`는 session validation과 process cache를 함께 비운다.
+  - DB smoke 기준 첫 validation은 약 7.31초, 같은 key cache hit는 약 0.045초였다. 다음은 6차 final QA/docs closeout이다.
+- Overview Futures Macro React UX 4차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 `혼재된 매크로 흐름`의 top-level compatibility를 유지하면서 subtype / regime hint / mixed reason을 세분화했다.
+  - 새 subtype은 금리 부담 완화 속 성장 약세, 달러 압력 Risk-Off 후보, 원자재 약세 + 수요 둔화 후보, 위험선호/안전자산 상충 전환 구간, 저신호 관망을 구분한다.
+  - FuturesMacroThermometer contract 20개, Overview contract 144개, `py_compile`, `git diff --check`를 통과했다. 다음은 5차 validation cache/materialization decision이다.
+- Overview Futures Macro React UX 2차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 `futures_macro_workbench` React/Vite component와 Python wrapper를 추가했다.
+  - React는 command strip, 현재 macro brief, score chips, 최근 1주 흐름, validation state, evidence drawer를 렌더링하고 Python은 DB 읽기 / validation 계산 / refresh action / raw tables를 계속 소유한다.
+  - Overview contract 144개, `py_compile`, `npm run build`, snapshot payload smoke, `git diff --check`를 통과했다. 다음은 3차 1W / 1M reading-flow expansion이다.
+- Overview Futures Macro React UX 1차:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 Futures Macro 첫 진입 병목을 historical validation 동기 계산으로 확인하고 lazy/on-demand 경계로 분리했다.
+  - 탭 진입은 `include_validation=False` snapshot만 읽고, `과거 점검 불러오기`가 validation / confidence를 session state에 저장한다.
+  - `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다. 다음은 2차 React component MVP다.
+- Overview Market Movers Tab Actions / Statement Refresh:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-tab-actions-statement-refresh-20260702/`에서 선택 종목 조사 탭 액션을 분리했다.
+  - News 탭은 뉴스 / 한국어 뉴스 metadata만, SEC 공시 탭은 SEC metadata와 필요한 재무제표 수집 action을 소유한다.
+  - 재무제표 수집은 Overview UI direct fetch가 아니라 `app/jobs/overview_actions.py` selected-symbol facade를 통해 기존 Ingestion EDGAR statement refresh job으로 위임한다.
+- Ingestion Console Structure V1:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-structure-v1-20260701/`에서 Ingestion 수집 화면을 1~4차로 정리했다.
+  - collection workbench는 `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` 3개 section으로 나뉘고, 기존 우측 column의 최근 수집 / 누적 실행 기록 / 상세 / 로그 / 실패 artifact는 기록 section으로 이동했다.
+  - 공용 영역에는 최신 실행 결과 요약과 next action을 먼저 보여주고, 운영용 alias와 수동 복구 entry의 관계는 job brief에서 설명한다.
+- Ingestion Manual Job State And Elapsed Time V1:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-manual-job-state-elapsed-v1-20260701/`에서 수동 수집 섹션 선택 상태와 실행 경과 시간 표시를 보강했다.
+  - Ingestion collection section은 `st.pills` 기반 session state로 유지하고, manual job scheduling은 `collection_section` / `ui_started_at`을 job state에 저장한다.
+  - Browser QA는 실제 EDGAR 수집 실행 없이 수동 섹션 전환과 화면 오류 부재를 확인했다.
+- Fundamental Source Migration P0-P3:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p0-current-state-recheck/`부터 `p3-quarterly-correctness-gate/`까지 1~4차를 순차 진행했다.
+  - Source contract는 `legacy_broad_yfinance`와 `sec_edgar_statement_shadow/strict`로 분리했고, Market Movers annual financials는 EDGAR statement shadow 우선으로 전환했다.
+  - P3에서는 quarterly `10-K` / `10-K/A` full-year flow가 분기값으로 소비되지 않도록 shadow write/read policy gate를 추가했다.
+- Fundamental Source Migration P4:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p4-backtest-strategy-migration/`에서 Backtest Analysis 기본 진입을 `Quality + Value / Strict Annual` statement annual path로 옮겼다.
+  - Portfolio Mix Builder 기본 조합은 `Quality + Value`, `GTAA`, `Equal Weight`로 맞췄고, broad `Quality Snapshot`은 legacy replay / compatibility path로만 남겼다.
+- Fundamental Source Migration P5:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p5-ingestion-workflow-cleanup/`에서 Ingestion operational refresh 흐름을 EDGAR annual statement refresh 우선으로 정리했다.
+  - `Legacy broad yfinance fundamentals / factors`는 compatibility / explicit comparison path로 낮췄고, statement refresh result는 coverage / freshness / failed / next action 중심으로 해석한다.
+  - 운영 절차는 [EDGAR Financial Statement Refresh Runbook](./docs/runbooks/EDGAR_FINANCIAL_STATEMENT_REFRESH.md)에 남겼다.
+- Fundamental Source Migration P6:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p6-coverage-expansion-source-qa/`에서 DB-backed `Statement Universe Coverage QA`를 추가했다.
+  - SP500 / Top1000 / Top2000 / Nasdaq annual statement shadow coverage를 reason group으로 설명하고, broad yfinance statement fallback 없이 targeted diagnosis / refresh / shadow rebuild로 이어지게 했다.
+  - 2026-06-30 DB smoke 기준 annual shadow coverage는 SP500 94.04%, Top1000 95.3%, Top2000 47.65%, Nasdaq universe unresolved다.
+- Overview Market Movers Redesign V2 1차:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`에서 사용자의 prototype UI 피드백을 1~6차 재설계 흐름으로 전환했다.
+  - 1차는 새 데이터 / provider 없이 Market Movers의 화면 언어를 `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리했다.
+  - Benchmark 근거는 `.aiworkspace/note/finance/researches/active/2026-06-market-movers-redesign-v2-benchmark/`에 남겼고, 2차부터 metric-card 중심 화면을 market-board형 list / tape로 재구성한다.
 - Backtest Policy Signal Help Board V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-help-board-v1-20260705/`에서 `검증 기준 상세`을 1차 기준 category board + click help UI로 개선했다.
   - `Data Trust`, `Execution Source`, `Validation Source` 중심으로 무엇을 검증했는지 `plain_explanation` / `checked_items`로 보여준다.
@@ -147,6 +238,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`에서 GTAA `interval`을 input row thinning이 아니라 strategy-owned rebalance cadence로 보정했다.
   - GTAA month_end runtime은 월말 row 뒤에 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
   - 2026-06-29 DB smoke 기준 결과 종료일은 `2026-03-16`이며, 이는 `SOXX/MTUM/QUAL/USMV` 가격 coverage가 그 날짜에서 멈춘 최신 공통일이다.
+- Overview Final Cleanup V33-V36:
+  - `.aiworkspace/note/finance/tasks/active/overview-final-cleanup-v33-v36-20260629/`에서 남은 1순위~4순위 cleanup을 순서대로 진행했다.
+  - `app/web/overview_ui_components.py`는 23줄 compatibility facade로 줄었고 renderer body는 `app/web/overview/components/*`가 소유한다.
+  - `app/web/overview_dashboard.py`는 `render_overview_dashboard` 1개 export만 남겼고, `app/services/overview_market_intelligence.py`는 삭제했다.
+  - `app/services/overview/data_health.py`는 unused import를 제거하고 direct Market Context vs reference context `Scope` / coverage counts를 제공한다.
+- Overview Service Split V25-V32:
+  - `.aiworkspace/note/finance/tasks/active/overview-service-split-v25-v32-20260629/`에서 25차~32차를 순서대로 진행했고 각 차수마다 red test, focused QA, py_compile을 수행했다.
+  - `app/services/overview_market_intelligence.py`는 7,788줄 구현체에서 96줄 compatibility facade로 축소했다.
+  - Overview service bodies는 `app/services/overview/{market_context,market_movers,events,sentiment,data_health,why_it_moved}.py`가 도메인별로 소유한다.
 - Overview Legacy Dashboard Removal V17-V24:
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-dashboard-removal-v17-v24-20260625/`에서 17차~24차를 순서대로 진행했고 각 차수마다 focused tests, Overview contract, py_compile, Browser QA를 수행했다.
   - `app/web/overview/legacy_dashboard.py`를 삭제했고, `app/web/overview_dashboard.py`는 필요한 compatibility helper만 explicit export하는 wrapper로 바꿨다.
@@ -225,6 +325,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+### 2026-07-02 - Market Movers investigation actions are tab-local
+- Completed `.aiworkspace/note/finance/tasks/active/overview-market-movers-tab-actions-statement-refresh-20260702/` after the user approved splitting selected-symbol investigation actions.
+- Replaced the combined `뉴스·공시 메타데이터 조회` action with News-tab metadata and SEC-tab metadata actions.
+- Added SEC-tab `필요 재무제표 수집` that calls `run_overview_market_mover_statement_refresh` for the selected symbol and keeps elapsed-time result context in place.
+- Verification passed: focused red-green contracts, compact metadata regressions, OverviewAutomation / OverviewMarketIntelligence contract classes, py_compile, `git diff --check`, and Browser QA without live EDGAR collection.
+
+### 2026-07-01 - Ingestion manual collection section now survives job reruns
+- Completed `.aiworkspace/note/finance/tasks/active/ingestion-manual-job-state-elapsed-v1-20260701/` after the user approved fixing the manual financial statement collection UX.
+- Replaced the Ingestion collection `st.tabs` with a session-state `st.pills` selector and stored `collection_section` / `ui_started_at` on scheduled jobs.
+- Running job banner and large-job progress captions now include elapsed time.
+- Browser QA confirmed manual section selection renders the manual cards without the expanded daily operational body; screenshot is local generated artifact only.
 
 ### 2026-06-30 - Streamlit native pages sidebar removed from cold Backtest startup
 - Completed `.aiworkspace/note/finance/tasks/active/streamlit-native-pages-sidebar-fix-20260630/`.
@@ -5514,6 +5626,131 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/gtaa-spy-cagr-mdd-preset-search-20260629/`에서 SPY 대비 CAGR/MDD 개선, CAGR 11% 이상, MDD 절대값 15% 이하, current 1차 promotion gate 통과 후보를 확인했다.
   - 새 anchor는 `GTAA SPY Low-MDD Style Top-2 ADV20`: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`, `top=2`, `interval=4`, `1M/6M`, `MA200`, `ADV20D=20M`; 결과는 `24.08% / -9.99% / real_money_candidate`.
   - GTAA runtime에 ADV20 liquidity evidence를 연결했고, preset 선택 시 핵심 파라미터가 자동 적용되도록 했다. 상세 결과는 `.aiworkspace/note/finance/reports/backtests/runs/2026/strategy_search/GTAA_SPY_LOW_MDD_TOP2_ADV20_20260629.md`를 보면 된다.
+- Overview Market Movers Workbench V1 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-workbench-v1-20260629/`에서 1차 Market Movers UX 골격 재설계를 완료했다.
+  - 상단 command strip으로 coverage / period / effective timestamp / freshness / universe / returnable / missing / mode를 먼저 보여주고, 본문은 `상위 변동종목 목록` + `핵심 차트 / 섹터 요약` + 보조 diagnostics + `선택 종목 조사` 흐름으로 정리했다.
+  - 검증은 py_compile, `git diff --check`, focused unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ daily/weekly, narrow viewport)로 완료했다. 2차는 explicit exploration mode / ranking read model 정리다.
+- Overview Market Movers Modes V2 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-modes-v2-20260629/`에서 2차 탐색 모드와 ranking read model 정리를 완료했다.
+  - `mover_views`로 Top Gainers / Top Losers / Volume Leaders / Unusual Volume / Sector Leaders를 추가하고, UI는 선택 모드 표/차트를 첫 화면에 렌더링한다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 3차는 선택 종목 detail pane과 Why It Moved 통합이다.
+- Overview Market Movers Detail V3 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-detail-v3-20260629/`에서 3차 선택 종목 detail pane과 Why It Moved 조사 흐름 통합을 완료했다.
+  - 선택된 탐색 모드의 종목을 기준으로 rank / price / volume / relative volume / 같은 섹터 위치 / metadata 상태 / 뉴스·한국어 뉴스·SEC·외부 검색 시작점을 한 패널에 묶었다.
+  - metadata 조회는 기존 why_it_moved service boundary를 통한 사용자 버튼 동작으로만 유지하고, 자동 원인 판정 / score / 추천 / 저장은 추가하지 않았다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 4차는 sector/heatmap/breadth 맥락 개선이다.
+- Overview Market Movers Sector V4 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-sector-v4-20260629/`에서 4차 sector / heatmap / breadth 맥락 개선을 완료했다.
+  - 기존 mover return rows로 full `sector_breadth` read model을 만들고, advancers / decliners, 평균·중앙·시총가중 수익률, market-cap share proxy, sector별 top gainer / loser를 heatmap과 fallback table로 렌더링한다.
+  - 4차도 context-only 경계를 유지했다. 새 provider / schema / 외부 fetch / sector rotation prediction / 추천 / Backtest·Validation·Final Review·Operations 연결은 추가하지 않았다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다. 5차는 Coverage/Data Quality trust UX 정리다.
+- Overview Market Movers Quality V5 2026-06-29:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-quality-v5-20260629/`에서 5차 Coverage/Data Quality UX 정리를 완료했다.
+  - `coverage trust` read model과 `자료 신뢰 상태` strip을 추가하고, grouped missing diagnostics를 먼저 보여주며 raw diagnostics / quote-gap diagnosis는 collapsed expander에 남겼다.
+  - Nasdaq no-universe는 기존 Overview action facade의 Symbol Directory refresh로만 이어지며, 새 provider / schema / signal / monitoring UX는 추가하지 않았다.
+  - 검증은 RED/GREEN focused tests, `git diff --check`, py_compile, unittest fallback, Streamlit Browser QA(SP500 daily/weekly, NASDAQ coverage, narrow viewport)로 완료했다.
+- Fundamental Source Migration Research 2026-06-30:
+  - `.aiworkspace/note/finance/researches/active/2026-06-fundamental-source-migration/`에서 yfinance broad fundamentals와 EDGAR statement ledger / shadow 의존성을 audit했다.
+  - 결론은 yfinance financial statements를 즉시 삭제하지 말고 legacy/fallback으로 freeze하고, EDGAR annual statement shadow를 primary로 승격하되 quarterly 10-K/FY 혼입 문제를 먼저 수정하는 것이다.
+  - 다음 개발은 Market Movers detail annual source 전환, quarterly correctness, broad quality_snapshot deprecation 순서로 잡는 것이 안전하다.
+- Fundamental Source Migration Phase 7 2026-06-30:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p7-legacy-yfinance-decommission/`에서 legacy broad yfinance active UI 제거를 완료했다.
+  - Ingestion의 broad fundamentals / factor 실행 카드는 내려가고, old run history / saved replay용 action handler와 table은 유지했다.
+  - 검증은 focused RED/GREEN, `git diff --check`, py_compile, service contract filtered pytest, Ingestion Browser QA로 기록했다.
+- Fundamental Source Migration Phase 8 2026-06-30:
+  - `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`에서 source migration closeout docs를 완료했다.
+  - Durable docs는 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 legacy compatibility로 정렬했다.
+  - 다음 세션은 `.aiworkspace/note/finance/docs/data/README.md`, `DB_SCHEMA_MAP.md`, `DATA_FLOW_MAP.md`, `TABLE_SEMANTICS.md`, `EDGAR_FINANCIAL_STATEMENT_REFRESH.md`를 보면 source contract를 확인할 수 있다.
+- Ingestion Console Action Unification V2 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-action-unification-v2-20260701/`에서 Ingestion action registry, scheduled diagnostics, shared progress, active / compatibility action boundary를 1~6차로 정리했다.
+  - Ingestion workbench는 `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` 3개 section을 유지하고, read-only 진단도 공용 scheduled job / run history / progress 흐름을 탄다.
+  - Broad yfinance fundamentals / factors는 active UI가 아니라 old replay / explicit comparison compatibility로만 남긴다.
+- Overview Market Movers Statement Collection Status 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-statement-collection-status-20260701/`에서 기본 지표 하단에 재무제표 수집 / 반영 상태 lane을 추가했다.
+  - EDGAR filing ledger 최신 10-Q / 10-K report date와 statement shadow period를 비교해 미반영 공시는 `받아야 할 재무제표 있음`, 반영 완료는 OK로 표시한다.
+  - Browser QA 중 GIS fiscal quarter false positive를 발견해 prediction-only quarter-end 비교에 14일 tolerance를 추가했다.
+- Ingestion Console Module Split V1 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/ingestion-console-module-split-v1-20260701/`에서 Ingestion script structure refactor를 1~6차로 진행했다.
+  - `app/web/ingestion_console.py`는 compatibility facade가 되었고 active UI는 `app/web/ingestion/{page,registry,guides,styles,results,dispatcher,sections}.py`로 나뉘었다.
+  - `app/jobs/ingestion/common.py`가 symbol parsing, normalized result, progress/status helper를 소유하고 `app/jobs/ingestion_jobs.py`는 기존 import path를 유지한다.
+- Overview Market Movers React Pilot 2026-07-03:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/`에서 0~8차를 순차 개발 / QA / commit으로 완료했다.
+  - React custom component가 Market Movers filters, summary, coverage trust detail, action strip을 렌더링하고, action / state normalization은 기존 Overview Python facade와 session result key로 dispatch된다.
+  - Streamlit fallback은 유지한다. 다른 Overview 탭 확장은 이 pilot QA 결과를 확인한 뒤 별도 phase로 잡는다.
+- Overview Market Movers Liquidity Universe V1 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-liquidity-universe-v1-20260705/`에서 1~6차 개발 / QA / commit을 진행했다.
+  - Top1000 / Top2000 기준은 `nyse_asset_profile.market_cap`에서 `market_liquidity_universe_member`의 최근 20거래일 평균 거래대금 materialized membership으로 전환됐다.
+  - `유니버스 기준 갱신`은 SP500 구성, Nasdaq Symbol Directory, Top liquidity universe materialize로 분기하며, Market Movers 기본 UI에서는 `가격 이력 갱신` primary action을 숨겼다.
+  - Local DB smoke 기준 TOP1000은 1,000개, TOP2000은 1,920개가 저장됐고, Browser QA에서 남은 `by market cap` 문구를 제거했다.
+- Overview Market Movers Sector React Follow-up 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-sector-react-20260705/`에서 React 섹터 breadth 상세표 펼침 시 iframe 높이가 갱신되지 않아 표가 잘리는 문제를 수정했다.
+  - `<details>` toggle 시 custom component frame height를 재동기화하고, Browser QA에서 섹터 iframe 높이가 `765 -> 1617`로 늘어나는 것을 확인했다.
+- Overview Futures Macro React UX Phase 3 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`에서 3차 1W / 1M reading-flow 확장을 완료했다.
+  - `flow_context`는 저장된 1D 선물의 `5D %` / `20D %`로 1주 / 1개월 흐름을 만들고, React workbench는 기간 탭으로 렌더링한다.
+  - 다음 차수는 4차 mixed subtype / confidence interpretation refinement다.
+- Overview Futures Macro Session Basis / Score Sign UX 2026-07-06:
+  - `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/` 후속으로 React 기준일 표기를 `CME/yfinance 일봉 세션 기준`으로 바꿨다.
+  - Score chips는 `+ 위험선호 강화 · - 위험회피`, `+ 금리 부담 확대 · - 금리 부담 완화` 같은 polarity hint를 보여줘 양수 / 음수가 보편적 good/bad가 아니라 score-family 방향임을 드러낸다.
+  - QA는 focused contracts, FuturesMacroThermometer contracts, `py_compile`, React build, Browser QA로 완료했다.
+- Overview Futures Macro 1D Flow Tab 2026-07-06:
+  - `Futures Macro` React flow tabs now use `1D / 1W / 1M`, defaulting to 1D so the current standardized score can be compared with raw one-day moves before weekly / monthly context.
+  - Existing 1W `weekly_context` compatibility remains pinned to 1W; DB collection, schema, and provider refresh boundaries are unchanged.
+  - QA covered RED/GREEN contracts, the focused 26-test Futures Macro suite, `py_compile`, `git diff --check`, and Browser QA.
+- Overview Futures Macro Historical Validation UX 2026-07-06:
+  - `과거 점검` is now framed as `오늘과 비슷한 과거 흐름 확인`: the current 16-futures daily score state is compared against historical dates computed with the same classification method.
+  - The React panel owns the historical-validation action, inline loading state, and metric-backed result tiles for `판정`, `5거래일 표본`, `20거래일 표본`, and `자산군 해석`.
+  - The panel now shows first-read conclusion tiles for `비슷한 상태`, `상태 빈도`, `방향성 판정`, and `판정 이유` before detailed 5D / 20D tiles. Lower `원본 데이터 / 계산 추적` stays focused on raw score / contribution / daily futures / historical sample tables; validation prose uses only computed sample / mean-return / hit-rate metrics and does not create recommendation copy.
+- Overview Sentiment React UX 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에서 1~5차 개발 / QA / 커밋 흐름을 완료했다.
+  - Sentiment는 React workbench로 phase/headline/summary, freshness/action, CNN / AAII cross-read, driver lanes, component explanations, hover-readable history line chart, component bars, stored evidence tables를 렌더링한다.
+  - 후속 피드백으로 기본 화면의 next-check cards는 제거했고, history graph hover tooltip은 날짜 / 시리즈 / 값 / source를 보여준다.
+  - Python service/helper가 DB read, refresh action, interpretation text를 계속 소유하고 React는 표시/dispatch만 맡는다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.
+- Overview Sentiment context-depth follow-up 2026-07-07:
+  - 같은 task에서 CNN / AAII 최근 range percentile, CNN headline / component / AAII divergence, CNN component latest-vs-previous change context를 service read model에 추가했다.
+  - React workbench는 range cards, divergence panel, component-history section으로 표시하고, Browser QA에서 range 3개 / divergence axis 3개 / component history 7개 렌더링을 확인했다.
+  - 새 screenshot은 generated artifact로 남기고 커밋하지 않는다. 다음에 이어 볼 위치는 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`이다.
+- Overview Sentiment divergence copy follow-up 2026-07-07:
+  - `지표 합의 상태` framing을 제거하고 React heading을 `엇갈리는 지점`으로 바꿨다.
+  - CNN headline / CNN components / AAII survey axis cards는 metric 정의가 아니라 service-owned current interpretation copy를 보여준다.
+  - QA와 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`의 `STATUS.md` / `RUNS.md`를 본다.
+- Overview Events Calendar 4차 Earnings Universe 2026-07-07:
+  - `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/`에서 Earnings 수집 row에 taxonomy 필드와 universe/source-authority contract를 채웠다.
+  - S&P 500 / large-cap batch는 canonical source로 저장되고, portfolio / watchlist / Nasdaq-100은 explicit symbol loader boundary로 열었다.
+  - 다음 차수는 market-structure 일정 수집이며 generated screenshots / run history는 계속 커밋 제외한다.
+- Overview Events Calendar 5차 Market Structure 2026-07-07:
+  - Nasdaq Trader holiday / early close, Cboe options expiration, FTSE Russell reconstitution calendar를 market-structure background event로 수집하는 경계를 추가했다.
+  - Ingestion의 시장 이벤트 캘린더 수집에 `시장 구조 일정` 탭과 `collect_market_structure_calendar` job을 연결했다.
+  - 다음 차수는 Python service가 React workbench용 hero / rail / trust / chart payload를 구조화하는 작업이다.
+- Overview Events Calendar 6차 Workbench Payload 2026-07-07:
+  - `app/services/overview/events.py`에 `build_events_workbench_payload()`를 추가해 hero brief, rails, trust review, calendar / density, evidence rows를 Python-owned contract로 만들었다.
+  - React는 다음 차수부터 이 payload만 렌더링하고, 거래 신호 / validation gate / monitoring action 문구를 만들지 않는다.
+  - 다음 차수는 `app/web/streamlit_components/events_workbench`와 `app/web/overview/events_react_component.py` scaffold다.
+- Overview Events Calendar 7차 React Scaffold 2026-07-07:
+  - `events_workbench` Vite component, static build, Python wrapper, Events tab integration을 추가했다.
+  - React는 현재 additive scaffold로 기존 Streamlit lanes / detail tabs 위에 렌더링되며 fallback을 제거하지 않았다.
+  - 다음 차수는 hero brief / freshness / refresh UX를 React 쪽에서 제품 흐름으로 다듬는 작업이다.
+- Overview Events legacy cleanup follow-up 2026-07-07:
+  - React workbench build가 있으면 Events 탭은 중복 Streamlit summary / source / macro-week lanes와 상단 Refresh popover를 숨기고, React command band를 refresh entry로 사용한다.
+  - Streamlit Agenda / Calendar / Quality / Raw는 삭제하지 않고 하단 `상세 표 / 전체 근거` collapsed fallback/evidence section으로 낮췄다.
+  - React component는 incoming payload를 직접 mutate하지 않도록 기본값을 파생 상수로 정리했다. 상세 QA 기록은 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/RUNS.md`를 본다.
+- Overview Events feedback follow-up 1~6차 2026-07-07:
+  - 상단 Streamlit `일정 타입` / separate `Refresh Results`를 React-first path에서 제거하고, refresh 결과는 React command band의 last results로 통합했다.
+  - React는 `전체 일정 갱신`, 실적 예상 일정 기준, 탭형 event rails, `일정 확정성 / 추정 일정 점검`, 오늘/current-week highlight가 있는 월간 calendar grid를 렌더한다.
+  - QA와 commit handoff는 `.aiworkspace/note/finance/tasks/active/overview-events-ux-redesign/STATUS.md` / `RUNS.md`를 본다. Browser screenshots는 generated artifact로 커밋 제외한다.
+- Overview Market Movers smart EOD refresh 1~3차 2026-07-07:
+  - Weekly / Monthly / Yearly 가격 이력 갱신은 freshness preflight로 최신 종목을 스킵하고 stale 종목은 delta, missing / insufficient coverage 종목은 full fallback window로 보강한다.
+  - latest close / volume 이상값은 quality repair 대상으로 포함하며, UI result caption은 갱신 대상 / 최신 스킵 / Delta / Full window / 품질 보강 수를 요약한다.
+  - 상세 QA와 한계는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-smart-eod-refresh-20260707/`를 본다. Browser screenshots / run history는 커밋 제외한다.
+- Overview Market Movers EOD refresh scope 1~4차 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-eod-refresh-scope-20260708/`에서 Top1000 weekly refresh가 반복해서 길어지는 원인을 action as-of / universe / batch 범위 불일치로 정리하고 수정했다.
+  - Top1000 / Top2000 가격 이력 갱신은 화면과 같은 materialized liquidity universe를 쓰고, 화면 effective EOD date를 `as_of_date`로 넘겨 KST 하루 차이로 current symbols가 stale 처리되지 않게 했다.
+  - Preflight와 React action detail은 수집 대상 수, 범위, 시작일 이유를 클릭 전 보여주며, 상태는 `계산 가능 · 이력 보강 필요`로 화면 계산 정상과 refresh debt를 분리한다.
+- Overview Market Movers Fundamental Chart polish 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/` 후속으로 기본지표 그래프의 연간 / 분기 nested tabs를 제거했다.
+  - 각 PER / EPS / 당기순이익 / 유동비율 / FCF 탭은 연간 그래프와 분기 그래프를 좌우 한 row로 보여주며, 각 그래프는 tall bar, tighter spacing, 내부 horizontal scroll, SVG line overlay를 사용한다.
+  - 추가 후속으로 막대 위 숫자를 제거하고 기간 / 값을 하단 2줄 caption으로 분리했다. Browser QA는 in-app browser localhost URL policy로 차단됐고, 검증은 focused tests / `py_compile` / static preview로 기록했다.
+  - 분기 그래프가 2023년 이후 8개만 보인 원인은 service trend limit이 연간/분기 모두 8개였기 때문이라, 분기는 최대 32개까지 유지하도록 수정했다. 콤마 문자열 금액도 억/만/천 달러 formatter를 타도록 보강했다.
 - Backtest Entry Cleanup Tabs V1 2026-06-30:
   - `.aiworkspace/note/finance/tasks/active/backtest-entry-cleanup-tabs-v1-20260630/`에서 Backtest 첫 화면 안내 / strategy capability helper / 하단 연구 참고 보드를 기본 render path에서 제거했다.
   - 3단계 workflow selector는 Overview와 같은 `st.pills` 기반 Korean-first text tab + red underline으로 맞췄다.

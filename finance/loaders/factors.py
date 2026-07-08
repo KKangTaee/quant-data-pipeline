@@ -6,6 +6,7 @@ import pandas as pd
 
 from finance.data.factors import build_quality_factor_snapshot_from_statement_snapshot
 from finance.data.db.mysql import MySQLClient
+from finance.financial_source_policy import filter_safe_quarterly_statement_rows
 
 from ._common import (
     normalize_date_range,
@@ -14,6 +15,13 @@ from ._common import (
     validate_snapshot_inputs,
 )
 from .financial_statements import load_statement_snapshot_strict
+from .financial_source_contract import (
+    LEGACY_BROAD_YFINANCE_SOURCE,
+    SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+    SEC_EDGAR_STATEMENT_STRICT_SOURCE,
+    apply_financial_source_contract,
+    source_contract_columns_present,
+)
 
 
 FACTOR_COLUMNS = [
@@ -119,7 +127,13 @@ def load_factors(
     if df.empty:
         return df
     df["period_end"] = pd.to_datetime(df["period_end"])
-    return df
+    return apply_financial_source_contract(
+        df,
+        financial_source=LEGACY_BROAD_YFINANCE_SOURCE,
+        financial_source_mode="legacy_broad_factor",
+        source_table="finance_fundamental.nyse_factors",
+        source_detail="yfinance financial statements broad compatibility factor layer",
+    )
 
 
 def load_factor_snapshot(
@@ -145,7 +159,11 @@ def load_factor_snapshot(
     snapshot["as_of_date"] = as_of_ts.normalize()
 
     if factor_names:
-        keep = ["symbol", "freq", "period_end", "as_of_date"] + [name for name in factor_names if name in snapshot.columns]
+        keep = (
+            ["symbol", "freq", "period_end", "as_of_date"]
+            + source_contract_columns_present(snapshot)
+            + [name for name in factor_names if name in snapshot.columns]
+        )
         snapshot = snapshot[keep]
     return snapshot
 
@@ -177,11 +195,20 @@ def load_statement_quality_snapshot_strict(
 
     quality_snapshot["freq"] = normalized_freq
     quality_snapshot["as_of_date"] = as_of_ts.normalize()
+    quality_snapshot = apply_financial_source_contract(
+        quality_snapshot,
+        financial_source=SEC_EDGAR_STATEMENT_STRICT_SOURCE,
+        financial_source_mode="strict_statement_snapshot",
+        source_table="finance_fundamental.nyse_financial_statement_values",
+        source_detail="SEC EDGAR raw statement value snapshot filtered by available_at",
+    )
 
     if factor_names:
-        keep = ["symbol", "freq", "statement_period_end", "as_of_date"] + [
-            name for name in factor_names if name in quality_snapshot.columns
-        ]
+        keep = (
+            ["symbol", "freq", "statement_period_end", "as_of_date"]
+            + source_contract_columns_present(quality_snapshot)
+            + [name for name in factor_names if name in quality_snapshot.columns]
+        )
         quality_snapshot = quality_snapshot[keep]
     return quality_snapshot
 
@@ -236,7 +263,7 @@ def load_statement_factor_snapshot_shadow(
             "period_end",
             "fundamental_available_at",
             "as_of_date",
-        ] + [name for name in factor_names if name in snapshot.columns]
+        ] + source_contract_columns_present(snapshot) + [name for name in factor_names if name in snapshot.columns]
         snapshot = snapshot[keep]
     return snapshot
 
@@ -283,21 +310,31 @@ def load_statement_factors_shadow(
     try:
         db.use_db("finance_fundamental")
         placeholders = ",".join(["%s"] * len(resolved_symbols))
-        where = [f"symbol IN ({placeholders})", "freq = %s"]
+        where = [f"f.symbol IN ({placeholders})", "f.freq = %s"]
         params: list[object] = list(resolved_symbols) + [normalized_freq]
 
         if start_ts is not None:
-            where.append("period_end >= %s")
+            where.append("f.period_end >= %s")
             params.append(start_ts.strftime("%Y-%m-%d"))
         if end_ts is not None:
-            where.append("period_end <= %s")
+            where.append("f.period_end <= %s")
             params.append(end_ts.strftime("%Y-%m-%d"))
 
+        select_columns = [f"f.{column}" for column in STATEMENT_FACTOR_COLUMNS]
+        select_columns.insert(5, "fs.latest_form_type AS fundamental_form_type")
         sql = f"""
-        SELECT {", ".join(STATEMENT_FACTOR_COLUMNS)}
-        FROM nyse_factors_statement
+        SELECT {", ".join(select_columns)}
+        FROM nyse_factors_statement f
+        LEFT JOIN nyse_fundamentals_statement fs
+          ON fs.symbol = f.symbol
+         AND fs.freq = f.freq
+         AND fs.period_end = f.period_end
+         AND (
+           fs.latest_accession_no = f.fundamental_accession_no
+           OR (fs.latest_accession_no IS NULL AND f.fundamental_accession_no IS NULL)
+         )
         WHERE {" AND ".join(where)}
-        ORDER BY symbol ASC, period_end ASC
+        ORDER BY f.symbol ASC, f.period_end ASC
         """
         rows = db.query(sql, params)
     finally:
@@ -311,4 +348,18 @@ def load_statement_factors_shadow(
         df["price_date"] = pd.to_datetime(df["price_date"])
     if "fundamental_available_at" in df.columns:
         df["fundamental_available_at"] = pd.to_datetime(df["fundamental_available_at"])
-    return df
+    annotated = apply_financial_source_contract(
+        df,
+        financial_source=SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+        financial_source_mode="statement_factor_shadow",
+        source_table="finance_fundamental.nyse_factors_statement",
+        source_detail="SEC EDGAR statement shadow factors with available_at metadata",
+        available_at_column="fundamental_available_at",
+        form_type_column="fundamental_form_type",
+        accession_no_column="fundamental_accession_no",
+    )
+    return filter_safe_quarterly_statement_rows(
+        annotated,
+        freq=normalized_freq,
+        form_type_column="form_type",
+    )

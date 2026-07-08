@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-06-22
+Last Verified: 2026-07-07
 
 ## Purpose
 
@@ -36,8 +36,9 @@ http://localhost:8501
 
 1. `Workspace > Ingestion > Overview Market Snapshot`
    - `Collect S&P 500 Universe`를 먼저 실행해 current S&P 500 membership을 갱신한다.
-   - Nasdaq coverage가 필요하면 `Workspace > Ingestion > 상장 / 상폐 근거 > Nasdaq Symbol Directory current snapshot` 또는 Overview Market Movers의 `Nasdaq 목록 갱신`을 실행해 latest `nasdaq_symdir_nasdaqlisted` row를 `finance_meta.nyse_symbol_lifecycle`에 저장한다.
-   - `Collect Market Intraday Snapshot`으로 `SP500`, 필요하면 `TOP1000`, `TOP2000` snapshot을 갱신한다.
+   - Nasdaq coverage가 필요하면 `Workspace > Ingestion > 상장 / 상폐 근거 > Nasdaq Symbol Directory current snapshot` 또는 Overview Market Movers의 `유니버스 기준 갱신`을 실행해 latest `nasdaq_symdir_nasdaqlisted` row를 `finance_meta.nyse_symbol_lifecycle`에 저장한다.
+   - Top1000 / Top2000 coverage가 필요하면 먼저 listing source를 최신화하고, EOD 1d price / volume row를 확보한 다음, Overview Market Movers의 `유니버스 기준 갱신`으로 `market_liquidity_universe_member`를 다시 materialize한다.
+   - `Collect Market Intraday Snapshot`으로 `SP500`, 필요하면 `TOP1000`, `TOP2000` snapshot을 갱신한다. Top coverage의 intraday snapshot은 저장된 liquidity universe membership을 읽는다.
    - Nasdaq-listed daily movers가 필요하면 `NASDAQ` intraday snapshot을 갱신한다. 이 coverage는 Nasdaq Symbol Directory current listing observation 기준이며 Nasdaq Composite / Nasdaq-100 membership proof가 아니다.
    - daily movers는 `finance_price.market_intraday_snapshot`의 latest snapshot을 읽는다.
 
@@ -45,7 +46,10 @@ http://localhost:8501
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
    - daily period의 `데이터 갱신` 패널에서 `수동 갱신` 또는 `자동 갱신`을 선택한다.
    - `수동 갱신`에서는 `일중 스냅샷 갱신`을 눌러 새 snapshot을 저장하고, `화면 새로고침`으로 stored DB state를 다시 읽는다.
-   - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `Nasdaq 목록 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
+   - `유니버스 기준 갱신`은 선택 coverage의 membership 기준을 다시 저장한다. `SP500`은 S&P 500 구성 목록, `NASDAQ`은 Nasdaq Symbol Directory current snapshot, `TOP1000` / `TOP2000`은 최근 20거래일 평균 거래대금 ranking membership을 갱신한다.
+   - Coverage에서 `Nasdaq-listed current snapshot`을 선택했는데 universe가 비어 있으면 `유니버스 기준 갱신` 또는 Ingestion의 Nasdaq Symbol Directory 수집을 먼저 실행한다.
+   - Top1000 / Top2000에서 universe 수가 1000 / 2000보다 작으면 listing source 후보 수, 최신 EOD 가격 row coverage, provider price 누락을 순서대로 확인한다. 최신 거래일 price row가 없는 ticker는 ranking 가능한 후보에서 제외된다.
+   - Weekly / Monthly / Yearly 결과는 저장된 EOD 가격 기준이다. Market Movers 기본 화면에서는 별도 `가격 이력 갱신` 버튼을 노출하지 않고, 먼저 `유니버스 기준 갱신`과 `화면 새로고침`으로 membership 기준과 stored DB state를 명확히 분리한다.
    - `자동 갱신`은 현재 선택한 daily coverage 하나만 확인한다. S&P 500은 `browser_safe` / `sp500_intraday`, Top1000은 `intraday` / `top1000_intraday`, Top2000은 `intraday` / `top2000_intraday` job filter를 사용한다.
    - CLI / scheduler dry-run에서는 Nasdaq-listed snapshot도 `standard` profile plan에 표시되며, 단일 job 확인은 `--profile intraday --job nasdaq_intraday --dry-run`으로 한다. 실제 자동 실행은 미국 장중 guard와 cadence를 따른다.
    - 자동 cadence는 S&P 500 5분, Top1000 15분, Top2000 30분 기준이며 Overview가 열려 있는 브라우저 세션에서만 heartbeat가 돈다.
@@ -63,6 +67,10 @@ http://localhost:8501
    - 조회 결과는 Streamlit session state에만 남는다. DB schema, workflow registry JSONL, saved setup JSONL, run history에는 쓰지 않는다. DB-backed compact metadata는 retention / freshness / replay semantics가 승인된 후속 V2 조건으로만 검토한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
    - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
+   - `Coverage trust detail` 또는 상단 action bar에 `티커 변경 복구 적용`이 보이면 old ticker가 Yahoo quote row를 반환하지 않고 replacement ticker 후보가 탐지된 상태다.
+   - `티커 변경 복구 적용`을 누르면 candidate alias가 `finance_meta.market_symbol_alias`에 active로 저장된다. 이 버튼은 가격 row를 즉시 다시 쓰지 않는다.
+   - 복구 적용 후 `일중 스냅샷 갱신`을 다시 실행한다. 새 snapshot은 universe symbol은 유지하고 quote lookup만 active alias ticker를 사용해 `finance_price.market_intraday_snapshot.quote_symbol`에 남긴다.
+   - 복구 후에도 missing이 남으면 `Diagnose Missing Quotes`로 provider coverage, listing evidence, previous-close coverage를 다시 확인한다.
    - daily intraday missing row는 `Diagnose Missing Quotes`로 원인 후보를 확인한다. 결과는 `finance_meta.market_data_issue`에 반복 issue로 누적된다.
 
 3. `Workspace > Overview > Sector / Industry`
@@ -82,9 +90,14 @@ http://localhost:8501
    - `데이터 갱신` popover에서 `수동` 또는 `60초 자동 확인`을 고른다. `선택 선물 1분봉 갱신`은 현재 선택한 선물만 수집하고, `화면만 다시 읽기`는 DB state를 다시 읽는다.
    - 60초 자동 확인은 브라우저 세션이 열려 있을 때만 동작하며 provider를 매초 호출하지 않는다. 20초 fast mode는 이 화면의 기본 선택지로 노출하지 않는다.
    - 상단 `선물 워크스페이스`, `단기 움직임`, `데이터 상태`를 먼저 본다. 최신 candle이 오래됐으면 차트는 latest stored data를 보여주되 `오래됨`과 갱신 안내를 표시한다.
-   - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 과거 일관성 점검, 유사 구간, score chip을 보여준다.
-   - `최근 1주 흐름`은 저장된 1D 선물의 최근 5거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
-   - `근거 해석 / 원본 데이터`를 열면 `강하게 말하는 근거`, `약한 근거`, `충돌 근거`, `자료 부족`을 먼저 읽고, 그 다음 historical validation / 원본 점수표 / 구성 선물별 기여 / 선물별 일봉 변화 원본을 확인한다.
+   - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 자료 기준, score chip, 현재 score evidence를 보여준다. Futures Macro tab의 React workbench는 command strip, 현재 브리프, score chip, 1D / 1W / 1M 흐름, 과거 점검, 현재 근거 panel을 렌더링한다.
+   - Futures Macro tab 첫 진입은 `include_validation=False` snapshot으로 빠르게 렌더링한다. Historical validation은 과거 점검 카드의 `오늘과 비슷한 과거 흐름 확인`을 눌렀을 때만 계산되며, `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다.
+   - Historical validation은 DB에 materialize하지 않고 Streamlit process 안에서 latest futures daily marker / proxy price marker 기준으로 캐시한다. 같은 저장 데이터 기준에서 반복해서 `오늘과 비슷한 과거 흐름 확인`을 누르면 재계산 비용을 줄이고, `일봉 갱신` / `다시 읽기`는 이 process cache도 함께 clear한다.
+   - `1D / 1W / 1M 흐름`은 저장된 1D 선물의 최근 1거래일 / 5거래일 / 20거래일 변화율로 위험선호, 금리 부담, 달러 압력, 안전자산, 원자재 / 물가 흐름을 요약한다. 이 값은 render 중 provider fetch를 실행하지 않는다.
+   - Top-level이 `혼재된 매크로 흐름`이면 subtype / regime hint / mixed reason을 함께 읽는다. `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, `저신호 / 관망` 같은 문구는 충돌 맥락을 설명하기 위한 후보 / 확인 언어이며, directional hit-rate 신호로 승격하지 않는다.
+   - React `현재 근거` panel은 `매크로 컨텍스트` 안에서 현재 macro 해석을 강화하거나 약화시키는 score evidence를 보여준다. 각 근거 item은 score label / symbol / z-score를 함께 보존해 하단 원본 데이터와 대조할 수 있다.
+   - `과거 점검` 결과는 먼저 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유`로 읽는다. 혼재 / 관망 상태는 빈도 표본이 많아도 특정 자산 상승 / 하락 hit rule이 없으면 방향성 판정을 `보류`로 표시한다. 상세 타일은 `판정`, `5거래일 표본`, `20거래일 표본`, `자산군 해석`으로 이어서 확인한다. 이 문구는 validation metrics에 있는 표본 수, 평균 수익률, 방향 일관성, target family, hit rule만 사용하며, 계산값 없는 매수/매도 추천 문구를 만들지 않는다.
+   - `원본 데이터 / 계산 추적`을 열면 화면 섹션별 원본 연결, 자료 기준, `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, `과거 시나리오 표본`, `점수-이후수익 관계`, `기준값 민감도`를 확인한다. `비슷한 과거 상태`는 반복 빈도 또는 5D 방향성 적용 여부를 확인하는 read-only context이며, 매수/매도 신호가 아니다.
    - 매크로 일봉이 비어 있거나 근거가 부족하면 `일봉 매크로 데이터 갱신`을 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
    - Historical Validation은 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 시나리오의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. 혼재 시나리오는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
    - `실시간 선물 차트`에서 선택 symbol을 포함한 최대 6개 미니 캔들 차트를 본다. 더 넓게 보려면 `차트 범위`를 `데이터 있는 전체`로 바꾼다.
@@ -94,21 +107,27 @@ http://localhost:8501
 5. `Workspace > Overview > Sentiment`
    - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집해 `finance_meta.macro_series_observation`에 저장한다.
    - 같은 수집은 `Workspace > Ingestion > 시장 심리 수집`에서도 실행할 수 있으며, CNN / AAII source를 개별 checkbox로 켜고 끌 수 있다.
-   - 상단 카드에서 `Sentiment Status`, CNN score / rating, AAII bearish %, AAII bull-bear spread를 먼저 확인한다.
-   - `Trend` 탭은 stored CNN score / AAII bearish / bull-bear spread history를 보여주고, `CNN Components`는 CNN component score를 보여준다.
-   - `Table` 탭은 source, observation date, staleness, status를 함께 보여준다.
+   - React workbench가 available이면 첫 화면에서 service-owned phase / headline / summary, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, data freshness, `시장 심리 갱신` / `화면 다시 읽기` action을 함께 확인한다. React build가 없으면 기존 Streamlit controls / overview / detail sections로 fallback한다.
+   - `CNN / AAII 같이 보기`는 `analysis_steps`, core metrics, 최근 범위 percentile / min-max, CNN headline / component / AAII divergence를 표시한다. 프론트엔드는 AAII / CNN divergence나 추천 문구를 새로 만들지 않고 `app/services/overview/sentiment.py`가 제공한 해석만 보여준다.
+   - `무엇이 이 심리를 만들었나`에서 CNN 7개 구성요소를 탐욕 / 공포 / 중립 driver lane으로 읽고, `CNN 구성요소 상세`에서 각 component가 무엇을 보는지와 현재 읽기를 확인한다. `CNN 구성요소 변화`는 latest vs previous 관측값, 날짜, 변화폭, service-owned change detail을 보여준다.
+   - `그래프로 보는 근거`는 stored CNN score / AAII bearish / bull-bear spread history line chart와 CNN component bar chart를 보여준다. History line chart는 y축 눈금과 hover tooltip으로 날짜 / 시리즈 / 값 / source를 확인한다.
+   - `원본 / 상세 근거`는 source, observation date, staleness, status, component rows, history rows를 하단 근거 table로 보여준다.
    - 이 화면은 시장 심리 context이며 trade signal, Practical Validation PASS, live approval, order, broker/account sync, auto rebalance로 해석하지 않는다.
    - AAII official page가 automated backend request를 차단하면 job result와 Overview status에 failed / missing state를 남기고 값을 임의 생성하지 않는다.
 
 6. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
+   - Events read model은 legacy row라도 `event_family=central_bank`, `universe_scope=official_macro`, `source_authority=official`로 읽을 수 있게 추론한다.
 
 7. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
    - 기본은 current year와 next year를 수집한다.
-   - BLS source는 CPI / PPI / Employment Situation release schedule을 읽어 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
-   - BEA source는 national GDP release schedule을 읽어 `MACRO_GDP`로 저장한다.
-   - 결과는 모두 `source_type=official`, `validation_status=official`로 저장된다.
+   - BLS source는 CPI / PPI / Employment Situation / JOLTS / ECI release schedule을 읽어 official macro row로 저장한다.
+   - BEA source는 national GDP와 Personal Income and Outlays / PCE release schedule을 official macro row로 저장한다.
+   - Census source는 retail sales, durable goods, housing, construction, trade 관련 economic indicator release row를 저장한다.
+   - ISM source는 Manufacturing / Services PMI release row를 저장한다.
+   - TreasuryDirect source는 Treasury auction calendar row를 `event_family=fixed_income`, `event_type=TREASURY_AUCTION`으로 저장한다.
+   - 결과는 모두 `source_type=official`, `validation_status=official`, `source_authority=official`로 저장된다.
    - BLS가 HTTP 403 등으로 차단되면 BEA가 성공하더라도 job은 `partial_success`가 될 수 있다.
    - BLS 자동 요청이 막히면 BLS 공식 release schedule `.ics` 파일을 브라우저로 내려받아 `BLS Calendar .ics File`에 업로드하고 `Import BLS .ics Calendar`를 실행한다.
    - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.
@@ -121,24 +140,25 @@ http://localhost:8501
    - latest movers mode는 stored S&P 500 intraday snapshot이 먼저 있어야 한다.
    - 특정 ticker 확인이 필요하면 `Manual Symbols`를 사용한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장된다.
+   - S&P 500 / Nasdaq-100 / portfolio / watchlist / major-cap earnings coverage는 후속 확장 대상이며, 저장 row는 `universe_scope`로 구분한다.
    - yfinance-only estimate는 `validation_status=estimate_only`, Nasdaq 확인 row는 `validation_status=cross_checked`, Nasdaq에서 확인하지 못한 row는 `validation_status=not_confirmed`가 된다.
+   - `source_authority=provider_estimate` 또는 `cross_checked`는 공식 실적 일정 확인이 아니다. 회사 IR / SEC / issuer-confirmed source가 붙은 경우만 official/issuer-confirmed로 올린다.
    - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
    - 수집 결과에는 `symbol_diagnostics`가 포함되며 `no_provider_earnings_date`, `outside_window`, `provider_error` 같은 missing / failure reason을 확인할 수 있다.
    - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
 
 9. `Workspace > Overview > Events`
-   - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
-   - `Window`, `Source Type`, `Validation`, `Importance` filter로 캘린더 범위와 source quality를 좁힌다.
-   - 상단 summary strip에서 next event, this week, next 30D, needs review counts를 먼저 확인한다.
-   - source lane의 FOMC / Earnings / Macro mini card에서 row count, latest collection, review count를 확인한다.
-   - `Refresh` popover에서 FOMC / Earnings / Macro refresh button을 실행한다.
-   - `Agenda` 탭에서 upcoming / needs review / high impact row를 먼저 확인한다.
-   - `Calendar` 탭에서 월별 calendar grid와 event type별 marker를 확인한다.
-   - `Quality` 탭에서 source / validation issue와 next action을 확인한다.
-   - `Raw` 탭에서 DB row-level detail을 확인한다.
-   - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
-   - `Importance`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
-   - Overview의 refresh buttons는 `app/jobs/overview_actions.py` facade를 통해 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
+   - React `다가오는 시장 이벤트 브리프` workbench가 available이면 next event, today / this week / next 30D counts, official vs provider-estimate counts, stale estimate count, and context-only boundary를 먼저 확인한다.
+   - `화면 / 수집 갱신` command band에서 `화면 새로고침`은 stored DB rows를 다시 읽고, `전체 일정 갱신`은 FOMC / Macro / Market Structure / Earnings collectors를 `app/jobs/overview_actions.py` facade에서 순차 실행한다. 개별 refresh도 같은 Python facade를 통과한다.
+   - `실적 예상 일정 갱신`은 최근 S&P 500 movers snapshot 상위 최대 20개 후보를 기준으로 하며 provider 호출은 최대 50개 symbol / 120일 lookahead로 제한한다. 이 일정은 issuer-confirmed source가 붙기 전까지 provider estimate다.
+   - React `일정 타입` filter는 `전체`, `FOMC`, `매크로`, `실적`, `시장 구조`를 display-only로 좁힌다. `자료 상태` filter는 `전체`, `확인 필요`, `공식 / 확인됨`, `추정 / 미확정`을 display-only로 좁힌다.
+   - Event rails는 row 5개를 한 번에 펼치지 않고 `최근 중요`, `오늘 / 이번 주`, `30일 내`, `나중` 탭으로 읽는다. Badge는 공식 일정 / 제공사 추정 / 교차 확인 / 오래된 추정 / 미확정 같은 source-state를 구분한다.
+   - `일정 확정성 / 추정 일정 점검`에서 오래된 추정 일정, 미확정 일정, 추정만 있음, 일정 충돌 sections를 확인한다. 이 섹션의 신뢰는 예측 신뢰가 아니라 source authority / freshness / confirmation 상태다.
+   - `캘린더로 보는 일정 근거`는 월간 7열 calendar grid와 weekly density bars를 보여준다. 오늘과 이번 주는 별도 색으로 표시되며, hover tooltip은 날짜별 event count, major title, stale/review count, family mix를 보여준다. 이 정보는 일정 밀도와 자료 상태 근거이며 예측/신호가 아니다.
+   - `원본 / 상세 근거`는 collapsed appendix다. 펼치면 Source URL, Source Authority, Collected At 등 service-provided evidence rows를 확인한다.
+   - React build가 없으면 기존 Streamlit summary/source lane과 `Agenda`, `Calendar`, `Quality`, `Raw` tabs가 fallback으로 남는다.
+   - 하단 Streamlit detail filters인 `Window`, `Source Type`, `Validation`, `Importance`로 캘린더 범위와 source quality를 더 좁힐 수 있다.
+   - Overview Events는 UI render 중 직접 외부 source를 scraping하지 않는다. External source fetch는 ingestion job wrapper가 DB에 저장한 뒤 service read model이 읽는다.
 
 10. Data Health ownership
    - `Data Health`는 V22부터 `Workspace > Overview` top-level tab이 아니다.
@@ -213,6 +233,18 @@ print(load_latest_intraday_mover_symbols(universe_code="SP500", top_n=5))
 PY
 ```
 
+Top1000 / Top2000 liquidity universe 저장 상태 확인:
+
+```bash
+uv run python - <<'PY'
+from finance.data.market_intelligence import load_market_liquidity_universe_members
+for code in ("TOP1000", "TOP2000"):
+    rows = load_market_liquidity_universe_members(code)
+    latest = rows[0]["as_of_date"] if rows else None
+    print(code, len(rows), latest, [row["symbol"] for row in rows[:5]])
+PY
+```
+
 BEA GDP macro calendar smoke:
 
 ```bash
@@ -238,6 +270,8 @@ PY
 
 - Market Movers Coverage includes `S&P 500`, `Top 1000`, `Top 2000`, and `Nasdaq-listed current snapshot`.
 - Nasdaq-listed coverage shows `coverage_basis=Nasdaq-listed current snapshot`, `universe_source=nasdaq_symdir_nasdaqlisted`, current snapshot caveat, and Symbol Directory refresh guidance when no lifecycle rows exist.
+- Top1000 / Top2000 coverage shows a 20D average dollar volume basis, not market-cap basis. The materialized membership is stored in `finance_meta.market_liquidity_universe_member` and reused by Overview read model and intraday snapshot refresh.
+- New listing tickers appear in Top1000 / Top2000 only after the listing source contains the symbol and `finance_price.nyse_price_history` has latest EOD close / volume rows for ranking.
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
 - Market Movers daily `데이터 갱신` status / action bar shows coverage ratio / percent, next check time, refresh mode, and the recommended next action for SP500 / TOP1000 / TOP2000.
@@ -264,7 +298,7 @@ PY
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Coverage Diagnostics keeps `Reason` / `Recommended Action` and adds compact `Likely Cause`, `Evidence Summary`, `Next Check`, `Listing Evidence`, `Profile Freshness`, and `Market Data Issue` evidence. These are DB-backed hints, not legal status, trading signal, validation gate, or monitoring signal.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.
-- Futures Macro Thermometer shows six standardized daily score cards, scenario summary, mixed-scenario subtype / reason when the top-level scenario is `혼재된 매크로 흐름`, Interpretation Confidence, current scenario directional sample / hit rate or mixed-scenario occurrence count, strong / weak / conflicting evidence groups, score components, symbol-level 1D / 3D / 5D / 20D / 60D returns, 60D volatility standardized move, 252D position, historical validation summary, score threshold sensitivity, false-positive rates, score-forward-return relationships, and caution copy. The `Futures Macro` tab owns explicit `일봉 매크로 갱신` and `최신 데이터 다시 읽기` controls; newly collected daily futures rows invalidate the macro snapshot cache through the latest stored 1D candle marker.
+- Futures Macro Thermometer shows six standardized daily score cards, scenario summary, mixed-scenario subtype / reason when the top-level scenario is `혼재된 매크로 흐름`, Interpretation Confidence, current scenario directional sample / hit rate or mixed-scenario occurrence count, strong / weak / conflicting evidence groups, score components, symbol-level 1D / 3D / 5D / 20D / 60D returns, 60D volatility standardized move, 252D position, historical validation summary, score threshold sensitivity, false-positive rates, score-forward-return relationships, and caution copy. The `Futures Macro` tab owns explicit `일봉 매크로 갱신` and `최신 데이터 다시 읽기` controls; newly collected daily futures rows invalidate the macro snapshot cache through the latest stored 1D candle marker. Historical validation is lazy-loaded by the `오늘과 비슷한 과거 흐름 확인` button inside the `과거 점검` card instead of tab entry, and `일봉 갱신` / `다시 읽기` clears the session validation state so the next validation uses the current snapshot. Its conclusion and result tiles stay metric-backed and must not create uncomputed recommendation prose.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
 - BLS `.ics` import rows keep `source=bureau_labor_statistics_release_schedule` and `raw_payload_json.import_method=official_ics_file`.
@@ -273,13 +307,13 @@ PY
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
-- Overview Events displays summary cards, source mini cards, refresh popover, and `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters.
-- Overview Events read model includes `Days Until`, `Importance`, quality / validation fields, and source status summaries; FOMC / macro rows are `High`, earnings rows are `Medium`, and rows with source / validation action show `Needs Review`.
-- Overview Events calendar is a month grid with event type markers; agenda and quality views stay available for list/detail inspection.
-- Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
-- Overview Events `Latest Collection` updates after a successful collector run.
-- Overview Sentiment starts with `시장 심리 컨텍스트`: phase / headline / data confidence, then `시장 심리 읽기 - 6단계` covering current conclusion, why it reads that way, strong signals, weak signals, combined interpretation, and next checks.
-- Overview Sentiment then displays CNN Fear & Greed, AAII Bearish, AAII Bull-Bear Spread, CNN component scores, driver groups, CNN component learning notes, next-check links, trend evidence, component detail, and stored row table from `macro_series_observation`.
+- Overview Events starts with the React workbench when the component build exists: brief, command boundary with last refresh results, local display filters, tabbed event rails, schedule-confirmation review, monthly calendar grid, weekly density, and collapsed raw evidence appendix.
+- Overview Events read model includes `Days Until`, `Importance`, taxonomy, quality / validation fields, source status summaries, and workbench payload sections; FOMC / macro / fixed-income rows are high-context official rows, earnings rows remain estimates until confirmed, and rows with source / validation action show `Needs Review`.
+- Overview Events calendar/density visuals show schedule clustering and stale/review evidence only. Today and the current week can be highlighted in the month grid, but they do not create validation gates, trade signals, monitoring signals, or automated actions.
+- Overview Events keeps existing Streamlit `Agenda`, `Calendar`, `Quality`, `Raw` tabs with Window / Source Type / Validation / Importance filters as fallback and lower evidence sections.
+- Overview Events `Latest Collection` / freshness updates after a successful collector run.
+- Overview Sentiment starts with the React `시장 심리 컨텍스트` workbench when the component build exists: phase / headline / summary, freshness, CNN Fear & Greed, AAII Bearish, Bull-Bear Spread, Data Confidence, refresh / reload actions, context-only boundary, CNN / AAII cross-read, recent range percentile / min-max, divergence axes, service-owned analysis steps, driver lanes, component explanations, CNN component latest-vs-previous changes, hover-readable history line chart, component bar chart, and stored row evidence.
+- Overview Sentiment keeps Python services as owner of DB reads, refresh actions, and interpretation text. React only displays and dispatches the existing refresh / reload events, and the fallback Streamlit detail sections remain available when the React build is missing.
 - Overview no longer renders Data Health as a primary tab. Use Market Context source / refresh evidence for current brief issues and `Operations > System / Data Health` for detailed operational diagnostics.
 - Overview refresh buttons route through `app/jobs/overview_actions.py` and append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed. Market Context refresh is intentionally scoped to the current Market Context surface and does not run Top1000 / Top2000 / Futures refresh actions.
 - Overview scheduled refresh CLI can run without Streamlit and appends scheduled job results to the same local web app run history.
@@ -309,7 +343,7 @@ PY
 ## Verification Commands
 
 ```bash
-uv run python -m py_compile app/web/overview_dashboard.py app/web/overview/page.py app/web/overview/market_context.py app/web/overview/market_movers.py app/web/overview/futures_macro.py app/web/overview/sentiment.py app/web/overview/events.py app/web/overview/legacy_dashboard.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py finance/data/sentiment.py finance/loaders/sentiment.py
+uv run python -m py_compile app/web/overview_dashboard.py app/web/overview/page.py app/web/overview/market_context.py app/web/overview/market_movers.py app/web/overview/futures_macro.py app/web/overview/sentiment.py app/web/overview/events.py app/web/overview/components/common.py app/web/overview/components/layout.py app/web/overview/components/market_context.py app/web/overview/components/market_movers.py app/web/overview/components/events.py app/web/overview/components/data_health.py app/web/overview_ui_components.py app/web/streamlit_app.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py app/jobs/overview_automation.py finance/data/db/schema.py finance/data/market_intelligence.py finance/data/sentiment.py finance/loaders/sentiment.py
 uv run python -m unittest tests.test_service_contracts
 uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
 git diff --check

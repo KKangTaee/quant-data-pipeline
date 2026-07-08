@@ -68,6 +68,16 @@ STATEMENT_LABEL_COLUMNS = [
     "condition_json",
 ]
 
+STATEMENT_FILING_COLUMNS = [
+    "symbol",
+    "accession_no",
+    "form_type",
+    "filing_date",
+    "accepted_at",
+    "available_at",
+    "report_date",
+]
+
 STATEMENT_TIMING_AUDIT_COLUMNS = [
     "symbol",
     "freq",
@@ -227,6 +237,69 @@ def load_statement_labels(
         if col in df.columns:
             df[col] = pd.to_datetime(df[col])
     for col in ["latest_accepted_at", "latest_available_at"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col])
+    return df
+
+
+def load_statement_filings(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    forms: str | Iterable[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> pd.DataFrame:
+    resolved_symbols = resolve_loader_symbols(symbols=symbols, universe_source=universe_source)
+    start_ts, end_ts = normalize_date_range(start=start, end=end)
+    form_list = [form.upper() for form in _normalize_optional_list(forms)]
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_fundamental")
+        where: list[str] = []
+        params: list[object] = []
+
+        placeholders = ",".join(["%s"] * len(resolved_symbols))
+        where.append(f"symbol IN ({placeholders})")
+        params.extend(resolved_symbols)
+
+        if form_list:
+            placeholders = ",".join(["%s"] * len(form_list))
+            where.append(f"UPPER(form_type) IN ({placeholders})")
+            params.extend(form_list)
+
+        if start_ts is not None:
+            where.append("report_date >= %s")
+            params.append(start_ts.strftime("%Y-%m-%d"))
+        if end_ts is not None:
+            where.append("report_date <= %s")
+            params.append(end_ts.strftime("%Y-%m-%d"))
+            end_of_day = end_ts.normalize() + pd.Timedelta(days=1)
+            where.append(
+                "((available_at IS NOT NULL AND available_at < %s) "
+                "OR (available_at IS NULL AND (filing_date IS NULL OR filing_date <= %s)))"
+            )
+            params.extend([end_of_day.strftime("%Y-%m-%d %H:%M:%S"), end_ts.strftime("%Y-%m-%d")])
+
+        sql = f"""
+        SELECT {", ".join(STATEMENT_FILING_COLUMNS)}
+        FROM nyse_financial_statement_filings
+        WHERE {" AND ".join(where)}
+        ORDER BY symbol ASC, report_date ASC, available_at ASC, accession_no ASC
+        """
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows, columns=STATEMENT_FILING_COLUMNS)
+    if df.empty:
+        return df
+
+    for col in ["filing_date", "report_date"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col])
+    for col in ["accepted_at", "available_at"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col])
     return df

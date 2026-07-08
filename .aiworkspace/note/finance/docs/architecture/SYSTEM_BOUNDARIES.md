@@ -59,6 +59,8 @@ New code should not recreate legacy `.note/finance` paths directly.
 
 Ingestion is the primary product surface for collector execution, data repair, and source diagnostics.
 It calls `app/jobs/ingestion_jobs.py`, which calls `finance/data/*` and writes MySQL rows.
+The Streamlit page owns scheduling, section state, running progress / elapsed-time display, result interpretation, and run-history inspection; it should not fetch providers directly during render.
+Read-only diagnostics use `app/services/ingestion_diagnostics.py` and are scheduled through the same UI job path so results stay attached to the current section and execution records.
 
 It does not produce PASS / BLOCKER validation decisions by itself.
 Partial lifecycle, provider, macro, futures, or sentiment evidence must remain visibly partial in downstream read models.

@@ -1,0 +1,42 @@
+# Overview Futures Macro React UX Notes
+
+- Current Futures Macro tab entrypoint is thin, but `render_futures_macro_tab()` calls `render_futures_macro_fragment(detail_expanded=True)`.
+- `_render_futures_macro_panel()` calls `load_overview_futures_macro_snapshot()` without arguments.
+- `load_overview_futures_macro_snapshot()` defaults `include_validation=True` and `lookback_days=365 * 5 + 90`.
+- Local smoke timing on the current DB:
+  - `include_validation=False`: about 0.21s
+  - `include_validation=True`: about 7.59s
+  - cached follow-up calls: about 0.03s
+- The first-entry bottleneck is therefore synchronous historical validation, not the top-level tab selector.
+- Phase 1 implementation:
+  - `render_futures_macro_tab()` now opens the fragment with `detail_expanded=False`.
+  - `_render_futures_macro_panel()` calls `load_overview_futures_macro_snapshot(include_validation=False)` so first tab entry renders current macro state only.
+  - `과거 점검 불러오기` runs `build_futures_macro_validation_snapshot(...)` and `build_interpretation_confidence(...)` only on click, then stores the validation / confidence / loaded timestamp in session state.
+  - `일봉 갱신` and `다시 읽기` clear the session validation keys along with the snapshot cache boundary.
+  - The snapshot `symbols` payload is a pandas DataFrame in this path, so the on-demand validation action must extract unique values from its `Symbol` column instead of using `macro.get("symbols") or []`.
+- Phase 2 implementation:
+  - `app/web/overview/futures_macro_react_component.py` declares the `futures_macro_workbench` Streamlit component and falls back to the Streamlit renderer when `component_static/index.html` is absent.
+  - `app/web/streamlit_components/futures_macro_workbench/` owns the React/Vite source and checked-in `component_static` build used by Streamlit.
+  - `build_futures_macro_react_workbench_payload(...)` converts the existing macro snapshot into a JSON contract for command actions, current brief, score chips, 1W flow cards, validation state/metrics, and compact evidence sections.
+  - `_handle_futures_macro_react_event(...)` accepts both nested `{"event": ...}` and direct event shapes, deduplicates by nonce/token, and dispatches only to existing Python refresh / reload / validation helpers.
+  - Raw score/component/symbol tables and the source-of-truth calculations remain in Python/Streamlit; the React component is a read / action surface, not a trading signal, prediction gate, or data fetcher.
+- Phase 3 implementation:
+  - `compute_symbol_metrics(...)` already produced both `5D %` and `20D %`, so the implementation generalized the existing weekly flow grouping instead of adding new DB reads or materialization.
+  - `build_weekly_macro_context(...)` remains the compatibility contract for existing Streamlit fallback readers.
+  - New `build_macro_flow_context(...)` returns `default_period="1W"` and period payloads for `1W` / `1M`; the same risk appetite, rate burden, dollar pressure, safe-haven, and commodity/inflation groups are interpreted from `5D %` or `20D %` depending on period.
+  - `build_futures_macro_react_workbench_payload(...)` now sends `flow.default_period` and `flow.periods`, while preserving top-level `flow.cards` for the default 1W view.
+  - React renders `1W` / `1M` buttons inside the flow section. This remains read-only period selection inside the iframe and does not call providers, write registries, or change validation state.
+- Phase 4 implementation:
+  - `generate_market_interpretation(...)` still uses the existing directional scenario rules first. The richer mixed labels only apply inside `_mixed_macro_context(...)` after a directional interpretation was not established.
+  - The old broad `혼재된 매크로 흐름` top-level scenario is preserved for validation compatibility and UI stability.
+  - Mixed subtypes now separate `금리 부담 완화 속 성장 약세`, `달러 압력 Risk-Off 후보`, `원자재 약세 + 수요 둔화 후보`, `상충 흐름 / 전환 구간`, and `저신호 / 관망`.
+  - The subtype wording is intentionally candidate / confirmation language. It should help the user read conflict without turning mixed states into a prediction, trading signal, validation gate, or monitoring signal.
+- Phase 5 implementation:
+  - DB materialization was not added. Current validation result is compact enough for process cache, and durable storage semantics for historical validation summaries are not yet needed by another workflow.
+  - `build_futures_macro_validation_snapshot(...)` now has a process cache with a 15-minute default TTL. The key includes selected symbols, years, min standardized threshold, latest futures daily candle marker, latest proxy target price marker, current summary identity, and the query function identity.
+  - `clear_futures_macro_validation_cache()` is a dedicated invalidation hook. Futures Macro `다시 읽기` and `일봉 갱신` now clear session validation state and the process validation cache.
+  - This keeps first explicit validation calculation honest while making repeated explicit loads within the same process cheap when the stored data basis has not changed.
+- Phase 6 closeout:
+  - The six-step roadmap is complete in this worktree and branch without creating a new branch.
+  - Current-code Browser QA on port 8517 verified the React workbench render, new mixed subtype copy, lazy validation state, and 1W / 1M controls.
+  - Browser automation still could not click through the iframe custom component button path; this remains a tooling limitation rather than an observed product failure.

@@ -1,12 +1,13 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-06-30
 
 ## Feature Runbooks
 
 | Runbook | Use When |
 |---|---|
+| [EDGAR_FINANCIAL_STATEMENT_REFRESH.md](./EDGAR_FINANCIAL_STATEMENT_REFRESH.md) | EDGAR annual statement refresh, statement coverage diagnosis, shadow rebuild, SEC fair-access / pacing 확인 |
 | [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview Market Movers / Sector / Futures Monitor / Events refresh 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
 | [OPERATIONS_OVERVIEW_QA.md](./OPERATIONS_OVERVIEW_QA.md) | Operations Overview V2 화면 / routing / review queue / no-live boundary QA |
 
@@ -50,6 +51,20 @@ Service contract 변경:
 ```bash
 .venv/bin/python -m unittest tests/test_service_contracts.py
 ```
+
+Financial statement source migration checks:
+
+```bash
+git diff --check
+find .aiworkspace/note/finance/docs -maxdepth 3 -type f | sort
+rg -n "nyse_fundamentals|nyse_factors|EDGAR annual|legacy broad yfinance" app finance tests .aiworkspace/note/finance/docs
+```
+
+기대 결과:
+
+- EDGAR annual refresh / statement shadow rebuild / coverage QA가 canonical operational path로 문서화되어 있음
+- `nyse_fundamentals` / `nyse_factors`는 legacy compatibility 또는 explicit broad comparison으로만 설명됨
+- generated artifact, run history, registry/saved JSONL, `.DS_Store`는 stage하지 않음
 
 기대 결과:
 

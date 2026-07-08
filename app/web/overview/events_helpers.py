@@ -10,11 +10,18 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from app.services.overview.events import build_events_workbench_payload
 from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_earnings_calendar,
+    run_overview_event_calendars_refresh_all,
     run_overview_fomc_calendar,
     run_overview_macro_calendar,
+    run_overview_market_structure_calendar,
+)
+from app.web.overview.events_react_component import (
+    events_react_component_available,
+    render_events_react_workbench,
 )
 from app.web.overview.components.events import (
     render_event_agenda_sections,
@@ -28,7 +35,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_macro_week_lane,
     load_overview_market_events_snapshot,
 )
-from app.web.overview_ui_components import (
+from app.web.overview.components.common import (
     OVERVIEW_COLOR_BORDER,
     OVERVIEW_COLOR_NEUTRAL,
     OVERVIEW_COLOR_POSITIVE,
@@ -53,6 +60,14 @@ EVENT_TYPE_LABELS = {
     "EARNINGS": "Earnings",
     "MACRO": "Macro",
 }
+
+EVENT_REFRESH_RESULT_KEYS = [
+    ("overview_events_all_calendar_result", "전체 일정 갱신"),
+    ("overview_fomc_calendar_result", "FOMC 공식 일정"),
+    ("overview_macro_calendar_result", "매크로 공식 일정"),
+    ("overview_market_structure_calendar_result", "시장 구조 일정"),
+    ("overview_earnings_calendar_result", "실적 예상 일정"),
+]
 
 
 @dataclass(frozen=True)
@@ -88,9 +103,17 @@ def render_events_header() -> None:
     st.markdown("### Events")
 
 
-def render_event_refresh_toolbar() -> str:
+def events_react_workbench_available() -> bool:
+    return events_react_component_available()
+
+
+def render_event_refresh_toolbar(*, show_refresh: bool = True) -> str:
     render_overview_toolbar_label("일정 타입")
-    controls = st.columns([0.95, 2.9, 0.9], gap="small", vertical_alignment="bottom")
+    controls = (
+        st.columns([0.95, 2.9, 0.9], gap="small", vertical_alignment="bottom")
+        if show_refresh
+        else st.columns([0.95, 3.8], gap="small", vertical_alignment="bottom")
+    )
     event_options = list(EVENT_TYPE_LABELS.keys())
     event_filter = str(
         controls[0].selectbox(
@@ -104,6 +127,9 @@ def render_event_refresh_toolbar() -> str:
             key="overview_events_type_filter",
         )
     )
+    if not show_refresh:
+        return event_filter
+
     with controls[2].popover(
         "Refresh",
         icon=":material/sync:",
@@ -133,13 +159,26 @@ def render_event_refresh_toolbar() -> str:
             "Macro",
             key="overview_events_refresh_macro",
             use_container_width=True,
-            help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
+            help="Collects official macro release, PMI, Treasury auction, and related calendar dates.",
         ):
             current_year = datetime.now().year
-            with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
+            with st.spinner("Collecting official macro and Treasury calendars..."):
                 _store_overview_job_result(
                     "overview_macro_calendar_result",
                     run_overview_macro_calendar(years=(current_year, current_year + 1)),
+                )
+            st.rerun()
+        if st.button(
+            "Market Structure",
+            key="overview_events_refresh_market_structure",
+            use_container_width=True,
+            help="Collects official market holiday, early close, options expiration, and index event dates.",
+        ):
+            current_year = datetime.now().year
+            with st.spinner("Collecting official market structure calendars..."):
+                _store_overview_job_result(
+                    "overview_market_structure_calendar_result",
+                    run_overview_market_structure_calendar(years=(current_year, current_year + 1)),
                 )
             st.rerun()
     return event_filter
@@ -154,15 +193,48 @@ def _event_type_label(value: Any) -> str:
         "MACRO_PPI": "PPI",
         "MACRO_EMPLOYMENT": "Jobs",
         "MACRO_GDP": "GDP",
+        "MACRO_JOLTS": "JOLTS",
+        "MACRO_ECI": "ECI",
+        "MACRO_PCE": "PCE",
+        "MACRO_RETAIL_SALES": "Retail Sales",
+        "MACRO_DURABLE_GOODS": "Durable Goods",
+        "MACRO_HOUSING": "Housing",
+        "MACRO_CONSTRUCTION_SPENDING": "Construction Spending",
+        "MACRO_TRADE": "Trade",
+        "MACRO_ISM_MANUFACTURING_PMI": "ISM Mfg PMI",
+        "MACRO_ISM_SERVICES_PMI": "ISM Services PMI",
+        "TREASURY_AUCTION": "Treasury Auction",
+        "MARKET_HOLIDAY": "Market Holiday",
+        "EARLY_CLOSE": "Early Close",
+        "OPTIONS_EXPIRATION": "Options Expiration",
+        "RUSSELL_RECONSTITUTION": "Russell Reconstitution",
+        "INDEX_REBALANCE": "Index Rebalance",
+        "SP500_REBALANCE": "S&P Rebalance",
+        "NASDAQ100_RECONSTITUTION": "Nasdaq-100 Reconstitution",
     }
     return labels.get(str(value or ""), str(value or "-").replace("_", " ").title())
 
 
 def _event_importance_from_type(value: Any) -> str:
     event_type = str(value or "").upper()
-    if event_type == "FOMC_MEETING" or event_type == "MACRO" or event_type.startswith("MACRO_"):
+    if (
+        event_type == "FOMC_MEETING"
+        or event_type == "MACRO"
+        or event_type.startswith("MACRO_")
+        or event_type.startswith("TREASURY_")
+    ):
         return "High"
     if event_type == "EARNINGS":
+        return "Medium"
+    if event_type in {
+        "MARKET_HOLIDAY",
+        "EARLY_CLOSE",
+        "OPTIONS_EXPIRATION",
+        "RUSSELL_RECONSTITUTION",
+        "INDEX_REBALANCE",
+        "SP500_REBALANCE",
+        "NASDAQ100_RECONSTITUTION",
+    }:
         return "Medium"
     return "Low"
 
@@ -268,11 +340,7 @@ def _render_market_job_result(result_key: str) -> None:
 def _has_event_refresh_result() -> bool:
     return any(
         isinstance(st.session_state.get(key), dict)
-        for key in [
-            "overview_fomc_calendar_result",
-            "overview_earnings_calendar_result",
-            "overview_macro_calendar_result",
-        ]
+        for key, _label in EVENT_REFRESH_RESULT_KEYS
     )
 
 
@@ -280,9 +348,131 @@ def render_event_refresh_results() -> None:
     if not _has_event_refresh_result():
         return
     with st.expander("Refresh Results", expanded=False):
-        _render_market_job_result("overview_fomc_calendar_result")
-        _render_market_job_result("overview_earnings_calendar_result")
-        _render_market_job_result("overview_macro_calendar_result")
+        for result_key, _label in EVENT_REFRESH_RESULT_KEYS:
+            _render_market_job_result(result_key)
+
+
+def _events_refresh_result_payload(result_key: str, label: str) -> dict[str, Any] | None:
+    result = st.session_state.get(result_key)
+    if not isinstance(result, dict):
+        return None
+    details = dict(result.get("details") or {})
+    return {
+        "key": result_key,
+        "label": label,
+        "status": result.get("status") or "unknown",
+        "message": result.get("message") or "",
+        "rows_written": result.get("rows_written"),
+        "events_found": details.get("events_found"),
+        "source": details.get("source"),
+        "method": details.get("method") or details.get("method_requested"),
+        "duration_sec": result.get("duration_sec"),
+        "jobs_run": result.get("jobs_run"),
+        "jobs_failed": result.get("jobs_failed"),
+        "finished_at": result.get("finished_at"),
+        "sub_results": [
+            {
+                "label": row.get("label") or row.get("job_name") or "-",
+                "status": row.get("status") or "unknown",
+                "message": row.get("message") or "",
+            }
+            for row in list(result.get("results") or [])[:6]
+            if isinstance(row, dict)
+        ],
+    }
+
+
+def _events_refresh_results_payload() -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    for result_key, label in EVENT_REFRESH_RESULT_KEYS:
+        payload = _events_refresh_result_payload(result_key, label)
+        if payload is not None:
+            payloads.append(payload)
+    return payloads
+
+
+def _events_react_event_payload(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    event = value.get("event")
+    if isinstance(event, dict):
+        return event
+    if value.get("id") or value.get("action_id"):
+        return value
+    return None
+
+
+def _events_react_event_token(event: dict[str, Any]) -> str:
+    action_id = str(event.get("id") or event.get("action_id") or "").strip()
+    nonce = str(event.get("nonce") or event.get("ts") or "").strip()
+    return f"{action_id}:{nonce}" if nonce else action_id
+
+
+def _handle_events_react_event(event: dict[str, Any], context: EventSnapshotContext) -> None:
+    del context
+    action_id = str(event.get("id") or event.get("action_id") or "").strip()
+    if not action_id:
+        return
+    event_token = _events_react_event_token(event)
+    if st.session_state.get("overview_events_react_event_token") == event_token:
+        return
+    st.session_state["overview_events_react_event_token"] = event_token
+    current_year = datetime.now().year
+    if action_id == "reload":
+        st.rerun()
+    if action_id == "refresh_all":
+        with st.spinner("Collecting all Events calendar sources sequentially..."):
+            _store_overview_job_result(
+                "overview_events_all_calendar_result",
+                run_overview_event_calendars_refresh_all(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_fomc":
+        with st.spinner("Collecting FOMC calendar from the official Fed page..."):
+            _store_overview_job_result(
+                "overview_fomc_calendar_result",
+                run_overview_fomc_calendar(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_macro":
+        with st.spinner("Collecting official macro and Treasury calendars..."):
+            _store_overview_job_result(
+                "overview_macro_calendar_result",
+                run_overview_macro_calendar(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_market_structure":
+        with st.spinner("Collecting official market structure calendars..."):
+            _store_overview_job_result(
+                "overview_market_structure_calendar_result",
+                run_overview_market_structure_calendar(years=(current_year, current_year + 1)),
+            )
+        st.rerun()
+    if action_id == "refresh_earnings":
+        with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
+            _store_overview_job_result(
+                "overview_earnings_calendar_result",
+                run_overview_earnings_calendar(),
+            )
+        st.rerun()
+
+
+def render_events_react_workbench_section(context: EventSnapshotContext) -> bool:
+    if not events_react_component_available():
+        return False
+    payload = dict(build_events_workbench_payload(context.snapshot))
+    command = dict(payload.get("command") or {})
+    command["last_results"] = _events_refresh_results_payload()
+    payload["command"] = command
+    react_event = render_events_react_workbench(
+        payload,
+        key=f"overview_events_workbench_{context.event_filter}",
+    )
+    event_payload = _events_react_event_payload(react_event)
+    if event_payload:
+        st.session_state["overview_events_react_event"] = event_payload
+        _handle_events_react_event(event_payload, context)
+    return True
 
 
 def _event_tone(value: Any) -> str:
@@ -1082,3 +1272,9 @@ def render_event_detail_tabs(filtered_rows: Any) -> None:
             width="stretch",
             hide_index=True,
         )
+
+
+def render_events_streamlit_evidence_section(context: EventSnapshotContext, *, expanded: bool = False) -> None:
+    with st.expander("상세 표 / 전체 근거", expanded=expanded):
+        filtered_rows = filter_event_calendar_rows(context)
+        render_event_detail_tabs(filtered_rows)

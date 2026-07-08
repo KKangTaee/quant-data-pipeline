@@ -122,34 +122,78 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - current universe snapshot table이다.
 - source는 Wikipedia S&P 500 constituents table이며, ticker는 Yahoo Finance 호환을 위해 `.`을 `-`로 정규화한다.
-- Top1000 / Top2000 coverage는 이 table이 아니라 `nyse_asset_profile.market_cap` current snapshot을 직접 사용한다.
+- Top1000 / Top2000 coverage는 이 table이 아니라 `market_liquidity_universe_member` materialized membership을 사용한다.
 
 주의:
 
 - historical S&P 500 membership이나 point-in-time constituent truth가 아니다.
 - 상장폐지 / 편입변경의 과거 재현이 필요한 backtest universe로 바로 쓰면 survivorship bias가 생길 수 있다.
 
+## `market_liquidity_universe_member`
+
+역할:
+
+- Market Movers Top1000 / Top2000 current membership을 저장한다.
+- `nyse_symbol_lifecycle` / `nyse_stock` 등 listing source에서 후보 ticker를 읽고, `nyse_price_history`의 최근 거래일 row가 있는 후보만 ranking 대상으로 삼는다.
+- ranking 기준은 최근 20거래일 `close * volume` 평균 거래대금이다.
+
+성격:
+
+- materialized current universe snapshot table이다.
+- `rank_position`, `avg_dollar_volume`, `lookback_trading_days`, `as_of_date`, `ranking_source`, `price_source`, `listing_source`를 함께 저장해 UI와 snapshot refresh가 같은 membership을 재사용하게 한다.
+- Top1000 / Top2000은 더 이상 `nyse_asset_profile.market_cap` snapshot으로 순위를 정하지 않는다. `nyse_asset_profile`은 회사명, sector, industry 같은 보조 metadata join에만 사용한다.
+- listing source fallback이 비어 있으면 legacy profile fallback으로 자동 대체하지 않는다. 이 경우 universe 기준 갱신 결과가 실패 / 확인 필요 상태로 남아 listing source 갱신을 먼저 요구한다.
+
+주의:
+
+- 이 table은 "가장 큰 기업" 순위가 아니라 "최근 거래대금이 큰 종목" 순위다.
+- 신규 상장 ticker는 current listing source에 들어오고, 이후 `nyse_price_history`에 최신 EOD 가격 / 거래량 row가 저장되어야 포함될 수 있다.
+- 최신 거래일 price row가 없는 ticker는 ranking 가능한 후보에서 제외된다. 이는 stale listing, provider 누락, delisted ticker, 거래 정지 가능성을 모두 포함하는 보수적 처리다.
+- current snapshot이므로 historical point-in-time membership이나 survivorship control PASS 근거가 아니다.
+
+## `market_symbol_alias`
+
+역할:
+
+- Market Movers daily snapshot에서 old ticker가 더 이상 Yahoo quote row를 반환하지 않을 때 replacement ticker 후보와 적용 상태를 저장한다.
+- `SATS -> ECHO`, `VSCO -> VSXY` 같은 ticker-change repair를 반복 조사 없이 재사용하게 한다.
+
+성격:
+
+- alias mapping / repair state table이다.
+- `status=candidate` row는 자동 탐지 또는 화면 read-model이 제안한 후보이며, quote lookup에는 아직 적용하지 않는다.
+- `status=active` row는 사용자가 `티커 변경 복구 적용` action으로 승인한 alias이며, 이후 `market_intraday_snapshot` 수집에서 source universe symbol의 quote lookup symbol을 바꾼다.
+- `evidence_json`은 official 확인, search / quote verification 같은 compact 근거를 담는다. Full external page나 provider raw response를 저장하는 테이블이 아니다.
+
+주의:
+
+- 이 table은 universe membership 자체를 교체하지 않는다. 예를 들어 Top1000 universe row는 `SATS`로 남을 수 있고, quote lookup만 `ECHO`를 사용한다.
+- ticker change 후보는 provider/search evidence 기반 운영 복구 힌트이며, corporate action의 최종 official master가 아니다.
+- active alias 적용 후에도 `일중 스냅샷 갱신`을 다시 실행해야 `market_intraday_snapshot` missing row가 실제 가격 row로 대체된다.
+
 ## `market_intraday_snapshot`
 
 역할:
 
 - Overview Market Movers의 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 coverage별로 저장한다.
-- 현재 coverage는 `SP500`, `TOP1000`, `TOP2000`이다.
+- 현재 coverage는 `SP500`, `TOP1000`, `TOP2000`, `NASDAQ`이다.
 
 성격:
 
 - provider snapshot table이다.
 - 기본 source는 yfinance 세션을 통한 Yahoo quote batch이고, 실패 시 yfinance 5m OHLCV fallback을 사용할 수 있다.
 - `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
+- `quote_symbol`은 실제 provider quote 조회에 사용한 ticker다. ticker-change repair가 적용되면 `symbol`은 universe member ticker를 유지하고 `quote_symbol`만 replacement ticker가 될 수 있다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 이 table의 최신 snapshot을 읽는다.
-- `TOP1000` / `TOP2000`은 `nyse_asset_profile.market_cap` current snapshot으로 universe를 구성해 저장한다.
+- `TOP1000` / `TOP2000`은 `market_liquidity_universe_member`의 active membership을 기본 universe로 읽어 저장한다.
 
 주의:
 
 - 무료 provider 기반이므로 지연, rate limit, ticker별 missing이 발생할 수 있다.
 - `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
 - Market Movers quote gap diagnosis는 이 table의 missing row를 대상으로 추가 evidence를 조회해 job result로 보여주고, 반복 추적용으로 `market_data_issue`에도 누적 저장한다.
-- `TOP1000` / `TOP2000` UI refresh는 quote fast path만 사용하고, 광범위한 yfinance OHLCV fallback은 오래 걸릴 수 있어 자동 fallback하지 않는다.
+- `TOP1000` / `TOP2000` 일중 스냅샷 갱신은 이미 materialize된 liquidity universe를 읽는다. Universe 기준 자체를 바꾸려면 Market Movers의 `유니버스 기준 갱신`을 먼저 실행한다.
+- active ticker alias가 있으면 quote lookup은 alias를 사용하지만 ranking / display symbol은 universe symbol을 유지한다. Source ref에 `alias_symbol=<ticker>`가 남는다.
 
 ## `market_data_issue`
 
@@ -181,21 +225,30 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 성격:
 
 - provider snapshot table이다.
-- `event_date`, `event_type`, `symbol`, `title`, `source`, `source_type`, `validation_status`, `event_status`, `source_url`, `confidence`, `collected_at`, `raw_payload_json`을 공통 컬럼으로 둔다.
+- `event_date`, `event_type`, `event_family`, `event_subtype`, `event_time_label`, `event_datetime_utc`, `universe_scope`, `source_authority`, `symbol`, `title`, `source`, `source_type`, `validation_status`, `event_status`, `source_url`, `confidence`, `collected_at`, `raw_payload_json`을 공통 컬럼으로 둔다.
 - `event_key`는 반복 수집이 같은 event row를 UPSERT하도록 만든 내부 business key다.
 - UI는 정상 render 때 외부 페이지를 직접 파싱하지 않고 이 table을 읽는다.
+- `event_family`는 `central_bank`, `macro`, `earnings`, `fixed_income`, `market_structure`, `corporate_action`, `other` 같은 표시/필터용 대분류다.
+- `event_subtype`은 `cpi`, `ppi`, `employment`, `gdp`, `fomc_meeting`, `options_expiration`, `index_rebalance`, `earnings`처럼 source-neutral detail을 담는다.
+- `universe_scope`는 `official_macro`, `all_us`, `sp500`, `nasdaq100`, `portfolio`, `watchlist`, `latest_movers`, `major_cap` 등 이벤트가 적용되는 universe를 나타낸다.
+- `source_authority`는 `official`, `issuer_confirmed`, `provider_estimate`, `cross_checked`, `not_confirmed`, `conflict`, `unknown`으로 읽는다. `cross_checked`는 여전히 official confirmation이 아니다.
 - FOMC row의 `source`는 `federal_reserve_fomc_calendar`, `event_type`은 `FOMC_MEETING`이다.
 - FOMC meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장한다. 예: `June 16-17*`는 `2026-06-17`로 저장한다.
 - Macro row는 공식 release schedule에서 온 event timing metadata다.
-- BLS source row는 `source=bureau_labor_statistics_release_schedule`이며 CPI / PPI / Employment Situation을 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
+- BLS source row는 `source=bureau_labor_statistics_release_schedule`이며 CPI / PPI / Employment Situation / JOLTS / ECI를 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, `MACRO_JOLTS`, `MACRO_ECI`로 저장한다.
 - BLS 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있고, 이 row는 같은 source와 `raw_payload_json.import_method=official_ics_file`로 저장된다.
-- BEA source row는 `source=bureau_economic_analysis_release_schedule`이며 national GDP release를 `MACRO_GDP`로 저장한다.
+- BEA source row는 `source=bureau_economic_analysis_release_schedule`이며 national GDP / Personal Income and Outlays releases를 `MACRO_GDP`, `MACRO_PCE`로 저장한다.
+- Census source row는 `source=census_economic_indicators_calendar`이며 retail sales, durable goods, housing, construction, and trade indicator releases를 macro subtype으로 저장할 수 있다.
+- ISM source row는 `source=ism_report_calendar`이며 Manufacturing / Services PMI releases를 `MACRO_ISM_MANUFACTURING_PMI`, `MACRO_ISM_SERVICES_PMI`로 저장한다.
+- TreasuryDirect source row는 `source=treasurydirect_auction_calendar`, `event_family=fixed_income`, `event_type=TREASURY_AUCTION`으로 저장한다.
+- Official macro/fixed-income rows may populate `event_time_label` and `event_datetime_utc` when the source provides an ET release time.
 - Earnings row의 primary `source`는 `yfinance_calendar`, `event_type`은 `EARNINGS`, `source_type`은 `provider_estimate`이다.
 - Earnings row는 manual symbol list, latest S&P 500 movers, 또는 S&P 500 / Top1000 / Top2000 low-frequency batch에서 파생된 bounded symbol set을 대상으로 한다.
 - Nasdaq earnings calendar는 같은 symbol/date를 확인하는 alternate free provider cross-check로만 사용한다. `validation_status=cross_checked`는 official row를 뜻하지 않는다.
 - 날짜가 변경된 같은 symbol/source의 이전 active earnings estimate는 `event_status=superseded`로 남긴다.
 - 요청 ticker 중 저장 row가 없는 symbol의 missing / failure reason은 `market_event_calendar`에 별도 row로 쓰지 않고 job result의 `symbol_diagnostics`와 generated failure CSV에 남긴다.
 - Overview read model은 `Validation`, `Freshness`, `Quality Action`을 계산해 estimate-only / not-confirmed / stale row의 다음 조치를 표시한다.
+- Overview read model은 legacy row에 taxonomy column이 비어 있어도 `event_type`, `source_type`, `validation_status`, `source`에서 `Event Family`, `Event Subtype`, `Universe Scope`, `Source Authority`를 보수적으로 추론한다.
 
 주의:
 
@@ -203,6 +256,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FOMC의 `*` 표시는 Summary of Economic Projections 관련 meeting 의미이며 `raw_payload_json.has_summary_of_economic_projections`에 보존한다.
 - BLS schedule page는 공식 source지만 자동 요청이 HTTP 403으로 차단될 수 있다. 이 경우 macro collector는 가능한 source만 저장하고 partial failure를 job result에 남기며, BLS `.ics` import fallback으로 CPI / PPI / Jobs row를 보강한다.
 - earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 yfinance-only row는 `confidence=0.65`, Nasdaq cross-checked row는 `confidence=0.75`를 사용한다.
+- S&P 500 / Nasdaq-100 / portfolio / watchlist earnings coverage는 후속 collector 확장 대상이다. 이 table schema는 먼저 그 coverage를 받을 수 있게 확장되었지만, row가 저장되기 전까지 coverage가 존재한다는 뜻은 아니다.
 - `symbol_diagnostics.reason`의 주요 값은 `no_provider_earnings_date`, `outside_window`, `provider_error`다. 이는 수집 운영 진단이며 event calendar fact row는 아니다.
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
@@ -352,6 +406,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 역할:
 
 - provider-normalized broad fundamentals summary
+- loader source contract에서는 `financial_source=legacy_broad_yfinance`, `financial_source_mode=legacy_broad_summary`로 표시한다.
 
 성격:
 
@@ -363,12 +418,16 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - `period_end` 중심이므로 filing-time PIT source로 바로 쓰면 look-ahead risk가 있다.
+- filing metadata가 없으므로 source contract alias의 `available_at`, `form_type`, `accession_no`는 비어 있을 수 있다.
+- 새 기능의 canonical financial statement source로 추가 사용하지 않는다. 기존 run/history compatibility 또는 explicit fallback label이 있을 때만 사용한다.
+- Phase 7 source migration부터 active Ingestion UI에서는 이 table을 채우는 broad financial statement collection card를 제공하지 않는다.
 
 ## `nyse_fundamentals_statement`
 
 역할:
 
 - statement ledger 기반 fundamentals shadow
+- loader source contract에서는 `financial_source=sec_edgar_statement_shadow`, `financial_source_mode=statement_shadow`로 표시한다.
 
 성격:
 
@@ -380,12 +439,17 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - schema column 이름에 `latest_*`가 남아 있어도, 현재 해석은 period_end별 earliest usable snapshot 쪽으로 읽는다.
 - `shares_outstanding`은 statement-derived를 우선하고, 없으면 broad fallback을 사용할 수 있다.
+- loader는 `latest_available_at`, `latest_form_type`, `latest_accession_no`를 공통 alias인 `available_at`, `form_type`, `accession_no`로도 노출한다.
+- annual은 EDGAR-first migration의 primary source 후보지만, quarterly는 10-K/FY flow-value policy가 고정되기 전까지 blocked/prototype으로 읽는다.
+- Phase 3 source migration부터 새 quarterly shadow 생성은 `10-K` / `10-K/A` filing의 full-year flow metrics를 분기 flow로 저장하지 않고 flow column을 비운다. balance sheet instant 항목은 남을 수 있으므로 flow와 instant 해석을 분리한다.
+- Phase 3 source migration부터 loader는 quarterly 소비 경로에서 `10-Q` / `10-Q/A` row만 반환한다. 기존 `10-K` / `10-K/A` quarterly row가 table에 남아 있어도 usable quarterly financial row로 보지 않는다.
 
 ## `nyse_factors`
 
 역할:
 
 - broad fundamentals와 as-of price를 이용한 derived factor table
+- loader source contract에서는 `financial_source=legacy_broad_yfinance`, `financial_source_mode=legacy_broad_factor`로 표시한다.
 
 성격:
 
@@ -396,12 +460,15 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - `period_end` 기준 as-of price matching은 유용하지만, filing availability 기준과는 다를 수 있다.
+- current workflows should prefer statement annual factor paths. This table remains a legacy broad compatibility layer until decommissioned.
+- Phase 7 source migration부터 active Ingestion UI에서는 이 table을 계산하는 broad factor card를 제공하지 않는다. saved/history replay와 explicit broad comparison compatibility는 유지한다.
 
 ## `nyse_factors_statement`
 
 역할:
 
 - statement fundamentals shadow와 as-of price를 이용한 derived factor shadow
+- loader source contract에서는 `financial_source=sec_edgar_statement_shadow`, `financial_source_mode=statement_factor_shadow`로 표시한다.
 
 성격:
 
@@ -412,6 +479,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - shares fallback이 없거나 부족한 row에서는 valuation 계열 factor가 `NULL`일 수 있다.
+- loader는 `fundamental_available_at`, `fundamental_accession_no`, joined `latest_form_type`을 공통 alias인 `available_at`, `accession_no`, `form_type`으로도 노출한다.
+- annual strict strategies can treat this as the EDGAR-first factor path. Quarterly prototype rows stay non-canonical; Phase 3 source migration gates quarterly factor reads to `10-Q` / `10-Q/A` rows only.
 
 ## `nyse_financial_statement_filings`
 
@@ -441,6 +510,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - quarterly path는 `10-Q`, `10-Q/A`, `10-K`, `10-K/A`를 함께 받을 수 있다.
 - DB 저장 단계에서 synthetic Q4를 만들지 않는다.
+- raw value ledger는 10-K/FY fact를 보존할 수 있다. 다만 shadow fundamentals / factors 소비 경로는 full-year flow fact를 quarterly flow metric처럼 쓰지 않도록 별도 policy를 적용한다.
 - provider의 `fiscal_year` / `fiscal_period`는 filing context일 수 있으므로, row identity는 `period_end`와 `accession_no`를 우선한다.
 - `periods=0` ingestion은 source가 가진 usable history를 최대한 적재하는 의미다.
 

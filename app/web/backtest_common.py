@@ -68,6 +68,8 @@ from app.runtime.backtest import (
 )
 from app.web.backtest_strategy_catalog import (
     COMPARE_STRATEGY_OPTIONS,
+    DEFAULT_COMPARE_STRATEGY_OPTIONS,
+    DEFAULT_SINGLE_STRATEGY_OPTION,
     SINGLE_STRATEGY_OPTIONS,
     display_name_to_selection,
     family_variant_options,
@@ -1644,11 +1646,11 @@ def _render_quality_family_guide(current_strategy: str) -> None:
         [
             {
                 "Strategy": "Quality Snapshot",
-                "Data Source": "nyse_factors",
-                "Timing": "broad_research",
-                "History / Coverage": "summary/factor history depends on weekly refresh depth",
-                "Speed": "Fastest",
-                "Best For": "research-oriented trial / quick UI runs",
+                "Data Source": "nyse_factors (legacy broad yfinance)",
+                "Timing": "legacy_broad_factor",
+                "History / Coverage": "old saved/history replay compatibility",
+                "Speed": "Legacy",
+                "Best For": "explicit legacy replay or comparison only",
             },
             {
                 "Strategy": "Quality Snapshot (Strict Annual)",
@@ -1681,8 +1683,9 @@ def _render_quality_family_guide(current_strategy: str) -> None:
         st.dataframe(guide_df, width="stretch", hide_index=True)
         if current_strategy == "quality_broad":
             st.info(
-                "Use `Quality Snapshot` when we want the quickest research-oriented run. "
-                "It is easier to refresh, but history depth depends on broad fundamentals/factors coverage."
+                "`Quality Snapshot` is the legacy broad yfinance factor path. "
+                "Use it only for old saved/history replay or explicit compatibility comparison; "
+                "new financial-statement factor work should start from the strict annual family."
             )
         elif current_strategy == "quality_strict":
             st.info(

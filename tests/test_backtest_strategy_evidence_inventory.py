@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from pathlib import Path
 
 
 class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
@@ -58,6 +59,27 @@ class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
             self.assertIn("Practical Validation", row["validation_readiness"])
             self.assertIn("post-run", row["next_action"].lower())
 
+    def test_factor_strategy_rows_expose_financial_source_contracts(self) -> None:
+        from app.services.backtest_strategy_evidence_inventory import build_strategy_evidence_inventory
+
+        rows_by_key = {row["strategy_key"]: row for row in build_strategy_evidence_inventory()}
+
+        legacy = rows_by_key["quality_snapshot"]["source_contract"]
+        self.assertEqual(legacy["financial_source"], "legacy_broad_yfinance")
+        self.assertEqual(legacy["source_table"], "finance_fundamental.nyse_factors")
+        self.assertFalse(legacy["canonical"])
+
+        strict_annual = rows_by_key["quality_value_snapshot_strict_annual"]["source_contract"]
+        self.assertEqual(strict_annual["financial_source"], "sec_edgar_statement_shadow")
+        self.assertEqual(strict_annual["source_table"], "finance_fundamental.nyse_factors_statement")
+        self.assertTrue(strict_annual["canonical"])
+        self.assertEqual(strict_annual["timing_basis"], "available_at <= rebalance_date")
+
+        quarterly = rows_by_key["quality_snapshot_strict_quarterly_prototype"]["source_contract"]
+        self.assertEqual(quarterly["financial_source"], "sec_edgar_statement_shadow")
+        self.assertFalse(quarterly["canonical"])
+        self.assertIn("10-K", quarterly["limitation"])
+
     def test_first_evidence_mature_candidate_group_is_fixed(self) -> None:
         from app.services.backtest_strategy_evidence_inventory import build_strategy_evidence_inventory
 
@@ -99,6 +121,31 @@ class BacktestStrategyEvidenceInventoryContractTests(unittest.TestCase):
         self.assertEqual(web_catalog.STRATEGY_KEY_TO_DISPLAY_NAME, service_catalog.STRATEGY_KEY_TO_DISPLAY_NAME)
         self.assertEqual(web_catalog.SINGLE_STRATEGY_OPTIONS, service_catalog.SINGLE_STRATEGY_OPTIONS)
         self.assertEqual(web_catalog.STRATEGY_FAMILY_VARIANTS, service_catalog.STRATEGY_FAMILY_VARIANTS)
+
+    def test_strategy_catalog_defaults_prioritize_statement_annual_family(self) -> None:
+        from app.services import backtest_strategy_catalog as catalog
+
+        self.assertEqual(catalog.DEFAULT_SINGLE_STRATEGY_OPTION, "Quality + Value")
+        self.assertEqual(catalog.SINGLE_STRATEGY_OPTIONS[0], "Quality + Value")
+        self.assertEqual(
+            catalog.resolve_concrete_strategy_key(catalog.DEFAULT_SINGLE_STRATEGY_OPTION),
+            "quality_value_snapshot_strict_annual",
+        )
+        self.assertEqual(catalog.DEFAULT_COMPARE_STRATEGY_OPTIONS, ["Quality + Value", "GTAA", "Equal Weight"])
+        self.assertNotIn("Quality Snapshot", catalog.SINGLE_STRATEGY_OPTIONS)
+        self.assertNotIn("Quality Snapshot", catalog.COMPARE_STRATEGY_OPTIONS)
+        self.assertIn("quality_snapshot", catalog.LEGACY_BROAD_STRATEGY_KEYS)
+
+    def test_backtest_ui_uses_catalog_defaults_for_primary_strategy_surfaces(self) -> None:
+        single_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")
+        compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        self.assertIn("DEFAULT_SINGLE_STRATEGY_OPTION", single_source)
+        self.assertIn("statement annual", single_source.lower())
+        self.assertIn("DEFAULT_COMPARE_STRATEGY_OPTIONS", compare_source)
+        self.assertIn("legacy broad yfinance", common_source.lower())
+        self.assertNotIn("research-oriented trial / quick UI runs", common_source)
 
 
 if __name__ == "__main__":

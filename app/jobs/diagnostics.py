@@ -8,6 +8,11 @@ import pandas as pd
 
 from finance.data.data import probe_ohlcv_provider
 from finance.data.financial_statements import inspect_financial_statement_source
+from finance.data.market_intelligence import (
+    load_market_cap_universe_members,
+    load_market_universe_members,
+    load_nasdaq_symbol_directory_universe_members,
+)
 from finance.loaders import (
     load_asset_profile_status_summary,
     load_latest_market_date,
@@ -324,6 +329,12 @@ def inspect_price_stale_symbols(
 SUPPORTED_ANNUAL_FORMS = {"10-K", "10-K/A"}
 SUPPORTED_QUARTERLY_FORMS = {"10-Q", "10-Q/A", "10-K", "10-K/A"}
 FOREIGN_OR_NONSTANDARD_FORMS = {"20-F", "20-F/A", "6-K", "6-K/A", "40-F", "40-F/A"}
+STATEMENT_UNIVERSE_LABELS = {
+    "SP500": "S&P 500",
+    "TOP1000": "Top 1000 by 20D avg dollar volume",
+    "TOP2000": "Top 2000 by 20D avg dollar volume",
+    "NASDAQ": "Nasdaq-listed current snapshot",
+}
 
 
 def _normalize_symbol_map(df: pd.DataFrame, key: str = "symbol") -> dict[str, dict[str, Any]]:
@@ -365,6 +376,235 @@ def _build_statement_shadow_rebuild_payload(symbols: list[str], freq: str) -> di
             f"symbols={symbols_csv}\n"
             f"freq={freq}"
         ),
+    }
+
+
+def _load_statement_coverage_universe_members(
+    universe_code: str,
+    *,
+    universe_limit: int | None,
+) -> tuple[str, str, list[dict[str, Any]]]:
+    normalized = str(universe_code or "TOP1000").strip().upper()
+    if normalized == "SP500":
+        return normalized, "Current S&P 500 constituents", load_market_universe_members("SP500")
+    if normalized == "NASDAQ":
+        rows = load_nasdaq_symbol_directory_universe_members()
+        limit = int(universe_limit or 0)
+        return normalized, "Nasdaq-listed current snapshot", rows[:limit] if limit > 0 else rows
+
+    if normalized not in {"TOP1000", "TOP2000"}:
+        normalized = "TOP1000"
+    default_limit = 2000 if normalized == "TOP2000" else 1000
+    limit = int(universe_limit or default_limit)
+    return (
+        normalized,
+        "Latest asset_profile.market_cap snapshot",
+        load_market_cap_universe_members(normalized, universe_limit=limit),
+    )
+
+
+def _to_timestamp(value: Any) -> pd.Timestamp | None:
+    ts = pd.to_datetime(value, errors="coerce")
+    if pd.isna(ts):
+        return None
+    return ts.normalize()
+
+
+def _is_recent_statement_period(value: Any, *, as_of_ts: pd.Timestamp, max_age_days: int) -> bool:
+    ts = _to_timestamp(value)
+    if ts is None:
+        return False
+    return int((as_of_ts - ts).days) <= max_age_days
+
+
+def _classify_statement_universe_coverage_row(
+    *,
+    raw_row: dict[str, Any] | None,
+    shadow_row: dict[str, Any] | None,
+    profile_row: dict[str, Any] | None,
+    as_of_ts: pd.Timestamp,
+    max_annual_age_days: int,
+) -> tuple[str, str, str]:
+    raw_rows = int(raw_row.get("strict_rows") or 0) if raw_row else 0
+    shadow_rows = int(shadow_row.get("shadow_rows") or 0) if shadow_row else 0
+    shadow_recent = _is_recent_statement_period(
+        shadow_row.get("max_period_end") if shadow_row else None,
+        as_of_ts=as_of_ts,
+        max_age_days=max_annual_age_days,
+    )
+    raw_recent = _is_recent_statement_period(
+        raw_row.get("max_period_end") if raw_row else None,
+        as_of_ts=as_of_ts,
+        max_age_days=max_annual_age_days,
+    )
+
+    if shadow_rows > 0 and shadow_recent:
+        return (
+            "statement_shadow_available",
+            "No immediate action.",
+            "EDGAR statement shadow rows are present and recent enough for annual coverage QA.",
+        )
+    if shadow_rows > 0 and not shadow_recent:
+        return (
+            "statement_shadow_stale_no_recent_10k",
+            "Run Statement Coverage Diagnosis, then targeted EDGAR annual refresh for stale symbols.",
+            "Statement shadow rows exist, but the latest annual period is older than the freshness window.",
+        )
+    if raw_rows > 0 and not raw_recent:
+        return (
+            "raw_present_but_no_recent_10k",
+            "Run Statement Coverage Diagnosis before deciding between refresh and exclusion.",
+            "Strict raw statement rows exist, but the latest annual period is stale; this can mean no recent 10-K has been collected.",
+        )
+    if raw_rows > 0:
+        return (
+            "raw_present_shadow_missing",
+            "Run Statement Shadow Rebuild for these symbols first.",
+            "Strict raw EDGAR rows are already present, so a shadow rebuild is the fastest next action.",
+        )
+
+    profile_row = profile_row or {}
+    country = str(profile_row.get("country") or "").strip().lower()
+    if country and country not in {"united states", "usa", "us", "u.s.", "u.s.a."}:
+        return (
+            "non_us_issuer_or_foreign_form_expected",
+            "Review whether this issuer belongs in strict annual US statement coverage.",
+            "The current asset profile is non-US, so 20-F / 6-K / foreign-form structure may be expected.",
+        )
+
+    profile_status = str(profile_row.get("status") or "").strip().lower()
+    if profile_status in {"delisted", "not_found", "error"}:
+        return (
+            "symbol_status_or_profile_issue",
+            "Refresh or inspect asset profile / lifecycle evidence before rerunning EDGAR collection.",
+            "Asset profile status weakens the statement-source interpretation.",
+        )
+    if not profile_row:
+        return (
+            "missing_profile_or_universe_metadata",
+            "Refresh metadata, then rerun coverage QA.",
+            "The symbol is in the selected universe but has no compact asset-profile row for source QA.",
+        )
+
+    return (
+        "edgar_unavailable_or_cik_mapping_issue",
+        "Run Statement Coverage Diagnosis on a small sample before targeted EDGAR annual refresh.",
+        "No DB raw/shadow statement rows are present. The next read-only step is to separate unavailable EDGAR source from CIK/ticker mapping gaps.",
+    )
+
+
+def inspect_statement_universe_coverage(
+    *,
+    universe_code: str = "TOP1000",
+    universe_limit: int | None = None,
+    freq: str = "annual",
+    as_of_date: str | date | None = None,
+    max_annual_age_days: int = 800,
+) -> dict[str, Any]:
+    normalized_freq = str(freq or "annual").strip().lower()
+    as_of_ts = _normalize_end(as_of_date)
+    normalized_universe, coverage_basis, universe_rows = _load_statement_coverage_universe_members(
+        universe_code,
+        universe_limit=universe_limit,
+    )
+    symbols = []
+    for row in universe_rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        if symbol and symbol not in symbols:
+            symbols.append(symbol)
+
+    if not symbols:
+        return {
+            "status": "error",
+            "message": f"No symbols resolved for {normalized_universe} statement universe coverage QA.",
+            "details": {
+                "universe_code": normalized_universe,
+                "universe_label": STATEMENT_UNIVERSE_LABELS.get(normalized_universe, normalized_universe),
+                "coverage_basis": coverage_basis,
+                "universe_count": 0,
+                "reason_counts": {},
+                "rows": [],
+                "next_actions": ["Refresh or inspect the selected universe source before statement QA."],
+            },
+        }
+
+    raw_summary = load_statement_coverage_summary(symbols, freq=normalized_freq)
+    shadow_summary = load_statement_shadow_coverage_summary(symbols, freq=normalized_freq)
+    profile_summary = load_asset_profile_status_summary(symbols)
+    raw_map = _normalize_symbol_map(raw_summary)
+    shadow_map = _normalize_symbol_map(shadow_summary)
+    profile_map = _normalize_symbol_map(profile_summary)
+    universe_map = _normalize_symbol_map(pd.DataFrame(universe_rows)) if universe_rows else {}
+
+    reason_counts: dict[str, int] = {}
+    rows: list[dict[str, Any]] = []
+    for symbol in symbols:
+        raw_row = raw_map.get(symbol)
+        shadow_row = shadow_map.get(symbol)
+        profile_row = profile_map.get(symbol)
+        reason, recommended_action, note = _classify_statement_universe_coverage_row(
+            raw_row=raw_row,
+            shadow_row=shadow_row,
+            profile_row=profile_row,
+            as_of_ts=as_of_ts,
+            max_annual_age_days=max_annual_age_days,
+        )
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        rows.append(
+            {
+                "symbol": symbol,
+                "name": (universe_map.get(symbol) or {}).get("name"),
+                "country": (profile_row or {}).get("country"),
+                "profile_status": (profile_row or {}).get("status"),
+                "raw_strict_rows": int(raw_row.get("strict_rows") or 0) if raw_row else 0,
+                "raw_max_period_end": str(_to_timestamp(raw_row.get("max_period_end")).date()) if raw_row and _to_timestamp(raw_row.get("max_period_end")) is not None else None,
+                "shadow_rows": int(shadow_row.get("shadow_rows") or 0) if shadow_row else 0,
+                "shadow_max_period_end": str(_to_timestamp(shadow_row.get("max_period_end")).date()) if shadow_row and _to_timestamp(shadow_row.get("max_period_end")) is not None else None,
+                "reason_group": reason,
+                "recommended_action": recommended_action,
+                "note": note,
+            }
+        )
+
+    shadow_available = reason_counts.get("statement_shadow_available", 0)
+    stale_shadow = reason_counts.get("statement_shadow_stale_no_recent_10k", 0)
+    raw_available = sum(1 for row in rows if int(row.get("raw_strict_rows") or 0) > 0)
+    missing_count = len(symbols) - shadow_available
+    coverage_pct = round((shadow_available / len(symbols)) * 100, 2) if symbols else 0.0
+    status = "ok" if missing_count == 0 else "warning"
+    next_actions = [
+        "Use Statement Coverage Diagnosis on sampled missing symbols before rerunning EDGAR annual refresh.",
+        "Use Statement Shadow Rebuild for raw_present_shadow_missing symbols.",
+        "Keep non-US / foreign-form and CIK mapping gaps as source QA decisions; do not use yfinance financial statements as primary fallback.",
+    ]
+
+    rows.sort(key=lambda item: (item["reason_group"] != "statement_shadow_available", item["reason_group"], item["symbol"]))
+    return {
+        "status": status,
+        "message": (
+            f"{STATEMENT_UNIVERSE_LABELS.get(normalized_universe, normalized_universe)} EDGAR annual coverage by universe: "
+            f"{shadow_available}/{len(symbols)} symbols have recent statement shadow rows."
+        ),
+        "details": {
+            "universe_code": normalized_universe,
+            "universe_label": STATEMENT_UNIVERSE_LABELS.get(normalized_universe, normalized_universe),
+            "coverage_basis": coverage_basis,
+            "freq": normalized_freq,
+            "as_of_date": as_of_ts.strftime("%Y-%m-%d"),
+            "max_annual_age_days": max_annual_age_days,
+            "universe_count": len(symbols),
+            "universe_limit": universe_limit,
+            "coverage": {
+                "shadow_available_count": shadow_available,
+                "shadow_stale_count": stale_shadow,
+                "raw_available_count": raw_available,
+                "missing_or_not_ready_count": missing_count,
+                "shadow_coverage_pct": coverage_pct,
+            },
+            "reason_counts": reason_counts,
+            "rows": rows,
+            "next_actions": next_actions,
+        },
     }
 
 

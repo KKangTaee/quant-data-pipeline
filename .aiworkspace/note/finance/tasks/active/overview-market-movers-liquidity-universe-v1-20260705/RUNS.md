@@ -1,0 +1,76 @@
+# Runs
+
+- 2026-07-05: `pwd && git branch --show-current && git status --short && git log --oneline -5`
+  - branch: `codex/sub-dev`
+  - note: generated/local artifacts remain dirty and are not part of this task.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_schema_tracks_materialized_rank_contract tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_upsert_materializes_ranked_members_and_deactivates_old_rows tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_loader_reads_active_rows_in_rank_order`
+  - RED: missing schema key and missing writer/reader functions.
+  - GREEN: 3 tests passed after 1차 implementation.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests`
+  - Result: 31 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile finance/data/db/schema.py finance/data/market_intelligence.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_top_universe_reads_materialized_liquidity_members tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_top_universe_snapshot_defaults_to_materialized_liquidity_members`
+  - RED: service and intraday snapshot still used live market_cap universe paths.
+  - GREEN: materialized read paths passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests tests.test_service_contracts.MarketIntelligenceIngestionContractTests`
+  - Result: 122 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile app/services/overview/market_movers.py finance/data/market_intelligence.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_market_movers_followup_keeps_refresh_actions_in_fixed_slots tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_actions_use_liquidity_universe_refresh_for_top_coverage tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_event_bridge_dispatches_liquidity_universe_refresh_once`
+  - RED: helper import/action/dispatch still used disabled Top universe behavior.
+  - GREEN: 3 tests passed after wiring `유니버스 기준 갱신`.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests`
+  - Result: 242 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile app/web/overview/market_movers_helpers.py app/web/overview/components/common.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_collect_liquidity_universe_materializes_computed_dollar_volume_members tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_liquidity_universe_refresh_updates_eod_then_materializes_top_universe`
+  - RED: missing materialize and Overview action functions.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_candidate_loader_reads_current_lifecycle_listing_sources tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_dollar_volume_universe_query_excludes_symbols_missing_latest_price_row`
+  - RED: missing candidate loader and 20D dollar-volume loader.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_collect_liquidity_universe_materializes_computed_dollar_volume_members tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_liquidity_universe_candidate_loader_reads_current_lifecycle_listing_sources tests.test_service_contracts.MarketIntelligenceIngestionContractTests.test_dollar_volume_universe_query_excludes_symbols_missing_latest_price_row tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_liquidity_universe_refresh_updates_eod_then_materializes_top_universe`
+  - GREEN: 4 tests passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.OverviewAutomationContractTests`
+  - Result: 154 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile finance/data/market_intelligence.py app/jobs/overview_actions.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_refresh_bar_hides_eod_action_for_non_daily_basic_ui tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_react_actions_hide_price_history_refresh_for_non_daily`
+  - RED: non-daily Market Movers UI still exposed `가격 이력 갱신` / `refresh_eod_history`.
+  - GREEN: 2 tests passed after routing non-daily refresh actions to coverage-specific `유니버스 기준 갱신`.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests`
+  - Result: 244 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile app/web/overview/market_movers_helpers.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.
+- 2026-07-05: `.venv/bin/python - <<'PY' ... load_market_liquidity_universe_members ... PY`
+  - Initial result: `finance_meta.market_liquidity_universe_member` did not exist in local DB.
+- 2026-07-05: `.venv/bin/python - <<'PY' ... sync_market_intelligence_tables() ... PY`
+  - Result: local market intelligence schema sync passed.
+- 2026-07-05: `.venv/bin/python - <<'PY' ... run_overview_market_liquidity_universe_refresh(TOP1000) ... PY`
+  - Result: stopped after 6+ minutes because full provider EOD refresh was too heavy for a closeout smoke.
+- 2026-07-05: `.venv/bin/python -u - <<'PY' ... SQL-only liquidity universe compute/store ... PY`
+  - TOP1000: candidates `6012`, rankable `1000`, stored `1000`, ranking end date `2026-07-02`, sample `MU, NVDA, SNDK, AAPL, TSLA`.
+  - TOP2000: candidates `6012`, rankable `1920`, stored `1920`, ranking end date `2026-07-02`, sample `MU, NVDA, SNDK, AAPL, TSLA`.
+- 2026-07-05: Browser QA on `http://localhost:8503`
+  - Verified Market Movers action strip exposes `일중 스냅샷 갱신`, `유니버스 기준 갱신`, `화면 새로고침`.
+  - Found and fixed stale `Top 2000 by market cap` text in trust detail / service labels.
+  - Rechecked Top2000: `hasMarketCap=false`, `has20D=true`, universe `1,920`, returnable `1,208`, missing `712`.
+  - Screenshot artifact: `market-movers-liquidity-universe-top2000-qa.png` (generated, not staged).
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_catalyst_links_include_context_without_fetching_articles tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_why_it_moved_read_model_includes_context_links_and_pending_metadata`
+  - RED: service labels still said `Top 1000 by market cap`.
+  - GREEN: labels now say `Top 1000 by 20D avg dollar volume`.
+- 2026-07-05: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests`
+  - Result: 261 tests passed.
+- 2026-07-05: `.venv/bin/python -m py_compile finance/data/db/schema.py finance/data/market_intelligence.py app/jobs/overview_actions.py app/jobs/diagnostics.py app/services/overview/market_movers.py app/services/overview/why_it_moved.py app/web/overview/market_movers_helpers.py app/web/overview/components/common.py tests/test_service_contracts.py`
+  - Result: passed.
+- 2026-07-05: `git diff --check`
+  - Result: passed.

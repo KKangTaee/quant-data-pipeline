@@ -7,10 +7,17 @@ shared normalization and query helpers inside domain modules.
 
 from .financial_statements import (
     load_statement_coverage_summary,
+    load_statement_filings,
     load_statement_labels,
     load_statement_snapshot_strict,
     load_statement_timing_audit,
     load_statement_values,
+)
+from .financial_source_contract import (
+    LEGACY_BROAD_YFINANCE_SOURCE,
+    SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+    SEC_EDGAR_STATEMENT_STRICT_SOURCE,
+    apply_financial_source_contract,
 )
 from .factors import (
     load_factor_matrix,
@@ -71,10 +78,15 @@ __all__ = [
     "load_statement_factors_shadow",
     "load_statement_quality_snapshot_strict",
     "load_statement_values",
+    "load_statement_filings",
     "load_statement_labels",
     "load_statement_coverage_summary",
     "load_statement_snapshot_strict",
     "load_statement_timing_audit",
+    "LEGACY_BROAD_YFINANCE_SOURCE",
+    "SEC_EDGAR_STATEMENT_SHADOW_SOURCE",
+    "SEC_EDGAR_STATEMENT_STRICT_SOURCE",
+    "apply_financial_source_contract",
     "adapt_price_history_to_strategy_dfs",
     "load_price_strategy_dfs",
     "load_asset_profile_status_summary",

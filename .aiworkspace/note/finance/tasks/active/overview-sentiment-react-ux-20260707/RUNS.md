@@ -1,0 +1,162 @@
+# Overview Sentiment React UX Runs
+
+## 2026-07-07
+
+- RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: failed with `ImportError: cannot import name 'build_sentiment_react_workbench_payload'`, as expected before adapter implementation.
+- GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 1 test ... OK`.
+- Focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 2 tests ... OK`.
+- Compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/services/overview/sentiment.py finance/data/sentiment.py finance/loaders/sentiment.py`
+  - Result: exit 0.
+- Diff check: `git diff --check`
+  - Result: exit 0.
+- Phase 2 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback`
+  - Result: failed with `ModuleNotFoundError: No module named 'app.web.overview.sentiment_react_component'`, as expected before scaffold implementation.
+- Phase 2 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback`
+  - Result: `Ran 1 test ... OK`.
+- Component deps: `npm install` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: added 107 packages, found 0 vulnerabilities.
+- Component build: `npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0, emitted `component_static/index.html`, JS, and CSS assets.
+- Phase 2 focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 2 tests ... OK`.
+- Phase 2 compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`
+  - Result: exit 0.
+- Phase 2 diff check: `git diff --check`
+  - Result: exit 0.
+- Cleanup: removed untracked `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 3 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness`
+  - Result: failed because the scaffold did not yet expose `sentiment-workbench__hero`, phase/headline/summary, metric cards, or freshness panel.
+- Phase 3 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness`
+  - Result: `Ran 1 test ... OK`.
+- Phase 3 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets.
+- Phase 3 cleanup: removed `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 3 focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 3 tests ... OK`.
+- Phase 3 compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`
+  - Result: exit 0.
+- Phase 3 diff check: `git diff --check`
+  - Result: exit 0.
+- Phase 4 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks`
+  - Result: failed because React did not yet render `analysis_steps`, CNN / AAII cross-read, driver lanes, component explanations, or next checks.
+- Phase 4 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: failed with `KeyError: 'analysis_steps'`, as expected before preserving service-owned analysis steps in the payload.
+- Phase 4 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks`
+  - Result: `Ran 1 test ... OK`.
+- Phase 4 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 1 test ... OK`.
+- Phase 4 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets.
+- Phase 4 cleanup: removed `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 4 focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 5 tests ... OK`.
+- Phase 4 compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py`
+  - Result: exit 0.
+- Phase 4 diff check: `git diff --check`
+  - Result: exit 0.
+- Phase 5 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: failed because React did not yet render chart / evidence sections and the entrypoint still duplicated Streamlit detail sections after React render.
+- Phase 5 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: `Ran 1 test ... OK`.
+- Phase 5 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets.
+- Phase 5 focused regression / compile: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail` and `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`
+  - Result: focused tests `Ran 2 tests ... OK`; compile exit 0.
+- Phase 5 Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8508 --server.headless true --server.runOnSave false --server.fileWatcherType none`
+  - Result: `Workspace > Overview > Sentiment` rendered the React workbench. DOM confirmed summary/freshness, CNN / AAII cross-read, driver lanes, next checks, graph section, and stored-row evidence tables.
+- Phase 5 Browser QA screenshot: `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-react-contrast-summary.png`
+  - Result: top summary/freshness view captured after contrast fix. Screenshot is generated QA artifact and must not be committed.
+- Phase 5 Browser QA screenshot: `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-react-graphs.png`
+  - Result: history line chart, component bars, and stored evidence tables captured. Screenshot is generated QA artifact and must not be committed.
+- Phase 5 docs sync: updated `docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md`, `docs/flows/BACKTEST_UI_FLOW.md`, and `docs/ROADMAP.md`.
+- Phase 5 cleanup: removed `app/web/streamlit_components/sentiment_workbench/node_modules` after build.
+- Phase 5 final focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_aaii_and_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 6 tests ... OK`.
+- Phase 5 final compile: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py finance/data/sentiment.py finance/loaders/sentiment.py`
+  - Result: exit 0.
+- Phase 5 final diff check: `git diff --check`
+  - Result: exit 0.
+- Follow-up RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: failed before implementation because React still rendered next-check cards and the history chart had no hover tooltip / y-axis labels.
+- Follow-up GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail`
+  - Result: `Ran 2 tests ... OK`.
+- Follow-up component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets. `node_modules` was removed after build.
+- Follow-up Browser QA: `Workspace > Overview > Sentiment` on `localhost:8508`
+  - Result: DOM confirmed no visible `다음 확인` text in the React iframe, 3 y-axis labels on the history chart, and hover tooltip text `2026-05-06 / AAII Bearish / 33 / aaii_sentiment_survey`.
+- Follow-up Browser QA screenshot: `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-react-graph-tooltip.png`
+  - Result: history chart tooltip / focus guide captured. Screenshot is generated QA artifact and must not be committed.
+- Follow-up final focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 6 tests ... OK`.
+- Follow-up final compile / hygiene: `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py finance/data/sentiment.py finance/loaders/sentiment.py`, `git diff --check`, and `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`
+  - Result: compile exit 0, diff check exit 0, `node_modules absent`.
+- Feature expansion 1차 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: failed with `KeyError: 'range_context'`, as expected before service read-model expansion.
+- Feature expansion 1차 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: `Ran 1 test ... OK`.
+- Feature expansion 1차 focused regression: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: `Ran 2 tests ... OK`.
+- Feature expansion 1차 compile / hygiene: `.venv/bin/python -m py_compile app/services/overview/sentiment.py finance/loaders/sentiment.py`; `git diff --check`
+  - Result: compile exit 0, diff check exit 0.
+- Feature expansion 2차 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: failed with `KeyError: 'interpretation'`, as expected before wiring the new service-owned context fields into the React payload.
+- Feature expansion 2차 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`
+  - Result: `Ran 1 test ... OK`.
+- Feature expansion 2차 focused regression / compile: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/web/overview/sentiment_helpers.py`
+  - Result: focused tests `Ran 2 tests ... OK`; compile exit 0.
+- Feature expansion 3차 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence`
+  - Result: failed because React did not yet expose `SentimentRangeContextItem`, range cards, percentile track, or divergence axes.
+- Feature expansion 3차 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence`
+  - Result: `Ran 1 test ... OK`.
+- Feature expansion 3차 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets. `node_modules` was removed after build.
+- Feature expansion 3차 focused regression / hygiene: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`; `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`; `git diff --check`
+  - Result: focused tests `Ran 4 tests ... OK`; compile exit 0; `node_modules` absent; diff check exit 0.
+- Feature expansion 4차 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_history_surface_shows_recent_changes`
+  - Result: failed because React did not yet render `payload.interpretation.component_history.map` or component-history cards.
+- Feature expansion 4차 GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_history_surface_shows_recent_changes`
+  - Result: `Ran 1 test ... OK`.
+- Feature expansion 4차 component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`
+  - Result: Vite build exit 0; emitted updated `component_static/index.html`, JS, and CSS assets. `node_modules` was removed after build.
+- Feature expansion 4차 focused regression / hygiene: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_history_surface_shows_recent_changes tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`; `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`; `git diff --check`
+  - Result: focused tests `Ran 5 tests ... OK`; compile exit 0; `node_modules` absent; diff check exit 0.
+- Feature expansion 5차 Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8508 --server.headless true --server.runOnSave false --server.fileWatcherType none`; in-app browser opened `Workspace > Overview > Sentiment`.
+  - Result: DOM confirmed `최근`, `뚜렷한 엇갈림`, `CNN 구성요소 변화`, `latest vs previous`, and `CNN / AAII 같이 보기`; iframe counts confirmed `rangeCount=3`, `divergenceCount=3`, `componentHistoryCount=7`.
+- Feature expansion 5차 Browser QA screenshot: `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-react-range-divergence-component-history.png`
+  - Result: screenshot saved as generated QA artifact and intentionally left uncommitted. Additional scroll attempts were also generated and left uncommitted.
+- Feature expansion 5차 docs sync: updated `docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md`, `docs/data/DATA_FLOW_MAP.md`, `docs/ROADMAP.md`, `WORK_PROGRESS.md`, and `QUESTION_AND_ANALYSIS_LOG.md`.
+- Feature expansion 5차 final focused regression / hygiene: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_history_surface_shows_recent_changes tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py app/services/overview/sentiment.py finance/data/sentiment.py finance/loaders/sentiment.py`; `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`; `git diff --check`
+  - Result: focused tests `Ran 9 tests ... OK`; compile exit 0; `node_modules` absent; diff check exit 0.
+- Duplicate-metric follow-up RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks`
+  - Result: failed as expected because React still referenced the duplicated `metricByLabel("CNN Fear & Greed")` / AAII metric row in the cross-read section.
+- Duplicate-metric follow-up GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks`
+  - Result: `Ran 1 test ... OK`.
+- Duplicate-metric component build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`; `rm -rf node_modules`
+  - Result: Vite build exit 0; emitted updated static component assets; `node_modules` removed after build.
+- Duplicate-metric focused regression / hygiene: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_history_surface_shows_recent_changes tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`; `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`; `git diff --check`
+  - Result: focused tests `Ran 6 tests ... OK`; compile exit 0; `node_modules` absent; diff check exit 0.
+- Duplicate-metric Browser QA: `Workspace > Overview > Sentiment` on `localhost:8508`
+  - Result: iframe locator counts confirmed `crossRead=1`, `rangeContext=1`, `crossMetrics=0`, and `crossMetric=0`; screenshot saved as generated QA artifact at `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-no-duplicate-compare-section-v3.png` and intentionally left uncommitted.
+- Divergence / conclusion layout follow-up RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence`
+  - Result: failed as expected because the React workbench still rendered divergence status as a bare summary title and the five conclusion cards still used the fixed 3-column grid contract.
+- Divergence / conclusion layout follow-up GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence`
+  - Result: `Ran 2 tests ... OK`.
+- Divergence / conclusion layout build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`; `rm -rf node_modules`
+  - Result: Vite build exit 0; emitted updated static component assets; `node_modules` removed after build.
+- Divergence / conclusion layout focused regression / hygiene: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_history_surface_shows_recent_changes tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/web/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`; `test ! -d app/web/streamlit_components/sentiment_workbench/node_modules`; `git diff --check`
+  - Result: focused tests `Ran 6 tests ... OK`; compile exit 0; `node_modules` absent; diff check exit 0.
+- Divergence / conclusion layout Browser QA: `Workspace > Overview > Sentiment` on `localhost:8508`
+  - Result: iframe locator counts confirmed `divergence-heading=1`, `divergence-status=1`, `analysisSteps=5`, and `nextChecks=0`; screenshot saved as generated QA artifact at `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/browser-qa-sentiment-divergence-layout-polish-v2.png` and intentionally left uncommitted.
+- Divergence copy follow-up RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence`; `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: failed as expected because React still contained `지표 합의 상태` and service divergence axis details still used metric-definition copy such as `headline score 기준입니다`.
+- Divergence copy follow-up GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history`
+  - Result: `Ran 2 tests ... OK`.
+- Divergence copy follow-up build: `npm ci && npm run build` in `app/web/streamlit_components/sentiment_workbench`; `rm -rf node_modules`
+  - Result: Vite build exit 0; emitted updated static component JS and `component_static/index.html`; `node_modules` removed after build.
+- Divergence copy follow-up focused regression / hygiene: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_scaffold_keeps_streamlit_fallback tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_summary_surface_prioritizes_state_and_freshness tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_context_surface_shows_recent_range_and_divergence tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_component_history_surface_shows_recent_changes tests.test_service_contracts.OverviewAutomationContractTests.test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_adds_range_divergence_and_component_history tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_react_payload_uses_existing_snapshot_fields`; `.venv/bin/python -m py_compile app/services/overview/sentiment.py app/web/overview/sentiment_helpers.py app/web/overview/sentiment_react_component.py`; `git diff --check`
+  - Result: focused tests `Ran 8 tests ... OK`; compile exit 0; diff check exit 0.
+- Divergence copy follow-up Browser QA: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8508 --server.headless true --server.runOnSave false --server.fileWatcherType none`; in-app browser opened `Workspace > Overview > Sentiment`.
+  - Result: DOM snapshot confirmed `엇갈리는 지점`, `뚜렷한 엇갈림`, service-owned axis details with `headline`, `내부가 갈라`, and `비관 쪽`; DOM confirmed old phrases `지표 합의 상태`, `headline score 기준`, `방향 분포입니다`, and `함께 본 설문 방향` were absent. Screenshot positioning was limited by Streamlit component auto-scroll behavior; generated screenshot attempts remain QA artifacts and are intentionally uncommitted.

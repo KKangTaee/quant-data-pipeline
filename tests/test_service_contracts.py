@@ -11,7 +11,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 
 import pandas as pd
 
@@ -2792,7 +2792,12 @@ import app.services.backtest_practical_validation_source
 import app.services.backtest_risk_contribution_audit
 import app.services.backtest_selected_route_preflight
 import app.services.backtest_validation_efficacy
-import app.services.overview_market_intelligence
+import app.services.overview.market_context
+import app.services.overview.market_movers
+import app.services.overview.events
+import app.services.overview.sentiment
+import app.services.overview.data_health
+import app.services.overview.why_it_moved
 print("streamlit" in sys.modules)
 """
         result = subprocess.run(
@@ -5615,7 +5620,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_ingestion_console_delegates_read_only_diagnostics_to_service_facade(self) -> None:
         import ast
 
-        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        source = Path("app/web/ingestion/dispatcher.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
@@ -5635,18 +5640,489 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("finance.loaders.price", imported_modules)
         self.assertNotIn("_load_price_window_summary_cached", function_names)
 
+    def test_ingestion_financial_statement_refresh_is_edgar_first_with_legacy_broad_archived(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("EDGAR annual 재무제표 갱신", source)
+        self.assertIn("Archived legacy broad yfinance fundamentals / factors", source)
+        self.assertNotIn('with st.expander("Legacy broad yfinance fundamentals / factors"', source)
+        self.assertIn("primary financial statement refresh", source)
+        self.assertIn("not an active financial statement refresh workflow", source)
+
+    def test_statement_refresh_action_summary_focuses_on_coverage_freshness_and_next_action(self) -> None:
+        from app.web.ingestion_console import _build_statement_refresh_action_summary
+
+        summary = _build_statement_refresh_action_summary(
+            {
+                "job_name": "extended_statement_refresh",
+                "status": "partial_success",
+                "rows_written": 42,
+                "symbols_requested": 3,
+                "symbols_processed": 2,
+                "failed_symbols": ["BAD"],
+                "details": {
+                    "freq": "annual",
+                    "steps": [
+                        {"job_name": "collect_financial_statements", "status": "success"},
+                        {"job_name": "statement_factors_shadow", "status": "failed"},
+                    ],
+                },
+            }
+        )
+
+        self.assertEqual(summary["coverage"], "2/3 symbols processed")
+        self.assertEqual(summary["failed"], "1 failed")
+        self.assertIn("annual", summary["freshness"])
+        self.assertIn("statement_factors_shadow", summary["next_action"])
+        self.assertIn("Statement Coverage Diagnosis", summary["next_action"])
+
     def test_ingestion_diagnostics_service_owns_public_entrypoints(self) -> None:
         from app.services.ingestion_diagnostics import (
             load_price_window_preflight_summary,
             run_price_stale_diagnosis,
             run_statement_coverage_diagnosis,
             run_statement_pit_inspection,
+            run_statement_universe_coverage_qa,
         )
 
         self.assertTrue(callable(load_price_window_preflight_summary))
         self.assertTrue(callable(run_price_stale_diagnosis))
         self.assertTrue(callable(run_statement_coverage_diagnosis))
         self.assertTrue(callable(run_statement_pit_inspection))
+        self.assertTrue(callable(run_statement_universe_coverage_qa))
+
+    def test_statement_universe_coverage_qa_groups_missing_reasons_without_live_source_probe(self) -> None:
+        from app.jobs.diagnostics import inspect_statement_universe_coverage
+
+        universe_rows = [
+            {"symbol": "GOOD", "name": "Good Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "RAW", "name": "Raw Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "OLD", "name": "Old Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "FGN", "name": "Foreign Co", "source": "nyse_asset_profile.market_cap"},
+            {"symbol": "MISS", "name": "Missing Co", "source": "nyse_asset_profile.market_cap"},
+        ]
+        raw_df = pd.DataFrame(
+            [
+                {
+                    "symbol": "RAW",
+                    "freq": "annual",
+                    "strict_rows": 12,
+                    "distinct_accessions": 3,
+                    "max_period_end": pd.Timestamp("2025-12-31"),
+                    "max_available_at": pd.Timestamp("2026-02-15"),
+                },
+                {
+                    "symbol": "OLD",
+                    "freq": "annual",
+                    "strict_rows": 7,
+                    "distinct_accessions": 2,
+                    "max_period_end": pd.Timestamp("2023-12-31"),
+                    "max_available_at": pd.Timestamp("2024-02-15"),
+                },
+            ]
+        )
+        shadow_df = pd.DataFrame(
+            [
+                {
+                    "symbol": "GOOD",
+                    "freq": "annual",
+                    "shadow_rows": 2,
+                    "max_period_end": pd.Timestamp("2025-12-31"),
+                    "max_available_at": pd.Timestamp("2026-02-15"),
+                }
+            ]
+        )
+        profile_df = pd.DataFrame(
+            [
+                {"symbol": "GOOD", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "RAW", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "OLD", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "FGN", "country": "Canada", "status": "ok", "quote_type": "EQUITY"},
+                {"symbol": "MISS", "country": "United States", "status": "ok", "quote_type": "EQUITY"},
+            ]
+        )
+
+        with (
+            patch("app.jobs.diagnostics.load_market_cap_universe_members", return_value=universe_rows) as load_universe,
+            patch("app.jobs.diagnostics.load_statement_coverage_summary", return_value=raw_df),
+            patch("app.jobs.diagnostics.load_statement_shadow_coverage_summary", return_value=shadow_df),
+            patch("app.jobs.diagnostics.load_asset_profile_status_summary", return_value=profile_df),
+            patch("app.jobs.diagnostics.inspect_financial_statement_source") as live_source_probe,
+        ):
+            result = inspect_statement_universe_coverage(
+                universe_code="TOP1000",
+                universe_limit=5,
+                freq="annual",
+                as_of_date="2026-06-30",
+            )
+
+        load_universe.assert_called_once_with("TOP1000", universe_limit=5)
+        live_source_probe.assert_not_called()
+
+        details = result["details"]
+        self.assertEqual(details["universe_code"], "TOP1000")
+        self.assertEqual(details["universe_count"], 5)
+        self.assertEqual(details["coverage"]["shadow_available_count"], 1)
+        self.assertEqual(details["coverage"]["shadow_coverage_pct"], 20.0)
+        self.assertEqual(
+            details["reason_counts"],
+            {
+                "statement_shadow_available": 1,
+                "raw_present_shadow_missing": 1,
+                "raw_present_but_no_recent_10k": 1,
+                "non_us_issuer_or_foreign_form_expected": 1,
+                "edgar_unavailable_or_cik_mapping_issue": 1,
+            },
+        )
+        self.assertIn("Statement Coverage Diagnosis", details["next_actions"][0])
+
+    def test_ingestion_console_surfaces_statement_universe_coverage_qa_card(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("Statement Universe Coverage QA", source)
+        self.assertIn("run_statement_universe_coverage_qa", source)
+        self.assertIn("EDGAR annual coverage by universe", source)
+        self.assertNotIn("yfinance financial statements fallback", source)
+
+    def test_ingestion_ui_removes_legacy_broad_collection_cards_but_keeps_compatibility_actions(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertNotIn('with st.expander("Legacy broad yfinance fundamentals / factors"', source)
+        self.assertNotIn('with st.expander("핵심 시장 데이터 일괄 수집"', source)
+        self.assertNotIn('with st.expander("펀더멘털 수동 수집"', source)
+        self.assertNotIn('with st.expander("팩터 수동 계산"', source)
+        self.assertIn('if action == "weekly_fundamental_refresh":', source)
+        self.assertIn('if action == "collect_fundamentals":', source)
+        self.assertIn('if action == "calculate_factors":', source)
+        self.assertIn("Archived legacy broad yfinance compatibility path", source)
+
+    def test_quality_snapshot_form_marks_broad_yfinance_as_history_replay_only(self) -> None:
+        source = "\n".join(
+            [
+                Path("app/web/backtest_single_forms/__init__.py").read_text(encoding="utf-8"),
+                Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8"),
+            ]
+        )
+
+        self.assertIn("Archived legacy broad yfinance compatibility path", source)
+        self.assertIn("saved/history replay", source)
+        self.assertIn("Quality Snapshot (Strict Annual)", source)
+
+    def test_ingestion_collection_section_selector_is_stateful_across_reruns(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("INGESTION_COLLECTION_SECTIONS", source)
+        self.assertIn("ingestion_collection_section_choice", source)
+        self.assertIn("st.pills(", source)
+        self.assertNotIn('st.tabs(["일상 운영 / 검증 데이터", "수동 복구 / 진단"])', source)
+
+    def test_ingestion_console_moves_run_records_into_third_collection_section(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn('INGESTION_COLLECTION_RECORDS = "실행 기록 / 결과"', source)
+        self.assertIn("INGESTION_COLLECTION_RECORDS", source)
+        self.assertIn("def _render_ingestion_records_section", source)
+        self.assertIn("selected_collection_section == INGESTION_COLLECTION_RECORDS", source)
+        self.assertNotIn("col_left, col_right = st.columns([3, 2])", source)
+        self.assertIn("_render_recent_results()", source)
+        self.assertIn("_render_persistent_run_history()", source)
+        self.assertIn("_render_recent_logs()", source)
+        self.assertIn("_render_failure_csv_preview()", source)
+
+    def test_ingestion_console_dispatches_collection_sections_to_dedicated_renderers(self) -> None:
+        import ast
+
+        source = Path("app/web/ingestion/page.py").read_text(encoding="utf-8")
+        sections_source = Path("app/web/ingestion/sections.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        functions = {
+            node.name: node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        self.assertIn("render_operational_section as _render_ingestion_operational_section", source)
+        self.assertIn("render_manual_section as _render_ingestion_manual_section", source)
+        self.assertIn("render_selected_section as _render_selected_ingestion_collection_section", source)
+        self.assertIn("def render_operational_section", sections_source)
+        self.assertIn("def render_manual_section", sections_source)
+        self.assertIn("def render_selected_section", sections_source)
+
+        entrypoint = functions["render_ingestion_console"]
+        entrypoint_calls = {
+            node.func.id
+            for node in ast.walk(entrypoint)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        self.assertIn("_render_selected_ingestion_collection_section", entrypoint_calls)
+        self.assertNotIn("_render_price_stale_diagnosis_card", entrypoint_calls)
+        self.assertNotIn("_render_statement_pit_inspection_card", entrypoint_calls)
+
+    def test_ingestion_common_last_result_summary_preserves_next_action_focus(self) -> None:
+        from app.web.ingestion_console import _build_common_last_result_summary
+
+        summary = _build_common_last_result_summary(
+            {
+                "job_name": "daily_market_update",
+                "status": "partial_success",
+                "rows_written": 120,
+                "symbols_requested": 4,
+                "failed_symbols": ["BAD"],
+                "duration_sec": 12.25,
+                "message": "Daily market update completed with partial success.",
+            }
+        )
+
+        self.assertEqual(summary["title"], "일별 가격 업데이트")
+        self.assertEqual(summary["status"], "부분 성공")
+        self.assertEqual(summary["failed"], "1")
+        self.assertEqual(summary["rows"], "120")
+        self.assertIn("Price Stale Diagnosis", summary["next_action"])
+        self.assertIn("coverage gap", summary["attention"])
+
+    def test_ingestion_job_briefs_explain_operational_alias_relationships(self) -> None:
+        from app.web.ingestion_console import _collection_entry_relationship_note
+
+        daily_note = _collection_entry_relationship_note("daily_market_update")
+        manual_note = _collection_entry_relationship_note("collect_ohlcv")
+        metadata_note = _collection_entry_relationship_note("metadata_refresh")
+        profile_note = _collection_entry_relationship_note("collect_asset_profiles")
+        statement_note = _collection_entry_relationship_note("collect_financial_statements")
+
+        self.assertIn("운영용", daily_note)
+        self.assertIn("수동 가격 이력 수집", daily_note)
+        self.assertIn("복구용", manual_note)
+        self.assertIn("운영용", metadata_note)
+        self.assertIn("수동 자산 프로필", metadata_note)
+        self.assertIn("복구용", profile_note)
+        self.assertIn("EDGAR annual", statement_note)
+
+    def test_ingestion_action_registry_classifies_active_and_compatibility_actions(self) -> None:
+        from app.web.ingestion_console import (
+            INGESTION_ACTION_REGISTRY,
+            INGESTION_COLLECTION_MANUAL,
+            INGESTION_COLLECTION_OPERATIONAL,
+            _infer_ingestion_collection_section,
+        )
+
+        self.assertEqual(
+            INGESTION_ACTION_REGISTRY["daily_market_update"]["section"],
+            INGESTION_COLLECTION_OPERATIONAL,
+        )
+        self.assertEqual(
+            INGESTION_ACTION_REGISTRY["collect_ohlcv"]["section"],
+            INGESTION_COLLECTION_MANUAL,
+        )
+        self.assertEqual(
+            INGESTION_ACTION_REGISTRY["diagnose_price_stale"]["section"],
+            INGESTION_COLLECTION_MANUAL,
+        )
+        self.assertEqual(INGESTION_ACTION_REGISTRY["diagnose_price_stale"]["write_behavior"], "read_only")
+        self.assertIn(
+            "finance_price.nyse_price_history",
+            INGESTION_ACTION_REGISTRY["daily_market_update"]["target_tables"],
+        )
+        self.assertTrue(INGESTION_ACTION_REGISTRY["daily_market_update"]["active"])
+        self.assertFalse(INGESTION_ACTION_REGISTRY["weekly_fundamental_refresh"]["active"])
+        self.assertTrue(INGESTION_ACTION_REGISTRY["weekly_fundamental_refresh"]["compatibility"])
+        self.assertEqual(
+            _infer_ingestion_collection_section({"action": "diagnose_statement_coverage"}),
+            INGESTION_COLLECTION_MANUAL,
+        )
+
+    def test_ingestion_action_registry_helpers_separate_active_from_compatibility_actions(self) -> None:
+        from app.web.ingestion_console import (
+            INGESTION_COLLECTION_MANUAL,
+            INGESTION_COLLECTION_OPERATIONAL,
+            _active_ingestion_actions,
+            _compatibility_ingestion_actions,
+            _is_compatibility_ingestion_action,
+        )
+
+        active_actions = _active_ingestion_actions()
+        operational_actions = _active_ingestion_actions(section=INGESTION_COLLECTION_OPERATIONAL)
+        manual_actions = _active_ingestion_actions(section=INGESTION_COLLECTION_MANUAL)
+        compatibility_actions = _compatibility_ingestion_actions()
+
+        self.assertIn("daily_market_update", active_actions)
+        self.assertIn("collect_financial_statements", manual_actions)
+        self.assertIn("metadata_refresh", operational_actions)
+        self.assertNotIn("weekly_fundamental_refresh", active_actions)
+        self.assertNotIn("pipeline_core_market_data", operational_actions)
+        self.assertEqual(
+            compatibility_actions,
+            (
+                "pipeline_core_market_data",
+                "weekly_fundamental_refresh",
+                "collect_fundamentals",
+                "calculate_factors",
+            ),
+        )
+        self.assertTrue(_is_compatibility_ingestion_action("weekly_fundamental_refresh"))
+        self.assertFalse(_is_compatibility_ingestion_action("extended_statement_refresh"))
+
+    def test_ingestion_diagnostic_actions_dispatch_as_job_results(self) -> None:
+        from app.web.ingestion import dispatcher
+
+        with patch.object(
+            dispatcher,
+            "run_price_stale_diagnosis",
+            return_value={"status": "ok", "message": "diagnosis ok", "details": {"rows": []}},
+        ) as diagnose:
+            result = dispatcher._dispatch_job(
+                {
+                    "action": "diagnose_price_stale",
+                    "job_name": "diagnose_price_stale",
+                    "params": {"symbols": ["AAPL"], "end": "2026-07-01", "timeframe": "1d"},
+                }
+            )
+
+        diagnose.assert_called_once_with(["AAPL"], end="2026-07-01", timeframe="1d")
+        self.assertEqual(result["job_name"], "diagnose_price_stale")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 0)
+        self.assertEqual(result["symbols_requested"], 1)
+        self.assertEqual(result["details"]["diagnostic_result"]["message"], "diagnosis ok")
+
+    def test_ingestion_diagnostic_cards_schedule_jobs_instead_of_running_inline(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn('"action": "diagnose_price_stale"', source)
+        self.assertIn('"action": "diagnose_statement_universe_coverage"', source)
+        self.assertIn('"action": "diagnose_statement_coverage"', source)
+        self.assertIn('"action": "inspect_statement_pit"', source)
+        self.assertNotIn('with st.spinner("Running price stale diagnosis...")', source)
+        self.assertNotIn('with st.spinner("Running DB-backed statement universe coverage QA...")', source)
+        self.assertNotIn('with st.spinner("Running statement coverage diagnosis...")', source)
+        self.assertNotIn('with st.spinner("Running statement PIT inspection...")', source)
+
+    def test_ingestion_ohlcv_collection_params_builder_aligns_daily_and_manual(self) -> None:
+        from app.web.ingestion_console import _build_ohlcv_collection_params
+
+        daily_params = _build_ohlcv_collection_params(
+            symbols=["AAPL", "MSFT"],
+            start="2026-01-01",
+            end="2026-02-01",
+            period=None,
+            interval="1d",
+            execution_profile="managed_safe",
+            excluded_symbols=["BRK.B"],
+        )
+        manual_params = _build_ohlcv_collection_params(
+            symbols=["AAPL"],
+            start=None,
+            end=None,
+            period="3mo",
+            interval="1d",
+        )
+
+        self.assertEqual(daily_params["symbols"], ["AAPL", "MSFT"])
+        self.assertEqual(daily_params["execution_profile"], "managed_safe")
+        self.assertEqual(daily_params["excluded_symbols"], ["BRK.B"])
+        self.assertEqual(manual_params["period"], "3mo")
+        self.assertNotIn("execution_profile", manual_params)
+        self.assertNotIn("excluded_symbols", manual_params)
+
+    def test_ingestion_asset_profile_job_builder_records_metadata(self) -> None:
+        from app.web.ingestion_console import _build_asset_profile_job
+
+        job = _build_asset_profile_job(
+            action="collect_asset_profiles",
+            job_name="collect_asset_profiles",
+            spinner_text="Running asset profile collection...",
+            kinds=("stock",),
+            pipeline_type="manual_asset_profile_collection",
+            execution_mode="manual",
+            execution_context="Manual asset profile refresh.",
+        )
+
+        self.assertEqual(job["params"]["kinds"], ("stock",))
+        self.assertEqual(job["run_metadata"]["pipeline_type"], "manual_asset_profile_collection")
+        self.assertEqual(job["run_metadata"]["execution_mode"], "manual")
+        self.assertEqual(job["run_metadata"]["input_params"]["kinds"], ("stock",))
+
+    def test_ingestion_edgar_statement_refresh_copy_is_frequency_neutral(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn('with st.expander("EDGAR 재무제표 갱신"', source)
+        self.assertIn('"EDGAR 재무제표 갱신 실행"', source)
+        self.assertIn('"Running EDGAR statement refresh..."', source)
+        self.assertIn("Primary EDGAR financial statement refresh", source)
+        self.assertNotIn('with st.expander("EDGAR annual 재무제표 갱신"', source)
+        self.assertNotIn('"EDGAR annual 재무제표 갱신 실행"', source)
+        self.assertNotIn('"Running EDGAR annual statement refresh..."', source)
+
+    def test_ingestion_stage_jobs_accept_progress_callback(self) -> None:
+        import inspect
+
+        from app.jobs import ingestion_jobs
+
+        progress_job_names = [
+            "run_collect_futures_ohlcv",
+            "run_collect_fomc_calendar",
+            "run_collect_earnings_calendar",
+            "run_collect_macro_calendar",
+            "run_collect_market_structure_calendar",
+            "run_import_bls_macro_calendar_ics",
+            "run_metadata_refresh",
+            "run_collect_asset_profiles",
+            "run_discover_etf_provider_source_map",
+            "run_collect_sec_form25_delistings",
+            "run_collect_symbol_directory_snapshots",
+            "run_collect_sec_company_ticker_crosscheck",
+            "run_collect_computed_snapshot_lifecycle",
+        ]
+
+        for function_name in progress_job_names:
+            with self.subTest(function_name=function_name):
+                signature = inspect.signature(getattr(ingestion_jobs, function_name))
+                self.assertIn("progress_callback", signature.parameters)
+
+    def test_ingestion_dispatcher_passes_progress_callback_to_stage_jobs(self) -> None:
+        source = Path("app/web/ingestion/dispatcher.py").read_text(encoding="utf-8")
+        stage_actions = [
+            "metadata_refresh",
+            "discover_etf_provider_source_map",
+            "collect_sec_form25_delistings",
+            "collect_symbol_directory_snapshots",
+            "collect_sec_company_ticker_crosscheck",
+            "collect_computed_snapshot_lifecycle",
+            "collect_fomc_calendar",
+            "collect_earnings_calendar",
+            "collect_futures_ohlcv",
+            "collect_macro_calendar",
+            "import_bls_macro_calendar_ics",
+            "collect_asset_profiles",
+        ]
+
+        for action in stage_actions:
+            with self.subTest(action=action):
+                action_index = source.index(f'if action == "{action}":')
+                block = source[action_index : source.index("\n    if action ==", action_index + 1)]
+                self.assertIn('params["progress_callback"] = progress_callback', block)
+
+    def test_ingestion_progress_callback_allowlist_covers_stage_jobs_without_symbol_threshold(self) -> None:
+        from app.web.ingestion_console import PROGRESS_ENABLED_ACTIONS
+
+        self.assertIn("collect_futures_ohlcv", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("collect_fomc_calendar", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("collect_market_structure_calendar", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("collect_asset_profiles", PROGRESS_ENABLED_ACTIONS)
+        self.assertIn("diagnose_price_stale", PROGRESS_ENABLED_ACTIONS)
+
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        self.assertNotIn("symbol_count < 100", source)
+        self.assertIn("event.get(\"event\") or event.get(\"type\")", source)
+
+    def test_ingestion_running_jobs_preserve_section_and_show_elapsed_time(self) -> None:
+        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+
+        self.assertIn("collection_section", source)
+        self.assertIn('run_metadata["collection_section"]', source)
+        self.assertIn("ui_started_at", source)
+        self.assertIn("def _format_job_elapsed", source)
+        self.assertIn("경과", source)
+        self.assertIn("Financial Statement Ingestion", source)
 
     def test_backtest_compare_delegates_visual_shell_to_component_module(self) -> None:
         import ast
@@ -5970,7 +6446,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("latest raw 2026-05-28 is sparse", items[0]["detail"])
 
     def test_browser_auto_refresh_timing_shows_remaining_cadence(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_timing
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_timing
 
         timing = _browser_auto_refresh_timing(
             {
@@ -5993,7 +6469,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(timing["next_due_at"], "2026-05-29 10:05:00")
 
     def test_browser_auto_refresh_timing_waits_outside_market_hours(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_timing
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_timing
 
         timing = _browser_auto_refresh_timing(
             {
@@ -6015,7 +6491,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(timing["progress_pct"], 0)
 
     def test_browser_auto_refresh_timing_rebases_success_to_next_cadence(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_timing
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_timing
 
         timing = _browser_auto_refresh_timing(
             {
@@ -6040,7 +6516,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(timing["progress_pct"], 20)
 
     def test_browser_auto_refresh_check_due_uses_next_due(self) -> None:
-        from app.web.overview_dashboard import _should_run_browser_auto_refresh_check
+        from app.web.overview.market_movers_helpers import _should_run_browser_auto_refresh_check
 
         summary = {
             "status": "skipped",
@@ -6063,7 +6539,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_browser_auto_refresh_completion_label_uses_actionable_status(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_completion_label
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_completion_label
 
         self.assertEqual(
             _browser_auto_refresh_completion_label({"status": "success"}),
@@ -6084,7 +6560,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_browser_auto_refresh_job_config_tracks_selected_coverage(self) -> None:
-        from app.web.overview_dashboard import _browser_auto_refresh_job_config
+        from app.web.overview.market_movers_helpers import _browser_auto_refresh_job_config
 
         self.assertEqual(
             _browser_auto_refresh_job_config("SP500"),
@@ -6210,7 +6686,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "forbidden": "_legacy._render_futures_macro_tab",
                 "required": [
                     "render_futures_macro_header()",
-                    "render_futures_macro_fragment(detail_expanded=True)",
+                    "render_futures_macro_fragment(detail_expanded=False)",
                 ],
             },
             "app/web/overview/sentiment.py": {
@@ -6228,6 +6704,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "forbidden": "_legacy._render_events_tab",
                 "required": [
                     "render_events_header()",
+                    'event_filter = "ALL"',
                     "render_event_refresh_toolbar()",
                     "load_event_snapshot_context(",
                     "render_events_overview_lanes(",
@@ -6317,6 +6794,17 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "build_collection_ops_snapshot",
                 "build_overview_data_health_ingestion_handoff",
             ],
+            "app.services.overview.why_it_moved": [
+                "build_market_mover_catalyst_links",
+                "build_market_mover_metadata_not_requested_state",
+                "build_market_mover_metadata_status_strip",
+                "build_market_mover_why_it_moved_read_model",
+                "fetch_market_mover_compact_metadata",
+                "fetch_market_mover_news_metadata",
+                "fetch_market_mover_sec_metadata",
+                "merge_market_mover_metadata",
+                "sort_market_mover_sec_filings_by_form_priority",
+            ],
             "app.services.overview.ia": ["load_overview_ia_closeout_model"],
         }
 
@@ -6329,6 +6817,89 @@ class OverviewAutomationContractTests(unittest.TestCase):
             module = importlib.import_module(module_name)
             for entrypoint in entrypoints:
                 self.assertTrue(callable(getattr(module, entrypoint, None)))
+
+    def test_overview_sentiment_service_owns_implementation_body(self) -> None:
+        source = Path("app/services/overview/sentiment.py").read_text(encoding="utf-8")
+
+        self.assertIn("def build_market_sentiment_snapshot", source)
+        self.assertIn("load_market_sentiment_snapshot", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
+    def test_overview_events_service_owns_implementation_body(self) -> None:
+        source = Path("app/services/overview/events.py").read_text(encoding="utf-8")
+
+        self.assertIn("def build_market_events_snapshot", source)
+        self.assertIn("def build_overview_macro_week_lane", source)
+        self.assertIn("EVENT_COLUMNS", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
+    def test_overview_data_health_service_owns_implementation_body(self) -> None:
+        source = Path("app/services/overview/data_health.py").read_text(encoding="utf-8")
+
+        self.assertIn("def build_collection_ops_snapshot", source)
+        self.assertIn("def build_overview_data_health_ingestion_handoff", source)
+        self.assertIn("DATA_HEALTH_HANDOFF_TARGETS", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
+    def test_overview_data_health_service_imports_only_used_dependencies(self) -> None:
+        source = Path("app/services/overview/data_health.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("import json", source)
+        self.assertNotIn("import os", source)
+        self.assertNotIn("import re", source)
+        self.assertNotIn("import urllib.request", source)
+        self.assertNotIn("from html import unescape", source)
+        self.assertNotIn("from urllib.parse import", source)
+        self.assertNotIn("from xml.etree import ElementTree", source)
+        self.assertNotIn("CNN_COMPONENT_SERIES", source)
+        self.assertNotIn("load_market_sentiment_history", source)
+        self.assertNotIn("load_market_sentiment_snapshot", source)
+        self.assertIn("CORE_SENTIMENT_SERIES", source)
+
+    def test_overview_market_movers_service_owns_implementation_body(self) -> None:
+        source = Path("app/services/overview/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn("def build_market_movers_snapshot", source)
+        self.assertIn("def build_group_leadership_snapshot", source)
+        self.assertIn("def build_overview_breadth_heatmap_summary", source)
+        self.assertIn("def resolve_effective_market_dates", source)
+        self.assertIn("MOVERS_COLUMNS", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
+    def test_overview_market_context_service_owns_implementation_body(self) -> None:
+        source = Path("app/services/overview/market_context.py").read_text(encoding="utf-8")
+
+        self.assertIn("def build_overview_macro_context_cockpit", source)
+        self.assertIn("def build_overview_source_confidence_catalog", source)
+        self.assertIn("direct_market_context_refresh_only", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
+    def test_overview_why_it_moved_service_owns_implementation_body(self) -> None:
+        service_path = Path("app/services/overview/why_it_moved.py")
+        self.assertTrue(service_path.exists())
+        source = service_path.read_text(encoding="utf-8")
+
+        self.assertIn("def build_market_mover_catalyst_links", source)
+        self.assertIn("def build_market_mover_why_it_moved_read_model", source)
+        self.assertIn("def fetch_market_mover_compact_metadata", source)
+        self.assertIn("def fetch_market_mover_news_metadata", source)
+        self.assertIn("def fetch_market_mover_sec_metadata", source)
+        self.assertIn("def merge_market_mover_metadata", source)
+        self.assertIn("WHY_IT_MOVED_STATUS_LABELS", source)
+        self.assertNotIn("overview_market_intelligence", source)
+
+    def test_overview_market_intelligence_legacy_facade_removed(self) -> None:
+        self.assertFalse(Path("app/services/overview_market_intelligence.py").exists())
+
+        guarded_roots = [Path("app")]
+        references: list[Path] = []
+        for root in guarded_roots:
+            references.extend(
+                path
+                for path in root.rglob("*.py")
+                if "overview_market_intelligence" in path.read_text(encoding="utf-8")
+            )
+        self.assertEqual(references, [])
 
     def test_overview_dashboard_helpers_use_domain_service_surfaces(self) -> None:
         source = Path("app/web/overview_dashboard_helpers.py").read_text(encoding="utf-8")
@@ -6437,6 +7008,66 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("def _market_context_session_payload", helper_source)
         self.assertIn("def _snapshot_status_items", helper_source)
 
+    def test_overview_component_modules_own_renderer_bodies(self) -> None:
+        component_contracts = {
+            Path("app/web/overview/components/common.py"): (
+                "def overview_ui_css",
+                "def render_overview_toolbar_label",
+                "def render_overview_meta_strip",
+            ),
+            Path("app/web/overview/components/layout.py"): (
+                "def render_market_session_banner",
+            ),
+            Path("app/web/overview/components/market_context.py"): (
+                "def render_macro_context_cockpit",
+                "def _macro_cockpit_historical_analog_html",
+                "def _sector_pressure_map_html",
+            ),
+            Path("app/web/overview/components/data_health.py"): (
+                "def render_data_health_ingestion_handoff",
+            ),
+            Path("app/web/overview/components/market_movers.py"): (
+                "def render_breadth_heatmap_summary",
+                "def render_market_refresh_status_bar",
+                "def render_auto_refresh_countdown",
+            ),
+            Path("app/web/overview/components/events.py"): (
+                "def render_macro_week_lane",
+                "def render_events_summary_strip",
+                "def render_event_agenda_sections",
+            ),
+        }
+
+        for path, expected_defs in component_contracts.items():
+            self.assertTrue(path.exists(), f"{path} should exist")
+            source = path.read_text(encoding="utf-8")
+            for expected in expected_defs:
+                self.assertIn(expected, source)
+            self.assertNotIn("from app.web.overview_ui_components import", source)
+
+    def test_overview_ui_components_is_compatibility_facade(self) -> None:
+        source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+
+        self.assertLessEqual(len(source.splitlines()), 120)
+        self.assertIn("from app.web.overview.components.common import", source)
+        self.assertIn("from app.web.overview.components.market_context import", source)
+        self.assertIn("from app.web.overview.components.events import", source)
+        self.assertNotIn("def _macro_context_cockpit_html", source)
+        self.assertNotIn("def render_auto_refresh_countdown", source)
+
+    def test_overview_tab_helpers_use_domain_component_surfaces(self) -> None:
+        helper_paths = [
+            Path("app/web/overview/market_context_helpers.py"),
+            Path("app/web/overview/market_movers_helpers.py"),
+            Path("app/web/overview/events_helpers.py"),
+            Path("app/web/overview/sentiment_helpers.py"),
+            Path("app/web/overview/futures_macro_helpers.py"),
+        ]
+
+        for path in helper_paths:
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn("from app.web.overview_ui_components import", source)
+
     def test_overview_market_context_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
@@ -6473,6 +7104,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "load_event_snapshot_context",
             "render_event_refresh_results",
             "render_events_overview_lanes",
+            "render_events_streamlit_evidence_section",
+            "events_react_workbench_available",
             "has_event_rows",
             "filter_event_calendar_rows",
             "render_event_detail_tabs",
@@ -6758,13 +7391,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_overview_dashboard_wrapper_remains_thin_compatibility_facade(self) -> None:
         source = Path("app/web/overview_dashboard.py").read_text(encoding="utf-8")
 
-        self.assertLessEqual(len(source.splitlines()), 80)
+        self.assertLessEqual(len(source.splitlines()), 12)
         self.assertIn("from app.web.overview.page import render_overview_dashboard", source)
-        self.assertIn("from app.web.overview.navigation import (", source)
-        self.assertIn("from app.web.overview.market_movers_helpers import (", source)
-        self.assertIn("from app.web.overview.futures_macro_helpers import (", source)
+        self.assertEqual(source.count("from app.web.overview."), 1)
+        self.assertIn('__all__ = ["render_overview_dashboard"]', source)
         self.assertNotIn("import streamlit", source)
         self.assertNotIn("legacy_dashboard", source)
+        self.assertNotIn("market_movers_helpers", source)
+        self.assertNotIn("futures_macro_helpers", source)
         self.assertNotIn("for _name in dir", source)
 
     def test_overview_dashboard_uses_lazy_selected_deep_tab_rendering(self) -> None:
@@ -6791,7 +7425,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(sentiment_label_index, events_label_index)
 
     def test_overview_dashboard_primary_selector_excludes_inactive_tabs(self) -> None:
-        from app.web.overview_dashboard import OVERVIEW_DEEP_TAB_OPTIONS
+        from app.web.overview.navigation import OVERVIEW_DEEP_TAB_OPTIONS
 
         self.assertEqual(
             OVERVIEW_DEEP_TAB_OPTIONS,
@@ -6833,7 +7467,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("background: #f2faf7", source)
 
     def test_overview_dashboard_dispatches_only_selected_deep_tab(self) -> None:
-        from app.web.overview_dashboard import _render_selected_overview_tab
+        from app.web.overview.navigation import _render_selected_overview_tab
 
         calls: list[str] = []
         renderers = {
@@ -6847,7 +7481,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(calls, ["Futures Macro"])
 
     def test_overview_dashboard_defaults_unknown_deep_tab_to_market_context(self) -> None:
-        from app.web.overview_dashboard import _overview_active_tab_label
+        from app.web.overview.navigation import _overview_active_tab_label
 
         self.assertEqual(_overview_active_tab_label("does-not-exist"), "Market Context")
         self.assertEqual(_overview_active_tab_label("Futures Macro"), "Futures Macro")
@@ -6856,7 +7490,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(_overview_active_tab_label(None), "Market Context")
 
     def test_overview_dashboard_pill_nav_slug_contract(self) -> None:
-        from app.web.overview_dashboard import (
+        from app.web.overview.navigation import (
             OVERVIEW_DEEP_TAB_OPTIONS,
             _overview_tab_seed_label,
             _overview_tab_display_label,
@@ -6900,7 +7534,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertIn('"Futures Macro": render_futures_macro_tab', render_body)
         self.assertIn("def render_futures_macro_tab", futures_source)
-        self.assertIn("render_futures_macro_fragment(detail_expanded=True)", futures_source)
+        self.assertIn("render_futures_macro_fragment(detail_expanded=False)", futures_source)
         self.assertNotIn("legacy_dashboard", futures_helper_source)
         self.assertNotIn("_legacy.", futures_helper_source)
         self.assertIn("_render_futures_macro_panel(detail_expanded=detail_expanded)", futures_helper_source)
@@ -6909,22 +7543,33 @@ class OverviewAutomationContractTests(unittest.TestCase):
     def test_futures_macro_tab_exposes_daily_refresh_and_cache_reload(self) -> None:
         futures_source = Path("app/web/overview/futures_macro.py").read_text(encoding="utf-8")
         futures_helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
-        style_source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+        style_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+        validation_clear_body = futures_helper_source[futures_helper_source.index("def _clear_futures_macro_validation_state") :]
+        validation_clear_body = validation_clear_body[: validation_clear_body.index("def _futures_macro_session_validation")]
+        refresh_helper_body = futures_helper_source[futures_helper_source.index("def _refresh_futures_macro_daily_for_ui") :]
+        refresh_helper_body = refresh_helper_body[: refresh_helper_body.index("def _render_market_job_result")]
         controls_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_refresh_controls") :]
         controls_body = controls_body[: controls_body.index("def _render_futures_macro_panel")]
         panel_body = futures_helper_source[futures_helper_source.index("def _render_futures_macro_panel") :]
         panel_body = panel_body[: panel_body.index("def render_futures_macro_fragment")]
         tab_body = futures_source[futures_source.index("def render_futures_macro_tab") :]
 
-        self.assertIn("render_futures_macro_fragment(detail_expanded=True)", tab_body)
+        self.assertIn("render_futures_macro_fragment(detail_expanded=False)", tab_body)
         self.assertNotIn("_legacy._render_futures_macro_refresh_controls()", tab_body)
         self.assertNotIn("legacy_dashboard", futures_helper_source)
         self.assertNotIn("_legacy.", futures_helper_source)
+        self.assertIn("OVERVIEW_FUTURES_MACRO_VALIDATION_KEY", futures_helper_source)
+        self.assertIn("load_overview_futures_macro_snapshot(include_validation=False)", panel_body)
+        self.assertIn("_render_futures_macro_validation_controls(", panel_body)
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
         self.assertIn("section_detail=", panel_body)
         self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
-        self.assertIn("_run_futures_daily_ohlcv_action()", controls_body)
-        self.assertIn("clear_overview_futures_macro_snapshot_cache()", controls_body)
+        self.assertIn("_refresh_futures_macro_daily_for_ui()", controls_body)
+        self.assertIn("_reload_futures_macro_snapshot_for_ui()", controls_body)
+        self.assertIn("_run_futures_daily_ohlcv_action()", refresh_helper_body)
+        self.assertIn("clear_overview_futures_macro_snapshot_cache()", refresh_helper_body)
+        self.assertIn("clear_futures_macro_validation_cache", futures_helper_source)
+        self.assertIn("clear_futures_macro_validation_cache()", validation_clear_body)
         self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
         self.assertIn("ov-futures-macro-action-copy", controls_body)
@@ -6938,8 +7583,678 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('"다시 읽기"', controls_body)
         self.assertIn(".ov-futures-macro-action-title", style_source)
         self.assertIn(".ov-futures-macro-action-rule", style_source)
+        self.assertIn(".ov-futures-validation-action-title", style_source)
+        self.assertIn(".st-key-overview_futures_macro_validation_load button", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_daily_refresh button", style_source)
         self.assertIn(".st-key-overview_futures_macro_tab_reload button", style_source)
+
+    def test_futures_macro_symbol_extraction_accepts_snapshot_dataframe(self) -> None:
+        import pandas as pd
+
+        from app.web.overview.futures_macro_helpers import _futures_selected_symbols
+
+        symbols = _futures_selected_symbols(
+            {
+                "symbols": pd.DataFrame(
+                    [
+                        {"Symbol": "ES=F"},
+                        {"Symbol": "NQ=F"},
+                        {"Symbol": "ES=F"},
+                    ]
+                )
+            }
+        )
+
+        self.assertEqual(symbols, ["ES=F", "NQ=F"])
+
+    def test_futures_macro_react_workbench_payload_keeps_python_action_boundary(self) -> None:
+        import pandas as pd
+
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        macro = {
+            "coverage": {"standardized_count": 2, "symbol_count": 2, "latest_daily_date": "2026-07-01"},
+            "summary": {
+                "scenario": "혼재된 매크로 흐름",
+                "summary": "현재 선물 일봉 기준 흐름은 한 방향으로 확정되지 않았습니다.",
+                "sub_scenario": "저신호 / 관망",
+                "regime_hint": "관망",
+                "mixed_reason": "주요 점수가 방향성 임계값을 충분히 넘지 않았습니다.",
+                "evidence": ["저신호 / 관망: Risk-On -10"],
+            },
+            "scores": pd.DataFrame(
+                [
+                    {
+                        "Score": "Risk-On Score",
+                        "Value": -10,
+                        "Direction": "Mixed",
+                        "Coverage": "4/4",
+                        "Tone": "neutral",
+                        "Description": "미국 주가지수 선물 기반 위험선호 점수",
+                    },
+                    {
+                        "Score": "Rate Pressure Score",
+                        "Value": 24,
+                        "Direction": "Rate pressure up",
+                        "Coverage": "2/2",
+                        "Tone": "danger",
+                        "Description": "채권선물 가격 하락을 금리 상승 부담으로 변환한 점수",
+                    }
+                ]
+            ),
+            "weekly_context": {
+                "summary": "최근 1주 원자재/물가 변화가 가장 두드러집니다.",
+                "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+                "cards": [
+                    {
+                        "label": "위험선호",
+                        "value": "+1.09%",
+                        "detail": "지수 선물이 최근 1주 위험자산 선호를 지지합니다.",
+                        "meaning": "ES/NQ/RTY 5D 흐름",
+                        "tone": "positive",
+                    }
+                ],
+            },
+            "flow_context": {
+                "default_period": "1D",
+                "periods": [
+                    {
+                        "key": "1D",
+                        "label": "1D",
+                        "title": "최근 1일 흐름",
+                        "summary": "최근 1일 금리 부담 변화가 가장 두드러집니다.",
+                        "basis": "저장된 1D 선물 OHLCV의 최근 1거래일 변화율",
+                        "cards": [
+                            {
+                                "label": "금리 부담",
+                                "value": "-0.32%",
+                                "detail": "채권선물 가격 상승이 최근 1일 금리 부담 완화처럼 읽힙니다.",
+                                "meaning": "채권선물은 가격과 금리가 반대로 움직이므로 1D 변화율을 뒤집어 봅니다.",
+                                "tone": "positive",
+                            }
+                        ],
+                    },
+                    {
+                        "key": "1W",
+                        "label": "1W",
+                        "title": "최근 1주 흐름",
+                        "summary": "최근 1주 원자재/물가 변화가 가장 두드러집니다.",
+                        "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
+                        "cards": [
+                            {
+                                "label": "위험선호",
+                                "value": "+1.09%",
+                                "detail": "지수 선물이 최근 1주 위험자산 선호를 지지합니다.",
+                                "meaning": "ES/NQ/RTY 5D 흐름",
+                                "tone": "positive",
+                            }
+                        ],
+                    },
+                    {
+                        "key": "1M",
+                        "label": "1M",
+                        "title": "최근 1개월 흐름",
+                        "summary": "최근 1개월 안전자산 변화가 가장 두드러집니다.",
+                        "basis": "저장된 1D 선물 OHLCV의 최근 20거래일 변화율",
+                        "cards": [
+                            {
+                                "label": "안전자산",
+                                "value": "+2.88%",
+                                "detail": "금 / 채권 / 엔 쪽 최근 1개월 방어 수요가 보입니다.",
+                                "meaning": "금, 채권선물, 엔 선물을 묶어 방어적 선호를 확인합니다.",
+                                "tone": "warning",
+                            }
+                        ],
+                    },
+                ],
+            },
+            "evidence_reading": [
+                {
+                    "key": "strong",
+                    "label": "강한 근거",
+                    "description": "현재 macro 해석을 직접 강화하는 표준화 움직임입니다.",
+                    "count": 1,
+                    "items": [
+                        {
+                            "title": "금리 부담 · ZN=F",
+                            "score_label": "금리 부담",
+                            "symbol": "ZN=F",
+                            "contribution_z": "+1.85z",
+                            "impact_label": "영향 강함",
+                            "meaning": "채권선물 가격 하락은 금리 상승 부담으로 뒤집어 해석합니다.",
+                        }
+                    ],
+                    "empty_label": "강한 근거 없음",
+                }
+            ],
+        }
+
+        payload = build_futures_macro_react_workbench_payload(
+            macro,
+            validation={},
+            confidence={},
+            validation_loaded_at="",
+        )
+
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v1")
+        self.assertEqual(payload["component"], "FuturesMacroWorkbench")
+        self.assertEqual(payload["command"]["validation_state"]["state"], "대기")
+        self.assertIn("CME/yfinance 일봉 세션 기준", payload["command"]["detail"])
+        self.assertEqual(
+            [action["id"] for action in payload["command"]["actions"]],
+            ["daily_refresh", "reload"],
+        )
+        self.assertEqual(payload["validation"]["action"]["id"], "load_validation")
+        self.assertEqual(payload["validation"]["action"]["label"], "오늘과 비슷한 과거 흐름 확인")
+        conclusion = payload["validation"]["conclusion"]
+        self.assertEqual([item["label"] for item in conclusion], ["비슷한 상태", "상태 빈도", "방향성 판정", "판정 이유"])
+        self.assertEqual(conclusion[0]["value"], "계산 전")
+        self.assertEqual(conclusion[2]["value"], "대기")
+        bridge = payload["validation"]["insight"]["evidence_bridge"]
+        self.assertEqual(bridge["label"], "자산군 해석")
+        self.assertEqual(bridge["value"], "계산 전")
+        self.assertIn("강한 근거 1개", bridge["detail"])
+        visual_candidates = payload["validation"]["visual_candidates"]
+        self.assertEqual([item["key"] for item in visual_candidates], ["similar_state_frequency", "forward_return_distribution"])
+        self.assertEqual(visual_candidates[0]["status"], "pending")
+        self.assertEqual(visual_candidates[1]["status"], "pending")
+        self.assertEqual(payload["brief"]["title"], "혼재된 매크로 흐름")
+        self.assertEqual(payload["brief"]["sub_scenario"], "저신호 / 관망")
+        self.assertIn("CME/yfinance 일봉 세션 기준일", payload["brief"]["metrics"][0]["detail"])
+        self.assertEqual(payload["scores"][0]["label"], "위험선호")
+        self.assertEqual(payload["scores"][0]["polarity"], "+ 위험선호 강화 · - 위험회피")
+        self.assertEqual(payload["scores"][1]["label"], "금리")
+        self.assertEqual(payload["scores"][1]["polarity"], "+ 금리 부담 확대 · - 금리 부담 완화")
+        self.assertEqual(payload["flow"]["default_period"], "1D")
+        self.assertEqual([period["key"] for period in payload["flow"]["periods"]], ["1D", "1W", "1M"])
+        self.assertEqual(payload["flow"]["periods"][0]["title"], "최근 1일 흐름")
+        self.assertIn("최근 1거래일", payload["flow"]["periods"][0]["basis"])
+        self.assertEqual(payload["flow"]["periods"][2]["title"], "최근 1개월 흐름")
+        self.assertEqual(payload["flow"]["cards"][0]["label"], "금리 부담")
+        self.assertEqual(payload["evidence"]["title"], "현재 근거")
+        evidence_item = payload["evidence"]["sections"][0]["items"][0]
+        self.assertEqual(evidence_item["title"], "금리 부담 · ZN=F")
+        self.assertEqual(evidence_item["score_label"], "금리 부담")
+        self.assertEqual(evidence_item["symbol"], "ZN=F")
+        self.assertEqual(evidence_item["contribution_z"], "+1.85z")
+        self.assertEqual(payload["action_boundary"], "python_dispatch_only")
+
+    def test_futures_macro_react_event_payload_accepts_nested_and_direct_shapes(self) -> None:
+        from app.web.overview.futures_macro_helpers import _futures_macro_react_event_payload
+
+        self.assertEqual(
+            _futures_macro_react_event_payload({"event": {"id": "load_validation", "nonce": 101}}),
+            {"id": "load_validation", "nonce": 101},
+        )
+        self.assertEqual(
+            _futures_macro_react_event_payload({"id": "load_validation", "nonce": 102}),
+            {"id": "load_validation", "nonce": 102},
+        )
+
+    def test_futures_macro_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.futures_macro_react_component import (
+            FUTURES_MACRO_REACT_COMPONENT_NAME,
+            futures_macro_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/futures_macro_workbench")
+        helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/futures_macro_react_component.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "FuturesMacroWorkbench.tsx").read_text(encoding="utf-8")
+        macro_context_path = component_root / "src" / "MacroContextSection.tsx"
+        recent_flow_path = component_root / "src" / "RecentFlowSection.tsx"
+        validation_panel_path = component_root / "src" / "HistoricalValidationPanel.tsx"
+        current_evidence_path = component_root / "src" / "CurrentEvidencePanel.tsx"
+        self.assertTrue(macro_context_path.exists())
+        self.assertTrue(recent_flow_path.exists())
+        self.assertTrue(validation_panel_path.exists())
+        self.assertTrue(current_evidence_path.exists())
+        macro_context_source = macro_context_path.read_text(encoding="utf-8")
+        recent_flow_source = recent_flow_path.read_text(encoding="utf-8")
+        validation_panel_source = validation_panel_path.read_text(encoding="utf-8")
+        current_evidence_source = current_evidence_path.read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertEqual(FUTURES_MACRO_REACT_COMPONENT_NAME, "futures_macro_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "index.html").exists())
+        self.assertTrue((component_root / "src" / "FuturesMacroWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "MacroContextSection.tsx").exists())
+        self.assertTrue((component_root / "src" / "RecentFlowSection.tsx").exists())
+        self.assertTrue((component_root / "src" / "HistoricalValidationPanel.tsx").exists())
+        self.assertTrue((component_root / "src" / "CurrentEvidencePanel.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(futures_macro_react_component_available(component_root / "missing-dist"))
+        self.assertIn("render_futures_macro_react_workbench", helper_source)
+        self.assertIn("build_futures_macro_react_workbench_payload", helper_source)
+        self.assertIn("_handle_futures_macro_react_event(", helper_source)
+        self.assertIn('with st.expander("원본 데이터 / 계산 추적"', helper_source)
+        self.assertNotIn('with st.expander("계산 근거 / 원본 표"', helper_source)
+        self.assertNotIn('with st.expander("근거 해석 / 원본 데이터"', helper_source)
+        self.assertIn('"title": "현재 근거"', helper_source)
+        self.assertNotIn('"title": "근거 해석"', helper_source)
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
+        self.assertIn('import MacroContextSection from "./MacroContextSection"', react_source)
+        self.assertIn('import RecentFlowSection from "./RecentFlowSection"', react_source)
+        self.assertIn('import HistoricalValidationPanel from "./HistoricalValidationPanel"', react_source)
+        self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn('setPendingActionId("")', react_source)
+        self.assertIn("<MacroContextSection", react_source)
+        self.assertIn("<RecentFlowSection", react_source)
+        self.assertIn("<HistoricalValidationPanel", react_source)
+        self.assertNotIn('<details className="fm-workbench__evidence"', react_source)
+        self.assertIn('className="fm-workbench__macro-section fm-workbench__section-card"', macro_context_source)
+        self.assertIn('import CurrentEvidencePanel from "./CurrentEvidencePanel"', macro_context_source)
+        self.assertIn("payload.brief", macro_context_source)
+        self.assertIn("payload.scores.map", macro_context_source)
+        self.assertIn("<CurrentEvidencePanel", macro_context_source)
+        self.assertIn("payload.evidence", macro_context_source)
+        self.assertIn("score.polarity", macro_context_source)
+        self.assertIn("fm-workbench__score-hint", macro_context_source)
+        self.assertIn('className="fm-workbench__flow-section fm-workbench__section-card"', recent_flow_source)
+        self.assertIn("flowPeriods.map", recent_flow_source)
+        self.assertIn("setSelectedFlowKey", recent_flow_source)
+        self.assertIn("evidence.sections.map", current_evidence_source)
+        self.assertIn("item.score_label", current_evidence_source)
+        self.assertIn("item.contribution_z", current_evidence_source)
+        self.assertIn("fm-workbench__evidence-meta", current_evidence_source)
+        self.assertIn('score.polarity.split(" · ")', macro_context_source)
+        self.assertIn("fm-workbench__score-hint-line", macro_context_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("Streamlit.setFrameHeight", react_source)
+        self.assertIn("function MetricTile", validation_panel_source)
+        self.assertIn("validation.insight.evidence_bridge", validation_panel_source)
+        self.assertIn("validation.conclusion", validation_panel_source)
+        self.assertIn("validation.action", validation_panel_source)
+        self.assertIn("onAction(validation.action)", validation_panel_source)
+        self.assertIn("pendingValidation", validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-card"', validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-eyebrow">과거 점검', validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-summary"', validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-control"', validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-conclusion-grid"', validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-status-grid"', validation_panel_source)
+        self.assertIn('className="fm-workbench__validation-result-grid"', validation_panel_source)
+        self.assertIn("fm-workbench__validation-action", validation_panel_source)
+        self.assertIn("fm-workbench__validation-loading", validation_panel_source)
+        self.assertLess(
+            validation_panel_source.index('className="fm-workbench__validation-control"'),
+            validation_panel_source.index('className="fm-workbench__validation-status-grid"'),
+        )
+        self.assertLess(
+            validation_panel_source.index('className="fm-workbench__validation-conclusion-grid"'),
+            validation_panel_source.index('className="fm-workbench__validation-result-grid"'),
+        )
+        self.assertIn(".fm-workbench__section-card", react_style)
+        self.assertIn(".fm-workbench__macro-section", react_style)
+        self.assertIn(".fm-workbench__flow-section", react_style)
+        self.assertIn(".fm-workbench__scores", react_style)
+        self.assertIn(".fm-workbench__score-hint", react_style)
+        self.assertIn(".fm-workbench__score-hint-line", react_style)
+        self.assertIn(".fm-workbench__validation-card", react_style)
+        self.assertIn(".fm-workbench__validation-header", react_style)
+        self.assertIn(".fm-workbench__validation-control", react_style)
+        self.assertIn(".fm-workbench__validation-conclusion-grid", react_style)
+        self.assertIn(".fm-workbench__validation-status-grid", react_style)
+        self.assertIn(".fm-workbench__validation-result-grid", react_style)
+        self.assertIn(".fm-workbench__validation-action", react_style)
+        self.assertIn(".fm-workbench__validation-loading", react_style)
+        self.assertIn(".fm-workbench__flow-tabs", react_style)
+        self.assertIn(".fm-workbench__evidence", react_style)
+        react_event_body = helper_source[helper_source.index('if action_id == "load_validation"') :]
+        react_event_body = react_event_body[: react_event_body.index("def _futures_symbols_with_candles")]
+        self.assertNotIn('st.spinner("과거 점검을 계산하는 중입니다..."', react_event_body)
+
+    def test_sentiment_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.sentiment_react_component import (
+            SENTIMENT_REACT_COMPONENT_NAME,
+            sentiment_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        helper_source = Path("app/web/overview/sentiment_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/sentiment_react_component.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertEqual(SENTIMENT_REACT_COMPONENT_NAME, "sentiment_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "index.html").exists())
+        self.assertTrue((component_root / "src" / "SentimentWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(sentiment_react_component_available(component_root / "missing-dist"))
+        self.assertIn("render_sentiment_react_workbench", helper_source)
+        self.assertIn("build_sentiment_react_workbench_payload", helper_source)
+        self.assertIn("_handle_sentiment_react_event(", helper_source)
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('payload.component === "SentimentWorkbench"', react_source)
+        self.assertIn("payload.command.actions.map", react_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("sentiment-workbench__command", react_source)
+        self.assertIn("sentiment-workbench__fallback-note", react_source)
+        self.assertIn(".sentiment-workbench__command", react_style)
+        self.assertIn("@media (max-width: 760px)", react_style)
+
+    def test_events_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.events_react_component import (
+            EVENTS_REACT_COMPONENT_NAME,
+            events_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/events_workbench")
+        events_tab_source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/events_react_component.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "EventsWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertEqual(EVENTS_REACT_COMPONENT_NAME, "events_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "index.html").exists())
+        self.assertTrue((component_root / "src" / "EventsWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(events_react_component_available(component_root / "missing-dist"))
+        self.assertIn("events_react_workbench_available", helper_source)
+        self.assertIn("render_events_react_workbench", helper_source)
+        self.assertIn("build_events_workbench_payload", helper_source)
+        self.assertIn("react_available = events_react_workbench_available()", events_tab_source)
+        self.assertIn('event_filter = "ALL"', events_tab_source)
+        self.assertNotIn("render_event_refresh_toolbar(show_refresh=not react_available)", events_tab_source)
+        self.assertIn("react_rendered = render_events_react_workbench_section(context) if react_available else False", events_tab_source)
+        self.assertIn("if not react_rendered:", events_tab_source)
+        self.assertGreater(
+            events_tab_source.index("render_event_refresh_results()"),
+            events_tab_source.index("if not react_rendered:"),
+        )
+        self.assertIn("render_events_overview_lanes(context)", events_tab_source)
+        self.assertIn("render_events_streamlit_evidence_section(context, expanded=False)", events_tab_source)
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('payload.schema_version === "events_workbench_v1"', react_source)
+        self.assertIn("payload.brief", react_source)
+        self.assertIn("railTabs.tabs.map", react_source)
+        self.assertIn("payload.trust_review", react_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("Streamlit.setFrameHeight", react_source)
+        self.assertIn("events-workbench__fallback-note", react_source)
+        self.assertIn(".events-workbench__hero", react_style)
+        self.assertIn("@media (max-width: 760px)", react_style)
+
+    def test_events_react_refresh_actions_are_python_dispatched(self) -> None:
+        helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
+        react_source = Path("app/web/streamlit_components/events_workbench/src/EventsWorkbench.tsx").read_text(encoding="utf-8")
+
+        self.assertIn("_handle_events_react_event(", helper_source)
+        self.assertIn('if action_id == "reload"', helper_source)
+        self.assertIn('if action_id == "refresh_fomc"', helper_source)
+        self.assertIn('if action_id == "refresh_macro"', helper_source)
+        self.assertIn('if action_id == "refresh_market_structure"', helper_source)
+        self.assertIn('if action_id == "refresh_earnings"', helper_source)
+        self.assertIn('if action_id == "refresh_all"', helper_source)
+        self.assertIn("run_overview_event_calendars_refresh_all", helper_source)
+        self.assertIn("run_overview_market_structure_calendar", helper_source)
+        self.assertIn("_events_refresh_results_payload", helper_source)
+        self.assertIn('"last_results"', helper_source)
+        self.assertIn("commandActions.map", react_source)
+        self.assertIn("setPendingActionId", react_source)
+        self.assertIn("events-workbench__command", react_source)
+        self.assertIn("refresh_boundary", react_source)
+        self.assertIn("lastResults", react_source)
+        self.assertIn("실적 예상 일정 기준", react_source)
+
+    def test_events_react_workbench_renders_filters_calendar_trust_and_evidence(self) -> None:
+        component_root = Path("app/web/streamlit_components/events_workbench")
+        react_source = (component_root / "src" / "EventsWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("familyOptions.map", react_source)
+        self.assertIn("setFamilyFilter", react_source)
+        self.assertIn("setReviewFilter", react_source)
+        self.assertIn("railTabs.tabs.map", react_source)
+        self.assertIn("activeRailKey", react_source)
+        self.assertIn("trustSections.map", react_source)
+        self.assertIn("calendarDays", react_source)
+        self.assertIn("calendarDensity", react_source)
+        self.assertIn("calendarMonthDays", react_source)
+        self.assertNotIn("payload.rails =", react_source)
+        self.assertNotIn("payload.command =", react_source)
+        self.assertNotIn("payload.calendar =", react_source)
+        self.assertNotIn("payload.evidence =", react_source)
+        self.assertNotIn("events-workbench__day-tooltip", react_source)
+        self.assertNotIn("dayTooltipText", react_source)
+        self.assertIn("setExpandedEvidence", react_source)
+        self.assertIn("events-workbench__evidence-table", react_source)
+        self.assertIn("formatMonthTitle", react_source)
+        self.assertIn("moveCalendarMonth", react_source)
+        self.assertIn("events-workbench__month-nav", react_source)
+        self.assertIn("events-workbench__month-title", react_source)
+        self.assertIn("events-workbench__month-summary", react_source)
+        self.assertIn("events-workbench__day--outside-month", react_source)
+        self.assertIn("selectedDate", react_source)
+        self.assertIn("setSelectedDate", react_source)
+        self.assertIn("events-workbench__day-button", react_source)
+        self.assertIn("events-workbench__day--selected", react_source)
+        self.assertIn("events-workbench__date-detail", react_source)
+        self.assertIn("events-workbench__date-detail-card", react_source)
+        self.assertIn("(selectedCalendarDay.items || []).map((item)", react_source)
+        self.assertIn("events-workbench__date-detail-list--scroll", react_source)
+        self.assertNotIn(".slice(0, 6).map((item)", react_source)
+        self.assertNotIn("원본 / 상세 근거에서 확인할 수 있습니다", react_source)
+        self.assertIn("eventFamilyKey", react_source)
+        self.assertIn("display_family", react_source)
+        self.assertIn("미국 공휴일", react_source)
+        self.assertIn("옵션 만기", react_source)
+        self.assertIn("densityRangeLabel", react_source)
+        self.assertIn("주간 일정 밀집도", react_source)
+        self.assertIn("주간 합계", react_source)
+        self.assertIn("총 {bucket.count}건", react_source)
+        self.assertIn("일정 타입", react_source)
+        self.assertIn("일정 확정성", react_source)
+        self.assertIn(".events-workbench__filterbar", react_style)
+        self.assertIn(".events-workbench__rail-tabs", react_style)
+        self.assertIn(".events-workbench__month-grid", react_style)
+        self.assertIn(".events-workbench__month-nav", react_style)
+        self.assertIn(".events-workbench__month-title", react_style)
+        self.assertIn(".events-workbench__month-summary", react_style)
+        self.assertIn(".events-workbench__day--outside-month", react_style)
+        self.assertIn(".events-workbench__day-button", react_style)
+        self.assertIn(".events-workbench__day--selected", react_style)
+        self.assertIn(".events-workbench__date-detail", react_style)
+        self.assertIn(".events-workbench__date-detail-card", react_style)
+        self.assertIn(".events-workbench__date-detail-list--scroll", react_style)
+        self.assertIn("overflow-y: auto", react_style)
+        self.assertIn(".events-workbench__density-head", react_style)
+        self.assertIn(".events-workbench__density-legend", react_style)
+        self.assertIn(".events-workbench__day--today", react_style)
+        self.assertIn(".events-workbench__day--current-week", react_style)
+        self.assertNotIn(".events-workbench__day-tooltip", react_style)
+        self.assertIn(".events-workbench__density-bar", react_style)
+
+    def test_sentiment_react_summary_surface_prioritizes_state_and_freshness(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("sentiment-workbench__hero", react_source)
+        self.assertIn("sentiment-workbench__phase-pill", react_source)
+        self.assertIn("payload.summary.phase_label", react_source)
+        self.assertIn("sentiment-workbench__headline", react_source)
+        self.assertIn("payload.summary.headline", react_source)
+        self.assertIn("sentiment-workbench__summary-copy", react_source)
+        self.assertIn("payload.summary.summary", react_source)
+        self.assertIn("payload.summary.metrics.map", react_source)
+        self.assertIn("sentiment-workbench__metric-grid", react_source)
+        self.assertIn("sentiment-workbench__metric-card", react_source)
+        self.assertIn("sentiment-workbench__freshness-panel", react_source)
+        self.assertIn("payload.freshness.detail", react_source)
+        self.assertIn("payload.boundary_note", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__hero"'),
+            react_source.index('className="sentiment-workbench__fallback-note"'),
+        )
+        self.assertIn(".sentiment-workbench__hero", react_style)
+        self.assertIn("background: #f8fafc;", react_style)
+        self.assertIn("background: #ffffff;", react_style)
+        self.assertIn(".sentiment-workbench__metric-grid", react_style)
+        self.assertIn(".sentiment-workbench__metric-card", react_style)
+        self.assertIn(".sentiment-workbench__freshness-panel", react_style)
+
+    def test_sentiment_react_driver_surface_groups_cnn_and_aaii_without_next_checks(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("visibleAnalysisSteps", react_source)
+        self.assertIn("visibleAnalysisSteps.map", react_source)
+        self.assertIn("다음 확인", react_source)
+        self.assertIn("sentiment-workbench__analysis-steps", react_source)
+        self.assertIn("sentiment-workbench__cross-read", react_source)
+        self.assertNotIn("metricByLabel(\"CNN Fear & Greed\")", react_source)
+        self.assertNotIn("metricByLabel(\"AAII Bearish\")", react_source)
+        self.assertNotIn("metricByLabel(\"Bull-Bear Spread\")", react_source)
+        self.assertNotIn("sentiment-workbench__cross-metrics", react_source)
+        self.assertNotIn("sentiment-workbench__cross-metric", react_source)
+        self.assertIn("payload.drivers.lanes.map", react_source)
+        self.assertIn("sentiment-workbench__driver-section", react_source)
+        self.assertIn("sentiment-workbench__driver-lanes", react_source)
+        self.assertIn("sentiment-workbench__driver-card", react_source)
+        self.assertIn("payload.component_explanations.map", react_source)
+        self.assertIn("sentiment-workbench__component-section", react_source)
+        self.assertIn("sentiment-workbench__component-list", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__driver-section"'),
+            react_source.index('className="sentiment-workbench__chart-section"'),
+        )
+        self.assertNotIn("payload.next_checks.map", react_source)
+        self.assertNotIn('className="sentiment-workbench__next-checks"', react_source)
+        self.assertIn(".sentiment-workbench__cross-read", react_style)
+        self.assertNotIn(".sentiment-workbench__cross-metrics", react_style)
+        self.assertNotIn(".sentiment-workbench__cross-metric", react_style)
+        self.assertIn(".sentiment-workbench__analysis-steps", react_style)
+        self.assertIn("flex-wrap: wrap;", react_style)
+        self.assertIn("flex: 1 1 12.5rem;", react_style)
+        self.assertIn("box-sizing: border-box;", react_style)
+        self.assertIn(".sentiment-workbench__driver-lanes", react_style)
+        self.assertIn(".sentiment-workbench__driver-card", react_style)
+        self.assertIn(".sentiment-workbench__component-list", react_style)
+        self.assertNotIn(".sentiment-workbench__next-checks", react_style)
+
+    def test_sentiment_react_context_surface_shows_recent_range_and_divergence(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("SentimentRangeContextItem", react_source)
+        self.assertIn("SentimentDivergenceContext", react_source)
+        self.assertIn("payload.interpretation.range_context.map", react_source)
+        self.assertIn("sentiment-workbench__range-context", react_source)
+        self.assertIn("sentiment-workbench__range-card", react_source)
+        self.assertIn("sentiment-workbench__range-track", react_source)
+        self.assertIn("rangePercentileWidth", react_source)
+        self.assertIn("payload.interpretation.divergence.items.map", react_source)
+        self.assertIn("sentiment-workbench__divergence-panel", react_source)
+        self.assertIn("sentiment-workbench__divergence-heading", react_source)
+        self.assertIn("sentiment-workbench__divergence-status", react_source)
+        self.assertIn("엇갈리는 지점", react_source)
+        self.assertNotIn("지표 합의 상태", react_source)
+        self.assertIn("sentiment-workbench__divergence-axis", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__range-context"'),
+            react_source.index('className="sentiment-workbench__driver-section"'),
+        )
+        self.assertIn(".sentiment-workbench__range-context", react_style)
+        self.assertIn(".sentiment-workbench__range-card", react_style)
+        self.assertIn(".sentiment-workbench__range-track", react_style)
+        self.assertIn(".sentiment-workbench__divergence-panel", react_style)
+        self.assertIn(".sentiment-workbench__divergence-heading", react_style)
+        self.assertIn(".sentiment-workbench__divergence-status", react_style)
+        self.assertIn(".sentiment-workbench__divergence-axis", react_style)
+
+    def test_sentiment_react_component_history_surface_shows_recent_changes(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("SentimentComponentHistoryItem", react_source)
+        self.assertIn("payload.interpretation.component_history.map", react_source)
+        self.assertIn("sentiment-workbench__component-history", react_source)
+        self.assertIn("sentiment-workbench__component-history-grid", react_source)
+        self.assertIn("sentiment-workbench__component-history-card", react_source)
+        self.assertIn("sentiment-workbench__component-history-delta", react_source)
+        self.assertIn("componentChangeLabel", react_source)
+        self.assertLess(
+            react_source.index('className="sentiment-workbench__component-history"'),
+            react_source.index('className="sentiment-workbench__chart-section"'),
+        )
+        self.assertIn(".sentiment-workbench__component-history", react_style)
+        self.assertIn(".sentiment-workbench__component-history-grid", react_style)
+        self.assertIn(".sentiment-workbench__component-history-card", react_style)
+        self.assertIn(".sentiment-workbench__component-history-delta", react_style)
+
+    def test_sentiment_react_evidence_surface_improves_graphs_and_raw_detail(self) -> None:
+        component_root = Path("app/web/streamlit_components/sentiment_workbench")
+        entry_source = Path("app/web/overview/sentiment.py").read_text(encoding="utf-8")
+        react_source = (component_root / "src" / "SentimentWorkbench.tsx").read_text(encoding="utf-8")
+        react_style = (component_root / "src" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("payload.charts.history.series.map", react_source)
+        self.assertIn("sentiment-workbench__chart-section", react_source)
+        self.assertIn("sentiment-workbench__line-chart", react_source)
+        self.assertIn("handleHistoryHover", react_source)
+        self.assertIn("onMouseMove={handleHistoryHover}", react_source)
+        self.assertIn("hoveredHistoryPoint", react_source)
+        self.assertIn("sentiment-workbench__chart-tooltip", react_source)
+        self.assertIn("sentiment-workbench__chart-focus-dot", react_source)
+        self.assertIn("sentiment-workbench__chart-y-label", react_source)
+        self.assertIn("sentiment-workbench__chart-gridline", react_source)
+        self.assertIn("buildHistoryDateTicks", react_source)
+        self.assertIn("maxTickCount = 6", react_source)
+        self.assertIn("stroke-width: 2;", react_style)
+        self.assertNotIn("stroke-width: 3;", react_style)
+        self.assertIn("<polyline", react_source)
+        self.assertIn("payload.charts.components.items.map", react_source)
+        self.assertIn("sentiment-workbench__component-bars", react_source)
+        self.assertIn("sentiment-workbench__component-bar-fill", react_source)
+        self.assertIn("payload.evidence.raw_rows", react_source)
+        self.assertIn("payload.evidence.component_rows", react_source)
+        self.assertIn("payload.evidence.history_rows", react_source)
+        self.assertIn("sentiment-workbench__evidence-details", react_source)
+        self.assertIn("sentiment-workbench__evidence-table", react_source)
+        self.assertIn("if not react_rendered:", entry_source)
+        self.assertLess(
+            entry_source.index("if not react_rendered:"),
+            entry_source.index("render_sentiment_detail_sections(snapshot)"),
+        )
+        self.assertIn(".sentiment-workbench__chart-section", react_style)
+        self.assertIn(".sentiment-workbench__line-chart", react_style)
+        self.assertIn(".sentiment-workbench__chart-tooltip", react_style)
+        self.assertIn(".sentiment-workbench__chart-focus-dot", react_style)
+        self.assertIn(".sentiment-workbench__chart-y-label", react_style)
+        self.assertIn(".sentiment-workbench__component-bars", react_style)
+        self.assertIn(".sentiment-workbench__evidence-details", react_style)
+        self.assertIn(".sentiment-workbench__evidence-table", react_style)
+
+    def test_futures_macro_raw_tables_are_named_by_calculation_step(self) -> None:
+        helper_source = Path("app/web/overview/futures_macro_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("_render_futures_raw_table_map(", helper_source)
+        self.assertIn('현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본', helper_source)
+        self.assertIn("CME/yfinance 일봉 세션 기준", helper_source)
+        self.assertIn("CME/yfinance 일봉 세션 기준일", helper_source)
+        self.assertIn("화면 섹션별 원본 연결", helper_source)
+        self.assertIn("매크로 컨텍스트", helper_source)
+        self.assertIn("최근 흐름", helper_source)
+        self.assertIn("이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다", helper_source)
+        self.assertNotIn("과거 점검 요약은 상단 React 패널에서 확인", helper_source)
+        self.assertIn("if validation and not react_available:", helper_source)
+        self.assertIn('with st.expander("현재 점수 원본"', helper_source)
+        self.assertIn('with st.expander("점수 구성 기여"', helper_source)
+        self.assertIn('with st.expander("선물 일봉 변화"', helper_source)
+        self.assertIn('with st.expander("과거 시나리오 표본"', helper_source)
+        self.assertIn('with st.expander("점수-이후수익 관계"', helper_source)
+        self.assertIn('with st.expander("기준값 민감도"', helper_source)
+        self.assertNotIn('with st.expander("원본 점수 표"', helper_source)
+        self.assertNotIn('with st.expander("전체 시나리오 원본 표"', helper_source)
 
     def test_overview_dashboard_renders_default_market_context_without_load_gate(self) -> None:
         source = Path("app/web/overview/page.py").read_text(encoding="utf-8")
@@ -7002,9 +8317,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("include_futures_macro=include_futures_macro", helper_body)
 
     def test_overview_market_context_refresh_reflection_copy_distinguishes_outcomes(self) -> None:
-        from app.web import overview_dashboard
+        from app.web.overview import market_context_helpers
 
-        reflection_state = getattr(overview_dashboard, "_overview_market_context_refresh_reflection_state", None)
+        reflection_state = getattr(market_context_helpers, "_overview_market_context_refresh_reflection_state", None)
         self.assertTrue(callable(reflection_state), "Market Context refresh should expose reflection state copy.")
 
         reflected_at = datetime(2026, 6, 12, 14, 32)
@@ -7084,19 +8399,30 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn('"Sector / Industry"', render_body)
         self.assertIn("build_overview_breadth_heatmap_summary", Path("app/services/overview/market_movers.py").read_text(encoding="utf-8"))
 
-    def test_overview_events_tab_renders_macro_week_lane_before_calendar_filters(self) -> None:
+    def test_overview_events_tab_demotes_streamlit_legacy_when_react_renders(self) -> None:
         source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")
         tab_body = source[source.index("def render_events_tab"):]
-        lane_index = tab_body.index("render_events_overview_lanes(")
-        filter_index = tab_body.index("filter_event_calendar_rows(")
 
-        self.assertLess(lane_index, filter_index)
+        react_index = tab_body.index("react_rendered = render_events_react_workbench_section")
+        lane_guard_index = tab_body.index("if not react_rendered:")
+        evidence_index = tab_body.index("render_events_streamlit_evidence_section(context, expanded=False)")
+
+        self.assertLess(react_index, lane_guard_index)
+        self.assertLess(lane_guard_index, evidence_index)
+        self.assertIn('event_filter = "ALL"', tab_body)
+        self.assertNotIn("render_event_refresh_toolbar(show_refresh=not react_available)", tab_body)
+        self.assertGreater(
+            tab_body.index("render_event_refresh_results()"),
+            tab_body.index("if not react_rendered:"),
+        )
+        self.assertIn("with st.expander(\"상세 표 / 전체 근거\"", helper_source)
+        self.assertIn("filter_event_calendar_rows(context)", helper_source)
         self.assertIn("load_overview_macro_week_lane(context.snapshot)", helper_source)
         self.assertNotIn("_legacy.load_overview_macro_week_lane", helper_source)
 
     def test_futures_chart_symbols_supports_compact_and_all_data_scopes(self) -> None:
-        from app.web.overview_dashboard import _futures_chart_symbols
+        from app.web.overview.futures_macro_helpers import _futures_chart_symbols
 
         symbols = [f"S{index}=F" for index in range(1, 10)]
         chartable_symbols = [symbol for symbol in symbols if symbol != "S4=F"]
@@ -7112,7 +8438,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(_futures_chart_symbols(snapshot, chart_scope="all_with_data"), chartable_symbols)
 
     def test_futures_monitor_command_summary_owns_page_state_without_provider_rows(self) -> None:
-        from app.web.overview_dashboard import _futures_command_summary_items
+        from app.web.overview.futures_macro_helpers import _futures_command_summary_items
 
         selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
         snapshot = {
@@ -7149,7 +8475,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("2026-06-22 14:34:00", flattened)
 
     def test_futures_monitor_live_summary_line_avoids_repeating_top_move_or_run(self) -> None:
-        from app.web.overview_dashboard import _futures_live_summary_line
+        from app.web.overview.futures_macro_helpers import _futures_live_summary_line
 
         selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
         snapshot = {
@@ -7177,7 +8503,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("성공", summary)
 
     def test_futures_monitor_macro_support_items_do_not_repeat_scenario(self) -> None:
-        from app.web.overview_dashboard import _macro_support_items
+        from app.web.overview.futures_macro_helpers import _macro_support_items
 
         macro = {
             "summary": {"scenario": "혼재된 매크로 흐름"},
@@ -7207,7 +8533,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("혼재된 매크로 흐름", flattened)
 
     def test_futures_workbench_context_bar_items_compactly_summarize_controls(self) -> None:
-        from app.web.overview_dashboard import _futures_workbench_context_items
+        from app.web.overview.futures_macro_helpers import _futures_workbench_context_items
 
         selected_symbols = ["NQ=F", "ZN=F", "CL=F", "6E=F", "GC=F", "6J=F"]
         snapshot = {
@@ -7244,7 +8570,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("2026-06-22 14:34:00", flattened)
 
     def test_futures_refresh_module_groups_live_and_macro_actions(self) -> None:
-        from app.web.overview_dashboard import _futures_refresh_module_model
+        from app.web.overview.futures_macro_helpers import _futures_refresh_module_model
 
         snapshot = {
             "status": "REVIEW",
@@ -7280,7 +8606,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual([mode["label"] for mode in model["modes"]], ["수동", "60초 자동 확인"])
 
     def test_futures_watch_strip_items_show_symbol_state_without_provider_run(self) -> None:
-        from app.web.overview_dashboard import _futures_watch_strip_items
+        from app.web.overview.futures_macro_helpers import _futures_watch_strip_items
 
         rows = pd.DataFrame(
             [
@@ -7303,7 +8629,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("success", flattened)
 
     def test_futures_market_brief_model_places_scenario_and_support_together(self) -> None:
-        from app.web.overview_dashboard import _futures_market_brief_model
+        from app.web.overview.futures_macro_helpers import _futures_market_brief_model
 
         macro = {
             "coverage": {"standardized_count": 16, "symbol_count": 16, "latest_daily_date": "2026-06-19"},
@@ -7341,7 +8667,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("Risk-On", " ".join(model["evidence_chips"]))
 
     def test_futures_weekly_flow_model_ranks_driver_and_supports(self) -> None:
-        from app.web.overview_dashboard import _futures_weekly_flow_model
+        from app.web.overview.futures_macro_helpers import _futures_weekly_flow_model
 
         weekly_context = {
             "basis": "저장된 1D 선물 OHLCV의 최근 5거래일 변화율",
@@ -7384,9 +8710,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         import inspect
 
         from app.web import overview_ui_components
+        from app.web.overview.components import market_context as market_context_components
 
         css = overview_ui_components.overview_ui_css()
-        source = inspect.getsource(overview_ui_components)
+        source = inspect.getsource(market_context_components)
 
         self.assertIn(".ov-context-disclosure", css)
         self.assertIn(".ov-context-disclosure > summary", css)
@@ -7440,7 +8767,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertLess(cockpit_index, refresh_bar_index)
 
     def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
-        source = Path("app/web/overview_ui_components.py").read_text(encoding="utf-8")
+        source = Path("app/web/overview/components/market_context.py").read_text(encoding="utf-8")
         market_context_source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         self.assertIn("_macro_cockpit_historical_analog_html", source)
         self.assertIn("Macro 조건 결과 비교", source)
@@ -7918,7 +9245,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn('key="overview_market_context_refresh_smart"', no_action_branch)
 
     def test_overview_macro_context_model_includes_hybrid_visual_fields(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         model = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -8412,6 +9739,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
             ) as load_universe,
             patch.object(
                 overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={},
+                create=True,
+            ),
+            patch.object(
+                overview_actions,
                 "run_collect_ohlcv",
                 return_value={
                     "job_name": "collect_ohlcv",
@@ -8441,7 +9774,386 @@ class OverviewAutomationContractTests(unittest.TestCase):
             execution_profile="managed_safe",
         )
 
-    def test_overview_market_movers_refresh_action_uses_large_universe_loader_for_top1000(self) -> None:
+    def test_overview_market_movers_eod_history_uses_delta_refresh_for_stale_symbols(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["AAA", "BBB", "CCC"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "AAA": {"latest_date": date(2026, 7, 7), "row_count": 120},
+                    "BBB": {"latest_date": date(2026, 7, 3), "row_count": 117},
+                },
+                create=True,
+            ),
+            patch.object(overview_actions, "_market_movers_today", return_value=date(2026, 7, 7), create=True),
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                side_effect=[
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 2,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Delta completed.",
+                    },
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 63,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Full window completed.",
+                    },
+                ],
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+            )
+
+        self.assertEqual(result["job_name"], "overview_market_movers_eod_history")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 65)
+        self.assertEqual(result["details"]["refresh_strategy"], "smart_delta")
+        self.assertEqual(result["details"]["symbols_requested"], 3)
+        self.assertEqual(result["details"]["symbols_selected"], 2)
+        self.assertEqual(result["details"]["symbols_skipped_current"], 1)
+        self.assertEqual(result["details"]["delta_symbols_count"], 1)
+        self.assertEqual(result["details"]["missing_symbols_count"], 1)
+        self.assertEqual(result["details"]["delta_start"], "2026-07-04")
+        self.assertEqual(result["details"]["delta_end"], "2026-07-08")
+        collect.assert_has_calls(
+            [
+                call(
+                    ["BBB"],
+                    start="2026-07-04",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+                call(
+                    ["CCC"],
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+            ]
+        )
+
+    def test_overview_market_movers_eod_history_accepts_effective_as_of_date_to_skip_current_symbols(
+        self,
+    ) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["AAA", "BBB"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "AAA": {"latest_date": date(2026, 7, 7), "row_count": 120, "close": 10, "volume": 1000},
+                    "BBB": {"latest_date": date(2026, 7, 7), "row_count": 120, "close": 20, "volume": 1000},
+                },
+                create=True,
+            ),
+            patch.object(overview_actions, "_market_movers_today", return_value=date(2026, 7, 8), create=True),
+            patch.object(overview_actions, "run_collect_ohlcv") as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+                as_of_date="2026-07-07",
+            )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 0)
+        self.assertEqual(result["details"]["as_of_date"], "2026-07-07")
+        self.assertEqual(result["details"]["symbols_selected"], 0)
+        self.assertEqual(result["details"]["symbols_skipped_current"], 2)
+        collect.assert_not_called()
+
+    def test_overview_market_movers_eod_history_batches_delta_by_start_date(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["OLD", "AAA", "BBB"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "OLD": {"latest_date": date(2026, 1, 30), "row_count": 120, "close": 10, "volume": 1000},
+                    "AAA": {"latest_date": date(2026, 7, 6), "row_count": 120, "close": 20, "volume": 1000},
+                    "BBB": {"latest_date": date(2026, 7, 6), "row_count": 120, "close": 30, "volume": 1000},
+                },
+                create=True,
+            ),
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                side_effect=[
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 110,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Old delta completed.",
+                    },
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 4,
+                        "symbols_requested": 2,
+                        "symbols_processed": 2,
+                        "failed_symbols": [],
+                        "message": "Recent delta completed.",
+                    },
+                ],
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+                as_of_date="2026-07-07",
+            )
+
+        self.assertEqual(result["rows_written"], 114)
+        self.assertEqual(result["details"]["delta_symbols_count"], 3)
+        self.assertEqual(result["details"]["delta_batch_count"], 2)
+        self.assertEqual(result["details"]["range_start"], "2026-01-31")
+        self.assertEqual(result["details"]["range_end"], "2026-07-08")
+        self.assertIn("OLD", result["details"]["range_driver_symbols"])
+        collect.assert_has_calls(
+            [
+                call(
+                    ["OLD"],
+                    start="2026-01-31",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+                call(
+                    ["AAA", "BBB"],
+                    start="2026-07-07",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+            ]
+        )
+
+    def test_market_movers_eod_refresh_preflight_explains_collection_scope(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["OLD", "CUR"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "OLD": {"latest_date": date(2026, 1, 30), "row_count": 120, "close": 10, "volume": 1000},
+                    "CUR": {"latest_date": date(2026, 7, 7), "row_count": 120, "close": 20, "volume": 1000},
+                },
+                create=True,
+            ),
+        ):
+            preflight = overview_actions.build_market_movers_eod_refresh_preflight(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                period="weekly",
+                as_of_date="2026-07-07",
+            )
+
+        self.assertEqual(preflight["schema_version"], "market_movers_eod_refresh_preflight_v1")
+        self.assertEqual(preflight["status"], "due")
+        self.assertEqual(preflight["selected_symbols_count"], 1)
+        self.assertEqual(preflight["skipped_current_count"], 1)
+        self.assertEqual(preflight["range_start"], "2026-01-31")
+        self.assertEqual(preflight["range_end"], "2026-07-08")
+        self.assertIn("OLD", preflight["range_driver_symbols"])
+        self.assertIn("가장 오래된 stale", preflight["range_reason"])
+
+    def test_overview_market_movers_eod_history_repairs_bad_or_partial_current_symbols(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_universe_symbols",
+                return_value=(["GOOD", "BAD", "ZERO", "THIN"], "fixture universe"),
+            ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={
+                    "GOOD": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 63,
+                        "close": 100.0,
+                        "adj_close": 100.0,
+                        "volume": 1200,
+                    },
+                    "BAD": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 63,
+                        "close": None,
+                        "adj_close": 100.0,
+                        "volume": 1200,
+                    },
+                    "ZERO": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 63,
+                        "close": 50.0,
+                        "adj_close": 50.0,
+                        "volume": 0,
+                    },
+                    "THIN": {
+                        "latest_date": date(2026, 7, 7),
+                        "row_count": 4,
+                        "close": 25.0,
+                        "adj_close": 25.0,
+                        "volume": 800,
+                    },
+                },
+                create=True,
+            ),
+            patch.object(overview_actions, "_market_movers_today", return_value=date(2026, 7, 7), create=True),
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                side_effect=[
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 2,
+                        "symbols_requested": 2,
+                        "symbols_processed": 2,
+                        "failed_symbols": [],
+                        "message": "Quality repair completed.",
+                    },
+                    {
+                        "job_name": "collect_ohlcv",
+                        "status": "success",
+                        "rows_written": 63,
+                        "symbols_requested": 1,
+                        "symbols_processed": 1,
+                        "failed_symbols": [],
+                        "message": "Full window completed.",
+                    },
+                ],
+            ) as collect,
+        ):
+            result = overview_actions.run_overview_market_movers_eod_history(
+                universe_code="SP500",
+                universe_limit=500,
+                period="weekly",
+            )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 65)
+        self.assertEqual(result["details"]["symbols_selected"], 3)
+        self.assertEqual(result["details"]["symbols_skipped_current"], 1)
+        self.assertEqual(result["details"]["quality_symbols_count"], 3)
+        self.assertEqual(result["details"]["bad_latest_symbols_count"], 2)
+        self.assertEqual(result["details"]["insufficient_window_symbols_count"], 1)
+        self.assertEqual(
+            result["details"]["quality_reason_counts"],
+            {"bad_latest_price": 1, "zero_latest_volume": 1, "insufficient_window_rows": 1},
+        )
+        collect.assert_has_calls(
+            [
+                call(
+                    ["BAD", "ZERO"],
+                    start="2026-07-07",
+                    end="2026-07-08",
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+                call(
+                    ["THIN"],
+                    period="3mo",
+                    interval="1d",
+                    execution_profile="managed_safe",
+                ),
+            ]
+        )
+
+    def test_market_movers_eod_freshness_merges_latest_price_quality_fields(self) -> None:
+        from app.jobs import overview_actions
+
+        with (
+            patch.object(
+                overview_actions,
+                "load_price_freshness_summary",
+                return_value=pd.DataFrame(
+                    [
+                        {
+                            "symbol": "BAD",
+                            "latest_date": pd.Timestamp("2026-07-07"),
+                            "row_count": 63,
+                        }
+                    ]
+                ),
+            ),
+            patch.object(
+                overview_actions,
+                "load_latest_prices",
+                return_value=pd.DataFrame(
+                    [
+                        {
+                            "symbol": "BAD",
+                            "latest_date": pd.Timestamp("2026-07-07"),
+                            "price": None,
+                            "close": None,
+                            "adj_close": 100.0,
+                            "volume": 0,
+                        }
+                    ]
+                ),
+                create=True,
+            ),
+        ):
+            rows = overview_actions._load_market_movers_eod_freshness(["BAD"])
+
+        self.assertEqual(rows["BAD"]["latest_date"], date(2026, 7, 7))
+        self.assertEqual(rows["BAD"]["row_count"], 63)
+        self.assertIsNone(rows["BAD"]["close"])
+        self.assertEqual(rows["BAD"]["adj_close"], 100.0)
+        self.assertEqual(rows["BAD"]["volume"], 0)
+
+    def test_overview_market_movers_refresh_action_uses_liquidity_universe_loader_for_top1000(self) -> None:
         from app.jobs import overview_actions
 
         action = getattr(overview_actions, "run_overview_market_movers_eod_history", None)
@@ -8451,9 +10163,15 @@ class OverviewAutomationContractTests(unittest.TestCase):
         with (
             patch.object(
                 overview_actions,
-                "load_market_cap_universe_members",
+                "load_market_liquidity_universe_members",
                 return_value=[{"symbol": "AAA"}, {"symbol": "CCC"}],
             ) as load_universe,
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={},
+                create=True,
+            ),
             patch.object(
                 overview_actions,
                 "run_collect_ohlcv",
@@ -8467,13 +10185,77 @@ class OverviewAutomationContractTests(unittest.TestCase):
             )
 
         self.assertEqual(result["details"]["collection_period"], "1y")
-        self.assertEqual(result["details"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        self.assertEqual(result["details"]["coverage_basis"], "20D avg dollar volume materialized universe")
         load_universe.assert_called_once_with("TOP1000", universe_limit=1000)
         collect.assert_called_once_with(
             ["AAA", "CCC"],
             period="1y",
             interval="1d",
             execution_profile="managed_safe",
+        )
+
+    def test_overview_market_liquidity_universe_refresh_updates_eod_then_materializes_top_universe(self) -> None:
+        from app.jobs import overview_actions
+
+        action = getattr(overview_actions, "run_overview_market_liquidity_universe_refresh", None)
+        if not callable(action):
+            self.fail("Overview action facade should expose run_overview_market_liquidity_universe_refresh.")
+
+        candidate_rows = [{"symbol": "BBB"}, {"symbol": "AAA"}, {"symbol": "BBB"}]
+        with (
+            patch.object(
+                overview_actions,
+                "load_market_liquidity_universe_candidate_symbols",
+                return_value=candidate_rows,
+            ) as load_candidates,
+            patch.object(
+                overview_actions,
+                "run_collect_ohlcv",
+                return_value={
+                    "job_name": "collect_ohlcv",
+                    "status": "success",
+                    "rows_written": 42,
+                    "symbols_processed": 2,
+                    "failed_symbols": [],
+                    "message": "OHLCV collection completed.",
+                    "details": {"target_tables": ["finance_price.nyse_price_history"]},
+                },
+            ) as collect_eod,
+            patch.object(
+                overview_actions,
+                "collect_and_store_market_liquidity_universe",
+                return_value={
+                    "universe_code": "TOP1000",
+                    "universe_limit": 1000,
+                    "rows_written": 2,
+                    "symbols": ["BBB", "AAA"],
+                    "ranking_source": "nyse_price_history.20d_avg_dollar_volume",
+                    "ranking_end_date": "2026-06-26",
+                },
+            ) as materialize,
+        ):
+            result = action(universe_code="TOP1000", universe_limit=1000)
+
+        self.assertEqual(result["job_name"], "overview_market_liquidity_universe_refresh")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols_requested"], 2)
+        self.assertEqual(
+            result["details"]["target_tables"],
+            ["finance_price.nyse_price_history", "finance_meta.market_liquidity_universe_member"],
+        )
+        self.assertEqual(result["details"]["coverage_basis"], "20D avg dollar volume from nyse_price_history")
+        load_candidates.assert_called_once_with("TOP1000")
+        collect_eod.assert_called_once_with(
+            ["BBB", "AAA"],
+            period="1mo",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+        materialize.assert_called_once_with(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            candidate_rows=candidate_rows,
         )
 
     def test_overview_market_movers_refresh_action_uses_nasdaq_directory_loader(self) -> None:
@@ -8485,6 +10267,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "load_nasdaq_symbol_directory_universe_members",
                 return_value=[{"symbol": "AAPL"}, {"symbol": "MSFT"}, {"symbol": "AAPL"}],
             ) as load_universe,
+            patch.object(
+                overview_actions,
+                "_load_market_movers_eod_freshness",
+                return_value={},
+                create=True,
+            ),
             patch.object(
                 overview_actions,
                 "run_collect_ohlcv",
@@ -8507,6 +10295,48 @@ class OverviewAutomationContractTests(unittest.TestCase):
             execution_profile="managed_safe",
         )
 
+    def test_overview_market_mover_statement_refresh_runs_selected_symbol_through_ingestion_job(self) -> None:
+        from app.jobs import overview_actions
+
+        with patch.object(
+            overview_actions,
+            "run_extended_statement_refresh",
+            return_value={
+                "job_name": "extended_statement_refresh",
+                "status": "success",
+                "started_at": "2026-07-02 10:00:00",
+                "finished_at": "2026-07-02 10:00:03",
+                "duration_sec": 3.0,
+                "rows_written": 12,
+                "symbols_requested": 1,
+                "symbols_processed": 1,
+                "failed_symbols": [],
+                "message": "Statement refresh completed.",
+                "details": {"target_tables": ["finance_fundamental.nyse_financial_statement_filings"]},
+            },
+        ) as refresh:
+            result = overview_actions.run_overview_market_mover_statement_refresh(
+                symbol=" aaa ",
+                freq="quarterly",
+            )
+
+        self.assertEqual(result["job_name"], "overview_market_mover_statement_refresh")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 12)
+        self.assertEqual(result["details"]["source_job_name"], "extended_statement_refresh")
+        self.assertEqual(result["details"]["symbol"], "AAA")
+        self.assertEqual(result["details"]["symbols"], ["AAA"])
+        self.assertEqual(result["details"]["freq"], "quarterly")
+        self.assertEqual(result["details"]["period"], "quarterly")
+        self.assertIn("Overview Market Movers", result["details"]["purpose"])
+        refresh.assert_called_once_with(
+            symbols=["AAA"],
+            freq="quarterly",
+            period="quarterly",
+            periods=0,
+            progress_callback=None,
+        )
+
     def test_overview_automation_standard_plan_includes_symbol_directory_refresh(self) -> None:
         from app.jobs.overview_automation import build_overview_automation_plan
 
@@ -8527,13 +10357,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(intraday_row["cadence_minutes"], 30)
         self.assertTrue(intraday_row["market_hours_only"])
 
-    def test_overview_market_movers_refresh_bar_renders_eod_action_for_non_daily_without_auto_mode(self) -> None:
+    def test_overview_market_movers_refresh_bar_exposes_eod_action_for_non_daily_basic_ui(self) -> None:
         source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
 
-        self.assertIn("run_overview_market_movers_eod_history", source)
         self.assertIn("def _render_market_movers_daily_refresh_bar", source)
         self.assertIn("def _render_market_movers_eod_refresh_bar", source)
-        self.assertIn("run_overview_market_movers_eod_history,", source)
+        self.assertIn("run_overview_market_movers_eod_history", source)
 
         dispatch_body = source[source.index("def _render_market_movers_refresh_bar") :]
         dispatch_body = dispatch_body[: dispatch_body.index("def _rank_token")]
@@ -8544,14 +10373,496 @@ class OverviewAutomationContractTests(unittest.TestCase):
         eod_body = eod_body[: eod_body.index("def _render_market_movers_refresh_bar")]
         self.assertIn("가격 이력 갱신", eod_body)
         self.assertIn("run_overview_market_movers_eod_history(", eod_body)
+        self.assertIn("_run_market_movers_job_with_progress(", eod_body)
+        self.assertIn("유니버스 기준 갱신", eod_body)
+        self.assertIn("_render_market_movers_universe_action(control_cols[1]", eod_body)
         self.assertNotIn("_select_market_refresh_mode", eod_body)
         self.assertNotIn("_render_market_auto_refresh_summary", eod_body)
+
+    def test_market_movers_eod_refresh_result_caption_explains_smart_scope(self) -> None:
+        from app.web.overview import market_movers_helpers
+
+        helper = getattr(market_movers_helpers, "_market_movers_refresh_scope_detail", None)
+        self.assertTrue(callable(helper), "Market Movers job result should expose a smart refresh scope helper.")
+
+        detail = helper(
+            {
+                "details": {
+                    "refresh_strategy": "smart_delta",
+                    "symbols_requested": 503,
+                    "symbols_selected": 18,
+                    "symbols_skipped_current": 485,
+                    "delta_symbols_count": 12,
+                    "missing_symbols_count": 6,
+                    "delta_start": "2026-07-03",
+                    "delta_end": "2026-07-08",
+                }
+            }
+        )
+
+        self.assertIn("스마트 갱신", detail)
+        self.assertIn("18개 갱신", detail)
+        self.assertIn("485개 최신 스킵", detail)
+        self.assertIn("Delta 12개", detail)
+        self.assertIn("2026-07-03~2026-07-08", detail)
+        self.assertIn("Full window 6개", detail)
+
+        quality_detail = helper(
+            {
+                "details": {
+                    "refresh_strategy": "smart_delta",
+                    "symbols_requested": 503,
+                    "symbols_selected": 18,
+                    "symbols_skipped_current": 485,
+                    "delta_symbols_count": 12,
+                    "missing_symbols_count": 6,
+                    "quality_symbols_count": 3,
+                    "bad_latest_symbols_count": 2,
+                    "insufficient_window_symbols_count": 1,
+                }
+            }
+        )
+
+        self.assertIn("품질 보강 3개", quality_detail)
+        self.assertIn("값 이상 2개", quality_detail)
+        self.assertIn("이력 부족 1개", quality_detail)
+
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        result_body = source[source.index("def _render_market_job_result") :]
+        result_body = result_body[: result_body.index("def _auto_refresh_reason_label")]
+        self.assertIn("_market_movers_refresh_scope_detail(result)", result_body)
 
     def test_market_movers_empty_snapshot_replaces_stale_why_it_moved_panel(self) -> None:
         source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
 
-        self.assertIn("Market mover rows are needed before Why It Moved can be shown.", source)
-        self.assertIn("선택한 coverage에 ranking row가 생기면 조사 패널을 사용할 수 있습니다.", source)
+        self.assertIn("render_market_movers_empty_state", source)
+        self.assertIn("build_market_movers_empty_state_model", source)
+        self.assertIn('"show_why_it_moved": False', source)
+        self.assertIn("선택한 coverage에 ranking row가 생기면 선택 종목 조사 패널을 사용할 수 있습니다.", source)
+
+    def test_market_movers_command_strip_model_summarizes_active_workbench_context(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_command_strip_model,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="Technology",
+            top_n=20,
+        )
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 470,
+                "missing_count": 33,
+                "returnable_pct": 93.44,
+                "snapshot_time_utc": "2026-06-29 14:15",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "partial", "label": "Partial", "detail": "33 missing"},
+            },
+        }
+
+        model = build_market_movers_command_strip_model(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        self.assertEqual(model["schema_version"], "market_movers_command_strip_v1")
+        self.assertEqual(model["headline"], "변동 종목")
+        self.assertEqual(model["context"], "S&P 500 · Daily · Technology")
+        self.assertEqual(model["tone"], "warning")
+        items = {item["label"]: item for item in model["items"]}
+        self.assertEqual(items["Coverage"]["value"], "S&P 500")
+        self.assertEqual(items["Period"]["value"], "Daily")
+        self.assertEqual(items["Effective timestamp"]["value"], "2026-06-29 14:15")
+        self.assertEqual(items["Freshness"]["value"], "Partial")
+        self.assertEqual(items["Universe"]["value"], "503")
+        self.assertEqual(items["Returnable"]["value"], "470")
+        self.assertEqual(items["Missing"]["value"], "33")
+        self.assertEqual(items["보기"]["value"], "상승")
+        self.assertIn("93.4%", items["Returnable"]["detail"])
+
+    def test_market_movers_redesign_v2_uses_market_ranking_language(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn('"top_gainers": "상승"', source)
+        self.assertIn('"top_losers": "하락"', source)
+        self.assertIn('"volume_leaders": "거래량"', source)
+        self.assertIn('"unusual_volume": "이상 거래량"', source)
+        self.assertIn('"sector_leaders": "섹터"', source)
+        self.assertIn('"랭킹 기준"', source)
+        self.assertIn('"보기"', source)
+        self.assertNotIn("변동종목 작업대", source)
+        self.assertNotIn("탐색 모드", source)
+        self.assertNotIn("변동종목 작업대", component_source)
+        self.assertNotIn("탐색 모드", component_source)
+
+    def test_market_movers_redesign_v2_phase2_uses_market_board_renderer(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_mover_board_model", helper_source)
+        self.assertIn("render_market_mover_board", helper_source)
+        self.assertIn("render_market_mover_board", component_source)
+        self.assertIn("ov-mm-board", component_source)
+        self.assertIn("ov-mm-tape", common_source)
+        self.assertIn("ov-mm-list-row", common_source)
+        self.assertIn("상위 종목", helper_source)
+        self.assertNotIn("metric-card", helper_source.lower())
+
+    def test_market_movers_redesign_v2_phase3_uses_chart_workspace(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_mover_chart_workspace_model", helper_source)
+        self.assertIn("render_market_mover_chart_workspace", helper_source)
+        self.assertIn("render_market_mover_chart_workspace", component_source)
+        self.assertIn("ov-mm-chart-workspace", component_source)
+        self.assertIn("ov-mm-chart-fact", common_source)
+        self.assertIn("가격 / 거래량 워크스페이스", helper_source)
+
+    def test_market_movers_redesign_v2_phase4_uses_sector_market_map(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_sector_map_model", helper_source)
+        self.assertIn("render_sector_breadth_market_map", helper_source)
+        self.assertIn("render_sector_breadth_market_map", component_source)
+        self.assertIn("시장 확산 지도", component_source)
+        self.assertIn("ov-sector-breadth-lane", component_source)
+        self.assertIn("ov-sector-breadth-rail", common_source)
+
+    def test_market_movers_redesign_v2_phase5_uses_investigation_pane(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("build_market_mover_investigation_pane_model", helper_source)
+        self.assertIn("render_market_mover_investigation_pane", helper_source)
+        self.assertIn("render_market_mover_investigation_pane", component_source)
+        self.assertIn("수동 조사 패널", component_source)
+        self.assertNotIn("선택 종목 원천 detail 표", helper_source)
+        self.assertIn("build_market_mover_research_snapshot_model", helper_source)
+        self.assertIn("render_market_mover_research_snapshot", helper_source)
+        self.assertIn("뉴스 메타데이터 조회", helper_source)
+        self.assertIn("SEC 공시 메타데이터 조회", helper_source)
+        self.assertIn("필요 재무제표 수집", helper_source)
+        self.assertIn("run_overview_market_mover_statement_refresh", helper_source)
+        self.assertIn("def _render_market_mover_investigation_actions", helper_source)
+        self.assertIn("render_market_mover_investigation_pane_react", helper_source)
+        self.assertIn("build_market_mover_investigation_react_pane_payload", helper_source)
+        self.assertIn('"component": "MarketMoverInvestigationPane"', helper_source)
+        self.assertIn('payload.component === "MarketMoverInvestigationPane"', react_source)
+        self.assertIn('className="mm-investigation__actions"', react_source)
+        self.assertIn("수동 조사 패널", react_source)
+        fallback_pane_block = common_source[
+            common_source.index(".ov-mm-investigation-pane {") : common_source.index(".ov-mm-investigation-head {")
+        ]
+        react_pane_block = react_style[
+            react_style.index(".mm-investigation {") : react_style.index(".mm-investigation__head {")
+        ]
+        self.assertIn("border-radius: 0;", fallback_pane_block)
+        self.assertNotIn("border-radius: var(--ov-mi-radius-panel)", fallback_pane_block)
+        self.assertIn("border-radius: 0;", react_pane_block)
+        self.assertNotIn("border-radius: 8px", react_pane_block)
+        self.assertIn("@st.fragment", helper_source)
+        self.assertIn('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])', helper_source)
+        self.assertNotIn('st.tabs(["기본 지표", "뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])', helper_source)
+        self.assertNotIn("뉴스·공시 메타데이터 조회", helper_source)
+        action_body = helper_source[helper_source.index("def _render_market_mover_investigation_actions") :]
+        action_body = action_body[: action_body.index("def _render_market_mover_selected_investigation_fragment")]
+        self.assertIn("render_market_mover_investigation_pane_react", action_body)
+        self.assertIn("_dispatch_market_mover_investigation_react_event", action_body)
+        self.assertIn("metadata_update = fetch_market_mover_news_metadata", action_body)
+        self.assertIn("metadata_update = fetch_market_mover_sec_metadata", action_body)
+        self.assertIn("run_overview_market_mover_statement_refresh(", action_body)
+        self.assertIn('if refresh_target["enabled"]:', action_body)
+        self.assertNotIn("disabled=not bool(refresh_target", action_body)
+        panel_index = helper_source.index("build_market_mover_investigation_pane_model")
+        action_call_index = helper_source.index("_render_market_mover_investigation_actions(", panel_index)
+        divider_index = helper_source.index('render_market_movers_section_divider("조사 단서"', panel_index)
+        self.assertLess(action_call_index, divider_index)
+        tabs_index = helper_source.index('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])')
+        sec_tab_index = helper_source.index("with clue_tabs[2]:", tabs_index)
+        news_tab_body = helper_source[helper_source.index("with clue_tabs[1]:", tabs_index) : sec_tab_index]
+        sec_tab_body = helper_source[sec_tab_index : helper_source.index("with clue_tabs[3]:", tabs_index)]
+        self.assertNotIn("st.button(", news_tab_body)
+        self.assertNotIn("st.button(", sec_tab_body)
+        self.assertNotIn("fetch_market_mover_news_metadata", news_tab_body)
+        self.assertNotIn("fetch_market_mover_sec_metadata", sec_tab_body)
+        self.assertNotIn("run_overview_market_mover_statement_refresh(", sec_tab_body)
+        self.assertIn('metadata.get("news")', news_tab_body)
+        self.assertIn('metadata.get("korean_news")', news_tab_body)
+        self.assertNotIn("st.rerun()", news_tab_body)
+        self.assertNotIn("st.rerun()", sec_tab_body)
+        self.assertIn("ov-mm-investigation-pane", common_source)
+        self.assertIn("ov-mm-research-snapshot", common_source)
+
+    @patch("app.web.overview.market_movers_helpers.fetch_market_mover_news_metadata")
+    @patch("app.web.overview.market_movers_helpers.merge_market_mover_metadata")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_mover_investigation_react_event_dispatches_news_metadata_once(
+        self,
+        mock_st: MagicMock,
+        mock_merge: MagicMock,
+        mock_fetch_news: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            _dispatch_market_mover_investigation_react_event,
+        )
+
+        mock_st.session_state = {}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+        mock_fetch_news.return_value = {"news": [{"Title": "AXON news"}]}
+        mock_merge.return_value = {"news": [{"Title": "AXON news"}]}
+
+        event = {"event": {"id": "fetch_news_metadata", "nonce": 123}}
+        metadata = _dispatch_market_mover_investigation_react_event(
+            event,
+            symbol="AXON",
+            identity={"Name": "AXON ENTERPRISE INC"},
+            metadata_key="overview_market_mover_metadata__AXON",
+            metadata={},
+            refresh_target={"enabled": False},
+        )
+
+        mock_fetch_news.assert_called_once_with(
+            "AXON",
+            name="AXON ENTERPRISE INC",
+            max_news=3,
+            max_korean_news=3,
+        )
+        mock_merge.assert_called_once_with(None, mock_fetch_news.return_value)
+        self.assertEqual(metadata, {"news": [{"Title": "AXON news"}]})
+        self.assertEqual(mock_st.session_state["overview_market_mover_metadata__AXON"], metadata)
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertEqual(
+            _dispatch_market_mover_investigation_react_event(
+                event,
+                symbol="AXON",
+                identity={"Name": "AXON ENTERPRISE INC"},
+                metadata_key="overview_market_mover_metadata__AXON",
+                metadata=metadata,
+                refresh_target={"enabled": False},
+            ),
+            metadata,
+        )
+        mock_st.rerun.assert_not_called()
+
+    def test_market_mover_investigation_react_payload_hides_statement_action_when_current(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            _market_mover_investigation_react_actions,
+            build_market_mover_investigation_react_pane_payload,
+        )
+
+        pane_model = {
+            "schema_version": "market_mover_investigation_pane_v1",
+            "title": "AXON · AXON ENTERPRISE INC",
+            "subtitle": "Industrials · Aerospace & Defense",
+            "rank_badge": "상승 #1",
+            "facts": [],
+            "status_items": [],
+            "boundary_note": "Manual investigation starter only.",
+        }
+
+        current_actions = _market_mover_investigation_react_actions({"enabled": False})
+        self.assertEqual(
+            [action["id"] for action in current_actions],
+            ["fetch_news_metadata", "fetch_sec_metadata"],
+        )
+
+        due_actions = _market_mover_investigation_react_actions({"enabled": True})
+        self.assertIn("refresh_statement", [action["id"] for action in due_actions])
+
+        payload = build_market_mover_investigation_react_pane_payload(
+            pane_model,
+            symbol="AXON",
+            actions=due_actions,
+        )
+        self.assertEqual(payload["schema_version"], "market_mover_investigation_react_pane_v1")
+        self.assertEqual(payload["component"], "MarketMoverInvestigationPane")
+        self.assertEqual(payload["panel"]["title"], "AXON · AXON ENTERPRISE INC")
+        self.assertEqual(payload["actions"][-1]["label"], "필요 재무제표 수집")
+
+    def test_market_movers_redesign_v2_phase6_uses_compact_data_trust_strip(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_data_trust_strip_model", helper_source)
+        self.assertIn("render_market_movers_data_trust_strip", helper_source)
+        self.assertIn("render_market_movers_data_trust_strip", component_source)
+        self.assertIn("현재 결과 신뢰도", component_source)
+        self.assertIn("ov-mm-data-trust-strip", common_source)
+        self.assertIn("Coverage trust detail", helper_source)
+
+    def test_market_movers_followup_keeps_refresh_actions_in_fixed_slots(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        daily_body = helper_source[helper_source.index("def _render_market_movers_daily_refresh_bar") :]
+        daily_body = daily_body[: daily_body.index("def _market_movers_eod_refresh_state")]
+
+        self.assertIn("def _render_market_movers_universe_action", helper_source)
+        self.assertIn("_render_market_movers_universe_action(control_cols[2]", daily_body)
+        self.assertIn("run_overview_market_liquidity_universe_refresh", helper_source)
+        self.assertIn("overview_{universe_code.lower()}_liquidity_universe_refresh", helper_source)
+        self.assertIn("유니버스 기준 갱신", helper_source)
+        self.assertNotIn("overview_{universe_code.lower()}_universe_static", helper_source)
+        self.assertNotIn("Top universe는 market-cap", helper_source)
+        self.assertNotIn("control_cols[2].caption", daily_body)
+        self.assertNotIn("Top universe는", daily_body)
+        self.assertIn("_liquidity_universe_refresh", common_source)
+        self.assertNotIn("_universe_static", common_source)
+
+    def test_market_movers_followup_removes_duplicate_sector_leader_strip_from_main_map(self) -> None:
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        render_body = component_source[component_source.index("def render_sector_breadth_market_map") :]
+        render_body = render_body[: render_body.index("def render_breadth_heatmap_summary")]
+
+        self.assertNotIn("_sector_breadth_leader_strip_html", render_body)
+        self.assertNotIn("ov-sector-breadth-leader-strip", render_body)
+        self.assertIn("ov-sector-breadth-lanes", render_body)
+        self.assertIn("ov-sector-breadth-boundary", render_body)
+
+    def test_market_movers_followup_uses_square_sector_breadth_map_rail(self) -> None:
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        map_block = common_source[common_source.index(".ov-sector-breadth-map {") :]
+        map_block = map_block[: map_block.index(".ov-sector-breadth-head")]
+
+        self.assertIn("border-left: 4px solid var(--ov-band-tone", map_block)
+        self.assertIn("border-radius: 0 var(--ov-mi-radius-panel) var(--ov-mi-radius-panel) 0;", map_block)
+        self.assertNotIn("border-radius: var(--ov-mi-radius-panel);", map_block)
+
+    def test_market_movers_followup_uses_section_dividers_instead_of_markdown_headings(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_market_movers_section_divider", helper_source)
+        self.assertIn("def render_market_movers_section_divider", component_source)
+        self.assertIn(".ov-mm-section-divider", common_source)
+        self.assertIn('"섹터 / 시장 확산 맥락"', helper_source)
+        self.assertIn('"선택 종목 조사"', helper_source)
+        self.assertNotIn('st.markdown("#### 섹터 / 시장 확산 맥락")', helper_source)
+        self.assertNotIn('st.markdown("#### 선택 종목 조사")', helper_source)
+        self.assertNotIn('st.markdown("##### 조사 단서")', helper_source)
+
+    def test_market_movers_empty_state_model_guides_no_universe_without_showing_why_it_moved(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_empty_state_model,
+        )
+
+        controls = MarketMoverControls(
+            coverage="NASDAQ",
+            universe_limit=5000,
+            period="daily",
+            sector="All",
+            top_n=20,
+        )
+        snapshot = {
+            "status": "NO_UNIVERSE",
+            "message": "Nasdaq Symbol Directory refresh is required before Nasdaq-listed current snapshot coverage can render.",
+            "coverage": {"universe_count": 0, "returnable_count": 0, "missing_count": 0},
+        }
+
+        model = build_market_movers_empty_state_model(snapshot, controls=controls)
+
+        self.assertEqual(model["schema_version"], "market_movers_empty_state_v1")
+        self.assertEqual(model["tone"], "warning")
+        self.assertIn("Nasdaq-listed current snapshot", model["title"])
+        self.assertIn("Symbol Directory", model["detail"])
+        self.assertEqual(model["primary_action"], "Nasdaq 목록 갱신")
+        self.assertFalse(model["show_why_it_moved"])
+        self.assertIn("ranking row", model["investigation_note"])
+        self.assertIn("No Universe", model["trust_hint"]["value"])
+
+    def test_market_movers_coverage_trust_ui_keeps_raw_diagnostics_secondary(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_coverage_trust_model", helper_source)
+        self.assertIn("render_market_movers_coverage_trust", helper_source)
+        self.assertIn("자료 신뢰 상태", component_source)
+        self.assertIn("Coverage trust detail", helper_source)
+        self.assertIn("Grouped missing diagnostics", helper_source)
+        self.assertIn("Raw diagnostics", helper_source)
+        self.assertIn("overview_nasdaq_symbol_directory_result", helper_source)
+        self.assertIn("run_overview_nasdaq_symbol_directory()", helper_source)
+        self.assertNotIn("상장폐지 확정", helper_source)
+        self.assertNotIn("거래정지 확정", helper_source)
+
+    def test_overview_action_facade_runs_events_calendar_refresh_all(self) -> None:
+        from app.jobs import overview_actions
+
+        calls: list[str] = []
+
+        def _result(job_name: str, status: str = "success") -> dict[str, Any]:
+            calls.append(job_name)
+            return {"job_name": job_name, "status": status, "message": f"{job_name} done"}
+
+        with (
+            patch.object(
+                overview_actions,
+                "run_overview_fomc_calendar",
+                side_effect=lambda **_: _result("fomc_calendar"),
+            ) as fomc,
+            patch.object(
+                overview_actions,
+                "run_overview_macro_calendar",
+                side_effect=lambda **_: _result("macro_calendar"),
+            ) as macro,
+            patch.object(
+                overview_actions,
+                "run_overview_market_structure_calendar",
+                side_effect=lambda **_: _result("market_structure_calendar"),
+            ) as market_structure,
+            patch.object(
+                overview_actions,
+                "run_overview_earnings_calendar",
+                side_effect=lambda: _result("earnings_calendar", status="partial_success"),
+            ) as earnings,
+        ):
+            summary = overview_actions.run_overview_event_calendars_refresh_all(years=(2026, 2027))
+
+        self.assertEqual(summary["job_name"], "overview_event_calendars_refresh_all")
+        self.assertEqual(summary["status"], "partial_success")
+        self.assertEqual(summary["jobs_run"], 4)
+        self.assertEqual(summary["jobs_failed"], 0)
+        self.assertEqual(
+            calls,
+            [
+                "fomc_calendar",
+                "macro_calendar",
+                "market_structure_calendar",
+                "earnings_calendar",
+            ],
+        )
+        fomc.assert_called_once_with(years=(2026, 2027))
+        macro.assert_called_once_with(years=(2026, 2027))
+        market_structure.assert_called_once_with(years=(2026, 2027))
+        earnings.assert_called_once_with()
 
     def test_overview_action_facade_runs_market_context_refresh_bundle(self) -> None:
         from app.jobs import overview_actions
@@ -8737,7 +11048,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         )
 
     def test_group_trend_heatmap_expands_for_many_selected_groups(self) -> None:
-        from app.web.overview_dashboard import (
+        from app.web.overview.market_context_helpers import (
             GROUP_TREND_HEATMAP_ROW_HEIGHT,
             _build_group_leadership_trend_heatmap,
         )
@@ -11909,7 +14220,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "volume_days": 5,
                 },
             ]
-        if "FROM nyse_asset_profile" in sql:
+        if "FROM market_liquidity_universe_member" in sql or "FROM nyse_asset_profile" in sql:
             return [
                 {
                     "symbol": "AAA",
@@ -11917,6 +14228,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Technology",
                     "industry": "Software",
                     "market_cap": 100,
+                    "universe_rank_position": 1,
+                    "avg_dollar_volume_20d": 1200000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
                 {
                     "symbol": "BBB",
@@ -11924,6 +14239,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Technology",
                     "industry": "Software",
                     "market_cap": 300,
+                    "universe_rank_position": 2,
+                    "avg_dollar_volume_20d": 1000000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
                 {
                     "symbol": "CCC",
@@ -11931,6 +14250,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Healthcare",
                     "industry": "Medical Devices",
                     "market_cap": 200,
+                    "universe_rank_position": 3,
+                    "avg_dollar_volume_20d": 900000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
                 {
                     "symbol": "DDD",
@@ -11938,6 +14261,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     "sector": "Energy",
                     "industry": "Oil & Gas",
                     "market_cap": 100,
+                    "universe_rank_position": 4,
+                    "avg_dollar_volume_20d": 800000.0,
+                    "universe_collected_at": "2026-07-05 05:31:00",
+                    "universe_source": "nyse_price_history.20d_avg_dollar_volume",
                 },
             ]
         if "COALESCE(adj_close, close) AS price" in sql:
@@ -11962,7 +14289,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         return []
 
     def test_effective_market_date_skips_sparse_latest_raw_date(self) -> None:
-        from app.services.overview_market_intelligence import resolve_effective_market_dates
+        from app.services.overview.market_movers import resolve_effective_market_dates
 
         window = resolve_effective_market_dates(
             period="daily",
@@ -11979,7 +14306,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
     def test_latest_raw_date_query_uses_ordered_latest_row(self) -> None:
         import inspect
-        import app.services.overview_market_intelligence as service
+        import app.services.overview.market_movers as service
 
         source = inspect.getsource(service._query_latest_raw_date)
 
@@ -11988,7 +14315,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("MAX(`date`)", source)
 
     def test_group_trend_window_contract_uses_compact_horizons(self) -> None:
-        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+        from app.services.overview.market_movers import resolve_group_trend_market_dates
 
         market_dates = [
             item.strftime("%Y-%m-%d")
@@ -12015,7 +14342,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(len(monthly["windows"]), 12)
 
     def test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_limit=100,
@@ -12049,7 +14376,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
     def test_market_movers_snapshot_uses_sp500_intraday_previous_close_returns(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_code="SP500",
@@ -12088,7 +14415,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
     def test_market_movers_snapshot_uses_top1000_intraday_returns(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_code="TOP1000",
@@ -12100,7 +14427,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["universe_code"], "TOP1000")
         self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
-        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "20D avg dollar volume materialized universe")
         self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
         self.assertEqual(snapshot["coverage"]["returnable_pct"], 25.0)
         self.assertEqual(snapshot["coverage"]["refresh_state"]["universe_count"], 4)
@@ -12110,8 +14437,65 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
 
+    def test_market_movers_top_universe_reads_materialized_liquidity_members(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        queries: list[str] = []
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            queries.append(sql)
+            if "FROM market_liquidity_universe_member" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "long_name": "AAA Corp",
+                        "sector": "Technology",
+                        "industry": "Software",
+                        "market_cap": 100,
+                        "avg_dollar_volume_20d": 1_200_000.0,
+                        "universe_rank_position": 1,
+                        "universe_collected_at": "2026-07-05 05:31:00",
+                        "universe_source": "nyse_price_history.20d_avg_dollar_volume",
+                    }
+                ]
+            if "MAX(snapshot_time_utc) AS snapshot_time_utc" in sql:
+                return [{"snapshot_time_utc": "2026-07-05 05:31:00"}]
+            if "FROM market_intraday_snapshot s" in sql:
+                return [
+                    {
+                        "symbol": "AAA",
+                        "interval_code": "5m",
+                        "snapshot_time_utc": "2026-07-05 05:31:00",
+                        "quote_time_utc": "2026-07-05 05:30:00",
+                        "previous_close": 100.0,
+                        "latest_price": 112.0,
+                        "return_pct": 12.0,
+                        "volume": 1000,
+                        "provider_status": "ok",
+                        "error_msg": None,
+                        "source": "yahoo_quote",
+                        "source_ref": "test",
+                    }
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            top_n=5,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "20D avg dollar volume materialized universe")
+        self.assertEqual(snapshot["coverage"]["universe_count"], 1)
+        self.assertTrue(any("FROM market_liquidity_universe_member" in sql for sql in queries))
+        self.assertFalse(any("FROM nyse_asset_profile p" in sql for sql in queries))
+
     def test_market_movers_snapshot_uses_nasdaq_symbol_directory_current_snapshot(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -12195,7 +14579,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAPL")
 
     def test_market_movers_snapshot_explains_missing_nasdaq_directory_refresh(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, sql, params
@@ -12213,11 +14597,11 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Nasdaq Symbol Directory refresh", snapshot["message"])
 
     def test_market_movers_missing_rows_include_profile_lifecycle_and_issue_evidence(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
-            if "FROM nyse_asset_profile" in sql:
+            if "FROM market_liquidity_universe_member" in sql:
                 return [
                     {
                         "symbol": "AAA",
@@ -12305,7 +14689,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("profile", missing.iloc[0]["Next Check"].lower())
 
     def test_market_movers_weekly_volume_rows_use_average_and_total_volume(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         snapshot = build_market_movers_snapshot(
             universe_code="TOP1000",
@@ -12327,8 +14711,2742 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["volume_rows"].iloc[0]["Total Dollar Volume"], 2500000.0)
         self.assertEqual(snapshot["volume_rows"].iloc[0]["Volume Days"], 5)
 
+    def test_market_movers_snapshot_builds_context_only_exploration_mode_views(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_liquidity_universe_member" in sql:
+                return [
+                    {"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100},
+                    {"symbol": "BBB", "long_name": "BBB Corp", "sector": "Technology", "industry": "Software", "market_cap": 300},
+                    {"symbol": "CCC", "long_name": "CCC Corp", "sector": "Healthcare", "industry": "Devices", "market_cap": 200},
+                    {"symbol": "DDD", "long_name": "DDD Corp", "sector": "Energy", "industry": "Oil", "market_cap": 100},
+                ]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-05-20"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-05-20", "usable_rows": 1200},
+                    {"date": "2026-05-19", "usable_rows": 1200},
+                    {"date": "2026-05-18", "usable_rows": 1200},
+                    {"date": "2026-05-15", "usable_rows": 1200},
+                    {"date": "2026-05-14", "usable_rows": 1200},
+                    {"date": "2026-05-13", "usable_rows": 1200},
+                    {"date": "2026-05-12", "usable_rows": 1200},
+                    {"date": "2026-05-11", "usable_rows": 1200},
+                    {"date": "2026-05-08", "usable_rows": 1200},
+                    {"date": "2026-05-07", "usable_rows": 1200},
+                    {"date": "2026-05-06", "usable_rows": 1200},
+                    {"date": "2026-05-05", "usable_rows": 1200},
+                ]
+            if "AVG(volume) AS avg_10d_volume" in sql:
+                return [
+                    {"symbol": "AAA", "avg_10d_volume": 1000, "baseline_days": 10},
+                    {"symbol": "BBB", "avg_10d_volume": 800, "baseline_days": 10},
+                    {"symbol": "CCC", "avg_10d_volume": 1500, "baseline_days": 10},
+                    {"symbol": "DDD", "avg_10d_volume": 500, "baseline_days": 10},
+                ]
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-05-18", "price": 100.0, "volume": 900},
+                    {"symbol": "AAA", "date": "2026-05-19", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-05-20", "price": 130.0, "volume": 5000},
+                    {"symbol": "BBB", "date": "2026-05-18", "price": 100.0, "volume": 700},
+                    {"symbol": "BBB", "date": "2026-05-19", "price": 100.0, "volume": 800},
+                    {"symbol": "BBB", "date": "2026-05-20", "price": 90.0, "volume": 1000},
+                    {"symbol": "CCC", "date": "2026-05-18", "price": 100.0, "volume": 1400},
+                    {"symbol": "CCC", "date": "2026-05-19", "price": 100.0, "volume": 1500},
+                    {"symbol": "CCC", "date": "2026-05-20", "price": 108.0, "volume": 3000},
+                    {"symbol": "DDD", "date": "2026-05-18", "price": 100.0, "volume": 500},
+                    {"symbol": "DDD", "date": "2026-05-19", "price": 100.0, "volume": 500},
+                    {"symbol": "DDD", "date": "2026-05-20", "price": 70.0, "volume": 2000},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 21),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        views = snapshot["mover_views"]
+        self.assertEqual(
+            list(views),
+            ["top_gainers", "top_losers", "volume_leaders", "unusual_volume", "sector_leaders"],
+        )
+        self.assertEqual(views["top_gainers"]["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(views["top_losers"]["rows"].iloc[0]["Symbol"], "DDD")
+        self.assertLess(views["top_losers"]["rows"].iloc[0]["Return %"], 0)
+        self.assertEqual(views["volume_leaders"]["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(views["unusual_volume"]["status"], "OK")
+        self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(views["unusual_volume"]["rows"].iloc[0]["Relative Volume"], 5.0)
+        self.assertEqual(views["sector_leaders"]["rows"].iloc[0]["Group"], "Healthcare")
+        self.assertIn("context-only", views["top_gainers"]["boundary_note"].lower())
+
+    def test_market_movers_snapshot_adds_full_sector_breadth_context(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_liquidity_universe_member" in sql:
+                return [
+                    {"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100},
+                    {"symbol": "BBB", "long_name": "BBB Corp", "sector": "Technology", "industry": "Software", "market_cap": 300},
+                    {"symbol": "CCC", "long_name": "CCC Corp", "sector": "Healthcare", "industry": "Devices", "market_cap": 200},
+                    {"symbol": "DDD", "long_name": "DDD Corp", "sector": "Energy", "industry": "Oil", "market_cap": 100},
+                ]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-05-20"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-05-20", "usable_rows": 1200},
+                    {"date": "2026-05-19", "usable_rows": 1200},
+                    {"date": "2026-05-18", "usable_rows": 1200},
+                ]
+            if "AVG(volume) AS avg_10d_volume" in sql:
+                return []
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-05-19", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-05-20", "price": 130.0, "volume": 5000},
+                    {"symbol": "BBB", "date": "2026-05-19", "price": 100.0, "volume": 800},
+                    {"symbol": "BBB", "date": "2026-05-20", "price": 90.0, "volume": 1000},
+                    {"symbol": "CCC", "date": "2026-05-19", "price": 100.0, "volume": 1500},
+                    {"symbol": "CCC", "date": "2026-05-20", "price": 108.0, "volume": 3000},
+                    {"symbol": "DDD", "date": "2026-05-19", "price": 100.0, "volume": 500},
+                    {"symbol": "DDD", "date": "2026-05-20", "price": 70.0, "volume": 2000},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=2,
+            today=date(2026, 5, 21),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        model = snapshot["sector_breadth"]
+        groups = [row["group"] for row in model["heatmap_rows"]]
+        technology = next(row for row in model["table_rows"] if row["Sector"] == "Technology")
+
+        self.assertEqual(model["schema_version"], "market_movers_sector_breadth_v1")
+        self.assertEqual(groups, ["Healthcare", "Technology", "Energy"])
+        self.assertEqual(model["coverage"]["group_count"], 3)
+        self.assertEqual(model["summary"]["participation_label"], "mixed")
+        self.assertEqual(technology["Advancers"], 1)
+        self.assertEqual(technology["Decliners"], 1)
+        self.assertEqual(technology["Median Return %"], 10.0)
+        self.assertEqual(technology["Top Gainer"], "AAA")
+        self.assertEqual(technology["Top Loser"], "BBB")
+        self.assertAlmostEqual(technology["Market Cap Share %"], 57.14)
+        self.assertIn("context-only", model["boundary_note"].lower())
+        self.assertNotIn("prediction", model["boundary_note"].lower())
+
+    def test_market_movers_coverage_trust_model_groups_missing_diagnostics(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_coverage_trust_model
+
+        snapshot = {
+            "status": "OK",
+            "period": "daily",
+            "period_label": "Daily",
+            "universe_code": "SP500",
+            "universe_label": "S&P 500",
+            "coverage": {
+                "universe_count": 4,
+                "returnable_count": 2,
+                "missing_count": 2,
+                "returnable_pct": 50.0,
+                "snapshot_time_utc": "2026-06-29 14:20",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "partial", "label": "Partial", "detail": "2 missing"},
+            },
+            "missing_rows": pd.DataFrame(
+                [
+                    {
+                        "Symbol": "AAA",
+                        "Reason": "missing latest quote",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                        "Next Check": "Refresh daily snapshot; if repeated, run quote-gap diagnostics.",
+                    },
+                    {
+                        "Symbol": "BBB",
+                        "Reason": "missing latest quote",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                        "Next Check": "Refresh daily snapshot; if repeated, run quote-gap diagnostics.",
+                    },
+                ]
+            ),
+        }
+
+        model = build_market_movers_coverage_trust_model(snapshot)
+
+        self.assertEqual(model["schema_version"], "market_movers_coverage_trust_v1")
+        self.assertEqual(model["state"], "Missing Quotes")
+        self.assertEqual(model["tone"], "warning")
+        self.assertFalse(model["raw_detail_default_expanded"])
+        self.assertIn("context-only", model["boundary_note"].lower())
+        grouped = model["grouped_missing_rows"]
+        self.assertEqual(list(grouped.columns), ["Missing Reason Group", "Likely Cause", "Suggested Next Action", "Affected Count", "Sample Tickers"])
+        self.assertEqual(grouped.iloc[0]["Missing Reason Group"], "missing latest quote")
+        self.assertEqual(grouped.iloc[0]["Affected Count"], 2)
+        self.assertEqual(grouped.iloc[0]["Sample Tickers"], "AAA, BBB")
+        self.assertIn("Refresh the daily snapshot", grouped.iloc[0]["Suggested Next Action"])
+        self.assertEqual(model["suggested_action"]["label"], "Open raw diagnostics")
+
+    def test_market_movers_coverage_trust_model_explains_nasdaq_no_universe(self) -> None:
+        from app.services.overview.market_movers import (
+            build_market_movers_coverage_trust_model,
+            build_market_movers_snapshot,
+        )
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="NASDAQ",
+            period="daily",
+            top_n=20,
+            query_fn=lambda _db_name, _sql, _params=None: [],
+        )
+
+        model = build_market_movers_coverage_trust_model(snapshot)
+
+        self.assertEqual(snapshot["status"], "NO_UNIVERSE")
+        self.assertEqual(model["state"], "No Universe")
+        self.assertEqual(model["tone"], "warning")
+        self.assertIn("Nasdaq Symbol Directory", model["headline"])
+        self.assertEqual(model["suggested_action"]["label"], "Nasdaq 목록 갱신")
+        self.assertEqual(model["suggested_action"]["action_id"], "overview_nasdaq_symbol_directory")
+        grouped = model["grouped_missing_rows"]
+        self.assertEqual(grouped.iloc[0]["Missing Reason Group"], "No universe")
+        self.assertIn("current snapshot", grouped.iloc[0]["Likely Cause"])
+        self.assertIn("Nasdaq 목록 갱신", grouped.iloc[0]["Suggested Next Action"])
+        self.assertNotIn("상장폐지", grouped.to_string())
+        self.assertNotIn("거래정지", grouped.to_string())
+
+    def test_market_movers_unusual_volume_view_explains_missing_baseline(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_liquidity_universe_member" in sql:
+                return [{"symbol": "AAA", "long_name": "AAA Corp", "sector": "Technology", "industry": "Software", "market_cap": 100}]
+            if "AS latest_raw_date" in sql and "ORDER BY `date` DESC" in sql:
+                return [{"latest_raw_date": "2026-05-20"}]
+            if "GROUP BY `date`" in sql:
+                return [
+                    {"date": "2026-05-20", "usable_rows": 1200},
+                    {"date": "2026-05-19", "usable_rows": 1200},
+                    {"date": "2026-05-18", "usable_rows": 1200},
+                ]
+            if "AVG(volume) AS avg_10d_volume" in sql:
+                return []
+            if "COALESCE(adj_close, close) AS price" in sql:
+                return [
+                    {"symbol": "AAA", "date": "2026-05-18", "price": 100.0, "volume": 900},
+                    {"symbol": "AAA", "date": "2026-05-19", "price": 100.0, "volume": 1000},
+                    {"symbol": "AAA", "date": "2026-05-20", "price": 110.0, "volume": 5000},
+                ]
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 21),
+            prefer_intraday=False,
+            query_fn=query_fn,
+        )
+
+        unusual = snapshot["mover_views"]["unusual_volume"]
+        self.assertEqual(unusual["status"], "INSUFFICIENT_DATA")
+        self.assertTrue(unusual["rows"].empty)
+        self.assertIn("10-day", unusual["empty_reason"])
+
+    def test_market_movers_ui_controls_include_explicit_exploration_mode(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("MARKET_MOVER_MODE_LABELS", source)
+        self.assertIn("overview_market_movers_mode", source)
+        self.assertIn("controls.mode", source)
+        self.assertIn("mover_views", source)
+        self.assertIn("랭킹 기준", source)
+        self.assertNotIn("탐색 모드", source)
+        self.assertNotIn("buy signal", source.lower())
+        self.assertNotIn("sell signal", source.lower())
+
+    def test_market_movers_polish_phase1_uses_uniform_select_controls(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        controls_body = source[source.index("def _render_market_movers_controls") :]
+        controls_body = controls_body[: controls_body.index("def render_market_movers_header")]
+        self.assertIn("render_overview_toolbar_label(\"조건\")", controls_body)
+        self.assertIn("MARKET_MOVER_TOP_N_OPTIONS", source)
+        self.assertIn("\"랭킹 기준\"", controls_body)
+        self.assertIn("overview_market_movers_mode", controls_body)
+        self.assertIn("overview_market_movers_top_n", controls_body)
+        self.assertNotIn("number_input", controls_body)
+        self.assertNotIn("segmented_control", controls_body)
+        self.assertNotIn("st.columns([1.05, 1.0, 1.0, 0.72, 1.45]", controls_body)
+
+    def test_market_movers_polish_phase2_uses_unified_summary(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_movers_unified_summary_model", helper_source)
+        self.assertIn("render_market_movers_unified_summary", helper_source)
+        self.assertIn("render_market_movers_unified_summary", component_source)
+        self.assertIn("ov-mm-unified-summary", common_source)
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("_render_market_movers_react_summary(", render_body)
+        self.assertNotIn("render_market_movers_command_strip(", render_body)
+        trust_body = helper_source[helper_source.index("def _render_market_movers_coverage_trust") :]
+        trust_body = trust_body[: trust_body.index("def _render_missing_diagnostics")]
+        self.assertIn("Coverage trust detail", trust_body)
+        self.assertNotIn("render_market_movers_data_trust_strip", trust_body)
+
+    def test_market_movers_unified_summary_model_removes_duplicate_control_items(self) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_unified_summary_model,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "OK",
+            "universe_code": "SP500",
+            "universe_label": "S&P 500",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 503,
+                "missing_count": 0,
+                "returnable_pct": 100.0,
+                "snapshot_time_utc": "2026-06-24 14:31",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "stale", "label": "Stale", "detail": "7104m old"},
+            },
+        }
+
+        model = build_market_movers_unified_summary_model(snapshot, controls=controls, exploration_mode="상승")
+
+        self.assertEqual(model["schema_version"], "market_movers_unified_summary_v1")
+        self.assertEqual(model["title"], "변동 종목")
+        self.assertEqual(model["context"], "S&P 500 · Daily · All sectors")
+        self.assertEqual(model["trust_state"], "Stale")
+        labels = [item["label"] for item in model["items"]]
+        self.assertEqual(labels, ["기준", "Universe", "Returnable", "Missing", "보기"])
+        self.assertNotIn("Coverage", labels)
+        self.assertNotIn("Period", labels)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_pilot_contract_defines_payload_and_actions(self, mock_st: MagicMock) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+            market_movers_react_action_plan,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "PARTIAL",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 502,
+                "missing_count": 1,
+                "returnable_pct": 99.8,
+                "snapshot_time_utc": "2026-07-02 23:28",
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {"status": "partial", "label": "Partial", "detail": "0m old, 1 missing"},
+            },
+        }
+
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        self.assertEqual(payload["schema_version"], "market_movers_react_workbench_v1")
+        self.assertEqual(payload["component"], "MarketMoversWorkbench")
+        self.assertEqual(payload["summary"]["title"], "변동 종목")
+        self.assertEqual(payload["summary"]["trust_state"], "Partial")
+        self.assertEqual(payload["summary"]["trust_detail"], "0m old, 1 missing")
+        self.assertEqual(payload["controls"]["coverage"], "SP500")
+        self.assertEqual(payload["controls"]["period"], "daily")
+        self.assertEqual(payload["actions"][0]["id"], "refresh_intraday")
+        self.assertEqual(payload["actions"][0]["label"], "일중 스냅샷 갱신")
+        self.assertIn({"id": "reload", "label": "화면 새로고침", "kind": "secondary"}, payload["actions"])
+
+        plan = market_movers_react_action_plan("refresh_intraday", controls=controls)
+        self.assertEqual(plan["handler"], "run_overview_market_intraday_snapshot")
+        self.assertEqual(plan["universe_code"], "SP500")
+        self.assertEqual(plan["universe_limit"], 500)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_actions_use_liquidity_universe_refresh_for_top_coverage(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+            market_movers_react_action_plan,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+
+        payload = build_market_movers_react_workbench_payload(
+            {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}},
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        self.assertIn(
+            {"id": "refresh_liquidity_universe", "label": "유니버스 기준 갱신", "kind": "secondary"},
+            payload["actions"],
+        )
+        self.assertNotIn("universe_static", [action["id"] for action in payload["actions"]])
+
+        plan = market_movers_react_action_plan("refresh_liquidity_universe", controls=controls)
+        self.assertEqual(plan["handler"], "run_overview_market_liquidity_universe_refresh")
+        self.assertEqual(plan["universe_code"], "TOP1000")
+        self.assertEqual(plan["universe_limit"], 1000)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_actions_include_ticker_alias_repair_when_candidates_exist(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+            market_movers_react_action_plan,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "OK",
+            "coverage": {"refresh_state": {"label": "Partial"}},
+            "ticker_alias_candidates": [
+                {"symbol": "SATS", "alias_symbol": "ECHO", "confidence": 0.96},
+                {"symbol": "VSCO", "alias_symbol": "VSXY", "confidence": 0.95},
+            ],
+        }
+
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        self.assertIn(
+            {"id": "apply_ticker_alias_repair", "label": "티커 변경 복구 적용", "kind": "secondary"},
+            payload["actions"],
+        )
+        self.assertEqual(payload["trust_panel"]["ticker_alias_candidates"][0]["symbol"], "SATS")
+        plan = market_movers_react_action_plan("apply_ticker_alias_repair", controls=controls)
+        self.assertEqual(plan["handler"], "run_overview_market_symbol_alias_repair")
+        self.assertEqual(plan["universe_code"], "TOP1000")
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_actions_include_price_history_refresh_for_non_daily(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+            market_movers_react_action_plan,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="TOP2000",
+            universe_limit=2000,
+            period="monthly",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+
+        payload = build_market_movers_react_workbench_payload(
+            {
+                "status": "OK",
+                "date_window": {"effective_end_date": "2026-07-07"},
+                "coverage": {"refresh_state": {"label": "Fresh"}},
+                "eod_refresh_preflight": {
+                    "schema_version": "market_movers_eod_refresh_preflight_v1",
+                    "status": "due",
+                    "status_label": "가격 이력 보강 필요",
+                    "selected_symbols_count": 12,
+                    "skipped_current_count": 1988,
+                    "range_start": "2026-06-28",
+                    "range_end": "2026-07-08",
+                    "range_reason": "가장 오래된 stale 종목 AAA의 다음 거래일부터 보강합니다.",
+                    "range_driver_symbols": ["AAA"],
+                    "as_of_date": "2026-07-07",
+                },
+            },
+            controls=controls,
+            exploration_mode="상승",
+        )
+
+        action_ids = [action["id"] for action in payload["actions"]]
+        action_labels = [action["label"] for action in payload["actions"]]
+        self.assertIn("refresh_liquidity_universe", action_ids)
+        self.assertIn("유니버스 기준 갱신", action_labels)
+        self.assertEqual(action_ids[0], "refresh_eod_history")
+        self.assertIn("가격 이력 갱신", action_labels)
+        self.assertEqual(payload["summary"]["trust_state"], "계산 가능 · 이력 보강 필요")
+        self.assertEqual(payload["summary"]["tone"], "warning")
+        self.assertEqual(payload["summary"]["action_label"], "가격 이력 확인")
+        self.assertEqual(payload["eod_refresh_preflight"]["selected_symbols_count"], 12)
+        self.assertEqual(payload["eod_refresh_preflight"]["range_start"], "2026-06-28")
+        self.assertIn("수집 대상 12개", payload["actions"][0]["detail"])
+        self.assertIn("2026-06-28", payload["actions"][0]["detail"])
+
+        plan = market_movers_react_action_plan("refresh_eod_history", controls=controls)
+        self.assertEqual(plan["handler"], "run_overview_market_movers_eod_history")
+        self.assertEqual(plan["universe_code"], "TOP2000")
+        self.assertEqual(plan["universe_limit"], 2000)
+        self.assertEqual(plan["period"], "monthly")
+        self.assertEqual(plan["as_of_date"], "2026-07-07")
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_filters_live_inside_workbench_card(self, mock_st: MagicMock) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}}
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(payload["control_ownership"]["mode"], "python_state_react_ui")
+        self.assertEqual(
+            payload["control_ownership"]["migrated_controls"],
+            ["coverage", "period", "sector", "top_n", "mode", "summary_actions", "refresh_mode"],
+        )
+        self.assertEqual(payload["control_ownership"]["deferred_controls"], [])
+        filter_controls = payload["filter_controls"]
+        self.assertTrue(filter_controls["visible"])
+        self.assertEqual(
+            [item["id"] for item in filter_controls["items"]],
+            ["coverage", "period", "sector", "top_n", "mode"],
+        )
+        coverage_control = filter_controls["items"][0]
+        self.assertEqual(coverage_control["label"], "Coverage")
+        self.assertEqual(coverage_control["value"], "SP500")
+        self.assertIn({"value": "SP500", "label": "S&P 500"}, coverage_control["options"])
+        self.assertIn("control_ownership", react_source)
+        self.assertIn("data-control-mode={payload.control_ownership.mode}", react_source)
+        self.assertIn("payload.filter_controls.visible", react_source)
+        self.assertIn('className="mm-workbench__filters"', react_source)
+
+        controls_body = helper_source[helper_source.index("def _render_market_movers_controls") :]
+        controls_body = controls_body[: controls_body.index("def render_market_movers_header")]
+        self.assertIn("market_movers_react_component_available()", controls_body)
+        self.assertIn("_market_movers_controls_from_session_state()", controls_body)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_refresh_mode_lives_inside_action_strip(self, mock_st: MagicMock) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        payload = build_market_movers_react_workbench_payload(
+            {"status": "OK", "coverage": {"refresh_state": {"label": "Fresh"}}},
+            controls=controls,
+            exploration_mode="상승",
+        )
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertEqual(payload["refresh_mode"]["value"], "manual")
+        self.assertEqual(
+            payload["refresh_mode"]["options"],
+            [{"value": "manual", "label": "수동 갱신"}, {"value": "auto", "label": "자동 갱신"}],
+        )
+        self.assertFalse(payload["refresh_mode"]["disabled"])
+        self.assertIn("def _market_movers_react_refresh_mode_config", helper_source)
+        self.assertIn("set_refresh_mode", helper_source)
+        self.assertIn("payload.refresh_mode.visible", react_source)
+        self.assertIn("emitRefreshMode", react_source)
+        self.assertIn('className="mm-workbench__action-row"', react_source)
+        self.assertIn('className="mm-workbench__mode-select"', react_source)
+        self.assertIn(".mm-workbench__action-row", react_style)
+        self.assertIn(".mm-workbench__mode-select", react_style)
+
+        companion_body = helper_source[helper_source.index("def _render_market_movers_react_refresh_companion") :]
+        companion_body = companion_body[: companion_body.index("def _rank_token")]
+        self.assertNotIn("_select_market_refresh_mode", companion_body)
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_refresh_mode_event_updates_session_once(self, mock_st: MagicMock) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "set_refresh_mode", "value": "auto", "nonce": 456}}
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+        self.assertEqual(mock_st.session_state["overview_market_movers_refresh_mode"], "auto")
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertFalse(_dispatch_market_movers_react_event(event, controls=controls))
+        mock_st.rerun.assert_not_called()
+
+    @patch("app.web.overview.market_movers_helpers.load_overview_market_mover_sectors")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_filter_event_updates_python_state_once(
+        self,
+        mock_st: MagicMock,
+        mock_load_sectors: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="Technology",
+            top_n=20,
+            mode="top_gainers",
+        )
+        mock_load_sectors.return_value = ["Technology", "Healthcare"]
+        mock_st.session_state = {
+            "overview_market_movers_coverage": "SP500",
+            "overview_market_movers_sector": "Technology",
+        }
+        event = {"event": {"id": "set_control", "control": "coverage", "value": "NASDAQ", "nonce": 789}}
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+        self.assertEqual(mock_st.session_state["overview_market_movers_coverage"], "NASDAQ")
+        self.assertEqual(mock_st.session_state["overview_market_movers_sector"], "All")
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertFalse(_dispatch_market_movers_react_event(event, controls=controls))
+        mock_st.rerun.assert_not_called()
+
+    @patch("app.web.overview.market_movers_helpers.load_overview_market_mover_sectors")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_filter_state_resolver_validates_options(
+        self,
+        mock_st: MagicMock,
+        mock_load_sectors: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import _market_movers_controls_from_session_state
+
+        mock_load_sectors.return_value = ["Technology", "Healthcare"]
+        mock_st.session_state = {
+            "overview_market_movers_coverage": "BROKEN",
+            "overview_market_movers_period": "weekly",
+            "overview_market_movers_sector": "Bad Sector",
+            "overview_market_movers_top_n": 999,
+            "overview_market_movers_mode": "volume_leaders",
+        }
+
+        controls = _market_movers_controls_from_session_state()
+
+        self.assertEqual(controls.coverage, "SP500")
+        self.assertEqual(controls.universe_limit, 500)
+        self.assertEqual(controls.period, "weekly")
+        self.assertEqual(controls.sector, "All")
+        self.assertEqual(controls.top_n, 20)
+        self.assertEqual(controls.mode, "volume_leaders")
+        self.assertEqual(mock_st.session_state["overview_market_movers_coverage"], "SP500")
+        self.assertEqual(mock_st.session_state["overview_market_movers_sector"], "All")
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_trust_panel_replaces_streamlit_expander_and_alerts(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            build_market_movers_react_workbench_payload,
+        )
+
+        mock_st.session_state = {"overview_market_movers_refresh_mode": "manual"}
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        snapshot = {
+            "status": "PARTIAL",
+            "universe_code": "SP500",
+            "universe_label": "S&P 500",
+            "coverage": {
+                "universe_count": 503,
+                "returnable_count": 501,
+                "missing_count": 2,
+                "returnable_pct": 99.6,
+                "snapshot_time_utc": "2026-07-02 23:29",
+                "snapshot_stale_minutes": 4257,
+                "price_mode": "Intraday Snapshot",
+                "refresh_state": {
+                    "status": "stale",
+                    "label": "Stale",
+                    "detail": "4257m old, 2 missing",
+                    "recommended_action": "Run Update Daily Snapshot.",
+                },
+            },
+            "date_window": {"status": "OK"},
+            "missing_rows": pd.DataFrame(
+                [
+                    {
+                        "Symbol": "AAA",
+                        "Reason": "missing quote row",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                    },
+                    {
+                        "Symbol": "BBB",
+                        "Reason": "missing quote row",
+                        "Likely Cause": "Daily quote snapshot gap.",
+                        "Recommended Action": "Refresh the daily snapshot.",
+                    },
+                ]
+            ),
+        }
+
+        payload = build_market_movers_react_workbench_payload(
+            snapshot,
+            controls=controls,
+            exploration_mode="상승",
+        )
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        trust_panel = payload["trust_panel"]
+        self.assertEqual(trust_panel["schema_version"], "market_movers_react_trust_panel_v1")
+        self.assertEqual(trust_panel["title"], "Coverage trust detail")
+        self.assertEqual(trust_panel["kicker"], "자료 품질")
+        self.assertEqual(trust_panel["state"], "오래됨")
+        self.assertFalse(trust_panel["default_open"])
+        self.assertTrue(trust_panel["has_issues"])
+        self.assertEqual(trust_panel["detail"], "4257분 경과, 2개 누락")
+        self.assertEqual(trust_panel["warnings"][0], "선택한 유니버스에서 랭킹 가능한 가격 행이 없는 심볼 2개가 있습니다.")
+        self.assertIn("최신 일중 스냅샷이 4257분 경과했습니다.", trust_panel["warnings"])
+        self.assertEqual(
+            trust_panel["group_columns"],
+            ["누락 사유 그룹", "가능한 원인", "권장 다음 조치", "영향 종목 수", "예시 티커"],
+        )
+        self.assertEqual(trust_panel["grouped_rows"][0]["누락 사유 그룹"], "시세 행 누락")
+        self.assertEqual(trust_panel["grouped_rows"][0]["가능한 원인"], "일중 시세 스냅샷 공백입니다.")
+        self.assertEqual(trust_panel["grouped_rows"][0]["권장 다음 조치"], "일중 스냅샷을 갱신하세요.")
+        self.assertEqual(trust_panel["grouped_rows"][0]["영향 종목 수"], 2)
+        self.assertEqual(trust_panel["grouped_rows"][0]["예시 티커"], "AAA, BBB")
+        self.assertEqual(trust_panel["suggested_action"]["label"], "일중 스냅샷 갱신")
+        self.assertEqual(trust_panel["suggested_action"]["action_id"], "use_existing_refresh_bar")
+        self.assertIn("매매 신호", trust_panel["boundary_note"])
+        self.assertNotIn("not a trading signal", trust_panel["boundary_note"])
+        self.assertIn("payload.trust_panel.visible", react_source)
+        self.assertIn("mm-workbench__trust-panel", react_source)
+        self.assertIn("mm-workbench__trust-issue-dot", react_source)
+        self.assertIn("그룹 누락 진단", react_source)
+        self.assertIn(".mm-workbench__trust-panel", react_style)
+        self.assertIn(".mm-workbench__trust-issue-dot", react_style)
+        self.assertIn(".mm-workbench__trust-warning", react_style)
+
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("_render_market_movers_coverage_trust(snapshot, controls=controls)", render_body)
+        self.assertIn("show_warnings=react_event is None", render_body)
+        self.assertLess(
+            render_body.index("if react_event is None:"),
+            render_body.index("_render_market_movers_coverage_trust(snapshot, controls=controls)"),
+        )
+
+    def test_market_movers_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
+        from app.web.overview.market_movers_react_component import (
+            MARKET_MOVERS_REACT_COMPONENT_NAME,
+            market_movers_react_component_available,
+        )
+
+        component_root = Path("app/web/streamlit_components/market_movers_workbench")
+
+        self.assertEqual(MARKET_MOVERS_REACT_COMPONENT_NAME, "market_movers_workbench")
+        self.assertTrue((component_root / "package.json").exists())
+        self.assertTrue((component_root / "src" / "MarketMoversWorkbench.tsx").exists())
+        self.assertTrue((component_root / "src" / "main.tsx").exists())
+        self.assertFalse(market_movers_react_component_available(component_root / "missing-dist"))
+
+    def test_market_movers_react_display_pilot_wraps_unified_summary_with_fallback(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/market_movers_react_component.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        vite_source = Path("app/web/streamlit_components/market_movers_workbench/vite.config.ts").read_text(
+            encoding="utf-8"
+        )
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("render_market_movers_react_workbench", helper_source)
+        self.assertIn("def _render_market_movers_react_summary", helper_source)
+        self.assertIn("build_market_movers_react_workbench_payload", helper_source)
+        self.assertIn('render_market_movers_unified_summary(payload["summary"])', helper_source)
+        self.assertIn('default={"event": None}', wrapper_source)
+        self.assertIn('className="mm-workbench__grid"', react_source)
+        self.assertIn("payload.summary.items.map", react_source)
+        self.assertIn('className="mm-workbench__actions"', react_source)
+        self.assertIn('disabled={action.kind === "disabled"}', react_source)
+        self.assertIn('base: "./"', vite_source)
+        self.assertIn(".mm-workbench__grid", react_style)
+        self.assertIn(".mm-workbench__action", react_style)
+
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("_render_market_movers_react_summary(", render_body)
+        self.assertNotIn("render_market_movers_unified_summary(", render_body)
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.run_overview_market_intraday_snapshot")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_event_bridge_dispatches_existing_actions_once(
+        self,
+        mock_st: MagicMock,
+        mock_run_intraday: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+            _market_movers_react_event_action_id,
+        )
+
+        controls = MarketMoverControls(
+            coverage="SP500",
+            universe_limit=500,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "refresh_intraday", "nonce": 123}}
+        mock_st.session_state = {}
+        mock_run_intraday.return_value = {"status": "success", "rows_written": 503}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+
+        self.assertEqual(_market_movers_react_event_action_id(event), "refresh_intraday")
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+
+        mock_run_intraday.assert_called_once_with(universe_code="SP500", universe_limit=500)
+        mock_store_result.assert_called_once_with("overview_sp500_intraday_result", mock_run_intraday.return_value)
+        mock_st.rerun.assert_called_once()
+
+        mock_st.rerun.reset_mock()
+        self.assertFalse(_dispatch_market_movers_react_event(event, controls=controls))
+        mock_st.rerun.assert_not_called()
+
+    def test_market_movers_react_component_emits_action_events(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("def _dispatch_market_movers_react_event", helper_source)
+        self.assertIn("_dispatch_market_movers_react_event(react_event, controls=controls)", helper_source)
+        self.assertIn("Streamlit.setComponentValue", react_source)
+        self.assertIn("nonce: Date.now()", react_source)
+        self.assertIn("onClick={() => emitAction(action)}", react_source)
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.run_overview_market_liquidity_universe_refresh")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_event_bridge_dispatches_liquidity_universe_refresh_once(
+        self,
+        mock_st: MagicMock,
+        mock_run_refresh: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "refresh_liquidity_universe", "nonce": 223}}
+        mock_st.session_state = {}
+        mock_run_refresh.return_value = {"status": "success", "rows_written": 998}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+
+        mock_run_refresh.assert_called_once_with(universe_code="TOP1000", universe_limit=1000)
+        mock_store_result.assert_called_once_with(
+            "overview_top1000_liquidity_universe_result",
+            mock_run_refresh.return_value,
+        )
+        mock_st.rerun.assert_called_once()
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.run_overview_market_movers_eod_history")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_event_bridge_dispatches_eod_history_refresh_once(
+        self,
+        mock_st: MagicMock,
+        mock_run_refresh: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="TOP2000",
+            universe_limit=2000,
+            period="weekly",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "refresh_eod_history", "nonce": 225}}
+        mock_st.session_state = {"overview_top2000_weekly_eod_history_as_of_date": "2026-07-07"}
+        mock_run_refresh.return_value = {"status": "success", "rows_written": 4000}
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+
+        mock_run_refresh.assert_called_once_with(
+            universe_code="TOP2000",
+            universe_limit=2000,
+            period="weekly",
+            as_of_date="2026-07-07",
+        )
+        mock_store_result.assert_called_once_with(
+            "overview_top2000_weekly_eod_history_result",
+            mock_run_refresh.return_value,
+        )
+        mock_st.rerun.assert_called_once()
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_refresh_progress_uses_bar_and_stopwatch_not_status_expander(
+        self,
+        mock_st: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            _format_market_movers_stopwatch,
+            _run_market_movers_job_with_progress,
+        )
+
+        mock_st.session_state = {}
+        mock_status = MagicMock()
+        mock_st.status.return_value.__enter__.return_value = mock_status
+        mock_st.status.return_value.__exit__.return_value = None
+        result = {"status": "success", "message": "Weekly refresh completed."}
+
+        _run_market_movers_job_with_progress(
+            result_key="overview_sp500_weekly_eod_history_result",
+            label="S&P 500 Weekly 가격 이력 갱신",
+            detail="비-Daily 랭킹 산출에 필요한 저장 EOD 가격 이력을 갱신합니다.",
+            run_job=lambda: result,
+        )
+
+        mock_st.status.assert_not_called()
+        mock_st.html.assert_called_once()
+        self.assertTrue(mock_st.html.call_args.kwargs["unsafe_allow_javascript"])
+        progress_html = mock_st.html.call_args.args[0]
+        self.assertIn("ov-mm-job-progress", progress_html)
+        self.assertIn("setInterval", progress_html)
+        self.assertIn("경과", progress_html)
+        self.assertEqual(_format_market_movers_stopwatch(149.975), "02:30")
+        mock_store_result.assert_called_once_with("overview_sp500_weekly_eod_history_result", result)
+
+    @patch("app.web.overview.market_movers_react_component._declare_market_movers_component")
+    def test_market_movers_react_component_sanitizes_datetime_payload_before_render(
+        self,
+        mock_declare_component: MagicMock,
+    ) -> None:
+        import app.web.overview.market_movers_react_component as react_component
+
+        rendered_payload: dict[str, Any] = {}
+
+        def fake_component(**kwargs: Any) -> dict[str, Any]:
+            rendered_payload.update(kwargs["payload"])
+            json.dumps(kwargs["payload"], ensure_ascii=False)
+            return {"event": None}
+
+        mock_declare_component.return_value = fake_component
+        payload = {
+            "schema_version": "market_movers_react_workbench_v1",
+            "coverage": {
+                "snapshot_time": datetime(2026, 7, 7, 13, 26),
+                "snapshot_time_utc": datetime(2026, 7, 7, 4, 26, tzinfo=timezone.utc),
+                "market_date": date(2026, 7, 7),
+                "universe_collected_at": pd.Timestamp("2026-07-07 13:25:00"),
+                "missing_since": pd.NaT,
+                "returnable_pct": Decimal("99.75"),
+                "bad_numeric": float("nan"),
+            },
+            "trust_panel": {
+                "grouped_rows": [
+                    {"symbol": "ABC", "last_seen_at": datetime(2026, 7, 6, 9, 30)},
+                ]
+            },
+        }
+
+        result = react_component.render_market_movers_react_workbench(payload, key="market_movers_json_safe_test")
+
+        self.assertEqual(result, {"event": None})
+        self.assertEqual(rendered_payload["coverage"]["snapshot_time"], "2026-07-07T13:26:00")
+        self.assertEqual(rendered_payload["coverage"]["snapshot_time_utc"], "2026-07-07T04:26:00+00:00")
+        self.assertEqual(rendered_payload["coverage"]["market_date"], "2026-07-07")
+        self.assertEqual(rendered_payload["coverage"]["universe_collected_at"], "2026-07-07T13:25:00")
+        self.assertIsNone(rendered_payload["coverage"]["missing_since"])
+        self.assertEqual(rendered_payload["coverage"]["returnable_pct"], 99.75)
+        self.assertIsNone(rendered_payload["coverage"]["bad_numeric"])
+
+    @patch("app.web.overview.market_movers_helpers._store_overview_job_result")
+    @patch("app.web.overview.market_movers_helpers.run_overview_market_symbol_alias_repair")
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_movers_react_event_bridge_dispatches_ticker_alias_repair_once(
+        self,
+        mock_st: MagicMock,
+        mock_run_repair: MagicMock,
+        mock_store_result: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import (
+            MarketMoverControls,
+            _dispatch_market_movers_react_event,
+        )
+
+        controls = MarketMoverControls(
+            coverage="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            sector="All",
+            top_n=20,
+            mode="top_gainers",
+        )
+        event = {"event": {"id": "apply_ticker_alias_repair", "nonce": 224}}
+        mock_st.session_state = {
+            "overview_market_movers_ticker_alias_candidates_TOP1000": [
+                {"symbol": "SATS", "alias_symbol": "ECHO", "confidence": 0.96},
+                {"symbol": "VSCO", "alias_symbol": "VSXY", "confidence": 0.95},
+            ]
+        }
+        mock_run_repair.return_value = {"status": "success", "rows_written": 2}
+        mock_st.spinner.return_value.__enter__.return_value = None
+        mock_st.spinner.return_value.__exit__.return_value = None
+
+        self.assertTrue(_dispatch_market_movers_react_event(event, controls=controls))
+
+        mock_run_repair.assert_called_once_with(
+            universe_code="TOP1000",
+            candidates=[
+                {"symbol": "SATS", "alias_symbol": "ECHO", "confidence": 0.96},
+                {"symbol": "VSCO", "alias_symbol": "VSXY", "confidence": 0.95},
+            ],
+        )
+        mock_store_result.assert_called_once_with(
+            "overview_top1000_ticker_alias_repair_result",
+            mock_run_repair.return_value,
+        )
+        mock_st.rerun.assert_called_once()
+
+    def test_market_movers_react_action_strip_replaces_legacy_buttons_when_rendered(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("def _render_market_movers_react_refresh_companion", helper_source)
+        render_body = helper_source[helper_source.index("def render_market_movers_snapshot") :]
+        self.assertIn("react_event = _render_market_movers_react_summary(snapshot, controls=controls)", render_body)
+        self.assertIn("_dispatch_market_movers_react_event(react_event, controls=controls)", render_body)
+        self.assertIn("if react_event is None:", render_body)
+        self.assertIn("_render_market_movers_refresh_bar(", render_body)
+        self.assertIn("_render_market_movers_react_refresh_companion(", render_body)
+        self.assertLess(render_body.index("if react_event is None:"), render_body.index("_render_market_movers_refresh_bar("))
+        self.assertLess(
+            render_body.index("_render_market_movers_refresh_bar("),
+            render_body.index("_render_market_movers_react_refresh_companion("),
+        )
+
+    def test_market_movers_polish_phase3_compacts_refresh_actions(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        refresh_mode_body = helper_source[helper_source.index("def _select_market_refresh_mode") :]
+        refresh_mode_body = refresh_mode_body[: refresh_mode_body.index("def _select_market_mover_mode")]
+        self.assertIn("container.selectbox", refresh_mode_body)
+        self.assertNotIn("segmented_control", refresh_mode_body)
+        self.assertNotIn(".radio(", refresh_mode_body)
+
+        auto_message_body = component_source[component_source.index("def render_market_auto_message") :]
+        auto_message_body = auto_message_body[: auto_message_body.index("def render_market_auto_waiting_panel")]
+        self.assertIn("_market_refresh_state_detail(message)", auto_message_body)
+        self.assertIn("ov-mm-refresh-rail", component_source)
+        self.assertNotIn("ov-mm-refresh-label", component_source)
+        self.assertIn("ov-mm-refresh-rail", common_source)
+        self.assertIn('[class*="_market_movers_reload"] button', common_source)
+
+    def test_market_movers_polish_phase4_centers_ranking_board(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        panel_body = helper_source[helper_source.index("def _render_market_movers_snapshot_panel") :]
+        panel_body = panel_body[: panel_body.index("def render_market_movers_snapshot")]
+        self.assertIn("render_market_mover_board", panel_body)
+        self.assertIn("모드별 상세 표 전체 높이로 보기", panel_body)
+        self.assertNotIn("render_market_mover_chart_workspace", panel_body)
+        self.assertNotIn("_build_market_mover_mode_chart", panel_body)
+        self.assertNotIn("상세 표로 보기", panel_body)
+        self.assertNotIn("list_col, context_col = st.columns", panel_body)
+        self.assertIn("max-height", common_source[common_source.index(".ov-mm-list") :])
+        self.assertIn("overflow-y: auto", common_source[common_source.index(".ov-mm-list") :])
+
+    def test_market_mover_board_model_formats_compact_ranking_rows(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_board_model
+
+        rows = pd.DataFrame(
+            [
+                {
+                    "Rank": 1,
+                    "Symbol": "AAA",
+                    "Name": "AAA Corp",
+                    "Sector": "Technology",
+                    "Return %": 12.34,
+                    "Previous Return %": 3.21,
+                    "Volume": 1_250_000,
+                    "Dollar Volume": 543_210_000,
+                    "Relative Volume": 2.75,
+                },
+                {
+                    "Rank": 2,
+                    "Symbol": "BBB",
+                    "Name": "BBB Corp",
+                    "Sector": "Industrials",
+                    "Return %": 8.9,
+                    "Volume": 900_000,
+                },
+            ]
+        )
+        mode_model = {
+            "mode": "top_gainers",
+            "label": "상승",
+            "kind": "symbol",
+            "sort_basis": "Return % descending",
+            "boundary_note": "Context-only ranking view.",
+            "status": "OK",
+            "rows": rows,
+        }
+
+        model = build_market_mover_board_model(mode_model, top_n=20)
+
+        self.assertEqual(model["schema_version"], "market_mover_board_v1")
+        self.assertEqual(model["title"], "상승 상위 종목")
+        self.assertEqual(model["summary"]["count"], 2)
+        self.assertEqual(model["rows"][0]["symbol"], "AAA")
+        self.assertEqual(model["rows"][0]["name"], "AAA Corp")
+        self.assertEqual(model["rows"][0]["primary_metric_label"], "수익률")
+        self.assertEqual(model["rows"][0]["primary_metric"], "+12.34%")
+        self.assertEqual(model["rows"][0]["tone"], "positive")
+        self.assertIn("직전 수익률 +3.21%", model["rows"][0]["secondary"])
+        self.assertIn("거래량 1.2M", model["rows"][0]["secondary"])
+        self.assertIn("상대 2.75x", model["rows"][0]["secondary"])
+        self.assertIn("Context-only", model["boundary_note"])
+
+    def test_market_mover_chart_workspace_model_summarizes_mode_metric(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_chart_workspace_model
+
+        rows = pd.DataFrame(
+            [
+                {"Rank": 1, "Symbol": "AAA", "Name": "AAA Corp", "Relative Volume": 4.25, "Return %": 8.1},
+                {"Rank": 2, "Symbol": "BBB", "Name": "BBB Corp", "Relative Volume": 2.5, "Return %": -1.2},
+            ]
+        )
+        mode_model = {
+            "mode": "unusual_volume",
+            "label": "이상 거래량",
+            "sort_basis": "Relative Volume vs 10D Avg descending",
+            "boundary_note": "Context-only ranking view.",
+            "rows": rows,
+        }
+
+        model = build_market_mover_chart_workspace_model(mode_model)
+
+        self.assertEqual(model["schema_version"], "market_mover_chart_workspace_v1")
+        self.assertEqual(model["title"], "이상 거래량 차트")
+        self.assertEqual(model["metric_label"], "상대 거래량")
+        facts = {item["label"]: item for item in model["facts"]}
+        self.assertEqual(facts["표시 rows"]["value"], "2")
+        self.assertEqual(facts["상위"]["value"], "AAA")
+        self.assertEqual(facts["상위"]["detail"], "4.25x")
+        self.assertIn("2.50x", facts["범위"]["value"])
+        self.assertIn("4.25x", facts["범위"]["value"])
+
+    def test_market_movers_sector_map_model_builds_breadth_lanes(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_movers_sector_map_model
+
+        source_model = {
+            "status": "OK",
+            "summary": {
+                "headline": "Broad participation, balanced leadership",
+                "detail": "Technology leads the selected universe.",
+            },
+            "coverage": {"freshness": "2026-06-26"},
+            "boundary_note": "Context-only sector breadth.",
+            "heatmap_rows": [
+                {
+                    "rank": 1,
+                    "group": "Technology",
+                    "tone": "positive",
+                    "market_cap_weighted_return_pct": 2.0,
+                    "positive_symbol_share_pct": 80.0,
+                    "advancers": 8,
+                    "decliners": 2,
+                    "market_cap_share_pct": 30.0,
+                    "top_symbol": "AAA",
+                    "top_symbol_return_pct": 5.5,
+                    "top_loser": "BBB",
+                    "top_loser_return_pct": -1.1,
+                },
+                {
+                    "rank": 2,
+                    "group": "Energy",
+                    "tone": "negative",
+                    "market_cap_weighted_return_pct": -1.0,
+                    "positive_symbol_share_pct": 20.0,
+                    "advancers": 1,
+                    "decliners": 4,
+                    "market_cap_share_pct": 10.0,
+                    "top_symbol": "CCC",
+                    "top_symbol_return_pct": 1.0,
+                    "top_loser": "DDD",
+                    "top_loser_return_pct": -4.0,
+                },
+            ],
+        }
+
+        model = build_market_movers_sector_map_model(source_model)
+
+        self.assertEqual(model["schema_version"], "market_movers_sector_map_v1")
+        self.assertEqual(model["headline"], "넓은 참여, 균형 리더십")
+        self.assertIn("Technology 섹터가 선택 coverage를 주도합니다.", model["detail"])
+        self.assertEqual(model["participation"]["value"], "50%")
+        self.assertEqual(model["leadership"]["value"], "Technology")
+        self.assertEqual(model["leadership"]["detail"], "+2.00% 시총가중")
+        self.assertEqual(model["dispersion"]["value"], "혼재")
+        self.assertEqual(model["dispersion"]["detail"], "1개 양수 섹터 · 1개 음수 섹터")
+        self.assertEqual(model["lanes"][0]["sector"], "Technology")
+        self.assertEqual(model["lanes"][0]["return_label"], "+2.00%")
+        self.assertEqual(model["lanes"][0]["bar_pct"], 100)
+        self.assertEqual(model["lanes"][0]["bar_width_pct"], 100)
+        self.assertEqual(model["lanes"][0]["participation_label"], "상승 80%")
+        self.assertEqual(model["lanes"][0]["participation_detail"], "상승 8 / 하락 2 · 상승 비중 80%")
+        self.assertEqual(model["lanes"][0]["top_gainer_detail"], "상승 상위 AAA +5.50%")
+        self.assertEqual(model["lanes"][0]["top_loser_detail"], "하락 상위 BBB -1.10%")
+        self.assertEqual(model["lanes"][1]["return_label"], "-1.00%")
+        self.assertEqual(model["lanes"][1]["tone"], "danger")
+        self.assertEqual(model["lanes"][1]["bar_pct"], 50)
+        self.assertEqual(model["lanes"][1]["bar_width_pct"], 50)
+
+    def test_market_movers_polish_phase5_localizes_sector_context(self) -> None:
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Freshness:", component_source)
+        self.assertNotIn("Top Loser", component_source)
+        self.assertNotIn("Decliners", component_source)
+        self.assertNotIn("adv /", component_source)
+        self.assertNotIn("% positive", component_source)
+        self.assertIn("기준:", component_source)
+        self.assertIn("하락 상위", component_source)
+        sector_css = common_source[common_source.index(".ov-sector-breadth-lanes") :]
+        self.assertIn("max-height", sector_css)
+        self.assertIn("overflow-y: auto", sector_css)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", sector_css)
+        self.assertNotIn("grid-template-columns: repeat(2, minmax(0, 1fr));", sector_css[: sector_css.index(".ov-sector-breadth-lane {")])
+        self.assertNotIn(".ov-sector-breadth-zero", sector_css)
+        self.assertNotIn("right: 50%", sector_css)
+
+    def test_market_movers_sector_breadth_react_payload_includes_map_and_detail_table(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_movers_sector_breadth_react_payload
+
+        source_model = {
+            "status": "OK",
+            "summary": {
+                "headline": "Broad participation, balanced leadership",
+                "detail": "Technology leads the selected universe.",
+            },
+            "coverage": {"freshness": "2026-06-26"},
+            "boundary_note": "Context-only sector breadth.",
+            "heatmap_rows": [
+                {
+                    "rank": 1,
+                    "group": "Technology",
+                    "tone": "positive",
+                    "market_cap_weighted_return_pct": 2.0,
+                    "positive_symbol_share_pct": 80.0,
+                    "advancers": 8,
+                    "decliners": 2,
+                    "market_cap_share_pct": 30.0,
+                    "top_symbol": "AAA",
+                    "top_symbol_return_pct": 5.5,
+                    "top_loser": "BBB",
+                    "top_loser_return_pct": -1.1,
+                },
+                {
+                    "rank": 2,
+                    "group": "Energy",
+                    "tone": "negative",
+                    "market_cap_weighted_return_pct": -1.0,
+                    "positive_symbol_share_pct": 20.0,
+                    "advancers": 1,
+                    "decliners": 4,
+                    "market_cap_share_pct": 10.0,
+                    "top_symbol": "CCC",
+                    "top_symbol_return_pct": 1.0,
+                    "top_loser": "DDD",
+                    "top_loser_return_pct": -4.0,
+                },
+            ],
+            "table_rows": [
+                {"Sector": "Technology", "Return %": 2.0, "Advancers": 8, "Decliners": 2},
+                {"Sector": "Energy", "Return %": -1.0, "Advancers": 1, "Decliners": 4},
+            ],
+        }
+
+        payload = build_market_movers_sector_breadth_react_payload(source_model)
+
+        self.assertEqual(payload["schema_version"], "market_movers_sector_breadth_react_v1")
+        self.assertEqual(payload["component"], "MarketMoversSectorBreadth")
+        self.assertEqual(payload["map"]["schema_version"], "market_movers_sector_map_v1")
+        self.assertEqual(payload["map"]["lanes"][0]["bar_width_pct"], 100)
+        self.assertEqual(payload["map"]["lanes"][1]["tone"], "danger")
+        self.assertEqual(payload["map"]["lanes"][1]["bar_width_pct"], 50)
+        self.assertTrue(payload["detail_table"]["visible"])
+        self.assertFalse(payload["detail_table"]["default_open"])
+        self.assertEqual(payload["detail_table"]["title"], "섹터 breadth 상세 표")
+        self.assertEqual(payload["detail_table"]["columns"], ["Sector", "Return %", "Advancers", "Decliners"])
+        self.assertEqual(payload["detail_table"]["rows"][0]["Sector"], "Technology")
+        self.assertEqual(payload["detail_table"]["empty_text"], "선택한 coverage/period에서 표시할 sector breadth row가 없습니다.")
+
+    def test_market_movers_sector_breadth_uses_react_with_html_fallback(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        wrapper_source = Path("app/web/overview/market_movers_react_component.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_market_movers_sector_breadth_react", wrapper_source)
+        self.assertIn("build_market_movers_sector_breadth_react_payload", helper_source)
+        self.assertIn("def _render_market_movers_sector_breadth_react", helper_source)
+        self.assertIn("def _render_market_movers_sector_breadth_fallback", helper_source)
+
+        render_body = helper_source[helper_source.index("def _render_market_movers_sector_breadth_context") :]
+        render_body = render_body[: render_body.index("def _consume_market_mover_investigation_react_event")]
+        self.assertIn("_render_market_movers_sector_breadth_react(", render_body)
+        self.assertNotIn('with st.expander("섹터 breadth 상세 표"', render_body)
+
+        fallback_body = helper_source[helper_source.index("def _render_market_movers_sector_breadth_fallback") :]
+        fallback_body = fallback_body[: fallback_body.index("def _render_market_movers_sector_breadth_context")]
+        self.assertIn("render_sector_breadth_market_map(", fallback_body)
+        self.assertIn('with st.expander("섹터 breadth 상세 표"', fallback_body)
+
+    def test_market_movers_sector_breadth_react_component_renders_map_and_detail_drawer(self) -> None:
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("MarketMoversSectorBreadth", react_source)
+        self.assertIn('payload.component === "MarketMoversSectorBreadth"', react_source)
+        self.assertIn('className="mm-sector-breadth"', react_source)
+        self.assertIn('className="mm-sector-breadth__lanes"', react_source)
+        self.assertIn('className="mm-sector-breadth__detail"', react_source)
+        self.assertIn("payload.detail_table.rows.map", react_source)
+        self.assertIn("bar_width_pct", react_source)
+        self.assertIn("syncFrameHeightSoon", react_source)
+        self.assertIn("onToggle={syncFrameHeightSoon}", react_source)
+        self.assertEqual(react_source.count('className="mm-sector-breadth__status"'), 1)
+        self.assertIn(".mm-sector-breadth", react_style)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", react_style)
+        self.assertIn(".mm-sector-breadth__bar", react_style)
+        self.assertNotIn("right: 50%", react_style)
+
+    def test_market_mover_investigation_pane_model_summarizes_selection(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_investigation_pane_model
+
+        detail_model = {
+            "read_model": {
+                "identity": {"Symbol": "AAA", "Name": "AAA Corp", "Sector": "Technology", "Industry": "Software"},
+                "context": {"Rank": 1, "Rank Type": "Top Gainers", "Coverage": "S&P 500", "Period": "Daily"},
+                "movement": {"Return %": 3.2, "Relative Volume": 2.5, "Current Volume": 1234567, "Dollar Volume": 9876543},
+            },
+            "status_strip": {
+                "items": [
+                    {"label": "News", "value": "Ready", "tone": "neutral"},
+                    {"label": "SEC", "value": "Manual", "tone": "neutral"},
+                ]
+            },
+        }
+
+        model = build_market_mover_investigation_pane_model(detail_model)
+
+        self.assertEqual(model["schema_version"], "market_mover_investigation_pane_v1")
+        self.assertEqual(model["title"], "AAA · AAA Corp")
+        self.assertIn("Technology", model["subtitle"])
+        facts = {item["label"]: item for item in model["facts"]}
+        self.assertEqual(facts["수익률"]["value"], "+3.20%")
+        self.assertEqual(facts["상대 거래량"]["value"], "2.50x")
+        self.assertEqual(facts["현재 거래량"]["value"], "1.2M")
+        self.assertIn("not a trading signal", model["boundary_note"])
+
+    def test_market_mover_research_snapshot_reads_existing_db_loaders(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            self.assertEqual(kwargs["start"], "2026-01-01")
+            self.assertEqual(kwargs["end"], "2026-06-30")
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0, "close": 101.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 125.0, "close": 126.0},
+                ]
+            )
+
+        def fake_fundamental_snapshot_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            self.assertEqual(kwargs["as_of_date"], "2026-06-30")
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-12-31"),
+                            "net_income": 1_200_000_000,
+                            "shares_outstanding": 400_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2026-03-31"),
+                        "net_income": 300_000_000,
+                        "shares_outstanding": 400_000_000,
+                    }
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            return pd.DataFrame()
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=fake_fundamental_snapshot_loader,
+        )
+
+        self.assertEqual(model["schema_version"], "market_mover_research_snapshot_v1")
+        self.assertEqual(model["current_market_cap"]["value"], 5_500_000_000)
+        self.assertEqual(model["market_cap_change"]["status"], "UNAVAILABLE")
+        self.assertAlmostEqual(model["ytd_return"]["return_pct"], 25.0)
+        self.assertEqual(model["ytd_return"]["start_date"], "2026-01-02")
+        self.assertEqual(model["ytd_return"]["end_date"], "2026-06-30")
+        self.assertAlmostEqual(model["annual_financials"]["eps"], 3.0)
+        self.assertAlmostEqual(model["annual_financials"]["per"], 41.666666666666664)
+        self.assertEqual(model["annual_financials"]["net_income"], 1_200_000_000)
+        self.assertEqual(model["annual_financials"]["financial_source"], "legacy_broad_yfinance")
+        self.assertEqual(model["annual_financials"]["financial_source_mode"], "legacy_broad_summary")
+        self.assertEqual(model["annual_financials"]["source_table"], "finance_fundamental.nyse_fundamentals")
+        self.assertTrue(model["annual_financials"]["fallback_used"])
+        self.assertIn("EDGAR statement shadow", model["annual_financials"]["fallback_reason"])
+        self.assertEqual(model["quarterly_financials"]["status"], "UNAVAILABLE")
+        self.assertIn("10-Q", model["quarterly_financials"]["reason"])
+        self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_market_mover_research_snapshot_prefers_edgar_annual_and_blocks_quarterly_10k(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        legacy_calls: list[str] = []
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-12-31"),
+                            "latest_available_at": pd.Timestamp("2026-02-20"),
+                            "latest_form_type": "10-K",
+                            "latest_accession_no": "000-aaa-10k",
+                            "financial_source": "sec_edgar_statement_shadow",
+                            "financial_source_mode": "statement_shadow",
+                            "source_table": "finance_fundamental.nyse_fundamentals_statement",
+                            "available_at": pd.Timestamp("2026-02-20"),
+                            "form_type": "10-K",
+                            "accession_no": "000-aaa-10k",
+                            "net_income": 1_000_000_000,
+                            "shares_outstanding": 500_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2026-03-31"),
+                        "latest_available_at": pd.Timestamp("2026-04-20"),
+                        "latest_form_type": "10-K",
+                        "latest_accession_no": "000-aaa-fy",
+                        "financial_source": "sec_edgar_statement_shadow",
+                        "financial_source_mode": "statement_shadow",
+                        "source_table": "finance_fundamental.nyse_fundamentals_statement",
+                        "available_at": pd.Timestamp("2026-04-20"),
+                        "form_type": "10-K",
+                        "accession_no": "000-aaa-fy",
+                        "net_income": 4_000_000_000,
+                        "shares_outstanding": 500_000_000,
+                    }
+                ]
+            )
+
+        def fake_legacy_loader(**kwargs: object) -> pd.DataFrame:
+            legacy_calls.append(str(kwargs["freq"]))
+            return pd.DataFrame()
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=fake_legacy_loader,
+        )
+
+        self.assertEqual(model["annual_financials"]["financial_source"], "sec_edgar_statement_shadow")
+        self.assertEqual(model["annual_financials"]["available_at"], "2026-02-20")
+        self.assertEqual(model["annual_financials"]["form_type"], "10-K")
+        self.assertEqual(model["annual_financials"]["accession_no"], "000-aaa-10k")
+        self.assertFalse(model["annual_financials"]["fallback_used"])
+        self.assertAlmostEqual(model["annual_financials"]["eps"], 2.0)
+        self.assertEqual(legacy_calls, [])
+        self.assertEqual(model["quarterly_financials"]["status"], "UNAVAILABLE")
+        self.assertEqual(model["quarterly_financials"]["form_type"], "10-K")
+        self.assertIn("10-Q", model["quarterly_financials"]["reason"])
+
+    def test_market_mover_research_snapshot_exposes_fundamental_chart_trends(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2024-12-31"),
+                            "available_at": pd.Timestamp("2025-02-20"),
+                            "form_type": "10-K",
+                            "accession_no": "000-aaa-2024-10k",
+                            "net_income": 950_000_000,
+                            "shares_outstanding": 500_000_000,
+                            "current_assets": 1_500_000_000,
+                            "current_liabilities": 1_000_000_000,
+                            "free_cash_flow": 375_000_000,
+                        },
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-12-31"),
+                            "available_at": pd.Timestamp("2026-02-20"),
+                            "form_type": "10-K",
+                            "accession_no": "000-aaa-2025-10k",
+                            "net_income": 1_200_000_000,
+                            "shares_outstanding": 500_000_000,
+                            "current_assets": 1_800_000_000,
+                            "current_liabilities": 1_000_000_000,
+                            "free_cash_flow": 450_000_000,
+                        },
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2025-12-31"),
+                        "available_at": pd.Timestamp("2026-01-30"),
+                        "form_type": "10-Q",
+                        "accession_no": "000-aaa-2025-q4",
+                        "net_income": 250_000_000,
+                        "shares_outstanding": 500_000_000,
+                        "current_assets": 1_600_000_000,
+                        "current_liabilities": 1_000_000_000,
+                        "free_cash_flow": 100_000_000,
+                    },
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2026-03-31"),
+                        "available_at": pd.Timestamp("2026-05-02"),
+                        "form_type": "10-Q",
+                        "accession_no": "000-aaa-2026-q1",
+                        "net_income": 300_000_000,
+                        "shares_outstanding": 500_000_000,
+                        "current_assets": 1_650_000_000,
+                        "current_liabilities": 1_000_000_000,
+                        "free_cash_flow": 125_000_000,
+                    },
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+            statement_filings_loader=lambda **_: pd.DataFrame(),
+        )
+
+        self.assertAlmostEqual(model["annual_financials"]["current_ratio"], 1.8)
+        self.assertEqual(model["annual_financials"]["free_cash_flow"], 450_000_000)
+        self.assertAlmostEqual(model["quarterly_financials"]["current_ratio"], 1.65)
+        self.assertEqual(model["quarterly_financials"]["free_cash_flow"], 125_000_000)
+        trends = model["financial_trends"]
+        self.assertEqual([row["period_end"] for row in trends["annual"]], ["2024-12-31", "2025-12-31"])
+        self.assertEqual([row["period_end"] for row in trends["quarterly"]], ["2025-12-31", "2026-03-31"])
+        self.assertAlmostEqual(trends["annual"][-1]["per"], 50.0)
+        self.assertAlmostEqual(trends["annual"][-1]["current_ratio"], 1.8)
+        self.assertEqual(trends["quarterly"][-1]["form_type"], "10-Q")
+
+    def test_market_mover_research_snapshot_keeps_long_quarterly_chart_trends(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        quarter_periods: list[pd.Timestamp] = []
+        for year in range(2019, 2027):
+            for month, day in ((3, 31), (6, 30), (9, 30), (12, 31)):
+                period = pd.Timestamp(year=year, month=month, day=day)
+                if period <= pd.Timestamp("2026-03-31"):
+                    quarter_periods.append(period)
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp(year=year, month=12, day=31),
+                            "available_at": pd.Timestamp(year=year + 1, month=2, day=20),
+                            "form_type": "10-K",
+                            "accession_no": f"000-aaa-{year}-10k",
+                            "net_income": 900_000_000 + ((year - 2019) * 100_000_000),
+                            "shares_outstanding": 500_000_000,
+                            "current_assets": 1_500_000_000,
+                            "current_liabilities": 1_000_000_000,
+                            "free_cash_flow": 300_000_000 + ((year - 2019) * 10_000_000),
+                        }
+                        for year in range(2019, 2026)
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": period,
+                        "available_at": period + pd.Timedelta(days=35),
+                        "form_type": "10-Q",
+                        "accession_no": f"000-aaa-{period.year}-q{((period.month - 1) // 3) + 1}",
+                        "net_income": 100_000_000 + (index * 10_000_000),
+                        "shares_outstanding": 500_000_000,
+                        "current_assets": 1_000_000_000 + (index * 1_000_000),
+                        "current_liabilities": 500_000_000,
+                        "free_cash_flow": 50_000_000 + (index * 1_000_000),
+                    }
+                    for index, period in enumerate(quarter_periods)
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+            statement_filings_loader=lambda **_: pd.DataFrame(),
+        )
+
+        trends = model["financial_trends"]
+        self.assertEqual([row["period_end"] for row in trends["annual"]][0], "2019-12-31")
+        self.assertEqual(len(trends["quarterly"]), len(quarter_periods))
+        self.assertEqual(trends["quarterly"][0]["period_end"], "2019-03-31")
+        self.assertEqual(trends["quarterly"][-1]["period_end"], "2026-03-31")
+
+    def test_market_mover_research_snapshot_flags_unreflected_edgar_quarterly_filing(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-12-31"),
+                            "available_at": pd.Timestamp("2026-02-12"),
+                            "form_type": "10-K",
+                            "accession_no": "000-aaa-10k",
+                            "net_income": 1_000_000_000,
+                            "shares_outstanding": 500_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2025-09-30"),
+                        "available_at": pd.Timestamp("2025-10-31"),
+                        "form_type": "10-Q",
+                        "accession_no": "000-aaa-old-10q",
+                        "net_income": 250_000_000,
+                        "shares_outstanding": 500_000_000,
+                    }
+                ]
+            )
+
+        def fake_statement_filings_loader(**kwargs: object) -> pd.DataFrame:
+            self.assertEqual(kwargs["symbols"], "AAA")
+            self.assertEqual(kwargs["end"], "2026-06-30")
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "form_type": "10-K",
+                        "report_date": pd.Timestamp("2025-12-31"),
+                        "filing_date": pd.Timestamp("2026-02-12"),
+                        "available_at": pd.Timestamp("2026-02-12"),
+                        "accession_no": "000-aaa-10k",
+                    },
+                    {
+                        "symbol": "AAA",
+                        "form_type": "10-Q",
+                        "report_date": pd.Timestamp("2026-03-31"),
+                        "filing_date": pd.Timestamp("2026-05-01"),
+                        "available_at": pd.Timestamp("2026-05-01"),
+                        "accession_no": "000-aaa-new-10q",
+                    },
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+            statement_filings_loader=fake_statement_filings_loader,
+        )
+
+        collection = model["financial_statement_collection"]
+        self.assertEqual(collection["status"], "ACTION_REQUIRED")
+        self.assertEqual(collection["headline"], "받아야 할 재무제표 있음")
+        self.assertIn("2026-03-31", collection["detail"])
+        self.assertEqual(collection["missing_filings"][0]["form_type"], "10-Q")
+        self.assertEqual(collection["missing_filings"][0]["report_date"], "2026-03-31")
+        self.assertEqual(collection["missing_filings"][0]["filing_date"], "2026-05-01")
+        self.assertEqual(collection["items"][0]["label"], "최신 EDGAR 10-Q")
+        self.assertEqual(collection["items"][1]["value"], "2025-09-30")
+
+    def test_market_mover_research_snapshot_does_not_flag_nearby_fiscal_quarter_as_missing(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "GIS", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "GIS", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "GIS",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp("2025-05-25"),
+                            "available_at": pd.Timestamp("2025-06-25"),
+                            "form_type": "10-K",
+                            "accession_no": "000-gis-10k",
+                            "net_income": 290_000_000,
+                            "shares_outstanding": 550_000_000,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "GIS",
+                        "freq": "quarterly",
+                        "period_end": pd.Timestamp("2026-02-22"),
+                        "available_at": pd.Timestamp("2026-03-18"),
+                        "form_type": "10-Q",
+                        "accession_no": "000-gis-10q",
+                        "net_income": 300_000_000,
+                        "shares_outstanding": 550_000_000,
+                    }
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "GIS", "Market Cap": 24_800_000_000},
+            as_of_date="2026-07-01",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+            statement_filings_loader=lambda **_: pd.DataFrame(),
+        )
+
+        collection = model["financial_statement_collection"]
+        self.assertNotEqual(collection["status"], "CHECK_REQUIRED")
+        self.assertNotIn("2026-02-25", collection["detail"])
+
+    def test_financial_source_contract_helper_adds_legacy_and_statement_aliases(self) -> None:
+        from finance.loaders.financial_source_contract import (
+            LEGACY_BROAD_YFINANCE_SOURCE,
+            SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+            apply_financial_source_contract,
+        )
+
+        broad = apply_financial_source_contract(
+            pd.DataFrame([{"symbol": "AAA", "period_end": pd.Timestamp("2025-12-31")}]),
+            financial_source=LEGACY_BROAD_YFINANCE_SOURCE,
+            financial_source_mode="legacy_broad_summary",
+            source_table="finance_fundamental.nyse_fundamentals",
+        )
+
+        self.assertEqual(broad.loc[0, "financial_source"], "legacy_broad_yfinance")
+        self.assertEqual(broad.loc[0, "financial_source_mode"], "legacy_broad_summary")
+        self.assertEqual(broad.loc[0, "source_table"], "finance_fundamental.nyse_fundamentals")
+        self.assertIn("available_at", broad.columns)
+        self.assertTrue(pd.isna(broad.loc[0, "available_at"]))
+        self.assertIsNone(broad.loc[0, "form_type"])
+        self.assertIsNone(broad.loc[0, "accession_no"])
+
+        statement = apply_financial_source_contract(
+            pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "period_end": pd.Timestamp("2025-12-31"),
+                        "latest_available_at": pd.Timestamp("2026-02-20"),
+                        "latest_form_type": "10-K",
+                        "latest_accession_no": "000-test",
+                    }
+                ]
+            ),
+            financial_source=SEC_EDGAR_STATEMENT_SHADOW_SOURCE,
+            financial_source_mode="statement_shadow",
+            source_table="finance_fundamental.nyse_fundamentals_statement",
+            available_at_column="latest_available_at",
+            form_type_column="latest_form_type",
+            accession_no_column="latest_accession_no",
+        )
+
+        self.assertEqual(statement.loc[0, "financial_source"], "sec_edgar_statement_shadow")
+        self.assertEqual(statement.loc[0, "available_at"], pd.Timestamp("2026-02-20"))
+        self.assertEqual(statement.loc[0, "form_type"], "10-K")
+        self.assertEqual(statement.loc[0, "accession_no"], "000-test")
+
+    def test_quarterly_statement_policy_filters_unsafe_10k_rows(self) -> None:
+        from finance.financial_source_policy import filter_safe_quarterly_statement_rows
+
+        rows = pd.DataFrame(
+            [
+                {"symbol": "AAA", "form_type": "10-Q"},
+                {"symbol": "BBB", "form_type": "10-K"},
+                {"symbol": "CCC", "form_type": "10-Q/A"},
+                {"symbol": "DDD", "form_type": "10-K/A"},
+            ]
+        )
+
+        quarterly = filter_safe_quarterly_statement_rows(
+            rows,
+            freq="quarterly",
+            form_type_column="form_type",
+        )
+        annual = filter_safe_quarterly_statement_rows(
+            rows,
+            freq="annual",
+            form_type_column="form_type",
+        )
+
+        self.assertEqual(list(quarterly["symbol"]), ["AAA", "CCC"])
+        self.assertEqual(list(annual["symbol"]), ["AAA", "BBB", "CCC", "DDD"])
+
+    def test_quarterly_statement_policy_clears_unsafe_10k_flow_values(self) -> None:
+        from finance.financial_source_policy import sanitize_quarterly_statement_flow_record
+
+        record = {
+            "symbol": "AAA",
+            "freq": "quarterly",
+            "latest_form_type": "10-K",
+            "total_revenue": 10_000_000_000,
+            "gross_profit": 4_000_000_000,
+            "operating_income": 2_000_000_000,
+            "net_income": 1_000_000_000,
+            "operating_cash_flow": 1_500_000_000,
+            "free_cash_flow": 1_200_000_000,
+            "total_assets": 50_000_000_000,
+            "cash_and_equivalents": 5_000_000_000,
+            "source_mode": "statement_shadow_first_available",
+            "timing_basis": "first_available_for_period_end",
+            "error_msg": None,
+        }
+
+        sanitized = sanitize_quarterly_statement_flow_record(record)
+
+        self.assertIsNone(sanitized["total_revenue"])
+        self.assertIsNone(sanitized["gross_profit"])
+        self.assertIsNone(sanitized["operating_income"])
+        self.assertIsNone(sanitized["net_income"])
+        self.assertIsNone(sanitized["operating_cash_flow"])
+        self.assertIsNone(sanitized["free_cash_flow"])
+        self.assertEqual(sanitized["total_assets"], 50_000_000_000)
+        self.assertEqual(sanitized["cash_and_equivalents"], 5_000_000_000)
+        self.assertEqual(sanitized["source_mode"], "quarterly_10k_flow_blocked")
+        self.assertEqual(sanitized["timing_basis"], "blocked_10k_fy_flow")
+        self.assertIn("10-K", sanitized["error_msg"])
+
+    def test_statement_fundamentals_shadow_loader_filters_quarterly_10k_rows(self) -> None:
+        from finance.loaders.fundamentals import load_statement_fundamentals_shadow
+
+        rows = [
+            {
+                "symbol": "AAA",
+                "freq": "quarterly",
+                "period_end": "2025-12-31",
+                "latest_available_at": "2026-02-20",
+                "latest_form_type": "10-K",
+                "latest_accession_no": "000-aaa-10k",
+                "net_income": 1_000_000_000,
+            },
+            {
+                "symbol": "BBB",
+                "freq": "quarterly",
+                "period_end": "2026-03-31",
+                "latest_available_at": "2026-05-05",
+                "latest_form_type": "10-Q",
+                "latest_accession_no": "000-bbb-10q",
+                "net_income": 250_000_000,
+            },
+        ]
+
+        class FakeClient:
+            def use_db(self, name: str) -> None:
+                self.name = name
+
+            def query(self, sql: str, params: list[object]) -> list[dict[str, object]]:
+                return rows
+
+            def close(self) -> None:
+                pass
+
+        with patch("finance.loaders.fundamentals.MySQLClient", return_value=FakeClient()):
+            loaded = load_statement_fundamentals_shadow(symbols=["AAA", "BBB"], freq="quarterly")
+
+        self.assertEqual(list(loaded["symbol"]), ["BBB"])
+        self.assertEqual(loaded.loc[0, "form_type"], "10-Q")
+        self.assertEqual(loaded.loc[0, "financial_source"], "sec_edgar_statement_shadow")
+
+    def test_statement_filings_loader_reads_edgar_filing_ledger(self) -> None:
+        from finance.loaders.financial_statements import load_statement_filings
+
+        captured: dict[str, object] = {}
+        rows = [
+            {
+                "symbol": "AAA",
+                "accession_no": "000-aaa-10q",
+                "form_type": "10-Q",
+                "filing_date": "2026-05-01",
+                "accepted_at": "2026-05-01 14:44:14",
+                "available_at": "2026-05-01 14:44:14",
+                "report_date": "2026-03-31",
+            }
+        ]
+
+        class FakeClient:
+            def use_db(self, name: str) -> None:
+                captured["db"] = name
+
+            def query(self, sql: str, params: list[object]) -> list[dict[str, object]]:
+                captured["sql"] = sql
+                captured["params"] = params
+                return rows
+
+            def close(self) -> None:
+                pass
+
+        with patch("finance.loaders.financial_statements.MySQLClient", return_value=FakeClient()):
+            loaded = load_statement_filings(symbols=["AAA"], forms=["10-Q", "10-K"], end="2026-06-30")
+
+        self.assertEqual(captured["db"], "finance_fundamental")
+        self.assertIn("nyse_financial_statement_filings", str(captured["sql"]))
+        self.assertEqual(list(loaded["form_type"]), ["10-Q"])
+        self.assertEqual(loaded.loc[0, "report_date"], pd.Timestamp("2026-03-31"))
+        self.assertEqual(loaded.loc[0, "available_at"], pd.Timestamp("2026-05-01 14:44:14"))
+
+    def test_statement_factors_shadow_loader_joins_form_type_and_filters_quarterly_10k_rows(self) -> None:
+        from finance.loaders.factors import load_statement_factors_shadow
+
+        captured_sql: dict[str, str] = {}
+        rows = [
+            {
+                "symbol": "AAA",
+                "freq": "quarterly",
+                "period_end": "2025-12-31",
+                "fundamental_available_at": "2026-02-20",
+                "fundamental_accession_no": "000-aaa-10k",
+                "fundamental_form_type": "10-K",
+                "price": 100.0,
+            },
+            {
+                "symbol": "BBB",
+                "freq": "quarterly",
+                "period_end": "2026-03-31",
+                "fundamental_available_at": "2026-05-05",
+                "fundamental_accession_no": "000-bbb-10q",
+                "fundamental_form_type": "10-Q",
+                "price": 50.0,
+            },
+        ]
+
+        class FakeClient:
+            def use_db(self, name: str) -> None:
+                self.name = name
+
+            def query(self, sql: str, params: list[object]) -> list[dict[str, object]]:
+                captured_sql["sql"] = sql
+                return rows
+
+            def close(self) -> None:
+                pass
+
+        with patch("finance.loaders.factors.MySQLClient", return_value=FakeClient()):
+            loaded = load_statement_factors_shadow(symbols=["AAA", "BBB"], freq="quarterly")
+
+        self.assertIn("nyse_fundamentals_statement", captured_sql["sql"])
+        self.assertEqual(list(loaded["symbol"]), ["BBB"])
+        self.assertEqual(loaded.loc[0, "form_type"], "10-Q")
+        self.assertEqual(loaded.loc[0, "financial_source"], "sec_edgar_statement_shadow")
+
+    def test_market_mover_research_snapshot_model_formats_korean_metrics(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_research_snapshot_model
+
+        model = build_market_mover_research_snapshot_model(
+            {
+                "read_model": {
+                    "identity": {"Symbol": "AAA", "Name": "AAA Corp", "Market Cap": 5_500_000_000},
+                    "context": {"Coverage": "S&P 500", "Period": "Daily"},
+                    "movement": {},
+                }
+            },
+            research_snapshot={
+                "current_market_cap": {"status": "OK", "value": 5_500_000_000, "basis": "asset_profile latest"},
+                "market_cap_change": {"status": "UNAVAILABLE", "reason": "과거 시총 snapshot 없음"},
+                "ytd_return": {
+                    "status": "OK",
+                    "return_pct": 25.0,
+                    "start_date": "2026-01-02",
+                    "end_date": "2026-06-30",
+                },
+                "annual_financials": {
+                    "status": "OK",
+                    "period_end": "2025-12-31",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "available_at": "2026-02-20",
+                    "form_type": "10-K",
+                    "accession_no": "0000000000-26-000001",
+                    "eps": 3.0,
+                    "per": 41.666666666666664,
+                    "net_income": 1_200_000_000,
+                },
+                "quarterly_financials": {
+                    "status": "OK",
+                    "period_end": "2026-03-31",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "available_at": "2026-05-02",
+                    "form_type": "10-Q",
+                    "accession_no": "0000000000-26-000002",
+                    "eps": 0.75,
+                    "per": 166.66666666666666,
+                    "net_income": 300_000_000,
+                },
+                "financial_statement_collection": {
+                    "status": "ACTION_REQUIRED",
+                    "headline": "받아야 할 재무제표 있음",
+                    "detail": "EDGAR 10-Q 2026-03-31 공시됨, DB 분기 반영은 2025-09-30입니다.",
+                    "tone": "warning",
+                    "items": [
+                        {"label": "최신 EDGAR 10-Q", "value": "2026-03-31", "detail": "공시 2026-05-02"},
+                        {"label": "DB 분기 반영", "value": "2025-09-30", "detail": "statement shadow"},
+                    ],
+                },
+                "boundary_note": "Context-only fundamentals snapshot.",
+            },
+        )
+
+        self.assertEqual(model["schema_version"], "market_mover_research_metrics_v1")
+        items = {item["label"]: item for item in model["items"]}
+        self.assertEqual(items["현재 시총"]["value"], "55.0억 달러")
+        self.assertNotIn("시총 변화", items)
+        self.assertEqual(items["올해 수익률"]["value"], "+25.00%")
+        per_eps = items["PER / EPS"]
+        self.assertEqual(per_eps["value"], "연간 / 분기 비교")
+        self.assertEqual(
+            per_eps["rows"],
+            [
+                {
+                    "period": "연간",
+                    "period_end": "2025-12-31",
+                    "disclosure_date": "2026-02-20",
+                    "per": "41.67x",
+                    "eps": "$3.00",
+                },
+                {
+                    "period": "분기",
+                    "period_end": "2026-03-31",
+                    "disclosure_date": "2026-05-02",
+                    "per": "166.67x",
+                    "eps": "$0.75",
+                },
+            ],
+        )
+        self.assertEqual(per_eps["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31 · 공시일 기준")
+        self.assertNotIn("available", per_eps["detail"])
+        self.assertNotIn("accession", per_eps["detail"])
+        income = items["당기순이익"]
+        self.assertEqual(income["value"], "연간 / 분기 비교")
+        self.assertEqual(
+            income["rows"],
+            [
+                {
+                    "period": "연간",
+                    "period_end": "2025-12-31",
+                    "disclosure_date": "2026-02-20",
+                    "net_income": "12.0억 달러",
+                },
+                {
+                    "period": "분기",
+                    "period_end": "2026-03-31",
+                    "disclosure_date": "2026-05-02",
+                    "net_income": "3.0억 달러",
+                },
+            ],
+        )
+        self.assertEqual(income["detail"], "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31 · 공시일 기준")
+        self.assertEqual(model["financial_statement_collection"]["headline"], "받아야 할 재무제표 있음")
+        self.assertIn("2026-03-31", model["financial_statement_collection"]["detail"])
+        self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_market_mover_research_snapshot_model_builds_fundamental_chart_payload(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_research_snapshot_model
+
+        model = build_market_mover_research_snapshot_model(
+            {
+                "read_model": {
+                    "identity": {"Symbol": "AAA", "Name": "AAA Corp", "Market Cap": 5_500_000_000},
+                    "context": {"Coverage": "S&P 500", "Period": "Daily"},
+                    "movement": {},
+                }
+            },
+            research_snapshot={
+                "current_market_cap": {"status": "OK", "value": 5_500_000_000, "basis": "asset_profile latest"},
+                "ytd_return": {"status": "OK", "return_pct": 25.0, "start_date": "2026-01-02", "end_date": "2026-06-30"},
+                "annual_financials": {"status": "OK", "period_end": "2025-12-31"},
+                "quarterly_financials": {"status": "OK", "period_end": "2026-03-31"},
+                "financial_trends": {
+                    "annual": [
+                        {
+                            "status": "OK",
+                            "period_end": "2024-12-31",
+                            "available_at": "2025-02-20",
+                            "form_type": "10-K",
+                            "per": 63.1578947368421,
+                            "eps": 1.9,
+                            "net_income": 950_000_000,
+                            "current_ratio": 1.5,
+                            "free_cash_flow": 375_000_000,
+                        },
+                        {
+                            "status": "OK",
+                            "period_end": "2025-12-31",
+                            "available_at": "2026-02-20",
+                            "form_type": "10-K",
+                            "per": 50.0,
+                            "eps": 2.4,
+                            "net_income": 1_200_000_000,
+                            "current_ratio": 1.8,
+                            "free_cash_flow": 450_000_000,
+                        },
+                    ],
+                    "quarterly": [
+                        {
+                            "status": "OK",
+                            "period_end": "2025-12-31",
+                            "available_at": "2026-01-30",
+                            "form_type": "10-Q",
+                            "per": 240.0,
+                            "eps": 0.5,
+                            "net_income": 250_000_000,
+                            "current_ratio": 1.6,
+                            "free_cash_flow": 100_000_000,
+                        },
+                        {
+                            "status": "OK",
+                            "period_end": "2026-03-31",
+                            "available_at": "2026-05-02",
+                            "form_type": "10-Q",
+                            "per": 200.0,
+                            "eps": 0.6,
+                            "net_income": 300_000_000,
+                            "current_ratio": 1.65,
+                            "free_cash_flow": 125_000_000,
+                        },
+                    ],
+                },
+                "boundary_note": "Context-only fundamentals snapshot.",
+            },
+        )
+
+        charts = {chart["metric"]: chart for chart in model["metric_charts"]}
+        self.assertEqual(
+            [chart["label"] for chart in model["metric_charts"]],
+            ["PER", "EPS", "당기순이익", "유동비율", "FCF"],
+        )
+        self.assertEqual([point["period_end"] for point in charts["per"]["series"]["annual"]], ["2024-12-31", "2025-12-31"])
+        self.assertEqual(charts["per"]["series"]["annual"][-1]["display_value"], "50.00x")
+        self.assertEqual(charts["eps"]["series"]["quarterly"][-1]["display_value"], "$0.60")
+        self.assertEqual(charts["net_income"]["series"]["annual"][-1]["display_value"], "12.0억 달러")
+        self.assertEqual(charts["current_ratio"]["series"]["annual"][-1]["display_value"], "1.80x")
+        self.assertEqual(charts["free_cash_flow"]["series"]["quarterly"][-1]["display_value"], "1.2억 달러")
+
+    def test_market_mover_research_snapshot_model_formats_comma_money_strings_for_charts(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_research_snapshot_model
+
+        model = build_market_mover_research_snapshot_model(
+            {
+                "read_model": {
+                    "identity": {"Symbol": "AAA", "Name": "AAA Corp", "Market Cap": "5,500,000,000"},
+                    "context": {"Coverage": "S&P 500", "Period": "Daily"},
+                    "movement": {},
+                }
+            },
+            research_snapshot={
+                "current_market_cap": {"status": "OK", "value": "5,500,000,000", "basis": "asset_profile latest"},
+                "annual_financials": {
+                    "status": "OK",
+                    "period_end": "2025-12-31",
+                    "available_at": "2026-02-20",
+                    "form_type": "10-K",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "net_income": "620,000,000",
+                },
+                "quarterly_financials": {
+                    "status": "OK",
+                    "period_end": "2026-03-31",
+                    "available_at": "2026-05-02",
+                    "form_type": "10-Q",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "net_income": "6,200",
+                },
+                "financial_trends": {
+                    "annual": [
+                        {
+                            "status": "OK",
+                            "period_end": "2025-12-31",
+                            "available_at": "2026-02-20",
+                            "form_type": "10-K",
+                            "net_income": "620,000,000",
+                        }
+                    ],
+                    "quarterly": [
+                        {
+                            "status": "OK",
+                            "period_end": "2025-09-30",
+                            "available_at": "2025-10-31",
+                            "form_type": "10-Q",
+                            "net_income": "620,000,000",
+                        },
+                        {
+                            "status": "OK",
+                            "period_end": "2026-03-31",
+                            "available_at": "2026-05-02",
+                            "form_type": "10-Q",
+                            "net_income": "6,200",
+                        },
+                    ],
+                },
+                "boundary_note": "Context-only fundamentals snapshot.",
+            },
+        )
+
+        items = {item["label"]: item for item in model["items"]}
+        self.assertEqual(items["현재 시총"]["value"], "55.0억 달러")
+        self.assertEqual(items["당기순이익"]["rows"][0]["net_income"], "6.2억 달러")
+        self.assertEqual(items["당기순이익"]["rows"][1]["net_income"], "6.2천 달러")
+
+        charts = {chart["metric"]: chart for chart in model["metric_charts"]}
+        quarterly = charts["net_income"]["series"]["quarterly"]
+        self.assertEqual([point["display_value"] for point in quarterly], ["6.2억 달러", "6.2천 달러"])
+        self.assertEqual([point["value"] for point in quarterly], [620_000_000.0, 6_200.0])
+
+    def test_market_mover_research_collection_html_renders_collection_status(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_collection_html
+
+        html = _market_mover_research_collection_html(
+            {
+                "status": "ACTION_REQUIRED",
+                "headline": "받아야 할 재무제표 있음",
+                "detail": "EDGAR 10-Q 2026-03-31 공시됨, DB 분기 반영은 2025-09-30입니다.",
+                "tone": "warning",
+                "items": [
+                    {"label": "최신 EDGAR 10-Q", "value": "2026-03-31", "detail": "공시 2026-05-02"},
+                    {"label": "DB 분기 반영", "value": "2025-09-30", "detail": "statement shadow"},
+                ],
+            }
+        )
+
+        self.assertIn("재무제표 수집 상태", html)
+        self.assertIn("받아야 할 재무제표 있음", html)
+        self.assertIn("최신 EDGAR 10-Q", html)
+        self.assertIn("2026-03-31", html)
+        self.assertIn("DB 분기 반영", html)
+
+    def test_market_mover_research_items_html_renders_per_eps_rows_as_table(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_items_html
+
+        html = _market_mover_research_items_html(
+            [
+                {
+                    "label": "PER / EPS",
+                    "value": "연간 / 분기 비교",
+                    "detail": "EDGAR statement shadow",
+                    "available": True,
+                    "tone": "neutral",
+                    "rows": [
+                        {
+                            "period": "연간",
+                            "period_end": "2025-12-31",
+                            "disclosure_date": "2026-02-20",
+                            "per": "41.67x",
+                            "eps": "$3.00",
+                        },
+                        {
+                            "period": "분기",
+                            "period_end": "2026-03-31",
+                            "disclosure_date": "2026-05-02",
+                            "per": "166.67x",
+                            "eps": "$0.75",
+                        },
+                    ],
+                }
+            ]
+        )
+
+        self.assertIn('class="ov-mm-research-table is-per-eps"', html)
+        self.assertIn("구분", html)
+        self.assertIn("회계기간", html)
+        self.assertIn("공시일", html)
+        self.assertIn("PER", html)
+        self.assertIn("EPS", html)
+        self.assertIn("2025-12-31", html)
+        self.assertIn("2026-02-20", html)
+        self.assertIn("2026-03-31", html)
+        self.assertIn("2026-05-02", html)
+        self.assertIn("41.67x", html)
+        self.assertIn("$0.75", html)
+
+    def test_market_mover_research_items_html_renders_income_rows_as_table(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_items_html
+
+        html = _market_mover_research_items_html(
+            [
+                {
+                    "label": "당기순이익",
+                    "value": "연간 / 분기 비교",
+                    "detail": "근거: EDGAR 10-K 2025-12-31, 10-Q 2026-03-31",
+                    "available": True,
+                    "tone": "neutral",
+                    "rows": [
+                        {
+                            "period": "연간",
+                            "period_end": "2025-12-31",
+                            "disclosure_date": "2026-02-20",
+                            "net_income": "12.0억 달러",
+                        },
+                        {
+                            "period": "분기",
+                            "period_end": "2026-03-31",
+                            "disclosure_date": "2026-05-02",
+                            "net_income": "3.0억 달러",
+                        },
+                    ],
+                }
+            ]
+        )
+
+        self.assertIn('class="ov-mm-research-table is-income"', html)
+        self.assertIn("구분", html)
+        self.assertIn("회계기간", html)
+        self.assertIn("공시일", html)
+        self.assertIn("당기순이익", html)
+        self.assertIn("2025-12-31", html)
+        self.assertIn("2026-02-20", html)
+        self.assertIn("2026-03-31", html)
+        self.assertIn("2026-05-02", html)
+        self.assertIn("12.0억 달러", html)
+        self.assertIn("3.0억 달러", html)
+        self.assertNotIn("accession", html)
+
+    def test_market_mover_research_chart_html_renders_vertical_bar_plot(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_bar_chart_html
+
+        chart = {
+            "metric": "per",
+            "label": "PER",
+            "series": {
+                "annual": [
+                    {
+                        "label": "2024",
+                        "period_end": "2024-12-31",
+                        "disclosure_date": "2025-02-20",
+                        "value": 63.1578947368421,
+                        "display_value": "63.16x",
+                    },
+                    {
+                        "label": "2025",
+                        "period_end": "2025-12-31",
+                        "disclosure_date": "2026-02-20",
+                        "value": 50.0,
+                        "display_value": "50.00x",
+                    },
+                ],
+                "quarterly": [],
+            },
+        }
+
+        html = _market_mover_research_bar_chart_html(chart, "annual")
+
+        self.assertIn('class="ov-mm-research-chart"', html)
+        self.assertIn('class="ov-mm-research-chart-scroll"', html)
+        self.assertIn('class="ov-mm-research-chart-plot-wrap"', html)
+        self.assertIn('class="ov-mm-research-chart-line"', html)
+        self.assertIn('class="ov-mm-research-chart-bar-plot"', html)
+        self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
+        self.assertIn('class="ov-mm-research-chart-caption"', html)
+        self.assertIn("<polyline", html)
+        self.assertIn("<circle", html)
+        self.assertIn("PER", html)
+        self.assertIn("2024", html)
+        self.assertIn("2025", html)
+        self.assertIn("63.16x", html)
+        self.assertIn("50.00x", html)
+        self.assertIn("height:100.00%", html)
+        self.assertNotIn("width:100.00%", html)
+        self.assertIn("공시 2026-02-20", html)
+        self.assertLess(
+            html.index('class="ov-mm-research-chart-track"'),
+            html.index('class="ov-mm-research-chart-caption"'),
+        )
+        self.assertLess(
+            html.index('class="ov-mm-research-chart-label"'),
+            html.index('class="ov-mm-research-chart-value"'),
+        )
+
+        empty_html = _market_mover_research_bar_chart_html(chart, "quarterly")
+        self.assertIn("표시할 분기 데이터가 없습니다", empty_html)
+
+    def test_market_mover_research_chart_html_accepts_comma_numeric_values(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_bar_chart_html
+
+        chart = {
+            "metric": "net_income",
+            "label": "당기순이익",
+            "series": {
+                "annual": [],
+                "quarterly": [
+                    {
+                        "label": "2025 Q3",
+                        "period_end": "2025-09-30",
+                        "disclosure_date": "2025-10-31",
+                        "value": "620,000,000",
+                        "display_value": "6.2억 달러",
+                    }
+                ],
+            },
+        }
+
+        html = _market_mover_research_bar_chart_html(chart, "quarterly")
+
+        self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
+        self.assertIn("2025 Q3", html)
+        self.assertIn("6.2억 달러", html)
+        self.assertNotIn("표시할 분기 데이터가 없습니다", html)
+
+    def test_market_mover_research_chart_html_places_negative_bars_below_zero_line(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_bar_chart_html
+
+        chart = {
+            "metric": "fcf",
+            "label": "FCF",
+            "series": {
+                "annual": [
+                    {
+                        "label": "2024",
+                        "period_end": "2024-12-31",
+                        "disclosure_date": "2025-02-20",
+                        "value": 10.0,
+                        "display_value": "10.0억 달러",
+                    },
+                    {
+                        "label": "2025",
+                        "period_end": "2025-12-31",
+                        "disclosure_date": "2026-02-20",
+                        "value": -5.0,
+                        "display_value": "-5.0억 달러",
+                    },
+                ],
+                "quarterly": [],
+            },
+        }
+
+        html = _market_mover_research_bar_chart_html(chart, "annual")
+        css_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn('class="ov-mm-research-chart-plot-wrap is-diverging"', html)
+        self.assertIn('class="ov-mm-research-chart-zero-line"', html)
+        self.assertIn('class="ov-mm-research-chart-bar-plot is-diverging"', html)
+        self.assertIn('class="ov-mm-research-chart-column is-negative"', html)
+        self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
+        self.assertIn('style="height:50.00%;"', html)
+        self.assertIn('style="height:25.00%;"', html)
+        self.assertIn('<polyline points="32.00,2.00 100.00,75.00"', html)
+        self.assertRegex(css_source, r"\.ov-mm-research-chart-zero-line\s*\{[^}]*top:\s*50%;")
+        self.assertRegex(
+            css_source,
+            r"\.ov-mm-research-chart-bar-plot\.is-diverging\s+"
+            r"\.ov-mm-research-chart-column\.is-negative\s+"
+            r"\.ov-mm-research-chart-bar\s*\{[^}]*top:\s*50%;",
+        )
+        self.assertRegex(css_source, r"\.ov-mm-research-chart-track\s*\{[^}]*height:\s*13\.4rem;")
+
+    def test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies(self) -> None:
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        css_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn("_render_market_mover_research_metric_charts", component_source)
+        self.assertIn('st.tabs([chart["label"]', component_source)
+        self.assertIn('class="ov-mm-research-chart-pair"', component_source)
+        self.assertNotIn('st.tabs(["연간", "분기"])', component_source)
+        self.assertIn('_market_mover_research_bar_chart_html(chart, "annual")', component_source)
+        self.assertIn('_market_mover_research_bar_chart_html(chart, "quarterly")', component_source)
+        self.assertRegex(css_source, r"\.ov-mm-research-chart\s*\{[^}]*min-width:\s*0;")
+        self.assertRegex(css_source, r"\.ov-mm-research-chart-scroll\s*\{[^}]*max-width:\s*100%;")
+
+    def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model
+
+        trust_model = {
+            "state": "Missing Quotes",
+            "tone": "warning",
+            "headline": "S&P 500 quote 누락 2건이 있습니다.",
+            "detail": "그룹 요약을 먼저 봅니다.",
+            "items": [
+                {"label": "Coverage", "value": "S&P 500"},
+                {"label": "Freshness", "value": "Missing Quotes", "detail": "2026-06-29 14:20"},
+                {"label": "Universe", "value": "503"},
+                {"label": "Returnable", "value": "501", "detail": "99.6%"},
+                {"label": "Missing", "value": "2"},
+            ],
+            "suggested_action": {"label": "Open raw diagnostics", "detail": "Grouped summary 아래 raw diagnostics를 확인합니다."},
+            "boundary_note": "Coverage trust is context-only data-quality evidence.",
+        }
+
+        model = build_market_movers_data_trust_strip_model(trust_model)
+
+        self.assertEqual(model["schema_version"], "market_movers_data_trust_strip_v1")
+        self.assertEqual(model["state"], "Missing Quotes")
+        self.assertEqual(model["headline"], "S&P 500 quote 누락 2건이 있습니다.")
+        self.assertEqual(model["action_label"], "Open raw diagnostics")
+        self.assertEqual([item["label"] for item in model["items"]], ["Freshness", "Returnable", "Missing"])
+        self.assertIn("context-only", model["boundary_note"].lower())
+
+    def test_market_movers_ui_renders_sector_breadth_heatmap_workflow(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_breadth_heatmap_summary", helper_source)
+        self.assertIn("sector_breadth", helper_source)
+        self.assertIn("섹터 / 시장 확산 맥락", helper_source)
+        self.assertIn("섹터 breadth 상세 표", helper_source)
+        self.assertIn("ov-sector-pressure-map", component_source)
+        self.assertIn("하락", component_source)
+        self.assertNotIn("Top Loser", component_source)
+        for forbidden in ["급등 가능성", "매수 후보", "추천", "trade signal"]:
+            self.assertNotIn(forbidden, helper_source)
+
     def test_market_mover_catalyst_links_include_context_without_fetching_articles(self) -> None:
-        from app.services.overview_market_intelligence import build_market_mover_catalyst_links
+        from app.services.overview.why_it_moved import build_market_mover_catalyst_links
 
         rows = build_market_mover_catalyst_links(
             symbol="AAA",
@@ -12345,7 +17463,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("AAA", rows.iloc[1]["Search Query"])
         self.assertIn("AAA Corp", rows.iloc[1]["Search Query"])
         self.assertIn("Weekly", rows.iloc[1]["Search Query"])
-        self.assertIn("Top 1000 by market cap", rows.iloc[1]["Search Query"])
+        self.assertIn("Top 1000 by 20D avg dollar volume", rows.iloc[1]["Search Query"])
         self.assertIn("Volume Rank 2", rows.iloc[1]["Search Query"])
         self.assertIn("news.google.com/search", rows.iloc[1]["URL"])
         self.assertIn("SEC", rows.iloc[2]["Source"])
@@ -12361,7 +17479,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("search.naver.com/search.naver", rows.iloc[5]["URL"])
 
     def test_market_mover_why_it_moved_read_model_includes_context_links_and_pending_metadata(self) -> None:
-        from app.services.overview_market_intelligence import build_market_mover_why_it_moved_read_model
+        from app.services.overview.why_it_moved import build_market_mover_why_it_moved_read_model
 
         model = build_market_mover_why_it_moved_read_model(
             mover={
@@ -12387,7 +17505,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["identity"]["Symbol"], "AAA")
         self.assertEqual(model["identity"]["Sector"], "Technology")
         self.assertEqual(model["context"]["Period"], "Weekly")
-        self.assertEqual(model["context"]["Coverage"], "Top 1000 by market cap")
+        self.assertEqual(model["context"]["Coverage"], "Top 1000 by 20D avg dollar volume")
         self.assertEqual(model["context"]["Rank Type"], "Volume Rank")
         self.assertEqual(model["context"]["Rank"], "2")
         self.assertEqual(model["movement"]["Return %"], 12.34)
@@ -12398,8 +17516,104 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Google News KR", set(model["links"]["Source"]))
         self.assertIn("Naver News", set(model["links"]["Source"]))
 
+    def test_market_mover_why_it_moved_read_model_carries_relative_volume_context(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_why_it_moved_read_model
+
+        model = build_market_mover_why_it_moved_read_model(
+            mover={
+                "Rank": 3,
+                "Symbol": "AAA",
+                "Name": "AAA Corp",
+                "Sector": "Technology",
+                "Industry": "Software",
+                "Return %": -7.5,
+                "Relative Volume": 4.25,
+                "Current Volume": 4250000,
+                "Avg 10D Volume": 1000000,
+                "Volume Basis": "Daily share volume",
+            },
+            period="daily",
+            coverage="SP500",
+            rank_source="Unusual Volume",
+        )
+
+        self.assertEqual(model["context"]["Rank Type"], "Unusual Volume")
+        self.assertEqual(model["context"]["Rank"], "3")
+        self.assertEqual(model["movement"]["Relative Volume"], 4.25)
+        self.assertEqual(model["movement"]["Current Volume"], 4250000)
+        self.assertEqual(model["movement"]["Avg 10D Volume"], 1000000)
+        self.assertEqual(model["movement"]["Volume Basis"], "Daily share volume")
+        self.assertIn("Manual investigation", model["boundary_note"])
+        self.assertNotIn("score", model["boundary_note"].lower())
+
+    def test_market_movers_detail_panel_model_integrates_selected_mode_and_status_strip(self) -> None:
+        from app.web.overview.market_movers_helpers import _market_mover_detail_panel_model
+
+        selected = {
+            "id": "top_losers:1:AAA",
+            "symbol": "AAA",
+            "name": "AAA Corp",
+            "rank": "1",
+            "rank_source": "Top Losers",
+            "mover": {
+                "Rank": 1,
+                "Symbol": "AAA",
+                "Name": "AAA Corp",
+                "Sector": "Technology",
+                "Industry": "Software",
+                "Return %": -9.5,
+                "Volume": 500000,
+                "Relative Volume": 3.2,
+            },
+        }
+        peer_rows = pd.DataFrame(
+            [
+                {"Rank": 1, "Symbol": "AAA", "Sector": "Technology", "Return %": -9.5},
+                {"Rank": 2, "Symbol": "BBB", "Sector": "Technology", "Return %": -6.5},
+                {"Rank": 3, "Symbol": "CCC", "Sector": "Healthcare", "Return %": -4.0},
+            ]
+        )
+
+        model = _market_mover_detail_panel_model(
+            selected,
+            period="daily",
+            coverage="SP500",
+            peer_rows=peer_rows,
+        )
+
+        self.assertEqual(model["read_model"]["identity"]["Symbol"], "AAA")
+        self.assertEqual(model["read_model"]["context"]["Rank Type"], "하락")
+        self.assertEqual(model["read_model"]["movement"]["Relative Volume"], 3.2)
+        self.assertEqual(model["status_strip"]["lookup"]["value"], "조회 전")
+        self.assertEqual(model["peer_context"].iloc[0]["항목"], "같은 섹터 내 표시 순위")
+        self.assertEqual(model["peer_context"].iloc[0]["값"], "1 / 2")
+        self.assertEqual(len(model["links"]), 6)
+        self.assertIn("manual", model["read_model"]["mode"])
+
+    def test_market_movers_ui_why_it_moved_is_selected_symbol_workflow(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_mover_why_it_moved_read_model", source)
+        self.assertIn("build_market_mover_metadata_status_strip", source)
+        self.assertIn("overview_market_mover_detail_selection", source)
+        self.assertIn("조사 단서", source)
+        self.assertIn("기본 지표", source)
+        self.assertIn('"뉴스"', source)
+        self.assertIn("뉴스 메타데이터", source)
+        self.assertIn("한국어 뉴스", source)
+        self.assertIn("SEC 공시", source)
+        self.assertIn("뉴스 메타데이터 조회", source)
+        self.assertIn("SEC 공시 메타데이터 조회", source)
+        self.assertIn("필요 재무제표 수집", source)
+        self.assertNotIn("뉴스·공시 메타데이터 조회", source)
+        self.assertIn("일반 뉴스와 한국어 뉴스를 같은 탭에서 확인합니다.", source)
+        self.assertNotIn("선택 종목 원천 detail 표", source)
+        self.assertNotIn("간단 메타데이터 조회", source)
+        self.assertNotIn("catalyst score", source.lower())
+        self.assertNotIn("confidence score", source.lower())
+
     def test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         def news_fetcher(symbol: str, max_items: int) -> list[dict[str, object]]:
             self.assertEqual(symbol, "AAA")
@@ -12448,8 +17662,145 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(metadata["sec_filings"].iloc[0]["Form"], "8-K")
         self.assertNotIn("Document", metadata["sec_filings"].columns)
 
+    def test_market_mover_news_metadata_fetcher_does_not_call_sec_fetcher(self) -> None:
+        import app.services.overview.why_it_moved as service
+        from app.services.overview.why_it_moved import fetch_market_mover_news_metadata
+
+        def news_fetcher(symbol: str, max_items: int) -> list[dict[str, object]]:
+            self.assertEqual(symbol, "AAA")
+            self.assertEqual(max_items, 1)
+            return [
+                {
+                    "title": "AAA shares rise after guidance update",
+                    "publisher": "Market Desk",
+                    "published_at": "2026-06-03T13:00:00Z",
+                    "url": "https://example.com/news/aaa",
+                }
+            ]
+
+        def korean_news_fetcher(
+            symbol: str,
+            name: str | None,
+            max_items: int,
+            request_timeout: float,
+        ) -> list[dict[str, object]]:
+            self.assertEqual((symbol, name, max_items), ("AAA", "AAA Corp", 1))
+            self.assertGreater(request_timeout, 0)
+            return [
+                {
+                    "title": "AAA 주가 상승",
+                    "source": "한국경제",
+                    "description": "AAA가 가이던스 이후 상승했습니다.",
+                    "pubDate": "Sat, 06 Jun 2026 09:15:00 GMT",
+                    "link": "https://news.google.com/rss/articles/aaa",
+                }
+            ]
+
+        with patch.object(service, "_fetch_sec_recent_filing_metadata", side_effect=AssertionError("SEC fetcher called")):
+            metadata = fetch_market_mover_news_metadata(
+                "aaa",
+                name="AAA Corp",
+                max_news=1,
+                max_korean_news=1,
+                news_fetcher=news_fetcher,
+                korean_news_fetcher=korean_news_fetcher,
+            )
+
+        self.assertEqual(metadata["status"], "OK")
+        self.assertEqual(metadata["requested_lanes"], ["news", "korean_news"])
+        self.assertFalse(metadata["news"].empty)
+        self.assertFalse(metadata["korean_news"].empty)
+        self.assertTrue(metadata["sec_filings"].empty)
+
+    def test_market_mover_sec_metadata_fetcher_does_not_call_news_fetchers(self) -> None:
+        import app.services.overview.why_it_moved as service
+        from app.services.overview.why_it_moved import fetch_market_mover_sec_metadata
+
+        def sec_fetcher(
+            symbol: str,
+            max_items: int,
+            user_agent: str | None,
+            request_timeout: float,
+        ) -> list[dict[str, object]]:
+            self.assertEqual(symbol, "AAA")
+            self.assertEqual(max_items, 1)
+            self.assertEqual(user_agent, "qa-agent")
+            self.assertGreater(request_timeout, 0)
+            return [
+                {
+                    "form": "10-Q",
+                    "filing_date": "2026-05-08",
+                    "title": "Quarterly report",
+                    "url": "https://www.sec.gov/Archives/edgar/data/1/0001/a10q.htm",
+                }
+            ]
+
+        with (
+            patch.object(service, "_fetch_yfinance_news_metadata", side_effect=AssertionError("news fetcher called")),
+            patch.object(
+                service,
+                "_fetch_google_news_kr_rss_metadata",
+                side_effect=AssertionError("Korean news fetcher called"),
+            ),
+        ):
+            metadata = fetch_market_mover_sec_metadata(
+                "aaa",
+                max_filings=1,
+                sec_fetcher=sec_fetcher,
+                user_agent="qa-agent",
+            )
+
+        self.assertEqual(metadata["status"], "OK")
+        self.assertEqual(metadata["requested_lanes"], ["sec_filings"])
+        self.assertTrue(metadata["news"].empty)
+        self.assertTrue(metadata["korean_news"].empty)
+        self.assertEqual(metadata["sec_filings"].iloc[0]["Form"], "10-Q")
+
+    def test_market_mover_metadata_merge_preserves_existing_lanes(self) -> None:
+        from app.services.overview.why_it_moved import (
+            fetch_market_mover_news_metadata,
+            fetch_market_mover_sec_metadata,
+            merge_market_mover_metadata,
+        )
+
+        news_metadata = fetch_market_mover_news_metadata(
+            "AAA",
+            name="AAA Corp",
+            max_news=1,
+            max_korean_news=0,
+            news_fetcher=lambda symbol, max_items: [
+                {
+                    "title": "AAA shares rise",
+                    "publisher": "Market Desk",
+                    "published_at": "2026-06-03T13:00:00Z",
+                    "url": "https://example.com/news/aaa",
+                }
+            ],
+            korean_news_fetcher=lambda symbol, name, max_items, request_timeout: [],
+        )
+        sec_metadata = fetch_market_mover_sec_metadata(
+            "AAA",
+            max_filings=1,
+            sec_fetcher=lambda symbol, max_items, user_agent, request_timeout: [
+                {
+                    "form": "8-K",
+                    "filing_date": "2026-06-02",
+                    "title": "Current report",
+                    "url": "https://www.sec.gov/Archives/edgar/data/1/0001/a8k.htm",
+                }
+            ],
+        )
+
+        merged = merge_market_mover_metadata(news_metadata, sec_metadata)
+
+        self.assertEqual(merged["status"], "OK")
+        self.assertEqual(merged["requested_lanes"], ["news", "korean_news", "sec_filings"])
+        self.assertEqual(merged["news"].iloc[0]["Title"], "AAA shares rise")
+        self.assertTrue(merged["korean_news"].empty)
+        self.assertEqual(merged["sec_filings"].iloc[0]["Form"], "8-K")
+
     def test_market_mover_compact_metadata_fetcher_adds_korean_news_metadata_lane(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         def korean_news_fetcher(
             symbol: str,
@@ -12496,7 +17847,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
     def test_market_mover_google_news_kr_rss_fetcher_builds_keyless_metadata_rows(self) -> None:
         from urllib.parse import parse_qs, urlparse
 
-        import app.services.overview_market_intelligence as service
+        import app.services.overview.why_it_moved as service
 
         self.assertTrue(
             hasattr(service, "_fetch_google_news_kr_rss_metadata"),
@@ -12557,7 +17908,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("body", rows[0])
 
     def test_market_mover_compact_metadata_fetcher_uses_google_news_kr_without_naver_credentials(self) -> None:
-        import app.services.overview_market_intelligence as service
+        import app.services.overview.why_it_moved as service
 
         calls: list[tuple[str, str | None, int, float]] = []
 
@@ -12579,7 +17930,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 }
             ]
 
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         with patch.dict(
             "os.environ",
@@ -12610,7 +17961,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(any("NAVER_SEARCH" in message for message in metadata["messages"]))
 
     def test_market_mover_compact_metadata_fetcher_distinguishes_empty_and_failed(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         empty = fetch_market_mover_compact_metadata(
             "AAA",
@@ -12642,7 +17993,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("SEC 메타데이터 조회 실패: sec timeout", failed["messages"])
 
     def test_market_mover_compact_metadata_fetcher_marks_partial_provider_failure(self) -> None:
-        from app.services.overview_market_intelligence import fetch_market_mover_compact_metadata
+        from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
 
         def sec_timeout(symbol: str, max_items: int, user_agent: str | None, request_timeout: float) -> list[dict[str, object]]:
             raise RuntimeError("sec timeout")
@@ -12667,7 +18018,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("SEC 메타데이터 조회 실패: sec timeout", metadata["messages"])
 
     def test_market_mover_metadata_status_strip_distinguishes_lookup_states(self) -> None:
-        from app.services.overview_market_intelligence import (
+        from app.services.overview.why_it_moved import (
             WHY_IT_MOVED_NEWS_COLUMNS,
             WHY_IT_MOVED_KOREAN_NEWS_COLUMNS,
             WHY_IT_MOVED_SEC_COLUMNS,
@@ -12760,7 +18111,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(no_metadata["sec"]["value"], "0건")
 
     def test_market_mover_sec_filings_sort_by_form_priority_deterministically(self) -> None:
-        from app.services.overview_market_intelligence import sort_market_mover_sec_filings_by_form_priority
+        from app.services.overview.why_it_moved import sort_market_mover_sec_filings_by_form_priority
 
         filings = pd.DataFrame(
             [
@@ -12778,8 +18129,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(list(sorted_filings.columns), ["Form", "Filing Date", "Title", "URL"])
 
     def test_market_mover_sec_lane_keeps_metadata_table_only_without_preview_helpers(self) -> None:
-        import app.services.overview_market_intelligence as market_intelligence
-        import app.web.overview_dashboard as overview_dashboard
+        import app.services.overview.why_it_moved as market_intelligence
+        import app.web.overview.market_movers_helpers as overview_dashboard
 
         sec_filings = pd.DataFrame(
             [
@@ -12805,7 +18156,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(hasattr(market_intelligence, "parse_market_mover_sec_filing_preview"))
 
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
-        from app.web.overview_dashboard import _market_mover_catalyst_candidates
+        from app.web.overview.market_movers_helpers import _market_mover_catalyst_candidates
 
         return_rows = pd.DataFrame(
             [
@@ -12844,7 +18195,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(candidates[0]["mover"]["Momentum Delta pp"], 9.13)
 
     def test_market_mover_metadata_tables_configure_url_as_clickable_link(self) -> None:
-        from app.web.overview_dashboard import _market_mover_metadata_column_config
+        from app.web.overview.market_movers_helpers import _market_mover_metadata_column_config
 
         config = _market_mover_metadata_column_config()
 
@@ -12853,7 +18204,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(config["열기"]["type_config"]["display_text"], "열기")
 
     def test_market_mover_korean_news_display_model_keeps_snippet_and_clickable_open_link(self) -> None:
-        from app.web.overview_dashboard import _market_mover_metadata_column_config, _market_mover_open_link_frame
+        from app.web.overview.market_movers_helpers import _market_mover_metadata_column_config, _market_mover_open_link_frame
 
         frame = pd.DataFrame(
             [
@@ -12876,7 +18227,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(config["열기"]["type_config"]["type"], "link")
 
     def test_market_mover_research_link_tables_share_clickable_url_config(self) -> None:
-        from app.web.overview_dashboard import _market_mover_external_search_table_model
+        from app.web.overview.market_movers_helpers import _market_mover_external_search_table_model
 
         table_model = _market_mover_external_search_table_model(
             pd.DataFrame(
@@ -12908,12 +18259,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(config["열기"]["type_config"]["display_text"], "열기")
 
     def test_market_movers_snapshot_falls_back_to_listing_names(self) -> None:
-        from app.services.overview_market_intelligence import build_market_movers_snapshot
+        from app.services.overview.market_movers import build_market_movers_snapshot
 
         observed_sql: dict[str, str] = {}
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
-            if "FROM nyse_asset_profile p" in sql:
+            if "FROM market_liquidity_universe_member m" in sql:
                 observed_sql["universe"] = sql
                 return [
                     {
@@ -12943,12 +18294,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         )
 
         self.assertIn("LEFT JOIN nyse_stock", observed_sql["universe"])
-        self.assertIn("COALESCE(NULLIF(p.long_name, ''), s.name)", observed_sql["universe"])
+        self.assertIn("COALESCE(NULLIF(p.long_name, ''), NULLIF(m.name, ''), s.name)", observed_sql["universe"])
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["rows"].iloc[0]["Name"], "BBB LISTING INC")
 
     def test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns(self) -> None:
-        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+        from app.services.overview.market_movers import build_group_leadership_snapshot
 
         snapshot = build_group_leadership_snapshot(
             universe_limit=100,
@@ -12985,7 +18336,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Momentum Delta pp", technology_leaders.columns)
 
     def test_group_leadership_snapshot_supports_sp500_daily_trend(self) -> None:
-        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+        from app.services.overview.market_movers import build_group_leadership_snapshot
 
         snapshot = build_group_leadership_snapshot(
             universe_code="SP500",
@@ -13017,7 +18368,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Healthcare", set(snapshot["trend_rows"]["Group"]))
 
     def test_overview_breadth_heatmap_summary_scores_participation_and_concentration(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+        from app.services.overview.market_movers import build_overview_breadth_heatmap_summary
 
         snapshot = {
             "status": "OK",
@@ -13071,7 +18422,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("not a trading action", model["boundary_note"])
 
     def test_overview_breadth_heatmap_summary_keeps_full_canonical_sector_map(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_breadth_heatmap_summary
+        from app.services.overview.market_movers import build_overview_breadth_heatmap_summary
         from app.web.overview_ui_components import _sector_pressure_map_html
 
         sector_names = [
@@ -13118,7 +18469,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(html.count("ov-sector-pressure-tile"), 11)
 
     def test_overview_macro_week_lane_clusters_near_events_without_signal_language(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+        from app.services.overview.events import build_overview_macro_week_lane
 
         snapshot = {
             "status": "OK",
@@ -13182,7 +18533,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("거래 실행", model["boundary_note"])
 
     def test_overview_macro_week_lane_splits_recent_and_upcoming_major_macro_events(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_week_lane
+        from app.services.overview.events import build_overview_macro_week_lane
 
         snapshot = {
             "status": "OK",
@@ -13269,7 +18620,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(model["items"][1]["type"], "FOMC_MEETING")
 
     def test_market_events_snapshot_defaults_to_recent_plus_upcoming_and_prioritizes_major_macro(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         captured: dict[str, object] = {}
 
@@ -13353,7 +18704,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[1]["Window"], "Upcoming")
 
     def test_overview_source_confidence_catalog_surfaces_provider_caveats_and_review_items(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+        from app.services.overview.market_context import build_overview_source_confidence_catalog
 
         model = build_overview_source_confidence_catalog(
             market_movers_snapshot={
@@ -13436,7 +18787,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("context 전용", model["boundary_note"])
 
     def test_overview_source_confidence_does_not_mark_events_and_data_health_meta_as_unresolved(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_source_confidence_catalog
+        from app.services.overview.market_context import build_overview_source_confidence_catalog
 
         model = build_overview_source_confidence_catalog(
             market_movers_snapshot={
@@ -13494,7 +18845,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(data_item["counts_for_status"])
 
     def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         snapshot = build_market_events_snapshot(
             today=date(2026, 5, 28),
@@ -13517,7 +18868,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Official")
 
     def test_market_events_snapshot_can_read_all_event_types(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         snapshot = build_market_events_snapshot(
             event_type=None,
@@ -13546,8 +18897,150 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(earnings_row["Freshness"], "Current estimate")
         self.assertEqual(earnings_row["Quality Action"], "Enable cross-check or refresh closer to date")
 
+    def test_market_events_snapshot_exposes_taxonomy_contract_for_expanded_calendar(self) -> None:
+        from app.services.overview.events import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return [
+                {
+                    "event_date": "2026-07-29",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: July 28-29, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_type": "provider_estimate",
+                    "validation_status": "not_confirmed",
+                    "event_status": "active",
+                    "event_family": "earnings",
+                    "event_subtype": "earnings",
+                    "event_time_label": "After Close",
+                    "event_datetime_utc": "2026-07-30 20:00:00",
+                    "universe_scope": "sp500",
+                    "source_authority": "provider_estimate",
+                    "source_url": "https://finance.yahoo.com/calendar/earnings",
+                    "confidence": 0.6,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+                {
+                    "event_date": "2026-08-21",
+                    "event_type": "OPTIONS_EXPIRATION",
+                    "symbol": None,
+                    "title": "Standard equity options expiration",
+                    "source": "cboe_options_calendar",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://cdn.cboe.com/resources/options/Cboe2026OPTIONSCalendar.pdf",
+                    "confidence": 0.95,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+
+        rows = snapshot["rows"]
+        self.assertEqual(snapshot["schema_version"], "market_events_snapshot_v2")
+        self.assertIn("market_structure", snapshot["taxonomy"]["event_families"])
+        self.assertIn("source_authorities", snapshot["taxonomy"])
+        for column in [
+            "Event Family",
+            "Event Subtype",
+            "Universe Scope",
+            "Source Authority",
+            "Event Time",
+            "Event Datetime UTC",
+        ]:
+            self.assertIn(column, rows.columns)
+        fomc_row = rows[rows["Type"] == "FOMC_MEETING"].iloc[0]
+        earnings_row = rows[rows["Type"] == "EARNINGS"].iloc[0]
+        options_row = rows[rows["Type"] == "OPTIONS_EXPIRATION"].iloc[0]
+        self.assertEqual(fomc_row["Event Family"], "central_bank")
+        self.assertEqual(fomc_row["Universe Scope"], "official_macro")
+        self.assertEqual(fomc_row["Source Authority"], "official")
+        self.assertEqual(earnings_row["Event Family"], "earnings")
+        self.assertEqual(earnings_row["Event Subtype"], "earnings")
+        self.assertEqual(earnings_row["Universe Scope"], "sp500")
+        self.assertEqual(earnings_row["Source Authority"], "provider_estimate")
+        self.assertEqual(earnings_row["Event Time"], "After Close")
+        self.assertEqual(earnings_row["Event Datetime UTC"], "2026-07-30 20:00")
+        self.assertEqual(options_row["Event Family"], "market_structure")
+        self.assertEqual(options_row["Event Subtype"], "options_expiration")
+        self.assertEqual(options_row["Universe Scope"], "all_us")
+        self.assertEqual(snapshot["coverage"]["family_counts"]["central_bank"], 1)
+        self.assertEqual(snapshot["coverage"]["family_counts"]["earnings"], 1)
+        self.assertEqual(snapshot["coverage"]["family_counts"]["market_structure"], 1)
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["official"], 2)
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["provider_estimate"], 1)
+        self.assertEqual(snapshot["coverage"]["universe_scope_counts"]["sp500"], 1)
+
+    def test_market_events_snapshot_derives_taxonomy_for_legacy_event_rows(self) -> None:
+        from app.services.overview.events import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return [
+                {
+                    "event_date": "2026-07-29",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_url": "https://finance.yahoo.com/calendar/earnings",
+                    "confidence": 0.65,
+                    "collected_at": "2026-07-01 01:00:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+
+        rows = snapshot["rows"]
+        fomc_row = rows[rows["Type"] == "FOMC_MEETING"].iloc[0]
+        earnings_row = rows[rows["Type"] == "EARNINGS"].iloc[0]
+        self.assertEqual(fomc_row["Event Family"], "central_bank")
+        self.assertEqual(fomc_row["Source Authority"], "official")
+        self.assertEqual(fomc_row["Universe Scope"], "official_macro")
+        self.assertEqual(earnings_row["Event Family"], "earnings")
+        self.assertEqual(earnings_row["Source Authority"], "provider_estimate")
+        self.assertEqual(earnings_row["Universe Scope"], "latest_movers")
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["official"], 1)
+        self.assertEqual(snapshot["coverage"]["source_authority_counts"]["provider_estimate"], 1)
+
     def test_market_events_snapshot_macro_filter_reads_macro_prefix_rows(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name
@@ -13596,7 +19089,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(set(snapshot["rows"]["Type"]), {"MACRO_CPI", "MACRO_GDP"})
 
     def test_market_events_snapshot_warns_on_stale_earnings_estimates(self) -> None:
-        from app.services.overview_market_intelligence import build_market_events_snapshot
+        from app.services.overview.events import build_market_events_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, sql, params
@@ -13627,8 +19120,261 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Age Days"], 27)
         self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
 
+    def test_events_workbench_payload_groups_brief_trust_calendar_and_evidence(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-06",
+                "event_type": "MACRO_CPI",
+                "title": "CPI: Consumer Price Index",
+                "source": "bureau_labor_statistics_release_schedule",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "macro",
+                "event_subtype": "cpi",
+                "universe_scope": "official_macro",
+                "source_authority": "official",
+                "confidence": 0.95,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-07",
+                "event_type": "EARNINGS",
+                "symbol": "MSFT",
+                "title": "MSFT Earnings Release",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "validation_status": "not_confirmed",
+                "event_family": "earnings",
+                "event_subtype": "earnings_release",
+                "universe_scope": "sp500",
+                "source_authority": "not_confirmed",
+                "source_url": "https://finance.yahoo.com/quote/MSFT/analysis",
+                "confidence": 0.6,
+                "collected_at": "2026-06-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-10",
+                "event_type": "OPTIONS_EXPIRATION",
+                "title": "Monthly Options Expiration",
+                "source": "cboe_options_expiration_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "options_expiration",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "confidence": 0.9,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-29",
+                "event_type": "FOMC_MEETING",
+                "title": "FOMC Meeting",
+                "source": "federal_reserve_fomc_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "central_bank",
+                "event_subtype": "fomc_meeting",
+                "universe_scope": "official_macro",
+                "source_authority": "official",
+                "confidence": 1.0,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return rows
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
+
+        self.assertEqual(payload["schema_version"], "events_workbench_v1")
+        self.assertIn("거래 신호가 아니라", payload["brief"]["boundary_note"])
+        self.assertEqual(payload["brief"]["next_event"]["date"], "2026-07-07")
+        self.assertEqual(payload["brief"]["counts"]["today"], 1)
+        self.assertEqual(payload["brief"]["counts"]["this_week"], 2)
+        self.assertEqual(payload["brief"]["counts"]["next_30d"], 3)
+        self.assertEqual(payload["brief"]["source_summary"]["official"], 3)
+        self.assertTrue(payload["brief"]["freshness_summary"]["has_stale_estimates"])
+        self.assertEqual(payload["command"]["actions"][0]["id"], "reload")
+        self.assertIn("DB", payload["command"]["actions"][0]["detail"])
+        self.assertIn("refresh_all", [action["id"] for action in payload["command"]["actions"]])
+        self.assertIn("provider/job", payload["command"]["refresh_boundary"])
+        self.assertEqual(payload["command"]["earnings_universe"]["symbol_source"], "latest_movers")
+        self.assertEqual(payload["command"]["earnings_universe"]["top_movers_limit"], 20)
+        self.assertEqual(payload["command"]["earnings_universe"]["max_symbols"], 50)
+        self.assertEqual(payload["filters"]["family"]["label"], "일정 타입")
+        self.assertIn("옵션 만기", [option["label"] for option in payload["filters"]["family"]["options"]])
+        self.assertIn("미국 공휴일", [option["label"] for option in payload["filters"]["family"]["options"]])
+        self.assertEqual(payload["filters"]["source_state"]["label"], "자료 상태")
+        self.assertEqual(payload["rails"][0]["key"], "recent_major")
+        self.assertEqual(payload["rails"][1]["items"][0]["symbol"], "MSFT")
+        self.assertEqual(payload["rail_tabs"]["default_key"], "near_term")
+        self.assertEqual(payload["rail_tabs"]["tabs"][1]["label"], "오늘 / 이번 주")
+        self.assertEqual(payload["rail_tabs"]["tabs"][1]["items"][0]["symbol"], "MSFT")
+        self.assertIn("최근 중요", [tab["label"] for tab in payload["rail_tabs"]["tabs"]])
+        self.assertEqual(payload["trust_review"]["eyebrow"], "자료 상태")
+        self.assertIn("일정 확정성", payload["trust_review"]["title"])
+        self.assertIn("공식 일정", payload["trust_review"]["source_boundary"])
+        self.assertIn("제공사 추정", payload["trust_review"]["source_boundary"])
+        self.assertEqual(payload["trust_review"]["sections"][0]["label"], "오래된 추정 일정")
+        self.assertEqual(payload["trust_review"]["not_confirmed_count"], 1)
+        self.assertEqual(payload["trust_review"]["stale_estimate_count"], 1)
+        self.assertEqual(payload["calendar"]["today"], "2026-07-07")
+        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
+        self.assertEqual(payload["calendar"]["days"][1]["date"], "2026-07-07")
+        self.assertEqual(payload["calendar"]["days"][1]["review_count"], 1)
+        options_day = next(day for day in payload["calendar"]["days"] if day["date"] == "2026-07-10")
+        self.assertIn("options_expiration", options_day["by_family"])
+        self.assertNotIn("market_structure", options_day["by_family"])
+        self.assertEqual(options_day["items"][0]["display_family"], "options_expiration")
+        self.assertEqual(options_day["items"][0]["display_family_label"], "옵션 만기")
+        self.assertEqual(options_day["items"][0]["badges"][0]["label"], "옵션 만기")
+        self.assertTrue(payload["calendar"]["density"])
+        self.assertEqual(payload["calendar"]["density"][0]["week_start"], "2026-07-06")
+        self.assertEqual(payload["calendar"]["density"][0]["week_end"], "2026-07-12")
+        self.assertEqual(payload["calendar"]["density"][0]["label"], "7/6-7/12")
+        self.assertIn("raw_fields", payload["evidence"])
+        self.assertEqual(payload["evidence"]["rows"][1]["Source Authority"], "not_confirmed")
+
+    def test_events_workbench_market_structure_subtypes_display_separately(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-03",
+                "event_type": "MARKET_HOLIDAY",
+                "title": "US Market Holiday",
+                "source": "nasdaq_market_holiday_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "market_holiday",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-17",
+                "event_type": "OPTIONS_EXPIRATION",
+                "title": "Monthly Options Expiration",
+                "source": "cboe_options_expiration_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "options_expiration",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-24",
+                "event_type": "RUSSELL_RECONSTITUTION",
+                "title": "Russell Reconstitution",
+                "source": "ftse_russell_reconstitution_calendar",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "market_structure",
+                "event_subtype": "russell_reconstitution",
+                "universe_scope": "all_us",
+                "source_authority": "official",
+                "collected_at": "2026-07-01 01:00:00",
+            },
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return rows
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 1),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 1))
+
+        by_date = {day["date"]: day for day in payload["calendar"]["days"]}
+        self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family"], "market_holiday")
+        self.assertEqual(by_date["2026-07-03"]["items"][0]["display_family_label"], "미국 공휴일")
+        self.assertIn("market_holiday", by_date["2026-07-03"]["by_family"])
+        self.assertEqual(by_date["2026-07-17"]["items"][0]["display_family"], "options_expiration")
+        self.assertEqual(by_date["2026-07-17"]["items"][0]["display_family_label"], "옵션 만기")
+        self.assertIn("options_expiration", by_date["2026-07-17"]["by_family"])
+        self.assertEqual(by_date["2026-07-24"]["items"][0]["display_family"], "market_reconstitution")
+        self.assertEqual(by_date["2026-07-24"]["items"][0]["display_family_label"], "지수 재구성")
+        self.assertIn("market_reconstitution", by_date["2026-07-24"]["by_family"])
+
+    def test_events_workbench_near_term_uses_calendar_week_not_rolling_seven_days(self) -> None:
+        from app.services.overview.events import build_events_workbench_payload, build_market_events_snapshot
+
+        rows = [
+            {
+                "event_date": "2026-07-10",
+                "event_type": "MACRO_PPI",
+                "title": "PPI: Producer Price Index",
+                "source": "bureau_labor_statistics_release_schedule",
+                "source_type": "official",
+                "validation_status": "official",
+                "event_family": "macro",
+                "event_subtype": "ppi",
+                "universe_scope": "official_macro",
+                "source_authority": "official",
+                "confidence": 0.95,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+            {
+                "event_date": "2026-07-14",
+                "event_type": "EARNINGS",
+                "symbol": "JPM",
+                "title": "JPM Earnings Release",
+                "source": "yfinance_calendar",
+                "source_type": "provider_estimate",
+                "validation_status": "cross_checked",
+                "event_family": "earnings",
+                "event_subtype": "earnings_release",
+                "universe_scope": "sp500",
+                "source_authority": "provider_estimate",
+                "confidence": 0.65,
+                "collected_at": "2026-07-01 01:00:00",
+            },
+        ]
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return rows
+
+        snapshot = build_market_events_snapshot(
+            event_type=None,
+            today=date(2026, 7, 7),
+            horizon_days=60,
+            query_fn=query_fn,
+        )
+        payload = build_events_workbench_payload(snapshot, today=date(2026, 7, 7))
+
+        near_term_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "near_term")
+        next_30d_tab = next(tab for tab in payload["rail_tabs"]["tabs"] if tab["key"] == "next_30d")
+        near_term_dates = [item["date"] for item in near_term_tab["items"]]
+        next_30d_dates = [item["date"] for item in next_30d_tab["items"]]
+
+        self.assertEqual(payload["calendar"]["current_week_start"], "2026-07-06")
+        self.assertEqual(payload["calendar"]["current_week_end"], "2026-07-12")
+        self.assertEqual(payload["brief"]["counts"]["this_week"], 1)
+        self.assertIn("2026-07-10", near_term_dates)
+        self.assertNotIn("2026-07-14", near_term_dates)
+        self.assertIn("2026-07-14", next_30d_dates)
+
     def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -13728,7 +19474,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         rows = snapshot["rows"]
         self.assertEqual(snapshot["status"], "REVIEW")
         self.assertEqual(snapshot["coverage"]["partial_count"], 1)
+        self.assertEqual(snapshot["coverage"]["direct_market_context_count"], 6)
+        self.assertEqual(snapshot["coverage"]["reference_context_count"], 3)
+        self.assertGreaterEqual(snapshot["coverage"]["direct_market_context_review_count"], 1)
+        self.assertGreaterEqual(snapshot["coverage"]["reference_context_review_count"], 1)
         universe_row = rows[rows["Area"] == "S&P 500 Universe"].iloc[0]
+        self.assertEqual(universe_row["Scope"], "direct_market_context")
         self.assertEqual(universe_row["Status"], "OK")
         self.assertEqual(universe_row["Rows"], 503)
         self.assertEqual(universe_row["Last Auto Run"], "2026-05-28 01:05")
@@ -13739,7 +19490,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sp500_intraday_row["Last Auto Run"], "2026-05-28 04:05")
         self.assertEqual(sp500_intraday_row["Auto Source"], "Browser Auto")
         self.assertEqual(sp500_intraday_row["Next Auto Due"], "2026-05-28 04:10")
+        top1000_row = rows[rows["Area"] == "Top1000 Daily Snapshot"].iloc[0]
+        self.assertEqual(top1000_row["Scope"], "reference_context")
         futures_row = rows[rows["Area"] == "Futures Monitor 1m OHLCV"].iloc[0]
+        self.assertEqual(futures_row["Scope"], "reference_context")
         self.assertEqual(futures_row["Status"], "OK")
         self.assertIn("4 symbols", futures_row["Data Freshness"])
         self.assertEqual(snapshot["coverage"]["latest_auto_at"], "2026-05-28 04:05")
@@ -13750,7 +19504,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Inspect failed symbols", earnings_row["Next Action"])
 
     def test_collection_ops_snapshot_supports_legacy_event_calendar_schema(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         event_query_count = 0
 
@@ -13803,7 +19557,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("next 2026-06-17", fomc_row["Data Freshness"])
 
     def test_collection_ops_snapshot_marks_macro_calendar_due_when_some_macro_types_missing(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -13832,7 +19586,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("covered 1/4", macro_row["Data Freshness"])
 
     def test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context(self) -> None:
-        from app.services.overview_market_intelligence import build_market_sentiment_snapshot
+        from app.services.overview.sentiment import build_market_sentiment_snapshot
 
         snapshot_rows = pd.DataFrame(
             [
@@ -14061,8 +19815,362 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("시장 폭", breadth["current_reading"])
         self.assertIn("Market Movers", analysis["next_checks"][0]["target"])
 
+    def test_market_sentiment_snapshot_adds_range_divergence_and_component_history(self) -> None:
+        from app.services.overview.sentiment import build_market_sentiment_snapshot
+
+        snapshot_rows = pd.DataFrame(
+            [
+                {
+                    "series_id": "CNN_FEAR_GREED",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "CNN Fear & Greed",
+                    "category": "sentiment_index",
+                    "units": "score_0_100",
+                    "value": 54.7,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "neutral"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BEARISH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html_table",
+                    "series_name": "AAII Bearish Sentiment",
+                    "category": "sentiment_survey",
+                    "units": "percent",
+                    "value": 42.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "AAII_BULL_BEAR_SPREAD",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "aaii_sentiment_survey",
+                    "source_type": "official",
+                    "source_mode": "html_table",
+                    "series_name": "AAII Bull-Bear Spread",
+                    "category": "sentiment_survey",
+                    "units": "percentage_point",
+                    "value": -12.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": "{}",
+                    "collected_at": pd.Timestamp("2026-06-04 14:50:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_MARKET_MOMENTUM_SP500",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Market Momentum",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 65.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "greed"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+                {
+                    "series_id": "CNN_FNG_STOCK_PRICE_BREADTH",
+                    "observation_date": pd.Timestamp("2026-06-04"),
+                    "source": "cnn_fear_greed",
+                    "source_type": "official",
+                    "source_mode": "json",
+                    "series_name": "Stock Price Breadth",
+                    "category": "sentiment_component",
+                    "units": "score_0_100",
+                    "value": 22.0,
+                    "coverage_status": "actual",
+                    "missing_fields_json": json.dumps({"rating": "extreme fear"}),
+                    "collected_at": pd.Timestamp("2026-06-04 23:10:00"),
+                    "staleness_days": 1,
+                    "snapshot_status": "actual",
+                },
+            ]
+        )
+        history_rows = pd.DataFrame(
+            [
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-01"), "source": "cnn_fear_greed", "value": 40.0},
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-02"), "source": "cnn_fear_greed", "value": 50.0},
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-03"), "source": "cnn_fear_greed", "value": 70.0},
+                {"series_id": "CNN_FEAR_GREED", "observation_date": pd.Timestamp("2026-06-04"), "source": "cnn_fear_greed", "value": 54.7},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-01"), "source": "aaii_sentiment_survey", "value": 25.0},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-02"), "source": "aaii_sentiment_survey", "value": 30.0},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-03"), "source": "aaii_sentiment_survey", "value": 38.0},
+                {"series_id": "AAII_BEARISH", "observation_date": pd.Timestamp("2026-06-04"), "source": "aaii_sentiment_survey", "value": 42.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-01"), "source": "aaii_sentiment_survey", "value": 12.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-02"), "source": "aaii_sentiment_survey", "value": 2.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-03"), "source": "aaii_sentiment_survey", "value": -4.0},
+                {"series_id": "AAII_BULL_BEAR_SPREAD", "observation_date": pd.Timestamp("2026-06-04"), "source": "aaii_sentiment_survey", "value": -12.0},
+                {"series_id": "CNN_FNG_MARKET_MOMENTUM_SP500", "observation_date": pd.Timestamp("2026-06-03"), "source": "cnn_fear_greed", "value": 55.0},
+                {"series_id": "CNN_FNG_MARKET_MOMENTUM_SP500", "observation_date": pd.Timestamp("2026-06-04"), "source": "cnn_fear_greed", "value": 65.0},
+                {"series_id": "CNN_FNG_STOCK_PRICE_BREADTH", "observation_date": pd.Timestamp("2026-06-03"), "source": "cnn_fear_greed", "value": 30.0},
+                {"series_id": "CNN_FNG_STOCK_PRICE_BREADTH", "observation_date": pd.Timestamp("2026-06-04"), "source": "cnn_fear_greed", "value": 22.0},
+            ]
+        )
+
+        snapshot = build_market_sentiment_snapshot(
+            snapshot_rows=snapshot_rows,
+            history_rows=history_rows,
+            today=date(2026, 6, 5),
+        )
+
+        analysis = snapshot["analysis"]
+        range_by_series = {item["series"]: item for item in analysis["range_context"]}
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["sample_count"], 4)
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["min_value"], 40.0)
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["max_value"], 70.0)
+        self.assertEqual(range_by_series["CNN Fear & Greed"]["percentile"], 75.0)
+        self.assertIn("최근", range_by_series["AAII Bearish"]["detail"])
+        self.assertEqual(range_by_series["AAII Bull-Bear Spread"]["position_label"], "낮은 편")
+
+        divergence = analysis["divergence"]
+        self.assertEqual(divergence["status"], "뚜렷한 엇갈림")
+        self.assertEqual(divergence["headline_direction"], "neutral")
+        self.assertEqual(divergence["component_direction"], "mixed")
+        self.assertEqual(divergence["aaii_direction"], "fear")
+        self.assertIn("서로 다르게", divergence["summary"])
+        divergence_items = {item["label"]: item for item in divergence["items"]}
+        self.assertIn("중립", divergence_items["CNN headline"]["detail"])
+        self.assertIn("강하게 밀지", divergence_items["CNN headline"]["detail"])
+        self.assertIn("탐욕 1개와 공포 1개", divergence_items["CNN components"]["detail"])
+        self.assertIn("내부가 갈라", divergence_items["CNN components"]["detail"])
+        self.assertIn("비관", divergence_items["AAII survey"]["detail"])
+        self.assertIn("42.0", divergence_items["AAII survey"]["detail"])
+        self.assertIn("-12.0", divergence_items["AAII survey"]["detail"])
+        self.assertNotIn("headline score 기준", divergence_items["CNN headline"]["detail"])
+        self.assertNotIn("방향 분포입니다", divergence_items["CNN components"]["detail"])
+        self.assertNotIn("함께 본 설문 방향", divergence_items["AAII survey"]["detail"])
+
+        history_by_series = {item["series"]: item for item in analysis["component_history"]}
+        self.assertEqual(history_by_series["Market Momentum"]["latest"], 65.0)
+        self.assertEqual(history_by_series["Market Momentum"]["previous"], 55.0)
+        self.assertEqual(history_by_series["Market Momentum"]["change"], 10.0)
+        self.assertEqual(history_by_series["Market Momentum"]["change_direction"], "up")
+        self.assertEqual(history_by_series["Stock Price Breadth"]["change_direction"], "down")
+
+    def test_market_sentiment_react_payload_uses_existing_snapshot_fields(self) -> None:
+        from app.web.overview.sentiment_helpers import build_sentiment_react_workbench_payload
+
+        snapshot = {
+            "status": "OK",
+            "coverage": {
+                "cnn_score": 54.7,
+                "cnn_rating": "neutral",
+                "aaii_bearish": 37.0,
+                "aaii_bull_bear_spread": -0.7,
+                "source_count": 2,
+                "stale_count": 0,
+                "missing_count": 0,
+            },
+            "analysis": {
+                "phase": "MIXED_NEUTRAL",
+                "phase_label": "혼합 중립",
+                "tone": "neutral",
+                "headline": "중립이지만 내부는 엇갈린 시장 심리입니다.",
+                "summary": "헤드라인 점수는 중립권이지만 CNN 구성요소는 탐욕과 공포가 갈립니다.",
+                "data_confidence": {
+                    "status": "High",
+                    "tone": "positive",
+                    "detail": "2개 source 준비, missing 0, stale 0.",
+                },
+                "analysis_steps": [
+                    {
+                        "title": "왜 이렇게 보나",
+                        "status": "CNN 54.7 · AAII spread -0.7pp",
+                        "tone": "neutral",
+                        "detail": "CNN 헤드라인은 중립권이고, Bearish 37.0%는 장기 평균보다 +6.5pp 높습니다.",
+                    }
+                ],
+                "driver_summary": {"greed_count": 1, "fear_count": 1, "neutral_count": 0},
+                "driver_groups": {
+                    "greed": [
+                        {
+                            "series": "Market Momentum",
+                            "label_ko": "지수 추세",
+                            "score": 93.8,
+                            "rating_label_ko": "극단적 탐욕",
+                            "tone": "positive",
+                            "direction": "greed",
+                            "current_reading": "지수 추세: 지수 자체의 추세가 강합니다.",
+                        }
+                    ],
+                    "fear": [
+                        {
+                            "series": "Stock Price Breadth",
+                            "label_ko": "시장 폭",
+                            "score": 31.4,
+                            "rating_label_ko": "공포",
+                            "tone": "warning",
+                            "direction": "fear",
+                            "current_reading": "시장 폭: 상승 참여 폭이 약합니다.",
+                        }
+                    ],
+                    "neutral": [],
+                },
+                "component_explanations": [
+                    {
+                        "series": "Market Momentum",
+                        "label_ko": "지수 추세",
+                        "score": 93.8,
+                        "rating_label_ko": "극단적 탐욕",
+                        "tone": "positive",
+                        "current_reading": "지수 추세: 지수 자체의 추세가 강합니다.",
+                    }
+                ],
+                "range_context": [
+                    {
+                        "series": "CNN Fear & Greed",
+                        "latest_value": 54.7,
+                        "sample_count": 40,
+                        "min_value": 22.0,
+                        "max_value": 78.0,
+                        "median_value": 51.0,
+                        "percentile": 62.5,
+                        "position_label": "중간권",
+                        "tone": "neutral",
+                        "detail": "CNN Fear & Greed 현재값 54.7은 최근 40개 관측치 중 62.5 percentile입니다.",
+                    },
+                    {
+                        "series": "AAII Bearish",
+                        "latest_value": 37.0,
+                        "sample_count": 40,
+                        "min_value": 18.0,
+                        "max_value": 52.0,
+                        "median_value": 31.0,
+                        "percentile": 76.0,
+                        "position_label": "높은 편",
+                        "tone": "warning",
+                        "detail": "AAII Bearish 현재값 37.0은 최근 40개 관측치 중 76.0 percentile입니다.",
+                    },
+                ],
+                "divergence": {
+                    "status": "뚜렷한 엇갈림",
+                    "tone": "warning",
+                    "headline_direction": "neutral",
+                    "component_direction": "mixed",
+                    "aaii_direction": "fear",
+                    "summary": "CNN 헤드라인, 구성요소, AAII 설문이 서로 다르게 읽힙니다.",
+                    "items": [
+                        {
+                            "label": "CNN headline",
+                            "direction": "neutral",
+                            "direction_label": "중립",
+                            "detail": "CNN Fear & Greed headline은 중립으로 읽힙니다.",
+                            "tone": "neutral",
+                        },
+                        {
+                            "label": "AAII survey",
+                            "direction": "fear",
+                            "direction_label": "공포",
+                            "detail": "AAII bearish와 bull-bear spread는 공포로 읽힙니다.",
+                            "tone": "warning",
+                        },
+                    ],
+                },
+                "component_history": [
+                    {
+                        "series": "Market Momentum",
+                        "label_ko": "지수 추세",
+                        "latest": 93.8,
+                        "latest_date": "2026-06-04",
+                        "previous": 84.0,
+                        "previous_date": "2026-06-03",
+                        "change": 9.8,
+                        "change_direction": "up",
+                        "tone": "positive",
+                        "detail": "지수 추세는 직전 84.0에서 93.8로 +9.8 움직였습니다.",
+                    }
+                ],
+                "next_checks": [
+                    {
+                        "target": "Market Movers breadth",
+                        "reason": "상승 종목 비중이 넓은지 확인합니다.",
+                        "watch_for": "Stock Price Breadth와 같은 방향인지 확인",
+                        "tone": "neutral",
+                    }
+                ],
+            },
+            "rows": pd.DataFrame(
+                [
+                    {
+                        "Series": "CNN Fear & Greed",
+                        "Value": "54.7",
+                        "Label": "neutral",
+                        "Observation Date": "2026-06-04",
+                        "Staleness Days": 1.0,
+                        "Status": "OK",
+                        "Source": "cnn_fear_greed",
+                    }
+                ]
+            ),
+            "component_rows": pd.DataFrame(
+                [
+                    {
+                        "Series": "Market Momentum",
+                        "Score": 93.8,
+                        "Rating": "extreme greed",
+                        "Observation Date": "2026-06-04",
+                        "Status": "OK",
+                    }
+                ]
+            ),
+            "history_rows": pd.DataFrame(
+                [
+                    {"Date": "2026-06-03", "Series": "CNN Fear & Greed", "Value": 54.0, "Source": "cnn_fear_greed"},
+                    {"Date": "2026-06-04", "Series": "CNN Fear & Greed", "Value": 54.7, "Source": "cnn_fear_greed"},
+                ]
+            ),
+            "warnings": [],
+        }
+
+        payload = build_sentiment_react_workbench_payload(snapshot)
+
+        self.assertEqual(payload["schema_version"], "sentiment_react_workbench_v1")
+        self.assertEqual(payload["component"], "SentimentWorkbench")
+        self.assertEqual(payload["action_boundary"], "python_dispatch_only")
+        self.assertEqual([action["id"] for action in payload["command"]["actions"]], ["refresh", "reload"])
+        self.assertEqual(payload["summary"]["phase_label"], "혼합 중립")
+        self.assertEqual(payload["summary"]["headline"], "중립이지만 내부는 엇갈린 시장 심리입니다.")
+        self.assertIn("시장 배경", payload["boundary_note"])
+        self.assertIn(
+            {"label": "CNN Fear & Greed", "value": "54.7", "detail": "neutral", "tone": "neutral"},
+            payload["summary"]["metrics"],
+        )
+        self.assertEqual(payload["freshness"]["latest_observation_date"], "2026-06-04")
+        self.assertEqual(payload["freshness"]["source_count"], 2)
+        self.assertEqual(payload["analysis_steps"][0]["title"], "왜 이렇게 보나")
+        self.assertIn("AAII spread", payload["analysis_steps"][0]["status"])
+        self.assertEqual(payload["drivers"]["summary"]["greed_count"], 1)
+        self.assertEqual(payload["drivers"]["lanes"][0]["key"], "greed")
+        self.assertEqual(payload["drivers"]["lanes"][0]["items"][0]["current_reading"], "지수 추세: 지수 자체의 추세가 강합니다.")
+        self.assertEqual(payload["interpretation"]["range_context"][0]["series"], "CNN Fear & Greed")
+        self.assertEqual(payload["interpretation"]["range_context"][0]["percentile"], 62.5)
+        self.assertEqual(payload["interpretation"]["divergence"]["status"], "뚜렷한 엇갈림")
+        self.assertEqual(payload["interpretation"]["divergence"]["items"][1]["direction_label"], "공포")
+        self.assertEqual(payload["interpretation"]["component_history"][0]["series"], "Market Momentum")
+        self.assertEqual(payload["interpretation"]["component_history"][0]["change_direction"], "up")
+        self.assertEqual(payload["next_checks"][0]["target"], "Market Movers breadth")
+        self.assertEqual(payload["charts"]["history"]["series"][0]["series"], "CNN Fear & Greed")
+        self.assertEqual(payload["charts"]["components"]["items"][0]["series"], "Market Momentum")
+        self.assertEqual(payload["evidence"]["raw_rows"][0]["Series"], "CNN Fear & Greed")
+
     def test_collection_ops_snapshot_tracks_market_sentiment_freshness(self) -> None:
-        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+        from app.services.overview.data_health import build_collection_ops_snapshot
 
         def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
             del db_name, params
@@ -14107,7 +20215,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("latest 2026-06-04", sentiment_row["Data Freshness"])
 
     def test_overview_data_health_handoff_ranks_problem_rows_and_points_to_collection_surfaces(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_data_health_ingestion_handoff
+        from app.services.overview.data_health import build_overview_data_health_ingestion_handoff
 
         handoff = build_overview_data_health_ingestion_handoff(
             {
@@ -14178,10 +20286,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(handoff["summary"]["next_target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > FOMC 일정")
         self.assertEqual([item["area"] for item in handoff["priority_items"]], ["FOMC Calendar", "Macro Calendar", "Futures Monitor 1m OHLCV", "Earnings Calendar"])
         self.assertEqual(handoff["priority_items"][0]["status"], "Failed")
+        self.assertEqual(handoff["priority_items"][0]["scope"], "direct_market_context")
         self.assertEqual(handoff["priority_items"][0]["severity"], "critical")
         self.assertIn("Failure streak 2", handoff["priority_items"][0]["reason"])
         self.assertEqual(handoff["priority_items"][1]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > 매크로 발표")
         self.assertEqual(handoff["priority_items"][2]["owner_surface"], "Workspace > Ingestion")
+        self.assertEqual(handoff["priority_items"][2]["scope"], "reference_context")
         self.assertEqual(handoff["priority_items"][2]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집")
         self.assertEqual(handoff["priority_items"][2]["alternate_surface"], "Workspace > Overview > Futures Monitor")
         self.assertEqual(handoff["counts"]["OK"], 1)
@@ -14190,7 +20300,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("does not execute", handoff["boundary_note"].lower())
 
     def test_overview_macro_context_cockpit_can_omit_futures_macro_for_fast_entry(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             include_futures_macro=False,
@@ -14265,7 +20375,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("선물/매크로", summary_copy)
 
     def test_overview_macro_context_cockpit_summarizes_existing_context_snapshots(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -14442,7 +20552,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("context 전용", cockpit["boundary_note"])
 
     def test_overview_macro_context_cockpit_uses_last_market_basis_when_market_is_closed(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_session_context={
@@ -14530,7 +20640,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(prices["status_label"], "자료 정상")
 
     def test_overview_macro_context_cockpit_keeps_intraday_refresh_action_when_market_is_open(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_session_context={
@@ -14598,7 +20708,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("오늘의 시장 브리프", html)
 
     def test_overview_macro_context_cockpit_uses_recent_cpi_as_compact_event_cue(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -14708,7 +20818,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("확인하세요", event_findings[0]["conclusion"])
 
     def test_overview_macro_context_cockpit_normalizes_intraday_refresh_state_dict(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={
@@ -15431,7 +21541,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in pilot["insufficient_conditions"]], ["gld_safe_haven_context"])
 
     def test_group_leadership_date_resolver_respects_selected_as_of_date(self) -> None:
-        from app.services.overview_market_intelligence import resolve_group_trend_market_dates
+        from app.services.overview.market_movers import resolve_group_trend_market_dates
 
         captured: list[tuple[str, list[object]]] = []
         eligible_dates = list(pd.bdate_range(end="2024-03-15", periods=6).strftime("%Y-%m-%d"))[::-1]
@@ -15458,7 +21568,7 @@ class OverviewMarketContextAnalogServiceContractTests(unittest.TestCase):
         self.assertTrue(any("2024-03-15" in params for _, params in captured))
 
     def test_macro_context_cockpit_embeds_analog_read_model_when_supplied(self) -> None:
-        from app.services.overview_market_intelligence import build_overview_macro_context_cockpit
+        from app.services.overview.market_context import build_overview_macro_context_cockpit
 
         cockpit = build_overview_macro_context_cockpit(
             market_movers_snapshot={"status": "OK", "coverage": {}, "rows": pd.DataFrame([{"Symbol": "MRNA", "Return %": 7.2, "Name": "Moderna", "Sector": "Healthcare"}])},
@@ -16711,6 +22821,45 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
                 )
         return rows
 
+    def _daily_rows_with_recent_flow_moves(
+        self,
+        five_day_moves: dict[str, float],
+        twenty_day_moves: dict[str, float],
+        *,
+        days: int = 260,
+    ) -> list[dict[str, object]]:
+        base = pd.Timestamp(date.today().isoformat(), tz=timezone.utc) - pd.Timedelta(days=days - 1)
+        rows: list[dict[str, object]] = []
+        for symbol_index, (symbol, five_day_move) in enumerate(five_day_moves.items()):
+            price = 100.0 + symbol_index * 7.0
+            twenty_day_move = twenty_day_moves.get(symbol, five_day_move)
+            pre_recent_move = ((1.0 + twenty_day_move) / (1.0 + five_day_move)) - 1.0
+            month_daily_move = (1.0 + pre_recent_move) ** (1 / 15) - 1.0
+            week_daily_move = (1.0 + five_day_move) ** (1 / 5) - 1.0
+            for idx in range(days):
+                daily_move = 0.0002
+                if days - 20 <= idx < days - 5:
+                    daily_move = month_daily_move
+                elif idx >= days - 5:
+                    daily_move = week_daily_move
+                price *= 1.0 + daily_move
+                ts = base + pd.Timedelta(days=idx)
+                rows.append(
+                    {
+                        "provider_symbol": symbol,
+                        "interval_code": "1d",
+                        "candle_time_utc": ts.strftime("%Y-%m-%d %H:%M:%S"),
+                        "open": price * 0.995,
+                        "high": price * 1.005,
+                        "low": price * 0.99,
+                        "close": price,
+                        "volume": 1000 + idx,
+                        "source": "yfinance",
+                        "provider_status": "ok",
+                    }
+                )
+        return rows
+
     def _risk_on_validation_rows(self, *, days: int = 150) -> tuple[list[str], list[dict[str, object]]]:
         symbols = [
             "ES=F",
@@ -16906,9 +23055,107 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         )
 
         self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
-        self.assertEqual(interpretation["sub_scenario"], "위험선호 약세 + 금리 부담 완화")
+        self.assertEqual(interpretation["sub_scenario"], "금리 부담 완화 속 성장 약세")
         self.assertEqual(interpretation["regime_hint"], "성장주 부담 완화 확인 필요")
         self.assertIn("금리 부담", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_explains_dollar_pressure_risk_off_candidate(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -12,
+                    "Growth Score": -4,
+                    "Rate Pressure Score": 6,
+                    "Dollar Pressure Score": 34,
+                    "Safe Haven Score": 4,
+                    "Inflation Pressure Score": 2,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": -0.24,
+                    "NQ=F": -0.18,
+                    "RTY=F": -0.34,
+                    "HG=F": -0.20,
+                    "6E=F": -1.12,
+                    "6B=F": -0.91,
+                    "6A=F": -0.86,
+                    "6C=F": -0.73,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "달러 압력 Risk-Off 후보")
+        self.assertEqual(interpretation["regime_hint"], "Risk-off 확인 필요")
+        self.assertIn("달러 압력", interpretation["mixed_reason"])
+        self.assertIn("위험자산", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_explains_commodity_weakness_as_demand_slowdown_candidate(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": -6,
+                    "Growth Score": -8,
+                    "Rate Pressure Score": -2,
+                    "Dollar Pressure Score": 3,
+                    "Safe Haven Score": 5,
+                    "Inflation Pressure Score": -31,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "CL=F": -1.12,
+                    "NG=F": -0.82,
+                    "HG=F": -0.74,
+                    "ES=F": -0.08,
+                    "NQ=F": 0.03,
+                    "GC=F": 0.10,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "원자재 약세 + 수요 둔화 후보")
+        self.assertEqual(interpretation["regime_hint"], "수요 둔화 확인 필요")
+        self.assertIn("수요 둔화", interpretation["mixed_reason"])
+
+    def test_macro_interpretation_explains_conflicting_risk_on_and_safe_haven_as_transition(self) -> None:
+        from app.services.futures_macro_thermometer import generate_market_interpretation
+
+        interpretation = generate_market_interpretation(
+            self._macro_score_frame(
+                {
+                    "Risk-On Score": 27,
+                    "Growth Score": 6,
+                    "Rate Pressure Score": 3,
+                    "Dollar Pressure Score": -4,
+                    "Safe Haven Score": 25,
+                    "Inflation Pressure Score": 5,
+                }
+            ),
+            self._macro_symbol_frame(
+                {
+                    "ES=F": 1.02,
+                    "NQ=F": 0.88,
+                    "RTY=F": 0.18,
+                    "GC=F": 0.91,
+                    "ZN=F": 0.74,
+                    "ZB=F": 0.66,
+                    "6J=F": 0.53,
+                }
+            ),
+        )
+
+        self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
+        self.assertEqual(interpretation["sub_scenario"], "상충 흐름 / 전환 구간")
+        self.assertEqual(interpretation["regime_hint"], "전환 구간 확인 필요")
+        self.assertIn("위험선호", interpretation["mixed_reason"])
+        self.assertIn("안전자산", interpretation["mixed_reason"])
 
     def test_macro_interpretation_keeps_low_signal_mixed_context_distinct(self) -> None:
         from app.services.futures_macro_thermometer import generate_market_interpretation
@@ -16938,7 +23185,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         )
 
         self.assertEqual(interpretation["scenario"], "혼재된 매크로 흐름")
-        self.assertEqual(interpretation["sub_scenario"], "저신호 / 방향성 없음")
+        self.assertEqual(interpretation["sub_scenario"], "저신호 / 관망")
         self.assertEqual(interpretation["regime_hint"], "관망")
         self.assertIn("20점", interpretation["mixed_reason"])
 
@@ -16993,6 +23240,86 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertIn("금리 부담", card_by_label)
         self.assertGreater(card_by_label["금리 부담"]["raw_value"], 0)
         self.assertIn("채권선물", card_by_label["금리 부담"]["meaning"])
+
+    def test_macro_thermometer_builds_flow_context_for_1d_1w_and_1m_moves(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = [
+            "ES=F",
+            "NQ=F",
+            "RTY=F",
+            "ZN=F",
+            "ZB=F",
+            "CL=F",
+            "HG=F",
+            "NG=F",
+            "GC=F",
+            "6E=F",
+            "6J=F",
+            "6B=F",
+            "6A=F",
+            "6C=F",
+        ]
+        five_day_moves = {symbol: 0.001 for symbol in symbols}
+        five_day_moves.update(
+            {
+                "ES=F": 0.023,
+                "NQ=F": 0.031,
+                "RTY=F": 0.018,
+                "ZN=F": -0.015,
+                "ZB=F": -0.018,
+                "CL=F": 0.028,
+                "HG=F": 0.02,
+                "NG=F": 0.015,
+                "6E=F": -0.012,
+                "6A=F": -0.011,
+            }
+        )
+        twenty_day_moves = {symbol: 0.001 for symbol in symbols}
+        twenty_day_moves.update(
+            {
+                "ES=F": -0.042,
+                "NQ=F": -0.035,
+                "RTY=F": -0.05,
+                "ZN=F": 0.024,
+                "ZB=F": 0.026,
+                "GC=F": 0.045,
+                "6J=F": 0.02,
+                "CL=F": -0.015,
+                "HG=F": -0.01,
+                "NG=F": -0.012,
+                "6E=F": 0.012,
+                "6B=F": 0.011,
+                "6A=F": 0.009,
+                "6C=F": 0.008,
+            }
+        )
+        candle_rows = self._daily_rows_with_recent_flow_moves(five_day_moves, twenty_day_moves)
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM futures_ohlcv" in sql:
+                return candle_rows
+            return []
+
+        snapshot = build_futures_macro_thermometer_snapshot(symbols=symbols, query_fn=query_fn)
+        flow = snapshot["flow_context"]
+
+        self.assertEqual(flow["default_period"], "1D")
+        self.assertEqual([period["key"] for period in flow["periods"]], ["1D", "1W", "1M"])
+        period_by_key = {period["key"]: period for period in flow["periods"]}
+        self.assertEqual(period_by_key["1D"]["title"], "최근 1일 흐름")
+        self.assertIn("최근 1거래일", period_by_key["1D"]["basis"])
+        self.assertIn("최근 1일", period_by_key["1D"]["summary"])
+        self.assertIn("1D", period_by_key["1D"]["cards"][0]["meaning"])
+        self.assertEqual(period_by_key["1W"]["title"], "최근 1주 흐름")
+        self.assertIn("최근 5거래일", period_by_key["1W"]["basis"])
+        self.assertEqual(period_by_key["1M"]["title"], "최근 1개월 흐름")
+        self.assertIn("최근 20거래일", period_by_key["1M"]["basis"])
+        one_month_cards = {card["label"]: card for card in period_by_key["1M"]["cards"]}
+        self.assertLess(one_month_cards["위험선호"]["raw_value"], 0)
+        self.assertGreater(one_month_cards["안전자산"]["raw_value"], 0)
+        self.assertIn("최근 1개월", one_month_cards["위험선호"]["detail"])
 
     def test_macro_thermometer_returns_current_state_evidence_reading(self) -> None:
         from app.services.futures_macro_thermometer import build_macro_evidence_reading
@@ -17099,6 +23426,128 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertIsNotNone(risk_on_row["Hit Rate 5D %"])
         self.assertGreaterEqual(risk_on_row["Hit Rate 5D %"], 50)
 
+    def test_macro_validation_process_cache_reuses_snapshot_until_cleared(self) -> None:
+        import app.services.futures_macro_validation as validation_service
+
+        calls: list[str] = []
+        original_futures_loader = validation_service._load_validation_futures_rows
+        original_proxy_loader = validation_service._load_proxy_price_rows
+        original_instruments = validation_service._instrument_rows
+        original_futures_marker = validation_service._latest_validation_futures_cache_marker
+        original_proxy_marker = validation_service._latest_validation_proxy_cache_marker
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return []
+
+        def fake_futures_loader(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+            del args, kwargs
+            calls.append("futures")
+            return []
+
+        try:
+            validation_service.clear_futures_macro_validation_cache()
+            validation_service._load_validation_futures_rows = fake_futures_loader
+            validation_service._load_proxy_price_rows = lambda *args, **kwargs: []
+            validation_service._instrument_rows = lambda query: []
+            validation_service._latest_validation_futures_cache_marker = lambda query, symbols: "2026-07-03 00:00:00"
+            validation_service._latest_validation_proxy_cache_marker = lambda query, symbols: "2026-07-03"
+
+            first = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            second = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            validation_service.clear_futures_macro_validation_cache()
+            third = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+
+            self.assertIs(first, second)
+            self.assertIsNot(second, third)
+            self.assertEqual(calls, ["futures", "futures"])
+        finally:
+            validation_service._load_validation_futures_rows = original_futures_loader
+            validation_service._load_proxy_price_rows = original_proxy_loader
+            validation_service._instrument_rows = original_instruments
+            validation_service._latest_validation_futures_cache_marker = original_futures_marker
+            validation_service._latest_validation_proxy_cache_marker = original_proxy_marker
+            validation_service.clear_futures_macro_validation_cache()
+
+    def test_macro_validation_process_cache_key_tracks_futures_and_proxy_markers(self) -> None:
+        import app.services.futures_macro_validation as validation_service
+
+        calls: list[str] = []
+        markers = {"futures": "2026-07-03 00:00:00", "proxy": "2026-07-03"}
+        original_futures_loader = validation_service._load_validation_futures_rows
+        original_proxy_loader = validation_service._load_proxy_price_rows
+        original_instruments = validation_service._instrument_rows
+        original_futures_marker = validation_service._latest_validation_futures_cache_marker
+        original_proxy_marker = validation_service._latest_validation_proxy_cache_marker
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return []
+
+        def fake_futures_loader(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+            del args, kwargs
+            calls.append(f"{markers['futures']}|{markers['proxy']}")
+            return []
+
+        try:
+            validation_service.clear_futures_macro_validation_cache()
+            validation_service._load_validation_futures_rows = fake_futures_loader
+            validation_service._load_proxy_price_rows = lambda *args, **kwargs: []
+            validation_service._instrument_rows = lambda query: []
+            validation_service._latest_validation_futures_cache_marker = lambda query, symbols: markers["futures"]
+            validation_service._latest_validation_proxy_cache_marker = lambda query, symbols: markers["proxy"]
+
+            first = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            markers["futures"] = "2026-07-04 00:00:00"
+            second = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+            markers["proxy"] = "2026-07-04"
+            third = validation_service.build_futures_macro_validation_snapshot(
+                symbols=["ES=F", "NQ=F"],
+                query_fn=query_fn,
+                current_snapshot={"summary": {"scenario": "혼재된 매크로 흐름"}},
+                cache_ttl_seconds=60,
+            )
+
+            self.assertIsNot(first, second)
+            self.assertIsNot(second, third)
+            self.assertEqual(calls, [
+                "2026-07-03 00:00:00|2026-07-03",
+                "2026-07-04 00:00:00|2026-07-03",
+                "2026-07-04 00:00:00|2026-07-04",
+            ])
+        finally:
+            validation_service._load_validation_futures_rows = original_futures_loader
+            validation_service._load_proxy_price_rows = original_proxy_loader
+            validation_service._instrument_rows = original_instruments
+            validation_service._latest_validation_futures_cache_marker = original_futures_marker
+            validation_service._latest_validation_proxy_cache_marker = original_proxy_marker
+            validation_service.clear_futures_macro_validation_cache()
+
     def test_macro_validation_summary_focuses_current_scenario_before_raw_tables(self) -> None:
         from app.services.futures_macro_validation import build_current_scenario_validation_summary
 
@@ -17117,16 +23566,153 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
 
         summary = build_current_scenario_validation_summary(validation, confidence_label="Medium Confidence")
 
-        self.assertEqual(summary["title"], "과거 점검 요약")
+        self.assertEqual(summary["title"], "현재 해석의 과거 일관성")
         self.assertEqual(summary["scenario"], "혼재된 매크로 흐름")
-        self.assertEqual(summary["occurrence"]["label"], "과거 발생")
+        self.assertEqual(summary["occurrence"]["label"], "비슷한 과거 상태")
         self.assertEqual(summary["occurrence"]["value"], "950회")
-        self.assertEqual(summary["coverage"], "1212개 PIT 날짜 · 5.05년")
+        self.assertEqual(summary["coverage"], "점검 기준 1,212개 · 5.05년")
         self.assertFalse(summary["hit_rate_applicable"])
-        self.assertIn("방향성 적중률", summary["interpretation"])
-        self.assertIn("현재 confidence를 보조", summary["confidence_effect"])
+        self.assertIn("5D 방향 적중률로 읽지 않습니다", summary["interpretation"])
+        self.assertIn("반복 빈도만 보조 근거", summary["confidence_effect"])
         self.assertIn("매수/매도 신호", summary["confidence_effect"])
         self.assertIn("아닙니다", summary["confidence_effect"])
+
+    def test_macro_react_validation_metrics_use_interpretable_labels(self) -> None:
+        import pandas as pd
+
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        macro = {
+            "coverage": {"standardized_count": 1, "symbol_count": 1, "latest_daily_date": "2026-07-01"},
+            "summary": {"scenario": "혼재된 매크로 흐름", "summary": "관망"},
+            "scores": pd.DataFrame(),
+            "weekly_context": {},
+            "evidence_reading": [],
+        }
+        validation = {
+            "status": "OK",
+            "coverage": {"validation_dates": 1212, "history_span_years": 5.05},
+            "current_scenario_metrics": {
+                "Scenario": "혼재된 매크로 흐름",
+                "Occurrence Count": 950,
+                "Directional Hit Applicable": False,
+            },
+        }
+
+        payload = build_futures_macro_react_workbench_payload(
+            macro,
+            validation=validation,
+            confidence={},
+            validation_loaded_at="2026-07-06 10:00:00",
+        )
+
+        insight = payload["validation"]["insight"]
+        self.assertEqual(insight["purpose"], "오늘과 비슷한 과거 흐름 확인")
+        self.assertIn("현재 1D 선물 1/1개", insight["basis"])
+        conclusion = payload["validation"]["conclusion"]
+        self.assertEqual([item["label"] for item in conclusion], ["비슷한 상태", "상태 빈도", "방향성 판정", "판정 이유"])
+        self.assertEqual(conclusion[0]["value"], "950회 / 1,212일")
+        self.assertIn("빈도 표본", conclusion[0]["detail"])
+        self.assertEqual(conclusion[1]["value"], "자주 발생")
+        self.assertIn("78.4%", conclusion[1]["detail"])
+        self.assertEqual(conclusion[2]["value"], "보류")
+        self.assertIn("상승/하락 적중률로 채점하지 않습니다", conclusion[2]["detail"])
+        self.assertEqual(conclusion[3]["value"], "Hit rule 없음")
+        self.assertIn("Target Family: Mixed", conclusion[3]["detail"])
+        self.assertEqual(insight["current_state"]["label"], "판정")
+        self.assertEqual(insight["current_state"]["value"], "방향성 보류")
+        self.assertIn("혼재된 매크로 흐름", insight["current_state"]["detail"])
+        self.assertEqual(insight["sample"]["label"], "5거래일 표본")
+        self.assertEqual(insight["sample"]["value"], "방향성 없음")
+        self.assertIn("5D 적중률로 읽지 않습니다", insight["sample"]["detail"])
+        self.assertEqual(insight["directionality"]["label"], "20거래일 표본")
+        self.assertEqual(insight["directionality"]["value"], "방향성 없음")
+        self.assertEqual(insight["evidence_bridge"]["label"], "자산군 해석")
+        self.assertEqual(insight["evidence_bridge"]["value"], "중립 / 관망")
+        self.assertIn("Target Family: Mixed", insight["evidence_bridge"]["detail"])
+        self.assertIn("비슷한 과거 상태 950회", insight["confidence_effect"])
+        self.assertIn("상승/하락 확률로 읽지 않습니다", insight["confidence_effect"])
+        self.assertIn("계산된 표본 통계만 사용", insight["confidence_effect"])
+        self.assertNotIn("현재 상태 이름", str(insight))
+        self.assertNotIn("과거에 비슷했던 날", str(insight))
+
+        metrics = payload["validation"]["metrics"]
+        self.assertEqual([metric["label"] for metric in metrics], ["상태", "점검 기준", "비슷한 상태"])
+        self.assertEqual(metrics[1]["value"], "1,212개")
+        self.assertEqual(metrics[1]["detail"], "5.05년 범위")
+        self.assertEqual(metrics[2]["value"], "950회")
+        self.assertIn("방향성 비적용", metrics[2]["detail"])
+        self.assertNotIn("PIT 날짜", [metric["label"] for metric in metrics])
+        self.assertNotIn("current scenario sample", " ".join(metric["detail"] for metric in metrics))
+        visual_candidates = payload["validation"]["visual_candidates"]
+        self.assertEqual([item["key"] for item in visual_candidates], ["similar_state_frequency", "forward_return_distribution"])
+        self.assertEqual(visual_candidates[0]["status"], "ready")
+        self.assertEqual(visual_candidates[1]["status"], "not_applicable")
+
+        directional_validation = {
+            "status": "OK",
+            "coverage": {"validation_dates": 100, "history_span_years": 4.0},
+            "current_scenario_metrics": {
+                "Scenario": "좋은 risk-on",
+                "Occurrence Count": 90,
+                "Target Family": "Risk Asset",
+                "Hit Rule": "risk asset forward return > 0",
+                "Sample 5D": 80,
+                "Mean 5D %": 1.25,
+                "Hit Rate 5D %": 61.0,
+                "Sample 20D": 75,
+                "Mean 20D %": -0.45,
+                "Hit Rate 20D %": 47.0,
+                "Directional Hit Applicable": True,
+            },
+        }
+        directional_payload = build_futures_macro_react_workbench_payload(
+            {**macro, "summary": {"scenario": "좋은 risk-on", "summary": "risk-on"}},
+            validation=directional_validation,
+            confidence={},
+            validation_loaded_at="2026-07-06 10:00:00",
+        )
+        directional_insight = directional_payload["validation"]["insight"]
+        directional_conclusion = directional_payload["validation"]["conclusion"]
+        self.assertEqual(directional_conclusion[0]["value"], "90회 / 100일")
+        self.assertEqual(directional_conclusion[2]["value"], "적용 가능")
+        self.assertIn("risk asset forward return > 0", directional_conclusion[2]["detail"])
+        self.assertEqual(directional_conclusion[3]["value"], "Risk Asset")
+        self.assertEqual(directional_insight["current_state"]["value"], "방향성 참고 가능")
+        self.assertEqual(directional_insight["sample"]["value"], "+1.25%")
+        self.assertIn("표본 80회", directional_insight["sample"]["detail"])
+        self.assertIn("방향 일관성 61.0%", directional_insight["sample"]["detail"])
+        self.assertEqual(directional_insight["directionality"]["value"], "-0.45%")
+        self.assertIn("표본 75회", directional_insight["directionality"]["detail"])
+        self.assertEqual(directional_insight["evidence_bridge"]["value"], "위험자산 우위")
+        self.assertIn("risk asset forward return > 0", directional_insight["evidence_bridge"]["detail"])
+        self.assertIn("5D 평균 +1.25%", directional_insight["confidence_effect"])
+        self.assertIn("방향 일관성 61.0%", directional_insight["confidence_effect"])
+
+        sparse_directional_validation = {
+            "status": "OK",
+            "coverage": {"validation_dates": pd.NA, "history_span_years": pd.NA},
+            "current_scenario_metrics": {
+                "Scenario": "좋은 risk-on",
+                "Occurrence Count": pd.NA,
+                "Target Family": "Risk Asset",
+                "Hit Rule": "risk asset forward return > 0",
+                "Sample 5D": pd.NA,
+                "Mean 5D %": pd.NA,
+                "Hit Rate 5D %": pd.NA,
+                "Directional Hit Applicable": True,
+            },
+        }
+        sparse_payload = build_futures_macro_react_workbench_payload(
+            {**macro, "summary": {"scenario": "좋은 risk-on", "summary": "risk-on"}},
+            validation=sparse_directional_validation,
+            confidence={},
+            validation_loaded_at="2026-07-06 10:00:00",
+        )
+        sparse_insight = sparse_payload["validation"]["insight"]
+        self.assertEqual(sparse_insight["sample"]["value"], "표본 부족")
+        self.assertIn("계산 가능 표본 0회", sparse_insight["sample"]["detail"])
+        self.assertIn("비슷한 과거 상태 0회", sparse_insight["confidence_effect"])
 
     def test_interpretation_confidence_uses_current_coverage_and_validation_sample(self) -> None:
         from app.services.futures_macro_validation import build_interpretation_confidence
@@ -17525,6 +24111,532 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(written_rows[0]["universe_code"], "TOP1000")
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
 
+    def test_top_universe_snapshot_defaults_to_materialized_liquidity_members(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [{"symbol": "AAA"}, {"symbol": "BBB"}]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912000,
+                    "regularMarketVolume": 1000,
+                },
+                {
+                    "symbol": "BBB",
+                    "regularMarketPrice": 96.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912001,
+                    "regularMarketVolume": 2000,
+                },
+            ]
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "load_market_liquidity_universe_members", return_value=members) as load_liquidity,
+            patch.object(mi, "load_market_cap_universe_members", return_value=[]) as load_market_cap,
+            patch.object(mi, "_load_db_previous_close_map", return_value={}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", return_value=2),
+        ):
+            result = mi.collect_and_store_market_intraday_snapshot(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["rows_written"], 2)
+        load_liquidity.assert_called_once_with(
+            "TOP1000",
+            universe_limit=1000,
+            host="localhost",
+            user="root",
+            password="1234",
+            port=3306,
+        )
+        load_market_cap.assert_not_called()
+
+    def test_market_symbol_alias_schema_tracks_ticker_change_repair_contract(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"]
+
+        for column in [
+            "source_symbol",
+            "alias_symbol",
+            "alias_type",
+            "status",
+            "confidence",
+            "evidence_json",
+            "detected_at",
+            "applied_at",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_market_symbol_alias", schema_sql)
+        self.assertIn("KEY ix_market_symbol_alias_active", schema_sql)
+
+    def test_market_symbol_alias_upsert_and_loader_are_idempotent(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.executemany_calls: list[tuple[str, list[dict[str, object]]]] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+                self.executemany_calls.append((sql, rows))
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [
+                    {
+                        "source_symbol": "SATS",
+                        "alias_symbol": "ECHO",
+                        "alias_type": "ticker_change",
+                        "status": "active",
+                        "confidence": 0.96,
+                    }
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            rows_written = mi.upsert_market_symbol_aliases(
+                [
+                    {
+                        "source_symbol": "sats",
+                        "alias_symbol": "echo",
+                        "alias_type": "ticker_change",
+                        "confidence": "0.96",
+                        "evidence": {"reason": "official ticker change"},
+                    }
+                ],
+                applied_at="2026-07-07 09:00:00",
+            )
+            aliases = mi.load_active_market_symbol_aliases(["SATS", "VSCO"])
+
+        self.assertEqual(rows_written, 1)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta", "finance_meta"])
+        sync_schema.assert_called()
+        _, captured_rows = fake_db.executemany_calls[0]
+        self.assertEqual(captured_rows[0]["source_symbol"], "SATS")
+        self.assertEqual(captured_rows[0]["alias_symbol"], "ECHO")
+        self.assertEqual(captured_rows[0]["status"], "active")
+        self.assertEqual(captured_rows[0]["applied_at"], "2026-07-07 09:00:00")
+        self.assertIn("evidence_json", captured_rows[0])
+        self.assertEqual(aliases["SATS"]["alias_symbol"], "ECHO")
+        self.assertTrue(fake_db.closed)
+
+    def test_ticker_alias_candidates_are_detected_from_missing_quote_rows(self) -> None:
+        from app.services.overview.market_movers import build_market_movers_snapshot
+
+        def query_fn(db_name, sql, params=None):
+            del db_name, params
+            if "FROM market_liquidity_universe_member m" in sql:
+                return [
+                    {
+                        "symbol": "SATS",
+                        "long_name": "EchoStar Corporation",
+                        "sector": "Communication Services",
+                        "industry": "Telecom Services",
+                        "market_cap": 1,
+                        "rank_position": 1,
+                    }
+                ]
+            if "MAX(snapshot_time_utc)" in sql:
+                return [{"snapshot_time_utc": "2026-07-06 21:57:00"}]
+            if "FROM market_intraday_snapshot s" in sql:
+                return [
+                    {
+                        "symbol": "SATS",
+                        "interval_code": "5m",
+                        "snapshot_time_utc": "2026-07-06 21:57:00",
+                        "quote_time_utc": "2026-07-06 21:57:00",
+                        "previous_close": 101.5,
+                        "latest_price": None,
+                        "return_pct": None,
+                        "volume": None,
+                        "provider_status": "missing",
+                        "error_msg": "missing quote row",
+                        "source": "yahoo_quote",
+                        "source_ref": "yahoo_quote_v7;previous_close=db_previous_close",
+                    }
+                ]
+            if "FROM market_data_issue" in sql:
+                return []
+            if "FROM market_symbol_alias" in sql:
+                return []
+            if "FROM nyse_price_history" in sql:
+                return []
+            return []
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            universe_limit=1000,
+            period="daily",
+            query_fn=query_fn,
+            alias_probe_fn=lambda symbols, **kwargs: [
+                {
+                    "symbol": "SATS",
+                    "alias_symbol": "ECHO",
+                    "alias_type": "ticker_change",
+                    "confidence": 0.96,
+                    "reason": "old ticker missing, replacement quote active",
+                }
+            ],
+        )
+
+        self.assertEqual(snapshot["coverage"]["missing_count"], 1)
+        self.assertEqual(snapshot["ticker_alias_candidates"][0]["symbol"], "SATS")
+        self.assertEqual(snapshot["ticker_alias_candidates"][0]["alias_symbol"], "ECHO")
+        grouped = snapshot["coverage_trust"]["grouped_missing_rows"]
+        self.assertEqual(grouped[0]["Missing Reason Group"], "Ticker change candidate")
+
+    def test_top_universe_snapshot_uses_active_alias_for_quote_lookup_but_keeps_universe_symbol(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [{"symbol": "SATS"}]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["ECHO"])
+            return [
+                {
+                    "symbol": "ECHO",
+                    "regularMarketPrice": 98.29,
+                    "regularMarketPreviousClose": 101.5,
+                    "regularMarketTime": 1783368001,
+                    "regularMarketVolume": 5201562,
+                }
+            ]
+
+        written_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "load_active_market_symbol_aliases", return_value={"SATS": {"alias_symbol": "ECHO"}}),
+            patch.object(mi, "_load_db_previous_close_map", return_value={"SATS": {"previous_close": 101.5}}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_market_intraday_snapshot(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                universe_loader=lambda: members,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["failed_symbols"], [])
+        self.assertEqual(written_rows[0]["symbol"], "SATS")
+        self.assertEqual(written_rows[0]["quote_symbol"], "ECHO")
+        self.assertIn("alias_symbol=ECHO", written_rows[0]["source_ref"])
+        self.assertAlmostEqual(float(written_rows[0]["latest_price"]), 98.29)
+
+    def test_liquidity_universe_schema_tracks_materialized_rank_contract(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_liquidity_universe_member"]
+
+        for column in [
+            "universe_code",
+            "symbol",
+            "rank_position",
+            "avg_dollar_volume_20d",
+            "dollar_volume_days",
+            "ranking_window_start_date",
+            "ranking_end_date",
+            "ranking_source",
+            "price_source",
+            "listing_source",
+            "listing_source_type",
+            "listing_coverage_status",
+            "listing_event_type",
+            "listing_status",
+            "generated_at",
+            "active",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_liquidity_universe_symbol", schema_sql)
+        self.assertIn("KEY ix_liquidity_universe_rank", schema_sql)
+
+    def test_liquidity_universe_upsert_materializes_ranked_members_and_deactivates_old_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.executemany_calls: list[tuple[str, list[dict[str, object]]]] = []
+                self.executes: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+                self.executemany_calls.append((sql, rows))
+
+            def execute(self, sql: str, params=None) -> None:
+                self.executes.append((sql, list(params or [])))
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            rows_written = mi.upsert_market_liquidity_universe_members(
+                [
+                    {
+                        "symbol": "aaa",
+                        "name": "AAA Corp",
+                        "rank_position": 2,
+                        "avg_dollar_volume_20d": "1200000.5",
+                        "dollar_volume_days": "20",
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                        "listing_source": "nasdaq_symdir_nasdaqlisted",
+                        "listing_source_type": "current_listing_snapshot",
+                        "listing_coverage_status": "partial",
+                        "listing_event_type": "listing_observed",
+                        "listing_status": "active",
+                    },
+                    {
+                        "symbol": "bbb",
+                        "rank_position": 1,
+                        "avg_dollar_volume_20d": 2500000,
+                        "dollar_volume_days": 20,
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                    },
+                ],
+                universe_code="TOP1000",
+                generated_at="2026-07-05 05:31:00",
+            )
+
+        self.assertEqual(rows_written, 2)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sync_schema.assert_called_once()
+        _, captured_rows = fake_db.executemany_calls[0]
+        self.assertEqual([row["symbol"] for row in captured_rows], ["AAA", "BBB"])
+        self.assertEqual([row["rank_position"] for row in captured_rows], [2, 1])
+        self.assertEqual(captured_rows[0]["generated_at"], "2026-07-05 05:31:00")
+        self.assertEqual(captured_rows[0]["avg_dollar_volume_20d"], 1200000.5)
+        self.assertEqual(captured_rows[0]["dollar_volume_days"], 20)
+        self.assertEqual(captured_rows[0]["ranking_source"], "nyse_price_history.20d_avg_dollar_volume")
+        self.assertEqual(fake_db.executes[0][1], ["TOP1000", "AAA", "BBB"])
+        self.assertTrue(fake_db.closed)
+
+    def test_liquidity_universe_loader_reads_active_rows_in_rank_order(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [
+                    {"symbol": "BBB", "rank_position": 1, "avg_dollar_volume_20d": 2500000.0},
+                    {"symbol": "AAA", "rank_position": 2, "avg_dollar_volume_20d": 1200000.5},
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with patch.object(mi, "_db", return_value=fake_db):
+            rows = mi.load_market_liquidity_universe_members("TOP1000", universe_limit=1000)
+
+        self.assertEqual([row["symbol"] for row in rows], ["BBB", "AAA"])
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sql, params = fake_db.queries[0]
+        self.assertIn("FROM market_liquidity_universe_member", sql)
+        self.assertIn("ORDER BY rank_position ASC, symbol ASC", sql)
+        self.assertIn("LIMIT %s", sql)
+        self.assertEqual(params, ["TOP1000", 1000])
+        self.assertTrue(fake_db.closed)
+
+    def test_collect_liquidity_universe_materializes_computed_dollar_volume_members(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        computed_rows = [
+            {
+                "symbol": "BBB",
+                "rank_position": 1,
+                "avg_dollar_volume_20d": 2500000.0,
+                "dollar_volume_days": 20,
+                "ranking_end_date": "2026-06-26",
+            },
+            {
+                "symbol": "AAA",
+                "rank_position": 2,
+                "avg_dollar_volume_20d": 1200000.5,
+                "dollar_volume_days": 20,
+                "ranking_end_date": "2026-06-26",
+            },
+        ]
+        with (
+            patch.object(mi, "load_market_dollar_volume_universe_members", return_value=computed_rows) as load_members,
+            patch.object(mi, "upsert_market_liquidity_universe_members", return_value=2) as upsert_members,
+        ):
+            result = mi.collect_and_store_market_liquidity_universe(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                generated_at="2026-07-05 05:31:00",
+            )
+
+        self.assertEqual(result["universe_code"], "TOP1000")
+        self.assertEqual(result["universe_limit"], 1000)
+        self.assertEqual(result["ranking_source"], "nyse_price_history.20d_avg_dollar_volume")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols"], ["BBB", "AAA"])
+        load_members.assert_called_once_with(
+            "TOP1000",
+            universe_limit=1000,
+            candidate_rows=None,
+            host="localhost",
+            user="root",
+            password="1234",
+            port=3306,
+        )
+        upsert_members.assert_called_once_with(
+            computed_rows,
+            universe_code="TOP1000",
+            generated_at="2026-07-05 05:31:00",
+            host="localhost",
+            user="root",
+            password="1234",
+            port=3306,
+        )
+
+    def test_liquidity_universe_candidate_loader_reads_current_lifecycle_listing_sources(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [
+                    {"symbol": "AAA", "listing_source": "nasdaq_symdir_nasdaqlisted"},
+                    {"symbol": "AAA", "listing_source": "sec_company_tickers_exchange"},
+                    {"symbol": "BBB", "listing_source": "nyse_listings_directory"},
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with patch.object(mi, "_db", return_value=fake_db):
+            rows = mi.load_market_liquidity_universe_candidate_symbols("TOP1000")
+
+        self.assertEqual([row["symbol"] for row in rows], ["AAA", "BBB"])
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sql, params = fake_db.queries[0]
+        self.assertIn("FROM nyse_symbol_lifecycle l", sql)
+        self.assertIn("current_listing_snapshot", params)
+        self.assertIn("listing_observed", params)
+        self.assertIn("nyse_listings_directory", params)
+        self.assertTrue(fake_db.closed)
+
+    def test_dollar_volume_universe_query_excludes_symbols_missing_latest_price_row(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        candidate_rows = [
+            {"symbol": "AAA", "name": "AAA Corp", "listing_source": "nasdaq_symdir_nasdaqlisted"},
+            {"symbol": "BBB", "name": "BBB Corp", "listing_source": "nyse_listings_directory"},
+        ]
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                if "MAX(`date`) AS latest_price_date" in sql:
+                    return [{"latest_price_date": "2026-06-26"}]
+                return [
+                    {
+                        "symbol": "BBB",
+                        "avg_dollar_volume_20d": 2500000.0,
+                        "dollar_volume_days": 20,
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                    },
+                    {
+                        "symbol": "AAA",
+                        "avg_dollar_volume_20d": 1200000.5,
+                        "dollar_volume_days": 20,
+                        "ranking_window_start_date": "2026-06-01",
+                        "ranking_end_date": "2026-06-26",
+                    },
+                ]
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with patch.object(mi, "_db", return_value=fake_db):
+            rows = mi.load_market_dollar_volume_universe_members(
+                "TOP1000",
+                universe_limit=1000,
+                candidate_rows=candidate_rows,
+            )
+
+        self.assertEqual([row["symbol"] for row in rows], ["BBB", "AAA"])
+        self.assertEqual([row["rank_position"] for row in rows], [1, 2])
+        self.assertEqual(rows[0]["name"], "BBB Corp")
+        self.assertEqual(rows[0]["ranking_source"], "nyse_price_history.20d_avg_dollar_volume")
+        self.assertEqual(fake_db.used_dbs, ["finance_price"])
+        latest_sql, latest_params = fake_db.queries[0]
+        ranking_sql, ranking_params = fake_db.queries[1]
+        self.assertIn("MAX(`date`) AS latest_price_date", latest_sql)
+        self.assertIn("AVG(COALESCE(adj_close, close) * volume)", ranking_sql)
+        self.assertIn("MAX(p.`date`) = %s", ranking_sql)
+        self.assertEqual(ranking_params[-2:], ["2026-06-26", 1000])
+        self.assertTrue(fake_db.closed)
+
     def test_quote_gap_diagnostics_explain_batch_only_gap(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -17670,6 +24782,12 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         for column in [
             "event_date",
             "event_type",
+            "event_family",
+            "event_subtype",
+            "event_time_label",
+            "event_datetime_utc",
+            "universe_scope",
+            "source_authority",
             "symbol",
             "title",
             "source",
@@ -17685,6 +24803,8 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         ]:
             self.assertIn(column, schema_sql)
         self.assertIn("UNIQUE KEY uk_market_event_key", schema_sql)
+        self.assertIn("KEY ix_event_family_date", schema_sql)
+        self.assertIn("KEY ix_event_universe_date", schema_sql)
 
     def test_market_data_issue_schema_tracks_repeated_quote_gaps(self) -> None:
         from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
@@ -17802,10 +24922,42 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
 
         self.assertEqual([row["event_type"] for row in rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
         self.assertEqual(rows[0]["event_date"], "2026-06-10")
+        self.assertEqual(rows[0]["event_family"], "macro")
+        self.assertEqual(rows[0]["event_subtype"], "cpi")
+        self.assertEqual(rows[0]["event_time_label"], "08:30 ET")
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-06-10 12:30:00")
         self.assertEqual(rows[0]["source_type"], "official")
+        self.assertEqual(rows[0]["source_authority"], "official")
+        self.assertEqual(rows[0]["universe_scope"], "official_macro")
         self.assertEqual(rows[0]["validation_status"], "official")
         self.assertEqual(rows[0]["raw_payload"]["reference_period"], "May 2026")
         self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+
+    def test_bls_macro_calendar_parser_builds_jolts_and_eci_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Date Time</th><th>Release</th></tr></thead>
+          <tbody>
+            <tr><td>Tuesday, June 30, 2026 10:00 AM</td><td>Job Openings and Labor Turnover Survey for May 2026</td></tr>
+            <tr><td>Friday, July 31, 2026 08:30 AM</td><td>Employment Cost Index for 2nd Quarter 2026</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bls_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bls.gov/schedule/2026/",
+            year=2026,
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_JOLTS", "MACRO_ECI"])
+        self.assertEqual(rows[0]["event_subtype"], "jolts")
+        self.assertEqual(rows[0]["event_time_label"], "10:00 ET")
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-06-30 14:00:00")
+        self.assertEqual(rows[1]["event_subtype"], "eci")
+        self.assertEqual(rows[1]["event_datetime_utc"], "2026-07-31 12:30:00")
 
     def test_bls_macro_calendar_ics_parser_builds_official_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -17958,6 +25110,220 @@ END:VCALENDAR
         self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
         self.assertIsNone(rows[0]["raw_payload"]["source_row"]["Unnamed: 3"])
 
+    def test_bea_macro_calendar_parser_builds_gdp_and_pce_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Year 2026</th><th>Type</th><th>Release</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>June 25 8:30 AM</td><td>News</td><td>Gross Domestic Product, 1st Quarter 2026 (Third Estimate)</td><td></td></tr>
+            <tr><td>June 26 8:30 AM</td><td>News</td><td>Personal Income and Outlays, May 2026</td><td>View</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bea_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bea.gov/news/schedule",
+            years=[2026],
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_GDP", "MACRO_PCE"])
+        self.assertEqual(rows[1]["event_family"], "macro")
+        self.assertEqual(rows[1]["event_subtype"], "pce")
+        self.assertEqual(rows[1]["event_time_label"], "08:30 ET")
+        self.assertEqual(rows[1]["event_datetime_utc"], "2026-06-26 12:30:00")
+
+    def test_census_macro_calendar_parser_builds_retail_durable_and_housing_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Release Date</th><th>Time</th><th>Indicator Name</th></tr></thead>
+          <tbody>
+            <tr><td>July 16, 2026</td><td>8:30 AM</td><td>Advance Monthly Sales for Retail and Food Services</td></tr>
+            <tr><td>July 27, 2026</td><td>8:30 AM</td><td>Advance Report on Durable Goods Manufacturers' Shipments, Inventories and Orders</td></tr>
+            <tr><td>July 17, 2026</td><td>8:30 AM</td><td>New Residential Construction</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_census_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.census.gov/economic-indicators/calendar-listview.html",
+            years=[2026],
+        )
+
+        self.assertEqual(
+            [row["event_type"] for row in rows],
+            ["MACRO_RETAIL_SALES", "MACRO_DURABLE_GOODS", "MACRO_HOUSING"],
+        )
+        self.assertEqual(rows[0]["source"], mi.CENSUS_ECONOMIC_INDICATORS_SOURCE)
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-07-16 12:30:00")
+
+    def test_ism_macro_calendar_parser_builds_pmi_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Report</th><th>Release Date</th><th>Release Time</th></tr></thead>
+          <tbody>
+            <tr><td>Manufacturing PMI</td><td>July 1, 2026</td><td>10:00 AM ET</td></tr>
+            <tr><td>Services PMI</td><td>July 6, 2026</td><td>10:00 AM ET</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_ism_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+            years=[2026],
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_ISM_MANUFACTURING_PMI", "MACRO_ISM_SERVICES_PMI"])
+        self.assertEqual(rows[0]["event_subtype"], "ism_manufacturing_pmi")
+        self.assertEqual(rows[0]["event_datetime_utc"], "2026-07-01 14:00:00")
+
+    def test_treasury_auction_calendar_parser_builds_fixed_income_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Security Type</th><th>Term</th><th>Auction Date</th><th>Issue Date</th></tr></thead>
+          <tbody>
+            <tr><td>Note</td><td>10-Year</td><td>July 8, 2026</td><td>July 15, 2026</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_treasury_auction_calendar_events_from_html(
+            html,
+            source_url="https://www.treasurydirect.gov/auctions/upcoming/",
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["event_type"], "TREASURY_AUCTION")
+        self.assertEqual(rows[0]["event_family"], "fixed_income")
+        self.assertEqual(rows[0]["event_subtype"], "treasury_auction")
+        self.assertEqual(rows[0]["source"], mi.TREASURY_AUCTIONS_SOURCE)
+        self.assertEqual(rows[0]["source_authority"], "official")
+        self.assertEqual(rows[0]["universe_scope"], "official_macro")
+
+    def test_parse_nasdaq_market_holiday_calendar_events(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.parse_nasdaq_market_holiday_calendar_events_from_html(
+            """
+            <table>
+              <tr><th>Holiday</th><th>Date</th><th>NYSE</th><th>Nasdaq</th></tr>
+              <tr><td>New Year's Day</td><td>Thursday, January 1, 2026</td><td>Closed</td><td>Closed</td></tr>
+              <tr><td>Day after Thanksgiving</td><td>Friday, November 27, 2026</td><td>Early Close 1:00 p.m.</td><td>Early Close 1:00 p.m.</td></tr>
+            </table>
+            """,
+            source_url="https://www.nasdaqtrader.test/calendar",
+            years=[2026],
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MARKET_HOLIDAY", "EARLY_CLOSE"])
+        self.assertEqual(rows[0]["event_date"], "2026-01-01")
+        self.assertEqual(rows[0]["event_family"], "market_structure")
+        self.assertEqual(rows[0]["event_subtype"], "market_holiday")
+        self.assertEqual(rows[0]["universe_scope"], "all_us")
+        self.assertEqual(rows[0]["source_authority"], "official")
+        self.assertEqual(rows[1]["event_time_label"], "Early close 13:00 ET")
+
+    def test_build_options_expiration_calendar_events_adjusts_holidays(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.build_options_expiration_calendar_events(
+            years=[2026],
+            exchange_holidays={"2026-06-19"},
+            source_url_template="https://www.cboe.test/{year}/calendar.pdf",
+        )
+
+        june = [row for row in rows if row["event_date"].startswith("2026-06")][0]
+        self.assertEqual(june["event_date"], "2026-06-18")
+        self.assertEqual(june["event_type"], "OPTIONS_EXPIRATION")
+        self.assertEqual(june["event_family"], "market_structure")
+        self.assertEqual(june["event_subtype"], "triple_witch")
+        self.assertEqual(june["source_authority"], "official")
+        self.assertIn("holiday_adjusted", june["raw_payload"])
+
+    def test_parse_russell_reconstitution_calendar_events(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        rows = mi.parse_russell_reconstitution_events_from_html(
+            """
+            <main>
+              <p>2026 Russell US Indexes Reconstitution calendar</p>
+              <p>Rank Day falls on Thursday, April 30.</p>
+              <p>Beginning on May 22, preliminary membership lists are posted to the market.</p>
+              <p>Updates are provided on May 29, June 5, June 12, and June 18.</p>
+              <p>The newly reconstituted indexes take effect after the market close on June 26.</p>
+            </main>
+            """,
+            source_url="https://www.lseg.test/russell-reconstitution",
+            years=[2026],
+        )
+
+        self.assertEqual(rows[0]["event_date"], "2026-04-30")
+        self.assertEqual(rows[0]["event_type"], "RUSSELL_RECONSTITUTION")
+        self.assertEqual(rows[0]["event_subtype"], "russell_rank_day")
+        self.assertEqual(rows[-1]["event_date"], "2026-06-26")
+        self.assertEqual(rows[-1]["event_time_label"], "After market close ET")
+        self.assertEqual(rows[-1]["universe_scope"], "all_us")
+
+    def test_collect_market_structure_calendar_writes_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        def fake_fetcher(**kwargs):
+            self.assertEqual(kwargs["years"], (2026,))
+            return {
+                "source": mi.MARKET_STRUCTURE_CALENDAR_SOURCE,
+                "source_url": mi.NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+                "event_type": "MARKET_STRUCTURE",
+                "events": [
+                    {
+                        "event_date": "2026-06-26",
+                        "event_type": "RUSSELL_RECONSTITUTION",
+                        "event_family": "market_structure",
+                        "event_subtype": "russell_reconstitution",
+                        "universe_scope": "all_us",
+                        "source_authority": "official",
+                        "title": "Russell US Index Reconstitution Effective",
+                        "source": mi.FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        "source_type": "official",
+                        "validation_status": "official",
+                        "event_status": "active",
+                        "source_url": "https://www.lseg.test/russell-reconstitution",
+                        "confidence": 0.95,
+                        "raw_payload": {"source": mi.FTSE_RUSSELL_RECONSTITUTION_SOURCE},
+                    }
+                ],
+                "events_found": 1,
+                "failed_sources": [],
+            }
+
+        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+            result = mi.collect_and_store_market_structure_calendar(
+                years=[2026],
+                market_structure_fetcher=fake_fetcher,
+            )
+
+        self.assertEqual(result["source"], mi.MARKET_STRUCTURE_CALENDAR_SOURCE)
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_types"], ["RUSSELL_RECONSTITUTION"])
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
     def test_collect_macro_calendar_writes_events_and_reports_failed_sources(self) -> None:
         from finance.data import market_intelligence as mi
 
@@ -17970,6 +25336,7 @@ END:VCALENDAR
 
         def fake_fetcher(**kwargs):
             self.assertEqual(kwargs["years"], [2026])
+            self.assertTrue(kwargs["include_treasury"])
             return {
                 "source": mi.MACRO_CALENDAR_SOURCE,
                 "source_url": "https://example.test/macro",
@@ -17992,7 +25359,11 @@ END:VCALENDAR
             }
 
         with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
-            result = mi.collect_and_store_macro_calendar(years=[2026], macro_fetcher=fake_fetcher)
+            result = mi.collect_and_store_macro_calendar(
+                years=[2026],
+                include_treasury=True,
+                macro_fetcher=fake_fetcher,
+            )
 
         self.assertEqual(result["source"], mi.MACRO_CALENDAR_SOURCE)
         self.assertEqual(result["event_type"], "MACRO")
@@ -18021,6 +25392,7 @@ END:VCALENDAR
             ["AAA", "BBB"],
             start_date="2026-05-28",
             lookahead_days=120,
+            universe_scope="sp500",
             ticker_factory=FakeTicker,
         )
 
@@ -18032,9 +25404,14 @@ END:VCALENDAR
         self.assertEqual(row["event_date"], "2026-07-30")
         self.assertEqual(row["symbol"], "AAA")
         self.assertEqual(row["event_type"], "EARNINGS")
+        self.assertEqual(row["event_family"], "earnings")
+        self.assertEqual(row["event_subtype"], "earnings_release")
+        self.assertEqual(row["universe_scope"], "sp500")
+        self.assertEqual(row["source_authority"], "provider_estimate")
         self.assertEqual(row["confidence"], 0.65)
         self.assertEqual(row["source_type"], "provider_estimate")
         self.assertEqual(row["validation_status"], "estimate_only")
+        self.assertEqual(row["raw_payload"]["universe_scope"], "sp500")
         self.assertEqual(row["raw_payload"]["provider_calendar"]["Earnings Average"], 1.23)
         self.assertEqual(result["symbols_with_events"], 1)
         self.assertEqual(result["missing_reason_counts"], {"no_provider_earnings_date": 1})
@@ -18103,8 +25480,10 @@ END:VCALENDAR
         row = result["events"][0]
         self.assertEqual(result["validation_source"], mi.NASDAQ_EARNINGS_CALENDAR_SOURCE)
         self.assertEqual(row["validation_status"], "cross_checked")
+        self.assertEqual(row["source_authority"], "cross_checked")
         self.assertEqual(row["confidence"], 0.75)
         self.assertTrue(row["raw_payload"]["source_validation"]["fallback_order"][1]["matched"])
+        self.assertEqual(row["raw_payload"]["source_validation"]["source_authority"], "cross_checked")
 
     def test_collect_earnings_calendar_writes_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -18119,6 +25498,7 @@ END:VCALENDAR
         def fake_fetcher(symbols, **kwargs):
             self.assertEqual(symbols, ["AAA", "BBB"])
             self.assertEqual(kwargs["lookahead_days"], 90)
+            self.assertEqual(kwargs["universe_scope"], "sp500")
             return {
                 "source": mi.EARNINGS_CALENDAR_SOURCE,
                 "source_url": mi.EARNINGS_CALENDAR_SOURCE_URL,
@@ -18153,14 +25533,16 @@ END:VCALENDAR
             patch.object(mi, "mark_stale_earnings_estimates", return_value=0),
         ):
             result = mi.collect_and_store_earnings_calendar(
-                symbols=["AAA", "BBB"],
+                symbol_source="sp500_universe",
+                source_symbols_loader=lambda: ["AAA", "BBB"],
                 lookahead_days=90,
                 earnings_fetcher=fake_fetcher,
             )
 
         self.assertEqual(result["source"], mi.EARNINGS_CALENDAR_SOURCE)
         self.assertEqual(result["event_type"], "EARNINGS")
-        self.assertEqual(result["symbol_source"], "manual")
+        self.assertEqual(result["symbol_source"], "sp500")
+        self.assertEqual(result["universe_scope"], "sp500")
         self.assertEqual(result["events_found"], 1)
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_dates"], ["2026-07-30"])
@@ -18168,6 +25550,10 @@ END:VCALENDAR
         self.assertEqual(result["superseded_rows_marked"], 0)
         self.assertEqual(result["stale_rows_marked"], 0)
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+        self.assertEqual(captured_rows[0]["event_family"], "earnings")
+        self.assertEqual(captured_rows[0]["event_subtype"], "earnings_release")
+        self.assertEqual(captured_rows[0]["universe_scope"], "sp500")
+        self.assertEqual(captured_rows[0]["source_authority"], "provider_estimate")
 
     def test_resolve_earnings_collection_symbols_supports_universe_batches(self) -> None:
         from finance.data import market_intelligence as mi
@@ -18181,6 +25567,22 @@ END:VCALENDAR
 
         self.assertEqual(source, "top1000")
         self.assertEqual(symbols, ["BBB", "CCC"])
+
+    def test_resolve_earnings_collection_symbols_supports_named_source_loaders(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        symbols, source = mi.resolve_earnings_collection_symbols(
+            symbol_source="Nasdaq 100",
+            max_symbols=2,
+            source_symbol_loaders={
+                "nasdaq100": lambda: ["MSFT", "AAPL", "NVDA"],
+            },
+        )
+
+        self.assertEqual(source, "nasdaq100")
+        self.assertEqual(symbols, ["MSFT", "AAPL"])
+        self.assertEqual(mi.earnings_universe_scope_for_source("top2000"), "major_cap")
+        self.assertEqual(mi.earnings_universe_scope_for_source("manual"), "watchlist")
 
     def test_mark_superseded_earnings_events_marks_prior_active_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -18260,6 +25662,12 @@ END:VCALENDAR
                         "event_type": "fomc meeting",
                         "symbol": "",
                         "title": "FOMC Meeting",
+                        "event_family": "central_bank",
+                        "event_subtype": "fomc_meeting",
+                        "event_time_label": "14:00 ET",
+                        "event_datetime_utc": "2026-06-17 18:00:00",
+                        "universe_scope": "official_macro",
+                        "source_authority": "official",
                         "source": "federal_reserve",
                         "source_url": "https://example.test/fomc",
                         "confidence": "0.95",
@@ -18275,6 +25683,12 @@ END:VCALENDAR
         captured = captured_rows[0]
         self.assertEqual(captured["event_date"], "2026-06-17")
         self.assertEqual(captured["event_type"], "FOMC_MEETING")
+        self.assertEqual(captured["event_family"], "central_bank")
+        self.assertEqual(captured["event_subtype"], "fomc_meeting")
+        self.assertEqual(captured["event_time_label"], "14:00 ET")
+        self.assertEqual(captured["event_datetime_utc"], "2026-06-17 18:00:00")
+        self.assertEqual(captured["universe_scope"], "official_macro")
+        self.assertEqual(captured["source_authority"], "official")
         self.assertIsNone(captured["symbol"])
         self.assertEqual(captured["source_type"], "unknown")
         self.assertEqual(captured["validation_status"], "unknown")
@@ -18282,6 +25696,8 @@ END:VCALENDAR
         self.assertEqual(captured["confidence"], 0.95)
         self.assertEqual(captured["raw_payload_json"], '{"meeting":"June"}')
         self.assertEqual(len(str(captured["event_key"])), 64)
+        self.assertIn("event_family", fake_db.executemany_calls[0][0])
+        self.assertIn("source_authority", fake_db.executemany_calls[0][0])
         self.assertTrue(fake_db.closed)
 
     def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:

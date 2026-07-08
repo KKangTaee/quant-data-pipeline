@@ -136,4 +136,3 @@ def _render_global_relative_strength_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="Global Relative Strength")
-

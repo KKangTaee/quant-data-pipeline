@@ -144,4 +144,3 @@ def run_risk_parity_trend_backtest_from_db(
             f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
     return bundle
-

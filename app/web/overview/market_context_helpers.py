@@ -20,7 +20,7 @@ from app.web.overview_dashboard_helpers import (
     load_overview_market_context_historical_analog,
     load_overview_market_sentiment_snapshot,
 )
-from app.web.overview_ui_components import (
+from app.web.overview.components.common import (
     OVERVIEW_COLOR_DANGER,
     OVERVIEW_COLOR_NEUTRAL,
     OVERVIEW_COLOR_POSITIVE,

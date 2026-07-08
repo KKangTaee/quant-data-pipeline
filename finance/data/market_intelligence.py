@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import hashlib
 import json
 import re
@@ -35,7 +36,23 @@ BLS_MACRO_CALENDAR_ICS_SOURCE_URL = "https://www.bls.gov/schedule/news_release/b
 BLS_MACRO_CALENDAR_SOURCE = "bureau_labor_statistics_release_schedule"
 BEA_MACRO_CALENDAR_SOURCE_URL = "https://www.bea.gov/index.php/news/schedule/full"
 BEA_MACRO_CALENDAR_SOURCE = "bureau_economic_analysis_release_schedule"
+CENSUS_ECONOMIC_INDICATORS_SOURCE_URL = "https://www.census.gov/economic-indicators/calendar-listview.html"
+CENSUS_ECONOMIC_INDICATORS_SOURCE = "census_economic_indicators_calendar"
+ISM_REPORT_CALENDAR_SOURCE_URL = "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/"
+ISM_REPORT_CALENDAR_SOURCE = "ism_report_calendar"
+TREASURY_AUCTIONS_SOURCE_URL = "https://www.treasurydirect.gov/auctions/upcoming/"
+TREASURY_AUCTIONS_SOURCE = "treasurydirect_auction_calendar"
 MACRO_CALENDAR_SOURCE = "official_macro_release_schedules"
+NASDAQ_MARKET_HOLIDAY_SOURCE_URL = "https://www.nasdaqtrader.com/trader.aspx?id=calendar"
+NASDAQ_MARKET_HOLIDAY_SOURCE = "nasdaqtrader_equity_options_holiday_calendar"
+CBOE_OPTIONS_EXPIRATION_SOURCE_URL_TEMPLATE = "https://cdn.cboe.com/resources/options/Cboe{year}OPTIONSCalendar.pdf"
+CBOE_OPTIONS_EXPIRATION_SOURCE = "cboe_options_expiration_calendar"
+FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL = (
+    "https://www.lseg.com/en/media-centre/press-releases/ftse-russell/2026/"
+    "russell-reconstitution-2026-schedule"
+)
+FTSE_RUSSELL_RECONSTITUTION_SOURCE = "ftse_russell_reconstitution_schedule"
+MARKET_STRUCTURE_CALENDAR_SOURCE = "official_market_structure_calendars"
 EARNINGS_CALENDAR_SOURCE = "yfinance_calendar"
 EARNINGS_CALENDAR_SOURCE_URL = "https://finance.yahoo.com/calendar/earnings"
 NASDAQ_EARNINGS_CALENDAR_SOURCE = "nasdaq_earnings_calendar"
@@ -45,12 +62,54 @@ EARNINGS_PROVIDER_ESTIMATE_CONFIDENCE = 0.65
 EARNINGS_CROSS_CHECKED_CONFIDENCE = 0.75
 EARNINGS_NOT_CONFIRMED_CONFIDENCE = 0.6
 EARNINGS_STALE_ESTIMATE_DAYS = 14
+EARNINGS_SYMBOL_SOURCE_ALIASES = {
+    "latest_movers": "latest_movers",
+    "latest movers": "latest_movers",
+    "latest_sp500_movers": "latest_movers",
+    "sp500": "sp500",
+    "sp500_universe": "sp500",
+    "s&p500": "sp500",
+    "s&p 500": "sp500",
+    "top1000": "top1000",
+    "top1000_batch": "top1000",
+    "top2000": "top2000",
+    "top2000_batch": "top2000",
+    "major_cap": "major_cap",
+    "large_cap": "major_cap",
+    "large-cap": "major_cap",
+    "nasdaq100": "nasdaq100",
+    "nasdaq_100": "nasdaq100",
+    "nasdaq 100": "nasdaq100",
+    "portfolio": "portfolio",
+    "watchlist": "watchlist",
+    "manual": "manual",
+    "universe": "universe",
+}
+EARNINGS_UNIVERSE_SCOPE_BY_SOURCE = {
+    "latest_movers": "latest_movers",
+    "sp500": "sp500",
+    "top1000": "major_cap",
+    "top2000": "major_cap",
+    "major_cap": "major_cap",
+    "nasdaq100": "nasdaq100",
+    "portfolio": "portfolio",
+    "watchlist": "watchlist",
+    "manual": "watchlist",
+}
 DEFAULT_INTRADAY_INTERVAL = "5m"
 YAHOO_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
 MARKET_CAP_UNIVERSE_LIMITS = {"TOP1000": 1000, "TOP2000": 2000}
 NASDAQ_SYMBOL_DIRECTORY_SOURCE = "nasdaq_symdir_nasdaqlisted"
 NASDAQ_SYMBOL_DIRECTORY_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
+LIQUIDITY_UNIVERSE_RANKING_SOURCE = "nyse_price_history.20d_avg_dollar_volume"
+LIQUIDITY_UNIVERSE_PRICE_SOURCE = "finance_price.nyse_price_history"
+LIQUIDITY_UNIVERSE_LISTING_SOURCES = (
+    "nasdaq_symdir_nasdaqlisted",
+    "nasdaq_symdir_otherlisted",
+    "nyse_listings_directory",
+    "sec_company_tickers_exchange",
+)
 MARKET_UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
@@ -75,6 +134,64 @@ BLS_MACRO_RELEASE_TYPES = [
         "label": "Employment Situation",
         "match": "employment situation",
         "aliases": ["the employment situation"],
+    },
+    {
+        "event_type": "MACRO_JOLTS",
+        "label": "JOLTS",
+        "match": "job openings and labor turnover survey",
+        "aliases": ["jolts"],
+    },
+    {
+        "event_type": "MACRO_ECI",
+        "label": "Employment Cost Index",
+        "match": "employment cost index",
+        "aliases": ["eci"],
+    },
+]
+CENSUS_MACRO_RELEASE_TYPES = [
+    {
+        "event_type": "MACRO_RETAIL_SALES",
+        "label": "Retail Sales",
+        "match": "advance monthly sales for retail and food services",
+        "aliases": ["monthly retail trade", "retail and food services"],
+    },
+    {
+        "event_type": "MACRO_DURABLE_GOODS",
+        "label": "Durable Goods",
+        "match": "durable goods",
+        "aliases": ["manufacturers' shipments inventories and orders", "manufacturers shipments inventories and orders"],
+    },
+    {
+        "event_type": "MACRO_HOUSING",
+        "label": "Housing",
+        "match": "new residential construction",
+        "aliases": ["housing starts", "new residential sales"],
+    },
+    {
+        "event_type": "MACRO_CONSTRUCTION_SPENDING",
+        "label": "Construction Spending",
+        "match": "construction spending",
+        "aliases": [],
+    },
+    {
+        "event_type": "MACRO_TRADE",
+        "label": "Trade",
+        "match": "international trade",
+        "aliases": ["advance economic indicators", "goods and services"],
+    },
+]
+ISM_MACRO_RELEASE_TYPES = [
+    {
+        "event_type": "MACRO_ISM_MANUFACTURING_PMI",
+        "label": "ISM Manufacturing PMI",
+        "match": "manufacturing",
+        "aliases": ["manufacturing pmi", "manufacturing ism"],
+    },
+    {
+        "event_type": "MACRO_ISM_SERVICES_PMI",
+        "label": "ISM Services PMI",
+        "match": "services",
+        "aliases": ["services pmi", "service pmi", "services ism"],
     },
 ]
 MONTH_NAME_TO_NUMBER = {
@@ -137,6 +254,29 @@ def _normalize_intraday_universe(
     raise ValueError(f"Unsupported intraday universe: {universe_code!r}")
 
 
+def normalize_earnings_symbol_source(value: Any) -> str:
+    normalized = str(value or "latest_movers").strip().lower().replace("-", "_")
+    return EARNINGS_SYMBOL_SOURCE_ALIASES.get(normalized, normalized or "latest_movers")
+
+
+def earnings_universe_scope_for_source(
+    symbol_source: Any,
+    *,
+    universe_code: str | None = None,
+) -> str:
+    normalized_source = normalize_earnings_symbol_source(symbol_source)
+    if normalized_source == "universe":
+        normalized_universe = str(universe_code or "").strip().upper()
+        if normalized_universe == "SP500":
+            return "sp500"
+        if normalized_universe == "NASDAQ100":
+            return "nasdaq100"
+        if normalized_universe in MARKET_CAP_UNIVERSE_LIMITS:
+            return "major_cap"
+        return "unknown"
+    return EARNINGS_UNIVERSE_SCOPE_BY_SOURCE.get(normalized_source, "unknown")
+
+
 def _safe_float(value: Any) -> float | None:
     try:
         if value in (None, ""):
@@ -195,6 +335,18 @@ def sync_market_intelligence_tables(
             meta_db,
             "market_universe_member",
             MARKET_INTELLIGENCE_SCHEMAS["market_universe_member"],
+            DB_META,
+        )
+        sync_table_schema(
+            meta_db,
+            "market_liquidity_universe_member",
+            MARKET_INTELLIGENCE_SCHEMAS["market_liquidity_universe_member"],
+            DB_META,
+        )
+        sync_table_schema(
+            meta_db,
+            "market_symbol_alias",
+            MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"],
             DB_META,
         )
         sync_table_schema(
@@ -278,6 +430,33 @@ def _normalize_event_type(value: Any) -> str:
 def _normalize_event_symbol(value: Any) -> str | None:
     symbol = _normalize_symbol(value)
     return symbol or None
+
+
+def _normalize_event_taxonomy_value(value: Any) -> str | None:
+    normalized = str(value or "").strip().lower().replace(" ", "_")
+    return normalized or None
+
+
+def _normalize_event_datetime_utc(value: Any) -> str | None:
+    return _to_utc_naive(value)
+
+
+def _event_subtype_from_type(event_type: str) -> str:
+    normalized = _normalize_event_type(event_type)
+    if normalized.startswith("MACRO_"):
+        return normalized.replace("MACRO_", "").lower()
+    return normalized.lower()
+
+
+def _event_datetime_utc_from_eastern_time(event_date: str, release_time_et: str | None) -> str | None:
+    if not release_time_et:
+        return None
+    try:
+        local_dt = datetime.strptime(f"{event_date} {release_time_et}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None
+    eastern_dt = local_dt.replace(tzinfo=ZoneInfo("America/New_York"))
+    return eastern_dt.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _normalize_source_type(value: Any, *, event_type: str, source: str) -> str:
@@ -403,6 +582,12 @@ def normalize_market_event_rows(
         row = {
             "event_date": event_date,
             "event_type": event_type,
+            "event_family": _normalize_event_taxonomy_value(item.get("event_family")),
+            "event_subtype": _normalize_event_taxonomy_value(item.get("event_subtype")),
+            "event_time_label": str(item.get("event_time_label") or "").strip() or None,
+            "event_datetime_utc": _normalize_event_datetime_utc(item.get("event_datetime_utc")),
+            "universe_scope": _normalize_event_taxonomy_value(item.get("universe_scope")),
+            "source_authority": _normalize_event_taxonomy_value(item.get("source_authority")),
             "symbol": _normalize_event_symbol(item.get("symbol")),
             "title": title,
             "source": source,
@@ -443,11 +628,13 @@ def upsert_market_event_rows(
         )
         sql = """
         INSERT INTO market_event_calendar (
-          event_key, event_date, event_type, symbol, title,
+          event_key, event_date, event_type, event_family, event_subtype, event_time_label,
+          event_datetime_utc, universe_scope, source_authority, symbol, title,
           source, source_type, validation_status, event_status, superseded_by_event_key, superseded_at,
           source_url, confidence, collected_at, raw_payload_json
         ) VALUES (
-          %(event_key)s, %(event_date)s, %(event_type)s, %(symbol)s, %(title)s,
+          %(event_key)s, %(event_date)s, %(event_type)s, %(event_family)s, %(event_subtype)s, %(event_time_label)s,
+          %(event_datetime_utc)s, %(universe_scope)s, %(source_authority)s, %(symbol)s, %(title)s,
           %(source)s, %(source_type)s, %(validation_status)s, %(event_status)s,
           %(superseded_by_event_key)s, %(superseded_at)s,
           %(source_url)s, %(confidence)s, %(collected_at)s, %(raw_payload_json)s
@@ -455,6 +642,12 @@ def upsert_market_event_rows(
         ON DUPLICATE KEY UPDATE
           event_date = VALUES(event_date),
           event_type = VALUES(event_type),
+          event_family = VALUES(event_family),
+          event_subtype = VALUES(event_subtype),
+          event_time_label = VALUES(event_time_label),
+          event_datetime_utc = VALUES(event_datetime_utc),
+          universe_scope = VALUES(universe_scope),
+          source_authority = VALUES(source_authority),
           symbol = VALUES(symbol),
           title = VALUES(title),
           source = VALUES(source),
@@ -643,6 +836,12 @@ def load_market_event_calendar(
                 event_key,
                 event_date,
                 event_type,
+                event_family,
+                event_subtype,
+                event_time_label,
+                event_datetime_utc,
+                universe_scope,
+                source_authority,
                 symbol,
                 title,
                 source,
@@ -900,6 +1099,17 @@ def _bls_macro_release_type(release_title: Any) -> dict[str, str] | None:
     return None
 
 
+def _calendar_release_type(release_title: Any, release_types: Sequence[dict[str, Any]]) -> dict[str, str] | None:
+    normalized = _clean_text(release_title).lower()
+    for item in release_types:
+        terms = [str(item["match"])] + [str(alias) for alias in item.get("aliases", [])]
+        for term in terms:
+            cleaned = term.lower().strip()
+            if cleaned and cleaned in normalized:
+                return {str(key): str(value) for key, value in item.items() if key != "aliases"}
+    return None
+
+
 def _reference_period_from_release_title(release_title: str) -> str | None:
     match = re.search(r"\bfor\s+(.+)$", release_title, flags=re.IGNORECASE)
     return _clean_text(match.group(1)) if match else None
@@ -913,6 +1123,10 @@ def _macro_event_row(
     source: str,
     source_url: str,
     release_time_et: str | None,
+    event_family: str = "macro",
+    event_subtype: str | None = None,
+    universe_scope: str = "official_macro",
+    source_authority: str = "official",
     confidence: float = 0.95,
     raw_payload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -920,9 +1134,16 @@ def _macro_event_row(
     payload.setdefault("release_time_et", release_time_et)
     payload.setdefault("event_date_basis", "official_release_date")
     payload = _json_safe_payload_value(payload)
+    time_label = f"{release_time_et} ET" if release_time_et else None
     return {
         "event_date": event_date,
         "event_type": event_type,
+        "event_family": event_family,
+        "event_subtype": event_subtype or _event_subtype_from_type(event_type),
+        "event_time_label": time_label,
+        "event_datetime_utc": _event_datetime_utc_from_eastern_time(event_date, release_time_et),
+        "universe_scope": universe_scope,
+        "source_authority": source_authority,
         "symbol": None,
         "title": title,
         "source": source,
@@ -1180,7 +1401,16 @@ def _is_bea_gdp_release(release_title: Any) -> bool:
     return "gross domestic product" in normalized or normalized.startswith("gdp ")
 
 
-def parse_bea_gdp_calendar_events_from_html(
+def _bea_macro_release_type(release_title: Any) -> dict[str, str] | None:
+    normalized = _clean_text(release_title).lower()
+    if _is_bea_gdp_release(release_title):
+        return {"event_type": "MACRO_GDP", "label": "GDP"}
+    if "personal income and outlays" in normalized:
+        return {"event_type": "MACRO_PCE", "label": "PCE"}
+    return None
+
+
+def parse_bea_macro_calendar_events_from_html(
     html: str,
     *,
     source_url: str = BEA_MACRO_CALENDAR_SOURCE_URL,
@@ -1192,7 +1422,8 @@ def parse_bea_gdp_calendar_events_from_html(
     events: list[dict[str, Any]] = []
     for record in records:
         release_title = _clean_text(_record_value_by_hint(record, ["release"], fallback_index=2))
-        if not _is_bea_gdp_release(release_title):
+        release_type = _bea_macro_release_type(release_title)
+        if not release_type:
             continue
         date_time_text = _record_value_by_hint(record, ["year", "date"], fallback_index=0)
         event_date, release_time = _parse_release_date_time(date_time_text, default_year=default_year)
@@ -1204,8 +1435,8 @@ def parse_bea_gdp_calendar_events_from_html(
         events.append(
             _macro_event_row(
                 event_date=event_date,
-                event_type="MACRO_GDP",
-                title=f"GDP: {release_title}",
+                event_type=release_type["event_type"],
+                title=f"{release_type['label']}: {release_title}",
                 source=BEA_MACRO_CALENDAR_SOURCE,
                 source_url=source_url,
                 release_time_et=release_time,
@@ -1219,6 +1450,420 @@ def parse_bea_gdp_calendar_events_from_html(
             )
         )
     return events
+
+
+def parse_bea_gdp_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = BEA_MACRO_CALENDAR_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in parse_bea_macro_calendar_events_from_html(html, source_url=source_url, years=years)
+        if row.get("event_type") == "MACRO_GDP"
+    ]
+
+
+def parse_census_macro_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = CENSUS_ECONOMIC_INDICATORS_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        release_title = _clean_text(
+            _record_value_by_hint(record, ["indicator", "name", "title"], fallback_index=2)
+        )
+        release_type = _calendar_release_type(release_title, CENSUS_MACRO_RELEASE_TYPES)
+        if not release_type:
+            continue
+        date_text = _record_value_by_hint(record, ["release date", "date"], fallback_index=0)
+        time_text = _record_value_by_hint(record, ["time"], fallback_index=1)
+        event_date, release_time = _parse_release_date_time(f"{date_text or ''} {time_text or ''}")
+        if not event_date:
+            continue
+        event_year = int(event_date[:4])
+        if year_filter and event_year not in year_filter:
+            continue
+        events.append(
+            _macro_event_row(
+                event_date=event_date,
+                event_type=release_type["event_type"],
+                title=f"{release_type['label']}: {release_title}",
+                source=CENSUS_ECONOMIC_INDICATORS_SOURCE,
+                source_url=source_url,
+                release_time_et=release_time,
+                raw_payload={
+                    "agency": "Census",
+                    "calendar_year": event_year,
+                    "release_title": release_title,
+                    "release_time_et": release_time,
+                    "source_row": record,
+                },
+            )
+        )
+    return events
+
+
+def parse_ism_macro_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = ISM_REPORT_CALENDAR_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        release_title = _clean_text(_record_value_by_hint(record, ["report", "release"], fallback_index=0))
+        release_type = _calendar_release_type(release_title, ISM_MACRO_RELEASE_TYPES)
+        if not release_type:
+            continue
+        date_text = _record_value_by_hint(record, ["release date", "date"], fallback_index=1)
+        time_text = _record_value_by_hint(record, ["time"], fallback_index=2)
+        event_date, release_time = _parse_release_date_time(f"{date_text or ''} {time_text or ''}")
+        if not event_date:
+            continue
+        event_year = int(event_date[:4])
+        if year_filter and event_year not in year_filter:
+            continue
+        events.append(
+            _macro_event_row(
+                event_date=event_date,
+                event_type=release_type["event_type"],
+                title=f"{release_type['label']}: {release_title}",
+                source=ISM_REPORT_CALENDAR_SOURCE,
+                source_url=source_url,
+                release_time_et=release_time,
+                raw_payload={
+                    "agency": "ISM",
+                    "calendar_year": event_year,
+                    "release_title": release_title,
+                    "release_time_et": release_time,
+                    "source_row": record,
+                },
+            )
+        )
+    return events
+
+
+def parse_treasury_auction_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = TREASURY_AUCTIONS_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        auction_date_text = _record_value_by_hint(record, ["auction date"], fallback_index=2)
+        event_date, release_time = _parse_release_date_time(auction_date_text)
+        if not event_date:
+            continue
+        event_year = int(event_date[:4])
+        if year_filter and event_year not in year_filter:
+            continue
+        security_type = _clean_text(_record_value_by_hint(record, ["security type", "security"], fallback_index=0))
+        term = _clean_text(_record_value_by_hint(record, ["term"], fallback_index=1))
+        title_detail = " ".join(item for item in [term, security_type] if item).strip() or "Treasury security"
+        events.append(
+            _macro_event_row(
+                event_date=event_date,
+                event_type="TREASURY_AUCTION",
+                title=f"Treasury Auction: {title_detail}",
+                source=TREASURY_AUCTIONS_SOURCE,
+                source_url=source_url,
+                release_time_et=release_time,
+                event_family="fixed_income",
+                event_subtype="treasury_auction",
+                universe_scope="official_macro",
+                raw_payload={
+                    "agency": "TreasuryDirect",
+                    "calendar_year": event_year,
+                    "security_type": security_type,
+                    "term": term,
+                    "auction_date": event_date,
+                    "source_row": record,
+                },
+            )
+        )
+    return events
+
+
+def _market_structure_event_row(
+    *,
+    event_date: str,
+    event_type: str,
+    title: str,
+    source: str,
+    source_url: str,
+    event_subtype: str | None = None,
+    event_time_label: str | None = None,
+    release_time_et: str | None = None,
+    confidence: float = 0.95,
+    raw_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "event_date": event_date,
+        "event_type": event_type,
+        "event_family": "market_structure",
+        "event_subtype": event_subtype or _event_subtype_from_type(event_type),
+        "event_time_label": event_time_label,
+        "event_datetime_utc": _event_datetime_utc_from_eastern_time(event_date, release_time_et),
+        "universe_scope": "all_us",
+        "source_authority": "official",
+        "title": title,
+        "source": source,
+        "source_type": "official",
+        "validation_status": "official",
+        "event_status": "active",
+        "source_url": source_url,
+        "confidence": confidence,
+        "raw_payload": raw_payload or {},
+    }
+
+
+def _holiday_status_from_text(text: str) -> tuple[str | None, str | None, str | None]:
+    normalized = text.lower()
+    if "early close" in normalized or "1:00" in normalized or "1 p.m" in normalized or "1pm" in normalized:
+        return "EARLY_CLOSE", "Early close 13:00 ET", "13:00"
+    if "closed" in normalized:
+        return "MARKET_HOLIDAY", "Closed", None
+    return None, None, None
+
+
+def parse_nasdaq_market_holiday_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        values = [_clean_text(value) for value in record.values() if _clean_text(value)]
+        if not values:
+            continue
+        event_date = None
+        date_text = ""
+        for value in values:
+            try:
+                parsed = _event_date_str(re.sub(r"^[A-Za-z]+,\s*", "", value))
+            except Exception:
+                parsed = None
+            if parsed:
+                event_date = parsed
+                date_text = value
+                break
+        if not event_date:
+            continue
+        event_year = int(event_date[:4])
+        if year_filter and event_year not in year_filter:
+            continue
+        row_text = " ".join(values)
+        event_type, event_time_label, release_time = _holiday_status_from_text(row_text)
+        if not event_type:
+            continue
+        title_candidates = [
+            value
+            for value in values
+            if value != date_text and not _holiday_status_from_text(value)[0]
+        ]
+        holiday_title = title_candidates[0] if title_candidates else "US Equity and Options Markets"
+        title_prefix = "US Market Early Close" if event_type == "EARLY_CLOSE" else "US Market Holiday"
+        events.append(
+            _market_structure_event_row(
+                event_date=event_date,
+                event_type=event_type,
+                title=f"{title_prefix}: {holiday_title}",
+                source=NASDAQ_MARKET_HOLIDAY_SOURCE,
+                source_url=source_url,
+                event_subtype="early_close" if event_type == "EARLY_CLOSE" else "market_holiday",
+                event_time_label=event_time_label,
+                release_time_et=release_time,
+                raw_payload={
+                    "exchange": "Nasdaq Trader",
+                    "calendar_year": event_year,
+                    "holiday": holiday_title,
+                    "market_status": event_time_label,
+                    "source_row": record,
+                },
+            )
+        )
+    return events
+
+
+def _previous_business_day(value: date, *, exchange_holidays: set[str]) -> date:
+    current = value
+    while current.weekday() >= 5 or current.isoformat() in exchange_holidays:
+        current -= timedelta(days=1)
+    return current
+
+
+def _third_friday(year: int, month: int) -> date:
+    fridays = [
+        week[calendar.FRIDAY]
+        for week in calendar.monthcalendar(year, month)
+        if week[calendar.FRIDAY]
+    ]
+    return date(year, month, fridays[2])
+
+
+def build_options_expiration_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    exchange_holidays: set[str] | Sequence[str] | None = None,
+    source_url_template: str = CBOE_OPTIONS_EXPIRATION_SOURCE_URL_TEMPLATE,
+) -> list[dict[str, Any]]:
+    target_years = [int(year) for year in years] if years else [datetime.now(UTC).year]
+    holiday_set = {str(item) for item in exchange_holidays or []}
+    events: list[dict[str, Any]] = []
+    for year in target_years:
+        source_url = source_url_template.format(year=year)
+        for month in range(1, 13):
+            scheduled = _third_friday(year, month)
+            adjusted = _previous_business_day(scheduled, exchange_holidays=holiday_set)
+            is_quarter_month = month in {3, 6, 9, 12}
+            events.append(
+                _market_structure_event_row(
+                    event_date=adjusted.isoformat(),
+                    event_type="OPTIONS_EXPIRATION",
+                    title=(
+                        "Quarterly Options Expiration / Triple Witch"
+                        if is_quarter_month
+                        else "Monthly Options Expiration"
+                    ),
+                    source=CBOE_OPTIONS_EXPIRATION_SOURCE,
+                    source_url=source_url,
+                    event_subtype="triple_witch" if is_quarter_month else "options_expiration",
+                    event_time_label="Market close ET",
+                    release_time_et="16:00",
+                    confidence=0.9,
+                    raw_payload={
+                        "exchange": "Cboe",
+                        "calendar_year": year,
+                        "scheduled_expiration_date": scheduled.isoformat(),
+                        "holiday_adjusted": adjusted != scheduled,
+                        "calculation_basis": "third_friday_standard_options_expiration",
+                        "source_url_template": source_url_template,
+                    },
+                )
+            )
+    return events
+
+
+def _month_day_dates_from_text(text: str, *, year: int) -> list[str]:
+    patterns = [
+        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?[,]?\s*([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?",
+        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?[,]?\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)",
+    ]
+    dates: list[str] = []
+    seen: set[str] = set()
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            first, second = match.groups()
+            if first.isdigit():
+                day = int(first)
+                month_name = second
+            else:
+                month_name = first
+                day = int(second)
+            month = MONTH_NAME_TO_NUMBER.get(month_name.upper())
+            if not month:
+                continue
+            try:
+                parsed = date(year, month, day).isoformat()
+            except ValueError:
+                continue
+            if parsed not in seen:
+                seen.add(parsed)
+                dates.append(parsed)
+    return dates
+
+
+def parse_russell_reconstitution_events_from_html(
+    html: str,
+    *,
+    source_url: str = FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    text = _clean_text(BeautifulSoup(html, "html.parser").get_text(" "))
+    detected_years = sorted({int(item) for item in re.findall(r"\b(20\d{2})\b", text)})
+    target_years = [int(year) for year in years] if years else detected_years or [datetime.now(UTC).year]
+    events: list[dict[str, Any]] = []
+    for year in target_years:
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        for sentence in sentences:
+            normalized = sentence.lower()
+            dates = _month_day_dates_from_text(sentence, year=year)
+            if not dates:
+                continue
+            if "rank day" in normalized:
+                events.append(
+                    _market_structure_event_row(
+                        event_date=dates[0],
+                        event_type="RUSSELL_RECONSTITUTION",
+                        title="Russell US Index Rank Day",
+                        source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        source_url=source_url,
+                        event_subtype="russell_rank_day",
+                        raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                    )
+                )
+            elif "preliminary" in normalized and ("list" in normalized or "membership" in normalized):
+                events.append(
+                    _market_structure_event_row(
+                        event_date=dates[0],
+                        event_type="RUSSELL_RECONSTITUTION",
+                        title="Russell US Index Preliminary Additions/Deletions",
+                        source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        source_url=source_url,
+                        event_subtype="russell_preliminary_lists",
+                        event_time_label="After market close ET",
+                        release_time_et="18:00",
+                        raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                    )
+                )
+            elif "update" in normalized and ("provided" in normalized or "post" in normalized or "list" in normalized):
+                for event_date in dates:
+                    events.append(
+                        _market_structure_event_row(
+                            event_date=event_date,
+                            event_type="RUSSELL_RECONSTITUTION",
+                            title="Russell US Index Reconstitution Update",
+                            source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                            source_url=source_url,
+                            event_subtype="russell_update",
+                            event_time_label="After market close ET",
+                            release_time_et="18:00",
+                            raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                        )
+                    )
+            elif "take effect" in normalized or "effective" in normalized or "reconstituted indexes" in normalized:
+                events.append(
+                    _market_structure_event_row(
+                        event_date=dates[-1],
+                        event_type="RUSSELL_RECONSTITUTION",
+                        title="Russell US Index Reconstitution Effective",
+                        source=FTSE_RUSSELL_RECONSTITUTION_SOURCE,
+                        source_url=source_url,
+                        event_subtype="russell_reconstitution",
+                        event_time_label="After market close ET",
+                        release_time_et="16:00",
+                        raw_payload={"provider": "FTSE Russell", "calendar_year": year, "source_sentence": sentence},
+                    )
+                )
+    deduped: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, str]] = set()
+    for row in sorted(events, key=lambda item: (str(item.get("event_date") or ""), str(item.get("event_subtype") or ""))):
+        key = (str(row.get("event_date") or ""), str(row.get("event_subtype") or ""))
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        deduped.append(row)
+    return deduped
 
 
 def fetch_bls_macro_calendar_events(
@@ -1253,13 +1898,158 @@ def fetch_bea_gdp_calendar_events(
     return events
 
 
+def fetch_bea_macro_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = BEA_MACRO_CALENDAR_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_bea_macro_calendar_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No BEA macro calendar events were parsed{year_text}.")
+    return events
+
+
+def fetch_census_macro_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = CENSUS_ECONOMIC_INDICATORS_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_census_macro_calendar_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No Census economic indicator calendar events were parsed{year_text}.")
+    return events
+
+
+def fetch_ism_macro_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = ISM_REPORT_CALENDAR_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_ism_macro_calendar_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No ISM report calendar events were parsed{year_text}.")
+    return events
+
+
+def fetch_treasury_auction_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = TREASURY_AUCTIONS_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_treasury_auction_calendar_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No Treasury auction calendar events were parsed{year_text}.")
+    return events
+
+
+def fetch_nasdaq_market_holiday_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_nasdaq_market_holiday_calendar_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No Nasdaq Trader market holiday events were parsed{year_text}.")
+    return events
+
+
+def fetch_russell_reconstitution_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = FTSE_RUSSELL_RECONSTITUTION_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_russell_reconstitution_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No Russell reconstitution events were parsed{year_text}.")
+    return events
+
+
+def fetch_market_structure_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    include_holidays: bool = True,
+    include_options_expiration: bool = True,
+    include_russell: bool = True,
+    holiday_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    russell_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    options_builder: Callable[..., list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    target_years = tuple(int(year) for year in years) if years else (datetime.now(UTC).year,)
+    events: list[dict[str, Any]] = []
+    failed_sources: list[str] = []
+    exchange_holidays: set[str] = set()
+
+    if include_holidays:
+        try:
+            fetcher = holiday_fetcher or fetch_nasdaq_market_holiday_calendar_events
+            holiday_events = fetcher(years=target_years)
+            events.extend(holiday_events)
+            exchange_holidays = {
+                str(row.get("event_date"))
+                for row in holiday_events
+                if row.get("event_type") == "MARKET_HOLIDAY" and row.get("event_date")
+            }
+        except Exception as exc:
+            failed_sources.append(f"Nasdaq Trader: {exc}")
+    if include_options_expiration:
+        try:
+            builder = options_builder or build_options_expiration_calendar_events
+            events.extend(builder(years=target_years, exchange_holidays=exchange_holidays))
+        except Exception as exc:
+            failed_sources.append(f"Cboe: {exc}")
+    if include_russell:
+        try:
+            fetcher = russell_fetcher or fetch_russell_reconstitution_events
+            events.extend(fetcher(years=target_years))
+        except Exception as exc:
+            failed_sources.append(f"FTSE Russell: {exc}")
+
+    return {
+        "source": MARKET_STRUCTURE_CALENDAR_SOURCE,
+        "source_url": NASDAQ_MARKET_HOLIDAY_SOURCE_URL,
+        "event_type": "MARKET_STRUCTURE",
+        "method": "official_market_structure_calendar_sources",
+        "years": list(target_years),
+        "include_holidays": include_holidays,
+        "include_options_expiration": include_options_expiration,
+        "include_russell": include_russell,
+        "events": events,
+        "events_found": len(events),
+        "failed_sources": failed_sources,
+    }
+
+
 def fetch_macro_calendar_events(
     *,
     years: Sequence[int] | None = None,
     include_bls: bool = True,
     include_bea: bool = True,
+    include_census: bool = True,
+    include_ism: bool = True,
+    include_treasury: bool = True,
     bls_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
     bea_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    census_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    ism_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    treasury_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     events: list[dict[str, Any]] = []
     failed_sources: list[str] = []
@@ -1271,13 +2061,32 @@ def fetch_macro_calendar_events(
             failed_sources.append(f"BLS: {exc}")
     if include_bea:
         try:
-            fetcher = bea_fetcher or fetch_bea_gdp_calendar_events
+            fetcher = bea_fetcher or fetch_bea_macro_calendar_events
             events.extend(fetcher(years=years))
         except Exception as exc:
             failed_sources.append(f"BEA: {exc}")
+    if include_census:
+        try:
+            fetcher = census_fetcher or fetch_census_macro_calendar_events
+            events.extend(fetcher(years=years))
+        except Exception as exc:
+            failed_sources.append(f"Census: {exc}")
+    if include_ism:
+        try:
+            fetcher = ism_fetcher or fetch_ism_macro_calendar_events
+            events.extend(fetcher(years=years))
+        except Exception as exc:
+            failed_sources.append(f"ISM: {exc}")
+    if include_treasury:
+        try:
+            fetcher = treasury_fetcher or fetch_treasury_auction_calendar_events
+            events.extend(fetcher(years=years))
+        except Exception as exc:
+            failed_sources.append(f"Treasury: {exc}")
     if not events:
         detail = "; ".join(failed_sources) if failed_sources else "no enabled source returned events"
         raise RuntimeError(f"No macro calendar events were collected: {detail}")
+    target_year = int(years[0]) if years else datetime.now(UTC).year
     return {
         "source": MACRO_CALENDAR_SOURCE,
         "source_url": ", ".join(
@@ -1285,11 +2094,14 @@ def fetch_macro_calendar_events(
                 item
                 for item in [
                     BLS_MACRO_CALENDAR_SOURCE_URL_TEMPLATE.format(
-                        year=(int(years[0]) if years else datetime.now(UTC).year)
+                        year=target_year
                     )
                     if include_bls
                     else None,
                     BEA_MACRO_CALENDAR_SOURCE_URL if include_bea else None,
+                    CENSUS_ECONOMIC_INDICATORS_SOURCE_URL if include_census else None,
+                    ISM_REPORT_CALENDAR_SOURCE_URL if include_ism else None,
+                    TREASURY_AUCTIONS_SOURCE_URL if include_treasury else None,
                 ]
                 if item
             ]
@@ -1308,6 +2120,9 @@ def collect_and_store_macro_calendar(
     years: Sequence[int] | None = None,
     include_bls: bool = True,
     include_bea: bool = True,
+    include_census: bool = True,
+    include_ism: bool = True,
+    include_treasury: bool = True,
     host: str = "localhost",
     user: str = "root",
     password: str = "1234",
@@ -1317,7 +2132,14 @@ def collect_and_store_macro_calendar(
     """Collect official macro release dates and persist them to the common event calendar."""
     collected_at = _timestamp_str()
     fetcher = macro_fetcher or fetch_macro_calendar_events
-    result = fetcher(years=years, include_bls=include_bls, include_bea=include_bea)
+    result = fetcher(
+        years=years,
+        include_bls=include_bls,
+        include_bea=include_bea,
+        include_census=include_census,
+        include_ism=include_ism,
+        include_treasury=include_treasury,
+    )
     events = [{**row, "collected_at": collected_at} for row in result.get("events", [])]
     rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
     event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
@@ -1329,6 +2151,47 @@ def collect_and_store_macro_calendar(
         "event_types": event_types,
         "include_bls": include_bls,
         "include_bea": include_bea,
+        "include_census": include_census,
+        "include_ism": include_ism,
+        "include_treasury": include_treasury,
+        "collected_at": collected_at,
+    }
+
+
+def collect_and_store_market_structure_calendar(
+    *,
+    years: Sequence[int] | None = None,
+    include_holidays: bool = True,
+    include_options_expiration: bool = True,
+    include_russell: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    market_structure_fetcher: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect market-structure dates that explain trading-calendar density, not signals."""
+    collected_at = _timestamp_str()
+    target_years = tuple(int(year) for year in years) if years else None
+    fetcher = market_structure_fetcher or fetch_market_structure_calendar_events
+    result = fetcher(
+        years=target_years,
+        include_holidays=include_holidays,
+        include_options_expiration=include_options_expiration,
+        include_russell=include_russell,
+    )
+    events = [{**row, "collected_at": collected_at} for row in result.get("events", [])]
+    rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
+    event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
+    event_types = sorted({str(row["event_type"]) for row in events if row.get("event_type")})
+    return {
+        **result,
+        "rows_written": rows_written,
+        "event_dates": event_dates,
+        "event_types": event_types,
+        "include_holidays": include_holidays,
+        "include_options_expiration": include_options_expiration,
+        "include_russell": include_russell,
         "collected_at": collected_at,
     }
 
@@ -1457,6 +2320,17 @@ def _parse_window_date(value: Any, *, default: date) -> date:
     if not parsed:
         return default
     return datetime.strptime(parsed, "%Y-%m-%d").date()
+
+
+def _earnings_source_authority(validation_status: str | None) -> str:
+    normalized = str(validation_status or "").strip().lower()
+    if normalized == "cross_checked":
+        return "cross_checked"
+    if normalized == "not_confirmed":
+        return "not_confirmed"
+    if normalized == "conflict":
+        return "conflict"
+    return "provider_estimate"
 
 
 def _fetch_json(source_url: str, *, timeout: int = 20) -> dict[str, Any]:
@@ -1591,6 +2465,7 @@ def _earnings_source_validation_payload(
     payload = {
         "source_type": "provider_estimate",
         "validation_status": validation_status,
+        "source_authority": _earnings_source_authority(validation_status),
         "fallback_order": [
             {
                 "source": COMPANY_IR_EARNINGS_SOURCE,
@@ -1624,6 +2499,8 @@ def fetch_yfinance_earnings_calendar_events(
     end_date: str | date | None = None,
     lookahead_days: int = 120,
     max_symbols: int = 100,
+    universe_scope: str = "latest_movers",
+    symbol_source: str = "latest_movers",
     validate_with_nasdaq: bool = False,
     nasdaq_fetcher: Callable[..., dict[str, dict[str, Any]]] | None = None,
     request_sleep_sec: float = 0.0,
@@ -1640,6 +2517,11 @@ def fetch_yfinance_earnings_calendar_events(
         window_end = window_start
 
     normalized_symbols = _normalize_symbol_list(symbols, max_symbols=max_symbols)
+    normalized_symbol_source = normalize_earnings_symbol_source(symbol_source)
+    normalized_universe_scope = _normalize_event_taxonomy_value(universe_scope) or earnings_universe_scope_for_source(
+        normalized_symbol_source
+    )
+    source_authority = _earnings_source_authority("estimate_only")
     ticker_factory = ticker_factory or yf.Ticker
     events: list[dict[str, Any]] = []
     missing_symbols: list[str] = []
@@ -1699,6 +2581,10 @@ def fetch_yfinance_earnings_calendar_events(
                     {
                         "event_date": event_date,
                         "event_type": "EARNINGS",
+                        "event_family": "earnings",
+                        "event_subtype": "earnings_release",
+                        "universe_scope": normalized_universe_scope,
+                        "source_authority": source_authority,
                         "symbol": symbol,
                         "title": f"{symbol} Earnings Release",
                         "source": EARNINGS_CALENDAR_SOURCE,
@@ -1709,6 +2595,8 @@ def fetch_yfinance_earnings_calendar_events(
                         "confidence": EARNINGS_PROVIDER_ESTIMATE_CONFIDENCE,
                         "raw_payload": {
                             "provider": EARNINGS_CALENDAR_SOURCE,
+                            "symbol_source": normalized_symbol_source,
+                            "universe_scope": normalized_universe_scope,
                             "provider_calendar": calendar,
                             "provider_earnings_dates": earnings_dates,
                             "event_date_basis": "yfinance_calendar_earnings_date",
@@ -1723,6 +2611,7 @@ def fetch_yfinance_earnings_calendar_events(
                             "source_validation": {
                                 "source_type": "provider_estimate",
                                 "validation_status": "estimate_only",
+                                "source_authority": source_authority,
                             },
                         },
                     }
@@ -1753,9 +2642,12 @@ def fetch_yfinance_earnings_calendar_events(
                 nasdaq_by_date=nasdaq_by_date,
             )
             row["validation_status"] = validation_status
+            row["source_authority"] = _earnings_source_authority(validation_status)
             row["confidence"] = confidence
             raw_payload = dict(row.get("raw_payload") or {})
             raw_payload["source_validation"] = validation_payload
+            raw_payload["universe_scope"] = normalized_universe_scope
+            raw_payload["symbol_source"] = normalized_symbol_source
             row["raw_payload"] = raw_payload
 
     return {
@@ -1764,6 +2656,8 @@ def fetch_yfinance_earnings_calendar_events(
         "event_type": "EARNINGS",
         "method": "yfinance_ticker_calendar",
         "validation_source": validation_source,
+        "symbol_source": normalized_symbol_source,
+        "universe_scope": normalized_universe_scope,
         "start_date": window_start.isoformat(),
         "end_date": window_end.isoformat(),
         "symbols_requested": len(normalized_symbols),
@@ -1807,13 +2701,17 @@ def resolve_earnings_collection_symbols(
     password: str = "1234",
     port: int = 3306,
     source_symbols_loader: Callable[[], list[str]] | None = None,
+    source_symbol_loaders: dict[str, Callable[[], list[str]]] | None = None,
 ) -> tuple[list[str], str]:
     if symbols is not None:
         return _slice_symbols(symbols, offset=batch_offset, max_symbols=max_symbols), "manual"
 
-    normalized_source = str(symbol_source or "latest_movers").strip().lower()
+    normalized_source = normalize_earnings_symbol_source(symbol_source)
     if source_symbols_loader is not None:
         return _slice_symbols(source_symbols_loader(), offset=batch_offset, max_symbols=max_symbols), normalized_source
+    loader = (source_symbol_loaders or {}).get(normalized_source)
+    if loader is not None:
+        return _slice_symbols(loader(), offset=batch_offset, max_symbols=max_symbols), normalized_source
 
     if normalized_source == "latest_movers":
         latest_limit = max(1, min(int(top_movers_limit or 20), int(max_symbols or 100)))
@@ -1829,15 +2727,23 @@ def resolve_earnings_collection_symbols(
         )
         return _slice_symbols(target_symbols, offset=batch_offset, max_symbols=max_symbols), normalized_source
 
+    if normalized_source == "portfolio":
+        raise ValueError("Portfolio earnings source requires a source_symbol_loaders['portfolio'] loader.")
+    if normalized_source == "watchlist":
+        raise ValueError("Watchlist earnings source requires a source_symbol_loaders['watchlist'] loader.")
+
     source_to_universe = {
         "sp500": "SP500",
-        "sp500_universe": "SP500",
-        "s&p500": "SP500",
         "top1000": "TOP1000",
         "top2000": "TOP2000",
+        "major_cap": "TOP1000",
+        "nasdaq100": "NASDAQ100",
         "universe": universe_code,
     }
     resolved_universe = source_to_universe.get(normalized_source, universe_code)
+    if resolved_universe == "NASDAQ100":
+        rows = load_market_universe_members("NASDAQ100", host=host, user=user, password=password, port=port)
+        return _slice_symbols([row.get("symbol") for row in rows], offset=batch_offset, max_symbols=max_symbols), normalized_source
     normalized_universe, normalized_limit = _normalize_intraday_universe(resolved_universe, universe_limit)
     if normalized_universe == "SP500":
         rows = load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
@@ -1871,6 +2777,7 @@ def collect_and_store_earnings_calendar(
     password: str = "1234",
     port: int = 3306,
     source_symbols_loader: Callable[[], list[str]] | None = None,
+    source_symbol_loaders: dict[str, Callable[[], list[str]]] | None = None,
     earnings_fetcher: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Collect bounded upcoming earnings events and persist them to the common event calendar."""
@@ -1889,7 +2796,9 @@ def collect_and_store_earnings_calendar(
         password=password,
         port=port,
         source_symbols_loader=source_symbols_loader,
+        source_symbol_loaders=source_symbol_loaders,
     )
+    universe_scope = earnings_universe_scope_for_source(normalized_source, universe_code=universe_code)
 
     if not target_symbols:
         return {
@@ -1898,6 +2807,7 @@ def collect_and_store_earnings_calendar(
             "event_type": "EARNINGS",
             "method": "yfinance_ticker_calendar",
             "symbol_source": normalized_source,
+            "universe_scope": universe_scope,
             "universe_code": universe_code,
             "batch_offset": batch_offset,
             "rows_written": 0,
@@ -1919,6 +2829,8 @@ def collect_and_store_earnings_calendar(
     fetch_kwargs = {
         "lookahead_days": lookahead_days,
         "max_symbols": max_symbols,
+        "symbol_source": normalized_source,
+        "universe_scope": universe_scope,
         "validate_with_nasdaq": validate_with_nasdaq,
         "request_sleep_sec": request_sleep_sec,
     }
@@ -1931,7 +2843,19 @@ def collect_and_store_earnings_calendar(
         target_symbols,
         **supported_kwargs,
     )
-    events = [{**row, "collected_at": collected_at} for row in result.get("events", [])]
+    events = []
+    for row in result.get("events", []):
+        enriched = {**row, "collected_at": collected_at}
+        if str(enriched.get("event_type") or "").strip().upper() == "EARNINGS":
+            enriched.setdefault("event_family", "earnings")
+            enriched.setdefault("event_subtype", "earnings_release")
+            enriched.setdefault("universe_scope", universe_scope)
+            enriched.setdefault("source_authority", _earnings_source_authority(enriched.get("validation_status")))
+            raw_payload = dict(enriched.get("raw_payload") or {})
+            raw_payload.setdefault("symbol_source", normalized_source)
+            raw_payload.setdefault("universe_scope", universe_scope)
+            enriched["raw_payload"] = raw_payload
+        events.append(enriched)
     rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
     superseded_rows_marked = mark_superseded_earnings_events(
         events,
@@ -1968,6 +2892,7 @@ def collect_and_store_earnings_calendar(
         **result,
         "rows_written": rows_written,
         "symbol_source": normalized_source,
+        "universe_scope": universe_scope,
         "universe_code": universe_code,
         "universe_limit": universe_limit,
         "interval": interval,
@@ -2096,6 +3021,688 @@ def load_market_universe_members(
         )
     finally:
         db.close()
+
+
+def _market_liquidity_universe_row(
+    row: dict[str, Any],
+    *,
+    universe_code: str,
+    rank_position: int,
+    generated_at: str,
+) -> dict[str, Any] | None:
+    symbol = _normalize_symbol(row.get("symbol"))
+    if not symbol:
+        return None
+    return {
+        "universe_code": universe_code,
+        "symbol": symbol,
+        "rank_position": _safe_int(row.get("rank_position")) or rank_position,
+        "source_symbol": _normalize_symbol(row.get("source_symbol") or row.get("symbol")) or symbol,
+        "name": row.get("name") or row.get("long_name"),
+        "sector": row.get("sector"),
+        "industry": row.get("industry"),
+        "market_cap": _safe_int(row.get("market_cap")),
+        "avg_dollar_volume_20d": _safe_float(row.get("avg_dollar_volume_20d")),
+        "dollar_volume_days": _safe_int(row.get("dollar_volume_days")),
+        "ranking_window_start_date": row.get("ranking_window_start_date"),
+        "ranking_end_date": row.get("ranking_end_date"),
+        "ranking_source": row.get("ranking_source") or LIQUIDITY_UNIVERSE_RANKING_SOURCE,
+        "price_source": row.get("price_source") or LIQUIDITY_UNIVERSE_PRICE_SOURCE,
+        "listing_source": row.get("listing_source") or row.get("source"),
+        "listing_source_url": row.get("listing_source_url") or row.get("source_url"),
+        "listing_source_type": row.get("listing_source_type"),
+        "listing_coverage_status": row.get("listing_coverage_status"),
+        "listing_event_type": row.get("listing_event_type"),
+        "listing_status": row.get("listing_status"),
+        "listing_event_date": row.get("listing_event_date") or row.get("as_of_date"),
+        "listing_collected_at": row.get("listing_collected_at") or row.get("collected_at"),
+        "generated_at": generated_at,
+        "active": _safe_int(row.get("active")) if row.get("active") is not None else 1,
+        "error_msg": row.get("error_msg"),
+    }
+
+
+def upsert_market_liquidity_universe_members(
+    rows: list[dict[str, Any]],
+    *,
+    universe_code: str = "TOP1000",
+    generated_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    normalized_code, _ = _normalize_intraday_universe(universe_code)
+    generated_at_value = generated_at or _timestamp_str()
+    normalized_rows = [
+        normalized
+        for index, row in enumerate(rows, start=1)
+        if (
+            normalized := _market_liquidity_universe_row(
+                row,
+                universe_code=normalized_code,
+                rank_position=index,
+                generated_at=generated_at_value,
+            )
+        )
+    ]
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_liquidity_universe_member",
+            MARKET_INTELLIGENCE_SCHEMAS["market_liquidity_universe_member"],
+            DB_META,
+        )
+        if not normalized_rows:
+            return 0
+        sql = """
+        INSERT INTO market_liquidity_universe_member (
+          universe_code, symbol, rank_position, source_symbol, name, sector, industry, market_cap,
+          avg_dollar_volume_20d, dollar_volume_days, ranking_window_start_date, ranking_end_date,
+          ranking_source, price_source,
+          listing_source, listing_source_url, listing_source_type, listing_coverage_status,
+          listing_event_type, listing_status, listing_event_date, listing_collected_at,
+          generated_at, active, error_msg
+        ) VALUES (
+          %(universe_code)s, %(symbol)s, %(rank_position)s, %(source_symbol)s, %(name)s, %(sector)s, %(industry)s, %(market_cap)s,
+          %(avg_dollar_volume_20d)s, %(dollar_volume_days)s, %(ranking_window_start_date)s, %(ranking_end_date)s,
+          %(ranking_source)s, %(price_source)s,
+          %(listing_source)s, %(listing_source_url)s, %(listing_source_type)s, %(listing_coverage_status)s,
+          %(listing_event_type)s, %(listing_status)s, %(listing_event_date)s, %(listing_collected_at)s,
+          %(generated_at)s, %(active)s, %(error_msg)s
+        )
+        ON DUPLICATE KEY UPDATE
+          rank_position = VALUES(rank_position),
+          source_symbol = VALUES(source_symbol),
+          name = VALUES(name),
+          sector = VALUES(sector),
+          industry = VALUES(industry),
+          market_cap = VALUES(market_cap),
+          avg_dollar_volume_20d = VALUES(avg_dollar_volume_20d),
+          dollar_volume_days = VALUES(dollar_volume_days),
+          ranking_window_start_date = VALUES(ranking_window_start_date),
+          ranking_end_date = VALUES(ranking_end_date),
+          ranking_source = VALUES(ranking_source),
+          price_source = VALUES(price_source),
+          listing_source = VALUES(listing_source),
+          listing_source_url = VALUES(listing_source_url),
+          listing_source_type = VALUES(listing_source_type),
+          listing_coverage_status = VALUES(listing_coverage_status),
+          listing_event_type = VALUES(listing_event_type),
+          listing_status = VALUES(listing_status),
+          listing_event_date = VALUES(listing_event_date),
+          listing_collected_at = VALUES(listing_collected_at),
+          generated_at = VALUES(generated_at),
+          active = VALUES(active),
+          error_msg = VALUES(error_msg)
+        """
+        db.executemany(sql, normalized_rows)
+        symbols = [row["symbol"] for row in normalized_rows if row.get("symbol")]
+        placeholders = ",".join(["%s"] * len(symbols))
+        db.execute(
+            f"""
+            UPDATE market_liquidity_universe_member
+            SET active = 0
+            WHERE universe_code = %s
+              AND symbol NOT IN ({placeholders})
+            """,
+            [normalized_code] + symbols,
+        )
+        return len(normalized_rows)
+    finally:
+        db.close()
+
+
+def load_market_liquidity_universe_members(
+    universe_code: str = "TOP1000",
+    *,
+    universe_limit: int | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    limit = int(universe_limit or normalized_limit)
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        return db.query(
+            """
+            SELECT
+                universe_code, symbol, rank_position, source_symbol, name, sector, industry, market_cap,
+                avg_dollar_volume_20d, dollar_volume_days, ranking_window_start_date, ranking_end_date,
+                ranking_source, price_source,
+                listing_source, listing_source_url, listing_source_type, listing_coverage_status,
+                listing_event_type, listing_status, listing_event_date, listing_collected_at,
+                generated_at, active, error_msg
+            FROM market_liquidity_universe_member
+            WHERE universe_code = %s
+              AND active = 1
+            ORDER BY rank_position ASC, symbol ASC
+            LIMIT %s
+            """,
+            [normalized_code, limit],
+        )
+    finally:
+        db.close()
+
+
+def _market_symbol_alias_row(
+    row: dict[str, Any],
+    *,
+    status: str,
+    detected_at: str,
+    applied_at: str | None,
+) -> dict[str, Any] | None:
+    source_symbol = _normalize_symbol(row.get("source_symbol") or row.get("symbol"))
+    alias_symbol = _normalize_symbol(row.get("alias_symbol") or row.get("replacement_symbol"))
+    if not source_symbol or not alias_symbol or source_symbol == alias_symbol:
+        return None
+    row_status = str(row.get("status") or status or "candidate").strip().lower()
+    if row_status not in {"candidate", "active", "rejected"}:
+        row_status = "candidate"
+    evidence = row.get("evidence_json") if row.get("evidence_json") is not None else row.get("evidence")
+    return {
+        "source_symbol": source_symbol,
+        "alias_symbol": alias_symbol,
+        "alias_type": str(row.get("alias_type") or "ticker_change").strip() or "ticker_change",
+        "status": row_status,
+        "confidence": _safe_float(row.get("confidence")),
+        "evidence_json": _json_payload(evidence),
+        "detected_at": row.get("detected_at") or detected_at,
+        "applied_at": row.get("applied_at") or applied_at,
+    }
+
+
+def upsert_market_symbol_aliases(
+    rows: list[dict[str, Any]],
+    *,
+    status: str | None = None,
+    detected_at: str | None = None,
+    applied_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    effective_status = status or ("active" if applied_at else "candidate")
+    detected_at_value = detected_at or _timestamp_str()
+    normalized_rows = [
+        normalized
+        for row in rows
+        if (
+            normalized := _market_symbol_alias_row(
+                row,
+                status=effective_status,
+                detected_at=detected_at_value,
+                applied_at=applied_at,
+            )
+        )
+    ]
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_symbol_alias",
+            MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"],
+            DB_META,
+        )
+        if not normalized_rows:
+            return 0
+        sql = """
+        INSERT INTO market_symbol_alias (
+          source_symbol, alias_symbol, alias_type, status, confidence,
+          evidence_json, detected_at, applied_at
+        ) VALUES (
+          %(source_symbol)s, %(alias_symbol)s, %(alias_type)s, %(status)s, %(confidence)s,
+          %(evidence_json)s, %(detected_at)s, %(applied_at)s
+        )
+        ON DUPLICATE KEY UPDATE
+          status = VALUES(status),
+          confidence = VALUES(confidence),
+          evidence_json = VALUES(evidence_json),
+          detected_at = VALUES(detected_at),
+          applied_at = VALUES(applied_at)
+        """
+        db.executemany(sql, normalized_rows)
+        return len(normalized_rows)
+    finally:
+        db.close()
+
+
+def load_active_market_symbol_aliases(
+    symbols: Sequence[Any],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, dict[str, Any]]:
+    normalized_symbols = sorted({_normalize_symbol(symbol) for symbol in symbols if _normalize_symbol(symbol)})
+    if not normalized_symbols:
+        return {}
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_symbol_alias",
+            MARKET_INTELLIGENCE_SCHEMAS["market_symbol_alias"],
+            DB_META,
+        )
+        placeholders = ",".join(["%s"] * len(normalized_symbols))
+        rows = db.query(
+            f"""
+            SELECT
+                source_symbol, alias_symbol, alias_type, status, confidence,
+                evidence_json, detected_at, applied_at
+            FROM market_symbol_alias
+            WHERE source_symbol IN ({placeholders})
+              AND status = %s
+            ORDER BY confidence DESC, applied_at DESC, detected_at DESC
+            """,
+            normalized_symbols + ["active"],
+        )
+    finally:
+        db.close()
+
+    aliases: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        source_symbol = _normalize_symbol(row.get("source_symbol"))
+        alias_symbol = _normalize_symbol(row.get("alias_symbol"))
+        if not source_symbol or not alias_symbol or source_symbol in aliases:
+            continue
+        normalized = dict(row)
+        normalized["source_symbol"] = source_symbol
+        normalized["alias_symbol"] = alias_symbol
+        aliases[source_symbol] = normalized
+    return aliases
+
+
+def _normalized_company_name(value: Any) -> str:
+    text = re.sub(r"[^A-Z0-9]+", " ", str(value or "").upper())
+    suffixes = {
+        "INC",
+        "INCORPORATED",
+        "CORP",
+        "CORPORATION",
+        "CO",
+        "COMPANY",
+        "LTD",
+        "PLC",
+        "HOLDING",
+        "HOLDINGS",
+        "GROUP",
+        "CLASS",
+        "COMMON",
+        "STOCK",
+    }
+    tokens = [token for token in text.split() if token and token not in suffixes]
+    return " ".join(tokens)
+
+
+def _default_symbol_alias_search(query: str, *, max_results: int = 8) -> list[dict[str, Any]]:
+    try:
+        search = yf.Search(query, max_results=max_results)
+        quotes = getattr(search, "quotes", None)
+        return list(quotes or [])
+    except Exception:
+        return []
+
+
+def _symbol_alias_candidate_score(
+    *,
+    source_name: str,
+    candidate: dict[str, Any],
+    expected_exchange: str | None,
+) -> float:
+    candidate_name = candidate.get("longname") or candidate.get("shortname") or candidate.get("name")
+    source_normalized = _normalized_company_name(source_name)
+    candidate_normalized = _normalized_company_name(candidate_name)
+    if not source_normalized or not candidate_normalized:
+        score = 0.55
+    elif source_normalized == candidate_normalized:
+        score = 0.96
+    elif source_normalized in candidate_normalized or candidate_normalized in source_normalized:
+        score = 0.88
+    else:
+        source_tokens = set(source_normalized.split())
+        candidate_tokens = set(candidate_normalized.split())
+        overlap = len(source_tokens & candidate_tokens) / max(len(source_tokens), 1)
+        score = 0.62 + min(0.2, overlap * 0.2)
+    exchange = str(candidate.get("exchange") or candidate.get("exchDisp") or "").strip().upper()
+    if expected_exchange and exchange and exchange != str(expected_exchange).strip().upper():
+        score -= 0.05
+    if str(candidate.get("quoteType") or "").strip().upper() not in {"", "EQUITY"}:
+        score -= 0.1
+    return max(0.0, min(0.99, score))
+
+
+def detect_market_symbol_alias_candidates(
+    symbols: Sequence[Any],
+    *,
+    metadata_by_symbol: dict[str, dict[str, Any]] | None = None,
+    quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    search_fn: Callable[..., list[dict[str, Any]]] | None = None,
+) -> list[dict[str, Any]]:
+    """Suggest replacement tickers for quote-missing universe symbols without applying them."""
+    fetcher = quote_fetcher or _fetch_yahoo_quote_rows
+    search = search_fn or _default_symbol_alias_search
+    metadata_by_symbol = metadata_by_symbol or {}
+    candidates: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for raw_symbol in symbols:
+        source_symbol = _normalize_symbol(raw_symbol)
+        if not source_symbol:
+            continue
+        metadata = metadata_by_symbol.get(source_symbol) or {}
+        source_name = str(metadata.get("long_name") or metadata.get("name") or "").strip()
+        if not source_name:
+            continue
+        expected_exchange = metadata.get("profile_exchange") or metadata.get("exchange")
+        search_rows = search(source_name, max_results=8)
+        ranked: list[tuple[float, dict[str, Any]]] = []
+        for row in search_rows:
+            alias_symbol = _normalize_symbol(row.get("symbol"))
+            if not alias_symbol or alias_symbol == source_symbol:
+                continue
+            score = _symbol_alias_candidate_score(
+                source_name=source_name,
+                candidate=row,
+                expected_exchange=expected_exchange,
+            )
+            ranked.append((score, row))
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        for score, row in ranked[:3]:
+            alias_symbol = _normalize_symbol(row.get("symbol"))
+            if not alias_symbol or (source_symbol, alias_symbol) in seen:
+                continue
+            quote_rows = fetcher([alias_symbol])
+            quote_map = {
+                _normalize_symbol(quote.get("symbol")): quote
+                for quote in quote_rows
+                if _normalize_symbol(quote.get("symbol"))
+            }
+            if alias_symbol not in quote_map:
+                continue
+            seen.add((source_symbol, alias_symbol))
+            candidates.append(
+                {
+                    "symbol": source_symbol,
+                    "source_symbol": source_symbol,
+                    "alias_symbol": alias_symbol,
+                    "alias_type": "ticker_change",
+                    "status": "candidate",
+                    "confidence": round(score, 2),
+                    "reason": "old ticker missing, replacement quote active",
+                    "evidence": {
+                        "source_name": source_name,
+                        "search_symbol": row.get("symbol"),
+                        "search_name": row.get("longname") or row.get("shortname"),
+                        "search_exchange": row.get("exchange") or row.get("exchDisp"),
+                        "quote_provider": "yahoo_quote_v7",
+                    },
+                }
+            )
+            break
+    return candidates
+
+
+def _dedupe_liquidity_candidate_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        symbol = _normalize_symbol(row.get("symbol"))
+        if not symbol or symbol in seen:
+            continue
+        seen.add(symbol)
+        item = dict(row)
+        item["symbol"] = symbol
+        item["source_symbol"] = _normalize_symbol(row.get("source_symbol") or symbol) or symbol
+        item["name"] = row.get("name") or row.get("long_name")
+        item["listing_source"] = row.get("listing_source") or row.get("source")
+        item["listing_source_url"] = row.get("listing_source_url") or row.get("source_url") or row.get("source_ref")
+        deduped.append(item)
+    return deduped
+
+
+def load_market_liquidity_universe_candidate_symbols(
+    universe_code: str = "TOP1000",
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    _normalize_intraday_universe(universe_code)
+    source_placeholders = ",".join(["%s"] * len(LIQUIDITY_UNIVERSE_LISTING_SOURCES))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        rows = db.query(
+            f"""
+            SELECT
+                l.symbol,
+                l.symbol AS source_symbol,
+                COALESCE(NULLIF(p.long_name, ''), NULLIF(l.name, ''), s.name) AS name,
+                p.sector,
+                p.industry,
+                p.market_cap,
+                l.source AS listing_source,
+                l.source_ref AS listing_source_url,
+                l.source_type AS listing_source_type,
+                l.coverage_status AS listing_coverage_status,
+                l.event_type AS listing_event_type,
+                l.listing_status AS listing_status,
+                l.event_date AS listing_event_date,
+                l.collected_at AS listing_collected_at,
+                l.error_msg
+            FROM nyse_symbol_lifecycle l
+            LEFT JOIN nyse_asset_profile p
+              ON p.symbol = l.symbol
+             AND p.kind = l.kind
+            LEFT JOIN nyse_stock s
+              ON s.symbol = l.symbol
+            WHERE l.source IN ({source_placeholders})
+              AND l.source_type = %s
+              AND l.event_type = %s
+              AND l.kind = %s
+              AND l.listing_status = %s
+              AND COALESCE(l.event_date, DATE(l.collected_at)) = (
+                    SELECT MAX(COALESCE(latest.event_date, DATE(latest.collected_at)))
+                    FROM nyse_symbol_lifecycle latest
+                    WHERE latest.source = l.source
+                      AND latest.source_type = %s
+                      AND latest.event_type = %s
+                      AND latest.kind = %s
+                      AND latest.listing_status = %s
+              )
+              AND (p.is_spac IS NULL OR p.is_spac <> 1)
+              AND (p.status IS NULL OR LOWER(p.status) NOT IN ('dilist', 'delist', 'delisted'))
+            ORDER BY
+              l.symbol ASC,
+              CASE l.source
+                WHEN 'nasdaq_symdir_nasdaqlisted' THEN 1
+                WHEN 'nasdaq_symdir_otherlisted' THEN 2
+                WHEN 'nyse_listings_directory' THEN 3
+                WHEN 'sec_company_tickers_exchange' THEN 4
+                ELSE 9
+              END ASC
+            """,
+            list(LIQUIDITY_UNIVERSE_LISTING_SOURCES)
+            + [
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+                "current_listing_snapshot",
+                "listing_observed",
+                "stock",
+                "active",
+            ],
+        )
+        return _dedupe_liquidity_candidate_rows(rows)
+    finally:
+        db.close()
+
+
+def load_market_dollar_volume_universe_members(
+    universe_code: str = "TOP1000",
+    *,
+    universe_limit: int | None = None,
+    candidate_rows: list[dict[str, Any]] | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    limit = int(universe_limit or normalized_limit)
+    candidates = _dedupe_liquidity_candidate_rows(
+        candidate_rows
+        if candidate_rows is not None
+        else load_market_liquidity_universe_candidate_symbols(
+            normalized_code,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    )
+    symbols = [_normalize_symbol(row.get("symbol")) for row in candidates if row.get("symbol")]
+    symbols = [symbol for symbol in symbols if symbol]
+    if not symbols:
+        return []
+
+    symbol_meta = {str(row["symbol"]): row for row in candidates if row.get("symbol")}
+    placeholders = ",".join(["%s"] * len(symbols))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_PRICE)
+        latest_rows = db.query(
+            f"""
+            SELECT MAX(`date`) AS latest_price_date
+            FROM nyse_price_history
+            WHERE symbol IN ({placeholders})
+              AND timeframe = %s
+              AND COALESCE(adj_close, close) IS NOT NULL
+              AND volume IS NOT NULL
+              AND volume > 0
+            """,
+            symbols + ["1d"],
+        )
+        latest_price_date = _event_date_str((latest_rows[0] or {}).get("latest_price_date")) if latest_rows else None
+        if not latest_price_date:
+            return []
+        ranking_rows = db.query(
+            f"""
+            WITH recent_dates AS (
+                SELECT DISTINCT `date`
+                FROM nyse_price_history
+                WHERE symbol IN ({placeholders})
+                  AND timeframe = %s
+                  AND `date` <= %s
+                  AND COALESCE(adj_close, close) IS NOT NULL
+                  AND volume IS NOT NULL
+                  AND volume > 0
+                ORDER BY `date` DESC
+                LIMIT 20
+            )
+            SELECT
+                p.symbol,
+                AVG(COALESCE(adj_close, close) * volume) AS avg_dollar_volume_20d,
+                COUNT(*) AS dollar_volume_days,
+                MIN(p.`date`) AS ranking_window_start_date,
+                MAX(p.`date`) AS ranking_end_date
+            FROM nyse_price_history p
+            JOIN recent_dates rd
+              ON rd.`date` = p.`date`
+            WHERE p.symbol IN ({placeholders})
+              AND p.timeframe = %s
+              AND COALESCE(p.adj_close, p.close) IS NOT NULL
+              AND p.volume IS NOT NULL
+              AND p.volume > 0
+            GROUP BY p.symbol
+            HAVING MAX(p.`date`) = %s
+            ORDER BY avg_dollar_volume_20d DESC, p.symbol ASC
+            LIMIT %s
+            """,
+            symbols + ["1d", latest_price_date] + symbols + ["1d", latest_price_date, limit],
+        )
+    finally:
+        db.close()
+
+    out: list[dict[str, Any]] = []
+    for rank, row in enumerate(ranking_rows[:limit], start=1):
+        symbol = _normalize_symbol(row.get("symbol"))
+        if not symbol:
+            continue
+        meta = symbol_meta.get(symbol, {})
+        out.append(
+            {
+                **meta,
+                "universe_code": normalized_code,
+                "symbol": symbol,
+                "rank_position": rank,
+                "avg_dollar_volume_20d": _safe_float(row.get("avg_dollar_volume_20d")),
+                "dollar_volume_days": _safe_int(row.get("dollar_volume_days")),
+                "ranking_window_start_date": _event_date_str(row.get("ranking_window_start_date")),
+                "ranking_end_date": _event_date_str(row.get("ranking_end_date")) or latest_price_date,
+                "ranking_source": LIQUIDITY_UNIVERSE_RANKING_SOURCE,
+                "price_source": LIQUIDITY_UNIVERSE_PRICE_SOURCE,
+            }
+        )
+    return out
+
+
+def collect_and_store_market_liquidity_universe(
+    *,
+    universe_code: str = "TOP1000",
+    universe_limit: int | None = None,
+    candidate_rows: list[dict[str, Any]] | None = None,
+    generated_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    rows = load_market_dollar_volume_universe_members(
+        normalized_code,
+        universe_limit=normalized_limit,
+        candidate_rows=candidate_rows,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    generated_at_value = generated_at or _timestamp_str()
+    rows_written = upsert_market_liquidity_universe_members(
+        rows,
+        universe_code=normalized_code,
+        generated_at=generated_at_value,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    ranking_dates = [row.get("ranking_end_date") for row in rows if row.get("ranking_end_date")]
+    return {
+        "universe_code": normalized_code,
+        "universe_limit": normalized_limit,
+        "rows_computed": len(rows),
+        "rows_written": rows_written,
+        "symbols": [row["symbol"] for row in rows if row.get("symbol")],
+        "ranking_source": LIQUIDITY_UNIVERSE_RANKING_SOURCE,
+        "price_source": LIQUIDITY_UNIVERSE_PRICE_SOURCE,
+        "ranking_end_date": max(ranking_dates) if ranking_dates else None,
+        "generated_at": generated_at_value,
+        "target_table": "finance_meta.market_liquidity_universe_member",
+    }
 
 
 def load_market_cap_universe_members(
@@ -2851,6 +4458,7 @@ def _build_quote_snapshot_row(
     *,
     universe_code: str,
     symbol: str,
+    quote_symbol: str | None = None,
     interval_code: str,
     snapshot_time_utc: str,
     quote_row: dict[str, Any] | None,
@@ -2858,6 +4466,7 @@ def _build_quote_snapshot_row(
 ) -> dict[str, Any]:
     quote_row = dict(quote_row or {})
     db_previous_close = dict(db_previous_close or {})
+    normalized_quote_symbol = _normalize_symbol(quote_symbol or symbol) or symbol
     latest_price = _safe_float(quote_row.get("regularMarketPrice"))
     previous_close = _safe_float(quote_row.get("regularMarketPreviousClose"))
     previous_source = "quote"
@@ -2885,11 +4494,14 @@ def _build_quote_snapshot_row(
 
     market_state = quote_row.get("marketState") or ""
     source_ref = f"yahoo_quote_v7;previous_close={previous_source}"
+    if normalized_quote_symbol != symbol:
+        source_ref += f";alias_symbol={normalized_quote_symbol}"
     if market_state:
         source_ref += f";market_state={market_state}"
     return {
         "universe_code": universe_code,
         "symbol": symbol,
+        "quote_symbol": normalized_quote_symbol,
         "interval_code": interval_code,
         "snapshot_time_utc": snapshot_time_utc,
         "quote_time_utc": quote_time_utc,
@@ -2938,6 +4550,7 @@ def _build_snapshot_row(
     return {
         "universe_code": universe_code,
         "symbol": symbol,
+        "quote_symbol": symbol,
         "interval_code": interval_code,
         "snapshot_time_utc": snapshot_time_utc,
         "quote_time_utc": quote_time_utc,
@@ -2961,15 +4574,22 @@ def _collect_quote_snapshot_rows(
     quote_batch_size: int,
     quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
     previous_close_map: dict[str, dict[str, Any]] | None = None,
+    alias_map: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:
     fetcher = quote_fetcher or _fetch_yahoo_quote_rows
     previous_close_map = previous_close_map or {}
+    alias_map = alias_map or {}
     rows: list[dict[str, Any]] = []
     failed_symbols: list[str] = []
     batches: list[dict[str, Any]] = []
     for batch in _chunked(symbols, max(1, int(quote_batch_size))):
         batch_started = datetime.now(UTC)
-        quote_rows = fetcher(batch)
+        quote_symbols_by_source = {
+            symbol: _normalize_symbol(dict(alias_map.get(symbol) or {}).get("alias_symbol") or symbol) or symbol
+            for symbol in batch
+        }
+        quote_request_symbols = list(dict.fromkeys(quote_symbols_by_source.values()))
+        quote_rows = fetcher(quote_request_symbols)
         quote_map = {
             _normalize_symbol(row.get("symbol")): row
             for row in quote_rows
@@ -2978,17 +4598,20 @@ def _collect_quote_snapshot_rows(
         batches.append(
             {
                 "requested": len(batch),
+                "quote_requested": len(quote_request_symbols),
                 "returned": len(quote_map),
                 "duration_sec": round((datetime.now(UTC) - batch_started).total_seconds(), 3),
             }
         )
         for symbol in batch:
+            quote_symbol = quote_symbols_by_source.get(symbol) or symbol
             row = _build_quote_snapshot_row(
                 universe_code=universe_code,
                 symbol=symbol,
+                quote_symbol=quote_symbol,
                 interval_code=interval_code,
                 snapshot_time_utc=snapshot_time,
-                quote_row=quote_map.get(symbol),
+                quote_row=quote_map.get(quote_symbol),
                 db_previous_close=previous_close_map.get(symbol),
             )
             if row["provider_status"] != "ok":
@@ -3055,15 +4678,16 @@ def upsert_intraday_snapshot_rows(
         )
         sql = """
         INSERT INTO market_intraday_snapshot (
-          universe_code, symbol, interval_code, snapshot_time_utc, quote_time_utc,
+          universe_code, symbol, quote_symbol, interval_code, snapshot_time_utc, quote_time_utc,
           source, source_ref, previous_close, latest_price, return_pct, volume,
           provider_status, error_msg
         ) VALUES (
-          %(universe_code)s, %(symbol)s, %(interval_code)s, %(snapshot_time_utc)s, %(quote_time_utc)s,
+          %(universe_code)s, %(symbol)s, %(quote_symbol)s, %(interval_code)s, %(snapshot_time_utc)s, %(quote_time_utc)s,
           %(source)s, %(source_ref)s, %(previous_close)s, %(latest_price)s, %(return_pct)s, %(volume)s,
           %(provider_status)s, %(error_msg)s
         )
         ON DUPLICATE KEY UPDATE
+          quote_symbol = VALUES(quote_symbol),
           quote_time_utc = VALUES(quote_time_utc),
           source = VALUES(source),
           source_ref = VALUES(source_ref),
@@ -3120,7 +4744,7 @@ def collect_and_store_market_intraday_snapshot(
             port=port,
         )
     else:
-        loader = lambda: load_market_cap_universe_members(
+        loader = lambda: load_market_liquidity_universe_members(
             normalized_universe,
             universe_limit=normalized_limit,
             host=host,
@@ -3132,6 +4756,11 @@ def collect_and_store_market_intraday_snapshot(
     if not members and normalized_universe == "SP500":
         collect_and_store_sp500_universe(host=host, user=user, password=password, port=port)
         members = loader()
+    metadata_by_symbol = {
+        symbol: dict(row)
+        for row in members
+        if (symbol := _normalize_symbol(row.get("symbol")))
+    }
     symbols = [_normalize_symbol(row.get("symbol")) for row in members if row.get("symbol")]
     symbols = sorted({symbol for symbol in symbols if symbol})
     if not symbols:
@@ -3153,12 +4782,22 @@ def collect_and_store_market_intraday_snapshot(
         "universe_code": normalized_universe,
         "universe_limit": normalized_limit,
     }
+    active_aliases: dict[str, dict[str, Any]] = {}
+    ticker_alias_candidates: list[dict[str, Any]] = []
     snapshot_rows: list[dict[str, Any]]
     failed_symbols: list[str]
     source = "yfinance"
     method_used = "yfinance_5m"
 
     if normalized_method == "quote_fast" and price_downloader is None:
+        active_aliases = load_active_market_symbol_aliases(
+            symbols,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+        diagnostics["active_symbol_alias_count"] = len(active_aliases)
         previous_close_map = _load_db_previous_close_map(
             symbols,
             host=host,
@@ -3175,10 +4814,45 @@ def collect_and_store_market_intraday_snapshot(
                 quote_batch_size=quote_batch_size,
                 quote_fetcher=quote_fetcher,
                 previous_close_map=previous_close_map,
+                alias_map=active_aliases,
             )
             diagnostics.update(quote_diagnostics)
             source = "yahoo_quote"
             method_used = "quote_fast"
+            missing_quote_symbols = [
+                symbol
+                for symbol in failed_symbols
+                if str(
+                    next(
+                        (
+                            row.get("error_msg")
+                            for row in snapshot_rows
+                            if row.get("symbol") == symbol and row.get("provider_status") != "ok"
+                        ),
+                        "",
+                    )
+                ).lower()
+                == "missing quote row"
+            ]
+            if missing_quote_symbols:
+                try:
+                    ticker_alias_candidates = detect_market_symbol_alias_candidates(
+                        missing_quote_symbols,
+                        metadata_by_symbol=metadata_by_symbol,
+                        quote_fetcher=quote_fetcher,
+                    )
+                    if ticker_alias_candidates:
+                        upsert_market_symbol_aliases(
+                            ticker_alias_candidates,
+                            status="candidate",
+                            host=host,
+                            user=user,
+                            password=password,
+                            port=port,
+                        )
+                except Exception as exc:
+                    diagnostics["ticker_alias_candidate_error"] = str(exc)
+            diagnostics["ticker_alias_candidate_count"] = len(ticker_alias_candidates)
         except Exception as exc:
             diagnostics["quote_fast_error"] = str(exc)
             if not fallback_to_yfinance:
@@ -3223,6 +4897,11 @@ def collect_and_store_market_intraday_snapshot(
         "interval": normalized_interval,
         "source": source,
         "method": method_used,
+        "active_symbol_aliases": [
+            {"source_symbol": source_symbol, "alias_symbol": alias.get("alias_symbol")}
+            for source_symbol, alias in sorted(active_aliases.items())
+        ],
+        "ticker_alias_candidates": ticker_alias_candidates,
         "duration_sec": round((datetime.now(UTC) - started_at).total_seconds(), 3),
         "diagnostics": diagnostics,
         "message": f"{universe_label} intraday snapshot completed.",

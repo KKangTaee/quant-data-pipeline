@@ -6,7 +6,11 @@ from typing import Any
 
 import pandas as pd
 
-from app.jobs.diagnostics import inspect_price_stale_symbols, inspect_statement_coverage_symbols
+from app.jobs.diagnostics import (
+    inspect_price_stale_symbols,
+    inspect_statement_coverage_symbols,
+    inspect_statement_universe_coverage,
+)
 from finance.data.financial_statements import inspect_financial_statement_source
 from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
 from finance.loaders.price import load_price_window_summary
@@ -62,6 +66,23 @@ def run_statement_coverage_diagnosis(
         symbols,
         freq=freq,
         sample_size=sample_size,
+    )
+
+
+def run_statement_universe_coverage_qa(
+    *,
+    universe_code: str,
+    universe_limit: int | None,
+    freq: str,
+    as_of_date: str | date | None,
+) -> dict[str, Any]:
+    """Run DB-backed EDGAR statement coverage QA for a broad universe."""
+
+    return inspect_statement_universe_coverage(
+        universe_code=universe_code,
+        universe_limit=universe_limit,
+        freq=freq,
+        as_of_date=as_of_date,
     )
 
 

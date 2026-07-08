@@ -1,0 +1,44 @@
+# Overview Service Split V25-V32 Runs
+
+## 2026-06-29
+
+- V25 QA: `test -f .../PLAN.md && test -f .../STATUS.md` -> pass.
+- V25 QA: `.venv/bin/python -m py_compile app/services/overview_market_intelligence.py app/services/overview/sentiment.py app/services/overview/events.py app/services/overview/data_health.py app/services/overview/market_movers.py app/services/overview/market_context.py tests/test_service_contracts.py` -> pass.
+- V26 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_service_owns_implementation_body` -> failed because `sentiment.py` was still a re-export wrapper.
+- V26 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_sentiment_service_owns_implementation_body` -> pass.
+- V26 QA: `.venv/bin/python -m py_compile app/services/overview/sentiment.py tests/test_service_contracts.py` -> pass.
+- V26 QA: direct `app.services.overview.sentiment.build_market_sentiment_snapshot` empty-frame smoke -> returned `MISSING` with expected read-model keys.
+- V26 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_sentiment_snapshot_summarizes_cnn_and_aaii_context` -> pass.
+- V27 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_service_owns_implementation_body` -> failed because `events.py` was still a re-export wrapper.
+- V27 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_events_service_owns_implementation_body` -> pass.
+- V27 QA: `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` -> pass.
+- V27 QA: direct `app.services.overview.events` empty-query smoke -> event snapshot `NO_EVENTS`, macro week lane `NO_DATA`.
+- V27 QA: legacy path event tests `test_market_events_snapshot_macro_filter_reads_macro_prefix_rows`, `test_market_events_snapshot_warns_on_stale_earnings_estimates`, `test_overview_macro_week_lane_clusters_near_events_without_signal_language`, `test_overview_macro_week_lane_splits_recent_and_upcoming_major_macro_events` -> pass.
+- V28 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_data_health_service_owns_implementation_body` -> failed because `data_health.py` was still a re-export wrapper.
+- V28 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_data_health_service_owns_implementation_body` -> pass.
+- V28 QA: `.venv/bin/python -m py_compile app/services/overview/data_health.py tests/test_service_contracts.py` -> pass.
+- V28 QA: direct `app.services.overview.data_health` empty-query smoke -> collection ops `REVIEW`, handoff schema `overview_data_health_ingestion_handoff_v1`.
+- V28 QA: legacy path data health tests `test_collection_ops_snapshot_combines_db_freshness_and_run_history`, `test_collection_ops_snapshot_tracks_market_sentiment_freshness`, `test_overview_data_health_handoff_ranks_problem_rows_and_points_to_collection_surfaces` -> pass.
+- V29 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_service_owns_implementation_body` -> failed because `market_movers.py` was still a re-export wrapper.
+- V29 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_movers_service_owns_implementation_body` -> pass.
+- V29 QA: `.venv/bin/python -m py_compile app/services/overview/market_movers.py tests/test_service_contracts.py` -> pass.
+- V29 QA: direct `app.services.overview.market_movers` empty-query smoke -> sectors `[]`, movers `NO_UNIVERSE`, group leadership `INSUFFICIENT_DATA`.
+- V29 QA: legacy path tests `test_effective_market_date_skips_sparse_latest_raw_date`, `test_group_trend_window_contract_uses_compact_horizons`, `test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps`, `test_market_movers_snapshot_uses_sp500_intraday_previous_close_returns`, `test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns`, `test_overview_breadth_heatmap_summary_keeps_full_canonical_sector_map` -> pass.
+- V30 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_service_owns_implementation_body` -> failed because `market_context.py` was still a re-export wrapper.
+- V30 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_context_service_owns_implementation_body` -> pass.
+- V30 QA: `.venv/bin/python -m py_compile app/services/overview/market_context.py tests/test_service_contracts.py` -> pass.
+- V30 QA: direct `app.services.overview.market_context.build_overview_macro_context_cockpit` smoke -> schema `overview_macro_context_cockpit_v1`, cards `movement/breadth/sentiment/events/data`.
+- V30 QA: legacy path tests `test_overview_macro_context_cockpit_can_omit_futures_macro_for_fast_entry`, `test_overview_macro_context_cockpit_summarizes_existing_context_snapshots`, `test_overview_source_confidence_catalog_surfaces_provider_caveats_and_review_items`, `test_overview_source_confidence_does_not_mark_events_and_data_health_meta_as_unresolved` -> pass.
+- V31 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_why_it_moved_service_owns_implementation_body` -> failed because `why_it_moved.py` did not exist.
+- V31 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_why_it_moved_service_owns_implementation_body tests.test_service_contracts.OverviewAutomationContractTests.test_overview_service_surfaces_are_split_by_domain` -> pass.
+- V31 QA: `.venv/bin/python -m py_compile app/services/overview/why_it_moved.py tests/test_service_contracts.py` -> pass.
+- V31 QA: direct `app.services.overview.why_it_moved` smoke -> 6 catalyst links, metadata strip `NOT_REQUESTED`.
+- V31 QA: legacy path tests `test_market_mover_catalyst_links_include_context_without_fetching_articles`, `test_market_mover_why_it_moved_read_model_includes_context_links_and_pending_metadata`, `test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded`, `test_market_mover_metadata_status_strip_distinguishes_lookup_states`, `test_market_mover_sec_filings_sort_by_form_priority_deterministically` -> pass.
+- V32 RED: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_intelligence_module_is_compatibility_facade` -> failed because `overview_market_intelligence.py` was still 7,788 lines.
+- V32 QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_overview_market_intelligence_module_is_compatibility_facade` -> pass after facade reduction.
+- V32 QA: `.venv/bin/python -m py_compile app/services/overview_market_intelligence.py app/services/overview/*.py tests/test_service_contracts.py` -> pass.
+- V32 QA: `wc -l app/services/overview_market_intelligence.py app/services/overview/*.py` -> facade is 96 lines; split domain modules total 8,156 lines.
+- V32 QA: legacy path tests `test_market_mover_google_news_kr_rss_fetcher_builds_keyless_metadata_rows`, `test_market_mover_compact_metadata_fetcher_uses_google_news_kr_without_naver_credentials`, `test_latest_raw_date_query_uses_ordered_latest_row` -> pass.
+- Final QA: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> 171 tests passed. Output included expected Streamlit cache warnings and third-party edgar deprecation warnings.
+- Final QA: `git diff --check -- app/services/overview_market_intelligence.py app/services/overview tests/test_service_contracts.py .aiworkspace/note/finance/docs/PROJECT_MAP.md .aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md .aiworkspace/note/finance/tasks/active/overview-service-split-v25-v32-20260629` -> pass.
+- Final QA: `rg -n 'overview_market_intelligence\\.py.*full calculation body|monolithic `app/services/overview_market_intelligence.py`|계산 body는 아직|service implementation body' .aiworkspace/note/finance/docs .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md || true` -> no stale doc matches.

@@ -318,5 +318,3 @@ def _render_risk_on_momentum_5d_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="Risk-On Momentum 5D")
-
-

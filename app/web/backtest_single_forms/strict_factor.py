@@ -33,17 +33,20 @@ def _render_strict_factor_data_readiness_note(
 
 def _render_quality_snapshot_form() -> None:
     st.markdown("### Quality Snapshot")
-    st.caption("Research-oriented quality snapshot strategy using broad-research factor snapshots. This first pass ranks quality factors and holds top names equally between monthly rebalances.")
+    st.caption(
+        "Archived legacy broad yfinance compatibility path for saved/history replay only. "
+        "For new research runs, start from `Quality Snapshot (Strict Annual)` or `Quality + Value / Strict Annual`."
+    )
     _render_quality_family_guide("quality_broad")
     with st.expander("Data Requirements", expanded=False):
         st.markdown(
             "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
-            "- `Weekly Fundamental Refresh`로 **`nyse_fundamentals` + `nyse_factors`**를 채워야 합니다.\n"
-            "- 현재 공개 버전은 **`Extended Statement Refresh`가 필수는 아닙니다**. 이 전략은 detailed statement ledger를 직접 읽지 않습니다.\n"
+            "- 이 archived path는 이미 존재하는 **`nyse_fundamentals` + `nyse_factors`** legacy rows가 있을 때만 재현용으로 사용합니다.\n"
+            "- 새 factor 준비나 새 재무제표 source 수집은 `EDGAR annual 재무제표 갱신`과 statement shadow path를 사용하세요.\n"
             "- 첫 공개 버전은 **stock-oriented** 입니다. ETF 위주 유니버스는 quality factor snapshot이 비거나 의미가 약할 수 있습니다.\n"
-            "- 현재 `Factor Frequency`는 `annual`만 지원하므로, 같은 universe에 대해 `Weekly Fundamental Refresh (annual)`를 맞춰서 돌리는 편이 가장 자연스럽습니다."
+            "- saved/history replay compatibility 때문에 실행 함수는 남아 있지만, 새 사용자 기본 선택지에서는 제외되어 있습니다."
         )
-        st.caption("Current public mode: `broad_research` (research-oriented snapshot, not strict PIT)")
+        st.caption("Archived mode: `legacy_broad_yfinance` (not strict PIT, not canonical financial statement source)")
     _apply_single_strategy_prefill("quality_snapshot")
 
     universe_mode = st.radio(

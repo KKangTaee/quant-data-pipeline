@@ -22,3 +22,109 @@
 - 2026-05-30: Browser smoke at 1500px and 1000px viewports - PASS; source mini cards rendered without card clipping, no horizontal overflow, no leaked HTML, console errors 0.
 - 2026-05-30: `uv run python -m unittest tests.test_service_contracts.OverviewAutomationContractTests` - PASS, 12 tests.
 - 2026-05-30: `git diff --check` - PASS.
+- 2026-07-07: `git status --short --branch` - current worktree confirmed as `codex/sub-dev` without creating a new branch; dirty state includes existing `.DS_Store`, run history, and generated QA screenshots that must stay out of this task commit.
+- 2026-07-07: Read `AGENTS.md`, docs index/roadmap/project map, existing Events task docs, Events UI/service/data/job/schema files, React workbench wrappers, and focused Events tests for 1차 analysis.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_events_snapshot_exposes_taxonomy_contract_for_expanded_calendar` - RED before implementation; failed on missing `schema_version`.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests.test_market_event_schema_contains_required_columns tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests.test_market_event_upsert_normalizes_payload_and_business_key` - RED before implementation; failed on missing schema/upsert taxonomy fields.
+- 2026-07-07: Same three focused taxonomy tests - PASS after schema/upsert/read-model implementation.
+- 2026-07-07: `.venv/bin/python -m unittest ...` event-focused Overview tests, 7 tests - PASS.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.MarketIntelligenceEventCalendarContractTests` - PASS, 18 tests.
+- 2026-07-07: `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_events_snapshot_derives_taxonomy_for_legacy_event_rows` - RED before compatibility fix; `Source Authority` fell back to `unknown`.
+- 2026-07-07: Same legacy taxonomy derivation test - PASS after `Source Authority` reused legacy source-type inference.
+- 2026-07-07: DB smoke `build_market_events_snapshot(event_type=None, horizon_days=60, limit=20)` - PASS; `schema_version=market_events_snapshot_v2`, taxonomy columns present, legacy earnings rows inferred as `family_counts={'earnings': 20}`, `source_authority_counts={'provider_estimate': 20}`, `universe_scope_counts={'latest_movers': 20}`.
+- 2026-07-07: `.venv/bin/python -m py_compile app/services/overview/events.py finance/data/market_intelligence.py finance/data/db/schema.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: Event-focused Overview unittest subset, 9 tests - PASS.
+- 2026-07-07: `MarketIntelligenceEventCalendarContractTests`, 18 tests - PASS.
+- 2026-07-07: `git diff --check` - PASS.
+- 2026-07-07: 3차 RED - new parser tests for BLS JOLTS/ECI, BEA PCE, Census indicators, ISM PMI, Treasury auctions failed before implementation with missing parser functions / unmatched BLS types.
+- 2026-07-07: 3차 GREEN - focused parser/collector tests, 8 tests - PASS.
+- 2026-07-07: 3차 QA - `py_compile` for market intelligence, ingestion jobs/sections, Events helpers/service, tests - PASS.
+- 2026-07-07: 3차 QA - `MarketIntelligenceEventCalendarContractTests`, 23 tests - PASS.
+- 2026-07-07: 3차 QA - focused Overview Events read-model tests, 5 tests - PASS.
+- 2026-07-07: 4차 RED - new Earnings universe/source-authority tests failed before implementation on missing `universe_scope` argument, missing row `source_authority`, missing collector fetch kwarg, and missing `source_symbol_loaders` resolver boundary.
+- 2026-07-07: 4차 GREEN - focused Earnings tests for yfinance row taxonomy, Nasdaq cross-check source authority, collector universe scope propagation, and named source loaders - PASS, 4 tests.
+- 2026-07-07: 4차 QA - `MarketIntelligenceEventCalendarContractTests`, 24 tests - PASS.
+- 2026-07-07: 4차 QA - `py_compile finance/data/market_intelligence.py app/web/ingestion/sections.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 4차 QA - `git diff --check` - PASS.
+- 2026-07-07: 5차 RED - new market-structure tests failed before implementation on missing Nasdaq holiday parser, Cboe options expiration builder, Russell reconstitution parser, and market-structure collector.
+- 2026-07-07: 5차 GREEN - focused market-structure parser/builder/collector tests - PASS, 4 tests.
+- 2026-07-07: 5차 QA - `MarketIntelligenceEventCalendarContractTests` plus progress signature/allowlist checks - PASS, 30 tests.
+- 2026-07-07: 5차 QA - `py_compile` for market intelligence, ingestion jobs/dispatcher/guides/registry/sections, Events helpers/service, overview actions, and tests - PASS.
+- 2026-07-07: 5차 QA - `git diff --check` - PASS.
+- 2026-07-07: 6차 RED - new `build_events_workbench_payload()` service contract failed before implementation with missing import.
+- 2026-07-07: 6차 GREEN - workbench payload groups brief, trust review, calendar buckets, density, and evidence rows - PASS.
+- 2026-07-07: 6차 QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: 6차 QA - `py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 6차 QA - `git diff --check` - PASS.
+- 2026-07-07: 7차 RED - new Events React scaffold test failed before implementation with missing `events_react_component` module.
+- 2026-07-07: 7차 GREEN - Events React wrapper/source/fallback scaffold contract - PASS.
+- 2026-07-07: 7차 QA - `py_compile app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 7차 QA - `npm install && npm run build` for `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` left uncommitted.
+- 2026-07-07: 7차 QA - rerun `npm run build` for `events_workbench` - PASS.
+- 2026-07-07: 8차 RED - `OverviewMarketIntelligenceServiceContractTests.test_events_workbench_payload_groups_brief_trust_calendar_and_evidence` failed on missing `payload["command"]`.
+- 2026-07-07: 8차 RED - `OverviewAutomationContractTests.test_events_react_refresh_actions_are_python_dispatched` failed on missing `_handle_events_react_event`.
+- 2026-07-07: 8차 GREEN - both focused command/dispatch tests - PASS.
+- 2026-07-07: 8차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 8차 QA - `npm install` for `app/web/streamlit_components/events_workbench` - PASS.
+- 2026-07-07: 8차 QA - `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: 9차 RED - `OverviewAutomationContractTests.test_events_react_workbench_renders_filters_calendar_trust_and_evidence` failed before implementation on missing `familyOptions.map`.
+- 2026-07-07: 9차 GREEN - same React workbench filter/calendar/trust/evidence contract - PASS.
+- 2026-07-07: 9차 QA - `npm install` for `events_workbench` - PASS.
+- 2026-07-07: 9차 QA - `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: 9차 QA - scaffold / refresh dispatch / filter-calendar-trust-evidence focused tests, 3 tests - PASS.
+- 2026-07-07: 9차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 9차 QA - `git diff --check` - PASS.
+- 2026-07-07: 10차 Browser QA - existing `:8501` server rendered legacy Events only, so current code was verified on fresh `:8502` Streamlit server.
+- 2026-07-07: 10차 Browser QA desktop - `http://localhost:8502/?overview_tab=events` PASS; React iframe rendered, brief / refresh boundary / trust review / calendar evidence / raw evidence / fallback tabs present. Screenshot: `browser-qa-events-react-workbench-phase10.png` (generated, uncommitted).
+- 2026-07-07: 10차 Browser QA mobile - 390px viewport PASS; React iframe rendered, type/source filters present, day tooltip displayed as `grid` on hover, Market Structure / Official filter interaction worked, density section remained visible. Screenshot: `browser-qa-events-react-workbench-mobile-phase10.png` (generated, uncommitted).
+- 2026-07-07: 10차 QA - `MarketIntelligenceEventCalendarContractTests`, 28 tests - PASS.
+- 2026-07-07: 10차 QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: 10차 QA - `OverviewAutomationContractTests`, 154 tests - PASS.
+- 2026-07-07: 10차 QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py finance/data/market_intelligence.py app/jobs/overview_actions.py app/jobs/ingestion_jobs.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: 10차 QA - final `npm install` / `npm run build` for `events_workbench` - PASS with unchanged `index-BTbfZ49w.css` / `index-BfCDl3_6.js`; generated `node_modules` removed.
+- 2026-07-07: 10차 QA - `git diff --check` - PASS.
+- 2026-07-07: legacy cleanup RED - focused Events React/fallback contract tests failed before implementation on missing `events_react_workbench_available`, missing React-gated entrypoint flow, and existing React prop mutation.
+- 2026-07-07: legacy cleanup GREEN - focused Events React/fallback contract tests, 5 tests - PASS after React availability gating, collapsed Streamlit evidence fallback, and props defaulting cleanup.
+- 2026-07-07: legacy cleanup QA - `py_compile app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: legacy cleanup QA - `OverviewAutomationContractTests`, 154 tests - PASS.
+- 2026-07-07: legacy cleanup QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: legacy cleanup QA - `npm install` / `npm run build` for `events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: legacy cleanup QA - `git diff --check` - PASS.
+- 2026-07-07: legacy cleanup Browser QA desktop/mobile at `http://localhost:8503/?overview_tab=events` - PASS. React brief / command rendered, duplicate legacy `Next Event` / `stored rows` lanes absent, top Streamlit refresh popover absent, `상세 표 / 전체 근거` remained collapsed. Screenshots `browser-qa-events-legacy-cleanup.png` and `browser-qa-events-legacy-cleanup-mobile.png` are generated artifacts and stay uncommitted.
+- 2026-07-07: follow-up 1~6차 RED - focused Events tests failed before implementation on old React gating contract, missing `refresh_all`, missing `rail_tabs`, missing Korean trust labels, and missing calendar today/current-week metadata.
+- 2026-07-07: follow-up 1~6차 GREEN - focused Events React/source/action/service tests, 5 tests - PASS after React-first toolbar removal, refresh result payload adapter, all-refresh facade, rail tabs, Korean trust copy, and month calendar metadata.
+- 2026-07-07: follow-up QA - `npm install` / `npm run build` for `app/web/streamlit_components/events_workbench` - PASS; build emitted `component_static/assets/index-BYNrMhGG.css` and `component_static/assets/index-iTMiB4bu.js`; generated `node_modules` removed after QA.
+- 2026-07-07: follow-up QA - `py_compile app/services/overview/events.py app/web/overview/events.py app/web/overview/events_helpers.py app/web/overview/events_react_component.py app/jobs/overview_actions.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: follow-up QA - focused Events contract tests, 5 tests - PASS.
+- 2026-07-07: follow-up QA - `OverviewMarketIntelligenceServiceContractTests`, 116 tests - PASS.
+- 2026-07-07: follow-up QA - `OverviewAutomationContractTests`, 155 tests - PASS after updating prior static contract to the new fallback-only toolbar structure.
+- 2026-07-07: follow-up QA - `MarketIntelligenceEventCalendarContractTests`, 28 tests - PASS.
+- 2026-07-07: follow-up Browser QA desktop at `http://localhost:8504/?overview_tab=events` - PASS. React brief / `전체 일정 갱신` / earnings-universe note / rail tabs / schedule-confirmation section / month calendar rendered; top-level legacy `일정 타입` and `Refresh Results` were absent. Screenshot `browser-qa-events-followup-calendar-desktop.png` is generated and uncommitted.
+- 2026-07-07: follow-up Browser QA mobile 390px - PASS. Brief, filters, `전체 일정 갱신`, rail tabs, trust, and calendar were present; `Refresh Results` absent. Screenshot `browser-qa-events-followup-calendar-mobile.png` is generated and uncommitted.
+- 2026-07-07: follow-up QA - `git diff --check` - PASS.
+- 2026-07-07: calendar-week bugfix RED - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_events_workbench_near_term_uses_calendar_week_not_rolling_seven_days` failed before implementation because `this_week` counted 2026-07-14 as rolling 7D.
+- 2026-07-07: calendar-week bugfix GREEN - same regression test PASS after calendar-week classification moved to actual current week boundaries.
+- 2026-07-07: calendar-week QA - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_events_workbench_payload_groups_brief_trust_calendar_and_evidence` - PASS.
+- 2026-07-07: calendar-week QA - `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: calendar-week QA - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` - PASS, 117 tests. Existing third-party deprecation and Streamlit no-runtime warnings were non-failing.
+- 2026-07-07: calendar-week QA - `git diff --check -- app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: calendar-week Browser QA at `http://localhost:8514/?overview_tab=events` - PASS. DOM confirmed `오늘 / 이번 주 0 · 0 확인`, `30일 내 106 · 90 확인`, and 2026-07-14 JPM under the `30일 내` article list. Screenshot `browser-qa-events-calendar-week-bucket-fresh-top.png` is generated and uncommitted.
+- 2026-07-07: Calendar polish 1차 RED - `.venv/bin/python -m unittest tests.test_service_contracts.OverviewAutomationContractTests.test_events_react_workbench_renders_filters_calendar_trust_and_evidence` failed before implementation on missing `formatMonthTitle`.
+- 2026-07-07: Calendar polish 1차 GREEN - same focused React source contract PASS after month title/navigation/month-summary/outside-month styling implementation.
+- 2026-07-07: Calendar polish 1차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: Calendar polish 1차 QA - `git diff --check` for changed source/test/task files - PASS.
+- 2026-07-07: Calendar polish 2차 RED - focused React source contract failed before implementation on missing `selectedDate`.
+- 2026-07-07: Calendar polish 2차 GREEN - same contract PASS after clickable day cells, selected-date state, fixed detail panel, detail cards, and richer tooltip list implementation.
+- 2026-07-07: Calendar polish 2차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: Calendar polish 2차 QA - `git diff --check` for changed source/test files - PASS.
+- 2026-07-07: Calendar polish 3차 RED - focused service contract failed before implementation on missing density `week_end`; focused React source contract failed on missing `densityRangeLabel`.
+- 2026-07-07: Calendar polish 3차 GREEN - both focused contracts PASS after service density week range labels and React weekly-density copy/legend implementation.
+- 2026-07-07: Calendar polish 3차 QA - `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-07: Calendar polish 3차 QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-07: Calendar polish 3차 QA - `git diff --check` for changed code/test/task files - PASS.
+- 2026-07-07: Calendar polish 3차 Browser QA at `http://localhost:8515/?overview_tab=events` - PASS. Desktop DOM confirmed `2026년 7월`, selected-month summary, selected-date detail after clicking `2026-07-14`, and weekly density labels such as `7/27-8/2`, `주간 합계 47건`, `총 47건`. Mobile 390px DOM confirmed the same weekly-density copy and totals. Screenshot `browser-qa-events-calendar-density-final.png` is generated and uncommitted.
+- 2026-07-08: Calendar follow-up RED - focused React source contract failed while hover tooltip DOM/CSS and selected-date 6-row cap still existed; focused service contracts failed on missing display-family labels for market-structure subtypes.
+- 2026-07-08: Calendar follow-up GREEN - focused React and service contracts PASS after removing hover tooltip rendering, showing all selected-date events in a scrollable panel, and adding display-family groups for `미국 공휴일`, `옵션 만기`, and `지수 재구성`.
+- 2026-07-08: Calendar follow-up QA - `.venv/bin/python -m py_compile app/services/overview/events.py tests/test_service_contracts.py` - PASS.
+- 2026-07-08: Calendar follow-up QA - `npm install && npm run build` in `app/web/streamlit_components/events_workbench` - PASS; generated `node_modules` removed after build.
+- 2026-07-08: Calendar follow-up Browser QA at `http://localhost:8516/?overview_tab=events` - PASS. DOM confirmed no hover tooltip DOM, `미국 공휴일` / `옵션 만기` / `기타 시장 일정` labels, no old overflow copy, and `2026-07-30` selected-date detail rendered 20 cards inside one scrollable detail container. Screenshot `browser-qa-events-calendar-hover-detail-subtypes.png` is generated and uncommitted.

@@ -27,7 +27,7 @@ external source
 |---|---|---|
 | Backtest Analysis | `app/runtime/backtest/`, `finance/loaders/*`, `finance/*` runtime | 후보 source와 result bundle 생성. Final approval / monitoring policy는 소유하지 않는다 |
 | Practical Validation / Final Review | `app/services/backtest_*`, `finance/loaders/provider.py`, `finance/loaders/macro.py`, `finance/loaders/sentiment.py` | compact evidence와 gate / selected-route read model 생성. Full provider / macro / holdings row는 DB에 둔다 |
-| Workspace > Overview | `app/services/overview_market_intelligence.py`, futures / sentiment services | market context / data health only. Trade signal이나 validation PASS / BLOCKER가 아니다 |
+| Workspace > Overview | `app/services/overview/*`, futures / sentiment services | market context / data health only. Trade signal이나 validation PASS / BLOCKER가 아니다 |
 | Operations > Portfolio Monitoring | `app/runtime/backtest/read_models/final_selected_portfolios.py`, `app/services/backtest_practical_validation.py` sentiment overlay | read-only monitoring / explicit scenario update. No broker order, live approval, auto rebalance |
 
 ## 주요 데이터 소스
@@ -35,7 +35,7 @@ external source
 | 소스 | 주로 쓰는 영역 |
 |---|---|
 | yfinance | price, profile, 일부 fundamentals |
-| NYSE listing source | stock / ETF universe |
+| NYSE / Nasdaq listing sources | stock / ETF universe, current listing lifecycle evidence, Market Movers Top liquidity universe candidate set |
 | EDGAR | detailed financial statements |
 | SEC EDGAR submissions / Form 25 | symbol lifecycle delisting evidence |
 | local DB | backtest runtime read path |
@@ -65,7 +65,7 @@ external source
 | `finance/data/computed_lifecycle.py` | 기존 current snapshot lifecycle rows를 읽어 repeated observation window를 `computed_from_snapshots` partial row로 요약 |
 | `finance/data/symbol_resolver.py` | 사용자가 Factor Readiness에서 승인한 ticker-change repair를 `nyse_symbol_lifecycle`에 `resolution_status=active` row로 UPSERT |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
-| `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, Nasdaq-listed Symbol Directory current snapshot read helper, S&P 500 / Top1000 / Top2000 / Nasdaq-listed intraday previous-close snapshot, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
+| `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, Nasdaq-listed Symbol Directory current snapshot read helper, Market Movers Top1000 / Top2000 최근 20거래일 평균 거래대금 universe materialize/read helper, S&P 500 / Top1000 / Top2000 / Nasdaq-listed intraday previous-close snapshot, ticker-change alias candidate / active alias persistence, missing quote gap diagnostics와 반복 issue persistence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Sector / Industry daily leadership의 최신 previous-close return read path가 공유한다 |
 | `finance/data/futures_market.py` | Overview Futures Monitor 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. `app/services/futures_market_monitoring.py`는 저장된 최신 candle 기준으로 표시 window를 읽고 stale 여부를 별도 계산한다. Macro Thermometer validation is read-only and does not create a new table |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
@@ -75,11 +75,11 @@ external source
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/pit_universe.py` | Quality / Value strict family용 monthly equity universe snapshot build / UPSERT helper. DB price, statement shadow shares evidence, asset profile filter를 읽어 `equity_universe_snapshot` / `equity_universe_member`에 idempotent하게 저장한다 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
-| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 approved action facade에서 실행되는 수집 job wrapper. provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
-| `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 승인된 market intelligence / futures / events / sentiment / quote-gap diagnostics job 호출과 run-history 기록을 맡는다. Market Context historical analog coverage gap은 같은 facade에서 기존 OHLCV collection job을 managed-safe profile로 호출해 `finance_price.nyse_price_history`를 보강한다 |
+| `app/jobs/ingestion_jobs.py` / `app/jobs/ingestion/common.py` | Streamlit Ingestion 또는 approved action facade에서 실행되는 수집 job wrapper. `ingestion_jobs.py`는 provider / macro / lifecycle evidence / market intelligence collector 결과를 표준 `JobResult`로 변환하고, `common.py`는 symbol parsing, result normalization, progress event, execution profile, pipeline status helper를 소유한다 |
+| `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 승인된 market intelligence / futures / events / sentiment / quote-gap diagnostics job 호출과 run-history 기록을 맡는다. Market Movers `유니버스 기준 갱신`은 S&P 500 구성 목록, Nasdaq Symbol Directory, 또는 Top1000 / Top2000 liquidity universe materialize action으로 분기한다. Market Movers ticker-change repair action은 화면의 후보 alias를 `market_symbol_alias.status=active`로 저장하고, 다음 `일중 스냅샷 갱신`이 active alias를 quote lookup에 사용하게 한다. Market Context historical analog coverage gap은 같은 facade에서 기존 OHLCV collection job을 managed-safe profile로 호출해 `finance_price.nyse_price_history`를 보강한다. Market Movers SEC filing tab의 selected-symbol 재무제표 보강도 같은 facade에서 기존 Ingestion EDGAR statement refresh job으로 위임한다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence job wrapper를 반복 호출하는 run-once orchestrator. cron / launchd / 외부 runner용 `standard` / `safe` / `events` profile과, Overview 브라우저 세션용 `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리한다 |
 | `app/services/ingestion_diagnostics.py` | `Workspace > Ingestion`의 read-only diagnostic facade. price window preflight, stale price diagnosis, statement coverage diagnosis, statement PIT inspection을 Streamlit 없이 실행하고 UI가 읽을 payload를 반환한다 |
-| `app/web/ingestion_console.py` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. Korean purpose-first job guide, result next-action guidance, routine / manual 작업 구분, ETF operability, ETF holdings / exposure, macro context, market sentiment, SEC Form 25 delisting evidence, Nasdaq Symbol Directory current snapshot, SEC CIK / ticker cross-check, computed snapshot lifecycle, FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate 수집 버튼과 diagnostic panel render를 제공한다 |
+| `app/web/ingestion_console.py` / `app/web/ingestion/*` | `Workspace > Ingestion`의 provider / evidence / market intelligence snapshot 실행 화면. `ingestion_console.py`는 compatibility facade이고 active implementation은 `app/web/ingestion/page.py`, `registry.py`, `guides.py`, `styles.py`, `results.py`, `dispatcher.py`, `sections.py`로 나뉜다. Korean purpose-first job guide, action registry, common recent-run summary, result next-action guidance, three-section workbench, scheduled read-only diagnostics, running progress / elapsed-time display, execution records section, ETF/provider/macro/lifecycle/event collection cards and diagnostic panel render를 제공한다. Broad yfinance fundamentals / factors는 active UI가 아니라 old replay / explicit comparison compatibility로만 남긴다 |
 
 ## Loader 계층
 
@@ -93,7 +93,7 @@ external source
 | `finance/loaders/sentiment.py` | Overview sentiment read path. `macro_series_observation`에서 CNN / AAII latest snapshot과 history를 읽는다 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
-| `finance/loaders/financial_statements.py` | statement values / labels / strict snapshot / timing audit 조회 |
+| `finance/loaders/financial_statements.py` | statement filing metadata / values / labels / strict snapshot / timing audit 조회 |
 | `finance/loaders/runtime_adapter.py` | runtime에서 쓰는 price strategy dict 생성 |
 
 ## 현재 중요한 구분
@@ -142,6 +142,12 @@ external source
   `symbol-directory-snapshot-ingestion-v1`부터 `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 읽어
   `source=nasdaq_symdir_nasdaqlisted` / `nasdaq_symdir_otherlisted`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장한다.
   이 row는 current snapshot evidence이며 historical membership PASS 근거가 아니다.
+  `market-movers-liquidity-universe-v1`부터 Market Movers Top1000 / Top2000은 `nyse_asset_profile.market_cap` snapshot이 아니라
+  `market_liquidity_universe_member`에 materialize된 최근 20거래일 평균 거래대금 membership을 읽는다.
+  후보 ticker는 current listing source에서 오고, ranking에는 `nyse_price_history` 최신 거래일 EOD row가 필요하다.
+  listing source가 비어 있으면 legacy profile fallback으로 UI를 채우지 않고 `유니버스 기준 갱신` 결과에서 listing source 갱신 필요를 드러낸다.
+  `market-movers-ticker-change-repair-v1`부터 quote-fast intraday snapshot은 `market_symbol_alias.status=active` alias를 읽어 provider lookup ticker만 바꿀 수 있다.
+  후보 탐지는 quote-missing row에 대해서만 candidate로 저장하며, 사용자가 Overview Market Movers에서 `티커 변경 복구 적용`을 누른 뒤 다시 `일중 스냅샷 갱신`해야 missing row가 제거된다.
   `sec-cik-exchange-crosscheck-v1`부터 `finance/data/sec_company_tickers.py`는 SEC `company_tickers_exchange.json` current association을 읽어
   `source=sec_company_tickers_exchange`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장하고 CIK를 `related_cik`에 둔다.
   이 row는 identity cross-check evidence이며 historical membership / delisting / ticker action proof가 아니다.

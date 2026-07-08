@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
+from time import monotonic
 from typing import Any
 
 import pandas as pd
@@ -13,6 +14,7 @@ from app.services.futures_macro_thermometer import (
     QueryFn,
     _default_query,
     _instrument_rows,
+    _latest_daily_cache_marker,
     _round,
     _safe_float,
     build_current_evidence_groups,
@@ -29,6 +31,8 @@ MIN_VALIDATION_YEARS = 3
 VALIDATION_HORIZONS = (1, 5, 20)
 VALIDATION_THRESHOLDS = (20, 40, 60)
 PROXY_TARGET_SYMBOLS = ("SPY", "QQQ", "IWM", "TLT", "GLD", "UUP")
+FUTURES_MACRO_VALIDATION_CACHE_TTL_SECONDS = 900
+_FUTURES_MACRO_VALIDATION_CACHE: dict[tuple[Any, ...], tuple[float, dict[str, Any]]] = {}
 
 FUTURES_PROXY_MAP = {
     "ES=F": "SPY",
@@ -108,6 +112,67 @@ def _load_proxy_price_rows(
         )
     except Exception:
         return []
+
+
+def clear_futures_macro_validation_cache() -> None:
+    _FUTURES_MACRO_VALIDATION_CACHE.clear()
+
+
+def _latest_validation_futures_cache_marker(query_fn: QueryFn, symbols: Sequence[str]) -> str | None:
+    return _latest_daily_cache_marker(query_fn, symbols)
+
+
+def _latest_validation_proxy_cache_marker(query_fn: QueryFn, symbols: Sequence[str]) -> str | None:
+    selected_symbols = [str(symbol).strip().upper() for symbol in symbols if str(symbol).strip()]
+    if not selected_symbols:
+        return None
+    placeholders = ", ".join(["%s"] * len(selected_symbols))
+    try:
+        rows = query_fn(
+            "finance_price",
+            f"""
+            SELECT MAX(`date`) AS latest_proxy_price
+            FROM nyse_price_history
+            WHERE symbol IN ({placeholders})
+              AND timeframe = %s
+            """,
+            [*selected_symbols, "1d"],
+        )
+    except Exception:
+        return None
+    if not rows:
+        return None
+    value = rows[0].get("latest_proxy_price")
+    return str(value) if value not in (None, "") else None
+
+
+def _validation_current_identity(current_snapshot: dict[str, Any] | None) -> tuple[Any, ...]:
+    summary = dict(current_snapshot.get("summary") or {}) if isinstance(current_snapshot, dict) else {}
+    return (
+        summary.get("scenario"),
+        summary.get("sub_scenario"),
+        summary.get("regime_hint"),
+    )
+
+
+def _validation_cache_key(
+    *,
+    query_fn: QueryFn,
+    symbols: Sequence[str],
+    years: int,
+    min_standardized_symbols: int,
+    current_snapshot: dict[str, Any] | None,
+) -> tuple[Any, ...]:
+    selected_symbols = tuple(str(symbol).strip().upper() for symbol in symbols if str(symbol).strip())
+    return (
+        id(query_fn),
+        selected_symbols,
+        int(max(1, years)),
+        int(min_standardized_symbols),
+        _latest_validation_futures_cache_marker(query_fn, selected_symbols),
+        _latest_validation_proxy_cache_marker(query_fn, PROXY_TARGET_SYMBOLS),
+        _validation_current_identity(current_snapshot),
+    )
 
 
 def _matrix_from_futures_candles(candles: pd.DataFrame) -> pd.DataFrame:
@@ -884,9 +949,9 @@ def _coverage(
 
 def _status_and_warnings(coverage: dict[str, Any], records: pd.DataFrame) -> tuple[str, list[str]]:
     warnings: list[str] = []
-    if int(coverage.get("futures_raw_rows") or 0) <= 0:
+    if _validation_int_value(coverage.get("futures_raw_rows")) <= 0:
         return "MISSING", ["Stored futures daily OHLCV rows are not available for historical validation."]
-    if int(coverage.get("validation_dates") or 0) <= 0:
+    if _validation_int_value(coverage.get("validation_dates")) <= 0:
         return "MISSING", ["No point-in-time validation dates had enough score history and forward return targets."]
     span_years = _safe_float(coverage.get("history_span_years"))
     if span_years is None or span_years < MIN_VALIDATION_YEARS:
@@ -919,6 +984,15 @@ def _validation_count_label(value: Any) -> str:
         return "0회"
 
 
+def _validation_int_value(value: Any) -> int:
+    try:
+        if value is None or pd.isna(value):
+            return 0
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _validation_percent_label(value: Any, *, digits: int = 1) -> str:
     try:
         if value is None or pd.isna(value):
@@ -938,16 +1012,16 @@ def build_current_scenario_validation_summary(
         return {}
     coverage = dict(validation_snapshot.get("coverage") or {})
     scenario = str(metrics.get("Scenario") or "현재 시나리오")
-    occurrence_count = int(metrics.get("Occurrence Count") or 0)
-    sample_5d = int(metrics.get("Sample 5D") or 0)
+    occurrence_count = _validation_int_value(metrics.get("Occurrence Count"))
+    sample_5d = _validation_int_value(metrics.get("Sample 5D"))
     hit_applicable = bool(metrics.get("Directional Hit Applicable"))
-    validation_dates = int(coverage.get("validation_dates") or 0)
+    validation_dates = _validation_int_value(coverage.get("validation_dates"))
     history_span = coverage.get("history_span_years")
     try:
         history_span_label = f"{float(history_span):.2f}년"
     except (TypeError, ValueError):
         history_span_label = "기간 미확인"
-    coverage_label = f"{validation_dates}개 PIT 날짜 · {history_span_label}"
+    coverage_label = f"점검 기준 {validation_dates:,}개 · {history_span_label}"
     confidence_text = str(confidence_label or "").strip()
     confidence_prefix = f"{confidence_text} 판단에서 " if confidence_text else ""
 
@@ -956,43 +1030,44 @@ def build_current_scenario_validation_summary(
         false_positive = _validation_percent_label(metrics.get("False Positive 5D %"))
         max_adverse = _validation_percent_label(metrics.get("Max Adverse 5D %"), digits=2)
         occurrence = {
-            "label": "5D 표본",
+            "label": "5D 계산 표본",
             "value": _validation_count_label(sample_5d),
-            "detail": f"과거 발생 {_validation_count_label(occurrence_count)} 중 5D 수익률 계산 가능 표본",
+            "detail": f"비슷한 과거 상태 {_validation_count_label(occurrence_count)} 중 5D 이후 수익률 계산 가능 표본",
         }
         interpretation = (
-            f"현재 시나리오는 5D 방향성 점검이 가능한 상태입니다. "
-            f"과거 5D hit-rate {hit_rate}, false-positive {false_positive}, max-adverse {max_adverse}입니다."
+            f"비슷한 과거 상태에서는 5D 방향 일관성 {hit_rate}, 오판 비율 {false_positive}, "
+            f"불리한 최대 5D {max_adverse}로 나타났습니다."
         )
         confidence_effect = (
-            f"{confidence_prefix}현재 confidence를 보조하지만 매수/매도 신호나 검증 gate는 아닙니다."
+            f"{confidence_prefix}이 결과는 보조 근거로만 읽습니다. 매수/매도 신호나 검증 gate는 아닙니다."
         )
         metrics_out = [
-            {"label": "5D hit-rate", "value": hit_rate},
-            {"label": "false-positive", "value": false_positive},
-            {"label": "max-adverse", "value": max_adverse},
+            {"label": "5D 방향 일관성", "value": hit_rate},
+            {"label": "오판 비율", "value": false_positive},
+            {"label": "불리한 최대 5D", "value": max_adverse},
         ]
     else:
         occurrence = {
-            "label": "과거 발생",
+            "label": "비슷한 과거 상태",
             "value": _validation_count_label(occurrence_count),
-            "detail": "방향성 5D hit-rate 대신 현재 상태의 반복 빈도를 확인합니다.",
+            "detail": "방향성 5D 적중률 대신 현재 상태의 반복 빈도를 확인합니다.",
         }
         interpretation = (
-            "자주 나타난 상태지만 방향성 적중률을 강하게 말하기 어려운 혼재 상태입니다. "
-            "이 시나리오는 directional hit-rate로 읽으면 안 됩니다."
+            f"비슷한 과거 상태는 {_validation_count_label(occurrence_count)} 있었지만, "
+            "이 혼재 상태는 5D 방향 적중률로 읽지 않습니다. 반복 빈도는 현재 해석이 드문 상태인지 확인하는 보조 근거입니다."
         )
         confidence_effect = (
-            f"{confidence_prefix}현재 confidence를 보조하지만 매수/매도 신호나 검증 gate는 아닙니다."
+            f"{confidence_prefix}반복 빈도만 보조 근거로 읽고, 방향성 확신을 올리는 근거로 쓰지 않습니다. "
+            "매수/매도 신호나 검증 gate는 아닙니다."
         )
         metrics_out = [
-            {"label": "5D hit-rate", "value": "적용 안 됨"},
-            {"label": "false-positive", "value": "적용 안 됨"},
-            {"label": "max-adverse", "value": "적용 안 됨"},
+            {"label": "5D 방향 일관성", "value": "방향성 없음"},
+            {"label": "오판 비율", "value": "방향성 없음"},
+            {"label": "불리한 최대 5D", "value": "방향성 없음"},
         ]
 
     return {
-        "title": "과거 점검 요약",
+        "title": "현재 해석의 과거 일관성",
         "scenario": scenario,
         "occurrence": occurrence,
         "coverage": coverage_label,
@@ -1010,9 +1085,26 @@ def build_futures_macro_validation_snapshot(
     query_fn: QueryFn | None = None,
     current_snapshot: dict[str, Any] | None = None,
     min_standardized_symbols: int = 8,
+    cache_ttl_seconds: int = FUTURES_MACRO_VALIDATION_CACHE_TTL_SECONDS,
 ) -> dict[str, Any]:
     query = query_fn or _default_query
     selected_symbols = [str(symbol).strip().upper() for symbol in (symbols or DEFAULT_CORE_FUTURES_SYMBOLS) if str(symbol).strip()]
+    cache_key = _validation_cache_key(
+        query_fn=query,
+        symbols=selected_symbols,
+        years=years,
+        min_standardized_symbols=min_standardized_symbols,
+        current_snapshot=current_snapshot,
+    )
+    now = monotonic()
+    cached = _FUTURES_MACRO_VALIDATION_CACHE.get(cache_key)
+    if (
+        cached is not None
+        and cache_ttl_seconds > 0
+        and now - cached[0] <= int(cache_ttl_seconds)
+    ):
+        return cached[1]
+
     lookback_days = int(max(1, years) * 366 + MIN_RECOMMENDED_DAYS + max(VALIDATION_HORIZONS))
     futures_rows = _load_validation_futures_rows(query, symbols=selected_symbols, lookback_days=lookback_days)
     proxy_rows = _load_proxy_price_rows(query, symbols=PROXY_TARGET_SYMBOLS, lookback_days=lookback_days)
@@ -1054,6 +1146,8 @@ def build_futures_macro_validation_snapshot(
         "source_note": "Point-in-time recalculation from stored daily futures OHLCV; ETF rows are used only as labeled proxy targets.",
     }
     snapshot["current_scenario_summary"] = build_current_scenario_validation_summary(snapshot)
+    if cache_ttl_seconds > 0:
+        _FUTURES_MACRO_VALIDATION_CACHE[cache_key] = (now, snapshot)
     return snapshot
 
 
@@ -1087,8 +1181,8 @@ def build_interpretation_confidence(
             "label": "Not Enough History",
             "tone": "warning",
             "score": 0,
-            "sample_size": int(current_metrics.get("Sample 5D") or 0),
-            "occurrence_count": int(current_metrics.get("Occurrence Count") or 0),
+            "sample_size": _validation_int_value(current_metrics.get("Sample 5D")),
+            "occurrence_count": _validation_int_value(current_metrics.get("Occurrence Count")),
             "hit_rate_5d": current_metrics.get("Hit Rate 5D %"),
             "hit_applicable": bool(current_metrics.get("Directional Hit Applicable")),
             "latest_candle_age_days": latest_age,
@@ -1097,7 +1191,7 @@ def build_interpretation_confidence(
                 "symbol_count": symbol_count,
                 "standardized_count": standardized_count,
                 "min_data_days": min_data_days,
-                "validation_dates": int(validation_coverage.get("validation_dates") or 0),
+                "validation_dates": _validation_int_value(validation_coverage.get("validation_dates")),
             },
         }
 
@@ -1146,9 +1240,9 @@ def build_interpretation_confidence(
         score -= 1
         reasons.append(f"Latest daily candle is {latest_age} days old.")
 
-    validation_dates = int(validation_coverage.get("validation_dates") or 0)
-    scenario_sample = int(current_metrics.get("Sample 5D") or 0)
-    occurrence_count = int(current_metrics.get("Occurrence Count") or 0)
+    validation_dates = _validation_int_value(validation_coverage.get("validation_dates"))
+    scenario_sample = _validation_int_value(current_metrics.get("Sample 5D"))
+    occurrence_count = _validation_int_value(current_metrics.get("Occurrence Count"))
     hit_rate = _safe_float(current_metrics.get("Hit Rate 5D %"))
     hit_applicable = bool(current_metrics.get("Directional Hit Applicable")) and hit_rate is not None and scenario_sample > 0
     if validation_dates <= 0:

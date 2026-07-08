@@ -394,12 +394,76 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           KEY ix_symbol (symbol)
         );
     """,
+    "market_liquidity_universe_member": """
+        CREATE TABLE IF NOT EXISTS market_liquidity_universe_member (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          universe_code VARCHAR(32) NOT NULL,
+          symbol VARCHAR(20) NOT NULL,
+          rank_position INT NOT NULL,
+          source_symbol VARCHAR(32) NULL,
+          name VARCHAR(255) NULL,
+          sector VARCHAR(100) NULL,
+          industry VARCHAR(150) NULL,
+          market_cap BIGINT NULL,
+
+          avg_dollar_volume_20d DOUBLE NULL,
+          dollar_volume_days INT NULL,
+          ranking_window_start_date DATE NULL,
+          ranking_end_date DATE NULL,
+          ranking_source VARCHAR(128) NOT NULL,
+          price_source VARCHAR(128) NULL,
+
+          listing_source VARCHAR(64) NULL,
+          listing_source_url VARCHAR(1024) NULL,
+          listing_source_type VARCHAR(64) NULL,
+          listing_coverage_status VARCHAR(32) NULL,
+          listing_event_type VARCHAR(64) NULL,
+          listing_status VARCHAR(32) NULL,
+          listing_event_date DATE NULL,
+          listing_collected_at TIMESTAMP NULL,
+
+          generated_at TIMESTAMP NOT NULL,
+          active TINYINT(1) NOT NULL DEFAULT 1,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_liquidity_universe_symbol (universe_code, symbol),
+          KEY ix_liquidity_universe_rank (universe_code, active, rank_position),
+          KEY ix_liquidity_universe_ranking_date (universe_code, ranking_end_date),
+          KEY ix_liquidity_universe_symbol (symbol)
+        );
+    """,
+    "market_symbol_alias": """
+        CREATE TABLE IF NOT EXISTS market_symbol_alias (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          source_symbol VARCHAR(20) NOT NULL,
+          alias_symbol VARCHAR(20) NOT NULL,
+          alias_type VARCHAR(64) NOT NULL DEFAULT 'ticker_change',
+          status ENUM('candidate','active','rejected') NOT NULL DEFAULT 'candidate',
+          confidence DOUBLE NULL,
+          evidence_json JSON NULL,
+          detected_at TIMESTAMP NOT NULL,
+          applied_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_market_symbol_alias (source_symbol, alias_symbol, alias_type),
+          KEY ix_market_symbol_alias_active (source_symbol, status),
+          KEY ix_market_symbol_alias_status (status, detected_at)
+        );
+    """,
     "market_intraday_snapshot": """
         CREATE TABLE IF NOT EXISTS market_intraday_snapshot (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,
 
           universe_code VARCHAR(32) NOT NULL,
           symbol VARCHAR(20) NOT NULL,
+          quote_symbol VARCHAR(20) NULL,
           interval_code VARCHAR(10) NOT NULL,
           snapshot_time_utc DATETIME NOT NULL,
           quote_time_utc DATETIME NULL,
@@ -431,6 +495,12 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           event_key CHAR(64) NOT NULL,
           event_date DATE NOT NULL,
           event_type VARCHAR(32) NOT NULL,
+          event_family VARCHAR(32) NULL,
+          event_subtype VARCHAR(64) NULL,
+          event_time_label VARCHAR(64) NULL,
+          event_datetime_utc TIMESTAMP NULL,
+          universe_scope VARCHAR(64) NULL,
+          source_authority VARCHAR(32) NULL,
           symbol VARCHAR(20) NULL,
           title VARCHAR(512) NOT NULL,
 
@@ -450,6 +520,8 @@ MARKET_INTELLIGENCE_SCHEMAS = {
 
           UNIQUE KEY uk_market_event_key (event_key),
           KEY ix_event_date_type (event_date, event_type),
+          KEY ix_event_family_date (event_family, event_date),
+          KEY ix_event_universe_date (universe_scope, event_date),
           KEY ix_event_symbol_date (symbol, event_date),
           KEY ix_event_status (event_type, event_status),
           KEY ix_event_source (source)

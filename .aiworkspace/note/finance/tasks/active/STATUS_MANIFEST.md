@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `practical-validation-required-taxonomy-audit-v1-20260708`
+- `practical-validation-boundary-cleanup-v1-20260708`
 
 Latest completed docs cleanup task:
 
@@ -58,8 +58,17 @@ Recent portfolio selection records:
 - `distinct-strategy-portfolio-discovery-20260609`: unique strategy family constraint / SPY superior GTAA U3 85% + GRS Compact 10% + Risk Parity Trend 5% portfolio / Final Review and Monitoring registration
 - `portfolio-discovery-final-review-monitoring-20260608`: current strategy catalog exploration / all-ETF Final Review selected decision / Portfolio Monitoring registration
 
+Recent Fundamental Source Migration records:
+
+- `fundamental-source-migration-p8-final-docs-runbook-alignment`: Phase 8 / 9차 final docs and runbook alignment. Durable docs now state EDGAR statement shadow as canonical financial statement source and broad yfinance fundamentals / factors as legacy compatibility only.
+- `fundamental-source-migration-p7-legacy-yfinance-decommission`: Phase 7 / 8차 legacy yfinance decommission. Active Ingestion broad fundamentals / factor cards were removed, compatibility action handlers remain, and broad Quality Snapshot is archived for saved/history replay.
+- `fundamental-source-migration-p6-coverage-expansion-source-qa`: Phase 6 / 7차 coverage expansion and source QA. Ingestion now has DB-backed Statement Universe Coverage QA for SP500 / TOP1000 / TOP2000 / NASDAQ missing reason grouping.
+- `fundamental-source-migration-p5-ingestion-workflow-cleanup`: Phase 5 / 6차 ingestion workflow cleanup. EDGAR annual refresh is the visible operational financial statement refresh path, with statement shadow rebuild and coverage diagnosis handoffs.
+- `fundamental-source-migration-p4-backtest-strategy-migration`: Phase 4 / 5차 backtest strategy migration. Strict annual quality/value paths use statement shadow factors; broad Quality Snapshot is legacy compatibility.
+
 Recent Backtest strategy contract records:
 
+- `gtaa-result-cadence-monthly-valuation-20260629`: GTAA `interval` is now strategy-owned rebalance cadence rather than input row thinning. Month-end runtime appends the latest common trading day row at or before the requested end date, so non-rebalance months can still show candidate signal / valuation context. Current DB smoke for a 2026-06-29 request stops at `2026-03-16` because `SOXX/MTUM/QUAL/USMV` price coverage stops there.
 - `risk-parity-dual-momentum-5b-20260610`: Backtest 5B / Risk Parity Trend volatility-window, eligible-universe, inverse-vol, guardrail cash-only, and low-vol overweight diagnostics plus Dual Momentum trend-rejection, cash proxy retention, concentration, and whipsaw row/meta contracts. No new panel, registry / saved write, run history write, provider fetch, Practical Validation, Final Review, or Monitoring behavior change.
 - `global-relative-strength-5a-20260609`: Backtest 5A / Global Relative Strength strategy-owned rebalance cadence, score window / cash proxy / benchmark / stale price / top-N concentration result bundle contracts. No new evidence/log/workbench panel or registry / saved / run history / generated artifact write.
 - `backtest-analysis-direction-reset-20260609`: Backtest 4C / execution-first Backtest Analysis reset. Reference and 3A-4B evidence / governance / ETF workbench panels remain preserved behind the `전략 개발 참고` advanced control.
@@ -80,6 +89,8 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-final-cleanup-v33-v36-20260629`: Completed record. UI component bodies now live under `app/web/overview/components/*`, `overview_dashboard.py` is a 1-export wrapper, `app/services/overview_market_intelligence.py` was removed, and Data Health scope / coverage counts separate direct Market Context from reference / dedicated-tab sources.
+- `overview-service-split-v25-v32-20260629`: Completed record. Overview market intelligence read-model bodies now live in `app/services/overview/{market_context,market_movers,events,sentiment,data_health,why_it_moved}.py` instead of the old monolithic service facade.
 - `overview-legacy-dashboard-removal-v17-v24-20260625`: Completed record. `app/web/overview/legacy_dashboard.py` was physically deleted after remaining helper ownership moved into tab-local helper modules; `app/web/overview_dashboard.py` now exposes explicit compatibility exports. QA passed with py_compile, Overview contracts, legacy import scan, and Browser QA.
 - `overview-tab-helper-extraction-v11-v16-20260625`: Completed record. Primary tab entry modules now use tab-local helper bridges for Market Context, Events, Futures Macro, Market Movers, and Sentiment instead of directly importing `legacy_dashboard.py`.
 - `overview-legacy-cleanup-v6-v10-20260625`: Completed record. Navigation moved to `app/web/overview/navigation.py`, Overview IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction.

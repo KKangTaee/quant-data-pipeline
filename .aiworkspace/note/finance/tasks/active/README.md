@@ -27,13 +27,19 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `practical-validation-required-taxonomy-audit-v1-20260708` closeout. |
+| none | - | No active task after `practical-validation-boundary-cleanup-v1-20260708` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-boundary-cleanup-v1-20260708` | Completed record | Practical Validation Flow 3 / Flow 4 visible UI now separates current validation fix work from Final Review judgment items. |
+| `practical-validation-flow4-final-review-handoff-v1-20260708` | Completed record | Flow 4 reduced Final Review-only REVIEW items from current validation problem detail; later Boundary Cleanup removed the visible handoff count from Flow 3 / Flow 4. |
+| `practical-validation-flow4-outcome-taxonomy-v1-20260708` | Completed record | Flow 4 outcome labels separate pass, recheck-needed, Final Review judgment, and blocked meanings while preserving `Current=REVIEW` where appropriate. |
+| `practical-validation-required-taxonomy-refactor-v1-20260708` | Completed record | `validation_efficacy` ownership was narrowed to method-strength checks; replay, benchmark, PIT, survivorship, provider freshness, and robustness stay with their owner modules. |
 | `practical-validation-required-taxonomy-audit-v1-20260708` | Completed record | Practical Validation 1차 필수 검증의 current row inventory와 owner matrix를 정리했다. `validation_efficacy` 중복 소유권을 확인했고, 다음 코드 작업은 method-strength 축소와 owner-module gate refactor다. |
+| `backtest-symbol-resolver-v1-20260708` | Completed record | Backtest Quality / Value Factor Readiness can distinguish stale price data from ticker-change symbol identity issues and store active repair metadata without rewriting source ticker identity. |
+| `backtest-factor-readiness-action-ui-v1-20260707` | Completed record | Strict factor readiness UI now shows affected tickers, impact, and bounded repair actions instead of raw diagnostic fields. |
 | `backtest-coverage-provider-gap-refresh-v1-20260707` | Completed record | Backtest Data Trust Coverage 최신화 no-row provider gap result no longer re-renders the retry action card; persistent provider/source gap symbols are excluded from refresh targets. |
 | `practical-validation-flow4-action-steps-v3-20260707` | Completed record | Practical Validation Flow 4 `해결 방법` now renders numbered action steps instead of a slash-joined paragraph. |
 | `practical-validation-flow4-action-guide-v2-20260707` | Completed record | Practical Validation Flow 4 criteria cards show `검증한 것 / 해결해야 할 항목 / 해결 방법 / 통과 기준 / 위치`, with location demoted to supporting context. |
@@ -43,6 +49,11 @@ tasks/active/<task-name>/
 | `practical-validation-flow3-clarity-v1-20260706` | Completed record | Practical Validation Flow 3 first-read surface cleanup. Removed duplicate control center / alert / badge layers and made the React Fix Queue focus on Final Review movement judgment, first fix work, and compact evidence summary. |
 | `practical-validation-entry-simplification-v1-20260705` | Completed record | Practical Validation default entry removed contextual Reference help and context-only sentiment overlay, renamed the command center, and changed custom cards / Fix Queue React surfaces to white square surfaces. |
 | `practical-validation-taxonomy-roadmap-v1-20260705` | Completed record | Practical Validation V1-V8 taxonomy and implementation round. Workspace read model, 5-flow page, read-only React Fix Queue, Flow 3 workspace panel, normalized status display, and durable docs alignment were completed. |
+| `fundamental-source-migration-p8-final-docs-runbook-alignment` | Completed record | 재무제표 source migration 1~9차 closeout. EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 legacy compatibility로 durable docs와 runbook에 정렬했다. |
+| `fundamental-source-migration-p7-legacy-yfinance-decommission` | Completed record | Ingestion active UI에서 broad yfinance fundamentals / factors 실행 카드를 제거하고, old run history / saved replay용 action handlers와 broad Quality Snapshot compatibility를 유지했다. |
+| `gtaa-result-cadence-monthly-valuation-20260629` | Completed record | GTAA `interval` now means strategy-owned rebalance cadence, not input row thinning. Month-end runtime appends the latest common trading day row at or before the requested end date, so non-rebalance months can still show candidate signal / valuation context. |
+| `overview-final-cleanup-v33-v36-20260629` | Completed record | `Workspace > Overview` V33-V36. UI component bodies now live under `app/web/overview/components/*`, `overview_dashboard.py` is a 1-export wrapper, `app/services/overview_market_intelligence.py` was removed, and Data Health scope / coverage counts separate direct Market Context from reference / dedicated-tab sources. |
+| `overview-service-split-v25-v32-20260629` | Completed record | `Workspace > Overview` V25-V32. Overview market intelligence read-model bodies now live in `app/services/overview/{market_context,market_movers,events,sentiment,data_health,why_it_moved}.py` instead of the old monolithic service facade. |
 | `overview-legacy-dashboard-removal-v17-v24-20260625` | Completed record | `Workspace > Overview` V17-V24. Remaining helper ownership was moved into `app/web/overview/*_helpers.py`, `app/web/overview/legacy_dashboard.py` was deleted, and `overview_dashboard.py` now keeps explicit compatibility exports. QA passed with py_compile, Overview contract tests, legacy import scan, and Browser QA. |
 | `overview-tab-helper-extraction-v11-v16-20260625` | Completed record | `Workspace > Overview` V11-V16. Market Context, Events, Futures Macro, Market Movers, and Sentiment entry modules now call tab-local helper bridge modules instead of importing `legacy_dashboard.py` directly. |
 | `overview-legacy-cleanup-v6-v10-20260625` | Completed record | `Workspace > Overview` V6-V10. Navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |

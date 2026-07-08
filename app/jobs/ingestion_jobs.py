@@ -1,8 +1,19 @@
 from __future__ import annotations
 
-import re
-from datetime import datetime
 from time import perf_counter
+from app.jobs.ingestion.common import (
+    JobResult,
+    _build_result,
+    _emit_stage_progress,
+    _failed_item_ids,
+    _merge_step_failures,
+    _now_str,
+    _pipeline_status,
+    _resolve_ohlcv_execution_profile,
+    _status_from_provider_summary,
+    parse_symbols,
+    split_valid_invalid_symbols,
+)
 from typing import Any, Callable, Iterable
 
 from finance.data.data import store_ohlcv_to_mysql
@@ -29,6 +40,7 @@ from finance.data.market_intelligence import (
     collect_and_store_earnings_calendar,
     collect_and_store_fomc_calendar,
     collect_and_store_macro_calendar,
+    collect_and_store_market_structure_calendar,
     collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
     diagnose_market_quote_gaps,
@@ -37,179 +49,6 @@ from finance.data.market_intelligence import (
 from finance.data.sec_company_tickers import collect_and_store_sec_company_ticker_crosscheck
 from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
 from finance.data.symbol_directory import collect_and_store_symbol_directory_snapshots
-
-
-JobResult = dict[str, Any]
-SYMBOL_PATTERN = re.compile(r"^[A-Z0-9.\-_=^]+$")
-OHLCV_EXECUTION_PROFILES: dict[str, dict[str, Any]] = {
-    "managed_refresh_short": {
-        "chunk_size": 70,
-        "sleep": 0.01,
-        "max_workers": 2,
-        "max_retry": 2,
-        "retry_backoff": 1.0,
-        "sleep_jitter_ratio": 0.15,
-        "rate_limit_cooldown_sec": 10.0,
-        "rate_limit_circuit_break_threshold": 1,
-        "cooldown_chunk_size": 40,
-        "degrade_to_single_worker_on_rate_limit": True,
-    },
-    "managed_fast": {
-        "chunk_size": 60,
-        "sleep": 0.05,
-        "max_workers": 1,
-        "max_retry": 2,
-        "retry_backoff": 1.0,
-        "sleep_jitter_ratio": 0.2,
-        "rate_limit_cooldown_sec": 12.0,
-        "rate_limit_circuit_break_threshold": 1,
-        "cooldown_chunk_size": 30,
-        "degrade_to_single_worker_on_rate_limit": True,
-    },
-    "managed_safe": {
-        "chunk_size": 40,
-        "sleep": 0.15,
-        "max_workers": 1,
-        "max_retry": 3,
-        "retry_backoff": 1.5,
-        "sleep_jitter_ratio": 0.3,
-        "rate_limit_cooldown_sec": 20.0,
-        "rate_limit_circuit_break_threshold": 1,
-        "cooldown_chunk_size": 20,
-        "degrade_to_single_worker_on_rate_limit": True,
-    },
-    "raw_heavy": {
-        "chunk_size": 25,
-        "sleep": 0.35,
-        "max_workers": 1,
-        "max_retry": 4,
-        "retry_backoff": 2.5,
-        "sleep_jitter_ratio": 0.35,
-        "rate_limit_cooldown_sec": 30.0,
-        "rate_limit_circuit_break_threshold": 1,
-        "cooldown_chunk_size": 10,
-        "degrade_to_single_worker_on_rate_limit": True,
-    },
-}
-
-
-def _now_str() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-def parse_symbols(symbols: str | Iterable[str] | None) -> list[str]:
-    if symbols is None:
-        return []
-
-    if isinstance(symbols, str):
-        raw = symbols.replace("\n", ",").split(",")
-    else:
-        raw = list(symbols)
-
-    out: list[str] = []
-    seen: set[str] = set()
-
-    for item in raw:
-        sym = str(item).strip().upper()
-        if not sym or sym in seen:
-            continue
-        seen.add(sym)
-        out.append(sym)
-
-    return out
-
-
-def split_valid_invalid_symbols(symbols: str | Iterable[str] | None) -> tuple[list[str], list[str]]:
-    parsed = parse_symbols(symbols)
-    valid: list[str] = []
-    invalid: list[str] = []
-
-    for sym in parsed:
-        if SYMBOL_PATTERN.fullmatch(sym):
-            valid.append(sym)
-        else:
-            invalid.append(sym)
-
-    return valid, invalid
-
-
-def _build_result(
-    *,
-    job_name: str,
-    status: str,
-    started_at: str,
-    finished_at: str,
-    duration_sec: float,
-    rows_written: int | None = None,
-    symbols_requested: int | None = None,
-    symbols_processed: int | None = None,
-    failed_symbols: list[str] | None = None,
-    message: str = "",
-    details: dict[str, Any] | None = None,
-) -> JobResult:
-    return {
-        "job_name": job_name,
-        "status": status,
-        "started_at": started_at,
-        "finished_at": finished_at,
-        "duration_sec": round(duration_sec, 3),
-        "rows_written": rows_written,
-        "symbols_requested": symbols_requested,
-        "symbols_processed": symbols_processed,
-        "failed_symbols": failed_symbols or [],
-        "message": message,
-        "details": details or {},
-    }
-
-
-def _resolve_ohlcv_execution_profile(execution_profile: str) -> tuple[str, dict[str, Any]]:
-    normalized = str(execution_profile or "managed_safe").strip().lower()
-    if normalized not in OHLCV_EXECUTION_PROFILES:
-        normalized = "managed_safe"
-    return normalized, dict(OHLCV_EXECUTION_PROFILES[normalized])
-
-
-def _merge_step_failures(steps: list[JobResult], invalid_symbols: list[str] | None = None) -> list[str]:
-    failures: list[str] = list(invalid_symbols or [])
-    for step in steps:
-        failures.extend(step.get("failed_symbols") or [])
-    return failures
-
-
-def _failed_item_ids(failed_items: Iterable[Any], *, id_keys: tuple[str, ...] = ("symbol", "series_id")) -> list[str]:
-    ids: list[str] = []
-    for item in failed_items or []:
-        if isinstance(item, dict):
-            for key in id_keys:
-                value = item.get(key)
-                if value:
-                    ids.append(str(value).upper())
-                    break
-        elif item:
-            ids.append(str(item).upper())
-    return ids
-
-
-def _status_from_provider_summary(
-    *,
-    rows_written: int,
-    failed_items: list[str],
-    missing_items: list[str],
-) -> str:
-    if rows_written <= 0:
-        return "failed"
-    if failed_items or missing_items:
-        return "partial_success"
-    return "success"
-
-
-def _pipeline_status(steps: list[JobResult]) -> str:
-    statuses = [step["status"] for step in steps]
-    if any(status == "failed" for status in statuses):
-        return "failed"
-    if any(status == "partial_success" for status in statuses):
-        return "partial_success"
-    return "success"
 
 
 def run_collect_ohlcv(
@@ -858,6 +697,7 @@ def run_collect_futures_ohlcv(
     max_symbols: int = 24,
     batch_size: int = 8,
     sleep_sec: float = 0.15,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_futures_ohlcv"
     started_at = _now_str()
@@ -867,6 +707,7 @@ def run_collect_futures_ohlcv(
             symbols if symbols is not None else DEFAULT_CORE_FUTURES_SYMBOLS,
             max_symbols=max_symbols,
         )
+        _emit_stage_progress(progress_callback, event="stage_start", stage="futures_ohlcv")
         result = collect_and_store_futures_ohlcv(
             requested_symbols,
             period=period,
@@ -876,6 +717,7 @@ def run_collect_futures_ohlcv(
             batch_size=batch_size,
             sleep_sec=sleep_sec,
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="futures_ohlcv")
         rows_written = int(result.get("rows_written") or 0)
         failed_symbols = list(result.get("failed_symbols") or [])
         requested = int(result.get("symbols_requested") or len(requested_symbols))
@@ -943,16 +785,19 @@ def run_collect_fomc_calendar(
     *,
     years: Iterable[int] | None = None,
     source_url: str | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_fomc_calendar"
     started_at = _now_str()
     t0 = perf_counter()
     try:
         normalized_years = tuple(int(year) for year in years) if years else None
+        _emit_stage_progress(progress_callback, event="stage_start", stage="fomc_calendar")
         result = collect_and_store_fomc_calendar(
             years=normalized_years,
             **({"source_url": source_url} if source_url else {}),
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="fomc_calendar")
         rows_written = int(result.get("rows_written") or 0)
         events_found = int(result.get("events_found") or 0)
         finished_at = _now_str()
@@ -999,6 +844,7 @@ def run_collect_earnings_calendar(
     batch_offset: int = 0,
     validate_with_nasdaq: bool = False,
     request_sleep_sec: float = 0.0,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_earnings_calendar"
     started_at = _now_str()
@@ -1023,6 +869,7 @@ def run_collect_earnings_calendar(
                 details={"symbol_source": "manual", "invalid_symbols": invalid_symbols},
             )
     try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="earnings_calendar")
         result = collect_and_store_earnings_calendar(
             symbols=parsed_symbols,
             symbol_source=symbol_source,
@@ -1036,6 +883,7 @@ def run_collect_earnings_calendar(
             validate_with_nasdaq=validate_with_nasdaq,
             request_sleep_sec=request_sleep_sec,
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="earnings_calendar")
         rows_written = int(result.get("rows_written") or 0)
         symbols_requested = int(result.get("symbols_requested") or 0)
         symbols_processed = int(result.get("symbols_processed") or 0)
@@ -1102,17 +950,26 @@ def run_collect_macro_calendar(
     years: Iterable[int] | None = None,
     include_bls: bool = True,
     include_bea: bool = True,
+    include_census: bool = True,
+    include_ism: bool = True,
+    include_treasury: bool = True,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_macro_calendar"
     started_at = _now_str()
     t0 = perf_counter()
     try:
         normalized_years = tuple(int(year) for year in years) if years else None
+        _emit_stage_progress(progress_callback, event="stage_start", stage="macro_calendar")
         result = collect_and_store_macro_calendar(
             years=normalized_years,
             include_bls=include_bls,
             include_bea=include_bea,
+            include_census=include_census,
+            include_ism=include_ism,
+            include_treasury=include_treasury,
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="macro_calendar")
         rows_written = int(result.get("rows_written") or 0)
         events_found = int(result.get("events_found") or 0)
         failed_sources = [str(item) for item in result.get("failed_sources") or []]
@@ -1153,6 +1010,72 @@ def run_collect_macro_calendar(
                 "years": list(years or []),
                 "include_bls": include_bls,
                 "include_bea": include_bea,
+            },
+        )
+
+
+def run_collect_market_structure_calendar(
+    *,
+    years: Iterable[int] | None = None,
+    include_holidays: bool = True,
+    include_options_expiration: bool = True,
+    include_russell: bool = True,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    job_name = "collect_market_structure_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        normalized_years = tuple(int(year) for year in years) if years else None
+        _emit_stage_progress(progress_callback, event="stage_start", stage="market_structure_calendar")
+        result = collect_and_store_market_structure_calendar(
+            years=normalized_years,
+            include_holidays=include_holidays,
+            include_options_expiration=include_options_expiration,
+            include_russell=include_russell,
+        )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="market_structure_calendar")
+        rows_written = int(result.get("rows_written") or 0)
+        events_found = int(result.get("events_found") or 0)
+        failed_sources = [str(item) for item in result.get("failed_sources") or []]
+        finished_at = _now_str()
+        if rows_written > 0 and not failed_sources:
+            status = "success"
+        elif rows_written > 0:
+            status = "partial_success"
+        else:
+            status = "failed"
+        message = (
+            f"Market-structure calendar collected {events_found} event dates."
+            if rows_written > 0
+            else "Market-structure calendar collection wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            failed_symbols=failed_sources,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Market-structure calendar collection failed: {exc}",
+            details={
+                "years": list(years or []),
+                "include_holidays": include_holidays,
+                "include_options_expiration": include_options_expiration,
+                "include_russell": include_russell,
             },
         )
 
@@ -1258,17 +1181,20 @@ def run_import_bls_macro_calendar_ics(
     ics_text: str,
     years: Iterable[int] | None = None,
     source_name: str | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "import_bls_macro_calendar_ics"
     started_at = _now_str()
     t0 = perf_counter()
     try:
         normalized_years = tuple(int(year) for year in years) if years else None
+        _emit_stage_progress(progress_callback, event="stage_start", stage="bls_macro_calendar_ics")
         result = collect_and_store_bls_macro_calendar_ics(
             ics_text,
             years=normalized_years,
             source_name=source_name,
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="bls_macro_calendar_ics")
         rows_written = int(result.get("rows_written") or 0)
         events_found = int(result.get("events_found") or 0)
         finished_at = _now_str()
@@ -1691,8 +1617,9 @@ def run_rebuild_statement_shadow(
 def run_metadata_refresh(
     *,
     kinds: tuple[str, ...] = ("stock", "etf"),
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
-    result = run_collect_asset_profiles(kinds=kinds)
+    result = run_collect_asset_profiles(kinds=kinds, progress_callback=progress_callback)
     result["job_name"] = "metadata_refresh"
     if result["status"] == "success":
         result["message"] = "Metadata refresh completed."
@@ -1708,13 +1635,16 @@ def run_metadata_refresh(
 def run_collect_asset_profiles(
     *,
     kinds: tuple[str, ...] = ("stock", "etf"),
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_asset_profiles"
     started_at = _now_str()
     t0 = perf_counter()
 
     try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="asset_profiles")
         failed_rows = collect_and_store_asset_profiles(kinds=kinds)
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="asset_profiles")
         finished_at = _now_str()
         failure_count = len(failed_rows)
         status = "partial_success" if failure_count > 0 else "success"
@@ -1865,17 +1795,20 @@ def run_discover_etf_provider_source_map(
     *,
     limit: int | None = None,
     verify: bool = True,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     """Discover ETF provider source endpoints from NYSE ETF/profile rows and cache them in DB."""
     job_name = "discover_etf_provider_source_map"
     started_at = _now_str()
     t0 = perf_counter()
     try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="etf_provider_source_map")
         summary = discover_and_store_etf_provider_source_map(
             symbols=symbols,
             limit=limit,
             verify=bool(verify),
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="etf_provider_source_map")
         failed_items = _failed_item_ids(summary.get("failed") or [], id_keys=("symbol",))
         rows_written = int(summary.get("stored") or 0)
         verified = int(summary.get("verified") or 0)
@@ -1923,6 +1856,7 @@ def run_collect_sec_form25_delistings(
     user_agent: str | None = None,
     include_archive_files: bool = True,
     max_archive_files: int = 5,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     """Collect SEC Form 25 delisting evidence into the lifecycle evidence table."""
     job_name = "collect_sec_form25_delistings"
@@ -1951,12 +1885,14 @@ def run_collect_sec_form25_delistings(
         )
 
     try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="sec_form25_delistings")
         summary = collect_and_store_sec_form25_delistings(
             parsed,
             user_agent=user_agent,
             include_archive_files=bool(include_archive_files),
             max_archive_files=int(max_archive_files),
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="sec_form25_delistings")
         rows_written = int(summary.get("rows_written") or 0)
         unmapped_symbols = list(summary.get("unmapped_symbols") or [])
         symbols_without_form25 = list(summary.get("symbols_without_form25") or [])
@@ -2013,6 +1949,7 @@ def run_collect_symbol_directory_snapshots(
     user_agent: str | None = None,
     include_test_issues: bool = False,
     snapshot_date: str | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     """Collect Nasdaq public Symbol Directory current snapshots into lifecycle evidence."""
     job_name = "collect_symbol_directory_snapshots"
@@ -2020,12 +1957,14 @@ def run_collect_symbol_directory_snapshots(
     t0 = perf_counter()
 
     try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="symbol_directory_snapshots")
         summary = collect_and_store_symbol_directory_snapshots(
             sources=sources,
             user_agent=user_agent,
             include_test_issues=bool(include_test_issues),
             snapshot_date=snapshot_date,
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="symbol_directory_snapshots")
         rows_written = int(summary.get("rows_written") or 0)
         errors = list(summary.get("errors") or [])
         failed_sources = _failed_item_ids(errors, id_keys=("source",))
@@ -2079,6 +2018,7 @@ def run_collect_sec_company_ticker_crosscheck(
     *,
     user_agent: str | None = None,
     snapshot_date: str | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     """Collect SEC current CIK / ticker / exchange associations into lifecycle evidence."""
     job_name = "collect_sec_company_ticker_crosscheck"
@@ -2106,11 +2046,13 @@ def run_collect_sec_company_ticker_crosscheck(
         )
 
     try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="sec_company_ticker_crosscheck")
         summary = collect_and_store_sec_company_ticker_crosscheck(
             symbols=parsed,
             user_agent=user_agent,
             snapshot_date=snapshot_date,
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="sec_company_ticker_crosscheck")
         rows_written = int(summary.get("rows_written") or 0)
         missing_symbols = list(summary.get("requested_missing_symbols") or [])
         failed_symbols = invalid_symbols + missing_symbols
@@ -2162,6 +2104,7 @@ def run_collect_computed_snapshot_lifecycle(
     symbols: str | Iterable[str] | None = None,
     *,
     min_observation_dates: int = 2,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     """Compute conservative lifecycle evidence from existing current snapshot rows."""
     job_name = "collect_computed_snapshot_lifecycle"
@@ -2190,10 +2133,12 @@ def run_collect_computed_snapshot_lifecycle(
         )
 
     try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="computed_snapshot_lifecycle")
         summary = collect_and_store_computed_snapshot_lifecycle(
             symbols=parsed,
             min_observation_dates=int(min_observation_dates),
         )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="computed_snapshot_lifecycle")
         rows_written = int(summary.get("rows_written") or 0)
         missing_symbols = list(summary.get("requested_missing_symbols") or [])
         failed_symbols = invalid_symbols + missing_symbols

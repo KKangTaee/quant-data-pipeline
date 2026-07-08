@@ -107,7 +107,7 @@ Wikipedia S&P 500 constituents
 Nasdaq public Symbol Directory nasdaqlisted.txt current file
   -> finance.data.symbol_directory.collect_and_store_symbol_directory_snapshots()
   -> finance_meta.nyse_symbol_lifecycle (source=nasdaq_symdir_nasdaqlisted)
-  -> app.services.overview_market_intelligence.build_market_movers_snapshot(universe_code=NASDAQ)
+  -> app.services.overview.market_movers.build_market_movers_snapshot(universe_code=NASDAQ)
   -> Workspace > Overview > Market Movers
 
 yahoo quote batch via yfinance cookie / crumb session
@@ -117,11 +117,11 @@ yahoo quote batch via yfinance cookie / crumb session
 yfinance 5m OHLCV fallback
   -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
   -> finance_price.market_intraday_snapshot
-  -> app.services.overview_market_intelligence.build_market_movers_snapshot()
+  -> app.services.overview.market_movers.build_market_movers_snapshot()
   -> Workspace > Overview > Market Movers
 
 finance_price.market_intraday_snapshot or finance_price.nyse_price_history
-  -> app.services.overview_market_intelligence.build_group_leadership_snapshot()
+  -> app.services.overview.market_movers.build_group_leadership_snapshot()
   -> Workspace > Overview > Sector / Industry
 
 missing quote rows
@@ -129,7 +129,7 @@ missing quote rows
   -> app.jobs.overview_actions.run_overview_quote_gap_diagnostics()
   -> app.jobs.ingestion_jobs.run_diagnose_market_quote_gaps()
   -> finance_meta.market_data_issue
-  -> Workspace > Overview > Market Movers > Coverage Diagnostics
+  -> Workspace > Overview > Market Movers > Coverage Trust / Raw diagnostics
 ```
 
 의미:
@@ -149,7 +149,7 @@ missing quote rows
 Federal Reserve official FOMC calendar HTML
   -> finance.data.market_intelligence.collect_and_store_fomc_calendar()
   -> finance_meta.market_event_calendar
-  -> app.services.overview_market_intelligence.build_market_events_snapshot()
+  -> app.services.overview.events.build_market_events_snapshot()
   -> Workspace > Overview > Events
 
 Yahoo / yfinance ticker calendar, bounded symbols
@@ -158,23 +158,39 @@ Yahoo / yfinance ticker calendar, bounded symbols
   -> finance_meta.market_event_calendar
   -> Workspace > Overview > Events
 
-BLS / BEA official release schedules or BLS .ics import
+BLS / BEA / Census / ISM / Treasury official schedules or BLS .ics import
   -> finance.data.market_intelligence.collect_and_store_macro_calendar()
   -> finance_meta.market_event_calendar
   -> Workspace > Overview > Events
+
+Nasdaq Trader / Cboe / FTSE Russell market-structure calendars
+  -> finance.data.market_intelligence.collect_and_store_market_structure_calendar()
+  -> finance_meta.market_event_calendar
+  -> Workspace > Overview > Events
+
+finance_meta.market_event_calendar
+  -> app.services.overview.events.build_market_events_snapshot()
+  -> app.services.overview.events.build_events_workbench_payload()
+  -> app/web/streamlit_components/events_workbench React display
 ```
 
 의미:
 
 - `market_event_calendar`는 event collector별 normalized output을 저장하는 공통 table이다.
 - 반복 수집은 `event_key` 기준 UPSERT로 같은 event row를 갱신한다.
+- `event_family`, `event_subtype`, `universe_scope`, `source_authority`는 FOMC / macro / earnings / market-structure / fixed-income / corporate-action 후보를 같은 UI/read-model contract로 읽기 위한 taxonomy 필드다.
+- 기존 row에 taxonomy 필드가 없으면 Overview read model은 `event_type`, `source_type`, `validation_status`, `source`에서 보수적으로 추론한다.
 - FOMC collector는 Fed 공식 `.gov` calendar page를 파싱한다. meeting range의 마지막 날을 `event_date`로 저장하고, 원본 month/date text와 link evidence는 `raw_payload_json`에 남긴다.
 - Earnings collector는 yfinance ticker `calendar` field에서 upcoming `Earnings Date`를 읽고 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장한다.
 - 선택적으로 Nasdaq earnings calendar web endpoint로 같은 symbol/date를 cross-check하고, 결과를 `validation_status`와 `raw_payload_json.source_validation`에 남긴다.
 - 날짜가 바뀐 같은 symbol/source의 이전 active estimate는 `event_status=superseded`로 남겨 audit trail을 유지한다.
-- Earnings 수집 대상은 manual symbol list 또는 최신 S&P 500 movers snapshot 일부로 제한한다. Coverage 1000/2000 전체 earnings scan은 rate-limit 위험 때문에 production화 전까지 기본 path가 아니다.
+- Earnings 수집 대상은 manual symbol list, latest movers, S&P 500, large-cap batch 등 bounded universe로 제한한다. Portfolio / watchlist / Nasdaq-100 source는 injected loader boundary로 열려 있으며, 저장 시 `universe_scope`로 구분한다.
 - Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, `app/jobs/overview_actions.py` facade를 거쳐 ingestion job wrapper로 DB에 저장한 뒤 service read model로 읽는다.
-- Macro calendar collector는 official BLS / BEA schedules를 사용한다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
+- Macro calendar collector는 official BLS / BEA / Census / ISM / Treasury schedules를 사용할 수 있다. BLS 자동 요청이 차단되면 사용자가 받은 공식 `.ics` 파일을 import해 같은 table에 저장한다.
+- Treasury auction rows are fixed-income calendar context and stay in the same Events table with `event_family=fixed_income`; they are not trade signals or monitoring triggers.
+- Market-structure rows use official source evidence for holidays, early closes, options expiration, and Russell reconstitution context. They are schedule-density background and are not validation gates, trading signals, monitoring signals, or automated actions.
+- `build_events_workbench_payload()` owns the React-ready Events brief, command boundary, filter labels, rail tabs, trust review, calendar day buckets, weekly density, and evidence rows. React filters, tabs, month-grid rendering, and hover interactions are display-only over that payload.
+- React-first Events hides the legacy Streamlit Type selector and refresh result expander when the component build is available. The helper still owns refresh side effects and attaches last refresh results to `command.last_results`; the old Streamlit toolbar remains fallback-only.
 
 ## Overview futures monitor 흐름
 
@@ -298,7 +314,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
   -> finance_meta.macro_series_observation
   -> finance.loaders.sentiment.load_market_sentiment_snapshot()
   -> finance.loaders.sentiment.load_market_sentiment_history()
-  -> app.services.overview_market_intelligence.build_market_sentiment_snapshot()
+  -> app.services.overview.sentiment.build_market_sentiment_snapshot()
   -> app.services.backtest_practical_validation.build_market_sentiment_context_overlay()
   -> Workspace > Overview > Sentiment / Data Health
   -> Backtest > Practical Validation / Final Review context overlay
@@ -312,7 +328,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 - Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 같은 long-form table에 저장한다.
 - AAII official page는 backend default HTTP client가 interstitial을 받을 수 있어 browser-like document request / TLS impersonation path를 사용한다. 실패하면 값을 꾸미지 않고 job result와 Overview status에 failed / missing state를 남긴다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
-- `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, surface-specific overlay는 Practical Validation / Final Review / Portfolio Monitoring에서도 같은 context를 읽는다. 이 context는 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.
+- `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, `load_market_sentiment_history()`는 CNN Fear & Greed, AAII bearish / bull-bear spread, CNN 7개 component history를 read model에 제공한다. Overview service는 latest 값의 최근 percentile / min-max range, CNN headline / component / AAII divergence, CNN component latest-vs-previous change context를 계산한다. surface-specific overlay는 Practical Validation / Final Review / Portfolio Monitoring에서도 같은 latest context를 읽는다. 이 context는 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 - `data-provenance-coverage-v1`부터 macro context는 FRED source mode, observation range, collected range, stale series를 compact provenance로 제공한다.
@@ -322,7 +338,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 ## Broad fundamentals / factors 흐름
 
 ```text
-yfinance statements
+yfinance financial statements (legacy compatibility only)
   -> finance.data.fundamentals.upsert_fundamentals()
   -> finance_fundamental.nyse_fundamentals
   -> finance.data.factors.upsert_factors()
@@ -333,7 +349,10 @@ yfinance statements
 
 - `nyse_fundamentals`는 provider-normalized broad summary layer다.
 - `nyse_factors`는 fundamentals와 price as-of matching으로 만든 derived research layer다.
-- 이 경로는 편리하지만 strict filing-time PIT source로 보지는 않는다.
+- 이 경로는 `legacy_broad_yfinance` source contract로 표시한다.
+- 이 경로는 편리하지만 canonical financial statement source나 strict filing-time PIT source로 보지 않는다.
+- Phase 7 source migration부터 Ingestion UI의 active broad yfinance fundamentals / factors collection cards는 제거했다. action handlers와 tables는 saved/history replay 또는 explicit compatibility comparison을 위해서만 남긴다.
+- loader read model은 `financial_source`, `financial_source_mode`, `source_table`, `available_at`, `form_type`, `accession_no` 공통 source contract alias를 노출한다. broad yfinance row는 filing metadata가 없으므로 `available_at`, `form_type`, `accession_no`가 비어 있을 수 있다.
 
 ## Statement-driven shadow 흐름
 
@@ -350,6 +369,12 @@ finance_fundamental.nyse_financial_statement_values
 - broad public path와 statement-driven rebuild path를 분리한다.
 - strict annual / quarterly factor strategy는 이 shadow path를 더 중요하게 본다.
 - raw truth는 여전히 `nyse_financial_statement_values`다.
+- 이 경로는 `sec_edgar_statement_shadow` source contract로 표시한다.
+- statement shadow loader는 `latest_available_at`, `latest_form_type`, `latest_accession_no`를 공통 alias인 `available_at`, `form_type`, `accession_no`로도 노출한다.
+- annual shadow는 canonical 승격 대상이지만, quarterly shadow는 10-K/FY full-year flow-value 혼입 정책이 고정되기 전까지 production source로 승격하지 않는다.
+- Phase 3 source migration부터 quarterly shadow write path는 `10-K` / `10-K/A` filing에서 온 flow metrics를 분기값으로 저장하지 않도록 해당 flow column을 비운다. balance sheet instant 항목은 별도 policy로 남을 수 있다.
+- Phase 3 source migration부터 quarterly shadow loaders는 `10-Q` / `10-Q/A` row만 소비 경로에 반환한다. 기존 DB에 남아 있는 quarterly `10-K` / `10-K/A` row는 audit 대상일 수 있지만 Market Movers / backtest factor 소비 경로의 usable row가 아니다.
+- `nyse_factors_statement` 자체에는 form type column이 없으므로 factor shadow loader는 `nyse_fundamentals_statement`와 `symbol/freq/period_end/accession` 기준으로 join해 `form_type` source contract alias를 회수한 뒤 같은 quarterly gate를 적용한다.
 
 ## Detailed financial statements 흐름
 
@@ -368,6 +393,8 @@ EDGAR
 - detailed statement 계층은 filing-level metadata와 raw long-format values를 보존한다.
 - `values` table은 향후 PIT-friendly custom factor engine의 원재료다.
 - `labels`는 UI / 해석 보조용 convenience layer로 본다.
+- Phase 5 source migration부터 `Workspace > Ingestion`의 기본 재무제표 갱신 흐름은 `EDGAR annual 재무제표 갱신` card에서 시작한다. 같은 화면의 broad yfinance fundamentals / factors refresh는 legacy compatibility / explicit comparison path이며 canonical financial statement refresh가 아니다.
+- Phase 6 source migration부터 `Workspace > Ingestion > 수동 복구 / 진단`은 DB-backed `Statement Universe Coverage QA`를 제공한다. 이 QA는 `SP500` / `TOP1000` / `TOP2000` / `NASDAQ` universe를 raw statement / shadow / profile rows로 요약하고, live EDGAR source probe는 소수 symbol용 `Statement Coverage Diagnosis`에만 남긴다.
 
 ## Runtime read path
 

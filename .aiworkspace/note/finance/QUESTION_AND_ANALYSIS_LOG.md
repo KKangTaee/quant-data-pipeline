@@ -144,6 +144,132 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: diagnostics는 raw evidence, audits는 user-facing evidence rows, validation modules는 gate owner, board map은 technical explanation으로 분리하고, first-read 화면은 workspace read model과 Fix Queue 중심으로 읽는 것이 가장 작고 안전한 구조다.
 - Follow-up: V1-V8에서 workspace read model, Final Review readiness wording, 5-flow page, read-only React Fix Queue, workspace panel split, normalized first-read status, durable docs alignment를 완료했다. Registry / saved / provider collection / threshold / live approval 경계는 변경하지 않았다.
 
+### 2026-07-08 - Market Movers basic indicator charts should extend, not replace, the table
+
+- User request: 변동종목 조사단서의 기본 지표 UI는 그대로 두고, 하단에 PER / EPS / 당기순이익 / 유동비율 / FCF를 막대 그래프로 볼 수 있게 해 달라고 승인함.
+- Interpreted goal: 기존 annual / quarterly 숫자 표를 없애지 않고, 같은 재무제표 근거를 지표 탭과 연간 / 분기 탭으로 빠르게 비교해야 한다.
+- Analysis result: 차트 payload는 `why_it_moved` selected-symbol research snapshot에서 만들고, UI는 그 payload만 렌더링한다. 유동비율은 current assets/current liabilities에서 계산하고, FCF는 statement row의 free cash flow를 쓴다. 차트는 context-only 기본 지표 시각화이며 trading signal이나 validation gate가 아니다.
+- Follow-up: 실제 DB row가 적은 종목은 빈 상태 또는 단일 막대로 보일 수 있다. 후속 개선은 chart scale / negative value 표현 polish 정도로 분리한다.
+
+### 2026-07-07 - Events calendar should include macro, earnings universe, and market-structure coverage
+
+- User request: 주식 / 매크로 / 퀀트 투자에서 반드시 확인해야 할 이벤트가 현재 Events 범위보다 더 넓은지, S&P 500 / 우량기업 실적도 일정 확인 대상인지 웹 시장조사 후 가이드를 요청함.
+- Interpreted goal: Events는 거래 신호가 아니라 시장 배경 달력이어야 하며, 공식 일정과 provider estimate를 명확히 분리한 수집 범위가 필요하다.
+- Analysis result: S&P 500 / Nasdaq-100 / portfolio-watchlist / major-cap earnings는 first-class coverage가 맞다. P0는 official macro/Fed, S&P/major earnings, holidays/OPEX/index rebalance, Treasury auctions를 포함하고, earnings는 official/issuer-confirmed/provider-estimate/cross-checked/not-confirmed 상태를 표시해야 한다. 2차~10차 구현으로 taxonomy contract, expanded official macro, earnings universe authority, market-structure events, service-owned workbench payload, React scaffold, refresh command boundary, calendar/density/evidence React UX, durable docs, and final QA closeout을 완료했다.
+- Follow-up: 상세 리서치는 `.aiworkspace/note/finance/researches/active/2026-07-events-calendar-scope/`에 남겼다. Browser QA screenshots and run history are generated local artifacts and remain uncommitted.
+
+### 2026-07-07 - Market Movers ticker-change gaps should be repaired by explicit alias application
+
+- User request: Top1000 / Top2000에서 `SATS`, `VSCO`처럼 ticker 변경 때문에 quote 누락이 생길 때마다 수동 조사 없이 해결할 기능을 1차~5차로 개발해 달라고 요청함.
+- Interpreted goal: `유니버스 기준 갱신`에 무거운 자동 조사를 숨기지 않고, missing quote row에서 replacement ticker 후보를 감지한 뒤 사용자가 명시적으로 적용하고 snapshot을 다시 갱신하는 workflow가 필요하다.
+- Analysis result: `market_symbol_alias`는 candidate / active alias를 저장한다. Active alias는 future intraday quote lookup ticker만 바꾸며, universe symbol identity는 유지하고 `market_intraday_snapshot.quote_symbol`에 근거를 남긴다.
+- Follow-up: candidate-only 버튼은 current DB에 후보가 있을 때만 나타난다. 적용 후에도 반드시 `일중 스냅샷 갱신`을 다시 실행해야 누락 row가 제거된다.
+
+### 2026-07-06 - Futures Macro past-check should be an on-screen section, not only a code component
+
+- User request: 사용자가 `과거 점검`을 React 파일로만 분리한 것이 아니라, 예시처럼 화면에서도 독립 박스 섹션으로 관리할 수 있는지 확인하고 진행을 승인함.
+- Interpreted goal: `과거 점검`은 현재 흐름 / 현재 근거 사이에 섞인 타일 묶음이 아니라, 무엇을 점검하고 어떤 action을 실행하며 어떤 결과를 보여주는지 한 surface 안에서 읽혀야 한다.
+- Analysis result: `HistoricalValidationPanel.tsx`는 독립 `과거 점검` 카드 섹션을 렌더링하고, Python action / DB / 계산 경계는 유지한다. 후속으로 하나의 React workbench / iframe 안에서 `MacroContextSection`, `RecentFlowSection`, `HistoricalValidationPanel`을 분리해 화면상 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`이 별도 블록처럼 읽히게 했다. 하단 `계산 근거 / 원본 표`는 raw table 추적 역할로 남긴다.
+- Follow-up: 그래프는 아직 렌더링하지 않는다. 발생 빈도 / 이후 흐름 분포 후보 payload는 후속 시각화 작업에서 이 섹션 안에 붙일 수 있다.
+
+### 2026-07-06 - Futures Macro evidence and original data should have separate reading roles
+
+- User request: Futures Macro React 보드의 `근거해석`과 하단 `근거해석/원본데이터` 중복을 정리하고, `과거발생`, `과거점검 요약`, 원본표가 무엇을 말하는지 더 명확하게 개선해 달라고 요청함.
+- Interpreted goal: 가이드 문구를 늘리는 것이 아니라, 현재 해석 근거, 과거 일관성, raw calculation table이 각각 어떤 판단 재료인지 화면 구조와 label 자체로 드러나야 한다.
+- Analysis result: React는 `현재 근거`를 맡고, 하단 Streamlit disclosure는 `계산 근거 / 원본 표`를 맡는다. Historical validation은 `현재 해석의 과거 일관성`, `비슷한 과거 상태`, `5D 방향성 적용/비적용`으로 정리하고, 원본표는 `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서로 읽는다.
+- Follow-up: 추가 UX가 필요하면 raw dataframe 자체를 숨기기보다 column display names / compact derived rows를 더 정교하게 다듬는다. Historical validation은 여전히 prediction guarantee, trading signal, validation gate, monitoring signal이 아니다.
+
+### 2026-07-05 - Futures Macro React UX 1차~6차 closeout
+
+- User request: Futures Macro 탭 개선을 1차~6차 개발 / QA / 커밋 단위로 진행하고 현재 `sub-dev` 브랜치에서 임의 브랜치를 만들지 말라고 요청함.
+- Interpreted goal: 빠른 첫 진입, React workbench, 1W / 1M flow, mixed subtype clarity, validation cache decision, final QA/docs를 coherent commit 단위로 닫아야 한다.
+- Analysis result: 1차~6차를 완료했고, Python은 DB read / validation / refresh dispatch를 계속 소유한다. React는 payload render / user action shell이고, historical validation은 DB materialization 없이 process cache로 재사용한다. Browser QA는 current-code iframe render를 확인했지만 iframe click dispatch 자동화는 좌표 제한으로 증명하지 못했다.
+- Follow-up: iframe click bridge가 실제 운영 리스크로 다시 제기되면 수동 QA 또는 더 적합한 iframe 이벤트 도구로 `과거 점검 불러오기` click-to-session update를 재확인한다.
+
+### 2026-07-05 - Futures Macro validation should be process-cached before materialized
+
+- User request: Futures Macro 탭 개선 5차로 historical validation persistence/cache/materialization 방식을 판단해 달라고 요청함.
+- Interpreted goal: 과거 점검을 매번 7초 이상 재계산하지 않게 하되, 아직 별도 DB table / registry source-of-truth를 만들 정도의 cross-process 요구는 없다.
+- Analysis result: 이번 차수는 process cache가 맞다. Cache key에 latest stored futures daily candle marker, proxy price marker, selected symbols, years, current summary identity를 넣어 데이터 기준이 바뀌면 재계산되게 하고, `일봉 갱신` / `다시 읽기`는 session state와 process cache를 함께 clear한다.
+- Follow-up: app restart / multi-process / 다른 workflow 재사용이 필요해지면 compact materialized validation summary를 별도 retention/source contract와 함께 설계한다.
+
+### 2026-07-05 - Futures Macro mixed labels should explain conflict without forcing direction
+
+- User request: Futures Macro 탭 개선 4차로 혼재 매크로 흐름을 더 세분화하되, 방향성 신호를 억지로 만들지 말라고 요청함.
+- Interpreted goal: `혼재된 매크로 흐름`은 historical validation compatibility와 no-signal boundary를 유지하고, 사용자가 어떤 충돌인지 읽을 수 있게 subtype / regime hint / reason만 더 구체화해야 한다.
+- Analysis result: `_mixed_macro_context(...)`만 좁게 보강해 금리 부담 완화 속 성장 약세, 달러 압력 Risk-Off 후보, 원자재 약세 + 수요 둔화 후보, 위험선호/안전자산 상충 전환 구간, 저신호 관망을 구분했다. Directional scenario rule과 validation hit-rate boundary는 바꾸지 않았다.
+- Follow-up: 5차에서는 historical validation 재계산 비용을 process cache로 충분히 낮출지, compact persisted summary를 둘지 먼저 판단한다.
+
+### 2026-07-05 - Futures Macro React workbench should be a UI/action shell, not a calculation owner
+
+- User request: Futures Macro 탭 개선 2차로 React component MVP를 진행하되, Python 계산 / DB / action dispatch 경계를 유지하면서 개발 / QA / 커밋 단위로 닫아 달라고 요청함.
+- Interpreted goal: React는 사용자가 현재 macro 상태, score, 최근 흐름, validation state, 근거를 더 빨리 읽고 action을 선택하는 workbench를 맡고, 금융 계산이나 provider / DB 호출을 소유하면 안 된다.
+- Analysis result: `futures_macro_workbench` custom component는 JSON payload를 렌더링하고 event만 보낸다. `build_futures_macro_react_workbench_payload(...)`와 `_handle_futures_macro_react_event(...)`는 Python 경계에 남겨 DB read, refresh, cache clear, historical validation, rerun을 계속 소유한다.
+- Follow-up: 3차는 1W / 1M reading-flow expansion이다. Browser 자동화가 iframe button dispatch를 Python까지 증명하지 못했으므로, 이후 QA에서는 실제 사용자 클릭 또는 더 적합한 iframe 이벤트 도구로 재확인한다.
+
+### 2026-07-05 - Futures Macro first entry should not compute historical validation synchronously
+
+- User request: Futures Macro 탭 개선을 1차~6차 개발 / QA / 커밋 단위로 진행하되, 먼저 첫 진입 병목을 분리하고 React 전환은 그 다음 차수로 진행해 달라고 요청함.
+- Interpreted goal: Futures Macro는 첫 화면에서 현재 매크로 해석을 빠르게 보여주고, 과거 점검은 숨기는 것이 아니라 사용자가 필요할 때 명시적으로 계산해야 한다.
+- Analysis result: 병목은 React / HTML 렌더링이 아니라 `load_overview_futures_macro_snapshot()` 기본 `include_validation=True` 경로의 historical validation 동기 계산이다. 따라서 1차는 tab entry를 `include_validation=False`로 바꾸고 `과거 점검 불러오기` 버튼에서 validation / confidence를 session state에 저장하는 경계가 맞다.
+- Follow-up: 2차는 React component MVP이며, 5차에서 process cache 강화와 compact DB materialization 중 어떤 방식이 맞는지 별도 판단한다.
+
+### 2026-07-02 - Market Movers metadata and filing collection actions should follow tab ownership
+
+- User request: 기본 지표에서 받아야 할 재무제표가 보이면 하단 `뉴스`, `SEC 공시`, `메타` 탭의 조회 기능을 각 탭에 맞게 분리하고, SEC 공시 탭에서 해당 재무제표를 수집할 수 있게 해 달라고 승인함.
+- Interpreted goal: combined metadata action은 사용자가 어떤 자료를 조회하는지 흐리므로 News 탭은 뉴스 metadata, SEC 탭은 SEC filing metadata와 selected-symbol statement refresh를 소유해야 한다.
+- Analysis result: 뉴스 / 한국어 뉴스 / SEC filing metadata는 session-only lookup으로 유지하고, 재무제표 수집은 UI direct provider fetch가 아니라 `app/jobs/overview_actions.py` facade를 통해 기존 Ingestion EDGAR statement refresh job에 위임하는 것이 맞다.
+- Follow-up: Browser QA에서는 live EDGAR 수집 버튼을 실제 실행하지 않고 UI 위치 / 버튼 노출 / overflow만 확인한다. 실제 수집 시간은 사용자가 필요한 symbol에서 실행할 때 화면에 표시된다.
+
+### 2026-07-01 - Ingestion collection workbench should become a three-section workflow
+
+- User request: Ingestion 수정을 이어서, 기존 `일상운영 / 검증데이터`, `수동복구 / 진단` 탭 옆에 새 탭을 만들고 우측 column의 세션 최근수집 / 누적실행기록 / 상세 / 수동수집 / 로그를 탭 내부로 관리하며, 공용 기능과 각 탭 기능을 코드 기준으로 파악한 뒤 1~4차 개발 / QA / 커밋 순으로 진행해 달라고 요청함.
+- Interpreted goal: Ingestion을 진단값 나열 화면이 아니라 공용 타이틀 / 공용 실행 결과 / 3개 collection section 구조로 읽히게 만들고, 운영 수집 entry와 수동 복구 entry의 중복처럼 보이는 관계를 사용자-facing copy로 구분해야 한다.
+- Analysis result: 기존 우측 column은 별도 `실행 기록 / 결과` section으로 옮기는 것이 가장 작고 안전한 구조 변경이다. 실행 결과 요약은 공용 영역에 두고, 실제 collection execution은 `일상 운영 / 검증 데이터`와 `수동 복구 / 진단` 안에 유지한다.
+- Follow-up: 상세 재무제표 수동 수집은 수동 복구 entry로 유지한다. 운영용 EDGAR annual refresh와 같은 canonical refresh는 운영 section에서 계속 먼저 노출한다.
+
+### 2026-07-01 - Ingestion manual collection should keep operator context during rerun
+
+- User request: `수동 복구 / 진단 > 상세 재무제표 수동 수집 실행`을 누르면 처음 Ingestion 화면처럼 돌아가 보여 헷갈리므로 수정하고, 진행 중 처리 / progress와 함께 현재 경과 시간을 표시해 달라고 승인함.
+- Interpreted goal: Streamlit rerun 자체는 유지하되, operator가 선택한 collection section과 실행 context를 UI state에 저장해 job scheduling 후에도 manual workflow 위치를 잃지 않게 해야 한다.
+- Analysis result: native `st.tabs` selection에 의존하지 않고 session-state `st.pills` selector로 바꾸는 것이 가장 작고 되돌리기 쉬운 수정이다. scheduled job에는 `collection_section`과 `ui_started_at`을 넣고, running banner / progress caption에서 elapsed time을 계산한다.
+- Follow-up: Browser QA에서는 실제 EDGAR 수집 버튼을 누르지 않았다. live elapsed progress를 눈으로 확인하려면 사람이 의도적으로 소량 수집 job을 실행해 확인할 수 있다.
+
+### 2026-06-30 - Quarterly statement shadow must gate 10-K FY flow before production use
+
+- User request: 재무제표 source migration을 DEVELOPMENT_GUIDE 기준으로 1~9차 순차 진행하라고 승인함.
+- Interpreted goal: quarterly statement shadow에 남은 `10-K` / `10-K/A` full-year flow values가 Market Movers / backtest / factor runtime에서 분기값처럼 쓰이는 길을 먼저 차단해야 한다.
+- Analysis result: table drop이나 schema 확장이 아니라 policy layer gate가 가장 안전하다. raw ledger와 기존 DB rows는 보존하고, new shadow build는 unsafe flow columns를 비우며, loaders는 quarterly 소비 경로에서 `10-Q` / `10-Q/A` rows만 반환한다.
+- Follow-up: synthetic Q4는 아직 미구현이다. 후속 phase는 annual statement factor path를 backtest primary로 올리고 legacy broad yfinance path를 명시적 fallback/legacy로 낮춘다.
+
+### 2026-06-30 - Backtest default financial source should be statement annual, not broad legacy
+
+- User request: 재무제표 source migration Phase 4에서 backtest strategy migration까지 순차 진행하라고 승인함.
+- Interpreted goal: 새 사용자가 broad yfinance factor path를 기본으로 실행하지 않고, statement annual factor family를 자연스럽게 먼저 실행해야 한다.
+- Analysis result: legacy `quality_snapshot` runner는 saved/history replay 때문에 삭제하지 않는다. 대신 Single Strategy 기본값을 `Quality + Value / Strict Annual`로, Portfolio Mix Builder 기본 조합을 strict annual + ETF sleeves로 옮기고 broad Quality guide는 legacy compatibility로 낮춘다.
+- Follow-up: Phase 5는 ingestion workflow에서 broad yfinance financial statement path가 canonical처럼 보이지 않도록 cleanup한다.
+
+### 2026-06-30 - Ingestion financial statement refresh should start from EDGAR annual
+
+- User request: 재무제표 source migration Phase 5 ingestion workflow cleanup까지 순차 진행하라고 승인함.
+- Interpreted goal: 사용자가 새 재무제표 source를 갱신할 때 broad yfinance refresh가 아니라 EDGAR annual statement refresh를 먼저 실행해야 한다.
+- Analysis result: 새 action을 만들지 않고 기존 `extended_statement_refresh` action id를 유지해 run history compatibility를 보존한다. 화면 language와 order만 EDGAR-first로 바꾸고, broad yfinance path는 legacy compatibility / explicit comparison으로 낮춘다.
+- Follow-up: Phase 6은 coverage expansion과 source QA로 넘어가며, partial statement refresh는 Statement Coverage Diagnosis와 shadow rebuild로 처리한다.
+
+### 2026-06-30 - Universe coverage QA should be DB-backed before targeted EDGAR refresh
+
+- User request: 재무제표 source migration Phase 6 coverage expansion / source QA까지 순차 진행하라고 승인함.
+- Interpreted goal: Top1000 / Top2000 / Nasdaq 확장 전, annual EDGAR statement shadow coverage와 missing reason을 broad yfinance fallback 없이 설명해야 한다.
+- Analysis result: broad universe QA는 DB raw/shadow/profile/universe rows로 요약하고, live EDGAR source probe는 소수 symbol 대상 `Statement Coverage Diagnosis`에 남기는 것이 안전하다. reason group은 raw-present/shadow-missing, stale/no recent 10-K, non-US/foreign form, metadata gap, EDGAR unavailable/CIK mapping candidate로 분리한다.
+- Follow-up: Top2000 coverage gap은 targeted EDGAR annual refresh batch 후보이며, Nasdaq은 current snapshot universe rows부터 복구해야 coverage를 판단할 수 있다.
+
+### 2026-06-29 - Market Movers redesign must benchmark market boards, not rename cards
+
+- User request: 사용자가 기존 Market Movers 1~5차 결과가 지난번과 달라 보이지 않고, 금융사이트 / 토스증권 / 업비트 같은 실제 UI를 파악한 완성본인지 강하게 문제제기한 뒤 1~6차 단계 진행을 승인함.
+- Interpreted goal: 이전 `작업대`, `탐색 모드`, metric-card 중심 패턴을 그대로 확장하지 말고, market mover 화면의 기본 문법을 ranking intent / market board density / sector breadth / selected-symbol investigation / trust strip으로 재정의해야 한다.
+- Analysis result: 1차는 새 기능 추가가 아니라 화면 언어 reset이다. user-facing mode는 `랭킹 기준`, option은 `상승`, `하락`, `거래량`, `이상 거래량`, `섹터`가 되어야 하며 내부 용어는 화면 전면에서 빠져야 한다.
+- Follow-up: 2차는 metric-card 중심 본문을 compact mover tape / list로 재구성하고, 3차~6차는 chart workspace, sector breadth map, investigation pane, data trust UX를 순서대로 다룬다.
+
 ### 2026-07-05 - Policy Signals 1차 기준은 category help board로 읽는다
 
 - User request: 사용자가 2차로 넘긴 확인 큐는 현재 UI에서 노출하지 않아도 되고, 1차 기준은 `Data Trust`, `Execution Source`, `Validation Source`처럼 카테고리별로 보여주며 각 기준이 무엇을 검증하는지 `?` help / tooltip 형태로 설명해 달라고 요청함.
@@ -213,6 +339,20 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: GTAA 결과 row cadence와 actual holdings rebalance cadence를 분리해야 한다.
 - Analysis result: 기존 문제는 `.interval(interval)`이 strategy 입력 row를 줄인 것과, `month_end` 필터가 현재 partial month를 제거한 것이 겹친 결과였다. 해결은 월말 row를 유지하고 최신 공통 거래일 row를 보강한 뒤, `GTAA3Strategy(rebalance_interval=...)`가 실제 `Next Ticker` 변경만 제어하는 것이다.
 - Follow-up: 현재 DB에서는 `SOXX/MTUM/QUAL/USMV` 가격이 `2026-03-16`에서 멈춰 `2026-06-29` 요청의 최신 공통 평가일도 `2026-03-16`이다. 이후 endpoint를 더 늘리려면 가격 데이터 refresh가 먼저 필요하다.
+
+### 2026-06-29 - Overview final cleanup should remove remaining facades once internal imports move
+
+- User request: 사용자가 남은 정리 후보 1순위~4순위를 단계별로 진행하고 이 Overview refactor 작업을 마무리해 달라고 승인함.
+- Interpreted goal: refactor가 실제로 끝나려면 UI component body, dashboard private helper export, old service facade, Data Health scope ambiguity를 각각 소유 모듈 기준으로 닫아야 한다.
+- Analysis result: `overview_ui_components.py`와 `overview_dashboard.py`는 compatibility facade로만 남기고, renderer body는 `app/web/overview/components/*`, service body는 `app/services/overview/*`가 직접 소유하는 구조가 가장 작고 명확하다. Data Health는 전체 engine이 아니라 collection ops / handoff read model이므로 direct Market Context 자료와 reference / dedicated-tab 자료를 `Scope`로 분리한다.
+- Follow-up: V33-V36에서 `overview_market_intelligence.py`를 삭제했고 internal imports는 domain services로 이동했다. 현재 추가 큰 refactor 후보는 사용자 승인 없이는 없다; 새 Overview tab / 기능은 tab entry + helper + service/domain component 단위로 추가하면 된다.
+
+### 2026-06-29 - Overview market intelligence service should be domain-owned, not monolithic
+
+- User request: 사용자가 `overview_market_intelligence.py`가 7,788줄인 이유와 개선 여부를 확인한 뒤, 25차~32차를 순서대로 진행해 달라고 승인함.
+- Interpreted goal: UI 탭 분리는 끝났지만 Overview read-model 계산 본문이 하나의 service monolith에 남아 있으면 수정 위치와 로딩 경계를 다시 파악하기 어렵다. 기존 import path는 유지하되 실제 구현 소유권은 도메인 파일로 옮겨야 한다.
+- Analysis result: 안전한 순서는 contract baseline, Sentiment, Events, Data Health, Market Movers, Market Context, Why It Moved, compatibility facade 축소였다. Market Context는 다른 도메인 구현을 다시 복제하지 않고 split domain services를 import해 조립하도록 유지했다.
+- Follow-up: `overview_market_intelligence.py`는 96줄 compatibility facade로 축소됐고, 남은 추가 후보는 old-path imports를 새 domain imports로 점진 전환한 뒤 facade 제거 가능성을 판단하는 것이다.
 
 ### 2026-06-25 - Overview legacy dashboard should be physically removed, not renamed
 
@@ -8506,6 +8646,251 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 기존 `GTAA SPY Low-MDD Style Top-3`는 성과 조건은 통과했지만 ADV20 liquidity evidence가 없거나 기준에 살짝 못 미쳐 current gate에서는 부족했다. GTAA runtime에 ADV20 evidence를 연결한 뒤 `GTAA SPY Low-MDD Style Top-2 ADV20`이 `24.08% / -9.99%`, SPY `13.36% / -20.61%`, `real_money_candidate / paper_probation / small_capital_ready`를 달성했다.
 - Follow-up: preset과 보고서는 등록했다. Practical Validation / Final Review 선정은 사용자가 원할 때 별도 후속 단계로 진행한다.
 
+### 2026-06-29 - Market Movers를 1차부터 5차까지 gate 방식으로 개선한다
+
+- User request: Overview > Market Movers를 1~5차로 개선하되, 이번 응답에서는 1차만 구현 / QA / commit 후 멈추라고 요청함.
+- Interpreted goal: 새 provider나 trade signal이 아니라 기존 snapshot/read model로 첫 화면을 변동종목 작업대처럼 재정렬해야 함.
+- Analysis result: 1차에서는 command strip과 본문 IA 재배치가 가장 작은 안전한 개선이다. Coverage Diagnostics는 보조로 낮추고, Why It Moved는 하단 부록 느낌을 줄여 `선택 종목 조사` 자리로 정리한다.
+- Follow-up: 1차 완료. 2차는 Top Gainers / Top Losers / Most Active / Unusual Volume / Sector Leaders 같은 explicit exploration mode와 ranking read model 정리다.
+
+### 2026-06-29 - Market Movers 2차에서 탐색 모드와 ranking read model을 정리한다
+
+- User request: 사용자가 `2차 진행`을 승인함.
+- Interpreted goal: 상용 Market Movers처럼 상승/하락/거래량/이상거래량/섹터 흐름을 명확히 전환하되, context-only 경계와 기존 DB/read model boundary를 유지해야 함.
+- Analysis result: 새 provider나 schema 없이 `build_market_movers_snapshot`에 `mover_views`를 추가하고, UI는 `overview_market_movers_mode` selector가 선택한 view의 표/차트를 렌더링하는 것이 가장 작은 안전한 변경이다.
+- Follow-up: 2차 완료. 3차는 선택 종목 detail pane 안에 Why It Moved 조사 시작점을 통합하되 자동 원인 판정/추천/저장은 만들지 않는다.
+
+### 2026-06-29 - Market Movers 3차에서 선택 종목 조사 흐름을 통합한다
+
+- User request: 사용자가 `3차 진행`을 승인함.
+- Interpreted goal: Why It Moved를 별도 하단 부록처럼 두지 않고, 현재 선택한 변동종목의 rank / price / volume / sector / metadata 조사 시작점을 한 패널로 묶어야 함.
+- Analysis result: 자동 원인 판정 없이도 기존 `why_it_moved` service read model과 current mover rows만으로 선택 종목 detail pane을 구성할 수 있다. metadata 조회는 page render가 아니라 사용자가 누르는 버튼 뒤에만 실행하는 것이 기존 provider boundary와 가장 잘 맞는다.
+- Follow-up: 3차 완료. 4차는 개별 종목 패널을 넘어 sector pulse / heatmap / breadth 맥락을 context-only로 개선한다.
+
+### 2026-06-29 - Market Movers 4차에서 sector 확산 / 집중 맥락을 추가한다
+
+- User request: 사용자가 `4차 진행`을 승인함.
+- Interpreted goal: 개별 급등락 목록 옆에 sector-level participation, concentration, breadth를 붙여 움직임이 특정 sector에 몰렸는지 시장 전반에 퍼졌는지 빠르게 읽게 해야 함.
+- Analysis result: 새 provider나 schema 없이 기존 Market Movers return rows와 group leadership 계산으로 full sector breadth model을 만들 수 있다. `top_n`은 탐색 표 길이에만 적용하고 sector breadth는 전체 returnable rows 기준으로 보여주는 것이 사용 흐름에 맞다.
+- Follow-up: 4차 완료. 5차는 stale / partial / missing / NASDAQ no-universe 같은 coverage trust UX를 같은 언어로 정리한다.
+
+### 2026-06-29 - Market Movers 5차에서 coverage trust / data quality UX를 정리한다
+
+- User request: 사용자가 `5차 작업 진행`을 승인함.
+- Interpreted goal: Coverage Diagnostics를 raw 진단 패널이 아니라 현재 결과 신뢰 상태를 이해하는 보조 UX로 바꾸되, 기존 refresh/action facade와 context-only 경계를 유지해야 함.
+- Analysis result: 기존 snapshot coverage, refresh_state, missing_rows만으로 Good / Stale / Partial / Needs Refresh / No Universe / Missing Quotes 상태와 grouped missing summary를 만들 수 있다. raw diagnostics는 보존하되 collapsed expander로 낮추는 것이 1~4차 workbench 흐름과 맞다.
+- Follow-up: 5차 완료. 1~5차 Market Movers gate는 완료됐고, 다음 작업은 사용자가 별도 승인할 때만 새 범위로 잡는다.
+
+### 2026-06-30 - 재무제표 source migration 전에 yfinance / EDGAR 의존성을 정리한다
+
+- User request: UI 작업 전에 yfinance 재무제표 수집을 없앨 수 있는지, EDGAR / edgartools를 신뢰할 수 있는지, 기존 backtest와 UI 의존성을 어떻게 마이그레이션할지 분석해 달라고 요청함.
+- Interpreted goal: 코드 변경보다 먼저 financial statement canonical source, legacy fallback, backtest/read model migration 순서를 확정해야 함.
+- Analysis result: annual EDGAR statement shadow는 primary 후보로 충분하지만 quarterly shadow는 10-K/FY 값이 quarterly row처럼 섞일 수 있어 먼저 보정해야 한다. yfinance broad fundamentals는 넓은 coverage와 legacy 호환성 때문에 즉시 삭제하지 말고 freeze/deprecate가 필요하다.
+- Follow-up: research bundle은 `.aiworkspace/note/finance/researches/active/2026-06-fundamental-source-migration/`에 남겼다. 다음 개발 순서는 source contract freeze -> Market Movers annual EDGAR 전환 -> quarterly correctness -> backtest migration -> ingestion UX cleanup -> broad yfinance decommission이다.
+
+### 2026-06-30 - legacy broad yfinance 재무제표 실행 카드를 active UI에서 내린다
+
+- User request: 재무제표 source migration 1~9차 중 Phase 7 legacy yfinance decommission을 앞선 commit 이후 이어서 진행.
+- Interpreted goal: yfinance package나 old table을 삭제하지 않고, 새 사용자가 broad yfinance financial statements를 canonical refresh로 실행하지 않게 active UI entry를 제거해야 함.
+- Analysis result: broad loader / writer / action handler는 saved/history replay compatibility 때문에 남겨야 하지만, Ingestion의 active broad collection cards와 broad `Quality Snapshot`의 새 실행 유도 문구는 제거 / archived 표시가 가능했다.
+- Follow-up: Ingestion UI는 EDGAR annual refresh와 statement shadow rebuild를 financial statement path로 노출한다. Phase 8에서 최종 docs / runbook alignment와 source audit closeout을 진행한다.
+
+### 2026-06-30 - 재무제표 source migration 최종 문서 기준을 닫는다
+
+- User request: 재무제표 source migration 1~9차를 모두 이어서 진행하고, 마지막에는 docs / runbook alignment까지 commit하라는 승인.
+- Interpreted goal: 코드 변경 결과가 다음 세션의 source 선택 기준으로 남도록 `docs/`와 runbook에서 canonical / legacy / quarterly policy를 같은 의미로 정리해야 함.
+- Analysis result: canonical source는 EDGAR raw ledger + statement shadow tables이고, broad yfinance fundamentals / factors는 old replay와 explicit comparison compatibility로만 유지된다. Quarterly는 10-Q / 10-Q/A consumer gate를 유지하고 synthetic Q4 / Top2000-Nasdaq full coverage는 후속 결정이다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`에 있다.
+
+### 2026-07-01 - Ingestion 기능을 action registry와 세 section 흐름으로 정리한다
+
+- User request: Ingestion의 일상운영 / 검증데이터, 수동복구 / 진단, 실행기록 결과 기능을 검증하고, 중복 / 잘못된 수집 / 파편화된 기능을 정리하며 실행 중 화면 고정과 progress / 수집 시간을 표시해 달라고 요청함.
+- Interpreted goal: 새 진단 패널을 추가하는 것이 아니라, active 수집 action과 legacy compatibility action을 분리하고, 실행 / 결과 / 진단 / 기록이 한 흐름으로 보이게 해야 함.
+- Analysis result: active write jobs, read-only diagnostics, legacy broad yfinance compatibility action을 action registry로 분류했다. 진단 카드는 inline 실행에서 scheduled job으로 바꾸고, futures / calendar / lifecycle / profile job에도 progress callback boundary를 추가했다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/ingestion-console-action-unification-v2-20260701/`에 있다. Browser QA screenshot은 generated artifact로만 보존하고 커밋하지 않는다.
+
+### 2026-07-01 - Market Movers 기본 지표에서 재무제표 수집 / 반영 상태를 보여준다
+
+- User request: 연간 / 분기 재무제표 제출 기간과 실제 수집 여부를 바탕으로 현재 받아야 하는 재무제표가 있는지 Overview 기본 지표에 표시해 달라고 요청함.
+- Interpreted goal: UI에서 provider를 직접 fetch하지 않고, 기존 EDGAR filing ledger와 statement shadow DB 상태를 비교해 사용자가 최신 공시 미반영 여부를 바로 알게 해야 함.
+- Analysis result: 실제 filing ledger에 최신 10-Q / 10-K가 있으면 그것을 우선 근거로 삼고, filing ledger가 비어 있을 때만 예상 제출 기한 기반 확인 필요 상태를 보조로 표시한다. Fiscal quarter end는 단순 월말이 아닐 수 있어 prediction-only 비교에는 14일 tolerance를 둔다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-statement-collection-status-20260701/`에 있다.
+
+### 2026-07-01 - Ingestion 대형 스크립트를 package 구조로 분리한다
+
+- User request: Ingestion도 한 파일에 5,000~6,000줄이 몰려 있는지 검토한 뒤, 1차부터 6차까지 개발 / QA / 커밋 순서로 구조 리팩토링을 진행해 달라고 요청함.
+- Interpreted goal: 수집 동작을 바꾸기보다 `Workspace > Ingestion` UI와 job wrapper의 책임을 package 단위로 나눠 이후 중복 수집 기능 제거 / 보강 / 진단 개선을 안전하게 해야 함.
+- Analysis result: `app/web/ingestion_console.py`가 5,370줄이었고 UI shell, action registry, result summary, dispatcher, section renderer가 섞여 있었다. 1~6차에서 facade, registry, guide/style/result, dispatcher, section renderer, job common helper로 물리 분리했다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/ingestion-console-module-split-v1-20260701/`에 있다. 후속은 `app/jobs/ingestion_jobs.py`를 domain별 jobs module로 더 나누는 작업이다.
+
+### 2026-07-03 - Market Movers에 React custom component pilot을 적용한다
+
+- User request: Overview > Market Movers만 먼저 진단하고, 버튼이 HTML UI와 따로 놀지 않게 React component 적용 방향을 0차부터 5차까지 순차 개발 / QA / commit으로 진행해 달라고 요청함.
+- Interpreted goal: Streamlit 전체를 Next.js로 바꾸지 않고, Market Movers summary/action strip만 custom component로 이관해 시각/상호작용 일관성을 검증해야 함.
+- Analysis result: React component는 summary와 action strip에 적합했고, action execution은 기존 Python facade가 계속 소유하는 구조가 안전했다. 상단 filters는 snapshot 로드 전 입력이라 이번 pilot에서는 `streamlit_owned`로 유지하는 것이 맞다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-react-pilot-20260703/`에 있다. 다른 Overview 탭 확장은 이 pilot QA 결과를 확인한 뒤 별도 phase로 잡는다.
+
+### 2026-07-04 - Market Movers React pilot에서 남은 Streamlit UI 조각을 통합한다
+
+- User request: 상단 filters와 coverage trust detail / warning 영역이 Streamlit 기본 UI처럼 따로 보이는 문제를 React component 안으로 개선해 달라고 요청함.
+- Interpreted goal: Market Movers 첫 화면의 controls, summary, data-quality detail, refresh action이 한 workbench처럼 보이게 하되, provider fetch / DB write / session normalization은 Python 경계에 남겨야 함.
+- Analysis result: filters와 refresh mode는 React가 UI만 렌더링하고 Python이 validated session state를 소유하는 구조로 옮길 수 있었다. Coverage trust detail은 Python read model을 `trust_panel` payload로 만들고 React가 read-only drawer로 렌더링하는 것이 가장 안전했다.
+- Follow-up: 6~8차 완료. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다. 다른 Overview 탭 적용은 Market Movers 사용감 확인 후 별도 작업으로 확장한다.
+
+### 2026-07-05 - Market Movers Top universe 기준을 시가총액에서 20D 평균 거래대금으로 바꾼다
+
+- User request: Top1000 / Top2000 universe가 stale `nyse_asset_profile.market_cap`에 묶여 있고 신규 상장 / EOD / listing refresh 흐름이 헷갈리므로, 별도 작업 흐름에서 1~6차 개발 / QA / commit으로 개선해 달라고 요청함.
+- Interpreted goal: Top universe membership을 화면 조회 때 live market-cap query로 만들지 않고, 명시적 `유니버스 기준 갱신`에서 listing source 후보와 최신 EOD price history를 사용해 materialize해야 함.
+- Analysis result: `market_liquidity_universe_member`를 추가하고 Top1000 / Top2000을 최근 20거래일 평균 `close * volume` 기준으로 저장 / 재사용하게 했다. legacy profile fallback은 제외했고, 신규 상장 ticker는 listing source와 latest EOD row가 모두 있어야 포함된다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-liquidity-universe-v1-20260705/`에 있다. Local DB smoke에서 TOP2000은 1,920개만 ranking 가능했으므로 2,000보다 작아지는 것은 현재 DB coverage 상태로 발생할 수 있다.
+
+### 2026-07-05 - Futures Macro 흐름을 1W / 1M으로 넓힌다
+
+- User request: Futures Macro 탭 개선을 1차부터 6차까지 개발 / QA / 커밋 단위로 진행하되, 임의 브랜치를 만들지 말라고 요청함.
+- Interpreted goal: 3차에서는 기존 최근 1주 흐름을 1개월 흐름까지 넓히되, provider fetch / validation persistence / DB materialization은 만들지 않아야 함.
+- Analysis result: 기존 symbol metrics가 이미 `5D %`와 `20D %`를 제공하므로, `weekly_context` 호환을 유지하고 새 `flow_context.periods`로 1W / 1M을 전달하는 것이 가장 작고 안전했다.
+- Follow-up: 3차 완료. 다음은 4차 mixed subtype / confidence interpretation refinement이며, validation cache/materialization 판단은 5차에 남긴다.
+
+### 2026-07-06 - Futures Macro 기준일과 score 부호 의미를 명확히 한다
+
+- User request: 선물시장이 열린 시간인데 일봉 기준일이 `2026-07-05`로 보이는 이유와 score 카드의 양수 / 음수 의미를 확인하고, 화면 문구를 바꿔 달라고 요청함.
+- Interpreted goal: `기준일`이 KST 달력일이 아니라 CME/yfinance futures daily session date임을 드러내고, score sign이 보편적 good/bad가 아니라 각 score family의 방향성임을 UI에서 바로 읽히게 해야 함.
+- Analysis result: daily collector / DB는 `1d` 최신 candle을 정상 갱신하고 있었고, `1m` stale 상태는 별도 intraday path였다. Score는 standardized move를 score family별 부호/가중치로 변환한 directional pressure value다.
+- Follow-up: React command / data-basis card에 `CME/yfinance 일봉 세션 기준`을 추가하고, score chips에 polarity hint를 표시했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에 있다.
+
+### 2026-07-06 - Futures Macro에 1D 흐름을 추가해 score와 기간 흐름을 비교한다
+
+- User request: 현재 금리 score와 1W 흐름이 다르게 보이므로 `최근 1일 흐름` 탭을 추가하면 어떨지 물었고 진행을 승인함.
+- Interpreted goal: top score의 latest standardized 1D signal과 raw 1D / 1W / 1M 흐름을 나란히 비교하게 해야 함.
+- Analysis result: `1D`는 raw 1거래일 변화율, top score는 같은 최신 일봉을 변동성 표준화한 값이므로 수치는 같지 않지만 방향 비교에 유용하다.
+- Follow-up: `flow_context`에 `1D`를 추가하고 default period를 `1D`로 변경했다. 기존 `weekly_context`는 1W를 유지한다.
+
+### 2026-07-06 - Futures Macro 과거 점검은 오늘과 비슷한 과거 흐름 확인으로 읽는다
+
+- User request: `과거 점검`이 정확히 무엇을 하는 기능인지 이해한 뒤, 위에서 정리한 1차~5차 개선을 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: 현재 16개 선물 일봉 상태를 같은 계산식으로 과거 날짜에 적용해 비슷한 상태를 찾고, 그 결과를 예측 신호가 아니라 현재 해석 보조 검산으로 읽게 해야 함.
+- Analysis result: `과거 점검`은 독립 React 카드로 두되, `현재 근거`는 현재 macro score evidence이므로 `매크로 컨텍스트` 내부 panel로 흡수하는 것이 더 자연스럽다. 하단 원본표는 특정 섹션 근거가 아니라 세 React 섹션을 검산하는 raw appendix다. 결과 해석은 사용자가 준 예시 문구를 상상으로 만들지 않고, 표본 수 / 평균 수익률 / 방향 일관성 / target family / hit rule처럼 계산된 값이 있을 때만 표시해야 한다.
+- Follow-up: `CurrentEvidencePanel`을 `MacroContextSection` 안으로 옮기고, 하단 disclosure를 `원본 데이터 / 계산 추적`으로 바꿔 화면 섹션별 원본 연결을 표시했다. 과거 점검 action은 `오늘과 비슷한 과거 흐름 확인`으로 정리했고, 결과 타일은 `판정`, `5거래일 표본`, `20거래일 표본`, `자산군 해석`으로 바꿨다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`에 있다.
+
+### 2026-07-06 - Futures Macro 과거 점검은 빈도와 방향성 판정을 분리해 읽는다
+
+- User request: 비슷한 과거 상태가 961회인데도 5D / 20D가 `방향성 없음`으로 나오는 이유를 물었고, 개선안 중 1번만 진행해 달라고 요청함.
+- Interpreted goal: `961회`가 충분한 빈도 표본이라는 점과, 혼재 / 관망 상태에는 특정 자산 상승 / 하락 hit rule이 없어 방향성 판정을 보류한다는 점을 UI 첫 결론에서 분리해 보여줘야 함.
+- Analysis result: 현재 DB 기준 `혼재된 매크로 흐름`은 961회 / 1,225일로 자주 발생했지만 `Target Family=Mixed`, `Hit Rule 없음`, `Directional Hit Applicable=False`다.
+- Follow-up: `과거 점검` 카드에 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유` 결론 grid를 추가하고, 기존 5D / 20D 상세 타일과 분포 / 그래프 계산은 건드리지 않았다.
+
+### 2026-07-07 - Sentiment 탭을 React workbench 흐름으로 개선한다
+
+- User request: `Workspace > Overview > Sentiment`를 Futures Macro처럼 React 기반 프로토타입으로 개선하되, branch 생성 없이 AGENTS.md를 확인하고 1차~5차 개발 / QA / commit 순서로 진행해 달라고 요청함. 그래프 개선도 포함되는지 확인함.
+- Interpreted goal: Sentiment를 raw status / table 중심이 아니라 현재 심리 상태, 만든 요인, freshness, 다음 확인, 하단 근거/그래프 순서로 읽게 하되, Python service가 모든 해석 문구와 refresh action을 소유해야 함.
+- Analysis result: `app/services/overview/sentiment.py`의 `analysis`, `driver_groups`, `component_explanations`, `next_checks`, rows payload만 React에 전달하고, React는 summary/freshness, CNN / AAII cross-read, driver lanes, component explanations, next checks, history line chart, component bars, evidence tables를 렌더링하는 구조가 맞다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에 있다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.
+
+### 2026-07-07 - Sentiment graph hover should expose exact evidence values
+
+- User request: React Sentiment 화면이 좋아졌지만 하단 `다음에 확인할 것`은 필요 없으면 제거하고, `그래프로 보는 근거`는 hover 시 x/y 값이 보이게 하며, 공포탐욕 탭의 약점과 추가 기능 후보를 리뷰해 달라고 요청함.
+- Interpreted goal: 다음 행동 카드는 기본 판단 흐름에서 빼고, graph evidence는 정확한 날짜 / 시리즈 / 값 / source를 즉시 확인할 수 있어야 한다.
+- Analysis result: next-check content는 service payload에는 남겨도 React 기본 화면에서는 숨기는 것이 가장 안전하다. History SVG는 기존 `charts.history` payload만 사용해 y축 눈금, hover guide, tooltip을 렌더링하면 된다.
+- Follow-up: tooltip Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다. 추가 기능 후보는 service-owned read model 확장을 전제로 별도 후속 차수에서 다룬다.
+
+### 2026-07-07 - Sentiment should show range, divergence, and CNN component changes
+
+- User request: 공포탐욕 탭에 현재값이 최근 범위에서 얼마나 특이한지, CNN / AAII 해석이 엇갈리는지, CNN 구성요소가 최근 어떻게 변했는지 추가해 달라고 요청함.
+- Interpreted goal: React가 새 판단 문구를 만들지 않고 `app/services/overview/sentiment.py`가 계산한 range context, divergence context, component history를 표시해야 함.
+- Analysis result: latest CNN / AAII context와 stored history만으로 최근 percentile / min-max, headline-component-AAII divergence, component latest-vs-previous change를 계산할 수 있다. 이 정보는 시장 배경 / 조사 단서이며 trade signal, validation gate, monitoring signal이 아니다.
+- Follow-up: closeout 기록은 `.aiworkspace/note/finance/tasks/active/overview-sentiment-react-ux-20260707/`에 있다. Browser QA screenshot은 generated artifact로 남기고 커밋하지 않는다.
+
+### 2026-07-07 - Sentiment divergence copy should explain the split, not define metrics
+
+- User request: `지표 합의 상태`와 세 축 카드의 내용이 무엇을 말하려는지 모르겠고, `headline score 기준입니다` 같은 문장이 이상하다고 지적함.
+- Interpreted goal: 합의/불일치 자체를 추상적으로 말하지 말고, CNN headline / CNN components / AAII survey가 현재 서로 어떻게 엇갈리는지를 service-owned copy로 설명해야 함.
+- Analysis result: React label은 `엇갈리는 지점` 정도의 구조 문구로 충분하고, 실제 판단 문장은 `app/services/overview/sentiment.py`에서 headline 방향, component driver count, AAII bearish / spread 값을 사용해 만들어야 한다.
+- Follow-up: service divergence axis detail과 React heading을 수정했다. Browser QA DOM에서 새 문구와 old phrase 제거를 확인했고, screenshot attempts는 generated artifact로 남긴다.
+
+### 2026-07-07 - Events Earnings rows need universe and authority context
+
+- User request: Events 개선을 2차부터 10차까지 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: 4차에서는 Earnings 일정이 어떤 symbol universe에서 수집됐고 provider estimate / cross-check 상태가 무엇인지 row contract에 남겨야 함.
+- Analysis result: 기존 yfinance + Nasdaq cross-check는 유지하되 `universe_scope`와 `source_authority`를 row와 raw payload에 채우는 것이 React workbench 전환 전 가장 작은 안정화 단계다.
+- Follow-up: 4차 완료. 다음은 Cboe / S&P Dow Jones / Nasdaq / Russell류 market-structure calendar를 수집 계약에 추가한다.
+
+### 2026-07-07 - Events market-structure dates should be background, not signals
+
+- User request: 주식/매크로/퀀트 투자자가 반드시 확인할 이벤트를 더 수집하고 전체 Events 개선을 진행해 달라고 요청함.
+- Interpreted goal: 휴장, 조기폐장, options expiration, index reconstitution처럼 일정 밀도에 영향을 주는 이벤트를 market background로 저장해야 함.
+- Analysis result: 공식/1차 source 기준으로 Nasdaq Trader holiday page, Cboe options expiration calendar, FTSE Russell reconstitution schedule을 먼저 추가하는 것이 현재 schema와 UX 목표에 맞다.
+- Follow-up: 5차 완료. 이 row들은 `market_structure` family / `all_us` universe / `official` authority로 저장되며, 다음은 React payload service 구조화다.
+
+### 2026-07-07 - Events React should receive a Python-owned workbench payload
+
+- User request: React custom component를 추가하되 DB 읽기 / 갱신 action / 해석 read model은 Python service가 소유하게 해 달라고 요청함.
+- Interpreted goal: React 전환 전에 hero, rails, trust, chart, evidence에 필요한 구조와 문구를 service contract로 고정해야 함.
+- Analysis result: 기존 `build_market_events_snapshot()` rows/coverage/warnings를 재사용해 `build_events_workbench_payload()`를 만들면 React는 local filter / layout / hover interaction만 담당할 수 있다.
+- Follow-up: 6차 완료. 다음은 React scaffold와 Streamlit wrapper/fallback 연결이다.
+
+### 2026-07-07 - Events React scaffold should be additive first
+
+- User request: React custom component를 추가하되 기존 Streamlit detail fallback을 유지해 달라고 요청함.
+- Interpreted goal: build가 있으면 React를 보여주되, scaffold 단계에서 Agenda / Calendar / Quality / Raw를 제거하면 안 됨.
+- Analysis result: `render_events_react_workbench_section(context)`를 `render_events_overview_lanes(context)` 앞에 두면 React가 먼저 보이고 기존 fallback은 그대로 남는다.
+- Follow-up: 7차 완료. 다음은 React hero/freshness/refresh UX를 실제 첫 화면 중심으로 개선한다.
+
+### 2026-07-07 - Events legacy UI should be demoted after React workbench
+
+- User request: React 컴포넌트 전환 후 불필요한 레거시는 가능한 정리하고 싶다고 요청함.
+- Interpreted goal: React가 이미 대체한 summary / source lane / macro week lane / refresh popover는 기본 화면에서 제거하되, raw/detail evidence와 build-missing fallback은 유지해야 함.
+- Analysis result: React build가 available이면 Events tab entrypoint에서 Streamlit legacy lanes를 숨기고, detailed Streamlit tabs는 collapsed `상세 표 / 전체 근거` 섹션으로 낮추는 것이 가장 작은 안전한 정리다.
+- Follow-up: 후속 cleanup 완료. React props mutation도 함께 제거했고, desktop/mobile Browser QA에서 duplicate legacy lane 부재와 collapsed evidence 상태를 확인했다.
+
+### 2026-07-07 - Events feedback requires one React control surface
+
+- User request: 상단 `일정 타입`과 `Refresh Results`가 따로 놀고, Events Next의 Type/refresh buttons/rails/trust/calendar가 더 통합되어야 한다고 지적함.
+- Interpreted goal: React가 Events의 primary control surface가 되어야 하며, Streamlit selector/result expander는 fallback-only가 되어야 한다. Trust는 예측 신뢰가 아니라 일정 확정성으로 설명되어야 하고, calendar는 active-date grid가 아니라 월간 달력이어야 한다.
+- Analysis result: Python service가 filters / rail tabs / trust copy / today-current-week metadata / earnings universe 기준을 payload로 내려주고, React는 display-only filter/tab/month-grid interaction만 담당하는 구조가 기존 ownership boundary와 맞다.
+- Follow-up: follow-up 1~6차 완료. 전체 일정 갱신은 Python facade에서 순차 실행하고, desktop/mobile Browser QA에서 React brief, command, rail tabs, trust, month calendar, legacy expander 부재를 확인했다.
+
+### 2026-07-07 - Market Movers non-daily refresh should skip current symbols
+
+- User request: Weekly / Monthly / Yearly 가격 이력 갱신이 이미 받은 데이터를 매번 크게 다시 받는 것 같으니, 이미 받은 것은 덜 받고 잘못 받았거나 다시 받아야 하는 것 위주로 갱신해 달라고 요청함.
+- Interpreted goal: non-Daily Market Movers refresh should remain Python-owned ingestion/action logic, but it should preflight DB freshness before calling yfinance OHLCV collection.
+- Analysis result: 최신 심볼은 스킵하고, stale 심볼은 latest date 다음 날부터 delta 수집하며, missing / insufficient row coverage는 기존 full fallback window로 보강하는 것이 기존 collection period 의미를 유지하면서 시간을 줄이는 가장 작은 안전한 변경이다.
+- Follow-up: latest close / volume 이상값은 quality repair로 포함하고, UI result caption은 selected / skipped / delta / full-window / quality counts를 보여준다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-smart-eod-refresh-20260707/`에 있다.
+
+### 2026-07-08 - Market Movers Top1000 weekly refresh still stays wide after prior collection
+
+- User request: Top1000 / weekly `가격 이력 갱신`이 990개 수집 후 다음 실행도 길게 잡히는 이유와, `자료정상` 표시 / 수집 범위 / start 이유를 단계별로 고쳐 달라고 요청함.
+- Interpreted goal: 화면 기준 최신 EOD와 refresh action 기준일 / universe / batch scope를 일치시키고, 클릭 전 수집 대상과 range driver를 보여줘야 함.
+- Analysis result: 기존 action은 KST local today를 as-of로 쓰고 Top universe는 asset-profile market-cap loader를 사용했다. 따라서 화면의 latest effective EOD / materialized liquidity universe와 달라져 current symbols가 stale로 다시 잡힐 수 있었다. 또한 stale 전체를 가장 오래된 1개 start로 묶어 범위가 과확장됐다.
+- Follow-up: 1~4차 완료. `build_market_movers_eod_refresh_preflight`, action `as_of_date`, liquidity universe loader, start-date batch split, React preflight detail / `계산 가능 · 이력 보강 필요` 상태를 추가했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-eod-refresh-scope-20260708/`에 있다.
+
+### 2026-07-08 - Fundamental chart annual and quarterly views should be visible together
+
+- User request: 기본지표 막대그래프가 너무 굵고, 연간 / 분기 탭을 없애 한눈에 보이게 하되 각 그래프는 horizontal scroll로 볼 수 있는 방식이 어떤지 질문한 뒤 진행을 승인함.
+- Interpreted goal: 기존 기본지표 표와 지표 탭은 유지하되, 연간 / 분기 비교는 추가 클릭 없이 같은 지표 탭 안에서 동시에 보여야 함.
+- Analysis result: 막대가 굵어진 원인은 chart grid가 화면 폭을 채우며 컬럼을 늘리는 CSS였다. 연간값과 분기값은 스케일이 다르므로 한 차트에 섞지 않고 위아래 별도 차트로 보여주는 것이 맞다.
+- Follow-up: nested frequency tabs를 제거하고, 각 그래프에 고정 폭 막대 / horizontal scroll wrapper를 적용했다. Browser QA는 in-app browser localhost URL policy로 차단되어 focused tests와 compile 검증으로 대체했다.
+
+### 2026-07-08 - Fundamental chart labels should not collide with bars
+
+- User request: preview에서 막대가 위 숫자를 가리고, 하단 분기 날짜도 가려지는 것 같다고 지적하고 수정을 승인함.
+- Interpreted goal: 얇은 막대는 유지하되 값 / 기간 라벨이 막대 영역과 겹치지 않아야 함.
+- Analysis result: 기존 column은 `값 -> 막대 -> 기간 -> 상세` 순서라 좁은 폭에서 위/아래 텍스트가 모두 압박됐다. 값을 막대 아래 caption으로 내리고 상세 날짜는 hover / aria로 낮추는 것이 맞다.
+- Follow-up: chart column을 `막대 -> 기간 -> 값` 구조로 바꾸고, static preview로 겹침이 해소된 상태를 확인했다.
+
+### 2026-07-08 - Fundamental chart should show bar and line trends in one row
+
+- User request: 막대가 짧으니 상하로 길게 하고 간격을 줄이며, 한 row에서 연간 / 분기를 보되 각 막대 상단을 선으로 이어 선그래프도 함께 포함해 달라고 요청함. 연간과 분기를 같은 축에 합치려는 의도는 아니라고 확인함.
+- Interpreted goal: 각 지표 탭 안에서 연간 패널과 분기 패널을 좌우로 동시에 보이게 하고, 각 패널 안에서는 독립 y-scale의 bar+line combo chart를 보여야 함.
+- Analysis result: 연간 / 분기를 같은 차트에 합치면 scale distortion이 생기므로 좌우 패널이 맞다. 막대 top point는 SVG overlay로 연결하면 데이터 계약 변경 없이 기존 HTML chart를 확장할 수 있다.
+- Follow-up: annual / quarterly pair layout, taller track, tighter column gap, SVG polyline/circle overlay를 추가했다. Static preview는 `fundamental-chart-pair-line-static-preview.png`에 있다.
+
+### 2026-07-08 - Fundamental chart quarterly history and money labels were misleading
+
+- User request: screenshot에서 분기가 2023년부터만 보이고 좌우 스크롤이 안 되며, `620,000,000 달러`처럼 억/천 달러 표기가 안 된다고 지적함.
+- Interpreted goal: 실제 데이터가 있으면 분기 그래프도 연간과 유사한 장기 범위를 보여야 하고, 긴 분기 series는 각 그래프 내부에서 overflow/scroll되어야 함.
+- Analysis result: service trend builder가 연간/분기 모두 `limit=8`로 자르고 있어 분기 데이터는 약 2년치만 내려갔다. 화면 scroll wrapper는 있었지만 point가 8개뿐이라 overflow가 없었다. 금액은 콤마 문자열 입력이 formatter/renderer에서 숫자로 정규화되지 않을 수 있었다.
+- Follow-up: 분기 trend cap을 32개로 분리하고, service/model/component 숫자 coercion과 억/만/천 달러 formatter 계약 테스트를 추가했다.
+
 ### 2026-06-30 - Backtest 첫 화면의 보조 설명을 제거하고 stage tabs를 맞춘다
 
 - User request: Backtest 사용 안내, strategy capability snapshot, 하단 전략 개발 참고를 제거하고 3개 stage tab을 Overview처럼 한글 / 영어 방식으로 바꿔 달라고 요청함.
@@ -8589,7 +8974,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Backtest Analysis는 결과 무결성 / 데이터 기준 / source contract hard blocker만 표시하고, Practical Validation review focus는 1차 화면에서 count나 상세로 노출하지 않아야 함.
 - Analysis result: 기존 코드와 문서는 Data Trust, Handoff, Policy Signals에서 2차 count / notice를 반복해 사용자가 1차 검증 결과로 오해할 수 있었다. 실제 source contract는 `entry_gate.review_focus_rows`로 2차 전달을 이미 지원했다.
 - Follow-up: visible Backtest Analysis에서는 `2차 확인 큐`, `2차 전달`, readiness score를 제거하고, hard blocker가 없으면 React Handoff button을 활성화한다. 2차 상세 항목은 Practical Validation의 `Backtest에서 넘어온 2차 확인 항목`에서만 본다.
-## 2026-07-05 - Data Trust에서 가격 데이터 업데이트를 직접 실행할 수 있는가?
+
+### 2026-07-05 - Data Trust에서 가격 데이터 업데이트를 직접 실행할 수 있는가?
 
 - User request: `데이터 기준 요약`에서 OHLCV가 최신이 아니면 현재 기준으로 받을 데이터가 있을 때 바로 업데이트하는 버튼을 추가하고 싶다.
 - Interpreted goal: Backtest Analysis 화면 안에서 현재 결과의 ticker만 대상으로 가격 DB를 보강하되, render path에서 provider를 직접 호출하지 않고 기존 ingestion job wrapper를 재사용한다.
