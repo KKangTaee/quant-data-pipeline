@@ -30,6 +30,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers 시장 관심 근거 V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v1-20260708/`에서 1차~4차 selected-symbol 조사 보조 패널을 개발했다.
+  - Market Movers 선택 종목 하단에 수동 `시장 관심 근거 확인` action과 `시장 관심` 탭을 추가해 애널리스트 / 뉴스·SEC / 13F 지연 맥락 / 원문 링크를 확인하게 했다.
+  - 추천, 점수화, 자동 catalyst 판정, 매수·매도 신호, article/report/filing body 저장, 13F DB ingestion은 추가하지 않았다.
 - Post-Merge Docs / Code Flow Refresh 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`에서 master 병합 후 공용 docs, status manifests, Overview runbook / data flow docs를 current state로 정렬했다.
   - Current Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`로 문서화했고, legacy `Futures Monitor` / `Sector / Industry` primary surface 표현을 낮췄다.

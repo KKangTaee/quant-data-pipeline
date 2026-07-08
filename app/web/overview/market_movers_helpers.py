@@ -28,6 +28,7 @@ from app.services.overview.market_movers import (
     COVERAGE_TRUST_GROUP_COLUMNS,
     build_market_movers_coverage_trust_model,
 )
+from app.services.overview.market_interest import build_market_interest_read_model
 from app.services.overview.why_it_moved import (
     build_market_mover_metadata_status_strip,
     build_market_mover_research_snapshot,
@@ -2783,6 +2784,10 @@ def _rank_token(value: Any, fallback: int) -> str:
 
 MARKET_MOVER_UI_LABELS = {
     "Source": "출처",
+    "Lane": "영역",
+    "Policy": "정책",
+    "Evidence": "근거",
+    "Caveat": "주의",
     "Open": "열기",
     "Search Query": "검색어",
     "Purpose": "용도",
@@ -3238,6 +3243,7 @@ def _market_mover_investigation_react_actions(refresh_target: dict[str, Any]) ->
     actions: list[dict[str, Any]] = [
         {"id": "fetch_news_metadata", "label": "뉴스 메타데이터 조회", "kind": "secondary"},
         {"id": "fetch_sec_metadata", "label": "SEC 공시 메타데이터 조회", "kind": "secondary"},
+        {"id": "fetch_market_interest", "label": "시장 관심 근거 확인", "kind": "secondary"},
     ]
     if refresh_target["enabled"]:
         actions.append({"id": "refresh_statement", "label": "필요 재무제표 수집", "kind": "primary"})
@@ -3725,6 +3731,10 @@ def _market_mover_statement_refresh_session_key(metadata_key: str) -> str:
     return f"{metadata_key}__statement_refresh_result"
 
 
+def _market_mover_market_interest_session_key(metadata_key: str) -> str:
+    return f"{metadata_key}__market_interest"
+
+
 def _format_elapsed_seconds(value: Any) -> str:
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -3829,6 +3839,75 @@ def _render_market_mover_metadata_table(frame: pd.DataFrame, columns: list[str],
     )
 
 
+def _market_interest_summary_html(items: list[dict[str, Any]]) -> str:
+    blocks: list[str] = []
+    for item in items:
+        tone_color, tone_bg, tone_border = _market_mover_tone_style(str(item.get("tone") or "neutral"))
+        blocks.append(
+            "<div style='"
+            f"border:1px solid {tone_border}; background:{tone_bg}; border-radius:8px; "
+            "padding:10px 12px; min-width:160px; flex:1 1 160px;'>"
+            f"<div style='font-size:12px; color:{OVERVIEW_COLOR_TEXT_MUTED};'>{escape(str(item.get('label') or '-'))}</div>"
+            f"<div style='font-size:16px; font-weight:750; color:{tone_color};'>{escape(str(item.get('state') or '-'))}</div>"
+            f"<div style='font-size:12px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:4px;'>{escape(str(item.get('detail') or ''))}</div>"
+            "</div>"
+        )
+    return "<div style='display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px 0;'>" + "".join(blocks) + "</div>"
+
+
+def _render_market_mover_market_interest(model: dict[str, Any], *, requested: bool) -> None:
+    st.caption(
+        "시장 관심 근거는 조사 보조 정보입니다. 투자 제안, 점수화, 자동 catalyst 판정, 매매 신호로 사용하지 않습니다."
+    )
+    if not requested:
+        st.info("시장 관심 근거는 아직 확인하지 않았습니다. 위의 `시장 관심 근거 확인` 버튼을 눌러 현재 선택 종목만 확인하세요.")
+        st.caption("13F는 분기 공시 기반 지연 자료이며, 공식 DB 조회는 CUSIP-symbol mapping 설계 이후 가능합니다.")
+        return
+
+    summary_items = [dict(item) for item in list(model.get("summary_items") or [])]
+    if summary_items:
+        st.markdown(_market_interest_summary_html(summary_items), unsafe_allow_html=True)
+
+    st.markdown("##### 애널리스트 관심")
+    st.caption("업그레이드/다운그레이드와 목표가 변경은 public aggregator 또는 quote page의 원문 링크에서 확인합니다.")
+    links = model.get("original_links") if isinstance(model.get("original_links"), pd.DataFrame) else pd.DataFrame()
+    analyst_links = links[links["Lane"] == "애널리스트 관심"] if "Lane" in links.columns else pd.DataFrame()
+    _render_market_mover_metadata_table(
+        analyst_links,
+        ["Source", "Policy", "Evidence", "Caveat", "Open"],
+        "애널리스트 관심 링크가 없습니다.",
+    )
+
+    st.markdown("##### 뉴스/공시 촉매")
+    st.caption("기존 뉴스 / SEC 공시 메타데이터 조회 결과를 보수적으로 연결합니다. 원인 판정은 하지 않습니다.")
+    news_sec_items = [item for item in summary_items if item.get("id") == "news_sec"]
+    if news_sec_items:
+        item = news_sec_items[0]
+        st.info(f"{item.get('state') or '-'} · {item.get('detail') or '-'}")
+
+    st.markdown("##### 기관 보유 배경")
+    st.caption("13F는 분기 공시 기반 지연 자료입니다. 실시간 기관 거래 의도처럼 해석하지 않습니다.")
+    for caveat in list(model.get("institutional_caveats") or []):
+        st.caption(f"- {caveat}")
+    institution_links = links[links["Lane"] == "기관 보유 배경"] if "Lane" in links.columns else pd.DataFrame()
+    _render_market_mover_metadata_table(
+        institution_links,
+        ["Source", "Policy", "Evidence", "Caveat", "Open"],
+        "기관 보유 배경 링크가 없습니다.",
+    )
+
+    st.markdown("##### 원문 확인")
+    st.caption("비공식/상업 데이터 페이지는 앱에 저장하지 않고 원문 확인 링크 또는 세션 전용 메타데이터로만 다룹니다.")
+    _render_market_mover_metadata_table(
+        links,
+        ["Source", "Lane", "Policy", "Evidence", "Caveat", "Open"],
+        "원문 확인 링크가 없습니다.",
+    )
+    boundary = str(model.get("boundary_note") or "").strip()
+    if boundary:
+        st.caption(boundary)
+
+
 def _market_mover_sector_breadth_table(model: dict[str, Any]) -> pd.DataFrame:
     rows = model.get("table_rows")
     if isinstance(rows, pd.DataFrame):
@@ -3890,7 +3969,7 @@ def _dispatch_market_mover_investigation_react_event(
     refresh_target: dict[str, Any],
 ) -> dict[str, Any]:
     action_id = _market_movers_react_event_action_id(event)
-    if action_id not in {"fetch_news_metadata", "fetch_sec_metadata", "refresh_statement"}:
+    if action_id not in {"fetch_news_metadata", "fetch_sec_metadata", "fetch_market_interest", "refresh_statement"}:
         return metadata
     if action_id == "refresh_statement" and not refresh_target["enabled"]:
         return metadata
@@ -3918,6 +3997,15 @@ def _dispatch_market_mover_investigation_react_event(
             )
             metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
+        st.rerun()
+        return metadata
+
+    if action_id == "fetch_market_interest":
+        interest_key = _market_mover_market_interest_session_key(metadata_key)
+        st.session_state[interest_key] = build_market_interest_read_model(
+            mover={"Symbol": symbol, "Name": identity.get("Name")},
+            metadata=metadata,
+        )
         st.rerun()
         return metadata
 
@@ -3957,6 +4045,7 @@ def _render_market_mover_investigation_actions(
     collection = dict(research_model.get("financial_statement_collection") or {})
     refresh_target = _market_mover_statement_refresh_target(collection)
     statement_result_key = _market_mover_statement_refresh_session_key(metadata_key)
+    market_interest_key = _market_mover_market_interest_session_key(metadata_key)
     if market_movers_react_component_available():
         payload = build_market_mover_investigation_react_pane_payload(
             pane_model,
@@ -3978,7 +4067,7 @@ def _render_market_mover_investigation_actions(
         _render_market_mover_statement_refresh_result(st.session_state.get(statement_result_key))
         return metadata
 
-    action_cols = st.columns([1.0, 1.0, 1.0, 3.0], gap="small", vertical_alignment="bottom")
+    action_cols = st.columns([1.0, 1.0, 1.0, 1.0, 2.0], gap="small", vertical_alignment="bottom")
     if action_cols[0].button(
         "뉴스 메타데이터 조회",
         key=f"{metadata_key}__fetch_news",
@@ -4011,8 +4100,20 @@ def _render_market_mover_investigation_actions(
             st.session_state[metadata_key] = metadata
         st.success("SEC 공시 메타데이터를 세션 전용으로 조회했습니다.")
 
+    if action_cols[2].button(
+        "시장 관심 근거 확인",
+        key=f"{metadata_key}__fetch_market_interest",
+        help="현재 선택 종목 1개에 대해 애널리스트/공시/13F 조사 링크와 보수적 상태만 세션 전용으로 준비합니다.",
+        use_container_width=True,
+    ):
+        st.session_state[market_interest_key] = build_market_interest_read_model(
+            mover={"Symbol": symbol, "Name": identity.get("Name")},
+            metadata=metadata,
+        )
+        st.success("시장 관심 근거를 세션 전용으로 준비했습니다.")
+
     if refresh_target["enabled"]:
-        if action_cols[2].button(
+        if action_cols[3].button(
             "필요 재무제표 수집",
             key=f"{metadata_key}__statement_refresh",
             help="기본 지표에서 받아야 할 연간 또는 분기 재무제표가 있을 때 선택 종목만 EDGAR statement path로 수집합니다.",
@@ -4037,7 +4138,7 @@ def _render_market_mover_investigation_actions(
                 record_overview_action_result(result)
             except Exception as exc:  # pragma: no cover - UI resilience only
                 st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
-    action_cols[3].caption("조회 결과는 아래 조사 단서 탭에 세션 전용으로 반영됩니다.")
+    action_cols[4].caption("조회 결과는 아래 조사 단서 탭에 세션 전용으로 반영됩니다.")
     _render_market_mover_statement_refresh_result(st.session_state.get(statement_result_key))
     return metadata
 
@@ -4058,6 +4159,7 @@ def _render_market_mover_selected_investigation_fragment(
     )
     read_model = dict(detail_model["read_model"])
     metadata_key = _market_mover_metadata_session_key(read_model)
+    market_interest_key = _market_mover_market_interest_session_key(metadata_key)
     stored_metadata = st.session_state.get(metadata_key)
     if isinstance(stored_metadata, dict):
         read_model["metadata"] = stored_metadata
@@ -4093,11 +4195,19 @@ def _render_market_mover_selected_investigation_fragment(
         with investigation_pane_slot.container():
             render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
 
-    render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스, SEC 공시, 외부 검색 시작점")
-    clue_tabs = st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])
+    market_interest_requested = isinstance(st.session_state.get(market_interest_key), dict)
+    market_interest_model = build_market_interest_read_model(
+        mover={"Symbol": symbol, "Name": identity.get("Name")},
+        metadata=metadata if market_interest_requested else None,
+    )
+
+    render_market_movers_section_divider("조사 단서", "기본 지표, 시장 관심, 뉴스, SEC 공시, 외부 검색 시작점")
+    clue_tabs = st.tabs(["기본 지표", "시장 관심", "뉴스", "SEC 공시", "외부 검색"])
     with clue_tabs[0]:
         render_market_mover_research_snapshot(research_model)
     with clue_tabs[1]:
+        _render_market_mover_market_interest(market_interest_model, requested=market_interest_requested)
+    with clue_tabs[2]:
         st.caption("일반 뉴스와 한국어 뉴스를 같은 탭에서 확인합니다. 원문 본문은 조회하거나 저장하지 않습니다.")
         st.caption("뉴스 메타데이터")
         _render_market_mover_metadata_table(
@@ -4111,14 +4221,14 @@ def _render_market_mover_selected_investigation_fragment(
             ["Title", "Source", "Published At", "Snippet", "Open"],
             "한국어 뉴스 메타데이터는 아직 조회하지 않았습니다. 원문 기사 본문은 수집하거나 저장하지 않습니다.",
         )
-    with clue_tabs[2]:
+    with clue_tabs[3]:
         st.caption("SEC 공시 메타데이터를 확인합니다. 공시 원문은 공식 링크에서 직접 엽니다.")
         _render_market_mover_metadata_table(
             metadata.get("sec_filings"),
             ["Form", "Filing Date", "Title", "Open"],
             "SEC 공시 메타데이터는 아직 조회하지 않았습니다. 공시 원문은 공식 링크에서 직접 확인합니다.",
         )
-    with clue_tabs[3]:
+    with clue_tabs[4]:
         table_model = _market_mover_external_search_table_model(detail_model["links"])
         st.caption("외부 검색 시작점입니다. 링크를 열어도 앱이 원문을 조회, 파싱, 저장하지 않습니다.")
         st.dataframe(

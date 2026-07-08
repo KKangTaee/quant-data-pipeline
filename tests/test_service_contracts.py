@@ -10581,7 +10581,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("border-radius: 0;", react_pane_block)
         self.assertNotIn("border-radius: 8px", react_pane_block)
         self.assertIn("@st.fragment", helper_source)
-        self.assertIn('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])', helper_source)
+        self.assertIn('st.tabs(["기본 지표", "시장 관심", "뉴스", "SEC 공시", "외부 검색"])', helper_source)
         self.assertNotIn('st.tabs(["기본 지표", "뉴스 메타데이터", "한국어 뉴스", "SEC 공시", "외부 검색"])', helper_source)
         self.assertNotIn("뉴스·공시 메타데이터 조회", helper_source)
         action_body = helper_source[helper_source.index("def _render_market_mover_investigation_actions") :]
@@ -10597,10 +10597,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
         action_call_index = helper_source.index("_render_market_mover_investigation_actions(", panel_index)
         divider_index = helper_source.index('render_market_movers_section_divider("조사 단서"', panel_index)
         self.assertLess(action_call_index, divider_index)
-        tabs_index = helper_source.index('st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])')
-        sec_tab_index = helper_source.index("with clue_tabs[2]:", tabs_index)
-        news_tab_body = helper_source[helper_source.index("with clue_tabs[1]:", tabs_index) : sec_tab_index]
-        sec_tab_body = helper_source[sec_tab_index : helper_source.index("with clue_tabs[3]:", tabs_index)]
+        tabs_index = helper_source.index('st.tabs(["기본 지표", "시장 관심", "뉴스", "SEC 공시", "외부 검색"])')
+        news_tab_index = helper_source.index("with clue_tabs[2]:", tabs_index)
+        sec_tab_index = helper_source.index("with clue_tabs[3]:", tabs_index)
+        external_tab_index = helper_source.index("with clue_tabs[4]:", tabs_index)
+        market_interest_tab_body = helper_source[helper_source.index("with clue_tabs[1]:", tabs_index) : news_tab_index]
+        news_tab_body = helper_source[news_tab_index:sec_tab_index]
+        sec_tab_body = helper_source[sec_tab_index:external_tab_index]
+        self.assertIn("_render_market_mover_market_interest", market_interest_tab_body)
         self.assertNotIn("st.button(", news_tab_body)
         self.assertNotIn("st.button(", sec_tab_body)
         self.assertNotIn("fetch_market_mover_news_metadata", news_tab_body)
@@ -10686,7 +10690,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         current_actions = _market_mover_investigation_react_actions({"enabled": False})
         self.assertEqual(
             [action["id"] for action in current_actions],
-            ["fetch_news_metadata", "fetch_sec_metadata"],
+            ["fetch_news_metadata", "fetch_sec_metadata", "fetch_market_interest"],
         )
 
         due_actions = _market_mover_investigation_react_actions({"enabled": True})
@@ -17546,6 +17550,64 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Manual investigation", model["boundary_note"])
         self.assertNotIn("score", model["boundary_note"].lower())
 
+    def test_market_interest_read_model_classifies_public_sources_without_recommendation(self) -> None:
+        from app.services.overview.market_interest import build_market_interest_read_model
+
+        model = build_market_interest_read_model(
+            mover={"Symbol": "NET", "Name": "Cloudflare Inc", "Rank": 1},
+            metadata=None,
+        )
+
+        self.assertEqual(model["schema_version"], "market_interest_evidence_v1")
+        self.assertEqual(model["status"], "NOT_REQUESTED")
+        self.assertEqual(model["symbol"], "NET")
+        policies = {row["Source"]: row["Policy"] for row in model["original_links"].to_dict("records")}
+        self.assertEqual(policies["SEC Form 13F Data Sets"], "official_durable_candidate")
+        self.assertEqual(policies["Briefing.com Upgrades / Downgrades"], "external_research_link")
+        self.assertIn("45일", " ".join(model["institutional_caveats"]))
+        self.assertNotIn("매수", model["boundary_note"])
+        self.assertNotIn("score", model["boundary_note"].lower())
+
+    def test_market_interest_summary_uses_conservative_statuses_from_existing_metadata(self) -> None:
+        from app.services.overview.market_interest import build_market_interest_read_model
+
+        metadata = {
+            "status": "OK",
+            "news": pd.DataFrame(
+                [
+                    {
+                        "Title": "NET news",
+                        "Source": "Desk",
+                        "Published At": "2026-07-08",
+                        "URL": "https://example.com/news",
+                    }
+                ]
+            ),
+            "korean_news": pd.DataFrame([], columns=["Title", "Source", "Published At", "Snippet", "URL"]),
+            "sec_filings": pd.DataFrame(
+                [
+                    {
+                        "Form": "8-K",
+                        "Filing Date": "2026-07-07",
+                        "Title": "Current report",
+                        "URL": "https://www.sec.gov/Archives/example",
+                    }
+                ]
+            ),
+        }
+        model = build_market_interest_read_model(
+            mover={"Symbol": "NET", "Name": "Cloudflare Inc"},
+            metadata=metadata,
+        )
+
+        summary = {item["id"]: item for item in model["summary_items"]}
+        self.assertEqual(summary["analyst_interest"]["state"], "원문 확인 필요")
+        self.assertEqual(summary["news_sec"]["state"], "관심 근거 있음")
+        self.assertEqual(summary["institutional_context"]["state"], "지연 자료")
+        self.assertEqual(summary["original_links"]["state"], "원문 확인")
+        self.assertEqual(summary["news_sec"]["detail"], "뉴스 1건 · SEC 1건")
+        self.assertFalse(any("buy" in str(item).lower() for item in model["summary_items"]))
+
     def test_market_movers_detail_panel_model_integrates_selected_mode_and_status_strip(self) -> None:
         from app.web.overview.market_movers_helpers import _market_mover_detail_panel_model
 
@@ -17611,6 +17673,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("간단 메타데이터 조회", source)
         self.assertNotIn("catalyst score", source.lower())
         self.assertNotIn("confidence score", source.lower())
+
+    def test_market_movers_selected_investigation_adds_market_interest_action_and_tab(self) -> None:
+        source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+
+        self.assertIn("build_market_interest_read_model", source)
+        self.assertIn("시장 관심 근거 확인", source)
+        self.assertIn('"시장 관심"', source)
+        self.assertIn("애널리스트 관심", source)
+        self.assertIn("기관 보유 배경", source)
+        self.assertIn("13F는 분기 공시 기반 지연 자료", source)
+        self.assertNotIn("기관이 지금 사고", source)
+        self.assertNotIn("매수 신호", source)
 
     def test_market_mover_compact_metadata_fetcher_keeps_news_and_sec_metadata_bounded(self) -> None:
         from app.services.overview.why_it_moved import fetch_market_mover_compact_metadata
@@ -18154,6 +18228,29 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertFalse(hasattr(overview_dashboard, "_market_mover_sec_digest_display_model"))
         self.assertFalse(hasattr(market_intelligence, "fetch_market_mover_sec_filing_preview"))
         self.assertFalse(hasattr(market_intelligence, "parse_market_mover_sec_filing_preview"))
+
+    @patch("app.web.overview.market_movers_helpers.st")
+    def test_market_mover_market_interest_react_event_sets_session_state_without_provider_fetch(
+        self,
+        mock_st: MagicMock,
+    ) -> None:
+        from app.web.overview.market_movers_helpers import _dispatch_market_mover_investigation_react_event
+
+        mock_st.session_state = {}
+        metadata: dict[str, object] = {}
+        result = _dispatch_market_mover_investigation_react_event(
+            {"event": {"id": "fetch_market_interest", "nonce": 456}},
+            symbol="NET",
+            identity={"Name": "Cloudflare Inc"},
+            metadata_key="overview_market_mover_metadata__NET",
+            metadata=metadata,
+            refresh_target={"enabled": False},
+        )
+
+        self.assertEqual(result, metadata)
+        self.assertIn("overview_market_mover_metadata__NET__market_interest", mock_st.session_state)
+        self.assertEqual(mock_st.session_state["overview_market_mover_metadata__NET__market_interest"]["symbol"], "NET")
+        mock_st.rerun.assert_called_once()
 
     def test_market_mover_catalyst_candidates_keep_return_and_volume_rank_context(self) -> None:
         from app.web.overview.market_movers_helpers import _market_mover_catalyst_candidates

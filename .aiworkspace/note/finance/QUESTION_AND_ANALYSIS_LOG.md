@@ -26,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - Market Movers 시장 관심은 선택 종목 조사 보조 패널이다
+
+- User request: Overview > Market Movers에서 선택된 종목에 대해 최근 애널리스트 변화, 목표가 변경, SEC 공시/뉴스 촉매, 13F 기관 보유 배경, 원문 링크를 확인하는 `시장 관심 근거` 기능을 1차~4차 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: 전체 Market Movers 자동 분석이나 추천기가 아니라, 사용자가 선택한 종목 1개에 대해 명시적으로 버튼을 눌렀을 때 조사 시작점을 모아주는 수동 패널을 만든다.
+- Analysis result: V1은 DB schema 변경 없이 기존 Why It Moved metadata와 외부 원문 링크를 결합하고, SEC 13F는 official durable candidate / delayed institutional context로만 표시한다. 13F durable ingestion은 CUSIP-symbol mapping과 quarter comparison 정책이 필요하므로 별도 승인 후 진행한다.
+- Follow-up: `overview-market-interest-evidence-v1-20260708`에서 read model, selected-symbol action/tab, conservative statuses, source caveats, focused tests, docs sync를 진행했다. 추천, 점수화, 매매 신호, article/report/filing body 저장, live trading 연결은 추가하지 않았다.
+
 ### 2026-07-08 - Post-merge docs refresh must verify code-flow labels, not only Markdown
 
 - User request: 사용자가 sub-dev / backtest-dev 병합 후 공용 문서가 완벽히 정리되지 않았을 수 있으니 문서 refresh, 코드 흐름 문서 업데이트, 코드 리뷰와 향후 개발 필요사항 조사를 요청함.
