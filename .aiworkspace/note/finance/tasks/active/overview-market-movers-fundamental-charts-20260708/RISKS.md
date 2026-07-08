@@ -7,3 +7,4 @@
 - 후속 4도 live Browser QA는 동일 제한으로 수행하지 못했다. 좌우 row layout은 좁은 화면에서 CSS media rule로 stack되며, 실제 앱에서는 Streamlit container 폭에 따라 각 패널 내부 horizontal scroll이 필요할 수 있다.
 - 후속 5는 CSS contract test로 scroll containment를 검증했다. live Browser QA 제한은 동일하므로 실제 앱에서 분기 그래프가 각 패널 내부에서 좌우 스크롤되는지 사용자가 최종 확인해야 한다.
 - 후속 6도 live Browser QA는 URL policy로 차단됐다. 음수 bar의 0선 아래 렌더링은 HTML/CSS contract test로 검증했으며, 실제 앱 theme에서 0선과 막대가 충분히 구분되는지는 사용자가 최종 육안 확인해야 한다.
+- 후속 7은 service/model/component contract test와 Browser QA로 검증했다. 실제 DB에 32개 미만의 안전한 10-Q row만 있으면 분기 그래프는 그 범위까지만 보이며, 이는 데이터 부족이지 UI scroll 실패가 아니다.

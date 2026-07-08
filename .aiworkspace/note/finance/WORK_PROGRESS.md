@@ -5626,3 +5626,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/` 후속으로 기본지표 그래프의 연간 / 분기 nested tabs를 제거했다.
   - 각 PER / EPS / 당기순이익 / 유동비율 / FCF 탭은 연간 그래프와 분기 그래프를 좌우 한 row로 보여주며, 각 그래프는 tall bar, tighter spacing, 내부 horizontal scroll, SVG line overlay를 사용한다.
   - 추가 후속으로 막대 위 숫자를 제거하고 기간 / 값을 하단 2줄 caption으로 분리했다. Browser QA는 in-app browser localhost URL policy로 차단됐고, 검증은 focused tests / `py_compile` / static preview로 기록했다.
+  - 분기 그래프가 2023년 이후 8개만 보인 원인은 service trend limit이 연간/분기 모두 8개였기 때문이라, 분기는 최대 32개까지 유지하도록 수정했다. 콤마 문자열 금액도 억/만/천 달러 formatter를 타도록 보강했다.

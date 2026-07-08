@@ -3267,9 +3267,29 @@ def build_market_mover_investigation_react_pane_payload(
     }
 
 
-def _format_korean_money(value: Any, *, currency: str = "달러") -> str:
+def _coerce_financial_display_number(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text or text in {"-", "—"}:
+            return None
+        is_accounting_negative = text.startswith("(") and text.endswith(")")
+        normalized = text.strip("()").replace(",", "").replace("$", "").strip()
+        try:
+            numeric = float(normalized)
+        except ValueError:
+            return None
+        return -numeric if is_accounting_negative else numeric
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
+        return None
+    return float(numeric)
+
+
+def _format_korean_money(value: Any, *, currency: str = "달러") -> str:
+    numeric = _coerce_financial_display_number(value)
+    if numeric is None:
         return "-"
     amount = float(numeric)
     sign = "-" if amount < 0 else ""
@@ -3278,21 +3298,25 @@ def _format_korean_money(value: Any, *, currency: str = "달러") -> str:
         return f"{sign}{absolute / 1_000_000_000_000:.1f}조 {currency}"
     if absolute >= 100_000_000:
         return f"{sign}{absolute / 100_000_000:.1f}억 {currency}"
+    if absolute >= 10_000:
+        return f"{sign}{absolute / 10_000:.1f}만 {currency}"
+    if absolute >= 1_000:
+        return f"{sign}{absolute / 1_000:.1f}천 {currency}"
     return f"{sign}{absolute:,.0f} {currency}"
 
 
 def _format_per(value: Any) -> str:
-    numeric = pd.to_numeric(value, errors="coerce")
-    if pd.isna(numeric):
+    numeric = _coerce_financial_display_number(value)
+    if numeric is None:
         return "-"
-    return f"{float(numeric):.2f}x"
+    return f"{numeric:.2f}x"
 
 
 def _format_eps(value: Any) -> str:
-    numeric = pd.to_numeric(value, errors="coerce")
-    if pd.isna(numeric):
+    numeric = _coerce_financial_display_number(value)
+    if numeric is None:
         return "-"
-    return f"${float(numeric):,.2f}"
+    return f"${numeric:,.2f}"
 
 
 def _research_metric_item(
@@ -3436,10 +3460,10 @@ def _income_row(item: dict[str, Any], period_label: str) -> dict[str, str] | Non
 
 
 def _format_current_ratio(value: Any) -> str:
-    numeric = pd.to_numeric(value, errors="coerce")
-    if pd.isna(numeric):
+    numeric = _coerce_financial_display_number(value)
+    if numeric is None:
         return "-"
-    return f"{float(numeric):.2f}x"
+    return f"{numeric:.2f}x"
 
 
 def _financial_chart_period_label(value: Any, *, freq: str) -> str:
@@ -3455,10 +3479,7 @@ def _financial_chart_period_label(value: Any, *, freq: str) -> str:
 
 
 def _financial_chart_numeric_value(value: Any) -> float | None:
-    numeric = pd.to_numeric(value, errors="coerce")
-    if pd.isna(numeric):
-        return None
-    return float(numeric)
+    return _coerce_financial_display_number(value)
 
 
 def _financial_chart_point(

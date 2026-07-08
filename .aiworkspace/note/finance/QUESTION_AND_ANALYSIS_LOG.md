@@ -8694,3 +8694,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 각 지표 탭 안에서 연간 패널과 분기 패널을 좌우로 동시에 보이게 하고, 각 패널 안에서는 독립 y-scale의 bar+line combo chart를 보여야 함.
 - Analysis result: 연간 / 분기를 같은 차트에 합치면 scale distortion이 생기므로 좌우 패널이 맞다. 막대 top point는 SVG overlay로 연결하면 데이터 계약 변경 없이 기존 HTML chart를 확장할 수 있다.
 - Follow-up: annual / quarterly pair layout, taller track, tighter column gap, SVG polyline/circle overlay를 추가했다. Static preview는 `fundamental-chart-pair-line-static-preview.png`에 있다.
+
+### 2026-07-08 - Fundamental chart quarterly history and money labels were misleading
+
+- User request: screenshot에서 분기가 2023년부터만 보이고 좌우 스크롤이 안 되며, `620,000,000 달러`처럼 억/천 달러 표기가 안 된다고 지적함.
+- Interpreted goal: 실제 데이터가 있으면 분기 그래프도 연간과 유사한 장기 범위를 보여야 하고, 긴 분기 series는 각 그래프 내부에서 overflow/scroll되어야 함.
+- Analysis result: service trend builder가 연간/분기 모두 `limit=8`로 자르고 있어 분기 데이터는 약 2년치만 내려갔다. 화면 scroll wrapper는 있었지만 point가 8개뿐이라 overflow가 없었다. 금액은 콤마 문자열 입력이 formatter/renderer에서 숫자로 정규화되지 않을 수 있었다.
+- Follow-up: 분기 trend cap을 32개로 분리하고, service/model/component 숫자 coercion과 억/만/천 달러 formatter 계약 테스트를 추가했다.

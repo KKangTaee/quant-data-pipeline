@@ -12541,6 +12541,79 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(trends["annual"][-1]["current_ratio"], 1.8)
         self.assertEqual(trends["quarterly"][-1]["form_type"], "10-Q")
 
+    def test_market_mover_research_snapshot_keeps_long_quarterly_chart_trends(self) -> None:
+        from app.services.overview.why_it_moved import build_market_mover_research_snapshot
+
+        quarter_periods: list[pd.Timestamp] = []
+        for year in range(2019, 2027):
+            for month, day in ((3, 31), (6, 30), (9, 30), (12, 31)):
+                period = pd.Timestamp(year=year, month=month, day=day)
+                if period <= pd.Timestamp("2026-03-31"):
+                    quarter_periods.append(period)
+
+        def fake_price_history_loader(**kwargs: object) -> pd.DataFrame:
+            return pd.DataFrame(
+                [
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-01-02"), "adj_close": 100.0},
+                    {"symbol": "AAA", "date": pd.Timestamp("2026-06-30"), "adj_close": 120.0},
+                ]
+            )
+
+        def fake_statement_fundamentals_loader(**kwargs: object) -> pd.DataFrame:
+            freq = str(kwargs["freq"])
+            if freq == "annual":
+                return pd.DataFrame(
+                    [
+                        {
+                            "symbol": "AAA",
+                            "freq": "annual",
+                            "period_end": pd.Timestamp(year=year, month=12, day=31),
+                            "available_at": pd.Timestamp(year=year + 1, month=2, day=20),
+                            "form_type": "10-K",
+                            "accession_no": f"000-aaa-{year}-10k",
+                            "net_income": 900_000_000 + ((year - 2019) * 100_000_000),
+                            "shares_outstanding": 500_000_000,
+                            "current_assets": 1_500_000_000,
+                            "current_liabilities": 1_000_000_000,
+                            "free_cash_flow": 300_000_000 + ((year - 2019) * 10_000_000),
+                        }
+                        for year in range(2019, 2026)
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAA",
+                        "freq": "quarterly",
+                        "period_end": period,
+                        "available_at": period + pd.Timedelta(days=35),
+                        "form_type": "10-Q",
+                        "accession_no": f"000-aaa-{period.year}-q{((period.month - 1) // 3) + 1}",
+                        "net_income": 100_000_000 + (index * 10_000_000),
+                        "shares_outstanding": 500_000_000,
+                        "current_assets": 1_000_000_000 + (index * 1_000_000),
+                        "current_liabilities": 500_000_000,
+                        "free_cash_flow": 50_000_000 + (index * 1_000_000),
+                    }
+                    for index, period in enumerate(quarter_periods)
+                ]
+            )
+
+        model = build_market_mover_research_snapshot(
+            mover={"Symbol": "AAA", "Market Cap": 5_500_000_000},
+            as_of_date="2026-06-30",
+            price_history_loader=fake_price_history_loader,
+            statement_fundamentals_loader=fake_statement_fundamentals_loader,
+            fundamental_snapshot_loader=lambda **_: pd.DataFrame(),
+            statement_filings_loader=lambda **_: pd.DataFrame(),
+        )
+
+        trends = model["financial_trends"]
+        self.assertEqual([row["period_end"] for row in trends["annual"]][0], "2019-12-31")
+        self.assertEqual(len(trends["quarterly"]), len(quarter_periods))
+        self.assertEqual(trends["quarterly"][0]["period_end"], "2019-03-31")
+        self.assertEqual(trends["quarterly"][-1]["period_end"], "2026-03-31")
+
     def test_market_mover_research_snapshot_flags_unreflected_edgar_quarterly_filing(self) -> None:
         from app.services.overview.why_it_moved import build_market_mover_research_snapshot
 
@@ -13103,6 +13176,76 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(charts["current_ratio"]["series"]["annual"][-1]["display_value"], "1.80x")
         self.assertEqual(charts["free_cash_flow"]["series"]["quarterly"][-1]["display_value"], "1.2억 달러")
 
+    def test_market_mover_research_snapshot_model_formats_comma_money_strings_for_charts(self) -> None:
+        from app.web.overview.market_movers_helpers import build_market_mover_research_snapshot_model
+
+        model = build_market_mover_research_snapshot_model(
+            {
+                "read_model": {
+                    "identity": {"Symbol": "AAA", "Name": "AAA Corp", "Market Cap": "5,500,000,000"},
+                    "context": {"Coverage": "S&P 500", "Period": "Daily"},
+                    "movement": {},
+                }
+            },
+            research_snapshot={
+                "current_market_cap": {"status": "OK", "value": "5,500,000,000", "basis": "asset_profile latest"},
+                "annual_financials": {
+                    "status": "OK",
+                    "period_end": "2025-12-31",
+                    "available_at": "2026-02-20",
+                    "form_type": "10-K",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "net_income": "620,000,000",
+                },
+                "quarterly_financials": {
+                    "status": "OK",
+                    "period_end": "2026-03-31",
+                    "available_at": "2026-05-02",
+                    "form_type": "10-Q",
+                    "financial_source": "sec_edgar_statement_shadow",
+                    "net_income": "6,200",
+                },
+                "financial_trends": {
+                    "annual": [
+                        {
+                            "status": "OK",
+                            "period_end": "2025-12-31",
+                            "available_at": "2026-02-20",
+                            "form_type": "10-K",
+                            "net_income": "620,000,000",
+                        }
+                    ],
+                    "quarterly": [
+                        {
+                            "status": "OK",
+                            "period_end": "2025-09-30",
+                            "available_at": "2025-10-31",
+                            "form_type": "10-Q",
+                            "net_income": "620,000,000",
+                        },
+                        {
+                            "status": "OK",
+                            "period_end": "2026-03-31",
+                            "available_at": "2026-05-02",
+                            "form_type": "10-Q",
+                            "net_income": "6,200",
+                        },
+                    ],
+                },
+                "boundary_note": "Context-only fundamentals snapshot.",
+            },
+        )
+
+        items = {item["label"]: item for item in model["items"]}
+        self.assertEqual(items["현재 시총"]["value"], "55.0억 달러")
+        self.assertEqual(items["당기순이익"]["rows"][0]["net_income"], "6.2억 달러")
+        self.assertEqual(items["당기순이익"]["rows"][1]["net_income"], "6.2천 달러")
+
+        charts = {chart["metric"]: chart for chart in model["metric_charts"]}
+        quarterly = charts["net_income"]["series"]["quarterly"]
+        self.assertEqual([point["display_value"] for point in quarterly], ["6.2억 달러", "6.2천 달러"])
+        self.assertEqual([point["value"] for point in quarterly], [620_000_000.0, 6_200.0])
+
     def test_market_mover_research_collection_html_renders_collection_status(self) -> None:
         from app.web.overview.components.market_movers import _market_mover_research_collection_html
 
@@ -13268,6 +13411,33 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         empty_html = _market_mover_research_bar_chart_html(chart, "quarterly")
         self.assertIn("표시할 분기 데이터가 없습니다", empty_html)
+
+    def test_market_mover_research_chart_html_accepts_comma_numeric_values(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_bar_chart_html
+
+        chart = {
+            "metric": "net_income",
+            "label": "당기순이익",
+            "series": {
+                "annual": [],
+                "quarterly": [
+                    {
+                        "label": "2025 Q3",
+                        "period_end": "2025-09-30",
+                        "disclosure_date": "2025-10-31",
+                        "value": "620,000,000",
+                        "display_value": "6.2억 달러",
+                    }
+                ],
+            },
+        }
+
+        html = _market_mover_research_bar_chart_html(chart, "quarterly")
+
+        self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
+        self.assertIn("2025 Q3", html)
+        self.assertIn("6.2억 달러", html)
+        self.assertNotIn("표시할 분기 데이터가 없습니다", html)
 
     def test_market_mover_research_chart_html_places_negative_bars_below_zero_line(self) -> None:
         from app.web.overview.components.market_movers import _market_mover_research_bar_chart_html

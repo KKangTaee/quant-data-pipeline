@@ -403,6 +403,8 @@ def _market_mover_research_collection_html(model: dict[str, Any]) -> str:
 
 
 def _chart_numeric_value(value: Any) -> float | None:
+    if isinstance(value, str):
+        value = value.strip().replace(",", "").replace("$", "")
     try:
         numeric = float(value)
     except (TypeError, ValueError):

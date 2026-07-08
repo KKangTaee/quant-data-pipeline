@@ -38,6 +38,9 @@ from finance.loaders.sentiment import (
 
 PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 
+FINANCIAL_TREND_ANNUAL_LIMIT = 8
+FINANCIAL_TREND_QUARTERLY_LIMIT = 32
+
 UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000 by 20D avg dollar volume",
@@ -254,6 +257,17 @@ def _clean_optional_text(value: Any, *, uppercase: bool = False) -> str | None:
 def _coerce_optional_float(value: Any) -> float | None:
     if value is None:
         return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text or text in {"-", "—"}:
+            return None
+        is_accounting_negative = text.startswith("(") and text.endswith(")")
+        normalized = text.strip("()").replace(",", "").replace("$", "").strip()
+        try:
+            numeric = float(normalized)
+        except ValueError:
+            return None
+        return -numeric if is_accounting_negative else numeric
     try:
         if pd.isna(value):
             return None
@@ -663,6 +677,7 @@ def _market_mover_statement_fundamental_trends(
         frame = statement_fundamentals_loader(symbols=symbol, freq=freq, end=as_of_date)
     except Exception:
         return []
+    trend_limit = FINANCIAL_TREND_QUARTERLY_LIMIT if freq == "quarterly" else FINANCIAL_TREND_ANNUAL_LIMIT
     return _financial_trend_rows_from_frame(
         frame,
         as_of_date=as_of_date,
@@ -670,6 +685,7 @@ def _market_mover_statement_fundamental_trends(
         latest_price=latest_price,
         default_source_payload=default_payload,
         require_quarterly_10q=require_quarterly_10q,
+        limit=trend_limit,
     )
 
 
