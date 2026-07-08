@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 ## Project Summary
 
@@ -80,7 +80,7 @@ Last Verified: 2026-07-08
 | Practical Validation module gate service | `app/services/backtest_practical_validation_modules.py` |
 | Practical Validation status policy service | `app/services/backtest_validation_status_policy.py` |
 | Practical Validation board map service | `app/services/backtest_practical_validation_board_registry.py` |
-| Practical Validation workspace read model service | `app/services/backtest_practical_validation_workspace.py`; includes Flow 3 conclusion fields, Flow 4 criteria status summary groups, and criteria-level resolution guides with numbered action steps |
+| Practical Validation workspace read model service | `app/services/backtest_practical_validation_workspace.py`; includes Flow 3 conclusion fields, Flow 4 criteria status summary groups, criteria-level resolution guides with numbered action steps, and Flow 4 display-only `data_action_board` built from provider collection plan / compact evidence rows |
 | Construction risk audit service | `app/services/backtest_construction_risk_audit.py` |
 | Risk contribution audit service | `app/services/backtest_risk_contribution_audit.py` |
 | Component role / weight audit service | `app/services/backtest_component_role_weight_audit.py` |
@@ -111,6 +111,7 @@ Last Verified: 2026-07-08
 | Practical Validation workspace panel | `app/web/backtest_practical_validation/workspace_panel.py`; owns Flow 3 single first-read Practical Validation conclusion, compact criteria status summary, user-facing blocker fields, and React fallback boundary. Conditional / downstream reference groups remain in the read model but are not rendered as a separate Flow 3 expander |
 | Practical Validation status display helper | `app/web/backtest_practical_validation/status_display.py`; normalizes first-read statuses for user-facing labels / tones |
 | Practical Validation Flow 3 React component | `app/web/components/practical_validation_fix_queue/`; compatibility path name keeps Fix Queue, but the visible surface is a read-only Practical Validation conclusion summary. It shows Practical Validation outcome, failed category count, category-level pass / fail summary, and sends detailed cause / module evidence to Flow 4 without owning validation execution, Final Review judgment, or persistence |
+| Practical Validation Flow 4 data action React component | `app/web/components/practical_validation_data_action_board/`; renders display-only `데이터 보강 대상` cards from the Python workspace read model. It shows category, ticker chips, reason, next action, and availability only; provider/FRED/API/DB fetch, validation calculation, collection execution, gate, registry, and saved writes stay in Python service/runtime boundaries |
 | Final Review | `app/web/backtest_final_review/page.py`; includes contextual Reference help entry point |
 | Final Review UI components | `app/web/backtest_final_review/components.py` |
 | Operations Overview | `app/web/operations_overview.py`; includes contextual Reference help entry point |
@@ -163,6 +164,7 @@ Last Verified: 2026-07-08
 | `app/web/backtest_practical_validation/workspace_panel.py` | Flow 3 first-read workspace renderer. Practical Validation category-level pass / fail conclusion summary, React component availability, and Streamlit fallback을 소유한다. 조건부 / 후속 참고 그룹은 read model에 남기되 별도 하단 expander로 반복 노출하지 않는다 |
 | `app/web/backtest_practical_validation/status_display.py` | Practical Validation UI display helper. `BLOCKED_FOR_FINAL_REVIEW`, `READY_WITH_REVIEW`, `READY_FOR_FINAL_REVIEW` 같은 raw route-like status를 first-read labels `BLOCKED`, `REVIEW`, `PASS`로 정규화한다 |
 | `app/web/components/practical_validation_fix_queue/` | Practical Validation Flow 3 React component. Compatibility path name is retained, but visible copy renders `검증 결론` and `카테고리별 검증 요약`; validation execution, gate calculation, persistence, provider action, handoff는 Python path가 소유한다 |
+| `app/web/components/practical_validation_data_action_board/` | Practical Validation Flow 4 display-only React component. `data_action_board` props만 렌더링하고, 수집 / 실행 / 계산 / gate / registry / saved write는 기존 Python service path가 소유한다 |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
 | `finance/data/macro.py` | FRED macro series 수집 |

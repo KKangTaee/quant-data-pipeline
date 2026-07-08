@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 ## Current State
 
@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `post-merge-docs-flow-refresh-20260708`
+- `practical-validation-flow4-data-action-board-v1-20260709`
 
 Previous completed task:
 
-- `practical-validation-boundary-cleanup-v1-20260708`
+- `practical-validation-flow-gating-evidence-ia-v1-20260708`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,9 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-flow4-data-action-board-v1-20260709`: Practical Validation Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다. `단계별 검증 소유권`과 별도 `수집 대상 근거` expander를 제거하고, 표시 전용 React board가 Python `data_action_board` read model을 렌더링한다. React는 수집 / 실행 / 계산 / gate / registry write를 하지 않는다.
+- `practical-validation-flow-gating-evidence-ia-v1-20260708`: Flow 2 current-session replay가 없으면 Flow 3 / Flow 4 / Flow 5와 Result JSON을 렌더링하지 않고, Flow 4 하단 evidence IA를 provider 보강 action 중심으로 낮췄다.
+- `practical-validation-category-empty-state-v1-20260708`: Practical Validation Flow 4 `카테고리별 검증 결과`의 REVIEW-only / empty category를 PV visible category result에서 숨기고, 내부 read model에는 유지했다.
 - `practical-validation-required-taxonomy-audit-v1-20260708`: Practical Validation 1차 필수 검증의 현재 module / audit row inventory를 점검하고, `check_id -> owner_module` 기준 taxonomy를 정의했다. 핵심 결론은 `validation_efficacy`를 walk-forward / OOS / regime 중심의 `validation_method_strength`로 축소하고, replay / benchmark / PIT / survivorship / provider freshness / robustness는 각 owner module이 단독 소유하게 하는 것이다. 이번 task는 코드 동작을 바꾸지 않은 설계 / handoff record다.
 - `backtest-coverage-provider-gap-refresh-v1-20260707`: Backtest Data Trust Coverage 최신화가 provider no-data / persistent source gap 심볼을 반복 클릭 대상으로 남기지 않도록 수정했다. 명백한 provider/source gap은 refresh plan에서 제외하고, rows_written=0 + unresolved 결과는 같은 화면에서 retry action card를 다시 렌더링하지 않는다.
 - `practical-validation-flow4-action-steps-v3-20260707`: Practical Validation Flow 4 `해결 방법` now renders numbered `action_steps` instead of a slash-joined paragraph. Row-level audit `Next Action` remains the most specific first step, followed by provider / DB / Flow 2 recheck guidance where relevant.

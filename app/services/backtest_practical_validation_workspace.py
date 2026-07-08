@@ -482,6 +482,34 @@ COLLECTABLE_DATA_ACTIONS = {
         "detail": "ETF operability, holdings / exposure, macro context 중 수집 가능한 provider gap을 보강합니다.",
     },
 }
+DATA_ACTION_GROUPS = (
+    {
+        "group_id": "immediate_collect",
+        "label": "지금 수집 가능",
+        "description": "기존 Python Provider / Data 보강 액션으로 바로 실행할 수 있는 항목입니다.",
+        "tone": "warning",
+    },
+    {
+        "group_id": "source_map_discovery",
+        "label": "Source map 탐색",
+        "description": "자동 source map 탐색 후 수집 가능 여부를 다시 확인해야 하는 항목입니다.",
+        "tone": "warning",
+    },
+    {
+        "group_id": "connector_needed",
+        "label": "Connector mapping 필요",
+        "description": "자동 탐색 이후에도 수동 connector mapping이 필요한 항목입니다.",
+        "tone": "danger",
+    },
+    {
+        "group_id": "no_action",
+        "label": "현재 수집으로 해결 불가",
+        "description": "데이터 수집 버튼이 아니라 재검증, 방법론 보강, 판단 단계에서 처리할 항목입니다.",
+        "tone": "neutral",
+    },
+)
+DATA_ACTION_EXCLUDED_MODULE_IDS = {"selected_route_preflight"}
+DATA_ACTION_EXCLUDED_LABEL_TOKENS = ("final review", "monitoring")
 
 
 def _dict_list(value: Any) -> list[dict[str, Any]]:
@@ -695,6 +723,276 @@ def _merge_action_steps(*groups: list[str], limit: int = 4) -> list[str]:
             if len(steps) >= limit:
                 return steps
     return steps
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        raw_items = [value]
+    elif isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = [value]
+    items: list[str] = []
+    for item in raw_items:
+        text = str(item or "").strip().upper()
+        if text and text != "-" and text not in items:
+            items.append(text)
+    return items
+
+
+def _provider_gap_plan_for_board(validation: dict[str, Any]) -> dict[str, Any]:
+    plan = dict(validation.get("provider_gap_collection_plan") or {})
+    if plan:
+        return {
+            "operability_official": _string_list(plan.get("operability_official")),
+            "operability_bridge": _string_list(plan.get("operability_bridge")),
+            "holdings_exposure": _string_list(plan.get("holdings_exposure")),
+            "source_map_discovery": _string_list(plan.get("source_map_discovery")),
+            "mapping_needed": _string_list(plan.get("mapping_needed")),
+            "macro": bool(plan.get("macro")),
+        }
+
+    provider_context = dict(validation.get("provider_coverage") or {})
+    coverage = dict(provider_context.get("coverage") or {})
+    operability_missing = _string_list(dict(coverage.get("operability") or {}).get("missing_symbols"))
+    holdings_missing = _string_list(dict(coverage.get("holdings") or {}).get("missing_symbols"))
+    exposure_missing = _string_list(dict(coverage.get("exposure") or {}).get("missing_symbols"))
+    macro = dict(coverage.get("macro") or {})
+    macro_needs_collection = str(macro.get("diagnostic_status") or "").upper() in {"NOT_RUN", "REVIEW"} and (
+        int(macro.get("series_count") or 0) < 3 or int(macro.get("stale_count") or 0) > 0
+    )
+    return {
+        "operability_official": [],
+        "operability_bridge": operability_missing,
+        "holdings_exposure": [],
+        "source_map_discovery": sorted(set(holdings_missing) | set(exposure_missing)),
+        "mapping_needed": [],
+        "macro": macro_needs_collection,
+    }
+
+
+def _data_action_item(
+    *,
+    group_id: str,
+    category: str,
+    tickers: list[str] | None = None,
+    reason: str,
+    next_action: str,
+    availability: str,
+    module_id: str = "",
+    source: str = "",
+    target_anchor: str = "pv-provider-data-action",
+) -> dict[str, Any]:
+    return {
+        "group_id": group_id,
+        "module_id": module_id,
+        "category": category,
+        "tickers": list(tickers or []),
+        "reason": reason,
+        "next_action": next_action,
+        "availability": availability,
+        "source": source,
+        "target_anchor": target_anchor,
+    }
+
+
+def _data_action_items_from_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    if plan.get("operability_official"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="ETF operability",
+                tickers=_string_list(plan.get("operability_official")),
+                reason="공식 source map 또는 내장 공식 source로 운용성 snapshot을 보강할 수 있습니다.",
+                next_action="아래 기존 Python Provider / Data 보강 액션에서 운용성 수집을 실행합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.operability_official",
+            )
+        )
+    if plan.get("operability_bridge"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="ETF operability",
+                tickers=_string_list(plan.get("operability_bridge")),
+                reason="공식 source가 없거나 부족해도 DB bridge로 운용성 근거를 보강할 수 있습니다.",
+                next_action="아래 기존 Python Provider / Data 보강 액션에서 DB bridge 보강을 실행합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.operability_bridge",
+            )
+        )
+    if plan.get("holdings_exposure"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="ETF holdings / exposure",
+                tickers=_string_list(plan.get("holdings_exposure")),
+                reason="검증된 holdings 또는 exposure source가 있어 look-through 근거를 보강할 수 있습니다.",
+                next_action="아래 기존 Python Provider / Data 보강 액션에서 holdings / exposure 수집을 실행합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.holdings_exposure",
+            )
+        )
+    if plan.get("macro"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="Macro context",
+                tickers=["VIXCLS", "T10Y3M", "BAA10Y"],
+                reason="저장된 macro context series가 부족하거나 오래되어 FRED series 보강이 필요합니다.",
+                next_action="아래 기존 Python Provider / Data 보강 액션에서 macro context 수집을 실행합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.macro",
+            )
+        )
+    if plan.get("source_map_discovery"):
+        items.append(
+            _data_action_item(
+                group_id="source_map_discovery",
+                category="ETF holdings / exposure",
+                tickers=_string_list(plan.get("source_map_discovery")),
+                reason="holdings / exposure 수집 전 verified source map을 먼저 찾아야 합니다.",
+                next_action="자동 source map 탐색을 실행한 뒤 같은 Flow 4 보강 액션을 다시 확인합니다.",
+                availability="자동 탐색 후 수집 가능 여부 재확인",
+                source="provider_gap_collection_plan.source_map_discovery",
+            )
+        )
+    if plan.get("mapping_needed"):
+        items.append(
+            _data_action_item(
+                group_id="connector_needed",
+                category="ETF holdings / exposure",
+                tickers=_string_list(plan.get("mapping_needed")),
+                reason="자동 탐색 이후에도 검증된 issuer URL / parser mapping이 없습니다.",
+                next_action="수동 connector mapping을 추가한 뒤 provider data 보강을 다시 실행합니다.",
+                availability="수동 connector mapping 필요",
+                source="provider_gap_collection_plan.mapping_needed",
+            )
+        )
+    return items
+
+
+def _row_tickers(row: dict[str, Any]) -> list[str]:
+    for key in ("Ticker", "ETF", "Symbol", "Symbols", "Tickers", "symbol", "symbols"):
+        tickers = _string_list(row.get(key))
+        if tickers:
+            return tickers
+    return []
+
+
+def _data_action_no_action_items(
+    modules: list[dict[str, Any]],
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for module in modules:
+        if not _module_applies(module):
+            continue
+        module_id = _module_id(module)
+        if module_id in DATA_ACTION_EXCLUDED_MODULE_IDS:
+            continue
+        label_text = f"{module.get('label') or ''} {module.get('group') or ''}".lower()
+        if any(token in label_text for token in DATA_ACTION_EXCLUDED_LABEL_TOKENS):
+            continue
+        stage_key = _stage_owner_key(module)
+        requirement = _module_requirement(module)
+        if stage_key in DOWNSTREAM_STAGE_OWNERS or requirement == "REFERENCE":
+            continue
+        status = normalize_validation_status(module.get("status"))
+        if status in {"PASS", "READY", "REVIEW", "NOT_APPLICABLE"}:
+            continue
+        evidence_rows = list(evidence_rows_by_module.get(module_id) or [])
+        actionable_rows = 0
+        non_action_rows = 0
+        for row in evidence_rows:
+            row_status = _evidence_row_status(row)
+            if row_status in {"PASS", "READY", "REVIEW", "NOT_APPLICABLE"}:
+                continue
+            if _row_mentions_collectable_data_action(row):
+                actionable_rows += 1
+                continue
+            non_action_rows += 1
+            items.append(
+                _data_action_item(
+                    group_id="no_action",
+                    module_id=module_id,
+                    category=str(module.get("label") or module_id or "-"),
+                    tickers=_row_tickers(row),
+                    reason=_evidence_row_label(row),
+                    next_action=_evidence_row_action(row)
+                    or str(module.get("resolution_action") or module.get("next_action") or "해당 기준 상세에서 보강한 뒤 Flow 2 재검증을 실행합니다."),
+                    availability="현재 Provider / Data 수집 버튼으로 직접 해결되지 않음",
+                    source=f"{module_id}.evidence_rows",
+                    target_anchor="",
+                )
+            )
+        if evidence_rows and (actionable_rows or non_action_rows):
+            continue
+        if not evidence_rows:
+            collection_action = _collection_action(module_id, status, [])
+            if collection_action.get("available"):
+                continue
+            items.append(
+                _data_action_item(
+                    group_id="no_action",
+                    module_id=module_id,
+                    category=str(module.get("label") or module_id or "-"),
+                    tickers=[],
+                    reason=_clean_issue_text(module.get("gate_reason") or module.get("reason") or module.get("evidence"))
+                    or "현재 기준에 보강 필요 상태가 남아 있습니다.",
+                    next_action=_clean_issue_text(module.get("resolution_action") or module.get("next_action"))
+                    or "해당 기준 상세에서 보강한 뒤 Flow 2 재검증을 실행합니다.",
+                    availability="현재 Provider / Data 수집 버튼으로 직접 해결되지 않음",
+                    source=f"{module_id}.module_status",
+                    target_anchor="",
+                )
+            )
+    return items
+
+
+def _data_action_board(
+    validation: dict[str, Any],
+    modules: list[dict[str, Any]],
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    plan = _provider_gap_plan_for_board(validation)
+    items = _data_action_items_from_plan(plan)
+    items.extend(_data_action_no_action_items(modules, evidence_rows_by_module))
+    grouped_items = {spec["group_id"]: [] for spec in DATA_ACTION_GROUPS}
+    for item in items:
+        group_id = str(item.get("group_id") or "no_action")
+        grouped_items.setdefault(group_id, []).append(item)
+    groups: list[dict[str, Any]] = []
+    for spec in DATA_ACTION_GROUPS:
+        group_id = str(spec["group_id"])
+        group_items = list(grouped_items.get(group_id) or [])
+        groups.append(
+            {
+                "group_id": group_id,
+                "label": spec["label"],
+                "description": spec["description"],
+                "tone": spec["tone"],
+                "count": len(group_items),
+                "items": group_items,
+            }
+        )
+    summary = {f"{group['group_id']}_count": int(group["count"]) for group in groups}
+    summary["actionable_count"] = (
+        summary.get("immediate_collect_count", 0)
+        + summary.get("source_map_discovery_count", 0)
+        + summary.get("connector_needed_count", 0)
+    )
+    summary["item_count"] = len(items)
+    return {
+        "title": "데이터 보강 대상",
+        "detail": "Practical Validation에서 지금 보강할 수 있는 데이터 항목과 현재 수집으로 해결되지 않는 항목을 분리합니다.",
+        "summary": summary,
+        "groups": groups,
+        "items": items,
+    }
 
 
 def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1376,6 +1674,11 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     visible_criteria_groups = _visible_criteria_detail_groups(criteria_groups)
     criteria_summary = _criteria_summary(criteria_groups)
     stage_ownership_inventory = _stage_ownership_inventory(modules)
+    data_action_board = _data_action_board(
+        validation_row,
+        modules,
+        evidence_rows_by_module,
+    )
     handoff_summary_groups = [
         group
         for group in [
@@ -1415,6 +1718,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "downstream_reference_groups": downstream_groups,
         "criteria_detail_groups": criteria_groups,
         "visible_criteria_detail_groups": visible_criteria_groups,
+        "data_action_board": data_action_board,
         "stage_ownership_inventory": stage_ownership_inventory,
         "category_result_groups": category_groups,
         "handoff_summary_groups": handoff_summary_groups,

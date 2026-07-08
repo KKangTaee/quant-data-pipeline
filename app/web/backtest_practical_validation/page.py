@@ -43,6 +43,10 @@ from app.web.backtest_practical_validation.status_display import (
     validation_status_label,
     validation_status_tone as _status_tone,
 )
+from app.web.components.practical_validation_data_action_board import (
+    is_practical_validation_data_action_board_available,
+    render_practical_validation_data_action_board,
+)
 from app.web.backtest_ui_components import render_badge_strip
 from app.runtime import (
     PORTFOLIO_SELECTION_SOURCE_FILE,
@@ -1156,14 +1160,11 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         min_width=220,
     )
 
-    st.markdown("##### 수집 대상 근거")
-    with st.expander("수집 대상 상세", expanded=False):
-        _render_board_context_badges(validation_result, "provider_data_gaps")
-        st.caption(
-            "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지와 "
-            "어떤 항목을 수집할 수 있는지 보여줍니다. source mapping이 없는 ETF는 connector 보강이 필요합니다."
-        )
-        _render_display_dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
+    _render_board_context_badges(validation_result, "provider_data_gaps")
+    st.caption(
+        "위 데이터 보강 대상 보드가 수집 가능한 항목과 수동 mapping 필요 항목을 먼저 요약합니다. "
+        "아래 버튼은 기존 Python 수집 경계만 실행합니다."
+    )
     if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
         st.success("현재 ETF provider gap은 없습니다.")
         return True
@@ -1800,8 +1801,8 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
 
 
 def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
-    with st.expander("근거 부록", expanded=False):
-        st.caption("Flow 4 기준 상세와 Provider / Data 보강 액션을 먼저 확인한 뒤, 필요한 근거만 펼쳐봅니다.")
+    with st.expander("상세 근거 / 원자료", expanded=False):
+        st.caption("카테고리별 검증 결과와 데이터 보강 대상 보드를 먼저 확인한 뒤, 필요한 원자료만 펼쳐봅니다.")
         summary_tab, data_tab, construction_tab, realism_tab, robustness_tab, raw_tab = st.tabs(
             ["핵심 근거", "데이터 품질", "구성 / 리스크", "검증 방법론", "강건성", "Raw Evidence"]
         )
@@ -1880,52 +1881,58 @@ def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:
         st.info("현재 후보에서 실행할 provider 보강 액션이 없습니다.")
 
 
-def _render_stage_ownership_inventory(validation_result: dict[str, Any]) -> None:
-    workspace = dict(validation_result.get("practical_validation_workspace") or {})
-    inventory = dict(workspace.get("stage_ownership_inventory") or {})
-    summaries = [dict(row or {}) for row in list(inventory.get("stage_summaries") or [])]
-    rows = [dict(row or {}) for row in list(inventory.get("rows") or [])]
-    if not summaries:
+def _render_data_action_board_fallback(board: dict[str, Any]) -> None:
+    groups = [dict(group or {}) for group in list(board.get("groups") or [])]
+    if not groups:
+        st.info("현재 표시할 데이터 보강 대상이 없습니다.")
         return
-    with st.expander("단계별 검증 소유권", expanded=False):
+    for group in groups:
+        items = [dict(item or {}) for item in list(group.get("items") or [])]
         render_pv_card_grid(
             [
                 {
-                    "kicker": row.get("stage") or "-",
-                    "title": f"{row.get('module_count', 0)}개 기준",
-                    "status": f"보강 {row.get('blocking_count', 0)}",
+                    "kicker": str(group.get("label") or "-"),
+                    "title": str(item.get("category") or "-"),
+                    "status": str(item.get("availability") or "-"),
                     "detail": (
-                        f"필수 {row.get('required_count', 0)} / 조건부 {row.get('conditional_count', 0)} / "
-                        f"참고 {row.get('reference_count', 0)}"
+                        f"{str(item.get('reason') or '-')} · "
+                        f"{str(item.get('next_action') or '-')}"
                     ),
-                    "tone": "warning" if row.get("blocking_count") else "neutral",
+                    "tone": str(group.get("tone") or "neutral"),
                 }
-                for row in summaries
+                for item in items
+            ]
+            or [
+                {
+                    "kicker": str(group.get("label") or "-"),
+                    "title": "표시할 항목 없음",
+                    "status": "0",
+                    "detail": str(group.get("description") or "-"),
+                    "tone": "neutral",
+                }
             ],
-            min_width=210,
+            min_width=240,
         )
-        if inventory.get("misplaced_downstream_blocker_count"):
-            st.warning("후속 단계 소유 기준이 현재 단계 blocker처럼 남아 있습니다. stage_owner / requirement를 확인하세요.")
-        else:
-            st.caption("후속 판단 항목은 Practical Validation 보강 항목으로 반복 노출하지 않고 각 소유 단계에서 확인합니다.")
-        if rows:
-            _render_display_dataframe(
-                pd.DataFrame(
-                    [
-                        {
-                            "Stage": row.get("stage"),
-                            "검증 기준": row.get("label"),
-                            "상태": row.get("status"),
-                            "역할": row.get("requirement"),
-                            "노출": row.get("visibility"),
-                            "위치": row.get("surface"),
-                        }
-                        for row in rows
-                    ]
-                ),
-                width="stretch",
-                hide_index=True,
-            )
+
+
+def _render_data_action_board(validation_result: dict[str, Any]) -> None:
+    workspace = dict(validation_result.get("practical_validation_workspace") or {})
+    board = dict(workspace.get("data_action_board") or {})
+    if not board:
+        return
+    render_pv_section_header(
+        eyebrow="Data action board",
+        title="데이터 보강 대상 / 액션",
+        detail="지금 수집 가능한 데이터, source map 탐색, 수동 connector mapping, 현재 수집으로 해결되지 않는 항목을 분리합니다.",
+        tone="warning" if dict(board.get("summary") or {}).get("actionable_count") else "neutral",
+    )
+    if is_practical_validation_data_action_board_available():
+        render_practical_validation_data_action_board(
+            board=board,
+            key=f"pv-data-action-board-{validation_result.get('validation_result_id') or validation_result.get('selection_source_id') or 'current'}",
+        )
+    else:
+        _render_data_action_board_fallback(board)
 
 
 def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) -> None:
@@ -2445,9 +2452,8 @@ def render_practical_validation_workspace() -> None:
             tone="neutral",
         )
         _render_validation_criteria_detail_board(validation_result)
-        _render_stage_ownership_inventory(validation_result)
+        _render_data_action_board(validation_result)
         st.markdown('<span id="pv-provider-data-action"></span>', unsafe_allow_html=True)
-        st.markdown("##### Provider / Data 보강 액션")
         _render_validation_action_boards(validation_result)
         _render_validation_evidence_boards(validation_result)
 

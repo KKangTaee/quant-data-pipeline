@@ -12435,6 +12435,166 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "selected_route_preflight",
         )
 
+    def test_practical_validation_workspace_builds_data_action_board(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "provider_gap_collection_plan": {
+                    "operability_official": ["SPY"],
+                    "operability_bridge": ["TLT"],
+                    "holdings_exposure": ["GLD"],
+                    "source_map_discovery": ["MYST"],
+                    "mapping_needed": ["ALT"],
+                    "macro": True,
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "data_coverage",
+                        "label": "Data Coverage",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                    {
+                        "module_id": "tax_account_scope",
+                        "label": "Tax / Account Scope",
+                        "status": "REVIEW",
+                        "applies": True,
+                        "requirement": "REFERENCE",
+                        "stage_owner": "final_review",
+                    },
+                    {
+                        "module_id": "selected_route_preflight",
+                        "label": "Final Review Readiness Preview",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                    {
+                        "module_id": "final_review_gate",
+                        "label": "Final Review Readiness Preview",
+                        "group": "Final Review Readiness Preview",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                ],
+                "data_coverage_display_rows": [
+                    {
+                        "Criteria": "Provider / freshness evidence",
+                        "Status": "NEEDS_INPUT",
+                        "Ticker": "SPY",
+                        "Evidence": "provider snapshot missing",
+                        "Next Action": "Provider / Data 보강 액션에서 수집합니다.",
+                    },
+                    {
+                        "Criteria": "Price DB window coverage",
+                        "Status": "NEEDS_INPUT",
+                        "Ticker": "QQQ",
+                        "Evidence": "stored price window is short",
+                        "Next Action": "DB price ingestion으로 보강한 뒤 Flow 2 재검증을 실행합니다.",
+                    },
+                ],
+                "validation_efficacy_display_rows": [
+                    {
+                        "Criteria": "Walk-forward temporal validation",
+                        "Status": "NEEDS_INPUT",
+                        "Evidence": "walk-forward missing",
+                        "Next Action": "검증 방법론 강도 상세에서 보강합니다.",
+                    }
+                ],
+            }
+        )
+
+        board = workspace["data_action_board"]
+        self.assertEqual(board["title"], "데이터 보강 대상")
+        self.assertEqual(board["summary"]["immediate_collect_count"], 4)
+        self.assertEqual(board["summary"]["source_map_discovery_count"], 1)
+        self.assertEqual(board["summary"]["connector_needed_count"], 1)
+        self.assertEqual(board["summary"]["no_action_count"], 2)
+        self.assertNotIn("tax_account_scope", {item.get("module_id") for item in board["items"]})
+        self.assertNotIn("selected_route_preflight", {item.get("module_id") for item in board["items"]})
+        self.assertNotIn("final_review_gate", {item.get("module_id") for item in board["items"]})
+
+        groups = {group["group_id"]: group for group in board["groups"]}
+        immediate_items = groups["immediate_collect"]["items"]
+        immediate_labels = {item["category"] for item in immediate_items}
+        self.assertIn("ETF operability", immediate_labels)
+        self.assertIn("ETF holdings / exposure", immediate_labels)
+        self.assertIn("Macro context", immediate_labels)
+        self.assertTrue(any("SPY" in item["tickers"] for item in immediate_items))
+        self.assertTrue(any("GLD" in item["tickers"] for item in immediate_items))
+        self.assertTrue(any(item["availability"] == "기존 Python 수집 경계에서 실행 가능" for item in immediate_items))
+
+        source_map_item = groups["source_map_discovery"]["items"][0]
+        self.assertEqual(source_map_item["tickers"], ["MYST"])
+        self.assertIn("자동 source map 탐색", source_map_item["next_action"])
+
+        connector_item = groups["connector_needed"]["items"][0]
+        self.assertEqual(connector_item["tickers"], ["ALT"])
+        self.assertIn("수동 connector mapping", connector_item["availability"])
+
+        no_action_items = groups["no_action"]["items"]
+        self.assertTrue(any(item["module_id"] == "data_coverage" and "QQQ" in item["tickers"] for item in no_action_items))
+        self.assertTrue(any(item["module_id"] == "validation_efficacy" for item in no_action_items))
+        self.assertTrue(all("Final Review" not in item["category"] for item in no_action_items))
+
+    def test_practical_validation_service_attaches_provider_plan_to_data_action_board(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        base_result = {
+            "selection_source_id": "source-data-actions",
+            "validation_modules": [
+                {
+                    "module_id": "data_coverage",
+                    "label": "Data Coverage",
+                    "status": "NEEDS_INPUT",
+                    "applies": True,
+                }
+            ],
+            "data_coverage_display_rows": [
+                {
+                    "Criteria": "Provider / freshness evidence",
+                    "Status": "NEEDS_INPUT",
+                    "Ticker": "SPY",
+                    "Evidence": "provider snapshot missing",
+                    "Next Action": "Provider / Data 보강 액션에서 수집합니다.",
+                }
+            ],
+        }
+
+        with (
+            patch.object(service, "_build_practical_validation_result", return_value=dict(base_result)),
+            patch.object(
+                service,
+                "build_provider_gap_collection_plan",
+                return_value={
+                    "operability_official": ["SPY"],
+                    "operability_bridge": [],
+                    "holdings_exposure": [],
+                    "source_map_discovery": [],
+                    "mapping_needed": [],
+                    "macro": False,
+                },
+            ) as plan_builder,
+        ):
+            result = service.build_practical_validation_result({"selection_source_id": "source-data-actions"})
+
+        plan_builder.assert_called_once()
+        self.assertEqual(result["provider_gap_collection_plan"]["operability_official"], ["SPY"])
+        board = result["practical_validation_workspace"]["data_action_board"]
+        immediate = next(group for group in board["groups"] if group["group_id"] == "immediate_collect")
+        self.assertEqual(immediate["items"][0]["tickers"], ["SPY"])
+        self.assertEqual(immediate["items"][0]["availability"], "기존 Python 수집 경계에서 실행 가능")
+
     def test_practical_validation_flow4_keeps_final_review_items_as_handoff_reference(self) -> None:
         from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
 
@@ -12715,6 +12875,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
     def test_practical_validation_flow4_uses_criteria_detail_board(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
         component_source = Path("app/web/backtest_practical_validation/components.py").read_text(encoding="utf-8")
+        data_action_wrapper = Path("app/web/components/practical_validation_data_action_board/component.py")
         flow4_body = page_source.split('eyebrow="Flow 4"', 1)[1]
         flow4_body = flow4_body.split('eyebrow="Flow 5"', 1)[0]
         evidence_body = page_source.split("def _render_validation_evidence_boards", 1)[1]
@@ -12736,12 +12897,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("##### Input Evidence", page_source)
         self.assertIn("실전성 진단", page_source)
         self.assertNotIn("##### Practical Diagnostics", page_source)
-        self.assertIn("근거 부록", evidence_body)
-        self.assertIn("Flow 4 기준 상세와 Provider / Data 보강 액션을 먼저 확인", evidence_body)
-        self.assertIn('st.expander("근거 부록", expanded=False)', evidence_body)
-        self.assertIn("수집 대상 근거", provider_gap_body)
-        self.assertIn("수집 대상 상세", provider_gap_body)
-        self.assertIn("expanded=False", provider_gap_body)
+        self.assertIn("상세 근거 / 원자료", evidence_body)
+        self.assertIn("카테고리별 검증 결과와 데이터 보강 대상 보드를 먼저 확인", evidence_body)
+        self.assertIn('st.expander("상세 근거 / 원자료", expanded=False)', evidence_body)
+        self.assertNotIn("수집 대상 근거", provider_gap_body)
+        self.assertNotIn("수집 대상 상세", provider_gap_body)
         self.assertNotIn("Provider 부족 근거", page_source)
         self.assertNotIn("검증 근거 보드", page_source)
         self.assertNotIn("Evidence workspace", page_source)
@@ -12778,9 +12938,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("collection_action", page_source)
         self.assertIn("pv-criteria-collect-action", page_source)
         self.assertIn("pv-criteria-collect-button", component_source)
-        self.assertIn("def _render_stage_ownership_inventory", page_source)
-        self.assertIn("_render_stage_ownership_inventory(validation_result)", flow4_body)
-        self.assertIn("단계별 검증 소유권", page_source)
+        self.assertIn("render_practical_validation_data_action_board", page_source)
+        self.assertIn("_render_data_action_board(validation_result)", flow4_body)
+        self.assertTrue(data_action_wrapper.exists())
+        self.assertNotIn("_render_stage_ownership_inventory(validation_result)", flow4_body)
+        self.assertNotIn("단계별 검증 소유권", page_source)
         criteria_board_body = page_source.split("def _render_validation_criteria_detail_board", 1)[1]
         criteria_board_body = criteria_board_body.split("def _render_validation_efficacy_audit", 1)[0]
         self.assertNotIn("Final Review 참고", criteria_board_body)
@@ -12789,16 +12951,62 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("handoff_html", criteria_board_body)
         self.assertLess(
             flow4_body.index("_render_validation_criteria_detail_board(validation_result)"),
-            flow4_body.index("_render_stage_ownership_inventory(validation_result)"),
-        )
-        self.assertLess(
-            flow4_body.index("_render_stage_ownership_inventory(validation_result)"),
-            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
+            flow4_body.index("_render_data_action_board(validation_result)"),
         )
         self.assertLess(
             flow4_body.index("_render_validation_action_boards(validation_result)"),
             flow4_body.index("_render_validation_evidence_boards(validation_result)"),
         )
+        self.assertLess(
+            flow4_body.index("_render_data_action_board(validation_result)"),
+            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
+        )
+
+    def test_practical_validation_data_action_board_react_component_is_ui_only(self) -> None:
+        wrapper_path = Path("app/web/components/practical_validation_data_action_board/component.py")
+        init_path = Path("app/web/components/practical_validation_data_action_board/__init__.py")
+        package_path = Path("app/web/components/practical_validation_data_action_board/frontend/package.json")
+        entry_path = Path(
+            "app/web/components/practical_validation_data_action_board/frontend/src/PracticalValidationDataActionBoard.tsx"
+        )
+        index_path = Path("app/web/components/practical_validation_data_action_board/frontend/src/index.tsx")
+        style_path = Path("app/web/components/practical_validation_data_action_board/frontend/src/style.css")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(init_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        index_source = index_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_practical_validation_data_action_board_available", wrapper_source)
+        self.assertIn("render_practical_validation_data_action_board", wrapper_source)
+        self.assertIn("PracticalValidationDataActionBoard", component_source)
+        self.assertIn("데이터 보강 대상", component_source)
+        self.assertIn("immediate_collect", component_source)
+        self.assertIn("source_map_discovery", component_source)
+        self.assertIn("connector_needed", component_source)
+        self.assertIn("no_action", component_source)
+        self.assertIn("ticker", component_source.lower())
+        self.assertIn("nextAction", component_source)
+        self.assertIn("availability", component_source)
+        self.assertIn("withStreamlitConnection", index_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("fetch(", component_source)
+        self.assertNotIn("axios", component_source)
+        self.assertNotIn("provider", component_source.lower().replace("provider / data", ""))
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
 
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
         flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")

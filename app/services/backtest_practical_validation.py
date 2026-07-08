@@ -22,6 +22,7 @@ from app.services.backtest_practical_validation_source import (
     build_validation_profile,
     source_components_dataframe,
 )
+from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
 from app.services.overview.sentiment import build_market_sentiment_snapshot
 from app.runtime import append_portfolio_selection_source, append_practical_validation_result
 from finance.data.etf_provider import (
@@ -64,11 +65,15 @@ def build_practical_validation_result(
 ) -> dict[str, Any]:
     """Build the Practical Validation result without depending on Streamlit state."""
 
-    return _build_practical_validation_result(
+    result = _build_practical_validation_result(
         source,
         validation_profile=validation_profile,
         replay_result=replay_result,
     )
+    provider_plan = build_provider_gap_collection_plan(result)
+    result["provider_gap_collection_plan"] = provider_plan
+    result["practical_validation_workspace"] = build_practical_validation_workspace(result)
+    return result
 
 
 def _sentiment_risk_context(analysis: dict[str, Any]) -> dict[str, str]:

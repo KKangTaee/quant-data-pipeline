@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,15 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `post-merge-docs-flow-refresh-20260708` closeout. |
+| none | - | No active task after `practical-validation-flow4-data-action-board-v1-20260709` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-flow4-data-action-board-v1-20260709` | Completed record | Practical Validation Flow 4 now reads `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`; React board is display-only and Python keeps provider collection / validation / gate / persistence boundaries. |
+| `practical-validation-flow-gating-evidence-ia-v1-20260708` | Completed record | Flow 2 current-session replay gates Flow 3 / Flow 4 / Flow 5 rendering and Flow 4 lower evidence IA was lowered behind provider action flow. |
+| `practical-validation-category-empty-state-v1-20260708` | Completed record | Flow 4 visible category result hides REVIEW-only / empty groups while retaining them in the internal read model. |
 | `post-merge-docs-flow-refresh-20260708` | Completed record | 2026-07-08 master 병합 후 current pointer, code flow docs, Overview surface names, and runbook boundaries were refreshed without changing code behavior or registry / saved JSONL. |
 | `practical-validation-boundary-cleanup-v1-20260708` | Completed record | Practical Validation Flow 3 / Flow 4 visible UI now separates current validation fix work from Final Review judgment items. |
 | `practical-validation-flow4-final-review-handoff-v1-20260708` | Completed record | Flow 4 reduced Final Review-only REVIEW items from current validation problem detail; later Boundary Cleanup removed the visible handoff count from Flow 3 / Flow 4. |

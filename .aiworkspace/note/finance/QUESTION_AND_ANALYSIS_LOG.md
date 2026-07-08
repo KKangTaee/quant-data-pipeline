@@ -17,6 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
@@ -25,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-09 - PV Flow4 data action board는 표시 전용이어야 한다
+
+- User request: 사용자가 Practical Validation Flow4에서 `단계별 검증 소유권`, `수집 대상 근거`, `근거 부록` expander 중심 UI를 정리하고, React는 표시 / 레이아웃만 담당하며 수집 / 실행 / 계산 / gate / 저장은 Python 경계에 남기라고 요청함.
+- Interpreted goal: Flow4는 지금 Practical Validation에서 보강할 데이터 항목을 먼저 보여주고, Final Review / Monitoring 판단 항목과 원자료 검산 영역은 first-read UI에서 반복하지 않아야 한다.
+- Analysis result: `data_action_board`는 기존 provider collection plan과 compact evidence rows를 읽는 display read model이면 충분하다. `Final Review Readiness Preview` 같은 downstream 판단 항목은 `no_action` 카드로도 PV 메인 보드에 반복 노출하면 안 된다.
+- Follow-up: `practical-validation-flow4-data-action-board-v1-20260709`에서 React display board, Streamlit wiring, docs sync, Browser QA를 완료했다. 새 수집 엔진 / DB schema / provider fetch path / registry write / gate threshold는 변경하지 않았다.
 
 ### 2026-07-08 - PV 카테고리 결과에서 empty/review-only 상태는 기본 노출하지 않는다
 

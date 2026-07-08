@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
@@ -30,6 +31,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow4 Data Action Board V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-data-action-board-v1-20260709/`에서 Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다.
+  - visible `단계별 검증 소유권` expander와 별도 `수집 대상 근거` expander를 제거하고, Python workspace read model의 `data_action_board`를 표시 전용 React board로 렌더링한다.
+  - React는 provider/FRED/API/DB fetch, validation calculation, provider collection, replay, gate, registry/saved write를 하지 않는다. Browser QA에서 Final Review preview 반복 노출을 제거한 상태까지 확인했다.
 - Practical Validation Category Empty State V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-category-empty-state-v1-20260708/`에서 Flow 4 `카테고리별 검증 결과`의 `보강 항목 없음` 노출을 정리했다.
   - `visible_criteria_detail_groups`를 추가해 REVIEW-only / empty category는 내부 read model에 남기되 Flow 3 / Flow 4 visible category result에서는 숨긴다.

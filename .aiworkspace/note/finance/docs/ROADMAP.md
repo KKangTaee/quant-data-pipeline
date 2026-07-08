@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 ## Current State After Master Merge
 
@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-data-action-board-v1-20260709/`다.
+
+- 목적: Practical Validation Flow 4에서 지금 해결할 데이터 보강 항목과 Final Review / Monitoring에서 판단할 참고 항목이 섞여 보이는 문제를 줄였다.
+- 주요 변경: Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다. `단계별 검증 소유권` expander와 별도 `수집 대상 근거` expander는 visible UI에서 제거하고, Python workspace read model의 display-only `data_action_board`를 React card board로 렌더링한다. React는 props 표시만 맡고 provider/FRED/API/DB fetch, validation calculation, collection execution, gate, registry / saved write는 기존 Python service / runtime 경계에 남겼다.
+- 이번 차수에서 하지 않은 일: 새 수집 엔진, DB schema, provider fetch path, Final Review 화면 재구성, gate threshold 변경, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/`다.
 
 - 목적: Practical Validation에서 Flow 2 재검증 실행 전 Flow 3 / Flow 4가 자동으로 보이는 문제를 막고, Flow 4 하단의 근거 / Provider 부족근거 덩어리를 실제 보강 흐름 중심으로 정리했다.
 - 주요 변경: Flow 2 current-session replay가 없으면 Flow 1 / Flow 2만 렌더링한다. Data Coverage / Construction Risk / Provider Investability 중 수집으로 해결 가능한 provider / holdings / exposure / macro gap만 `수집하기` CTA를 노출한다. Flow 4는 `카테고리별 검증 결과 -> 단계별 검증 소유권 -> Provider / Data 보강 액션 -> 접힌 근거 부록` 순서로 읽는다.
