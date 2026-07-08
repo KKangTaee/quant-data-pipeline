@@ -5275,24 +5275,30 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	.ov-mm-research-chart-bar-plot {
 	  display: grid;
 	  grid-auto-flow: column;
-	  grid-auto-columns: 3.45rem;
+	  grid-auto-columns: 4.25rem;
 	  gap: 0.42rem;
 	  align-items: end;
 	  min-width: max-content;
 	}
 	.ov-mm-research-chart-column {
 	  display: grid;
-	  grid-template-rows: auto 8.6rem auto auto;
-	  gap: 0.24rem;
+	  grid-template-rows: 8.2rem auto;
+	  gap: 0.32rem;
 	  align-items: stretch;
-	  width: 3.45rem;
-	  min-width: 3.45rem;
+	  width: 4.25rem;
+	  min-width: 4.25rem;
 	}
 	.ov-mm-research-chart-label,
-	.ov-mm-research-chart-value,
-	.ov-mm-research-chart-detail {
+	.ov-mm-research-chart-value {
 	  min-width: 0;
 	  overflow-wrap: anywhere;
+	}
+	.ov-mm-research-chart-caption {
+	  display: grid;
+	  grid-template-rows: auto auto;
+	  gap: 0.08rem;
+	  min-height: 2.08rem;
+	  align-content: start;
 	}
 	.ov-mm-research-chart-label {
 	  color: var(--ov-mi-color-text);
@@ -5306,7 +5312,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  align-items: flex-end;
 	  justify-content: center;
 	  min-width: 0;
-	  height: 8.6rem;
+	  height: 8.2rem;
 	  padding: 0.24rem 0.44rem 0;
 	  border-bottom: 1px solid var(--ov-mi-border-control);
 	  border-radius: var(--ov-mi-radius-card) var(--ov-mi-radius-card) 0 0;
@@ -5326,15 +5332,9 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-chart-value {
 	  color: var(--ov-mi-color-text);
-	  font-size: var(--ov-mi-font-caption);
+	  font-size: var(--ov-mi-font-xs);
 	  font-weight: var(--ov-mi-weight-heading);
 	  line-height: 1.12;
-	  text-align: center;
-	}
-	.ov-mm-research-chart-detail {
-	  color: var(--ov-mi-color-text-muted);
-	  font-size: var(--ov-mi-font-xs);
-	  line-height: 1.15;
 	  text-align: center;
 	}
 	.ov-mm-research-boundary {
@@ -5412,7 +5412,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	    flex-direction: column;
 	  }
 	  .ov-mm-research-chart-bar-plot {
-	    grid-auto-columns: 3.25rem;
+	    grid-auto-columns: 4.05rem;
 	    grid-template-columns: none;
 	  }
 		  .ov-mm-research-grid {

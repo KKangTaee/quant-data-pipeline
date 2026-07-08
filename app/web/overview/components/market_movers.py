@@ -434,14 +434,19 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
         details = [f"회계기간 {period_end}" if period_end not in ("", "-") else ""]
         if disclosure not in ("", "-"):
             details.append(f"공시 {disclosure}")
+        detail_text = " · ".join(part for part in details if part)
+        display_value = _display_value(point.get("display_value"))
+        label = _display_value(point.get("label"))
+        accessibility = " · ".join(part for part in [label, display_value, detail_text] if part)
         columns.append(
-            f'<div class="ov-mm-research-chart-column {direction_class}" role="listitem">'
-            f'<strong class="ov-mm-research-chart-value">{escape(_display_value(point.get("display_value")))}</strong>'
+            f'<div class="ov-mm-research-chart-column {direction_class}" role="listitem" title="{escape(detail_text)}" aria-label="{escape(accessibility)}">'
             '<div class="ov-mm-research-chart-track">'
             f'<span class="ov-mm-research-chart-bar" style="height:{height:.2f}%;"></span>'
             "</div>"
-            f'<div class="ov-mm-research-chart-label">{escape(_display_value(point.get("label")))}</div>'
-            f'<small class="ov-mm-research-chart-detail">{escape(" · ".join(part for part in details if part))}</small>'
+            '<div class="ov-mm-research-chart-caption">'
+            f'<div class="ov-mm-research-chart-label">{escape(label)}</div>'
+            f'<strong class="ov-mm-research-chart-value">{escape(display_value)}</strong>'
+            "</div>"
             "</div>"
         )
     return (

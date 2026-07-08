@@ -8680,3 +8680,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기존 기본지표 표와 지표 탭은 유지하되, 연간 / 분기 비교는 추가 클릭 없이 같은 지표 탭 안에서 동시에 보여야 함.
 - Analysis result: 막대가 굵어진 원인은 chart grid가 화면 폭을 채우며 컬럼을 늘리는 CSS였다. 연간값과 분기값은 스케일이 다르므로 한 차트에 섞지 않고 위아래 별도 차트로 보여주는 것이 맞다.
 - Follow-up: nested frequency tabs를 제거하고, 각 그래프에 고정 폭 막대 / horizontal scroll wrapper를 적용했다. Browser QA는 in-app browser localhost URL policy로 차단되어 focused tests와 compile 검증으로 대체했다.
+
+### 2026-07-08 - Fundamental chart labels should not collide with bars
+
+- User request: preview에서 막대가 위 숫자를 가리고, 하단 분기 날짜도 가려지는 것 같다고 지적하고 수정을 승인함.
+- Interpreted goal: 얇은 막대는 유지하되 값 / 기간 라벨이 막대 영역과 겹치지 않아야 함.
+- Analysis result: 기존 column은 `값 -> 막대 -> 기간 -> 상세` 순서라 좁은 폭에서 위/아래 텍스트가 모두 압박됐다. 값을 막대 아래 caption으로 내리고 상세 날짜는 hover / aria로 낮추는 것이 맞다.
+- Follow-up: chart column을 `막대 -> 기간 -> 값` 구조로 바꾸고, static preview로 겹침이 해소된 상태를 확인했다.

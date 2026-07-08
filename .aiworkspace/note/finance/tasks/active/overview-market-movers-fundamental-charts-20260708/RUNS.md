@@ -16,3 +16,8 @@
 - `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
 - `git diff --check` -> PASS.
 - Browser QA on `http://localhost:8510` -> BLOCKED. In-app browser URL policy rejected localhost navigation/reload, so no new screenshot was produced for this follow-up.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_research_chart_html_renders_vertical_bar_plot` -> RED, expected failure for missing `ov-mm-research-chart-caption`.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_research_chart_html_renders_vertical_bar_plot` -> PASS after moving value below the bar into caption.
+- `.venv/bin/python -m unittest -k market_mover_research tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> PASS, 12 tests after chart caption polish. Existing edgar deprecation and Streamlit no-runtime warnings are non-failing.
+- `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
+- Static preview generated at `fundamental-chart-caption-static-preview.png`; generated artifact, not intended for commit.

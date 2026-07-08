@@ -13244,6 +13244,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn('class="ov-mm-research-chart-scroll"', html)
         self.assertIn('class="ov-mm-research-chart-bar-plot"', html)
         self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
+        self.assertIn('class="ov-mm-research-chart-caption"', html)
         self.assertIn("PER", html)
         self.assertIn("2024", html)
         self.assertIn("2025", html)
@@ -13252,6 +13253,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("height:100.00%", html)
         self.assertNotIn("width:100.00%", html)
         self.assertIn("공시 2026-02-20", html)
+        self.assertLess(
+            html.index('class="ov-mm-research-chart-track"'),
+            html.index('class="ov-mm-research-chart-caption"'),
+        )
+        self.assertLess(
+            html.index('class="ov-mm-research-chart-label"'),
+            html.index('class="ov-mm-research-chart-value"'),
+        )
 
         empty_html = _market_mover_research_bar_chart_html(chart, "quarterly")
         self.assertIn("표시할 분기 데이터가 없습니다", empty_html)
