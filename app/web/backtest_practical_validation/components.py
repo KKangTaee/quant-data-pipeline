@@ -604,6 +604,38 @@ def render_pv_styles() -> None:
             padding-left: 0.1rem;
             overflow-wrap: anywhere;
           }
+          .pv-criteria-collect-action {
+            display: grid;
+            gap: 0.3rem;
+            margin-top: 0.54rem;
+            padding: 0.58rem;
+            border: 1px solid rgba(15, 143, 131, 0.25);
+            border-left: 3px solid #0f8f83;
+            background: rgba(15, 143, 131, 0.06);
+          }
+          .pv-criteria-collect-action span {
+            color: #0f766e;
+          }
+          .pv-criteria-collect-action p {
+            margin: 0;
+            color: var(--pv-muted);
+            font-size: 0.8rem;
+            line-height: 1.38;
+          }
+          .pv-criteria-collect-button {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            justify-content: center;
+            padding: 0.34rem 0.58rem;
+            border: 1px solid rgba(15, 143, 131, 0.36);
+            background: #ffffff;
+            color: #0f766e !important;
+            font-size: 0.78rem;
+            font-weight: 850;
+            line-height: 1.2;
+            text-decoration: none !important;
+          }
           .pv-criteria-card footer {
             display: flex;
             justify-content: space-between;

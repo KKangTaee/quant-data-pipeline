@@ -12413,9 +12413,18 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("provider gap", data_card["resolution_guide"]["pass_criteria"])
         self.assertIn("Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세", data_card["resolution_guide"]["location"])
         self.assertIn("Provider / Data 보강 액션", data_card["resolution_guide"]["location"])
+        collection_action = data_card["resolution_guide"]["collection_action"]
+        self.assertTrue(collection_action["available"])
+        self.assertEqual(collection_action["label"], "수집하기")
+        self.assertEqual(collection_action["target_anchor"], "pv-provider-data-action")
+        self.assertIn("Provider / Data 보강 액션", collection_action["surface"])
+        self.assertIn("수집 가능한", collection_action["detail"])
         self.assertEqual(data_group["passed_criteria"], [])
         self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
         self.assertIn("보강 필요", data_group["decision_summary"])
+        method_group = next(group for group in groups if group["label"] == "Validation Method Strength")
+        method_card = method_group["criteria_cards"][0]
+        self.assertFalse(method_card["resolution_guide"]["collection_action"]["available"])
         stress_group = next(group for group in groups if group["label"] == "Stress / Robustness")
         stress_card = stress_group["criteria_cards"][0]
         self.assertEqual(stress_card["outcome_key"], "review_required")
@@ -12642,6 +12651,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_practical_validation_flow4_uses_criteria_detail_board(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/backtest_practical_validation/components.py").read_text(encoding="utf-8")
         flow4_body = page_source.split('eyebrow="Flow 4"', 1)[1]
         flow4_body = flow4_body.split('eyebrow="Flow 5"', 1)[0]
 
@@ -12690,6 +12700,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Validation Readiness", flow4_body)
         self.assertNotIn("Final Review Readiness Preview", flow4_body)
         self.assertIn("pv-criteria-board", page_source)
+        self.assertIn("pv-provider-data-action", page_source)
+        self.assertIn("collection_action", page_source)
+        self.assertIn("pv-criteria-collect-action", page_source)
+        self.assertIn("pv-criteria-collect-button", component_source)
         criteria_board_body = page_source.split("def _render_validation_criteria_detail_board", 1)[1]
         criteria_board_body = criteria_board_body.split("def _render_validation_efficacy_audit", 1)[0]
         self.assertNotIn("Final Review 참고", criteria_board_body)
@@ -12701,8 +12715,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             flow4_body.index("_render_validation_evidence_boards(validation_result)"),
         )
         self.assertLess(
-            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
             flow4_body.index("_render_validation_action_boards(validation_result)"),
+            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
         )
 
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:

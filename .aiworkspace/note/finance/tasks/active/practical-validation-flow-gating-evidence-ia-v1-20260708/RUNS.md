@@ -10,3 +10,10 @@
   - Result: OK.
 - 1차 QA: `git diff --check -- app/web/backtest_practical_validation/page.py tests/test_service_contracts.py .aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708`
   - Result: OK.
+- 2차 RED/GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_workspace_model_builds_criteria_detail_groups tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow4_uses_criteria_detail_board tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow4_keeps_final_review_items_as_handoff_reference`
+  - RED result: failed before implementation because `collection_action` and `pv-provider-data-action` were absent.
+  - GREEN result: OK, 3 tests.
+- 2차 QA: `.venv/bin/python -m py_compile app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/components.py`
+  - Result: OK.
+- 2차 QA: `git diff --check -- app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/components.py tests/test_service_contracts.py`
+  - Result: OK.

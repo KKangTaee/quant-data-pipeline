@@ -451,6 +451,30 @@ MODULE_EVIDENCE_ROW_KEYS = {
     "risk_contribution": ("risk_contribution_display_rows", "risk_contribution_audit.rows"),
     "component_role_weight": ("component_role_weight_display_rows", "component_role_weight_audit.rows"),
 }
+COLLECTABLE_DATA_ACTION_KEYWORDS = (
+    "provider",
+    "holdings",
+    "exposure",
+    "macro",
+    "fred",
+    "operability",
+    "snapshot",
+    "운용성",
+)
+COLLECTABLE_DATA_ACTIONS = {
+    "data_coverage": {
+        "surface": "Flow4 > Provider / Data 보강 액션",
+        "detail": "provider snapshot, holdings / exposure, macro context처럼 수집 가능한 데이터 gap만 같은 화면에서 보강합니다.",
+    },
+    "construction_risk": {
+        "surface": "Flow4 > Provider / Data 보강 액션",
+        "detail": "구성 리스크 중 provider holdings / exposure 누락처럼 수집 가능한 gap만 보강합니다.",
+    },
+    "provider_investability": {
+        "surface": "Flow4 > Provider / Data 보강 액션",
+        "detail": "ETF operability, holdings / exposure, macro context 중 수집 가능한 provider gap을 보강합니다.",
+    },
+}
 
 
 def _dict_list(value: Any) -> list[dict[str, Any]]:
@@ -692,6 +716,46 @@ def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
+def _empty_collection_action() -> dict[str, Any]:
+    return {
+        "available": False,
+        "label": "",
+        "surface": "",
+        "detail": "",
+        "target_anchor": "",
+    }
+
+
+def _row_mentions_collectable_data_action(row: dict[str, Any]) -> bool:
+    status = _evidence_row_status(row)
+    if status in {"PASS", "READY", "NOT_APPLICABLE"}:
+        return False
+    text = " ".join(
+        _clean_issue_text(row.get(key))
+        for key in ("Criteria", "Evidence", "Next Action", "Required Action", "Action", "Meaning")
+    ).lower()
+    return any(keyword in text for keyword in COLLECTABLE_DATA_ACTION_KEYWORDS)
+
+
+def _collection_action(module_id: str, status: str, evidence_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if status in {"PASS", "READY", "NOT_APPLICABLE", "REVIEW"}:
+        return _empty_collection_action()
+    spec = COLLECTABLE_DATA_ACTIONS.get(module_id)
+    if not spec:
+        return _empty_collection_action()
+    if module_id in {"data_coverage", "construction_risk"} and not any(
+        _row_mentions_collectable_data_action(row) for row in evidence_rows
+    ):
+        return _empty_collection_action()
+    return {
+        "available": True,
+        "label": "수집하기",
+        "surface": spec["surface"],
+        "detail": f"수집 가능한 항목만 실행합니다. {spec['detail']}",
+        "target_anchor": "pv-provider-data-action",
+    }
+
+
 def _resolution_guide(
     module: dict[str, Any],
     *,
@@ -706,6 +770,7 @@ def _resolution_guide(
     module_id = str(module.get("module_id") or "").strip()
     guide = dict(MODULE_RESOLUTION_GUIDES.get(module_id) or {})
     row_summary = _non_pass_row_summary(evidence_rows)
+    collection_action = _collection_action(module_id, status, evidence_rows)
 
     checked = guide.get("checked_summary") or checked_summary
     missing = row_summary.get("missing") or row_summary.get("review") or guide.get("missing_summary") or missing_summary
@@ -782,6 +847,7 @@ def _resolution_guide(
         "location_label": location_label,
         "location": location or "-",
         "action_location": action_location,
+        "collection_action": collection_action,
     }
 
 

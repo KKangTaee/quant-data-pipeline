@@ -1964,6 +1964,18 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
             )
             location_label = str(guide.get("location_label") or "위치")
             location_text = str(guide.get("location") or card.get("location_summary") or card.get("fix_location") or "-")
+            collection_action = dict(guide.get("collection_action") or {})
+            collection_html = ""
+            if collection_action.get("available"):
+                target_anchor = str(collection_action.get("target_anchor") or "pv-provider-data-action")
+                collection_html = (
+                    '<div class="pv-criteria-collect-action">'
+                    "<span>데이터 수집으로 해결 가능</span>"
+                    f'<a class="pv-criteria-collect-button" href="#{escape(target_anchor)}">'
+                    f"{escape(str(collection_action.get('label') or '수집하기'))}</a>"
+                    f"<p>{escape(str(collection_action.get('detail') or '수집 가능한 항목만 실행합니다.'))}</p>"
+                    "</div>"
+                )
             technical_status = str(card.get("technical_status") or card.get("status") or "-")
             outcome_label_text = str(card.get("outcome_label") or card.get("status_label") or card.get("status") or "-")
             status_display = (
@@ -1996,6 +2008,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
                 '<div class="pv-criteria-row pv-criteria-row-location">'
                 f"<span>{escape(location_label)}</span>"
                 f"<p>{escape(location_text)}</p>"
+                f"{collection_html}"
                 "</div>"
                 "<footer>"
                 f"<span>기술 기준: {escape(str(card.get('technical_label') or card.get('module_type') or '-'))}</span>"
@@ -2382,9 +2395,10 @@ def render_practical_validation_workspace() -> None:
             tone="neutral",
         )
         _render_validation_criteria_detail_board(validation_result)
-        _render_validation_evidence_boards(validation_result)
+        st.markdown('<span id="pv-provider-data-action"></span>', unsafe_allow_html=True)
         st.markdown("##### Provider / Data 보강 액션")
         _render_validation_action_boards(validation_result)
+        _render_validation_evidence_boards(validation_result)
 
     with st.container(border=True):
         render_pv_section_header(
