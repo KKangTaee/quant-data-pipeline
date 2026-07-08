@@ -415,7 +415,12 @@ _RESEARCH_CHART_GAP_PX = 4
 _RESEARCH_CHART_LINE_HEIGHT = 100.0
 
 
-def _market_mover_research_line_svg(values: list[float], max_abs: float) -> tuple[str, int]:
+def _market_mover_research_line_svg(
+    values: list[float],
+    max_abs: float,
+    *,
+    uses_diverging_axis: bool = False,
+) -> tuple[str, int]:
     plot_width = (
         len(values) * _RESEARCH_CHART_COLUMN_WIDTH_PX
         + max(0, len(values) - 1) * _RESEARCH_CHART_GAP_PX
@@ -426,9 +431,14 @@ def _market_mover_research_line_svg(values: list[float], max_abs: float) -> tupl
     circles: list[str] = []
     step = _RESEARCH_CHART_COLUMN_WIDTH_PX + _RESEARCH_CHART_GAP_PX
     for index, value in enumerate(values):
-        height = max(3.0, min(_RESEARCH_CHART_LINE_HEIGHT, (abs(value) / max_abs) * 100.0))
         x = (_RESEARCH_CHART_COLUMN_WIDTH_PX / 2.0) + (index * step)
-        y = max(2.0, min(98.0, _RESEARCH_CHART_LINE_HEIGHT - height))
+        if uses_diverging_axis:
+            magnitude = (abs(value) / max_abs) * 50.0
+            y = 50.0 - magnitude if value >= 0 else 50.0 + magnitude
+        else:
+            height = max(3.0, min(_RESEARCH_CHART_LINE_HEIGHT, (abs(value) / max_abs) * 100.0))
+            y = _RESEARCH_CHART_LINE_HEIGHT - height
+        y = max(2.0, min(98.0, y))
         points.append(f"{x:.2f},{y:.2f}")
         circles.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="2.15"></circle>')
     svg = (
@@ -457,10 +467,31 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
         )
     values = [_chart_numeric_value(point.get("value")) or 0.0 for point in points]
     max_abs = max(abs(value) for value in values) or 1.0
-    line_svg, plot_width = _market_mover_research_line_svg(values, max_abs)
+    uses_diverging_axis = any(value < 0 for value in values)
+    line_svg, plot_width = _market_mover_research_line_svg(
+        values,
+        max_abs,
+        uses_diverging_axis=uses_diverging_axis,
+    )
+    height_scale = 50.0 if uses_diverging_axis else 100.0
+    plot_wrap_class = (
+        "ov-mm-research-chart-plot-wrap is-diverging"
+        if uses_diverging_axis
+        else "ov-mm-research-chart-plot-wrap"
+    )
+    bar_plot_class = (
+        "ov-mm-research-chart-bar-plot is-diverging"
+        if uses_diverging_axis
+        else "ov-mm-research-chart-bar-plot"
+    )
+    zero_line_html = (
+        '<div class="ov-mm-research-chart-zero-line" aria-hidden="true"></div>'
+        if uses_diverging_axis
+        else ""
+    )
     columns: list[str] = []
     for point, value in zip(points, values):
-        height = max(3.0, min(100.0, (abs(value) / max_abs) * 100.0))
+        height = max(3.0, min(height_scale, (abs(value) / max_abs) * height_scale))
         direction_class = "is-negative" if value < 0 else "is-positive"
         disclosure = _display_value(point.get("disclosure_date"))
         period_end = _display_value(point.get("period_end"))
@@ -474,6 +505,7 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
         columns.append(
             f'<div class="ov-mm-research-chart-column {direction_class}" role="listitem" title="{escape(detail_text)}" aria-label="{escape(accessibility)}">'
             '<div class="ov-mm-research-chart-track">'
+            f"{zero_line_html}"
             f'<span class="ov-mm-research-chart-bar" style="height:{height:.2f}%;"></span>'
             "</div>"
             '<div class="ov-mm-research-chart-caption">'
@@ -486,9 +518,9 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
         '<div class="ov-mm-research-chart">'
         f'<div class="ov-mm-research-chart-title">{escape(_display_value(chart.get("label")))} · {escape(frequency_label)}</div>'
         f'<div class="ov-mm-research-chart-scroll" tabindex="0" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 그래프 가로 스크롤">'
-        f'<div class="ov-mm-research-chart-plot-wrap" style="width:{plot_width}px;">'
+        f'<div class="{plot_wrap_class}" style="width:{plot_width}px;">'
         f"{line_svg}"
-        f'<div class="ov-mm-research-chart-bar-plot" role="list" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 막대그래프">{"".join(columns)}</div>'
+        f'<div class="{bar_plot_class}" role="list" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 막대그래프">{"".join(columns)}</div>'
         "</div>"
         "</div>"
         "</div>"

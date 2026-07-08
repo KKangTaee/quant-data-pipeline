@@ -5285,7 +5285,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  top: 0;
 	  left: 0;
 	  z-index: 3;
-	  height: 10.65rem;
+	  height: 13.4rem;
 	  overflow: visible;
 	  pointer-events: none;
 	}
@@ -5322,7 +5322,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-chart-column {
 	  display: grid;
-	  grid-template-rows: 10.65rem auto;
+	  grid-template-rows: 13.4rem auto;
 	  gap: 0.32rem;
 	  align-items: stretch;
 	  width: 4rem;
@@ -5349,18 +5349,34 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-chart-track {
 	  display: flex;
+	  position: relative;
 	  align-items: flex-end;
 	  justify-content: center;
 	  min-width: 0;
-	  height: 10.65rem;
+	  height: 13.4rem;
 	  padding: 0.24rem 0.44rem 0;
 	  border-bottom: 1px solid var(--ov-mi-border-control);
 	  border-radius: var(--ov-mi-radius-card) var(--ov-mi-radius-card) 0 0;
 	  background: var(--ov-mi-track-fill);
 	  overflow: hidden;
 	}
+	.ov-mm-research-chart-zero-line {
+	  position: absolute;
+	  top: 50%;
+	  left: 0.24rem;
+	  right: 0.24rem;
+	  z-index: 1;
+	  border-top: 1px solid var(--ov-mi-border-control);
+	  opacity: 0.82;
+	  pointer-events: none;
+	}
 	.ov-mm-research-chart-bar {
 	  display: block;
+	  position: absolute;
+	  left: 50%;
+	  bottom: 0;
+	  z-index: 2;
+	  transform: translateX(-50%);
 	  width: 0.92rem;
 	  max-width: 0.92rem;
 	  min-height: 0.18rem;
@@ -5369,6 +5385,14 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-chart-column.is-negative .ov-mm-research-chart-bar {
 	  background: var(--ov-mi-color-negative);
+	}
+	.ov-mm-research-chart-bar-plot.is-diverging .ov-mm-research-chart-column.is-positive .ov-mm-research-chart-bar {
+	  bottom: 50%;
+	}
+	.ov-mm-research-chart-bar-plot.is-diverging .ov-mm-research-chart-column.is-negative .ov-mm-research-chart-bar {
+	  top: 50%;
+	  bottom: auto;
+	  border-radius: 0 0 var(--ov-mi-radius-card) var(--ov-mi-radius-card);
 	}
 	.ov-mm-research-chart-value {
 	  color: var(--ov-mi-color-text);

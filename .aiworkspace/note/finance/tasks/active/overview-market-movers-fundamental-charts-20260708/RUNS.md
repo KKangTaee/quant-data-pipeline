@@ -31,3 +31,9 @@
 - `.venv/bin/python -m unittest -k market_mover_research tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> PASS, 12 tests after scroll containment CSS fix. Existing edgar deprecation and Streamlit no-runtime warnings are non-failing.
 - `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
 - `git diff --check` -> PASS.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_research_chart_html_places_negative_bars_below_zero_line` -> RED, expected failure because negative bars only changed color and did not use a 0-line diverging axis.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_research_chart_html_places_negative_bars_below_zero_line` -> PASS after adding diverging axis markup / line coordinates / CSS anchoring.
+- `.venv/bin/python -m unittest -k market_mover_research tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> PASS, 13 tests after negative bar polish. Existing edgar deprecation and Streamlit no-runtime warnings are non-failing.
+- Browser QA attempt: Streamlit server started on `http://localhost:8510`, but in-app Browser navigation to `http://localhost:8510/?overview_tab=market-movers` was blocked by Browser Use URL policy. Static Playwright render was unavailable because Python / Node Playwright packages are not installed in this worktree.
+- `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
+- `git diff --check` -> PASS.

@@ -13269,6 +13269,53 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         empty_html = _market_mover_research_bar_chart_html(chart, "quarterly")
         self.assertIn("표시할 분기 데이터가 없습니다", empty_html)
 
+    def test_market_mover_research_chart_html_places_negative_bars_below_zero_line(self) -> None:
+        from app.web.overview.components.market_movers import _market_mover_research_bar_chart_html
+
+        chart = {
+            "metric": "fcf",
+            "label": "FCF",
+            "series": {
+                "annual": [
+                    {
+                        "label": "2024",
+                        "period_end": "2024-12-31",
+                        "disclosure_date": "2025-02-20",
+                        "value": 10.0,
+                        "display_value": "10.0억 달러",
+                    },
+                    {
+                        "label": "2025",
+                        "period_end": "2025-12-31",
+                        "disclosure_date": "2026-02-20",
+                        "value": -5.0,
+                        "display_value": "-5.0억 달러",
+                    },
+                ],
+                "quarterly": [],
+            },
+        }
+
+        html = _market_mover_research_bar_chart_html(chart, "annual")
+        css_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        self.assertIn('class="ov-mm-research-chart-plot-wrap is-diverging"', html)
+        self.assertIn('class="ov-mm-research-chart-zero-line"', html)
+        self.assertIn('class="ov-mm-research-chart-bar-plot is-diverging"', html)
+        self.assertIn('class="ov-mm-research-chart-column is-negative"', html)
+        self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
+        self.assertIn('style="height:50.00%;"', html)
+        self.assertIn('style="height:25.00%;"', html)
+        self.assertIn('<polyline points="32.00,2.00 100.00,75.00"', html)
+        self.assertRegex(css_source, r"\.ov-mm-research-chart-zero-line\s*\{[^}]*top:\s*50%;")
+        self.assertRegex(
+            css_source,
+            r"\.ov-mm-research-chart-bar-plot\.is-diverging\s+"
+            r"\.ov-mm-research-chart-column\.is-negative\s+"
+            r"\.ov-mm-research-chart-bar\s*\{[^}]*top:\s*50%;",
+        )
+        self.assertRegex(css_source, r"\.ov-mm-research-chart-track\s*\{[^}]*height:\s*13\.4rem;")
+
     def test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies(self) -> None:
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
         css_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
