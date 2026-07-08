@@ -447,7 +447,9 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
     return (
         '<div class="ov-mm-research-chart">'
         f'<div class="ov-mm-research-chart-title">{escape(_display_value(chart.get("label")))} · {escape(frequency_label)}</div>'
+        f'<div class="ov-mm-research-chart-scroll" tabindex="0" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 그래프 가로 스크롤">'
         f'<div class="ov-mm-research-chart-bar-plot" role="list" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 막대그래프">{"".join(columns)}</div>'
+        "</div>"
         "</div>"
     )
 
@@ -470,11 +472,13 @@ def _render_market_mover_research_metric_charts(charts: list[dict[str, Any]]) ->
     metric_tabs = st.tabs([chart["label"] for chart in charts])
     for metric_tab, chart in zip(metric_tabs, charts):
         with metric_tab:
-            frequency_tabs = st.tabs(["연간", "분기"])
-            with frequency_tabs[0]:
-                st.markdown(_market_mover_research_bar_chart_html(chart, "annual"), unsafe_allow_html=True)
-            with frequency_tabs[1]:
-                st.markdown(_market_mover_research_bar_chart_html(chart, "quarterly"), unsafe_allow_html=True)
+            st.markdown(
+                '<div class="ov-mm-research-chart-stack">'
+                + _market_mover_research_bar_chart_html(chart, "annual")
+                + _market_mover_research_bar_chart_html(chart, "quarterly")
+                + "</div>",
+                unsafe_allow_html=True,
+            )
 
 
 def render_market_mover_research_snapshot(model: dict[str, Any]) -> None:

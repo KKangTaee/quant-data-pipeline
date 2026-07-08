@@ -8673,3 +8673,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 화면 기준 최신 EOD와 refresh action 기준일 / universe / batch scope를 일치시키고, 클릭 전 수집 대상과 range driver를 보여줘야 함.
 - Analysis result: 기존 action은 KST local today를 as-of로 쓰고 Top universe는 asset-profile market-cap loader를 사용했다. 따라서 화면의 latest effective EOD / materialized liquidity universe와 달라져 current symbols가 stale로 다시 잡힐 수 있었다. 또한 stale 전체를 가장 오래된 1개 start로 묶어 범위가 과확장됐다.
 - Follow-up: 1~4차 완료. `build_market_movers_eod_refresh_preflight`, action `as_of_date`, liquidity universe loader, start-date batch split, React preflight detail / `계산 가능 · 이력 보강 필요` 상태를 추가했다. 상세 기록은 `.aiworkspace/note/finance/tasks/active/overview-market-movers-eod-refresh-scope-20260708/`에 있다.
+
+### 2026-07-08 - Fundamental chart annual and quarterly views should be visible together
+
+- User request: 기본지표 막대그래프가 너무 굵고, 연간 / 분기 탭을 없애 한눈에 보이게 하되 각 그래프는 horizontal scroll로 볼 수 있는 방식이 어떤지 질문한 뒤 진행을 승인함.
+- Interpreted goal: 기존 기본지표 표와 지표 탭은 유지하되, 연간 / 분기 비교는 추가 클릭 없이 같은 지표 탭 안에서 동시에 보여야 함.
+- Analysis result: 막대가 굵어진 원인은 chart grid가 화면 폭을 채우며 컬럼을 늘리는 CSS였다. 연간값과 분기값은 스케일이 다르므로 한 차트에 섞지 않고 위아래 별도 차트로 보여주는 것이 맞다.
+- Follow-up: nested frequency tabs를 제거하고, 각 그래프에 고정 폭 막대 / horizontal scroll wrapper를 적용했다. Browser QA는 in-app browser localhost URL policy로 차단되어 focused tests와 compile 검증으로 대체했다.

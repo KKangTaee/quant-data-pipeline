@@ -5622,3 +5622,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-eod-refresh-scope-20260708/`에서 Top1000 weekly refresh가 반복해서 길어지는 원인을 action as-of / universe / batch 범위 불일치로 정리하고 수정했다.
   - Top1000 / Top2000 가격 이력 갱신은 화면과 같은 materialized liquidity universe를 쓰고, 화면 effective EOD date를 `as_of_date`로 넘겨 KST 하루 차이로 current symbols가 stale 처리되지 않게 했다.
   - Preflight와 React action detail은 수집 대상 수, 범위, 시작일 이유를 클릭 전 보여주며, 상태는 `계산 가능 · 이력 보강 필요`로 화면 계산 정상과 refresh debt를 분리한다.
+- Overview Market Movers Fundamental Chart polish 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/` 후속으로 기본지표 그래프의 연간 / 분기 nested tabs를 제거했다.
+  - 각 PER / EPS / 당기순이익 / 유동비율 / FCF 탭은 연간 그래프와 분기 그래프를 동시에 보여주며, 각 그래프는 얇은 고정 폭 막대와 내부 horizontal scroll을 사용한다.
+  - Browser QA는 in-app browser localhost URL policy로 차단됐다. 검증은 focused tests / `py_compile` / `git diff --check`로 기록했다.

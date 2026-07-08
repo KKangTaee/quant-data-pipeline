@@ -10,3 +10,9 @@
 - `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
 - `git diff --check` -> PASS after vertical chart polish.
 - Browser QA on `http://localhost:8510`: `ov-mm-research-chart-bar-plot` / `ov-mm-research-chart-column` DOM, height-based bars, and visible PER annual vertical bar chart 확인. Screenshot is a local generated artifact.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_research_chart_html_renders_vertical_bar_plot tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies` -> RED, expected failures for missing scroll wrapper and existing annual/quarterly nested tabs.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_research_chart_html_renders_vertical_bar_plot tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies` -> PASS after removing nested frequency tabs and adding chart scroll wrapper.
+- `.venv/bin/python -m unittest -k market_mover_research tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> PASS, 12 tests after visible annual/quarterly chart polish. Existing edgar deprecation and Streamlit no-runtime warnings are non-failing.
+- `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
+- `git diff --check` -> PASS.
+- Browser QA on `http://localhost:8510` -> BLOCKED. In-app browser URL policy rejected localhost navigation/reload, so no new screenshot was produced for this follow-up.

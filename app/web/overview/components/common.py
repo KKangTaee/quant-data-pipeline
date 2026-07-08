@@ -61,6 +61,7 @@ _CSS_TOKENS = {
     "color-primary": OVERVIEW_COLOR_PRIMARY,
     "color-warning": OVERVIEW_COLOR_WARNING,
     "color-danger": OVERVIEW_COLOR_DANGER,
+    "color-negative": OVERVIEW_COLOR_DANGER,
     "color-neutral": OVERVIEW_COLOR_NEUTRAL,
     "color-text": OVERVIEW_COLOR_TEXT,
     "color-text-subtle": OVERVIEW_COLOR_TEXT_SUBTLE,
@@ -5239,6 +5240,11 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  border-radius: var(--ov-mi-radius-card);
 	  background: rgba(248,250,252,0.62);
 	}
+	.ov-mm-research-chart-stack {
+	  display: grid;
+	  gap: 0.42rem;
+	  min-width: 0;
+	}
 	.ov-mm-research-chart.is-empty {
 	  color: var(--ov-mi-color-text-muted);
 	  font-size: var(--ov-mi-font-caption);
@@ -5250,20 +5256,37 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  font-weight: var(--ov-mi-weight-heading);
 	  line-height: 1.12;
 	}
-	.ov-mm-research-chart-bar-plot {
-	  display: grid;
-	  grid-template-columns: repeat(auto-fit, minmax(4.6rem, 1fr));
-	  gap: 0.46rem;
-	  align-items: end;
+	.ov-mm-research-chart-scroll {
 	  min-width: 0;
 	  margin-top: 0.5rem;
+	  overflow-x: auto;
+	  overflow-y: hidden;
+	  padding-bottom: 0.22rem;
+	  scrollbar-width: thin;
+	  scrollbar-color: var(--ov-mi-border-control) transparent;
+	}
+	.ov-mm-research-chart-scroll::-webkit-scrollbar {
+	  height: 0.42rem;
+	}
+	.ov-mm-research-chart-scroll::-webkit-scrollbar-thumb {
+	  border-radius: var(--ov-mi-radius-pill);
+	  background: var(--ov-mi-border-control);
+	}
+	.ov-mm-research-chart-bar-plot {
+	  display: grid;
+	  grid-auto-flow: column;
+	  grid-auto-columns: 3.45rem;
+	  gap: 0.42rem;
+	  align-items: end;
+	  min-width: max-content;
 	}
 	.ov-mm-research-chart-column {
 	  display: grid;
-	  grid-template-rows: auto 9.6rem auto auto;
+	  grid-template-rows: auto 8.6rem auto auto;
 	  gap: 0.24rem;
 	  align-items: stretch;
-	  min-width: 0;
+	  width: 3.45rem;
+	  min-width: 3.45rem;
 	}
 	.ov-mm-research-chart-label,
 	.ov-mm-research-chart-value,
@@ -5283,8 +5306,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  align-items: flex-end;
 	  justify-content: center;
 	  min-width: 0;
-	  height: 9.6rem;
-	  padding: 0.24rem 0.28rem 0;
+	  height: 8.6rem;
+	  padding: 0.24rem 0.44rem 0;
 	  border-bottom: 1px solid var(--ov-mi-border-control);
 	  border-radius: var(--ov-mi-radius-card) var(--ov-mi-radius-card) 0 0;
 	  background: var(--ov-mi-track-fill);
@@ -5292,7 +5315,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-chart-bar {
 	  display: block;
-	  width: 100%;
+	  width: 1.05rem;
+	  max-width: 1.05rem;
 	  min-height: 0.18rem;
 	  border-radius: var(--ov-mi-radius-card) var(--ov-mi-radius-card) 0 0;
 	  background: var(--ov-mi-color-positive);
@@ -5388,8 +5412,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	    flex-direction: column;
 	  }
 	  .ov-mm-research-chart-bar-plot {
-	    grid-auto-columns: minmax(4.4rem, 1fr);
-	    grid-template-columns: repeat(auto-fit, minmax(4.4rem, 1fr));
+	    grid-auto-columns: 3.25rem;
+	    grid-template-columns: none;
 	  }
 		  .ov-mm-research-grid {
 		    grid-template-columns: 1fr;

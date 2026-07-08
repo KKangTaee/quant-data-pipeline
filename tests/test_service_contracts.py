@@ -13241,6 +13241,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         html = _market_mover_research_bar_chart_html(chart, "annual")
 
         self.assertIn('class="ov-mm-research-chart"', html)
+        self.assertIn('class="ov-mm-research-chart-scroll"', html)
         self.assertIn('class="ov-mm-research-chart-bar-plot"', html)
         self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
         self.assertIn("PER", html)
@@ -13255,12 +13256,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         empty_html = _market_mover_research_bar_chart_html(chart, "quarterly")
         self.assertIn("표시할 분기 데이터가 없습니다", empty_html)
 
-    def test_market_movers_research_snapshot_component_adds_metric_and_frequency_tabs(self) -> None:
+    def test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies(self) -> None:
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
 
         self.assertIn("_render_market_mover_research_metric_charts", component_source)
         self.assertIn('st.tabs([chart["label"]', component_source)
-        self.assertIn('st.tabs(["연간", "분기"])', component_source)
+        self.assertNotIn('st.tabs(["연간", "분기"])', component_source)
+        self.assertIn('_market_mover_research_bar_chart_html(chart, "annual")', component_source)
+        self.assertIn('_market_mover_research_bar_chart_html(chart, "quarterly")', component_source)
 
     def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model
