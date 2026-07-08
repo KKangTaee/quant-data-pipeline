@@ -10564,6 +10564,91 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(checks_by_id["price_freshness"]["symbols"], ["ALLY"])
         self.assertNotIn("BK", checks_by_id["price_freshness"]["action"]["symbols"])
 
+    def test_factor_readiness_symbol_identity_check_shows_candidate_boundary_and_next_step(self) -> None:
+        from app.web.backtest_common import build_strict_factor_readiness_panel_model
+
+        model = build_strict_factor_readiness_panel_model(
+            preset_name="US Base Universe 300",
+            tickers=["BK", "ALLY"],
+            strategy_label="Quality Snapshot (Strict Annual)",
+            price_report={
+                "status": "warning",
+                "details": {
+                    "effective_end_date": "2026-07-02",
+                    "common_latest_date": "2026-05-20",
+                    "refresh_symbols_all": ["BK", "ALLY"],
+                    "stale_symbols_all": ["BK", "ALLY"],
+                    "symbol_identity_issue_candidates": [
+                        {
+                            "source_symbol": "BK",
+                            "resolved_symbol": "BNY",
+                            "confidence_level": "HIGH",
+                            "confidence": 0.97,
+                            "effective_date": "2026-05-21",
+                            "evidence_summary": "same CIK; resolved ticker has current price",
+                            "source_range": {"symbol": "BK", "start": "2016-01-01", "end": "2026-05-20"},
+                            "resolved_range": {"symbol": "BNY", "start": "2026-05-21", "end": "2026-07-02"},
+                        }
+                    ],
+                },
+            },
+            statement_summary={
+                "requested_count": 2,
+                "covered_count": 2,
+                "missing_symbols": [],
+            },
+        )
+
+        symbol_check = {check["id"]: check for check in model["checks"]}["symbol_identity_issue"]
+        diagnostics = {item["label"]: item["value"] for item in symbol_check["diagnostics"]}
+        self.assertEqual(diagnostics["후보쌍"], "BK -> BNY")
+        self.assertIn("HIGH", diagnostics["신뢰도"])
+        self.assertIn("BK 2016-01-01~2026-05-20", diagnostics["기간 경계"])
+        self.assertIn("BNY 2026-05-21~2026-07-02", diagnostics["기간 경계"])
+        self.assertIn("readiness", diagnostics["다음 행동"].lower())
+        self.assertIn("다시 확인", symbol_check["action"]["detail"])
+
+    def test_ticker_change_repair_result_guides_readiness_rerun(self) -> None:
+        from app.web import backtest_common
+
+        with (
+            patch.object(backtest_common, "upsert_ticker_change_resolutions", return_value=1),
+            patch.object(
+                backtest_common,
+                "run_backtest_price_refresh",
+                return_value={
+                    "status": "success",
+                    "message": "Backtest Coverage 최신화: collected BNY",
+                    "details": {
+                        "symbol_resolutions": [
+                            {
+                                "source_symbol": "BK",
+                                "resolved_symbol": "BNY",
+                                "split_status": "ready",
+                                "source_range": {"symbol": "BK", "start": "2016-01-01", "end": "2026-05-20"},
+                                "resolved_range": {"symbol": "BNY", "start": "2026-05-21", "end": "2026-07-02"},
+                            }
+                        ]
+                    },
+                },
+            ),
+        ):
+            result = backtest_common._run_ticker_change_repair_job(
+                candidates=[
+                    {
+                        "source_symbol": "BK",
+                        "resolved_symbol": "BNY",
+                        "effective_date": "2026-05-21",
+                        "confidence_level": "HIGH",
+                    }
+                ],
+                meta={"tickers": ["BK"], "start": "2016-01-01", "end": "2026-07-02"},
+            )
+
+        self.assertEqual(result["details"]["next_step"], "rerun_factor_readiness")
+        self.assertIn("Factor Readiness", result["message"])
+        self.assertIn("다시 확인", result["message"])
+
     def test_backtest_price_refresh_plan_uses_active_alias_for_collection_without_rewriting_source_symbol(self) -> None:
         from zoneinfo import ZoneInfo
 

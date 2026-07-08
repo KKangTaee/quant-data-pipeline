@@ -2314,6 +2314,51 @@ def _strict_symbol_identity_candidates(price_details: dict[str, Any]) -> list[di
     return candidates
 
 
+def _symbol_identity_confidence_text(candidate: dict[str, Any]) -> str:
+    level = str(candidate.get("confidence_level") or "-").strip().upper() or "-"
+    try:
+        confidence = float(candidate.get("confidence"))
+    except (TypeError, ValueError):
+        confidence = None
+    if confidence is None:
+        return level
+    return f"{level} ({confidence:.2f})"
+
+
+def _symbol_identity_range_text(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    symbol = str(value.get("symbol") or "").strip().upper()
+    start = str(value.get("start") or "").strip()
+    end = str(value.get("end") or "").strip()
+    if symbol and start and end:
+        return f"{symbol} {start}~{end}"
+    if symbol and start:
+        return f"{symbol} {start}~"
+    if symbol and end:
+        return f"{symbol} ~{end}"
+    return symbol
+
+
+def _symbol_identity_boundary_text(candidate: dict[str, Any]) -> str:
+    source_range = _symbol_identity_range_text(candidate.get("source_range"))
+    resolved_range = _symbol_identity_range_text(candidate.get("resolved_range"))
+    if source_range and resolved_range:
+        return f"{source_range} / {resolved_range}"
+    source_symbol = str(candidate.get("source_symbol") or "").strip().upper()
+    resolved_symbol = str(candidate.get("resolved_symbol") or "").strip().upper()
+    effective_date = str(candidate.get("effective_date") or candidate.get("event_date") or "").strip()
+    if source_symbol and resolved_symbol and effective_date:
+        return f"{source_symbol} -> {resolved_symbol}: {effective_date} 이후 resolved ticker 확인"
+    return "-"
+
+
+def _symbol_identity_next_action_text(enabled: bool) -> str:
+    if enabled:
+        return "티커 변경 반영 후 Factor Readiness를 다시 확인하고 백테스트를 재실행하세요."
+    return "source evidence를 보강한 뒤 Factor Readiness를 다시 확인하세요."
+
+
 def _symbol_identity_issue_check(candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not candidates:
         return None
@@ -2329,9 +2374,9 @@ def _symbol_identity_issue_check(candidates: list[dict[str, Any]]) -> dict[str, 
     action_id = "apply_ticker_change_repair" if enabled else "review_symbol_identity"
     action_label = "티커 변경 반영 후 데이터 보강" if enabled else "티커 변경 근거 수동 확인"
     action_detail = (
-        "선택된 source ticker는 유지하고, 가격 수집은 resolved ticker로 실행합니다."
+        "선택된 source ticker는 유지하고, 가격 수집은 resolved ticker로 실행합니다. 완료 후 Factor Readiness를 다시 확인하고 백테스트를 재실행하세요."
         if enabled
-        else "신뢰도가 낮아 자동 반영하지 않습니다. source evidence를 확인한 뒤 후보를 보강하세요."
+        else "신뢰도가 낮아 자동 반영하지 않습니다. source evidence를 확인한 뒤 후보를 보강하고 Factor Readiness를 다시 확인하세요."
     )
     solution = (
         "버튼으로 검토된 ticker-change lifecycle row를 active로 반영하고, 대체 ticker의 가격 데이터를 보강한 뒤 readiness를 다시 확인하세요."
@@ -2339,16 +2384,16 @@ def _symbol_identity_issue_check(candidates: list[dict[str, Any]]) -> dict[str, 
         else "후보 근거가 낮은 티커 변경은 자동 반영하지 않습니다. source evidence를 확인하고 lifecycle row를 보강한 뒤 readiness를 다시 확인하세요."
     )
     diagnostics: list[dict[str, str]] = []
-    for candidate in candidates[:8]:
+    for index, candidate in enumerate(candidates[:8]):
+        label_prefix = "" if len(candidates) == 1 else f"{index + 1}. "
         pair = f"{candidate.get('source_symbol')} -> {candidate.get('resolved_symbol')}"
-        detail_parts = [
-            str(candidate.get("confidence_level") or "-"),
-            str(candidate.get("effective_date") or candidate.get("event_date") or "-"),
-        ]
         evidence = str(candidate.get("evidence_summary") or "").strip()
+        diagnostics.append({"label": f"{label_prefix}후보쌍", "value": pair})
+        diagnostics.append({"label": f"{label_prefix}신뢰도", "value": _symbol_identity_confidence_text(candidate)})
+        diagnostics.append({"label": f"{label_prefix}기간 경계", "value": _symbol_identity_boundary_text(candidate)})
         if evidence:
-            detail_parts.append(evidence)
-        diagnostics.append({"label": "후보", "value": f"{pair} · {' · '.join(detail_parts)}"})
+            diagnostics.append({"label": f"{label_prefix}근거", "value": evidence})
+        diagnostics.append({"label": f"{label_prefix}다음 행동", "value": _symbol_identity_next_action_text(enabled)})
     check = _readiness_problem_check(
         check_id="symbol_identity_issue",
         title="티커 변경 후보",
@@ -4288,15 +4333,19 @@ def _run_ticker_change_repair_job(
             "ticker_change_rows_written": rows_written,
             "ticker_change_source_symbols": source_symbols,
             "ticker_change_candidates": candidates,
+            "next_step": "rerun_factor_readiness",
+            "next_step_label": "Factor Readiness 다시 확인",
+            "next_step_detail": "티커 변경 repair 후에는 readiness를 다시 확인하고 현재 백테스트를 재실행하세요.",
         }
     )
     result["details"] = details
     result["job_name"] = "backtest_ticker_change_repair"
     base_message = str(result.get("message") or "").strip()
+    next_step_message = "Factor Readiness를 다시 확인하고 백테스트를 재실행하세요."
     result["message"] = (
-        f"티커 변경 {len(candidates)}개를 active로 반영했습니다. {base_message}"
+        f"티커 변경 {len(candidates)}개를 active로 반영했습니다. {base_message} {next_step_message}"
         if base_message
-        else f"티커 변경 {len(candidates)}개를 active로 반영하고 가격 보강을 실행했습니다."
+        else f"티커 변경 {len(candidates)}개를 active로 반영하고 가격 보강을 실행했습니다. {next_step_message}"
     )
     return result
 

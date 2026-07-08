@@ -1,14 +1,14 @@
 # Backtest Symbol Resolver V1 Status
 
-Status: Phase 3 complete, phase 4 pending
+Status: Phase 4 complete, phase 5 pending
 
 ## Current Step
 
-- 2026-07-08: 3차 PIT effective-date split contract 구현 및 focused QA 통과. 커밋 준비 중.
+- 2026-07-08: 4차 Factor Readiness UX / action feedback polish 구현, frontend build, Browser QA 통과. 커밋 준비 중.
 
 ## Next
 
-- 4차 Factor Readiness UX / action feedback polish: 후보쌍, 신뢰도, 기간 경계, 적용 후 재확인 안내를 화면에서 더 명확하게 보이게 한다.
+- 5차 docs / regression QA / closeout: durable docs와 root handoff log를 정렬하고 최종 회귀 QA 후 closeout commit을 만든다.
 
 ## Completed
 
@@ -22,3 +22,6 @@ Status: Phase 3 complete, phase 4 pending
 - active repair 저장 시 source evidence factor payload를 `nyse_symbol_lifecycle.evidence_json`에 보존한다.
 - 3차에서 active ticker repair에 `source_range`, `resolved_range`, `split_status`, `stitching_status=metadata_only`를 붙여 future PIT stitching이 읽을 수 있는 metadata contract를 만들었다.
 - Backtest price refresh plan과 실행 result details는 동일한 `symbol_resolutions` split contract를 보존한다.
+- 4차에서 Factor Readiness ticker-change diagnostics를 후보쌍 / 신뢰도 / 기간 경계 / 근거 / 다음 행동으로 분리했다.
+- ticker-change repair action result는 `next_step=rerun_factor_readiness`와 Factor Readiness 재확인 / 백테스트 재실행 안내를 남긴다.
+- Browser QA screenshot: `backtest-symbol-resolver-v4-browser-qa.png` (generated, not staged).

@@ -12,6 +12,8 @@
 - DB 저장 시 `evidence_json`은 summary/status뿐 아니라 source quality, review note, evidence factor list를 보존한다.
 - 3차 split contract는 runtime stitching이 아니라 metadata contract다. `source_range`는 source ticker가 유효했던 구간, `resolved_range`는 effective date 이후 resolved ticker 구간을 표현한다.
 - `split_status=ready`는 source/resolved/effective_date가 모두 있는 경우에만 붙인다. effective date가 없으면 future PIT stitching이 안전하게 진행할 수 없으므로 ready로 간주하지 않는다.
+- 4차 UX는 새로운 진단 패널을 만들지 않고 기존 Factor Readiness card의 `근거 보기`와 action copy를 개선했다.
+- 사용자가 ticker-change repair를 실행한 뒤에는 현재 결과를 그대로 신뢰하지 않고 Factor Readiness를 다시 확인하고 백테스트를 재실행해야 한다.
 
 ## Open Notes
 
