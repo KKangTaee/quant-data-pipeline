@@ -57,10 +57,16 @@ FLOW4_CATEGORY_GROUP_SPECS = [
         "module_ids": ("backtest_realism",),
     },
     {
-        "group_id": "validation_strength",
-        "label": "Validation Strength / Robustness",
-        "purpose": "성과가 특정 구간이나 설정에만 기대지 않는지 확인합니다.",
-        "module_ids": ("validation_efficacy", "stress_robustness"),
+        "group_id": "validation_method_strength",
+        "label": "Validation Method Strength",
+        "purpose": "walk-forward, OOS, regime split으로 성과가 특정 구간에만 기대지 않는지 확인합니다.",
+        "module_ids": ("validation_efficacy",),
+    },
+    {
+        "group_id": "stress_robustness",
+        "label": "Stress / Robustness",
+        "purpose": "stress, rolling, sensitivity, overfit 근거로 설정 변화와 시장 충격에 대한 강건성을 확인합니다.",
+        "module_ids": ("stress_robustness",),
     },
     {
         "group_id": "portfolio_construction",
@@ -113,9 +119,13 @@ GROUP_DISPLAY_TEXT = {
         "display_label": "실전 운용 현실성",
         "purpose": "비용, turnover, liquidity, net curve, rebalance timing이 실전 해석에 충분한지 확인합니다.",
     },
-    "validation_strength": {
-        "display_label": "검증 강도 / 강건성",
-        "purpose": "walk-forward, OOS, regime, stress, sensitivity 근거가 결과 해석에 충분한지 확인합니다.",
+    "validation_method_strength": {
+        "display_label": "검증 방법론 강도",
+        "purpose": "walk-forward, OOS, regime split 근거가 결과 해석에 충분한지 확인합니다.",
+    },
+    "stress_robustness": {
+        "display_label": "강건성 / 스트레스",
+        "purpose": "stress, rolling, sensitivity, overfit 근거가 결과 해석에 충분한지 확인합니다.",
     },
     "portfolio_construction": {
         "display_label": "포트폴리오 구성 근거",
@@ -161,11 +171,11 @@ MODULE_DISPLAY_TEXT = {
     },
     "validation_efficacy": {
         "display_label": "검증이 우연한 좋은 구간에만 기대지 않는가",
-        "issue_title": "검증 효력 근거 부족",
-        "current_problem": "walk-forward / OOS / regime / PIT / survivorship 근거 중 일부가 비어 있거나 보강 필요 상태입니다.",
-        "completion_criteria": "Validation Efficacy 핵심 항목이 PASS 또는 Final Review 확인 상태가 되어야 합니다.",
-        "fix_location": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
-        "impact_summary": "이 근거가 부족하면 성과가 특정 기간에만 우연히 좋았는지 구분하기 어렵습니다.",
+        "issue_title": "검증 방법론 근거 부족",
+        "current_problem": "walk-forward / OOS / regime split 근거 중 일부가 비어 있거나 보강 필요 상태입니다.",
+        "completion_criteria": "Validation Method Strength 핵심 항목이 PASS 또는 Final Review 확인 상태가 되어야 합니다.",
+        "fix_location": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
+        "impact_summary": "검증 방법 근거가 부족하면 성과가 특정 기간에만 우연히 좋았는지 구분하기 어렵습니다.",
     },
     "data_coverage": {
         "display_label": "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가",
@@ -282,15 +292,15 @@ MODULE_RESOLUTION_GUIDES = {
         "location": "Flow4 > 핵심 근거 > Input Evidence / Curve·Recheck Evidence",
     },
     "validation_efficacy": {
-        "checked_summary": "walk-forward, OOS, regime, PIT, survivorship 근거가 성과 해석에 충분한지 확인합니다.",
-        "missing_summary": "walk-forward / OOS / regime / PIT / survivorship 중 보강 필요 항목",
-        "next_action_summary": "검증 강도 / 강건성 상세에서 non-PASS row를 확인하고 부족한 temporal / bias-control 근거를 보강합니다.",
+        "checked_summary": "walk-forward, OOS, regime split 근거가 성과 해석에 충분한지 확인합니다.",
+        "missing_summary": "walk-forward / OOS / regime split 중 보강 필요 항목",
+        "next_action_summary": "검증 방법론 강도 상세에서 non-PASS row를 확인하고 부족한 방법론 근거를 보강합니다.",
         "action_steps": [
-            "검증 강도 / 강건성 상세에서 non-PASS 기준이 walk-forward, OOS, regime, PIT, survivorship 중 무엇인지 확인합니다.",
-            "부족한 temporal 또는 bias-control 근거를 보강합니다.",
+            "검증 방법론 강도 상세에서 non-PASS 기준이 walk-forward, OOS, regime split 중 무엇인지 확인합니다.",
+            "부족한 방법론 근거를 보강합니다.",
             "보강 후 Flow 2 재검증으로 해당 기준이 PASS 또는 Final Review 확인 상태인지 확인합니다.",
         ],
-        "location": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
+        "location": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
     },
     "data_coverage": {
         "checked_summary": "가격 window, provider freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",

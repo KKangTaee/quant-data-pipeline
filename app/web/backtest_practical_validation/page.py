@@ -73,7 +73,8 @@ FLOW4_CRITERIA_GROUP_HINTS = (
     "Data Quality / Bias Control",
     "Comparison Validity",
     "Realism / Tradability",
-    "Validation Strength / Robustness",
+    "Validation Method Strength",
+    "Stress / Robustness",
     "Portfolio Construction",
     "Conditional Evidence",
 )
@@ -1845,7 +1846,7 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
         with st.expander("Component 역할 / 비중 상세", expanded=False):
             _render_component_role_weight_audit(validation_result)
     with realism_tab:
-        with st.expander("검증 강도 / 강건성 상세", expanded=False):
+        with st.expander("검증 방법론 강도 상세", expanded=False):
             _render_validation_efficacy_audit(validation_result)
         with st.expander("실전 운용 현실성 상세", expanded=False):
             _render_backtest_realism_audit(validation_result)
@@ -2067,7 +2068,7 @@ def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None
         return
     metrics = dict(audit.get("metrics") or {})
     boundary = dict(audit.get("execution_boundary") or {})
-    st.markdown("##### 검증 강도 / 강건성")
+    st.markdown("##### 검증 방법론 강도")
     _render_board_context_badges(validation_result, "validation_efficacy_audit")
     render_badge_strip(
         [

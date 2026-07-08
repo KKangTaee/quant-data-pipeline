@@ -376,12 +376,7 @@ def build_validation_module_plan(
         [check_status("Runtime recheck"), check_status("Runtime period coverage")]
     )
     benchmark_status = check_status("Benchmark parity")
-    validation_efficacy_status = _worst_status(
-        _row_statuses(
-            validation_efficacy_rows,
-            exclude={"Runtime replay evidence", "Runtime period coverage"},
-        )
-    )
+    validation_efficacy_status = _worst_status(_row_statuses(validation_efficacy_rows))
     data_coverage_status = _worst_status(_row_statuses(data_coverage_rows))
     construction_status = _worst_status(_row_statuses(construction_risk_rows))
     realism_status = _worst_status(
@@ -457,16 +452,16 @@ def build_validation_module_plan(
         ),
         _module(
             module_id="validation_efficacy",
-            label="Validation Efficacy",
+            label="Validation Method Strength",
             group="Required for Final Review",
             status=validation_efficacy_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
-            next_action="검증 효력에서 보강이 필요한 근거를 채우고 REVIEW 근거는 Final Review 판단 근거로 넘깁니다.",
+            reason="walk-forward, OOS, regime 검증 방법론이 후보 판단에 충분한지 봅니다.",
+            next_action="검증 방법론에서 보강이 필요한 근거를 채우고 REVIEW 근거는 Final Review 판단 근거로 넘깁니다.",
             profile_effect=profile_label,
-            resolution_surface="Flow4 > 실전성 > 검증 강도 / 강건성 상세",
-            resolution_action="검증 강도 / 강건성 상세에서 walk-forward / OOS / regime / PIT / survivorship 근거 중 부족한 항목을 보강합니다.",
+            resolution_surface="Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
+            resolution_action="검증 방법론 강도 상세에서 walk-forward / OOS / regime 근거 중 부족한 항목을 보강합니다.",
         ),
         _module(
             module_id="data_coverage",

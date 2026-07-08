@@ -2337,6 +2337,14 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         )
 
         modules = {row["module_id"]: row for row in plan["modules"]}
+        self.assertEqual(modules["validation_efficacy"]["label"], "Validation Method Strength")
+        self.assertIn("walk-forward", modules["validation_efficacy"]["reason"])
+        self.assertIn("OOS", modules["validation_efficacy"]["reason"])
+        self.assertIn("regime", modules["validation_efficacy"]["reason"])
+        self.assertNotIn("PIT", modules["validation_efficacy"]["reason"])
+        self.assertNotIn("survivorship", modules["validation_efficacy"]["reason"].lower())
+        self.assertNotIn("PIT", modules["validation_efficacy"]["resolution_action"])
+        self.assertNotIn("survivorship", modules["validation_efficacy"]["resolution_action"].lower())
         self.assertTrue(modules["provider_investability"]["applies"])
         self.assertFalse(modules["leverage_inverse"]["applies"])
         self.assertTrue(modules["macro_regime"]["applies"])
@@ -2350,6 +2358,12 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(display_rows["Risk Contribution"]["Fix Location"], "Flow4 > 구성 / 리스크 > 위험 기여 상세")
 
         board_rows = {row["Board"]: row for row in plan["board_display_rows"]}
+        board_rows_by_id = {row["Board ID"]: row for row in plan["board_display_rows"]}
+        self.assertEqual(board_rows_by_id["validation_efficacy_audit"]["Board"], "Validation Method Strength")
+        self.assertIn("walk-forward", board_rows_by_id["validation_efficacy_audit"]["Why It Appears"])
+        self.assertNotIn("PIT", board_rows_by_id["validation_efficacy_audit"]["Why It Appears"])
+        self.assertNotIn("survivorship", board_rows_by_id["validation_efficacy_audit"]["Why It Appears"].lower())
+        self.assertEqual(board_rows_by_id["robustness_lab"]["Feeds Modules"], "Stress / Robustness")
         self.assertEqual(board_rows["Provider Coverage"]["Applies"], "Yes")
         self.assertEqual(board_rows["Look-through Exposure Board"]["Applies"], "Yes")
         self.assertEqual(board_rows["Risk Contribution Audit"]["Applies"], "No")
@@ -9864,6 +9878,24 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "resolution_action": "가격 window를 확인합니다.",
                     },
                     {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "PASS",
+                        "applies": True,
+                        "reason": "walk-forward / OOS / regime 방법론 근거를 확인합니다.",
+                        "gate_reason": "필수 이동 기준을 충족했습니다.",
+                        "resolution_surface": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
+                    },
+                    {
+                        "module_id": "stress_robustness",
+                        "label": "Stress / Robustness",
+                        "status": "REVIEW",
+                        "applies": True,
+                        "reason": "stress / rolling / sensitivity 근거를 확인합니다.",
+                        "gate_reason": "Final Review에서 확인합니다.",
+                        "resolution_surface": "Flow4 > 강건성 > Stress / sensitivity 상세",
+                    },
+                    {
                         "module_id": "selected_route_preflight",
                         "label": "Selected-route Preflight",
                         "status": "NEEDS_INPUT",
@@ -9887,18 +9919,29 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "Next Action": "provider freshness를 Final Review에서 확인합니다.",
                     },
                 ],
+                "validation_efficacy_display_rows": [
+                    {
+                        "Criteria": "Walk-forward temporal validation",
+                        "Status": "PASS",
+                        "Evidence": "walk-forward pass",
+                        "Next Action": "추가 조치 없음",
+                    }
+                ],
             }
         )
 
         summary = workspace["summary"]
         self.assertEqual(summary["fix_item_count"], 1)
-        self.assertEqual(summary["criteria_group_count"], 2)
-        self.assertEqual(summary["criteria_pass_count"], 1)
+        self.assertEqual(summary["criteria_group_count"], 4)
+        self.assertEqual(summary["criteria_pass_count"], 2)
         self.assertEqual(summary["criteria_blocker_count"], 1)
 
         groups = workspace["criteria_detail_groups"]
         labels = [group["label"] for group in groups]
-        self.assertEqual(labels, ["Source & Replay", "Data Quality / Bias Control"])
+        self.assertEqual(
+            labels,
+            ["Source & Replay", "Data Quality / Bias Control", "Validation Method Strength", "Stress / Robustness"],
+        )
         self.assertNotIn("Final Review Readiness Preview", labels)
         data_group = next(group for group in groups if group["label"] == "Data Quality / Bias Control")
         data_card = data_group["criteria_cards"][0]
@@ -9950,24 +9993,24 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                     "blocking_modules": [
                         {
                             "module_id": "validation_efficacy",
-                            "label": "Validation Efficacy",
+                            "label": "Validation Method Strength",
                             "status": "NEEDS_INPUT",
-                            "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
-                            "resolution_surface": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
-                            "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+                            "gate_reason": "검증 방법론 근거를 보강해야 합니다.",
+                            "resolution_surface": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
+                            "resolution_action": "walk-forward / OOS / regime evidence 부족분을 보강합니다.",
                         }
                     ],
                 },
                 "validation_modules": [
                     {
                         "module_id": "validation_efficacy",
-                        "label": "Validation Efficacy",
+                        "label": "Validation Method Strength",
                         "status": "NEEDS_INPUT",
                         "applies": True,
-                        "reason": "walk-forward, OOS, regime, PIT, survivorship 등 검증 방식이 후보 판단에 충분한 효력을 갖는지 봅니다.",
-                        "gate_reason": "검증 효력의 NEEDS_INPUT row를 보강해야 합니다.",
-                        "resolution_surface": "Flow4 > 실전성 > 검증 강도 / 강건성 상세",
-                        "resolution_action": "NEEDS_INPUT row를 확인해 walk-forward / OOS / regime / PIT / survivorship evidence 부족분을 보강합니다.",
+                        "reason": "walk-forward, OOS, regime 검증 방법론이 후보 판단에 충분한지 봅니다.",
+                        "gate_reason": "검증 방법론 근거를 보강해야 합니다.",
+                        "resolution_surface": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
+                        "resolution_action": "walk-forward / OOS / regime evidence 부족분을 보강합니다.",
                     }
                 ],
                 "validation_efficacy_display_rows": [
@@ -9985,11 +10028,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(fix_item["status"], "NEEDS_INPUT")
         self.assertEqual(fix_item["status_label"], "근거 보강 필요")
         self.assertEqual(fix_item["technical_status"], "NEEDS_INPUT")
-        self.assertEqual(fix_item["issue_title"], "검증 효력 근거 부족")
+        self.assertEqual(fix_item["issue_title"], "검증 방법론 근거 부족")
         self.assertIn("walk-forward", fix_item["current_problem"])
         self.assertIn("PASS", fix_item["completion_criteria"])
-        self.assertIn("검증 강도 / 강건성", fix_item["fix_location"])
-        self.assertIn("성과가 특정 기간에만 우연히", fix_item["impact_summary"])
+        self.assertIn("검증 방법론 강도", fix_item["fix_location"])
+        self.assertIn("검증 방법", fix_item["impact_summary"])
         self.assertEqual(fix_item["resolution_guide"]["type"], "fix")
         self.assertEqual(fix_item["resolution_guide"]["issue_label"], "해결해야 할 항목")
         self.assertEqual(fix_item["resolution_guide"]["action_label"], "해결 방법")
@@ -9997,10 +10040,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Walk-forward temporal validation", fix_item["resolution_guide"]["missing"])
         self.assertIn("walk-forward evidence를 보강", fix_item["resolution_guide"]["next_action"])
         self.assertIn("walk-forward evidence를 보강", fix_item["resolution_guide"]["action_steps"][0])
-        self.assertTrue(any("검증 강도 / 강건성 상세" in step for step in fix_item["resolution_guide"]["action_steps"]))
+        self.assertTrue(any("검증 방법론 강도 상세" in step for step in fix_item["resolution_guide"]["action_steps"]))
         self.assertTrue(any("Flow 2 재검증" in step for step in fix_item["resolution_guide"]["action_steps"]))
         self.assertIn("PASS", fix_item["resolution_guide"]["pass_criteria"])
-        self.assertIn("Flow4 > 실전성 > 검증 강도 / 강건성 상세", fix_item["resolution_guide"]["location"])
+        self.assertIn("Flow4 > 검증 방법론 > 검증 방법론 강도 상세", fix_item["resolution_guide"]["location"])
         self.assertNotIn("NEEDS_INPUT row", fix_item["current_problem"])
         self.assertNotIn("NEEDS_INPUT row", fix_item["completion_criteria"])
 
@@ -10038,7 +10081,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("부족한 점", page_source)
         self.assertIn("Source & Replay", page_source)
         self.assertIn("Data Quality / Bias Control", page_source)
-        self.assertIn("Validation Strength / Robustness", page_source)
+        self.assertIn("Validation Method Strength", page_source)
+        self.assertIn("Stress / Robustness", page_source)
+        self.assertNotIn("Validation Strength / Robustness", page_source)
         self.assertNotIn("Validation Readiness", flow4_body)
         self.assertNotIn("Final Review Readiness Preview", flow4_body)
         self.assertIn("pv-criteria-board", page_source)

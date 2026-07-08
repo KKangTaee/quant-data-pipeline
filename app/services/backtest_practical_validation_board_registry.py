@@ -58,12 +58,12 @@ BOARD_SPECS = [
     },
     {
         "board_id": "validation_efficacy_audit",
-        "label": "Validation Efficacy Audit",
+        "label": "Validation Method Strength",
         "board_type": "Evidence Board",
         "surface": "Practical Validation / Final Review",
         "module_ids": ["validation_efficacy"],
         "primary_module_ids": ["validation_efficacy"],
-        "role": "walk-forward, OOS, regime, PIT, survivorship 근거가 충분한지 확인합니다.",
+        "role": "walk-forward, OOS, regime split 근거가 충분한지 확인합니다.",
     },
     {
         "board_id": "data_coverage_audit",
@@ -157,7 +157,7 @@ BOARD_SPECS = [
         "label": "Robustness Lab",
         "board_type": "Evidence Board",
         "surface": "Practical Validation / Final Review",
-        "module_ids": ["stress_robustness", "validation_efficacy"],
+        "module_ids": ["stress_robustness"],
         "primary_module_ids": ["stress_robustness"],
         "role": "stress, rolling, sensitivity, overfit 근거를 하나의 board로 묶습니다.",
     },
