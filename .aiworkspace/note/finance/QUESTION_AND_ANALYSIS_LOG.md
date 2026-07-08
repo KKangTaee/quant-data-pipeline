@@ -26,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - Market Interest V2는 링크 허브가 아니라 evidence 패널이어야 한다
+
+- User request: 사용자가 V1을 테스트한 뒤 모든 카드가 `원문 확인`처럼 보이고, 뉴스/공시 촉매를 눌러도 뉴스가 나오지 않으며, 13F와 SEC 공시 및 원문 확인의 역할이 헷갈린다고 지적하고 1차~5차 개발 / QA / 커밋을 요청함.
+- Interpreted goal: 선택 종목 `시장 관심`은 독립 URL 모음이 아니라 앱이 세션 전용으로 확인한 뉴스 / 한국어 뉴스 / SEC metadata evidence를 먼저 보여주고, 원문 링크는 보조 disclosure로 낮춰야 한다.
+- Analysis result: 기존 뉴스 / SEC metadata fetcher를 재사용해 `시장 관심 근거 확인` 버튼 하나가 evidence rows를 만들도록 하고, selected-symbol clue tabs는 `기본 지표` / `시장 관심`으로 통합한다. 13F는 issuer SEC filing이 아니라 manager holdings report이므로 `기관 보유 배경 · 13F 지연 자료`로 분리한다.
+- Follow-up: `overview-market-interest-evidence-v2-20260708`에서 V2 read model, action fetch, tab consolidation, evidence-section renderer, focused tests를 진행했다. FMP/Finnhub/Naver credential source, 13F DB ingestion, article/report/filing body 저장, 추천/점수화/매매 신호는 추가하지 않았다.
+
 ### 2026-07-08 - Market Movers 시장 관심은 선택 종목 조사 보조 패널이다
 
 - User request: Overview > Market Movers에서 선택된 종목에 대해 최근 애널리스트 변화, 목표가 변경, SEC 공시/뉴스 촉매, 13F 기관 보유 배경, 원문 링크를 확인하는 `시장 관심 근거` 기능을 1차~4차 개발 / QA / 커밋 순서로 진행해 달라고 요청함.

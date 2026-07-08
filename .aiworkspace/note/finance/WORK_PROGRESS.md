@@ -30,6 +30,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers 시장 관심 근거 V2:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v2-20260708/`에서 1차~5차 follow-up을 진행했다.
+  - `시장 관심 근거 확인`이 선택 종목 뉴스 / 한국어 뉴스 / SEC metadata를 함께 조회하고, `시장 관심` 탭 안에서 `애널리스트 관심`, `뉴스/공시 촉매`, `기관 보유 배경 · 13F 지연 자료`, `출처/원문 링크`를 구분해 보여준다.
+  - FMP/Finnhub/Naver API credential integration, 13F DB ingestion, body 저장, 추천 / 점수화 / 매매 신호는 추가하지 않았다.
 - Overview Market Movers 시장 관심 근거 V1:
   - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v1-20260708/`에서 1차~4차 selected-symbol 조사 보조 패널을 개발했다.
   - Market Movers 선택 종목 하단에 수동 `시장 관심 근거 확인` action과 `시장 관심` 탭을 추가해 애널리스트 / 뉴스·SEC / 13F 지연 맥락 / 원문 링크를 확인하게 했다.
