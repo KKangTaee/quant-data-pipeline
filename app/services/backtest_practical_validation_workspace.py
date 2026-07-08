@@ -31,6 +31,13 @@ DOWNSTREAM_STAGE_OWNERS = {
     "final_review",
     "selected_dashboard",
 }
+STAGE_OWNER_LABELS = {
+    "backtest_analysis": "Backtest Analysis",
+    "practical_validation": "Practical Validation",
+    "final_review": "Final Review",
+    "selected_dashboard": "Operations > Portfolio Monitoring",
+}
+STAGE_OWNER_ORDER = ("backtest_analysis", "practical_validation", "final_review", "selected_dashboard")
 FLOW4_CATEGORY_GROUP_SPECS = [
     {
         "group_id": "source_replay",
@@ -1127,6 +1134,81 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
     return {**summary, **_overall_outcome_summary(summary)}
 
 
+def _stage_owner_key(module: dict[str, Any]) -> str:
+    owner = _module_stage_owner(module)
+    if owner in STAGE_OWNER_LABELS:
+        return owner
+    return "practical_validation"
+
+
+def _stage_visibility_label(stage_key: str, status: str, requirement: str) -> str:
+    if stage_key in DOWNSTREAM_STAGE_OWNERS:
+        return "후속 단계 판단"
+    if status in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"} and requirement != "REFERENCE":
+        return "현재 단계 보강"
+    return "현재 단계 근거"
+
+
+def _stage_ownership_inventory(modules: list[dict[str, Any]]) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    for module in modules:
+        if not _module_applies(module):
+            continue
+        stage_key = _stage_owner_key(module)
+        status = normalize_validation_status(module.get("status"))
+        requirement = _module_requirement(module) or str(module.get("requirement") or "-").upper()
+        rows.append(
+            {
+                "module_id": _module_id(module),
+                "label": module.get("label") or _module_id(module) or "-",
+                "stage_key": stage_key,
+                "stage": STAGE_OWNER_LABELS[stage_key],
+                "requirement": requirement or "-",
+                "status": status,
+                "visibility": _stage_visibility_label(stage_key, status, requirement),
+                "surface": module.get("resolution_surface") or module.get("stage_owner") or "-",
+            }
+        )
+
+    stage_summaries: list[dict[str, Any]] = []
+    for stage_key in STAGE_OWNER_ORDER:
+        stage_rows = [row for row in rows if row["stage_key"] == stage_key]
+        blocking_count = len(
+            [
+                row
+                for row in stage_rows
+                if row["status"] in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
+                and row["requirement"] != "REFERENCE"
+            ]
+        )
+        stage_summaries.append(
+            {
+                "stage_key": stage_key,
+                "stage": STAGE_OWNER_LABELS[stage_key],
+                "module_count": len(stage_rows),
+                "required_count": len([row for row in stage_rows if row["requirement"] == "REQUIRED"]),
+                "conditional_count": len([row for row in stage_rows if row["requirement"] == "CONDITIONAL"]),
+                "reference_count": len([row for row in stage_rows if row["requirement"] == "REFERENCE"]),
+                "blocking_count": blocking_count,
+            }
+        )
+
+    misplaced_downstream_blocker_count = len(
+        [
+            row
+            for row in rows
+            if row["stage_key"] in DOWNSTREAM_STAGE_OWNERS
+            and row["status"] in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
+            and row["requirement"] != "REFERENCE"
+        ]
+    )
+    return {
+        "stage_summaries": stage_summaries,
+        "rows": rows,
+        "misplaced_downstream_blocker_count": misplaced_downstream_blocker_count,
+    }
+
+
 def _category_result_groups(
     modules: list[dict[str, Any]],
     evidence_rows_by_module: dict[str, list[dict[str, Any]]] | None = None,
@@ -1293,6 +1375,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     criteria_groups = _criteria_detail_groups(category_groups)
     visible_criteria_groups = _visible_criteria_detail_groups(criteria_groups)
     criteria_summary = _criteria_summary(criteria_groups)
+    stage_ownership_inventory = _stage_ownership_inventory(modules)
     handoff_summary_groups = [
         group
         for group in [
@@ -1332,6 +1415,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "downstream_reference_groups": downstream_groups,
         "criteria_detail_groups": criteria_groups,
         "visible_criteria_detail_groups": visible_criteria_groups,
+        "stage_ownership_inventory": stage_ownership_inventory,
         "category_result_groups": category_groups,
         "handoff_summary_groups": handoff_summary_groups,
         "technical_details": {

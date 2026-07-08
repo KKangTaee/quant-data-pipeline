@@ -17,3 +17,10 @@
   - Result: OK.
 - 2차 QA: `git diff --check -- app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/components.py tests/test_service_contracts.py`
   - Result: OK.
+- 3차 RED/GREEN: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_workspace_builds_stage_ownership_inventory tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow4_uses_criteria_detail_board tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_workspace_model_builds_criteria_detail_groups`
+  - RED result: failed before implementation because `stage_ownership_inventory` and Flow 4 renderer were absent.
+  - GREEN result: OK, 3 tests.
+- 3차 QA: `.venv/bin/python -m py_compile app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py`
+  - Result: OK.
+- 3차 QA: `git diff --check -- app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py tests/test_service_contracts.py`
+  - Result: OK.

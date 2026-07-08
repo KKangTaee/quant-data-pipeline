@@ -12491,6 +12491,69 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             [str(group.get("display_status") or "") for group in workspace["visible_criteria_detail_groups"]],
         )
 
+    def test_practical_validation_workspace_builds_stage_ownership_inventory(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "latest_replay",
+                        "label": "Latest Runtime Replay",
+                        "status": "NOT_RUN",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                        "resolution_surface": "Flow 2 · 실전 재검증 실행",
+                    },
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "PASS",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    },
+                    {
+                        "module_id": "tax_account_scope",
+                        "label": "Tax / Account Scope",
+                        "status": "REVIEW",
+                        "requirement": "REFERENCE",
+                        "stage_owner": "final_review",
+                        "applies": True,
+                        "resolution_surface": "Final Review",
+                    },
+                    {
+                        "module_id": "monitoring_baseline",
+                        "label": "Monitoring Baseline",
+                        "status": "REVIEW",
+                        "requirement": "REFERENCE",
+                        "stage_owner": "selected_dashboard",
+                        "applies": True,
+                        "resolution_surface": "Operations > Portfolio Monitoring",
+                    },
+                ]
+            }
+        )
+
+        inventory = workspace["stage_ownership_inventory"]
+        self.assertEqual(
+            [stage["stage"] for stage in inventory["stage_summaries"]],
+            ["Backtest Analysis", "Practical Validation", "Final Review", "Operations > Portfolio Monitoring"],
+        )
+        rows = {row["module_id"]: row for row in inventory["rows"]}
+        self.assertEqual(rows["latest_replay"]["stage"], "Practical Validation")
+        self.assertEqual(rows["latest_replay"]["visibility"], "현재 단계 보강")
+        self.assertEqual(rows["tax_account_scope"]["stage"], "Final Review")
+        self.assertEqual(rows["tax_account_scope"]["visibility"], "후속 단계 판단")
+        self.assertEqual(rows["monitoring_baseline"]["stage"], "Operations > Portfolio Monitoring")
+        practical_summary = next(
+            stage for stage in inventory["stage_summaries"] if stage["stage"] == "Practical Validation"
+        )
+        self.assertEqual(practical_summary["module_count"], 2)
+        self.assertEqual(practical_summary["blocking_count"], 1)
+        self.assertEqual(inventory["misplaced_downstream_blocker_count"], 0)
+
     def test_practical_validation_module_plan_preserves_review_input_checks(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
 
@@ -12704,6 +12767,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("collection_action", page_source)
         self.assertIn("pv-criteria-collect-action", page_source)
         self.assertIn("pv-criteria-collect-button", component_source)
+        self.assertIn("def _render_stage_ownership_inventory", page_source)
+        self.assertIn("_render_stage_ownership_inventory(validation_result)", flow4_body)
+        self.assertIn("단계별 검증 소유권", page_source)
         criteria_board_body = page_source.split("def _render_validation_criteria_detail_board", 1)[1]
         criteria_board_body = criteria_board_body.split("def _render_validation_efficacy_audit", 1)[0]
         self.assertNotIn("Final Review 참고", criteria_board_body)
@@ -12712,6 +12778,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("handoff_html", criteria_board_body)
         self.assertLess(
             flow4_body.index("_render_validation_criteria_detail_board(validation_result)"),
+            flow4_body.index("_render_stage_ownership_inventory(validation_result)"),
+        )
+        self.assertLess(
+            flow4_body.index("_render_stage_ownership_inventory(validation_result)"),
             flow4_body.index("_render_validation_evidence_boards(validation_result)"),
         )
         self.assertLess(

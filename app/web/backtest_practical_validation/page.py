@@ -1878,6 +1878,54 @@ def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:
         st.info("현재 후보에서 실행할 provider 보강 액션이 없습니다.")
 
 
+def _render_stage_ownership_inventory(validation_result: dict[str, Any]) -> None:
+    workspace = dict(validation_result.get("practical_validation_workspace") or {})
+    inventory = dict(workspace.get("stage_ownership_inventory") or {})
+    summaries = [dict(row or {}) for row in list(inventory.get("stage_summaries") or [])]
+    rows = [dict(row or {}) for row in list(inventory.get("rows") or [])]
+    if not summaries:
+        return
+    with st.expander("단계별 검증 소유권", expanded=False):
+        render_pv_card_grid(
+            [
+                {
+                    "kicker": row.get("stage") or "-",
+                    "title": f"{row.get('module_count', 0)}개 기준",
+                    "status": f"보강 {row.get('blocking_count', 0)}",
+                    "detail": (
+                        f"필수 {row.get('required_count', 0)} / 조건부 {row.get('conditional_count', 0)} / "
+                        f"참고 {row.get('reference_count', 0)}"
+                    ),
+                    "tone": "warning" if row.get("blocking_count") else "neutral",
+                }
+                for row in summaries
+            ],
+            min_width=210,
+        )
+        if inventory.get("misplaced_downstream_blocker_count"):
+            st.warning("후속 단계 소유 기준이 현재 단계 blocker처럼 남아 있습니다. stage_owner / requirement를 확인하세요.")
+        else:
+            st.caption("후속 판단 항목은 Practical Validation 보강 항목으로 반복 노출하지 않고 각 소유 단계에서 확인합니다.")
+        if rows:
+            _render_display_dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Stage": row.get("stage"),
+                            "검증 기준": row.get("label"),
+                            "상태": row.get("status"),
+                            "역할": row.get("requirement"),
+                            "노출": row.get("visibility"),
+                            "위치": row.get("surface"),
+                        }
+                        for row in rows
+                    ]
+                ),
+                width="stretch",
+                hide_index=True,
+            )
+
+
 def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) -> None:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     summary = dict(workspace.get("summary") or {})
@@ -2395,6 +2443,7 @@ def render_practical_validation_workspace() -> None:
             tone="neutral",
         )
         _render_validation_criteria_detail_board(validation_result)
+        _render_stage_ownership_inventory(validation_result)
         st.markdown('<span id="pv-provider-data-action"></span>', unsafe_allow_html=True)
         st.markdown("##### Provider / Data 보강 액션")
         _render_validation_action_boards(validation_result)
