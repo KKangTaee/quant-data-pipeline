@@ -12075,21 +12075,25 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "label": "Stress / Robustness",
             "display_label": "강건성",
             "status": "REVIEW",
-            "display_status": "보강 항목 없음",
+            "display_status": "Final Review 판단 필요",
             "passed_criteria": [],
             "remaining_issues": [],
             "review_criteria": ["Stress / sensitivity interpretation"],
             "final_review_reference_count": 1,
             "decision_summary": "Practical Validation에서 보강할 항목은 없습니다.",
+            "visible_in_practical_validation": False,
         }
 
         self.assertEqual(
             _conclusion_group_detail(group),
-            ("통과", "Practical Validation에서 보강할 항목은 없습니다.", "positive"),
+            ("확인 필요", "Practical Validation에서 보강할 항목은 없습니다.", "warning"),
         )
-        react_item = _react_criteria_group_items([group])[0]
-        self.assertEqual(react_item["reviewCriteria"], [])
-        self.assertEqual(react_item["status"], "보강 항목 없음")
+        self.assertEqual(_react_criteria_group_items([group]), [])
+
+        component_source = Path(
+            "app/web/components/practical_validation_fix_queue/frontend/src/PracticalValidationFixQueue.tsx"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("보강 항목 없음", component_source)
 
     def test_practical_validation_flow3_uses_conclusion_summary(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -12395,6 +12399,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(
             stress_group["decision_summary"],
             "Practical Validation에서 보강할 항목은 없습니다.",
+        )
+        self.assertFalse(stress_group["visible_in_practical_validation"])
+        visible_labels = [group["label"] for group in workspace["visible_criteria_detail_groups"]]
+        self.assertEqual(visible_labels, ["Source & Replay"])
+        self.assertNotIn(
+            "보강 항목 없음",
+            [str(group.get("display_status") or "") for group in workspace["visible_criteria_detail_groups"]],
         )
 
     def test_practical_validation_module_plan_preserves_review_input_checks(self) -> None:

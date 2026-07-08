@@ -1869,7 +1869,11 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     summary = dict(workspace.get("summary") or {})
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
-    groups = [dict(group or {}) for group in list(workspace.get("criteria_detail_groups") or [])]
+    groups = [
+        dict(group or {})
+        for group in list(workspace.get("visible_criteria_detail_groups") or workspace.get("criteria_detail_groups") or [])
+        if dict(group or {}).get("visible_in_practical_validation", True)
+    ]
     if not groups:
         return
     group_order = {label: index for index, label in enumerate(FLOW4_CRITERIA_GROUP_HINTS)}

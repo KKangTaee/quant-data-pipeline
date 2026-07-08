@@ -957,8 +957,11 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
         display_status = f"보강 필요 {len(repair)}"
     elif passed:
         display_status = f"통과 {len(passed)}"
+    elif review:
+        display_status = "Final Review 판단 필요"
     else:
-        display_status = "보강 항목 없음"
+        display_status = "비적용"
+    visible_in_practical_validation = bool(passed or remaining)
     return {
         "passed_criteria": passed,
         "remaining_issues": remaining,
@@ -967,6 +970,7 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
         "review_criteria": review,
         "final_review_reference_criteria": review,
         "final_review_reference_count": len(review),
+        "visible_in_practical_validation": visible_in_practical_validation,
         "display_status": display_status,
         "decision_summary": decision,
     }
@@ -1019,6 +1023,14 @@ def _criteria_detail_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]
             }
         )
     return detail_groups
+
+
+def _visible_criteria_detail_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        dict(group or {})
+        for group in groups
+        if dict(group or {}).get("visible_in_practical_validation", True)
+    ]
 
 
 def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1213,6 +1225,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     review_rows = _dict_list(gate.get("review_modules"))
     category_groups = _category_result_groups(modules, evidence_rows_by_module=evidence_rows_by_module)
     criteria_groups = _criteria_detail_groups(category_groups)
+    visible_criteria_groups = _visible_criteria_detail_groups(criteria_groups)
     criteria_summary = _criteria_summary(criteria_groups)
     handoff_summary_groups = [
         group
@@ -1252,6 +1265,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "conditional_evidence_groups": conditional_groups,
         "downstream_reference_groups": downstream_groups,
         "criteria_detail_groups": criteria_groups,
+        "visible_criteria_detail_groups": visible_criteria_groups,
         "category_result_groups": category_groups,
         "handoff_summary_groups": handoff_summary_groups,
         "technical_details": {

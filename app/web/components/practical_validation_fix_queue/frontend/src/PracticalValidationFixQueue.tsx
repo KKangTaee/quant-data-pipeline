@@ -95,9 +95,6 @@ const groupOutcome = (group: CriteriaGroup): { label: string; detail: string; to
   if (group.passedCriteria && group.passedCriteria.length > 0) {
     return { label: "통과", detail: joined(group.passedCriteria), tone: "positive" }
   }
-  if (compact(group.status, "").includes("보강 항목 없음")) {
-    return { label: "통과", detail: compact(group.decisionSummary, "보강 항목 없음"), tone: "positive" }
-  }
   return { label: "확인 필요", detail: compact(group.decisionSummary), tone: toneClass(group.tone) }
 }
 
@@ -130,7 +127,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         <div className="pv-react-fix__status">
           <span>{props.statusLabel}</span>
           <b>{props.canSaveAndMove ? "검증 보강 완료" : "검증 보강 필요"}</b>
-          <small>{props.fixItems.length > 0 ? `보강 항목 ${props.fixItems.length}` : "보강 항목 없음"}</small>
+          <small>{props.fixItems.length > 0 ? `보강 항목 ${props.fixItems.length}` : "현재 보강 기준 없음"}</small>
         </div>
       </header>
 

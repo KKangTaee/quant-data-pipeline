@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-category-empty-state-v1-20260708/`다.
+
+- 목적: Practical Validation Flow 4 `카테고리별 검증 결과`에서 `보강 항목 없음`이 통과 / 비적용 / Final Review 판단 항목처럼 애매하게 보이는 문제를 줄였다.
+- 주요 변경: workspace read model에 `visible_criteria_detail_groups`와 `visible_in_practical_validation`을 추가했다. Flow 3 React / fallback과 Flow 4 board는 visible groups만 읽고, REVIEW-only / empty group은 내부 read model에는 남기되 PV visible category result에서 숨긴다. React fallback copy도 `보강 항목 없음`을 통과처럼 해석하지 않게 정리했다.
+- 이번 차수에서 하지 않은 일: Final Review 화면 재구성, Final Review gate threshold 변경, validation module planner 정책 변경, registry / saved JSONL rewrite, provider ingestion, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`다.
 
 - 목적: `sub-dev` / `backtest-dev` 병합 이후 공용 문서의 current pointer, 코드 흐름, Overview surface 이름이 현재 master와 어긋나지 않게 정리했다.
 - 주요 변경: Product Direction, Roadmap, architecture / data / flow docs, Overview runbook을 현재 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events` primary tab 구조와 Backtest / Practical Validation / Operations 경계에 맞췄다. `Futures Monitor` / `Sector / Industry`는 current primary surface가 아니라 retained data / helper context 또는 과거 이력으로 낮췄고, Overview Data Health handoff / Market Context cockpit의 user-facing service label도 `Futures Macro` / `Market Movers` 기준으로 보정했다.

@@ -26,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - PV 카테고리 결과에서 empty/review-only 상태는 기본 노출하지 않는다
+
+- User request: 사용자가 Flow 4 `카테고리별 검증 결과`의 `보강 항목 없음`이 포트폴리오 검증 조건상 비적용인지, 현재 검증 중 필요 없는 항목이면 숨기는 편이 낫지 않은지 질문하고 1차~3차 수정을 승인함.
+- Interpreted goal: Practical Validation은 사용자가 지금 보강하거나 통과 여부를 읽는 화면이어야 하며, Final Review 판단용 REVIEW-only 그룹이나 empty 상태를 PV category result처럼 보여 혼동을 만들면 안 된다.
+- Analysis result: `applies=False` module은 이미 category group에서 제외되고 있었다. 문제는 REVIEW-only group이 `보강 항목 없음` fallback으로 보이고, React가 이를 pass-like 상태로 해석하는 데 있었다.
+- Follow-up: `practical-validation-category-empty-state-v1-20260708`에서 `visible_criteria_detail_groups` / `visible_in_practical_validation`을 추가하고 Flow 3 / Flow 4 visible UI가 이 목록만 읽도록 수정했다. Full read model에는 REVIEW metadata를 유지해 Final Review가 이어서 해석할 수 있게 했다.
+
 ### 2026-07-08 - Post-merge docs refresh must verify code-flow labels, not only Markdown
 
 - User request: 사용자가 sub-dev / backtest-dev 병합 후 공용 문서가 완벽히 정리되지 않았을 수 있으니 문서 refresh, 코드 흐름 문서 업데이트, 코드 리뷰와 향후 개발 필요사항 조사를 요청함.

@@ -30,6 +30,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Category Empty State V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-category-empty-state-v1-20260708/`에서 Flow 4 `카테고리별 검증 결과`의 `보강 항목 없음` 노출을 정리했다.
+  - `visible_criteria_detail_groups`를 추가해 REVIEW-only / empty category는 내부 read model에 남기되 Flow 3 / Flow 4 visible category result에서는 숨긴다.
+  - Flow 3 React fallback도 `보강 항목 없음`을 통과처럼 해석하지 않게 정리했다. Final Review 화면 재구성은 다음 차수로 남겼다.
 - Post-Merge Docs / Code Flow Refresh 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`에서 master 병합 후 공용 docs, status manifests, Overview runbook / data flow docs를 current state로 정렬했다.
   - Current Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`로 문서화했고, legacy `Futures Monitor` / `Sector / Industry` primary surface 표현을 낮췄다.

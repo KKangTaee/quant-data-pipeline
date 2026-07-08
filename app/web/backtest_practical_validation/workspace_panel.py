@@ -195,6 +195,8 @@ def _react_core_group_items(core_groups: list[dict[str, Any]]) -> list[dict[str,
 def _react_criteria_group_items(criteria_groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for group in criteria_groups:
+        if group.get("visible_in_practical_validation") is False:
+            continue
         cards = [dict(card or {}) for card in list(group.get("criteria_cards") or [])]
         items.append(
             {
@@ -244,6 +246,8 @@ def _conclusion_group_detail(group: dict[str, Any]) -> tuple[str, str, str]:
         return "실패", " / ".join(remaining), "danger"
     if passed:
         return "통과", " / ".join(passed), "positive"
+    if group.get("visible_in_practical_validation") is False:
+        return "확인 필요", str(group.get("decision_summary") or "-"), "warning"
     if review or int(group.get("final_review_reference_count") or 0):
         return "통과", str(group.get("decision_summary") or "Practical Validation에서 보강할 항목은 없습니다."), "positive"
     return "확인 필요", str(group.get("decision_summary") or "-"), str(group.get("tone") or "neutral")
@@ -292,7 +296,7 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
     fix_queue = list(workspace.get("fix_queue") or gate_summary.get("blocking_modules") or [])
     core_groups = list(workspace.get("core_evidence_groups") or [])
-    criteria_groups = list(workspace.get("criteria_detail_groups") or [])
+    criteria_groups = list(workspace.get("visible_criteria_detail_groups") or workspace.get("criteria_detail_groups") or [])
     repair_count = int(summary.get("criteria_repair_count") or 0)
     not_practical_count = int(summary.get("criteria_not_practical_count") or 0)
     practical_validation_ready = repair_count == 0 and not_practical_count == 0
