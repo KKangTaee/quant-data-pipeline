@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - Practical Validation validation_efficacy는 방법론 검증만 소유한다
+
+- User request: 사용자가 1차 필수 검증의 중복 소유를 정리한 뒤 2차부터 6차까지 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: `validation_efficacy`는 umbrella audit이 아니라 walk-forward / OOS / regime split 방법론 강도만 판단해야 하며, UI와 Final Review gate도 이 taxonomy를 같은 의미로 읽어야 한다.
+- Analysis result: `source_integrity`, `latest_replay`, `benchmark_parity`, `data_coverage`, `backtest_realism`, `stress_robustness` owner가 이미 있는 항목을 `validation_efficacy`가 다시 판정하면 같은 evidence gap이 여러 모듈에서 반복 차단된다. 따라서 method-strength audit으로 축소하고, 내부 id compatibility는 유지하되 user-facing label은 `Validation Method Strength`로 바꾸는 것이 가장 작은 안전한 변경이다.
+- Follow-up: `practical-validation-required-taxonomy-refactor-v1-20260708`에서 service row, module / board taxonomy, Flow 4 copy, Final Review gate read model, docs sync, QA를 완료했다. Registry / saved JSONL, provider ingestion, live approval / order / auto rebalance 의미는 추가하지 않았다.
+
 ### 2026-07-08 - Practical Validation 1차 필수 검증은 owner matrix로 재분류해야 한다
 
 - User request: 사용자가 1차 필수 검증 안에서 특정 모듈 내부 검증과 외부 검증이 중복되는 것 같고, 각 모듈의 검증을 다시 파악해 카테고리와 모듈을 재그루핑하고 싶다고 요청함.

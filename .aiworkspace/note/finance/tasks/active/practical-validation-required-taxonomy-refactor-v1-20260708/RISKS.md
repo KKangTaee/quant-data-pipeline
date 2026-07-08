@@ -1,5 +1,5 @@
 # Risks
 
-- 3차에서 module planner와 workspace label을 같이 정리하지 않으면 UI 문구가 여전히 `검증 효력` 중심으로 보여 taxonomy 변경 의도가 흐려질 수 있다.
-- 5차에서 Final Review gate 회귀 테스트를 보강해 owner module의 blocking semantics가 유지되는지 확인해야 한다.
-
+- 3차 risk는 해소했다. Module planner, board registry, workspace label을 `Validation Method Strength`와 `Stress / Robustness` 분리 구조로 정렬했다.
+- 5차 risk는 해소했다. Final Review evidence read model 회귀 테스트가 method-only blocker wording과 selected-route behavior를 검증한다.
+- 남은 주의점: `validation_efficacy`라는 internal id는 backward compatibility 때문에 남아 있다. User-facing copy와 docs에서는 `Validation Method Strength`로 읽어야 한다.

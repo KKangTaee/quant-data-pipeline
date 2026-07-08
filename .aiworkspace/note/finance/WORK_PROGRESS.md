@@ -29,6 +29,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Required Taxonomy Refactor V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-refactor-v1-20260708/`에서 2차~6차를 개발 / QA / 커밋 순서로 진행했다.
+  - `validation_efficacy` service는 walk-forward / OOS / regime split 방법론 검증만 소유하고, replay / benchmark / provider / PIT / survivorship / robustness는 각 owner module로 분리했다.
+  - Flow 4와 Final Review는 user-facing `Validation Method Strength` / `Stress / Robustness` taxonomy를 사용한다. Registry / saved JSONL, provider ingestion, live approval / order / auto rebalance 경계는 변경하지 않았다.
 - Practical Validation Required Taxonomy Audit V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-audit-v1-20260708/`에서 1차 필수 검증의 current row inventory와 owner matrix를 정리했다.
   - 핵심 결론은 `validation_efficacy`가 source / replay / benchmark / provider / PIT / survivorship / robustness를 중복 소유하고 있으므로, 다음 코드 작업에서 walk-forward / OOS / regime 중심의 method-strength module로 축소해야 한다는 것이다.

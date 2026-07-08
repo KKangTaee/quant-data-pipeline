@@ -9,10 +9,16 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-audit-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-refactor-v1-20260708/`다.
+
+- 목적: Practical Validation의 1차 필수 검증에서 같은 검증이 여러 module 안에 반복되는 문제를 줄이고, `validation_efficacy`를 방법론 검증 전용으로 축소했다.
+- 주요 변경: `app/services/backtest_validation_efficacy.py`는 walk-forward / OOS / regime split row만 생성한다. module planner / board registry / workspace는 `Validation Method Strength`와 `Stress / Robustness`를 분리해 보여주며, Flow 4 copy는 `검증 방법론`, `강건성`, `실전성 진단`처럼 사용자-facing 업무명으로 정리했다. Final Review gate와 evidence read model도 `Validation Method Strength` label과 method-only blocker 문구를 사용한다.
+- 이번 차수에서 하지 않은 일: gate threshold 강화, registry / saved JSONL rewrite, provider ingestion, 새 DB schema, 새 live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-required-taxonomy-audit-v1-20260708/`다.
 
 - 목적: Practical Validation의 1차 필수 검증이 여러 module 안에서 같은 검증을 반복 소유하는 문제를 막기 위해 현재 audit row inventory와 `check_id -> owner_module` taxonomy를 정리했다.
-- 주요 결론: `validation_efficacy`는 source / replay / benchmark / provider / PIT / survivorship / robustness를 다시 보는 umbrella audit이 아니라 walk-forward / OOS / regime split 중심의 `validation_method_strength`로 축소해야 한다. replay, benchmark, PIT, survivorship, provider freshness, stress/robustness는 각각 `latest_replay`, `comparison_basis`, `data_bias_control`, `stress_robustness` owner가 단독 소유한다.
+- 주요 결론: `validation_efficacy`는 source / replay / benchmark / provider / PIT / survivorship / robustness를 다시 보는 umbrella audit이 아니라 walk-forward / OOS / regime split 중심의 `validation_method_strength`로 축소해야 한다. replay, benchmark, PIT, survivorship, provider freshness, stress/robustness는 각각 owner module이 단독 소유해야 한다.
 - 이번 차수에서 하지 않은 일: Python service refactor, gate threshold 변경, Flow 4 UI 변경, registry / saved JSONL rewrite, provider ingestion, Final Review selected-route policy 변경, live approval / broker order / auto rebalance 의미 추가.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/backtest-symbol-resolver-v1-20260708/`다.
@@ -54,7 +60,7 @@ Latest completed task는 `.aiworkspace/note/finance/tasks/active/backtest-quarte
 Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-resolution-guide-v1-20260707/`다.
 
 - 목적: Practical Validation Flow 4의 `보강 위치`가 단순 위치 문자열이라 사용자가 실제 부족 항목과 해야 할 일을 파악하기 어려운 문제를 해결했다.
-- 주요 변경: workspace read model에 `resolution_guide`를 추가하고, Flow 4 criteria card를 `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치` 구조로 렌더링한다. Data Coverage / Validation Efficacy 등 audit row가 있는 기준은 non-PASS `Criteria`와 `Next Action`을 우선 사용한다. 위치명은 `Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세`, `Flow4 > Provider / Data 보강 액션`처럼 실제 화면 경로로 세분화했다.
+- 주요 변경: workspace read model에 `resolution_guide`를 추가하고, Flow 4 criteria card를 `검증한 것 / 부족한 것 또는 확인할 것 / 해야 할 일 / 확인 위치` 구조로 렌더링한다. Data Coverage / Validation Method Strength 등 audit row가 있는 기준은 non-PASS `Criteria`와 `Next Action`을 우선 사용한다. 위치명은 `Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세`, `Flow4 > Provider / Data 보강 액션`처럼 실제 화면 경로로 세분화했다.
 - 이번 차수에서 하지 않은 일: validation threshold 변경, replay 실행 로직 변경, provider ingestion orchestration 변경, registry / saved JSONL rewrite, Final Review selected-route 정책 변경, live approval / broker order / auto rebalance 의미 추가.
 
 Earlier completed task는 `.aiworkspace/note/finance/tasks/active/backtest-pit-universe-v1-20260707/`다.
@@ -87,7 +93,7 @@ Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-vali
 Earlier completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-category-results-v1-20260706/`다.
 
 - 목적: Practical Validation Flow 4가 Final Review 이동 기준판이 아니라 카테고리별 검증 결과로 읽히게 하고, 후보 특성과 무관한 검증이 universal blocker처럼 보이는 문제를 줄였다.
-- 주요 변경: workspace read model이 `Source & Replay`, `Data Quality / Bias Control`, `Comparison Validity`, `Realism / Tradability`, `Validation Strength / Robustness`, `Portfolio Construction`, `Conditional Evidence` category를 만든다. `selected_route_preflight`는 `Final Review 이동 요약`으로 분리했다. stress / robustness missing evidence는 기본 REVIEW, construction risk는 ETF-like 또는 weighted mix에만 적용, sentiment risk-on/off overlay는 macro gate status에서 제외했다.
+- 주요 변경: workspace read model이 `Source & Replay`, `Data Quality / Bias Control`, `Comparison Validity`, `Realism / Tradability`, `Validation Method Strength`, `Stress / Robustness`, `Portfolio Construction`, `Conditional Evidence` category를 만든다. `selected_route_preflight`는 `Final Review 이동 요약`으로 분리했다. stress / robustness missing evidence는 기본 REVIEW, construction risk는 ETF-like 또는 weighted mix에만 적용, sentiment risk-on/off overlay는 macro gate status에서 제외했다.
 - 이번 차수에서 하지 않은 일: provider 수집 실행, registry / saved JSONL rewrite, Final Review selected-route 저장 정책 변경, live approval / broker order / auto rebalance 의미 추가.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-issue-summary-v1-20260706/`다.
