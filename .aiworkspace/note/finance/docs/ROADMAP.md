@@ -9,10 +9,16 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-data-action-board-v1-20260709/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-center-v1-20260709/`다.
+
+- 목적: Practical Validation Flow 4에서 `데이터 보강 대상`과 `Provider 보강 액션`이 별도 영역처럼 보이며, 사용자가 수집 버튼이 무엇을 수집하는지 알기 어려운 문제를 줄인다.
+- 주요 변경: Flow 4를 `카테고리별 검증 결과 -> 데이터 보강 / 수집 실행 -> 상세 근거 / 원자료`로 읽게 했다. React board는 표시 전용 `데이터 보강 대상`을 맡고, 기존 Python 수집 버튼은 같은 action center의 `수집 실행` 하위 블록으로 남긴다. 버튼 주변에는 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 배치했고, provider 작업 상세 table은 `상세 근거 / 원자료` raw detail로 낮췄다.
+- 이번 차수에서 하지 않은 일: 새 수집 엔진, DB schema, provider fetch path, validation gate threshold, Final Review 화면 재구성, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-data-action-board-v1-20260709/`다.
 
 - 목적: Practical Validation Flow 4에서 지금 해결할 데이터 보강 항목과 Final Review / Monitoring에서 판단할 참고 항목이 섞여 보이는 문제를 줄였다.
-- 주요 변경: Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다. `단계별 검증 소유권` expander와 별도 `수집 대상 근거` expander는 visible UI에서 제거하고, Python workspace read model의 display-only `data_action_board`를 React card board로 렌더링한다. React는 props 표시만 맡고 provider/FRED/API/DB fetch, validation calculation, collection execution, gate, registry / saved write는 기존 Python service / runtime 경계에 남겼다.
+- 주요 변경: Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다. 후속 action center task에서 이 영역의 user-facing 이름을 `데이터 보강 / 수집 실행`으로 확정했다. `단계별 검증 소유권` expander와 별도 `수집 대상 근거` expander는 visible UI에서 제거하고, Python workspace read model의 display-only `data_action_board`를 React card board로 렌더링한다. React는 props 표시만 맡고 provider/FRED/API/DB fetch, validation calculation, collection execution, gate, registry / saved write는 기존 Python service / runtime 경계에 남겼다.
 - 이번 차수에서 하지 않은 일: 새 수집 엔진, DB schema, provider fetch path, Final Review 화면 재구성, gate threshold 변경, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/`다.

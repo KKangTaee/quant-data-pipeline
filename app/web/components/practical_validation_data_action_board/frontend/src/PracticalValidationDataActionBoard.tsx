@@ -112,9 +112,9 @@ export function PracticalValidationDataActionBoard({ board }: PracticalValidatio
     <section className="pv-data-action">
       <header className="pv-data-action__head">
         <div>
-          <div className="pv-data-action__kicker">Practical Validation Flow 4</div>
+          <div className="pv-data-action__kicker">데이터 보강 / 수집 실행</div>
           <h4>{compact(board.title, "데이터 보강 대상")}</h4>
-          <p>{compact(board.detail, "지금 보강할 수 있는 항목과 현재 수집으로 해결되지 않는 항목을 분리합니다.")}</p>
+          <p>{compact(board.detail, "수집 실행 전에 지금 보강할 수 있는 항목과 현재 수집으로 해결되지 않는 항목을 분리합니다.")}</p>
         </div>
         <div className="pv-data-action__summary" aria-label="data action summary">
           <span><b>{actionableCount}</b> 보강 경로</span>

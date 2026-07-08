@@ -12404,7 +12404,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("가격 window를 최신 DB 기준으로 보강", data_card["resolution_guide"]["next_action"])
         self.assertIn("가격 window를 최신 DB 기준으로 보강", data_card["resolution_guide"]["action_steps"][0])
         self.assertTrue(
-            any("Provider / Data 보강 액션" in step for step in data_card["resolution_guide"]["action_steps"])
+            any("데이터 보강 / 수집 실행" in step for step in data_card["resolution_guide"]["action_steps"])
         )
         self.assertTrue(
             any("Flow 2 재검증" in step for step in data_card["resolution_guide"]["action_steps"])
@@ -12412,12 +12412,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("PASS", data_card["resolution_guide"]["pass_criteria"])
         self.assertIn("provider gap", data_card["resolution_guide"]["pass_criteria"])
         self.assertIn("Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세", data_card["resolution_guide"]["location"])
-        self.assertIn("Provider / Data 보강 액션", data_card["resolution_guide"]["location"])
+        self.assertIn("데이터 보강 / 수집 실행", data_card["resolution_guide"]["location"])
         collection_action = data_card["resolution_guide"]["collection_action"]
         self.assertTrue(collection_action["available"])
         self.assertEqual(collection_action["label"], "수집하기")
         self.assertEqual(collection_action["target_anchor"], "pv-provider-data-action")
-        self.assertIn("Provider / Data 보강 액션", collection_action["surface"])
+        self.assertIn("데이터 보강 / 수집 실행", collection_action["surface"])
         self.assertIn("수집 가능한", collection_action["detail"])
         self.assertEqual(data_group["passed_criteria"], [])
         self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
@@ -12516,6 +12516,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         board = workspace["data_action_board"]
         self.assertEqual(board["title"], "데이터 보강 대상")
+        self.assertIn("수집 실행", board["detail"])
         self.assertEqual(board["summary"]["immediate_collect_count"], 4)
         self.assertEqual(board["summary"]["source_map_discovery_count"], 1)
         self.assertEqual(board["summary"]["connector_needed_count"], 1)
@@ -12941,6 +12942,17 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("render_practical_validation_data_action_board", page_source)
         self.assertIn("_render_data_action_board(validation_result)", flow4_body)
         self.assertTrue(data_action_wrapper.exists())
+        self.assertIn('title="데이터 보강 / 수집 실행"', page_source)
+        self.assertNotIn('title="Provider 보강 액션"', provider_gap_body)
+        self.assertIn('title="수집 실행"', provider_gap_body)
+        self.assertIn("수집하는 것", provider_gap_body)
+        self.assertIn("하지 않는 것", provider_gap_body)
+        self.assertIn("실행 후 다음 단계", provider_gap_body)
+        self.assertIn("백테스트 재실행", provider_gap_body)
+        self.assertIn("Final Review 판단", provider_gap_body)
+        self.assertIn("Flow 2 재검증", provider_gap_body)
+        self.assertNotIn('st.expander("보강 작업 상세 테이블"', provider_gap_body)
+        self.assertIn("보강 작업 상세 / 수집 원자료", evidence_body)
         self.assertNotIn("_render_stage_ownership_inventory(validation_result)", flow4_body)
         self.assertNotIn("단계별 검증 소유권", page_source)
         criteria_board_body = page_source.split("def _render_validation_criteria_detail_board", 1)[1]
@@ -12990,6 +13002,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("render_practical_validation_data_action_board", wrapper_source)
         self.assertIn("PracticalValidationDataActionBoard", component_source)
         self.assertIn("데이터 보강 대상", component_source)
+        self.assertIn("데이터 보강 / 수집 실행", component_source)
         self.assertIn("immediate_collect", component_source)
         self.assertIn("source_map_discovery", component_source)
         self.assertIn("connector_needed", component_source)

@@ -23,7 +23,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
+  - Current active Practical Validation UI task is none.
+  - Latest completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
@@ -31,6 +33,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Flow4 Action Center V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-center-v1-20260709/`에서 Flow 4의 `데이터 보강 대상` / `Provider 보강 액션` split를 `데이터 보강 / 수집 실행` action center로 재정렬했다.
+  - 수집 버튼 주변에 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 보여주고, raw 보강 작업 상세는 `상세 근거 / 원자료`로 낮췄다.
+  - React는 계속 props 표시만 맡고, 외부 데이터 수집 / replay / validation calculation / gate / persistence는 Python service/runtime 경계에 남긴다.
 - Practical Validation Flow4 Data Action Board V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-data-action-board-v1-20260709/`에서 Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다.
   - visible `단계별 검증 소유권` expander와 별도 `수집 대상 근거` expander를 제거하고, Python workspace read model의 `data_action_board`를 표시 전용 React board로 렌더링한다.

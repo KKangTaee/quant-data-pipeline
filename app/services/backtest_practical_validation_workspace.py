@@ -261,7 +261,7 @@ MODULE_DISPLAY_TEXT = {
         "issue_title": "ETF provider 근거 부족",
         "current_problem": "provider snapshot이나 holdings / exposure 근거가 없으면 ETF 내부 노출과 운용 가능성을 판단하기 어렵습니다.",
         "completion_criteria": "ETF Provider Investability가 PASS 또는 Final Review 확인 상태이고 provider snapshot gap이 보강되어야 합니다.",
-        "fix_location": "Flow4 > Provider / Data 보강 액션",
+        "fix_location": "Flow4 > 데이터 보강 / 수집 실행",
         "impact_summary": "provider 근거가 약하면 ETF 내부 노출과 실전 운용 가능성을 판단하기 어렵습니다.",
     },
     "leverage_inverse": {
@@ -344,14 +344,14 @@ MODULE_RESOLUTION_GUIDES = {
     "data_coverage": {
         "checked_summary": "가격 window, provider freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",
         "missing_summary": "가격 window / provider freshness / lifecycle / survivorship 중 비어 있거나 오래된 항목",
-        "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, 수집 가능한 provider gap은 데이터 보강 / 수집 실행에서 처리합니다.",
         "action_steps": [
-            "provider gap은 Provider / Data 보강 액션에서 수집하고, 가격 window gap은 DB price ingestion으로 보강합니다.",
+            "provider gap은 데이터 보강 / 수집 실행에서 수집하고, 가격 window gap은 DB price ingestion으로 보강합니다.",
             "보강 후 Flow 2 재검증을 다시 실행해 coverage blocker가 해소됐는지 확인합니다.",
             "그래도 막히면 데이터 품질 / 편향 통제 상세에서 lifecycle 또는 survivorship 기준까지 확인합니다.",
         ],
         "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
-        "action_location": "Flow4 > Provider / Data 보강 액션",
+        "action_location": "Flow4 > 데이터 보강 / 수집 실행",
     },
     "construction_risk": {
         "checked_summary": "ETF-like 또는 weighted mix 후보의 구성 집중, look-through, top holding, overlap, unknown exposure를 확인합니다.",
@@ -400,12 +400,12 @@ MODULE_RESOLUTION_GUIDES = {
     "provider_investability": {
         "checked_summary": "ETF provider operability, holdings, exposure, provider freshness가 충분한지 확인합니다.",
         "missing_summary": "ETF provider snapshot, holdings, exposure, operability gap",
-        "next_action_summary": "Provider / Data 보강 액션에서 수집 가능한 provider gap을 먼저 보강합니다.",
+        "next_action_summary": "데이터 보강 / 수집 실행에서 수집 가능한 provider gap을 먼저 보강합니다.",
         "action_steps": [
-            "Provider / Data 보강 액션에서 holdings, exposure, provider freshness 중 수집 가능한 gap을 확인합니다.",
+            "데이터 보강 / 수집 실행에서 holdings, exposure, provider freshness 중 수집 가능한 gap을 확인합니다.",
             "provider evidence를 보강한 뒤 데이터 품질 / 구성 기준의 blocker가 해소됐는지 확인합니다.",
         ],
-        "location": "Flow4 > Provider / Data 보강 액션",
+        "location": "Flow4 > 데이터 보강 / 수집 실행",
     },
     "leverage_inverse": {
         "checked_summary": "레버리지 / 인버스 노출의 목적, 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 확인합니다.",
@@ -470,15 +470,15 @@ COLLECTABLE_DATA_ACTION_KEYWORDS = (
 )
 COLLECTABLE_DATA_ACTIONS = {
     "data_coverage": {
-        "surface": "Flow4 > Provider / Data 보강 액션",
+        "surface": "Flow4 > 데이터 보강 / 수집 실행",
         "detail": "provider snapshot, holdings / exposure, macro context처럼 수집 가능한 데이터 gap만 같은 화면에서 보강합니다.",
     },
     "construction_risk": {
-        "surface": "Flow4 > Provider / Data 보강 액션",
+        "surface": "Flow4 > 데이터 보강 / 수집 실행",
         "detail": "구성 리스크 중 provider holdings / exposure 누락처럼 수집 가능한 gap만 보강합니다.",
     },
     "provider_investability": {
-        "surface": "Flow4 > Provider / Data 보강 액션",
+        "surface": "Flow4 > 데이터 보강 / 수집 실행",
         "detail": "ETF operability, holdings / exposure, macro context 중 수집 가능한 provider gap을 보강합니다.",
     },
 }
@@ -486,19 +486,19 @@ DATA_ACTION_GROUPS = (
     {
         "group_id": "immediate_collect",
         "label": "지금 수집 가능",
-        "description": "기존 Python Provider / Data 보강 액션으로 바로 실행할 수 있는 항목입니다.",
+        "description": "아래 수집 실행 버튼으로 바로 처리할 수 있는 외부 데이터 근거입니다.",
         "tone": "warning",
     },
     {
         "group_id": "source_map_discovery",
         "label": "Source map 탐색",
-        "description": "자동 source map 탐색 후 수집 가능 여부를 다시 확인해야 하는 항목입니다.",
+        "description": "ETF 공식 원천 위치를 자동으로 찾은 뒤 수집 가능 여부를 다시 확인해야 합니다.",
         "tone": "warning",
     },
     {
         "group_id": "connector_needed",
         "label": "Connector mapping 필요",
-        "description": "자동 탐색 이후에도 수동 connector mapping이 필요한 항목입니다.",
+        "description": "자동 탐색 이후에도 수동 원천 connector mapping이 필요한 항목입니다.",
         "tone": "danger",
     },
     {
@@ -807,7 +807,7 @@ def _data_action_items_from_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
                 category="ETF operability",
                 tickers=_string_list(plan.get("operability_official")),
                 reason="공식 source map 또는 내장 공식 source로 운용성 snapshot을 보강할 수 있습니다.",
-                next_action="아래 기존 Python Provider / Data 보강 액션에서 운용성 수집을 실행합니다.",
+                next_action="아래 수집 실행에서 운용성 데이터를 수집합니다.",
                 availability="기존 Python 수집 경계에서 실행 가능",
                 source="provider_gap_collection_plan.operability_official",
             )
@@ -819,7 +819,7 @@ def _data_action_items_from_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
                 category="ETF operability",
                 tickers=_string_list(plan.get("operability_bridge")),
                 reason="공식 source가 없거나 부족해도 DB bridge로 운용성 근거를 보강할 수 있습니다.",
-                next_action="아래 기존 Python Provider / Data 보강 액션에서 DB bridge 보강을 실행합니다.",
+                next_action="아래 수집 실행에서 DB bridge 보강을 실행합니다.",
                 availability="기존 Python 수집 경계에서 실행 가능",
                 source="provider_gap_collection_plan.operability_bridge",
             )
@@ -831,7 +831,7 @@ def _data_action_items_from_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
                 category="ETF holdings / exposure",
                 tickers=_string_list(plan.get("holdings_exposure")),
                 reason="검증된 holdings 또는 exposure source가 있어 look-through 근거를 보강할 수 있습니다.",
-                next_action="아래 기존 Python Provider / Data 보강 액션에서 holdings / exposure 수집을 실행합니다.",
+                next_action="아래 수집 실행에서 holdings / exposure를 수집합니다.",
                 availability="기존 Python 수집 경계에서 실행 가능",
                 source="provider_gap_collection_plan.holdings_exposure",
             )
@@ -843,7 +843,7 @@ def _data_action_items_from_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
                 category="Macro context",
                 tickers=["VIXCLS", "T10Y3M", "BAA10Y"],
                 reason="저장된 macro context series가 부족하거나 오래되어 FRED series 보강이 필요합니다.",
-                next_action="아래 기존 Python Provider / Data 보강 액션에서 macro context 수집을 실행합니다.",
+                next_action="아래 수집 실행에서 macro context를 수집합니다.",
                 availability="기존 Python 수집 경계에서 실행 가능",
                 source="provider_gap_collection_plan.macro",
             )
@@ -867,7 +867,7 @@ def _data_action_items_from_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
                 category="ETF holdings / exposure",
                 tickers=_string_list(plan.get("mapping_needed")),
                 reason="자동 탐색 이후에도 검증된 issuer URL / parser mapping이 없습니다.",
-                next_action="수동 connector mapping을 추가한 뒤 provider data 보강을 다시 실행합니다.",
+                next_action="수동 connector mapping을 추가한 뒤 외부 데이터 보강을 다시 실행합니다.",
                 availability="수동 connector mapping 필요",
                 source="provider_gap_collection_plan.mapping_needed",
             )
@@ -988,7 +988,7 @@ def _data_action_board(
     summary["item_count"] = len(items)
     return {
         "title": "데이터 보강 대상",
-        "detail": "Practical Validation에서 지금 보강할 수 있는 데이터 항목과 현재 수집으로 해결되지 않는 항목을 분리합니다.",
+        "detail": "수집 실행 전에 지금 보강할 수 있는 데이터 항목과 현재 수집으로 해결되지 않는 항목을 분리합니다.",
         "summary": summary,
         "groups": groups,
         "items": items,

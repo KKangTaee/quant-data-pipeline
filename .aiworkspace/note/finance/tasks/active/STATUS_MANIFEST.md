@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `practical-validation-flow4-data-action-board-v1-20260709`
+- `practical-validation-flow4-action-center-v1-20260709`
 
 Previous completed task:
 
-- `practical-validation-flow-gating-evidence-ia-v1-20260708`
+- `practical-validation-flow4-data-action-board-v1-20260709`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-flow4-action-center-v1-20260709`: Practical Validation Flow 4 `데이터 보강 대상` / `Provider 보강 액션` split를 `데이터 보강 / 수집 실행` action center로 정리했다. React board는 표시 전용이고 기존 Python 수집 버튼은 같은 action center의 `수집 실행` 하위 블록으로 남기며, 버튼 주변에는 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 명확히 표시한다. `보강 작업 상세`는 `상세 근거 / 원자료` raw detail로 낮췄다.
 - `practical-validation-flow4-data-action-board-v1-20260709`: Practical Validation Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다. `단계별 검증 소유권`과 별도 `수집 대상 근거` expander를 제거하고, 표시 전용 React board가 Python `data_action_board` read model을 렌더링한다. React는 수집 / 실행 / 계산 / gate / registry write를 하지 않는다.
 - `practical-validation-flow-gating-evidence-ia-v1-20260708`: Flow 2 current-session replay가 없으면 Flow 3 / Flow 4 / Flow 5와 Result JSON을 렌더링하지 않고, Flow 4 하단 evidence IA를 provider 보강 action 중심으로 낮췄다.
 - `practical-validation-category-empty-state-v1-20260708`: Practical Validation Flow 4 `카테고리별 검증 결과`의 REVIEW-only / empty category를 PV visible category result에서 숨기고, 내부 read model에는 유지했다.

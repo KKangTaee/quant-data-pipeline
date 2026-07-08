@@ -1090,7 +1090,7 @@ def _pct_badge_value(value: Any) -> str:
 def _render_provider_gap_collection_results(results: list[dict[str, Any]]) -> None:
     if not results:
         return
-    st.markdown("###### 최근 Provider 데이터 수집 결과")
+    st.markdown("###### 최근 외부 데이터 수집 결과")
     _render_display_dataframe(
         pd.DataFrame(
             [
@@ -1110,82 +1110,7 @@ def _render_provider_gap_collection_results(results: list[dict[str, Any]]) -> No
     )
 
 
-def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
-    gap_rows = build_provider_gap_rows(validation_result)
-    if not gap_rows:
-        return False
-
-    plan = build_provider_gap_collection_plan(validation_result)
-    actionable_rows = [row for row in gap_rows if str(row.get("Action") or "") != "조치 없음"]
-    collectable_count = sum(
-        len(plan[key])
-        for key in [
-            "operability_official",
-            "operability_bridge",
-            "holdings_exposure",
-            "source_map_discovery",
-        ]
-        if isinstance(plan.get(key), list)
-    ) + (1 if plan.get("macro") else 0)
-    render_pv_section_header(
-        eyebrow="Action center",
-        title="Provider 보강 액션",
-        detail="ETF provider snapshot 부족분을 요약하고, 수집 가능한 항목과 connector 보강이 필요한 항목을 분리합니다.",
-        tone="warning" if actionable_rows else "positive",
-    )
-    render_pv_card_grid(
-        [
-            {
-                "kicker": "Gap Status",
-                "title": "Provider data gaps",
-                "status": f"{len(actionable_rows)} actionable",
-                "detail": f"전체 {len(gap_rows)}개 row 중 보강 액션이 필요한 항목입니다.",
-                "tone": "warning" if actionable_rows else "positive",
-            },
-            {
-                "kicker": "Collectable Now",
-                "title": "수집 / 보강 가능",
-                "status": collectable_count,
-                "detail": "source map discovery, official operability, DB bridge, holdings / exposure, macro context 기준입니다.",
-                "tone": "positive" if collectable_count else "neutral",
-            },
-            {
-                "kicker": "Connector Work",
-                "title": "Mapping needed",
-                "status": len(plan["mapping_needed"]),
-                "detail": "검증된 issuer URL / parser mapping이 없으면 수동 connector 보강이 필요합니다.",
-                "tone": "warning" if plan["mapping_needed"] else "neutral",
-            },
-        ],
-        min_width=220,
-    )
-
-    _render_board_context_badges(validation_result, "provider_data_gaps")
-    st.caption(
-        "위 데이터 보강 대상 보드가 수집 가능한 항목과 수동 mapping 필요 항목을 먼저 요약합니다. "
-        "아래 버튼은 기존 Python 수집 경계만 실행합니다."
-    )
-    if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
-        st.success("현재 ETF provider gap은 없습니다.")
-        return True
-
-    if plan["operability_bridge"] or plan["operability_official"]:
-        st.warning(
-            "운용성 데이터 보강 필요: "
-            + ", ".join(sorted(set(plan["operability_official"]) | set(plan["operability_bridge"])))
-        )
-    if plan["holdings_exposure"]:
-        st.warning("Holdings / Exposure 수집 가능: " + ", ".join(plan["holdings_exposure"]))
-    if plan["source_map_discovery"]:
-        st.info(
-            "Holdings / Exposure source map 자동 탐색 필요: "
-            + ", ".join(plan["source_map_discovery"])
-        )
-    if plan["mapping_needed"]:
-        st.info(
-            "Holdings / Exposure connector mapping 필요: "
-            + ", ".join(plan["mapping_needed"])
-        )
+def _provider_gap_action_rows(plan: dict[str, Any]) -> list[dict[str, Any]]:
     action_rows = [
         {
             "Area": "ETF Provider Source Map",
@@ -1221,22 +1146,85 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
                 "Meaning": "FRED market context series를 다시 수집합니다.",
             }
         )
+    return action_rows
+
+
+def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
+    gap_rows = build_provider_gap_rows(validation_result)
+    if not gap_rows:
+        return False
+
+    plan = build_provider_gap_collection_plan(validation_result)
+    actionable_rows = [row for row in gap_rows if str(row.get("Action") or "") != "조치 없음"]
+    collectable_count = sum(
+        len(plan[key])
+        for key in [
+            "operability_official",
+            "operability_bridge",
+            "holdings_exposure",
+            "source_map_discovery",
+        ]
+        if isinstance(plan.get(key), list)
+    ) + (1 if plan.get("macro") else 0)
+    render_pv_section_header(
+        eyebrow="Action center",
+        title="수집 실행",
+        detail="위 데이터 보강 대상 중 기존 Python 수집 경계로 처리 가능한 외부 데이터 근거만 실행합니다.",
+        tone="warning" if actionable_rows else "positive",
+    )
     render_pv_card_grid(
         [
             {
-                "kicker": row["Area"],
-                "title": row["Symbols"],
-                "status": "No immediate action" if row["Symbols"] == "-" else "Action available",
-                "detail": row["Meaning"],
-                "tone": "neutral" if row["Symbols"] == "-" else "warning",
-            }
-            for row in action_rows
+                "kicker": "Collect",
+                "title": "수집하는 것",
+                "status": collectable_count,
+                "detail": "ETF 운용성 / 비용, holdings / exposure, source map 탐색, FRED 매크로를 기존 Python 수집 경계에서 보강합니다.",
+                "tone": "warning" if actionable_rows else "positive",
+            },
+            {
+                "kicker": "Boundary",
+                "title": "하지 않는 것",
+                "status": "No replay / no gate",
+                "detail": "백테스트 재실행, 검증 판정 변경, Final Review 판단, registry / saved JSONL 재작성은 하지 않습니다.",
+                "tone": "neutral",
+            },
+            {
+                "kicker": "Next",
+                "title": "실행 후 다음 단계",
+                "status": "Flow 2 재검증",
+                "detail": "수집이 끝나면 Flow 2에서 전략 재검증을 다시 실행해 보강된 DB 근거를 검증 결과에 반영합니다.",
+                "tone": "positive" if collectable_count else "neutral",
+            },
         ],
-        min_width=250,
+        min_width=220,
     )
-    with st.expander("보강 작업 상세 테이블", expanded=False):
-        _render_display_dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
 
+    _render_board_context_badges(validation_result, "provider_data_gaps")
+    st.caption(
+        "위 데이터 보강 대상 보드가 수집 가능한 항목과 수동 mapping 필요 항목을 먼저 요약합니다. "
+        "아래 버튼은 외부 데이터 수집만 실행하며 검증 판정은 Flow 2 재검증 후 다시 계산됩니다."
+    )
+    if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
+        st.success("현재 ETF 외부 데이터 근거 gap은 없습니다.")
+        return True
+
+    if plan["operability_bridge"] or plan["operability_official"]:
+        st.warning(
+            "운용성 데이터 보강 필요: "
+            + ", ".join(sorted(set(plan["operability_official"]) | set(plan["operability_bridge"])))
+        )
+    if plan["holdings_exposure"]:
+        st.warning("Holdings / Exposure 수집 가능: " + ", ".join(plan["holdings_exposure"]))
+    if plan["source_map_discovery"]:
+        st.info(
+            "Holdings / Exposure source map 자동 탐색 필요: "
+            + ", ".join(plan["source_map_discovery"])
+        )
+    if plan["mapping_needed"]:
+        st.info(
+            "Holdings / Exposure connector mapping 필요: "
+            + ", ".join(plan["mapping_needed"])
+        )
     result_key = provider_gap_state_key(validation_result)
     latest_results = st.session_state.get(result_key)
     if isinstance(latest_results, list):
@@ -1252,11 +1240,11 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         ]
     )
     if not has_collectable:
-        st.info("현재 버튼으로 수집 가능한 provider gap은 없습니다. 남은 부족 ETF는 connector source mapping 추가가 필요합니다.")
+        st.info("현재 버튼으로 수집 가능한 외부 데이터 gap은 없습니다. 남은 부족 ETF는 connector source mapping 추가가 필요합니다.")
         return True
 
-    if st.button("부족한 Provider 데이터 일괄 수집 / 보강", key=f"{result_key}_run", width="stretch"):
-        with st.spinner("현재 source에 필요한 provider snapshot을 수집 / 보강 중입니다...", show_time=True):
+    if st.button("부족한 외부 데이터 일괄 수집 / 보강", key=f"{result_key}_run", width="stretch"):
+        with st.spinner("현재 source에 필요한 외부 데이터 근거를 수집 / 보강 중입니다...", show_time=True):
             results = run_provider_gap_collection(validation_result)
         st.session_state[result_key] = results
         st.rerun()
@@ -1871,6 +1859,13 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
             with st.expander("Stress / sensitivity 상세", expanded=False):
                 _render_stress_sensitivity_interpretation(validation_result)
         with raw_tab:
+            action_rows = _provider_gap_action_rows(build_provider_gap_collection_plan(validation_result))
+            if any(str(row.get("Symbols") or "-") != "-" for row in action_rows):
+                with st.expander("보강 작업 상세 / 수집 원자료", expanded=False):
+                    st.caption(
+                        "데이터 보강 / 수집 실행 버튼이 어떤 기존 수집 area와 symbol 묶음으로 변환되는지 검산합니다."
+                    )
+                    _render_display_dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
             _render_diagnostic_detail_expanders(validation_result)
 
 
@@ -1878,7 +1873,7 @@ def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:
     provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
     rendered = _render_provider_gap_section(validation_result) if provider_rows else False
     if not rendered:
-        st.info("현재 후보에서 실행할 provider 보강 액션이 없습니다.")
+        st.info("현재 후보에서 실행할 외부 데이터 수집 액션이 없습니다.")
 
 
 def _render_data_action_board_fallback(board: dict[str, Any]) -> None:
@@ -1922,8 +1917,8 @@ def _render_data_action_board(validation_result: dict[str, Any]) -> None:
         return
     render_pv_section_header(
         eyebrow="Data action board",
-        title="데이터 보강 대상 / 액션",
-        detail="지금 수집 가능한 데이터, source map 탐색, 수동 connector mapping, 현재 수집으로 해결되지 않는 항목을 분리합니다.",
+        title="데이터 보강 / 수집 실행",
+        detail="지금 수집 가능한 데이터, source map 탐색, 수동 connector mapping, 현재 수집으로 해결되지 않는 항목을 한 흐름으로 분리합니다.",
         tone="warning" if dict(board.get("summary") or {}).get("actionable_count") else "neutral",
     )
     if is_practical_validation_data_action_board_available():
@@ -2448,7 +2443,7 @@ def render_practical_validation_workspace() -> None:
         render_pv_section_header(
             eyebrow="Flow 4",
             title="검증 기준 상세",
-            detail="카테고리별 통과 / 보강 필요 / 차단 항목을 먼저 보고, 필요한 상세 근거와 provider 보강 액션을 이어서 확인합니다.",
+            detail="카테고리별 통과 / 보강 필요 / 차단 항목을 먼저 보고, 데이터 보강 / 수집 실행과 상세 근거를 이어서 확인합니다.",
             tone="neutral",
         )
         _render_validation_criteria_detail_board(validation_result)

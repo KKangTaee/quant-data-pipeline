@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `practical-validation-flow4-data-action-board-v1-20260709` closeout. |
+| none | - | 현재 실행 중인 active task는 없다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-flow4-action-center-v1-20260709` | Completed record | Practical Validation Flow 4 `데이터 보강 대상`과 기존 Python 수집 버튼을 `데이터 보강 / 수집 실행` action center로 묶고, 버튼 주변에 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 명확히 표시한다. |
 | `practical-validation-flow4-data-action-board-v1-20260709` | Completed record | Practical Validation Flow 4 now reads `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`; React board is display-only and Python keeps provider collection / validation / gate / persistence boundaries. |
 | `practical-validation-flow-gating-evidence-ia-v1-20260708` | Completed record | Flow 2 current-session replay gates Flow 3 / Flow 4 / Flow 5 rendering and Flow 4 lower evidence IA was lowered behind provider action flow. |
 | `practical-validation-category-empty-state-v1-20260708` | Completed record | Flow 4 visible category result hides REVIEW-only / empty groups while retaining them in the internal read model. |

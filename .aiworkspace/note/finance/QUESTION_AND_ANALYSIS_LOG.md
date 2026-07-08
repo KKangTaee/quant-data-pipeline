@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
+  - Latest completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
@@ -26,6 +27,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-09 - PV Flow4 데이터 보강 영역은 하나의 action center로 읽혀야 한다
+
+- User request: 사용자가 Flow4의 `카테고리별 검증 결과`, `데이터 보강 대상`, `Provider 보강 액션`의 차이와 중복 여부, provider 수집 버튼이 무엇을 수집하는지 불명확한 점을 질문하고 superpower 기반 재분석 후 개선을 요청함.
+- Interpreted goal: `카테고리별 검증 결과`는 판정판, `데이터 보강 대상`은 해결 가능한 데이터 gap 번역판, Python 수집 버튼은 실행 영역이므로 내부 역할은 다르지만 사용자 화면에서는 하나의 `데이터 보강 / 수집 실행` 흐름으로 보여야 한다.
+- Analysis result: `Provider`는 broker가 아니라 ETF issuer / holdings / exposure / FRED / source map 같은 외부 데이터 근거 path다. first-read title에서는 낮추고, 버튼 주변에는 수집하는 것 / 하지 않는 것 / 실행 후 Flow 2 재검증을 명확히 써야 한다.
+- Follow-up: `practical-validation-flow4-action-center-v1-20260709`에서 Flow4 action center copy / wiring / raw detail 배치를 정리했다. 새 수집 엔진, DB schema, provider fetch path, gate policy, registry / saved rewrite는 만들지 않았다.
 
 ### 2026-07-09 - PV Flow4 data action board는 표시 전용이어야 한다
 
