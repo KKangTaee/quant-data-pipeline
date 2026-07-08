@@ -26,3 +26,8 @@
 - `.venv/bin/python -m unittest -k market_mover_research tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> PASS, 12 tests after pair-line chart polish. Existing edgar deprecation and Streamlit no-runtime warnings are non-failing.
 - `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
 - Static preview generated at `fundamental-chart-pair-line-static-preview.png`; generated artifact, not intended for commit.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies` -> RED, expected failure for missing chart panel `min-width: 0` and scroll wrapper `max-width: 100%`.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies` -> PASS after scroll containment CSS fix.
+- `.venv/bin/python -m unittest -k market_mover_research tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> PASS, 12 tests after scroll containment CSS fix. Existing edgar deprecation and Streamlit no-runtime warnings are non-failing.
+- `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
+- `git diff --check` -> PASS.

@@ -5234,6 +5234,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  overflow-wrap: anywhere;
 	}
 	.ov-mm-research-chart {
+	  min-width: 0;
 	  margin-top: 0.26rem;
 	  padding: 0.54rem 0.6rem;
 	  border: 1px solid var(--ov-mi-border-faint);
@@ -5264,6 +5265,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  line-height: 1.12;
 	}
 	.ov-mm-research-chart-scroll {
+	  width: 100%;
+	  max-width: 100%;
 	  min-width: 0;
 	  margin-top: 0.5rem;
 	  overflow-x: auto;

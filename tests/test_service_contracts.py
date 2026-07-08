@@ -13271,6 +13271,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
     def test_market_movers_research_snapshot_component_uses_metric_tabs_with_visible_frequencies(self) -> None:
         component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        css_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
 
         self.assertIn("_render_market_mover_research_metric_charts", component_source)
         self.assertIn('st.tabs([chart["label"]', component_source)
@@ -13278,6 +13279,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn('st.tabs(["연간", "분기"])', component_source)
         self.assertIn('_market_mover_research_bar_chart_html(chart, "annual")', component_source)
         self.assertIn('_market_mover_research_bar_chart_html(chart, "quarterly")', component_source)
+        self.assertRegex(css_source, r"\.ov-mm-research-chart\s*\{[^}]*min-width:\s*0;")
+        self.assertRegex(css_source, r"\.ov-mm-research-chart-scroll\s*\{[^}]*max-width:\s*100%;")
 
     def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model

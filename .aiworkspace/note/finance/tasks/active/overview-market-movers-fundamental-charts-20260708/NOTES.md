@@ -8,3 +8,4 @@
 - 막대 폭은 화면 너비를 채우지 않도록 고정 컬럼 폭 / 고정 bar width로 둔다. 긴 series는 각 그래프 내부 horizontal scroll로 확인한다.
 - 2026-07-08 후속 3: 값은 막대 위 annotation으로 두지 않는다. 좁은 column에서 막대 / 숫자 / 기간 라벨이 겹치므로 `막대 -> 기간 -> 값` 순서로 고정 caption을 둔다. 상세 회계기간 / 공시일은 title / aria label로 남긴다.
 - 2026-07-08 후속 4: 연간과 분기를 같은 축에 합치지 않고 같은 row의 좌우 패널로 둔다. 각 패널은 독립 y-scale을 유지하고, 막대 top을 SVG line overlay로 연결해 같은 series 안의 흐름만 보여준다.
+- 2026-07-08 후속 5: scroll wrapper 자체는 있었지만 `.ov-mm-research-chart` grid child가 기본 `min-width: auto`로 내용 폭을 밀어낼 수 있어 내부 `overflow-x: auto`가 체감되지 않을 수 있었다. chart panel에 `min-width: 0`, scroll wrapper에 `width/max-width: 100%`를 둬 분기처럼 긴 series가 각 그래프 내부에서 좌우 스크롤되도록 고정했다.
