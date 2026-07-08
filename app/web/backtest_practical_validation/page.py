@@ -1764,7 +1764,7 @@ def _render_diagnostic_detail_expanders(validation_result: dict[str, Any]) -> No
 
 
 def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> None:
-    st.markdown("##### Practical Diagnostics")
+    st.markdown("##### 실전성 진단")
     _render_board_context_badges(validation_result, "practical_diagnostics")
     diagnostic_rows = list(validation_result.get("diagnostic_display_rows") or [])
     if diagnostic_rows:
@@ -1772,7 +1772,7 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
             [
                 {
                     "kicker": "Diagnostics",
-                    "title": "Practical diagnostics rows",
+                    "title": "실전성 진단 요약",
                     "status": _audit_status_summary(diagnostic_rows),
                     "detail": "프로필과 source traits에 따라 실전성 진단 row를 compact하게 요약합니다.",
                     "tone": "warning" if any(str(row.get("Status") or "").upper() != "PASS" for row in diagnostic_rows) else "positive",
@@ -1780,7 +1780,7 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
             ],
             min_width=240,
         )
-        with st.expander("Practical Diagnostics 상세", expanded=False):
+        with st.expander("실전성 진단 상세", expanded=False):
             _render_display_dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
     else:
         st.info("표시할 diagnostic row가 없습니다.")
@@ -1788,10 +1788,10 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
 
 def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
     summary_tab, data_tab, construction_tab, realism_tab, robustness_tab, raw_tab = st.tabs(
-        ["핵심 근거", "데이터", "구성 / 리스크", "실전성", "강건성", "Raw Evidence"]
+        ["핵심 근거", "데이터 품질", "구성 / 리스크", "검증 방법론", "강건성", "Raw Evidence"]
     )
     with summary_tab:
-        st.markdown("##### Input Evidence")
+        st.markdown("##### 핵심 입력 근거")
         _render_board_context_badges(validation_result, "input_evidence")
         checks = list(validation_result.get("checks") or [])
         render_pv_card_grid(
@@ -1806,9 +1806,9 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
             ],
             min_width=240,
         )
-        with st.expander("Input Evidence 상세", expanded=False):
+        with st.expander("핵심 입력 근거 상세", expanded=False):
             _render_display_dataframe(pd.DataFrame(checks), width="stretch", hide_index=True)
-        with st.expander("Curve / Recheck Evidence", expanded=False):
+        with st.expander("Curve / 재검증 근거", expanded=False):
             _render_curve_evidence(validation_result)
         _render_validation_alerts(validation_result)
     with data_tab:
@@ -1819,7 +1819,7 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
             st.markdown("##### Provider 근거 상태")
             _render_board_context_badges(validation_result, "provider_coverage")
             st.caption(
-                "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
+                "Ingestion에서 저장한 ETF provider / FRED snapshot이 실전성 진단에 어떻게 연결됐는지 보여줍니다."
             )
             render_pv_card_grid(
                 [
@@ -2293,25 +2293,25 @@ def render_practical_validation_workspace() -> None:
         st.success(str(notice))
 
     render_pv_command_center(
-        eyebrow="Practical Validation Workbench",
+        eyebrow="실전 검증 센터",
         title="Final Review 이동 전 검증 상태",
         detail=(
             "이 후보가 Final Review로 넘어갈 수 있는지, 막힌 항목과 필요한 보강을 먼저 확인합니다. "
             "최종 선택 판단과 사용자 메모는 Final Review에서만 남깁니다."
         ),
-        route_label="Workflow Boundary",
-        route_value="Final Review Only",
+        route_label="업무 경계",
+        route_value="Final Review 전용",
         route_detail=(
-            f"Sources registry: {PORTFOLIO_SELECTION_SOURCE_FILE.name}. "
-            f"Validation registry: {PRACTICAL_VALIDATION_RESULT_FILE.name}. "
-            "Live approval and final memo are disabled here."
+            f"후보 source 기록: {PORTFOLIO_SELECTION_SOURCE_FILE.name}. "
+            f"검증 결과 기록: {PRACTICAL_VALIDATION_RESULT_FILE.name}. "
+            "Live 승인과 최종 메모는 이 화면에서 만들지 않습니다."
         ),
         route_tone="neutral",
         kpis=[
-            {"label": "Selection Sources", "value": len(sources), "detail": "current input"},
-            {"label": "Validation Results", "value": len(validation_rows), "detail": "Saved records"},
-            {"label": "Final Memo", "value": "Final Review", "detail": "Not stored here"},
-            {"label": "Live Approval", "value": "Disabled", "detail": "Read-only evidence"},
+            {"label": "후보 Source", "value": len(sources), "detail": "검증 입력"},
+            {"label": "검증 결과", "value": len(validation_rows), "detail": "저장 기록"},
+            {"label": "최종 메모", "value": "Final Review", "detail": "여기서 저장 안 함"},
+            {"label": "Live 승인", "value": "비활성", "detail": "읽기 전용 근거"},
         ],
     )
 
