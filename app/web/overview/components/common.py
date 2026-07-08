@@ -5245,6 +5245,13 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  gap: 0.42rem;
 	  min-width: 0;
 	}
+	.ov-mm-research-chart-pair {
+	  display: grid;
+	  grid-template-columns: repeat(2, minmax(0, 1fr));
+	  gap: 0.48rem;
+	  align-items: start;
+	  min-width: 0;
+	}
 	.ov-mm-research-chart.is-empty {
 	  color: var(--ov-mi-color-text-muted);
 	  font-size: var(--ov-mi-font-caption);
@@ -5265,6 +5272,34 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  scrollbar-width: thin;
 	  scrollbar-color: var(--ov-mi-border-control) transparent;
 	}
+	.ov-mm-research-chart-plot-wrap {
+	  position: relative;
+	  width: max-content;
+	  min-width: max-content;
+	}
+	.ov-mm-research-chart-line {
+	  position: absolute;
+	  top: 0;
+	  left: 0;
+	  z-index: 3;
+	  height: 10.65rem;
+	  overflow: visible;
+	  pointer-events: none;
+	}
+	.ov-mm-research-chart-line polyline {
+	  fill: none;
+	  stroke: var(--ov-mi-color-primary);
+	  stroke-width: 1.55;
+	  stroke-linecap: round;
+	  stroke-linejoin: round;
+	  opacity: 0.82;
+	}
+	.ov-mm-research-chart-line circle {
+	  fill: var(--ov-mi-color-surface);
+	  stroke: var(--ov-mi-color-primary);
+	  stroke-width: 1.3;
+	  opacity: 0.95;
+	}
 	.ov-mm-research-chart-scroll::-webkit-scrollbar {
 	  height: 0.42rem;
 	}
@@ -5275,18 +5310,20 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	.ov-mm-research-chart-bar-plot {
 	  display: grid;
 	  grid-auto-flow: column;
-	  grid-auto-columns: 4.25rem;
-	  gap: 0.42rem;
+	  grid-auto-columns: 4rem;
+	  gap: 0.25rem;
 	  align-items: end;
+	  position: relative;
+	  z-index: 1;
 	  min-width: max-content;
 	}
 	.ov-mm-research-chart-column {
 	  display: grid;
-	  grid-template-rows: 8.2rem auto;
+	  grid-template-rows: 10.65rem auto;
 	  gap: 0.32rem;
 	  align-items: stretch;
-	  width: 4.25rem;
-	  min-width: 4.25rem;
+	  width: 4rem;
+	  min-width: 4rem;
 	}
 	.ov-mm-research-chart-label,
 	.ov-mm-research-chart-value {
@@ -5312,7 +5349,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  align-items: flex-end;
 	  justify-content: center;
 	  min-width: 0;
-	  height: 8.2rem;
+	  height: 10.65rem;
 	  padding: 0.24rem 0.44rem 0;
 	  border-bottom: 1px solid var(--ov-mi-border-control);
 	  border-radius: var(--ov-mi-radius-card) var(--ov-mi-radius-card) 0 0;
@@ -5321,8 +5358,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	}
 	.ov-mm-research-chart-bar {
 	  display: block;
-	  width: 1.05rem;
-	  max-width: 1.05rem;
+	  width: 0.92rem;
+	  max-width: 0.92rem;
 	  min-height: 0.18rem;
 	  border-radius: var(--ov-mi-radius-card) var(--ov-mi-radius-card) 0 0;
 	  background: var(--ov-mi-color-positive);
@@ -5411,8 +5448,11 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	    align-items: flex-start;
 	    flex-direction: column;
 	  }
+	  .ov-mm-research-chart-pair {
+	    grid-template-columns: 1fr;
+	  }
 	  .ov-mm-research-chart-bar-plot {
-	    grid-auto-columns: 4.05rem;
+	    grid-auto-columns: 4rem;
 	    grid-template-columns: none;
 	  }
 		  .ov-mm-research-grid {

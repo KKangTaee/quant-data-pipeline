@@ -8687,3 +8687,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 얇은 막대는 유지하되 값 / 기간 라벨이 막대 영역과 겹치지 않아야 함.
 - Analysis result: 기존 column은 `값 -> 막대 -> 기간 -> 상세` 순서라 좁은 폭에서 위/아래 텍스트가 모두 압박됐다. 값을 막대 아래 caption으로 내리고 상세 날짜는 hover / aria로 낮추는 것이 맞다.
 - Follow-up: chart column을 `막대 -> 기간 -> 값` 구조로 바꾸고, static preview로 겹침이 해소된 상태를 확인했다.
+
+### 2026-07-08 - Fundamental chart should show bar and line trends in one row
+
+- User request: 막대가 짧으니 상하로 길게 하고 간격을 줄이며, 한 row에서 연간 / 분기를 보되 각 막대 상단을 선으로 이어 선그래프도 함께 포함해 달라고 요청함. 연간과 분기를 같은 축에 합치려는 의도는 아니라고 확인함.
+- Interpreted goal: 각 지표 탭 안에서 연간 패널과 분기 패널을 좌우로 동시에 보이게 하고, 각 패널 안에서는 독립 y-scale의 bar+line combo chart를 보여야 함.
+- Analysis result: 연간 / 분기를 같은 차트에 합치면 scale distortion이 생기므로 좌우 패널이 맞다. 막대 top point는 SVG overlay로 연결하면 데이터 계약 변경 없이 기존 HTML chart를 확장할 수 있다.
+- Follow-up: annual / quarterly pair layout, taller track, tighter column gap, SVG polyline/circle overlay를 추가했다. Static preview는 `fundamental-chart-pair-line-static-preview.png`에 있다.

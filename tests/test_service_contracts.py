@@ -13242,9 +13242,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertIn('class="ov-mm-research-chart"', html)
         self.assertIn('class="ov-mm-research-chart-scroll"', html)
+        self.assertIn('class="ov-mm-research-chart-plot-wrap"', html)
+        self.assertIn('class="ov-mm-research-chart-line"', html)
         self.assertIn('class="ov-mm-research-chart-bar-plot"', html)
         self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
         self.assertIn('class="ov-mm-research-chart-caption"', html)
+        self.assertIn("<polyline", html)
+        self.assertIn("<circle", html)
         self.assertIn("PER", html)
         self.assertIn("2024", html)
         self.assertIn("2025", html)
@@ -13270,6 +13274,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
         self.assertIn("_render_market_mover_research_metric_charts", component_source)
         self.assertIn('st.tabs([chart["label"]', component_source)
+        self.assertIn('class="ov-mm-research-chart-pair"', component_source)
         self.assertNotIn('st.tabs(["연간", "분기"])', component_source)
         self.assertIn('_market_mover_research_bar_chart_html(chart, "annual")', component_source)
         self.assertIn('_market_mover_research_bar_chart_html(chart, "quarterly")', component_source)

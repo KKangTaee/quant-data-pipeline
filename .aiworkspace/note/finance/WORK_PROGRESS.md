@@ -5624,5 +5624,5 @@ Detailed historical logs were archived on `2026-04-13`.
   - Preflight와 React action detail은 수집 대상 수, 범위, 시작일 이유를 클릭 전 보여주며, 상태는 `계산 가능 · 이력 보강 필요`로 화면 계산 정상과 refresh debt를 분리한다.
 - Overview Market Movers Fundamental Chart polish 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/` 후속으로 기본지표 그래프의 연간 / 분기 nested tabs를 제거했다.
-  - 각 PER / EPS / 당기순이익 / 유동비율 / FCF 탭은 연간 그래프와 분기 그래프를 동시에 보여주며, 각 그래프는 얇은 고정 폭 막대와 내부 horizontal scroll을 사용한다.
+  - 각 PER / EPS / 당기순이익 / 유동비율 / FCF 탭은 연간 그래프와 분기 그래프를 좌우 한 row로 보여주며, 각 그래프는 tall bar, tighter spacing, 내부 horizontal scroll, SVG line overlay를 사용한다.
   - 추가 후속으로 막대 위 숫자를 제거하고 기간 / 값을 하단 2줄 caption으로 분리했다. Browser QA는 in-app browser localhost URL policy로 차단됐고, 검증은 focused tests / `py_compile` / static preview로 기록했다.
