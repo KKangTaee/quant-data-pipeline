@@ -30,6 +30,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers 애널리스트 출처 보드:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-source-board-20260709/`에서 `애널리스트 관심`의 링크 묶음 expander를 `출처별 확인 상태` 보드로 바꿨다.
+  - Yahoo/yfinance는 세션 전용 구조화 단서로, MarketWatch / WSJ Markets / Nasdaq.com은 `원문 교차확인` 상태로 분리해 표시한다.
+  - 자동 크롤링, DB 저장, 추천 / 점수화 / 매매 신호는 추가하지 않았다.
 - Overview Market Movers 시장 관심 뉴스 / SEC 분리:
   - `.aiworkspace/note/finance/tasks/active/overview-market-interest-news-sec-split-20260709/`에서 선택 종목 `시장 관심` 패널의 `뉴스 리스트`와 `SEC 공시 촉매`를 별도 evidence section으로 분리했다.
   - Form 144처럼 제목이 form명뿐인 SEC metadata는 `SEC Form 144 · 제한/지배주식 매각 예정 통지`로 표시해 뉴스 기사와 혼동하지 않게 했다.

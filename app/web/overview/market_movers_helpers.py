@@ -3871,6 +3871,34 @@ def _market_interest_summary_html(items: list[dict[str, Any]]) -> str:
     return "<div style='display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px 0;'>" + "".join(blocks) + "</div>"
 
 
+def _market_interest_source_cards_html(cards: list[dict[str, Any]]) -> str:
+    blocks: list[str] = []
+    for card in cards:
+        tone_color, tone_bg, tone_border = _market_mover_tone_style(str(card.get("Tone") or "neutral"))
+        url = str(card.get("URL") or "").strip()
+        link_html = ""
+        if url:
+            link_html = (
+                f"<a href='{escape(url, quote=True)}' target='_blank' rel='noopener noreferrer' "
+                f"style='font-size:12px; color:{tone_color}; font-weight:700; text-decoration:none;'>원문</a>"
+            )
+        blocks.append(
+            "<div style='"
+            f"border:1px solid {tone_border}; background:{tone_bg}; border-radius:8px; "
+            "padding:10px 12px; min-width:220px; flex:1 1 220px;'>"
+            "<div style='display:flex; align-items:center; justify-content:space-between; gap:8px;'>"
+            f"<div style='font-size:13px; font-weight:750; color:{OVERVIEW_COLOR_TEXT};'>{escape(str(card.get('Source') or '-'))}</div>"
+            f"{link_html}"
+            "</div>"
+            f"<div style='font-size:14px; font-weight:750; color:{tone_color}; margin-top:5px;'>{escape(str(card.get('State') or '-'))}</div>"
+            f"<div style='font-size:12px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:4px;'>{escape(str(card.get('Detail') or ''))}</div>"
+            f"<div style='font-size:11px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:6px;'>{escape(str(card.get('Policy') or ''))}</div>"
+            f"<div style='font-size:11px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:2px;'>{escape(str(card.get('Caveat') or ''))}</div>"
+            "</div>"
+        )
+    return "<div style='display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px 0;'>" + "".join(blocks) + "</div>"
+
+
 def _market_interest_section(model: dict[str, Any], section_id: str) -> dict[str, Any]:
     for section in list(model.get("evidence_sections") or []):
         if isinstance(section, dict) and section.get("id") == section_id:
@@ -3905,6 +3933,11 @@ def _render_market_mover_market_interest(model: dict[str, Any], *, requested: bo
     analyst_section = _market_interest_section(section_model, "analyst_interest")
     st.markdown("##### 애널리스트 관심")
     st.caption(str(analyst_section.get("description") or "업그레이드/다운그레이드와 목표가 변경은 외부 source에서 확인합니다."))
+    analyst_source_cards = [dict(card) for card in list(analyst_section.get("source_cards") or []) if isinstance(card, dict)]
+    if analyst_source_cards:
+        st.markdown("###### 출처별 확인 상태")
+        st.markdown(_market_interest_source_cards_html(analyst_source_cards), unsafe_allow_html=True)
+        st.caption("MarketWatch / WSJ / Nasdaq은 자동 수집 없이 원문 확인 링크로만 제공합니다.")
     analyst_rows = _market_interest_rows_frame(analyst_section.get("rows"))
     st.markdown("###### 최근 애널리스트 액션")
     _render_market_mover_metadata_table(
@@ -3921,7 +3954,7 @@ def _render_market_mover_market_interest(model: dict[str, Any], *, requested: bo
             "Source",
             "Open",
         ],
-        "구조화 analyst rows가 없으면 아래 공개 페이지 교차확인 링크로 원문을 확인하세요.",
+        "구조화 analyst rows가 없으면 하단 출처/원문 링크에서 직접 확인하세요.",
     )
 
     target_rows = _market_interest_rows_frame(analyst_section.get("target_rows"))
@@ -3941,15 +3974,6 @@ def _render_market_mover_market_interest(model: dict[str, Any], *, requested: bo
             recommendation_rows,
             ["Period", "Strong Buy", "Buy", "Hold", "Sell", "Strong Sell", "Source", "Open"],
             "의견 분포가 없습니다.",
-        )
-
-    analyst_source_rows = _market_interest_rows_frame(analyst_section.get("source_rows"))
-    with st.expander("공개 페이지 교차확인", expanded=analyst_rows.empty):
-        st.caption("Nasdaq / WSJ / MarketWatch는 원문 교차확인 링크로 제공합니다. 이 단계에서는 해당 HTML을 자동 수집하지 않습니다.")
-        _render_market_mover_metadata_table(
-            analyst_source_rows,
-            ["Source", "Policy", "Evidence", "Caveat", "Open"],
-            "교차확인 링크가 없습니다.",
         )
 
     news_section = _market_interest_section(section_model, "news_catalysts")

@@ -26,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-09 - Analyst source cards must distinguish structured data from original-page links
+
+- User request: 사용자가 `애널리스트 관심`에 yfinance만 보이는 것이 의도인지 묻고, 여러 analyst 사이트를 보여주되 자동 크롤링 전에는 출처별 차이를 명확히 하고 싶다고 확인함.
+- Interpreted goal: 애널리스트 관심은 `Yahoo/yfinance 구조화 단서`와 `MarketWatch / WSJ / Nasdaq 원문 교차확인`을 같은 링크 묶음으로 보여주지 말고, 자동 수집 여부와 source policy를 한눈에 구분해야 한다.
+- Analysis result: 이번 차수에서는 크롤러를 추가하지 않고 read model에 `source_cards`를 추가해 `구조화 조회됨 / 구조화 단서 없음 / 조회 실패 / 원문 교차확인` 같은 보수적 상태만 표시한다.
+- Follow-up: `overview-market-interest-source-board-20260709`에서 visible source board, focused tests, Browser QA, commit 단위로 닫는다. 실제 multi-site parsing은 별도 provider policy 검토 후 진행한다.
+
 ### 2026-07-09 - Market Interest 뉴스와 SEC 공시는 같은 리스트가 아니다
 
 - User request: 사용자가 `뉴스/공시 촉매` 한 표에 뉴스와 SEC 공시가 섞여 있어 같은 종류처럼 보인다고 지적하고, 뉴스 리스트와 공시 촉매 리스트 분리를 제안함.

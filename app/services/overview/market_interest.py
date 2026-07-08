@@ -505,6 +505,88 @@ def _sec_filing_catalyst_rows(metadata: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _link_url_for_source(links: pd.DataFrame, source: str) -> str:
+    if not isinstance(links, pd.DataFrame) or links.empty or "Source" not in links.columns:
+        return ""
+    matches = links[links["Source"] == source]
+    if matches.empty or "URL" not in matches.columns:
+        return ""
+    return _clean_text(matches.iloc[0].get("URL")) or ""
+
+
+def _build_analyst_source_cards(
+    *,
+    links: pd.DataFrame,
+    analyst_payload: dict[str, Any],
+    analyst_rows: list[dict[str, Any]],
+    analyst_target_rows: list[dict[str, Any]],
+    analyst_recommendation_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    analyst_status = _clean_text(analyst_payload.get("status"), upper=True) or ""
+    has_structured_rows = bool(analyst_rows or analyst_target_rows or analyst_recommendation_rows)
+    if has_structured_rows:
+        yahoo_state = "구조화 조회됨"
+        yahoo_tone = "success"
+        yahoo_detail = (
+            f"최근 액션 {len(analyst_rows)}건 · "
+            f"목표가 {len(analyst_target_rows)}개 · "
+            f"의견 분포 {len(analyst_recommendation_rows)}개"
+        )
+    elif analyst_payload and analyst_status == "ERROR":
+        yahoo_state = "조회 실패"
+        yahoo_tone = "warning"
+        yahoo_detail = "세션 조회 오류 · 원문 교차확인 필요"
+    elif analyst_payload:
+        yahoo_state = "구조화 단서 없음"
+        yahoo_tone = "neutral"
+        yahoo_detail = "선택 종목에서 세션 메타데이터 rows 없음 · 원문 교차확인 필요"
+    else:
+        yahoo_state = "조회 전"
+        yahoo_tone = "neutral"
+        yahoo_detail = "버튼 조회 전 · 원문 링크만 준비됨"
+
+    cards = [
+        {
+            "Source": YFINANCE_ANALYST_SOURCE,
+            "State": yahoo_state,
+            "Detail": yahoo_detail,
+            "Policy": "session_structured_lead",
+            "Caveat": "선택 종목 버튼 조회 · 세션 전용 · durable storage 없음",
+            "URL": _link_url_for_source(links, "Yahoo Finance Analysis"),
+            "Tone": yahoo_tone,
+        }
+    ]
+    for source, link_source, detail in [
+        (
+            "MarketWatch",
+            "MarketWatch Analyst Estimates",
+            "자동 파싱 보류 · analyst estimates/targets 원문 직접 확인",
+        ),
+        (
+            "WSJ Markets",
+            "WSJ Markets Research & Ratings",
+            "자동 파싱 보류 · research ratings/targets 원문 직접 확인",
+        ),
+        (
+            "Nasdaq.com",
+            "Nasdaq Analyst Research",
+            "자동 파싱 보류 · analyst research 원문 직접 확인",
+        ),
+    ]:
+        cards.append(
+            {
+                "Source": source,
+                "State": "원문 교차확인",
+                "Detail": detail,
+                "Policy": "external_research_link",
+                "Caveat": "공개 페이지 링크만 제공하며 HTML body는 수집하거나 저장하지 않습니다.",
+                "URL": _link_url_for_source(links, link_source),
+                "Tone": "neutral",
+            }
+        )
+    return cards
+
+
 def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[str, Any] | None = None) -> dict[str, Any]:
     """Build a conservative selected-symbol market-interest investigation model."""
 
@@ -551,6 +633,13 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
     source_rows = _link_records(links)
     news_rows = _news_catalyst_rows(payload)
     sec_rows = _sec_filing_catalyst_rows(payload)
+    analyst_source_cards = _build_analyst_source_cards(
+        links=links,
+        analyst_payload=analyst_payload,
+        analyst_rows=analyst_rows,
+        analyst_target_rows=analyst_target_rows,
+        analyst_recommendation_rows=analyst_recommendation_rows,
+    )
     summary_items = [
         {
             "id": "analyst_interest",
@@ -598,6 +687,7 @@ def build_market_interest_read_model(*, mover: dict[str, Any], metadata: dict[st
             "rows": analyst_rows,
             "target_rows": analyst_target_rows,
             "recommendation_rows": analyst_recommendation_rows,
+            "source_cards": analyst_source_cards,
             "source_rows": _links_for_lane(links, "애널리스트 관심"),
         },
         {
