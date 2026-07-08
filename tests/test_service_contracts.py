@@ -12192,6 +12192,32 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             flow2_body.index("_render_actual_replay_panel(source)"),
         )
 
+    def test_practical_validation_downstream_flows_wait_for_explicit_replay(self) -> None:
+        from app.web.backtest_practical_validation import page as practical_page
+
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_practical_validation_workspace", 1)[1]
+        flow2_to_flow3 = workspace_body.split('eyebrow="Flow 3"', 1)[0]
+
+        self.assertFalse(practical_page._has_current_session_replay_result(None))
+        self.assertFalse(practical_page._has_current_session_replay_result({}))
+        self.assertFalse(practical_page._has_current_session_replay_result({"status": "NOT_RUN"}))
+        self.assertTrue(
+            practical_page._has_current_session_replay_result(
+                {"status": "BLOCKED", "replay_id": "pv_recheck_blocked"}
+            )
+        )
+        self.assertTrue(
+            practical_page._has_current_session_replay_result(
+                {"status": "REVIEW", "attempted_at": "2026-07-08T10:00:00"}
+            )
+        )
+        self.assertIn("_has_current_session_replay_result(replay_result)", flow2_to_flow3)
+        self.assertLess(
+            flow2_to_flow3.index("_has_current_session_replay_result(replay_result)"),
+            workspace_body.index("build_practical_validation_result("),
+        )
+
     def test_practical_validation_source_tables_are_arrow_safe_display_tables(self) -> None:
         import pyarrow as pa
 

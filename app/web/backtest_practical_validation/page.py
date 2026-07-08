@@ -699,6 +699,19 @@ def _clear_practical_validation_replay_state(source_id: str | None = None) -> No
             del st.session_state[key]
 
 
+def _has_current_session_replay_result(replay_result: Any) -> bool:
+    """Return True only after the user has attempted Flow 2 replay in this session."""
+
+    if not isinstance(replay_result, dict) or not replay_result:
+        return False
+    if replay_result.get("replay_id") or replay_result.get("attempted_at"):
+        return True
+    status = str(replay_result.get("status") or "").strip().upper()
+    if status and status != "NOT_RUN":
+        return True
+    return False
+
+
 def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None:
     source_id = source.get("selection_source_id") or "source"
     mode = st.radio(
@@ -2341,6 +2354,10 @@ def render_practical_validation_workspace() -> None:
         st.divider()
         st.markdown("##### 실전 재검증 실행")
         replay_result = _render_actual_replay_panel(source)
+
+    if not _has_current_session_replay_result(replay_result):
+        st.info("Flow 2에서 `전략 재검증 실행`을 실행하면 검증 결론과 기준 상세가 이어서 표시됩니다.")
+        return
 
     validation_result = build_practical_validation_result(
         source,
