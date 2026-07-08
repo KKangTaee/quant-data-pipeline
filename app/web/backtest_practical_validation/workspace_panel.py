@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import streamlit as st
-
 from app.web.backtest_practical_validation.components import (
     render_pv_card_grid,
     render_pv_section_header,
@@ -145,22 +143,6 @@ def _workspace_group_status(modules: list[dict[str, Any]]) -> str:
     if not counts:
         return "-"
     return " / ".join(f"{status} {count}" for status, count in sorted(counts.items()))
-
-
-def _workspace_group_cards(groups: list[dict[str, Any]], *, kicker: str) -> list[dict[str, Any]]:
-    cards: list[dict[str, Any]] = []
-    for group in groups:
-        modules = [dict(module or {}) for module in list(group.get("modules") or [])]
-        cards.append(
-            {
-                "kicker": kicker,
-                "title": group.get("label") or group.get("group_id") or "-",
-                "status": _workspace_group_status(modules),
-                "detail": group.get("purpose") or f"{len(modules)} module(s)",
-                "tone": _workspace_group_tone(modules),
-            }
-        )
-    return cards
 
 
 def _react_fix_queue_items(fix_queue: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -310,8 +292,6 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
     fix_queue = list(workspace.get("fix_queue") or gate_summary.get("blocking_modules") or [])
     core_groups = list(workspace.get("core_evidence_groups") or [])
-    conditional_groups = list(workspace.get("conditional_evidence_groups") or [])
-    downstream_groups = list(workspace.get("downstream_reference_groups") or [])
     criteria_groups = list(workspace.get("criteria_detail_groups") or [])
     repair_count = int(summary.get("criteria_repair_count") or 0)
     not_practical_count = int(summary.get("criteria_not_practical_count") or 0)
@@ -339,15 +319,3 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
             summary=summary,
             criteria_groups=criteria_groups,
         )
-    if conditional_groups or downstream_groups:
-        with st.expander("조건부 근거와 후속 참고", expanded=False):
-            if conditional_groups:
-                render_pv_card_grid(
-                    _workspace_group_cards(conditional_groups, kicker="Conditional"),
-                    min_width=250,
-                )
-            if downstream_groups:
-                render_pv_card_grid(
-                    _workspace_group_cards(downstream_groups, kicker="Reference"),
-                    min_width=250,
-                )

@@ -9796,6 +9796,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_react_criteria_group_items", panel_source)
         self.assertIn("overall_outcome_label", panel_source)
         self.assertIn("overall_outcome_headline", panel_source)
+        self.assertNotIn("조건부 근거와 후속 참고", panel_source)
         self.assertNotIn("verdict=str(gate_summary.get(\"verdict", panel_source)
         self.assertNotIn("status_label=readiness_status", panel_source)
 

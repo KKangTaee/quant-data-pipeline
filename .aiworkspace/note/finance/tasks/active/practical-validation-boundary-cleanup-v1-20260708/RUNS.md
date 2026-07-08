@@ -22,3 +22,15 @@
 - Browser QA:
   - Streamlit on `http://localhost:8541/backtest`
   - Confirmed Flow 3 / Flow 4 section has no `Final Review 참고`, `Final Review 이동 요약`, `Final Review 이동 보류`, `Final Review 이동 가능`, `검증 모듈 / 기술 상세`, `확인 필요`, or `보류 항목`.
+
+## 2026-07-08 follow-up
+
+- RED:
+  - `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow3_uses_conclusion_summary`
+  - Failed because Flow 3 still rendered `조건부 근거와 후속 참고`.
+- GREEN:
+  - `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow3_uses_conclusion_summary`
+  - Passed after removing the Flow 3 expander renderer.
+- Related:
+  - `.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_practical_validation_workspace_groups_stage_two_evidence_before_downstream_references tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_fix_queue_react_component_is_ui_only tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow3_uses_conclusion_summary tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow4_uses_criteria_detail_board tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_workspace_model_builds_criteria_detail_groups`
+  - Passed. The read model still keeps conditional / downstream groups, but Flow 3 no longer repeats them.
