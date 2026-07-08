@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
+  - Latest completed task is [institutional-portfolios-workspace-v1-20260708](./tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-08 - Institutional Portfolios belongs in Workspace, not Market Movers or Operations
+
+- User request: 투자 대가 / 기관별 전체 portfolio와 보유 변화 탐색 기능을 Market Movers와 분리된 새 Workspace tab으로 1차~6차 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: Market Movers의 선택 종목 관심 근거와 delayed SEC Form 13F manager portfolio research를 분리하고, DB-backed ingestion / loader / service / UI 경계를 지킨다.
+- Analysis result: `Workspace > Institutional Portfolios`가 맞다. `Operations`는 사용자 포트폴리오 monitoring / action queue 의미가 강하고, `Reference`는 static guidance에 가까워 실제 manager / holding exploration surface로 약하다.
+- Follow-up: `institutional-portfolios-workspace-v1-20260708`에서 SEC official dataset schema / parser / ingestion action / loader / read model / UI / docs를 추가했다. 13F delay, short / cash / derivatives / hedge omission, CUSIP-symbol caveat는 visible boundary로 남겼고 trading signal / broker / auto rebalance에는 연결하지 않았다.
 
 ### 2026-07-08 - Post-merge docs refresh must verify code-flow labels, not only Markdown
 

@@ -100,6 +100,18 @@ The action facade is allowed to call ingestion job wrappers, browser-session aut
 
 Overview context does not create trade signals, Practical Validation PASS / BLOCKER, Final Review selected-route decisions, monitoring signals, registry rows, saved setup rows, broker orders, or auto rebalance actions.
 
+### Workspace > Institutional Portfolios
+
+Institutional Portfolios is a read-only Workspace research surface for delayed SEC Form 13F filings.
+
+It reads official quarterly SEC Form 13F data sets only after an explicit Ingestion action stores manager, filing, holdings, and CUSIP-symbol mapping rows in MySQL.
+The normal path is `finance/data/institutional_13f.py -> finance_meta.institutional_13f_* -> finance/loaders/institutional_13f.py -> app/services/institutional_portfolios.py -> app/web/institutional_portfolios.py`.
+
+It owns manager search, latest reported portfolio summary, holdings table, quarter-over-quarter reported changes, sector exposure, symbol / CUSIP reverse lookup, and source links.
+It does not fetch SEC or third-party pages during normal render, write workflow registries, create saved portfolio setup, feed Backtest / Practical Validation / Final Review, or create monitoring signals.
+
+13F copy must stay explicit that filings can be delayed up to 45 days after quarter end, mostly show long reportable securities, omit shorts / cash / hedge structure / full trading intent, and are not buy / sell instructions.
+
 ### Backtest > Backtest Analysis
 
 Backtest Analysis creates candidate sources.
@@ -154,6 +166,7 @@ Sentiment context and target snapshot are context and monitoring evidence, not i
 | Data Class | Canonical Place | Rule |
 |---|---|---|
 | Full OHLCV, futures, macro, sentiment, provider, holdings, exposure, lifecycle rows | MySQL finance DBs | Store through `finance/data/*`; read through `finance/loaders/*` |
+| Full SEC Form 13F manager / filing / holding rows | MySQL `finance_meta.institutional_13f_*` | Store through explicit Ingestion action; read through institutional loader / service; do not copy full holdings to workflow JSONL |
 | Backtest candidate source | `PORTFOLIO_SELECTION_SOURCES.jsonl` | Compact handoff only |
 | Practical Validation result | `PRACTICAL_VALIDATION_RESULTS.jsonl` | Compact evidence, gate state, reason summary only |
 | Final Review selected-route decision | `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | Compact packet / gate snapshot / open review items only |
@@ -170,6 +183,7 @@ The following are context or investigation evidence unless a later approved task
 - CNN Fear & Greed and AAII Sentiment
 - Futures Macro Thermometer and historical validation
 - Overview Market Movers / Why It Moved metadata
+- Workspace > Institutional Portfolios SEC Form 13F holdings and reported changes
 - Market event calendar
 - Current listing snapshots, SEC CIK cross-checks, computed lifecycle partial rows
 - Risk-On Momentum 5D Backtest Analysis swing detail and generated artifacts

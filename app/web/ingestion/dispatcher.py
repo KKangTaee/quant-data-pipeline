@@ -13,6 +13,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_macro_calendar,
     run_collect_market_structure_calendar,
     run_collect_market_sentiment,
+    run_collect_sec_13f_dataset,
     run_collect_sec_company_ticker_crosscheck,
     run_import_bls_macro_calendar_ics,
     run_collect_etf_holdings_exposure,
@@ -200,6 +201,9 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "collect_sec_form25_delistings":
         params["progress_callback"] = progress_callback
         return run_collect_sec_form25_delistings(**params)
+    if action == "collect_sec_13f_dataset":
+        params["progress_callback"] = progress_callback
+        return run_collect_sec_13f_dataset(**params)
     if action == "collect_symbol_directory_snapshots":
         params["progress_callback"] = progress_callback
         return run_collect_symbol_directory_snapshots(**params)

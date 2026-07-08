@@ -413,6 +413,97 @@ def render_operational_section() -> Any:
             )
         _render_inline_last_completed_result("extended_statement_refresh")
 
+    with st.expander("SEC Form 13F 데이터셋 수집", expanded=False):
+        _render_job_brief("collect_sec_13f_dataset")
+        st.caption(
+            "SEC 공식 Form 13F quarterly data set zip을 DB에 저장해 `Workspace > Institutional Portfolios`에서 읽습니다. "
+            "13F는 분기 지연 공시이며 현재 매매 의도를 뜻하지 않습니다."
+        )
+        st.caption(
+            "저장 테이블: `finance_meta.institutional_13f_manager`, "
+            "`finance_meta.institutional_13f_filing`, `finance_meta.institutional_13f_holding`"
+        )
+        sec13f_default_url = (
+            "https://www.sec.gov/files/structureddata/data/form-13f-data-sets/"
+            "01mar2026-31may2026_form13f.zip"
+        )
+        sec13f_cols = st.columns(2)
+        sec13f_dataset_label = sec13f_cols[0].text_input(
+            "Dataset Label",
+            value="2026-march-april-may",
+            key="sec13f_dataset_label",
+            help="DB source_dataset에 저장할 사람이 읽는 label입니다.",
+        )
+        sec13f_user_agent = sec13f_cols[1].text_input(
+            "SEC User-Agent Override",
+            value="",
+            key="sec13f_user_agent",
+            help="선택 사항입니다. 비워두면 SEC_USER_AGENT 환경변수 또는 collector 기본값을 사용합니다.",
+        )
+        sec13f_url = st.text_input(
+            "SEC 13F Dataset URL",
+            value=sec13f_default_url,
+            key="sec13f_dataset_url",
+            help="SEC Form 13F Data Sets 페이지의 official zip 링크를 입력합니다.",
+        )
+        sec13f_local_path = st.text_input(
+            "Local Zip Path",
+            value="",
+            key="sec13f_local_zip_path",
+            help="이미 내려받은 zip 파일이 있으면 이 경로를 우선 사용합니다. 입력하면 URL download를 하지 않습니다.",
+        )
+        _render_collection_contract(
+            "실행 전 확인",
+            [
+                ("Source", "SEC Form 13F official data set"),
+                ("Dataset", sec13f_dataset_label or "-"),
+                ("Input", "local zip path" if sec13f_local_path.strip() else "SEC URL"),
+                ("저장 위치", "finance_meta institutional_13f_* tables"),
+            ],
+            note=(
+                "이 수집은 대용량 quarterly zip을 처리할 수 있습니다. UI는 결과만 읽고, full holdings row는 DB에 남깁니다. "
+                "CUSIP-symbol mapping은 별도 mapping table이 보강되기 전까지 partial입니다."
+            ),
+        )
+        if st.button(
+            "SEC Form 13F 데이터셋 수집 실행",
+            use_container_width=True,
+            disabled=_has_running_job() or not (sec13f_local_path.strip() or sec13f_url.strip()),
+        ):
+            _schedule_job(
+                {
+                    "action": "collect_sec_13f_dataset",
+                    "job_name": "collect_sec_13f_dataset",
+                    "spinner_text": "Collecting SEC Form 13F data set...",
+                    "params": {
+                        "dataset_url": None if sec13f_local_path.strip() else sec13f_url.strip(),
+                        "dataset_zip_path": sec13f_local_path.strip() or None,
+                        "source_dataset": sec13f_dataset_label.strip() or None,
+                        "user_agent": sec13f_user_agent.strip() or None,
+                    },
+                    "run_metadata": _job_metadata(
+                        pipeline_type="institutional_13f_dataset_collection",
+                        execution_mode="operational_low_frequency",
+                        symbol_source="SEC Form 13F official data set",
+                        symbol_count=None,
+                        execution_context=(
+                            "Institutional Portfolios Workspace가 읽을 SEC 13F filing / holdings snapshot을 DB에 저장합니다."
+                        ),
+                        input_params={
+                            "dataset_url": None if sec13f_local_path.strip() else sec13f_url.strip(),
+                            "dataset_zip_path": sec13f_local_path.strip() or None,
+                            "source_dataset": sec13f_dataset_label.strip() or None,
+                        },
+                    ),
+                }
+            )
+        if _is_running_action("collect_sec_13f_dataset"):
+            current_progress_callback = _build_progress_callback(
+                st.session_state.running_job,
+                label="SEC Form 13F Data Set",
+            )
+        _render_inline_last_completed_result("collect_sec_13f_dataset")
+
     with st.expander("종목 메타데이터 업데이트", expanded=False):
         _render_job_brief("metadata_refresh")
         st.caption("권장 주기: 주 1회 또는 tracked universe / profile filter가 바뀐 뒤 실행합니다.")

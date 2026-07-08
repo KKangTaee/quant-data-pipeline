@@ -835,6 +835,137 @@ PROVIDER_SCHEMAS = {
 }
 
 
+INSTITUTIONAL_13F_SCHEMAS = {
+    "institutional_13f_manager": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_manager (
+          cik VARCHAR(10) PRIMARY KEY,
+          manager_name VARCHAR(255) NOT NULL,
+
+          latest_accession_number VARCHAR(25) NULL,
+          latest_report_period DATE NULL,
+          latest_filing_date DATE NULL,
+          filing_count INT NOT NULL DEFAULT 0,
+
+          source VARCHAR(64) NOT NULL DEFAULT 'sec_form_13f_dataset',
+          source_ref VARCHAR(1024) NULL,
+          last_collected_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          KEY ix_manager_name (manager_name),
+          KEY ix_latest_report_period (latest_report_period),
+          KEY ix_latest_filing_date (latest_filing_date)
+        );
+    """,
+    "institutional_13f_filing": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_filing (
+          accession_number VARCHAR(25) PRIMARY KEY,
+          cik VARCHAR(10) NOT NULL,
+          manager_name VARCHAR(255) NOT NULL,
+
+          submission_type VARCHAR(10) NOT NULL,
+          filing_date DATE NOT NULL,
+          period_of_report DATE NOT NULL,
+          report_calendar_or_quarter DATE NULL,
+
+          is_amendment TINYINT(1) NOT NULL DEFAULT 0,
+          amendment_no INT NULL,
+          amendment_type VARCHAR(64) NULL,
+          report_type VARCHAR(64) NULL,
+          form13f_file_number VARCHAR(32) NULL,
+
+          table_entry_total INT NULL,
+          table_value_total DECIMAL(24,4) NULL,
+          is_confidential_omitted TINYINT(1) NULL,
+
+          source_dataset VARCHAR(128) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+          collected_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          KEY ix_cik_period (cik, period_of_report),
+          KEY ix_manager_name (manager_name),
+          KEY ix_period_filing (period_of_report, filing_date),
+          KEY ix_source_dataset (source_dataset)
+        );
+    """,
+    "institutional_13f_holding": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_holding (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          accession_number VARCHAR(25) NOT NULL,
+          infotable_sk BIGINT NOT NULL,
+          cik VARCHAR(10) NOT NULL,
+          manager_name VARCHAR(255) NOT NULL,
+          report_period DATE NOT NULL,
+          filing_date DATE NOT NULL,
+
+          issuer_name VARCHAR(255) NOT NULL,
+          title_of_class VARCHAR(150) NULL,
+          cusip CHAR(9) NOT NULL,
+          figi VARCHAR(16) NULL,
+
+          reported_value DECIMAL(24,4) NULL,
+          shares_or_principal_amount DECIMAL(24,4) NULL,
+          amount_type VARCHAR(10) NULL,
+          put_call VARCHAR(10) NULL,
+          investment_discretion VARCHAR(32) NULL,
+          other_manager VARCHAR(128) NULL,
+          voting_auth_sole DECIMAL(24,4) NULL,
+          voting_auth_shared DECIMAL(24,4) NULL,
+          voting_auth_none DECIMAL(24,4) NULL,
+
+          holding_symbol VARCHAR(20) NULL,
+          symbol_source VARCHAR(64) NULL,
+          sector VARCHAR(100) NULL,
+          industry VARCHAR(150) NULL,
+
+          source_dataset VARCHAR(128) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+          collected_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_accession_info_table (accession_number, infotable_sk),
+          KEY ix_cik_period (cik, report_period),
+          KEY ix_cusip (cusip),
+          KEY ix_holding_symbol (holding_symbol),
+          KEY ix_sector (sector),
+          KEY ix_source_dataset (source_dataset)
+        );
+    """,
+    "institutional_13f_cusip_symbol_map": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_cusip_symbol_map (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          cusip CHAR(9) NOT NULL,
+          symbol VARCHAR(20) NOT NULL,
+          issuer_name VARCHAR(255) NULL,
+          figi VARCHAR(16) NULL,
+          sector VARCHAR(100) NULL,
+          industry VARCHAR(150) NULL,
+
+          source VARCHAR(64) NOT NULL,
+          confidence DOUBLE NULL,
+          source_ref VARCHAR(1024) NULL,
+          verified_at TIMESTAMP NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_cusip_symbol_source (cusip, symbol, source),
+          KEY ix_cusip (cusip),
+          KEY ix_symbol (symbol),
+          KEY ix_source (source)
+        );
+    """,
+}
+
+
 FUNDAMENTAL_SCHEMAS = {
     "fundamentals": """
         CREATE TABLE IF NOT EXISTS nyse_fundamentals (

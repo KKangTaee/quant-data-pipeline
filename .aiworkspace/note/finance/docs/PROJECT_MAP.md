@@ -14,6 +14,7 @@ Last Verified: 2026-07-08
 - Backtest strategy engine과 daily swing research lane은 `finance/*`, `app/runtime/*`, `app/services/*`가 소유하고, Streamlit UI는 payload / render / session state에 집중한다.
 - Practical Validation / Final Review / Portfolio Monitoring은 compact evidence와 read-only service model을 공유하되, approval / broker / auto rebalance 경계는 넘지 않는다.
 - Overview의 Sentiment, Futures Macro, Why It Moved는 context / investigation surface이며 validation gate나 monitoring signal을 만들지 않는다.
+- Workspace > Institutional Portfolios는 Market Movers와 분리된 SEC Form 13F institutional research surface이며 delayed holdings context만 제공한다.
 
 ## Top-Level Structure
 
@@ -53,6 +54,8 @@ Last Verified: 2026-07-08
 | Finance Console shell / navigation | `app/web/streamlit_app.py` |
 | Workspace > Ingestion console | `app/web/ingestion_console.py` remains the compatibility facade. Active UI body lives under `app/web/ingestion/`: `page.py` owns the shell / session-state boundary, `registry.py` owns active vs legacy compatibility action classification, `guides.py` owns purpose-first job guide metadata, `styles.py` owns responsive CSS, `results.py` owns pure result summaries, `dispatcher.py` owns UI action dispatch / read-only diagnostic job wrapping, and `sections.py` owns the `일상 운영 / 검증 데이터`, `수동 복구 / 진단`, `실행 기록 / 결과` workbench renderers. Broad yfinance fundamentals / factors remain compatibility-only |
 | Workspace > Ingestion read-only diagnostics service | `app/services/ingestion_diagnostics.py` |
+| SEC Form 13F official dataset ingestion | `finance/data/institutional_13f.py` parses official SEC quarterly Form 13F ZIP datasets and UPSERTs manager / filing / holding / CUSIP-symbol map tables. `app/jobs/ingestion_jobs.py`, `app/web/ingestion/registry.py`, `dispatcher.py`, `guides.py`, and `sections.py` expose the explicit Ingestion action. |
+| Workspace > Institutional Portfolios | `app/web/institutional_portfolios.py` renders the read-only manager portfolio / reported change / sector exposure / reverse lookup screen. `app/services/institutional_portfolios.py` owns Streamlit-free read models and caveats. `finance/loaders/institutional_13f.py` owns DB read paths. |
 | Financial statement source migration path | EDGAR collection / raw ledger: `finance/data/financial_statements.py`; statement shadow rebuild: `finance/data/fundamentals.py`, `finance/data/factors.py`; loaders: `finance/loaders/financial_statements.py`, `finance/loaders/fundamentals.py`, `finance/loaders/factors.py`; Ingestion job orchestration: `app/jobs/ingestion_jobs.py` with shared helper contracts in `app/jobs/ingestion/common.py`; UI entry: `app/web/ingestion_console.py` / `app/web/ingestion/page.py` |
 | Finance workspace path constants | `app/workspace_paths.py` |
 | Backtest page | `app/web/backtest_page.py` |
@@ -204,6 +207,7 @@ Backtest Analysis
 | Data | Location | Commit Policy |
 |---|---|---|
 | Current / candidate / final decision registries | `.aiworkspace/note/finance/registries/*.jsonl` | 명시 요청 없이는 새 runtime 생성물 커밋 금지. 저장 경계는 `docs/data/STORAGE_GOVERNANCE.md` 기준 |
+| Full SEC Form 13F manager / filing / holdings rows | MySQL `finance_meta.institutional_13f_*` | Ingestion -> DB -> loader -> UI 경로만 사용. Workflow JSONL / saved setup에 full holdings를 저장하지 않음 |
 | Saved portfolio setup | `.aiworkspace/note/finance/saved/*.jsonl` | 보존 대상. validation / approval record가 아니라 reusable setup. `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`은 Operations > Portfolio Monitoring의 사용자 monitoring portfolio setup이며 legacy dashboard file name을 유지한다 |
 | Backtest result reports | `.aiworkspace/note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
 | Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
@@ -218,6 +222,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Situation | Start Here |
 |---|---|
 | Overview macro context cockpit / historical analog / market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview/`, `app/services/overview_market_context_analog.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview/`, `app/web/overview/components/`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
+| 투자 대가 / 기관별 SEC 13F portfolio explorer 수정 | `finance/data/institutional_13f.py`, `finance/loaders/institutional_13f.py`, `app/services/institutional_portfolios.py`, `app/web/institutional_portfolios.py`, `app/web/streamlit_app.py`, `app/web/ingestion/*`, `app/jobs/ingestion_jobs.py` |
 | S&P 500 / Nasdaq-listed universe, intraday snapshot, market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/symbol_directory.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview/market_movers.py`, `app/services/overview/events.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |
 | Backtest UI 수정 | `app/web/backtest_page.py`, 관련 `app/web/backtest_*.py`; Compare visual shell은 `app/web/backtest_compare/components.py` |

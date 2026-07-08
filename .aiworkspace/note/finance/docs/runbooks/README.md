@@ -8,6 +8,7 @@ Last Verified: 2026-07-08
 | Runbook | Use When |
 |---|---|
 | [EDGAR_FINANCIAL_STATEMENT_REFRESH.md](./EDGAR_FINANCIAL_STATEMENT_REFRESH.md) | EDGAR annual statement refresh, statement coverage diagnosis, shadow rebuild, SEC fair-access / pacing 확인 |
+| [INSTITUTIONAL_13F_DATASET.md](./INSTITUTIONAL_13F_DATASET.md) | SEC Form 13F official quarterly dataset ingestion, user-agent, source caveat, QA 확인 |
 | [OVERVIEW_MARKET_INTELLIGENCE.md](./OVERVIEW_MARKET_INTELLIGENCE.md) | Overview Market Context / Market Movers / Futures Macro / Sentiment / Events refresh 운영, scheduled refresh automation, FOMC / earnings estimate 수집, closeout QA |
 | [OPERATIONS_OVERVIEW_QA.md](./OPERATIONS_OVERVIEW_QA.md) | Operations Overview V2 화면 / routing / review queue / no-live boundary QA |
 

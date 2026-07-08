@@ -20,6 +20,7 @@ from app.web.ingestion_console import (
     promote_pending_job,
     render_ingestion_page,
 )
+from app.web.institutional_portfolios import render_institutional_portfolios_page
 from app.web.operations_overview import render_operations_overview_page
 from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
@@ -171,6 +172,15 @@ def _render_ingestion_page() -> None:
     )
 
 
+def _render_institutional_portfolios_page() -> None:
+    render_institutional_portfolios_page(
+        runtime_marker=APP_RUNTIME_MARKER,
+        loaded_at=APP_RUNTIME_LOADED_AT,
+        git_sha=CURRENT_GIT_SHORT_SHA,
+        render_runtime_snapshot=_render_runtime_build_indicator,
+    )
+
+
 def _render_backtest_page() -> None:
     st.title("Backtest")
     st.caption("백테스트 실행부터 비교, 후보 검토, Pre-Live 운영 기록, Portfolio Proposal까지 이어지는 후보 검토 작업 공간입니다.")
@@ -288,6 +298,12 @@ def main() -> None:
     apply_pending_ingestion_prefill()
 
     overview_page = st.Page(_render_overview_page, title="Overview", icon="🏠", default=True, url_path="overview")
+    institutional_portfolios_page = st.Page(
+        _render_institutional_portfolios_page,
+        title="Institutional Portfolios",
+        icon="🏛️",
+        url_path="institutional-portfolios",
+    )
     ingestion_page = st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion")
     backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
     ops_review_page = st.Page(_render_ops_review_page, title="System / Data Health", icon="🧾", url_path="ops-review")
@@ -323,6 +339,7 @@ def main() -> None:
         {
             "Workspace": [
                 overview_page,
+                institutional_portfolios_page,
                 ingestion_page,
                 backtest_page,
             ],

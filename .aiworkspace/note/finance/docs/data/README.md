@@ -24,7 +24,7 @@ Last Verified: 2026-07-08
 
 | DB | Role |
 |---|---|
-| `finance_meta` | universe, asset profile, ETF provider snapshot, macro / sentiment context, event calendar, market data issue |
+| `finance_meta` | universe, asset profile, ETF provider snapshot, macro / sentiment context, event calendar, market data issue, institutional 13F filings |
 | `finance_price` | OHLCV / dividend / split price history, intraday snapshot, futures OHLCV |
 | `finance_fundamental` | fundamentals, financial statements, derived factors |
 
@@ -45,6 +45,10 @@ Last Verified: 2026-07-08
 | `market_intraday_snapshot` | Overview daily market movers and sector/group leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage. Current UI reads this through Market Movers / Market Context, not a standalone Sector / Industry primary tab |
 | `market_data_issue` | Overview quote gap 같은 반복 market data issue를 symbol / universe 단위로 누적 추적 |
 | `market_event_calendar` | Overview Events calendar snapshot for FOMC, macro releases, earnings, market-structure events, fixed-income calendar events, and corporate-action candidates. Rows use normalized taxonomy fields such as `event_family`, `event_subtype`, `universe_scope`, and `source_authority`; macro/FOMC/Treasury rows are official schedule context, while earnings rows remain provider estimates unless issuer/official confirmation is stored. |
+| `institutional_13f_manager` | SEC Form 13F filer / manager master and latest filing pointer |
+| `institutional_13f_filing` | 13F filing-level metadata including report period, filing date, accession, amendment flag, and source link |
+| `institutional_13f_holding` | 13F information table holdings row ledger for reportable long positions in official quarterly SEC data sets |
+| `institutional_13f_cusip_symbol_map` | best-effort CUSIP to display symbol mapping derived from 13F rows and later enrichment |
 | `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
 | `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
@@ -92,6 +96,7 @@ runtime-defined JSONL 파일은 첫 workflow write 전에는 로컬에 없을 �
 - official row가 partial이면 DB bridge와 병합하되 source origin을 숨기지 않는다.
 - Practical Validation JSONL에는 compact evidence와 reason만 저장하고, full provider raw data는 DB에 둔다.
 - CNN / AAII sentiment, futures macro thermometer, Why It Moved metadata는 market context / investigation evidence이며 자동 trade signal, validation approval, monitoring signal로 저장하지 않는다.
+- SEC Form 13F holdings are delayed reporting evidence. Reported changes are not live buy / sell signals and do not show shorts, cash, derivatives, hedge structure, or full trading intent.
 - 새 JSONL registry는 기본적으로 만들지 않고, stage handoff나 명시적 reusable setup이 아닌 저장은 피한다.
 - static stress window JSON은 투자 신호가 아니라 재현 가능한 검증 preset이다.
 - Operations > Portfolio Monitoring read model은 monitoring log 자동 저장, live approval, broker order, account sync, auto rebalance를 수행하지 않는다. legacy `Selected Portfolio Dashboard` file/helper 이름은 남아 있지만 사용자 portfolio setup은 saved state로만 관리한다.

@@ -23,13 +23,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
+  - Latest completed task is [institutional-portfolios-workspace-v1-20260708](./tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
 
+- Institutional Portfolios Workspace V1 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-workspace-v1-20260708/`에서 1차~6차 scope를 진행했다.
+  - `Workspace > Institutional Portfolios`를 Market Movers와 분리된 delayed SEC Form 13F research surface로 추가하고, SEC official dataset ingestion / schema / loader / service / UI / docs / runbook을 연결했다.
+  - 13F 45일 지연, shorts / cash / derivatives / hedge omission, CUSIP-symbol mapping caveat를 visible boundary로 남겼고, Backtest / Practical Validation / Final Review / Operations live workflow에는 연결하지 않았다.
 - Post-Merge Docs / Code Flow Refresh 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`에서 master 병합 후 공용 docs, status manifests, Overview runbook / data flow docs를 current state로 정렬했다.
   - Current Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`로 문서화했고, legacy `Futures Monitor` / `Sector / Industry` primary surface 표현을 낮췄다.
