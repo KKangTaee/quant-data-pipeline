@@ -122,7 +122,7 @@ yfinance 5m OHLCV fallback
 
 finance_price.market_intraday_snapshot or finance_price.nyse_price_history
   -> app.services.overview.market_movers.build_group_leadership_snapshot()
-  -> Workspace > Overview > Sector / Industry
+  -> Workspace > Overview > Market Movers / Market Context sector evidence
 
 missing quote rows
   -> finance.data.market_intelligence.diagnose_market_quote_gaps()
@@ -141,7 +141,7 @@ missing quote rows
 - Top1000 / Top2000 / Nasdaq-listed daily movers도 저장된 quote snapshot을 우선 읽는다. Top universe는 `nyse_asset_profile.market_cap` current snapshot 기준이고 Nasdaq-listed universe는 Symbol Directory current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
 - Missing quote diagnostics는 Yahoo single-symbol quote, 5D history, DB EOD price, asset profile, 필요 시 yfinance `fast_info` evidence를 비교해 `provider_quote_gap` 같은 원인 후보를 job result로 표시한다.
 - 진단 결과는 `market_data_issue`에 `issue_type=quote_gap`으로 누적 저장한다. 이는 반복 발생 횟수와 최신 evidence를 추적하기 위한 운영 table이며, 상장폐지 / 거래정지 확정 판정은 아니다.
-- Sector / Industry daily leadership은 저장된 intraday snapshot이 있으면 `Previous Close -> latest quote` 기준을 사용한다. Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용하며, 최신 raw row가 sparse하면 prior eligible date로 fallback한다.
+- Sector / group leadership은 저장된 intraday snapshot이 있으면 `Previous Close -> latest quote` 기준을 사용한다. Weekly / Monthly leadership은 EOD DB의 최신 usable date를 사용하며, 최신 raw row가 sparse하면 prior eligible date로 fallback한다. Current UI는 이를 Market Movers `Sector Pulse` / Market Context sector evidence로 읽는다.
 
 ## Overview market event calendar 흐름
 
@@ -192,7 +192,7 @@ finance_meta.market_event_calendar
 - `build_events_workbench_payload()` owns the React-ready Events brief, command boundary, filter labels, rail tabs, trust review, calendar day buckets, weekly density, and evidence rows. React filters, tabs, month-grid rendering, and hover interactions are display-only over that payload.
 - React-first Events hides the legacy Streamlit Type selector and refresh result expander when the component build is available. The helper still owns refresh side effects and attaches last refresh results to `command.last_results`; the old Streamlit toolbar remains fallback-only.
 
-## Overview futures monitor 흐름
+## Overview futures macro / OHLCV 흐름
 
 ```text
 yfinance futures OHLCV
@@ -203,7 +203,7 @@ yfinance futures OHLCV
   -> app.services.futures_market_monitoring.build_futures_monitor_snapshot()
   -> app.services.futures_macro_thermometer.build_futures_macro_thermometer_snapshot()
   -> app.services.futures_macro_validation.build_futures_macro_validation_snapshot()
-  -> Workspace > Overview > Futures Monitor
+  -> Workspace > Overview > Futures Macro
   -> Market Context source / refresh evidence
   -> Operations > System / Data Health / Workspace > Ingestion for detailed diagnostics
 
@@ -216,7 +216,7 @@ finance_price.futures_ohlcv daily rows
 의미:
 
 - 1차 source는 Yahoo/yfinance provider symbol 기반의 pilot feed다.
-- 기본 watchlist는 주가지수, 금리, 원자재, FX futures이며 optional micro / crypto futures는 별도 그룹으로 둔다.
+- 기본 watchlist는 주가지수, 금리, 원자재, FX futures이며 optional micro / crypto futures는 별도 그룹으로 둔다. Current primary UI는 Futures Macro이고, 1m chart / run diagnostics는 보조 evidence다.
 - 정상 화면 render는 DB row를 읽고, 수집은 Overview refresh button이 `app/jobs/overview_actions.py` facade를 호출하거나 Ingestion job wrapper가 실행한다.
 - yfinance가 `period=1d`, `interval=1m`에서 일부 futures symbol을 빈 응답 또는 지나치게 희소한 응답으로 돌려주면 collector는 해당 symbol만 `period=2d`, `interval=1m`으로 한 번 보강 수집한다. 성공 / 실패, 초기 row 수, 회복 symbol은 `futures_market_monitor_run.diagnostics_json.fallback_retries`에 남긴다.
 - `futures_market_monitor_run`과 Overview local run history가 Data Health의 latest success / failed symbols / stale 판단에 사용된다.

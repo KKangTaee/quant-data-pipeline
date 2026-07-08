@@ -1,7 +1,7 @@
 # Finance Storage Governance
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-07-08
 
 ## Purpose
 
@@ -21,7 +21,7 @@ Last Verified: 2026-06-07
 - UI는 provider / FRED / crawler를 직접 fetch하지 않는다. `Ingestion -> DB -> Loader -> UI` 흐름을 유지한다.
 - `NOT_RUN`은 pass가 아니며, 저장 record에서도 실행 불가 / 데이터 부재로 남긴다.
 - Final Review와 Operations > Portfolio Monitoring의 record는 live approval, broker order, auto rebalance가 아니다.
-- Overview Sentiment, Futures Monitor, Macro Thermometer, Why It Moved metadata는 market context / investigation evidence이며 workflow JSONL이나 saved setup을 자동 생성하지 않는다.
+- Overview Sentiment, Futures Macro, stored futures chart diagnostics, Why It Moved metadata는 market context / investigation evidence이며 workflow JSONL이나 saved setup을 자동 생성하지 않는다.
 - Structured waiver는 현재 구현하지 않는다. 향후 필요해도 `BLOCK`은 waiver 불가이며, 일부 `REVIEW_REQUIRED` gap만 compact final decision evidence로 검토한다.
 
 ## Current Storage Model

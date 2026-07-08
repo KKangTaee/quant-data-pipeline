@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-07-07
+Last Verified: 2026-07-08
 
 ## Purpose
 
@@ -42,11 +42,11 @@ Last Verified: 2026-07-07
 | `market_universe_member` | Overview market intelligence current universe membership |
 | `market_liquidity_universe_member` | Market Movers Top1000 / Top2000 current membership materialized from recent average dollar volume |
 | `market_symbol_alias` | Market Movers ticker-change repair alias store. Quote-missing old tickers can be detected as candidates, then explicitly applied as active aliases for future intraday quote lookup |
-| `market_intraday_snapshot` | Overview daily market movers and Sector / Industry daily leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage |
+| `market_intraday_snapshot` | Overview daily market movers and sector/group leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage. Current UI reads this through Market Movers / Market Context, not a standalone Sector / Industry primary tab |
 | `market_data_issue` | Overview quote gap 같은 반복 market data issue를 symbol / universe 단위로 누적 추적 |
 | `market_event_calendar` | Overview Events calendar snapshot for FOMC, macro releases, earnings, market-structure events, fixed-income calendar events, and corporate-action candidates. Rows use normalized taxonomy fields such as `event_family`, `event_subtype`, `universe_scope`, and `source_authority`; macro/FOMC/Treasury rows are official schedule context, while earnings rows remain provider estimates unless issuer/official confirmation is stored. |
-| `futures_instrument` | Overview Futures Monitor watchlist preset / display metadata for yfinance pilot futures symbols |
-| `futures_ohlcv` | Overview Futures Monitor 1m / daily OHLCV candle ledger for selected futures symbols. Daily rows feed the Futures Macro Thermometer current scores and point-in-time historical validation |
+| `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
+| `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |

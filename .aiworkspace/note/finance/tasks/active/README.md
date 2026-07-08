@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `practical-validation-boundary-cleanup-v1-20260708` closeout. |
+| none | - | No active task after `post-merge-docs-flow-refresh-20260708` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `post-merge-docs-flow-refresh-20260708` | Completed record | 2026-07-08 master 병합 후 current pointer, code flow docs, Overview surface names, and runbook boundaries were refreshed without changing code behavior or registry / saved JSONL. |
 | `practical-validation-boundary-cleanup-v1-20260708` | Completed record | Practical Validation Flow 3 / Flow 4 visible UI now separates current validation fix work from Final Review judgment items. |
 | `practical-validation-flow4-final-review-handoff-v1-20260708` | Completed record | Flow 4 reduced Final Review-only REVIEW items from current validation problem detail; later Boundary Cleanup removed the visible handoff count from Flow 3 / Flow 4. |
 | `practical-validation-flow4-outcome-taxonomy-v1-20260708` | Completed record | Flow 4 outcome labels separate pass, recheck-needed, Final Review judgment, and blocked meanings while preserving `Current=REVIEW` where appropriate. |

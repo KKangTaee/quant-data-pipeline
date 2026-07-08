@@ -1,7 +1,7 @@
 # Finance System Boundaries
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-07-08
 
 ## Purpose
 
@@ -69,6 +69,9 @@ Partial lifecycle, provider, macro, futures, or sentiment evidence must remain v
 
 Overview is a market context and data health surface with approved bounded refresh actions.
 
+Current primary tabs are `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`.
+`Futures Monitor` and `Sector / Industry` standalone tabs are not current primary surfaces; their data paths remain as futures OHLCV / sector evidence consumed by Futures Macro, Market Context, and Market Movers.
+
 It reads DB-backed service models for:
 
 - Market Movers, sector breadth evidence, Events
@@ -111,7 +114,7 @@ Risk-On Momentum 5D governance connection to Practical Validation / Final Review
 
 Practical Validation turns a candidate source into compact investability evidence.
 
-It owns source confirmation, module planning, Final Review Gate, provider context, macro context, robustness, construction risk, risk contribution, component role / weight, validation efficacy, data coverage, and backtest realism evidence.
+It owns source confirmation, module planning, Final Review Gate, provider context, macro context, robustness, construction risk, risk contribution, component role / weight, Validation Method Strength, data coverage, and backtest realism evidence.
 
 `NOT_RUN` is not pass.
 Stored validation rows that fail the Final Review gate are audit trail, not Final Review candidates.

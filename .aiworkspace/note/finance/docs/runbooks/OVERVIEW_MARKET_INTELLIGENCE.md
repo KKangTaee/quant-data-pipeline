@@ -1,11 +1,11 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-07
+Last Verified: 2026-07-08
 
 ## Purpose
 
-이 runbook은 `Workspace > Overview`의 Market Movers, Sector / Industry, Futures Monitor, Sentiment, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
+이 runbook은 `Workspace > Overview`의 Market Context, Market Movers, Futures Macro, Sentiment, Events 데이터를 수동, browser-session auto refresh, 또는 scheduled refresh로 갱신하고 정상 여부를 확인하는 절차를 정리한다.
 
 ## When To Use
 
@@ -13,7 +13,7 @@ Last Verified: 2026-07-07
 - FOMC calendar row를 갱신해야 할 때
 - CPI / PPI / Employment Situation / GDP 같은 macro release calendar row를 갱신해야 할 때
 - latest S&P 500 movers 또는 수동 ticker의 upcoming earnings event를 갱신해야 할 때
-- 선물장 OHLCV와 개장 전 급변 상태를 Overview Futures Monitor에서 확인하고 싶을 때
+- 저장된 선물 OHLCV와 일봉 매크로 상태를 Overview Futures Macro에서 확인하고 싶을 때
 - CNN Fear & Greed / AAII bearish sentiment context를 갱신하거나 freshness를 확인해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
@@ -73,23 +73,16 @@ http://localhost:8501
    - 복구 후에도 missing이 남으면 `Diagnose Missing Quotes`로 provider coverage, listing evidence, previous-close coverage를 다시 확인한다.
    - daily intraday missing row는 `Diagnose Missing Quotes`로 원인 후보를 확인한다. 결과는 `finance_meta.market_data_issue`에 반복 issue로 누적된다.
 
-3. `Workspace > Overview > Sector / Industry`
-   - `Coverage`, `Group`, `Period`, `Top N`, `Min Symbols`를 선택한다.
-   - `Latest Ranking`에서 equal-weight / cap-weighted return, 구성 종목 수, 대표 symbol, breadth / concentration summary를 확인한다.
-   - `Trend`에서 Daily 1M, Weekly 3M, Monthly 12M window의 group 흐름을 보고, `Trend Groups`로 표시할 group을 좁힌다.
-   - 같은 `Group` mode 안에서는 `Coverage`, `Period`, `Top N`, `Min Symbols`를 바꿔도 유효한 `Trend Groups` 선택을 유지한다. `Sector`와 `Industry` 선택 기억은 분리된다.
-   - Trend chart는 `Heatmap`, `Line`, `Latest Delta` 하위 탭으로 본다. Heatmap은 구간별 양/음 흐름, Line은 경로, Latest Delta는 latest window와 previous window의 변화폭을 빠르게 확인하는 용도다.
+3. `Workspace > Overview` sector evidence
+   - `Sector / Industry`는 current primary tab이 아니다. Sector 흐름은 `Market Context`의 sector pressure / breadth evidence와 `Market Movers`의 `Sector Pulse` / group leadership에서 확인한다.
+   - `Market Movers`에서는 `Coverage`, `Period`, `Sector`, `Top N`을 바꿔 선택 mover set 안의 평균 return, breadth, concentration, leading symbols를 확인한다.
    - daily period는 저장된 `market_intraday_snapshot`이 있으면 `Previous Close -> latest quote` 기준을 사용한다.
-   - weekly / monthly period는 EOD DB 기준이다. 최신 raw EOD row가 sparse하면 `Effective EOD Date`와 fallback reason이 status에 표시된다.
-   - positive return group을 선택하면 해당 group 안의 ticker leaders와 return-share donut을 확인한다. Ticker leader bar는 양수일 때 sector color, 음수일 때 danger red를 사용하고, 직전 동일 기간 return은 얇은 marker로 표시한다.
+   - weekly / monthly / yearly period는 EOD DB 기준이다. 최신 raw EOD row가 sparse하면 effective date와 fallback reason을 먼저 확인한다.
+   - Market Context의 sector pressure map은 provider sector alias를 canonical sector로 normalize해 동일 크기 tile로 보여준다. tile 크기가 아니라 색상 / 값 / breadth를 읽는다.
 
-4. `Workspace > Overview > Futures Monitor`
-   - 기본 `관찰 그룹`은 `개장 전 핵심`이다. 기본 후보는 `NQ=F`(지수), `ZN=F`(금리), `CL=F`(원유), `6E=F`(FX), `GC=F`(금), `6J=F`(엔)를 보여준다.
-   - `관찰 그룹`은 1차 선택지를 `개장 전 핵심`, `주가지수`, `금리`, `원자재`, `환율`, `전체 보기`로 단순화했다. optional micro / crypto 그룹은 기본 사용 흐름에서 노출하지 않는다.
-   - `선물 선택`, `시간 범위`, `차트 봉`, `차트 범위`를 먼저 정한다. `차트 봉`은 저장된 1분봉 row를 표시용으로 `1분 / 5분 / 15분 / 60분` 집계한다.
-   - `데이터 갱신` popover에서 `수동` 또는 `60초 자동 확인`을 고른다. `선택 선물 1분봉 갱신`은 현재 선택한 선물만 수집하고, `화면만 다시 읽기`는 DB state를 다시 읽는다.
-   - 60초 자동 확인은 브라우저 세션이 열려 있을 때만 동작하며 provider를 매초 호출하지 않는다. 20초 fast mode는 이 화면의 기본 선택지로 노출하지 않는다.
-   - 상단 `선물 워크스페이스`, `단기 움직임`, `데이터 상태`를 먼저 본다. 최신 candle이 오래됐으면 차트는 latest stored data를 보여주되 `오래됨`과 갱신 안내를 표시한다.
+4. `Workspace > Overview > Futures Macro`
+   - 이 tab은 저장된 주요 선물 1D OHLCV로 macro state를 읽는 current primary surface다. `Futures Monitor` standalone tab은 current primary navigation이 아니다.
+   - 상단 command strip에서 `일봉 갱신`, `최신 데이터 다시 읽기`, `과거 점검` 상태를 확인한다.
    - `매크로 컨텍스트`는 core 16개 선물의 저장된 1D OHLCV를 읽어 오늘 기준 시장 해석, 근거 강도, 자료 기준, score chip, 현재 score evidence를 보여준다. Futures Macro tab의 React workbench는 command strip, 현재 브리프, score chip, 1D / 1W / 1M 흐름, 과거 점검, 현재 근거 panel을 렌더링한다.
    - Futures Macro tab 첫 진입은 `include_validation=False` snapshot으로 빠르게 렌더링한다. Historical validation은 과거 점검 카드의 `오늘과 비슷한 과거 흐름 확인`을 눌렀을 때만 계산되며, `일봉 갱신` / `다시 읽기`는 session validation state를 clear한다.
    - Historical validation은 DB에 materialize하지 않고 Streamlit process 안에서 latest futures daily marker / proxy price marker 기준으로 캐시한다. 같은 저장 데이터 기준에서 반복해서 `오늘과 비슷한 과거 흐름 확인`을 누르면 재계산 비용을 줄이고, `일봉 갱신` / `다시 읽기`는 이 process cache도 함께 clear한다.
@@ -100,9 +93,9 @@ http://localhost:8501
    - `원본 데이터 / 계산 추적`을 열면 화면 섹션별 원본 연결, 자료 기준, `현재 점수 원본`, `점수 구성 기여`, `선물 일봉 변화`, `과거 시나리오 표본`, `점수-이후수익 관계`, `기준값 민감도`를 확인한다. `비슷한 과거 상태`는 반복 빈도 또는 5D 방향성 적용 여부를 확인하는 read-only context이며, 매수/매도 신호가 아니다.
    - 매크로 일봉이 비어 있거나 근거가 부족하면 `일봉 매크로 데이터 갱신`을 눌러 core 16개 `5y / 1d` backfill을 실행하거나, `Workspace > Ingestion > 선물 OHLCV 수집`에서 `Period=5y`, `Interval=1d`로 수동 실행한다.
    - Historical Validation은 저장된 daily futures row를 point-in-time으로 재계산한 과거 일관성 평가다. 현재 시나리오의 directional sample / hit rate, score threshold sensitivity, score-forward-return relationship을 보되 예측 보장으로 해석하지 않는다. 혼재 시나리오는 억지로 risk-on / risk-off directional hit rule에 넣지 않으며 occurrence count와 hit-rate N/A로 본다.
-   - `실시간 선물 차트`에서 선택 symbol을 포함한 최대 6개 미니 캔들 차트를 본다. 더 넓게 보려면 `차트 범위`를 `데이터 있는 전체`로 바꾼다.
+   - 하단 data management / chart context에서는 stored 1m candle chart와 stale state를 보조로 확인할 수 있다. 최신 candle이 오래됐으면 차트는 latest stored data를 보여주되 `오래됨`과 갱신 안내를 표시한다.
    - `진단 / Provider 근거`는 보조 disclosure다. 최신 run status, rows, processed / requested, latest candle time은 여기서 확인한다.
-   - Futures Monitor는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
+   - Futures Macro는 시장 컨텍스트 화면이며 live approval, order, broker/account sync, auto rebalance를 만들지 않는다.
 
 5. `Workspace > Overview > Sentiment`
    - `시장 심리 갱신`을 누르면 `collect_market_sentiment` job이 CNN Fear & Greed와 AAII Sentiment Survey를 수집해 `finance_meta.macro_series_observation`에 저장한다.
@@ -284,17 +277,17 @@ PY
 - Market Movers `Why It Moved` renders a ticker selector sourced from Return Rank and Volume Rank rows, then shows a movement summary header with selected ticker identity, rank / coverage / period context, return / previous return / momentum delta, volume, and dollar volume. The visible labels are Korean except the main `Why It Moved` title and source/product names.
 - Market Movers `Why It Moved` shows a metadata status strip before the fetch button: `조회 상태`, 뉴스 rows / failure, 한국어 뉴스 rows / failure, SEC rows / failure, `조회 시각`, and `세션 전용` storage boundary. `PARTIAL` / `부분 완료` is warning-level evidence, not a complete lookup.
 - Market Movers `Why It Moved` uses `조사 단서` sections for `뉴스 메타데이터`, `한국어 뉴스`, `SEC 공시`, and collapsed `외부 검색`. The `한국어 뉴스` lane is powered by keyless Google News KR RSS and displays metadata/snippet only; no Naver API key, article scraping, or article body storage is required. Yahoo Finance, Google News, SEC company search, IR / earnings, Google News KR, and Naver News stay as collapsed external rows with clickable `열기` URLs instead of primary action buttons.
-- Futures Monitor shows the latest stored candle window for each selected symbol even when provider freshness is stale; stale latest candles should appear as `Stale`, not as missing chart data.
+- Futures Macro lower chart / diagnostics show the latest stored candle window for each selected symbol even when provider freshness is stale; stale latest candles should appear as `Stale`, not as missing chart data.
 - Market Movers `Why It Moved > SEC 공시` preserves the compact SEC table as `양식 / 공시일 / 제목 / 열기`. V1.7 / V1.8 selected-filing preview and `공시 Digest` were rolled back after user review, so this lane currently does not fetch, parse, preview, or store filing bodies; users open official SEC documents through the clickable `열기` links.
 - `Why It Moved` remains a manual investigation panel. It does not summarize, crawl, collect article bodies, collect filing bodies, run sentiment analysis, auto-classify catalysts, mutate DB schema, or write workflow JSONL / saved setup rows.
 - `간단 메타데이터 조회` is button-only and selected-ticker-only. The not-yet-run state is visible before lookup; `OK`, `PARTIAL`, no metadata, and failed lookup states are separate. Metadata URL columns render as clickable `열기` links. SEC filings are displayed as 양식 / 공시일 / 제목 / 열기 and sorted by date with form-priority tie-breaks.
 - Compact metadata is session-only. DB-backed metadata persistence is not part of V1.6 and requires a later V2 storage / freshness / retention decision.
-- Sector / Industry displays `Latest Breadth Heatmap`, `Latest Ranking`, trend detail, positive group ticker leaders, and raw tables behind `상세 표`.
-- Sector / Industry daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
-- Sector / Industry status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.
-- Sector / Industry shows `Best Breadth`, `Cap vs Equal`, `Concentration`, and `Improving` insight cards above the latest ranking chart.
-- Sector / Industry Trend has `Heatmap`, `Line`, and `Latest Delta` chart tabs, and valid `Trend Groups` selections persist across controls inside the same group mode.
-- Sector / Industry Positive Group Detail ticker bars use sector colors for positive returns, danger red for negative returns, and high-contrast previous-period return markers.
+- Market Movers / Market Context sector evidence displays breadth, group leadership, trend context, positive group ticker leaders, and raw tables as supporting detail rather than a standalone primary tab.
+- Sector/group daily mode uses the stored intraday previous-close snapshot when available; weekly / monthly remain EOD DB based.
+- Sector/group status distinguishes `Effective Quote Time` from `Effective EOD Date` and explains sparse raw-date fallback.
+- Sector/group evidence shows breadth, cap-vs-equal, concentration, and improving context before raw ranking detail.
+- Sector/group trend evidence can use heatmap, line, and latest-delta style views when surfaced inside the current Market Movers / Market Context flows.
+- Positive group detail ticker bars use sector colors for positive returns, danger red for negative returns, and high-contrast previous-period return markers.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - Coverage Diagnostics keeps `Reason` / `Recommended Action` and adds compact `Likely Cause`, `Evidence Summary`, `Next Check`, `Listing Evidence`, `Profile Freshness`, and `Market Data Issue` evidence. These are DB-backed hints, not legal status, trading signal, validation gate, or monitoring signal.
 - Quote gap diagnostics persist repeated issue history to `finance_meta.market_data_issue` and display occurrence count / latest evidence in Coverage Diagnostics.

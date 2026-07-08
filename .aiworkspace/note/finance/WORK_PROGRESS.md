@@ -23,12 +23,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
 
+- Post-Merge Docs / Code Flow Refresh 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`에서 master 병합 후 공용 docs, status manifests, Overview runbook / data flow docs를 current state로 정렬했다.
+  - Current Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`로 문서화했고, legacy `Futures Monitor` / `Sector / Industry` primary surface 표현을 낮췄다.
+  - 코드 리뷰 중 Overview Data Health handoff / Market Context cockpit의 legacy label drift를 발견해 service contract와 tests를 `Futures Macro` / `Market Movers` 기준으로 보정했다.
 - Practical Validation Boundary Cleanup V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-boundary-cleanup-v1-20260708/`에서 Flow 3 / Flow 4 visible UI를 Practical Validation 전용 결론과 보강 원인으로 정리했다.
   - Flow 3은 Final Review 이동 가능 / 보류와 REVIEW count를 제거하고 `보강 후 재검증`, 실패 category, 검증 category만 보여준다.

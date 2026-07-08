@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-07-07
+Last Verified: 2026-07-08
 
 ## 목적
 
@@ -33,7 +33,7 @@ Last Verified: 2026-07-07
 | `market_symbol_alias` | Market Movers ticker-change repair alias store. Quote-missing old ticker와 replacement ticker 후보 / 적용 상태를 저장해 future intraday quote lookup에서 사용 |
 | `market_event_calendar` | Overview Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
 | `market_data_issue` | Overview Market Movers quote gap 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
-| `futures_instrument` | Overview Futures Monitor용 선물 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
+| `futures_instrument` | Overview futures용 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
 | `futures_market_monitor_run` | Futures OHLCV 수집 run diagnostics. 최근 run status, failed symbols, latest candle time을 저장 |
 | `etf_provider_source_map` | ETF별 issuer 공식 endpoint / parser mapping cache. verified row를 provider snapshot collector가 사용 |
 | `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. DB bridge/proxy row와 일부 issuer official actual/partial row를 source별로 저장 |
@@ -47,7 +47,7 @@ Last Verified: 2026-07-07
 |---|---|
 | `nyse_price_history` | stock / ETF 공용 OHLCV, dividend, split price ledger |
 | `market_intraday_snapshot` | Overview daily movers용 intraday latest price / previous close snapshot. S&P 500 / Top1000 / Top2000 coverage별 최신 refresh row를 저장 |
-| `futures_ohlcv` | Overview Futures Monitor용 선물 OHLCV candle ledger. 1m row는 shock board / chart에, 1d row는 Macro Thermometer current score와 historical validation에 사용 |
+| `futures_ohlcv` | Overview futures OHLCV candle ledger. 1m row는 stored-candle chart / diagnostics에, 1d row는 Futures Macro current score와 historical validation에 사용 |
 
 ### `finance_fundamental`
 

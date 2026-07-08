@@ -19,8 +19,11 @@ from finance.loaders.sentiment import (
 )
 
 from app.services.overview.data_health import (
+    DATA_HEALTH_FUTURES_MACRO_DAILY_AREA,
+    DATA_HEALTH_FUTURES_MACRO_1M_AREA,
     build_collection_ops_snapshot,
     build_overview_data_health_ingestion_handoff,
+    normalize_overview_data_health_area,
 )
 from app.services.overview.events import (
     build_market_events_snapshot,
@@ -436,14 +439,14 @@ def build_overview_source_confidence_catalog(
         _source_confidence_item(
             item_id="breadth",
             title="Breadth / Groups",
-            surface="Sector / Industry",
+            surface="Market Movers",
             source="Stored price rows plus profile sector / industry metadata",
             owner="Overview group leadership read model",
             status=breadth_status,
             freshness=group_coverage.get("snapshot_time_utc") or group_coverage.get("effective_end_date"),
             detail=f"{_cockpit_int(group_coverage.get('returnable_count'))}/{_cockpit_int(group_coverage.get('universe_count'))} symbols grouped",
             caveat="시장 폭은 참여도와 집중도를 요약할 뿐 종목 선택 규칙이 아닙니다.",
-            next_check="Sector / Industry freshness와 그룹 coverage가 breadth 맥락의 주의점입니다.",
+            next_check="Market Movers group leadership freshness와 coverage가 breadth 맥락의 주의점입니다.",
         ),
         *(
             [
@@ -501,9 +504,9 @@ def build_overview_source_confidence_catalog(
         _source_confidence_item(
             item_id="data_health",
             title="Data Health",
-            surface="Data Health",
+            surface="Operations > System / Data Health",
             source="DB freshness summaries and local run history",
-            owner="Data Health read model and owning collection surfaces",
+            owner="Operations > System / Data Health and owning collection surfaces",
             status=data_status,
             freshness=data_coverage.get("latest_success_at") or data_coverage.get("latest_auto_at"),
             detail=(
@@ -858,10 +861,10 @@ def _build_cockpit_breadth_card(snapshot: dict[str, Any]) -> dict[str, Any]:
         "status": status,
         "status_label": _cockpit_status_label(status),
         "tone": _cockpit_status_tone(status),
-        "source": "Sector / Industry",
+        "source": "Market Movers · Group leadership",
         "freshness": coverage.get("effective_end_date") or "-",
         "freshness_label": _cockpit_freshness_label(coverage.get("effective_end_date")),
-        "target_tab": "Sector / Industry",
+        "target_tab": "Market Movers",
         "badges": [
             {"label": "자료 범위", "value": f"{coverage.get('returnable_count') or 0}/{coverage.get('universe_count') or 0}", "tone": "neutral"},
             {"label": "참여 비율", "value": share_value, "tone": "positive" if share_value != "-" else "neutral"},
@@ -1038,7 +1041,7 @@ def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], 
             "source": "Data Health",
             "freshness": coverage.get("latest_success_at") or coverage.get("latest_auto_at") or "-",
             "freshness_label": _cockpit_freshness_label(coverage.get("latest_success_at") or coverage.get("latest_auto_at")),
-            "target_tab": "Data Health",
+            "target_tab": "Operations > System / Data Health",
             "badges": [
                 {"label": "정상", "value": str(coverage.get("ok_count") or 0), "tone": "positive"},
                 {"label": "확인 필요", "value": str(review_count), "tone": "warning" if review_count else "positive"},
@@ -1048,10 +1051,10 @@ def _build_cockpit_data_card(snapshot: dict[str, Any]) -> tuple[dict[str, Any], 
     )
 
 def _data_health_collection_action_copy(area: Any, action: Any) -> str:
-    area_text = str(area or "").strip()
+    area_text = normalize_overview_data_health_area(area)
     mapping = {
-        "Futures Monitor 1m OHLCV": "기존 Futures OHLCV 수집 또는 Overview bounded refresh로 선물 가격 이력을 갱신하세요.",
-        "Futures Monitor Daily OHLCV": "기존 Futures OHLCV 수집으로 daily 선물 가격 이력을 갱신하세요.",
+        DATA_HEALTH_FUTURES_MACRO_1M_AREA: "기존 Futures OHLCV 수집 또는 Overview bounded refresh로 선물 가격 이력을 갱신하세요.",
+        DATA_HEALTH_FUTURES_MACRO_DAILY_AREA: "기존 Futures OHLCV 수집으로 daily 선물 가격 이력을 갱신하세요.",
         "FOMC Calendar": "FOMC calendar 수집을 다시 실행해 공식 일정 row를 보강하세요.",
         "Macro Calendar": "공식 macro calendar 수집 또는 BLS .ics import로 발표 일정을 보강하세요.",
         "Earnings Calendar": "bounded symbol source로 Earnings Calendar를 다시 수집하고 추정 일정 검증 상태를 보강하세요.",
@@ -1063,6 +1066,7 @@ def _data_health_collection_action_copy(area: Any, action: Any) -> str:
         return mapping[area_text]
     text = str(action or "").strip()
     fallback = {
+        "Run futures OHLCV collection; Overview bounded refresh is also available for Futures Macro.": "기존 Futures OHLCV 수집 또는 Overview bounded refresh를 실행하세요.",
         "Run futures OHLCV collection; Overview bounded refresh is also available for the Futures Monitor.": "기존 Futures OHLCV 수집 또는 Overview bounded refresh를 실행하세요.",
         "Run FOMC calendar collection from the existing market events collector.": "기존 market events collector로 FOMC calendar 수집을 실행하세요.",
         "Run official macro calendar collection or import the BLS .ics file.": "공식 macro calendar 수집 또는 BLS .ics import를 실행하세요.",
@@ -1074,12 +1078,12 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
     priority_items = snapshot.get("priority_items")
     if isinstance(priority_items, list) and priority_items:
         item = dict(priority_items[0] or {})
-        area = str(item.get("area") or "Data Health")
+        area = normalize_overview_data_health_area(item.get("area") or "Data Health")
         target_surface = str(item.get("target_surface") or "Workspace > Ingestion")
         action = _data_health_collection_action_copy(area, item.get("collection_action") or item.get("next_action"))
         return {
             "id": "data_health",
-            "target_tab": "Data Health",
+            "target_tab": "Operations > System / Data Health",
             "title": f"{area} 확인",
             "reason": str(item.get("reason") or f"{item.get('status') or 'Review'} · {item.get('freshness') or '-'}"),
             "action": f"{area} 자료 주의점입니다. 필요하면 {target_surface}에서 {action}",
@@ -1098,12 +1102,13 @@ def _cockpit_ops_next_check(snapshot: dict[str, Any]) -> dict[str, Any] | None:
     if review_rows.empty:
         return None
     row = dict(review_rows.iloc[0].dropna().to_dict())
+    area = normalize_overview_data_health_area(row.get("Area") or "Data Health")
     return {
-        "target_tab": "Data Health",
-        "title": str(row.get("Area") or "Data Health"),
+        "target_tab": "Operations > System / Data Health",
+        "title": area,
         "reason": f"{_cockpit_status_label(row.get('Status') or 'Review')} · 자료 기준 {_cockpit_freshness_label(row.get('Data Freshness'))}",
         "action": "Data Health 자료 관리 위치와 필요한 갱신 경로를 봅니다.",
-        "source_area": str(row.get("Area") or "Data Health"),
+        "source_area": area,
         "freshness": str(row.get("Data Freshness") or "-"),
         "priority": "P1",
         "status": row.get("Status") or "REVIEW",
@@ -1365,13 +1370,13 @@ def _cockpit_apply_futures_data_limit(
     ):
         return row
     limited = dict(row)
-    source_area = str(data_finding.get("source_area") or "Futures Monitor 1m OHLCV").strip()
+    source_area = normalize_overview_data_health_area(data_finding.get("source_area") or DATA_HEALTH_FUTURES_MACRO_1M_AREA)
     limited["value"] = "장중 macro 해석 보류"
     limited["detail"] = f"{source_area}가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다."
     limited["status"] = data_finding.get("status") or row.get("status")
     limited["status_label"] = data_finding.get("status_label") or row.get("status_label")
     limited["tone"] = "warning"
-    limited["target_tab"] = "Futures Monitor"
+    limited["target_tab"] = "Futures Macro"
     limited["source"] = source_area
     limited["source_area"] = source_area
     limited["freshness_label"] = data_finding.get("freshness") or row.get("freshness_label")
@@ -1402,15 +1407,15 @@ REFRESH_PLAN_BY_AREA: dict[str, dict[str, str]] = {
         "resolution": "resolvable",
         "limitation": "공식 구성 변경 반영 시점에 따라 기존 universe가 유지될 수 있습니다.",
     },
-    "Futures Monitor 1m OHLCV": {
+    DATA_HEALTH_FUTURES_MACRO_1M_AREA: {
         "action_id": "futures_1m",
-        "label": "Futures 1m",
+        "label": "Futures Macro 1m",
         "resolution": "resolvable",
         "limitation": "시장 휴장 또는 provider 지연이면 stale 상태가 남을 수 있습니다.",
     },
-    "Futures Monitor Daily OHLCV": {
+    DATA_HEALTH_FUTURES_MACRO_DAILY_AREA: {
         "action_id": "futures_daily",
-        "label": "Futures daily",
+        "label": "Futures Macro daily",
         "resolution": "resolvable",
         "limitation": "provider daily bar 지연이면 최근 기준일이 남을 수 있습니다.",
     },
@@ -1470,12 +1475,13 @@ def _refresh_plan_item(
     reason: Any,
     target_surface: Any = None,
 ) -> dict[str, Any] | None:
-    spec = REFRESH_PLAN_BY_AREA.get(source_area)
+    display_source_area = normalize_overview_data_health_area(source_area)
+    spec = REFRESH_PLAN_BY_AREA.get(display_source_area)
     if not spec:
         return None
     resolution = str(spec["resolution"])
     return {
-        "source_area": source_area,
+        "source_area": display_source_area,
         "label": spec["label"],
         "action_id": spec["action_id"],
         "resolution": resolution,
@@ -1540,7 +1546,7 @@ def _cockpit_refresh_plan(
     for priority_item in list(data_health_handoff.get("priority_items") or []):
         if not isinstance(priority_item, dict):
             continue
-        source_area = str(priority_item.get("area") or "").strip()
+        source_area = normalize_overview_data_health_area(priority_item.get("area") or "")
         if direct_market_context_refresh_only and source_area not in MARKET_CONTEXT_DIRECT_REFRESH_AREAS:
             continue
         if _closed_session_intraday_stale(priority_item.get("status"), source_area, market_session_context):

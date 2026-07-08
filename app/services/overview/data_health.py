@@ -42,6 +42,19 @@ DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE = "direct_market_context"
 
 DATA_HEALTH_REFERENCE_CONTEXT_SCOPE = "reference_context"
 
+DATA_HEALTH_FUTURES_MACRO_1M_AREA = "Futures Macro 1m OHLCV"
+
+DATA_HEALTH_FUTURES_MACRO_DAILY_AREA = "Futures Macro Daily OHLCV"
+
+DATA_HEALTH_AREA_ALIASES = {
+    "Futures Monitor 1m OHLCV": DATA_HEALTH_FUTURES_MACRO_1M_AREA,
+    "Futures Monitor Daily OHLCV": DATA_HEALTH_FUTURES_MACRO_DAILY_AREA,
+}
+
+def normalize_overview_data_health_area(area: Any) -> str:
+    text = str(area or "").strip()
+    return DATA_HEALTH_AREA_ALIASES.get(text, text or "Unknown")
+
 DATA_HEALTH_AREA_SCOPES = {
     "S&P 500 Universe": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
     "S&P 500 Daily Snapshot": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
@@ -51,7 +64,8 @@ DATA_HEALTH_AREA_SCOPES = {
     "Macro Calendar": DATA_HEALTH_DIRECT_MARKET_CONTEXT_SCOPE,
     "Top1000 Daily Snapshot": DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
     "Top2000 Daily Snapshot": DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
-    "Futures Monitor 1m OHLCV": DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
+    DATA_HEALTH_FUTURES_MACRO_1M_AREA: DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
+    DATA_HEALTH_FUTURES_MACRO_DAILY_AREA: DATA_HEALTH_REFERENCE_CONTEXT_SCOPE,
 }
 
 OPS_INTRADAY_TARGETS = [
@@ -80,9 +94,9 @@ OPS_INTRADAY_TARGETS = [
 
 OPS_FUTURES_TARGETS = [
     {
-        "area": "Futures Monitor 1m OHLCV",
+        "area": DATA_HEALTH_FUTURES_MACRO_1M_AREA,
         "job_names": ["collect_futures_ohlcv"],
-        "missing_action": "Run Refresh Futures OHLCV from Overview > Futures Monitor.",
+        "missing_action": "Run Refresh Futures OHLCV from Overview > Futures Macro.",
         "due_action": "Refresh Futures OHLCV before using pre-open futures context.",
     },
 ]
@@ -604,7 +618,7 @@ def _combined_event_ops_row(
     }
 
 def _ops_area_scope(area: str) -> str:
-    return DATA_HEALTH_AREA_SCOPES.get(area, DATA_HEALTH_REFERENCE_CONTEXT_SCOPE)
+    return DATA_HEALTH_AREA_SCOPES.get(normalize_overview_data_health_area(area), DATA_HEALTH_REFERENCE_CONTEXT_SCOPE)
 
 def _ops_row(
     *,
@@ -887,11 +901,11 @@ DATA_HEALTH_HANDOFF_TARGETS: dict[str, dict[str, str]] = {
         "target_surface": "Workspace > Overview > Market Movers > Top2000 > 일중 스냅샷 갱신",
         "collection_action": "Run the Top2000 intraday snapshot refresh from Market Movers.",
     },
-    "Futures Monitor 1m OHLCV": {
+    DATA_HEALTH_FUTURES_MACRO_1M_AREA: {
         "owner_surface": "Workspace > Ingestion",
         "target_surface": "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집",
-        "alternate_surface": "Workspace > Overview > Futures Monitor",
-        "collection_action": "Run futures OHLCV collection; Overview bounded refresh is also available for the Futures Monitor.",
+        "alternate_surface": "Workspace > Overview > Futures Macro",
+        "collection_action": "Run futures OHLCV collection; Overview bounded refresh is also available for Futures Macro.",
     },
     "Market Sentiment": {
         "owner_surface": "Workspace > Ingestion",
@@ -967,7 +981,7 @@ def _handoff_reason(row: dict[str, Any]) -> str:
     return " · ".join(parts)
 
 def _handoff_target(area: str) -> dict[str, str]:
-    target = dict(DATA_HEALTH_HANDOFF_TARGETS.get(area) or {})
+    target = dict(DATA_HEALTH_HANDOFF_TARGETS.get(normalize_overview_data_health_area(area)) or {})
     if target:
         return target
     return {
@@ -1039,7 +1053,7 @@ def build_overview_data_health_ingestion_handoff(
     priority_items: list[dict[str, Any]] = []
     for rank, (_, item_row) in enumerate(review_rows.head(max(1, int(limit or 5))).iterrows(), start=1):
         row = dict(item_row.drop(labels=["_status_rank", "_failure_streak"], errors="ignore").to_dict())
-        area = str(row.get("Area") or "Unknown")
+        area = normalize_overview_data_health_area(row.get("Area") or "Unknown")
         status = _handoff_status(row.get("Status"))
         target = _handoff_target(area)
         priority_items.append(
@@ -1087,6 +1101,9 @@ def build_overview_data_health_ingestion_handoff(
     }
 
 __all__ = [
+    "DATA_HEALTH_FUTURES_MACRO_1M_AREA",
+    "DATA_HEALTH_FUTURES_MACRO_DAILY_AREA",
     "build_collection_ops_snapshot",
     "build_overview_data_health_ingestion_handoff",
+    "normalize_overview_data_health_area",
 ]

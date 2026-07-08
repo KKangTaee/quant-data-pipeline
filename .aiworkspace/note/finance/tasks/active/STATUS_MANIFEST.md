@@ -11,14 +11,19 @@ Current active task:
 
 Latest completed task:
 
+- `post-merge-docs-flow-refresh-20260708`
+
+Previous completed task:
+
 - `practical-validation-boundary-cleanup-v1-20260708`
 
 Latest completed docs cleanup task:
 
-- `post-merge-verification-handoff-20260607`
+- `post-merge-docs-flow-refresh-20260708`
 
 Recent post-merge cleanup records:
 
+- `post-merge-docs-flow-refresh-20260708`: 2026-07-08 master 병합 후 current pointer / code flow / Overview surface name refresh, Data Health handoff / Market Context cockpit legacy label 보정
 - `post-merge-docs-alignment-20260607`: 1차 product / roadmap / current state alignment
 - `post-merge-boundary-docs-alignment-20260607`: 2차 architecture / data / flow boundary alignment
 - `post-merge-active-state-cleanup-20260607`: 3차 active task / phase state manifest alignment

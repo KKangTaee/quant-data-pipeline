@@ -8914,7 +8914,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 {
                     "label": "Futures/Macro 배경",
                     "value": "장중 macro 해석 보류",
-                    "detail": "Futures Monitor 1m OHLCV가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다.",
+                    "detail": "Futures Macro 1m OHLCV가 오래되어 risk-on / 금리 압력 설명은 낮게 봅니다.",
                     "tone": "warning",
                 },
             ],
@@ -9138,9 +9138,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 },
                 "items": [
                     {
-                        "surface": "Futures Monitor",
+                        "surface": "Futures Macro",
                         "status": "REVIEW",
-                        "title": "Futures Monitor 1m OHLCV",
+                        "title": "Futures Macro 1m OHLCV",
                         "detail": "선물 가격 이력 freshness를 확인합니다.",
                         "freshness": "3950m old",
                         "owner": "Data Health",
@@ -18826,7 +18826,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "coverage": {"ok_count": 3, "due_count": 0, "stale_count": 2, "partial_count": 0, "missing_count": 0, "failed_count": 0},
                 "rows": pd.DataFrame(
                     [
-                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Stale", "Data Freshness": "2006m old"},
+                        {"Area": "Futures Macro 1m OHLCV", "Status": "Stale", "Data Freshness": "2006m old"},
                     ]
                 ),
             },
@@ -19492,7 +19492,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(sp500_intraday_row["Next Auto Due"], "2026-05-28 04:10")
         top1000_row = rows[rows["Area"] == "Top1000 Daily Snapshot"].iloc[0]
         self.assertEqual(top1000_row["Scope"], "reference_context")
-        futures_row = rows[rows["Area"] == "Futures Monitor 1m OHLCV"].iloc[0]
+        futures_row = rows[rows["Area"] == "Futures Macro 1m OHLCV"].iloc[0]
         self.assertEqual(futures_row["Scope"], "reference_context")
         self.assertEqual(futures_row["Status"], "OK")
         self.assertIn("4 symbols", futures_row["Data Freshness"])
@@ -20284,7 +20284,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(handoff["summary"]["review_count"], 5)
         self.assertEqual(handoff["summary"]["top_priority"], "FOMC Calendar")
         self.assertEqual(handoff["summary"]["next_target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 시장 이벤트 캘린더 수집 > FOMC 일정")
-        self.assertEqual([item["area"] for item in handoff["priority_items"]], ["FOMC Calendar", "Macro Calendar", "Futures Monitor 1m OHLCV", "Earnings Calendar"])
+        self.assertEqual([item["area"] for item in handoff["priority_items"]], ["FOMC Calendar", "Macro Calendar", "Futures Macro 1m OHLCV", "Earnings Calendar"])
         self.assertEqual(handoff["priority_items"][0]["status"], "Failed")
         self.assertEqual(handoff["priority_items"][0]["scope"], "direct_market_context")
         self.assertEqual(handoff["priority_items"][0]["severity"], "critical")
@@ -20293,7 +20293,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(handoff["priority_items"][2]["owner_surface"], "Workspace > Ingestion")
         self.assertEqual(handoff["priority_items"][2]["scope"], "reference_context")
         self.assertEqual(handoff["priority_items"][2]["target_surface"], "Workspace > Ingestion > 일상 운영 / 검증 데이터 > 선물 OHLCV 수집")
-        self.assertEqual(handoff["priority_items"][2]["alternate_surface"], "Workspace > Overview > Futures Monitor")
+        self.assertEqual(handoff["priority_items"][2]["alternate_surface"], "Workspace > Overview > Futures Macro")
         self.assertEqual(handoff["counts"]["OK"], 1)
         self.assertEqual(handoff["counts"]["Failed"], 1)
         self.assertIn("read-only", handoff["boundary_note"].lower())
@@ -20344,7 +20344,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                     [
                         {"Area": "Top1000 Daily Snapshot", "Status": "Partial", "Data Freshness": "11m old", "Next Action": "Refresh Top1000."},
                         {"Area": "Top2000 Daily Snapshot", "Status": "Stale", "Data Freshness": "37m old", "Next Action": "Refresh Top2000."},
-                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Stale", "Data Freshness": "47m old", "Next Action": "Refresh futures."},
+                        {"Area": "Futures Macro 1m OHLCV", "Status": "Stale", "Data Freshness": "47m old", "Next Action": "Refresh futures."},
                         {"Area": "Earnings Calendar", "Status": "Partial", "Data Freshness": "covered 1/2", "Next Action": "Inspect failed symbols."},
                     ]
                 ),
@@ -20369,7 +20369,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         refresh_sources = [item["source_area"] for item in cockpit["refresh_plan"]["items"]]
         self.assertNotIn("Top1000 Daily Snapshot", refresh_sources)
         self.assertNotIn("Top2000 Daily Snapshot", refresh_sources)
-        self.assertNotIn("Futures Monitor 1m OHLCV", refresh_sources)
+        self.assertNotIn("Futures Macro 1m OHLCV", refresh_sources)
         summary_copy = f"{cockpit['summary']['headline']} {cockpit['summary']['detail']}"
         self.assertNotIn("macro", summary_copy.lower())
         self.assertNotIn("선물/매크로", summary_copy)
@@ -20462,7 +20462,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
                 "coverage": {"ok_count": 4, "due_count": 2, "stale_count": 1, "partial_count": 1, "missing_count": 0, "failed_count": 0},
                 "rows": pd.DataFrame(
                     [
-                        {"Area": "Futures Monitor 1m OHLCV", "Status": "Due", "Data Freshness": "8m old", "Next Action": "Refresh before using futures context."},
+                        {"Area": "Futures Macro 1m OHLCV", "Status": "Due", "Data Freshness": "8m old", "Next Action": "Refresh before using futures context."},
                         {"Area": "Earnings Calendar", "Status": "Partial", "Data Freshness": "covered 1/2", "Next Action": "Inspect failed symbols."},
                     ]
                 ),
@@ -20487,7 +20487,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(cockpit["summary"]["status_label"], "자료 보강 필요")
         self.assertEqual(cockpit["summary"]["review_count"], 3)
         self.assertEqual(cockpit["summary"]["data_review_count"], 4)
-        self.assertEqual(cockpit["summary"]["next_path"], "S&P 500 Daily Snapshot → Futures Monitor 1m OHLCV → Earnings Calendar")
+        self.assertEqual(cockpit["summary"]["next_path"], "S&P 500 Daily Snapshot → Futures Macro 1m OHLCV → Earnings Calendar")
         self.assertEqual(cockpit["summary"]["rail"][0]["label"], "자료 상태")
         self.assertEqual(cockpit["summary"]["rail"][0]["value"], "보강 가능 자료 3개")
         self.assertEqual(
@@ -20501,8 +20501,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual([cue["label"] for cue in cockpit["interpretation_cues"]], ["이벤트 압력", "심리 확인", "매크로 확인"])
         self.assertNotIn("자료 상태 주의점", [cue["label"] for cue in cockpit["interpretation_cues"]])
         self.assertEqual(cockpit["brief_rows"][0]["target_tab"], "Market Movers")
-        self.assertEqual(cockpit["brief_rows"][2]["target_tab"], "Futures Monitor")
-        self.assertEqual(cockpit["brief_rows"][2]["source_area"], "Futures Monitor 1m OHLCV")
+        self.assertEqual(cockpit["brief_rows"][2]["target_tab"], "Futures Macro")
+        self.assertEqual(cockpit["brief_rows"][2]["source_area"], "Futures Macro 1m OHLCV")
         self.assertEqual(cockpit["brief_rows"][2]["freshness_label"], "8m old")
         self.assertEqual(cockpit["brief_rows"][2]["value"], "장중 macro 해석 보류")
         self.assertIn("risk-on / 금리 압력 설명은 낮게 봅니다", cockpit["brief_rows"][2]["detail"])
@@ -20519,7 +20519,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             [item["resolution"] for item in cockpit["refresh_plan"]["items"]],
             ["resolvable", "resolvable", "partial"],
         )
-        self.assertEqual(cockpit["refresh_plan"]["items"][1]["source_area"], "Futures Monitor 1m OHLCV")
+        self.assertEqual(cockpit["refresh_plan"]["items"][1]["source_area"], "Futures Macro 1m OHLCV")
         self.assertIn("시장 휴장", cockpit["refresh_plan"]["items"][1]["limitation"])
         self.assertIn("추정", cockpit["refresh_plan"]["items"][2]["limitation"])
         self.assertEqual(cockpit["refresh_plan"]["excluded_items"][0]["source_area"], "Events")

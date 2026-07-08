@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-06-08
+Last Verified: 2026-07-08
 
 ## Product Summary
 
@@ -11,7 +11,7 @@ Last Verified: 2026-06-08
 데이터 신뢰도, ETF 운용성, holdings / exposure, macro context, stress / sensitivity, Final Review evidence를 통해
 실전 추적 가능한 후보인지 확인하는 데 있다.
 
-2026-06-07 master 병합 후 현재 제품은 네 축으로 읽는다.
+2026-07-08 master 병합 후 현재 제품은 네 축으로 읽는다.
 
 | 축 | 현재 의미 |
 |---|---|
@@ -23,7 +23,7 @@ Last Verified: 2026-06-08
 ## Target Experience
 
 - 사용자는 Backtest Analysis에서 전략이나 저장된 포트폴리오 mix를 후보 source로 만든다.
-- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Sector / Industry, Futures Monitor, Sentiment, Events로 시장 context를 보여준다. Data Health는 Market Context의 source / refresh evidence와 Operations / Ingestion 소유 흐름으로 분리한다.
+- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Futures Macro, Sentiment, Events로 시장 context를 보여준다. Sector evidence는 Market Context / Market Movers 안의 breadth와 group leadership으로 읽고, Data Health는 Market Context source / refresh evidence와 Operations / Ingestion 소유 흐름으로 분리한다.
 - Practical Validation은 후보를 source traits, module gate, provider / macro / robustness / realism evidence로 검증한다.
 - Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장하되, live approval로 해석하지 않는다.
 - Operations > Portfolio Monitoring은 사용자가 만든 monitoring portfolio에 최종 선정 후보를 담고, 명시적 scenario update 후 성과와 review signal을 read-only로 확인한다.
@@ -66,7 +66,7 @@ Last Verified: 2026-06-08
 
 현재 구현 완료로 보는 큰 흐름:
 
-- Overview Market Intelligence는 market movers, Why It Moved manual investigation, sector / industry leadership, futures monitor, macro thermometer, events calendar, sentiment, data health, browser-session auto refresh까지 production baseline을 갖췄다.
+- Overview Market Intelligence는 Market Context, Market Movers / Why It Moved manual investigation, sector breadth / group leadership evidence, Futures Macro, events calendar, sentiment, data-health handoff, browser-session auto refresh까지 production baseline을 갖췄다. `Futures Monitor`와 `Sector / Industry` standalone tab 표현은 current primary surface가 아니라 retained data / helper context로 본다.
 - Macro / sentiment context는 DB-backed collection과 loader를 통해 읽고, 화면에서는 freshness / source / partial state를 숨기지 않는다.
 - Backtest Analysis는 기존 ETF / factor / mix 후보와 Risk-On Momentum 5D Daily Swing research lane을 포함한다. Risk-On Momentum daily signal governance는 아직 Practical Validation / Final Review / Portfolio Monitoring에 연결하지 않았다.
 - Practical Validation V2 P2 / P3, Final Review selection readiness, Operations > Portfolio Monitoring read-only monitoring / recheck 연결은 closeout 완료 상태다.

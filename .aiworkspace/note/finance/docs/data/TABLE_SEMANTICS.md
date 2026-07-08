@@ -265,9 +265,9 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- `Workspace > Overview > Futures Monitor`에서 주요 선물 OHLCV 캔들과 개장 전 급변 상태를 read-only로 표시하기 위한 데이터 경계다.
+- `Workspace > Overview > Futures Macro`에서 주요 선물 daily macro context와 lazy historical validation을 만들고, 보조 stored-candle chart / diagnostics에서 1m OHLCV 상태를 read-only로 표시하기 위한 데이터 경계다.
 - `futures_instrument`는 watchlist preset / display metadata를 저장한다.
-- `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 shock board / candle chart에, 1d row는 Futures Macro Thermometer의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
+- `futures_ohlcv`는 provider symbol / interval / candle time 기준 OHLCV row를 저장한다. 1m row는 stored-candle chart / diagnostics에, 1d row는 Futures Macro의 현재 점수 / 해석과 point-in-time historical validation에 사용된다.
 - `futures_market_monitor_run`은 수집 run별 status, failed symbols, latest candle time, diagnostics를 저장한다.
 
 성격:

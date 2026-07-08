@@ -1,7 +1,7 @@
 # Active Finance Phases
 
 Status: Active
-Last Verified: 2026-06-07
+Last Verified: 2026-07-08
 
 이 폴더는 Main phase worktree가 관리하는 phase 기록을 둔다.
 현재는 완료된 phase board도 handoff / trace 용도로 남아 있으므로, 이 폴더의 하위 폴더가 모두 현재 active phase라는 뜻은 아니다.

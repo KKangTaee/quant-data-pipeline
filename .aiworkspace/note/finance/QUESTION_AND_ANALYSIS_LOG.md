@@ -17,6 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
@@ -24,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-08 - Post-merge docs refresh must verify code-flow labels, not only Markdown
+
+- User request: 사용자가 sub-dev / backtest-dev 병합 후 공용 문서가 완벽히 정리되지 않았을 수 있으니 문서 refresh, 코드 흐름 문서 업데이트, 코드 리뷰와 향후 개발 필요사항 조사를 요청함.
+- Interpreted goal: 최신 master 기준 durable docs / manifests / runbooks를 정렬하고, 문서에 적힌 current flow가 실제 Overview / Backtest / Practical Validation code boundary와 맞는지 확인한다.
+- Analysis result: 문서 drift는 주로 Overview current surface 이름에서 발생했다. 현재 primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`이며, `Futures Monitor` / `Sector / Industry`는 legacy 또는 lower evidence context로만 읽어야 한다. 코드 리뷰 중 Data Health handoff와 Market Context cockpit도 같은 legacy name을 user-facing path로 일부 출력해 service contract까지 보정했다.
+- Follow-up: `post-merge-docs-flow-refresh-20260708`에서 docs / manifests / root handoff / service labels / tests를 정렬했다. 후속 후보는 latest pointer와 current Overview tab labels를 자동 점검하는 consistency checker다.
 
 ### 2026-07-08 - Practical Validation과 Final Review 판단 책임을 화면에서 분리한다
 
