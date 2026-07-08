@@ -9701,12 +9701,25 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("검증 결론", component_source)
         self.assertIn("카테고리별 검증 요약", component_source)
         self.assertIn("Flow 4에서 확인합니다", component_source)
+        self.assertNotIn("reviewCount", component_source)
+        self.assertNotIn("group.reviewCriteria", component_source)
+        self.assertNotIn("Final Review 이동 가능", component_source)
+        self.assertNotIn("Final Review 이동 보류", component_source)
+        self.assertNotIn("Final Review로 이동", component_source)
+        self.assertNotIn("보류 항목", component_source)
+        self.assertIn("보강 항목", component_source)
         self.assertNotIn("Final Review 이동을 막는 이슈", component_source)
         self.assertNotIn("최종 선택, 투자 추천", component_source)
         self.assertNotIn("Final Review로 넘기기 전 확인 기준", component_source)
         self.assertIn("검증 결론", build_source)
         self.assertIn("카테고리별 검증 요약", build_source)
         self.assertIn("Flow 4에서 확인합니다", build_source)
+        self.assertNotIn("reviewCount", build_source)
+        self.assertNotIn("Final Review 이동 가능", build_source)
+        self.assertNotIn("Final Review 이동 보류", build_source)
+        self.assertNotIn("Final Review로 이동", build_source)
+        self.assertNotIn("보류 항목", build_source)
+        self.assertIn("보강 항목", build_source)
         self.assertNotIn("Final Review 이동을 막는 이슈", build_source)
         self.assertNotIn("최종 선택, 투자 추천", build_source)
         self.assertNotIn("Final Review로 넘기기 전 확인 기준", build_source)
@@ -9720,7 +9733,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("부족한 점", component_source)
         self.assertNotIn("해야 할 일", component_source)
         self.assertIn("다음 단계", component_source)
-        self.assertIn("Flow 5에서 저장 / 이동", component_source)
+        self.assertIn("Flow 5에서 검증 결과 저장", component_source)
         self.assertIn("criteriaGroups", component_source)
         self.assertNotIn("NEEDS_INPUT row", component_source)
         self.assertNotIn("2차 검증 결론 / Fix Queue", component_source)
@@ -9739,6 +9752,33 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("is_practical_validation_fix_queue_available()", panel_source)
         self.assertIn("criteria_groups", wrapper_source)
         self.assertIn("criteriaGroups", wrapper_source)
+        self.assertNotIn("reviewCount", wrapper_source)
+
+    def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
+        from app.web.backtest_practical_validation.workspace_panel import (
+            _conclusion_group_detail,
+            _react_criteria_group_items,
+        )
+
+        group = {
+            "label": "Stress / Robustness",
+            "display_label": "강건성",
+            "status": "REVIEW",
+            "display_status": "보강 항목 없음",
+            "passed_criteria": [],
+            "remaining_issues": [],
+            "review_criteria": ["Stress / sensitivity interpretation"],
+            "final_review_reference_count": 1,
+            "decision_summary": "Practical Validation에서 보강할 항목은 없습니다.",
+        }
+
+        self.assertEqual(
+            _conclusion_group_detail(group),
+            ("통과", "Practical Validation에서 보강할 항목은 없습니다.", "positive"),
+        )
+        react_item = _react_criteria_group_items([group])[0]
+        self.assertEqual(react_item["reviewCriteria"], [])
+        self.assertEqual(react_item["status"], "보강 항목 없음")
 
     def test_practical_validation_flow3_uses_conclusion_summary(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -9754,6 +9794,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("_render_validation_gate_section(validation_result)", flow3_body)
         self.assertNotIn("검증 모듈 / 기술 상세", flow3_body)
         self.assertIn("_react_criteria_group_items", panel_source)
+        self.assertIn("overall_outcome_label", panel_source)
+        self.assertIn("overall_outcome_headline", panel_source)
+        self.assertNotIn("verdict=str(gate_summary.get(\"verdict", panel_source)
+        self.assertNotIn("status_label=readiness_status", panel_source)
 
     def test_practical_validation_profile_belongs_to_flow2_execution_setup(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -10038,7 +10082,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(stress_group["final_review_reference_count"], 1)
         self.assertEqual(
             stress_group["decision_summary"],
-            "Practical Validation에서 보강할 항목은 없습니다. Final Review에서 해석할 참고 항목 1개는 넘깁니다.",
+            "Practical Validation에서 보강할 항목은 없습니다.",
         )
 
     def test_practical_validation_module_plan_preserves_review_input_checks(self) -> None:
@@ -10207,12 +10251,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("def _render_validation_criteria_detail_board", page_source)
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
         self.assertIn("_render_validation_evidence_boards(validation_result)", flow4_body)
+        self.assertNotIn("_render_validation_gate_section(validation_result)", flow4_body)
+        self.assertNotIn("검증 모듈 / 기술 상세", flow4_body)
         self.assertIn("카테고리별 검증 결과", page_source)
         self.assertIn("통과 / 보강 후 재검증 / 실전 사용 어려움", page_source)
-        self.assertIn("Final Review 참고", page_source)
-        self.assertIn("final_review_reference_count", page_source)
         self.assertIn("검증 기준 상세", flow4_body)
-        self.assertIn("Final Review 이동 요약", page_source)
         self.assertIn("실전 검증 센터", page_source)
         self.assertNotIn("Practical Validation Workbench", page_source)
         self.assertIn("핵심 입력 근거", page_source)
@@ -10250,6 +10293,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Validation Readiness", flow4_body)
         self.assertNotIn("Final Review Readiness Preview", flow4_body)
         self.assertIn("pv-criteria-board", page_source)
+        criteria_board_body = page_source.split("def _render_validation_criteria_detail_board", 1)[1]
+        criteria_board_body = criteria_board_body.split("def _render_validation_efficacy_audit", 1)[0]
+        self.assertNotIn("Final Review 참고", criteria_board_body)
+        self.assertNotIn("Final Review 이동 요약", criteria_board_body)
+        self.assertNotIn("final_review_reference_html", criteria_board_body)
+        self.assertNotIn("handoff_html", criteria_board_body)
         self.assertLess(
             flow4_body.index("_render_validation_criteria_detail_board(validation_result)"),
             flow4_body.index("_render_validation_evidence_boards(validation_result)"),

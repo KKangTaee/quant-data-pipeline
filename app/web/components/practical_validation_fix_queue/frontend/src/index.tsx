@@ -77,7 +77,6 @@ type StreamlitArgs = {
   fixItems?: FixItem[]
   coreGroups?: CoreGroup[]
   criteriaGroups?: CriteriaGroup[]
-  reviewCount?: number
 }
 
 type AppProps = {
@@ -95,7 +94,6 @@ function App({ args }: AppProps) {
       fixItems={Array.isArray(args?.fixItems) ? args.fixItems : []}
       coreGroups={Array.isArray(args?.coreGroups) ? args.coreGroups : []}
       criteriaGroups={Array.isArray(args?.criteriaGroups) ? args.criteriaGroups : []}
-      reviewCount={Number(args?.reviewCount ?? 0)}
     />
   )
 }

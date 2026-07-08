@@ -25,12 +25,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-08 - Practical Validation과 Final Review 판단 책임을 화면에서 분리한다
+
+- User request: 사용자가 Practical Validation에서 검증하는 부분과 마지막에 확인해야 할 부분을 명확하게 구분하고, Final Review에서 최종 검증할 항목은 이후 Final Review 개선 때 다루는 방향이 맞다고 확인한 뒤 진행을 승인함.
+- Interpreted goal: Flow 3 / Flow 4는 현재 단계에서 보강할 검증 이슈만 보여주고, `REVIEW`처럼 최종 선택 / 보류 해석에 필요한 항목은 Practical Validation visible issue로 노출하지 않는다.
+- Analysis result: Flow 3은 Practical Validation outcome summary를 기준으로 `보강 후 재검증`, 실패 category, 검증 category만 보여줘야 한다. Flow 4는 criteria detail과 provider 보강 action만 유지하고 `Final Review 참고`, `Final Review 이동 요약`, legacy gate technical expander는 제거하는 것이 책임 경계에 맞다.
+- Follow-up: `practical-validation-boundary-cleanup-v1-20260708`에서 Flow 3 React payload/copy, Flow 4 criteria board, workspace decision wording, tests, Browser QA를 완료했다. Final Review 화면의 REVIEW 해석 UX는 다음 Final Review 개선 차수로 남겼다.
+
 ### 2026-07-08 - Final Review 판단 항목은 Flow 4 상세 문제가 아니라 handoff 참고다
 
 - User request: 사용자가 Final Review에서 최종 검증해야 할 항목을 Practical Validation Flow 4에서 자세히 보여주는 것이 맞는지 질문했고, Final Review에서 할 일이라면 여기서 안 보여줘도 되지 않느냐고 지적한 뒤 진행을 승인함.
 - Interpreted goal: Practical Validation은 지금 보강해야 할 문제와 실전 사용 어려움만 명확히 보여주고, Final Review 해석 항목은 중복 상세 검증처럼 보이지 않게 해야 한다.
-- Analysis result: `REVIEW` 항목은 보강 실패가 아니라 Final Review의 선택 / 보류 해석 근거다. 따라서 Flow 4 main board에서 `Final Review 판단` 컬럼과 REVIEW 상세 카드를 제거하고, `Final Review 참고` count만 남기는 것이 책임 경계에 맞다.
-- Follow-up: `practical-validation-flow4-final-review-handoff-v1-20260708`에서 workspace summary와 Flow 4 renderer를 수정했다. Final Review evidence 화면 재구성, gate threshold, registry / saved JSONL, provider ingestion, live approval / order 의미는 변경하지 않았다.
+- Analysis result: `REVIEW` 항목은 보강 실패가 아니라 Final Review의 선택 / 보류 해석 근거다. 이 시점에는 Flow 4 main board에서 `Final Review 판단` 컬럼과 REVIEW 상세 카드를 제거하고, `Final Review 참고` count로 낮추는 방향을 채택했다.
+- Follow-up: `practical-validation-flow4-final-review-handoff-v1-20260708`에서 workspace summary와 Flow 4 renderer를 수정했다. 이후 `practical-validation-boundary-cleanup-v1-20260708`에서 이 visible count도 Flow 3 / Flow 4에서 제거했다. Final Review evidence 화면 재구성, gate threshold, registry / saved JSONL, provider ingestion, live approval / order 의미는 변경하지 않았다.
 
 ### 2026-07-08 - Practical Validation Flow4는 raw status보다 사용자 행동 결론을 먼저 보여준다
 

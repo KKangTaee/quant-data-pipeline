@@ -948,10 +948,7 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
     elif repair:
         decision = f"보강 필요: 재검증할 기준 {len(repair)}개가 남아 있습니다."
     elif review:
-        decision = (
-            "Practical Validation에서 보강할 항목은 없습니다. "
-            f"Final Review에서 해석할 참고 항목 {len(review)}개는 넘깁니다."
-        )
+        decision = "Practical Validation에서 보강할 항목은 없습니다."
     else:
         decision = "이 기준 그룹은 현재 통과 상태입니다."
     if not_practical:

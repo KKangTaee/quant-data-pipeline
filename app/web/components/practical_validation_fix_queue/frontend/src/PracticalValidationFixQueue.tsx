@@ -59,7 +59,6 @@ type CriteriaGroup = {
   purpose?: string
   passedCriteria?: string[]
   remainingIssues?: string[]
-  reviewCriteria?: string[]
   decisionSummary?: string
   tone?: Tone
   criteriaCards?: CriteriaCard[]
@@ -74,7 +73,6 @@ type PracticalValidationFixQueueProps = {
   fixItems: FixItem[]
   coreGroups: CoreGroup[]
   criteriaGroups: CriteriaGroup[]
-  reviewCount: number
 }
 
 const toneClass = (tone: Tone | string | undefined): Tone =>
@@ -94,11 +92,11 @@ const groupOutcome = (group: CriteriaGroup): { label: string; detail: string; to
   if (group.remainingIssues && group.remainingIssues.length > 0) {
     return { label: "실패", detail: joined(group.remainingIssues), tone: "danger" }
   }
-  if (group.reviewCriteria && group.reviewCriteria.length > 0) {
-    return { label: "확인 필요", detail: joined(group.reviewCriteria), tone: "warning" }
-  }
   if (group.passedCriteria && group.passedCriteria.length > 0) {
     return { label: "통과", detail: joined(group.passedCriteria), tone: "positive" }
+  }
+  if (compact(group.status, "").includes("보강 항목 없음")) {
+    return { label: "통과", detail: compact(group.decisionSummary, "보강 항목 없음"), tone: "positive" }
   }
   return { label: "확인 필요", detail: compact(group.decisionSummary), tone: toneClass(group.tone) }
 }
@@ -115,10 +113,10 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
   const hiddenCriteriaGroupCount = Math.max(criteriaGroups.length - visibleCriteriaGroups.length, 0)
   const failedCategoryCount = criteriaGroups.filter((group) => (group.remainingIssues ?? []).length > 0).length
   const flowAction = props.canSaveAndMove
-    ? "Flow 5에서 저장 / 이동"
+    ? "Flow 5에서 검증 결과 저장"
     : "Flow 4에서 상세 원인 확인"
   const nextStepItems = props.canSaveAndMove
-    ? ["Flow 5에서 검증 결과를 저장하고 Final Review로 이동합니다."]
+    ? ["Flow 5에서 검증 결과를 저장합니다."]
     : ["자세한 원인과 보강 기준은 Flow 4에서 확인합니다."]
 
   return (
@@ -131,21 +129,18 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         </div>
         <div className="pv-react-fix__status">
           <span>{props.statusLabel}</span>
-          <b>{props.canSaveAndMove ? "Final Review 이동 가능" : "Final Review 이동 보류"}</b>
-          <small>{props.fixItems.length > 0 ? `보류 항목 ${props.fixItems.length}` : "보류 항목 없음"}</small>
+          <b>{props.canSaveAndMove ? "검증 보강 완료" : "검증 보강 필요"}</b>
+          <small>{props.fixItems.length > 0 ? `보강 항목 ${props.fixItems.length}` : "보강 항목 없음"}</small>
         </div>
       </header>
 
       <div className="pv-react-fix__decision">
         <div className="pv-react-fix__summary" aria-label="검증 결론 요약">
           <span>
-            <b>{props.statusLabel}</b> 이동 상태
+            <b>{props.statusLabel}</b> 검증 상태
           </span>
           <span>
             <b>{failedCategoryCount}</b> 실패 카테고리
-          </span>
-          <span>
-            <b>{props.reviewCount}</b> 확인 필요
           </span>
           <span>
             <b>{criteriaGroups.length || coreGroups.length}</b> 검증 카테고리

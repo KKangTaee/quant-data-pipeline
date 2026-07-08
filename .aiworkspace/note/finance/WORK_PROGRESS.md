@@ -29,9 +29,13 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Boundary Cleanup V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-boundary-cleanup-v1-20260708/`에서 Flow 3 / Flow 4 visible UI를 Practical Validation 전용 결론과 보강 원인으로 정리했다.
+  - Flow 3은 Final Review 이동 가능 / 보류와 REVIEW count를 제거하고 `보강 후 재검증`, 실패 category, 검증 category만 보여준다.
+  - Flow 4는 `Final Review 참고`, `Final Review 이동 요약`, legacy gate technical expander를 렌더링하지 않는다. Final Review 화면 재구성은 다음 차수로 남겼다.
 - Practical Validation Flow4 Final Review Handoff V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/`에서 Flow 4가 Final Review 판단 항목을 상세 문제처럼 보여주는 중복을 줄였다.
-  - Flow 4 main board는 `통과 / 보강 후 재검증 / 실전 사용 어려움` 중심으로 읽고, REVIEW 항목은 `Final Review 참고` count로만 넘긴다.
+  - 당시 Flow 4 main board는 `통과 / 보강 후 재검증 / 실전 사용 어려움` 중심으로 읽고, REVIEW 항목을 `Final Review 참고` count로 낮췄다. 후속 Boundary Cleanup V1에서 이 visible count도 Flow 3 / Flow 4에서 제거했다.
   - Final Review 화면 재구성, gate threshold, registry / saved JSONL, provider ingestion, live approval / order semantics는 변경하지 않았다.
 - Practical Validation Flow4 Outcome Taxonomy V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/`에서 Flow 4 outcome layer와 `Current=REVIEW` 보존 회귀를 구현했다.

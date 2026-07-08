@@ -9,10 +9,16 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-boundary-cleanup-v1-20260708/`다.
+
+- 목적: Practical Validation Flow 3 / Flow 4가 Final Review에서 판단할 `REVIEW` 항목을 현재 보강해야 할 검증 이슈처럼 보여주는 혼선을 줄였다.
+- 주요 변경: Flow 3은 Practical Validation outcome summary를 읽어 `보강 후 재검증`, 실패 카테고리, 검증 카테고리만 보여주며 `Final Review 이동 가능 / 보류`, `확인 필요` review count, `보류 항목` copy를 제거했다. Flow 4는 `Final Review 참고`, `Final Review 이동 요약`, legacy gate technical expander를 렌더링하지 않고, Practical Validation에서 보강해야 할 기준과 원인만 보여준다.
+- 이번 차수에서 하지 않은 일: Final Review 화면 재구성, Final Review gate threshold 변경, registry / saved JSONL rewrite, provider ingestion, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/`다.
 
 - 목적: Practical Validation Flow 4가 Final Review에서 해석할 REVIEW 항목을 카테고리별 상세 문제처럼 보여 사용자가 현재 보강해야 할 항목과 최종 판단 항목을 혼동하는 문제를 줄였다.
-- 주요 변경: Flow 4 main board는 `통과`, `보강 후 재검증 필요`, `실전 사용 어려움`을 먼저 보여주며, REVIEW 항목은 `Final Review 참고` handoff count로만 남긴다. REVIEW만 남은 상태는 Practical Validation 관점에서 보강 필요가 아니라 Final Review 판단으로 넘긴다.
+- 주요 변경: 당시 Flow 4 main board는 `통과`, `보강 후 재검증 필요`, `실전 사용 어려움`을 먼저 보여주며, REVIEW 항목을 `Final Review 참고` handoff count로 낮췄다. 후속 Boundary Cleanup V1에서 이 visible count도 Flow 3 / Flow 4에서 제거했다.
 - 이번 차수에서 하지 않은 일: Final Review evidence 화면 재구성, gate threshold 변경, registry / saved JSONL rewrite, provider ingestion, live approval / broker order / auto rebalance 의미 추가.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/`다.

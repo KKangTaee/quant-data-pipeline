@@ -218,11 +218,11 @@ def _react_criteria_group_items(criteria_groups: list[dict[str, Any]]) -> list[d
             {
                 "label": group.get("label") or group.get("group_id") or "-",
                 "displayLabel": group.get("display_label") or group.get("label") or group.get("group_id") or "-",
-                "status": group.get("status") or "-",
+                "status": group.get("display_status") or group.get("status") or "-",
                 "purpose": group.get("purpose") or f"{len(cards)} criteria",
                 "passedCriteria": list(group.get("passed_criteria") or []),
                 "remainingIssues": list(group.get("remaining_issues") or []),
-                "reviewCriteria": list(group.get("review_criteria") or []),
+                "reviewCriteria": [],
                 "decisionSummary": group.get("decision_summary") or "-",
                 "tone": group.get("tone") or "neutral",
                 "criteriaCards": [
@@ -260,16 +260,17 @@ def _conclusion_group_detail(group: dict[str, Any]) -> tuple[str, str, str]:
     passed = [str(item) for item in list(group.get("passed_criteria") or []) if str(item).strip()]
     if remaining:
         return "실패", " / ".join(remaining), "danger"
-    if review:
-        return "확인 필요", " / ".join(review), "warning"
     if passed:
         return "통과", " / ".join(passed), "positive"
+    if review or int(group.get("final_review_reference_count") or 0):
+        return "통과", str(group.get("decision_summary") or "Practical Validation에서 보강할 항목은 없습니다."), "positive"
     return "확인 필요", str(group.get("decision_summary") or "-"), str(group.get("tone") or "neutral")
 
 
 def _render_validation_conclusion_summary(
     *,
     gate_summary: dict[str, Any],
+    summary: dict[str, Any],
     criteria_groups: list[dict[str, Any]],
 ) -> None:
     cards: list[dict[str, Any]] = []
@@ -296,39 +297,46 @@ def _render_validation_conclusion_summary(
         ]
     render_pv_section_header(
         eyebrow="검증 결론",
-        title=str(gate_summary.get("verdict") or "Practical Validation 검증 결론"),
+        title=str(summary.get("overall_outcome_headline") or "Practical Validation 검증 결론"),
         detail="카테고리별 통과 / 실패만 요약합니다. 자세한 원인과 보강 기준은 Flow 4에서 확인합니다.",
-        tone="positive" if gate_summary.get("can_save_and_move") else "danger",
+        tone=str(summary.get("overall_outcome_tone") or ("positive" if gate_summary.get("can_save_and_move") else "danger")),
     )
     render_pv_card_grid(cards, min_width=250)
 
 
 def render_practical_validation_workspace_overview(validation_result: dict[str, Any]) -> None:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
+    summary = dict(workspace.get("summary") or {})
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
     fix_queue = list(workspace.get("fix_queue") or gate_summary.get("blocking_modules") or [])
     core_groups = list(workspace.get("core_evidence_groups") or [])
     conditional_groups = list(workspace.get("conditional_evidence_groups") or [])
     downstream_groups = list(workspace.get("downstream_reference_groups") or [])
     criteria_groups = list(workspace.get("criteria_detail_groups") or [])
-    readiness_status = validation_status_label(gate_summary.get("route"))
+    repair_count = int(summary.get("criteria_repair_count") or 0)
+    not_practical_count = int(summary.get("criteria_not_practical_count") or 0)
+    practical_validation_ready = repair_count == 0 and not_practical_count == 0
+    practical_status_label = str(summary.get("overall_outcome_label") or validation_status_label(gate_summary.get("route")))
+    practical_tone = str(summary.get("overall_outcome_tone") or ("positive" if practical_validation_ready else "danger"))
+    practical_verdict = str(summary.get("overall_outcome_headline") or "Practical Validation 검증 결론")
+    practical_next_action = str(summary.get("overall_outcome_detail") or "")
 
     if is_practical_validation_fix_queue_available():
         render_practical_validation_fix_queue(
-            status_label=readiness_status,
-            tone="positive" if gate_summary.get("can_save_and_move") else "danger",
-            verdict=str(gate_summary.get("verdict") or "2차 검증 결론"),
-            next_action=str(gate_summary.get("next_action") or ""),
-            can_save_and_move=bool(gate_summary.get("can_save_and_move")),
+            status_label=practical_status_label,
+            tone=practical_tone,
+            verdict=practical_verdict,
+            next_action=practical_next_action,
+            can_save_and_move=practical_validation_ready,
             fix_items=_react_fix_queue_items(fix_queue),
             core_groups=_react_core_group_items(core_groups),
             criteria_groups=_react_criteria_group_items(criteria_groups),
-            review_count=int(gate_summary.get("review_count") or 0),
             key="practical_validation_fix_queue_overview",
         )
     else:
         _render_validation_conclusion_summary(
             gate_summary=gate_summary,
+            summary=summary,
             criteria_groups=criteria_groups,
         )
     if conditional_groups or downstream_groups:

@@ -30,7 +30,6 @@ def render_practical_validation_fix_queue(
     fix_items: list[dict[str, Any]],
     core_groups: list[dict[str, Any]],
     criteria_groups: list[dict[str, Any]],
-    review_count: int,
     key: str | None = None,
 ) -> dict[str, Any] | None:
     """Render the optional Practical Validation read model surface.
@@ -49,7 +48,6 @@ def render_practical_validation_fix_queue(
         fixItems=fix_items,
         coreGroups=core_groups,
         criteriaGroups=criteria_groups or [],
-        reviewCount=review_count,
         key=key,
         default=None,
     )
