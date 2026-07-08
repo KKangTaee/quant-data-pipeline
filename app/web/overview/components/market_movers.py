@@ -425,29 +425,29 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
         )
     values = [_chart_numeric_value(point.get("value")) or 0.0 for point in points]
     max_abs = max(abs(value) for value in values) or 1.0
-    rows: list[str] = []
+    columns: list[str] = []
     for point, value in zip(points, values):
-        width = max(3.0, min(100.0, (abs(value) / max_abs) * 100.0))
+        height = max(3.0, min(100.0, (abs(value) / max_abs) * 100.0))
         direction_class = "is-negative" if value < 0 else "is-positive"
         disclosure = _display_value(point.get("disclosure_date"))
         period_end = _display_value(point.get("period_end"))
         details = [f"회계기간 {period_end}" if period_end not in ("", "-") else ""]
         if disclosure not in ("", "-"):
             details.append(f"공시 {disclosure}")
-        rows.append(
-            '<div class="ov-mm-research-chart-row">'
-            f'<div class="ov-mm-research-chart-label">{escape(_display_value(point.get("label")))}</div>'
-            '<div class="ov-mm-research-chart-track">'
-            f'<span class="ov-mm-research-chart-bar {direction_class}" style="width:{width:.2f}%;"></span>'
-            "</div>"
+        columns.append(
+            f'<div class="ov-mm-research-chart-column {direction_class}" role="listitem">'
             f'<strong class="ov-mm-research-chart-value">{escape(_display_value(point.get("display_value")))}</strong>'
+            '<div class="ov-mm-research-chart-track">'
+            f'<span class="ov-mm-research-chart-bar" style="height:{height:.2f}%;"></span>'
+            "</div>"
+            f'<div class="ov-mm-research-chart-label">{escape(_display_value(point.get("label")))}</div>'
             f'<small class="ov-mm-research-chart-detail">{escape(" · ".join(part for part in details if part))}</small>'
             "</div>"
         )
     return (
         '<div class="ov-mm-research-chart">'
         f'<div class="ov-mm-research-chart-title">{escape(_display_value(chart.get("label")))} · {escape(frequency_label)}</div>'
-        f'<div class="ov-mm-research-chart-bars">{"".join(rows)}</div>'
+        f'<div class="ov-mm-research-chart-bar-plot" role="list" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 막대그래프">{"".join(columns)}</div>'
         "</div>"
     )
 

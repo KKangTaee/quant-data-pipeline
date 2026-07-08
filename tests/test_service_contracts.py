@@ -13211,7 +13211,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("3.0억 달러", html)
         self.assertNotIn("accession", html)
 
-    def test_market_mover_research_chart_html_renders_bar_rows(self) -> None:
+    def test_market_mover_research_chart_html_renders_vertical_bar_plot(self) -> None:
         from app.web.overview.components.market_movers import _market_mover_research_bar_chart_html
 
         chart = {
@@ -13241,12 +13241,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         html = _market_mover_research_bar_chart_html(chart, "annual")
 
         self.assertIn('class="ov-mm-research-chart"', html)
+        self.assertIn('class="ov-mm-research-chart-bar-plot"', html)
+        self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
         self.assertIn("PER", html)
         self.assertIn("2024", html)
         self.assertIn("2025", html)
         self.assertIn("63.16x", html)
         self.assertIn("50.00x", html)
-        self.assertIn("width:100.00%", html)
+        self.assertIn("height:100.00%", html)
+        self.assertNotIn("width:100.00%", html)
         self.assertIn("공시 2026-02-20", html)
 
         empty_html = _market_mover_research_bar_chart_html(chart, "quarterly")

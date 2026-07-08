@@ -5,3 +5,8 @@
 - `.venv/bin/python -m py_compile app/services/overview/why_it_moved.py app/web/overview/market_movers_helpers.py app/web/overview/components/market_movers.py app/web/overview/components/common.py` -> PASS.
 - `git diff --check` -> PASS.
 - Browser QA on `http://localhost:8510`: 기본 지표 표 유지, 하단 PER/EPS/당기순이익/유동비율/FCF tabs, annual/quarterly tabs, PER annual bars, FCF quarterly bars 확인. Screenshots are local generated artifacts.
+- `.venv/bin/python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests.test_market_mover_research_chart_html_renders_vertical_bar_plot` -> RED then PASS after vertical bar plot implementation.
+- `.venv/bin/python -m unittest -k market_mover_research tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` -> PASS, 12 tests after vertical chart polish.
+- `.venv/bin/python -m py_compile app/web/overview/components/market_movers.py app/web/overview/components/common.py tests/test_service_contracts.py` -> PASS.
+- `git diff --check` -> PASS after vertical chart polish.
+- Browser QA on `http://localhost:8510`: `ov-mm-research-chart-bar-plot` / `ov-mm-research-chart-column` DOM, height-based bars, and visible PER annual vertical bar chart 확인. Screenshot is a local generated artifact.
