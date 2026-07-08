@@ -966,6 +966,54 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             self.assertNotIn("value=date(2016, 1, 1)", body)
             self.assertNotIn("Research-only defaults", body)
 
+    def test_strict_factor_session_state_prefill_date_inputs_avoid_default_duplication_warning(self) -> None:
+        source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+
+        self.assertIn("def _strict_factor_date_input(", source)
+        for key in (
+            "qss_start",
+            "qss_end",
+            "qsqp_start",
+            "qsqp_end",
+            "vsqp_start",
+            "vsqp_end",
+            "vss_start",
+            "vss_end",
+            "qvqp_start",
+            "qvqp_end",
+            "qvss_start",
+            "qvss_end",
+        ):
+            self.assertIn(f'key="{key}"', source)
+            self.assertNotIn(
+                f'st.date_input("Start Date", value=_default_strict_factor_start_date(), key="{key}")',
+                source,
+            )
+            self.assertNotIn(
+                f'st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="{key}")',
+                source,
+            )
+
+    def test_backtest_state_init_does_not_eagerly_seed_strict_form_widget_keys(self) -> None:
+        source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        for key in (
+            "qss_end",
+            "qss_trend_filter_enabled",
+            "vss_end",
+            "vss_trend_filter_enabled",
+            "qvss_end",
+            "qvss_trend_filter_enabled",
+            "qsqp_end",
+            "qsqp_trend_filter_enabled",
+            "vsqp_end",
+            "vsqp_trend_filter_enabled",
+            "qvqp_end",
+            "qvqp_trend_filter_enabled",
+        ):
+            self.assertNotIn(f'st.session_state["{key}"] =', source)
+        self.assertIn("Migrate old strict-annual default factor selections", source)
+
     def test_etf_like_single_forms_stay_form_first_without_runtime_wrapper_copy(self) -> None:
         form_paths = [
             Path("app/web/backtest_single_forms/equal_weight.py"),
