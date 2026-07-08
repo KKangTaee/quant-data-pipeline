@@ -12717,6 +12717,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         component_source = Path("app/web/backtest_practical_validation/components.py").read_text(encoding="utf-8")
         flow4_body = page_source.split('eyebrow="Flow 4"', 1)[1]
         flow4_body = flow4_body.split('eyebrow="Flow 5"', 1)[0]
+        evidence_body = page_source.split("def _render_validation_evidence_boards", 1)[1]
+        evidence_body = evidence_body.split("def _render_validation_action_boards", 1)[0]
+        provider_gap_body = page_source.split("def _render_provider_gap_section", 1)[1]
+        provider_gap_body = provider_gap_body.split("def _provider_look_through_board", 1)[0]
 
         self.assertIn("def _render_validation_criteria_detail_board", page_source)
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
@@ -12732,6 +12736,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("##### Input Evidence", page_source)
         self.assertIn("실전성 진단", page_source)
         self.assertNotIn("##### Practical Diagnostics", page_source)
+        self.assertIn("근거 부록", evidence_body)
+        self.assertIn("Flow 4 기준 상세와 Provider / Data 보강 액션을 먼저 확인", evidence_body)
+        self.assertIn('st.expander("근거 부록", expanded=False)', evidence_body)
+        self.assertIn("수집 대상 근거", provider_gap_body)
+        self.assertIn("수집 대상 상세", provider_gap_body)
+        self.assertIn("expanded=False", provider_gap_body)
+        self.assertNotIn("Provider 부족 근거", page_source)
         self.assertNotIn("검증 근거 보드", page_source)
         self.assertNotIn("Evidence workspace", page_source)
         self.assertNotIn("_board_summary_cards", page_source)

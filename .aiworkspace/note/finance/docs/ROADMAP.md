@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-category-empty-state-v1-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/`다.
+
+- 목적: Practical Validation에서 Flow 2 재검증 실행 전 Flow 3 / Flow 4가 자동으로 보이는 문제를 막고, Flow 4 하단의 근거 / Provider 부족근거 덩어리를 실제 보강 흐름 중심으로 정리했다.
+- 주요 변경: Flow 2 current-session replay가 없으면 Flow 1 / Flow 2만 렌더링한다. Data Coverage / Construction Risk / Provider Investability 중 수집으로 해결 가능한 provider / holdings / exposure / macro gap만 `수집하기` CTA를 노출한다. Flow 4는 `카테고리별 검증 결과 -> 단계별 검증 소유권 -> Provider / Data 보강 액션 -> 접힌 근거 부록` 순서로 읽는다.
+- 이번 차수에서 하지 않은 일: Final Review 화면 재구성, gate threshold 변경, registry / saved JSONL rewrite, provider ingestion 신규 경로, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-category-empty-state-v1-20260708/`다.
 
 - 목적: Practical Validation Flow 4 `카테고리별 검증 결과`에서 `보강 항목 없음`이 통과 / 비적용 / Final Review 판단 항목처럼 애매하게 보이는 문제를 줄였다.
 - 주요 변경: workspace read model에 `visible_criteria_detail_groups`와 `visible_in_practical_validation`을 추가했다. Flow 3 React / fallback과 Flow 4 board는 visible groups만 읽고, REVIEW-only / empty group은 내부 read model에는 남기되 PV visible category result에서 숨긴다. React fallback copy도 `보강 항목 없음`을 통과처럼 해석하지 않게 정리했다.

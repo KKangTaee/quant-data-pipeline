@@ -5904,3 +5904,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Price refresh는 source ticker를 유지하되 active repair가 있으면 collection ticker만 resolved symbol로 바꾸며, plan/details에 metadata-only `source_range` / `resolved_range` / `split_status`를 남긴다.
 - Factor Readiness는 후보쌍 / 신뢰도 / 기간 경계 / 다음 행동을 보여주고, repair 후 readiness 재확인과 백테스트 재실행을 안내한다.
 - 후속 범위: official corporate-action feed 신규 수집과 실제 old/new ticker price series stitching.
+
+## 2026-07-08 - Practical Validation Flow Gating / Evidence IA V1
+
+- `.aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/`에서 1차~4차 Practical Validation flow 정리를 완료했다.
+- Flow 2에서 현재 세션 `전략 재검증 실행` 전에는 Flow 3 / Flow 4 / Flow 5와 결과 JSON을 렌더링하지 않는다.
+- Flow 4는 `카테고리별 검증 결과 -> 단계별 검증 소유권 -> Provider / Data 보강 액션 -> 접힌 근거 부록` 순서로 읽고, 수집 가능한 provider / holdings / exposure / macro gap에만 `수집하기` CTA를 노출한다.
+- Provider 부족근거 copy는 `수집 대상 근거`로 낮췄고, 상세 evidence tabs는 기본 접힌 `근거 부록`으로 이동했다.

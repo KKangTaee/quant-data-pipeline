@@ -1156,12 +1156,12 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         min_width=220,
     )
 
-    st.markdown("##### Provider 부족 근거")
-    with st.expander("Provider 부족 근거 상세", expanded=bool(actionable_rows)):
+    st.markdown("##### 수집 대상 근거")
+    with st.expander("수집 대상 상세", expanded=False):
         _render_board_context_badges(validation_result, "provider_data_gaps")
         st.caption(
-            "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지 보여줍니다. "
-            "부족 데이터는 이 화면에서 바로 수집할 수 있고, source mapping이 없는 ETF는 connector 보강이 필요합니다."
+            "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지와 "
+            "어떤 항목을 수집할 수 있는지 보여줍니다. source mapping이 없는 ETF는 connector 보강이 필요합니다."
         )
         _render_display_dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
     if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
@@ -1800,75 +1800,77 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
 
 
 def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
-    summary_tab, data_tab, construction_tab, realism_tab, robustness_tab, raw_tab = st.tabs(
-        ["핵심 근거", "데이터 품질", "구성 / 리스크", "검증 방법론", "강건성", "Raw Evidence"]
-    )
-    with summary_tab:
-        st.markdown("##### 핵심 입력 근거")
-        _render_board_context_badges(validation_result, "input_evidence")
-        checks = list(validation_result.get("checks") or [])
-        render_pv_card_grid(
-            [
-                {
-                    "kicker": "Input",
-                    "title": "Source / Replay / Comparator",
-                    "status": _audit_status_summary(checks),
-                    "detail": "source 자격, 최신 재검증, 비교 기준 동등성의 기본 입력 근거입니다.",
-                    "tone": "warning" if any(not bool(row.get("Ready")) for row in checks) else "positive",
-                }
-            ],
-            min_width=240,
+    with st.expander("근거 부록", expanded=False):
+        st.caption("Flow 4 기준 상세와 Provider / Data 보강 액션을 먼저 확인한 뒤, 필요한 근거만 펼쳐봅니다.")
+        summary_tab, data_tab, construction_tab, realism_tab, robustness_tab, raw_tab = st.tabs(
+            ["핵심 근거", "데이터 품질", "구성 / 리스크", "검증 방법론", "강건성", "Raw Evidence"]
         )
-        with st.expander("핵심 입력 근거 상세", expanded=False):
-            _render_display_dataframe(pd.DataFrame(checks), width="stretch", hide_index=True)
-        with st.expander("Curve / 재검증 근거", expanded=False):
-            _render_curve_evidence(validation_result)
-        _render_validation_alerts(validation_result)
-    with data_tab:
-        with st.expander("데이터 품질 / 편향 통제 상세", expanded=False):
-            _render_data_coverage_audit(validation_result)
-        provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
-        if provider_rows:
-            st.markdown("##### Provider 근거 상태")
-            _render_board_context_badges(validation_result, "provider_coverage")
-            st.caption(
-                "Ingestion에서 저장한 ETF provider / FRED snapshot이 실전성 진단에 어떻게 연결됐는지 보여줍니다."
-            )
+        with summary_tab:
+            st.markdown("##### 핵심 입력 근거")
+            _render_board_context_badges(validation_result, "input_evidence")
+            checks = list(validation_result.get("checks") or [])
             render_pv_card_grid(
                 [
                     {
-                        "kicker": "Provider Coverage",
-                        "title": "ETF / macro evidence",
-                        "status": _audit_status_summary(provider_rows),
-                        "detail": "provider freshness, operability, holdings / exposure coverage를 compact하게 확인합니다.",
-                        "tone": "warning"
-                        if any(str(row.get("Status") or "").upper() != "PASS" for row in provider_rows)
-                        else "positive",
+                        "kicker": "Input",
+                        "title": "Source / Replay / Comparator",
+                        "status": _audit_status_summary(checks),
+                        "detail": "source 자격, 최신 재검증, 비교 기준 동등성의 기본 입력 근거입니다.",
+                        "tone": "warning" if any(not bool(row.get("Ready")) for row in checks) else "positive",
                     }
                 ],
                 min_width=240,
             )
-            with st.expander("Provider 근거 상세", expanded=False):
-                _render_display_dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
-            _render_provider_look_through_board(validation_result)
-    with construction_tab:
-        with st.expander("포트폴리오 구성 근거 상세", expanded=False):
-            _render_construction_risk_audit(validation_result)
-        with st.expander("위험 기여 상세", expanded=False):
-            _render_risk_contribution_audit(validation_result)
-        with st.expander("Component 역할 / 비중 상세", expanded=False):
-            _render_component_role_weight_audit(validation_result)
-    with realism_tab:
-        with st.expander("검증 방법론 강도 상세", expanded=False):
-            _render_validation_efficacy_audit(validation_result)
-        with st.expander("실전 운용 현실성 상세", expanded=False):
-            _render_backtest_realism_audit(validation_result)
-        _render_practical_diagnostics_summary(validation_result)
-    with robustness_tab:
-        with st.expander("Stress / sensitivity 상세", expanded=False):
-            _render_stress_sensitivity_interpretation(validation_result)
-    with raw_tab:
-        _render_diagnostic_detail_expanders(validation_result)
+            with st.expander("핵심 입력 근거 상세", expanded=False):
+                _render_display_dataframe(pd.DataFrame(checks), width="stretch", hide_index=True)
+            with st.expander("Curve / 재검증 근거", expanded=False):
+                _render_curve_evidence(validation_result)
+            _render_validation_alerts(validation_result)
+        with data_tab:
+            with st.expander("데이터 품질 / 편향 통제 상세", expanded=False):
+                _render_data_coverage_audit(validation_result)
+            provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
+            if provider_rows:
+                st.markdown("##### Provider 근거 상태")
+                _render_board_context_badges(validation_result, "provider_coverage")
+                st.caption(
+                    "Ingestion에서 저장한 ETF provider / FRED snapshot이 실전성 진단에 어떻게 연결됐는지 보여줍니다."
+                )
+                render_pv_card_grid(
+                    [
+                        {
+                            "kicker": "Provider Coverage",
+                            "title": "ETF / macro evidence",
+                            "status": _audit_status_summary(provider_rows),
+                            "detail": "provider freshness, operability, holdings / exposure coverage를 compact하게 확인합니다.",
+                            "tone": "warning"
+                            if any(str(row.get("Status") or "").upper() != "PASS" for row in provider_rows)
+                            else "positive",
+                        }
+                    ],
+                    min_width=240,
+                )
+                with st.expander("Provider 근거 상세", expanded=False):
+                    _render_display_dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+                _render_provider_look_through_board(validation_result)
+        with construction_tab:
+            with st.expander("포트폴리오 구성 근거 상세", expanded=False):
+                _render_construction_risk_audit(validation_result)
+            with st.expander("위험 기여 상세", expanded=False):
+                _render_risk_contribution_audit(validation_result)
+            with st.expander("Component 역할 / 비중 상세", expanded=False):
+                _render_component_role_weight_audit(validation_result)
+        with realism_tab:
+            with st.expander("검증 방법론 강도 상세", expanded=False):
+                _render_validation_efficacy_audit(validation_result)
+            with st.expander("실전 운용 현실성 상세", expanded=False):
+                _render_backtest_realism_audit(validation_result)
+            _render_practical_diagnostics_summary(validation_result)
+        with robustness_tab:
+            with st.expander("Stress / sensitivity 상세", expanded=False):
+                _render_stress_sensitivity_interpretation(validation_result)
+        with raw_tab:
+            _render_diagnostic_detail_expanders(validation_result)
 
 
 def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:

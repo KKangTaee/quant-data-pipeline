@@ -9108,3 +9108,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: BK -> BNY를 하드코딩 fixture가 아닌 대표 케이스로 두고, stale/missing price ticker가 단순 refresh 대상인지 symbol identity issue인지 구분해야 함.
 - Analysis result: 새 `market_symbol_alias` table보다 기존 `nyse_symbol_lifecycle(event_type=ticker_change, related_symbol, related_cik)`를 공용 source로 쓰는 것이 Backtest / Data Coverage 경계와 맞다.
 - Follow-up: Symbol Resolver V1 1차~5차에서 candidate / active repair, source evidence scoring, LOW-confidence 수동 확인, metadata-only PIT split contract, Factor Readiness UX / action feedback, docs / QA closeout을 완료했다. 실제 old/new ticker price series stitching과 official corporate-action feed 신규 수집은 후속 범위다.
+
+### 2026-07-08 - Practical Validation은 재검증 후에만 결론과 상세를 보여야 한다
+
+- User request: 사용자가 Practical Validation 탭 진입만으로 Flow 3가 실행되어 보이는 문제, Flow 4 수집 가능 gap, 단계별 검증 소유권, 하단 evidence tabs / Provider 부족근거 정리를 1차~4차 개발 / QA / 커밋으로 진행해 달라고 요청함.
+- Interpreted goal: Flow 2 replay 실행 전에는 검증 결론을 보여주지 않고, Flow 4는 현재 단계에서 보강할 기준과 수집 가능한 데이터 action만 먼저 읽혀야 함.
+- Analysis result: Flow 3 / Flow 4는 현재 세션 replay gate가 없었고, 하단 evidence tabs와 Provider 부족근거가 기준 상세보다 큰 덩어리처럼 보여 사용자의 판단 경로를 흐렸다. 데이터 수집으로 해결 가능한 gap은 provider snapshot / holdings / exposure / macro context 계열로 제한하는 것이 안전했다.
+- Follow-up: Flow 2 current-session replay gate, 수집 가능 criteria CTA, 단계별 검증 소유권 inventory, 접힌 `근거 부록`, `수집 대상 근거` copy를 구현했다. Gate threshold, registry / saved JSONL, provider ingestion 신규 경로, Final Review 판단, live approval / broker order는 변경하지 않았다.

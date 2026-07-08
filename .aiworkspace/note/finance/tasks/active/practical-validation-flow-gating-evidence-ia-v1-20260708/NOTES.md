@@ -15,3 +15,8 @@
 
 - Stage ownership inventory는 검증을 새로 실행하거나 gate를 바꾸지 않는다. 현재 `validation_modules`의 `stage_owner`, `requirement`, `status`, `resolution_surface`를 화면에서 확인 가능한 read model로 정리한다.
 - 후속 단계 소유 기준은 `후속 단계 판단`으로 표시하고, Practical Validation 보강 항목으로 반복 노출하지 않는 경계를 유지한다.
+
+## 4차 Decision
+
+- 핵심근거 / 데이터품질 / 구성리스크 / 검증방법론 / 강건성 / Raw Evidence는 삭제하지 않고 `근거 부록`으로 기본 접힘 처리한다. Flow 4의 first-read path는 기준 상세, 단계별 소유권, Provider / Data 보강 액션이다.
+- `Provider 부족근거`는 부족이라는 판정을 큰 덩어리처럼 강조하지 않도록 `수집 대상 근거`로 바꾸고, 상세 table은 항상 접힌 `수집 대상 상세`에 둔다.
