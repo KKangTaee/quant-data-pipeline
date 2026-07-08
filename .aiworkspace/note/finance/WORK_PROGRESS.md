@@ -120,6 +120,42 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`에서 사용자의 prototype UI 피드백을 1~6차 재설계 흐름으로 전환했다.
   - 1차는 새 데이터 / provider 없이 Market Movers의 화면 언어를 `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리했다.
   - Benchmark 근거는 `.aiworkspace/note/finance/researches/active/2026-06-market-movers-redesign-v2-benchmark/`에 남겼고, 2차부터 metric-card 중심 화면을 market-board형 list / tape로 재구성한다.
+- Backtest Policy Signal Help Board V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-help-board-v1-20260705/`에서 `검증 기준 상세`을 1차 기준 category board + click help UI로 개선했다.
+  - `Data Trust`, `Execution Source`, `Validation Source` 중심으로 무엇을 검증했는지 `plain_explanation` / `checked_items`로 보여준다.
+  - 2차 review focus 상세 목록은 Backtest Analysis에서 제거하고, Practical Validation source snapshot / entry gate로 이어서 확인한다.
+- Backtest Policy Signal Gate V7-V11:
+  - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-gate-v7-v11-20260703/`에서 `검증 신호 · Policy Signals`와 `2차 실전성 검증 Handoff`의 gate 의미를 정리했다.
+  - Practical Validation entry gate와 Portfolio Mix strict compare gate를 분리했고, `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus로 보존한다.
+  - Candidate draft / Practical Validation source / component replay contract는 `handoff_readiness_snapshot`과 `entry_gate`를 함께 보존한다.
+- Backtest Handoff Before Detail Tabs V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-before-detail-tabs-v1-20260702/`에서 Run Backtest 직후 `2차 실전성 검증 Handoff`를 상세 결과 탭 위로 올렸다.
+  - 현재 latest run 흐름은 `전략 결과/KPI -> 데이터 기준 요약 -> 실전성 검증 Handoff -> 상세 결과 탭`이다.
+  - Handoff scoring, Practical Validation source handoff, registry / saved / validation persistence는 변경하지 않았다.
+- Backtest Data Trust Heading Integrated V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-data-trust-heading-integrated-v1-20260701/`에서 standalone `데이터 기준 요약` heading을 제거하고 Data Trust custom panel 내부 title로 흡수했다.
+  - `먼저 볼 결론`은 panel 내부 읽기 cue로 유지해 KPI band와 Data Trust panel 사이의 시각적 이질감을 줄였다.
+  - Data Trust 계산 모델, strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
+- Backtest Result KPI Band V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-result-kpi-band-v1-20260701/`에서 Run Backtest 결과 헤더와 핵심 성과 metric을 하나의 KPI band로 통합했다.
+  - 기존 pill-like 기준 정보는 보조 기준선으로 낮추고, 별도 metric row는 latest run 기본 path에서 제거했다.
+  - Strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
+- Backtest Result Flow Reorder V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-result-flow-reorder-v1-20260701/`에서 Run Backtest 직후 결과 화면을 `전략 결과 -> 핵심 성과 -> 데이터 기준 -> 상세 결과 -> 실전 검증 Handoff` 순서로 재정렬했다.
+  - `Latest Backtest Run` 제목을 제거하고 전략명 기반 결과 헤더를 추가했다.
+  - Strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
+- Backtest Data Trust Summary Redesign V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-data-trust-summary-redesign-v1-20260701/`에서 `Latest Backtest Run`의 Data Trust 영역을 한국어 `데이터 기준 요약` 패널로 재구성했다.
+  - 기존 영어 metric card / raw badge 중심 표시와 중복 reading row / 세부 기준 expander를 제거하고, `계산 기준일 / 가격 기준 / 사용 데이터 / 검토 큐` 요약과 `이번 실행 검토 큐`를 같은 패널에 둔다.
+  - Strategy runtime, result bundle schema, registry / saved / validation persistence는 변경하지 않았다.
+- Backtest Latest Run Cleanup V1:
+  - `.aiworkspace/note/finance/tasks/active/backtest-latest-run-cleanup-v1-20260701/`에서 Run Backtest 직후 결과 화면의 상단 `Execution Summary`와 Latest Run guide card를 제거했다.
+  - 결과 화면은 `Data Trust Summary`, 전략 metric, next action, 조건부 결과 탭 중심으로 유지한다.
+  - Strategy runtime, result bundle, registry / saved / validation persistence는 변경하지 않았다.
+- Streamlit Native Pages Sidebar Fix:
+  - `.aiworkspace/note/finance/tasks/active/streamlit-native-pages-sidebar-fix-20260630/`에서 cold/direct Backtest startup이 native Streamlit sidebar를 노출하던 원인을 정리했다.
+  - Root cause는 `streamlit_app.py`의 top navigation과 `app/web/pages/backtest.py` legacy auto-discovery가 동시에 존재한 것이다.
+  - Backtest shell은 `app/web/backtest_page.py`로 이동했고, `app/web/pages/`에는 user-facing `.py` page를 두지 않는 회귀 테스트를 추가했다.
 - GTAA Result Cadence Monthly Valuation V1:
   - `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`에서 GTAA `interval`을 input row thinning이 아니라 strategy-owned rebalance cadence로 보정했다.
   - GTAA month_end runtime은 월말 row 뒤에 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
@@ -223,6 +259,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - Replaced the Ingestion collection `st.tabs` with a session-state `st.pills` selector and stored `collection_section` / `ui_started_at` on scheduled jobs.
 - Running job banner and large-job progress captions now include elapsed time.
 - Browser QA confirmed manual section selection renders the manual cards without the expanded daily operational body; screenshot is local generated artifact only.
+
+### 2026-06-30 - Streamlit native pages sidebar removed from cold Backtest startup
+- Completed `.aiworkspace/note/finance/tasks/active/streamlit-native-pages-sidebar-fix-20260630/`.
+- Moved Backtest shell from `app/web/pages/backtest.py` to `app/web/backtest_page.py` so Streamlit no longer auto-discovers a legacy sidebar page alongside the Finance Console top navigation.
+- Added a service contract guard preventing user-facing `.py` files under `app/web/pages/`.
+- Durable maps now point future Backtest UI edits at `app/web/backtest_page.py` plus `app/web/backtest_*.py`.
 
 ### 2026-06-29 - GTAA result cadence now separates monthly valuation from rebalance cadence
 - Completed `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/` after the user clarified that non-rebalance months should still show new candidate signals.
@@ -5498,6 +5540,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-legacy-cleanup-v6-v10-20260625/`에서 legacy audit, navigation surface extraction, IA read model service extraction, confirmed unused wrapper / Candidate Ops snapshot helper removal, guard tests, final QA를 순서대로 완료했다.
   - Active Overview ownership은 `app/web/overview/page.py`, `app/web/overview/navigation.py`, `app/web/overview/{market_context,market_movers,futures_macro,sentiment,events}.py`로 정리했고, `legacy_dashboard.py`는 helper compatibility surface로 남겼다.
   - 검증은 V6-V10 각 차수별 Browser QA, py_compile, OverviewAutomationContractTests, `git diff --check`로 기록했다.
+- Backtest Analysis Commercial UX Research 2026-06-29:
+  - `.aiworkspace/note/finance/researches/active/2026-06-backtest-analysis-commercial-ux/`에 Backtest Analysis 과도한 guide / Reference / readiness 흐름을 줄이기 위한 audit, benchmark, 단계별 개발 가이드를 작성했다.
+  - 결론은 `Backtest 사용 안내`와 `Reference help`를 기본 Backtest Analysis에서 제거하고, Latest Run을 summary-first / validation handoff eligibility 중심으로 재설계하는 것이다.
+  - 다음 구현 세션은 `DEVELOPMENT_GUIDELINES.md`의 1차 `Backtest Analysis Default Surface Cleanup`만 승인 범위로 여는 것을 권장한다.
 - GTAA SPY Low-MDD Top-2 ADV20 2026-06-29:
   - `.aiworkspace/note/finance/tasks/active/gtaa-spy-cagr-mdd-preset-search-20260629/`에서 SPY 대비 CAGR/MDD 개선, CAGR 11% 이상, MDD 절대값 15% 이하, current 1차 promotion gate 통과 후보를 확인했다.
   - 새 anchor는 `GTAA SPY Low-MDD Style Top-2 ADV20`: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`, `top=2`, `interval=4`, `1M/6M`, `MA200`, `ADV20D=20M`; 결과는 `24.08% / -9.99% / real_money_candidate`.
@@ -5627,3 +5673,56 @@ Detailed historical logs were archived on `2026-04-13`.
   - 각 PER / EPS / 당기순이익 / 유동비율 / FCF 탭은 연간 그래프와 분기 그래프를 좌우 한 row로 보여주며, 각 그래프는 tall bar, tighter spacing, 내부 horizontal scroll, SVG line overlay를 사용한다.
   - 추가 후속으로 막대 위 숫자를 제거하고 기간 / 값을 하단 2줄 caption으로 분리했다. Browser QA는 in-app browser localhost URL policy로 차단됐고, 검증은 focused tests / `py_compile` / static preview로 기록했다.
   - 분기 그래프가 2023년 이후 8개만 보인 원인은 service trend limit이 연간/분기 모두 8개였기 때문이라, 분기는 최대 32개까지 유지하도록 수정했다. 콤마 문자열 금액도 억/만/천 달러 formatter를 타도록 보강했다.
+- Backtest Entry Cleanup Tabs V1 2026-06-30:
+  - `.aiworkspace/note/finance/tasks/active/backtest-entry-cleanup-tabs-v1-20260630/`에서 Backtest 첫 화면 안내 / strategy capability helper / 하단 연구 참고 보드를 기본 render path에서 제거했다.
+  - 3단계 workflow selector는 Overview와 같은 `st.pills` 기반 Korean-first text tab + red underline으로 맞췄다.
+  - 검증은 focused RED/GREEN, Boundary / Backtest 관련 43개 unittest, py_compile, `git diff --check`, Browser QA screenshot으로 완료했다.
+- Backtest Boundary Refactor V1 2026-07-01:
+  - `.aiworkspace/note/finance/tasks/active/backtest-boundary-refactor-v1/`에서 1차~7차 staged refactor를 진행했다.
+  - UI state / formatter, Single Strategy payload, Portfolio Mix readiness, validation status policy, Final Review policy, runtime runner catalog 경계를 추가했다.
+  - 전략 계산식, validation threshold, registry / saved JSONL / provider DB 의미는 바꾸지 않았다.
+- Backtest Final Boundary Refactor V2-V8 2026-07-01:
+  - `docs/superpowers/plans/2026-07-01-backtest-final-boundary-refactor.md` 기준으로 runtime package, runners, stores/read_models, Single Strategy forms, Portfolio Mix Builder, Practical Validation, Final Review package split을 순차 완료했다.
+  - 각 차수는 development -> QA -> commit으로 닫았고, V8에서 durable docs / root logs / task logs / full QA / Browser QA를 마무리했다.
+  - 상세 완료 구조와 QA 기록은 `.aiworkspace/note/finance/tasks/active/backtest-boundary-refactor-v1/STATUS.md`와 `RUNS.md`를 보면 된다.
+- Backtest Handoff UI Integrated V1 2026-07-02:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-ui-integrated-v1-20260702/`에서 Latest Backtest Run의 `2차 실전성 검증 Handoff` 중복 UI를 단일 custom panel로 통합했다.
+  - gate 판정, Practical Validation source 저장 경로, registry / saved JSONL, strategy runtime은 변경하지 않았다.
+  - 후속 V2 후보는 handoff readiness policy의 service extraction과 `Policy Signal Meta` 역할 정리다.
+- Backtest Handoff Readiness V2-V6 2026-07-02:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-readiness-v2-v6-20260702/`에서 readiness policy service extraction, grouped gate display, `검증 신호 · Policy Signals` cleanup, Practical Validation source snapshot persistence, final QA/docs closeout을 완료했다.
+  - 버튼 활성화 기준은 보수적으로 유지했다: promotion hold, execution blocker, validation blocker가 있으면 source registration은 막힌다.
+  - Browser QA는 current worktree server `localhost:8502`에서 Equal Weight / Dividend ETFs 실행 후 확인했고, screenshot은 generated artifact로 커밋하지 않았다.
+- Backtest 2차 확인 큐 이동 2026-07-03:
+  - Backtest Analysis의 `2차 확인` review focus 상세를 1차 처리 항목처럼 펼치지 않고, compact count / handoff notice로 낮췄다.
+  - Practical Validation `1. 선택 후보 확인` 상단에서 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 이어 보게 했다.
+  - hard blocker / source 등록 기준은 유지했고, review focus의 책임 위치만 2차 화면으로 옮겼다.
+- Backtest Handoff / Policy Signals action cleanup V1-V4 2026-07-04:
+  - Handoff를 유일한 Practical Validation 진입 판단 / source 등록 action surface로 두고, Policy Signals는 evidence detail surface로 낮췄다.
+  - Streamlit-only production path에서 Handoff action shell을 통합했고, React custom component POC는 `app/web/components/backtest_handoff_action/`에 격리해 두었다.
+  - React POC는 현재 source registration에 연결하지 않고, 반복되는 고급 action-card 수요가 확인될 때만 production wiring 후보로 본다.
+- Backtest Handoff React action card correction 2026-07-05:
+  - 사용자 피드백에 따라 Handoff action을 Streamlit shell에서 React Handoff action card production path로 전환했다.
+  - 보이는 `2차 실전성 검증 Handoff` card와 버튼은 React component가 함께 렌더링하고, Python은 submit event를 받아 current selection source 등록 / rerun만 수행한다.
+  - Policy Signals는 계속 evidence detail만 소유하며, registry / saved / strategy runtime 계약은 변경하지 않았다.
+- Backtest Policy Signal Stage Split V1 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-stage-split-v1-20260705/`에서 `검증 기준 상세`을 1차 source 기준 React board로 정리했다.
+  - 2차 review focus는 Backtest Analysis에서 count / group handoff만 보이고, 상세 row는 Practical Validation `Backtest에서 넘어온 2차 확인 항목`에서 확인한다.
+  - gate math, source registration write, registry / saved / strategy runtime 계약은 변경하지 않았다.
+- Backtest Handoff Entry Gate Queue V1 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/backtest-handoff-entry-gate-queue-v1-20260705/`에서 Handoff card의 visible `진입 준비도` score를 제거하고 `1차 진입 기준 / 먼저 해결 / 2차 확인 큐`로 바꿨다.
+  - `promotion_decision=hold`는 1차 source 등록 blocker가 아니라 Practical Validation으로 전달되는 2차 review queue로 표시한다.
+  - React card / button integration은 유지하고, registry / saved / strategy runtime / gate threshold는 변경하지 않았다.
+- Backtest Second Stage Visibility V1 2026-07-05:
+  - `.aiworkspace/note/finance/tasks/active/backtest-second-stage-visibility-v1-20260705/`에서 Data Trust와 Handoff의 1차 / 2차 표시 경계를 추가 정리했다.
+  - Data Trust는 excluded ticker / malformed price row 같은 1차 데이터 이슈만 상세 표시하고, `meta["warnings"]` review focus는 2차 전달 count로만 남긴다.
+  - Practical Validation `Backtest에서 넘어온 2차 확인 항목`의 상세 queue 전달은 유지했고, gate threshold / source registration / registry / strategy runtime은 변경하지 않았다.
+- Backtest Entry Gate Ownership Correction 2026-07-05:
+  - Backtest Analysis visible surface에서 `2차 확인 큐` count / `2차 전달` Data Trust 표시 / readiness score를 제거하고, 1차 source 등록 기준과 버튼 활성화만 남겼다.
+  - `promotion_decision=hold` 등 review focus는 버튼을 막지 않고 source contract `entry_gate.review_focus_rows`로만 Practical Validation에 전달한다.
+  - Practical Validation `Backtest에서 넘어온 2차 확인 항목` 상세 표시와 registry / saved / strategy runtime 계약은 유지했다.
+- Backtest Data Trust Price Refresh V1 2026-07-05:
+  - Added Backtest Data Trust price refresh planning / execution path so stale OHLCV can be repaired for the current backtest ticker set.
+  - The UI action appears only when DB common latest price date is older than the latest completed NYSE trading day after excluding weekends / holidays.
+  - Boundary retained: refresh uses existing `run_collect_ohlcv`; no automatic rerun, source registration, validation handoff, approval, or order behavior.
+  - Follow-up UI integration moved the visible price-refresh card and button into `app/web/components/backtest_price_refresh_action/` React custom component, matching the Handoff action pattern while Python keeps the ingestion side effect.

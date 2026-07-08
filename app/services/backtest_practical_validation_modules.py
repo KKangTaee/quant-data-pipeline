@@ -6,21 +6,15 @@ from app.services.backtest_practical_validation_board_registry import (
     build_validation_board_map,
     evidence_boards_for_module,
 )
+from app.services.backtest_validation_status_policy import (
+    BLOCKING_STATUSES,
+    PASS_STATUSES,
+    REVIEW_STATUSES,
+    STATUS_RANK,
+    normalize_validation_status as _status,
+    worst_validation_status as _worst_status,
+)
 
-
-BLOCKING_STATUSES = {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
-REVIEW_STATUSES = {"REVIEW"}
-PASS_STATUSES = {"PASS", "READY"}
-STATUS_RANK = {
-    "BLOCKED": 60,
-    "NEEDS_INPUT": 50,
-    "NOT_RUN": 40,
-    "REVIEW": 30,
-    "PASS": 20,
-    "READY": 20,
-    "INFO": 10,
-    "NOT_APPLICABLE": 0,
-}
 
 ETF_STRATEGY_KEYS = {
     "equal_weight",
@@ -68,22 +62,6 @@ def _as_list(value: Any) -> list[Any]:
     if isinstance(value, str):
         return [item.strip() for item in value.replace("\n", ",").split(",") if item.strip()]
     return [value]
-
-
-def _status(value: Any) -> str:
-    normalized = str(value or "NOT_RUN").strip().upper()
-    if normalized in {"TRUE"}:
-        return "PASS"
-    if normalized in {"FALSE"}:
-        return "NEEDS_INPUT"
-    return normalized if normalized in STATUS_RANK else "NOT_RUN"
-
-
-def _worst_status(values: list[Any], *, default: str = "NOT_RUN") -> str:
-    statuses = [_status(value) for value in values if value is not None]
-    if not statuses:
-        return default
-    return max(statuses, key=lambda item: STATUS_RANK.get(item, STATUS_RANK["NOT_RUN"]))
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:

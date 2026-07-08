@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.runtime.candidate_library import (
+from app.runtime.backtest.read_models.candidate_library import (
     build_candidate_badges,
     build_candidate_library_rows,
     build_candidate_replay_payload,

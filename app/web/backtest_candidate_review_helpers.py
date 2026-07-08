@@ -8,6 +8,7 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_handoff_readiness import build_handoff_gate_summary
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.services.backtest_practical_validation_curve_context import (
     compact_benchmark_curve_snapshot_from_bundle,
@@ -906,6 +907,79 @@ def _net_cost_curve_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any
     }
 
 
+_POLICY_SIGNAL_SNAPSHOT_KEYS = (
+    "group",
+    "signal",
+    "status",
+    "effect",
+    "role",
+    "next_surface",
+    "meaning",
+    "checked_evidence",
+    "plain_explanation",
+    "checked_items",
+    "display_detail",
+    "pass_note",
+    "review_note",
+    "block_note",
+    "stage_owner",
+    "source_key",
+)
+
+
+def _compact_policy_signal_rows(rows: list[dict[str, Any]], *, effect: str | None = None) -> list[dict[str, Any]]:
+    compact_rows: list[dict[str, Any]] = []
+    for row in rows:
+        row_dict = dict(row or {})
+        if effect is not None and row_dict.get("effect") != effect:
+            continue
+        compact_rows.append(
+            {
+                key: row_dict.get(key)
+                for key in _POLICY_SIGNAL_SNAPSHOT_KEYS
+                if row_dict.get(key) is not None
+            }
+        )
+    return compact_rows
+
+
+def _handoff_readiness_snapshot_from_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    summary = build_handoff_gate_summary(dict(data or {}))
+    evaluation = dict(summary.get("evaluation") or {})
+    inventory = dict(evaluation.get("policy_signal_inventory") or {})
+    signal_rows = _compact_policy_signal_rows(list(inventory.get("rows") or []))
+    review_rows = [
+        row
+        for row in signal_rows
+        if row.get("stage_owner") == "second_stage" and row.get("effect") == "review"
+    ]
+    blocker_rows = [row for row in signal_rows if row.get("stage_owner") == "first_stage" and row.get("effect") == "block"]
+    return {
+        "schema_version": "backtest_handoff_readiness_snapshot_v2",
+        "policy": "practical_validation_entry_gate_v2",
+        "compare_policy": "portfolio_mix_strict_promotion_gate_v1",
+        "can_submit": bool(summary.get("can_submit")),
+        "can_enter_practical_validation": bool(evaluation.get("can_enter_practical_validation")),
+        "can_move_to_compare": bool(evaluation.get("can_move_to_compare")),
+        "score": evaluation.get("score"),
+        "tone": evaluation.get("tone"),
+        "verdict": evaluation.get("verdict"),
+        "route_label": evaluation.get("route_label"),
+        "next_action": evaluation.get("next_action"),
+        "reason_title": summary.get("reason_title"),
+        "gate_groups": list(summary.get("gate_groups") or []),
+        "action_items": list(summary.get("action_items") or []),
+        "blocking_reasons": list(evaluation.get("blocking_reasons") or []),
+        "entry_blocking_reasons": list(evaluation.get("entry_blocking_reasons") or []),
+        "compare_blocking_reasons": list(evaluation.get("blocking_reasons") or []),
+        "review_reasons": list(evaluation.get("review_reasons") or []),
+        "criteria_rows": list(evaluation.get("criteria_rows") or []),
+        "policy_signal_counts": dict(inventory.get("counts") or {}),
+        "policy_signal_review_rows": review_rows,
+        "policy_signal_blocker_rows": blocker_rows,
+    }
+
+
 def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = dict(bundle.get("meta") or {})
     summary = _candidate_review_summary_from_bundle(bundle)
@@ -945,6 +1019,7 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
             "validation_status": meta.get("validation_status"),
             "monitoring_status": meta.get("monitoring_status"),
         },
+        "handoff_readiness_snapshot": _handoff_readiness_snapshot_from_mapping(meta),
         "data_trust_snapshot": {
             "requested_end": meta.get("end"),
             "actual_result_start": meta.get("actual_result_start"),
@@ -992,6 +1067,14 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
         deployment=deployment,
     )
     price_freshness = dict(record.get("price_freshness") or {})
+    readiness_meta = {
+        **record,
+        **gate_snapshot,
+        "promotion_decision": promotion,
+        "shortlist_status": shortlist,
+        "deployment_readiness_status": deployment,
+        "price_freshness": price_freshness or gate_snapshot.get("price_freshness"),
+    }
     return {
         "source_kind": "history_record",
         "created_at": datetime.now().isoformat(timespec="seconds"),
@@ -1018,6 +1101,7 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
             "validation_status": gate_snapshot.get("validation_status"),
             "monitoring_status": gate_snapshot.get("monitoring_status"),
         },
+        "handoff_readiness_snapshot": _handoff_readiness_snapshot_from_mapping(readiness_meta),
         "data_trust_snapshot": {
             "requested_end": record.get("input_end"),
             "actual_result_start": record.get("actual_result_start"),

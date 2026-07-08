@@ -492,6 +492,27 @@ def _metric_snapshot_from_result(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _entry_gate_snapshot_from_handoff_readiness(handoff_readiness: dict[str, Any]) -> dict[str, Any]:
+    review_rows = list(handoff_readiness.get("policy_signal_review_rows") or [])
+    blocker_rows = list(handoff_readiness.get("policy_signal_blocker_rows") or [])
+    return {
+        "schema_version": "selection_source_entry_gate_v1",
+        "policy": handoff_readiness.get("policy"),
+        "can_enter_practical_validation": bool(
+            handoff_readiness.get("can_enter_practical_validation", handoff_readiness.get("can_submit"))
+        ),
+        "can_move_to_compare": bool(handoff_readiness.get("can_move_to_compare")),
+        "verdict": handoff_readiness.get("verdict"),
+        "route_label": handoff_readiness.get("route_label"),
+        "next_action": handoff_readiness.get("next_action"),
+        "review_focus_count": len(review_rows),
+        "blocker_count": len(blocker_rows),
+        "review_focus_rows": review_rows,
+        "blocker_rows": blocker_rows,
+        "action_items": list(handoff_readiness.get("action_items") or []),
+    }
+
+
 def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[str, Any]:
     """Convert a single run / compare draft into the current workflow selection-source contract."""
     created_at = _now_text()
@@ -505,6 +526,8 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
     turnover_evidence = dict(draft.get("turnover_evidence_snapshot") or {})
     net_cost_curve = dict(draft.get("net_cost_curve_snapshot") or {})
     real_money = dict(draft.get("real_money_signal") or {})
+    handoff_readiness = dict(draft.get("handoff_readiness_snapshot") or {})
+    entry_gate = _entry_gate_snapshot_from_handoff_readiness(handoff_readiness)
     selection_history = list(draft.get("selection_history_snapshot") or [])
     return {
         "schema_version": PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
@@ -537,6 +560,8 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
         "turnover_evidence_snapshot": turnover_evidence,
         "net_cost_curve_snapshot": net_cost_curve,
         "real_money_signal": real_money,
+        "handoff_readiness_snapshot": handoff_readiness,
+        "entry_gate": entry_gate,
         "components": [
             {
                 "component_id": f"{source_id}_component_1",
@@ -563,6 +588,8 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
                     "cost_model_snapshot": cost_model,
                     "turnover_evidence_snapshot": turnover_evidence,
                     "net_cost_curve_snapshot": net_cost_curve,
+                    "handoff_readiness_snapshot": handoff_readiness,
+                    "entry_gate": entry_gate,
                     "source_kind": source_kind,
                 },
             }

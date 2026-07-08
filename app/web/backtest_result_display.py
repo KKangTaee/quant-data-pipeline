@@ -12,12 +12,31 @@ from app.services.backtest_result_read_model import (
     build_strategy_data_trust_rows,
     data_trust_status_label,
 )
+from app.services.backtest_handoff_readiness import (
+    build_handoff_gate_summary,
+    build_next_step_readiness_evaluation,
+    build_policy_signal_inventory,
+)
+from app.services.backtest_price_refresh import (
+    build_backtest_price_refresh_plan,
+    run_backtest_price_refresh,
+)
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_ui_components import (
     render_badge_strip,
-    render_checkpoint_strip,
-    render_readiness_route_panel,
     render_status_card_grid,
+)
+from app.web.components.backtest_handoff_action import (
+    is_backtest_handoff_action_available,
+    render_backtest_handoff_action,
+)
+from app.web.components.backtest_price_refresh_action import (
+    is_backtest_price_refresh_action_available,
+    render_backtest_price_refresh_action,
+)
+from app.web.components.backtest_policy_signal_board import (
+    is_backtest_policy_signal_board_available,
+    render_backtest_policy_signal_board,
 )
 
 
@@ -108,138 +127,536 @@ def _render_swing_curve_chart(curve_df: pd.DataFrame | None, *, title: str) -> N
     st.altair_chart(chart, use_container_width=True)
 
 
-def _data_trust_result_integrity(meta: dict[str, Any]) -> dict[str, str]:
+def _display_data_trust_value(value: Any) -> str:
+    if value is None:
+        return "-"
+    text = str(value).strip()
+    return text or "-"
+
+
+def _format_data_trust_count(value: Any) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return _display_data_trust_value(value)
+
+
+def _format_latest_date_spread(value: Any) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"{int(value)}d"
+    except (TypeError, ValueError):
+        return f"{value}d"
+
+
+def _data_trust_price_status_label(status: str) -> str:
+    mapping = {
+        "ok": "최신성 정상",
+        "warning": "최신성 확인",
+        "error": "가격 보강 필요",
+    }
+    return mapping.get(status, "기준 제한")
+
+
+def _build_data_trust_issue_cards(
+    *,
+    excluded_tickers: list[Any],
+    malformed_price_rows: list[Any],
+) -> list[dict[str, str]]:
+    issue_cards: list[dict[str, str]] = []
+
+    if excluded_tickers:
+        sample = ", ".join(str(ticker) for ticker in excluded_tickers[:8])
+        suffix = "..." if len(excluded_tickers) > 8 else ""
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "제외 종목",
+                "detail": f"{len(excluded_tickers)}개 ticker가 이번 계산에서 빠졌습니다: {sample}{suffix}",
+                "tone": "warning",
+            }
+        )
+
+    if malformed_price_rows:
+        sample_symbols = [
+            str(row.get("ticker") or row.get("symbol") or "").strip()
+            for row in malformed_price_rows
+            if isinstance(row, dict)
+        ]
+        sample = ", ".join(symbol for symbol in sample_symbols[:6] if symbol)
+        detail = f"가격 결측 row {len(malformed_price_rows)}개가 있어 공통 계산 가능 기간을 줄일 수 있습니다."
+        if sample:
+            detail = f"{detail} 먼저 볼 ticker: {sample}"
+        issue_cards.append(
+            {
+                "priority": f"확인 {len(issue_cards) + 1}",
+                "title": "결측 가격 row",
+                "detail": detail,
+                "tone": "warning",
+            }
+        )
+
+    return issue_cards
+
+
+def _build_data_trust_brief(meta: dict[str, Any]) -> dict[str, Any]:
     price_freshness = meta.get("price_freshness") or {}
+    freshness_details = price_freshness.get("details") or {}
     status = str(price_freshness.get("status") or "").strip().lower()
     excluded_tickers = list(meta.get("excluded_tickers") or [])
     malformed_price_rows = list(meta.get("malformed_price_rows") or [])
-    warnings = list(meta.get("warnings") or [])
+    tickers = list(meta.get("tickers") or [])
+    requested_end = _display_data_trust_value(meta.get("end"))
+    actual_end = _display_data_trust_value(
+        meta.get("actual_result_end")
+        or freshness_details.get("effective_end_date")
+        or freshness_details.get("common_latest_date")
+        or meta.get("end")
+    )
+    common_latest = _display_data_trust_value(freshness_details.get("common_latest_date") or actual_end)
+    newest_latest = _display_data_trust_value(freshness_details.get("newest_latest_date") or common_latest)
+    spread_label = _format_latest_date_spread(freshness_details.get("spread_days"))
+    result_rows = _format_data_trust_count(meta.get("result_rows"))
+    symbol_count = len(tickers)
+    symbol_label = f"{symbol_count}개 종목" if symbol_count else "종목 수 미상"
+    issue_cards = _build_data_trust_issue_cards(
+        excluded_tickers=excluded_tickers,
+        malformed_price_rows=malformed_price_rows,
+    )
 
     if status == "error":
-        return {
-            "label": "BLOCKED",
-            "tone": "danger",
-            "detail": "가격 최신성 오류가 있어 결과 해석 전에 데이터 보강이 필요합니다.",
-        }
-    if status == "warning" or excluded_tickers or malformed_price_rows or warnings:
-        return {
-            "label": "REVIEW",
-            "tone": "warning",
-            "detail": "결과는 읽을 수 있지만 기간, 제외 ticker, warning을 함께 확인해야 합니다.",
-        }
-    if status == "ok":
-        return {
-            "label": "OK",
-            "tone": "positive",
-            "detail": "요청 기간과 가격 최신성 기준에서 큰 차단 신호가 없습니다.",
-        }
+        status_label = "자료 보강 필요"
+        tone = "danger"
+        headline = f"가격 데이터 보강 전까지 {actual_end} 기준 결과는 검토용으로만 봅니다."
+        price_tone = "danger"
+    elif excluded_tickers or malformed_price_rows or status == "warning":
+        status_label = "확인 필요"
+        tone = "warning"
+        headline = f"백테스트는 {actual_end}까지 계산됐고, 데이터 기준을 함께 확인해야 합니다."
+        price_tone = "warning"
+    elif status == "ok":
+        status_label = "자료 정상"
+        tone = "positive"
+        headline = f"백테스트는 {actual_end}까지 저장된 가격으로 정상 계산됐습니다."
+        price_tone = "positive"
+    else:
+        status_label = "자료 제한"
+        tone = "neutral"
+        headline = f"백테스트는 {actual_end} 기준으로 계산됐지만 데이터 기준 정보가 제한적입니다."
+        price_tone = "neutral"
+
+    if requested_end != "-" and actual_end != "-" and requested_end != actual_end:
+        subtitle = (
+            f"요청 종료일 {requested_end}보다 실제 계산 기준일은 {actual_end}입니다. "
+            "저장 DB에서 모든 구성 종목이 함께 갖춘 최신 가격일을 기준으로 읽습니다."
+        )
+    elif requested_end != "-":
+        subtitle = f"요청 종료일 {requested_end}까지 저장된 가격 기준으로 읽습니다."
+    else:
+        subtitle = "저장 DB의 공통 최신 가격일을 기준으로 결과를 읽습니다."
+
+    if excluded_tickers or malformed_price_rows:
+        next_check_label = "1차 데이터 확인"
+        next_check_value = "데이터 이슈 확인"
+        next_check_detail = "제외 종목과 결측 row를 확인합니다."
+    elif status == "error":
+        next_check_label = "1차 데이터 확인"
+        next_check_value = "데이터 보강"
+        next_check_detail = "가격 수집 또는 DB 보강 후 다시 실행합니다."
+    else:
+        next_check_label = "1차 데이터 확인"
+        next_check_value = "바로 성과 확인"
+        next_check_detail = "아래 성과 metric과 차트를 이어서 봅니다."
+
+    summary_items = [
+        {"label": "계산 기준일", "value": actual_end, "detail": f"요청 {requested_end}", "tone": "neutral"},
+        {
+            "label": "가격 기준",
+            "value": _data_trust_price_status_label(status),
+            "detail": f"공통 {common_latest} · 최신 {newest_latest} · 차이 {spread_label}",
+            "tone": price_tone,
+        },
+        {
+            "label": "사용 데이터",
+            "value": symbol_label,
+            "detail": f"성과 row {result_rows} · 제외 {len(excluded_tickers)}개 · 결측 row {len(malformed_price_rows)}개",
+            "tone": "positive" if not excluded_tickers and not malformed_price_rows else "warning",
+        },
+        {"label": next_check_label, "value": next_check_value, "detail": next_check_detail, "tone": tone},
+    ]
+
     return {
-        "label": "UNKNOWN",
-        "tone": "neutral",
-        "detail": "가격 최신성 metadata가 제한적입니다. 결과 기간과 row 수를 먼저 확인합니다.",
+        "tone": tone,
+        "status_label": status_label,
+        "headline": headline,
+        "subtitle": subtitle,
+        "summary_items": summary_items,
+        "issue_cards": issue_cards,
+        "price_message": price_freshness.get("message"),
+        "excluded_tickers": excluded_tickers,
+        "malformed_price_rows": malformed_price_rows,
+        "warnings": [],
+        "second_stage_review_count": 0,
+        "newest_latest": newest_latest,
     }
 
 
-def _price_freshness_display(status: str | None) -> tuple[str, str]:
-    normalized = str(status or "").strip().lower()
-    if normalized == "ok":
-        return "OK", "positive"
-    if normalized == "warning":
-        return "WARNING", "warning"
-    if normalized == "error":
-        return "ERROR", "danger"
-    return "NOT ATTACHED", "neutral"
+def _render_data_trust_issue_queue(brief: dict[str, Any]) -> str:
+    issue_cards = list(brief.get("issue_cards") or [])
+    if not issue_cards:
+        return """
+  <div class="data-trust-brief__issues data-trust-brief__issues--empty">
+    <div class="data-trust-brief__issues-head">
+      <span>1차 데이터 확인</span>
+      <strong>추가 확인 없음</strong>
+    </div>
+    <p>현재 데이터 기준에서는 성과를 보기 전에 따로 볼 경고가 없습니다.</p>
+  </div>
+        """
+
+    issue_html = "".join(
+        (
+            f'<div class="data-trust-brief__issue data-trust-brief__issue--{escape(str(card.get("tone") or "warning"))}">'
+            f'<span class="data-trust-brief__issue-priority">{escape(str(card.get("priority") or "-"))}</span>'
+            '<div>'
+            f'<strong>{escape(str(card.get("title") or "-"))}</strong>'
+            f'<p>{escape(str(card.get("detail") or "-"))}</p>'
+            "</div>"
+            "</div>"
+        )
+        for card in issue_cards
+    )
+    return f"""
+  <div class="data-trust-brief__issues">
+    <div class="data-trust-brief__issues-head">
+      <span>1차 데이터 확인</span>
+      <strong>{len(issue_cards)}개 확인</strong>
+    </div>
+    <div class="data-trust-brief__issue-list">{issue_html}</div>
+  </div>
+    """
+
+
+def _render_data_trust_brief_panel(brief: dict[str, Any]) -> None:
+    tone = str(brief.get("tone") or "neutral")
+    status_label = escape(str(brief.get("status_label") or "-"))
+    headline = escape(str(brief.get("headline") or "-"))
+    subtitle = escape(str(brief.get("subtitle") or "-"))
+    summary_html = "".join(
+        (
+            f'<div class="data-trust-brief__summary-item data-trust-brief__summary-item--{escape(str(item.get("tone") or "neutral"))}">'
+            f'<span>{escape(str(item.get("label") or "-"))}</span>'
+            f'<strong>{escape(str(item.get("value") or "-"))}</strong>'
+            f'<small>{escape(str(item.get("detail") or "-"))}</small>'
+            "</div>"
+        )
+        for item in list(brief.get("summary_items") or [])
+    )
+    issue_queue_html = _render_data_trust_issue_queue(brief)
+    st.markdown(
+        f"""
+<style>
+.data-trust-brief {{
+  --dt-accent: #0f8f83;
+  --dt-soft: rgba(15, 143, 131, 0.10);
+  border-left: 4px solid var(--dt-accent);
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 1.1rem 1.2rem 1rem;
+  margin: 0.75rem 0 1rem;
+  background: linear-gradient(90deg, var(--dt-soft), rgba(255, 255, 255, 0));
+}}
+.data-trust-brief--warning {{
+  --dt-accent: #b45309;
+  --dt-soft: rgba(180, 83, 9, 0.10);
+}}
+.data-trust-brief--danger {{
+  --dt-accent: #b42318;
+  --dt-soft: rgba(180, 35, 24, 0.10);
+}}
+.data-trust-brief--neutral {{
+  --dt-accent: #667085;
+  --dt-soft: rgba(102, 112, 133, 0.10);
+}}
+.data-trust-brief__top {{
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}}
+.data-trust-brief__section-title {{
+  color: var(--dt-accent);
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-bottom: 0.7rem;
+}}
+.data-trust-brief__section-kicker {{
+  color: #667085;
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-bottom: 0.2rem;
+}}
+.data-trust-brief h4 {{
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.35rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}}
+.data-trust-brief__top p {{
+  margin: 0.55rem 0 0;
+  color: #667085;
+  font-size: 1rem;
+  line-height: 1.55;
+}}
+.data-trust-brief__pill {{
+  flex: 0 0 auto;
+  border: 1px solid rgba(15, 143, 131, 0.38);
+  color: var(--dt-accent);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  padding: 0.34rem 0.72rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+}}
+.data-trust-brief__summary {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+}}
+.data-trust-brief__summary-item {{
+  padding: 0.85rem 0.95rem;
+  border-right: 1px solid rgba(148, 163, 184, 0.22);
+  min-width: 0;
+}}
+.data-trust-brief__summary-item:last-child {{
+  border-right: 0;
+}}
+.data-trust-brief__summary-item span {{
+  display: block;
+  color: var(--dt-accent);
+  font-size: 0.86rem;
+  font-weight: 800;
+}}
+.data-trust-brief__summary-item strong {{
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--text-color);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}}
+.data-trust-brief__summary-item small {{
+  display: block;
+  margin-top: 0.22rem;
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}}
+.data-trust-brief__issues {{
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+}}
+.data-trust-brief__issues-head {{
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}}
+.data-trust-brief__issues-head span {{
+  color: #667085;
+  font-size: 0.88rem;
+  font-weight: 800;
+}}
+.data-trust-brief__issues-head strong {{
+  color: var(--dt-accent);
+  font-size: 0.9rem;
+}}
+.data-trust-brief__issue-list {{
+  margin-top: 0.45rem;
+}}
+.data-trust-brief__issue {{
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}}
+.data-trust-brief__issue:last-child {{
+  border-bottom: 0;
+}}
+.data-trust-brief__issue-priority {{
+  justify-self: start;
+  min-width: 3.8rem;
+  border-radius: 999px;
+  color: var(--dt-accent);
+  background: var(--dt-soft);
+  padding: 0.18rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+}}
+.data-trust-brief__issue strong {{
+  display: block;
+  color: var(--text-color);
+  font-size: 1.02rem;
+  line-height: 1.3;
+}}
+.data-trust-brief__issue p,
+.data-trust-brief__issues--empty p {{
+  margin: 0.14rem 0 0;
+  color: #667085;
+  line-height: 1.45;
+}}
+@media (max-width: 900px) {{
+  .data-trust-brief__top {{
+    display: block;
+  }}
+  .data-trust-brief__pill {{
+    display: inline-block;
+    margin-top: 0.75rem;
+  }}
+  .data-trust-brief__summary {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .data-trust-brief__summary-item:nth-child(2) {{
+    border-right: 0;
+  }}
+  .data-trust-brief__issue {{
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }}
+}}
+</style>
+<section class="data-trust-brief data-trust-brief--{escape(tone)}">
+  <div class="data-trust-brief__section-title">데이터 기준 요약</div>
+  <div class="data-trust-brief__top">
+    <div>
+      <div class="data-trust-brief__section-kicker">먼저 볼 결론</div>
+      <h4>{headline}</h4>
+      <p>{subtitle}</p>
+    </div>
+    <div class="data-trust-brief__pill">{status_label}</div>
+  </div>
+  <div class="data-trust-brief__summary">{summary_html}</div>
+{issue_queue_html}
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _data_trust_refresh_state_key(plan: dict[str, Any]) -> str:
+    tickers_key = "_".join(str(symbol) for symbol in list(plan.get("tickers") or [])[:12])
+    safe_tickers = "".join(ch if ch.isalnum() else "_" for ch in tickers_key)[:96]
+    current = str(plan.get("current_common_latest") or "none").replace("-", "")
+    target = str(plan.get("target_end") or "none").replace("-", "")
+    return f"backtest_data_trust_price_refresh_result_{safe_tickers}_{current}_{target}"
+
+
+def _render_data_trust_refresh_job_result(result: dict[str, Any]) -> None:
+    status = str(result.get("status") or "").strip().lower()
+    rows_written = result.get("rows_written")
+    message = str(result.get("message") or "가격 데이터 업데이트 실행 결과가 없습니다.")
+    if status == "success":
+        st.success(f"{message} 저장 rows: {rows_written or 0:,}")
+    elif status == "partial_success":
+        failed = ", ".join(str(symbol) for symbol in list(result.get("failed_symbols") or [])[:8])
+        suffix = f" 확인 필요: {failed}" if failed else ""
+        st.warning(f"{message} 저장 rows: {rows_written or 0:,}.{suffix}")
+    elif status == "skipped":
+        st.info(message)
+    else:
+        st.error(message)
+    st.caption("업데이트 후 최신 가격 기준 성과를 보려면 `Run Backtest`를 다시 실행하세요.")
+
+
+def _consume_data_trust_refresh_action(
+    action_value: dict[str, Any] | None,
+    meta: dict[str, Any],
+    state_key: str,
+) -> None:
+    """Run the Backtest price refresh once for a React component submit event."""
+    if not isinstance(action_value, dict) or action_value.get("action") != "refresh":
+        return
+    if action_value.get("source") != "backtest_price_refresh_action":
+        return
+    nonce = str(action_value.get("nonce") or "")
+    if not nonce:
+        return
+    consumed_key = f"{state_key}_component_nonce"
+    if st.session_state.get(consumed_key) == nonce:
+        return
+    st.session_state[consumed_key] = nonce
+    with st.spinner("현재 백테스트 ticker의 OHLCV 가격 데이터를 업데이트하는 중입니다...", show_time=True):
+        st.session_state[state_key] = run_backtest_price_refresh(meta)
+    st.rerun()
+
+
+def _render_data_trust_refresh_action(meta: dict[str, Any]) -> None:
+    plan = build_backtest_price_refresh_plan(meta)
+    if not plan.get("eligible"):
+        return
+
+    state_key = _data_trust_refresh_state_key(plan)
+    if not is_backtest_price_refresh_action_available():
+        st.error("가격 데이터 업데이트 React component build를 찾지 못했습니다. component build 후 갱신 UI가 표시됩니다.")
+        return
+
+    metric_items = [
+        {
+            "label": "현재 기준",
+            "value": str(plan.get("current_common_latest") or "-"),
+            "detail": "DB 공통 최신 가격일",
+        },
+        {
+            "label": "목표 기준",
+            "value": str(plan.get("target_end") or "-"),
+            "detail": "주말/휴장일 제외",
+        },
+        {
+            "label": "수집 시작",
+            "value": str(plan.get("collection_start") or "-"),
+            "detail": "부족 구간 시작",
+        },
+        {
+            "label": "대상 종목",
+            "value": f"{int(plan.get('ticker_count') or 0):,}개",
+            "detail": "현재 백테스트 ticker",
+        },
+    ]
+    action_value = render_backtest_price_refresh_action(
+        status_label="업데이트 가능",
+        tone="warning",
+        summary=str(plan.get("summary") or "가격 데이터 업데이트가 가능합니다."),
+        detail=str(plan.get("detail") or ""),
+        metric_items=metric_items,
+        action_text="현재 백테스트 ticker의 OHLCV 가격 데이터를 보강합니다.",
+        button_label=str(plan.get("button_label") or "가격 데이터 업데이트"),
+        action_note=(
+            "이 버튼은 가격 DB만 보강합니다. 백테스트 성과, 후보 등록, 2차 검증 전송은 자동으로 다시 실행하지 않습니다."
+        ),
+        disabled=False,
+        key=f"{state_key}_component",
+    )
+    _consume_data_trust_refresh_action(action_value, meta, state_key)
+    result = st.session_state.get(state_key)
+    if isinstance(result, dict):
+        _render_data_trust_refresh_job_result(result)
 
 
 def _render_data_trust_summary(meta: dict[str, Any]) -> None:
-    price_freshness = meta.get("price_freshness") or {}
-    freshness_details = price_freshness.get("details") or {}
-    excluded_tickers = list(meta.get("excluded_tickers") or [])
-    malformed_price_rows = list(meta.get("malformed_price_rows") or [])
-    integrity = _data_trust_result_integrity(meta)
-    freshness_label, freshness_tone = _price_freshness_display(price_freshness.get("status"))
+    brief = _build_data_trust_brief(meta)
 
-    st.markdown("#### Data Trust Summary")
-    st.caption(
-        "Checkpoint A · Result Integrity. 성과를 보기 전에 이 백테스트 결과가 어떤 데이터 범위에서 계산됐는지 확인합니다."
-    )
+    _render_data_trust_brief_panel(brief)
+    _render_data_trust_refresh_action(meta)
 
-    render_status_card_grid(
-        [
-            {
-                "title": "Result Integrity",
-                "value": integrity["label"],
-                "detail": integrity["detail"],
-                "tone": integrity["tone"],
-            },
-            {
-                "title": "Price Freshness",
-                "value": freshness_label,
-                "detail": price_freshness.get("message") or "가격 최신성 metadata 기준",
-                "tone": freshness_tone,
-            },
-            {
-                "title": "Result Window",
-                "value": meta.get("actual_result_end") or "-",
-                "detail": f"Requested end: {meta.get('end') or '-'}",
-                "tone": "neutral",
-            },
-            {
-                "title": "Excluded Tickers",
-                "value": len(excluded_tickers),
-                "detail": "전략 계산에서 제외된 ticker 수",
-                "tone": "warning" if excluded_tickers else "positive",
-            },
-        ]
-    )
-
-    render_badge_strip(
-        [
-            {"label": "Requested End", "value": meta.get("end") or "-", "tone": "neutral"},
-            {"label": "Actual Result End", "value": meta.get("actual_result_end") or "-", "tone": "neutral"},
-            {"label": "Result Rows", "value": meta.get("result_rows", "-"), "tone": "neutral"},
-            {"label": "Malformed Rows", "value": len(malformed_price_rows), "tone": "warning" if malformed_price_rows else "positive"},
-        ]
-    )
-
-    if freshness_details:
-        render_badge_strip(
-            [
-                {"label": "Effective Trading End", "value": freshness_details.get("effective_end_date") or "-", "tone": "neutral"},
-                {"label": "Common Latest Price", "value": freshness_details.get("common_latest_date") or "-", "tone": "neutral"},
-                {"label": "Newest Latest Price", "value": freshness_details.get("newest_latest_date") or "-", "tone": "neutral"},
-                {"label": "Latest-Date Spread", "value": f"{freshness_details.get('spread_days', 0)}d", "tone": freshness_tone},
-            ]
-        )
-        status = str(price_freshness.get("status") or "").strip().lower()
-        message = price_freshness.get("message")
-        if status == "ok":
-            st.success(message or "가격 최신성 점검이 통과되었습니다.")
-        elif status == "warning":
-            st.warning(message or "가격 최신성 점검에서 주의가 필요합니다.")
-        elif status == "error":
-            st.error(message or "가격 최신성 점검에 실패했습니다.")
-
-    if excluded_tickers or malformed_price_rows:
-        with st.expander("Data Quality Details", expanded=False):
-            if excluded_tickers:
-                st.markdown("**Excluded Tickers**")
-                st.caption("전략 계산에 필요한 가격 이력이나 파생 지표가 부족해 이번 실행에서 제외된 ticker입니다.")
-                st.code(", ".join(excluded_tickers))
-            if malformed_price_rows:
-                st.markdown("**Malformed / Missing Price Rows**")
-                st.caption("가격 컬럼에 결측이 있는 ticker입니다. 공통 계산 가능 날짜가 짧아질 수 있습니다.")
-                malformed_df = pd.DataFrame(malformed_price_rows).rename(
-                    columns={
-                        "ticker": "Ticker",
-                        "price_col": "Price Column",
-                        "count": "Missing Row Count",
-                        "first_date": "First Missing Date",
-                        "last_date": "Last Missing Date",
-                        "sample_dates": "Sample Missing Dates",
-                    }
-                )
-                st.dataframe(malformed_df, use_container_width=True, hide_index=True)
 
 def _data_trust_status_label(status: str | None) -> str:
     return data_trust_status_label(status)
@@ -336,123 +753,60 @@ def _render_strategy_data_trust_snapshot(
     return rows
 
 
-def _availability_tone(is_available: bool) -> str:
-    return "positive" if is_available else "warning"
-
-
-def _render_latest_run_orientation(
-    *,
-    has_selection_history: bool,
-    has_dynamic_details: bool,
-    has_real_money_details: bool,
-) -> None:
-    st.caption(
-        "Backtest Analysis는 후보를 만드는 화면입니다. 아래 체크포인트는 결과 해석 순서이며, "
-        "최종 검증과 선택은 Practical Validation과 Final Review에서 이어집니다."
-    )
-    render_checkpoint_strip(
-        [
-            {
-                "label": "A",
-                "title": "Result Integrity",
-                "detail": "Data Trust로 기간, 가격 최신성, 제외 ticker를 먼저 확인합니다.",
-                "status": "Data Trust",
-                "tone": "positive",
-            },
-            {
-                "label": "B",
-                "title": "Performance Shape",
-                "detail": "Summary와 Equity Curve에서 수익률, 낙폭, 회복 구간을 봅니다.",
-                "status": "Summary / Curve",
-                "tone": "neutral",
-            },
-            {
-                "label": "C",
-                "title": "Candidate Readiness",
-                "detail": "Promotion policy signal과 blocker로 다음 검토 가능성을 봅니다.",
-                "status": "Policy Signal" if has_real_money_details else "Not available",
-                "tone": _availability_tone(has_real_money_details),
-            },
-            {
-                "label": "D",
-                "title": "Next Action",
-                "detail": "필요하면 Portfolio Mix Builder에서 조합하거나 Practical Validation 후보로 보냅니다.",
-                "status": "Action after metrics",
-                "tone": "neutral",
-            },
-        ]
-    )
-    render_badge_strip(
-        [
-            {"label": "Selection History", "value": "Available" if has_selection_history else "Strategy-specific", "tone": _availability_tone(has_selection_history)},
-            {"label": "Dynamic Universe", "value": "Available" if has_dynamic_details else "Not included", "tone": "positive" if has_dynamic_details else "neutral"},
-            {"label": "Policy Signal", "value": "Available" if has_real_money_details else "Not included", "tone": _availability_tone(has_real_money_details)},
-            {"label": "Meta", "value": "Available", "tone": "positive"},
-        ]
-    )
-    if not has_selection_history:
-        st.caption(
-            "`Selection History`는 snapshot / factor 계열처럼 리밸런싱별 선택 이력이 있는 전략에서만 표시됩니다. "
-            "GTAA 같은 일부 ETF tactical 전략은 Result Table, Meta, Policy Signal에서 실행 조건을 확인합니다."
-        )
-
 def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[str, Any]:
     meta = bundle.get("meta") or {}
-    evaluation = _build_next_step_readiness_evaluation(meta)
-    can_submit = bool(evaluation.get("can_move_to_compare"))
-    score = float(evaluation.get("score") or 0.0)
+    evaluation = build_next_step_readiness_evaluation(meta)
+    gate_summary = build_handoff_gate_summary(meta)
+    can_submit = bool(evaluation.get("can_enter_practical_validation"))
     blocking_reasons = [str(reason) for reason in list(evaluation.get("blocking_reasons") or [])]
     review_reasons = [str(reason) for reason in list(evaluation.get("review_reasons") or [])]
+    inventory = dict(evaluation.get("policy_signal_inventory") or {})
+    inventory_counts = dict(inventory.get("counts") or {})
+    first_stage_blocker_count = int(inventory_counts.get("first_stage_block") or 0)
+    second_stage_review_count = int(inventory_counts.get("second_stage_review") or len(review_reasons))
+    if not can_submit:
+        first_stage_blocker_count = max(
+            first_stage_blocker_count,
+            len(list(evaluation.get("entry_blocking_reasons") or [])),
+        )
 
-    if can_submit and score >= 8.0:
-        status_label = "진입 가능"
+    if can_submit:
+        status_label = "1차 통과"
         tone = "positive"
-        summary = "1차 후보 판단을 통과했습니다."
-        action_text = "이 결과를 2차 실전성 검증 입력 후보로 등록할 수 있습니다."
-    elif can_submit:
-        status_label = "조건부 진입 가능"
-        tone = "warning"
-        summary = "1차 후보 판단은 통과했지만, 다음 단계에서 확인할 review 신호가 있습니다."
-        action_text = "Practical Validation으로 넘긴 뒤 표시된 review 신호를 우선 확인하세요."
+        summary = "1차 source 등록 기준은 통과했습니다. 다음 단계에서 실전성 검증을 진행합니다."
+        action_text = "Practical Validation에서 실전성, 유동성, 검증 근거를 확인합니다."
+        button_label = "2차 검증으로 보내기"
     else:
-        status_label = "진입 보류"
+        status_label = "1차 진입 보류"
         tone = "danger"
-        summary = "아직 1차 후보 판단을 통과하지 못했습니다."
-        action_text = "버튼을 활성화하려면 Promotion / 실행 원천 / 검증 원천 blocker를 먼저 해결하세요."
+        summary = "1차 source 등록 기준에 blocker가 있습니다."
+        action_text = "먼저 해결 항목을 정리한 뒤 다시 실행하세요."
+        button_label = "진입 기준 확인 필요"
 
-    if blocking_reasons:
-        display_reasons = blocking_reasons[:3]
-        reason_title = "막는 이유"
-    elif review_reasons:
-        display_reasons = review_reasons[:3]
-        reason_title = "다음 단계 확인 항목"
+    if not can_submit:
+        display_reasons = [str(item) for item in list(gate_summary.get("action_items") or [])][:3]
+        reason_title = str(gate_summary.get("reason_title") or ("막는 이유" if blocking_reasons else "상태"))
     else:
-        display_reasons = ["막는 항목 없음"]
-        reason_title = "상태"
-
-    criteria = [
+        display_reasons = ["Practical Validation에서 실전성 검증을 이어갑니다."]
+        reason_title = "다음 단계"
+    entry_cards = [
         {
-            "label": "Promotion",
-            "value": "통과" if bool(evaluation.get("promotion_ok")) else "보류",
-            "tone": "positive" if bool(evaluation.get("promotion_ok")) else "danger",
+            "label": "1차 진입 기준",
+            "value": "통과" if can_submit else "보류",
+            "detail": "source 등록 가능" if can_submit else "source 등록 차단",
+            "tone": "positive" if can_submit else "danger",
         },
         {
-            "label": "실행 원천",
-            "value": (
-                "통과"
-                if int(evaluation.get("execution_blocker_count") or 0) == 0
-                else f"block {int(evaluation.get('execution_blocker_count') or 0)}"
-            ),
-            "tone": "positive" if int(evaluation.get("execution_blocker_count") or 0) == 0 else "danger",
+            "label": "먼저 해결",
+            "value": f"{first_stage_blocker_count}개",
+            "detail": "1차 blocker",
+            "tone": "danger" if first_stage_blocker_count else "positive",
         },
         {
-            "label": "검증 원천",
-            "value": (
-                "통과"
-                if int(evaluation.get("validation_blocker_count") or 0) == 0
-                else f"block {int(evaluation.get('validation_blocker_count') or 0)}"
-            ),
-            "tone": "positive" if int(evaluation.get("validation_blocker_count") or 0) == 0 else "danger",
+            "label": "다음 단계",
+            "value": "Practical Validation",
+            "detail": "실전성 검증",
+            "tone": "neutral",
         },
     ]
 
@@ -462,189 +816,605 @@ def _build_practical_validation_handoff_state(bundle: dict[str, Any]) -> dict[st
         "tone": tone,
         "summary": summary,
         "action_text": action_text,
-        "score": score,
+        "button_label": button_label,
         "reason_title": reason_title,
         "display_reasons": display_reasons,
-        "criteria": criteria,
+        "entry_cards": entry_cards,
         "evaluation": evaluation,
+        "first_stage_blocker_count": first_stage_blocker_count,
+        "second_stage_review_count": second_stage_review_count,
     }
 
 
-def _render_practical_validation_handoff_card(state: dict[str, Any]) -> None:
+def _render_practical_validation_handoff_panel(state: dict[str, Any]) -> None:
     tone = str(state.get("tone") or "neutral")
     status = escape(str(state.get("status_label") or "-"))
     summary = escape(str(state.get("summary") or "-"))
-    score = escape(f"{float(state.get('score') or 0.0):.1f} / 10")
+    action_text = escape(str(state.get("action_text") or "-"))
     reason_title = escape(str(state.get("reason_title") or "상태"))
     reasons = list(state.get("display_reasons") or [])
-    criteria = list(state.get("criteria") or [])
+    entry_cards = list(state.get("entry_cards") or [])
+    action_label = "등록 가능" if bool(state.get("can_submit")) else "기준 확인 필요"
+    action_detail = (
+        "아래 버튼을 누르면 이 결과를 Practical Validation이 읽는 current selection source로 등록합니다."
+        if bool(state.get("can_submit"))
+        else "막는 항목이 남아 있으면 source 등록 버튼은 비활성화됩니다."
+    )
     reason_items = "".join(f"<li>{escape(str(reason))}</li>" for reason in reasons)
-    criteria_items = "".join(
+    entry_items = "".join(
         '<div class="bt-handoff-chip bt-handoff-chip-{tone}">'
         '<span class="bt-handoff-chip-label">{label}</span>'
         '<span class="bt-handoff-chip-value">{value}</span>'
+        '<small class="bt-handoff-chip-detail">{detail}</small>'
         "</div>".format(
             tone=escape(str(item.get("tone") or "neutral")),
             label=escape(str(item.get("label") or "-")),
             value=escape(str(item.get("value") or "-")),
+            detail=escape(str(item.get("detail") or "")),
         )
-        for item in criteria
+        for item in entry_cards
     )
     st.markdown(
         """
         <style>
-          .bt-handoff-card {
-            border: 1px solid rgba(49, 51, 63, 0.16);
-            border-left: 5px solid #64748b;
+          .bt-handoff-panel {
+            --bt-handoff-accent: #64748b;
+            --bt-handoff-soft: rgba(100, 116, 139, 0.10);
+            border-left: 4px solid var(--bt-handoff-accent);
+            border-top: 1px solid rgba(148, 163, 184, 0.24);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.24);
             border-radius: 8px;
-            padding: 1rem 1.05rem;
-            margin: 0.35rem 0 0.85rem 0;
-            background: #ffffff;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            padding: 1.1rem 1.2rem;
+            margin: 1rem 0 0.6rem 0;
+            background: linear-gradient(90deg, var(--bt-handoff-soft), rgba(255, 255, 255, 0));
           }
-          .bt-handoff-positive { border-left-color: #0f766e; background: #f8fffd; }
-          .bt-handoff-warning { border-left-color: #b45309; background: #fffaf0; }
-          .bt-handoff-danger { border-left-color: #b91c1c; background: #fffafa; }
+          .bt-handoff-panel--positive {
+            --bt-handoff-accent: #0f8f83;
+            --bt-handoff-soft: rgba(15, 143, 131, 0.10);
+          }
+          .bt-handoff-panel--warning {
+            --bt-handoff-accent: #b45309;
+            --bt-handoff-soft: rgba(180, 83, 9, 0.10);
+          }
+          .bt-handoff-panel--danger {
+            --bt-handoff-accent: #b42318;
+            --bt-handoff-soft: rgba(180, 35, 24, 0.10);
+          }
           .bt-handoff-head {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
-            gap: 0.65rem;
-            margin-bottom: 0.75rem;
+            gap: 0.85rem;
+            margin-bottom: 0.9rem;
+          }
+          .bt-handoff-kicker {
+            color: var(--bt-handoff-accent);
+            font-size: 0.88rem;
+            font-weight: 800;
+            margin-bottom: 0.24rem;
           }
           .bt-handoff-title {
-            font-size: 1.02rem;
-            font-weight: 750;
+            font-size: 1.2rem;
+            font-weight: 800;
             line-height: 1.35;
-            color: #111827;
+            color: var(--text-color);
+            margin: 0;
           }
           .bt-handoff-status {
-            padding: 0.26rem 0.58rem;
+            padding: 0.34rem 0.72rem;
             border-radius: 999px;
-            border: 1px solid rgba(49, 51, 63, 0.16);
-            font-size: 0.84rem;
-            font-weight: 750;
-            color: #111827;
-            background: #f8fafc;
+            border: 1px solid var(--bt-handoff-accent);
+            font-size: 0.86rem;
+            font-weight: 800;
+            color: var(--bt-handoff-accent);
+            background: rgba(255, 255, 255, 0.76);
           }
           .bt-handoff-main {
             display: grid;
             grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
-            gap: 0.8rem;
+            gap: 0.9rem;
             align-items: stretch;
           }
           .bt-handoff-summary {
-            font-size: 0.94rem;
-            line-height: 1.45;
-            color: #334155;
-          }
-          .bt-handoff-score {
-            margin-top: 0.55rem;
-            font-weight: 750;
-            color: #111827;
+            font-size: 1rem;
+            line-height: 1.55;
+            color: var(--text-color);
+            opacity: 0.74;
           }
           .bt-handoff-chips {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 0.5rem;
-            margin-top: 0.75rem;
+            margin-top: 0.82rem;
           }
           .bt-handoff-chip {
-            border: 1px solid rgba(49, 51, 63, 0.14);
+            border-right: 1px solid rgba(148, 163, 184, 0.22);
+            border-top: 1px solid rgba(148, 163, 184, 0.20);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.20);
+            border-left: 0;
             border-radius: 8px;
             padding: 0.62rem 0.68rem;
-            background: #ffffff;
+            background: var(--secondary-background-color);
             min-width: 0;
           }
-          .bt-handoff-chip-positive { border-color: rgba(15, 118, 110, 0.24); }
-          .bt-handoff-chip-danger { border-color: rgba(185, 28, 28, 0.24); }
+          .bt-handoff-chip-positive { border-top-color: rgba(15, 143, 131, 0.32); }
+          .bt-handoff-chip-danger { border-top-color: rgba(180, 35, 24, 0.32); }
           .bt-handoff-chip-label {
             display: block;
             font-size: 0.78rem;
-            color: #64748b;
-            font-weight: 650;
+            color: var(--text-color);
+            opacity: 0.68;
+            font-weight: 800;
             margin-bottom: 0.2rem;
           }
           .bt-handoff-chip-value {
             display: block;
             font-size: 0.96rem;
-            font-weight: 750;
-            color: #111827;
+            font-weight: 800;
+            color: var(--text-color);
             overflow-wrap: anywhere;
+          }
+          .bt-handoff-chip-detail {
+            display: block;
+            margin-top: 0.12rem;
+            color: var(--text-color);
+            opacity: 0.62;
+            font-size: 0.72rem;
+            line-height: 1.3;
           }
           .bt-handoff-reasons {
             border-radius: 8px;
-            background: rgba(248, 250, 252, 0.9);
-            border: 1px solid rgba(49, 51, 63, 0.12);
-            padding: 0.72rem 0.82rem;
+            background: var(--secondary-background-color);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            padding: 0.76rem 0.86rem;
           }
           .bt-handoff-reason-title {
             font-size: 0.84rem;
-            color: #64748b;
-            font-weight: 700;
+            color: var(--bt-handoff-accent);
+            font-weight: 800;
             margin-bottom: 0.4rem;
           }
           .bt-handoff-reasons ul {
             margin: 0;
             padding-left: 1.05rem;
-            color: #334155;
+            color: var(--text-color);
+            opacity: 0.78;
             line-height: 1.45;
             font-size: 0.92rem;
+          }
+          .bt-handoff-action {
+            display: grid;
+            grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1.2fr);
+            gap: 0.9rem;
+            margin-top: 0.95rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.24);
+          }
+          .bt-handoff-action-label {
+            color: var(--bt-handoff-accent);
+            font-size: 0.88rem;
+            font-weight: 800;
+            margin-bottom: 0.18rem;
+          }
+          .bt-handoff-action-text {
+            color: var(--text-color);
+            font-size: 1.02rem;
+            font-weight: 800;
+            line-height: 1.35;
+          }
+          .bt-handoff-boundary {
+            color: var(--text-color);
+            opacity: 0.76;
+            font-size: 0.92rem;
+            line-height: 1.45;
+          }
+          .bt-handoff-action-hint {
+            min-height: 2.45rem;
+            display: flex;
+            align-items: center;
+            border-left: 4px solid var(--bt-handoff-accent);
+            background: var(--bt-handoff-soft);
+            border-radius: 8px;
+            padding: 0.58rem 0.72rem;
+            color: var(--text-color);
+            opacity: 0.76;
+            font-size: 0.92rem;
+            line-height: 1.4;
+          }
+          .bt-handoff-action-hint--positive {
+            --bt-handoff-accent: #0f8f83;
+            --bt-handoff-soft: rgba(15, 143, 131, 0.10);
+          }
+          .bt-handoff-action-hint--warning {
+            --bt-handoff-accent: #b45309;
+            --bt-handoff-soft: rgba(180, 83, 9, 0.10);
+          }
+          .bt-handoff-action-hint--danger {
+            --bt-handoff-accent: #b42318;
+            --bt-handoff-soft: rgba(180, 35, 24, 0.10);
           }
           @media (max-width: 760px) {
             .bt-handoff-main { grid-template-columns: 1fr; }
             .bt-handoff-chips { grid-template-columns: 1fr; }
+            .bt-handoff-action { grid-template-columns: 1fr; }
           }
         </style>
         """,
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<div class="bt-handoff-card bt-handoff-{tone}">'
+        f'<section class="bt-handoff-panel bt-handoff-panel--{tone}">'
         f'<div class="bt-handoff-head">'
-        f'<div class="bt-handoff-title">2차 실전성 검증 Handoff</div>'
+        f"<div><div class=\"bt-handoff-kicker\">2차 단계 진입 판단</div>"
+        f'<h4 class="bt-handoff-title">2차 실전성 검증 Handoff</h4></div>'
         f'<div class="bt-handoff-status">{status}</div>'
         f"</div>"
         f'<div class="bt-handoff-main">'
         f'<div><div class="bt-handoff-summary">{summary}</div>'
-        f'<div class="bt-handoff-score">Candidate Readiness {score}</div>'
-        f'<div class="bt-handoff-chips">{criteria_items}</div></div>'
+        f'<div class="bt-handoff-chips">{entry_items}</div></div>'
         f'<div class="bt-handoff-reasons"><div class="bt-handoff-reason-title">{reason_title}</div>'
         f"<ul>{reason_items}</ul></div>"
         f"</div>"
-        f"</div>",
+        f'<div class="bt-handoff-action">'
+        f"<div>"
+        f'<div class="bt-handoff-action-label">{escape(action_label)}</div>'
+        f'<div class="bt-handoff-action-text">{action_text}</div>'
+        f"</div>"
+        f'<div class="bt-handoff-boundary">{escape(action_detail)} '
+        f"이 단계는 검증 source 등록만 수행합니다. 최종 선택, 투자 추천, live 승인, 주문 지시는 발생하지 않습니다.</div>"
+        f"</div>"
+        f"</section>",
         unsafe_allow_html=True,
     )
 
 
+def _consume_practical_validation_handoff_action(action_value: dict[str, Any] | None, bundle: dict[str, Any]) -> None:
+    """Handle the React card submit event without duplicating the source write on rerun."""
+    if not isinstance(action_value, dict) or action_value.get("action") != "submit":
+        return
+    nonce = str(action_value.get("nonce") or "")
+    if not nonce:
+        return
+    consumed_key = "latest_run_candidate_review_draft_component_nonce"
+    if st.session_state.get(consumed_key) == nonce:
+        return
+    st.session_state[consumed_key] = nonce
+    _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+    st.rerun()
+
+
+def _render_policy_signal_summary_panel(meta: dict[str, Any]) -> None:
+    gate_summary = build_handoff_gate_summary(meta)
+    evaluation = dict(gate_summary.get("evaluation") or {})
+    can_submit = bool(gate_summary.get("can_submit"))
+    tone = "positive" if can_submit and str(evaluation.get("tone") or "") == "success" else "warning" if can_submit else "danger"
+    status = "1차 통과" if can_submit else "기준 확인 필요"
+    route_label = escape(str(evaluation.get("route_label") or "-"))
+    verdict = escape(str(evaluation.get("verdict") or "-"))
+    next_action = escape(str(evaluation.get("next_action") or "-"))
+    if can_submit:
+        action_title = "다음 단계"
+        action_items = ["Practical Validation에서 실전성 검증을 이어갑니다."]
+    else:
+        action_title = str(gate_summary.get("reason_title") or "상태")
+        action_items = [str(item) for item in list(gate_summary.get("action_items") or [])] or ["막는 항목 없음"]
+    gate_groups = list(gate_summary.get("gate_groups") or [])
+
+    chip_html = "".join(
+        (
+            f'<div class="bt-policy-signal__chip bt-policy-signal__chip--{escape(str(group.get("tone") or "neutral"))}">'
+            f'<span>{escape(str(group.get("label") or "-"))}</span>'
+            f'<strong>{escape(str(group.get("value") or "-"))}</strong>'
+            "</div>"
+        )
+        for group in gate_groups
+    )
+    action_html = "".join(f"<li>{escape(item)}</li>" for item in action_items)
+
+    st.markdown(
+        f"""
+<style>
+.bt-policy-signal {{
+  --ps-accent: #64748b;
+  --ps-soft: rgba(100, 116, 139, 0.10);
+  border-left: 4px solid var(--ps-accent);
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 1.05rem 1.15rem 1rem;
+  margin: 0.35rem 0 1rem;
+  background: linear-gradient(90deg, var(--ps-soft), rgba(255, 255, 255, 0));
+}}
+.bt-policy-signal--positive {{
+  --ps-accent: #0f8f83;
+  --ps-soft: rgba(15, 143, 131, 0.10);
+}}
+.bt-policy-signal--warning {{
+  --ps-accent: #b45309;
+  --ps-soft: rgba(180, 83, 9, 0.10);
+}}
+.bt-policy-signal--danger {{
+  --ps-accent: #b42318;
+  --ps-soft: rgba(180, 35, 24, 0.10);
+}}
+.bt-policy-signal__head {{
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}}
+.bt-policy-signal__kicker {{
+  color: var(--ps-accent);
+  font-size: 0.86rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+}}
+.bt-policy-signal h4 {{
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.25rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+}}
+.bt-policy-signal__status {{
+  flex: 0 0 auto;
+  border: 1px solid var(--ps-accent);
+  border-radius: 999px;
+  color: var(--ps-accent);
+  background: rgba(255, 255, 255, 0.76);
+  padding: 0.34rem 0.72rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+}}
+.bt-policy-signal__body {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 0.9fr);
+  gap: 1rem;
+  margin-top: 0.95rem;
+}}
+.bt-policy-signal__verdict {{
+  color: var(--text-color);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.45;
+}}
+.bt-policy-signal__route {{
+  margin-top: 0.35rem;
+  color: #667085;
+  line-height: 1.55;
+}}
+.bt-policy-signal__chips {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}}
+.bt-policy-signal__chip {{
+  border-top: 3px solid rgba(100, 116, 139, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 0.62rem 0.65rem;
+  background: rgba(148, 163, 184, 0.06);
+  min-width: 0;
+}}
+.bt-policy-signal__chip--positive {{ border-top-color: rgba(15, 143, 131, 0.34); }}
+.bt-policy-signal__chip--warning {{ border-top-color: rgba(180, 83, 9, 0.34); }}
+.bt-policy-signal__chip--danger {{ border-top-color: rgba(180, 35, 24, 0.34); }}
+.bt-policy-signal__chip span {{
+  display: block;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 800;
+}}
+.bt-policy-signal__chip strong {{
+  display: block;
+  margin-top: 0.16rem;
+  color: var(--text-color);
+  font-size: 1rem;
+  line-height: 1.25;
+}}
+.bt-policy-signal__actions {{
+  border-left: 1px solid rgba(148, 163, 184, 0.30);
+  padding-left: 1rem;
+}}
+.bt-policy-signal__actions span {{
+  display: block;
+  color: var(--ps-accent);
+  font-size: 0.86rem;
+  font-weight: 800;
+  margin-bottom: 0.42rem;
+}}
+.bt-policy-signal__actions ul {{
+  margin: 0;
+  padding-left: 1rem;
+  color: #667085;
+  line-height: 1.6;
+}}
+@media (max-width: 900px) {{
+  .bt-policy-signal__body {{ grid-template-columns: 1fr; }}
+  .bt-policy-signal__chips {{ grid-template-columns: 1fr; }}
+  .bt-policy-signal__actions {{ border-left: 0; padding-left: 0; }}
+}}
+</style>
+<section class="bt-policy-signal bt-policy-signal--{tone}">
+  <div class="bt-policy-signal__head">
+    <div>
+      <div class="bt-policy-signal__kicker">검증 신호 요약</div>
+      <h4>{verdict}</h4>
+    </div>
+    <div class="bt-policy-signal__status">{escape(status)}</div>
+  </div>
+  <div class="bt-policy-signal__body">
+    <div>
+      <div class="bt-policy-signal__verdict">다음 경로: {route_label}</div>
+      <div class="bt-policy-signal__route">{next_action}</div>
+      <div class="bt-policy-signal__chips">{chip_html}</div>
+    </div>
+    <div class="bt-policy-signal__actions">
+      <span>{escape(action_title)}</span>
+      <ul>{action_html}</ul>
+    </div>
+  </div>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+def _policy_signal_effect_label(value: Any) -> str:
+    mapping = {
+        "block": "먼저 해결",
+        "review": "2차 확인",
+        "pass": "통과",
+        "context": "참고",
+    }
+    return mapping.get(str(value or "").strip().lower(), str(value or "-"))
+
+
+def _policy_signal_effect_tone(value: Any) -> str:
+    mapping = {
+        "block": "danger",
+        "review": "warning",
+        "pass": "positive",
+        "context": "neutral",
+    }
+    return mapping.get(str(value or "").strip().lower(), "neutral")
+
+
+def _policy_signal_row_sort_key(row: dict[str, Any]) -> tuple[int, str, str]:
+    rank = {"block": 0, "review": 1, "pass": 2, "context": 3}
+    effect = str(row.get("effect") or "").strip().lower()
+    return (
+        rank.get(effect, 4),
+        str(row.get("group") or ""),
+        str(row.get("signal") or ""),
+    )
+
+
+def _policy_signal_display_rows(frame_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "구분": row.get("group") or "-",
+            "신호": row.get("signal") or "-",
+            "상태": row.get("status") or "-",
+            "판정": _policy_signal_effect_label(row.get("effect")),
+            "다음 위치": row.get("next_surface") or "-",
+            "확인한 것": row.get("checked_evidence") or "-",
+            "표시 근거": row.get("display_detail") or row.get("meaning") or "-",
+            "의미": row.get("meaning") or "-",
+        }
+        for row in frame_rows
+    ]
+
+
+def _policy_signal_group_status(rows: list[dict[str, Any]]) -> tuple[str, str]:
+    counts = {
+        "block": sum(1 for row in rows if row.get("effect") == "block"),
+        "review": sum(1 for row in rows if row.get("effect") == "review"),
+        "pass": sum(1 for row in rows if row.get("effect") == "pass"),
+        "context": sum(1 for row in rows if row.get("effect") == "context"),
+    }
+    if counts["block"]:
+        return f"먼저 해결 {counts['block']}", "danger"
+    if counts["review"]:
+        return f"2차 확인 {counts['review']}", "warning"
+    if counts["pass"]:
+        return f"통과 {counts['pass']}", "positive"
+    return f"참고 {counts['context']}", "neutral"
+
+
+def _render_policy_signal_gate_board(rows: list[dict[str, Any]], evaluation: dict[str, Any]) -> None:
+    inventory = dict(evaluation.get("policy_signal_inventory") or {})
+    sorted_rows = sorted([dict(row or {}) for row in rows], key=_policy_signal_row_sort_key)
+    first_stage_rows = sorted(
+        [
+            dict(row or {})
+            for row in list(inventory.get("first_stage_rows") or [])
+            if row.get("effect") in {"block", "pass"}
+        ],
+        key=_policy_signal_row_sort_key,
+    )
+    if not first_stage_rows:
+        first_stage_rows = [
+            row
+            for row in sorted_rows
+            if row.get("stage_owner") == "first_stage" and row.get("effect") in {"block", "pass"}
+        ]
+    first_block_count = sum(1 for row in first_stage_rows if row.get("effect") == "block")
+    first_pass_count = sum(1 for row in first_stage_rows if row.get("effect") == "pass")
+    context_count = sum(1 for row in sorted_rows if row.get("effect") == "context")
+    entry_ready = bool(evaluation.get("can_enter_practical_validation"))
+    board_tone = "positive" if entry_ready else "danger"
+    headline = (
+        "1차에서 확인할 기준이 모두 통과 상태입니다."
+        if entry_ready
+        else "source 등록 전 먼저 해결할 1차 기준이 있습니다."
+    )
+    subhead = (
+        "이 보드는 Backtest Analysis에서 확정 가능한 source 등록 기준만 보여줍니다."
+    )
+    metrics = [
+        {
+            "label": "먼저 해결",
+            "value": str(first_block_count),
+            "detail": "1차 source 등록 차단",
+            "tone": "danger" if first_block_count else "positive",
+        },
+        {
+            "label": "1차 통과",
+            "value": str(first_pass_count),
+            "detail": "Backtest에서 확인 완료",
+            "tone": "positive",
+        },
+        {
+            "label": "기술 근거",
+            "value": str(len(sorted_rows)),
+            "detail": f"참고 {context_count}개 별도 보존",
+            "tone": "neutral",
+        },
+    ]
+
+    if is_backtest_policy_signal_board_available():
+        render_backtest_policy_signal_board(
+            tone=board_tone,
+            headline=headline,
+            subhead=subhead,
+            metrics=metrics,
+            first_stage_rows=first_stage_rows,
+            key="backtest_policy_signal_board",
+        )
+        return
+
+    st.warning("Policy Signal React component build를 찾지 못했습니다. 기술 원천 표로 대체 표시합니다.")
+    st.dataframe(pd.DataFrame(_policy_signal_display_rows(first_stage_rows)), width="stretch", hide_index=True)
+    return
+
+
 def _render_practical_validation_next_action(bundle: dict[str, Any]) -> None:
     state = _build_practical_validation_handoff_state(bundle)
-    _render_practical_validation_handoff_card(state)
-
-    with st.container(border=True):
-        st.markdown("##### 2차 실전성 검증 Handoff")
-        st.caption(
-            "이 버튼은 1차 후보 판단을 통과한 백테스트 결과를 Practical Validation이 읽을 current selection source로 등록합니다."
-        )
-        handoff_cols = st.columns([0.3, 0.7], gap="small")
-        with handoff_cols[0]:
-            if st.button(
-                "실전성 검증으로 보내기",
-                key="latest_run_candidate_review_draft",
-                use_container_width=True,
-                disabled=not bool(state["can_submit"]),
-                type="primary" if bool(state["can_submit"]) else "secondary",
-            ):
-                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
-                st.rerun()
-        with handoff_cols[1]:
-            if bool(state["can_submit"]):
-                st.success(str(state["action_text"]))
-            else:
-                st.warning(str(state["action_text"]))
-            st.markdown("`Practical Validation`에서 provider / data coverage / realism / robustness를 확인합니다.")
-            st.caption("최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
+    if not is_backtest_handoff_action_available():
+        st.error("Handoff React component build를 찾지 못했습니다. component build 후 source 등록 UI가 표시됩니다.")
+        return
+    can_submit = bool(state.get("can_submit"))
+    boundary_text = (
+        "이 버튼은 결과를 Practical Validation이 읽는 current selection source로 등록합니다. "
+        "최종 선택, 투자 추천, live 승인, 주문 지시는 발생하지 않습니다."
+        if can_submit
+        else "source 등록을 막는 항목이 남아 있어 버튼이 비활성화되어 있습니다. "
+        "먼저 Handoff 카드의 blocker를 해소한 뒤 다시 실행하세요."
+    )
+    action_value = render_backtest_handoff_action(
+        status_label=str(state.get("status_label") or "-"),
+        tone=str(state.get("tone") or "neutral"),
+        summary=str(state.get("summary") or "-"),
+        reason_title=str(state.get("reason_title") or "상태"),
+        reasons=[str(item) for item in list(state.get("display_reasons") or [])],
+        entry_cards=[dict(item) for item in list(state.get("entry_cards") or [])],
+        action_text=str(state.get("action_text") or "-"),
+        button_label=str(state.get("button_label") or "2차 검증으로 보내기"),
+        disabled=not can_submit,
+        boundary_text=boundary_text,
+        key="latest_run_candidate_review_draft_component",
+    )
+    _consume_practical_validation_handoff_action(action_value, bundle)
 
 
 def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
@@ -824,6 +1594,226 @@ def _render_swing_strategy_details(bundle: dict[str, Any]) -> None:
             st.info("No generated swing artifact was attached.")
 
 
+def _render_backtest_input_warning(message: str) -> None:
+    st.warning(message)
+
+
+def _display_result_header_value(value: Any) -> str:
+    text = str(value or "").strip()
+    return text or "-"
+
+
+def _format_result_kpi_value(row: pd.Series, column: str, formatter: Any) -> str:
+    try:
+        value = row[column]
+        if pd.isna(value):
+            return "-"
+        return formatter(float(value))
+    except (KeyError, TypeError, ValueError):
+        return "-"
+
+
+def _build_result_kpi_items(summary_df: pd.DataFrame) -> list[dict[str, str]]:
+    row = summary_df.iloc[0] if summary_df is not None and not summary_df.empty else pd.Series(dtype=object)
+    return [
+        {
+            "label": "End Balance",
+            "caption": "최종 평가액",
+            "value": _format_result_kpi_value(row, "End Balance", _format_currency),
+            "tone": "balance",
+        },
+        {
+            "label": "CAGR",
+            "caption": "연환산 수익률",
+            "value": _format_result_kpi_value(row, "CAGR", _format_percent),
+            "tone": "return",
+        },
+        {
+            "label": "Sharpe Ratio",
+            "caption": "위험 대비 성과",
+            "value": _format_result_kpi_value(row, "Sharpe Ratio", _format_ratio),
+            "tone": "ratio",
+        },
+        {
+            "label": "Maximum Drawdown",
+            "caption": "최대 낙폭",
+            "value": _format_result_kpi_value(row, "Maximum Drawdown", _format_percent),
+            "tone": "risk",
+        },
+    ]
+
+
+def _render_backtest_result_header(bundle: dict[str, Any], summary_df: pd.DataFrame) -> None:
+    meta = dict(bundle.get("meta") or {})
+    strategy_name = _display_result_header_value(bundle.get("strategy_name") or meta.get("strategy_name"))
+    start = _display_result_header_value(meta.get("start"))
+    end = _display_result_header_value(meta.get("end"))
+    actual_end = _display_result_header_value(meta.get("actual_result_end") or end)
+    universe = _display_result_header_value(meta.get("preset_name") or meta.get("universe_mode"))
+    data_mode = _display_result_header_value(meta.get("data_mode"))
+    execution_mode = _display_result_header_value(meta.get("execution_mode"))
+    tickers = list(meta.get("tickers") or [])
+    ticker_label = f"{len(tickers)}개 종목" if tickers else "종목 수 미상"
+    period_label = f"{start} -> {end}" if start != "-" and end != "-" else "기간 정보 제한"
+    actual_label = actual_end if actual_end != "-" else "계산 기준 제한"
+    headline = f"{strategy_name} 백테스트 결과"
+    subtitle = (
+        "핵심 성과를 먼저 보고, 바로 아래에서 이 성과가 어떤 데이터 기준으로 계산됐는지 확인합니다."
+    )
+    basis_items = [
+        ("기간", period_label),
+        ("계산 기준", actual_label),
+        ("Universe", universe),
+        ("구성", ticker_label),
+        ("Data", data_mode),
+        ("Execution", execution_mode),
+    ]
+    basis_html = "".join(
+        (
+            '<span class="backtest-result-hero__basis-item">'
+            f'<b>{escape(label)}</b>'
+            f' {escape(value)}'
+            '</span>'
+        )
+        for label, value in basis_items
+    )
+    kpi_html = "".join(
+        (
+            f'<div class="backtest-result-hero__kpi backtest-result-hero__kpi--{escape(item["tone"])}">'
+            f'<div class="backtest-result-hero__kpi-label">{escape(item["label"])}</div>'
+            f'<div class="backtest-result-hero__kpi-value">{escape(item["value"])}</div>'
+            f'<div class="backtest-result-hero__kpi-caption">{escape(item["caption"])}</div>'
+            '</div>'
+        )
+        for item in _build_result_kpi_items(summary_df)
+    )
+    st.markdown(
+        f"""
+<style>
+.backtest-result-hero {{
+  border-left: 4px solid #ff4b4b;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 1.05rem 1.15rem 0;
+  margin: 1.2rem 0 1.15rem;
+  background:
+    linear-gradient(90deg, rgba(255, 75, 75, 0.08), rgba(255, 255, 255, 0) 68%);
+}}
+.backtest-result-hero__eyebrow {{
+  color: #ff6b6b;
+  font-size: 0.86rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+}}
+.backtest-result-hero h3 {{
+  margin: 0;
+  color: var(--text-color);
+  font-size: 1.75rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+}}
+.backtest-result-hero p {{
+  margin: 0.45rem 0 0;
+  color: #667085;
+  line-height: 1.5;
+}}
+.backtest-result-hero__basis {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.15rem;
+  margin-top: 0.85rem;
+  color: #667085;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}}
+.backtest-result-hero__basis-item {{
+  min-width: 0;
+  overflow-wrap: anywhere;
+}}
+.backtest-result-hero__basis-item b {{
+  color: var(--text-color);
+  margin-right: 0.34rem;
+}}
+.backtest-result-hero__kpis {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+}}
+.backtest-result-hero__kpi {{
+  min-width: 0;
+  padding: 0.92rem 1rem 1rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+}}
+.backtest-result-hero__kpi:first-child {{
+  border-left: 0;
+  padding-left: 0;
+}}
+.backtest-result-hero__kpi-label {{
+  color: #475467;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+}}
+.backtest-result-hero__kpi-value {{
+  margin-top: 0.25rem;
+  color: var(--text-color);
+  font-size: 1.85rem;
+  font-weight: 760;
+  line-height: 1.12;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}}
+.backtest-result-hero__kpi-caption {{
+  margin-top: 0.25rem;
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}}
+.backtest-result-hero__kpi--return .backtest-result-hero__kpi-value {{
+  color: #087f5b;
+}}
+.backtest-result-hero__kpi--risk .backtest-result-hero__kpi-value {{
+  color: #b54708;
+}}
+@media (max-width: 760px) {{
+  .backtest-result-hero__kpis {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .backtest-result-hero__kpi:nth-child(odd) {{
+    border-left: 0;
+    padding-left: 0;
+  }}
+  .backtest-result-hero__kpi:nth-child(n + 3) {{
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+  }}
+}}
+@media (max-width: 520px) {{
+  .backtest-result-hero__kpis {{
+    grid-template-columns: 1fr;
+  }}
+  .backtest-result-hero__kpi {{
+    border-left: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
+    padding-left: 0;
+  }}
+  .backtest-result-hero__kpi:first-child {{
+    border-top: 0;
+  }}
+}}
+</style>
+<section class="backtest-result-hero">
+  <div class="backtest-result-hero__eyebrow">백테스트 결과</div>
+  <h3>{escape(headline)}</h3>
+  <p>{escape(subtitle)}</p>
+  <div class="backtest-result-hero__basis">{basis_html}</div>
+  <div class="backtest-result-hero__kpis">{kpi_html}</div>
+</section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -831,7 +1821,7 @@ def _render_last_run() -> None:
 
     if error:
         if error_kind == "input":
-            st.warning(error)
+            _render_backtest_input_warning(error)
         elif error_kind == "data":
             st.error(error)
             st.caption("Hint: run the ingestion pipeline for the requested tickers and date range, then try again.")
@@ -845,9 +1835,7 @@ def _render_last_run() -> None:
     chart_df = bundle["chart_df"]
     result_df = bundle["result_df"]
     meta = bundle["meta"]
-    warnings = list(meta.get("warnings") or [])
 
-    st.markdown("### Latest Backtest Run")
     strategy_key = meta.get("strategy_key")
     has_selection_history = strategy_key in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS
 
@@ -861,23 +1849,8 @@ def _render_last_run() -> None:
     has_real_money_details = bool(meta.get("real_money_hardening"))
     has_swing_details = bool(strategy_key == "risk_on_momentum_5d" or bundle.get("swing_trade_log_df") is not None)
 
-    _render_latest_run_orientation(
-        has_selection_history=has_selection_history,
-        has_dynamic_details=has_dynamic_details,
-        has_real_money_details=has_real_money_details,
-    )
-
+    _render_backtest_result_header(bundle, summary_df)
     _render_data_trust_summary(meta)
-
-    if warnings:
-        warning_lines = "\n".join(f"- {warning}" for warning in warnings)
-        st.warning(
-            "이번 실행에서 같이 봐야 할 주의 사항이 있습니다.\n\n"
-            + warning_lines
-        )
-
-    st.markdown(f"#### {bundle['strategy_name']}")
-    _render_summary_metrics(summary_df)
     _render_practical_validation_next_action(bundle)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
@@ -886,7 +1859,7 @@ def _render_last_run() -> None:
     if has_dynamic_details:
         tab_labels.append("Dynamic Universe")
     if has_real_money_details:
-        tab_labels.append("Policy Signal")
+        tab_labels.append("검증 신호 · Policy Signals")
     if has_swing_details:
         tab_labels.append("Swing Detail")
     tab_labels.extend(["Result Table", "Meta"])
@@ -1461,226 +2434,116 @@ def _render_dynamic_universe_details(bundle: dict[str, Any]) -> None:
         )
         st.dataframe(pd.DataFrame(candidate_status_rows), use_container_width=True, hide_index=True)
 
-def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]:
-    promotion = str(meta.get("promotion_decision") or "").strip().lower()
-    freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
-    turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
-    net_cost_curve_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
-    transaction_cost_bps = float(meta.get("transaction_cost_bps") or 0.0)
-
-    def _source_bucket(
-        value: Any,
-        *,
-        unavailable_blocks: bool = True,
-        caution_blocks: bool = True,
-    ) -> str:
-        normalized = str(value or "").strip().lower()
-        if not normalized or normalized in {"normal", "ok", "pass", "passed", "fresh"}:
-            return "pass"
-        if normalized in {"error", "missing"}:
-            return "block"
-        if normalized == "caution":
-            return "block" if caution_blocks else "review"
-        if normalized == "unavailable":
-            return "block" if unavailable_blocks else "review"
-        if normalized in {"watch", "warning"}:
-            return "review"
-        return "review"
-
-    def _collect_source_reasons(
-        specs: list[tuple[str, Any, bool, bool]],
-    ) -> tuple[list[str], list[str]]:
-        blockers: list[str] = []
-        reviews: list[str] = []
-        for label, status, unavailable_blocks, caution_blocks in specs:
-            normalized = str(status or "").strip().lower()
-            bucket = _source_bucket(
-                normalized,
-                unavailable_blocks=unavailable_blocks,
-                caution_blocks=caution_blocks,
-            )
-            if bucket == "block":
-                blockers.append(f"{label}: {normalized or '-'}")
-            elif bucket == "review":
-                reviews.append(f"{label}: {normalized or '-'}")
-        return blockers, reviews
-
-    execution_specs: list[tuple[str, Any, bool, bool]] = [
-        ("Liquidity Policy", meta.get("liquidity_policy_status"), True, True),
-        ("ETF Operability", meta.get("etf_operability_status"), True, True),
-        ("Price Freshness", freshness_status, True, True),
-    ]
-    validation_specs: list[tuple[str, Any, bool, bool]] = [
-        ("Benchmark 비교", "missing" if not bool(meta.get("benchmark_available")) else "", True, True),
-        ("Validation", meta.get("validation_status"), True, True),
-        ("Benchmark Policy", meta.get("benchmark_policy_status"), True, True),
-        ("Validation Policy", meta.get("validation_policy_status"), True, True),
-        ("Portfolio Guardrail Policy", meta.get("guardrail_policy_status"), True, True),
-        # Backtest-level recent/split checks are useful warning signals, but they are not formal holdout validation.
-        ("Rolling Review", meta.get("rolling_review_status"), False, False),
-        ("Split-Period Check", meta.get("out_of_sample_review_status"), False, False),
-    ]
-    execution_blockers, execution_reviews = _collect_source_reasons(execution_specs)
-    validation_blockers, validation_reviews = _collect_source_reasons(validation_specs)
-    if transaction_cost_bps > 0.0 and turnover_status and turnover_status != "estimated_from_holdings":
-        execution_reviews.append(f"Turnover Estimate: {turnover_status}")
-    if net_cost_curve_status == "applied_without_turnover_estimate":
-        execution_reviews.append("Cost Curve: turnover estimate unavailable")
-
-    if promotion == "real_money_candidate":
-        promotion_score = 4.0
-        promotion_judgment = "강한 handoff policy signal"
-    elif promotion == "production_candidate":
-        promotion_score = 3.0
-        promotion_judgment = "비교 가능, 추가 검토 필요"
-    elif promotion and promotion != "hold":
-        promotion_score = 2.0
-        promotion_judgment = "비교 가능성은 있으나 보수적 확인 필요"
-    else:
-        promotion_score = 0.0
-        promotion_judgment = "hold 해결 전에는 다음 단계 보류"
-
-    if execution_blockers:
-        execution_score = 0.0
-        execution_judgment = "실행 원천 blocker가 남아 있음"
-    elif execution_reviews:
-        execution_score = 2.0
-        execution_judgment = "실행 부담은 검토 가능하지만 확인 항목 있음"
-    else:
-        execution_score = 3.0
-        execution_judgment = "실행 부담 원천 지표가 양호함"
-
-    if validation_blockers:
-        validation_score = 0.0
-        validation_judgment = "검증 원천 blocker가 남아 있음"
-    elif validation_reviews:
-        validation_score = 2.0
-        validation_judgment = "검증 근거는 있으나 후속 확인 필요"
-    else:
-        validation_score = 3.0
-        validation_judgment = "검증 원천 지표가 양호함"
-
-    score = round(promotion_score + execution_score + validation_score, 1)
-    can_move_to_compare = (
-        promotion not in {"", "hold"}
-        and not execution_blockers
-        and not validation_blockers
-    )
-
-    if can_move_to_compare and score >= 8.0:
-        verdict = "후보 검토 진행 가능"
-        tone = "success"
-        route_label = "Portfolio Mix Builder 또는 Practical Validation"
-        next_action = "Portfolio Mix Builder에서 다른 후보와 조합하거나 Practical Validation으로 보내 검증 근거를 확인합니다."
-    elif can_move_to_compare:
-        verdict = "후보 검토 가능, 개선 항목 동시 확인"
-        tone = "warning"
-        route_label = "조건부 후보 검토"
-        next_action = "Portfolio Mix Builder 또는 Practical Validation으로 넘기기 전에 watch / preview 항목을 함께 확인합니다."
-    else:
-        verdict = "후보 보류: blocker 먼저 해결"
-        tone = "error"
-        route_label = "Hold / Review"
-        next_action = "Hold 해결 가이드, 실행 부담 preview, 검토 근거의 caution 항목을 먼저 정리합니다."
-
-    blocking_reasons: list[str] = []
-    if promotion in {"", "hold"}:
-        blocking_reasons.append("Promotion Decision이 hold이거나 비어 있음")
-    blocking_reasons.extend(execution_blockers)
-    blocking_reasons.extend(validation_blockers)
-
-    review_reasons: list[str] = execution_reviews + validation_reviews
-
-    criteria_rows = [
-        {
-            "기준": "Promotion Decision",
-            "현재 값": promotion or "-",
-            "점수": f"{promotion_score:g} / 4",
-            "판단": promotion_judgment,
-        },
-        {
-            "기준": "Execution Source Checks",
-            "현재 값": "정상" if not execution_blockers and not execution_reviews else f"block {len(execution_blockers)} / review {len(execution_reviews)}",
-            "점수": f"{execution_score:g} / 3",
-            "판단": execution_judgment,
-        },
-        {
-            "기준": "Validation Source Checks",
-            "현재 값": "정상" if not validation_blockers and not validation_reviews else f"block {len(validation_blockers)} / review {len(validation_reviews)}",
-            "점수": f"{validation_score:g} / 3",
-            "판단": validation_judgment,
-        },
-    ]
-
-    return {
-        "score": score,
-        "verdict": verdict,
-        "tone": tone,
-        "route_label": route_label,
-        "next_action": next_action,
-        "can_move_to_compare": can_move_to_compare,
-        "criteria_rows": criteria_rows,
-        "blocking_reasons": blocking_reasons,
-        "review_reasons": review_reasons,
-        "promotion_ok": promotion not in {"", "hold"},
-        "execution_blocker_count": len(execution_blockers),
-        "execution_review_count": len(execution_reviews),
-        "validation_blocker_count": len(validation_blockers),
-        "validation_review_count": len(validation_reviews),
-    }
-
-def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
-    evaluation = _build_next_step_readiness_evaluation(meta)
-    score = float(evaluation["score"])
-    tone = str(evaluation["tone"])
-
-    with st.container(border=True):
-        st.markdown("##### Candidate Readiness Checkpoint")
-        st.caption(
-            "이 체크포인트는 투자 승인 기준이 아니라, 이 결과를 후보 비교나 Practical Validation으로 "
-            "넘겨도 되는지 빠르게 보는 진단입니다."
-        )
-        render_readiness_route_panel(
-            route_label=str(evaluation["route_label"]),
-            score=score,
-            blockers_count=len(evaluation["blocking_reasons"]),
-            verdict=str(evaluation["verdict"]),
-            next_action=str(evaluation["next_action"]),
-            route_title="Next Route",
-            score_title="Candidate Readiness",
-        )
-        st.progress(max(0.0, min(score / 10.0, 1.0)))
-        st.caption(
-            "점수 기준: `8.0점 이상`은 깔끔한 후보 검토, `8.0점 미만`이어도 Promotion / 실행 원천 / 검증 원천에 "
-            "막는 항목이 없으면 조건부 검토, 막는 항목이 있으면 점수와 무관하게 blocker 해결이 먼저입니다."
-        )
-
-        message = (
-            f"{evaluation['verdict']}: "
-            f"`Promotion Decision != hold`, 실행 원천 blocker 없음, 검증 원천 blocker 없음 기준으로 계산했습니다."
-        )
-        if tone == "success":
-            st.success(message)
-        elif tone == "warning":
-            st.warning(message)
-        else:
-            st.error(message)
-
-        if evaluation["blocking_reasons"]:
-            st.caption("막는 항목: " + ", ".join(f"`{item}`" for item in evaluation["blocking_reasons"]))
-        elif evaluation["review_reasons"]:
-            st.caption("같이 볼 개선 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
-        else:
-            st.caption("핵심 blocker가 보이지 않습니다. 비교 또는 Practical Validation 후보로 검토해도 되는 상태입니다.")
-
-        with st.expander("점수 계산 기준 보기", expanded=False):
-            st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
-            st.caption(
-                "`real_money_candidate`는 가장 강한 handoff policy signal이고, "
-                "`production_candidate`는 후보 검토는 가능하지만 Final Review 전 추가 검토가 필요한 상태입니다."
-            )
-
 def _render_real_money_details(bundle: dict[str, Any]) -> None:
+    meta = bundle.get("meta") or {}
+    if not meta.get("real_money_hardening"):
+        st.caption("이 결과에는 promotion policy signal hardening 정보가 없습니다.")
+        return
+
+    result_df = bundle.get("result_df")
+    benchmark_chart_df = bundle.get("benchmark_chart_df")
+    benchmark_summary_df = bundle.get("benchmark_summary_df")
+    inventory = build_policy_signal_inventory(meta)
+    evaluation = build_next_step_readiness_evaluation(meta)
+    rows = list(inventory.get("rows") or [])
+    context_rows = [row for row in rows if row.get("effect") == "context"]
+
+    def _value_list_caption(prefix: str, values: list[Any] | tuple[Any, ...] | None) -> None:
+        if values:
+            st.caption(prefix + ": " + ", ".join(f"`{value}`" for value in list(values)))
+
+    def _optional_pct(value: Any) -> str:
+        return f"{float(value):.2%}" if value is not None else "-"
+
+    _render_policy_signal_gate_board(rows, evaluation)
+
+    if context_rows:
+        with st.expander("참고 신호 보기", expanded=False):
+            st.dataframe(pd.DataFrame(_policy_signal_display_rows(context_rows)), width="stretch", hide_index=True)
+
+    with st.expander("성과 / Benchmark 근거", expanded=False):
+        metric_rows: list[dict[str, Any]] = []
+        for label, value in [
+            ("Benchmark", meta.get("benchmark_label") or meta.get("benchmark_ticker") or meta.get("benchmark_contract")),
+            ("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No"),
+            ("Benchmark CAGR", _optional_pct(meta.get("benchmark_cagr"))),
+            ("Net CAGR Spread", _optional_pct(meta.get("net_cagr_spread"))),
+            ("Benchmark Coverage", _optional_pct(meta.get("benchmark_row_coverage"))),
+            ("Validation Status", str(meta.get("validation_status") or "normal").upper()),
+            ("Rolling Review", str(meta.get("rolling_review_status") or "-").upper()),
+            ("Split-Period Check", str(meta.get("out_of_sample_review_status") or "-").upper()),
+        ]:
+            metric_rows.append({"항목": label, "값": value})
+        st.dataframe(pd.DataFrame(metric_rows), use_container_width=True, hide_index=True)
+        if benchmark_chart_df is not None and result_df is not None:
+            strategy_line = (
+                bundle["chart_df"][["Date", "Total Balance"]]
+                .rename(columns={"Total Balance": bundle["strategy_name"]})
+                .set_index("Date")
+            )
+            benchmark_line = (
+                benchmark_chart_df[["Date", "Benchmark Total Balance"]]
+                .rename(
+                    columns={
+                        "Benchmark Total Balance": str(
+                            meta.get("benchmark_label") or meta.get("benchmark_ticker") or "Benchmark"
+                        )
+                    }
+                )
+                .set_index("Date")
+            )
+            overlay_df = pd.concat([strategy_line, benchmark_line], axis=1).sort_index()
+            _render_compare_altair_chart(
+                overlay_df,
+                title="Net Strategy vs Benchmark",
+                y_title="Total Balance",
+                show_end_markers=True,
+            )
+            st.caption("전략은 비용 반영 후 net 곡선이고, benchmark는 reference curve입니다.")
+
+    with st.expander("실행 / 비용 / 유동성 근거", expanded=False):
+        turnover_status = str(meta.get("turnover_estimation_status") or "").strip().lower()
+        net_cost_status = str(meta.get("net_cost_curve_status") or "").strip().lower()
+        execution_rows = [
+            {"항목": "Transaction Cost", "값": f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps"},
+            {"항목": "Turnover Estimate", "값": turnover_status or "-"},
+            {"항목": "Net Cost Curve", "값": net_cost_status or "-"},
+            {"항목": "Avg Turnover", "값": _optional_pct(meta.get("avg_turnover"))},
+            {"항목": "Estimated Cost Total", "값": f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}" if meta.get("estimated_cost_total") is not None else "-"},
+            {"항목": "Liquidity Policy", "값": str(meta.get("liquidity_policy_status") or "-").upper()},
+            {"항목": "Liquidity Clean Coverage", "값": _optional_pct(meta.get("liquidity_clean_coverage"))},
+            {"항목": "ETF Operability", "값": str(meta.get("etf_operability_status") or "-").upper()},
+            {"항목": "Guardrail Policy", "값": str(meta.get("guardrail_policy_status") or "-").upper()},
+        ]
+        st.dataframe(pd.DataFrame(execution_rows), use_container_width=True, hide_index=True)
+        _value_list_caption("Liquidity policy signals", meta.get("liquidity_policy_watch_signals"))
+        _value_list_caption("ETF operability signals", meta.get("etf_operability_watch_signals"))
+        _value_list_caption("Guardrail policy signals", meta.get("guardrail_policy_watch_signals"))
+
+    with st.expander("기술 원천 보기", expanded=False):
+        st.dataframe(pd.DataFrame(evaluation.get("criteria_rows") or []), width="stretch", hide_index=True)
+        if result_df is not None and "Estimated Cost" in result_df.columns:
+            detail_cols = [
+                column
+                for column in [
+                    "Date",
+                    "Gross Total Balance",
+                    "Total Balance",
+                    "Turnover",
+                    "Estimated Cost",
+                    "Cumulative Estimated Cost",
+                ]
+                if column in result_df.columns
+            ]
+            if detail_cols:
+                st.markdown("##### Cost Detail Preview")
+                st.dataframe(result_df[detail_cols].head(12), use_container_width=True, hide_index=True)
+        if benchmark_summary_df is not None:
+            st.markdown("##### Benchmark Summary")
+            st.dataframe(benchmark_summary_df, use_container_width=True, hide_index=True)
+
+
+def _render_real_money_details_legacy(bundle: dict[str, Any]) -> None:
     meta = bundle.get("meta") or {}
     if not meta.get("real_money_hardening"):
         st.caption("이 결과에는 Phase 12 promotion policy signal hardening 정보가 없습니다.")
@@ -1829,65 +2692,12 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 "promotion / policy gap을 먼저 정리한 뒤 다시 보는 것이 좋습니다."
             )
 
-    st.info(
-        "이 탭은 Backtest 단계의 1차 후보성 해석을 한 번에 보기 위한 화면입니다. "
-        "먼저 `현재 판단`에서 지금 상태를 보고, "
-        "그다음 `검토 근거`에서 왜 그런 판단이 나왔는지 확인하고, "
-        "`실행 부담`에서 비용/유동성/ETF 운용 가능성 preview를 본 뒤, "
-        "마지막 `상세 데이터`에서 원자료를 확인하면 됩니다."
-    )
-
     focus_count = len(_validation_focus_items())
     review_signal_count = len(_validation_review_signals())
-    _render_real_money_cards(
-        [
-            {
-                "title": "Promotion",
-                "value": str(meta.get("promotion_decision") or "-").upper(),
-                "detail": _promotion_detail(),
-                "tone": _status_tone(meta.get("promotion_decision")),
-            },
-            {
-                "title": "Suggested Route",
-                "value": _suggested_route_label(),
-                "detail": "다음 검증 후보 경로",
-                "tone": _status_tone(meta.get("shortlist_status")),
-            },
-            {
-                "title": "Validation Focus",
-                "value": str(focus_count),
-                "detail": "다음 단계에서 확인할 항목",
-                "tone": "warning" if focus_count else "neutral",
-            },
-            {
-                "title": "Review Signals",
-                "value": str(review_signal_count),
-                "detail": "확정이 아닌 재확인 신호",
-                "tone": "danger" if review_signal_count else "neutral",
-            },
-            {
-                "title": "Execution Preview",
-                "value": _execution_preview_label(meta.get("deployment_readiness_status")),
-                "detail": "배치 승인이 아닌 실행 부담 preview",
-                "tone": _status_tone(meta.get("deployment_readiness_status")),
-            },
-            {
-                "title": "Rolling Review",
-                "value": _review_status_value_to_label(meta.get("rolling_review_status")),
-                "detail": meta.get("rolling_review_window_label") or "",
-                "tone": _status_tone(meta.get("rolling_review_status")),
-            },
-            {
-                "title": "Validation",
-                "value": _review_status_value_to_label(meta.get("validation_status")),
-                "detail": meta.get("validation_window_label") or "",
-                "tone": _status_tone(meta.get("validation_status")),
-            },
-        ]
-    )
+    _render_policy_signal_summary_panel(meta)
 
     overview_tab, review_tab, execution_tab, detail_tab = st.tabs(
-        ["현재 판단", "검토 근거", "실행 부담", "상세 데이터"]
+        ["현재 판단", "검토 근거", "실행 부담", "기술 상세"]
     )
 
     with overview_tab:
@@ -1895,7 +2705,6 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             "이 섹션은 이 전략을 Backtest 1차 후보로 볼 수 있는지 보여줍니다. "
             "실제 paper observation, 소액 검토, 운영 모니터링 조건은 이후 단계에서 다시 정의합니다."
         )
-        _render_next_step_readiness_box(meta)
 
         if meta.get("promotion_decision"):
             with _section_header(

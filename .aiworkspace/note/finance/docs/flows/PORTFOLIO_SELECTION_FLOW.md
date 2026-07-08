@@ -47,7 +47,7 @@ Live / Deployment Readiness는 현재 별도 화면으로 구현되지 않았다
 |---|---|---|
 | Result Integrity | Backtest Analysis > Data Trust Summary | 결과 기간, 가격 최신성, excluded ticker를 먼저 확인 |
 | Performance Shape | Backtest Analysis > Summary / Equity Curve | 성과와 낙폭의 기본 모양 확인 |
-| Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation으로 넘겨도 되는지 확인 |
+| Candidate Readiness | Backtest Analysis > Promotion Policy Signal / Mix 후보 1차 판단 | 단일 후보 또는 mix 후보를 Practical Validation source로 넘겨도 되는지 확인한다. `promotion_decision=hold`는 2차 진입 blocker가 아니라 review focus이며, Backtest Analysis에서는 상세 review row와 count / handoff notice를 표시하지 않는다. Data Trust도 `meta["warnings"]` review focus를 1차 데이터 기준 요약에 표시하지 않는다. Portfolio Mix strict compare gate는 별도로 더 보수적으로 읽는다 |
 | Practical Evidence | Practical Validation | source traits, 필수 / 조건부 module gate, selected-route preflight, provider, data coverage, realism, robustness, construction risk 검증 |
 | Final Decision Gate | Final Review | selection hard blocker와 open review item을 분리해 최종 관찰 후보로 저장 가능한지 판단 |
 | Monitoring Check | Operations > Portfolio Monitoring | 모니터링 이후 recheck readiness, freshness, provider evidence, review signal 확인 |
@@ -73,12 +73,14 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 
 - 사용자는 Backtest Analysis에서 후보를 만들고 Practical Validation으로 보낸다.
 - `Operations > Operations Overview`는 선정 후 monitoring / system health의 Operations Console 입구이며, Backtest 후보 생성 단계가 아니다. Today action queue는 검토 우선순위만 안내하고 주문 / 자동 리밸런싱을 만들지 않는다. Backtest Run History와 Candidate Library archive 화면은 현재 Operations 상단 탭에 노출하지 않는다.
-- Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다.
+- Backtest Analysis의 Promotion Policy Signal은 1차 후보 readiness만 보며, probation / monitoring / deployment를 시작하거나 확정하지 않는다. hard blocker는 1차 source 등록을 막고, `2차 확인` review focus는 source의 `entry_gate.review_focus_rows`로 Practical Validation에 전달한다.
+- Backtest Analysis의 Data Trust Summary는 DB 가격 기준일이 최신 완료 거래일보다 오래된 경우, 현재 후보 ticker만 대상으로 OHLCV 가격 이력 업데이트 action을 제공한다. 보이는 action card와 버튼은 React custom component 안에서 통합 렌더링되며, Python은 submit event를 받아 데이터 보강만 수행한다. 결과 재계산 / source 등록 / 2차 검증 전송은 사용자가 별도로 실행한다.
+- Backtest Analysis의 Handoff panel이 source 등록 action과 entry judgment를 소유한다. Handoff는 `1차 진입 기준`, `먼저 해결`, `다음 단계`를 보여주며 readiness score나 promotion hold review를 1차 blocker처럼 표시하지 않는다. Policy Signals owns evidence detail and does not repeat the same entry-readiness hero. React custom component owns the visible Handoff card and button, and a separate React custom component owns the `검증 기준 상세` first-stage evidence board, while Python keeps source registration write / rerun, policy classification, and persistence. `검증 기준 상세`은 `Data Trust`, `Execution Source`, `Validation Source` 중심으로 1차 기준을 묶고, 각 기준의 `?` help는 `plain_explanation` / `checked_items`로 무엇을 검증했는지 설명한다. 2차 review focus 상세 목록과 count / notice는 Backtest Analysis에서 반복하지 않고 source contract로 Practical Validation에 전달한다.
 - Backtest Analysis의 Portfolio Mix Builder는 여러 component를 비교해 하나를 고르는 화면이 아니라, weight를 정해 하나의 mix 후보를 만드는 화면이다.
 - `검증 후보로 보내기`는 사용자 메모나 preset 저장이 아니라 1차 후보 판단을 통과한 source를 Practical Validation으로 넘기는 workflow handoff다.
 - Practical Validation은 후보가 Final Review에 충분한 검증 근거를 갖는지 보여준다.
 - Practical Validation은 source traits와 validation profile을 함께 읽어 필수 검증, 조건부 / 전략별 검증, 후속 참고 검증을 분리한다.
-- Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history를 먼저 보여줘 후보의 원래 백테스트 근거와 구성 방식을 빠르게 확인하게 한다.
+- Practical Validation의 `1. 선택 후보 확인`은 Backtest Analysis가 넘긴 `entry_gate.review_focus_rows`를 `Backtest에서 넘어온 2차 확인 항목`으로 먼저 보여준다. 이 queue는 Backtest Analysis에서 상세 노출하지 않은 2차 review focus이며, 각 row는 확인할 것과 표시 근거를 함께 보여준다. 이어 summary, equity curve, result table snapshot, strategy / construction brief, monthly selection / holdings history를 확인해 후보의 원래 백테스트 근거와 구성 방식을 빠르게 확인하게 한다.
 - 기존 source처럼 selection history snapshot이 없는 기록은 `3. 최신 데이터 기준 전략 재검증`을 실행하면 가능한 범위에서 runtime replay selection history를 확인한다. 이 fallback은 기존 registry row를 재작성하지 않는다.
 - Practical Validation은 전용 workbench shell의 Control Center에서 후보 / profile / latest replay / gate를 먼저 요약한다.
 - Practical Validation의 `시장 심리 Context Overlay`는 저장된 CNN Fear & Greed / AAII sentiment를 risk-on / neutral / risk-off 참고 맥락으로 보여준다. 이 overlay는 `context_only`이며 Final Review Gate, selected-route preflight, PASS / BLOCKER, registry 저장, saved setup, live approval / broker order / auto rebalance에 영향을 주지 않는다.
@@ -134,12 +136,12 @@ ETF 동적 전략 source contract는 Backtest Analysis fresh 실행 단계에서
 
 | Area | Files |
 |---|---|
-| Backtest stage routing | `app/web/backtest_common.py`, `app/web/backtest_workflow_routes.py`, `app/web/pages/backtest.py` |
-| Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
-| Practical Validation | `app/web/backtest_practical_validation*.py`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
-| Final Review | `app/web/backtest_final_review*.py`, `app/services/backtest_evidence_read_model.py` |
-| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard*.py`, `app/runtime/final_selected_portfolios.py` |
-| Selection persistence | `app/runtime/portfolio_selection_v2.py` |
+| Backtest stage routing | `app/web/backtest_common.py`, `app/web/backtest_workflow_routes.py`, `app/web/backtest_page.py` |
+| Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare/` |
+| Practical Validation | `app/web/backtest_practical_validation/`, `app/services/backtest_practical_validation_modules.py`, `app/services/backtest_practical_validation_board_registry.py`, `app/services/backtest_selected_route_preflight.py`, `app/services/backtest_construction_risk_audit.py`, `app/services/backtest_risk_contribution_audit.py`, `app/services/backtest_component_role_weight_audit.py`, `app/services/backtest_temporal_validation.py`, `app/services/backtest_validation_efficacy.py`, `app/services/backtest_data_coverage_audit.py`, `app/services/backtest_realism_audit.py` |
+| Final Review | `app/web/backtest_final_review/`, `app/services/backtest_evidence_read_model.py` |
+| Operations > Portfolio Monitoring | `app/web/final_selected_portfolio_dashboard*.py`, `app/runtime/backtest/read_models/final_selected_portfolios.py` |
+| Selection persistence | `app/runtime/backtest/stores/portfolio_selection.py` |
 
 ## Update Rules
 

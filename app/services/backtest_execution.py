@@ -35,6 +35,7 @@ from app.runtime.backtest import (
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
+from app.runtime.backtest.runner_catalog import require_runner_definition
 from finance.sample import (
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
@@ -132,8 +133,15 @@ def execute_single_backtest(
 
     started_at = time.perf_counter()
     try:
+        runner_definition = require_runner_definition(payload.get("strategy_key"))
         bundle = _dispatch_single_backtest(payload)
     except BacktestInputError as exc:
+        return BacktestExecutionResult(
+            ok=False,
+            error_kind="input",
+            error_message=f"Backtest input issue: {exc}",
+        )
+    except KeyError as exc:
         return BacktestExecutionResult(
             ok=False,
             error_kind="input",
@@ -156,6 +164,9 @@ def execute_single_backtest(
     normalized_bundle = dict(bundle)
     meta = dict(normalized_bundle.get("meta") or {})
     meta["ui_elapsed_seconds"] = round(elapsed_seconds, 3)
+    meta["runner_catalog_key"] = runner_definition.strategy_key
+    meta["runner_runtime_module"] = runner_definition.runtime_module
+    meta["runner_runtime_family"] = runner_definition.runtime_family
     normalized_bundle["meta"] = meta
 
     return BacktestExecutionResult(

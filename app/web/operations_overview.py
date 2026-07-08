@@ -7,7 +7,7 @@ from typing import Any
 import streamlit as st
 
 from app.jobs.run_history import load_run_history
-from app.runtime.final_selected_portfolios import load_final_selected_portfolio_dashboard
+from app.runtime.backtest.read_models.final_selected_portfolios import load_final_selected_portfolio_dashboard
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.reference_contextual_help import render_reference_contextual_help
 

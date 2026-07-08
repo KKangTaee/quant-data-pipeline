@@ -23,7 +23,7 @@ from app.web.ingestion_console import (
 from app.web.operations_overview import render_operations_overview_page
 from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
-from app.web.pages.backtest import render_backtest_tab
+from app.web.backtest_page import render_backtest_tab
 from app.web import reference_contextual_help as reference_contextual_help_module
 from app.web.reference_guides import render_reference_guides_page
 from app.services.reference_glossary_catalog import (

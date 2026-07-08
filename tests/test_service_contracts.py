@@ -332,7 +332,7 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
         self.assertEqual(payload["min_avg_dollar_volume_20d"], 20_000_000.0)
 
     def test_risk_on_momentum_sp500_universe_resolves_market_universe(self) -> None:
-        from app.runtime import backtest_risk_on_momentum as runtime
+        from app.runtime.backtest.runners import risk_on_momentum as runtime
 
         with (
             patch.object(
@@ -359,7 +359,7 @@ class RiskOnMomentumSwingContractTests(unittest.TestCase):
 
     def test_risk_on_momentum_sp500_universe_requires_membership_rows(self) -> None:
         from app.runtime import backtest as facade_runtime
-        from app.runtime import backtest_risk_on_momentum as runtime
+        from app.runtime.backtest.runners import risk_on_momentum as runtime
 
         with (
             patch.object(runtime, "load_market_cap_universe_members", return_value=[]),
@@ -690,12 +690,12 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(options[0]["source_id"], "validation-ready")
 
     def test_practical_validation_registry_serializes_db_scalar_payloads(self) -> None:
-        from app.runtime import portfolio_selection_v2
+        from app.runtime.backtest.stores import portfolio_selection
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             result_file = Path(tmp_dir) / "PRACTICAL_VALIDATION_RESULTS.jsonl"
-            with patch.object(portfolio_selection_v2, "PRACTICAL_VALIDATION_RESULT_FILE", result_file):
-                portfolio_selection_v2.append_practical_validation_result(
+            with patch.object(portfolio_selection, "PRACTICAL_VALIDATION_RESULT_FILE", result_file):
+                portfolio_selection.append_practical_validation_result(
                     {
                         "selection_source_id": "source-json-safe",
                         "input_evidence": {
@@ -766,9 +766,30 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
                     "net_end_balance": 1500.0,
                     "gross_net_end_balance_delta": 42.0,
                 },
+                "handoff_readiness_snapshot": {
+                    "schema_version": "backtest_handoff_readiness_snapshot_v1",
+                    "can_submit": True,
+                    "score": 10.0,
+                    "route_label": "Portfolio Mix Builder 또는 Practical Validation",
+                    "gate_groups": [{"label": "Promotion", "value": "통과", "status": "pass"}],
+                    "action_items": ["막는 항목 없음"],
+                },
             }
         )
 
+        self.assertEqual(source["handoff_readiness_snapshot"]["schema_version"], "backtest_handoff_readiness_snapshot_v1")
+        self.assertTrue(source["handoff_readiness_snapshot"]["can_submit"])
+        self.assertEqual(source["entry_gate"]["schema_version"], "selection_source_entry_gate_v1")
+        self.assertTrue(source["entry_gate"]["can_enter_practical_validation"])
+        self.assertEqual(source["entry_gate"]["review_focus_count"], 0)
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["handoff_readiness_snapshot"]["score"],
+            10.0,
+        )
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["entry_gate"]["schema_version"],
+            "selection_source_entry_gate_v1",
+        )
         self.assertEqual(
             source["cost_model_snapshot"]["cost_application_status"],
             "applied_to_result_curve",
@@ -1219,8 +1240,8 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
 import sys
 import app.runtime
 import app.runtime.backtest
-import app.runtime.candidate_library
-import app.runtime.backtest_result_bundle
+import app.runtime.backtest.read_models.candidate_library
+import app.runtime.backtest.result_bundle
 import app.services.backtest_component_role_weight_audit
 import app.services.backtest_construction_risk_audit
 import app.services.backtest_data_coverage_audit
@@ -1259,7 +1280,7 @@ print("streamlit" in sys.modules)
 import sys
 import importlib.util
 import app.runtime
-import app.runtime.candidate_library
+import app.runtime.backtest.read_models.candidate_library
 print("streamlit" in sys.modules)
 print(importlib.util.find_spec("app.web.runtime") is None)
 """
@@ -3894,6 +3915,64 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("app.web.ingestion_console", imported_modules)
         self.assertNotIn("_render_ingestion_console", function_names)
 
+    def test_streamlit_shell_does_not_expose_legacy_pages_sidebar(self) -> None:
+        import ast
+
+        pages_dir = Path("app/web/pages")
+        self.assertFalse(pages_dir.exists())
+
+        source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        imported_modules = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        }
+
+        self.assertIn("app.web.backtest_page", imported_modules)
+        self.assertNotIn("app.web.pages.backtest", imported_modules)
+
+    def test_backtest_page_uses_compact_korean_english_workflow_tabs(self) -> None:
+        source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
+        selector_body = source[source.index("def _render_backtest_panel_selector"):]
+        selector_body = selector_body[: selector_body.index("def render_backtest_tab")]
+
+        self.assertIn("st.pills(", selector_body)
+        self.assertIn("format_func=_backtest_workflow_stage_label", selector_body)
+        self.assertIn("후보 분석 · Backtest Analysis", source)
+        self.assertIn("실전 검증 · Practical Validation", source)
+        self.assertIn("최종 검토 · Final Review", source)
+        self.assertIn("stBaseButton-pillsActive", source)
+        self.assertIn("#ff4b4b", source)
+        self.assertNotIn("segmented_control", selector_body)
+        self.assertNotIn("st.radio(", selector_body)
+
+    def test_backtest_page_removes_unused_guide_snapshot_and_reference_panels(self) -> None:
+        page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
+        analysis_source = Path("app/web/backtest_analysis.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("Backtest 사용 안내", page_source)
+        self.assertNotIn("Strategy Capability Snapshot", common_source)
+        self.assertNotIn("_render_strategy_capability_snapshot", common_source)
+        self.assertNotIn("전략 개발 참고", analysis_source)
+        self.assertNotIn("backtest_analysis_show_research_reference_panels", analysis_source)
+
+    def test_backtest_latest_run_view_prioritizes_result_over_pre_result_guides(self) -> None:
+        runner_source = Path("app/web/backtest_single_runner.py").read_text(encoding="utf-8")
+        result_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("#### Execution Summary", runner_source)
+        self.assertNotIn("Developer Payload", runner_source)
+        self.assertNotIn("_render_latest_run_orientation", result_source)
+        self.assertNotIn("render_checkpoint_strip", result_source)
+        self.assertNotIn("아래 체크포인트는 결과 해석 순서", result_source)
+        self.assertNotIn("Performance Shape", result_source)
+        self.assertNotIn("Action after metrics", result_source)
+        self.assertIn('tab_labels.append("Selection History")', result_source)
+        self.assertIn('tab_labels.append("Dynamic Universe")', result_source)
+        self.assertIn('tab_labels.append("검증 신호 · Policy Signals")', result_source)
+
     def test_ingestion_console_module_owns_render_entrypoint(self) -> None:
         from app.web.ingestion_console import render_ingestion_page
 
@@ -3902,7 +3981,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_ingestion_console_delegates_read_only_diagnostics_to_service_facade(self) -> None:
         import ast
 
-        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        source = Path("app/web/ingestion/dispatcher.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
@@ -4079,7 +4158,12 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertIn("Archived legacy broad yfinance compatibility path", source)
 
     def test_quality_snapshot_form_marks_broad_yfinance_as_history_replay_only(self) -> None:
-        source = Path("app/web/backtest_single_forms.py").read_text(encoding="utf-8")
+        source = "\n".join(
+            [
+                Path("app/web/backtest_single_forms/__init__.py").read_text(encoding="utf-8"),
+                Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8"),
+            ]
+        )
 
         self.assertIn("Archived legacy broad yfinance compatibility path", source)
         self.assertIn("saved/history replay", source)
@@ -4109,7 +4193,8 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_ingestion_console_dispatches_collection_sections_to_dedicated_renderers(self) -> None:
         import ast
 
-        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        source = Path("app/web/ingestion/page.py").read_text(encoding="utf-8")
+        sections_source = Path("app/web/ingestion/sections.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         functions = {
             node.name: node
@@ -4117,9 +4202,12 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("_render_ingestion_operational_section", functions)
-        self.assertIn("_render_ingestion_manual_section", functions)
-        self.assertIn("_render_selected_ingestion_collection_section", functions)
+        self.assertIn("render_operational_section as _render_ingestion_operational_section", source)
+        self.assertIn("render_manual_section as _render_ingestion_manual_section", source)
+        self.assertIn("render_selected_section as _render_selected_ingestion_collection_section", source)
+        self.assertIn("def render_operational_section", sections_source)
+        self.assertIn("def render_manual_section", sections_source)
+        self.assertIn("def render_selected_section", sections_source)
 
         entrypoint = functions["render_ingestion_console"]
         entrypoint_calls = {
@@ -4235,14 +4323,14 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertFalse(_is_compatibility_ingestion_action("extended_statement_refresh"))
 
     def test_ingestion_diagnostic_actions_dispatch_as_job_results(self) -> None:
-        from app.web import ingestion_console
+        from app.web.ingestion import dispatcher
 
         with patch.object(
-            ingestion_console,
+            dispatcher,
             "run_price_stale_diagnosis",
             return_value={"status": "ok", "message": "diagnosis ok", "details": {"rows": []}},
         ) as diagnose:
-            result = ingestion_console._dispatch_job(
+            result = dispatcher._dispatch_job(
                 {
                     "action": "diagnose_price_stale",
                     "job_name": "diagnose_price_stale",
@@ -4352,7 +4440,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
                 self.assertIn("progress_callback", signature.parameters)
 
     def test_ingestion_dispatcher_passes_progress_callback_to_stage_jobs(self) -> None:
-        source = Path("app/web/ingestion_console.py").read_text(encoding="utf-8")
+        source = Path("app/web/ingestion/dispatcher.py").read_text(encoding="utf-8")
         stage_actions = [
             "metadata_refresh",
             "discover_etf_provider_source_map",
@@ -4400,7 +4488,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_backtest_compare_delegates_visual_shell_to_component_module(self) -> None:
         import ast
 
-        source = Path("app/web/backtest_compare.py").read_text(encoding="utf-8")
+        source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
@@ -4413,7 +4501,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.web.backtest_compare_components", imported_modules)
+        self.assertIn("app.web.backtest_compare.components", imported_modules)
         self.assertNotIn("_render_portfolio_mix_builder_css", function_names)
         self.assertNotIn("_render_portfolio_mix_flow_strip", function_names)
         self.assertNotIn("_render_portfolio_mix_section_head", function_names)
@@ -4421,7 +4509,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertNotIn("_status_chip_tone", function_names)
 
     def test_backtest_compare_components_module_owns_visual_entrypoints(self) -> None:
-        from app.web.backtest_compare_components import (
+        from app.web.backtest_compare.components import (
             html_text,
             render_component_result_overview_cards,
             render_portfolio_mix_builder_css,
@@ -4440,46 +4528,58 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_backtest_runtime_facade_delegates_risk_on_momentum_to_dedicated_module(self) -> None:
         import ast
 
-        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        source = Path("app/runtime/backtest/facade.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
             for node in ast.walk(tree)
             if isinstance(node, ast.ImportFrom) and node.module
         }
+        imported_modules.update(
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        )
         function_names = {
             node.name
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.runtime.backtest_risk_on_momentum", imported_modules)
+        self.assertIn("app.runtime.backtest.runners.risk_on_momentum", imported_modules)
         self.assertNotIn("run_risk_on_momentum_5d_backtest_from_db", function_names)
         self.assertNotIn("_resolve_risk_on_momentum_universe", function_names)
 
     def test_risk_on_momentum_runtime_module_owns_public_entrypoint(self) -> None:
         from app.runtime import backtest
-        from app.runtime.backtest_risk_on_momentum import run_risk_on_momentum_5d_backtest_from_db
+        from app.runtime.backtest.runners.risk_on_momentum import run_risk_on_momentum_5d_backtest_from_db
 
         self.assertIs(backtest.run_risk_on_momentum_5d_backtest_from_db, run_risk_on_momentum_5d_backtest_from_db)
 
     def test_backtest_runtime_facade_delegates_real_money_helpers_to_dedicated_module(self) -> None:
         import ast
 
-        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        source = Path("app/runtime/backtest/facade.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
             for node in ast.walk(tree)
             if isinstance(node, ast.ImportFrom) and node.module
         }
+        imported_modules.update(
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        )
         function_names = {
             node.name
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.runtime.backtest_real_money", imported_modules)
+        self.assertIn("app.runtime.backtest.real_money", imported_modules)
         self.assertNotIn("_apply_real_money_hardening", function_names)
         self.assertNotIn("_build_deployment_readiness_contract", function_names)
         self.assertNotIn("_apply_transaction_cost_postprocess", function_names)
@@ -4487,7 +4587,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
 
     def test_real_money_runtime_module_owns_facade_helper_contracts(self) -> None:
         from app.runtime import backtest
-        from app.runtime.backtest_real_money import (
+        from app.runtime.backtest.real_money import (
             ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             _apply_real_money_hardening,
             _apply_transaction_cost_postprocess,
@@ -4502,20 +4602,26 @@ class BoundaryContractHardeningTests(unittest.TestCase):
     def test_backtest_runtime_facade_delegates_strict_family_to_dedicated_module(self) -> None:
         import ast
 
-        source = Path("app/runtime/backtest.py").read_text(encoding="utf-8")
+        source = Path("app/runtime/backtest/facade.py").read_text(encoding="utf-8")
         tree = ast.parse(source)
         imported_modules = {
             node.module
             for node in ast.walk(tree)
             if isinstance(node, ast.ImportFrom) and node.module
         }
+        imported_modules.update(
+            alias.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        )
         function_names = {
             node.name
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
 
-        self.assertIn("app.runtime.backtest_strict", imported_modules)
+        self.assertIn("app.runtime.backtest.runners.strict_factor", imported_modules)
         self.assertNotIn("inspect_strict_annual_price_freshness", function_names)
         self.assertNotIn("run_quality_snapshot_strict_annual_backtest_from_db", function_names)
         self.assertNotIn("run_value_snapshot_strict_annual_backtest_from_db", function_names)
@@ -4524,7 +4630,7 @@ class BoundaryContractHardeningTests(unittest.TestCase):
 
     def test_strict_runtime_module_owns_facade_runner_contracts(self) -> None:
         from app.runtime import backtest
-        from app.runtime.backtest_strict import (
+        from app.runtime.backtest.runners.strict_factor import (
             inspect_strict_annual_price_freshness,
             run_quality_snapshot_strict_annual_backtest_from_db,
             run_quality_value_snapshot_strict_annual_backtest_from_db,
@@ -9690,9 +9796,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(preview["deployment_check_fail_count"], 0)
 
     def test_candidate_readiness_scores_source_checks_not_legacy_deployment_status(self) -> None:
-        from app.web.backtest_result_display import _build_next_step_readiness_evaluation
+        from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation
 
-        evaluation = _build_next_step_readiness_evaluation(
+        evaluation = build_next_step_readiness_evaluation(
             {
                 "promotion_decision": "real_money_candidate",
                 "deployment_readiness_status": "blocked",
@@ -9722,7 +9828,94 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["Execution Source Checks"]["현재 값"], "block 0 / review 2")
         self.assertEqual(criteria["Validation Source Checks"]["현재 값"], "block 0 / review 2")
 
-    def test_practical_validation_handoff_gate_blocks_hold_candidates(self) -> None:
+    def test_handoff_readiness_policy_lives_in_streamlit_free_service(self) -> None:
+        service_path = Path("app/services/backtest_handoff_readiness.py")
+        result_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        compare_source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
+
+        self.assertTrue(service_path.exists())
+        service_source = service_path.read_text(encoding="utf-8")
+
+        self.assertIn("def build_next_step_readiness_evaluation", service_source)
+        self.assertNotIn("import streamlit", service_source)
+        self.assertNotIn("from app.web", service_source)
+        self.assertNotIn("def _build_next_step_readiness_evaluation", result_source)
+        self.assertIn("from app.services.backtest_handoff_readiness import (", result_source)
+        self.assertIn("build_handoff_gate_summary", result_source)
+        self.assertIn("build_next_step_readiness_evaluation", result_source)
+        self.assertIn(
+            "from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation",
+            compare_source,
+        )
+        self.assertNotIn(
+            "from app.web.backtest_result_display import _build_next_step_readiness_evaluation",
+            compare_source,
+        )
+
+    def test_policy_signal_inventory_classifies_gate_review_and_context_rows(self) -> None:
+        from app.services.backtest_handoff_readiness import build_policy_signal_inventory
+
+        inventory = build_policy_signal_inventory(
+            {
+                "promotion_decision": "real_money_candidate",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "unavailable",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "normal",
+                "price_freshness": {"status": "ok"},
+                "rolling_review_status": "caution",
+                "out_of_sample_review_status": "watch",
+                "transaction_cost_bps": 10.0,
+                "turnover_estimation_status": "not_estimated_missing_holdings",
+                "net_cost_curve_status": "applied_without_turnover_estimate",
+                "deployment_readiness_status": "blocked",
+            }
+        )
+
+        self.assertEqual(inventory["schema_version"], "backtest_policy_signal_inventory_v1")
+        rows_by_signal = {row["signal"]: row for row in inventory["rows"]}
+        self.assertEqual(rows_by_signal["Promotion Decision"]["effect"], "pass")
+        self.assertEqual(rows_by_signal["Liquidity Policy"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Rolling Review"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Split-Period Check"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Turnover Estimate"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Cost Curve"]["effect"], "review")
+        self.assertEqual(rows_by_signal["Execution Preview"]["effect"], "context")
+        self.assertEqual(rows_by_signal["Execution Preview"]["role"], "context_only")
+        self.assertEqual(inventory["counts"]["block"], 0)
+        self.assertGreaterEqual(inventory["counts"]["review"], 5)
+
+    def test_handoff_gate_summary_groups_blockers_for_user_display(self) -> None:
+        from app.services.backtest_handoff_readiness import build_handoff_gate_summary
+
+        summary = build_handoff_gate_summary(
+            {
+                "promotion_decision": "hold",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "rolling_review_status": "caution",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "normal",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "normal",
+                "price_freshness": {"status": "ok"},
+            }
+        )
+
+        self.assertTrue(summary["can_submit"])
+        self.assertEqual([group["label"] for group in summary["gate_groups"]], ["Promotion", "실행 원천", "검증 원천"])
+        self.assertEqual(summary["gate_groups"][0]["value"], "review 1")
+        self.assertEqual(summary["gate_groups"][1]["value"], "통과")
+        self.assertEqual(summary["gate_groups"][2]["value"], "review 1")
+        self.assertIn("Promotion은 hold 상태입니다", summary["action_items"][0])
+        self.assertTrue(any("검증 원천 review 1개" in item for item in summary["action_items"]))
+        self.assertFalse(any(str(item).startswith("Validation:") for item in summary["action_items"]))
+
+    def test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state
 
         state = _build_practical_validation_handoff_state(
@@ -9741,11 +9934,49 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             }
         )
 
+        self.assertTrue(state["can_submit"])
+        self.assertEqual(state["status_label"], "1차 통과")
+        self.assertEqual(state["display_reasons"], ["Practical Validation에서 실전성 검증을 이어갑니다."])
+        self.assertNotIn("Promotion은 hold 상태입니다. 2차 검증에서 hold 사유와 보강 항목을 먼저 확인하세요.", state["display_reasons"])
+        self.assertFalse(any("provider" in reason for reason in state["display_reasons"]))
+        self.assertFalse(any("data coverage" in reason for reason in state["display_reasons"]))
+        self.assertEqual(state["first_stage_blocker_count"], 0)
+        self.assertEqual(state["second_stage_review_count"], 1)
+        entry_cards = {row["label"]: row for row in state["entry_cards"]}
+        self.assertEqual(entry_cards["1차 진입 기준"]["value"], "통과")
+        self.assertEqual(entry_cards["먼저 해결"]["value"], "0개")
+        self.assertEqual(entry_cards["다음 단계"]["value"], "Practical Validation")
+        self.assertNotIn("2차 확인 큐", entry_cards)
+        self.assertNotIn("criteria", state)
+        self.assertNotIn("score", state)
+
+    def test_practical_validation_handoff_gate_still_blocks_missing_source_basis(self) -> None:
+        from app.web.backtest_result_display import _build_practical_validation_handoff_state
+
+        state = _build_practical_validation_handoff_state(
+            {
+                "meta": {
+                    "promotion_decision": "",
+                    "benchmark_available": False,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                }
+            }
+        )
+
         self.assertFalse(state["can_submit"])
-        self.assertEqual(state["status_label"], "진입 보류")
-        self.assertIn("Promotion Decision이 hold이거나 비어 있음", state["display_reasons"])
-        criteria = {row["label"]: row for row in state["criteria"]}
-        self.assertEqual(criteria["Promotion"]["value"], "보류")
+        self.assertEqual(state["status_label"], "1차 진입 보류")
+        self.assertIn("Promotion signal이 비어 있습니다. Backtest 결과를 다시 실행해 promotion signal을 생성하세요.", state["display_reasons"])
+        self.assertTrue(any("검증 원천 blocker" in item for item in state["display_reasons"]))
+        self.assertGreaterEqual(state["first_stage_blocker_count"], 1)
+        entry_cards = {row["label"]: row for row in state["entry_cards"]}
+        self.assertEqual(entry_cards["1차 진입 기준"]["value"], "보류")
+        self.assertEqual(entry_cards["먼저 해결"]["tone"], "danger")
 
     def test_practical_validation_handoff_gate_allows_ready_candidates(self) -> None:
         from app.web.backtest_result_display import _build_practical_validation_handoff_state
@@ -9767,11 +9998,654 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
 
         self.assertTrue(state["can_submit"])
-        self.assertEqual(state["status_label"], "진입 가능")
-        self.assertEqual(state["display_reasons"], ["막는 항목 없음"])
-        criteria = {row["label"]: row for row in state["criteria"]}
-        self.assertEqual(criteria["실행 원천"]["value"], "통과")
-        self.assertEqual(criteria["검증 원천"]["value"], "통과")
+        self.assertEqual(state["status_label"], "1차 통과")
+        self.assertEqual(state["display_reasons"], ["Practical Validation에서 실전성 검증을 이어갑니다."])
+        entry_cards = {row["label"]: row for row in state["entry_cards"]}
+        self.assertEqual(entry_cards["1차 진입 기준"]["value"], "통과")
+        self.assertEqual(entry_cards["먼저 해결"]["value"], "0개")
+        self.assertEqual(entry_cards["다음 단계"]["value"], "Practical Validation")
+
+    def test_practical_validation_handoff_uses_single_integrated_action_surface(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        self.assertIn("is_backtest_handoff_action_available", source)
+        self.assertIn("render_backtest_handoff_action", source)
+        self.assertIn("def _render_practical_validation_handoff_panel", source)
+        self.assertNotIn("def _render_practical_validation_handoff_action_shell", source)
+
+        panel_start = source.index("def _render_practical_validation_handoff_panel")
+        panel_body = source[panel_start:]
+        panel_body = panel_body[: panel_body.index("\ndef ", 1)]
+        action_start = source.index("def _render_practical_validation_next_action")
+        action_body = source[action_start:]
+        action_body = action_body[: action_body.index("\ndef ", 1)]
+
+        self.assertIn("render_backtest_handoff_action(", action_body)
+        self.assertIn("is_backtest_handoff_action_available()", action_body)
+        self.assertIn("_consume_practical_validation_handoff_action(action_value, bundle)", action_body)
+        self.assertNotIn("_render_practical_validation_handoff_panel(state)", action_body)
+        self.assertNotIn("_render_practical_validation_handoff_action_shell(state)", action_body)
+        self.assertNotIn("st.button(", action_body)
+        self.assertNotIn("st.columns(", action_body)
+        self.assertIn("bt-handoff-panel", panel_body)
+        self.assertIn("bt-handoff-action", panel_body)
+        self.assertIn("bt-handoff-boundary", panel_body)
+        self.assertIn("2차 단계 진입 판단", panel_body)
+        self.assertIn("검증 source 등록만 수행합니다", panel_body)
+        self.assertIn("entry_cards", source)
+        self.assertNotIn("진입 준비도", panel_body)
+        self.assertNotIn("_render_practical_validation_handoff_card(state)", action_body)
+        self.assertNotIn("with st.container(border=True)", action_body)
+        self.assertNotIn("handoff_cols = st.columns", action_body)
+        self.assertNotIn("bt-handoff-submit-shell", source)
+        self.assertNotIn("Source 등록 액션", source)
+        self.assertNotIn("bt-handoff-action-hint", action_body)
+        self.assertNotIn('st.markdown("##### 2차 실전성 검증 Handoff")', action_body)
+        self.assertNotIn("bt-handoff-card", source)
+
+    def test_policy_signal_tab_is_evidence_only_after_handoff_summary(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        component_source = Path(
+            "app/web/components/backtest_policy_signal_board/frontend/src/BacktestPolicySignalBoard.tsx"
+        ).read_text(encoding="utf-8")
+        real_money_start = source.index("def _render_real_money_details")
+        real_money_body = source[real_money_start:]
+        real_money_body = real_money_body[: real_money_body.index("\ndef ", 1)]
+        handoff_start = source.index("def _render_practical_validation_next_action")
+        handoff_body = source[handoff_start:]
+        handoff_body = handoff_body[: handoff_body.index("\ndef ", 1)]
+
+        self.assertIn('tab_labels.append("검증 신호 · Policy Signals")', source)
+        self.assertNotIn('tab_labels.append("Policy Signal Meta")', source)
+        self.assertIn("def _render_policy_signal_summary_panel", source)
+        self.assertIn("render_backtest_handoff_action(", handoff_body)
+        self.assertNotIn("_render_policy_signal_summary_panel(meta)", real_money_body)
+        self.assertIn("_render_policy_signal_gate_board(rows, evaluation)", real_money_body)
+        self.assertIn("build_policy_signal_inventory(meta)", real_money_body)
+        self.assertIn("is_backtest_policy_signal_board_available", source)
+        self.assertIn("render_backtest_policy_signal_board(", source)
+        self.assertIn("first_stage_rows", source)
+        self.assertIn("second_stage_review_rows", source)
+        self.assertIn("bt-policy-signal", source)
+        self.assertIn("검증 기준 상세", component_source)
+        self.assertNotIn("2차 확인 항목은 Practical Validation 상단에서 확인합니다.", source)
+        self.assertIn("1차에서 확인한 기준", component_source)
+        self.assertIn("2차 확인은 Practical Validation에서 계속 확인합니다.", component_source)
+        self.assertNotIn("2차로 넘긴 확인 큐", component_source)
+        self.assertNotIn("bt-policy-gate", source)
+        self.assertNotIn("1차 처리 결과", source)
+        self.assertNotIn("이번 실행 확인 큐", source)
+        self.assertNotIn("진입 준비도", real_money_body)
+        self.assertIn("기술 원천 보기", real_money_body)
+        self.assertNotIn("render_status_card_grid(", real_money_body)
+        self.assertNotIn("st.dataframe(pd.DataFrame(_policy_rows(primary_rows))", real_money_body)
+        self.assertNotIn("Candidate readiness", source)
+        self.assertNotIn('["현재 판단", "검토 근거", "실행 부담", "기술 상세"]', real_money_body)
+        self.assertNotIn("전략 승격 판단", real_money_body)
+        self.assertNotIn("Execution Preview", real_money_body)
+        self.assertNotIn("_render_next_step_readiness_box(meta)", real_money_body)
+        self.assertNotIn("Candidate Readiness Checkpoint", source)
+
+    def test_policy_signal_inventory_splits_first_stage_and_second_stage_rows(self) -> None:
+        from app.services.backtest_handoff_readiness import build_policy_signal_inventory
+
+        inventory = build_policy_signal_inventory(
+            {
+                "promotion_decision": "hold",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "normal",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "watch",
+                "price_freshness": {"status": "ok"},
+            }
+        )
+
+        first_stage_signals = {row["signal"] for row in inventory["first_stage_rows"]}
+        second_stage_signals = {row["signal"] for row in inventory["second_stage_review_rows"]}
+
+        self.assertIn("Price Freshness", first_stage_signals)
+        self.assertIn("Benchmark Policy", first_stage_signals)
+        self.assertNotIn("Promotion Decision", first_stage_signals)
+        self.assertIn("Promotion Decision", second_stage_signals)
+        self.assertIn("ETF Operability", second_stage_signals)
+        self.assertEqual(inventory["counts"]["first_stage_block"], 0)
+        self.assertGreaterEqual(inventory["counts"]["first_stage_pass"], 1)
+        self.assertGreaterEqual(inventory["counts"]["second_stage_review"], 2)
+        self.assertIn("checked_evidence", inventory["rows"][0])
+        self.assertIn("display_detail", inventory["rows"][0])
+
+    def test_policy_signal_inventory_includes_plain_help_for_first_stage_rows(self) -> None:
+        from app.services.backtest_handoff_readiness import build_policy_signal_inventory
+
+        inventory = build_policy_signal_inventory(
+            {
+                "promotion_decision": "production_candidate",
+                "benchmark_available": True,
+                "validation_status": "normal",
+                "benchmark_policy_status": "normal",
+                "liquidity_policy_status": "normal",
+                "validation_policy_status": "normal",
+                "guardrail_policy_status": "normal",
+                "etf_operability_status": "normal",
+                "price_freshness": {"status": "ok"},
+            }
+        )
+
+        first_stage_by_signal = {row["signal"]: row for row in inventory["first_stage_rows"]}
+        liquidity = first_stage_by_signal["Liquidity Policy"]
+        liquidity_item_labels = {item["label"] for item in liquidity["checked_items"]}
+
+        self.assertIn("너무 거래가 얇아서", liquidity["plain_explanation"])
+        self.assertIn("Min Avg Dollar Volume 20D", liquidity_item_labels)
+        self.assertIn("Liquidity Clean Coverage", liquidity_item_labels)
+        self.assertIn("Liquidity Excluded Rows", liquidity_item_labels)
+        for signal in [
+            "Price Freshness",
+            "Benchmark Availability",
+            "Benchmark Policy",
+            "Validation Policy",
+            "Portfolio Guardrail Policy",
+        ]:
+            self.assertIn("plain_explanation", first_stage_by_signal[signal])
+            self.assertTrue(first_stage_by_signal[signal]["checked_items"])
+
+    def test_backtest_policy_signal_react_board_component_is_ui_only(self) -> None:
+        component_root = Path("app/web/components/backtest_policy_signal_board")
+        wrapper_path = component_root / "component.py"
+        entry_path = component_root / "frontend/src/BacktestPolicySignalBoard.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("render_backtest_policy_signal_board", wrapper_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertIn("BacktestPolicySignalBoard", component_source)
+        self.assertIn("1차에서 확인한 기준", component_source)
+        self.assertIn("groupedFirstRows", component_source)
+        self.assertIn("bt-react-policy__help", component_source)
+        self.assertIn("aria-expanded", component_source)
+        self.assertNotIn("secondStageCount", component_source)
+        self.assertNotIn("score?:", component_source)
+        self.assertNotIn("bt-react-policy__score", style_source)
+        self.assertNotIn("2차 확인은 Practical Validation에서 계속 확인합니다.", component_source)
+        self.assertNotIn("bt-react-policy__handoff", component_source)
+        self.assertIn("checked_evidence", component_source)
+        self.assertIn("checked_items", component_source)
+        self.assertNotIn("secondGroups.map", component_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("render_backtest_policy_signal_board(", result_display_source)
+        self.assertIn("first_stage_rows", result_display_source)
+        self.assertNotIn("second_stage_review_rows", result_display_source)
+
+    def test_practical_validation_step1_receives_backtest_review_focus_queue(self) -> None:
+        source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        workspace_start = source.index("def render_practical_validation_workspace")
+        workspace_body = source[workspace_start:]
+
+        self.assertIn("def _render_backtest_entry_gate_review_queue", source)
+        self.assertIn("_render_backtest_entry_gate_review_queue(source)", workspace_body)
+        self.assertIn("Backtest에서 넘어온 2차 확인 항목", source)
+        self.assertIn("review_focus_rows", source)
+        self.assertIn("checked_evidence", source)
+        self.assertIn("display_detail", source)
+        self.assertIn("2차 확인 항목 상세 테이블", source)
+        self.assertIn("can_move_to_compare", source)
+
+    def test_backtest_handoff_react_component_is_production_action_card(self) -> None:
+        component_root = Path("app/web/components/backtest_handoff_action")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/BacktestHandoffAction.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        build_entry_path = component_root / "frontend/build/index.html"
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = (component_root / "frontend/src/style.css").read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+        result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_backtest_handoff_action_available", wrapper_source)
+        self.assertIn("render_backtest_handoff_action", wrapper_source)
+        self.assertIn("BacktestHandoffAction", component_source)
+        self.assertIn("2차 실전성 검증 Handoff", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertIn("Date.now()", component_source)
+        self.assertIn("entry_cards", wrapper_source)
+        self.assertIn("entryCards", component_source)
+        self.assertIn("reasons", wrapper_source)
+        self.assertNotIn("score", wrapper_source)
+        self.assertNotIn("진입 준비도", component_source)
+        self.assertIn("1차 진입 기준", result_display_source)
+        self.assertNotIn("2차 확인 큐", component_source)
+        self.assertNotIn("reviewCount", component_source)
+        self.assertNotIn("2차 확인 큐", result_display_source)
+        self.assertIn(".bt-react-handoff {", style_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("render_backtest_handoff_action(", result_display_source)
+
+    def test_data_trust_price_refresh_react_component_is_integrated_action_card(self) -> None:
+        component_root = Path("app/web/components/backtest_price_refresh_action")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/BacktestPriceRefreshAction.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_backtest_price_refresh_action_available", wrapper_source)
+        self.assertIn("render_backtest_price_refresh_action", wrapper_source)
+        self.assertIn("BacktestPriceRefreshAction", component_source)
+        self.assertIn("가격 데이터 업데이트 가능", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertIn("source: \"backtest_price_refresh_action\"", component_source)
+        self.assertIn("Date.now()", component_source)
+        self.assertIn("metricItems", component_source)
+        self.assertIn("actionNote", component_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("render_backtest_price_refresh_action(", result_display_source)
+        self.assertIn("is_backtest_price_refresh_action_available()", result_display_source)
+
+    def test_data_trust_price_refresh_action_does_not_use_separate_streamlit_button_row(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        refresh_start = source.index("def _render_data_trust_refresh_action")
+        refresh_body = source[refresh_start:]
+        refresh_body = refresh_body[: refresh_body.index("\ndef ", 1)]
+
+        self.assertIn("render_backtest_price_refresh_action(", refresh_body)
+        self.assertIn("_consume_data_trust_refresh_action(action_value, meta, state_key)", refresh_body)
+        self.assertNotIn("st.columns(", refresh_body)
+        self.assertNotIn(".button(", refresh_body)
+        self.assertNotIn("action_cols", refresh_body)
+        self.assertNotIn("data-trust-refresh-action", refresh_body)
+
+    def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
+        flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")
+        selection_doc = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(
+            encoding="utf-8"
+        )
+        progress_doc = Path(".aiworkspace/note/finance/WORK_PROGRESS.md").read_text(encoding="utf-8")
+        question_doc = Path(".aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md").read_text(encoding="utf-8")
+        task_status = Path(
+            ".aiworkspace/note/finance/tasks/active/backtest-handoff-policy-signal-action-v1-v4-20260704/STATUS.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Handoff owns entry judgment and source registration action", flow_doc)
+        self.assertIn("React custom component", flow_doc)
+        self.assertIn("source registration button inside the Handoff panel", flow_doc)
+        self.assertIn("Policy Signals owns evidence detail", selection_doc)
+        self.assertIn("React custom component owns the visible Handoff card and button", selection_doc)
+        self.assertIn("Backtest Handoff / Policy Signals action cleanup V1-V4", progress_doc)
+        self.assertIn("React Handoff action card", question_doc)
+        self.assertIn("V4 complete", task_status)
+
+    def test_candidate_review_draft_captures_handoff_readiness_snapshot(self) -> None:
+        from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_bundle
+
+        draft = _candidate_review_draft_from_bundle(
+            {
+                "strategy_name": "Equal Weight",
+                "summary_df": pd.DataFrame(
+                    [
+                        {
+                            "Name": "Equal Weight",
+                            "Start Date": "2020-01-01",
+                            "End Date": "2026-06-26",
+                            "End Balance": 1500.0,
+                            "CAGR": 0.1,
+                            "Sharpe Ratio": 1.0,
+                            "Maximum Drawdown": -0.2,
+                        }
+                    ]
+                ),
+                "meta": {
+                    "strategy_key": "equal_weight",
+                    "promotion_decision": "real_money_candidate",
+                    "shortlist_status": "paper_probation",
+                    "deployment_readiness_status": "small_capital_ready",
+                    "benchmark_available": True,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                },
+            }
+        )
+
+        snapshot = draft["handoff_readiness_snapshot"]
+        self.assertEqual(snapshot["schema_version"], "backtest_handoff_readiness_snapshot_v2")
+        self.assertEqual(snapshot["policy"], "practical_validation_entry_gate_v2")
+        self.assertTrue(snapshot["can_submit"])
+        self.assertTrue(snapshot["can_enter_practical_validation"])
+        self.assertTrue(snapshot["can_move_to_compare"])
+        self.assertEqual(snapshot["score"], 10.0)
+        self.assertEqual([group["label"] for group in snapshot["gate_groups"]], ["Promotion", "실행 원천", "검증 원천"])
+        self.assertEqual(snapshot["action_items"], ["막는 항목 없음"])
+        self.assertEqual(snapshot["entry_blocking_reasons"], [])
+        self.assertEqual(snapshot["policy_signal_counts"]["block"], 0)
+
+    def test_candidate_review_draft_marks_hold_as_practical_validation_review_focus(self) -> None:
+        from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
+        from app.web.backtest_candidate_review_helpers import _candidate_review_draft_from_bundle
+
+        draft = _candidate_review_draft_from_bundle(
+            {
+                "strategy_name": "Equal Weight",
+                "summary_df": pd.DataFrame(
+                    [
+                        {
+                            "Name": "Equal Weight",
+                            "Start Date": "2020-01-01",
+                            "End Date": "2026-06-26",
+                            "End Balance": 1500.0,
+                            "CAGR": 0.1,
+                            "Sharpe Ratio": 1.0,
+                            "Maximum Drawdown": -0.2,
+                        }
+                    ]
+                ),
+                "meta": {
+                    "strategy_key": "equal_weight",
+                    "promotion_decision": "hold",
+                    "shortlist_status": "paper_probation",
+                    "deployment_readiness_status": "small_capital_ready",
+                    "benchmark_available": True,
+                    "validation_status": "normal",
+                    "benchmark_policy_status": "normal",
+                    "liquidity_policy_status": "normal",
+                    "validation_policy_status": "normal",
+                    "guardrail_policy_status": "normal",
+                    "etf_operability_status": "normal",
+                    "price_freshness": {"status": "ok"},
+                },
+            }
+        )
+
+        snapshot = draft["handoff_readiness_snapshot"]
+        self.assertTrue(snapshot["can_enter_practical_validation"])
+        self.assertFalse(snapshot["can_move_to_compare"])
+        self.assertEqual(snapshot["entry_blocking_reasons"], [])
+        self.assertIn("Promotion Decision이 hold이거나 비어 있음", snapshot["compare_blocking_reasons"])
+        self.assertEqual(snapshot["policy_signal_review_rows"][0]["signal"], "Promotion Decision")
+        self.assertEqual(snapshot["policy_signal_review_rows"][0]["status"], "hold")
+
+        source = build_selection_source_from_candidate_draft(draft)
+        self.assertTrue(source["entry_gate"]["can_enter_practical_validation"])
+        self.assertFalse(source["entry_gate"]["can_move_to_compare"])
+        self.assertEqual(source["entry_gate"]["review_focus_count"], 1)
+        self.assertEqual(source["entry_gate"]["review_focus_rows"][0]["signal"], "Promotion Decision")
+        self.assertEqual(
+            source["components"][0]["replay_contract"]["entry_gate"]["review_focus_count"],
+            1,
+        )
+
+    def test_data_trust_brief_model_compacts_basis_and_warning_queue(self) -> None:
+        from app.web.backtest_result_display import _build_data_trust_brief
+
+        brief = _build_data_trust_brief(
+            {
+                "strategy_name": "Equal Weight",
+                "tickers": ["VIG", "SCHD", "DGRO", "GLD"],
+                "end": "2026-07-01",
+                "actual_result_end": "2026-06-26",
+                "result_rows": 126,
+                "warnings": ["validation caution", "operability watch"],
+                "excluded_tickers": [],
+                "malformed_price_rows": [],
+                "price_freshness": {
+                    "status": "ok",
+                    "message": "All symbols have price data through effective trading end `2026-06-26`.",
+                    "details": {
+                        "effective_end_date": "2026-06-26",
+                        "common_latest_date": "2026-06-26",
+                        "newest_latest_date": "2026-06-26",
+                        "spread_days": 0,
+                    },
+                },
+            }
+        )
+
+        self.assertEqual(brief["status_label"], "자료 정상")
+        self.assertIn("2026-06-26까지", brief["headline"])
+        self.assertNotIn("2차", brief["headline"])
+        self.assertIn("요청 종료일 2026-07-01", brief["subtitle"])
+        self.assertEqual(
+            [item["label"] for item in brief["summary_items"]],
+            ["계산 기준일", "가격 기준", "사용 데이터", "1차 데이터 확인"],
+        )
+        self.assertEqual(brief["summary_items"][1]["value"], "최신성 정상")
+        self.assertIn("공통 2026-06-26", brief["summary_items"][1]["detail"])
+        self.assertEqual(brief["summary_items"][2]["value"], "4개 종목")
+        self.assertEqual(brief["summary_items"][3]["value"], "바로 성과 확인")
+        self.assertEqual(brief["summary_items"][3]["detail"], "아래 성과 metric과 차트를 이어서 봅니다.")
+        self.assertNotIn("reading_rows", brief)
+        self.assertNotIn("detail_rows", brief)
+        self.assertEqual(brief["issue_cards"], [])
+        self.assertEqual(brief["second_stage_review_count"], 0)
+        self.assertEqual(brief["warnings"], [])
+
+    def test_backtest_price_refresh_plan_uses_latest_completed_trading_day(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import build_backtest_price_refresh_plan
+
+        plan = build_backtest_price_refresh_plan(
+            {
+                "tickers": ["VIG", "SCHD", "DGRO", "GLD"],
+                "end": "2026-07-05",
+                "actual_result_end": "2026-06-26",
+                "price_freshness": {
+                    "status": "ok",
+                    "details": {
+                        "effective_end_date": "2026-06-26",
+                        "common_latest_date": "2026-06-26",
+                        "newest_latest_date": "2026-06-26",
+                    },
+                },
+            },
+            now=datetime(2026, 7, 5, 12, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+        )
+
+        self.assertTrue(plan["eligible"])
+        self.assertEqual(plan["status"], "refresh_available")
+        self.assertEqual(plan["target_end"], "2026-07-02")
+        self.assertEqual(plan["collection_start"], "2026-06-27")
+        self.assertEqual(plan["collection_end"], "2026-07-02")
+        self.assertEqual(plan["tickers"], ["VIG", "SCHD", "DGRO", "GLD"])
+        self.assertIn("주말/휴장일 제외", plan["detail"])
+        self.assertIn("4개 종목", plan["summary"])
+
+    def test_backtest_price_refresh_plan_hides_action_when_prices_are_current(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import build_backtest_price_refresh_plan
+
+        plan = build_backtest_price_refresh_plan(
+            {
+                "tickers": ["VIG", "SCHD"],
+                "end": "2026-07-05",
+                "actual_result_end": "2026-07-02",
+                "price_freshness": {
+                    "status": "ok",
+                    "details": {
+                        "effective_end_date": "2026-07-02",
+                        "common_latest_date": "2026-07-02",
+                        "newest_latest_date": "2026-07-02",
+                    },
+                },
+            },
+            now=datetime(2026, 7, 5, 12, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+        )
+
+        self.assertFalse(plan["eligible"])
+        self.assertEqual(plan["status"], "up_to_date")
+        self.assertEqual(plan["target_end"], "2026-07-02")
+        self.assertIn("이미 최신", plan["summary"])
+
+    def test_backtest_price_refresh_executes_existing_ohlcv_job_with_current_symbols(self) -> None:
+        from zoneinfo import ZoneInfo
+
+        from app.services.backtest_price_refresh import run_backtest_price_refresh
+
+        calls: list[dict[str, Any]] = []
+
+        def fake_runner(symbols: list[str], **kwargs: Any) -> dict[str, Any]:
+            calls.append({"symbols": symbols, **kwargs})
+            return {
+                "job_name": "collect_ohlcv",
+                "status": "success",
+                "rows_written": 12,
+                "symbols_requested": len(symbols),
+                "symbols_processed": len(symbols),
+                "failed_symbols": [],
+                "message": "OHLCV collection completed.",
+                "details": {"target_tables": ["finance_price.nyse_price_history"]},
+            }
+
+        result = run_backtest_price_refresh(
+            {
+                "tickers": ["vig", "SCHD", "VIG"],
+                "end": "2026-07-05",
+                "actual_result_end": "2026-06-26",
+                "price_freshness": {
+                    "status": "ok",
+                    "details": {
+                        "effective_end_date": "2026-06-26",
+                        "common_latest_date": "2026-06-26",
+                    },
+                },
+            },
+            now=datetime(2026, 7, 5, 12, 0, tzinfo=ZoneInfo("Asia/Seoul")),
+            runner=fake_runner,
+        )
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]["symbols"], ["VIG", "SCHD"])
+        self.assertEqual(calls[0]["start"], "2026-06-27")
+        self.assertEqual(calls[0]["end"], "2026-07-02")
+        self.assertEqual(calls[0]["period"], "1y")
+        self.assertEqual(calls[0]["interval"], "1d")
+        self.assertEqual(calls[0]["execution_profile"], "managed_safe")
+        self.assertEqual(result["job_name"], "backtest_data_trust_ohlcv_refresh")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["source"], "yfinance OHLCV")
+        self.assertEqual(result["details"]["purpose"], "Backtest Data Trust price freshness repair")
+        self.assertIn("Backtest 가격 데이터 업데이트", result["message"])
+
+    def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        function_body = source[source.index("def _render_data_trust_summary"):]
+        function_body = function_body[: function_body.index("def _data_trust_status_label")]
+        panel_body = source[source.index("def _render_data_trust_brief_panel"):]
+        panel_body = panel_body[: panel_body.index("def _render_data_trust_summary")]
+        last_run_start = source.index("def _render_last_run")
+        last_run_body = source[last_run_start:]
+        last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
+
+        self.assertIn("_build_data_trust_brief", function_body)
+        self.assertIn("_render_data_trust_brief_panel", function_body)
+        self.assertIn("_render_data_trust_refresh_action", function_body)
+        self.assertIn("build_backtest_price_refresh_plan", source)
+        self.assertIn("run_backtest_price_refresh", source)
+        self.assertIn("가격 데이터 업데이트", source)
+        self.assertIn("_render_data_trust_issue_queue", source)
+        self.assertIn("데이터 기준 요약", source)
+        self.assertIn("data-trust-brief", source)
+        self.assertIn("data-trust-brief__section-title", panel_body)
+        self.assertIn("data-trust-brief__section-kicker", panel_body)
+        self.assertNotIn("2차 확인 항목", panel_body)
+        self.assertNotIn("2차 전달", panel_body)
+        self.assertIn("1차 데이터 확인", source)
+        self.assertNotIn("이번 실행 검토 큐", source)
+        self.assertNotIn('st.markdown("#### 데이터 기준 요약")', function_body)
+        self.assertNotIn("render_status_card_grid", function_body)
+        self.assertNotIn("render_badge_strip", function_body)
+        self.assertNotIn("st.expander", function_body)
+        self.assertNotIn("세부 데이터 기준", function_body)
+        self.assertNotIn("data-trust-brief__rows", source)
+        self.assertNotIn("Checkpoint A", function_body)
+        self.assertNotIn("Result Integrity", function_body)
+        self.assertNotIn("Price Freshness", function_body)
+        self.assertNotIn("st.warning(", last_run_body)
+        self.assertNotIn("이번 실행에서 같이 봐야 할 주의 사항", last_run_body)
+
+    def test_latest_backtest_run_prioritizes_result_then_data_trust_then_handoff_then_tabs(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        last_run_start = source.index("def _render_last_run")
+        last_run_body = source[last_run_start:]
+        last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
+
+        self.assertIn("_render_backtest_result_header(bundle, summary_df)", last_run_body)
+        self.assertNotIn("_render_summary_metrics(summary_df)", last_run_body)
+        self.assertIn("_render_data_trust_summary(meta)", last_run_body)
+        self.assertIn("_render_practical_validation_next_action(bundle)", last_run_body)
+        self.assertNotIn("Latest Backtest Run", last_run_body)
+
+        header_pos = last_run_body.index("_render_backtest_result_header(bundle, summary_df)")
+        data_trust_pos = last_run_body.index("_render_data_trust_summary(meta)")
+        tabs_pos = last_run_body.index("tabs = st.tabs(tab_labels)")
+        handoff_pos = last_run_body.index("_render_practical_validation_next_action(bundle)")
+
+        self.assertLess(header_pos, data_trust_pos)
+        self.assertLess(data_trust_pos, handoff_pos)
+        self.assertLess(handoff_pos, tabs_pos)
+
+    def test_backtest_result_header_owns_integrated_kpi_band(self) -> None:
+        source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
+        header_start = source.index("def _render_backtest_result_header")
+        header_body = source[header_start:]
+        header_body = header_body[: header_body.index("\ndef ", 1)]
+
+        self.assertIn("summary_df: pd.DataFrame", header_body)
+        self.assertIn("_build_result_kpi_items(summary_df)", header_body)
+        self.assertIn("backtest-result-hero__kpis", header_body)
+        self.assertIn("backtest-result-hero__basis", header_body)
+        self.assertNotIn("backtest-result-hero__chips", header_body)
 
     def test_portfolio_mix_candidate_gate_allows_ready_mix(self) -> None:
         from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
@@ -9926,19 +10800,19 @@ class BacktestRuntimeContractTests(unittest.TestCase):
     def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
         import app.runtime
         from app.runtime import backtest as runtime_backtest
-        from app.runtime import backtest_result_bundle
+        from app.runtime.backtest import result_bundle
 
         self.assertIs(
             runtime_backtest.build_backtest_result_bundle,
-            backtest_result_bundle.build_backtest_result_bundle,
+            result_bundle.build_backtest_result_bundle,
         )
         self.assertIs(
             app.runtime.build_backtest_result_bundle,
-            backtest_result_bundle.build_backtest_result_bundle,
+            result_bundle.build_backtest_result_bundle,
         )
 
     def test_result_bundle_contract_sorts_dates_and_keeps_metadata(self) -> None:
-        from app.runtime.backtest_result_bundle import build_backtest_result_bundle
+        from app.runtime.backtest.result_bundle import build_backtest_result_bundle
 
         bundle = build_backtest_result_bundle(
             pd.DataFrame(
@@ -10035,6 +10909,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_global_relative_strength_source_contract_includes_promotion_policy_defaults(self) -> None:
         from app.runtime import backtest as runtime_backtest
+        from app.runtime.backtest.runners import global_relative_strength as grs_runtime
         from app.runtime.backtest import (
             STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
             STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
@@ -10062,13 +10937,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         with (
             patch.object(
-                runtime_backtest,
+                grs_runtime,
                 "inspect_strict_annual_price_freshness",
                 return_value={"status": "ok", "message": "", "details": {}},
             ),
-            patch.object(runtime_backtest, "_preflight_price_strategy_data"),
-            patch.object(runtime_backtest, "get_global_relative_strength_from_db", return_value=result_df),
-            patch.object(runtime_backtest, "_apply_real_money_hardening", side_effect=_capture_hardening),
+            patch.object(grs_runtime, "_preflight_price_strategy_data"),
+            patch.object(grs_runtime, "get_global_relative_strength_from_db", return_value=result_df),
+            patch.object(grs_runtime, "_apply_real_money_hardening", side_effect=_capture_hardening),
         ):
             bundle = runtime_backtest.run_global_relative_strength_backtest_from_db(
                 tickers=["SPY", "QQQ", "GLD", "IEF", "TLT", "BIL"],
@@ -10135,7 +11010,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("promotion_max_drawdown_gap_vs_benchmark", override)
 
     def test_result_bundle_rejects_missing_required_columns(self) -> None:
-        from app.runtime.backtest_result_bundle import build_backtest_result_bundle
+        from app.runtime.backtest.result_bundle import build_backtest_result_bundle
 
         with self.assertRaisesRegex(ValueError, "missing required columns"):
             build_backtest_result_bundle(
@@ -24469,7 +25344,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         return row
 
     def test_selected_dashboard_monitoring_portfolio_saved_state_crud_is_soft_delete(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             add_selected_dashboard_portfolio_strategy,
             delete_selected_dashboard_portfolio,
             load_selected_dashboard_portfolios,
@@ -24557,7 +25432,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertEqual(deleted_rows[0]["deleted_at"], "2026-06-01T10:04:00")
 
     def test_selected_dashboard_portfolio_state_joins_selected_strategy_pool(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_final_selected_portfolio_dashboard_row,
             build_selected_dashboard_portfolio_state,
         )
@@ -24591,7 +25466,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(state["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_selected_dashboard_portfolio_state_marks_complete_strategy_slots_ready(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_final_selected_portfolio_dashboard_row,
             build_selected_dashboard_portfolio_state,
         )
@@ -25123,7 +25998,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         }
 
     def test_selected_dashboard_handoff_review_links_selected_final_review_rows(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION,
             build_selected_dashboard_handoff_review,
         )
@@ -25150,7 +26025,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
 
     def test_selected_dashboard_handoff_review_blocks_without_selected_route(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_dashboard_handoff_review
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review
 
         row = dict(self._selected_row()["raw_decision"])
         row["decision_route"] = "HOLD_FOR_MORE_PAPER_TRACKING"
@@ -25169,7 +26044,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
 
     def test_selected_dashboard_handoff_review_surfaces_blocked_dashboard_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_dashboard_handoff_review
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review
 
         row = dict(self._selected_row()["raw_decision"])
         row["selected_components"] = [
@@ -25220,7 +26095,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         }
 
     def test_monitoring_timeline_is_read_only_and_requires_recheck_input(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
 
         timeline = build_selected_portfolio_monitoring_timeline(self._selected_row())
 
@@ -25243,7 +26118,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(timeline["source_contract"]["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_monitoring_timeline_surfaces_recheck_breach_and_drift_watch(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
 
         timeline = build_selected_portfolio_monitoring_timeline(
             self._selected_row(),
@@ -25281,7 +26156,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(timeline["execution_boundary"]["auto_rebalance"])
 
     def test_allocation_drift_boundary_is_read_only_and_session_only(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             SELECTED_ALLOCATION_DRIFT_BOUNDARY_SCHEMA_VERSION,
             build_selected_portfolio_allocation_drift_boundary,
             build_selected_portfolio_current_weight_inputs,
@@ -25332,7 +26207,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             self.assertFalse(execution_boundary["auto_rebalance"])
 
     def test_allocation_drift_boundary_surfaces_breach_without_rebalance_action(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_selected_portfolio_allocation_drift_boundary,
             build_selected_portfolio_drift_alert_preview,
             build_selected_portfolio_drift_check,
@@ -25380,7 +26255,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(boundary["execution_boundary"]["broker_sync"])
 
     def test_selected_continuity_check_requires_recheck_input_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_continuity_check
 
         continuity = build_selected_portfolio_continuity_check(self._selected_row())
 
@@ -25398,7 +26273,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(continuity["execution_boundary"]["live_approval"])
 
     def test_selected_continuity_check_blocks_mismatched_timeline_source_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import (
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
             build_selected_portfolio_continuity_check,
             build_selected_portfolio_monitoring_timeline,
         )
@@ -25418,7 +26293,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(continuity["execution_boundary"]["registry_write"])
 
     def test_selected_continuity_check_blocks_non_selected_or_invalid_component_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_continuity_check
 
         row = self._selected_row()
         row["raw_decision"]["decision_route"] = "HOLD_FOR_MORE_PAPER_TRACKING"
@@ -25434,7 +26309,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(continuity["execution_boundary"]["order_instruction"])
 
     def test_recheck_comparison_requires_recheck_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_comparison
 
         comparison = build_selected_portfolio_recheck_comparison(self._selected_row())
 
@@ -25449,7 +26324,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(comparison["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_comparison_surfaces_breach_from_recheck_delta(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_comparison
 
         comparison = build_selected_portfolio_recheck_comparison(
             self._selected_row(),
@@ -25488,7 +26363,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(comparison["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_comparison_ready_when_thesis_holds(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_comparison
 
         comparison = build_selected_portfolio_recheck_comparison(
             self._selected_row(),
@@ -25524,7 +26399,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(comparison["metrics"]["needs_input_count"], 0)
 
     def test_review_signal_policy_ready_uses_recheck_comparison_rows(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_review_signal_policy
 
         policy = build_selected_portfolio_review_signal_policy(
             self._selected_row(),
@@ -25551,7 +26426,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         )
 
     def test_review_signal_policy_keeps_missing_recheck_and_data_gaps_out_of_clear(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_review_signal_policy
 
         policy = build_selected_portfolio_review_signal_policy(
             self._selected_row(),
@@ -25569,7 +26444,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(policy["execution_boundary"]["registry_write"])
 
     def test_review_signal_policy_surfaces_comparison_breach(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_review_signal_policy
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_review_signal_policy
 
         breached_result = self._ready_recheck_result()
         breached_result["verdict_route"] = "PERFORMANCE_WEAKENED"
@@ -25598,7 +26473,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(policy["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_readiness_blocks_missing_replay_contract_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_readiness
 
         readiness = build_selected_portfolio_recheck_readiness(
             self._selected_row(),
@@ -25616,7 +26491,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(readiness["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_recheck_readiness_ready_when_db_latest_and_replay_contract_exist(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_readiness
 
         readiness = build_selected_portfolio_recheck_readiness(
             self._selected_row(),
@@ -25648,7 +26523,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Default recheck period"]["Status"], "PASS")
 
     def test_recheck_readiness_uses_embedded_final_decision_contract_without_registry(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_readiness
 
         row = self._selected_row()
         row["raw_decision"]["selected_components"][0]["strategy_key"] = "equal_weight"
@@ -25675,7 +26550,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Selected replay contract"]["Status"], "PASS")
 
     def test_recheck_symbol_freshness_detects_missing_and_stale_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
 
         freshness = build_selected_portfolio_recheck_symbol_freshness(
             self._selected_row(),
@@ -25716,7 +26591,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(freshness["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_recheck_symbol_freshness_ready_when_all_symbols_recent(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
 
         freshness = build_selected_portfolio_recheck_symbol_freshness(
             self._selected_row(),
@@ -25753,7 +26628,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(freshness["execution_boundary"]["order_instruction"])
 
     def test_recheck_operations_preflight_ready_when_readiness_and_freshness_are_ready(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
 
         preflight = build_selected_portfolio_recheck_operations_preflight(
             self._selected_row(),
@@ -25781,7 +26656,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(preflight["execution_boundary"]["auto_rebalance"])
 
     def test_recheck_operations_preflight_routes_missing_price_to_needs_data(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
 
         preflight = build_selected_portfolio_recheck_operations_preflight(
             self._selected_row(),
@@ -25801,7 +26676,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Symbol Freshness"]["Status"], "NEEDS_INPUT")
 
     def test_recheck_operations_preflight_blocks_missing_replay_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_recheck_operations_preflight
 
         preflight = build_selected_portfolio_recheck_operations_preflight(
             self._selected_row(),
@@ -25818,7 +26693,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Symbol Freshness"]["Status"], "BLOCKED")
 
     def test_open_issue_followup_surfaces_final_review_open_items(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_open_issue_followup
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_open_issue_followup
 
         followup = build_selected_portfolio_open_issue_followup(self._selected_row_with_open_issue())
 
@@ -25833,7 +26708,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(followup["execution_boundary"]["live_approval"])
 
     def test_deployment_readiness_preflight_is_read_only_and_keeps_review_open(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_deployment_readiness_preflight
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_deployment_readiness_preflight
 
         preflight = build_selected_portfolio_deployment_readiness_preflight(
             self._selected_row_with_open_issue(),
@@ -25876,7 +26751,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(preflight["execution_boundary"]["auto_rebalance"])
 
     def test_selected_provider_evidence_ready_from_injected_provider_context(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -25951,7 +26826,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(evidence["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_selected_provider_evidence_surfaces_not_run_without_writing(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -26013,7 +26888,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(evidence["execution_boundary"]["order_instruction"])
 
     def test_selected_provider_evidence_marks_component_fallback_as_review(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         row = self._selected_row()
         row["raw_decision"]["selected_components"][0]["universe"] = "SPY QQQ"
@@ -26072,7 +26947,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(evidence["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_selected_provider_evidence_downgrades_stale_actual_pass_to_review(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -26127,7 +27002,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertIn("freshness=stale", rows["ETF Holdings"]["Policy Reason"])
 
     def test_selected_provider_evidence_downgrades_partial_pass_to_review(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -26182,7 +27057,7 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["Look-through Coverage"]["Status"], "REVIEW")
 
     def test_selected_provider_evidence_requires_core_provider_areas(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_provider_evidence
 
         evidence = build_selected_portfolio_provider_evidence(
             self._selected_row(),
@@ -26329,7 +27204,7 @@ class DecisionDossierContractTests(unittest.TestCase):
         self.assertIn("not live approval", dossier["markdown"])
 
     def test_decision_dossier_can_include_selected_monitoring_timeline(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
         from app.services.backtest_evidence_read_model import build_decision_dossier
 
         selected_row = {"raw_decision": self._final_decision_row()}
@@ -26361,7 +27236,7 @@ class DecisionDossierContractTests(unittest.TestCase):
         self.assertFalse(dossier["execution_boundary"]["monitoring_log_auto_write"])
 
     def test_decision_dossier_surfaces_mismatched_timeline_source_contract(self) -> None:
-        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
         from app.services.backtest_evidence_read_model import build_decision_dossier
 
         selected_row = {"raw_decision": self._final_decision_row()}

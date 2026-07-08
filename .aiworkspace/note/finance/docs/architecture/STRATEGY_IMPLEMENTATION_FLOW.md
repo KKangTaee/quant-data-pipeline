@@ -16,8 +16,8 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 | preprocessing | `finance/transform.py` | MA, return, date alignment, snapshot shaping |
 | orchestration | `finance/engine.py` | price strategy chaining |
 | DB-backed sample/runtime helper | `finance/sample.py` | 수동 smoke와 reusable helper |
-| runtime adapter | `app/runtime/backtest.py`, family / helper modules such as `app/runtime/backtest_risk_on_momentum.py`, `app/runtime/backtest_real_money.py`, `app/runtime/backtest_strict.py` | UI payload를 실행 가능한 runtime으로 변환. `backtest.py`는 public compatibility facade를 유지한다 |
-| web UI | `app/web/pages/backtest.py` | form, compare, history, saved replay |
+| runtime adapter | `app/runtime/backtest/__init__.py`, `app/runtime/backtest/facade.py`, family / helper modules such as `app/runtime/backtest/runners/risk_on_momentum.py`, `app/runtime/backtest/real_money.py`, `app/runtime/backtest/runners/strict_factor.py` | UI payload를 실행 가능한 runtime으로 변환. `app.runtime.backtest`는 public compatibility facade를 유지한다 |
+| web UI | `app/web/backtest_page.py` | form, compare, history, saved replay |
 
 ## 새 전략 추가 순서
 
@@ -26,8 +26,8 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 3. core strategy를 `finance/strategy.py` 또는 적절한 strategy module에 추가한다.
 4. 필요한 transform helper가 있으면 `finance/transform.py`에 재사용 가능한 함수로 둔다.
 5. DB-backed runtime helper를 `finance/sample.py` 또는 runtime adapter에서 재사용 가능하게 만든다.
-6. `app/runtime/backtest.py` 또는 family-specific `app/runtime/backtest_*` module에 `run_*_backtest_from_db(...)` wrapper를 추가하고, 기존 UI / service caller가 필요하면 `app/runtime/backtest.py`에서 compatibility export한다.
-7. `app/web/pages/backtest.py`의 single strategy catalog와 form에 연결한다.
+6. `app/runtime/backtest/facade.py` 또는 family-specific `app/runtime/backtest/runners/*` module에 `run_*_backtest_from_db(...)` wrapper를 추가하고, 기존 UI / service caller가 필요하면 `app/runtime/backtest/__init__.py`에서 compatibility export한다.
+7. `app/web/backtest_page.py`의 single strategy catalog와 form에 연결한다.
 8. compare strategy catalog와 strategy-specific override를 연결한다.
 9. history payload, `Load Into Form`, `Run Again` 복원을 확인한다.
 10. `History Replay / Load Parity Snapshot`에서 핵심 설정이 저장되어 보이는지 확인한다.
@@ -69,7 +69,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 - Risk Parity Trend는 5B 이후 volatility window, trend/min-price eligible universe, eligible volatility, inverse-vol target weight, cash-only reason, guardrail cash-only state, max position weight, low-vol overweight ticker를 result row에 남긴다. Runtime meta는 `risk_parity_trend_contract`와 `risk_parity_inverse_vol_summary`를 보존한다.
 - Dual Momentum은 5B 이후 raw top-N selection, trend rejected ticker, selected / target / unfilled count, cash proxy return, cash reason, concentration status, selection changed, added / removed ticker, whipsaw status를 result row에 남긴다. Trend-rejected top-N slot은 surviving ticker에 재가중하지 않고 cash proxy로 유지한다. Runtime meta는 `dual_momentum_contract`와 `dual_momentum_concentration_turnover`를 보존한다.
 - ETF family는 데이터 이력 부족이나 결측 ticker를 조용히 무시하지 않고 `excluded_tickers`, `malformed_price_rows`, warning metadata로 남겨야 한다.
-- ETF family의 real-money / guardrail surface는 live approval이 아니라 실행 부담과 후보 검토 상태를 읽기 위한 진단 계층이다. 8B 이후 helper implementation owner는 `app/runtime/backtest_real_money.py`이고, `app/runtime/backtest.py`는 compatibility export를 유지한다.
+- ETF family의 real-money / guardrail surface는 live approval이 아니라 실행 부담과 후보 검토 상태를 읽기 위한 진단 계층이다. 8B 이후 helper implementation owner는 `app/runtime/backtest/real_money.py`이고, `app/runtime/backtest/__init__.py`는 compatibility export를 유지한다.
 
 ### Factor / fundamental 전략
 
@@ -96,7 +96,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 - strict annual은 broad factor path보다 statement shadow / annual PIT snapshot path를 더 중요하게 보며, `nyse_factors_statement`가 기본 재무제표 factor source다.
 - legacy broad `Quality Snapshot`은 `nyse_factors` / yfinance broad compatibility path로 남기되 새 사용자 기본 선택지는 아니다. saved/history replay와 명시적 compatibility 비교를 위해 삭제하지 않는다.
 - strict quarterly family는 Phase 23 이후 UI / payload / history / saved replay 계약이 보강됐지만, annual strict와 완전히 같은 real-money / guardrail parity를 가진 것은 아니다. Phase 3 source migration 이후 quarterly loaders는 `10-Q` / `10-Q/A` row만 usable row로 반환한다.
-- 8C 이후 strict quality / value / quality-value annual and quarterly wrapper implementation owner는 `app/runtime/backtest_strict.py`이고, `app/runtime/backtest.py`는 compatibility export를 유지한다.
+- 8C 이후 strict quality / value / quality-value annual and quarterly wrapper implementation owner는 `app/runtime/backtest/runners/strict_factor.py`이고, `app/runtime/backtest/__init__.py`는 compatibility export를 유지한다.
 - factor strategy는 단순 수익률 table만이 아니라 selection history, interpretation summary, contract metadata를 함께 보존해야 한다.
 
 ### Short-term stock swing 전략
@@ -118,7 +118,7 @@ Layer ownership과 storage / monitoring boundary는 [SYSTEM_BOUNDARIES.md](./SYS
 현재 주요 구현 메모:
 
 - `Risk-On Momentum 5D`는 `finance/swing.py`에 strategy-specific scanner / trade loop를 두고, reusable daily swing features는 `finance/transform.py`의 `add_daily_swing_features`에서 만든다.
-- DB-backed wrapper implementation은 `app/runtime/backtest_risk_on_momentum.py`의 `run_risk_on_momentum_5d_backtest_from_db`다. 기존 UI / service compatibility를 위해 `app/runtime/backtest.py`도 같은 runner를 re-export하며, UI는 `Backtest Analysis > Single Strategy`에 연결한다.
+- DB-backed wrapper implementation은 `app/runtime/backtest/runners/risk_on_momentum.py`의 `run_risk_on_momentum_5d_backtest_from_db`다. 기존 UI / service compatibility를 위해 `app/runtime/backtest/__init__.py`도 같은 runner를 re-export하며, UI는 `Backtest Analysis > Single Strategy`에 연결한다.
 - full trade / scanner detail은 workflow registry가 아니라 generated `.aiworkspace/note/finance/backtest_artifacts/` JSON artifact에 둔다.
 - V2는 `close_based` D close 판단 / D+1 open 체결 가정은 유지하면서 `fixed_pct`와 `atr_based` exit, macro `hard_filter` / `ranking_penalty` / `off`, one-variable comparison, bounded sensitivity, stability, trade-cause, quality-warning rows를 Backtest Analysis 연구 surface로 제공한다.
 - ATR math lives in `finance/indicators.py`, macro mode logic in `finance/swing_macro.py`, and repeated analysis suites in `finance/swing_analysis.py`.

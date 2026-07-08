@@ -1,31 +1,39 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-06-30
+Last Verified: 2026-07-08
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
 
-Latest completed task: `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`
+Current active task: none.
 
-Current active task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`
+Latest completed task: `.aiworkspace/note/finance/tasks/active/backtest-second-stage-visibility-v1-20260705/`
+
+목적: Backtest Analysis의 Data Trust / Handoff가 2차 Practical Validation review focus를 1차 상세 검토처럼 보여주는 혼선을 줄인다.
+
+주요 변경: Data Trust는 excluded ticker / malformed price row 같은 직접 데이터 이슈만 상세 표시하고, `meta["warnings"]` 기반 review focus는 2차 전달 count / 위치 안내로 낮췄다. Handoff / Policy Signals도 2차 상세 판단 문구를 반복하지 않는다.
+
+이번 차수에서 하지 않은 일: source registration write, Practical Validation review queue 저장, registry / saved JSONL / strategy runtime / gate threshold 변경.
+
+Recent Overview / Market Movers task: `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/`
+
+목적: `Workspace > Overview > Market Movers` selected-symbol 조사단서의 PER / EPS / 당기순이익 / 유동비율 / FCF chart payload와 UI를 보강해 연간 / 분기 추세를 함께 읽게 한다.
+
+주요 변경: 분기 chart 이력을 연간보다 짧게 잘라 보이던 제한을 늘리고, 금액 문자열 formatter가 comma 단위 숫자와 억 / 천 달러 단위를 안정적으로 표시하도록 보강했다.
+
+Recent Overview Futures Macro task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/`
 
 목적: `Workspace > Overview > Futures Macro`의 React 현재 근거와 하단 `원본 데이터 / 계산 추적`을 분리하고, historical validation / raw table 문구를 사용자가 판단 재료로 연결해 읽을 수 있게 정리한다.
 
-현재 상태: 1차~5차와 후속 카드 정리 완료. React workbench는 하나의 custom component / iframe 안에서 `MacroContextSection`, `RecentFlowSection`, `HistoricalValidationPanel`로 내부 분리되어, 화면상 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 별도 카드처럼 읽게 한다. `CurrentEvidencePanel`은 `MacroContextSection` 안에서 현재 score evidence를 맡으므로 현재 근거가 과거 점검과 분리되어 읽힌다. Historical validation은 현재 16개 선물 일봉 상태를 과거 동일 계산식으로 다시 찾아보는 보조 검산이며, `오늘과 비슷한 과거 흐름 확인` action은 `과거 점검` 섹션 안에 있다. 결과는 먼저 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유` 결론 타일로 읽고, 상세 타일은 `판정`, `5거래일 표본`, `20거래일 표본`, `자산군 해석`으로 확인한다. 해석 문구는 계산된 표본 수 / 평균 수익률 / 방향 일관성 / target family / hit rule만 사용한다. 하단 `원본 데이터 / 계산 추적`은 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 검산하는 raw table 부록이며, `현재 점수 -> 구성 기여 -> 선물 일봉 변화 -> 과거 표본` 순서의 원본 추적만 맡는다. 그래프는 아직 렌더링하지 않지만 payload에는 발생 빈도 / 이후 흐름 분포 후보 메타데이터를 준비했다.
+현재 상태: 1차~5차와 후속 카드 정리 완료. React workbench는 하나의 custom component / iframe 안에서 `MacroContextSection`, `RecentFlowSection`, `HistoricalValidationPanel`로 내부 분리되어, 화면상 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 별도 카드처럼 읽게 한다. `CurrentEvidencePanel`은 `MacroContextSection` 안에서 현재 score evidence를 맡으므로 현재 근거가 과거 점검과 분리되어 읽힌다. Historical validation은 현재 16개 선물 일봉 상태를 과거 동일 계산식으로 다시 찾아보는 보조 검산이며, `오늘과 비슷한 과거 흐름 확인` action은 `과거 점검` 섹션 안에 있다. 결과는 먼저 `비슷한 상태`, `상태 빈도`, `방향성 판정`, `판정 이유` 결론 타일로 읽고, 상세 타일은 `판정`, `5거래일 표본`, `20거래일 표본`, `자산군 해석`으로 확인한다. 하단 `원본 데이터 / 계산 추적`은 `매크로 컨텍스트`, `최근 흐름`, `과거 점검`을 검산하는 raw table 부록이다.
 
-최근 완료 task: `.aiworkspace/note/finance/tasks/active/overview-futures-macro-react-ux-20260705/`
-
-목적: `Workspace > Overview > Futures Macro`를 빠른 첫 진입 화면으로 만들고, historical validation을 명시적 사용자 action으로 분리한 뒤 React custom component 전환, 1W/1M 흐름 확장, mixed subtype refinement, validation cache/materialization 판단, 최종 QA/docs 순서로 닫았다.
-
-현재 상태: 1차~6차 완료. 탭 진입은 `include_validation=False` snapshot을 사용하고, `과거 점검 불러오기`가 historical validation과 confidence를 session state에 저장한다. `일봉 갱신` / `다시 읽기`는 session validation state와 validation process cache를 clear한다. `app/web/streamlit_components/futures_macro_workbench/` React component가 command strip, macro brief, score chips, 1W / 1M flow tabs, validation state, evidence drawer를 렌더링하고, Python이 DB 읽기 / refresh action / validation 계산 / rerun boundary를 계속 소유한다. `혼재된 매크로 흐름`은 top-level compatibility를 유지하되 rate-easing growth weakness, dollar-pressure risk-off candidate, commodity weakness / demand slowdown candidate, transition zone, low-signal watch 같은 subtype으로 설명한다. Historical validation은 아직 DB materialization 없이 latest futures/proxy marker 기반 process cache로만 재사용한다. 남은 후속은 필요 시 iframe click dispatch 수동 QA 또는 별도 automation 보강이다.
+Recent data-source migration task: `.aiworkspace/note/finance/tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/`
 
 목적: 재무제표 source migration 1~9차를 닫고, durable docs와 runbook에서 EDGAR statement shadow를 canonical financial statement path로, broad yfinance fundamentals / factors를 saved/history replay용 legacy compatibility로 고정한다.
 
 주요 변경: Market Movers annual financial snapshot, strict annual factor backtest family, Ingestion financial statement refresh, statement coverage QA, and docs now use EDGAR detailed statements / statement shadow as the primary source contract. Quarterly consumers remain gated to `10-Q` / `10-Q/A`; `10-K` / FY full-year flow values are not treated as quarterly values.
-
-이번 차수에서 하지 않은 일: yfinance package removal, table drop, registry / saved JSONL rewrite, paid provider adoption, full Top2000 / Nasdaq EDGAR coverage guarantee.
 
 2026-06-07 master 병합 후 제품은 다음 네 흐름이 함께 연결된 상태다.
 
@@ -48,11 +56,11 @@ Workspace > Ingestion
 - 9차: Backtest Compare Portfolio Mix Builder visual component extraction.
 - 10차: final structure audit, residual split decision, and handoff closeout.
 
-- Latest completed task: `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`
+- Recent GTAA cadence task: `.aiworkspace/note/finance/tasks/active/gtaa-result-cadence-monthly-valuation-20260629/`
 - 목적: GTAA `interval`을 결과 row thinning이 아니라 strategy-owned rebalance cadence로 해석하고, 비리밸런싱월에도 최신 후보 신호 / valuation row를 볼 수 있게 한다.
 - 주요 변경: GTAA sample / runtime path는 strategy 실행 전에 `.interval(...)`로 입력 row를 줄이지 않는다. `GTAA3Strategy(rebalance_interval=...)`가 실제 holdings 변경 cadence를 소유하고, month-end row 뒤에는 요청 종료일 이하 최신 공통 거래일 row를 보강한다.
 - 이번 차수에서 하지 않은 일: 가격 데이터 coverage refresh, provider / DB schema / registry / saved JSONL 변경, Practical Validation / Final Review / Monitoring behavior 변경, live trading / broker order / auto rebalance semantics 추가.
-- Active UX redesign task: `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`
+- Recent Overview Market Movers UX redesign task: `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`
 - 목적: Overview > Market Movers가 metric-card / prototype pattern처럼 보이는 문제를 Toss Securities / Upbit / StockAnalysis / TradingView / Finviz benchmark 기반의 market-board UX로 1~6차 재설계한다.
 - 1차 범위: user-facing language / IA reset. `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리하고 새 provider / schema / UI external fetch / trade signal은 추가하지 않는다.
 - 후속: 2차 compact mover tape / list, 3차 chart workspace, 4차 sector breadth visual, 5차 selected-symbol investigation pane, 6차 data trust / empty state hardening.
@@ -253,7 +261,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 
 - `risk-parity-dual-momentum-5b-20260610`: Backtest 5B로 Risk Parity Trend와 Dual Momentum의 strategy runtime / result bundle 계약을 고도화했다. Risk Parity는 volatility window / eligible universe / inverse-vol weight / cash-only state / guardrail effect / low-vol overweight를, Dual Momentum은 top-N concentration / trend rejected ticker / selected count / cash proxy retention / turnover-whipsaw 해석을 result row/meta와 기존 Selection History에서 확인할 수 있게 됐다. 새 Backtest Analysis evidence / log / workbench panel, registry / saved JSONL / run history / generated artifact write, provider / FRED direct fetch, Practical Validation / Final Review / Monitoring behavior, live trading / broker order / auto rebalance는 열지 않았다.
 - `global-relative-strength-5a-20260609`: Backtest 5A로 Global Relative Strength의 strategy runtime / result bundle 계약을 고도화했다. GRS는 strategy가 rebalance interval을 직접 소유하고, cash proxy / benchmark contract / excluded ticker / stale price / top-N concentration / momentum score window 정보를 result bundle meta와 기존 Selection History에서 해석할 수 있게 됐다. 새 evidence/log/workbench panel과 durable writes는 열지 않았다.
-- `backtest-analysis-direction-reset-20260609`: Backtest 4차 4C로 3A~4B evidence / governance / workbench 패널을 기본 화면에서 내리고, Backtest Analysis를 전략 실행 / 비교 / 후보 생성 중심으로 되돌렸다. 3A~4B 산출물은 `전략 개발 참고` advanced control 뒤에 보존한다.
+- `backtest-analysis-direction-reset-20260609`: Backtest 4차 4C로 3A~4B evidence / governance / workbench 패널을 기본 화면에서 내리고, Backtest Analysis를 전략 실행 / 비교 / 후보 생성 중심으로 되돌렸다. 2026-06-30 cleanup 이후 해당 보조 패널은 기본 Backtest Analysis render path에서 제외된 historical / auxiliary surface로 남는다.
 - `etf-rerun-matrix-workbench-20260608`, `etf-current-anchor-workbench-20260608`, `etf-evidence-expansion-20260608`, `risk-on-momentum-governance-20260608`, `strict-annual-etf-bridge-20260608`, `strategy-evidence-inventory-direction-panel-20260608`: Backtest 3A~4B read-only strategy evidence / bridge / governance / ETF readiness / rerun matrix workbench records. 이 흐름은 current candidate promotion, Practical Validation result creation, provider snapshot collection, live trading / broker order / auto rebalance를 열지 않는 retained work record다.
 
 ## Product Tracks
@@ -262,7 +270,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 |---|---|---|---|
 | Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
-| Backtest Analysis | Candidate creation plus Risk-On Momentum 5D research lane complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
+| Backtest Analysis | Candidate creation plus compact Korean-first stage navigation cleanup complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console now opens with portfolio-first status summary, evidence health strip, and priority/evidence ordered review queue, while Portfolio Monitoring remains daily-monitoring-first | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health` | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
@@ -292,7 +300,8 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 | Operations Overview IA / Operations Console V2-V5 | V2 closeout complete | Operations now has a console entry, Portfolio Monitoring and System / Data Health as the only top-level Operations tabs, and disabled live trading boundary copy. Operations Overview no longer exposes archive / development-history decision tables in the operator path and now starts with Portfolio Monitoring Status plus Evidence Health before a priority/evidence ordered review queue. Closeout QA and routing diagnostic are documented in `docs/runbooks/OPERATIONS_OVERVIEW_QA.md`; Backtest Runs / Candidate Library data deletion is deferred. |
 | Risk Parity / Dual Momentum 5B | Complete | Risk Parity Trend now exposes volatility window, eligible universe, inverse-vol weights, cash-only reasons, guardrail cash-only state, and low-vol overweight diagnostics. Dual Momentum now retains trend-rejected top-N slots as cash proxy and exposes selected / rejected / unfilled counts, cash proxy return, concentration, and selection-change / whipsaw diagnostics. Both reuse existing Selection History and result bundle meta without adding a new panel. |
 | Global Relative Strength 5A | Complete | GRS strategy cadence now lives in strategy runtime, not duplicated period-row slicing. Cash proxy, benchmark, excluded ticker, stale price, top-N concentration, rebalance interval, and momentum window metadata flow to the result bundle and Selection History without new evidence/log/workbench panels or durable writes. |
-| Backtest Analysis Direction Reset 4C | Complete | Backtest Analysis returned to execution-first strategy run / comparison / candidate creation. Reference help and 3A-4B evidence / governance / ETF workbench panels remain preserved behind `전략 개발 참고` advanced control. |
+| Backtest Entry Cleanup Tabs V1 | Complete | Backtest entry removes the top guide expander, strategy capability helper expander, and bottom research reference board from the default render path. The 3-stage workflow selector now uses Korean-first `st.pills` text tabs with red active underline. |
+| Backtest Analysis Direction Reset 4C | Complete | Backtest Analysis returned to execution-first strategy run / comparison / candidate creation. Reference help and 3A-4B evidence / governance / ETF workbench panels are now historical / auxiliary surfaces outside the default Backtest Analysis render path. |
 | Risk-On Momentum 5D V1/V2 | Implementation / QA complete | Daily Swing research lane added under Backtest Analysis. V2 adds ATR exit, macro ranking penalty, comparison / sensitivity / stability / trade-cause / quality-warning analysis, S&P 500 universe option. Governance connection to Practical Validation / Final Review / Portfolio Monitoring is deferred. |
 | Selected Dashboard Monitoring First UX V1 | Complete | Portfolio Monitoring opens with Active Portfolio Monitoring Scenario first, while portfolio setup and strategy board sit below. Scenario results stay explicit/session-based and do not auto-write monitoring logs. |
 | Overview Market Movers Workbench V1-V5 | Complete | Market Movers now renders as a context-only workbench with command strip, Top Gainers / Top Losers / Volume Leaders / Unusual Volume / Sector Leaders modes, selected-symbol investigation, sector breadth/heatmap context, and coverage trust UX. Coverage trust uses Good / Stale / Partial / Needs Refresh / No Universe / Missing Quotes language, grouped missing diagnostics first, raw diagnostics collapsed, and existing Overview action facade refreshes only. |
@@ -402,7 +411,7 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 
 | Candidate | Why It Matters | Requires Approval Before |
 |---|---|---|
-| Backtest Compare follow-up splits | 9차 first pass moved the visual shell, but saved replay, weighted result, and strategy-specific form body still remain in `app/web/backtest_compare.py` | Moving saved replay / weighted result / strategy form sections into focused modules while preserving service/runtime boundaries |
+| Backtest package refactor follow-up | V2-V8 moved Backtest runtime, stores/read models, Single Strategy forms, Portfolio Mix Builder, Practical Validation, and Final Review into packages. Remaining follow-up is smaller cleanup of transitional shared helpers such as `backtest_common.py`, not another broad same-name module split | Moving remaining shared helper ownership or public call paths |
 | Large-surface second refactor round | 10차 closeout confirmed large files remain in Backtest Compare, Overview, Operations / Portfolio Monitoring runtime, and Overview services | Opening a new focused refactor round that changes module ownership or public call paths |
 | Physical task / phase archive migration | `tasks/active` and `phases/active` still contain retained completed folders even though current active state is now manifest-clean | Moving folders, deleting retained boards, changing archive layout, or repairing historical links |
 | Overview Why It Moved V2 | Current V1 is manual/session-only; durable metadata retention or SEC financial-statement preview needs a storage/source policy | DB schema, article/filing body handling, AI summary, catalyst classification |

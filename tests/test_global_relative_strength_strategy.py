@@ -173,7 +173,7 @@ class GlobalRelativeStrengthRuntimeContractTests(unittest.TestCase):
         sys.modules.pop("streamlit", None)
 
         from app.runtime import backtest as runtime_backtest
-        from app.runtime.backtest_real_money import STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+        from app.runtime.backtest.real_money import STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
 
         result_df = pd.DataFrame(
             [

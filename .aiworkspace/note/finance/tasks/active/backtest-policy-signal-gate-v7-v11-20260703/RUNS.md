@@ -1,0 +1,34 @@
+# Runs
+
+실행한 QA 명령과 결과를 단계별로 기록한다.
+
+## V7
+
+- ` .venv/bin/python -m py_compile app/services/backtest_handoff_readiness.py tests/test_service_contracts.py` 통과.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_inventory_classifies_gate_review_and_context_rows tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_readiness_scores_source_checks_not_legacy_deployment_status tests.test_service_contracts.BacktestRuntimeContractTests.test_handoff_gate_summary_groups_blockers_for_user_display` 통과.
+- `git diff --check` 통과.
+
+## V8
+
+- `.venv/bin/python -m py_compile app/services/backtest_handoff_readiness.py app/web/backtest_result_display.py tests/test_service_contracts.py` 통과.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_inventory_classifies_gate_review_and_context_rows tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_readiness_scores_source_checks_not_legacy_deployment_status tests.test_service_contracts.BacktestRuntimeContractTests.test_handoff_gate_summary_groups_blockers_for_user_display tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_still_blocks_missing_source_basis tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_ready_candidates tests.test_service_contracts.BacktestRuntimeContractTests.test_portfolio_mix_candidate_gate_blocks_hold_component` 통과.
+- `git diff --check` 통과.
+
+## V9
+
+- `.venv/bin/python -m py_compile app/web/backtest_result_display.py tests/test_service_contracts.py` 통과.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_tab_prioritizes_grouped_signal_summary tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_inventory_classifies_gate_review_and_context_rows` 통과.
+- `git diff --check` 통과.
+
+## V10
+
+- `.venv/bin/python -m py_compile app/web/backtest_candidate_review_helpers.py app/services/backtest_practical_validation_source.py tests/test_service_contracts.py` 통과.
+- `.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_selection_source_preserves_cost_and_turnover_snapshots_without_new_registry tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_captures_handoff_readiness_snapshot tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_marks_hold_as_practical_validation_review_focus tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_still_blocks_missing_source_basis` 통과.
+- `git diff --check` 통과.
+
+## V11
+
+- `.venv/bin/python -m py_compile app/services/backtest_handoff_readiness.py app/web/backtest_result_display.py app/web/backtest_candidate_review_helpers.py app/services/backtest_practical_validation_source.py tests/test_service_contracts.py` 통과.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_inventory_classifies_gate_review_and_context_rows tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_readiness_scores_source_checks_not_legacy_deployment_status tests.test_service_contracts.BacktestRuntimeContractTests.test_handoff_gate_summary_groups_blockers_for_user_display tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_hold_candidates_as_conditional_review tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_still_blocks_missing_source_basis tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_handoff_gate_allows_ready_candidates tests.test_service_contracts.BacktestRuntimeContractTests.test_policy_signal_tab_prioritizes_grouped_signal_summary tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_captures_handoff_readiness_snapshot tests.test_service_contracts.BacktestRuntimeContractTests.test_candidate_review_draft_marks_hold_as_practical_validation_review_focus tests.test_service_contracts.PracticalValidationServiceContractTests.test_selection_source_preserves_cost_and_turnover_snapshots_without_new_registry` 통과.
+- `git diff --check` 통과.
+- Browser smoke: `.venv/bin/python -m streamlit run app/web/streamlit_app.py --server.port 8509 --server.headless true --server.runOnSave false --server.fileWatcherType none`로 서버 기동 후 `/backtest` direct 진입, 기본 Equal Weight 실행, 결과 헤더 / `데이터 기준 요약` / `실전성 검증 Handoff` / `검증 신호 · Policy Signals` DOM 존재 확인. Screenshot artifacts: `backtest-policy-signal-v11-browser-qa.png`, `backtest-policy-signal-v11-result-qa.png`, `backtest-policy-signal-v11-detail-qa.png`.

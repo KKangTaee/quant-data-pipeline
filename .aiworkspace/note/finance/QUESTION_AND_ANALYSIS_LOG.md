@@ -151,6 +151,69 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 1차는 새 기능 추가가 아니라 화면 언어 reset이다. user-facing mode는 `랭킹 기준`, option은 `상승`, `하락`, `거래량`, `이상 거래량`, `섹터`가 되어야 하며 내부 용어는 화면 전면에서 빠져야 한다.
 - Follow-up: 2차는 metric-card 중심 본문을 compact mover tape / list로 재구성하고, 3차~6차는 chart workspace, sector breadth map, investigation pane, data trust UX를 순서대로 다룬다.
 
+### 2026-07-05 - Policy Signals 1차 기준은 category help board로 읽는다
+
+- User request: 사용자가 2차로 넘긴 확인 큐는 현재 UI에서 노출하지 않아도 되고, 1차 기준은 `Data Trust`, `Execution Source`, `Validation Source`처럼 카테고리별로 보여주며 각 기준이 무엇을 검증하는지 `?` help / tooltip 형태로 설명해 달라고 요청함.
+- Interpreted goal: Backtest Analysis는 1차에서 확정 가능한 기준과 source blocker만 명확히 보여주고, 2차 review focus는 Practical Validation에서 이어 확인해야 함.
+- Analysis result: 기존 `first_stage_rows` / `second_stage_review_rows` 분리는 유지하되, service row에 `plain_explanation`과 `checked_items`를 추가하면 UI와 Practical Validation source snapshot이 같은 설명 데이터를 재사용할 수 있다.
+- Follow-up: `검증 기준 상세` React board를 category board + click help UI로 개편했고, 2차 review queue 상세 목록은 Backtest Analysis에서 제거해 count / handoff notice만 남겼다.
+
+### 2026-07-03 - Policy Signal gate separates 2차 entry from strict compare readiness
+
+- User request: `검증 신호 · Policy Signal`의 여러 탭 / 근거 / 승격 판단이 2차 실전성 검증에 필요한 기준인지, 중복이나 과보수 조건이 없는지 검토하고 V7부터 V11까지 개발 / QA / 커밋 순으로 진행 요청.
+- Interpreted goal: 사용자는 Backtest Analysis에서 다음 단계로 넘기는 기준을 실전 승격 확정처럼 보지 않고, 2차 검증 entry gate / review focus / strict compare gate로 분명히 나누길 원한다.
+- Analysis result: 기존 판단은 `promotion_decision=hold`를 strict blocker처럼 읽어 Practical Validation 진입까지 과보수로 막을 수 있었다. 반대로 benchmark missing, price hard error, promotion missing은 source 등록 blocker로 유지해야 한다.
+- Follow-up: `app/services/backtest_handoff_readiness.py`에 policy signal inventory를 추가하고, Practical Validation entry gate와 Portfolio Mix strict compare gate를 분리했다. `검증 신호 · Policy Signals` UI는 compact summary / review focus 중심으로 정리했고, Candidate draft / Practical Validation source는 `handoff_readiness_snapshot`과 `entry_gate`를 보존한다.
+
+### 2026-07-02 - Practical Validation handoff should precede detail tabs
+
+- User request: Run Backtest 결과에서 각종 상세 탭 다음에 `2차 실전성 검증 Handoff`가 나오는 순서를 다시 바꾸고, handoff의 promotion / 검증 원천 / 버튼 활성화 기준을 설명해 달라고 요청.
+- Interpreted goal: 사용자는 핵심 성과와 데이터 기준을 본 직후 다음 행동 가능 여부를 판단하고, 상세 탭은 이후 근거 확인으로 읽고 싶다.
+- Analysis result: `_render_last_run`에서 handoff 호출이 `st.tabs(...)` 구성과 tab content 렌더 이후에 있어 다음 행동이 화면 아래로 밀렸다. 버튼 활성화 자체는 `_build_next_step_readiness_evaluation(meta)`의 promotion / execution source / validation source blocker 기준을 유지한다.
+- Follow-up: latest run 순서를 `결과 헤더 -> 데이터 기준 요약 -> 실전성 검증 Handoff -> 상세 결과 탭`으로 변경했다.
+
+### 2026-07-01 - Data Trust title should live inside the custom panel
+
+- User request: CSS custom design 사이에 standalone `데이터 기준 요약` 제목이 이질적이므로 제거하고, 하단 `먼저 볼 결론` 쪽에 title을 추가하거나 다른 방식으로 정리해 달라고 요청.
+- Interpreted goal: 결과 KPI band와 Data Trust panel이 같은 custom visual 흐름으로 이어지고, 기본 Streamlit heading이 중간에서 흐름을 끊지 않아야 한다.
+- Analysis result: `_render_data_trust_summary`가 custom panel 전에 `st.markdown("#### 데이터 기준 요약")`를 별도 출력해 시각적 이질감이 생겼다.
+- Follow-up: standalone heading을 제거하고 Data Trust panel 내부에 `데이터 기준 요약` title과 `먼저 볼 결론` kicker를 함께 배치했다.
+
+### 2026-07-01 - Backtest result header should absorb KPI metrics
+
+- User request: 결과 헤더 아래 pill 기준 정보와 별도 metric row가 어색해 보이므로 더 예쁘고 자연스럽게 정리할 수 있는지 질문 후 진행 승인.
+- Interpreted goal: 사용자는 결과 제목과 핵심 성과를 하나의 결과 surface로 읽고, 데이터 기준 요약으로 바로 이어지는 흐름을 원한다.
+- Analysis result: 별도 `_render_summary_metrics` row는 정보는 맞지만 결과 헤더와 Data Trust 사이를 끊어 보이게 했다. 최신 실행 화면에서는 KPI를 헤더 내부로 흡수하는 것이 더 자연스럽다.
+- Follow-up: latest run 결과 헤더가 `summary_df` 기반 End Balance / CAGR / Sharpe Ratio / Maximum Drawdown KPI band를 직접 렌더하게 하고, 기간 / 계산 기준 / Universe / Data / Execution은 보조 기준선으로 낮췄다.
+
+### 2026-07-01 - Backtest result view should show result before interpretation and handoff
+
+- User request: Run Backtest 후 구조가 `Latest Backtest Run -> 데이터 기준 요약 -> Equal Weight -> 실전 검증 정보 -> 결과 tabs`처럼 보여 흐름이 어색하다고 지적하고 재정렬을 요청.
+- Interpreted goal: 사용자는 먼저 전략 결과와 핵심 성과를 보고, 그 다음 데이터 기준으로 해석 가능성을 확인한 뒤, 상세 결과와 다음 단계 handoff를 봐야 한다.
+- Analysis result: `Data Trust`는 사전 gate가 아니라 성과 해석 기준이고, `Practical Validation Handoff`는 결과 확인 후의 다음 action이므로 결과 위쪽에 둘 이유가 약했다.
+- Follow-up: `Latest Backtest Run` 제목을 제거하고 `전략명 백테스트 결과 -> 핵심 metric -> 데이터 기준 요약 -> 상세 결과 tabs -> 실전성 검증 Handoff` 순서로 재배치했다.
+
+### 2026-07-01 - Data Trust Summary should answer user questions before raw metadata
+
+- User request: `Data Trust Summary`의 상단 정보가 처음 사용하는 사람에게 의미가 불명확하므로, 필요한 정보만 요약하고 더 시각적으로 정리해 달라고 요청.
+- Interpreted goal: 백테스트 성과를 보기 전에 `이 결과를 읽어도 되는가`, `어디까지 계산됐는가`, `무엇을 먼저 확인해야 하는가`를 한국어 결론 중심으로 보여줘야 한다.
+- Analysis result: 기존 UI는 `Result Integrity`, `Price Freshness`, `Result Window`, `Excluded Tickers` 카드와 raw date badge를 먼저 보여줘 데이터 기준의 의미를 사용자가 조합해야 했다.
+- Follow-up: `데이터 기준 요약` 패널로 재구성하되, 중복된 reading row와 `세부 데이터 기준` expander는 제거했다. raw 날짜 / row 수 / latest price detail은 4개 요약 detail로 압축하고, warning / 제외 종목 / 결측 row는 같은 패널 안의 `이번 실행 검토 큐`로 통합했다.
+
+### 2026-07-01 - Run Backtest result view should prioritize the result, not guide cards
+
+- User request: Run Backtest 후 보이는 `Execution Summary`와 `Latest Backtest Run` guide card / 하단 근거 영역을 먼저 파악하고 개선 요청.
+- Interpreted goal: 실행 직후 화면은 payload preview나 반복 guide가 아니라 실제 결과, 데이터 신뢰도, 다음 action, 조건부 근거 탭을 먼저 보여줘야 한다.
+- Analysis result: `Execution Summary`는 `backtest_single_runner.py`에서 실행 전 payload를 노출했고, `Latest Backtest Run`의 checkpoint / availability block은 `backtest_result_display.py`에서 결과 위에 guide를 렌더링했다.
+- Follow-up: 기본 결과 화면에서 두 guide block을 제거하고, `Selection History`, `Dynamic Universe`, `Policy Signal Meta`는 result bundle 기반 조건부 결과 탭으로 유지했다.
+
+### 2026-06-30 - Backtest cold startup should use Finance Console top navigation, not native Streamlit pages
+
+- User request: 앱 최초 시작 시 좌측 native sidebar에 `streamlit app` / `backtest`가 뜨고, 클릭 후에야 원래 top navigation 화면으로 돌아오는 원인 파악과 수정 요청.
+- Interpreted goal: Finance Console의 canonical navigation은 `streamlit_app.py`의 top navigation이어야 하며, cold/direct Backtest load도 같은 shell 안에서 열려야 한다.
+- Analysis result: `app/web/streamlit_app.py`는 `st.navigation(..., position="top")`를 쓰지만, `app/web/pages/backtest.py`가 남아 있어 Streamlit legacy multipage auto-discovery가 native sidebar를 만들 수 있었다. 특히 `/backtest`가 첫 URL이면 native page route가 Backtest 본문을 먼저 렌더링한다.
+- Follow-up: Backtest shell을 `app/web/backtest_page.py`로 이동하고 `app/web/pages/` user-facing page 금지 회귀 테스트를 추가했다.
+
 ### 2026-06-29 - GTAA interval should mean rebalance cadence, not result-row thinning
 
 - User request: GTAA `interval=4` 실행이 마지막 리밸런싱일 `2026-02-27`에서 멈추지 않고 현재 탐색 종료일 기준으로 평가되길 원했고, 비리밸런싱월에도 새 종목 선택 신호는 보고 싶다고 확인함.
@@ -8450,6 +8513,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: `legacy_dashboard.py`는 아직 active 세부 helper 의존이 남아 있어 전체 삭제 대상은 아니지만, old page render / standalone tab wrappers / Candidate Ops overview snapshot helpers는 active 경로에서 끊겨 있어 삭제 가능했다.
 - Follow-up: V6-V10 완료. 다음 정리 후보는 남은 active helper cluster를 domain component / action / service 단위로 더 작게 이동하는 별도 task이며, 현재 Overview primary ownership은 `app/web/overview/` package가 맡는다.
 
+### 2026-06-29 - Backtest Analysis를 가이드 추가가 아닌 상용형 workbench로 정리한다
+
+- User request: Backtest 영역부터 불필요한 기능 / 안내 / 복잡한 흐름을 줄이고, 증권 / 백테스트 제품 벤치마킹 기반으로 상용형 UX/UI 개선 가이드라인을 작성해 달라고 요청함.
+- Interpreted goal: `Backtest 사용 안내`, `Reference help`, strategy reference panel, Latest Run readiness 과잉을 audit하고, `Backtest Analysis -> Practical Validation -> Final Review`는 유지하되 기본 화면을 실행 / 결과 / 다음 행동 중심으로 바꿔야 함.
+- Analysis result: Backtest Analysis의 핵심 문제는 기능 부재가 아니라 guide/reference gravity와 반복되는 readiness UI다. Practical Validation handoff도 hard blocker와 review signal을 분리해야 한다.
+- Follow-up: `.aiworkspace/note/finance/researches/active/2026-06-backtest-analysis-commercial-ux/`에 audit, benchmark, UI patterns, feature candidates, recommendation, implementation guideline을 남겼다. 다음 구현은 1차 `Backtest Analysis Default Surface Cleanup` 승인부터 시작한다.
+
 ### 2026-06-29 - GTAA로 SPY보다 CAGR/MDD가 개선된 1차 통과 후보를 찾는다
 
 - User request: 사용자가 GTAA를 활용해 SPY보다 CAGR과 MDD가 개선되고, MDD 절대값 15% 이하, CAGR 11% 이상, 1차 후보 판단을 통과한 포트폴리오를 찾아 프리셋으로 만들 수 있는지 요청함.
@@ -8701,3 +8771,94 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 실제 데이터가 있으면 분기 그래프도 연간과 유사한 장기 범위를 보여야 하고, 긴 분기 series는 각 그래프 내부에서 overflow/scroll되어야 함.
 - Analysis result: service trend builder가 연간/분기 모두 `limit=8`로 자르고 있어 분기 데이터는 약 2년치만 내려갔다. 화면 scroll wrapper는 있었지만 point가 8개뿐이라 overflow가 없었다. 금액은 콤마 문자열 입력이 formatter/renderer에서 숫자로 정규화되지 않을 수 있었다.
 - Follow-up: 분기 trend cap을 32개로 분리하고, service/model/component 숫자 coercion과 억/만/천 달러 formatter 계약 테스트를 추가했다.
+
+### 2026-06-30 - Backtest 첫 화면의 보조 설명을 제거하고 stage tabs를 맞춘다
+
+- User request: Backtest 사용 안내, strategy capability snapshot, 하단 전략 개발 참고를 제거하고 3개 stage tab을 Overview처럼 한글 / 영어 방식으로 바꿔 달라고 요청함.
+- Interpreted goal: 실행 / 후보 생성 흐름 자체는 유지하되 첫 화면에서 보조 설명과 연구 참고 gravity를 줄이고, stage selector의 시각 문법을 Overview primary tab과 맞춘다.
+- Analysis result: `st.segmented_control` 기반 selector와 안내 / snapshot / reference board가 기본 render path에 남아 있었다. `st.pills` Korean-first labels와 scoped CSS로 교체하고, 불필요한 보조 표면 호출을 제거하는 것이 가장 작은 안전한 변경이었다.
+- Follow-up: V1 완료. 다음 후보는 Latest Run / 결과 영역의 summary-first polish이며, registry / saved setup / validation / final review semantics는 바꾸지 않았다.
+
+### 2026-07-01 - Backtest UI / service / runtime / validation 경계를 차수별로 나눈다
+
+- User request: 사용자가 Backtest refactor를 1차 개발 -> QA -> 커밋 -> 2차 개발 순서로 7차까지 진행해 달라고 요청함.
+- Interpreted goal: 전략 계산식이나 validation threshold를 바꾸기 전에, UI가 소유할 것과 service / runtime / policy가 소유할 것을 작은 boundary module로 분리해야 함.
+- Analysis result: 가장 큰 혼합 지점은 `backtest_common.py`, `backtest_single_runner.py`, `backtest_compare.py`, Practical Validation status policy, Final Review selected-route policy, runtime runner ownership metadata였다.
+- Follow-up: V1에서 `backtest_state.py`, `backtest_formatters.py`, `backtest_single_payload.py`, `backtest_portfolio_mix_readiness.py`, `backtest_validation_status_policy.py`, `backtest_final_review_policy.py`, `backtest_runner_catalog.py`를 추가했다. registry / saved setup / provider DB / strategy math는 변경하지 않았다.
+
+### 2026-07-01 - Backtest package boundary refactor를 V8까지 마무리한다
+
+- User request: 사용자가 V2부터 V8까지 development -> QA -> commit 순서로 최종 refactor를 진행해 달라고 요청함.
+- Interpreted goal: V1 경계 helper 위에 물리적 package 구조를 완성해 UI, service, runtime runner, JSONL store, read model ownership을 더 명확하게 나눠야 함.
+- Analysis result: 최종 구조는 `app/runtime/backtest/` package, `runners/`, `stores/`, `read_models/`, `app/web/backtest_single_forms/`, `backtest_compare/`, `backtest_practical_validation/`, `backtest_final_review/`로 정리했다. V8 중 legacy facade monkeypatch 호환이 깨지는 것을 발견해 runtime hook bridge로 복원했다.
+- Follow-up: V2-V8 완료. 남은 후보는 `backtest_common.py` 같은 transitional shared helper의 작은 후속 정리이며, strategy math / validation threshold / registry row format / provider DB semantics는 바꾸지 않았다.
+
+### 2026-07-02 - Backtest Handoff UI를 단일 action surface로 정리한다
+
+- User request: 사용자가 `2차 실전성 검증 Handoff`가 프로토타입처럼 보인다고 지적하고, 실전형 UI 개선과 gate 중복 / 파편화 리뷰를 요청한 뒤 V1 개선 진행을 승인함.
+- Interpreted goal: 우선 화면 혼선을 줄이되, gate policy 의미 변경은 별도 V2로 분리해야 함.
+- Analysis result: 현재 버튼 활성화는 latest result bundle meta의 `promotion_decision`, execution source checks, validation source checks를 `_build_next_step_readiness_evaluation`으로 묶어 판단한다. UI 문제는 custom card와 별도 Streamlit container가 같은 handoff를 반복하는 구조였다.
+- Follow-up: V1에서는 중복 container / heading을 제거하고 단일 custom handoff panel로 통합한다. V2 후보는 readiness evaluation service extraction, duplicated promotion/source-check display 정리, `Policy Signal Meta` 역할 재정의다.
+
+### 2026-07-02 - Backtest Handoff readiness를 service / display / source evidence로 정리한다
+
+- User request: V2부터 V6까지 development -> QA -> commit 순서로 handoff gate 중복 / 파편화 개선을 진행해 달라고 요청함.
+- Interpreted goal: 2차 Practical Validation 진입 기준은 약화하지 않고, UI 표시와 source handoff evidence를 분리해 사용자가 왜 버튼이 열리거나 막히는지 이해하게 해야 함.
+- Analysis result: `promotion_decision`, execution source checks, validation source checks는 하나의 Streamlit-free readiness service에서 판단하는 것이 맞고, UI는 raw reason을 반복하기보다 `Promotion / 실행 원천 / 검증 원천`으로 묶어 보여주는 편이 안전하다.
+- Follow-up: V2-V6 완료. `Policy Signal Meta`는 `검증 신호 · Policy Signals`로 바뀌었고, Practical Validation source에는 compact `handoff_readiness_snapshot`이 저장된다. raw provider payload / full run history / screenshots는 workflow JSONL에 넣지 않는다.
+
+### 2026-07-03 - 2차 확인 항목은 Practical Validation에서 확인한다
+
+- User request: 사용자가 `2차 확인` 항목이 어차피 2차에서 확인할 목록이라면 1차 Backtest Analysis에서 명확히 확인 가능한 것만 남기고, 해당 검증은 2차로 옮기는 것이 맞지 않냐고 질문하고 진행을 승인함.
+- Interpreted goal: 1차 화면은 hard blocker / source 등록 가능 여부에 집중하고, hold / caution / watch 같은 review focus 상세는 source evidence로 전달해 Practical Validation에서 이어 확인해야 함.
+- Analysis result: 기존 `entry_gate.review_focus_rows`가 이미 handoff source에 저장되므로 policy 의미를 바꾸지 않고 표시 위치를 옮길 수 있었다. hard blocker는 계속 1차에서 source 등록을 막고, review focus는 2차 확인 큐로 해석한다.
+- Follow-up: Backtest Analysis handoff / Policy Signals는 `2차 확인 항목 N개` 요약만 표시하고, Practical Validation `1. 선택 후보 확인` 상단에서 `Backtest에서 넘어온 2차 확인 항목` 카드와 상세 테이블을 보여준다.
+
+### 2026-07-04 - Handoff와 Policy Signals의 역할을 분리하고 React는 POC로 둔다
+
+- User request: 사용자가 `2차 실전성 검증 Handoff`와 `검증 신호 · Policy Signals`의 `2차 검증 진입 가능` 중복을 정리하고, React custom component로 버튼을 카드 안에 통합할 수 있는지 검토 / 단계별 진행을 요청함.
+- Interpreted goal: Handoff는 action / entry judgment를 소유하고, Policy Signals는 근거 상세만 보여줘야 한다. 버튼 통합은 먼저 Streamlit-only production path로 개선하고, React는 앱 전체 전환이 아니라 고급 action-card POC로 제한해야 함.
+- Analysis result: 같은 `build_handoff_gate_summary()` / `build_next_step_readiness_evaluation()` 결과가 Handoff와 Policy Signals 요약 카드에서 반복되고 있었다. Streamlit HTML과 `st.button`은 DOM 계층이 달라 완전한 HTML 내부 버튼은 어렵지만, Streamlit-only production path로 action shell을 붙일 수 있다.
+- Follow-up: Streamlit-only production path remains active. React custom component POC is isolated under `app/web/components/backtest_handoff_action/` and is not wired into source registration until repeated advanced action-card needs justify it.
+
+### 2026-07-05 - Handoff 버튼을 React card 내부 action으로 연결한다
+
+- User request: 사용자가 이전 구현이 원하는 방식이 아니며, `st.button`을 남기는 것이 아니라 React custom component로 `2차 실전성 검증 Handoff` 박스 안에 실제 버튼을 넣어야 한다고 정정함.
+- Interpreted goal: 앱 전체 React 전환은 하지 않고, Handoff처럼 HTML design + real interaction이 필요한 고급 UI에만 React Handoff action card를 production 경로로 연결한다.
+- Analysis result: Streamlit `st.button`과 custom HTML은 서로 다른 DOM/rendering layer라 같은 카드 내부 button처럼 보이기 어렵다. React component가 card + button + submit event를 소유하고 Python이 source registration write / rerun만 담당하는 구조가 의도에 맞다.
+- Follow-up: React Handoff action card를 active source registration path에 연결하고, 기존 Streamlit action shell / visible `st.button` 경로는 제거한다.
+
+### 2026-07-05 - Policy Signals는 1차 기준만 자세히 보여준다
+
+- User request: 사용자가 `검증 기준 상세`에서 1차 확인 항목과 2차 확인 항목이 섞여 보이므로, 현재 위치에는 1차에서 확인할 내용만 노출하고 2차 항목은 Practical Validation에서 보여주는 방향을 검토 / 개발해 달라고 요청함.
+- Interpreted goal: 1차 화면은 source 등록 기준과 hard blocker를 명확히 보여주고, hold / watch / caution 같은 review focus는 source evidence로 2차에 전달해야 함.
+- Analysis result: `entry_gate.review_focus_rows`가 이미 Practical Validation source에 저장되므로, gate math나 저장 경로를 바꾸지 않고 display model만 `first_stage_rows` / `second_stage_review_rows`로 분리할 수 있다.
+- Follow-up: Backtest Analysis `검증 기준 상세`은 React first-stage evidence board로 렌더링하고, Practical Validation `Backtest에서 넘어온 2차 확인 항목`은 각 row의 확인할 것과 표시 근거를 함께 보여준다.
+
+### 2026-07-05 - Handoff는 1차 gate와 2차 queue를 분리해 보여준다
+
+- User request: 사용자가 `진입 준비도 5.0 / 10`과 promotion hold 표시 때문에 2차로 보낼 수 있는데도 1차에서 덜 통과한 것처럼 보인다고 지적하고, 1차 / 2차 검증 리스트를 명확히 구분해 달라고 요청함.
+- Interpreted goal: Handoff card는 1차 source 등록 기준 통과 여부와 2차로 전달할 review queue를 분리해야 하며, score는 visible entry gate처럼 보이지 않아야 한다.
+- Analysis result: 버튼 활성화는 이미 `can_enter_practical_validation`이 담당하고 있었고, 혼선은 visible score / Promotion review chip이 같은 Handoff card 안에 노출된 데서 왔다. `promotion_decision=hold`는 source 등록 blocker가 아니라 2차 review focus다.
+- Follow-up: Handoff React card는 `1차 진입 기준 / 먼저 해결 / 2차 확인 큐` entry cards를 표시하고, source registration write / rerun / registry / strategy runtime 계약은 유지한다.
+
+### 2026-07-05 - 2차에서 확인할 warning 상세는 1차 Data Trust에서 펼치지 않는다
+
+- User request: 사용자가 2차에서 검증해야 하는 것은 2차에서 노출하는 것이 맞다며 그렇게 수정 진행을 요청함.
+- Interpreted goal: Backtest Analysis는 1차 데이터 기준과 source 등록 가능 여부만 상세히 보여주고, 실전성 review focus 상세는 Practical Validation으로 넘겨야 함.
+- Analysis result: Data Trust가 `meta["warnings"]`를 `이번 실행 검토 큐` 상세 카드로 펼치고 있었고, Handoff / Policy Signal handoff 문구도 2차 판단 도메인을 1차 화면에서 다시 설명하고 있었다.
+- Follow-up: Data Trust는 excluded ticker / malformed price row 같은 직접 데이터 이슈만 상세 표시하고, `meta["warnings"]`는 `2차 확인 항목` count / 위치 안내로만 표시한다. Practical Validation의 review queue 전달은 유지한다.
+
+### 2026-07-05 - Backtest Analysis는 1차 source 등록 기준만 표시한다
+
+- User request: 사용자가 1차에서 검증하는 것과 2차에서 검증하는 것이 명확히 구별되어 있는지 검토하고, 1차 통과 시 해당 포트폴리오를 2차로 보낼 수 있도록 버튼이 활성화되는 흐름을 바로잡아 달라고 요청함.
+- Interpreted goal: Backtest Analysis는 결과 무결성 / 데이터 기준 / source contract hard blocker만 표시하고, Practical Validation review focus는 1차 화면에서 count나 상세로 노출하지 않아야 함.
+- Analysis result: 기존 코드와 문서는 Data Trust, Handoff, Policy Signals에서 2차 count / notice를 반복해 사용자가 1차 검증 결과로 오해할 수 있었다. 실제 source contract는 `entry_gate.review_focus_rows`로 2차 전달을 이미 지원했다.
+- Follow-up: visible Backtest Analysis에서는 `2차 확인 큐`, `2차 전달`, readiness score를 제거하고, hard blocker가 없으면 React Handoff button을 활성화한다. 2차 상세 항목은 Practical Validation의 `Backtest에서 넘어온 2차 확인 항목`에서만 본다.
+
+### 2026-07-05 - Data Trust에서 가격 데이터 업데이트를 직접 실행할 수 있는가?
+
+- User request: `데이터 기준 요약`에서 OHLCV가 최신이 아니면 현재 기준으로 받을 데이터가 있을 때 바로 업데이트하는 버튼을 추가하고 싶다.
+- Interpreted goal: Backtest Analysis 화면 안에서 현재 결과의 ticker만 대상으로 가격 DB를 보강하되, render path에서 provider를 직접 호출하지 않고 기존 ingestion job wrapper를 재사용한다.
+- Analysis result: 최신 기준일은 주말 / NYSE 휴장일과 장중 미완료 거래일을 제외한 latest completed session으로 계산한다. DB common latest date가 그보다 오래됐을 때만 `가격 데이터 업데이트` action을 노출한다.
+- Follow-up: 업데이트 후 기존 결과는 자동 재계산하지 않으므로 사용자가 `Run Backtest`를 다시 눌러 최신 가격 기준으로 성과를 재계산한다. 후속 UI 보정으로 visible card와 버튼은 React custom component 안에 통합했고, Python path는 submit event와 ingestion side effect만 소유한다.

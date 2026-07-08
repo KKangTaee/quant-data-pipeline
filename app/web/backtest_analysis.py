@@ -190,7 +190,7 @@ def _research_board_rows_table(rows: list[dict[str, object]]) -> pd.DataFrame:
                 "항목": row.get("korean_label") or row.get("title") or "-",
                 "성격": row.get("classification") or "-",
                 "백테스트 실행 필수": "예" if row.get("required_for_backtest_execution") else "아니오",
-                "전략 개발 참고": "예" if row.get("strategy_development_useful") else "아니오",
+                "전략 연구용": "예" if row.get("strategy_development_useful") else "아니오",
                 "기본 표시": row.get("default_display") or "-",
                 "권장 위치": row.get("recommended_location") or "-",
                 "이유": row.get("reason") or "-",
@@ -525,7 +525,7 @@ def _render_backtest_analysis_research_reference_board() -> None:
     board = build_backtest_analysis_research_board()
 
     st.divider()
-    st.markdown("#### 전략 개발 참고")
+    st.markdown("#### 전략 연구 보조")
     st.caption(board["summary"])
     with st.expander("기본 화면에서 숨긴 참고 항목", expanded=False):
         st.dataframe(
@@ -536,9 +536,9 @@ def _render_backtest_analysis_research_reference_board() -> None:
         st.caption(board["storage_boundary"])
 
     show_reference_panels = st.checkbox(
-        "전략 개발 참고 패널 열기",
+        "전략 연구 보조 패널 열기",
         value=False,
-        key="backtest_analysis_show_research_reference_panels",
+        key="backtest_analysis_show_research_auxiliary_panels",
         help="전략 성숙도, governance, ETF evidence / rerun matrix 같은 보조 패널을 아래에 표시합니다.",
     )
     if not show_reference_panels:
@@ -546,7 +546,7 @@ def _render_backtest_analysis_research_reference_board() -> None:
         return
 
     st.info(
-        "아래 패널은 전략 개발 참고용입니다. 기본 백테스트 실행, registry, saved setup, run history, "
+        "아래 패널은 전략 연구 보조용입니다. 기본 백테스트 실행, registry, saved setup, run history, "
         "Practical Validation 결과, Final Review 결정, Monitoring log를 자동으로 만들지 않습니다."
     )
     render_reference_contextual_help("backtest_analysis", expanded=False)
@@ -561,8 +561,7 @@ def _render_backtest_analysis_research_reference_board() -> None:
 def render_backtest_analysis_workspace() -> None:
     st.markdown("### Backtest Analysis")
     st.caption(
-        "전략 실행, 전략 비교, 후보 생성을 먼저 진행합니다. "
-        "근거 / governance 참고 패널은 기본 흐름 아래에서 필요할 때만 엽니다."
+        "전략 실행, 전략 비교, 후보 생성을 먼저 진행합니다."
     )
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
@@ -582,4 +581,3 @@ def render_backtest_analysis_workspace() -> None:
         if mode != BACKTEST_ANALYSIS_MODE_SINGLE:
             st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
         render_single_strategy_workspace()
-    _render_backtest_analysis_research_reference_board()

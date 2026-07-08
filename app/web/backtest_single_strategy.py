@@ -62,8 +62,6 @@ def render_single_strategy_workspace() -> None:
         ),
         key="backtest_strategy_choice",
     )
-    if not family_variant_options(strategy_choice):
-        _render_strategy_capability_snapshot(strategy_choice)
     st.divider()
     if strategy_choice == "Equal Weight":
         _render_equal_weight_form()

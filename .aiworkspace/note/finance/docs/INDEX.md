@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-06-30
+Last Verified: 2026-07-08
 
 ## Purpose
 
@@ -23,9 +23,11 @@ Last Verified: 2026-06-30
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: [Overview Futures Macro Evidence / Original Data UX 2026-07-06](../tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/STATUS.md).
-- Latest completed task: [Fundamental Source Migration P8 Final Docs / Runbook Alignment](../tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/STATUS.md).
-- Latest completed product task: [Fundamental Source Migration P8 Final Docs / Runbook Alignment](../tasks/active/fundamental-source-migration-p8-final-docs-runbook-alignment/STATUS.md).
+- Current active task: none.
+- Latest completed task: [Backtest Second Stage Visibility V1 2026-07-05](../tasks/active/backtest-second-stage-visibility-v1-20260705/STATUS.md).
+- Latest completed product task: [Backtest Second Stage Visibility V1 2026-07-05](../tasks/active/backtest-second-stage-visibility-v1-20260705/STATUS.md).
+- Recent Overview / Market Movers task: [Overview Market Movers Fundamental Charts 2026-07-08](../tasks/active/overview-market-movers-fundamental-charts-20260708/STATUS.md).
+- Recent Overview Futures Macro task: [Overview Futures Macro Evidence / Original Data UX 2026-07-06](../tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/STATUS.md).
 - Recent data-source migration: [Fundamental Source Migration P0-P8 research / implementation records](../researches/active/2026-06-fundamental-source-migration/DEVELOPMENT_GUIDE.md). Canonical financial statement source is EDGAR detailed statements plus statement shadow tables; broad yfinance fundamentals / factors are legacy compatibility only.
 - Recent Overview final cleanup task: [Overview Final Cleanup V33-V36 2026-06-29](../tasks/active/overview-final-cleanup-v33-v36-20260629/STATUS.md).
 - Recent Overview service split task: [Overview Service Split V25-V32 2026-06-29](../tasks/active/overview-service-split-v25-v32-20260629/STATUS.md).
