@@ -12384,6 +12384,48 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         workspace_intro = workspace_intro.split("current_rows = load_current_candidate_registry_latest()", 1)[0]
         self.assertNotIn("render_reference_contextual_help(\"final_review\")", workspace_intro)
 
+    def test_final_review_decision_desk_model_prioritizes_candidate_status(self) -> None:
+        from app.web.backtest_final_review.page import _build_final_review_decision_desk_model
+
+        model = _build_final_review_decision_desk_model(
+            candidate_summary={
+                "total_candidates": 3,
+                "select_ready": 1,
+                "hold_or_re_review": 2,
+                "blocked": 0,
+                "first_review_candidate": "Balanced Mix",
+                "first_review_reason": "open review 2개",
+                "first_review_action": "Decision Cockpit 확인",
+            },
+            practical_validation_count=5,
+            eligible_count=3,
+            hidden_validation_count=2,
+            final_decision_count=4,
+            dashboard_selected_count=1,
+            route_value="모니터링 후보 있음",
+            route_detail="저장 가능한 후보를 확인합니다.",
+            route_tone="positive",
+        )
+
+        self.assertEqual(model["title"], "후보 현황과 다음 판단")
+        self.assertIn("Gate 통과 후보 3개", model["detail"])
+        self.assertIn("Balanced Mix", model["route_detail"])
+        self.assertEqual(model["route_value"], "모니터링 후보 있음")
+        self.assertEqual(
+            [item["label"] for item in model["kpis"]],
+            ["올라온 후보", "선택 가능", "보류 / 재검토", "숨김", "저장된 판단", "Monitoring 연결"],
+        )
+
+        joined = " ".join(str(value) for value in model.values())
+        self.assertNotIn("Saved PV", joined)
+        self.assertNotIn("Review Queue", joined)
+        self.assertNotIn("Selected Dashboard 후보", joined)
+
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        workspace_body = workspace_body.split("if hidden_validation_count > 0:", 1)[0]
+        self.assertNotIn("render_fr_flow(", workspace_body)
+
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
             _conclusion_group_detail,

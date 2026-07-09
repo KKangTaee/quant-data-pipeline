@@ -36,7 +36,6 @@ from app.web.backtest_final_review_helpers import (
 from app.web.backtest_final_review.components import (
     render_fr_action_panel,
     render_fr_command_center,
-    render_fr_flow,
     render_fr_lane_grid,
     render_fr_section_header,
 )
@@ -138,6 +137,60 @@ def _build_final_review_top_summary() -> dict[str, str]:
             "선정 후 확인은 Operations > Portfolio Monitoring에서 이어집니다."
         ),
         "destination": "Operations > Portfolio Monitoring",
+    }
+
+
+def _build_final_review_decision_desk_model(
+    *,
+    candidate_summary: dict[str, Any],
+    practical_validation_count: int,
+    eligible_count: int,
+    hidden_validation_count: int,
+    final_decision_count: int,
+    dashboard_selected_count: int,
+    route_value: str,
+    route_detail: str,
+    route_tone: str,
+) -> dict[str, Any]:
+    first_candidate = str(candidate_summary.get("first_review_candidate") or "-")
+    first_reason = str(candidate_summary.get("first_review_reason") or "-")
+    first_action = str(candidate_summary.get("first_review_action") or "-")
+    return {
+        "eyebrow": "Final Review Decision Desk",
+        "title": "후보 현황과 다음 판단",
+        "detail": (
+            f"Gate 통과 후보 {eligible_count}개를 비교합니다. "
+            f"저장된 Practical Validation 기록 {practical_validation_count}개 중 "
+            f"{hidden_validation_count}개는 Gate 미통과로 숨겨졌습니다."
+        ),
+        "route_label": "오늘 먼저 볼 후보",
+        "route_value": route_value,
+        "route_detail": f"{route_detail} 먼저 볼 후보: {first_candidate}. 이유: {first_reason}. 다음 행동: {first_action}.",
+        "route_tone": route_tone,
+        "kpis": [
+            {
+                "label": "올라온 후보",
+                "value": int(candidate_summary.get("total_candidates", 0) or 0),
+                "detail": "Gate 통과 후 비교 대상",
+            },
+            {
+                "label": "선택 가능",
+                "value": int(candidate_summary.get("select_ready", 0) or 0),
+                "detail": "모니터링 후보 저장 가능",
+            },
+            {
+                "label": "보류 / 재검토",
+                "value": int(candidate_summary.get("hold_or_re_review", 0) or 0),
+                "detail": "추가 판단 또는 근거 보강",
+            },
+            {"label": "숨김", "value": hidden_validation_count, "detail": "Gate 미통과 기록"},
+            {"label": "저장된 판단", "value": final_decision_count, "detail": "Final Review record"},
+            {
+                "label": "Monitoring 연결",
+                "value": dashboard_selected_count,
+                "detail": "Portfolio Monitoring 대상",
+            },
+        ],
     }
 
 
@@ -1415,70 +1468,26 @@ def render_final_review_workspace() -> None:
     dashboard_handoff = build_selected_dashboard_handoff_review(final_decision_rows)
     dashboard_summary = dict(dashboard_handoff.get("summary") or {})
     hidden_validation_count = len(practical_validation_rows) - len(eligible_practical_validation_rows)
-    render_fr_command_center(
-        eyebrow="Final Review Decision Desk",
-        title="모니터링 후보 선별",
-        detail=(
-            "Practical Validation Gate를 통과한 후보의 수익성, benchmark 비교, 후보 간 우선순위, profile 적합성을 비교하고 "
-            "Decision Cockpit에서 모니터링 후보 저장 가능 상태를 확인합니다."
-        ),
-        route_label="오늘의 판단 상태",
+    decision_desk = _build_final_review_decision_desk_model(
+        candidate_summary=candidate_summary,
+        practical_validation_count=len(practical_validation_rows),
+        eligible_count=len(eligible_practical_validation_rows),
+        hidden_validation_count=hidden_validation_count,
+        final_decision_count=len(final_decision_rows),
+        dashboard_selected_count=int(dashboard_summary.get("selected_decision_count", 0) or 0),
         route_value=route_value,
         route_detail=route_detail,
         route_tone=route_tone,
-        kpis=[
-            {
-                "label": "Saved PV",
-                "value": len(practical_validation_rows),
-                "detail": "기록용 저장 포함",
-            },
-            {
-                "label": "Eligible",
-                "value": f"{len(eligible_practical_validation_rows)} / {len(practical_validation_rows)}",
-                "detail": "Final Review Gate 통과",
-            },
-            {"label": "Hidden", "value": hidden_validation_count, "detail": "Gate 미통과 기록"},
-            {
-                "label": "Review Queue",
-                "value": candidate_summary.get("total_candidates", 0),
-                "detail": "오늘 비교할 후보",
-            },
-            {"label": "Final Records", "value": len(final_decision_rows), "detail": "저장된 모니터링 후보 기록"},
-            {
-                "label": "Dashboard Selected",
-                "value": dashboard_summary.get("selected_decision_count", 0),
-                "detail": "Selected Dashboard 후보",
-            },
-        ],
     )
-    render_fr_flow(
-        [
-            {
-                "title": "후보 선택",
-                "detail": "Gate 통과 후보의 성과, benchmark, profile 적합성을 Candidate Board에서 비교합니다.",
-                "tone": "info",
-            },
-            {
-                "title": "상태 판단",
-                "detail": "Decision Cockpit에서 최종 선택 / 보류 / 모니터링 후보 가능 상태를 확인합니다.",
-                "tone": "neutral",
-            },
-            {
-                "title": "모니터링 후보 저장",
-                "detail": "selected-route gate가 통과된 후보만 정식 저장합니다.",
-                "tone": "warning",
-            },
-            {
-                "title": "근거 확인",
-                "detail": "필요할 때만 이전 validation evidence를 read-only 부록으로 확인합니다.",
-                "tone": "neutral",
-            },
-            {
-                "title": "대시보드 연결",
-                "detail": "선정 기록만 Selected Portfolio Dashboard 후보로 전달됩니다.",
-                "tone": "positive",
-            },
-        ]
+    render_fr_command_center(
+        eyebrow=str(decision_desk["eyebrow"]),
+        title=str(decision_desk["title"]),
+        detail=str(decision_desk["detail"]),
+        route_label=str(decision_desk["route_label"]),
+        route_value=str(decision_desk["route_value"]),
+        route_detail=str(decision_desk["route_detail"]),
+        route_tone=str(decision_desk["route_tone"]),
+        kpis=list(decision_desk["kpis"]),
     )
     _render_market_sentiment_context_overlay()
     if hidden_validation_count > 0:

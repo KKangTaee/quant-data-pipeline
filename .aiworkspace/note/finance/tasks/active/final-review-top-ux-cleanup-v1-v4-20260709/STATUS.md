@@ -8,4 +8,5 @@
 ## Current Step
 
 - Baseline focused Final Review tests passed before edits.
-- 1차 top summary cleanup implemented and QA passed. Preparing 1차 commit.
+- 1차 top summary cleanup committed.
+- 2차 candidate-status command center implemented and QA passed. Preparing 2차 commit.
