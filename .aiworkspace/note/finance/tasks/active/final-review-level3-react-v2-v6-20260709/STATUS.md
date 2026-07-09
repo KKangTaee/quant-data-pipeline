@@ -19,7 +19,13 @@
   - Investment report recommendation now includes classification and scorecard-backed route.
   - React report displays `최종 점수 체계`, `/100`, and category scores.
   - Streamlit fallback includes a `점수 체계` tab.
+- V5 implemented:
+  - Python service read model `build_final_review_save_handoff_summary`.
+  - Investment report now includes recommended route save / handoff boundary.
+  - React report displays `저장 / Monitoring handoff`.
+  - Final Decision Action displays actual selected-route judgment / handoff badges.
+  - Streamlit fallback includes a `저장 경계` tab.
 
 ## Current Step
 
-- V4 QA passed. Preparing V4 commit.
+- V5 QA passed. Preparing V5 commit.

@@ -14,6 +14,7 @@ from app.services.backtest_evidence_read_model import (
     build_final_review_decision_cockpit,
     build_final_review_investment_report,
     build_final_review_decision_record_guide,
+    build_final_review_save_handoff_summary,
     build_saved_final_review_decision_review,
 )
 from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
@@ -1001,7 +1002,7 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         ],
         min_width=220,
     )
-    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "Level2 REVIEW"])
+    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "Level2 REVIEW"])
     with report_tabs[0]:
         rows = list(report.get("strengths") or [])
         if rows:
@@ -1034,6 +1035,19 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         )
         st.dataframe(pd.DataFrame(scorecard.get("categories") or []), width="stretch", hide_index=True)
     with report_tabs[4]:
+        handoff_summary = dict(report.get("save_handoff_summary") or {})
+        judgment = dict(handoff_summary.get("judgment_record") or {})
+        monitoring = dict(handoff_summary.get("monitoring_handoff") or {})
+        render_badge_strip(
+            [
+                {"label": "Judgment Record", "value": judgment.get("label") or "-", "tone": "positive" if judgment.get("ready") else "warning"},
+                {"label": "Monitoring Handoff", "value": monitoring.get("label") or "-", "tone": "positive" if monitoring.get("candidate") else "warning"},
+                {"label": "Record Type", "value": handoff_summary.get("record_type") or "-", "tone": "neutral"},
+                {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        st.caption(str(monitoring.get("detail") or "-"))
+    with report_tabs[5]:
         disposition = dict(report.get("level2_review_disposition") or {})
         groups = dict(disposition.get("groups") or {})
         rows = [
@@ -1612,6 +1626,9 @@ def render_final_review_workspace() -> None:
             decision_evidence=evidence,
             investability_packet=investability_packet,
         )
+        save_handoff_summary = build_final_review_save_handoff_summary(
+            decision_record_guide=decision_record_guide,
+        )
         official_save_ready = bool(decision_record_guide.get("recordable_route"))
         selected_gate = dict(decision_record_guide.get("selected_route_gate") or {})
         render_badge_strip(
@@ -1646,6 +1663,29 @@ def render_final_review_workspace() -> None:
             st.success(notice)
         else:
             st.info(notice)
+        handoff_state = dict(save_handoff_summary.get("monitoring_handoff") or {})
+        judgment_state = dict(save_handoff_summary.get("judgment_record") or {})
+        render_badge_strip(
+            [
+                {
+                    "label": "Final Review 판단 저장",
+                    "value": judgment_state.get("label") or "-",
+                    "tone": "positive" if judgment_state.get("ready") else "warning",
+                },
+                {
+                    "label": "Portfolio Monitoring",
+                    "value": handoff_state.get("label") or "-",
+                    "tone": "positive" if handoff_state.get("candidate") else "warning",
+                },
+                {
+                    "label": "Record Type",
+                    "value": save_handoff_summary.get("record_type") or "-",
+                    "tone": "neutral",
+                },
+                {"label": "Order / Auto Rebalance", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        st.caption(str(handoff_state.get("detail") or "-"))
         with st.expander("Decision Record Checklist", expanded=True):
             st.dataframe(pd.DataFrame(decision_record_guide.get("checklist_rows") or []), width="stretch", hide_index=True)
             st.caption("이 checklist는 기존 evidence를 다시 검증하지 않고, 최종 기록 전에 route 의미와 저장 경계를 보여주는 안내입니다.")

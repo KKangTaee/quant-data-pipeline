@@ -32,3 +32,10 @@
 - `select_ready` from the existing selection gate keeps the Monitoring candidate route unless blockers are present.
 - Packet score and Level2 REVIEW burden adjust the visible score and watch label.
 - The scorecard writes nothing and does not create live approval, order, or auto rebalance.
+
+## V5 Notes
+
+- Final Review judgment persistence and Portfolio Monitoring handoff remain separate.
+- The report shows recommended-route boundary, while Final Decision Action shows the currently selected route boundary.
+- Non-select routes are `judgment_decision` records and do not become Monitoring candidates.
+- Selected route only becomes `monitoring_candidate` when the selected-route gate is ready.

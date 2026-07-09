@@ -128,6 +128,33 @@ type Scorecard = {
   categories?: ScorecardCategory[]
 }
 
+type SaveHandoffSummary = {
+  recordType?: string
+  record_type?: string
+  judgmentRecord?: {
+    ready?: boolean
+    label?: string
+    detail?: string
+  }
+  judgment_record?: {
+    ready?: boolean
+    label?: string
+    detail?: string
+  }
+  monitoringHandoff?: {
+    candidate?: boolean
+    state?: string
+    label?: string
+    detail?: string
+  }
+  monitoring_handoff?: {
+    candidate?: boolean
+    state?: string
+    label?: string
+    detail?: string
+  }
+}
+
 export type InvestmentReport = {
   schemaVersion?: string
   schema_version?: string
@@ -142,6 +169,8 @@ export type InvestmentReport = {
   recommendation?: Recommendation
   score?: Score
   scorecard?: Scorecard
+  saveHandoffSummary?: SaveHandoffSummary
+  save_handoff_summary?: SaveHandoffSummary
   summary?: Summary
   strengths?: ReportCard[]
   weaknesses?: ReportCard[]
@@ -290,6 +319,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const risk = report.expectedRangeAndRisk ?? report.expected_range_and_risk ?? {}
   const benchmark = report.benchmarkRationale ?? report.benchmark_rationale ?? {}
   const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
+  const saveHandoff = report.saveHandoffSummary ?? report.save_handoff_summary ?? {}
   const level2Summary = level2Review.summary ?? {}
   const level2Groups = level2Review.groups ?? {}
   const handoffReady = field(monitoring.handoffReady, monitoring.handoff_ready) === true
@@ -303,6 +333,9 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scorecardClassification = field(scorecard.classificationLabel, scorecard.classification_label)
   const scorecardDecision = field(scorecard.decisionLabel, scorecard.decision_label)
   const scorecardMonitoringCandidate = field(scorecard.monitoringCandidate, scorecard.monitoring_candidate) === true
+  const judgmentRecord = saveHandoff.judgmentRecord ?? saveHandoff.judgment_record ?? {}
+  const monitoringHandoff = saveHandoff.monitoringHandoff ?? saveHandoff.monitoring_handoff ?? {}
+  const saveRecordType = field(saveHandoff.recordType, saveHandoff.record_type)
 
   return (
     <section className={`fr-invest-report fr-invest-report--${tone}`}>
@@ -384,6 +417,31 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           <span>{compact(scorecard.classification)}</span>
         </div>
         <ScorecardCategoryList categories={scorecard.categories ?? []} />
+      </section>
+
+      <section className="fr-invest-report__handoff-panel">
+        <div>
+          <span>저장 / Monitoring handoff</span>
+          <h5>{compact(judgmentRecord.label)}</h5>
+          <p>{compact(judgmentRecord.detail)}</p>
+        </div>
+        <div className="fr-invest-report__handoff-grid">
+          <article>
+            <span>Final Review 판단 저장</span>
+            <strong>{judgmentRecord.ready ? "Ready" : "Check"}</strong>
+            <p>{compact(saveRecordType)}</p>
+          </article>
+          <article>
+            <span>Portfolio Monitoring</span>
+            <strong>{monitoringHandoff.candidate ? "Handoff" : "Decision Only"}</strong>
+            <p>{compact(monitoringHandoff.detail)}</p>
+          </article>
+          <article>
+            <span>Order / Auto Rebalance</span>
+            <strong>Disabled</strong>
+            <p>Final Review는 판단 기록과 Monitoring 후보 handoff만 다룹니다.</p>
+          </article>
+        </div>
       </section>
 
       <section className="fr-invest-report__review-disposition">

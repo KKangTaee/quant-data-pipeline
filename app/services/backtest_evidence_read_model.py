@@ -19,6 +19,7 @@ SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
 INVESTMENT_REPORT_SCHEMA_VERSION = "final_review_investment_report_v1"
 LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION = "final_review_level2_review_disposition_v1"
 FINAL_REVIEW_SCORECARD_SCHEMA_VERSION = "final_review_scorecard_v1"
+SAVE_HANDOFF_SUMMARY_SCHEMA_VERSION = "final_review_save_handoff_summary_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -1413,6 +1414,62 @@ def build_final_review_decision_record_guide(
     }
 
 
+def build_final_review_save_handoff_summary(*, decision_record_guide: dict[str, Any]) -> dict[str, Any]:
+    """Summarize the difference between judgment persistence and Monitoring handoff."""
+
+    guide = dict(decision_record_guide or {})
+    decision_route = str(guide.get("decision_route") or "").strip()
+    selected_route = decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO
+    recordable = bool(guide.get("recordable_route"))
+    handoff_candidate = bool(guide.get("monitoring_handoff_candidate"))
+    selected_gate = dict(guide.get("selected_route_gate") or {})
+    if handoff_candidate:
+        handoff_state = "ready"
+        handoff_label = "Monitoring handoff ready"
+        handoff_detail = "선택 route와 selection gate가 모두 통과해 Portfolio Monitoring 후보로 연결됩니다."
+        record_type = "monitoring_candidate"
+    elif selected_route:
+        handoff_state = "blocked"
+        handoff_label = "Monitoring handoff blocked"
+        handoff_detail = "선택 route를 요청했지만 selection gate가 통과하지 않아 Monitoring handoff가 차단됩니다."
+        record_type = "blocked_selected_route"
+    else:
+        handoff_state = "not_requested"
+        handoff_label = "Decision only"
+        handoff_detail = "보류 / 거절 / 재검토는 Final Review 판단 기록으로만 남고 Monitoring 후보로 연결되지 않습니다."
+        record_type = "judgment_decision"
+    return {
+        "schema_version": SAVE_HANDOFF_SUMMARY_SCHEMA_VERSION,
+        "decision_route": decision_route,
+        "decision_label": guide.get("decision_label") or _decision_route_label(decision_route),
+        "record_type": record_type,
+        "judgment_record": {
+            "ready": recordable,
+            "label": "Final Review 판단 저장 가능" if recordable else "Final Review 판단 저장 확인 필요",
+            "detail": guide.get("notice") or "-",
+        },
+        "monitoring_handoff": {
+            "candidate": handoff_candidate,
+            "state": handoff_state,
+            "label": handoff_label,
+            "detail": handoff_detail,
+            "selected_gate_ready": bool(selected_gate.get("Ready")),
+            "selected_gate_current": selected_gate.get("Current") or "-",
+        },
+        "boundaries": {
+            "append_final_review_decision_record": True,
+            "non_select_persistence": True,
+            "monitoring_handoff_requires_selected_route": True,
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "account_sync": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
 def _decision_route_label(route: Any) -> str:
     return FINAL_REVIEW_DECISION_LABELS.get(_safe_text(route, ""), "재검토 필요")
 
@@ -1940,6 +1997,14 @@ def build_final_review_investment_report(
         level2_review_disposition=level2_review_disposition,
     )
     suggested_route = str(scorecard.get("decision_route") or suggested_route)
+    decision_record_guide = build_final_review_decision_record_guide(
+        decision_route=suggested_route,
+        decision_evidence=decision_evidence,
+        investability_packet=packet,
+    )
+    save_handoff_summary = build_final_review_save_handoff_summary(
+        decision_record_guide=decision_record_guide,
+    )
     score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
     if state == "SELECT_READY":
         headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
@@ -1973,6 +2038,7 @@ def build_final_review_investment_report(
             "basis": scorecard.get("basis") or "Investability packet ready-check ratio",
         },
         "scorecard": scorecard,
+        "save_handoff_summary": save_handoff_summary,
         "summary": {
             "headline": headline,
             "verdict": cockpit.get("verdict") or packet.get("verdict") or "-",

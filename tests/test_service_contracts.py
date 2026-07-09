@@ -12313,6 +12313,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Monitoring 조건", component_source)
         self.assertIn("최종 점수 체계", component_source)
         self.assertIn("/ 100", component_source)
+        self.assertIn("저장 / Monitoring handoff", component_source)
+        self.assertIn("Final Review 판단 저장", component_source)
+        self.assertIn("Portfolio Monitoring", component_source)
         self.assertIn("Level2 REVIEW 처리 결과", component_source)
         self.assertIn("Open Review", component_source)
         self.assertIn("Monitoring Follow-up", component_source)
@@ -12331,12 +12334,16 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Monitoring 조건", build_source)
         self.assertIn("최종 점수 체계", build_source)
         self.assertIn("/ 100", build_source)
+        self.assertIn("저장 / Monitoring handoff", build_source)
+        self.assertIn("Final Review 판단 저장", build_source)
+        self.assertIn("Portfolio Monitoring", build_source)
         self.assertIn("Level2 REVIEW 처리 결과", build_source)
         self.assertIn("Open Review", build_source)
         self.assertIn("Monitoring Follow-up", build_source)
         self.assertIn("build_final_review_investment_report", page_source)
         self.assertIn("render_final_review_investment_report", page_source)
         self.assertIn("점수 체계", page_source)
+        self.assertIn("저장 경계", page_source)
         self.assertIn("Level2 REVIEW", page_source)
 
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
@@ -27445,6 +27452,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertGreaterEqual(scorecard["overall_score"], 80)
         self.assertEqual(report["recommendation"]["classification"], "MONITORING_CANDIDATE")
         self.assertEqual(report["score"]["scale"], "0-10")
+        self.assertEqual(report["save_handoff_summary"]["monitoring_handoff"]["state"], "ready")
         self.assertEqual(scorecard["categories"][0]["category"], "Selection Gate")
         self.assertFalse(scorecard["boundaries"]["live_approval"])
 
@@ -27492,7 +27500,82 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertLess(scorecard["overall_score"], 60)
         self.assertEqual(report["recommendation"]["classification"], "REVIEW_REQUIRED")
         self.assertEqual(report["recommendation"]["route"], "RE_REVIEW_REQUIRED")
+        self.assertEqual(report["save_handoff_summary"]["record_type"], "judgment_decision")
         self.assertFalse(scorecard["monitoring_candidate"])
+
+    def test_final_review_save_handoff_summary_separates_judgment_and_monitoring(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_final_review_decision_record_guide,
+            build_final_review_save_handoff_summary,
+        )
+
+        ready_packet = {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "selection_gate_policy_snapshot": {
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                "blockers": [],
+                "review_required": [],
+            },
+        }
+        selected_guide = build_final_review_decision_record_guide(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=ready_packet,
+        )
+        hold_guide = build_final_review_decision_record_guide(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=ready_packet,
+        )
+
+        selected_summary = build_final_review_save_handoff_summary(decision_record_guide=selected_guide)
+        hold_summary = build_final_review_save_handoff_summary(decision_record_guide=hold_guide)
+
+        self.assertEqual(selected_summary["schema_version"], "final_review_save_handoff_summary_v1")
+        self.assertTrue(selected_summary["judgment_record"]["ready"])
+        self.assertEqual(selected_summary["monitoring_handoff"]["state"], "ready")
+        self.assertEqual(selected_summary["record_type"], "monitoring_candidate")
+        self.assertTrue(selected_summary["boundaries"]["append_final_review_decision_record"])
+        self.assertFalse(selected_summary["boundaries"]["live_approval"])
+        self.assertTrue(hold_summary["judgment_record"]["ready"])
+        self.assertEqual(hold_summary["monitoring_handoff"]["state"], "not_requested")
+        self.assertEqual(hold_summary["record_type"], "judgment_decision")
+        self.assertFalse(hold_summary["monitoring_handoff"]["candidate"])
+
+    def test_final_review_save_handoff_summary_blocks_selected_handoff_when_gate_blocks(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_final_review_decision_record_guide,
+            build_final_review_save_handoff_summary,
+        )
+
+        blocked_packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "selection_gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "suggested_decision_route": "RE_REVIEW_REQUIRED",
+                "blockers": ["Data Coverage: survivorship evidence missing"],
+                "review_required": [],
+            },
+        }
+        guide = build_final_review_decision_record_guide(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=blocked_packet,
+        )
+
+        summary = build_final_review_save_handoff_summary(decision_record_guide=guide)
+
+        self.assertFalse(summary["judgment_record"]["ready"])
+        self.assertEqual(summary["monitoring_handoff"]["state"], "blocked")
+        self.assertEqual(summary["record_type"], "blocked_selected_route")
+        self.assertIn("selection gate", summary["monitoring_handoff"]["detail"])
 
     def test_final_review_candidate_board_prioritizes_ready_candidates(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_candidate_board
