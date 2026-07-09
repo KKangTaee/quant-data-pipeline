@@ -17,6 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Current active Final Review task is [final-review-level3-redesign-analysis-v1-20260709](./tasks/active/final-review-level3-redesign-analysis-v1-20260709/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
@@ -28,6 +29,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-09 - Final Review 저장 record와 Monitoring handoff를 분리한다
+
+- User request: 사용자가 Backtest `Final Review / Level3` 개선을 시작하며 현재 코드 / 기능 / read model / 저장 / Monitoring handoff 경계를 분석하고, 오래된 저장 기준이 비효율적이면 변경해도 된다고 승인함.
+- Interpreted goal: Final Review는 실전 투입 가능한 포트폴리오를 최종 선별하는 단계이며, 보류 / 탈락 / 재검토 판단도 기록으로 남겨야 한다. 다만 Portfolio Monitoring으로 올라가는 대상은 더 좁게 관리해야 한다.
+- Analysis result: 기존 구현은 UI와 save gate가 `SELECT_FOR_PRACTICAL_PORTFOLIO`만 저장 가능한 구조라 Final Review 판단 history와 Monitoring handoff가 섞여 있었다.
+- Follow-up: `final-review-level3-redesign-analysis-v1-20260709`에서 Final Review judgment persistence와 Monitoring handoff를 분리했다. v3 row는 `monitoring_candidate` / `monitoring_handoff_state`를 포함하고, 기존 registry / saved JSONL은 재작성하지 않는다. analyst-style narrative / score와 weakness-improvement flow는 후속 차수다.
 
 ### 2026-07-09 - PV REVIEW는 Final Review 숙제가 아니라 role로 분리해야 한다
 
@@ -1315,11 +1323,12 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request:
   - Final Review에서 비선정 저장 판단이 필요한지 질문했고, 정식 저장은 최종 통과 후보에만 활성화되도록 요청함.
 - Interpreted goal:
-  - Final Review의 주 action을 모니터링 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
+  - 당시 기준으로 Final Review의 주 action을 모니터링 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
 - Analysis result:
   - 구현 기준은 `SELECT_FOR_PRACTICAL_PORTFOLIO` + selected-route gate pass + operator reason + unique decision id다.
-  - 기존 hold / reject / re-review row는 Saved Decision Review / read model 호환을 위해 읽을 수 있지만, 새 UI의 정식 저장 action은 만들지 않는다.
+  - 당시 구현은 기존 hold / reject / re-review row를 Saved Decision Review / read model 호환으로만 읽고, 새 저장 action은 selected route로 제한했다.
 - Follow-up:
+  - 이 저장 정책은 2026-07-09 Final Review Level3 storage boundary 작업에서 superseded되었다. 현재는 보류 / 거절 / 재검토도 Final Review 판단 record로 저장할 수 있고, Portfolio Monitoring handoff만 `monitoring_candidate` row로 제한한다.
   - Selected Dashboard는 계속 selected row만 읽는다. 보류 후보 queue를 별도 운영 대상으로 관리하고 싶다면 나중에 별도 lightweight queue 기능으로 분리한다.
 
 ### 2026-05-31 - Final Review should feel like a user-facing decision desk

@@ -803,15 +803,15 @@ def build_investability_gate_policy(
     if blockers:
         outcome = "blocked"
         suggested_decision_route = "RE_REVIEW_REQUIRED"
-        next_action = "critical blocker를 해소한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "critical blocker를 해소한 뒤 Final Review에서 판단 route와 Monitoring handoff 가능 여부를 다시 확인합니다."
     elif review_required:
         outcome = "hold_or_re_review"
         suggested_decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
-        next_action = "부족한 evidence를 보강한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "부족한 evidence를 보강하거나 보류 / 재검토 판단으로 기록한 뒤 Monitoring handoff 가능 여부를 다시 확인합니다."
     else:
         outcome = "select_ready"
         suggested_decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
-        next_action = "Final Review에서 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
+        next_action = "Final Review에서 판단 route를 저장하고, 선택 route라면 Portfolio Monitoring 후보 handoff를 남깁니다."
     return {
         "schema_version": (
             SELECTION_GATE_POLICY_SCHEMA_VERSION
@@ -1227,7 +1227,7 @@ def build_investability_evidence_packet(
     elif decision_evidence.get("route") == "READY_FOR_FINAL_DECISION":
         route = "INVESTABILITY_PACKET_READY"
         verdict = "Selected Dashboard에서 추적할 모니터링 후보로 기록 가능한 evidence packet입니다."
-        next_action = "Final Review에서 모니터링 후보 선정 저장을 진행하고 open review item은 Dashboard / Live Readiness에서 이어서 확인합니다."
+        next_action = "Final Review 판단을 저장하고, 선택 route라면 open review item은 Dashboard / Live Readiness에서 이어서 확인합니다."
     else:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
         verdict = "hard blocker는 없지만 Final Review evidence가 아직 완전하지 않습니다."
@@ -1294,9 +1294,9 @@ def build_selected_route_gate(
         "Ready": ready,
         "Current": current,
         "Meaning": (
-            "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 가능합니다. live 투입 판단은 별도 단계입니다."
+            "Monitoring 후보 handoff는 Final Review selection gate가 허용할 때만 가능합니다. live 투입 판단은 별도 단계입니다."
             if selected
-            else "보류 / 거절 / 재검토는 정식 저장하지 않는 상태 안내입니다."
+            else "보류 / 거절 / 재검토 판단은 저장할 수 있지만 Monitoring 후보 handoff는 만들지 않습니다."
         ),
     }
 
@@ -1332,19 +1332,19 @@ def build_final_review_decision_record_guide(
     )
     if selected and not bool(selected_gate.get("Ready")):
         route_state = "SELECT_ROUTE_BLOCKED"
-        route_state_label = "선정 저장 차단"
+        route_state_label = "Monitoring handoff 차단"
         notice_level = "warning"
-        notice = "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 저장하지 않는 상태 안내로만 표시합니다."
+        notice = "Monitoring 후보 handoff는 Final Review selection gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 Final Review 판단 기록으로 저장할 수 있습니다."
     elif selected:
         route_state = "SELECT_ROUTE_READY"
         route_state_label = "선정 기록 가능"
         notice_level = "success"
         notice = "현재 selection gate가 선정 기록을 허용합니다. 판단 사유를 남기면 최종 검토 기록으로 저장할 수 있습니다."
     else:
-        route_state = "NON_SELECT_NOT_STORED"
-        route_state_label = "상태 안내만 표시"
+        route_state = "JUDGMENT_ROUTE_READY" if valid_route else "INVALID_ROUTE"
+        route_state_label = "판단 기록 가능" if valid_route else "판단 route 확인 필요"
         notice_level = "info"
-        notice = "보류 / 거절 / 재검토는 정식 저장 대상이 아닙니다. Final Review의 저장 버튼은 모니터링 후보 선정이 가능할 때만 활성화됩니다."
+        notice = "보류 / 거절 / 재검토는 Final Review 판단 기록으로 저장됩니다. Monitoring 후보 handoff는 선택 route가 gate를 통과할 때만 만들어집니다."
     checklist_rows = [
         {
             "Criteria": "Suggested decision",
@@ -1359,10 +1359,10 @@ def build_final_review_decision_record_guide(
             "Meaning": "최종 판단으로 저장될 route입니다.",
         },
         {
-            "Criteria": "Official selection route",
-            "Ready": selected,
-            "Current": "selection save" if selected else "status only",
-            "Meaning": "Final Review의 정식 저장은 모니터링 후보 선정 route만 허용합니다.",
+            "Criteria": "Monitoring handoff",
+            "Ready": True,
+            "Current": "requested" if selected else "not requested",
+            "Meaning": "Monitoring 후보 handoff는 선택 route에서만 요청됩니다. non-select route는 판단 기록으로만 남습니다.",
         },
         selected_gate,
         {
@@ -1390,16 +1390,18 @@ def build_final_review_decision_record_guide(
         "notice_level": notice_level,
         "notice": notice,
         "selected_route_gate": selected_gate,
-        "recordable_route": valid_route and selected and bool(selected_gate.get("Ready")),
+        "recordable_route": valid_route and ((not selected) or bool(selected_gate.get("Ready"))),
+        "monitoring_handoff_candidate": valid_route and selected and bool(selected_gate.get("Ready")),
         "checklist_rows": checklist_rows,
         "blockers": blockers,
         "route_templates": route_templates,
         "record_boundary": {
-            "write_policy": "append_final_selection_decision_only",
+            "write_policy": "append_final_review_decision_record",
             "validation_rerun": False,
             "provider_fetch": False,
             "waiver_persistence": False,
-            "non_select_persistence": False,
+            "non_select_persistence": True,
+            "monitoring_handoff": valid_route and selected and bool(selected_gate.get("Ready")),
             "live_approval": False,
             "order_instruction": False,
             "account_sync": False,
@@ -1410,6 +1412,15 @@ def build_final_review_decision_record_guide(
 
 def _decision_route_label(route: Any) -> str:
     return FINAL_REVIEW_DECISION_LABELS.get(_safe_text(route, ""), "재검토 필요")
+
+
+def _is_monitoring_handoff_candidate(row: dict[str, Any]) -> bool:
+    if "monitoring_candidate" in row:
+        return row.get("monitoring_candidate") is True
+    return (
+        row.get("selected_practical_portfolio") is True
+        or str(row.get("decision_route") or "").strip() == SELECT_FOR_PRACTICAL_PORTFOLIO
+    )
 
 
 def _policy_rows_by_severity(gate_policy: dict[str, Any], severity: str) -> list[dict[str, Any]]:
@@ -1434,7 +1445,7 @@ def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any])
         return (
             "SELECT_BLOCKED",
             "선정 차단",
-            "critical blocker가 남아 있어 모니터링 후보 선정 저장이 차단됩니다.",
+            "critical blocker가 남아 있어 Monitoring 후보 handoff가 차단됩니다.",
         )
     return (
         "HOLD_OR_RE_REVIEW",
@@ -1796,7 +1807,7 @@ def build_saved_final_review_decision_review(rows: list[dict[str, Any]]) -> dict
                 "Gate Outcome": gate_policy.get("outcome") or "-",
                 "Select Allowed": "Yes" if bool(gate_policy.get("select_allowed")) else "No",
                 "Evidence Issues": issue_count,
-                "Dashboard Eligible": "Yes" if route == SELECT_FOR_PRACTICAL_PORTFOLIO else "No",
+                "Dashboard Eligible": "Yes" if _is_monitoring_handoff_candidate(row) else "No",
                 "Operator Reason": _safe_text(operator.get("reason"), "-"),
                 "Next Action": _safe_text(operator.get("next_action") or status_display.get("next_action"), "-"),
                 "Live Approval": "Disabled",

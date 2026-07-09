@@ -809,6 +809,8 @@ def _selected_decision_source_matches_contract(row: dict[str, Any], contract: di
 
 
 def _is_selected_practical_portfolio(row: dict[str, Any]) -> bool:
+    if "monitoring_candidate" in row:
+        return row.get("monitoring_candidate") is True
     return (
         row.get("selected_practical_portfolio") is True
         or str(row.get("decision_route") or "").strip() == SELECTED_PRACTICAL_PORTFOLIO_ROUTE

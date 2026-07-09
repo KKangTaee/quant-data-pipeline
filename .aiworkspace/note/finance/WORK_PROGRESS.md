@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Current active Final Review task is [final-review-level3-redesign-analysis-v1-20260709](./tasks/active/final-review-level3-redesign-analysis-v1-20260709/STATUS.md).
   - Current active Practical Validation UI task is none.
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
@@ -34,6 +35,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Level3 Storage Boundary V1:
+  - `.aiworkspace/note/finance/tasks/active/final-review-level3-redesign-analysis-v1-20260709/`에서 Final Review 판단 record와 Portfolio Monitoring handoff 경계를 분리했다.
+  - `SELECT_FOR_PRACTICAL_PORTFOLIO` / 보류 / 거절 / 재검토는 모두 Final Review 판단으로 append 가능하며, Monitoring 후보는 selected-route gate 통과 row의 `monitoring_candidate`만 읽는다.
+  - registry / saved JSONL 기존 row는 재작성하지 않았고, live approval / broker order / auto rebalance 경계도 변경하지 않았다.
 - Practical Validation Stage Ownership V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-stage-ownership-v1/`에서 REVIEW role taxonomy와 Flow4 visibility contract를 정리했다.
   - Flow4는 적용된 REVIEW-only Practical Validation category를 숨기지 않고 `데이터 주의` / `2단계 실용성 주의`로 표시하며, Final Review / Monitoring 항목은 보조 참고로 낮춘다.
@@ -887,7 +892,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Verification passed: `py_compile`, targeted Practical Validation / Final Review service contracts, and full `tests.test_service_contracts` 211 tests.
 
 ### 2026-05-31
-- Session closeout docs aligned for master merge handoff: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs now describe Final Review selection-only official save and the current candidate search outcome.
+- Session closeout docs aligned for master merge handoff at the time: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs then described the former selected-route-only Final Review save policy and the current candidate search outcome. This storage rule was superseded by the 2026-07-09 Final Review Level3 storage boundary work.
 - Opened `.aiworkspace/note/finance/tasks/active/non-gtaa-final-selection-candidate-search-20260531/`.
 - Non-GTAA dry-runs found several Practical Validation / Final Review evidence-ready candidates, but no fresh candidate passed the current selected-route gate for V2 `SELECT_FOR_PRACTICAL_PORTFOLIO` save.
 - Existing legacy V1 Final Review registry contains one non-GTAA Quality selected row; a read-only handoff dry-run maps it to one dashboard row, but the current V2 dashboard source remains empty until an explicit migration seed is approved.

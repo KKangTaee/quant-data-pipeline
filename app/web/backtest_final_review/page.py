@@ -18,6 +18,7 @@ from app.services.backtest_evidence_read_model import (
 from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
+    FINAL_REVIEW_ROUTE_OPTIONS,
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
     _build_investability_evidence_packet,
     _build_final_review_decision_evidence_pack,
@@ -84,6 +85,15 @@ def _handoff_tone(route: Any) -> str:
     if route_text == "HANDOFF_BLOCKED":
         return "danger"
     return "neutral"
+
+
+def _is_monitoring_handoff_candidate(row: dict[str, Any]) -> bool:
+    if "monitoring_candidate" in row:
+        return row.get("monitoring_candidate") is True
+    return (
+        row.get("selected_practical_portfolio") is True
+        or str(row.get("decision_route") or "").strip() == SELECT_FOR_PRACTICAL_PORTFOLIO
+    )
 
 
 def _short_text(value: Any, limit: int = 140) -> str:
@@ -723,7 +733,7 @@ def _render_investability_packet(packet: dict[str, Any]) -> None:
     policy_rows = list(gate_policy.get("policy_rows") or [])
     if policy_rows:
         st.markdown("###### Validation Gate Policy")
-        st.caption("profile-aware gate matrix입니다. `Selected Route = Blocked`이면 정식 선정 저장은 비활성화됩니다.")
+        st.caption("profile-aware gate matrix입니다. `Selected Route = Blocked`이면 Monitoring handoff는 비활성화됩니다.")
         st.dataframe(pd.DataFrame(policy_rows), width="stretch", hide_index=True)
         if gate_policy.get("blockers"):
             for blocker in list(gate_policy.get("blockers") or []):
@@ -966,8 +976,8 @@ def _render_evidence_appendix(
     )
     with appendix_tabs[0]:
         st.info(
-            "모니터링 후보 선정에 필요한 요약은 위 Decision Cockpit과 Final Decision Action에 있습니다. "
-            "이 부록은 왜 그런 후보 가능 / 차단 판단이 나왔는지 원본 근거를 추적할 때 확인합니다."
+            "Final Review 판단에 필요한 요약은 위 Decision Cockpit과 Final Decision Action에 있습니다. "
+            "이 부록은 왜 그런 후보 가능 / 보류 / 차단 판단이 나왔는지 원본 근거를 추적할 때 확인합니다."
         )
         render_badge_strip(
             [
@@ -1095,7 +1105,7 @@ def _render_selected_dashboard_handoff(final_decision_rows: list[dict[str, Any]]
 
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
-        st.info("아직 저장된 모니터링 후보 선정 결과가 없습니다.")
+        st.info("아직 저장된 Final Review 판단 기록이 없습니다.")
         st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
         _render_selected_dashboard_handoff(final_decision_rows)
         return
@@ -1103,7 +1113,7 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
     review = build_saved_final_review_decision_review(final_decision_rows)
     summary = dict(review.get("summary") or {})
     render_stage_brief(
-        purpose="저장된 모니터링 후보 선정 기록을 다시 읽고, 어떤 후보가 Selected Dashboard로 이어지는지 확인합니다.",
+        purpose="저장된 Final Review 판단 기록을 다시 읽고, 어떤 후보가 Portfolio Monitoring으로 이어지는지 확인합니다.",
         result="Saved decision ledger",
     )
     render_status_card_grid(
@@ -1156,6 +1166,7 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
     evidence = dict(selected_row.get("decision_evidence_snapshot") or {})
     status_display = _build_final_review_status_display(selected_row)
     decision_label = FINAL_REVIEW_DECISION_LABELS.get(str(selected_row.get("decision_route") or ""), "재검토 필요")
+    monitoring_candidate = _is_monitoring_handoff_candidate(selected_row)
     detail_tabs = st.tabs(["Summary", "Dossier", "Evidence Packet", "Raw JSON"])
     with detail_tabs[0]:
         render_readiness_route_panel(
@@ -1172,16 +1183,16 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
                 {
                     "label": "Decision",
                     "value": selected_row.get("decision_route") or "-",
-                    "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning",
+                    "tone": "positive" if monitoring_candidate else "warning",
                 },
                 {
                     "label": "판단 라벨",
                     "value": decision_label,
-                    "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning",
+                    "tone": "positive" if monitoring_candidate else "warning",
                 },
                 {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
                 {"label": "Observation", "value": selected_row.get("source_observation_id") or selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
-                {"label": "Dashboard", "value": "Eligible" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "Not selected", "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "neutral"},
+                {"label": "Dashboard", "value": "Eligible" if monitoring_candidate else "Not selected", "tone": "positive" if monitoring_candidate else "neutral"},
                 {"label": "Order", "value": "Disabled", "tone": "neutral"},
             ]
         )
@@ -1390,15 +1401,15 @@ def render_final_review_workspace() -> None:
     render_fr_section_header(
         eyebrow="Step 3",
         title="Final Decision Action",
-        detail="Decision Cockpit을 보고 모니터링 후보 선정 저장 가능 여부를 확인합니다.",
+        detail="Decision Cockpit을 보고 최종 판단 기록과 Monitoring handoff 여부를 확인합니다.",
         tone="warning",
     )
     with st.container(border=True):
         render_fr_action_panel(
             title="Final Decision Action",
             detail=(
-                "이 구간이 Selected Dashboard 모니터링 후보 저장입니다. 운영 상태와 proposal 메모는 준비 기록이고, "
-                "보류 / 거절 / 재검토는 저장하지 않는 상태 안내로만 표시합니다."
+                "이 구간은 Final Review 판단 기록을 남기는 곳입니다. Monitoring 후보 handoff는 selected-route gate가 "
+                "통과한 경우에만 만들어지며, 보류 / 거절 / 재검토는 판단 기록으로 저장됩니다."
             ),
             route_label="Evidence Route",
             route_value=str(evidence.get("route") or "-"),
@@ -1411,7 +1422,7 @@ def render_final_review_workspace() -> None:
                 {"label": "Live Approval", "value": "Disabled"},
             ],
         )
-        st.caption("상세 validation table은 아래 Evidence Appendix에서 확인합니다. 이 구간은 모니터링 후보 선정 저장이 주 action입니다.")
+        st.caption("상세 validation table은 아래 Evidence Appendix에서 확인합니다. 이 구간은 Final Review 판단 저장과 Monitoring handoff 여부를 정리하는 주 action입니다.")
         if evidence.get("blockers"):
             for blocker in list(evidence.get("blockers") or []):
                 st.warning(str(blocker))
@@ -1438,28 +1449,40 @@ def render_final_review_workspace() -> None:
             or cockpit.get("suggested_decision_route")
             or SELECT_FOR_PRACTICAL_PORTFOLIO
         )
-        decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
+        route_options = list(FINAL_REVIEW_ROUTE_OPTIONS)
+        if suggested_route not in route_options:
+            route_options.append(suggested_route)
+        default_route_index = route_options.index(suggested_route) if suggested_route in route_options else 0
+        decision_route_key = f"final_review_decision_route_v1_{source_slug}"
+        decision_route = st.selectbox(
+            "최종 판단 route",
+            options=route_options,
+            index=default_route_index,
+            format_func=lambda value: FINAL_REVIEW_DECISION_LABELS.get(value, str(value)),
+            key=decision_route_key,
+            help="Final Review 판단 기록 route입니다. Monitoring handoff는 모니터링 후보 선정 route가 selection gate를 통과할 때만 만들어집니다.",
+        )
         official_route_label = FINAL_REVIEW_DECISION_LABELS.get(decision_route, decision_route)
         suggested_route_label = FINAL_REVIEW_DECISION_LABELS.get(suggested_route, suggested_route or "-")
-        official_route_display_key = f"final_review_official_route_display_v1_{source_slug}"
-        operator_reason_key = f"final_review_selection_reason_v2_{source_slug}"
-        operator_constraints_key = f"final_review_selection_constraints_v2_{source_slug}"
-        operator_next_action_key = f"final_review_selection_next_action_v2_{source_slug}"
+        route_slug = _paper_ledger_slug(decision_route)
+        operator_reason_key = f"final_review_selection_reason_v2_{source_slug}_{route_slug}"
+        operator_constraints_key = f"final_review_selection_constraints_v2_{source_slug}_{route_slug}"
+        operator_next_action_key = f"final_review_selection_next_action_v2_{source_slug}_{route_slug}"
 
-        input_cols = st.columns([0.56, 0.44], gap="small")
+        input_cols = st.columns([0.44, 0.56], gap="small")
         with input_cols[0]:
-            st.text_input(
-                "정식 저장",
-                value=official_route_label,
-                disabled=True,
-                key=official_route_display_key,
-                help="Final Review의 정식 저장은 selected-route gate를 통과한 모니터링 후보 선정만 허용합니다.",
-            )
-        with input_cols[1]:
             st.text_input("Source", value=str(source.get("source_id") or "-"), disabled=True, key=source_display_key)
+        with input_cols[1]:
+            st.text_input(
+                "권장 route",
+                value=suggested_route_label,
+                disabled=True,
+                key=f"final_review_suggested_route_display_v1_{source_slug}",
+                help="Python read model이 현재 evidence에서 제안한 route입니다. 사용자는 근거를 남기고 다른 최종 판단으로 override할 수 있습니다.",
+            )
         st.caption(
-            "정식 저장은 모니터링 후보 선정만 남깁니다. "
-            f"현재 권장 상태는 `{suggested_route_label}`이며, 보류 / 거절 / 재검토는 저장하지 않는 상태 안내입니다. "
+            "Final Review 판단은 추천 / 보류 / 탈락 / 재검토 모두 기록할 수 있습니다. "
+            "Portfolio Monitoring handoff는 selected-route gate가 통과한 모니터링 후보 선정만 대상으로 합니다. "
             f"{FINAL_REVIEW_ROUTE_DESCRIPTIONS.get(decision_route, '')}"
         )
         decision_record_guide = build_final_review_decision_record_guide(
@@ -1477,7 +1500,7 @@ def render_final_review_workspace() -> None:
                     "tone": "neutral",
                 },
                 {
-                    "label": "Official Save",
+                    "label": "Decision Save",
                     "value": decision_record_guide.get("decision_label") or "-",
                     "tone": "positive" if official_save_ready else "warning",
                 },
@@ -1505,13 +1528,13 @@ def render_final_review_workspace() -> None:
             st.dataframe(pd.DataFrame(decision_record_guide.get("checklist_rows") or []), width="stretch", hide_index=True)
             st.caption("이 checklist는 기존 evidence를 다시 검증하지 않고, 최종 기록 전에 route 의미와 저장 경계를 보여주는 안내입니다.")
         route_templates = dict(decision_record_guide.get("route_templates") or {})
-        if not official_save_ready:
+        if decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO and not official_save_ready:
             route_templates = {
                 "reason": (
                     f"현재 권장 상태는 {suggested_route_label}이며, selected-route blocker가 남아 "
-                    "모니터링 후보 선정 저장을 하지 않는다."
+                    "Monitoring 후보 handoff를 만들지 않는다."
                 ),
-                "constraints": "Must Fix / Must Review 항목을 해소한 뒤에만 Selected Dashboard 모니터링 후보로 선정할 수 있다.",
+                "constraints": "Must Fix / Must Review 항목을 해소한 뒤에만 Selected Dashboard 모니터링 후보 handoff를 만들 수 있다.",
                 "next_action": "Practical Validation 또는 해당 evidence 보강 위치로 돌아가 blocker를 해소한 뒤 Final Review에서 다시 확인한다.",
             }
         if not str(st.session_state.get(operator_reason_key) or "").strip():
@@ -1520,12 +1543,12 @@ def render_final_review_workspace() -> None:
             st.session_state[operator_constraints_key] = str(route_templates.get("constraints") or "")
         if not str(st.session_state.get(operator_next_action_key) or "").strip():
             st.session_state[operator_next_action_key] = str(route_templates.get("next_action") or "")
-        with st.expander("선정 저장 문안 / 미통과 시 다음 행동", expanded=False):
-            st.markdown(f"**선정 사유**: {route_templates.get('reason') or '-'}")
+        with st.expander("판단 저장 문안 / 다음 행동", expanded=False):
+            st.markdown(f"**판단 사유**: {route_templates.get('reason') or '-'}")
             st.markdown(f"**운영 전 조건**: {route_templates.get('constraints') or '-'}")
             st.markdown(f"**다음 행동**: {route_templates.get('next_action') or '-'}")
         operator_reason = st.text_area(
-            "선정 사유",
+            "판단 사유",
             key=operator_reason_key,
             placeholder=str(route_templates.get("reason") or ""),
         )
@@ -1550,9 +1573,9 @@ def render_final_review_workspace() -> None:
             existing_decision_ids=existing_decision_ids,
         )
         render_fr_action_panel(
-            title="Selection Save Readiness",
+            title="Final Review Save Readiness",
             detail=str(save_evaluation.get("verdict") or "-"),
-            route_label="Official Save",
+            route_label="Decision Save",
             route_value=str(save_evaluation.get("route") or "-"),
             route_detail=str(save_evaluation.get("next_action") or "-"),
             route_tone="positive" if save_evaluation.get("can_save") else "danger",
@@ -1560,7 +1583,10 @@ def render_final_review_workspace() -> None:
                 {"label": "Record Score", "value": f"{float(save_evaluation.get('score') or 0.0):.1f}"},
                 {"label": "Blockers", "value": len(save_evaluation.get("blockers") or [])},
                 {"label": "Decision ID", "value": decision_id},
-                {"label": "Storage", "value": "Monitoring Candidate"},
+                {
+                    "label": "Handoff",
+                    "value": "Monitoring Candidate" if save_evaluation.get("monitoring_handoff_candidate") else "Decision Only",
+                },
             ],
         )
         final_row = _build_final_review_decision_row(
@@ -1577,15 +1603,21 @@ def render_final_review_workspace() -> None:
         )
         action_cols = st.columns(2, gap="small")
         with action_cols[0]:
+            save_button_label = (
+                "모니터링 후보로 선정"
+                if save_evaluation.get("monitoring_handoff_candidate")
+                else "Final Review 판단 저장"
+            )
             if st.button(
-                "모니터링 후보로 선정",
+                save_button_label,
                 key="final_review_record_decision",
                 disabled=not bool(save_evaluation.get("can_save")),
                 width="stretch",
             ):
                 append_current_final_selection_decision(final_row)
+                saved_notice_prefix = "모니터링 후보 선정" if final_row.get("monitoring_candidate") else "Final Review 판단"
                 st.session_state["final_review_decision_notice"] = (
-                    f"모니터링 후보 선정 `{final_row['decision_id']}`를 기록했습니다. "
+                    f"{saved_notice_prefix} `{final_row['decision_id']}`를 기록했습니다. "
                     "이 기록은 live approval이나 주문 지시가 아닙니다."
                 )
                 st.session_state["final_review_reset_decision_id_after_save"] = True
@@ -1597,16 +1629,16 @@ def render_final_review_workspace() -> None:
                 key="final_review_live_order_disabled",
                 disabled=True,
                 width="stretch",
-                help="Final Review는 모니터링 후보 선정 저장까지 담당하며 실제 승인/주문은 만들지 않습니다.",
+                help="Final Review는 판단 기록과 Monitoring 후보 handoff까지만 담당하며 실제 승인/주문은 만들지 않습니다.",
             )
-        with st.expander("모니터링 후보 선정 Preview", expanded=False):
+        with st.expander("Final Review 판단 Preview", expanded=False):
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
 
     render_fr_section_header(
         eyebrow="Step 4",
         title="Evidence Appendix",
-        detail="모니터링 후보 선정에 필요한 요약은 위에서 끝내고, 원본 검증 근거는 필요한 경우에만 read-only로 확인합니다.",
+        detail="Final Review 판단에 필요한 요약은 위에서 끝내고, 원본 검증 근거는 필요한 경우에만 read-only로 확인합니다.",
         tone="neutral",
     )
     with st.container(border=True):
@@ -1619,7 +1651,7 @@ def render_final_review_workspace() -> None:
     render_fr_section_header(
         eyebrow="Step 5",
         title="Decision History / Dashboard Handoff",
-        detail="저장된 모니터링 후보 선정 기록과 Selected Portfolio Dashboard로 이어질 후보 상태를 확인합니다.",
+        detail="저장된 Final Review 판단 기록과 Portfolio Monitoring으로 이어질 후보 상태를 확인합니다.",
         tone=_handoff_tone(dashboard_handoff.get("route")),
     )
     with st.container(border=True):

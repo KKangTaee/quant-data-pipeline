@@ -385,6 +385,8 @@ def _build_final_review_save_evaluation(
     """Check whether the final review can be recorded as one durable decision row."""
     decision_id_clean = str(decision_id or "").strip()
     decision_route_clean = str(decision_route or "").strip()
+    selected_route = decision_route_clean == SELECT_FOR_PRACTICAL_PORTFOLIO
+    valid_route = decision_route_clean in FINAL_REVIEW_DECISION_LABELS
     packet_gate = build_selected_route_gate(
         decision_route=decision_route_clean,
         investability_packet=investability_packet,
@@ -397,10 +399,10 @@ def _build_final_review_save_evaluation(
             "Meaning": "중복되지 않는 최종 검토 기록 id가 필요합니다.",
         },
         {
-            "Criteria": "Official selection route",
-            "Ready": decision_route_clean == SELECT_FOR_PRACTICAL_PORTFOLIO,
+            "Criteria": "Final Review route",
+            "Ready": valid_route,
             "Current": decision_route_clean or "-",
-            "Meaning": "Final Review의 정식 저장은 모니터링 후보 선정 route만 허용합니다. 보류 / 거절 / 재검토는 저장하지 않는 상태 안내입니다.",
+            "Meaning": "추천 / 보류 / 탈락 / 재검토 중 하나의 최종 판단 route가 필요합니다.",
         },
         {
             "Criteria": "Operator reason",
@@ -410,21 +412,26 @@ def _build_final_review_save_evaluation(
         },
         {
             "Criteria": "Select readiness",
-            "Ready": evidence.get("route") == "READY_FOR_FINAL_DECISION",
+            "Ready": (not selected_route) or evidence.get("route") == "READY_FOR_FINAL_DECISION",
             "Current": evidence.get("route") or "-",
-            "Meaning": "모니터링 후보 선정은 blocker가 없을 때만 저장합니다.",
+            "Meaning": "모니터링 후보 선정은 blocker가 없을 때만 저장합니다. non-select route는 판단 기록으로 남길 수 있습니다.",
         },
         packet_gate,
     ]
     blockers = [str(row["Criteria"]) for row in checks if not row["Ready"]]
     if not blockers:
-        route = "FINAL_SELECTION_SAVE_READY"
-        verdict = "모니터링 후보 선정 저장 가능"
-        next_action = "`모니터링 후보로 선정`을 눌러 선정 근거를 남깁니다."
+        if selected_route:
+            route = "FINAL_SELECTION_SAVE_READY"
+            verdict = "모니터링 후보 선정 저장 가능"
+            next_action = "`모니터링 후보로 선정`을 눌러 선정 근거를 남깁니다."
+        else:
+            route = "FINAL_REVIEW_JUDGMENT_SAVE_READY"
+            verdict = "Final Review 판단 저장 가능"
+            next_action = "`Final Review 판단 저장`을 눌러 보류 / 탈락 / 재검토 근거를 남깁니다."
     else:
-        route = "FINAL_SELECTION_SAVE_BLOCKED"
-        verdict = "모니터링 후보 선정 저장 전 확인 필요"
-        next_action = "decision id, 선정 사유, selection gate, investability packet을 확인합니다."
+        route = "FINAL_REVIEW_JUDGMENT_SAVE_BLOCKED"
+        verdict = "Final Review 판단 저장 전 확인 필요"
+        next_action = "decision id, 판단 사유, route, selection gate, investability packet을 확인합니다."
     return {
         "route": route,
         "score": round((len(checks) - len(blockers)) / len(checks) * 10.0, 1),
@@ -433,6 +440,7 @@ def _build_final_review_save_evaluation(
         "checks": checks,
         "blockers": blockers,
         "can_save": not blockers,
+        "monitoring_handoff_candidate": selected_route and bool(packet_gate.get("Ready")) and not blockers,
     }
 
 
@@ -460,6 +468,12 @@ def _build_final_review_decision_row(
         dict(investability_packet or {}).get("deployment_readiness_policy_snapshot") or {}
     )
     open_review_items = list(dict(investability_packet or {}).get("open_review_items") or [])
+    selected_gate = build_selected_route_gate(
+        decision_route=str(decision_route or "").strip(),
+        investability_packet=investability_packet,
+    )
+    selected_route = str(decision_route or "").strip() == SELECT_FOR_PRACTICAL_PORTFOLIO
+    monitoring_candidate = selected_route and bool(selected_gate.get("Ready"))
     row = {
         "schema_version": FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
         "decision_id": str(decision_id or "").strip(),
@@ -467,7 +481,10 @@ def _build_final_review_decision_row(
         "updated_at": now,
         "decision_status": "recorded",
         "decision_route": str(decision_route or "").strip(),
-        "selected_practical_portfolio": decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO",
+        "final_review_record_type": "monitoring_candidate" if monitoring_candidate else "judgment_decision",
+        "selected_practical_portfolio": monitoring_candidate,
+        "monitoring_candidate": monitoring_candidate,
+        "monitoring_handoff_state": "ready" if monitoring_candidate else ("blocked" if selected_route else "not_requested"),
         "source_paper_ledger_id": None,
         "source_observation_id": f"paper_observation_{_paper_ledger_slug(source_id)}",
         "source_type": source.get("source_type"),

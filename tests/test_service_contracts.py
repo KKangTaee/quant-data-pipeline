@@ -27262,7 +27262,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("Investability evidence packet", guide["blockers"])
         self.assertFalse(guide["record_boundary"]["live_approval"])
 
-    def test_final_review_decision_record_guide_treats_non_select_route_as_status_only(self) -> None:
+    def test_final_review_decision_record_guide_records_non_select_judgment_without_monitoring_handoff(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_decision_record_guide
 
         packet = {
@@ -27283,12 +27283,14 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             investability_packet=packet,
         )
 
-        self.assertEqual(guide["route_state"], "NON_SELECT_NOT_STORED")
-        self.assertFalse(guide["recordable_route"])
+        self.assertEqual(guide["route_state"], "JUDGMENT_ROUTE_READY")
+        self.assertTrue(guide["recordable_route"])
+        self.assertFalse(guide["monitoring_handoff_candidate"])
         self.assertTrue(guide["selected_route_gate"]["Ready"])
-        self.assertIn("Official selection route", guide["blockers"])
+        self.assertNotIn("Official selection route", guide["blockers"])
         self.assertIn("paper tracking", guide["route_templates"]["reason"])
-        self.assertFalse(guide["record_boundary"]["non_select_persistence"])
+        self.assertTrue(guide["record_boundary"]["non_select_persistence"])
+        self.assertFalse(guide["record_boundary"]["monitoring_handoff"])
         self.assertFalse(guide["record_boundary"]["waiver_persistence"])
 
     def test_evidence_rows_expand_current_and_wrapped_decision_shapes(self) -> None:
@@ -28798,8 +28800,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
 
         self.assertFalse(selected["can_save"])
         self.assertIn("Investability evidence packet", selected["blockers"])
-        self.assertFalse(hold["can_save"])
-        self.assertIn("Official selection route", hold["blockers"])
+        self.assertTrue(hold["can_save"])
+        self.assertEqual(hold["route"], "FINAL_REVIEW_JUDGMENT_SAVE_READY")
+        self.assertFalse(hold["monitoring_handoff_candidate"])
+        self.assertNotIn("Official selection route", hold["blockers"])
 
     def test_final_review_decision_row_stores_compact_gate_policy_snapshot(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_decision_row
@@ -28850,6 +28854,43 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(row["selection_gate_policy_snapshot"]["schema_version"], "final_review_selection_gate_policy_v1")
         self.assertEqual(row["deployment_readiness_policy_snapshot"]["schema_version"], "deployment_readiness_gate_policy_v1")
         self.assertEqual(row["open_review_items"][0]["Group"], "provider_coverage")
+        self.assertTrue(row["selected_practical_portfolio"])
+        self.assertTrue(row["monitoring_candidate"])
+
+    def test_final_review_decision_row_stores_non_select_judgment_without_monitoring_candidate(self) -> None:
+        from app.web.backtest_final_review_helpers import _build_final_review_decision_row
+
+        packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "selection_gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "policy_rows": [],
+            },
+            "open_review_items": [{"Group": "data_coverage", "Criteria": "Coverage"}],
+        }
+
+        row = _build_final_review_decision_row(
+            source={"source_id": "source-hold", "source_type": "practical_validation_result"},
+            validation={"selection_source_id": "source-hold", "validation_id": "validation-hold"},
+            paper_observation={"active_components": [], "checks": []},
+            evidence={"route": "BLOCKED_FOR_FINAL_DECISION", "checks": [], "blockers": ["Coverage"]},
+            investability_packet=packet,
+            decision_id="decision-hold",
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            operator_reason="hold until data coverage is fixed",
+            operator_constraints="data coverage review",
+            operator_next_action="monitor after evidence refresh",
+        )
+
+        self.assertEqual(row["decision_route"], "HOLD_FOR_MORE_PAPER_TRACKING")
+        self.assertFalse(row["selected_practical_portfolio"])
+        self.assertFalse(row["monitoring_candidate"])
+        self.assertEqual(row["final_review_record_type"], "judgment_decision")
+        self.assertEqual(row["monitoring_handoff_state"], "not_requested")
+        self.assertFalse(row["live_approval"])
+        self.assertFalse(row["order_instruction"])
 
 
 class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
@@ -29679,6 +29720,24 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(checks["Final Review decision record"]["Status"], "PASS")
         self.assertEqual(checks["Selected route record"]["Status"], "NEEDS_INPUT")
         self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
+
+    def test_selected_dashboard_handoff_review_respects_explicit_monitoring_candidate_flag(self) -> None:
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review
+
+        row = dict(self._selected_row()["raw_decision"])
+        row["schema_version"] = 3
+        row["decision_route"] = "SELECT_FOR_PRACTICAL_PORTFOLIO"
+        row["selected_practical_portfolio"] = False
+        row["monitoring_candidate"] = False
+        row["monitoring_handoff_state"] = "blocked"
+
+        handoff = build_selected_dashboard_handoff_review([row])
+
+        self.assertEqual(handoff["route"], "HANDOFF_NO_SELECTED_DECISION")
+        self.assertEqual(handoff["summary"]["final_decision_count"], 1)
+        self.assertEqual(handoff["summary"]["selected_decision_count"], 0)
+        self.assertEqual(handoff["summary"]["dashboard_row_count"], 0)
+        self.assertEqual(handoff["rows"], [])
 
     def test_selected_dashboard_handoff_review_surfaces_blocked_dashboard_contract(self) -> None:
         from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review

@@ -7,7 +7,11 @@ Last Verified: 2026-07-09
 
 현재 active phase는 없다.
 
-현재 active task는 없다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/final-review-level3-redesign-analysis-v1-20260709/`다.
+
+- 목적: Backtest `Final Review / Level3`를 최종 판단 단계로 정리하고, Final Review 판단 record와 Portfolio Monitoring handoff 경계를 분리한다.
+- 현재 구현: `SELECT_FOR_PRACTICAL_PORTFOLIO` / 보류 / 거절 / 재검토 모두 Final Review 판단으로 저장할 수 있고, Monitoring 후보 handoff는 selected-route gate를 통과한 row의 `monitoring_candidate`로만 연결한다.
+- 남은 차수: analyst-style final review narrative / score, Level2 REVIEW 처리 summary, weakness-improvement proposal은 후속 개발로 남아 있다.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow5-cta-integration-v1-20260709/`다.
 
