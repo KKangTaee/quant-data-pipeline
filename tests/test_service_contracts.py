@@ -27461,6 +27461,60 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(scorecard["categories"][0]["category"], "Selection Gate")
         self.assertFalse(scorecard["boundaries"]["live_approval"])
 
+    def test_final_review_detailed_scorecard_exposes_weighted_dimensions(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Detailed score candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        scorecard = report["scorecard"]
+        dimension_keys = [dimension["key"] for dimension in scorecard["dimensions"]]
+        self.assertEqual(
+            dimension_keys,
+            [
+                "investment",
+                "risk",
+                "readiness",
+                "evidence_quality",
+                "monitoring_suitability",
+            ],
+        )
+        self.assertEqual(scorecard["weights"]["investment"], 0.30)
+        self.assertEqual(scorecard["weights"]["risk"], 0.20)
+        self.assertEqual(scorecard["weights"]["readiness"], 0.20)
+        self.assertEqual(scorecard["weights"]["evidence_quality"], 0.20)
+        self.assertEqual(scorecard["weights"]["monitoring_suitability"], 0.10)
+        self.assertGreaterEqual(scorecard["pre_cap_score"], 0)
+        self.assertLessEqual(scorecard["pre_cap_score"], 100)
+        self.assertGreaterEqual(scorecard["overall_score"], 0)
+        self.assertLessEqual(scorecard["overall_score"], 100)
+        self.assertTrue(scorecard["score_drivers"]["positive"])
+        self.assertTrue(scorecard["score_drivers"]["negative"])
+        self.assertEqual(scorecard["score_limits"], [])
+
     def test_final_review_scorecard_downgrades_blocked_candidate(self) -> None:
         from app.services.backtest_evidence_read_model import (
             build_final_review_investment_report,

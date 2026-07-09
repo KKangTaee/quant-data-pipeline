@@ -1849,6 +1849,39 @@ def _scorecard_category(category: str, score: int, evidence: str, effect: str) -
     }
 
 
+def _scorecard_dimension(
+    *,
+    key: str,
+    label: str,
+    score: int,
+    weight: float,
+    evidence: str,
+    interpretation: str,
+) -> dict[str, Any]:
+    if score >= 80:
+        tone = "positive"
+    elif score >= 60:
+        tone = "warning"
+    else:
+        tone = "danger"
+    return {
+        "key": key,
+        "label": label,
+        "score": _clamped_score(score),
+        "weight": weight,
+        "evidence": evidence,
+        "interpretation": interpretation,
+        "tone": tone,
+    }
+
+
+def _weighted_dimension_score(dimensions: list[dict[str, Any]]) -> int:
+    total = 0.0
+    for dimension in dimensions:
+        total += float(dimension.get("score") or 0.0) * float(dimension.get("weight") or 0.0)
+    return _clamped_score(total)
+
+
 def build_final_review_scorecard(
     *,
     investability_packet: dict[str, Any],
@@ -1872,12 +1905,97 @@ def build_final_review_scorecard(
     evidence_score = _clamped_score(packet_score * 10.0)
     review_penalty = min(18, warning_count * 2 + open_review_count + monitoring_followup_count)
     review_score = _clamped_score(100 - review_penalty)
+    weights = {
+        "investment": 0.30,
+        "risk": 0.20,
+        "readiness": 0.20,
+        "evidence_quality": 0.20,
+        "monitoring_suitability": 0.10,
+    }
+    investment_score = _clamped_score(evidence_score - min(12, review_required_count * 3 + open_review_count))
+    risk_score = _clamped_score(92 - min(32, blocker_count * 16 + warning_count * 3 + open_review_count))
+    readiness_score = _clamped_score(gate_score - min(30, blocker_count * 20 + review_required_count * 5))
+    evidence_quality_score = _clamped_score(evidence_score - min(35, warning_count * 6 + open_review_count * 3))
+    monitoring_score = _clamped_score((90 if select_ready else 55) - min(25, monitoring_followup_count * 4 + blocker_count * 20))
+    dimensions = [
+        _scorecard_dimension(
+            key="investment",
+            label="Investment Score",
+            score=investment_score,
+            weight=weights["investment"],
+            evidence=f"investability packet {packet_score:.1f} / 10, open review {open_review_count}",
+            interpretation="성과 / benchmark / 전략 매력도 기반의 최종 선택 매력도",
+        ),
+        _scorecard_dimension(
+            key="risk",
+            label="Risk Score",
+            score=risk_score,
+            weight=weights["risk"],
+            evidence=f"blocker {blocker_count}, warning {warning_count}, open review {open_review_count}",
+            interpretation="drawdown / robustness / construction 부담을 반영한 위험 부담",
+        ),
+        _scorecard_dimension(
+            key="readiness",
+            label="Readiness Score",
+            score=readiness_score,
+            weight=weights["readiness"],
+            evidence=gate_outcome or "-",
+            interpretation="Final Review 판단 저장과 Monitoring handoff 준비도",
+        ),
+        _scorecard_dimension(
+            key="evidence_quality",
+            label="Evidence Quality Score",
+            score=evidence_quality_score,
+            weight=weights["evidence_quality"],
+            evidence=f"warning {warning_count}, open review {open_review_count}",
+            interpretation="데이터 / 검증 / Level2 REVIEW 근거 품질",
+        ),
+        _scorecard_dimension(
+            key="monitoring_suitability",
+            label="Monitoring Suitability Score",
+            score=monitoring_score,
+            weight=weights["monitoring_suitability"],
+            evidence=f"monitoring follow-up {monitoring_followup_count}",
+            interpretation="Monitoring에 올렸을 때 추적 조건을 관리할 수 있는지",
+        ),
+    ]
+    pre_cap_score = _weighted_dimension_score(dimensions)
     if blocker_count:
-        overall = min(55, _clamped_score((gate_score * 0.45) + (evidence_score * 0.35) + (review_score * 0.20)))
+        overall = min(55, pre_cap_score)
     elif select_ready:
-        overall = max(70, _clamped_score((gate_score * 0.45) + (evidence_score * 0.35) + (review_score * 0.20)))
+        overall = max(70, pre_cap_score)
     else:
-        overall = _clamped_score((gate_score * 0.45) + (evidence_score * 0.35) + (review_score * 0.20))
+        overall = pre_cap_score
+    strongest_dimension = max(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
+    weakest_dimension = min(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
+    positive_drivers = [
+        {
+            "label": strongest_dimension["label"],
+            "detail": strongest_dimension["interpretation"],
+            "score": strongest_dimension["score"],
+            "tone": strongest_dimension["tone"],
+        },
+        {
+            "label": "Selection Gate",
+            "detail": "selected-route gate 통과 상태" if select_ready else "selected-route gate 추가 확인 필요",
+            "score": gate_score,
+            "tone": "positive" if select_ready else "warning",
+        },
+    ]
+    negative_drivers = [
+        {
+            "label": weakest_dimension["label"],
+            "detail": weakest_dimension["interpretation"],
+            "score": weakest_dimension["score"],
+            "tone": weakest_dimension["tone"],
+        },
+        {
+            "label": "Level2 REVIEW burden",
+            "detail": f"warning {warning_count}, open review {open_review_count}, monitoring follow-up {monitoring_followup_count}",
+            "score": review_score,
+            "tone": "warning" if review_penalty else "neutral",
+        },
+    ]
     if blocker_count:
         classification = "REVIEW_REQUIRED"
         classification_label = "재검토 필요"
@@ -1915,13 +2033,21 @@ def build_final_review_scorecard(
     return {
         "schema_version": FINAL_REVIEW_SCORECARD_SCHEMA_VERSION,
         "overall_score": overall,
+        "pre_cap_score": pre_cap_score,
         "score_band": score_band,
         "classification": classification,
         "classification_label": classification_label,
         "decision_route": decision_route,
         "decision_label": _decision_route_label(decision_route),
         "monitoring_candidate": decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO and select_ready and blocker_count == 0,
-        "basis": "selection gate, investability packet score, Level2 REVIEW disposition",
+        "basis": "weighted investment, risk, readiness, evidence quality, monitoring suitability dimensions",
+        "weights": weights,
+        "dimensions": dimensions,
+        "score_drivers": {
+            "positive": positive_drivers,
+            "negative": negative_drivers,
+        },
+        "score_limits": [],
         "inputs": {
             "gate_outcome": gate_outcome,
             "packet_score_0_10": packet_score,

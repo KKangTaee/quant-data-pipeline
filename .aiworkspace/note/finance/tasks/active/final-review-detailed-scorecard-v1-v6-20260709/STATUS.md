@@ -7,4 +7,4 @@
 
 ## Current Step
 
-- Preparing V1 plan and RED tests.
+- V1 detailed scorecard read model QA passed. Preparing V1 commit.
