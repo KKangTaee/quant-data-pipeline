@@ -43,3 +43,15 @@ Command log for Final Review detailed scorecard V1-V6.
   - Result: passed.
 - `git diff --check`
   - Result: passed.
+
+## V4
+
+- `.venv/bin/python -m unittest tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_scorecard_applies_caps_before_route_decision`
+  - RED result: failed with empty `score_limits` before implementation.
+  - GREEN result: passed after adding hard blocker, selected-route not-ready, gate review-required, and excessive open-review caps.
+- `.venv/bin/python -m unittest tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_detailed_scorecard_exposes_weighted_dimensions tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_scorecard_maps_gate_to_recommendation_taxonomy tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_scorecard_downgrades_blocked_candidate`
+  - Result: passed.
+- `.venv/bin/python -m py_compile app/services/backtest_evidence_read_model.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.

@@ -9,4 +9,5 @@
 
 - V1 detailed scorecard read model committed.
 - V2 React score breakdown UI committed.
-- V3 Level2 REVIEW score impact service and React display QA passed. Preparing V3 commit.
+- V3 Level2 REVIEW score impact service and React display committed.
+- V4 score cap and route decision QA passed. Preparing V4 commit.

@@ -1882,6 +1882,16 @@ def _weighted_dimension_score(dimensions: list[dict[str, Any]]) -> int:
     return _clamped_score(total)
 
 
+def _score_limit(*, code: str, label: str, cap: int, detail: str, tone: str = "warning") -> dict[str, Any]:
+    return {
+        "code": code,
+        "label": label,
+        "cap": _clamped_score(cap),
+        "detail": detail,
+        "tone": tone,
+    }
+
+
 def _review_impact_for_item(item: dict[str, Any]) -> dict[str, Any]:
     role = _safe_text(item.get("role"), "final_decision_input")
     mapping = {
@@ -1996,12 +2006,51 @@ def build_final_review_scorecard(
         ),
     ]
     pre_cap_score = _weighted_dimension_score(dimensions)
+    score_limits: list[dict[str, Any]] = []
     if blocker_count:
-        overall = min(55, pre_cap_score)
+        score_limits.append(
+            _score_limit(
+                code="hard_blocker",
+                label="Hard blocker cap",
+                cap=55,
+                detail="Final Review 저장 전 보강 또는 gate blocker가 있어 높은 원점수라도 재검토권으로 제한합니다.",
+                tone="danger",
+            )
+        )
+    if not select_ready:
+        score_limits.append(
+            _score_limit(
+                code="selected_route_not_ready",
+                label="Selected-route not ready cap",
+                cap=69,
+                detail="selected-route gate가 아직 선택 가능 상태가 아니므로 추천권 점수로 올리지 않습니다.",
+            )
+        )
+    if review_required_count:
+        score_limits.append(
+            _score_limit(
+                code="gate_review_required",
+                label="Gate review-required cap",
+                cap=74,
+                detail="selection gate가 추가 검토 항목을 남겼으므로 실전 투입 판단은 watch 조건을 동반합니다.",
+            )
+        )
+    if open_review_count >= 8:
+        score_limits.append(
+            _score_limit(
+                code="excessive_open_review",
+                label="Open review burden cap",
+                cap=79,
+                detail="Level2 REVIEW open 항목이 과도해 강한 추천 점수로 표시하지 않습니다.",
+            )
+        )
+    if score_limits:
+        overall = min(pre_cap_score, min(int(limit.get("cap") or 100) for limit in score_limits))
     elif select_ready:
         overall = max(70, pre_cap_score)
     else:
         overall = pre_cap_score
+    cap_applied = bool(score_limits and overall < pre_cap_score)
     strongest_dimension = max(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
     weakest_dimension = min(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
     positive_drivers = [
@@ -2084,7 +2133,8 @@ def build_final_review_scorecard(
             "positive": positive_drivers,
             "negative": negative_drivers,
         },
-        "score_limits": [],
+        "score_limits": score_limits,
+        "cap_applied": cap_applied,
         "inputs": {
             "gate_outcome": gate_outcome,
             "packet_score_0_10": packet_score,

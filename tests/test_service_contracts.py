@@ -27609,6 +27609,80 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(scorecard["score_drivers"]["negative"])
         self.assertEqual(scorecard["score_limits"], [])
 
+    def test_final_review_scorecard_applies_caps_before_route_decision(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_scorecard
+
+        empty_disposition = {
+            "summary": {"blocker": 0, "warning": 0, "open_review": 0, "monitoring_followup": 0},
+            "groups": {},
+        }
+
+        hard_blocked = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.7,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [{"title": "Missing selected-route validation"}],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertLessEqual(hard_blocked["overall_score"], 55)
+        self.assertEqual(hard_blocked["score_limits"][0]["code"], "hard_blocker")
+        self.assertTrue(hard_blocked["cap_applied"])
+        self.assertEqual(hard_blocked["decision_route"], "RE_REVIEW_REQUIRED")
+        self.assertFalse(hard_blocked["monitoring_candidate"])
+
+        route_not_ready = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.4,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "review_required",
+                    "select_allowed": False,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertLessEqual(route_not_ready["overall_score"], 69)
+        self.assertEqual(route_not_ready["score_limits"][0]["code"], "selected_route_not_ready")
+        self.assertEqual(route_not_ready["decision_route"], "HOLD_FOR_MORE_PAPER_TRACKING")
+
+        gate_review = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.2,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                    "review_required": [{"title": "Tax account scope"}],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertLessEqual(gate_review["overall_score"], 74)
+        self.assertIn("gate_review_required", {limit["code"] for limit in gate_review["score_limits"]})
+        self.assertTrue(gate_review["cap_applied"])
+
+        many_open_reviews = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.5,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition={
+                "summary": {"blocker": 0, "warning": 0, "open_review": 10, "monitoring_followup": 0},
+                "groups": {},
+            },
+        )
+        self.assertLessEqual(many_open_reviews["overall_score"], 79)
+        self.assertIn("excessive_open_review", {limit["code"] for limit in many_open_reviews["score_limits"]})
+        self.assertEqual(many_open_reviews["classification"], "MONITORING_CANDIDATE_WITH_WATCH")
+
     def test_final_review_scorecard_downgrades_blocked_candidate(self) -> None:
         from app.services.backtest_evidence_read_model import (
             build_final_review_investment_report,
