@@ -12315,6 +12315,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("세부 점수", component_source)
         self.assertIn("점수 영향", component_source)
         self.assertIn("점수 제한", component_source)
+        self.assertIn("Level2 REVIEW 점수 영향", component_source)
         self.assertIn("/ 100", component_source)
         self.assertIn("저장 / Monitoring handoff", component_source)
         self.assertIn("Final Review 판단 저장", component_source)
@@ -12341,6 +12342,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("세부 점수", build_source)
         self.assertIn("점수 영향", build_source)
         self.assertIn("점수 제한", build_source)
+        self.assertIn("Level2 REVIEW 점수 영향", build_source)
         self.assertIn("/ 100", build_source)
         self.assertIn("저장 / Monitoring handoff", build_source)
         self.assertIn("Final Review 판단 저장", build_source)
@@ -27426,6 +27428,92 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(disposition["groups"]["monitoring_followup"][0]["title"], "Monitoring baseline")
         self.assertEqual(report["level2_review_disposition"]["summary"]["total"], 5)
         self.assertFalse(report["level2_review_disposition"]["boundary"]["validation_rerun"])
+
+    def test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-review-impact"
+        validation["practical_validation_workspace"] = {
+            "criteria_detail_groups": [
+                {
+                    "display_label": "Review impact",
+                    "criteria_cards": [
+                        {
+                            "display_label": "Provider freshness",
+                            "status": "REVIEW",
+                            "review_role": "pv_data_caution",
+                            "review_role_label": "데이터 주의",
+                            "evidence": "provider snapshot is stale",
+                            "resolution_action": "Refresh provider snapshot if material.",
+                        },
+                        {
+                            "display_label": "Stress window coverage",
+                            "status": "REVIEW",
+                            "review_role": "pv_practical_caution",
+                            "review_role_label": "2단계 실용성 주의",
+                            "evidence": "stress windows are partial",
+                            "resolution_action": "Track stress windows.",
+                        },
+                        {
+                            "display_label": "Tax account scope",
+                            "status": "REVIEW",
+                            "review_role": "final_decision_input",
+                            "review_role_label": "최종 판단 참고",
+                            "evidence": "tax scope not modeled",
+                            "resolution_action": "Mention account scope.",
+                        },
+                        {
+                            "display_label": "Monitoring baseline",
+                            "status": "REVIEW",
+                            "review_role": "monitoring_followup",
+                            "review_role_label": "Monitoring 추적",
+                            "evidence": "baseline trigger should be tracked",
+                            "resolution_action": "Add tracking trigger.",
+                        },
+                        {
+                            "display_label": "Selected-route preflight",
+                            "status": "REVIEW",
+                            "review_role": "final_readiness_blocker",
+                            "review_role_label": "저장 전 보강",
+                            "evidence": "selected route preflight needs confirmation",
+                            "resolution_action": "Re-run selected-route preflight.",
+                        },
+                    ],
+                }
+            ]
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Review impact candidate",
+        }
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+            investability_packet=packet,
+        )
+
+        impacts = report["scorecard"]["review_impacts"]
+        impact_map = {impact["role"]: impact["target_dimension"] for impact in impacts}
+        self.assertEqual(impact_map["pv_data_caution"], "evidence_quality")
+        self.assertEqual(impact_map["pv_practical_caution"], "risk")
+        self.assertEqual(impact_map["final_decision_input"], "investment")
+        self.assertEqual(impact_map["monitoring_followup"], "monitoring_suitability")
+        self.assertEqual(impact_map["final_readiness_blocker"], "readiness")
+        self.assertEqual(report["scorecard"]["inputs"]["review_impact_count"], 5)
 
     def test_final_review_scorecard_maps_gate_to_recommendation_taxonomy(self) -> None:
         from app.services.backtest_evidence_read_model import (

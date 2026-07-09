@@ -1882,6 +1882,30 @@ def _weighted_dimension_score(dimensions: list[dict[str, Any]]) -> int:
     return _clamped_score(total)
 
 
+def _review_impact_for_item(item: dict[str, Any]) -> dict[str, Any]:
+    role = _safe_text(item.get("role"), "final_decision_input")
+    mapping = {
+        "pv_data_caution": ("evidence_quality", 6, "데이터 주의는 근거 품질을 낮춥니다."),
+        "pv_practical_caution": ("risk", 4, "실용성 주의는 위험 부담을 높입니다."),
+        "final_decision_input": ("investment", 3, "최종 판단 참고는 투자 매력도 해석 부담입니다."),
+        "monitoring_followup": ("monitoring_suitability", 4, "Monitoring 추적 항목은 운영 적합성 부담입니다."),
+        "final_readiness_blocker": ("readiness", 20, "저장 전 보강 항목은 readiness blocker입니다."),
+    }
+    target_dimension, deduction, rationale = mapping.get(role, ("investment", 2, "일반 REVIEW는 최종 판단 부담입니다."))
+    return {
+        "title": _safe_text(item.get("title"), "Review item"),
+        "role": role,
+        "role_label": _safe_text(item.get("role_label"), "최종 판단 참고"),
+        "disposition": _safe_text(item.get("disposition"), "open_review"),
+        "target_dimension": target_dimension,
+        "score_effect": -deduction,
+        "detail": _safe_text(item.get("detail"), "-"),
+        "action": _safe_text(item.get("action"), "-"),
+        "rationale": rationale,
+        "tone": _safe_text(item.get("tone"), "warning"),
+    }
+
+
 def build_final_review_scorecard(
     *,
     investability_packet: dict[str, Any],
@@ -1900,6 +1924,18 @@ def build_final_review_scorecard(
     warning_count = int(disposition_summary.get("warning", 0) or 0)
     open_review_count = int(disposition_summary.get("open_review", 0) or 0)
     monitoring_followup_count = int(disposition_summary.get("monitoring_followup", 0) or 0)
+    review_impacts: list[dict[str, Any]] = []
+    for items in dict(disposition.get("groups") or {}).values():
+        for item in list(items or []):
+            if isinstance(item, dict):
+                review_impacts.append(_review_impact_for_item(item))
+    impact_deductions = {
+        "investment": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "investment"),
+        "risk": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "risk"),
+        "readiness": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "readiness"),
+        "evidence_quality": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "evidence_quality"),
+        "monitoring_suitability": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "monitoring_suitability"),
+    }
     select_ready = bool(gate_policy.get("select_allowed")) or gate_outcome == "select_ready"
     gate_score = 100 if select_ready else 35 if gate_outcome == "blocked" else 65
     evidence_score = _clamped_score(packet_score * 10.0)
@@ -1912,11 +1948,11 @@ def build_final_review_scorecard(
         "evidence_quality": 0.20,
         "monitoring_suitability": 0.10,
     }
-    investment_score = _clamped_score(evidence_score - min(12, review_required_count * 3 + open_review_count))
-    risk_score = _clamped_score(92 - min(32, blocker_count * 16 + warning_count * 3 + open_review_count))
-    readiness_score = _clamped_score(gate_score - min(30, blocker_count * 20 + review_required_count * 5))
-    evidence_quality_score = _clamped_score(evidence_score - min(35, warning_count * 6 + open_review_count * 3))
-    monitoring_score = _clamped_score((90 if select_ready else 55) - min(25, monitoring_followup_count * 4 + blocker_count * 20))
+    investment_score = _clamped_score(evidence_score - min(20, review_required_count * 3 + impact_deductions["investment"]))
+    risk_score = _clamped_score(92 - min(36, blocker_count * 16 + impact_deductions["risk"]))
+    readiness_score = _clamped_score(gate_score - min(35, blocker_count * 20 + review_required_count * 5 + impact_deductions["readiness"]))
+    evidence_quality_score = _clamped_score(evidence_score - min(40, warning_count * 3 + impact_deductions["evidence_quality"]))
+    monitoring_score = _clamped_score((90 if select_ready else 55) - min(30, monitoring_followup_count * 2 + blocker_count * 20 + impact_deductions["monitoring_suitability"]))
     dimensions = [
         _scorecard_dimension(
             key="investment",
@@ -2043,6 +2079,7 @@ def build_final_review_scorecard(
         "basis": "weighted investment, risk, readiness, evidence quality, monitoring suitability dimensions",
         "weights": weights,
         "dimensions": dimensions,
+        "review_impacts": review_impacts,
         "score_drivers": {
             "positive": positive_drivers,
             "negative": negative_drivers,
@@ -2056,6 +2093,7 @@ def build_final_review_scorecard(
             "warning_count": warning_count,
             "open_review_count": open_review_count,
             "monitoring_followup_count": monitoring_followup_count,
+            "review_impact_count": len(review_impacts),
         },
         "categories": [
             _scorecard_category(

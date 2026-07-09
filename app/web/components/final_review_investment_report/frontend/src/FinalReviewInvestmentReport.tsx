@@ -137,6 +137,22 @@ type ScorecardLimit = {
   tone?: Tone
 }
 
+type ReviewImpact = {
+  title?: string
+  role?: string
+  roleLabel?: string
+  role_label?: string
+  disposition?: string
+  targetDimension?: string
+  target_dimension?: string
+  scoreEffect?: number
+  score_effect?: number
+  detail?: string
+  action?: string
+  rationale?: string
+  tone?: Tone
+}
+
 type Scorecard = {
   overallScore?: number
   overall_score?: number
@@ -164,6 +180,8 @@ type Scorecard = {
   }
   scoreLimits?: ScorecardLimit[]
   score_limits?: ScorecardLimit[]
+  reviewImpacts?: ReviewImpact[]
+  review_impacts?: ReviewImpact[]
 }
 
 type SaveHandoffSummary = {
@@ -424,6 +442,39 @@ function ScoreLimitList({ limits }: { limits: ScorecardLimit[] }) {
   )
 }
 
+function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
+  return (
+    <article className="fr-invest-report__review-impacts">
+      <h5>Level2 REVIEW 점수 영향</h5>
+      {impacts.length > 0 ? (
+        impacts.map((impact, index) => {
+          const scoreEffect = field(impact.scoreEffect, impact.score_effect)
+          return (
+            <section className={`fr-invest-report__review-impact fr-invest-report__review-impact--${toneClass(impact.tone)}`} key={`${impact.role ?? "review"}-${impact.title ?? index}`}>
+              <div>
+                <strong>{compact(impact.title)}</strong>
+                <span>{formattedScore(scoreEffect)}</span>
+              </div>
+              <small>{compact(field(impact.roleLabel, impact.role_label))} · {compact(field(impact.targetDimension, impact.target_dimension))}</small>
+              <p>{compact(impact.rationale ?? impact.detail)}</p>
+              {impact.action ? <em>{compact(impact.action)}</em> : null}
+            </section>
+          )
+        })
+      ) : (
+        <section className="fr-invest-report__review-impact fr-invest-report__review-impact--positive">
+          <div>
+            <strong>점수 영향 항목 없음</strong>
+            <span>-</span>
+          </div>
+          <small>Level2 REVIEW</small>
+          <p>Final Review 점수에 반영할 Level2 REVIEW 부담이 없습니다.</p>
+        </section>
+      )}
+    </article>
+  )
+}
+
 export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -460,6 +511,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scorecardPreCap = field(scorecard.preCapScore, scorecard.pre_cap_score)
   const scorecardDrivers = field(scorecard.scoreDrivers, scorecard.score_drivers) ?? {}
   const scorecardLimits = field(scorecard.scoreLimits, scorecard.score_limits) ?? []
+  const scorecardReviewImpacts = field(scorecard.reviewImpacts, scorecard.review_impacts) ?? []
   const judgmentRecord = saveHandoff.judgmentRecord ?? saveHandoff.judgment_record ?? {}
   const monitoringHandoff = saveHandoff.monitoringHandoff ?? saveHandoff.monitoring_handoff ?? {}
   const saveRecordType = field(saveHandoff.recordType, saveHandoff.record_type)
@@ -558,6 +610,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           <ScoreDriverList title="감점 요인" drivers={scorecardDrivers.negative ?? []} />
           <ScoreLimitList limits={scorecardLimits} />
         </div>
+        <ReviewImpactList impacts={scorecardReviewImpacts} />
         <ScorecardCategoryList categories={scorecard.categories ?? []} />
       </section>
 
