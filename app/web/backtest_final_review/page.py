@@ -155,6 +155,8 @@ def _build_final_review_decision_desk_model(
     first_candidate = str(candidate_summary.get("first_review_candidate") or "-")
     first_reason = str(candidate_summary.get("first_review_reason") or "-")
     first_action = str(candidate_summary.get("first_review_action") or "-")
+    has_candidate = first_candidate not in {"", "-"}
+    monitoring_badge = "연결 가능" if route_tone == "positive" else "확인 필요"
     return {
         "eyebrow": "Final Review Decision Desk",
         "title": "후보 현황과 다음 판단",
@@ -165,8 +167,19 @@ def _build_final_review_decision_desk_model(
         ),
         "route_label": "오늘 먼저 볼 후보",
         "route_value": route_value,
-        "route_detail": f"{route_detail} 먼저 볼 후보: {first_candidate}. 이유: {first_reason}. 다음 행동: {first_action}.",
+        "route_detail": route_detail,
         "route_tone": route_tone,
+        "featured_candidate": {
+            "candidate": first_candidate if has_candidate else "검토 후보 없음",
+            "reason": first_reason if first_reason != "-" else "먼저 볼 후보가 없습니다.",
+            "recommendation": route_detail,
+            "next_action": first_action if first_action != "-" else "Practical Validation에서 Gate 통과 후보를 먼저 만듭니다.",
+            "badges": [
+                {"label": "Gate", "value": "통과" if has_candidate else "대상 없음"},
+                {"label": "선택 가능", "value": int(candidate_summary.get("select_ready", 0) or 0)},
+                {"label": "Monitoring", "value": monitoring_badge},
+            ],
+        },
         "kpis": [
             {
                 "label": "올라온 후보",
@@ -1463,6 +1476,7 @@ def render_final_review_workspace() -> None:
         route_detail=str(decision_desk["route_detail"]),
         route_tone=str(decision_desk["route_tone"]),
         kpis=list(decision_desk["kpis"]),
+        featured_candidate=dict(decision_desk["featured_candidate"]),
     )
     _render_market_sentiment_context_overlay()
     if hidden_validation_count > 0:

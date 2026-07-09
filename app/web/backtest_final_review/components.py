@@ -90,7 +90,7 @@ def render_fr_styles() -> None:
           }
           .fr-kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 0.58rem;
           }
           .fr-kpi {
@@ -156,6 +156,59 @@ def render_fr_styles() -> None:
             line-height: 1.38;
             color: var(--fr-muted);
             overflow-wrap: anywhere;
+          }
+          .fr-featured-body {
+            display: grid;
+            gap: 0.54rem;
+          }
+          .fr-featured-field {
+            display: grid;
+            gap: 0.16rem;
+          }
+          .fr-featured-label {
+            font-size: 0.7rem;
+            line-height: 1.18;
+            font-weight: 760;
+            color: var(--fr-subtle);
+            overflow-wrap: anywhere;
+          }
+          .fr-featured-value {
+            font-size: 0.84rem;
+            line-height: 1.35;
+            font-weight: 760;
+            color: var(--fr-ink);
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .fr-featured-value-muted {
+            color: var(--fr-muted);
+            font-weight: 680;
+          }
+          .fr-featured-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.36rem;
+            margin-top: 0.12rem;
+          }
+          .fr-featured-badge {
+            display: inline-flex;
+            max-width: 100%;
+            gap: 0.26rem;
+            align-items: center;
+            padding: 0.2rem 0.46rem;
+            border: 1px solid var(--fr-line);
+            border-radius: 999px;
+            background: #ffffff;
+            color: var(--fr-ink);
+            font-size: 0.72rem;
+            line-height: 1.2;
+            font-weight: 740;
+            overflow-wrap: anywhere;
+          }
+          .fr-featured-badge-label {
+            color: var(--fr-muted);
+            font-weight: 760;
+            white-space: nowrap;
           }
           .fr-flow {
             display: grid;
@@ -337,6 +390,14 @@ def render_fr_styles() -> None:
             .fr-action-route {
               min-height: auto;
             }
+            .fr-kpi-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+          @media (min-width: 761px) and (max-width: 1100px) {
+            .fr-kpi-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
           }
         </style>
         """,
@@ -354,6 +415,7 @@ def render_fr_command_center(
     route_detail: str,
     route_tone: str,
     kpis: list[dict[str, Any]],
+    featured_candidate: dict[str, Any] | None = None,
 ) -> None:
     render_fr_styles()
     kpi_html: list[str] = []
@@ -369,6 +431,34 @@ def render_fr_command_center(
             f"{detail_html}"
             "</div>"
         )
+    featured = dict(featured_candidate or {})
+    route_body_html = f'<div class="fr-route-detail">{escape(route_detail)}</div>'
+    if featured:
+        fields = [
+            ("후보", str(featured.get("candidate") or "-"), ""),
+            ("왜 먼저 보나", str(featured.get("reason") or "-"), " fr-featured-value-muted"),
+            ("추천 근거", str(featured.get("recommendation") or route_detail or "-"), " fr-featured-value-muted"),
+            ("다음 행동", str(featured.get("next_action") or "-"), " fr-featured-value-muted"),
+        ]
+        field_html = "".join(
+            '<div class="fr-featured-field">'
+            f'<div class="fr-featured-label">{escape(label)}</div>'
+            f'<div class="fr-featured-value{value_class}">{escape(value)}</div>'
+            "</div>"
+            for label, value, value_class in fields
+        )
+        badge_html: list[str] = []
+        for badge in list(featured.get("badges") or []):
+            badge_label = escape(str(dict(badge).get("label") or ""))
+            badge_value = escape(_display_value(dict(badge).get("value")))
+            badge_html.append(
+                '<span class="fr-featured-badge">'
+                f'<span class="fr-featured-badge-label">{badge_label}</span>'
+                f"<span>{badge_value}</span>"
+                "</span>"
+            )
+        badges = f'<div class="fr-featured-badges">{"".join(badge_html)}</div>' if badge_html else ""
+        route_body_html = f'<div class="fr-featured-body">{badges}{field_html}</div>'
     tone = _safe_tone(route_tone)
     st.markdown(
         '<div class="fr-shell">'
@@ -383,7 +473,7 @@ def render_fr_command_center(
         f'<div class="fr-route-card fr-tone-{tone}">'
         f'<div class="fr-route-label">{escape(route_label)}</div>'
         f'<div class="fr-route-value">{escape(route_value)}</div>'
-        f'<div class="fr-route-detail">{escape(route_detail)}</div>'
+        f"{route_body_html}"
         "</div>"
         "</div>"
         "</div></div>",

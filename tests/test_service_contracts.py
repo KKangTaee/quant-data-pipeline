@@ -12418,8 +12418,18 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertEqual(model["title"], "후보 현황과 다음 판단")
         self.assertIn("Gate 통과 후보 3개", model["detail"])
-        self.assertIn("Balanced Mix", model["route_detail"])
         self.assertEqual(model["route_value"], "모니터링 후보 있음")
+        self.assertNotIn("먼저 볼 후보:", model["route_detail"])
+        self.assertNotIn("이유:", model["route_detail"])
+        self.assertNotIn("다음 행동:", model["route_detail"])
+        self.assertEqual(model["featured_candidate"]["candidate"], "Balanced Mix")
+        self.assertEqual(model["featured_candidate"]["reason"], "open review 2개")
+        self.assertEqual(model["featured_candidate"]["recommendation"], "저장 가능한 후보를 확인합니다.")
+        self.assertEqual(model["featured_candidate"]["next_action"], "Decision Cockpit 확인")
+        self.assertEqual(
+            [item["label"] for item in model["featured_candidate"]["badges"]],
+            ["Gate", "선택 가능", "Monitoring"],
+        )
         self.assertEqual(
             [item["label"] for item in model["kpis"]],
             ["올라온 후보", "선택 가능", "보류 / 재검토", "숨김", "저장된 판단", "Monitoring 연결"],
@@ -12434,6 +12444,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
         workspace_body = workspace_body.split("if hidden_validation_count > 0:", 1)[0]
         self.assertNotIn("render_fr_flow(", workspace_body)
+
+        component_source = Path("app/web/backtest_final_review/components.py").read_text(encoding="utf-8")
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", component_source)
+        self.assertIn(".fr-featured-field", component_source)
+        self.assertIn(".fr-featured-badges", component_source)
+        self.assertNotIn("grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));", component_source)
 
     def test_final_review_sentiment_display_is_compact_context_only(self) -> None:
         from app.web.backtest_final_review.page import _build_final_review_sentiment_display_model
