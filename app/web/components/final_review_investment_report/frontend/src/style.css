@@ -232,6 +232,129 @@
   font-weight: 700;
 }
 
+.fr-invest-report__review-disposition {
+  margin-top: 14px;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.fr-invest-report__review-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.fr-invest-report__review-head span {
+  color: #526070;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fr-invest-report__review-head h5 {
+  margin-top: 4px;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.fr-invest-report__review-counts {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 4px 8px;
+  align-items: baseline;
+  justify-content: end;
+}
+
+.fr-invest-report__review-counts b {
+  color: #111827;
+  font-size: 18px;
+}
+
+.fr-invest-report__review-counts small {
+  color: #526070;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.fr-invest-report__review-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fr-invest-report__review-group {
+  min-width: 0;
+}
+
+.fr-invest-report__review-group h5 {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.fr-invest-report__review-group > div {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.fr-invest-report__review-item {
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.fr-invest-report__review-item strong,
+.fr-invest-report__review-item span,
+.fr-invest-report__review-item p,
+.fr-invest-report__review-item small {
+  display: block;
+}
+
+.fr-invest-report__review-item strong {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.fr-invest-report__review-item span {
+  margin-top: 4px;
+  color: #526070;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.fr-invest-report__review-item p,
+.fr-invest-report__review-item small {
+  margin-top: 6px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fr-invest-report__review-item--danger {
+  border-left: 4px solid #dc2626;
+}
+
+.fr-invest-report__review-item--warning {
+  border-left: 4px solid #c98515;
+}
+
+.fr-invest-report__review-item--positive {
+  border-left: 4px solid #1f9d6a;
+}
+
+.fr-invest-report__review-item--neutral {
+  border-left: 4px solid #64748b;
+}
+
 .fr-invest-report__monitoring {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -289,8 +412,14 @@
   .fr-invest-report__summary,
   .fr-invest-report__evidence,
   .fr-invest-report__mini-grid,
+  .fr-invest-report__review-head,
+  .fr-invest-report__review-grid,
   .fr-invest-report__monitoring {
     grid-template-columns: 1fr;
+  }
+
+  .fr-invest-report__review-counts {
+    justify-content: start;
   }
 
   .fr-invest-report__score {

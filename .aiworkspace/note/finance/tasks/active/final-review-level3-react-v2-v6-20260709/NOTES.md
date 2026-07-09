@@ -17,3 +17,11 @@
 - The investment report does not change selected-route gate logic. It reads the existing investability packet and Decision Cockpit state.
 - React renders only the report payload. It has no `Streamlit.setComponentValue`, no fetch, and no storage write.
 - Score band is still provisional. If selection gate is ready but packet ready-check score is below 6, V2 labels it `선정 가능 / 보강 추적` rather than `취약` to avoid contradicting the gate.
+
+## V3 Notes
+
+- Level2 REVIEW handling is classification only. Final Review does not re-run Practical Validation or solve the underlying issue.
+- `final_readiness_blocker` and non-review blocking statuses map to `blocker`.
+- `pv_data_caution` and `pv_practical_caution` map to `warning`.
+- `final_decision_input` maps to `open_review`.
+- `monitoring_followup` maps to `monitoring_followup`.

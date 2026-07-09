@@ -12311,6 +12311,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("강점", component_source)
         self.assertIn("약점", component_source)
         self.assertIn("Monitoring 조건", component_source)
+        self.assertIn("Level2 REVIEW 처리 결과", component_source)
+        self.assertIn("Open Review", component_source)
+        self.assertIn("Monitoring Follow-up", component_source)
         self.assertIn("최종 판단 점수", component_source)
         self.assertNotIn("Streamlit.setComponentValue", component_source)
         self.assertNotIn("fetch(", component_source)
@@ -12324,8 +12327,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("강점", build_source)
         self.assertIn("약점", build_source)
         self.assertIn("Monitoring 조건", build_source)
+        self.assertIn("Level2 REVIEW 처리 결과", build_source)
+        self.assertIn("Open Review", build_source)
+        self.assertIn("Monitoring Follow-up", build_source)
         self.assertIn("build_final_review_investment_report", page_source)
         self.assertIn("render_final_review_investment_report", page_source)
+        self.assertIn("Level2 REVIEW", page_source)
 
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
@@ -27293,6 +27300,109 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("Run stress diagnostics before selection.", report["weaknesses"][0]["action"])
         self.assertIn("critical blocker", report["summary"]["next_action"])
         self.assertFalse(report["boundaries"]["order_instruction"])
+
+    def test_final_review_level2_review_disposition_splits_stage_roles(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_final_review_level2_review_disposition,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["practical_validation_workspace"] = {
+            "criteria_detail_groups": [
+                {
+                    "display_label": "Data Quality",
+                    "criteria_cards": [
+                        {
+                            "display_label": "Provider freshness",
+                            "status": "REVIEW",
+                            "review_role": "pv_data_caution",
+                            "review_role_label": "데이터 주의",
+                            "stage_decision_surface": "Practical Validation",
+                            "evidence": "provider snapshot is stale",
+                            "resolution_action": "Refresh provider snapshot if this becomes material.",
+                        },
+                        {
+                            "display_label": "Stress window coverage",
+                            "status": "REVIEW",
+                            "review_role": "pv_practical_caution",
+                            "review_role_label": "2단계 실용성 주의",
+                            "stage_decision_surface": "Practical Validation",
+                            "evidence": "stress windows are partial",
+                            "resolution_action": "Track stress windows during final judgement.",
+                        },
+                    ],
+                },
+                {
+                    "display_label": "Final / Monitoring",
+                    "criteria_cards": [
+                        {
+                            "display_label": "Tax account scope",
+                            "status": "REVIEW",
+                            "review_role": "final_decision_input",
+                            "review_role_label": "최종 판단 참고",
+                            "stage_decision_surface": "Final Review",
+                            "evidence": "tax scope not modeled",
+                            "resolution_action": "Mention account scope in the final reason.",
+                        },
+                        {
+                            "display_label": "Monitoring baseline",
+                            "status": "REVIEW",
+                            "review_role": "monitoring_followup",
+                            "review_role_label": "Monitoring 추적",
+                            "stage_decision_surface": "Operations > Portfolio Monitoring",
+                            "evidence": "baseline trigger should be tracked",
+                            "resolution_action": "Add tracking trigger to monitoring.",
+                        },
+                        {
+                            "display_label": "Selected-route preflight",
+                            "status": "REVIEW",
+                            "review_role": "final_readiness_blocker",
+                            "review_role_label": "저장 전 보강",
+                            "stage_decision_surface": "Practical Validation",
+                            "evidence": "selected route preflight needs confirmation",
+                            "resolution_action": "Re-run selected-route preflight.",
+                        },
+                    ],
+                },
+            ]
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Role split candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["review trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        disposition = build_final_review_level2_review_disposition(validation=validation)
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(disposition["schema_version"], "final_review_level2_review_disposition_v1")
+        self.assertEqual(disposition["summary"]["total"], 5)
+        self.assertEqual(disposition["summary"]["blocker"], 1)
+        self.assertEqual(disposition["summary"]["warning"], 2)
+        self.assertEqual(disposition["summary"]["open_review"], 1)
+        self.assertEqual(disposition["summary"]["monitoring_followup"], 1)
+        self.assertEqual(disposition["groups"]["blocker"][0]["title"], "Selected-route preflight")
+        self.assertEqual(disposition["groups"]["warning"][0]["role_label"], "데이터 주의")
+        self.assertEqual(disposition["groups"]["open_review"][0]["title"], "Tax account scope")
+        self.assertEqual(disposition["groups"]["monitoring_followup"][0]["title"], "Monitoring baseline")
+        self.assertEqual(report["level2_review_disposition"]["summary"]["total"], 5)
+        self.assertFalse(report["level2_review_disposition"]["boundary"]["validation_rerun"])
 
     def test_final_review_candidate_board_prioritizes_ready_candidates(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_candidate_board

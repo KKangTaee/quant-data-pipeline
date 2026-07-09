@@ -1001,7 +1001,7 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         ],
         min_width=220,
     )
-    report_tabs = st.tabs(["강점", "약점", "해석"])
+    report_tabs = st.tabs(["강점", "약점", "해석", "Level2 REVIEW"])
     with report_tabs[0]:
         rows = list(report.get("strengths") or [])
         if rows:
@@ -1022,6 +1022,18 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
             dict(report.get("benchmark_rationale") or {}),
         ]
         st.dataframe(pd.DataFrame(interpretation_rows), width="stretch", hide_index=True)
+    with report_tabs[3]:
+        disposition = dict(report.get("level2_review_disposition") or {})
+        groups = dict(disposition.get("groups") or {})
+        rows = [
+            {**dict(item or {}), "group": group_name}
+            for group_name, items in groups.items()
+            for item in list(items or [])
+        ]
+        if rows:
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        else:
+            st.info("Final Review에서 처리할 Level2 REVIEW 항목이 없습니다.")
 
 
 def _render_investment_report(report: dict[str, Any], *, key: str) -> None:

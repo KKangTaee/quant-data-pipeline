@@ -68,6 +68,42 @@ type ReportSection = {
   policy_blockers?: number
 }
 
+type ReviewDispositionItem = {
+  title?: string
+  status?: string
+  role?: string
+  roleLabel?: string
+  role_label?: string
+  stageSurface?: string
+  stage_surface?: string
+  disposition?: string
+  dispositionLabel?: string
+  disposition_label?: string
+  detail?: string
+  action?: string
+  tone?: Tone
+}
+
+type Level2ReviewDisposition = {
+  summary?: {
+    total?: number
+    blocker?: number
+    warning?: number
+    openReview?: number
+    open_review?: number
+    monitoringFollowup?: number
+    monitoring_followup?: number
+  }
+  groups?: {
+    blocker?: ReviewDispositionItem[]
+    warning?: ReviewDispositionItem[]
+    openReview?: ReviewDispositionItem[]
+    open_review?: ReviewDispositionItem[]
+    monitoringFollowup?: ReviewDispositionItem[]
+    monitoring_followup?: ReviewDispositionItem[]
+  }
+}
+
 export type InvestmentReport = {
   schemaVersion?: string
   schema_version?: string
@@ -92,6 +128,8 @@ export type InvestmentReport = {
   expected_range_and_risk?: ReportSection
   benchmarkRationale?: ReportSection
   benchmark_rationale?: ReportSection
+  level2ReviewDisposition?: Level2ReviewDisposition
+  level2_review_disposition?: Level2ReviewDisposition
   monitoringConditions?: MonitoringConditions
   monitoring_conditions?: MonitoringConditions
   boundaries?: Record<string, boolean>
@@ -166,6 +204,32 @@ function SmallSection({ section }: { section: ReportSection }) {
   )
 }
 
+function ReviewDispositionList({ title, items, emptyLabel }: { title: string; items: ReviewDispositionItem[]; emptyLabel: string }) {
+  return (
+    <article className="fr-invest-report__review-group">
+      <h5>{title}</h5>
+      <div>
+        {items.length > 0 ? (
+          items.map((item, index) => (
+            <section className={`fr-invest-report__review-item fr-invest-report__review-item--${toneClass(item.tone)}`} key={`${title}-${item.title ?? index}`}>
+              <strong>{compact(item.title)}</strong>
+              <span>{compact(item.roleLabel ?? item.role_label)} · {compact(item.dispositionLabel ?? item.disposition_label)}</span>
+              <p>{compact(item.detail)}</p>
+              <small>{compact(item.action)}</small>
+            </section>
+          ))
+        ) : (
+          <section className="fr-invest-report__review-item fr-invest-report__review-item--neutral">
+            <strong>{emptyLabel}</strong>
+            <span>-</span>
+            <p>해당 분류의 Level2 REVIEW 항목이 없습니다.</p>
+          </section>
+        )}
+      </div>
+    </article>
+  )
+}
+
 export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -182,8 +246,15 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scenario = report.scenarioFit ?? report.scenario_fit ?? {}
   const risk = report.expectedRangeAndRisk ?? report.expected_range_and_risk ?? {}
   const benchmark = report.benchmarkRationale ?? report.benchmark_rationale ?? {}
+  const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
+  const level2Summary = level2Review.summary ?? {}
+  const level2Groups = level2Review.groups ?? {}
   const handoffReady = field(monitoring.handoffReady, monitoring.handoff_ready) === true
   const monitoringCandidate = field(recommendation.monitoringCandidate, recommendation.monitoring_candidate) === true
+  const openReviewCount = field(level2Summary.openReview, level2Summary.open_review) ?? 0
+  const monitoringFollowupCount = field(level2Summary.monitoringFollowup, level2Summary.monitoring_followup) ?? 0
+  const openReviewItems = field(level2Groups.openReview, level2Groups.open_review) ?? []
+  const monitoringFollowupItems = field(level2Groups.monitoringFollowup, level2Groups.monitoring_followup) ?? []
 
   return (
     <section className={`fr-invest-report fr-invest-report--${tone}`}>
@@ -245,6 +316,27 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
         <SmallSection section={risk} />
         <SmallSection section={benchmark} />
       </div>
+
+      <section className="fr-invest-report__review-disposition">
+        <div className="fr-invest-report__review-head">
+          <div>
+            <span>Level2 REVIEW 처리 결과</span>
+            <h5>Final Review에서 다시 실행하지 않고 판단 근거로 소비합니다.</h5>
+          </div>
+          <div className="fr-invest-report__review-counts">
+            <b>{level2Summary.blocker ?? 0}</b><small>Blocker</small>
+            <b>{level2Summary.warning ?? 0}</b><small>Warning</small>
+            <b>{openReviewCount}</b><small>Open</small>
+            <b>{monitoringFollowupCount}</b><small>Monitoring</small>
+          </div>
+        </div>
+        <div className="fr-invest-report__review-grid">
+          <ReviewDispositionList title="Blocker" items={level2Groups.blocker ?? []} emptyLabel="저장 전 보강 없음" />
+          <ReviewDispositionList title="Warning" items={level2Groups.warning ?? []} emptyLabel="최종 판단 warning 없음" />
+          <ReviewDispositionList title="Open Review" items={openReviewItems} emptyLabel="Final Review open review 없음" />
+          <ReviewDispositionList title="Monitoring Follow-up" items={monitoringFollowupItems} emptyLabel="Monitoring 추적 항목 없음" />
+        </div>
+      </section>
 
       <footer className="fr-invest-report__monitoring">
         <div>

@@ -17,6 +17,7 @@ CANDIDATE_BOARD_SCHEMA_VERSION = "final_review_candidate_board_v1"
 DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
 SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
 INVESTMENT_REPORT_SCHEMA_VERSION = "final_review_investment_report_v1"
+LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION = "final_review_level2_review_disposition_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -1661,6 +1662,114 @@ def _report_weaknesses(cockpit: dict[str, Any]) -> list[dict[str, Any]]:
     return rows[:6]
 
 
+def _review_disposition_for_role(role: str, status: str) -> tuple[str, str, str]:
+    role_text = str(role or "").strip()
+    status_text = str(status or "").strip().upper()
+    if status_text in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"} or role_text == "final_readiness_blocker":
+        return "blocker", "Blocker", "danger"
+    if role_text in {"pv_data_caution", "pv_practical_caution"}:
+        return "warning", "Warning", "warning"
+    if role_text == "monitoring_followup":
+        return "monitoring_followup", "Monitoring follow-up", "neutral"
+    return "open_review", "Open review", "warning"
+
+
+def _level2_review_cards(validation: dict[str, Any]) -> list[dict[str, Any]]:
+    workspace = dict(validation.get("practical_validation_workspace") or {})
+    groups = list(workspace.get("criteria_detail_groups") or workspace.get("visible_criteria_detail_groups") or [])
+    cards = [
+        dict(card or {})
+        for group in groups
+        for card in list(dict(group or {}).get("criteria_cards") or [])
+        if isinstance(card, dict)
+    ]
+    if cards:
+        return cards
+    fallback_rows = list(validation.get("validation_module_display_rows") or validation.get("validation_modules") or [])
+    return [dict(row or {}) for row in fallback_rows if isinstance(row, dict)]
+
+
+def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) -> dict[str, Any]:
+    """Classify Practical Validation REVIEW handoff items for Final Review consumption."""
+
+    validation = dict(validation or {})
+    groups: dict[str, list[dict[str, Any]]] = {
+        "blocker": [],
+        "warning": [],
+        "open_review": [],
+        "monitoring_followup": [],
+    }
+    seen: set[tuple[str, str, str]] = set()
+    for raw_card in _level2_review_cards(validation):
+        card = dict(raw_card or {})
+        status = _safe_text(card.get("status") or card.get("Status") or card.get("Current"), "")
+        role = _safe_text(card.get("review_role"), "")
+        if status.upper() == "PASS" or status.upper() == "READY":
+            continue
+        if status.upper() != "REVIEW" and role not in {"final_readiness_blocker"}:
+            continue
+        disposition, disposition_label, tone = _review_disposition_for_role(role, status)
+        title = _safe_text(
+            card.get("display_label")
+            or card.get("label")
+            or card.get("Criteria")
+            or card.get("Module")
+            or card.get("module_id"),
+            "Review item",
+        )
+        key = (title, role, disposition)
+        if key in seen:
+            continue
+        seen.add(key)
+        groups[disposition].append(
+            {
+                "title": title,
+                "status": status.upper() or "REVIEW",
+                "role": role or "final_decision_input",
+                "role_label": _safe_text(card.get("review_role_label"), "최종 판단 참고"),
+                "stage_surface": _safe_text(card.get("stage_decision_surface"), "Final Review"),
+                "disposition": disposition,
+                "disposition_label": disposition_label,
+                "detail": _safe_text(
+                    card.get("evidence")
+                    or card.get("current_problem")
+                    or card.get("missing_summary")
+                    or card.get("Meaning")
+                    or card.get("Current"),
+                    "-",
+                ),
+                "action": _safe_text(
+                    card.get("resolution_action")
+                    or card.get("next_action_summary")
+                    or card.get("action_label")
+                    or card.get("Next Action")
+                    or card.get("Required Action"),
+                    "-",
+                ),
+                "tone": tone,
+            }
+        )
+    total = sum(len(items) for items in groups.values())
+    return {
+        "schema_version": LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION,
+        "summary": {
+            "total": total,
+            "blocker": len(groups["blocker"]),
+            "warning": len(groups["warning"]),
+            "open_review": len(groups["open_review"]),
+            "monitoring_followup": len(groups["monitoring_followup"]),
+        },
+        "groups": groups,
+        "boundary": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "storage_write": False,
+            "solves_level2_review": False,
+            "final_review_consumes_evidence": True,
+        },
+    }
+
+
 def build_final_review_investment_report(
     *,
     source: dict[str, Any],
@@ -1691,6 +1800,7 @@ def build_final_review_investment_report(
     monitoring = dict(cockpit.get("monitoring_handoff") or {})
     strengths = _report_strengths(cockpit, packet)
     weaknesses = _report_weaknesses(cockpit)
+    level2_review_disposition = build_final_review_level2_review_disposition(validation=validation)
     if state == "SELECT_READY":
         headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
     elif state == "SELECT_BLOCKED":
@@ -1761,6 +1871,7 @@ def build_final_review_investment_report(
                 "Benchmark parity evidence를 Evidence Appendix와 gate policy에서 확인합니다.",
             ),
         },
+        "level2_review_disposition": level2_review_disposition,
         "monitoring_conditions": {
             "handoff_ready": bool(cockpit.get("select_allowed")),
             "tracking_benchmark": monitoring.get("tracking_benchmark") or "-",
