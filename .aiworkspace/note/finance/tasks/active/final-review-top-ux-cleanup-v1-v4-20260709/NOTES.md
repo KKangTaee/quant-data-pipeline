@@ -1,0 +1,6 @@
+# Notes
+
+- User-facing problem: Final Review top area repeats guide copy and makes the actual candidate-selection job hard to scan.
+- Product interpretation: Final Review should first answer which Practical Validation Gate-passed candidates are available, which are hidden, what can be selected, and what to do next.
+- Sentiment interpretation: CNN / AAII market sentiment remains context-only. It should not become timing / rebalance logic without separate research and look-ahead-safe validation.
+- V1 result: top caption is now a short action-focused summary, and contextual Reference help is no longer rendered at the top of Final Review.

@@ -58,7 +58,6 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_dashboard_handoff_checklist_table,
     build_selected_dashboard_handoff_table,
 )
-from app.web.reference_contextual_help import render_reference_contextual_help
 from app.runtime import (
     FINAL_SELECTION_DECISION_FILE,
     append_current_final_selection_decision,
@@ -129,6 +128,17 @@ def _candidate_board_route(summary: dict[str, Any]) -> tuple[str, str, str]:
     if int(summary.get("blocked", 0) or 0) > 0:
         return "차단 원인 확인", "먼저 볼 후보의 blocker를 해소해야 정식 저장이 활성화됩니다.", "danger"
     return "재검토 필요", "review-required 근거를 확인하고 모니터링 후보 가능 상태로 보강합니다.", "warning"
+
+
+def _build_final_review_top_summary() -> dict[str, str]:
+    return {
+        "title": "Final Review",
+        "caption": (
+            "Gate 통과 후보 중 모니터링 후보로 저장할 대상을 고릅니다. "
+            "선정 후 확인은 Operations > Portfolio Monitoring에서 이어집니다."
+        ),
+        "destination": "Operations > Portfolio Monitoring",
+    }
 
 
 def _policy_rows_preview(rows: list[dict[str, Any]], *, empty_message: str) -> str:
@@ -1360,12 +1370,9 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
 
 
 def render_final_review_workspace() -> None:
-    st.markdown("### Final Review")
-    st.caption(
-        "수익성, benchmark 대비 경쟁력, 후보 간 비교, profile 적합성을 종합해 Selected Dashboard에서 추적할 모니터링 후보로 선정할지 판단하는 공간입니다. "
-        "Candidate Board와 Decision Cockpit으로 최종 판단 상태를 먼저 보고, 필요한 경우에만 이전 validation evidence 부록을 확인합니다."
-    )
-    render_reference_contextual_help("final_review")
+    top_summary = _build_final_review_top_summary()
+    st.markdown(f"### {top_summary['title']}")
+    st.caption(top_summary["caption"])
 
     current_rows = load_current_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()

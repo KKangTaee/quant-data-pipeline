@@ -12363,6 +12363,27 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("약점 개선안", page_source)
         self.assertIn("Level2 REVIEW", page_source)
 
+    def test_final_review_top_summary_is_short_and_action_focused(self) -> None:
+        from app.web.backtest_final_review.page import _build_final_review_top_summary
+
+        summary = _build_final_review_top_summary()
+
+        self.assertEqual(summary["title"], "Final Review")
+        self.assertIn("Gate 통과 후보", summary["caption"])
+        self.assertIn("모니터링 후보", summary["caption"])
+        self.assertEqual(summary["destination"], "Operations > Portfolio Monitoring")
+        self.assertLessEqual(len(summary["caption"]), 110)
+
+        joined = " ".join(str(value) for value in summary.values())
+        self.assertNotIn("과거 실행 기록은 Operations > Backtest Run History", joined)
+        self.assertNotIn("Reference help - Backtest > Final Review", joined)
+        self.assertNotIn("Candidate Board와 Decision Cockpit으로 최종 판단 상태를 먼저 보고", joined)
+
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_intro = page_source.split("def render_final_review_workspace", 1)[1]
+        workspace_intro = workspace_intro.split("current_rows = load_current_candidate_registry_latest()", 1)[0]
+        self.assertNotIn("render_reference_contextual_help(\"final_review\")", workspace_intro)
+
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
             _conclusion_group_detail,
