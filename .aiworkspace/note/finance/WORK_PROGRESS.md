@@ -5946,3 +5946,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Selection Source JSON / Practical Validation Result JSON은 Flow4 `상세 근거 / 원자료` Raw Evidence로 낮췄다.
 - Gate threshold, provider/FRED/API/DB fetch path, Final Review selected-route policy, registry / saved rewrite, live approval / broker order 의미는 변경하지 않았다.
 - Follow-up review: Flow3 노란불 통과 상태를 `주의 포함 이동 가능`으로 표시하고, stale Flow5 copy / unused gate module board helpers / `Required for Final Review` display group 잔여물을 정리했다.
+
+## 2026-07-09 - Final Review Detailed Scorecard V1-V6
+
+- `.aiworkspace/note/finance/tasks/active/final-review-detailed-scorecard-v1-v6-20260709/`에서 1차~6차 개발 / QA / commit 흐름을 완료했다.
+- Final Review scorecard는 5개 dimension, Level2 REVIEW role별 score impact, hard blocker / selected-route not-ready / gate review-required / excessive open review score cap을 만든다.
+- React investment report는 Python read model의 `세부 점수`, `Level2 REVIEW 점수 영향`, `최종 선택 사유`, `판단 저장 전 메모`를 표시만 하며 provider fetch / DB write / registry write / gate 계산을 소유하지 않는다.
+- QA: focused service / React contract 47개, npm build, py_compile, Browser QA iframe label 확인 완료. Browser screenshot artifacts는 generated 파일로 남기고 stage하지 않았다.

@@ -72,3 +72,17 @@ Command log for Final Review detailed scorecard V1-V6.
   - Result: passed.
 - `git diff --check`
   - Result: passed.
+
+## V6
+
+- `.venv/bin/python -m unittest tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests tests.test_service_contracts.BacktestRuntimeContractTests.test_final_review_investment_report_react_component_is_ui_only`
+  - Result: passed. 47 focused tests ran.
+- `npm run build` in `app/web/components/final_review_investment_report/frontend`
+  - Result: passed.
+- `.venv/bin/python -m py_compile app/services/backtest_evidence_read_model.py app/web/backtest_final_review/page.py app/web/components/final_review_investment_report/component.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.
+- `.venv/bin/streamlit run app/web/streamlit_app.py --server.port 8532 --server.address 127.0.0.1 --server.headless true`
+  - Browser QA result: opened `http://127.0.0.1:8532/backtest`, selected `최종 검토 · Final Review`, and confirmed the investment report iframe rendered `세부 점수`, `Level2 REVIEW 점수 영향`, `최종 선택 사유`, `판단 저장 전 메모`, and `점수 제한` with no Traceback / Exception text.
+  - Screenshot artifacts: `final-review-detailed-scorecard-v6-qa.png`, `final-review-detailed-scorecard-v6-top-qa.png`, `final-review-detailed-scorecard-v6-rationale-qa.png` (generated QA artifacts, not staged).

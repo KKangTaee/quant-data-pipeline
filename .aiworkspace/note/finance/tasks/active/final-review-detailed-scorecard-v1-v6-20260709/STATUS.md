@@ -11,4 +11,5 @@
 - V2 React score breakdown UI committed.
 - V3 Level2 REVIEW score impact service and React display committed.
 - V4 score cap and route decision committed.
-- V5 selection rationale payload and React surface QA passed. Preparing V5 commit.
+- V5 selection rationale payload and React surface committed.
+- V6 integrated QA, Browser QA, and durable docs sync completed. Preparing V6 docs commit.

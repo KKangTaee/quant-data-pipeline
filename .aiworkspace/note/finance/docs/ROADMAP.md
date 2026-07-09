@@ -9,12 +9,15 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed Final Review task는 `.aiworkspace/note/finance/tasks/active/final-review-level3-react-v2-v6-20260709/`다.
+Latest completed Final Review task는 `.aiworkspace/note/finance/tasks/active/final-review-detailed-scorecard-v1-v6-20260709/`다.
 
-- 목적: Backtest `Final Review / Level3`를 사람이 읽는 최종 투자 검토서로 정리하고, Level2 REVIEW 처리 / 점수 체계 / 저장 경계 / 약점 개선안 최소 흐름을 React surface와 Python service read model로 연결했다.
-- 주요 변경: Candidate Board 뒤에 `Final Review 투자 검토서` React section을 추가했다. Python `backtest_evidence_read_model`이 investment report, Level2 REVIEW disposition, scorecard, save / Monitoring handoff summary, weakness improvement plan을 만들고, React는 표시와 UI intent만 맡는다.
-- 저장 경계: `SELECT_FOR_PRACTICAL_PORTFOLIO` / 보류 / 거절 / 재검토는 Final Review 판단 record로 append 가능하며, Monitoring 후보 handoff는 selected-route gate를 통과한 row의 `monitoring_candidate`로만 연결한다. live approval / broker order / auto rebalance는 계속 disabled 의미다.
+- 목적: Backtest `Final Review / Level3`의 단순 종합 점수를 실전 포트폴리오 선별에 쓸 수 있는 세부 점수 / 점수 상한 / 선택 사유 read model로 강화했다.
+- 주요 변경: Python `backtest_evidence_read_model`이 5개 weighted dimension(`Investment`, `Risk`, `Readiness`, `Evidence Quality`, `Monitoring Suitability`), Level2 REVIEW role별 점수 영향, hard blocker / selected-route not-ready / gate review-required / 과도한 open review score cap, selection rationale, 판단 저장 전 required note를 만든다. React `Final Review 투자 검토서`는 이를 `세부 점수`, `Level2 REVIEW 점수 영향`, `최종 선택 사유`, `판단 저장 전 메모`로 표시만 한다.
+- 판단 경계: Level2 REVIEW는 Final Review에서 재검증하지 않고 최종 판단 부담 / 근거 품질 / Monitoring 추적 조건으로 점수와 사유에 반영한다. blocker와 selected-route not-ready는 높은 원점수라도 추천권 점수로 올라가지 않게 cap을 적용한다.
+- QA: service contract 47개 focused test, React build, py_compile, Browser QA에서 Final Review React iframe의 `세부 점수`, `Level2 REVIEW 점수 영향`, `최종 선택 사유`, `판단 저장 전 메모` 렌더링을 확인했다.
 - 후속 후보: 실제 portfolio variant 생성, 자동 약점 최적화, 개선 포트폴리오 신규 backtest / 비교 저장은 구현하지 않았다. 필요하면 별도 task에서 Python engine/service boundary로 설계한다.
+
+Previous completed Final Review task는 `.aiworkspace/note/finance/tasks/active/final-review-level3-react-v2-v6-20260709/`다.
 
 Previous completed Final Review analysis task는 `.aiworkspace/note/finance/tasks/active/final-review-level3-redesign-analysis-v1-20260709/`다.
 

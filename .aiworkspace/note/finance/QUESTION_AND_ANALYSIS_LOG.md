@@ -9170,3 +9170,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow3/Flow4가 Final Review 검증을 떠안는 것처럼 보이거나, REVIEW 노란불인데 버튼이 무조건 초록 통과처럼 보이는 잔여 혼선을 제거해야 함.
 - Analysis result: 실제 QA에서 PV-owned `데이터 주의` / `2단계 실용성 주의` 카드가 남아도 gate 이동이 가능한 케이스가 있었고, Flow3 CTA가 단순 `이동 가능`으로 표시돼 사용자가 노란불 의미를 다시 묻게 만들 수 있었다.
 - Follow-up: Flow3 CTA 상태를 `주의 포함 이동 가능`으로 표시하고, stale Flow5 copy / unused gate module board helpers / `Required for Final Review` display group 잔여물을 정리했다. Gate policy, provider fetch, registry / saved write, Final Review 판단 경계는 변경하지 않았다.
+
+### 2026-07-09 - Final Review 점수는 세분화하고 cap으로 과대평가를 막는다
+
+- User request: 사용자가 Final Review 종합점수가 너무 단순한지 묻고, 종합점수 기반 세부 점수 / 구현 방향 / 최종 포트폴리오 선별 흐름을 정한 뒤 1차~6차 개발 / QA / 커밋을 요청함.
+- Interpreted goal: Final Review는 실전 투입 가능한 포트폴리오 선별 단계이므로, 점수의 이유 / 약점 / Level2 REVIEW 영향 / Monitoring handoff 조건을 사용자가 바로 읽어야 함.
+- Analysis result: Level2 REVIEW는 Final Review에서 다시 검증하지 않고 score impact와 선택 사유로 소비한다. blocker / selected-route not-ready / gate review-required / 과도한 open review는 높은 원점수라도 추천권으로 보이지 않게 score cap을 적용해야 한다.
+- Follow-up: Python read model에 5개 weighted dimension, REVIEW score impact, score cap, selection rationale, required decision notes를 추가했고, React investment report는 이를 표시만 하게 했다. registry / saved JSONL / run_history / generated QA artifact는 stage하지 않았다.
