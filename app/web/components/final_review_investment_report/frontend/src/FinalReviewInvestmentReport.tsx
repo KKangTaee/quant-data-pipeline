@@ -112,9 +112,36 @@ type ScorecardCategory = {
   tone?: Tone
 }
 
+type ScorecardDimension = {
+  key?: string
+  label?: string
+  score?: number
+  weight?: number
+  evidence?: string
+  interpretation?: string
+  tone?: Tone
+}
+
+type ScorecardDriver = {
+  label?: string
+  detail?: string
+  score?: number
+  tone?: Tone
+}
+
+type ScorecardLimit = {
+  label?: string
+  detail?: string
+  cap?: number
+  reason?: string
+  tone?: Tone
+}
+
 type Scorecard = {
   overallScore?: number
   overall_score?: number
+  preCapScore?: number
+  pre_cap_score?: number
   scoreBand?: string
   score_band?: string
   classification?: string
@@ -126,6 +153,17 @@ type Scorecard = {
   monitoring_candidate?: boolean
   basis?: string
   categories?: ScorecardCategory[]
+  dimensions?: ScorecardDimension[]
+  scoreDrivers?: {
+    positive?: ScorecardDriver[]
+    negative?: ScorecardDriver[]
+  }
+  score_drivers?: {
+    positive?: ScorecardDriver[]
+    negative?: ScorecardDriver[]
+  }
+  scoreLimits?: ScorecardLimit[]
+  score_limits?: ScorecardLimit[]
 }
 
 type SaveHandoffSummary = {
@@ -328,6 +366,64 @@ function ScorecardCategoryList({ categories }: { categories: ScorecardCategory[]
   )
 }
 
+function ScorecardDimensionList({ dimensions }: { dimensions: ScorecardDimension[] }) {
+  return (
+    <div className="fr-invest-report__scorecard-dimensions" aria-label="세부 점수">
+      {dimensions.map((dimension, index) => (
+        <article className={`fr-invest-report__scorecard-dimension fr-invest-report__scorecard-dimension--${toneClass(dimension.tone)}`} key={`${dimension.key ?? "dimension"}-${index}`}>
+          <div>
+            <h5>{compact(dimension.label)}</h5>
+            <strong>{formattedScore(dimension.score)}</strong>
+          </div>
+          <div className="fr-invest-report__scorebar" aria-hidden="true">
+            <span style={{ width: `${Math.max(0, Math.min(100, Number(dimension.score) || 0))}%` }} />
+          </div>
+          <p>{compact(dimension.interpretation)}</p>
+          <small>{compact(dimension.evidence)} · weight {Math.round((Number(dimension.weight) || 0) * 100)}%</small>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function ScoreDriverList({ title, drivers }: { title: string; drivers: ScorecardDriver[] }) {
+  return (
+    <article className="fr-invest-report__score-driver-group">
+      <h5>{title}</h5>
+      {drivers.map((driver, index) => (
+        <section className={`fr-invest-report__score-driver fr-invest-report__score-driver--${toneClass(driver.tone)}`} key={`${title}-${driver.label ?? index}`}>
+          <strong>{compact(driver.label)}</strong>
+          <span>{formattedScore(driver.score)}</span>
+          <p>{compact(driver.detail)}</p>
+        </section>
+      ))}
+    </article>
+  )
+}
+
+function ScoreLimitList({ limits }: { limits: ScorecardLimit[] }) {
+  return (
+    <article className="fr-invest-report__score-limits">
+      <h5>점수 제한</h5>
+      {limits.length > 0 ? (
+        limits.map((limit, index) => (
+          <section className={`fr-invest-report__score-limit fr-invest-report__score-limit--${toneClass(limit.tone)}`} key={`${limit.label ?? "limit"}-${index}`}>
+            <strong>{compact(limit.label)}</strong>
+            <span>cap {formattedScore(limit.cap)}</span>
+            <p>{compact(limit.detail ?? limit.reason)}</p>
+          </section>
+        ))
+      ) : (
+        <section className="fr-invest-report__score-limit fr-invest-report__score-limit--positive">
+          <strong>적용된 score cap 없음</strong>
+          <span>-</span>
+          <p>현재 hard blocker나 과도한 open review로 인한 종합점수 상한은 없습니다.</p>
+        </section>
+      )}
+    </article>
+  )
+}
+
 export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -361,6 +457,9 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scorecardClassification = field(scorecard.classificationLabel, scorecard.classification_label)
   const scorecardDecision = field(scorecard.decisionLabel, scorecard.decision_label)
   const scorecardMonitoringCandidate = field(scorecard.monitoringCandidate, scorecard.monitoring_candidate) === true
+  const scorecardPreCap = field(scorecard.preCapScore, scorecard.pre_cap_score)
+  const scorecardDrivers = field(scorecard.scoreDrivers, scorecard.score_drivers) ?? {}
+  const scorecardLimits = field(scorecard.scoreLimits, scorecard.score_limits) ?? []
   const judgmentRecord = saveHandoff.judgmentRecord ?? saveHandoff.judgment_record ?? {}
   const monitoringHandoff = saveHandoff.monitoringHandoff ?? saveHandoff.monitoring_handoff ?? {}
   const saveRecordType = field(saveHandoff.recordType, saveHandoff.record_type)
@@ -449,6 +548,15 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           <span>{compact(scorecardDecision)}</span>
           <span>{scorecardMonitoringCandidate ? "Monitoring 후보" : "Monitoring handoff 보류"}</span>
           <span>{compact(scorecard.classification)}</span>
+          <span>Pre-cap {formattedScore(scorecardPreCap)}</span>
+        </div>
+        <div className="fr-invest-report__scorecard-subtitle">세부 점수</div>
+        <ScorecardDimensionList dimensions={scorecard.dimensions ?? []} />
+        <div className="fr-invest-report__scorecard-subtitle">점수 영향</div>
+        <div className="fr-invest-report__score-drivers">
+          <ScoreDriverList title="가산 요인" drivers={scorecardDrivers.positive ?? []} />
+          <ScoreDriverList title="감점 요인" drivers={scorecardDrivers.negative ?? []} />
+          <ScoreLimitList limits={scorecardLimits} />
         </div>
         <ScorecardCategoryList categories={scorecard.categories ?? []} />
       </section>

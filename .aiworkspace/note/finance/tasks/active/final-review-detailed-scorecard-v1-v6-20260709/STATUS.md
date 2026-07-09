@@ -7,4 +7,5 @@
 
 ## Current Step
 
-- V1 detailed scorecard read model QA passed. Preparing V1 commit.
+- V1 detailed scorecard read model committed.
+- V2 React score breakdown UI QA passed. Preparing V2 commit.
