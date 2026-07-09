@@ -64,6 +64,24 @@ type CriteriaGroup = {
   criteriaCards?: CriteriaCard[]
 }
 
+type ActionSpec = {
+  id?: string
+  label?: string
+  detail?: string
+  enabled?: boolean
+  tone?: Tone
+}
+
+type NextStageAction = {
+  targetStage?: string
+  statusLabel?: string
+  blockerCount?: number
+  disabledReason?: string
+  primaryAction?: ActionSpec
+  secondaryAction?: ActionSpec
+  boundaryNote?: string
+}
+
 type PracticalValidationFixQueueProps = {
   statusLabel: string
   tone: Tone
@@ -73,6 +91,7 @@ type PracticalValidationFixQueueProps = {
   fixItems: FixItem[]
   coreGroups: CoreGroup[]
   criteriaGroups: CriteriaGroup[]
+  nextStageAction: NextStageAction
 }
 
 const toneClass = (tone: Tone | string | undefined): Tone =>
@@ -98,6 +117,20 @@ const groupOutcome = (group: CriteriaGroup): { label: string; detail: string; to
   return { label: "확인 필요", detail: compact(group.decisionSummary), tone: toneClass(group.tone) }
 }
 
+const saveAndMovePayload = () => ({
+  action: "save_and_move",
+  source: "practical_validation_fix_queue",
+  nonce: `${Date.now()}`,
+})
+
+const saveAuditOnlyPayload = () => ({
+  action: "save_audit_only",
+  source: "practical_validation_fix_queue",
+  nonce: `${Date.now()}`,
+})
+
+const actionEnabled = (action: ActionSpec | undefined): boolean => action?.enabled !== false
+
 export function PracticalValidationFixQueue(props: PracticalValidationFixQueueProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -109,12 +142,58 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
   const visibleCriteriaGroups = criteriaGroups.slice(0, 7)
   const hiddenCriteriaGroupCount = Math.max(criteriaGroups.length - visibleCriteriaGroups.length, 0)
   const failedCategoryCount = criteriaGroups.filter((group) => (group.remainingIssues ?? []).length > 0).length
-  const flowAction = props.canSaveAndMove
-    ? "Flow 5에서 검증 결과 저장"
-    : "Flow 4에서 상세 원인 확인"
-  const nextStepItems = props.canSaveAndMove
-    ? ["Flow 5에서 검증 결과를 저장합니다."]
-    : ["자세한 원인과 보강 기준은 Flow 4에서 확인합니다."]
+  const fallbackNextStageAction: NextStageAction = {
+    targetStage: "Final Review",
+    statusLabel: props.canSaveAndMove ? "이동 가능" : "보강 필요",
+    blockerCount: props.fixItems.length,
+    disabledReason: props.canSaveAndMove ? "" : "자세한 원인과 보강 기준은 Flow 4에서 확인합니다.",
+    primaryAction: {
+      id: "save_and_move",
+      label: "저장하고 Final Review로 이동",
+      detail: props.canSaveAndMove
+        ? "검증 결과를 저장하고 Final Review에서 최종 판단을 이어갑니다."
+        : "Flow 4에서 보강 항목을 확인한 뒤 다시 시도합니다.",
+      enabled: props.canSaveAndMove,
+      tone: props.canSaveAndMove ? "positive" : "danger",
+    },
+    secondaryAction: {
+      id: "save_audit_only",
+      label: "검증 결과 저장(기록용)",
+      detail: "audit trail만 남깁니다.",
+      enabled: true,
+      tone: "neutral",
+    },
+    boundaryNote: "Final Review 이동은 최종 승인, 투자 추천, live approval, broker order, auto rebalance가 아닙니다.",
+  }
+  const nextStageAction: NextStageAction = {
+    ...fallbackNextStageAction,
+    ...props.nextStageAction,
+    primaryAction: {
+      ...fallbackNextStageAction.primaryAction,
+      ...(props.nextStageAction?.primaryAction ?? {}),
+    },
+    secondaryAction: {
+      ...fallbackNextStageAction.secondaryAction,
+      ...(props.nextStageAction?.secondaryAction ?? {}),
+    },
+  }
+  const primaryAction = nextStageAction.primaryAction
+  const secondaryAction = nextStageAction.secondaryAction
+  const primaryEnabled = actionEnabled(primaryAction)
+  const secondaryEnabled = actionEnabled(secondaryAction)
+  const nextStepItems = primaryEnabled
+    ? [compact(primaryAction?.detail, "검증 결과를 저장하고 Final Review에서 최종 판단을 이어갑니다.")]
+    : [compact(nextStageAction.disabledReason ?? primaryAction?.detail, "자세한 원인과 보강 기준은 Flow 4에서 확인합니다.")]
+
+  const submitSaveAndMove = () => {
+    if (!primaryEnabled) return
+    Streamlit.setComponentValue(saveAndMovePayload())
+  }
+
+  const submitSaveAuditOnly = () => {
+    if (!secondaryEnabled) return
+    Streamlit.setComponentValue(saveAuditOnlyPayload())
+  }
 
   return (
     <section className={`pv-react-fix pv-react-fix--${tone}`}>
@@ -157,10 +236,32 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
       <footer className="pv-react-fix__action">
         <div>
           <div className="pv-react-fix__action-label">
-            {props.canSaveAndMove ? "다음 위치" : "상세 확인 위치"}
+            {primaryEnabled ? "다음 위치" : "상세 확인 위치"}
           </div>
-          <div className="pv-react-fix__action-text">{flowAction}</div>
+          <div className="pv-react-fix__action-text">
+            {primaryEnabled ? compact(nextStageAction.targetStage) : compact(nextStageAction.disabledReason)}
+          </div>
         </div>
+        <div className="pv-react-fix__buttons">
+          <button
+            className="pv-react-fix__button pv-react-fix__button--primary"
+            disabled={!primaryEnabled}
+            onClick={submitSaveAndMove}
+            type="button"
+          >
+            {compact(primaryAction?.label, "저장하고 Final Review로 이동")}
+          </button>
+          <button
+            className="pv-react-fix__button pv-react-fix__button--secondary"
+            disabled={!secondaryEnabled}
+            onClick={submitSaveAuditOnly}
+            type="button"
+          >
+            {compact(secondaryAction?.label, "검증 결과 저장(기록용)")}
+          </button>
+        </div>
+        <p>{compact(secondaryAction?.detail, "audit trail만 남깁니다.")}</p>
+        <p>{compact(nextStageAction.boundaryNote)}</p>
       </footer>
 
       <div className="pv-react-fix__body pv-react-fix__body--single">

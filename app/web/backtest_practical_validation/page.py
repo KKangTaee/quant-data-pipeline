@@ -1789,7 +1789,7 @@ def _render_practical_diagnostics_summary(validation_result: dict[str, Any]) -> 
         st.info("표시할 diagnostic row가 없습니다.")
 
 
-def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> None:
+def _render_validation_evidence_boards(validation_result: dict[str, Any], *, source: dict[str, Any] | None = None) -> None:
     with st.expander("상세 근거 / 원자료", expanded=False):
         st.caption("카테고리별 검증 결과와 데이터 보강 대상 보드를 먼저 확인한 뒤, 필요한 원자료만 펼쳐봅니다.")
         summary_tab, data_tab, construction_tab, realism_tab, robustness_tab, raw_tab = st.tabs(
@@ -1868,6 +1868,10 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
                     )
                     _render_display_dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
             _render_diagnostic_detail_expanders(validation_result)
+            with st.expander("Selection Source JSON", expanded=False):
+                st.json(dict(source or {}))
+            with st.expander("Practical Validation Result JSON", expanded=False):
+                st.json(validation_result)
 
 
 def _render_validation_action_boards(validation_result: dict[str, Any]) -> None:
@@ -2339,6 +2343,56 @@ def _render_data_coverage_audit(validation_result: dict[str, Any]) -> None:
         st.caption(str(audit.get("conclusion")))
 
 
+def _consume_practical_validation_next_stage_action(
+    action_value: dict[str, Any] | None,
+    *,
+    source: dict[str, Any],
+    validation_result: dict[str, Any],
+) -> None:
+    if not isinstance(action_value, dict):
+        return
+    action = str(action_value.get("action") or "").strip()
+    if action not in {"save_and_move", "save_audit_only"}:
+        return
+    event_source = str(action_value.get("source") or "").strip()
+    if event_source not in {"practical_validation_fix_queue", "practical_validation_fix_queue_fallback"}:
+        return
+
+    validation_id = str(validation_result.get("validation_id") or "validation").strip() or "validation"
+    nonce = str(action_value.get("nonce") or "").strip()
+    consumed_key = f"practical_validation_flow3_action_nonce_{validation_id}"
+    if nonce:
+        if st.session_state.get(consumed_key) == nonce:
+            return
+        st.session_state[consumed_key] = nonce
+
+    gate = dict(validation_result.get("final_review_gate") or {})
+    can_save_and_move = bool(gate.get("can_save_and_move"))
+    if action == "save_audit_only":
+        save_practical_validation_result(validation_result)
+        notice = f"검증 결과 `{validation_id}`를 기록용으로 저장했습니다."
+        if not can_save_and_move:
+            notice += " 이 기록은 Final Review 후보 목록에는 표시되지 않습니다."
+        st.session_state.backtest_practical_validation_notice = notice
+        st.rerun()
+
+    if not can_save_and_move:
+        st.session_state.backtest_practical_validation_notice = (
+            "Final Review 이동 전 보강 항목이 남아 있습니다. Flow4 기준 상세와 데이터 보강 대상을 먼저 확인하세요."
+        )
+        st.rerun()
+
+    handoff = prepare_final_review_handoff_from_validation(
+        source=source,
+        validation_result=validation_result,
+        persist_validation=True,
+    )
+    st.session_state.final_review_practical_validation_source = handoff.session_payload
+    st.session_state.final_review_practical_validation_notice = handoff.notice
+    st.session_state.backtest_requested_panel = handoff.requested_panel
+    st.rerun()
+
+
 def render_practical_validation_workspace() -> None:
     render_pv_styles()
     st.markdown("### Practical Validation")
@@ -2440,10 +2494,15 @@ def render_practical_validation_workspace() -> None:
         render_pv_section_header(
             eyebrow="Flow 3",
             title="검증 결론",
-            detail="카테고리별 통과 / 실패만 요약합니다. 자세한 원인과 보강 기준은 Flow 4에서 확인합니다.",
+            detail="카테고리별 통과 / 실패와 Final Review 이동 가능 여부를 확인하고, 저장 / 이동 action을 처리합니다.",
             tone=_status_tone(dict(validation_result.get("final_review_gate") or {}).get("route")),
         )
-        render_practical_validation_workspace_overview(validation_result)
+        action_value = render_practical_validation_workspace_overview(validation_result, source=source)
+        _consume_practical_validation_next_stage_action(
+            action_value,
+            source=source,
+            validation_result=validation_result,
+        )
 
     with st.container(border=True):
         render_pv_section_header(
@@ -2456,80 +2515,4 @@ def render_practical_validation_workspace() -> None:
         _render_data_action_board(validation_result)
         st.markdown('<span id="pv-provider-data-action"></span>', unsafe_allow_html=True)
         _render_validation_action_boards(validation_result)
-        _render_validation_evidence_boards(validation_result)
-
-    with st.container(border=True):
-        render_pv_section_header(
-            eyebrow="Flow 5",
-            title="저장 / Final Review 이동",
-            detail="구조화된 검증 자료를 저장하고, 필수 blocker가 없을 때만 Final Review로 보냅니다.",
-            tone="neutral",
-        )
-        gate = dict(validation_result.get("final_review_gate") or {})
-        can_save_and_move = bool(gate.get("can_save_and_move"))
-        render_pv_alert_panel(
-            title="Save & Move Control",
-            detail=(
-                "검증 결과 저장은 감사용 기록을 남기는 기능입니다. Final Review 이동과 후보 노출은 필수 검증 모듈의 "
-                "BLOCKED / NEEDS_INPUT / NOT_RUN 상태가 해소됐을 때만 가능합니다. "
-                "Final Review의 정식 저장은 Final Review 준비 상태와 Selected Dashboard 모니터링 후보 선정 기준을 통과할 때만 허용합니다."
-            ),
-            tone="positive" if can_save_and_move else "danger",
-        )
-        render_badge_strip(
-            [
-                {
-                    "label": "Gate",
-                    "value": validation_status_label(gate.get("route") or validation_result.get("validation_route")),
-                    "tone": _status_tone(gate.get("route") or validation_result.get("validation_route")),
-                },
-                {
-                    "label": "Save & Move",
-                    "value": "Enabled" if can_save_and_move else "Blocked",
-                    "tone": "positive" if can_save_and_move else "danger",
-                },
-                {
-                    "label": "Blocking Modules",
-                    "value": len(gate.get("blocking_modules") or []),
-                    "tone": "danger" if gate.get("blocking_modules") else "positive",
-                },
-            ]
-        )
-        if gate.get("next_action"):
-            st.caption(str(gate.get("next_action")))
-        if not can_save_and_move:
-            st.caption("준비 상태 통과 전 저장 기록은 audit trail로만 남고 Final Review 후보 목록에는 노출되지 않습니다.")
-        blocking_modules = list(gate.get("blocking_modules") or [])
-        if blocking_modules:
-            with st.expander("Save blocker 상세", expanded=False):
-                _render_display_dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
-        action_cols = st.columns(2, gap="small")
-        with action_cols[0]:
-            if st.button("검증 결과 저장(기록용)", key="practical_validation_save_result", width="stretch"):
-                save_practical_validation_result(validation_result)
-                st.success(f"검증 결과 `{validation_result['validation_id']}`를 저장했습니다.")
-                if not can_save_and_move:
-                    st.warning("이 기록은 Final Review 준비 상태를 통과하지 않아 Final Review 후보 목록에는 표시되지 않습니다.")
-        with action_cols[1]:
-            if st.button(
-                "저장하고 Final Review로 이동",
-                key="practical_validation_send_final_review",
-                width="stretch",
-                disabled=not can_save_and_move,
-            ):
-                handoff = prepare_final_review_handoff_from_validation(
-                    source=source,
-                    validation_result=validation_result,
-                    persist_validation=True,
-                )
-                st.session_state.final_review_practical_validation_source = handoff.session_payload
-                st.session_state.final_review_practical_validation_notice = handoff.notice
-                st.session_state.backtest_requested_panel = handoff.requested_panel
-                st.rerun()
-            if not can_save_and_move:
-                st.caption("필수 검증 모듈을 보강한 뒤 저장하고 Final Review로 이동할 수 있습니다.")
-
-    with st.expander("Selection Source JSON", expanded=False):
-        st.json(source)
-    with st.expander("Practical Validation Result JSON", expanded=False):
-        st.json(validation_result)
+        _render_validation_evidence_boards(validation_result, source=source)

@@ -9,7 +9,13 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-stage-ownership-v1/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow5-cta-integration-v1-20260709/`다.
+
+- 목적: Practical Validation Flow5가 별도 검증 단계처럼 보이면서 Flow3 결론과 저장 / Final Review 이동 action이 분리되어 보이는 문제를 줄였다.
+- 주요 변경: Flow3 `검증 결론` React component가 `next_stage_action` read model을 받아 `검증 결과 저장(기록용)`과 `저장하고 Final Review로 이동` CTA를 렌더링한다. React는 click intent만 보내고, Python page/service가 save-only audit append, Final Review handoff, session state, rerun을 처리한다. 별도 visible Flow5 container는 제거했고 Selection Source JSON / Practical Validation Result JSON은 Flow4 `상세 근거 / 원자료` Raw Evidence로 낮췄다.
+- 이번 차수에서 하지 않은 일: validation gate threshold 변경, Final Review selected-route policy 변경, provider/FRED/API/DB fetch path 생성, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-stage-ownership-v1/`다.
 
 - 목적: Practical Validation의 `REVIEW`가 모두 Final Review 숙제처럼 보이고 REVIEW-only 카테고리가 숨겨져 검증 항목이 갑자기 줄어든 것처럼 보이는 문제를 바로잡았다.
 - 주요 변경: `review_role` / `review_role_label` read-model contract를 추가해 REVIEW를 `데이터 주의`, `2단계 실용성 주의`, `최종 판단 참고`, `Monitoring 추적`, `저장 전 보강`으로 분리했다. Flow 4는 적용된 REVIEW-only Practical Validation category를 숨기지 않고 카테고리별 검증 결과에서 보여주며, provider-facing copy는 `ETF 운용사 / 공식 외부 데이터` 중심으로 낮췄다. Final Review는 수익성 / benchmark / 후보 비교 / 최종 모니터링 후보 판단 중심으로 설명한다.

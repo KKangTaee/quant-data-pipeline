@@ -9034,6 +9034,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow 3은 Final Review 이동 결론과 먼저 해결할 일을 빠르게 읽는 판정판이어야 하고, Flow 4는 그 판단의 기준별 근거와 보강 위치를 확인하는 상세 보드여야 한다.
 - Analysis result: Backtest Analysis UI를 그대로 복제하면 1차 source 등록과 2차 Final Review 이동 판단이 섞일 수 있다. 따라서 visual grammar만 빌리고, Flow 3에는 save / move action을 두지 않으며, Flow 4 첫 board에서 Source / Validation / Final Review readiness criteria를 자세히 보여주는 것이 맞다.
 - Follow-up: Flow 3 React Fix Queue와 Flow 4 criteria detail board를 구현했다. Gate policy, replay execution, provider collection, persistence semantics는 바꾸지 않았다.
+- Superseded note: 2026-07-09 Flow5 CTA Integration V1에서 save / move는 새 검증이 아니라 Flow3 결론의 next action으로 재분류했다. React는 intent만 보내고 Python이 persistence / handoff를 소유한다.
 
 ### 2026-07-06 - Practical Validation blocker는 내부 audit 용어보다 먼저 행동 언어로 읽혀야 한다
 
@@ -9139,3 +9140,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow 2 replay 실행 전에는 검증 결론을 보여주지 않고, Flow 4는 현재 단계에서 보강할 기준과 수집 가능한 데이터 action만 먼저 읽혀야 함.
 - Analysis result: Flow 3 / Flow 4는 현재 세션 replay gate가 없었고, 하단 evidence tabs와 Provider 부족근거가 기준 상세보다 큰 덩어리처럼 보여 사용자의 판단 경로를 흐렸다. 데이터 수집으로 해결 가능한 gap은 provider snapshot / holdings / exposure / macro context 계열로 제한하는 것이 안전했다.
 - Follow-up: Flow 2 current-session replay gate, 수집 가능 criteria CTA, 단계별 검증 소유권 inventory, 접힌 `근거 부록`, `수집 대상 근거` copy를 구현했다. Gate threshold, registry / saved JSONL, provider ingestion 신규 경로, Final Review 판단, live approval / broker order는 변경하지 않았다.
+
+### 2026-07-09 - Flow5는 별도 검증 단계가 아니라 Flow3 결론의 실행부다
+
+- User request: 사용자가 Flow5가 다음 단계 승격 가능 여부 판단이라면 Flow3 결론 카드의 버튼 활성화 방식으로 통합하는 것이 맞지 않느냐고 물었고 1차~6차 개발을 승인함.
+- Interpreted goal: Practical Validation의 결론과 다음 행동을 같은 first-read surface에 두되, React가 저장 / handoff / gate / provider / registry logic을 직접 소유하지 않게 해야 함.
+- Analysis result: 기존 Flow5는 새 검증이 아니라 save-only audit append와 Final Review handoff 버튼이었다. 따라서 별도 visible Flow5는 사용자 흐름을 늘리고, Flow3 `검증 결론`의 CTA로 흡수하는 것이 맞다.
+- Follow-up: Flow3 React에 `검증 결과 저장(기록용)` / `저장하고 Final Review로 이동` intent-only CTA를 추가하고, Python page/service가 기존 save / Final Review handoff를 처리하게 했다. Raw JSON은 Flow4 `상세 근거 / 원자료`로 낮췄다.

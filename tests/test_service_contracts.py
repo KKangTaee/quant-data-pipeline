@@ -2818,6 +2818,77 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(workspace["summary"]["blocker_count"], 2)
         self.assertEqual(workspace["summary"]["review_count"], 1)
 
+    def test_practical_validation_workspace_builds_flow3_next_stage_action(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        blocked_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "latest_replay",
+                        "label": "Latest Runtime Replay",
+                        "status": "NOT_RUN",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "BLOCKED_FOR_FINAL_REVIEW",
+                    "can_save_and_move": False,
+                    "verdict": "필수 검증 모듈에 보강이 필요한 항목이 있습니다.",
+                    "next_action": "필수 모듈의 NOT_RUN 항목을 먼저 해결합니다.",
+                    "blocking_modules": [
+                        {"module_id": "latest_replay", "label": "Latest Runtime Replay", "status": "NOT_RUN"}
+                    ],
+                    "review_modules": [],
+                },
+            }
+        )
+
+        blocked_action = blocked_workspace["next_stage_action"]
+        self.assertEqual(blocked_action["target_stage"], "Final Review")
+        self.assertFalse(blocked_action["primary_action"]["enabled"])
+        self.assertEqual(blocked_action["primary_action"]["id"], "save_and_move")
+        self.assertEqual(blocked_action["primary_action"]["label"], "저장하고 Final Review로 이동")
+        self.assertEqual(blocked_action["secondary_action"]["id"], "save_audit_only")
+        self.assertTrue(blocked_action["secondary_action"]["enabled"])
+        self.assertEqual(blocked_action["blocker_count"], 1)
+        self.assertIn("Flow4", blocked_action["disabled_reason"])
+        self.assertIn("audit trail", blocked_action["secondary_action"]["detail"])
+        self.assertFalse(blocked_action["side_effects"]["react_executes_storage"])
+        self.assertTrue(blocked_action["side_effects"]["python_executes_storage"])
+
+        ready_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "source_integrity",
+                        "label": "Source Integrity",
+                        "status": "PASS",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "READY_FOR_FINAL_REVIEW",
+                    "can_save_and_move": True,
+                    "verdict": "필수 검증 모듈이 통과되어 Final Review로 이동할 수 있습니다.",
+                    "next_action": "검증 결과를 저장하고 Final Review에서 최종 판단을 이어갑니다.",
+                    "blocking_modules": [],
+                    "review_modules": [],
+                },
+            }
+        )
+
+        ready_action = ready_workspace["next_stage_action"]
+        self.assertTrue(ready_action["primary_action"]["enabled"])
+        self.assertEqual(ready_action["primary_action"]["tone"], "positive")
+        self.assertEqual(ready_action["disabled_reason"], "")
+        self.assertIn("최종 승인", ready_action["boundary_note"])
+        self.assertIn("수익성", ready_action["boundary_note"])
+
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
 import sys
@@ -12066,7 +12137,6 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("group.reviewCriteria", component_source)
         self.assertNotIn("Final Review 이동 가능", component_source)
         self.assertNotIn("Final Review 이동 보류", component_source)
-        self.assertNotIn("Final Review로 이동", component_source)
         self.assertNotIn("보류 항목", component_source)
         self.assertIn("보강 항목", component_source)
         self.assertNotIn("Final Review 이동을 막는 이슈", component_source)
@@ -12078,7 +12148,6 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("reviewCount", build_source)
         self.assertNotIn("Final Review 이동 가능", build_source)
         self.assertNotIn("Final Review 이동 보류", build_source)
-        self.assertNotIn("Final Review로 이동", build_source)
         self.assertNotIn("보류 항목", build_source)
         self.assertIn("보강 항목", build_source)
         self.assertNotIn("Final Review 이동을 막는 이슈", build_source)
@@ -12094,16 +12163,28 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("부족한 점", component_source)
         self.assertNotIn("해야 할 일", component_source)
         self.assertIn("다음 단계", component_source)
-        self.assertIn("Flow 5에서 검증 결과 저장", component_source)
+        self.assertIn("저장하고 Final Review로 이동", component_source)
+        self.assertIn("검증 결과 저장(기록용)", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertIn('action: "save_and_move"', component_source)
+        self.assertIn('action: "save_audit_only"', component_source)
+        self.assertNotIn("Flow 5에서 검증 결과 저장", component_source)
+        self.assertIn("저장하고 Final Review로 이동", build_source)
+        self.assertIn("검증 결과 저장(기록용)", build_source)
+        self.assertIn("setComponentValue", build_source)
+        self.assertIn('action:"save_and_move"', build_source.replace(" ", ""))
+        self.assertIn('action:"save_audit_only"', build_source.replace(" ", ""))
+        self.assertNotIn("Flow 5에서 검증 결과 저장", build_source)
         self.assertIn("criteriaGroups", component_source)
         self.assertNotIn("NEEDS_INPUT row", component_source)
         self.assertNotIn("2차 검증 결론 / Fix Queue", component_source)
         self.assertIn("fixItems", component_source)
         self.assertIn("coreGroups", component_source)
-        self.assertNotIn("Streamlit.setComponentValue", component_source)
         self.assertNotIn("from app.services", wrapper_source)
         self.assertNotIn("from app.runtime", wrapper_source)
         self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("next_stage_action", wrapper_source)
+        self.assertIn("nextStageAction", wrapper_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)
         self.assertIn("render_practical_validation_workspace_overview(", page_source)
@@ -12153,11 +12234,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertNotIn("render_pv_step_rail(", page_source)
         self.assertIn('title="검증 결론"', flow3_body)
-        self.assertIn("카테고리별 통과 / 실패만 요약", flow3_body)
-        self.assertIn("자세한 원인과 보강 기준은 Flow 4", flow3_body)
+        self.assertIn("카테고리별 통과 / 실패와 Final Review 이동 가능 여부", flow3_body)
+        self.assertIn("저장 / 이동 action을 처리", flow3_body)
+        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", flow3_body)
+        self.assertIn("_consume_practical_validation_next_stage_action(", flow3_body)
         self.assertNotIn("Fix Queue", flow3_body)
         self.assertNotIn("_render_validation_gate_section(validation_result)", flow3_body)
         self.assertNotIn("검증 모듈 / 기술 상세", flow3_body)
+        self.assertIn("Final Review 이동 가능 여부를 확인", panel_source)
+        self.assertIn("_render_next_stage_action_fallback", panel_source)
         self.assertIn("_react_criteria_group_items", panel_source)
         self.assertIn("overall_outcome_label", panel_source)
         self.assertIn("overall_outcome_headline", panel_source)
@@ -12889,15 +12974,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         component_source = Path("app/web/backtest_practical_validation/components.py").read_text(encoding="utf-8")
         data_action_wrapper = Path("app/web/components/practical_validation_data_action_board/component.py")
         flow4_body = page_source.split('eyebrow="Flow 4"', 1)[1]
-        flow4_body = flow4_body.split('eyebrow="Flow 5"', 1)[0]
         evidence_body = page_source.split("def _render_validation_evidence_boards", 1)[1]
         evidence_body = evidence_body.split("def _render_validation_action_boards", 1)[0]
         provider_gap_body = page_source.split("def _render_provider_gap_section", 1)[1]
         provider_gap_body = provider_gap_body.split("def _provider_look_through_board", 1)[0]
+        render_body = page_source.split("def render_practical_validation_workspace", 1)[1]
 
         self.assertIn("def _render_validation_criteria_detail_board", page_source)
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
-        self.assertIn("_render_validation_evidence_boards(validation_result)", flow4_body)
+        self.assertIn("_render_validation_evidence_boards(validation_result, source=source)", flow4_body)
         self.assertNotIn("_render_validation_gate_section(validation_result)", flow4_body)
         self.assertNotIn("검증 모듈 / 기술 상세", flow4_body)
         self.assertIn("카테고리별 검증 결과", page_source)
@@ -12912,6 +12997,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("상세 근거 / 원자료", evidence_body)
         self.assertIn("카테고리별 검증 결과와 데이터 보강 대상 보드를 먼저 확인", evidence_body)
         self.assertIn('st.expander("상세 근거 / 원자료", expanded=False)', evidence_body)
+        self.assertIn('st.expander("Selection Source JSON", expanded=False)', evidence_body)
+        self.assertIn('st.expander("Practical Validation Result JSON", expanded=False)', evidence_body)
+        self.assertNotIn('eyebrow="Flow 5"', page_source)
+        self.assertNotIn('title="저장 / Final Review 이동"', page_source)
+        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", render_body)
+        self.assertIn("_consume_practical_validation_next_stage_action(", render_body)
+        after_flow4_evidence = render_body.split("_render_validation_evidence_boards(validation_result, source=source)", 1)[1]
+        self.assertNotIn('st.expander("Selection Source JSON", expanded=False)', after_flow4_evidence)
+        self.assertNotIn('st.expander("Practical Validation Result JSON", expanded=False)', after_flow4_evidence)
         self.assertNotIn("수집 대상 근거", provider_gap_body)
         self.assertNotIn("수집 대상 상세", provider_gap_body)
         self.assertNotIn("Provider 부족 근거", page_source)
@@ -12981,11 +13075,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         )
         self.assertLess(
             flow4_body.index("_render_validation_action_boards(validation_result)"),
-            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
+            flow4_body.index("_render_validation_evidence_boards(validation_result, source=source)"),
         )
         self.assertLess(
             flow4_body.index("_render_data_action_board(validation_result)"),
-            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
+            flow4_body.index("_render_validation_evidence_boards(validation_result, source=source)"),
         )
 
     def test_practical_validation_data_action_board_react_component_is_ui_only(self) -> None:

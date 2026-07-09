@@ -1660,6 +1660,51 @@ def _fix_queue(
     return _fallback_fix_queue(modules, evidence_rows_by_module=evidence_rows_by_module)
 
 
+def _next_stage_action(gate: dict[str, Any], *, blocker_count: int) -> dict[str, Any]:
+    can_save_and_move = bool(gate.get("can_save_and_move"))
+    disabled_reason = (
+        ""
+        if can_save_and_move
+        else "Flow4에서 보강 항목을 확인하고 Flow2 재검증을 다시 실행한 뒤 Final Review로 이동할 수 있습니다."
+    )
+    primary_detail = (
+        "검증 결과를 저장하고 Final Review에서 수익성, 벤치마크, 후보 비교, 모니터링 후보 선정 판단을 이어갑니다."
+        if can_save_and_move
+        else disabled_reason
+    )
+    return {
+        "target_stage": "Final Review",
+        "status_label": "이동 가능" if can_save_and_move else "보강 필요",
+        "blocker_count": int(blocker_count),
+        "disabled_reason": disabled_reason,
+        "primary_action": {
+            "id": "save_and_move",
+            "label": "저장하고 Final Review로 이동",
+            "detail": primary_detail,
+            "enabled": can_save_and_move,
+            "tone": "positive" if can_save_and_move else "danger",
+        },
+        "secondary_action": {
+            "id": "save_audit_only",
+            "label": "검증 결과 저장(기록용)",
+            "detail": "audit trail만 남깁니다. Gate 미통과 row는 Final Review 후보 목록에 노출되지 않습니다.",
+            "enabled": True,
+            "tone": "neutral",
+        },
+        "boundary_note": (
+            "Final Review 이동은 최종 승인, 투자 추천, live approval, broker order, auto rebalance가 아닙니다. "
+            "Final Review에서 수익성, 벤치마크, 후보 비교, 모니터링 후보 선정 가능 여부를 판단합니다."
+        ),
+        "side_effects": {
+            "react_executes_storage": False,
+            "react_executes_handoff": False,
+            "python_executes_storage": True,
+            "python_executes_handoff": True,
+            "validation_gate_calculation": "existing_python_service",
+        },
+    }
+
+
 def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str, Any]:
     """Build a screen-oriented Practical Validation workspace model from validation evidence."""
 
@@ -1787,6 +1832,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "blocker_count": len(fix_queue),
         "review_count": len(review_rows),
     }
+    next_stage_action = _next_stage_action(gate, blocker_count=len(fix_queue))
 
     return {
         "summary": {
@@ -1806,6 +1852,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "criteria_detail_groups": criteria_groups,
         "visible_criteria_detail_groups": visible_criteria_groups,
         "data_action_board": data_action_board,
+        "next_stage_action": next_stage_action,
         "stage_ownership_inventory": stage_ownership_inventory,
         "category_result_groups": category_groups,
         "handoff_summary_groups": handoff_summary_groups,

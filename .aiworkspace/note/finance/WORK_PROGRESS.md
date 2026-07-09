@@ -5928,3 +5928,11 @@ Detailed historical logs were archived on `2026-04-13`.
 - Flow 2에서 현재 세션 `전략 재검증 실행` 전에는 Flow 3 / Flow 4 / Flow 5와 결과 JSON을 렌더링하지 않는다.
 - Flow 4는 `카테고리별 검증 결과 -> 단계별 검증 소유권 -> Provider / Data 보강 액션 -> 접힌 근거 부록` 순서로 읽고, 수집 가능한 provider / holdings / exposure / macro gap에만 `수집하기` CTA를 노출한다.
 - Provider 부족근거 copy는 `수집 대상 근거`로 낮췄고, 상세 evidence tabs는 기본 접힌 `근거 부록`으로 이동했다.
+- 2026-07-09 Flow5 CTA Integration V1에서 이 visible Flow5 / evidence IA는 Flow3 CTA와 Flow4 `상세 근거 / 원자료` 구조로 대체됐다.
+
+## 2026-07-09 - Practical Validation Flow5 CTA Integration V1
+
+- `.aiworkspace/note/finance/tasks/active/practical-validation-flow5-cta-integration-v1-20260709/`에서 Flow5 visible container를 Flow3 `검증 결론 / 다음 행동` CTA로 통합했다.
+- Flow3 React는 `검증 결과 저장(기록용)`과 `저장하고 Final Review로 이동` intent만 보내고, Python page/service가 audit append, Final Review handoff, session state, rerun을 처리한다.
+- Selection Source JSON / Practical Validation Result JSON은 Flow4 `상세 근거 / 원자료` Raw Evidence로 낮췄다.
+- Gate threshold, provider/FRED/API/DB fetch path, Final Review selected-route policy, registry / saved rewrite, live approval / broker order 의미는 변경하지 않았다.
