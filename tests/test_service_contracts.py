@@ -2474,6 +2474,8 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
         self.assertIn("Benchmark / Comparator Parity", display_rows)
         self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Gate Effect"], "Ready")
+        self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Group"], "Practical Validation Core")
+        self.assertNotIn("Required for Final Review", {row["Group"] for row in plan["module_display_rows"]})
 
     def test_validation_module_gate_reviews_missing_default_robustness_without_blocking(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
@@ -2885,9 +2887,73 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         ready_action = ready_workspace["next_stage_action"]
         self.assertTrue(ready_action["primary_action"]["enabled"])
         self.assertEqual(ready_action["primary_action"]["tone"], "positive")
+        self.assertEqual(ready_action["status_label"], "이동 가능")
         self.assertEqual(ready_action["disabled_reason"], "")
         self.assertIn("최종 승인", ready_action["boundary_note"])
         self.assertIn("수익성", ready_action["boundary_note"])
+
+        review_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "REVIEW",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "READY_WITH_REVIEW",
+                    "can_save_and_move": True,
+                    "verdict": "Final Review 이동 가능하지만 REVIEW 항목은 PASS가 아닙니다.",
+                    "next_action": "REVIEW 항목은 2단계 실용성 주의로 남깁니다.",
+                    "blocking_modules": [],
+                    "review_modules": [
+                        {
+                            "module_id": "validation_efficacy",
+                            "label": "Validation Method Strength",
+                            "status": "REVIEW",
+                            "review_role_label": "2단계 실용성 주의",
+                        }
+                    ],
+                },
+            }
+        )
+
+        review_action = review_workspace["next_stage_action"]
+        self.assertTrue(review_action["primary_action"]["enabled"])
+        self.assertEqual(review_action["status_label"], "주의 포함 이동 가능")
+        self.assertIn("REVIEW 주의 신호", review_action["primary_action"]["detail"])
+
+        category_caution_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "REVIEW",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "READY_FOR_FINAL_REVIEW",
+                    "can_save_and_move": True,
+                    "verdict": "Final Review 이동을 막는 항목은 없습니다.",
+                    "next_action": "주의 신호를 남기고 Final Review로 이동합니다.",
+                    "blocking_modules": [],
+                    "review_modules": [],
+                },
+            }
+        )
+
+        category_caution_action = category_caution_workspace["next_stage_action"]
+        self.assertTrue(category_caution_action["primary_action"]["enabled"])
+        self.assertEqual(category_caution_action["status_label"], "주의 포함 이동 가능")
+        self.assertIn("REVIEW 주의 신호", category_caution_action["primary_action"]["detail"])
 
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
@@ -12195,6 +12261,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("from finance", wrapper_source)
         self.assertIn("next_stage_action", wrapper_source)
         self.assertIn("nextStageAction", wrapper_source)
+        self.assertEqual(component_source.count("canSaveAndMove: boolean"), 1)
+        self.assertIn("nextStageAction.statusLabel", component_source)
+        self.assertIn("hasVisibleReviewCaution", component_source)
+        self.assertIn("주의 포함 이동 가능", component_source)
+        self.assertNotIn('props.canSaveAndMove ? "검증 보강 완료" : "검증 보강 필요"', component_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)
         self.assertIn("render_practical_validation_workspace_overview(", page_source)
@@ -12981,6 +13052,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_practical_validation_flow4_uses_criteria_detail_board(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        workspace_source = Path("app/services/backtest_practical_validation_workspace.py").read_text(encoding="utf-8")
         component_source = Path("app/web/backtest_practical_validation/components.py").read_text(encoding="utf-8")
         data_action_wrapper = Path("app/web/components/practical_validation_data_action_board/component.py")
         flow4_body = page_source.split('eyebrow="Flow 4"', 1)[1]
@@ -13011,6 +13083,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn('st.expander("Practical Validation Result JSON", expanded=False)', evidence_body)
         self.assertNotIn('eyebrow="Flow 5"', page_source)
         self.assertNotIn('title="저장 / Final Review 이동"', page_source)
+        self.assertNotIn("Flow 5 저장 / Final Review 이동", workspace_source)
         self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", render_body)
         self.assertIn("_consume_practical_validation_next_stage_action(", render_body)
         after_flow4_evidence = render_body.split("_render_validation_evidence_boards(validation_result, source=source)", 1)[1]
@@ -13076,6 +13149,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Final Review 이동 요약", criteria_board_body)
         self.assertNotIn("final_review_reference_html", criteria_board_body)
         self.assertNotIn("handoff_html", criteria_board_body)
+        self.assertNotIn("def _render_validation_gate_section", page_source)
+        self.assertNotIn("def _render_validation_module_board", page_source)
+        self.assertNotIn("def _render_applied_validation_map", page_source)
+        self.assertNotIn("Required for Final Review", page_source)
         self.assertNotIn('str(card.get("status") or "") != "REVIEW"', criteria_board_body)
         self.assertIn("review_role_label", criteria_board_body)
         self.assertIn("2단계 실용성 주의", page_source)

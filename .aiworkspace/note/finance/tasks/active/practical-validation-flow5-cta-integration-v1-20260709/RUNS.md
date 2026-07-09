@@ -23,3 +23,8 @@
   - Verified parent DOM has Flow3 / Flow4 / `상세 근거 / 원자료` and no `Flow 5` / `저장 / Final Review 이동`.
   - Verified React iframe has `저장하고 Final Review로 이동` and `검증 결과 저장(기록용)` buttons, and no old Flow5 text.
   - Screenshot: `practical-validation-flow5-cta-integration-v1-qa.png` (generated artifact, not staged).
+- 2026-07-09 Follow-up review:
+  - RED: Flow3 next-stage contract failed when PV category REVIEW cards existed but gate route was `READY_FOR_FINAL_REVIEW`; React/static contracts also failed for missing `주의 포함 이동 가능` fallback and stale dead helper guards.
+  - GREEN: Flow3 read model and React display now show `주의 포함 이동 가능` for allowed yellow-light cases; stale `Flow 5 저장 / Final Review 이동` copy and unused gate/module board helpers were removed.
+  - Verification: `PracticalValidationServiceContractTests` + `BacktestRuntimeContractTests` passed 100 tests, `npm run build` passed, py_compile passed, `git diff --check` passed.
+  - Browser QA: fresh server `http://127.0.0.1:8525`, Flow2 replay executed through Python boundary, Flow3 iframe showed `주의 포함 이동 가능`, no `Flow 5` / `단계별 검증 소유권` / `수집 대상 근거` / `Required for Final Review`. Screenshots: `practical-validation-level2-review-qa.png`, `practical-validation-level2-review-flow3-pageup-qa.png` (generated artifacts, not staged).

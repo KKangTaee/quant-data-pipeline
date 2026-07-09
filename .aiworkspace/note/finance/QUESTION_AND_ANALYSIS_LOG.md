@@ -9147,3 +9147,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Practical Validation의 결론과 다음 행동을 같은 first-read surface에 두되, React가 저장 / handoff / gate / provider / registry logic을 직접 소유하지 않게 해야 함.
 - Analysis result: 기존 Flow5는 새 검증이 아니라 save-only audit append와 Final Review handoff 버튼이었다. 따라서 별도 visible Flow5는 사용자 흐름을 늘리고, Flow3 `검증 결론`의 CTA로 흡수하는 것이 맞다.
 - Follow-up: Flow3 React에 `검증 결과 저장(기록용)` / `저장하고 Final Review로 이동` intent-only CTA를 추가하고, Python page/service가 기존 save / Final Review handoff를 처리하게 했다. Raw JSON은 Flow4 `상세 근거 / 원자료`로 낮췄다.
+
+### 2026-07-09 - Level2 노란불은 차단이 아니라 주의 포함 통과다
+
+- User request: 사용자가 Level2 실전검증 개선 후 리뷰와 수정 / 제거 / 개선점 점검을 요청함.
+- Interpreted goal: Flow3/Flow4가 Final Review 검증을 떠안는 것처럼 보이거나, REVIEW 노란불인데 버튼이 무조건 초록 통과처럼 보이는 잔여 혼선을 제거해야 함.
+- Analysis result: 실제 QA에서 PV-owned `데이터 주의` / `2단계 실용성 주의` 카드가 남아도 gate 이동이 가능한 케이스가 있었고, Flow3 CTA가 단순 `이동 가능`으로 표시돼 사용자가 노란불 의미를 다시 묻게 만들 수 있었다.
+- Follow-up: Flow3 CTA 상태를 `주의 포함 이동 가능`으로 표시하고, stale Flow5 copy / unused gate module board helpers / `Required for Final Review` display group 잔여물을 정리했다. Gate policy, provider fetch, registry / saved write, Final Review 판단 경계는 변경하지 않았다.

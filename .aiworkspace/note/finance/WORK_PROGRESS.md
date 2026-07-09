@@ -5936,3 +5936,4 @@ Detailed historical logs were archived on `2026-04-13`.
 - Flow3 React는 `검증 결과 저장(기록용)`과 `저장하고 Final Review로 이동` intent만 보내고, Python page/service가 audit append, Final Review handoff, session state, rerun을 처리한다.
 - Selection Source JSON / Practical Validation Result JSON은 Flow4 `상세 근거 / 원자료` Raw Evidence로 낮췄다.
 - Gate threshold, provider/FRED/API/DB fetch path, Final Review selected-route policy, registry / saved rewrite, live approval / broker order 의미는 변경하지 않았다.
+- Follow-up review: Flow3 노란불 통과 상태를 `주의 포함 이동 가능`으로 표시하고, stale Flow5 copy / unused gate module board helpers / `Required for Final Review` display group 잔여물을 정리했다.

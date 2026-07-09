@@ -394,7 +394,7 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "Final Review 이동 요약에서 저장을 막는 deterministic blocker가 남아 있는지 확인합니다.",
             "blocker가 Flow4 검증 기준에서 발생했다면 해당 기준의 해결 방법을 먼저 처리합니다.",
-            "blocker가 사라진 뒤 Flow 5 저장 / Final Review 이동을 다시 실행합니다.",
+            "blocker가 사라진 뒤 Flow 3 저장 / Final Review 이동 CTA를 다시 실행합니다.",
         ],
         "location": "Flow4 > 카테고리별 검증 결과 > Final Review 이동 요약",
     },
@@ -1660,21 +1660,32 @@ def _fix_queue(
     return _fallback_fix_queue(modules, evidence_rows_by_module=evidence_rows_by_module)
 
 
-def _next_stage_action(gate: dict[str, Any], *, blocker_count: int) -> dict[str, Any]:
+def _next_stage_action(gate: dict[str, Any], *, blocker_count: int, caution_count: int = 0) -> dict[str, Any]:
     can_save_and_move = bool(gate.get("can_save_and_move"))
+    route = str(gate.get("route") or "").strip().upper()
+    ready_with_review = can_save_and_move and (
+        route == "READY_WITH_REVIEW" or bool(gate.get("review_modules")) or int(caution_count or 0) > 0
+    )
     disabled_reason = (
         ""
         if can_save_and_move
         else "Flow4에서 보강 항목을 확인하고 Flow2 재검증을 다시 실행한 뒤 Final Review로 이동할 수 있습니다."
     )
-    primary_detail = (
-        "검증 결과를 저장하고 Final Review에서 수익성, 벤치마크, 후보 비교, 모니터링 후보 선정 판단을 이어갑니다."
-        if can_save_and_move
-        else disabled_reason
-    )
+    if ready_with_review:
+        status_label = "주의 포함 이동 가능"
+        primary_detail = (
+            "검증 결과와 REVIEW 주의 신호를 저장하고 Final Review에서 수익성, 벤치마크, 후보 비교, "
+            "모니터링 후보 선정 판단을 이어갑니다."
+        )
+    elif can_save_and_move:
+        status_label = "이동 가능"
+        primary_detail = "검증 결과를 저장하고 Final Review에서 수익성, 벤치마크, 후보 비교, 모니터링 후보 선정 판단을 이어갑니다."
+    else:
+        status_label = "보강 필요"
+        primary_detail = disabled_reason
     return {
         "target_stage": "Final Review",
-        "status_label": "이동 가능" if can_save_and_move else "보강 필요",
+        "status_label": status_label,
         "blocker_count": int(blocker_count),
         "disabled_reason": disabled_reason,
         "primary_action": {
@@ -1832,7 +1843,10 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "blocker_count": len(fix_queue),
         "review_count": len(review_rows),
     }
-    next_stage_action = _next_stage_action(gate, blocker_count=len(fix_queue))
+    pv_caution_count = int(criteria_summary.get("pv_data_caution_count") or 0) + int(
+        criteria_summary.get("pv_practical_caution_count") or 0
+    )
+    next_stage_action = _next_stage_action(gate, blocker_count=len(fix_queue), caution_count=pv_caution_count)
 
     return {
         "summary": {

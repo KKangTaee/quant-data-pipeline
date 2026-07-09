@@ -54,6 +54,7 @@ MODULE_TYPE_LABELS = {
     "CONDITIONAL": "Conditional",
     "REFERENCE": "Reference",
 }
+PRACTICAL_VALIDATION_CORE_GROUP = "Practical Validation Core"
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -439,7 +440,7 @@ def build_validation_module_plan(
         _module(
             module_id="source_integrity",
             label="Source Integrity",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=source_integrity_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
@@ -452,7 +453,7 @@ def build_validation_module_plan(
         _module(
             module_id="latest_replay",
             label="Latest Runtime Replay",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=latest_replay_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
@@ -465,7 +466,7 @@ def build_validation_module_plan(
         _module(
             module_id="benchmark_parity",
             label="Benchmark / Comparator Parity",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=benchmark_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
@@ -478,7 +479,7 @@ def build_validation_module_plan(
         _module(
             module_id="validation_efficacy",
             label="Validation Method Strength",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=validation_efficacy_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
@@ -491,7 +492,7 @@ def build_validation_module_plan(
         _module(
             module_id="data_coverage",
             label="Data Coverage",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=data_coverage_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
@@ -504,7 +505,7 @@ def build_validation_module_plan(
         _module(
             module_id="construction_risk",
             label="Construction Risk",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=construction_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
@@ -523,7 +524,7 @@ def build_validation_module_plan(
         _module(
             module_id="backtest_realism",
             label="Backtest Realism",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=realism_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
@@ -536,7 +537,7 @@ def build_validation_module_plan(
         _module(
             module_id="stress_robustness",
             label="Stress / Robustness",
-            group="Required for Final Review",
+            group=PRACTICAL_VALIDATION_CORE_GROUP,
             status=robustness_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",

@@ -8,3 +8,4 @@
 - 2026-07-09: Moved Selection Source JSON and Practical Validation Result JSON into Flow4 `상세 근거 / 원자료` Raw Evidence.
 - 2026-07-09: Synced BACKTEST_UI_FLOW, PORTFOLIO_SELECTION_FLOW, PROJECT_MAP, ROADMAP, INDEX, and root handoff logs.
 - 2026-07-09: Completed focused service/runtime contract tests, py_compile, frontend build, diff check, and Browser QA on fresh server `localhost:8523`.
+- 2026-07-09: Follow-up review removed stale unused Flow4 gate/module board helpers, renamed module display core group to `Practical Validation Core`, and made Flow3 show `주의 포함 이동 가능` when PV-owned yellow REVIEW cards remain but movement is allowed.

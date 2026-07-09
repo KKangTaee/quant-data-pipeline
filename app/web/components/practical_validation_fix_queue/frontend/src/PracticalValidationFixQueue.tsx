@@ -199,6 +199,12 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
   const secondaryAction = nextStageAction.secondaryAction
   const primaryEnabled = actionEnabled(primaryAction)
   const secondaryEnabled = actionEnabled(secondaryAction)
+  const hasVisibleReviewCaution = criteriaGroups.some((group) => Boolean(reviewStatusLabel(group.status)))
+  const nextStageStatusLabel = compact(nextStageAction.statusLabel, props.canSaveAndMove ? "이동 가능" : "보강 필요")
+  const displayedNextStageStatusLabel =
+    props.canSaveAndMove && hasVisibleReviewCaution && nextStageStatusLabel === "이동 가능"
+      ? "주의 포함 이동 가능"
+      : nextStageStatusLabel
   const nextStepItems = primaryEnabled
     ? [compact(primaryAction?.detail, "검증 결과를 저장하고 Final Review에서 최종 판단을 이어갑니다.")]
     : [compact(nextStageAction.disabledReason ?? primaryAction?.detail, "자세한 원인과 보강 기준은 Flow 4에서 확인합니다.")]
@@ -223,7 +229,7 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         </div>
         <div className="pv-react-fix__status">
           <span>{props.statusLabel}</span>
-          <b>{props.canSaveAndMove ? "검증 보강 완료" : "검증 보강 필요"}</b>
+          <b>{displayedNextStageStatusLabel}</b>
           <small>{props.fixItems.length > 0 ? `보강 항목 ${props.fixItems.length}` : "현재 보강 기준 없음"}</small>
         </div>
       </header>
