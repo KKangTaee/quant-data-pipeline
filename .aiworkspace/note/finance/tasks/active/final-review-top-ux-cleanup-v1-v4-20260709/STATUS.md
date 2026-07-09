@@ -9,4 +9,5 @@
 
 - Baseline focused Final Review tests passed before edits.
 - 1차 top summary cleanup committed.
-- 2차 candidate-status command center implemented and QA passed. Preparing 2차 commit.
+- 2차 candidate-status command center committed.
+- 3차 compact sentiment context implemented and QA passed. Preparing 3차 commit.

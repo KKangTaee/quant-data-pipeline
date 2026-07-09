@@ -221,90 +221,65 @@ def _format_sentiment_pct(value: Any) -> str:
         return "-"
 
 
-def _format_sentiment_pp(value: Any) -> str:
-    try:
-        return f"{float(value):+.1f} pp"
-    except (TypeError, ValueError):
-        return "-"
+def _build_final_review_sentiment_display_model(overlay: dict[str, Any]) -> dict[str, Any]:
+    risk_context = dict(overlay.get("risk_context") or {})
+    metrics = dict(overlay.get("metrics") or {})
+    boundary = dict(overlay.get("boundary") or {})
+    state_label = str(risk_context.get("state_label") or "Neutral")
+    phase_label = str(risk_context.get("source_phase_label") or "-")
+    cnn_score = _format_sentiment_score(metrics.get("cnn_fear_greed"))
+    cnn_rating = str(metrics.get("cnn_rating") or "-")
+    aaii_bearish = _format_sentiment_pct(metrics.get("aaii_bearish"))
+    return {
+        "display_mode": "compact",
+        "title": "시장 심리",
+        "headline": f"{state_label} · {phase_label}",
+        "detail": (
+            "Final Review 판단 근거가 아니라 시장 배경입니다. "
+            "자세한 심리 해석은 Workspace > Overview > Sentiment에서 확인합니다."
+        ),
+        "detail_destination": "Workspace > Overview > Sentiment",
+        "tone": str(risk_context.get("tone") or "neutral"),
+        "route_label": "역할",
+        "route_value": "Context only",
+        "route_detail": (
+            str(overlay.get("headline") or "").strip()
+            or "CNN / AAII sentiment는 Final Review에서 시장 배경으로만 표시됩니다."
+        ),
+        "meta_items": [
+            {"label": "CNN / AAII", "value": f"CNN {cnn_score} ({cnn_rating}) / AAII bearish {aaii_bearish}"},
+            {"label": "Gate", "value": boundary.get("gate_effect") or "none"},
+            {"label": "Timing / Rebalance", "value": "research only"},
+        ],
+    }
 
 
 def _render_market_sentiment_context_overlay() -> None:
     overlay = build_market_sentiment_context_overlay(surface="Final Review")
-    risk_context = dict(overlay.get("risk_context") or {})
-    metrics = dict(overlay.get("metrics") or {})
-    boundary = dict(overlay.get("boundary") or {})
-    tone = str(risk_context.get("tone") or "neutral")
+    model = _build_final_review_sentiment_display_model(overlay)
+    tone = str(model.get("tone") or "neutral")
     render_fr_section_header(
         eyebrow="Market Context",
-        title="시장 심리 Context Overlay",
-        detail=(
-            "CNN Fear & Greed / AAII sentiment를 Final Review 판단의 배경으로만 보여줍니다. "
-            "Candidate Board priority, selected-route gate, 저장 가능 여부는 기존 evidence owner가 계속 결정합니다."
-        ),
+        title=str(model["title"]),
+        detail=str(model["detail"]),
         tone=tone,
     )
     with st.container(border=True):
         render_fr_action_panel(
-            title=f"{risk_context.get('state_label') or 'Neutral'} · {risk_context.get('source_phase_label') or '-'}",
+            title=str(model["headline"]),
             detail=f"{overlay.get('headline') or ''} {overlay.get('summary') or ''}".strip(),
-            route_label="Boundary",
-            route_value="Context only",
-            route_detail=str(boundary.get("message") or ""),
+            route_label=str(model["route_label"]),
+            route_value=str(model["route_value"]),
+            route_detail=str(model["route_detail"]),
             route_tone=tone,
-            meta_items=[
-                {"label": "Gate Effect", "value": boundary.get("gate_effect") or "none"},
-                {"label": "Trade Signal", "value": "Disabled"},
-                {"label": "Registry Write", "value": "No"},
-                {"label": "Live Approval", "value": "Disabled"},
-            ],
-        )
-        render_fr_lane_grid(
-            [
-                {
-                    "kicker": "CNN Fear & Greed",
-                    "title": _format_sentiment_score(metrics.get("cnn_fear_greed")),
-                    "status": metrics.get("cnn_rating") or overlay.get("status") or "-",
-                    "detail": "0~100 headline sentiment score",
-                    "tone": tone,
-                },
-                {
-                    "kicker": "AAII Bearish",
-                    "title": _format_sentiment_pct(metrics.get("aaii_bearish")),
-                    "status": "weekly survey",
-                    "detail": "높을수록 개인투자자 비관이 강합니다.",
-                    "tone": "warning" if (metrics.get("aaii_bearish") or 0) and float(metrics.get("aaii_bearish") or 0) >= 35 else "neutral",
-                },
-                {
-                    "kicker": "AAII Bull-Bear Spread",
-                    "title": _format_sentiment_pp(metrics.get("aaii_bull_bear_spread")),
-                    "status": "bullish - bearish",
-                    "detail": "양수는 낙관 우위, 음수는 비관 우위입니다.",
-                    "tone": "positive" if (metrics.get("aaii_bull_bear_spread") or 0) and float(metrics.get("aaii_bull_bear_spread") or 0) > 0 else "warning",
-                },
-                {
-                    "kicker": "Data Confidence",
-                    "title": dict(overlay.get("data_confidence") or {}).get("status") or overlay.get("status") or "-",
-                    "status": f"missing {metrics.get('missing_count') or 0} / stale {metrics.get('stale_count') or 0}",
-                    "detail": dict(overlay.get("data_confidence") or {}).get("detail") or "Stored DB rows",
-                    "tone": dict(overlay.get("data_confidence") or {}).get("tone") or "neutral",
-                },
-            ],
-            min_width=190,
-        )
-        render_badge_strip(
-            [
-                {"label": "PASS / BLOCKER", "value": "No effect", "tone": "neutral"},
-                {"label": "Saved Setup", "value": "No write", "tone": "neutral"},
-                {"label": "Order / Rebalance", "value": "Disabled", "tone": "neutral"},
-                {"label": "Surface", "value": overlay.get("surface") or "Final Review", "tone": "neutral"},
-            ]
+            meta_items=list(model["meta_items"]),
         )
         warnings = list(overlay.get("warnings") or [])
         if warnings:
             st.warning(" / ".join(str(item) for item in warnings))
         evidence_rows = list(overlay.get("evidence_rows") or [])
         if evidence_rows:
-            with st.expander("CNN / AAII context evidence", expanded=False):
+            with st.expander(f"CNN / AAII detail · {model['detail_destination']}", expanded=False):
                 st.dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
         if overlay.get("next_action"):
             st.caption(str(overlay["next_action"]))

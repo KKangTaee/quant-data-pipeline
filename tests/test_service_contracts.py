@@ -12426,6 +12426,55 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         workspace_body = workspace_body.split("if hidden_validation_count > 0:", 1)[0]
         self.assertNotIn("render_fr_flow(", workspace_body)
 
+    def test_final_review_sentiment_display_is_compact_context_only(self) -> None:
+        from app.web.backtest_final_review.page import _build_final_review_sentiment_display_model
+
+        model = _build_final_review_sentiment_display_model(
+            {
+                "surface": "Final Review",
+                "headline": "공포 심리가 우위입니다.",
+                "summary": "방어적 심리가 우세합니다.",
+                "risk_context": {
+                    "state_label": "Risk-off",
+                    "source_phase_label": "공포 우위",
+                    "tone": "warning",
+                },
+                "metrics": {
+                    "cnn_fear_greed": 34.2,
+                    "cnn_rating": "Fear",
+                    "aaii_bearish": 42.5,
+                    "aaii_bull_bear_spread": -8.5,
+                    "missing_count": 0,
+                    "stale_count": 0,
+                },
+                "boundary": {
+                    "context_only": True,
+                    "gate_effect": "none",
+                    "monitoring_signal": False,
+                    "auto_rebalance": False,
+                },
+            }
+        )
+
+        self.assertEqual(model["title"], "시장 심리")
+        self.assertEqual(model["display_mode"], "compact")
+        self.assertEqual(model["detail_destination"], "Workspace > Overview > Sentiment")
+        self.assertEqual(model["route_value"], "Context only")
+        self.assertIn("공포 우위", model["headline"])
+        self.assertEqual([item["label"] for item in model["meta_items"]], ["CNN / AAII", "Gate", "Timing / Rebalance"])
+
+        joined = " ".join(str(value) for value in model.values())
+        self.assertIn("Final Review 판단 근거가 아니라 시장 배경", joined)
+        self.assertNotIn("PASS / BLOCKER", joined)
+        self.assertNotIn("Saved Setup", joined)
+        self.assertNotIn("Order / Rebalance", joined)
+        self.assertNotIn("Candidate Board priority", joined)
+
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        sentiment_body = page_source.split("def _render_market_sentiment_context_overlay", 1)[1]
+        sentiment_body = sentiment_body.split("\ndef ", 1)[0]
+        self.assertNotIn("render_fr_lane_grid(", sentiment_body)
+
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
             _conclusion_group_detail,
