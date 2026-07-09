@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+  - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
@@ -27,6 +28,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-09 - PV REVIEW는 Final Review 숙제가 아니라 role로 분리해야 한다
+
+- User request: 사용자가 Practical Validation 검증 항목이 2개만 남은 것처럼 보이는 이유와 REVIEW 모듈이 Final Review에서 모두 처리되어야 하는지 질문하고, 1차~6차 개선을 승인함.
+- Interpreted goal: 1단계 데이터 / 기본 검증, 2단계 Practical Validation 실용성 판단, 3단계 Final Review 수익성 / benchmark / 후보 비교 / 최종 판단, Monitoring 추적 책임을 다시 분리해야 함.
+- Analysis result: 검증 모듈은 사라진 것이 아니라 REVIEW-only category를 숨기고 모든 REVIEW를 `Final Review review`로 표시한 UI/read-model 계약이 문제였다.
+- Follow-up: `practical-validation-stage-ownership-v1`에서 `review_role` taxonomy를 추가하고 Flow4 category visibility, `ETF 운용사 / 공식 외부 데이터` 중심 data action wording, Final Review copy, docs를 갱신했다. 새 provider fetch path, DB schema, gate threshold, registry / saved rewrite는 만들지 않았다.
 
 ### 2026-07-09 - PV Flow4 데이터 보강 영역은 하나의 action center로 읽혀야 한다
 

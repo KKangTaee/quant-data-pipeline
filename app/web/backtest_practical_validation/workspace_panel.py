@@ -35,11 +35,11 @@ GATE_FIX_GUIDANCE = {
     },
     "data_coverage": {
         "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
-        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, 운용사 / 공식 외부 데이터 freshness, lifecycle / survivorship 부족 항목을 확인하고 수집 가능한 gap은 Flow4 데이터 보강 / 수집 실행에서 처리합니다.",
     },
     "Data Coverage": {
         "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
-        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, 운용사 / 공식 외부 데이터 freshness, lifecycle / survivorship 부족 항목을 확인하고 수집 가능한 gap은 Flow4 데이터 보강 / 수집 실행에서 처리합니다.",
     },
 }
 
@@ -244,6 +244,14 @@ def _conclusion_group_detail(group: dict[str, Any]) -> tuple[str, str, str]:
     passed = [str(item) for item in list(group.get("passed_criteria") or []) if str(item).strip()]
     if remaining:
         return "실패", " / ".join(remaining), "danger"
+    if int(group.get("pv_practical_caution_count") or 0):
+        return "주의", str(group.get("decision_summary") or "2단계 실용성 주의 항목이 있습니다."), "warning"
+    if int(group.get("pv_data_caution_count") or 0):
+        return "주의", str(group.get("decision_summary") or "데이터 주의 항목이 있습니다."), "warning"
+    if int(group.get("final_review_reference_count") or 0):
+        return "참고", str(group.get("decision_summary") or "최종 판단 참고 항목입니다."), "neutral"
+    if int(group.get("monitoring_followup_count") or 0):
+        return "추적", str(group.get("decision_summary") or "Monitoring 추적 항목입니다."), "neutral"
     if passed:
         return "통과", " / ".join(passed), "positive"
     if group.get("visible_in_practical_validation") is False:

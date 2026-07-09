@@ -1222,8 +1222,8 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
 def render_final_review_workspace() -> None:
     st.markdown("### Final Review")
     st.caption(
-        "Selected Dashboard에서 추적할 모니터링 후보로 선정할지 판단하는 공간입니다. Candidate Board와 Decision Cockpit으로 판단 상태를 먼저 보고, "
-        "selected-route gate까지 통과한 후보만 정식 저장합니다. 필요한 경우에만 이전 validation evidence 부록을 확인합니다. 검토 대상은 Practical Validation Gate를 통과한 후보만 표시합니다."
+        "수익성, benchmark 대비 경쟁력, 후보 간 비교, profile 적합성을 종합해 Selected Dashboard에서 추적할 모니터링 후보로 선정할지 판단하는 공간입니다. "
+        "Candidate Board와 Decision Cockpit으로 최종 판단 상태를 먼저 보고, 필요한 경우에만 이전 validation evidence 부록을 확인합니다."
     )
     render_reference_contextual_help("final_review")
 
@@ -1272,8 +1272,8 @@ def render_final_review_workspace() -> None:
         eyebrow="Final Review Decision Desk",
         title="모니터링 후보 선별",
         detail=(
-            "Practical Validation Gate를 통과한 후보만 비교하고, Decision Cockpit에서 차단 / 보류 / 모니터링 후보 가능 상태를 확인한 뒤 "
-            "가능 후보만 정식 저장합니다."
+            "Practical Validation Gate를 통과한 후보의 수익성, benchmark 비교, 후보 간 우선순위, profile 적합성을 비교하고 "
+            "Decision Cockpit에서 모니터링 후보 저장 가능 상태를 확인합니다."
         ),
         route_label="오늘의 판단 상태",
         route_value=route_value,
@@ -1308,12 +1308,12 @@ def render_final_review_workspace() -> None:
         [
             {
                 "title": "후보 선택",
-                "detail": "Gate 통과 후보를 Candidate Board에서 비교합니다.",
+                "detail": "Gate 통과 후보의 성과, benchmark, profile 적합성을 Candidate Board에서 비교합니다.",
                 "tone": "info",
             },
             {
                 "title": "상태 판단",
-                "detail": "Decision Cockpit에서 선정 차단 / 보류 / 모니터링 후보 가능 상태를 확인합니다.",
+                "detail": "Decision Cockpit에서 최종 선택 / 보류 / 모니터링 후보 가능 상태를 확인합니다.",
                 "tone": "neutral",
             },
             {

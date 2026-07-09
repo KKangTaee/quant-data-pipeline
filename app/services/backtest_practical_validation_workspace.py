@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.backtest_practical_validation_stage_roles import review_role_fields
 from app.services.backtest_validation_status_policy import normalize_validation_status
 
 
@@ -84,14 +85,14 @@ FLOW4_CATEGORY_GROUP_SPECS = [
     {
         "group_id": "conditional_context",
         "label": "Conditional Evidence",
-        "purpose": "ETF provider, 레버리지 / 인버스, macro 조건처럼 후보 특성에 따라 필요한 추가 근거를 확인합니다.",
+        "purpose": "ETF 운용사 / 공식 외부 데이터, 레버리지 / 인버스, macro 조건처럼 후보 특성에 따라 필요한 추가 근거를 확인합니다.",
         "module_ids": ("provider_investability", "leverage_inverse", "macro_regime"),
     },
 ]
 STATUS_LABELS = {
     "PASS": "통과",
     "READY": "통과",
-    "REVIEW": "Final Review에서 확인",
+    "REVIEW": "확인 필요",
     "NEEDS_INPUT": "근거 보강 필요",
     "NOT_RUN": "아직 실행 안 됨",
     "BLOCKED": "이동 차단",
@@ -111,9 +112,9 @@ OUTCOME_TEXT = {
         "tone": "warning",
     },
     "review_required": {
-        "label": "Final Review 판단 필요",
-        "detail": "자동 차단은 아니지만 Final Review에서 판단 근거로 확인해야 합니다.",
-        "headline": "Final Review에서 판단할 REVIEW 항목이 남아 있습니다.",
+        "label": "주의 확인 필요",
+        "detail": "자동 차단은 아니지만 stage role에 따라 확인해야 합니다.",
+        "headline": "역할별 REVIEW 항목이 남아 있습니다.",
         "tone": "warning",
     },
     "not_practical": {
@@ -176,7 +177,7 @@ GROUP_DISPLAY_TEXT = {
     },
     "conditional_context": {
         "display_label": "후보 특성별 추가 근거",
-        "purpose": "ETF provider, 레버리지 / 인버스, macro 조건처럼 해당 후보에만 필요한 근거를 확인합니다.",
+        "purpose": "ETF 운용사 / 공식 외부 데이터, 레버리지 / 인버스, macro 조건처럼 해당 후보에만 필요한 근거를 확인합니다.",
     },
     "final_review_handoff_summary": {
         "display_label": "Final Review 이동 요약",
@@ -212,15 +213,15 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "검증이 우연한 좋은 구간에만 기대지 않는가",
         "issue_title": "검증 방법론 근거 부족",
         "current_problem": "walk-forward / OOS / regime split 근거 중 일부가 비어 있거나 보강 필요 상태입니다.",
-        "completion_criteria": "Validation Method Strength 핵심 항목이 PASS 또는 Final Review 확인 상태가 되어야 합니다.",
+        "completion_criteria": "Validation Method Strength 핵심 항목이 PASS 또는 해당 REVIEW 역할 확인 상태가 되어야 합니다.",
         "fix_location": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
         "impact_summary": "검증 방법 근거가 부족하면 성과가 특정 기간에만 우연히 좋았는지 구분하기 어렵습니다.",
     },
     "data_coverage": {
-        "display_label": "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가",
+        "display_label": "검증에 필요한 가격 / ETF 운용사 / 생존편향 데이터가 충분한가",
         "issue_title": "데이터 커버리지 부족",
-        "current_problem": "가격 window, provider freshness, lifecycle, survivorship evidence 중 비어 있거나 오래된 데이터가 있습니다.",
-        "completion_criteria": "데이터 커버리지 핵심 항목이 PASS 또는 Final Review 확인 상태이고 provider gap이 Final Review 이동을 막지 않아야 합니다.",
+        "current_problem": "가격 window, ETF 운용사 / 공식 외부 데이터 freshness, lifecycle, survivorship evidence 중 비어 있거나 오래된 데이터가 있습니다.",
+        "completion_criteria": "데이터 커버리지 핵심 항목이 PASS 또는 해당 REVIEW 역할 확인 상태이고 수집 가능한 외부 데이터 gap이 저장 / 이동을 막지 않아야 합니다.",
         "fix_location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
         "impact_summary": "데이터 커버리지가 부족하면 검증 결과가 일부 ticker나 현재 snapshot에만 기대게 됩니다.",
     },
@@ -228,7 +229,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "구성 / 집중 위험을 설명할 근거가 있는가",
         "issue_title": "구성 / 집중 위험 근거 부족",
         "current_problem": "ETF 내부 보유 / exposure coverage나 concentration evidence가 부족하면 실제 구성 위험을 설명하기 어렵습니다.",
-        "completion_criteria": "Construction Risk가 PASS 또는 Final Review 확인 상태이고 집중 / overlap / unknown exposure가 판단 근거로 정리되어야 합니다.",
+        "completion_criteria": "Construction Risk가 PASS 또는 해당 REVIEW 역할 확인 상태이고 집중 / overlap / unknown exposure가 판단 근거로 정리되어야 합니다.",
         "fix_location": "Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
         "impact_summary": "구성 위험을 설명하지 못하면 좋은 백테스트라도 실제 운용 위험을 판단하기 어렵습니다.",
     },
@@ -236,7 +237,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "실전 운용 비용과 거래 현실성이 반영됐는가",
         "issue_title": "실전 운용 현실성 근거 부족",
         "current_problem": "비용 적용, turnover, liquidity, net curve 근거가 없으면 백테스트 성과가 실전 운용 성과와 달라질 수 있습니다.",
-        "completion_criteria": "Backtest Realism 핵심 항목이 PASS 또는 Final Review 확인 상태이고 cost / turnover / liquidity blocker가 없어야 합니다.",
+        "completion_criteria": "Backtest Realism 핵심 항목이 PASS 또는 해당 REVIEW 역할 확인 상태이고 cost / turnover / liquidity blocker가 없어야 합니다.",
         "fix_location": "Flow4 > 실전성 > 실전 운용 현실성 상세",
         "impact_summary": "비용과 거래 현실성이 빠지면 실전 성과가 백테스트보다 크게 달라질 수 있습니다.",
     },
@@ -244,7 +245,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "시장 충격과 설정 변화에도 버티는가",
         "issue_title": "강건성 근거 부족",
         "current_problem": "stress / rolling / sensitivity / overfit 근거 중 실행되지 않았거나 부족한 항목이 있습니다.",
-        "completion_criteria": "Stress / Robustness가 PASS 또는 Final Review 확인 상태이고 미실행 핵심 항목이 없어야 합니다.",
+        "completion_criteria": "Stress / Robustness가 PASS 또는 해당 REVIEW 역할 확인 상태이고 미실행 핵심 항목이 없어야 합니다.",
         "fix_location": "Flow4 > 강건성 > Stress / sensitivity 상세",
         "impact_summary": "강건성 근거가 약하면 특정 조건에 과최적화된 후보일 수 있습니다.",
     },
@@ -252,31 +253,31 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "Final Review 저장 전에 막힐 필수 gap이 없는가",
         "issue_title": "Final Review 저장 전 필수 gap",
         "current_problem": "Final Review 저장 전에 필요한 evidence packet, selected-route policy, review-required gap이 남아 있습니다.",
-        "completion_criteria": "Selected-route Preflight가 PASS 또는 Final Review 확인 상태이고 저장 차단 gap이 없어야 합니다.",
+        "completion_criteria": "Selected-route Preflight가 PASS 또는 저장 전 보강 확인 상태이고 저장 차단 gap이 없어야 합니다.",
         "fix_location": "Final Review 이동 요약",
         "impact_summary": "여기서 gap을 확인하지 않으면 Final Review로 넘어가도 저장 단계에서 다시 막힐 수 있습니다.",
     },
     "provider_investability": {
-        "display_label": "ETF provider 근거가 충분한가",
-        "issue_title": "ETF provider 근거 부족",
-        "current_problem": "provider snapshot이나 holdings / exposure 근거가 없으면 ETF 내부 노출과 운용 가능성을 판단하기 어렵습니다.",
-        "completion_criteria": "ETF Provider Investability가 PASS 또는 Final Review 확인 상태이고 provider snapshot gap이 보강되어야 합니다.",
+        "display_label": "ETF 운용사 / 공식 외부 데이터 근거가 충분한가",
+        "issue_title": "ETF 운용사 / 공식 외부 데이터 근거 부족",
+        "current_problem": "ETF 운용사 snapshot이나 holdings / exposure 근거가 없으면 ETF 내부 노출과 운용 가능성을 판단하기 어렵습니다.",
+        "completion_criteria": "ETF Provider Investability가 PASS 또는 해당 REVIEW 역할 확인 상태이고 운용사 / 공식 외부 데이터 snapshot gap이 보강되어야 합니다.",
         "fix_location": "Flow4 > 데이터 보강 / 수집 실행",
-        "impact_summary": "provider 근거가 약하면 ETF 내부 노출과 실전 운용 가능성을 판단하기 어렵습니다.",
+        "impact_summary": "운용사 / 공식 외부 데이터 근거가 약하면 ETF 내부 노출과 실전 운용 가능성을 판단하기 어렵습니다.",
     },
     "leverage_inverse": {
         "display_label": "레버리지 / 인버스 노출이 목적과 맞는가",
         "issue_title": "레버리지 / 인버스 적합성 확인 필요",
         "current_problem": "레버리지 / 인버스 ticker가 포함되면 일간 목표 상품 특성과 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 별도 확인이 필요합니다.",
-        "completion_criteria": "노출 목적, 보유 기간, 손실 허용 기준이 Final Review 판단 근거로 정리되어야 합니다.",
-        "fix_location": "Final Review 확인 항목",
+        "completion_criteria": "노출 목적, 보유 기간, 손실 허용 기준이 2단계 실용성 주의 근거로 정리되어야 합니다.",
+        "fix_location": "Flow4 > 조건부 근거 > 레버리지 / 인버스 적합성",
         "impact_summary": "레버리지 / 인버스 노출은 장기 보유 목적과 충돌하거나 손실 확대 위험을 만들 수 있습니다.",
     },
     "risk_contribution": {
         "display_label": "weighted mix의 위험 기여가 한쪽으로 쏠리지 않는가",
         "issue_title": "위험 기여 설명 부족",
         "current_problem": "component matrix나 risk contribution evidence가 없으면 weighted mix 위험이 한쪽으로 쏠렸는지 설명하기 어렵습니다.",
-        "completion_criteria": "Risk Contribution이 PASS 또는 Final Review 확인 상태이고 component matrix / correlation / drop-one 근거가 있어야 합니다.",
+        "completion_criteria": "Risk Contribution이 PASS 또는 해당 REVIEW 역할 확인 상태이고 component matrix / correlation / drop-one 근거가 있어야 합니다.",
         "fix_location": "Flow4 > 구성 / 리스크 > 위험 기여 상세",
         "impact_summary": "위험 기여가 설명되지 않으면 여러 component를 섞은 이유를 Final Review에서 판단하기 어렵습니다.",
     },
@@ -284,7 +285,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "component 역할과 비중 이유가 설명되는가",
         "issue_title": "component 역할 / 비중 근거 부족",
         "current_problem": "component role이나 weight rationale이 없으면 mix 구성 의도가 부족합니다.",
-        "completion_criteria": "Component Role / Weight가 PASS 또는 Final Review 확인 상태이고 role source와 weight rationale이 정리되어야 합니다.",
+        "completion_criteria": "Component Role / Weight가 PASS 또는 해당 REVIEW 역할 확인 상태이고 role source와 weight rationale이 정리되어야 합니다.",
         "fix_location": "Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
         "impact_summary": "역할과 비중 이유가 없으면 좋은 결과가 우연한 조합인지 판단하기 어렵습니다.",
     },
@@ -292,7 +293,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "전술형 전략의 macro / regime 근거가 있는가",
         "issue_title": "macro / regime 근거 확인 필요",
         "current_problem": "전술형 또는 헤지형 후보는 macro regime과 risk-on/off context가 전략 약점과 충돌하지 않는지 확인해야 합니다.",
-        "completion_criteria": "macro snapshot, regime split, risk-on/off context가 Final Review 판단 근거로 정리되어야 합니다.",
+        "completion_criteria": "macro snapshot, regime split, risk-on/off context가 2단계 실용성 주의 근거로 정리되어야 합니다.",
         "fix_location": "Flow4 > Raw Evidence > Practical Diagnostics",
         "impact_summary": "macro / regime 근거가 없으면 전술형 전략의 성과가 특정 시장 환경에만 기대는지 판단하기 어렵습니다.",
     },
@@ -315,7 +316,7 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "Flow 2에서 `전략 재검증 실행`을 눌러 현재 DB 최신 시장일까지 replay를 실행합니다.",
             "Recheck End와 coverage가 저장 시점 이후 기간을 포함하는지 확인합니다.",
-            "재검증 후 같은 기준 카드가 PASS 또는 Final Review 확인 상태로 바뀌었는지 확인합니다.",
+            "재검증 후 같은 기준 카드가 PASS 또는 해당 REVIEW 역할 확인 상태로 바뀌었는지 확인합니다.",
         ],
         "location": "Flow2 > 검증 기준 설정 / 실전 재검증 실행",
     },
@@ -337,16 +338,16 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "검증 방법론 강도 상세에서 non-PASS 기준이 walk-forward, OOS, regime split 중 무엇인지 확인합니다.",
             "부족한 방법론 근거를 보강합니다.",
-            "보강 후 Flow 2 재검증으로 해당 기준이 PASS 또는 Final Review 확인 상태인지 확인합니다.",
+            "보강 후 Flow 2 재검증으로 해당 기준이 PASS 또는 해당 REVIEW 역할 확인 상태인지 확인합니다.",
         ],
         "location": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
     },
     "data_coverage": {
-        "checked_summary": "가격 window, provider freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",
-        "missing_summary": "가격 window / provider freshness / lifecycle / survivorship 중 비어 있거나 오래된 항목",
-        "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, 수집 가능한 provider gap은 데이터 보강 / 수집 실행에서 처리합니다.",
+        "checked_summary": "가격 window, ETF 운용사 / 공식 외부 데이터 freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",
+        "missing_summary": "가격 window / ETF 운용사 freshness / lifecycle / survivorship 중 비어 있거나 오래된 항목",
+        "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, 수집 가능한 외부 데이터 gap은 데이터 보강 / 수집 실행에서 처리합니다.",
         "action_steps": [
-            "provider gap은 데이터 보강 / 수집 실행에서 수집하고, 가격 window gap은 DB price ingestion으로 보강합니다.",
+            "운용사 / 공식 외부 데이터 gap은 데이터 보강 / 수집 실행에서 수집하고, 가격 window gap은 DB price ingestion으로 보강합니다.",
             "보강 후 Flow 2 재검증을 다시 실행해 coverage blocker가 해소됐는지 확인합니다.",
             "그래도 막히면 데이터 품질 / 편향 통제 상세에서 lifecycle 또는 survivorship 기준까지 확인합니다.",
         ],
@@ -356,11 +357,11 @@ MODULE_RESOLUTION_GUIDES = {
     "construction_risk": {
         "checked_summary": "ETF-like 또는 weighted mix 후보의 구성 집중, look-through, top holding, overlap, unknown exposure를 확인합니다.",
         "missing_summary": "구성 집중, holdings / exposure coverage, overlap, unknown exposure 근거",
-        "next_action_summary": "포트폴리오 구성 근거 상세에서 non-PASS row를 확인하고 provider look-through 근거를 보강합니다.",
+        "next_action_summary": "포트폴리오 구성 근거 상세에서 non-PASS row를 확인하고 운용사 look-through 근거를 보강합니다.",
         "action_steps": [
             "포트폴리오 구성 근거 상세에서 집중, holdings coverage, overlap, unknown exposure 중 막힌 기준을 확인합니다.",
             "ETF 또는 mix 구성의 look-through / top holding / exposure 근거를 보강합니다.",
-            "구성 위험이 설명 가능한 수준인지 Final Review 판단 근거로 다시 확인합니다.",
+            "구성 위험이 설명 가능한 수준인지 2단계 실용성 주의 근거로 다시 확인합니다.",
         ],
         "location": "Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
     },
@@ -398,24 +399,24 @@ MODULE_RESOLUTION_GUIDES = {
         "location": "Flow4 > 카테고리별 검증 결과 > Final Review 이동 요약",
     },
     "provider_investability": {
-        "checked_summary": "ETF provider operability, holdings, exposure, provider freshness가 충분한지 확인합니다.",
-        "missing_summary": "ETF provider snapshot, holdings, exposure, operability gap",
-        "next_action_summary": "데이터 보강 / 수집 실행에서 수집 가능한 provider gap을 먼저 보강합니다.",
+        "checked_summary": "ETF 운용사 operability, holdings, exposure, freshness가 충분한지 확인합니다.",
+        "missing_summary": "ETF 운용사 snapshot, holdings, exposure, operability gap",
+        "next_action_summary": "데이터 보강 / 수집 실행에서 수집 가능한 운용사 / 공식 외부 데이터 gap을 먼저 보강합니다.",
         "action_steps": [
-            "데이터 보강 / 수집 실행에서 holdings, exposure, provider freshness 중 수집 가능한 gap을 확인합니다.",
-            "provider evidence를 보강한 뒤 데이터 품질 / 구성 기준의 blocker가 해소됐는지 확인합니다.",
+            "데이터 보강 / 수집 실행에서 holdings, exposure, 운용사 freshness 중 수집 가능한 gap을 확인합니다.",
+            "운용사 / 공식 외부 데이터 evidence를 보강한 뒤 데이터 품질 / 구성 기준의 blocker가 해소됐는지 확인합니다.",
         ],
         "location": "Flow4 > 데이터 보강 / 수집 실행",
     },
     "leverage_inverse": {
         "checked_summary": "레버리지 / 인버스 노출의 목적, 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 확인합니다.",
         "missing_summary": "노출 목적, 보유 기간, 손실 허용 기준",
-        "next_action_summary": "Final Review에서 레버리지 / 인버스 노출을 선택 근거 또는 보류 근거로 확인합니다.",
+        "next_action_summary": "Flow4에서 레버리지 / 인버스 노출을 2단계 실용성 주의 근거로 확인합니다.",
         "action_steps": [
             "레버리지 / 인버스 노출의 목적과 보유 기간이 후보 목적과 맞는지 확인합니다.",
-            "손실 허용 기준을 넘을 가능성이 있으면 Final Review에서 보류 근거로 남깁니다.",
+            "손실 허용 기준을 넘을 가능성이 있으면 2단계 실용성 주의 또는 보류 근거로 남깁니다.",
         ],
-        "location": "Final Review 확인 항목",
+        "location": "Flow4 > 조건부 근거 > 레버리지 / 인버스 적합성",
     },
     "risk_contribution": {
         "checked_summary": "weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency를 확인합니다.",
@@ -435,14 +436,14 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "Component 역할 / 비중 상세에서 역할 설명, target weight, profile intent, weight rationale 중 부족한 기준을 확인합니다.",
             "각 component가 왜 포함됐고 왜 그 비중인지 설명 근거를 보강합니다.",
-            "보강 후 mix 구성이 후보 목적과 맞는지 Final Review 판단 근거로 확인합니다.",
+            "보강 후 mix 구성이 후보 목적과 맞는지 2단계 실용성 주의로 확인합니다.",
         ],
         "location": "Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
     },
     "macro_regime": {
         "checked_summary": "전술형 / 헤지형 후보의 macro regime, risk-on/off context, regime split 근거를 확인합니다.",
         "missing_summary": "macro snapshot, regime split, risk-on/off context 근거",
-        "next_action_summary": "Raw Evidence의 Practical Diagnostics에서 macro / regime row를 확인하고 Final Review 판단 근거로 넘깁니다.",
+        "next_action_summary": "Raw Evidence의 Practical Diagnostics에서 macro / regime row를 확인하고 2단계 실용성 주의로 정리합니다.",
         "action_steps": [
             "Raw Evidence의 Practical Diagnostics에서 macro snapshot, regime split, risk-on/off context를 확인합니다.",
             "전술형 성과가 특정 regime에 과도하게 의존하면 Final Review에서 선택 리스크로 남깁니다.",
@@ -471,15 +472,15 @@ COLLECTABLE_DATA_ACTION_KEYWORDS = (
 COLLECTABLE_DATA_ACTIONS = {
     "data_coverage": {
         "surface": "Flow4 > 데이터 보강 / 수집 실행",
-        "detail": "provider snapshot, holdings / exposure, macro context처럼 수집 가능한 데이터 gap만 같은 화면에서 보강합니다.",
+        "detail": "ETF 운용사 snapshot, holdings / exposure, macro context처럼 수집 가능한 데이터 gap만 같은 화면에서 보강합니다.",
     },
     "construction_risk": {
         "surface": "Flow4 > 데이터 보강 / 수집 실행",
-        "detail": "구성 리스크 중 provider holdings / exposure 누락처럼 수집 가능한 gap만 보강합니다.",
+        "detail": "구성 리스크 중 ETF holdings / exposure 누락처럼 수집 가능한 gap만 보강합니다.",
     },
     "provider_investability": {
         "surface": "Flow4 > 데이터 보강 / 수집 실행",
-        "detail": "ETF operability, holdings / exposure, macro context 중 수집 가능한 provider gap을 보강합니다.",
+        "detail": "ETF 운용성, holdings / exposure, macro context 중 수집 가능한 외부 데이터 gap을 보강합니다.",
     },
 }
 DATA_ACTION_GROUPS = (
@@ -545,6 +546,7 @@ def _normalize_module(
     row["status"] = normalize_validation_status(row.get("status"))
     row["workspace_role"] = workspace_role
     row.update(_module_display_fields(row, evidence_rows=evidence_rows))
+    row.update(review_role_fields(row))
     return row
 
 
@@ -639,7 +641,7 @@ def _clean_issue_text(value: Any) -> str:
         "NEEDS_INPUT row": "보강 필요 항목",
         "NEEDS_INPUT 항목": "보강 필요 항목",
         "NOT_RUN row": "미실행 항목",
-        "REVIEW row": "Final Review 확인 항목",
+        "REVIEW row": "역할별 REVIEW 확인 항목",
     }
     for raw, replacement in replacements.items():
         text = text.replace(raw, replacement)
@@ -1096,23 +1098,30 @@ def _resolution_guide(
         outcome_label = "통과 기준"
         location_label = "위치"
         missing = "현재 기준에서 부족한 항목은 없습니다."
-        action = "추가 보강 없이 Final Review 판단 근거로 사용할 수 있습니다."
+        action = "추가 보강 없이 다음 단계 참고 근거로 사용할 수 있습니다."
         action_steps = [action]
         pass_criteria = pass_criteria or "현재 기준이 통과 상태입니다."
     elif status == "REVIEW":
+        role = review_role_fields(module)
         guide_type = "review"
         issue_label = "확인할 항목"
         action_label = "확인 방법"
         outcome_label = "완료 기준"
         location_label = "확인 위치"
         missing = row_summary.get("review") or missing
-        action = row_summary.get("actions") or action or "Final Review에서 review 항목을 판단 근거로 확인합니다."
+        action = (
+            row_summary.get("actions")
+            or action
+            or f"{role['stage_decision_surface']}에서 {role['review_role_label']} 항목을 확인합니다."
+        )
         action_steps = _merge_action_steps(
             row_action_steps,
             configured_action_steps,
-            [action or "Final Review에서 review 항목을 판단 근거로 확인합니다."],
+            [action or f"{role['stage_decision_surface']}에서 {role['review_role_label']} 항목을 확인합니다."],
         )
-        pass_criteria = pass_criteria or "Final Review에서 확인할 근거와 판단 사유가 남아 있어야 합니다."
+        pass_criteria = pass_criteria.replace("Final Review 확인 상태", role["review_role_label"])
+        pass_criteria = pass_criteria.replace("해당 REVIEW 역할 확인 상태", role["review_role_label"])
+        pass_criteria = pass_criteria or f"{role['review_role_label']}로 확인할 근거와 판단 사유가 남아 있어야 합니다."
     elif status == "NOT_APPLICABLE":
         guide_type = "none"
         issue_label = "적용 여부"
@@ -1130,7 +1139,7 @@ def _resolution_guide(
         outcome_label = "통과 기준"
         location_label = "위치"
         action_steps = _merge_action_steps(row_action_steps, configured_action_steps, [action])
-        pass_criteria = pass_criteria or "필수 기준이 PASS 또는 Final Review 확인 상태가 되어야 합니다."
+        pass_criteria = pass_criteria or "필수 기준이 PASS 또는 해당 REVIEW 역할 확인 상태가 되어야 합니다."
 
     if action_steps:
         action = action_steps[0]
@@ -1173,7 +1182,7 @@ def _module_display_fields(module: dict[str, Any], evidence_rows: list[dict[str,
     completion_criteria = (
         reading.get("completion_criteria")
         or action
-        or f"{label} 기준이 PASS 또는 Final Review 확인 상태가 되어야 합니다."
+        or f"{label} 기준이 PASS 또는 해당 REVIEW 역할 확인 상태가 되어야 합니다."
     )
     if status in {"PASS", "READY"}:
         current_problem = "현재 기준에서 Final Review 이동을 즉시 막는 문제는 없습니다."
@@ -1240,6 +1249,14 @@ def _group_tone(modules: list[dict[str, Any]]) -> str:
 def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
     status = _status_label(module.get("status") or "NOT_RUN")
     outcome = _criteria_outcome(status)
+    role_fields = review_role_fields(module)
+    status_label = module.get("status_label") or _criteria_status_label(status)
+    outcome_label = module.get("outcome_label") or outcome["outcome_label"]
+    outcome_detail = module.get("outcome_detail") or outcome["outcome_detail"]
+    if status == "REVIEW":
+        status_label = role_fields["review_role_label"]
+        outcome_label = role_fields["review_role_label"]
+        outcome_detail = f"{role_fields['stage_decision_surface']}에서 확인할 주의 항목입니다."
     evidence = (
         module.get("gate_reason")
         or module.get("evidence")
@@ -1256,14 +1273,15 @@ def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
         "label": module.get("label") or module.get("module_id") or "-",
         "display_label": module.get("display_label") or module.get("label") or module.get("module_id") or "-",
         "status": status,
-        "status_label": module.get("status_label") or _criteria_status_label(status),
+        "status_label": status_label,
         "technical_status": module.get("technical_status") or status,
         "technical_label": module.get("technical_label") or f"{module.get('label') or module.get('module_id') or '-'} · {status}",
         "outcome_key": module.get("outcome_key") or outcome["outcome_key"],
-        "outcome_label": module.get("outcome_label") or outcome["outcome_label"],
-        "outcome_detail": module.get("outcome_detail") or outcome["outcome_detail"],
+        "outcome_label": outcome_label,
+        "outcome_detail": outcome_detail,
         "outcome_tone": module.get("outcome_tone") or outcome["outcome_tone"],
         "tone": _status_tone(status),
+        **role_fields,
         "explanation": explanation,
         "evidence": evidence,
         "issue_title": module.get("issue_title") or module.get("display_label") or module.get("label") or "-",
@@ -1314,33 +1332,75 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
         for card in cards
         if card.get("status") == "REVIEW"
     ]
+    pv_data_caution = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "pv_data_caution"
+    ]
+    pv_practical_caution = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "pv_practical_caution"
+    ]
+    final_review_reference = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "final_decision_input"
+    ]
+    monitoring_followup = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "monitoring_followup"
+    ]
     if not_practical:
         decision = f"현재 상태로 실전 사용이 어려운 기준 {len(not_practical)}개가 있습니다."
     elif repair:
         decision = f"보강 필요: 재검증할 기준 {len(repair)}개가 남아 있습니다."
+    elif pv_practical_caution:
+        decision = f"실용성 판단에서 주의할 REVIEW 기준 {len(pv_practical_caution)}개가 있습니다."
+    elif pv_data_caution:
+        decision = f"데이터 / 기본 검증에서 주의할 REVIEW 기준 {len(pv_data_caution)}개가 있습니다."
+    elif final_review_reference:
+        decision = f"최종 판단 메모에서 참고할 기준 {len(final_review_reference)}개가 있습니다."
+    elif monitoring_followup:
+        decision = f"Monitoring에서 추적할 기준 {len(monitoring_followup)}개가 있습니다."
     elif review:
-        decision = "Practical Validation에서 보강할 항목은 없습니다."
+        decision = f"역할 확인이 필요한 REVIEW 기준 {len(review)}개가 있습니다."
     else:
         decision = "이 기준 그룹은 현재 통과 상태입니다."
     if not_practical:
         display_status = f"실전 사용 어려움 {len(not_practical)}"
     elif repair:
         display_status = f"보강 필요 {len(repair)}"
+    elif pv_practical_caution:
+        display_status = f"2단계 실용성 주의 {len(pv_practical_caution)}"
+    elif pv_data_caution:
+        display_status = f"데이터 주의 {len(pv_data_caution)}"
+    elif final_review_reference:
+        display_status = f"최종 판단 참고 {len(final_review_reference)}"
+    elif monitoring_followup:
+        display_status = f"Monitoring 추적 {len(monitoring_followup)}"
+    elif review:
+        display_status = f"REVIEW {len(review)}"
     elif passed:
         display_status = f"통과 {len(passed)}"
-    elif review:
-        display_status = "Final Review 판단 필요"
     else:
         display_status = "비적용"
-    visible_in_practical_validation = bool(passed or remaining)
+    visible_in_practical_validation = bool(passed or remaining or pv_data_caution or pv_practical_caution)
     return {
         "passed_criteria": passed,
         "remaining_issues": remaining,
         "repair_criteria": repair,
         "not_practical_criteria": not_practical,
         "review_criteria": review,
-        "final_review_reference_criteria": review,
-        "final_review_reference_count": len(review),
+        "pv_data_caution_criteria": pv_data_caution,
+        "pv_practical_caution_criteria": pv_practical_caution,
+        "final_review_reference_criteria": final_review_reference,
+        "monitoring_followup_criteria": monitoring_followup,
+        "pv_data_caution_count": len(pv_data_caution),
+        "pv_practical_caution_count": len(pv_practical_caution),
+        "final_review_reference_count": len(final_review_reference),
+        "monitoring_followup_count": len(monitoring_followup),
         "visible_in_practical_validation": visible_in_practical_validation,
         "display_status": display_status,
         "decision_summary": decision,
@@ -1418,7 +1478,34 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
         "criteria_card_count": len(cards),
         "criteria_pass_count": len([card for card in cards if card.get("status") in {"PASS", "READY"}]),
         "criteria_review_count": len([card for card in cards if card.get("status") == "REVIEW"]),
-        "final_review_reference_count": len([card for card in cards if card.get("status") == "REVIEW"]),
+        "pv_data_caution_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "pv_data_caution"
+            ]
+        ),
+        "pv_practical_caution_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "pv_practical_caution"
+            ]
+        ),
+        "final_review_reference_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "final_decision_input"
+            ]
+        ),
+        "monitoring_followup_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "monitoring_followup"
+            ]
+        ),
         "criteria_repair_count": repair_count,
         "criteria_not_practical_count": not_practical_count,
         "criteria_blocker_count": len(

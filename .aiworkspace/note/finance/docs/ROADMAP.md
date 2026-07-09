@@ -9,7 +9,13 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-center-v1-20260709/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-stage-ownership-v1/`다.
+
+- 목적: Practical Validation의 `REVIEW`가 모두 Final Review 숙제처럼 보이고 REVIEW-only 카테고리가 숨겨져 검증 항목이 갑자기 줄어든 것처럼 보이는 문제를 바로잡았다.
+- 주요 변경: `review_role` / `review_role_label` read-model contract를 추가해 REVIEW를 `데이터 주의`, `2단계 실용성 주의`, `최종 판단 참고`, `Monitoring 추적`, `저장 전 보강`으로 분리했다. Flow 4는 적용된 REVIEW-only Practical Validation category를 숨기지 않고 카테고리별 검증 결과에서 보여주며, provider-facing copy는 `ETF 운용사 / 공식 외부 데이터` 중심으로 낮췄다. Final Review는 수익성 / benchmark / 후보 비교 / 최종 모니터링 후보 판단 중심으로 설명한다.
+- 이번 차수에서 하지 않은 일: 새 수집 엔진, DB schema, provider fetch path, validation gate threshold 전면 변경, registry / saved JSONL rewrite, live approval / broker order / auto rebalance 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-center-v1-20260709/`다.
 
 - 목적: Practical Validation Flow 4에서 `데이터 보강 대상`과 `Provider 보강 액션`이 별도 영역처럼 보이며, 사용자가 수집 버튼이 무엇을 수집하는지 알기 어려운 문제를 줄인다.
 - 주요 변경: Flow 4를 `카테고리별 검증 결과 -> 데이터 보강 / 수집 실행 -> 상세 근거 / 원자료`로 읽게 했다. React board는 표시 전용 `데이터 보강 대상`을 맡고, 기존 Python 수집 버튼은 같은 action center의 `수집 실행` 하위 블록으로 남긴다. 버튼 주변에는 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 배치했고, provider 작업 상세 table은 `상세 근거 / 원자료` raw detail로 낮췄다.

@@ -2467,9 +2467,10 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
             {row["module_id"] for row in gate["review_modules"]}
             >= {"construction_risk", "backtest_realism"}
         )
-        self.assertTrue(
-            all(row["gate_effect"] == "Final Review review" for row in gate["review_modules"])
-        )
+        review_rows = {row["module_id"]: row for row in gate["review_modules"]}
+        self.assertEqual(review_rows["construction_risk"]["gate_effect"], "Practical Validation caution")
+        self.assertEqual(review_rows["backtest_realism"]["gate_effect"], "Practical Validation caution")
+        self.assertEqual(review_rows["construction_risk"]["review_role_label"], "2단계 실용성 주의")
         display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
         self.assertIn("Benchmark / Comparator Parity", display_rows)
         self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Gate Effect"], "Ready")
@@ -2523,7 +2524,8 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(gate["route"], "READY_WITH_REVIEW")
         self.assertEqual(gate["blocking_modules"], [])
         self.assertEqual(modules["stress_robustness"]["status"], "REVIEW")
-        self.assertEqual(modules["stress_robustness"]["gate_effect"], "Final Review review")
+        self.assertEqual(modules["stress_robustness"]["gate_effect"], "Practical Validation caution")
+        self.assertEqual(modules["stress_robustness"]["review_role_label"], "2단계 실용성 주의")
 
     def test_validation_module_gate_skips_construction_risk_for_single_factor_source(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
@@ -12123,18 +12125,18 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "label": "Stress / Robustness",
             "display_label": "강건성",
             "status": "REVIEW",
-            "display_status": "Final Review 판단 필요",
+            "display_status": "최종 판단 참고 1",
             "passed_criteria": [],
             "remaining_issues": [],
             "review_criteria": ["Stress / sensitivity interpretation"],
             "final_review_reference_count": 1,
-            "decision_summary": "Practical Validation에서 보강할 항목은 없습니다.",
+            "decision_summary": "최종 판단 메모에서 참고할 기준 1개가 있습니다.",
             "visible_in_practical_validation": False,
         }
 
         self.assertEqual(
             _conclusion_group_detail(group),
-            ("확인 필요", "Practical Validation에서 보강할 항목은 없습니다.", "warning"),
+            ("참고", "최종 판단 메모에서 참고할 기준 1개가 있습니다.", "neutral"),
         )
         self.assertEqual(_react_criteria_group_items([group]), [])
 
@@ -12326,7 +12328,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "status": "REVIEW",
                         "applies": True,
                         "reason": "stress / rolling / sensitivity 근거를 확인합니다.",
-                        "gate_reason": "Final Review에서 확인합니다.",
+                        "gate_reason": "2단계 실용성 주의로 확인합니다.",
                         "resolution_surface": "Flow4 > 강건성 > Stress / sensitivity 상세",
                     },
                     {
@@ -12350,7 +12352,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "Criteria": "Provider / freshness evidence",
                         "Status": "REVIEW",
                         "Evidence": "provider freshness review",
-                        "Next Action": "provider freshness를 Final Review에서 확인합니다.",
+                        "Next Action": "provider freshness를 데이터 주의로 확인합니다.",
                     },
                 ],
                 "validation_efficacy_display_rows": [
@@ -12391,7 +12393,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(data_card["outcome_label"], "보강 후 재검증 필요")
         self.assertEqual(data_card["resolution_surface"], "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세")
         self.assertIn("가격 window 보강 필요", data_card["evidence"])
-        self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가")
+        self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / ETF 운용사 / 생존편향 데이터가 충분한가")
         self.assertIn("가격", data_card["current_problem"])
         self.assertIn("PASS", data_card["completion_criteria"])
         self.assertIn("데이터 품질 / 편향 통제", data_card["fix_location"])
@@ -12410,7 +12412,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             any("Flow 2 재검증" in step for step in data_card["resolution_guide"]["action_steps"])
         )
         self.assertIn("PASS", data_card["resolution_guide"]["pass_criteria"])
-        self.assertIn("provider gap", data_card["resolution_guide"]["pass_criteria"])
+        self.assertIn("외부 데이터 gap", data_card["resolution_guide"]["pass_criteria"])
         self.assertIn("Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세", data_card["resolution_guide"]["location"])
         self.assertIn("데이터 보강 / 수집 실행", data_card["resolution_guide"]["location"])
         collection_action = data_card["resolution_guide"]["collection_action"]
@@ -12420,7 +12422,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("데이터 보강 / 수집 실행", collection_action["surface"])
         self.assertIn("수집 가능한", collection_action["detail"])
         self.assertEqual(data_group["passed_criteria"], [])
-        self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
+        self.assertIn("검증에 필요한 가격 / ETF 운용사 / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
         self.assertIn("보강 필요", data_group["decision_summary"])
         method_group = next(group for group in groups if group["label"] == "Validation Method Strength")
         method_card = method_group["criteria_cards"][0]
@@ -12428,7 +12430,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         stress_group = next(group for group in groups if group["label"] == "Stress / Robustness")
         stress_card = stress_group["criteria_cards"][0]
         self.assertEqual(stress_card["outcome_key"], "review_required")
-        self.assertEqual(stress_card["outcome_label"], "Final Review 판단 필요")
+        self.assertEqual(stress_card["outcome_label"], "2단계 실용성 주의")
+        self.assertEqual(stress_card["review_role"], "pv_practical_caution")
         self.assertIn("설정 변화", stress_group["review_criteria"][0])
         self.assertEqual(
             workspace["handoff_summary_groups"][0]["modules"][0]["module_id"],
@@ -12493,7 +12496,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "Status": "NEEDS_INPUT",
                         "Ticker": "SPY",
                         "Evidence": "provider snapshot missing",
-                        "Next Action": "Provider / Data 보강 액션에서 수집합니다.",
+                        "Next Action": "Flow4 데이터 보강 / 수집 실행에서 수집합니다.",
                     },
                     {
                         "Criteria": "Price DB window coverage",
@@ -12567,7 +12570,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                     "Status": "NEEDS_INPUT",
                     "Ticker": "SPY",
                     "Evidence": "provider snapshot missing",
-                    "Next Action": "Provider / Data 보강 액션에서 수집합니다.",
+                    "Next Action": "Flow4 데이터 보강 / 수집 실행에서 수집합니다.",
                 }
             ],
         }
@@ -12596,7 +12599,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(immediate["items"][0]["tickers"], ["SPY"])
         self.assertEqual(immediate["items"][0]["availability"], "기존 Python 수집 경계에서 실행 가능")
 
-    def test_practical_validation_flow4_keeps_final_review_items_as_handoff_reference(self) -> None:
+    def test_practical_validation_flow4_keeps_review_only_categories_visible_with_stage_role(self) -> None:
         from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
 
         workspace = build_practical_validation_workspace(
@@ -12604,7 +12607,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                 "final_review_gate": {
                     "route": "READY_WITH_REVIEW",
                     "can_save_and_move": True,
-                    "verdict": "Final Review에서 확인할 항목이 있습니다.",
+                    "verdict": "역할별 REVIEW 항목이 있습니다.",
                     "review_modules": [
                         {
                             "module_id": "stress_robustness",
@@ -12633,20 +12636,28 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         summary = workspace["summary"]
         self.assertEqual(summary["criteria_review_count"], 1)
-        self.assertEqual(summary["final_review_reference_count"], 1)
+        self.assertEqual(summary["final_review_reference_count"], 0)
+        self.assertEqual(summary["pv_practical_caution_count"], 1)
         self.assertEqual(summary["overall_outcome_key"], "pass")
         self.assertEqual(summary["overall_outcome_label"], "통과")
 
         stress_group = next(group for group in workspace["criteria_detail_groups"] if group["label"] == "Stress / Robustness")
         self.assertEqual(stress_group["remaining_issues"], [])
-        self.assertEqual(stress_group["final_review_reference_count"], 1)
+        self.assertEqual(stress_group["final_review_reference_count"], 0)
+        self.assertEqual(stress_group["pv_practical_caution_count"], 1)
         self.assertEqual(
             stress_group["decision_summary"],
-            "Practical Validation에서 보강할 항목은 없습니다.",
+            "실용성 판단에서 주의할 REVIEW 기준 1개가 있습니다.",
         )
-        self.assertFalse(stress_group["visible_in_practical_validation"])
+        self.assertTrue(stress_group["visible_in_practical_validation"])
+        self.assertEqual(stress_group["display_status"], "2단계 실용성 주의 1")
+        stress_card = stress_group["criteria_cards"][0]
+        self.assertEqual(stress_card["review_role"], "pv_practical_caution")
+        self.assertEqual(stress_card["review_role_label"], "2단계 실용성 주의")
+        self.assertEqual(stress_card["stage_decision_surface"], "Practical Validation")
+        self.assertEqual(stress_card["final_review_visibility"], "evidence_appendix")
         visible_labels = [group["label"] for group in workspace["visible_criteria_detail_groups"]]
-        self.assertEqual(visible_labels, ["Source & Replay"])
+        self.assertEqual(visible_labels, ["Source & Replay", "Stress / Robustness"])
         self.assertNotIn(
             "보강 항목 없음",
             [str(group.get("display_status") or "") for group in workspace["visible_criteria_detail_groups"]],
@@ -12961,6 +12972,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Final Review 이동 요약", criteria_board_body)
         self.assertNotIn("final_review_reference_html", criteria_board_body)
         self.assertNotIn("handoff_html", criteria_board_body)
+        self.assertNotIn('str(card.get("status") or "") != "REVIEW"', criteria_board_body)
+        self.assertIn("review_role_label", criteria_board_body)
+        self.assertIn("2단계 실용성 주의", page_source)
         self.assertLess(
             flow4_body.index("_render_validation_criteria_detail_board(validation_result)"),
             flow4_body.index("_render_data_action_board(validation_result)"),

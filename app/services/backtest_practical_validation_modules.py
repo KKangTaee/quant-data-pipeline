@@ -6,6 +6,10 @@ from app.services.backtest_practical_validation_board_registry import (
     build_validation_board_map,
     evidence_boards_for_module,
 )
+from app.services.backtest_practical_validation_stage_roles import (
+    review_gate_effect,
+    review_role_fields,
+)
 from app.services.backtest_validation_status_policy import (
     BLOCKING_STATUSES,
     PASS_STATUSES,
@@ -217,7 +221,7 @@ def _module(
 ) -> dict[str, Any]:
     normalized_status = _status(status) if applies else "NOT_APPLICABLE"
     requirement_text = str(requirement or "").upper()
-    return {
+    row = {
         "module_id": module_id,
         "label": label,
         "group": group,
@@ -236,6 +240,8 @@ def _module(
         "evidence": evidence,
         "profile_effect": profile_effect or "-",
     }
+    row.update(review_role_fields(row))
+    return row
 
 
 def _module_blocks_gate(module: dict[str, Any]) -> bool:
@@ -262,7 +268,7 @@ def _module_gate_effect(module: dict[str, Any]) -> str:
     if _module_blocks_gate(module):
         return "Blocks Final Review"
     if _module_needs_review(module):
-        return "Final Review review"
+        return review_gate_effect(module)
     requirement = str(module.get("requirement") or "").upper()
     if requirement == "REFERENCE":
         return "Reference only"
@@ -276,7 +282,11 @@ def _module_gate_reason(module: dict[str, Any]) -> str:
     if _module_blocks_gate(module):
         return f"Final Review 이동 전 보강 필요: {module.get('next_action') or module.get('reason') or status}"
     if _module_needs_review(module):
-        return f"이동 가능하지만 PASS가 아니므로 Final Review 판단 근거로 확인: {module.get('next_action') or module.get('reason') or status}"
+        role = review_role_fields(module)
+        return (
+            f"이동 가능하지만 PASS가 아니므로 {role['review_role_label']}로 확인: "
+            f"{module.get('next_action') or module.get('reason') or status}"
+        )
     requirement = str(module.get("requirement") or "").upper()
     if requirement == "REFERENCE":
         return "Practical Validation 이동 차단 기준은 아니며 후속 화면의 참고 근거입니다."
@@ -290,6 +300,15 @@ def _module_gate_row(module: dict[str, Any]) -> dict[str, Any]:
         "status": module.get("status"),
         "gate_effect": module.get("gate_effect") or _module_gate_effect(module),
         "gate_reason": module.get("gate_reason") or _module_gate_reason(module),
+        "review_role": module.get("review_role") or review_role_fields(module)["review_role"],
+        "review_role_label": module.get("review_role_label") or review_role_fields(module)["review_role_label"],
+        "stage_decision_surface": module.get("stage_decision_surface")
+        or review_role_fields(module)["stage_decision_surface"],
+        "pv_visibility": module.get("pv_visibility") or review_role_fields(module)["pv_visibility"],
+        "final_review_visibility": module.get("final_review_visibility")
+        or review_role_fields(module)["final_review_visibility"],
+        "monitoring_visibility": module.get("monitoring_visibility")
+        or review_role_fields(module)["monitoring_visibility"],
         "resolution_surface": module.get("resolution_surface"),
         "resolution_action": module.get("resolution_action") or module.get("next_action"),
         "reason": module.get("reason"),
@@ -464,7 +483,7 @@ def build_validation_module_plan(
             requirement="REQUIRED",
             stage_owner="practical_validation",
             reason="walk-forward, OOS, regime 검증 방법론이 후보 판단에 충분한지 봅니다.",
-            next_action="검증 방법론에서 보강이 필요한 근거를 채우고 REVIEW 근거는 Final Review 판단 근거로 넘깁니다.",
+            next_action="검증 방법론에서 보강이 필요한 근거를 채우고 REVIEW 근거는 2단계 실용성 주의로 표시합니다.",
             profile_effect=profile_label,
             resolution_surface="Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
             resolution_action="검증 방법론 강도 상세에서 walk-forward / OOS / regime 근거 중 부족한 항목을 보강합니다.",
@@ -476,11 +495,11 @@ def build_validation_module_plan(
             status=data_coverage_status,
             requirement="REQUIRED",
             stage_owner="practical_validation",
-            reason="최신 가격, provider freshness, PIT window, universe / survivorship coverage가 Practical Validation 판단에 충분한지 확인합니다.",
-            next_action="가격 / provider / lifecycle / replay coverage 부족분을 보강합니다.",
+            reason="최신 가격, ETF 운용사 / 공식 외부 데이터 freshness, PIT window, universe / survivorship coverage가 Practical Validation 판단에 충분한지 확인합니다.",
+            next_action="가격 / 운용사 데이터 / lifecycle / replay coverage 부족분을 보강합니다.",
             profile_effect=profile_label,
             resolution_surface="Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
-            resolution_action="데이터 품질 / 편향 통제 상세에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+            resolution_action="데이터 품질 / 편향 통제 상세에서 가격 window, 운용사 / 공식 외부 데이터 freshness, lifecycle / survivorship 부족 항목을 확인하고 수집 가능한 gap은 Flow4 데이터 보강 / 수집 실행에서 처리합니다.",
         ),
         _module(
             module_id="construction_risk",
@@ -491,7 +510,7 @@ def build_validation_module_plan(
             stage_owner="practical_validation",
             applies=construction_applies,
             reason="ETF-like 또는 weighted mix 후보에서 실제 보유 관점의 비중 집중, look-through, top holding, overlap, asset bucket exposure를 확인합니다.",
-            next_action="REVIEW row는 Final Review에서 선택 근거 또는 보류 근거로 확인합니다.",
+            next_action="REVIEW row는 구성 / 집중 위험의 2단계 실용성 주의로 확인합니다.",
             profile_effect=f"max weight {traits.get('max_component_weight')}%",
             applicability_reason=(
                 "ETF-like 또는 weighted mix 후보이므로 구성 / 집중 위험을 확인합니다."
@@ -509,7 +528,7 @@ def build_validation_module_plan(
             requirement="REQUIRED",
             stage_owner="practical_validation",
             reason="비용, turnover, liquidity, net performance, rebalance timing이 실전 해석에 충분한지 확인합니다.",
-            next_action="비용 / turnover / 유동성 / net curve evidence가 부족하면 보강하고 assumption-only row는 Final Review review 근거로 넘깁니다.",
+            next_action="비용 / turnover / 유동성 / net curve evidence가 부족하면 보강하고 assumption-only row는 2단계 실용성 주의로 남깁니다.",
             profile_effect=profile_label,
             resolution_surface="Flow4 > 실전성 > 실전 운용 현실성 상세",
             resolution_action="실전 운용 현실성 상세에서 cost / turnover / liquidity / net performance / rebalance timing row 중 blocker를 보강합니다.",
@@ -535,16 +554,16 @@ def build_validation_module_plan(
             requirement="CONDITIONAL",
             stage_owner="practical_validation",
             applies=bool(traits.get("is_etf_like")),
-            reason="ETF-like source에서 운용성, holdings, exposure, provider freshness를 확인합니다.",
-            next_action="ETF source이면 provider gap 수집을 먼저 실행합니다.",
+            reason="ETF-like source에서 운용성, holdings, exposure, 운용사 freshness를 확인합니다.",
+            next_action="ETF source이면 운용사 / 공식 외부 데이터 gap 수집을 먼저 실행합니다.",
             profile_effect="ETF-like source" if traits.get("is_etf_like") else "not ETF-like",
             applicability_reason=(
-                "ETF-like source이므로 provider 운용성 / holdings / exposure를 확인합니다."
+                "ETF-like source이므로 운용사 공식 운용성 / holdings / exposure를 확인합니다."
                 if traits.get("is_etf_like")
-                else "ETF-like source가 아니므로 provider 전용 검증은 적용하지 않습니다."
+                else "ETF-like source가 아니므로 ETF 운용사 전용 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Flow4 > Provider / Data 보강 액션",
-            resolution_action="ETF provider operability / holdings / exposure gap을 확인하고 수집 가능한 부족분을 보강합니다.",
+            resolution_surface="Flow4 > 데이터 보강 / 수집 실행",
+            resolution_action="ETF 운용사 operability / holdings / exposure gap을 확인하고 수집 가능한 부족분을 보강합니다.",
         ),
         _module(
             module_id="leverage_inverse",
@@ -555,7 +574,7 @@ def build_validation_module_plan(
             stage_owner="practical_validation",
             applies=bool(traits.get("has_leveraged_or_inverse_symbols")),
             reason="레버리지 / 인버스 노출이 profile의 복잡도 허용 범위와 맞는지 확인합니다.",
-            next_action="노출이 있으면 목적, 보유기간, 손실 감내 기준을 Final Review에 남깁니다.",
+            next_action="노출이 있으면 목적, 보유기간, 손실 감내 기준을 2단계 실용성 주의로 남깁니다.",
             profile_effect="leveraged/inverse symbols detected"
             if traits.get("has_leveraged_or_inverse_symbols")
             else "no leveraged/inverse symbols",
@@ -564,8 +583,8 @@ def build_validation_module_plan(
                 if traits.get("has_leveraged_or_inverse_symbols")
                 else "현재 universe에 레버리지 / 인버스 ticker가 없어 이 조건부 검증은 적용하지 않습니다."
             ),
-            resolution_surface="Final Review 확인 항목",
-            resolution_action="레버리지 / 인버스 노출이 있으면 목적, 보유기간, 손실 감내 기준을 Final Review 판단 근거로 남깁니다.",
+            resolution_surface="Flow4 > 조건부 근거 > 레버리지 / 인버스 적합성",
+            resolution_action="레버리지 / 인버스 노출이 있으면 목적, 보유기간, 손실 감내 기준을 2단계 실용성 주의 근거로 남깁니다.",
         ),
         _module(
             module_id="risk_contribution",
@@ -717,8 +736,8 @@ def build_validation_module_plan(
             next_action = "필수 모듈의 BLOCKED / NEEDS_INPUT / NOT_RUN 항목을 먼저 해결합니다."
     elif review_modules:
         gate_route = "READY_WITH_REVIEW"
-        gate_verdict = "Final Review 이동 가능하지만 REVIEW 항목은 PASS가 아니며 최종 판단 근거로 확인해야 합니다."
-        next_action = "검증 결과를 저장하고 Final Review에서 보강 필요 상태와 모니터링 후보 선정 가능 여부를 확인합니다."
+        gate_verdict = "Final Review 이동 가능하지만 REVIEW 항목은 PASS가 아니며 역할에 따라 PV 주의, 최종 판단 참고, Monitoring 추적으로 나눠 확인해야 합니다."
+        next_action = "검증 결과를 저장하고 Final Review에서는 후보 비교 / 수익성 / 최종 선택 판단만 이어서 확인합니다."
     else:
         gate_route = "READY_FOR_FINAL_REVIEW"
         gate_verdict = "필수 검증 모듈이 통과되어 Final Review로 이동할 수 있습니다."

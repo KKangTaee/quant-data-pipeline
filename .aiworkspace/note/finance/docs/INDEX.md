@@ -24,7 +24,8 @@ Last Verified: 2026-07-09
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Practical Validation Flow4 Action Center V1 2026-07-09](../tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+- Latest completed task: [Practical Validation Stage Ownership V1 2026-07-09](../tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
+- Previous completed task: [Practical Validation Flow4 Action Center V1 2026-07-09](../tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
 - Previous completed task: [Practical Validation Flow4 Data Action Board V1 2026-07-09](../tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
 - Previous completed task: [Practical Validation Flow Gating / Evidence IA V1 2026-07-08](../tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Category Empty State V1 2026-07-08](../tasks/active/practical-validation-category-empty-state-v1-20260708/STATUS.md).

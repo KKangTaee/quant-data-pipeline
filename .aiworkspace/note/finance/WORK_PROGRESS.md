@@ -24,7 +24,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active Practical Validation UI task is none.
-  - Latest completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+  - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
@@ -33,6 +34,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Stage Ownership V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-stage-ownership-v1/`에서 REVIEW role taxonomy와 Flow4 visibility contract를 정리했다.
+  - Flow4는 적용된 REVIEW-only Practical Validation category를 숨기지 않고 `데이터 주의` / `2단계 실용성 주의`로 표시하며, Final Review / Monitoring 항목은 보조 참고로 낮춘다.
+  - Flow4 provider-facing wording은 `ETF 운용사 / 공식 외부 데이터` 중심으로 낮췄고, Browser QA는 fresh server `http://localhost:8517`에서 확인했다.
+  - React / Streamlit UI는 표시만 맡고, replay / provider collection / validation calculation / gate / persistence는 기존 Python service/runtime 경계에 남긴다.
 - Practical Validation Flow4 Action Center V1:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-center-v1-20260709/`에서 Flow 4의 `데이터 보강 대상` / `Provider 보강 액션` split를 `데이터 보강 / 수집 실행` action center로 재정렬했다.
   - 수집 버튼 주변에 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 보여주고, raw 보강 작업 상세는 `상세 근거 / 원자료`로 낮췄다.

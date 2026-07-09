@@ -1169,7 +1169,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
     render_pv_section_header(
         eyebrow="Action center",
         title="수집 실행",
-        detail="위 데이터 보강 대상 중 기존 Python 수집 경계로 처리 가능한 외부 데이터 근거만 실행합니다.",
+        detail="위 데이터 보강 대상 중 기존 Python 수집 경계로 처리 가능한 운용사 / 공식 외부 데이터 근거만 실행합니다.",
         tone="warning" if actionable_rows else "positive",
     )
     render_pv_card_grid(
@@ -1178,7 +1178,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
                 "kicker": "Collect",
                 "title": "수집하는 것",
                 "status": collectable_count,
-                "detail": "ETF 운용성 / 비용, holdings / exposure, source map 탐색, FRED 매크로를 기존 Python 수집 경계에서 보강합니다.",
+                "detail": "ETF 운용사 공식 운용성 / 비용, holdings / exposure, source map 탐색, FRED 매크로를 기존 Python 수집 경계에서 보강합니다.",
                 "tone": "warning" if actionable_rows else "positive",
             },
             {
@@ -1202,6 +1202,7 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
     _render_board_context_badges(validation_result, "provider_data_gaps")
     st.caption(
         "위 데이터 보강 대상 보드가 수집 가능한 항목과 수동 mapping 필요 항목을 먼저 요약합니다. "
+        "여기서 말하는 provider는 ETF 운용사 / 공식 외부 데이터 원천을 뜻합니다. "
         "아래 버튼은 외부 데이터 수집만 실행하며 검증 판정은 Flow 2 재검증 후 다시 계산됩니다."
     )
     if not any(str(row.get("Action") or "") != "조치 없음" for row in gap_rows):
@@ -1554,7 +1555,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
     st.caption(str(gate.get("verdict") or ""))
     st.caption(
         "Gate Effect는 Final Review 이동 영향입니다. `Blocks Final Review`는 먼저 보강하고, "
-        "`Final Review review`는 이동 후 최종 판단 근거로 확인합니다."
+        "REVIEW는 역할에 따라 `2단계 실용성 주의`, `최종 판단 참고`, `Monitoring 추적`으로 나눠 읽습니다."
     )
     render_badge_strip(
         [
@@ -1589,7 +1590,7 @@ def _render_validation_module_board(validation_result: dict[str, Any]) -> None:
             _render_display_dataframe(pd.DataFrame(gate_module_display_rows(blocking_modules)), width="stretch", hide_index=True)
     review_modules = list(gate.get("review_modules") or [])
     if review_modules:
-        with st.expander("Final Review에서 확인할 REVIEW 모듈", expanded=False):
+        with st.expander("REVIEW 모듈 역할 상세", expanded=False):
             _render_display_dataframe(pd.DataFrame(gate_module_display_rows(review_modules)), width="stretch", hide_index=True)
 
     if module_rows:
@@ -1820,10 +1821,10 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
                 _render_data_coverage_audit(validation_result)
             provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
             if provider_rows:
-                st.markdown("##### Provider 근거 상태")
+                st.markdown("##### ETF 운용사 / 공식 외부 데이터 근거 상태")
                 _render_board_context_badges(validation_result, "provider_coverage")
                 st.caption(
-                    "Ingestion에서 저장한 ETF provider / FRED snapshot이 실전성 진단에 어떻게 연결됐는지 보여줍니다."
+                    "Ingestion에서 저장한 ETF 운용사 / FRED snapshot이 실전성 진단에 어떻게 연결됐는지 보여줍니다."
                 )
                 render_pv_card_grid(
                     [
@@ -1831,7 +1832,7 @@ def _render_validation_evidence_boards(validation_result: dict[str, Any]) -> Non
                             "kicker": "Provider Coverage",
                             "title": "ETF / macro evidence",
                             "status": _audit_status_summary(provider_rows),
-                            "detail": "provider freshness, operability, holdings / exposure coverage를 compact하게 확인합니다.",
+                            "detail": "운용사 freshness, operability, holdings / exposure coverage를 compact하게 확인합니다.",
                             "tone": "warning"
                             if any(str(row.get("Status") or "").upper() != "PASS" for row in provider_rows)
                             else "positive",
@@ -1918,7 +1919,10 @@ def _render_data_action_board(validation_result: dict[str, Any]) -> None:
     render_pv_section_header(
         eyebrow="Data action board",
         title="데이터 보강 / 수집 실행",
-        detail="지금 수집 가능한 데이터, source map 탐색, 수동 connector mapping, 현재 수집으로 해결되지 않는 항목을 한 흐름으로 분리합니다.",
+        detail=(
+            "지금 수집 가능한 운용사 / 공식 외부 데이터 근거, source map 탐색, 수동 connector mapping, "
+            "현재 수집으로 해결되지 않는 항목을 한 흐름으로 분리합니다."
+        ),
         tone="warning" if dict(board.get("summary") or {}).get("actionable_count") else "neutral",
     )
     if is_practical_validation_data_action_board_available():
@@ -1985,7 +1989,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
         passed_text = " / ".join(passed) if passed else "없음"
         remaining_text = " / ".join(remaining) if remaining else "없음"
         card_html: list[str] = []
-        detail_cards = [card for card in cards if str(card.get("status") or "") != "REVIEW"]
+        detail_cards = cards
         for card in detail_cards:
             card_tone = _status_tone(card.get("status"))
             guide = dict(card.get("resolution_guide") or {})
@@ -2030,9 +2034,10 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
                 )
             technical_status = str(card.get("technical_status") or card.get("status") or "-")
             outcome_label_text = str(card.get("outcome_label") or card.get("status_label") or card.get("status") or "-")
+            review_role_label = str(card.get("review_role_label") or "2단계 실용성 주의")
             status_display = (
-                f"{outcome_label_text} · REVIEW"
-                if technical_status == "REVIEW" and "REVIEW" not in outcome_label_text
+                f"{review_role_label} · REVIEW"
+                if technical_status == "REVIEW"
                 else outcome_label_text
             )
             card_html.append(
@@ -2065,6 +2070,7 @@ def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) 
                 "<footer>"
                 f"<span>기술 기준: {escape(str(card.get('technical_label') or card.get('module_type') or '-'))}</span>"
                 f"<span>기준 범위: {escape(str(card.get('module_type') or '-'))}</span>"
+                f"<span>판단 위치: {escape(str(card.get('stage_decision_surface') or '-'))}</span>"
                 "</footer>"
                 "</article>"
             )
