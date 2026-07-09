@@ -12311,6 +12311,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("강점", component_source)
         self.assertIn("약점", component_source)
         self.assertIn("Monitoring 조건", component_source)
+        self.assertIn("최종 점수 체계", component_source)
+        self.assertIn("/ 100", component_source)
         self.assertIn("Level2 REVIEW 처리 결과", component_source)
         self.assertIn("Open Review", component_source)
         self.assertIn("Monitoring Follow-up", component_source)
@@ -12327,11 +12329,14 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("강점", build_source)
         self.assertIn("약점", build_source)
         self.assertIn("Monitoring 조건", build_source)
+        self.assertIn("최종 점수 체계", build_source)
+        self.assertIn("/ 100", build_source)
         self.assertIn("Level2 REVIEW 처리 결과", build_source)
         self.assertIn("Open Review", build_source)
         self.assertIn("Monitoring Follow-up", build_source)
         self.assertIn("build_final_review_investment_report", page_source)
         self.assertIn("render_final_review_investment_report", page_source)
+        self.assertIn("점수 체계", page_source)
         self.assertIn("Level2 REVIEW", page_source)
 
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
@@ -27403,6 +27408,91 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(disposition["groups"]["monitoring_followup"][0]["title"], "Monitoring baseline")
         self.assertEqual(report["level2_review_disposition"]["summary"]["total"], 5)
         self.assertFalse(report["level2_review_disposition"]["boundary"]["validation_rerun"])
+
+    def test_final_review_scorecard_maps_gate_to_recommendation_taxonomy(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Ready score candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        scorecard = report["scorecard"]
+        self.assertEqual(scorecard["schema_version"], "final_review_scorecard_v1")
+        self.assertEqual(scorecard["classification"], "MONITORING_CANDIDATE")
+        self.assertEqual(scorecard["decision_route"], "SELECT_FOR_PRACTICAL_PORTFOLIO")
+        self.assertGreaterEqual(scorecard["overall_score"], 80)
+        self.assertEqual(report["recommendation"]["classification"], "MONITORING_CANDIDATE")
+        self.assertEqual(report["score"]["scale"], "0-10")
+        self.assertEqual(scorecard["categories"][0]["category"], "Selection Gate")
+        self.assertFalse(scorecard["boundaries"]["live_approval"])
+
+    def test_final_review_scorecard_downgrades_blocked_candidate(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-score-blocked"
+        validation["not_run_critical_domains"] = [
+            {
+                "domain": "stress_scenario_diagnostics",
+                "title": "Stress scenario diagnostics",
+                "next_action": "Run stress diagnostics before selection.",
+            }
+        ]
+        validation["diagnostic_summary"]["status_counts"]["NOT_RUN"] = 1
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": "validation-score-blocked",
+            "source_title": "Blocked score candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        scorecard = report["scorecard"]
+        self.assertEqual(scorecard["classification"], "REVIEW_REQUIRED")
+        self.assertEqual(scorecard["decision_route"], "RE_REVIEW_REQUIRED")
+        self.assertLess(scorecard["overall_score"], 60)
+        self.assertEqual(report["recommendation"]["classification"], "REVIEW_REQUIRED")
+        self.assertEqual(report["recommendation"]["route"], "RE_REVIEW_REQUIRED")
+        self.assertFalse(scorecard["monitoring_candidate"])
 
     def test_final_review_candidate_board_prioritizes_ready_candidates(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_candidate_board

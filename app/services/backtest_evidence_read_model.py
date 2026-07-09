@@ -18,6 +18,7 @@ DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
 SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
 INVESTMENT_REPORT_SCHEMA_VERSION = "final_review_investment_report_v1"
 LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION = "final_review_level2_review_disposition_v1"
+FINAL_REVIEW_SCORECARD_SCHEMA_VERSION = "final_review_scorecard_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -1770,6 +1771,139 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
     }
 
 
+def _clamped_score(value: float, *, lower: float = 0.0, upper: float = 100.0) -> int:
+    return int(round(max(lower, min(upper, value))))
+
+
+def _scorecard_category(category: str, score: int, evidence: str, effect: str) -> dict[str, Any]:
+    if score >= 80:
+        tone = "positive"
+    elif score >= 60:
+        tone = "warning"
+    else:
+        tone = "danger"
+    return {
+        "category": category,
+        "score": score,
+        "evidence": evidence,
+        "effect": effect,
+        "tone": tone,
+    }
+
+
+def build_final_review_scorecard(
+    *,
+    investability_packet: dict[str, Any],
+    level2_review_disposition: dict[str, Any],
+) -> dict[str, Any]:
+    """Build the Final Review recommendation taxonomy from existing gate evidence."""
+
+    packet = dict(investability_packet or {})
+    gate_policy = dict(packet.get("selection_gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
+    disposition = dict(level2_review_disposition or {})
+    disposition_summary = dict(disposition.get("summary") or {})
+    gate_outcome = str(gate_policy.get("outcome") or packet.get("route") or "").strip()
+    packet_score = _float_or_none(packet.get("score")) or 0.0
+    blocker_count = len(gate_policy.get("blockers") or []) + int(disposition_summary.get("blocker", 0) or 0)
+    review_required_count = len(gate_policy.get("review_required") or [])
+    warning_count = int(disposition_summary.get("warning", 0) or 0)
+    open_review_count = int(disposition_summary.get("open_review", 0) or 0)
+    monitoring_followup_count = int(disposition_summary.get("monitoring_followup", 0) or 0)
+    select_ready = bool(gate_policy.get("select_allowed")) or gate_outcome == "select_ready"
+    gate_score = 100 if select_ready else 35 if gate_outcome == "blocked" else 65
+    evidence_score = _clamped_score(packet_score * 10.0)
+    review_penalty = min(18, warning_count * 2 + open_review_count + monitoring_followup_count)
+    review_score = _clamped_score(100 - review_penalty)
+    if blocker_count:
+        overall = min(55, _clamped_score((gate_score * 0.45) + (evidence_score * 0.35) + (review_score * 0.20)))
+    elif select_ready:
+        overall = max(70, _clamped_score((gate_score * 0.45) + (evidence_score * 0.35) + (review_score * 0.20)))
+    else:
+        overall = _clamped_score((gate_score * 0.45) + (evidence_score * 0.35) + (review_score * 0.20))
+    if blocker_count:
+        classification = "REVIEW_REQUIRED"
+        classification_label = "재검토 필요"
+        decision_route = "RE_REVIEW_REQUIRED"
+    elif select_ready and overall >= 80:
+        classification = "MONITORING_CANDIDATE"
+        classification_label = "추천 / 모니터링 후보"
+        decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
+    elif select_ready:
+        classification = "MONITORING_CANDIDATE_WITH_WATCH"
+        classification_label = "모니터링 후보 / 보강 추적"
+        decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
+    elif overall >= 55:
+        classification = "HOLD"
+        classification_label = "보류 / 추가 관찰"
+        decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
+    elif overall >= 35:
+        classification = "REVIEW_REQUIRED"
+        classification_label = "재검토 필요"
+        decision_route = "RE_REVIEW_REQUIRED"
+    else:
+        classification = "REJECT"
+        classification_label = "탈락 / 실전 사용 제외"
+        decision_route = "REJECT_FOR_PRACTICAL_USE"
+    if overall >= 80:
+        score_band = "강함"
+    elif overall >= 70:
+        score_band = "선정 가능 / 보강 추적"
+    elif overall >= 55:
+        score_band = "보류권"
+    elif overall >= 35:
+        score_band = "재검토권"
+    else:
+        score_band = "탈락권"
+    return {
+        "schema_version": FINAL_REVIEW_SCORECARD_SCHEMA_VERSION,
+        "overall_score": overall,
+        "score_band": score_band,
+        "classification": classification,
+        "classification_label": classification_label,
+        "decision_route": decision_route,
+        "decision_label": _decision_route_label(decision_route),
+        "monitoring_candidate": decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO and select_ready and blocker_count == 0,
+        "basis": "selection gate, investability packet score, Level2 REVIEW disposition",
+        "inputs": {
+            "gate_outcome": gate_outcome,
+            "packet_score_0_10": packet_score,
+            "blocker_count": blocker_count,
+            "review_required_count": review_required_count,
+            "warning_count": warning_count,
+            "open_review_count": open_review_count,
+            "monitoring_followup_count": monitoring_followup_count,
+        },
+        "categories": [
+            _scorecard_category(
+                "Selection Gate",
+                gate_score,
+                gate_outcome or "-",
+                "Monitoring 후보 handoff 가능 여부",
+            ),
+            _scorecard_category(
+                "Evidence Packet",
+                evidence_score,
+                f"{packet_score:.1f} / 10",
+                "기존 investability evidence ready-check",
+            ),
+            _scorecard_category(
+                "Review Burden",
+                review_score,
+                f"warning {warning_count} / open {open_review_count} / monitoring {monitoring_followup_count}",
+                "Final Review 판단 부담과 Monitoring 추적 조건",
+            ),
+        ],
+        "boundaries": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "storage_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
 def build_final_review_investment_report(
     *,
     source: dict[str, Any],
@@ -1801,6 +1935,12 @@ def build_final_review_investment_report(
     strengths = _report_strengths(cockpit, packet)
     weaknesses = _report_weaknesses(cockpit)
     level2_review_disposition = build_final_review_level2_review_disposition(validation=validation)
+    scorecard = build_final_review_scorecard(
+        investability_packet=packet,
+        level2_review_disposition=level2_review_disposition,
+    )
+    suggested_route = str(scorecard.get("decision_route") or suggested_route)
+    score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
     if state == "SELECT_READY":
         headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
     elif state == "SELECT_BLOCKED":
@@ -1818,17 +1958,21 @@ def build_final_review_investment_report(
         "recommendation": {
             "route": suggested_route,
             "label": _decision_route_label(suggested_route),
+            "classification": scorecard.get("classification"),
+            "classification_label": scorecard.get("classification_label"),
             "state": state,
             "state_label": cockpit.get("state_label") or "-",
             "tone": tone,
-            "monitoring_candidate": bool(cockpit.get("select_allowed")),
+            "monitoring_candidate": bool(scorecard.get("monitoring_candidate")),
             "monitoring_handoff_state": "ready" if cockpit.get("select_allowed") else "blocked",
         },
         "score": {
             "value": score_value,
-            "label": _score_band(score_value, state),
-            "basis": "Investability packet ready-check ratio",
+            "label": scorecard.get("score_band") or _score_band(score_value, state),
+            "scale": "0-10",
+            "basis": scorecard.get("basis") or "Investability packet ready-check ratio",
         },
+        "scorecard": scorecard,
         "summary": {
             "headline": headline,
             "verdict": cockpit.get("verdict") or packet.get("verdict") or "-",

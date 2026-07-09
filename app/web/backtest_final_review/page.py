@@ -1001,7 +1001,7 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         ],
         min_width=220,
     )
-    report_tabs = st.tabs(["강점", "약점", "해석", "Level2 REVIEW"])
+    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "Level2 REVIEW"])
     with report_tabs[0]:
         rows = list(report.get("strengths") or [])
         if rows:
@@ -1023,6 +1023,17 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         ]
         st.dataframe(pd.DataFrame(interpretation_rows), width="stretch", hide_index=True)
     with report_tabs[3]:
+        scorecard = dict(report.get("scorecard") or {})
+        render_badge_strip(
+            [
+                {"label": "Overall", "value": f"{float(scorecard.get('overall_score') or 0.0):.0f}/100", "tone": "positive" if float(scorecard.get("overall_score") or 0.0) >= 70 else "warning"},
+                {"label": "분류", "value": scorecard.get("classification_label") or "-", "tone": "neutral"},
+                {"label": "Route", "value": scorecard.get("decision_label") or "-", "tone": "neutral"},
+                {"label": "Monitoring", "value": "Yes" if scorecard.get("monitoring_candidate") else "No", "tone": "positive" if scorecard.get("monitoring_candidate") else "warning"},
+            ]
+        )
+        st.dataframe(pd.DataFrame(scorecard.get("categories") or []), width="stretch", hide_index=True)
+    with report_tabs[4]:
         disposition = dict(report.get("level2_review_disposition") or {})
         groups = dict(disposition.get("groups") or {})
         rows = [

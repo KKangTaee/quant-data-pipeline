@@ -104,6 +104,30 @@ type Level2ReviewDisposition = {
   }
 }
 
+type ScorecardCategory = {
+  category?: string
+  score?: number
+  evidence?: string
+  effect?: string
+  tone?: Tone
+}
+
+type Scorecard = {
+  overallScore?: number
+  overall_score?: number
+  scoreBand?: string
+  score_band?: string
+  classification?: string
+  classificationLabel?: string
+  classification_label?: string
+  decisionLabel?: string
+  decision_label?: string
+  monitoringCandidate?: boolean
+  monitoring_candidate?: boolean
+  basis?: string
+  categories?: ScorecardCategory[]
+}
+
 export type InvestmentReport = {
   schemaVersion?: string
   schema_version?: string
@@ -117,6 +141,7 @@ export type InvestmentReport = {
   }
   recommendation?: Recommendation
   score?: Score
+  scorecard?: Scorecard
   summary?: Summary
   strengths?: ReportCard[]
   weaknesses?: ReportCard[]
@@ -230,6 +255,23 @@ function ReviewDispositionList({ title, items, emptyLabel }: { title: string; it
   )
 }
 
+function ScorecardCategoryList({ categories }: { categories: ScorecardCategory[] }) {
+  return (
+    <div className="fr-invest-report__scorecard-categories">
+      {categories.map((category, index) => (
+        <article className={`fr-invest-report__scorecard-category fr-invest-report__scorecard-category--${toneClass(category.tone)}`} key={`${category.category ?? "score"}-${index}`}>
+          <div>
+            <h5>{compact(category.category)}</h5>
+            <strong>{formattedScore(category.score)}</strong>
+          </div>
+          <p>{compact(category.evidence)}</p>
+          <small>{compact(category.effect)}</small>
+        </article>
+      ))}
+    </div>
+  )
+}
+
 export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -237,6 +279,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
 
   const recommendation = report.recommendation ?? {}
   const score = report.score ?? {}
+  const scorecard = report.scorecard ?? {}
   const summary = report.summary ?? {}
   const source = report.source ?? {}
   const tone = toneClass(recommendation.tone)
@@ -255,6 +298,11 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const monitoringFollowupCount = field(level2Summary.monitoringFollowup, level2Summary.monitoring_followup) ?? 0
   const openReviewItems = field(level2Groups.openReview, level2Groups.open_review) ?? []
   const monitoringFollowupItems = field(level2Groups.monitoringFollowup, level2Groups.monitoring_followup) ?? []
+  const scorecardOverall = field(scorecard.overallScore, scorecard.overall_score)
+  const scorecardBand = field(scorecard.scoreBand, scorecard.score_band)
+  const scorecardClassification = field(scorecard.classificationLabel, scorecard.classification_label)
+  const scorecardDecision = field(scorecard.decisionLabel, scorecard.decision_label)
+  const scorecardMonitoringCandidate = field(scorecard.monitoringCandidate, scorecard.monitoring_candidate) === true
 
   return (
     <section className={`fr-invest-report fr-invest-report--${tone}`}>
@@ -316,6 +364,27 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
         <SmallSection section={risk} />
         <SmallSection section={benchmark} />
       </div>
+
+      <section className="fr-invest-report__scorecard-panel">
+        <div className="fr-invest-report__scorecard-head">
+          <div>
+            <span>최종 점수 체계</span>
+            <h5>{compact(scorecardClassification, compact(recommendation.label))}</h5>
+            <p>{compact(scorecard.basis)}</p>
+          </div>
+          <aside>
+            <strong>{formattedScore(scorecardOverall)}</strong>
+            <span>/ 100</span>
+            <small>{compact(scorecardBand)}</small>
+          </aside>
+        </div>
+        <div className="fr-invest-report__scorecard-meta">
+          <span>{compact(scorecardDecision)}</span>
+          <span>{scorecardMonitoringCandidate ? "Monitoring 후보" : "Monitoring handoff 보류"}</span>
+          <span>{compact(scorecard.classification)}</span>
+        </div>
+        <ScorecardCategoryList categories={scorecard.categories ?? []} />
+      </section>
 
       <section className="fr-invest-report__review-disposition">
         <div className="fr-invest-report__review-head">

@@ -25,3 +25,10 @@
 - `pv_data_caution` and `pv_practical_caution` map to `warning`.
 - `final_decision_input` maps to `open_review`.
 - `monitoring_followup` maps to `monitoring_followup`.
+
+## V4 Notes
+
+- The scorecard is a Final Review taxonomy, not a new validation engine.
+- `select_ready` from the existing selection gate keeps the Monitoring candidate route unless blockers are present.
+- Packet score and Level2 REVIEW burden adjust the visible score and watch label.
+- The scorecard writes nothing and does not create live approval, order, or auto rebalance.
