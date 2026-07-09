@@ -188,7 +188,8 @@ def _render_diagnostic_detail(message: str | None) -> None:
 
 
 def _render_refresh_status_panel(refresh_status: dict[str, Any]) -> None:
-    with st.expander("SEC 13F data refresh", expanded=False):
+    refresh_panel_expanded = bool(st.session_state.pop("institutional_13f_refresh_panel_expanded", False))
+    with st.expander("SEC 13F data refresh", expanded=refresh_panel_expanded):
         st.caption(
             "보조 액션입니다. 포트폴리오 화면은 저장된 DB snapshot을 읽고, 이 버튼은 공식 SEC 13F dataset을 DB에 다시 적재합니다."
         )
@@ -248,7 +249,26 @@ def _render_refresh_status_panel(refresh_status: dict[str, Any]) -> None:
                     source_dataset=dataset_label.strip() or None,
                     user_agent=user_agent.strip() or None,
                 )
+            st.session_state["institutional_13f_refresh_panel_expanded"] = True
             st.rerun()
+
+
+def _should_show_refresh_panel_on_entry(refresh_status: dict[str, Any]) -> bool:
+    status = str(refresh_status.get("status") or "").strip().lower()
+    latest_report_period = str(refresh_status.get("latest_report_period") or "").strip()
+    rows_written = int(refresh_status.get("rows_written") or 0)
+    if status in {"missing", "error", "failed", "not_ready", "unavailable"}:
+        return True
+    return not latest_report_period or rows_written <= 0
+
+
+def _render_requested_refresh_status_panel(refresh_status: dict[str, Any]) -> bool:
+    should_open = bool(st.session_state.get("institutional_13f_refresh_panel_expanded"))
+    if not should_open and not _should_show_refresh_panel_on_entry(refresh_status):
+        return False
+    st.session_state["institutional_13f_refresh_panel_expanded"] = True
+    _render_refresh_status_panel(refresh_status)
+    return True
 
 
 def _selected_manager(managers: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -263,17 +283,34 @@ def _selected_manager(managers: list[dict[str, Any]]) -> dict[str, Any] | None:
     return first
 
 
+def _workbench_event_payload(event: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {}
+    nested = event.get("event")
+    if isinstance(nested, dict):
+        return dict(nested)
+    return event
+
+
 def _handle_workbench_event(event: dict[str, Any] | None) -> None:
-    if not event:
+    payload = _workbench_event_payload(event)
+    if not payload:
         return
-    event_name = event.get("event")
+    event_name = str(payload.get("id") or payload.get("event") or "")
+    if event_name == "open_refresh":
+        event_id = str(payload.get("nonce") or payload.get("event_id") or event_name)
+        if event_id != st.session_state.get("institutional_13f_last_refresh_open_event_id"):
+            st.session_state["institutional_13f_last_refresh_open_event_id"] = event_id
+            st.session_state["institutional_13f_refresh_panel_expanded"] = True
+            st.rerun()
+        return
     if event_name == "select_manager":
-        cik = str(event.get("cik") or "")
+        cik = str(payload.get("cik") or "")
         if cik and cik != st.session_state.get("institutional_portfolios_selected_cik"):
             st.session_state["institutional_portfolios_selected_cik"] = cik
             st.rerun()
     if event_name == "drilldown":
-        query = str(event.get("query") or "").strip()
+        query = str(payload.get("query") or "").strip()
         if query and query != st.session_state.get("institutional_interest_query"):
             st.session_state["institutional_interest_query"] = query
             st.rerun()
@@ -323,13 +360,15 @@ def render_institutional_portfolios_page(
     )
     refresh_result = load_institutional_refresh_status()
     refresh_status = dict(refresh_result.get("model") or {})
+    refresh_panel_rendered = _render_requested_refresh_status_panel(refresh_status)
     manager_result = load_institutional_manager_choices(search, limit=24)
     if manager_result["status"] != "ok":
         payload = build_institutional_preview_workbench_payload(
             "Local 13F data is not ready yet. This preview shows the visual portfolio workflow before official SEC rows are loaded."
         )
         _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_error")
-        _render_refresh_status_panel(refresh_status)
+        if not refresh_panel_rendered:
+            _render_refresh_status_panel(refresh_status)
         with st.expander("Source caveats and setup", expanded=False):
             _render_caveats()
             _render_diagnostic_detail(manager_result.get("message"))
@@ -340,7 +379,8 @@ def render_institutional_portfolios_page(
     if selected_manager is None:
         payload = build_institutional_preview_workbench_payload("Local 13F DB has no manager rows yet. Preview mode is shown until data is collected.")
         _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_empty")
-        _render_refresh_status_panel(refresh_status)
+        if not refresh_panel_rendered:
+            _render_refresh_status_panel(refresh_status)
         with st.expander("Source caveats and setup", expanded=False):
             _render_caveats()
         return
@@ -351,7 +391,8 @@ def render_institutional_portfolios_page(
             "The selected manager portfolio is not available in the local 13F snapshot. Preview mode shows the intended visual workflow."
         )
         _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_model_error")
-        _render_refresh_status_panel(refresh_status)
+        if not refresh_panel_rendered:
+            _render_refresh_status_panel(refresh_status)
         with st.expander("Source caveats and setup", expanded=False):
             _render_caveats()
             _render_diagnostic_detail(portfolio_result.get("message"))
@@ -374,7 +415,8 @@ def render_institutional_portfolios_page(
         refresh_status=refresh_status,
     )
     _render_workbench_or_fallback(payload, key=f"institutional_portfolios_{selected_manager.get('cik') or 'unknown'}")
-    _render_refresh_status_panel(refresh_status)
+    if not refresh_panel_rendered:
+        _render_refresh_status_panel(refresh_status)
 
     with st.expander("Detailed filings / table fallback", expanded=False):
         _render_summary(model)

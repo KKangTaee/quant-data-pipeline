@@ -251,7 +251,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   }
 
   const sendEvent = (event: Record<string, unknown>) => {
-    Streamlit.setComponentValue(event);
+    Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
     syncFrameHeightSoon();
   };
 
@@ -260,7 +260,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       return;
     }
     setActiveView("interest");
-    sendEvent({ event: "drilldown", query });
+    sendEvent({ id: "drilldown", query });
   };
 
   return (
@@ -279,7 +279,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               key={item.cik || item.manager_name}
               type="button"
               className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""}`}
-              onClick={() => item.cik && sendEvent({ event: "select_manager", cik: item.cik })}
+              onClick={() => item.cik && sendEvent({ id: "select_manager", cik: item.cik })}
             >
               <strong>{item.manager_name}</strong>
               <span>{item.watchlist_label ? `${item.watchlist_label} · ${item.latest_report_period}` : item.latest_report_period}</span>
@@ -288,9 +288,15 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         </div>
 
         <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
-          <span>{payload.refresh_action?.label || "SEC 13F data"}</span>
+          <button
+            type="button"
+            className="ip-freshness__action"
+            onClick={() => sendEvent({ id: "open_refresh" })}
+          >
+            {payload.refresh_action?.label || "SEC 13F data"}
+          </button>
           <strong>{payload.freshness?.latest_report_period || "No local 13F data"}</strong>
-          <em>{payload.freshness?.last_collected_at ? `collected ${payload.freshness.last_collected_at}` : "refresh available below"}</em>
+          <em>{payload.freshness?.last_collected_at ? `collected ${payload.freshness.last_collected_at}` : "refresh controls available"}</em>
         </div>
 
         <div className="ip-hero__grid">

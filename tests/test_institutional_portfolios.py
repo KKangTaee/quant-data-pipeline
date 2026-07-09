@@ -446,6 +446,25 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
+    def test_missing_refresh_status_opens_refresh_panel_on_entry(self) -> None:
+        from app.web.institutional_portfolios import _should_show_refresh_panel_on_entry
+
+        self.assertTrue(
+            _should_show_refresh_panel_on_entry(
+                {"status": "missing", "latest_report_period": None, "rows_written": 0}
+            )
+        )
+        self.assertTrue(
+            _should_show_refresh_panel_on_entry(
+                {"status": "ok", "latest_report_period": None, "rows_written": 0}
+            )
+        )
+        self.assertFalse(
+            _should_show_refresh_panel_on_entry(
+                {"status": "ok", "latest_report_period": "2026-03-31", "rows_written": 123}
+            )
+        )
+
     def test_workspace_navigation_adds_institutional_portfolios_without_operations(self) -> None:
         source = Path("app/web/streamlit_app.py").read_text(encoding="utf-8")
 
@@ -484,6 +503,28 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("_render_refresh_status_panel", source)
         self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("st.dataframe"))
         self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("_render_refresh_status_panel"))
+
+    def test_refresh_strip_opens_streamlit_refresh_panel(self) -> None:
+        page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
+        component_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("Streamlit.setComponentValue({ event: {", component_source)
+        self.assertIn('id: "open_refresh"', component_source)
+        self.assertIn('className="ip-freshness__action"', component_source)
+        self.assertIn("refresh controls available", component_source)
+        self.assertNotIn("refresh available below", component_source)
+        self.assertIn("_workbench_event_payload", page_source)
+        self.assertIn("institutional_13f_refresh_panel_expanded", page_source)
+        self.assertIn('event_name = str(payload.get("id")', page_source)
+        self.assertIn('event_name == "open_refresh"', page_source)
+        self.assertIn("expanded=refresh_panel_expanded", page_source)
+        self.assertIn("_render_requested_refresh_status_panel", page_source)
+        self.assertLess(
+            page_source.index("_render_requested_refresh_status_panel(refresh_status)"),
+            page_source.index("manager_result = load_institutional_manager_choices"),
+        )
 
 
 if __name__ == "__main__":

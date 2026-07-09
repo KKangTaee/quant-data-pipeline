@@ -121,9 +121,26 @@ a {
   font-size: 12px;
 }
 
-.ip-freshness span {
+.ip-freshness__action {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: #2563eb;
+  cursor: pointer;
+  font: inherit;
   font-weight: 800;
+  text-align: left;
+}
+
+.ip-freshness__action:hover {
+  text-decoration: underline;
+}
+
+.ip-freshness__action:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .ip-freshness strong {
@@ -145,7 +162,7 @@ a {
   background: #fffaf5;
 }
 
-.ip-freshness--stale span {
+.ip-freshness--stale .ip-freshness__action {
   color: #c2410c;
 }
 
