@@ -55,3 +55,20 @@ Command log for Final Review detailed scorecard V1-V6.
   - Result: passed.
 - `git diff --check`
   - Result: passed.
+
+## V5
+
+- `.venv/bin/python -m unittest tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_exposes_selection_rationale_and_required_notes`
+  - RED result: failed with missing `selection_rationale` before implementation.
+  - GREEN result: passed after adding selection rationale and required decision note read models.
+- `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_final_review_investment_report_react_component_is_ui_only`
+  - RED result: failed because `최종 선택 사유` was missing from the React source.
+  - GREEN result: passed after adding the selection rationale and decision-note panels.
+- `npm run build` in `app/web/components/final_review_investment_report/frontend`
+  - Result: passed.
+- `.venv/bin/python -m unittest tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_exposes_selection_rationale_and_required_notes tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_scorecard_applies_caps_before_route_decision tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_detailed_scorecard_exposes_weighted_dimensions tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_scorecard_maps_gate_to_recommendation_taxonomy`
+  - Result: passed.
+- `.venv/bin/python -m py_compile app/services/backtest_evidence_read_model.py app/web/components/final_review_investment_report/component.py`
+  - Result: passed.
+- `git diff --check`
+  - Result: passed.

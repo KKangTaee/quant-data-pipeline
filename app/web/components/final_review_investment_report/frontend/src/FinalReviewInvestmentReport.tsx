@@ -236,6 +236,38 @@ type WeaknessImprovement = {
   }
 }
 
+type SelectionRationalePoint = {
+  label?: string
+  detail?: string
+  tone?: Tone
+}
+
+type SelectionRationale = {
+  headline?: string
+  decisionRoute?: string
+  decision_route?: string
+  decisionLabel?: string
+  decision_label?: string
+  classificationLabel?: string
+  classification_label?: string
+  scoreSummary?: string
+  score_summary?: string
+  decisionReason?: string
+  decision_reason?: string
+  keyPoints?: SelectionRationalePoint[]
+  key_points?: SelectionRationalePoint[]
+  monitoringHandoffReason?: string
+  monitoring_handoff_reason?: string
+}
+
+type RequiredDecisionNote = {
+  kind?: string
+  label?: string
+  prompt?: string
+  required?: boolean
+  source?: string
+}
+
 export type InvestmentReport = {
   schemaVersion?: string
   schema_version?: string
@@ -250,6 +282,10 @@ export type InvestmentReport = {
   recommendation?: Recommendation
   score?: Score
   scorecard?: Scorecard
+  selectionRationale?: SelectionRationale
+  selection_rationale?: SelectionRationale
+  requiredFinalDecisionNotes?: RequiredDecisionNote[]
+  required_final_decision_notes?: RequiredDecisionNote[]
   saveHandoffSummary?: SaveHandoffSummary
   save_handoff_summary?: SaveHandoffSummary
   weaknessImprovement?: WeaknessImprovement
@@ -475,6 +511,46 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
   )
 }
 
+function SelectionRationalePanel({ rationale, notes }: { rationale: SelectionRationale; notes: RequiredDecisionNote[] }) {
+  const keyPoints = field(rationale.keyPoints, rationale.key_points) ?? []
+  return (
+    <section className="fr-invest-report__selection-rationale">
+      <div className="fr-invest-report__selection-head">
+        <div>
+          <span>최종 선택 사유</span>
+          <h5>{compact(rationale.headline, "최종 판단 사유 확인 필요")}</h5>
+          <p>{compact(field(rationale.decisionReason, rationale.decision_reason))}</p>
+        </div>
+        <aside>
+          <strong>{compact(field(rationale.decisionLabel, rationale.decision_label))}</strong>
+          <small>{compact(field(rationale.scoreSummary, rationale.score_summary))}</small>
+        </aside>
+      </div>
+      <div className="fr-invest-report__selection-grid">
+        {keyPoints.map((point, index) => (
+          <article className={`fr-invest-report__selection-point fr-invest-report__selection-point--${toneClass(point.tone)}`} key={`${point.label ?? "point"}-${index}`}>
+            <strong>{compact(point.label)}</strong>
+            <p>{compact(point.detail)}</p>
+          </article>
+        ))}
+      </div>
+      <div className="fr-invest-report__decision-notes">
+        <h5>판단 저장 전 메모</h5>
+        {notes.map((note, index) => (
+          <article className="fr-invest-report__decision-note" key={`${note.kind ?? "note"}-${index}`}>
+            <div>
+              <strong>{compact(note.label)}</strong>
+              <span>{note.required ? "필수" : "선택"}</span>
+            </div>
+            <p>{compact(note.prompt)}</p>
+            <small>{compact(note.source)}</small>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -495,6 +571,8 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
   const saveHandoff = report.saveHandoffSummary ?? report.save_handoff_summary ?? {}
   const weaknessImprovement = report.weaknessImprovement ?? report.weakness_improvement ?? {}
+  const selectionRationale = report.selectionRationale ?? report.selection_rationale ?? {}
+  const requiredDecisionNotes = report.requiredFinalDecisionNotes ?? report.required_final_decision_notes ?? []
   const level2Summary = level2Review.summary ?? {}
   const level2Groups = level2Review.groups ?? {}
   const handoffReady = field(monitoring.handoffReady, monitoring.handoff_ready) === true
@@ -570,6 +648,8 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           <p>{compact(summary.nextAction ?? summary.next_action)}</p>
         </article>
       </div>
+
+      <SelectionRationalePanel rationale={selectionRationale} notes={requiredDecisionNotes} />
 
       <div className="fr-invest-report__evidence">
         <EvidenceList title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" />

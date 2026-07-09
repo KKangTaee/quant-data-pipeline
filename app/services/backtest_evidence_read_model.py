@@ -21,6 +21,7 @@ LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION = "final_review_level2_review_dispositi
 FINAL_REVIEW_SCORECARD_SCHEMA_VERSION = "final_review_scorecard_v1"
 SAVE_HANDOFF_SUMMARY_SCHEMA_VERSION = "final_review_save_handoff_summary_v1"
 WEAKNESS_IMPROVEMENT_SCHEMA_VERSION = "final_review_weakness_improvement_v1"
+SELECTION_RATIONALE_SCHEMA_VERSION = "final_review_selection_rationale_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -2235,6 +2236,141 @@ def build_final_review_weakness_improvement_plan(
     }
 
 
+def build_final_review_selection_rationale(*, scorecard: dict[str, Any]) -> dict[str, Any]:
+    """Summarize why the final route is selectable, held, rejected, or needs review."""
+
+    scorecard = dict(scorecard or {})
+    dimensions = [dict(row or {}) for row in list(scorecard.get("dimensions") or []) if isinstance(row, dict)]
+    strongest = max(dimensions, key=lambda row: int(row.get("score") or 0)) if dimensions else {}
+    weakest = min(dimensions, key=lambda row: int(row.get("score") or 0)) if dimensions else {}
+    inputs = dict(scorecard.get("inputs") or {})
+    score_limits = [dict(row or {}) for row in list(scorecard.get("score_limits") or []) if isinstance(row, dict)]
+    decision_route = _safe_text(scorecard.get("decision_route"), "HOLD_FOR_MORE_PAPER_TRACKING")
+    overall_score = int(scorecard.get("overall_score") or 0)
+    pre_cap_score = int(scorecard.get("pre_cap_score") or overall_score)
+    classification_label = _safe_text(scorecard.get("classification_label"), _decision_route_label(decision_route))
+    if decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO:
+        headline = "Monitoring 후보로 올릴 수 있는 최종 선택 근거입니다."
+    elif decision_route == "HOLD_FOR_MORE_PAPER_TRACKING":
+        headline = "선정 전 추가 관찰로 보류해야 하는 근거입니다."
+    elif decision_route == "RE_REVIEW_REQUIRED":
+        headline = "실전 후보 판단 전에 재검토해야 하는 근거입니다."
+    else:
+        headline = "실전 사용 후보에서 제외해야 하는 근거입니다."
+    limit_summary = (
+        f"score cap {min(int(limit.get('cap') or 100) for limit in score_limits)} 적용"
+        if score_limits
+        else "score cap 없음"
+    )
+    review_summary = (
+        f"Level2 REVIEW warning {int(inputs.get('warning_count') or 0)}, "
+        f"open {int(inputs.get('open_review_count') or 0)}, "
+        f"monitoring follow-up {int(inputs.get('monitoring_followup_count') or 0)}"
+    )
+    decision_reason = (
+        f"{classification_label}: 종합 {overall_score}/100, 원점수 {pre_cap_score}/100, {limit_summary}. "
+        f"가장 강한 근거는 {_safe_text(strongest.get('label'), '확인 필요')}이고 "
+        f"가장 큰 확인 지점은 {_safe_text(weakest.get('label'), '확인 필요')}입니다."
+    )
+    key_points = [
+        {
+            "label": "종합 점수",
+            "detail": f"{overall_score}/100 ({_safe_text(scorecard.get('score_band'), '-')})",
+            "tone": "positive" if overall_score >= 80 else "warning" if overall_score >= 55 else "danger",
+        },
+        {
+            "label": "가장 강한 근거",
+            "detail": f"{_safe_text(strongest.get('label'), '-')} {int(strongest.get('score') or 0)}/100 - {_safe_text(strongest.get('interpretation'), '-')}",
+            "tone": _safe_text(strongest.get("tone"), "neutral"),
+        },
+        {
+            "label": "가장 큰 확인 지점",
+            "detail": f"{_safe_text(weakest.get('label'), '-')} {int(weakest.get('score') or 0)}/100 - {_safe_text(weakest.get('interpretation'), '-')}",
+            "tone": _safe_text(weakest.get("tone"), "neutral"),
+        },
+        {
+            "label": "Level2 REVIEW 반영",
+            "detail": review_summary,
+            "tone": "warning" if int(inputs.get("open_review_count") or 0) else "neutral",
+        },
+    ]
+    if score_limits:
+        key_points.append(
+            {
+                "label": "점수 제한",
+                "detail": "; ".join(_safe_text(limit.get("detail"), _safe_text(limit.get("label"), "-")) for limit in score_limits),
+                "tone": "warning",
+            }
+        )
+    return {
+        "schema_version": SELECTION_RATIONALE_SCHEMA_VERSION,
+        "headline": headline,
+        "decision_route": decision_route,
+        "decision_label": _decision_route_label(decision_route),
+        "classification": scorecard.get("classification"),
+        "classification_label": classification_label,
+        "score_summary": f"종합 {overall_score}/100, 원점수 {pre_cap_score}/100, {limit_summary}",
+        "decision_reason": decision_reason,
+        "key_points": key_points,
+        "monitoring_handoff_reason": (
+            "Monitoring 후보로 올리고 review trigger를 추적합니다."
+            if bool(scorecard.get("monitoring_candidate"))
+            else "Monitoring handoff 전에 보강 또는 추가 관찰이 필요합니다."
+        ),
+        "boundary": {
+            "provider_fetch": False,
+            "storage_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
+def build_final_review_required_decision_notes(*, scorecard: dict[str, Any], selection_rationale: dict[str, Any]) -> list[dict[str, Any]]:
+    """Describe the user-authored notes needed before saving a Final Review judgment."""
+
+    scorecard = dict(scorecard or {})
+    inputs = dict(scorecard.get("inputs") or {})
+    score_limits = [dict(row or {}) for row in list(scorecard.get("score_limits") or []) if isinstance(row, dict)]
+    review_count = int(inputs.get("review_impact_count") or 0)
+    notes = [
+        {
+            "kind": "decision_reason",
+            "label": "선택 / 보류 / 탈락 사유",
+            "prompt": _safe_text(selection_rationale.get("decision_reason"), "최종 판단 사유를 기록합니다."),
+            "required": True,
+            "source": "selection_rationale",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+        {
+            "kind": "score",
+            "label": "점수와 제한 조건",
+            "prompt": _safe_text(selection_rationale.get("score_summary"), "종합 점수와 score cap 적용 여부를 기록합니다."),
+            "required": True,
+            "source": "scorecard",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+        {
+            "kind": "level2_review",
+            "label": "Level2 REVIEW 처리 메모",
+            "prompt": f"Final Review에서 해결하지 않는 REVIEW {review_count}개를 최종 판단 근거 또는 Monitoring 추적 조건으로 기록합니다.",
+            "required": bool(review_count or score_limits),
+            "source": "level2_review_disposition",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+        {
+            "kind": "monitoring_handoff",
+            "label": "Monitoring 추적 조건",
+            "prompt": _safe_text(selection_rationale.get("monitoring_handoff_reason"), "Monitoring handoff 조건을 기록합니다."),
+            "required": bool(scorecard.get("monitoring_candidate")),
+            "source": "monitoring_conditions",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+    ]
+    return notes
+
+
 def build_final_review_investment_report(
     *,
     source: dict[str, Any],
@@ -2283,6 +2419,11 @@ def build_final_review_investment_report(
         weaknesses=weaknesses,
         scorecard=scorecard,
     )
+    selection_rationale = build_final_review_selection_rationale(scorecard=scorecard)
+    required_final_decision_notes = build_final_review_required_decision_notes(
+        scorecard=scorecard,
+        selection_rationale=selection_rationale,
+    )
     score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
     if state == "SELECT_READY":
         headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
@@ -2316,6 +2457,8 @@ def build_final_review_investment_report(
             "basis": scorecard.get("basis") or "Investability packet ready-check ratio",
         },
         "scorecard": scorecard,
+        "selection_rationale": selection_rationale,
+        "required_final_decision_notes": required_final_decision_notes,
         "save_handoff_summary": save_handoff_summary,
         "weakness_improvement": weakness_improvement,
         "summary": {

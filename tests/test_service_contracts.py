@@ -12316,6 +12316,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("점수 영향", component_source)
         self.assertIn("점수 제한", component_source)
         self.assertIn("Level2 REVIEW 점수 영향", component_source)
+        self.assertIn("최종 선택 사유", component_source)
+        self.assertIn("판단 저장 전 메모", component_source)
         self.assertIn("/ 100", component_source)
         self.assertIn("저장 / Monitoring handoff", component_source)
         self.assertIn("Final Review 판단 저장", component_source)
@@ -12343,6 +12345,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("점수 영향", build_source)
         self.assertIn("점수 제한", build_source)
         self.assertIn("Level2 REVIEW 점수 영향", build_source)
+        self.assertIn("최종 선택 사유", build_source)
+        self.assertIn("판단 저장 전 메모", build_source)
         self.assertIn("/ 100", build_source)
         self.assertIn("저장 / Monitoring handoff", build_source)
         self.assertIn("Final Review 판단 저장", build_source)
@@ -27682,6 +27686,56 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertLessEqual(many_open_reviews["overall_score"], 79)
         self.assertIn("excessive_open_review", {limit["code"] for limit in many_open_reviews["score_limits"]})
         self.assertEqual(many_open_reviews["classification"], "MONITORING_CANDIDATE_WITH_WATCH")
+
+    def test_final_review_investment_report_exposes_selection_rationale_and_required_notes(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Selection rationale candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["monthly drawdown watch"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        rationale = report["selection_rationale"]
+        self.assertEqual(rationale["schema_version"], "final_review_selection_rationale_v1")
+        self.assertTrue(rationale["headline"])
+        self.assertTrue(rationale["decision_reason"])
+        self.assertTrue(rationale["score_summary"])
+        self.assertGreaterEqual(len(rationale["key_points"]), 3)
+        self.assertIn(rationale["decision_route"], {
+            "SELECT_FOR_PRACTICAL_PORTFOLIO",
+            "HOLD_FOR_MORE_PAPER_TRACKING",
+            "RE_REVIEW_REQUIRED",
+            "REJECT_FOR_PRACTICAL_USE",
+        })
+        self.assertFalse(rationale["boundary"]["storage_write"])
+
+        notes = report["required_final_decision_notes"]
+        self.assertGreaterEqual(len(notes), 2)
+        self.assertEqual(notes[0]["kind"], "decision_reason")
+        self.assertTrue(notes[0]["required"])
+        self.assertIn("score", {note["kind"] for note in notes})
+        self.assertTrue(all(note["boundary"]["storage_write"] is False for note in notes))
 
     def test_final_review_scorecard_downgrades_blocked_candidate(self) -> None:
         from app.services.backtest_evidence_read_model import (
