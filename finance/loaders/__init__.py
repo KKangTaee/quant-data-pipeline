@@ -50,6 +50,7 @@ from .institutional_13f import (
     load_institutional_13f_interest,
     load_institutional_13f_latest_filing,
     load_institutional_13f_managers,
+    load_institutional_13f_managers_by_ciks,
     load_institutional_13f_portfolio_bundle,
     load_institutional_13f_previous_filing,
 )
@@ -98,6 +99,7 @@ __all__ = [
     "adapt_price_history_to_strategy_dfs",
     "load_price_strategy_dfs",
     "load_institutional_13f_managers",
+    "load_institutional_13f_managers_by_ciks",
     "load_institutional_13f_latest_filing",
     "load_institutional_13f_previous_filing",
     "load_institutional_13f_holdings",

@@ -5914,3 +5914,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-live-sec13f-v1-20260709/`에서 1차~6차 개발 / QA / docs closeout을 완료했다.
 - SEC 13F ingestion은 refresh status row와 conservative CUSIP-symbol enrichment를 기록하고, Institutional Portfolios는 watchlist rail / freshness payload / secondary refresh panel을 갖게 됐다.
 - QA: focused tests 12개, py_compile, npm build, git diff --check, UI/engine boundary check, Browser QA screenshot 완료. Full official SEC ZIP load는 사용자가 명시 실행할 수 있는 후속 운영 action으로 남겼다.
+
+## 2026-07-10 KST - Institutional Portfolios Selection Loading V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-selection-loading-v1-20260709/`에서 manager rail 클릭 후 반복 로딩처럼 보이던 선택 전환 문제를 진단하고 수정했다.
+- 원인은 watchlist 선택 CIK가 search result에 없을 때 첫 DB row로 fallback되고, custom component의 이전 event가 재처리될 수 있던 흐름이었다.
+- Watchlist-aware selected manager resolver, event nonce 소비, reverse lookup lazy cache, 한글 loading banner, Runtime / Build 제거를 적용했다.
+- QA: focused tests 18개, py_compile, npm build, git diff --check, Browser 반복 클릭 QA 완료. 후속 범위는 SEC full ZIP 운영 refresh와 CUSIP-symbol map 품질 개선이다.

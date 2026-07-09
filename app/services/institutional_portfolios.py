@@ -9,6 +9,7 @@ from finance.data.institutional_13f import DEFAULT_SEC_13F_DATASET_LABEL, DEFAUL
 from finance.loaders.institutional_13f import (
     load_institutional_13f_interest,
     load_institutional_13f_managers,
+    load_institutional_13f_managers_by_ciks,
     load_institutional_13f_portfolio_bundle,
     load_institutional_13f_refresh_status,
 )
@@ -26,11 +27,11 @@ CHANGE_ORDER = {
     "no_longer_reported": 4,
 }
 CHANGE_LABELS = {
-    "reported_new": "Newly reported",
-    "increased": "Increased",
-    "reduced": "Reduced",
-    "no_longer_reported": "No longer reported",
-    "unchanged": "Unchanged",
+    "reported_new": "신규 보고",
+    "increased": "비중 증가",
+    "reduced": "비중 감소",
+    "no_longer_reported": "더 이상 보고 안 됨",
+    "unchanged": "변화 없음",
 }
 CHANGE_DESCRIPTIONS = {
     "reported_new": "이번 보고서에 새로 등장한 보유 종목",
@@ -380,9 +381,9 @@ def build_institutional_refresh_status_model(row: dict[str, Any] | None = None, 
 def _refresh_action_payload() -> dict[str, Any]:
     return {
         "action_id": "collect_sec_13f_dataset",
-        "label": "Refresh SEC 13F data",
+        "label": "최신 13F 데이터 갱신",
         "primary": False,
-        "description": "Runs the SEC official Form 13F dataset ingestion into MySQL; the UI only reads stored rows.",
+        "description": "공식 SEC Form 13F dataset을 MySQL에 적재합니다. 이 화면은 저장된 row만 읽습니다.",
         "default_dataset_label": DEFAULT_SEC_13F_DATASET_LABEL,
         "default_dataset_url": DEFAULT_SEC_13F_DATASET_URL,
     }
@@ -568,7 +569,7 @@ def build_institutional_workbench_payload(
     total_value = _num(summary.get("total_reported_value"))
     is_preview = mode == "preview"
     freshness = build_institutional_refresh_status_model(refresh_status)
-    data_state_label = "Preview sample" if is_preview else "Stored SEC 13F snapshot"
+    data_state_label = "Preview sample" if is_preview else "저장된 SEC 13F 스냅샷"
     data_state_message = data_message or (
         "샘플 데이터입니다. 실제 13F 수집 후 저장 DB 기준 화면으로 바뀝니다."
         if is_preview
@@ -602,29 +603,29 @@ def build_institutional_workbench_payload(
             "holding_count": int(_num(summary.get("holding_count"))),
             "source_ref": _text(summary.get("source_ref")),
             "facts": [
-                {"label": "Report period", "value": report_period},
-                {"label": "Filing date", "value": filing_date},
-                {"label": "Data refreshed", "value": freshness.get("last_collected_at") or "Not collected"},
-                {"label": "Holdings", "value": f"{int(_num(summary.get('holding_count'))):,}"},
-                {"label": "Reported value", "value": _money_label(total_value)},
+                {"label": "보고 기준 분기", "value": report_period},
+                {"label": "제출일", "value": filing_date},
+                {"label": "DB 갱신 시각", "value": freshness.get("last_collected_at") or "미수집"},
+                {"label": "보유 종목 수", "value": f"{int(_num(summary.get('holding_count'))):,}"},
+                {"label": "보고 평가액", "value": _money_label(total_value)},
             ],
             "caveat": "13F는 분기 지연 자료이며 실시간 매수/매도 신호가 아닙니다.",
         },
         "allocation": {
-            "title": "Portfolio Allocation",
-            "subtitle": "Top holdings by reported value, grouped with Other for scanability.",
+            "title": "포트폴리오 비중",
+            "subtitle": "보고 평가액 기준 상위 보유 종목입니다. 나머지는 Other로 묶어 표시합니다.",
             "total_label": _money_label(total_value),
             "segments": _allocation_segments(holdings, limit=allocation_limit),
             "top_holdings": _top_holding_rows(holdings, limit=row_limit),
         },
         "change_board": {
-            "title": "Reported Quarter Changes",
+            "title": "분기 보고 변화",
             "subtitle": f"{previous_period} -> {report_period}",
             "groups": _change_groups(changes, limit=5),
         },
         "sector_exposure": {
-            "title": "Sector Exposure",
-            "subtitle": "Best-effort sector mapping from stored symbol metadata.",
+            "title": "섹터 노출",
+            "subtitle": "저장된 symbol metadata로 가능한 범위에서 매핑한 섹터 비중입니다.",
             "bars": _sector_bars(sector_exposure, limit=8),
         },
         "holdings_table": {
@@ -823,9 +824,20 @@ def build_institutional_interest_model(query: str, holder_rows: pd.DataFrame | N
 def load_institutional_manager_choices(query: str | None = None, *, limit: int = 100) -> dict[str, Any]:
     try:
         frame = load_institutional_13f_managers(query, limit=limit)
+        watchlist_ciks = [str(row["cik"]) for row in INSTITUTIONAL_MANAGER_WATCHLIST if row.get("cik")]
+        watchlist_frame = load_institutional_13f_managers_by_ciks(watchlist_ciks)
     except Exception as exc:
         return {"status": "error", "message": str(exc), "managers": []}
-    return {"status": "ok", "message": "", "managers": _records(frame)}
+    rows_by_cik: dict[str, dict[str, Any]] = {}
+    for row in _records(frame):
+        cik = _cik_text(row.get("cik"))
+        if cik:
+            rows_by_cik[cik] = row
+    for row in _records(watchlist_frame):
+        cik = _cik_text(row.get("cik"))
+        if cik:
+            rows_by_cik.setdefault(cik, row)
+    return {"status": "ok", "message": "", "managers": list(rows_by_cik.values())}
 
 
 def load_institutional_refresh_status() -> dict[str, Any]:

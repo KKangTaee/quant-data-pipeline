@@ -157,6 +157,11 @@ type Props = ComponentProps & {
   };
 };
 
+type PendingAction =
+  | { kind: "manager"; cik: string; label: string }
+  | { kind: "interest"; query: string; label: string }
+  | { kind: "refresh"; label: string };
+
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
   window.requestAnimationFrame(() => Streamlit.setFrameHeight());
@@ -226,6 +231,7 @@ function AllocationDonut({ segments }: { segments: Segment[] }) {
 function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const payload = args.payload;
   const [activeView, setActiveView] = useState<"overview" | "holdings" | "interest">("overview");
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   useEffect(() => {
     Streamlit.setComponentReady();
@@ -235,6 +241,18 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   useEffect(() => {
     syncFrameHeightSoon();
   }, [payload, activeView]);
+
+  useEffect(() => {
+    if (!pendingAction || !payload) {
+      return;
+    }
+    if (pendingAction.kind === "manager" && payload.manager_picker.selected_cik === pendingAction.cik) {
+      setPendingAction(null);
+    }
+    if (pendingAction.kind === "interest" && payload.interest.query === pendingAction.query) {
+      setPendingAction(null);
+    }
+  }, [payload, pendingAction]);
 
   const changeGroups = useMemo(() => {
     if (!payload) {
@@ -259,8 +277,23 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     if (!query) {
       return;
     }
+    setPendingAction({ kind: "interest", query, label: `${query} 보유 기관 조회 중` });
     setActiveView("interest");
     sendEvent({ id: "drilldown", query });
+  };
+
+  const handleManagerSelect = (item: ManagerItem) => {
+    if (!item.cik || item.selected) {
+      return;
+    }
+    setPendingAction({ kind: "manager", cik: item.cik, label: `${item.manager_name} 포트폴리오 불러오는 중` });
+    sendEvent({ id: "select_manager", cik: item.cik });
+  };
+
+  const handleRefreshOpen = () => {
+    setPendingAction({ kind: "refresh", label: "13F 데이터 갱신 설정을 여는 중" });
+    sendEvent({ id: "open_refresh" });
+    window.setTimeout(() => setPendingAction((current) => (current?.kind === "refresh" ? null : current)), 900);
   };
 
   return (
@@ -278,8 +311,12 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
             <button
               key={item.cik || item.manager_name}
               type="button"
-              className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""}`}
-              onClick={() => item.cik && sendEvent({ id: "select_manager", cik: item.cik })}
+              className={`ip-manager-tab ${item.selected ? "ip-manager-tab--active" : ""} ${
+                pendingAction?.kind === "manager" && pendingAction.cik === item.cik ? "ip-manager-tab--pending" : ""
+              }`}
+              data-cik={item.cik || ""}
+              disabled={Boolean(pendingAction)}
+              onClick={() => handleManagerSelect(item)}
             >
               <strong>{item.manager_name}</strong>
               <span>{item.watchlist_label ? `${item.watchlist_label} · ${item.latest_report_period}` : item.latest_report_period}</span>
@@ -287,16 +324,30 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
           ))}
         </div>
 
+        {pendingAction ? (
+          <div className="ip-loading-banner" role="status" aria-live="polite">
+            <span className="ip-spinner" aria-hidden="true" />
+            <strong>
+              {pendingAction.kind === "manager"
+                ? "포트폴리오 불러오는 중"
+                : pendingAction.kind === "interest"
+                  ? "보유 기관 조회 중"
+                  : "갱신 설정 여는 중"}
+            </strong>
+            <em>{pendingAction.label}</em>
+          </div>
+        ) : null}
+
         <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
           <button
             type="button"
             className="ip-freshness__action"
-            onClick={() => sendEvent({ id: "open_refresh" })}
+            onClick={handleRefreshOpen}
           >
-            {payload.refresh_action?.label || "SEC 13F data"}
+            {payload.refresh_action?.label || "SEC 13F 데이터"}
           </button>
-          <strong>{payload.freshness?.latest_report_period || "No local 13F data"}</strong>
-          <em>{payload.freshness?.last_collected_at ? `collected ${payload.freshness.last_collected_at}` : "refresh controls available"}</em>
+          <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
+          <em>{payload.freshness?.last_collected_at ? `수집 시각 ${payload.freshness.last_collected_at}` : "갱신 설정 사용 가능"}</em>
         </div>
 
         <div className="ip-hero__grid">
@@ -314,7 +365,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
             </div>
             {payload.hero.source_ref ? (
               <a className="ip-source-link" href={payload.hero.source_ref} target="_blank" rel="noreferrer">
-                Open source filing
+                SEC 원문 열기
               </a>
             ) : null}
           </div>
@@ -353,13 +404,13 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
 
       <nav className="ip-view-tabs" aria-label="Institutional portfolio views">
         <button className={activeView === "overview" ? "ip-view-tabs__active" : ""} type="button" onClick={() => setActiveView("overview")}>
-          Overview
+          요약
         </button>
         <button className={activeView === "holdings" ? "ip-view-tabs__active" : ""} type="button" onClick={() => setActiveView("holdings")}>
-          Holdings
+          전체 보유
         </button>
         <button className={activeView === "interest" ? "ip-view-tabs__active" : ""} type="button" onClick={() => setActiveView("interest")}>
-          Institutional Interest
+          보유 기관 조회
         </button>
       </nav>
 
@@ -426,8 +477,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         <section className="ip-panel">
           <div className="ip-section-head">
             <div>
-              <h3>Full Holdings</h3>
-              <p>Click a holding to see latest stored 13F holders for that security.</p>
+              <h3>전체 보유 종목</h3>
+              <p>종목을 클릭하면 저장된 최신 13F 기준으로 해당 종목을 보유한 기관을 조회합니다.</p>
             </div>
             <strong>{payload.holdings_table.rows.length}</strong>
           </div>
@@ -449,8 +500,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         <section className="ip-panel">
           <div className="ip-section-head">
             <div>
-              <h3>Institutional Interest</h3>
-              <p>{payload.interest.query ? `Latest stored 13F holders for ${payload.interest.query}` : payload.interest.empty_text}</p>
+              <h3>보유 기관 조회</h3>
+              <p>{payload.interest.query ? `${payload.interest.query} 보유 기관 - 저장된 최신 13F 기준` : payload.interest.empty_text}</p>
             </div>
             <strong>{payload.interest.holder_count}</strong>
           </div>

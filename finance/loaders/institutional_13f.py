@@ -42,6 +42,148 @@ def _connect(host: str, user: str, password: str, port: int) -> MySQLClient:
     return db
 
 
+def _dedupe_interest_rows(rows: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+    seen: set[tuple[Any, ...]] = set()
+    deduped: list[dict[str, Any]] = []
+    for row in rows:
+        key = (
+            row.get("cik"),
+            row.get("period_of_report"),
+            row.get("cusip"),
+            row.get("holding_symbol"),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    deduped.sort(key=lambda row: (float(row.get("reported_value") or 0.0), str(row.get("manager_name") or "")), reverse=True)
+    return deduped[:limit]
+
+
+def _load_mapped_cusips_for_symbol(db: MySQLClient, symbol: str, *, limit: int = 25) -> list[str]:
+    rows = db.query(
+        """
+        SELECT DISTINCT cusip
+        FROM institutional_13f_cusip_symbol_map
+        WHERE symbol = %s
+        ORDER BY cusip ASC
+        LIMIT %s
+        """,
+        (symbol, int(limit)),
+    )
+    return [str(row["cusip"]) for row in rows if row.get("cusip")]
+
+
+def _load_mapped_cusips_for_issuer(db: MySQLClient, query: str, *, limit: int = 25) -> list[str]:
+    like_query = f"%{query.upper()}%"
+    rows = db.query(
+        """
+        SELECT DISTINCT cusip
+        FROM institutional_13f_cusip_symbol_map
+        WHERE UPPER(issuer_name) LIKE %s
+        ORDER BY cusip ASC
+        LIMIT %s
+        """,
+        (like_query, int(limit)),
+    )
+    return [str(row["cusip"]) for row in rows if row.get("cusip")]
+
+
+def _load_interest_rows_by_cusips(db: MySQLClient, cusips: list[str], *, limit: int) -> list[dict[str, Any]]:
+    if not cusips:
+        return []
+    placeholders = ", ".join(["%s"] * len(cusips))
+    return db.query(
+        f"""
+        SELECT
+          m.manager_name,
+          m.cik,
+          f.period_of_report,
+          f.filing_date,
+          h.cusip,
+          COALESCE(h.holding_symbol, sm.symbol) AS holding_symbol,
+          h.issuer_name,
+          h.reported_value,
+          h.shares_or_principal_amount,
+          h.source_ref,
+          f.table_value_total AS total_reported_value
+        FROM institutional_13f_holding h FORCE INDEX(ix_cusip)
+        INNER JOIN institutional_13f_filing f
+          ON h.accession_number = f.accession_number
+        INNER JOIN institutional_13f_manager m
+          ON m.latest_accession_number = f.accession_number
+        LEFT JOIN institutional_13f_cusip_symbol_map sm
+          ON h.cusip = sm.cusip
+        WHERE h.cusip IN ({placeholders})
+        ORDER BY h.reported_value DESC, m.manager_name ASC
+        LIMIT %s
+        """,
+        tuple([*cusips, int(limit)]),
+    )
+
+
+def _load_interest_rows_by_holding_symbol(db: MySQLClient, symbol: str, *, limit: int) -> list[dict[str, Any]]:
+    return db.query(
+        """
+        SELECT
+          m.manager_name,
+          m.cik,
+          f.period_of_report,
+          f.filing_date,
+          h.cusip,
+          COALESCE(h.holding_symbol, sm.symbol) AS holding_symbol,
+          h.issuer_name,
+          h.reported_value,
+          h.shares_or_principal_amount,
+          h.source_ref,
+          f.table_value_total AS total_reported_value
+        FROM institutional_13f_holding h FORCE INDEX(ix_holding_symbol)
+        INNER JOIN institutional_13f_filing f
+          ON h.accession_number = f.accession_number
+        INNER JOIN institutional_13f_manager m
+          ON m.latest_accession_number = f.accession_number
+        LEFT JOIN institutional_13f_cusip_symbol_map sm
+          ON h.cusip = sm.cusip
+        WHERE h.holding_symbol = %s
+        ORDER BY h.reported_value DESC, m.manager_name ASC
+        LIMIT %s
+        """,
+        (symbol, int(limit)),
+    )
+
+
+def _load_interest_rows_by_issuer_text(db: MySQLClient, clean_query: str, *, limit: int) -> list[dict[str, Any]]:
+    like_query = f"%{clean_query.upper()}%"
+    return db.query(
+        """
+        SELECT
+          m.manager_name,
+          m.cik,
+          f.period_of_report,
+          f.filing_date,
+          h.cusip,
+          COALESCE(h.holding_symbol, sm.symbol) AS holding_symbol,
+          h.issuer_name,
+          h.reported_value,
+          h.shares_or_principal_amount,
+          h.source_ref,
+          f.table_value_total AS total_reported_value
+        FROM institutional_13f_manager m
+        INNER JOIN institutional_13f_filing f
+          ON m.latest_accession_number = f.accession_number
+        INNER JOIN institutional_13f_holding h
+          ON f.accession_number = h.accession_number
+        LEFT JOIN institutional_13f_cusip_symbol_map sm
+          ON h.cusip = sm.cusip
+        WHERE UPPER(h.issuer_name) LIKE %s
+           OR UPPER(sm.issuer_name) LIKE %s
+        ORDER BY h.reported_value DESC, m.manager_name ASC
+        LIMIT %s
+        """,
+        (like_query, like_query, int(limit)),
+    )
+
+
 def load_institutional_13f_managers(
     query: str | None = None,
     *,
@@ -71,6 +213,50 @@ def load_institutional_13f_managers(
             LIMIT %s
             """,
             tuple(params),
+        )
+    finally:
+        db.close()
+    return _frame(rows)
+
+
+def load_institutional_13f_managers_by_ciks(
+    ciks: Iterable[str],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> pd.DataFrame:
+    """Load manager rows for explicit CIKs, preserving the DB read-only loader boundary."""
+    normalized: list[str] = []
+    for cik in ciks:
+        digits = "".join(ch for ch in str(cik or "") if ch.isdigit())
+        if digits:
+            normalized.append(digits.zfill(10)[-10:])
+    normalized = list(dict.fromkeys(normalized))
+    if not normalized:
+        return _empty_frame(
+            [
+                "cik",
+                "manager_name",
+                "latest_accession_number",
+                "latest_report_period",
+                "latest_filing_date",
+                "filing_count",
+                "source_ref",
+            ]
+        )
+    placeholders = ", ".join(["%s"] * len(normalized))
+    db = _connect(host, user, password, port)
+    try:
+        rows = db.query(
+            f"""
+            SELECT cik, manager_name, latest_accession_number, latest_report_period,
+                   latest_filing_date, filing_count, source_ref
+            FROM institutional_13f_manager
+            WHERE cik IN ({placeholders})
+            """,
+            tuple(normalized),
         )
     finally:
         db.close()
@@ -270,47 +456,28 @@ def load_institutional_13f_interest(
         return _empty_frame([])
 
     symbol = normalized_symbols[0] if normalized_symbols else clean_query.upper()
-    like_query = f"%{clean_query.upper()}%"
     db = _connect(host, user, password, port)
     try:
-        rows = db.query(
-            """
-            SELECT
-              m.manager_name,
-              m.cik,
-              f.period_of_report,
-              f.filing_date,
-              h.cusip,
-              COALESCE(h.holding_symbol, sm.symbol) AS holding_symbol,
-              h.issuer_name,
-              h.reported_value,
-              h.shares_or_principal_amount,
-              h.source_ref,
-              totals.total_reported_value
-            FROM institutional_13f_manager m
-            INNER JOIN institutional_13f_filing f
-              ON m.latest_accession_number = f.accession_number
-            INNER JOIN institutional_13f_holding h
-              ON f.accession_number = h.accession_number
-            INNER JOIN (
-              SELECT accession_number, SUM(reported_value) AS total_reported_value
-              FROM institutional_13f_holding
-              GROUP BY accession_number
-            ) totals
-              ON h.accession_number = totals.accession_number
-            LEFT JOIN institutional_13f_cusip_symbol_map sm
-              ON h.cusip = sm.cusip
-            WHERE h.cusip = %s
-               OR COALESCE(h.holding_symbol, sm.symbol) = %s
-               OR UPPER(h.issuer_name) LIKE %s
-            ORDER BY h.reported_value DESC, m.manager_name ASC
-            LIMIT %s
-            """,
-            (symbol, symbol, like_query, int(limit)),
-        )
+        candidate_cusips: list[str] = []
+        if len(symbol) == 9 and symbol.isalnum():
+            candidate_cusips.append(symbol)
+        candidate_cusips.extend(_load_mapped_cusips_for_symbol(db, symbol))
+        candidate_cusips = list(dict.fromkeys(candidate_cusips))
+
+        rows = []
+        if candidate_cusips:
+            rows.extend(_load_interest_rows_by_cusips(db, candidate_cusips, limit=max(int(limit) * 3, int(limit))))
+        rows.extend(_load_interest_rows_by_holding_symbol(db, symbol, limit=int(limit)))
+        if not rows:
+            issuer_cusips = _load_mapped_cusips_for_issuer(db, clean_query)
+            if issuer_cusips:
+                rows = _load_interest_rows_by_cusips(db, issuer_cusips, limit=max(int(limit) * 3, int(limit)))
+            else:
+                rows = _load_interest_rows_by_issuer_text(db, clean_query, limit=int(limit))
     finally:
         db.close()
 
+    rows = _dedupe_interest_rows(rows, limit=int(limit))
     frame = _frame(rows)
     if frame.empty:
         return frame

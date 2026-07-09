@@ -9122,3 +9122,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 첫 화면은 manager portfolio workbench로 유지하고, 수동 refresh는 보조 패널로 낮추며, UI는 `DB -> loader -> service payload`만 읽고 수집은 explicit job path로 분리해야 함.
 - Analysis result: Dataroma / WhaleWisdom / Fintel은 UI benchmark 또는 licensed API 후보일 뿐 scraping source로 삼지 않는다. SEC official 13F dataset이 primary ingestion source이고, refresh status / watchlist / CUSIP-symbol display mapping이 실제 사용성을 막는 핵심 gap이었다.
 - Follow-up: refresh status / watchlist schema, ingestion status upsert, conservative asset-profile name-match enrichment, service freshness payload, React freshness strip, secondary refresh panel, docs / QA closeout을 완료했다. Full official SEC ZIP load는 사용자가 실행할 운영 action으로 남겼다.
+
+### 2026-07-10 KST - Institutional Portfolios manager rail 클릭 후 계속 로딩처럼 보인다
+
+- User request: 기관 카드 클릭 시 처음에는 바뀌지만 이후 브라우저 탭이 계속 로딩되는 것처럼 보이고 포트폴리오가 변경되지 않는 문제를 먼저 진단한 뒤 단계별 개발을 진행해달라고 요청함.
+- Interpreted goal: 클릭은 수집 job 실행이 아니라 저장된 13F 포트폴리오 선택 변경이어야 하며, 처리 중에는 사용자가 상태를 볼 수 있어야 함. Runtime / Build 표시는 제거하고 주요 내용은 한글화해야 함.
+- Analysis result: watchlist CIK가 manager search result에 없으면 첫 DB row로 fallback되고, 같은 component key에서 이전 manager-select event가 재처리되며 rerun loop처럼 보일 수 있었다. 별도 병목으로 reverse lookup SQL이 최신 filing holder 조회에 약 10초를 쓰고 있었다.
+- Follow-up: watchlist-aware selection, event nonce consumption, loading banner, Korean copy, Runtime / Build 제거, reverse lookup SQL/index 최적화를 완료했다. Browser QA에서 Baupost / Pershing / Berkshire / Appaloosa 반복 선택이 정상 settle됨을 확인했다.

@@ -173,12 +173,7 @@ def _render_ingestion_page() -> None:
 
 
 def _render_institutional_portfolios_page() -> None:
-    render_institutional_portfolios_page(
-        runtime_marker=APP_RUNTIME_MARKER,
-        loaded_at=APP_RUNTIME_LOADED_AT,
-        git_sha=CURRENT_GIT_SHORT_SHA,
-        render_runtime_snapshot=_render_runtime_build_indicator,
-    )
+    render_institutional_portfolios_page()
 
 
 def _render_backtest_page() -> None:

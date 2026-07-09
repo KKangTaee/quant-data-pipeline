@@ -8,6 +8,7 @@ import streamlit as st
 
 from app.jobs.ingestion_jobs import run_collect_sec_13f_dataset
 from app.services.institutional_portfolios import (
+    INSTITUTIONAL_MANAGER_WATCHLIST,
     INSTITUTIONAL_PORTFOLIO_CAVEATS,
     build_institutional_preview_workbench_payload,
     build_institutional_workbench_payload,
@@ -21,6 +22,14 @@ from app.web.institutional_portfolios_react_component import (
     render_institutional_portfolios_workbench,
 )
 from finance.data.institutional_13f import DEFAULT_SEC_13F_DATASET_LABEL, DEFAULT_SEC_13F_DATASET_URL
+
+
+def _cik_text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return None
+    return digits.zfill(10)[-10:]
 
 
 def _as_frame(rows: list[dict[str, Any]], columns: list[str] | None = None) -> pd.DataFrame:
@@ -271,16 +280,47 @@ def _render_requested_refresh_status_panel(refresh_status: dict[str, Any]) -> bo
     return True
 
 
-def _selected_manager(managers: list[dict[str, Any]]) -> dict[str, Any] | None:
+def _resolve_selected_manager(managers: list[dict[str, Any]], selected_cik: str | None) -> dict[str, Any] | None:
     if not managers:
-        return None
-    selected_cik = str(st.session_state.get("institutional_portfolios_selected_cik") or "")
-    for row in managers:
-        if str(row.get("cik") or "") == selected_cik:
-            return row
-    first = managers[0]
-    st.session_state["institutional_portfolios_selected_cik"] = str(first.get("cik") or "")
-    return first
+        manager_rows: list[dict[str, Any]] = []
+    else:
+        manager_rows = [dict(row) for row in managers]
+
+    by_cik: dict[str, dict[str, Any]] = {}
+    for row in manager_rows:
+        cik = _cik_text(row.get("cik"))
+        if cik:
+            by_cik[cik] = dict(row, cik=cik)
+
+    selected = _cik_text(selected_cik)
+    if selected and selected in by_cik:
+        return by_cik[selected]
+
+    for seed in sorted(INSTITUTIONAL_MANAGER_WATCHLIST, key=lambda row: int(row.get("priority") or 100)):
+        seed_cik = _cik_text(seed.get("cik"))
+        if not seed_cik:
+            continue
+        row = {**seed, **by_cik.get(seed_cik, {})}
+        normalized = {
+            "cik": seed_cik,
+            "manager_name": row.get("manager_name") or row.get("display_name") or "Unknown manager",
+            "latest_report_period": row.get("latest_report_period"),
+            "latest_filing_date": row.get("latest_filing_date"),
+            "source_ref": row.get("source_ref"),
+        }
+        if selected and selected == seed_cik:
+            return normalized
+        if not selected:
+            return normalized
+
+    return manager_rows[0] if manager_rows else None
+
+
+def _selected_manager(managers: list[dict[str, Any]]) -> dict[str, Any] | None:
+    selected = _resolve_selected_manager(managers, str(st.session_state.get("institutional_portfolios_selected_cik") or ""))
+    if selected is not None:
+        st.session_state["institutional_portfolios_selected_cik"] = str(selected.get("cik") or "")
+    return selected
 
 
 def _workbench_event_payload(event: dict[str, Any] | None) -> dict[str, Any]:
@@ -292,10 +332,28 @@ def _workbench_event_payload(event: dict[str, Any] | None) -> dict[str, Any]:
     return event
 
 
+def _consume_workbench_event(payload: dict[str, Any], last_event_key: str | None) -> tuple[bool, str | None]:
+    event_name = str(payload.get("id") or payload.get("event") or "").strip()
+    if not event_name:
+        return False, last_event_key
+    nonce = str(payload.get("nonce") or payload.get("event_id") or "").strip()
+    event_key = f"{event_name}:{nonce}" if nonce else f"{event_name}:{payload}"
+    if event_key == last_event_key:
+        return False, event_key
+    return True, event_key
+
+
 def _handle_workbench_event(event: dict[str, Any] | None) -> None:
     payload = _workbench_event_payload(event)
     if not payload:
         return
+    should_handle, event_key = _consume_workbench_event(
+        payload,
+        str(st.session_state.get("institutional_portfolios_last_workbench_event_key") or ""),
+    )
+    if not should_handle:
+        return
+    st.session_state["institutional_portfolios_last_workbench_event_key"] = event_key
     event_name = str(payload.get("id") or payload.get("event") or "")
     if event_name == "open_refresh":
         event_id = str(payload.get("nonce") or payload.get("event_id") or event_name)
@@ -308,11 +366,13 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
         cik = str(payload.get("cik") or "")
         if cik and cik != st.session_state.get("institutional_portfolios_selected_cik"):
             st.session_state["institutional_portfolios_selected_cik"] = cik
+            st.session_state["institutional_interest_query_needs_load"] = False
             st.rerun()
     if event_name == "drilldown":
         query = str(payload.get("query") or "").strip()
         if query and query != st.session_state.get("institutional_interest_query"):
             st.session_state["institutional_interest_query"] = query
+            st.session_state["institutional_interest_query_needs_load"] = True
             st.rerun()
 
 
@@ -342,8 +402,8 @@ def render_institutional_portfolios_page(
 ) -> None:
     st.title("Institutional Portfolios")
     st.caption(
-        "Explore delayed SEC Form 13F portfolios by manager, allocation, reported change, and holder lookup. "
-        "This is a read-only research workspace, separate from Market Movers."
+        "저장된 SEC Form 13F 기준으로 기관 / 투자 대가의 포트폴리오, 분기 보고 변화, 보유 기관 역조회를 탐색합니다. "
+        "이 화면은 읽기 전용 리서치 화면이며 Market Movers와 분리되어 있습니다."
     )
 
     if render_runtime_snapshot is not None:
@@ -353,7 +413,7 @@ def render_institutional_portfolios_page(
         st.caption(f"Runtime: {runtime_marker or '-'} · Loaded: {loaded_at or '-'} · Git: {git_sha or '-'}")
 
     search = st.text_input(
-        "Search manager / institution",
+        "기관 / 투자 대가 검색",
         value="",
         key="institutional_portfolios_manager_search",
         placeholder="Berkshire Hathaway, Pershing Square, BlackRock",
@@ -402,9 +462,17 @@ def render_institutional_portfolios_page(
     interest_query = str(st.session_state.get("institutional_interest_query") or "").strip()
     interest_model: dict[str, Any] | None = None
     if interest_query:
-        interest_result = load_institutional_interest_model(interest_query, limit=100)
-        if interest_result["status"] == "ok":
-            interest_model = dict(interest_result.get("model") or {})
+        cache = st.session_state.get("institutional_interest_model_cache")
+        if isinstance(cache, dict) and cache.get("query") == interest_query:
+            interest_model = dict(cache.get("model") or {})
+        elif st.session_state.pop("institutional_interest_query_needs_load", False):
+            interest_result = load_institutional_interest_model(interest_query, limit=100)
+            if interest_result["status"] == "ok":
+                interest_model = dict(interest_result.get("model") or {})
+                st.session_state["institutional_interest_model_cache"] = {
+                    "query": interest_query,
+                    "model": interest_model,
+                }
 
     payload = build_institutional_workbench_payload(
         model=model,

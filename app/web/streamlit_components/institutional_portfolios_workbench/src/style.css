@@ -82,6 +82,10 @@ a {
   cursor: pointer;
 }
 
+.ip-manager-tab:disabled {
+  cursor: progress;
+}
+
 .ip-manager-tab strong,
 .ip-manager-tab span {
   display: block;
@@ -104,6 +108,55 @@ a {
 .ip-manager-tab--active {
   border-color: #2563eb;
   background: #eff6ff;
+}
+
+.ip-manager-tab--pending {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 1px #2563eb;
+}
+
+.ip-loading-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.ip-loading-banner strong {
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+
+.ip-loading-banner em {
+  min-width: 0;
+  color: #475569;
+  font-size: 13px;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ip-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid #bfdbfe;
+  border-top-color: #2563eb;
+  border-radius: 999px;
+  animation: ip-spin 0.75s linear infinite;
+}
+
+@keyframes ip-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ip-freshness {
@@ -692,6 +745,14 @@ a {
   }
 
   .ip-freshness em {
+    white-space: normal;
+  }
+
+  .ip-loading-banner {
+    align-items: flex-start;
+  }
+
+  .ip-loading-banner em {
     white-space: normal;
   }
 

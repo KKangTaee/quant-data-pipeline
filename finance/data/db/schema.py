@@ -854,6 +854,7 @@ INSTITUTIONAL_13F_SCHEMAS = {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
           KEY ix_manager_name (manager_name),
+          KEY ix_latest_accession_number (latest_accession_number),
           KEY ix_latest_report_period (latest_report_period),
           KEY ix_latest_filing_date (latest_filing_date)
         );

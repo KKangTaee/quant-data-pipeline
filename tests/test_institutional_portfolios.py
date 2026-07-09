@@ -144,6 +144,7 @@ class Sec13FDataSetParserTests(unittest.TestCase):
         self.assertIn("institutional_13f_manager_watchlist", INSTITUTIONAL_13F_SCHEMAS)
         self.assertIn("latest_report_period", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_refresh_status"])
         self.assertIn("external_links_json", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_manager_watchlist"])
+        self.assertIn("ix_latest_accession_number", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_manager"])
 
     def test_cusip_symbol_map_rows_use_unique_asset_profile_name_matches(self) -> None:
         from finance.data.institutional_13f import build_cusip_symbol_map_rows
@@ -442,10 +443,61 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertFalse(payload["boundary"]["trade_signal"])
         self.assertFalse(payload["boundary"]["live_trading"])
         self.assertEqual(payload["refresh_action"]["action_id"], "collect_sec_13f_dataset")
-        self.assertIn("SEC", payload["refresh_action"]["label"])
+        self.assertIn("13F", payload["refresh_action"]["label"])
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
+    def test_selected_manager_resolver_keeps_watchlist_selection_outside_search_results(self) -> None:
+        from app.web.institutional_portfolios import _resolve_selected_manager
+
+        selected = _resolve_selected_manager(
+            managers=[
+                {
+                    "cik": "0001475896",
+                    "manager_name": "Asset Dedication, LLC",
+                    "latest_report_period": "2026-03-31",
+                }
+            ],
+            selected_cik="0001656456",
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["cik"], "0001656456")
+        self.assertEqual(selected["manager_name"], "APPALOOSA LP")
+
+    def test_selected_manager_resolver_defaults_to_curated_first_portfolio(self) -> None:
+        from app.web.institutional_portfolios import _resolve_selected_manager
+
+        selected = _resolve_selected_manager(
+            managers=[
+                {
+                    "cik": "0001475896",
+                    "manager_name": "Asset Dedication, LLC",
+                    "latest_report_period": "2026-03-31",
+                }
+            ],
+            selected_cik="",
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["cik"], "0001067983")
+        self.assertEqual(selected["manager_name"], "BERKSHIRE HATHAWAY INC")
+
+    def test_workbench_event_consumption_skips_replayed_component_value(self) -> None:
+        from app.web.institutional_portfolios import _consume_workbench_event
+
+        payload = {"id": "select_manager", "cik": "0001656456", "nonce": "n-1"}
+
+        self.assertEqual(_consume_workbench_event(payload, None), (True, "select_manager:n-1"))
+        self.assertEqual(_consume_workbench_event(payload, "select_manager:n-1"), (False, "select_manager:n-1"))
+
+    def test_reverse_lookup_loader_uses_filing_total_without_full_holding_groupby(self) -> None:
+        source = Path("finance/loaders/institutional_13f.py").read_text(encoding="utf-8")
+        interest_source = source[source.index("def load_institutional_13f_interest") :]
+
+        self.assertIn("f.table_value_total", source)
+        self.assertNotIn("GROUP BY accession_number", interest_source)
+
     def test_missing_refresh_status_opens_refresh_panel_on_entry(self) -> None:
         from app.web.institutional_portfolios import _should_show_refresh_panel_on_entry
 
@@ -513,7 +565,7 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("Streamlit.setComponentValue({ event: {", component_source)
         self.assertIn('id: "open_refresh"', component_source)
         self.assertIn('className="ip-freshness__action"', component_source)
-        self.assertIn("refresh controls available", component_source)
+        self.assertIn("갱신 설정 사용 가능", component_source)
         self.assertNotIn("refresh available below", component_source)
         self.assertIn("_workbench_event_payload", page_source)
         self.assertIn("institutional_13f_refresh_panel_expanded", page_source)
