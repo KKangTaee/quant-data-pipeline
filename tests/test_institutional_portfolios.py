@@ -111,6 +111,76 @@ class Sec13FDataSetParserTests(unittest.TestCase):
         self.assertEqual(normalized["holdings"][0]["source_dataset"], "2026-march-april-may")
         self.assertTrue(any("45 days" in caveat for caveat in SEC_13F_SOURCE_CAVEATS))
 
+    def test_sec_13f_refresh_status_summarizes_latest_dataset_freshness(self) -> None:
+        from finance.data.institutional_13f import build_sec_13f_refresh_status
+
+        status = build_sec_13f_refresh_status(
+            source_dataset="2026-march-april-may",
+            source_ref="https://www.sec.gov/files/structureddata/data/form-13f-data-sets/01mar2026-31may2026_form13f.zip",
+            collected_at="2026-07-09 00:00:00",
+            normalized={
+                "managers": [{"cik": "0001067983"}],
+                "filings": [
+                    {"period_of_report": "2025-12-31", "filing_date": "2026-02-14"},
+                    {"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+                ],
+                "holdings": [{"cusip": "037833100"}, {"cusip": "060505104"}],
+            },
+        )
+
+        self.assertEqual(status["source_key"], "sec_form_13f_dataset")
+        self.assertEqual(status["status"], "ok")
+        self.assertEqual(status["latest_report_period"], "2026-03-31")
+        self.assertEqual(status["latest_filing_date"], "2026-05-15")
+        self.assertEqual(status["managers_written"], 1)
+        self.assertEqual(status["filings_written"], 2)
+        self.assertEqual(status["holdings_written"], 2)
+        self.assertFalse(status["is_stale"])
+
+    def test_schema_defines_refresh_status_and_watchlist_tables(self) -> None:
+        from finance.data.db.schema import INSTITUTIONAL_13F_SCHEMAS
+
+        self.assertIn("institutional_13f_refresh_status", INSTITUTIONAL_13F_SCHEMAS)
+        self.assertIn("institutional_13f_manager_watchlist", INSTITUTIONAL_13F_SCHEMAS)
+        self.assertIn("latest_report_period", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_refresh_status"])
+        self.assertIn("external_links_json", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_manager_watchlist"])
+
+    def test_cusip_symbol_map_rows_use_unique_asset_profile_name_matches(self) -> None:
+        from finance.data.institutional_13f import build_cusip_symbol_map_rows
+
+        rows = build_cusip_symbol_map_rows(
+            holdings=[
+                {"cusip": "037833100", "issuer_name": "APPLE INC", "figi": "BBG000B9XRY4"},
+                {"cusip": "060505104", "issuer_name": "BANK OF AMERICA CORP", "figi": ""},
+                {"cusip": "999999999", "issuer_name": "DUPLICATE HOLDING", "figi": ""},
+            ],
+            asset_profiles=pd.DataFrame(
+                [
+                    {
+                        "symbol": "AAPL",
+                        "long_name": "Apple Inc.",
+                        "sector": "Technology",
+                        "industry": "Consumer Electronics",
+                    },
+                    {
+                        "symbol": "BAC",
+                        "long_name": "Bank of America Corporation",
+                        "sector": "Financial Services",
+                        "industry": "Banks",
+                    },
+                    {"symbol": "DUPA", "long_name": "Duplicate Holding Inc.", "sector": "Industrials", "industry": "Tools"},
+                    {"symbol": "DUPB", "long_name": "Duplicate Holding Corp.", "sector": "Industrials", "industry": "Tools"},
+                ]
+            ),
+            source_ref="unit-test",
+        )
+
+        mapped = {row["cusip"]: row for row in rows}
+        self.assertEqual(mapped["037833100"]["symbol"], "AAPL")
+        self.assertEqual(mapped["037833100"]["confidence"], 0.7)
+        self.assertEqual(mapped["060505104"]["sector"], "Financial Services")
+        self.assertNotIn("999999999", mapped)
+
 
 class InstitutionalPortfolioReadModelTests(unittest.TestCase):
     def test_portfolio_model_builds_weights_changes_and_unmapped_sector_exposure(self) -> None:
@@ -316,6 +386,14 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
             interest_model=None,
             mode="live",
             allocation_limit=2,
+            refresh_status={
+                "status": "ok",
+                "last_collected_at": "2026-07-09 00:00:00",
+                "latest_report_period": "2026-03-31",
+                "latest_filing_date": "2026-05-15",
+                "stale_reason": "",
+                "is_stale": False,
+            },
         )
 
         self.assertEqual(payload["schema_version"], "institutional_portfolios_workbench_v1")
@@ -329,8 +407,27 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(payload["change_board"]["groups"]["reduced"]["count"], 1)
         self.assertEqual(payload["change_board"]["groups"]["no_longer_reported"]["count"], 1)
         self.assertEqual(payload["sector_exposure"]["bars"][0]["sector"], "Technology")
+        self.assertEqual(payload["freshness"]["latest_report_period"], "2026-03-31")
+        self.assertEqual(payload["refresh_action"]["action_id"], "collect_sec_13f_dataset")
+        self.assertFalse(payload["refresh_action"]["primary"])
         self.assertTrue(payload["source_caveats"]["visible"])
         self.assertFalse(payload["boundary"]["trade_signal"])
+
+    def test_watchlist_manager_rail_keeps_seed_managers_visible_before_search_results(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_manager_rail
+
+        rail = build_institutional_manager_rail(
+            managers=[
+                {"cik": "0009999999", "manager_name": "GENERAL INDEX FUND", "latest_report_period": "2026-03-31"},
+                {"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC", "latest_report_period": "2026-03-31"},
+            ],
+            selected_cik="0001067983",
+        )
+
+        self.assertEqual(rail[0]["cik"], "0001067983")
+        self.assertEqual(rail[0]["watchlist_label"], "Warren Buffett")
+        self.assertTrue(rail[0]["selected"])
+        self.assertTrue(rail[0]["external_links"])
 
     def test_preview_workbench_payload_is_labeled_and_not_live_data(self) -> None:
         from app.services.institutional_portfolios import build_institutional_preview_workbench_payload
@@ -344,6 +441,8 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertTrue(payload["allocation"]["segments"])
         self.assertFalse(payload["boundary"]["trade_signal"])
         self.assertFalse(payload["boundary"]["live_trading"])
+        self.assertEqual(payload["refresh_action"]["action_id"], "collect_sec_13f_dataset")
+        self.assertIn("SEC", payload["refresh_action"]["label"])
 
 
 class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
@@ -371,6 +470,7 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertTrue(definition["active"])
         self.assertEqual(definition["write_behavior"], "db_write")
         self.assertIn("finance_meta.institutional_13f_holding", definition["target_tables"])
+        self.assertIn("finance_meta.institutional_13f_refresh_status", definition["target_tables"])
         self.assertIn("collect_sec_13f_dataset", active_ingestion_actions())
         self.assertIn("collect_sec_13f_dataset", PROGRESS_ENABLED_ACTIONS)
         self.assertIn("SEC Form 13F", JOB_GUIDE["collect_sec_13f_dataset"]["title"])
@@ -380,7 +480,10 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
 
         self.assertIn("render_institutional_portfolios_workbench", source)
         self.assertIn("build_institutional_workbench_payload", source)
+        self.assertIn("load_institutional_refresh_status", source)
+        self.assertIn("_render_refresh_status_panel", source)
         self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("st.dataframe"))
+        self.assertLess(source.index("render_institutional_portfolios_workbench"), source.index("_render_refresh_status_panel"))
 
 
 if __name__ == "__main__":

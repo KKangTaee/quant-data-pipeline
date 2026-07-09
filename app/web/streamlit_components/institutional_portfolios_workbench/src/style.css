@@ -106,6 +106,49 @@ a {
   background: #eff6ff;
 }
 
+.ip-freshness {
+  display: grid;
+  grid-template-columns: minmax(130px, auto) minmax(90px, auto) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #334155;
+  font-size: 12px;
+}
+
+.ip-freshness span {
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.ip-freshness strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.ip-freshness em {
+  min-width: 0;
+  color: #64748b;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ip-freshness--stale {
+  border-color: #fed7aa;
+  background: #fffaf5;
+}
+
+.ip-freshness--stale span {
+  color: #c2410c;
+}
+
 .ip-hero__grid {
   display: grid;
   grid-template-columns: minmax(260px, 0.9fr) minmax(360px, 1.35fr);
@@ -626,8 +669,13 @@ a {
 
   .ip-hero__facts,
   .ip-allocation-layout,
-  .ip-change-grid {
+  .ip-change-grid,
+  .ip-freshness {
     grid-template-columns: 1fr;
+  }
+
+  .ip-freshness em {
+    white-space: normal;
   }
 
   .ip-donut {

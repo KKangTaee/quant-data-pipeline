@@ -5908,3 +5908,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - Price refresh는 source ticker를 유지하되 active repair가 있으면 collection ticker만 resolved symbol로 바꾸며, plan/details에 metadata-only `source_range` / `resolved_range` / `split_status`를 남긴다.
 - Factor Readiness는 후보쌍 / 신뢰도 / 기간 경계 / 다음 행동을 보여주고, repair 후 readiness 재확인과 백테스트 재실행을 안내한다.
 - 후속 범위: official corporate-action feed 신규 수집과 실제 old/new ticker price series stitching.
+
+## 2026-07-09 - Institutional Portfolios Live SEC 13F V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-live-sec13f-v1-20260709/`에서 1차~6차 개발 / QA / docs closeout을 완료했다.
+- SEC 13F ingestion은 refresh status row와 conservative CUSIP-symbol enrichment를 기록하고, Institutional Portfolios는 watchlist rail / freshness payload / secondary refresh panel을 갖게 됐다.
+- QA: focused tests 12개, py_compile, npm build, git diff --check, UI/engine boundary check, Browser QA screenshot 완료. Full official SEC ZIP load는 사용자가 명시 실행할 수 있는 후속 운영 action으로 남겼다.

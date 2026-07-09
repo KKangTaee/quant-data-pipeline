@@ -25,6 +25,8 @@ The official page should be checked before each refresh. On 2026-07-08, the late
 6. Run the collection.
 7. Open `Workspace > Institutional Portfolios`.
 
+Alternative path: open `Workspace > Institutional Portfolios`, expand `SEC 13F data refresh`, and run the same official dataset collection from the secondary refresh panel. This keeps the portfolio explorer as the first screen while still allowing a manual refresh.
+
 ## Environment
 
 Set a descriptive SEC user agent when downloading from SEC:
@@ -44,6 +46,7 @@ SEC Form 13F ZIP
   -> finance_meta.institutional_13f_filing
   -> finance_meta.institutional_13f_holding
   -> finance_meta.institutional_13f_cusip_symbol_map
+  -> finance_meta.institutional_13f_refresh_status
   -> finance/loaders/institutional_13f.py
   -> app/services/institutional_portfolios.py
   -> app/web/institutional_portfolios.py
@@ -68,3 +71,4 @@ If UI changes are present, run Browser QA against `Workspace > Institutional Por
 - 13F does not fully show shorts, cash, derivatives, hedge structure, non-reportable securities, or complete portfolio context.
 - Amendments, confidential treatment, filer errors, and SEC extraction issues can change interpretation.
 - CUSIP-symbol mapping is best-effort display metadata, not a complete security master.
+- The collector can opportunistically enrich `institutional_13f_cusip_symbol_map` from unique `nyse_asset_profile.long_name` matches. Ambiguous names are skipped.

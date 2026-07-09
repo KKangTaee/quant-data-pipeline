@@ -9115,3 +9115,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: BK -> BNY를 하드코딩 fixture가 아닌 대표 케이스로 두고, stale/missing price ticker가 단순 refresh 대상인지 symbol identity issue인지 구분해야 함.
 - Analysis result: 새 `market_symbol_alias` table보다 기존 `nyse_symbol_lifecycle(event_type=ticker_change, related_symbol, related_cik)`를 공용 source로 쓰는 것이 Backtest / Data Coverage 경계와 맞다.
 - Follow-up: Symbol Resolver V1 1차~5차에서 candidate / active repair, source evidence scoring, LOW-confidence 수동 확인, metadata-only PIT split contract, Factor Readiness UX / action feedback, docs / QA closeout을 완료했다. 실제 old/new ticker price series stitching과 official corporate-action feed 신규 수집은 후속 범위다.
+
+### 2026-07-09 - Institutional Portfolios를 preview가 아닌 실제 SEC 13F 기능으로 전환한다
+
+- User request: `Workspace > Institutional Portfolios`를 수집 job 화면이 아니라 투자 대가 / 기관 포트폴리오 탐색 화면으로 만들고, SEC 13F 공식 dataset을 primary source로 삼아 1차~6차 개발 / QA / 커밋까지 진행해달라고 요청함.
+- Interpreted goal: 첫 화면은 manager portfolio workbench로 유지하고, 수동 refresh는 보조 패널로 낮추며, UI는 `DB -> loader -> service payload`만 읽고 수집은 explicit job path로 분리해야 함.
+- Analysis result: Dataroma / WhaleWisdom / Fintel은 UI benchmark 또는 licensed API 후보일 뿐 scraping source로 삼지 않는다. SEC official 13F dataset이 primary ingestion source이고, refresh status / watchlist / CUSIP-symbol display mapping이 실제 사용성을 막는 핵심 gap이었다.
+- Follow-up: refresh status / watchlist schema, ingestion status upsert, conservative asset-profile name-match enrichment, service freshness payload, React freshness strip, secondary refresh panel, docs / QA closeout을 완료했다. Full official SEC ZIP load는 사용자가 실행할 운영 action으로 남겼다.

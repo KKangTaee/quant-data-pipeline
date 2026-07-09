@@ -963,6 +963,53 @@ INSTITUTIONAL_13F_SCHEMAS = {
           KEY ix_source (source)
         );
     """,
+    "institutional_13f_manager_watchlist": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_manager_watchlist (
+          cik VARCHAR(10) PRIMARY KEY,
+          display_name VARCHAR(255) NOT NULL,
+          watchlist_label VARCHAR(100) NULL,
+          alias VARCHAR(255) NULL,
+          priority INT NOT NULL DEFAULT 100,
+          tags_json JSON NULL,
+          external_links_json JSON NULL,
+          source VARCHAR(64) NOT NULL DEFAULT 'seed_config',
+          active TINYINT(1) NOT NULL DEFAULT 1,
+          notes TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          KEY ix_active_priority (active, priority),
+          KEY ix_display_name (display_name)
+        );
+    """,
+    "institutional_13f_refresh_status": """
+        CREATE TABLE IF NOT EXISTS institutional_13f_refresh_status (
+          source_key VARCHAR(64) PRIMARY KEY,
+          source_dataset VARCHAR(128) NULL,
+          source_ref VARCHAR(1024) NULL,
+          status VARCHAR(32) NOT NULL DEFAULT 'unknown',
+
+          last_collected_at TIMESTAMP NULL,
+          latest_report_period DATE NULL,
+          latest_filing_date DATE NULL,
+          managers_written INT NOT NULL DEFAULT 0,
+          filings_written INT NOT NULL DEFAULT 0,
+          holdings_written INT NOT NULL DEFAULT 0,
+          rows_written INT NOT NULL DEFAULT 0,
+
+          is_stale TINYINT(1) NOT NULL DEFAULT 1,
+          stale_reason TEXT NULL,
+          error_message TEXT NULL,
+          source_limitations_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          KEY ix_status_collected (status, last_collected_at),
+          KEY ix_latest_report_period (latest_report_period)
+        );
+    """,
 }
 
 

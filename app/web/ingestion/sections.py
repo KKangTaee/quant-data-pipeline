@@ -421,7 +421,8 @@ def render_operational_section() -> Any:
         )
         st.caption(
             "저장 테이블: `finance_meta.institutional_13f_manager`, "
-            "`finance_meta.institutional_13f_filing`, `finance_meta.institutional_13f_holding`"
+            "`finance_meta.institutional_13f_filing`, `finance_meta.institutional_13f_holding`, "
+            "`finance_meta.institutional_13f_refresh_status`"
         )
         sec13f_default_url = (
             "https://www.sec.gov/files/structureddata/data/form-13f-data-sets/"

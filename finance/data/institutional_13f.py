@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import io
+import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -20,6 +22,11 @@ from .sec_delisting import DEFAULT_SEC_USER_AGENT
 
 DB_META = "finance_meta"
 SEC_13F_DATASETS_PAGE = "https://www.sec.gov/data-research/sec-markets-data/form-13f-data-sets"
+DEFAULT_SEC_13F_DATASET_LABEL = "2026-march-april-may"
+DEFAULT_SEC_13F_DATASET_URL = (
+    "https://www.sec.gov/files/structureddata/data/form-13f-data-sets/"
+    "01mar2026-31may2026_form13f.zip"
+)
 SEC_13F_SOURCE_CAVEATS = [
     "SEC Form 13F is a delayed quarterly disclosure and can be filed up to 45 days after quarter end.",
     "13F holdings are not real-time buys or sells and are not a buy/sell signal.",
@@ -100,6 +107,35 @@ def _bool_flag(value: Any) -> int:
     return 1 if text in {"Y", "YES", "TRUE", "1", "X"} else 0
 
 
+_ISSUER_SUFFIXES = {
+    "INC",
+    "INCORPORATED",
+    "CORP",
+    "CORPORATION",
+    "CO",
+    "COMPANY",
+    "LTD",
+    "LIMITED",
+    "PLC",
+    "SA",
+    "NV",
+    "AG",
+    "LP",
+    "LLC",
+}
+
+
+def _issuer_match_key(value: Any) -> str | None:
+    text = _clean_text(value)
+    if not text:
+        return None
+    normalized = re.sub(r"[^A-Z0-9 ]+", " ", text.upper().replace("&", " AND "))
+    tokens = [token for token in normalized.split() if token]
+    while tokens and tokens[-1] in _ISSUER_SUFFIXES:
+        tokens.pop()
+    return " ".join(tokens) or None
+
+
 def _optional_bool_flag(value: Any) -> int | None:
     text = str(value or "").strip().upper()
     if not text:
@@ -121,6 +157,17 @@ def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
         return []
     normalized = normalized.where(pd.notna(normalized), None)
     return normalized.to_dict(orient="records")
+
+
+def _profile_records(asset_profiles: pd.DataFrame | Iterable[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    if asset_profiles is None:
+        return []
+    if isinstance(asset_profiles, pd.DataFrame):
+        if asset_profiles.empty:
+            return []
+        work = asset_profiles.copy().where(pd.notna(asset_profiles), None)
+        return work.to_dict(orient="records")
+    return [dict(row) for row in asset_profiles if isinstance(row, dict)]
 
 
 def _index_by_accession(frame: pd.DataFrame | None) -> dict[str, dict[str, Any]]:
@@ -336,6 +383,94 @@ def _sync_schema(db: MySQLClient) -> None:
         sync_table_schema(db, table_name, create_sql, DB_META)
 
 
+def build_cusip_symbol_map_rows(
+    *,
+    holdings: Iterable[dict[str, Any]],
+    asset_profiles: pd.DataFrame | Iterable[dict[str, Any]] | None,
+    source_ref: str | None = None,
+) -> list[dict[str, Any]]:
+    """Build conservative CUSIP-symbol map rows from unique asset profile name matches."""
+    profiles_by_key: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for profile in _profile_records(asset_profiles):
+        symbol = _clean_text(profile.get("symbol"))
+        name_key = _issuer_match_key(profile.get("long_name"))
+        if symbol and name_key:
+            profiles_by_key[name_key].append(profile)
+
+    unique_profiles = {key: rows[0] for key, rows in profiles_by_key.items() if len(rows) == 1}
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    verified_at = _now_utc_text()
+    for holding in holdings:
+        cusip = _clean_text(holding.get("cusip"))
+        issuer_key = _issuer_match_key(holding.get("issuer_name"))
+        if not cusip or not issuer_key:
+            continue
+        profile = unique_profiles.get(issuer_key)
+        if not profile:
+            continue
+        symbol = _clean_text(profile.get("symbol"))
+        if not symbol:
+            continue
+        dedupe_key = (cusip.upper(), symbol.upper())
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        out.append(
+            {
+                "cusip": cusip.upper(),
+                "symbol": symbol.upper(),
+                "issuer_name": _clean_text(holding.get("issuer_name")),
+                "figi": _clean_text(holding.get("figi")),
+                "sector": _clean_text(profile.get("sector")),
+                "industry": _clean_text(profile.get("industry")),
+                "source": "asset_profile_name_match",
+                "confidence": 0.7,
+                "source_ref": source_ref,
+                "verified_at": verified_at,
+            }
+        )
+    return out
+
+
+def _load_asset_profile_rows_for_mapping(db: MySQLClient) -> list[dict[str, Any]]:
+    try:
+        return db.query(
+            """
+            SELECT symbol, long_name, sector, industry
+            FROM nyse_asset_profile
+            WHERE status = 'active'
+              AND long_name IS NOT NULL
+              AND symbol IS NOT NULL
+            """
+        )
+    except Exception:
+        return []
+
+
+def _upsert_cusip_symbol_map_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
+    if not rows:
+        return 0
+    sql = """
+        INSERT INTO institutional_13f_cusip_symbol_map (
+          cusip, symbol, issuer_name, figi, sector, industry, source, confidence, source_ref, verified_at
+        ) VALUES (
+          %(cusip)s, %(symbol)s, %(issuer_name)s, %(figi)s, %(sector)s, %(industry)s,
+          %(source)s, %(confidence)s, %(source_ref)s, %(verified_at)s
+        )
+        ON DUPLICATE KEY UPDATE
+          issuer_name = VALUES(issuer_name),
+          figi = VALUES(figi),
+          sector = VALUES(sector),
+          industry = VALUES(industry),
+          confidence = VALUES(confidence),
+          source_ref = VALUES(source_ref),
+          verified_at = VALUES(verified_at)
+    """
+    db.executemany(sql, rows)
+    return len(rows)
+
+
 def _upsert_manager_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
     if not rows:
         return 0
@@ -446,6 +581,86 @@ def _upsert_holding_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
     return len(rows)
 
 
+def _max_date_text(rows: Iterable[dict[str, Any]], key: str) -> str | None:
+    dates = [_date_text(row.get(key)) for row in rows]
+    present = [value for value in dates if value]
+    return max(present) if present else None
+
+
+def build_sec_13f_refresh_status(
+    *,
+    source_dataset: str,
+    source_ref: str | None,
+    collected_at: str,
+    normalized: dict[str, list[dict[str, Any]]],
+    status: str = "ok",
+    error_message: str | None = None,
+) -> dict[str, Any]:
+    """Build a compact product freshness row from normalized SEC 13F rows."""
+    manager_count = len(normalized.get("managers") or [])
+    filing_count = len(normalized.get("filings") or [])
+    holding_count = len(normalized.get("holdings") or [])
+    latest_report_period = _max_date_text(normalized.get("filings") or [], "period_of_report")
+    latest_filing_date = _max_date_text(normalized.get("filings") or [], "filing_date")
+    is_stale = not latest_report_period or status != "ok"
+    stale_reason = ""
+    if not latest_report_period:
+        stale_reason = "No usable 13F filing rows were found in the selected SEC dataset."
+    elif status != "ok":
+        stale_reason = error_message or "Latest SEC 13F refresh did not complete successfully."
+
+    return {
+        "source_key": "sec_form_13f_dataset",
+        "source_dataset": source_dataset,
+        "source_ref": source_ref,
+        "status": status,
+        "last_collected_at": collected_at,
+        "latest_report_period": latest_report_period,
+        "latest_filing_date": latest_filing_date,
+        "managers_written": manager_count,
+        "filings_written": filing_count,
+        "holdings_written": holding_count,
+        "rows_written": manager_count + filing_count + holding_count,
+        "is_stale": is_stale,
+        "stale_reason": stale_reason,
+        "error_message": error_message,
+        "source_limitations_json": json.dumps(SEC_13F_SOURCE_CAVEATS, ensure_ascii=True),
+    }
+
+
+def _upsert_refresh_status_row(db: MySQLClient, row: dict[str, Any]) -> int:
+    sql = """
+        INSERT INTO institutional_13f_refresh_status (
+          source_key, source_dataset, source_ref, status, last_collected_at,
+          latest_report_period, latest_filing_date, managers_written, filings_written,
+          holdings_written, rows_written, is_stale, stale_reason, error_message,
+          source_limitations_json
+        ) VALUES (
+          %(source_key)s, %(source_dataset)s, %(source_ref)s, %(status)s, %(last_collected_at)s,
+          %(latest_report_period)s, %(latest_filing_date)s, %(managers_written)s, %(filings_written)s,
+          %(holdings_written)s, %(rows_written)s, %(is_stale)s, %(stale_reason)s, %(error_message)s,
+          %(source_limitations_json)s
+        )
+        ON DUPLICATE KEY UPDATE
+          source_dataset = VALUES(source_dataset),
+          source_ref = VALUES(source_ref),
+          status = VALUES(status),
+          last_collected_at = VALUES(last_collected_at),
+          latest_report_period = VALUES(latest_report_period),
+          latest_filing_date = VALUES(latest_filing_date),
+          managers_written = VALUES(managers_written),
+          filings_written = VALUES(filings_written),
+          holdings_written = VALUES(holdings_written),
+          rows_written = VALUES(rows_written),
+          is_stale = VALUES(is_stale),
+          stale_reason = VALUES(stale_reason),
+          error_message = VALUES(error_message),
+          source_limitations_json = VALUES(source_limitations_json)
+    """
+    db.execute(sql, row)
+    return 1
+
+
 def collect_and_store_sec_13f_dataset(
     *,
     dataset_zip_path: str | Path | None = None,
@@ -475,11 +690,18 @@ def collect_and_store_sec_13f_dataset(
             download_sec_13f_dataset_zip(str(dataset_url), user_agent=user_agent, timeout=float(request_timeout))
         )
 
+    collected_at = _now_utc_text()
     normalized = normalize_sec_13f_frames(
         frames,
         source_dataset=dataset_label,
         source_ref=source_ref,
-        collected_at=_now_utc_text(),
+        collected_at=collected_at,
+    )
+    refresh_status = build_sec_13f_refresh_status(
+        source_dataset=dataset_label,
+        source_ref=source_ref,
+        collected_at=collected_at,
+        normalized=normalized,
     )
 
     db = MySQLClient(host, user, password, port)
@@ -489,6 +711,24 @@ def collect_and_store_sec_13f_dataset(
         manager_rows = _upsert_manager_rows(db, normalized["managers"])
         filing_rows = _upsert_filing_rows(db, normalized["filings"])
         holding_rows = _upsert_holding_rows(db, normalized["holdings"])
+        map_rows = build_cusip_symbol_map_rows(
+            holdings=normalized["holdings"],
+            asset_profiles=_load_asset_profile_rows_for_mapping(db),
+            source_ref=source_ref,
+        )
+        mapping_rows = _upsert_cusip_symbol_map_rows(db, map_rows)
+        refresh_status.update(
+            {
+                "managers_written": manager_rows,
+                "filings_written": filing_rows,
+                "holdings_written": holding_rows,
+                "rows_written": manager_rows + filing_rows + holding_rows,
+                "is_stale": not bool(refresh_status.get("latest_report_period")) or manager_rows + filing_rows + holding_rows <= 0,
+                "stale_reason": refresh_status.get("stale_reason")
+                or ("SEC Form 13F dataset wrote no rows." if manager_rows + filing_rows + holding_rows <= 0 else ""),
+            }
+        )
+        _upsert_refresh_status_row(db, refresh_status)
     finally:
         db.close()
 
@@ -501,11 +741,14 @@ def collect_and_store_sec_13f_dataset(
             "finance_meta.institutional_13f_filing",
             "finance_meta.institutional_13f_holding",
             "finance_meta.institutional_13f_cusip_symbol_map",
+            "finance_meta.institutional_13f_refresh_status",
         ],
         "rows_written": manager_rows + filing_rows + holding_rows,
         "managers_written": manager_rows,
         "filings_written": filing_rows,
         "holdings_written": holding_rows,
+        "cusip_symbol_maps_written": mapping_rows,
+        "refresh_status": refresh_status,
         "source_limitations": SEC_13F_SOURCE_CAVEATS,
         "execution_boundary": {
             "db_write": True,

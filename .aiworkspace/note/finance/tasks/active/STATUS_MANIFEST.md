@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-09
 
 ## Current State
 
@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `post-merge-docs-flow-refresh-20260708`
+- `institutional-portfolios-live-sec13f-v1-20260709`
 
 Previous completed task:
 
-- `practical-validation-boundary-cleanup-v1-20260708`
+- `institutional-portfolios-react-workbench-v1-20260709`
 
 Latest completed docs cleanup task:
 

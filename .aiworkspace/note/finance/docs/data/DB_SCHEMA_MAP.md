@@ -36,6 +36,8 @@ Last Verified: 2026-07-08
 | `institutional_13f_filing` | SEC Form 13F filing metadata. accession, report period, filing date, amendment, source link를 저장 |
 | `institutional_13f_holding` | SEC Form 13F information table holdings row ledger. reported value, shares / principal amount, put/call, discretion, voting authority, source link를 저장 |
 | `institutional_13f_cusip_symbol_map` | 13F row에서 얻은 best-effort CUSIP-symbol display mapping과 추후 enrichment source |
+| `institutional_13f_manager_watchlist` | Institutional Portfolios manager rail용 curated seed metadata. CIK, label, priority, external links를 저장할 수 있음 |
+| `institutional_13f_refresh_status` | SEC 13F dataset 수집 freshness state. latest report period, filing date, row counts, stale reason을 저장 |
 | `market_data_issue` | Overview Market Movers quote gap 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
 | `futures_instrument` | Overview futures용 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
 | `futures_market_monitor_run` | Futures OHLCV 수집 run diagnostics. 최근 run status, failed symbols, latest candle time을 저장 |
@@ -90,6 +92,7 @@ Phase 8 source migration closeout 기준으로 production financial statement so
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |
 | holdings filing ledger | delayed regulatory holdings filings and reported positions | `institutional_13f_manager`, `institutional_13f_filing`, `institutional_13f_holding`, `institutional_13f_cusip_symbol_map` |
+| freshness metadata | product surface data readiness / collection status | `institutional_13f_refresh_status`, `institutional_13f_manager_watchlist` |
 | broad summary | provider-normalized legacy compatibility summary | `nyse_fundamentals` |
 | derived | 계산된 factor table 또는 holdings aggregate. `nyse_factors`는 legacy compatibility, `etf_exposure_snapshot`은 provider/holdings aggregate | `nyse_factors`, `etf_exposure_snapshot` |
 | shadow | statement raw ledger에서 재구성한 canonical 재무제표 / strict annual factor layer | `nyse_fundamentals_statement`, `nyse_factors_statement` |

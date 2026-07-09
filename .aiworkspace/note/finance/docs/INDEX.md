@@ -24,7 +24,8 @@ Last Verified: 2026-07-09
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Institutional Portfolios React Workbench V1 2026-07-09](../tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
+- Latest completed task: [Institutional Portfolios Live SEC 13F V1 2026-07-09](../tasks/active/institutional-portfolios-live-sec13f-v1-20260709/STATUS.md).
+- Previous completed task: [Institutional Portfolios React Workbench V1 2026-07-09](../tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
 - Previous completed task: [Institutional Portfolios Workspace V1 2026-07-08](../tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
 - Earlier completed task: [Post-Merge Docs / Code Flow Refresh 2026-07-08](../tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Boundary Cleanup V1 2026-07-08](../tasks/active/practical-validation-boundary-cleanup-v1-20260708/STATUS.md).

@@ -6,6 +6,8 @@ type ManagerItem = {
   cik: string | null;
   manager_name: string;
   latest_report_period: string;
+  watchlist_label?: string | null;
+  external_links?: Array<{ label: string; url: string }>;
   selected: boolean;
 };
 
@@ -84,6 +86,21 @@ type WorkbenchPayload = {
   manager_picker: {
     selected_cik?: string | null;
     items: ManagerItem[];
+  };
+  freshness?: {
+    status: string;
+    last_collected_at?: string | null;
+    latest_report_period?: string | null;
+    latest_filing_date?: string | null;
+    rows_written?: number;
+    is_stale?: boolean;
+    stale_reason?: string;
+  };
+  refresh_action?: {
+    action_id: string;
+    label: string;
+    primary: boolean;
+    description: string;
   };
   hero: {
     manager_name: string;
@@ -265,9 +282,15 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               onClick={() => item.cik && sendEvent({ event: "select_manager", cik: item.cik })}
             >
               <strong>{item.manager_name}</strong>
-              <span>{item.latest_report_period}</span>
+              <span>{item.watchlist_label ? `${item.watchlist_label} · ${item.latest_report_period}` : item.latest_report_period}</span>
             </button>
           ))}
+        </div>
+
+        <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
+          <span>{payload.refresh_action?.label || "SEC 13F data"}</span>
+          <strong>{payload.freshness?.latest_report_period || "No local 13F data"}</strong>
+          <em>{payload.freshness?.last_collected_at ? `collected ${payload.freshness.last_collected_at}` : "refresh available below"}</em>
         </div>
 
         <div className="ip-hero__grid">

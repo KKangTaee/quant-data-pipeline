@@ -77,6 +77,32 @@ def load_institutional_13f_managers(
     return _frame(rows)
 
 
+def load_institutional_13f_refresh_status(
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any] | None:
+    """Load the latest SEC 13F refresh status row for the product surface."""
+    db = _connect(host, user, password, port)
+    try:
+        rows = db.query(
+            """
+            SELECT source_key, source_dataset, source_ref, status, last_collected_at,
+                   latest_report_period, latest_filing_date, managers_written, filings_written,
+                   holdings_written, rows_written, is_stale, stale_reason, error_message,
+                   source_limitations_json, updated_at
+            FROM institutional_13f_refresh_status
+            WHERE source_key = 'sec_form_13f_dataset'
+            LIMIT 1
+            """
+        )
+    finally:
+        db.close()
+    return rows[0] if rows else None
+
+
 def load_institutional_13f_latest_filing(
     cik: str,
     *,

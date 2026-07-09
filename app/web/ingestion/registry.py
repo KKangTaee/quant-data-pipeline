@@ -200,6 +200,7 @@ INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
             "finance_meta.institutional_13f_filing",
             "finance_meta.institutional_13f_holding",
             "finance_meta.institutional_13f_cusip_symbol_map",
+            "finance_meta.institutional_13f_refresh_status",
         ],
         "progress": "stage",
     },

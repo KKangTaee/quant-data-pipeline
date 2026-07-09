@@ -1977,6 +1977,7 @@ def run_collect_sec_13f_dataset(
                     "finance_meta.institutional_13f_manager",
                     "finance_meta.institutional_13f_filing",
                     "finance_meta.institutional_13f_holding",
+                    "finance_meta.institutional_13f_refresh_status",
                 ],
             },
         )
@@ -2036,6 +2037,7 @@ def run_collect_sec_13f_dataset(
                     "finance_meta.institutional_13f_manager",
                     "finance_meta.institutional_13f_filing",
                     "finance_meta.institutional_13f_holding",
+                    "finance_meta.institutional_13f_refresh_status",
                 ],
             },
         )

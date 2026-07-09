@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pandas as pd
 
-from finance.data.institutional_13f import SEC_13F_SOURCE_CAVEATS
+from finance.data.institutional_13f import DEFAULT_SEC_13F_DATASET_LABEL, DEFAULT_SEC_13F_DATASET_URL, SEC_13F_SOURCE_CAVEATS
 from finance.loaders.institutional_13f import (
     load_institutional_13f_interest,
     load_institutional_13f_managers,
     load_institutional_13f_portfolio_bundle,
+    load_institutional_13f_refresh_status,
 )
 
 
@@ -24,10 +26,10 @@ CHANGE_ORDER = {
     "no_longer_reported": 4,
 }
 CHANGE_LABELS = {
-    "reported_new": "New",
+    "reported_new": "Newly reported",
     "increased": "Increased",
     "reduced": "Reduced",
-    "no_longer_reported": "Sold out candidate",
+    "no_longer_reported": "No longer reported",
     "unchanged": "Unchanged",
 }
 CHANGE_DESCRIPTIONS = {
@@ -49,6 +51,36 @@ WORKBENCH_COLORS = [
     "#64748b",
     "#d946ef",
     "#94a3b8",
+]
+INSTITUTIONAL_MANAGER_WATCHLIST = [
+    {
+        "cik": "0001067983",
+        "manager_name": "BERKSHIRE HATHAWAY INC",
+        "watchlist_label": "Warren Buffett",
+        "priority": 10,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1067983"}],
+    },
+    {
+        "cik": "0001336528",
+        "manager_name": "PERSHING SQUARE CAPITAL MANAGEMENT, L.P.",
+        "watchlist_label": "Bill Ackman",
+        "priority": 20,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1336528"}],
+    },
+    {
+        "cik": "0001656456",
+        "manager_name": "APPALOOSA LP",
+        "watchlist_label": "David Tepper",
+        "priority": 30,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1656456"}],
+    },
+    {
+        "cik": "0001061768",
+        "manager_name": "BAUPOST GROUP LLC/MA",
+        "watchlist_label": "Seth Klarman",
+        "priority": 40,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1061768"}],
+    },
 ]
 
 
@@ -95,6 +127,14 @@ def _date_label(value: Any) -> str | None:
     if pd.isna(parsed):
         return _text(value)
     return parsed.date().isoformat()
+
+
+def _cik_text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return None
+    return digits.zfill(10)[-10:]
 
 
 def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
@@ -236,20 +276,116 @@ def _sector_exposure(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _manager_picker_items(managers: list[dict[str, Any]], selected_cik: str | None) -> list[dict[str, Any]]:
+def build_institutional_manager_rail(managers: list[dict[str, Any]], selected_cik: str | None) -> list[dict[str, Any]]:
+    """Merge stored manager search results with the curated watchlist rail."""
+    selected = _cik_text(selected_cik)
+    by_cik: dict[str, dict[str, Any]] = {}
+    for row in managers:
+        cik = _cik_text(row.get("cik"))
+        if cik:
+            by_cik[cik] = dict(row, cik=cik)
+
     items: list[dict[str, Any]] = []
+    included: set[str] = set()
+    for seed in sorted(INSTITUTIONAL_MANAGER_WATCHLIST, key=lambda row: int(row.get("priority") or 100)):
+        cik = str(seed["cik"])
+        row = {**seed, **by_cik.get(cik, {})}
+        latest_period = _date_label(row.get("latest_report_period")) or _text(row.get("latest_report_period")) or "Collect 13F data"
+        items.append(
+            {
+                "cik": cik,
+                "manager_name": _text(row.get("manager_name")) or "Unknown manager",
+                "latest_report_period": latest_period,
+                "watchlist_label": _text(seed.get("watchlist_label")),
+                "watchlist_priority": int(seed.get("priority") or 100),
+                "external_links": list(seed.get("external_links") or []),
+                "selected": bool(cik and selected and cik == selected),
+            }
+        )
+        included.add(cik)
+
     for row in managers[:24]:
-        cik = _text(row.get("cik"))
+        cik = _cik_text(row.get("cik"))
+        if not cik or cik in included:
+            continue
         latest_period = _date_label(row.get("latest_report_period")) or _text(row.get("latest_report_period")) or "-"
         items.append(
             {
                 "cik": cik,
                 "manager_name": _text(row.get("manager_name")) or "Unknown manager",
                 "latest_report_period": latest_period,
-                "selected": bool(cik and selected_cik and cik == selected_cik),
+                "watchlist_label": None,
+                "watchlist_priority": None,
+                "external_links": [{"label": "SEC filings", "url": f"https://www.sec.gov/edgar/browse/?CIK={int(cik)}"}],
+                "selected": bool(cik and selected and cik == selected),
             }
         )
     return items
+
+
+def _manager_picker_items(managers: list[dict[str, Any]], selected_cik: str | None) -> list[dict[str, Any]]:
+    return build_institutional_manager_rail(managers, selected_cik)[:24]
+
+
+def _parse_source_limitations(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if item]
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return [value]
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed if item]
+    return list(INSTITUTIONAL_PORTFOLIO_CAVEATS)
+
+
+def build_institutional_refresh_status_model(row: dict[str, Any] | None = None, *, error_message: str | None = None) -> dict[str, Any]:
+    source = dict(row or {})
+    if not source:
+        return {
+            "source_key": "sec_form_13f_dataset",
+            "source_dataset": None,
+            "source_ref": None,
+            "status": "missing",
+            "last_collected_at": None,
+            "latest_report_period": None,
+            "latest_filing_date": None,
+            "rows_written": 0,
+            "managers_written": 0,
+            "filings_written": 0,
+            "holdings_written": 0,
+            "is_stale": True,
+            "stale_reason": error_message or "SEC Form 13F data has not been collected into the local DB yet.",
+            "source_limitations": list(INSTITUTIONAL_PORTFOLIO_CAVEATS),
+        }
+    return {
+        "source_key": _text(source.get("source_key")) or "sec_form_13f_dataset",
+        "source_dataset": _text(source.get("source_dataset")),
+        "source_ref": _text(source.get("source_ref")),
+        "status": _text(source.get("status")) or "unknown",
+        "last_collected_at": _text(source.get("last_collected_at")),
+        "latest_report_period": _date_label(source.get("latest_report_period")),
+        "latest_filing_date": _date_label(source.get("latest_filing_date")),
+        "rows_written": int(_num(source.get("rows_written"))),
+        "managers_written": int(_num(source.get("managers_written"))),
+        "filings_written": int(_num(source.get("filings_written"))),
+        "holdings_written": int(_num(source.get("holdings_written"))),
+        "is_stale": bool(int(_num(source.get("is_stale"), 1.0))),
+        "stale_reason": _text(source.get("stale_reason")) or error_message or "",
+        "source_limitations": _parse_source_limitations(source.get("source_limitations_json")),
+    }
+
+
+def _refresh_action_payload() -> dict[str, Any]:
+    return {
+        "action_id": "collect_sec_13f_dataset",
+        "label": "Refresh SEC 13F data",
+        "primary": False,
+        "description": "Runs the SEC official Form 13F dataset ingestion into MySQL; the UI only reads stored rows.",
+        "default_dataset_label": DEFAULT_SEC_13F_DATASET_LABEL,
+        "default_dataset_url": DEFAULT_SEC_13F_DATASET_URL,
+    }
 
 
 def _allocation_segments(holdings: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
@@ -417,6 +553,7 @@ def build_institutional_workbench_payload(
     interest_model: dict[str, Any] | None,
     mode: str = "live",
     data_message: str = "",
+    refresh_status: dict[str, Any] | None = None,
     allocation_limit: int = 10,
     row_limit: int = 12,
 ) -> dict[str, Any]:
@@ -430,6 +567,7 @@ def build_institutional_workbench_payload(
     filing_date = _text(summary.get("latest_filing_date")) or "-"
     total_value = _num(summary.get("total_reported_value"))
     is_preview = mode == "preview"
+    freshness = build_institutional_refresh_status_model(refresh_status)
     data_state_label = "Preview sample" if is_preview else "Stored SEC 13F snapshot"
     data_state_message = data_message or (
         "샘플 데이터입니다. 실제 13F 수집 후 저장 DB 기준 화면으로 바뀝니다."
@@ -451,6 +589,8 @@ def build_institutional_workbench_payload(
             "selected_cik": selected_cik,
             "items": _manager_picker_items(list(managers or []), selected_cik),
         },
+        "freshness": freshness,
+        "refresh_action": _refresh_action_payload(),
         "hero": {
             "manager_name": manager_name,
             "cik": _text(summary.get("cik")) or selected_cik,
@@ -464,6 +604,7 @@ def build_institutional_workbench_payload(
             "facts": [
                 {"label": "Report period", "value": report_period},
                 {"label": "Filing date", "value": filing_date},
+                {"label": "Data refreshed", "value": freshness.get("last_collected_at") or "Not collected"},
                 {"label": "Holdings", "value": f"{int(_num(summary.get('holding_count'))):,}"},
                 {"label": "Reported value", "value": _money_label(total_value)},
             ],
@@ -685,6 +826,14 @@ def load_institutional_manager_choices(query: str | None = None, *, limit: int =
     except Exception as exc:
         return {"status": "error", "message": str(exc), "managers": []}
     return {"status": "ok", "message": "", "managers": _records(frame)}
+
+
+def load_institutional_refresh_status() -> dict[str, Any]:
+    try:
+        row = load_institutional_13f_refresh_status()
+    except Exception as exc:
+        return {"status": "error", "message": str(exc), "model": build_institutional_refresh_status_model(error_message=str(exc))}
+    return {"status": "ok", "message": "", "model": build_institutional_refresh_status_model(row)}
 
 
 def load_institutional_portfolio_model(cik: str) -> dict[str, Any]:

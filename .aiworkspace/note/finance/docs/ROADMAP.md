@@ -9,7 +9,13 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-react-workbench-v1-20260709/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-live-sec13f-v1-20260709/`다.
+
+- 목적: React workbench가 preview sample에 머무르지 않고 SEC official 13F DB snapshot을 실제로 읽는 제품 화면이 되게 한다.
+- 주요 변경: refresh status / watchlist schema, official SEC 13F ingestion status row, secondary refresh panel, workbench freshness payload, conservative CUSIP-symbol enrichment, docs / QA를 정렬했다.
+- 이번 차수에서 하지 않은 일: Dataroma / WhaleWisdom / Fintel scraping, paid API adapter, broker / live trading / auto rebalance, 완전한 security master 구축.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-react-workbench-v1-20260709/`다.
 
 - 목적: 기존 `Workspace > Institutional Portfolios` V1이 SEC 13F ingestion / DB 조회 중심으로 보여 실제 투자 대가 / 기관 포트폴리오를 시각적으로 탐색하는 제품 경험이 약했던 문제를 해결했다.
 - 주요 변경: `app/web/streamlit_components/institutional_portfolios_workbench/` React workbench를 추가하고, Python service에 visual payload / preview payload contract를 만들었다. 첫 화면은 manager rail, allocation donut, top holdings, reported quarter change board, sector exposure, holdings tab, institutional interest drill-down을 보여준다. DB empty 상태는 clearly labeled preview로 표시하고 raw DB error는 setup expander에만 둔다.

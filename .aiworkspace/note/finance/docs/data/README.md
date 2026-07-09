@@ -49,6 +49,8 @@ Last Verified: 2026-07-08
 | `institutional_13f_filing` | 13F filing-level metadata including report period, filing date, accession, amendment flag, and source link |
 | `institutional_13f_holding` | 13F information table holdings row ledger for reportable long positions in official quarterly SEC data sets |
 | `institutional_13f_cusip_symbol_map` | best-effort CUSIP to display symbol mapping derived from 13F rows and later enrichment |
+| `institutional_13f_manager_watchlist` | curated manager rail seed metadata for Institutional Portfolios |
+| `institutional_13f_refresh_status` | latest SEC 13F dataset ingestion status, freshness, stale reason, and row counts |
 | `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
 | `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
