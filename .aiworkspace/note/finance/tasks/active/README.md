@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-10
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `final-review-sentiment-scope-cleanup-v1-20260710` | Completed record | Final Review first-read에서 CNN / AAII 시장심리 패널과 raw detail expander를 제거했다. 시장심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Final Review gate / score / 저장 / Monitoring signal에는 연결하지 않는다. |
 | `practical-validation-flow4-action-center-v1-20260709` | Completed record | Practical Validation Flow 4 `데이터 보강 대상`과 기존 Python 수집 버튼을 `데이터 보강 / 수집 실행` action center로 묶고, 버튼 주변에 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 명확히 표시한다. |
 | `practical-validation-flow4-data-action-board-v1-20260709` | Completed record | Practical Validation Flow 4 now reads `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`; React board is display-only and Python keeps provider collection / validation / gate / persistence boundaries. |
 | `practical-validation-flow-gating-evidence-ia-v1-20260708` | Completed record | Flow 2 current-session replay gates Flow 3 / Flow 4 / Flow 5 rendering and Flow 4 lower evidence IA was lowered behind provider action flow. |

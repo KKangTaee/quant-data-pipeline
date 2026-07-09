@@ -60,7 +60,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_page.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당하며, native Streamlit `pages/` auto-discovery를 피하려고 `app/web/pages/` 밖에 둔다 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel, legacy product card / stepper render helper |
 | `app/web/backtest_practical_validation/components.py` | Practical Validation 전용 workbench visual shell. Command Center, section header, card grid, step rail, alert panel helper를 제공하며 검증 로직과 저장 계약은 갖지 않는다 |
-| `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. source/result 저장, Practical Validation / Final Review handoff contract, Provider Data Gaps row / collection plan / ingestion job orchestration, Practical Validation / Final Review / Portfolio Monitoring에서 공유하는 CNN / AAII market sentiment context overlay를 만든다 |
+| `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. source/result 저장, Practical Validation / Final Review handoff contract, Provider Data Gaps row / collection plan / ingestion job orchestration, downstream surface가 읽을 수 있는 CNN / AAII market sentiment context overlay를 만든다. Final Review first-read에서는 이 overlay를 렌더링하지 않는다 |
 | `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder / source component table / compact selection history helper. Candidate draft, saved mix, weighted mix를 Clean current source로 변환하며 weighted mix의 component role / weight reason / cost / turnover / net-cost compact evidence를 보존한다 |
 | `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free curve context helper. compact curve snapshot, curve normalize, DB price proxy, component curve combination, window perturbation / monthly returns 계산을 맡는다 |
 | `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free stress / sensitivity helper. rolling validation, stress window, baseline challenge, sensitivity 해석, correlation risk, market context, overfit audit를 맡는다 |
@@ -85,7 +85,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision evidence read model. Final Review Candidate Board priority / Decision Cockpit / Decision Record guide / Saved Decision Review ledger / investability evidence packet / selection-readiness gate / deployment-readiness policy snapshot / open review item / detailed scorecard / Level2 REVIEW score impact / score cap / selection rationale / required decision note / saved decision status / table row, Selected Dashboard evidence check row, Decision Dossier markdown read model과 selected decision source contract를 공통으로 만든다 |
 | `app/services/backtest_final_review_policy.py` | Streamlit-free Final Review selected-route policy mapper. investability evidence packet을 selected-route preflight contract로 변환한다 |
-| `app/web/backtest_final_review/page.py` | Final Review 화면 render. Decision Desk command center / flow rail, CNN / AAII market sentiment context overlay, Practical Validation Gate 통과 후보 Candidate Board priority / review queue, 선택 후보 investment report React section과 Decision Cockpit, Final Review 판단 저장 checklist / route guide, Monitoring 후보 handoff 상태 안내, Evidence Appendix의 Validation / Robustness / Paper Observation / Investability Evidence Packet read-only 확인, saved final selection review ledger, Selected Dashboard handoff summary, Decision Dossier download |
+| `app/web/backtest_final_review/page.py` | Final Review 화면 render. Decision Desk command center / flow rail, Practical Validation Gate 통과 후보 Candidate Board priority / review queue, 선택 후보 investment report React section과 Decision Cockpit, Final Review 판단 저장 checklist / route guide, Monitoring 후보 handoff 상태 안내, Evidence Appendix의 Validation / Robustness / Paper Observation / Investability Evidence Packet read-only 확인, saved final selection review ledger, Selected Dashboard handoff summary, Decision Dossier download. Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다 |
 | `app/web/backtest_final_review/components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, investability packet 연결, final evidence / save readiness / decision row helper |
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Portfolio Monitoring` 화면 render. Legacy file name은 Selected Portfolio Dashboard를 유지한다. Final Review selected 후보 pool과 사용자-created monitoring portfolio setup을 읽고, CNN / AAII market sentiment context overlay와 Active Portfolio Monitoring Scenario hero를 먼저 보여준다. Hero는 no portfolio / no strategy / configured-not-run / executed 상태를 구분하고 portfolio-wide value / P&L / return / CAGR / MDD / value curve / strategy performance / rebalance target을 표시한다. 그 아래 fixed-height portfolio card shelf / 생성 / 선택 / collapsed management soft delete, portfolio name / description edit, compact selected strategy slot board / 설정 적용 / 제거, pending-stale scenario update, 선택한 1개 strategy의 lazy Monitoring Scenario / Monitoring Signals / evidence detail, 전환 비교, optional preflight, Actual Allocation / allocation evidence boundary, Decision Dossier / Audit을 보여준다 |
@@ -904,9 +904,8 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 ```text
 Practical Validation Gate 통과 후보
   -> Backtest > Final Review
-  -> 1. 후보 현황 / 시장 배경 확인
+  -> 1. 후보 현황 확인
      -> Decision Desk 후보 수 / 선택 가능 / 보류 / 숨김 / 저장된 판단 / Monitoring 연결 확인
-     -> CNN / AAII compact 시장 배경 확인
   -> 2. Candidate Board / 최종 검토 대상 선택
      -> review priority / first-review candidate / primary reason 확인
   -> 3. Final Review 투자 검토서
@@ -925,7 +924,7 @@ Practical Validation Gate 통과 후보
 구분:
 
 - Final Review는 Portfolio Proposal 탭이 아니라 별도 workflow panel이다.
-- Final Review에서는 CNN / AAII를 compact 시장 배경으로만 보여준다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`에서 확인하며, 이 context는 gate, score, 저장 가능 여부, Monitoring signal을 바꾸지 않는다.
+- Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`에서 확인하며, 시장심리는 gate, score, 저장 가능 여부, Monitoring signal을 바꾸지 않는다.
 - 시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다.
 - Candidate Board의 `Review Priority`는 화면 정렬용 우선순위다. `SELECT_READY` 후보를 먼저 보여주고, 그 다음 hold / re-review, blocked 후보를 보여주며, 같은 상태에서는 blocker / open review 수와 packet score를 기준으로 정렬한다.
 - `Final Review 투자 검토서`는 Python `backtest_evidence_read_model`이 만든 report payload를 React component가 렌더링하는 first-read surface다. React는 추천 / 점수 / 강점 / 약점 / Level2 REVIEW disposition / save handoff / weakness proposal을 표시만 하며, gate 계산, DB / provider fetch, registry write, strategy variant 생성은 하지 않는다.

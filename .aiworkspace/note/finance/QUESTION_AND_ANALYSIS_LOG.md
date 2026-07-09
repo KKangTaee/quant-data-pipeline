@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-sentiment-scope-cleanup-v1-20260710](./tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
+  - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
@@ -30,6 +31,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-10 - Final Review first-read는 시장심리 패널을 소유하지 않는다
+
+- User request: 사용자가 Final Review의 `Market Context / 시장 심리` 영역이 어떤 역할인지, 불필요하면 제거하고 필요하다면 Final Review 목적에 맞게 바꾸라고 요청함.
+- Interpreted goal: Final Review는 후보 비교 / 최종 선택 / Monitoring handoff 판단에 집중해야 하며, 판단 근거가 아닌 CNN / AAII sentiment가 큰 패널과 raw table로 보이면 사용자가 decision evidence처럼 오해할 수 있다.
+- Analysis result: 시장심리를 마켓타이밍이나 리밸런싱 지표로 쓰려면 별도 research와 look-ahead-safe 검증이 필요하다. 현재는 gate / score / 저장 / monitoring signal 소유자가 아니므로 Final Review first-read에서 제거하는 것이 맞다.
+- Follow-up: `final-review-sentiment-scope-cleanup-v1-20260710`에서 Final Review sentiment render path와 docs contract를 제거했다. 상세 심리 해석은 `Workspace > Overview > Sentiment`, 운영 중 read-only 맥락은 `Operations > Portfolio Monitoring`에 남긴다.
 
 ### 2026-07-09 - Final Review 상단은 후보 판단 중심으로 읽는다
 

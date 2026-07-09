@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-10
 
 ## Project Summary
 
@@ -70,7 +70,7 @@ Last Verified: 2026-07-09
 | Reference contextual help service | `app/services/reference_contextual_help.py` |
 | Reference contextual help renderer | `app/web/reference_contextual_help.py` |
 | Backtest Compare visual components | `app/web/backtest_compare/components.py` |
-| Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and surface-aware read-only CNN / AAII market sentiment context overlay |
+| Practical Validation service | `app/services/backtest_practical_validation.py`; includes Practical Validation result build wrapper, source/result registry append, provider gap collection orchestration, and reusable read-only CNN / AAII market sentiment context overlay for downstream surfaces. Final Review first-read does not render this overlay |
 | Practical Validation source/profile/selection-history service helper | `app/services/backtest_practical_validation_source.py` |
 | Practical Validation curve service helper | `app/services/backtest_practical_validation_curve.py` |
 | Practical Validation curve context service helper | `app/services/backtest_practical_validation_curve_context.py` |
@@ -179,7 +179,7 @@ Last Verified: 2026-07-09
 | File | Responsibility |
 |---|---|
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, Final Review candidate board priority / decision cockpit / decision record guide / saved decision review read models, investability evidence packet / profile-aware gate policy snapshot / selected-route gate, detailed weighted scorecard, Level2 REVIEW score impact, score cap, selection rationale, required decision notes, saved decision table rows, shared evidence check rows, decision dossier markdown read model and selected decision source consistency contract. Validation Method Strength row-level walk-forward / OOS / regime gaps and Construction Risk / Risk Contribution / Component Role / Weight non-PASS rows feed selected-route gate evidence |
-| `app/web/backtest_final_review/page.py` | Final Review screen render, Decision Desk command center / flow ordering, read-only CNN / AAII market sentiment context overlay, Practical Validation Gate-passed Candidate Board with review priority / queue / primary reason, selected-source investment report React section, selected-source Decision Cockpit, hidden blocked validation count, final decision route input with decision record checklist / selected-route guide, Evidence Appendix for investability packet / look-through / Robustness Lab / previous validation evidence, saved final decision review ledger with route filter and detail tabs, Selected Dashboard handoff summary, decision dossier download |
+| `app/web/backtest_final_review/page.py` | Final Review screen render, Decision Desk command center / flow ordering, Practical Validation Gate-passed Candidate Board with review priority / queue / primary reason, selected-source investment report React section, selected-source Decision Cockpit, hidden blocked validation count, final decision route input with decision record checklist / selected-route guide, Evidence Appendix for investability packet / look-through / Robustness Lab / previous validation evidence, saved final decision review ledger with route filter and detail tabs, Selected Dashboard handoff summary, decision dossier download. Final Review first-read does not render the CNN / AAII market sentiment panel |
 | `app/web/backtest_final_review/components.py` | Final Review 전용 visual shell. Command center, flow rail, section header, lane grid, action panel CSS / HTML helper를 제공하며 service/gate/persistence 로직은 포함하지 않는다 |
 | `app/web/backtest_final_review_helpers.py` | Final Review source eligibility filter, validation reuse, paper observation snapshot, investability packet wiring, Final Review decision row construction, save readiness, and explicit Monitoring handoff flagging |
 | `app/web/operations_overview.py` | Operations Console landing page render와 Streamlit-free read model. selected dashboard summary, monitoring portfolio setup, run health를 읽어 Portfolio Monitoring Status summary, Evidence Health mini strip, priority / evidence ordered review queue, Portfolio Monitoring / System Data Health primary lane, no-live boundary를 표시 |

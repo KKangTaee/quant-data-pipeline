@@ -12451,54 +12451,20 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn(".fr-featured-badges", component_source)
         self.assertNotIn("grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));", component_source)
 
-    def test_final_review_sentiment_display_is_compact_context_only(self) -> None:
-        from app.web.backtest_final_review.page import _build_final_review_sentiment_display_model
-
-        model = _build_final_review_sentiment_display_model(
-            {
-                "surface": "Final Review",
-                "headline": "공포 심리가 우위입니다.",
-                "summary": "방어적 심리가 우세합니다.",
-                "risk_context": {
-                    "state_label": "Risk-off",
-                    "source_phase_label": "공포 우위",
-                    "tone": "warning",
-                },
-                "metrics": {
-                    "cnn_fear_greed": 34.2,
-                    "cnn_rating": "Fear",
-                    "aaii_bearish": 42.5,
-                    "aaii_bull_bear_spread": -8.5,
-                    "missing_count": 0,
-                    "stale_count": 0,
-                },
-                "boundary": {
-                    "context_only": True,
-                    "gate_effect": "none",
-                    "monitoring_signal": False,
-                    "auto_rebalance": False,
-                },
-            }
-        )
-
-        self.assertEqual(model["title"], "시장 심리")
-        self.assertEqual(model["display_mode"], "compact")
-        self.assertEqual(model["detail_destination"], "Workspace > Overview > Sentiment")
-        self.assertEqual(model["route_value"], "Context only")
-        self.assertIn("공포 우위", model["headline"])
-        self.assertEqual([item["label"] for item in model["meta_items"]], ["CNN / AAII", "Gate", "Timing / Rebalance"])
-
-        joined = " ".join(str(value) for value in model.values())
-        self.assertIn("Final Review 판단 근거가 아니라 시장 배경", joined)
-        self.assertNotIn("PASS / BLOCKER", joined)
-        self.assertNotIn("Saved Setup", joined)
-        self.assertNotIn("Order / Rebalance", joined)
-        self.assertNotIn("Candidate Board priority", joined)
-
+    def test_final_review_first_read_excludes_market_sentiment_panel(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
-        sentiment_body = page_source.split("def _render_market_sentiment_context_overlay", 1)[1]
-        sentiment_body = sentiment_body.split("\ndef ", 1)[0]
-        self.assertNotIn("render_fr_lane_grid(", sentiment_body)
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        first_read_body = workspace_body.split("if hidden_validation_count > 0:", 1)[0]
+
+        self.assertNotIn("build_market_sentiment_context_overlay", page_source)
+        self.assertNotIn("_render_market_sentiment_context_overlay", page_source)
+        self.assertNotIn("_build_final_review_sentiment_display_model", page_source)
+        self.assertNotIn("_format_sentiment_score", page_source)
+        self.assertNotIn("_format_sentiment_pct", page_source)
+        self.assertNotIn("CNN / AAII detail", page_source)
+        self.assertNotIn("Timing / Rebalance", page_source)
+        self.assertNotIn("Context only", page_source)
+        self.assertNotIn("Market Context", first_read_body)
 
     def test_final_review_sentiment_timing_rebalance_boundary_is_documented(self) -> None:
         portfolio_flow = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(
@@ -12513,9 +12479,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 "
             "Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다"
         )
-        self.assertIn("Final Review에서는 CNN / AAII를 compact 시장 배경으로만 보여준다", portfolio_flow)
+        self.assertIn("Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다", portfolio_flow)
         self.assertIn(required_boundary, portfolio_flow)
         self.assertIn("Workspace > Overview > Sentiment", backtest_flow)
+        self.assertIn("Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다", backtest_flow)
         self.assertIn(required_boundary, backtest_flow)
         self.assertIn("sentiment timing / rebalance research", roadmap)
 

@@ -17,7 +17,6 @@ from app.services.backtest_evidence_read_model import (
     build_final_review_save_handoff_summary,
     build_saved_final_review_decision_review,
 )
-from app.services.backtest_practical_validation import build_market_sentiment_context_overlay
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_OPTIONS,
@@ -218,84 +217,6 @@ def _policy_rows_preview(rows: list[dict[str, Any]], *, empty_message: str) -> s
     if len(rows) > 2:
         previews.append(f"외 {len(rows) - 2}개")
     return " / ".join(previews)
-
-
-def _format_sentiment_score(value: Any) -> str:
-    try:
-        return f"{float(value):.1f}"
-    except (TypeError, ValueError):
-        return "-"
-
-
-def _format_sentiment_pct(value: Any) -> str:
-    try:
-        return f"{float(value):.1f}%"
-    except (TypeError, ValueError):
-        return "-"
-
-
-def _build_final_review_sentiment_display_model(overlay: dict[str, Any]) -> dict[str, Any]:
-    risk_context = dict(overlay.get("risk_context") or {})
-    metrics = dict(overlay.get("metrics") or {})
-    boundary = dict(overlay.get("boundary") or {})
-    state_label = str(risk_context.get("state_label") or "Neutral")
-    phase_label = str(risk_context.get("source_phase_label") or "-")
-    cnn_score = _format_sentiment_score(metrics.get("cnn_fear_greed"))
-    cnn_rating = str(metrics.get("cnn_rating") or "-")
-    aaii_bearish = _format_sentiment_pct(metrics.get("aaii_bearish"))
-    return {
-        "display_mode": "compact",
-        "title": "시장 심리",
-        "headline": f"{state_label} · {phase_label}",
-        "detail": (
-            "Final Review 판단 근거가 아니라 시장 배경입니다. "
-            "자세한 심리 해석은 Workspace > Overview > Sentiment에서 확인합니다."
-        ),
-        "detail_destination": "Workspace > Overview > Sentiment",
-        "tone": str(risk_context.get("tone") or "neutral"),
-        "route_label": "역할",
-        "route_value": "Context only",
-        "route_detail": (
-            str(overlay.get("headline") or "").strip()
-            or "CNN / AAII sentiment는 Final Review에서 시장 배경으로만 표시됩니다."
-        ),
-        "meta_items": [
-            {"label": "CNN / AAII", "value": f"CNN {cnn_score} ({cnn_rating}) / AAII bearish {aaii_bearish}"},
-            {"label": "Gate", "value": boundary.get("gate_effect") or "none"},
-            {"label": "Timing / Rebalance", "value": "research only"},
-        ],
-    }
-
-
-def _render_market_sentiment_context_overlay() -> None:
-    overlay = build_market_sentiment_context_overlay(surface="Final Review")
-    model = _build_final_review_sentiment_display_model(overlay)
-    tone = str(model.get("tone") or "neutral")
-    render_fr_section_header(
-        eyebrow="Market Context",
-        title=str(model["title"]),
-        detail=str(model["detail"]),
-        tone=tone,
-    )
-    with st.container(border=True):
-        render_fr_action_panel(
-            title=str(model["headline"]),
-            detail=f"{overlay.get('headline') or ''} {overlay.get('summary') or ''}".strip(),
-            route_label=str(model["route_label"]),
-            route_value=str(model["route_value"]),
-            route_detail=str(model["route_detail"]),
-            route_tone=tone,
-            meta_items=list(model["meta_items"]),
-        )
-        warnings = list(overlay.get("warnings") or [])
-        if warnings:
-            st.warning(" / ".join(str(item) for item in warnings))
-        evidence_rows = list(overlay.get("evidence_rows") or [])
-        if evidence_rows:
-            with st.expander(f"CNN / AAII detail · {model['detail_destination']}", expanded=False):
-                st.dataframe(pd.DataFrame(evidence_rows), width="stretch", hide_index=True)
-        if overlay.get("next_action"):
-            st.caption(str(overlay["next_action"]))
 
 
 def _provider_look_through_board(validation: dict[str, Any]) -> dict[str, Any]:
@@ -1478,7 +1399,6 @@ def render_final_review_workspace() -> None:
         kpis=list(decision_desk["kpis"]),
         featured_candidate=dict(decision_desk["featured_candidate"]),
     )
-    _render_market_sentiment_context_overlay()
     if hidden_validation_count > 0:
         st.caption(
             f"Practical Validation 저장 기록 {hidden_validation_count}개는 Final Review Gate를 통과하지 않아 검토 대상 목록에서 숨겼습니다."

@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-10
 
 ## Current State After Master Merge
 
@@ -9,10 +9,17 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed Final Review UX task는 `.aiworkspace/note/finance/tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/`다.
+Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/`다.
+
+- 목적: Final Review에서 판단 근거가 아닌 CNN / AAII 시장심리 패널과 raw detail table이 first-read decision surface를 차지하지 않게 했다.
+- 주요 변경: `Backtest > Final Review`는 Decision Desk 다음에 Candidate Board와 투자 검토서를 이어서 보여주며, 시장심리 패널 / `CNN / AAII detail` expander를 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Operations > Portfolio Monitoring의 read-only context overlay는 유지한다.
+- 판단 경계: 시장심리는 Final Review gate, score, 저장 가능 여부, Candidate Board priority, Portfolio Monitoring signal, broker order, auto rebalance를 바꾸지 않는다. 시장심리 timing / rebalance 활용은 별도 제품 리서치와 look-ahead-safe 검증 전까지 구현하지 않는다.
+- QA: focused Final Review source contract와 timing / rebalance documentation contract를 RED/GREEN으로 확인했다.
+
+Previous completed Final Review UX task는 `.aiworkspace/note/finance/tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/`다.
 
 - 목적: Backtest `Final Review / Level3` 상단을 안내 / 가이드 반복이 아니라 후보 현황, 선택 가능성, 다음 판단 중심으로 정리했다.
-- 주요 변경: top summary를 짧은 목적 / destination copy로 줄이고, shared Backtest selector의 오래된 run-history caption과 Final Review top Reference help, 1~5 flow card를 first-read surface에서 제거했다. Decision Desk는 올라온 후보, 선택 가능, 보류 / 재검토, 숨김, 저장된 판단, Monitoring 연결을 먼저 보여준다. CNN / AAII sentiment는 compact 시장 배경으로만 보여주고 상세 해석은 `Workspace > Overview > Sentiment`로 보낸다.
+- 주요 변경: top summary를 짧은 목적 / destination copy로 줄이고, shared Backtest selector의 오래된 run-history caption과 Final Review top Reference help, 1~5 flow card를 first-read surface에서 제거했다. Decision Desk는 올라온 후보, 선택 가능, 보류 / 재검토, 숨김, 저장된 판단, Monitoring 연결을 먼저 보여준다. 후속 `final-review-sentiment-scope-cleanup-v1-20260710`에서 CNN / AAII sentiment 패널도 Final Review first-read에서 제거했다.
 - 판단 경계: Final Review는 gate / score / 저장 / Monitoring handoff 계산을 Python service / page boundary에 유지한다. 시장심리는 context-only이며 selected-route gate, Candidate Board priority, Final Decision save readiness, Portfolio Monitoring signal을 바꾸지 않는다.
 - QA: 1차~4차를 development -> QA -> commit 순서로 진행했고, focused service/source contract tests 55개, py_compile, `git diff --check`, Browser QA로 Final Review 상단 렌더링과 `Operations > Portfolio Monitoring` route wording을 확인했다.
 - 후속 후보: `sentiment timing / rebalance research`는 별도 제품 리서치와 look-ahead-safe 검증 후에만 논의한다. 현재 task에서는 시장심리를 gate나 monitoring signal로 만들지 않았다.
