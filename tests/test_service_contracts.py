@@ -12316,6 +12316,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("저장 / Monitoring handoff", component_source)
         self.assertIn("Final Review 판단 저장", component_source)
         self.assertIn("Portfolio Monitoring", component_source)
+        self.assertIn("약점 개선안", component_source)
+        self.assertIn("현재 후보와 개선 기대 범위", component_source)
         self.assertIn("Level2 REVIEW 처리 결과", component_source)
         self.assertIn("Open Review", component_source)
         self.assertIn("Monitoring Follow-up", component_source)
@@ -12337,6 +12339,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("저장 / Monitoring handoff", build_source)
         self.assertIn("Final Review 판단 저장", build_source)
         self.assertIn("Portfolio Monitoring", build_source)
+        self.assertIn("약점 개선안", build_source)
+        self.assertIn("현재 후보와 개선 기대 범위", build_source)
         self.assertIn("Level2 REVIEW 처리 결과", build_source)
         self.assertIn("Open Review", build_source)
         self.assertIn("Monitoring Follow-up", build_source)
@@ -12344,6 +12348,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("render_final_review_investment_report", page_source)
         self.assertIn("점수 체계", page_source)
         self.assertIn("저장 경계", page_source)
+        self.assertIn("약점 개선안", page_source)
         self.assertIn("Level2 REVIEW", page_source)
 
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
@@ -27576,6 +27581,87 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(summary["monitoring_handoff"]["state"], "blocked")
         self.assertEqual(summary["record_type"], "blocked_selected_route")
         self.assertIn("selection gate", summary["monitoring_handoff"]["detail"])
+
+    def test_final_review_weakness_improvement_plan_proposes_verifiable_changes(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-improvement-blocked"
+        validation["not_run_critical_domains"] = [
+            {
+                "domain": "stress_scenario_diagnostics",
+                "title": "Stress scenario diagnostics",
+                "next_action": "Run stress diagnostics before selection.",
+            }
+        ]
+        validation["diagnostic_summary"]["status_counts"]["NOT_RUN"] = 1
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": "validation-improvement-blocked",
+            "source_title": "Improvement candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        improvement = report["weakness_improvement"]
+        self.assertEqual(improvement["schema_version"], "final_review_weakness_improvement_v1")
+        self.assertGreaterEqual(len(improvement["proposals"]), 1)
+        self.assertIn("Stress", improvement["proposals"][0]["weakness"])
+        self.assertIn("검증", improvement["proposals"][0]["verification_step"])
+        self.assertGreater(improvement["comparison"]["expected_score_high"], improvement["comparison"]["current_score"])
+        self.assertTrue(improvement["boundary"]["verification_required"])
+        self.assertFalse(improvement["boundary"]["auto_generate_strategy"])
+
+    def test_final_review_weakness_improvement_plan_keeps_monitoring_for_no_blocker_candidate(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "No blocker improvement candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        improvement = report["weakness_improvement"]
+        self.assertEqual(improvement["proposals"][0]["weakness"], "선택 차단 약점 없음")
+        self.assertEqual(improvement["comparison"]["verification_status"], "monitoring_required")
+        self.assertFalse(improvement["boundary"]["auto_backtest"])
 
     def test_final_review_candidate_board_prioritizes_ready_candidates(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_candidate_board

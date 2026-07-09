@@ -20,6 +20,7 @@ INVESTMENT_REPORT_SCHEMA_VERSION = "final_review_investment_report_v1"
 LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION = "final_review_level2_review_disposition_v1"
 FINAL_REVIEW_SCORECARD_SCHEMA_VERSION = "final_review_scorecard_v1"
 SAVE_HANDOFF_SUMMARY_SCHEMA_VERSION = "final_review_save_handoff_summary_v1"
+WEAKNESS_IMPROVEMENT_SCHEMA_VERSION = "final_review_weakness_improvement_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -1961,6 +1962,65 @@ def build_final_review_scorecard(
     }
 
 
+def build_final_review_weakness_improvement_plan(
+    *,
+    weaknesses: list[dict[str, Any]],
+    scorecard: dict[str, Any],
+) -> dict[str, Any]:
+    """Suggest verifiable weakness mitigations without generating a new strategy."""
+
+    weakness_rows = [dict(row or {}) for row in list(weaknesses or []) if isinstance(row, dict)]
+    current_score = int(dict(scorecard or {}).get("overall_score") or 0)
+    proposals: list[dict[str, Any]] = []
+    for row in weakness_rows[:5]:
+        title = _safe_text(row.get("title"), "약점")
+        action = _safe_text(row.get("action"), "근거를 보강하고 Final Review scorecard를 다시 확인합니다.")
+        proposals.append(
+            {
+                "weakness": title,
+                "current_gap": _safe_text(row.get("detail"), "-"),
+                "proposed_change": action,
+                "expected_effect": "selection blocker 또는 review burden을 줄여 Final Review 점수와 route confidence를 개선합니다.",
+                "verification_step": f"{action} 이후 Practical Validation 검증 결과와 Final Review scorecard를 다시 비교합니다.",
+                "scope": "evidence_and_validation",
+                "auto_generate_strategy": False,
+            }
+        )
+    if not proposals:
+        proposals.append(
+            {
+                "weakness": "선택 차단 약점 없음",
+                "current_gap": "현재 selected-route blocker는 없습니다.",
+                "proposed_change": "새 비중이나 전략을 자동 생성하지 않고, Monitoring trigger와 open review를 추적합니다.",
+                "expected_effect": "현재 후보 상태를 유지하면서 사후 recheck에서 성과 악화나 근거 stale을 확인합니다.",
+                "verification_step": "Portfolio Monitoring에서 정해진 review trigger와 scorecard 변화를 검증합니다.",
+                "scope": "monitoring_followup",
+                "auto_generate_strategy": False,
+            }
+        )
+    expected_low = min(100, current_score + (2 if weakness_rows else 0))
+    expected_high = min(100, current_score + min(18, max(6, len(weakness_rows) * 6)) if weakness_rows else current_score)
+    return {
+        "schema_version": WEAKNESS_IMPROVEMENT_SCHEMA_VERSION,
+        "proposals": proposals,
+        "comparison": {
+            "current_score": current_score,
+            "expected_score_low": expected_low,
+            "expected_score_high": expected_high,
+            "weakness_count": len(weakness_rows),
+            "verification_status": "verification_required" if weakness_rows else "monitoring_required",
+        },
+        "boundary": {
+            "auto_generate_strategy": False,
+            "auto_backtest": False,
+            "auto_save_portfolio": False,
+            "verification_required": bool(weakness_rows),
+            "provider_fetch": False,
+            "storage_write": False,
+        },
+    }
+
+
 def build_final_review_investment_report(
     *,
     source: dict[str, Any],
@@ -2005,6 +2065,10 @@ def build_final_review_investment_report(
     save_handoff_summary = build_final_review_save_handoff_summary(
         decision_record_guide=decision_record_guide,
     )
+    weakness_improvement = build_final_review_weakness_improvement_plan(
+        weaknesses=weaknesses,
+        scorecard=scorecard,
+    )
     score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
     if state == "SELECT_READY":
         headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
@@ -2039,6 +2103,7 @@ def build_final_review_investment_report(
         },
         "scorecard": scorecard,
         "save_handoff_summary": save_handoff_summary,
+        "weakness_improvement": weakness_improvement,
         "summary": {
             "headline": headline,
             "verdict": cockpit.get("verdict") or packet.get("verdict") or "-",

@@ -155,6 +155,31 @@ type SaveHandoffSummary = {
   }
 }
 
+type WeaknessImprovement = {
+  proposals?: Array<{
+    weakness?: string
+    currentGap?: string
+    current_gap?: string
+    proposedChange?: string
+    proposed_change?: string
+    expectedEffect?: string
+    expected_effect?: string
+    verificationStep?: string
+    verification_step?: string
+    scope?: string
+  }>
+  comparison?: {
+    currentScore?: number
+    current_score?: number
+    expectedScoreLow?: number
+    expected_score_low?: number
+    expectedScoreHigh?: number
+    expected_score_high?: number
+    verificationStatus?: string
+    verification_status?: string
+  }
+}
+
 export type InvestmentReport = {
   schemaVersion?: string
   schema_version?: string
@@ -171,6 +196,8 @@ export type InvestmentReport = {
   scorecard?: Scorecard
   saveHandoffSummary?: SaveHandoffSummary
   save_handoff_summary?: SaveHandoffSummary
+  weaknessImprovement?: WeaknessImprovement
+  weakness_improvement?: WeaknessImprovement
   summary?: Summary
   strengths?: ReportCard[]
   weaknesses?: ReportCard[]
@@ -320,6 +347,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const benchmark = report.benchmarkRationale ?? report.benchmark_rationale ?? {}
   const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
   const saveHandoff = report.saveHandoffSummary ?? report.save_handoff_summary ?? {}
+  const weaknessImprovement = report.weaknessImprovement ?? report.weakness_improvement ?? {}
   const level2Summary = level2Review.summary ?? {}
   const level2Groups = level2Review.groups ?? {}
   const handoffReady = field(monitoring.handoffReady, monitoring.handoff_ready) === true
@@ -336,6 +364,12 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const judgmentRecord = saveHandoff.judgmentRecord ?? saveHandoff.judgment_record ?? {}
   const monitoringHandoff = saveHandoff.monitoringHandoff ?? saveHandoff.monitoring_handoff ?? {}
   const saveRecordType = field(saveHandoff.recordType, saveHandoff.record_type)
+  const improvementComparison = weaknessImprovement.comparison ?? {}
+  const improvementProposals = weaknessImprovement.proposals ?? []
+  const improvementCurrent = field(improvementComparison.currentScore, improvementComparison.current_score)
+  const improvementLow = field(improvementComparison.expectedScoreLow, improvementComparison.expected_score_low)
+  const improvementHigh = field(improvementComparison.expectedScoreHigh, improvementComparison.expected_score_high)
+  const improvementStatus = field(improvementComparison.verificationStatus, improvementComparison.verification_status)
 
   return (
     <section className={`fr-invest-report fr-invest-report--${tone}`}>
@@ -441,6 +475,30 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
             <strong>Disabled</strong>
             <p>Final Review는 판단 기록과 Monitoring 후보 handoff만 다룹니다.</p>
           </article>
+        </div>
+      </section>
+
+      <section className="fr-invest-report__improvement-panel">
+        <div className="fr-invest-report__improvement-head">
+          <div>
+            <span>약점 개선안</span>
+            <h5>현재 후보와 개선 기대 범위</h5>
+          </div>
+          <aside>
+            <strong>{formattedScore(improvementCurrent)}</strong>
+            <span>{formattedScore(improvementLow)} - {formattedScore(improvementHigh)}</span>
+            <small>{compact(improvementStatus)}</small>
+          </aside>
+        </div>
+        <div className="fr-invest-report__improvement-list">
+          {improvementProposals.map((proposal, index) => (
+            <article className="fr-invest-report__improvement-item" key={`${proposal.weakness ?? "proposal"}-${index}`}>
+              <h5>{compact(proposal.weakness)}</h5>
+              <p>{compact(field(proposal.currentGap, proposal.current_gap))}</p>
+              <strong>{compact(field(proposal.proposedChange, proposal.proposed_change))}</strong>
+              <small>{compact(field(proposal.verificationStep, proposal.verification_step))}</small>
+            </article>
+          ))}
         </div>
       </section>
 

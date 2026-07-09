@@ -25,7 +25,12 @@
   - React report displays `저장 / Monitoring handoff`.
   - Final Decision Action displays actual selected-route judgment / handoff badges.
   - Streamlit fallback includes a `저장 경계` tab.
+- V6 implemented:
+  - Python service read model `build_final_review_weakness_improvement_plan`.
+  - Investment report now includes read-only weakness improvement proposals and current-vs-improved expectation.
+  - React report displays `약점 개선안`.
+  - Streamlit fallback includes a `약점 개선안` tab.
 
 ## Current Step
 
-- V5 QA passed. Preparing V5 commit.
+- V6 QA passed. Preparing V6 commit.

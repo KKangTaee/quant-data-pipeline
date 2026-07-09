@@ -1002,7 +1002,7 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         ],
         min_width=220,
     )
-    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "Level2 REVIEW"])
+    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "약점 개선안", "Level2 REVIEW"])
     with report_tabs[0]:
         rows = list(report.get("strengths") or [])
         if rows:
@@ -1048,6 +1048,18 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         )
         st.caption(str(monitoring.get("detail") or "-"))
     with report_tabs[5]:
+        improvement = dict(report.get("weakness_improvement") or {})
+        comparison = dict(improvement.get("comparison") or {})
+        render_badge_strip(
+            [
+                {"label": "Current", "value": comparison.get("current_score", 0), "tone": "neutral"},
+                {"label": "Expected Low", "value": comparison.get("expected_score_low", 0), "tone": "warning"},
+                {"label": "Expected High", "value": comparison.get("expected_score_high", 0), "tone": "positive"},
+                {"label": "Verification", "value": comparison.get("verification_status") or "-", "tone": "warning"},
+            ]
+        )
+        st.dataframe(pd.DataFrame(improvement.get("proposals") or []), width="stretch", hide_index=True)
+    with report_tabs[6]:
         disposition = dict(report.get("level2_review_disposition") or {})
         groups = dict(disposition.get("groups") or {})
         rows = [

@@ -39,3 +39,9 @@
 - The report shows recommended-route boundary, while Final Decision Action shows the currently selected route boundary.
 - Non-select routes are `judgment_decision` records and do not become Monitoring candidates.
 - Selected route only becomes `monitoring_candidate` when the selected-route gate is ready.
+
+## V6 Notes
+
+- Weakness improvement is read-only proposal / verification guidance.
+- It does not generate a new strategy, run a new backtest, save a new portfolio, or mutate registries.
+- If no selected-route blocker exists, the proposal becomes monitoring / open-review tracking rather than fake optimization.
