@@ -183,9 +183,9 @@ Operations 화면:
 첫 화면은 portfolio-selection 전용 hero가 아니라 task-first `Reference Center`다.
 이 화면은 read-only 안내 surface이며 ingestion job, provider fetch, registry write, saved setup write,
 broker order, live approval, auto rebalance를 직접 실행하지 않는다.
-Backtest Analysis, Final Review, Operations Console, Portfolio Monitoring은 접힌 `Reference help` expander로
+Backtest Analysis, Operations Console, Portfolio Monitoring은 접힌 `Reference help` expander로
 `Guides` / `Glossary` entry point와 현재 화면의 먼저 확인할 항목을 보여준다.
-Practical Validation 기본 진입 path는 검증 상태와 보강 action을 우선하기 위해 이 expander를 렌더링하지 않는다. 이 contextual help도 read-only이며 validation gate, selected decision, saved setup, provider fetch를 바꾸지 않는다.
+Practical Validation 기본 진입 path는 검증 상태와 보강 action을 우선하기 위해 이 expander를 렌더링하지 않는다. Final Review first-read path도 후보 현황과 투자 검토서를 우선하기 위해 top contextual help를 렌더링하지 않는다. 이 contextual help도 read-only이며 validation gate, selected decision, saved setup, provider fetch를 바꾸지 않는다.
 5차부터 contextual help catalog는 shared Glossary concept dictionary term, Reference link target, surface key duplicate, raw guide focus marker drift를
 Streamlit-free report로 점검한다.
 
@@ -904,24 +904,29 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 ```text
 Practical Validation Gate 통과 후보
   -> Backtest > Final Review
-  -> 1. Candidate Board / 최종 검토 대상 선택
+  -> 1. 후보 현황 / 시장 배경 확인
+     -> Decision Desk 후보 수 / 선택 가능 / 보류 / 숨김 / 저장된 판단 / Monitoring 연결 확인
+     -> CNN / AAII compact 시장 배경 확인
+  -> 2. Candidate Board / 최종 검토 대상 선택
      -> review priority / first-review candidate / primary reason 확인
-  -> 2. Final Review 투자 검토서
+  -> 3. Final Review 투자 검토서
      -> 추천 / 보류 / 탈락 / Monitoring 후보, 점수, 강점 / 약점, Level2 REVIEW 처리, handoff 경계, 약점 개선안 확인
-  -> 3. Decision Cockpit
+  -> 4. Decision Cockpit
      -> selection-readiness state / Must Fix / open review items / monitoring seed 확인
-  -> 4. Final Review 판단 저장
-     -> selection gate 통과 selected route만 Selected Dashboard 추적 후보 handoff
+  -> 5. Final Review 판단 저장
+     -> selection gate 통과 selected route만 Portfolio Monitoring 추적 후보 handoff
      -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl append
-  -> 5. Evidence Appendix / 이전 검증 결과 부록
+  -> 6. Evidence Appendix / 이전 검증 결과 부록
      -> Validation / Robustness / Paper Observation / Investability Packet read-only 확인
-  -> 6. 저장된 모니터링 후보 선정 기록 확인
-     -> Phase35 handoff inspect
+  -> 7. 저장된 모니터링 후보 선정 기록 확인
+     -> Portfolio Monitoring handoff inspect
 ```
 
 구분:
 
 - Final Review는 Portfolio Proposal 탭이 아니라 별도 workflow panel이다.
+- Final Review에서는 CNN / AAII를 compact 시장 배경으로만 보여준다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`에서 확인하며, 이 context는 gate, score, 저장 가능 여부, Monitoring signal을 바꾸지 않는다.
+- 시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다.
 - Candidate Board의 `Review Priority`는 화면 정렬용 우선순위다. `SELECT_READY` 후보를 먼저 보여주고, 그 다음 hold / re-review, blocked 후보를 보여주며, 같은 상태에서는 blocker / open review 수와 packet score를 기준으로 정렬한다.
 - `Final Review 투자 검토서`는 Python `backtest_evidence_read_model`이 만든 report payload를 React component가 렌더링하는 first-read surface다. React는 추천 / 점수 / 강점 / 약점 / Level2 REVIEW disposition / save handoff / weakness proposal을 표시만 하며, gate 계산, DB / provider fetch, registry write, strategy variant 생성은 하지 않는다.
 - Level2 REVIEW disposition은 blocker / warning / open review / monitoring follow-up으로 나뉜다. 데이터 / 실용성 주의는 Final Review에서 해결할 숙제가 아니라 판단 근거로 읽고, Monitoring follow-up은 추적 조건으로 넘긴다.

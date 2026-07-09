@@ -9,7 +9,15 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed Final Review task는 `.aiworkspace/note/finance/tasks/active/final-review-detailed-scorecard-v1-v6-20260709/`다.
+Latest completed Final Review UX task는 `.aiworkspace/note/finance/tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/`다.
+
+- 목적: Backtest `Final Review / Level3` 상단을 안내 / 가이드 반복이 아니라 후보 현황, 선택 가능성, 다음 판단 중심으로 정리했다.
+- 주요 변경: top summary를 짧은 목적 / destination copy로 줄이고, shared Backtest selector의 오래된 run-history caption과 Final Review top Reference help, 1~5 flow card를 first-read surface에서 제거했다. Decision Desk는 올라온 후보, 선택 가능, 보류 / 재검토, 숨김, 저장된 판단, Monitoring 연결을 먼저 보여준다. CNN / AAII sentiment는 compact 시장 배경으로만 보여주고 상세 해석은 `Workspace > Overview > Sentiment`로 보낸다.
+- 판단 경계: Final Review는 gate / score / 저장 / Monitoring handoff 계산을 Python service / page boundary에 유지한다. 시장심리는 context-only이며 selected-route gate, Candidate Board priority, Final Decision save readiness, Portfolio Monitoring signal을 바꾸지 않는다.
+- QA: 1차~4차를 development -> QA -> commit 순서로 진행했고, focused service/source contract tests 55개, py_compile, `git diff --check`, Browser QA로 Final Review 상단 렌더링과 `Operations > Portfolio Monitoring` route wording을 확인했다.
+- 후속 후보: `sentiment timing / rebalance research`는 별도 제품 리서치와 look-ahead-safe 검증 후에만 논의한다. 현재 task에서는 시장심리를 gate나 monitoring signal로 만들지 않았다.
+
+Previous completed Final Review task는 `.aiworkspace/note/finance/tasks/active/final-review-detailed-scorecard-v1-v6-20260709/`다.
 
 - 목적: Backtest `Final Review / Level3`의 단순 종합 점수를 실전 포트폴리오 선별에 쓸 수 있는 세부 점수 / 점수 상한 / 선택 사유 read model로 강화했다.
 - 주요 변경: Python `backtest_evidence_read_model`이 5개 weighted dimension(`Investment`, `Risk`, `Readiness`, `Evidence Quality`, `Monitoring Suitability`), Level2 REVIEW role별 점수 영향, hard blocker / selected-route not-ready / gate review-required / 과도한 open review score cap, selection rationale, 판단 저장 전 required note를 만든다. React `Final Review 투자 검토서`는 이를 `세부 점수`, `Level2 REVIEW 점수 영향`, `최종 선택 사유`, `판단 저장 전 메모`로 표시만 한다.

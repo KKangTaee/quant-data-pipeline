@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Final Review task is [final-review-level3-react-v2-v6-20260709](./tasks/active/final-review-level3-react-v2-v6-20260709/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
+  - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
@@ -29,6 +30,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-09 - Final Review 상단은 후보 판단 중심으로 읽는다
+
+- User request: 사용자가 Final Review 상단 안내, `모니터링 후보선별`, 시장심리 공포우위 영역을 분석하고 1차~4차를 development -> QA -> commit 순서로 개선하라고 요청함.
+- Interpreted goal: Final Review first-read surface는 가이드 / reference copy가 아니라 어떤 후보가 올라왔고, 무엇이 선택 가능하며, 다음 판단이 무엇인지 빠르게 보여줘야 한다.
+- Analysis result: Reference help와 1~5 card guide는 상단 판단 흐름을 흐리므로 제거하고, Decision Desk는 candidate status 중심으로 재구성한다. CNN / AAII sentiment는 현재 market backdrop일 뿐이며 timing / rebalance signal로 쓰려면 별도 리서치와 look-ahead-safe 검증이 필요하다.
+- Follow-up: `final-review-top-ux-cleanup-v1-v4-20260709`에서 top summary, 후보 현황 command center, compact sentiment context, docs boundary를 개발 / QA / 커밋했다. `sentiment timing / rebalance research`는 후속 리서치 후보로만 남겼다.
 
 ### 2026-07-09 - Final Review Level3는 투자 검토서와 handoff 경계로 읽는다
 

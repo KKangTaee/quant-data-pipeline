@@ -1434,7 +1434,7 @@ def build_practical_validation_result(
             next_action = "Final Review에서 보강 필요 상태를 확인하고, selected-route gate가 통과될 때만 모니터링 후보로 저장합니다."
         else:
             verdict = "Final Review로 이동 가능: 후보 검증 근거 자료가 구성되었습니다."
-            next_action = "Final Review에서 selected-route gate를 확인한 뒤 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
+            next_action = "Final Review에서 selected-route gate를 확인한 뒤 Portfolio Monitoring 후보 선정 저장을 진행합니다."
 
     component_rows = [
         {

@@ -6,3 +6,5 @@
 - V1 result: top caption is now a short action-focused summary, and contextual Reference help is no longer rendered at the top of Final Review.
 - V2 result: Decision Desk now reads as candidate status (`올라온 후보`, `선택 가능`, `보류 / 재검토`, `숨김`, `저장된 판단`, `Monitoring 연결`) and no longer renders the 1~5 guide cards above Candidate Board.
 - V3 result: market sentiment is now a compact `시장 심리` context panel with CNN / AAII, Gate, and Timing / Rebalance meta only; raw sentiment evidence remains collapsed and detailed interpretation is directed to `Workspace > Overview > Sentiment`.
+- V4 result: docs now state that sentiment timing / rebalance use is research-only until look-ahead-safe validation exists. Final Review top / handoff wording uses `Operations > Portfolio Monitoring`, while legacy helper/function names remain compatibility implementation details.
+- Browser QA note: fresh Streamlit reload was required because the first browser check still had stale in-memory service copy from the previous process.

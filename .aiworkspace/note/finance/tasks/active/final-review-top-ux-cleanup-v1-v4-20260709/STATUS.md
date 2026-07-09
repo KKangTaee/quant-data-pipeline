@@ -10,4 +10,12 @@
 - Baseline focused Final Review tests passed before edits.
 - 1차 top summary cleanup committed.
 - 2차 candidate-status command center committed.
-- 3차 compact sentiment context implemented and QA passed. Preparing 3차 commit.
+- 3차 compact sentiment context committed.
+- 4차 timing / rebalance research boundary, Portfolio Monitoring route wording, docs sync, focused QA, and Browser QA completed. Preparing final 4차 commit.
+
+## Completed Scope
+
+- 1차: Final Review first-read top summary was shortened and top Reference help was removed.
+- 2차: Decision Desk now prioritizes candidate status and the old 1~5 guide cards are removed.
+- 3차: CNN / AAII sentiment is compact context only, with details routed to `Workspace > Overview > Sentiment`.
+- 4차: sentiment timing / rebalance remains research-only, and visible Final Review handoff wording uses `Operations > Portfolio Monitoring`.

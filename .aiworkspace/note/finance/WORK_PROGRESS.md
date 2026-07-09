@@ -23,7 +23,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Final Review task is [final-review-level3-react-v2-v6-20260709](./tasks/active/final-review-level3-react-v2-v6-20260709/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
+  - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Current active Practical Validation UI task is none.
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
@@ -35,6 +36,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Top UX Cleanup V1-V4:
+  - `.aiworkspace/note/finance/tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/`에서 Final Review 상단 안내, 후보 현황, compact 시장심리 context, timing / rebalance research 경계를 1차~4차로 개발 / QA / 커밋했다.
+  - first-read surface는 후보 수, 선택 가능, 보류 / 재검토, 숨김, 저장된 판단, Monitoring 연결을 먼저 보여주고, Reference help와 1~5 guide card는 상단에서 제거했다.
+  - CNN / AAII sentiment는 `Workspace > Overview > Sentiment`로 상세 해석을 넘기는 context-only 배경이며, gate / score / 저장 / Monitoring signal로 쓰지 않는다.
 - Final Review Level3 React V2-V6:
   - `.aiworkspace/note/finance/tasks/active/final-review-level3-react-v2-v6-20260709/`에서 Final Review 투자 검토서, Level2 REVIEW disposition, 점수 체계, 저장 / Monitoring handoff summary, 약점 개선안 read-only flow를 개발 / QA / 커밋 순서로 완료했다.
   - React component는 표시와 intent만 맡고, score / recommendation / REVIEW 분류 / handoff 판단 / weakness proposal은 Python `backtest_evidence_read_model`이 만든다.

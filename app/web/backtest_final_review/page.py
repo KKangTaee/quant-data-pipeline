@@ -123,7 +123,7 @@ def _candidate_board_route(summary: dict[str, Any]) -> tuple[str, str, str]:
     if not int(summary.get("total_candidates", 0) or 0):
         return "검토 후보 없음", "Final Review Gate를 통과한 후보가 없습니다.", "warning"
     if int(summary.get("select_ready", 0) or 0) > 0:
-        return "모니터링 후보 있음", "저장 가능한 후보를 확인하고 Selected Dashboard 추적 후보로 저장합니다.", "positive"
+        return "모니터링 후보 있음", "저장 가능한 후보를 확인하고 Portfolio Monitoring 추적 후보로 저장합니다.", "positive"
     if int(summary.get("blocked", 0) or 0) > 0:
         return "차단 원인 확인", "먼저 볼 후보의 blocker를 해소해야 정식 저장이 활성화됩니다.", "danger"
     return "재검토 필요", "review-required 근거를 확인하고 모니터링 후보 가능 상태로 보강합니다.", "warning"
@@ -1218,7 +1218,7 @@ def _render_selected_dashboard_handoff(final_decision_rows: list[dict[str, Any]]
     handoff = build_selected_dashboard_handoff_review(final_decision_rows)
     summary = dict(handoff.get("summary") or {})
     route = str(handoff.get("route") or "")
-    st.markdown("##### Selected Dashboard Handoff")
+    st.markdown("##### Portfolio Monitoring Handoff")
     render_badge_strip(
         [
             {"label": "Handoff", "value": handoff.get("route_label") or route, "tone": _handoff_tone(route)},
@@ -1228,7 +1228,7 @@ def _render_selected_dashboard_handoff(final_decision_rows: list[dict[str, Any]]
                 "tone": "positive" if summary.get("selected_decision_count") else "warning",
             },
             {
-                "label": "Dashboard Rows",
+                "label": "Monitoring Rows",
                 "value": summary.get("dashboard_row_count", 0),
                 "tone": "positive" if summary.get("dashboard_row_count") else "neutral",
             },
@@ -1256,7 +1256,7 @@ def _render_selected_dashboard_handoff(final_decision_rows: list[dict[str, Any]]
     if not handoff_df.empty:
         st.dataframe(handoff_df, width="stretch", hide_index=True)
     else:
-        st.caption("Selected Dashboard로 넘길 모니터링 후보 row가 아직 없습니다.")
+        st.caption("Portfolio Monitoring으로 넘길 모니터링 후보 row가 아직 없습니다.")
     with st.expander("Handoff checklist / storage boundary", expanded=False):
         checklist_df = build_selected_dashboard_handoff_checklist_table(handoff)
         if not checklist_df.empty:
@@ -1475,8 +1475,8 @@ def render_final_review_workspace() -> None:
         st.caption("검증 결과만 저장한 blocked / needs input / not run 후보는 기록으로 남지만, Final Review 검토 대상에는 표시되지 않습니다.")
         render_fr_section_header(
             eyebrow="Saved Decisions",
-            title="Decision History / Dashboard Handoff",
-            detail="새로 판단할 후보가 없을 때도 기존 최종 판단과 Dashboard handoff 상태는 확인할 수 있습니다.",
+            title="Decision History / Portfolio Monitoring Handoff",
+            detail="새로 판단할 후보가 없을 때도 기존 최종 판단과 Portfolio Monitoring handoff 상태는 확인할 수 있습니다.",
             tone=_handoff_tone(dashboard_handoff.get("route")),
         )
         with st.container(border=True):
@@ -1699,7 +1699,7 @@ def render_final_review_workspace() -> None:
                     f"현재 권장 상태는 {suggested_route_label}이며, selected-route blocker가 남아 "
                     "Monitoring 후보 handoff를 만들지 않는다."
                 ),
-                "constraints": "Must Fix / Must Review 항목을 해소한 뒤에만 Selected Dashboard 모니터링 후보 handoff를 만들 수 있다.",
+                "constraints": "Must Fix / Must Review 항목을 해소한 뒤에만 Portfolio Monitoring 후보 handoff를 만들 수 있다.",
                 "next_action": "Practical Validation 또는 해당 evidence 보강 위치로 돌아가 blocker를 해소한 뒤 Final Review에서 다시 확인한다.",
             }
         if not str(st.session_state.get(operator_reason_key) or "").strip():
@@ -1815,7 +1815,7 @@ def render_final_review_workspace() -> None:
 
     render_fr_section_header(
         eyebrow="Step 5",
-        title="Decision History / Dashboard Handoff",
+        title="Decision History / Portfolio Monitoring Handoff",
         detail="저장된 Final Review 판단 기록과 Portfolio Monitoring으로 이어질 후보 상태를 확인합니다.",
         tone=_handoff_tone(dashboard_handoff.get("route")),
     )

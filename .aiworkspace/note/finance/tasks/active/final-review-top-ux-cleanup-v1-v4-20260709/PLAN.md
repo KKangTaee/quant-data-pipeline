@@ -35,15 +35,15 @@
 - Modify: `tests/test_service_contracts.py`
 - Create/update: task `STATUS.md`, `RUNS.md`, `NOTES.md`, `RISKS.md`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
   - Add a test that requires a Streamlit-free top summary model with short purpose copy, destination, and excluded long guide copy.
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
   - Run the focused test and confirm it fails because the helper does not exist.
-- [ ] **Step 3: Implement minimal helper and render usage**
+- [x] **Step 3: Implement minimal helper and render usage**
   - Add `_build_final_review_top_summary(...)` and replace the long top caption with concise text.
-- [ ] **Step 4: QA**
+- [x] **Step 4: QA**
   - Run focused test, py_compile, diff check.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit only tracked code/task-doc files for 1차.
 
 ## 2차 - 후보선별 command center 재구성
@@ -53,17 +53,17 @@
 - Modify: `tests/test_service_contracts.py`
 - Update: task docs
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
   - Require command center copy/model to expose available candidate count, hidden count, saved selection count, dashboard count, and no 1~5 card guide.
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
   - Run the focused test and confirm missing helper/output.
-- [ ] **Step 3: Implement minimal command summary and remove flow card render**
+- [x] **Step 3: Implement minimal command summary and remove flow card render**
   - Add `_build_final_review_decision_desk_model(...)`.
   - Use the model in `render_fr_command_center`.
   - Remove `render_fr_flow([...])` from top-level Final Review render.
-- [ ] **Step 4: QA**
+- [x] **Step 4: QA**
   - Run focused test, py_compile, diff check.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit 2차 code/task-doc changes.
 
 ## 3차 - 시장심리 compact context
@@ -73,16 +73,16 @@
 - Modify: `tests/test_service_contracts.py`
 - Update: task docs
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
   - Require Final Review sentiment display model to be compact, context-only, and to route detailed sentiment review to Overview Sentiment.
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
   - Run the focused test and confirm missing helper/output.
-- [ ] **Step 3: Implement compact overlay**
+- [x] **Step 3: Implement compact overlay**
   - Add `_build_final_review_sentiment_display_model(...)`.
   - Change `_render_market_sentiment_context_overlay()` to render one compact panel and keep evidence rows collapsed.
-- [ ] **Step 4: QA**
+- [x] **Step 4: QA**
   - Run focused test, existing sentiment context tests, py_compile, diff check.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit 3차 code/task-doc changes.
 
 ## 4차 - timing / rebalance 리서치 경계 문서화
@@ -95,16 +95,16 @@
 - Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Update: task docs
 
-- [ ] **Step 1: Write failing documentation drift test**
+- [x] **Step 1: Write failing documentation drift test**
   - Add a source/doc contract assertion that Final Review sentiment timing remains research-only and context-only.
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
   - Run focused test and confirm the doc text is missing.
-- [ ] **Step 3: Update smallest durable docs**
+- [x] **Step 3: Update smallest durable docs**
   - Document that Final Review shows compact sentiment context only.
   - Document that timing/rebalance use requires separate research with look-ahead-safe validation.
-- [ ] **Step 4: QA**
+- [x] **Step 4: QA**
   - Run focused docs/source test, py_compile, `git diff --check`, and relevant finance doc listing.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit 4차 docs/task changes.
 
 ## Final QA

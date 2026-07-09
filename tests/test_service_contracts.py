@@ -12384,6 +12384,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         workspace_intro = workspace_intro.split("current_rows = load_current_candidate_registry_latest()", 1)[0]
         self.assertNotIn("render_reference_contextual_help(\"final_review\")", workspace_intro)
 
+        backtest_page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
+        self.assertIn("Portfolio Monitoring 후보 여부", backtest_page_source)
+        self.assertNotIn("Selected Dashboard 모니터링 후보 여부", backtest_page_source)
+        self.assertNotIn("과거 실행 기록은 `Operations > Backtest Run History`", backtest_page_source)
+
+        final_review_page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        self.assertNotIn("Selected Dashboard 추적 후보", final_review_page_source)
+        self.assertNotIn("Selected Dashboard Handoff", final_review_page_source)
+
     def test_final_review_decision_desk_model_prioritizes_candidate_status(self) -> None:
         from app.web.backtest_final_review.page import _build_final_review_decision_desk_model
 
@@ -12474,6 +12483,25 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         sentiment_body = page_source.split("def _render_market_sentiment_context_overlay", 1)[1]
         sentiment_body = sentiment_body.split("\ndef ", 1)[0]
         self.assertNotIn("render_fr_lane_grid(", sentiment_body)
+
+    def test_final_review_sentiment_timing_rebalance_boundary_is_documented(self) -> None:
+        portfolio_flow = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(
+            encoding="utf-8"
+        )
+        backtest_flow = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(
+            encoding="utf-8"
+        )
+        roadmap = Path(".aiworkspace/note/finance/docs/ROADMAP.md").read_text(encoding="utf-8")
+
+        required_boundary = (
+            "시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 "
+            "Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다"
+        )
+        self.assertIn("Final Review에서는 CNN / AAII를 compact 시장 배경으로만 보여준다", portfolio_flow)
+        self.assertIn(required_boundary, portfolio_flow)
+        self.assertIn("Workspace > Overview > Sentiment", backtest_flow)
+        self.assertIn(required_boundary, backtest_flow)
+        self.assertIn("sentiment timing / rebalance research", roadmap)
 
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
@@ -30589,13 +30617,13 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
 
         self.assertEqual(handoff["schema_version"], SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION)
         self.assertEqual(handoff["route"], "HANDOFF_READY")
-        self.assertEqual(handoff["destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["destination"], "Operations > Portfolio Monitoring")
         self.assertEqual(handoff["summary"]["final_decision_count"], 1)
         self.assertEqual(handoff["summary"]["selected_decision_count"], 1)
         self.assertEqual(handoff["summary"]["dashboard_row_count"], 1)
         self.assertEqual(handoff["summary"]["monitorable_count"], 1)
         self.assertEqual(handoff["rows"][0]["Decision ID"], "decision-selected")
-        self.assertEqual(handoff["rows"][0]["Handoff Destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["rows"][0]["Handoff Destination"], "Operations > Portfolio Monitoring")
         self.assertEqual(handoff["rows"][0]["Live Approval"], "Disabled")
         checks = {row["Check"]: row for row in handoff["checklist"]}
         self.assertEqual(checks["Selected route record"]["Status"], "PASS")
@@ -31777,7 +31805,7 @@ class DecisionDossierContractTests(unittest.TestCase):
             "operator_decision": {
                 "reason": "검증 근거가 충분합니다.",
                 "constraints": "실제 투자 전 금액과 중단 기준 확인",
-                "next_action": "Selected Dashboard에서 사후 점검",
+                "next_action": "Operations > Portfolio Monitoring에서 사후 점검",
             },
         }
 

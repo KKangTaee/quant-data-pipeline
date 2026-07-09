@@ -56,7 +56,7 @@ REFERENCE_CONTEXTUAL_HELP: list[dict[str, Any]] = [
         "surface_key": "final_review",
         "surface": "Backtest > Final Review",
         "title": "모니터링 후보로 저장해도 되는지 볼 때",
-        "summary": "selected-route gate, decision record, Selected Dashboard handoff의 의미를 확인합니다.",
+        "summary": "selected-route gate, decision record, Portfolio Monitoring handoff의 의미를 확인합니다.",
         "guide_focus": "제품 흐름 / Final Review, 상태 / 용어 / Selected-route Gate",
         "glossary_terms": ["Selected-route Gate", "Provider Coverage", "Data Trust"],
         "next_checks": [
