@@ -7,13 +7,18 @@ Last Verified: 2026-07-09
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/final-review-level3-redesign-analysis-v1-20260709/`다.
+현재 active task는 없다.
 
-- 목적: Backtest `Final Review / Level3`를 최종 판단 단계로 정리하고, Final Review 판단 record와 Portfolio Monitoring handoff 경계를 분리한다.
-- 현재 구현: `SELECT_FOR_PRACTICAL_PORTFOLIO` / 보류 / 거절 / 재검토 모두 Final Review 판단으로 저장할 수 있고, Monitoring 후보 handoff는 selected-route gate를 통과한 row의 `monitoring_candidate`로만 연결한다.
-- 남은 차수: analyst-style final review narrative / score, Level2 REVIEW 처리 summary, weakness-improvement proposal은 후속 개발로 남아 있다.
+Latest completed Final Review task는 `.aiworkspace/note/finance/tasks/active/final-review-level3-react-v2-v6-20260709/`다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow5-cta-integration-v1-20260709/`다.
+- 목적: Backtest `Final Review / Level3`를 사람이 읽는 최종 투자 검토서로 정리하고, Level2 REVIEW 처리 / 점수 체계 / 저장 경계 / 약점 개선안 최소 흐름을 React surface와 Python service read model로 연결했다.
+- 주요 변경: Candidate Board 뒤에 `Final Review 투자 검토서` React section을 추가했다. Python `backtest_evidence_read_model`이 investment report, Level2 REVIEW disposition, scorecard, save / Monitoring handoff summary, weakness improvement plan을 만들고, React는 표시와 UI intent만 맡는다.
+- 저장 경계: `SELECT_FOR_PRACTICAL_PORTFOLIO` / 보류 / 거절 / 재검토는 Final Review 판단 record로 append 가능하며, Monitoring 후보 handoff는 selected-route gate를 통과한 row의 `monitoring_candidate`로만 연결한다. live approval / broker order / auto rebalance는 계속 disabled 의미다.
+- 후속 후보: 실제 portfolio variant 생성, 자동 약점 최적화, 개선 포트폴리오 신규 backtest / 비교 저장은 구현하지 않았다. 필요하면 별도 task에서 Python engine/service boundary로 설계한다.
+
+Previous completed Final Review analysis task는 `.aiworkspace/note/finance/tasks/active/final-review-level3-redesign-analysis-v1-20260709/`다.
+
+Latest completed Practical Validation task는 `.aiworkspace/note/finance/tasks/active/practical-validation-flow5-cta-integration-v1-20260709/`다.
 
 - 목적: Practical Validation Flow5가 별도 검증 단계처럼 보이면서 Flow3 결론과 저장 / Final Review 이동 action이 분리되어 보이는 문제를 줄였다.
 - 주요 변경: Flow3 `검증 결론` React component가 `next_stage_action` read model을 받아 `검증 결과 저장(기록용)`과 `저장하고 Final Review로 이동` CTA를 렌더링한다. React는 click intent만 보내고, Python page/service가 save-only audit append, Final Review handoff, session state, rerun을 처리한다. 별도 visible Flow5 container는 제거했고 Selection Source JSON / Practical Validation Result JSON은 Flow4 `상세 근거 / 원자료` Raw Evidence로 낮췄다.

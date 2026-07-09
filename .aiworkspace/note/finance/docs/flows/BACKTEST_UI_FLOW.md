@@ -906,14 +906,16 @@ Practical Validation Gate 통과 후보
   -> Backtest > Final Review
   -> 1. Candidate Board / 최종 검토 대상 선택
      -> review priority / first-review candidate / primary reason 확인
-  -> 2. Decision Cockpit
+  -> 2. Final Review 투자 검토서
+     -> 추천 / 보류 / 탈락 / Monitoring 후보, 점수, 강점 / 약점, Level2 REVIEW 처리, handoff 경계, 약점 개선안 확인
+  -> 3. Decision Cockpit
      -> selection-readiness state / Must Fix / open review items / monitoring seed 확인
-  -> 3. Final Review 판단 저장
+  -> 4. Final Review 판단 저장
      -> selection gate 통과 selected route만 Selected Dashboard 추적 후보 handoff
      -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl append
-  -> 4. Evidence Appendix / 이전 검증 결과 부록
+  -> 5. Evidence Appendix / 이전 검증 결과 부록
      -> Validation / Robustness / Paper Observation / Investability Packet read-only 확인
-  -> 5. 저장된 모니터링 후보 선정 기록 확인
+  -> 6. 저장된 모니터링 후보 선정 기록 확인
      -> Phase35 handoff inspect
 ```
 
@@ -921,6 +923,9 @@ Practical Validation Gate 통과 후보
 
 - Final Review는 Portfolio Proposal 탭이 아니라 별도 workflow panel이다.
 - Candidate Board의 `Review Priority`는 화면 정렬용 우선순위다. `SELECT_READY` 후보를 먼저 보여주고, 그 다음 hold / re-review, blocked 후보를 보여주며, 같은 상태에서는 blocker / open review 수와 packet score를 기준으로 정렬한다.
+- `Final Review 투자 검토서`는 Python `backtest_evidence_read_model`이 만든 report payload를 React component가 렌더링하는 first-read surface다. React는 추천 / 점수 / 강점 / 약점 / Level2 REVIEW disposition / save handoff / weakness proposal을 표시만 하며, gate 계산, DB / provider fetch, registry write, strategy variant 생성은 하지 않는다.
+- Level2 REVIEW disposition은 blocker / warning / open review / monitoring follow-up으로 나뉜다. 데이터 / 실용성 주의는 Final Review에서 해결할 숙제가 아니라 판단 근거로 읽고, Monitoring follow-up은 추적 조건으로 넘긴다.
+- 약점 개선안은 read-only 최소 기능이다. 개선안을 실제 전략 / portfolio variant로 만들고 현재 portfolio와 backtest 비교하는 기능은 후속 개발 대상이다.
 - Phase 31 이후 `Validation Pack`은 Final Review 안에서 같은 검증 언어로 읽되, 현재 화면에서는 주 action이 아니라 Evidence Appendix로 낮춘다.
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
 - Phase 32의 `Robustness / Stress Validation Preview`와 `Stress / Sensitivity Summary`도 Final Review 안에서 읽지만, 재검증 단계가 아니라 Appendix evidence다.
@@ -935,6 +940,7 @@ Practical Validation Gate 통과 후보
 ```text
 Backtest > Final Review
   -> 검토 대상 선택
+  -> Final Review 투자 검토서 확인
   -> Decision Cockpit 확인
   -> Final Review 판단 route 선택
      -> SELECT_FOR_PRACTICAL_PORTFOLIO gate 통과 시 Monitoring handoff

@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active Final Review task is [final-review-level3-redesign-analysis-v1-20260709](./tasks/active/final-review-level3-redesign-analysis-v1-20260709/STATUS.md).
+  - Latest completed Final Review task is [final-review-level3-react-v2-v6-20260709](./tasks/active/final-review-level3-react-v2-v6-20260709/STATUS.md).
   - Current active Practical Validation UI task is none.
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
@@ -35,6 +35,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Level3 React V2-V6:
+  - `.aiworkspace/note/finance/tasks/active/final-review-level3-react-v2-v6-20260709/`에서 Final Review 투자 검토서, Level2 REVIEW disposition, 점수 체계, 저장 / Monitoring handoff summary, 약점 개선안 read-only flow를 개발 / QA / 커밋 순서로 완료했다.
+  - React component는 표시와 intent만 맡고, score / recommendation / REVIEW 분류 / handoff 판단 / weakness proposal은 Python `backtest_evidence_read_model`이 만든다.
+  - registry / saved JSONL 기존 row는 재작성하지 않았고, run_history / generated QA artifacts는 stage하지 않았다. live approval / broker order / auto rebalance 경계도 변경하지 않았다.
 - Final Review Level3 Storage Boundary V1:
   - `.aiworkspace/note/finance/tasks/active/final-review-level3-redesign-analysis-v1-20260709/`에서 Final Review 판단 record와 Portfolio Monitoring handoff 경계를 분리했다.
   - `SELECT_FOR_PRACTICAL_PORTFOLIO` / 보류 / 거절 / 재검토는 모두 Final Review 판단으로 append 가능하며, Monitoring 후보는 selected-route gate 통과 row의 `monitoring_candidate`만 읽는다.

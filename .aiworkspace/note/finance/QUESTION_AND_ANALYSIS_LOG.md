@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active Final Review task is [final-review-level3-redesign-analysis-v1-20260709](./tasks/active/final-review-level3-redesign-analysis-v1-20260709/STATUS.md).
+  - Latest completed Final Review task is [final-review-level3-react-v2-v6-20260709](./tasks/active/final-review-level3-react-v2-v6-20260709/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
   - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
@@ -29,6 +29,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-09 - Final Review Level3는 투자 검토서와 handoff 경계로 읽는다
+
+- User request: 사용자가 Final Review 2차부터 6차까지 development -> QA -> commit 순서로 진행하되, UI는 다른 레벨과 동일하게 React로 만들고 판단 / 계산 / 저장은 Python service 경계에 남기라고 요청함.
+- Interpreted goal: Final Review는 raw evidence table이 아니라 실전 투입 후보를 사람이 최종 선별하는 투자 검토서여야 하며, Level2 REVIEW 처리와 Monitoring handoff 조건을 한 화면에서 읽을 수 있어야 한다.
+- Analysis result: React는 investment report, scorecard, REVIEW disposition, save handoff, weakness proposal을 표시하는 presentation surface로 두고, Python `backtest_evidence_read_model`이 classification / score / handoff / weakness proposal payload를 소유해야 한다.
+- Follow-up: `final-review-level3-react-v2-v6-20260709`에서 V2 report shell, V3 Level2 REVIEW disposition, V4 scorecard, V5 save / handoff boundary, V6 weakness improvement proposal을 각각 개발 / QA / 커밋했다. 개선 portfolio 생성 / 자동 backtest 비교 / registry 또는 saved rewrite는 후속 개발로 남겼다.
 
 ### 2026-07-09 - Final Review 저장 record와 Monitoring handoff를 분리한다
 

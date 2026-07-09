@@ -33,4 +33,4 @@
 
 ## Current Step
 
-- V6 QA passed. Preparing V6 commit.
+- V2-V6 implementation, QA, commits, Browser QA, and docs sync are complete.
