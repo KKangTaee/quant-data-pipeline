@@ -107,14 +107,32 @@ const joined = (items: string[] | undefined, fallback = "없음"): string => {
   return cleaned.length > 0 ? cleaned.join(" / ") : fallback
 }
 
-const groupOutcome = (group: CriteriaGroup): { label: string; detail: string; tone: Tone } => {
+const reviewStatusLabel = (status: unknown): string => {
+  const text = compact(status, "")
+  const labels = ["데이터 주의", "2단계 실용성 주의", "최종 판단 참고", "Monitoring 추적"]
+  const matched = labels.find((label) => text.startsWith(label))
+  if (matched) return matched
+  if (text.startsWith("REVIEW")) return "주의"
+  return ""
+}
+
+const roleAwareGroupOutcome = (group: CriteriaGroup): { label: string; detail: string; tone: Tone } => {
   if (group.remainingIssues && group.remainingIssues.length > 0) {
     return { label: "실패", detail: joined(group.remainingIssues), tone: "danger" }
+  }
+  const reviewLabel = reviewStatusLabel(group.status)
+  if (reviewLabel) {
+    const tone = toneClass(group.tone)
+    return {
+      label: reviewLabel,
+      detail: compact(group.decisionSummary),
+      tone: tone === "neutral" ? "warning" : tone,
+    }
   }
   if (group.passedCriteria && group.passedCriteria.length > 0) {
     return { label: "통과", detail: joined(group.passedCriteria), tone: "positive" }
   }
-  return { label: "확인 필요", detail: compact(group.decisionSummary), tone: toneClass(group.tone) }
+  return { label: "검토", detail: compact(group.decisionSummary), tone: toneClass(group.tone) }
 }
 
 const saveAndMovePayload = () => ({
@@ -268,20 +286,23 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         <section className="pv-react-fix__lane pv-react-fix__criteria-preview">
           <div className="pv-react-fix__lane-title">카테고리별 검증 요약</div>
           <div className="pv-react-fix__groups pv-react-fix__groups--compact">
-            {visibleCriteriaGroups.map((group, index) => (
-              <article className={`pv-react-fix__group pv-react-fix__group--${groupOutcome(group).tone}`} key={`${group.label ?? "criteria"}-${index}`}>
-                <div>
-                  <h5>{compact(group.displayLabel ?? group.label)}</h5>
-                  <span>{compact(group.status)}</span>
-                </div>
-                <p>
-                  <b>{groupOutcome(group).label}</b>: {groupOutcome(group).detail}
-                </p>
-                {(group.remainingIssues ?? []).length > 0 && (group.passedCriteria ?? []).length > 0 ? (
-                  <small>통과: {joined(group.passedCriteria)}</small>
-                ) : null}
-              </article>
-            ))}
+            {visibleCriteriaGroups.map((group, index) => {
+              const outcome = roleAwareGroupOutcome(group)
+              return (
+                <article className={`pv-react-fix__group pv-react-fix__group--${outcome.tone}`} key={`${group.label ?? "criteria"}-${index}`}>
+                  <div>
+                    <h5>{compact(group.displayLabel ?? group.label)}</h5>
+                    <span>{compact(group.status)}</span>
+                  </div>
+                  <p>
+                    <b>{outcome.label}</b>: {outcome.detail}
+                  </p>
+                  {(group.remainingIssues ?? []).length > 0 && (group.passedCriteria ?? []).length > 0 ? (
+                    <small>통과: {joined(group.passedCriteria)}</small>
+                  ) : null}
+                </article>
+              )
+            })}
             {hiddenCriteriaGroupCount > 0 ? (
               <div className="pv-react-fix__more">나머지 {hiddenCriteriaGroupCount}개 카테고리는 Flow 4에서 확인합니다.</div>
             ) : null}
