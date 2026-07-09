@@ -9,10 +9,17 @@ Last Verified: 2026-07-10
 
 현재 active task는 없다.
 
-Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/`다.
+Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-candidate-selection-integration-v1-20260710/`다.
+
+- 목적: Final Review의 독립 `Step 1 / Candidate Board`가 상단 `후보 현황과 다음 판단`과 같은 후보 상태를 반복해 보이는 문제를 줄였다.
+- 주요 변경: `Backtest > Final Review`는 Decision Desk 아래에 Review Queue, `검토 대상` selector, 접힌 후보 비교 상세를 바로 붙이고, 중복 select-ready / hold / blocked lane cards와 numbered Step eyebrow를 제거했다. 이후 흐름은 `Final Review 투자 검토서`, `Decision Cockpit`, `Final Decision Action`, `Evidence Appendix`, saved decision review로 의미형 섹션을 따라 읽는다.
+- 판단 경계: Candidate Board read model은 계속 기존 evidence를 읽어 queue / detail을 만들지만, UI는 별도 단계처럼 보이지 않는다. score, gate, 저장, provider fetch, registry / saved JSONL write, Portfolio Monitoring handoff 계산은 변경하지 않았다.
+- QA: TDD RED/GREEN source contract, focused Final Review / evidence tests 52개, py_compile, `git diff --check`, Browser QA를 확인했다.
+
+Previous completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/`다.
 
 - 목적: Final Review에서 판단 근거가 아닌 CNN / AAII 시장심리 패널과 raw detail table이 first-read decision surface를 차지하지 않게 했다.
-- 주요 변경: `Backtest > Final Review`는 Decision Desk 다음에 Candidate Board와 투자 검토서를 이어서 보여주며, 시장심리 패널 / `CNN / AAII detail` expander를 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Operations > Portfolio Monitoring의 read-only context overlay는 유지한다.
+- 주요 변경: `Backtest > Final Review`는 Decision Desk 다음에 후보 선택 패널과 투자 검토서를 이어서 보여주며, 시장심리 패널 / `CNN / AAII detail` expander를 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Operations > Portfolio Monitoring의 read-only context overlay는 유지한다.
 - 판단 경계: 시장심리는 Final Review gate, score, 저장 가능 여부, Candidate Board priority, Portfolio Monitoring signal, broker order, auto rebalance를 바꾸지 않는다. 시장심리 timing / rebalance 활용은 별도 제품 리서치와 look-ahead-safe 검증 전까지 구현하지 않는다.
 - QA: focused Final Review source contract와 timing / rebalance documentation contract를 RED/GREEN으로 확인했다.
 

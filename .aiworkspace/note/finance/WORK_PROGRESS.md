@@ -23,7 +23,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-candidate-selection-integration-v1-20260710](./tasks/active/final-review-candidate-selection-integration-v1-20260710/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-sentiment-scope-cleanup-v1-20260710](./tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
+  - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Current active Practical Validation UI task is none.
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
@@ -36,9 +38,13 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Candidate Selection Integration V1:
+  - `.aiworkspace/note/finance/tasks/active/final-review-candidate-selection-integration-v1-20260710/`에서 standalone `Step 1 / Candidate Board`와 중복 4-card lane summary를 제거했다.
+  - Review Queue, `검토 대상` selector, 후보 비교 상세는 Decision Desk 아래 후보 선택 패널로 통합했고, 투자 검토서 / Decision Cockpit / 판단 저장 / Evidence Appendix는 의미형 섹션으로 이어진다.
+  - score / gate / 저장 / provider fetch / registry write / Portfolio Monitoring handoff 계산은 변경하지 않았다. Browser QA screenshot은 generated artifact로 남겼다.
 - Final Review Sentiment Scope Cleanup V1:
   - `.aiworkspace/note/finance/tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/`에서 Final Review first-read의 CNN / AAII market sentiment panel과 detail expander를 제거했다.
-  - Final Review는 Decision Desk 이후 Candidate Board / 투자 검토서 / Decision Cockpit을 바로 이어서 읽고, 자세한 심리 해석은 `Workspace > Overview > Sentiment`에 둔다.
+  - Final Review는 Decision Desk 이후 후보 선택 패널 / 투자 검토서 / Decision Cockpit을 바로 이어서 읽고, 자세한 심리 해석은 `Workspace > Overview > Sentiment`에 둔다.
   - 시장심리는 Final Review gate / score / 저장 / Candidate Board priority / Monitoring signal을 바꾸지 않으며, timing / rebalance 활용은 별도 research 전까지 구현하지 않는다.
 - Final Review Top UX Cleanup V1-V4:
   - `.aiworkspace/note/finance/tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/`에서 Final Review 상단 안내, 후보 현황, compact 시장심리 context, timing / rebalance research 경계를 1차~4차로 개발 / QA / 커밋했다.

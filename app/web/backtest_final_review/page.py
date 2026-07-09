@@ -108,16 +108,6 @@ def _short_text(value: Any, limit: int = 140) -> str:
     return text[: max(0, limit - 3)].rstrip() + "..."
 
 
-def _candidate_board_tone(summary: dict[str, Any]) -> str:
-    if int(summary.get("select_ready", 0) or 0) > 0:
-        return "positive"
-    if int(summary.get("blocked", 0) or 0) > 0:
-        return "danger"
-    if int(summary.get("hold_or_re_review", 0) or 0) > 0:
-        return "warning"
-    return "neutral"
-
-
 def _candidate_board_route(summary: dict[str, Any]) -> tuple[str, str, str]:
     if not int(summary.get("total_candidates", 0) or 0):
         return "검토 후보 없음", "Final Review Gate를 통과한 후보가 없습니다.", "warning"
@@ -775,55 +765,48 @@ def _build_candidate_contexts(
     return contexts
 
 
-def _render_candidate_board(candidate_contexts: list[dict[str, Any]]) -> None:
+def _render_candidate_selection_panel(candidate_contexts: list[dict[str, Any]]) -> dict[str, Any]:
     board = build_final_review_candidate_board(candidate_contexts)
     rows = list(board.get("rows") or [])
-    if not rows:
+    if not candidate_contexts:
         st.info("표시할 Final Review 후보가 없습니다.")
-        return
+        return {}
     summary = dict(board.get("summary") or {})
-    route_value, route_detail, route_tone = _candidate_board_route(summary)
-    render_fr_lane_grid(
-        [
-            {
-                "kicker": "Next Review",
-                "title": _short_text(summary.get("first_review_candidate") or "검토 후보 없음", 96),
-                "status": route_value,
-                "detail": _short_text(summary.get("first_review_reason") or route_detail, 150),
-                "meta": _short_text(summary.get("first_review_action") or "-", 100),
-                "tone": route_tone,
-            },
-            {
-                "title": "Select Ready",
-                "status": summary.get("select_ready", 0),
-                "detail": "선정 기록 가능 후보",
-                "tone": "positive" if summary.get("select_ready") else "neutral",
-            },
-            {
-                "title": "Hold / Re-review",
-                "status": summary.get("hold_or_re_review", 0),
-                "detail": "보류 / 재검토 판단 필요",
-                "tone": "warning" if summary.get("hold_or_re_review") else "neutral",
-            },
-            {
-                "title": "Blocked",
-                "status": summary.get("blocked", 0),
-                "detail": "선정 전 차단 원인 있음",
-                "tone": "danger" if summary.get("blocked") else "neutral",
-            },
-        ],
-        min_width=210,
-    )
     queue_rows = list(board.get("review_queue_rows") or [])
     if queue_rows:
         st.markdown("###### Review Queue")
         st.dataframe(pd.DataFrame(queue_rows), width="stretch", hide_index=True)
-    with st.expander("Candidate Board detail", expanded=False):
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-    st.caption(
-        "Candidate Board는 기존 Practical Validation result와 investability packet을 읽는 비교표입니다. "
-        "Review Priority는 화면 정렬용 우선순위이며, 새 registry row를 만들거나 provider 데이터를 수집하지 않습니다."
+        st.caption("Review Queue는 기존 evidence 기준으로 오늘 먼저 볼 후보 순서를 보여주며, 저장 / 점수 / gate 계산을 바꾸지 않습니다.")
+    elif rows:
+        st.info("Review Queue로 표시할 우선순위 후보가 없습니다.")
+
+    st.markdown("###### 검토 대상")
+    labels = [str(context["label"]) for context in candidate_contexts]
+    first_review_candidate = str(summary.get("first_review_candidate") or "")
+    default_index = labels.index(first_review_candidate) if first_review_candidate in labels else 0
+    selected_label = st.selectbox(
+        "검토 대상",
+        options=labels,
+        index=default_index,
+        key="final_review_source_selected",
     )
+    selected_context = candidate_contexts[labels.index(selected_label)]
+    source = dict(selected_context["source"])
+    render_badge_strip(
+        [
+            {"label": "Source Type", "value": source.get("source_type") or "-", "tone": "neutral"},
+            {"label": "Source ID", "value": source.get("source_id") or "-", "tone": "neutral"},
+        ]
+    )
+
+    if rows:
+        with st.expander("후보 비교 상세", expanded=False):
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    st.caption(
+        "후보 비교는 기존 Practical Validation result와 investability packet을 읽는 화면 정렬용 정보입니다. "
+        "새 registry row를 만들거나 provider 데이터를 수집하지 않습니다."
+    )
+    return selected_context
 
 
 def _render_decision_cockpit(cockpit: dict[str, Any]) -> None:
@@ -1417,25 +1400,9 @@ def render_final_review_workspace() -> None:
             _render_saved_final_review_decisions(final_decision_rows)
         return
 
-    st.divider()
-    render_fr_section_header(
-        eyebrow="Step 1",
-        title="Candidate Board",
-        detail="Final Review Gate를 통과한 후보를 먼저 비교하고, 오늘 판단할 source를 고릅니다.",
-        tone=_candidate_board_tone(candidate_summary),
-    )
     with st.container(border=True):
-        _render_candidate_board(candidate_contexts)
-        labels = [str(context["label"]) for context in candidate_contexts]
-        selected_label = st.selectbox("검토 대상", options=labels, key="final_review_source_selected")
-        selected_context = candidate_contexts[labels.index(selected_label)]
-        source = dict(selected_context["source"])
-        render_badge_strip(
-            [
-                {"label": "Source Type", "value": source.get("source_type") or "-", "tone": "neutral"},
-                {"label": "Source ID", "value": source.get("source_id") or "-", "tone": "neutral"},
-            ]
-        )
+        selected_context = _render_candidate_selection_panel(candidate_contexts)
+    source = dict(selected_context["source"])
 
     validation = dict(selected_context["validation"])
     paper_observation = dict(selected_context["paper_observation"])
@@ -1451,7 +1418,7 @@ def render_final_review_workspace() -> None:
     )
 
     render_fr_section_header(
-        eyebrow="Step 2",
+        eyebrow="Investment Report",
         title="Final Review 투자 검토서",
         detail="최종 판단 요약, 강점 / 약점, 모니터링 조건을 먼저 읽고 Decision Cockpit에서 gate detail을 확인합니다.",
         tone=str(dict(investment_report.get("recommendation") or {}).get("tone") or "neutral"),
@@ -1463,7 +1430,7 @@ def render_final_review_workspace() -> None:
         )
 
     render_fr_section_header(
-        eyebrow="Step 3",
+        eyebrow="Selection Readiness",
         title="Decision Cockpit",
         detail="상세 표를 보기 전에 선정 차단, 보류 필요, 모니터링 후보 가능 여부와 monitoring seed를 먼저 확인합니다.",
         tone=_cockpit_tone(cockpit.get("state")),
@@ -1472,7 +1439,7 @@ def render_final_review_workspace() -> None:
         _render_decision_cockpit(cockpit)
 
     render_fr_section_header(
-        eyebrow="Step 4",
+        eyebrow="Decision Record",
         title="Final Decision Action",
         detail="Decision Cockpit을 보고 최종 판단 기록과 Monitoring handoff 여부를 확인합니다.",
         tone="warning",
@@ -1735,7 +1702,7 @@ def render_final_review_workspace() -> None:
             st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
 
     render_fr_section_header(
-        eyebrow="Step 4",
+        eyebrow="Evidence Appendix",
         title="Evidence Appendix",
         detail="Final Review 판단에 필요한 요약은 위에서 끝내고, 원본 검증 근거는 필요한 경우에만 read-only로 확인합니다.",
         tone="neutral",
@@ -1748,7 +1715,7 @@ def render_final_review_workspace() -> None:
         )
 
     render_fr_section_header(
-        eyebrow="Step 5",
+        eyebrow="Saved Decisions",
         title="Decision History / Portfolio Monitoring Handoff",
         detail="저장된 Final Review 판단 기록과 Portfolio Monitoring으로 이어질 후보 상태를 확인합니다.",
         tone=_handoff_tone(dashboard_handoff.get("route")),

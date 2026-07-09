@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `final-review-candidate-selection-integration-v1-20260710` | Completed record | Final Review standalone `Step 1 / Candidate Board`를 제거하고, Review Queue / 검토 대상 selector / 후보 비교 상세를 Decision Desk 아래 후보 선택 패널로 통합했다. |
 | `final-review-sentiment-scope-cleanup-v1-20260710` | Completed record | Final Review first-read에서 CNN / AAII 시장심리 패널과 raw detail expander를 제거했다. 시장심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Final Review gate / score / 저장 / Monitoring signal에는 연결하지 않는다. |
 | `practical-validation-flow4-action-center-v1-20260709` | Completed record | Practical Validation Flow 4 `데이터 보강 대상`과 기존 Python 수집 버튼을 `데이터 보강 / 수집 실행` action center로 묶고, 버튼 주변에 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 명확히 표시한다. |
 | `practical-validation-flow4-data-action-board-v1-20260709` | Completed record | Practical Validation Flow 4 now reads `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`; React board is display-only and Python keeps provider collection / validation / gate / persistence boundaries. |

@@ -24,7 +24,8 @@ Last Verified: 2026-07-10
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Final Review Sentiment Scope Cleanup V1 2026-07-10](../tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
+- Latest completed task: [Final Review Candidate Selection Integration V1 2026-07-10](../tasks/active/final-review-candidate-selection-integration-v1-20260710/STATUS.md).
+- Previous completed task: [Final Review Sentiment Scope Cleanup V1 2026-07-10](../tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
 - Previous completed task: [Final Review Detailed Scorecard V1-V6 2026-07-09](../tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
 - Previous completed task: [Final Review Level3 React V2-V6 2026-07-09](../tasks/active/final-review-level3-react-v2-v6-20260709/STATUS.md).
 - Previous completed task: [Practical Validation Flow5 CTA Integration V1 2026-07-09](../tasks/active/practical-validation-flow5-cta-integration-v1-20260709/STATUS.md).

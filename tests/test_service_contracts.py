@@ -12451,6 +12451,33 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn(".fr-featured-badges", component_source)
         self.assertNotIn("grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));", component_source)
 
+    def test_final_review_candidate_queue_is_integrated_into_decision_desk(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        candidate_selection_area = workspace_body.split("investment_report = build_final_review_investment_report", 1)[0]
+
+        self.assertIn("def _render_candidate_selection_panel", page_source)
+        self.assertIn("_render_candidate_selection_panel(candidate_contexts)", candidate_selection_area)
+        self.assertNotIn('eyebrow="Step 1"', candidate_selection_area)
+        self.assertNotIn('title="Candidate Board"', candidate_selection_area)
+        self.assertNotIn("_render_candidate_board(candidate_contexts)", candidate_selection_area)
+        self.assertNotIn('eyebrow="Step ', workspace_body)
+        self.assertIn('eyebrow="Investment Report"', workspace_body)
+        self.assertIn('eyebrow="Selection Readiness"', workspace_body)
+        self.assertIn('eyebrow="Decision Record"', workspace_body)
+        self.assertIn('eyebrow="Evidence Appendix"', workspace_body)
+
+        helper_body = page_source.split("def _render_candidate_selection_panel", 1)[1]
+        helper_body = helper_body.split("def _render_decision_cockpit", 1)[0]
+        self.assertIn("Review Queue", helper_body)
+        self.assertIn('"검토 대상"', helper_body)
+        self.assertIn('"후보 비교 상세"', helper_body)
+        self.assertNotIn("render_fr_lane_grid", helper_body)
+        self.assertNotIn('"Select Ready"', helper_body)
+        self.assertNotIn('"Hold / Re-review"', helper_body)
+        self.assertNotIn('"Blocked"', helper_body)
+        self.assertNotIn('"Candidate Board detail"', helper_body)
+
     def test_final_review_first_read_excludes_market_sentiment_panel(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         workspace_body = page_source.split("def render_final_review_workspace", 1)[1]

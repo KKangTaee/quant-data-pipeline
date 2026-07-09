@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-sentiment-scope-cleanup-v1-20260710](./tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-candidate-selection-integration-v1-20260710](./tasks/active/final-review-candidate-selection-integration-v1-20260710/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-sentiment-scope-cleanup-v1-20260710](./tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
@@ -31,6 +32,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-10 - Final Review 후보 선택은 별도 Step이 아니라 Decision Desk 상세다
+
+- User request: 사용자가 Final Review `Step 1 / Candidate Board`의 4개 카드가 상단 `후보 현황과 다음 판단`과 겹치므로 제거하고, Review Queue / Candidate Board detail / 검토 대상 정보를 상단으로 옮겨 Step 1 자체를 없애도 될 것 같다고 요청함.
+- Interpreted goal: Final Review first-read는 Level2에서 승격한 후보 현황과 오늘 볼 대상을 한 곳에서 고르게 해야 하며, 같은 후보 상태를 별도 단계와 카드로 반복하면 판단 흐름이 느려진다.
+- Analysis result: Candidate Board read model은 계속 필요하지만 화면에서는 별도 stage가 아니라 Decision Desk의 후보 선택 상세로 소비하는 편이 맞다. 투자 검토서 이후 섹션도 numbered Step 대신 역할 이름으로 읽는 편이 자연스럽다.
+- Follow-up: `final-review-candidate-selection-integration-v1-20260710`에서 standalone `Step 1 / Candidate Board`를 제거하고 Review Queue / `검토 대상` selector / 후보 비교 상세를 Decision Desk 아래로 통합했다. score / gate / 저장 / provider fetch / registry write 경계는 변경하지 않았다.
 
 ### 2026-07-10 - Final Review first-read는 시장심리 패널을 소유하지 않는다
 
