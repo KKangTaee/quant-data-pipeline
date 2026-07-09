@@ -12277,6 +12277,56 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("criteriaGroups", wrapper_source)
         self.assertNotIn("reviewCount", wrapper_source)
 
+    def test_final_review_investment_report_react_component_is_ui_only(self) -> None:
+        component_root = Path("app/web/components/final_review_investment_report")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/FinalReviewInvestmentReport.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+        build_source = "".join(
+            path.read_text(encoding="utf-8")
+            for path in build_entry_path.parent.glob("assets/*.js")
+        )
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_final_review_investment_report_available", wrapper_source)
+        self.assertIn("render_final_review_investment_report", wrapper_source)
+        self.assertIn("FinalReviewInvestmentReport", component_source)
+        self.assertIn("Final Review 투자 검토서", component_source)
+        self.assertIn("강점", component_source)
+        self.assertIn("약점", component_source)
+        self.assertIn("Monitoring 조건", component_source)
+        self.assertIn("최종 판단 점수", component_source)
+        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("fetch(", component_source)
+        self.assertNotIn("localStorage", component_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertIn("Final Review 투자 검토서", build_source)
+        self.assertIn("강점", build_source)
+        self.assertIn("약점", build_source)
+        self.assertIn("Monitoring 조건", build_source)
+        self.assertIn("build_final_review_investment_report", page_source)
+        self.assertIn("render_final_review_investment_report", page_source)
+
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
             _conclusion_group_detail,
@@ -27146,6 +27196,103 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(board_rows[0]["Select Allowed"], "No")
         self.assertGreaterEqual(board_rows[0]["Blockers"], 1)
         self.assertEqual(board_rows[0]["NOT_RUN"], 1)
+
+    def test_final_review_investment_report_turns_packet_into_readable_review(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Ready candidate",
+        }
+        paper = {
+            "route": "PAPER_OBSERVATION_READY",
+            "blockers": [],
+            "review_cadence": "monthly_or_rebalance_review",
+            "tracking_benchmark": "SPY",
+            "review_triggers": ["CAGR deterioration review", "MDD breach review"],
+            "active_components": [{"title": "Ready component", "target_weight": 100.0}],
+            "baseline_snapshot": {"target_weight_total": 100.0},
+        }
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(report["schema_version"], "final_review_investment_report_v1")
+        self.assertEqual(report["recommendation"]["route"], "SELECT_FOR_PRACTICAL_PORTFOLIO")
+        self.assertEqual(report["recommendation"]["label"], "모니터링 후보 선정")
+        self.assertEqual(report["recommendation"]["state"], "SELECT_READY")
+        self.assertTrue(report["recommendation"]["monitoring_candidate"])
+        self.assertGreaterEqual(report["score"]["value"], 8.0)
+        self.assertGreaterEqual(len(report["strengths"]), 3)
+        self.assertEqual(report["weaknesses"], [])
+        self.assertEqual(report["monitoring_conditions"]["tracking_benchmark"], "SPY")
+        self.assertIn("MDD breach review", report["monitoring_conditions"]["review_triggers"])
+        self.assertFalse(report["boundaries"]["live_approval"])
+        self.assertFalse(report["boundaries"]["provider_fetch"])
+
+    def test_final_review_investment_report_surfaces_weaknesses_when_blocked(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-blocked-report"
+        validation["not_run_critical_domains"] = [
+            {
+                "domain": "stress_scenario_diagnostics",
+                "title": "Stress scenario diagnostics",
+                "next_action": "Run stress diagnostics before selection.",
+            }
+        ]
+        validation["diagnostic_summary"]["status_counts"]["NOT_RUN"] = 1
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": "validation-blocked-report",
+            "source_title": "Blocked candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(report["recommendation"]["route"], "RE_REVIEW_REQUIRED")
+        self.assertEqual(report["recommendation"]["state"], "SELECT_BLOCKED")
+        self.assertFalse(report["recommendation"]["monitoring_candidate"])
+        self.assertGreaterEqual(len(report["weaknesses"]), 1)
+        self.assertIn("Stress", report["weaknesses"][0]["title"])
+        self.assertIn("Run stress diagnostics before selection.", report["weaknesses"][0]["action"])
+        self.assertIn("critical blocker", report["summary"]["next_action"])
+        self.assertFalse(report["boundaries"]["order_instruction"])
 
     def test_final_review_candidate_board_prioritizes_ready_candidates(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_candidate_board

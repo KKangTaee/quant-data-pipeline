@@ -12,6 +12,7 @@ from app.services.backtest_evidence_read_model import (
     build_decision_dossier,
     build_final_review_candidate_board,
     build_final_review_decision_cockpit,
+    build_final_review_investment_report,
     build_final_review_decision_record_guide,
     build_saved_final_review_decision_review,
 )
@@ -37,6 +38,10 @@ from app.web.backtest_final_review.components import (
     render_fr_flow,
     render_fr_lane_grid,
     render_fr_section_header,
+)
+from app.web.components.final_review_investment_report import (
+    is_final_review_investment_report_available,
+    render_final_review_investment_report,
 )
 from app.web.backtest_portfolio_proposal_helpers import (
     _build_final_selection_decision_component_rows,
@@ -951,6 +956,81 @@ def _render_decision_cockpit(cockpit: dict[str, Any]) -> None:
                 st.info("관찰 전용 policy row가 없습니다.")
 
 
+def _render_investment_report_fallback(report: dict[str, Any]) -> None:
+    recommendation = dict(report.get("recommendation") or {})
+    score = dict(report.get("score") or {})
+    summary = dict(report.get("summary") or {})
+    monitoring = dict(report.get("monitoring_conditions") or {})
+    render_fr_action_panel(
+        title=str(summary.get("headline") or "Final Review 투자 검토서"),
+        detail=str(summary.get("verdict") or "-"),
+        route_label="Recommendation",
+        route_value=str(recommendation.get("label") or "-"),
+        route_detail=str(summary.get("next_action") or "-"),
+        route_tone=str(recommendation.get("tone") or "neutral"),
+        meta_items=[
+            {"label": "Score", "value": f"{float(score.get('value') or 0.0):.1f}"},
+            {"label": "Score Band", "value": score.get("label") or "-"},
+            {"label": "State", "value": recommendation.get("state_label") or "-"},
+            {"label": "Monitoring", "value": "Ready" if monitoring.get("handoff_ready") else "Blocked"},
+        ],
+    )
+    render_fr_lane_grid(
+        [
+            {
+                "kicker": "핵심 근거",
+                "title": str(summary.get("strongest_evidence") or "-"),
+                "status": len(report.get("strengths") or []),
+                "detail": "강점 근거",
+                "tone": "positive",
+            },
+            {
+                "kicker": "가장 큰 약점",
+                "title": str(summary.get("weakest_constraint") or "-"),
+                "status": len(report.get("weaknesses") or []),
+                "detail": "약점 / 보강 조건",
+                "tone": "warning" if report.get("weaknesses") else "positive",
+            },
+            {
+                "kicker": "Monitoring 조건",
+                "title": str(monitoring.get("tracking_benchmark") or "-"),
+                "status": len(monitoring.get("review_triggers") or []),
+                "detail": str(monitoring.get("review_cadence") or "-"),
+                "tone": "positive" if monitoring.get("handoff_ready") else "warning",
+            },
+        ],
+        min_width=220,
+    )
+    report_tabs = st.tabs(["강점", "약점", "해석"])
+    with report_tabs[0]:
+        rows = list(report.get("strengths") or [])
+        if rows:
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 강점 근거 없음")
+    with report_tabs[1]:
+        rows = list(report.get("weaknesses") or [])
+        if rows:
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        else:
+            st.success("선택 차단 약점 없음")
+    with report_tabs[2]:
+        interpretation_rows = [
+            dict(report.get("performance_interpretation") or {}),
+            dict(report.get("scenario_fit") or {}),
+            dict(report.get("expected_range_and_risk") or {}),
+            dict(report.get("benchmark_rationale") or {}),
+        ]
+        st.dataframe(pd.DataFrame(interpretation_rows), width="stretch", hide_index=True)
+
+
+def _render_investment_report(report: dict[str, Any], *, key: str) -> None:
+    if is_final_review_investment_report_available():
+        render_final_review_investment_report(report=report, key=key)
+        return
+    _render_investment_report_fallback(report)
+
+
 def _render_evidence_appendix(
     *,
     validation: dict[str, Any],
@@ -1388,9 +1468,28 @@ def render_final_review_workspace() -> None:
     evidence = dict(selected_context["decision_evidence"])
     investability_packet = dict(selected_context["investability_packet"])
     cockpit = dict(selected_context["cockpit"])
+    investment_report = build_final_review_investment_report(
+        source=source,
+        validation=validation,
+        paper_observation=paper_observation,
+        decision_evidence=evidence,
+        investability_packet=investability_packet,
+    )
 
     render_fr_section_header(
         eyebrow="Step 2",
+        title="Final Review 투자 검토서",
+        detail="최종 판단 요약, 강점 / 약점, 모니터링 조건을 먼저 읽고 Decision Cockpit에서 gate detail을 확인합니다.",
+        tone=str(dict(investment_report.get("recommendation") or {}).get("tone") or "neutral"),
+    )
+    with st.container(border=True):
+        _render_investment_report(
+            investment_report,
+            key=f"final_review_investment_report_{validation.get('validation_id') or source.get('source_id') or 'current'}",
+        )
+
+    render_fr_section_header(
+        eyebrow="Step 3",
         title="Decision Cockpit",
         detail="상세 표를 보기 전에 선정 차단, 보류 필요, 모니터링 후보 가능 여부와 monitoring seed를 먼저 확인합니다.",
         tone=_cockpit_tone(cockpit.get("state")),
@@ -1399,7 +1498,7 @@ def render_final_review_workspace() -> None:
         _render_decision_cockpit(cockpit)
 
     render_fr_section_header(
-        eyebrow="Step 3",
+        eyebrow="Step 4",
         title="Final Decision Action",
         detail="Decision Cockpit을 보고 최종 판단 기록과 Monitoring handoff 여부를 확인합니다.",
         tone="warning",

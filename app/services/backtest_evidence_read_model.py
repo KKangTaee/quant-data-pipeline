@@ -16,6 +16,7 @@ DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consisten
 CANDIDATE_BOARD_SCHEMA_VERSION = "final_review_candidate_board_v1"
 DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
 SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
+INVESTMENT_REPORT_SCHEMA_VERSION = "final_review_investment_report_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -1571,6 +1572,212 @@ def build_final_review_decision_cockpit(
             "validation_efficacy_route": summary.get("validation_efficacy_route") or "-",
             "data_coverage_route": summary.get("data_coverage_route") or "-",
             "backtest_realism_route": summary.get("backtest_realism_route") or "-",
+        },
+    }
+
+
+def _report_tone_from_state(state: Any) -> str:
+    state_text = str(state or "").upper()
+    if state_text == "SELECT_READY":
+        return "positive"
+    if state_text == "SELECT_BLOCKED":
+        return "danger"
+    return "warning"
+
+
+def _score_band(score: Any, state: Any) -> str:
+    numeric = _float_or_none(score)
+    state_text = str(state or "").upper()
+    if state_text == "SELECT_BLOCKED":
+        return "차단"
+    if numeric is None:
+        return "미산정"
+    if state_text == "SELECT_READY" and numeric < 6.0:
+        return "선정 가능 / 보강 추적"
+    if numeric >= 8.0:
+        return "강함"
+    if numeric >= 6.0:
+        return "보류권"
+    return "취약"
+
+
+def _report_policy_card(row: dict[str, Any], *, fallback_title: str, tone: str) -> dict[str, Any]:
+    return {
+        "title": _safe_text(row.get("Criteria") or row.get("Group"), fallback_title),
+        "detail": _safe_text(row.get("Evidence") or row.get("Current"), "-"),
+        "action": _safe_text(row.get("Required Action") or row.get("Next Action"), "-"),
+        "severity": _safe_text(row.get("Severity"), "PASS"),
+        "tone": tone,
+    }
+
+
+def _report_strengths(cockpit: dict[str, Any], packet: dict[str, Any]) -> list[dict[str, Any]]:
+    strengths = [
+        _report_policy_card(dict(row or {}), fallback_title="Evidence ready", tone="positive")
+        for row in list(cockpit.get("ready_rows") or [])
+        if isinstance(row, dict)
+    ]
+    if strengths:
+        return strengths[:6]
+    fallback_rows = [
+        dict(row or {})
+        for row in list(packet.get("checks") or [])
+        if isinstance(row, dict) and _ready_from_check(dict(row or {}))
+    ]
+    return [
+        {
+            "title": _safe_text(row.get("Section") or row.get("Criteria"), "Evidence ready"),
+            "detail": _safe_text(row.get("Meaning") or row.get("Current"), "-"),
+            "action": "추가 조치 없음",
+            "severity": "PASS",
+            "tone": "positive",
+        }
+        for row in fallback_rows[:6]
+    ]
+
+
+def _report_weaknesses(cockpit: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for gap in list(cockpit.get("critical_gaps") or []):
+        if not isinstance(gap, dict):
+            continue
+        gap_row = dict(gap or {})
+        severity = "BLOCK" if str(gap_row.get("Severity") or "").upper() == "BLOCK" else "REVIEW_REQUIRED"
+        rows.append(
+            {
+                "title": _safe_text(gap_row.get("Area"), "Critical gap"),
+                "detail": _safe_text(gap_row.get("Gap"), "-"),
+                "action": _safe_text(gap_row.get("Required Action"), "-"),
+                "severity": severity,
+                "tone": "danger" if severity == "BLOCK" else "warning",
+            }
+        )
+    for row in list(cockpit.get("must_fix_rows") or []):
+        if isinstance(row, dict):
+            rows.append(_report_policy_card(dict(row or {}), fallback_title="Selection blocker", tone="danger"))
+    for row in list(cockpit.get("must_review_rows") or []):
+        if isinstance(row, dict):
+            rows.append(_report_policy_card(dict(row or {}), fallback_title="Review required", tone="warning"))
+    return rows[:6]
+
+
+def build_final_review_investment_report(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    paper_observation: dict[str, Any],
+    decision_evidence: dict[str, Any],
+    investability_packet: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a human-readable Final Review report from existing evidence only."""
+
+    source = dict(source or {})
+    validation = dict(validation or {})
+    paper_observation = dict(paper_observation or {})
+    decision_evidence = dict(decision_evidence or {})
+    packet = dict(investability_packet or {})
+    cockpit = build_final_review_decision_cockpit(
+        source=source,
+        validation=validation,
+        paper_observation=paper_observation,
+        decision_evidence=decision_evidence,
+        investability_packet=packet,
+    )
+    state = str(cockpit.get("state") or "")
+    suggested_route = str(cockpit.get("suggested_decision_route") or SELECT_FOR_PRACTICAL_PORTFOLIO)
+    score_value = _float_or_none(packet.get("score") if packet.get("score") is not None else decision_evidence.get("score"))
+    score_value = round(score_value, 1) if score_value is not None else 0.0
+    tone = _report_tone_from_state(state)
+    monitoring = dict(cockpit.get("monitoring_handoff") or {})
+    strengths = _report_strengths(cockpit, packet)
+    weaknesses = _report_weaknesses(cockpit)
+    if state == "SELECT_READY":
+        headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
+    elif state == "SELECT_BLOCKED":
+        headline = "Monitoring handoff 전에 반드시 해소해야 할 차단 항목이 있습니다."
+    else:
+        headline = "선정 전 추가 관찰 또는 재검토가 필요한 후보입니다."
+    return {
+        "schema_version": INVESTMENT_REPORT_SCHEMA_VERSION,
+        "source": {
+            "title": source.get("source_title") or cockpit.get("source_title") or "-",
+            "type": source.get("source_type") or cockpit.get("source_type") or "-",
+            "source_id": source.get("source_id") or dict(packet.get("source_chain") or {}).get("source_id") or "-",
+            "validation_id": validation.get("validation_id") or dict(packet.get("source_chain") or {}).get("validation_id") or "-",
+        },
+        "recommendation": {
+            "route": suggested_route,
+            "label": _decision_route_label(suggested_route),
+            "state": state,
+            "state_label": cockpit.get("state_label") or "-",
+            "tone": tone,
+            "monitoring_candidate": bool(cockpit.get("select_allowed")),
+            "monitoring_handoff_state": "ready" if cockpit.get("select_allowed") else "blocked",
+        },
+        "score": {
+            "value": score_value,
+            "label": _score_band(score_value, state),
+            "basis": "Investability packet ready-check ratio",
+        },
+        "summary": {
+            "headline": headline,
+            "verdict": cockpit.get("verdict") or packet.get("verdict") or "-",
+            "next_action": cockpit.get("next_action") or packet.get("next_action") or "-",
+            "strongest_evidence": strengths[0]["title"] if strengths else "근거 확인 필요",
+            "weakest_constraint": weaknesses[0]["title"] if weaknesses else "현재 선택 차단 약점 없음",
+        },
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "performance_interpretation": {
+            "title": "과거 성과 해석",
+            "detail": _safe_text(packet.get("verdict") or decision_evidence.get("verdict"), cockpit.get("verdict") or "-"),
+            "score": score_value,
+        },
+        "scenario_fit": {
+            "title": "환경 적합성",
+            "detail": _safe_text(
+                monitoring.get("tracking_benchmark"),
+                "시장 / 매크로 적합성은 기존 robustness, provider, benchmark evidence를 기준으로 해석합니다.",
+            ),
+            "review_cadence": monitoring.get("review_cadence") or "-",
+        },
+        "expected_range_and_risk": {
+            "title": "향후 기대 / 리스크 범위",
+            "detail": "과거 backtest와 validation evidence 기반의 관찰 후보 판단입니다. 미래 수익 보장이나 주문 지시가 아닙니다.",
+            "open_review_items": int(dict(cockpit.get("metrics") or {}).get("open_review_items", 0) or 0),
+            "policy_blockers": int(dict(cockpit.get("metrics") or {}).get("policy_blockers", 0) or 0),
+        },
+        "benchmark_rationale": {
+            "title": "Benchmark / 대체 전략 대비 선택 이유",
+            "detail": _safe_text(
+                next(
+                    (
+                        dict(row or {}).get("Evidence") or dict(row or {}).get("Current")
+                        for row in list(dict(packet.get("selection_gate_policy_snapshot") or {}).get("policy_rows") or [])
+                        if str(dict(row or {}).get("Group") or "") == "benchmark"
+                    ),
+                    "",
+                ),
+                "Benchmark parity evidence를 Evidence Appendix와 gate policy에서 확인합니다.",
+            ),
+        },
+        "monitoring_conditions": {
+            "handoff_ready": bool(cockpit.get("select_allowed")),
+            "tracking_benchmark": monitoring.get("tracking_benchmark") or "-",
+            "review_cadence": monitoring.get("review_cadence") or "-",
+            "review_triggers": list(monitoring.get("review_triggers") or []),
+            "active_components": int(monitoring.get("active_components") or 0),
+            "target_weight_total": monitoring.get("target_weight_total"),
+        },
+        "boundaries": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "registry_write": False,
+            "storage_append": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "account_sync": False,
+            "auto_rebalance": False,
         },
     }
 
