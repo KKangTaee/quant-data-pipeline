@@ -1502,17 +1502,10 @@ def render_final_review_workspace() -> None:
         investability_packet=investability_packet,
     )
 
-    render_fr_section_header(
-        eyebrow="Investment Report",
-        title="Final Review 투자 검토서",
-        detail="최종 판단 요약, 강점 / 약점, 모니터링 조건을 먼저 읽고 Decision Cockpit에서 gate detail을 확인합니다.",
-        tone=str(dict(investment_report.get("recommendation") or {}).get("tone") or "neutral"),
+    _render_investment_report(
+        investment_report,
+        key=f"final_review_investment_report_{validation.get('validation_id') or source.get('source_id') or 'current'}",
     )
-    with st.container(border=True):
-        _render_investment_report(
-            investment_report,
-            key=f"final_review_investment_report_{validation.get('validation_id') or source.get('source_id') or 'current'}",
-        )
 
     render_fr_section_header(
         eyebrow="Selection Readiness",

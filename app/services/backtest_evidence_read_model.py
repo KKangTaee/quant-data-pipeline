@@ -1768,7 +1768,7 @@ def _build_decision_summary(
     classification_label = _safe_text(scorecard.get("classification_label"), _safe_text(selection_rationale.get("classification_label"), "-"))
     monitoring_candidate = bool(scorecard.get("monitoring_candidate"))
     headline = (
-        "Portfolio Monitoring 후보로 저장 가능"
+        "모니터링 후보로 검토할 수 있습니다"
         if monitoring_candidate
         else f"{classification_label} 상태로 추가 판단 필요"
     )

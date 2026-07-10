@@ -754,9 +754,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const weaknessImprovement = report.weaknessImprovement ?? report.weakness_improvement ?? {}
   const level2Summary = level2Review.summary ?? {}
   const level2RoleSections = field(level2Review.roleSections, level2Review.role_sections) ?? []
-  const handoffReady = field(monitoring.handoffReady, monitoring.handoff_ready) === true
-  const monitoringCandidate = field(recommendation.monitoringCandidate, recommendation.monitoring_candidate) === true
-  const openReviewCount = field(level2Summary.openReview, level2Summary.open_review) ?? 0
+  const reviewItemCount = Number(level2Summary.total ?? 0)
   const scorecardOverall = field(scorecard.overallScore, scorecard.overall_score)
   const scorecardBand = field(scorecard.scoreBand, scorecard.score_band)
   const scorecardClassification = field(scorecard.classificationLabel, scorecard.classification_label)
@@ -777,10 +775,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const improvementStatus = field(improvementComparison.verificationStatus, improvementComparison.verification_status)
   const metaItems: MetaItem[] = [
     { label: "후보", value: compact(source.title) },
-    { label: "판단 상태", value: compact(recommendation.stateLabel ?? recommendation.state_label), tone: recommendation.tone },
-    { label: "Monitoring 후보", value: monitoringCandidate ? "가능" : "불가", tone: monitoringCandidate ? "positive" : "warning" },
-    { label: "Handoff", value: handoffReady ? "Ready" : "Blocked", tone: handoffReady ? "positive" : "danger" },
-    { label: "Level2 open", value: String(openReviewCount), tone: openReviewCount > 0 ? "warning" : "positive" },
+    { label: "확인 필요", value: `${reviewItemCount}개`, tone: reviewItemCount > 0 ? "warning" : "positive" },
   ]
   const detailTabs: DetailTab[] = [
     {
@@ -904,7 +899,12 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
     <section className={`fr-invest-report fr-invest-report--${tone}`}>
       <header className="fr-invest-report__header">
         <div>
-          <div className="fr-invest-report__kicker">Final Review 투자 검토서</div>
+          <div className="fr-invest-report__title-row">
+            <div className="fr-invest-report__kicker">Final Review 투자 검토서</div>
+            <span className={`fr-invest-report__status fr-invest-report__status--${tone}`}>
+              {compact(recommendation.stateLabel ?? recommendation.state_label)}
+            </span>
+          </div>
           <h3>{compact(decisionSummary.headline, compact(summary.headline, "최종 검토 요약"))}</h3>
           <p>{compact(summary.verdict)}</p>
         </div>
