@@ -12516,14 +12516,35 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         helper_body = page_source.split("def _render_candidate_selection_panel", 1)[1]
         helper_body = helper_body.split("def _render_decision_cockpit", 1)[0]
-        self.assertIn("Review Queue", helper_body)
+        self.assertNotIn("Review Queue", helper_body)
         self.assertIn('"검토 대상"', helper_body)
         self.assertIn('"후보 비교 상세"', helper_body)
+        self.assertIn("options=candidate_keys", helper_body)
+        self.assertIn("format_func=lambda candidate_key", helper_body)
+        self.assertNotIn("labels.index", helper_body)
         self.assertNotIn("render_fr_lane_grid", helper_body)
         self.assertNotIn('"Select Ready"', helper_body)
         self.assertNotIn('"Hold / Re-review"', helper_body)
         self.assertNotIn('"Blocked"', helper_body)
         self.assertNotIn('"Candidate Board detail"', helper_body)
+
+    def test_final_review_candidate_selector_key_does_not_depend_on_duplicate_labels(self) -> None:
+        from app.web.backtest_final_review.page import _final_review_candidate_key
+
+        first = {
+            "label": "중복 후보명",
+            "source": {"source_type": "practical_validation_result", "source_id": "validation-a"},
+            "validation": {"validation_id": "validation-a", "selection_source_id": "source-a"},
+        }
+        second = {
+            "label": "중복 후보명",
+            "source": {"source_type": "practical_validation_result", "source_id": "validation-b"},
+            "validation": {"validation_id": "validation-b", "selection_source_id": "source-b"},
+        }
+
+        self.assertEqual(_final_review_candidate_key(first), "practical_validation_result:validation-a")
+        self.assertEqual(_final_review_candidate_key(second), "practical_validation_result:validation-b")
+        self.assertNotEqual(_final_review_candidate_key(first), _final_review_candidate_key(second))
 
     def test_final_review_first_read_excludes_market_sentiment_panel(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")

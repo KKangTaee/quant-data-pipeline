@@ -754,6 +754,12 @@ def _build_candidate_contexts(
         contexts.append(
             {
                 "label": str(option.get("label") or option.get("source_id") or "-"),
+                "candidate_key": _final_review_candidate_key(
+                    {
+                        "source": source,
+                        "validation": validation,
+                    }
+                ),
                 "source": source,
                 "validation": validation,
                 "paper_observation": paper_observation,
@@ -765,32 +771,64 @@ def _build_candidate_contexts(
     return contexts
 
 
+def _final_review_candidate_key(context: dict[str, Any]) -> str:
+    """Build a stable Final Review selector identity without using display labels."""
+
+    source = dict(context.get("source") or {})
+    validation = dict(context.get("validation") or {})
+    source_type = str(source.get("source_type") or validation.get("source_type") or "unknown").strip()
+    validation_id = str(validation.get("validation_id") or "").strip()
+    selection_source_id = str(validation.get("selection_source_id") or "").strip()
+    source_id = str(source.get("source_id") or "").strip()
+    identity = validation_id or selection_source_id or source_id
+    return f"{source_type}:{identity or 'missing'}"
+
+
+def _default_candidate_key(
+    candidate_contexts: list[dict[str, Any]],
+    board_rows: list[dict[str, Any]],
+) -> str:
+    if not candidate_contexts:
+        return ""
+    first_row = dict(board_rows[0] or {}) if board_rows else {}
+    first_validation_id = str(first_row.get("Validation ID") or "").strip()
+    first_source_id = str(first_row.get("Source ID") or "").strip()
+    for context in candidate_contexts:
+        validation = dict(context.get("validation") or {})
+        source = dict(context.get("source") or {})
+        if first_validation_id not in {"", "-"} and first_validation_id == str(validation.get("validation_id") or "").strip():
+            return str(context.get("candidate_key") or "")
+        context_source_ids = {
+            str(validation.get("selection_source_id") or "").strip(),
+            str(source.get("source_id") or "").strip(),
+        }
+        if first_source_id not in {"", "-"} and first_source_id in context_source_ids:
+            return str(context.get("candidate_key") or "")
+    return str(candidate_contexts[0].get("candidate_key") or "")
+
+
 def _render_candidate_selection_panel(candidate_contexts: list[dict[str, Any]]) -> dict[str, Any]:
     board = build_final_review_candidate_board(candidate_contexts)
     rows = list(board.get("rows") or [])
     if not candidate_contexts:
         st.info("표시할 Final Review 후보가 없습니다.")
         return {}
-    summary = dict(board.get("summary") or {})
-    queue_rows = list(board.get("review_queue_rows") or [])
-    if queue_rows:
-        st.markdown("###### Review Queue")
-        st.dataframe(pd.DataFrame(queue_rows), width="stretch", hide_index=True)
-        st.caption("Review Queue는 기존 evidence 기준으로 오늘 먼저 볼 후보 순서를 보여주며, 저장 / 점수 / gate 계산을 바꾸지 않습니다.")
-    elif rows:
-        st.info("Review Queue로 표시할 우선순위 후보가 없습니다.")
-
     st.markdown("###### 검토 대상")
-    labels = [str(context["label"]) for context in candidate_contexts]
-    first_review_candidate = str(summary.get("first_review_candidate") or "")
-    default_index = labels.index(first_review_candidate) if first_review_candidate in labels else 0
-    selected_label = st.selectbox(
+    candidate_by_key = {
+        str(context["candidate_key"]): context
+        for context in candidate_contexts
+    }
+    candidate_keys = list(candidate_by_key)
+    default_key = _default_candidate_key(candidate_contexts, rows)
+    default_index = candidate_keys.index(default_key) if default_key in candidate_keys else 0
+    selected_key = st.selectbox(
         "검토 대상",
-        options=labels,
+        options=candidate_keys,
         index=default_index,
         key="final_review_source_selected",
+        format_func=lambda candidate_key: str(candidate_by_key[candidate_key]["label"]),
     )
-    selected_context = candidate_contexts[labels.index(selected_label)]
+    selected_context = candidate_by_key[selected_key]
     source = dict(selected_context["source"])
     render_badge_strip(
         [
