@@ -37,7 +37,8 @@
 .fr-invest-report__section-head span,
 .fr-invest-report__lane-title,
 .fr-invest-report__meta-item dt,
-.fr-invest-report__detail-disclosure summary span,
+.fr-invest-report__detail-tab span,
+.fr-invest-report__detail-panel-head span,
 .fr-invest-report__score span,
 .fr-invest-report__score small {
   color: #526070;
@@ -319,49 +320,70 @@
   gap: 6px;
 }
 
-.fr-invest-report__detail-disclosure {
-  margin-top: 16px;
+.fr-invest-report__detail-tabs {
+  margin-top: 18px;
   border-top: 1px solid #d8dee8;
+  padding-top: 12px;
 }
 
-.fr-invest-report__detail-disclosure summary {
+.fr-invest-report__detail-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fr-invest-report__detail-tab {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  min-height: 46px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.fr-invest-report__detail-disclosure summary::-webkit-details-marker {
-  display: none;
-}
-
-.fr-invest-report__detail-disclosure summary::after {
-  content: "열기";
+  gap: 2px;
+  min-width: 132px;
   border: 1px solid #d8dee8;
   border-radius: 999px;
-  padding: 4px 9px;
-  color: #526070;
-  font-size: 11px;
-  font-weight: 900;
+  background: #ffffff;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 7px 12px;
+  text-align: left;
 }
 
-.fr-invest-report__detail-disclosure[open] summary::after {
-  content: "닫기";
+.fr-invest-report__detail-tab:hover,
+.fr-invest-report__detail-tab:focus-visible {
+  border-color: #94a3b8;
+  outline: none;
 }
 
-.fr-invest-report__detail-disclosure summary strong {
+.fr-invest-report__detail-tab--active {
+  border-color: #16806a;
+  background: #ecfdf5;
+  box-shadow: inset 0 0 0 1px rgba(22, 128, 106, 0.16);
+}
+
+.fr-invest-report__detail-tab strong {
   display: block;
+  overflow: hidden;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fr-invest-report__detail-panel {
+  margin-top: 14px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 14px;
+}
+
+.fr-invest-report__detail-panel-head {
+  margin-bottom: 12px;
+}
+
+.fr-invest-report__detail-panel-head h5 {
   margin-top: 3px;
   color: #111827;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.3;
-}
-
-.fr-invest-report__detail-body {
-  padding: 2px 0 16px;
 }
 
 .fr-invest-report__scorecard-detail,
@@ -724,5 +746,15 @@
 
   .fr-invest-report__inline-badges {
     justify-content: start;
+  }
+
+  .fr-invest-report__detail-tablist {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .fr-invest-report__detail-tab {
+    min-width: 0;
+    border-radius: 8px;
   }
 }

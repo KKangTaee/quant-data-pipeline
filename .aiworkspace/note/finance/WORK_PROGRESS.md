@@ -5982,3 +5982,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - React first-read는 meta strip, `왜 후보인가` / `무엇을 확인해야 하나`, 강점 / 확인 지점 rows, 해석 rows로 정리했고, 상세 scorecard / Level2 / handoff / 개선안 / Monitoring 조건은 disclosure로 낮췄다.
 - Python score / gate / route / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
 - QA: RED/GREEN source contract, focused service / React contract 51개, py_compile, npm build, diff check, Browser QA 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.
+
+## 2026-07-11 - Final Review Investment Report Detail Tabs V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-investment-report-detail-tabs-v1-20260711/`에서 1차~4차 하단 상세 탭 전환 작업을 완료했다.
+- React lower detail 영역은 expander 5개 대신 `근거 상세`, `저장 경계`, `개선 후보`, `Review 처리`, `Monitoring` 탭과 단일 panel로 렌더링한다.
+- Python score / gate / route / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+- QA: RED/GREEN source contract, focused service / React contract 51개, py_compile, npm build, diff check, Browser QA tab click 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.

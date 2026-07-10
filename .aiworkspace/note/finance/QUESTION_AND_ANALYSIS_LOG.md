@@ -9215,3 +9215,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: first-read는 후보 상태, 왜 후보인지, 무엇을 확인해야 하는지에 집중하고, detailed score / Level2 / handoff / monitoring 조건은 검산용 하위 근거로 낮춰야 함.
 - Analysis result: 상용 투자 앱류의 scan-first 패턴은 핵심 상태와 다음 판단을 압축하고 상세 근거는 뒤로 접는다. 기존 React report는 facts, decision grid, card list, mini grid가 같은 박스 문법을 반복해 사용자가 판단보다 UI 구조를 먼저 읽게 했다.
 - Follow-up: React report를 meta strip, two-column decision brief, evidence rows, interpretation rows, lower detail disclosures로 평면화했고, source contract로 old first-read card classes를 금지했다. Python read model, score / gate / save / handoff / provider / registry boundary는 유지했다.
+
+### 2026-07-11 - Final Review 투자 검토서 하단 상세는 탭으로 전환한다
+
+- User request: 사용자가 하단 `근거 상세`, `저장 경계`, `개선 후보` 등 expander가 세로로 반복되는 대신 탭을 눌렀을 때 하단에 해당 내용만 보이게 해달라고 요청하고 1차~4차 개발을 승인함.
+- Interpreted goal: first-read 아래 검산용 근거를 한 번에 펼치는 목록이 아니라, 사용자가 관심 있는 상세 범주 하나를 선택해 읽는 tabbed detail panel로 바꿔야 함.
+- Analysis result: expander는 여러 섹션을 동시에 열 수 있지만 화면 높이를 늘리고 제목 / 열기 버튼 반복을 만든다. 현재 흐름에서는 탭이 세부 근거 탐색 부담을 줄인다.
+- Follow-up: React investment report의 lower detail 영역을 `DetailTabs`로 교체했고, source contract는 old `detail-disclosure` class를 금지한다. 탭 상태는 React local state이며 Python read model, score / gate / save / handoff / provider / registry boundary는 유지했다.

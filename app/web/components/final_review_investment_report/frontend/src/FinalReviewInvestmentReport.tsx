@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import { Streamlit } from "streamlit-component-lib"
 
 type Tone = "positive" | "warning" | "danger" | "neutral"
@@ -506,15 +506,58 @@ function InterpretationRows({ cards }: { cards: InterpretationCard[] }) {
   )
 }
 
-function DetailDisclosure({ title, eyebrow, children }: { title: string; eyebrow?: string; children: React.ReactNode }) {
+type DetailTab = {
+  id: string
+  label: string
+  title: string
+  children: React.ReactNode
+}
+
+function DetailTabs({ tabs }: { tabs: DetailTab[] }) {
+  const [activeId, setActiveId] = useState(tabs[0]?.id ?? "")
+  const activeTab = tabs.find((tab) => tab.id === activeId) ?? tabs[0]
+
+  useEffect(() => {
+    Streamlit.setFrameHeight()
+  }, [activeId])
+
+  if (!activeTab) return null
+
   return (
-    <details className="fr-invest-report__detail-disclosure">
-      <summary>
-        <span>{compact(eyebrow, "근거 상세")}</span>
-        <strong>{title}</strong>
-      </summary>
-      <div className="fr-invest-report__detail-body">{children}</div>
-    </details>
+    <section className="fr-invest-report__detail-tabs" aria-label="근거 상세 탭">
+      <div className="fr-invest-report__detail-tablist" role="tablist" aria-label="투자 검토서 상세 근거">
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeTab.id
+          return (
+            <button
+              aria-controls={`fr-invest-report-panel-${tab.id}`}
+              aria-selected={isActive}
+              className={`fr-invest-report__detail-tab${isActive ? " fr-invest-report__detail-tab--active" : ""}`}
+              id={`fr-invest-report-tab-${tab.id}`}
+              key={tab.id}
+              onClick={() => setActiveId(tab.id)}
+              role="tab"
+              type="button"
+            >
+              <span>{tab.label}</span>
+              <strong>{tab.title}</strong>
+            </button>
+          )
+        })}
+      </div>
+      <div
+        aria-labelledby={`fr-invest-report-tab-${activeTab.id}`}
+        className="fr-invest-report__detail-panel"
+        id={`fr-invest-report-panel-${activeTab.id}`}
+        role="tabpanel"
+      >
+        <div className="fr-invest-report__detail-panel-head">
+          <span>{activeTab.label}</span>
+          <h5>{activeTab.title}</h5>
+        </div>
+        {activeTab.children}
+      </div>
+    </section>
   )
 }
 
@@ -704,34 +747,12 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
     { label: "Handoff", value: handoffReady ? "Ready" : "Blocked", tone: handoffReady ? "positive" : "danger" },
     { label: "Level2 open", value: String(openReviewCount), tone: openReviewCount > 0 ? "warning" : "positive" },
   ]
-
-  return (
-    <section className={`fr-invest-report fr-invest-report--${tone}`}>
-      <header className="fr-invest-report__header">
-        <div>
-          <div className="fr-invest-report__kicker">Final Review 투자 검토서</div>
-          <h3>{compact(decisionSummary.headline, compact(summary.headline, "최종 검토 요약"))}</h3>
-          <p>{compact(summary.verdict)}</p>
-        </div>
-        <aside className="fr-invest-report__score" aria-label="최종 판단 점수">
-          <span>{compact(recommendation.label)}</span>
-          <strong>{formattedScore(score.value)}</strong>
-          <small>{compact(score.label)}</small>
-        </aside>
-      </header>
-
-      <MetaStrip items={metaItems} />
-
-      <DecisionBriefPanel summary={decisionSummary} />
-
-      <div className="fr-invest-report__evidence">
-        <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />
-        <EvidenceRows title="확인 지점" items={watchItems} emptyLabel="확인 지점 없음" limit={2} />
-      </div>
-
-      <InterpretationRows cards={interpretationCards} />
-
-      <DetailDisclosure eyebrow="근거 상세" title="최종 점수 체계">
+  const detailTabs: DetailTab[] = [
+    {
+      id: "score-evidence",
+      label: "근거 상세",
+      title: "최종 점수 체계",
+      children: (
         <section className="fr-invest-report__scorecard-detail">
           <div className="fr-invest-report__scorecard-head">
             <div>
@@ -762,9 +783,13 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           <ReviewImpactList impacts={scorecardReviewImpacts} />
           <ScorecardCategoryList categories={scorecard.categories ?? []} />
         </section>
-      </DetailDisclosure>
-
-      <DetailDisclosure eyebrow="저장 경계" title="저장 / Monitoring handoff">
+      ),
+    },
+    {
+      id: "save-boundary",
+      label: "저장 경계",
+      title: "저장 / Monitoring handoff",
+      children: (
         <section className="fr-invest-report__handoff-detail">
           <div>
             <span>저장 / Monitoring handoff</span>
@@ -789,9 +814,13 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
             </article>
           </div>
         </section>
-      </DetailDisclosure>
-
-      <DetailDisclosure eyebrow="개선 후보" title="약점 개선안">
+      ),
+    },
+    {
+      id: "improvement-candidates",
+      label: "개선 후보",
+      title: "약점 개선안",
+      children: (
         <section className="fr-invest-report__improvement-detail">
           <div className="fr-invest-report__improvement-head">
             <div>
@@ -815,9 +844,13 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
             ))}
           </div>
         </section>
-      </DetailDisclosure>
-
-      <DetailDisclosure eyebrow="Review 처리" title="Level2 REVIEW 처리 결과">
+      ),
+    },
+    {
+      id: "review-disposition",
+      label: "Review 처리",
+      title: "Level2 REVIEW 처리 결과",
+      children: (
         <section className="fr-invest-report__review-disposition">
           <div className="fr-invest-report__review-head">
             <div>
@@ -838,9 +871,13 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
             <ReviewDispositionList title="Monitoring Follow-up" items={monitoringFollowupItems} emptyLabel="Monitoring 추적 항목 없음" />
           </div>
         </section>
-      </DetailDisclosure>
-
-      <DetailDisclosure eyebrow="Monitoring" title="Monitoring 조건">
+      ),
+    },
+    {
+      id: "monitoring-conditions",
+      label: "Monitoring",
+      title: "Monitoring 조건",
+      children: (
         <footer className="fr-invest-report__monitoring">
           <div>
             <span>Monitoring 조건</span>
@@ -851,7 +888,37 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
             {triggers.length > 0 ? triggers.map((trigger, index) => <li key={`${trigger}-${index}`}>{trigger}</li>) : <li>추적 trigger 없음</li>}
           </ul>
         </footer>
-      </DetailDisclosure>
+      ),
+    },
+  ]
+
+  return (
+    <section className={`fr-invest-report fr-invest-report--${tone}`}>
+      <header className="fr-invest-report__header">
+        <div>
+          <div className="fr-invest-report__kicker">Final Review 투자 검토서</div>
+          <h3>{compact(decisionSummary.headline, compact(summary.headline, "최종 검토 요약"))}</h3>
+          <p>{compact(summary.verdict)}</p>
+        </div>
+        <aside className="fr-invest-report__score" aria-label="최종 판단 점수">
+          <span>{compact(recommendation.label)}</span>
+          <strong>{formattedScore(score.value)}</strong>
+          <small>{compact(score.label)}</small>
+        </aside>
+      </header>
+
+      <MetaStrip items={metaItems} />
+
+      <DecisionBriefPanel summary={decisionSummary} />
+
+      <div className="fr-invest-report__evidence">
+        <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />
+        <EvidenceRows title="확인 지점" items={watchItems} emptyLabel="확인 지점 없음" limit={2} />
+      </div>
+
+      <InterpretationRows cards={interpretationCards} />
+
+      <DetailTabs tabs={detailTabs} />
     </section>
   )
 }

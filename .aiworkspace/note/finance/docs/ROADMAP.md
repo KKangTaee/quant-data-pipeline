@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-10
+Last Verified: 2026-07-11
 
 ## Current State After Master Merge
 
@@ -9,7 +9,14 @@ Last Verified: 2026-07-10
 
 현재 active task는 없다.
 
-Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-flat-ui-v1-20260710/`다.
+Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-detail-tabs-v1-20260711/`다.
+
+- 목적: Final Review `투자 검토서` 하단 상세 근거가 expander 5개로 세로 반복되어 다시 긴 목록처럼 보이는 문제를 줄였다.
+- 주요 변경: React investment report lower detail 영역을 `근거 상세`, `저장 경계`, `개선 후보`, `Review 처리`, `Monitoring` 탭으로 바꿨고, 선택한 탭 하나의 내용만 하단 panel에 표시한다.
+- 판단 경계: 탭 상태는 React local UI state일 뿐이며 Python score, gate, route decision, save guidance, Monitoring handoff, provider / persistence boundary는 변경하지 않았다.
+- QA: RED/GREEN source contract, focused Final Review / evidence service tests 51개, py_compile, npm build, `git diff --check`, Browser QA tab click과 screenshot을 확인했다.
+
+Previous completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-flat-ui-v1-20260710/`다.
 
 - 목적: Final Review `투자 검토서`가 박스 안에 박스가 반복되는 dashboard처럼 보여 Monitoring 후보 여부, 추천 이유, 확인 지점을 빠르게 읽기 어려운 문제를 줄였다.
 - 주요 변경: React investment report first-read를 meta strip, `왜 후보인가` / `무엇을 확인해야 하나` decision brief, capped strength / watch rows, interpretation rows로 평면화했다. 상세 scorecard, Level2 REVIEW 처리, 저장 / Monitoring handoff, 약점 개선안, Monitoring 조건은 lower disclosure로 낮췄다.
