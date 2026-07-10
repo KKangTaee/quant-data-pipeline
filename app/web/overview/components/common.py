@@ -5313,8 +5313,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	.ov-mm-research-chart-bar-plot {
 	  display: grid;
 	  grid-auto-flow: column;
-	  grid-auto-columns: 4rem;
-	  gap: 0.25rem;
+	  grid-auto-columns: var(--ov-mm-research-chart-column-width, 64px);
+	  gap: var(--ov-mm-research-chart-gap, 4px);
 	  align-items: end;
 	  position: relative;
 	  z-index: 1;
@@ -5325,8 +5325,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  grid-template-rows: 13.4rem auto;
 	  gap: 0.32rem;
 	  align-items: stretch;
-	  width: 4rem;
-	  min-width: 4rem;
+	  width: var(--ov-mm-research-chart-column-width, 64px);
+	  min-width: var(--ov-mm-research-chart-column-width, 64px);
 	}
 	.ov-mm-research-chart-label,
 	.ov-mm-research-chart-value {
@@ -5479,7 +5479,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	    grid-template-columns: 1fr;
 	  }
 	  .ov-mm-research-chart-bar-plot {
-	    grid-auto-columns: 4rem;
+	    grid-auto-columns: var(--ov-mm-research-chart-column-width, 64px);
 	    grid-template-columns: none;
 	  }
 		  .ov-mm-research-grid {

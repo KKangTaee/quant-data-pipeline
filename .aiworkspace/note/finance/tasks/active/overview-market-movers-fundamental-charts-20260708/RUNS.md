@@ -43,3 +43,5 @@
 - `.venv/bin/python -m py_compile app/services/overview/why_it_moved.py app/web/overview/market_movers_helpers.py app/web/overview/components/market_movers.py tests/test_service_contracts.py` -> PASS.
 - `git diff --check` -> PASS.
 - Browser QA on `http://localhost:8510/?overview_tab=market-movers`: `당기순이익` 탭에서 연간/분기 그래프가 보이고, 분기 scroll container는 `clientWidth 529` / `scrollWidth 2172`로 overflow 확인. DOM text에 raw `620,000,000`은 없고 `억 달러` 단위 표시가 확인됨. Screenshot saved as generated artifact `browser-qa-fundamental-income-scroll.png`.
+- 2026-07-11: chart column alignment focused unittest 4건 PASS, component/common/tests `py_compile` PASS, `git diff --check` PASS.
+- 2026-07-11 Browser QA on `http://localhost:8507`: `당기순이익` 연간/분기 패널의 computed column width `64px`, gap `4px`, SVG point center와 bar center 최대 차이 `0px`, console error 0건 확인. Screenshot saved as generated artifact `overview-market-movers-chart-column-alignment-qa.png` and excluded from commit.

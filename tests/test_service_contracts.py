@@ -17293,6 +17293,8 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn('class="ov-mm-research-chart-bar-plot"', html)
         self.assertIn('class="ov-mm-research-chart-column is-positive"', html)
         self.assertIn('class="ov-mm-research-chart-caption"', html)
+        self.assertIn("--ov-mm-research-chart-column-width:64px", html)
+        self.assertIn("--ov-mm-research-chart-gap:4px", html)
         self.assertIn("<polyline", html)
         self.assertIn("<circle", html)
         self.assertIn("PER", html)
@@ -17401,6 +17403,16 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn('_market_mover_research_bar_chart_html(chart, "quarterly")', component_source)
         self.assertRegex(css_source, r"\.ov-mm-research-chart\s*\{[^}]*min-width:\s*0;")
         self.assertRegex(css_source, r"\.ov-mm-research-chart-scroll\s*\{[^}]*max-width:\s*100%;")
+        self.assertRegex(
+            css_source,
+            r"\.ov-mm-research-chart-bar-plot\s*\{[^}]*"
+            r"grid-auto-columns:\s*var\(--ov-mm-research-chart-column-width,\s*64px\);",
+        )
+        self.assertRegex(
+            css_source,
+            r"\.ov-mm-research-chart-column\s*\{[^}]*"
+            r"width:\s*var\(--ov-mm-research-chart-column-width,\s*64px\);",
+        )
 
     def test_market_movers_data_trust_strip_model_summarizes_actionable_state(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_movers_data_trust_strip_model

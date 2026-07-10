@@ -520,7 +520,8 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
         '<div class="ov-mm-research-chart">'
         f'<div class="ov-mm-research-chart-title">{escape(_display_value(chart.get("label")))} · {escape(frequency_label)}</div>'
         f'<div class="ov-mm-research-chart-scroll" tabindex="0" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 그래프 가로 스크롤">'
-        f'<div class="{plot_wrap_class}" style="width:{plot_width}px;">'
+        f'<div class="{plot_wrap_class}" style="--ov-mm-research-chart-column-width:{_RESEARCH_CHART_COLUMN_WIDTH_PX}px;'
+        f'--ov-mm-research-chart-gap:{_RESEARCH_CHART_GAP_PX}px;width:{plot_width}px;">'
         f"{line_svg}"
         f'<div class="{bar_plot_class}" role="list" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 막대그래프">{"".join(columns)}</div>'
         "</div>"
