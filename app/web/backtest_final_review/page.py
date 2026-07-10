@@ -829,6 +829,24 @@ def _render_candidate_selection_panel(candidate_contexts: list[dict[str, Any]]) 
         format_func=lambda candidate_key: str(candidate_by_key[candidate_key]["label"]),
     )
     selected_context = candidate_by_key[selected_key]
+    confirmed_key = str(st.session_state.get("final_review_confirmed_candidate_key") or "")
+    if st.button(
+        "최종 검토서 확인",
+        key="final_review_confirm_candidate",
+        type="primary",
+        width="stretch",
+    ):
+        confirmed_key = selected_key
+        st.session_state["final_review_confirmed_candidate_key"] = selected_key
+    is_confirmed = confirmed_key == selected_key
+    if not is_confirmed and confirmed_key:
+        st.warning("검토 대상이 변경되었습니다. 다시 확인하세요")
+    elif not is_confirmed:
+        st.info("검토 대상을 선택한 뒤 `최종 검토서 확인`을 눌러 저장된 evidence를 확인하세요.")
+    st.caption(
+        "이 버튼은 새 검증을 실행하지 않습니다. 저장된 Practical Validation evidence를 현재 후보 기준으로 읽어 "
+        "투자 검토서와 최종 판단 화면을 엽니다."
+    )
     source = dict(selected_context["source"])
     render_badge_strip(
         [
@@ -844,7 +862,12 @@ def _render_candidate_selection_panel(candidate_contexts: list[dict[str, Any]]) 
         "후보 비교는 기존 Practical Validation result와 investability packet을 읽는 화면 정렬용 정보입니다. "
         "새 registry row를 만들거나 provider 데이터를 수집하지 않습니다."
     )
-    return selected_context
+    return {
+        "context": selected_context,
+        "selected_key": selected_key,
+        "confirmed_key": confirmed_key,
+        "is_confirmed": is_confirmed,
+    }
 
 
 def _render_decision_cockpit(cockpit: dict[str, Any]) -> None:
@@ -1439,7 +1462,10 @@ def render_final_review_workspace() -> None:
         return
 
     with st.container(border=True):
-        selected_context = _render_candidate_selection_panel(candidate_contexts)
+        candidate_selection = _render_candidate_selection_panel(candidate_contexts)
+    if not bool(candidate_selection.get("is_confirmed")):
+        return
+    selected_context = dict(candidate_selection["context"])
     source = dict(selected_context["source"])
 
     validation = dict(selected_context["validation"])

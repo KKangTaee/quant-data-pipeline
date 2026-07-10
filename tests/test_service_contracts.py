@@ -12522,6 +12522,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("options=candidate_keys", helper_body)
         self.assertIn("format_func=lambda candidate_key", helper_body)
         self.assertNotIn("labels.index", helper_body)
+        self.assertIn('"최종 검토서 확인"', helper_body)
+        self.assertIn('st.session_state["final_review_confirmed_candidate_key"] = selected_key', helper_body)
+        self.assertIn('"검토 대상이 변경되었습니다. 다시 확인하세요"', helper_body)
+        self.assertIn("새 검증을 실행하지 않습니다", helper_body)
         self.assertNotIn("render_fr_lane_grid", helper_body)
         self.assertNotIn('"Select Ready"', helper_body)
         self.assertNotIn('"Hold / Re-review"', helper_body)
@@ -12545,6 +12549,20 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(_final_review_candidate_key(first), "practical_validation_result:validation-a")
         self.assertEqual(_final_review_candidate_key(second), "practical_validation_result:validation-b")
         self.assertNotEqual(_final_review_candidate_key(first), _final_review_candidate_key(second))
+
+    def test_final_review_candidate_must_be_confirmed_before_decision_surfaces_render(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        selection_position = workspace_body.index("candidate_selection = _render_candidate_selection_panel")
+        confirmation_guard_position = workspace_body.index('if not bool(candidate_selection.get("is_confirmed"))')
+        report_build_position = workspace_body.index("investment_report = build_final_review_investment_report")
+        cockpit_position = workspace_body.index('title="Decision Cockpit"')
+        decision_action_position = workspace_body.index('title="Final Decision Action"')
+
+        self.assertLess(selection_position, confirmation_guard_position)
+        self.assertLess(confirmation_guard_position, report_build_position)
+        self.assertLess(report_build_position, cockpit_position)
+        self.assertLess(cockpit_position, decision_action_position)
 
     def test_final_review_first_read_excludes_market_sentiment_panel(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
