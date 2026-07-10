@@ -12334,6 +12334,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn('label: "Level2 open"', component_source)
         self.assertIn("AssessmentPanel", component_source)
         self.assertIn("DecisionQuestionList", component_source)
+        self.assertIn("PatternGuidePanel", component_source)
+        self.assertIn("Monitoring 방향 가이드", component_source)
+        self.assertIn("조건부 패턴 프로토타입", component_source)
+        self.assertIn("근거 충분", component_source)
+        self.assertIn("보강 필요", component_source)
         self.assertNotIn("DecisionBriefPanel", component_source)
         self.assertIn("EvidenceRows", component_source)
         self.assertIn("DetailTabs", component_source)
@@ -12341,6 +12346,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("fr-invest-report__meta-strip", component_source)
         self.assertIn("fr-invest-report__assessment", component_source)
         self.assertIn("fr-invest-report__questions", component_source)
+        self.assertIn("fr-invest-report__patterns", component_source)
         self.assertIn("fr-invest-report__evidence-row", component_source)
         self.assertIn("fr-invest-report__detail-tabs", component_source)
         self.assertIn("fr-invest-report__detail-tablist", component_source)
@@ -12377,6 +12383,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn(".fr-invest-report__meta-strip", style_source)
         self.assertIn(".fr-invest-report__assessment", style_source)
         self.assertIn(".fr-invest-report__questions", style_source)
+        self.assertIn(".fr-invest-report__patterns", style_source)
         self.assertIn(".fr-invest-report__evidence-row", style_source)
         self.assertIn(".fr-invest-report__detail-tabs", style_source)
         self.assertIn(".fr-invest-report__detail-tablist", style_source)
@@ -12402,6 +12409,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("총평", build_source)
         self.assertIn("약점과 한계", build_source)
         self.assertIn("저장 전 확인 질문", build_source)
+        self.assertIn("Monitoring 방향 가이드", build_source)
+        self.assertIn("조건부 패턴 프로토타입", build_source)
         self.assertIn("fr-invest-report__meta-strip", build_source)
         self.assertIn("확인 필요", build_source)
         self.assertIn("fr-invest-report__status", build_source)
@@ -12411,6 +12420,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("감점 없음", build_source)
         self.assertIn("fr-invest-report__assessment", build_source)
         self.assertIn("fr-invest-report__questions", build_source)
+        self.assertIn("fr-invest-report__patterns", build_source)
         self.assertIn("fr-invest-report__evidence-row", build_source)
         self.assertIn("fr-invest-report__detail-tabs", build_source)
         self.assertIn("fr-invest-report__detail-tablist", build_source)
@@ -27156,6 +27166,47 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertFalse(contract["boundaries"]["provider_fetch"])
         self.assertFalse(contract["boundaries"]["investment_advice"])
 
+    def test_final_review_pattern_guide_uses_supported_indicative_and_insufficient_states(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_pattern_guide
+
+        guide = build_final_review_pattern_guide(
+            validation={
+                "construction_risk_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Top holding concentration and exposure",
+                            "Current": "42%",
+                            "threshold": "35%",
+                            "evidence_source": "provider holdings snapshot",
+                            "as_of": "2026-07-10",
+                        },
+                        {
+                            "Criteria": "Treasury duration exposure",
+                            "Current": "8.2 years",
+                            "evidence_source": "provider exposure snapshot",
+                        },
+                    ]
+                },
+                "component_role_weight_audit": {
+                    "rows": [{"Criteria": "Component weight", "Current": "equity 60%"}]
+                },
+            },
+            investability_packet={},
+        )
+
+        cards = {card["key"]: card for card in guide["cards"]}
+        self.assertEqual(len(cards), 10)
+        self.assertEqual(cards["concentration"]["support"], "supported")
+        self.assertTrue(cards["concentration"]["direct_scenario_claim"])
+        self.assertEqual(cards["concentration"]["evidence_as_of"], "2026-07-10")
+        self.assertEqual(cards["rate_duration"]["support"], "indicative")
+        self.assertFalse(cards["rate_duration"]["direct_scenario_claim"])
+        self.assertIn("방향을 단정하지 않습니다", cards["rate_duration"]["conclusion"])
+        self.assertEqual(cards["benchmark_dependency"]["support"], "insufficient")
+        self.assertTrue(cards["benchmark_dependency"]["missing_signals"])
+        self.assertFalse(guide["boundaries"]["freeform_generation"])
+        self.assertFalse(guide["boundaries"]["provider_fetch"])
+
     def _integrated_gate_ready_validation(self) -> dict:
         return {
             "selection_source_id": "source-integrated-ready",
@@ -27598,6 +27649,9 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             {"최종 판단 기록", "점수 해석", "저장 전 확인", "Monitoring 조건"},
         )
         self.assertIn("새 검증", narrative["boundary_note"])
+        self.assertEqual(len(report["pattern_guide"]["cards"]), 10)
+        self.assertFalse(report["pattern_guide"]["boundaries"]["freeform_generation"])
+        self.assertFalse(report["pattern_guide"]["boundaries"]["provider_fetch"])
 
     def test_final_review_investment_report_prioritizes_monitoring_decision_summary(self) -> None:
         from app.services.backtest_evidence_read_model import (

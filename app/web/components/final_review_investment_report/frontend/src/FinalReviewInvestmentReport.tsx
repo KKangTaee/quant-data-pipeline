@@ -117,6 +117,41 @@ type ReportNarrative = {
   boundary_note?: string
 }
 
+type PatternGuideCard = {
+  key?: string
+  label?: string
+  question?: string
+  support?: string
+  supportLabel?: string
+  support_label?: string
+  tone?: Tone
+  conclusion?: string
+  observed?: string[]
+  evidenceSources?: string[]
+  evidence_sources?: string[]
+  evidenceAsOf?: string
+  evidence_as_of?: string
+  missingSignals?: string[]
+  missing_signals?: string[]
+  monitoringTrigger?: string
+  monitoring_trigger?: string
+  experimentCandidate?: string
+  experiment_candidate?: string
+  directScenarioClaim?: boolean
+  direct_scenario_claim?: boolean
+}
+
+type PatternGuide = {
+  summary?: {
+    headline?: string
+    supportCounts?: Record<string, number>
+    support_counts?: Record<string, number>
+    boundaryNote?: string
+    boundary_note?: string
+  }
+  cards?: PatternGuideCard[]
+}
+
 type InterpretationCard = {
   kind?: string
   title?: string
@@ -390,6 +425,8 @@ export type InvestmentReport = {
   decision_summary?: DecisionSummary
   reportNarrative?: ReportNarrative
   report_narrative?: ReportNarrative
+  patternGuide?: PatternGuide
+  pattern_guide?: PatternGuide
   selectionRationale?: SelectionRationale
   selection_rationale?: SelectionRationale
   requiredFinalDecisionNotes?: RequiredDecisionNote[]
@@ -511,6 +548,46 @@ function DecisionQuestionList({ narrative }: { narrative: ReportNarrative }) {
             <small>{compact(item.source)}</small>
           </article>
         ))}
+      </div>
+    </section>
+  )
+}
+
+function PatternGuidePanel({ guide }: { guide: PatternGuide }) {
+  const summary = guide.summary ?? {}
+  const counts = field(summary.supportCounts, summary.support_counts) ?? {}
+  const cards = guide.cards ?? []
+  return (
+    <section className="fr-invest-report__patterns" aria-label="Monitoring 방향 가이드">
+      <div className="fr-invest-report__section-head">
+        <div>
+          <span>조건부 패턴 프로토타입</span>
+          <h5>Monitoring 방향 가이드</h5>
+        </div>
+        <strong>근거 충분 {counts.supported ?? 0} · 참고 {counts.indicative ?? 0} · 보류 {counts.insufficient ?? 0}</strong>
+      </div>
+      <p className="fr-invest-report__pattern-boundary">{compact(field(summary.boundaryNote, summary.boundary_note))}</p>
+      <div className="fr-invest-report__pattern-list">
+        {cards.map((card, index) => {
+          const sources = field(card.evidenceSources, card.evidence_sources) ?? []
+          const missing = field(card.missingSignals, card.missing_signals) ?? []
+          return (
+            <article className={`fr-invest-report__pattern fr-invest-report__pattern--${toneClass(card.tone)}`} key={card.key ?? index}>
+              <div className="fr-invest-report__pattern-head">
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <h6>{compact(card.label)}</h6>
+                <em>{compact(field(card.supportLabel, card.support_label))}</em>
+              </div>
+              <p>{compact(card.conclusion)}</p>
+              <dl>
+                <div><dt>근거</dt><dd>{card.observed?.length ? card.observed.join(" · ") : "직접 관측값 없음"}</dd></div>
+                <div><dt>Source / 기준일</dt><dd>{sources.length ? sources.join(", ") : "-"} / {compact(field(card.evidenceAsOf, card.evidence_as_of))}</dd></div>
+                <div><dt>보강 필요</dt><dd>{missing.length ? missing.join(", ") : "없음"}</dd></div>
+              </dl>
+              <small>{compact(field(card.monitoringTrigger, card.monitoring_trigger))}</small>
+            </article>
+          )
+        })}
       </div>
     </section>
   )
@@ -821,6 +898,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const summary = report.summary ?? {}
   const decisionSummary = report.decisionSummary ?? report.decision_summary ?? {}
   const reportNarrative = report.reportNarrative ?? report.report_narrative ?? {}
+  const patternGuide = report.patternGuide ?? report.pattern_guide ?? {}
   const source = report.source ?? {}
   const tone = toneClass(recommendation.tone)
   const monitoring = report.monitoringConditions ?? report.monitoring_conditions ?? {}
@@ -1015,6 +1093,8 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       </div>
 
       <DecisionQuestionList narrative={reportNarrative} />
+
+      <PatternGuidePanel guide={patternGuide} />
 
       <ReviewActionBoard sections={level2RoleSections} />
 

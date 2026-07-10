@@ -14,3 +14,6 @@
 - Federal Reserve FEDS 2025-002: 인플레이션 민감도는 성장과의 관계에 따라 `good` / `bad` inflation으로 다르게 나타날 수 있다. https://www.federalreserve.gov/econres/feds/good-inflation-bad-inflation-implications-for-risky-asset-prices.htm
 - NBER W22208: 변동성 기반 위험 조절은 여러 factor에서 조건부 성과 차이를 보이므로 volatility / tail 패턴을 별도로 본다. https://www.nber.org/papers/w22208
 - NBER momentum 연구는 momentum 효과와 경로 의존성을 별도로 다루므로 추세장 결과를 횡보 / 반전 구간으로 일반화하지 않는다. https://www.nber.org/papers/w8734
+- 패턴 evaluator는 저장된 validation / investability packet을 재귀적으로 읽되, 각 패턴의 signal token과 trace 완결성을 함께 확인한다.
+- 두 필수 signal 그룹과 관측값 / 기준 / source / 기준일이 있으면 `supported`, 일부 signal만 있으면 `indicative`, 없으면 `insufficient`다.
+- `indicative` 문구에는 방향을 단정하지 않는다는 제한을 포함하고, 대안 배분은 항상 counterfactual backtest 후보로만 제시한다.

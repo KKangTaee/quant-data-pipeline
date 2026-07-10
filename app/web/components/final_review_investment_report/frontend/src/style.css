@@ -262,10 +262,104 @@
 
 .fr-invest-report__assessment,
 .fr-invest-report__questions,
+.fr-invest-report__patterns,
 .fr-invest-report__interpretation {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+}
+
+.fr-invest-report__pattern-boundary {
+  margin-top: 8px !important;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fr-invest-report__pattern-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fr-invest-report__pattern {
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #94a3b8;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.fr-invest-report__pattern--positive { border-left-color: #16806a; }
+.fr-invest-report__pattern--warning { border-left-color: #c98515; }
+.fr-invest-report__pattern--danger { border-left-color: #dc2626; }
+
+.fr-invest-report__pattern-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.fr-invest-report__pattern-head > span {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.fr-invest-report__pattern-head h6 {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.fr-invest-report__pattern-head em {
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.fr-invest-report__pattern > p {
+  margin-top: 8px;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fr-invest-report__pattern dl {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.fr-invest-report__pattern dl div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.fr-invest-report__pattern dt,
+.fr-invest-report__pattern dd,
+.fr-invest-report__pattern > small {
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.fr-invest-report__pattern dt {
+  font-weight: 900;
+}
+
+.fr-invest-report__pattern > small {
+  display: block;
+  margin-top: 9px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
 }
 
 .fr-invest-report__assessment {
@@ -990,6 +1084,7 @@
   .fr-invest-report__headline-scores,
   .fr-invest-report__evidence,
   .fr-invest-report__question-list,
+  .fr-invest-report__pattern-list,
   .fr-invest-report__review-trace,
   .fr-invest-report__scorecard-head,
   .fr-invest-report__scorecard-dimensions,
