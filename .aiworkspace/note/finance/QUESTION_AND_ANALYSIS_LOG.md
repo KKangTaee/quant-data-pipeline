@@ -9201,3 +9201,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Final Review는 실전 투입 가능한 포트폴리오 선별 단계이므로, 점수의 이유 / 약점 / Level2 REVIEW 영향 / Monitoring handoff 조건을 사용자가 바로 읽어야 함.
 - Analysis result: Level2 REVIEW는 Final Review에서 다시 검증하지 않고 score impact와 선택 사유로 소비한다. blocker / selected-route not-ready / gate review-required / 과도한 open review는 높은 원점수라도 추천권으로 보이지 않게 score cap을 적용해야 한다.
 - Follow-up: Python read model에 5개 weighted dimension, REVIEW score impact, score cap, selection rationale, required decision notes를 추가했고, React investment report는 이를 표시만 하게 했다. registry / saved JSONL / run_history / generated QA artifact는 stage하지 않았다.
+
+### 2026-07-10 - Final Review 투자 검토서는 선택 판단 요약을 먼저 보여야 한다
+
+- User request: 사용자가 Step2 투자 검토서가 여전히 난잡하고, 핵심 근거 / 다음 행동 / 최종 선택 사유 / 판단 저장 전 메모 / 강점과 약점 하단 카드가 중복 또는 guide처럼 보인다고 지적하고 1차~4차 단계 개발을 승인함.
+- Interpreted goal: 투자 검토서는 이 후보가 Monitoring 후보인지, 왜 추천되는지, 강점과 확인 지점이 무엇인지 먼저 읽혀야 하며 React는 계속 Python payload 표시만 맡아야 함.
+- Analysis result: old first-read layout은 selection rationale과 required memo를 반복해 보여 실제 판단 근거보다 저장 전 안내가 커졌다. 강점은 policy pass만 있었고, 약점이 없을 때 빈 공간이 컸으며 하단 해석 카드는 실제 해석보다 안내문에 가까웠다.
+- Follow-up: Python read model에 `decision_summary`, high-score dimension strengths, compact watch items, actual interpretation cards를 추가하고 React를 `선택 판단 요약`, `강점`, `확인 지점`, `해석` 중심으로 정리했다. score / gate / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.

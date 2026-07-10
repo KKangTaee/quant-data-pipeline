@@ -25,7 +25,9 @@
 .fr-invest-report__kicker,
 .fr-invest-report__lane-title,
 .fr-invest-report__summary span,
-.fr-invest-report__monitoring span {
+.fr-invest-report__monitoring span,
+.fr-invest-report__section-head span,
+.fr-invest-report__decision-item span {
   color: #526070;
   font-size: 12px;
   font-weight: 700;
@@ -71,6 +73,21 @@
   font-size: 34px;
   line-height: 1;
   letter-spacing: 0;
+}
+
+.fr-invest-report--positive .fr-invest-report__header {
+  border-top: 4px solid #16806a;
+  padding-top: 12px;
+}
+
+.fr-invest-report--warning .fr-invest-report__header {
+  border-top: 4px solid #c98515;
+  padding-top: 12px;
+}
+
+.fr-invest-report--danger .fr-invest-report__header {
+  border-top: 4px solid #dc2626;
+  padding-top: 12px;
 }
 
 .fr-invest-report__facts {
@@ -121,6 +138,124 @@
   color: #1f2937;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.fr-invest-report__decision-summary,
+.fr-invest-report__interpretation {
+  margin-top: 14px;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.fr-invest-report__section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.fr-invest-report__section-head h5 {
+  margin-top: 4px;
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.fr-invest-report__section-head strong {
+  justify-self: end;
+  max-width: 360px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.fr-invest-report__decision-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fr-invest-report__decision-item {
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #64748b;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.fr-invest-report__decision-item p {
+  margin-top: 6px;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.fr-invest-report__decision-item--positive,
+.fr-invest-report__interpretation-card--positive {
+  border-left-color: #1f9d6a;
+}
+
+.fr-invest-report__decision-item--warning,
+.fr-invest-report__interpretation-card--warning {
+  border-left-color: #c98515;
+}
+
+.fr-invest-report__decision-item--danger,
+.fr-invest-report__interpretation-card--danger {
+  border-left-color: #dc2626;
+}
+
+.fr-invest-report__interpretation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fr-invest-report__interpretation-card {
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #64748b;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.fr-invest-report__interpretation-card h5 {
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.fr-invest-report__interpretation-card p {
+  margin-top: 7px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fr-invest-report__interpretation-card div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.fr-invest-report__interpretation-card span {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 3px 7px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .fr-invest-report__selection-rationale {
@@ -960,6 +1095,9 @@
   .fr-invest-report__header,
   .fr-invest-report__facts,
   .fr-invest-report__summary,
+  .fr-invest-report__section-head,
+  .fr-invest-report__decision-grid,
+  .fr-invest-report__interpretation-grid,
   .fr-invest-report__selection-head,
   .fr-invest-report__selection-grid,
   .fr-invest-report__decision-notes,
@@ -980,6 +1118,11 @@
 
   .fr-invest-report__scorecard-head aside {
     justify-items: start;
+  }
+
+  .fr-invest-report__section-head strong {
+    justify-self: start;
+    text-align: left;
   }
 
   .fr-invest-report__selection-head aside {

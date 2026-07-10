@@ -5968,3 +5968,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Final Review scorecard는 5개 dimension, Level2 REVIEW role별 score impact, hard blocker / selected-route not-ready / gate review-required / excessive open review score cap을 만든다.
 - React investment report는 Python read model의 `세부 점수`, `Level2 REVIEW 점수 영향`, `최종 선택 사유`, `판단 저장 전 메모`를 표시만 하며 provider fetch / DB write / registry write / gate 계산을 소유하지 않는다.
 - QA: focused service / React contract 47개, npm build, py_compile, Browser QA iframe label 확인 완료. Browser screenshot artifacts는 generated 파일로 남기고 stage하지 않았다.
+
+## 2026-07-10 - Final Review Investment Report IA V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-investment-report-ia-v1-20260710/`에서 1차~4차 투자 검토서 IA 개선을 완료했다.
+- Python read model은 `decision_summary`, high-score dimension 강점, compact `watch_items`, 실제 해석 카드 payload를 만들고 React는 이를 `선택 판단 요약`, `강점`, `확인 지점`, `해석`으로 렌더링한다.
+- old first-read `다음 행동` / `판단 저장 전 메모` 반복 block은 제거했고, score / gate / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+- QA: focused service / React contract 51개, py_compile, npm build, diff check, Browser QA 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.

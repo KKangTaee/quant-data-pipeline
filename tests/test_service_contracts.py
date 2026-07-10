@@ -12316,8 +12316,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("점수 영향", component_source)
         self.assertIn("점수 제한", component_source)
         self.assertIn("Level2 REVIEW 점수 영향", component_source)
-        self.assertIn("최종 선택 사유", component_source)
-        self.assertIn("판단 저장 전 메모", component_source)
+        self.assertIn("decisionSummary", component_source)
+        self.assertIn("선택 판단 요약", component_source)
+        self.assertIn("확인 지점", component_source)
+        self.assertNotIn("<span>다음 행동</span>", component_source)
+        self.assertNotIn("판단 저장 전 메모", component_source)
         self.assertIn("/ 100", component_source)
         self.assertIn("저장 / Monitoring handoff", component_source)
         self.assertIn("Final Review 판단 저장", component_source)
@@ -12345,8 +12348,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("점수 영향", build_source)
         self.assertIn("점수 제한", build_source)
         self.assertIn("Level2 REVIEW 점수 영향", build_source)
-        self.assertIn("최종 선택 사유", build_source)
-        self.assertIn("판단 저장 전 메모", build_source)
+        self.assertIn("decisionSummary", build_source)
+        self.assertIn("선택 판단 요약", build_source)
+        self.assertIn("확인 지점", build_source)
+        self.assertNotIn("다음 행동", build_source)
+        self.assertNotIn("판단 저장 전 메모", build_source)
         self.assertIn("/ 100", build_source)
         self.assertIn("저장 / Monitoring handoff", build_source)
         self.assertIn("Final Review 판단 저장", build_source)
@@ -27432,6 +27438,89 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("MDD breach review", report["monitoring_conditions"]["review_triggers"])
         self.assertFalse(report["boundaries"]["live_approval"])
         self.assertFalse(report["boundaries"]["provider_fetch"])
+
+    def test_final_review_investment_report_prioritizes_monitoring_decision_summary(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Decision summary candidate",
+        }
+        paper = {
+            "route": "PAPER_OBSERVATION_READY",
+            "blockers": [],
+            "review_cadence": "monthly_or_rebalance_review",
+            "tracking_benchmark": "SPY",
+            "review_triggers": ["CAGR deterioration review", "MDD breach review"],
+        }
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        summary = report["decision_summary"]
+        summary_labels = {item["label"] for item in summary["items"]}
+
+        self.assertEqual(summary["schema_version"], "final_review_decision_summary_v1")
+        self.assertIn("Portfolio Monitoring 후보", summary["headline"])
+        self.assertIn("종합", summary["score_line"])
+        self.assertIn("최종 선택 사유", summary_labels)
+        self.assertIn("가장 강한 근거", summary_labels)
+        self.assertIn("가장 큰 확인 지점", summary_labels)
+        self.assertNotIn("다음 행동", summary_labels)
+        self.assertTrue(any("Readiness Score" in item["detail"] for item in summary["items"]))
+        self.assertTrue(any(card["kind"] == "monitoring_fit" for card in report["interpretation_cards"]))
+        self.assertTrue(all("미래 수익 보장" not in card["detail"] for card in report["interpretation_cards"]))
+        self.assertTrue(all("Portfolio Monitoring에서 추적할 모니터링 후보" not in card["detail"] for card in report["interpretation_cards"]))
+
+    def test_final_review_investment_report_translates_high_score_dimensions_into_strengths(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Strength dimension candidate",
+        }
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+            investability_packet=packet,
+        )
+
+        strength_titles = {row["title"] for row in report["strengths"]}
+
+        self.assertIn("Readiness Score", strength_titles)
+        self.assertTrue(any(row["severity"] == "HIGH_SCORE" for row in report["strengths"]))
+        self.assertTrue(any("Monitoring handoff" in row["detail"] for row in report["strengths"]))
 
     def test_final_review_investment_report_surfaces_weaknesses_when_blocked(self) -> None:
         from app.services.backtest_evidence_read_model import (

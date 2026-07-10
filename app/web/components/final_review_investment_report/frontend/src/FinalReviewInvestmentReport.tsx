@@ -68,6 +68,30 @@ type ReportSection = {
   policy_blockers?: number
 }
 
+type DecisionSummaryItem = {
+  label?: string
+  detail?: string
+  tone?: Tone
+  source?: string
+}
+
+type DecisionSummary = {
+  headline?: string
+  statusLabel?: string
+  status_label?: string
+  scoreLine?: string
+  score_line?: string
+  items?: DecisionSummaryItem[]
+}
+
+type InterpretationCard = {
+  kind?: string
+  title?: string
+  detail?: string
+  tone?: Tone
+  badges?: string[]
+}
+
 type ReviewDispositionItem = {
   title?: string
   status?: string
@@ -282,6 +306,8 @@ export type InvestmentReport = {
   recommendation?: Recommendation
   score?: Score
   scorecard?: Scorecard
+  decisionSummary?: DecisionSummary
+  decision_summary?: DecisionSummary
   selectionRationale?: SelectionRationale
   selection_rationale?: SelectionRationale
   requiredFinalDecisionNotes?: RequiredDecisionNote[]
@@ -293,6 +319,10 @@ export type InvestmentReport = {
   summary?: Summary
   strengths?: ReportCard[]
   weaknesses?: ReportCard[]
+  watchItems?: ReportCard[]
+  watch_items?: ReportCard[]
+  interpretationCards?: InterpretationCard[]
+  interpretation_cards?: InterpretationCard[]
   performanceInterpretation?: ReportSection
   performance_interpretation?: ReportSection
   scenarioFit?: ReportSection
@@ -362,18 +392,55 @@ function EvidenceList({ title, items, emptyLabel }: { title: string; items: Repo
   )
 }
 
-function SmallSection({ section }: { section: ReportSection }) {
+function DecisionSummaryPanel({ summary }: { summary: DecisionSummary }) {
+  const items = summary.items ?? []
   return (
-    <article className="fr-invest-report__mini">
-      <h5>{compact(section.title)}</h5>
-      <p>{compact(section.detail)}</p>
-      <div>
-        {section.score !== undefined ? <span>Score {formattedScore(section.score)}</span> : null}
-        {field(section.reviewCadence, section.review_cadence) ? <span>{compact(field(section.reviewCadence, section.review_cadence))}</span> : null}
-        {field(section.openReviewItems, section.open_review_items) !== undefined ? <span>Open {field(section.openReviewItems, section.open_review_items)}</span> : null}
-        {field(section.policyBlockers, section.policy_blockers) !== undefined ? <span>Blocker {field(section.policyBlockers, section.policy_blockers)}</span> : null}
+    <section className="fr-invest-report__decision-summary" aria-label="선택 판단 요약">
+      <div className="fr-invest-report__section-head">
+        <div>
+          <span>선택 판단 요약</span>
+          <h5>{compact(field(summary.statusLabel, summary.status_label), compact(summary.headline))}</h5>
+        </div>
+        <strong>{compact(field(summary.scoreLine, summary.score_line))}</strong>
       </div>
-    </article>
+      <div className="fr-invest-report__decision-grid">
+        {items.map((item, index) => (
+          <article className={`fr-invest-report__decision-item fr-invest-report__decision-item--${toneClass(item.tone)}`} key={`${item.label ?? "summary"}-${index}`}>
+            <span>{compact(item.label)}</span>
+            <p>{compact(item.detail)}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function InterpretationCardList({ cards }: { cards: InterpretationCard[] }) {
+  if (cards.length === 0) return null
+  return (
+    <section className="fr-invest-report__interpretation" aria-label="해석 카드">
+      <div className="fr-invest-report__section-head">
+        <div>
+          <span>해석</span>
+          <h5>실제 판단에 쓰는 근거만 표시합니다.</h5>
+        </div>
+      </div>
+      <div className="fr-invest-report__interpretation-grid">
+        {cards.map((card, index) => (
+          <article className={`fr-invest-report__interpretation-card fr-invest-report__interpretation-card--${toneClass(card.tone)}`} key={`${card.kind ?? card.title ?? "interpretation"}-${index}`}>
+            <h5>{compact(card.title)}</h5>
+            <p>{compact(card.detail)}</p>
+            {card.badges && card.badges.length > 0 ? (
+              <div>
+                {card.badges.map((badge, badgeIndex) => (
+                  <span key={`${badge}-${badgeIndex}`}>{compact(badge)}</span>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -511,46 +578,6 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
   )
 }
 
-function SelectionRationalePanel({ rationale, notes }: { rationale: SelectionRationale; notes: RequiredDecisionNote[] }) {
-  const keyPoints = field(rationale.keyPoints, rationale.key_points) ?? []
-  return (
-    <section className="fr-invest-report__selection-rationale">
-      <div className="fr-invest-report__selection-head">
-        <div>
-          <span>최종 선택 사유</span>
-          <h5>{compact(rationale.headline, "최종 판단 사유 확인 필요")}</h5>
-          <p>{compact(field(rationale.decisionReason, rationale.decision_reason))}</p>
-        </div>
-        <aside>
-          <strong>{compact(field(rationale.decisionLabel, rationale.decision_label))}</strong>
-          <small>{compact(field(rationale.scoreSummary, rationale.score_summary))}</small>
-        </aside>
-      </div>
-      <div className="fr-invest-report__selection-grid">
-        {keyPoints.map((point, index) => (
-          <article className={`fr-invest-report__selection-point fr-invest-report__selection-point--${toneClass(point.tone)}`} key={`${point.label ?? "point"}-${index}`}>
-            <strong>{compact(point.label)}</strong>
-            <p>{compact(point.detail)}</p>
-          </article>
-        ))}
-      </div>
-      <div className="fr-invest-report__decision-notes">
-        <h5>판단 저장 전 메모</h5>
-        {notes.map((note, index) => (
-          <article className="fr-invest-report__decision-note" key={`${note.kind ?? "note"}-${index}`}>
-            <div>
-              <strong>{compact(note.label)}</strong>
-              <span>{note.required ? "필수" : "선택"}</span>
-            </div>
-            <p>{compact(note.prompt)}</p>
-            <small>{compact(note.source)}</small>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
 export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -560,19 +587,16 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const score = report.score ?? {}
   const scorecard = report.scorecard ?? {}
   const summary = report.summary ?? {}
+  const decisionSummary = report.decisionSummary ?? report.decision_summary ?? {}
   const source = report.source ?? {}
   const tone = toneClass(recommendation.tone)
   const monitoring = report.monitoringConditions ?? report.monitoring_conditions ?? {}
   const triggers = listItems(field(monitoring.reviewTriggers, monitoring.review_triggers))
-  const performance = report.performanceInterpretation ?? report.performance_interpretation ?? {}
-  const scenario = report.scenarioFit ?? report.scenario_fit ?? {}
-  const risk = report.expectedRangeAndRisk ?? report.expected_range_and_risk ?? {}
-  const benchmark = report.benchmarkRationale ?? report.benchmark_rationale ?? {}
+  const interpretationCards = field(report.interpretationCards, report.interpretation_cards) ?? []
+  const watchItems = field(report.watchItems, report.watch_items) ?? report.weaknesses ?? []
   const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
   const saveHandoff = report.saveHandoffSummary ?? report.save_handoff_summary ?? {}
   const weaknessImprovement = report.weaknessImprovement ?? report.weakness_improvement ?? {}
-  const selectionRationale = report.selectionRationale ?? report.selection_rationale ?? {}
-  const requiredDecisionNotes = report.requiredFinalDecisionNotes ?? report.required_final_decision_notes ?? []
   const level2Summary = level2Review.summary ?? {}
   const level2Groups = level2Review.groups ?? {}
   const handoffReady = field(monitoring.handoffReady, monitoring.handoff_ready) === true
@@ -605,7 +629,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       <header className="fr-invest-report__header">
         <div>
           <div className="fr-invest-report__kicker">Final Review 투자 검토서</div>
-          <h3>{compact(summary.headline, "최종 검토 요약")}</h3>
+          <h3>{compact(decisionSummary.headline, compact(summary.headline, "최종 검토 요약"))}</h3>
           <p>{compact(summary.verdict)}</p>
         </div>
         <aside className="fr-invest-report__score" aria-label="최종 판단 점수">
@@ -634,34 +658,14 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
         </span>
       </div>
 
-      <div className="fr-invest-report__summary">
-        <article>
-          <span>핵심 근거</span>
-          <p>{compact(summary.strongestEvidence ?? summary.strongest_evidence)}</p>
-        </article>
-        <article>
-          <span>가장 큰 약점</span>
-          <p>{compact(summary.weakestConstraint ?? summary.weakest_constraint)}</p>
-        </article>
-        <article>
-          <span>다음 행동</span>
-          <p>{compact(summary.nextAction ?? summary.next_action)}</p>
-        </article>
-      </div>
-
-      <SelectionRationalePanel rationale={selectionRationale} notes={requiredDecisionNotes} />
+      <DecisionSummaryPanel summary={decisionSummary} />
 
       <div className="fr-invest-report__evidence">
         <EvidenceList title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" />
-        <EvidenceList title="약점" items={report.weaknesses ?? []} emptyLabel="선택 차단 약점 없음" />
+        <EvidenceList title="확인 지점" items={watchItems} emptyLabel="확인 지점 없음" />
       </div>
 
-      <div className="fr-invest-report__mini-grid">
-        <SmallSection section={performance} />
-        <SmallSection section={scenario} />
-        <SmallSection section={risk} />
-        <SmallSection section={benchmark} />
-      </div>
+      <InterpretationCardList cards={interpretationCards} />
 
       <section className="fr-invest-report__scorecard-panel">
         <div className="fr-invest-report__scorecard-head">

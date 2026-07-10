@@ -22,6 +22,8 @@ FINAL_REVIEW_SCORECARD_SCHEMA_VERSION = "final_review_scorecard_v1"
 SAVE_HANDOFF_SUMMARY_SCHEMA_VERSION = "final_review_save_handoff_summary_v1"
 WEAKNESS_IMPROVEMENT_SCHEMA_VERSION = "final_review_weakness_improvement_v1"
 SELECTION_RATIONALE_SCHEMA_VERSION = "final_review_selection_rationale_v1"
+DECISION_SUMMARY_SCHEMA_VERSION = "final_review_decision_summary_v1"
+INTERPRETATION_CARD_SCHEMA_VERSION = "final_review_interpretation_card_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -1672,14 +1674,52 @@ def _report_policy_card(row: dict[str, Any], *, fallback_title: str, tone: str) 
     }
 
 
-def _report_strengths(cockpit: dict[str, Any], packet: dict[str, Any]) -> list[dict[str, Any]]:
-    strengths = [
+def _score_limit_summary(score_limits: list[dict[str, Any]]) -> str:
+    if not score_limits:
+        return "score cap 없음"
+    caps = [int(limit.get("cap") or 100) for limit in score_limits if isinstance(limit, dict)]
+    cap = min(caps) if caps else 100
+    return f"score cap {cap} 적용"
+
+
+def _report_dimension_strengths(scorecard: dict[str, Any]) -> list[dict[str, Any]]:
+    strengths: list[dict[str, Any]] = []
+    for dimension in list(dict(scorecard or {}).get("dimensions") or []):
+        if not isinstance(dimension, dict):
+            continue
+        score = int(dimension.get("score") or 0)
+        if score < 80:
+            continue
+        strengths.append(
+            {
+                "title": _safe_text(dimension.get("label"), "Score strength"),
+                "detail": f"{score}/100 - {_safe_text(dimension.get('interpretation'), '-')}",
+                "action": _safe_text(dimension.get("evidence"), "현재 Final Review scorecard 근거를 유지합니다."),
+                "severity": "HIGH_SCORE",
+                "tone": _safe_text(dimension.get("tone"), "positive"),
+            }
+        )
+    return strengths[:4]
+
+
+def _report_strengths(cockpit: dict[str, Any], packet: dict[str, Any], scorecard: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    dimension_strengths = _report_dimension_strengths(scorecard or {})
+    policy_strengths = [
         _report_policy_card(dict(row or {}), fallback_title="Evidence ready", tone="positive")
         for row in list(cockpit.get("ready_rows") or [])
         if isinstance(row, dict)
     ]
+    strengths = dimension_strengths + policy_strengths
     if strengths:
-        return strengths[:6]
+        deduped: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for strength in strengths:
+            title = _safe_text(strength.get("title"), "")
+            if title in seen:
+                continue
+            seen.add(title)
+            deduped.append(strength)
+        return deduped[:6]
     fallback_rows = [
         dict(row or {})
         for row in list(packet.get("checks") or [])
@@ -1695,6 +1735,222 @@ def _report_strengths(cockpit: dict[str, Any], packet: dict[str, Any]) -> list[d
         }
         for row in fallback_rows[:6]
     ]
+
+
+def _dimension_by_rank(scorecard: dict[str, Any], *, strongest: bool) -> dict[str, Any]:
+    dimensions = [dict(row or {}) for row in list(dict(scorecard or {}).get("dimensions") or []) if isinstance(row, dict)]
+    if not dimensions:
+        return {}
+    return (max if strongest else min)(dimensions, key=lambda row: int(row.get("score") or 0))
+
+
+def _dimension_detail(dimension: dict[str, Any]) -> str:
+    if not dimension:
+        return "확인할 세부 점수 없음"
+    return (
+        f"{_safe_text(dimension.get('label'), '-')} {int(dimension.get('score') or 0)}/100 - "
+        f"{_safe_text(dimension.get('interpretation'), '-')}"
+    )
+
+
+def _build_decision_summary(
+    *,
+    scorecard: dict[str, Any],
+    selection_rationale: dict[str, Any],
+) -> dict[str, Any]:
+    overall = int(dict(scorecard or {}).get("overall_score") or 0)
+    pre_cap = int(dict(scorecard or {}).get("pre_cap_score") or overall)
+    score_limits = [dict(row or {}) for row in list(dict(scorecard or {}).get("score_limits") or []) if isinstance(row, dict)]
+    strongest = _dimension_by_rank(scorecard, strongest=True)
+    weakest = _dimension_by_rank(scorecard, strongest=False)
+    dimensions = {str(row.get("key") or ""): dict(row or {}) for row in list(dict(scorecard or {}).get("dimensions") or []) if isinstance(row, dict)}
+    readiness = dimensions.get("readiness", {})
+    classification_label = _safe_text(scorecard.get("classification_label"), _safe_text(selection_rationale.get("classification_label"), "-"))
+    monitoring_candidate = bool(scorecard.get("monitoring_candidate"))
+    headline = (
+        "Portfolio Monitoring 후보로 저장 가능"
+        if monitoring_candidate
+        else f"{classification_label} 상태로 추가 판단 필요"
+    )
+    limit_summary = _score_limit_summary(score_limits)
+    inputs = dict(dict(scorecard or {}).get("inputs") or {})
+    review_summary = (
+        f"warning {int(inputs.get('warning_count') or 0)}, "
+        f"open {int(inputs.get('open_review_count') or 0)}, "
+        f"monitoring {int(inputs.get('monitoring_followup_count') or 0)}"
+    )
+    items = [
+        {
+            "label": "최종 선택 사유",
+            "detail": _safe_text(selection_rationale.get("decision_reason"), "-"),
+            "tone": "positive" if monitoring_candidate else "warning",
+            "source": "selection_rationale",
+        },
+        {
+            "label": "가장 강한 근거",
+            "detail": _dimension_detail(strongest),
+            "tone": _safe_text(strongest.get("tone"), "neutral"),
+            "source": "scorecard",
+        },
+        {
+            "label": "Monitoring 준비도",
+            "detail": _dimension_detail(readiness),
+            "tone": _safe_text(readiness.get("tone"), "neutral"),
+            "source": "scorecard",
+        },
+        {
+            "label": "가장 큰 확인 지점",
+            "detail": _dimension_detail(weakest),
+            "tone": _safe_text(weakest.get("tone"), "neutral"),
+            "source": "scorecard",
+        },
+        {
+            "label": "Level2 REVIEW 반영",
+            "detail": review_summary,
+            "tone": "warning" if int(inputs.get("open_review_count") or 0) else "neutral",
+            "source": "level2_review_disposition",
+        },
+    ]
+    if score_limits:
+        items.append(
+            {
+                "label": "점수 제한",
+                "detail": "; ".join(_safe_text(limit.get("detail"), _safe_text(limit.get("label"), "-")) for limit in score_limits),
+                "tone": "warning",
+                "source": "scorecard",
+            }
+        )
+    return {
+        "schema_version": DECISION_SUMMARY_SCHEMA_VERSION,
+        "headline": headline,
+        "status_label": classification_label,
+        "score_line": f"종합 {overall}/100, 원점수 {pre_cap}/100, {limit_summary}",
+        "items": items,
+        "boundary": {
+            "provider_fetch": False,
+            "storage_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
+def _find_policy_row(gate_policy: dict[str, Any], group: str) -> dict[str, Any]:
+    for row in list(dict(gate_policy or {}).get("policy_rows") or []):
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("Group") or "") == group:
+            return dict(row or {})
+    return {}
+
+
+def _build_interpretation_cards(
+    *,
+    scorecard: dict[str, Any],
+    cockpit: dict[str, Any],
+    packet: dict[str, Any],
+    monitoring: dict[str, Any],
+) -> list[dict[str, Any]]:
+    dimensions = {str(row.get("key") or ""): dict(row or {}) for row in list(dict(scorecard or {}).get("dimensions") or []) if isinstance(row, dict)}
+    inputs = dict(dict(scorecard or {}).get("inputs") or {})
+    gate_policy = dict(dict(packet or {}).get("selection_gate_policy_snapshot") or dict(packet or {}).get("gate_policy_snapshot") or {})
+    benchmark_row = _find_policy_row(gate_policy, "benchmark")
+    trigger_count = len(list(dict(monitoring or {}).get("review_triggers") or []))
+    blocker_count = int(inputs.get("blocker_count") or 0)
+    open_review_count = int(inputs.get("open_review_count") or 0)
+    score_limits = [dict(row or {}) for row in list(dict(scorecard or {}).get("score_limits") or []) if isinstance(row, dict)]
+    cards = [
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "performance_interpretation",
+            "title": "과거 성과 해석",
+            "detail": (
+                f"Investment Score {int(dimensions.get('investment', {}).get('score') or 0)}/100, "
+                f"Evidence Packet {int(dimensions.get('evidence_quality', {}).get('score') or 0)}/100 기준의 최종 선택 매력도입니다."
+            ),
+            "tone": _safe_text(dimensions.get("investment", {}).get("tone"), "neutral"),
+            "badges": [
+                f"종합 {int(dict(scorecard or {}).get('overall_score') or 0)}/100",
+                _score_limit_summary(score_limits),
+            ],
+        },
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "monitoring_fit",
+            "title": "Monitoring 적합성",
+            "detail": (
+                f"{_safe_text(monitoring.get('tracking_benchmark'), 'benchmark 미지정')} 기준으로 "
+                f"{_safe_text(monitoring.get('review_cadence'), 'cadence 미지정')} cadence와 "
+                f"{trigger_count}개 review trigger를 추적합니다."
+            ),
+            "tone": _safe_text(dimensions.get("monitoring_suitability", {}).get("tone"), "neutral"),
+            "badges": [
+                _safe_text(monitoring.get("tracking_benchmark"), "-"),
+                _safe_text(monitoring.get("review_cadence"), "-"),
+            ],
+        },
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "risk_watch",
+            "title": "확인 지점 / 리스크",
+            "detail": (
+                f"Blocker {blocker_count}, open review {open_review_count}, "
+                f"가장 낮은 차원은 {_dimension_detail(_dimension_by_rank(scorecard, strongest=False))}입니다."
+            ),
+            "tone": "warning" if blocker_count or open_review_count else "positive",
+            "badges": [f"Open {open_review_count}", f"Blocker {blocker_count}"],
+        },
+    ]
+    if benchmark_row:
+        cards.append(
+            {
+                "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+                "kind": "benchmark_rationale",
+                "title": "Benchmark / 대체 전략 대비 선택 이유",
+                "detail": _safe_text(
+                    benchmark_row.get("Evidence") or benchmark_row.get("Current"),
+                    "Benchmark parity evidence가 있습니다.",
+                ),
+                "tone": "positive" if str(benchmark_row.get("Severity") or "").upper() == "PASS" else "warning",
+                "badges": [
+                    _safe_text(benchmark_row.get("Severity"), "-"),
+                    _safe_text(benchmark_row.get("Required Action") or benchmark_row.get("Next Action"), "-"),
+                ],
+            }
+        )
+    return cards
+
+
+def _build_watch_items(
+    *,
+    weaknesses: list[dict[str, Any]],
+    scorecard: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if weaknesses:
+        return [dict(row or {}) for row in weaknesses[:4] if isinstance(row, dict)]
+    weakest = _dimension_by_rank(scorecard, strongest=False)
+    score_limits = [dict(row or {}) for row in list(dict(scorecard or {}).get("score_limits") or []) if isinstance(row, dict)]
+    items = [
+        {
+            "title": "확인 지점",
+            "detail": _dimension_detail(weakest),
+            "action": "Monitoring에서 이 차원의 score 변화와 review trigger를 같이 봅니다.",
+            "severity": "WATCH",
+            "tone": _safe_text(weakest.get("tone"), "neutral"),
+        }
+    ]
+    for limit in score_limits[:2]:
+        items.append(
+            {
+                "title": _safe_text(limit.get("label"), "점수 제한"),
+                "detail": _safe_text(limit.get("detail") or limit.get("reason"), "-"),
+                "action": f"cap {int(limit.get('cap') or 0)} 기준을 확인합니다.",
+                "severity": "SCORE_CAP",
+                "tone": _safe_text(limit.get("tone"), "warning"),
+            }
+        )
+    return items[:4]
 
 
 def _report_weaknesses(cockpit: dict[str, Any]) -> list[dict[str, Any]]:
@@ -2399,13 +2655,13 @@ def build_final_review_investment_report(
     score_value = round(score_value, 1) if score_value is not None else 0.0
     tone = _report_tone_from_state(state)
     monitoring = dict(cockpit.get("monitoring_handoff") or {})
-    strengths = _report_strengths(cockpit, packet)
     weaknesses = _report_weaknesses(cockpit)
     level2_review_disposition = build_final_review_level2_review_disposition(validation=validation)
     scorecard = build_final_review_scorecard(
         investability_packet=packet,
         level2_review_disposition=level2_review_disposition,
     )
+    strengths = _report_strengths(cockpit, packet, scorecard)
     suggested_route = str(scorecard.get("decision_route") or suggested_route)
     decision_record_guide = build_final_review_decision_record_guide(
         decision_route=suggested_route,
@@ -2423,6 +2679,20 @@ def build_final_review_investment_report(
     required_final_decision_notes = build_final_review_required_decision_notes(
         scorecard=scorecard,
         selection_rationale=selection_rationale,
+    )
+    decision_summary = _build_decision_summary(
+        scorecard=scorecard,
+        selection_rationale=selection_rationale,
+    )
+    interpretation_cards = _build_interpretation_cards(
+        scorecard=scorecard,
+        cockpit=cockpit,
+        packet=packet,
+        monitoring=monitoring,
+    )
+    watch_items = _build_watch_items(
+        weaknesses=weaknesses,
+        scorecard=scorecard,
     )
     score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
     if state == "SELECT_READY":
@@ -2457,6 +2727,7 @@ def build_final_review_investment_report(
             "basis": scorecard.get("basis") or "Investability packet ready-check ratio",
         },
         "scorecard": scorecard,
+        "decision_summary": decision_summary,
         "selection_rationale": selection_rationale,
         "required_final_decision_notes": required_final_decision_notes,
         "save_handoff_summary": save_handoff_summary,
@@ -2470,28 +2741,37 @@ def build_final_review_investment_report(
         },
         "strengths": strengths,
         "weaknesses": weaknesses,
+        "watch_items": watch_items,
+        "interpretation_cards": interpretation_cards,
         "performance_interpretation": {
             "title": "과거 성과 해석",
-            "detail": _safe_text(packet.get("verdict") or decision_evidence.get("verdict"), cockpit.get("verdict") or "-"),
+            "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "performance_interpretation"), ""),
+                cockpit.get("verdict") or "-",
+            ),
             "score": score_value,
         },
         "scenario_fit": {
             "title": "환경 적합성",
             "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "monitoring_fit"), ""),
                 monitoring.get("tracking_benchmark"),
-                "시장 / 매크로 적합성은 기존 robustness, provider, benchmark evidence를 기준으로 해석합니다.",
             ),
             "review_cadence": monitoring.get("review_cadence") or "-",
         },
         "expected_range_and_risk": {
             "title": "향후 기대 / 리스크 범위",
-            "detail": "과거 backtest와 validation evidence 기반의 관찰 후보 판단입니다. 미래 수익 보장이나 주문 지시가 아닙니다.",
+            "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "risk_watch"), ""),
+                "open review와 blocker를 기준으로 추적합니다.",
+            ),
             "open_review_items": int(dict(cockpit.get("metrics") or {}).get("open_review_items", 0) or 0),
             "policy_blockers": int(dict(cockpit.get("metrics") or {}).get("policy_blockers", 0) or 0),
         },
         "benchmark_rationale": {
             "title": "Benchmark / 대체 전략 대비 선택 이유",
             "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "benchmark_rationale"), ""),
                 next(
                     (
                         dict(row or {}).get("Evidence") or dict(row or {}).get("Current")
@@ -2500,7 +2780,6 @@ def build_final_review_investment_report(
                     ),
                     "",
                 ),
-                "Benchmark parity evidence를 Evidence Appendix와 gate policy에서 확인합니다.",
             ),
         },
         "level2_review_disposition": level2_review_disposition,
