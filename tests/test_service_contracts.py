@@ -12345,9 +12345,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Portfolio Monitoring", component_source)
         self.assertIn("약점 개선안", component_source)
         self.assertIn("현재 후보와 개선 기대 범위", component_source)
-        self.assertIn("Level2 REVIEW 처리 결과", component_source)
-        self.assertIn("Open Review", component_source)
-        self.assertIn("Monitoring Follow-up", component_source)
+        self.assertIn("Final Review 확인 필요", component_source)
+        self.assertIn("ReviewActionBoard", component_source)
+        self.assertIn("점수에 반영됨", component_source)
+        self.assertIn("저장 전 확인", component_source)
+        self.assertIn("Monitoring 조건으로 넘김", component_source)
+        self.assertIn("blocker", component_source)
         self.assertIn("최종 판단 점수", component_source)
         self.assertNotIn("Streamlit.setComponentValue", component_source)
         self.assertNotIn("fetch(", component_source)
@@ -12400,9 +12403,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Portfolio Monitoring", build_source)
         self.assertIn("약점 개선안", build_source)
         self.assertIn("현재 후보와 개선 기대 범위", build_source)
-        self.assertIn("Level2 REVIEW 처리 결과", build_source)
-        self.assertIn("Open Review", build_source)
-        self.assertIn("Monitoring Follow-up", build_source)
+        self.assertIn("Final Review 확인 필요", build_source)
+        self.assertIn("점수에 반영됨", build_source)
+        self.assertIn("저장 전 확인", build_source)
+        self.assertIn("Monitoring 조건으로 넘김", build_source)
+        self.assertIn("blocker", build_source)
         self.assertIn("build_final_review_investment_report", page_source)
         self.assertIn("render_final_review_investment_report", page_source)
         self.assertIn("점수 체계", page_source)
@@ -27749,6 +27754,19 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(disposition["groups"]["warning"][0]["role_label"], "데이터 주의")
         self.assertEqual(disposition["groups"]["open_review"][0]["title"], "Tax account scope")
         self.assertEqual(disposition["groups"]["monitoring_followup"][0]["title"], "Monitoring baseline")
+        role_sections = disposition["role_sections"]
+        self.assertEqual(
+            [section["label"] for section in role_sections],
+            ["데이터 주의", "2단계 실용성 주의", "최종 판단 참고", "Monitoring 추적", "저장 전 보강"],
+        )
+        self.assertEqual(
+            [section["action_label"] for section in role_sections],
+            ["점수에 반영됨", "점수에 반영됨", "저장 전 확인", "Monitoring 조건으로 넘김", "blocker"],
+        )
+        self.assertEqual([section["count"] for section in role_sections], [1, 1, 1, 1, 1])
+        self.assertEqual(role_sections[0]["items"][0]["action_outcome"], "score_reflected")
+        self.assertEqual(role_sections[3]["items"][0]["action_outcome"], "monitoring_condition")
+        self.assertEqual(role_sections[4]["items"][0]["action_outcome"], "blocker")
         self.assertEqual(report["level2_review_disposition"]["summary"]["total"], 5)
         self.assertFalse(report["level2_review_disposition"]["boundary"]["validation_rerun"])
 

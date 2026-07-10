@@ -308,6 +308,99 @@
   line-height: 1.4;
 }
 
+.fr-invest-report__review-actions {
+  margin-top: 18px;
+  border-top: 1px solid #d8dee8;
+  padding-top: 16px;
+}
+
+.fr-invest-report__review-boundary {
+  margin-top: 6px;
+  color: #526070;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fr-invest-report__review-action-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+  margin-top: 10px;
+}
+
+.fr-invest-report__review-action {
+  min-width: 0;
+  border-top: 1px solid #e5e7eb;
+  border-left: 3px solid #c98515;
+  padding: 10px 0 10px 12px;
+}
+
+.fr-invest-report__review-action > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.fr-invest-report__review-action > div span,
+.fr-invest-report__review-action > div strong,
+.fr-invest-report__review-action em {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.fr-invest-report__review-action em {
+  display: block;
+  margin-top: 5px;
+  color: #9a5b0a;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.fr-invest-report__review-action p,
+.fr-invest-report__review-action > small,
+.fr-invest-report__review-action li span,
+.fr-invest-report__review-action li small {
+  display: block;
+  margin-top: 5px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fr-invest-report__review-action ul {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.fr-invest-report__review-action li {
+  border-top: 1px dashed #d8dee8;
+  padding-top: 7px;
+}
+
+.fr-invest-report__review-action li strong {
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fr-invest-report__review-action--danger {
+  border-left-color: #dc2626;
+}
+
+.fr-invest-report__review-action--danger em {
+  color: #b91c1c;
+}
+
+.fr-invest-report__review-action--positive {
+  border-left-color: #1f9d6a;
+}
+
 .fr-invest-report__interpretation-rows {
   display: grid;
   margin-top: 10px;
@@ -722,6 +815,7 @@
   .fr-invest-report__improvement-list,
   .fr-invest-report__review-head,
   .fr-invest-report__review-grid,
+  .fr-invest-report__review-action-list,
   .fr-invest-report__monitoring {
     grid-template-columns: 1fr;
   }

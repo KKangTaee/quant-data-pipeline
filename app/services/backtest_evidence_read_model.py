@@ -2005,6 +2005,37 @@ def _level2_review_cards(validation: dict[str, Any]) -> list[dict[str, Any]]:
     return [dict(row or {}) for row in fallback_rows if isinstance(row, dict)]
 
 
+def _level2_review_action(role: str) -> dict[str, str]:
+    actions = {
+        "pv_data_caution": {
+            "action_outcome": "score_reflected",
+            "action_label": "점수에 반영됨",
+            "action_detail": "데이터 근거 품질 부담으로 Final Review 점수와 판단 사유에 반영합니다.",
+        },
+        "pv_practical_caution": {
+            "action_outcome": "score_reflected",
+            "action_label": "점수에 반영됨",
+            "action_detail": "2단계 실용성 부담으로 Final Review 준비도와 판단 사유에 반영합니다.",
+        },
+        "final_decision_input": {
+            "action_outcome": "pre_save_check",
+            "action_label": "저장 전 확인",
+            "action_detail": "Final Review 판단 사유와 운영 전 조건에 반영했는지 저장 전에 확인합니다.",
+        },
+        "monitoring_followup": {
+            "action_outcome": "monitoring_condition",
+            "action_label": "Monitoring 조건으로 넘김",
+            "action_detail": "선정 후 Operations > Portfolio Monitoring에서 추적할 조건으로 넘깁니다.",
+        },
+        "final_readiness_blocker": {
+            "action_outcome": "blocker",
+            "action_label": "blocker",
+            "action_detail": "해소 전에는 Monitoring 후보 선정 route를 저장할 수 없습니다.",
+        },
+    }
+    return dict(actions.get(role) or actions["final_decision_input"])
+
+
 def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) -> dict[str, Any]:
     """Classify Practical Validation REVIEW handoff items for Final Review consumption."""
 
@@ -2037,11 +2068,12 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
         if key in seen:
             continue
         seen.add(key)
+        normalized_role = role or "final_decision_input"
         groups[disposition].append(
             {
                 "title": title,
                 "status": status.upper() or "REVIEW",
-                "role": role or "final_decision_input",
+                "role": normalized_role,
                 "role_label": _safe_text(card.get("review_role_label"), "최종 판단 참고"),
                 "stage_surface": _safe_text(card.get("stage_decision_surface"), "Final Review"),
                 "disposition": disposition,
@@ -2063,9 +2095,32 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                     "-",
                 ),
                 "tone": tone,
+                **_level2_review_action(normalized_role),
             }
         )
     total = sum(len(items) for items in groups.values())
+    all_items = [item for items in groups.values() for item in items]
+    role_specs = [
+        ("pv_data_caution", "데이터 주의", "warning"),
+        ("pv_practical_caution", "2단계 실용성 주의", "warning"),
+        ("final_decision_input", "최종 판단 참고", "warning"),
+        ("monitoring_followup", "Monitoring 추적", "warning"),
+        ("final_readiness_blocker", "저장 전 보강", "danger"),
+    ]
+    role_sections = []
+    for role, label, tone in role_specs:
+        action = _level2_review_action(role)
+        items = [dict(item) for item in all_items if item.get("role") == role]
+        role_sections.append(
+            {
+                "role": role,
+                "label": label,
+                "tone": tone,
+                "count": len(items),
+                "items": items,
+                **action,
+            }
+        )
     return {
         "schema_version": LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION,
         "summary": {
@@ -2076,6 +2131,7 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
             "monitoring_followup": len(groups["monitoring_followup"]),
         },
         "groups": groups,
+        "role_sections": role_sections,
         "boundary": {
             "validation_rerun": False,
             "provider_fetch": False,

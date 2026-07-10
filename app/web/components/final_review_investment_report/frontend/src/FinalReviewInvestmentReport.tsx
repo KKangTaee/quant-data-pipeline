@@ -126,6 +126,22 @@ type Level2ReviewDisposition = {
     monitoringFollowup?: ReviewDispositionItem[]
     monitoring_followup?: ReviewDispositionItem[]
   }
+  roleSections?: ReviewRoleSection[]
+  role_sections?: ReviewRoleSection[]
+}
+
+type ReviewRoleSection = {
+  role?: string
+  label?: string
+  tone?: Tone
+  count?: number
+  actionOutcome?: string
+  action_outcome?: string
+  actionLabel?: string
+  action_label?: string
+  actionDetail?: string
+  action_detail?: string
+  items?: ReviewDispositionItem[]
 }
 
 type ScorecardCategory = {
@@ -561,29 +577,51 @@ function DetailTabs({ tabs }: { tabs: DetailTab[] }) {
   )
 }
 
-function ReviewDispositionList({ title, items, emptyLabel }: { title: string; items: ReviewDispositionItem[]; emptyLabel: string }) {
+function ReviewActionBoard({ sections }: { sections: ReviewRoleSection[] }) {
+  const total = sections.reduce((sum, section) => sum + Number(section.count ?? section.items?.length ?? 0), 0)
   return (
-    <article className="fr-invest-report__review-group">
-      <h5>{title}</h5>
-      <div>
-        {items.length > 0 ? (
-          items.map((item, index) => (
-            <section className={`fr-invest-report__review-item fr-invest-report__review-item--${toneClass(item.tone)}`} key={`${title}-${item.title ?? index}`}>
-              <strong>{compact(item.title)}</strong>
-              <span>{compact(item.roleLabel ?? item.role_label)} · {compact(item.dispositionLabel ?? item.disposition_label)}</span>
-              <p>{compact(item.detail)}</p>
-              <small>{compact(item.action)}</small>
-            </section>
-          ))
-        ) : (
-          <section className="fr-invest-report__review-item fr-invest-report__review-item--neutral">
-            <strong>{emptyLabel}</strong>
-            <span>-</span>
-            <p>해당 분류의 Level2 REVIEW 항목이 없습니다.</p>
-          </section>
-        )}
+    <section className="fr-invest-report__review-actions" aria-label="Final Review 확인 필요">
+      <div className="fr-invest-report__section-head">
+        <div>
+          <span>Level2 REVIEW handoff</span>
+          <h5>Final Review 확인 필요</h5>
+        </div>
+        <strong>{total > 0 ? `${total}개 행동 확인` : "추가 확인 없음"}</strong>
       </div>
-    </article>
+      <p className="fr-invest-report__review-boundary">
+        저장된 Practical Validation evidence를 다시 실행하지 않고, 각 항목을 점수에 반영됨 / 저장 전 확인 / Monitoring 조건으로 넘김 / blocker로 구분합니다.
+      </p>
+      <div className="fr-invest-report__review-action-list">
+        {sections.map((section) => {
+          const items = section.items ?? []
+          const actionLabel = field(section.actionLabel, section.action_label)
+          const actionDetail = field(section.actionDetail, section.action_detail)
+          return (
+            <article className={`fr-invest-report__review-action fr-invest-report__review-action--${toneClass(section.tone)}`} key={section.role ?? section.label}>
+              <div>
+                <span>{compact(section.label)}</span>
+                <strong>{section.count ?? items.length}</strong>
+              </div>
+              <em>{compact(actionLabel)}</em>
+              <p>{compact(actionDetail)}</p>
+              {items.length > 0 ? (
+                <ul>
+                  {items.map((item, index) => (
+                    <li key={`${section.role ?? "review"}-${item.title ?? index}`}>
+                      <strong>{compact(item.title)}</strong>
+                      <span>{compact(item.detail)}</span>
+                      <small>{compact(item.action)}</small>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <small>현재 해당 항목이 없습니다.</small>
+              )}
+            </article>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -715,13 +753,10 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const saveHandoff = report.saveHandoffSummary ?? report.save_handoff_summary ?? {}
   const weaknessImprovement = report.weaknessImprovement ?? report.weakness_improvement ?? {}
   const level2Summary = level2Review.summary ?? {}
-  const level2Groups = level2Review.groups ?? {}
+  const level2RoleSections = field(level2Review.roleSections, level2Review.role_sections) ?? []
   const handoffReady = field(monitoring.handoffReady, monitoring.handoff_ready) === true
   const monitoringCandidate = field(recommendation.monitoringCandidate, recommendation.monitoring_candidate) === true
   const openReviewCount = field(level2Summary.openReview, level2Summary.open_review) ?? 0
-  const monitoringFollowupCount = field(level2Summary.monitoringFollowup, level2Summary.monitoring_followup) ?? 0
-  const openReviewItems = field(level2Groups.openReview, level2Groups.open_review) ?? []
-  const monitoringFollowupItems = field(level2Groups.monitoringFollowup, level2Groups.monitoring_followup) ?? []
   const scorecardOverall = field(scorecard.overallScore, scorecard.overall_score)
   const scorecardBand = field(scorecard.scoreBand, scorecard.score_band)
   const scorecardClassification = field(scorecard.classificationLabel, scorecard.classification_label)
@@ -847,33 +882,6 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       ),
     },
     {
-      id: "review-disposition",
-      label: "Review 처리",
-      title: "Level2 REVIEW 처리 결과",
-      children: (
-        <section className="fr-invest-report__review-disposition">
-          <div className="fr-invest-report__review-head">
-            <div>
-              <span>Level2 REVIEW 처리 결과</span>
-              <h5>Final Review에서 다시 실행하지 않고 판단 근거로 소비합니다.</h5>
-            </div>
-            <div className="fr-invest-report__review-counts">
-              <b>{level2Summary.blocker ?? 0}</b><small>Blocker</small>
-              <b>{level2Summary.warning ?? 0}</b><small>Warning</small>
-              <b>{openReviewCount}</b><small>Open</small>
-              <b>{monitoringFollowupCount}</b><small>Monitoring</small>
-            </div>
-          </div>
-          <div className="fr-invest-report__review-grid">
-            <ReviewDispositionList title="Blocker" items={level2Groups.blocker ?? []} emptyLabel="저장 전 보강 없음" />
-            <ReviewDispositionList title="Warning" items={level2Groups.warning ?? []} emptyLabel="최종 판단 warning 없음" />
-            <ReviewDispositionList title="Open Review" items={openReviewItems} emptyLabel="Final Review open review 없음" />
-            <ReviewDispositionList title="Monitoring Follow-up" items={monitoringFollowupItems} emptyLabel="Monitoring 추적 항목 없음" />
-          </div>
-        </section>
-      ),
-    },
-    {
       id: "monitoring-conditions",
       label: "Monitoring",
       title: "Monitoring 조건",
@@ -915,6 +923,8 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
         <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />
         <EvidenceRows title="확인 지점" items={watchItems} emptyLabel="확인 지점 없음" limit={2} />
       </div>
+
+      <ReviewActionBoard sections={level2RoleSections} />
 
       <InterpretationRows cards={interpretationCards} />
 

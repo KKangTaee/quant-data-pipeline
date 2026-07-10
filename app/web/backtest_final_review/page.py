@@ -1018,7 +1018,40 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         ],
         min_width=220,
     )
-    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "약점 개선안", "Level2 REVIEW"])
+    disposition = dict(report.get("level2_review_disposition") or {})
+    role_sections = list(disposition.get("role_sections") or [])
+    st.markdown("##### Final Review 확인 필요")
+    st.caption(
+        "저장된 Practical Validation evidence를 다시 실행하지 않고, 점수 반영 / 저장 전 확인 / "
+        "Monitoring 조건 / blocker로 구분합니다."
+    )
+    render_badge_strip(
+        [
+            {
+                "label": section.get("label") or "-",
+                "value": f"{section.get('action_label') or '-'} · {int(section.get('count', 0) or 0)}",
+                "tone": section.get("tone") or "neutral",
+            }
+            for section in role_sections
+        ]
+    )
+    action_rows = [
+        {
+            "구분": section.get("label") or "-",
+            "처리": section.get("action_label") or "-",
+            "항목": item.get("title") or "-",
+            "근거": item.get("detail") or "-",
+            "다음 행동": item.get("action") or "-",
+        }
+        for section in role_sections
+        for item in list(section.get("items") or [])
+    ]
+    if action_rows:
+        st.dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
+    else:
+        st.success("Final Review에서 추가로 확인할 Level2 REVIEW 항목이 없습니다.")
+
+    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "약점 개선안"])
     with report_tabs[0]:
         rows = list(report.get("strengths") or [])
         if rows:
@@ -1075,18 +1108,6 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
             ]
         )
         st.dataframe(pd.DataFrame(improvement.get("proposals") or []), width="stretch", hide_index=True)
-    with report_tabs[6]:
-        disposition = dict(report.get("level2_review_disposition") or {})
-        groups = dict(disposition.get("groups") or {})
-        rows = [
-            {**dict(item or {}), "group": group_name}
-            for group_name, items in groups.items()
-            for item in list(items or [])
-        ]
-        if rows:
-            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        else:
-            st.info("Final Review에서 처리할 Level2 REVIEW 항목이 없습니다.")
 
 
 def _render_investment_report(report: dict[str, Any], *, key: str) -> None:
