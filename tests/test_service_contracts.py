@@ -27119,6 +27119,43 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
 
 
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
+    def test_final_review_pattern_guide_contract_defines_ten_bounded_patterns(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_pattern_guide_contract
+
+        contract = build_final_review_pattern_guide_contract()
+        patterns = contract["patterns"]
+
+        self.assertEqual(contract["schema_version"], "final_review_pattern_guide_contract_v1")
+        self.assertEqual(len(patterns), 10)
+        self.assertEqual([pattern["rank"] for pattern in patterns], list(range(1, 11)))
+        self.assertEqual(
+            [pattern["key"] for pattern in patterns],
+            [
+                "concentration",
+                "stock_bond_diversification",
+                "rate_duration",
+                "inflation",
+                "tail_risk",
+                "trend_regime",
+                "component_dependency",
+                "liquidity_cost",
+                "benchmark_dependency",
+                "parameter_sensitivity",
+            ],
+        )
+        self.assertTrue(all(pattern["primary_evidence"] for pattern in patterns))
+        self.assertTrue(all(pattern["required_signals"] for pattern in patterns))
+        self.assertTrue(all(set(pattern["support_contract"]) == {"supported", "indicative", "insufficient"} for pattern in patterns))
+        self.assertEqual(
+            [state["key"] for state in contract["support_states"]],
+            ["supported", "indicative", "insufficient"],
+        )
+        self.assertTrue(contract["rules"]["stored_evidence_only"])
+        self.assertFalse(contract["rules"]["freeform_generation"])
+        self.assertTrue(contract["rules"]["alternative_allocation_requires_counterfactual_backtest"])
+        self.assertFalse(contract["boundaries"]["provider_fetch"])
+        self.assertFalse(contract["boundaries"]["investment_advice"])
+
     def _integrated_gate_ready_validation(self) -> dict:
         return {
             "selection_source_id": "source-integrated-ready",

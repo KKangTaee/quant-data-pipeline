@@ -24,6 +24,80 @@ WEAKNESS_IMPROVEMENT_SCHEMA_VERSION = "final_review_weakness_improvement_v1"
 SELECTION_RATIONALE_SCHEMA_VERSION = "final_review_selection_rationale_v1"
 DECISION_SUMMARY_SCHEMA_VERSION = "final_review_decision_summary_v1"
 INTERPRETATION_CARD_SCHEMA_VERSION = "final_review_interpretation_card_v1"
+PATTERN_GUIDE_CONTRACT_SCHEMA_VERSION = "final_review_pattern_guide_contract_v1"
+
+FINAL_REVIEW_PATTERN_CATALOG = (
+    {
+        "key": "concentration",
+        "label": "주식 / 섹터 집중도",
+        "question": "특정 자산, 섹터 또는 보유 종목에 성과와 위험이 과도하게 집중되는가?",
+        "primary_evidence": ["construction_risk_audit", "component_role_weight_audit"],
+        "required_signals": ["component_weight", "holdings_or_exposure_concentration"],
+    },
+    {
+        "key": "stock_bond_diversification",
+        "label": "주식-채권 분산과 상관",
+        "question": "주식과 채권의 역할 및 상관 변화에도 분산 효과가 유지되는가?",
+        "primary_evidence": ["risk_contribution_audit", "component_role_weight_audit"],
+        "required_signals": ["component_role", "correlation_or_component_return_matrix"],
+    },
+    {
+        "key": "rate_duration",
+        "label": "금리 / 듀레이션 민감도",
+        "question": "금리 상승 또는 하락 구간에서 어떤 노출이 후보를 강화하거나 약화하는가?",
+        "primary_evidence": ["macro_regime_evidence", "construction_risk_audit"],
+        "required_signals": ["rate_regime_result", "duration_or_rate_sensitive_exposure"],
+    },
+    {
+        "key": "inflation",
+        "label": "인플레이션 민감도",
+        "question": "인플레이션 유형과 구간 변화에서 후보의 방어력은 어떻게 달라지는가?",
+        "primary_evidence": ["macro_regime_evidence", "stress_robustness_evidence"],
+        "required_signals": ["inflation_regime_result", "inflation_sensitive_exposure"],
+    },
+    {
+        "key": "tail_risk",
+        "label": "변동성 / 낙폭 / tail risk",
+        "question": "급격한 변동성과 낙폭 구간에서 손실 구조와 회복력이 확인되는가?",
+        "primary_evidence": ["stress_robustness_evidence", "risk_contribution_audit"],
+        "required_signals": ["drawdown_or_stress_result", "recovery_or_tail_metric"],
+    },
+    {
+        "key": "trend_regime",
+        "label": "추세 / 모멘텀 체제",
+        "question": "추세장과 반전 또는 횡보장에서 전략 성과가 어떻게 달라지는가?",
+        "primary_evidence": ["macro_regime_evidence", "validation_efficacy_audit"],
+        "required_signals": ["trend_regime_result", "out_of_sample_or_regime_split"],
+    },
+    {
+        "key": "component_dependency",
+        "label": "위험 기여도 / 구성요소 의존",
+        "question": "한 구성요소 제거 또는 변동성 확대가 포트폴리오 전체를 좌우하는가?",
+        "primary_evidence": ["risk_contribution_audit", "component_role_weight_audit"],
+        "required_signals": ["risk_contribution", "drop_one_or_dependency_result"],
+    },
+    {
+        "key": "liquidity_cost",
+        "label": "유동성 / 비용 / turnover",
+        "question": "거래비용, 회전율, 유동성이 순성과와 실제 운용 가능성을 훼손하는가?",
+        "primary_evidence": ["backtest_realism_audit", "construction_risk_audit"],
+        "required_signals": ["turnover_or_cost", "liquidity_or_capacity"],
+    },
+    {
+        "key": "benchmark_dependency",
+        "label": "벤치마크 의존 / 상대 성과",
+        "question": "동일 기간과 빈도의 비교 기준에서 상대 우위와 열위가 반복되는가?",
+        "primary_evidence": ["benchmark_parity_evidence", "validation_efficacy_audit"],
+        "required_signals": ["benchmark_parity", "relative_performance"],
+    },
+    {
+        "key": "parameter_sensitivity",
+        "label": "파라미터 / 리밸런싱 민감도",
+        "question": "파라미터와 리밸런싱 주기를 바꿔도 결론이 유지되는가?",
+        "primary_evidence": ["stress_robustness_evidence", "validation_efficacy_audit"],
+        "required_signals": ["sensitivity_result", "rebalance_or_parameter_range"],
+    },
+)
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -2170,6 +2244,48 @@ def _clamped_score(value: float, *, lower: float = 0.0, upper: float = 100.0) ->
     return int(round(max(lower, min(upper, value))))
 
 
+def build_final_review_pattern_guide_contract() -> dict[str, Any]:
+    """Describe the evidence contract for conditional portfolio guidance."""
+
+    patterns = []
+    for rank, raw_pattern in enumerate(FINAL_REVIEW_PATTERN_CATALOG, start=1):
+        pattern = dict(raw_pattern)
+        patterns.append(
+            {
+                "rank": rank,
+                **pattern,
+                "support_contract": {
+                    "supported": "직접 관측값, 판단 기준, source, 기준일과 패턴별 필수 signal이 모두 있어야 합니다.",
+                    "indicative": "일부 직접 근거 또는 명시된 proxy가 있으나 조건부 참고만 가능합니다.",
+                    "insufficient": "필수 signal이 없으면 방향을 단정하지 않고 판단 보류로 표시합니다.",
+                },
+            }
+        )
+    return {
+        "schema_version": PATTERN_GUIDE_CONTRACT_SCHEMA_VERSION,
+        "patterns": patterns,
+        "support_states": [
+            {"key": "supported", "label": "근거 충분", "tone": "positive"},
+            {"key": "indicative", "label": "참고 신호", "tone": "warning"},
+            {"key": "insufficient", "label": "판단 보류", "tone": "neutral"},
+        ],
+        "rules": {
+            "stored_evidence_only": True,
+            "freeform_generation": False,
+            "direct_scenario_claim_requires_observation": True,
+            "alternative_allocation_requires_counterfactual_backtest": True,
+        },
+        "boundaries": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "storage_write": False,
+            "investment_advice": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
 def _scorecard_category(category: str, score: int, evidence: str, effect: str) -> dict[str, Any]:
     if score >= 80:
         tone = "positive"
@@ -2874,6 +2990,7 @@ def build_final_review_investment_report(
             "decision_questions": decision_questions,
             "boundary_note": "저장된 Practical Validation evidence를 해석한 결과이며 새 검증이나 투자 주문을 실행하지 않습니다.",
         },
+        "pattern_guide_contract": build_final_review_pattern_guide_contract(),
         "selection_rationale": selection_rationale,
         "required_final_decision_notes": required_final_decision_notes,
         "save_handoff_summary": save_handoff_summary,
