@@ -2599,6 +2599,11 @@ def build_final_review_selection_rationale(*, scorecard: dict[str, Any]) -> dict
 
     scorecard = dict(scorecard or {})
     dimensions = [dict(row or {}) for row in list(scorecard.get("dimensions") or []) if isinstance(row, dict)]
+    headline_scores = {
+        str(row.get("key") or ""): dict(row or {})
+        for row in list(scorecard.get("headline_scores") or [])
+        if isinstance(row, dict)
+    }
     strongest = max(dimensions, key=lambda row: int(row.get("score") or 0)) if dimensions else {}
     weakest = min(dimensions, key=lambda row: int(row.get("score") or 0)) if dimensions else {}
     inputs = dict(scorecard.get("inputs") or {})
@@ -2607,6 +2612,14 @@ def build_final_review_selection_rationale(*, scorecard: dict[str, Any]) -> dict
     overall_score = int(scorecard.get("overall_score") or 0)
     pre_cap_score = int(scorecard.get("pre_cap_score") or overall_score)
     classification_label = _safe_text(scorecard.get("classification_label"), _decision_route_label(decision_route))
+    attractiveness = int(dict(headline_scores.get("attractiveness") or {}).get("score") or overall_score)
+    evidence_confidence = int(dict(headline_scores.get("evidence_confidence") or {}).get("score") or 0)
+    monitoring_readiness = int(dict(headline_scores.get("monitoring_readiness") or {}).get("score") or 0)
+    route_constraints = [
+        dict(row or {})
+        for row in list(scorecard.get("route_constraints") or [])
+        if isinstance(row, dict)
+    ]
     if decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO:
         headline = "Monitoring 후보로 올릴 수 있는 최종 선택 근거입니다."
     elif decision_route == "HOLD_FOR_MORE_PAPER_TRACKING":
@@ -2615,10 +2628,11 @@ def build_final_review_selection_rationale(*, scorecard: dict[str, Any]) -> dict
         headline = "실전 후보 판단 전에 재검토해야 하는 근거입니다."
     else:
         headline = "실전 사용 후보에서 제외해야 하는 근거입니다."
-    limit_summary = (
-        f"score cap {min(int(limit.get('cap') or 100) for limit in score_limits)} 적용"
-        if score_limits
-        else "score cap 없음"
+    limit_summary = "투자 매력도 자동 cap 없음"
+    route_summary = (
+        ", ".join(_safe_text(item.get("label"), "route 확인") for item in route_constraints)
+        if route_constraints
+        else "선택 route 제약 없음"
     )
     review_summary = (
         f"Level2 REVIEW warning {int(inputs.get('warning_count') or 0)}, "
@@ -2626,14 +2640,13 @@ def build_final_review_selection_rationale(*, scorecard: dict[str, Any]) -> dict
         f"monitoring follow-up {int(inputs.get('monitoring_followup_count') or 0)}"
     )
     decision_reason = (
-        f"{classification_label}: 종합 {overall_score}/100, 원점수 {pre_cap_score}/100, {limit_summary}. "
-        f"가장 강한 근거는 {_safe_text(strongest.get('label'), '확인 필요')}이고 "
-        f"가장 큰 확인 지점은 {_safe_text(weakest.get('label'), '확인 필요')}입니다."
+        f"{classification_label}. 투자 매력도 {attractiveness}/100, 근거 신뢰도 {evidence_confidence}/100, "
+        f"Monitoring 준비도 {monitoring_readiness}/100입니다. {route_summary}."
     )
     key_points = [
         {
-            "label": "종합 점수",
-            "detail": f"{overall_score}/100 ({_safe_text(scorecard.get('score_band'), '-')})",
+            "label": "투자 매력도",
+            "detail": f"{attractiveness}/100 ({_safe_text(scorecard.get('score_band'), '-')})",
             "tone": "positive" if overall_score >= 80 else "warning" if overall_score >= 55 else "danger",
         },
         {
@@ -2667,7 +2680,10 @@ def build_final_review_selection_rationale(*, scorecard: dict[str, Any]) -> dict
         "decision_label": _decision_route_label(decision_route),
         "classification": scorecard.get("classification"),
         "classification_label": classification_label,
-        "score_summary": f"종합 {overall_score}/100, 원점수 {pre_cap_score}/100, {limit_summary}",
+        "score_summary": (
+            f"투자 매력도 {attractiveness}/100, 근거 신뢰도 {evidence_confidence}/100, "
+            f"Monitoring 준비도 {monitoring_readiness}/100, {limit_summary}, {route_summary}"
+        ),
         "decision_reason": decision_reason,
         "key_points": key_points,
         "monitoring_handoff_reason": (
@@ -2703,8 +2719,8 @@ def build_final_review_required_decision_notes(*, scorecard: dict[str, Any], sel
         },
         {
             "kind": "score",
-            "label": "점수와 제한 조건",
-            "prompt": _safe_text(selection_rationale.get("score_summary"), "종합 점수와 score cap 적용 여부를 기록합니다."),
+            "label": "점수 해석과 route 조건",
+            "prompt": _safe_text(selection_rationale.get("score_summary"), "세 점수와 route 조건을 구분해 기록합니다."),
             "required": True,
             "source": "scorecard",
             "boundary": {"storage_write": False, "provider_fetch": False},
@@ -2796,6 +2812,24 @@ def build_final_review_investment_report(
         weaknesses=weaknesses,
         scorecard=scorecard,
     )
+    decision_questions = []
+    question_effects = {
+        "decision_reason": "최종 판단 기록",
+        "score": "점수 해석",
+        "level2_review": "저장 전 확인",
+        "monitoring_handoff": "Monitoring 조건",
+    }
+    for note in required_final_decision_notes:
+        decision_questions.append(
+            {
+                "kind": note.get("kind"),
+                "label": note.get("label"),
+                "question": note.get("prompt"),
+                "required": bool(note.get("required")),
+                "effect": question_effects.get(str(note.get("kind") or ""), "판단 참고"),
+                "source": note.get("source"),
+            }
+        )
     score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
     if state == "SELECT_READY":
         headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
@@ -2830,6 +2864,16 @@ def build_final_review_investment_report(
         },
         "scorecard": scorecard,
         "decision_summary": decision_summary,
+        "report_narrative": {
+            "total_assessment": {
+                "label": "총평",
+                "headline": selection_rationale.get("classification_label"),
+                "detail": selection_rationale.get("decision_reason"),
+                "tone": "positive" if scorecard.get("monitoring_candidate") else "warning",
+            },
+            "decision_questions": decision_questions,
+            "boundary_note": "저장된 Practical Validation evidence를 해석한 결과이며 새 검증이나 투자 주문을 실행하지 않습니다.",
+        },
         "selection_rationale": selection_rationale,
         "required_final_decision_notes": required_final_decision_notes,
         "save_handoff_summary": save_handoff_summary,

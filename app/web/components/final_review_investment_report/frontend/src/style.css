@@ -260,11 +260,95 @@
   text-align: right;
 }
 
-.fr-invest-report__decision-brief,
+.fr-invest-report__assessment,
+.fr-invest-report__questions,
 .fr-invest-report__interpretation {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
+}
+
+.fr-invest-report__assessment {
+  border-left: 4px solid #94a3b8;
+  padding: 16px 0 2px 16px;
+}
+
+.fr-invest-report__assessment--positive { border-left-color: #16806a; }
+.fr-invest-report__assessment--warning { border-left-color: #c98515; }
+.fr-invest-report__assessment--danger { border-left-color: #dc2626; }
+
+.fr-invest-report__assessment > span {
+  color: #526070;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fr-invest-report__assessment h5 {
+  margin-top: 4px;
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.fr-invest-report__assessment p {
+  margin-top: 7px;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.fr-invest-report__assessment small {
+  display: block;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.fr-invest-report__question-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fr-invest-report__question-list article {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.fr-invest-report__question-list article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fr-invest-report__question-list span,
+.fr-invest-report__question-list em,
+.fr-invest-report__question-list small {
+  color: #64748b;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.fr-invest-report__question-list h6 {
+  margin-top: 8px;
+  color: #111827;
+  font-size: 13px;
+}
+
+.fr-invest-report__question-list p {
+  margin-top: 6px;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fr-invest-report__question-list small {
+  display: block;
+  margin-top: 8px;
 }
 
 .fr-invest-report__decision-columns {
@@ -903,8 +987,10 @@
 
   .fr-invest-report__header,
   .fr-invest-report__section-head,
-  .fr-invest-report__decision-columns,
+  .fr-invest-report__headline-scores,
   .fr-invest-report__evidence,
+  .fr-invest-report__question-list,
+  .fr-invest-report__review-trace,
   .fr-invest-report__scorecard-head,
   .fr-invest-report__scorecard-dimensions,
   .fr-invest-report__score-drivers,

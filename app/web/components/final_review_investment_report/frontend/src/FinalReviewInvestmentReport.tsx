@@ -84,6 +84,39 @@ type DecisionSummary = {
   items?: DecisionSummaryItem[]
 }
 
+type ReportNarrative = {
+  totalAssessment?: {
+    label?: string
+    headline?: string
+    detail?: string
+    tone?: Tone
+  }
+  total_assessment?: {
+    label?: string
+    headline?: string
+    detail?: string
+    tone?: Tone
+  }
+  decisionQuestions?: Array<{
+    kind?: string
+    label?: string
+    question?: string
+    required?: boolean
+    effect?: string
+    source?: string
+  }>
+  decision_questions?: Array<{
+    kind?: string
+    label?: string
+    question?: string
+    required?: boolean
+    effect?: string
+    source?: string
+  }>
+  boundaryNote?: string
+  boundary_note?: string
+}
+
 type InterpretationCard = {
   kind?: string
   title?: string
@@ -355,6 +388,8 @@ export type InvestmentReport = {
   scorecard?: Scorecard
   decisionSummary?: DecisionSummary
   decision_summary?: DecisionSummary
+  reportNarrative?: ReportNarrative
+  report_narrative?: ReportNarrative
   selectionRationale?: SelectionRationale
   selection_rationale?: SelectionRationale
   requiredFinalDecisionNotes?: RequiredDecisionNote[]
@@ -441,49 +476,41 @@ function MetaStrip({ items }: { items: MetaItem[] }) {
   )
 }
 
-function DecisionBriefPanel({ summary }: { summary: DecisionSummary }) {
-  const items = summary.items ?? []
-  const candidateItems = items.filter((item) => {
-    const label = compact(item.label, "")
-    return label.includes("최종 선택") || label.includes("강한 근거") || label.includes("준비도")
-  })
-  const checkItems = items.filter((item) => !candidateItems.includes(item))
-  const itemList = (rows: DecisionSummaryItem[], emptyLabel: string) => (
-    <ul>
-      {rows.length > 0 ? (
-        rows.map((item, index) => (
-          <li className={`fr-invest-report__decision-row fr-invest-report__decision-row--${toneClass(item.tone)}`} key={`${item.label ?? "decision"}-${index}`}>
-            <span>{compact(item.label)}</span>
-            <p>{compact(item.detail)}</p>
-          </li>
-        ))
-      ) : (
-        <li className="fr-invest-report__decision-row fr-invest-report__decision-row--neutral">
-          <span>{emptyLabel}</span>
-          <p>현재 report payload에 표시할 항목이 없습니다.</p>
-        </li>
-      )}
-    </ul>
-  )
-
+function AssessmentPanel({ narrative }: { narrative: ReportNarrative }) {
+  const assessment = narrative.totalAssessment ?? narrative.total_assessment ?? {}
   return (
-    <section className="fr-invest-report__decision-brief" aria-label="선택 판단 요약">
+    <section className={`fr-invest-report__assessment fr-invest-report__assessment--${toneClass(assessment.tone)}`} aria-label="총평">
+      <span>{compact(assessment.label, "총평")}</span>
+      <h5>{compact(assessment.headline)}</h5>
+      <p>{compact(assessment.detail)}</p>
+      <small>{compact(field(narrative.boundaryNote, narrative.boundary_note))}</small>
+    </section>
+  )
+}
+
+function DecisionQuestionList({ narrative }: { narrative: ReportNarrative }) {
+  const questions = field(narrative.decisionQuestions, narrative.decision_questions) ?? []
+  return (
+    <section className="fr-invest-report__questions" aria-label="저장 전 확인 질문">
       <div className="fr-invest-report__section-head">
         <div>
-          <span>선택 판단 요약</span>
-          <h5>{compact(field(summary.statusLabel, summary.status_label), compact(summary.headline))}</h5>
+          <span>최종 판단 체크</span>
+          <h5>저장 전 확인 질문</h5>
         </div>
-        <strong>{compact(field(summary.scoreLine, summary.score_line))}</strong>
+        <strong>{questions.filter((item) => item.required).length}개 필수 확인</strong>
       </div>
-      <div className="fr-invest-report__decision-columns">
-        <div>
-          <h6>왜 후보인가</h6>
-          {itemList(candidateItems, "후보 근거 없음")}
-        </div>
-        <div>
-          <h6>무엇을 확인해야 하나</h6>
-          {itemList(checkItems, "확인 지점 없음")}
-        </div>
+      <div className="fr-invest-report__question-list">
+        {questions.map((item, index) => (
+          <article key={`${item.kind ?? "question"}-${index}`}>
+            <div>
+              <span>{compact(item.effect)}</span>
+              <em>{item.required ? "필수" : "참고"}</em>
+            </div>
+            <h6>{compact(item.label)}</h6>
+            <p>{compact(item.question)}</p>
+            <small>{compact(item.source)}</small>
+          </article>
+        ))}
       </div>
     </section>
   )
@@ -793,6 +820,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scorecard = report.scorecard ?? {}
   const summary = report.summary ?? {}
   const decisionSummary = report.decisionSummary ?? report.decision_summary ?? {}
+  const reportNarrative = report.reportNarrative ?? report.report_narrative ?? {}
   const source = report.source ?? {}
   const tone = toneClass(recommendation.tone)
   const monitoring = report.monitoringConditions ?? report.monitoring_conditions ?? {}
@@ -979,12 +1007,14 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
         ))}
       </section>
 
-      <DecisionBriefPanel summary={decisionSummary} />
+      <AssessmentPanel narrative={reportNarrative} />
 
       <div className="fr-invest-report__evidence">
         <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />
-        <EvidenceRows title="확인 지점" items={watchItems} emptyLabel="확인 지점 없음" limit={2} />
+        <EvidenceRows title="약점과 한계" items={watchItems} emptyLabel="현재 확인된 구조적 약점 없음" limit={3} />
       </div>
+
+      <DecisionQuestionList narrative={reportNarrative} />
 
       <ReviewActionBoard sections={level2RoleSections} />
 
