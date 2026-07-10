@@ -9,7 +9,14 @@ Last Verified: 2026-07-10
 
 현재 active task는 없다.
 
-Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-ia-v1-20260710/`다.
+Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-flat-ui-v1-20260710/`다.
+
+- 목적: Final Review `투자 검토서`가 박스 안에 박스가 반복되는 dashboard처럼 보여 Monitoring 후보 여부, 추천 이유, 확인 지점을 빠르게 읽기 어려운 문제를 줄였다.
+- 주요 변경: React investment report first-read를 meta strip, `왜 후보인가` / `무엇을 확인해야 하나` decision brief, capped strength / watch rows, interpretation rows로 평면화했다. 상세 scorecard, Level2 REVIEW 처리, 저장 / Monitoring handoff, 약점 개선안, Monitoring 조건은 lower disclosure로 낮췄다.
+- 판단 경계: Python read model이 score, gate, route decision, save guidance, Monitoring handoff, provider / persistence boundary를 계속 소유한다. React는 기존 payload 표시 우선순위와 layout만 바꾼다.
+- QA: TDD RED/GREEN source contract, focused Final Review / evidence service tests 51개, py_compile, npm build, `git diff --check`, Browser QA iframe DOM check와 screenshot을 확인했다.
+
+Previous completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-ia-v1-20260710/`다.
 
 - 목적: Final Review `투자 검토서`가 최종 선택 사유, 저장 전 메모, 저장 / Monitoring handoff copy를 반복하고 일부 하단 카드가 guide처럼 보이는 문제를 줄였다.
 - 주요 변경: Python investment report payload가 `decision_summary`, high-score dimension 기반 강점, compact `watch_items`, 실제 해석용 `interpretation_cards`를 만들고 React는 `선택 판단 요약`, `강점`, `확인 지점`, `해석`으로 표시한다. first-read의 old `다음 행동` / `판단 저장 전 메모` block은 제거했다.

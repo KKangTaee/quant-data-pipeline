@@ -362,24 +362,106 @@ const listItems = (items: string[] | undefined): string[] => (items ?? []).map((
 
 const field = <T,>(camel: T | undefined, snake: T | undefined): T | undefined => (camel !== undefined ? camel : snake)
 
-function EvidenceList({ title, items, emptyLabel }: { title: string; items: ReportCard[]; emptyLabel: string }) {
+const badgeText = (value: unknown): string => {
+  const text = compact(value, "")
+  const labels: Record<string, string> = {
+    HIGH_SCORE: "강점",
+    PASS: "통과",
+    WATCH: "확인 필요",
+    SCORE_CAP: "점수 제한",
+    BLOCKER: "차단",
+    WARNING: "주의",
+  }
+  return labels[text] ?? text.replaceAll("_", " ").toLowerCase()
+}
+
+type MetaItem = {
+  label: string
+  value: string
+  tone?: Tone
+}
+
+function MetaStrip({ items }: { items: MetaItem[] }) {
   return (
-    <section className="fr-invest-report__lane">
+    <dl className="fr-invest-report__meta-strip" aria-label="후보 메타 정보">
+      {items.map((item) => (
+        <div className={`fr-invest-report__meta-item fr-invest-report__meta-item--${toneClass(item.tone)}`} key={`${item.label}-${item.value}`}>
+          <dt>{item.label}</dt>
+          <dd>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+function DecisionBriefPanel({ summary }: { summary: DecisionSummary }) {
+  const items = summary.items ?? []
+  const candidateItems = items.filter((item) => {
+    const label = compact(item.label, "")
+    return label.includes("최종 선택") || label.includes("강한 근거") || label.includes("준비도")
+  })
+  const checkItems = items.filter((item) => !candidateItems.includes(item))
+  const itemList = (rows: DecisionSummaryItem[], emptyLabel: string) => (
+    <ul>
+      {rows.length > 0 ? (
+        rows.map((item, index) => (
+          <li className={`fr-invest-report__decision-row fr-invest-report__decision-row--${toneClass(item.tone)}`} key={`${item.label ?? "decision"}-${index}`}>
+            <span>{compact(item.label)}</span>
+            <p>{compact(item.detail)}</p>
+          </li>
+        ))
+      ) : (
+        <li className="fr-invest-report__decision-row fr-invest-report__decision-row--neutral">
+          <span>{emptyLabel}</span>
+          <p>현재 report payload에 표시할 항목이 없습니다.</p>
+        </li>
+      )}
+    </ul>
+  )
+
+  return (
+    <section className="fr-invest-report__decision-brief" aria-label="선택 판단 요약">
+      <div className="fr-invest-report__section-head">
+        <div>
+          <span>선택 판단 요약</span>
+          <h5>{compact(field(summary.statusLabel, summary.status_label), compact(summary.headline))}</h5>
+        </div>
+        <strong>{compact(field(summary.scoreLine, summary.score_line))}</strong>
+      </div>
+      <div className="fr-invest-report__decision-columns">
+        <div>
+          <h6>왜 후보인가</h6>
+          {itemList(candidateItems, "후보 근거 없음")}
+        </div>
+        <div>
+          <h6>무엇을 확인해야 하나</h6>
+          {itemList(checkItems, "확인 지점 없음")}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function EvidenceRows({ title, items, emptyLabel, limit }: { title: string; items: ReportCard[]; emptyLabel: string; limit: number }) {
+  const visibleItems = items.slice(0, limit)
+  const hiddenCount = Math.max(0, items.length - visibleItems.length)
+  return (
+    <section className="fr-invest-report__evidence-lane">
       <div className="fr-invest-report__lane-title">{title}</div>
-      <div className="fr-invest-report__cards">
-        {items.length > 0 ? (
-          items.map((item, index) => (
-            <article className={`fr-invest-report__card fr-invest-report__card--${toneClass(item.tone)}`} key={`${item.title ?? title}-${index}`}>
+      <div className="fr-invest-report__evidence-rows">
+        {visibleItems.length > 0 ? (
+          visibleItems.map((item, index) => (
+            <article className={`fr-invest-report__evidence-row fr-invest-report__evidence-row--${toneClass(item.tone)}`} key={`${item.title ?? title}-${index}`}>
               <div>
                 <h5>{compact(item.title)}</h5>
-                <span>{compact(item.severity)}</span>
+                <span>{badgeText(item.severity)}</span>
               </div>
               <p>{compact(item.detail)}</p>
               {item.action ? <small>{compact(item.action)}</small> : null}
             </article>
           ))
         ) : (
-          <article className="fr-invest-report__card fr-invest-report__card--neutral">
+          <article className="fr-invest-report__evidence-row fr-invest-report__evidence-row--neutral">
             <div>
               <h5>{emptyLabel}</h5>
               <span>-</span>
@@ -388,50 +470,30 @@ function EvidenceList({ title, items, emptyLabel }: { title: string; items: Repo
           </article>
         )}
       </div>
+      {hiddenCount > 0 ? <p className="fr-invest-report__more-note">추가 {hiddenCount}개 항목은 아래 근거 상세에서 확인합니다.</p> : null}
     </section>
   )
 }
 
-function DecisionSummaryPanel({ summary }: { summary: DecisionSummary }) {
-  const items = summary.items ?? []
-  return (
-    <section className="fr-invest-report__decision-summary" aria-label="선택 판단 요약">
-      <div className="fr-invest-report__section-head">
-        <div>
-          <span>선택 판단 요약</span>
-          <h5>{compact(field(summary.statusLabel, summary.status_label), compact(summary.headline))}</h5>
-        </div>
-        <strong>{compact(field(summary.scoreLine, summary.score_line))}</strong>
-      </div>
-      <div className="fr-invest-report__decision-grid">
-        {items.map((item, index) => (
-          <article className={`fr-invest-report__decision-item fr-invest-report__decision-item--${toneClass(item.tone)}`} key={`${item.label ?? "summary"}-${index}`}>
-            <span>{compact(item.label)}</span>
-            <p>{compact(item.detail)}</p>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function InterpretationCardList({ cards }: { cards: InterpretationCard[] }) {
+function InterpretationRows({ cards }: { cards: InterpretationCard[] }) {
   if (cards.length === 0) return null
   return (
-    <section className="fr-invest-report__interpretation" aria-label="해석 카드">
+    <section className="fr-invest-report__interpretation" aria-label="해석">
       <div className="fr-invest-report__section-head">
         <div>
           <span>해석</span>
           <h5>실제 판단에 쓰는 근거만 표시합니다.</h5>
         </div>
       </div>
-      <div className="fr-invest-report__interpretation-grid">
+      <div className="fr-invest-report__interpretation-rows">
         {cards.map((card, index) => (
-          <article className={`fr-invest-report__interpretation-card fr-invest-report__interpretation-card--${toneClass(card.tone)}`} key={`${card.kind ?? card.title ?? "interpretation"}-${index}`}>
-            <h5>{compact(card.title)}</h5>
-            <p>{compact(card.detail)}</p>
+          <article className={`fr-invest-report__interpretation-row fr-invest-report__interpretation-row--${toneClass(card.tone)}`} key={`${card.kind ?? card.title ?? "interpretation"}-${index}`}>
+            <div>
+              <h5>{compact(card.title)}</h5>
+              <p>{compact(card.detail)}</p>
+            </div>
             {card.badges && card.badges.length > 0 ? (
-              <div>
+              <div className="fr-invest-report__inline-badges">
                 {card.badges.map((badge, badgeIndex) => (
                   <span key={`${badge}-${badgeIndex}`}>{compact(badge)}</span>
                 ))}
@@ -441,6 +503,18 @@ function InterpretationCardList({ cards }: { cards: InterpretationCard[] }) {
         ))}
       </div>
     </section>
+  )
+}
+
+function DetailDisclosure({ title, eyebrow, children }: { title: string; eyebrow?: string; children: React.ReactNode }) {
+  return (
+    <details className="fr-invest-report__detail-disclosure">
+      <summary>
+        <span>{compact(eyebrow, "근거 상세")}</span>
+        <strong>{title}</strong>
+      </summary>
+      <div className="fr-invest-report__detail-body">{children}</div>
+    </details>
   )
 }
 
@@ -623,6 +697,13 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const improvementLow = field(improvementComparison.expectedScoreLow, improvementComparison.expected_score_low)
   const improvementHigh = field(improvementComparison.expectedScoreHigh, improvementComparison.expected_score_high)
   const improvementStatus = field(improvementComparison.verificationStatus, improvementComparison.verification_status)
+  const metaItems: MetaItem[] = [
+    { label: "후보", value: compact(source.title) },
+    { label: "판단 상태", value: compact(recommendation.stateLabel ?? recommendation.state_label), tone: recommendation.tone },
+    { label: "Monitoring 후보", value: monitoringCandidate ? "가능" : "불가", tone: monitoringCandidate ? "positive" : "warning" },
+    { label: "Handoff", value: handoffReady ? "Ready" : "Blocked", tone: handoffReady ? "positive" : "danger" },
+    { label: "Level2 open", value: String(openReviewCount), tone: openReviewCount > 0 ? "warning" : "positive" },
+  ]
 
   return (
     <section className={`fr-invest-report fr-invest-report--${tone}`}>
@@ -639,145 +720,138 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
         </aside>
       </header>
 
-      <div className="fr-invest-report__facts">
-        <span>
-          <b>{compact(source.title)}</b>
-          후보
-        </span>
-        <span>
-          <b>{compact(recommendation.stateLabel ?? recommendation.state_label)}</b>
-          판단 상태
-        </span>
-        <span>
-          <b>{monitoringCandidate ? "가능" : "불가"}</b>
-          Monitoring 후보
-        </span>
-        <span>
-          <b>{handoffReady ? "Ready" : "Blocked"}</b>
-          Handoff
-        </span>
-      </div>
+      <MetaStrip items={metaItems} />
 
-      <DecisionSummaryPanel summary={decisionSummary} />
+      <DecisionBriefPanel summary={decisionSummary} />
 
       <div className="fr-invest-report__evidence">
-        <EvidenceList title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" />
-        <EvidenceList title="확인 지점" items={watchItems} emptyLabel="확인 지점 없음" />
+        <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />
+        <EvidenceRows title="확인 지점" items={watchItems} emptyLabel="확인 지점 없음" limit={2} />
       </div>
 
-      <InterpretationCardList cards={interpretationCards} />
+      <InterpretationRows cards={interpretationCards} />
 
-      <section className="fr-invest-report__scorecard-panel">
-        <div className="fr-invest-report__scorecard-head">
-          <div>
-            <span>최종 점수 체계</span>
-            <h5>{compact(scorecardClassification, compact(recommendation.label))}</h5>
-            <p>{compact(scorecard.basis)}</p>
+      <DetailDisclosure eyebrow="근거 상세" title="최종 점수 체계">
+        <section className="fr-invest-report__scorecard-detail">
+          <div className="fr-invest-report__scorecard-head">
+            <div>
+              <span>최종 점수 체계</span>
+              <h5>{compact(scorecardClassification, compact(recommendation.label))}</h5>
+              <p>{compact(scorecard.basis)}</p>
+            </div>
+            <aside>
+              <strong>{formattedScore(scorecardOverall)}</strong>
+              <span>/ 100</span>
+              <small>{compact(scorecardBand)}</small>
+            </aside>
           </div>
-          <aside>
-            <strong>{formattedScore(scorecardOverall)}</strong>
-            <span>/ 100</span>
-            <small>{compact(scorecardBand)}</small>
-          </aside>
-        </div>
-        <div className="fr-invest-report__scorecard-meta">
-          <span>{compact(scorecardDecision)}</span>
-          <span>{scorecardMonitoringCandidate ? "Monitoring 후보" : "Monitoring handoff 보류"}</span>
-          <span>{compact(scorecard.classification)}</span>
-          <span>Pre-cap {formattedScore(scorecardPreCap)}</span>
-        </div>
-        <div className="fr-invest-report__scorecard-subtitle">세부 점수</div>
-        <ScorecardDimensionList dimensions={scorecard.dimensions ?? []} />
-        <div className="fr-invest-report__scorecard-subtitle">점수 영향</div>
-        <div className="fr-invest-report__score-drivers">
-          <ScoreDriverList title="가산 요인" drivers={scorecardDrivers.positive ?? []} />
-          <ScoreDriverList title="감점 요인" drivers={scorecardDrivers.negative ?? []} />
-          <ScoreLimitList limits={scorecardLimits} />
-        </div>
-        <ReviewImpactList impacts={scorecardReviewImpacts} />
-        <ScorecardCategoryList categories={scorecard.categories ?? []} />
-      </section>
-
-      <section className="fr-invest-report__handoff-panel">
-        <div>
-          <span>저장 / Monitoring handoff</span>
-          <h5>{compact(judgmentRecord.label)}</h5>
-          <p>{compact(judgmentRecord.detail)}</p>
-        </div>
-        <div className="fr-invest-report__handoff-grid">
-          <article>
-            <span>Final Review 판단 저장</span>
-            <strong>{judgmentRecord.ready ? "Ready" : "Check"}</strong>
-            <p>{compact(saveRecordType)}</p>
-          </article>
-          <article>
-            <span>Portfolio Monitoring</span>
-            <strong>{monitoringHandoff.candidate ? "Handoff" : "Decision Only"}</strong>
-            <p>{compact(monitoringHandoff.detail)}</p>
-          </article>
-          <article>
-            <span>Order / Auto Rebalance</span>
-            <strong>Disabled</strong>
-            <p>Final Review는 판단 기록과 Monitoring 후보 handoff만 다룹니다.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="fr-invest-report__improvement-panel">
-        <div className="fr-invest-report__improvement-head">
-          <div>
-            <span>약점 개선안</span>
-            <h5>현재 후보와 개선 기대 범위</h5>
+          <div className="fr-invest-report__scorecard-meta">
+            <span>{compact(scorecardDecision)}</span>
+            <span>{scorecardMonitoringCandidate ? "Monitoring 후보" : "Monitoring handoff 보류"}</span>
+            <span>{compact(scorecard.classification)}</span>
+            <span>Pre-cap {formattedScore(scorecardPreCap)}</span>
           </div>
-          <aside>
-            <strong>{formattedScore(improvementCurrent)}</strong>
-            <span>{formattedScore(improvementLow)} - {formattedScore(improvementHigh)}</span>
-            <small>{compact(improvementStatus)}</small>
-          </aside>
-        </div>
-        <div className="fr-invest-report__improvement-list">
-          {improvementProposals.map((proposal, index) => (
-            <article className="fr-invest-report__improvement-item" key={`${proposal.weakness ?? "proposal"}-${index}`}>
-              <h5>{compact(proposal.weakness)}</h5>
-              <p>{compact(field(proposal.currentGap, proposal.current_gap))}</p>
-              <strong>{compact(field(proposal.proposedChange, proposal.proposed_change))}</strong>
-              <small>{compact(field(proposal.verificationStep, proposal.verification_step))}</small>
+          <div className="fr-invest-report__scorecard-subtitle">세부 점수</div>
+          <ScorecardDimensionList dimensions={scorecard.dimensions ?? []} />
+          <div className="fr-invest-report__scorecard-subtitle">점수 영향</div>
+          <div className="fr-invest-report__score-drivers">
+            <ScoreDriverList title="가산 요인" drivers={scorecardDrivers.positive ?? []} />
+            <ScoreDriverList title="감점 요인" drivers={scorecardDrivers.negative ?? []} />
+            <ScoreLimitList limits={scorecardLimits} />
+          </div>
+          <ReviewImpactList impacts={scorecardReviewImpacts} />
+          <ScorecardCategoryList categories={scorecard.categories ?? []} />
+        </section>
+      </DetailDisclosure>
+
+      <DetailDisclosure eyebrow="저장 경계" title="저장 / Monitoring handoff">
+        <section className="fr-invest-report__handoff-detail">
+          <div>
+            <span>저장 / Monitoring handoff</span>
+            <h5>{compact(judgmentRecord.label)}</h5>
+            <p>{compact(judgmentRecord.detail)}</p>
+          </div>
+          <div className="fr-invest-report__handoff-grid">
+            <article>
+              <span>Final Review 판단 저장</span>
+              <strong>{judgmentRecord.ready ? "Ready" : "Check"}</strong>
+              <p>{compact(saveRecordType)}</p>
             </article>
-          ))}
-        </div>
-      </section>
+            <article>
+              <span>Portfolio Monitoring</span>
+              <strong>{monitoringHandoff.candidate ? "Handoff" : "Decision Only"}</strong>
+              <p>{compact(monitoringHandoff.detail)}</p>
+            </article>
+            <article>
+              <span>Order / Auto Rebalance</span>
+              <strong>Disabled</strong>
+              <p>Final Review는 판단 기록과 Monitoring 후보 handoff만 다룹니다.</p>
+            </article>
+          </div>
+        </section>
+      </DetailDisclosure>
 
-      <section className="fr-invest-report__review-disposition">
-        <div className="fr-invest-report__review-head">
+      <DetailDisclosure eyebrow="개선 후보" title="약점 개선안">
+        <section className="fr-invest-report__improvement-detail">
+          <div className="fr-invest-report__improvement-head">
+            <div>
+              <span>약점 개선안</span>
+              <h5>현재 후보와 개선 기대 범위</h5>
+            </div>
+            <aside>
+              <strong>{formattedScore(improvementCurrent)}</strong>
+              <span>{formattedScore(improvementLow)} - {formattedScore(improvementHigh)}</span>
+              <small>{compact(improvementStatus)}</small>
+            </aside>
+          </div>
+          <div className="fr-invest-report__improvement-list">
+            {improvementProposals.map((proposal, index) => (
+              <article className="fr-invest-report__improvement-item" key={`${proposal.weakness ?? "proposal"}-${index}`}>
+                <h5>{compact(proposal.weakness)}</h5>
+                <p>{compact(field(proposal.currentGap, proposal.current_gap))}</p>
+                <strong>{compact(field(proposal.proposedChange, proposal.proposed_change))}</strong>
+                <small>{compact(field(proposal.verificationStep, proposal.verification_step))}</small>
+              </article>
+            ))}
+          </div>
+        </section>
+      </DetailDisclosure>
+
+      <DetailDisclosure eyebrow="Review 처리" title="Level2 REVIEW 처리 결과">
+        <section className="fr-invest-report__review-disposition">
+          <div className="fr-invest-report__review-head">
+            <div>
+              <span>Level2 REVIEW 처리 결과</span>
+              <h5>Final Review에서 다시 실행하지 않고 판단 근거로 소비합니다.</h5>
+            </div>
+            <div className="fr-invest-report__review-counts">
+              <b>{level2Summary.blocker ?? 0}</b><small>Blocker</small>
+              <b>{level2Summary.warning ?? 0}</b><small>Warning</small>
+              <b>{openReviewCount}</b><small>Open</small>
+              <b>{monitoringFollowupCount}</b><small>Monitoring</small>
+            </div>
+          </div>
+          <div className="fr-invest-report__review-grid">
+            <ReviewDispositionList title="Blocker" items={level2Groups.blocker ?? []} emptyLabel="저장 전 보강 없음" />
+            <ReviewDispositionList title="Warning" items={level2Groups.warning ?? []} emptyLabel="최종 판단 warning 없음" />
+            <ReviewDispositionList title="Open Review" items={openReviewItems} emptyLabel="Final Review open review 없음" />
+            <ReviewDispositionList title="Monitoring Follow-up" items={monitoringFollowupItems} emptyLabel="Monitoring 추적 항목 없음" />
+          </div>
+        </section>
+      </DetailDisclosure>
+
+      <DetailDisclosure eyebrow="Monitoring" title="Monitoring 조건">
+        <footer className="fr-invest-report__monitoring">
           <div>
-            <span>Level2 REVIEW 처리 결과</span>
-            <h5>Final Review에서 다시 실행하지 않고 판단 근거로 소비합니다.</h5>
+            <span>Monitoring 조건</span>
+            <strong>{compact(field(monitoring.trackingBenchmark, monitoring.tracking_benchmark))}</strong>
+            <small>{compact(field(monitoring.reviewCadence, monitoring.review_cadence))}</small>
           </div>
-          <div className="fr-invest-report__review-counts">
-            <b>{level2Summary.blocker ?? 0}</b><small>Blocker</small>
-            <b>{level2Summary.warning ?? 0}</b><small>Warning</small>
-            <b>{openReviewCount}</b><small>Open</small>
-            <b>{monitoringFollowupCount}</b><small>Monitoring</small>
-          </div>
-        </div>
-        <div className="fr-invest-report__review-grid">
-          <ReviewDispositionList title="Blocker" items={level2Groups.blocker ?? []} emptyLabel="저장 전 보강 없음" />
-          <ReviewDispositionList title="Warning" items={level2Groups.warning ?? []} emptyLabel="최종 판단 warning 없음" />
-          <ReviewDispositionList title="Open Review" items={openReviewItems} emptyLabel="Final Review open review 없음" />
-          <ReviewDispositionList title="Monitoring Follow-up" items={monitoringFollowupItems} emptyLabel="Monitoring 추적 항목 없음" />
-        </div>
-      </section>
-
-      <footer className="fr-invest-report__monitoring">
-        <div>
-          <span>Monitoring 조건</span>
-          <strong>{compact(field(monitoring.trackingBenchmark, monitoring.tracking_benchmark))}</strong>
-          <small>{compact(field(monitoring.reviewCadence, monitoring.review_cadence))}</small>
-        </div>
-        <ul>
-          {triggers.length > 0 ? triggers.map((trigger, index) => <li key={`${trigger}-${index}`}>{trigger}</li>) : <li>추적 trigger 없음</li>}
-        </ul>
-      </footer>
+          <ul>
+            {triggers.length > 0 ? triggers.map((trigger, index) => <li key={`${trigger}-${index}`}>{trigger}</li>) : <li>추적 trigger 없음</li>}
+          </ul>
+        </footer>
+      </DetailDisclosure>
     </section>
   )
 }

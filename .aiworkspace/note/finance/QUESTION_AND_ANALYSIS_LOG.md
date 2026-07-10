@@ -9208,3 +9208,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 투자 검토서는 이 후보가 Monitoring 후보인지, 왜 추천되는지, 강점과 확인 지점이 무엇인지 먼저 읽혀야 하며 React는 계속 Python payload 표시만 맡아야 함.
 - Analysis result: old first-read layout은 selection rationale과 required memo를 반복해 보여 실제 판단 근거보다 저장 전 안내가 커졌다. 강점은 policy pass만 있었고, 약점이 없을 때 빈 공간이 컸으며 하단 해석 카드는 실제 해석보다 안내문에 가까웠다.
 - Follow-up: Python read model에 `decision_summary`, high-score dimension strengths, compact watch items, actual interpretation cards를 추가하고 React를 `선택 판단 요약`, `강점`, `확인 지점`, `해석` 중심으로 정리했다. score / gate / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+
+### 2026-07-10 - Final Review 투자 검토서는 카드 대시보드가 아니라 판단서처럼 읽혀야 한다
+
+- User request: 사용자가 투자 검토서 UI가 박스 안에 박스가 반복되어 엉망이고, Upbit / Toss Securities 같은 투자 앱 벤치마킹 관점으로 UI 문제를 진단한 뒤 1차~4차 단계 개발을 요청함.
+- Interpreted goal: first-read는 후보 상태, 왜 후보인지, 무엇을 확인해야 하는지에 집중하고, detailed score / Level2 / handoff / monitoring 조건은 검산용 하위 근거로 낮춰야 함.
+- Analysis result: 상용 투자 앱류의 scan-first 패턴은 핵심 상태와 다음 판단을 압축하고 상세 근거는 뒤로 접는다. 기존 React report는 facts, decision grid, card list, mini grid가 같은 박스 문법을 반복해 사용자가 판단보다 UI 구조를 먼저 읽게 했다.
+- Follow-up: React report를 meta strip, two-column decision brief, evidence rows, interpretation rows, lower detail disclosures로 평면화했고, source contract로 old first-read card classes를 금지했다. Python read model, score / gate / save / handoff / provider / registry boundary는 유지했다.

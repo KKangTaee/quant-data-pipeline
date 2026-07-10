@@ -5975,3 +5975,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Python read model은 `decision_summary`, high-score dimension 강점, compact `watch_items`, 실제 해석 카드 payload를 만들고 React는 이를 `선택 판단 요약`, `강점`, `확인 지점`, `해석`으로 렌더링한다.
 - old first-read `다음 행동` / `판단 저장 전 메모` 반복 block은 제거했고, score / gate / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
 - QA: focused service / React contract 51개, py_compile, npm build, diff check, Browser QA 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.
+
+## 2026-07-10 - Final Review Investment Report Flat UI V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-investment-report-flat-ui-v1-20260710/`에서 1차~4차 투자 검토서 평면화 작업을 완료했다.
+- React first-read는 meta strip, `왜 후보인가` / `무엇을 확인해야 하나`, 강점 / 확인 지점 rows, 해석 rows로 정리했고, 상세 scorecard / Level2 / handoff / 개선안 / Monitoring 조건은 disclosure로 낮췄다.
+- Python score / gate / route / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+- QA: RED/GREEN source contract, focused service / React contract 51개, py_compile, npm build, diff check, Browser QA 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.
