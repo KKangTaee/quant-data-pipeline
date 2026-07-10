@@ -173,6 +173,69 @@
   background: #fef2f2;
 }
 
+.fr-invest-report__headline-scores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.fr-invest-report__headline-score {
+  border-top: 2px solid #94a3b8;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.fr-invest-report__headline-score span {
+  color: #526070;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fr-invest-report__headline-score strong {
+  display: block;
+  margin-top: 4px;
+  color: #111827;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.fr-invest-report__headline-score p {
+  margin-top: 7px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fr-invest-report__headline-score--positive { border-top-color: #16806a; }
+.fr-invest-report__headline-score--warning { border-top-color: #c98515; }
+.fr-invest-report__headline-score--danger { border-top-color: #dc2626; }
+
+.fr-invest-report__review-trace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin-top: 9px !important;
+}
+
+.fr-invest-report__review-trace div {
+  min-width: 0;
+}
+
+.fr-invest-report__review-trace dt {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.fr-invest-report__review-trace dd {
+  margin-top: 2px;
+  color: #334155;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .fr-invest-report__section-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

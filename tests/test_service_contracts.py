@@ -12314,7 +12314,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("최종 점수 체계", component_source)
         self.assertIn("세부 점수", component_source)
         self.assertIn("점수 영향", component_source)
-        self.assertIn("점수 제한", component_source)
+        self.assertIn("점수 / route 정책", component_source)
+        self.assertIn("REVIEW 개수 자동 감점 없음", component_source)
         self.assertIn("Level2 REVIEW 점수 영향", component_source)
         self.assertIn("decisionSummary", component_source)
         self.assertIn("선택 판단 요약", component_source)
@@ -12322,6 +12323,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("MetaStrip", component_source)
         self.assertIn('label: "확인 필요"', component_source)
         self.assertIn("fr-invest-report__status", component_source)
+        self.assertIn("headlineScores", component_source)
+        self.assertIn("투자 매력도", component_source)
+        self.assertIn("관측값", component_source)
+        self.assertIn("판단 기준", component_source)
+        self.assertIn("감점 없음", component_source)
         self.assertNotIn('label: "Handoff"', component_source)
         self.assertNotIn('label: "Monitoring 후보"', component_source)
         self.assertNotIn('label: "Level2 open"', component_source)
@@ -12384,7 +12390,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("최종 점수 체계", build_source)
         self.assertIn("세부 점수", build_source)
         self.assertIn("점수 영향", build_source)
-        self.assertIn("점수 제한", build_source)
+        self.assertIn("점수 / route 정책", build_source)
+        self.assertIn("REVIEW 개수 자동 감점 없음", build_source)
         self.assertIn("Level2 REVIEW 점수 영향", build_source)
         self.assertIn("decisionSummary", build_source)
         self.assertIn("선택 판단 요약", build_source)
@@ -12393,6 +12400,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("확인 필요", build_source)
         self.assertIn("fr-invest-report__status", build_source)
         self.assertNotIn("Level2 open", build_source)
+        self.assertIn("투자 매력도", build_source)
+        self.assertIn("관측값", build_source)
+        self.assertIn("감점 없음", build_source)
         self.assertIn("fr-invest-report__decision-brief", build_source)
         self.assertIn("fr-invest-report__evidence-row", build_source)
         self.assertIn("fr-invest-report__detail-tabs", build_source)
@@ -27575,7 +27585,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         summary_labels = {item["label"] for item in summary["items"]}
 
         self.assertEqual(summary["schema_version"], "final_review_decision_summary_v1")
-        self.assertIn("Portfolio Monitoring 후보", summary["headline"])
+        self.assertIn("모니터링 후보", summary["headline"])
         self.assertIn("종합", summary["score_line"])
         self.assertIn("최종 선택 사유", summary_labels)
         self.assertIn("가장 강한 근거", summary_labels)
@@ -27801,6 +27811,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                             "review_role": "pv_data_caution",
                             "review_role_label": "데이터 주의",
                             "evidence": "provider snapshot is stale",
+                            "observed_value": "41 days old",
+                            "threshold": "30 days or less",
+                            "evidence_source": "provider snapshot",
+                            "as_of": "2026-07-10",
                             "resolution_action": "Refresh provider snapshot if material.",
                         },
                         {
@@ -27861,11 +27875,22 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
 
         impacts = report["scorecard"]["review_impacts"]
         impact_map = {impact["role"]: impact["target_dimension"] for impact in impacts}
-        self.assertEqual(impact_map["pv_data_caution"], "evidence_quality")
-        self.assertEqual(impact_map["pv_practical_caution"], "risk")
-        self.assertEqual(impact_map["final_decision_input"], "investment")
-        self.assertEqual(impact_map["monitoring_followup"], "monitoring_suitability")
-        self.assertEqual(impact_map["final_readiness_blocker"], "readiness")
+        self.assertEqual(impact_map["pv_data_caution"], "evidence_confidence")
+        self.assertEqual(impact_map["pv_practical_caution"], "evidence_confidence")
+        self.assertEqual(impact_map["final_decision_input"], "evidence_confidence")
+        self.assertEqual(impact_map["monitoring_followup"], "monitoring_readiness")
+        self.assertEqual(impact_map["final_readiness_blocker"], "monitoring_readiness")
+        impact_by_role = {impact["role"]: impact for impact in impacts}
+        self.assertEqual(impact_by_role["final_decision_input"]["score_effect"], 0)
+        self.assertEqual(impact_by_role["final_decision_input"]["score_policy"], "no_score_effect")
+        self.assertEqual(impact_by_role["final_decision_input"]["observed_value"], "-")
+        self.assertEqual(impact_by_role["final_decision_input"]["threshold"], "-")
+        self.assertEqual(impact_by_role["final_decision_input"]["trace_status"], "context_only")
+        self.assertEqual(impact_by_role["pv_data_caution"]["observed_value"], "41 days old")
+        self.assertEqual(impact_by_role["pv_data_caution"]["threshold"], "30 days or less")
+        self.assertEqual(impact_by_role["pv_data_caution"]["evidence_source"], "provider snapshot")
+        self.assertEqual(impact_by_role["pv_data_caution"]["evidence_as_of"], "2026-07-10")
+        self.assertEqual(impact_by_role["pv_data_caution"]["trace_status"], "measured")
         self.assertEqual(report["scorecard"]["inputs"]["review_impact_count"], 5)
 
     def test_final_review_scorecard_maps_gate_to_recommendation_taxonomy(self) -> None:
@@ -27962,7 +27987,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(scorecard["score_drivers"]["negative"])
         self.assertEqual(scorecard["score_limits"], [])
 
-    def test_final_review_scorecard_applies_caps_before_route_decision(self) -> None:
+    def test_final_review_scorecard_separates_attractiveness_from_route_constraints(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_scorecard
 
         empty_disposition = {
@@ -27981,9 +28006,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             },
             level2_review_disposition=empty_disposition,
         )
-        self.assertLessEqual(hard_blocked["overall_score"], 55)
-        self.assertEqual(hard_blocked["score_limits"][0]["code"], "hard_blocker")
-        self.assertTrue(hard_blocked["cap_applied"])
+        self.assertGreaterEqual(hard_blocked["overall_score"], 90)
+        self.assertEqual(hard_blocked["score_limits"], [])
+        self.assertIn("hard_blocker", {item["code"] for item in hard_blocked["route_constraints"]})
+        self.assertFalse(hard_blocked["cap_applied"])
         self.assertEqual(hard_blocked["decision_route"], "RE_REVIEW_REQUIRED")
         self.assertFalse(hard_blocked["monitoring_candidate"])
 
@@ -27998,8 +28024,8 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             },
             level2_review_disposition=empty_disposition,
         )
-        self.assertLessEqual(route_not_ready["overall_score"], 69)
-        self.assertEqual(route_not_ready["score_limits"][0]["code"], "selected_route_not_ready")
+        self.assertGreaterEqual(route_not_ready["overall_score"], 90)
+        self.assertIn("selected_route_not_ready", {item["code"] for item in route_not_ready["route_constraints"]})
         self.assertEqual(route_not_ready["decision_route"], "HOLD_FOR_MORE_PAPER_TRACKING")
 
         gate_review = build_final_review_scorecard(
@@ -28014,9 +28040,9 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             },
             level2_review_disposition=empty_disposition,
         )
-        self.assertLessEqual(gate_review["overall_score"], 74)
-        self.assertIn("gate_review_required", {limit["code"] for limit in gate_review["score_limits"]})
-        self.assertTrue(gate_review["cap_applied"])
+        self.assertGreaterEqual(gate_review["overall_score"], 90)
+        self.assertIn("gate_review_required", {item["code"] for item in gate_review["route_constraints"]})
+        self.assertFalse(gate_review["cap_applied"])
 
         many_open_reviews = build_final_review_scorecard(
             investability_packet={
@@ -28032,9 +28058,28 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "groups": {},
             },
         )
-        self.assertLessEqual(many_open_reviews["overall_score"], 79)
-        self.assertIn("excessive_open_review", {limit["code"] for limit in many_open_reviews["score_limits"]})
-        self.assertEqual(many_open_reviews["classification"], "MONITORING_CANDIDATE_WITH_WATCH")
+        no_open_reviews = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.5,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertEqual(many_open_reviews["overall_score"], no_open_reviews["overall_score"])
+        self.assertNotIn("excessive_open_review", {item["code"] for item in many_open_reviews["route_constraints"]})
+        self.assertEqual(many_open_reviews["classification"], "MONITORING_CANDIDATE")
+        self.assertEqual(
+            [item["key"] for item in many_open_reviews["headline_scores"]],
+            ["attractiveness", "evidence_confidence", "monitoring_readiness"],
+        )
+        self.assertEqual(
+            [item["label"] for item in many_open_reviews["headline_scores"]],
+            ["투자 매력도", "근거 신뢰도", "Monitoring 준비도"],
+        )
 
     def test_final_review_investment_report_exposes_selection_rationale_and_required_notes(self) -> None:
         from app.services.backtest_evidence_read_model import (
@@ -28127,7 +28172,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         scorecard = report["scorecard"]
         self.assertEqual(scorecard["classification"], "REVIEW_REQUIRED")
         self.assertEqual(scorecard["decision_route"], "RE_REVIEW_REQUIRED")
-        self.assertLess(scorecard["overall_score"], 60)
+        headline_scores = {item["key"]: item["score"] for item in scorecard["headline_scores"]}
+        self.assertEqual(scorecard["overall_score"], headline_scores["attractiveness"])
+        self.assertLess(headline_scores["monitoring_readiness"], headline_scores["attractiveness"])
+        self.assertIn("hard_blocker", {item["code"] for item in scorecard["route_constraints"]})
         self.assertEqual(report["recommendation"]["classification"], "REVIEW_REQUIRED")
         self.assertEqual(report["recommendation"]["route"], "RE_REVIEW_REQUIRED")
         self.assertEqual(report["save_handoff_summary"]["record_type"], "judgment_decision")

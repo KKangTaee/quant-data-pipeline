@@ -105,6 +105,15 @@ type ReviewDispositionItem = {
   disposition_label?: string
   detail?: string
   action?: string
+  observedValue?: string
+  observed_value?: string
+  threshold?: string
+  evidenceSource?: string
+  evidence_source?: string
+  evidenceAsOf?: string
+  evidence_as_of?: string
+  traceStatus?: string
+  trace_status?: string
   tone?: Tone
 }
 
@@ -170,10 +179,17 @@ type ScorecardDriver = {
 }
 
 type ScorecardLimit = {
+  code?: string
   label?: string
   detail?: string
   cap?: number
   reason?: string
+  tone?: Tone
+}
+
+type RouteConstraint = {
+  code?: string
+  label?: string
   tone?: Tone
 }
 
@@ -187,9 +203,20 @@ type ReviewImpact = {
   target_dimension?: string
   scoreEffect?: number
   score_effect?: number
+  scorePolicy?: string
+  score_policy?: string
   detail?: string
   action?: string
   rationale?: string
+  observedValue?: string
+  observed_value?: string
+  threshold?: string
+  evidenceSource?: string
+  evidence_source?: string
+  evidenceAsOf?: string
+  evidence_as_of?: string
+  traceStatus?: string
+  trace_status?: string
   tone?: Tone
 }
 
@@ -210,6 +237,8 @@ type Scorecard = {
   basis?: string
   categories?: ScorecardCategory[]
   dimensions?: ScorecardDimension[]
+  headlineScores?: ScorecardDimension[]
+  headline_scores?: ScorecardDimension[]
   scoreDrivers?: {
     positive?: ScorecardDriver[]
     negative?: ScorecardDriver[]
@@ -220,6 +249,8 @@ type Scorecard = {
   }
   scoreLimits?: ScorecardLimit[]
   score_limits?: ScorecardLimit[]
+  routeConstraints?: RouteConstraint[]
+  route_constraints?: RouteConstraint[]
   reviewImpacts?: ReviewImpact[]
   review_impacts?: ReviewImpact[]
 }
@@ -677,10 +708,10 @@ function ScoreDriverList({ title, drivers }: { title: string; drivers: Scorecard
   )
 }
 
-function ScoreLimitList({ limits }: { limits: ScorecardLimit[] }) {
+function ScoreLimitList({ limits, constraints }: { limits: ScorecardLimit[]; constraints: RouteConstraint[] }) {
   return (
     <article className="fr-invest-report__score-limits">
-      <h5>점수 제한</h5>
+      <h5>점수 / route 정책</h5>
       {limits.length > 0 ? (
         limits.map((limit, index) => (
           <section className={`fr-invest-report__score-limit fr-invest-report__score-limit--${toneClass(limit.tone)}`} key={`${limit.label ?? "limit"}-${index}`}>
@@ -691,11 +722,18 @@ function ScoreLimitList({ limits }: { limits: ScorecardLimit[] }) {
         ))
       ) : (
         <section className="fr-invest-report__score-limit fr-invest-report__score-limit--positive">
-          <strong>적용된 score cap 없음</strong>
-          <span>-</span>
-          <p>현재 hard blocker나 과도한 open review로 인한 종합점수 상한은 없습니다.</p>
+          <strong>REVIEW 개수 자동 감점 없음</strong>
+          <span>Attractiveness</span>
+          <p>근거 부족은 근거 신뢰도로, blocker는 선택 route 제약으로 분리합니다.</p>
         </section>
       )}
+      {constraints.map((constraint) => (
+        <section className={`fr-invest-report__score-limit fr-invest-report__score-limit--${toneClass(constraint.tone)}`} key={constraint.code ?? constraint.label}>
+          <strong>{compact(constraint.label)}</strong>
+          <span>Route</span>
+          <p>투자 매력도 점수는 유지하고 선택 / 저장 가능 여부에만 적용합니다.</p>
+        </section>
+      ))}
     </article>
   )
 }
@@ -707,14 +745,26 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
       {impacts.length > 0 ? (
         impacts.map((impact, index) => {
           const scoreEffect = field(impact.scoreEffect, impact.score_effect)
+          const scorePolicy = field(impact.scorePolicy, impact.score_policy)
+          const observedValue = field(impact.observedValue, impact.observed_value)
+          const evidenceSource = field(impact.evidenceSource, impact.evidence_source)
+          const evidenceAsOf = field(impact.evidenceAsOf, impact.evidence_as_of)
+          const traceStatus = field(impact.traceStatus, impact.trace_status)
           return (
             <section className={`fr-invest-report__review-impact fr-invest-report__review-impact--${toneClass(impact.tone)}`} key={`${impact.role ?? "review"}-${impact.title ?? index}`}>
               <div>
                 <strong>{compact(impact.title)}</strong>
-                <span>{formattedScore(scoreEffect)}</span>
+                <span>{Number(scoreEffect) === 0 ? "감점 없음" : formattedScore(scoreEffect)}</span>
               </div>
               <small>{compact(field(impact.roleLabel, impact.role_label))} · {compact(field(impact.targetDimension, impact.target_dimension))}</small>
               <p>{compact(impact.rationale ?? impact.detail)}</p>
+              <dl className="fr-invest-report__review-trace">
+                <div><dt>관측값</dt><dd>{compact(observedValue, "미제공")}</dd></div>
+                <div><dt>판단 기준</dt><dd>{compact(impact.threshold, "미제공")}</dd></div>
+                <div><dt>근거</dt><dd>{compact(evidenceSource, "미제공")}</dd></div>
+                <div><dt>기준일</dt><dd>{compact(evidenceAsOf, "미제공")}</dd></div>
+              </dl>
+              <small>{compact(scorePolicy)} · {compact(traceStatus)}</small>
               {impact.action ? <em>{compact(impact.action)}</em> : null}
             </section>
           )
@@ -763,7 +813,9 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scorecardPreCap = field(scorecard.preCapScore, scorecard.pre_cap_score)
   const scorecardDrivers = field(scorecard.scoreDrivers, scorecard.score_drivers) ?? {}
   const scorecardLimits = field(scorecard.scoreLimits, scorecard.score_limits) ?? []
+  const routeConstraints = field(scorecard.routeConstraints, scorecard.route_constraints) ?? []
   const scorecardReviewImpacts = field(scorecard.reviewImpacts, scorecard.review_impacts) ?? []
+  const headlineScores = field(scorecard.headlineScores, scorecard.headline_scores) ?? []
   const judgmentRecord = saveHandoff.judgmentRecord ?? saveHandoff.judgment_record ?? {}
   const monitoringHandoff = saveHandoff.monitoringHandoff ?? saveHandoff.monitoring_handoff ?? {}
   const saveRecordType = field(saveHandoff.recordType, saveHandoff.record_type)
@@ -808,7 +860,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           <div className="fr-invest-report__score-drivers">
             <ScoreDriverList title="가산 요인" drivers={scorecardDrivers.positive ?? []} />
             <ScoreDriverList title="감점 요인" drivers={scorecardDrivers.negative ?? []} />
-            <ScoreLimitList limits={scorecardLimits} />
+            <ScoreLimitList limits={scorecardLimits} constraints={routeConstraints} />
           </div>
           <ReviewImpactList impacts={scorecardReviewImpacts} />
           <ScorecardCategoryList categories={scorecard.categories ?? []} />
@@ -909,13 +961,23 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           <p>{compact(summary.verdict)}</p>
         </div>
         <aside className="fr-invest-report__score" aria-label="최종 판단 점수">
-          <span>{compact(recommendation.label)}</span>
+          <span>투자 매력도</span>
           <strong>{formattedScore(score.value)}</strong>
           <small>{compact(score.label)}</small>
         </aside>
       </header>
 
       <MetaStrip items={metaItems} />
+
+      <section className="fr-invest-report__headline-scores" aria-label="핵심 점수 구분">
+        {headlineScores.map((item) => (
+          <article className={`fr-invest-report__headline-score fr-invest-report__headline-score--${toneClass(item.tone)}`} key={item.key ?? item.label}>
+            <span>{compact(item.label)}</span>
+            <strong>{formattedScore(item.score)}</strong>
+            <p>{compact(item.interpretation)}</p>
+          </article>
+        ))}
+      </section>
 
       <DecisionBriefPanel summary={decisionSummary} />
 

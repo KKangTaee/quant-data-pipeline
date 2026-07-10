@@ -2010,12 +2010,12 @@ def _level2_review_action(role: str) -> dict[str, str]:
         "pv_data_caution": {
             "action_outcome": "score_reflected",
             "action_label": "점수에 반영됨",
-            "action_detail": "데이터 근거 품질 부담으로 Final Review 점수와 판단 사유에 반영합니다.",
+            "action_detail": "투자 매력도가 아니라 근거 신뢰도에 반영합니다.",
         },
         "pv_practical_caution": {
             "action_outcome": "score_reflected",
             "action_label": "점수에 반영됨",
-            "action_detail": "2단계 실용성 부담으로 Final Review 준비도와 판단 사유에 반영합니다.",
+            "action_detail": "측정 공백은 투자 매력도가 아니라 근거 신뢰도에 반영합니다.",
         },
         "final_decision_input": {
             "action_outcome": "pre_save_check",
@@ -2034,6 +2034,14 @@ def _level2_review_action(role: str) -> dict[str, str]:
         },
     }
     return dict(actions.get(role) or actions["final_decision_input"])
+
+
+def _review_trace_value(card: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = card.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return "-"
 
 
 def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) -> dict[str, Any]:
@@ -2069,6 +2077,17 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
             continue
         seen.add(key)
         normalized_role = role or "final_decision_input"
+        observed_value = _review_trace_value(card, "observed_value", "current_value", "metric_value", "Value")
+        threshold = _review_trace_value(card, "threshold", "pass_criteria", "criterion", "Target")
+        evidence_source = _review_trace_value(
+            card,
+            "evidence_source",
+            "source_label",
+            "provider",
+            "module_id",
+            "Module",
+        )
+        evidence_as_of = _review_trace_value(card, "as_of", "snapshot_at", "collected_at", "updated_at", "generated_at")
         groups[disposition].append(
             {
                 "title": title,
@@ -2094,6 +2113,11 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                     or card.get("Required Action"),
                     "-",
                 ),
+                "observed_value": observed_value,
+                "threshold": threshold,
+                "evidence_source": evidence_source,
+                "evidence_as_of": evidence_as_of,
+                "trace_status": "measured" if observed_value != "-" and threshold != "-" else "context_only",
                 "tone": tone,
                 **_level2_review_action(normalized_role),
             }
@@ -2208,13 +2232,16 @@ def _score_limit(*, code: str, label: str, cap: int, detail: str, tone: str = "w
 def _review_impact_for_item(item: dict[str, Any]) -> dict[str, Any]:
     role = _safe_text(item.get("role"), "final_decision_input")
     mapping = {
-        "pv_data_caution": ("evidence_quality", 6, "데이터 주의는 근거 품질을 낮춥니다."),
-        "pv_practical_caution": ("risk", 4, "실용성 주의는 위험 부담을 높입니다."),
-        "final_decision_input": ("investment", 3, "최종 판단 참고는 투자 매력도 해석 부담입니다."),
-        "monitoring_followup": ("monitoring_suitability", 4, "Monitoring 추적 항목은 운영 적합성 부담입니다."),
-        "final_readiness_blocker": ("readiness", 20, "저장 전 보강 항목은 readiness blocker입니다."),
+        "pv_data_caution": ("evidence_confidence", 6, "confidence_adjustment", "데이터 주의는 투자 매력도가 아니라 근거 신뢰도를 낮춥니다."),
+        "pv_practical_caution": ("evidence_confidence", 4, "confidence_adjustment", "미측정 실용성 공백은 투자 매력도가 아니라 근거 신뢰도를 낮춥니다."),
+        "final_decision_input": ("evidence_confidence", 0, "no_score_effect", "관측값과 기준이 없는 최종 판단 참고는 자동 감점하지 않습니다."),
+        "monitoring_followup": ("monitoring_readiness", 4, "readiness_adjustment", "Monitoring 추적 항목은 추적 준비도에만 반영합니다."),
+        "final_readiness_blocker": ("monitoring_readiness", 20, "blocker", "저장 전 보강 항목은 Monitoring 준비 blocker입니다."),
     }
-    target_dimension, deduction, rationale = mapping.get(role, ("investment", 2, "일반 REVIEW는 최종 판단 부담입니다."))
+    target_dimension, deduction, score_policy, rationale = mapping.get(
+        role,
+        ("evidence_confidence", 0, "no_score_effect", "근거가 없는 일반 REVIEW는 자동 감점하지 않습니다."),
+    )
     return {
         "title": _safe_text(item.get("title"), "Review item"),
         "role": role,
@@ -2222,8 +2249,14 @@ def _review_impact_for_item(item: dict[str, Any]) -> dict[str, Any]:
         "disposition": _safe_text(item.get("disposition"), "open_review"),
         "target_dimension": target_dimension,
         "score_effect": -deduction,
+        "score_policy": score_policy,
         "detail": _safe_text(item.get("detail"), "-"),
         "action": _safe_text(item.get("action"), "-"),
+        "observed_value": _safe_text(item.get("observed_value"), "-"),
+        "threshold": _safe_text(item.get("threshold"), "-"),
+        "evidence_source": _safe_text(item.get("evidence_source"), "-"),
+        "evidence_as_of": _safe_text(item.get("evidence_as_of"), "-"),
+        "trace_status": _safe_text(item.get("trace_status"), "context_only"),
         "rationale": rationale,
         "tone": _safe_text(item.get("tone"), "warning"),
     }
@@ -2242,7 +2275,8 @@ def build_final_review_scorecard(
     disposition_summary = dict(disposition.get("summary") or {})
     gate_outcome = str(gate_policy.get("outcome") or packet.get("route") or "").strip()
     packet_score = _float_or_none(packet.get("score")) or 0.0
-    blocker_count = len(gate_policy.get("blockers") or []) + int(disposition_summary.get("blocker", 0) or 0)
+    gate_blocker_count = len(gate_policy.get("blockers") or [])
+    blocker_count = gate_blocker_count + int(disposition_summary.get("blocker", 0) or 0)
     review_required_count = len(gate_policy.get("review_required") or [])
     warning_count = int(disposition_summary.get("warning", 0) or 0)
     open_review_count = int(disposition_summary.get("open_review", 0) or 0)
@@ -2253,17 +2287,16 @@ def build_final_review_scorecard(
             if isinstance(item, dict):
                 review_impacts.append(_review_impact_for_item(item))
     impact_deductions = {
-        "investment": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "investment"),
-        "risk": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "risk"),
-        "readiness": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "readiness"),
-        "evidence_quality": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "evidence_quality"),
-        "monitoring_suitability": sum(abs(int(impact.get("score_effect") or 0)) for impact in review_impacts if impact.get("target_dimension") == "monitoring_suitability"),
+        key: sum(
+            abs(int(impact.get("score_effect") or 0))
+            for impact in review_impacts
+            if impact.get("target_dimension") == key
+        )
+        for key in ("evidence_confidence", "monitoring_readiness")
     }
     select_ready = bool(gate_policy.get("select_allowed")) or gate_outcome == "select_ready"
     gate_score = 100 if select_ready else 35 if gate_outcome == "blocked" else 65
     evidence_score = _clamped_score(packet_score * 10.0)
-    review_penalty = min(18, warning_count * 2 + open_review_count + monitoring_followup_count)
-    review_score = _clamped_score(100 - review_penalty)
     weights = {
         "investment": 0.30,
         "risk": 0.20,
@@ -2271,18 +2304,24 @@ def build_final_review_scorecard(
         "evidence_quality": 0.20,
         "monitoring_suitability": 0.10,
     }
-    investment_score = _clamped_score(evidence_score - min(20, review_required_count * 3 + impact_deductions["investment"]))
-    risk_score = _clamped_score(92 - min(36, blocker_count * 16 + impact_deductions["risk"]))
-    readiness_score = _clamped_score(gate_score - min(35, blocker_count * 20 + review_required_count * 5 + impact_deductions["readiness"]))
-    evidence_quality_score = _clamped_score(evidence_score - min(40, warning_count * 3 + impact_deductions["evidence_quality"]))
-    monitoring_score = _clamped_score((90 if select_ready else 55) - min(30, monitoring_followup_count * 2 + blocker_count * 20 + impact_deductions["monitoring_suitability"]))
+    investment_score = evidence_score
+    risk_score = evidence_score
+    readiness_score = _clamped_score(
+        gate_score - min(45, gate_blocker_count * 20 + review_required_count * 5 + impact_deductions["monitoring_readiness"])
+    )
+    evidence_quality_score = _clamped_score(
+        evidence_score - min(40, impact_deductions["evidence_confidence"])
+    )
+    monitoring_score = _clamped_score(
+        (90 if select_ready else 55) - min(40, gate_blocker_count * 20 + impact_deductions["monitoring_readiness"])
+    )
     dimensions = [
         _scorecard_dimension(
             key="investment",
             label="Investment Score",
             score=investment_score,
             weight=weights["investment"],
-            evidence=f"investability packet {packet_score:.1f} / 10, open review {open_review_count}",
+            evidence=f"investability packet {packet_score:.1f} / 10; REVIEW 개수 자동 감점 없음",
             interpretation="성과 / benchmark / 전략 매력도 기반의 최종 선택 매력도",
         ),
         _scorecard_dimension(
@@ -2290,8 +2329,8 @@ def build_final_review_scorecard(
             label="Risk Score",
             score=risk_score,
             weight=weights["risk"],
-            evidence=f"blocker {blocker_count}, warning {warning_count}, open review {open_review_count}",
-            interpretation="drawdown / robustness / construction 부담을 반영한 위험 부담",
+            evidence="저장 evidence의 risk / robustness 해석; REVIEW 개수 자동 감점 없음",
+            interpretation="측정된 drawdown / robustness / construction 근거의 위험 방어력",
         ),
         _scorecard_dimension(
             key="readiness",
@@ -2306,64 +2345,57 @@ def build_final_review_scorecard(
             label="Evidence Quality Score",
             score=evidence_quality_score,
             weight=weights["evidence_quality"],
-            evidence=f"warning {warning_count}, open review {open_review_count}",
-            interpretation="데이터 / 검증 / Level2 REVIEW 근거 품질",
+            evidence=f"근거 신뢰도 조정 {impact_deductions['evidence_confidence']}점",
+            interpretation="데이터 / 검증 공백이 결론의 신뢰도에 미치는 영향",
         ),
         _scorecard_dimension(
             key="monitoring_suitability",
             label="Monitoring Suitability Score",
             score=monitoring_score,
             weight=weights["monitoring_suitability"],
-            evidence=f"monitoring follow-up {monitoring_followup_count}",
+            evidence=f"Monitoring 준비도 조정 {impact_deductions['monitoring_readiness']}점",
             interpretation="Monitoring에 올렸을 때 추적 조건을 관리할 수 있는지",
         ),
     ]
-    pre_cap_score = _weighted_dimension_score(dimensions)
+    attractiveness_score = _clamped_score(investment_score * 0.65 + risk_score * 0.35)
+    monitoring_readiness_score = _clamped_score(readiness_score * 0.65 + monitoring_score * 0.35)
+    headline_scores = [
+        _scorecard_dimension(
+            key="attractiveness",
+            label="투자 매력도",
+            score=attractiveness_score,
+            weight=1.0,
+            evidence="Investment Score 65% + Risk Score 35%",
+            interpretation="측정된 성과와 위험 근거만 반영하며 REVIEW 개수로 감점하지 않습니다.",
+        ),
+        _scorecard_dimension(
+            key="evidence_confidence",
+            label="근거 신뢰도",
+            score=evidence_quality_score,
+            weight=1.0,
+            evidence=f"근거 품질 조정 {impact_deductions['evidence_confidence']}점",
+            interpretation="미측정과 데이터 주의가 결론의 신뢰도에 미치는 영향입니다.",
+        ),
+        _scorecard_dimension(
+            key="monitoring_readiness",
+            label="Monitoring 준비도",
+            score=monitoring_readiness_score,
+            weight=1.0,
+            evidence=f"gate {gate_outcome or '-'}; 준비도 조정 {impact_deductions['monitoring_readiness']}점",
+            interpretation="저장 전 blocker와 Monitoring 추적 준비 상태입니다.",
+        ),
+    ]
+    pre_cap_score = attractiveness_score
+    overall = attractiveness_score
     score_limits: list[dict[str, Any]] = []
+    cap_applied = False
+    route_constraints = []
     if blocker_count:
-        score_limits.append(
-            _score_limit(
-                code="hard_blocker",
-                label="Hard blocker cap",
-                cap=55,
-                detail="Final Review 저장 전 보강 또는 gate blocker가 있어 높은 원점수라도 재검토권으로 제한합니다.",
-                tone="danger",
-            )
-        )
+        route_constraints.append({"code": "hard_blocker", "label": "저장 전 blocker", "tone": "danger"})
     if not select_ready:
-        score_limits.append(
-            _score_limit(
-                code="selected_route_not_ready",
-                label="Selected-route not ready cap",
-                cap=69,
-                detail="selected-route gate가 아직 선택 가능 상태가 아니므로 추천권 점수로 올리지 않습니다.",
-            )
-        )
+        route_constraints.append({"code": "selected_route_not_ready", "label": "선택 route 준비 필요", "tone": "warning"})
     if review_required_count:
-        score_limits.append(
-            _score_limit(
-                code="gate_review_required",
-                label="Gate review-required cap",
-                cap=74,
-                detail="selection gate가 추가 검토 항목을 남겼으므로 실전 투입 판단은 watch 조건을 동반합니다.",
-            )
-        )
-    if open_review_count >= 8:
-        score_limits.append(
-            _score_limit(
-                code="excessive_open_review",
-                label="Open review burden cap",
-                cap=79,
-                detail="Level2 REVIEW open 항목이 과도해 강한 추천 점수로 표시하지 않습니다.",
-            )
-        )
-    if score_limits:
-        overall = min(pre_cap_score, min(int(limit.get("cap") or 100) for limit in score_limits))
-    elif select_ready:
-        overall = max(70, pre_cap_score)
-    else:
-        overall = pre_cap_score
-    cap_applied = bool(score_limits and overall < pre_cap_score)
+        route_constraints.append({"code": "gate_review_required", "label": "gate 확인 필요", "tone": "warning"})
     strongest_dimension = max(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
     weakest_dimension = min(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
     positive_drivers = [
@@ -2388,10 +2420,10 @@ def build_final_review_scorecard(
             "tone": weakest_dimension["tone"],
         },
         {
-            "label": "Level2 REVIEW burden",
-            "detail": f"warning {warning_count}, open review {open_review_count}, monitoring follow-up {monitoring_followup_count}",
-            "score": review_score,
-            "tone": "warning" if review_penalty else "neutral",
+            "label": "근거 신뢰도",
+            "detail": f"데이터 / 실용성 근거 조정 {impact_deductions['evidence_confidence']}점; 최종 판단 참고는 자동 감점 없음",
+            "score": evidence_quality_score,
+            "tone": "warning" if impact_deductions["evidence_confidence"] else "neutral",
         },
     ]
     if blocker_count:
@@ -2438,15 +2470,17 @@ def build_final_review_scorecard(
         "decision_route": decision_route,
         "decision_label": _decision_route_label(decision_route),
         "monitoring_candidate": decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO and select_ready and blocker_count == 0,
-        "basis": "weighted investment, risk, readiness, evidence quality, monitoring suitability dimensions",
+        "basis": "투자 매력도와 근거 신뢰도, Monitoring 준비도를 분리한 evidence-only scorecard",
         "weights": weights,
         "dimensions": dimensions,
+        "headline_scores": headline_scores,
         "review_impacts": review_impacts,
         "score_drivers": {
             "positive": positive_drivers,
             "negative": negative_drivers,
         },
         "score_limits": score_limits,
+        "route_constraints": route_constraints,
         "cap_applied": cap_applied,
         "inputs": {
             "gate_outcome": gate_outcome,
@@ -2472,10 +2506,22 @@ def build_final_review_scorecard(
                 "기존 investability evidence ready-check",
             ),
             _scorecard_category(
-                "Review Burden",
-                review_score,
-                f"warning {warning_count} / open {open_review_count} / monitoring {monitoring_followup_count}",
-                "Final Review 판단 부담과 Monitoring 추적 조건",
+                "투자 매력도",
+                attractiveness_score,
+                "측정된 성과 / 위험 evidence",
+                "REVIEW 개수 자동 감점 없음",
+            ),
+            _scorecard_category(
+                "근거 신뢰도",
+                evidence_quality_score,
+                f"근거 품질 조정 {impact_deductions['evidence_confidence']}점",
+                "미측정 / 데이터 주의 분리",
+            ),
+            _scorecard_category(
+                "Monitoring 준비도",
+                monitoring_readiness_score,
+                f"준비도 조정 {impact_deductions['monitoring_readiness']}점",
+                "blocker / 추적 조건 분리",
             ),
         ],
         "boundaries": {
