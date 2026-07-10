@@ -9,7 +9,14 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-detail-tabs-v1-20260711/`다.
+Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-confirmed-review-flow-v1-20260711/`다.
+
+- 목적: label identity와 즉시 report 렌더 때문에 생기는 후보 오선택 / stale 혼동을 막고, Level2 REVIEW를 실제 확인 행동으로 읽게 했다.
+- 주요 변경: Final Review 후보 selector는 stable key를 사용하고 visible Review Queue를 제거했다. `최종 검토서 확인` 전에는 후보별 report / cockpit / decision action을 열지 않으며, 선택 변경 시 stale 경고와 함께 downstream surface를 숨긴다. 투자 검토서는 다섯 REVIEW role을 `Final Review 확인 필요`에서 `점수에 반영됨 / 저장 전 확인 / Monitoring 조건으로 넘김 / blocker`로 표시한다.
+- 판단 경계: 확인 버튼은 저장된 Practical Validation evidence를 읽을 후보만 확정한다. 재검증, provider fetch, DB 수집, registry / saved rewrite, live approval, broker order, auto rebalance를 수행하지 않는다.
+- QA: focused tests 53개, React build, py_compile, `git diff --check`, Browser QA 후보 연속 전환 / 확인 전후 / stale 차단 / Level2 행동 섹션 / Review Queue 제거를 확인했다.
+
+Previous completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-detail-tabs-v1-20260711/`다.
 
 - 목적: Final Review `투자 검토서` 하단 상세 근거가 expander 5개로 세로 반복되어 다시 긴 목록처럼 보이는 문제를 줄였다.
 - 주요 변경: React investment report lower detail 영역을 `근거 상세`, `저장 경계`, `개선 후보`, `Review 처리`, `Monitoring` 탭으로 바꿨고, 선택한 탭 하나의 내용만 하단 panel에 표시한다.

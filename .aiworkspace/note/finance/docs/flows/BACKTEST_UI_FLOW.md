@@ -906,9 +906,10 @@ Practical Validation Gate 통과 후보
   -> Backtest > Final Review
   -> 1. 후보 현황과 검토 대상 선택
      -> Decision Desk 후보 수 / 선택 가능 / 보류 / 숨김 / 저장된 판단 / Monitoring 연결 확인
-     -> Review Queue / 검토 대상 / 후보 비교 상세 확인
+     -> stable key 기반 검토 대상 / 후보 비교 상세 확인
+     -> 최종 검토서 확인으로 현재 후보 확정
   -> 2. Final Review 투자 검토서
-     -> 추천 / 보류 / 탈락 / Monitoring 후보, 점수, 강점 / 약점, Level2 REVIEW 처리, handoff 경계, 약점 개선안 확인
+     -> 추천 / 보류 / 탈락 / Monitoring 후보, 점수, 강점 / 약점, Final Review 확인 필요, handoff 경계, 약점 개선안 확인
   -> 3. Decision Cockpit
      -> selection-readiness state / Must Fix / open review items / monitoring seed 확인
   -> 4. Final Review 판단 저장
@@ -925,9 +926,10 @@ Practical Validation Gate 통과 후보
 - Final Review는 Portfolio Proposal 탭이 아니라 별도 workflow panel이다.
 - Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`에서 확인하며, 시장심리는 gate, score, 저장 가능 여부, Monitoring signal을 바꾸지 않는다.
 - 시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다.
-- Decision Desk 아래 후보 선택 패널의 `Review Queue`는 화면 정렬용 우선순위다. `SELECT_READY` 후보를 먼저 보여주고, 그 다음 hold / re-review, blocked 후보를 보여주며, 같은 상태에서는 blocker / open review 수와 packet score를 기준으로 정렬한다. 이 정보는 별도 Step이나 새 투자 점수가 아니라 기존 evidence를 보기 쉽게 정렬한 read-only 표시다.
+- Decision Desk가 오늘 먼저 볼 후보와 우선순위 요약을 소유하고, 전체 정렬 근거는 접힌 `후보 비교 상세`에 남긴다. 별도 visible `Review Queue` table은 렌더링하지 않는다.
+- `검토 대상` selector는 표시 label이 아니라 validation / source stable key를 option identity로 사용한다. 후보를 바꾸는 것만으로 투자 검토서 / Decision Cockpit / Final Decision Action을 열지 않으며, `최종 검토서 확인`으로 현재 후보를 확정한 뒤 저장된 evidence를 읽는다. 확정 뒤 후보가 바뀌면 이전 report를 숨기고 stale 안내를 표시한다.
 - `Final Review 투자 검토서`는 Python `backtest_evidence_read_model`이 만든 report payload를 React component가 렌더링하는 first-read surface다. React는 추천 / 점수 / 강점 / 약점 / Level2 REVIEW disposition / save handoff / weakness proposal을 표시만 하며, gate 계산, DB / provider fetch, registry write, strategy variant 생성은 하지 않는다.
-- Level2 REVIEW disposition은 blocker / warning / open review / monitoring follow-up으로 나뉜다. 데이터 / 실용성 주의는 Final Review에서 해결할 숙제가 아니라 판단 근거로 읽고, Monitoring follow-up은 추적 조건으로 넘긴다.
+- Level2 REVIEW disposition은 기존 blocker / warning / open review / monitoring follow-up 계산을 유지하면서 `데이터 주의`, `2단계 실용성 주의`, `최종 판단 참고`, `Monitoring 추적`, `저장 전 보강`을 first-read `Final Review 확인 필요`에 분리한다. 각 항목은 `점수에 반영됨`, `저장 전 확인`, `Monitoring 조건으로 넘김`, `blocker` 중 하나로 읽는다.
 - 약점 개선안은 read-only 최소 기능이다. 개선안을 실제 전략 / portfolio variant로 만들고 현재 portfolio와 backtest 비교하는 기능은 후속 개발 대상이다.
 - Phase 31 이후 `Validation Pack`은 Final Review 안에서 같은 검증 언어로 읽되, 현재 화면에서는 주 action이 아니라 Evidence Appendix로 낮춘다.
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
@@ -943,6 +945,7 @@ Practical Validation Gate 통과 후보
 ```text
 Backtest > Final Review
   -> 검토 대상 선택
+  -> 최종 검토서 확인으로 현재 후보 확정
   -> Final Review 투자 검토서 확인
   -> Decision Cockpit 확인
   -> Final Review 판단 route 선택

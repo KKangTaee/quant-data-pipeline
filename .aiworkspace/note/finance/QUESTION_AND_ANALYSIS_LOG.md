@@ -17,8 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-candidate-selection-integration-v1-20260710](./tasks/active/final-review-candidate-selection-integration-v1-20260710/STATUS.md).
-  - Previous completed Final Review UX task is [final-review-sentiment-scope-cleanup-v1-20260710](./tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-investment-report-detail-tabs-v1-20260711](./tasks/active/final-review-investment-report-detail-tabs-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
@@ -32,6 +32,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-11 - Final Review는 후보 선택과 검토서 확인을 분리한다
+
+- User request: 후보 selectbox 변경 즉시 투자 검토서가 바뀌어 검증 없이 결과가 나온 듯 보이고 빠른 전환 시 stale / 멈춤 혼동이 생기므로, stable key 선택과 명시적 확인 경계, Level2 REVIEW 행동형 노출을 요청함.
+- Interpreted goal: 후보 탐색과 저장된 evidence를 최종 판단 surface로 여는 행동을 분리하고, REVIEW가 감점 숫자가 아니라 사용자가 확인할 일로 읽혀야 한다.
+- Analysis result: selector는 stable identity만 소유하고 `최종 검토서 확인`이 confirmed candidate session state를 만든다. confirmed key가 현재 selector와 다르면 후보별 downstream을 렌더링하지 않는다. REVIEW 역할과 행동 결과는 Python service가 만들고 React는 표시만 한다.
+- Follow-up: `final-review-confirmed-review-flow-v1-20260711`에서 1차~4차 구현 / QA / commit을 완료했다. 새 검증, provider fetch, DB 수집, registry / saved rewrite, live approval / order / auto rebalance는 추가하지 않았다.
 
 ### 2026-07-10 - Final Review 후보 선택은 별도 Step이 아니라 Decision Desk 상세다
 

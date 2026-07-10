@@ -23,8 +23,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-candidate-selection-integration-v1-20260710](./tasks/active/final-review-candidate-selection-integration-v1-20260710/STATUS.md).
-  - Previous completed Final Review UX task is [final-review-sentiment-scope-cleanup-v1-20260710](./tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-investment-report-detail-tabs-v1-20260711](./tasks/active/final-review-investment-report-detail-tabs-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Current active Practical Validation UI task is none.
@@ -38,6 +38,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Confirmed Review Flow V1:
+  - stable key 후보 선택, visible Review Queue 제거, `최종 검토서 확인` session boundary와 stale report 차단을 1차~2차로 완료했다.
+  - Level2 REVIEW 다섯 role은 `Final Review 확인 필요`에서 점수 반영 / 저장 전 확인 / Monitoring 이관 / blocker 행동으로 읽으며 React는 표시만 맡는다.
+  - focused tests 53개와 Browser QA를 통과했고, 재검증 / provider fetch / registry write / live approval 경계는 변경하지 않았다.
 - Final Review Candidate Selection Integration V1:
   - `.aiworkspace/note/finance/tasks/active/final-review-candidate-selection-integration-v1-20260710/`에서 standalone `Step 1 / Candidate Board`와 중복 4-card lane summary를 제거했다.
   - Review Queue, `검토 대상` selector, 후보 비교 상세는 Decision Desk 아래 후보 선택 패널로 통합했고, 투자 검토서 / Decision Cockpit / 판단 저장 / Evidence Appendix는 의미형 섹션으로 이어진다.
