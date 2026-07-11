@@ -329,6 +329,7 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
     holdings = dict(coverage.get("holdings") or {})
     exposure = dict(coverage.get("exposure") or {})
     operability_missing = _upper_symbol_set(operability.get("missing_symbols"))
+    operability_stale = _upper_symbol_set(dict(operability.get("provenance") or {}).get("stale_symbols"))
     holdings_missing = _upper_symbol_set(holdings.get("missing_symbols"))
     exposure_missing = _upper_symbol_set(exposure.get("missing_symbols"))
     source_maps = _verified_provider_source_maps(set(symbols))
@@ -336,6 +337,7 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
     rows: list[dict[str, Any]] = []
     for symbol in symbols:
         op_missing = symbol in operability_missing
+        op_stale = symbol in operability_stale
         holdings_is_missing = symbol in holdings_missing
         exposure_is_missing = symbol in exposure_missing
         mapped_operability = dict(source_maps.get("operability") or {}).get(symbol)
@@ -351,6 +353,8 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
         actions: list[str] = []
         if op_missing:
             actions.append("운용성 보강")
+        elif op_stale:
+            actions.append("운용성 최신화")
         if holdings_is_missing or exposure_is_missing:
             if holdings_collectable or exposure_collectable:
                 actions.append("holdings/exposure 수집")
@@ -360,7 +364,7 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
             {
                 "ETF": symbol,
                 "Target Weight": round(weights.get(symbol, 0.0), 4),
-                "Operability": "부족" if op_missing else "있음",
+                "Operability": "부족" if op_missing else "오래됨" if op_stale else "있음",
                 "Operability Source": op_source_status,
                 "Holdings": "부족" if holdings_is_missing else "있음",
                 "Holdings Source": holdings_source_status,
@@ -377,14 +381,17 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
 
     provider_context = dict(validation_result.get("provider_coverage") or {})
     coverage = dict(provider_context.get("coverage") or {})
-    operability_missing = _upper_symbol_set(dict(coverage.get("operability") or {}).get("missing_symbols"))
+    operability = dict(coverage.get("operability") or {})
+    operability_missing = _upper_symbol_set(operability.get("missing_symbols"))
+    operability_stale = _upper_symbol_set(dict(operability.get("provenance") or {}).get("stale_symbols"))
+    operability_targets = operability_missing | operability_stale
     holdings_missing = _upper_symbol_set(dict(coverage.get("holdings") or {}).get("missing_symbols"))
     exposure_missing = _upper_symbol_set(dict(coverage.get("exposure") or {}).get("missing_symbols"))
     holdings_targets = sorted(holdings_missing | exposure_missing)
     provider_symbols = sorted(
         _upper_symbol_set(provider_context.get("symbols"))
         | _upper_symbol_set(dict(provider_context.get("symbol_weights") or {}).keys())
-        | operability_missing
+        | operability_targets
         | holdings_missing
         | exposure_missing
     )
@@ -406,12 +413,13 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
     return {
         "source_map_discovery": source_map_discovery,
         "source_symbols": provider_symbols,
+        "operability_stale": sorted(operability_stale),
         "operability_official": sorted(
             symbol
-            for symbol in operability_missing
+            for symbol in operability_targets
             if symbol in OFFICIAL_PROVIDER_SOURCES or symbol in dict(source_maps.get("operability") or {})
         ),
-        "operability_bridge": sorted(operability_missing),
+        "operability_bridge": sorted(operability_targets),
         "holdings_exposure": holdings_collectable,
         "mapping_needed": [],
         "macro": macro_needs_collection,

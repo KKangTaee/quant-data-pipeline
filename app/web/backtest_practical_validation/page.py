@@ -1249,6 +1249,107 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
     return True
 
 
+def _render_final_review_data_enrichment_handoff(source: dict[str, Any]) -> None:
+    """Offer the existing provider collection action for the Final Review candidate only."""
+
+    handoff = dict(st.session_state.get("backtest_practical_validation_data_enrichment_handoff") or {})
+    validation_result = dict(handoff.get("validation_result") or {})
+    if not validation_result:
+        return
+    selected_source_id = str(source.get("selection_source_id") or "").strip()
+    handoff_source_id = str(validation_result.get("selection_source_id") or "").strip()
+    if selected_source_id != handoff_source_id:
+        return
+    plan = build_provider_gap_collection_plan(validation_result)
+    operability_symbols = sorted(
+        {
+            *list(plan.get("operability_official") or []),
+            *list(plan.get("operability_bridge") or []),
+        }
+    )
+    holdings_symbols = sorted(set(plan.get("holdings_exposure") or []))
+    discovery_symbols = sorted(set(plan.get("source_map_discovery") or []))
+    collectable = bool(
+        operability_symbols
+        or holdings_symbols
+        or discovery_symbols
+        or plan.get("macro")
+    )
+    render_pv_section_header(
+        eyebrow="Final Review handoff",
+        title="이 후보의 데이터 보강부터 이어서 처리",
+        detail=(
+            "Final Review의 남은 판단 근거에서 실제 수집 가능한 자료만 전달했습니다. "
+            "수집 후에는 Flow 2 재검증과 새 검증 결과 저장이 필요합니다."
+        ),
+        tone="warning" if collectable else "neutral",
+    )
+    cards = []
+    if operability_symbols:
+        cards.append(
+            {
+                "kicker": "Operability",
+                "title": "ETF 거래 가능성 자료",
+                "status": len(operability_symbols),
+                "detail": ", ".join(operability_symbols),
+                "tone": "warning",
+            }
+        )
+    if holdings_symbols:
+        cards.append(
+            {
+                "kicker": "Look-through",
+                "title": "ETF 보유 종목·노출",
+                "status": len(holdings_symbols),
+                "detail": ", ".join(holdings_symbols),
+                "tone": "warning",
+            }
+        )
+    if discovery_symbols:
+        cards.append(
+            {
+                "kicker": "Source map",
+                "title": "공식 원천 탐색",
+                "status": len(discovery_symbols),
+                "detail": ", ".join(discovery_symbols),
+                "tone": "neutral",
+            }
+        )
+    if plan.get("macro"):
+        cards.append(
+            {
+                "kicker": "Macro",
+                "title": "시장 환경 자료",
+                "status": 3,
+                "detail": "VIXCLS, T10Y3M, BAA10Y",
+                "tone": "warning",
+            }
+        )
+    if cards:
+        render_pv_card_grid(cards, min_width=220)
+    if not collectable:
+        st.info("현재 Python 수집 경계에서 바로 보강할 외부 데이터가 없습니다. 기간 밖·미구현 검증은 데이터 갱신으로 해결되지 않습니다.")
+        return
+    st.caption(
+        "아래 실행은 외부 데이터만 보강합니다. 저장된 Final Review 검토서와 검증 판정은 자동으로 바뀌지 않습니다."
+    )
+    if st.button(
+        "부족하거나 오래된 외부 데이터 일괄 수집 / 보강",
+        key=f"final_review_data_enrichment_{provider_gap_state_key(validation_result)}",
+        type="primary",
+        width="stretch",
+    ):
+        with st.spinner("현재 후보에 필요한 외부 데이터를 수집 / 보강 중입니다...", show_time=True):
+            results = run_provider_gap_collection(validation_result)
+        st.session_state[provider_gap_state_key(validation_result)] = results
+        st.session_state.pop("backtest_practical_validation_data_enrichment_handoff", None)
+        st.session_state.backtest_practical_validation_notice = (
+            f"외부 데이터 보강 작업 {len(results)}개를 실행했습니다. "
+            "이제 아래 Flow 2에서 전략 재검증을 실행해 새 근거를 계산하세요."
+        )
+        st.rerun()
+
+
 def _provider_look_through_board(validation_result: dict[str, Any]) -> dict[str, Any]:
     board = dict(validation_result.get("provider_look_through_board") or {})
     if board:
@@ -2223,6 +2324,8 @@ def render_practical_validation_workspace() -> None:
     if st.session_state.get("practical_validation_active_source_id") != selected_source_id:
         _clear_practical_validation_replay_state()
         st.session_state.practical_validation_active_source_id = selected_source_id
+
+    _render_final_review_data_enrichment_handoff(source)
 
     with st.container(border=True):
         render_pv_section_header(

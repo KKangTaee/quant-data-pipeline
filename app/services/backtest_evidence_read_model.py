@@ -2600,6 +2600,97 @@ def _review_trace_rows(validation: dict[str, Any], module_id: str) -> tuple[list
     return traces, source_label
 
 
+def _build_final_review_data_enrichment_action(validation: dict[str, Any]) -> dict[str, Any]:
+    """Describe only provider jobs the existing Level2 Python boundary can run."""
+
+    from app.services.backtest_practical_validation import build_provider_gap_collection_plan
+
+    plan = build_provider_gap_collection_plan(dict(validation or {}))
+    operability_symbols = sorted(
+        {
+            *list(plan.get("operability_official") or []),
+            *list(plan.get("operability_bridge") or []),
+        }
+    )
+    stale_symbols = sorted(set(plan.get("operability_stale") or []))
+    holdings_symbols = sorted(set(plan.get("holdings_exposure") or []))
+    discovery_symbols = sorted(set(plan.get("source_map_discovery") or []))
+    items: list[dict[str, Any]] = []
+    if operability_symbols:
+        items.append(
+            {
+                "key": "operability",
+                "label": "ETF 거래 가능성 자료",
+                "symbols": operability_symbols,
+                "detail": (
+                    f"오래된 snapshot {len(stale_symbols)}개를 포함해 비용·거래 가능성 자료를 갱신합니다."
+                    if stale_symbols
+                    else "누락된 비용·거래 가능성 자료를 보강합니다."
+                ),
+                "tone": "warning",
+            }
+        )
+    if holdings_symbols:
+        items.append(
+            {
+                "key": "holdings_exposure",
+                "label": "ETF 보유 종목·노출",
+                "symbols": holdings_symbols,
+                "detail": "검증된 공식 source가 있는 holdings·exposure를 수집합니다.",
+                "tone": "warning",
+            }
+        )
+    if discovery_symbols:
+        items.append(
+            {
+                "key": "source_map_discovery",
+                "label": "ETF 공식 source 탐색",
+                "symbols": discovery_symbols,
+                "detail": "holdings·exposure 수집 전 공식 원천 위치를 찾아 수집 가능 여부를 다시 확인합니다.",
+                "tone": "neutral",
+            }
+        )
+    if bool(plan.get("macro")):
+        items.append(
+            {
+                "key": "macro",
+                "label": "시장 환경 자료",
+                "symbols": ["VIXCLS", "T10Y3M", "BAA10Y"],
+                "detail": "부족하거나 오래된 FRED 시장 환경 series를 갱신합니다.",
+                "tone": "warning",
+            }
+        )
+    unique_symbols = sorted(
+        {
+            str(symbol)
+            for item in items
+            for symbol in list(item.get("symbols") or [])
+            if str(symbol).strip()
+        }
+    )
+    selection_source = dict(validation.get("selection_source_snapshot") or {})
+    selection_source_id = _safe_text(
+        selection_source.get("selection_source_id") or validation.get("selection_source_id"),
+        "-",
+    )
+    return {
+        "available": bool(items),
+        "title": "2단계에서 보강 가능한 데이터",
+        "detail": (
+            "현재 Python 수집 경계에서 보강할 수 있는 자료만 모았습니다. "
+            "기간 밖 stress, 미구현 검증, 세금·계좌 판단은 이 작업에 포함되지 않습니다."
+        ),
+        "item_count": len(items),
+        "symbol_count": len(unique_symbols),
+        "items": items,
+        "selection_source_id": selection_source_id,
+        "validation_id": _safe_text(validation.get("validation_id"), "-"),
+        "button_label": "2단계 데이터 보강으로 이동",
+        "next_step": "데이터 보강 후 Flow 2 재검증을 실행하고 새 결과를 저장한 뒤 Final Review에서 검토서를 다시 확인합니다.",
+        "boundary": "이 버튼은 Final Review에서 provider를 직접 호출하지 않고, 같은 후보를 Practical Validation 데이터 보강으로 전달합니다.",
+    }
+
+
 def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) -> dict[str, Any]:
     """Classify Practical Validation REVIEW handoff items for Final Review consumption."""
 
@@ -2878,6 +2969,7 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
             "inherited_limit": action_type_counts.get("inherited_limit", 0),
         },
         "trace_actions": trace_actions,
+        "data_enrichment_action": _build_final_review_data_enrichment_action(validation),
         "boundary": {
             "validation_rerun": False,
             "provider_fetch": False,

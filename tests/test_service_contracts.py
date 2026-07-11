@@ -12286,6 +12286,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         style_path = component_root / "frontend/src/style.css"
         build_entry_path = component_root / "frontend/build/index.html"
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        practical_page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
 
         self.assertTrue(wrapper_path.exists())
         self.assertTrue(package_path.exists())
@@ -12340,6 +12341,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("이 결과가 뜻하는 것", component_source)
         self.assertIn("개선 방법", component_source)
         self.assertIn("처리 위치", component_source)
+        self.assertIn("2단계 데이터 보강으로 이동", component_source)
+        self.assertIn('action: "open_practical_validation_data_enrichment"', component_source)
+        self.assertIn("_consume_final_review_data_enrichment_intent", page_source)
+        self.assertNotIn("run_provider_gap_collection", page_source)
+        self.assertIn("_render_final_review_data_enrichment_handoff", practical_page_source)
+        self.assertIn("부족하거나 오래된 외부 데이터 일괄 수집 / 보강", practical_page_source)
         self.assertIn("감점 없음", component_source)
         self.assertNotIn('label: "Handoff"', component_source)
         self.assertNotIn('label: "Monitoring 후보"', component_source)
@@ -26961,6 +26968,39 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
             "practical_validation_provider_gap_results_source-provider-gap",
         )
 
+    def test_provider_gap_plan_includes_stale_operability_snapshots(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-stale-provider",
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+
+        with patch.object(service, "load_etf_provider_source_map", return_value=verified_rows):
+            rows = service.build_provider_gap_rows(validation)
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(rows[0]["Operability"], "오래됨")
+        self.assertEqual(rows[0]["Action"], "운용성 최신화")
+        self.assertEqual(plan["operability_stale"], ["TLT"])
+        self.assertEqual(plan["operability_official"], ["TLT"])
+        self.assertEqual(plan["operability_bridge"], ["TLT"])
+
     def test_provider_gap_collection_runs_planned_jobs_and_records_history(self) -> None:
         from app.services import backtest_practical_validation as service
 
@@ -28291,6 +28331,45 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(disposition["trace_action_summary"]["refreshable_data"], 1)
         self.assertEqual(disposition["trace_action_summary"]["period_outside"], 1)
         self.assertEqual(disposition["trace_action_summary"]["user_decision"], 1)
+
+    def test_final_review_disposition_exposes_only_executable_data_enrichment_handoff(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        validation = {
+            "validation_id": "validation-readable-action",
+            "selection_source_id": "source-readable-action",
+            "selection_source_snapshot": {"selection_source_id": "source-readable-action"},
+            "provider_coverage": {
+                "symbols": ["TLT", "LQD"],
+                "symbol_weights": {"TLT": 0.5, "LQD": 0.5},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": ["LQD"]},
+                    "exposure": {"missing_symbols": ["LQD"]},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+            {"symbol": "LQD", "data_kind": "holdings", "provider": "ishares", "parser": "holdings_csv"},
+        ]
+
+        with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):
+            action = build_final_review_level2_review_disposition(validation=validation)["data_enrichment_action"]
+
+        self.assertTrue(action["available"])
+        self.assertEqual(action["selection_source_id"], "source-readable-action")
+        self.assertEqual(action["validation_id"], "validation-readable-action")
+        self.assertEqual(action["item_count"], 2)
+        self.assertEqual(action["symbol_count"], 2)
+        self.assertEqual([item["key"] for item in action["items"]], ["operability", "holdings_exposure"])
+        self.assertIn("기간 밖 stress", action["detail"])
+        self.assertIn("Flow 2 재검증", action["next_step"])
 
     def test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts(self) -> None:
         from app.services.backtest_evidence_read_model import (

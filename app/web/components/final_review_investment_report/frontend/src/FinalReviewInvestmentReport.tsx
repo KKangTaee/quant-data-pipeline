@@ -271,6 +271,34 @@ type Level2ReviewDisposition = {
   role_sections?: ReviewRoleSection[]
   finalReviewSections?: ReviewRoleSection[]
   final_review_sections?: ReviewRoleSection[]
+  dataEnrichmentAction?: DataEnrichmentAction
+  data_enrichment_action?: DataEnrichmentAction
+}
+
+type DataEnrichmentAction = {
+  available?: boolean
+  title?: string
+  detail?: string
+  itemCount?: number
+  item_count?: number
+  symbolCount?: number
+  symbol_count?: number
+  items?: Array<{
+    key?: string
+    label?: string
+    symbols?: string[]
+    detail?: string
+    tone?: Tone
+  }>
+  selectionSourceId?: string
+  selection_source_id?: string
+  validationId?: string
+  validation_id?: string
+  buttonLabel?: string
+  button_label?: string
+  nextStep?: string
+  next_step?: string
+  boundary?: string
 }
 
 type ReviewRoleSection = {
@@ -1198,6 +1226,45 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
   )
 }
 
+function DataEnrichmentActionPanel({ model }: { model: DataEnrichmentAction }) {
+  if (!model.available) return null
+  const items = model.items ?? []
+  const itemCount = field(model.itemCount, model.item_count) ?? items.length
+  const symbolCount = field(model.symbolCount, model.symbol_count) ?? 0
+  const openPracticalValidation = () => {
+    Streamlit.setComponentValue({
+      action: "open_practical_validation_data_enrichment",
+      intent_id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      selection_source_id: compact(field(model.selectionSourceId, model.selection_source_id), ""),
+      validation_id: compact(field(model.validationId, model.validation_id), ""),
+    })
+  }
+  return (
+    <section className="fr-invest-report__data-enrichment" aria-label="2단계 데이터 보강">
+      <div className="fr-invest-report__data-enrichment-head">
+        <div>
+          <span>해결 가능한 데이터만 분리</span>
+          <h5>{compact(model.title)}</h5>
+          <p>{compact(model.detail)}</p>
+        </div>
+        <strong>{itemCount}종 · {symbolCount}개 대상</strong>
+      </div>
+      <div className="fr-invest-report__data-enrichment-items">
+        {items.map((item, index) => (
+          <article key={item.key ?? item.label ?? index}>
+            <div><strong>{compact(item.label)}</strong><span>{(item.symbols ?? []).length}개</span></div>
+            <p>{compact(item.detail)}</p>
+            <small>{(item.symbols ?? []).join(", ") || "공통 series"}</small>
+          </article>
+        ))}
+      </div>
+      <button onClick={openPracticalValidation} type="button">{compact(field(model.buttonLabel, model.button_label), "2단계 데이터 보강으로 이동")}</button>
+      <p className="fr-invest-report__data-enrichment-next">{compact(field(model.nextStep, model.next_step))}</p>
+      <small>{compact(model.boundary)}</small>
+    </section>
+  )
+}
+
 export function FinalReviewInvestmentReport({ report, decisionAction }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
@@ -1215,6 +1282,7 @@ export function FinalReviewInvestmentReport({ report, decisionAction }: FinalRev
   const interpretationCards = field(report.interpretationCards, report.interpretation_cards) ?? []
   const watchItems = field(report.watchItems, report.watch_items) ?? report.weaknesses ?? []
   const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
+  const dataEnrichmentAction = field(level2Review.dataEnrichmentAction, level2Review.data_enrichment_action) ?? {}
   const level2RoleSections = field(level2Review.roleSections, level2Review.role_sections) ?? []
   const finalReviewSections = field(level2Review.finalReviewSections, level2Review.final_review_sections)
     ?? level2RoleSections.filter((section) => Number(section.count ?? section.items?.length ?? 0) > 0)
@@ -1282,6 +1350,7 @@ export function FinalReviewInvestmentReport({ report, decisionAction }: FinalRev
       children: (
         <section className="fr-invest-report__review-evidence-detail">
           <p>2단계에서 저장한 검증 결과를 바탕으로 무엇을 확인했고, 왜 주의가 남았는지 사용자 언어로 설명합니다.</p>
+          <DataEnrichmentActionPanel model={dataEnrichmentAction} />
           <ReviewImpactList impacts={scorecardReviewImpacts} />
         </section>
       ),

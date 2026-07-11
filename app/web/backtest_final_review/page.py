@@ -36,6 +36,10 @@ from app.web.components.final_review_investment_report import (
     render_final_review_investment_report,
 )
 from app.web.backtest_portfolio_proposal_helpers import _paper_ledger_slug
+from app.web.backtest_workflow_routes import (
+    BACKTEST_STAGE_PRACTICAL_VALIDATION,
+    PRACTICAL_VALIDATION_MODE_SELECTED_SOURCE,
+)
 from app.web.backtest_ui_components import (
     render_badge_strip,
 )
@@ -611,6 +615,48 @@ def _consume_final_review_decision_intent(
     st.rerun()
 
 
+def _consume_final_review_data_enrichment_intent(
+    intent: dict[str, Any] | None,
+    *,
+    validation: dict[str, Any],
+) -> None:
+    """Route one readable-report intent to the owning Level2 Python action surface."""
+
+    payload = dict(intent or {})
+    if payload.get("action") != "open_practical_validation_data_enrichment":
+        return
+    intent_id = str(payload.get("intent_id") or "").strip()
+    validation_id = str(validation.get("validation_id") or "").strip()
+    consumed_key = f"final_review_consumed_data_enrichment_{_paper_ledger_slug(validation_id)}"
+    if not intent_id or st.session_state.get(consumed_key) == intent_id:
+        return
+    requested_validation_id = str(payload.get("validation_id") or "").strip()
+    if requested_validation_id and requested_validation_id != validation_id:
+        st.error("현재 확인한 검토서와 데이터 보강 요청의 validation이 다릅니다. 검토서를 다시 확인하세요.")
+        return
+    source_snapshot = dict(validation.get("selection_source_snapshot") or {})
+    selection_source_id = str(source_snapshot.get("selection_source_id") or validation.get("selection_source_id") or "").strip()
+    requested_source_id = str(payload.get("selection_source_id") or "").strip()
+    if not source_snapshot or (requested_source_id and requested_source_id != selection_source_id):
+        st.error("같은 후보를 2단계로 전달할 selection source가 없습니다. Practical Validation에서 후보를 다시 선택하세요.")
+        return
+
+    st.session_state[consumed_key] = intent_id
+    st.session_state.backtest_practical_validation_source = source_snapshot
+    st.session_state.backtest_practical_validation_mode = PRACTICAL_VALIDATION_MODE_SELECTED_SOURCE
+    st.session_state.backtest_practical_validation_data_enrichment_handoff = {
+        "selection_source": source_snapshot,
+        "validation_result": dict(validation),
+    }
+    st.session_state.backtest_practical_validation_notice = (
+        "Final Review에서 확인한 같은 후보의 데이터 보강으로 이동했습니다. "
+        "수집 가능한 자료만 보강한 뒤 Flow 2 재검증을 실행하세요."
+    )
+    st.session_state.pop("practical_validation_source_selected", None)
+    st.session_state.backtest_requested_panel = BACKTEST_STAGE_PRACTICAL_VALIDATION
+    st.rerun()
+
+
 def render_final_review_workspace() -> None:
     top_summary = _build_final_review_top_summary()
     st.markdown(f"### {top_summary['title']}")
@@ -731,6 +777,10 @@ def render_final_review_workspace() -> None:
         investment_report,
         decision_action=decision_action,
         key=f"final_review_investment_report_{validation.get('validation_id') or source.get('source_id') or 'current'}",
+    )
+    _consume_final_review_data_enrichment_intent(
+        decision_intent,
+        validation=validation,
     )
     _consume_final_review_decision_intent(
         decision_intent,

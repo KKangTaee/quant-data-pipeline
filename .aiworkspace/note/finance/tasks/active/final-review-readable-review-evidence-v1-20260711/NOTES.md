@@ -12,3 +12,10 @@
 - `기간 미포함`은 `period_outside`, parameter perturbation `NOT_RUN`은 `implementation_gap`으로 분리했다.
 - provider freshness / operability / holdings / exposure는 `refreshable_data`, lifecycle / delisting은 `source_discovery`로 분리했다.
 - 측정된 성과·집중·상관 REVIEW는 `inherited_limit`, Tax / Account는 `user_decision`으로 분리했다.
+
+## 2026-07-11 Data Enrichment Handoff
+
+- provider collection plan은 누락 symbol뿐 아니라 operability provenance의 stale symbol도 수집 대상으로 포함한다.
+- Final Review CTA는 실행 가능한 provider plan이 있을 때만 노출되고, React는 navigation intent만 전달한다.
+- 같은 selection source와 saved validation을 Practical Validation으로 전달하며 실제 수집은 Level2 Python service가 수행한다.
+- 수집 후 저장된 검토서는 자동 변경하지 않고 Flow 2 재검증, 새 결과 저장, Final Review 재확인을 요구한다.

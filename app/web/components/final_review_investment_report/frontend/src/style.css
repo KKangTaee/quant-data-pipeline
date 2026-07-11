@@ -1279,6 +1279,97 @@
   margin-top: 12px;
 }
 
+.fr-invest-report__data-enrichment {
+  margin-top: 12px;
+  border: 1px solid #a7d7c8;
+  border-left: 4px solid #16806a;
+  background: #f5fbf8;
+  padding: 13px 14px;
+}
+
+.fr-invest-report__data-enrichment-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.fr-invest-report__data-enrichment-head span,
+.fr-invest-report__data-enrichment-head > strong {
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fr-invest-report__data-enrichment-head h5 {
+  margin-top: 3px;
+  color: #111827;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.fr-invest-report__data-enrichment-head p,
+.fr-invest-report__data-enrichment-next,
+.fr-invest-report__data-enrichment > small {
+  margin-top: 5px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fr-invest-report__data-enrichment-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fr-invest-report__data-enrichment-items article {
+  min-width: 0;
+  border-top: 1px solid #cfe8df;
+  padding-top: 8px;
+}
+
+.fr-invest-report__data-enrichment-items article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fr-invest-report__data-enrichment-items strong,
+.fr-invest-report__data-enrichment-items span {
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.fr-invest-report__data-enrichment-items p,
+.fr-invest-report__data-enrichment-items small {
+  display: block;
+  margin-top: 4px;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.fr-invest-report__data-enrichment > button {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid #16806a;
+  background: #16806a;
+  padding: 10px 12px;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fr-invest-report__data-enrichment > button:hover {
+  background: #0f6d59;
+}
+
 .fr-invest-report__review-trace-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1710,6 +1801,11 @@
   .fr-invest-report__review-trace-list p {
     grid-template-columns: minmax(0, 1fr);
     gap: 2px;
+  }
+
+  .fr-invest-report__data-enrichment-head,
+  .fr-invest-report__data-enrichment-items {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .fr-invest-report__review-trace-list > section > div {
