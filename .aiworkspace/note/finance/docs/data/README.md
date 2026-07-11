@@ -47,7 +47,7 @@ Last Verified: 2026-07-08
 | `market_event_calendar` | Overview Events calendar snapshot for FOMC, macro releases, earnings, market-structure events, fixed-income calendar events, and corporate-action candidates. Rows use normalized taxonomy fields such as `event_family`, `event_subtype`, `universe_scope`, and `source_authority`; macro/FOMC/Treasury rows are official schedule context, while earnings rows remain provider estimates unless issuer/official confirmation is stored. |
 | `institutional_13f_manager` | SEC Form 13F filer / manager master and latest filing pointer |
 | `institutional_13f_filing` | 13F filing-level metadata including report period, filing date, accession, amendment flag, and source link |
-| `institutional_13f_holding` | 13F information table holdings row ledger for reportable long positions in official quarterly SEC data sets |
+| `institutional_13f_holding` | 13F information table holdings row ledger for reportable long positions in official quarterly SEC data sets. Loader access includes `ix_report_period_cusip_cik` for report-period institution-count ranking; UI read models aggregate raw rows by CUSIP / put-call before display |
 | `institutional_13f_cusip_symbol_map` | best-effort CUSIP to display symbol mapping derived from 13F rows and later enrichment |
 | `institutional_13f_manager_watchlist` | curated manager rail seed metadata for Institutional Portfolios |
 | `institutional_13f_refresh_status` | latest SEC 13F dataset ingestion status, freshness, stale reason, and row counts |

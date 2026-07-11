@@ -16,6 +16,8 @@ from app.services.institutional_portfolios import (
     load_institutional_interest_model,
     load_institutional_manager_choices,
     load_institutional_portfolio_model,
+    load_institutional_popularity_model,
+    load_institutional_selected_security_model,
 )
 from app.web.institutional_portfolios_react_component import (
     institutional_portfolios_react_component_available,
@@ -366,7 +368,10 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
         cik = str(payload.get("cik") or "")
         if cik and cik != st.session_state.get("institutional_portfolios_selected_cik"):
             st.session_state["institutional_portfolios_selected_cik"] = cik
+            st.session_state["institutional_interest_query"] = ""
             st.session_state["institutional_interest_query_needs_load"] = False
+            st.session_state["institutional_interest_model_cache"] = {}
+            st.session_state["institutional_popularity_needs_load"] = False
             st.rerun()
     if event_name == "drilldown":
         query = str(payload.get("query") or "").strip()
@@ -374,6 +379,9 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
             st.session_state["institutional_interest_query"] = query
             st.session_state["institutional_interest_query_needs_load"] = True
             st.rerun()
+    if event_name == "open_popularity":
+        st.session_state["institutional_popularity_needs_load"] = True
+        st.rerun()
 
 
 def _render_workbench_or_fallback(payload: dict[str, Any], *, key: str) -> None:
@@ -474,15 +482,39 @@ def render_institutional_portfolios_page(
                     "model": interest_model,
                 }
 
+    selected_security_model: dict[str, Any] | None = None
+    if interest_query:
+        selected_security_model = load_institutional_selected_security_model(
+            portfolio_model=model,
+            query=interest_query,
+            interest_model=interest_model,
+        )
+
+    popularity_model: dict[str, Any] | None = None
+    report_period = str((model.get("summary") or {}).get("latest_report_period") or "").strip()
+    popularity_cache = st.session_state.get("institutional_popularity_model_cache")
+    if isinstance(popularity_cache, dict) and popularity_cache.get("report_period") == report_period:
+        popularity_model = dict(popularity_cache.get("model") or {})
+    elif st.session_state.pop("institutional_popularity_needs_load", False):
+        popularity_result = load_institutional_popularity_model(report_period or None, limit=50)
+        if popularity_result["status"] == "ok":
+            popularity_model = dict(popularity_result.get("model") or {})
+            st.session_state["institutional_popularity_model_cache"] = {
+                "report_period": report_period,
+                "model": popularity_model,
+            }
+
     payload = build_institutional_workbench_payload(
         model=model,
         managers=managers,
         selected_cik=str(selected_manager.get("cik") or ""),
         interest_model=interest_model,
+        selected_security_model=selected_security_model,
+        popularity_model=popularity_model,
         mode="live",
         refresh_status=refresh_status,
     )
-    _render_workbench_or_fallback(payload, key=f"institutional_portfolios_{selected_manager.get('cik') or 'unknown'}")
+    _render_workbench_or_fallback(payload, key="institutional_portfolios_workbench")
     if not refresh_panel_rendered:
         _render_refresh_status_panel(refresh_status)
 

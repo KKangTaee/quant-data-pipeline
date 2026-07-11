@@ -11,8 +11,10 @@ from finance.loaders.institutional_13f import (
     load_institutional_13f_managers,
     load_institutional_13f_managers_by_ciks,
     load_institutional_13f_portfolio_bundle,
+    load_institutional_13f_popularity_ranking,
     load_institutional_13f_refresh_status,
 )
+from finance.loaders.price import load_price_history
 
 
 INSTITUTIONAL_PORTFOLIO_CAVEATS = [
@@ -121,6 +123,12 @@ def _pct_label(value: Any) -> str:
     return f"{_num(value):.1f}%"
 
 
+def _signed_pct_label(value: Any) -> str:
+    numeric = _num(value)
+    sign = "+" if numeric > 0 else ""
+    return f"{sign}{numeric:.1f}%"
+
+
 def _date_label(value: Any) -> str | None:
     if value is None:
         return None
@@ -136,6 +144,11 @@ def _cik_text(value: Any) -> str | None:
     if not digits:
         return None
     return digits.zfill(10)[-10:]
+
+
+def _symbol(value: Any) -> str | None:
+    text = _text(value)
+    return text.upper() if text else None
 
 
 def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
@@ -159,7 +172,23 @@ def _holding_key(row: dict[str, Any]) -> str:
 
 
 def _prepared_holdings(frame: pd.DataFrame | None) -> tuple[list[dict[str, Any]], float]:
-    rows = _records(frame)
+    raw_rows = _records(frame)
+    grouped: dict[str, dict[str, Any]] = {}
+    for row in raw_rows:
+        key = _holding_key(row)
+        if key not in grouped:
+            grouped[key] = dict(row)
+            grouped[key]["reported_value"] = _num(row.get("reported_value"))
+            grouped[key]["shares_or_principal_amount"] = _num(row.get("shares_or_principal_amount"))
+            continue
+        bucket = grouped[key]
+        bucket["reported_value"] = _num(bucket.get("reported_value")) + _num(row.get("reported_value"))
+        bucket["shares_or_principal_amount"] = _num(bucket.get("shares_or_principal_amount")) + _num(row.get("shares_or_principal_amount"))
+        for field in ["holding_symbol", "figi", "sector", "industry", "source_ref", "symbol_source"]:
+            if not _text(bucket.get(field)) and _text(row.get(field)):
+                bucket[field] = row.get(field)
+
+    rows = list(grouped.values())
     total_value = sum(_num(row.get("reported_value")) for row in rows)
     prepared: list[dict[str, Any]] = []
     for row in rows:
@@ -275,6 +304,103 @@ def _sector_exposure(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         row["weight_pct"] = round(_num(row["weight_pct"]), 4)
     out.sort(key=lambda row: row["weight_pct"], reverse=True)
     return out
+
+
+def _portfolio_symbols(holdings: list[dict[str, Any]], *, limit: int = 250) -> list[str]:
+    symbols: list[str] = []
+    seen: set[str] = set()
+    for row in holdings:
+        symbol = _symbol(row.get("holding_symbol"))
+        if symbol and symbol not in seen:
+            symbols.append(symbol)
+            seen.add(symbol)
+        if len(symbols) >= limit:
+            break
+    return symbols
+
+
+def _price_column(frame: pd.DataFrame) -> str | None:
+    for column in ["adj_close", "close", "price"]:
+        if column in frame.columns:
+            return column
+    return None
+
+
+def _price_frame(price_history: pd.DataFrame | None, symbol: str | None = None) -> pd.DataFrame:
+    if price_history is None or price_history.empty:
+        return pd.DataFrame(columns=["symbol", "date", "price"])
+    price_column = _price_column(price_history)
+    if price_column is None or "date" not in price_history.columns:
+        return pd.DataFrame(columns=["symbol", "date", "price"])
+    work = price_history.copy()
+    if "symbol" not in work.columns:
+        work["symbol"] = symbol or ""
+    work["symbol"] = work["symbol"].astype(str).str.upper()
+    if symbol:
+        work = work[work["symbol"] == symbol.upper()]
+    work["date"] = pd.to_datetime(work["date"], errors="coerce")
+    work["price"] = pd.to_numeric(work[price_column], errors="coerce")
+    work = work.dropna(subset=["date", "price"])
+    work = work[work["price"] > 0]
+    if work.empty:
+        return pd.DataFrame(columns=["symbol", "date", "price"])
+    return work[["symbol", "date", "price"]].sort_values(["symbol", "date"])
+
+
+def _price_points(frame: pd.DataFrame, *, max_points: int = 90) -> list[dict[str, Any]]:
+    if frame.empty:
+        return []
+    if len(frame) > max_points:
+        step = max(1, len(frame) // max_points)
+        frame = frame.iloc[::step].tail(max_points)
+    return [
+        {"date": row["date"].date().isoformat(), "price": round(float(row["price"]), 4)}
+        for _, row in frame.iterrows()
+        if pd.notna(row.get("date")) and pd.notna(row.get("price"))
+    ]
+
+
+def _resample_price_points(frame: pd.DataFrame, rule: str) -> list[dict[str, Any]]:
+    if frame.empty:
+        return []
+    work = frame.set_index("date")[["price"]].sort_index()
+    sampled = work.resample(rule).last().dropna().reset_index()
+    return _price_points(sampled, max_points=90)
+
+
+def _security_charts(price_history: pd.DataFrame | None, symbol: str | None) -> dict[str, Any]:
+    frame = _price_frame(price_history, symbol)
+    return {
+        "daily": {
+            "label": "일봉",
+            "points": _price_points(frame, max_points=90),
+        },
+        "weekly": {
+            "label": "주봉",
+            "points": _resample_price_points(frame, "W-FRI"),
+        },
+        "monthly": {
+            "label": "월봉",
+            "points": _resample_price_points(frame, "ME"),
+        },
+    }
+
+
+def _find_holding(holdings: list[dict[str, Any]], query: str) -> dict[str, Any] | None:
+    clean = str(query or "").strip()
+    if not clean:
+        return holdings[0] if holdings else None
+    upper = clean.upper()
+    for row in holdings:
+        if upper == (_symbol(row.get("holding_symbol")) or ""):
+            return row
+        if upper == (str(row.get("cusip") or "").strip().upper()):
+            return row
+    for row in holdings:
+        issuer = str(row.get("issuer_name") or "").upper()
+        if upper and upper in issuer:
+            return row
+    return None
 
 
 def build_institutional_manager_rail(managers: list[dict[str, Any]], selected_cik: str | None) -> list[dict[str, Any]]:
@@ -520,6 +646,194 @@ def _workbench_holdings_rows(holdings: list[dict[str, Any]]) -> list[dict[str, A
     ]
 
 
+def build_institutional_portfolio_performance_model(
+    model: dict[str, Any],
+    *,
+    price_history: pd.DataFrame | None = None,
+    as_of_date: str | None = None,
+) -> dict[str, Any]:
+    summary = dict(model.get("summary") or {})
+    report_period = _date_label(summary.get("latest_report_period"))
+    holdings = list(model.get("holdings") or [])
+    if not report_period:
+        return {
+            "status": "unavailable",
+            "reason": "보고 기준일이 없어 성과를 계산할 수 없습니다.",
+            "rows": [],
+            "caveat": "보고 기준일 포트폴리오를 그대로 보유했다고 가정한 단순 계산입니다.",
+        }
+
+    total_weight = sum(_num(row.get("weight_pct")) for row in holdings if _num(row.get("weight_pct")) > 0)
+    symbol_holdings = [row for row in holdings if _symbol(row.get("holding_symbol")) and _num(row.get("weight_pct")) > 0]
+    if total_weight <= 0 or not symbol_holdings:
+        return {
+            "status": "unavailable",
+            "report_period": report_period,
+            "reason": "가격 계산에 사용할 수 있는 mapped ticker가 없습니다.",
+            "rows": [],
+            "caveat": "보고 기준일 포트폴리오를 그대로 보유했다고 가정한 단순 계산입니다.",
+        }
+
+    prices = _price_frame(price_history)
+    if as_of_date:
+        as_of_ts = pd.to_datetime(as_of_date, errors="coerce")
+        if pd.notna(as_of_ts):
+            prices = prices[prices["date"] <= as_of_ts]
+    report_ts = pd.to_datetime(report_period, errors="coerce")
+
+    rows: list[dict[str, Any]] = []
+    covered_weight = 0.0
+    latest_dates: list[pd.Timestamp] = []
+    for holding in symbol_holdings:
+        symbol = _symbol(holding.get("holding_symbol"))
+        if not symbol or pd.isna(report_ts):
+            continue
+        symbol_prices = prices[(prices["symbol"] == symbol) & (prices["date"] >= report_ts)].sort_values("date")
+        if symbol_prices.empty:
+            continue
+        start = symbol_prices.iloc[0]
+        latest = symbol_prices.iloc[-1]
+        start_price = float(start["price"])
+        latest_price = float(latest["price"])
+        if start_price <= 0:
+            continue
+        return_pct = ((latest_price / start_price) - 1.0) * 100.0
+        normalized_weight = (_num(holding.get("weight_pct")) / total_weight) * 100.0
+        contribution_pct = normalized_weight * return_pct / 100.0
+        covered_weight += _num(holding.get("weight_pct"))
+        latest_dates.append(latest["date"])
+        rows.append(
+            {
+                "symbol": symbol,
+                "issuer_name": _text(holding.get("issuer_name")) or symbol,
+                "cusip": _text(holding.get("cusip")),
+                "weight_pct": round(normalized_weight, 4),
+                "weight_label": _pct_label(normalized_weight),
+                "start_date": start["date"].date().isoformat(),
+                "latest_date": latest["date"].date().isoformat(),
+                "start_price": round(start_price, 4),
+                "latest_price": round(latest_price, 4),
+                "return_pct": round(return_pct, 4),
+                "return_label": _signed_pct_label(return_pct),
+                "contribution_pct": round(contribution_pct, 4),
+                "contribution_label": _signed_pct_label(contribution_pct),
+                "drilldown_query": symbol,
+            }
+        )
+
+    if not rows:
+        return {
+            "status": "unavailable",
+            "report_period": report_period,
+            "reason": "보고 기준일 이후 저장된 가격 row가 없어 성과를 계산할 수 없습니다.",
+            "covered_weight_pct": 0.0,
+            "rows": [],
+            "caveat": "보고 기준일 포트폴리오를 그대로 보유했다고 가정한 단순 계산입니다.",
+        }
+
+    portfolio_return = sum(_num(row.get("contribution_pct")) for row in rows)
+    latest_price_date = max(latest_dates).date().isoformat() if latest_dates else None
+    rows.sort(key=lambda row: _num(row.get("weight_pct")), reverse=True)
+    return {
+        "status": "ok",
+        "title": "보고 기준일 이후 가정 성과",
+        "report_period": report_period,
+        "latest_price_date": latest_price_date,
+        "portfolio_return_pct": round(portfolio_return, 4),
+        "portfolio_return_label": _signed_pct_label(portfolio_return),
+        "covered_weight_pct": round((covered_weight / total_weight) * 100.0, 4) if total_weight > 0 else 0.0,
+        "covered_weight_label": _pct_label((covered_weight / total_weight) * 100.0 if total_weight > 0 else 0.0),
+        "row_count": len(rows),
+        "rows": rows,
+        "top_contributors": sorted(rows, key=lambda row: _num(row.get("contribution_pct")), reverse=True)[:5],
+        "top_laggards": sorted(rows, key=lambda row: _num(row.get("contribution_pct")))[:5],
+        "best_return": sorted(rows, key=lambda row: _num(row.get("return_pct")), reverse=True)[0],
+        "caveat": "보고 기준일 포트폴리오를 지금까지 그대로 보유했다고 가정한 단순 성과입니다. 실제 매매, 현재 보유, 추천 신호가 아닙니다.",
+    }
+
+
+def build_institutional_selected_security_model(
+    *,
+    portfolio_model: dict[str, Any],
+    query: str,
+    interest_model: dict[str, Any] | None = None,
+    price_history: pd.DataFrame | None = None,
+) -> dict[str, Any]:
+    holdings = list(portfolio_model.get("holdings") or [])
+    holding = _find_holding(holdings, query)
+    if holding is None:
+        return {
+            "status": "empty",
+            "query": str(query or "").strip(),
+            "empty_text": "선택한 종목을 현재 포트폴리오에서 찾지 못했습니다.",
+            "holders": list((interest_model or {}).get("holders") or []),
+            "holder_count": int((interest_model or {}).get("holder_count") or 0),
+        }
+
+    symbol = _symbol(holding.get("holding_symbol"))
+    security = {
+        "symbol": symbol,
+        "issuer_name": _text(holding.get("issuer_name")) or symbol or "-",
+        "cusip": _text(holding.get("cusip")),
+        "sector": _text(holding.get("sector")) or "Unmapped",
+        "industry": _text(holding.get("industry")),
+    }
+    holders = list((interest_model or {}).get("holders") or [])
+    return {
+        "status": "ok",
+        "query": str(query or "").strip().upper(),
+        "security": security,
+        "portfolio_position": {
+            "weight_pct": round(_num(holding.get("weight_pct")), 4),
+            "weight_label": _pct_label(holding.get("weight_pct")),
+            "reported_value": _num(holding.get("reported_value")),
+            "value_label": _money_label(holding.get("reported_value")),
+            "shares_or_principal_amount": _num(holding.get("shares_or_principal_amount")),
+            "shares_label": f"{_num(holding.get('shares_or_principal_amount')):,.0f}",
+        },
+        "charts": _security_charts(price_history, symbol),
+        "holders": holders[:50],
+        "holder_count": int((interest_model or {}).get("holder_count") or len(holders)),
+        "caveat": "차트는 저장된 가격 DB 기준이며 13F 보고 이후 실제 거래를 의미하지 않습니다.",
+    }
+
+
+def build_institutional_popularity_model(rows: pd.DataFrame | None, *, report_period: str | None = None) -> dict[str, Any]:
+    records = _records(rows)
+    period = _date_label(report_period) or _date_label(records[0].get("report_period") if records else None)
+    ranked: list[dict[str, Any]] = []
+    records.sort(key=lambda row: (_num(row.get("holder_count")), _num(row.get("total_reported_value"))), reverse=True)
+    for idx, row in enumerate(records, start=1):
+        symbol = _symbol(row.get("holding_symbol"))
+        issuer = _text(row.get("issuer_name")) or symbol or "-"
+        query = symbol or _text(row.get("cusip")) or issuer
+        ranked.append(
+            {
+                "rank": idx,
+                "report_period": _date_label(row.get("report_period")) or period,
+                "cusip": _text(row.get("cusip")),
+                "symbol": symbol,
+                "issuer_name": issuer,
+                "holder_count": int(_num(row.get("holder_count"))),
+                "holder_count_label": f"{int(_num(row.get('holder_count'))):,}",
+                "holding_rows": int(_num(row.get("holding_rows"))),
+                "total_reported_value": _num(row.get("total_reported_value")),
+                "value_label": _money_label(row.get("total_reported_value")),
+                "sample_managers": _text(row.get("sample_managers")) or "",
+                "drilldown_query": query,
+            }
+        )
+    return {
+        "status": "ok" if ranked else "empty",
+        "title": "기관 보유 랭킹",
+        "subtitle": "보고 기준 분기별로 같은 종목을 보유한 기관 수를 집계합니다.",
+        "report_period": period,
+        "rows": ranked,
+        "empty_text": "랭킹을 불러오면 보고 기준 분기별 보유 기관 수를 보여줍니다.",
+        "caveat": "동일 CUSIP 기준 집계이며 CUSIP-symbol mapping 한계가 있을 수 있습니다.",
+    }
+
+
 def _interest_payload(interest_model: dict[str, Any] | None) -> dict[str, Any]:
     model = dict(interest_model or {})
     holders = [
@@ -552,6 +866,8 @@ def build_institutional_workbench_payload(
     managers: list[dict[str, Any]] | None,
     selected_cik: str | None,
     interest_model: dict[str, Any] | None,
+    selected_security_model: dict[str, Any] | None = None,
+    popularity_model: dict[str, Any] | None = None,
     mode: str = "live",
     data_message: str = "",
     refresh_status: dict[str, Any] | None = None,
@@ -564,11 +880,13 @@ def build_institutional_workbench_payload(
     sector_exposure = list(model.get("sector_exposure") or [])
     manager_name = _text(summary.get("manager_name")) or "Unknown manager"
     report_period = _text(summary.get("latest_report_period")) or "-"
-    previous_period = _text(summary.get("previous_report_period")) or "-"
+    previous_period_raw = _text(summary.get("previous_report_period"))
+    previous_period = previous_period_raw or "이전 보고 분기 없음"
     filing_date = _text(summary.get("latest_filing_date")) or "-"
     total_value = _num(summary.get("total_reported_value"))
     is_preview = mode == "preview"
     freshness = build_institutional_refresh_status_model(refresh_status)
+    performance_model = dict(model.get("portfolio_performance") or {})
     data_state_label = "Preview sample" if is_preview else "저장된 SEC 13F 스냅샷"
     data_state_message = data_message or (
         "샘플 데이터입니다. 실제 13F 수집 후 저장 DB 기준 화면으로 바뀝니다."
@@ -621,7 +939,19 @@ def build_institutional_workbench_payload(
         "change_board": {
             "title": "분기 보고 변화",
             "subtitle": f"{previous_period} -> {report_period}",
+            "comparison_available": bool(previous_period_raw),
+            "empty_reason": ""
+            if previous_period_raw
+            else "현재 local 13F DB에 이 기관의 이전 보고 분기가 없어 증가 / 감소 / 더 이상 보고 안 됨 비교가 아직 불가합니다.",
             "groups": _change_groups(changes, limit=5),
+        },
+        "portfolio_performance": performance_model
+        or {
+            "status": "unavailable",
+            "title": "보고 기준일 이후 가정 성과",
+            "reason": "가격 DB coverage가 없어 성과를 계산하지 못했습니다.",
+            "rows": [],
+            "caveat": "보고 기준일 포트폴리오를 그대로 보유했다고 가정한 단순 계산입니다.",
         },
         "sector_exposure": {
             "title": "섹터 노출",
@@ -633,6 +963,19 @@ def build_institutional_workbench_payload(
             "rows": _workbench_holdings_rows(holdings),
         },
         "interest": _interest_payload(interest_model),
+        "selected_security": dict(selected_security_model or {}),
+        "security_charts": dict(model.get("security_charts") or {}),
+        "popularity": dict(
+            popularity_model
+            or {
+                "status": "not_loaded",
+                "title": "기관 보유 랭킹",
+                "subtitle": "보고 기준 분기별로 많은 기관이 보유한 종목을 확인합니다.",
+                "report_period": report_period if report_period != "-" else None,
+                "rows": [],
+                "empty_text": "탭을 열면 보고 기준 분기의 보유 기관 수 랭킹을 불러옵니다.",
+            }
+        ),
         "source_caveats": {
             "visible": True,
             "items": list(model.get("caveats") or INSTITUTIONAL_PORTFOLIO_CAVEATS),
@@ -868,6 +1211,25 @@ def load_institutional_portfolio_model(cik: str) -> dict[str, Any]:
         previous_filing=bundle.get("previous_filing"),
         previous_holdings=bundle.get("previous_holdings"),
     )
+    report_period = _text((model.get("summary") or {}).get("latest_report_period"))
+    symbols = _portfolio_symbols(list(model.get("holdings") or []))
+    if report_period and symbols:
+        try:
+            price_history = load_price_history(symbols=symbols, start=report_period, timeframe="1d")
+            model["portfolio_performance"] = build_institutional_portfolio_performance_model(model, price_history=price_history)
+            model["security_charts"] = {
+                symbol: _security_charts(price_history, symbol)
+                for symbol in symbols[:24]
+                if not _price_frame(price_history, symbol).empty
+            }
+        except Exception as exc:
+            model["portfolio_performance"] = {
+                "status": "unavailable",
+                "report_period": report_period,
+                "reason": str(exc),
+                "rows": [],
+                "caveat": "보고 기준일 포트폴리오를 그대로 보유했다고 가정한 단순 계산입니다.",
+            }
     return {"status": "ok", "message": "", "model": model}
 
 
@@ -877,3 +1239,38 @@ def load_institutional_interest_model(query: str, *, limit: int = 100) -> dict[s
     except Exception as exc:
         return {"status": "error", "message": str(exc), "model": build_institutional_interest_model(query, pd.DataFrame())}
     return {"status": "ok", "message": "", "model": build_institutional_interest_model(query, rows)}
+
+
+def load_institutional_selected_security_model(
+    *,
+    portfolio_model: dict[str, Any],
+    query: str,
+    interest_model: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    holding = _find_holding(list(portfolio_model.get("holdings") or []), query)
+    symbol = _symbol((holding or {}).get("holding_symbol"))
+    report_period = _text((portfolio_model.get("summary") or {}).get("latest_report_period"))
+    price_history = pd.DataFrame()
+    if symbol and report_period:
+        try:
+            price_history = load_price_history(symbols=[symbol], start=report_period, timeframe="1d")
+        except Exception:
+            price_history = pd.DataFrame()
+    return build_institutional_selected_security_model(
+        portfolio_model=portfolio_model,
+        query=query,
+        interest_model=interest_model,
+        price_history=price_history,
+    )
+
+
+def load_institutional_popularity_model(report_period: str | None = None, *, limit: int = 50) -> dict[str, Any]:
+    try:
+        rows = load_institutional_13f_popularity_ranking(report_period, limit=limit)
+    except Exception as exc:
+        return {
+            "status": "error",
+            "message": str(exc),
+            "model": build_institutional_popularity_model(pd.DataFrame(), report_period=report_period),
+        }
+    return {"status": "ok", "message": "", "model": build_institutional_popularity_model(rows, report_period=report_period)}

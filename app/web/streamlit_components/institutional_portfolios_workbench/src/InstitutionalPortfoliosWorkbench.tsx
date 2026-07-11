@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
 import "./style.css";
 
@@ -68,9 +68,87 @@ type InterestHolder = {
   filing_date: string;
   issuer_name: string;
   symbol?: string | null;
+  cusip?: string | null;
   weight_label: string;
   value_label: string;
   source_ref?: string | null;
+};
+
+type ChartPoint = {
+  date: string;
+  price: number;
+};
+
+type SelectedSecurity = {
+  status?: "ok" | "empty" | string;
+  query?: string;
+  empty_text?: string;
+  security?: {
+    symbol?: string | null;
+    issuer_name: string;
+    cusip?: string | null;
+    sector?: string | null;
+    industry?: string | null;
+  };
+  portfolio_position?: {
+    weight_label: string;
+    value_label: string;
+    shares_label: string;
+  };
+  charts?: Record<"daily" | "weekly" | "monthly", { label: string; points: ChartPoint[] }>;
+  holders?: InterestHolder[];
+  holder_count?: number;
+  caveat?: string;
+};
+
+type PerformanceRow = {
+  symbol: string;
+  issuer_name: string;
+  weight_label: string;
+  start_date: string;
+  latest_date: string;
+  return_pct: number;
+  return_label: string;
+  contribution_label: string;
+  drilldown_query: string;
+};
+
+type PortfolioPerformance = {
+  status: "ok" | "unavailable" | string;
+  title?: string;
+  report_period?: string | null;
+  latest_price_date?: string | null;
+  portfolio_return_label?: string;
+  covered_weight_label?: string;
+  reason?: string;
+  rows?: PerformanceRow[];
+  top_contributors?: PerformanceRow[];
+  top_laggards?: PerformanceRow[];
+  best_return?: PerformanceRow;
+  caveat?: string;
+};
+
+type PopularityRow = {
+  rank: number;
+  report_period?: string | null;
+  cusip?: string | null;
+  symbol?: string | null;
+  issuer_name: string;
+  holder_count: number;
+  holder_count_label: string;
+  value_label: string;
+  sample_managers: string;
+  drilldown_query: string;
+};
+
+type PopularityPayload = {
+  status: "ok" | "empty" | "not_loaded" | string;
+  title: string;
+  subtitle?: string;
+  report_period?: string | null;
+  rows: PopularityRow[];
+  empty_text?: string;
+  caveat?: string;
 };
 
 type WorkbenchPayload = {
@@ -124,8 +202,11 @@ type WorkbenchPayload = {
   change_board: {
     title: string;
     subtitle: string;
+    comparison_available?: boolean;
+    empty_reason?: string;
     groups: Record<string, ChangeGroup>;
   };
+  portfolio_performance?: PortfolioPerformance;
   sector_exposure: {
     title: string;
     subtitle: string;
@@ -140,6 +221,9 @@ type WorkbenchPayload = {
     holders: InterestHolder[];
     empty_text: string;
   };
+  selected_security?: SelectedSecurity;
+  security_charts?: Record<string, Record<"daily" | "weekly" | "monthly", { label: string; points: ChartPoint[] }>>;
+  popularity?: PopularityPayload;
   source_caveats: {
     visible: boolean;
     items: string[];
@@ -157,15 +241,39 @@ type Props = ComponentProps & {
   };
 };
 
+type ViewName = "overview" | "holdings" | "interest" | "popularity";
+
 type PendingAction =
   | { kind: "manager"; cik: string; label: string }
   | { kind: "interest"; query: string; label: string }
+  | { kind: "popularity"; label: string }
   | { kind: "refresh"; label: string };
 
 function syncFrameHeightSoon() {
   Streamlit.setFrameHeight();
   window.requestAnimationFrame(() => Streamlit.setFrameHeight());
   window.setTimeout(() => Streamlit.setFrameHeight(), 180);
+}
+
+function hostScrollPosition() {
+  try {
+    return { x: window.parent.scrollX, y: window.parent.scrollY };
+  } catch {
+    return { x: window.scrollX, y: window.scrollY };
+  }
+}
+
+function restoreHostScroll(position: { x: number; y: number }) {
+  const restore = () => {
+    try {
+      window.parent.scrollTo(position.x, position.y);
+    } catch {
+      window.scrollTo(position.x, position.y);
+    }
+  };
+  window.requestAnimationFrame(restore);
+  window.setTimeout(restore, 80);
+  window.setTimeout(restore, 220);
 }
 
 function clampPercent(value: number | string | undefined) {
@@ -210,14 +318,7 @@ function AllocationDonut({ segments }: { segments: Segment[] }) {
           if (end - start <= 0.01) {
             return null;
           }
-          return (
-            <path
-              key={segment.key}
-              d={arcPath(start, end, 72)}
-              stroke={segment.color}
-              className="ip-donut__arc"
-            />
-          );
+          return <path key={segment.key} d={arcPath(start, end, 72)} stroke={segment.color} className="ip-donut__arc" />;
         })}
       </svg>
       <div className="ip-donut__center">
@@ -228,10 +329,237 @@ function AllocationDonut({ segments }: { segments: Segment[] }) {
   );
 }
 
+function MiniLineChart({ points }: { points: ChartPoint[] }) {
+  if (!points || points.length < 2) {
+    return <div className="ip-chart-empty">가격 데이터 없음</div>;
+  }
+  const width = 520;
+  const height = 180;
+  const pad = 14;
+  const prices = points.map((point) => Number(point.price)).filter((value) => Number.isFinite(value));
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const span = max - min || 1;
+  const path = points
+    .map((point, idx) => {
+      const x = pad + (idx / Math.max(1, points.length - 1)) * (width - pad * 2);
+      const y = height - pad - ((Number(point.price) - min) / span) * (height - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="ip-mini-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="저장 가격 차트">
+        <line x1={pad} x2={width - pad} y1={height - pad} y2={height - pad} />
+        <polyline points={path} />
+      </svg>
+      <div className="ip-mini-chart__axis">
+        <span>{points[0]?.date}</span>
+        <strong>{points[points.length - 1]?.price?.toFixed?.(2) || points[points.length - 1]?.price}</strong>
+        <span>{points[points.length - 1]?.date}</span>
+      </div>
+    </div>
+  );
+}
+
+function PortfolioPerformancePanel({
+  performance,
+  onDrilldown,
+}: {
+  performance?: PortfolioPerformance;
+  onDrilldown: (query: string) => void;
+}) {
+  const rows = performance?.rows || [];
+  return (
+    <div className="ip-panel ip-performance-panel">
+      <div className="ip-section-head">
+        <div>
+          <h3>{performance?.title || "보고 기준일 이후 가정 성과"}</h3>
+          <p>
+            {performance?.status === "ok"
+              ? `${performance.report_period || "-"}부터 ${performance.latest_price_date || "-"}까지 저장 가격 기준`
+              : performance?.reason || "가격 DB coverage가 없어 계산하지 못했습니다."}
+          </p>
+        </div>
+        <strong>{performance?.status === "ok" ? performance.portfolio_return_label : "-"}</strong>
+      </div>
+      <div className="ip-performance-metrics">
+        <div>
+          <span>가격 커버리지</span>
+          <strong>{performance?.covered_weight_label || "-"}</strong>
+        </div>
+        <div>
+          <span>최고 수익률</span>
+          <strong>{performance?.best_return?.return_label || "-"}</strong>
+        </div>
+        <div>
+          <span>대상 종목</span>
+          <strong>{rows.length.toLocaleString()}</strong>
+        </div>
+      </div>
+      <div className="ip-performance-list">
+        {rows.slice(0, 8).map((row) => (
+          <button type="button" key={`${row.symbol}-${row.start_date}`} onClick={() => onDrilldown(row.drilldown_query)}>
+            <span>
+              <strong>{row.symbol}</strong>
+              <small>{row.issuer_name}</small>
+            </span>
+            <em>{row.return_label}</em>
+            <small>{row.contribution_label}</small>
+          </button>
+        ))}
+      </div>
+      <p className="ip-note">{performance?.caveat}</p>
+    </div>
+  );
+}
+
+function SecurityDetail({
+  detail,
+  interest,
+  notice,
+}: {
+  detail?: SelectedSecurity;
+  interest: WorkbenchPayload["interest"];
+  notice?: string | null;
+}) {
+  const [chartMode, setChartMode] = useState<"daily" | "weekly" | "monthly">("daily");
+  const charts = detail?.charts;
+  const chart = charts?.[chartMode];
+  const holders = detail?.holders?.length ? detail.holders : interest.holders;
+  const holderCount = detail?.holder_count ?? interest.holder_count;
+
+  if (!interest.query && detail?.status !== "ok") {
+    return <div className="ip-interest-empty">{interest.empty_text}</div>;
+  }
+
+  return (
+    <div className="ip-security-detail">
+      {notice ? <div className="ip-board-note">{notice}</div> : null}
+      <div className="ip-security-detail__summary">
+        <div>
+          <span className="ip-security-detail__kicker">선택 종목</span>
+          <h3>{detail?.security?.symbol || interest.query || "-"}</h3>
+          <p>{detail?.security?.issuer_name || detail?.empty_text || interest.empty_text}</p>
+        </div>
+        <div className="ip-security-detail__stats">
+          <div>
+            <span>포트폴리오 비중</span>
+            <strong>{detail?.portfolio_position?.weight_label || "-"}</strong>
+          </div>
+          <div>
+            <span>보고 평가액</span>
+            <strong>{detail?.portfolio_position?.value_label || "-"}</strong>
+          </div>
+          <div>
+            <span>보유 기관</span>
+            <strong>{holderCount.toLocaleString()}</strong>
+          </div>
+        </div>
+      </div>
+      <div className="ip-security-detail__body">
+        <div className="ip-chart-panel">
+          <div className="ip-chart-tabs">
+            {(["daily", "weekly", "monthly"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={chartMode === mode ? "ip-chart-tabs__active" : ""}
+                onClick={() => setChartMode(mode)}
+              >
+                {charts?.[mode]?.label || mode}
+              </button>
+            ))}
+          </div>
+          <MiniLineChart points={chart?.points || []} />
+          <p className="ip-note">{detail?.caveat}</p>
+        </div>
+        <div className="ip-holder-panel">
+          <div className="ip-section-head">
+            <div>
+              <h3>보유 기관 리스트</h3>
+              <p>저장된 최신 13F filing 기준입니다.</p>
+            </div>
+            <strong>{holderCount.toLocaleString()}</strong>
+          </div>
+          <div className="ip-interest-list">
+            {holders.length ? (
+              holders.slice(0, 24).map((holder) => (
+                <a href={holder.source_ref || "#"} target="_blank" rel="noreferrer" key={`${holder.cik}-${holder.manager_name}`}>
+                  <span>
+                    <strong>{holder.manager_name}</strong>
+                    <small>{holder.period_of_report} · 제출 {holder.filing_date}</small>
+                  </span>
+                  <em>{holder.weight_label}</em>
+                  <small>{holder.value_label}</small>
+                </a>
+              ))
+            ) : (
+              <div className="ip-interest-empty">{interest.empty_text}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PopularityRankingPanel({
+  popularity,
+  onLoad,
+  onDrilldown,
+}: {
+  popularity?: PopularityPayload;
+  onLoad: () => void;
+  onDrilldown: (query: string) => void;
+}) {
+  const rows = popularity?.rows || [];
+  return (
+    <section className="ip-panel">
+      <div className="ip-section-head">
+        <div>
+          <h3>{popularity?.title || "기관 보유 랭킹"}</h3>
+          <p>{popularity?.subtitle || "보고 기준 분기별로 많은 기관이 보유한 종목을 확인합니다."}</p>
+        </div>
+        <strong>{popularity?.report_period || "-"}</strong>
+      </div>
+      {popularity?.status === "not_loaded" ? (
+        <button type="button" className="ip-load-button" onClick={onLoad}>
+          기관 보유 랭킹 불러오기
+        </button>
+      ) : (
+        <div className="ip-popularity-list">
+          {rows.length ? (
+            rows.map((row) => (
+              <button type="button" key={`${row.rank}-${row.cusip}`} onClick={() => onDrilldown(row.drilldown_query)}>
+                <strong>{row.rank}</strong>
+                <span>
+                  <b>{row.symbol || row.cusip || "-"}</b>
+                  <small>{row.issuer_name}</small>
+                </span>
+                <em>{row.holder_count_label}개 기관</em>
+                <small>{row.value_label}</small>
+              </button>
+            ))
+          ) : (
+            <div className="ip-interest-empty">{popularity?.empty_text || "랭킹 데이터가 없습니다."}</div>
+          )}
+        </div>
+      )}
+      <p className="ip-note">{popularity?.caveat}</p>
+    </section>
+  );
+}
+
 function InstitutionalPortfoliosWorkbench({ args }: Props) {
   const payload = args.payload;
-  const [activeView, setActiveView] = useState<"overview" | "holdings" | "interest">("overview");
+  const [activeView, setActiveView] = useState<ViewName>("overview");
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [localSelectedQuery, setLocalSelectedQuery] = useState<string>("");
+  const managerRailRef = useRef<HTMLDivElement | null>(null);
+  const managerRailScrollRef = useRef(0);
 
   useEffect(() => {
     Streamlit.setComponentReady();
@@ -243,16 +571,44 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
   }, [payload, activeView]);
 
   useEffect(() => {
+    const rail = managerRailRef.current;
+    if (rail) {
+      rail.scrollLeft = managerRailScrollRef.current;
+    }
+  }, [payload?.manager_picker.selected_cik, payload?.manager_picker.items.length]);
+
+  useEffect(() => {
     if (!pendingAction || !payload) {
       return;
     }
     if (pendingAction.kind === "manager" && payload.manager_picker.selected_cik === pendingAction.cik) {
       setPendingAction(null);
+      setActionNotice(null);
     }
     if (pendingAction.kind === "interest" && payload.interest.query === pendingAction.query) {
       setPendingAction(null);
+      setActionNotice(null);
+    }
+    if (pendingAction.kind === "popularity" && payload.popularity?.status !== "not_loaded") {
+      setPendingAction(null);
+      setActionNotice(null);
     }
   }, [payload, pendingAction]);
+
+  useEffect(() => {
+    if (!pendingAction) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      setActionNotice(
+        pendingAction.kind === "interest"
+          ? "서버 응답이 지연되어 우선 현재 포트폴리오 row 기준 상세를 표시합니다. 보유 기관 리스트는 응답이 오면 자동으로 갱신됩니다."
+          : "서버 응답이 지연되고 있습니다. 화면은 멈추지 않도록 로딩 표시를 해제했습니다."
+      );
+      setPendingAction(null);
+    }, 7000);
+    return () => window.clearTimeout(timer);
+  }, [pendingAction]);
 
   const changeGroups = useMemo(() => {
     if (!payload) {
@@ -264,6 +620,51 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     }));
   }, [payload]);
 
+  const localSecurityDetail = useMemo<SelectedSecurity | undefined>(() => {
+    if (!payload || payload.selected_security?.status === "ok") {
+      return payload?.selected_security;
+    }
+    const query = localSelectedQuery || payload.interest.query;
+    if (!query) {
+      return payload.selected_security;
+    }
+    const upper = query.toUpperCase();
+    const row = payload.holdings_table.rows.find((item) => {
+      const symbol = String(item.symbol || "").toUpperCase();
+      const cusip = String(item.cusip || "").toUpperCase();
+      const issuer = String(item.issuer_name || "").toUpperCase();
+      return symbol === upper || cusip === upper || issuer.includes(upper);
+    });
+    if (!row) {
+      return payload.selected_security;
+    }
+    const chartKey = String(row.symbol || "").toUpperCase();
+    const fallbackCharts = chartKey ? payload.security_charts?.[chartKey] : undefined;
+    return {
+      status: "ok",
+      query,
+      security: {
+        symbol: row.symbol || null,
+        issuer_name: row.issuer_name,
+        cusip: row.cusip || null,
+        sector: row.sector,
+      },
+      portfolio_position: {
+        weight_label: row.weight_label,
+        value_label: row.value_label,
+        shares_label: "-",
+      },
+      charts: fallbackCharts || {
+        daily: { label: "일봉", points: [] },
+        weekly: { label: "주봉", points: [] },
+        monthly: { label: "월봉", points: [] },
+      },
+      holders: payload.interest.holders,
+      holder_count: payload.interest.holder_count,
+      caveat: "현재 포트폴리오 payload 기준의 즉시 표시입니다. 서버 응답 후 가격 차트와 보유 기관 정보가 보강됩니다.",
+    };
+  }, [payload, localSelectedQuery]);
+
   if (!payload) {
     return <div className="ip-empty">Institutional portfolio payload is unavailable.</div>;
   }
@@ -273,24 +674,48 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     syncFrameHeightSoon();
   };
 
+  const switchView = (view: ViewName) => {
+    const position = hostScrollPosition();
+    setActiveView(view);
+    restoreHostScroll(position);
+    syncFrameHeightSoon();
+  };
+
   const handleDrilldown = (query: string) => {
     if (!query) {
       return;
     }
-    setPendingAction({ kind: "interest", query, label: `${query} 보유 기관 조회 중` });
+    const position = hostScrollPosition();
+    setActionNotice(null);
+    setLocalSelectedQuery(query);
+    setPendingAction({ kind: "interest", query, label: `${query} 종목 상세 불러오는 중` });
     setActiveView("interest");
     sendEvent({ id: "drilldown", query });
+    restoreHostScroll(position);
   };
 
   const handleManagerSelect = (item: ManagerItem) => {
     if (!item.cik || item.selected) {
       return;
     }
+    const rail = managerRailRef.current;
+    if (rail) {
+      managerRailScrollRef.current = rail.scrollLeft;
+    }
+    setActionNotice(null);
+    setLocalSelectedQuery("");
     setPendingAction({ kind: "manager", cik: item.cik, label: `${item.manager_name} 포트폴리오 불러오는 중` });
     sendEvent({ id: "select_manager", cik: item.cik });
   };
 
+  const handlePopularityLoad = () => {
+    setActionNotice(null);
+    setPendingAction({ kind: "popularity", label: "기관 보유 랭킹 불러오는 중" });
+    sendEvent({ id: "open_popularity" });
+  };
+
   const handleRefreshOpen = () => {
+    setActionNotice(null);
     setPendingAction({ kind: "refresh", label: "13F 데이터 갱신 설정을 여는 중" });
     sendEvent({ id: "open_refresh" });
     window.setTimeout(() => setPendingAction((current) => (current?.kind === "refresh" ? null : current)), 900);
@@ -300,13 +725,19 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     <main className="ip-workbench" data-schema-version={payload.schema_version} data-mode={payload.mode}>
       <section className="ip-hero">
         <div className="ip-hero__topline">
-          <span className={`ip-state ${payload.data_state.is_preview ? "ip-state--preview" : ""}`}>
-            {payload.data_state.label}
-          </span>
+          <span className={`ip-state ${payload.data_state.is_preview ? "ip-state--preview" : ""}`}>{payload.data_state.label}</span>
           <span>{payload.hero.caveat}</span>
         </div>
 
-        <div className="ip-manager-rail" role="tablist" aria-label="Institutional managers">
+        <div
+          className="ip-manager-rail"
+          role="tablist"
+          aria-label="Institutional managers"
+          ref={managerRailRef}
+          onScroll={(event) => {
+            managerRailScrollRef.current = event.currentTarget.scrollLeft;
+          }}
+        >
           {payload.manager_picker.items.map((item) => (
             <button
               key={item.cik || item.manager_name}
@@ -331,19 +762,17 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               {pendingAction.kind === "manager"
                 ? "포트폴리오 불러오는 중"
                 : pendingAction.kind === "interest"
-                  ? "보유 기관 조회 중"
-                  : "갱신 설정 여는 중"}
+                  ? "종목 상세 불러오는 중"
+                  : pendingAction.kind === "popularity"
+                    ? "기관 보유 랭킹 불러오는 중"
+                    : "갱신 설정 여는 중"}
             </strong>
             <em>{pendingAction.label}</em>
           </div>
         ) : null}
 
         <div className={`ip-freshness ${payload.freshness?.is_stale ? "ip-freshness--stale" : ""}`}>
-          <button
-            type="button"
-            className="ip-freshness__action"
-            onClick={handleRefreshOpen}
-          >
+          <button type="button" className="ip-freshness__action" onClick={handleRefreshOpen}>
             {payload.refresh_action?.label || "SEC 13F 데이터"}
           </button>
           <strong>{payload.freshness?.latest_report_period || "로컬 13F 데이터 없음"}</strong>
@@ -382,12 +811,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               <AllocationDonut segments={payload.allocation.segments} />
               <div className="ip-holding-list">
                 {payload.allocation.top_holdings.slice(0, 6).map((holding) => (
-                  <button
-                    type="button"
-                    key={`${holding.key}-${holding.label}`}
-                    className="ip-holding-row"
-                    onClick={() => handleDrilldown(holding.drilldown_query)}
-                  >
+                  <button type="button" key={`${holding.key}-${holding.label}`} className="ip-holding-row" onClick={() => handleDrilldown(holding.drilldown_query)}>
                     <span className="ip-dot" style={{ backgroundColor: holding.color }} />
                     <span>
                       <strong>{holding.label}</strong>
@@ -403,126 +827,132 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       </section>
 
       <nav className="ip-view-tabs" aria-label="Institutional portfolio views">
-        <button className={activeView === "overview" ? "ip-view-tabs__active" : ""} type="button" onClick={() => setActiveView("overview")}>
+        <button className={activeView === "overview" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("overview")}>
           요약
         </button>
-        <button className={activeView === "holdings" ? "ip-view-tabs__active" : ""} type="button" onClick={() => setActiveView("holdings")}>
+        <button className={activeView === "holdings" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("holdings")}>
           전체 보유
         </button>
-        <button className={activeView === "interest" ? "ip-view-tabs__active" : ""} type="button" onClick={() => setActiveView("interest")}>
+        <button className={activeView === "interest" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("interest")}>
           보유 기관 조회
+        </button>
+        <button className={activeView === "popularity" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("popularity")}>
+          기관 보유 랭킹
         </button>
       </nav>
 
-      {activeView === "overview" ? (
-        <section className="ip-grid">
-          <div className="ip-panel ip-panel--changes">
-            <div className="ip-section-head">
-              <div>
-                <h3>{payload.change_board.title}</h3>
-                <p>{payload.change_board.subtitle}</p>
-              </div>
-            </div>
-            <div className="ip-change-grid">
-              {changeGroups.map((group) => (
-                <div className="ip-change-card" key={group.key}>
-                  <div className="ip-change-card__head">
-                    <span>{group.label}</span>
-                    <strong>{group.count}</strong>
-                  </div>
-                  <p>{group.description}</p>
-                  <div className="ip-change-card__items">
-                    {group.items.length ? (
-                      group.items.map((item) => (
-                        <button type="button" key={`${group.key}-${item.label}`} onClick={() => handleDrilldown(item.drilldown_query)}>
-                          <span>{item.label}</span>
-                          <em>{item.value_delta_label}</em>
-                        </button>
-                      ))
-                    ) : (
-                      <small>No rows</small>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="ip-panel">
-            <div className="ip-section-head">
-              <div>
-                <h3>{payload.sector_exposure.title}</h3>
-                <p>{payload.sector_exposure.subtitle}</p>
-              </div>
-            </div>
-            <div className="ip-sector-bars">
-              {payload.sector_exposure.bars.map((bar) => (
-                <div className="ip-sector-row" key={bar.sector}>
+      <div className="ip-view-body">
+        {activeView === "overview" ? (
+          <section className="ip-grid">
+            <div className="ip-stack">
+              <PortfolioPerformancePanel performance={payload.portfolio_performance} onDrilldown={handleDrilldown} />
+              <div className="ip-panel ip-panel--changes">
+                <div className="ip-section-head">
                   <div>
-                    <strong>{bar.sector}</strong>
-                    <span>{bar.holding_count} holdings · {bar.value_label}</span>
+                    <h3>{payload.change_board.title}</h3>
+                    <p>{payload.change_board.subtitle}</p>
                   </div>
-                  <div className="ip-sector-row__track">
-                    <span style={{ width: `${clampPercent(bar.bar_width_pct)}%`, backgroundColor: bar.color }} />
-                  </div>
-                  <em>{bar.weight_label}</em>
                 </div>
+                {!payload.change_board.comparison_available ? <div className="ip-board-note">{payload.change_board.empty_reason}</div> : null}
+                <div className="ip-change-grid">
+                  {changeGroups.map((group) => (
+                    <div className="ip-change-card" key={group.key}>
+                      <div className="ip-change-card__head">
+                        <span>{group.label}</span>
+                        <strong>{group.count}</strong>
+                      </div>
+                      <p>{group.description}</p>
+                      <div className="ip-change-card__items">
+                        {group.items.length ? (
+                          group.items.map((item) => (
+                            <button type="button" key={`${group.key}-${item.label}`} onClick={() => handleDrilldown(item.drilldown_query)}>
+                              <span>{item.label}</span>
+                              <em>{item.value_delta_label}</em>
+                            </button>
+                          ))
+                        ) : (
+                          <small>표시할 row 없음</small>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="ip-panel">
+              <div className="ip-section-head">
+                <div>
+                  <h3>{payload.sector_exposure.title}</h3>
+                  <p>{payload.sector_exposure.subtitle}</p>
+                </div>
+              </div>
+              <div className="ip-sector-bars">
+                {payload.sector_exposure.bars.map((bar) => (
+                  <div className="ip-sector-row" key={bar.sector}>
+                    <div>
+                      <strong>{bar.sector}</strong>
+                      <span>{bar.holding_count}개 종목 · {bar.value_label}</span>
+                    </div>
+                    <div className="ip-sector-row__track">
+                      <span style={{ width: `${clampPercent(bar.bar_width_pct)}%`, backgroundColor: bar.color }} />
+                    </div>
+                    <em>{bar.weight_label}</em>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {activeView === "holdings" ? (
+          <section className="ip-panel">
+            <div className="ip-section-head">
+              <div>
+                <h3>전체 보유 종목</h3>
+                <p>종목을 클릭하면 아래의 보유 기관 조회 화면에서 종목 상세와 기관 리스트를 함께 보여줍니다.</p>
+              </div>
+              <strong>{payload.holdings_table.rows.length}</strong>
+            </div>
+            <div className="ip-table">
+              {payload.holdings_table.rows.slice(0, 80).map((row) => (
+                <button type="button" key={`${row.cusip}-${row.issuer_name}`} onClick={() => handleDrilldown(row.drilldown_query)}>
+                  <span>{row.symbol || "-"}</span>
+                  <strong>{row.issuer_name}</strong>
+                  <em>{row.weight_label}</em>
+                  <small>{row.value_label}</small>
+                  <small>{row.sector}</small>
+                </button>
               ))}
             </div>
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
 
-      {activeView === "holdings" ? (
-        <section className="ip-panel">
-          <div className="ip-section-head">
-            <div>
-              <h3>전체 보유 종목</h3>
-              <p>종목을 클릭하면 저장된 최신 13F 기준으로 해당 종목을 보유한 기관을 조회합니다.</p>
+        {activeView === "interest" ? (
+          <section className="ip-panel">
+            <div className="ip-section-head">
+              <div>
+                <h3>보유 기관 조회</h3>
+                <p>
+                  {payload.interest.query || localSelectedQuery
+                    ? `${payload.interest.query || localSelectedQuery} 종목 상세와 보유 기관`
+                    : payload.interest.empty_text}
+                </p>
+              </div>
+              <strong>{payload.interest.holder_count}</strong>
             </div>
-            <strong>{payload.holdings_table.rows.length}</strong>
-          </div>
-          <div className="ip-table">
-            {payload.holdings_table.rows.slice(0, 80).map((row) => (
-              <button type="button" key={`${row.cusip}-${row.issuer_name}`} onClick={() => handleDrilldown(row.drilldown_query)}>
-                <span>{row.symbol || "-"}</span>
-                <strong>{row.issuer_name}</strong>
-                <em>{row.weight_label}</em>
-                <small>{row.value_label}</small>
-                <small>{row.sector}</small>
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
+            <SecurityDetail
+              detail={localSecurityDetail}
+              interest={{ ...payload.interest, query: payload.interest.query || localSelectedQuery }}
+              notice={actionNotice}
+            />
+          </section>
+        ) : null}
 
-      {activeView === "interest" ? (
-        <section className="ip-panel">
-          <div className="ip-section-head">
-            <div>
-              <h3>보유 기관 조회</h3>
-              <p>{payload.interest.query ? `${payload.interest.query} 보유 기관 - 저장된 최신 13F 기준` : payload.interest.empty_text}</p>
-            </div>
-            <strong>{payload.interest.holder_count}</strong>
-          </div>
-          <div className="ip-interest-list">
-            {payload.interest.holders.length ? (
-              payload.interest.holders.map((holder) => (
-                <a href={holder.source_ref || "#"} target="_blank" rel="noreferrer" key={`${holder.cik}-${holder.manager_name}`}>
-                  <span>
-                    <strong>{holder.manager_name}</strong>
-                    <small>{holder.period_of_report} · filed {holder.filing_date}</small>
-                  </span>
-                  <em>{holder.weight_label}</em>
-                  <small>{holder.value_label}</small>
-                </a>
-              ))
-            ) : (
-              <div className="ip-interest-empty">{payload.interest.empty_text}</div>
-            )}
-          </div>
-        </section>
-      ) : null}
+        {activeView === "popularity" ? (
+          <PopularityRankingPanel popularity={payload.popularity} onLoad={handlePopularityLoad} onDrilldown={handleDrilldown} />
+        ) : null}
+      </div>
 
       {payload.source_caveats.visible ? (
         <section className="ip-caveats">

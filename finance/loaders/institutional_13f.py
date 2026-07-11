@@ -114,6 +114,7 @@ def _load_interest_rows_by_cusips(db: MySQLClient, cusips: list[str], *, limit: 
           ON m.latest_accession_number = f.accession_number
         LEFT JOIN institutional_13f_cusip_symbol_map sm
           ON h.cusip = sm.cusip
+         AND UPPER(sm.issuer_name) = UPPER(h.issuer_name)
         WHERE h.cusip IN ({placeholders})
         ORDER BY h.reported_value DESC, m.manager_name ASC
         LIMIT %s
@@ -144,11 +145,13 @@ def _load_interest_rows_by_holding_symbol(db: MySQLClient, symbol: str, *, limit
           ON m.latest_accession_number = f.accession_number
         LEFT JOIN institutional_13f_cusip_symbol_map sm
           ON h.cusip = sm.cusip
+         AND UPPER(sm.issuer_name) = UPPER(h.issuer_name)
         WHERE h.holding_symbol = %s
+           OR sm.symbol = %s
         ORDER BY h.reported_value DESC, m.manager_name ASC
         LIMIT %s
         """,
-        (symbol, int(limit)),
+        (symbol, symbol, int(limit)),
     )
 
 
@@ -175,12 +178,62 @@ def _load_interest_rows_by_issuer_text(db: MySQLClient, clean_query: str, *, lim
           ON f.accession_number = h.accession_number
         LEFT JOIN institutional_13f_cusip_symbol_map sm
           ON h.cusip = sm.cusip
+         AND UPPER(sm.issuer_name) = UPPER(h.issuer_name)
         WHERE UPPER(h.issuer_name) LIKE %s
            OR UPPER(sm.issuer_name) LIKE %s
         ORDER BY h.reported_value DESC, m.manager_name ASC
         LIMIT %s
         """,
         (like_query, like_query, int(limit)),
+    )
+
+
+def _latest_report_period(db: MySQLClient) -> str | None:
+    rows = db.query(
+        """
+        SELECT MAX(report_period) AS report_period
+        FROM institutional_13f_holding
+        """
+    )
+    if not rows:
+        return None
+    value = rows[0].get("report_period")
+    return str(value) if value else None
+
+
+def _load_popularity_rows(db: MySQLClient, report_period: str, *, limit: int, force_index: bool) -> list[dict[str, Any]]:
+    index_clause = " FORCE INDEX(ix_report_period_cusip_cik)" if force_index else ""
+    return db.query(
+        f"""
+        SELECT
+          h.report_period,
+          h.cusip,
+          SUBSTRING_INDEX(
+            GROUP_CONCAT(NULLIF(h.holding_symbol, '') ORDER BY h.reported_value DESC SEPARATOR '||'),
+            '||',
+            1
+          ) AS holding_symbol,
+          SUBSTRING_INDEX(
+            GROUP_CONCAT(NULLIF(h.issuer_name, '') ORDER BY h.reported_value DESC SEPARATOR '||'),
+            '||',
+            1
+          ) AS issuer_name,
+          COUNT(DISTINCT h.cik) AS holder_count,
+          COUNT(*) AS holding_rows,
+          SUM(COALESCE(h.reported_value, 0)) AS total_reported_value,
+          SUBSTRING_INDEX(
+            GROUP_CONCAT(DISTINCT h.manager_name ORDER BY h.manager_name ASC SEPARATOR ', '),
+            ', ',
+            5
+          ) AS sample_managers
+        FROM institutional_13f_holding h{index_clause}
+        WHERE h.report_period = %s
+          AND (h.put_call IS NULL OR h.put_call = '')
+        GROUP BY h.report_period, h.cusip
+        ORDER BY holder_count DESC, total_reported_value DESC, issuer_name ASC
+        LIMIT %s
+        """,
+        (report_period, int(limit)),
     )
 
 
@@ -378,6 +431,7 @@ def load_institutional_13f_holdings(
             FROM institutional_13f_holding h
             LEFT JOIN institutional_13f_cusip_symbol_map m
               ON h.cusip = m.cusip
+             AND UPPER(m.issuer_name) = UPPER(h.issuer_name)
             WHERE h.accession_number = %s
             ORDER BY h.reported_value DESC, h.issuer_name ASC
             """,
@@ -440,6 +494,49 @@ def load_institutional_13f_portfolio_bundle(
     }
 
 
+def load_institutional_13f_popularity_ranking(
+    report_period: str | None = None,
+    *,
+    limit: int = 50,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> pd.DataFrame:
+    """Rank securities by distinct 13F managers holding them for one report period."""
+    db = _connect(host, user, password, port)
+    columns = [
+        "report_period",
+        "cusip",
+        "holding_symbol",
+        "issuer_name",
+        "holder_count",
+        "holding_rows",
+        "total_reported_value",
+        "sample_managers",
+    ]
+    try:
+        period = str(report_period or "").strip() or _latest_report_period(db)
+        if not period:
+            return _empty_frame(columns)
+        try:
+            rows = _load_popularity_rows(db, period, limit=limit, force_index=True)
+        except Exception as exc:
+            if "ix_report_period_cusip_cik" not in str(exc):
+                raise
+            rows = _load_popularity_rows(db, period, limit=limit, force_index=False)
+    finally:
+        db.close()
+
+    frame = _frame(rows)
+    if frame.empty:
+        return _empty_frame(columns)
+    for column in columns:
+        if column not in frame.columns:
+            frame[column] = None
+    return frame[columns]
+
+
 def load_institutional_13f_interest(
     query: str,
     *,
@@ -458,16 +555,16 @@ def load_institutional_13f_interest(
     symbol = normalized_symbols[0] if normalized_symbols else clean_query.upper()
     db = _connect(host, user, password, port)
     try:
-        candidate_cusips: list[str] = []
-        if len(symbol) == 9 and symbol.isalnum():
-            candidate_cusips.append(symbol)
-        candidate_cusips.extend(_load_mapped_cusips_for_symbol(db, symbol))
-        candidate_cusips = list(dict.fromkeys(candidate_cusips))
-
         rows = []
-        if candidate_cusips:
+        if len(symbol) == 9 and symbol.isalnum():
+            candidate_cusips = [symbol]
             rows.extend(_load_interest_rows_by_cusips(db, candidate_cusips, limit=max(int(limit) * 3, int(limit))))
-        rows.extend(_load_interest_rows_by_holding_symbol(db, symbol, limit=int(limit)))
+        else:
+            rows.extend(_load_interest_rows_by_holding_symbol(db, symbol, limit=int(limit)))
+            if not rows:
+                candidate_cusips = _load_mapped_cusips_for_symbol(db, symbol)
+                if candidate_cusips:
+                    rows.extend(_load_interest_rows_by_cusips(db, candidate_cusips, limit=max(int(limit) * 3, int(limit))))
         if not rows:
             issuer_cusips = _load_mapped_cusips_for_issuer(db, clean_query)
             if issuer_cusips:

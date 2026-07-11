@@ -145,6 +145,7 @@ class Sec13FDataSetParserTests(unittest.TestCase):
         self.assertIn("latest_report_period", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_refresh_status"])
         self.assertIn("external_links_json", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_manager_watchlist"])
         self.assertIn("ix_latest_accession_number", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_manager"])
+        self.assertIn("ix_report_period_cusip_cik", INSTITUTIONAL_13F_SCHEMAS["institutional_13f_holding"])
 
     def test_cusip_symbol_map_rows_use_unique_asset_profile_name_matches(self) -> None:
         from finance.data.institutional_13f import build_cusip_symbol_map_rows
@@ -256,6 +257,162 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(model["changes"][0]["change_type"], "increased")
         self.assertTrue(any(row["sector"] == "Unmapped" for row in model["sector_exposure"]))
         self.assertTrue(any("not a buy/sell signal" in caveat for caveat in model["caveats"]))
+
+    def test_portfolio_performance_model_uses_report_period_price_window_and_coverage(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_performance_model
+
+        model = {
+            "summary": {"latest_report_period": "2026-03-31"},
+            "holdings": [
+                {
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "reported_value": 750.0,
+                    "weight_pct": 75.0,
+                },
+                {
+                    "holding_symbol": "MSFT",
+                    "issuer_name": "MICROSOFT CORP",
+                    "reported_value": 250.0,
+                    "weight_pct": 25.0,
+                },
+                {
+                    "holding_symbol": None,
+                    "issuer_name": "UNMAPPED HOLDING",
+                    "reported_value": 100.0,
+                    "weight_pct": 10.0,
+                },
+            ],
+        }
+        prices = pd.DataFrame(
+            [
+                {"symbol": "AAPL", "date": "2026-03-31", "adj_close": 100.0, "close": 100.0},
+                {"symbol": "AAPL", "date": "2026-07-07", "adj_close": 110.0, "close": 110.0},
+                {"symbol": "MSFT", "date": "2026-04-01", "adj_close": 50.0, "close": 50.0},
+                {"symbol": "MSFT", "date": "2026-07-07", "adj_close": 45.0, "close": 45.0},
+            ]
+        )
+
+        performance = build_institutional_portfolio_performance_model(model, price_history=prices, as_of_date="2026-07-07")
+
+        self.assertEqual(performance["status"], "ok")
+        self.assertEqual(performance["report_period"], "2026-03-31")
+        self.assertEqual(performance["latest_price_date"], "2026-07-07")
+        self.assertAlmostEqual(performance["covered_weight_pct"], 90.9091)
+        self.assertAlmostEqual(performance["portfolio_return_pct"], 4.5455)
+        self.assertEqual(performance["rows"][0]["symbol"], "AAPL")
+        self.assertEqual(performance["rows"][0]["return_pct"], 10.0)
+        self.assertEqual(performance["top_contributors"][0]["symbol"], "AAPL")
+        self.assertIn("가정", performance["caveat"])
+
+    def test_selected_security_model_combines_holding_chart_and_holder_list(self) -> None:
+        from app.services.institutional_portfolios import (
+            build_institutional_interest_model,
+            build_institutional_portfolio_model,
+            build_institutional_selected_security_model,
+        )
+
+        latest_holdings = pd.DataFrame(
+            [
+                {
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "reported_value": 1500,
+                    "shares_or_principal_amount": 15,
+                    "sector": "Technology",
+                    "industry": "Consumer Electronics",
+                }
+            ]
+        )
+        portfolio = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=latest_holdings,
+            previous_filing=None,
+            previous_holdings=pd.DataFrame(),
+        )
+        interest = build_institutional_interest_model(
+            "AAPL",
+            pd.DataFrame(
+                [
+                    {
+                        "manager_name": "BERKSHIRE HATHAWAY INC",
+                        "cik": "0001067983",
+                        "period_of_report": "2026-03-31",
+                        "filing_date": "2026-05-15",
+                        "cusip": "037833100",
+                        "holding_symbol": "AAPL",
+                        "issuer_name": "APPLE INC",
+                        "reported_value": 1500,
+                        "shares_or_principal_amount": 15,
+                        "weight_pct": 42.5,
+                        "source_ref": "https://www.sec.gov/Archives/edgar/data/1067983/000106798326000001/",
+                    }
+                ]
+            ),
+        )
+        prices = pd.DataFrame(
+            [
+                {"symbol": "AAPL", "date": "2026-03-31", "adj_close": 100.0, "close": 100.0},
+                {"symbol": "AAPL", "date": "2026-04-01", "adj_close": 102.0, "close": 102.0},
+                {"symbol": "AAPL", "date": "2026-05-01", "adj_close": 105.0, "close": 105.0},
+                {"symbol": "AAPL", "date": "2026-07-07", "adj_close": 110.0, "close": 110.0},
+            ]
+        )
+
+        detail = build_institutional_selected_security_model(
+            portfolio_model=portfolio,
+            query="AAPL",
+            interest_model=interest,
+            price_history=prices,
+        )
+
+        self.assertEqual(detail["status"], "ok")
+        self.assertEqual(detail["security"]["symbol"], "AAPL")
+        self.assertEqual(detail["security"]["sector"], "Technology")
+        self.assertEqual(detail["portfolio_position"]["weight_label"], "100.0%")
+        self.assertEqual(detail["holder_count"], 1)
+        self.assertIn("daily", detail["charts"])
+        self.assertIn("weekly", detail["charts"])
+        self.assertIn("monthly", detail["charts"])
+        self.assertTrue(detail["charts"]["daily"]["points"])
+
+    def test_popularity_model_ranks_stocks_by_report_period_holder_count(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_popularity_model
+
+        rows = pd.DataFrame(
+            [
+                {
+                    "report_period": "2026-03-31",
+                    "cusip": "037833100",
+                    "holding_symbol": "AAPL",
+                    "issuer_name": "APPLE INC",
+                    "holder_count": 130,
+                    "total_reported_value": 8000000,
+                    "sample_managers": "BERKSHIRE HATHAWAY INC, SAMPLE CAPITAL",
+                },
+                {
+                    "report_period": "2026-03-31",
+                    "cusip": "594918104",
+                    "holding_symbol": "MSFT",
+                    "issuer_name": "MICROSOFT CORP",
+                    "holder_count": 120,
+                    "total_reported_value": 9000000,
+                    "sample_managers": "SAMPLE CAPITAL",
+                },
+            ]
+        )
+
+        model = build_institutional_popularity_model(rows, report_period="2026-03-31")
+
+        self.assertEqual(model["status"], "ok")
+        self.assertEqual(model["title"], "기관 보유 랭킹")
+        self.assertEqual(model["report_period"], "2026-03-31")
+        self.assertEqual(model["rows"][0]["rank"], 1)
+        self.assertEqual(model["rows"][0]["symbol"], "AAPL")
+        self.assertEqual(model["rows"][0]["holder_count"], 130)
+        self.assertEqual(model["rows"][0]["drilldown_query"], "AAPL")
 
     def test_institutional_interest_model_accepts_symbol_or_cusip_lookup(self) -> None:
         from app.services.institutional_portfolios import build_institutional_interest_model
@@ -407,12 +564,45 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(payload["change_board"]["groups"]["increased"]["count"], 1)
         self.assertEqual(payload["change_board"]["groups"]["reduced"]["count"], 1)
         self.assertEqual(payload["change_board"]["groups"]["no_longer_reported"]["count"], 1)
+        self.assertTrue(payload["change_board"]["comparison_available"])
         self.assertEqual(payload["sector_exposure"]["bars"][0]["sector"], "Technology")
         self.assertEqual(payload["freshness"]["latest_report_period"], "2026-03-31")
         self.assertEqual(payload["refresh_action"]["action_id"], "collect_sec_13f_dataset")
         self.assertFalse(payload["refresh_action"]["primary"])
         self.assertTrue(payload["source_caveats"]["visible"])
         self.assertFalse(payload["boundary"]["trade_signal"])
+
+    def test_visual_workbench_payload_explains_missing_previous_filing_comparison(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
+
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001656456", "manager_name": "APPALOOSA LP"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=pd.DataFrame(
+                [
+                    {
+                        "cusip": "037833100",
+                        "holding_symbol": "AAPL",
+                        "issuer_name": "APPLE INC",
+                        "reported_value": 1000,
+                        "shares_or_principal_amount": 10,
+                    }
+                ]
+            ),
+            previous_filing=None,
+            previous_holdings=pd.DataFrame(),
+        )
+
+        payload = build_institutional_workbench_payload(
+            model=model,
+            managers=[],
+            selected_cik="0001656456",
+            interest_model=None,
+            mode="live",
+        )
+
+        self.assertFalse(payload["change_board"]["comparison_available"])
+        self.assertIn("이전 보고 분기", payload["change_board"]["empty_reason"])
 
     def test_watchlist_manager_rail_keeps_seed_managers_visible_before_search_results(self) -> None:
         from app.services.institutional_portfolios import build_institutional_manager_rail
@@ -498,6 +688,14 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("f.table_value_total", source)
         self.assertNotIn("GROUP BY accession_number", interest_source)
 
+    def test_popularity_loader_uses_report_period_cusip_index_without_external_sources(self) -> None:
+        source = Path("finance/loaders/institutional_13f.py").read_text(encoding="utf-8")
+        popularity_source = source[source.index("def load_institutional_13f_popularity_ranking") :]
+
+        self.assertIn("FORCE INDEX(ix_report_period_cusip_cik)", source)
+        self.assertIn("COUNT(DISTINCT h.cik)", source)
+        self.assertNotIn("requests.", popularity_source)
+
     def test_missing_refresh_status_opens_refresh_panel_on_entry(self) -> None:
         from app.web.institutional_portfolios import _should_show_refresh_panel_on_entry
 
@@ -577,6 +775,21 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
             page_source.index("_render_requested_refresh_status_panel(refresh_status)"),
             page_source.index("manager_result = load_institutional_manager_choices"),
         )
+
+    def test_workbench_preserves_scroll_and_exposes_security_detail_and_popularity_tab(self) -> None:
+        page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
+        component_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('key="institutional_portfolios_workbench"', page_source)
+        self.assertNotIn('key=f"institutional_portfolios_{', page_source)
+        self.assertIn("restoreHostScroll", component_source)
+        self.assertIn("managerRailRef", component_source)
+        self.assertIn('"popularity"', component_source)
+        self.assertIn("기관 보유 랭킹", component_source)
+        self.assertIn("ip-security-detail", component_source)
+        self.assertIn("ip-performance-panel", component_source)
 
 
 if __name__ == "__main__":

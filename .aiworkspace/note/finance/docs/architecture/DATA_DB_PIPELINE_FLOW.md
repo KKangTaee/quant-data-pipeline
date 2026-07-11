@@ -97,7 +97,7 @@ external source
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement filing metadata / values / labels / strict snapshot / timing audit 조회 |
-| `finance/loaders/institutional_13f.py` | institutional manager search, latest / previous filing, holdings, and symbol / CUSIP reverse lookup read path. External fetch나 DB write를 하지 않는다 |
+| `finance/loaders/institutional_13f.py` | institutional manager search, latest / previous filing, holdings, symbol / CUSIP reverse lookup, and report-period holder-count ranking read path. External fetch나 DB write를 하지 않는다 |
 | `finance/loaders/runtime_adapter.py` | runtime에서 쓰는 price strategy dict 생성 |
 
 ## 현재 중요한 구분

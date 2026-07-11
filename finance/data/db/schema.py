@@ -933,6 +933,7 @@ INSTITUTIONAL_13F_SCHEMAS = {
 
           UNIQUE KEY uk_accession_info_table (accession_number, infotable_sk),
           KEY ix_cik_period (cik, report_period),
+          KEY ix_report_period_cusip_cik (report_period, cusip, cik),
           KEY ix_cusip (cusip),
           KEY ix_holding_symbol (holding_symbol),
           KEY ix_sector (sector),

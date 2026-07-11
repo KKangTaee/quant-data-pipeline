@@ -5921,3 +5921,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 원인은 watchlist 선택 CIK가 search result에 없을 때 첫 DB row로 fallback되고, custom component의 이전 event가 재처리될 수 있던 흐름이었다.
 - Watchlist-aware selected manager resolver, event nonce 소비, reverse lookup lazy cache, 한글 loading banner, Runtime / Build 제거를 적용했다.
 - QA: focused tests 18개, py_compile, npm build, git diff --check, Browser 반복 클릭 QA 완료. 후속 범위는 SEC full ZIP 운영 refresh와 CUSIP-symbol map 품질 개선이다.
+
+## 2026-07-11 KST - Institutional Portfolios UX Detail / Performance V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/`에서 selected-security detail, report-period performance, institution-count ranking, scroll/pending fallback을 구현했다.
+- 13F raw holdings는 service read model에서 CUSIP / put-call 기준으로 합산해 도넛 / holdings / change board / performance 중복 표시를 줄였다.
+- Ranking loader는 `ix_report_period_cusip_cik` 접근을 사용하고, React는 pending timeout fallback으로 클릭 후 무한 로딩처럼 보이지 않게 했다.
+- QA: focused tests 24개, py_compile, npm build, git diff --check, UI/engine boundary scan, Browser QA screenshot 완료.

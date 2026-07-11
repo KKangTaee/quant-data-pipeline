@@ -9129,3 +9129,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 클릭은 수집 job 실행이 아니라 저장된 13F 포트폴리오 선택 변경이어야 하며, 처리 중에는 사용자가 상태를 볼 수 있어야 함. Runtime / Build 표시는 제거하고 주요 내용은 한글화해야 함.
 - Analysis result: watchlist CIK가 manager search result에 없으면 첫 DB row로 fallback되고, 같은 component key에서 이전 manager-select event가 재처리되며 rerun loop처럼 보일 수 있었다. 별도 병목으로 reverse lookup SQL이 최신 filing holder 조회에 약 10초를 쓰고 있었다.
 - Follow-up: watchlist-aware selection, event nonce consumption, loading banner, Korean copy, Runtime / Build 제거, reverse lookup SQL/index 최적화를 완료했다. Browser QA에서 Baupost / Pershing / Berkshire / Appaloosa 반복 선택이 정상 settle됨을 확인했다.
+
+### 2026-07-11 KST - Institutional Portfolios 종목 상세 / 기관 보유 랭킹 / 보고일 이후 성과
+
+- User request: 포트폴리오 탭 / manager rail 스크롤이 유지되고, 도넛 옆 종목 클릭 시 기업 정보 / 일봉·주봉·월봉 / 보유기관 리스트가 같은 흐름에 나오며, 보고 기준 분기 기준 기관 보유 랭킹과 보고일 이후 가정 성과를 추가해달라고 요청함.
+- Interpreted goal: Institutional Portfolios는 수집 화면이 아니라 실제 탐색 workbench여야 하며, 클릭 후 로딩 상태와 fallback이 명확해야 한다.
+- Analysis result: 변화 board의 증가 / 감소 / 더 이상 보고 안 됨 0은 local DB에 이전 filing이 없어서 생긴 상태다. 기존 raw holdings display는 같은 CUSIP가 여러 row로 보일 수 있고, CUSIP-symbol map은 일부 오염 가능성이 있어 보수적 표시가 필요했다.
+- Follow-up: service read model에서 CUSIP-level aggregation, report-period performance coverage, selected-security chart payload, popularity ranking payload를 추가했다. React workbench는 selected-security detail, ranking tab, scroll preserve, pending timeout fallback을 제공한다.
