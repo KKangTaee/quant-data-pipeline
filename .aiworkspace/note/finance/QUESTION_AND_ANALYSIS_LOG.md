@@ -9143,3 +9143,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 상용화가 아니더라도 전체 자동 수집이 아니라 선택 종목 조사 보조 흐름으로 analyst action / target / source cross-check를 보여줘야 함.
 - Analysis result: yfinance는 구조화 selected-symbol metadata로 먼저 연결하고, Nasdaq / WSJ / MarketWatch는 provider / terms 제약 때문에 자동 HTML scraping 없이 원문 교차확인 링크로 두는 것이 안전하다.
 - Follow-up: Market Interest Analyst Multi-Source V1에서 yfinance action / target / opinion distribution을 세션 전용으로 표시하고, Yahoo / MarketWatch / WSJ / Nasdaq source links를 같은 섹션에 묶었다.
+
+### 2026-07-11 - Sector Breadth 색상과 선택 종목 조사 그룹은 어디까지 묶어야 하는가
+
+- User request: 사용자가 이전 색상 수정이 Sector Breadth에 보이지 않는다고 지적하고, 하단 선택 종목 조사부터 기본 지표 그래프까지 하나의 박스 그룹으로 관리해 달라고 승인함.
+- Interpreted goal: Ranking Board row가 아니라 React Sector Breadth 전체와 lane에 실제 배경색을 적용하고, 선택 종목 조사 workflow는 외곽 박스 1개와 내부 구분선 중심으로 읽혀야 함.
+- Analysis result: 이전 수정은 `.ov-mm-list-row`에만 적용돼 React Sector Breadth와 무관했다. 하단은 Streamlit selector/tabs/HTML과 React iframe이 섞여 있으므로 raw HTML wrapper보다 keyed `st.container`가 안정적인 부모 경계다.
+- Follow-up: Sector outer/lane tint와 keyed investigation workspace를 구현하고 desktop/mobile Browser QA를 완료했다. 이후 화면 구조 설명은 가능한 경우 ASCII tree로 계층을 함께 제시한다.

@@ -10756,6 +10756,16 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("border-right: 0;", map_block)
         self.assertIn("border-radius: 0;", map_block)
         self.assertNotIn("border-left: 4px", map_block)
+        self.assertIn(
+            "background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));",
+            map_block,
+        )
+        lane_block = common_source[common_source.index(".ov-sector-breadth-lane {") :]
+        lane_block = lane_block[: lane_block.index(".ov-sector-breadth-lane-head")]
+        self.assertIn(
+            "background: color-mix(in srgb, var(--ov-lane-tone, var(--ov-mi-color-neutral)) 4%, transparent);",
+            lane_block,
+        )
 
     def test_market_movers_followup_uses_section_dividers_instead_of_markdown_headings(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
@@ -16198,9 +16208,33 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("border-left: 0;", react_map_block)
         self.assertIn("border-right: 0;", react_map_block)
         self.assertNotIn("border-left: 4px", react_map_block)
+        self.assertIn("background: color-mix(in srgb, #2563eb 3%, #ffffff);", react_map_block)
+        react_lane_block = react_style[react_style.index(".mm-sector-breadth__lane {") :]
+        react_lane_block = react_lane_block[: react_lane_block.index(".mm-sector-breadth__lane-head")]
+        self.assertIn(
+            "background: color-mix(in srgb, var(--mm-sector-lane-tone) 4%, transparent);",
+            react_lane_block,
+        )
         self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", react_style)
         self.assertIn(".mm-sector-breadth__bar", react_style)
         self.assertNotIn("right: 50%", react_style)
+
+    def test_market_movers_groups_selected_investigation_as_one_workspace(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        panel_body = helper_source[helper_source.index("def _render_market_mover_why_it_moved_panel") :]
+        panel_body = panel_body[: panel_body.index("def _render_market_movers_snapshot_panel")]
+        self.assertIn(
+            'with st.container(border=True, key="overview_market_mover_investigation_workspace"):',
+            panel_body,
+        )
+        workspace_index = panel_body.index('with st.container(border=True, key="overview_market_mover_investigation_workspace"):')
+        self.assertGreater(panel_body.index("render_market_movers_section_divider(", workspace_index), workspace_index)
+        self.assertGreater(panel_body.index("st.selectbox(", workspace_index), workspace_index)
+        self.assertGreater(panel_body.index("_render_market_mover_selected_investigation_fragment(", workspace_index), workspace_index)
+        self.assertIn(".st-key-overview_market_mover_investigation_workspace", common_source)
+        self.assertIn("background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));", common_source)
 
     def test_market_mover_investigation_pane_model_summarizes_selection(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_investigation_pane_model

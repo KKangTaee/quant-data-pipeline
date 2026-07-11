@@ -5927,3 +5927,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - `시장 관심 근거 확인`은 선택 종목 1개에 대해 news / Korean news / SEC metadata / yfinance analyst metadata를 세션 전용으로 조회한다.
 - 화면은 최근 애널리스트 액션, 목표가 요약, 의견 분포, Nasdaq / WSJ / MarketWatch / Yahoo 원문 교차확인 링크를 보여준다.
 - Nasdaq / WSJ / MarketWatch HTML scraping, DB 저장, 추천/점수화/매매 신호, paid API, broker 연결은 추가하지 않았다.
+
+## 2026-07-11 - Overview Market Movers Visual Grouping V1
+
+- `.aiworkspace/note/finance/tasks/active/overview-market-movers-visual-grouping-v1-20260711/`에서 Sector Breadth 색상 범위와 선택 종목 조사 그룹 통합을 완료했다.
+- Sector Breadth는 3% outer surface와 lane별 direction tint를 사용하며, 조사 selector/panel/tabs/Snapshot/chart는 keyed 부모 container 하나로 읽힌다.
+- Market Movers 80 tests, React build, desktop/mobile Browser QA를 통과했고 데이터/payload/provider/DB 경계는 변경하지 않았다.

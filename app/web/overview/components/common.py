@@ -2613,9 +2613,7 @@ def overview_ui_css() -> str:
   border-left: 0;
   border-right: 0;
   border-radius: 0;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
-    var(--ov-mi-color-surface);
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));
 }
 .ov-sector-breadth-head {
   display: grid;
@@ -2745,7 +2743,7 @@ def overview_ui_css() -> str:
   padding: 0.48rem 0.52rem;
   border: 1px solid color-mix(in srgb, var(--ov-lane-tone, var(--ov-mi-color-neutral)) 24%, transparent);
   border-radius: var(--ov-mi-radius-card);
-  background: rgba(248,250,252,0.78);
+  background: color-mix(in srgb, var(--ov-lane-tone, var(--ov-mi-color-neutral)) 4%, transparent);
 }
 .ov-sector-breadth-lane-head {
   display: flex;
@@ -3019,6 +3017,33 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-caption);
   line-height: 1.2;
   overflow-wrap: anywhere;
+}
+.st-key-overview_market_mover_investigation_workspace {
+  margin-top: 0.84rem;
+  border-radius: var(--ov-mi-radius-panel);
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));
+  color: var(--ov-mi-color-text);
+}
+.st-key-overview_market_mover_investigation_workspace > div[data-testid="stVerticalBlockBorderWrapper"] {
+  border-color: var(--ov-mi-border-faint);
+  background: transparent;
+}
+.st-key-overview_market_mover_investigation_workspace .ov-mm-section-divider:first-of-type {
+  margin-top: 0.12rem;
+}
+.st-key-overview_market_mover_investigation_workspace [class~="ov-mm-investigation-pane"] {
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: transparent;
+}
+.st-key-overview_market_mover_investigation_workspace .ov-mm-research-snapshot,
+.st-key-overview_market_mover_investigation_workspace .ov-mm-research-chart-shell {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
 }
 div[class*="st-key-overview_market_movers_refresh_mode"] div[data-baseweb="select"] > div {
   min-height: 2rem;

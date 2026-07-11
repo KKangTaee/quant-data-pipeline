@@ -480,10 +480,11 @@ body {
 }
 
 .mm-investigation {
-  border: 1px solid #dbe4ef;
+  background: color-mix(in srgb, #2563eb 3%, #ffffff);
+  border: 0;
   border-left: 4px solid #2563eb;
   border-radius: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  box-shadow: none;
   padding: 14px 16px 12px;
 }
 
@@ -611,6 +612,7 @@ body {
 }
 
 .mm-sector-breadth {
+  background: color-mix(in srgb, #2563eb 3%, #ffffff);
   border-top: 1px solid #dbe4ef;
   border-bottom: 1px solid #dbe4ef;
   border-left: 0;
@@ -750,6 +752,7 @@ body {
 }
 
 .mm-sector-breadth__lane {
+  background: color-mix(in srgb, var(--mm-sector-lane-tone) 4%, transparent);
   border: 1px solid color-mix(in srgb, var(--mm-sector-lane-tone) 30%, #e5e7eb);
   border-radius: 8px;
   min-width: 0;
@@ -966,6 +969,10 @@ body {
   .mm-sector-breadth__rail,
   .mm-sector-breadth__track {
     background: #243244;
+  }
+
+  .mm-sector-breadth__lane {
+    background: color-mix(in srgb, var(--mm-sector-lane-tone) 8%, #111827);
   }
 
   .mm-sector-breadth__table-row span {

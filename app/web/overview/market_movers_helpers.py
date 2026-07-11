@@ -4371,30 +4371,32 @@ def _render_market_mover_why_it_moved_panel(
     )
     if not candidates:
         return
-    render_market_movers_section_divider(
-        "선택 종목 조사",
-        "랭킹에서 고른 종목의 가격, 거래량, 섹터, 외부 조사 시작점을 한 곳에서 확인합니다.",
-    )
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
     selection_key = "overview_market_mover_detail_selection"
     if st.session_state.get(selection_key) not in candidate_by_id:
         st.session_state[selection_key] = option_ids[0]
-    selected_id = str(
-        st.selectbox(
-            "종목",
-            option_ids,
-            format_func=lambda value: candidate_by_id.get(str(value), {}).get("label", str(value)),
-            key=selection_key,
+
+    with st.container(border=True, key="overview_market_mover_investigation_workspace"):
+        render_market_movers_section_divider(
+            "선택 종목 조사",
+            "랭킹에서 고른 종목의 가격, 거래량, 섹터, 외부 조사 시작점을 한 곳에서 확인합니다.",
         )
-    )
-    selected = candidate_by_id[selected_id]
-    _render_market_mover_selected_investigation_fragment(
-        selected,
-        period=period,
-        universe_code=universe_code,
-        peer_rows=rows,
-    )
+        selected_id = str(
+            st.selectbox(
+                "종목",
+                option_ids,
+                format_func=lambda value: candidate_by_id.get(str(value), {}).get("label", str(value)),
+                key=selection_key,
+            )
+        )
+        selected = candidate_by_id[selected_id]
+        _render_market_mover_selected_investigation_fragment(
+            selected,
+            period=period,
+            universe_code=universe_code,
+            peer_rows=rows,
+        )
 
 
 def _render_market_movers_snapshot_panel(
