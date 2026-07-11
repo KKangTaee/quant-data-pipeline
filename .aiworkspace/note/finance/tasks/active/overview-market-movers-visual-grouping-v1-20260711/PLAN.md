@@ -8,6 +8,7 @@
 
 - React와 fallback `Sector Breadth` 전체에 옅은 공통 배경을 적용하고 섹터 lane에는 방향성 tone 배경을 추가한다.
 - 선택 종목 조사 전체를 하나의 `종목 조사 워크스페이스` 부모 Streamlit container로 묶는다.
+- Ranking Board의 모드별 전체 표 expander를 Ranking Board 부모 container 안으로 옮겨 Sector Breadth와 선택 종목 조사 사이의 독립 박스를 제거한다.
 - 부모 그룹 안에서는 중첩 박스 수를 줄이고 section divider, selector, 조사 패널, 단서 tabs, snapshot, chart를 하나의 흐름으로 읽히게 한다.
 - 데이터 계산, payload 의미, 조회 action, provider/DB/schema/registry/saved는 변경하지 않는다.
 
@@ -15,6 +16,7 @@
 
 - `Sector Breadth` 전체 배경과 lane별 4% direction tint가 React/fallback에서 일치한다.
 - 선택 종목 조사 divider부터 조사 단서 tabs와 기본 지표 그래프까지 하나의 keyed parent container 안에 렌더링된다.
+- 랭킹 모드별 전체 상세 표가 Ranking Board와 같은 keyed parent 안에 있고 Sector Breadth보다 먼저 렌더링된다.
 - desktop/mobile에서 그룹 경계와 내부 간격이 자연스럽고 기존 action/tab 동작이 유지된다.
 - 관련 계약 테스트, React production build, py_compile, Browser QA가 통과한다.
 

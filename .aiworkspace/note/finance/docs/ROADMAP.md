@@ -12,7 +12,7 @@ Last Verified: 2026-07-11
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-visual-grouping-v1-20260711/`다.
 
 - 목적: Sector Breadth의 색상 범위가 카드 테두리/막대에서 끊기고, 선택 종목 조사 workflow가 여러 독립 박스로 분리돼 보이는 문제를 줄였다.
-- 주요 변경: React/fallback Sector Breadth는 3% outer surface와 4% lane direction tint를 사용한다. 선택 종목 조사는 selector, React 조사 패널, 조사 단서 tabs, Research Snapshot, 기본 지표 그래프를 keyed Streamlit 부모 container 하나로 묶는다.
+- 주요 변경: React/fallback Sector Breadth는 3% outer surface와 4% lane direction tint를 사용한다. Ranking Board는 모드별 전체 상세 표 expander를 같은 keyed 부모에 둔다. 선택 종목 조사는 selector, React 조사 패널, 조사 단서 tabs, Research Snapshot, 기본 지표 그래프를 keyed Streamlit 부모 container 하나로 묶는다.
 - 이번 차수에서 하지 않은 일: 섹터 계산/payload 의미, 선택 종목 조회 action, provider/DB/schema/registry/saved 변경.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-section-title-unification-v1-20260711/`다.

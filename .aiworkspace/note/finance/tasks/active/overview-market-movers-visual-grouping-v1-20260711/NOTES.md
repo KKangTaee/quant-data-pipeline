@@ -7,4 +7,4 @@
 - React Sector Breadth의 light surface는 primary blue 3%, lane은 방향 tone 4%로 통일했다. dark surface에서는 lane tint를 8%로 올려 상승/하락 차이가 사라지지 않게 했다.
 - keyed workspace는 밝은 Overview surface를 유지하므로 부모가 자체 text color를 소유해 외부 dark theme 상속색 때문에 divider title이 사라지지 않게 했다.
 - 선택 종목 조사 상단은 inline divider 대신 `INVESTIGATION WORKSPACE -> 선택 종목 조사 -> 설명`의 독립 헤더로 렌더해 Sector Breadth/Ranking Board와 정보 계층을 맞춘다.
-- `모드별 상세 표 전체 높이로 보기`는 Ranking Board/Sector Breadth의 원자료를 펼치는 보조 기능이다. 다음 UI 차수에서는 `Ranking Board -> Sector Breadth -> 선택 종목 조사 -> 상세 데이터 부록` 순서로 내려 핵심 조사 흐름 뒤에 두는 방향이 적절하다.
+- `모드별 상세 표 전체 높이로 보기`는 Sector Breadth 상세가 아니라 Ranking Board의 상승/하락/거래량/이상 거래량/섹터 모드별 원자료다. Sector Breadth에 합치지 않고 `Ranking Board -> 랭킹 모드별 전체 상세 표 -> Sector Breadth -> 선택 종목 조사` 순서로 두는 것이 의미와 시각 계층을 함께 보존한다.

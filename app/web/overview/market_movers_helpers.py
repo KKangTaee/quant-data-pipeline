@@ -4420,31 +4420,32 @@ def _render_market_movers_snapshot_panel(
         volume_rows = rows
     selected_model = _market_mover_view_model(snapshot, controls.mode)
     selected_rows = selected_model["rows"]
+    mode_models = [_market_mover_view_model(snapshot, mode) for mode in MARKET_MOVER_MODE_ORDER]
+    with st.container(border=True, key="overview_market_mover_ranking_workspace"):
+        if selected_rows.empty:
+            st.markdown(f"#### {selected_model['label']} 상위 종목")
+            st.info(selected_model["empty_reason"])
+        else:
+            render_market_mover_board(build_market_mover_board_model(selected_model, top_n=controls.top_n))
 
-    if selected_rows.empty:
-        st.markdown(f"#### {selected_model['label']} 상위 종목")
-        st.info(selected_model["empty_reason"])
-    else:
-        render_market_mover_board(build_market_mover_board_model(selected_model, top_n=controls.top_n))
+        with st.expander("랭킹 모드별 전체 상세 표", expanded=False):
+            table_tabs = st.tabs([model["label"] for model in mode_models])
+            for tab, model in zip(table_tabs, mode_models, strict=True):
+                with tab:
+                    mode_rows = model["rows"]
+                    st.caption(model["sort_basis"])
+                    if mode_rows.empty:
+                        st.info(model["empty_reason"])
+                        continue
+                    st.dataframe(
+                        mode_rows,
+                        width="stretch",
+                        height=_market_mover_chart_height(len(mode_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+                        hide_index=True,
+                    )
 
     _render_market_movers_sector_breadth_context(snapshot)
     _render_missing_diagnostics(snapshot, universe_code=controls.coverage, period=controls.period)
-    mode_models = [_market_mover_view_model(snapshot, mode) for mode in MARKET_MOVER_MODE_ORDER]
-    with st.expander("모드별 상세 표 전체 높이로 보기", expanded=False):
-        table_tabs = st.tabs([model["label"] for model in mode_models])
-        for tab, model in zip(table_tabs, mode_models, strict=True):
-            with tab:
-                mode_rows = model["rows"]
-                st.caption(model["sort_basis"])
-                if mode_rows.empty:
-                    st.info(model["empty_reason"])
-                    continue
-                st.dataframe(
-                    mode_rows,
-                    width="stretch",
-                    height=_market_mover_chart_height(len(mode_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
-                    hide_index=True,
-                )
     investigation_rows = (
         selected_rows
         if selected_model["kind"] == "symbol" and isinstance(selected_rows, pd.DataFrame) and not selected_rows.empty

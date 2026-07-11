@@ -3018,6 +3018,26 @@ def overview_ui_css() -> str:
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
+.st-key-overview_market_mover_ranking_workspace {
+  margin-top: 0.1rem;
+  border-radius: var(--ov-mi-radius-panel);
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));
+  color: var(--ov-mi-color-text);
+}
+.st-key-overview_market_mover_ranking_workspace > div[data-testid="stVerticalBlockBorderWrapper"] {
+  border-color: var(--ov-mi-border-faint);
+  background: transparent;
+}
+.st-key-overview_market_mover_ranking_workspace .ov-mm-board {
+  margin: 0;
+  padding: 0 0 0.48rem 0;
+  border: 0;
+  background: transparent;
+}
+.st-key-overview_market_mover_ranking_workspace div[data-testid="stExpander"] {
+  border-color: var(--ov-mi-border-faint);
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 2%, var(--ov-mi-color-surface));
+}
 .st-key-overview_market_mover_investigation_workspace {
   margin-top: 0.84rem;
   border-radius: var(--ov-mi-radius-panel);

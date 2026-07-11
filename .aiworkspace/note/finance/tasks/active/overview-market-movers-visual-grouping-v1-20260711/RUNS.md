@@ -10,3 +10,6 @@
 - 선택 종목 조사 헤더 후속 검증: Market Movers 80 tests와 변경 Python/test `py_compile` PASS.
 - Browser QA on `http://localhost:8507`: `INVESTIGATION WORKSPACE`, `선택 종목 조사`, 설명의 순서와 타이포 계층, 기존 workspace surface를 확인했다. `모드별 상세 표 전체 높이로 보기` expander는 이번 범위에서 기존 위치를 유지한다. Screenshot: `market-movers-investigation-title-unification-qa.png` (generated, not staged).
 - Console log에는 서버 재시작 구간의 과거 health/WebSocket 오류만 있었고, QA 시점 health endpoint는 HTTP 200이었다.
+- Ranking Board expander follow-up RED/GREEN: keyed ranking workspace와 `Ranking Board -> expander -> Sector Breadth` 순서 계약이 구현 전 실패하고 구현 후 통과했다.
+- Market Movers combined: `OverviewAutomationContractTests` + `OverviewMarketIntelligenceServiceContractTests`의 `market_movers` 81 tests PASS. 변경 Python/test `py_compile`과 `git diff --check` PASS.
+- Browser QA on `http://localhost:8507`: Ranking Board와 `랭킹 모드별 전체 상세 표`가 같은 외곽 그룹에 있고 Sector Breadth가 다음 독립 그룹으로 시작함을 확인했다. Expander open 후 상승/하락/거래량/이상 거래량/섹터 5개 tabs와 dataframe 5개가 유지됐다. Screenshot: `market-movers-ranking-detail-group-qa.png` (generated, not staged).

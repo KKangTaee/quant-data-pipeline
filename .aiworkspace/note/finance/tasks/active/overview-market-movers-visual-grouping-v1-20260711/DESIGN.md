@@ -3,6 +3,9 @@
 ## 화면 구조
 
 ```text
+Ranking Board
+└─ 랭킹 모드별 전체 상세 표
+
 Sector Breadth
 ├─ 고정 헤더 · 상태
 ├─ 현재 확산 결과 · 핵심 통계
@@ -32,4 +35,5 @@ Sector Breadth
 - Sector outer surface는 공통 primary tone을 2~3%만 혼합해 영역을 묶는다.
 - 각 sector lane은 자체 tone을 4% 혼합하고 현재 30% tone border와 bar는 유지한다.
 - 종목 조사 workspace는 외곽 박스 1개를 주 경계로 쓰고, 내부 컴포넌트는 얇은 구분선과 간격을 우선한다.
+- 모드별 전체 표는 Sector Breadth 데이터가 아니라 Ranking Board의 상승/하락/거래량/이상 거래량/섹터 원자료이므로 Ranking Board 외곽 그룹의 마지막 보조 행으로 둔다.
 - 안전 안내와 상세 표는 중립 배경을 유지해 방향성 색과 의미를 섞지 않는다.

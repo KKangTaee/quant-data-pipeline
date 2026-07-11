@@ -15908,7 +15908,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         panel_body = helper_source[helper_source.index("def _render_market_movers_snapshot_panel") :]
         panel_body = panel_body[: panel_body.index("def render_market_movers_snapshot")]
         self.assertIn("render_market_mover_board", panel_body)
-        self.assertIn("모드별 상세 표 전체 높이로 보기", panel_body)
+        self.assertIn("랭킹 모드별 전체 상세 표", panel_body)
         self.assertNotIn("render_market_mover_chart_workspace", panel_body)
         self.assertNotIn("_build_market_mover_mode_chart", panel_body)
         self.assertNotIn("상세 표로 보기", panel_body)
@@ -16242,6 +16242,28 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn(".ov-mm-workspace-section-detail", common_source)
         self.assertIn(".st-key-overview_market_mover_investigation_workspace", common_source)
         self.assertIn("background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));", common_source)
+
+    def test_market_movers_groups_mode_detail_tables_with_ranking_board(self) -> None:
+        helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
+
+        panel_body = helper_source[helper_source.index("def _render_market_movers_snapshot_panel") :]
+        panel_body = panel_body[: panel_body.index("def render_market_movers_snapshot")]
+        workspace_marker = 'with st.container(border=True, key="overview_market_mover_ranking_workspace"):'
+        self.assertIn(workspace_marker, panel_body)
+        workspace_index = panel_body.index(workspace_marker)
+        sector_index = panel_body.index("_render_market_movers_sector_breadth_context(snapshot)")
+        self.assertLess(workspace_index, sector_index)
+        ranking_group = panel_body[workspace_index:sector_index]
+        self.assertIn("render_market_mover_board(", ranking_group)
+        self.assertIn('with st.expander("랭킹 모드별 전체 상세 표"', ranking_group)
+        self.assertIn("st.dataframe(", ranking_group)
+        self.assertNotIn("모드별 상세 표 전체 높이로 보기", panel_body)
+        self.assertIn(".st-key-overview_market_mover_ranking_workspace", common_source)
+        self.assertIn(
+            ".st-key-overview_market_mover_ranking_workspace .ov-mm-board",
+            common_source,
+        )
 
     def test_market_mover_investigation_pane_model_summarizes_selection(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_investigation_pane_model

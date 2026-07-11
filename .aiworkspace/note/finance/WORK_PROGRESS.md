@@ -5932,4 +5932,5 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - `.aiworkspace/note/finance/tasks/active/overview-market-movers-visual-grouping-v1-20260711/`에서 Sector Breadth 색상 범위와 선택 종목 조사 그룹 통합을 완료했다.
 - Sector Breadth는 3% outer surface와 lane별 direction tint를 사용하며, 조사 selector/panel/tabs/Snapshot/chart는 keyed 부모 container 하나로 읽힌다.
-- Market Movers 80 tests, React build, desktop/mobile Browser QA를 통과했고 데이터/payload/provider/DB 경계는 변경하지 않았다.
+- 후속으로 Ranking Board의 모드별 전체 표 expander를 Ranking Board keyed 부모 안으로 이동해 Sector Breadth와 선택 종목 조사 사이의 독립 박스를 제거했다.
+- Market Movers 81 tests, React build, desktop/mobile Browser QA를 통과했고 데이터/payload/provider/DB 경계는 변경하지 않았다.

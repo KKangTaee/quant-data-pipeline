@@ -9150,3 +9150,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Ranking Board row가 아니라 React Sector Breadth 전체와 lane에 실제 배경색을 적용하고, 선택 종목 조사 workflow는 외곽 박스 1개와 내부 구분선 중심으로 읽혀야 함.
 - Analysis result: 이전 수정은 `.ov-mm-list-row`에만 적용돼 React Sector Breadth와 무관했다. 하단은 Streamlit selector/tabs/HTML과 React iframe이 섞여 있으므로 raw HTML wrapper보다 keyed `st.container`가 안정적인 부모 경계다.
 - Follow-up: Sector outer/lane tint와 keyed investigation workspace를 구현하고 desktop/mobile Browser QA를 완료했다. 이후 화면 구조 설명은 가능한 경우 ASCII tree로 계층을 함께 제시한다.
+- Follow-up clarification: `모드별 상세 표 전체 높이로 보기`는 Sector Breadth 상세가 아니라 Ranking Board의 모드별 원자료이므로 Sector Breadth에 합치지 않고 Ranking Board keyed 부모의 마지막 행으로 이동했다.
