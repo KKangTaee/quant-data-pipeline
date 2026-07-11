@@ -1330,6 +1330,61 @@
   line-height: 1.5 !important;
 }
 
+.fr-invest-report__review-trace-meaning,
+.fr-invest-report__review-trace-action {
+  margin-top: 8px;
+  padding: 9px 10px;
+  background: #ffffff;
+}
+
+.fr-invest-report__review-trace-meaning {
+  border-left: 3px solid #64748b;
+}
+
+.fr-invest-report__review-trace-meaning > b,
+.fr-invest-report__review-trace-action b,
+.fr-invest-report__review-trace-action span {
+  color: #1e293b;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fr-invest-report__review-trace-meaning p,
+.fr-invest-report__review-trace-action p,
+.fr-invest-report__review-trace-action small {
+  display: block;
+  margin-top: 4px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fr-invest-report__review-trace-action {
+  border-left: 3px solid #94a3b8;
+  background: #f1f5f9;
+}
+
+.fr-invest-report__review-trace-action > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fr-invest-report__review-trace-action--warning {
+  border-left-color: #c98515;
+  background: #fffbeb;
+}
+
+.fr-invest-report__review-trace-action--danger {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.fr-invest-report__review-trace-action--positive {
+  border-left-color: #1f9d6a;
+  background: #f0fdf4;
+}
+
 .fr-invest-report__review-trace-list p {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);

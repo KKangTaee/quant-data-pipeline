@@ -6,3 +6,9 @@
 - `기간 미포함`은 후보 기간이 2016년 이후라 2000~2009 stress window가 포함되지 않은 결과이며 freshness 문제가 아니다.
 - 빈 관측은 Tax / Account 정성 판단, strategy-specific perturbation NOT_RUN, provider row의 criteria 계약 공백으로 나뉜다.
 - weighted mix 2개에는 holdings / exposure와 source map 보강 대상이 있으나 단일 후보는 stale-only provider snapshot이라 기존 missing-only collection plan에 잡히지 않는다.
+
+## 2026-07-11 Action Taxonomy
+
+- `기간 미포함`은 `period_outside`, parameter perturbation `NOT_RUN`은 `implementation_gap`으로 분리했다.
+- provider freshness / operability / holdings / exposure는 `refreshable_data`, lifecycle / delisting은 `source_discovery`로 분리했다.
+- 측정된 성과·집중·상관 REVIEW는 `inherited_limit`, Tax / Account는 `user_decision`으로 분리했다.

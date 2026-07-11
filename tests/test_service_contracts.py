@@ -12337,6 +12337,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn('"왜 확인이 필요한가"', component_source)
         self.assertIn("기술 근거 보기", component_source)
         self.assertIn("사용자용 세부 설명이 아직 없습니다", component_source)
+        self.assertIn("이 결과가 뜻하는 것", component_source)
+        self.assertIn("개선 방법", component_source)
+        self.assertIn("처리 위치", component_source)
         self.assertIn("감점 없음", component_source)
         self.assertNotIn('label: "Handoff"', component_source)
         self.assertNotIn('label: "Monitoring 후보"', component_source)
@@ -28201,6 +28204,93 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(item["trace_items"][0]["status_label"], "일부 확인")
         self.assertIn("특정 한 시기", item["trace_items"][0]["validation_description"])
         self.assertIn("반복 검증 구간 79", item["trace_items"][0]["display_observed_value"])
+
+    def test_final_review_disposition_classifies_trace_resolution_actions(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        disposition = build_final_review_level2_review_disposition(
+            validation={
+                "practical_validation_workspace": {
+                    "criteria_detail_groups": [
+                        {
+                            "criteria_cards": [
+                                {
+                                    "display_label": "데이터 범위",
+                                    "module_id": "data_coverage",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_data_caution",
+                                },
+                                {
+                                    "display_label": "충격과 설정 변화",
+                                    "module_id": "stress_robustness",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_practical_caution",
+                                },
+                                {
+                                    "display_label": "Tax account scope",
+                                    "module_id": "tax_account_scope",
+                                    "status": "REVIEW",
+                                    "review_role": "final_decision_input",
+                                },
+                            ]
+                        }
+                    ]
+                },
+                "data_coverage_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Provider snapshot freshness",
+                            "Status": "REVIEW",
+                            "Current": "PASS, REVIEW",
+                            "Evidence": "freshness=fresh, stale",
+                        },
+                        {
+                            "Criteria": "Survivorship / delisting control",
+                            "Status": "REVIEW",
+                            "Current": "not proven / covered=4 / partial=3",
+                        },
+                    ]
+                },
+                "robustness_validation": {
+                    "sensitivity_rows": [
+                        {
+                            "Scenario": "Relative Strength perturbation",
+                            "Result Status": "NOT_RUN",
+                            "Judgment": "-",
+                            "Expected Check": "momentum window 민감도",
+                        }
+                    ],
+                    "stress_summary_rows": [
+                        {
+                            "Scenario": "Dot-com bust / early-2000s bear market",
+                            "Result Status": "NOT_RUN",
+                            "Judgment": "기간 미포함",
+                            "Expected Check": "return / MDD / benchmark spread",
+                        }
+                    ],
+                },
+            }
+        )
+
+        traces = [
+            trace
+            for section in disposition["final_review_sections"]
+            for item in section["items"]
+            for trace in item["trace_items"]
+        ]
+        by_label = {trace["label"]: trace for trace in traces}
+        self.assertEqual(by_label["Provider snapshot freshness"]["action_type"], "refreshable_data")
+        self.assertEqual(by_label["Survivorship / delisting control"]["action_type"], "source_discovery")
+        self.assertEqual(by_label["Relative Strength perturbation"]["action_type"], "implementation_gap")
+        self.assertEqual(by_label["Dot-com bust / early-2000s bear market"]["action_type"], "period_outside")
+        self.assertEqual(by_label["Tax account scope"]["action_type"], "user_decision")
+        self.assertIn(
+            "일반 데이터 갱신으로는 해결되지 않습니다",
+            by_label["Relative Strength perturbation"]["improvement_action"],
+        )
+        self.assertEqual(disposition["trace_action_summary"]["refreshable_data"], 1)
+        self.assertEqual(disposition["trace_action_summary"]["period_outside"], 1)
+        self.assertEqual(disposition["trace_action_summary"]["user_decision"], 1)
 
     def test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts(self) -> None:
         from app.services.backtest_evidence_read_model import (

@@ -2279,6 +2279,9 @@ _FINAL_REVIEW_TRACE_PRESENTATION: dict[str, tuple[str, str]] = {
 
 
 def _review_trace_presentation(label: str) -> tuple[str, str]:
+    normalized_label = label.lower().replace("/", " ")
+    if "tax" in normalized_label and "account" in normalized_label:
+        return _FINAL_REVIEW_TRACE_PRESENTATION["Tax / account scope"]
     if label.startswith("Drop-one: "):
         component = label.split(":", 1)[1].strip()
         return (
@@ -2370,6 +2373,118 @@ def _review_trace_basis_copy(label: str, basis: str) -> str:
     return readable
 
 
+_FINAL_REVIEW_TRACE_MEANINGS: dict[str, str] = {
+    "Provider snapshot freshness": "일부 ETF 자료의 기준일이 오래되어 현재 거래 조건을 설명하는 확신이 낮아질 수 있습니다.",
+    "Universe / listing evidence": "현재 종목 정보는 있으나 일부 종목의 과거 상장 이력이 완전하지 않아 기간 전체의 재현성을 주의해야 합니다.",
+    "Survivorship / delisting control": "상장폐지 종목이 충분히 포함됐다는 근거가 없어 백테스트 성과가 실제보다 좋아 보일 가능성을 배제하지 못합니다.",
+    "Price DB window coverage": "일부 종목의 가격 시작일이 늦으면 후보별 비교 기간과 실제 투자 가능 시점이 달라질 수 있습니다.",
+    "PIT price window coverage": "재실행은 가능하지만 일부 가격 기간 gap 때문에 시점 기준 재현의 확신이 낮아질 수 있습니다.",
+    "Cost / slippage sensitivity evidence": "기본 비용 민감도는 계산됐지만 전략 전용 설정 변화까지 모두 확인된 것은 아닙니다.",
+    "Liquidity / operability evidence": "거래 가능성 근거가 오래됐거나 일부만 확인돼 현재 운용 현실성을 다시 확인해야 합니다.",
+    "Tax / account scope": "세금과 계좌 조건을 반영하지 않은 성과이므로 사용자의 실제 계좌에서는 결과가 달라질 수 있습니다.",
+    "Walk-forward temporal validation": "기간을 옮긴 반복 검증에서 비교 기준을 자주 하회하면 특정 시기 의존 가능성이 있습니다.",
+    "Regime split validation": "시장 국면별 성과 차이가 있어 후보가 약해지는 환경을 최종 판단과 Monitoring 조건에 반영해야 합니다.",
+    "Exclude last 12M": "최근 구간을 제외했을 때 성과가 크게 달라지면 최근 성과 의존 가능성이 있습니다.",
+    "Exclude first 12M": "초기 구간을 제외했을 때 성과가 크게 달라지면 시작 시점 의존 가능성이 있습니다.",
+    "Relative Strength perturbation": "모멘텀 기간 변경 결과가 없어 현재 설정값에 대한 의존도를 판단할 수 없습니다.",
+    "GTAA parameter perturbation": "GTAA 설정 변경 결과가 없어 현재 리밸런싱 규칙에 대한 의존도를 판단할 수 없습니다.",
+    "Component weight concentration": "한 구성요소 비중이 크면 그 구성요소의 약세가 포트폴리오 전체에 직접 영향을 줍니다.",
+    "Provider look-through coverage": "ETF 내부 구성을 확인하지 못한 비중만큼 실제 자산·섹터 집중도를 과소평가할 수 있습니다.",
+    "Top holding concentration": "상위 보유 종목 비중이 크면 ETF가 여러 개여도 실제 분산 효과가 제한될 수 있습니다.",
+    "Holdings overlap": "ETF 간 중복 보유가 크면 서로 다른 상품을 담아도 동일 종목 위험이 반복됩니다.",
+    "Pairwise correlation": "구성요소 간 상관이 높으면 시장 충격에서 함께 하락해 기대한 분산 효과가 약해질 수 있습니다.",
+    "Risk contribution concentration": "표면 비중보다 실제 위험 기여가 한쪽에 집중돼 특정 구성요소가 손실을 주도할 수 있습니다.",
+    "Profile-aware weight discipline": "후보의 목표보다 한 구성요소 비중이 커 의도한 운용 성격이 왜곡될 수 있습니다.",
+    "Role concentration discipline": "같은 역할의 구성요소가 많으면 이름이 달라도 동일한 시장 환경에 함께 취약할 수 있습니다.",
+    "ETF Operability": "ETF 거래 가능성 자료의 범위 또는 최신성이 충분하지 않아 실제 운용 조건을 보수적으로 봐야 합니다.",
+    "ETF Holdings": "확인하지 못한 ETF 내부 종목 때문에 실제 집중도와 중복 보유를 완전히 계산하지 못했습니다.",
+    "ETF Exposure": "확인하지 못한 ETF 자산·섹터 노출 때문에 시장 환경별 민감도를 완전히 설명하지 못했습니다.",
+}
+
+
+def _review_trace_guidance(label: str, status: str, observed_value: str) -> dict[str, str]:
+    normalized_status = str(status or "").strip().upper()
+    observed = str(observed_value or "").strip()
+    display_label, _ = _review_trace_presentation(label)
+    if observed == "기간 미포함":
+        return {
+            "meaning": "이 검증은 실패한 것이 아니라 현재 백테스트 시작일보다 과거의 충격 구간이라 계산할 수 없었습니다.",
+            "action_type": "period_outside",
+            "action_label": "기간 확장 또는 대체 검증",
+            "improvement_action": "과거 가격 이력이 충분하면 백테스트 시작일을 확장하고, 어렵다면 최근 유사 충격 구간이나 별도 프록시 스트레스 검증을 사용합니다.",
+            "action_owner": "Backtest Analysis / Practical Validation",
+            "action_tone": "neutral",
+        }
+    normalized_label = label.lower().replace("/", " ")
+    if "tax" in normalized_label and "account" in normalized_label:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS["Tax / account scope"],
+            "action_type": "user_decision",
+            "action_label": "판단 사유에 기록",
+            "improvement_action": "현재 계좌의 세금·수수료 조건을 별도로 확인하고, 이 제한을 수용하는 이유를 선택 또는 보류 사유에 기록합니다.",
+            "action_owner": "Final Review 사용자 판단",
+            "action_tone": "neutral",
+        }
+    if normalized_status == "NOT_RUN":
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS.get(label, f"{display_label} 결과가 없어 현재 설정에 대한 의존도를 판단할 수 없습니다."),
+            "action_type": "implementation_gap",
+            "action_label": "검증 기능 추가 필요",
+            "improvement_action": "이 전략에 맞는 설정 변경 runner를 구현한 뒤 2단계 검증을 다시 실행합니다. 일반 데이터 갱신으로는 해결되지 않습니다.",
+            "action_owner": "Practical Validation 검증 개발",
+            "action_tone": "warning",
+        }
+    if label in {
+        "Provider snapshot freshness",
+        "Liquidity / operability evidence",
+        "Provider look-through coverage",
+        "ETF Operability",
+        "ETF Holdings",
+        "ETF Exposure",
+    }:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS.get(label, "ETF 외부 데이터의 범위 또는 최신성이 충분하지 않습니다."),
+            "action_type": "refreshable_data",
+            "action_label": "2단계 데이터 보강 가능",
+            "improvement_action": "Practical Validation의 데이터 보강에서 수집 가능한 ETF snapshot을 갱신하고, 2단계 재검증 후 새 결과를 저장합니다.",
+            "action_owner": "Practical Validation 데이터 보강",
+            "action_tone": "warning",
+        }
+    if label in {"Universe / listing evidence", "Survivorship / delisting control"}:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS[label],
+            "action_type": "source_discovery",
+            "action_label": "과거 종목 이력 보강 필요",
+            "improvement_action": "현재 snapshot 갱신이 아니라 과거 상장·상장폐지 이력을 제공하는 source와 point-in-time universe 계약을 보강한 뒤 재검증합니다.",
+            "action_owner": "데이터 파이프라인 / Practical Validation",
+            "action_tone": "warning",
+        }
+    if label in {"Price DB window coverage", "PIT price window coverage"}:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS[label],
+            "action_type": "rerun_required",
+            "action_label": "가격 보강 후 재검증",
+            "improvement_action": "부족한 종목의 DB 가격 기간을 보강한 뒤 같은 후보를 2단계에서 다시 검증합니다.",
+            "action_owner": "가격 ingestion / Practical Validation",
+            "action_tone": "warning",
+        }
+    if label.startswith("Drop-one: "):
+        meaning = "구성요소를 제외했을 때 성과 변화가 커 해당 구성요소 의존도를 최종 판단에 반영해야 합니다."
+    else:
+        meaning = _FINAL_REVIEW_TRACE_MEANINGS.get(
+            label,
+            "저장된 검증 결과가 확인 기준을 완전히 충족하지 않아 후보의 한계로 함께 해석해야 합니다.",
+        )
+    return {
+        "meaning": meaning,
+        "action_type": "inherited_limit",
+        "action_label": "현재 제한 수용 여부 판단",
+        "improvement_action": "현재 결과를 후보의 약점으로 받아들일지 판단하고, 선정한다면 재검토 조건으로 Monitoring에 넘깁니다. 데이터 갱신만으로 수치가 바뀌지는 않습니다.",
+        "action_owner": "Final Review / Portfolio Monitoring",
+        "action_tone": "neutral",
+    }
+
+
 def _review_trace_row_status(row: dict[str, Any]) -> str:
     return _review_trace_value(row, "Status", "Result Status", "Diagnostic Status", "status").upper()
 
@@ -2400,6 +2515,7 @@ def _review_trace_item(
     evidence_as_of: str,
 ) -> dict[str, str]:
     display_label, validation_description = _review_trace_presentation(label)
+    guidance = _review_trace_guidance(label, status, observed_value)
     return {
         "label": label,
         "display_label": display_label,
@@ -2412,6 +2528,7 @@ def _review_trace_item(
         "judgment_basis": judgment_basis,
         "judgment_basis_label": "왜 확인이 필요한가",
         "display_judgment_basis": _review_trace_basis_copy(label, judgment_basis),
+        **guidance,
         "evidence_source": evidence_source,
         "evidence_as_of": evidence_as_of,
     }
@@ -2551,15 +2668,26 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                 threshold = _safe_text(first_trace.get("judgment_basis"), "-")
                 evidence_source = _safe_text(first_trace.get("evidence_source"), adapter_source)
                 evidence_as_of = _safe_text(first_trace.get("evidence_as_of"), "-")
+        if not trace_items and normalized_role in {"final_decision_input", "monitoring_followup"}:
+            trace_items.append(
+                _review_trace_item(
+                    label=title,
+                    status=status.upper() or "REVIEW",
+                    observed_value=observed_value,
+                    judgment_basis=threshold,
+                    evidence_source=evidence_source,
+                    evidence_as_of=evidence_as_of,
+                )
+            )
         if observed_value != "-" and threshold != "-" and direct_trace:
             trace_status = "measured"
             trace_label = "측정 근거 확인"
-        elif trace_items:
-            trace_status = "derived"
-            trace_label = f"세부 근거 {len(trace_items)}개 확인"
         elif normalized_role in {"final_decision_input", "monitoring_followup"}:
             trace_status = "qualitative"
             trace_label = "사용자 판단 항목"
+        elif trace_items:
+            trace_status = "derived"
+            trace_label = f"세부 근거 {len(trace_items)}개 확인"
         else:
             trace_status = "missing_contract"
             trace_label = "세부 설명 준비 안 됨"
@@ -2698,6 +2826,35 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                 "items": items,
             }
         )
+    trace_actions: list[dict[str, str]] = []
+    seen_trace_actions: set[tuple[str, str, str]] = set()
+    for item in all_items:
+        for trace in list(item.get("trace_items") or []):
+            if not isinstance(trace, dict):
+                continue
+            action_type = _safe_text(trace.get("action_type"), "inherited_limit")
+            action_key = (
+                _safe_text(trace.get("display_label") or trace.get("label"), "세부 근거"),
+                action_type,
+                _safe_text(trace.get("observed_value"), "-"),
+            )
+            if action_key in seen_trace_actions:
+                continue
+            seen_trace_actions.add(action_key)
+            trace_actions.append(
+                {
+                    "label": action_key[0],
+                    "action_type": action_type,
+                    "action_label": _safe_text(trace.get("action_label"), "현재 제한 확인"),
+                    "improvement_action": _safe_text(trace.get("improvement_action"), "최종 판단에 반영합니다."),
+                    "action_owner": _safe_text(trace.get("action_owner"), "Final Review"),
+                    "tone": _safe_text(trace.get("action_tone"), "neutral"),
+                }
+            )
+    action_type_counts: dict[str, int] = {}
+    for trace in trace_actions:
+        action_type = trace["action_type"]
+        action_type_counts[action_type] = action_type_counts.get(action_type, 0) + 1
     return {
         "schema_version": LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION,
         "summary": {
@@ -2710,6 +2867,17 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
         "groups": groups,
         "role_sections": role_sections,
         "final_review_sections": final_review_sections,
+        "trace_action_summary": {
+            "total": len(trace_actions),
+            "refreshable_data": action_type_counts.get("refreshable_data", 0),
+            "source_discovery": action_type_counts.get("source_discovery", 0),
+            "rerun_required": action_type_counts.get("rerun_required", 0),
+            "period_outside": action_type_counts.get("period_outside", 0),
+            "implementation_gap": action_type_counts.get("implementation_gap", 0),
+            "user_decision": action_type_counts.get("user_decision", 0),
+            "inherited_limit": action_type_counts.get("inherited_limit", 0),
+        },
+        "trace_actions": trace_actions,
         "boundary": {
             "validation_rerun": False,
             "provider_fetch": False,

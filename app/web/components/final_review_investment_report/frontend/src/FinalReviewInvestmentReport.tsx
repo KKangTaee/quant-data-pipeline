@@ -374,6 +374,17 @@ type ReviewImpact = {
     judgment_basis_label?: string
     displayJudgmentBasis?: string
     display_judgment_basis?: string
+    meaning?: string
+    actionType?: string
+    action_type?: string
+    actionLabel?: string
+    action_label?: string
+    improvementAction?: string
+    improvement_action?: string
+    actionOwner?: string
+    action_owner?: string
+    actionTone?: Tone
+    action_tone?: Tone
     evidenceSource?: string
     evidence_source?: string
     evidenceAsOf?: string
@@ -400,6 +411,17 @@ type ReviewImpact = {
     judgment_basis_label?: string
     displayJudgmentBasis?: string
     display_judgment_basis?: string
+    meaning?: string
+    actionType?: string
+    action_type?: string
+    actionLabel?: string
+    action_label?: string
+    improvementAction?: string
+    improvement_action?: string
+    actionOwner?: string
+    action_owner?: string
+    actionTone?: Tone
+    action_tone?: Tone
     evidenceSource?: string
     evidence_source?: string
     evidenceAsOf?: string
@@ -1121,6 +1143,10 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
                     const displayObserved = field(trace.displayObservedValue, trace.display_observed_value)
                     const basisLabel = field(trace.judgmentBasisLabel, trace.judgment_basis_label)
                     const displayBasis = field(trace.displayJudgmentBasis, trace.display_judgment_basis)
+                    const actionLabel = field(trace.actionLabel, trace.action_label)
+                    const improvementAction = field(trace.improvementAction, trace.improvement_action)
+                    const actionOwner = field(trace.actionOwner, trace.action_owner)
+                    const actionTone = field(trace.actionTone, trace.action_tone)
                     const traceSource = field(trace.evidenceSource, trace.evidence_source)
                     const traceAsOf = field(trace.evidenceAsOf, trace.evidence_as_of)
                     return (
@@ -1129,6 +1155,15 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
                         <p className="fr-invest-report__review-trace-description">{compact(validationDescription)}</p>
                         <p><b>{compact(observedLabel, "현재 확인된 내용")}</b>{compact(displayObserved, compact(traceObserved, "수치로 자동 판정하지 않는 항목입니다."))}</p>
                         <p><b>{compact(basisLabel, "왜 확인이 필요한가")}</b>{compact(displayBasis, compact(traceBasis, "사용자 판단이 필요한 항목입니다."))}</p>
+                        <div className="fr-invest-report__review-trace-meaning">
+                          <b>이 결과가 뜻하는 것</b>
+                          <p>{compact(trace.meaning)}</p>
+                        </div>
+                        <div className={`fr-invest-report__review-trace-action fr-invest-report__review-trace-action--${toneClass(actionTone)}`}>
+                          <div><b>개선 방법</b><span>{compact(actionLabel)}</span></div>
+                          <p>{compact(improvementAction)}</p>
+                          <small>처리 위치 · {compact(actionOwner)}</small>
+                        </div>
                         <details>
                           <summary>기술 근거 보기</summary>
                           <small>출처·기준일: {compact(traceSource, compact(evidenceSource, "저장 evidence"))} · {compact(traceAsOf, compact(evidenceAsOf, "기준일 미기록"))}</small>
