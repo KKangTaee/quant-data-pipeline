@@ -942,6 +942,44 @@ a {
   font-size: 13px;
 }
 
+.ip-price-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 0 12px;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ip-price-action:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
+.ip-price-reason,
+.ip-price-result {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ip-price-reason {
+  color: #64748b;
+}
+
+.ip-price-result {
+  color: #166534;
+  font-weight: 700;
+}
+
 .ip-load-button {
   display: inline-flex;
   align-items: center;

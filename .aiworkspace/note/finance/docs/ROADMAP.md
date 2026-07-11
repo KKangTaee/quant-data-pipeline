@@ -9,7 +9,18 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-live-sec13f-v1-20260709/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios` 보유기관조회에서 선택 종목 차트가 비어 보이는 원인을 실제 DB 기준으로 분리하고, DB에 이미 있는 가격 row는 차트로 연결하며, 가격 row가 없을 때는 버튼으로 기존 OHLCV 수집 job을 실행하게 한다.
+- 주요 변경: service-level safe CUSIP-symbol resolver, curated symbol -> CUSIP 우선 reverse lookup, selected-security price action payload, React 가격 데이터 수집 버튼, Streamlit event -> `run_collect_ohlcv` boundary를 추가했다.
+- 이번 차수에서 하지 않은 일: DB schema 변경, external site scraping, full security master 구축, 추천 / 매매 신호 / live trading / auto rebalance 연결.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/`다.
+
+- 목적: Institutional Portfolios의 selected-security detail, report-period performance, institution-count ranking, scroll / pending fallback을 보강했다.
+- 주요 변경: CUSIP-level aggregation, selected-security chart payload, report-period performance panel, institution-count ranking tab을 추가했다.
+
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-live-sec13f-v1-20260709/`다.
 
 - 목적: React workbench가 preview sample에 머무르지 않고 SEC official 13F DB snapshot을 실제로 읽는 제품 화면이 되게 한다.
 - 주요 변경: refresh status / watchlist schema, official SEC 13F ingestion status row, secondary refresh panel, workbench freshness payload, conservative CUSIP-symbol enrichment, docs / QA를 정렬했다.

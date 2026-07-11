@@ -5928,3 +5928,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 13F raw holdings는 service read model에서 CUSIP / put-call 기준으로 합산해 도넛 / holdings / change board / performance 중복 표시를 줄였다.
 - Ranking loader는 `ix_report_period_cusip_cik` 접근을 사용하고, React는 pending timeout fallback으로 클릭 후 무한 로딩처럼 보이지 않게 했다.
 - QA: focused tests 24개, py_compile, npm build, git diff --check, UI/engine boundary scan, Browser QA screenshot 완료.
+
+## 2026-07-12 KST - Institutional Portfolios Holding Chart Refresh V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/`에서 보유기관조회 차트 empty 원인을 실제 DB 기준으로 진단했다.
+- Berkshire 상위 13F holdings는 ticker가 비어 있었지만 가격 DB에는 KO/BAC/CVX/OXY/GOOGL 등 row가 이미 있어, service-level safe CUSIP resolver로 차트를 연결했다.
+- `KO` 같은 curated symbol reverse lookup은 오염된 generic map보다 curated CUSIP를 먼저 사용하며, 차트가 비면 React 버튼이 Python `run_collect_ohlcv` 수집 job을 실행한다.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import pandas as pd
@@ -85,6 +86,137 @@ INSTITUTIONAL_MANAGER_WATCHLIST = [
         "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1061768"}],
     },
 ]
+CURATED_13F_CUSIP_SYMBOL_SEED: dict[str, dict[str, Any]] = {
+    "02005N100": {
+        "symbol": "ALLY",
+        "issuer_tokens": ("ALLY",),
+        "sector": "Financial Services",
+        "industry": "Credit Services",
+    },
+    "02079K107": {
+        "symbol": "GOOG",
+        "issuer_tokens": ("ALPHABET",),
+        "sector": "Communication Services",
+        "industry": "Internet Content & Information",
+    },
+    "02079K305": {
+        "symbol": "GOOGL",
+        "issuer_tokens": ("ALPHABET",),
+        "sector": "Communication Services",
+        "industry": "Internet Content & Information",
+    },
+    "025816109": {
+        "symbol": "AXP",
+        "issuer_tokens": ("AMERICAN", "EXPRESS"),
+        "sector": "Financial Services",
+        "industry": "Credit Services",
+    },
+    "037833100": {
+        "symbol": "AAPL",
+        "issuer_tokens": ("APPLE",),
+        "sector": "Technology",
+        "industry": "Consumer Electronics",
+    },
+    "060505104": {
+        "symbol": "BAC",
+        "issuer_tokens": ("BANK", "AMERICA"),
+        "sector": "Financial Services",
+        "industry": "Banks - Diversified",
+    },
+    "14040H105": {
+        "symbol": "COF",
+        "issuer_tokens": ("CAPITAL", "ONE"),
+        "sector": "Financial Services",
+        "industry": "Credit Services",
+    },
+    "166764100": {
+        "symbol": "CVX",
+        "issuer_tokens": ("CHEVRON",),
+        "sector": "Energy",
+        "industry": "Oil & Gas Integrated",
+    },
+    "191216100": {
+        "symbol": "KO",
+        "issuer_tokens": ("COCA", "COLA"),
+        "sector": "Consumer Defensive",
+        "industry": "Beverages - Non-Alcoholic",
+    },
+    "23918K108": {
+        "symbol": "DVA",
+        "issuer_tokens": ("DAVITA",),
+        "sector": "Healthcare",
+        "industry": "Medical Care Facilities",
+    },
+    "247361702": {
+        "symbol": "DAL",
+        "issuer_tokens": ("DELTA", "AIR"),
+        "sector": "Industrials",
+        "industry": "Airlines",
+    },
+    "500754106": {
+        "symbol": "KHC",
+        "issuer_tokens": ("KRAFT", "HEINZ"),
+        "sector": "Consumer Defensive",
+        "industry": "Packaged Foods",
+    },
+    "501044101": {
+        "symbol": "KR",
+        "issuer_tokens": ("KROGER",),
+        "sector": "Consumer Defensive",
+        "industry": "Grocery Stores",
+    },
+    "594918104": {
+        "symbol": "MSFT",
+        "issuer_tokens": ("MICROSOFT",),
+        "sector": "Technology",
+        "industry": "Software - Infrastructure",
+    },
+    "615369105": {
+        "symbol": "MCO",
+        "issuer_tokens": ("MOODY",),
+        "sector": "Financial Services",
+        "industry": "Financial Data & Stock Exchanges",
+    },
+    "650111107": {
+        "symbol": "NYT",
+        "issuer_tokens": ("NEW", "YORK", "TIMES"),
+        "sector": "Communication Services",
+        "industry": "Publishing",
+    },
+    "67066G104": {
+        "symbol": "NVDA",
+        "issuer_tokens": ("NVIDIA",),
+        "sector": "Technology",
+        "industry": "Semiconductors",
+    },
+    "674599105": {
+        "symbol": "OXY",
+        "issuer_tokens": ("OCCIDENTAL",),
+        "sector": "Energy",
+        "industry": "Oil & Gas E&P",
+    },
+    "829933100": {
+        "symbol": "SIRI",
+        "issuer_tokens": ("SIRIUS",),
+        "sector": "Communication Services",
+        "industry": "Entertainment",
+    },
+    "92343E102": {
+        "symbol": "VRSN",
+        "issuer_tokens": ("VERISIGN",),
+        "sector": "Technology",
+        "industry": "Software - Infrastructure",
+    },
+    "H1467J104": {
+        "symbol": "CB",
+        "issuer_tokens": ("CHUBB",),
+        "sector": "Financial Services",
+        "industry": "Insurance - Property & Casualty",
+    },
+}
+CURATED_13F_SYMBOL_TO_CUSIP = {
+    str(row["symbol"]).upper(): cusip for cusip, row in CURATED_13F_CUSIP_SYMBOL_SEED.items()
+}
 
 
 def _text(value: Any) -> str | None:
@@ -151,6 +283,58 @@ def _symbol(value: Any) -> str | None:
     return text.upper() if text else None
 
 
+def _issuer_search_text(value: Any) -> str:
+    text = _text(value) or ""
+    return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+
+
+def _issuer_matches_tokens(issuer_name: Any, tokens: tuple[str, ...]) -> bool:
+    issuer = _issuer_search_text(issuer_name)
+    if not issuer or not tokens:
+        return False
+    return all(str(token).upper() in issuer for token in tokens)
+
+
+def _curated_identity_for_holding(row: dict[str, Any]) -> dict[str, Any] | None:
+    cusip = (_text(row.get("cusip")) or "").upper()
+    seed = CURATED_13F_CUSIP_SYMBOL_SEED.get(cusip)
+    if not seed:
+        return None
+    tokens = tuple(str(token).upper() for token in seed.get("issuer_tokens") or ())
+    if not _issuer_matches_tokens(row.get("issuer_name"), tokens):
+        return None
+    return {
+        "symbol": _symbol(seed.get("symbol")),
+        "symbol_source": "curated_13f_cusip_seed",
+        "sector": _text(seed.get("sector")),
+        "industry": _text(seed.get("industry")),
+    }
+
+
+def _curated_cusip_for_symbol(query: str | None) -> str | None:
+    symbol = _symbol(query)
+    if not symbol:
+        return None
+    return CURATED_13F_SYMBOL_TO_CUSIP.get(symbol)
+
+
+def _resolved_holding_identity(row: dict[str, Any]) -> dict[str, Any]:
+    symbol = _symbol(row.get("holding_symbol"))
+    if symbol:
+        return {
+            "symbol": symbol,
+            "symbol_source": _text(row.get("symbol_source")),
+            "sector": _text(row.get("sector")),
+            "industry": _text(row.get("industry")),
+        }
+    return _curated_identity_for_holding(row) or {
+        "symbol": None,
+        "symbol_source": _text(row.get("symbol_source")),
+        "sector": _text(row.get("sector")),
+        "industry": _text(row.get("industry")),
+    }
+
+
 def _records(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
     if frame is None or frame.empty:
         return []
@@ -194,10 +378,12 @@ def _prepared_holdings(frame: pd.DataFrame | None) -> tuple[list[dict[str, Any]]
     for row in rows:
         value = _num(row.get("reported_value"))
         shares = _num(row.get("shares_or_principal_amount"))
+        identity = _resolved_holding_identity(row)
         prepared.append(
             {
                 "issuer_name": _text(row.get("issuer_name")) or "-",
-                "holding_symbol": _text(row.get("holding_symbol")),
+                "holding_symbol": identity.get("symbol"),
+                "symbol_source": identity.get("symbol_source"),
                 "cusip": _text(row.get("cusip")),
                 "figi": _text(row.get("figi")),
                 "title_of_class": _text(row.get("title_of_class")),
@@ -205,8 +391,8 @@ def _prepared_holdings(frame: pd.DataFrame | None) -> tuple[list[dict[str, Any]]
                 "shares_or_principal_amount": shares,
                 "amount_type": _text(row.get("amount_type")),
                 "put_call": _text(row.get("put_call")),
-                "sector": _text(row.get("sector")),
-                "industry": _text(row.get("industry")),
+                "sector": identity.get("sector"),
+                "industry": identity.get("industry"),
                 "weight_pct": round((value / total_value) * 100.0, 4) if total_value > 0 else 0.0,
                 "source_ref": _text(row.get("source_ref")),
             }
@@ -383,6 +569,37 @@ def _security_charts(price_history: pd.DataFrame | None, symbol: str | None) -> 
             "label": "월봉",
             "points": _resample_price_points(frame, "ME"),
         },
+    }
+
+
+def _charts_have_points(charts: dict[str, Any]) -> bool:
+    for chart in charts.values():
+        if len(chart.get("points") or []) >= 2:
+            return True
+    return False
+
+
+def _price_action_payload(symbol: str | None, charts: dict[str, Any], *, start_date: str | None = None) -> dict[str, Any]:
+    resolved_symbol = _symbol(symbol)
+    has_chart = _charts_have_points(charts)
+    if not resolved_symbol:
+        return {
+            "action_id": "collect_price_history",
+            "label": "가격 데이터 수집",
+            "symbol": None,
+            "start_date": start_date,
+            "available": False,
+            "needs_collection": False,
+            "reason": "13F row를 가격 DB ticker로 안전하게 매핑하지 못했습니다. 원문 filing의 CUSIP를 먼저 확인하세요.",
+        }
+    return {
+        "action_id": "collect_price_history",
+        "label": "가격 데이터 새로고침" if has_chart else "가격 데이터 수집",
+        "symbol": resolved_symbol,
+        "start_date": start_date,
+        "available": True,
+        "needs_collection": not has_chart,
+        "reason": "저장된 가격 row가 없어 차트가 비어 있습니다." if not has_chart else "저장된 가격 DB 기준 차트가 표시 중입니다.",
     }
 
 
@@ -771,6 +988,8 @@ def build_institutional_selected_security_model(
         }
 
     symbol = _symbol(holding.get("holding_symbol"))
+    charts = _security_charts(price_history, symbol)
+    report_period = _date_label((portfolio_model.get("summary") or {}).get("latest_report_period"))
     security = {
         "symbol": symbol,
         "issuer_name": _text(holding.get("issuer_name")) or symbol or "-",
@@ -791,7 +1010,8 @@ def build_institutional_selected_security_model(
             "shares_or_principal_amount": _num(holding.get("shares_or_principal_amount")),
             "shares_label": f"{_num(holding.get('shares_or_principal_amount')):,.0f}",
         },
-        "charts": _security_charts(price_history, symbol),
+        "charts": charts,
+        "price_action": _price_action_payload(symbol, charts, start_date=report_period),
         "holders": holders[:50],
         "holder_count": int((interest_model or {}).get("holder_count") or len(holders)),
         "caveat": "차트는 저장된 가격 DB 기준이며 13F 보고 이후 실제 거래를 의미하지 않습니다.",
@@ -804,7 +1024,8 @@ def build_institutional_popularity_model(rows: pd.DataFrame | None, *, report_pe
     ranked: list[dict[str, Any]] = []
     records.sort(key=lambda row: (_num(row.get("holder_count")), _num(row.get("total_reported_value"))), reverse=True)
     for idx, row in enumerate(records, start=1):
-        symbol = _symbol(row.get("holding_symbol"))
+        identity = _resolved_holding_identity(row)
+        symbol = _symbol(identity.get("symbol"))
         issuer = _text(row.get("issuer_name")) or symbol or "-"
         query = symbol or _text(row.get("cusip")) or issuer
         ranked.append(
@@ -868,6 +1089,7 @@ def build_institutional_workbench_payload(
     interest_model: dict[str, Any] | None,
     selected_security_model: dict[str, Any] | None = None,
     popularity_model: dict[str, Any] | None = None,
+    price_refresh_result: dict[str, Any] | None = None,
     mode: str = "live",
     data_message: str = "",
     refresh_status: dict[str, Any] | None = None,
@@ -965,6 +1187,7 @@ def build_institutional_workbench_payload(
         "interest": _interest_payload(interest_model),
         "selected_security": dict(selected_security_model or {}),
         "security_charts": dict(model.get("security_charts") or {}),
+        "price_refresh_result": dict(price_refresh_result or {}),
         "popularity": dict(
             popularity_model
             or {
@@ -1136,6 +1359,7 @@ def build_institutional_interest_model(query: str, holder_rows: pd.DataFrame | N
     rows = _records(holder_rows)
     holders: list[dict[str, Any]] = []
     for row in rows:
+        identity = _resolved_holding_identity(row)
         holders.append(
             {
                 "manager_name": _text(row.get("manager_name")) or "Unknown manager",
@@ -1143,7 +1367,7 @@ def build_institutional_interest_model(query: str, holder_rows: pd.DataFrame | N
                 "period_of_report": _date_label(row.get("period_of_report")),
                 "filing_date": _date_label(row.get("filing_date")),
                 "issuer_name": _text(row.get("issuer_name")),
-                "holding_symbol": _text(row.get("holding_symbol")),
+                "holding_symbol": identity.get("symbol"),
                 "cusip": _text(row.get("cusip")),
                 "reported_value": _num(row.get("reported_value")),
                 "shares_or_principal_amount": _num(row.get("shares_or_principal_amount")),
@@ -1235,7 +1459,11 @@ def load_institutional_portfolio_model(cik: str) -> dict[str, Any]:
 
 def load_institutional_interest_model(query: str, *, limit: int = 100) -> dict[str, Any]:
     try:
-        rows = load_institutional_13f_interest(query, limit=limit)
+        fallback_cusip = _curated_cusip_for_symbol(query)
+        lookup_query = fallback_cusip or query
+        rows = load_institutional_13f_interest(lookup_query, limit=limit)
+        if rows.empty and fallback_cusip:
+            rows = load_institutional_13f_interest(query, limit=limit)
     except Exception as exc:
         return {"status": "error", "message": str(exc), "model": build_institutional_interest_model(query, pd.DataFrame())}
     return {"status": "ok", "message": "", "model": build_institutional_interest_model(query, rows)}

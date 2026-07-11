@@ -9136,3 +9136,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Institutional Portfolios는 수집 화면이 아니라 실제 탐색 workbench여야 하며, 클릭 후 로딩 상태와 fallback이 명확해야 한다.
 - Analysis result: 변화 board의 증가 / 감소 / 더 이상 보고 안 됨 0은 local DB에 이전 filing이 없어서 생긴 상태다. 기존 raw holdings display는 같은 CUSIP가 여러 row로 보일 수 있고, CUSIP-symbol map은 일부 오염 가능성이 있어 보수적 표시가 필요했다.
 - Follow-up: service read model에서 CUSIP-level aggregation, report-period performance coverage, selected-security chart payload, popularity ranking payload를 추가했다. React workbench는 selected-security detail, ranking tab, scroll preserve, pending timeout fallback을 제공한다.
+
+### 2026-07-12 KST - 보유기관조회에서 그래프가 안 나오는 이유
+
+- User request: 보유 기관 조회에서 그래프가 안 나오는 원인을 DB까지 확인하고, 자동 수집이 어렵다면 버튼 클릭으로 수집하게 수정해달라고 요청함.
+- Interpreted goal: 차트 empty가 가격 DB 부재인지, 13F ticker mapping 문제인지, UI event 문제인지 분리하고 실제 사용 흐름 안에서 해결해야 함.
+- Analysis result: Berkshire KO/BAC/CVX/OXY/GOOGL 등은 13F holding row에 ticker가 없지만 가격 DB row는 이미 있었다. 따라서 1차 원인은 수집 부재가 아니라 CUSIP-symbol resolution gap이었다. 추가로 generic symbol lookup은 오염된 map row를 탈 수 있어 curated symbol은 curated CUSIP 우선 조회가 필요했다.
+- Follow-up: service-level safe CUSIP resolver, selected-security price action payload, React price collection button, Python `run_collect_ohlcv` event boundary를 추가했다.

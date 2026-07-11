@@ -6,7 +6,7 @@ from typing import Any, Callable
 import pandas as pd
 import streamlit as st
 
-from app.jobs.ingestion_jobs import run_collect_sec_13f_dataset
+from app.jobs.ingestion_jobs import run_collect_ohlcv, run_collect_sec_13f_dataset
 from app.services.institutional_portfolios import (
     INSTITUTIONAL_MANAGER_WATCHLIST,
     INSTITUTIONAL_PORTFOLIO_CAVEATS,
@@ -345,6 +345,16 @@ def _consume_workbench_event(payload: dict[str, Any], last_event_key: str | None
     return True, event_key
 
 
+def _price_refresh_result_payload(symbol: str, result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "symbol": symbol,
+        "status": str(result.get("status") or ""),
+        "message": str(result.get("message") or ""),
+        "rows_written": int(result.get("rows_written") or 0),
+        "finished_at": result.get("finished_at"),
+    }
+
+
 def _handle_workbench_event(event: dict[str, Any] | None) -> None:
     payload = _workbench_event_payload(event)
     if not payload:
@@ -372,15 +382,38 @@ def _handle_workbench_event(event: dict[str, Any] | None) -> None:
             st.session_state["institutional_interest_query_needs_load"] = False
             st.session_state["institutional_interest_model_cache"] = {}
             st.session_state["institutional_popularity_needs_load"] = False
+            st.session_state["institutional_price_refresh_result"] = {}
             st.rerun()
     if event_name == "drilldown":
         query = str(payload.get("query") or "").strip()
         if query and query != st.session_state.get("institutional_interest_query"):
             st.session_state["institutional_interest_query"] = query
             st.session_state["institutional_interest_query_needs_load"] = True
+            st.session_state["institutional_price_refresh_result"] = {}
             st.rerun()
     if event_name == "open_popularity":
         st.session_state["institutional_popularity_needs_load"] = True
+        st.rerun()
+    if event_name == "collect_price_history":
+        symbol = str(payload.get("symbol") or "").strip().upper()
+        start_date = str(payload.get("start_date") or "").strip() or None
+        if not symbol:
+            st.session_state["institutional_price_refresh_result"] = {
+                "symbol": "",
+                "status": "failed",
+                "message": "가격 수집에 사용할 ticker가 없습니다.",
+                "rows_written": 0,
+            }
+            st.rerun()
+        with st.spinner(f"{symbol} 가격 데이터 수집 중..."):
+            result = run_collect_ohlcv(
+                [symbol],
+                start=start_date,
+                period="1y",
+                interval="1d",
+                execution_profile="managed_safe",
+            )
+        st.session_state["institutional_price_refresh_result"] = _price_refresh_result_payload(symbol, dict(result))
         st.rerun()
 
 
@@ -511,6 +544,7 @@ def render_institutional_portfolios_page(
         interest_model=interest_model,
         selected_security_model=selected_security_model,
         popularity_model=popularity_model,
+        price_refresh_result=dict(st.session_state.get("institutional_price_refresh_result") or {}),
         mode="live",
         refresh_status=refresh_status,
     )

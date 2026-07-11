@@ -378,6 +378,81 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertIn("monthly", detail["charts"])
         self.assertTrue(detail["charts"]["daily"]["points"])
 
+    def test_portfolio_model_resolves_safe_curated_cusip_symbols_for_charts(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model
+
+        latest_holdings = pd.DataFrame(
+            [
+                {
+                    "cusip": "191216100",
+                    "holding_symbol": None,
+                    "issuer_name": "COCA COLA CO",
+                    "reported_value": 1200,
+                    "shares_or_principal_amount": 40,
+                    "sector": None,
+                    "industry": None,
+                },
+                {
+                    "cusip": "594918104",
+                    "holding_symbol": None,
+                    "issuer_name": "ABBVIE INC",
+                    "reported_value": 300,
+                    "shares_or_principal_amount": 3,
+                    "sector": None,
+                    "industry": None,
+                },
+            ]
+        )
+
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=latest_holdings,
+            previous_filing=None,
+            previous_holdings=pd.DataFrame(),
+        )
+
+        by_cusip = {row["cusip"]: row for row in model["holdings"]}
+        self.assertEqual(by_cusip["191216100"]["holding_symbol"], "KO")
+        self.assertEqual(by_cusip["191216100"]["symbol_source"], "curated_13f_cusip_seed")
+        self.assertEqual(by_cusip["191216100"]["sector"], "Consumer Defensive")
+        self.assertIsNone(by_cusip["594918104"]["holding_symbol"])
+
+    def test_selected_security_model_exposes_price_collection_action_when_chart_missing(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_selected_security_model
+
+        portfolio = build_institutional_portfolio_model(
+            manager={"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=pd.DataFrame(
+                [
+                    {
+                        "cusip": "191216100",
+                        "holding_symbol": None,
+                        "issuer_name": "COCA COLA CO",
+                        "reported_value": 1200,
+                        "shares_or_principal_amount": 40,
+                    }
+                ]
+            ),
+            previous_filing=None,
+            previous_holdings=pd.DataFrame(),
+        )
+
+        detail = build_institutional_selected_security_model(
+            portfolio_model=portfolio,
+            query="KO",
+            interest_model={"holders": [], "holder_count": 0},
+            price_history=pd.DataFrame(),
+        )
+
+        self.assertEqual(detail["status"], "ok")
+        self.assertEqual(detail["security"]["symbol"], "KO")
+        self.assertFalse(detail["charts"]["daily"]["points"])
+        self.assertEqual(detail["price_action"]["action_id"], "collect_price_history")
+        self.assertEqual(detail["price_action"]["symbol"], "KO")
+        self.assertTrue(detail["price_action"]["available"])
+
     def test_popularity_model_ranks_stocks_by_report_period_holder_count(self) -> None:
         from app.services.institutional_portfolios import build_institutional_popularity_model
 
@@ -455,6 +530,83 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(model["holders"][0]["manager_name"], "BERKSHIRE HATHAWAY INC")
         self.assertEqual(model["holders"][0]["weight_pct"], 42.5)
         self.assertTrue(any("CUSIP-symbol mapping" in caveat for caveat in model["caveats"]))
+
+    def test_institutional_interest_model_applies_safe_curated_symbol_display(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_interest_model
+
+        model = build_institutional_interest_model(
+            "KO",
+            pd.DataFrame(
+                [
+                    {
+                        "manager_name": "BERKSHIRE HATHAWAY INC",
+                        "cik": "0001067983",
+                        "period_of_report": "2026-03-31",
+                        "filing_date": "2026-05-15",
+                        "cusip": "191216100",
+                        "holding_symbol": None,
+                        "issuer_name": "COCA COLA CO",
+                        "reported_value": 1200,
+                        "shares_or_principal_amount": 40,
+                        "weight_pct": 11.5,
+                    }
+                ]
+            ),
+        )
+
+        self.assertEqual(model["holders"][0]["holding_symbol"], "KO")
+
+    def test_institutional_interest_loader_prefers_curated_cusip_for_curated_symbol_query(self) -> None:
+        import app.services.institutional_portfolios as service
+
+        calls: list[str] = []
+        original_loader = service.load_institutional_13f_interest
+
+        def fake_loader(query: str, *, limit: int = 100) -> pd.DataFrame:
+            calls.append(query)
+            if query == "191216100":
+                return pd.DataFrame(
+                    [
+                        {
+                            "manager_name": "BERKSHIRE HATHAWAY INC",
+                            "cik": "0001067983",
+                            "period_of_report": "2026-03-31",
+                            "filing_date": "2026-05-15",
+                            "cusip": "191216100",
+                            "holding_symbol": None,
+                            "issuer_name": "COCA COLA CO",
+                            "reported_value": 1200,
+                            "shares_or_principal_amount": 40,
+                            "weight_pct": 11.5,
+                        }
+                    ]
+                )
+            return pd.DataFrame(
+                [
+                    {
+                        "manager_name": "WRONG MAP CAPITAL",
+                        "cik": "0000000001",
+                        "period_of_report": "2026-03-31",
+                        "filing_date": "2026-05-15",
+                        "cusip": "031652100",
+                        "holding_symbol": "AMKR",
+                        "issuer_name": "AMKOR TECHNOLOGY INC",
+                        "reported_value": 10,
+                        "shares_or_principal_amount": 1,
+                        "weight_pct": 1.0,
+                    }
+                ]
+            )
+
+        try:
+            service.load_institutional_13f_interest = fake_loader
+            model = service.load_institutional_interest_model("KO")["model"]
+        finally:
+            service.load_institutional_13f_interest = original_loader
+
+        self.assertEqual(calls, ["191216100"])
+        self.assertEqual(model["holders"][0]["issuer_name"], "COCA COLA CO")
+        self.assertEqual(model["holders"][0]["holding_symbol"], "KO")
 
     def test_visual_workbench_payload_prioritizes_portfolio_chart_and_change_boards(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_workbench_payload
@@ -790,6 +942,19 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("기관 보유 랭킹", component_source)
         self.assertIn("ip-security-detail", component_source)
         self.assertIn("ip-performance-panel", component_source)
+
+    def test_selected_security_price_collection_button_routes_through_python_job_boundary(self) -> None:
+        page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")
+        component_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("run_collect_ohlcv", page_source)
+        self.assertIn('event_name == "collect_price_history"', page_source)
+        self.assertIn("institutional_price_refresh_result", page_source)
+        self.assertIn('id: "collect_price_history"', component_source)
+        self.assertIn("가격 데이터 수집", component_source)
+        self.assertIn("ip-price-action", component_source)
 
 
 if __name__ == "__main__":

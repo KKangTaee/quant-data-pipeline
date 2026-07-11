@@ -79,6 +79,24 @@ type ChartPoint = {
   price: number;
 };
 
+type PriceAction = {
+  action_id: "collect_price_history" | string;
+  label: string;
+  symbol?: string | null;
+  start_date?: string | null;
+  available: boolean;
+  needs_collection?: boolean;
+  reason?: string;
+};
+
+type PriceRefreshResult = {
+  symbol?: string | null;
+  status?: string;
+  message?: string;
+  rows_written?: number;
+  finished_at?: string | null;
+};
+
 type SelectedSecurity = {
   status?: "ok" | "empty" | string;
   query?: string;
@@ -96,6 +114,7 @@ type SelectedSecurity = {
     shares_label: string;
   };
   charts?: Record<"daily" | "weekly" | "monthly", { label: string; points: ChartPoint[] }>;
+  price_action?: PriceAction;
   holders?: InterestHolder[];
   holder_count?: number;
   caveat?: string;
@@ -223,6 +242,7 @@ type WorkbenchPayload = {
   };
   selected_security?: SelectedSecurity;
   security_charts?: Record<string, Record<"daily" | "weekly" | "monthly", { label: string; points: ChartPoint[] }>>;
+  price_refresh_result?: PriceRefreshResult;
   popularity?: PopularityPayload;
   source_caveats: {
     visible: boolean;
@@ -247,6 +267,7 @@ type PendingAction =
   | { kind: "manager"; cik: string; label: string }
   | { kind: "interest"; query: string; label: string }
   | { kind: "popularity"; label: string }
+  | { kind: "price"; symbol: string; label: string }
   | { kind: "refresh"; label: string };
 
 function syncFrameHeightSoon() {
@@ -419,16 +440,32 @@ function SecurityDetail({
   detail,
   interest,
   notice,
+  priceRefresh,
+  disabled,
+  onCollectPrice,
 }: {
   detail?: SelectedSecurity;
   interest: WorkbenchPayload["interest"];
   notice?: string | null;
+  priceRefresh?: PriceRefreshResult;
+  disabled?: boolean;
+  onCollectPrice: (action: PriceAction) => void;
 }) {
   const [chartMode, setChartMode] = useState<"daily" | "weekly" | "monthly">("daily");
   const charts = detail?.charts;
   const chart = charts?.[chartMode];
   const holders = detail?.holders?.length ? detail.holders : interest.holders;
   const holderCount = detail?.holder_count ?? interest.holder_count;
+  const chartHasPoints = Boolean(chart?.points && chart.points.length >= 2);
+  const priceAction = detail?.price_action;
+  const selectedSymbol = String(detail?.security?.symbol || "").toUpperCase();
+  const refreshSymbol = String(priceRefresh?.symbol || "").toUpperCase();
+  const priceRefreshText =
+    priceRefresh?.status && selectedSymbol && refreshSymbol === selectedSymbol
+      ? `${priceRefresh.status === "success" || priceRefresh.status === "partial_success" ? "가격 데이터 수집 완료" : "가격 데이터 수집 결과"} · ${
+          priceRefresh.rows_written?.toLocaleString?.() || 0
+        } rows`
+      : "";
 
   if (!interest.query && detail?.status !== "ok") {
     return <div className="ip-interest-empty">{interest.empty_text}</div>;
@@ -473,6 +510,13 @@ function SecurityDetail({
             ))}
           </div>
           <MiniLineChart points={chart?.points || []} />
+          {!chartHasPoints && priceAction?.available ? (
+            <button type="button" className="ip-price-action" disabled={disabled} onClick={() => onCollectPrice(priceAction)}>
+              {priceAction.label || "가격 데이터 수집"}
+            </button>
+          ) : null}
+          {!chartHasPoints && priceAction?.reason ? <p className="ip-price-reason">{priceAction.reason}</p> : null}
+          {priceRefreshText ? <p className="ip-price-result">{priceRefreshText}</p> : null}
           <p className="ip-note">{detail?.caveat}</p>
         </div>
         <div className="ip-holder-panel">
@@ -593,6 +637,13 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       setPendingAction(null);
       setActionNotice(null);
     }
+    if (
+      pendingAction.kind === "price" &&
+      String(payload.price_refresh_result?.symbol || "").toUpperCase() === pendingAction.symbol
+    ) {
+      setPendingAction(null);
+      setActionNotice(null);
+    }
   }, [payload, pendingAction]);
 
   useEffect(() => {
@@ -603,6 +654,8 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
       setActionNotice(
         pendingAction.kind === "interest"
           ? "서버 응답이 지연되어 우선 현재 포트폴리오 row 기준 상세를 표시합니다. 보유 기관 리스트는 응답이 오면 자동으로 갱신됩니다."
+          : pendingAction.kind === "price"
+            ? "가격 수집 응답이 지연되고 있습니다. 수집이 끝나면 차트가 자동으로 갱신됩니다."
           : "서버 응답이 지연되고 있습니다. 화면은 멈추지 않도록 로딩 표시를 해제했습니다."
       );
       setPendingAction(null);
@@ -640,6 +693,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     }
     const chartKey = String(row.symbol || "").toUpperCase();
     const fallbackCharts = chartKey ? payload.security_charts?.[chartKey] : undefined;
+    const hasFallbackChart = Boolean(
+      fallbackCharts && Object.values(fallbackCharts).some((item) => (item.points || []).length >= 2)
+    );
     return {
       status: "ok",
       query,
@@ -658,6 +714,15 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         daily: { label: "일봉", points: [] },
         weekly: { label: "주봉", points: [] },
         monthly: { label: "월봉", points: [] },
+      },
+      price_action: {
+        action_id: "collect_price_history",
+        label: hasFallbackChart ? "가격 데이터 새로고침" : "가격 데이터 수집",
+        symbol: row.symbol || null,
+        start_date: payload.hero.latest_report_period,
+        available: Boolean(row.symbol),
+        needs_collection: !hasFallbackChart,
+        reason: hasFallbackChart ? "저장된 가격 DB 기준 차트가 표시 중입니다." : "저장된 가격 row가 없어 차트가 비어 있습니다.",
       },
       holders: payload.interest.holders,
       holder_count: payload.interest.holder_count,
@@ -714,6 +779,16 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     sendEvent({ id: "open_popularity" });
   };
 
+  const handlePriceCollect = (action: PriceAction) => {
+    const symbol = String(action.symbol || "").toUpperCase();
+    if (!symbol || !action.available) {
+      return;
+    }
+    setActionNotice(null);
+    setPendingAction({ kind: "price", symbol, label: `${symbol} 가격 데이터 수집 중` });
+    sendEvent({ id: "collect_price_history", symbol, start_date: action.start_date || payload.hero.latest_report_period });
+  };
+
   const handleRefreshOpen = () => {
     setActionNotice(null);
     setPendingAction({ kind: "refresh", label: "13F 데이터 갱신 설정을 여는 중" });
@@ -765,7 +840,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
                   ? "종목 상세 불러오는 중"
                   : pendingAction.kind === "popularity"
                     ? "기관 보유 랭킹 불러오는 중"
-                    : "갱신 설정 여는 중"}
+                    : pendingAction.kind === "price"
+                      ? "가격 데이터 수집 중"
+                      : "갱신 설정 여는 중"}
             </strong>
             <em>{pendingAction.label}</em>
           </div>
@@ -945,6 +1022,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               detail={localSecurityDetail}
               interest={{ ...payload.interest, query: payload.interest.query || localSelectedQuery }}
               notice={actionNotice}
+              priceRefresh={payload.price_refresh_result}
+              disabled={Boolean(pendingAction)}
+              onCollectPrice={handlePriceCollect}
             />
           </section>
         ) : null}
