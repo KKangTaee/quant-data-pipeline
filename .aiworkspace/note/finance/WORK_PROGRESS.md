@@ -6007,3 +6007,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - React lower detail 영역은 expander 5개 대신 `근거 상세`, `저장 경계`, `개선 후보`, `Review 처리`, `Monitoring` 탭과 단일 panel로 렌더링한다.
 - Python score / gate / route / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
 - QA: RED/GREEN source contract, focused service / React contract 51개, py_compile, npm build, diff check, Browser QA tab click 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.
+
+## 2026-07-11 - Final Review Decision Surface Consolidation V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-decision-surface-consolidation-v1-20260711/`에서 하단 근거 탭, REVIEW trace, 다음 실험, 최종 판단 흐름 1차~4차를 완료했다.
+- 연결된 세 탭 shell, 한국어 세부 점수, stored audit trace와 정성 판단 구분, 상위 3개 counterfactual 가설을 적용했다.
+- standalone Decision Cockpit / 반복 Save Readiness / disabled order action을 제거하고 Python-owned 통합 `판단 기록`으로 정리했다.
+- service 53개 / page 8개 test, React build, py_compile, diff check, Browser QA를 통과했으며 generated screenshot과 run history는 stage하지 않는다.

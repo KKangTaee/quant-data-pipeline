@@ -9252,3 +9252,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: first-read 아래 검산용 근거를 한 번에 펼치는 목록이 아니라, 사용자가 관심 있는 상세 범주 하나를 선택해 읽는 tabbed detail panel로 바꿔야 함.
 - Analysis result: expander는 여러 섹션을 동시에 열 수 있지만 화면 높이를 늘리고 제목 / 열기 버튼 반복을 만든다. 현재 흐름에서는 탭이 세부 근거 탐색 부담을 줄인다.
 - Follow-up: React investment report의 lower detail 영역을 `DetailTabs`로 교체했고, source contract는 old `detail-disclosure` class를 금지한다. 탭 상태는 React local state이며 Python read model, score / gate / save / handoff / provider / registry boundary는 유지했다.
+
+### 2026-07-11 - Final Review 하단 근거와 최종 판단은 하나의 사용자 흐름으로 읽혀야 한다
+
+- User request: 사용자가 점수 / REVIEW / 대안 실험 탭의 연결감과 목적, 비어 있는 REVIEW 근거, Decision Cockpit 필요성, Final Decision Action 위치와 정보량을 분석한 뒤 단계별 개발을 승인함.
+- Interpreted goal: 투자 검토서에서 점수 이유와 남은 판단을 확인한 뒤, 별도 중복 요약을 거치지 않고 최종 판단을 기록할 수 있어야 한다.
+- Analysis result: REVIEW 빈칸은 재승격 문제가 아니라 summary card와 stored audit row 사이 adapter 공백이었다. 대안 실험은 자동 실행 기능이 아닌 후속 counterfactual 가설이고, Cockpit read model은 필요하지만 standalone UI는 투자 검토서와 중복됐다.
+- Follow-up: stored audit trace adapter, 상위 3개 정형 실험 가설, connected tabs와 통합 판단 기록을 구현했다. React는 표시만 맡고 Python이 gate / trace / 저장 / Monitoring handoff를 계속 소유한다.

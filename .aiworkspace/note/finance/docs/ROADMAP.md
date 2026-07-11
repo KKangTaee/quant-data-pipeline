@@ -9,7 +9,14 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed Final Review guidance actionability task는 `.aiworkspace/note/finance/tasks/active/final-review-guidance-actionability-v1-20260711/`다.
+Latest completed Final Review decision surface consolidation task는 `.aiworkspace/note/finance/tasks/active/final-review-decision-surface-consolidation-v1-20260711/`다.
+
+- 목적: 하단 근거 탭의 시각적 단절, REVIEW trace 빈칸, 목적이 불명확한 대안 실험, 투자 검토서와 중복되는 Decision Cockpit / Final Decision Action을 하나의 판단 흐름으로 정리한다.
+- 주요 변경: 하단을 연결된 `점수 근거 / 남은 판단 근거 / 다음 실험 아이디어` shell로 바꾸고 세부 점수명을 한국어로 정리했다. Level2 summary는 module별 stored audit row와 연결해 measured / derived / qualitative / missing contract로 구분한다. 다음 실험은 적용 가능한 상위 3개만 `바꿀 것 / 같게 둘 것 / 확인할 것`으로 표시한다.
+- 판단 흐름: standalone Decision Cockpit과 반복 Save Readiness / disabled order action은 visible flow에서 제거했다. Python selection-readiness model은 유지하고 `판단 기록`이 상태 / 차단 수 / 권장 판단 / route / 사유 / 저장 CTA를 한 번에 보여준다.
+- QA: Final Review evidence service 53개, page contract 8개, React build, py_compile, `git diff --check`, Browser QA를 통과했다. registry / saved / run history / QA screenshot은 변경 또는 stage하지 않았다.
+
+Previous completed Final Review guidance actionability task는 `.aiworkspace/note/finance/tasks/active/final-review-guidance-actionability-v1-20260711/`다.
 
 - 목적: 모든 패턴이 비슷한 `참고` 문장으로 보이고 Level2 보강 지시가 Final Review 행동처럼 노출되던 문제를 해결해, 사용자가 현재 판단과 다음 행동을 바로 읽게 한다.
 - 주요 변경: 10개 패턴을 named evidence adapter 기반 `판단 가능 / 조건부 추적 / 추가 검증 필요 / 적용 제외`로 판정하고 first-read를 최대 6개로 제한했다. 각 카드는 `현재 진단 / 의미 / 변화 조건 / 다음 행동`을 표시하고 source / 기준일 / technical path는 접힌 상세로 이동했다. 총평 아래에는 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 배치했다.
