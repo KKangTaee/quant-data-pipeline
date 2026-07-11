@@ -12474,8 +12474,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("build_final_review_investment_report", page_source)
         self.assertIn("render_final_review_investment_report", page_source)
         self.assertIn("점수 근거", page_source)
-        self.assertIn("REVIEW 근거", page_source)
-        self.assertIn("대안 실험 후보", page_source)
+        self.assertIn("남은 판단 근거", page_source)
+        self.assertIn("다음 실험 아이디어", page_source)
         self.assertNotIn('st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "약점 개선안"])', page_source)
         self.assertIn("Level2 REVIEW", page_source)
 
@@ -12579,12 +12579,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("_render_candidate_board(candidate_contexts)", candidate_selection_area)
         self.assertNotIn('eyebrow="Step ', workspace_body)
         investment_report_area = workspace_body.split("investment_report = build_final_review_investment_report", 1)[1]
-        investment_report_area = investment_report_area.split('eyebrow="Selection Readiness"', 1)[0]
+        investment_report_area = investment_report_area.split('eyebrow="최종 판단"', 1)[0]
         self.assertNotIn('eyebrow="Investment Report"', workspace_body)
         self.assertNotIn("with st.container(border=True):", investment_report_area)
         self.assertIn("_render_investment_report(", investment_report_area)
-        self.assertIn('eyebrow="Selection Readiness"', workspace_body)
-        self.assertIn('eyebrow="Decision Record"', workspace_body)
+        self.assertNotIn('eyebrow="Selection Readiness"', workspace_body)
+        self.assertNotIn('eyebrow="Decision Record"', workspace_body)
+        self.assertIn('eyebrow="최종 판단"', workspace_body)
         self.assertIn('eyebrow="Evidence Appendix"', workspace_body)
 
         helper_body = page_source.split("def _render_candidate_selection_panel", 1)[1]
@@ -12629,13 +12630,17 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         selection_position = workspace_body.index("candidate_selection = _render_candidate_selection_panel")
         confirmation_guard_position = workspace_body.index('if not bool(candidate_selection.get("is_confirmed"))')
         report_build_position = workspace_body.index("investment_report = build_final_review_investment_report")
-        cockpit_position = workspace_body.index('title="Decision Cockpit"')
-        decision_action_position = workspace_body.index('title="Final Decision Action"')
+        decision_position = workspace_body.index('title="판단 기록"')
 
         self.assertLess(selection_position, confirmation_guard_position)
         self.assertLess(confirmation_guard_position, report_build_position)
-        self.assertLess(report_build_position, cockpit_position)
-        self.assertLess(cockpit_position, decision_action_position)
+        self.assertLess(report_build_position, decision_position)
+        self.assertNotIn('_render_decision_cockpit(cockpit)', workspace_body)
+        self.assertNotIn('title="Final Decision Action"', workspace_body)
+        self.assertNotIn('title="Final Review Save Readiness"', workspace_body)
+        self.assertNotIn('"Live Approval / Order"', workspace_body)
+        self.assertIn('"모니터링 후보로 선정"', workspace_body)
+        self.assertIn('"판단 근거와 저장 경계"', workspace_body)
 
     def test_final_review_first_read_excludes_market_sentiment_panel(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")

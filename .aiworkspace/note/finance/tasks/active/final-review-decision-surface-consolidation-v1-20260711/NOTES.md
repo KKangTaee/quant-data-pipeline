@@ -8,3 +8,5 @@
 - audit Target이 없는 경우 Evidence / Expected Check를 `판단 근거`로 표시하고 수치 threshold로 오해시키지 않는다.
 - 다음 실험은 적용 가능한 패턴 중 salience 상위 3개만 표시하고 `바꿀 것 / 같게 둘 것 / 확인할 것`을 제공한다.
 - 다음 실험은 설정 아이디어이며 자동 실행, 점수 변경, strategy variant 저장을 하지 않는다.
+- Decision Cockpit의 read model은 권장 route / gate / blocker 계산에 계속 사용하고 standalone visible section만 제거했다.
+- 최종 판단은 상태, 권장 판단, route 선택, 판단 사유, 저장 CTA를 한 section에 두며 기술 checklist와 ID는 접힌 상세로 내렸다.

@@ -143,7 +143,7 @@ FINAL_REVIEW_STATUS_DISPLAY = {
 }
 FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
-        "reason": "Decision Cockpit과 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Portfolio Monitoring 추적 후보로 기록한다.",
+        "reason": "투자 검토서와 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Portfolio Monitoring 추적 후보로 기록한다.",
         "constraints": "실제 투자 전 투입 금액, 리밸런싱 규칙, 중단 / 재검토 기준, 세금 / 계좌 조건은 별도로 확인한다.",
         "next_action": "Operations > Portfolio Monitoring에서 read-only monitoring / recheck 기준을 확인한다.",
     },
@@ -1629,7 +1629,7 @@ def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
     if state == "SELECT_READY":
         return (
             "모니터링 후보 선정",
-            "모니터링 후보로 저장 가능한 상태입니다. Decision Cockpit을 확인한 뒤 Portfolio Monitoring 추적 후보로 저장합니다.",
+            "모니터링 후보로 저장 가능한 상태입니다. 투자 검토서와 선정 조건을 확인한 뒤 Portfolio Monitoring 추적 후보로 저장합니다.",
             "모니터링 후보 가능",
         )
     if state == "SELECT_BLOCKED":

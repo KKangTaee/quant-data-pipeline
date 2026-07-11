@@ -7,3 +7,5 @@
 - 2026-07-11: 2차 focused service test 3개, React component contract, React build, py_compile, git diff check를 통과했다.
 - 2026-07-11: 3차 10개 pattern catalog에 정형화한 experiment change를 추가하고 상위 3개 실험 가설 UI를 구성했다.
 - 2026-07-11: 3차 pattern service test 3개, React component contract, React build, py_compile, git diff check를 통과했다.
+- 2026-07-11: 4차 standalone Decision Cockpit과 반복 Save Readiness / disabled order action을 visible flow에서 제거하고 최종 판단 section으로 통합했다.
+- 2026-07-11: 4차 Final Review page / decision record focused unittest 10개, py_compile, git diff check를 통과했다.
