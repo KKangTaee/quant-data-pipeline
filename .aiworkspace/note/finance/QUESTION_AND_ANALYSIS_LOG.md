@@ -17,8 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
-  - Previous completed Final Review UX task is [final-review-investment-report-detail-tabs-v1-20260711](./tasks/active/final-review-investment-report-detail-tabs-v1-20260711/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
@@ -32,6 +32,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-11 - Final Review 점수와 Monitoring 방향은 근거 수준을 분리한다
+
+- User request: 투자 검토서 상단 중복 상태와 기술 용어를 줄이고, 총평 / 강점과 약점 / 향후 방향을 보여주며 Level2 REVIEW 감점 근거를 명확히 하라고 요청함.
+- Interpreted goal: 측정된 투자 매력, 근거 공백, 저장 / 추적 준비를 한 점수처럼 섞지 않고 사용자가 무엇을 믿고 무엇을 확인할지 구분해야 한다.
+- Analysis result: open REVIEW 개수는 투자 매력도를 자동 감점하지 않는다. Python service가 세 점수 축과 REVIEW trace를 만들고, 10개 패턴은 저장 evidence 수준에 따라 `supported / indicative / insufficient`로만 조건부 해석한다.
+- Follow-up: 1차~6차 구현 / QA / commit을 완료했다. 대안은 counterfactual backtest 전에는 점수 개선으로 예측하지 않으며 새 검증 / provider fetch / registry write / live action은 추가하지 않았다.
 
 ### 2026-07-11 - Final Review는 후보 선택과 검토서 확인을 분리한다
 

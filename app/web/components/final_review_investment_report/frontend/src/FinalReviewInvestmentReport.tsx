@@ -477,8 +477,6 @@ const formattedScore = (score: unknown): string => {
   return value.toFixed(1)
 }
 
-const listItems = (items: string[] | undefined): string[] => (items ?? []).map((item) => compact(item, "")).filter(Boolean)
-
 const field = <T,>(camel: T | undefined, snake: T | undefined): T | undefined => (camel !== undefined ? camel : snake)
 
 const badgeText = (value: unknown): string => {
@@ -845,7 +843,7 @@ function ScoreLimitList({ limits, constraints }: { limits: ScorecardLimit[]; con
 function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
   return (
     <article className="fr-invest-report__review-impacts">
-      <h5>Level2 REVIEW 점수 영향</h5>
+      <h5>REVIEW 근거와 반영 정책</h5>
       {impacts.length > 0 ? (
         impacts.map((impact, index) => {
           const scoreEffect = field(impact.scoreEffect, impact.score_effect)
@@ -901,13 +899,9 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const patternGuide = report.patternGuide ?? report.pattern_guide ?? {}
   const source = report.source ?? {}
   const tone = toneClass(recommendation.tone)
-  const monitoring = report.monitoringConditions ?? report.monitoring_conditions ?? {}
-  const triggers = listItems(field(monitoring.reviewTriggers, monitoring.review_triggers))
   const interpretationCards = field(report.interpretationCards, report.interpretation_cards) ?? []
   const watchItems = field(report.watchItems, report.watch_items) ?? report.weaknesses ?? []
   const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
-  const saveHandoff = report.saveHandoffSummary ?? report.save_handoff_summary ?? {}
-  const weaknessImprovement = report.weaknessImprovement ?? report.weakness_improvement ?? {}
   const level2Summary = level2Review.summary ?? {}
   const level2RoleSections = field(level2Review.roleSections, level2Review.role_sections) ?? []
   const reviewItemCount = Number(level2Summary.total ?? 0)
@@ -915,22 +909,12 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scorecardBand = field(scorecard.scoreBand, scorecard.score_band)
   const scorecardClassification = field(scorecard.classificationLabel, scorecard.classification_label)
   const scorecardDecision = field(scorecard.decisionLabel, scorecard.decision_label)
-  const scorecardMonitoringCandidate = field(scorecard.monitoringCandidate, scorecard.monitoring_candidate) === true
-  const scorecardPreCap = field(scorecard.preCapScore, scorecard.pre_cap_score)
   const scorecardDrivers = field(scorecard.scoreDrivers, scorecard.score_drivers) ?? {}
   const scorecardLimits = field(scorecard.scoreLimits, scorecard.score_limits) ?? []
   const routeConstraints = field(scorecard.routeConstraints, scorecard.route_constraints) ?? []
   const scorecardReviewImpacts = field(scorecard.reviewImpacts, scorecard.review_impacts) ?? []
   const headlineScores = field(scorecard.headlineScores, scorecard.headline_scores) ?? []
-  const judgmentRecord = saveHandoff.judgmentRecord ?? saveHandoff.judgment_record ?? {}
-  const monitoringHandoff = saveHandoff.monitoringHandoff ?? saveHandoff.monitoring_handoff ?? {}
-  const saveRecordType = field(saveHandoff.recordType, saveHandoff.record_type)
-  const improvementComparison = weaknessImprovement.comparison ?? {}
-  const improvementProposals = weaknessImprovement.proposals ?? []
-  const improvementCurrent = field(improvementComparison.currentScore, improvementComparison.current_score)
-  const improvementLow = field(improvementComparison.expectedScoreLow, improvementComparison.expected_score_low)
-  const improvementHigh = field(improvementComparison.expectedScoreHigh, improvementComparison.expected_score_high)
-  const improvementStatus = field(improvementComparison.verificationStatus, improvementComparison.verification_status)
+  const patternCards = patternGuide.cards ?? []
   const metaItems: MetaItem[] = [
     { label: "후보", value: compact(source.title) },
     { label: "확인 필요", value: `${reviewItemCount}개`, tone: reviewItemCount > 0 ? "warning" : "positive" },
@@ -938,13 +922,13 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const detailTabs: DetailTab[] = [
     {
       id: "score-evidence",
-      label: "근거 상세",
-      title: "최종 점수 체계",
+      label: "점수",
+      title: "점수 근거",
       children: (
         <section className="fr-invest-report__scorecard-detail">
           <div className="fr-invest-report__scorecard-head">
             <div>
-              <span>최종 점수 체계</span>
+              <span>투자 매력도 산정 근거</span>
               <h5>{compact(scorecardClassification, compact(recommendation.label))}</h5>
               <p>{compact(scorecard.basis)}</p>
             </div>
@@ -956,99 +940,50 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           </div>
           <div className="fr-invest-report__scorecard-meta">
             <span>{compact(scorecardDecision)}</span>
-            <span>{scorecardMonitoringCandidate ? "Monitoring 후보" : "Monitoring handoff 보류"}</span>
             <span>{compact(scorecard.classification)}</span>
-            <span>Pre-cap {formattedScore(scorecardPreCap)}</span>
+            <span>REVIEW 개수 자동 감점 없음</span>
           </div>
           <div className="fr-invest-report__scorecard-subtitle">세부 점수</div>
           <ScorecardDimensionList dimensions={scorecard.dimensions ?? []} />
           <div className="fr-invest-report__scorecard-subtitle">점수 영향</div>
           <div className="fr-invest-report__score-drivers">
-            <ScoreDriverList title="가산 요인" drivers={scorecardDrivers.positive ?? []} />
-            <ScoreDriverList title="감점 요인" drivers={scorecardDrivers.negative ?? []} />
+            <ScoreDriverList title="점수를 지지한 근거" drivers={scorecardDrivers.positive ?? []} />
+            <ScoreDriverList title="해석상 확인할 축" drivers={scorecardDrivers.negative ?? []} />
             <ScoreLimitList limits={scorecardLimits} constraints={routeConstraints} />
           </div>
-          <ReviewImpactList impacts={scorecardReviewImpacts} />
           <ScorecardCategoryList categories={scorecard.categories ?? []} />
         </section>
       ),
     },
     {
-      id: "save-boundary",
-      label: "저장 경계",
-      title: "저장 / Monitoring handoff",
+      id: "review-evidence",
+      label: "REVIEW",
+      title: "REVIEW 근거 추적",
       children: (
-        <section className="fr-invest-report__handoff-detail">
-          <div>
-            <span>저장 / Monitoring handoff</span>
-            <h5>{compact(judgmentRecord.label)}</h5>
-            <p>{compact(judgmentRecord.detail)}</p>
-          </div>
-          <div className="fr-invest-report__handoff-grid">
-            <article>
-              <span>Final Review 판단 저장</span>
-              <strong>{judgmentRecord.ready ? "Ready" : "Check"}</strong>
-              <p>{compact(saveRecordType)}</p>
-            </article>
-            <article>
-              <span>Portfolio Monitoring</span>
-              <strong>{monitoringHandoff.candidate ? "Handoff" : "Decision Only"}</strong>
-              <p>{compact(monitoringHandoff.detail)}</p>
-            </article>
-            <article>
-              <span>Order / Auto Rebalance</span>
-              <strong>Disabled</strong>
-              <p>Final Review는 판단 기록과 Monitoring 후보 handoff만 다룹니다.</p>
-            </article>
-          </div>
+        <section className="fr-invest-report__review-evidence-detail">
+          <p>각 항목의 관측값, 판단 기준, source, 기준일과 실제 반영 축을 함께 확인합니다.</p>
+          <ReviewImpactList impacts={scorecardReviewImpacts} />
         </section>
       ),
     },
     {
-      id: "improvement-candidates",
-      label: "개선 후보",
-      title: "약점 개선안",
+      id: "pattern-experiments",
+      label: "대안 실험",
+      title: "대안 실험 후보",
       children: (
-        <section className="fr-invest-report__improvement-detail">
-          <div className="fr-invest-report__improvement-head">
-            <div>
-              <span>약점 개선안</span>
-              <h5>현재 후보와 개선 기대 범위</h5>
-            </div>
-            <aside>
-              <strong>{formattedScore(improvementCurrent)}</strong>
-              <span>{formattedScore(improvementLow)} - {formattedScore(improvementHigh)}</span>
-              <small>{compact(improvementStatus)}</small>
-            </aside>
-          </div>
-          <div className="fr-invest-report__improvement-list">
-            {improvementProposals.map((proposal, index) => (
-              <article className="fr-invest-report__improvement-item" key={`${proposal.weakness ?? "proposal"}-${index}`}>
-                <h5>{compact(proposal.weakness)}</h5>
-                <p>{compact(field(proposal.currentGap, proposal.current_gap))}</p>
-                <strong>{compact(field(proposal.proposedChange, proposal.proposed_change))}</strong>
-                <small>{compact(field(proposal.verificationStep, proposal.verification_step))}</small>
+        <section className="fr-invest-report__experiment-detail">
+          <p>아래 항목은 점수 개선 예측이 아니라 별도 counterfactual backtest가 필요한 실험 후보입니다.</p>
+          <div className="fr-invest-report__experiment-list">
+            {patternCards.map((card, index) => (
+              <article key={`${card.key ?? "experiment"}-${index}`}>
+                <div><span>{compact(field(card.supportLabel, card.support_label))}</span><em>{String(index + 1).padStart(2, "0")}</em></div>
+                <h5>{compact(card.label)}</h5>
+                <p>{compact(field(card.experimentCandidate, card.experiment_candidate))}</p>
+                <small>{compact(card.question)}</small>
               </article>
             ))}
           </div>
         </section>
-      ),
-    },
-    {
-      id: "monitoring-conditions",
-      label: "Monitoring",
-      title: "Monitoring 조건",
-      children: (
-        <footer className="fr-invest-report__monitoring">
-          <div>
-            <span>Monitoring 조건</span>
-            <strong>{compact(field(monitoring.trackingBenchmark, monitoring.tracking_benchmark))}</strong>
-            <small>{compact(field(monitoring.reviewCadence, monitoring.review_cadence))}</small>
-          </div>
-          <ul>
-            {triggers.length > 0 ? triggers.map((trigger, index) => <li key={`${trigger}-${index}`}>{trigger}</li>) : <li>추적 trigger 없음</li>}
-          </ul>
-        </footer>
       ),
     },
   ]

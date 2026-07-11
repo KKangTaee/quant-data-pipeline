@@ -23,8 +23,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
-  - Previous completed Final Review UX task is [final-review-investment-report-detail-tabs-v1-20260711](./tasks/active/final-review-investment-report-detail-tabs-v1-20260711/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
   - Current active Practical Validation UI task is none.
@@ -38,6 +38,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Investment Report Redesign V1:
+  - 외부 Investment Report card와 중복 상태 / Handoff 기술 용어를 제거하고 투자 매력도 / 근거 신뢰도 / Monitoring 준비도를 분리했다.
+  - open REVIEW 개수 자동 감점 / cap을 제거하고 REVIEW trace, 총평 / 강점과 약점 / 저장 전 질문, 10개 조건부 패턴 가이드와 세 개 상세 탭을 구현했다.
+  - focused tests 53개, React build, py_compile, diff check, Browser QA를 통과했으며 generated screenshot과 run history는 stage하지 않았다.
 - Final Review Confirmed Review Flow V1:
   - stable key 후보 선택, visible Review Queue 제거, `최종 검토서 확인` session boundary와 stale report 차단을 1차~2차로 완료했다.
   - Level2 REVIEW 다섯 role은 `Final Review 확인 필요`에서 점수 반영 / 저장 전 확인 / Monitoring 이관 / blocker 행동으로 읽으며 React는 표시만 맡는다.

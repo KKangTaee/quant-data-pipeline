@@ -977,7 +977,10 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
     recommendation = dict(report.get("recommendation") or {})
     score = dict(report.get("score") or {})
     summary = dict(report.get("summary") or {})
-    monitoring = dict(report.get("monitoring_conditions") or {})
+    scorecard = dict(report.get("scorecard") or {})
+    narrative = dict(report.get("report_narrative") or {})
+    pattern_guide = dict(report.get("pattern_guide") or {})
+    assessment = dict(narrative.get("total_assessment") or {})
     render_fr_action_panel(
         title=str(summary.get("headline") or "Final Review 투자 검토서"),
         detail=str(summary.get("verdict") or "-"),
@@ -986,37 +989,22 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         route_detail=str(summary.get("next_action") or "-"),
         route_tone=str(recommendation.get("tone") or "neutral"),
         meta_items=[
-            {"label": "Score", "value": f"{float(score.get('value') or 0.0):.1f}"},
-            {"label": "Score Band", "value": score.get("label") or "-"},
-            {"label": "State", "value": recommendation.get("state_label") or "-"},
-            {"label": "Monitoring", "value": "Ready" if monitoring.get("handoff_ready") else "Blocked"},
+            {"label": "투자 매력도", "value": f"{float(score.get('value') or 0.0):.1f}"},
+            {"label": "판단 상태", "value": recommendation.get("state_label") or "-"},
         ],
     )
-    render_fr_lane_grid(
+    st.markdown(f"##### {assessment.get('label') or '총평'} · {assessment.get('headline') or '-'}")
+    st.write(str(assessment.get("detail") or "-"))
+    st.caption(str(narrative.get("boundary_note") or "-"))
+    render_badge_strip(
         [
             {
-                "kicker": "핵심 근거",
-                "title": str(summary.get("strongest_evidence") or "-"),
-                "status": len(report.get("strengths") or []),
-                "detail": "강점 근거",
-                "tone": "positive",
-            },
-            {
-                "kicker": "가장 큰 약점",
-                "title": str(summary.get("weakest_constraint") or "-"),
-                "status": len(report.get("weaknesses") or []),
-                "detail": "약점 / 보강 조건",
-                "tone": "warning" if report.get("weaknesses") else "positive",
-            },
-            {
-                "kicker": "Monitoring 조건",
-                "title": str(monitoring.get("tracking_benchmark") or "-"),
-                "status": len(monitoring.get("review_triggers") or []),
-                "detail": str(monitoring.get("review_cadence") or "-"),
-                "tone": "positive" if monitoring.get("handoff_ready") else "warning",
-            },
+                "label": item.get("label") or "-",
+                "value": f"{float(item.get('score') or 0.0):.0f}/100",
+                "tone": item.get("tone") or "neutral",
+            }
+            for item in list(scorecard.get("headline_scores") or [])
         ],
-        min_width=220,
     )
     disposition = dict(report.get("level2_review_disposition") or {})
     role_sections = list(disposition.get("role_sections") or [])
@@ -1051,63 +1039,45 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
     else:
         st.success("Final Review에서 추가로 확인할 Level2 REVIEW 항목이 없습니다.")
 
-    report_tabs = st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "약점 개선안"])
+    st.markdown("##### Monitoring 방향 가이드")
+    pattern_rows = [
+        {
+            "패턴": card.get("label") or "-",
+            "지원 수준": card.get("support_label") or "-",
+            "해석": card.get("conclusion") or "-",
+            "보강 필요": ", ".join(card.get("missing_signals") or []) or "없음",
+        }
+        for card in list(pattern_guide.get("cards") or [])
+    ]
+    if pattern_rows:
+        st.dataframe(pd.DataFrame(pattern_rows), width="stretch", hide_index=True)
+
+    report_tabs = st.tabs(["점수 근거", "REVIEW 근거", "대안 실험 후보"])
     with report_tabs[0]:
-        rows = list(report.get("strengths") or [])
-        if rows:
-            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        else:
-            st.info("표시할 강점 근거 없음")
-    with report_tabs[1]:
-        rows = list(report.get("weaknesses") or [])
-        if rows:
-            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        else:
-            st.success("선택 차단 약점 없음")
-    with report_tabs[2]:
-        interpretation_rows = [
-            dict(report.get("performance_interpretation") or {}),
-            dict(report.get("scenario_fit") or {}),
-            dict(report.get("expected_range_and_risk") or {}),
-            dict(report.get("benchmark_rationale") or {}),
-        ]
-        st.dataframe(pd.DataFrame(interpretation_rows), width="stretch", hide_index=True)
-    with report_tabs[3]:
-        scorecard = dict(report.get("scorecard") or {})
         render_badge_strip(
             [
-                {"label": "Overall", "value": f"{float(scorecard.get('overall_score') or 0.0):.0f}/100", "tone": "positive" if float(scorecard.get("overall_score") or 0.0) >= 70 else "warning"},
+                {"label": "투자 매력도", "value": f"{float(scorecard.get('overall_score') or 0.0):.0f}/100", "tone": "positive" if float(scorecard.get("overall_score") or 0.0) >= 70 else "warning"},
                 {"label": "분류", "value": scorecard.get("classification_label") or "-", "tone": "neutral"},
-                {"label": "Route", "value": scorecard.get("decision_label") or "-", "tone": "neutral"},
-                {"label": "Monitoring", "value": "Yes" if scorecard.get("monitoring_candidate") else "No", "tone": "positive" if scorecard.get("monitoring_candidate") else "warning"},
+                {"label": "REVIEW 개수 감점", "value": "없음", "tone": "positive"},
             ]
         )
-        st.dataframe(pd.DataFrame(scorecard.get("categories") or []), width="stretch", hide_index=True)
-    with report_tabs[4]:
-        handoff_summary = dict(report.get("save_handoff_summary") or {})
-        judgment = dict(handoff_summary.get("judgment_record") or {})
-        monitoring = dict(handoff_summary.get("monitoring_handoff") or {})
-        render_badge_strip(
-            [
-                {"label": "Judgment Record", "value": judgment.get("label") or "-", "tone": "positive" if judgment.get("ready") else "warning"},
-                {"label": "Monitoring Handoff", "value": monitoring.get("label") or "-", "tone": "positive" if monitoring.get("candidate") else "warning"},
-                {"label": "Record Type", "value": handoff_summary.get("record_type") or "-", "tone": "neutral"},
-                {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-            ]
+        st.dataframe(pd.DataFrame(scorecard.get("dimensions") or []), width="stretch", hide_index=True)
+    with report_tabs[1]:
+        st.dataframe(
+            pd.DataFrame(scorecard.get("review_impacts") or []),
+            width="stretch",
+            hide_index=True,
         )
-        st.caption(str(monitoring.get("detail") or "-"))
-    with report_tabs[5]:
-        improvement = dict(report.get("weakness_improvement") or {})
-        comparison = dict(improvement.get("comparison") or {})
-        render_badge_strip(
-            [
-                {"label": "Current", "value": comparison.get("current_score", 0), "tone": "neutral"},
-                {"label": "Expected Low", "value": comparison.get("expected_score_low", 0), "tone": "warning"},
-                {"label": "Expected High", "value": comparison.get("expected_score_high", 0), "tone": "positive"},
-                {"label": "Verification", "value": comparison.get("verification_status") or "-", "tone": "warning"},
-            ]
-        )
-        st.dataframe(pd.DataFrame(improvement.get("proposals") or []), width="stretch", hide_index=True)
+    with report_tabs[2]:
+        st.caption("점수 개선 예측이 아니라 별도 counterfactual backtest가 필요한 실험 후보입니다.")
+        experiment_rows = [
+            {
+                "패턴": card.get("label") or "-",
+                "실험 후보": card.get("experiment_candidate") or "-",
+            }
+            for card in list(pattern_guide.get("cards") or [])
+        ]
+        st.dataframe(pd.DataFrame(experiment_rows), width="stretch", hide_index=True)
 
 
 def _render_investment_report(report: dict[str, Any], *, key: str) -> None:

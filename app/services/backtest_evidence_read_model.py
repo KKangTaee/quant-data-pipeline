@@ -2842,7 +2842,7 @@ def build_final_review_weakness_improvement_plan(
                 "weakness": title,
                 "current_gap": _safe_text(row.get("detail"), "-"),
                 "proposed_change": action,
-                "expected_effect": "selection blocker 또는 review burden을 줄여 Final Review 점수와 route confidence를 개선합니다.",
+                "expected_effect": "이 변경의 효과는 별도 재검증 전에는 점수 개선으로 추정하지 않습니다.",
                 "verification_step": f"{action} 이후 Practical Validation 검증 결과와 Final Review scorecard를 다시 비교합니다.",
                 "scope": "evidence_and_validation",
                 "auto_generate_strategy": False,
@@ -2860,17 +2860,15 @@ def build_final_review_weakness_improvement_plan(
                 "auto_generate_strategy": False,
             }
         )
-    expected_low = min(100, current_score + (2 if weakness_rows else 0))
-    expected_high = min(100, current_score + min(18, max(6, len(weakness_rows) * 6)) if weakness_rows else current_score)
     return {
         "schema_version": WEAKNESS_IMPROVEMENT_SCHEMA_VERSION,
         "proposals": proposals,
         "comparison": {
             "current_score": current_score,
-            "expected_score_low": expected_low,
-            "expected_score_high": expected_high,
             "weakness_count": len(weakness_rows),
-            "verification_status": "verification_required" if weakness_rows else "monitoring_required",
+            "score_projection_available": False,
+            "verification_status": "counterfactual_required" if weakness_rows else "monitoring_required",
+            "projection_note": "대안 적용 후 Practical Validation과 counterfactual backtest 전에는 예상 점수 범위를 제공하지 않습니다.",
         },
         "boundary": {
             "auto_generate_strategy": False,

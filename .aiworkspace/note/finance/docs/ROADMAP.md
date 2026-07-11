@@ -9,7 +9,14 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-confirmed-review-flow-v1-20260711/`다.
+Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-redesign-v1-20260711/`다.
+
+- 목적: 투자 검토서의 중복 상태 / 기술 용어 / 불명확한 REVIEW 감점과 반복 본문을 정리하고, 저장 evidence 범위 안에서 조건부 Monitoring 방향을 제시한다.
+- 주요 변경: 외부 Investment Report card를 제거하고 헤더를 단일 상태 / 투자 매력도 / 확인 필요 수로 줄였다. 투자 매력도, 근거 신뢰도, Monitoring 준비도를 분리하고 open REVIEW 개수 자동 감점 / cap을 제거했다. 총평, 강점 / 약점, 저장 전 질문과 10개 조건부 패턴 가이드를 first-read로 만들고 하단은 `점수 근거 / REVIEW 근거 / 대안 실험 후보` 세 탭으로 정리했다.
+- 판단 경계: Python service가 score 의미, REVIEW trace, 패턴 support state와 조건부 문구를 만들고 React는 표시만 한다. 패턴은 `supported / indicative / insufficient`만 사용하며 대안 배분은 counterfactual backtest 전에는 점수 개선으로 예측하지 않는다.
+- QA: focused tests 53개, React build, py_compile, `git diff --check`, Browser QA 확인 전후 / stale 차단 / Review Queue 제거 / 점수 축 / 패턴 가이드 / REVIEW와 대안 실험 탭을 확인했다.
+
+Previous completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-confirmed-review-flow-v1-20260711/`다.
 
 - 목적: label identity와 즉시 report 렌더 때문에 생기는 후보 오선택 / stale 혼동을 막고, Level2 REVIEW를 실제 확인 행동으로 읽게 했다.
 - 주요 변경: Final Review 후보 selector는 stable key를 사용하고 visible Review Queue를 제거했다. `최종 검토서 확인` 전에는 후보별 report / cockpit / decision action을 열지 않으며, 선택 변경 시 stale 경고와 함께 downstream surface를 숨긴다. 투자 검토서는 다섯 REVIEW role을 `Final Review 확인 필요`에서 `점수에 반영됨 / 저장 전 확인 / Monitoring 조건으로 넘김 / blocker`로 표시한다.
