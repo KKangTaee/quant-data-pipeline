@@ -2608,9 +2608,11 @@ def overview_ui_css() -> str:
 .ov-sector-breadth-map {
   margin: 0.44rem 0 0.74rem 0;
   padding: 0.58rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-left: 4px solid var(--ov-band-tone, var(--ov-mi-color-neutral));
-  border-radius: 0 var(--ov-mi-radius-panel) var(--ov-mi-radius-panel) 0;
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
     var(--ov-mi-color-surface);

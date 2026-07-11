@@ -611,8 +611,10 @@ body {
 }
 
 .mm-sector-breadth {
-  border: 1px solid #dbe4ef;
-  border-left: 4px solid var(--mm-sector-tone, #64748b);
+  border-top: 1px solid #dbe4ef;
+  border-bottom: 1px solid #dbe4ef;
+  border-left: 0;
+  border-right: 0;
   border-radius: 0;
   color: #111827;
   padding: 14px 16px 12px;
@@ -917,8 +919,8 @@ body {
 
   .mm-sector-breadth {
     background: #111827;
-    border-color: #334155;
-    border-left-color: var(--mm-sector-tone, #64748b);
+    border-top-color: #334155;
+    border-bottom-color: #334155;
     color: #e5e7eb;
   }
 

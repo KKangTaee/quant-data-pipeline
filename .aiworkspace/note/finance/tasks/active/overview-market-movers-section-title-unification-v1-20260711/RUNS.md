@@ -7,3 +7,5 @@
 - `py_compile` for changed Python/test files and `git diff --check` -> PASS.
 - Wider Overview combined run: 302/303 relevant tests passed; one unrelated pre-existing Sentiment source assertion (`payload.summary.metrics.map`) remains outside this task.
 - Browser QA on `http://localhost:8507`: external sector divider absent, one React sector component present, `SECTOR BREADTH / 섹터 / 시장 확산 맥락 / 정상 / 넓은 참여, 균형 리더십` order confirmed, legacy `시장 확산 지도` exact label count 0, console errors 0. Screenshot: `market-movers-section-title-unification-qa.png` (generated, not staged).
+- Border follow-up: focused border contracts 2건, Market Movers focused 79 tests, React production build, py_compile, diff check PASS.
+- Border Browser QA on `http://localhost:8507`: Ranking Board와 Sector Breadth 모두 top/bottom `1px solid`, left/right `0px`, radius `0px`; console errors 0. Screenshot: `market-movers-section-border-unification-qa.png` (generated, not staged).

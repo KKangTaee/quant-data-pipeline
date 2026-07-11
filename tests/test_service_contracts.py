@@ -10744,15 +10744,18 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("ov-sector-breadth-lanes", render_body)
         self.assertIn("ov-sector-breadth-boundary", render_body)
 
-    def test_market_movers_followup_uses_square_sector_breadth_map_rail(self) -> None:
+    def test_market_movers_followup_matches_sector_breadth_outer_border_to_ranking_board(self) -> None:
         common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
 
         map_block = common_source[common_source.index(".ov-sector-breadth-map {") :]
         map_block = map_block[: map_block.index(".ov-sector-breadth-head")]
 
-        self.assertIn("border-left: 4px solid var(--ov-band-tone", map_block)
-        self.assertIn("border-radius: 0 var(--ov-mi-radius-panel) var(--ov-mi-radius-panel) 0;", map_block)
-        self.assertNotIn("border-radius: var(--ov-mi-radius-panel);", map_block)
+        self.assertIn("border-top: 1px solid var(--ov-mi-border-faint);", map_block)
+        self.assertIn("border-bottom: 1px solid var(--ov-mi-border-faint);", map_block)
+        self.assertIn("border-left: 0;", map_block)
+        self.assertIn("border-right: 0;", map_block)
+        self.assertIn("border-radius: 0;", map_block)
+        self.assertNotIn("border-left: 4px", map_block)
 
     def test_market_movers_followup_uses_section_dividers_instead_of_markdown_headings(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
@@ -16182,6 +16185,13 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(react_source.count('className="mm-sector-breadth__status"'), 1)
         self.assertIn(".mm-sector-breadth", react_style)
         self.assertIn(".mm-sector-breadth__result", react_style)
+        react_map_block = react_style[react_style.index(".mm-sector-breadth {") :]
+        react_map_block = react_map_block[: react_map_block.index(".mm-sector-breadth__head")]
+        self.assertIn("border-top: 1px solid #dbe4ef;", react_map_block)
+        self.assertIn("border-bottom: 1px solid #dbe4ef;", react_map_block)
+        self.assertIn("border-left: 0;", react_map_block)
+        self.assertIn("border-right: 0;", react_map_block)
+        self.assertNotIn("border-left: 4px", react_map_block)
         self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", react_style)
         self.assertIn(".mm-sector-breadth__bar", react_style)
         self.assertNotIn("right: 50%", react_style)
