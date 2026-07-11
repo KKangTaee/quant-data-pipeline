@@ -2139,6 +2139,101 @@ def _review_trace_value(card: dict[str, Any], *keys: str) -> str:
     return "-"
 
 
+_FINAL_REVIEW_TRACE_SOURCES: dict[str, tuple[str, str]] = {
+    "data_coverage": ("data_coverage_audit", "데이터 품질 / 편향 통제 audit"),
+    "backtest_realism": ("backtest_realism_audit", "실전 운용 현실성 audit"),
+    "validation_efficacy": ("validation_efficacy_audit", "검증 방법론 강도 audit"),
+    "construction_risk": ("construction_risk_audit", "포트폴리오 구성 audit"),
+    "risk_contribution": ("risk_contribution_audit", "위험 기여 audit"),
+    "component_role_weight": ("component_role_weight_audit", "Component 역할 / 비중 audit"),
+    "provider_investability": ("provider_coverage", "ETF 운용사 evidence"),
+    "stress_robustness": ("robustness_validation", "Stress / sensitivity evidence"),
+}
+
+
+def _review_trace_row_status(row: dict[str, Any]) -> str:
+    return _review_trace_value(row, "Status", "Result Status", "Diagnostic Status", "status").upper()
+
+
+def _review_trace_row_observed(row: dict[str, Any]) -> str:
+    observed = _review_trace_value(row, "Current", "Summary", "Judgment", "Coverage", "current_value")
+    if observed != "-":
+        return observed
+    metric_parts = []
+    for key in ("CAGR", "MDD", "CAGR Delta", "MDD Delta", "Coverage Weight"):
+        value = row.get(key)
+        if value is None or value == "":
+            continue
+        if isinstance(value, (int, float)) and key != "Coverage Weight":
+            metric_parts.append(f"{key} {float(value) * 100:.2f}%")
+        else:
+            metric_parts.append(f"{key} {value}")
+    return " / ".join(metric_parts) or "-"
+
+
+def _review_trace_rows(validation: dict[str, Any], module_id: str) -> tuple[list[dict[str, str]], str]:
+    """Connect a Level2 summary card to stored audit rows without inventing thresholds."""
+
+    source_spec = _FINAL_REVIEW_TRACE_SOURCES.get(module_id)
+    if not source_spec:
+        return [], "-"
+    source_key, source_label = source_spec
+    source_payload = validation.get(source_key)
+    raw_rows: list[Any] = []
+    if module_id == "provider_investability":
+        provider = dict(source_payload) if isinstance(source_payload, dict) else {}
+        raw_rows = list(validation.get("provider_coverage_display_rows") or provider.get("display_rows") or [])
+    elif module_id == "stress_robustness":
+        robustness = dict(source_payload) if isinstance(source_payload, dict) else {}
+        raw_rows = [
+            *list(robustness.get("sensitivity_rows") or validation.get("sensitivity_rows") or []),
+            *list(robustness.get("stress_summary_rows") or validation.get("stress_window_rows") or []),
+        ]
+    else:
+        audit = dict(source_payload) if isinstance(source_payload, dict) else {}
+        raw_rows = list(audit.get("rows") or [])
+    non_pass_rows = [
+        dict(row or {})
+        for row in raw_rows
+        if isinstance(row, dict)
+        and _review_trace_row_status(dict(row or {})) not in {"", "PASS", "READY", "OK"}
+    ]
+    traces: list[dict[str, str]] = []
+    for row in non_pass_rows[:3]:
+        traces.append(
+            {
+                "label": _review_trace_value(row, "Criteria", "Scenario", "Area", "Module", "label"),
+                "status": _review_trace_row_status(row) or "REVIEW",
+                "observed_value": _review_trace_row_observed(row),
+                "judgment_basis": _review_trace_value(
+                    row,
+                    "Target",
+                    "Expected Check",
+                    "Evidence",
+                    "Meaning",
+                    "criterion",
+                ),
+                "evidence_source": _review_trace_value(
+                    row,
+                    "Source",
+                    "Source Strength",
+                    "Source Mix",
+                    "evidence_source",
+                )
+                if _review_trace_value(row, "Source", "Source Strength", "Source Mix", "evidence_source") != "-"
+                else source_label,
+                "evidence_as_of": _review_trace_value(
+                    row,
+                    "As Of",
+                    "As Of Range",
+                    "as_of",
+                    "snapshot_at",
+                ),
+            }
+        )
+    return traces, source_label
+
+
 def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) -> dict[str, Any]:
     """Classify Practical Validation REVIEW handoff items for Final Review consumption."""
 
@@ -2183,6 +2278,42 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
             "Module",
         )
         evidence_as_of = _review_trace_value(card, "as_of", "snapshot_at", "collected_at", "updated_at", "generated_at")
+        trace_items: list[dict[str, str]] = []
+        direct_trace = observed_value != "-" or threshold != "-"
+        if direct_trace:
+            trace_items.append(
+                {
+                    "label": title,
+                    "status": status.upper() or "REVIEW",
+                    "observed_value": observed_value,
+                    "judgment_basis": threshold,
+                    "evidence_source": evidence_source,
+                    "evidence_as_of": evidence_as_of,
+                }
+            )
+        else:
+            trace_items, adapter_source = _review_trace_rows(
+                validation,
+                _safe_text(card.get("module_id") or card.get("Module"), ""),
+            )
+            if trace_items:
+                first_trace = trace_items[0]
+                observed_value = _safe_text(first_trace.get("observed_value"), "-")
+                threshold = _safe_text(first_trace.get("judgment_basis"), "-")
+                evidence_source = _safe_text(first_trace.get("evidence_source"), adapter_source)
+                evidence_as_of = _safe_text(first_trace.get("evidence_as_of"), "-")
+        if observed_value != "-" and threshold != "-" and direct_trace:
+            trace_status = "measured"
+            trace_label = "측정 근거"
+        elif trace_items:
+            trace_status = "derived"
+            trace_label = "세부 audit에서 연결"
+        elif normalized_role in {"final_decision_input", "monitoring_followup"}:
+            trace_status = "qualitative"
+            trace_label = "정성 판단"
+        else:
+            trace_status = "missing_contract"
+            trace_label = "근거 연결 미완료"
         ownership = {
             "pv_data_caution": "level2_inherited_limit",
             "pv_practical_caution": "level2_inherited_limit",
@@ -2238,7 +2369,9 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                 "threshold": threshold,
                 "evidence_source": evidence_source,
                 "evidence_as_of": evidence_as_of,
-                "trace_status": "measured" if observed_value != "-" and threshold != "-" else "context_only",
+                "trace_status": trace_status,
+                "trace_label": trace_label,
+                "trace_items": trace_items,
                 "tone": tone,
                 **_level2_review_action(normalized_role),
             }
@@ -2449,6 +2582,8 @@ def _review_impact_for_item(item: dict[str, Any]) -> dict[str, Any]:
         "evidence_source": _safe_text(item.get("evidence_source"), "-"),
         "evidence_as_of": _safe_text(item.get("evidence_as_of"), "-"),
         "trace_status": _safe_text(item.get("trace_status"), "context_only"),
+        "trace_label": _safe_text(item.get("trace_label"), "근거 상태"),
+        "trace_items": [dict(row or {}) for row in list(item.get("trace_items") or []) if isinstance(row, dict)],
         "rationale": rationale,
         "tone": _safe_text(item.get("tone"), "warning"),
     }

@@ -12329,8 +12329,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("fr-invest-report__status", component_source)
         self.assertIn("headlineScores", component_source)
         self.assertIn("투자 매력도", component_source)
-        self.assertIn("관측값", component_source)
-        self.assertIn("판단 기준", component_source)
+        self.assertIn("<b>관측</b>", component_source)
+        self.assertIn("<b>판단 근거</b>", component_source)
+        self.assertIn("출처와 기준일", component_source)
+        self.assertIn("세부 audit 근거의 연결이 아직 없습니다", component_source)
         self.assertIn("감점 없음", component_source)
         self.assertNotIn('label: "Handoff"', component_source)
         self.assertNotIn('label: "Monitoring 후보"', component_source)
@@ -12438,7 +12440,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("fr-invest-report__status", build_source)
         self.assertNotIn("Level2 open", build_source)
         self.assertIn("투자 매력도", build_source)
-        self.assertIn("관측값", build_source)
+        self.assertIn("판단 근거", build_source)
         self.assertIn("감점 없음", build_source)
         self.assertIn("fr-invest-report__assessment", build_source)
         self.assertIn("이 후보를 읽는 네 가지 기준", build_source)
@@ -28009,6 +28011,52 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("수용할지 판단", disposition["groups"]["open_review"][0]["action"])
         self.assertNotIn("Flow4", disposition["groups"]["warning"][0]["action"])
 
+    def test_final_review_disposition_connects_summary_review_to_stored_audit_rows(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        disposition = build_final_review_level2_review_disposition(
+            validation={
+                "practical_validation_workspace": {
+                    "criteria_detail_groups": [
+                        {
+                            "criteria_cards": [
+                                {
+                                    "display_label": "검증이 좋은 구간에만 기대지 않는가",
+                                    "module_id": "validation_efficacy",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_practical_caution",
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "validation_efficacy_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Walk-forward temporal validation",
+                            "Status": "REVIEW",
+                            "Current": "windows=79 / negative share=73.42%",
+                            "Evidence": "worst excess -50.63%",
+                        },
+                        {
+                            "Criteria": "OOS holdout validation",
+                            "Status": "PASS",
+                            "Current": "in=58 / out=57",
+                        },
+                    ]
+                },
+            }
+        )
+
+        item = disposition["groups"]["warning"][0]
+        self.assertEqual(item["trace_status"], "derived")
+        self.assertEqual(item["trace_label"], "세부 audit에서 연결")
+        self.assertEqual(item["observed_value"], "windows=79 / negative share=73.42%")
+        self.assertEqual(item["threshold"], "worst excess -50.63%")
+        self.assertEqual(item["evidence_source"], "검증 방법론 강도 audit")
+        self.assertEqual(len(item["trace_items"]), 1)
+        self.assertEqual(item["trace_items"][0]["label"], "Walk-forward temporal validation")
+
     def test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts(self) -> None:
         from app.services.backtest_evidence_read_model import (
             build_final_review_investment_report,
@@ -28102,12 +28150,14 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(impact_by_role["final_decision_input"]["score_policy"], "no_score_effect")
         self.assertEqual(impact_by_role["final_decision_input"]["observed_value"], "-")
         self.assertEqual(impact_by_role["final_decision_input"]["threshold"], "-")
-        self.assertEqual(impact_by_role["final_decision_input"]["trace_status"], "context_only")
+        self.assertEqual(impact_by_role["final_decision_input"]["trace_status"], "qualitative")
+        self.assertEqual(impact_by_role["final_decision_input"]["trace_label"], "정성 판단")
         self.assertEqual(impact_by_role["pv_data_caution"]["observed_value"], "41 days old")
         self.assertEqual(impact_by_role["pv_data_caution"]["threshold"], "30 days or less")
         self.assertEqual(impact_by_role["pv_data_caution"]["evidence_source"], "provider snapshot")
         self.assertEqual(impact_by_role["pv_data_caution"]["evidence_as_of"], "2026-07-10")
         self.assertEqual(impact_by_role["pv_data_caution"]["trace_status"], "measured")
+        self.assertEqual(impact_by_role["pv_data_caution"]["trace_label"], "측정 근거")
         self.assertEqual(report["scorecard"]["inputs"]["review_impact_count"], 5)
 
     def test_final_review_scorecard_maps_gate_to_recommendation_taxonomy(self) -> None:

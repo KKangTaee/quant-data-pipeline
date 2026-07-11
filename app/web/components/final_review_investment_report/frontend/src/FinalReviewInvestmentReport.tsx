@@ -336,6 +336,32 @@ type ReviewImpact = {
   evidence_as_of?: string
   traceStatus?: string
   trace_status?: string
+  traceLabel?: string
+  trace_label?: string
+  traceItems?: Array<{
+    label?: string
+    status?: string
+    observedValue?: string
+    observed_value?: string
+    judgmentBasis?: string
+    judgment_basis?: string
+    evidenceSource?: string
+    evidence_source?: string
+    evidenceAsOf?: string
+    evidence_as_of?: string
+  }>
+  trace_items?: Array<{
+    label?: string
+    status?: string
+    observedValue?: string
+    observed_value?: string
+    judgmentBasis?: string
+    judgment_basis?: string
+    evidenceSource?: string
+    evidence_source?: string
+    evidenceAsOf?: string
+    evidence_as_of?: string
+  }>
   tone?: Tone
 }
 
@@ -910,25 +936,47 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
         impacts.map((impact, index) => {
           const scoreEffect = field(impact.scoreEffect, impact.score_effect)
           const scorePolicy = field(impact.scorePolicy, impact.score_policy)
-          const observedValue = field(impact.observedValue, impact.observed_value)
           const evidenceSource = field(impact.evidenceSource, impact.evidence_source)
           const evidenceAsOf = field(impact.evidenceAsOf, impact.evidence_as_of)
           const traceStatus = field(impact.traceStatus, impact.trace_status)
+          const traceLabel = field(impact.traceLabel, impact.trace_label)
+          const traceItems = field(impact.traceItems, impact.trace_items) ?? []
           return (
             <section className={`fr-invest-report__review-impact fr-invest-report__review-impact--${toneClass(impact.tone)}`} key={`${impact.role ?? "review"}-${impact.title ?? index}`}>
               <div>
                 <strong>{compact(impact.title)}</strong>
-                <span>{Number(scoreEffect) === 0 ? "감점 없음" : formattedScore(scoreEffect)}</span>
+                <span>{compact(traceLabel, Number(scoreEffect) === 0 ? "정성 판단" : "근거 확인")}</span>
               </div>
-              <small>{compact(field(impact.roleLabel, impact.role_label))} · {compact(field(impact.targetDimension, impact.target_dimension))}</small>
+              <small>{compact(field(impact.roleLabel, impact.role_label))} · {Number(scoreEffect) === 0 ? "감점 없음" : `${formattedScore(scoreEffect)} 반영`}</small>
               <p>{compact(impact.rationale ?? impact.detail)}</p>
-              <dl className="fr-invest-report__review-trace">
-                <div><dt>관측값</dt><dd>{compact(observedValue, "미제공")}</dd></div>
-                <div><dt>판단 기준</dt><dd>{compact(impact.threshold, "미제공")}</dd></div>
-                <div><dt>근거</dt><dd>{compact(evidenceSource, "미제공")}</dd></div>
-                <div><dt>기준일</dt><dd>{compact(evidenceAsOf, "미제공")}</dd></div>
-              </dl>
-              <small>{compact(scorePolicy)} · {compact(traceStatus)}</small>
+              {traceItems.length > 0 ? (
+                <div className="fr-invest-report__review-trace-list">
+                  {traceItems.map((trace, traceIndex) => {
+                    const traceObserved = field(trace.observedValue, trace.observed_value)
+                    const traceBasis = field(trace.judgmentBasis, trace.judgment_basis)
+                    const traceSource = field(trace.evidenceSource, trace.evidence_source)
+                    const traceAsOf = field(trace.evidenceAsOf, trace.evidence_as_of)
+                    return (
+                      <section key={`${trace.label ?? "trace"}-${traceIndex}`}>
+                        <div><strong>{compact(trace.label, "세부 근거")}</strong><em>{compact(trace.status)}</em></div>
+                        <p><b>관측</b>{compact(traceObserved, "수치 관측 없음")}</p>
+                        <p><b>판단 근거</b>{compact(traceBasis, "정성 판단")}</p>
+                        <details>
+                          <summary>출처와 기준일</summary>
+                          <small>{compact(traceSource, compact(evidenceSource, "저장 evidence"))} · {compact(traceAsOf, compact(evidenceAsOf, "기준일 미기록"))}</small>
+                        </details>
+                      </section>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className={`fr-invest-report__review-trace-state fr-invest-report__review-trace-state--${traceStatus}`}>
+                  {traceStatus === "qualitative"
+                    ? "수치로 자동 판정하지 않는 항목입니다. 아래 사용자 판단을 선택 또는 보류 사유에 기록합니다."
+                    : "요약 REVIEW와 세부 audit 근거의 연결이 아직 없습니다. 이 항목만으로 수치를 추정하지 않습니다."}
+                </div>
+              )}
+              <small>{compact(scorePolicy)} · {compact(field(impact.targetDimension, impact.target_dimension))}</small>
               {impact.action ? <em>{compact(impact.action)}</em> : null}
             </section>
           )
@@ -1026,7 +1074,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       question: "무엇을 수용하거나 확인해야 하나?",
       children: (
         <section className="fr-invest-report__review-evidence-detail">
-          <p>각 항목의 관측값, 판단 기준, source, 기준일과 실제 반영 축을 함께 확인합니다.</p>
+          <p>2단계 요약을 저장된 세부 audit와 연결해 관측, 판단 근거, 점수 반영 방식과 사용자의 결정을 함께 보여줍니다.</p>
           <ReviewImpactList impacts={scorecardReviewImpacts} />
         </section>
       ),

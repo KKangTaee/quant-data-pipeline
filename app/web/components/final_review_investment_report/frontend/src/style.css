@@ -1125,6 +1125,66 @@
   margin-top: 12px;
 }
 
+.fr-invest-report__review-trace-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.fr-invest-report__review-trace-list > section {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 9px 10px;
+}
+
+.fr-invest-report__review-trace-list > section > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fr-invest-report__review-trace-list strong,
+.fr-invest-report__review-trace-list em,
+.fr-invest-report__review-trace-list b {
+  color: #1e293b;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.fr-invest-report__review-trace-list p {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.fr-invest-report__review-trace-list details {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.fr-invest-report__review-trace-list summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.fr-invest-report__review-trace-state {
+  margin-top: 9px;
+  border-left: 3px solid #c98515;
+  background: #fffbeb;
+  padding: 9px 10px;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fr-invest-report__review-trace-state--qualitative {
+  border-left-color: #64748b;
+  background: #f8fafc;
+}
+
 .fr-invest-report__review-evidence-detail > p,
 .fr-invest-report__experiment-detail > p {
   color: #475569;
