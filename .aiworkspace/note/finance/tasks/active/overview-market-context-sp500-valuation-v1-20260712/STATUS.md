@@ -1,6 +1,6 @@
 # Overview Market Context S&P 500 Valuation V1 Status
 
-Status: Awaiting Written-Spec Review
+Status: Implementation Planning
 Last Updated: 2026-07-12
 
 ## Current Progress
@@ -13,14 +13,13 @@ Last Updated: 2026-07-12
 
 ## Current Stage
 
-Design specification review gate before `writing-plans` and implementation.
+Written specification approved. Detailed implementation plan is being finalized before inline execution.
 
 ## Next Action
 
-1. User reviews `DESIGN.md`.
-2. Apply requested design corrections, if any.
-3. Invoke `superpowers:writing-plans`.
-4. Execute 1차 through 5차 inline with TDD, QA, and coherent commits.
+1. Self-review `PLAN.md` for spec coverage, placeholders, and interface consistency.
+2. Commit the implementation plan.
+3. Execute 1차 through 5차 inline with TDD, QA, and coherent commits.
 
 ## Not Started
 
