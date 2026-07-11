@@ -11,6 +11,7 @@ Last Updated: 2026-07-12
 - Verified S&P Index Earnings discoverability and index/divisor methodology.
 - Downloaded and inspected the official Shiller workbook outside the repository.
 - Compared 3y, 5y, and 10y log(PER) windows using latest complete Shiller earnings data.
+- Rewrote the UI design section in Korean and added explicit before/after UI trees during written-spec review.
 
 ## Repository Mutation
 

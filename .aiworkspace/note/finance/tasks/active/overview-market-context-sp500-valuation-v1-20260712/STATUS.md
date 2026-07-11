@@ -9,6 +9,7 @@ Last Updated: 2026-07-12
 - Public and licensed data-source options reviewed.
 - User approved the two-graph product direction, 5-year primary window, FOMC SEP refresh, old UI removal, React implementation, five-stage delivery, QA, and commits.
 - Written design created for review before implementation planning.
+- User requested the UI design section in Korean and a before/after UI tree; the written spec now includes both.
 
 ## Current Stage
 
