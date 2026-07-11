@@ -1,11 +1,16 @@
 import React from "react"
 import { createRoot } from "react-dom/client"
 import { Streamlit, withStreamlitConnection } from "streamlit-component-lib"
-import { FinalReviewInvestmentReport, InvestmentReport } from "./FinalReviewInvestmentReport"
+import {
+  FinalDecisionActionModel,
+  FinalReviewInvestmentReport,
+  InvestmentReport,
+} from "./FinalReviewInvestmentReport"
 import "./style.css"
 
 type StreamlitArgs = {
   report?: Record<string, unknown>
+  decision_action?: Record<string, unknown>
 }
 
 type AppProps = {
@@ -13,7 +18,12 @@ type AppProps = {
 }
 
 function App({ args }: AppProps) {
-  return <FinalReviewInvestmentReport report={(args?.report ?? {}) as InvestmentReport} />
+  return (
+    <FinalReviewInvestmentReport
+      decisionAction={(args?.decision_action ?? {}) as FinalDecisionActionModel}
+      report={(args?.report ?? {}) as InvestmentReport}
+    />
+  )
 }
 
 const ConnectedApp = withStreamlitConnection(App)

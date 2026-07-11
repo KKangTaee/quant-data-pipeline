@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-responsive-evidence-v1-20260711](./tasks/active/final-review-responsive-evidence-v1-20260711/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-decision-flow-simplification-v1-20260711](./tasks/active/final-review-decision-flow-simplification-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
@@ -40,6 +40,11 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Decision Flow Simplification V1:
+  - 총평과 4행 해석 직후에 route / 판단 사유 / gate 기반 CTA를 배치해 Level1 / Level2와 같은 판단 action 흐름으로 정리했다.
+  - React는 decision intent만 전달하고 Python이 save evaluation, 자동 Decision ID, route template, append를 소유한다. 판단 사유는 사용자가 직접 입력해야 CTA가 활성화된다.
+  - Evidence Appendix와 Saved Decisions ledger를 Final Review에서 제거했다. selected row 운영 확인은 Portfolio Monitoring에서 이어지며 기존 decision JSONL은 보존했다.
+  - 계약 테스트 137개, React build, py_compile, diff check, Browser QA를 통과했고 QA 중 registry write는 실행하지 않았다.
 - Final Review Responsive Evidence V1:
   - REVIEW impact header에만 2열 selector를 적용하고 내부 audit trace는 전체 폭 1열로 고정해 축소 화면의 카드 찌그러짐을 제거했다.
   - 긴 lifecycle / provider 근거는 카드 내부에서 줄바꿈하고 compact / mobile에서 header, tab, trace label을 단계적으로 쌓는다.

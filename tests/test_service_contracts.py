@@ -12277,7 +12277,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("criteriaGroups", wrapper_source)
         self.assertNotIn("reviewCount", wrapper_source)
 
-    def test_final_review_investment_report_react_component_is_ui_only(self) -> None:
+    def test_final_review_investment_report_react_component_emits_intent_only(self) -> None:
         component_root = Path("app/web/components/final_review_investment_report")
         wrapper_path = component_root / "component.py"
         package_path = component_root / "frontend/package.json"
@@ -12348,6 +12348,14 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "<AssessmentPanel narrative={reportNarrative} />\n\n      <InterpretationRows cards={interpretationCards} />",
             component_source,
         )
+        self.assertIn("FinalDecisionAction", component_source)
+        self.assertIn('action: "record_final_decision"', component_source)
+        self.assertIn('aria-label="판단 사유"', component_source)
+        self.assertIn("자동 문구가 아닌 사용자의 판단 이유", page_source)
+        self.assertIn(
+            "<InterpretationRows cards={interpretationCards} />\n\n      {decisionAction",
+            component_source,
+        )
         self.assertIn("DecisionQuestionList", component_source)
         self.assertIn("PatternGuidePanel", component_source)
         self.assertIn("Monitoring 방향 가이드", component_source)
@@ -12398,7 +12406,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("사용자 판단", component_source)
         self.assertNotIn("Level2 REVIEW handoff", component_source)
         self.assertIn("최종 판단 점수", component_source)
-        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("append_current_final_selection_decision", component_source)
+        self.assertNotIn("build_final_review_save_evaluation", component_source)
         self.assertNotIn("fetch(", component_source)
         self.assertNotIn("localStorage", component_source)
         self.assertNotIn("from app.services", wrapper_source)
@@ -12414,6 +12424,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn(".fr-invest-report__detail-tablist", style_source)
         self.assertIn(".fr-invest-report__detail-tab", style_source)
         self.assertIn(".fr-invest-report__detail-panel", style_source)
+        self.assertIn(".fr-invest-report__final-decision", style_source)
+        self.assertIn(".fr-invest-report__decision-routes", style_source)
+        self.assertIn(".fr-invest-report__decision-submit:disabled", style_source)
         self.assertIn(".fr-invest-report__review-impact > div:first-child", style_source)
         self.assertNotIn(".fr-invest-report__review-impact > div,", style_source)
         self.assertIn("grid-template-columns: minmax(0, 1fr);", style_source)
@@ -12461,6 +12474,8 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("fr-invest-report__detail-tablist", build_source)
         self.assertIn("fr-invest-report__detail-tab", build_source)
         self.assertIn("fr-invest-report__detail-panel", build_source)
+        self.assertIn("fr-invest-report__final-decision", build_source)
+        self.assertIn("record_final_decision", build_source)
         self.assertNotIn("fr-invest-report__detail-disclosure", build_source)
         self.assertNotIn("fr-invest-report__facts", build_source)
         self.assertNotIn("fr-invest-report__decision-grid", build_source)
@@ -12471,7 +12486,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("판단 저장 전 메모", build_source)
         self.assertIn("/ 100", build_source)
         self.assertNotIn("저장 / Monitoring handoff", build_source)
-        self.assertNotIn("Final Review 판단 저장", build_source)
+        self.assertIn("판단 사유", build_source)
+        self.assertNotIn("Decision ID", build_source)
+        self.assertNotIn("운영 전 조건", build_source)
         self.assertNotIn("현재 후보와 개선 기대 범위", build_source)
         self.assertIn("Final Review에서 결정할 것", build_source)
         self.assertIn("왜 보이나", build_source)
@@ -12589,10 +12606,16 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn('eyebrow="Investment Report"', workspace_body)
         self.assertNotIn("with st.container(border=True):", investment_report_area)
         self.assertIn("_render_investment_report(", investment_report_area)
+        self.assertIn("decision_action=decision_action", investment_report_area)
         self.assertNotIn('eyebrow="Selection Readiness"', workspace_body)
         self.assertNotIn('eyebrow="Decision Record"', workspace_body)
-        self.assertIn('eyebrow="최종 판단"', workspace_body)
-        self.assertIn('eyebrow="Evidence Appendix"', workspace_body)
+        self.assertNotIn('eyebrow="최종 판단"', workspace_body)
+        self.assertNotIn('eyebrow="Evidence Appendix"', workspace_body)
+        self.assertNotIn("_render_evidence_appendix(", workspace_body)
+        self.assertNotIn("_render_saved_final_review_decisions(", workspace_body)
+        self.assertNotIn('title="Decision History / Portfolio Monitoring Handoff"', workspace_body)
+        self.assertNotIn('"고급: 저장 ID / 운영 전 조건 / 다음 행동 확인"', workspace_body)
+        self.assertNotIn('"판단 근거와 저장 경계"', workspace_body)
 
         helper_body = page_source.split("def _render_candidate_selection_panel", 1)[1]
         helper_body = helper_body.split("def _render_decision_cockpit", 1)[0]
@@ -12636,17 +12659,115 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         selection_position = workspace_body.index("candidate_selection = _render_candidate_selection_panel")
         confirmation_guard_position = workspace_body.index('if not bool(candidate_selection.get("is_confirmed"))')
         report_build_position = workspace_body.index("investment_report = build_final_review_investment_report")
-        decision_position = workspace_body.index('title="판단 기록"')
+        decision_model_position = workspace_body.index("decision_action = _build_final_review_decision_action_model")
+        report_render_position = workspace_body.index("decision_intent = _render_investment_report")
+        decision_consume_position = workspace_body.index("_consume_final_review_decision_intent(")
 
         self.assertLess(selection_position, confirmation_guard_position)
         self.assertLess(confirmation_guard_position, report_build_position)
-        self.assertLess(report_build_position, decision_position)
+        self.assertLess(report_build_position, decision_model_position)
+        self.assertLess(decision_model_position, report_render_position)
+        self.assertLess(report_render_position, decision_consume_position)
         self.assertNotIn('_render_decision_cockpit(cockpit)', workspace_body)
         self.assertNotIn('title="Final Decision Action"', workspace_body)
         self.assertNotIn('title="Final Review Save Readiness"', workspace_body)
         self.assertNotIn('"Live Approval / Order"', workspace_body)
-        self.assertIn('"모니터링 후보로 선정"', workspace_body)
-        self.assertIn('"판단 근거와 저장 경계"', workspace_body)
+        self.assertIn('"모니터링 후보로 선정"', page_source)
+        self.assertIn("append_current_final_selection_decision(final_row)", page_source)
+        self.assertNotIn('title="판단 기록"', workspace_body)
+        self.assertNotIn('"판단 근거와 저장 경계"', workspace_body)
+        self.assertNotIn('"Evidence Appendix"', workspace_body)
+        self.assertNotIn('"Saved Decisions"', workspace_body)
+
+    def test_final_review_decision_action_model_keeps_save_authority_in_python(self) -> None:
+        from app.services.backtest_evidence_read_model import SELECT_FOR_PRACTICAL_PORTFOLIO
+        from app.web.backtest_final_review.page import _build_final_review_decision_action_model
+
+        ready_packet = {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "selection_gate_policy_snapshot": {
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                "blockers": [],
+                "review_required": [],
+            },
+            "gate_policy_snapshot": {
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            },
+        }
+        model = _build_final_review_decision_action_model(
+            cockpit={
+                "verdict": "Monitoring 후보로 기록할 수 있습니다.",
+                "state_label": "모니터링 후보 가능",
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            },
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=ready_packet,
+            decision_id="final-auto-id",
+            existing_decision_ids=set(),
+        )
+
+        routes = {option["route"]: option for option in model["options"]}
+        self.assertEqual(model["suggested_route"], SELECT_FOR_PRACTICAL_PORTFOLIO)
+        self.assertTrue(routes[SELECT_FOR_PRACTICAL_PORTFOLIO]["recordable"])
+        self.assertEqual(routes[SELECT_FOR_PRACTICAL_PORTFOLIO]["button_label"], "모니터링 후보로 선정")
+        self.assertEqual(routes["HOLD_FOR_MORE_PAPER_TRACKING"]["button_label"], "보류로 기록")
+        self.assertIn("사용자의 판단 이유", model["reason_help"])
+        self.assertNotIn("decision_id", model)
+        self.assertNotIn("storage", model)
+
+    def test_final_review_decision_intent_appends_once_in_python(self) -> None:
+        import app.web.backtest_final_review.page as final_review_page
+        from app.services.backtest_evidence_read_model import SELECT_FOR_PRACTICAL_PORTFOLIO
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        append_mock = MagicMock()
+        ready_packet = {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "selection_gate_policy_snapshot": {
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                "blockers": [],
+                "review_required": [],
+            },
+        }
+        intent = {
+            "action": "record_final_decision",
+            "intent_id": "intent-once",
+            "decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            "operator_reason": "총평과 Monitoring 조건을 확인해 추적 후보로 선정한다.",
+        }
+
+        with (
+            patch.object(final_review_page, "st", fake_st),
+            patch.object(final_review_page, "append_current_final_selection_decision", append_mock),
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            final_review_page._consume_final_review_decision_intent(
+                intent,
+                source={"source_id": "validation-a", "source_type": "practical_validation_result", "source_title": "Candidate A"},
+                validation={"validation_id": "validation-a", "selection_source_id": "source-a"},
+                paper_observation={"active_components": []},
+                evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+                investability_packet=ready_packet,
+                decision_id="final-auto-id",
+                decision_id_key="final_review_decision_id_v2_validation_a",
+                existing_decision_ids=set(),
+            )
+
+        append_mock.assert_called_once()
+        saved_row = append_mock.call_args.args[0]
+        self.assertEqual(saved_row["decision_id"], "final-auto-id")
+        self.assertEqual(saved_row["operator_decision"]["reason"], intent["operator_reason"])
+        self.assertTrue(saved_row["operator_decision"]["constraints"])
+        self.assertTrue(saved_row["operator_decision"]["next_action"])
+        self.assertEqual(fake_st.session_state["final_review_consumed_decision_intent_validation_a"], "intent-once")
 
     def test_final_review_first_read_excludes_market_sentiment_panel(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")

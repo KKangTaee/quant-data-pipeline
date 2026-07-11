@@ -9259,3 +9259,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 투자 검토서에서 점수 이유와 남은 판단을 확인한 뒤, 별도 중복 요약을 거치지 않고 최종 판단을 기록할 수 있어야 한다.
 - Analysis result: REVIEW 빈칸은 재승격 문제가 아니라 summary card와 stored audit row 사이 adapter 공백이었다. 대안 실험은 자동 실행 기능이 아닌 후속 counterfactual 가설이고, Cockpit read model은 필요하지만 standalone UI는 투자 검토서와 중복됐다.
 - Follow-up: stored audit trace adapter, 상위 3개 정형 실험 가설, connected tabs와 통합 판단 기록을 구현했다. React는 표시만 맡고 Python이 gate / trace / 저장 / Monitoring handoff를 계속 소유한다.
+
+### 2026-07-11 - Final Review는 총평 직후 판단을 끝내고 과거 ledger를 반복하지 않는다
+
+- User request: 사용자가 하단 `판단 기록`을 총평 가까이 올려 Level1 / Level2 action과 통일하고, Evidence Appendix와 Saved Decisions가 실제로 필요한지 검증해 불필요하면 제거해 달라고 요청함.
+- Interpreted goal: 현재 후보의 총평과 핵심 해석을 읽은 직후 route와 판단 사유를 기록하고, 중복 원본 근거 / 과거 판단 조회 때문에 완료 지점이 흐려지지 않아야 함.
+- Analysis result: Appendix는 Practical Validation과 report audit trace를 반복했고 Saved Decisions는 현재 판단과 과거 ledger / Monitoring handoff를 한 화면에 섞었다. selected row 운영 확인은 Portfolio Monitoring 소유가 자연스럽다.
+- Follow-up: React report 총평 / 4행 해석 직후 route / reason / gate CTA를 배치하고 intent만 Python에 전달한다. Python은 자동 Decision ID, save evaluation, route template, append를 소유한다. Evidence Appendix와 Saved Decisions / Dossier / Raw JSON은 Final Review에서 제거했으며 기존 decision row는 보존한다.

@@ -9,13 +9,10 @@ import streamlit as st
 
 from app.services.backtest_evidence_read_model import (
     SELECT_FOR_PRACTICAL_PORTFOLIO,
-    build_decision_dossier,
     build_final_review_candidate_board,
     build_final_review_decision_cockpit,
     build_final_review_investment_report,
     build_final_review_decision_record_guide,
-    build_final_review_save_handoff_summary,
-    build_saved_final_review_decision_review,
 )
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
@@ -24,40 +21,25 @@ from app.web.backtest_final_review_helpers import (
     _build_investability_evidence_packet,
     _build_final_review_decision_evidence_pack,
     _build_final_review_decision_row,
-    _build_final_review_decision_rows_for_display,
     _build_final_review_paper_observation_snapshot,
     _build_final_review_save_evaluation,
     _build_final_review_source_options,
-    _build_final_review_status_display,
     _build_final_review_validation,
     _is_final_review_eligible_validation_result,
 )
 from app.web.backtest_final_review.components import (
     render_fr_action_panel,
     render_fr_command_center,
-    render_fr_lane_grid,
-    render_fr_section_header,
 )
 from app.web.components.final_review_investment_report import (
     is_final_review_investment_report_available,
     render_final_review_investment_report,
 )
-from app.web.backtest_portfolio_proposal_helpers import (
-    _build_final_selection_decision_component_rows,
-    _paper_ledger_slug,
-)
+from app.web.backtest_portfolio_proposal_helpers import _paper_ledger_slug
 from app.web.backtest_ui_components import (
     render_badge_strip,
-    render_readiness_route_panel,
-    render_stage_brief,
-    render_status_card_grid,
-)
-from app.web.final_selected_portfolio_dashboard_helpers import (
-    build_selected_dashboard_handoff_checklist_table,
-    build_selected_dashboard_handoff_table,
 )
 from app.runtime import (
-    FINAL_SELECTION_DECISION_FILE,
     append_current_final_selection_decision,
     build_selected_dashboard_handoff_review,
     load_current_candidate_registry_latest,
@@ -68,46 +50,6 @@ from app.runtime import (
 )
 
 
-def _status_tone(status: Any) -> str:
-    status_text = str(status or "").upper()
-    if status_text in {"PASS", "READY"}:
-        return "positive"
-    if status_text == "BLOCKED":
-        return "danger"
-    if status_text in {"REVIEW", "NEEDS_INPUT"}:
-        return "warning"
-    return "neutral"
-
-
-def _handoff_tone(route: Any) -> str:
-    route_text = str(route or "")
-    if route_text == "HANDOFF_READY":
-        return "positive"
-    if route_text in {"HANDOFF_NO_FINAL_DECISION", "HANDOFF_NO_SELECTED_DECISION"}:
-        return "warning"
-    if route_text == "HANDOFF_BLOCKED":
-        return "danger"
-    return "neutral"
-
-
-def _is_monitoring_handoff_candidate(row: dict[str, Any]) -> bool:
-    if "monitoring_candidate" in row:
-        return row.get("monitoring_candidate") is True
-    return (
-        row.get("selected_practical_portfolio") is True
-        or str(row.get("decision_route") or "").strip() == SELECT_FOR_PRACTICAL_PORTFOLIO
-    )
-
-
-def _short_text(value: Any, limit: int = 140) -> str:
-    text = str(value or "").strip()
-    if not text:
-        return "-"
-    if len(text) <= limit:
-        return text
-    return text[: max(0, limit - 3)].rstrip() + "..."
-
-
 def _candidate_board_route(summary: dict[str, Any]) -> tuple[str, str, str]:
     if not int(summary.get("total_candidates", 0) or 0):
         return "검토 후보 없음", "Final Review Gate를 통과한 후보가 없습니다.", "warning"
@@ -116,6 +58,133 @@ def _candidate_board_route(summary: dict[str, Any]) -> tuple[str, str, str]:
     if int(summary.get("blocked", 0) or 0) > 0:
         return "차단 원인 확인", "먼저 볼 후보의 blocker를 해소해야 정식 저장이 활성화됩니다.", "danger"
     return "재검토 필요", "review-required 근거를 확인하고 모니터링 후보 가능 상태로 보강합니다.", "warning"
+
+
+_FINAL_REVIEW_ROUTE_BUTTON_LABELS = {
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보로 선정",
+    "HOLD_FOR_MORE_PAPER_TRACKING": "보류로 기록",
+    "REJECT_FOR_PRACTICAL_USE": "탈락으로 기록",
+    "RE_REVIEW_REQUIRED": "재검토로 기록",
+}
+
+_FINAL_REVIEW_ROUTE_TONES = {
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "positive",
+    "HOLD_FOR_MORE_PAPER_TRACKING": "warning",
+    "REJECT_FOR_PRACTICAL_USE": "danger",
+    "RE_REVIEW_REQUIRED": "warning",
+}
+
+
+def _build_final_review_decision_action_model(
+    *,
+    cockpit: dict[str, Any],
+    evidence: dict[str, Any],
+    investability_packet: dict[str, Any],
+    decision_id: str,
+    existing_decision_ids: set[str],
+) -> dict[str, Any]:
+    """Build the display-only route choices used by the React decision intent form."""
+
+    gate_policy_snapshot = dict(investability_packet.get("gate_policy_snapshot") or {})
+    suggested_route = str(
+        gate_policy_snapshot.get("suggested_decision_route")
+        or evidence.get("suggested_decision_route")
+        or cockpit.get("suggested_decision_route")
+        or SELECT_FOR_PRACTICAL_PORTFOLIO
+    )
+    route_options = list(FINAL_REVIEW_ROUTE_OPTIONS)
+    if suggested_route not in route_options:
+        route_options.append(suggested_route)
+
+    options: list[dict[str, Any]] = []
+    for route in route_options:
+        guide = build_final_review_decision_record_guide(
+            decision_route=route,
+            decision_evidence=evidence,
+            investability_packet=investability_packet,
+        )
+        templates = dict(guide.get("route_templates") or {})
+        preview = _build_final_review_save_evaluation(
+            evidence=evidence,
+            investability_packet=investability_packet,
+            decision_id=decision_id,
+            decision_route=route,
+            operator_reason="preview reason",
+            existing_decision_ids=existing_decision_ids,
+        )
+        disabled_reason = " · ".join(str(item) for item in list(preview.get("blockers") or []))
+        reason_placeholder = str(templates.get("reason") or "왜 이 판단을 선택했는지 직접 작성합니다.")
+        if route == SELECT_FOR_PRACTICAL_PORTFOLIO and not bool(preview.get("can_save")):
+            reason_placeholder = "현재 blocker가 남아 있어 Monitoring 후보로 선정할 수 없습니다. 다른 판단을 선택하거나 근거를 보강합니다."
+        options.append(
+            {
+                "route": route,
+                "label": FINAL_REVIEW_DECISION_LABELS.get(route, route),
+                "description": FINAL_REVIEW_ROUTE_DESCRIPTIONS.get(route, "최종 판단 기록으로 저장합니다."),
+                "tone": _FINAL_REVIEW_ROUTE_TONES.get(route, "neutral"),
+                "recordable": bool(preview.get("can_save")),
+                "disabled_reason": disabled_reason,
+                "reason_placeholder": reason_placeholder,
+                "button_label": _FINAL_REVIEW_ROUTE_BUTTON_LABELS.get(route, "최종 판단 저장"),
+            }
+        )
+
+    return {
+        "title": "이 후보를 Monitoring 대상으로 기록할까요?",
+        "detail": str(cockpit.get("verdict") or "투자 검토서의 총평과 핵심 해석을 바탕으로 최종 판단을 기록합니다."),
+        "status_label": str(cockpit.get("state_label") or "판단 확인"),
+        "suggested_route": suggested_route,
+        "suggested_label": FINAL_REVIEW_DECISION_LABELS.get(suggested_route, suggested_route),
+        "reason_label": "판단 사유",
+        "reason_help": "자동 문구가 아닌 사용자의 판단 이유를 남겨야 저장 버튼이 활성화됩니다.",
+        "boundary_note": "이 판단은 Portfolio Monitoring 후보 기록이며 실제 투자 승인, 주문 또는 자동 리밸런싱이 아닙니다.",
+        "options": options,
+    }
+
+
+def _render_final_review_decision_fallback(
+    decision_action: dict[str, Any],
+    *,
+    key: str,
+) -> dict[str, Any] | None:
+    """Keep the same compact action contract if the optional React build is unavailable."""
+
+    options = list(decision_action.get("options") or [])
+    if not options:
+        return None
+    route_values = [str(option.get("route") or "") for option in options]
+    suggested_route = str(decision_action.get("suggested_route") or route_values[0])
+    selected_route = st.radio(
+        "최종 판단",
+        options=route_values,
+        index=route_values.index(suggested_route) if suggested_route in route_values else 0,
+        format_func=lambda route: FINAL_REVIEW_DECISION_LABELS.get(route, route),
+        horizontal=True,
+        key=f"{key}_route",
+    )
+    selected = next(option for option in options if option.get("route") == selected_route)
+    reason = st.text_area(
+        "판단 사유",
+        placeholder=str(selected.get("reason_placeholder") or "왜 이 판단을 선택했는지 직접 작성합니다."),
+        key=f"{key}_reason_{_paper_ledger_slug(selected_route)}",
+    )
+    can_submit = bool(selected.get("recordable")) and bool(str(reason or "").strip())
+    if not bool(selected.get("recordable")):
+        st.error(str(selected.get("disabled_reason") or "현재 조건에서는 이 판단을 저장할 수 없습니다."))
+    if st.button(
+        str(selected.get("button_label") or "최종 판단 저장"),
+        key=f"{key}_submit",
+        disabled=not can_submit,
+        width="stretch",
+    ):
+        return {
+            "action": "record_final_decision",
+            "intent_id": uuid4().hex,
+            "decision_route": selected_route,
+            "operator_reason": str(reason or "").strip(),
+        }
+    st.caption(str(decision_action.get("boundary_note") or ""))
+    return None
 
 
 def _build_final_review_top_summary() -> dict[str, str]:
@@ -194,541 +263,6 @@ def _build_final_review_decision_desk_model(
             },
         ],
     }
-
-
-def _policy_rows_preview(rows: list[dict[str, Any]], *, empty_message: str) -> str:
-    if not rows:
-        return empty_message
-    previews: list[str] = []
-    for row in rows[:2]:
-        label = str(row.get("Criteria") or row.get("Group") or row.get("Module") or "-")
-        action = str(row.get("Required Action") or row.get("Fix Action") or row.get("Current") or row.get("Evidence") or "-")
-        previews.append(f"{label}: {_short_text(action, 86)}")
-    if len(rows) > 2:
-        previews.append(f"외 {len(rows) - 2}개")
-    return " / ".join(previews)
-
-
-def _provider_look_through_board(validation: dict[str, Any]) -> dict[str, Any]:
-    board = dict(validation.get("provider_look_through_board") or {})
-    if board:
-        return board
-    provider_context = dict(validation.get("provider_coverage") or {})
-    return dict(provider_context.get("look_through_board") or {})
-
-
-def _render_provider_look_through_summary(validation: dict[str, Any]) -> None:
-    board = _provider_look_through_board(validation)
-    if not board:
-        return
-
-    st.markdown("###### Look-through Exposure Board")
-    render_badge_strip(
-        [
-            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
-            {"label": "Holdings", "value": f"{board.get('holdings_coverage_weight', 0)}%", "tone": _status_tone(board.get("holdings_status"))},
-            {"label": "Exposure", "value": f"{board.get('exposure_coverage_weight', 0)}%", "tone": _status_tone(board.get("exposure_status"))},
-            {"label": "Top Holding", "value": f"{board.get('top_holding_weight', 0)}%", "tone": "warning" if (board.get("top_holding_weight") or 0) > 25 else "neutral"},
-            {"label": "Dominant", "value": f"{board.get('dominant_asset_bucket') or '-'} {board.get('dominant_asset_weight', 0)}%", "tone": "neutral"},
-            {"label": "Unknown", "value": f"{board.get('unknown_exposure_weight', 0)}%", "tone": "warning" if (board.get("unknown_exposure_weight") or 0) else "neutral"},
-        ]
-    )
-    st.caption(str(board.get("summary") or "-"))
-    summary_rows = list(board.get("summary_rows") or [])
-    if summary_rows:
-        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
-    with st.expander("Look-through detail", expanded=False):
-        detail_tabs = st.tabs(["Asset Buckets", "Top Holdings", "Fund Coverage"])
-        with detail_tabs[0]:
-            rows = list(board.get("asset_bucket_rows") or [])
-            if rows:
-                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-            else:
-                st.info("표시할 asset bucket row가 없습니다.")
-        with detail_tabs[1]:
-            rows = list(board.get("top_holding_rows") or [])
-            if rows:
-                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-            else:
-                st.info("표시할 top holdings row가 없습니다.")
-        with detail_tabs[2]:
-            rows = list(board.get("fund_coverage_rows") or [])
-            if rows:
-                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-            else:
-                st.info("표시할 ETF별 coverage row가 없습니다.")
-
-
-def _robustness_lab_board(validation: dict[str, Any]) -> dict[str, Any]:
-    robustness = dict(validation.get("robustness_validation") or {})
-    return dict(robustness.get("robustness_lab_board") or validation.get("robustness_lab_board") or {})
-
-
-def _render_robustness_lab_summary(board: dict[str, Any]) -> None:
-    metrics = dict(board.get("metrics") or {})
-    st.markdown("###### Robustness Lab")
-    render_badge_strip(
-        [
-            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
-            {
-                "label": "Stress",
-                "value": f"{metrics.get('computed_stress_windows', 0)}/{metrics.get('covered_stress_windows', 0)}",
-                "tone": _status_tone(metrics.get("stress_status")),
-            },
-            {
-                "label": "Sensitivity",
-                "value": metrics.get("computed_sensitivity_checks", 0),
-                "tone": _status_tone(metrics.get("sensitivity_status")),
-            },
-            {
-                "label": "Follow-up",
-                "value": metrics.get("runtime_followup_count", 0),
-                "tone": "warning" if metrics.get("runtime_followup_count") else "neutral",
-            },
-            {"label": "Rolling", "value": metrics.get("rolling_window_count") or "-", "tone": _status_tone(metrics.get("rolling_status"))},
-            {"label": "Trials", "value": metrics.get("local_trial_count", 0), "tone": _status_tone(metrics.get("overfit_status"))},
-        ]
-    )
-    st.caption(str(board.get("summary") or "-"))
-    summary_rows = list(board.get("summary_rows") or [])
-    if summary_rows:
-        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
-    with st.expander("Robustness Lab detail", expanded=False):
-        stress_tab, sensitivity_tab, follow_up_tab = st.tabs(["Stress", "Sensitivity", "Follow-up"])
-        with stress_tab:
-            stress_rows = list(board.get("stress_rows") or [])
-            if stress_rows:
-                st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
-            else:
-                st.info("표시할 stress detail row가 없습니다.")
-        with sensitivity_tab:
-            sensitivity_rows = list(board.get("sensitivity_rows") or [])
-            if sensitivity_rows:
-                st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
-            else:
-                st.info("표시할 sensitivity detail row가 없습니다.")
-        with follow_up_tab:
-            follow_up_rows = list(board.get("follow_up_rows") or [])
-            if follow_up_rows:
-                st.dataframe(pd.DataFrame(follow_up_rows), width="stretch", hide_index=True)
-            else:
-                st.success("즉시 follow-up으로 남은 robustness row가 없습니다.")
-    limitations = list(board.get("limitations") or [])
-    if limitations:
-        st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
-
-
-def _render_validation_efficacy_summary(validation: dict[str, Any]) -> None:
-    audit = dict(validation.get("validation_efficacy_audit") or {})
-    rows = list(validation.get("validation_efficacy_display_rows") or audit.get("rows") or [])
-    if not rows:
-        return
-    metrics = dict(audit.get("metrics") or {})
-    st.markdown("###### Validation Efficacy")
-    render_badge_strip(
-        [
-            {
-                "label": "Route",
-                "value": audit.get("route_label") or audit.get("route") or "-",
-                "tone": _status_tone(audit.get("overall_status")),
-            },
-            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
-            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
-            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
-            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
-        ]
-    )
-    with st.expander("Validation efficacy rows", expanded=False):
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        if audit.get("next_action"):
-            st.caption(str(audit.get("next_action")))
-
-
-def _render_backtest_realism_summary(validation: dict[str, Any]) -> None:
-    audit = dict(validation.get("backtest_realism_audit") or {})
-    rows = list(validation.get("backtest_realism_display_rows") or audit.get("rows") or [])
-    if not rows:
-        return
-    metrics = dict(audit.get("metrics") or {})
-    st.markdown("###### Backtest Realism")
-    render_badge_strip(
-        [
-            {
-                "label": "Route",
-                "value": audit.get("route_label") or audit.get("route") or "-",
-                "tone": _status_tone(audit.get("overall_status")),
-            },
-            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
-            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
-            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
-            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
-        ]
-    )
-    with st.expander("Backtest realism rows", expanded=False):
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        if audit.get("next_action"):
-            st.caption(str(audit.get("next_action")))
-
-
-def _render_data_coverage_summary(validation: dict[str, Any]) -> None:
-    audit = dict(validation.get("data_coverage_audit") or {})
-    rows = list(validation.get("data_coverage_display_rows") or audit.get("rows") or [])
-    if not rows:
-        return
-    metrics = dict(audit.get("metrics") or {})
-    st.markdown("###### Data Coverage")
-    render_badge_strip(
-        [
-            {
-                "label": "Route",
-                "value": audit.get("route_label") or audit.get("route") or "-",
-                "tone": _status_tone(audit.get("overall_status")),
-            },
-            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
-            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
-            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
-            {"label": "Symbols", "value": metrics.get("symbol_count", 0), "tone": "neutral"},
-        ]
-    )
-    with st.expander("Data coverage rows", expanded=False):
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        if audit.get("next_action"):
-            st.caption(str(audit.get("next_action")))
-
-
-def _render_construction_risk_summary(validation: dict[str, Any]) -> None:
-    audit = dict(validation.get("construction_risk_audit") or {})
-    rows = list(validation.get("construction_risk_display_rows") or audit.get("rows") or [])
-    if not rows:
-        return
-    metrics = dict(audit.get("metrics") or {})
-    st.markdown("###### Construction Risk")
-    render_badge_strip(
-        [
-            {
-                "label": "Route",
-                "value": audit.get("route_label") or audit.get("route") or "-",
-                "tone": _status_tone(audit.get("overall_status")),
-            },
-            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
-            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
-            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
-            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
-            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
-        ]
-    )
-    with st.expander("Construction risk rows", expanded=False):
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        if audit.get("next_action"):
-            st.caption(str(audit.get("next_action")))
-
-
-def _render_risk_contribution_summary(validation: dict[str, Any]) -> None:
-    audit = dict(validation.get("risk_contribution_audit") or {})
-    rows = list(validation.get("risk_contribution_display_rows") or audit.get("rows") or [])
-    if not rows:
-        return
-    metrics = dict(audit.get("metrics") or {})
-    st.markdown("###### Risk Contribution")
-    render_badge_strip(
-        [
-            {
-                "label": "Route",
-                "value": audit.get("route_label") or audit.get("route") or "-",
-                "tone": _status_tone(audit.get("overall_status")),
-            },
-            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
-            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
-            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
-            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
-            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
-        ]
-    )
-    with st.expander("Risk contribution rows", expanded=False):
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        component_rows = list(audit.get("component_rows") or [])
-        if component_rows:
-            st.markdown("Component proxy rows")
-            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
-        if audit.get("next_action"):
-            st.caption(str(audit.get("next_action")))
-
-
-def _render_component_role_weight_summary(validation: dict[str, Any]) -> None:
-    audit = dict(validation.get("component_role_weight_audit") or {})
-    rows = list(validation.get("component_role_weight_display_rows") or audit.get("rows") or [])
-    if not rows:
-        return
-    metrics = dict(audit.get("metrics") or {})
-    st.markdown("###### Component Role / Weight")
-    render_badge_strip(
-        [
-            {
-                "label": "Route",
-                "value": audit.get("route_label") or audit.get("route") or "-",
-                "tone": _status_tone(audit.get("overall_status")),
-            },
-            {"label": "Source", "value": audit.get("source_strength") or "-", "tone": "neutral"},
-            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
-            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
-            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
-            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
-        ]
-    )
-    with st.expander("Component role / weight rows", expanded=False):
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        component_rows = list(audit.get("component_rows") or [])
-        if component_rows:
-            st.markdown("Component role source rows")
-            st.dataframe(pd.DataFrame(component_rows), width="stretch", hide_index=True)
-        if audit.get("next_action"):
-            st.caption(str(audit.get("next_action")))
-
-
-def _render_validation_summary(validation: dict[str, Any]) -> None:
-    metrics = dict(validation.get("metrics") or {})
-    route = str(validation.get("validation_route") or "-")
-    render_readiness_route_panel(
-        route_label=route,
-        score=float(validation.get("validation_score") or 0.0),
-        blockers_count=len(validation.get("hard_blockers") or []),
-        verdict=str(validation.get("verdict") or "-"),
-        next_action=str(validation.get("next_action") or "-"),
-        route_title="Portfolio Validation",
-        score_title="Validation Score",
-    )
-    render_badge_strip(
-        [
-            {"label": "Source", "value": validation.get("source_type") or "-", "tone": "neutral"},
-            {"label": "Components", "value": metrics.get("active_components", 0), "tone": "neutral"},
-            {"label": "Weight Total", "value": f"{metrics.get('weight_total', 0)}%", "tone": "neutral"},
-            {"label": "Max Weight", "value": f"{metrics.get('max_weight', 0)}%", "tone": "neutral"},
-        ]
-    )
-    component_df = pd.DataFrame(validation.get("component_rows") or [])
-    if component_df.empty:
-        st.info("최종 검토에 연결된 component가 없습니다.")
-    else:
-        st.dataframe(component_df, width="stretch", hide_index=True)
-    _render_validation_efficacy_summary(validation)
-    _render_data_coverage_summary(validation)
-    _render_construction_risk_summary(validation)
-    _render_risk_contribution_summary(validation)
-    _render_component_role_weight_summary(validation)
-    _render_backtest_realism_summary(validation)
-    diagnostic_rows = list(validation.get("diagnostic_display_rows") or [])
-    if diagnostic_rows:
-        st.markdown("###### Practical Diagnostics")
-        profile = dict(validation.get("validation_profile") or {})
-        status_counts = dict(dict(validation.get("diagnostic_summary") or {}).get("status_counts") or {})
-        render_badge_strip(
-            [
-                {"label": "Profile", "value": profile.get("profile_label") or "-", "tone": "neutral"},
-                {"label": "PASS", "value": status_counts.get("PASS", 0), "tone": "positive"},
-                {"label": "REVIEW", "value": status_counts.get("REVIEW", 0), "tone": "warning"},
-                {"label": "BLOCKED", "value": status_counts.get("BLOCKED", 0), "tone": "danger"},
-                {"label": "NOT_RUN", "value": status_counts.get("NOT_RUN", 0), "tone": "neutral"},
-            ]
-        )
-        st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
-        provider_rows = list(validation.get("provider_coverage_display_rows") or [])
-        if provider_rows:
-            st.markdown("###### Provider Coverage")
-            st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
-            _render_provider_look_through_summary(validation)
-        not_run_critical = list(validation.get("not_run_critical_domains") or [])
-        if not_run_critical:
-            st.caption("NOT_RUN 항목은 선택을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 합니다.")
-            st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
-        profile_score_rows = list(validation.get("profile_score_rows") or [])
-        if profile_score_rows:
-            with st.expander("Profile-aware score breakdown", expanded=False):
-                st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
-        curve_evidence = dict(validation.get("curve_evidence") or {})
-        if curve_evidence:
-            with st.expander("Curve / Replay evidence", expanded=False):
-                render_badge_strip(
-                    [
-                        {"label": "Portfolio Curve", "value": curve_evidence.get("portfolio_curve_source") or "-", "tone": "neutral"},
-                        {"label": "Rows", "value": curve_evidence.get("portfolio_curve_rows", 0), "tone": "neutral"},
-                        {"label": "Benchmark", "value": curve_evidence.get("benchmark_ticker") or "-", "tone": "neutral"},
-                        {"label": "Benchmark Rows", "value": curve_evidence.get("benchmark_curve_rows", 0), "tone": "neutral"},
-                    ]
-                )
-                component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
-                if component_curve_rows:
-                    st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
-    gap_cols = st.columns(3, gap="small")
-    with gap_cols[0]:
-        st.markdown("###### Hard Blockers")
-        if validation.get("hard_blockers"):
-            for blocker in list(validation.get("hard_blockers") or []):
-                st.error(str(blocker))
-        else:
-            st.success("hard blocker 없음")
-    with gap_cols[1]:
-        st.markdown("###### Paper / Observation Gaps")
-        if validation.get("paper_tracking_gaps"):
-            for gap in list(validation.get("paper_tracking_gaps") or []):
-                st.warning(str(gap))
-        else:
-            st.success("관찰 gap 없음")
-    with gap_cols[2]:
-        st.markdown("###### Review Gaps")
-        if validation.get("review_gaps"):
-            for gap in list(validation.get("review_gaps") or []):
-                st.info(str(gap))
-        else:
-            st.success("review gap 없음")
-
-
-def _render_robustness_summary(validation: dict[str, Any]) -> None:
-    robustness = dict(validation.get("robustness_validation") or {})
-    if not robustness:
-        st.info("Robustness / Stress preview가 없습니다.")
-        return
-    route = str(robustness.get("robustness_route") or "-")
-    render_readiness_route_panel(
-        route_label=route,
-        score=float(robustness.get("robustness_score") or 0.0),
-        blockers_count=len(robustness.get("blockers") or []),
-        verdict=str(robustness.get("verdict") or "-"),
-        next_action=str(robustness.get("next_action") or "-"),
-        route_title="Robustness Preview",
-        score_title="Robustness Score",
-    )
-    board = _robustness_lab_board(validation)
-    if board:
-        _render_robustness_lab_summary(board)
-        return
-
-    stress_interpretation = dict(robustness.get("stress_interpretation") or validation.get("stress_interpretation") or {})
-    sensitivity_interpretation = dict(
-        robustness.get("sensitivity_interpretation") or validation.get("sensitivity_interpretation") or {}
-    )
-    if stress_interpretation or sensitivity_interpretation:
-        st.markdown("###### Stress / Sensitivity Interpretation")
-        interpretation_tabs = st.tabs(["Stress", "Sensitivity"])
-        with interpretation_tabs[0]:
-            render_badge_strip(
-                [
-                    {"label": "Status", "value": stress_interpretation.get("status") or "-", "tone": _status_tone(stress_interpretation.get("status"))},
-                    {"label": "Computed", "value": f"{stress_interpretation.get('computed_count', 0)}/{stress_interpretation.get('covered_count', 0)}", "tone": "neutral"},
-                    {"label": "Uncomputed", "value": stress_interpretation.get("uncomputed_count", 0), "tone": "warning" if stress_interpretation.get("uncomputed_count") else "neutral"},
-                ]
-            )
-            st.caption(str(stress_interpretation.get("summary") or "-"))
-            stress_rows = list(stress_interpretation.get("rows") or [])
-            if stress_rows:
-                st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
-        with interpretation_tabs[1]:
-            render_badge_strip(
-                [
-                    {"label": "Status", "value": sensitivity_interpretation.get("status") or "-", "tone": _status_tone(sensitivity_interpretation.get("status"))},
-                    {"label": "Computed", "value": sensitivity_interpretation.get("computed_count", 0), "tone": "neutral"},
-                    {"label": "Review", "value": sensitivity_interpretation.get("review_count", 0), "tone": "warning" if sensitivity_interpretation.get("review_count") else "neutral"},
-                    {"label": "Runtime Follow-up", "value": sensitivity_interpretation.get("runtime_followup_count", 0), "tone": "warning" if sensitivity_interpretation.get("runtime_followup_count") else "neutral"},
-                ]
-            )
-            st.caption(str(sensitivity_interpretation.get("summary") or "-"))
-            sensitivity_rows = list(sensitivity_interpretation.get("rows") or [])
-            if sensitivity_rows:
-                st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
-    stress_df = pd.DataFrame(robustness.get("stress_summary_rows") or [])
-    if stress_df.empty:
-        st.info("Stress / Sensitivity summary가 없습니다.")
-    else:
-        st.dataframe(stress_df, width="stretch", hide_index=True)
-        st.caption("`Result Status = NOT_RUN`은 stress runner 실행 결과가 아니라, 최종 검토 전에 확인할 검증 질문입니다.")
-
-
-def _render_paper_observation_summary(paper_observation: dict[str, Any]) -> None:
-    baseline = dict(paper_observation.get("baseline_snapshot") or {})
-    render_badge_strip(
-        [
-            {"label": "Mode", "value": "Inline Observation", "tone": "neutral"},
-            {"label": "Route", "value": paper_observation.get("route") or "-", "tone": "positive" if paper_observation.get("route") == "PAPER_OBSERVATION_READY" else "warning"},
-            {"label": "Components", "value": baseline.get("active_component_count", 0), "tone": "neutral"},
-            {"label": "Weight Total", "value": f"{baseline.get('target_weight_total', 0)}%", "tone": "neutral"},
-            {"label": "Benchmark", "value": paper_observation.get("tracking_benchmark") or "-", "tone": "neutral"},
-        ]
-    )
-    st.dataframe(pd.DataFrame(paper_observation.get("checks") or []), width="stretch", hide_index=True)
-    trigger_cols = st.columns(2, gap="small")
-    with trigger_cols[0]:
-        st.markdown("###### 관찰 기준")
-        st.write(
-            {
-                "review_cadence": paper_observation.get("review_cadence"),
-                "tracking_benchmark": paper_observation.get("tracking_benchmark"),
-            }
-        )
-    with trigger_cols[1]:
-        st.markdown("###### 재검토 trigger")
-        for trigger in list(paper_observation.get("review_triggers") or []):
-            st.info(str(trigger))
-
-
-def _render_investability_packet(packet: dict[str, Any]) -> None:
-    summary = dict(packet.get("summary") or {})
-    source_chain = dict(packet.get("source_chain") or {})
-    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
-    policy_blocker_count = len(gate_policy.get("blockers") or []) + len(gate_policy.get("review_required") or [])
-    route = str(packet.get("route") or "-")
-    render_readiness_route_panel(
-        route_label=route,
-        score=float(packet.get("score") or 0.0),
-        blockers_count=policy_blocker_count or len(packet.get("critical_gaps") or []),
-        verdict=str(packet.get("verdict") or "-"),
-        next_action=str(packet.get("next_action") or "-"),
-        route_title="Investability Packet",
-        score_title="Packet Score",
-    )
-    render_badge_strip(
-        [
-            {"label": "Source", "value": source_chain.get("selection_source_id") or source_chain.get("source_id") or "-", "tone": "neutral"},
-            {"label": "Validation", "value": source_chain.get("validation_id") or "-", "tone": "neutral"},
-            {"label": "PASS", "value": summary.get("pass", 0), "tone": "positive"},
-            {"label": "REVIEW", "value": summary.get("review", 0), "tone": "warning"},
-            {"label": "BLOCKED", "value": summary.get("blocked", 0), "tone": "danger"},
-            {"label": "NOT_RUN", "value": summary.get("not_run", 0), "tone": "neutral"},
-            {"label": "Gate", "value": gate_policy.get("outcome") or "-", "tone": "positive" if gate_policy.get("select_allowed") else "warning"},
-            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-        ]
-    )
-    st.caption("이 packet은 새 저장소가 아니라 Final Review에서 기존 validation evidence를 읽는 compact 판단 근거입니다.")
-    st.dataframe(pd.DataFrame(packet.get("checks") or []), width="stretch", hide_index=True)
-    policy_rows = list(gate_policy.get("policy_rows") or [])
-    if policy_rows:
-        st.markdown("###### Validation Gate Policy")
-        st.caption("profile-aware gate matrix입니다. `Selected Route = Blocked`이면 Monitoring handoff는 비활성화됩니다.")
-        st.dataframe(pd.DataFrame(policy_rows), width="stretch", hide_index=True)
-        if gate_policy.get("blockers"):
-            for blocker in list(gate_policy.get("blockers") or []):
-                st.error(str(blocker))
-        if gate_policy.get("review_required"):
-            for item in list(gate_policy.get("review_required") or []):
-                st.warning(str(item))
-    critical_gaps = list(packet.get("critical_gaps") or [])
-    if critical_gaps:
-        st.markdown("###### Critical Gaps")
-        st.dataframe(pd.DataFrame(critical_gaps), width="stretch", hide_index=True)
-    else:
-        if gate_policy.get("blockers") or gate_policy.get("review_required"):
-            st.info("packet critical gap은 없지만 gate policy상 선정 전 보강 항목이 있습니다.")
-        else:
-            st.success("critical gap 없음")
-    with st.expander("Assumptions & Limits", expanded=False):
-        st.dataframe(pd.DataFrame(packet.get("assumptions_and_limits") or []), width="stretch", hide_index=True)
-
-
-def _cockpit_tone(state: Any) -> str:
-    state_text = str(state or "").upper()
-    if state_text == "SELECT_READY":
-        return "positive"
-    if state_text == "SELECT_BLOCKED":
-        return "danger"
-    return "warning"
 
 
 def _build_candidate_contexts(
@@ -870,109 +404,6 @@ def _render_candidate_selection_panel(candidate_contexts: list[dict[str, Any]]) 
     }
 
 
-def _render_decision_cockpit(cockpit: dict[str, Any]) -> None:
-    metrics = dict(cockpit.get("metrics") or {})
-    handoff = dict(cockpit.get("monitoring_handoff") or {})
-    source_chain = dict(cockpit.get("source_chain") or {})
-    must_fix_rows = list(cockpit.get("must_fix_rows") or [])
-    must_review_rows = list(cockpit.get("must_review_rows") or [])
-    watch_rows = list(cockpit.get("watch_rows") or [])
-    cockpit_tone = _cockpit_tone(cockpit.get("state"))
-    render_fr_action_panel(
-        title="Decision Cockpit",
-        detail=str(cockpit.get("verdict") or "-"),
-        route_label="Suggested Decision",
-        route_value=str(cockpit.get("suggested_decision_label") or "-"),
-        route_detail=str(cockpit.get("next_action") or "-"),
-        route_tone=cockpit_tone,
-        meta_items=[
-            {"label": "State", "value": cockpit.get("state_label") or "-"},
-            {"label": "Gate", "value": cockpit.get("gate_outcome") or "-"},
-            {"label": "Packet Score", "value": f"{float(cockpit.get('packet_score') or 0.0):.1f}"},
-            {"label": "Validation", "value": source_chain.get("validation_id") or "-"},
-            {"label": "Live Approval", "value": "Disabled"},
-        ],
-    )
-    render_fr_lane_grid(
-        [
-            {
-                "kicker": "Gate Policy",
-                "title": "Must Fix",
-                "status": len(must_fix_rows),
-                "detail": _policy_rows_preview(must_fix_rows, empty_message="선정 차단 blocker 없음"),
-                "tone": "danger" if must_fix_rows else "positive",
-            },
-            {
-                "kicker": "Gate Policy",
-                "title": "Must Review",
-                "status": len(must_review_rows),
-                "detail": _policy_rows_preview(must_review_rows, empty_message="선정 전 review-required 없음"),
-                "tone": "warning" if must_review_rows else "positive",
-            },
-            {
-                "kicker": "Monitoring Seed",
-                "title": str(handoff.get("review_cadence") or "관찰 기준 미지정"),
-                "status": f"{handoff.get('active_components', 0)} components",
-                "detail": (
-                    f"Benchmark {handoff.get('tracking_benchmark') or '-'} / "
-                    f"Triggers {len(handoff.get('review_triggers') or [])} / "
-                    f"Weight {handoff.get('target_weight_total') or '-'}"
-                ),
-                "tone": "info",
-            },
-            {
-                "kicker": "Watch Only",
-                "title": "Policy Watch",
-                "status": len(watch_rows),
-                "detail": _policy_rows_preview(watch_rows, empty_message="관찰 전용 policy row 없음"),
-                "tone": "warning" if watch_rows else "neutral",
-            },
-        ],
-        min_width=220,
-    )
-    with st.expander("Decision Cockpit detail", expanded=False):
-        render_badge_strip(
-            [
-                {"label": "State", "value": cockpit.get("state_label") or "-", "tone": cockpit_tone},
-                {"label": "Suggested", "value": cockpit.get("suggested_decision_label") or "-", "tone": cockpit_tone},
-                {"label": "Gate", "value": cockpit.get("gate_outcome") or "-", "tone": "positive" if cockpit.get("select_allowed") else "warning"},
-                {"label": "Blockers", "value": metrics.get("policy_blockers", 0), "tone": "danger" if metrics.get("policy_blockers") else "neutral"},
-                {"label": "Review", "value": metrics.get("policy_review_required", 0), "tone": "warning" if metrics.get("policy_review_required") else "neutral"},
-                {"label": "NOT_RUN", "value": metrics.get("not_run", 0), "tone": "warning" if metrics.get("not_run") else "neutral"},
-            ]
-        )
-        detail_tabs = st.tabs(["Must Fix", "Must Review", "Monitoring Seed", "Watch-only"])
-        with detail_tabs[0]:
-            if must_fix_rows:
-                st.dataframe(pd.DataFrame(must_fix_rows), width="stretch", hide_index=True)
-            else:
-                st.success("선정 차단 blocker 없음")
-        with detail_tabs[1]:
-            if must_review_rows:
-                st.dataframe(pd.DataFrame(must_review_rows), width="stretch", hide_index=True)
-            else:
-                st.success("선정 전 review-required 없음")
-        with detail_tabs[2]:
-            st.dataframe(
-                pd.DataFrame(
-                    [
-                        {"Field": "Cadence", "Value": str(handoff.get("review_cadence") or "-")},
-                        {"Field": "Benchmark", "Value": str(handoff.get("tracking_benchmark") or "-")},
-                        {"Field": "Triggers", "Value": str(len(handoff.get("review_triggers") or []))},
-                        {"Field": "Components", "Value": str(handoff.get("active_components", 0))},
-                        {"Field": "Weight Total", "Value": str(handoff.get("target_weight_total") or "-")},
-                    ]
-                ),
-                width="stretch",
-                hide_index=True,
-            )
-        with detail_tabs[3]:
-            if watch_rows:
-                st.dataframe(pd.DataFrame(watch_rows), width="stretch", hide_index=True)
-            else:
-                st.info("관찰 전용 policy row가 없습니다.")
-
-
 def _render_investment_report_fallback(report: dict[str, Any]) -> None:
     recommendation = dict(report.get("recommendation") or {})
     score = dict(report.get("score") or {})
@@ -1091,290 +522,93 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         st.dataframe(pd.DataFrame(experiment_rows), width="stretch", hide_index=True)
 
 
-def _render_investment_report(report: dict[str, Any], *, key: str) -> None:
-    if is_final_review_investment_report_available():
-        render_final_review_investment_report(report=report, key=key)
-        return
-    _render_investment_report_fallback(report)
-
-
-def _render_evidence_appendix(
+def _render_investment_report(
+    report: dict[str, Any],
     *,
+    decision_action: dict[str, Any],
+    key: str,
+) -> dict[str, Any] | None:
+    if is_final_review_investment_report_available():
+        return render_final_review_investment_report(
+            report=report,
+            decision_action=decision_action,
+            key=key,
+        )
+    _render_investment_report_fallback(report)
+    return _render_final_review_decision_fallback(decision_action, key=key)
+
+
+def _consume_final_review_decision_intent(
+    intent: dict[str, Any] | None,
+    *,
+    source: dict[str, Any],
     validation: dict[str, Any],
     paper_observation: dict[str, Any],
+    evidence: dict[str, Any],
     investability_packet: dict[str, Any],
+    decision_id: str,
+    decision_id_key: str,
+    existing_decision_ids: set[str],
 ) -> None:
-    render_stage_brief(
-        purpose="이전 단계에서 이미 저장된 validation evidence를 필요할 때만 확인하는 부록입니다.",
-        result="Read-only evidence appendix",
-    )
-    st.caption(
-        "Evidence Appendix는 Practical Validation을 다시 실행하지 않습니다. "
-        "현재 선택 후보의 저장된 validation result와 Final Review read model을 그대로 읽습니다."
-    )
-    appendix_tabs = st.tabs(
-        [
-            "Guide",
-            "Practical Validation",
-            "Robustness / Stress",
-            "Paper Observation",
-            "Investability Packet",
-        ]
-    )
-    with appendix_tabs[0]:
-        st.info(
-            "Final Review 판단에 필요한 요약은 위 투자 검토서와 최종 판단 영역에 있습니다. "
-            "이 부록은 왜 그런 후보 가능 / 보류 / 차단 판단이 나왔는지 원본 근거를 추적할 때 확인합니다."
-        )
-        render_badge_strip(
-            [
-                {"label": "Validation Re-run", "value": "Disabled", "tone": "neutral"},
-                {"label": "Provider Fetch", "value": "Disabled", "tone": "neutral"},
-                {"label": "Registry Write", "value": "Disabled", "tone": "neutral"},
-                {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-            ]
-        )
-    with appendix_tabs[1]:
-        _render_validation_summary(validation)
-    with appendix_tabs[2]:
-        _render_robustness_summary(validation)
-    with appendix_tabs[3]:
-        render_stage_brief(
-            purpose="별도 Paper Ledger를 또 저장하지 않고, 최종 검토 기록 안에 관찰 기준을 함께 남깁니다.",
-            result="Inline paper observation criteria",
-        )
-        _render_paper_observation_summary(paper_observation)
-    with appendix_tabs[4]:
-        render_stage_brief(
-            purpose="새 저장 기능을 늘리지 않고, 기존 검증 결과를 최종 판단용 compact packet으로 읽습니다.",
-            result="Decision support packet",
-        )
-        _render_investability_packet(investability_packet)
+    """Validate one component intent and append the authoritative Python decision row once."""
 
+    payload = dict(intent or {})
+    if payload.get("action") != "record_final_decision":
+        return
+    intent_id = str(payload.get("intent_id") or "").strip()
+    source_slug = _paper_ledger_slug(source.get("source_id"))
+    consumed_key = f"final_review_consumed_decision_intent_{source_slug}"
+    if not intent_id or st.session_state.get(consumed_key) == intent_id:
+        return
+    st.session_state[consumed_key] = intent_id
 
-def _render_decision_dossier_export(row: dict[str, Any], *, key_prefix: str) -> None:
-    dossier = build_decision_dossier(row)
-    decision = dict(dossier.get("decision") or {})
-    metrics = dict(dossier.get("metrics") or {})
-    boundary = dict(dossier.get("execution_boundary") or {})
-    st.markdown("###### Decision Dossier")
-    st.caption(
-        "저장된 Final Review row를 사람이 읽는 markdown dossier로 묶습니다. "
-        "이 export는 report 파일을 자동 저장하지 않습니다."
+    decision_route = str(payload.get("decision_route") or "").strip()
+    operator_reason = str(payload.get("operator_reason") or "").strip()
+    guide = build_final_review_decision_record_guide(
+        decision_route=decision_route,
+        decision_evidence=evidence,
+        investability_packet=investability_packet,
     )
-    render_badge_strip(
-        [
-            {"label": "Schema", "value": dossier.get("schema_version"), "tone": "neutral"},
-            {"label": "Decision", "value": decision.get("decision_label"), "tone": "neutral"},
-            {"label": "Evidence", "value": metrics.get("evidence_check_count", 0), "tone": "neutral"},
-            {
-                "label": "Needs Review",
-                "value": metrics.get("not_ready_evidence_check_count", 0),
-                "tone": "warning" if metrics.get("not_ready_evidence_check_count") else "neutral",
-            },
-            {"label": "Auto Write", "value": "Disabled", "tone": "neutral"},
-        ]
+    route_templates = dict(guide.get("route_templates") or {})
+    save_evaluation = _build_final_review_save_evaluation(
+        evidence=evidence,
+        investability_packet=investability_packet,
+        decision_id=decision_id,
+        decision_route=decision_route,
+        operator_reason=operator_reason,
+        existing_decision_ids=existing_decision_ids,
     )
-    action_cols = st.columns([0.36, 0.64], gap="small")
-    with action_cols[0]:
-        st.download_button(
-            "Markdown 다운로드",
-            data=str(dossier.get("markdown") or ""),
-            file_name=str(dossier.get("filename") or "decision_dossier.md"),
-            mime="text/markdown",
-            key=f"{key_prefix}_download",
-            width="stretch",
-        )
-    with action_cols[1]:
-        st.caption(
-            f"Write policy: {boundary.get('write_policy') or '-'} / "
-            f"report auto write: {boundary.get('report_auto_write')}"
-        )
-    with st.expander("Dossier preview", expanded=False):
-        st.markdown(str(dossier.get("markdown") or "-"))
-
-
-def _render_selected_dashboard_handoff(final_decision_rows: list[dict[str, Any]]) -> None:
-    handoff = build_selected_dashboard_handoff_review(final_decision_rows)
-    summary = dict(handoff.get("summary") or {})
-    route = str(handoff.get("route") or "")
-    st.markdown("##### Portfolio Monitoring Handoff")
-    render_badge_strip(
-        [
-            {"label": "Handoff", "value": handoff.get("route_label") or route, "tone": _handoff_tone(route)},
-            {
-                "label": "Selected Rows",
-                "value": summary.get("selected_decision_count", 0),
-                "tone": "positive" if summary.get("selected_decision_count") else "warning",
-            },
-            {
-                "label": "Monitoring Rows",
-                "value": summary.get("dashboard_row_count", 0),
-                "tone": "positive" if summary.get("dashboard_row_count") else "neutral",
-            },
-            {
-                "label": "Monitorable",
-                "value": summary.get("monitorable_count", 0),
-                "tone": "positive" if summary.get("monitorable_count") else "warning",
-            },
-            {
-                "label": "Blocked",
-                "value": summary.get("blocked_count", 0),
-                "tone": "danger" if summary.get("blocked_count") else "neutral",
-            },
-            {"label": "Approval / Order", "value": "Disabled", "tone": "neutral"},
-        ]
-    )
-    message = f"{handoff.get('verdict') or '-'} 다음 단계: {handoff.get('next_action') or '-'}"
-    if route == "HANDOFF_READY":
-        st.success(message)
-    elif route == "HANDOFF_BLOCKED":
-        st.error(message)
-    else:
-        st.warning(message)
-    handoff_df = build_selected_dashboard_handoff_table(handoff)
-    if not handoff_df.empty:
-        st.dataframe(handoff_df, width="stretch", hide_index=True)
-    else:
-        st.caption("Portfolio Monitoring으로 넘길 모니터링 후보 row가 아직 없습니다.")
-    with st.expander("Handoff checklist / storage boundary", expanded=False):
-        checklist_df = build_selected_dashboard_handoff_checklist_table(handoff)
-        if not checklist_df.empty:
-            st.dataframe(checklist_df, width="stretch", hide_index=True)
-        boundary = dict(handoff.get("execution_boundary") or {})
-        st.caption(
-            f"Destination: {handoff.get('destination') or '-'} / "
-            f"write policy: {boundary.get('write_policy') or '-'} / "
-            f"monitoring auto-write: {boundary.get('monitoring_log_auto_write')} / "
-            f"auto rebalance: {boundary.get('auto_rebalance')}"
-        )
-
-
-def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
-    if not final_decision_rows:
-        st.info("아직 저장된 Final Review 판단 기록이 없습니다.")
-        st.caption(f"Path: {FINAL_SELECTION_DECISION_FILE}")
-        _render_selected_dashboard_handoff(final_decision_rows)
+    if not bool(save_evaluation.get("can_save")):
+        st.error(str(save_evaluation.get("verdict") or "판단 기록을 저장할 수 없습니다."))
+        for blocker in list(save_evaluation.get("blockers") or []):
+            st.caption(f"- {blocker}")
         return
 
-    review = build_saved_final_review_decision_review(final_decision_rows)
-    summary = dict(review.get("summary") or {})
-    render_stage_brief(
-        purpose="저장된 Final Review 판단 기록을 다시 읽고, 어떤 후보가 Portfolio Monitoring으로 이어지는지 확인합니다.",
-        result="Saved decision ledger",
+    final_row = _build_final_review_decision_row(
+        source=source,
+        validation=validation,
+        paper_observation=paper_observation,
+        evidence=evidence,
+        investability_packet=investability_packet,
+        decision_id=decision_id,
+        decision_route=decision_route,
+        operator_reason=operator_reason,
+        operator_constraints=str(route_templates.get("constraints") or ""),
+        operator_next_action=str(route_templates.get("next_action") or ""),
     )
-    render_status_card_grid(
-        [
-            {"title": "Saved Decisions", "value": summary.get("total_records", 0), "tone": "positive"},
-            {"title": "Selected", "value": summary.get("selected", 0), "detail": "Dashboard eligible", "tone": "positive" if summary.get("selected") else "neutral"},
-            {"title": "Hold", "value": summary.get("hold", 0), "tone": "warning" if summary.get("hold") else "neutral"},
-            {"title": "Reject", "value": summary.get("reject", 0), "tone": "warning" if summary.get("reject") else "neutral"},
-            {"title": "Re-review", "value": summary.get("re_review", 0), "tone": "warning" if summary.get("re_review") else "neutral"},
-            {"title": "Live Approval", "value": "Disabled", "detail": "review only", "tone": "neutral"},
-        ]
+    append_current_final_selection_decision(final_row)
+    decision_label = FINAL_REVIEW_DECISION_LABELS.get(decision_route, decision_route)
+    next_location = (
+        "Operations > Portfolio Monitoring에서 추적 조건을 이어서 확인하세요."
+        if final_row.get("monitoring_candidate")
+        else "판단 기록은 보존되며 Portfolio Monitoring 후보로는 연결되지 않습니다."
     )
-    _render_selected_dashboard_handoff(final_decision_rows)
-    st.info(
-        "최근 판단: "
-        f"{summary.get('latest_updated_at') or '-'} / "
-        f"{summary.get('latest_decision') or '-'} / "
-        f"id={summary.get('latest_decision_id') or '-'}"
+    st.session_state["final_review_decision_notice"] = (
+        f"{decision_label} 판단을 기록했습니다. {next_location} "
+        "이 기록은 실제 투자 승인이나 주문 지시가 아닙니다."
     )
-    filter_options = list(review.get("filter_options") or ["All"])
-    selected_filter = st.selectbox(
-        "판단 상태 필터",
-        options=filter_options,
-        key="final_review_saved_decision_route_filter",
-    )
-    review_rows = list(review.get("rows") or [])
-    if selected_filter != "All":
-        review_rows = [row for row in review_rows if row.get("Route Family") == selected_filter]
-    st.caption(f"표시 중인 기록: {len(review_rows)} / {summary.get('total_records', 0)}")
-    if not review_rows:
-        st.warning("선택한 필터에 해당하는 최종 검토 기록이 없습니다.")
-        return
-
-    table_rows = [
-        {key: value for key, value in row.items() if not str(key).startswith("_")}
-        for row in review_rows
-    ]
-    st.dataframe(pd.DataFrame(table_rows), width="stretch", hide_index=True)
-    labels = [
-        f"{row.get('Updated At')} | {row.get('Decision')} | {row.get('Decision ID')}"
-        for row in review_rows
-    ]
-    selected_label = st.selectbox(
-        "기록 확인",
-        options=labels,
-        key=f"final_review_saved_decision_selected_{selected_filter}",
-    )
-    selected_review_row = review_rows[labels.index(selected_label)]
-    selected_row = dict(final_decision_rows[int(selected_review_row.get("_row_index", 0))] or {})
-    evidence = dict(selected_row.get("decision_evidence_snapshot") or {})
-    status_display = _build_final_review_status_display(selected_row)
-    decision_label = FINAL_REVIEW_DECISION_LABELS.get(str(selected_row.get("decision_route") or ""), "재검토 필요")
-    monitoring_candidate = _is_monitoring_handoff_candidate(selected_row)
-    detail_tabs = st.tabs(["Summary", "Dossier", "Evidence Packet", "Raw JSON"])
-    with detail_tabs[0]:
-        render_readiness_route_panel(
-            route_label=str(status_display.get("route") or "-"),
-            score=float(evidence.get("score") or 0.0),
-            blockers_count=len(evidence.get("blockers") or []),
-            verdict=str(status_display.get("verdict") or "-"),
-            next_action=str(status_display.get("next_action") or "-"),
-            route_title="Final Review Status",
-            score_title="Evidence Score",
-        )
-        render_badge_strip(
-            [
-                {
-                    "label": "Decision",
-                    "value": selected_row.get("decision_route") or "-",
-                    "tone": "positive" if monitoring_candidate else "warning",
-                },
-                {
-                    "label": "판단 라벨",
-                    "value": decision_label,
-                    "tone": "positive" if monitoring_candidate else "warning",
-                },
-                {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
-                {"label": "Observation", "value": selected_row.get("source_observation_id") or selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
-                {"label": "Dashboard", "value": "Eligible" if monitoring_candidate else "Not selected", "tone": "positive" if monitoring_candidate else "neutral"},
-                {"label": "Order", "value": "Disabled", "tone": "neutral"},
-            ]
-        )
-        operator = dict(selected_row.get("operator_decision") or {})
-        st.markdown("###### Operator Decision")
-        st.dataframe(
-            pd.DataFrame(
-                [
-                    {"Field": "Reason", "Value": operator.get("reason") or "-"},
-                    {"Field": "Constraints", "Value": operator.get("constraints") or "-"},
-                    {"Field": "Next Action", "Value": operator.get("next_action") or "-"},
-                ]
-            ),
-            width="stretch",
-            hide_index=True,
-        )
-        component_df = _build_final_selection_decision_component_rows(selected_row)
-        if component_df.empty:
-            st.info("이 기록에는 selected component가 없습니다.")
-        else:
-            st.markdown("###### Components")
-            st.dataframe(component_df, width="stretch", hide_index=True)
-    with detail_tabs[1]:
-        _render_decision_dossier_export(
-            selected_row,
-            key_prefix=f"final_review_dossier_{selected_row.get('decision_id') or 'saved'}",
-        )
-    with detail_tabs[2]:
-        packet = dict(selected_row.get("investability_evidence_packet") or {})
-        if packet:
-            _render_investability_packet(packet)
-        else:
-            st.info("이 기록에는 investability evidence packet snapshot이 없습니다.")
-    with detail_tabs[3]:
-        st.json(selected_row)
+    st.session_state.pop(decision_id_key, None)
+    st.rerun()
 
 
 def render_final_review_workspace() -> None:
@@ -1453,14 +687,7 @@ def render_final_review_workspace() -> None:
     if not source_options:
         st.info("Final Review Gate를 통과한 Practical Validation 후보가 없습니다.")
         st.caption("검증 결과만 저장한 blocked / needs input / not run 후보는 기록으로 남지만, Final Review 검토 대상에는 표시되지 않습니다.")
-        render_fr_section_header(
-            eyebrow="Saved Decisions",
-            title="Decision History / Portfolio Monitoring Handoff",
-            detail="새로 판단할 후보가 없을 때도 기존 최종 판단과 Portfolio Monitoring handoff 상태는 확인할 수 있습니다.",
-            tone=_handoff_tone(dashboard_handoff.get("route")),
-        )
-        with st.container(border=True):
-            _render_saved_final_review_decisions(final_decision_rows)
+        st.caption("기존에 선정한 Monitoring 후보와 운영 상태는 Operations > Portfolio Monitoring에서 확인합니다.")
         return
 
     with st.container(border=True):
@@ -1483,218 +710,36 @@ def render_final_review_workspace() -> None:
         investability_packet=investability_packet,
     )
 
-    _render_investment_report(
+    existing_decision_ids = {
+        str(row.get("decision_id") or "").strip()
+        for row in final_decision_rows
+        if str(row.get("decision_id") or "").strip()
+    }
+    source_slug = _paper_ledger_slug(source.get("source_id"))
+    decision_id_key = f"final_review_decision_id_v2_{source_slug}"
+    if not str(st.session_state.get(decision_id_key) or "").strip():
+        st.session_state[decision_id_key] = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
+    decision_id = str(st.session_state[decision_id_key])
+    decision_action = _build_final_review_decision_action_model(
+        cockpit=cockpit,
+        evidence=evidence,
+        investability_packet=investability_packet,
+        decision_id=decision_id,
+        existing_decision_ids=existing_decision_ids,
+    )
+    decision_intent = _render_investment_report(
         investment_report,
+        decision_action=decision_action,
         key=f"final_review_investment_report_{validation.get('validation_id') or source.get('source_id') or 'current'}",
     )
-
-    render_fr_section_header(
-        eyebrow="최종 판단",
-        title="판단 기록",
-        detail="투자 검토서의 결론을 바탕으로 Monitoring 후보 선정, 보류, 탈락 또는 재검토를 기록합니다.",
-        tone=_cockpit_tone(cockpit.get("state")),
+    _consume_final_review_decision_intent(
+        decision_intent,
+        source=source,
+        validation=validation,
+        paper_observation=paper_observation,
+        evidence=evidence,
+        investability_packet=investability_packet,
+        decision_id=decision_id,
+        decision_id_key=decision_id_key,
+        existing_decision_ids=existing_decision_ids,
     )
-    with st.container(border=True):
-        render_fr_action_panel(
-            title="현재 판단 상태",
-            detail=str(cockpit.get("verdict") or "-"),
-            route_label="권장 판단",
-            route_value=str(cockpit.get("suggested_decision_label") or "-"),
-            route_detail=str(cockpit.get("next_action") or "-"),
-            route_tone=_cockpit_tone(cockpit.get("state")),
-            meta_items=[
-                {"label": "상태", "value": cockpit.get("state_label") or "-"},
-                {"label": "선정 조건", "value": cockpit.get("gate_outcome") or "-"},
-                {"label": "차단 항목", "value": len(cockpit.get("must_fix_rows") or [])},
-            ],
-        )
-        st.caption("여기서는 판단 기록과 Monitoring 후보 handoff 여부만 결정합니다. 새 검증, live approval, 주문 또는 자동 리밸런싱을 실행하지 않습니다.")
-        if evidence.get("blockers"):
-            for blocker in list(evidence.get("blockers") or []):
-                st.warning(str(blocker))
-
-        existing_decision_ids = {
-            str(row.get("decision_id") or "").strip()
-            for row in final_decision_rows
-            if str(row.get("decision_id") or "").strip()
-        }
-        source_slug = _paper_ledger_slug(source.get("source_id"))
-        decision_id_key = f"final_review_decision_id_v1_{source_slug}"
-        if st.session_state.pop("final_review_reset_decision_id_after_save", False):
-            reset_source_slug = str(st.session_state.pop("final_review_reset_decision_id_source_slug", "") or source_slug)
-            st.session_state.pop(f"final_review_decision_id_v1_{reset_source_slug}", None)
-            st.session_state.pop("final_review_decision_id", None)
-        default_decision_id = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
-        gate_policy_snapshot = dict(investability_packet.get("gate_policy_snapshot") or {})
-        suggested_route = str(
-            gate_policy_snapshot.get("suggested_decision_route")
-            or evidence.get("suggested_decision_route")
-            or cockpit.get("suggested_decision_route")
-            or SELECT_FOR_PRACTICAL_PORTFOLIO
-        )
-        route_options = list(FINAL_REVIEW_ROUTE_OPTIONS)
-        if suggested_route not in route_options:
-            route_options.append(suggested_route)
-        default_route_index = route_options.index(suggested_route) if suggested_route in route_options else 0
-        decision_route_key = f"final_review_decision_route_v1_{source_slug}"
-        decision_route = st.selectbox(
-            "최종 판단",
-            options=route_options,
-            index=default_route_index,
-            format_func=lambda value: FINAL_REVIEW_DECISION_LABELS.get(value, str(value)),
-            key=decision_route_key,
-            help="Final Review 판단 기록 route입니다. Monitoring handoff는 모니터링 후보 선정 route가 selection gate를 통과할 때만 만들어집니다.",
-        )
-        suggested_route_label = FINAL_REVIEW_DECISION_LABELS.get(suggested_route, suggested_route or "-")
-        route_slug = _paper_ledger_slug(decision_route)
-        operator_reason_key = f"final_review_selection_reason_v2_{source_slug}_{route_slug}"
-        operator_constraints_key = f"final_review_selection_constraints_v2_{source_slug}_{route_slug}"
-        operator_next_action_key = f"final_review_selection_next_action_v2_{source_slug}_{route_slug}"
-
-        st.caption(
-            f"현재 권장 판단은 `{suggested_route_label}`입니다. 추천 / 보류 / 탈락 / 재검토를 모두 기록할 수 있으며, "
-            "Portfolio Monitoring handoff는 selected-route gate가 통과한 모니터링 후보 선정만 대상으로 합니다. "
-            f"{FINAL_REVIEW_ROUTE_DESCRIPTIONS.get(decision_route, '')}"
-        )
-        decision_record_guide = build_final_review_decision_record_guide(
-            decision_route=decision_route,
-            decision_evidence=evidence,
-            investability_packet=investability_packet,
-        )
-        save_handoff_summary = build_final_review_save_handoff_summary(
-            decision_record_guide=decision_record_guide,
-        )
-        official_save_ready = bool(decision_record_guide.get("recordable_route"))
-        selected_gate = dict(decision_record_guide.get("selected_route_gate") or {})
-        notice = str(decision_record_guide.get("notice") or "")
-        if decision_record_guide.get("notice_level") == "warning":
-            st.warning(notice)
-        elif decision_record_guide.get("notice_level") == "success":
-            st.success(notice)
-        else:
-            st.info(notice)
-        handoff_state = dict(save_handoff_summary.get("monitoring_handoff") or {})
-        render_badge_strip(
-            [
-                {
-                    "label": "선택한 판단",
-                    "value": decision_record_guide.get("decision_label") or "-",
-                    "tone": "positive" if official_save_ready else "warning",
-                },
-                {
-                    "label": "선정 조건",
-                    "value": "통과" if selected_gate.get("Ready") else "차단",
-                    "tone": "positive" if selected_gate.get("Ready") else "danger",
-                },
-                {
-                    "label": "Monitoring handoff",
-                    "value": handoff_state.get("label") or "-",
-                    "tone": "positive" if handoff_state.get("candidate") else "neutral",
-                },
-            ]
-        )
-        st.caption(str(handoff_state.get("detail") or "-"))
-        route_templates = dict(decision_record_guide.get("route_templates") or {})
-        if decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO and not official_save_ready:
-            route_templates = {
-                "reason": (
-                    f"현재 권장 상태는 {suggested_route_label}이며, selected-route blocker가 남아 "
-                    "Monitoring 후보 handoff를 만들지 않는다."
-                ),
-                "constraints": "Must Fix / Must Review 항목을 해소한 뒤에만 Portfolio Monitoring 후보 handoff를 만들 수 있다.",
-                "next_action": "Practical Validation 또는 해당 evidence 보강 위치로 돌아가 blocker를 해소한 뒤 Final Review에서 다시 확인한다.",
-            }
-        if not str(st.session_state.get(operator_reason_key) or "").strip():
-            st.session_state[operator_reason_key] = str(route_templates.get("reason") or "")
-        if not str(st.session_state.get(operator_constraints_key) or "").strip():
-            st.session_state[operator_constraints_key] = str(route_templates.get("constraints") or "")
-        if not str(st.session_state.get(operator_next_action_key) or "").strip():
-            st.session_state[operator_next_action_key] = str(route_templates.get("next_action") or "")
-        operator_reason = st.text_area(
-            "판단 사유",
-            key=operator_reason_key,
-            placeholder=str(route_templates.get("reason") or ""),
-        )
-        with st.expander("고급: 저장 ID / 운영 전 조건 / 다음 행동 확인", expanded=False):
-            decision_id = st.text_input("Decision ID", value=default_decision_id, key=decision_id_key)
-            operator_constraints = st.text_area(
-                "운영 전 조건",
-                key=operator_constraints_key,
-                placeholder=str(route_templates.get("constraints") or ""),
-            )
-            operator_next_action = st.text_area(
-                "다음 행동",
-                key=operator_next_action_key,
-                placeholder=str(route_templates.get("next_action") or ""),
-            )
-        save_evaluation = _build_final_review_save_evaluation(
-            evidence=evidence,
-            investability_packet=investability_packet,
-            decision_id=decision_id,
-            decision_route=decision_route,
-            operator_reason=operator_reason,
-            existing_decision_ids=existing_decision_ids,
-        )
-        if not bool(save_evaluation.get("can_save")):
-            st.error(str(save_evaluation.get("verdict") or "판단 기록을 저장할 수 없습니다."))
-            for blocker in list(save_evaluation.get("blockers") or []):
-                st.caption(f"- {blocker}")
-        final_row = _build_final_review_decision_row(
-            source=source,
-            validation=validation,
-            paper_observation=paper_observation,
-            evidence=evidence,
-            investability_packet=investability_packet,
-            decision_id=decision_id,
-            decision_route=decision_route,
-            operator_reason=operator_reason,
-            operator_constraints=operator_constraints,
-            operator_next_action=operator_next_action,
-        )
-        save_button_label = (
-            "모니터링 후보로 선정"
-            if save_evaluation.get("monitoring_handoff_candidate")
-            else "최종 판단 저장"
-        )
-        if st.button(
-            save_button_label,
-            key="final_review_record_decision",
-            disabled=not bool(save_evaluation.get("can_save")),
-            width="stretch",
-        ):
-            append_current_final_selection_decision(final_row)
-            saved_notice_prefix = "모니터링 후보 선정" if final_row.get("monitoring_candidate") else "Final Review 판단"
-            st.session_state["final_review_decision_notice"] = (
-                f"{saved_notice_prefix} `{final_row['decision_id']}`를 기록했습니다. "
-                "이 기록은 live approval이나 주문 지시가 아닙니다."
-            )
-            st.session_state["final_review_reset_decision_id_after_save"] = True
-            st.session_state["final_review_reset_decision_id_source_slug"] = source_slug
-            st.rerun()
-        st.caption("`모니터링 후보로 선정`은 Portfolio Monitoring의 추적 후보 record를 만드는 동작이며, 실제 모니터링 실행·투자 승인·주문이 아닙니다.")
-        with st.expander("판단 근거와 저장 경계", expanded=False):
-            st.dataframe(pd.DataFrame(decision_record_guide.get("checklist_rows") or []), width="stretch", hide_index=True)
-            st.dataframe(pd.DataFrame(evidence.get("checks") or []), width="stretch", hide_index=True)
-            st.caption(f"판단 ID: {decision_id} · 저장 위치: {FINAL_SELECTION_DECISION_FILE}")
-
-    render_fr_section_header(
-        eyebrow="Evidence Appendix",
-        title="Evidence Appendix",
-        detail="Final Review 판단에 필요한 요약은 위에서 끝내고, 원본 검증 근거는 필요한 경우에만 read-only로 확인합니다.",
-        tone="neutral",
-    )
-    with st.container(border=True):
-        _render_evidence_appendix(
-            validation=validation,
-            paper_observation=paper_observation,
-            investability_packet=investability_packet,
-        )
-
-    render_fr_section_header(
-        eyebrow="Saved Decisions",
-        title="Decision History / Portfolio Monitoring Handoff",
-        detail="저장된 Final Review 판단 기록과 Portfolio Monitoring으로 이어질 후보 상태를 확인합니다.",
-        tone=_handoff_tone(dashboard_handoff.get("route")),
-    )
-    with st.container(border=True):
-        _render_saved_final_review_decisions(final_decision_rows)

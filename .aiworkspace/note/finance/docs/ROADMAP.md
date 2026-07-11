@@ -9,7 +9,14 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed Final Review responsive evidence task는 `.aiworkspace/note/finance/tasks/active/final-review-responsive-evidence-v1-20260711/`다.
+Latest completed Final Review decision flow simplification task는 `.aiworkspace/note/finance/tasks/active/final-review-decision-flow-simplification-v1-20260711/`다.
+
+- 목적: 실제 완료 행동인 최종 판단을 긴 report 뒤에서 총평 / 4행 해석 직후로 올리고, 중복 Appendix와 과거 ledger가 완료 지점을 흐리지 않게 한다.
+- 주요 변경: React report 안에 네 route와 사용자가 직접 작성하는 판단 사유, gate 기반 CTA를 배치했다. React는 intent만 전달하고 Python이 save evaluation, 자동 Decision ID, route template, row append를 소유한다.
+- 화면 정리: Evidence Appendix와 Saved Decisions / Dossier / Evidence Packet / Raw JSON을 Final Review에서 제거했다. selected row 운영 확인은 Operations > Portfolio Monitoring이 소유하며 기존 decision JSONL은 보존한다.
+- QA: BacktestRuntime / FinalReviewEvidence 계약 137개, React build, py_compile, `git diff --check`, Browser QA의 확인 전후 / 화면 순서 / 사유 입력 전후 CTA / Appendix·Saved 미노출을 확인했다. 실제 저장 CTA는 누르지 않아 registry를 변경하지 않았다.
+
+Previous completed Final Review responsive evidence task는 `.aiworkspace/note/finance/tasks/active/final-review-responsive-evidence-v1-20260711/`다.
 
 - 목적: 축소 화면에서 REVIEW trace list가 공통 2열 selector에 잡혀 첫 카드가 좁아지고 긴 audit 문자열이 옆 카드를 밀어내던 문제를 해결한다.
 - 주요 변경: review impact header selector를 first child로 한정하고 trace list를 독립 1열로 고정했다. 긴 lifecycle / provider 문자열은 카드 내부에서 줄바꿈하며, compact / mobile에서는 header badge와 trace label을 세로로 정리한다.

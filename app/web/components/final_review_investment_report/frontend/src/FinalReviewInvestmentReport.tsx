@@ -549,8 +549,41 @@ export type InvestmentReport = {
   boundaries?: Record<string, boolean>
 }
 
+type FinalDecisionRouteOption = {
+  route?: string
+  label?: string
+  description?: string
+  tone?: Tone
+  recordable?: boolean
+  disabledReason?: string
+  disabled_reason?: string
+  reasonPlaceholder?: string
+  reason_placeholder?: string
+  buttonLabel?: string
+  button_label?: string
+}
+
+export type FinalDecisionActionModel = {
+  title?: string
+  detail?: string
+  statusLabel?: string
+  status_label?: string
+  suggestedRoute?: string
+  suggested_route?: string
+  suggestedLabel?: string
+  suggested_label?: string
+  reasonLabel?: string
+  reason_label?: string
+  reasonHelp?: string
+  reason_help?: string
+  boundaryNote?: string
+  boundary_note?: string
+  options?: FinalDecisionRouteOption[]
+}
+
 type FinalReviewInvestmentReportProps = {
   report: InvestmentReport
+  decisionAction?: FinalDecisionActionModel
 }
 
 const compact = (value: unknown, fallback = "-"): string => {
@@ -768,6 +801,90 @@ function InterpretationRows({ cards }: { cards: InterpretationCard[] }) {
           </article>
         ))}
       </div>
+    </section>
+  )
+}
+
+function FinalDecisionAction({ model }: { model: FinalDecisionActionModel }) {
+  const options = model.options ?? []
+  const suggestedRoute = compact(field(model.suggestedRoute, model.suggested_route), compact(options[0]?.route, ""))
+  const [selectedRoute, setSelectedRoute] = useState(suggestedRoute)
+  const [reason, setReason] = useState("")
+  const selected = options.find((option) => option.route === selectedRoute) ?? options[0]
+  const canSubmit = Boolean(selected?.recordable) && reason.trim().length > 0
+
+  useEffect(() => {
+    Streamlit.setFrameHeight()
+  }, [selectedRoute])
+
+  if (!selected) return null
+
+  const submit = () => {
+    if (!canSubmit) return
+    Streamlit.setComponentValue({
+      action: "record_final_decision",
+      intent_id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      decision_route: selectedRoute,
+      operator_reason: reason.trim(),
+    })
+  }
+
+  return (
+    <section className="fr-invest-report__final-decision" aria-label="최종 판단">
+      <div className="fr-invest-report__section-head">
+        <div>
+          <span>최종 판단</span>
+          <h5>{compact(model.title, "이 후보를 Monitoring 대상으로 기록할까요?")}</h5>
+        </div>
+        <strong>{compact(field(model.statusLabel, model.status_label))}</strong>
+      </div>
+      <p className="fr-invest-report__final-decision-detail">{compact(model.detail)}</p>
+      <div className="fr-invest-report__decision-routes" role="radiogroup" aria-label="최종 판단 선택">
+        {options.map((option) => {
+          const active = option.route === selectedRoute
+          return (
+            <button
+              aria-checked={active}
+              className={`fr-invest-report__decision-route fr-invest-report__decision-route--${toneClass(option.tone)}${active ? " fr-invest-report__decision-route--active" : ""}`}
+              key={option.route}
+              onClick={() => {
+                setSelectedRoute(compact(option.route, ""))
+                setReason("")
+              }}
+              role="radio"
+              type="button"
+            >
+              <strong>{compact(option.label)}</strong>
+              <small>{compact(option.description)}</small>
+            </button>
+          )
+        })}
+      </div>
+      <p className="fr-invest-report__decision-suggestion">
+        권장 판단 <strong>{compact(field(model.suggestedLabel, model.suggested_label))}</strong>
+      </p>
+      <label className="fr-invest-report__decision-reason">
+        <span>{compact(field(model.reasonLabel, model.reason_label), "판단 사유")}</span>
+        <textarea
+          aria-label="판단 사유"
+          onChange={(event) => setReason(event.target.value)}
+          placeholder={compact(field(selected.reasonPlaceholder, selected.reason_placeholder), compact(field(model.reasonHelp, model.reason_help)))}
+          value={reason}
+        />
+        <small>{compact(field(model.reasonHelp, model.reason_help))}</small>
+      </label>
+      {!selected.recordable ? (
+        <p className="fr-invest-report__decision-blocker">{compact(field(selected.disabledReason, selected.disabled_reason), "현재 조건에서는 이 판단을 저장할 수 없습니다.")}</p>
+      ) : null}
+      <button
+        className="fr-invest-report__decision-submit"
+        disabled={!canSubmit}
+        onClick={submit}
+        type="button"
+      >
+        {compact(field(selected.buttonLabel, selected.button_label), "최종 판단 저장")}
+      </button>
+      <p className="fr-invest-report__decision-boundary">{compact(field(model.boundaryNote, model.boundary_note))}</p>
     </section>
   )
 }
@@ -1010,7 +1127,7 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
   )
 }
 
-export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentReportProps) {
+export function FinalReviewInvestmentReport({ report, decisionAction }: FinalReviewInvestmentReportProps) {
   useEffect(() => {
     Streamlit.setFrameHeight()
   }, [report])
@@ -1169,6 +1286,8 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       <AssessmentPanel narrative={reportNarrative} />
 
       <InterpretationRows cards={interpretationCards} />
+
+      {decisionAction && (decisionAction.options ?? []).length > 0 ? <FinalDecisionAction model={decisionAction} /> : null}
 
       <div className="fr-invest-report__evidence">
         <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />
