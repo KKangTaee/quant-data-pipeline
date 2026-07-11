@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
@@ -2161,6 +2162,214 @@ _FINAL_REVIEW_TRACE_SOURCES: dict[str, tuple[str, str]] = {
 }
 
 
+_FINAL_REVIEW_TRACE_PRESENTATION: dict[str, tuple[str, str]] = {
+    "Provider snapshot freshness": (
+        "ETF·외부 데이터 최신성",
+        "ETF 비용·운용성·보유 종목 자료가 현재 판단에 사용할 만큼 최근 자료인지 확인합니다.",
+    ),
+    "Universe / listing evidence": (
+        "종목 목록과 상장 이력 반영",
+        "현재 종목 목록뿐 아니라 상장 시점과 종목별 데이터 이력이 검증 기간에 맞게 반영됐는지 확인합니다.",
+    ),
+    "Survivorship / delisting control": (
+        "상장폐지 종목 포함 여부",
+        "현재 살아남은 종목만 사용해 성과가 과대평가되는 생존편향을 통제했는지 확인합니다.",
+    ),
+    "Price DB window coverage": (
+        "가격 데이터 기간 충족 여부",
+        "후보를 구성하는 각 종목의 가격 데이터가 선택한 백테스트 기간을 모두 덮는지 확인합니다.",
+    ),
+    "PIT price window coverage": (
+        "시점 기준 가격 재현 범위",
+        "당시 알 수 있었던 가격만 사용해 같은 기간을 다시 계산할 수 있는지 확인합니다.",
+    ),
+    "Cost / slippage sensitivity evidence": (
+        "거래비용 변화 민감도",
+        "수수료와 체결 오차를 높였을 때에도 결과 해석이 유지되는지 확인합니다.",
+    ),
+    "Liquidity / operability evidence": (
+        "실제 거래 가능성과 유동성",
+        "후보 ETF를 현실적으로 거래할 수 있는지와 관련 자료가 충분히 최신인지 확인합니다.",
+    ),
+    "Tax / account scope": (
+        "세금·계좌 조건 반영 범위",
+        "세금과 계좌 유형에 따라 달라지는 실현 성과를 현재 검증이 어디까지 반영했는지 확인합니다.",
+    ),
+    "Walk-forward temporal validation": (
+        "기간을 이동한 반복 검증",
+        "검증 구간을 순차적으로 옮겨도 특정 한 시기에만 좋은 결과가 나오는지 확인합니다.",
+    ),
+    "Regime split validation": (
+        "시장 국면별 성과 검증",
+        "시장 환경을 여러 구간으로 나눴을 때 취약한 국면이 있는지 확인합니다.",
+    ),
+    "Exclude last 12M": (
+        "최근 12개월 제외 검증",
+        "최근 성과를 제외해도 장기 결과의 방향이 유지되는지 확인합니다.",
+    ),
+    "Exclude first 12M": (
+        "초기 12개월 제외 검증",
+        "초기 구간의 우연한 성과를 제외해도 결과가 유지되는지 확인합니다.",
+    ),
+    "Relative Strength perturbation": (
+        "모멘텀 기간 변경 검증",
+        "상대강도 계산 기간을 바꿔도 전략 결과가 과도하게 흔들리지 않는지 확인합니다.",
+    ),
+    "GTAA parameter perturbation": (
+        "GTAA 설정 변경 검증",
+        "리밸런싱 주기 등 GTAA 핵심 설정을 바꿔도 결과가 유지되는지 확인합니다.",
+    ),
+    "Component weight concentration": (
+        "구성 비중 집중도",
+        "한 전략 또는 구성요소의 비중이 포트폴리오 전체를 지배하는지 확인합니다.",
+    ),
+    "Provider look-through coverage": (
+        "ETF 내부 구성 확인 범위",
+        "ETF 내부 보유 종목과 자산 노출을 실제 자료로 얼마나 확인했는지 측정합니다.",
+    ),
+    "Top holding concentration": (
+        "상위 보유 종목 집중도",
+        "ETF 내부의 한 종목이 전체 포트폴리오 위험을 과도하게 좌우하는지 확인합니다.",
+    ),
+    "Holdings overlap": (
+        "ETF 간 보유 종목 중복",
+        "서로 다른 ETF가 같은 종목을 반복 보유해 분산 효과가 약해지는지 확인합니다.",
+    ),
+    "Pairwise correlation": (
+        "구성요소 간 상관관계",
+        "구성요소가 함께 움직여 기대한 분산 효과가 약해지는지 확인합니다.",
+    ),
+    "Risk contribution concentration": (
+        "위험 기여 집중도",
+        "표면 비중과 별개로 한 구성요소가 실제 변동 위험을 과도하게 만들고 있는지 확인합니다.",
+    ),
+    "Profile-aware weight discipline": (
+        "목표 성격에 맞는 비중",
+        "후보의 운용 목적과 비교해 특정 구성요소 비중이 지나치게 큰지 확인합니다.",
+    ),
+    "Role concentration discipline": (
+        "구성 역할 집중도",
+        "방어·성장·헤지 같은 하나의 역할에 포트폴리오가 과도하게 치우쳤는지 확인합니다.",
+    ),
+    "ETF Operability": (
+        "ETF 거래 가능성 근거",
+        "ETF 비용과 거래 가능성을 공식 자료 또는 DB 근거로 확인할 수 있는지 봅니다.",
+    ),
+    "ETF Holdings": (
+        "ETF 보유 종목 근거",
+        "ETF 내부 보유 종목을 공식 자료로 얼마나 확인했는지 봅니다.",
+    ),
+    "ETF Exposure": (
+        "ETF 자산·섹터 노출 근거",
+        "ETF의 자산군과 섹터 노출을 공식 자료로 얼마나 확인했는지 봅니다.",
+    ),
+    "Dot-com bust / early-2000s bear market": (
+        "닷컴버블 붕괴 구간",
+        "2000년대 초 장기 약세장에서 후보가 어떻게 움직였을지 확인하는 역사적 충격 검증입니다.",
+    ),
+    "9/11 market closure and reopening stress": (
+        "9·11 시장 충격 구간",
+        "시장 폐쇄와 재개가 있었던 단기 충격 구간에서의 반응을 확인합니다.",
+    ),
+    "Global financial crisis bear market": (
+        "글로벌 금융위기 구간",
+        "2007~2009년 금융위기 약세장에서의 손실과 회복력을 확인합니다.",
+    ),
+}
+
+
+def _review_trace_presentation(label: str) -> tuple[str, str]:
+    if label.startswith("Drop-one: "):
+        component = label.split(":", 1)[1].strip()
+        return (
+            f"{component} 제외 검증",
+            "해당 구성요소를 제외했을 때 성과와 위험이 얼마나 달라지는지 확인합니다.",
+        )
+    return _FINAL_REVIEW_TRACE_PRESENTATION.get(
+        label,
+        (label, "저장된 2단계 세부 근거를 사용해 이 항목이 최종 판단에 미치는 영향을 확인합니다."),
+    )
+
+
+def _review_trace_status_label(status: str, observed_value: str) -> str:
+    normalized = str(status or "").strip().upper()
+    if str(observed_value or "").strip() == "기간 미포함":
+        return "검증 기간 밖"
+    return {
+        "PASS": "충분",
+        "READY": "충분",
+        "REVIEW": "일부 확인",
+        "NEEDS_INPUT": "자료 필요",
+        "NOT_RUN": "확인하지 못함",
+        "NOT_APPLICABLE": "해당 없음",
+        "BLOCKED": "차단",
+    }.get(normalized, normalized or "확인 필요")
+
+
+def _review_trace_observed_copy(label: str, observed_value: str, status: str) -> str:
+    observed = str(observed_value or "").strip()
+    if observed == "기간 미포함":
+        return "선택한 백테스트 기간에 이 충격 구간이 포함되지 않습니다."
+    if observed in {"", "-"}:
+        return "아직 계산된 결과가 없습니다." if str(status or "").upper() == "NOT_RUN" else "수치로 자동 판정하지 않는 항목입니다."
+    if label == "Provider snapshot freshness":
+        return "최신 자료와 오래된 자료가 함께 있어 기준일 확인이 필요합니다."
+    if label == "Survivorship / delisting control" and "not proven" in observed.lower():
+        covered = re.search(r"covered=(\d+)", observed)
+        partial = re.search(r"partial=(\d+)", observed)
+        suffix = f" 확인 완료 {covered.group(1)}개, 부분 확인 {partial.group(1)}개" if covered and partial else ""
+        return f"상장폐지 종목 반영이 충분히 입증되지 않았습니다.{suffix}"
+    if label == "Tax / account scope" and "not modeled" in observed.lower():
+        return "세금과 계좌 유형별 차이는 현재 결과에 계산되지 않았습니다."
+    replacements = (
+        ("windows=", "반복 검증 구간 "),
+        ("negative share=", "비교 기준 하회 비율 "),
+        ("profiles=", "종목 정보 "),
+        ("lifecycle=", "상장 이력 "),
+        ("symbols=", "대상 종목 "),
+        ("generic=", "기본 민감도 결과 "),
+        ("runtime follow-up=", "전략 전용 후속 검증 "),
+        ("freshness=stale", "자료 최신성=오래됨"),
+        ("stale_or_unknown_provider_snapshot", "오래됐거나 기준일을 확인하지 못한 ETF 자료"),
+        ("coverage=", "확인 비중="),
+        ("holdings ", "보유 종목 "),
+        ("exposure ", "자산·섹터 노출 "),
+        ("max ", "최대 "),
+        ("total ", "합계 "),
+        ("components ", "구성요소 "),
+        ("avg ", "평균 "),
+    )
+    readable = observed
+    for source, target in replacements:
+        readable = readable.replace(source, target)
+    return readable
+
+
+def _review_trace_basis_copy(label: str, basis: str) -> str:
+    text = str(basis or "").strip()
+    if text in {"", "-"}:
+        return "비교 기준이 저장된 근거에 포함되지 않아 세부 기준 확인이 필요합니다."
+    if text == "return / MDD / benchmark spread":
+        return "해당 충격 구간의 수익률·최대낙폭·비교 기준 대비 차이를 계산해야 합니다."
+    replacements = (
+        ("review line", "확인 기준"),
+        ("max correlation", "최대 상관계수"),
+        ("max weight", "최대 비중"),
+        ("volatility contribution proxy", "변동성 기반 위험 기여 추정치"),
+        ("role review line", "역할 집중 확인 기준"),
+        ("holdings coverage", "보유 종목 확인 비중"),
+        ("window gaps=", "전체 기간을 채우지 못한 종목="),
+        ("stored_period", "저장된 백테스트 기간"),
+        ("cadence 민감도", "리밸런싱 주기 변경 결과가 필요합니다."),
+        ("momentum window 민감도", "모멘텀 계산 기간 변경 결과가 필요합니다."),
+        ("특정 component 의존성", "특정 구성요소를 제외했을 때 결과 변화가 확인 기준입니다."),
+    )
+    readable = text
+    for source, target in replacements:
+        readable = readable.replace(source, target)
+    return readable
+
+
 def _review_trace_row_status(row: dict[str, Any]) -> str:
     return _review_trace_value(row, "Status", "Result Status", "Diagnostic Status", "status").upper()
 
@@ -2179,6 +2388,33 @@ def _review_trace_row_observed(row: dict[str, Any]) -> str:
         else:
             metric_parts.append(f"{key} {value}")
     return " / ".join(metric_parts) or "-"
+
+
+def _review_trace_item(
+    *,
+    label: str,
+    status: str,
+    observed_value: str,
+    judgment_basis: str,
+    evidence_source: str,
+    evidence_as_of: str,
+) -> dict[str, str]:
+    display_label, validation_description = _review_trace_presentation(label)
+    return {
+        "label": label,
+        "display_label": display_label,
+        "validation_description": validation_description,
+        "status": status,
+        "status_label": _review_trace_status_label(status, observed_value),
+        "observed_value": observed_value,
+        "observed_label": "현재 확인된 내용",
+        "display_observed_value": _review_trace_observed_copy(label, observed_value, status),
+        "judgment_basis": judgment_basis,
+        "judgment_basis_label": "왜 확인이 필요한가",
+        "display_judgment_basis": _review_trace_basis_copy(label, judgment_basis),
+        "evidence_source": evidence_source,
+        "evidence_as_of": evidence_as_of,
+    }
 
 
 def _review_trace_rows(validation: dict[str, Any], module_id: str) -> tuple[list[dict[str, str]], str]:
@@ -2210,36 +2446,39 @@ def _review_trace_rows(validation: dict[str, Any], module_id: str) -> tuple[list
     ]
     traces: list[dict[str, str]] = []
     for row in non_pass_rows[:3]:
+        label = _review_trace_value(row, "Criteria", "Scenario", "Area", "Module", "label")
+        status = _review_trace_row_status(row) or "REVIEW"
+        observed_value = _review_trace_row_observed(row)
+        judgment_basis = _review_trace_value(
+            row,
+            "Target",
+            "Expected Check",
+            "Evidence",
+            "Meaning",
+            "criterion",
+        )
+        row_source = _review_trace_value(
+            row,
+            "Source",
+            "Source Strength",
+            "Source Mix",
+            "evidence_source",
+        )
         traces.append(
-            {
-                "label": _review_trace_value(row, "Criteria", "Scenario", "Area", "Module", "label"),
-                "status": _review_trace_row_status(row) or "REVIEW",
-                "observed_value": _review_trace_row_observed(row),
-                "judgment_basis": _review_trace_value(
-                    row,
-                    "Target",
-                    "Expected Check",
-                    "Evidence",
-                    "Meaning",
-                    "criterion",
-                ),
-                "evidence_source": _review_trace_value(
-                    row,
-                    "Source",
-                    "Source Strength",
-                    "Source Mix",
-                    "evidence_source",
-                )
-                if _review_trace_value(row, "Source", "Source Strength", "Source Mix", "evidence_source") != "-"
-                else source_label,
-                "evidence_as_of": _review_trace_value(
+            _review_trace_item(
+                label=label,
+                status=status,
+                observed_value=observed_value,
+                judgment_basis=judgment_basis,
+                evidence_source=row_source if row_source != "-" else source_label,
+                evidence_as_of=_review_trace_value(
                     row,
                     "As Of",
                     "As Of Range",
                     "as_of",
                     "snapshot_at",
                 ),
-            }
+            )
         )
     return traces, source_label
 
@@ -2292,14 +2531,14 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
         direct_trace = observed_value != "-" or threshold != "-"
         if direct_trace:
             trace_items.append(
-                {
-                    "label": title,
-                    "status": status.upper() or "REVIEW",
-                    "observed_value": observed_value,
-                    "judgment_basis": threshold,
-                    "evidence_source": evidence_source,
-                    "evidence_as_of": evidence_as_of,
-                }
+                _review_trace_item(
+                    label=title,
+                    status=status.upper() or "REVIEW",
+                    observed_value=observed_value,
+                    judgment_basis=threshold,
+                    evidence_source=evidence_source,
+                    evidence_as_of=evidence_as_of,
+                )
             )
         else:
             trace_items, adapter_source = _review_trace_rows(
@@ -2314,16 +2553,16 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                 evidence_as_of = _safe_text(first_trace.get("evidence_as_of"), "-")
         if observed_value != "-" and threshold != "-" and direct_trace:
             trace_status = "measured"
-            trace_label = "측정 근거"
+            trace_label = "측정 근거 확인"
         elif trace_items:
             trace_status = "derived"
-            trace_label = "세부 audit에서 연결"
+            trace_label = f"세부 근거 {len(trace_items)}개 확인"
         elif normalized_role in {"final_decision_input", "monitoring_followup"}:
             trace_status = "qualitative"
-            trace_label = "정성 판단"
+            trace_label = "사용자 판단 항목"
         else:
             trace_status = "missing_contract"
-            trace_label = "근거 연결 미완료"
+            trace_label = "세부 설명 준비 안 됨"
         ownership = {
             "pv_data_caution": "level2_inherited_limit",
             "pv_practical_caution": "level2_inherited_limit",

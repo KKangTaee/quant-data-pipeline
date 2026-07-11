@@ -355,11 +355,25 @@ type ReviewImpact = {
   trace_label?: string
   traceItems?: Array<{
     label?: string
+    displayLabel?: string
+    display_label?: string
+    validationDescription?: string
+    validation_description?: string
     status?: string
+    statusLabel?: string
+    status_label?: string
     observedValue?: string
     observed_value?: string
+    observedLabel?: string
+    observed_label?: string
+    displayObservedValue?: string
+    display_observed_value?: string
     judgmentBasis?: string
     judgment_basis?: string
+    judgmentBasisLabel?: string
+    judgment_basis_label?: string
+    displayJudgmentBasis?: string
+    display_judgment_basis?: string
     evidenceSource?: string
     evidence_source?: string
     evidenceAsOf?: string
@@ -367,11 +381,25 @@ type ReviewImpact = {
   }>
   trace_items?: Array<{
     label?: string
+    displayLabel?: string
+    display_label?: string
+    validationDescription?: string
+    validation_description?: string
     status?: string
+    statusLabel?: string
+    status_label?: string
     observedValue?: string
     observed_value?: string
+    observedLabel?: string
+    observed_label?: string
+    displayObservedValue?: string
+    display_observed_value?: string
     judgmentBasis?: string
     judgment_basis?: string
+    judgmentBasisLabel?: string
+    judgment_basis_label?: string
+    displayJudgmentBasis?: string
+    display_judgment_basis?: string
     evidenceSource?: string
     evidence_source?: string
     evidenceAsOf?: string
@@ -1063,7 +1091,7 @@ function ScoreLimitList({ limits, constraints }: { limits: ScorecardLimit[]; con
 function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
   return (
     <article className="fr-invest-report__review-impacts">
-      <h5>REVIEW 근거와 반영 정책</h5>
+      <h5>검증별 남은 판단 근거</h5>
       {impacts.length > 0 ? (
         impacts.map((impact, index) => {
           const scoreEffect = field(impact.scoreEffect, impact.score_effect)
@@ -1086,16 +1114,24 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
                   {traceItems.map((trace, traceIndex) => {
                     const traceObserved = field(trace.observedValue, trace.observed_value)
                     const traceBasis = field(trace.judgmentBasis, trace.judgment_basis)
+                    const displayLabel = field(trace.displayLabel, trace.display_label)
+                    const validationDescription = field(trace.validationDescription, trace.validation_description)
+                    const statusLabel = field(trace.statusLabel, trace.status_label)
+                    const observedLabel = field(trace.observedLabel, trace.observed_label)
+                    const displayObserved = field(trace.displayObservedValue, trace.display_observed_value)
+                    const basisLabel = field(trace.judgmentBasisLabel, trace.judgment_basis_label)
+                    const displayBasis = field(trace.displayJudgmentBasis, trace.display_judgment_basis)
                     const traceSource = field(trace.evidenceSource, trace.evidence_source)
                     const traceAsOf = field(trace.evidenceAsOf, trace.evidence_as_of)
                     return (
                       <section key={`${trace.label ?? "trace"}-${traceIndex}`}>
-                        <div><strong>{compact(trace.label, "세부 근거")}</strong><em>{compact(trace.status)}</em></div>
-                        <p><b>관측</b>{compact(traceObserved, "수치 관측 없음")}</p>
-                        <p><b>판단 근거</b>{compact(traceBasis, "정성 판단")}</p>
+                        <div><strong>{compact(displayLabel, compact(trace.label, "세부 근거"))}</strong><em>{compact(statusLabel, compact(trace.status))}</em></div>
+                        <p className="fr-invest-report__review-trace-description">{compact(validationDescription)}</p>
+                        <p><b>{compact(observedLabel, "현재 확인된 내용")}</b>{compact(displayObserved, compact(traceObserved, "수치로 자동 판정하지 않는 항목입니다."))}</p>
+                        <p><b>{compact(basisLabel, "왜 확인이 필요한가")}</b>{compact(displayBasis, compact(traceBasis, "사용자 판단이 필요한 항목입니다."))}</p>
                         <details>
-                          <summary>출처와 기준일</summary>
-                          <small>{compact(traceSource, compact(evidenceSource, "저장 evidence"))} · {compact(traceAsOf, compact(evidenceAsOf, "기준일 미기록"))}</small>
+                          <summary>기술 근거 보기</summary>
+                          <small>출처·기준일: {compact(traceSource, compact(evidenceSource, "저장 evidence"))} · {compact(traceAsOf, compact(evidenceAsOf, "기준일 미기록"))}</small>
                         </details>
                       </section>
                     )
@@ -1105,7 +1141,7 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
                 <div className={`fr-invest-report__review-trace-state fr-invest-report__review-trace-state--${traceStatus}`}>
                   {traceStatus === "qualitative"
                     ? "수치로 자동 판정하지 않는 항목입니다. 아래 사용자 판단을 선택 또는 보류 사유에 기록합니다."
-                    : "요약 REVIEW와 세부 audit 근거의 연결이 아직 없습니다. 이 항목만으로 수치를 추정하지 않습니다."}
+                    : "저장된 2단계 요약에 사용자용 세부 설명이 아직 없습니다. 이 항목만으로 수치를 추정하지 않습니다."}
                 </div>
               )}
               <small>{compact(scorePolicy)} · {compact(field(impact.targetDimension, impact.target_dimension))}</small>
@@ -1210,7 +1246,7 @@ export function FinalReviewInvestmentReport({ report, decisionAction }: FinalRev
       question: "무엇을 수용하거나 확인해야 하나?",
       children: (
         <section className="fr-invest-report__review-evidence-detail">
-          <p>2단계 요약을 저장된 세부 audit와 연결해 관측, 판단 근거, 점수 반영 방식과 사용자의 결정을 함께 보여줍니다.</p>
+          <p>2단계에서 저장한 검증 결과를 바탕으로 무엇을 확인했고, 왜 주의가 남았는지 사용자 언어로 설명합니다.</p>
           <ReviewImpactList impacts={scorecardReviewImpacts} />
         </section>
       ),

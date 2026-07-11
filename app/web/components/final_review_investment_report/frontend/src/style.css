@@ -1308,9 +1308,26 @@
 .fr-invest-report__review-trace-list em,
 .fr-invest-report__review-trace-list b {
   color: #1e293b;
-  font-size: 11px;
   font-style: normal;
   font-weight: 900;
+}
+
+.fr-invest-report__review-trace-list strong {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.fr-invest-report__review-trace-list em,
+.fr-invest-report__review-trace-list b {
+  font-size: 11px;
+}
+
+.fr-invest-report__review-trace-description {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #64748b !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
 }
 
 .fr-invest-report__review-trace-list p {
