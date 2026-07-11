@@ -169,10 +169,25 @@ type PatternGuideCard = {
   monitoring_trigger?: string
   experimentCandidate?: string
   experiment_candidate?: string
+  experimentPlan?: {
+    change?: string
+    comparison?: string
+    learning?: string
+    executionBoundary?: string
+    execution_boundary?: string
+  }
+  experiment_plan?: {
+    change?: string
+    comparison?: string
+    learning?: string
+    executionBoundary?: string
+    execution_boundary?: string
+  }
   directScenarioClaim?: boolean
   direct_scenario_claim?: boolean
   visibleFirstRead?: boolean
   visible_first_read?: boolean
+  salience?: number
 }
 
 type PatternGuide = {
@@ -1028,6 +1043,10 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const scorecardReviewImpacts = field(scorecard.reviewImpacts, scorecard.review_impacts) ?? []
   const headlineScores = field(scorecard.headlineScores, scorecard.headline_scores) ?? []
   const patternCards = patternGuide.cards ?? []
+  const experimentCards = patternCards
+    .filter((card) => card.applicable !== false && card.support !== "not_applicable")
+    .sort((left, right) => Number(right.salience ?? 0) - Number(left.salience ?? 0))
+    .slice(0, 3)
   const metaItems: MetaItem[] = [
     { label: "후보", value: compact(source.title) },
     { label: "직접 결정", value: `${directDecisionCount}개`, tone: directDecisionCount > 0 ? "warning" : "positive" },
@@ -1086,17 +1105,30 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       question: "다음 백테스트에서 무엇을 바꿔볼까?",
       children: (
         <section className="fr-invest-report__experiment-detail">
-          <p>아래 항목은 점수 개선 예측이 아니라 별도 counterfactual backtest가 필요한 실험 후보입니다.</p>
-          <div className="fr-invest-report__experiment-list">
-            {patternCards.map((card, index) => (
-              <article key={`${card.key ?? "experiment"}-${index}`}>
-                <div><span>{compact(field(card.supportLabel, card.support_label))}</span><em>{String(index + 1).padStart(2, "0")}</em></div>
-                <h5>{compact(card.label)}</h5>
-                <p>{compact(field(card.experimentCandidate, card.experiment_candidate))}</p>
-                <small>{compact(card.question)}</small>
-              </article>
-            ))}
+          <div className="fr-invest-report__experiment-boundary">
+            <strong>정보 · 자동 실행 없음</strong>
+            <p>현재 약점을 다음 검증 가설로 바꾼 목록입니다. 점수 개선을 예측하지 않으며 별도 counterfactual backtest 전에는 현재 판단이 바뀌지 않습니다.</p>
           </div>
+          <div className="fr-invest-report__experiment-list">
+            {experimentCards.map((card, index) => {
+              const plan = field(card.experimentPlan, card.experiment_plan) ?? {}
+              return (
+                <article key={`${card.key ?? "experiment"}-${index}`}>
+                  <div><span>{compact(field(card.supportLabel, card.support_label))}</span><em>{String(index + 1).padStart(2, "0")}</em></div>
+                  <h5>{compact(card.label)}</h5>
+                  <dl>
+                    <div><dt>바꿀 것</dt><dd>{compact(plan.change, compact(field(card.experimentCandidate, card.experiment_candidate)))}</dd></div>
+                    <div><dt>같게 둘 것</dt><dd>{compact(plan.comparison)}</dd></div>
+                    <div><dt>확인할 것</dt><dd>{compact(plan.learning, compact(card.question))}</dd></div>
+                  </dl>
+                  <small>{compact(field(plan.executionBoundary, plan.execution_boundary))}</small>
+                </article>
+              )
+            })}
+          </div>
+          {patternCards.filter((card) => card.applicable !== false && card.support !== "not_applicable").length > experimentCards.length ? (
+            <p className="fr-invest-report__experiment-more">우선순위가 낮은 아이디어는 Monitoring 방향 가이드의 나머지 패턴에서 확인합니다.</p>
+          ) : null}
         </section>
       ),
     },

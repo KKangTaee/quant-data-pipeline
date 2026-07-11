@@ -6,3 +6,5 @@
 - Decision Cockpit의 policy/read model은 저장 route 계산에 필요하므로 UI 제거와 service 삭제를 구분한다.
 - 최신 Distinct Strategy validation의 REVIEW 9개는 adapter 적용 후 `derived 8 / qualitative 1 / missing contract 0`으로 분류됐다.
 - audit Target이 없는 경우 Evidence / Expected Check를 `판단 근거`로 표시하고 수치 threshold로 오해시키지 않는다.
+- 다음 실험은 적용 가능한 패턴 중 salience 상위 3개만 표시하고 `바꿀 것 / 같게 둘 것 / 확인할 것`을 제공한다.
+- 다음 실험은 설정 아이디어이며 자동 실행, 점수 변경, strategy variant 저장을 하지 않는다.

@@ -154,6 +154,12 @@ def _card(
         "missing_signals": missing_signals,
         "monitoring_trigger": change_condition,
         "experiment_candidate": f"{pattern['label']} 조건을 바꾼 대안은 별도 counterfactual backtest로 비교합니다.",
+        "experiment_plan": {
+            "change": str(pattern.get("experiment_change") or f"{pattern['label']} 조건 한 가지만 변경합니다."),
+            "comparison": "현재 후보와 변경 후보를 동일 기간·benchmark·거래비용 조건으로 비교합니다.",
+            "learning": pattern["question"],
+            "execution_boundary": "설정 아이디어만 제공합니다. 자동 실행하거나 현재 점수·판단 기록을 바꾸지 않습니다.",
+        },
         "direct_scenario_claim": state == "actionable",
         "visible_first_read": False,
         "salience": salience,

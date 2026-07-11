@@ -1192,6 +1192,29 @@
   line-height: 1.5;
 }
 
+.fr-invest-report__experiment-boundary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  border-left: 3px solid #64748b;
+  background: #f8fafc;
+  padding: 10px 12px;
+}
+
+.fr-invest-report__experiment-boundary strong {
+  color: #334155;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.fr-invest-report__experiment-boundary p {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .fr-invest-report__experiment-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1203,6 +1226,34 @@
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   padding: 12px;
+}
+
+.fr-invest-report__experiment-list dl {
+  display: grid;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.fr-invest-report__experiment-list dl div {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.fr-invest-report__experiment-list dt {
+  color: #334155;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fr-invest-report__experiment-list dd {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fr-invest-report__experiment-more {
+  margin-top: 10px;
 }
 
 .fr-invest-report__experiment-list article > div {

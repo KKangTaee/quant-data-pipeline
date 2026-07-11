@@ -12320,6 +12320,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("남은 판단 근거", component_source)
         self.assertIn("다음 실험 아이디어", component_source)
         self.assertIn("counterfactual backtest", component_source)
+        self.assertIn("정보 · 자동 실행 없음", component_source)
+        self.assertIn("<dt>바꿀 것</dt>", component_source)
+        self.assertIn("<dt>같게 둘 것</dt>", component_source)
+        self.assertIn("<dt>확인할 것</dt>", component_source)
         self.assertIn("decisionSummary", component_source)
         self.assertIn("총평", component_source)
         self.assertIn("약점과 한계", component_source)
@@ -27180,6 +27184,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         )
         self.assertTrue(all(pattern["primary_evidence"] for pattern in patterns))
         self.assertTrue(all(pattern["required_signals"] for pattern in patterns))
+        self.assertTrue(all(pattern["experiment_change"] for pattern in patterns))
         self.assertTrue(
             all(
                 set(pattern["support_contract"])
@@ -27240,6 +27245,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(all(card["visible_first_read"] for card in guide["visible_cards"]))
         self.assertTrue(cards["concentration"]["evidence_trace"])
         self.assertIn("technical_path", cards["concentration"]["evidence_trace"][0])
+        self.assertIn("최대 비중", cards["concentration"]["experiment_plan"]["change"])
+        self.assertIn("동일 기간", cards["concentration"]["experiment_plan"]["comparison"])
+        self.assertEqual(cards["concentration"]["experiment_plan"]["learning"], cards["concentration"]["question"])
+        self.assertIn("자동 실행", cards["concentration"]["experiment_plan"]["execution_boundary"])
         self.assertFalse(guide["boundaries"]["freeform_generation"])
         self.assertFalse(guide["boundaries"]["provider_fetch"])
 
