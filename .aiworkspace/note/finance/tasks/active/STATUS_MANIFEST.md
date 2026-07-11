@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `portfolio-workflow-legacy-reset-rebuild-20260711`
+- `final-review-guidance-actionability-v1-20260711`
 
 Previous completed task:
 
-- `final-review-investment-report-redesign-v1-20260711`
+- `portfolio-workflow-legacy-reset-rebuild-20260711`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `final-review-guidance-actionability-v1-20260711`: 10개 Monitoring 패턴을 named evidence adapter 기반 `판단 가능 / 조건부 추적 / 추가 검증 필요 / 적용 제외`로 바꾸고 first-read를 최대 6개로 제한했다. technical trace는 접힌 상세로 이동했고, REVIEW는 Final Review 직접 결정 / 2단계 인수 제한 / Monitoring 조건 / blocker로 분리했다. 총평 직후에는 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 표시한다.
 - `portfolio-workflow-legacy-reset-rebuild-20260711`: 기존 Final Review 6개 후보를 current 1차 source / 2차 Practical Validation / 3차 Final Review 판단으로 다시 생성했다. 새 validation은 workspace / REVIEW role 계약을 포함하고, Monitoring setup은 새 decision ID만 참조한다. legacy `SAVED_PORTFOLIOS.jsonl`은 사용자 요청으로 제거했다.
 - `final-review-candidate-selection-integration-v1-20260710`: Final Review standalone `Step 1 / Candidate Board`와 중복 4-card lane summary를 제거하고, Review Queue / 검토 대상 selector / 후보 비교 상세를 Decision Desk 아래 후보 선택 패널로 통합했다. score / gate / 저장 / provider fetch / registry write 경계는 변경하지 않았다.
 - `final-review-sentiment-scope-cleanup-v1-20260710`: Final Review first-read에서 CNN / AAII 시장심리 패널과 raw detail expander를 제거했다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Operations > Portfolio Monitoring의 read-only context overlay는 유지한다. 시장심리는 Final Review gate / score / 저장 가능 여부 / Monitoring signal로 쓰지 않는다.

@@ -9,6 +9,13 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
+Latest completed Final Review guidance actionability task는 `.aiworkspace/note/finance/tasks/active/final-review-guidance-actionability-v1-20260711/`다.
+
+- 목적: 모든 패턴이 비슷한 `참고` 문장으로 보이고 Level2 보강 지시가 Final Review 행동처럼 노출되던 문제를 해결해, 사용자가 현재 판단과 다음 행동을 바로 읽게 한다.
+- 주요 변경: 10개 패턴을 named evidence adapter 기반 `판단 가능 / 조건부 추적 / 추가 검증 필요 / 적용 제외`로 판정하고 first-read를 최대 6개로 제한했다. 각 카드는 `현재 진단 / 의미 / 변화 조건 / 다음 행동`을 표시하고 source / 기준일 / technical path는 접힌 상세로 이동했다. 총평 아래에는 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 배치했다.
+- stage ownership: Final Review는 `최종 판단에서 결정할 것 / 2단계에서 인수한 제한사항 / Monitoring으로 넘길 조건 / 선정 전 해소할 차단 항목`만 구분한다. 2단계 Flow4 보강 문구는 Final Review 사용자 행동으로 반복하지 않는다.
+- QA: focused service / contract tests 53개, React build, py_compile, `git diff --check`, Browser QA의 확인 전후 / 후보 변경 stale 차단 / Review Queue 제거 / 기술 trace disclosure / 4행 해석 / REVIEW 소유권을 확인했다.
+
 Latest completed portfolio workflow reset task는 `.aiworkspace/note/finance/tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/`다.
 
 - 목적: 구형 저장 계약으로 인해 Level2 REVIEW가 Final Review에서 한 역할로 몰리던 기존 6개 후보를 현재 1차 → 2차 → 3차 계약으로 다시 생성한다.
@@ -16,7 +23,7 @@ Latest completed portfolio workflow reset task는 `.aiworkspace/note/finance/tas
 - 저장 경계: 이번 작업은 사용자가 명시한 reset migration으로 active registry chain을 교체했다. legacy reusable `SAVED_PORTFOLIOS.jsonl`은 제거했고, live approval / broker order / auto rebalance는 만들지 않았다.
 - QA: data-chain invariant, focused unittest 5개, py_compile, `git diff --check` 통과. Browser QA는 localhost URL 보안 정책으로 미실행이다.
 
-Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-redesign-v1-20260711/`다.
+Previous completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-redesign-v1-20260711/`다.
 
 - 목적: 투자 검토서의 중복 상태 / 기술 용어 / 불명확한 REVIEW 감점과 반복 본문을 정리하고, 저장 evidence 범위 안에서 조건부 Monitoring 방향을 제시한다.
 - 주요 변경: 외부 Investment Report card를 제거하고 헤더를 단일 상태 / 투자 매력도 / 확인 필요 수로 줄였다. 투자 매력도, 근거 신뢰도, Monitoring 준비도를 분리하고 open REVIEW 개수 자동 감점 / cap을 제거했다. 총평, 강점 / 약점, 저장 전 질문과 10개 조건부 패턴 가이드를 first-read로 만들고 하단은 `점수 근거 / REVIEW 근거 / 대안 실험 후보` 세 탭으로 정리했다.

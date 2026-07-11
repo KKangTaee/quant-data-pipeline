@@ -23,8 +23,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed Final Review UX task is [final-review-guidance-actionability-v1-20260711](./tasks/active/final-review-guidance-actionability-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
-  - Latest completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
@@ -39,6 +40,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Guidance Actionability V1:
+  - 10개 Monitoring 패턴을 named evidence adapter 기반 4개 상태로 판정하고, 첫 화면 최대 6개에 `현재 진단 / 의미 / 변화 조건 / 다음 행동`을 표시했다. source / 기준일 / technical path는 접힌 상세에 남겼다.
+  - Level2 REVIEW를 Final Review 직접 결정, 2단계 인수 제한, Monitoring 조건, blocker로 분리하고 총평 직후 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 배치했다.
+  - focused tests 53개, React build, py_compile, diff check, Browser QA를 통과했다. registry / saved / run history와 generated QA screenshot은 커밋하지 않았다.
 - Portfolio Workflow Legacy Reset / Rebuild:
   - 기존 Final Review 후보 6개를 current source → Practical Validation → Final Review 판단으로 재생성했다. 모든 stored-period runtime replay가 PASS였고 새 validation은 workspace / REVIEW role 계약을 포함한다.
   - schema-v3 monitoring decision 6개와 Portfolio Monitoring setup 3개를 새 ID로 연결했으며 legacy `SAVED_PORTFOLIOS.jsonl`은 사용자 요청으로 제거했다.

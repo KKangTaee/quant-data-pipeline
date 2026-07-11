@@ -17,8 +17,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed Final Review UX task is [final-review-guidance-actionability-v1-20260711](./tasks/active/final-review-guidance-actionability-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
-  - Latest completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
   - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
@@ -33,6 +34,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-11 - Final Review 가이드는 판단 상태와 stage ownership을 함께 설명한다
+
+- User request: Monitoring 방향 가이드의 모든 카드가 같은 보류 문장으로 끝나고, source code path와 Level2 잔재가 전면에 보이며, Final Review 확인 필요가 무엇을 하라는지 불명확하므로 1~4차로 개선하라고 요청함.
+- Interpreted goal: 저장 evidence 안에서 현실적인 10종 prototype을 정형화하되, 근거가 없는 시장 반응을 생성하지 않고 사용자가 지금 판단할 일과 2단계에서 이미 처리된 제한을 분리해야 한다.
+- Analysis result: 전체 payload keyword scan은 무관한 텍스트도 pattern signal로 승격했다. named evidence adapter와 applicability contract가 필요하며, Level2 data/practical caution은 Final Review action이 아니라 근거 신뢰도에 반영된 인수 제한이다.
+- Follow-up: pattern을 `판단 가능 / 조건부 추적 / 추가 검증 필요 / 적용 제외`로 판정하고 행동형 카드, 접힌 technical trace, stage-owned REVIEW section, 총평 직후 4행 해석을 구현했다. 새 validation / provider fetch / registry write / live action은 추가하지 않았다.
 
 ### 2026-07-11 - 구형 후보는 현재 1차 → 2차 → 3차 계약으로 다시 생성한다
 

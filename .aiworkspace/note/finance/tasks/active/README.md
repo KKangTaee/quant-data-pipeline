@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `final-review-guidance-actionability-v1-20260711` | Completed record | 10개 Monitoring 패턴을 structured applicability/action state로 바꾸고, 첫 화면 최대 6개 행동 가이드, 접힌 technical trace, Level2/Final Review stage ownership, 총평 직후 해석 4행을 구현했다. |
 | `portfolio-workflow-legacy-reset-rebuild-20260711` | Completed record | 기존 6개 Final Review 후보를 current source → Practical Validation → Final Review schema로 재생성하고 Monitoring setup을 새 decision ID에 연결했다. legacy `SAVED_PORTFOLIOS.jsonl`은 요청대로 제거했다. |
 | `final-review-candidate-selection-integration-v1-20260710` | Completed record | Final Review standalone `Step 1 / Candidate Board`를 제거하고, Review Queue / 검토 대상 selector / 후보 비교 상세를 Decision Desk 아래 후보 선택 패널로 통합했다. |
 | `final-review-sentiment-scope-cleanup-v1-20260710` | Completed record | Final Review first-read에서 CNN / AAII 시장심리 패널과 raw detail expander를 제거했다. 시장심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Final Review gate / score / 저장 / Monitoring signal에는 연결하지 않는다. |
