@@ -15255,8 +15255,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["action_label"], "가격 이력 확인")
         self.assertEqual(payload["eod_refresh_preflight"]["selected_symbols_count"], 12)
         self.assertEqual(payload["eod_refresh_preflight"]["range_start"], "2026-06-28")
-        self.assertIn("수집 대상 12개", payload["actions"][0]["detail"])
-        self.assertIn("2026-06-28", payload["actions"][0]["detail"])
+        self.assertNotIn("detail", payload["actions"][0])
+        self.assertIn("갱신 12개", payload["action_note"])
+        self.assertIn("2026-06-28", payload["action_note"])
 
         plan = market_movers_react_action_plan("refresh_eod_history", controls=controls)
         self.assertEqual(plan["handler"], "run_overview_market_movers_eod_history")
@@ -15264,6 +15265,90 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["universe_limit"], 2000)
         self.assertEqual(plan["period"], "monthly")
         self.assertEqual(plan["as_of_date"], "2026-07-07")
+
+    def test_market_movers_monthly_preflight_separates_persisted_limited_history(self) -> None:
+        from app.jobs.overview_actions import build_market_movers_eod_refresh_preflight
+
+        freshness = {
+            "FDXF": {
+                "first_date": date(2026, 5, 27),
+                "latest_date": date(2026, 7, 10),
+                "row_count": 31,
+                "close": 188.46,
+                "volume": 7_419_200,
+            },
+            "HONA": {
+                "first_date": date(2026, 7, 10),
+                "latest_date": date(2026, 7, 10),
+                "row_count": 1,
+                "close": 220.75,
+                "volume": 1_869_141,
+            },
+        }
+        issues = [
+            {"symbol": "FDXF", "latest_status": "active"},
+            {"symbol": "HONA", "latest_status": "active"},
+        ]
+        with (
+            patch(
+                "app.jobs.overview_actions._load_market_movers_eod_universe_symbols",
+                return_value=(["FDXF", "HONA"], "Current S&P 500 constituents"),
+            ),
+            patch("app.jobs.overview_actions._load_market_movers_eod_freshness", return_value=freshness),
+            patch("app.jobs.overview_actions.load_market_data_issues", return_value=issues),
+        ):
+            preflight = build_market_movers_eod_refresh_preflight(
+                universe_code="SP500",
+                universe_limit=500,
+                period="monthly",
+                as_of_date="2026-07-07",
+            )
+
+        self.assertEqual(preflight["status"], "limited")
+        self.assertEqual(preflight["selected_symbols_count"], 0)
+        self.assertEqual(preflight["limited_history_symbols_count"], 2)
+        self.assertEqual(preflight["limited_history_symbols"], ["FDXF", "HONA"])
+        self.assertIn("추가 수집 대상이 아닙니다", preflight["range_reason"])
+
+    def test_market_movers_limited_history_issue_rows_keep_compact_price_evidence(self) -> None:
+        from finance.data.market_intelligence import build_price_history_limit_issue_rows
+
+        rows = build_price_history_limit_issue_rows(
+            [
+                {
+                    "symbol": "FDXF",
+                    "period": "monthly",
+                    "first_date": "2026-05-27",
+                    "latest_date": "2026-07-10",
+                    "row_count": 31,
+                    "min_rows": 45,
+                }
+            ],
+            universe_code="SP500",
+            seen_at="2026-07-11 17:12:54",
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["issue_type"], "limited_price_history")
+        self.assertEqual(rows[0]["diagnosis"], "available_history_short")
+        self.assertIn("rows=31/45", rows[0]["latest_evidence"])
+        self.assertIn('"period":"monthly"', rows[0]["raw_payload_json"])
+
+    def test_market_movers_main_actions_render_detail_outside_buttons(self) -> None:
+        react_source = Path(
+            "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        react_style = Path("app/web/streamlit_components/market_movers_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        workbench_body = react_source[react_source.index("function MarketMoversWorkbench") :]
+        action_buttons = workbench_body[workbench_body.index('aria-label="Market Movers actions"') :]
+        action_buttons = action_buttons[: action_buttons.index("</div>\n      </div>")]
+        self.assertNotIn("action.detail", action_buttons)
+        self.assertIn("payload.action_note", workbench_body)
+        self.assertIn("mm-workbench__action-note", workbench_body)
+        self.assertIn(".mm-workbench__action-note", react_style)
 
     @patch("app.web.overview.market_movers_helpers.st")
     def test_market_movers_react_filters_live_inside_workbench_card(self, mock_st: MagicMock) -> None:

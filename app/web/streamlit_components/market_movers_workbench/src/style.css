@@ -423,6 +423,24 @@ body {
   justify-content: flex-end;
 }
 
+.mm-workbench__action-stack {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.mm-workbench__action-note {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  max-width: min(100%, 620px);
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .mm-workbench__action {
   align-items: center;
   appearance: none;
@@ -432,7 +450,7 @@ body {
   color: #334155;
   cursor: pointer;
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   font: inherit;
   font-size: 0.84rem;
   font-weight: 800;

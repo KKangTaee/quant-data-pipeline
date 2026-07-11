@@ -32,7 +32,7 @@ Last Verified: 2026-07-08
 | `market_liquidity_universe_member` | Market Movers Top1000 / Top2000용 current liquidity universe membership. listing source 후보 중 `nyse_price_history` 최신 거래일 row가 있는 종목을 최근 20거래일 평균 거래대금으로 ranking해 저장 |
 | `market_symbol_alias` | Market Movers ticker-change repair alias store. Quote-missing old ticker와 replacement ticker 후보 / 적용 상태를 저장해 future intraday quote lookup에서 사용 |
 | `market_event_calendar` | Overview Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
-| `market_data_issue` | Overview Market Movers quote gap 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
+| `market_data_issue` | Overview Market Movers quote gap과 full-window 뒤에도 짧은 가격 이력 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
 | `futures_instrument` | Overview futures용 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
 | `futures_market_monitor_run` | Futures OHLCV 수집 run diagnostics. 최근 run status, failed symbols, latest candle time을 저장 |
 | `etf_provider_source_map` | ETF별 issuer 공식 endpoint / parser mapping cache. verified row를 provider snapshot collector가 사용 |

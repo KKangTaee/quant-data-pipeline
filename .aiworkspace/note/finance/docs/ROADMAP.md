@@ -9,7 +9,13 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-visual-grouping-v1-20260711/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
+
+- 목적: Market Movers 비-Daily 상단의 긴 설명형 버튼을 간결하게 만들고, Monthly full-window 갱신 성공 뒤에도 provider 가용 이력이 짧은 종목이 같은 갱신 대상으로 반복되는 문제를 해결했다.
+- 주요 변경: action button에는 행동명만 남기고 대상/기간/제외 설명은 버튼 아래 한 줄로 분리했다. Full-window 수집 후에도 period row threshold가 부족한 symbol은 `market_data_issue(issue_type=limited_price_history)`로 기록하며, 이후 preflight에서는 현재 랭킹 제외 상태로 설명하고 같은 수집 action을 다시 제안하지 않는다.
+- 이번 차수에서 하지 않은 일: S&P 500 membership 변경, Monthly 수익률 계산식 변경, 과거 가격 합성, 새 provider/table/schema, 자동 매매/검증/모니터링 의미 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-visual-grouping-v1-20260711/`다.
 
 - 목적: Sector Breadth의 색상 범위가 카드 테두리/막대에서 끊기고, 선택 종목 조사 workflow가 여러 독립 박스로 분리돼 보이는 문제를 줄였다.
 - 주요 변경: React/fallback Sector Breadth는 3% outer surface와 4% lane direction tint를 사용한다. Ranking Board는 모드별 전체 상세 표 expander를 같은 keyed 부모에 둔다. 선택 종목 조사는 selector, React 조사 패널, 조사 단서 tabs, Research Snapshot, 기본 지표 그래프를 keyed Streamlit 부모 container 하나로 묶는다.

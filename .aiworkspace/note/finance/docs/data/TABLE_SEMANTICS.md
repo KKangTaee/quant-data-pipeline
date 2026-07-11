@@ -200,7 +200,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 역할:
 
 - Overview Market Movers에서 반복되는 quote gap / coverage issue를 symbol / universe 단위로 누적 추적한다.
-- 현재 1차 사용처는 `issue_type=quote_gap`이다.
+- `issue_type=quote_gap`은 일중 quote 누락을, `issue_type=limited_price_history`는 full-window EOD 수집 뒤에도 provider 가용 이력이 period 최소 row보다 짧은 상태를 나타낸다.
 
 성격:
 
@@ -208,12 +208,14 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `issue_key`는 `universe_code`, `symbol`, `issue_type` 조합에서 만든 내부 business key다.
 - 같은 symbol / universe에서 다시 진단되면 `occurrence_count`를 증가시키고 최신 diagnosis, confidence, evidence, recommended action을 갱신한다.
 - `raw_payload_json`에는 마지막 진단 row의 compact evidence를 저장한다.
+- `limited_price_history`는 first/latest date, 현재/필요 row count만 근거로 저장하며 상장일이나 기업 이벤트 원인을 단정하지 않는다.
 
 주의:
 
 - 이 table은 투자 신호나 official corporate action fact가 아니다.
 - `possible_stale_universe`도 상장폐지 / 거래정지 확정 판정이 아니라 profile / price evidence가 약하다는 운영 힌트다.
 - issue가 사라졌다는 자동 resolve lifecycle은 아직 없다. 현재는 반복 발생을 빠르게 알아보는 목적이다.
+- limited-history issue가 남아 있어도 현재 `nyse_price_history` row count가 period threshold를 충족하면 Market Movers preflight는 정상 계산 경로를 우선한다.
 
 ## `market_event_calendar`
 

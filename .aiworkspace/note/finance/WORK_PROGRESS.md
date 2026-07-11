@@ -30,6 +30,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers 상단 action / Monthly 짧은 이력 V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`에서 긴 버튼 detail을 버튼 밖 한 줄 설명으로 분리했다.
+  - FDXF/HONA의 Monthly 반복 갱신 원인을 provider 가용 이력 31/1 rows로 확인하고 `limited_price_history` evidence를 저장해 같은 full-window 수집 제안을 제거했다.
+  - 146 focused tests, React build, DB live preflight, Browser QA를 통과했다.
 - Overview Market Movers 섹션 제목 통일 V1:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-section-title-unification-v1-20260711/`에서 섹터 breadth의 외부 중복 divider를 제거했다.
   - React/fallback 모두 `SECTOR BREADTH / 섹터 / 시장 확산 맥락 / 설명 / 상태`를 고정 섹션 헤더로 사용하고, 현재 breadth headline은 결과 요약으로 낮췄다.

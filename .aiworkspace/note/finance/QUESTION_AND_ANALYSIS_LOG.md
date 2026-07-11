@@ -26,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-11 - Monthly 짧은 가격 이력은 실패한 갱신과 구분한다
+
+- User request: Market Movers 상단 버튼의 긴 내용을 줄이고, Monthly에서 갱신을 눌러도 문제가 해소되지 않는 원인을 확인해 개선해 달라고 요청함.
+- Interpreted goal: 실제로 보강 가능한 gap과 provider가 아직 제공하지 않는 짧은 이력을 구분하고, 버튼은 행동명만 빠르게 읽히게 한다.
+- Analysis result: FDXF/HONA full-window 수집은 성공했지만 provider가 각각 31/1 daily rows만 제공해 Monthly 45-row 기준을 충족하지 못했다. 합성/제외가 아니라 `limited_price_history` evidence로 기록하고 같은 full-window 수집 action을 반복 제안하지 않는 것이 맞다.
+- Follow-up: 버튼 detail 외부 분리, durable issue/preflight 분류, FDXF/HONA backfill, 테스트/build/Browser QA를 완료했다.
+
 ### 2026-07-11 - Market Movers 섹터 제목은 고정 섹션명과 데이터 결과를 분리한다
 
 - User request: Market Movers 큰 탭/구간 제목이 고정되지 않고 통일성이 없다고 지적하며, 특히 `섹터 / 시장 확산 맥락` UI 개선을 요청함.

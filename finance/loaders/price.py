@@ -179,6 +179,7 @@ def load_price_freshness_summary(
         sql = f"""
         SELECT
             symbol,
+            MIN(Date) AS first_date,
             MAX(Date) AS latest_date,
             COUNT(*) AS row_count
         FROM nyse_price_history
@@ -194,6 +195,7 @@ def load_price_freshness_summary(
     if df.empty:
         return df
 
+    df["first_date"] = pd.to_datetime(df["first_date"], errors="coerce")
     df["latest_date"] = pd.to_datetime(df["latest_date"], errors="coerce")
     return df
 

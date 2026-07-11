@@ -116,6 +116,7 @@ export type MarketMoversWorkbenchPayload = {
     deferred_controls: string[];
   };
   actions: MarketMoverAction[];
+  action_note?: string;
 };
 
 export type MarketMoverInvestigationPanePayload = {
@@ -538,19 +539,21 @@ function MarketMoversWorkbench({ args }: Props) {
         ) : (
           <div />
         )}
-        <div className="mm-workbench__actions" aria-label="Market Movers actions">
-          {payload.actions.map((action) => (
-            <button
-              className={`mm-workbench__action mm-workbench__action--${action.kind}`}
-              disabled={action.kind === "disabled"}
-              key={action.id}
-              onClick={() => emitAction(action)}
-              type="button"
-            >
-              <span className="mm-workbench__action-label">{action.label}</span>
-              {action.detail ? <span className="mm-workbench__action-detail">{action.detail}</span> : null}
-            </button>
-          ))}
+        <div className="mm-workbench__action-stack">
+          <div className="mm-workbench__actions" aria-label="Market Movers actions">
+            {payload.actions.map((action) => (
+              <button
+                className={`mm-workbench__action mm-workbench__action--${action.kind}`}
+                disabled={action.kind === "disabled"}
+                key={action.id}
+                onClick={() => emitAction(action)}
+                type="button"
+              >
+                <span className="mm-workbench__action-label">{action.label}</span>
+              </button>
+            ))}
+          </div>
+          {payload.action_note ? <div className="mm-workbench__action-note">{payload.action_note}</div> : null}
         </div>
       </div>
     </section>

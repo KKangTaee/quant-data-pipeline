@@ -628,9 +628,13 @@ def build_market_movers_command_strip_model(
     period_label = _market_mover_period_label(controls.period)
     sector_label = controls.sector if controls.sector and controls.sector != "All" else "All sectors"
     freshness = _freshness_label(snapshot, coverage)
-    eod_due_count = _safe_int(dict(snapshot.get("eod_refresh_preflight") or {}).get("selected_symbols_count"))
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
+    eod_due_count = _safe_int(preflight.get("selected_symbols_count"))
+    limited_count = _safe_int(preflight.get("limited_history_symbols_count"))
     if eod_due_count > 0:
         freshness = "계산 가능 · 이력 보강 필요"
+    elif limited_count > 0:
+        freshness = "계산 가능 · 짧은 이력 제외"
     returnable_pct = coverage.get("returnable_pct")
     return {
         "schema_version": "market_movers_command_strip_v1",
@@ -669,12 +673,25 @@ def build_market_movers_unified_summary_model(
     returnable_pct = coverage.get("returnable_pct")
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
     eod_due_count = _safe_int(preflight.get("selected_symbols_count"))
+    limited_count = _safe_int(preflight.get("limited_history_symbols_count"))
     if eod_due_count > 0:
         freshness = "계산 가능 · 이력 보강 필요"
-    action_label = "가격 이력 확인" if eod_due_count > 0 else "정상" if _command_strip_tone(snapshot, coverage) == "positive" else "갱신 확인"
+    elif limited_count > 0:
+        freshness = "계산 가능 · 짧은 이력 제외"
+    action_label = (
+        "가격 이력 확인"
+        if eod_due_count > 0
+        else "추가 수집 없음"
+        if limited_count > 0
+        else "정상"
+        if _command_strip_tone(snapshot, coverage) == "positive"
+        else "갱신 확인"
+    )
     trust_detail = _freshness_detail(coverage)
     if eod_due_count > 0:
         trust_detail = f"{trust_detail} · 가격 이력 보강 {eod_due_count:,}개"
+    elif limited_count > 0:
+        trust_detail = f"{trust_detail} · 짧은 가격 이력 {limited_count:,}개 제외"
     return {
         "schema_version": "market_movers_unified_summary_v1",
         "title": "변동 종목",
@@ -738,12 +755,9 @@ def _market_movers_eod_action_detail(preflight: dict[str, Any]) -> str:
             return f"최신 {skipped:,}개 스킵 가능"
         return "수집 대상 확인 후 실행"
     range_text = _market_movers_eod_preflight_range_text(preflight)
-    reason = str(preflight.get("range_reason") or "").strip()
-    detail = f"수집 대상 {selected:,}개"
+    detail = f"갱신 {selected:,}개"
     if range_text:
         detail = f"{detail} · {range_text}"
-    if reason:
-        detail = f"{detail} · {reason}"
     return detail
 
 
@@ -795,16 +809,25 @@ def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dic
         return actions
 
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
-    return [
-        {
-            "id": "refresh_eod_history",
-            "label": "가격 이력 갱신",
-            "kind": "primary",
-            "detail": _market_movers_eod_action_detail(preflight),
-        },
-        _market_movers_react_universe_basis_action(controls.coverage, kind="secondary"),
-        {"id": "reload", "label": "화면 새로고침", "kind": "secondary"},
-    ]
+    actions = []
+    if _safe_int(preflight.get("selected_symbols_count")) > 0:
+        actions.append({"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"})
+    actions.append(_market_movers_react_universe_basis_action(controls.coverage, kind="secondary"))
+    actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
+    return actions
+
+
+def _market_movers_react_action_note(*, controls: MarketMoverControls, snapshot: dict[str, Any]) -> str:
+    if controls.period == "daily":
+        return ""
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
+    if _safe_int(preflight.get("selected_symbols_count")) > 0:
+        return _market_movers_eod_action_detail(preflight)
+    limited_symbols = [str(symbol) for symbol in list(preflight.get("limited_history_symbols") or [])]
+    if limited_symbols:
+        sample = ", ".join(limited_symbols[:3])
+        return f"{sample} · 사용 가능한 가격 이력이 짧아 현재 랭킹에서 제외 · 추가 수집 없음"
+    return _market_movers_eod_action_detail(preflight)
 
 
 def _market_movers_react_universe_basis_action(coverage: str, *, kind: str) -> dict[str, Any]:
@@ -859,6 +882,7 @@ def build_market_movers_react_workbench_payload(
             "deferred_controls": [],
         },
         "actions": _market_movers_react_actions(controls=controls, snapshot=snapshot),
+        "action_note": _market_movers_react_action_note(controls=controls, snapshot=snapshot),
     }
     if controls.period != "daily":
         payload["eod_refresh_preflight"] = dict(snapshot.get("eod_refresh_preflight") or {})
@@ -2674,6 +2698,8 @@ def _render_market_movers_eod_refresh_bar(
     returnable = coverage.get("returnable_count") or 0
     universe_count = coverage.get("universe_count") or 0
     returnable_pct = coverage.get("returnable_pct")
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
+    refresh_disabled = _safe_int(preflight.get("selected_symbols_count")) <= 0
 
     render_market_refresh_status_bar(
         universe_label=universe_label,
@@ -2690,6 +2716,7 @@ def _render_market_movers_eod_refresh_bar(
         key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
         use_container_width=True,
         type="primary",
+        disabled=refresh_disabled,
         help=(
             f"{period_label} 랭킹 산출에 필요한 저장 EOD 가격 이력을 기존 OHLCV 경로로 갱신합니다. "
             "이미 최신인 종목은 건너뛰고 누락되었거나 오래된 종목을 우선 보강합니다."
@@ -2704,7 +2731,7 @@ def _render_market_movers_eod_refresh_bar(
                 universe_limit=universe_limit,
                 period=period,
                 as_of_date=str(
-                    dict(snapshot.get("eod_refresh_preflight") or {}).get("as_of_date")
+                    preflight.get("as_of_date")
                     or _market_movers_snapshot_effective_as_of_date(snapshot)
                     or ""
                 )
@@ -2721,10 +2748,13 @@ def _render_market_movers_eod_refresh_bar(
     ):
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
-    control_cols[3].caption(
-        f"{period_label} 결과는 저장된 EOD 가격 기준입니다. "
-        "가격 이력 갱신은 시세를 보강하고, 유니버스 기준 갱신은 coverage 구성 또는 Top 유동성 기준을 다시 저장합니다."
-    )
+    if _safe_int(preflight.get("limited_history_symbols_count")) > 0 and refresh_disabled:
+        control_cols[3].caption(str(preflight.get("range_reason") or "짧은 가격 이력 종목은 현재 랭킹에서 제외됩니다."))
+    else:
+        control_cols[3].caption(
+            f"{period_label} 결과는 저장된 EOD 가격 기준입니다. "
+            "가격 이력 갱신은 시세를 보강하고, 유니버스 기준 갱신은 coverage 구성 또는 Top 유동성 기준을 다시 저장합니다."
+        )
     _render_market_movers_universe_result(universe_code)
     _render_market_job_result(eod_result_key)
 
