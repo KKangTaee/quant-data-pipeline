@@ -224,6 +224,13 @@ type ReviewDispositionItem = {
   evidence_as_of?: string
   traceStatus?: string
   trace_status?: string
+  whyVisible?: string
+  why_visible?: string
+  userInstruction?: string
+  user_instruction?: string
+  ownership?: string
+  finalReviewActionRequired?: boolean
+  final_review_action_required?: boolean
   tone?: Tone
 }
 
@@ -247,6 +254,8 @@ type Level2ReviewDisposition = {
   }
   roleSections?: ReviewRoleSection[]
   role_sections?: ReviewRoleSection[]
+  finalReviewSections?: ReviewRoleSection[]
+  final_review_sections?: ReviewRoleSection[]
 }
 
 type ReviewRoleSection = {
@@ -778,17 +787,20 @@ function DetailTabs({ tabs }: { tabs: DetailTab[] }) {
 
 function ReviewActionBoard({ sections }: { sections: ReviewRoleSection[] }) {
   const total = sections.reduce((sum, section) => sum + Number(section.count ?? section.items?.length ?? 0), 0)
+  const directActionCount = sections
+    .flatMap((section) => section.items ?? [])
+    .filter((item) => field(item.finalReviewActionRequired, item.final_review_action_required)).length
   return (
-    <section className="fr-invest-report__review-actions" aria-label="Final Review 확인 필요">
+    <section className="fr-invest-report__review-actions" aria-label="Final Review 판단 항목">
       <div className="fr-invest-report__section-head">
         <div>
-          <span>Level2 REVIEW handoff</span>
-          <h5>Final Review 확인 필요</h5>
+          <span>2단계 검증에서 넘어온 판단 재료</span>
+          <h5>Final Review에서 결정할 것</h5>
         </div>
-        <strong>{total > 0 ? `${total}개 행동 확인` : "추가 확인 없음"}</strong>
+        <strong>{total > 0 ? `직접 결정 ${directActionCount}개 · 인수 제한 ${total - directActionCount}개` : "추가 판단 없음"}</strong>
       </div>
       <p className="fr-invest-report__review-boundary">
-        저장된 Practical Validation evidence를 다시 실행하지 않고, 각 항목을 점수에 반영됨 / 저장 전 확인 / Monitoring 조건으로 넘김 / blocker로 구분합니다.
+        검증을 다시 실행하는 화면이 아닙니다. 지금 결정할 조건, Monitoring 조건, 이미 2단계에서 점수에 반영한 제한을 구분합니다.
       </p>
       <div className="fr-invest-report__review-action-list">
         {sections.map((section) => {
@@ -808,8 +820,8 @@ function ReviewActionBoard({ sections }: { sections: ReviewRoleSection[] }) {
                   {items.map((item, index) => (
                     <li key={`${section.role ?? "review"}-${item.title ?? index}`}>
                       <strong>{compact(item.title)}</strong>
-                      <span>{compact(item.detail)}</span>
-                      <small>{compact(item.action)}</small>
+                      <span><b>왜 보이나</b>{compact(field(item.whyVisible, item.why_visible), compact(item.detail))}</span>
+                      <small><b>사용자 판단</b>{compact(field(item.userInstruction, item.user_instruction), compact(item.action))}</small>
                     </li>
                   ))}
                 </ul>
@@ -968,9 +980,12 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const interpretationCards = field(report.interpretationCards, report.interpretation_cards) ?? []
   const watchItems = field(report.watchItems, report.watch_items) ?? report.weaknesses ?? []
   const level2Review = report.level2ReviewDisposition ?? report.level2_review_disposition ?? {}
-  const level2Summary = level2Review.summary ?? {}
   const level2RoleSections = field(level2Review.roleSections, level2Review.role_sections) ?? []
-  const reviewItemCount = Number(level2Summary.total ?? 0)
+  const finalReviewSections = field(level2Review.finalReviewSections, level2Review.final_review_sections)
+    ?? level2RoleSections.filter((section) => Number(section.count ?? section.items?.length ?? 0) > 0)
+  const directDecisionCount = finalReviewSections
+    .flatMap((section) => section.items ?? [])
+    .filter((item) => field(item.finalReviewActionRequired, item.final_review_action_required)).length
   const scorecardOverall = field(scorecard.overallScore, scorecard.overall_score)
   const scorecardBand = field(scorecard.scoreBand, scorecard.score_band)
   const scorecardClassification = field(scorecard.classificationLabel, scorecard.classification_label)
@@ -983,7 +998,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
   const patternCards = patternGuide.cards ?? []
   const metaItems: MetaItem[] = [
     { label: "후보", value: compact(source.title) },
-    { label: "확인 필요", value: `${reviewItemCount}개`, tone: reviewItemCount > 0 ? "warning" : "positive" },
+    { label: "직접 결정", value: `${directDecisionCount}개`, tone: directDecisionCount > 0 ? "warning" : "positive" },
   ]
   const detailTabs: DetailTab[] = [
     {
@@ -1097,7 +1112,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
 
       <PatternGuidePanel guide={patternGuide} />
 
-      <ReviewActionBoard sections={level2RoleSections} />
+      <ReviewActionBoard sections={finalReviewSections} />
 
       <InterpretationRows cards={interpretationCards} />
 

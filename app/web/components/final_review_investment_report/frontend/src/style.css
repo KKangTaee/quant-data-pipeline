@@ -752,6 +752,22 @@
   line-height: 1.35;
 }
 
+.fr-invest-report__review-action li span b,
+.fr-invest-report__review-action li small b {
+  display: block;
+  margin-bottom: 2px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.fr-invest-report__review-action li small {
+  border-left: 2px solid #d6e8e1;
+  padding-left: 8px;
+  color: #12604f;
+}
+
 .fr-invest-report__review-action--danger {
   border-left-color: #dc2626;
 }

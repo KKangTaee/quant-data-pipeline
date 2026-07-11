@@ -2077,38 +2077,51 @@ def _level2_review_cards(validation: dict[str, Any]) -> list[dict[str, Any]]:
         for card in list(dict(group or {}).get("criteria_cards") or [])
         if isinstance(card, dict)
     ]
-    if cards:
-        return cards
-    fallback_rows = list(validation.get("validation_module_display_rows") or validation.get("validation_modules") or [])
-    return [dict(row or {}) for row in fallback_rows if isinstance(row, dict)]
+    fallback_rows = [
+        *list(validation.get("validation_module_display_rows") or []),
+        *list(validation.get("validation_modules") or []),
+    ]
+    fallback_cards = [dict(row or {}) for row in fallback_rows if isinstance(row, dict)]
+    if not cards:
+        return fallback_cards
+    # The workspace contains the most readable Level2 cautions, while the module
+    # contract can contain Final Review / Monitoring roles omitted from that view.
+    existing_roles = {str(card.get("review_role") or "") for card in cards}
+    cards.extend(
+        card
+        for card in fallback_cards
+        if str(card.get("review_role") or "")
+        and str(card.get("review_role") or "") not in existing_roles
+    )
+    return cards
 
 
 def _level2_review_action(role: str) -> dict[str, str]:
     actions = {
         "pv_data_caution": {
             "action_outcome": "score_reflected",
-            "action_label": "점수에 반영됨",
-            "action_detail": "투자 매력도가 아니라 근거 신뢰도에 반영합니다.",
+            "action_label": "이미 신뢰도에 반영",
+            "action_detail": "2단계에서 인수한 데이터 제한입니다. Final Review에서 다시 해결하지 않습니다.",
         },
         "pv_practical_caution": {
             "action_outcome": "score_reflected",
-            "action_label": "점수에 반영됨",
-            "action_detail": "측정 공백은 투자 매력도가 아니라 근거 신뢰도에 반영합니다.",
+            "action_label": "이미 신뢰도에 반영",
+            "action_detail": "2단계에서 허용한 측정 제한입니다. Final Review에서는 판단의 확신 수준에만 반영합니다.",
         },
         "final_decision_input": {
             "action_outcome": "pre_save_check",
-            "action_label": "저장 전 확인",
-            "action_detail": "Final Review 판단 사유와 운영 전 조건에 반영했는지 저장 전에 확인합니다.",
+            "action_label": "선택·보류 사유에 반영",
+            "action_detail": "사용자가 지금 선택 또는 보류 판단에 반영해야 하는 항목입니다.",
         },
         "monitoring_followup": {
             "action_outcome": "monitoring_condition",
-            "action_label": "Monitoring 조건으로 넘김",
-            "action_detail": "선정 후 Operations > Portfolio Monitoring에서 추적할 조건으로 넘깁니다.",
+            "action_label": "추적 조건으로 확정",
+            "action_detail": "선정한다면 Portfolio Monitoring에서 추적할 조건으로 확정합니다.",
         },
         "final_readiness_blocker": {
             "action_outcome": "blocker",
-            "action_label": "blocker",
-            "action_detail": "해소 전에는 Monitoring 후보 선정 route를 저장할 수 없습니다.",
+            "action_label": "2단계에서 해소 필요",
+            "action_detail": "해소 전에는 Monitoring 후보로 선정할 수 없습니다.",
         },
     }
     return dict(actions.get(role) or actions["final_decision_input"])
@@ -2166,6 +2179,34 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
             "Module",
         )
         evidence_as_of = _review_trace_value(card, "as_of", "snapshot_at", "collected_at", "updated_at", "generated_at")
+        ownership = {
+            "pv_data_caution": "level2_inherited_limit",
+            "pv_practical_caution": "level2_inherited_limit",
+            "final_decision_input": "final_review_decision",
+            "monitoring_followup": "monitoring_handoff",
+            "final_readiness_blocker": "selection_blocker",
+        }.get(normalized_role, "final_review_decision")
+        user_instruction = {
+            "pv_data_caution": "총평과 근거 신뢰도에 이 제한이 반영됐는지만 확인합니다. 보강 작업은 2단계 책임입니다.",
+            "pv_practical_caution": "선택 판단의 확신을 낮추는 제한으로 받아들입니다. Final Review에서 검증을 다시 실행하지 않습니다.",
+            "final_decision_input": "이 항목을 수용할지 판단하고 선택 또는 보류 사유에 기록합니다.",
+            "monitoring_followup": "선정한다면 어떤 변화에서 재검토할지 Monitoring 조건으로 확정합니다.",
+            "final_readiness_blocker": "Final Review를 중단하고 2단계로 돌아가 이 항목을 먼저 해소합니다.",
+        }.get(normalized_role, "선택 또는 보류 사유에 반영합니다.")
+        why_visible = {
+            "level2_inherited_limit": "2단계에서 통과는 허용했지만 판단 확신과 점수 해석에 영향을 주는 제한입니다.",
+            "final_review_decision": "검증으로 자동 결정할 수 없어 사용자의 최종 판단이 필요합니다.",
+            "monitoring_handoff": "선정 후에도 조건 변화 여부를 지속해서 확인해야 합니다.",
+            "selection_blocker": "선정 전에 반드시 해소해야 하는 차단 항목입니다.",
+        }[ownership]
+        raw_resolution_action = _safe_text(
+            card.get("resolution_action")
+            or card.get("next_action_summary")
+            or card.get("action_label")
+            or card.get("Next Action")
+            or card.get("Required Action"),
+            "-",
+        )
         groups[disposition].append(
             {
                 "title": title,
@@ -2183,14 +2224,12 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                     or card.get("Current"),
                     "-",
                 ),
-                "action": _safe_text(
-                    card.get("resolution_action")
-                    or card.get("next_action_summary")
-                    or card.get("action_label")
-                    or card.get("Next Action")
-                    or card.get("Required Action"),
-                    "-",
-                ),
+                "action": user_instruction,
+                "user_instruction": user_instruction,
+                "why_visible": why_visible,
+                "ownership": ownership,
+                "final_review_action_required": ownership != "level2_inherited_limit",
+                "level2_resolution_action": raw_resolution_action,
                 "observed_value": observed_value,
                 "threshold": threshold,
                 "evidence_source": evidence_source,
@@ -2223,6 +2262,56 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                 **action,
             }
         )
+    final_review_section_specs = [
+        (
+            "decision",
+            "최종 판단에서 결정할 것",
+            "선택·보류 사유에 반영",
+            "검증으로 자동 결정할 수 없는 조건을 사용자가 수용하거나 보류합니다.",
+            {"final_decision_input"},
+            "warning",
+        ),
+        (
+            "inherited_limits",
+            "2단계에서 인수한 제한사항",
+            "이미 점수·신뢰도에 반영",
+            "2단계에서 통과를 허용한 제한입니다. Final Review에서 보강 작업을 다시 수행하지 않습니다.",
+            {"pv_data_caution", "pv_practical_caution"},
+            "neutral",
+        ),
+        (
+            "monitoring_handoff",
+            "Monitoring으로 넘길 조건",
+            "추적 조건으로 확정",
+            "선정 후 어떤 변화에서 재검토할지 운영 조건으로 넘깁니다.",
+            {"monitoring_followup"},
+            "warning",
+        ),
+        (
+            "selection_blockers",
+            "선정 전 해소할 차단 항목",
+            "2단계에서 해소 필요",
+            "이 항목이 있으면 Final Review에서 선정하지 않고 2단계로 돌아갑니다.",
+            {"final_readiness_blocker"},
+            "danger",
+        ),
+    ]
+    final_review_sections = []
+    for key, label, action_label, detail, roles, tone in final_review_section_specs:
+        items = [dict(item) for item in all_items if item.get("role") in roles]
+        if not items:
+            continue
+        final_review_sections.append(
+            {
+                "key": key,
+                "label": label,
+                "tone": tone,
+                "count": len(items),
+                "action_label": action_label,
+                "action_detail": detail,
+                "items": items,
+            }
+        )
     return {
         "schema_version": LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION,
         "summary": {
@@ -2234,6 +2323,7 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
         },
         "groups": groups,
         "role_sections": role_sections,
+        "final_review_sections": final_review_sections,
         "boundary": {
             "validation_rerun": False,
             "provider_fetch": False,

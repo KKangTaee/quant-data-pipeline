@@ -12325,7 +12325,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("약점과 한계", component_source)
         self.assertIn("저장 전 확인 질문", component_source)
         self.assertIn("MetaStrip", component_source)
-        self.assertIn('label: "확인 필요"', component_source)
+        self.assertIn('label: "직접 결정"', component_source)
         self.assertIn("fr-invest-report__status", component_source)
         self.assertIn("headlineScores", component_source)
         self.assertIn("투자 매력도", component_source)
@@ -12376,12 +12376,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("저장 / Monitoring handoff", component_source)
         self.assertNotIn("Final Review 판단 저장", component_source)
         self.assertNotIn("현재 후보와 개선 기대 범위", component_source)
-        self.assertIn("Final Review 확인 필요", component_source)
+        self.assertIn("Final Review에서 결정할 것", component_source)
         self.assertIn("ReviewActionBoard", component_source)
-        self.assertIn("점수에 반영됨", component_source)
-        self.assertIn("저장 전 확인", component_source)
-        self.assertIn("Monitoring 조건으로 넘김", component_source)
-        self.assertIn("blocker", component_source)
+        self.assertIn("이미 2단계에서 점수에 반영한 제한", component_source)
+        self.assertIn("왜 보이나", component_source)
+        self.assertIn("사용자 판단", component_source)
+        self.assertNotIn("Level2 REVIEW handoff", component_source)
         self.assertIn("최종 판단 점수", component_source)
         self.assertNotIn("Streamlit.setComponentValue", component_source)
         self.assertNotIn("fetch(", component_source)
@@ -12451,11 +12451,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("저장 / Monitoring handoff", build_source)
         self.assertNotIn("Final Review 판단 저장", build_source)
         self.assertNotIn("현재 후보와 개선 기대 범위", build_source)
-        self.assertIn("Final Review 확인 필요", build_source)
-        self.assertIn("점수에 반영됨", build_source)
-        self.assertIn("저장 전 확인", build_source)
-        self.assertIn("Monitoring 조건으로 넘김", build_source)
-        self.assertIn("blocker", build_source)
+        self.assertIn("Final Review에서 결정할 것", build_source)
+        self.assertIn("왜 보이나", build_source)
+        self.assertIn("사용자 판단", build_source)
+        self.assertNotIn("Level2 REVIEW handoff", build_source)
         self.assertIn("build_final_review_investment_report", page_source)
         self.assertIn("render_final_review_investment_report", page_source)
         self.assertIn("점수 근거", page_source)
@@ -27932,14 +27931,63 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         )
         self.assertEqual(
             [section["action_label"] for section in role_sections],
-            ["점수에 반영됨", "점수에 반영됨", "저장 전 확인", "Monitoring 조건으로 넘김", "blocker"],
+            ["이미 신뢰도에 반영", "이미 신뢰도에 반영", "선택·보류 사유에 반영", "추적 조건으로 확정", "2단계에서 해소 필요"],
         )
         self.assertEqual([section["count"] for section in role_sections], [1, 1, 1, 1, 1])
         self.assertEqual(role_sections[0]["items"][0]["action_outcome"], "score_reflected")
         self.assertEqual(role_sections[3]["items"][0]["action_outcome"], "monitoring_condition")
         self.assertEqual(role_sections[4]["items"][0]["action_outcome"], "blocker")
+        self.assertFalse(role_sections[0]["items"][0]["final_review_action_required"])
+        self.assertEqual(role_sections[0]["items"][0]["ownership"], "level2_inherited_limit")
+        self.assertEqual(role_sections[2]["items"][0]["ownership"], "final_review_decision")
+        self.assertNotIn("Refresh provider snapshot", role_sections[0]["items"][0]["action"])
+        self.assertEqual(
+            [section["label"] for section in disposition["final_review_sections"]],
+            [
+                "최종 판단에서 결정할 것",
+                "2단계에서 인수한 제한사항",
+                "Monitoring으로 넘길 조건",
+                "선정 전 해소할 차단 항목",
+            ],
+        )
         self.assertEqual(report["level2_review_disposition"]["summary"]["total"], 5)
         self.assertFalse(report["level2_review_disposition"]["boundary"]["validation_rerun"])
+
+    def test_final_review_disposition_supplements_final_decision_role_omitted_from_workspace(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        disposition = build_final_review_level2_review_disposition(
+            validation={
+                "practical_validation_workspace": {
+                    "criteria_detail_groups": [
+                        {
+                            "criteria_cards": [
+                                {
+                                    "display_label": "Data coverage",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_data_caution",
+                                    "resolution_action": "Flow4 데이터 보강 / 수집 실행",
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "tax_account_scope",
+                        "status": "REVIEW",
+                        "review_role": "final_decision_input",
+                        "evidence": "tax scope is not modeled",
+                        "resolution_action": "세금·계좌 조건을 선택 사유에 남깁니다.",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(disposition["summary"]["total"], 2)
+        self.assertEqual(disposition["groups"]["open_review"][0]["title"], "tax_account_scope")
+        self.assertIn("수용할지 판단", disposition["groups"]["open_review"][0]["action"])
+        self.assertNotIn("Flow4", disposition["groups"]["warning"][0]["action"])
 
     def test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts(self) -> None:
         from app.services.backtest_evidence_read_model import (
