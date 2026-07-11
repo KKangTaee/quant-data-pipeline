@@ -22,6 +22,7 @@ export type MarketMoversSectorBreadthPayload = {
   component: "MarketMoversSectorBreadth";
   map: {
     schema_version: "market_movers_sector_map_v1";
+    section_header: { kicker: string; title: string; detail: string };
     tone: string;
     status: string;
     headline: string;
@@ -251,13 +252,17 @@ function MarketMoversSectorBreadth({ payload }: { payload: MarketMoversSectorBre
     >
       <div className="mm-sector-breadth__head">
         <div>
-          <div className="mm-sector-breadth__kicker">시장 확산 지도</div>
-          <div className="mm-sector-breadth__title">{payload.map.headline}</div>
-          <div className="mm-sector-breadth__detail-copy">
-            {payload.map.detail} · 기준: {payload.map.freshness}
-          </div>
+          <div className="mm-sector-breadth__kicker">{payload.map.section_header.kicker}</div>
+          <div className="mm-sector-breadth__title">{payload.map.section_header.title}</div>
+          <div className="mm-sector-breadth__detail-copy">{payload.map.section_header.detail}</div>
         </div>
         <span className="mm-sector-breadth__status">{payload.map.status}</span>
+      </div>
+      <div className="mm-sector-breadth__result">
+        <div className="mm-sector-breadth__result-title">{payload.map.headline}</div>
+        <div className="mm-sector-breadth__result-detail">
+          {payload.map.detail} · 기준: {payload.map.freshness}
+        </div>
       </div>
       <div className="mm-sector-breadth__rail">
         <span className="mm-sector-breadth__rail-fill" />

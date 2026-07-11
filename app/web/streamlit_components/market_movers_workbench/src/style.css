@@ -626,13 +626,15 @@ body {
 }
 
 .mm-sector-breadth__kicker {
-  color: #64748b;
+  color: #2563eb;
   font-size: 0.76rem;
   font-weight: 850;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .mm-sector-breadth__title {
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   font-weight: 850;
   line-height: 1.2;
   margin-top: 3px;
@@ -650,7 +652,27 @@ body {
 }
 
 .mm-sector-breadth__detail-copy {
-  margin-top: 6px;
+  margin-top: 4px;
+}
+
+.mm-sector-breadth__result {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.mm-sector-breadth__result-title {
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.mm-sector-breadth__result-detail {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.35;
+  margin-top: 4px;
 }
 
 .mm-sector-breadth__status {
@@ -901,14 +923,23 @@ body {
   }
 
   .mm-sector-breadth__title,
+  .mm-sector-breadth__result-title,
   .mm-sector-breadth__stat strong,
   .mm-sector-breadth__lane-head span,
   .mm-sector-breadth__detail-summary span {
     color: #f8fafc;
   }
 
-  .mm-sector-breadth__kicker,
+  .mm-sector-breadth__kicker {
+    color: #60a5fa;
+  }
+
+  .mm-sector-breadth__result {
+    border-top-color: #334155;
+  }
+
   .mm-sector-breadth__detail-copy,
+  .mm-sector-breadth__result-detail,
   .mm-sector-breadth__lane-copy,
   .mm-sector-breadth__lane-foot,
   .mm-sector-breadth__boundary,

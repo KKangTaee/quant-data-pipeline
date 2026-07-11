@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-11
 
 ## Current State
 
@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `post-merge-docs-flow-refresh-20260708`
+- `overview-market-movers-section-title-unification-v1-20260711`
 
 Previous completed task:
 
-- `practical-validation-boundary-cleanup-v1-20260708`
+- `post-merge-docs-flow-refresh-20260708`
 
 Latest completed docs cleanup task:
 
@@ -94,6 +94,7 @@ Recent Operations records:
 
 Recent Overview / Market Context records:
 
+- `overview-market-movers-section-title-unification-v1-20260711`: Completed record. Market Movers sector breadth removed its duplicated outer divider and now uses one `SECTOR BREADTH / 섹터 / 시장 확산 맥락 / 설명 / 상태` header, with the current breadth headline rendered as a subordinate result summary in React and fallback.
 - `overview-final-cleanup-v33-v36-20260629`: Completed record. UI component bodies now live under `app/web/overview/components/*`, `overview_dashboard.py` is a 1-export wrapper, `app/services/overview_market_intelligence.py` was removed, and Data Health scope / coverage counts separate direct Market Context from reference / dedicated-tab sources.
 - `overview-service-split-v25-v32-20260629`: Completed record. Overview market intelligence read-model bodies now live in `app/services/overview/{market_context,market_movers,events,sentiment,data_health,why_it_moved}.py` instead of the old monolithic service facade.
 - `overview-legacy-dashboard-removal-v17-v24-20260625`: Completed record. `app/web/overview/legacy_dashboard.py` was physically deleted after remaining helper ownership moved into tab-local helper modules; `app/web/overview_dashboard.py` now exposes explicit compatibility exports. QA passed with py_compile, Overview contracts, legacy import scan, and Browser QA.

@@ -30,6 +30,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Movers 섹션 제목 통일 V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-section-title-unification-v1-20260711/`에서 섹터 breadth의 외부 중복 divider를 제거했다.
+  - React/fallback 모두 `SECTOR BREADTH / 섹터 / 시장 확산 맥락 / 설명 / 상태`를 고정 섹션 헤더로 사용하고, 현재 breadth headline은 결과 요약으로 낮췄다.
+  - Market Movers focused 79 tests, React build, Browser QA를 통과했으며 데이터 계산/provider/DB/registry 의미는 변경하지 않았다.
 - Overview Market Movers 애널리스트 출처 보드:
   - `.aiworkspace/note/finance/tasks/active/overview-market-interest-source-board-20260709/`에서 `애널리스트 관심`의 링크 묶음 expander를 `출처별 확인 상태` 보드로 바꿨다.
   - Yahoo/yfinance는 세션 전용 구조화 단서로, MarketWatch / WSJ Markets / Nasdaq.com은 `원문 교차확인` 상태로 분리해 표시한다.

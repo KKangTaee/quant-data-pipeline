@@ -3020,6 +3020,11 @@ def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any
     participation_rail = 0 if average_participation is None else max(0, min(100, int(round(average_participation))))
     return {
         "schema_version": "market_movers_sector_map_v1",
+        "section_header": {
+            "kicker": "SECTOR BREADTH",
+            "title": "섹터 / 시장 확산 맥락",
+            "detail": "선택 coverage의 움직임이 넓게 퍼졌는지, 특정 그룹에 집중됐는지 확인합니다.",
+        },
         "tone": model.get("status") or "-",
         "status": _market_movers_sector_status_label(model.get("status") or "-"),
         "headline": _market_movers_sector_headline_label(summary.get("headline")),
@@ -4047,10 +4052,6 @@ def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> No
     model = snapshot.get("sector_breadth")
     if not isinstance(model, dict):
         return
-    render_market_movers_section_divider(
-        "섹터 / 시장 확산 맥락",
-        "선택 coverage의 움직임이 넓게 퍼졌는지, 특정 그룹에 집중됐는지 확인합니다.",
-    )
     if _render_market_movers_sector_breadth_react(model) is not None:
         return
     _render_market_movers_sector_breadth_fallback(model)

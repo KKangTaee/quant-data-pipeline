@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-11
 
 ## Current State After Master Merge
 
@@ -9,7 +9,13 @@ Last Verified: 2026-07-08
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-section-title-unification-v1-20260711/`다.
+
+- 목적: Market Movers의 `섹터 / 시장 확산 맥락`이 외부 divider와 내부 결과 title을 중복 사용해 큰 섹션 계층이 고정되지 않는 문제를 줄였다.
+- 주요 변경: React/fallback 섹터 영역은 `SECTOR BREADTH / 섹터 / 시장 확산 맥락 / 설명 / 상태` 헤더를 사용하고, 데이터 기반 breadth headline은 그 아래 결과 요약으로 분리한다.
+- 이번 차수에서 하지 않은 일: Market Movers 상단/Ranking Board/선택 종목 조사 재설계, 섹터 계산/payload 의미 변경, provider/DB/schema/registry/saved 변경.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`다.
 
 - 목적: `sub-dev` / `backtest-dev` 병합 이후 공용 문서의 current pointer, 코드 흐름, Overview surface 이름이 현재 master와 어긋나지 않게 정리했다.
 - 주요 변경: Product Direction, Roadmap, architecture / data / flow docs, Overview runbook을 현재 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events` primary tab 구조와 Backtest / Practical Validation / Operations 경계에 맞췄다. `Futures Monitor` / `Sector / Industry`는 current primary surface가 아니라 retained data / helper context 또는 과거 이력으로 낮췄고, Overview Data Health handoff / Market Context cockpit의 user-facing service label도 `Futures Macro` / `Market Movers` 기준으로 보정했다.

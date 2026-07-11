@@ -10537,7 +10537,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("build_market_movers_sector_map_model", helper_source)
         self.assertIn("render_sector_breadth_market_map", helper_source)
         self.assertIn("render_sector_breadth_market_map", component_source)
-        self.assertIn("시장 확산 지도", component_source)
+        self.assertIn("ov-sector-breadth-result", component_source)
+        self.assertIn("section_header", component_source)
         self.assertIn("ov-sector-breadth-lane", component_source)
         self.assertIn("ov-sector-breadth-rail", common_source)
 
@@ -10761,8 +10762,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("render_market_movers_section_divider", helper_source)
         self.assertIn("def render_market_movers_section_divider", component_source)
         self.assertIn(".ov-mm-section-divider", common_source)
-        self.assertIn('"섹터 / 시장 확산 맥락"', helper_source)
         self.assertIn('"선택 종목 조사"', helper_source)
+        sector_context_body = helper_source[helper_source.index("def _render_market_movers_sector_breadth_context") :]
+        sector_context_body = sector_context_body[: sector_context_body.index("def _consume_market_mover_investigation_react_event")]
+        self.assertNotIn("render_market_movers_section_divider(", sector_context_body)
         self.assertNotIn('st.markdown("#### 섹터 / 시장 확산 맥락")', helper_source)
         self.assertNotIn('st.markdown("#### 선택 종목 조사")', helper_source)
         self.assertNotIn('st.markdown("##### 조사 단서")', helper_source)
@@ -16117,6 +16120,9 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "market_movers_sector_breadth_react_v1")
         self.assertEqual(payload["component"], "MarketMoversSectorBreadth")
         self.assertEqual(payload["map"]["schema_version"], "market_movers_sector_map_v1")
+        self.assertEqual(payload["map"]["section_header"]["kicker"], "SECTOR BREADTH")
+        self.assertEqual(payload["map"]["section_header"]["title"], "섹터 / 시장 확산 맥락")
+        self.assertIn("선택 coverage", payload["map"]["section_header"]["detail"])
         self.assertEqual(payload["map"]["lanes"][0]["bar_width_pct"], 100)
         self.assertEqual(payload["map"]["lanes"][1]["tone"], "danger")
         self.assertEqual(payload["map"]["lanes"][1]["bar_width_pct"], 50)
@@ -16146,6 +16152,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("render_sector_breadth_market_map(", fallback_body)
         self.assertIn('with st.expander("섹터 breadth 상세 표"', fallback_body)
 
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
+        fallback_component = component_source[component_source.index("def render_sector_breadth_market_map") :]
+        fallback_component = fallback_component[: fallback_component.index("def render_breadth_heatmap_summary")]
+        self.assertIn('class="ov-sector-breadth-result"', fallback_component)
+        self.assertIn("section_header", fallback_component)
+
     def test_market_movers_sector_breadth_react_component_renders_map_and_detail_drawer(self) -> None:
         react_source = Path(
             "app/web/streamlit_components/market_movers_workbench/src/MarketMoversWorkbench.tsx"
@@ -16157,6 +16169,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("MarketMoversSectorBreadth", react_source)
         self.assertIn('payload.component === "MarketMoversSectorBreadth"', react_source)
         self.assertIn('className="mm-sector-breadth"', react_source)
+        self.assertIn('className="mm-sector-breadth__result"', react_source)
+        self.assertIn("payload.map.section_header.kicker", react_source)
+        self.assertIn("payload.map.section_header.title", react_source)
+        self.assertIn("payload.map.section_header.detail", react_source)
         self.assertIn('className="mm-sector-breadth__lanes"', react_source)
         self.assertIn('className="mm-sector-breadth__detail"', react_source)
         self.assertIn("payload.detail_table.rows.map", react_source)
@@ -16165,6 +16181,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("onToggle={syncFrameHeightSoon}", react_source)
         self.assertEqual(react_source.count('className="mm-sector-breadth__status"'), 1)
         self.assertIn(".mm-sector-breadth", react_style)
+        self.assertIn(".mm-sector-breadth__result", react_style)
         self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", react_style)
         self.assertIn(".mm-sector-breadth__bar", react_style)
         self.assertNotIn("right: 50%", react_style)

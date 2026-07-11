@@ -773,6 +773,7 @@ def _sector_breadth_leader_strip_html(leaders: list[dict[str, Any]]) -> str:
 
 def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
     tone_color = escape(_overview_tone_color(model.get("tone") or model.get("status")))
+    section_header = dict(model.get("section_header") or {})
     stats = [
         dict(model.get("participation") or {}),
         dict(model.get("leadership") or {}),
@@ -787,11 +788,15 @@ def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
 <section class="ov-sector-breadth-map" style="--ov-band-tone:{tone_color};--ov-rail-fill:{rail_pct}%;">
   <div class="ov-sector-breadth-head">
     <div>
-      <div class="ov-sector-breadth-kicker">시장 확산 지도</div>
-      <div class="ov-sector-breadth-title">{escape(_display_value(model.get("headline")))}</div>
-      <div class="ov-sector-breadth-detail">{escape(_display_value(model.get("detail")))} · 기준: {escape(_display_value(model.get("freshness")))}</div>
+      <div class="ov-sector-breadth-kicker">{escape(_display_value(section_header.get("kicker")))}</div>
+      <div class="ov-sector-breadth-title">{escape(_display_value(section_header.get("title")))}</div>
+      <div class="ov-sector-breadth-detail">{escape(_display_value(section_header.get("detail")))}</div>
     </div>
     <span class="ov-sector-breadth-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-sector-breadth-result">
+    <div class="ov-sector-breadth-result-title">{escape(_display_value(model.get("headline")))}</div>
+    <div class="ov-sector-breadth-result-detail">{escape(_display_value(model.get("detail")))} · 기준: {escape(_display_value(model.get("freshness")))}</div>
   </div>
   <div class="ov-sector-breadth-rail">
     <span class="ov-sector-breadth-rail-fill"></span>

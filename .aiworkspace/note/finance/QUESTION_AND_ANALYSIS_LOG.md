@@ -26,6 +26,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-11 - Market Movers 섹터 제목은 고정 섹션명과 데이터 결과를 분리한다
+
+- User request: Market Movers 큰 탭/구간 제목이 고정되지 않고 통일성이 없다고 지적하며, 특히 `섹터 / 시장 확산 맥락` UI 개선을 요청함.
+- Interpreted goal: 페이지 header, 내부 section header, 데이터 기반 결과 headline을 같은 제목처럼 겹치지 않고 사용자가 스크롤 중에도 현재 업무 구간을 바로 식별하게 한다.
+- Analysis result: Market Movers 상단은 page header로 유지하고, Ranking Board의 `kicker / title / detail / badge` 계층을 섹터 영역에 적용한다. `혼재된 참여...` 같은 값은 고정 화면명이 아니라 현재 데이터 결과이므로 아래 result summary로 분리한다.
+- Follow-up: `overview-market-movers-section-title-unification-v1-20260711`에서 React/fallback, 계약 테스트, build, Browser QA를 완료했다. 선택 종목 조사까지의 확장은 별도 필요가 확인될 때 진행한다.
+
 ### 2026-07-09 - Analyst source cards must distinguish structured data from original-page links
 
 - User request: 사용자가 `애널리스트 관심`에 yfinance만 보이는 것이 의도인지 묻고, 여러 analyst 사이트를 보여주되 자동 크롤링 전에는 출처별 차이를 명확히 하고 싶다고 확인함.

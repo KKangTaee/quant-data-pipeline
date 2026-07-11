@@ -2623,9 +2623,10 @@ def overview_ui_css() -> str:
   margin-bottom: 0.52rem;
 }
 .ov-sector-breadth-kicker {
-  color: var(--ov-mi-color-text-muted);
+  color: var(--ov-mi-color-primary);
   font-size: var(--ov-mi-font-xs);
   font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0.02em;
   line-height: 1.15;
   text-transform: uppercase;
 }
@@ -2646,6 +2647,25 @@ def overview_ui_css() -> str:
 }
 .ov-sector-breadth-detail {
   margin-top: 0.16rem;
+}
+.ov-sector-breadth-result {
+  margin-top: 0.52rem;
+  padding-top: 0.46rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-sector-breadth-result-title {
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-result-detail {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
 }
 .ov-sector-breadth-status {
   display: inline-flex;
