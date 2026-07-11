@@ -47,3 +47,12 @@ This supports 5y as the primary window and 3y as regime sensitivity, not the mai
 - A TTM value is returned only with four completed distinct quarters; fewer rows remain `INSUFFICIENT_HISTORY`.
 - Official classification thresholds are log(PER) z-score `< -1 LOW`, `< 1 NEUTRAL`, `< 2 HIGH`, otherwise `EXTREME_HIGH`.
 - The 36-month bucket never replaces the 60-month bucket; disagreement is exposed through `period_sensitive`.
+
+## 3차 Implementation Decisions
+
+- Nominal EPS sensitivity compounds SEP inputs as `(1 + real GDP) × (1 + PCE) - 1`; it does not simply add percentages.
+- Conservative/baseline/optimistic use central-tendency lower/median/central-tendency upper endpoints respectively.
+- SPX lower/baseline/upper scenarios combine the matching EPS sensitivity with -1σ/mean/+1σ trailing multiple values.
+- SPY equivalents are proportional convenience values only and are omitted when SPX/SPY EOD dates differ.
+- SEP older than 180 days relative to the SPX as-of date is marked `STALE_SEP` and blocks the index scenario.
+- Mixed or non-actual EPS never enters the calculation; the read model returns Korean blocking reasons.

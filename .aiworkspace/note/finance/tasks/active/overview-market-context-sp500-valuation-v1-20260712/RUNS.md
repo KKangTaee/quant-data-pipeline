@@ -33,3 +33,10 @@ Last Updated: 2026-07-12
 - `.venv/bin/python -m unittest tests.test_sp500_valuation`: 10 tests passed after implementation.
 - `.venv/bin/python -m py_compile finance/loaders/sp500_valuation.py app/services/overview/sp500_valuation.py`: passed.
 - Full `tests.test_service_contracts` run executed 749 tests and exposed one unrelated pre-existing Sentiment React source-string contract failure (`payload.summary.metrics.map`). The failing Sentiment source is outside this task's diff.
+
+## 3차 Verification
+
+- Scenario/read-model imports failed as expected before implementation; stale SEP test failed before the guard was added.
+- `.venv/bin/python -m unittest tests.test_sp500_valuation`: 14 tests passed.
+- `.venv/bin/python -m py_compile app/services/overview/sp500_valuation.py finance/loaders/sp500_valuation.py`: passed.
+- `git diff --check`: passed.

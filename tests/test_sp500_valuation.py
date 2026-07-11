@@ -18,6 +18,27 @@ def monthly_pe_frame(months: int, start: str = "2020-01-01") -> pd.DataFrame:
     )
 
 
+def sep_projection_frame() -> pd.DataFrame:
+    values = {
+        "real_gdp": {"median": 2.2, "central_tendency_lower": 2.0, "central_tendency_upper": 2.3},
+        "pce_inflation": {"median": 3.6, "central_tendency_lower": 3.5, "central_tendency_upper": 3.7},
+    }
+    return pd.DataFrame(
+        [
+            {
+                "release_date": "2026-06-17",
+                "target_year": 2026,
+                "variable_name": variable,
+                "statistic_name": statistic,
+                "value_pct": value,
+                "source_ref": "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260617.htm",
+            }
+            for variable, statistics in values.items()
+            for statistic, value in statistics.items()
+        ]
+    )
+
+
 SEP_HTML_FIXTURE = """
 <html>
   <head><title>June 17, 2026: FOMC Projections materials</title></head>
@@ -230,6 +251,71 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["ttm_eps"], 270.0)
         self.assertEqual(result["value_status"], "actual")
         self.assertEqual(result["basis"], "as_reported")
+
+    def test_fomc_eps_scenario_compounds_real_gdp_and_pce(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_fomc_eps_scenarios
+
+        result = calculate_fomc_eps_scenarios(270.0, sep_projection_frame())
+
+        self.assertAlmostEqual(result["baseline"]["growth_pct"], 5.8792, places=4)
+        self.assertAlmostEqual(result["baseline"]["projected_eps"], 285.87384, places=5)
+        self.assertEqual(result["target_year"], 2026)
+
+    def test_index_scenario_blocks_spy_conversion_when_dates_differ(self) -> None:
+        from app.services.overview.sp500_valuation import (
+            calculate_fomc_eps_scenarios,
+            calculate_index_scenario,
+            calculate_multiple_regime,
+        )
+
+        result = calculate_index_scenario(
+            multiple_regime=calculate_multiple_regime(
+                monthly_pe_frame(60), current_spx=7200.0, current_ttm_eps=270.0
+            ),
+            eps_scenarios=calculate_fomc_eps_scenarios(270.0, sep_projection_frame()),
+            current_spx={"date": "2026-07-10", "price": 7200.0},
+            current_spy={"date": "2026-07-09", "price": 720.0},
+        )
+
+        self.assertIsNone(result["spy_equivalent"])
+        self.assertEqual(result["spy_status"], "DATE_MISMATCH")
+
+    def test_read_model_blocks_actual_scenario_for_mixed_eps(self) -> None:
+        from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+
+        model = build_sp500_valuation_read_model(
+            monthly_rows=monthly_pe_frame(60),
+            ttm_evidence={"value_status": "mixed", "ttm_eps": 280.0},
+            sep_rows=sep_projection_frame(),
+            current_prices=pd.DataFrame(
+                [
+                    {"symbol": "^GSPC", "latest_date": "2026-07-10", "price": 7200.0},
+                    {"symbol": "SPY", "latest_date": "2026-07-10", "price": 720.0},
+                ]
+            ),
+        )
+
+        self.assertEqual(model["earnings_scenario"]["status"], "BLOCKED")
+        self.assertIn("실제 EPS", model["earnings_scenario"]["reason"])
+
+    def test_read_model_marks_sep_stale_against_spx_date(self) -> None:
+        from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+
+        stale_sep = sep_projection_frame().assign(release_date="2025-12-01")
+        model = build_sp500_valuation_read_model(
+            monthly_rows=monthly_pe_frame(60),
+            ttm_evidence={"status": "READY", "value_status": "actual", "ttm_eps": 280.0},
+            sep_rows=stale_sep,
+            current_prices=pd.DataFrame(
+                [
+                    {"symbol": "^GSPC", "latest_date": "2026-07-10", "price": 7200.0},
+                    {"symbol": "SPY", "latest_date": "2026-07-10", "price": 720.0},
+                ]
+            ),
+        )
+
+        self.assertEqual(model["earnings_scenario"]["status"], "STALE_SEP")
+        self.assertEqual(model["index_scenario"]["status"], "BLOCKED")
 
 
 if __name__ == "__main__":
