@@ -705,13 +705,14 @@ function InterpretationRows({ cards }: { cards: InterpretationCard[] }) {
     <section className="fr-invest-report__interpretation" aria-label="해석">
       <div className="fr-invest-report__section-head">
         <div>
-          <span>해석</span>
-          <h5>실제 판단에 쓰는 근거만 표시합니다.</h5>
+          <span>총평 해석</span>
+          <h5>이 후보를 읽는 네 가지 기준</h5>
         </div>
       </div>
       <div className="fr-invest-report__interpretation-rows">
         {cards.map((card, index) => (
           <article className={`fr-invest-report__interpretation-row fr-invest-report__interpretation-row--${toneClass(card.tone)}`} key={`${card.kind ?? card.title ?? "interpretation"}-${index}`}>
+            <span className="fr-invest-report__interpretation-index">{String(index + 1).padStart(2, "0")}</span>
             <div>
               <h5>{compact(card.title)}</h5>
               <p>{compact(card.detail)}</p>
@@ -1103,6 +1104,8 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
 
       <AssessmentPanel narrative={reportNarrative} />
 
+      <InterpretationRows cards={interpretationCards} />
+
       <div className="fr-invest-report__evidence">
         <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />
         <EvidenceRows title="약점과 한계" items={watchItems} emptyLabel="현재 확인된 구조적 약점 없음" limit={3} />
@@ -1113,8 +1116,6 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       <PatternGuidePanel guide={patternGuide} />
 
       <ReviewActionBoard sections={finalReviewSections} />
-
-      <InterpretationRows cards={interpretationCards} />
 
       <DetailTabs tabs={detailTabs} />
     </section>

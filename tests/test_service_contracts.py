@@ -12336,6 +12336,12 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn('label: "Monitoring 후보"', component_source)
         self.assertNotIn('label: "Level2 open"', component_source)
         self.assertIn("AssessmentPanel", component_source)
+        self.assertIn("이 후보를 읽는 네 가지 기준", component_source)
+        self.assertIn("fr-invest-report__interpretation-index", component_source)
+        self.assertIn(
+            "<AssessmentPanel narrative={reportNarrative} />\n\n      <InterpretationRows cards={interpretationCards} />",
+            component_source,
+        )
         self.assertIn("DecisionQuestionList", component_source)
         self.assertIn("PatternGuidePanel", component_source)
         self.assertIn("Monitoring 방향 가이드", component_source)
@@ -12432,6 +12438,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("관측값", build_source)
         self.assertIn("감점 없음", build_source)
         self.assertIn("fr-invest-report__assessment", build_source)
+        self.assertIn("이 후보를 읽는 네 가지 기준", build_source)
         self.assertIn("fr-invest-report__questions", build_source)
         self.assertIn("fr-invest-report__patterns", build_source)
         self.assertIn("fr-invest-report__evidence-row", build_source)
@@ -27693,6 +27700,16 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(len(report["pattern_guide"]["cards"]), 10)
         self.assertFalse(report["pattern_guide"]["boundaries"]["freeform_generation"])
         self.assertFalse(report["pattern_guide"]["boundaries"]["provider_fetch"])
+        interpretation_cards = report["interpretation_cards"]
+        self.assertEqual(
+            [card["title"] for card in interpretation_cards],
+            ["성과 해석", "위험 해석", "근거 신뢰도", "Monitoring 적합성"],
+        )
+        self.assertEqual(len(interpretation_cards), 4)
+        self.assertTrue(all("Investment Score" not in card["detail"] for card in interpretation_cards))
+        self.assertTrue(all("Evidence Packet" not in card["detail"] for card in interpretation_cards))
+        self.assertTrue(all("Evidence Quality Score" not in card["detail"] for card in interpretation_cards))
+        self.assertTrue(all("monthly_or_rebalance_review" not in card["detail"] for card in interpretation_cards))
 
     def test_final_review_investment_report_prioritizes_monitoring_decision_summary(self) -> None:
         from app.services.backtest_evidence_read_model import (

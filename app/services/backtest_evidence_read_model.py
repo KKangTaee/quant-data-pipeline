@@ -1914,15 +1914,6 @@ def _build_decision_summary(
     }
 
 
-def _find_policy_row(gate_policy: dict[str, Any], group: str) -> dict[str, Any]:
-    for row in list(dict(gate_policy or {}).get("policy_rows") or []):
-        if not isinstance(row, dict):
-            continue
-        if str(row.get("Group") or "") == group:
-            return dict(row or {})
-    return {}
-
-
 def _build_interpretation_cards(
     *,
     scorecard: dict[str, Any],
@@ -1932,25 +1923,71 @@ def _build_interpretation_cards(
 ) -> list[dict[str, Any]]:
     dimensions = {str(row.get("key") or ""): dict(row or {}) for row in list(dict(scorecard or {}).get("dimensions") or []) if isinstance(row, dict)}
     inputs = dict(dict(scorecard or {}).get("inputs") or {})
-    gate_policy = dict(dict(packet or {}).get("selection_gate_policy_snapshot") or dict(packet or {}).get("gate_policy_snapshot") or {})
-    benchmark_row = _find_policy_row(gate_policy, "benchmark")
     trigger_count = len(list(dict(monitoring or {}).get("review_triggers") or []))
     blocker_count = int(inputs.get("blocker_count") or 0)
     open_review_count = int(inputs.get("open_review_count") or 0)
+    inherited_limit_count = int(inputs.get("warning_count") or 0)
     score_limits = [dict(row or {}) for row in list(dict(scorecard or {}).get("score_limits") or []) if isinstance(row, dict)]
-    cards = [
+    investment = dimensions.get("investment", {})
+    evidence_quality = dimensions.get("evidence_quality", {})
+    weakest = _dimension_by_rank(scorecard, strongest=False)
+    weakest_label = {
+        "investment": "투자 매력도",
+        "evidence_quality": "근거 신뢰도",
+        "readiness": "선정 준비도",
+        "monitoring_suitability": "Monitoring 적합성",
+    }.get(str(weakest.get("key") or ""), _safe_text(weakest.get("label"), "확인 지점"))
+    weakest_summary = f"{weakest_label} {int(weakest.get('score') or 0)}/100"
+    overall = int(dict(scorecard or {}).get("overall_score") or 0)
+    cadence_raw = _safe_text(monitoring.get("review_cadence"), "미지정")
+    cadence_label = {
+        "monthly_or_rebalance_review": "월 1회 또는 리밸런싱 시점",
+        "monthly": "월 1회",
+        "quarterly": "분기 1회",
+    }.get(cadence_raw, cadence_raw)
+    benchmark = _safe_text(monitoring.get("tracking_benchmark"), "미지정")
+    return [
         {
             "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
             "kind": "performance_interpretation",
-            "title": "과거 성과 해석",
+            "title": "성과 해석",
             "detail": (
-                f"Investment Score {int(dimensions.get('investment', {}).get('score') or 0)}/100, "
-                f"Evidence Packet {int(dimensions.get('evidence_quality', {}).get('score') or 0)}/100 기준의 최종 선택 매력도입니다."
+                f"과거 성과와 실전성 근거를 합친 투자 매력도는 {int(investment.get('score') or 0)}/100입니다. "
+                "미래 수익 예측이 아니라 현재 후보끼리 비교하기 위한 점수입니다."
             ),
-            "tone": _safe_text(dimensions.get("investment", {}).get("tone"), "neutral"),
+            "tone": _safe_text(investment.get("tone"), "neutral"),
             "badges": [
-                f"종합 {int(dict(scorecard or {}).get('overall_score') or 0)}/100",
-                _score_limit_summary(score_limits),
+                f"투자 매력도 {int(investment.get('score') or 0)}/100",
+                f"종합 {overall}/100",
+                f"점수 상한 {min(int(row.get('cap') or 100) for row in score_limits)}/100" if score_limits else "점수 제한 없음",
+            ],
+        },
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "risk_interpretation",
+            "title": "위험 해석",
+            "detail": (
+                f"현재 가장 약한 판단 축은 {weakest_summary}입니다. "
+                f"선정 차단 {blocker_count}개, 사용자가 결정할 항목 {open_review_count}개를 구분해 봅니다."
+            ),
+            "tone": "danger" if blocker_count else ("warning" if int(weakest.get("score") or 0) < 70 else "positive"),
+            "badges": [
+                f"선정 차단 {blocker_count}",
+                f"직접 결정 {open_review_count}",
+            ],
+        },
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "evidence_confidence",
+            "title": "근거 신뢰도",
+            "detail": (
+                f"저장된 검증 근거의 신뢰도는 {int(evidence_quality.get('score') or 0)}/100입니다. "
+                f"2단계에서 허용한 제한 {inherited_limit_count}개는 투자 매력도와 분리해 해석 확신에 반영했습니다."
+            ),
+            "tone": _safe_text(evidence_quality.get("tone"), "neutral"),
+            "badges": [
+                f"근거 신뢰도 {int(evidence_quality.get('score') or 0)}/100",
+                f"인수 제한 {inherited_limit_count}",
             ],
         },
         {
@@ -1958,46 +1995,13 @@ def _build_interpretation_cards(
             "kind": "monitoring_fit",
             "title": "Monitoring 적합성",
             "detail": (
-                f"{_safe_text(monitoring.get('tracking_benchmark'), 'benchmark 미지정')} 기준으로 "
-                f"{_safe_text(monitoring.get('review_cadence'), 'cadence 미지정')} cadence와 "
-                f"{trigger_count}개 review trigger를 추적합니다."
+                f"선정한다면 {cadence_label}에 {trigger_count}개 변화 조건을 확인합니다. "
+                f"비교 기준은 {benchmark}이며, 조건 이탈 시 후보를 다시 검토합니다."
             ),
             "tone": _safe_text(dimensions.get("monitoring_suitability", {}).get("tone"), "neutral"),
-            "badges": [
-                _safe_text(monitoring.get("tracking_benchmark"), "-"),
-                _safe_text(monitoring.get("review_cadence"), "-"),
-            ],
-        },
-        {
-            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
-            "kind": "risk_watch",
-            "title": "확인 지점 / 리스크",
-            "detail": (
-                f"Blocker {blocker_count}, open review {open_review_count}, "
-                f"가장 낮은 차원은 {_dimension_detail(_dimension_by_rank(scorecard, strongest=False))}입니다."
-            ),
-            "tone": "warning" if blocker_count or open_review_count else "positive",
-            "badges": [f"Open {open_review_count}", f"Blocker {blocker_count}"],
+            "badges": [f"점검 주기 {cadence_label}", f"변화 조건 {trigger_count}개"],
         },
     ]
-    if benchmark_row:
-        cards.append(
-            {
-                "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
-                "kind": "benchmark_rationale",
-                "title": "Benchmark / 대체 전략 대비 선택 이유",
-                "detail": _safe_text(
-                    benchmark_row.get("Evidence") or benchmark_row.get("Current"),
-                    "Benchmark parity evidence가 있습니다.",
-                ),
-                "tone": "positive" if str(benchmark_row.get("Severity") or "").upper() == "PASS" else "warning",
-                "badges": [
-                    _safe_text(benchmark_row.get("Severity"), "-"),
-                    _safe_text(benchmark_row.get("Required Action") or benchmark_row.get("Next Action"), "-"),
-                ],
-            }
-        )
-    return cards
 
 
 def _build_watch_items(
@@ -3082,7 +3086,7 @@ def build_final_review_investment_report(
         "watch_items": watch_items,
         "interpretation_cards": interpretation_cards,
         "performance_interpretation": {
-            "title": "과거 성과 해석",
+            "title": "성과 해석",
             "detail": _safe_text(
                 next((card.get("detail") for card in interpretation_cards if card.get("kind") == "performance_interpretation"), ""),
                 cockpit.get("verdict") or "-",
@@ -3098,9 +3102,9 @@ def build_final_review_investment_report(
             "review_cadence": monitoring.get("review_cadence") or "-",
         },
         "expected_range_and_risk": {
-            "title": "향후 기대 / 리스크 범위",
+            "title": "위험 해석",
             "detail": _safe_text(
-                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "risk_watch"), ""),
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "risk_interpretation"), ""),
                 "open review와 blocker를 기준으로 추적합니다.",
             ),
             "open_review_items": int(dict(cockpit.get("metrics") or {}).get("open_review_items", 0) or 0),

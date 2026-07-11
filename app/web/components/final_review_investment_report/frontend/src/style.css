@@ -612,9 +612,13 @@
 .fr-invest-report__evidence-row > div,
 .fr-invest-report__interpretation-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   align-items: start;
+}
+
+.fr-invest-report__evidence-row > div {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .fr-invest-report__evidence-row h5,
@@ -782,7 +786,25 @@
 
 .fr-invest-report__interpretation-rows {
   display: grid;
-  margin-top: 10px;
+  margin-top: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.fr-invest-report__interpretation-row {
+  padding: 13px 0;
+  border-left: 0;
+}
+
+.fr-invest-report__interpretation-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #eef5f2;
+  color: #16705d;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .fr-invest-report__inline-badges {
