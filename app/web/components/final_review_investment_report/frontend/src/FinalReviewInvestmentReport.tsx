@@ -695,6 +695,16 @@ const badgeText = (value: unknown): string => {
   return labels[text] ?? text.replaceAll("_", " ").toLowerCase()
 }
 
+const scorePolicyText = (value: unknown): string => {
+  const key = compact(value, "")
+  return {
+    confidence_adjustment: "근거 신뢰도에 반영",
+    readiness_adjustment: "Monitoring 준비도에 반영",
+    no_score_effect: "자동 감점 없음",
+    blocker: "선정 전 해소 필요",
+  }[key] ?? "판단 해석에 반영"
+}
+
 type MetaItem = {
   label: string
   value: string
@@ -1207,7 +1217,7 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
                     : "저장된 2단계 요약에 사용자용 세부 설명이 아직 없습니다. 이 항목만으로 수치를 추정하지 않습니다."}
                 </div>
               )}
-              <small>{compact(scorePolicy)} · {compact(field(impact.targetDimension, impact.target_dimension))}</small>
+              <small>{scorePolicyText(scorePolicy)}</small>
               {impact.action ? <em>{compact(impact.action)}</em> : null}
             </section>
           )

@@ -19,3 +19,10 @@
 - Final Review CTA는 실행 가능한 provider plan이 있을 때만 노출되고, React는 navigation intent만 전달한다.
 - 같은 selection source와 saved validation을 Practical Validation으로 전달하며 실제 수집은 Level2 Python service가 수행한다.
 - 수집 후 저장된 검토서는 자동 변경하지 않고 Flow 2 재검증, 새 결과 저장, Final Review 재확인을 요구한다.
+
+## 2026-07-11 Browser QA Findings
+
+- raw audit id와 score policy code는 첫 화면에서 한국어 의미로 바꾸고, source / 기준일은 접힌 상세 근거로 유지했다.
+- `기간 미포함`은 데이터 최신화 문제가 아니라 검증 범위 문제이며, `모멘텀 기간 변경 검증`의 미실행은 수집이 아니라 검증 기능 보강 문제로 표시한다.
+- 세금 / 계좌 조건은 자동 감점이나 수집 대상이 아니라 사용자가 판단 사유에 남길 항목이다.
+- lifecycle / delisting 근거는 current snapshot 새로고침만으로 해결되지 않으므로 historical source 탐색으로 분리한다.

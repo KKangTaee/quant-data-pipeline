@@ -9,7 +9,14 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed Final Review decision flow simplification task는 `.aiworkspace/note/finance/tasks/active/final-review-decision-flow-simplification-v1-20260711/`다.
+Latest completed Final Review readable review evidence task는 `.aiworkspace/note/finance/tasks/active/final-review-readable-review-evidence-v1-20260711/`다.
+
+- 목적: `남은 판단 근거`의 raw audit 이름과 코드형 관측·판단 근거를 사용자 언어로 바꾸고, 각 항목이 무엇이며 어떻게 개선할지를 같은 카드에서 끝내게 한다.
+- 주요 변경: stored audit 값을 새로 판정하지 않고 한국어 title / 검증 설명 / 현재 확인 내용 / 판단 이유로 번역했다. 각 trace는 데이터 최신화, source 탐색, 재검증, 기간 확장, 검증 기능 보강, 사용자 판단, 인수 제한 중 하나의 행동으로 분류한다.
+- 사용자 흐름: 실제 provider plan이 있는 항목만 `2단계 데이터 보강으로 이동`을 제공한다. Final Review React는 navigation intent만 내고, Practical Validation Python boundary가 같은 후보의 수집 실행과 이후 Flow 2 재검증을 소유한다.
+- QA: focused contract test 59개, React build, py_compile, `git diff --check`, 760px Browser QA와 Final Review → Practical Validation handoff를 통과했다. 실제 수집 / 판단 저장은 실행하지 않았고 registry / saved / run history를 변경하지 않았다.
+
+Previous completed Final Review decision flow simplification task는 `.aiworkspace/note/finance/tasks/active/final-review-decision-flow-simplification-v1-20260711/`다.
 
 - 목적: 실제 완료 행동인 최종 판단을 긴 report 뒤에서 총평 / 4행 해석 직후로 올리고, 중복 Appendix와 과거 ledger가 완료 지점을 흐리지 않게 한다.
 - 주요 변경: React report 안에 네 route와 사용자가 직접 작성하는 판단 사유, gate 기반 CTA를 배치했다. React는 intent만 전달하고 Python이 save evaluation, 자동 Decision ID, route template, row append를 소유한다.

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-guidance-actionability-v1-20260711](./tasks/active/final-review-guidance-actionability-v1-20260711/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-readable-review-evidence-v1-20260711](./tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
@@ -34,6 +34,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-11 - 남은 판단 근거는 확인 내용과 개선 행동을 함께 답한다
+
+- User request: 코드형 관측·판단 근거, 불명확한 `세부 audit에서 연결`, 빈 값과 기간 미포함의 원인을 조사하고 부족 데이터를 일괄 갱신할 수 있는지 1~4차로 개발해 달라고 요청함.
+- Interpreted goal: 사용자가 각 REVIEW 항목의 의미와 다음 행동을 한 카드에서 이해하되, 모든 공백을 데이터 최신화 문제로 오인하지 않게 해야 한다.
+- Analysis result: 공백은 provider freshness, 검증 기간 밖, 검증 기능 미구현, historical lifecycle source, 사용자 세금·계좌 판단으로 원인이 달랐다. 저장 evidence 표현과 action routing만 바꾸고 새 점수 판정은 만들지 않았다.
+- Follow-up: 사용자 언어 mapping과 action taxonomy를 만들고, 실행 가능한 provider plan만 같은 후보의 Practical Validation 보강 화면으로 연결했다. 실제 수집 후에는 Flow 2 재검증과 새 Final Review 확인이 필요하다.
 
 ### 2026-07-11 - Final Review 가이드는 판단 상태와 stage ownership을 함께 설명한다
 

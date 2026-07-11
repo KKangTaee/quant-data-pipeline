@@ -2317,6 +2317,15 @@ def _review_trace_observed_copy(label: str, observed_value: str, status: str) ->
         return "아직 계산된 결과가 없습니다." if str(status or "").upper() == "NOT_RUN" else "수치로 자동 판정하지 않는 항목입니다."
     if label == "Provider snapshot freshness":
         return "최신 자료와 오래된 자료가 함께 있어 기준일 확인이 필요합니다."
+    if label == "Universe / listing evidence":
+        profiles = re.search(r"profiles=(\d+)", observed)
+        covered = re.search(r"covered=(\d+)", observed)
+        partial = re.search(r"partial=(\d+)", observed)
+        if profiles and covered and partial:
+            return (
+                f"대상 종목 {profiles.group(1)}개 중 상장 이력을 충분히 확인한 종목은 "
+                f"{covered.group(1)}개, 부분 확인은 {partial.group(1)}개입니다."
+            )
     if label == "Survivorship / delisting control" and "not proven" in observed.lower():
         covered = re.search(r"covered=(\d+)", observed)
         partial = re.search(r"partial=(\d+)", observed)
@@ -2324,6 +2333,46 @@ def _review_trace_observed_copy(label: str, observed_value: str, status: str) ->
         return f"상장폐지 종목 반영이 충분히 입증되지 않았습니다.{suffix}"
     if label == "Tax / account scope" and "not modeled" in observed.lower():
         return "세금과 계좌 유형별 차이는 현재 결과에 계산되지 않았습니다."
+    if label == "Cost / slippage sensitivity evidence":
+        generic = re.search(r"generic=(\d+)", observed)
+        follow_up = re.search(r"runtime follow-up=(\d+)", observed)
+        if generic and follow_up:
+            return f"기본 민감도 결과 {generic.group(1)}개를 계산했고 전략 전용 후속 검증 {follow_up.group(1)}개가 남았습니다."
+    if label == "Liquidity / operability evidence":
+        coverage = re.search(r"coverage=([\d.]+)", observed)
+        coverage_text = f"확인 비중은 {float(coverage.group(1)):.1f}%이며 " if coverage else ""
+        return f"{coverage_text}거래 가능성 자료의 기준일이 오래됐습니다."
+    if label == "Component weight concentration":
+        maximum = re.search(r"max ([\d.]+)%", observed)
+        components = re.search(r"components (\d+)", observed)
+        if maximum and components:
+            return f"구성요소 {components.group(1)}개 중 최대 비중은 {maximum.group(1)}%입니다."
+    if label == "Provider look-through coverage":
+        holdings = re.search(r"holdings ([\d.]+)%", observed)
+        exposure = re.search(r"exposure ([\d.]+)%", observed)
+        if holdings and exposure:
+            return f"ETF 보유 종목은 {holdings.group(1)}%, 자산·섹터 노출은 {exposure.group(1)}%까지 확인했습니다."
+    if label == "ETF Operability":
+        coverage = re.search(r"covers ([\d.]+)%", observed)
+        return f"포트폴리오 비중의 {coverage.group(1)}%에서 ETF 거래 가능성 자료를 확인했습니다." if coverage else observed
+    if label == "ETF Holdings":
+        coverage = re.search(r"covers ([\d.]+)%", observed)
+        top = re.search(r"top holding ([\d.]+)%", observed)
+        overlap = re.search(r"top overlap ([\d.]+)%", observed)
+        if coverage:
+            suffix = f" 상위 종목 {top.group(1)}%, 최대 중복 {overlap.group(1)}%입니다." if top and overlap else ""
+            return f"포트폴리오 비중의 {coverage.group(1)}%에서 ETF 내부 종목을 확인했습니다.{suffix}"
+    if label == "ETF Exposure":
+        coverage = re.search(r"covers ([\d.]+)%", observed)
+        return f"포트폴리오 비중의 {coverage.group(1)}%에서 자산·섹터 노출을 확인했습니다." if coverage else observed
+    if label == "Walk-forward temporal validation":
+        windows = re.search(r"windows=(\d+)", observed)
+        return f"기간을 이동한 반복 검증 {windows.group(1)}개를 계산했고 일부 구간에서 비교 기준을 하회했습니다." if windows else observed
+    if label == "Regime split validation":
+        buckets = re.search(r"buckets=(\d+)", observed)
+        months = re.search(r"months=(\d+)", observed)
+        if buckets and months:
+            return f"총 {months.group(1)}개월을 {buckets.group(1)}개 시장 국면으로 나눠 성과 차이를 확인했습니다."
     replacements = (
         ("windows=", "반복 검증 구간 "),
         ("negative share=", "비교 기준 하회 비율 "),
@@ -2341,6 +2390,10 @@ def _review_trace_observed_copy(label: str, observed_value: str, status: str) ->
         ("total ", "합계 "),
         ("components ", "구성요소 "),
         ("avg ", "평균 "),
+        ("CAGR Delta", "연복리수익률 변화"),
+        ("MDD Delta", "최대낙폭 변화"),
+        ("CAGR", "연복리수익률"),
+        ("MDD", "최대낙폭"),
     )
     readable = observed
     for source, target in replacements:
@@ -2350,10 +2403,53 @@ def _review_trace_observed_copy(label: str, observed_value: str, status: str) ->
 
 def _review_trace_basis_copy(label: str, basis: str) -> str:
     text = str(basis or "").strip()
+    normalized_label = label.lower().replace("/", " ")
+    if "tax" in normalized_label and "account" in normalized_label:
+        return "세금과 계좌 조건은 공통 자동 기준으로 판정하지 않으므로 사용자의 실제 계좌 조건을 직접 확인해야 합니다."
+    if label in {"ETF Operability", "ETF Holdings", "ETF Exposure"} and text in {"", "-"}:
+        return "공식 또는 DB snapshot의 확인 범위와 최신성이 충분한지 판단합니다."
+    if text in {"", "-"} and label in {"Universe / listing evidence", "Survivorship / delisting control"}:
+        return "상장폐지 종목을 실제 포함했다는 근거가 아직 없어 과거 종목 이력 보강이 필요합니다."
     if text in {"", "-"}:
         return "비교 기준이 저장된 근거에 포함되지 않아 세부 기준 확인이 필요합니다."
     if text == "return / MDD / benchmark spread":
         return "해당 충격 구간의 수익률·최대낙폭·비교 기준 대비 차이를 계산해야 합니다."
+    if label == "Provider snapshot freshness":
+        return "최신 자료와 오래된 자료가 함께 있어 오래된 ETF와 실제 기준일을 확인해야 합니다."
+    if label in {"Universe / listing evidence", "Survivorship / delisting control"}:
+        partial = re.search(r"partial=([^/]+)", text)
+        partial_symbols = partial.group(1).strip() if partial else "일부 종목"
+        return f"상장 이력을 부분 확인한 종목은 {partial_symbols}이며, 상장폐지 종목을 실제 포함했다는 근거는 아직 없습니다."
+    if label == "Liquidity / operability evidence":
+        coverage = re.search(r"covers ([\d.]+)%", text)
+        return (
+            f"ETF 거래 가능성 자료는 목표 비중의 {coverage.group(1)}%를 덮지만 최신성 기준을 충족하지 못했습니다."
+            if coverage
+            else "ETF 거래 가능성 자료의 범위와 최신성을 함께 확인합니다."
+        )
+    if label == "Component weight concentration":
+        coverage = re.search(r"covers ([\d.]+)%", text)
+        top = re.search(r"top holding ([\d.]+)%", text)
+        overlap = re.search(r"top overlap ([\d.]+)%", text)
+        if coverage and top and overlap:
+            return (
+                f"ETF 내부 종목 확인 비중 {coverage.group(1)}%, 상위 종목 {top.group(1)}%, "
+                f"최대 중복 {overlap.group(1)}%를 구성 집중 판단에 사용했습니다."
+            )
+    if label in {"ETF Operability", "ETF Holdings", "ETF Exposure"}:
+        return "공식 또는 DB snapshot의 확인 범위와 최신성이 충분한지 판단합니다."
+    if label == "Walk-forward temporal validation":
+        worst = re.search(r"worst excess ([\-\d.]+)%", text)
+        negative = re.search(r"negative share ([\d.]+)%", text)
+        if worst and negative:
+            return f"최악 초과성과 {worst.group(1)}%, 비교 기준 하회 구간 비율 {negative.group(1)}%를 확인 기준으로 사용했습니다."
+    if label == "Regime split validation":
+        worst = re.search(r"worst excess ([\-\d.]+)%", text)
+        return f"가장 약한 시장 국면의 초과성과 {worst.group(1)}%를 확인 기준으로 사용했습니다." if worst else text
+    if label == "Cost / slippage sensitivity evidence":
+        follow_up = re.search(r"(?:runtime 항목은|runtime 후속 항목은) (\d+)개", text)
+        suffix = f" 전략 전용 후속 검증 {follow_up.group(1)}개가 남았습니다." if follow_up else ""
+        return f"기본 비용·슬리피지 민감도와 기간 이동 검증을 계산했습니다.{suffix}"
     replacements = (
         ("review line", "확인 기준"),
         ("max correlation", "최대 상관계수"),

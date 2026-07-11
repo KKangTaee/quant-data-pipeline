@@ -23,7 +23,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-decision-flow-simplification-v1-20260711](./tasks/active/final-review-decision-flow-simplification-v1-20260711/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-readable-review-evidence-v1-20260711](./tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-decision-flow-simplification-v1-20260711](./tasks/active/final-review-decision-flow-simplification-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
@@ -40,6 +41,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Readable Review Evidence V1:
+  - `남은 판단 근거`를 사용자 언어의 검증명, 현재 확인 내용, 판단 이유, 개선 행동으로 정리하고 raw source / 기준일은 접힌 상세로 낮췄다.
+  - 수집 가능한 provider gap만 같은 후보의 Practical Validation 보강 화면으로 넘기며 기간 밖 / 미구현 / source 탐색 / 사용자 판단은 별도 행동으로 분리했다.
+  - focused tests 59개, React build, py_compile, diff check, 760px Browser QA와 2단계 handoff를 통과했다. 실제 수집 / 판단 저장과 registry / saved / run history write는 실행하지 않았다.
 - Final Review Decision Flow Simplification V1:
   - 총평과 4행 해석 직후에 route / 판단 사유 / gate 기반 CTA를 배치해 Level1 / Level2와 같은 판단 action 흐름으로 정리했다.
   - React는 decision intent만 전달하고 Python이 save evaluation, 자동 Decision ID, route template, append를 소유한다. 판단 사유는 사용자가 직접 입력해야 CTA가 활성화된다.

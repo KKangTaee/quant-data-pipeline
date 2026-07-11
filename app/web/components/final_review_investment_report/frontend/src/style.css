@@ -1428,6 +1428,11 @@
   background: #ffffff;
 }
 
+.fr-invest-report__review-trace-list > section > .fr-invest-report__review-trace-meaning,
+.fr-invest-report__review-trace-list > section > .fr-invest-report__review-trace-action {
+  display: block;
+}
+
 .fr-invest-report__review-trace-meaning {
   border-left: 3px solid #64748b;
 }
@@ -1448,6 +1453,13 @@
   color: #475569;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.fr-invest-report__review-trace-list .fr-invest-report__review-trace-meaning p,
+.fr-invest-report__review-trace-list .fr-invest-report__review-trace-action p {
+  display: block;
+  grid-template-columns: none;
+  width: 100%;
 }
 
 .fr-invest-report__review-trace-action {

@@ -28243,7 +28243,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(item["trace_items"][0]["display_label"], "기간을 이동한 반복 검증")
         self.assertEqual(item["trace_items"][0]["status_label"], "일부 확인")
         self.assertIn("특정 한 시기", item["trace_items"][0]["validation_description"])
-        self.assertIn("반복 검증 구간 79", item["trace_items"][0]["display_observed_value"])
+        self.assertIn("반복 검증 79개", item["trace_items"][0]["display_observed_value"])
 
     def test_final_review_disposition_classifies_trace_resolution_actions(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
@@ -28324,6 +28324,9 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(by_label["Relative Strength perturbation"]["action_type"], "implementation_gap")
         self.assertEqual(by_label["Dot-com bust / early-2000s bear market"]["action_type"], "period_outside")
         self.assertEqual(by_label["Tax account scope"]["action_type"], "user_decision")
+        self.assertNotIn("freshness=", by_label["Provider snapshot freshness"]["display_judgment_basis"])
+        self.assertIn("실제 기준일", by_label["Provider snapshot freshness"]["display_judgment_basis"])
+        self.assertIn("상장폐지 종목을 실제 포함", by_label["Survivorship / delisting control"]["display_judgment_basis"])
         self.assertIn(
             "일반 데이터 갱신으로는 해결되지 않습니다",
             by_label["Relative Strength perturbation"]["improvement_action"],
