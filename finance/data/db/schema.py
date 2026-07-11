@@ -835,6 +835,87 @@ PROVIDER_SCHEMAS = {
 }
 
 
+VALUATION_SCHEMAS = {
+    "sp500_monthly_valuation": """
+        CREATE TABLE IF NOT EXISTS sp500_monthly_valuation (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          observation_month DATE NOT NULL,
+          spx_level DOUBLE NULL,
+          trailing_eps DOUBLE NULL,
+          trailing_pe DOUBLE NULL,
+          cape DOUBLE NULL,
+
+          data_quality ENUM('actual','interpolated','estimate','missing','error') NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+          source_version VARCHAR(128) NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_sp500_month_source (observation_month, source),
+          KEY ix_sp500_month (observation_month)
+        );
+    """,
+    "sp500_index_earnings": """
+        CREATE TABLE IF NOT EXISTS sp500_index_earnings (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          period_end DATE NOT NULL,
+          period_type ENUM('quarterly','annual','ttm') NOT NULL,
+          earnings_basis ENUM('as_reported','operating') NOT NULL,
+          value_status ENUM('actual','estimate','mixed') NOT NULL,
+          eps DOUBLE NOT NULL,
+
+          source VARCHAR(64) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+          source_release_date DATE NOT NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_sp500_eps_period_basis_status_source
+            (period_end, period_type, earnings_basis, value_status, source, source_release_date),
+          KEY ix_sp500_eps_period (period_end, period_type)
+        );
+    """,
+    "fomc_sep_projection": """
+        CREATE TABLE IF NOT EXISTS fomc_sep_projection (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          release_date DATE NOT NULL,
+          target_year SMALLINT NOT NULL,
+          variable_name ENUM('real_gdp','pce_inflation') NOT NULL,
+          statistic_name ENUM(
+            'median',
+            'central_tendency_lower',
+            'central_tendency_upper',
+            'range_lower',
+            'range_upper'
+          ) NOT NULL,
+          value_pct DOUBLE NOT NULL,
+
+          source VARCHAR(64) NOT NULL DEFAULT 'federal_reserve_sep',
+          source_ref VARCHAR(1024) NOT NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_sep_release_year_variable_stat
+            (release_date, target_year, variable_name, statistic_name),
+          KEY ix_sep_latest (release_date, target_year)
+        );
+    """,
+}
+
+
 FUNDAMENTAL_SCHEMAS = {
     "fundamentals": """
         CREATE TABLE IF NOT EXISTS nyse_fundamentals (

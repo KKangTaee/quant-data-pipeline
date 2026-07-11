@@ -9,6 +9,8 @@ Last Updated: 2026-07-12
 
 Official Index Earnings workbook automation may be blocked or subject to usage terms. V1 must support deterministic local/uploaded source ingestion and preserve source identity.
 
+Mitigation implemented in 1차: deterministic local `.xlsx` import with mandatory source release date and explicit status columns. Fully automated official download remains open for 5차 refresh integration.
+
 ### Monthly Earnings PIT
 
 Shiller monthly earnings are interpolated research data. They support current descriptive valuation bands but not strict historical signal timing claims.

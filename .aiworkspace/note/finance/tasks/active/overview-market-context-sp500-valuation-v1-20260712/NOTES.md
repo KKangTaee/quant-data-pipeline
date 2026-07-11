@@ -31,3 +31,11 @@ Using the latest complete Shiller earnings month available during design review,
 - 10y log-multiple center: about 24.85x; current z about +0.17
 
 This supports 5y as the primary window and 3y as regime sensitivity, not the main classification.
+
+## 1차 Implementation Decisions
+
+- Three finance_meta tables preserve monthly valuation, explicit EPS status/basis/release vintage, and SEP release vintage separately.
+- Shiller rows are labeled `interpolated`; the collector never promotes them to strict PIT actual observations.
+- S&P earnings import requires explicit `period_end`, `status`, and EPS columns. It does not infer actual/estimate from workbook formatting.
+- The S&P official download can remain operator-supplied when automated access is blocked; release date is mandatory.
+- SEP discovery selects the latest dated official accessible-material link and keeps every release as a separate vintage.

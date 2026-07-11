@@ -16,5 +16,13 @@ Last Updated: 2026-07-12
 
 ## Repository Mutation
 
-- Only this active task design record has been added.
-- No code or generated artifacts changed.
+- Added valuation DDL, Shiller/S&P EPS/SEP source normalization, workbook readers, and parameterized UPSERT collectors.
+- Added `openpyxl`/`xlrd` dependency declarations and regenerated `uv.lock`.
+
+## 1차 Verification
+
+- `.venv/bin/python -m unittest tests.test_sp500_valuation`: 8 tests passed.
+- `.venv/bin/python -m py_compile finance/data/sp500_valuation.py finance/data/db/schema.py`: passed.
+- Official Fed calendar discovery returned `fomcprojtabl20260617.htm`; parser emitted 18 GDP/PCE rows for vintage `2026-06-17`.
+- `git diff --check`: passed.
+- The repository environment does not include pytest, so plan test selectors are executed with equivalent `unittest` commands.
