@@ -27138,7 +27138,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         contract = build_final_review_pattern_guide_contract()
         patterns = contract["patterns"]
 
-        self.assertEqual(contract["schema_version"], "final_review_pattern_guide_contract_v1")
+        self.assertEqual(contract["schema_version"], "final_review_pattern_guide_contract_v2")
         self.assertEqual(len(patterns), 10)
         self.assertEqual([pattern["rank"] for pattern in patterns], list(range(1, 11)))
         self.assertEqual(
@@ -27158,10 +27158,16 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         )
         self.assertTrue(all(pattern["primary_evidence"] for pattern in patterns))
         self.assertTrue(all(pattern["required_signals"] for pattern in patterns))
-        self.assertTrue(all(set(pattern["support_contract"]) == {"supported", "indicative", "insufficient"} for pattern in patterns))
+        self.assertTrue(
+            all(
+                set(pattern["support_contract"])
+                == {"actionable", "conditional", "needs_validation", "not_applicable"}
+                for pattern in patterns
+            )
+        )
         self.assertEqual(
             [state["key"] for state in contract["support_states"]],
-            ["supported", "indicative", "insufficient"],
+            ["actionable", "conditional", "needs_validation", "not_applicable"],
         )
         self.assertTrue(contract["rules"]["stored_evidence_only"])
         self.assertFalse(contract["rules"]["freeform_generation"])
@@ -27169,7 +27175,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertFalse(contract["boundaries"]["provider_fetch"])
         self.assertFalse(contract["boundaries"]["investment_advice"])
 
-    def test_final_review_pattern_guide_uses_supported_indicative_and_insufficient_states(self) -> None:
+    def test_final_review_pattern_guide_uses_structured_applicability_and_action_states(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_pattern_guide
 
         guide = build_final_review_pattern_guide(
@@ -27199,16 +27205,38 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
 
         cards = {card["key"]: card for card in guide["cards"]}
         self.assertEqual(len(cards), 10)
-        self.assertEqual(cards["concentration"]["support"], "supported")
+        self.assertEqual(cards["concentration"]["support"], "actionable")
+        self.assertTrue(cards["concentration"]["applicable"])
         self.assertTrue(cards["concentration"]["direct_scenario_claim"])
         self.assertEqual(cards["concentration"]["evidence_as_of"], "2026-07-10")
-        self.assertEqual(cards["rate_duration"]["support"], "indicative")
+        self.assertEqual(cards["rate_duration"]["support"], "needs_validation")
         self.assertFalse(cards["rate_duration"]["direct_scenario_claim"])
-        self.assertIn("방향을 단정하지 않습니다", cards["rate_duration"]["conclusion"])
-        self.assertEqual(cards["benchmark_dependency"]["support"], "insufficient")
+        self.assertIn("듀레이션", cards["rate_duration"]["next_action"])
+        self.assertEqual(cards["benchmark_dependency"]["support"], "not_applicable")
         self.assertTrue(cards["benchmark_dependency"]["missing_signals"])
+        self.assertLessEqual(len(guide["visible_cards"]), 6)
+        self.assertTrue(all(card["visible_first_read"] for card in guide["visible_cards"]))
+        self.assertTrue(cards["concentration"]["evidence_trace"])
+        self.assertIn("technical_path", cards["concentration"]["evidence_trace"][0])
         self.assertFalse(guide["boundaries"]["freeform_generation"])
         self.assertFalse(guide["boundaries"]["provider_fetch"])
+
+    def test_final_review_pattern_guide_does_not_promote_unrelated_keyword_matches(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_pattern_guide
+
+        guide = build_final_review_pattern_guide(
+            validation={
+                "notes": {
+                    "summary": "benchmark rate duration inflation turnover correlation sensitivity",
+                    "Current": "all pattern words appear only in an unrelated note",
+                }
+            },
+            investability_packet={},
+        )
+
+        self.assertEqual(len(guide["cards"]), 10)
+        self.assertTrue(all(card["support"] == "not_applicable" for card in guide["cards"]))
+        self.assertEqual(guide["visible_cards"], [])
 
     def _integrated_gate_ready_validation(self) -> dict:
         return {

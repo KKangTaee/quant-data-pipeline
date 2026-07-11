@@ -5,6 +5,10 @@ from typing import Any
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_data_coverage_audit import build_data_coverage_audit
+from app.services.backtest_final_review_guidance import (
+    build_pattern_guide as _build_pattern_guide_v2,
+    build_pattern_guide_contract as _build_pattern_guide_contract_v2,
+)
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
@@ -24,7 +28,7 @@ WEAKNESS_IMPROVEMENT_SCHEMA_VERSION = "final_review_weakness_improvement_v1"
 SELECTION_RATIONALE_SCHEMA_VERSION = "final_review_selection_rationale_v1"
 DECISION_SUMMARY_SCHEMA_VERSION = "final_review_decision_summary_v1"
 INTERPRETATION_CARD_SCHEMA_VERSION = "final_review_interpretation_card_v1"
-PATTERN_GUIDE_CONTRACT_SCHEMA_VERSION = "final_review_pattern_guide_contract_v1"
+PATTERN_GUIDE_CONTRACT_SCHEMA_VERSION = "final_review_pattern_guide_contract_v2"
 
 FINAL_REVIEW_PATTERN_CATALOG = (
     {
@@ -98,32 +102,6 @@ FINAL_REVIEW_PATTERN_CATALOG = (
         "required_signals": ["sensitivity_result", "rebalance_or_parameter_range"],
     },
 )
-
-FINAL_REVIEW_PATTERN_SIGNAL_TOKENS = {
-    "concentration": (("weight", "비중", "concentration", "집중"), ("holding", "exposure", "sector", "overlap", "보유", "노출", "섹터")),
-    "stock_bond_diversification": (("stock", "equity", "주식"), ("bond", "treasury", "채권", "correlation", "상관")),
-    "rate_duration": (("rate", "yield", "금리"), ("duration", "treasury", "bond", "듀레이션", "채권")),
-    "inflation": (("inflation", "cpi", "인플레이션", "물가"), ("regime", "exposure", "체제", "노출")),
-    "tail_risk": (("drawdown", "mdd", "낙폭", "stress", "스트레스"), ("recovery", "tail", "volatility", "회복", "변동성")),
-    "trend_regime": (("trend", "momentum", "추세", "모멘텀"), ("regime", "oos", "out-of-sample", "체제", "횡보", "반전")),
-    "component_dependency": (("risk contribution", "위험 기여", "component", "구성요소"), ("drop-one", "dependency", "의존", "제거")),
-    "liquidity_cost": (("turnover", "cost", "slippage", "회전율", "비용"), ("liquidity", "capacity", "volume", "유동성", "거래량")),
-    "benchmark_dependency": (("benchmark", "comparator", "벤치마크", "비교"), ("relative", "excess", "상대", "초과")),
-    "parameter_sensitivity": (("sensitivity", "parameter", "민감", "파라미터"), ("rebalance", "range", "리밸런싱", "범위")),
-}
-
-FINAL_REVIEW_PATTERN_GUIDANCE = {
-    "concentration": "집중 신호가 커지면 해당 자산 / 섹터의 약세가 전체 후보를 더 크게 흔들 수 있으므로 비중과 look-through 집중도를 함께 추적합니다.",
-    "stock_bond_diversification": "주식-채권 분산 효과를 고정 가정하지 않고 rolling correlation과 두 자산의 위험 기여 변화를 함께 확인합니다.",
-    "rate_duration": "금리 민감 노출과 금리 구간 성과가 함께 확인될 때만 상승 / 하락 금리 시나리오의 방향을 해석합니다.",
-    "inflation": "인플레이션의 수준만이 아니라 성장과 함께 움직이는 체제를 구분해 자산별 반응을 추적합니다.",
-    "tail_risk": "평균 성과보다 stress 낙폭, 변동성 확대, 회복 기간이 기존 기준을 벗어나는지 우선 추적합니다.",
-    "trend_regime": "추세장에서의 강점이 횡보나 급반전에서도 유지된다고 가정하지 않고 regime split 결과를 비교합니다.",
-    "component_dependency": "단일 구성요소의 위험 기여와 drop-one 결과가 커지면 포트폴리오 분산보다 구성요소 의존이 우세한지 재확인합니다.",
-    "liquidity_cost": "turnover, 비용, 유동성 변화가 gross 성과를 실제 net 성과로 유지할 수 있는지 추적합니다.",
-    "benchmark_dependency": "동일 기간 / 빈도의 benchmark 대비 상대 성과가 약해지는 구간과 후보 고유 성과를 분리합니다.",
-    "parameter_sensitivity": "파라미터 또는 리밸런싱 주기를 바꿨을 때 결론이 크게 흔들리면 과최적화 가능성을 우선 재검토합니다.",
-}
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -2271,88 +2249,9 @@ def _clamped_score(value: float, *, lower: float = 0.0, upper: float = 100.0) ->
 
 
 def build_final_review_pattern_guide_contract() -> dict[str, Any]:
-    """Describe the evidence contract for conditional portfolio guidance."""
+    """Describe the structured evidence contract for conditional guidance."""
 
-    patterns = []
-    for rank, raw_pattern in enumerate(FINAL_REVIEW_PATTERN_CATALOG, start=1):
-        pattern = dict(raw_pattern)
-        patterns.append(
-            {
-                "rank": rank,
-                **pattern,
-                "support_contract": {
-                    "supported": "직접 관측값, 판단 기준, source, 기준일과 패턴별 필수 signal이 모두 있어야 합니다.",
-                    "indicative": "일부 직접 근거 또는 명시된 proxy가 있으나 조건부 참고만 가능합니다.",
-                    "insufficient": "필수 signal이 없으면 방향을 단정하지 않고 판단 보류로 표시합니다.",
-                },
-            }
-        )
-    return {
-        "schema_version": PATTERN_GUIDE_CONTRACT_SCHEMA_VERSION,
-        "patterns": patterns,
-        "support_states": [
-            {"key": "supported", "label": "근거 충분", "tone": "positive"},
-            {"key": "indicative", "label": "참고 신호", "tone": "warning"},
-            {"key": "insufficient", "label": "판단 보류", "tone": "neutral"},
-        ],
-        "rules": {
-            "stored_evidence_only": True,
-            "freeform_generation": False,
-            "direct_scenario_claim_requires_observation": True,
-            "alternative_allocation_requires_counterfactual_backtest": True,
-        },
-        "boundaries": {
-            "validation_rerun": False,
-            "provider_fetch": False,
-            "storage_write": False,
-            "investment_advice": False,
-            "order_instruction": False,
-            "auto_rebalance": False,
-        },
-    }
-
-
-def _pattern_evidence_rows(value: Any, *, path: str) -> list[dict[str, str]]:
-    rows: list[dict[str, str]] = []
-    if isinstance(value, list):
-        for index, item in enumerate(value):
-            rows.extend(_pattern_evidence_rows(item, path=f"{path}[{index}]"))
-        return rows
-    if not isinstance(value, dict):
-        return rows
-    row = dict(value)
-    text_fields = (
-        "Criteria",
-        "Section",
-        "title",
-        "display_label",
-        "Current",
-        "Meaning",
-        "evidence",
-        "summary",
-        "route",
-        "route_label",
-    )
-    text = " | ".join(str(row.get(key) or "").strip() for key in text_fields if str(row.get(key) or "").strip())
-    if text:
-        observed_value = _review_trace_value(row, "observed_value", "current_value", "metric_value", "Current", "value")
-        threshold = _review_trace_value(row, "threshold", "pass_criteria", "criterion", "Target")
-        source = _review_trace_value(row, "evidence_source", "source_label", "provider", "source", "Module")
-        as_of = _review_trace_value(row, "as_of", "snapshot_at", "collected_at", "updated_at", "generated_at")
-        rows.append(
-            {
-                "path": path,
-                "text": text,
-                "observed_value": observed_value,
-                "threshold": threshold,
-                "source": source if source != "-" else path,
-                "as_of": as_of,
-            }
-        )
-    for key, nested in row.items():
-        if isinstance(nested, (dict, list)):
-            rows.extend(_pattern_evidence_rows(nested, path=f"{path}.{key}"))
-    return rows
+    return _build_pattern_guide_contract_v2(FINAL_REVIEW_PATTERN_CATALOG)
 
 
 def build_final_review_pattern_guide(
@@ -2360,103 +2259,13 @@ def build_final_review_pattern_guide(
     validation: dict[str, Any],
     investability_packet: dict[str, Any],
 ) -> dict[str, Any]:
-    """Evaluate ten conditional patterns without fetching or generating new evidence."""
+    """Evaluate ten patterns from named evidence adapters without new I/O."""
 
-    evidence_rows = _pattern_evidence_rows(dict(validation or {}), path="validation")
-    evidence_rows.extend(_pattern_evidence_rows(dict(investability_packet or {}), path="investability_packet"))
-    cards = []
-    for raw_pattern in FINAL_REVIEW_PATTERN_CATALOG:
-        pattern = dict(raw_pattern)
-        key = str(pattern["key"])
-        token_groups = FINAL_REVIEW_PATTERN_SIGNAL_TOKENS[key]
-        group_matches: list[list[dict[str, str]]] = []
-        for tokens in token_groups:
-            matches = [
-                row
-                for row in evidence_rows
-                if any(token.lower() in f"{row['path']} {row['text']}".lower() for token in tokens)
-            ]
-            group_matches.append(matches)
-        matched_rows: list[dict[str, str]] = []
-        seen_paths: set[str] = set()
-        for rows in group_matches:
-            for row in rows:
-                identity = f"{row['path']}::{row['text']}"
-                if identity not in seen_paths:
-                    seen_paths.add(identity)
-                    matched_rows.append(row)
-        trace_complete = any(
-            row["observed_value"] != "-"
-            and row["threshold"] != "-"
-            and row["source"] != "-"
-            and row["as_of"] != "-"
-            for row in matched_rows
-        )
-        covered_groups = sum(1 for rows in group_matches if rows)
-        if covered_groups == len(token_groups) and trace_complete:
-            support = "supported"
-            support_label = "근거 충분"
-            tone = "positive"
-            conclusion = FINAL_REVIEW_PATTERN_GUIDANCE[key]
-        elif matched_rows:
-            support = "indicative"
-            support_label = "참고 신호"
-            tone = "warning"
-            conclusion = f"{FINAL_REVIEW_PATTERN_GUIDANCE[key]} 현재 evidence는 일부 신호만 제공하므로 방향을 단정하지 않습니다."
-        else:
-            support = "insufficient"
-            support_label = "판단 보류"
-            tone = "neutral"
-            conclusion = "현재 저장 evidence만으로는 이 패턴의 방향을 판단하지 않습니다. 필요한 signal을 보강한 뒤 다시 확인합니다."
-        missing_signals = [
-            signal
-            for signal, matches in zip(list(pattern.get("required_signals") or []), group_matches)
-            if not matches
-        ]
-        observed = [row["text"] for row in matched_rows[:2]]
-        evidence_sources = list(dict.fromkeys(row["source"] for row in matched_rows[:4]))
-        evidence_as_of = next((row["as_of"] for row in matched_rows if row["as_of"] != "-"), "-")
-        cards.append(
-            {
-                "key": key,
-                "label": pattern["label"],
-                "question": pattern["question"],
-                "support": support,
-                "support_label": support_label,
-                "tone": tone,
-                "conclusion": conclusion,
-                "observed": observed,
-                "evidence_sources": evidence_sources,
-                "evidence_as_of": evidence_as_of,
-                "missing_signals": missing_signals,
-                "monitoring_trigger": f"{pattern['label']} 관련 관측값이 기존 기준을 벗어나거나 source가 stale이면 재검토합니다.",
-                "experiment_candidate": f"{pattern['label']} 조건을 바꾼 대안은 별도 counterfactual backtest 후보로만 검증합니다.",
-                "direct_scenario_claim": support == "supported",
-            }
-        )
-    support_counts = {
-        state: sum(1 for card in cards if card["support"] == state)
-        for state in ("supported", "indicative", "insufficient")
-    }
-    return {
-        "schema_version": "final_review_pattern_guide_v1",
-        "summary": {
-            "headline": "10개 조건부 패턴으로 향후 Monitoring 방향을 점검합니다.",
-            "support_counts": support_counts,
-            "boundary_note": "저장 evidence에 없는 시장 반응은 단정하지 않으며 대안 배분은 별도 재검증이 필요합니다.",
-        },
-        "cards": cards,
-        "contract": build_final_review_pattern_guide_contract(),
-        "boundaries": {
-            "validation_rerun": False,
-            "provider_fetch": False,
-            "storage_write": False,
-            "freeform_generation": False,
-            "investment_advice": False,
-            "order_instruction": False,
-            "auto_rebalance": False,
-        },
-    }
+    return _build_pattern_guide_v2(
+        validation=validation,
+        investability_packet=investability_packet,
+        catalog=FINAL_REVIEW_PATTERN_CATALOG,
+    )
 
 
 def _scorecard_category(category: str, score: int, evidence: str, effect: str) -> dict[str, Any]:
