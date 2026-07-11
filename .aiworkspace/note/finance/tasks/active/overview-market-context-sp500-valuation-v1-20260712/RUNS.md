@@ -1,0 +1,18 @@
+# Overview Market Context S&P 500 Valuation V1 Runs
+
+Status: Active
+Last Updated: 2026-07-12
+
+## Design Research
+
+- Read finance INDEX, ROADMAP, PROJECT_MAP, PRODUCT_DIRECTION, architecture/flow docs, and Market Context ownership files.
+- Inspected current Market Context entrypoint, helpers, component, service, tests, and recent git history.
+- Verified official Federal Reserve SEP accessible materials and definitions.
+- Verified S&P Index Earnings discoverability and index/divisor methodology.
+- Downloaded and inspected the official Shiller workbook outside the repository.
+- Compared 3y, 5y, and 10y log(PER) windows using latest complete Shiller earnings data.
+
+## Repository Mutation
+
+- Only this active task design record has been added.
+- No code or generated artifacts changed.
