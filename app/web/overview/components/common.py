@@ -3028,8 +3028,31 @@ def overview_ui_css() -> str:
   border-color: var(--ov-mi-border-faint);
   background: transparent;
 }
-.st-key-overview_market_mover_investigation_workspace .ov-mm-section-divider:first-of-type {
+.ov-mm-workspace-section-head {
+  padding: 0.12rem 0 0.58rem 0;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-mm-workspace-section-kicker {
+  color: var(--ov-mi-color-primary);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0.02em;
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+.ov-mm-workspace-section-title {
   margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.15;
+}
+.ov-mm-workspace-section-detail {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 .st-key-overview_market_mover_investigation_workspace [class~="ov-mm-investigation-pane"] {
   border-top: 0;

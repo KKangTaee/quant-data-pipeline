@@ -16221,6 +16221,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
 
     def test_market_movers_groups_selected_investigation_as_one_workspace(self) -> None:
         helper_source = Path("app/web/overview/market_movers_helpers.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/overview/components/market_movers.py").read_text(encoding="utf-8")
         common_source = Path("app/web/overview/components/common.py").read_text(encoding="utf-8")
 
         panel_body = helper_source[helper_source.index("def _render_market_mover_why_it_moved_panel") :]
@@ -16230,9 +16231,15 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             panel_body,
         )
         workspace_index = panel_body.index('with st.container(border=True, key="overview_market_mover_investigation_workspace"):')
-        self.assertGreater(panel_body.index("render_market_movers_section_divider(", workspace_index), workspace_index)
+        self.assertGreater(panel_body.index("render_market_movers_workspace_header(", workspace_index), workspace_index)
         self.assertGreater(panel_body.index("st.selectbox(", workspace_index), workspace_index)
         self.assertGreater(panel_body.index("_render_market_mover_selected_investigation_fragment(", workspace_index), workspace_index)
+        self.assertIn("def render_market_movers_workspace_header", component_source)
+        self.assertIn('class="ov-mm-workspace-section-head"', component_source)
+        self.assertIn("INVESTIGATION WORKSPACE", helper_source)
+        self.assertIn(".ov-mm-workspace-section-kicker", common_source)
+        self.assertIn(".ov-mm-workspace-section-title", common_source)
+        self.assertIn(".ov-mm-workspace-section-detail", common_source)
         self.assertIn(".st-key-overview_market_mover_investigation_workspace", common_source)
         self.assertIn("background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));", common_source)
 

@@ -76,6 +76,7 @@ from app.web.overview.components.market_movers import (
     render_market_movers_empty_state,
     render_market_movers_section_divider,
     render_market_movers_unified_summary,
+    render_market_movers_workspace_header,
     render_market_refresh_status_bar,
     render_sector_breadth_market_map,
 )
@@ -4378,9 +4379,10 @@ def _render_market_mover_why_it_moved_panel(
         st.session_state[selection_key] = option_ids[0]
 
     with st.container(border=True, key="overview_market_mover_investigation_workspace"):
-        render_market_movers_section_divider(
-            "선택 종목 조사",
-            "랭킹에서 고른 종목의 가격, 거래량, 섹터, 외부 조사 시작점을 한 곳에서 확인합니다.",
+        render_market_movers_workspace_header(
+            kicker="INVESTIGATION WORKSPACE",
+            title="선택 종목 조사",
+            detail="랭킹에서 고른 종목의 가격, 거래량, 섹터, 외부 조사 시작점을 한 곳에서 확인합니다.",
         )
         selected_id = str(
             st.selectbox(
