@@ -39,3 +39,11 @@ This supports 5y as the primary window and 3y as regime sensitivity, not the mai
 - S&P earnings import requires explicit `period_end`, `status`, and EPS columns. It does not infer actual/estimate from workbook formatting.
 - The S&P official download can remain operator-supplied when automated access is blocked; release date is mandatory.
 - SEP discovery selects the latest dated official accessible-material link and keeps every release as a separate vintage.
+
+## 2차 Implementation Decisions
+
+- Monthly valuation loading returns ascending months even though the DB query selects newest rows first.
+- TTM evidence deduplicates a quarter by newest source release before selecting four quarters.
+- A TTM value is returned only with four completed distinct quarters; fewer rows remain `INSUFFICIENT_HISTORY`.
+- Official classification thresholds are log(PER) z-score `< -1 LOW`, `< 1 NEUTRAL`, `< 2 HIGH`, otherwise `EXTREME_HIGH`.
+- The 36-month bucket never replaces the 60-month bucket; disagreement is exposed through `period_sensitive`.

@@ -26,3 +26,10 @@ Last Updated: 2026-07-12
 - Official Fed calendar discovery returned `fomcprojtabl20260617.htm`; parser emitted 18 GDP/PCE rows for vintage `2026-06-17`.
 - `git diff --check`: passed.
 - The repository environment does not include pytest, so plan test selectors are executed with equivalent `unittest` commands.
+
+## 2차 Verification
+
+- Initial loader/service imports failed as expected before implementation.
+- `.venv/bin/python -m unittest tests.test_sp500_valuation`: 10 tests passed after implementation.
+- `.venv/bin/python -m py_compile finance/loaders/sp500_valuation.py app/services/overview/sp500_valuation.py`: passed.
+- Full `tests.test_service_contracts` run executed 749 tests and exposed one unrelated pre-existing Sentiment React source-string contract failure (`payload.summary.metrics.map`). The failing Sentiment source is outside this task's diff.

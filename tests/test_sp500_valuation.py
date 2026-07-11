@@ -6,6 +6,18 @@ from unittest.mock import Mock
 import pandas as pd
 
 
+def monthly_pe_frame(months: int, start: str = "2020-01-01") -> pd.DataFrame:
+    dates = pd.date_range(start, periods=months, freq="MS")
+    return pd.DataFrame(
+        {
+            "observation_month": dates,
+            "trailing_pe": [18.0 + (index * 0.15) for index in range(months)],
+            "spx_level": [3600.0 + (index * 45.0) for index in range(months)],
+            "trailing_eps": [200.0 + index for index in range(months)],
+        }
+    )
+
+
 SEP_HTML_FIXTURE = """
 <html>
   <head><title>June 17, 2026: FOMC Projections materials</title></head>
@@ -185,6 +197,39 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["release_date"], "2026-06-17")
         self.assertEqual(result["rows_written"], 12)
         self.assertIn("release_date = VALUES(release_date)", db.executemany.call_args.args[0])
+
+    def test_multiple_regime_uses_60_months_and_36_month_sensitivity(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_multiple_regime
+
+        result = calculate_multiple_regime(
+            monthly_pe_frame(72),
+            current_spx=7200.0,
+            current_ttm_eps=280.0,
+        )
+
+        self.assertEqual(result["window_months"], 60)
+        self.assertEqual(result["sensitivity"]["window_months"], 36)
+        self.assertAlmostEqual(result["current_pe"], 25.7142857)
+        self.assertIn(result["bucket"], {"LOW", "NEUTRAL", "HIGH", "EXTREME_HIGH"})
+        self.assertEqual(len(result["series"]), 60)
+
+    def test_ttm_loader_sums_latest_four_completed_actual_quarters(self) -> None:
+        from finance.loaders.sp500_valuation import load_latest_sp500_ttm_actual_eps
+
+        rows = [
+            {"period_end": "2026-03-31", "eps": 72.0, "source_release_date": "2026-05-15"},
+            {"period_end": "2025-12-31", "eps": 70.0, "source_release_date": "2026-02-15"},
+            {"period_end": "2025-09-30", "eps": 66.0, "source_release_date": "2025-11-15"},
+            {"period_end": "2025-06-30", "eps": 62.0, "source_release_date": "2025-08-15"},
+            {"period_end": "2025-03-31", "eps": 58.0, "source_release_date": "2025-05-15"},
+        ]
+
+        result = load_latest_sp500_ttm_actual_eps(query_fn=lambda _sql, _params: rows)
+
+        self.assertEqual(result["quarter_count"], 4)
+        self.assertEqual(result["ttm_eps"], 270.0)
+        self.assertEqual(result["value_status"], "actual")
+        self.assertEqual(result["basis"], "as_reported")
 
 
 if __name__ == "__main__":

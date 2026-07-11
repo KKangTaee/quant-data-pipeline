@@ -30,3 +30,7 @@ Shiller monthly, S&P earnings, SEP quarterly, and SPX/SPY EOD sources update at 
 ### Existing Workspace Changes
 
 The worktree contains unrelated untracked Market Movers research and generated QA screenshots. They must not be staged, modified, or deleted by this task.
+
+### Pre-existing Sentiment Contract Failure
+
+The full service-contract suite currently has one failure expecting `payload.summary.metrics.map` in the Sentiment React source. Market Context valuation changes do not touch that source; targeted valuation tests and later Market Context contracts remain the acceptance gate for this task.
