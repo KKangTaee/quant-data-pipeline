@@ -816,40 +816,48 @@
 
 .fr-invest-report__detail-tabs {
   margin-top: 18px;
-  border-top: 1px solid #d8dee8;
-  padding-top: 12px;
+  overflow: hidden;
+  border: 1px solid #d8dee8;
+  background: #ffffff;
 }
 
 .fr-invest-report__detail-tablist {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  border-bottom: 1px solid #d8dee8;
+  background: #f8fafc;
 }
 
 .fr-invest-report__detail-tab {
   display: grid;
-  gap: 2px;
-  min-width: 132px;
-  border: 1px solid #d8dee8;
-  border-radius: 999px;
-  background: #ffffff;
+  flex: 1 1 0;
+  gap: 3px;
+  min-width: 0;
+  border: 0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
-  padding: 7px 12px;
+  padding: 11px 14px 9px;
   text-align: left;
+}
+
+.fr-invest-report__detail-tab:last-child {
+  border-right: 0;
 }
 
 .fr-invest-report__detail-tab:hover,
 .fr-invest-report__detail-tab:focus-visible {
   border-color: #94a3b8;
-  outline: none;
+  background: #f1f5f9;
+  outline: 2px solid transparent;
 }
 
 .fr-invest-report__detail-tab--active {
-  border-color: #16806a;
-  background: #ecfdf5;
-  box-shadow: inset 0 0 0 1px rgba(22, 128, 106, 0.16);
+  border-bottom-color: #16806a;
+  background: #ffffff;
+  box-shadow: 0 1px 0 #ffffff;
 }
 
 .fr-invest-report__detail-tab strong {
@@ -863,21 +871,18 @@
   white-space: nowrap;
 }
 
-.fr-invest-report__detail-panel {
-  margin-top: 14px;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 14px;
-}
-
-.fr-invest-report__detail-panel-head {
-  margin-bottom: 12px;
-}
-
-.fr-invest-report__detail-panel-head h5 {
-  margin-top: 3px;
-  color: #111827;
-  font-size: 16px;
+.fr-invest-report__detail-tab small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fr-invest-report__detail-panel {
+  padding: 16px;
 }
 
 .fr-invest-report__scorecard-detail,
@@ -976,7 +981,6 @@
 
 .fr-invest-report__scorecard-dimensions,
 .fr-invest-report__score-drivers,
-.fr-invest-report__scorecard-categories,
 .fr-invest-report__improvement-list,
 .fr-invest-report__review-grid {
   display: grid;
@@ -994,7 +998,7 @@
 .fr-invest-report__review-item {
   min-width: 0;
   border-top: 1px solid #e5e7eb;
-  padding: 10px 0;
+  padding: 9px 0;
 }
 
 .fr-invest-report__scorecard-dimension > div:first-child,
@@ -1040,6 +1044,16 @@
   margin-top: 8px;
   border-radius: 999px;
   background: #e5e7eb;
+}
+
+.fr-invest-report__scorecard-dimension-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.fr-invest-report__scorecard-dimension-copy p,
+.fr-invest-report__scorecard-dimension-copy small {
+  margin-top: 4px;
 }
 
 .fr-invest-report__scorebar span {
@@ -1308,6 +1322,12 @@
 
   .fr-invest-report__detail-tab {
     min-width: 0;
-    border-radius: 8px;
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .fr-invest-report__detail-tab--active {
+    border-left: 3px solid #16806a;
+    border-bottom-color: #e2e8f0;
   }
 }

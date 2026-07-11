@@ -735,6 +735,7 @@ type DetailTab = {
   id: string
   label: string
   title: string
+  question: string
   children: React.ReactNode
 }
 
@@ -766,6 +767,7 @@ function DetailTabs({ tabs }: { tabs: DetailTab[] }) {
             >
               <span>{tab.label}</span>
               <strong>{tab.title}</strong>
+              <small>{tab.question}</small>
             </button>
           )
         })}
@@ -776,10 +778,6 @@ function DetailTabs({ tabs }: { tabs: DetailTab[] }) {
         id={`fr-invest-report-panel-${activeTab.id}`}
         role="tabpanel"
       >
-        <div className="fr-invest-report__detail-panel-head">
-          <span>{activeTab.label}</span>
-          <h5>{activeTab.title}</h5>
-        </div>
         {activeTab.children}
       </div>
     </section>
@@ -837,23 +835,6 @@ function ReviewActionBoard({ sections }: { sections: ReviewRoleSection[] }) {
   )
 }
 
-function ScorecardCategoryList({ categories }: { categories: ScorecardCategory[] }) {
-  return (
-    <div className="fr-invest-report__scorecard-categories">
-      {categories.map((category, index) => (
-        <article className={`fr-invest-report__scorecard-category fr-invest-report__scorecard-category--${toneClass(category.tone)}`} key={`${category.category ?? "score"}-${index}`}>
-          <div>
-            <h5>{compact(category.category)}</h5>
-            <strong>{formattedScore(category.score)}</strong>
-          </div>
-          <p>{compact(category.evidence)}</p>
-          <small>{compact(category.effect)}</small>
-        </article>
-      ))}
-    </div>
-  )
-}
-
 function ScorecardDimensionList({ dimensions }: { dimensions: ScorecardDimension[] }) {
   return (
     <div className="fr-invest-report__scorecard-dimensions" aria-label="세부 점수">
@@ -866,8 +847,10 @@ function ScorecardDimensionList({ dimensions }: { dimensions: ScorecardDimension
           <div className="fr-invest-report__scorebar" aria-hidden="true">
             <span style={{ width: `${Math.max(0, Math.min(100, Number(dimension.score) || 0))}%` }} />
           </div>
-          <p>{compact(dimension.interpretation)}</p>
-          <small>{compact(dimension.evidence)} · weight {Math.round((Number(dimension.weight) || 0) * 100)}%</small>
+          <div className="fr-invest-report__scorecard-dimension-copy">
+            <p>{compact(dimension.interpretation)}</p>
+            <small>비중 {Math.round((Number(dimension.weight) || 0) * 100)}% · {compact(dimension.evidence)}</small>
+          </div>
         </article>
       ))}
     </div>
@@ -1006,6 +989,7 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
       id: "score-evidence",
       label: "점수",
       title: "점수 근거",
+      question: "왜 이 점수인가?",
       children: (
         <section className="fr-invest-report__scorecard-detail">
           <div className="fr-invest-report__scorecard-head">
@@ -1022,7 +1006,6 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
           </div>
           <div className="fr-invest-report__scorecard-meta">
             <span>{compact(scorecardDecision)}</span>
-            <span>{compact(scorecard.classification)}</span>
             <span>REVIEW 개수 자동 감점 없음</span>
           </div>
           <div className="fr-invest-report__scorecard-subtitle">세부 점수</div>
@@ -1033,14 +1016,14 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
             <ScoreDriverList title="해석상 확인할 축" drivers={scorecardDrivers.negative ?? []} />
             <ScoreLimitList limits={scorecardLimits} constraints={routeConstraints} />
           </div>
-          <ScorecardCategoryList categories={scorecard.categories ?? []} />
         </section>
       ),
     },
     {
       id: "review-evidence",
       label: "REVIEW",
-      title: "REVIEW 근거 추적",
+      title: "남은 판단 근거",
+      question: "무엇을 수용하거나 확인해야 하나?",
       children: (
         <section className="fr-invest-report__review-evidence-detail">
           <p>각 항목의 관측값, 판단 기준, source, 기준일과 실제 반영 축을 함께 확인합니다.</p>
@@ -1050,8 +1033,9 @@ export function FinalReviewInvestmentReport({ report }: FinalReviewInvestmentRep
     },
     {
       id: "pattern-experiments",
-      label: "대안 실험",
-      title: "대안 실험 후보",
+      label: "다음 실험",
+      title: "다음 실험 아이디어",
+      question: "다음 백테스트에서 무엇을 바꿔볼까?",
       children: (
         <section className="fr-invest-report__experiment-detail">
           <p>아래 항목은 점수 개선 예측이 아니라 별도 counterfactual backtest가 필요한 실험 후보입니다.</p>

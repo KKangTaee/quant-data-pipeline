@@ -2510,7 +2510,7 @@ def build_final_review_scorecard(
     dimensions = [
         _scorecard_dimension(
             key="investment",
-            label="Investment Score",
+            label="투자 성과 매력도",
             score=investment_score,
             weight=weights["investment"],
             evidence=f"investability packet {packet_score:.1f} / 10; REVIEW 개수 자동 감점 없음",
@@ -2518,7 +2518,7 @@ def build_final_review_scorecard(
         ),
         _scorecard_dimension(
             key="risk",
-            label="Risk Score",
+            label="위험 방어력",
             score=risk_score,
             weight=weights["risk"],
             evidence="저장 evidence의 risk / robustness 해석; REVIEW 개수 자동 감점 없음",
@@ -2526,7 +2526,7 @@ def build_final_review_scorecard(
         ),
         _scorecard_dimension(
             key="readiness",
-            label="Readiness Score",
+            label="선정 준비도",
             score=readiness_score,
             weight=weights["readiness"],
             evidence=gate_outcome or "-",
@@ -2534,7 +2534,7 @@ def build_final_review_scorecard(
         ),
         _scorecard_dimension(
             key="evidence_quality",
-            label="Evidence Quality Score",
+            label="근거 품질",
             score=evidence_quality_score,
             weight=weights["evidence_quality"],
             evidence=f"근거 신뢰도 조정 {impact_deductions['evidence_confidence']}점",
@@ -2542,7 +2542,7 @@ def build_final_review_scorecard(
         ),
         _scorecard_dimension(
             key="monitoring_suitability",
-            label="Monitoring Suitability Score",
+            label="Monitoring 적합성",
             score=monitoring_score,
             weight=weights["monitoring_suitability"],
             evidence=f"Monitoring 준비도 조정 {impact_deductions['monitoring_readiness']}점",
@@ -2557,7 +2557,7 @@ def build_final_review_scorecard(
             label="투자 매력도",
             score=attractiveness_score,
             weight=1.0,
-            evidence="Investment Score 65% + Risk Score 35%",
+            evidence="투자 성과 매력도 65% + 위험 방어력 35%",
             interpretation="측정된 성과와 위험 근거만 반영하며 REVIEW 개수로 감점하지 않습니다.",
         ),
         _scorecard_dimension(
@@ -2598,7 +2598,7 @@ def build_final_review_scorecard(
             "tone": strongest_dimension["tone"],
         },
         {
-            "label": "Selection Gate",
+            "label": "선정 가능 조건",
             "detail": "selected-route gate 통과 상태" if select_ready else "selected-route gate 추가 확인 필요",
             "score": gate_score,
             "tone": "positive" if select_ready else "warning",
