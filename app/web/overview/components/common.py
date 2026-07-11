@@ -4798,6 +4798,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  padding: 0.42rem 0.36rem;
 	  border-bottom: 1px solid var(--ov-mi-border-faint);
 	  border-left: 3px solid var(--ov-row-tone, var(--ov-mi-color-neutral));
+	  background: color-mix(in srgb, var(--ov-row-tone, var(--ov-mi-color-neutral)) 4%, transparent);
 	}
 	.ov-mm-list-rank {
 	  color: var(--ov-mi-color-text-muted);

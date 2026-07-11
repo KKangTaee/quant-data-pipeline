@@ -15905,6 +15905,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertNotIn("list_col, context_col = st.columns", panel_body)
         self.assertIn("max-height", common_source[common_source.index(".ov-mm-list") :])
         self.assertIn("overflow-y: auto", common_source[common_source.index(".ov-mm-list") :])
+        list_row_block = common_source[common_source.index(".ov-mm-list-row {") :]
+        list_row_block = list_row_block[: list_row_block.index(".ov-mm-list-rank")]
+        self.assertIn(
+            "background: color-mix(in srgb, var(--ov-row-tone, var(--ov-mi-color-neutral)) 4%, transparent);",
+            list_row_block,
+        )
 
     def test_market_mover_board_model_formats_compact_ranking_rows(self) -> None:
         from app.web.overview.market_movers_helpers import build_market_mover_board_model

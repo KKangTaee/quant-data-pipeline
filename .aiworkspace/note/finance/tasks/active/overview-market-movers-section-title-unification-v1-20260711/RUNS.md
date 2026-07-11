@@ -9,3 +9,5 @@
 - Browser QA on `http://localhost:8507`: external sector divider absent, one React sector component present, `SECTOR BREADTH / 섹터 / 시장 확산 맥락 / 정상 / 넓은 참여, 균형 리더십` order confirmed, legacy `시장 확산 지도` exact label count 0, console errors 0. Screenshot: `market-movers-section-title-unification-qa.png` (generated, not staged).
 - Border follow-up: focused border contracts 2건, Market Movers focused 79 tests, React production build, py_compile, diff check PASS.
 - Border Browser QA on `http://localhost:8507`: Ranking Board와 Sector Breadth 모두 top/bottom `1px solid`, left/right `0px`, radius `0px`; console errors 0. Screenshot: `market-movers-section-border-unification-qa.png` (generated, not staged).
+- Ranking row color follow-up: focused contract test, Market Movers focused 79 tests, py_compile, diff check PASS.
+- Ranking row color Browser QA on `http://localhost:8507`: Top 5 tape와 하단 20개 행 모두 상승 tone `#0f766e`의 4% background로 연결되고, boundary는 neutral `rgba(248, 250, 252, 0.72)`로 분리됨을 확인했다. 현재 QA 구간 신규 console error 0. Screenshot: `market-movers-ranking-row-color-qa.png` (generated, not staged).
