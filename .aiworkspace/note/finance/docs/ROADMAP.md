@@ -9,7 +9,14 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed Final Review decision surface consolidation task는 `.aiworkspace/note/finance/tasks/active/final-review-decision-surface-consolidation-v1-20260711/`다.
+Latest completed Final Review responsive evidence task는 `.aiworkspace/note/finance/tasks/active/final-review-responsive-evidence-v1-20260711/`다.
+
+- 목적: 축소 화면에서 REVIEW trace list가 공통 2열 selector에 잡혀 첫 카드가 좁아지고 긴 audit 문자열이 옆 카드를 밀어내던 문제를 해결한다.
+- 주요 변경: review impact header selector를 first child로 한정하고 trace list를 독립 1열로 고정했다. 긴 lifecycle / provider 문자열은 카드 내부에서 줄바꿈하며, compact / mobile에서는 header badge와 trace label을 세로로 정리한다.
+- 판단 경계: Python evidence / score / gate / 저장 계약은 변경하지 않았다. React CSS와 presentation contract만 보정했다.
+- QA: React build, focused contract test, py_compile, `git diff --check`, Browser QA 900px / 680px를 통과했고 두 폭 모두 document / trace 가로 overflow 0을 확인했다.
+
+Previous completed Final Review decision surface consolidation task는 `.aiworkspace/note/finance/tasks/active/final-review-decision-surface-consolidation-v1-20260711/`다.
 
 - 목적: 하단 근거 탭의 시각적 단절, REVIEW trace 빈칸, 목적이 불명확한 대안 실험, 투자 검토서와 중복되는 Decision Cockpit / Final Decision Action을 하나의 판단 흐름으로 정리한다.
 - 주요 변경: 하단을 연결된 `점수 근거 / 남은 판단 근거 / 다음 실험 아이디어` shell로 바꾸고 세부 점수명을 한국어로 정리했다. Level2 summary는 module별 stored audit row와 연결해 measured / derived / qualitative / missing contract로 구분한다. 다음 실험은 적용 가능한 상위 3개만 `바꿀 것 / 같게 둘 것 / 확인할 것`으로 표시한다.

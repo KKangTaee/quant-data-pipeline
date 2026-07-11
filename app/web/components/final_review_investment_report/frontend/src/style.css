@@ -1004,7 +1004,7 @@
 .fr-invest-report__scorecard-dimension > div:first-child,
 .fr-invest-report__score-driver,
 .fr-invest-report__score-limit,
-.fr-invest-report__review-impact > div,
+.fr-invest-report__review-impact > div:first-child,
 .fr-invest-report__scorecard-category > div,
 .fr-invest-report__review-item {
   display: grid;
@@ -1127,11 +1127,17 @@
 
 .fr-invest-report__review-trace-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+  min-width: 0;
+  width: 100%;
   margin-top: 9px;
 }
 
 .fr-invest-report__review-trace-list > section {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   padding: 9px 10px;
@@ -1141,6 +1147,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .fr-invest-report__review-trace-list strong,
@@ -1156,13 +1163,23 @@
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 8px;
+  min-width: 0;
   margin-top: 5px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.fr-invest-report__review-trace-list p > * {
+  min-width: 0;
 }
 
 .fr-invest-report__review-trace-list details {
+  min-width: 0;
   margin-top: 6px;
   color: #64748b;
   font-size: 11px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .fr-invest-report__review-trace-list summary {
@@ -1377,6 +1394,24 @@
   line-height: 1.4;
 }
 
+@media (max-width: 980px) {
+  .fr-invest-report__review-impact > div:first-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fr-invest-report__review-impact > div:first-child span {
+    justify-self: start;
+  }
+
+  .fr-invest-report__detail-tab {
+    padding-inline: 10px;
+  }
+
+  .fr-invest-report__detail-tab small {
+    white-space: normal;
+  }
+}
+
 @media (max-width: 760px) {
   .fr-invest-report {
     padding: 14px;
@@ -1440,5 +1475,14 @@
   .fr-invest-report__detail-tab--active {
     border-left: 3px solid #16806a;
     border-bottom-color: #e2e8f0;
+  }
+
+  .fr-invest-report__review-trace-list p {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .fr-invest-report__review-trace-list > section > div {
+    align-items: flex-start;
   }
 }

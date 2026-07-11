@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed Final Review UX task is [final-review-guidance-actionability-v1-20260711](./tasks/active/final-review-guidance-actionability-v1-20260711/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-responsive-evidence-v1-20260711](./tasks/active/final-review-responsive-evidence-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
@@ -40,6 +40,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Final Review Responsive Evidence V1:
+  - REVIEW impact header에만 2열 selector를 적용하고 내부 audit trace는 전체 폭 1열로 고정해 축소 화면의 카드 찌그러짐을 제거했다.
+  - 긴 lifecycle / provider 근거는 카드 내부에서 줄바꿈하고 compact / mobile에서 header, tab, trace label을 단계적으로 쌓는다.
+  - React build, focused contract test, py_compile, diff check, 900px / 680px Browser QA를 통과했다. Python evidence 계약과 registry / saved / run history는 변경하지 않았다.
 - Final Review Guidance Actionability V1:
   - 10개 Monitoring 패턴을 named evidence adapter 기반 4개 상태로 판정하고, 첫 화면 최대 6개에 `현재 진단 / 의미 / 변화 조건 / 다음 행동`을 표시했다. source / 기준일 / technical path는 접힌 상세에 남겼다.
   - Level2 REVIEW를 Final Review 직접 결정, 2단계 인수 제한, Monitoring 조건, blocker로 분리하고 총평 직후 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 배치했다.
