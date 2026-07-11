@@ -126,7 +126,39 @@ type PatternGuideCard = {
   support_label?: string
   tone?: Tone
   conclusion?: string
+  applicable?: boolean
+  applicabilityReason?: string
+  applicability_reason?: string
+  currentDiagnosis?: string
+  current_diagnosis?: string
+  meaning?: string
+  changeCondition?: string
+  change_condition?: string
+  nextAction?: string
+  next_action?: string
   observed?: string[]
+  evidenceTrace?: Array<{
+    label?: string
+    value?: string
+    threshold?: string
+    sourceLabel?: string
+    source_label?: string
+    technicalPath?: string
+    technical_path?: string
+    asOf?: string
+    as_of?: string
+  }>
+  evidence_trace?: Array<{
+    label?: string
+    value?: string
+    threshold?: string
+    sourceLabel?: string
+    source_label?: string
+    technicalPath?: string
+    technical_path?: string
+    asOf?: string
+    as_of?: string
+  }>
   evidenceSources?: string[]
   evidence_sources?: string[]
   evidenceAsOf?: string
@@ -139,6 +171,8 @@ type PatternGuideCard = {
   experiment_candidate?: string
   directScenarioClaim?: boolean
   direct_scenario_claim?: boolean
+  visibleFirstRead?: boolean
+  visible_first_read?: boolean
 }
 
 type PatternGuide = {
@@ -148,8 +182,16 @@ type PatternGuide = {
     support_counts?: Record<string, number>
     boundaryNote?: string
     boundary_note?: string
+    visibleCount?: number
+    visible_count?: number
+    additionalCount?: number
+    additional_count?: number
   }
   cards?: PatternGuideCard[]
+  visibleCards?: PatternGuideCard[]
+  visible_cards?: PatternGuideCard[]
+  additionalCards?: PatternGuideCard[]
+  additional_cards?: PatternGuideCard[]
 }
 
 type InterpretationCard = {
@@ -554,21 +596,21 @@ function DecisionQuestionList({ narrative }: { narrative: ReportNarrative }) {
 function PatternGuidePanel({ guide }: { guide: PatternGuide }) {
   const summary = guide.summary ?? {}
   const counts = field(summary.supportCounts, summary.support_counts) ?? {}
-  const cards = guide.cards ?? []
+  const cards = field(guide.visibleCards, guide.visible_cards) ?? guide.cards ?? []
+  const additionalCards = field(guide.additionalCards, guide.additional_cards) ?? []
   return (
     <section className="fr-invest-report__patterns" aria-label="Monitoring 방향 가이드">
       <div className="fr-invest-report__section-head">
         <div>
-          <span>조건부 패턴 프로토타입</span>
+          <span>저장 evidence 기반 조건부 가이드</span>
           <h5>Monitoring 방향 가이드</h5>
         </div>
-        <strong>근거 충분 {counts.supported ?? 0} · 참고 {counts.indicative ?? 0} · 보류 {counts.insufficient ?? 0}</strong>
+        <strong>판단 가능 {counts.actionable ?? 0} · 조건부 추적 {counts.conditional ?? 0} · 추가 검증 {counts.needs_validation ?? 0} · 적용 제외 {counts.not_applicable ?? 0}</strong>
       </div>
       <p className="fr-invest-report__pattern-boundary">{compact(field(summary.boundaryNote, summary.boundary_note))}</p>
       <div className="fr-invest-report__pattern-list">
         {cards.map((card, index) => {
-          const sources = field(card.evidenceSources, card.evidence_sources) ?? []
-          const missing = field(card.missingSignals, card.missing_signals) ?? []
+          const traces = field(card.evidenceTrace, card.evidence_trace) ?? []
           return (
             <article className={`fr-invest-report__pattern fr-invest-report__pattern--${toneClass(card.tone)}`} key={card.key ?? index}>
               <div className="fr-invest-report__pattern-head">
@@ -576,17 +618,41 @@ function PatternGuidePanel({ guide }: { guide: PatternGuide }) {
                 <h6>{compact(card.label)}</h6>
                 <em>{compact(field(card.supportLabel, card.support_label))}</em>
               </div>
-              <p>{compact(card.conclusion)}</p>
-              <dl>
-                <div><dt>근거</dt><dd>{card.observed?.length ? card.observed.join(" · ") : "직접 관측값 없음"}</dd></div>
-                <div><dt>Source / 기준일</dt><dd>{sources.length ? sources.join(", ") : "-"} / {compact(field(card.evidenceAsOf, card.evidence_as_of))}</dd></div>
-                <div><dt>보강 필요</dt><dd>{missing.length ? missing.join(", ") : "없음"}</dd></div>
+              <dl className="fr-invest-report__pattern-guide">
+                <div><dt>현재 진단</dt><dd>{compact(field(card.currentDiagnosis, card.current_diagnosis), compact(card.conclusion))}</dd></div>
+                <div><dt>의미</dt><dd>{compact(card.meaning)}</dd></div>
+                <div><dt>변화 조건</dt><dd>{compact(field(card.changeCondition, card.change_condition), compact(field(card.monitoringTrigger, card.monitoring_trigger)))}</dd></div>
+                <div className="fr-invest-report__pattern-action"><dt>다음 행동</dt><dd>{compact(field(card.nextAction, card.next_action))}</dd></div>
               </dl>
-              <small>{compact(field(card.monitoringTrigger, card.monitoring_trigger))}</small>
+              <details className="fr-invest-report__pattern-details">
+                <summary>근거 및 기술 정보 보기</summary>
+                {traces.length > 0 ? (
+                  <div className="fr-invest-report__pattern-traces">
+                    {traces.map((trace, traceIndex) => (
+                      <article key={`${card.key ?? index}-trace-${traceIndex}`}>
+                        <strong>{compact(trace.label)} · {compact(trace.value)}</strong>
+                        <span>판단 기준 {compact(trace.threshold)}</span>
+                        <span>{compact(field(trace.sourceLabel, trace.source_label))} · 기준일 {compact(field(trace.asOf, trace.as_of))}</span>
+                        <code>{compact(field(trace.technicalPath, trace.technical_path))}</code>
+                      </article>
+                    ))}
+                  </div>
+                ) : <p>현재 표시할 직접 관측 trace가 없습니다.</p>}
+              </details>
             </article>
           )
         })}
       </div>
+      {additionalCards.length > 0 ? (
+        <details className="fr-invest-report__pattern-more">
+          <summary>나머지 {additionalCards.length}개 패턴 상태 보기</summary>
+          <div>
+            {additionalCards.map((card) => (
+              <span key={card.key ?? card.label}>{compact(card.label)} · {compact(field(card.supportLabel, card.support_label))}</span>
+            ))}
+          </div>
+        </details>
+      ) : null}
     </section>
   )
 }

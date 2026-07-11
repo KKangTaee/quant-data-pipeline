@@ -323,13 +323,6 @@
   font-weight: 900;
 }
 
-.fr-invest-report__pattern > p {
-  margin-top: 8px;
-  color: #334155;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 .fr-invest-report__pattern dl {
   display: grid;
   gap: 5px;
@@ -355,11 +348,104 @@
   font-weight: 900;
 }
 
-.fr-invest-report__pattern > small {
-  display: block;
+.fr-invest-report__pattern-guide {
+  gap: 0 !important;
+  margin-top: 10px !important;
+}
+
+.fr-invest-report__pattern-guide > div {
+  grid-template-columns: 74px minmax(0, 1fr) !important;
+  border-top: 1px solid #edf1f5;
+  padding: 8px 0;
+}
+
+.fr-invest-report__pattern-guide dt {
+  color: #475569;
+  font-size: 11px;
+}
+
+.fr-invest-report__pattern-guide dd {
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fr-invest-report__pattern-action {
+  border-top-color: #d6e8e1 !important;
+  background: #f4faf7;
+  margin: 0 -8px -2px;
+  padding: 9px 8px !important;
+}
+
+.fr-invest-report__pattern-action dt,
+.fr-invest-report__pattern-action dd {
+  color: #12604f;
+}
+
+.fr-invest-report__pattern-details,
+.fr-invest-report__pattern-more {
   margin-top: 9px;
   border-top: 1px solid #e2e8f0;
   padding-top: 8px;
+}
+
+.fr-invest-report__pattern-details summary,
+.fr-invest-report__pattern-more summary {
+  cursor: pointer;
+  color: #526070;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.fr-invest-report__pattern-traces {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.fr-invest-report__pattern-traces article {
+  border-left: 2px solid #cbd5e1;
+  padding-left: 8px;
+}
+
+.fr-invest-report__pattern-traces strong,
+.fr-invest-report__pattern-traces span,
+.fr-invest-report__pattern-traces code,
+.fr-invest-report__pattern-details p {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.fr-invest-report__pattern-traces strong {
+  color: #334155;
+}
+
+.fr-invest-report__pattern-traces code {
+  margin-top: 3px;
+  color: #7c8796;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.fr-invest-report__pattern-more {
+  margin-top: 12px;
+}
+
+.fr-invest-report__pattern-more > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.fr-invest-report__pattern-more span {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 5px 7px;
+  color: #526070;
+  font-size: 10px;
 }
 
 .fr-invest-report__assessment {
