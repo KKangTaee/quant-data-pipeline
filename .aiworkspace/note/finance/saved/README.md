@@ -10,6 +10,9 @@ Last Verified: 2026-05-28
 - `SAVED_PORTFOLIOS.jsonl`: Compare / Portfolio Builder에서 저장한 weighted portfolio 설정
 - `SAVED_PORTFOLIO_MIXES.jsonl`: Portfolio Selection V2에서 저장한 reusable mix setup
 
+`SAVED_PORTFOLIOS.jsonl`은 2026-07-11 사용자 요청 reset에서 기존 legacy setup을 제거해 현재 파일이 없을 수 있다.
+이는 저장 기능 폐기가 아니며, 사용자가 새 reusable portfolio를 명시적으로 저장하면 runtime이 파일을 다시 생성한다.
+
 ## 사용 기준
 
 saved 파일은 registry와 다르게 후보 승인 기록이 아니다. 사용자가 같은 설정을 다시 열거나 replay하기 위한 저장소다.

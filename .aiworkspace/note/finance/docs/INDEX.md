@@ -24,7 +24,8 @@ Last Verified: 2026-07-11
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Final Review Confirmed Review Flow V1 2026-07-11](../tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
+- Latest completed task: [Portfolio Workflow Legacy Reset / Rebuild 2026-07-11](../tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
+- Previous completed task: [Final Review Confirmed Review Flow V1 2026-07-11](../tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
 - Previous completed task: [Final Review Investment Report Detail Tabs V1 2026-07-11](../tasks/active/final-review-investment-report-detail-tabs-v1-20260711/STATUS.md).
 - Previous completed task: [Final Review Investment Report Flat UI V1 2026-07-10](../tasks/active/final-review-investment-report-flat-ui-v1-20260710/STATUS.md).
 - Previous completed task: [Final Review Investment Report IA V1 2026-07-10](../tasks/active/final-review-investment-report-ia-v1-20260710/STATUS.md).

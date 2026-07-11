@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-10
+Last Verified: 2026-07-11
 
 ## Current State
 
@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `final-review-candidate-selection-integration-v1-20260710`
+- `portfolio-workflow-legacy-reset-rebuild-20260711`
 
 Previous completed task:
 
-- `final-review-sentiment-scope-cleanup-v1-20260710`
+- `final-review-investment-report-redesign-v1-20260711`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `portfolio-workflow-legacy-reset-rebuild-20260711`: 기존 Final Review 6개 후보를 current 1차 source / 2차 Practical Validation / 3차 Final Review 판단으로 다시 생성했다. 새 validation은 workspace / REVIEW role 계약을 포함하고, Monitoring setup은 새 decision ID만 참조한다. legacy `SAVED_PORTFOLIOS.jsonl`은 사용자 요청으로 제거했다.
 - `final-review-candidate-selection-integration-v1-20260710`: Final Review standalone `Step 1 / Candidate Board`와 중복 4-card lane summary를 제거하고, Review Queue / 검토 대상 selector / 후보 비교 상세를 Decision Desk 아래 후보 선택 패널로 통합했다. score / gate / 저장 / provider fetch / registry write 경계는 변경하지 않았다.
 - `final-review-sentiment-scope-cleanup-v1-20260710`: Final Review first-read에서 CNN / AAII 시장심리 패널과 raw detail expander를 제거했다. 자세한 심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Operations > Portfolio Monitoring의 read-only context overlay는 유지한다. 시장심리는 Final Review gate / score / 저장 가능 여부 / Monitoring signal로 쓰지 않는다.
 - `practical-validation-flow4-action-center-v1-20260709`: Practical Validation Flow 4 `데이터 보강 대상` / `Provider 보강 액션` split를 `데이터 보강 / 수집 실행` action center로 정리했다. React board는 표시 전용이고 기존 Python 수집 버튼은 같은 action center의 `수집 실행` 하위 블록으로 남기며, 버튼 주변에는 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 명확히 표시한다. `보강 작업 상세`는 `상세 근거 / 원자료` raw detail로 낮췄다.

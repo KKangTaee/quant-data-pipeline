@@ -9,6 +9,13 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
+Latest completed portfolio workflow reset task는 `.aiworkspace/note/finance/tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/`다.
+
+- 목적: 구형 저장 계약으로 인해 Level2 REVIEW가 Final Review에서 한 역할로 몰리던 기존 6개 후보를 현재 1차 → 2차 → 3차 계약으로 다시 생성한다.
+- 주요 변경: 단일 GRS 4개와 weighted mix 2개를 stored-period runtime으로 재실행하고, source 6개 / workspace·review role 포함 validation 6개 / schema-v3 monitoring decision 6개를 새 ID로 저장했다. Portfolio Monitoring setup 3개도 새 decision ID로 다시 연결했다.
+- 저장 경계: 이번 작업은 사용자가 명시한 reset migration으로 active registry chain을 교체했다. legacy reusable `SAVED_PORTFOLIOS.jsonl`은 제거했고, live approval / broker order / auto rebalance는 만들지 않았다.
+- QA: data-chain invariant, focused unittest 5개, py_compile, `git diff --check` 통과. Browser QA는 localhost URL 보안 정책으로 미실행이다.
+
 Latest completed Final Review UX follow-up task는 `.aiworkspace/note/finance/tasks/active/final-review-investment-report-redesign-v1-20260711/`다.
 
 - 목적: 투자 검토서의 중복 상태 / 기술 용어 / 불명확한 REVIEW 감점과 반복 본문을 정리하고, 저장 evidence 범위 안에서 조건부 Monitoring 방향을 제시한다.

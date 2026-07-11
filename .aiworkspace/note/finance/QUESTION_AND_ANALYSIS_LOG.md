@@ -17,6 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Latest completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
@@ -32,6 +33,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-11 - 구형 후보는 현재 1차 → 2차 → 3차 계약으로 다시 생성한다
+
+- User request: 기존 3단계 포트폴리오와 legacy saved file을 삭제하고 동일 포트폴리오를 1단계부터 3단계까지 다시 세팅해 달라고 요청함.
+- Interpreted goal: display fallback만 고치는 것이 아니라 실제 active source / validation / final decision chain을 최신 workspace / REVIEW role 계약으로 다시 만들어야 한다.
+- Analysis result: 기존 Final Review 판단 6개 중 단일 GRS 4개는 decision row의 replay contract로, weighted mix 2개는 selection source의 prefill contract로 복원 가능했다. 모두 stored-period replay와 selected-route gate를 통과했다.
+- Follow-up: 새 source / validation / schema-v3 decision 각 6개와 Monitoring setup 3개를 생성하고 legacy `SAVED_PORTFOLIOS.jsonl`을 제거했다. live approval / order / auto rebalance는 생성하지 않았다.
 
 ### 2026-07-11 - Final Review 점수와 Monitoring 방향은 근거 수준을 분리한다
 

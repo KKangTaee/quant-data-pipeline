@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Latest completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
   - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
@@ -38,6 +39,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Portfolio Workflow Legacy Reset / Rebuild:
+  - 기존 Final Review 후보 6개를 current source → Practical Validation → Final Review 판단으로 재생성했다. 모든 stored-period runtime replay가 PASS였고 새 validation은 workspace / REVIEW role 계약을 포함한다.
+  - schema-v3 monitoring decision 6개와 Portfolio Monitoring setup 3개를 새 ID로 연결했으며 legacy `SAVED_PORTFOLIOS.jsonl`은 사용자 요청으로 제거했다.
+  - focused unittest 5개, py_compile, data-chain invariant, diff check는 통과했다. Browser QA는 localhost URL 보안 정책 때문에 미실행이다.
 - Final Review Investment Report Redesign V1:
   - 외부 Investment Report card와 중복 상태 / Handoff 기술 용어를 제거하고 투자 매력도 / 근거 신뢰도 / Monitoring 준비도를 분리했다.
   - open REVIEW 개수 자동 감점 / cap을 제거하고 REVIEW trace, 총평 / 강점과 약점 / 저장 전 질문, 10개 조건부 패턴 가이드와 세 개 상세 탭을 구현했다.
