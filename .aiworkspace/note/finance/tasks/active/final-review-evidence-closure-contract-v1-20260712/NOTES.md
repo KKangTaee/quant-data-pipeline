@@ -23,3 +23,11 @@
 - 해결 가능한 문제는 Level2에서 닫고, 해결 불가능한 핵심 문제는 block/defer한다.
 - 비핵심 residual만 accepted limit 또는 Monitoring transfer로 Final Review에 전달한다.
 - 완료 조건은 evidence count zero가 아니라 open terminal-state count zero다.
+
+## 2026-07-12 Planning Session Findings
+
+- 현재 `latest_replay`는 required module이지만 `_FINAL_REVIEW_TRACE_SOURCES` adapter가 없어 stored provenance가 있어도 `missing_contract`로 떨어진다.
+- `data_coverage`의 `PIT price window coverage`가 같은 runtime/period status를 다시 읽고 두 module 모두 `pv_data_caution` 고정 `-6` 대상이 된다.
+- `build_practical_validation_recheck_plan()`은 source universe 공통 최신일이 아니라 `load_latest_market_date()` 전체 DB max를 requested end로 사용한다.
+- GRS는 `filter_by_period() -> align_dates()` exact intersection으로 ticker별 6월 마지막 거래일 차이를 제거하며 valuation-only row contract가 없다.
+- focused baseline은 `unittest` 75개가 통과했다. 이 worktree `.venv`에는 `pytest`가 설치되어 있지 않다.
