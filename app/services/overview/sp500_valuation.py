@@ -28,6 +28,7 @@ def _distribution(values: list[float], window_months: int) -> dict[str, Any]:
         "mean_log": mean_log,
         "std_log": std_log,
         "mean_multiple": math.exp(mean_log),
+        "minus_2sigma": math.exp(mean_log - (2.0 * std_log)),
         "minus_1sigma": math.exp(mean_log - std_log),
         "plus_1sigma": math.exp(mean_log + std_log),
         "plus_2sigma": math.exp(mean_log + (2.0 * std_log)),
@@ -94,6 +95,7 @@ def calculate_multiple_regime(
         "observation_count": len(series),
         "series": series,
         "mean_multiple": official["mean_multiple"],
+        "minus_2sigma": official["minus_2sigma"],
         "minus_1sigma": official["minus_1sigma"],
         "plus_1sigma": official["plus_1sigma"],
         "plus_2sigma": official["plus_2sigma"],
@@ -257,6 +259,210 @@ def calculate_index_scenario(
     }
 
 
+def _sep_median_inputs(
+    sep_frame: pd.DataFrame,
+    *,
+    observation_month: pd.Timestamp,
+    effective_at: pd.Timestamp,
+    monthly_point: bool,
+) -> dict[str, Any] | None:
+    releases = sep_frame.loc[
+        sep_frame["release_date"] < observation_month
+        if monthly_point
+        else sep_frame["release_date"] <= effective_at
+    ]
+    if releases.empty:
+        return None
+    release_date = releases["release_date"].max()
+    target_year = int(observation_month.year)
+    vintage = releases.loc[
+        (releases["release_date"] == release_date)
+        & (releases["target_year"] == target_year)
+        & (releases["statistic_name"] == "median")
+    ]
+    values: dict[str, float] = {}
+    for variable_name in ("real_gdp", "pce_inflation"):
+        match = vintage.loc[vintage["variable_name"] == variable_name, "value_pct"]
+        if not match.empty:
+            values[variable_name] = float(match.iloc[0])
+    if len(values) != 2:
+        return None
+    return {
+        "release_date": pd.Timestamp(release_date).strftime("%Y-%m-%d"),
+        "target_year": target_year,
+        **values,
+    }
+
+
+def calculate_historical_index_scenario(
+    monthly_rows: pd.DataFrame | list[dict[str, Any]],
+    sep_rows: pd.DataFrame | list[dict[str, Any]],
+    *,
+    current_spx: dict[str, Any] | None = None,
+    visible_months: int = 12,
+    rolling_window: int = 60,
+) -> dict[str, Any]:
+    """Reconstruct a one-year macro-implied SPX path using only effective SEP vintages."""
+    frame = pd.DataFrame(monthly_rows).copy()
+    sep_frame = pd.DataFrame(sep_rows).copy()
+    required_monthly = {"observation_month", "spx_level", "trailing_eps"}
+    required_sep = {
+        "release_date",
+        "target_year",
+        "variable_name",
+        "statistic_name",
+        "value_pct",
+    }
+    if frame.empty or sep_frame.empty or not required_monthly.issubset(frame.columns) or not required_sep.issubset(sep_frame.columns):
+        return {
+            "status": "INSUFFICIENT_HISTORY",
+            "window_months": int(visible_months),
+            "series": [],
+            "sep_releases": [],
+        }
+
+    frame["observation_month"] = pd.to_datetime(frame["observation_month"], errors="coerce")
+    for column in ("spx_level", "trailing_eps"):
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    if "trailing_pe" not in frame:
+        frame["trailing_pe"] = frame["spx_level"] / frame["trailing_eps"]
+    frame["trailing_pe"] = pd.to_numeric(frame["trailing_pe"], errors="coerce")
+    frame = (
+        frame.dropna(subset=["observation_month", "spx_level"])
+        .loc[lambda value: value["spx_level"] > 0]
+        .sort_values("observation_month")
+        .drop_duplicates("observation_month", keep="last")
+        .reset_index(drop=True)
+    )
+    if frame.empty:
+        return {
+            "status": "INSUFFICIENT_HISTORY",
+            "window_months": int(visible_months),
+            "series": [],
+            "sep_releases": [],
+        }
+
+    spx_date = pd.to_datetime((current_spx or {}).get("date"), errors="coerce")
+    spx_price = pd.to_numeric((current_spx or {}).get("price"), errors="coerce")
+    if not pd.isna(spx_date) and not pd.isna(spx_price) and float(spx_price) > 0:
+        current_month = pd.Timestamp(spx_date).to_period("M").to_timestamp()
+        same_month = frame["observation_month"] == current_month
+        if same_month.any():
+            frame.loc[same_month, "spx_level"] = float(spx_price)
+        elif current_month > frame["observation_month"].max():
+            frame = pd.concat(
+                [
+                    frame,
+                    pd.DataFrame(
+                        [
+                            {
+                                "observation_month": current_month,
+                                "spx_level": float(spx_price),
+                                "trailing_eps": None,
+                                "trailing_pe": None,
+                            }
+                        ]
+                    ),
+                ],
+                ignore_index=True,
+            )
+    else:
+        spx_date = pd.NaT
+
+    positive_eps = frame["trailing_eps"].where(frame["trailing_eps"] > 0)
+    frame["effective_eps"] = positive_eps.ffill()
+    frame["eps_basis_date"] = frame["observation_month"].where(positive_eps.notna()).ffill()
+
+    sep_frame["release_date"] = pd.to_datetime(sep_frame["release_date"], errors="coerce")
+    sep_frame["target_year"] = pd.to_numeric(sep_frame["target_year"], errors="coerce")
+    sep_frame["value_pct"] = pd.to_numeric(sep_frame["value_pct"], errors="coerce")
+    sep_frame = sep_frame.dropna(subset=["release_date", "target_year", "value_pct"])
+    if sep_frame.empty:
+        return {
+            "status": "INSUFFICIENT_HISTORY",
+            "window_months": int(visible_months),
+            "series": [],
+            "sep_releases": [],
+        }
+    sep_frame["target_year"] = sep_frame["target_year"].astype(int)
+
+    end_month = (
+        pd.Timestamp(spx_date).to_period("M").to_timestamp()
+        if not pd.isna(spx_date)
+        else frame["observation_month"].max()
+    )
+    start_month = end_month - pd.DateOffset(months=max(1, int(visible_months)) - 1)
+    visible = frame.loc[
+        (frame["observation_month"] >= start_month)
+        & (frame["observation_month"] <= end_month)
+    ]
+    series: list[dict[str, Any]] = []
+    for row in visible.itertuples():
+        month = pd.Timestamp(row.observation_month)
+        is_current = not pd.isna(spx_date) and month.to_period("M") == pd.Timestamp(spx_date).to_period("M")
+        effective_at = pd.Timestamp(spx_date) if is_current else month
+        sep_inputs = _sep_median_inputs(
+            sep_frame,
+            observation_month=month,
+            effective_at=effective_at,
+            monthly_point=not is_current,
+        )
+        eps = float(row.effective_eps) if not pd.isna(row.effective_eps) else 0.0
+        pe_history = frame.loc[
+            (frame["observation_month"] <= month)
+            & frame["trailing_pe"].notna()
+            & (frame["trailing_pe"] > 0),
+            "trailing_pe",
+        ].astype(float).tolist()
+        if sep_inputs is None or eps <= 0 or len(pe_history) < int(rolling_window):
+            continue
+        multiple = _distribution(pe_history, int(rolling_window))
+        growth_pct = _macro_growth(
+            sep_inputs["real_gdp"], sep_inputs["pce_inflation"]
+        )
+        projected_eps = eps * (1.0 + growth_pct / 100.0)
+        actual_spx = float(row.spx_level)
+        baseline_spx = projected_eps * multiple["mean_multiple"]
+        basis_date = pd.Timestamp(row.eps_basis_date).strftime("%Y-%m-%d")
+        series.append(
+            {
+                "month": month.strftime("%Y-%m-%d"),
+                "actual_spx": actual_spx,
+                "eps_basis_date": basis_date,
+                "eps_carried_forward": basis_date != month.strftime("%Y-%m-%d"),
+                "current_ttm_eps": eps,
+                "sep_release_date": sep_inputs["release_date"],
+                "target_year": sep_inputs["target_year"],
+                "real_gdp_pct": sep_inputs["real_gdp"],
+                "pce_inflation_pct": sep_inputs["pce_inflation"],
+                "growth_pct": growth_pct,
+                "projected_eps": projected_eps,
+                "lower_spx": projected_eps * multiple["minus_1sigma"],
+                "baseline_spx": baseline_spx,
+                "upper_spx": projected_eps * multiple["plus_1sigma"],
+                "gap_to_baseline_pct": ((actual_spx / baseline_spx) - 1.0) * 100.0,
+            }
+        )
+
+    visible_releases = sorted(
+        {
+            pd.Timestamp(value).strftime("%Y-%m-%d")
+            for value in sep_frame["release_date"]
+            if start_month <= pd.Timestamp(value) <= (pd.Timestamp(spx_date) if not pd.isna(spx_date) else end_month + pd.offsets.MonthEnd(0))
+        }
+    )
+    return {
+        "status": "READY" if len(series) >= 2 else "INSUFFICIENT_HISTORY",
+        "window_months": int(visible_months),
+        "rolling_multiple_months": int(rolling_window),
+        "series": series,
+        "sep_releases": visible_releases,
+        "label": "최근 1년 과거 시점 재구성 시나리오",
+        "methodology": "각 월에 당시 사용 가능한 최신 SEP와 60개월 rolling log(PER)를 적용",
+        "limitation": "Shiller EPS는 release-vintage PIT 원본이 아니며 미발표 월은 최신 확인 TTM EPS를 유지합니다.",
+    }
+
+
 def _price_evidence(
     current_prices: pd.DataFrame | list[dict[str, Any]], symbol: str
 ) -> dict[str, Any] | None:
@@ -279,13 +485,16 @@ def build_sp500_valuation_read_model(
     monthly_rows: pd.DataFrame | list[dict[str, Any]] | None = None,
     ttm_evidence: dict[str, Any] | None = None,
     sep_rows: pd.DataFrame | list[dict[str, Any]] | None = None,
+    sep_history_rows: pd.DataFrame | list[dict[str, Any]] | None = None,
     current_prices: pd.DataFrame | list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the JSON-safe read model consumed by the React Market Context surface."""
-    if monthly_rows is None or ttm_evidence is None or sep_rows is None or current_prices is None:
+    sep_rows_supplied = sep_rows is not None
+    if monthly_rows is None or ttm_evidence is None or sep_rows is None or current_prices is None or sep_history_rows is None:
         from finance.loaders.price import load_latest_prices
         from finance.loaders.sp500_valuation import (
             load_latest_fomc_sep_projection,
+            load_fomc_sep_projection_history,
             load_sp500_monthly_valuation,
             resolve_sp500_ttm_eps,
         )
@@ -293,6 +502,11 @@ def build_sp500_valuation_read_model(
         monthly_rows = monthly_rows if monthly_rows is not None else load_sp500_monthly_valuation()
         ttm_evidence = ttm_evidence if ttm_evidence is not None else resolve_sp500_ttm_eps()
         sep_rows = sep_rows if sep_rows is not None else load_latest_fomc_sep_projection()
+        sep_history_rows = (
+            sep_history_rows
+            if sep_history_rows is not None
+            else (sep_rows if sep_rows_supplied else load_fomc_sep_projection_history())
+        )
         current_prices = (
             current_prices
             if current_prices is not None
@@ -375,6 +589,12 @@ def build_sp500_valuation_read_model(
         distinct_dates = {str(value) for value in basis_dates.values() if value}
         index["basis_dates"] = basis_dates
         index["basis_date_mismatch"] = len(distinct_dates) > 1
+
+    index["history"] = calculate_historical_index_scenario(
+        monthly_rows,
+        [] if sep_history_rows is None else sep_history_rows,
+        current_spx=spx,
+    )
 
     overall = "READY" if index.get("status") == "READY" else "BLOCKED"
     return {

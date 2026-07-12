@@ -691,3 +691,70 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 - [ ] Generated artifacts and unrelated user files are not committed.
 - [ ] Browser QA screenshot exists and is not staged.
 - [ ] All relevant tests/build/compile/diff checks have fresh passing output before completion claims.
+
+---
+
+## V1.2 Visual And Historical Scenario Implementation Plan — 2026-07-12
+
+**Goal:** 그래프 1을 증권 앱 수준의 읽기 쉬운 인터랙티브 차트로 개선하고 `-2σ`를 포함한 대칭 구간을 표시하며, 공식 SEP 과거 vintage를 이용한 최근 1년 예상 적정 SPX 흐름을 그래프 2에 추가한다.
+
+**Architecture:** Federal Reserve 공개 SEP 과거 페이지는 기존 parser와 vintage UPSERT에 재사용한다. Loader는 전체 SEP vintage와 Shiller price-only 월을 읽고, service는 다음 달 적용 규칙으로 point-in-time SEP를 선택해 60개월 rolling log(PER) 밴드와 12개월 시나리오를 계산한다. React는 계산된 read model을 SVG로 시각화하고 hover evidence만 관리한다.
+
+**Global Constraints:**
+
+- 1년 화면을 우선 제공하고 5년 시계열 selector는 추가하지 않는다.
+- 월중 발표 SEP는 look-ahead를 피하기 위해 다음 달 월별 지점부터 적용한다. 최신 EOD 지점은 해당 기준일 이전 발표 vintage를 적용한다.
+- 과거 시계열은 `과거 시점 재구성 시나리오`로 표시한다. Shiller EPS를 strict release-vintage PIT 데이터라고 표현하지 않는다.
+- EPS 미발표 월에는 최신 확인 Shiller TTM EPS를 유지하고 각 지점의 `eps_basis_date`를 노출한다.
+- 기존 `Ingestion -> DB -> Loader -> Service -> React` 경계를 유지하고 UI에서 원격 provider를 호출하지 않는다.
+- S&P 403 우회, scraping, cookie/proxy/headless 접근을 추가하지 않는다.
+
+### Task 11: 1차 — SEP Historical Backfill And Shiller Price Coverage
+
+**Files:** `finance/data/sp500_valuation.py`, `app/jobs/ingestion_jobs.py`, `tests/test_sp500_valuation.py`
+
+**Produces:** `discover_fomc_sep_urls`, `collect_and_store_fomc_sep_history`, price-only Shiller rows, idempotent official vintage backfill.
+
+- [x] Write failing tests for ordered SEP URL discovery, multi-vintage UPSERT, and price-only Shiller normalization.
+- [x] Run focused tests and confirm RED for missing interfaces/rows.
+- [x] Implement bounded official SEP history collection and preserve Shiller price rows whose EPS is not yet published.
+- [x] Run focused/full valuation tests and confirm GREEN.
+
+### Task 12: 2차 — PIT Loader And One-Year Scenario Engine
+
+**Files:** `finance/loaders/sp500_valuation.py`, `app/services/overview/sp500_valuation.py`, `tests/test_sp500_valuation.py`
+
+**Produces:** `load_fomc_sep_projection_history`, `minus_2sigma`, and `calculate_historical_index_scenario` with 12 monthly points, rolling 60-month multiples, next-month SEP activation, EPS basis date, band/gap evidence.
+
+- [x] Write failing loader/service tests for all vintage loading, `-2σ`, next-month activation, calendar-year target selection, and stale EPS carry-forward evidence.
+- [x] Run tests and confirm RED for the new contract.
+- [x] Implement the smallest PIT resolver and history calculator; integrate it into `build_sp500_valuation_read_model` as `index_scenario.history`.
+- [x] Run focused/full valuation tests and confirm GREEN.
+
+### Task 13: 3차 — React Chart Redesign
+
+**Files:** `tests/test_service_contracts.py`, `app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx`, `app/web/streamlit_components/market_context_valuation/src/style.css`, compiled component assets.
+
+**Produces:** symmetric five-line multiple chart (`-2σ/-1σ/중심/+1σ/+2σ`), clearer zones, hover detail, and one-year actual-vs-fair SPX band/history with SEP markers.
+
+- [x] Add failing source contracts for `minus_2sigma`, one-year history, hover, and SEP marker rendering.
+- [x] Run Market Context contracts and confirm RED.
+- [x] Implement the React/CSS redesign without moving financial calculations into TypeScript.
+- [x] Run TypeScript, Vite build, Market Context contracts, and confirm GREEN.
+
+### Task 14: 4차 — Live Backfill And Browser QA
+
+**Files:** live DB rows only; generated screenshot remains untracked.
+
+- [x] Run official SEP backfill for 2025-06 through 2026-06 and refresh Shiller data.
+- [x] Verify DB vintage count/dates and DB-backed read model history.
+- [x] Start the app and verify desktop/narrow layout, tooltips, `-2σ`, one-year band, SEP markers, source dates, console errors, and horizontal overflow.
+- [x] Capture one new QA screenshot without staging it.
+
+### Task 15: 5차 — Documentation, Review, Verification, Commit
+
+**Files:** active task docs, affected canonical data/architecture/flow docs, root handoff logs.
+
+- [x] Synchronize STATUS/NOTES/RUNS/RISKS and the smallest durable doc set.
+- [x] Run fresh valuation tests, Market Context contracts, Python compile, TypeScript, Vite, DB smoke, `git diff --check`, and owned-diff review.
+- [x] Stage only owned code/docs/build assets and create a coherent Korean commit; leave all unrelated untracked research/QA files untouched.

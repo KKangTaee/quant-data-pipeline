@@ -21,18 +21,20 @@ Last Updated: 2026-07-12
 - User confirmed V1.1 combined activation: graph 1 independence, Shiller TTM fallback, and browser-assisted official XLSX registration.
 - Latest user policy removed the uploader from current scope and kept the existing importer as an optional extension.
 - V1.1 graph independence, EPS resolver, additive SEP EPS, fair SPX band, React source/date/fallback UI, and Browser QA are implemented.
+- V1.2 official SEP history backfill, Shiller price-only latest rows, symmetric 2σ chart, 12-month PIT SEP reconstruction, React hover redesign, live DB smoke, and Browser QA are implemented.
 
 ## Current Stage
 
-V1.1 1차~5차 implementation, fresh verification, Browser QA, documentation sync, integration review를 완료했다.
+V1.2 1차~5차 implementation, live backfill, fresh verification, Browser QA, documentation sync, owned-diff review를 완료했다.
 
 ## Next Action
 
-1. Keep the optional S&P workbook importer available for future official actual source promotion.
-2. Re-run the same DB/Browser checks when a newer Shiller workbook or SEP vintage arrives.
-3. Leave the unrelated Sentiment and Market Movers full-suite isolation failures to their owning tasks.
+1. Daily latest SEP collector로 이후 release vintage를 계속 보존한다.
+2. Shiller가 새 EPS를 게시하면 price-only 최신 월이 정상적으로 보강되는지 같은 DB/Browser smoke를 반복한다.
+3. 5년 시계열 selector는 별도 승인 범위로 남긴다.
 
 ## V1 Completion
 
 - 1차 through 5차 complete; no required implementation stage remains.
 - V1.1 1차 through 5차 complete; no required implementation stage remains.
+- V1.2 1차 through 5차 complete; no required implementation stage remains.

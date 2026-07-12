@@ -40,6 +40,31 @@ def sep_projection_frame() -> pd.DataFrame:
     )
 
 
+def sep_history_frame() -> pd.DataFrame:
+    inputs = [
+        ("2025-06-18", 2025, 2.0, 2.5),
+        ("2025-09-17", 2025, 2.1, 2.6),
+        ("2025-12-10", 2025, 2.2, 2.7),
+        ("2025-12-10", 2026, 2.2, 2.8),
+        ("2026-03-18", 2026, 2.3, 3.0),
+        ("2026-06-17", 2026, 2.4, 3.2),
+    ]
+    return pd.DataFrame(
+        [
+            {
+                "release_date": release_date,
+                "target_year": target_year,
+                "variable_name": variable_name,
+                "statistic_name": "median",
+                "value_pct": value,
+                "source_ref": f"https://www.federalreserve.gov/monetarypolicy/fomcprojtabl{release_date.replace('-', '')}.htm",
+            }
+            for release_date, target_year, real_gdp, pce in inputs
+            for variable_name, value in (("real_gdp", real_gdp), ("pce_inflation", pce))
+        ]
+    )
+
+
 SEP_HTML_FIXTURE = """
 <html>
   <head><title>June 17, 2026: FOMC Projections materials</title></head>
@@ -103,6 +128,21 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0]["trailing_pe"], 25.4254, places=4)
         self.assertEqual(rows[0]["data_quality"], "interpolated")
 
+    def test_shiller_normalizer_preserves_price_before_eps_is_published(self) -> None:
+        from finance.data.sp500_valuation import normalize_shiller_monthly_frame
+
+        frame = pd.DataFrame(
+            {"Date": [2026.07], "P": [7575.2], "E": [None], "CAPE": [None]}
+        )
+
+        rows = normalize_shiller_monthly_frame(frame)
+
+        self.assertEqual(rows[0]["observation_month"], "2026-07-01")
+        self.assertEqual(rows[0]["spx_level"], 7575.2)
+        self.assertIsNone(rows[0]["trailing_eps"])
+        self.assertIsNone(rows[0]["trailing_pe"])
+        self.assertEqual(rows[0]["data_quality"], "missing")
+
     def test_shiller_page_discovery_uses_current_xls_download(self) -> None:
         from finance.data.sp500_valuation import discover_shiller_workbook_url
 
@@ -144,6 +184,23 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(
             discover_latest_fomc_sep_url(calendar_html),
             "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260617.htm",
+        )
+
+    def test_fomc_calendar_discovery_returns_ordered_unique_vintages(self) -> None:
+        from finance.data.sp500_valuation import discover_fomc_sep_urls
+
+        calendar_html = """
+        <a href="/monetarypolicy/fomcprojtabl20250917.htm">September</a>
+        <a href="/monetarypolicy/fomcprojtabl20250618.htm">June</a>
+        <a href="/monetarypolicy/fomcprojtabl20250917.htm?duplicate=1">Duplicate</a>
+        """
+
+        self.assertEqual(
+            discover_fomc_sep_urls(calendar_html),
+            [
+                "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20250618.htm",
+                "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20250917.htm",
+            ],
         )
 
     def test_sep_parser_preserves_release_vintage_and_central_tendency(self) -> None:
@@ -245,6 +302,35 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["rows_written"], 12)
         self.assertIn("release_date = VALUES(release_date)", db.executemany.call_args.args[0])
 
+    def test_sep_history_collector_fetches_only_missing_official_vintages(self) -> None:
+        from finance.data.sp500_valuation import collect_and_store_fomc_sep_history
+
+        db = Mock()
+        db.query.side_effect = [
+            [{"cnt": 0}],
+            [{"release_date": "2026-06-17"}],
+        ]
+        source_refs = [
+            "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260318.htm",
+            "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260617.htm",
+        ]
+        fetcher = Mock(return_value=SEP_HTML_FIXTURE)
+
+        result = collect_and_store_fomc_sep_history(
+            source_refs=source_refs,
+            sep_fetcher=fetcher,
+            db_factory=lambda *_args, **_kwargs: db,
+        )
+
+        self.assertEqual(fetcher.call_count, 1)
+        self.assertEqual(
+            fetcher.call_args.args[0],
+            "https://www.federalreserve.gov/monetarypolicy/fomcprojtabl20260318.htm",
+        )
+        self.assertEqual(result["release_dates"], ["2026-03-18"])
+        self.assertEqual(result["rows_written"], 12)
+        self.assertTrue(all(row["release_date"] == "2026-03-18" for row in db.executemany.call_args.args[1]))
+
     def test_multiple_regime_uses_latest_shiller_per_as_current_marker(self) -> None:
         from app.services.overview.sp500_valuation import calculate_multiple_regime
 
@@ -256,6 +342,19 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertIn(result["bucket"], {"LOW", "NEUTRAL", "HIGH", "EXTREME_HIGH"})
         self.assertEqual(len(result["series"]), 60)
         self.assertEqual(result["current_basis_date"], "2025-12-01")
+
+    def test_multiple_regime_returns_symmetric_minus_two_sigma_anchor(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_multiple_regime
+
+        result = calculate_multiple_regime(monthly_pe_frame(72))
+
+        self.assertIn("minus_2sigma", result)
+        self.assertLess(result["minus_2sigma"], result["minus_1sigma"])
+        self.assertAlmostEqual(
+            result["mean_multiple"] ** 2,
+            result["minus_1sigma"] * result["plus_1sigma"],
+            places=8,
+        )
 
     def test_read_model_keeps_graph_one_ready_without_official_eps(self) -> None:
         from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
@@ -293,6 +392,22 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["ttm_eps"], 270.0)
         self.assertEqual(result["value_status"], "actual")
         self.assertEqual(result["basis"], "as_reported")
+
+    def test_sep_history_loader_returns_all_release_vintages(self) -> None:
+        from finance.loaders.sp500_valuation import load_fomc_sep_projection_history
+
+        captured: dict[str, object] = {}
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return sep_history_frame().to_dict("records")
+
+        frame = load_fomc_sep_projection_history(query_fn=query)
+
+        self.assertEqual(frame["release_date"].nunique(), 5)
+        self.assertNotIn("MAX(release_date)", str(captured["sql"]))
+        self.assertEqual(captured["params"], ())
 
     def test_shiller_ttm_loader_returns_latest_positive_eps_with_basis_date(self) -> None:
         from finance.loaders.sp500_valuation import load_latest_shiller_ttm_eps
@@ -445,6 +560,68 @@ class Sp500ValuationDataTests(unittest.TestCase):
         )
         self.assertTrue(index["basis_date_mismatch"])
 
+    def test_historical_scenario_uses_next_month_sep_and_calendar_year_target(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_historical_index_scenario
+
+        months = pd.date_range("2019-12-01", "2026-07-01", freq="MS")
+        rows = pd.DataFrame(
+            {
+                "observation_month": months,
+                "spx_level": [3200.0 + index * 55.0 for index in range(len(months))],
+                "trailing_eps": [
+                    180.0 + index if month <= pd.Timestamp("2026-03-01") else None
+                    for index, month in enumerate(months)
+                ],
+            }
+        )
+        rows["trailing_pe"] = rows["spx_level"] / rows["trailing_eps"]
+
+        result = calculate_historical_index_scenario(
+            rows,
+            sep_history_frame(),
+            current_spx={"date": "2026-07-10", "price": 7575.0},
+        )
+
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(result["window_months"], 12)
+        self.assertEqual(len(result["series"]), 12)
+        keyed = {row["month"]: row for row in result["series"]}
+        self.assertEqual(keyed["2025-09-01"]["sep_release_date"], "2025-06-18")
+        self.assertEqual(keyed["2025-10-01"]["sep_release_date"], "2025-09-17")
+        self.assertEqual(keyed["2026-01-01"]["sep_release_date"], "2025-12-10")
+        self.assertEqual(keyed["2026-01-01"]["target_year"], 2026)
+        self.assertEqual(keyed["2026-04-01"]["sep_release_date"], "2026-03-18")
+        self.assertEqual(keyed["2026-07-01"]["sep_release_date"], "2026-06-17")
+        self.assertEqual(keyed["2026-07-01"]["eps_basis_date"], "2026-03-01")
+        self.assertEqual(keyed["2026-07-01"]["actual_spx"], 7575.0)
+        self.assertGreater(keyed["2026-07-01"]["upper_spx"], keyed["2026-07-01"]["baseline_spx"])
+        self.assertLess(keyed["2026-07-01"]["lower_spx"], keyed["2026-07-01"]["baseline_spx"])
+
+    def test_read_model_exposes_one_year_reconstructed_history(self) -> None:
+        from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+
+        rows = monthly_pe_frame(76, start="2020-04-01")
+        model = build_sp500_valuation_read_model(
+            monthly_rows=rows,
+            ttm_evidence={
+                "status": "READY",
+                "current_ttm_eps": 261.7,
+                "eps_source": "Robert Shiller TTM EPS",
+                "eps_source_quality": "interpolated_ttm_proxy",
+                "eps_basis_date": "2026-03-01",
+            },
+            sep_rows=sep_projection_frame(),
+            sep_history_rows=sep_history_frame(),
+            current_prices=pd.DataFrame(
+                [{"symbol": "^GSPC", "latest_date": "2026-07-10", "price": 7575.0}]
+            ),
+        )
+
+        history = model["index_scenario"]["history"]
+        self.assertEqual(history["status"], "READY")
+        self.assertEqual(history["window_months"], 12)
+        self.assertIn("과거 시점 재구성", history["label"])
+
     def test_index_scenario_blocks_spy_conversion_when_dates_differ(self) -> None:
         from app.services.overview.sp500_valuation import (
             calculate_fomc_eps_scenarios,
@@ -511,6 +688,9 @@ class Sp500ValuationDataTests(unittest.TestCase):
             "app.jobs.ingestion_jobs.collect_and_store_fomc_sep",
             return_value={"rows_written": 12, "source": "federal_reserve_sep", "release_date": "2026-06-17"},
         ), patch(
+            "app.jobs.ingestion_jobs.collect_and_store_fomc_sep_history",
+            return_value={"rows_written": 48, "source": "federal_reserve_sep", "release_dates": ["2025-06-18", "2025-09-17", "2025-12-10", "2026-03-18"]},
+        ), patch(
             "app.jobs.ingestion_jobs.import_and_store_sp500_index_earnings",
             return_value={"rows_written": 8, "source": "sp_index_earnings"},
         ), patch(
@@ -523,8 +703,11 @@ class Sp500ValuationDataTests(unittest.TestCase):
             )
 
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["rows_written"], 90)
+        self.assertEqual(result["rows_written"], 138)
         self.assertEqual(result["details"]["pipeline_type"], "sp500_valuation_context")
+        self.assertTrue(
+            any(step["label"] == "Federal Reserve SEP history" for step in result["details"]["steps"])
+        )
 
     def test_overview_automation_includes_daily_sep_vintage_check(self) -> None:
         from app.jobs.overview_automation import OVERVIEW_AUTOMATION_JOB_SPECS

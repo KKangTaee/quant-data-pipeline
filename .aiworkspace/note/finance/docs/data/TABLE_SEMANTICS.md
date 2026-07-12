@@ -532,13 +532,13 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- Shiller 월별 SPX price / interpolated EPS에서 계산한 후행 PER과 CAPE를 저장한다.
+- Shiller 월별 SPX price와 interpolated EPS, 계산 가능한 월의 후행 PER/CAPE를 저장한다. EPS 발표가 늦은 최신 월은 price-only row로도 보존한다.
 - `observation_month + source` unique key로 재수집을 idempotent UPSERT한다.
 
 주의:
 
-- `data_quality=interpolated`이며 strict historical release timing proof가 아니다.
-- 60개월 log(PER) 상대평가와 36개월 민감도에만 사용한다. 표준편차 band는 신뢰구간이 아니다.
+- EPS가 있는 월은 `data_quality=interpolated`, EPS 미발표 price-only 월은 `data_quality=missing`이다. 어느 쪽도 strict historical release timing proof가 아니다.
+- 60개월 log(PER) 상대평가, 36개월 민감도, 12개월 reconstructed actual-SPX 비교에 사용한다. 표준편차 band는 신뢰구간이 아니다.
 - Market Context graph 2는 공식 actual 4분기 TTM이 없을 때 이 table의 최신 양수 `trailing_eps`를 `interpolated_ttm_proxy`로 선택한다. UI는 이를 S&P 공식 EPS나 애널리스트 컨센서스로 표시하지 않는다.
 
 ## `sp500_index_earnings`
@@ -564,5 +564,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - 새 SEP는 새 release vintage로 저장하며 이전 release를 덮어쓰지 않는다.
+- bounded history collector는 2025-06 이후 공식 release 중 DB에 없는 vintage만 가져오고, daily latest collector가 이후 release를 보존한다.
+- 월별 reconstruction은 월중 발표 vintage를 다음 달부터 적용하고 관측 월 calendar year의 target row를 선택한다. 최신 EOD 지점은 기준일 이전 최신 release를 적용한다.
 - central-tendency endpoint 조합은 sensitivity scenario이지 participant joint distribution이나 confidence interval이 아니다.
 - latest SPX 기준일보다 release가 180일 넘게 오래되면 UI scenario는 `STALE_SEP`로 차단한다.

@@ -37,6 +37,7 @@ from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_ser
 from finance.data.sentiment import collect_and_store_market_sentiment
 from finance.data.sp500_valuation import (
     collect_and_store_fomc_sep,
+    collect_and_store_fomc_sep_history,
     collect_and_store_shiller_monthly_valuation,
     ensure_sp500_valuation_schemas,
     import_and_store_sp500_index_earnings,
@@ -235,6 +236,7 @@ def run_collect_sp500_valuation_context(
             )
 
     collect_step("Shiller monthly valuation", collect_and_store_shiller_monthly_valuation)
+    collect_step("Federal Reserve SEP history", collect_and_store_fomc_sep_history)
     collect_step("Federal Reserve SEP", collect_and_store_fomc_sep)
     if index_earnings_path and source_release_date:
         collect_step(

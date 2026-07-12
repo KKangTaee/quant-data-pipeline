@@ -9172,3 +9172,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: graph 1은 Shiller 월별 PER만으로 독립 실행하고, graph 2는 official-first/Shiller-fallback source hierarchy와 basis date를 숨기지 않아야 함.
 - Analysis result: Shiller EPS는 S&P four-quarter total의 월별 보간 proxy이므로 `interpolated_ttm_proxy`로만 사용한다. SEP median GDP+PCE는 consensus가 아닌 자체 예상 성장률이며, current SPX / baseline SPX gap의 양수는 기준 시나리오보다 높은 상태다.
 - Follow-up: loader resolver, 독립 graph states, React source/date/fallback 안내, 실제 DB/Browser QA를 완료했다. 공식 workbook importer는 optional extension으로 유지한다.
+
+### 2026-07-12 - 과거 SEP vintage를 수집해 1년 적정 SPX 흐름을 만들 수 있는가
+
+- User request: 현재 DB에 SEP vintage가 하나뿐이라는 제약을 과거 공식 release 수집으로 해결하고, 5년 대신 1년 흐름부터 제공하도록 요청함.
+- Interpreted goal: official SEP history는 point-in-time으로 적용하되, Shiller EPS vintage 한계를 숨기지 않는 최근 1년 valuation flow와 더 읽기 쉬운 대칭 multiple chart가 필요함.
+- Analysis result: 2025-06/09/12, 2026-03/06 다섯 vintage로 1년 흐름을 구성할 수 있다. 월중 release는 다음 달부터 적용하고 관측 연도 target을 선택하며, EPS 미발표 월은 마지막 확인 EPS basis date를 유지한다.
+- Follow-up: missing four-vintage backfill, 12-point rolling service, `-2σ` 포함 React SVG, hover, actual/baseline/band/SEP markers, Browser QA를 구현했다. 이 흐름은 strict PIT backtest가 아닌 reconstructed scenario다.

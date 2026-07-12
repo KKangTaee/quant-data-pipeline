@@ -110,26 +110,28 @@ operator-supplied S&P Index Earnings workbook + source release date
   -> import_and_store_sp500_index_earnings()
   -> finance_meta.sp500_index_earnings
 
-Federal Reserve FOMC calendar -> latest fomcprojtablYYYYMMDD.htm
-  -> collect_and_store_fomc_sep()
+Federal Reserve official SEP history + FOMC calendar latest material
+  -> collect_and_store_fomc_sep_history() + collect_and_store_fomc_sep()
   -> finance_meta.fomc_sep_projection (release vintage preserved)
 
 yfinance EOD ^GSPC / SPY
   -> finance_price.nyse_price_history
 
 finance.loaders.sp500_valuation + finance.loaders.price
-  -> official actual TTM first, latest Shiller interpolated TTM fallback
+  -> official actual TTM first, latest Shiller interpolated TTM fallback, all SEP vintages
   -> app.services.overview.sp500_valuation.build_sp500_valuation_read_model()
   -> React Market Context valuation component
 ```
 
 의미:
 
-- 60개월 log(PER)가 공식 상대 구간이며 36개월은 기간 민감도다.
+- 60개월 log(PER)가 공식 상대 구간이며 36개월은 기간 민감도다. 화면은 `-2σ/-1σ/중심/+1σ/+2σ`를 대칭 표시한다.
 - Shiller monthly EPS는 S&P four-quarter total의 월별 보간 연구 자료이므로 strict PIT timing proof가 아니다.
 - graph 1 current PER는 최신 유효 Shiller 월의 `trailing_pe`이며 S&P earnings table이나 현재 SPX readiness와 무관하다.
 - graph 2 current TTM EPS는 최근 완료된 네 개의 distinct quarterly As-Reported actual row 합계를 우선하고, 준비되지 않으면 최신 Shiller TTM EPS를 `interpolated_ttm_proxy`로 사용한다. estimate/mixed는 official actual로 승격하지 않는다.
 - FOMC 예상 EPS 성장률은 최신 SEP target year median의 `real GDP + PCE`이며 S&P 애널리스트 컨센서스가 아니다.
+- 최근 1년 flow는 각 월 이전에 발표된 최신 SEP를 사용한다. 월중 release는 다음 달부터 적용하고, EPS 미발표 최신 월은 마지막 확인 Shiller EPS를 basis date와 함께 유지한다.
+- 1년 flow는 Shiller EPS vintage 제약 때문에 strict PIT backtest가 아니라 `과거 시점 재구성 시나리오`다.
 - SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
 - 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
 

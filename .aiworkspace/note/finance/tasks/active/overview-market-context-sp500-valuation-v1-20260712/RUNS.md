@@ -74,3 +74,15 @@ Last Updated: 2026-07-12
 - Fresh final gates repeated 24 valuation tests, 32 Market Context contracts, Python compile, DB assertions, TypeScript, Vite build, and `git diff --check` successfully.
 - Full `tests.test_service_contracts` ran 742 tests with the same 2 out-of-scope failures already tracked here: Sentiment source-string expectation and Market Movers persisted limited-history isolation.
 - Final integration review added an explicit canonical Shiller source predicate to the fallback loader and repeated the 24-test valuation/DB smoke successfully.
+
+## V1.2 Visual And Historical Scenario Verification
+
+- TDD RED reproduced missing price-only Shiller rows, missing SEP-history discovery/collector, missing all-vintage loader, missing `minus_2sigma`, missing historical service, and missing React history contracts.
+- GREEN targeted/full runs reached 31 valuation tests and 33 Market Context contracts; Python compile, TypeScript `tsc --noEmit`, and Vite production build passed.
+- Official backfill stored four missing releases: 2025-06-18, 2025-09-17, 2025-12-10, 2026-03-18. DB now contains five SEP vintages including 2026-06-17.
+- Latest Shiller refresh wrote 1,867 rows and preserved 2026-04~07 price-only rows; latest positive EPS/PER remains 2026-03.
+- DB-backed history returned 12 points (2025-08~2026-07), four visible SEP markers, current SPX 7,575, baseline 6,958, lower/upper 6,267/7,726, and current-vs-baseline +8.9%.
+- Browser QA on `http://localhost:8527` verified both charts, hover transition from 2026-07 to 2025-10, symmetric 2σ labels, 12-month band, desktop and 420px layout, current-app console errors 0, outer/iframe horizontal overflow 0.
+- QA screenshot: `market-context-sp500-valuation-v1-2-qa.png` (generated, not committed).
+- Fresh final scoped gates: 31 valuation tests, 33 Market Context contracts, Python compile, TypeScript, Vite build, 5-vintage/12-point DB assertions, and `git diff --check` passed.
+- Full `tests.test_service_contracts`: 743 tests, 2 pre-existing out-of-scope failures. Sentiment still expects removed `payload.summary.metrics.map`; Market Movers still reads persisted limited-history DB state and reports 2 instead of isolated 65 rows.

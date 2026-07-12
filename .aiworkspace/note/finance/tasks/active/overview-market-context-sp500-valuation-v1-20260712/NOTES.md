@@ -3,6 +3,22 @@
 Status: Active
 Last Updated: 2026-07-12
 
+## V1.2 Approved Direction
+
+- 최근 1년 화면에는 2025-06/09/12, 2026-03/06 공식 SEP vintage가 필요하며 현재 DB의 2026-06을 제외한 네 release를 backfill한다.
+- 월별 과거 지점은 월중 발표된 SEP를 다음 달부터 적용한다. 최신 EOD 지점만 기준일 이전 최신 release를 즉시 적용한다.
+- target year는 관측 월의 calendar year를 선택한다.
+- 시계열은 Shiller EPS가 strict historical release vintage가 아니므로 `과거 시점 재구성 시나리오`로 표시한다.
+- 그래프 1은 `-2σ/-1σ/중심/+1σ/+2σ`를 대칭 표시하고, 그래프 2는 현재 자형 비교를 유지하면서 아래에 1년 흐름을 추가한다.
+
+## V1.2 Final Implementation Decisions
+
+- `collect_and_store_fomc_sep_history()`는 bounded official URL 집합 중 DB에 없는 release만 fetch한다. 기존 daily latest collector는 새 release 보존을 계속 담당한다.
+- Shiller normalization은 EPS가 비어도 양수 price가 있으면 `data_quality=missing`, null EPS/PER row를 저장한다. Graph 1은 양수 PER만 사용하고 Graph 2 history는 마지막 양수 EPS와 basis date를 forward-fill한다.
+- history의 monthly point는 release month 다음 달부터 새 SEP를 적용한다. 최신 EOD point는 exact as-of date까지 발표된 SEP를 적용한다.
+- 1년 visible series는 12 points, multiple warmup은 60 completed PER months다. 실제 DB 결과는 2025-08~2026-07 12개 지점과 2025-09/12, 2026-03/06 marker를 반환했다.
+- React redesign은 외부 chart dependency 없이 responsive SVG, hover inspector, actual/baseline/band/SEP legend를 사용한다.
+
 ## Confirmed Decisions
 
 - Exactly two primary valuation surfaces.

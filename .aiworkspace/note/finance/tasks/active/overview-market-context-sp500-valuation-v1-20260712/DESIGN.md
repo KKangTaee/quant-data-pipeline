@@ -1,7 +1,15 @@
 # Overview Market Context S&P 500 Valuation V1 Design
 
-Status: Pending Written-Spec Review
+Status: Implemented through V1.2
 Last Updated: 2026-07-12
+
+## V1.2 Implemented Amendment
+
+- Graph 1 keeps the 60-month official / 36-month sensitivity contract and displays symmetric `-2σ/-1σ/center/+1σ/+2σ` anchors. React SVG owns hover state only; Python owns every multiple value.
+- Graph 2 keeps the current EPS/SPX ruler and adds a 12-month reconstructed history using stored SEP release vintages, observation-year targets, and rolling 60-month log(PER) anchors.
+- A SEP released during a month becomes effective for the next monthly point. The latest EOD point uses the latest release available by its exact as-of date.
+- Shiller price-only months after the latest EPS publication remain stored. The history carries the last positive TTM EPS forward and exposes its `eps_basis_date` instead of implying that a new EPS was published.
+- The history is labeled `과거 시점 재구성 시나리오`, not a strict PIT backtest, because Shiller EPS is not a preserved release-vintage series.
 
 ## Decision Summary
 

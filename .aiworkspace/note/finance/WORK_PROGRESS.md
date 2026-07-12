@@ -5952,3 +5952,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 그래프 2는 official actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 source/quality/basis/fallback evidence와 함께 사용한다.
 - SEP median GDP+PCE 예상 EPS와 동일 EPS × 5년 PER band, 현재 SPX 괴리율을 React에 연결했다.
 - 상세 실행과 QA는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`를 본다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.2
+
+- 2025-06 이후 missing SEP official vintage를 backfill하고 Shiller EPS 미발표 최신 월의 price-only row를 보존했다.
+- Graph 1은 대칭 `-2σ/-1σ/center/+1σ/+2σ`와 hover inspector로 개선했다.
+- Graph 2는 다음 달 SEP activation과 observation-year target을 적용한 12개월 actual-vs-reconstructed SPX band를 추가했다.
+- 테스트, 실제 DB smoke, desktop/420px Browser QA 근거는 active task `RUNS.md`를 본다.

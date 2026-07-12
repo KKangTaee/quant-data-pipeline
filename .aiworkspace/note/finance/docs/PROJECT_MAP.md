@@ -213,7 +213,7 @@ Backtest Analysis
 
 ### Current Market Context Valuation Boundary
 
-`Workspace > Overview > Market Context`의 current visible surface는 legacy macro cockpit이 아니라 S&P 500 valuation V1.1이다. `finance/data/sp500_valuation.py`가 Shiller/S&P Earnings/Fed SEP를 수집·UPSERT하고, `finance/loaders/sp500_valuation.py`가 Shiller 월별 PER와 공식-first/Shiller-fallback TTM EPS를 해결한다. `app/services/overview/sp500_valuation.py`는 Shiller-only 60m/36m log(PER), SEP GDP+PCE 예상 EPS, 현재 SPX 대비 scenario gap을 계산한다. `app/web/overview/market_context.py`는 `market_context_helpers.py`를 통해 `market_context_react_component.py`와 `app/web/streamlit_components/market_context_valuation/`만 렌더링한다. 기존 `app/services/overview/market_context.py`와 `app/web/overview/components/market_context.py` cockpit/analog helper는 retained compatibility code이며 current Market Context entrypoint에서 렌더링하지 않는다.
+`Workspace > Overview > Market Context`의 current visible surface는 legacy macro cockpit이 아니라 S&P 500 valuation V1.2다. `finance/data/sp500_valuation.py`가 Shiller price-only 최신 월까지 보존하고 S&P Earnings/Fed SEP 최신·과거 vintage를 idempotent UPSERT한다. `finance/loaders/sp500_valuation.py`는 Shiller 월별 valuation, 전체 SEP history, 공식-first/Shiller-fallback TTM EPS를 읽는다. `app/services/overview/sp500_valuation.py`는 Shiller-only 60m/36m log(PER), 대칭 2σ anchor, 최신 SEP 예상 EPS/current SPX gap, 다음 달 SEP 적용 규칙의 12개월 rolling scenario를 계산한다. React component는 계산된 read model의 hover/시각화만 담당한다. 기존 Market Context cockpit/analog helper는 retained compatibility code이며 current entrypoint에서 렌더링하지 않는다.
 
 Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/jobs should not recreate legacy `.note/finance` paths directly.
 

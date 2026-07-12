@@ -7121,6 +7121,22 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("fallback_reason", helper_source)
         self.assertNotIn("file_uploader", helper_source)
 
+    def test_market_context_valuation_renders_symmetric_bands_and_one_year_history(self) -> None:
+        component_source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "minus_2sigma",
+            "-2σ",
+            "과거 시점 재구성",
+            "최근 1년 적정 SPX 흐름",
+            "sep_releases",
+            "gap_to_baseline_pct",
+            "onMouseMove",
+        ):
+            self.assertIn(token, component_source)
+
     def test_overview_events_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")

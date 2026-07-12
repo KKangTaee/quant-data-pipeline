@@ -29,7 +29,7 @@ def _query_meta(
 
 
 def load_sp500_monthly_valuation(
-    months: int = 72,
+    months: int = 84,
     *,
     query_fn: QueryFn | None = None,
 ) -> pd.DataFrame:
@@ -40,7 +40,7 @@ def load_sp500_monthly_valuation(
         SELECT observation_month, spx_level, trailing_eps, trailing_pe, cape,
                data_quality, source, source_ref, source_version, collected_at
         FROM sp500_monthly_valuation
-        WHERE trailing_pe > 0 AND spx_level > 0 AND trailing_eps > 0
+        WHERE spx_level > 0
         ORDER BY observation_month DESC
         LIMIT %s
         """,
@@ -252,6 +252,27 @@ def load_latest_fomc_sep_projection(
         FROM fomc_sep_projection
         WHERE release_date = (SELECT MAX(release_date) FROM fomc_sep_projection)
         ORDER BY target_year, variable_name, statistic_name
+        """,
+        (),
+        query_fn=query_fn,
+    )
+    frame = pd.DataFrame(rows)
+    if not frame.empty:
+        frame["release_date"] = pd.to_datetime(frame["release_date"], errors="coerce")
+    return frame
+
+
+def load_fomc_sep_projection_history(
+    *,
+    query_fn: QueryFn | None = None,
+) -> pd.DataFrame:
+    """Load all stored GDP/PCE SEP release vintages for PIT reconstruction."""
+    rows = _query_meta(
+        """
+        SELECT release_date, target_year, variable_name, statistic_name,
+               value_pct, source, source_ref, collected_at
+        FROM fomc_sep_projection
+        ORDER BY release_date, target_year, variable_name, statistic_name
         """,
         (),
         query_fn=query_fn,

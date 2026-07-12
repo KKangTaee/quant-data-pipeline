@@ -15,6 +15,8 @@ Mitigation implemented: deterministic local `.xlsx` import remains optional with
 
 Shiller monthly earnings are interpolated research data. They support current descriptive valuation bands but not strict historical signal timing claims.
 
+V1.2 mitigation: the 1-year line is explicitly labeled `과거 시점 재구성 시나리오`. EPS 미발표 월은 최신 확인 EPS를 유지하고 `eps_basis_date`/carry-forward 상태를 노출한다. Strict as-known historical EPS backtest remains out of scope.
+
 ### Trailing-To-Forward Multiple Mismatch
 
 Applying a trailing-multiple distribution to macro-implied NTM EPS creates a scenario band, not a statistically pure historical forward-PER band. UI copy must not call it an official fair value or confidence interval.
@@ -26,6 +28,8 @@ Real GDP plus PCE does not fully explain S&P 500 EPS. Margins, wages, FX, taxes,
 ### Source Freshness
 
 Shiller monthly, S&P earnings, SEP quarterly, and SPX/SPY EOD sources update at different cadences. Same-date evidence and stale-state behavior require explicit tests.
+
+V1.2 retains this cadence mismatch visibly. SEP backfill is bounded to the official vintages needed by the 1-year view; a longer 5-year view would require expanding the historical release set and is not implemented.
 
 ### Existing Workspace Changes
 

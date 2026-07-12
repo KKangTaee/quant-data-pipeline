@@ -22,6 +22,13 @@ SHILLER_SOURCE_URL = SHILLER_PAGE_URL
 SP500_EARNINGS_SOURCE = "sp_dow_jones_index_earnings"
 FOMC_SEP_SOURCE = "federal_reserve_sep"
 DB_META = "finance_meta"
+DEFAULT_FOMC_SEP_HISTORY_URLS = (
+    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20250618.htm",
+    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20250917.htm",
+    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20251210.htm",
+    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20260318.htm",
+    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20260617.htm",
+)
 
 
 def _fetch_text(url: str, *, timeout: int = 30) -> str:
@@ -67,18 +74,19 @@ def normalize_shiller_monthly_frame(
         spx_level = _optional_float(item.get("P"))
         trailing_eps = _optional_float(item.get("E"))
         cape = _optional_float(item.get("CAPE"))
-        if observation_month is None or spx_level is None or trailing_eps is None:
+        if observation_month is None or spx_level is None:
             continue
-        if spx_level <= 0 or trailing_eps <= 0:
+        if spx_level <= 0:
             continue
+        has_eps = trailing_eps is not None and trailing_eps > 0
         rows.append(
             {
                 "observation_month": observation_month,
                 "spx_level": spx_level,
-                "trailing_eps": trailing_eps,
-                "trailing_pe": spx_level / trailing_eps,
+                "trailing_eps": trailing_eps if has_eps else None,
+                "trailing_pe": spx_level / trailing_eps if has_eps else None,
                 "cape": cape,
-                "data_quality": "interpolated",
+                "data_quality": "interpolated" if has_eps else "missing",
                 "source": SHILLER_SOURCE,
                 "source_ref": SHILLER_SOURCE_URL,
                 "source_version": None,
@@ -221,8 +229,8 @@ def read_sp500_index_earnings_workbook(
     )
 
 
-def discover_latest_fomc_sep_url(calendar_html: str) -> str:
-    """Return the latest official accessible FOMC projections URL found in calendar HTML."""
+def discover_fomc_sep_urls(calendar_html: str) -> list[str]:
+    """Return dated official SEP accessible-material URLs in release order."""
     matches = re.findall(
         r'href=["\']([^"\']*fomcprojtabl(\d{8})\.htm(?:\?[^"\']*)?)["\']',
         str(calendar_html or ""),
@@ -230,8 +238,16 @@ def discover_latest_fomc_sep_url(calendar_html: str) -> str:
     )
     if not matches:
         raise ValueError("FOMC SEP accessible-material link was not found.")
-    href, _ = max(matches, key=lambda match: match[1])
-    return urljoin(FEDERAL_RESERVE_BASE_URL, href)
+    by_release: dict[str, str] = {}
+    for href, release_text in matches:
+        canonical_href = href.split("?", 1)[0]
+        by_release[release_text] = urljoin(FEDERAL_RESERVE_BASE_URL, canonical_href)
+    return [by_release[key] for key in sorted(by_release)]
+
+
+def discover_latest_fomc_sep_url(calendar_html: str) -> str:
+    """Return the latest official accessible FOMC projections URL found in calendar HTML."""
+    return discover_fomc_sep_urls(calendar_html)[-1]
 
 
 def _sep_release_date(source_url: str, html: str) -> str:
@@ -613,4 +629,57 @@ def collect_and_store_fomc_sep(
         "source_ref": source_ref,
         "release_date": release_date,
         "warnings": [] if rows else ["GDP/PCE SEP 행이 없습니다."],
+    }
+
+
+def collect_and_store_fomc_sep_history(
+    *,
+    source_refs: list[str] | tuple[str, ...] | None = None,
+    sep_fetcher: Any = _fetch_text,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Backfill missing official SEP vintages without re-fetching stored releases."""
+    refs = list(dict.fromkeys(source_refs or DEFAULT_FOMC_SEP_HISTORY_URLS))
+    dated_refs = sorted(
+        ((_sep_release_date(ref, ""), ref) for ref in refs),
+        key=lambda item: item[0],
+    )
+    db = _open_meta_db(
+        db_factory, host=host, user=user, password=password, port=port
+    )
+    try:
+        _ensure_table(db, "fomc_sep_projection")
+        existing_rows = db.query(
+            "SELECT DISTINCT release_date FROM fomc_sep_projection",
+            (),
+        )
+        existing_dates = {
+            pd.Timestamp(value).strftime("%Y-%m-%d")
+            for row in existing_rows
+            if (value := pd.to_datetime(row.get("release_date"), errors="coerce"))
+            is not pd.NaT
+            and not pd.isna(value)
+        }
+        missing_refs = [
+            (release_date, ref)
+            for release_date, ref in dated_refs
+            if release_date not in existing_dates
+        ]
+        rows: list[dict[str, Any]] = []
+        for _release_date, ref in missing_refs:
+            rows.extend(parse_fomc_sep_html(sep_fetcher(ref), source_url=ref))
+        _upsert_sep_rows(db, rows)
+    finally:
+        db.close()
+    release_dates = sorted({str(row["release_date"]) for row in rows})
+    return {
+        "rows_written": len(rows),
+        "source": FOMC_SEP_SOURCE,
+        "source_refs": [ref for _, ref in missing_refs],
+        "release_dates": release_dates,
+        "warnings": [] if rows or not missing_refs else ["GDP/PCE SEP 과거 행이 없습니다."],
     }

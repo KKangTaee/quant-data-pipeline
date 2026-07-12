@@ -10,9 +10,9 @@ Last Verified: 2026-07-12
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`다.
 
 - 목적: 기존 Market Context brief/cockpit/sector/event visible composition을 제거하고, 현재 S&P 500의 상대 멀티플 위치와 FOMC 기반 예상 EPS/지수 시나리오를 숫자로 비교한다.
-- 주요 변경: Shiller 월별 가격·EPS, optional S&P Index Earnings actual As-Reported quarter, Federal Reserve SEP vintage, SPX/SPY EOD를 `Ingestion -> DB -> Loader -> Service -> React`로 연결했다. 그래프 1의 공식 멀티플 window는 Shiller 최근 60개월이며 36개월은 민감도다. 그래프 2는 공식 actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 명시적으로 사용한다. SEP는 매일 최신 accessible-material URL을 확인하고 release vintage를 보존한다.
-- 경계: SEP median `real GDP + PCE`는 애널리스트 컨센서스가 아닌 자체 EPS 성장 시나리오다. 하나의 예상 EPS에 5년 `-1σ / 평균 / +1σ` trailing PER를 적용한 SPX 범위는 공식 적정가/투자 신호가 아니며, Shiller EPS는 `interpolated_ttm_proxy`로 표시한다.
-- QA: valuation 24 tests, Market Context 32 contracts, TypeScript, Vite build, 실제 Shiller/SEP/SPX-SPY DB-backed read model, desktop/420px Browser QA를 통과했다. Browser console error와 horizontal overflow는 0건이었다. 전체 742 service-contract run에는 task 외부 Sentiment source-string contract 1건과 DB limited-history state를 격리하지 않는 Market Movers expectation 1건이 남아 있다.
+- 주요 변경: Shiller 월별 가격·EPS, optional S&P Index Earnings actual As-Reported quarter, Federal Reserve SEP vintage, SPX/SPY EOD를 `Ingestion -> DB -> Loader -> Service -> React`로 연결했다. 그래프 1은 Shiller 최근 60개월의 `-2σ/-1σ/중심/+1σ/+2σ` log(PER) anchor와 36개월 민감도를 표시한다. 그래프 2는 공식 actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 사용하며, 2025-06부터 공식 SEP vintage를 backfill해 최근 1년 실제 SPX와 rolling 적정 SPX band를 함께 표시한다.
+- 경계: 월별 과거 지점은 월중 SEP를 다음 달부터 적용하고 calendar-year target을 선택한다. 이 흐름은 Shiller EPS가 strict release-vintage PIT 원본이 아니므로 `과거 시점 재구성 시나리오`이며, SEP median `real GDP + PCE`와 trailing PER band는 공식 적정가·투자 신호·애널리스트 컨센서스가 아니다.
+- QA: valuation 31 tests, Market Context 33 contracts, TypeScript, Vite build, 실제 5개 SEP vintage/1,867 Shiller rows 기반 read model, desktop/420px Browser QA를 통과했다. 현재 앱 URL의 Browser console error와 horizontal overflow는 0건이었다. generated V1.2 QA screenshot은 커밋하지 않는다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
 
