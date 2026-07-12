@@ -85,7 +85,41 @@ Access date: 2026-07-12
 ## Public Filing Source
 
 17. [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
-    - Supports: filing metadata and XBRL company facts without API key
+    - Supports: filing metadata and XBRL company facts without authentication or API key
     - Type: official API docs
     - Evidence: Documented
     - Limitation: does not provide NDX historical weights or index aggregate EPS
+18. [QQQ September 2024 Annual Filing](https://www.sec.gov/Archives/edgar/data/1067839/000119312524285734/d876223dn30b2.htm)
+    - Supports: complete QQQ schedule of investments and statement that first/third-quarter complete holdings are filed on Form N-PORT
+    - Type: SEC issuer filing
+    - Evidence: Documented
+19. [QQQ March 2026 Semi-Annual Filing](https://www.sec.gov/Archives/edgar/data/1067839/000119312526250483/8deb6f921189c0e.htm)
+    - Supports: full QQQ holdings schedule and 102-holding fund summary
+    - Type: SEC issuer filing
+    - Evidence: Documented
+20. [Nasdaq Global Index Policies](https://www.nasdaq.com/solutions/global-indexes/policies)
+    - Supports: public current/rebalance constituent weight publication for selected licensed UCITS indexes, including NDX
+    - Type: official policy page
+    - Evidence: Documented
+    - Limitation: public page is not a documented five-year historical weight API
+21. [Current Public NDX Weight File](https://www.nasdaq.com/docs/2026/05/04/NDX.pdf)
+    - Supports: current full NDX constituent/weight snapshot without login
+    - Type: official public PDF
+    - Evidence: Documented
+22. [Nasdaq NDX Weighting Page](https://indexes.nasdaq.com/Index/Weighting/NDX)
+    - Supports: current weighting surface and confirms full/historical access is login-gated
+    - Type: official index page
+    - Evidence: Observed
+23. [Nasdaq-100 Methodology](https://indexes.nasdaq.com/docs/Methodology_NDX.pdf)
+    - Supports: quarterly rebalance schedule and modified capitalization weighting rules
+    - Type: official methodology
+    - Evidence: Documented
+24. [Nasdaq-100 2023 Special Rebalance](https://www.nasdaq.com/press-release/the-nasdaq-100-index-special-rebalance-to-be-effective-july-24-2023-2023-07-07)
+    - Supports: known mid-quarter special rebalance that must be handled in a five-year reconstruction
+    - Type: official press release
+    - Evidence: Documented
+25. [FRED NASDAQ-100 Series](https://fred.stlouisfed.org/series/NASDAQ100)
+    - Supports: daily NDX close history sourced from Nasdaq
+    - Type: official Federal Reserve data page
+    - Evidence: Documented
+    - Limitation: series notes mark Nasdaq copyright/pre-approval; QQQ EOD is the safer no-license V1 price proxy

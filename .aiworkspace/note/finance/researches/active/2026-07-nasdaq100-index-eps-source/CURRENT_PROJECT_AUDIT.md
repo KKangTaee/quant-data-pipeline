@@ -9,7 +9,7 @@ Last Updated: 2026-07-12
 
 ## Snapshot
 
-현재 QQQ 가격과 FOMC SEP는 준비돼 있지만 NDX 가격, index-level EPS/P-E, 과거 구성·가중치는 준비되지 않았다.
+현재 QQQ 가격과 FOMC SEP는 준비돼 있고, SEC에서 5년 이상의 QQQ 분기 holdings를 backfill할 수 있음이 확인됐다. 다만 NDX 공식 index-level EPS/P-E는 여전히 없으며 공개 공시 기반 재구성 pipeline은 구현되지 않았다.
 
 ## Current Product Promise
 
@@ -26,6 +26,7 @@ Last Updated: 2026-07-12
 - QQQ 일봉 5,105건(2006-03-21~2026-07-07)
 - SEC detailed statement filing 92,770건, 1,029 symbols
 - QQQ holdings 210 rows, 2 vintages(2026-05-08/2026-05-29)
+- SEC QQQ N-PORT public archive 22 quarters(2020-12-31~2026-03-31, no-auth backfill 가능)
 
 ## Surface Role Classification
 
@@ -41,8 +42,8 @@ Market Context 가치평가 화면은 사용자-facing product surface다. provi
 
 - DB에 `^NDX` 또는 `^IXIC` 가격 이력이 없다.
 - NDX index-level EPS/PER 원천과 전용 table/loader/resolver가 없다.
-- 과거 NDX 구성·가중치 snapshot이 없다.
-- QQQ holdings 2개 vintage로는 1년 또는 5년을 즉시 재구성할 수 없다.
+- DB에는 과거 NDX 구성·가중치 snapshot이 아직 없다.
+- 하지만 SEC QQQ N-PORT 22개 분기를 ingestion하면 1년/5년 proxy reconstruction이 가능하다.
 
 ## Data And Validation Risks
 
@@ -63,3 +64,5 @@ Market Context 가치평가 화면은 사용자-facing product surface다. provi
 
 - GuruFocus indicator 6778의 적자 기업/복수 클래스 처리 방법은 공개 문서에서 확인되지 않았다.
 - FactSet/LSEG 계약에서 NDX와 trailing actual P/E entitlement가 실제 포함되는지 quote/sample 확인이 필요하다.
+- QQQ N-PORT 22개 분기의 CUSIP/ISIN -> ticker/CIK mapping과 SEC TTM actual weighted coverage가 95% 이상인지 implementation spike로 측정해야 한다.
+- ADR ratio, 복수 클래스, foreign issuer, 2023 special rebalance를 반영한 뒤 공개 Nasdaq P/E 관측값과의 오차가 허용 범위인지 검증해야 한다.

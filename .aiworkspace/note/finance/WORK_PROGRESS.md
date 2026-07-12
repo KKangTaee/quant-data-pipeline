@@ -6116,3 +6116,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - root issue dedup, Level2 actionability Gate, GRS signal/valuation 분리, static/dynamic survivorship policy, Final Review terminal snapshot, measured-only score를 적용했다.
 - 구현 커밋: `697a119b`, `65eacc92`, `cb2af299`, `4a05ae2f`; closeout 상세는 active task `STATUS.md`와 `RUNS.md`를 본다.
 - 후속은 dynamic historical universe용 PIT membership / delisting provider 승인 여부다.
+
+## 2026-07-12 - Nasdaq-100 무계정 공개 데이터 경로 조사
+
+- SEC에서 QQQ 분기 N-PORT 22건(2020-12-31~2026-03-31)을 인증 없이 backfill할 수 있음을 확인했다.
+- no-account V1 권고를 `QQQ N-PORT + SEC actual + QQQ EOD` 공개 공시 기반 재구성으로 변경했다.
+- 공식 Nasdaq P/E가 아니라 `Nasdaq-100 (QQQ proxy)`로 표시하며, ADR/복수 클래스/foreign issuer mapping과 공개 P/E calibration을 구현 전 quality gate로 둔다.
+- 상세 근거와 구현 후보는 `.aiworkspace/note/finance/researches/active/2026-07-nasdaq100-index-eps-source/`를 본다.

@@ -5,6 +5,12 @@ Last Updated: 2026-07-12
 
 | Risk | Impact | Mitigation |
 |---|---|---|
+| QQQ proxy와 공식 NDX aggregate 차이 | 공식 P/E처럼 오인 가능 | `public_filing_reconstructed_proxy` 표시, 공식 Nasdaq P/E 명칭 금지, calibration 공개 |
+| N-PORT 분기 cadence | 월별 weight가 실제 rebalance/flow를 완전히 반영하지 못함 | 분기 anchor 사이 price drift, special rebalance event 반영 |
+| CUSIP/ISIN -> ticker/CIK mapping 누락 | aggregate earnings coverage 저하 | security master와 coverage threshold, unmapped weight 표시 |
+| ADR ratio/복수 클래스 | per-share EPS가 거래 증권 단위와 불일치 | issuer-level aggregation 또는 명시적 ADR/class conversion table |
+| foreign issuer filing cadence/tag 차이 | TTM actual stale/missing | 20-F/6-K/IFRS taxonomy 별 resolver와 staleness 표시 |
+| SEC period-end와 filing availability 차이 | look-ahead 가능 | filing_date/accepted_at 기준 적용, reconstructed/PIT 구분 |
 | GuruFocus aggregate methodology 비공개 | S&P/Shiller와 P/E 의미가 다를 수 있음 | source quality 분리, quarterly EPS 교차검증, provider 문의 |
 | release-vintage 미제공 | strict PIT 해석 불가 | `과거 시점 재구성`, descriptive history로 제한 |
 | API license/retention 제한 | DB 저장/화면 표시 불가 가능성 | 구현 전 Data API Agreement 확인 |

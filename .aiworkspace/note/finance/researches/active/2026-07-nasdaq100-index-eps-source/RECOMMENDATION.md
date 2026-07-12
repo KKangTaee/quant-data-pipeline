@@ -1,24 +1,46 @@
 # Recommendation
 
-Status: Conditional - Access And License Verification Required
+Status: Recommended - Public Filing Reconstruction Pilot
 Last Updated: 2026-07-12
 
 ## One-Line Recommendation
 
-GuruFocus는 기술적으로 가장 적합하지만 무료 Economic Data 호출과 내부 DB 저장 권한이 확인되기 전에는 개발 source로 승인하지 않는다.
+계정·API token·데이터 구독 없이 진행하려면 QQQ SEC N-PORT와 SEC 기업 실적을 결합한 공개 공시 기반 재구성값을 V1 source로 사용한다.
 
 ## Final Recommendation
 
-V1의 조건부 권장 조달 경로는 GuruFocus Economic Data API다.
+사용자가 account/token 없는 경로를 우선했으므로 V1의 권장 조달 경로를 공개 공시 기반 자체 재구성으로 변경한다.
 
-1. `Nasdaq 100 PE Ratio` indicator `6778`의 일별 history를 수집한다.
-2. 일별 값을 각 월의 마지막 유효 관측으로 downsample한다.
-3. 동일 기준일의 NDX level을 결합한다.
-4. `monthly_ttm_eps = ndx_level / trailing_pe`로 월별 TTM EPS proxy를 역산한다.
-5. `Nasdaq 100 Earnings per Share` indicator `5870`의 분기 값을 교차검증용으로 저장한다.
-6. 기존 FOMC SEP GDP+PCE 시나리오와 log(PER) 계산을 재사용한다.
+1. SEC EDGAR에서 QQQ CIK `0001067839`의 분기별 N-PORT holdings를 수집한다.
+2. 2020-12-31~2026-03-31 사이 확인된 22개 분기 snapshot의 종목·수량·평가액·비중을 저장한다.
+3. 각 보유 종목의 filing-aware TTM actual EPS/net income을 SEC XBRL에서 계산한다.
+4. 분기 snapshot 사이에는 보유 수량/비중을 월말 가격으로 drift시키고, 다음 분기 snapshot에서 다시 anchor한다.
+5. 종목 earnings yield를 QQQ weight로 합산해 reconstructed trailing P/E를 만든다.
+6. 현재 DB의 QQQ 가격으로 TTM EPS proxy와 FOMC SEP GDP+PCE 적정가 시나리오를 계산한다.
+7. UI 명칭은 `Nasdaq-100 (QQQ proxy)` 또는 `QQQ 공개 공시 기반 재구성`으로 표시한다.
+
+이 방식은 공식 Nasdaq index-level P/E가 아니다. 정확한 NDX level 표시가 필요하면 별도 가격 source의 자동 수집/사용 조건을 확인한 뒤 추가하며, V1은 이미 DB에 장기 이력이 있는 QQQ 가격으로 닫는 것이 안전하다.
+
+## Verified Public Coverage
+
+- SEC EDGAR 조회 API는 인증이나 API key가 필요 없다.
+- QQQ N-PORT 22건이 2020-12-31부터 2026-03-31까지 분기별로 연속 확인됐다.
+- 샘플 2025-03-31 N-PORT에는 101개 holding과 name, CUSIP, ISIN, quantity, USD value, portfolio weight가 포함됐다.
+- QQQ 2024 annual filing은 complete holdings가 1·3분기 N-PORT에도 제출된다고 명시한다.
+- SEC companyfacts/submissions는 10-K, 10-Q, 20-F 등의 XBRL actual을 인증 없이 제공한다.
+- 현재 DB에는 QQQ 일봉 5,105건과 SEC statement 기반 데이터가 있어 신규 외부 계정 없이 pipeline을 확장할 수 있다.
 
 ## Cost And Usage Verdict
+
+### Public reconstruction
+
+- 계정: 불필요
+- API token/key: 불필요
+- 데이터 구독료: 없음
+- 필요한 운영 준수: SEC automated access의 User-Agent와 fair-access 정책
+- 대가: provider fee 대신 security mapping, ADR ratio, 복수 주식 클래스, 적자 기업, split/corporate action 처리 개발비가 든다.
+
+### Direct aggregate provider option
 
 - 공개 indicator 페이지 조회는 무료다.
 - 공개 웹페이지를 robot/scraping으로 반복 수집해 DB에 저장하는 방식은 GuruFocus Terms of Use 경계와 맞지 않으므로 사용하지 않는다.
@@ -31,43 +53,46 @@ V1의 조건부 권장 조달 경로는 GuruFocus Economic Data API다.
 
 ## Why This Route
 
-- 구성 종목과 가중치를 직접 재구성하지 않아 survivorship/rebalance 오류를 줄인다.
-- daily P/E history가 있으므로 60개월을 앞으로 기다리지 않고 즉시 backfill할 수 있다.
-- API 문서가 indicator ID 기반 historical response를 제공한다.
-- 공개 가격 신호상 enterprise provider보다 작은 비용으로 proof-of-source를 실행할 수 있다.
+- 5년 quarterly holdings history가 이미 존재해 앞으로 5년을 기다릴 필요가 없다.
+- 현재 구성 종목을 과거에 소급하지 않으므로 survivorship bias를 줄인다.
+- SEC filing date를 사용해 earnings look-ahead를 통제할 수 있다.
+- 프로젝트의 기존 SEC/QQQ/SEP 자산과 `Ingestion -> DB -> Loader -> Service -> React` 경계를 그대로 활용한다.
+- 계정, secret, 월 요청량, 공급자 결제 상태를 운영할 필요가 없다.
 
 ## Source Labels
 
-- `eps_source`: `GuruFocus Nasdaq-100 trailing P/E 기반 역산 EPS`
-- `eps_source_quality`: `third_party_provider_aggregate_derived`
-- `pe_source`: `GuruFocus Nasdaq 100 PE Ratio`
-- `eps_crosscheck_source`: `GuruFocus Nasdaq 100 Earnings per Share`
-- `fallback_reason`: `공개된 Nasdaq 공식 index-level TTM EPS feed가 없어 provider aggregate trailing P/E로 역산합니다.`
+- `eps_source`: `QQQ SEC 보유내역·SEC 기업 실적 기반 재구성 EPS`
+- `eps_source_quality`: `public_filing_reconstructed_proxy`
+- `pe_source`: `QQQ SEC N-PORT + SEC filing-aware actuals`
+- `index_proxy`: `QQQ`
+- `fallback_reason`: `무료 공개자료에는 Nasdaq 공식 index-level TTM EPS/P-E 이력이 없어 QQQ 보유내역과 SEC actual로 재구성합니다.`
 
 ## Quality Gates Before Implementation Approval
 
-1. Free Data API account/token으로 indicators 6778/5870을 각각 1회 호출한다.
-2. HTTP 200과 최근 60개월 이상의 date/value payload를 실제 확인한다.
-3. Free plan에서 Economic Data가 차단되면 paid source를 사용자 승인 없이 구매하지 않는다.
-4. P/E가 trailing actual인지 provider support에 서면 확인한다.
-5. 로컬 DB 장기 저장, 파생 EPS 저장, 내부 앱 chart 표시, attribution 요구를 provider에 확인한다.
-6. 계약 종료 후 raw/derived history 보유 가능 여부를 확인한다.
-7. NDX official/FRED close와 같은 날 P/E를 결합해 derived EPS를 계산한다.
-8. 분기 EPS와 derived EPS의 오차 분포를 측정한 뒤 warning/block threshold를 정한다.
-9. missing/revision/negative/zero P/E 처리 계약을 테스트한다.
+1. 22개 N-PORT 전부의 holdings parse 성공률과 weight 합계를 확인한다.
+2. CUSIP/ISIN/LEI -> ticker/CIK security master mapping coverage를 측정한다.
+3. 미국 10-K/10-Q와 foreign issuer 20-F/6-K의 TTM actual coverage를 별도로 측정한다.
+4. ADR ratio와 Alphabet 같은 복수 클래스의 issuer earnings 중복 배분 규칙을 명시한다.
+5. 적자 기업을 제외하지 않고 aggregate earnings에 포함하는 기본식을 검증한다.
+6. 분기 snapshot 사이의 price drift와 2023 special rebalance 처리 규칙을 테스트한다.
+7. 공개 Nasdaq 연구의 알려진 P/E 관측값으로 오차를 교차검증한다.
+8. reconstructed coverage가 95% 미만이거나 calibration 오차가 threshold를 넘으면 graph를 warning 상태로 둔다.
+9. missing/revision/negative/zero P/E 처리 계약과 collected_at/filing_available_at을 테스트한다.
 
 ## Refresh Cadence
 
-- NDX price: trading-day EOD
-- GuruFocus P/E: daily 수집, monthly last-valid row materialize
-- GuruFocus EPS cross-check: quarterly
+- QQQ price: 기존 trading-day EOD
+- QQQ N-PORT: 분기 공시 후 수집, historical backfill 22건
+- SEC company actuals: filing ingestion cadence 공유
+- reconstructed P/E/EPS: 월말 materialize
 - FOMC SEP: 기존 March/June/September/December vintage 수집 공유
 
 ## Upgrade Path
 
+- GuruFocus API access/license가 확인되면 reconstructed series의 저비용 교차검증 source로 사용한다.
 - FactSet 계약이 가능하면 `/ratios` 기반 NDX aggregate를 production primary로 승격한다.
-- LSEG/Bloomberg entitlement가 이미 있다면 같은 60개월 샘플을 받아 GuruFocus와 비교한다.
-- strict PIT 연구가 필요해질 때만 Nasdaq GIW/GIFFD weights + SEC available-at statements 자체 산출을 별도 데이터 과제로 연다.
+- LSEG/Bloomberg entitlement가 이미 있다면 같은 60개월 샘플과 공개 재구성값을 비교한다.
+- 공식 NDX constituent/divisor 재현이 필요할 때만 Nasdaq GIW/GIFFD license를 검토한다.
 
 ## Not Recommended
 
@@ -75,3 +100,4 @@ V1의 조건부 권장 조달 경로는 GuruFocus Economic Data API다.
 - QQQ holdings 2개 vintage로 과거 5년 합성
 - public chart HTML scraping 또는 premium download 접근 우회
 - quarterly EPS period-end를 실제 발표일로 간주
+- 공개 재구성값을 `Nasdaq 공식 P/E`로 표시

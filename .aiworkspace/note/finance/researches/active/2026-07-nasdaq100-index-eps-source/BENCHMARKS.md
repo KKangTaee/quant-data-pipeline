@@ -20,13 +20,43 @@ Nasdaq-100 가치평가 그래프에 필요한 60개월 trailing P/E와 current/
 
 | Source | Direct NDX P/E | Direct NDX EPS | 60m Backfill | Automation | Cost Signal | Evidence | Fit |
 |---|---:|---:|---:|---:|---|---|---|
-| GuruFocus Economic Data API | 일별 | 분기별 | 가능성이 높음(5Y/20Y chart 및 historical endpoint) | REST | Free 100 requests 표시는 있으나 Economic entitlement 불명확; PAYG $0.10/request/add-on +$90 | Documented | 조건부 V1 권장 |
+| QQQ SEC N-PORT + SEC actual 자체 산출 | 직접 제공 아님 | 직접 제공 아님 | 가능(22 quarterly snapshots, 2020-12~2026-03) | SEC public API/XML | 무료, 계정/token 불필요 | Documented inputs + Inferred formula | no-auth V1 권장 |
+| GuruFocus Economic Data API | 일별 | 분기별 | 가능성이 높음(5Y/20Y chart 및 historical endpoint) | REST | Free 100 requests 표시는 있으나 Economic entitlement 불명확; PAYG $0.10/request/add-on +$90 | Documented | 조건부 교차검증 |
 | FactSet Benchmarks API | index ratios endpoint | per-share/aggregate content 기반 | 가능 | REST/SDK | entitlement/quote | Documented | Enterprise 최우선 |
 | LSEG I/B/E/S Global Aggregates / Datastream | major index aggregate/valuation | actual/estimate aggregate 계열 | 가능성이 높음 | DSWS/FTP/SFTP | enterprise quote | Documented + NDX coverage는 확인 필요 | Enterprise 대안 |
 | Bloomberg Data License | historical fundamentals/estimates/price | field entitlement에 따라 가능 | 가능성이 높음 | REST/SFTP/cloud | enterprise quote | Claimed; exact NDX field unknown | 교차검증/대안 |
-| Nasdaq GIW/GIFFD + SEC 자체 산출 | 직접 제공 아님 | 직접 제공 아님 | weights entitlement가 있으면 가능 | Web service/file + SEC API | Nasdaq license + 구현비 | Documented/Inferred | 장기 독립성, V1 비권장 |
+| Nasdaq GIW/GIFFD + SEC 자체 산출 | 직접 제공 아님 | 직접 제공 아님 | weights entitlement가 있으면 가능 | Web service/file + SEC API | Nasdaq license + 구현비 | Documented/Inferred | 공식 구성 정밀화 |
 
 ## Source Notes
+
+### QQQ SEC N-PORT + SEC Actual Self-Construction
+
+- Category: free public filing reconstruction
+- Verified coverage:
+  - QQQ CIK `0001067839`
+  - 22 quarterly N-PORT filings from 2020-12-31 through 2026-03-31
+  - 2025-03-31 sample has 101 holdings with name/CUSIP/ISIN/quantity/value/weight
+  - SEC EDGAR lookup APIs require no authentication or API key
+- Formula candidate:
+
+```text
+security earnings yield = filing-aware TTM EPS / same-security month-end price
+portfolio earnings yield = sum(QQQ weight × security earnings yield)
+reconstructed P/E = 1 / portfolio earnings yield
+reconstructed QQQ EPS = QQQ price / reconstructed P/E
+```
+
+- Strong fit:
+  - quarterly holdings cover the full requested five-year window without survivorship backfill
+  - QQQ EOD and SEC statements already exist in the project
+  - no account, token, paid plan, scraping, or access bypass
+- Limit:
+  - QQQ proxy is not the official Nasdaq aggregate
+  - N-PORT is quarterly, so monthly rows require price drift between anchors
+  - CUSIP/ISIN to ticker/CIK mapping, ADR ratios, multiple classes and foreign issuer EPS need explicit rules
+  - 2023 special rebalance and tracking cash can create local deviations
+  - public filings arrive after period end; UI must distinguish reconstructed history from contemporaneously available data
+- Evidence label: Documented inputs + Inferred aggregate
 
 ### GuruFocus Economic Data API
 
@@ -119,6 +149,7 @@ index EPS = NDX level / index P/E
 ## Cross-Source Patterns
 
 - 지수 가격은 공개/공식 경로가 많지만 historical index fundamentals는 대부분 라이선스 데이터다.
+- QQQ 분기 holdings는 SEC에서 5년 이상 무료 backfill되므로, 공식 aggregate가 아니어도 no-auth reconstructed proxy는 가능하다.
 - 빠른 구현은 direct aggregate P/E series를 받고 EPS를 `index/P/E`로 역산하는 방법이다.
 - strict PIT backtest가 아니라 상대 가치평가/reconstructed scenario라면 provider history를 사용할 수 있지만, release vintage 부재를 반드시 표시해야 한다.
 - enterprise provider는 가격보다 constituents/aggregate methodology/entitlement가 핵심 비용 항목이다.

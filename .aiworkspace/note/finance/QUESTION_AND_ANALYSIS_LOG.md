@@ -9389,3 +9389,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 해결 가능한 근거는 Level2에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 보낸다.
 - Analysis result: replay/PIT와 universe/survivorship 중복 root를 통합했고, GRS 6월 유실은 BIL/위험자산 월말 exact-date 차이였다. 숫자 감점은 role이 아니라 explicit measurement만 소유해야 한다.
 - Follow-up: 1차~4차 구현과 실제 DB/Browser QA를 완료했다. dynamic historical universe provider는 후속 승인 전까지 critical blocker다.
+
+### 2026-07-12 - 계정·토큰 없이 Nasdaq-100 가치평가를 만들 수 있는가
+
+- User request: GuruFocus 계정·API token·유료 구독 없이 S&P와 유사한 Nasdaq 가치평가를 만들 수 있는지 검토 요청함.
+- Interpreted goal: scraping이나 접근 우회 없이 무료 공개자료만 사용하고, 1년뿐 아니라 가능하면 5년 흐름도 즉시 backfill해야 함.
+- Analysis result: SEC EDGAR에 QQQ N-PORT 22개 분기와 기업 XBRL actual이 인증 없이 존재하므로 QQQ proxy trailing P/E/EPS 재구성이 가능하다. 다만 이는 공식 Nasdaq index-level P/E가 아니다.
+- Follow-up: 구현 전 22개 holdings parse, identifier/ADR/class mapping, weighted actual coverage 95%, 공개 Nasdaq P/E calibration을 P0 gate로 검증한다. 통과하면 기존 SEP GDP+PCE와 1/3/5년 React 흐름을 재사용한다.
