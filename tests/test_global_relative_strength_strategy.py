@@ -94,6 +94,67 @@ class _FakeGrsEngine:
 
 
 class GlobalRelativeStrengthRuntimeContractTests(unittest.TestCase):
+    def test_grs_latest_common_row_is_valuation_without_fake_rebalance(self) -> None:
+        from finance.strategy import global_relative_strength_allocation
+        from finance.transform import append_latest_common_row
+
+        signal_date = pd.Timestamp("2026-05-29")
+        latest_common = pd.Timestamp("2026-06-26")
+        period_dfs = {
+            "SPY": _grs_price_df(
+                dates=pd.DatetimeIndex([signal_date, pd.Timestamp("2026-06-30")]),
+                closes=[100.0, 110.0],
+                scores=[0.5, 0.6],
+                ma_values=[90.0, 90.0],
+            ),
+            "BIL": _grs_price_df(
+                dates=pd.DatetimeIndex([signal_date, latest_common]),
+                closes=[50.0, 51.0],
+                scores=[0.0, 0.0],
+                ma_values=[40.0, 40.0],
+            ),
+        }
+        full_dfs = {
+            "SPY": pd.concat(
+                [
+                    period_dfs["SPY"],
+                    _grs_price_df(
+                        dates=pd.DatetimeIndex([latest_common]),
+                        closes=[108.0],
+                        scores=[0.55],
+                        ma_values=[90.0],
+                    ),
+                ],
+                ignore_index=True,
+            ),
+            "BIL": period_dfs["BIL"].copy(),
+        }
+
+        enriched = append_latest_common_row(
+            period_dfs,
+            full_dfs,
+            end="2026-07-10",
+            row_kind_col="Row Kind",
+        )
+        common_dates = set(enriched["SPY"]["Date"]).intersection(enriched["BIL"]["Date"])
+        aligned = {
+            ticker: frame[frame["Date"].isin(common_dates)].sort_values("Date").reset_index(drop=True)
+            for ticker, frame in enriched.items()
+        }
+        result = global_relative_strength_allocation(
+            aligned,
+            start_balance=10000.0,
+            top=1,
+            cash_ticker="BIL",
+        )
+
+        last = result.iloc[-1]
+        self.assertEqual(pd.Timestamp(last["Date"]), latest_common)
+        self.assertEqual(last["Row Kind"], "valuation")
+        self.assertFalse(last["Rebalancing"])
+        self.assertEqual(last["Next Ticker"], result.iloc[-2]["Next Ticker"])
+        self.assertEqual(last["Raw Selected Ticker"], [])
+
     def test_get_global_relative_strength_keeps_raw_monthly_rows_for_strategy_cadence(self) -> None:
         sys.modules.pop("streamlit", None)
 
@@ -240,6 +301,7 @@ class GlobalRelativeStrengthRuntimeContractTests(unittest.TestCase):
             )
 
         meta = bundle["meta"]
+        self.assertIn("grs_period_contract", meta)
         self.assertEqual(meta["benchmark_contract"], STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT)
         self.assertEqual(meta["captured_hardening_benchmark_contract"], STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT)
         self.assertEqual(

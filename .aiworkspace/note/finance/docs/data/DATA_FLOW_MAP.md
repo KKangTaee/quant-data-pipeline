@@ -99,6 +99,43 @@ yfinance
 
 ## Overview market intelligence 흐름
 
+### S&P 500 Market Context valuation
+
+```text
+Robert Shiller official page -> current ie_data.xls discovery
+  -> finance.data.sp500_valuation.collect_and_store_shiller_monthly_valuation()
+  -> finance_meta.sp500_monthly_valuation
+
+operator-supplied S&P Index Earnings workbook + source release date
+  -> import_and_store_sp500_index_earnings()
+  -> finance_meta.sp500_index_earnings
+
+Federal Reserve official SEP history + FOMC calendar latest material
+  -> collect_and_store_fomc_sep_history() + collect_and_store_fomc_sep()
+  -> finance_meta.fomc_sep_projection (release vintage preserved)
+
+yfinance EOD ^GSPC / SPY
+  -> finance_price.nyse_price_history
+
+finance.loaders.sp500_valuation + finance.loaders.price
+  -> official actual TTM first, latest Shiller interpolated TTM fallback, all SEP vintages
+  -> app.services.overview.sp500_valuation.build_sp500_valuation_read_model()
+  -> React Market Context valuation component
+```
+
+의미:
+
+- 60개월 log(PER)가 공식 상대 구간이며 36개월은 기간 민감도다. 화면은 `-2σ/-1σ/중심/+1σ/+2σ`를 대칭 표시한다.
+- Shiller monthly EPS는 S&P four-quarter total의 월별 보간 연구 자료이므로 strict PIT timing proof가 아니다.
+- graph 1 분포와 z-score는 최신 완결 Shiller PER 60개월만 사용한다. 화면은 그 이후 price-only 월과 current SPX EOD를 마지막 확인 Shiller EPS로 나눈 값을 `provisional`로 계산해 점선 표시하고, price/EPS basis date를 함께 노출한다.
+- graph 2 current TTM EPS는 최근 완료된 네 개의 distinct quarterly As-Reported actual row 합계를 우선하고, 준비되지 않으면 최신 Shiller TTM EPS를 `interpolated_ttm_proxy`로 사용한다. estimate/mixed는 official actual로 승격하지 않는다.
+- FOMC 예상 EPS 성장률은 최신 SEP target year median의 `real GDP + PCE`이며 S&P 애널리스트 컨센서스가 아니다.
+- 1/3/5년 flow는 각 월 이전에 발표된 최신 SEP를 사용한다. 월중 release는 다음 달부터 적용하고, EPS 미발표 최신 월은 마지막 확인 Shiller EPS를 basis date와 함께 유지한다.
+- 5년 화면과 60개월 rolling multiple warmup을 함께 확보하기 위해 loader는 최근 120개월 Shiller rows를 읽는다.
+- 모든 기간 flow는 Shiller EPS vintage 제약 때문에 strict PIT backtest가 아니라 `과거 시점 재구성 시나리오`다.
+- SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
+- 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
+
 ```text
 Wikipedia S&P 500 constituents
   -> finance.data.market_intelligence.collect_and_store_sp500_universe()

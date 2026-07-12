@@ -1,0 +1,30 @@
+# Runs
+
+- 2026-07-09 RED: `.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests.test_practical_validation_workspace_builds_flow3_next_stage_action tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_fix_queue_react_component_is_ui_only tests.test_service_contracts.BacktestRuntimeContractTests.test_practical_validation_flow4_uses_criteria_detail_board`
+  - Expected failure: `next_stage_action` missing, React CTA copy / intent missing, Flow4 evidence call and visible Flow5 still use old structure.
+- 2026-07-09 GREEN: same focused unittest selection passed after read model, React, Streamlit wiring, and Flow5 removal.
+- 2026-07-09 Build: `npm run build` in `app/web/components/practical_validation_fix_queue/frontend` completed successfully.
+- 2026-07-09 Verification: `.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests tests.test_service_contracts.BacktestRuntimeContractTests`
+  - First broad run failed on stale Flow3 copy contract (`카테고리별 통과 / 실패만 요약`).
+  - Updated Flow3 contract / fallback copy to the new `검증 결론 + Final Review 이동 가능 여부 + CTA intent` meaning.
+  - Rerun passed: 100 tests OK.
+- 2026-07-09 Verification: `.venv/bin/python -m py_compile app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py app/web/components/practical_validation_fix_queue/component.py` passed.
+- 2026-07-09 Verification: `git diff --check` passed.
+- 2026-07-09 Verification: `npm run build` passed after the final React/source state.
+- 2026-07-09 Final verification rerun:
+  - `.venv/bin/python -m unittest tests.test_service_contracts.PracticalValidationServiceContractTests tests.test_service_contracts.BacktestRuntimeContractTests` passed: 100 tests OK.
+  - `.venv/bin/python -m py_compile app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py app/web/components/practical_validation_fix_queue/component.py` passed.
+  - `npm run build` passed.
+  - `git diff --check` passed.
+- 2026-07-09 Browser QA:
+  - Stale server `localhost:8517` still showed old Flow5 because it was started before this code change with `runOnSave=false`.
+  - Started fresh server on `http://localhost:8523`.
+  - Ran Flow2 `전략 재검증 실행` through the existing Python boundary.
+  - Verified parent DOM has Flow3 / Flow4 / `상세 근거 / 원자료` and no `Flow 5` / `저장 / Final Review 이동`.
+  - Verified React iframe has `저장하고 Final Review로 이동` and `검증 결과 저장(기록용)` buttons, and no old Flow5 text.
+  - Screenshot: `practical-validation-flow5-cta-integration-v1-qa.png` (generated artifact, not staged).
+- 2026-07-09 Follow-up review:
+  - RED: Flow3 next-stage contract failed when PV category REVIEW cards existed but gate route was `READY_FOR_FINAL_REVIEW`; React/static contracts also failed for missing `주의 포함 이동 가능` fallback and stale dead helper guards.
+  - GREEN: Flow3 read model and React display now show `주의 포함 이동 가능` for allowed yellow-light cases; stale `Flow 5 저장 / Final Review 이동` copy and unused gate/module board helpers were removed.
+  - Verification: `PracticalValidationServiceContractTests` + `BacktestRuntimeContractTests` passed 100 tests, `npm run build` passed, py_compile passed, `git diff --check` passed.
+  - Browser QA: fresh server `http://127.0.0.1:8525`, Flow2 replay executed through Python boundary, Flow3 iframe showed `주의 포함 이동 가능`, no `Flow 5` / `단계별 검증 소유권` / `수집 대상 근거` / `Required for Final Review`. Screenshots: `practical-validation-level2-review-qa.png`, `practical-validation-level2-review-flow3-pageup-qa.png` (generated artifacts, not staged).

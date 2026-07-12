@@ -64,6 +64,24 @@ type CriteriaGroup = {
   criteriaCards?: CriteriaCard[]
 }
 
+type ActionSpec = {
+  id?: string
+  label?: string
+  detail?: string
+  enabled?: boolean
+  tone?: Tone
+}
+
+type NextStageAction = {
+  targetStage?: string
+  statusLabel?: string
+  blockerCount?: number
+  disabledReason?: string
+  primaryAction?: ActionSpec
+  secondaryAction?: ActionSpec
+  boundaryNote?: string
+}
+
 type PracticalValidationFixQueueProps = {
   statusLabel: string
   tone: Tone
@@ -73,6 +91,7 @@ type PracticalValidationFixQueueProps = {
   fixItems: FixItem[]
   coreGroups: CoreGroup[]
   criteriaGroups: CriteriaGroup[]
+  nextStageAction: NextStageAction
 }
 
 const toneClass = (tone: Tone | string | undefined): Tone =>
@@ -88,18 +107,47 @@ const joined = (items: string[] | undefined, fallback = "없음"): string => {
   return cleaned.length > 0 ? cleaned.join(" / ") : fallback
 }
 
-const groupOutcome = (group: CriteriaGroup): { label: string; detail: string; tone: Tone } => {
+const reviewStatusLabel = (status: unknown): string => {
+  const text = compact(status, "")
+  const labels = ["데이터 주의", "2단계 실용성 주의", "최종 판단 참고", "Monitoring 추적"]
+  const matched = labels.find((label) => text.startsWith(label))
+  if (matched) return matched
+  if (text.startsWith("REVIEW")) return "주의"
+  return ""
+}
+
+const roleAwareGroupOutcome = (group: CriteriaGroup): { label: string; detail: string; tone: Tone } => {
   if (group.remainingIssues && group.remainingIssues.length > 0) {
     return { label: "실패", detail: joined(group.remainingIssues), tone: "danger" }
+  }
+  const reviewLabel = reviewStatusLabel(group.status)
+  if (reviewLabel) {
+    const tone = toneClass(group.tone)
+    return {
+      label: reviewLabel,
+      detail: compact(group.decisionSummary),
+      tone: tone === "neutral" ? "warning" : tone,
+    }
   }
   if (group.passedCriteria && group.passedCriteria.length > 0) {
     return { label: "통과", detail: joined(group.passedCriteria), tone: "positive" }
   }
-  if (compact(group.status, "").includes("보강 항목 없음")) {
-    return { label: "통과", detail: compact(group.decisionSummary, "보강 항목 없음"), tone: "positive" }
-  }
-  return { label: "확인 필요", detail: compact(group.decisionSummary), tone: toneClass(group.tone) }
+  return { label: "검토", detail: compact(group.decisionSummary), tone: toneClass(group.tone) }
 }
+
+const saveAndMovePayload = () => ({
+  action: "save_and_move",
+  source: "practical_validation_fix_queue",
+  nonce: `${Date.now()}`,
+})
+
+const saveAuditOnlyPayload = () => ({
+  action: "save_audit_only",
+  source: "practical_validation_fix_queue",
+  nonce: `${Date.now()}`,
+})
+
+const actionEnabled = (action: ActionSpec | undefined): boolean => action?.enabled !== false
 
 export function PracticalValidationFixQueue(props: PracticalValidationFixQueueProps) {
   useEffect(() => {
@@ -112,12 +160,64 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
   const visibleCriteriaGroups = criteriaGroups.slice(0, 7)
   const hiddenCriteriaGroupCount = Math.max(criteriaGroups.length - visibleCriteriaGroups.length, 0)
   const failedCategoryCount = criteriaGroups.filter((group) => (group.remainingIssues ?? []).length > 0).length
-  const flowAction = props.canSaveAndMove
-    ? "Flow 5에서 검증 결과 저장"
-    : "Flow 4에서 상세 원인 확인"
-  const nextStepItems = props.canSaveAndMove
-    ? ["Flow 5에서 검증 결과를 저장합니다."]
-    : ["자세한 원인과 보강 기준은 Flow 4에서 확인합니다."]
+  const fallbackNextStageAction: NextStageAction = {
+    targetStage: "Final Review",
+    statusLabel: props.canSaveAndMove ? "이동 가능" : "보강 필요",
+    blockerCount: props.fixItems.length,
+    disabledReason: props.canSaveAndMove ? "" : "자세한 원인과 보강 기준은 Flow 4에서 확인합니다.",
+    primaryAction: {
+      id: "save_and_move",
+      label: "저장하고 Final Review로 이동",
+      detail: props.canSaveAndMove
+        ? "검증 결과를 저장하고 Final Review에서 최종 판단을 이어갑니다."
+        : "Flow 4에서 보강 항목을 확인한 뒤 다시 시도합니다.",
+      enabled: props.canSaveAndMove,
+      tone: props.canSaveAndMove ? "positive" : "danger",
+    },
+    secondaryAction: {
+      id: "save_audit_only",
+      label: "검증 결과 저장(기록용)",
+      detail: "audit trail만 남깁니다.",
+      enabled: true,
+      tone: "neutral",
+    },
+    boundaryNote: "Final Review 이동은 최종 승인, 투자 추천, live approval, broker order, auto rebalance가 아닙니다.",
+  }
+  const nextStageAction: NextStageAction = {
+    ...fallbackNextStageAction,
+    ...props.nextStageAction,
+    primaryAction: {
+      ...fallbackNextStageAction.primaryAction,
+      ...(props.nextStageAction?.primaryAction ?? {}),
+    },
+    secondaryAction: {
+      ...fallbackNextStageAction.secondaryAction,
+      ...(props.nextStageAction?.secondaryAction ?? {}),
+    },
+  }
+  const primaryAction = nextStageAction.primaryAction
+  const secondaryAction = nextStageAction.secondaryAction
+  const primaryEnabled = actionEnabled(primaryAction)
+  const secondaryEnabled = actionEnabled(secondaryAction)
+  const hasVisibleReviewCaution = criteriaGroups.some((group) => Boolean(reviewStatusLabel(group.status)))
+  const nextStageStatusLabel = compact(nextStageAction.statusLabel, props.canSaveAndMove ? "이동 가능" : "보강 필요")
+  const displayedNextStageStatusLabel =
+    props.canSaveAndMove && hasVisibleReviewCaution && nextStageStatusLabel === "이동 가능"
+      ? "주의 포함 이동 가능"
+      : nextStageStatusLabel
+  const nextStepItems = primaryEnabled
+    ? [compact(primaryAction?.detail, "검증 결과를 저장하고 Final Review에서 최종 판단을 이어갑니다.")]
+    : [compact(nextStageAction.disabledReason ?? primaryAction?.detail, "자세한 원인과 보강 기준은 Flow 4에서 확인합니다.")]
+
+  const submitSaveAndMove = () => {
+    if (!primaryEnabled) return
+    Streamlit.setComponentValue(saveAndMovePayload())
+  }
+
+  const submitSaveAuditOnly = () => {
+    if (!secondaryEnabled) return
+    Streamlit.setComponentValue(saveAuditOnlyPayload())
+  }
 
   return (
     <section className={`pv-react-fix pv-react-fix--${tone}`}>
@@ -129,8 +229,8 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         </div>
         <div className="pv-react-fix__status">
           <span>{props.statusLabel}</span>
-          <b>{props.canSaveAndMove ? "검증 보강 완료" : "검증 보강 필요"}</b>
-          <small>{props.fixItems.length > 0 ? `보강 항목 ${props.fixItems.length}` : "보강 항목 없음"}</small>
+          <b>{displayedNextStageStatusLabel}</b>
+          <small>{props.fixItems.length > 0 ? `보강 항목 ${props.fixItems.length}` : "현재 보강 기준 없음"}</small>
         </div>
       </header>
 
@@ -160,30 +260,55 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
       <footer className="pv-react-fix__action">
         <div>
           <div className="pv-react-fix__action-label">
-            {props.canSaveAndMove ? "다음 위치" : "상세 확인 위치"}
+            {primaryEnabled ? "다음 위치" : "상세 확인 위치"}
           </div>
-          <div className="pv-react-fix__action-text">{flowAction}</div>
+          <div className="pv-react-fix__action-text">
+            {primaryEnabled ? compact(nextStageAction.targetStage) : compact(nextStageAction.disabledReason)}
+          </div>
         </div>
+        <div className="pv-react-fix__buttons">
+          <button
+            className="pv-react-fix__button pv-react-fix__button--primary"
+            disabled={!primaryEnabled}
+            onClick={submitSaveAndMove}
+            type="button"
+          >
+            {compact(primaryAction?.label, "저장하고 Final Review로 이동")}
+          </button>
+          <button
+            className="pv-react-fix__button pv-react-fix__button--secondary"
+            disabled={!secondaryEnabled}
+            onClick={submitSaveAuditOnly}
+            type="button"
+          >
+            {compact(secondaryAction?.label, "검증 결과 저장(기록용)")}
+          </button>
+        </div>
+        <p>{compact(secondaryAction?.detail, "audit trail만 남깁니다.")}</p>
+        <p>{compact(nextStageAction.boundaryNote)}</p>
       </footer>
 
       <div className="pv-react-fix__body pv-react-fix__body--single">
         <section className="pv-react-fix__lane pv-react-fix__criteria-preview">
           <div className="pv-react-fix__lane-title">카테고리별 검증 요약</div>
           <div className="pv-react-fix__groups pv-react-fix__groups--compact">
-            {visibleCriteriaGroups.map((group, index) => (
-              <article className={`pv-react-fix__group pv-react-fix__group--${groupOutcome(group).tone}`} key={`${group.label ?? "criteria"}-${index}`}>
-                <div>
-                  <h5>{compact(group.displayLabel ?? group.label)}</h5>
-                  <span>{compact(group.status)}</span>
-                </div>
-                <p>
-                  <b>{groupOutcome(group).label}</b>: {groupOutcome(group).detail}
-                </p>
-                {(group.remainingIssues ?? []).length > 0 && (group.passedCriteria ?? []).length > 0 ? (
-                  <small>통과: {joined(group.passedCriteria)}</small>
-                ) : null}
-              </article>
-            ))}
+            {visibleCriteriaGroups.map((group, index) => {
+              const outcome = roleAwareGroupOutcome(group)
+              return (
+                <article className={`pv-react-fix__group pv-react-fix__group--${outcome.tone}`} key={`${group.label ?? "criteria"}-${index}`}>
+                  <div>
+                    <h5>{compact(group.displayLabel ?? group.label)}</h5>
+                    <span>{compact(group.status)}</span>
+                  </div>
+                  <p>
+                    <b>{outcome.label}</b>: {outcome.detail}
+                  </p>
+                  {(group.remainingIssues ?? []).length > 0 && (group.passedCriteria ?? []).length > 0 ? (
+                    <small>통과: {joined(group.passedCriteria)}</small>
+                  ) : null}
+                </article>
+              )
+            })}
             {hiddenCriteriaGroupCount > 0 ? (
               <div className="pv-react-fix__more">나머지 {hiddenCriteriaGroupCount}개 카테고리는 Flow 4에서 확인합니다.</div>
             ) : null}

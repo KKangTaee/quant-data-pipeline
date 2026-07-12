@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.backtest_evidence_closure import normalize_evidence_issue
+from app.services.backtest_practical_validation_stage_roles import review_role_fields
 from app.services.backtest_validation_status_policy import normalize_validation_status
 
 
@@ -31,6 +33,13 @@ DOWNSTREAM_STAGE_OWNERS = {
     "final_review",
     "selected_dashboard",
 }
+STAGE_OWNER_LABELS = {
+    "backtest_analysis": "Backtest Analysis",
+    "practical_validation": "Practical Validation",
+    "final_review": "Final Review",
+    "selected_dashboard": "Operations > Portfolio Monitoring",
+}
+STAGE_OWNER_ORDER = ("backtest_analysis", "practical_validation", "final_review", "selected_dashboard")
 FLOW4_CATEGORY_GROUP_SPECS = [
     {
         "group_id": "source_replay",
@@ -77,14 +86,14 @@ FLOW4_CATEGORY_GROUP_SPECS = [
     {
         "group_id": "conditional_context",
         "label": "Conditional Evidence",
-        "purpose": "ETF provider, 레버리지 / 인버스, macro 조건처럼 후보 특성에 따라 필요한 추가 근거를 확인합니다.",
+        "purpose": "ETF 운용사 / 공식 외부 데이터, 레버리지 / 인버스, macro 조건처럼 후보 특성에 따라 필요한 추가 근거를 확인합니다.",
         "module_ids": ("provider_investability", "leverage_inverse", "macro_regime"),
     },
 ]
 STATUS_LABELS = {
     "PASS": "통과",
     "READY": "통과",
-    "REVIEW": "Final Review에서 확인",
+    "REVIEW": "확인 필요",
     "NEEDS_INPUT": "근거 보강 필요",
     "NOT_RUN": "아직 실행 안 됨",
     "BLOCKED": "이동 차단",
@@ -104,9 +113,9 @@ OUTCOME_TEXT = {
         "tone": "warning",
     },
     "review_required": {
-        "label": "Final Review 판단 필요",
-        "detail": "자동 차단은 아니지만 Final Review에서 판단 근거로 확인해야 합니다.",
-        "headline": "Final Review에서 판단할 REVIEW 항목이 남아 있습니다.",
+        "label": "주의 확인 필요",
+        "detail": "자동 차단은 아니지만 stage role에 따라 확인해야 합니다.",
+        "headline": "역할별 REVIEW 항목이 남아 있습니다.",
         "tone": "warning",
     },
     "not_practical": {
@@ -169,7 +178,7 @@ GROUP_DISPLAY_TEXT = {
     },
     "conditional_context": {
         "display_label": "후보 특성별 추가 근거",
-        "purpose": "ETF provider, 레버리지 / 인버스, macro 조건처럼 해당 후보에만 필요한 근거를 확인합니다.",
+        "purpose": "ETF 운용사 / 공식 외부 데이터, 레버리지 / 인버스, macro 조건처럼 해당 후보에만 필요한 근거를 확인합니다.",
     },
     "final_review_handoff_summary": {
         "display_label": "Final Review 이동 요약",
@@ -205,15 +214,15 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "검증이 우연한 좋은 구간에만 기대지 않는가",
         "issue_title": "검증 방법론 근거 부족",
         "current_problem": "walk-forward / OOS / regime split 근거 중 일부가 비어 있거나 보강 필요 상태입니다.",
-        "completion_criteria": "Validation Method Strength 핵심 항목이 PASS 또는 Final Review 확인 상태가 되어야 합니다.",
+        "completion_criteria": "Validation Method Strength 핵심 항목이 PASS 또는 해당 REVIEW 역할 확인 상태가 되어야 합니다.",
         "fix_location": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
         "impact_summary": "검증 방법 근거가 부족하면 성과가 특정 기간에만 우연히 좋았는지 구분하기 어렵습니다.",
     },
     "data_coverage": {
-        "display_label": "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가",
+        "display_label": "검증에 필요한 가격 / ETF 운용사 / 생존편향 데이터가 충분한가",
         "issue_title": "데이터 커버리지 부족",
-        "current_problem": "가격 window, provider freshness, lifecycle, survivorship evidence 중 비어 있거나 오래된 데이터가 있습니다.",
-        "completion_criteria": "데이터 커버리지 핵심 항목이 PASS 또는 Final Review 확인 상태이고 provider gap이 Final Review 이동을 막지 않아야 합니다.",
+        "current_problem": "가격 window, ETF 운용사 / 공식 외부 데이터 freshness, lifecycle, survivorship evidence 중 비어 있거나 오래된 데이터가 있습니다.",
+        "completion_criteria": "데이터 커버리지 핵심 항목이 PASS 또는 해당 REVIEW 역할 확인 상태이고 수집 가능한 외부 데이터 gap이 저장 / 이동을 막지 않아야 합니다.",
         "fix_location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
         "impact_summary": "데이터 커버리지가 부족하면 검증 결과가 일부 ticker나 현재 snapshot에만 기대게 됩니다.",
     },
@@ -221,7 +230,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "구성 / 집중 위험을 설명할 근거가 있는가",
         "issue_title": "구성 / 집중 위험 근거 부족",
         "current_problem": "ETF 내부 보유 / exposure coverage나 concentration evidence가 부족하면 실제 구성 위험을 설명하기 어렵습니다.",
-        "completion_criteria": "Construction Risk가 PASS 또는 Final Review 확인 상태이고 집중 / overlap / unknown exposure가 판단 근거로 정리되어야 합니다.",
+        "completion_criteria": "Construction Risk가 PASS 또는 해당 REVIEW 역할 확인 상태이고 집중 / overlap / unknown exposure가 판단 근거로 정리되어야 합니다.",
         "fix_location": "Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
         "impact_summary": "구성 위험을 설명하지 못하면 좋은 백테스트라도 실제 운용 위험을 판단하기 어렵습니다.",
     },
@@ -229,7 +238,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "실전 운용 비용과 거래 현실성이 반영됐는가",
         "issue_title": "실전 운용 현실성 근거 부족",
         "current_problem": "비용 적용, turnover, liquidity, net curve 근거가 없으면 백테스트 성과가 실전 운용 성과와 달라질 수 있습니다.",
-        "completion_criteria": "Backtest Realism 핵심 항목이 PASS 또는 Final Review 확인 상태이고 cost / turnover / liquidity blocker가 없어야 합니다.",
+        "completion_criteria": "Backtest Realism 핵심 항목이 PASS 또는 해당 REVIEW 역할 확인 상태이고 cost / turnover / liquidity blocker가 없어야 합니다.",
         "fix_location": "Flow4 > 실전성 > 실전 운용 현실성 상세",
         "impact_summary": "비용과 거래 현실성이 빠지면 실전 성과가 백테스트보다 크게 달라질 수 있습니다.",
     },
@@ -237,7 +246,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "시장 충격과 설정 변화에도 버티는가",
         "issue_title": "강건성 근거 부족",
         "current_problem": "stress / rolling / sensitivity / overfit 근거 중 실행되지 않았거나 부족한 항목이 있습니다.",
-        "completion_criteria": "Stress / Robustness가 PASS 또는 Final Review 확인 상태이고 미실행 핵심 항목이 없어야 합니다.",
+        "completion_criteria": "Stress / Robustness가 PASS 또는 해당 REVIEW 역할 확인 상태이고 미실행 핵심 항목이 없어야 합니다.",
         "fix_location": "Flow4 > 강건성 > Stress / sensitivity 상세",
         "impact_summary": "강건성 근거가 약하면 특정 조건에 과최적화된 후보일 수 있습니다.",
     },
@@ -245,31 +254,31 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "Final Review 저장 전에 막힐 필수 gap이 없는가",
         "issue_title": "Final Review 저장 전 필수 gap",
         "current_problem": "Final Review 저장 전에 필요한 evidence packet, selected-route policy, review-required gap이 남아 있습니다.",
-        "completion_criteria": "Selected-route Preflight가 PASS 또는 Final Review 확인 상태이고 저장 차단 gap이 없어야 합니다.",
+        "completion_criteria": "Selected-route Preflight가 PASS 또는 저장 전 보강 확인 상태이고 저장 차단 gap이 없어야 합니다.",
         "fix_location": "Final Review 이동 요약",
         "impact_summary": "여기서 gap을 확인하지 않으면 Final Review로 넘어가도 저장 단계에서 다시 막힐 수 있습니다.",
     },
     "provider_investability": {
-        "display_label": "ETF provider 근거가 충분한가",
-        "issue_title": "ETF provider 근거 부족",
-        "current_problem": "provider snapshot이나 holdings / exposure 근거가 없으면 ETF 내부 노출과 운용 가능성을 판단하기 어렵습니다.",
-        "completion_criteria": "ETF Provider Investability가 PASS 또는 Final Review 확인 상태이고 provider snapshot gap이 보강되어야 합니다.",
-        "fix_location": "Flow4 > Provider / Data 보강 액션",
-        "impact_summary": "provider 근거가 약하면 ETF 내부 노출과 실전 운용 가능성을 판단하기 어렵습니다.",
+        "display_label": "ETF 운용사 / 공식 외부 데이터 근거가 충분한가",
+        "issue_title": "ETF 운용사 / 공식 외부 데이터 근거 부족",
+        "current_problem": "ETF 운용사 snapshot이나 holdings / exposure 근거가 없으면 ETF 내부 노출과 운용 가능성을 판단하기 어렵습니다.",
+        "completion_criteria": "ETF Provider Investability가 PASS 또는 해당 REVIEW 역할 확인 상태이고 운용사 / 공식 외부 데이터 snapshot gap이 보강되어야 합니다.",
+        "fix_location": "Flow4 > 데이터 보강 / 수집 실행",
+        "impact_summary": "운용사 / 공식 외부 데이터 근거가 약하면 ETF 내부 노출과 실전 운용 가능성을 판단하기 어렵습니다.",
     },
     "leverage_inverse": {
         "display_label": "레버리지 / 인버스 노출이 목적과 맞는가",
         "issue_title": "레버리지 / 인버스 적합성 확인 필요",
         "current_problem": "레버리지 / 인버스 ticker가 포함되면 일간 목표 상품 특성과 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 별도 확인이 필요합니다.",
-        "completion_criteria": "노출 목적, 보유 기간, 손실 허용 기준이 Final Review 판단 근거로 정리되어야 합니다.",
-        "fix_location": "Final Review 확인 항목",
+        "completion_criteria": "노출 목적, 보유 기간, 손실 허용 기준이 2단계 실용성 주의 근거로 정리되어야 합니다.",
+        "fix_location": "Flow4 > 조건부 근거 > 레버리지 / 인버스 적합성",
         "impact_summary": "레버리지 / 인버스 노출은 장기 보유 목적과 충돌하거나 손실 확대 위험을 만들 수 있습니다.",
     },
     "risk_contribution": {
         "display_label": "weighted mix의 위험 기여가 한쪽으로 쏠리지 않는가",
         "issue_title": "위험 기여 설명 부족",
         "current_problem": "component matrix나 risk contribution evidence가 없으면 weighted mix 위험이 한쪽으로 쏠렸는지 설명하기 어렵습니다.",
-        "completion_criteria": "Risk Contribution이 PASS 또는 Final Review 확인 상태이고 component matrix / correlation / drop-one 근거가 있어야 합니다.",
+        "completion_criteria": "Risk Contribution이 PASS 또는 해당 REVIEW 역할 확인 상태이고 component matrix / correlation / drop-one 근거가 있어야 합니다.",
         "fix_location": "Flow4 > 구성 / 리스크 > 위험 기여 상세",
         "impact_summary": "위험 기여가 설명되지 않으면 여러 component를 섞은 이유를 Final Review에서 판단하기 어렵습니다.",
     },
@@ -277,7 +286,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "component 역할과 비중 이유가 설명되는가",
         "issue_title": "component 역할 / 비중 근거 부족",
         "current_problem": "component role이나 weight rationale이 없으면 mix 구성 의도가 부족합니다.",
-        "completion_criteria": "Component Role / Weight가 PASS 또는 Final Review 확인 상태이고 role source와 weight rationale이 정리되어야 합니다.",
+        "completion_criteria": "Component Role / Weight가 PASS 또는 해당 REVIEW 역할 확인 상태이고 role source와 weight rationale이 정리되어야 합니다.",
         "fix_location": "Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
         "impact_summary": "역할과 비중 이유가 없으면 좋은 결과가 우연한 조합인지 판단하기 어렵습니다.",
     },
@@ -285,7 +294,7 @@ MODULE_DISPLAY_TEXT = {
         "display_label": "전술형 전략의 macro / regime 근거가 있는가",
         "issue_title": "macro / regime 근거 확인 필요",
         "current_problem": "전술형 또는 헤지형 후보는 macro regime과 risk-on/off context가 전략 약점과 충돌하지 않는지 확인해야 합니다.",
-        "completion_criteria": "macro snapshot, regime split, risk-on/off context가 Final Review 판단 근거로 정리되어야 합니다.",
+        "completion_criteria": "macro snapshot, regime split, risk-on/off context가 2단계 실용성 주의 근거로 정리되어야 합니다.",
         "fix_location": "Flow4 > Raw Evidence > Practical Diagnostics",
         "impact_summary": "macro / regime 근거가 없으면 전술형 전략의 성과가 특정 시장 환경에만 기대는지 판단하기 어렵습니다.",
     },
@@ -308,7 +317,7 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "Flow 2에서 `전략 재검증 실행`을 눌러 현재 DB 최신 시장일까지 replay를 실행합니다.",
             "Recheck End와 coverage가 저장 시점 이후 기간을 포함하는지 확인합니다.",
-            "재검증 후 같은 기준 카드가 PASS 또는 Final Review 확인 상태로 바뀌었는지 확인합니다.",
+            "재검증 후 같은 기준 카드가 PASS 또는 해당 REVIEW 역할 확인 상태로 바뀌었는지 확인합니다.",
         ],
         "location": "Flow2 > 검증 기준 설정 / 실전 재검증 실행",
     },
@@ -330,30 +339,30 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "검증 방법론 강도 상세에서 non-PASS 기준이 walk-forward, OOS, regime split 중 무엇인지 확인합니다.",
             "부족한 방법론 근거를 보강합니다.",
-            "보강 후 Flow 2 재검증으로 해당 기준이 PASS 또는 Final Review 확인 상태인지 확인합니다.",
+            "보강 후 Flow 2 재검증으로 해당 기준이 PASS 또는 해당 REVIEW 역할 확인 상태인지 확인합니다.",
         ],
         "location": "Flow4 > 검증 방법론 > 검증 방법론 강도 상세",
     },
     "data_coverage": {
-        "checked_summary": "가격 window, provider freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",
-        "missing_summary": "가격 window / provider freshness / lifecycle / survivorship 중 비어 있거나 오래된 항목",
-        "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "checked_summary": "가격 window, ETF 운용사 / 공식 외부 데이터 freshness, PIT replay, universe / lifecycle, survivorship 근거가 충분한지 확인합니다.",
+        "missing_summary": "가격 window / ETF 운용사 freshness / lifecycle / survivorship 중 비어 있거나 오래된 항목",
+        "next_action_summary": "데이터 품질 상세에서 non-PASS row를 확인하고, 수집 가능한 외부 데이터 gap은 데이터 보강 / 수집 실행에서 처리합니다.",
         "action_steps": [
-            "provider gap은 Provider / Data 보강 액션에서 수집하고, 가격 window gap은 DB price ingestion으로 보강합니다.",
+            "운용사 / 공식 외부 데이터 gap은 데이터 보강 / 수집 실행에서 수집하고, 가격 window gap은 DB price ingestion으로 보강합니다.",
             "보강 후 Flow 2 재검증을 다시 실행해 coverage blocker가 해소됐는지 확인합니다.",
             "그래도 막히면 데이터 품질 / 편향 통제 상세에서 lifecycle 또는 survivorship 기준까지 확인합니다.",
         ],
         "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
-        "action_location": "Flow4 > Provider / Data 보강 액션",
+        "action_location": "Flow4 > 데이터 보강 / 수집 실행",
     },
     "construction_risk": {
         "checked_summary": "ETF-like 또는 weighted mix 후보의 구성 집중, look-through, top holding, overlap, unknown exposure를 확인합니다.",
         "missing_summary": "구성 집중, holdings / exposure coverage, overlap, unknown exposure 근거",
-        "next_action_summary": "포트폴리오 구성 근거 상세에서 non-PASS row를 확인하고 provider look-through 근거를 보강합니다.",
+        "next_action_summary": "포트폴리오 구성 근거 상세에서 non-PASS row를 확인하고 운용사 look-through 근거를 보강합니다.",
         "action_steps": [
             "포트폴리오 구성 근거 상세에서 집중, holdings coverage, overlap, unknown exposure 중 막힌 기준을 확인합니다.",
             "ETF 또는 mix 구성의 look-through / top holding / exposure 근거를 보강합니다.",
-            "구성 위험이 설명 가능한 수준인지 Final Review 판단 근거로 다시 확인합니다.",
+            "구성 위험이 설명 가능한 수준인지 2단계 실용성 주의 근거로 다시 확인합니다.",
         ],
         "location": "Flow4 > 구성 / 리스크 > 포트폴리오 구성 근거 상세",
     },
@@ -386,29 +395,29 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "Final Review 이동 요약에서 저장을 막는 deterministic blocker가 남아 있는지 확인합니다.",
             "blocker가 Flow4 검증 기준에서 발생했다면 해당 기준의 해결 방법을 먼저 처리합니다.",
-            "blocker가 사라진 뒤 Flow 5 저장 / Final Review 이동을 다시 실행합니다.",
+            "blocker가 사라진 뒤 Flow 3 저장 / Final Review 이동 CTA를 다시 실행합니다.",
         ],
         "location": "Flow4 > 카테고리별 검증 결과 > Final Review 이동 요약",
     },
     "provider_investability": {
-        "checked_summary": "ETF provider operability, holdings, exposure, provider freshness가 충분한지 확인합니다.",
-        "missing_summary": "ETF provider snapshot, holdings, exposure, operability gap",
-        "next_action_summary": "Provider / Data 보강 액션에서 수집 가능한 provider gap을 먼저 보강합니다.",
+        "checked_summary": "ETF 운용사 operability, holdings, exposure, freshness가 충분한지 확인합니다.",
+        "missing_summary": "ETF 운용사 snapshot, holdings, exposure, operability gap",
+        "next_action_summary": "데이터 보강 / 수집 실행에서 수집 가능한 운용사 / 공식 외부 데이터 gap을 먼저 보강합니다.",
         "action_steps": [
-            "Provider / Data 보강 액션에서 holdings, exposure, provider freshness 중 수집 가능한 gap을 확인합니다.",
-            "provider evidence를 보강한 뒤 데이터 품질 / 구성 기준의 blocker가 해소됐는지 확인합니다.",
+            "데이터 보강 / 수집 실행에서 holdings, exposure, 운용사 freshness 중 수집 가능한 gap을 확인합니다.",
+            "운용사 / 공식 외부 데이터 evidence를 보강한 뒤 데이터 품질 / 구성 기준의 blocker가 해소됐는지 확인합니다.",
         ],
-        "location": "Flow4 > Provider / Data 보강 액션",
+        "location": "Flow4 > 데이터 보강 / 수집 실행",
     },
     "leverage_inverse": {
         "checked_summary": "레버리지 / 인버스 노출의 목적, 보유 기간, 손실 허용 기준이 후보 목적과 맞는지 확인합니다.",
         "missing_summary": "노출 목적, 보유 기간, 손실 허용 기준",
-        "next_action_summary": "Final Review에서 레버리지 / 인버스 노출을 선택 근거 또는 보류 근거로 확인합니다.",
+        "next_action_summary": "Flow4에서 레버리지 / 인버스 노출을 2단계 실용성 주의 근거로 확인합니다.",
         "action_steps": [
             "레버리지 / 인버스 노출의 목적과 보유 기간이 후보 목적과 맞는지 확인합니다.",
-            "손실 허용 기준을 넘을 가능성이 있으면 Final Review에서 보류 근거로 남깁니다.",
+            "손실 허용 기준을 넘을 가능성이 있으면 2단계 실용성 주의 또는 보류 근거로 남깁니다.",
         ],
-        "location": "Final Review 확인 항목",
+        "location": "Flow4 > 조건부 근거 > 레버리지 / 인버스 적합성",
     },
     "risk_contribution": {
         "checked_summary": "weighted mix의 component return matrix, correlation, risk contribution, drop-one dependency를 확인합니다.",
@@ -428,14 +437,14 @@ MODULE_RESOLUTION_GUIDES = {
         "action_steps": [
             "Component 역할 / 비중 상세에서 역할 설명, target weight, profile intent, weight rationale 중 부족한 기준을 확인합니다.",
             "각 component가 왜 포함됐고 왜 그 비중인지 설명 근거를 보강합니다.",
-            "보강 후 mix 구성이 후보 목적과 맞는지 Final Review 판단 근거로 확인합니다.",
+            "보강 후 mix 구성이 후보 목적과 맞는지 2단계 실용성 주의로 확인합니다.",
         ],
         "location": "Flow4 > 구성 / 리스크 > Component 역할 / 비중 상세",
     },
     "macro_regime": {
         "checked_summary": "전술형 / 헤지형 후보의 macro regime, risk-on/off context, regime split 근거를 확인합니다.",
         "missing_summary": "macro snapshot, regime split, risk-on/off context 근거",
-        "next_action_summary": "Raw Evidence의 Practical Diagnostics에서 macro / regime row를 확인하고 Final Review 판단 근거로 넘깁니다.",
+        "next_action_summary": "Raw Evidence의 Practical Diagnostics에서 macro / regime row를 확인하고 2단계 실용성 주의로 정리합니다.",
         "action_steps": [
             "Raw Evidence의 Practical Diagnostics에서 macro snapshot, regime split, risk-on/off context를 확인합니다.",
             "전술형 성과가 특정 regime에 과도하게 의존하면 Final Review에서 선택 리스크로 남깁니다.",
@@ -451,6 +460,58 @@ MODULE_EVIDENCE_ROW_KEYS = {
     "risk_contribution": ("risk_contribution_display_rows", "risk_contribution_audit.rows"),
     "component_role_weight": ("component_role_weight_display_rows", "component_role_weight_audit.rows"),
 }
+COLLECTABLE_DATA_ACTION_KEYWORDS = (
+    "provider",
+    "holdings",
+    "exposure",
+    "macro",
+    "fred",
+    "operability",
+    "snapshot",
+    "운용성",
+)
+COLLECTABLE_DATA_ACTIONS = {
+    "data_coverage": {
+        "surface": "Flow4 > 데이터 보강 / 수집 실행",
+        "detail": "ETF 운용사 snapshot, holdings / exposure, macro context처럼 수집 가능한 데이터 gap만 같은 화면에서 보강합니다.",
+    },
+    "construction_risk": {
+        "surface": "Flow4 > 데이터 보강 / 수집 실행",
+        "detail": "구성 리스크 중 ETF holdings / exposure 누락처럼 수집 가능한 gap만 보강합니다.",
+    },
+    "provider_investability": {
+        "surface": "Flow4 > 데이터 보강 / 수집 실행",
+        "detail": "ETF 운용성, holdings / exposure, macro context 중 수집 가능한 외부 데이터 gap을 보강합니다.",
+    },
+}
+DATA_ACTION_GROUPS = (
+    {
+        "group_id": "immediate_collect",
+        "label": "지금 수집 가능",
+        "description": "아래 수집 실행 버튼으로 바로 처리할 수 있는 외부 데이터 근거입니다.",
+        "tone": "warning",
+    },
+    {
+        "group_id": "source_map_discovery",
+        "label": "Source map 탐색",
+        "description": "ETF 공식 원천 위치를 자동으로 찾은 뒤 수집 가능 여부를 다시 확인해야 합니다.",
+        "tone": "warning",
+    },
+    {
+        "group_id": "connector_needed",
+        "label": "Connector mapping 필요",
+        "description": "자동 탐색 이후에도 수동 원천 connector mapping이 필요한 항목입니다.",
+        "tone": "danger",
+    },
+    {
+        "group_id": "no_action",
+        "label": "현재 수집으로 해결 불가",
+        "description": "데이터 수집 버튼이 아니라 재검증, 방법론 보강, 판단 단계에서 처리할 항목입니다.",
+        "tone": "neutral",
+    },
+)
+DATA_ACTION_EXCLUDED_MODULE_IDS = {"selected_route_preflight"}
+DATA_ACTION_EXCLUDED_LABEL_TOKENS = ("final review", "monitoring")
 
 
 def _dict_list(value: Any) -> list[dict[str, Any]]:
@@ -486,6 +547,7 @@ def _normalize_module(
     row["status"] = normalize_validation_status(row.get("status"))
     row["workspace_role"] = workspace_role
     row.update(_module_display_fields(row, evidence_rows=evidence_rows))
+    row.update(review_role_fields(row))
     return row
 
 
@@ -580,7 +642,7 @@ def _clean_issue_text(value: Any) -> str:
         "NEEDS_INPUT row": "보강 필요 항목",
         "NEEDS_INPUT 항목": "보강 필요 항목",
         "NOT_RUN row": "미실행 항목",
-        "REVIEW row": "Final Review 확인 항목",
+        "REVIEW row": "역할별 REVIEW 확인 항목",
     }
     for raw, replacement in replacements.items():
         text = text.replace(raw, replacement)
@@ -666,6 +728,276 @@ def _merge_action_steps(*groups: list[str], limit: int = 4) -> list[str]:
     return steps
 
 
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        raw_items = [value]
+    elif isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = [value]
+    items: list[str] = []
+    for item in raw_items:
+        text = str(item or "").strip().upper()
+        if text and text != "-" and text not in items:
+            items.append(text)
+    return items
+
+
+def _provider_gap_plan_for_board(validation: dict[str, Any]) -> dict[str, Any]:
+    plan = dict(validation.get("provider_gap_collection_plan") or {})
+    if plan:
+        return {
+            "operability_official": _string_list(plan.get("operability_official")),
+            "operability_bridge": _string_list(plan.get("operability_bridge")),
+            "holdings_exposure": _string_list(plan.get("holdings_exposure")),
+            "source_map_discovery": _string_list(plan.get("source_map_discovery")),
+            "mapping_needed": _string_list(plan.get("mapping_needed")),
+            "macro": bool(plan.get("macro")),
+        }
+
+    provider_context = dict(validation.get("provider_coverage") or {})
+    coverage = dict(provider_context.get("coverage") or {})
+    operability_missing = _string_list(dict(coverage.get("operability") or {}).get("missing_symbols"))
+    holdings_missing = _string_list(dict(coverage.get("holdings") or {}).get("missing_symbols"))
+    exposure_missing = _string_list(dict(coverage.get("exposure") or {}).get("missing_symbols"))
+    macro = dict(coverage.get("macro") or {})
+    macro_needs_collection = str(macro.get("diagnostic_status") or "").upper() in {"NOT_RUN", "REVIEW"} and (
+        int(macro.get("series_count") or 0) < 3 or int(macro.get("stale_count") or 0) > 0
+    )
+    return {
+        "operability_official": [],
+        "operability_bridge": operability_missing,
+        "holdings_exposure": [],
+        "source_map_discovery": sorted(set(holdings_missing) | set(exposure_missing)),
+        "mapping_needed": [],
+        "macro": macro_needs_collection,
+    }
+
+
+def _data_action_item(
+    *,
+    group_id: str,
+    category: str,
+    tickers: list[str] | None = None,
+    reason: str,
+    next_action: str,
+    availability: str,
+    module_id: str = "",
+    source: str = "",
+    target_anchor: str = "pv-provider-data-action",
+) -> dict[str, Any]:
+    return {
+        "group_id": group_id,
+        "module_id": module_id,
+        "category": category,
+        "tickers": list(tickers or []),
+        "reason": reason,
+        "next_action": next_action,
+        "availability": availability,
+        "source": source,
+        "target_anchor": target_anchor,
+    }
+
+
+def _data_action_items_from_plan(plan: dict[str, Any]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    if plan.get("operability_official"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="ETF operability",
+                tickers=_string_list(plan.get("operability_official")),
+                reason="공식 source map 또는 내장 공식 source로 운용성 snapshot을 보강할 수 있습니다.",
+                next_action="아래 수집 실행에서 운용성 데이터를 수집합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.operability_official",
+            )
+        )
+    if plan.get("operability_bridge"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="ETF operability",
+                tickers=_string_list(plan.get("operability_bridge")),
+                reason="공식 source가 없거나 부족해도 DB bridge로 운용성 근거를 보강할 수 있습니다.",
+                next_action="아래 수집 실행에서 DB bridge 보강을 실행합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.operability_bridge",
+            )
+        )
+    if plan.get("holdings_exposure"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="ETF holdings / exposure",
+                tickers=_string_list(plan.get("holdings_exposure")),
+                reason="검증된 holdings 또는 exposure source가 있어 look-through 근거를 보강할 수 있습니다.",
+                next_action="아래 수집 실행에서 holdings / exposure를 수집합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.holdings_exposure",
+            )
+        )
+    if plan.get("macro"):
+        items.append(
+            _data_action_item(
+                group_id="immediate_collect",
+                category="Macro context",
+                tickers=["VIXCLS", "T10Y3M", "BAA10Y"],
+                reason="저장된 macro context series가 부족하거나 오래되어 FRED series 보강이 필요합니다.",
+                next_action="아래 수집 실행에서 macro context를 수집합니다.",
+                availability="기존 Python 수집 경계에서 실행 가능",
+                source="provider_gap_collection_plan.macro",
+            )
+        )
+    if plan.get("source_map_discovery"):
+        items.append(
+            _data_action_item(
+                group_id="source_map_discovery",
+                category="ETF holdings / exposure",
+                tickers=_string_list(plan.get("source_map_discovery")),
+                reason="holdings / exposure 수집 전 verified source map을 먼저 찾아야 합니다.",
+                next_action="자동 source map 탐색을 실행한 뒤 같은 Flow 4 보강 액션을 다시 확인합니다.",
+                availability="자동 탐색 후 수집 가능 여부 재확인",
+                source="provider_gap_collection_plan.source_map_discovery",
+            )
+        )
+    if plan.get("mapping_needed"):
+        items.append(
+            _data_action_item(
+                group_id="connector_needed",
+                category="ETF holdings / exposure",
+                tickers=_string_list(plan.get("mapping_needed")),
+                reason="자동 탐색 이후에도 검증된 issuer URL / parser mapping이 없습니다.",
+                next_action="수동 connector mapping을 추가한 뒤 외부 데이터 보강을 다시 실행합니다.",
+                availability="수동 connector mapping 필요",
+                source="provider_gap_collection_plan.mapping_needed",
+            )
+        )
+    return items
+
+
+def _row_tickers(row: dict[str, Any]) -> list[str]:
+    for key in ("Ticker", "ETF", "Symbol", "Symbols", "Tickers", "symbol", "symbols"):
+        tickers = _string_list(row.get(key))
+        if tickers:
+            return tickers
+    return []
+
+
+def _data_action_no_action_items(
+    modules: list[dict[str, Any]],
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for module in modules:
+        if not _module_applies(module):
+            continue
+        module_id = _module_id(module)
+        if module_id in DATA_ACTION_EXCLUDED_MODULE_IDS:
+            continue
+        label_text = f"{module.get('label') or ''} {module.get('group') or ''}".lower()
+        if any(token in label_text for token in DATA_ACTION_EXCLUDED_LABEL_TOKENS):
+            continue
+        stage_key = _stage_owner_key(module)
+        requirement = _module_requirement(module)
+        if stage_key in DOWNSTREAM_STAGE_OWNERS or requirement == "REFERENCE":
+            continue
+        status = normalize_validation_status(module.get("status"))
+        if status in {"PASS", "READY", "REVIEW", "NOT_APPLICABLE"}:
+            continue
+        evidence_rows = list(evidence_rows_by_module.get(module_id) or [])
+        actionable_rows = 0
+        non_action_rows = 0
+        for row in evidence_rows:
+            row_status = _evidence_row_status(row)
+            if row_status in {"PASS", "READY", "REVIEW", "NOT_APPLICABLE"}:
+                continue
+            if _row_mentions_collectable_data_action(row):
+                actionable_rows += 1
+                continue
+            non_action_rows += 1
+            items.append(
+                _data_action_item(
+                    group_id="no_action",
+                    module_id=module_id,
+                    category=str(module.get("label") or module_id or "-"),
+                    tickers=_row_tickers(row),
+                    reason=_evidence_row_label(row),
+                    next_action=_evidence_row_action(row)
+                    or str(module.get("resolution_action") or module.get("next_action") or "해당 기준 상세에서 보강한 뒤 Flow 2 재검증을 실행합니다."),
+                    availability="현재 Provider / Data 수집 버튼으로 직접 해결되지 않음",
+                    source=f"{module_id}.evidence_rows",
+                    target_anchor="",
+                )
+            )
+        if evidence_rows and (actionable_rows or non_action_rows):
+            continue
+        if not evidence_rows:
+            collection_action = _collection_action(module_id, status, [])
+            if collection_action.get("available"):
+                continue
+            items.append(
+                _data_action_item(
+                    group_id="no_action",
+                    module_id=module_id,
+                    category=str(module.get("label") or module_id or "-"),
+                    tickers=[],
+                    reason=_clean_issue_text(module.get("gate_reason") or module.get("reason") or module.get("evidence"))
+                    or "현재 기준에 보강 필요 상태가 남아 있습니다.",
+                    next_action=_clean_issue_text(module.get("resolution_action") or module.get("next_action"))
+                    or "해당 기준 상세에서 보강한 뒤 Flow 2 재검증을 실행합니다.",
+                    availability="현재 Provider / Data 수집 버튼으로 직접 해결되지 않음",
+                    source=f"{module_id}.module_status",
+                    target_anchor="",
+                )
+            )
+    return items
+
+
+def _data_action_board(
+    validation: dict[str, Any],
+    modules: list[dict[str, Any]],
+    evidence_rows_by_module: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    plan = _provider_gap_plan_for_board(validation)
+    items = _data_action_items_from_plan(plan)
+    items.extend(_data_action_no_action_items(modules, evidence_rows_by_module))
+    grouped_items = {spec["group_id"]: [] for spec in DATA_ACTION_GROUPS}
+    for item in items:
+        group_id = str(item.get("group_id") or "no_action")
+        grouped_items.setdefault(group_id, []).append(item)
+    groups: list[dict[str, Any]] = []
+    for spec in DATA_ACTION_GROUPS:
+        group_id = str(spec["group_id"])
+        group_items = list(grouped_items.get(group_id) or [])
+        groups.append(
+            {
+                "group_id": group_id,
+                "label": spec["label"],
+                "description": spec["description"],
+                "tone": spec["tone"],
+                "count": len(group_items),
+                "items": group_items,
+            }
+        )
+    summary = {f"{group['group_id']}_count": int(group["count"]) for group in groups}
+    summary["actionable_count"] = (
+        summary.get("immediate_collect_count", 0)
+        + summary.get("source_map_discovery_count", 0)
+        + summary.get("connector_needed_count", 0)
+    )
+    summary["item_count"] = len(items)
+    return {
+        "title": "데이터 보강 대상",
+        "detail": "수집 실행 전에 지금 보강할 수 있는 데이터 항목과 현재 수집으로 해결되지 않는 항목을 분리합니다.",
+        "summary": summary,
+        "groups": groups,
+        "items": items,
+    }
+
+
 def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, Any]:
     missing: list[str] = []
     actions: list[str] = []
@@ -692,6 +1024,46 @@ def _non_pass_row_summary(evidence_rows: list[dict[str, Any]]) -> dict[str, Any]
     }
 
 
+def _empty_collection_action() -> dict[str, Any]:
+    return {
+        "available": False,
+        "label": "",
+        "surface": "",
+        "detail": "",
+        "target_anchor": "",
+    }
+
+
+def _row_mentions_collectable_data_action(row: dict[str, Any]) -> bool:
+    status = _evidence_row_status(row)
+    if status in {"PASS", "READY", "NOT_APPLICABLE"}:
+        return False
+    text = " ".join(
+        _clean_issue_text(row.get(key))
+        for key in ("Criteria", "Evidence", "Next Action", "Required Action", "Action", "Meaning")
+    ).lower()
+    return any(keyword in text for keyword in COLLECTABLE_DATA_ACTION_KEYWORDS)
+
+
+def _collection_action(module_id: str, status: str, evidence_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if status in {"PASS", "READY", "NOT_APPLICABLE", "REVIEW"}:
+        return _empty_collection_action()
+    spec = COLLECTABLE_DATA_ACTIONS.get(module_id)
+    if not spec:
+        return _empty_collection_action()
+    if module_id in {"data_coverage", "construction_risk"} and not any(
+        _row_mentions_collectable_data_action(row) for row in evidence_rows
+    ):
+        return _empty_collection_action()
+    return {
+        "available": True,
+        "label": "수집하기",
+        "surface": spec["surface"],
+        "detail": f"수집 가능한 항목만 실행합니다. {spec['detail']}",
+        "target_anchor": "pv-provider-data-action",
+    }
+
+
 def _resolution_guide(
     module: dict[str, Any],
     *,
@@ -706,6 +1078,7 @@ def _resolution_guide(
     module_id = str(module.get("module_id") or "").strip()
     guide = dict(MODULE_RESOLUTION_GUIDES.get(module_id) or {})
     row_summary = _non_pass_row_summary(evidence_rows)
+    collection_action = _collection_action(module_id, status, evidence_rows)
 
     checked = guide.get("checked_summary") or checked_summary
     missing = row_summary.get("missing") or row_summary.get("review") or guide.get("missing_summary") or missing_summary
@@ -726,23 +1099,30 @@ def _resolution_guide(
         outcome_label = "통과 기준"
         location_label = "위치"
         missing = "현재 기준에서 부족한 항목은 없습니다."
-        action = "추가 보강 없이 Final Review 판단 근거로 사용할 수 있습니다."
+        action = "추가 보강 없이 다음 단계 참고 근거로 사용할 수 있습니다."
         action_steps = [action]
         pass_criteria = pass_criteria or "현재 기준이 통과 상태입니다."
     elif status == "REVIEW":
+        role = review_role_fields(module)
         guide_type = "review"
         issue_label = "확인할 항목"
         action_label = "확인 방법"
         outcome_label = "완료 기준"
         location_label = "확인 위치"
         missing = row_summary.get("review") or missing
-        action = row_summary.get("actions") or action or "Final Review에서 review 항목을 판단 근거로 확인합니다."
+        action = (
+            row_summary.get("actions")
+            or action
+            or f"{role['stage_decision_surface']}에서 {role['review_role_label']} 항목을 확인합니다."
+        )
         action_steps = _merge_action_steps(
             row_action_steps,
             configured_action_steps,
-            [action or "Final Review에서 review 항목을 판단 근거로 확인합니다."],
+            [action or f"{role['stage_decision_surface']}에서 {role['review_role_label']} 항목을 확인합니다."],
         )
-        pass_criteria = pass_criteria or "Final Review에서 확인할 근거와 판단 사유가 남아 있어야 합니다."
+        pass_criteria = pass_criteria.replace("Final Review 확인 상태", role["review_role_label"])
+        pass_criteria = pass_criteria.replace("해당 REVIEW 역할 확인 상태", role["review_role_label"])
+        pass_criteria = pass_criteria or f"{role['review_role_label']}로 확인할 근거와 판단 사유가 남아 있어야 합니다."
     elif status == "NOT_APPLICABLE":
         guide_type = "none"
         issue_label = "적용 여부"
@@ -760,7 +1140,7 @@ def _resolution_guide(
         outcome_label = "통과 기준"
         location_label = "위치"
         action_steps = _merge_action_steps(row_action_steps, configured_action_steps, [action])
-        pass_criteria = pass_criteria or "필수 기준이 PASS 또는 Final Review 확인 상태가 되어야 합니다."
+        pass_criteria = pass_criteria or "필수 기준이 PASS 또는 해당 REVIEW 역할 확인 상태가 되어야 합니다."
 
     if action_steps:
         action = action_steps[0]
@@ -782,6 +1162,7 @@ def _resolution_guide(
         "location_label": location_label,
         "location": location or "-",
         "action_location": action_location,
+        "collection_action": collection_action,
     }
 
 
@@ -802,7 +1183,7 @@ def _module_display_fields(module: dict[str, Any], evidence_rows: list[dict[str,
     completion_criteria = (
         reading.get("completion_criteria")
         or action
-        or f"{label} 기준이 PASS 또는 Final Review 확인 상태가 되어야 합니다."
+        or f"{label} 기준이 PASS 또는 해당 REVIEW 역할 확인 상태가 되어야 합니다."
     )
     if status in {"PASS", "READY"}:
         current_problem = "현재 기준에서 Final Review 이동을 즉시 막는 문제는 없습니다."
@@ -869,6 +1250,14 @@ def _group_tone(modules: list[dict[str, Any]]) -> str:
 def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
     status = _status_label(module.get("status") or "NOT_RUN")
     outcome = _criteria_outcome(status)
+    role_fields = review_role_fields(module)
+    status_label = module.get("status_label") or _criteria_status_label(status)
+    outcome_label = module.get("outcome_label") or outcome["outcome_label"]
+    outcome_detail = module.get("outcome_detail") or outcome["outcome_detail"]
+    if status == "REVIEW":
+        status_label = role_fields["review_role_label"]
+        outcome_label = role_fields["review_role_label"]
+        outcome_detail = f"{role_fields['stage_decision_surface']}에서 확인할 주의 항목입니다."
     evidence = (
         module.get("gate_reason")
         or module.get("evidence")
@@ -885,14 +1274,15 @@ def _criteria_card(module: dict[str, Any]) -> dict[str, Any]:
         "label": module.get("label") or module.get("module_id") or "-",
         "display_label": module.get("display_label") or module.get("label") or module.get("module_id") or "-",
         "status": status,
-        "status_label": module.get("status_label") or _criteria_status_label(status),
+        "status_label": status_label,
         "technical_status": module.get("technical_status") or status,
         "technical_label": module.get("technical_label") or f"{module.get('label') or module.get('module_id') or '-'} · {status}",
         "outcome_key": module.get("outcome_key") or outcome["outcome_key"],
-        "outcome_label": module.get("outcome_label") or outcome["outcome_label"],
-        "outcome_detail": module.get("outcome_detail") or outcome["outcome_detail"],
+        "outcome_label": outcome_label,
+        "outcome_detail": outcome_detail,
         "outcome_tone": module.get("outcome_tone") or outcome["outcome_tone"],
         "tone": _status_tone(status),
+        **role_fields,
         "explanation": explanation,
         "evidence": evidence,
         "issue_title": module.get("issue_title") or module.get("display_label") or module.get("label") or "-",
@@ -943,30 +1333,76 @@ def _criteria_group_summary(cards: list[dict[str, Any]]) -> dict[str, Any]:
         for card in cards
         if card.get("status") == "REVIEW"
     ]
+    pv_data_caution = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "pv_data_caution"
+    ]
+    pv_practical_caution = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "pv_practical_caution"
+    ]
+    final_review_reference = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "final_decision_input"
+    ]
+    monitoring_followup = [
+        str(card.get("display_label") or card.get("label") or "-")
+        for card in cards
+        if card.get("status") == "REVIEW" and card.get("review_role") == "monitoring_followup"
+    ]
     if not_practical:
         decision = f"현재 상태로 실전 사용이 어려운 기준 {len(not_practical)}개가 있습니다."
     elif repair:
         decision = f"보강 필요: 재검증할 기준 {len(repair)}개가 남아 있습니다."
+    elif pv_practical_caution:
+        decision = f"실용성 판단에서 주의할 REVIEW 기준 {len(pv_practical_caution)}개가 있습니다."
+    elif pv_data_caution:
+        decision = f"데이터 / 기본 검증에서 주의할 REVIEW 기준 {len(pv_data_caution)}개가 있습니다."
+    elif final_review_reference:
+        decision = f"최종 판단 메모에서 참고할 기준 {len(final_review_reference)}개가 있습니다."
+    elif monitoring_followup:
+        decision = f"Monitoring에서 추적할 기준 {len(monitoring_followup)}개가 있습니다."
     elif review:
-        decision = "Practical Validation에서 보강할 항목은 없습니다."
+        decision = f"역할 확인이 필요한 REVIEW 기준 {len(review)}개가 있습니다."
     else:
         decision = "이 기준 그룹은 현재 통과 상태입니다."
     if not_practical:
         display_status = f"실전 사용 어려움 {len(not_practical)}"
     elif repair:
         display_status = f"보강 필요 {len(repair)}"
+    elif pv_practical_caution:
+        display_status = f"2단계 실용성 주의 {len(pv_practical_caution)}"
+    elif pv_data_caution:
+        display_status = f"데이터 주의 {len(pv_data_caution)}"
+    elif final_review_reference:
+        display_status = f"최종 판단 참고 {len(final_review_reference)}"
+    elif monitoring_followup:
+        display_status = f"Monitoring 추적 {len(monitoring_followup)}"
+    elif review:
+        display_status = f"REVIEW {len(review)}"
     elif passed:
         display_status = f"통과 {len(passed)}"
     else:
-        display_status = "보강 항목 없음"
+        display_status = "비적용"
+    visible_in_practical_validation = bool(passed or remaining or pv_data_caution or pv_practical_caution)
     return {
         "passed_criteria": passed,
         "remaining_issues": remaining,
         "repair_criteria": repair,
         "not_practical_criteria": not_practical,
         "review_criteria": review,
-        "final_review_reference_criteria": review,
-        "final_review_reference_count": len(review),
+        "pv_data_caution_criteria": pv_data_caution,
+        "pv_practical_caution_criteria": pv_practical_caution,
+        "final_review_reference_criteria": final_review_reference,
+        "monitoring_followup_criteria": monitoring_followup,
+        "pv_data_caution_count": len(pv_data_caution),
+        "pv_practical_caution_count": len(pv_practical_caution),
+        "final_review_reference_count": len(final_review_reference),
+        "monitoring_followup_count": len(monitoring_followup),
+        "visible_in_practical_validation": visible_in_practical_validation,
         "display_status": display_status,
         "decision_summary": decision,
     }
@@ -1021,6 +1457,14 @@ def _criteria_detail_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]
     return detail_groups
 
 
+def _visible_criteria_detail_groups(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        dict(group or {})
+        for group in groups
+        if dict(group or {}).get("visible_in_practical_validation", True)
+    ]
+
+
 def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
     cards = [
         dict(card or {})
@@ -1035,7 +1479,34 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
         "criteria_card_count": len(cards),
         "criteria_pass_count": len([card for card in cards if card.get("status") in {"PASS", "READY"}]),
         "criteria_review_count": len([card for card in cards if card.get("status") == "REVIEW"]),
-        "final_review_reference_count": len([card for card in cards if card.get("status") == "REVIEW"]),
+        "pv_data_caution_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "pv_data_caution"
+            ]
+        ),
+        "pv_practical_caution_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "pv_practical_caution"
+            ]
+        ),
+        "final_review_reference_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "final_decision_input"
+            ]
+        ),
+        "monitoring_followup_count": len(
+            [
+                card
+                for card in cards
+                if card.get("status") == "REVIEW" and card.get("review_role") == "monitoring_followup"
+            ]
+        ),
         "criteria_repair_count": repair_count,
         "criteria_not_practical_count": not_practical_count,
         "criteria_blocker_count": len(
@@ -1047,6 +1518,81 @@ def _criteria_summary(groups: list[dict[str, Any]]) -> dict[str, Any]:
         ),
     }
     return {**summary, **_overall_outcome_summary(summary)}
+
+
+def _stage_owner_key(module: dict[str, Any]) -> str:
+    owner = _module_stage_owner(module)
+    if owner in STAGE_OWNER_LABELS:
+        return owner
+    return "practical_validation"
+
+
+def _stage_visibility_label(stage_key: str, status: str, requirement: str) -> str:
+    if stage_key in DOWNSTREAM_STAGE_OWNERS:
+        return "후속 단계 판단"
+    if status in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"} and requirement != "REFERENCE":
+        return "현재 단계 보강"
+    return "현재 단계 근거"
+
+
+def _stage_ownership_inventory(modules: list[dict[str, Any]]) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    for module in modules:
+        if not _module_applies(module):
+            continue
+        stage_key = _stage_owner_key(module)
+        status = normalize_validation_status(module.get("status"))
+        requirement = _module_requirement(module) or str(module.get("requirement") or "-").upper()
+        rows.append(
+            {
+                "module_id": _module_id(module),
+                "label": module.get("label") or _module_id(module) or "-",
+                "stage_key": stage_key,
+                "stage": STAGE_OWNER_LABELS[stage_key],
+                "requirement": requirement or "-",
+                "status": status,
+                "visibility": _stage_visibility_label(stage_key, status, requirement),
+                "surface": module.get("resolution_surface") or module.get("stage_owner") or "-",
+            }
+        )
+
+    stage_summaries: list[dict[str, Any]] = []
+    for stage_key in STAGE_OWNER_ORDER:
+        stage_rows = [row for row in rows if row["stage_key"] == stage_key]
+        blocking_count = len(
+            [
+                row
+                for row in stage_rows
+                if row["status"] in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
+                and row["requirement"] != "REFERENCE"
+            ]
+        )
+        stage_summaries.append(
+            {
+                "stage_key": stage_key,
+                "stage": STAGE_OWNER_LABELS[stage_key],
+                "module_count": len(stage_rows),
+                "required_count": len([row for row in stage_rows if row["requirement"] == "REQUIRED"]),
+                "conditional_count": len([row for row in stage_rows if row["requirement"] == "CONDITIONAL"]),
+                "reference_count": len([row for row in stage_rows if row["requirement"] == "REFERENCE"]),
+                "blocking_count": blocking_count,
+            }
+        )
+
+    misplaced_downstream_blocker_count = len(
+        [
+            row
+            for row in rows
+            if row["stage_key"] in DOWNSTREAM_STAGE_OWNERS
+            and row["status"] in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"}
+            and row["requirement"] != "REFERENCE"
+        ]
+    )
+    return {
+        "stage_summaries": stage_summaries,
+        "rows": rows,
+        "misplaced_downstream_blocker_count": misplaced_downstream_blocker_count,
+    }
 
 
 def _category_result_groups(
@@ -1115,10 +1661,166 @@ def _fix_queue(
     return _fallback_fix_queue(modules, evidence_rows_by_module=evidence_rows_by_module)
 
 
+def _next_stage_action(gate: dict[str, Any], *, blocker_count: int, caution_count: int = 0) -> dict[str, Any]:
+    can_save_and_move = bool(gate.get("can_save_and_move"))
+    route = str(gate.get("route") or "").strip().upper()
+    enrichment_gate = dict(gate.get("pre_final_enrichment_gate") or {})
+    requires_enrichment = bool(enrichment_gate.get("blocking"))
+    ready_with_review = can_save_and_move and (
+        route == "READY_WITH_REVIEW" or bool(gate.get("review_modules")) or int(caution_count or 0) > 0
+    )
+    disabled_reason = (
+        ""
+        if can_save_and_move
+        else (
+            "Flow4의 필수 데이터 보강을 실행하고 Flow 2 재검증을 다시 완료해야 Final Review로 이동할 수 있습니다."
+            if requires_enrichment
+            else "Flow4에서 보강 항목을 확인하고 Flow2 재검증을 다시 실행한 뒤 Final Review로 이동할 수 있습니다."
+        )
+    )
+    if ready_with_review:
+        status_label = "주의 포함 이동 가능"
+        primary_detail = (
+            "검증 결과와 REVIEW 주의 신호를 저장하고 Final Review에서 수익성, 벤치마크, 후보 비교, "
+            "모니터링 후보 선정 판단을 이어갑니다."
+        )
+    elif can_save_and_move:
+        status_label = "이동 가능"
+        primary_detail = "검증 결과를 저장하고 Final Review에서 수익성, 벤치마크, 후보 비교, 모니터링 후보 선정 판단을 이어갑니다."
+    elif requires_enrichment:
+        status_label = "데이터 보강 후 재검증 필요"
+        primary_detail = disabled_reason
+    else:
+        status_label = "보강 필요"
+        primary_detail = disabled_reason
+    return {
+        "target_stage": "Final Review",
+        "status_label": status_label,
+        "blocker_count": int(blocker_count),
+        "disabled_reason": disabled_reason,
+        "primary_action": {
+            "id": "save_and_move",
+            "label": "저장하고 Final Review로 이동",
+            "detail": primary_detail,
+            "enabled": can_save_and_move,
+            "tone": "positive" if can_save_and_move else "danger",
+        },
+        "secondary_action": {
+            "id": "save_audit_only",
+            "label": "검증 결과 저장(기록용)",
+            "detail": "audit trail만 남깁니다. Gate 미통과 row는 Final Review 후보 목록에 노출되지 않습니다.",
+            "enabled": True,
+            "tone": "neutral",
+        },
+        "boundary_note": (
+            "Final Review 이동은 최종 승인, 투자 추천, live approval, broker order, auto rebalance가 아닙니다. "
+            "Final Review에서 수익성, 벤치마크, 후보 비교, 모니터링 후보 선정 가능 여부를 판단합니다."
+        ),
+        "side_effects": {
+            "react_executes_storage": False,
+            "react_executes_handoff": False,
+            "python_executes_storage": True,
+            "python_executes_handoff": True,
+            "validation_gate_calculation": "existing_python_service",
+        },
+    }
+
+
+def build_practical_validation_recovery_progress(
+    *,
+    collection_completed: bool,
+    replay_completed: bool,
+    can_save_and_move: bool,
+    blocking: bool,
+) -> dict[str, Any]:
+    """Describe the required recovery sequence without treating collection as validation."""
+
+    if not collection_completed:
+        state = "collection_required"
+        headline = "먼저 부족하거나 오래된 자료를 보강하세요."
+        next_action = "데이터 보강을 실행한 뒤 Flow 2 재검증으로 이어갑니다."
+    elif not replay_completed:
+        state = "recheck_required"
+        headline = "자료 보강은 끝났고 새 재검증이 필요합니다."
+        next_action = "Flow 2의 전략 재검증 실행을 눌러 새 검증 근거를 계산합니다."
+    elif blocking or not can_save_and_move:
+        state = "blocked"
+        headline = "재검증 후에도 Final Review 이동을 막는 항목이 남았습니다."
+        next_action = "Flow 4에서 남은 원인과 보강 기준을 확인한 뒤 다시 재검증합니다."
+    else:
+        state = "save_ready"
+        headline = "새 검증 결과를 Final Review로 저장할 수 있습니다."
+        next_action = "저장하고 Final Review로 이동을 눌러 새 검토서를 엽니다."
+
+    steps = [
+        {
+            "key": "collection",
+            "label": "1. 자료 보강",
+            "status": "completed" if collection_completed else "current",
+            "detail": "부족하거나 오래된 외부 데이터를 보강합니다.",
+        },
+        {
+            "key": "replay",
+            "label": "2. Flow 2 재검증",
+            "status": "completed" if replay_completed else "current" if collection_completed else "pending",
+            "detail": "보강된 자료를 반영해 전략과 검증 근거를 다시 계산합니다.",
+        },
+        {
+            "key": "save",
+            "label": "3. 새 결과 저장",
+            "status": (
+                "current"
+                if replay_completed and can_save_and_move and not blocking
+                else "blocked"
+                if replay_completed and (blocking or not can_save_and_move)
+                else "pending"
+            ),
+            "detail": "현재 replay와 Gate를 새 validation row로 저장합니다.",
+        },
+        {
+            "key": "final_review",
+            "label": "4. Final Review 확인",
+            "status": "next" if state == "save_ready" else "pending",
+            "detail": "방금 저장한 validation의 새 투자 검토서를 확인합니다.",
+        },
+    ]
+    return {
+        "state": state,
+        "headline": headline,
+        "next_action": next_action,
+        "steps": steps,
+        "boundary": "자료 수집만으로 검증 결과나 Final Review 판단이 갱신되지는 않습니다.",
+    }
+
+
 def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str, Any]:
     """Build a screen-oriented Practical Validation workspace model from validation evidence."""
 
     validation_row = dict(validation or {})
+    closure = dict(validation_row.get("evidence_closure") or {})
+    closure_issues = [
+        normalize_evidence_issue(dict(issue))
+        for issue in list(closure.get("issues") or [])
+        if isinstance(issue, dict)
+    ]
+    closure_group_specs = (
+        ("resolve_now", "지금 해결 가능", "Level 2에서 실행하고 새 validation을 저장해야 닫힙니다."),
+        ("engineering_required", "개발 필요", "현재 제품 기능으로 해결할 수 없어 Final Review 승격을 막습니다."),
+        ("accepted_limit", "한계 인수 가능", "자동 해소할 수 없는 비핵심 한계로 Final Review에서 종결합니다."),
+    )
+    evidence_closure_groups = [
+        {
+            "group_id": resolution_class,
+            "label": label,
+            "purpose": purpose,
+            "items": [
+                issue
+                for issue in closure_issues
+                if issue.get("resolution_class") == resolution_class
+            ],
+        }
+        for resolution_class, label, purpose in closure_group_specs
+    ]
     modules = _dict_list(validation_row.get("validation_modules"))
     gate = dict(validation_row.get("final_review_gate") or {})
     evidence_rows_by_module = _module_evidence_row_map(validation_row)
@@ -1213,7 +1915,35 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     review_rows = _dict_list(gate.get("review_modules"))
     category_groups = _category_result_groups(modules, evidence_rows_by_module=evidence_rows_by_module)
     criteria_groups = _criteria_detail_groups(category_groups)
+    visible_criteria_groups = _visible_criteria_detail_groups(criteria_groups)
     criteria_summary = _criteria_summary(criteria_groups)
+    enrichment_gate = dict(gate.get("pre_final_enrichment_gate") or {})
+    if (
+        enrichment_gate.get("blocking")
+        and criteria_summary.get("overall_outcome_key") != "not_practical"
+    ):
+        repair_text = OUTCOME_TEXT["repair_required"]
+        criteria_summary.update(
+            {
+                "overall_outcome_key": "repair_required",
+                "overall_outcome_label": repair_text["label"],
+                "overall_outcome_detail": (
+                    "Final Review 이동 전 해결 가능한 필수 외부 데이터를 보강하고 Flow 2 재검증을 다시 실행해야 합니다."
+                ),
+                "overall_outcome_headline": "필수 데이터 보강 후 재검증이 필요합니다.",
+                "overall_outcome_tone": repair_text["tone"],
+                "overall_outcome_count": max(
+                    int(criteria_summary.get("overall_outcome_count") or 0),
+                    int(enrichment_gate.get("item_count") or 1),
+                ),
+            }
+        )
+    stage_ownership_inventory = _stage_ownership_inventory(modules)
+    data_action_board = _data_action_board(
+        validation_row,
+        modules,
+        evidence_rows_by_module,
+    )
     handoff_summary_groups = [
         group
         for group in [
@@ -1235,6 +1965,10 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "blocker_count": len(fix_queue),
         "review_count": len(review_rows),
     }
+    pv_caution_count = int(criteria_summary.get("pv_data_caution_count") or 0) + int(
+        criteria_summary.get("pv_practical_caution_count") or 0
+    )
+    next_stage_action = _next_stage_action(gate, blocker_count=len(fix_queue), caution_count=pv_caution_count)
 
     return {
         "summary": {
@@ -1252,8 +1986,13 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "conditional_evidence_groups": conditional_groups,
         "downstream_reference_groups": downstream_groups,
         "criteria_detail_groups": criteria_groups,
+        "visible_criteria_detail_groups": visible_criteria_groups,
+        "data_action_board": data_action_board,
+        "next_stage_action": next_stage_action,
+        "stage_ownership_inventory": stage_ownership_inventory,
         "category_result_groups": category_groups,
         "handoff_summary_groups": handoff_summary_groups,
+        "evidence_closure_groups": evidence_closure_groups,
         "technical_details": {
             "raw_diagnostics": _dict_list(validation_row.get("diagnostics")),
             "module_display_rows": _dict_list(validation_row.get("validation_module_display_rows")),
@@ -1264,5 +2003,6 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
 
 
 __all__ = [
+    "build_practical_validation_recovery_progress",
     "build_practical_validation_workspace",
 ]

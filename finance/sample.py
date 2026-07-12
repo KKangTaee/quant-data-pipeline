@@ -251,6 +251,13 @@ def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, d
     return buffered.strftime("%Y-%m-%d")
 
 
+def _date_text(value):
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return pd.Timestamp(parsed).strftime("%Y-%m-%d")
+
+
 def _build_price_only_engine(
     tickers,
     *,
@@ -794,12 +801,16 @@ def get_global_relative_strength_from_db(
         history_buffer_years=3,
     )
     malformed_price_rows = _inspect_missing_price_rows(engine.dfs, price_col="Close")
-    engine = (
-        engine
-        .add_ma(trend_filter_window)
-        .filter_by_period()
-        .add_interval_returns(effective_score_lookback_months)
+    engine = engine.add_ma(trend_filter_window)
+    full_dfs = {ticker: frame.copy() for ticker, frame in (engine.dfs or {}).items()}
+    engine = engine.filter_by_period()
+    engine.dfs = append_latest_common_row(
+        engine.dfs,
+        full_dfs,
+        end=end,
+        row_kind_col="Row Kind",
     )
+    engine = engine.add_interval_returns(effective_score_lookback_months)
     engine.dfs, excluded_tickers = _filter_global_relative_strength_usable_dfs(
         engine.dfs,
         risky_tickers=risky_tickers,
@@ -833,6 +844,20 @@ def get_global_relative_strength_from_db(
     df.attrs["effective_tickers"] = effective_tickers
     df.attrs["excluded_tickers"] = excluded_tickers
     df.attrs["malformed_price_rows"] = malformed_price_rows
+    result_dates = pd.to_datetime(df.get("Date"), errors="coerce")
+    row_kinds = df.get("Row Kind", pd.Series("signal", index=df.index)).astype(str).str.lower()
+    signal_dates = result_dates[row_kinds != "valuation"].dropna()
+    valuation_dates = result_dates[row_kinds == "valuation"].dropna()
+    latest_result_date = result_dates.dropna().max() if not result_dates.dropna().empty else pd.NaT
+    df.attrs["grs_period_contract"] = {
+        "requested_market_date": _date_text(end),
+        "latest_common_price_date": _date_text(latest_result_date),
+        "last_complete_rebalance_date": _date_text(signal_dates.max()) if not signal_dates.empty else None,
+        "latest_valuation_date": (
+            _date_text(valuation_dates.max()) if not valuation_dates.empty else _date_text(latest_result_date)
+        ),
+        "valuation_row_count": int((row_kinds == "valuation").sum()),
+    }
     return df
 
 

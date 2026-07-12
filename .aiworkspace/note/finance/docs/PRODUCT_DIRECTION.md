@@ -1,7 +1,7 @@
 # Product Direction
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-12
 
 ## Product Summary
 
@@ -15,7 +15,7 @@ Last Verified: 2026-07-09
 
 | 축 | 현재 의미 |
 |---|---|
-| Data / Market Context | 사용자가 직접 수집한 DB-backed 가격, universe, provider, macro, futures, sentiment 데이터를 바탕으로 시장 상태를 입체적으로 본다 |
+| Data / Market Context | DB-backed 가격·지수 EPS·SEP·macro·futures·sentiment를 바탕으로 시장 상태를 입체적으로 본다. Market Context 기본 화면은 S&P 500 상대 멀티플과 예상 실적 기반 지수 시나리오를 분리해 보여준다 |
 | Transparent Macro Evidence | FRED, futures OHLCV, FOMC / BLS / BEA calendar, CNN Fear & Greed, AAII sentiment 같은 macro / sentiment context를 source와 freshness가 보이는 형태로 표시한다 |
 | Backtest To Monitoring Workflow | Backtest Analysis에서 후보를 만들고, Practical Validation과 Final Review를 거쳐 Operations Portfolio Monitoring에서 사후 확인한다 |
 | UI / Engine Boundary | Streamlit UI는 화면과 session state를 담당하고, 데이터 수집 / loader / runtime / service read model은 Streamlit-free 계층에 둔다 |
@@ -23,7 +23,7 @@ Last Verified: 2026-07-09
 ## Target Experience
 
 - 사용자는 Backtest Analysis에서 전략이나 저장된 포트폴리오 mix를 후보 source로 만든다.
-- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Futures Macro, Sentiment, Events로 시장 context를 보여준다. Sector evidence는 Market Context / Market Movers 안의 breadth와 group leadership으로 읽고, Data Health는 Market Context source / refresh evidence와 Operations / Ingestion 소유 흐름으로 분리한다.
+- Workspace > Overview는 Market Context, Market Movers / Why It Moved, Futures Macro, Sentiment, Events로 시장 context를 보여준다. Market Context는 5년 후행 PER 상대 구간과 FOMC 거시 가정 기반 EPS/SPX 시나리오를 보여주며, 공식 적정가나 거래 신호로 표현하지 않는다. Sector evidence는 Market Movers가 소유하고 Data Health는 Operations / Ingestion 흐름으로 분리한다.
 - Workspace > Institutional Portfolios는 Overview Market Movers와 분리된 read-only research surface로, 투자 대가 / 기관별 delayed SEC Form 13F portfolio를 React workbench에서 포트폴리오 allocation, 상위 보유, 분기별 reported change, 섹터 노출, 종목별 보유기관 drill-down으로 탐색한다.
 - Practical Validation은 후보를 source traits, module gate, provider / macro / robustness / realism evidence로 검증한다.
 - Final Review는 selected-route gate를 통과한 후보를 최종 관찰 후보로 저장하되, live approval로 해석하지 않는다.

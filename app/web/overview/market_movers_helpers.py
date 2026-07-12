@@ -28,6 +28,10 @@ from app.services.overview.market_movers import (
     COVERAGE_TRUST_GROUP_COLUMNS,
     build_market_movers_coverage_trust_model,
 )
+from app.services.overview.market_interest import (
+    build_market_interest_read_model,
+    fetch_yfinance_analyst_interest_metadata,
+)
 from app.services.overview.why_it_moved import (
     build_market_mover_metadata_status_strip,
     build_market_mover_research_snapshot,
@@ -72,6 +76,7 @@ from app.web.overview.components.market_movers import (
     render_market_movers_empty_state,
     render_market_movers_section_divider,
     render_market_movers_unified_summary,
+    render_market_movers_workspace_header,
     render_market_refresh_status_bar,
     render_sector_breadth_market_map,
 )
@@ -623,9 +628,13 @@ def build_market_movers_command_strip_model(
     period_label = _market_mover_period_label(controls.period)
     sector_label = controls.sector if controls.sector and controls.sector != "All" else "All sectors"
     freshness = _freshness_label(snapshot, coverage)
-    eod_due_count = _safe_int(dict(snapshot.get("eod_refresh_preflight") or {}).get("selected_symbols_count"))
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
+    eod_due_count = _safe_int(preflight.get("selected_symbols_count"))
+    limited_count = _safe_int(preflight.get("limited_history_symbols_count"))
     if eod_due_count > 0:
         freshness = "계산 가능 · 이력 보강 필요"
+    elif limited_count > 0:
+        freshness = "계산 가능 · 짧은 이력 제외"
     returnable_pct = coverage.get("returnable_pct")
     return {
         "schema_version": "market_movers_command_strip_v1",
@@ -664,12 +673,25 @@ def build_market_movers_unified_summary_model(
     returnable_pct = coverage.get("returnable_pct")
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
     eod_due_count = _safe_int(preflight.get("selected_symbols_count"))
+    limited_count = _safe_int(preflight.get("limited_history_symbols_count"))
     if eod_due_count > 0:
         freshness = "계산 가능 · 이력 보강 필요"
-    action_label = "가격 이력 확인" if eod_due_count > 0 else "정상" if _command_strip_tone(snapshot, coverage) == "positive" else "갱신 확인"
+    elif limited_count > 0:
+        freshness = "계산 가능 · 짧은 이력 제외"
+    action_label = (
+        "가격 이력 확인"
+        if eod_due_count > 0
+        else "추가 수집 없음"
+        if limited_count > 0
+        else "정상"
+        if _command_strip_tone(snapshot, coverage) == "positive"
+        else "갱신 확인"
+    )
     trust_detail = _freshness_detail(coverage)
     if eod_due_count > 0:
         trust_detail = f"{trust_detail} · 가격 이력 보강 {eod_due_count:,}개"
+    elif limited_count > 0:
+        trust_detail = f"{trust_detail} · 짧은 가격 이력 {limited_count:,}개 제외"
     return {
         "schema_version": "market_movers_unified_summary_v1",
         "title": "변동 종목",
@@ -733,12 +755,9 @@ def _market_movers_eod_action_detail(preflight: dict[str, Any]) -> str:
             return f"최신 {skipped:,}개 스킵 가능"
         return "수집 대상 확인 후 실행"
     range_text = _market_movers_eod_preflight_range_text(preflight)
-    reason = str(preflight.get("range_reason") or "").strip()
-    detail = f"수집 대상 {selected:,}개"
+    detail = f"갱신 {selected:,}개"
     if range_text:
         detail = f"{detail} · {range_text}"
-    if reason:
-        detail = f"{detail} · {reason}"
     return detail
 
 
@@ -790,16 +809,25 @@ def _market_movers_react_actions(*, controls: MarketMoverControls, snapshot: dic
         return actions
 
     preflight = dict(snapshot.get("eod_refresh_preflight") or {})
-    return [
-        {
-            "id": "refresh_eod_history",
-            "label": "가격 이력 갱신",
-            "kind": "primary",
-            "detail": _market_movers_eod_action_detail(preflight),
-        },
-        _market_movers_react_universe_basis_action(controls.coverage, kind="secondary"),
-        {"id": "reload", "label": "화면 새로고침", "kind": "secondary"},
-    ]
+    actions = []
+    if _safe_int(preflight.get("selected_symbols_count")) > 0:
+        actions.append({"id": "refresh_eod_history", "label": "가격 이력 갱신", "kind": "primary"})
+    actions.append(_market_movers_react_universe_basis_action(controls.coverage, kind="secondary"))
+    actions.append({"id": "reload", "label": "화면 새로고침", "kind": "secondary"})
+    return actions
+
+
+def _market_movers_react_action_note(*, controls: MarketMoverControls, snapshot: dict[str, Any]) -> str:
+    if controls.period == "daily":
+        return ""
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
+    if _safe_int(preflight.get("selected_symbols_count")) > 0:
+        return _market_movers_eod_action_detail(preflight)
+    limited_symbols = [str(symbol) for symbol in list(preflight.get("limited_history_symbols") or [])]
+    if limited_symbols:
+        sample = ", ".join(limited_symbols[:3])
+        return f"{sample} · 사용 가능한 가격 이력이 짧아 현재 랭킹에서 제외 · 추가 수집 없음"
+    return _market_movers_eod_action_detail(preflight)
 
 
 def _market_movers_react_universe_basis_action(coverage: str, *, kind: str) -> dict[str, Any]:
@@ -854,6 +882,7 @@ def build_market_movers_react_workbench_payload(
             "deferred_controls": [],
         },
         "actions": _market_movers_react_actions(controls=controls, snapshot=snapshot),
+        "action_note": _market_movers_react_action_note(controls=controls, snapshot=snapshot),
     }
     if controls.period != "daily":
         payload["eod_refresh_preflight"] = dict(snapshot.get("eod_refresh_preflight") or {})
@@ -2669,6 +2698,8 @@ def _render_market_movers_eod_refresh_bar(
     returnable = coverage.get("returnable_count") or 0
     universe_count = coverage.get("universe_count") or 0
     returnable_pct = coverage.get("returnable_pct")
+    preflight = dict(snapshot.get("eod_refresh_preflight") or {})
+    refresh_disabled = _safe_int(preflight.get("selected_symbols_count")) <= 0
 
     render_market_refresh_status_bar(
         universe_label=universe_label,
@@ -2685,6 +2716,7 @@ def _render_market_movers_eod_refresh_bar(
         key=f"overview_{universe_code.lower()}_{period}_eod_history_refresh",
         use_container_width=True,
         type="primary",
+        disabled=refresh_disabled,
         help=(
             f"{period_label} 랭킹 산출에 필요한 저장 EOD 가격 이력을 기존 OHLCV 경로로 갱신합니다. "
             "이미 최신인 종목은 건너뛰고 누락되었거나 오래된 종목을 우선 보강합니다."
@@ -2699,7 +2731,7 @@ def _render_market_movers_eod_refresh_bar(
                 universe_limit=universe_limit,
                 period=period,
                 as_of_date=str(
-                    dict(snapshot.get("eod_refresh_preflight") or {}).get("as_of_date")
+                    preflight.get("as_of_date")
                     or _market_movers_snapshot_effective_as_of_date(snapshot)
                     or ""
                 )
@@ -2716,10 +2748,13 @@ def _render_market_movers_eod_refresh_bar(
     ):
         st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         st.rerun()
-    control_cols[3].caption(
-        f"{period_label} 결과는 저장된 EOD 가격 기준입니다. "
-        "가격 이력 갱신은 시세를 보강하고, 유니버스 기준 갱신은 coverage 구성 또는 Top 유동성 기준을 다시 저장합니다."
-    )
+    if _safe_int(preflight.get("limited_history_symbols_count")) > 0 and refresh_disabled:
+        control_cols[3].caption(str(preflight.get("range_reason") or "짧은 가격 이력 종목은 현재 랭킹에서 제외됩니다."))
+    else:
+        control_cols[3].caption(
+            f"{period_label} 결과는 저장된 EOD 가격 기준입니다. "
+            "가격 이력 갱신은 시세를 보강하고, 유니버스 기준 갱신은 coverage 구성 또는 Top 유동성 기준을 다시 저장합니다."
+        )
     _render_market_movers_universe_result(universe_code)
     _render_market_job_result(eod_result_key)
 
@@ -2783,6 +2818,12 @@ def _rank_token(value: Any, fallback: int) -> str:
 
 MARKET_MOVER_UI_LABELS = {
     "Source": "출처",
+    "Lane": "영역",
+    "Policy": "정책",
+    "Evidence": "근거",
+    "Caveat": "주의",
+    "Kind": "종류",
+    "Region": "지역",
     "Open": "열기",
     "Search Query": "검색어",
     "Purpose": "용도",
@@ -3010,6 +3051,11 @@ def build_market_movers_sector_map_model(model: dict[str, Any]) -> dict[str, Any
     participation_rail = 0 if average_participation is None else max(0, min(100, int(round(average_participation))))
     return {
         "schema_version": "market_movers_sector_map_v1",
+        "section_header": {
+            "kicker": "SECTOR BREADTH",
+            "title": "섹터 / 시장 확산 맥락",
+            "detail": "선택 coverage의 움직임이 넓게 퍼졌는지, 특정 그룹에 집중됐는지 확인합니다.",
+        },
         "tone": model.get("status") or "-",
         "status": _market_movers_sector_status_label(model.get("status") or "-"),
         "headline": _market_movers_sector_headline_label(summary.get("headline")),
@@ -3238,6 +3284,7 @@ def _market_mover_investigation_react_actions(refresh_target: dict[str, Any]) ->
     actions: list[dict[str, Any]] = [
         {"id": "fetch_news_metadata", "label": "뉴스 메타데이터 조회", "kind": "secondary"},
         {"id": "fetch_sec_metadata", "label": "SEC 공시 메타데이터 조회", "kind": "secondary"},
+        {"id": "fetch_market_interest", "label": "시장 관심 근거 확인", "kind": "secondary"},
     ]
     if refresh_target["enabled"]:
         actions.append({"id": "refresh_statement", "label": "필요 재무제표 수집", "kind": "primary"})
@@ -3725,6 +3772,21 @@ def _market_mover_statement_refresh_session_key(metadata_key: str) -> str:
     return f"{metadata_key}__statement_refresh_result"
 
 
+def _market_mover_market_interest_session_key(metadata_key: str) -> str:
+    return f"{metadata_key}__market_interest"
+
+
+def _merge_market_mover_metadata_for_investigation(
+    existing: dict[str, Any] | None,
+    update: dict[str, Any] | None,
+) -> dict[str, Any]:
+    merged = merge_market_mover_metadata(existing, update)
+    analyst_interest = dict(existing or {}).get("analyst_interest")
+    if analyst_interest is not None and "analyst_interest" not in dict(update or {}):
+        merged["analyst_interest"] = analyst_interest
+    return merged
+
+
 def _format_elapsed_seconds(value: Any) -> str:
     numeric = pd.to_numeric(value, errors="coerce")
     if pd.isna(numeric):
@@ -3829,6 +3891,167 @@ def _render_market_mover_metadata_table(frame: pd.DataFrame, columns: list[str],
     )
 
 
+def _market_interest_summary_html(items: list[dict[str, Any]]) -> str:
+    blocks: list[str] = []
+    for item in items:
+        tone_color, tone_bg, tone_border = _market_mover_tone_style(str(item.get("tone") or "neutral"))
+        blocks.append(
+            "<div style='"
+            f"border:1px solid {tone_border}; background:{tone_bg}; border-radius:8px; "
+            "padding:10px 12px; min-width:160px; flex:1 1 160px;'>"
+            f"<div style='font-size:12px; color:{OVERVIEW_COLOR_TEXT_MUTED};'>{escape(str(item.get('label') or '-'))}</div>"
+            f"<div style='font-size:16px; font-weight:750; color:{tone_color};'>{escape(str(item.get('state') or '-'))}</div>"
+            f"<div style='font-size:12px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:4px;'>{escape(str(item.get('detail') or ''))}</div>"
+            "</div>"
+        )
+    return "<div style='display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px 0;'>" + "".join(blocks) + "</div>"
+
+
+def _market_interest_source_cards_html(cards: list[dict[str, Any]]) -> str:
+    blocks: list[str] = []
+    for card in cards:
+        tone_color, tone_bg, tone_border = _market_mover_tone_style(str(card.get("Tone") or "neutral"))
+        url = str(card.get("URL") or "").strip()
+        link_html = ""
+        if url:
+            link_html = (
+                f"<a href='{escape(url, quote=True)}' target='_blank' rel='noopener noreferrer' "
+                f"style='font-size:12px; color:{tone_color}; font-weight:700; text-decoration:none;'>원문</a>"
+            )
+        blocks.append(
+            "<div style='"
+            f"border:1px solid {tone_border}; background:{tone_bg}; border-radius:8px; "
+            "padding:10px 12px; min-width:220px; flex:1 1 220px;'>"
+            "<div style='display:flex; align-items:center; justify-content:space-between; gap:8px;'>"
+            f"<div style='font-size:13px; font-weight:750; color:{OVERVIEW_COLOR_TEXT};'>{escape(str(card.get('Source') or '-'))}</div>"
+            f"{link_html}"
+            "</div>"
+            f"<div style='font-size:14px; font-weight:750; color:{tone_color}; margin-top:5px;'>{escape(str(card.get('State') or '-'))}</div>"
+            f"<div style='font-size:12px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:4px;'>{escape(str(card.get('Detail') or ''))}</div>"
+            f"<div style='font-size:11px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:6px;'>{escape(str(card.get('Policy') or ''))}</div>"
+            f"<div style='font-size:11px; color:{OVERVIEW_COLOR_TEXT_MUTED}; margin-top:2px;'>{escape(str(card.get('Caveat') or ''))}</div>"
+            "</div>"
+        )
+    return "<div style='display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px 0;'>" + "".join(blocks) + "</div>"
+
+
+def _market_interest_section(model: dict[str, Any], section_id: str) -> dict[str, Any]:
+    for section in list(model.get("evidence_sections") or []):
+        if isinstance(section, dict) and section.get("id") == section_id:
+            return dict(section)
+    return {}
+
+
+def _market_interest_rows_frame(rows: Any) -> pd.DataFrame:
+    if isinstance(rows, pd.DataFrame):
+        return rows
+    if isinstance(rows, list):
+        return pd.DataFrame([dict(row) for row in rows if isinstance(row, dict)])
+    return pd.DataFrame()
+
+
+def _render_market_mover_market_interest(model: dict[str, Any], *, requested: bool) -> None:
+    st.caption(
+        "시장 관심 근거는 조사 보조 정보입니다. 투자 제안, 점수화, 자동 catalyst 판정, 매매 신호로 사용하지 않습니다."
+    )
+    if not requested:
+        st.info("시장 관심 근거는 아직 확인하지 않았습니다. 위의 `시장 관심 근거 확인` 버튼을 눌러 현재 선택 종목만 확인하세요.")
+        st.caption("13F는 분기 공시 기반 지연 자료이며, 공식 DB 조회는 CUSIP-symbol mapping 설계 이후 가능합니다.")
+        return
+
+    summary_items = [dict(item) for item in list(model.get("summary_items") or [])]
+    if summary_items:
+        st.markdown(_market_interest_summary_html(summary_items), unsafe_allow_html=True)
+
+    evidence_sections = list(model.get("evidence_sections") or [])
+    section_model = {"evidence_sections": evidence_sections}
+
+    analyst_section = _market_interest_section(section_model, "analyst_interest")
+    st.markdown("##### 애널리스트 관심")
+    st.caption(str(analyst_section.get("description") or "업그레이드/다운그레이드와 목표가 변경은 외부 source에서 확인합니다."))
+    analyst_source_cards = [dict(card) for card in list(analyst_section.get("source_cards") or []) if isinstance(card, dict)]
+    if analyst_source_cards:
+        st.markdown("###### 출처별 확인 상태")
+        st.markdown(_market_interest_source_cards_html(analyst_source_cards), unsafe_allow_html=True)
+        st.caption("MarketWatch / WSJ / Nasdaq은 자동 수집 없이 원문 확인 링크로만 제공합니다.")
+    analyst_rows = _market_interest_rows_frame(analyst_section.get("rows"))
+    st.markdown("###### 최근 애널리스트 액션")
+    _render_market_mover_metadata_table(
+        analyst_rows,
+        [
+            "Date",
+            "Firm",
+            "Action",
+            "From",
+            "To",
+            "Target Change",
+            "Prior Target",
+            "Current Target",
+            "Source",
+            "Open",
+        ],
+        "구조화 analyst rows가 없으면 하단 출처/원문 링크에서 직접 확인하세요.",
+    )
+
+    target_rows = _market_interest_rows_frame(analyst_section.get("target_rows"))
+    if not target_rows.empty:
+        st.markdown("###### 목표가 요약")
+        _render_market_mover_metadata_table(
+            target_rows,
+            ["Metric", "Value", "Source", "Open"],
+            "목표가 요약이 없습니다.",
+        )
+
+    recommendation_rows = _market_interest_rows_frame(analyst_section.get("recommendation_rows"))
+    if not recommendation_rows.empty:
+        st.markdown("###### 의견 분포")
+        st.caption("분포는 출처가 제공한 집계값을 그대로 보여주는 조사 단서이며 앱의 판단이나 점수화가 아닙니다.")
+        _render_market_mover_metadata_table(
+            recommendation_rows,
+            ["Period", "Strong Buy", "Buy", "Hold", "Sell", "Strong Sell", "Source", "Open"],
+            "의견 분포가 없습니다.",
+        )
+
+    news_section = _market_interest_section(section_model, "news_catalysts")
+    st.markdown("##### 뉴스 리스트")
+    st.caption(str(news_section.get("description") or "선택 종목의 뉴스 metadata입니다."))
+    news_rows = _market_interest_rows_frame(news_section.get("rows"))
+    _render_market_mover_metadata_table(
+        news_rows,
+        ["Region", "Title", "Source", "Published At", "Snippet", "Open"],
+        "뉴스 metadata는 아직 조회하지 않았습니다. `시장 관심 근거 확인`을 눌러 현재 선택 종목만 조회하세요.",
+    )
+
+    sec_section = _market_interest_section(section_model, "sec_filing_catalysts")
+    st.markdown("##### SEC 공시 촉매")
+    st.caption(str(sec_section.get("description") or "선택 종목의 최근 SEC issuer filing metadata입니다."))
+    sec_rows = _market_interest_rows_frame(sec_section.get("rows"))
+    _render_market_mover_metadata_table(
+        sec_rows,
+        ["Form", "Title", "Source", "Published At", "Open"],
+        "SEC 공시 metadata는 아직 조회하지 않았습니다. `시장 관심 근거 확인`을 눌러 현재 선택 종목만 조회하세요.",
+    )
+
+    institution_section = _market_interest_section(section_model, "institutional_context")
+    st.markdown("##### 기관 보유 배경 · 13F 지연 자료")
+    st.caption(str(institution_section.get("description") or "13F는 기관투자운용사 보유 보고입니다."))
+    for row in list(institution_section.get("rows") or []):
+        if isinstance(row, dict) and row.get("Title"):
+            st.caption(f"- {row['Title']}")
+
+    source_rows = _market_interest_rows_frame(dict(model.get("source_disclosure") or {}).get("rows"))
+    with st.expander("출처/원문 링크", expanded=False):
+        st.caption("비공식/상업 데이터 페이지는 앱에 저장하지 않고 원문 확인 링크 또는 세션 전용 메타데이터로만 다룹니다.")
+        _render_market_mover_metadata_table(
+            source_rows,
+            ["Source", "Lane", "Policy", "Evidence", "Caveat", "Open"],
+            "출처 링크가 없습니다.",
+        )
+    boundary = str(model.get("boundary_note") or "").strip()
+    if boundary:
+        st.caption(boundary)
+
+
 def _market_mover_sector_breadth_table(model: dict[str, Any]) -> pd.DataFrame:
     rows = model.get("table_rows")
     if isinstance(rows, pd.DataFrame):
@@ -3860,10 +4083,6 @@ def _render_market_movers_sector_breadth_context(snapshot: dict[str, Any]) -> No
     model = snapshot.get("sector_breadth")
     if not isinstance(model, dict):
         return
-    render_market_movers_section_divider(
-        "섹터 / 시장 확산 맥락",
-        "선택 coverage의 움직임이 넓게 퍼졌는지, 특정 그룹에 집중됐는지 확인합니다.",
-    )
     if _render_market_movers_sector_breadth_react(model) is not None:
         return
     _render_market_movers_sector_breadth_fallback(model)
@@ -3880,6 +4099,39 @@ def _consume_market_mover_investigation_react_event(event: dict[str, Any] | None
     return True
 
 
+def _fetch_market_mover_market_interest_metadata(
+    *,
+    symbol: str,
+    identity: dict[str, Any],
+    metadata_key: str,
+) -> dict[str, Any]:
+    interest_key = _market_mover_market_interest_session_key(metadata_key)
+    with st.spinner(f"{symbol} 시장 관심 근거 메타데이터를 조회하는 중입니다..."):
+        news_update = fetch_market_mover_news_metadata(
+            symbol,
+            name=identity.get("Name"),
+            max_news=3,
+            max_korean_news=3,
+        )
+        metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), news_update)
+        st.session_state[metadata_key] = metadata
+
+        sec_update = fetch_market_mover_sec_metadata(
+            symbol,
+            max_filings=3,
+        )
+        metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), sec_update)
+        analyst_update = fetch_yfinance_analyst_interest_metadata(symbol, max_actions=5)
+        metadata = dict(metadata)
+        metadata["analyst_interest"] = analyst_update
+        st.session_state[metadata_key] = metadata
+        st.session_state[interest_key] = build_market_interest_read_model(
+            mover={"Symbol": symbol, "Name": identity.get("Name")},
+            metadata=metadata,
+        )
+    return metadata
+
+
 def _dispatch_market_mover_investigation_react_event(
     event: dict[str, Any] | None,
     *,
@@ -3890,7 +4142,7 @@ def _dispatch_market_mover_investigation_react_event(
     refresh_target: dict[str, Any],
 ) -> dict[str, Any]:
     action_id = _market_movers_react_event_action_id(event)
-    if action_id not in {"fetch_news_metadata", "fetch_sec_metadata", "refresh_statement"}:
+    if action_id not in {"fetch_news_metadata", "fetch_sec_metadata", "fetch_market_interest", "refresh_statement"}:
         return metadata
     if action_id == "refresh_statement" and not refresh_target["enabled"]:
         return metadata
@@ -3905,7 +4157,7 @@ def _dispatch_market_mover_investigation_react_event(
                 max_news=3,
                 max_korean_news=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
         st.rerun()
         return metadata
@@ -3916,8 +4168,17 @@ def _dispatch_market_mover_investigation_react_event(
                 symbol,
                 max_filings=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
+        st.rerun()
+        return metadata
+
+    if action_id == "fetch_market_interest":
+        metadata = _fetch_market_mover_market_interest_metadata(
+            symbol=symbol,
+            identity=identity,
+            metadata_key=metadata_key,
+        )
         st.rerun()
         return metadata
 
@@ -3978,7 +4239,7 @@ def _render_market_mover_investigation_actions(
         _render_market_mover_statement_refresh_result(st.session_state.get(statement_result_key))
         return metadata
 
-    action_cols = st.columns([1.0, 1.0, 1.0, 3.0], gap="small", vertical_alignment="bottom")
+    action_cols = st.columns([1.0, 1.0, 1.0, 1.0, 2.0], gap="small", vertical_alignment="bottom")
     if action_cols[0].button(
         "뉴스 메타데이터 조회",
         key=f"{metadata_key}__fetch_news",
@@ -3992,7 +4253,7 @@ def _render_market_mover_investigation_actions(
                 max_news=3,
                 max_korean_news=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
         st.success("뉴스와 한국어 뉴스 메타데이터를 세션 전용으로 조회했습니다.")
 
@@ -4007,12 +4268,25 @@ def _render_market_mover_investigation_actions(
                 symbol,
                 max_filings=3,
             )
-            metadata = merge_market_mover_metadata(st.session_state.get(metadata_key), metadata_update)
+            metadata = _merge_market_mover_metadata_for_investigation(st.session_state.get(metadata_key), metadata_update)
             st.session_state[metadata_key] = metadata
         st.success("SEC 공시 메타데이터를 세션 전용으로 조회했습니다.")
 
+    if action_cols[2].button(
+        "시장 관심 근거 확인",
+        key=f"{metadata_key}__fetch_market_interest",
+        help="현재 선택 종목 1개에 대해 애널리스트/공시/13F 조사 링크와 보수적 상태만 세션 전용으로 준비합니다.",
+        use_container_width=True,
+    ):
+        metadata = _fetch_market_mover_market_interest_metadata(
+            symbol=symbol,
+            identity=identity,
+            metadata_key=metadata_key,
+        )
+        st.success("시장 관심 근거와 뉴스 / SEC 공시 메타데이터를 세션 전용으로 준비했습니다.")
+
     if refresh_target["enabled"]:
-        if action_cols[2].button(
+        if action_cols[3].button(
             "필요 재무제표 수집",
             key=f"{metadata_key}__statement_refresh",
             help="기본 지표에서 받아야 할 연간 또는 분기 재무제표가 있을 때 선택 종목만 EDGAR statement path로 수집합니다.",
@@ -4037,7 +4311,7 @@ def _render_market_mover_investigation_actions(
                 record_overview_action_result(result)
             except Exception as exc:  # pragma: no cover - UI resilience only
                 st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
-    action_cols[3].caption("조회 결과는 아래 조사 단서 탭에 세션 전용으로 반영됩니다.")
+    action_cols[4].caption("조회 결과는 아래 조사 단서 탭에 세션 전용으로 반영됩니다.")
     _render_market_mover_statement_refresh_result(st.session_state.get(statement_result_key))
     return metadata
 
@@ -4058,6 +4332,7 @@ def _render_market_mover_selected_investigation_fragment(
     )
     read_model = dict(detail_model["read_model"])
     metadata_key = _market_mover_metadata_session_key(read_model)
+    market_interest_key = _market_mover_market_interest_session_key(metadata_key)
     stored_metadata = st.session_state.get(metadata_key)
     if isinstance(stored_metadata, dict):
         read_model["metadata"] = stored_metadata
@@ -4093,40 +4368,18 @@ def _render_market_mover_selected_investigation_fragment(
         with investigation_pane_slot.container():
             render_market_mover_investigation_pane(build_market_mover_investigation_pane_model(detail_model))
 
-    render_market_movers_section_divider("조사 단서", "기본 지표, 뉴스, SEC 공시, 외부 검색 시작점")
-    clue_tabs = st.tabs(["기본 지표", "뉴스", "SEC 공시", "외부 검색"])
+    market_interest_requested = isinstance(st.session_state.get(market_interest_key), dict)
+    market_interest_model = build_market_interest_read_model(
+        mover={"Symbol": symbol, "Name": identity.get("Name")},
+        metadata=metadata if market_interest_requested else None,
+    )
+
+    render_market_movers_section_divider("조사 단서", "기본 지표와 시장 관심 근거를 한 곳에서 확인합니다.")
+    clue_tabs = st.tabs(["기본 지표", "시장 관심"])
     with clue_tabs[0]:
         render_market_mover_research_snapshot(research_model)
     with clue_tabs[1]:
-        st.caption("일반 뉴스와 한국어 뉴스를 같은 탭에서 확인합니다. 원문 본문은 조회하거나 저장하지 않습니다.")
-        st.caption("뉴스 메타데이터")
-        _render_market_mover_metadata_table(
-            metadata.get("news"),
-            ["Title", "Source", "Published At", "Open"],
-            "뉴스 메타데이터는 아직 조회하지 않았습니다. 필요할 때 현재 선택 종목만 조회하세요.",
-        )
-        st.caption("한국어 뉴스")
-        _render_market_mover_metadata_table(
-            metadata.get("korean_news"),
-            ["Title", "Source", "Published At", "Snippet", "Open"],
-            "한국어 뉴스 메타데이터는 아직 조회하지 않았습니다. 원문 기사 본문은 수집하거나 저장하지 않습니다.",
-        )
-    with clue_tabs[2]:
-        st.caption("SEC 공시 메타데이터를 확인합니다. 공시 원문은 공식 링크에서 직접 엽니다.")
-        _render_market_mover_metadata_table(
-            metadata.get("sec_filings"),
-            ["Form", "Filing Date", "Title", "Open"],
-            "SEC 공시 메타데이터는 아직 조회하지 않았습니다. 공시 원문은 공식 링크에서 직접 확인합니다.",
-        )
-    with clue_tabs[3]:
-        table_model = _market_mover_external_search_table_model(detail_model["links"])
-        st.caption("외부 검색 시작점입니다. 링크를 열어도 앱이 원문을 조회, 파싱, 저장하지 않습니다.")
-        st.dataframe(
-            table_model["rows"],
-            width="stretch",
-            hide_index=True,
-            column_config=table_model["column_config"],
-        )
+        _render_market_mover_market_interest(market_interest_model, requested=market_interest_requested)
 
 
 def _render_market_mover_why_it_moved_panel(
@@ -4149,30 +4402,33 @@ def _render_market_mover_why_it_moved_panel(
     )
     if not candidates:
         return
-    render_market_movers_section_divider(
-        "선택 종목 조사",
-        "랭킹에서 고른 종목의 가격, 거래량, 섹터, 외부 조사 시작점을 한 곳에서 확인합니다.",
-    )
     candidate_by_id = {item["id"]: item for item in candidates}
     option_ids = list(candidate_by_id)
     selection_key = "overview_market_mover_detail_selection"
     if st.session_state.get(selection_key) not in candidate_by_id:
         st.session_state[selection_key] = option_ids[0]
-    selected_id = str(
-        st.selectbox(
-            "종목",
-            option_ids,
-            format_func=lambda value: candidate_by_id.get(str(value), {}).get("label", str(value)),
-            key=selection_key,
+
+    with st.container(border=True, key="overview_market_mover_investigation_workspace"):
+        render_market_movers_workspace_header(
+            kicker="INVESTIGATION WORKSPACE",
+            title="선택 종목 조사",
+            detail="랭킹에서 고른 종목의 가격, 거래량, 섹터, 외부 조사 시작점을 한 곳에서 확인합니다.",
         )
-    )
-    selected = candidate_by_id[selected_id]
-    _render_market_mover_selected_investigation_fragment(
-        selected,
-        period=period,
-        universe_code=universe_code,
-        peer_rows=rows,
-    )
+        selected_id = str(
+            st.selectbox(
+                "종목",
+                option_ids,
+                format_func=lambda value: candidate_by_id.get(str(value), {}).get("label", str(value)),
+                key=selection_key,
+            )
+        )
+        selected = candidate_by_id[selected_id]
+        _render_market_mover_selected_investigation_fragment(
+            selected,
+            period=period,
+            universe_code=universe_code,
+            peer_rows=rows,
+        )
 
 
 def _render_market_movers_snapshot_panel(
@@ -4194,31 +4450,32 @@ def _render_market_movers_snapshot_panel(
         volume_rows = rows
     selected_model = _market_mover_view_model(snapshot, controls.mode)
     selected_rows = selected_model["rows"]
+    mode_models = [_market_mover_view_model(snapshot, mode) for mode in MARKET_MOVER_MODE_ORDER]
+    with st.container(border=True, key="overview_market_mover_ranking_workspace"):
+        if selected_rows.empty:
+            st.markdown(f"#### {selected_model['label']} 상위 종목")
+            st.info(selected_model["empty_reason"])
+        else:
+            render_market_mover_board(build_market_mover_board_model(selected_model, top_n=controls.top_n))
 
-    if selected_rows.empty:
-        st.markdown(f"#### {selected_model['label']} 상위 종목")
-        st.info(selected_model["empty_reason"])
-    else:
-        render_market_mover_board(build_market_mover_board_model(selected_model, top_n=controls.top_n))
+        with st.expander("랭킹 모드별 전체 상세 표", expanded=False):
+            table_tabs = st.tabs([model["label"] for model in mode_models])
+            for tab, model in zip(table_tabs, mode_models, strict=True):
+                with tab:
+                    mode_rows = model["rows"]
+                    st.caption(model["sort_basis"])
+                    if mode_rows.empty:
+                        st.info(model["empty_reason"])
+                        continue
+                    st.dataframe(
+                        mode_rows,
+                        width="stretch",
+                        height=_market_mover_chart_height(len(mode_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+                        hide_index=True,
+                    )
 
     _render_market_movers_sector_breadth_context(snapshot)
     _render_missing_diagnostics(snapshot, universe_code=controls.coverage, period=controls.period)
-    mode_models = [_market_mover_view_model(snapshot, mode) for mode in MARKET_MOVER_MODE_ORDER]
-    with st.expander("모드별 상세 표 전체 높이로 보기", expanded=False):
-        table_tabs = st.tabs([model["label"] for model in mode_models])
-        for tab, model in zip(table_tabs, mode_models, strict=True):
-            with tab:
-                mode_rows = model["rows"]
-                st.caption(model["sort_basis"])
-                if mode_rows.empty:
-                    st.info(model["empty_reason"])
-                    continue
-                st.dataframe(
-                    mode_rows,
-                    width="stretch",
-                    height=_market_mover_chart_height(len(mode_rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
-                    hide_index=True,
-                )
     investigation_rows = (
         selected_rows
         if selected_model["kind"] == "symbol" and isinstance(selected_rows, pd.DataFrame) and not selected_rows.empty

@@ -68,6 +68,24 @@ type CriteriaGroup = {
   criteriaCards?: CriteriaCard[]
 }
 
+type ActionSpec = {
+  id?: string
+  label?: string
+  detail?: string
+  enabled?: boolean
+  tone?: Tone
+}
+
+type NextStageAction = {
+  targetStage?: string
+  statusLabel?: string
+  blockerCount?: number
+  disabledReason?: string
+  primaryAction?: ActionSpec
+  secondaryAction?: ActionSpec
+  boundaryNote?: string
+}
+
 type StreamlitArgs = {
   statusLabel?: string
   tone?: Tone
@@ -77,6 +95,7 @@ type StreamlitArgs = {
   fixItems?: FixItem[]
   coreGroups?: CoreGroup[]
   criteriaGroups?: CriteriaGroup[]
+  nextStageAction?: NextStageAction
 }
 
 type AppProps = {
@@ -94,6 +113,7 @@ function App({ args }: AppProps) {
       fixItems={Array.isArray(args?.fixItems) ? args.fixItems : []}
       coreGroups={Array.isArray(args?.coreGroups) ? args.coreGroups : []}
       criteriaGroups={Array.isArray(args?.criteriaGroups) ? args.criteriaGroups : []}
+      nextStageAction={args?.nextStageAction ?? {}}
     />
   )
 }

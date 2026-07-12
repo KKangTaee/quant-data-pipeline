@@ -1,0 +1,11 @@
+# Runs
+
+- 2026-07-11: 구현 전 관련 service/React contract와 기존 생성 artifact 상태를 확인했다.
+- 2026-07-11: pattern contract focused unittest 3개와 두 Python service py_compile을 통과했다.
+- 2026-07-11: 실제 Distinct Strategy evidence에서 actionable 3, conditional 5, needs validation 1, not applicable 1로 분류되고 첫 화면 6개 제한이 적용됨을 확인했다.
+- 2026-07-11: Final Review 투자 검토서 React build와 presentation-only source contract test를 통과했다.
+- 2026-07-11: 실제 Distinct Strategy에서 직접 결정 1개와 2단계 인수 제한 8개로 분리되고 사용자 행동에서 Flow4 문구가 제거됨을 확인했다.
+- 2026-07-11: 해석을 성과, 위험, 근거 신뢰도, Monitoring 적합성 4행으로 고정하고 총평 직후 배치하는 service/UI contract test를 통과했다.
+- 2026-07-11: focused Final Review service / contract tests 53개, React build, py_compile, git diff check를 통과했다.
+- 2026-07-11: Browser QA에서 확인 전 downstream 미렌더, 확인 후 report, 후보 변경 stale 차단, Review Queue 제거, 4행 해석, 최대 6개 행동형 pattern, 접힌 technical trace, 직접 결정 / 인수 제한 분리를 확인했다.
+- 2026-07-11: Browser QA screenshot은 `final-review-guidance-actionability-v1-qa.png`로만 생성하고 stage하지 않았다.

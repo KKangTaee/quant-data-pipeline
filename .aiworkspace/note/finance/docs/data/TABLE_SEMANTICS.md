@@ -200,7 +200,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 역할:
 
 - Overview Market Movers에서 반복되는 quote gap / coverage issue를 symbol / universe 단위로 누적 추적한다.
-- 현재 1차 사용처는 `issue_type=quote_gap`이다.
+- `issue_type=quote_gap`은 일중 quote 누락을, `issue_type=limited_price_history`는 full-window EOD 수집 뒤에도 provider 가용 이력이 period 최소 row보다 짧은 상태를 나타낸다.
 
 성격:
 
@@ -208,12 +208,14 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `issue_key`는 `universe_code`, `symbol`, `issue_type` 조합에서 만든 내부 business key다.
 - 같은 symbol / universe에서 다시 진단되면 `occurrence_count`를 증가시키고 최신 diagnosis, confidence, evidence, recommended action을 갱신한다.
 - `raw_payload_json`에는 마지막 진단 row의 compact evidence를 저장한다.
+- `limited_price_history`는 first/latest date, 현재/필요 row count만 근거로 저장하며 상장일이나 기업 이벤트 원인을 단정하지 않는다.
 
 주의:
 
 - 이 table은 투자 신호나 official corporate action fact가 아니다.
 - `possible_stale_universe`도 상장폐지 / 거래정지 확정 판정이 아니라 profile / price evidence가 약하다는 운영 힌트다.
 - issue가 사라졌다는 자동 resolve lifecycle은 아직 없다. 현재는 반복 발생을 빠르게 알아보는 목적이다.
+- limited-history issue가 남아 있어도 현재 `nyse_price_history` row count가 period threshold를 충족하면 Market Movers preflight는 정상 계산 경로를 우선한다.
 
 ## `market_event_calendar`
 
@@ -555,3 +557,44 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - UI / 해석 보조 layer
 - strict loader의 source of truth가 아니다.
 - 실제 statement value 판단은 `nyse_financial_statement_values`를 중심으로 읽는다.
+
+## `sp500_monthly_valuation`
+
+역할:
+
+- Shiller 월별 SPX price와 interpolated EPS, 계산 가능한 월의 후행 PER/CAPE를 저장한다. EPS 발표가 늦은 최신 월은 price-only row로도 보존한다.
+- `observation_month + source` unique key로 재수집을 idempotent UPSERT한다.
+
+주의:
+
+- EPS가 있는 월은 `data_quality=interpolated`, EPS 미발표 price-only 월은 `data_quality=missing`이다. 어느 쪽도 strict historical release timing proof가 아니다.
+- 60개월 log(PER) 상대평가, 36개월 민감도, 12개월 reconstructed actual-SPX 비교에 사용한다. 표준편차 band는 신뢰구간이 아니다.
+- Market Context graph 2는 공식 actual 4분기 TTM이 없을 때 이 table의 최신 양수 `trailing_eps`를 `interpolated_ttm_proxy`로 선택한다. UI는 이를 S&P 공식 EPS나 애널리스트 컨센서스로 표시하지 않는다.
+
+## `sp500_index_earnings`
+
+역할:
+
+- S&P index EPS를 `period_end`, `period_type`, `earnings_basis`, `value_status`, `source_release_date`로 보존한다.
+- 동일 period라도 release vintage가 다르면 별도 row로 유지한다.
+
+주의:
+
+- Market Context TTM actual은 최신 네 개의 distinct `quarterly + as_reported + actual` row만 합산한다.
+- `estimate` 또는 `mixed` row는 actual 부족을 채우는 fallback이 아니다.
+- importer는 workbook 색상이나 위치로 상태를 추론하지 않고 explicit status column을 요구한다.
+
+## `fomc_sep_projection`
+
+역할:
+
+- Federal Reserve SEP real GDP / PCE inflation을 `release_date`, `target_year`, `statistic_name`별로 저장한다.
+- median과 central-tendency lower/upper endpoint를 분리해 보존한다.
+
+주의:
+
+- 새 SEP는 새 release vintage로 저장하며 이전 release를 덮어쓰지 않는다.
+- bounded history collector는 2025-06 이후 공식 release 중 DB에 없는 vintage만 가져오고, daily latest collector가 이후 release를 보존한다.
+- 월별 reconstruction은 월중 발표 vintage를 다음 달부터 적용하고 관측 월 calendar year의 target row를 선택한다. 최신 EOD 지점은 기준일 이전 최신 release를 적용한다.
+- central-tendency endpoint 조합은 sensitivity scenario이지 participant joint distribution이나 confidence interval이 아니다.
+- latest SPX 기준일보다 release가 180일 넘게 오래되면 UI scenario는 `STALE_SEP`로 차단한다.

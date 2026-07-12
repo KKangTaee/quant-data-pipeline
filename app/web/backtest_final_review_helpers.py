@@ -13,6 +13,11 @@ from app.services.backtest_evidence_read_model import (
     build_final_review_status_display,
     build_selected_route_gate,
 )
+from app.services.backtest_evidence_closure import (
+    build_evidence_closure_contract,
+    finalize_evidence_closure,
+    is_current_final_review_eligible,
+)
 from app.services.backtest_selected_route_preflight import (
     build_practical_validation_selected_route_preflight,
 )
@@ -36,7 +41,7 @@ from app.runtime import FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
 FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
-    SELECT_FOR_PRACTICAL_PORTFOLIO: "Selected Dashboard 모니터링 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 선정 판단이 완료됩니다.",
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "Portfolio Monitoring 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 선정 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "근거는 남기되 실제 선정 전 더 관찰합니다.",
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 모니터링 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, 검증 근거, 데이터 상태를 다시 검토합니다.",
@@ -72,6 +77,9 @@ def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
     """Return whether a saved Practical Validation result may appear in Final Review."""
 
     validation = dict(row or {})
+    enrichment_gate = dict(validation.get("pre_final_enrichment_gate") or {})
+    if enrichment_gate.get("blocking"):
+        return False
     gate = dict(validation.get("final_review_gate") or {})
     base_eligible = False
     if "can_save_and_move" in gate:
@@ -87,6 +95,9 @@ def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
             )
     if not base_eligible:
         return False
+    closure = dict(validation.get("evidence_closure") or build_evidence_closure_contract(validation))
+    if not is_current_final_review_eligible(closure):
+        return False
     preflight = dict(validation.get("selected_route_preflight") or {})
     if "select_allowed" not in preflight:
         try:
@@ -94,6 +105,33 @@ def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
         except Exception:
             return False
     return bool(preflight.get("select_allowed"))
+
+
+def _latest_practical_validation_rows_by_source(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Keep the newest validation per source before applying Final Review eligibility."""
+
+    ordered = sorted(
+        [dict(row or {}) for row in list(rows or [])],
+        key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""),
+        reverse=True,
+    )
+    latest_rows: list[dict[str, Any]] = []
+    seen_source_ids: set[str] = set()
+    for row in ordered:
+        source_snapshot = dict(row.get("selection_source_snapshot") or {})
+        source_id = str(
+            row.get("selection_source_id")
+            or source_snapshot.get("selection_source_id")
+            or row.get("validation_id")
+            or ""
+        ).strip()
+        if not source_id or source_id in seen_source_ids:
+            continue
+        seen_source_ids.add(source_id)
+        latest_rows.append(row)
+    return latest_rows
 
 
 def _build_final_review_source_options(
@@ -121,7 +159,7 @@ def _build_final_review_source_options(
     seen_validation_ids = {
         str(session_validation.get("validation_id") or "").strip()
     } if session_validation else set()
-    for row in list(practical_validation_rows or []):
+    for row in _latest_practical_validation_rows_by_source(list(practical_validation_rows or [])):
         validation_id = str(row.get("validation_id") or "").strip()
         if validation_id and validation_id in seen_validation_ids:
             continue
@@ -337,7 +375,7 @@ def _build_final_review_decision_evidence_pack(
     else:
         route = "READY_FOR_FINAL_DECISION"
         verdict = "최종 검토 가능: 검증 근거와 관찰 기준이 하나의 판단 기록으로 묶임"
-        next_action = "모니터링 후보 선정과 사유를 저장하면 Final Review에서 Dashboard 추적 후보 판단이 완료됩니다."
+        next_action = "모니터링 후보 선정과 사유를 저장하면 Final Review에서 Portfolio Monitoring 추적 후보 판단이 완료됩니다."
         suggested_decision_route = "SELECT_FOR_PRACTICAL_PORTFOLIO"
     return {
         "route": route,
@@ -385,6 +423,8 @@ def _build_final_review_save_evaluation(
     """Check whether the final review can be recorded as one durable decision row."""
     decision_id_clean = str(decision_id or "").strip()
     decision_route_clean = str(decision_route or "").strip()
+    selected_route = decision_route_clean == SELECT_FOR_PRACTICAL_PORTFOLIO
+    valid_route = decision_route_clean in FINAL_REVIEW_DECISION_LABELS
     packet_gate = build_selected_route_gate(
         decision_route=decision_route_clean,
         investability_packet=investability_packet,
@@ -397,10 +437,10 @@ def _build_final_review_save_evaluation(
             "Meaning": "중복되지 않는 최종 검토 기록 id가 필요합니다.",
         },
         {
-            "Criteria": "Official selection route",
-            "Ready": decision_route_clean == SELECT_FOR_PRACTICAL_PORTFOLIO,
+            "Criteria": "Final Review route",
+            "Ready": valid_route,
             "Current": decision_route_clean or "-",
-            "Meaning": "Final Review의 정식 저장은 모니터링 후보 선정 route만 허용합니다. 보류 / 거절 / 재검토는 저장하지 않는 상태 안내입니다.",
+            "Meaning": "추천 / 보류 / 탈락 / 재검토 중 하나의 최종 판단 route가 필요합니다.",
         },
         {
             "Criteria": "Operator reason",
@@ -410,21 +450,26 @@ def _build_final_review_save_evaluation(
         },
         {
             "Criteria": "Select readiness",
-            "Ready": evidence.get("route") == "READY_FOR_FINAL_DECISION",
+            "Ready": (not selected_route) or evidence.get("route") == "READY_FOR_FINAL_DECISION",
             "Current": evidence.get("route") or "-",
-            "Meaning": "모니터링 후보 선정은 blocker가 없을 때만 저장합니다.",
+            "Meaning": "모니터링 후보 선정은 blocker가 없을 때만 저장합니다. non-select route는 판단 기록으로 남길 수 있습니다.",
         },
         packet_gate,
     ]
     blockers = [str(row["Criteria"]) for row in checks if not row["Ready"]]
     if not blockers:
-        route = "FINAL_SELECTION_SAVE_READY"
-        verdict = "모니터링 후보 선정 저장 가능"
-        next_action = "`모니터링 후보로 선정`을 눌러 선정 근거를 남깁니다."
+        if selected_route:
+            route = "FINAL_SELECTION_SAVE_READY"
+            verdict = "모니터링 후보 선정 저장 가능"
+            next_action = "`모니터링 후보로 선정`을 눌러 선정 근거를 남깁니다."
+        else:
+            route = "FINAL_REVIEW_JUDGMENT_SAVE_READY"
+            verdict = "Final Review 판단 저장 가능"
+            next_action = "`Final Review 판단 저장`을 눌러 보류 / 탈락 / 재검토 근거를 남깁니다."
     else:
-        route = "FINAL_SELECTION_SAVE_BLOCKED"
-        verdict = "모니터링 후보 선정 저장 전 확인 필요"
-        next_action = "decision id, 선정 사유, selection gate, investability packet을 확인합니다."
+        route = "FINAL_REVIEW_JUDGMENT_SAVE_BLOCKED"
+        verdict = "Final Review 판단 저장 전 확인 필요"
+        next_action = "decision id, 판단 사유, route, selection gate, investability packet을 확인합니다."
     return {
         "route": route,
         "score": round((len(checks) - len(blockers)) / len(checks) * 10.0, 1),
@@ -433,6 +478,7 @@ def _build_final_review_save_evaluation(
         "checks": checks,
         "blockers": blockers,
         "can_save": not blockers,
+        "monitoring_handoff_candidate": selected_route and bool(packet_gate.get("Ready")) and not blockers,
     }
 
 
@@ -460,6 +506,19 @@ def _build_final_review_decision_row(
         dict(investability_packet or {}).get("deployment_readiness_policy_snapshot") or {}
     )
     open_review_items = list(dict(investability_packet or {}).get("open_review_items") or [])
+    selected_gate = build_selected_route_gate(
+        decision_route=str(decision_route or "").strip(),
+        investability_packet=investability_packet,
+    )
+    selected_route = str(decision_route or "").strip() == SELECT_FOR_PRACTICAL_PORTFOLIO
+    monitoring_candidate = selected_route and bool(selected_gate.get("Ready"))
+    closure_snapshot = finalize_evidence_closure(
+        dict(validation.get("evidence_closure") or build_evidence_closure_contract(validation)),
+        decision_route=str(decision_route or "").strip(),
+        operator_reason=str(operator_reason or "").strip(),
+    )
+    if closure_snapshot.get("open_count") or closure_snapshot.get("selection_blocker_count"):
+        monitoring_candidate = False
     row = {
         "schema_version": FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
         "decision_id": str(decision_id or "").strip(),
@@ -467,7 +526,10 @@ def _build_final_review_decision_row(
         "updated_at": now,
         "decision_status": "recorded",
         "decision_route": str(decision_route or "").strip(),
-        "selected_practical_portfolio": decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO",
+        "final_review_record_type": "monitoring_candidate" if monitoring_candidate else "judgment_decision",
+        "selected_practical_portfolio": monitoring_candidate,
+        "monitoring_candidate": monitoring_candidate,
+        "monitoring_handoff_state": "ready" if monitoring_candidate else ("blocked" if selected_route else "not_requested"),
         "source_paper_ledger_id": None,
         "source_observation_id": f"paper_observation_{_paper_ledger_slug(source_id)}",
         "source_type": source.get("source_type"),
@@ -482,6 +544,7 @@ def _build_final_review_decision_row(
         "selection_gate_policy_snapshot": selection_gate_policy_snapshot,
         "deployment_readiness_policy_snapshot": deployment_readiness_policy_snapshot,
         "open_review_items": open_review_items,
+        "evidence_closure_snapshot": closure_snapshot,
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),
             "validation_score": validation.get("validation_score"),

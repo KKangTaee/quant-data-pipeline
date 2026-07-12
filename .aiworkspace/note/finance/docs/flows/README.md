@@ -20,7 +20,8 @@ Workspace > Ingestion
 `Workspace > Institutional Portfolios`도 Backtest의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
 현재 Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`다.
-`Futures Monitor`와 `Sector / Industry` standalone tab은 current primary navigation이 아니며, 관련 데이터는 Futures Macro / Market Context / Market Movers의 context evidence로 읽는다.
+`Market Context`는 S&P 500의 최근 60개월 후행 PER 상대 구간과 FOMC SEP 기반 EPS/SPX 시나리오를 두 React 그래프로 읽는다. 36개월은 민감도이며, actual As-Reported TTM EPS가 없으면 예상 지수 숫자를 표시하지 않는다.
+`Futures Monitor`와 `Sector / Industry` standalone tab은 current primary navigation이 아니며, 관련 데이터는 Futures Macro / Market Movers의 context evidence로 읽는다.
 
 화면 경계가 code layer / storage boundary와 섞일 때는 [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md)를 먼저 확인한다.
 

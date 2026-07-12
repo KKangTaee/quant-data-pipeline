@@ -22,6 +22,7 @@ export type MarketMoversSectorBreadthPayload = {
   component: "MarketMoversSectorBreadth";
   map: {
     schema_version: "market_movers_sector_map_v1";
+    section_header: { kicker: string; title: string; detail: string };
     tone: string;
     status: string;
     headline: string;
@@ -115,6 +116,7 @@ export type MarketMoversWorkbenchPayload = {
     deferred_controls: string[];
   };
   actions: MarketMoverAction[];
+  action_note?: string;
 };
 
 export type MarketMoverInvestigationPanePayload = {
@@ -251,13 +253,17 @@ function MarketMoversSectorBreadth({ payload }: { payload: MarketMoversSectorBre
     >
       <div className="mm-sector-breadth__head">
         <div>
-          <div className="mm-sector-breadth__kicker">시장 확산 지도</div>
-          <div className="mm-sector-breadth__title">{payload.map.headline}</div>
-          <div className="mm-sector-breadth__detail-copy">
-            {payload.map.detail} · 기준: {payload.map.freshness}
-          </div>
+          <div className="mm-sector-breadth__kicker">{payload.map.section_header.kicker}</div>
+          <div className="mm-sector-breadth__title">{payload.map.section_header.title}</div>
+          <div className="mm-sector-breadth__detail-copy">{payload.map.section_header.detail}</div>
         </div>
         <span className="mm-sector-breadth__status">{payload.map.status}</span>
+      </div>
+      <div className="mm-sector-breadth__result">
+        <div className="mm-sector-breadth__result-title">{payload.map.headline}</div>
+        <div className="mm-sector-breadth__result-detail">
+          {payload.map.detail} · 기준: {payload.map.freshness}
+        </div>
       </div>
       <div className="mm-sector-breadth__rail">
         <span className="mm-sector-breadth__rail-fill" />
@@ -533,19 +539,21 @@ function MarketMoversWorkbench({ args }: Props) {
         ) : (
           <div />
         )}
-        <div className="mm-workbench__actions" aria-label="Market Movers actions">
-          {payload.actions.map((action) => (
-            <button
-              className={`mm-workbench__action mm-workbench__action--${action.kind}`}
-              disabled={action.kind === "disabled"}
-              key={action.id}
-              onClick={() => emitAction(action)}
-              type="button"
-            >
-              <span className="mm-workbench__action-label">{action.label}</span>
-              {action.detail ? <span className="mm-workbench__action-detail">{action.detail}</span> : null}
-            </button>
-          ))}
+        <div className="mm-workbench__action-stack">
+          <div className="mm-workbench__actions" aria-label="Market Movers actions">
+            {payload.actions.map((action) => (
+              <button
+                className={`mm-workbench__action mm-workbench__action--${action.kind}`}
+                disabled={action.kind === "disabled"}
+                key={action.id}
+                onClick={() => emitAction(action)}
+                type="button"
+              >
+                <span className="mm-workbench__action-label">{action.label}</span>
+              </button>
+            ))}
+          </div>
+          {payload.action_note ? <div className="mm-workbench__action-note">{payload.action_note}</div> : null}
         </div>
       </div>
     </section>

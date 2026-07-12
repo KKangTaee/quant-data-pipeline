@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import streamlit as st
+
 from app.web.backtest_practical_validation.components import (
     render_pv_card_grid,
     render_pv_section_header,
@@ -35,11 +37,11 @@ GATE_FIX_GUIDANCE = {
     },
     "data_coverage": {
         "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
-        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, 운용사 / 공식 외부 데이터 freshness, lifecycle / survivorship 부족 항목을 확인하고 수집 가능한 gap은 Flow4 데이터 보강 / 수집 실행에서 처리합니다.",
     },
     "Data Coverage": {
         "location": "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세",
-        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, provider freshness, lifecycle / survivorship 부족 항목을 확인하고 provider gap은 Provider / Data 보강 액션에서 수집합니다.",
+        "action": "데이터 품질 / 편향 통제 상세에서 가격 window, 운용사 / 공식 외부 데이터 freshness, lifecycle / survivorship 부족 항목을 확인하고 수집 가능한 gap은 Flow4 데이터 보강 / 수집 실행에서 처리합니다.",
     },
 }
 
@@ -116,7 +118,7 @@ def _render_fix_queue(blocking_modules: list[dict[str, Any]]) -> None:
     render_pv_section_header(
         eyebrow="검증 결론",
         title=f"이동 보류 항목 {len(blocking_modules)}개",
-        detail="Flow 3에서는 결론만 요약합니다. 상세 원인과 보강 기준은 Flow 4에서 확인합니다.",
+        detail="카테고리별 결론과 Final Review 이동 가능 여부를 확인합니다. 상세 원인과 보강 기준은 Flow 4에서 확인합니다.",
         tone="danger",
     )
     render_pv_card_grid(cards, min_width=260)
@@ -195,6 +197,8 @@ def _react_core_group_items(core_groups: list[dict[str, Any]]) -> list[dict[str,
 def _react_criteria_group_items(criteria_groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for group in criteria_groups:
+        if group.get("visible_in_practical_validation") is False:
+            continue
         cards = [dict(card or {}) for card in list(group.get("criteria_cards") or [])]
         items.append(
             {
@@ -242,8 +246,18 @@ def _conclusion_group_detail(group: dict[str, Any]) -> tuple[str, str, str]:
     passed = [str(item) for item in list(group.get("passed_criteria") or []) if str(item).strip()]
     if remaining:
         return "실패", " / ".join(remaining), "danger"
+    if int(group.get("pv_practical_caution_count") or 0):
+        return "주의", str(group.get("decision_summary") or "2단계 실용성 주의 항목이 있습니다."), "warning"
+    if int(group.get("pv_data_caution_count") or 0):
+        return "주의", str(group.get("decision_summary") or "데이터 주의 항목이 있습니다."), "warning"
+    if int(group.get("final_review_reference_count") or 0):
+        return "참고", str(group.get("decision_summary") or "최종 판단 참고 항목입니다."), "neutral"
+    if int(group.get("monitoring_followup_count") or 0):
+        return "추적", str(group.get("decision_summary") or "Monitoring 추적 항목입니다."), "neutral"
     if passed:
         return "통과", " / ".join(passed), "positive"
+    if group.get("visible_in_practical_validation") is False:
+        return "확인 필요", str(group.get("decision_summary") or "-"), "warning"
     if review or int(group.get("final_review_reference_count") or 0):
         return "통과", str(group.get("decision_summary") or "Practical Validation에서 보강할 항목은 없습니다."), "positive"
     return "확인 필요", str(group.get("decision_summary") or "-"), str(group.get("tone") or "neutral")
@@ -280,29 +294,63 @@ def _render_validation_conclusion_summary(
     render_pv_section_header(
         eyebrow="검증 결론",
         title=str(summary.get("overall_outcome_headline") or "Practical Validation 검증 결론"),
-        detail="카테고리별 통과 / 실패만 요약합니다. 자세한 원인과 보강 기준은 Flow 4에서 확인합니다.",
+        detail=(
+            "카테고리별 통과 / 실패와 Final Review 이동 가능 여부를 확인합니다. "
+            "상세 원인과 보강 기준은 Flow 4에서 확인합니다."
+        ),
         tone=str(summary.get("overall_outcome_tone") or ("positive" if gate_summary.get("can_save_and_move") else "danger")),
     )
     render_pv_card_grid(cards, min_width=250)
 
 
-def render_practical_validation_workspace_overview(validation_result: dict[str, Any]) -> None:
+def _render_next_stage_action_fallback(next_stage_action: dict[str, Any]) -> dict[str, Any] | None:
+    primary = dict(next_stage_action.get("primary_action") or {})
+    secondary = dict(next_stage_action.get("secondary_action") or {})
+    primary_enabled = bool(primary.get("enabled"))
+    secondary_enabled = bool(secondary.get("enabled", True))
+    action_cols = st.columns(2, gap="small")
+    with action_cols[0]:
+        if st.button(
+            str(primary.get("label") or "저장하고 Final Review로 이동"),
+            key="practical_validation_flow3_save_and_move",
+            width="stretch",
+            disabled=not primary_enabled,
+        ):
+            return {"action": "save_and_move", "source": "practical_validation_fix_queue_fallback"}
+    with action_cols[1]:
+        if st.button(
+            str(secondary.get("label") or "검증 결과 저장(기록용)"),
+            key="practical_validation_flow3_save_audit_only",
+            width="stretch",
+            disabled=not secondary_enabled,
+        ):
+            return {"action": "save_audit_only", "source": "practical_validation_fix_queue_fallback"}
+    detail = secondary.get("detail") or next_stage_action.get("boundary_note")
+    boundary_note = str(next_stage_action.get("boundary_note") or "")
+    if detail:
+        st.caption(str(detail))
+    if boundary_note and str(detail or "") != boundary_note:
+        st.caption(boundary_note)
+    return None
+
+
+def render_practical_validation_workspace_overview(validation_result: dict[str, Any], *, source: dict[str, Any] | None = None) -> dict[str, Any] | None:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     summary = dict(workspace.get("summary") or {})
     gate_summary = dict(workspace.get("gate_summary") or validation_result.get("final_review_gate") or {})
     fix_queue = list(workspace.get("fix_queue") or gate_summary.get("blocking_modules") or [])
     core_groups = list(workspace.get("core_evidence_groups") or [])
-    criteria_groups = list(workspace.get("criteria_detail_groups") or [])
-    repair_count = int(summary.get("criteria_repair_count") or 0)
-    not_practical_count = int(summary.get("criteria_not_practical_count") or 0)
-    practical_validation_ready = repair_count == 0 and not_practical_count == 0
+    criteria_groups = list(workspace.get("visible_criteria_detail_groups") or workspace.get("criteria_detail_groups") or [])
+    next_stage_action = dict(workspace.get("next_stage_action") or {})
+    primary_action = dict(next_stage_action.get("primary_action") or {})
+    practical_validation_ready = bool(primary_action.get("enabled", gate_summary.get("can_save_and_move")))
     practical_status_label = str(summary.get("overall_outcome_label") or validation_status_label(gate_summary.get("route")))
     practical_tone = str(summary.get("overall_outcome_tone") or ("positive" if practical_validation_ready else "danger"))
     practical_verdict = str(summary.get("overall_outcome_headline") or "Practical Validation 검증 결론")
     practical_next_action = str(summary.get("overall_outcome_detail") or "")
 
     if is_practical_validation_fix_queue_available():
-        render_practical_validation_fix_queue(
+        return render_practical_validation_fix_queue(
             status_label=practical_status_label,
             tone=practical_tone,
             verdict=practical_verdict,
@@ -311,11 +359,12 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
             fix_items=_react_fix_queue_items(fix_queue),
             core_groups=_react_core_group_items(core_groups),
             criteria_groups=_react_criteria_group_items(criteria_groups),
+            next_stage_action=next_stage_action,
             key="practical_validation_fix_queue_overview",
         )
-    else:
-        _render_validation_conclusion_summary(
-            gate_summary=gate_summary,
-            summary=summary,
-            criteria_groups=criteria_groups,
-        )
+    _render_validation_conclusion_summary(
+        gate_summary=gate_summary,
+        summary=summary,
+        criteria_groups=criteria_groups,
+    )
+    return _render_next_stage_action_fallback(next_stage_action)

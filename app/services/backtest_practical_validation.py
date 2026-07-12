@@ -22,6 +22,8 @@ from app.services.backtest_practical_validation_source import (
     build_validation_profile,
     source_components_dataframe,
 )
+from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+from app.services.backtest_evidence_closure import build_evidence_closure_contract
 from app.services.overview.sentiment import build_market_sentiment_snapshot
 from app.runtime import append_portfolio_selection_source, append_practical_validation_result
 from finance.data.etf_provider import (
@@ -64,11 +66,18 @@ def build_practical_validation_result(
 ) -> dict[str, Any]:
     """Build the Practical Validation result without depending on Streamlit state."""
 
-    return _build_practical_validation_result(
+    result = _build_practical_validation_result(
         source,
         validation_profile=validation_profile,
         replay_result=replay_result,
     )
+    provider_plan = build_provider_gap_collection_plan(result)
+    result["provider_gap_collection_plan"] = provider_plan
+    pre_final_gate = build_pre_final_enrichment_gate(result, provider_plan=provider_plan)
+    _apply_pre_final_enrichment_gate(result, pre_final_gate)
+    result["evidence_closure"] = build_evidence_closure_contract(result)
+    result["practical_validation_workspace"] = build_practical_validation_workspace(result)
+    return result
 
 
 def _sentiment_risk_context(analysis: dict[str, Any]) -> dict[str, str]:
@@ -324,6 +333,7 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
     holdings = dict(coverage.get("holdings") or {})
     exposure = dict(coverage.get("exposure") or {})
     operability_missing = _upper_symbol_set(operability.get("missing_symbols"))
+    operability_stale = _upper_symbol_set(dict(operability.get("provenance") or {}).get("stale_symbols"))
     holdings_missing = _upper_symbol_set(holdings.get("missing_symbols"))
     exposure_missing = _upper_symbol_set(exposure.get("missing_symbols"))
     source_maps = _verified_provider_source_maps(set(symbols))
@@ -331,6 +341,7 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
     rows: list[dict[str, Any]] = []
     for symbol in symbols:
         op_missing = symbol in operability_missing
+        op_stale = symbol in operability_stale
         holdings_is_missing = symbol in holdings_missing
         exposure_is_missing = symbol in exposure_missing
         mapped_operability = dict(source_maps.get("operability") or {}).get(symbol)
@@ -346,6 +357,8 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
         actions: list[str] = []
         if op_missing:
             actions.append("운용성 보강")
+        elif op_stale:
+            actions.append("운용성 최신화")
         if holdings_is_missing or exposure_is_missing:
             if holdings_collectable or exposure_collectable:
                 actions.append("holdings/exposure 수집")
@@ -355,7 +368,7 @@ def build_provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str,
             {
                 "ETF": symbol,
                 "Target Weight": round(weights.get(symbol, 0.0), 4),
-                "Operability": "부족" if op_missing else "있음",
+                "Operability": "부족" if op_missing else "오래됨" if op_stale else "있음",
                 "Operability Source": op_source_status,
                 "Holdings": "부족" if holdings_is_missing else "있음",
                 "Holdings Source": holdings_source_status,
@@ -372,14 +385,17 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
 
     provider_context = dict(validation_result.get("provider_coverage") or {})
     coverage = dict(provider_context.get("coverage") or {})
-    operability_missing = _upper_symbol_set(dict(coverage.get("operability") or {}).get("missing_symbols"))
+    operability = dict(coverage.get("operability") or {})
+    operability_missing = _upper_symbol_set(operability.get("missing_symbols"))
+    operability_stale = _upper_symbol_set(dict(operability.get("provenance") or {}).get("stale_symbols"))
+    operability_targets = operability_missing | operability_stale
     holdings_missing = _upper_symbol_set(dict(coverage.get("holdings") or {}).get("missing_symbols"))
     exposure_missing = _upper_symbol_set(dict(coverage.get("exposure") or {}).get("missing_symbols"))
     holdings_targets = sorted(holdings_missing | exposure_missing)
     provider_symbols = sorted(
         _upper_symbol_set(provider_context.get("symbols"))
         | _upper_symbol_set(dict(provider_context.get("symbol_weights") or {}).keys())
-        | operability_missing
+        | operability_targets
         | holdings_missing
         | exposure_missing
     )
@@ -401,16 +417,156 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
     return {
         "source_map_discovery": source_map_discovery,
         "source_symbols": provider_symbols,
+        "operability_stale": sorted(operability_stale),
         "operability_official": sorted(
             symbol
-            for symbol in operability_missing
+            for symbol in operability_targets
             if symbol in OFFICIAL_PROVIDER_SOURCES or symbol in dict(source_maps.get("operability") or {})
         ),
-        "operability_bridge": sorted(operability_missing),
+        "operability_bridge": sorted(operability_targets),
         "holdings_exposure": holdings_collectable,
         "mapping_needed": [],
         "macro": macro_needs_collection,
     }
+
+
+def build_pre_final_enrichment_gate(
+    validation_result: dict[str, Any],
+    *,
+    provider_plan: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Identify executable provider gaps that must be resolved before Final Review."""
+
+    plan = dict(provider_plan or build_provider_gap_collection_plan(validation_result))
+    items: list[dict[str, Any]] = []
+    operability_symbols = sorted(
+        set(plan.get("operability_official") or [])
+        | set(plan.get("operability_bridge") or [])
+    )
+    if operability_symbols:
+        items.append(
+            {
+                "category": "operability",
+                "label": "ETF 거래 가능성 자료",
+                "symbols": operability_symbols,
+                "detail": "공식 source 또는 DB bridge에서 오래되거나 누락된 운용성 자료를 갱신합니다.",
+            }
+        )
+    holdings_symbols = sorted(set(plan.get("holdings_exposure") or []))
+    if holdings_symbols:
+        items.append(
+            {
+                "category": "holdings_exposure",
+                "label": "ETF 보유 종목·노출",
+                "symbols": holdings_symbols,
+                "detail": "검증된 공식 source에서 holdings와 exposure를 보강합니다.",
+            }
+        )
+    if bool(plan.get("macro")):
+        items.append(
+            {
+                "category": "macro",
+                "label": "시장 환경 자료",
+                "symbols": ["VIXCLS", "T10Y3M", "BAA10Y"],
+                "detail": "현재 검증에 필요한 FRED 시장 환경 series를 갱신합니다.",
+            }
+        )
+    unique_symbols = {
+        str(symbol)
+        for item in items
+        for symbol in list(item.get("symbols") or [])
+        if str(symbol).strip()
+    }
+    required = bool(items)
+    return {
+        "required": required,
+        "blocking": required,
+        "item_count": len(items),
+        "symbol_count": len(unique_symbols),
+        "items": items,
+        "reason": (
+            "현재 수집 가능한 필수 외부 데이터가 남아 있습니다."
+            if required
+            else "승격 전 필수 데이터 보강이 없습니다."
+        ),
+        "next_action": (
+            "필수 데이터를 보강한 뒤 Flow 2 재검증을 실행합니다."
+            if required
+            else "Final Review 판단을 이어갑니다."
+        ),
+    }
+
+
+def _apply_pre_final_enrichment_gate(
+    validation_result: dict[str, Any],
+    enrichment_gate: dict[str, Any],
+) -> None:
+    """Merge the pre-Final data requirement into the existing module Gate result."""
+
+    gate_contract = dict(enrichment_gate or {})
+    validation_result["pre_final_enrichment_gate"] = gate_contract
+    if not gate_contract.get("blocking"):
+        return
+
+    blocker = {
+        "module_id": "pre_final_data_enrichment",
+        "label": "승격 전 필수 데이터 보강",
+        "group": "Final Review Readiness Preview",
+        "status": "NEEDS_INPUT",
+        "requirement": "REQUIRED",
+        "module_type": "Required",
+        "stage_owner": "practical_validation",
+        "applies": True,
+        "reason": str(gate_contract.get("reason") or "수집 가능한 필수 외부 데이터가 남아 있습니다."),
+        "next_action": str(gate_contract.get("next_action") or "필수 데이터를 보강한 뒤 재검증합니다."),
+        "resolution_surface": "Flow 4 · 데이터 보강 / 수집 실행",
+        "resolution_action": "필수 데이터 보강을 실행한 뒤 Flow 2에서 전략 재검증을 다시 실행합니다.",
+        "gate_effect": "Blocks Final Review",
+        "gate_reason": "Final Review 이동 전 수집 가능한 필수 외부 데이터를 보강하고 재검증해야 합니다.",
+        "review_role": "final_readiness_blocker",
+        "review_role_label": "저장 전 보강",
+        "stage_decision_surface": "Practical Validation",
+        "pv_visibility": "handoff_reference",
+        "final_review_visibility": "selected_route_gate",
+        "monitoring_visibility": "hidden",
+        "item_count": int(gate_contract.get("item_count") or 0),
+        "symbol_count": int(gate_contract.get("symbol_count") or 0),
+        "items": list(gate_contract.get("items") or []),
+    }
+    modules = list(validation_result.get("validation_modules") or [])
+    modules = [module for module in modules if module.get("module_id") != blocker["module_id"]]
+    modules.append(blocker)
+    validation_result["validation_modules"] = modules
+
+    final_gate = dict(validation_result.get("final_review_gate") or {})
+    blocking_modules = [
+        dict(module)
+        for module in list(final_gate.get("blocking_modules") or [])
+        if dict(module).get("module_id") != blocker["module_id"]
+    ]
+    blocking_modules.append(blocker)
+    final_gate.update(
+        {
+            "route": "BLOCKED_FOR_FINAL_REVIEW",
+            "can_save_and_move": False,
+            "verdict": "수집 가능한 필수 외부 데이터가 남아 있어 Final Review 이동을 막습니다.",
+            "next_action": blocker["resolution_action"],
+            "blocking_modules": blocking_modules,
+            "pre_final_enrichment_gate": gate_contract,
+        }
+    )
+    validation_result["final_review_gate"] = final_gate
+    validation_result["validation_route"] = "BLOCKED_FOR_FINAL_REVIEW"
+
+    handoff = dict(validation_result.get("final_review_handoff") or {})
+    handoff.update(
+        {
+            "route": "BLOCKED_FOR_FINAL_REVIEW",
+            "allowed": False,
+            "module_gate": final_gate,
+        }
+    )
+    validation_result["final_review_handoff"] = handoff
 
 
 def _record_provider_gap_result(result: dict[str, Any], *, source_id: str, area: str) -> dict[str, Any]:
@@ -495,6 +651,7 @@ __all__ = [
     "VALIDATION_PROFILE_OPTIONS",
     "VALIDATION_PROFILE_QUESTIONS",
     "build_market_sentiment_context_overlay",
+    "build_pre_final_enrichment_gate",
     "build_provider_gap_collection_plan",
     "build_provider_gap_rows",
     "build_practical_validation_result",

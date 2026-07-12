@@ -252,6 +252,19 @@ def render_market_movers_section_divider(title: str, detail: str | None = None) 
     )
 
 
+def render_market_movers_workspace_header(*, kicker: str, title: str, detail: str) -> None:
+    st.markdown(
+        overview_ui_css()
+        + f"""
+<section class="ov-mm-workspace-section-head">
+  <div class="ov-mm-workspace-section-kicker">{escape(_display_value(kicker))}</div>
+  <div class="ov-mm-workspace-section-title">{escape(_display_value(title))}</div>
+  <div class="ov-mm-workspace-section-detail">{escape(_display_value(detail))}</div>
+</section>""",
+        unsafe_allow_html=True,
+    )
+
+
 def _market_mover_investigation_facts_html(facts: list[dict[str, Any]]) -> str:
     html: list[str] = []
     for item in facts:
@@ -520,7 +533,8 @@ def _market_mover_research_bar_chart_html(chart: dict[str, Any], frequency: str)
         '<div class="ov-mm-research-chart">'
         f'<div class="ov-mm-research-chart-title">{escape(_display_value(chart.get("label")))} · {escape(frequency_label)}</div>'
         f'<div class="ov-mm-research-chart-scroll" tabindex="0" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 그래프 가로 스크롤">'
-        f'<div class="{plot_wrap_class}" style="width:{plot_width}px;">'
+        f'<div class="{plot_wrap_class}" style="--ov-mm-research-chart-column-width:{_RESEARCH_CHART_COLUMN_WIDTH_PX}px;'
+        f'--ov-mm-research-chart-gap:{_RESEARCH_CHART_GAP_PX}px;width:{plot_width}px;">'
         f"{line_svg}"
         f'<div class="{bar_plot_class}" role="list" aria-label="{escape(_display_value(chart.get("label")))} {escape(frequency_label)} 막대그래프">{"".join(columns)}</div>'
         "</div>"
@@ -772,6 +786,7 @@ def _sector_breadth_leader_strip_html(leaders: list[dict[str, Any]]) -> str:
 
 def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
     tone_color = escape(_overview_tone_color(model.get("tone") or model.get("status")))
+    section_header = dict(model.get("section_header") or {})
     stats = [
         dict(model.get("participation") or {}),
         dict(model.get("leadership") or {}),
@@ -786,11 +801,15 @@ def render_sector_breadth_market_map(model: dict[str, Any]) -> None:
 <section class="ov-sector-breadth-map" style="--ov-band-tone:{tone_color};--ov-rail-fill:{rail_pct}%;">
   <div class="ov-sector-breadth-head">
     <div>
-      <div class="ov-sector-breadth-kicker">시장 확산 지도</div>
-      <div class="ov-sector-breadth-title">{escape(_display_value(model.get("headline")))}</div>
-      <div class="ov-sector-breadth-detail">{escape(_display_value(model.get("detail")))} · 기준: {escape(_display_value(model.get("freshness")))}</div>
+      <div class="ov-sector-breadth-kicker">{escape(_display_value(section_header.get("kicker")))}</div>
+      <div class="ov-sector-breadth-title">{escape(_display_value(section_header.get("title")))}</div>
+      <div class="ov-sector-breadth-detail">{escape(_display_value(section_header.get("detail")))}</div>
     </div>
     <span class="ov-sector-breadth-status">{escape(_display_value(model.get("status")))}</span>
+  </div>
+  <div class="ov-sector-breadth-result">
+    <div class="ov-sector-breadth-result-title">{escape(_display_value(model.get("headline")))}</div>
+    <div class="ov-sector-breadth-result-detail">{escape(_display_value(model.get("detail")))} · 기준: {escape(_display_value(model.get("freshness")))}</div>
   </div>
   <div class="ov-sector-breadth-rail">
     <span class="ov-sector-breadth-rail-fill"></span>
@@ -1067,6 +1086,7 @@ __all__ = [
     "render_market_mover_chart_workspace",
     "render_market_mover_investigation_pane",
     "render_market_movers_section_divider",
+    "render_market_movers_workspace_header",
     "render_market_movers_data_trust_strip",
     "render_market_movers_unified_summary",
     "_market_refresh_state_label",

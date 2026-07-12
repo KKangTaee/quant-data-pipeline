@@ -24,8 +24,8 @@ Last Verified: 2026-07-12
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Institutional Portfolios Watchlist / Mapping V1 2026-07-12](../tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
-- Previous completed task: [Institutional Portfolios Security Detail Chart Layout V1 2026-07-12](../tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+- Latest completed task: [Institutional Portfolios Security Detail Chart Layout V1 2026-07-12](../tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Watchlist / Mapping V1 2026-07-12](../tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Two-Tier Tabs V1 2026-07-12](../tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Portfolio / Security IA V1 2026-07-12](../tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Interactive Security Chart V1 2026-07-12](../tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
@@ -34,7 +34,33 @@ Last Verified: 2026-07-12
 - Previous completed task: [Institutional Portfolios Live SEC 13F V1 2026-07-09](../tasks/active/institutional-portfolios-live-sec13f-v1-20260709/STATUS.md).
 - Previous completed task: [Institutional Portfolios React Workbench V1 2026-07-09](../tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
 - Previous completed task: [Institutional Portfolios Workspace V1 2026-07-08](../tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
-- Earlier completed task: [Post-Merge Docs / Code Flow Refresh 2026-07-08](../tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
+- Recent completed Final Review task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
+- Previous completed task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
+- Previous completed task: [Practical Validation Recheck Handoff Loop Fix V1 2026-07-12](../tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
+- Previous completed task: [Practical Validation Pre-Final Enrichment Gate V1 2026-07-12](../tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
+- Previous completed task: [Overview Market Movers Top Actions / Monthly History V1 2026-07-11](../tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/STATUS.md).
+- Previous completed task: [Overview Market Movers Visual Grouping V1 2026-07-11](../tasks/active/overview-market-movers-visual-grouping-v1-20260711/STATUS.md).
+- Earlier completed task: [Overview Market Movers Section Title Unification V1 2026-07-11](../tasks/active/overview-market-movers-section-title-unification-v1-20260711/STATUS.md).
+- Previous completed task: [Final Review Readable Review Evidence V1 2026-07-11](../tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
+- Previous completed task: [Final Review Decision Flow Simplification V1 2026-07-11](../tasks/active/final-review-decision-flow-simplification-v1-20260711/STATUS.md).
+- Previous completed task: [Final Review Responsive Evidence V1 2026-07-11](../tasks/active/final-review-responsive-evidence-v1-20260711/STATUS.md).
+- Previous completed task: [Final Review Decision Surface Consolidation V1 2026-07-11](../tasks/active/final-review-decision-surface-consolidation-v1-20260711/STATUS.md).
+- Previous completed task: [Portfolio Workflow Legacy Reset / Rebuild 2026-07-11](../tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
+- Previous completed task: [Final Review Confirmed Review Flow V1 2026-07-11](../tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
+- Previous completed task: [Final Review Investment Report Detail Tabs V1 2026-07-11](../tasks/active/final-review-investment-report-detail-tabs-v1-20260711/STATUS.md).
+- Previous completed task: [Final Review Investment Report Flat UI V1 2026-07-10](../tasks/active/final-review-investment-report-flat-ui-v1-20260710/STATUS.md).
+- Previous completed task: [Final Review Investment Report IA V1 2026-07-10](../tasks/active/final-review-investment-report-ia-v1-20260710/STATUS.md).
+- Previous completed task: [Final Review Candidate Selection Integration V1 2026-07-10](../tasks/active/final-review-candidate-selection-integration-v1-20260710/STATUS.md).
+- Previous completed task: [Final Review Sentiment Scope Cleanup V1 2026-07-10](../tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/STATUS.md).
+- Previous completed task: [Final Review Detailed Scorecard V1-V6 2026-07-09](../tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
+- Previous completed task: [Final Review Level3 React V2-V6 2026-07-09](../tasks/active/final-review-level3-react-v2-v6-20260709/STATUS.md).
+- Previous completed task: [Practical Validation Flow5 CTA Integration V1 2026-07-09](../tasks/active/practical-validation-flow5-cta-integration-v1-20260709/STATUS.md).
+- Previous completed task: [Practical Validation Stage Ownership V1 2026-07-09](../tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
+- Previous completed task: [Practical Validation Flow4 Action Center V1 2026-07-09](../tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+- Previous completed task: [Practical Validation Flow4 Data Action Board V1 2026-07-09](../tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
+- Previous completed task: [Practical Validation Flow Gating / Evidence IA V1 2026-07-08](../tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/STATUS.md).
+- Previous completed task: [Practical Validation Category Empty State V1 2026-07-08](../tasks/active/practical-validation-category-empty-state-v1-20260708/STATUS.md).
+- Previous completed task: [Post-Merge Docs / Code Flow Refresh 2026-07-08](../tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Boundary Cleanup V1 2026-07-08](../tasks/active/practical-validation-boundary-cleanup-v1-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Flow4 Final Review Handoff V1 2026-07-08](../tasks/active/practical-validation-flow4-final-review-handoff-v1-20260708/STATUS.md).
 - Previous completed task: [Practical Validation Flow4 Outcome Taxonomy V1 2026-07-08](../tasks/active/practical-validation-flow4-outcome-taxonomy-v1-20260708/STATUS.md).
@@ -53,6 +79,7 @@ Last Verified: 2026-07-12
 - Latest completed product task: [Practical Validation Taxonomy Roadmap V1 2026-07-05](../tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/STATUS.md).
 - Recent Backtest handoff task: [Backtest Second Stage Visibility V1 2026-07-05](../tasks/active/backtest-second-stage-visibility-v1-20260705/STATUS.md).
 - Recent Overview / Market Movers task: [Overview Market Movers Fundamental Charts 2026-07-08](../tasks/active/overview-market-movers-fundamental-charts-20260708/STATUS.md).
+- Recent Overview / Market Context task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
 - Recent Overview Futures Macro task: [Overview Futures Macro Evidence / Original Data UX 2026-07-06](../tasks/active/overview-futures-macro-evidence-original-data-ux-20260706/STATUS.md).
 - Recent data-source migration: [Fundamental Source Migration P0-P8 research / implementation records](../researches/active/2026-06-fundamental-source-migration/DEVELOPMENT_GUIDE.md). Canonical financial statement source is EDGAR detailed statements plus statement shadow tables; broad yfinance fundamentals / factors are legacy compatibility only.
 - Recent Overview final cleanup task: [Overview Final Cleanup V33-V36 2026-06-29](../tasks/active/overview-final-cleanup-v33-v36-20260629/STATUS.md).
@@ -61,7 +88,8 @@ Last Verified: 2026-07-12
 - Recent Overview helper extraction task: [Overview Tab Helper Extraction V11-V16 2026-06-25](../tasks/active/overview-tab-helper-extraction-v11-v16-20260625/STATUS.md).
 - Recent Backtest strategy contract task: [Risk Parity / Dual Momentum 5B 2026-06-10](../tasks/active/risk-parity-dual-momentum-5b-20260610/STATUS.md).
 - Recent Reference merge-review fix: [Merge Review Fixes 2026-06-08](../tasks/active/merge-review-fixes-20260608/STATUS.md).
-- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are now `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`, rendered as an internal text-tab underline selector; each primary tab has a thin entrypoint plus tab-local helper bridge under `app/web/overview/*_helpers.py`, visual component bodies under `app/web/overview/components/*`, and service read models under `app/services/overview/*`. `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. `Market Context` renders immediately with a light cockpit and does not default-load futures macro or historical analog validation; `Futures Macro` owns stored futures daily macro diagnosis, historical validation, tab-local daily refresh / cache reload controls, and mixed top-level scenario subtype/reason copy without becoming trade signals. Backtest strict quarterly is now formal `Strict Quarterly` candidate flow while legacy `_prototype` keys remain replay compatibility, and GTAA now treats `interval` as strategy-owned rebalance cadence while keeping latest common valuation rows visible. See [Roadmap](./ROADMAP.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`; each tab keeps its thin entrypoint, helper bridge, visual components, and service read model boundary. `Market Context` now renders two React valuation surfaces: a Shiller-only 60-month log(PER) relative-zone chart with complete/provisional price separation, and a FOMC SEP GDP+PCE-based EPS/SPX scenario chart with 1/3/5-year reconstructed history. `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. Backtest strict quarterly remains formal `Strict Quarterly` while legacy `_prototype` keys are replay compatibility, and GTAA keeps `interval` as strategy-owned rebalance cadence. See [Roadmap](./ROADMAP.md).
+- Current Final Review evidence state: [Final Review Evidence Closure Contract V1](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md) is completed. Practical Validation closes actionable root issues before handoff, while Final Review records accepted limits / Monitoring transfers as terminal states instead of treating REVIEW count as unfinished work.
 
 ## By Purpose
 

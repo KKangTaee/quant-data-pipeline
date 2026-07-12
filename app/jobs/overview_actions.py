@@ -7,12 +7,15 @@ from typing import Any, Callable, Iterable
 
 from finance.data.futures_market import DEFAULT_CORE_FUTURES_SYMBOLS
 from finance.data.market_intelligence import (
+    build_price_history_limit_issue_rows,
     collect_and_store_market_liquidity_universe,
+    load_market_data_issues,
     load_market_cap_universe_members,
     load_market_liquidity_universe_members,
     load_market_liquidity_universe_candidate_symbols,
     load_market_universe_members,
     load_nasdaq_symbol_directory_universe_members,
+    upsert_market_data_issue_rows,
     upsert_market_symbol_aliases,
 )
 from finance.loaders.price import load_latest_prices, load_price_freshness_summary
@@ -370,6 +373,7 @@ def _load_market_movers_eod_freshness(symbols: list[str]) -> dict[str, dict[str,
                 continue
             latest_date = _coerce_market_movers_date(row.get("latest_date"))
             rows[symbol] = {
+                "first_date": _coerce_market_movers_date(row.get("first_date")),
                 "latest_date": latest_date,
                 "row_count": int(row.get("row_count") or 0),
             }
@@ -385,6 +389,22 @@ def _load_market_movers_eod_freshness(symbols: list[str]) -> dict[str, dict[str,
                 if field in row:
                     target[field] = row.get(field)
     return rows
+
+
+def _load_market_movers_limited_history_symbols(*, universe_code: str, symbols: list[str]) -> set[str]:
+    if not symbols:
+        return set()
+    issues = load_market_data_issues(
+        universe_code=universe_code,
+        symbols=symbols,
+        issue_type="limited_price_history",
+        limit=max(len(symbols), 1),
+    )
+    return {
+        str(row.get("symbol") or "").strip().upper()
+        for row in issues
+        if str(row.get("latest_status") or "active").strip().lower() == "active"
+    }
 
 
 def _market_movers_positive_number(value: Any) -> bool:
@@ -471,6 +491,7 @@ def _market_movers_eod_refresh_plan(
     *,
     as_of_date: date,
     period: str,
+    known_limited_symbols: set[str] | None = None,
 ) -> dict[str, Any]:
     current_symbols: list[str] = []
     stale_symbols: list[str] = []
@@ -481,6 +502,8 @@ def _market_movers_eod_refresh_plan(
     stale_starts_by_symbol: dict[str, date] = {}
     repair_starts_by_symbol: dict[str, date] = {}
     quality_reasons_by_symbol: dict[str, list[str]] = {}
+    limited_history_symbols: list[str] = []
+    known_limited = known_limited_symbols or set()
 
     for symbol in symbols:
         row = freshness.get(symbol) or {}
@@ -489,8 +512,11 @@ def _market_movers_eod_refresh_plan(
         if latest_date is None:
             missing_symbols.append(symbol)
         elif "insufficient_window_rows" in quality_reasons:
-            missing_symbols.append(symbol)
             quality_reasons_by_symbol[symbol] = quality_reasons
+            if symbol in known_limited:
+                limited_history_symbols.append(symbol)
+            else:
+                missing_symbols.append(symbol)
         elif quality_reasons:
             repair_symbols.append(symbol)
             repair_starts.append(latest_date)
@@ -529,6 +555,7 @@ def _market_movers_eod_refresh_plan(
         "stale_symbols": stale_symbols,
         "repair_symbols": repair_symbols,
         "missing_symbols": missing_symbols,
+        "limited_history_symbols": limited_history_symbols,
         "delta_start": delta_start,
         "repair_start": repair_start,
         "delta_end": delta_end if stale_symbols else None,
@@ -571,9 +598,12 @@ def _market_movers_eod_preflight_payload(
     freshness_error: str = "",
 ) -> dict[str, Any]:
     missing_symbols = symbols if force_full_refresh else list(plan["missing_symbols"])
+    limited_history_symbols = [] if force_full_refresh else list(plan.get("limited_history_symbols") or [])
     current_symbols = [] if force_full_refresh else list(plan["current_symbols"])
     selected_symbols = list(dict.fromkeys([*plan["stale_symbols"], *plan["repair_symbols"], *missing_symbols]))
     status = "current" if not selected_symbols and not freshness_error else "due"
+    if limited_history_symbols and not selected_symbols and not freshness_error:
+        status = "limited"
     range_start = plan.get("range_start")
     range_end = plan.get("range_end")
     if force_full_refresh:
@@ -585,6 +615,13 @@ def _market_movers_eod_preflight_payload(
     elif selected_symbols:
         status_label = "가격 이력 보강 필요"
         range_reason = str(plan.get("range_reason") or "")
+    elif limited_history_symbols:
+        status_label = "짧은 가격 이력 제외"
+        sample = ", ".join(limited_history_symbols[:3])
+        range_reason = (
+            f"{sample or '-'}는 provider에서 사용할 수 있는 가격 이력이 짧아 현재 랭킹에서 제외되며 "
+            "추가 수집 대상이 아닙니다."
+        )
     else:
         status_label = "가격 이력 최신"
         range_reason = str(plan.get("range_reason") or "")
@@ -605,6 +642,8 @@ def _market_movers_eod_preflight_payload(
         "delta_symbols_count": len(plan["stale_symbols"]),
         "repair_symbols_count": len(plan["repair_symbols"]),
         "missing_symbols_count": len(missing_symbols),
+        "limited_history_symbols_count": len(limited_history_symbols),
+        "limited_history_symbols": limited_history_symbols,
         "quality_symbols_count": len(plan["quality_reasons_by_symbol"]),
         "delta_batch_count": len(plan.get("delta_batches") or []),
         "repair_batch_count": len(plan.get("repair_batches") or []),
@@ -640,17 +679,26 @@ def build_market_movers_eod_refresh_preflight(
     resolved_as_of_date = _coerce_market_movers_date(as_of_date) or _market_movers_today()
     freshness_error = ""
     freshness: dict[str, dict[str, Any]] = {}
+    known_limited_symbols: set[str] = set()
     if not force_full_refresh:
         try:
             freshness = _load_market_movers_eod_freshness(symbols)
         except Exception as exc:
             freshness_error = str(exc)
             freshness = {}
+        try:
+            known_limited_symbols = _load_market_movers_limited_history_symbols(
+                universe_code=normalized_universe,
+                symbols=symbols,
+            )
+        except Exception:
+            known_limited_symbols = set()
     plan = _market_movers_eod_refresh_plan(
         symbols,
         freshness,
         as_of_date=resolved_as_of_date,
         period=normalized_period,
+        known_limited_symbols=known_limited_symbols,
     )
     return _market_movers_eod_preflight_payload(
         normalized_universe=normalized_universe,
@@ -731,6 +779,43 @@ def _merge_market_movers_eod_results(results: list[dict[str, Any]], *, now_text:
     }
 
 
+def _persist_market_movers_limited_history_issues(
+    *,
+    universe_code: str,
+    period: str,
+    symbols: list[str],
+    as_of_date: date,
+) -> dict[str, Any]:
+    """Persist symbols that remain short only after a full provider-window refresh."""
+    if not symbols:
+        return {"symbols": [], "rows_written": 0}
+    freshness = _load_market_movers_eod_freshness(symbols)
+    min_rows = MARKET_MOVERS_EOD_MIN_PRICE_ROWS.get(period, 0)
+    evidence: list[dict[str, Any]] = []
+    for symbol in symbols:
+        row = freshness.get(symbol) or {}
+        latest_date = _coerce_market_movers_date(row.get("latest_date"))
+        reasons = _market_movers_quality_reasons(row, period=period)
+        if "insufficient_window_rows" not in reasons or latest_date is None or latest_date < as_of_date:
+            continue
+        evidence.append(
+            {
+                "symbol": symbol,
+                "period": period,
+                "first_date": _market_movers_format_date(_coerce_market_movers_date(row.get("first_date"))),
+                "latest_date": _market_movers_format_date(latest_date),
+                "row_count": int(row.get("row_count") or 0),
+                "min_rows": min_rows,
+            }
+        )
+    issue_rows = build_price_history_limit_issue_rows(evidence, universe_code=universe_code)
+    rows_written = upsert_market_data_issue_rows(issue_rows) if issue_rows else 0
+    return {
+        "symbols": [str(row.get("symbol") or "") for row in evidence],
+        "rows_written": rows_written,
+    }
+
+
 def run_overview_market_movers_eod_history(
     *,
     universe_code: str,
@@ -776,17 +861,26 @@ def run_overview_market_movers_eod_history(
 
     freshness_error = ""
     freshness: dict[str, dict[str, Any]] = {}
+    known_limited_symbols: set[str] = set()
     if not force_full_refresh:
         try:
             freshness = _load_market_movers_eod_freshness(symbols)
         except Exception as exc:
             freshness_error = str(exc)
             freshness = {}
+        try:
+            known_limited_symbols = _load_market_movers_limited_history_symbols(
+                universe_code=normalized_universe,
+                symbols=symbols,
+            )
+        except Exception:
+            known_limited_symbols = set()
     plan = _market_movers_eod_refresh_plan(
         symbols,
         freshness,
         as_of_date=resolved_as_of_date,
         period=normalized_period,
+        known_limited_symbols=known_limited_symbols,
     )
     stale_symbols = plan["stale_symbols"]
     repair_symbols = plan["repair_symbols"]
@@ -848,6 +942,13 @@ def run_overview_market_movers_eod_history(
             )
         result = _merge_market_movers_eod_results(collect_results, now_text=now_text)
 
+    limited_history_result = _persist_market_movers_limited_history_issues(
+        universe_code=normalized_universe,
+        period=normalized_period,
+        symbols=selected_symbols,
+        as_of_date=resolved_as_of_date,
+    )
+
     result["job_name"] = "overview_market_movers_eod_history"
     details = dict(result.get("details") or {})
     refresh_strategy = "full_window_forced" if force_full_refresh else "smart_delta"
@@ -879,6 +980,10 @@ def run_overview_market_movers_eod_history(
             "delta_symbols_count": len(stale_symbols),
             "repair_symbols_count": len(repair_symbols),
             "missing_symbols_count": len(missing_symbols),
+            "known_limited_history_symbols_count": len(plan.get("limited_history_symbols") or []),
+            "limited_history_symbols_count": len(limited_history_result["symbols"]),
+            "limited_history_symbols": limited_history_result["symbols"],
+            "limited_history_issue_rows_written": limited_history_result["rows_written"],
             "quality_symbols_count": len(plan["quality_reasons_by_symbol"]),
             "delta_batch_count": len(plan.get("delta_batches") or []),
             "repair_batch_count": len(plan.get("repair_batches") or []),

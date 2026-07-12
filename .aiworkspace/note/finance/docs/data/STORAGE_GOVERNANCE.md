@@ -34,7 +34,7 @@ Last Verified: 2026-07-08
 | `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Optional selected-portfolio monitoring check record | Explicit user action only. No automatic log sprawl. |
 | `.aiworkspace/note/finance/saved/SELECTED_DASHBOARD_PORTFOLIOS.jsonl` | User-created Operations > Portfolio Monitoring portfolio setup. File name keeps the legacy dashboard term | Keep as dashboard setup, not evidence or approval. Stores portfolio names, selected decision strategy slots, start / latest-end mode, balance, memo, and soft delete state. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Reusable portfolio mix setup | Keep as setup, not evidence. |
-| `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl` | Legacy reusable weighted portfolio setup | Preserve as compatibility; do not expand without migration. |
+| `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl` | Legacy reusable weighted portfolio setup | Preserve as compatibility; do not expand without migration. The active file may be absent after an explicit user reset until the next reusable portfolio save. |
 | `.aiworkspace/note/finance/run_history/*.jsonl` | Local execution history | Debug/replay artifact, not decision source-of-truth. |
 | `.aiworkspace/note/finance/run_artifacts/` | Generated job result artifacts | Local/generated unless promoted to a report. |
 | `.aiworkspace/note/finance/reports/backtests/` | Human-readable strategy / validation / decision reports | Reports may cite evidence, but do not replace registries. |
@@ -46,7 +46,7 @@ As of the 2026-06-01 JSONL cleanup, the active selected-dashboard state is inten
 - `SELECTED_DASHBOARD_PORTFOLIOS.jsonl`
 - `SAVED_PORTFOLIOS.jsonl`
 
-`PORTFOLIO_SELECTION_SOURCES.jsonl` and `PRACTICAL_VALIDATION_RESULTS.jsonl` may be absent until the next Backtest Analysis / Practical Validation save. File absence is not storage drift when no active selected-route source/result row is being preserved.
+`PORTFOLIO_SELECTION_SOURCES.jsonl` and `PRACTICAL_VALIDATION_RESULTS.jsonl` may be absent until the next Backtest Analysis / Practical Validation save. `SAVED_PORTFOLIOS.jsonl` may also be absent after an explicit user reset until the next reusable portfolio save. These file-absence states are not storage drift when their corresponding active record is not being preserved.
 
 ## Phase 13 Alignment Notes
 

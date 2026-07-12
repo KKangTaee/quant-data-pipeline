@@ -40,7 +40,63 @@ GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 def render_market_context_header() -> None:
     """Render the compact Market Context tab heading."""
     st.markdown("### 시장 맥락")
-    st.caption("저장된 시장 자료로 현재 세션의 움직임, 확산, 이벤트 배경을 빠르게 확인합니다.")
+    st.caption("S&P 500의 최근 멀티플 위치와 FOMC 기반 예상 실적 시나리오를 함께 비교합니다.")
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_sp500_valuation_model() -> dict[str, Any]:
+    """Load the DB-backed, JSON-safe valuation read model."""
+    from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+
+    return build_sp500_valuation_read_model()
+
+
+def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:
+    """Keep the valuation question readable when the React build is unavailable."""
+    st.info("가치평가 화면 빌드를 찾지 못해 핵심 수치만 표시합니다.")
+    multiple = dict(payload.get("multiple_regime") or {})
+    earnings = dict(payload.get("earnings_scenario") or {})
+    index = dict(payload.get("index_scenario") or {})
+    cols = st.columns(3)
+    cols[0].metric("현재 후행 PER", f"{float(multiple.get('current_pe') or 0):.2f}x")
+    cols[1].metric("5년 중심 PER", f"{float(multiple.get('mean_multiple') or 0):.2f}x")
+    cols[2].metric("가치평가 구간", str(multiple.get("bucket") or "자료 부족"))
+    scenarios = dict(index.get("spx_scenarios") or {})
+    if scenarios:
+        st.write("예상 실적 기반 SPX 시나리오", scenarios)
+    st.caption(
+        f"EPS 출처: {earnings.get('eps_source') or '확인 필요'} · "
+        f"EPS 기준: {earnings.get('eps_basis_date') or '-'} · "
+        f"SEP 발표: {earnings.get('release_date') or '-'}"
+    )
+    baseline = dict(earnings.get("baseline") or {})
+    if baseline:
+        st.caption(
+            f"적용 GDP {float(baseline.get('real_gdp_pct') or 0):.1f}% + "
+            f"PCE {float(baseline.get('pce_inflation_pct') or 0):.1f}% = "
+            f"예상 EPS 성장률 {float(baseline.get('growth_pct') or 0):.1f}%"
+        )
+    if earnings.get("fallback_reason"):
+        st.caption(str(earnings["fallback_reason"]))
+    st.caption("거시 지표 기반 자체 예상이며 애널리스트 컨센서스가 아닙니다.")
+
+
+def render_market_context_valuation() -> None:
+    """Render the React-first two-chart S&P 500 valuation surface."""
+    from app.web.overview.market_context_react_component import (
+        market_context_valuation_component_available,
+        render_market_context_valuation_component,
+    )
+
+    try:
+        payload = load_sp500_valuation_model()
+    except Exception as exc:  # pragma: no cover - UI resilience only
+        st.warning(f"S&P 500 가치평가 자료를 불러오지 못했습니다: {exc}")
+        return
+    if market_context_valuation_component_available():
+        render_market_context_valuation_component(payload)
+        return
+    _render_market_context_valuation_fallback(payload)
 
 
 def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:

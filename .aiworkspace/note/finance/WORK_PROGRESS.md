@@ -24,11 +24,31 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
+  - Current active task is none.
+  - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
+  - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
+  - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
+  - Previous completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-readable-review-evidence-v1-20260711](./tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-decision-flow-simplification-v1-20260711](./tasks/active/final-review-decision-flow-simplification-v1-20260711/STATUS.md).
+  - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
+  - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
+  - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
+  - Current active Practical Validation UI task is none.
+  - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
+  - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
+
+### Institutional Portfolios Track
 
 - Institutional Portfolios Security Detail Chart Layout V1 2026-07-12:
   - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`에서 `종목 분석 > 종목 상세` 1차~3차를 완료했다.
@@ -53,6 +73,104 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-workspace-v1-20260708/`에서 1차~6차 scope를 진행했다.
   - `Workspace > Institutional Portfolios`를 Market Movers와 분리된 delayed SEC Form 13F research surface로 추가하고, SEC official dataset ingestion / schema / loader / service / UI / docs / runbook을 연결했다.
   - 13F 45일 지연, shorts / cash / derivatives / hedge omission, CUSIP-symbol mapping caveat를 visible boundary로 남겼고, Backtest / Practical Validation / Final Review / Operations live workflow에는 연결하지 않았다.
+### Overview / Market Interest Track
+
+- Overview Market Movers 상단 action / Monthly 짧은 이력 V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`에서 긴 버튼 detail을 버튼 밖 한 줄 설명으로 분리했다.
+  - FDXF/HONA의 Monthly 반복 갱신 원인을 provider 가용 이력 31/1 rows로 확인하고 `limited_price_history` evidence를 저장해 같은 full-window 수집 제안을 제거했다.
+  - 146 focused tests, React build, DB live preflight, Browser QA를 통과했다.
+- Overview Market Movers 섹션 제목 통일 V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-movers-section-title-unification-v1-20260711/`에서 섹터 breadth의 외부 중복 divider를 제거했다.
+  - React/fallback 모두 `SECTOR BREADTH / 섹터 / 시장 확산 맥락 / 설명 / 상태`를 고정 섹션 헤더로 사용하고, 현재 breadth headline은 결과 요약으로 낮췄다.
+  - Market Movers focused 79 tests, React build, Browser QA를 통과했으며 데이터 계산/provider/DB/registry 의미는 변경하지 않았다.
+- Overview Market Movers 애널리스트 출처 보드:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-source-board-20260709/`에서 `애널리스트 관심`의 링크 묶음 expander를 `출처별 확인 상태` 보드로 바꿨다.
+  - Yahoo/yfinance는 세션 전용 구조화 단서로, MarketWatch / WSJ Markets / Nasdaq.com은 `원문 교차확인` 상태로 분리해 표시한다.
+  - 자동 크롤링, DB 저장, 추천 / 점수화 / 매매 신호는 추가하지 않았다.
+- Overview Market Movers 시장 관심 뉴스 / SEC 분리:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-news-sec-split-20260709/`에서 선택 종목 `시장 관심` 패널의 `뉴스 리스트`와 `SEC 공시 촉매`를 별도 evidence section으로 분리했다.
+  - Form 144처럼 제목이 form명뿐인 SEC metadata는 `SEC Form 144 · 제한/지배주식 매각 예정 통지`로 표시해 뉴스 기사와 혼동하지 않게 했다.
+  - 13F는 계속 `기관 보유 배경 · 13F 지연 자료`로 분리하며, 추천 / 점수화 / 매매 신호 / body 저장 / DB schema 변경은 추가하지 않았다.
+- Overview Market Movers 시장 관심 근거 V2:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v2-20260708/`에서 1차~5차 follow-up을 진행했다.
+  - `시장 관심 근거 확인`이 선택 종목 뉴스 / 한국어 뉴스 / SEC metadata를 함께 조회하고, `시장 관심` 탭 안에서 `애널리스트 관심`, `뉴스 리스트`, `SEC 공시 촉매`, `기관 보유 배경 · 13F 지연 자료`, `출처/원문 링크`를 구분해 보여준다.
+  - FMP/Finnhub/Naver API credential integration, 13F DB ingestion, body 저장, 추천 / 점수화 / 매매 신호는 추가하지 않았다.
+- Overview Market Movers 시장 관심 근거 V1:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v1-20260708/`에서 1차~4차 selected-symbol 조사 보조 패널을 개발했다.
+  - Market Movers 선택 종목 하단에 수동 `시장 관심 근거 확인` action과 `시장 관심` 탭을 추가해 애널리스트 / 뉴스·SEC / 13F 지연 맥락 / 원문 링크를 확인하게 했다.
+  - 추천, 점수화, 자동 catalyst 판정, 매수·매도 신호, article/report/filing body 저장, 13F DB ingestion은 추가하지 않았다.
+### Practical Validation / Final Review Track
+
+- Practical Validation Pre-Final Enrichment Gate V1:
+  - 실행 가능한 operability / holdings·exposure / required macro gap을 Practical Validation 승격 전 blocker로 분리했다. 수집 성공 뒤에도 Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동이 활성화되지 않는다.
+  - Final Review의 legacy / stale 검토서는 과거 근거 열람과 2단계 복구 navigation만 허용하고 Decision Desk, recommendation, 판단 저장을 `2단계 재검증 필요`로 잠갔다.
+  - Browser QA에서 단계 요약 일관성, 복구 handoff, 비활성 판단 CTA, 760px no-overflow를 확인했다. registry / saved / run history / generated screenshot은 커밋하지 않았다.
+- Final Review Readable Review Evidence V1:
+  - `남은 판단 근거`를 사용자 언어의 검증명, 현재 확인 내용, 판단 이유, 개선 행동으로 정리하고 raw source / 기준일은 접힌 상세로 낮췄다.
+  - 수집 가능한 provider gap만 같은 후보의 Practical Validation 보강 화면으로 넘기며 기간 밖 / 미구현 / source 탐색 / 사용자 판단은 별도 행동으로 분리했다.
+  - focused tests 59개, React build, py_compile, diff check, 760px Browser QA와 2단계 handoff를 통과했다. 실제 수집 / 판단 저장과 registry / saved / run history write는 실행하지 않았다.
+- Final Review Decision Flow Simplification V1:
+  - 총평과 4행 해석 직후에 route / 판단 사유 / gate 기반 CTA를 배치해 Level1 / Level2와 같은 판단 action 흐름으로 정리했다.
+  - React는 decision intent만 전달하고 Python이 save evaluation, 자동 Decision ID, route template, append를 소유한다. 판단 사유는 사용자가 직접 입력해야 CTA가 활성화된다.
+  - Evidence Appendix와 Saved Decisions ledger를 Final Review에서 제거했다. selected row 운영 확인은 Portfolio Monitoring에서 이어지며 기존 decision JSONL은 보존했다.
+  - 계약 테스트 137개, React build, py_compile, diff check, Browser QA를 통과했고 QA 중 registry write는 실행하지 않았다.
+- Final Review Responsive Evidence V1:
+  - REVIEW impact header에만 2열 selector를 적용하고 내부 audit trace는 전체 폭 1열로 고정해 축소 화면의 카드 찌그러짐을 제거했다.
+  - 긴 lifecycle / provider 근거는 카드 내부에서 줄바꿈하고 compact / mobile에서 header, tab, trace label을 단계적으로 쌓는다.
+  - React build, focused contract test, py_compile, diff check, 900px / 680px Browser QA를 통과했다. Python evidence 계약과 registry / saved / run history는 변경하지 않았다.
+- Final Review Guidance Actionability V1:
+  - 10개 Monitoring 패턴을 named evidence adapter 기반 4개 상태로 판정하고, 첫 화면 최대 6개에 `현재 진단 / 의미 / 변화 조건 / 다음 행동`을 표시했다. source / 기준일 / technical path는 접힌 상세에 남겼다.
+  - Level2 REVIEW를 Final Review 직접 결정, 2단계 인수 제한, Monitoring 조건, blocker로 분리하고 총평 직후 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 배치했다.
+  - focused tests 53개, React build, py_compile, diff check, Browser QA를 통과했다. registry / saved / run history와 generated QA screenshot은 커밋하지 않았다.
+- Portfolio Workflow Legacy Reset / Rebuild:
+  - 기존 Final Review 후보 6개를 current source → Practical Validation → Final Review 판단으로 재생성했다. 모든 stored-period runtime replay가 PASS였고 새 validation은 workspace / REVIEW role 계약을 포함한다.
+  - schema-v3 monitoring decision 6개와 Portfolio Monitoring setup 3개를 새 ID로 연결했으며 legacy `SAVED_PORTFOLIOS.jsonl`은 사용자 요청으로 제거했다.
+  - focused unittest 5개, py_compile, data-chain invariant, diff check는 통과했다. Browser QA는 localhost URL 보안 정책 때문에 미실행이다.
+- Final Review Investment Report Redesign V1:
+  - 외부 Investment Report card와 중복 상태 / Handoff 기술 용어를 제거하고 투자 매력도 / 근거 신뢰도 / Monitoring 준비도를 분리했다.
+  - open REVIEW 개수 자동 감점 / cap을 제거하고 REVIEW trace, 총평 / 강점과 약점 / 저장 전 질문, 10개 조건부 패턴 가이드와 세 개 상세 탭을 구현했다.
+  - focused tests 53개, React build, py_compile, diff check, Browser QA를 통과했으며 generated screenshot과 run history는 stage하지 않았다.
+- Final Review Confirmed Review Flow V1:
+  - stable key 후보 선택, visible Review Queue 제거, `최종 검토서 확인` session boundary와 stale report 차단을 1차~2차로 완료했다.
+  - Level2 REVIEW 다섯 role은 `Final Review 확인 필요`에서 점수 반영 / 저장 전 확인 / Monitoring 이관 / blocker 행동으로 읽으며 React는 표시만 맡는다.
+  - focused tests 53개와 Browser QA를 통과했고, 재검증 / provider fetch / registry write / live approval 경계는 변경하지 않았다.
+- Final Review Candidate Selection Integration V1:
+  - `.aiworkspace/note/finance/tasks/active/final-review-candidate-selection-integration-v1-20260710/`에서 standalone `Step 1 / Candidate Board`와 중복 4-card lane summary를 제거했다.
+  - Review Queue, `검토 대상` selector, 후보 비교 상세는 Decision Desk 아래 후보 선택 패널로 통합했고, 투자 검토서 / Decision Cockpit / 판단 저장 / Evidence Appendix는 의미형 섹션으로 이어진다.
+  - score / gate / 저장 / provider fetch / registry write / Portfolio Monitoring handoff 계산은 변경하지 않았다. Browser QA screenshot은 generated artifact로 남겼다.
+- Final Review Sentiment Scope Cleanup V1:
+  - `.aiworkspace/note/finance/tasks/active/final-review-sentiment-scope-cleanup-v1-20260710/`에서 Final Review first-read의 CNN / AAII market sentiment panel과 detail expander를 제거했다.
+  - Final Review는 Decision Desk 이후 후보 선택 패널 / 투자 검토서 / Decision Cockpit을 바로 이어서 읽고, 자세한 심리 해석은 `Workspace > Overview > Sentiment`에 둔다.
+  - 시장심리는 Final Review gate / score / 저장 / Candidate Board priority / Monitoring signal을 바꾸지 않으며, timing / rebalance 활용은 별도 research 전까지 구현하지 않는다.
+- Final Review Top UX Cleanup V1-V4:
+  - `.aiworkspace/note/finance/tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/`에서 Final Review 상단 안내, 후보 현황, compact 시장심리 context, timing / rebalance research 경계를 1차~4차로 개발 / QA / 커밋했다.
+  - first-read surface는 후보 수, 선택 가능, 보류 / 재검토, 숨김, 저장된 판단, Monitoring 연결을 먼저 보여주고, Reference help와 1~5 guide card는 상단에서 제거했다.
+  - 후속 `final-review-sentiment-scope-cleanup-v1-20260710`에서 CNN / AAII sentiment는 Final Review first-read에서 제거하고, `Workspace > Overview > Sentiment`가 상세 해석을 소유하도록 정리했다.
+- Final Review Level3 React V2-V6:
+  - `.aiworkspace/note/finance/tasks/active/final-review-level3-react-v2-v6-20260709/`에서 Final Review 투자 검토서, Level2 REVIEW disposition, 점수 체계, 저장 / Monitoring handoff summary, 약점 개선안 read-only flow를 개발 / QA / 커밋 순서로 완료했다.
+  - React component는 표시와 intent만 맡고, score / recommendation / REVIEW 분류 / handoff 판단 / weakness proposal은 Python `backtest_evidence_read_model`이 만든다.
+  - registry / saved JSONL 기존 row는 재작성하지 않았고, run_history / generated QA artifacts는 stage하지 않았다. live approval / broker order / auto rebalance 경계도 변경하지 않았다.
+- Final Review Level3 Storage Boundary V1:
+  - `.aiworkspace/note/finance/tasks/active/final-review-level3-redesign-analysis-v1-20260709/`에서 Final Review 판단 record와 Portfolio Monitoring handoff 경계를 분리했다.
+  - `SELECT_FOR_PRACTICAL_PORTFOLIO` / 보류 / 거절 / 재검토는 모두 Final Review 판단으로 append 가능하며, Monitoring 후보는 selected-route gate 통과 row의 `monitoring_candidate`만 읽는다.
+  - registry / saved JSONL 기존 row는 재작성하지 않았고, live approval / broker order / auto rebalance 경계도 변경하지 않았다.
+- Practical Validation Stage Ownership V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-stage-ownership-v1/`에서 REVIEW role taxonomy와 Flow4 visibility contract를 정리했다.
+  - Flow4는 적용된 REVIEW-only Practical Validation category를 숨기지 않고 `데이터 주의` / `2단계 실용성 주의`로 표시하며, Final Review / Monitoring 항목은 보조 참고로 낮춘다.
+  - Flow4 provider-facing wording은 `ETF 운용사 / 공식 외부 데이터` 중심으로 낮췄고, Browser QA는 fresh server `http://localhost:8517`에서 확인했다.
+  - React / Streamlit UI는 표시만 맡고, replay / provider collection / validation calculation / gate / persistence는 기존 Python service/runtime 경계에 남긴다.
+- Practical Validation Flow4 Action Center V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-action-center-v1-20260709/`에서 Flow 4의 `데이터 보강 대상` / `Provider 보강 액션` split를 `데이터 보강 / 수집 실행` action center로 재정렬했다.
+  - 수집 버튼 주변에 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 보여주고, raw 보강 작업 상세는 `상세 근거 / 원자료`로 낮췄다.
+  - React는 계속 props 표시만 맡고, 외부 데이터 수집 / replay / validation calculation / gate / persistence는 Python service/runtime 경계에 남긴다.
+- Practical Validation Flow4 Data Action Board V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-flow4-data-action-board-v1-20260709/`에서 Flow 4 visible order를 `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`로 정리했다.
+  - visible `단계별 검증 소유권` expander와 별도 `수집 대상 근거` expander를 제거하고, Python workspace read model의 `data_action_board`를 표시 전용 React board로 렌더링한다.
+  - React는 provider/FRED/API/DB fetch, validation calculation, provider collection, replay, gate, registry/saved write를 하지 않는다. Browser QA에서 Final Review preview 반복 노출을 제거한 상태까지 확인했다.
+- Practical Validation Category Empty State V1:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-category-empty-state-v1-20260708/`에서 Flow 4 `카테고리별 검증 결과`의 `보강 항목 없음` 노출을 정리했다.
+  - `visible_criteria_detail_groups`를 추가해 REVIEW-only / empty category는 내부 read model에 남기되 Flow 3 / Flow 4 visible category result에서는 숨긴다.
+  - Flow 3 React fallback도 `보강 항목 없음`을 통과처럼 해석하지 않게 정리했다. Final Review 화면 재구성은 다음 차수로 남겼다.
 - Post-Merge Docs / Code Flow Refresh 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/post-merge-docs-flow-refresh-20260708/`에서 master 병합 후 공용 docs, status manifests, Overview runbook / data flow docs를 current state로 정렬했다.
   - Current Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`로 문서화했고, legacy `Futures Monitor` / `Sector / Industry` primary surface 표현을 낮췄다.
@@ -135,6 +253,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에서 Practical Validation 개편 V1-V8을 개발 / QA / 커밋 순서로 완료했다.
   - 주요 결과는 workspace read model, Final Review readiness wording, 5-flow 화면, read-only React Fix Queue, Flow 3 workspace panel split, first-read status normalization이다.
   - registry / saved JSONL, provider 수집, validation threshold, Final Review selected-route 저장 정책, live approval / broker / auto rebalance 경계는 변경하지 않았다.
+### Earlier Overview / Data Track
+
 - Overview Market Movers 기본지표 그래프 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/`에서 1차~4차를 완료했다.
   - 기존 PER / EPS / 당기순이익 표는 유지하고, 하단에 PER / EPS / 당기순이익 / 유동비율 / FCF 지표 탭과 연간 / 분기 막대 그래프를 추가했다.
@@ -226,6 +346,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`에서 사용자의 prototype UI 피드백을 1~6차 재설계 흐름으로 전환했다.
   - 1차는 새 데이터 / provider 없이 Market Movers의 화면 언어를 `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리했다.
   - Benchmark 근거는 `.aiworkspace/note/finance/researches/active/2026-06-market-movers-redesign-v2-benchmark/`에 남겼고, 2차부터 metric-card 중심 화면을 market-board형 list / tape로 재구성한다.
+### Earlier Backtest Track
+
 - Backtest Policy Signal Help Board V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-help-board-v1-20260705/`에서 `검증 기준 상세`을 1차 기준 category board + click help UI로 개선했다.
   - `Data Trust`, `Execution Source`, `Validation Source` 중심으로 무엇을 검증했는지 `plain_explanation` / `checked_items`로 보여준다.
@@ -353,6 +475,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+## 2026-07-12 KST - Master Merge Conflict Integration
+
+- `finance/data/db/schema.py`에서 Institutional 13F schema 6개와 S&P 500 valuation / EPS / SEP schema 3개를 독립 group으로 모두 보존했다.
+- Finance durable docs와 root handoff logs는 Institutional Portfolios, Final Review, Market Context 변경을 함께 유지하되 current/latest task pointer를 실제 HEAD 이력 기준 하나로 정렬했다.
+- master에 포함된 registry / saved reset migration은 기존 승인된 task 결과로 보존하고, untracked QA PNG는 병합 대상에서 제외했다.
+- 검증은 JSONL 21행, staged Python compile, Institutional Portfolios 39개, S&P 500 valuation 37개, evidence closure 18개, GRS 5개를 통과했다. Service contracts는 805개 중 804개가 통과했고, 양쪽 baseline에 공통인 Sentiment React source-contract 1건은 별도 후속으로 남겼다.
 
 ### 2026-07-02 - Market Movers investigation actions are tab-local
 - Completed `.aiworkspace/note/finance/tasks/active/overview-market-movers-tab-actions-statement-refresh-20260702/` after the user approved splitting selected-symbol investigation actions.
@@ -889,7 +1018,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Verification passed: `py_compile`, targeted Practical Validation / Final Review service contracts, and full `tests.test_service_contracts` 211 tests.
 
 ### 2026-05-31
-- Session closeout docs aligned for master merge handoff: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs now describe Final Review selection-only official save and the current candidate search outcome.
+- Session closeout docs aligned for master merge handoff at the time: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, and task logs then described the former selected-route-only Final Review save policy and the current candidate search outcome. This storage rule was superseded by the 2026-07-09 Final Review Level3 storage boundary work.
 - Opened `.aiworkspace/note/finance/tasks/active/non-gtaa-final-selection-candidate-search-20260531/`.
 - Non-GTAA dry-runs found several Practical Validation / Final Review evidence-ready candidates, but no fresh candidate passed the current selected-route gate for V2 `SELECT_FOR_PRACTICAL_PORTFOLIO` save.
 - Existing legacy V1 Final Review registry contains one non-GTAA Quality selected row; a read-only handoff dry-run maps it to one dashboard row, but the current V2 dashboard source remains empty until an explicit migration seed is approved.
@@ -5827,6 +5956,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Backtest Analysis visible surface에서 `2차 확인 큐` count / `2차 전달` Data Trust 표시 / readiness score를 제거하고, 1차 source 등록 기준과 버튼 활성화만 남겼다.
   - `promotion_decision=hold` 등 review focus는 버튼을 막지 않고 source contract `entry_gate.review_focus_rows`로만 Practical Validation에 전달한다.
   - Practical Validation `Backtest에서 넘어온 2차 확인 항목` 상세 표시와 registry / saved / strategy runtime 계약은 유지했다.
+
 ## 2026-07-05 - Backtest Data Trust Price Refresh V1
 
 - Added Backtest Data Trust price refresh planning / execution path so stale OHLCV can be repaired for the current backtest ticker set.
@@ -5955,3 +6085,110 @@ Detailed historical logs were archived on `2026-04-13`.
 - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/`에서 대가 watchlist / alias 검색과 가격 차트 empty 사유 분리를 구현했다.
 - Duquesne / Stanley Druckenmiller 등 확장 seed와 DB-backed `institutional_13f_manager_watchlist` loader 경계를 추가했고, alias 검색 CIK를 우선 정렬한다.
 - Ambiguous CUSIP-symbol mapping은 차트용 symbol로 쓰지 않으며, selected-security price action은 symbol missing / ambiguous mapping / price missing / ready 상태로 나뉜다.
+
+## 2026-07-09 - Market Movers Analyst Interest Multi-Source V1
+
+- `.aiworkspace/note/finance/tasks/active/overview-market-interest-analyst-multisource-20260709/`에서 Market Movers 선택 종목의 `애널리스트 관심`을 link-only에서 yfinance 구조화 세션 단서로 보강했다.
+- `시장 관심 근거 확인`은 선택 종목 1개에 대해 news / Korean news / SEC metadata / yfinance analyst metadata를 세션 전용으로 조회한다.
+- 화면은 최근 애널리스트 액션, 목표가 요약, 의견 분포, Nasdaq / WSJ / MarketWatch / Yahoo 원문 교차확인 링크를 보여준다.
+- Nasdaq / WSJ / MarketWatch HTML scraping, DB 저장, 추천/점수화/매매 신호, paid API, broker 연결은 추가하지 않았다.
+
+## 2026-07-11 - Overview Market Movers Visual Grouping V1
+
+- `.aiworkspace/note/finance/tasks/active/overview-market-movers-visual-grouping-v1-20260711/`에서 Sector Breadth 색상 범위와 선택 종목 조사 그룹 통합을 완료했다.
+- Sector Breadth는 3% outer surface와 lane별 direction tint를 사용하며, 조사 selector/panel/tabs/Snapshot/chart는 keyed 부모 container 하나로 읽힌다.
+- 후속으로 Ranking Board의 모드별 전체 표 expander를 Ranking Board keyed 부모 안으로 이동해 Sector Breadth와 선택 종목 조사 사이의 독립 박스를 제거했다.
+- Market Movers 81 tests, React build, desktop/mobile Browser QA를 통과했고 데이터/payload/provider/DB 경계는 변경하지 않았다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1
+
+- 기존 Market Context visible cockpit/brief/sector/event/refresh composition을 제거하고 5년 후행 PER 구간과 FOMC 예상 EPS/SPX 시나리오 React 화면으로 교체했다.
+- Shiller 월별 valuation, S&P index earnings release vintage, Federal Reserve SEP vintage 3-table pipeline과 loader/service/read-model 경계를 추가했다.
+- SEP 최신 링크를 매일 확인하는 automation과 optional EPS table bootstrap을 추가했고, 실제 수집·TypeScript/Vite·18 valuation tests·31 Market Context contracts·Browser QA를 완료했다.
+- V1 당시에는 S&P actual earnings workbook이 없으면 예상 지수 시나리오를 차단했다. 이 제약은 아래 V1.1 fallback 구현으로 대체됐으며 generated QA screenshot은 커밋하지 않는다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.1
+
+- 그래프 1을 official EPS/SPX readiness에서 분리하고 최신 Shiller 월별 PER를 current marker로 사용했다.
+- 그래프 2는 official actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 source/quality/basis/fallback evidence와 함께 사용한다.
+- SEP median GDP+PCE 예상 EPS와 동일 EPS × 5년 PER band, 현재 SPX 괴리율을 React에 연결했다.
+- 상세 실행과 QA는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`를 본다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.2
+
+- 2025-06 이후 missing SEP official vintage를 backfill하고 Shiller EPS 미발표 최신 월의 price-only row를 보존했다.
+- Graph 1은 대칭 `-2σ/-1σ/center/+1σ/+2σ`와 hover inspector로 개선했다.
+- Graph 2는 다음 달 SEP activation과 observation-year target을 적용한 12개월 actual-vs-reconstructed SPX band를 추가했다.
+- 테스트, 실제 DB smoke, desktop/420px Browser QA 근거는 active task `RUNS.md`를 본다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.3
+
+- Graph 1의 60개월 분포는 2026-03 완결 PER까지만 유지하고, EPS 미발표 2026-04~07은 March EPS를 유지한 잠정 PER 점선으로 연장했다.
+- current SPX EOD와 price/EPS basis date, latest complete PER를 service contract에 추가하고 React hover inspector를 선택 점 옆으로 이동·경계 반전·상단 clamp했다.
+- 33 valuation tests, 34 Market Context contracts, DB smoke, desktop/420px Browser QA를 완료했으며 generated V1.3 screenshot은 커밋하지 않는다.
+- Graph 2의 1/3/5년 선택은 older SEP vintage backfill과 Shiller EPS PIT 경계를 함께 다루는 후속 차수로 남긴다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.4
+
+- Federal Reserve calendar에서 공식 SEP 21개 vintage(2021-03~2026-06)를 발견해 missing 16개 release 326 rows를 idempotent backfill했다.
+- Graph 2 service는 120개월 Shiller warmup으로 12/36/60-point history options를 만들고 React는 `1년 / 3년 / 5년` selector로 전환한다.
+- 37 valuation tests, 35 Market Context contracts, DB smoke, desktop/420px Browser QA를 완료했고 V1.4 screenshot은 커밋하지 않는다.
+- Shiller EPS release-vintage 한계와 `과거 시점 재구성` 경계는 모든 기간에 유지한다.
+
+## 2026-07-08 - Practical Validation Flow Gating / Evidence IA V1
+
+- `.aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/`에서 1차~4차 Practical Validation flow 정리를 완료했다.
+- Flow 2에서 현재 세션 `전략 재검증 실행` 전에는 Flow 3 / Flow 4 / Flow 5와 결과 JSON을 렌더링하지 않는다.
+- Flow 4는 `카테고리별 검증 결과 -> 단계별 검증 소유권 -> Provider / Data 보강 액션 -> 접힌 근거 부록` 순서로 읽고, 수집 가능한 provider / holdings / exposure / macro gap에만 `수집하기` CTA를 노출한다.
+- Provider 부족근거 copy는 `수집 대상 근거`로 낮췄고, 상세 evidence tabs는 기본 접힌 `근거 부록`으로 이동했다.
+- 2026-07-09 Flow5 CTA Integration V1에서 이 visible Flow5 / evidence IA는 Flow3 CTA와 Flow4 `상세 근거 / 원자료` 구조로 대체됐다.
+
+## 2026-07-09 - Practical Validation Flow5 CTA Integration V1
+
+- `.aiworkspace/note/finance/tasks/active/practical-validation-flow5-cta-integration-v1-20260709/`에서 Flow5 visible container를 Flow3 `검증 결론 / 다음 행동` CTA로 통합했다.
+- Flow3 React는 `검증 결과 저장(기록용)`과 `저장하고 Final Review로 이동` intent만 보내고, Python page/service가 audit append, Final Review handoff, session state, rerun을 처리한다.
+- Selection Source JSON / Practical Validation Result JSON은 Flow4 `상세 근거 / 원자료` Raw Evidence로 낮췄다.
+- Gate threshold, provider/FRED/API/DB fetch path, Final Review selected-route policy, registry / saved rewrite, live approval / broker order 의미는 변경하지 않았다.
+- Follow-up review: Flow3 노란불 통과 상태를 `주의 포함 이동 가능`으로 표시하고, stale Flow5 copy / unused gate module board helpers / `Required for Final Review` display group 잔여물을 정리했다.
+
+## 2026-07-09 - Final Review Detailed Scorecard V1-V6
+
+- `.aiworkspace/note/finance/tasks/active/final-review-detailed-scorecard-v1-v6-20260709/`에서 1차~6차 개발 / QA / commit 흐름을 완료했다.
+- Final Review scorecard는 5개 dimension, Level2 REVIEW role별 score impact, hard blocker / selected-route not-ready / gate review-required / excessive open review score cap을 만든다.
+- React investment report는 Python read model의 `세부 점수`, `Level2 REVIEW 점수 영향`, `최종 선택 사유`, `판단 저장 전 메모`를 표시만 하며 provider fetch / DB write / registry write / gate 계산을 소유하지 않는다.
+- QA: focused service / React contract 47개, npm build, py_compile, Browser QA iframe label 확인 완료. Browser screenshot artifacts는 generated 파일로 남기고 stage하지 않았다.
+
+## 2026-07-10 - Final Review Investment Report IA V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-investment-report-ia-v1-20260710/`에서 1차~4차 투자 검토서 IA 개선을 완료했다.
+- Python read model은 `decision_summary`, high-score dimension 강점, compact `watch_items`, 실제 해석 카드 payload를 만들고 React는 이를 `선택 판단 요약`, `강점`, `확인 지점`, `해석`으로 렌더링한다.
+- old first-read `다음 행동` / `판단 저장 전 메모` 반복 block은 제거했고, score / gate / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+- QA: focused service / React contract 51개, py_compile, npm build, diff check, Browser QA 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.
+
+## 2026-07-10 - Final Review Investment Report Flat UI V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-investment-report-flat-ui-v1-20260710/`에서 1차~4차 투자 검토서 평면화 작업을 완료했다.
+- React first-read는 meta strip, `왜 후보인가` / `무엇을 확인해야 하나`, 강점 / 확인 지점 rows, 해석 rows로 정리했고, 상세 scorecard / Level2 / handoff / 개선안 / Monitoring 조건은 disclosure로 낮췄다.
+- Python score / gate / route / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+- QA: RED/GREEN source contract, focused service / React contract 51개, py_compile, npm build, diff check, Browser QA 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.
+
+## 2026-07-11 - Final Review Investment Report Detail Tabs V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-investment-report-detail-tabs-v1-20260711/`에서 1차~4차 하단 상세 탭 전환 작업을 완료했다.
+- React lower detail 영역은 expander 5개 대신 `근거 상세`, `저장 경계`, `개선 후보`, `Review 처리`, `Monitoring` 탭과 단일 panel로 렌더링한다.
+- Python score / gate / route / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+- QA: RED/GREEN source contract, focused service / React contract 51개, py_compile, npm build, diff check, Browser QA tab click 완료. Screenshot과 run history는 generated artifact로 stage하지 않는다.
+
+## 2026-07-11 - Final Review Decision Surface Consolidation V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-decision-surface-consolidation-v1-20260711/`에서 하단 근거 탭, REVIEW trace, 다음 실험, 최종 판단 흐름 1차~4차를 완료했다.
+- 연결된 세 탭 shell, 한국어 세부 점수, stored audit trace와 정성 판단 구분, 상위 3개 counterfactual 가설을 적용했다.
+- standalone Decision Cockpit / 반복 Save Readiness / disabled order action을 제거하고 Python-owned 통합 `판단 기록`으로 정리했다.
+- service 53개 / page 8개 test, React build, py_compile, diff check, Browser QA를 통과했으며 generated screenshot과 run history는 stage하지 않는다.
+
+## 2026-07-12 - Final Review Evidence Closure Contract V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`의 계획과 1차~4차 구현 / QA를 완료했다.
+- root issue dedup, Level2 actionability Gate, GRS signal/valuation 분리, static/dynamic survivorship policy, Final Review terminal snapshot, measured-only score를 적용했다.
+- 구현 커밋: `697a119b`, `65eacc92`, `cb2af299`, `4a05ae2f`; closeout 상세는 active task `STATUS.md`와 `RUNS.md`를 본다.
+- 후속은 dynamic historical universe용 PIT membership / delisting provider 승인 여부다.

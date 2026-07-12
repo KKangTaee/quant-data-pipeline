@@ -2608,12 +2608,12 @@ def overview_ui_css() -> str:
 .ov-sector-breadth-map {
   margin: 0.44rem 0 0.74rem 0;
   padding: 0.58rem;
-  border: 1px solid var(--ov-mi-border-faint);
-  border-left: 4px solid var(--ov-band-tone, var(--ov-mi-color-neutral));
-  border-radius: 0 var(--ov-mi-radius-panel) var(--ov-mi-radius-panel) 0;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--ov-band-tone, var(--ov-mi-color-neutral)) 5%, var(--ov-mi-color-surface)), rgba(255,255,255,0.98)),
-    var(--ov-mi-color-surface);
+  border-top: 1px solid var(--ov-mi-border-faint);
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));
 }
 .ov-sector-breadth-head {
   display: grid;
@@ -2623,9 +2623,10 @@ def overview_ui_css() -> str:
   margin-bottom: 0.52rem;
 }
 .ov-sector-breadth-kicker {
-  color: var(--ov-mi-color-text-muted);
+  color: var(--ov-mi-color-primary);
   font-size: var(--ov-mi-font-xs);
   font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0.02em;
   line-height: 1.15;
   text-transform: uppercase;
 }
@@ -2646,6 +2647,25 @@ def overview_ui_css() -> str:
 }
 .ov-sector-breadth-detail {
   margin-top: 0.16rem;
+}
+.ov-sector-breadth-result {
+  margin-top: 0.52rem;
+  padding-top: 0.46rem;
+  border-top: 1px solid var(--ov-mi-border-faint);
+}
+.ov-sector-breadth-result-title {
+  color: var(--ov-mi-color-text);
+  font-size: 1rem;
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ov-sector-breadth-result-detail {
+  margin-top: 0.16rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.28;
+  overflow-wrap: anywhere;
 }
 .ov-sector-breadth-status {
   display: inline-flex;
@@ -2723,7 +2743,7 @@ def overview_ui_css() -> str:
   padding: 0.48rem 0.52rem;
   border: 1px solid color-mix(in srgb, var(--ov-lane-tone, var(--ov-mi-color-neutral)) 24%, transparent);
   border-radius: var(--ov-mi-radius-card);
-  background: rgba(248,250,252,0.78);
+  background: color-mix(in srgb, var(--ov-lane-tone, var(--ov-mi-color-neutral)) 4%, transparent);
 }
 .ov-sector-breadth-lane-head {
   display: flex;
@@ -2997,6 +3017,76 @@ def overview_ui_css() -> str:
   font-size: var(--ov-mi-font-caption);
   line-height: 1.2;
   overflow-wrap: anywhere;
+}
+.st-key-overview_market_mover_ranking_workspace {
+  margin-top: 0.1rem;
+  border-radius: var(--ov-mi-radius-panel);
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));
+  color: var(--ov-mi-color-text);
+}
+.st-key-overview_market_mover_ranking_workspace > div[data-testid="stVerticalBlockBorderWrapper"] {
+  border-color: var(--ov-mi-border-faint);
+  background: transparent;
+}
+.st-key-overview_market_mover_ranking_workspace .ov-mm-board {
+  margin: 0;
+  padding: 0 0 0.48rem 0;
+  border: 0;
+  background: transparent;
+}
+.st-key-overview_market_mover_ranking_workspace div[data-testid="stExpander"] {
+  border-color: var(--ov-mi-border-faint);
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 2%, var(--ov-mi-color-surface));
+}
+.st-key-overview_market_mover_investigation_workspace {
+  margin-top: 0.84rem;
+  border-radius: var(--ov-mi-radius-panel);
+  background: color-mix(in srgb, var(--ov-mi-color-primary) 3%, var(--ov-mi-color-surface));
+  color: var(--ov-mi-color-text);
+}
+.st-key-overview_market_mover_investigation_workspace > div[data-testid="stVerticalBlockBorderWrapper"] {
+  border-color: var(--ov-mi-border-faint);
+  background: transparent;
+}
+.ov-mm-workspace-section-head {
+  padding: 0.12rem 0 0.58rem 0;
+  border-bottom: 1px solid var(--ov-mi-border-faint);
+}
+.ov-mm-workspace-section-kicker {
+  color: var(--ov-mi-color-primary);
+  font-size: var(--ov-mi-font-xs);
+  font-weight: var(--ov-mi-weight-label);
+  letter-spacing: 0.02em;
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+.ov-mm-workspace-section-title {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text);
+  font-size: var(--ov-mi-font-title);
+  font-weight: var(--ov-mi-weight-heading);
+  line-height: 1.15;
+}
+.ov-mm-workspace-section-detail {
+  margin-top: 0.12rem;
+  color: var(--ov-mi-color-text-subtle);
+  font-size: var(--ov-mi-font-caption);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.st-key-overview_market_mover_investigation_workspace [class~="ov-mm-investigation-pane"] {
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: transparent;
+}
+.st-key-overview_market_mover_investigation_workspace .ov-mm-research-snapshot,
+.st-key-overview_market_mover_investigation_workspace .ov-mm-research-chart-shell {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
 }
 div[class*="st-key-overview_market_movers_refresh_mode"] div[data-baseweb="select"] > div {
   min-height: 2rem;
@@ -4776,6 +4866,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  padding: 0.42rem 0.36rem;
 	  border-bottom: 1px solid var(--ov-mi-border-faint);
 	  border-left: 3px solid var(--ov-row-tone, var(--ov-mi-color-neutral));
+	  background: color-mix(in srgb, var(--ov-row-tone, var(--ov-mi-color-neutral)) 4%, transparent);
 	}
 	.ov-mm-list-rank {
 	  color: var(--ov-mi-color-text-muted);
@@ -5313,8 +5404,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	.ov-mm-research-chart-bar-plot {
 	  display: grid;
 	  grid-auto-flow: column;
-	  grid-auto-columns: 4rem;
-	  gap: 0.25rem;
+	  grid-auto-columns: var(--ov-mm-research-chart-column-width, 64px);
+	  gap: var(--ov-mm-research-chart-gap, 4px);
 	  align-items: end;
 	  position: relative;
 	  z-index: 1;
@@ -5325,8 +5416,8 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	  grid-template-rows: 13.4rem auto;
 	  gap: 0.32rem;
 	  align-items: stretch;
-	  width: 4rem;
-	  min-width: 4rem;
+	  width: var(--ov-mm-research-chart-column-width, 64px);
+	  min-width: var(--ov-mm-research-chart-column-width, 64px);
 	}
 	.ov-mm-research-chart-label,
 	.ov-mm-research-chart-value {
@@ -5479,7 +5570,7 @@ div[class*="st-key-overview_nasdaq_symbol_directory_refresh"] button {
 	    grid-template-columns: 1fr;
 	  }
 	  .ov-mm-research-chart-bar-plot {
-	    grid-auto-columns: 4rem;
+	    grid-auto-columns: var(--ov-mm-research-chart-column-width, 64px);
 	    grid-template-columns: none;
 	  }
 		  .ov-mm-research-grid {

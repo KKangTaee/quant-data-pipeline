@@ -4265,6 +4265,66 @@ def build_quote_gap_issue_rows(
     return rows
 
 
+def build_price_history_limit_issue_rows(
+    evidence_rows: Sequence[dict[str, Any]],
+    *,
+    universe_code: str,
+    seen_at: str | None = None,
+) -> list[dict[str, Any]]:
+    """Build durable evidence for symbols whose full provider window is still too short."""
+    normalized_universe = str(universe_code or "SP500").strip().upper()
+    collected_at = seen_at or _timestamp_str()
+    rows: list[dict[str, Any]] = []
+    for item in evidence_rows:
+        symbol = _normalize_symbol(item.get("symbol"))
+        if not symbol:
+            continue
+        period = str(item.get("period") or "").strip().lower()
+        row_count = int(item.get("row_count") or 0)
+        min_rows = int(item.get("min_rows") or 0)
+        first_date = str(item.get("first_date") or "-")
+        latest_date = str(item.get("latest_date") or "-")
+        issue_type = "limited_price_history"
+        payload = {
+            "symbol": symbol,
+            "period": period,
+            "first_date": first_date,
+            "latest_date": latest_date,
+            "row_count": row_count,
+            "min_rows": min_rows,
+            "source": "yfinance OHLCV full-window refresh",
+        }
+        rows.append(
+            {
+                "issue_key": _market_data_issue_key(
+                    universe_code=normalized_universe,
+                    symbol=symbol,
+                    issue_type=issue_type,
+                ),
+                "issue_type": issue_type,
+                "universe_code": normalized_universe,
+                "symbol": symbol,
+                "interval_code": "1d",
+                "diagnosis": "available_history_short",
+                "latest_status": "active",
+                "occurrence_count": 1,
+                "first_seen_at": collected_at,
+                "last_seen_at": collected_at,
+                "last_snapshot_time_utc": None,
+                "latest_confidence": 1.0,
+                "latest_evidence": (
+                    f"period={period or '-'}; rows={row_count}/{min_rows}; "
+                    f"first={first_date}; latest={latest_date}"
+                ),
+                "latest_recommended_action": (
+                    "Wait for additional trading history; do not repeat the same full-window refresh."
+                ),
+                "raw_payload_json": _json_payload(payload),
+            }
+        )
+    return rows
+
+
 def upsert_market_data_issue_rows(
     rows: Sequence[dict[str, Any]],
     *,

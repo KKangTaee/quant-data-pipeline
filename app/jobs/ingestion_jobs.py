@@ -36,6 +36,13 @@ from finance.data.futures_market import (
 from finance.data.institutional_13f import collect_and_store_sec_13f_dataset
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.sentiment import collect_and_store_market_sentiment
+from finance.data.sp500_valuation import (
+    collect_and_store_fomc_sep,
+    collect_and_store_fomc_sep_history,
+    collect_and_store_shiller_monthly_valuation,
+    ensure_sp500_valuation_schemas,
+    import_and_store_sp500_index_earnings,
+)
 from finance.data.market_intelligence import (
     collect_and_store_bls_macro_calendar_ics,
     collect_and_store_earnings_calendar,
@@ -178,6 +185,129 @@ def run_collect_ohlcv(
                 "timing_breakdown": {},
             },
         )
+
+
+def run_collect_sp500_valuation_context(
+    *,
+    index_earnings_path: str | None = None,
+    source_release_date: str | None = None,
+) -> JobResult:
+    """Refresh the DB inputs used by the S&P 500 valuation read model."""
+    job_name = "collect_sp500_valuation_context"
+    started_at = _now_str()
+    t0 = perf_counter()
+    steps: list[dict[str, Any]] = []
+
+    try:
+        ensure_sp500_valuation_schemas()
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=2,
+            symbols_processed=0,
+            message=f"S&P 500 valuation schema bootstrap failed: {exc}",
+            details={"pipeline_type": "sp500_valuation_context", "steps": []},
+        )
+
+    def collect_step(label: str, collector: Callable[[], dict[str, Any]]) -> None:
+        try:
+            payload = dict(collector() or {})
+            steps.append(
+                {
+                    "label": label,
+                    "status": "success",
+                    "rows_written": int(payload.get("rows_written") or 0),
+                    "details": payload,
+                }
+            )
+        except Exception as exc:
+            steps.append(
+                {
+                    "label": label,
+                    "status": "failed",
+                    "rows_written": 0,
+                    "message": str(exc),
+                }
+            )
+
+    collect_step("Shiller monthly valuation", collect_and_store_shiller_monthly_valuation)
+    collect_step("Federal Reserve SEP history", collect_and_store_fomc_sep_history)
+    collect_step("Federal Reserve SEP", collect_and_store_fomc_sep)
+    if index_earnings_path and source_release_date:
+        collect_step(
+            "S&P Index Earnings",
+            lambda: import_and_store_sp500_index_earnings(
+                index_earnings_path,
+                source_release_date=source_release_date,
+            ),
+        )
+    else:
+        steps.append(
+            {
+                "label": "S&P Index Earnings",
+                "status": "skipped",
+                "rows_written": 0,
+                "message": "명시적 workbook path와 release date가 없어 기존 actual EPS를 유지합니다.",
+            }
+        )
+
+    price_result = run_collect_ohlcv(
+        ["^GSPC", "SPY"],
+        period="1mo",
+        interval="1d",
+        execution_profile="managed_safe",
+    )
+    steps.append(
+        {
+            "label": "SPX/SPY EOD",
+            "status": str(price_result.get("status") or "failed"),
+            "rows_written": int(price_result.get("rows_written") or 0),
+            "message": price_result.get("message"),
+            "details": price_result.get("details") or {},
+        }
+    )
+
+    failed = [step for step in steps if step["status"] == "failed"]
+    succeeded = [step for step in steps if step["status"] in {"success", "partial_success"}]
+    rows_written = sum(int(step.get("rows_written") or 0) for step in steps)
+    if failed and succeeded:
+        status = "partial_success"
+    elif failed:
+        status = "failed"
+    else:
+        status = "success"
+    finished_at = _now_str()
+    return _build_result(
+        job_name=job_name,
+        status=status,
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_sec=perf_counter() - t0,
+        rows_written=rows_written,
+        symbols_requested=2,
+        symbols_processed=2 if price_result.get("status") == "success" else 0,
+        message=(
+            "S&P 500 valuation context refresh completed."
+            if status == "success"
+            else "S&P 500 valuation context refresh completed with source failures."
+        ),
+        details={
+            "pipeline_type": "sp500_valuation_context",
+            "target_tables": [
+                "finance_meta.sp500_monthly_valuation",
+                "finance_meta.sp500_index_earnings",
+                "finance_meta.fomc_sep_projection",
+                "finance_price.nyse_price_history",
+            ],
+            "steps": steps,
+        },
+    )
 
 
 def run_collect_fundamentals(

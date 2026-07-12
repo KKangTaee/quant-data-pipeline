@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-12
 
 ## 목적
 
@@ -38,7 +38,7 @@ Last Verified: 2026-07-08
 | `institutional_13f_cusip_symbol_map` | 13F row에서 얻은 best-effort CUSIP-symbol display mapping과 추후 enrichment source |
 | `institutional_13f_manager_watchlist` | Institutional Portfolios manager rail용 curated seed metadata. CIK, label, priority, external links를 저장할 수 있음 |
 | `institutional_13f_refresh_status` | SEC 13F dataset 수집 freshness state. latest report period, filing date, row counts, stale reason을 저장 |
-| `market_data_issue` | Overview Market Movers quote gap 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
+| `market_data_issue` | Overview Market Movers quote gap과 full-window 뒤에도 짧은 가격 이력 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
 | `futures_instrument` | Overview futures용 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
 | `futures_market_monitor_run` | Futures OHLCV 수집 run diagnostics. 최근 run status, failed symbols, latest candle time을 저장 |
 | `etf_provider_source_map` | ETF별 issuer 공식 endpoint / parser mapping cache. verified row를 provider snapshot collector가 사용 |
@@ -46,6 +46,9 @@ Last Verified: 2026-07-08
 | `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
 | `etf_exposure_snapshot` | ETF holdings 또는 provider aggregate에서 만든 asset class / sector / country / currency exposure summary |
 | `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
+| `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장. EPS 미발표 최신 월은 price-only `missing` row로 유지 |
+| `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
+| `fomc_sep_projection` | SEP release/year/variable/statistic unique vintage row. real GDP/PCE median 및 central-tendency endpoints와 1/3/5년 reconstruction용 calendar-discovered 과거 release 저장 |
 
 ### `finance_price`
 

@@ -101,7 +101,7 @@ def _backtest_workflow_nav_css() -> str:
 # Render the Backtest workflow as primary navigation.
 def _render_backtest_panel_selector() -> str:
     st.markdown("#### 후보 선정 흐름")
-    st.caption("Backtest Analysis에서 후보를 만들고, Practical Validation에서 검증 근거를 만든 뒤, Final Review에서 Selected Dashboard 모니터링 후보 여부를 판단합니다.")
+    st.caption("Backtest Analysis에서 후보를 만들고, Practical Validation에서 검증 근거를 만든 뒤, Final Review에서 Portfolio Monitoring 후보 여부를 판단합니다.")
 
     current_panel = str(st.session_state.get("backtest_active_panel") or BACKTEST_STAGE_ANALYSIS)
     if current_panel not in BACKTEST_WORKFLOW_PANEL_OPTIONS:
@@ -123,7 +123,6 @@ def _render_backtest_panel_selector() -> str:
     if selected_panel in BACKTEST_WORKFLOW_PANEL_OPTIONS:
         st.session_state.backtest_active_stage = selected_panel
         st.session_state.backtest_active_panel = selected_panel
-    st.caption("과거 실행 기록은 `Operations > Backtest Run History`, 선정 후 모니터링 관리는 `Operations > Selected Portfolio Dashboard`에서 확인합니다.")
     return str(st.session_state.get("backtest_active_panel") or BACKTEST_STAGE_ANALYSIS)
 
 
