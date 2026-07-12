@@ -206,6 +206,11 @@ def build_curve_provenance(
     component_sources = list(curve_context.get("curve_rows") or [])
     recheck_plan = dict(replay.get("recheck_plan") or {})
     period_coverage = dict(replay.get("period_coverage") or {})
+    market_date_contract = dict(
+        replay.get("market_date_contract")
+        or recheck_plan.get("market_date_contract")
+        or {}
+    )
     return {
         "portfolio_curve_source": curve_context.get("portfolio_curve_source") or "unavailable",
         "portfolio_curve_rows": len(normalize_result_curve(curve_context.get("portfolio_curve"))),
@@ -228,5 +233,11 @@ def build_curve_provenance(
         "period_coverage_status": period_coverage.get("status"),
         "period_coverage_end_gap_days": period_coverage.get("end_gap_days"),
         "actual_period": replay.get("actual_period") or period_coverage.get("actual_period"),
+        "market_date_contract": market_date_contract,
+        "requested_market_date": market_date_contract.get("requested_market_date"),
+        "latest_common_price_date": market_date_contract.get("latest_common_price_date"),
+        "last_complete_rebalance_date": market_date_contract.get("last_complete_rebalance_date"),
+        "latest_valuation_date": market_date_contract.get("latest_valuation_date"),
+        "limiting_symbols": list(market_date_contract.get("limiting_symbols") or []),
         "component_curve_sources": component_sources,
     }

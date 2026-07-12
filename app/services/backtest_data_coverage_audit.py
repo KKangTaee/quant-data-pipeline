@@ -240,6 +240,27 @@ def _context(validation: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _universe_contract(validation: dict[str, Any]) -> dict[str, Any]:
+    values = _nested_values_for_keys(
+        validation,
+        {"universe_mode", "universe_contract_mode", "historical_universe_mode"},
+    )
+    modes = {str(value or "").strip().lower() for value in values if not isinstance(value, dict)}
+    dynamic_modes = {
+        "pit_monthly_snapshot",
+        "pit_monthly_snapshot_universe",
+        "historical_dynamic_pit",
+        "dynamic_historical",
+        "point_in_time",
+    }
+    dynamic = bool(modes.intersection(dynamic_modes))
+    return {
+        "mode": "dynamic_historical" if dynamic else "static_manual",
+        "requires_pit_membership": dynamic,
+        "survivorship_applicability": "critical_required" if dynamic else "accepted_limit_allowed",
+    }
+
+
 def _price_window_row(validation: dict[str, Any], context: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     weights = _normalize_symbol_weights(context.get("symbol_weights"))
     symbols = list(context.get("symbols") or weights)
@@ -627,6 +648,7 @@ def build_data_coverage_audit(validation: dict[str, Any]) -> dict[str, Any]:
     """Summarize DB-backed data coverage evidence without adding persistence."""
 
     validation = dict(validation or {})
+    universe_contract = _universe_contract(validation)
     context = _context(validation)
     price_row, price_metrics = _price_window_row(validation, context)
     provider_row = _provider_snapshot_row(validation)
@@ -634,6 +656,12 @@ def build_data_coverage_audit(validation: dict[str, Any]) -> dict[str, Any]:
     universe_row = _universe_listing_row(validation, context)
     lifecycle_evidence = _symbol_lifecycle_evidence(context)
     survivorship_row = _survivorship_row(validation, context, str(universe_row.get("Status") or "NEEDS_INPUT"))
+    if universe_contract["requires_pit_membership"]:
+        for row in (universe_row, survivorship_row):
+            if row.get("Status") != "PASS":
+                row["Status"] = "NEEDS_INPUT"
+                row["Ready"] = False
+                row["Next Action"] = "PIT membership / delisting provider 개발 후 재검토합니다."
     rows = [
         price_row,
         provider_row,
@@ -667,6 +695,7 @@ def build_data_coverage_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "conclusion": conclusion,
         "next_action": next_action,
         "rows": rows,
+        "universe_contract": universe_contract,
         "metrics": {
             "ready_rows": status_counts["PASS"],
             "total_rows": len(rows),

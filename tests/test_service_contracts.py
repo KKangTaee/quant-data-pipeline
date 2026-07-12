@@ -4593,6 +4593,54 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
 
 
 class DataCoverageAuditContractTests(unittest.TestCase):
+    def test_universe_contract_distinguishes_static_manual_from_dynamic_historical(self) -> None:
+        from app.services.backtest_data_coverage_audit import build_data_coverage_audit
+
+        base = {
+            "data_coverage_context": {
+                "symbols": ["SPY"],
+                "symbol_weights": {"SPY": 100.0},
+                "requested_start": "2020-01-01",
+                "requested_end": "2020-12-31",
+                "price_window_rows": [
+                    {
+                        "symbol": "SPY",
+                        "first_window_date": "2020-01-01",
+                        "latest_window_date": "2020-12-31",
+                        "window_row_count": 252,
+                    }
+                ],
+                "asset_profile_rows": [{"symbol": "SPY", "status": "active"}],
+            },
+            "provider_coverage_display_rows": [{"Diagnostic Status": "PASS", "Freshness": "fresh"}],
+            "curve_evidence": {
+                "portfolio_curve_source": "actual_runtime_replay",
+                "curve_provenance": {
+                    "runtime_recheck_status": "PASS",
+                    "period_coverage_status": "PASS",
+                },
+                "period_coverage": {"status": "PASS"},
+            },
+        }
+
+        static_audit = build_data_coverage_audit(
+            {**base, "selection_source_snapshot": {"settings_snapshot": {"universe_mode": "manual_tickers"}}}
+        )
+        dynamic_audit = build_data_coverage_audit(
+            {
+                **base,
+                "selection_source_snapshot": {
+                    "settings_snapshot": {"universe_mode": "pit_monthly_snapshot"}
+                },
+            }
+        )
+        dynamic_rows = {row["Criteria"]: row for row in dynamic_audit["rows"]}
+
+        self.assertEqual(static_audit["universe_contract"]["mode"], "static_manual")
+        self.assertEqual(dynamic_audit["universe_contract"]["mode"], "dynamic_historical")
+        self.assertTrue(dynamic_audit["universe_contract"]["requires_pit_membership"])
+        self.assertEqual(dynamic_rows["Survivorship / delisting control"]["Status"], "NEEDS_INPUT")
+
     def test_ready_audit_uses_db_price_provider_and_survivorship_evidence_without_writes(self) -> None:
         from app.services.backtest_data_coverage_audit import (
             DATA_COVERAGE_READY,

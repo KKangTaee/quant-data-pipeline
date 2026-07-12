@@ -154,15 +154,35 @@ def build_latest_replay_evidence(validation: dict[str, Any]) -> dict[str, Any]:
     curve = dict(validation.get("curve_evidence") or {})
     provenance = dict(curve.get("curve_provenance") or {})
     period = dict(curve.get("period_coverage") or provenance.get("period_coverage") or {})
+    market_date_contract = dict(
+        provenance.get("market_date_contract")
+        or period.get("market_date_contract")
+        or {}
+    )
     requested_period = dict(period.get("requested_period") or {})
     actual_period = dict(period.get("actual_period") or {})
     return {
         "requested_market_date": _date_text(
-            period.get("requested_market_date") or requested_period.get("end")
+            period.get("requested_market_date")
+            or market_date_contract.get("requested_market_date")
+            or provenance.get("requested_market_date")
+            or requested_period.get("end")
         ),
-        "latest_common_price_date": _date_text(period.get("latest_common_price_date")),
-        "last_complete_rebalance_date": _date_text(period.get("last_complete_rebalance_date")),
-        "latest_valuation_date": _date_text(period.get("latest_valuation_date")),
+        "latest_common_price_date": _date_text(
+            period.get("latest_common_price_date")
+            or market_date_contract.get("latest_common_price_date")
+            or provenance.get("latest_common_price_date")
+        ),
+        "last_complete_rebalance_date": _date_text(
+            period.get("last_complete_rebalance_date")
+            or market_date_contract.get("last_complete_rebalance_date")
+            or provenance.get("last_complete_rebalance_date")
+        ),
+        "latest_valuation_date": _date_text(
+            period.get("latest_valuation_date")
+            or market_date_contract.get("latest_valuation_date")
+            or provenance.get("latest_valuation_date")
+        ),
         "actual_result_date": _date_text(
             period.get("actual_result_date") or actual_period.get("end")
         ),
@@ -178,6 +198,12 @@ def build_latest_replay_evidence(validation: dict[str, Any]) -> dict[str, Any]:
             curve.get("portfolio_curve_source")
             or provenance.get("portfolio_curve_source")
             or "stored_curve_provenance"
+        ),
+        "limiting_symbols": list(
+            period.get("limiting_symbols")
+            or market_date_contract.get("limiting_symbols")
+            or provenance.get("limiting_symbols")
+            or []
         ),
     }
 
@@ -261,6 +287,8 @@ def _replay_issue(validation: dict[str, Any], modules: dict[str, dict[str, Any]]
 
 
 def _historical_universe_issue(validation: dict[str, Any]) -> dict[str, Any] | None:
+    audit = dict(validation.get("data_coverage_audit") or {})
+    universe_contract = dict(audit.get("universe_contract") or {})
     listing = _audit_row(validation, "Universe / listing evidence")
     survivorship = _audit_row(validation, "Survivorship / delisting control")
     if not _is_non_pass(listing.get("Status")) and not _is_non_pass(survivorship.get("Status")):
@@ -275,6 +303,10 @@ def _historical_universe_issue(validation: dict[str, Any]) -> dict[str, Any] | N
         for row in (listing, survivorship)
         if row
     )
+    dynamic_historical = (
+        universe_contract.get("mode") == "dynamic_historical"
+        or bool(universe_contract.get("requires_pit_membership"))
+    )
     return _base_issue(
         root_issue_id="historical_universe_coverage",
         title="과거 universe와 상장폐지 반영 범위",
@@ -282,14 +314,15 @@ def _historical_universe_issue(validation: dict[str, Any]) -> dict[str, Any] | N
         expected="universe 적용 방식에 맞는 lifecycle / survivorship evidence",
         cause="historical lifecycle coverage",
         derived_checks=derived,
-        resolution_class="accepted_limit",
-        owner_stage="final_review",
+        resolution_class="engineering_required" if dynamic_historical else "accepted_limit",
+        owner_stage="development" if dynamic_historical else "final_review",
         actionable_now=False,
         action_id=None,
         completion_criteria="static/dynamic universe applicability에 맞는 종결 상태 저장",
-        applicability="pending_universe_contract",
-        criticality="noncritical",
-        gate_effect="final_review_closure",
+        applicability=str(universe_contract.get("mode") or "pending_universe_contract"),
+        criticality="critical" if dynamic_historical else "noncritical",
+        gate_effect="block_final_review" if dynamic_historical else "final_review_closure",
+        terminal_state="deferred" if dynamic_historical else "open",
     )
 
 

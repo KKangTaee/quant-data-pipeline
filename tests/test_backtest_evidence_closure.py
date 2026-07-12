@@ -62,6 +62,85 @@ def _grs_validation_fixture() -> dict[str, object]:
 
 
 class EvidenceClosureContractTests(unittest.TestCase):
+    def test_recheck_plan_uses_component_common_date_not_whole_db_max(self) -> None:
+        import pandas as pd
+        from unittest.mock import patch
+
+        from app.services import backtest_practical_validation_replay as replay_service
+
+        source = {
+            "period": {"actual_start": "2016-08-31", "actual_end": "2026-02-28"},
+            "components": [
+                {
+                    "strategy_key": "global_relative_strength",
+                    "universe": ["SPY"],
+                    "contract": {"cash_ticker": "BIL"},
+                }
+            ],
+        }
+        freshness = pd.DataFrame(
+            [
+                {"symbol": "SPY", "latest_date": "2026-06-30", "row_count": 100},
+                {"symbol": "BIL", "latest_date": "2026-06-26", "row_count": 100},
+            ]
+        )
+
+        with (
+            patch.object(replay_service, "load_latest_market_date", return_value="2026-07-10"),
+            patch.object(replay_service, "load_price_freshness_summary", return_value=freshness),
+        ):
+            plan = replay_service.build_practical_validation_recheck_plan(source)
+
+        self.assertEqual(plan["market_date_contract"]["requested_market_date"], "2026-07-10")
+        self.assertEqual(plan["market_date_contract"]["latest_common_price_date"], "2026-06-26")
+        self.assertEqual(plan["market_date_contract"]["limiting_symbols"], ["BIL"])
+        self.assertEqual(plan["requested_period"]["end"], "2026-06-26")
+
+    def test_static_manual_survivorship_gap_is_accepted_limit_candidate(self) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        validation["data_coverage_audit"] = {
+            "universe_contract": {
+                "mode": "static_manual",
+                "requires_pit_membership": False,
+                "survivorship_applicability": "accepted_limit_allowed",
+            },
+            "rows": [
+                {"Criteria": "Universe / listing evidence", "Status": "REVIEW", "Current": "partial"},
+                {"Criteria": "Survivorship / delisting control", "Status": "REVIEW", "Current": "not proven"},
+            ],
+        }
+
+        issue = _issue(build_evidence_closure_contract(validation), "historical_universe_coverage")
+
+        self.assertEqual(issue["resolution_class"], "accepted_limit")
+        self.assertEqual(issue["criticality"], "noncritical")
+
+    def test_dynamic_universe_missing_pit_membership_is_critical_engineering_blocker(self) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        validation["data_coverage_audit"] = {
+            "universe_contract": {
+                "mode": "dynamic_historical",
+                "requires_pit_membership": True,
+                "survivorship_applicability": "critical_required",
+            },
+            "rows": [
+                {"Criteria": "Universe / listing evidence", "Status": "NEEDS_INPUT", "Current": "missing PIT"},
+                {"Criteria": "Survivorship / delisting control", "Status": "NEEDS_INPUT", "Current": "not proven"},
+            ],
+        }
+
+        contract = build_evidence_closure_contract(validation)
+        issue = _issue(contract, "historical_universe_coverage")
+
+        self.assertEqual(issue["resolution_class"], "engineering_required")
+        self.assertEqual(issue["criticality"], "critical")
+        self.assertEqual(issue["terminal_state"], "deferred")
+        self.assertFalse(contract["current_final_review_eligible"])
+
     def test_resolve_now_without_registered_handler_has_no_cta_and_blocks(self) -> None:
         from app.services.backtest_evidence_closure import normalize_evidence_issue
 
