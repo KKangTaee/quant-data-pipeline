@@ -356,6 +356,82 @@ class Sp500ValuationDataTests(unittest.TestCase):
             places=8,
         )
 
+    def test_multiple_regime_extends_price_only_months_as_provisional(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_multiple_regime
+
+        complete = monthly_pe_frame(64, start="2020-12-01")
+        latest_eps = float(complete.iloc[-1]["trailing_eps"])
+        price_only = pd.DataFrame(
+            {
+                "observation_month": pd.date_range("2026-04-01", periods=4, freq="MS"),
+                "spx_level": [6957.0, 7412.55, 7450.03, 7503.85],
+                "trailing_eps": [None, None, None, None],
+                "trailing_pe": [None, None, None, None],
+            }
+        )
+        rows = pd.concat([complete, price_only], ignore_index=True)
+        complete_only = calculate_multiple_regime(complete)
+
+        result = calculate_multiple_regime(
+            rows,
+            current_spx={"date": "2026-07-10", "price": 7575.39},
+        )
+
+        self.assertEqual(len(result["series"]), 60)
+        self.assertEqual(result["series"][-2]["month"], "2026-06-01")
+        self.assertEqual(result["series"][-2]["quality"], "provisional")
+        self.assertEqual(result["series"][-1]["month"], "2026-07-01")
+        self.assertEqual(result["series"][-1]["quality"], "provisional")
+        self.assertEqual(result["series"][-1]["price_basis_date"], "2026-07-10")
+        self.assertEqual(result["current_price_basis_date"], "2026-07-10")
+        self.assertEqual(result["current_eps_basis_date"], "2026-03-01")
+        self.assertTrue(result["current_is_provisional"])
+        self.assertAlmostEqual(result["current_pe"], 7575.39 / latest_eps)
+        self.assertEqual(result["latest_complete_basis_date"], "2026-03-01")
+        self.assertAlmostEqual(result["latest_complete_pe"], float(complete.iloc[-1]["trailing_pe"]))
+        for key in ("minus_2sigma", "minus_1sigma", "mean_multiple", "plus_1sigma", "plus_2sigma"):
+            self.assertAlmostEqual(result[key], complete_only[key])
+
+    def test_read_model_passes_latest_spx_to_graph_one_provisional_marker(self) -> None:
+        from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+
+        complete = monthly_pe_frame(64, start="2020-12-01")
+        rows = pd.concat(
+            [
+                complete,
+                pd.DataFrame(
+                    {
+                        "observation_month": pd.date_range("2026-04-01", periods=4, freq="MS"),
+                        "spx_level": [6957.0, 7412.55, 7450.03, 7503.85],
+                        "trailing_eps": [None, None, None, None],
+                        "trailing_pe": [None, None, None, None],
+                    }
+                ),
+            ],
+            ignore_index=True,
+        )
+
+        model = build_sp500_valuation_read_model(
+            monthly_rows=rows,
+            ttm_evidence={
+                "status": "READY",
+                "current_ttm_eps": 263.0,
+                "eps_source": "Robert Shiller TTM EPS",
+                "eps_source_quality": "interpolated_ttm_proxy",
+                "eps_basis_date": "2026-03-01",
+            },
+            sep_rows=sep_projection_frame(),
+            sep_history_rows=sep_history_frame(),
+            current_prices=pd.DataFrame(
+                [{"symbol": "^GSPC", "latest_date": "2026-07-10", "price": 7575.39}]
+            ),
+        )
+
+        multiple = model["multiple_regime"]
+        self.assertTrue(multiple["current_is_provisional"])
+        self.assertEqual(multiple["current_price_basis_date"], "2026-07-10")
+        self.assertAlmostEqual(multiple["current_pe"], 7575.39 / 263.0)
+
     def test_read_model_keeps_graph_one_ready_without_official_eps(self) -> None:
         from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
 

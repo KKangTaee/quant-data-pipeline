@@ -26,6 +26,9 @@ Last Updated: 2026-07-12
 - June provisional PER is approximately `7450.03 / 261.723 = 28.47x`; July current EOD provisional PER is approximately `7575.39 / 261.723 = 28.94x`.
 - Hover value changes already worked; only the inspector position was fixed by CSS. V1.3 moves it beside the selected point and flips it near the right edge.
 - The earlier 1/3/5-year Graph 2 selector discussion remains deferred because the user approved this Graph 1 fix specifically.
+- Distribution anchors and z-score continue to use the latest 60 complete Shiller PER observations ending 2026-03; provisional April-July values are presentation evidence only.
+- July provisional PER uses current `^GSPC` EOD 7,575.39 at 2026-07-10 divided by March Shiller TTM EPS 261.723, while April-June use their stored Shiller monthly prices with the same EPS basis.
+- Inspector position is calculated from the selected SVG point. It flips left after 72% of plot width and clamps the vertical anchor so high-multiple points do not clip the card at the chart top.
 
 ## Confirmed Decisions
 

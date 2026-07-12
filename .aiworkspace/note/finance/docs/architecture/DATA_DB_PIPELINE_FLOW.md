@@ -74,7 +74,7 @@ external source
 | `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/sp500_valuation.py` | S&P 500 valuation source 경계. Shiller workbook discovery/read와 price-only 최신 월, explicit S&P index earnings import, latest/missing-history SEP discovery/parse, 3-table schema bootstrap, parameterized UPSERT를 소유한다 |
 | `finance/loaders/sp500_valuation.py` | 월별 price/EPS/PER, 최근 4개 actual As-Reported quarter TTM, 최신 Shiller interpolated TTM EPS, latest/all SEP vintage DB read 경계. graph 2 resolver는 official actual을 우선하고 준비되지 않으면 Shiller proxy를 source/quality/basis/fallback evidence와 함께 반환한다 |
-| `app/services/overview/sp500_valuation.py` | Shiller-only 60m official/36m sensitivity log(PER)와 대칭 2σ anchor, SEP median GDP+PCE current scenario, 다음 달 vintage activation과 calendar-year target을 적용한 12개월 rolling SPX reconstruction을 계산하는 Streamlit-free read model 경계 |
+| `app/services/overview/sp500_valuation.py` | 완결 Shiller-only 60m official/36m sensitivity log(PER)와 대칭 2σ anchor, 최신 EPS를 유지한 price-only/current EOD 잠정 PER display series, SEP median GDP+PCE current scenario, 다음 달 vintage activation과 calendar-year target을 적용한 12개월 rolling SPX reconstruction을 계산하는 Streamlit-free read model 경계 |
 | `finance/data/sentiment.py` | CNN Fear & Greed / AAII Sentiment Survey 수집 / 저장 경계. 별도 table을 만들지 않고 `macro_series_observation`에 sentiment series를 idempotent UPSERT한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |

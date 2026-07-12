@@ -9179,3 +9179,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: official SEP history는 point-in-time으로 적용하되, Shiller EPS vintage 한계를 숨기지 않는 최근 1년 valuation flow와 더 읽기 쉬운 대칭 multiple chart가 필요함.
 - Analysis result: 2025-06/09/12, 2026-03/06 다섯 vintage로 1년 흐름을 구성할 수 있다. 월중 release는 다음 달부터 적용하고 관측 연도 target을 선택하며, EPS 미발표 월은 마지막 확인 EPS basis date를 유지한다.
 - Follow-up: missing four-vintage backfill, 12-point rolling service, `-2σ` 포함 React SVG, hover, actual/baseline/band/SEP markers, Browser QA를 구현했다. 이 흐름은 strict PIT backtest가 아닌 reconstructed scenario다.
+
+### 2026-07-12 - Graph 1을 최신 가격월까지 정직하게 연장하고 hover를 이동할 수 있는가
+
+- User request: hover 카드가 좌측 상단에 고정된 문제와 Graph 1이 2026-03에서 끝나는 이유를 확인하고, 적어도 2026-06 이후 최신 가격까지 표시해 달라고 요청함.
+- Interpreted goal: EPS 발표 지연을 숨기거나 최신 가격을 버리지 않고 완결 PER와 잠정 PER를 시각적으로 분리하며, hover 카드는 선택 지점 근처에서 읽혀야 함.
+- Analysis result: DB에는 April-July price-only Shiller rows와 July SPX EOD가 있었지만 service가 null PER를 제거해 March에서 끝났고, CSS가 inspector를 고정했다. 분포는 complete-only로 유지하고 최신 EPS carry-forward 값은 provisional display evidence로만 쓰는 것이 통계와 최신성을 함께 보존한다.
+- Follow-up: April-July dashed provisional series, current/complete basis evidence, point-adjacent/right-edge-flipped/top-clamped inspector, desktop/420px Browser QA를 구현했다. Graph 2 1/3/5년 선택은 별도 후속 차수다.

@@ -40,8 +40,9 @@ def calculate_multiple_regime(
     *,
     official_window: int = 60,
     sensitivity_window: int = 36,
+    current_spx: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Calculate descriptive log(P/E) zones over 60m with a 36m sensitivity view."""
+    """Calculate complete-only bands and extend the display with provisional P/E."""
     frame = pd.DataFrame(monthly_rows).copy()
     if frame.empty or "observation_month" not in frame or "trailing_pe" not in frame:
         return {
@@ -53,27 +54,91 @@ def calculate_multiple_regime(
     frame["observation_month"] = pd.to_datetime(
         frame["observation_month"], errors="coerce"
     )
-    frame["trailing_pe"] = pd.to_numeric(frame["trailing_pe"], errors="coerce")
+    for column in ("trailing_pe", "trailing_eps", "spx_level"):
+        if column not in frame:
+            frame[column] = None
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
     frame = (
-        frame.dropna(subset=["observation_month", "trailing_pe"])
-        .loc[lambda value: value["trailing_pe"] > 0]
+        frame.dropna(subset=["observation_month"])
         .sort_values("observation_month")
         .drop_duplicates("observation_month", keep="last")
+        .reset_index(drop=True)
     )
+    complete_frame = frame.loc[
+        frame["trailing_pe"].notna() & (frame["trailing_pe"] > 0)
+    ].copy()
     required = max(int(official_window), int(sensitivity_window), 2)
-    if len(frame) < required:
+    if len(complete_frame) < required:
         return {
             "status": "INSUFFICIENT_HISTORY",
             "window_months": int(official_window),
-            "observation_count": len(frame),
+            "observation_count": len(complete_frame),
             "series": [],
         }
 
-    official_frame = frame.tail(int(official_window))
-    values = frame["trailing_pe"].astype(float).tolist()
+    official_frame = complete_frame.tail(int(official_window))
+    values = complete_frame["trailing_pe"].astype(float).tolist()
     official = _distribution(values, int(official_window))
     sensitivity = _distribution(values, int(sensitivity_window))
-    current_pe = float(official_frame.iloc[-1]["trailing_pe"])
+    latest_complete = complete_frame.iloc[-1]
+    latest_complete_month = pd.Timestamp(latest_complete["observation_month"])
+    eps_frame = frame.loc[
+        (frame["observation_month"] <= latest_complete_month)
+        & frame["trailing_eps"].notna()
+        & (frame["trailing_eps"] > 0)
+    ]
+    latest_eps = float(eps_frame.iloc[-1]["trailing_eps"]) if not eps_frame.empty else None
+    latest_eps_month = (
+        pd.Timestamp(eps_frame.iloc[-1]["observation_month"])
+        if not eps_frame.empty
+        else None
+    )
+
+    display_points: dict[pd.Timestamp, dict[str, Any]] = {
+        pd.Timestamp(row.observation_month): {
+            "month": pd.Timestamp(row.observation_month).strftime("%Y-%m-%d"),
+            "trailing_pe": float(row.trailing_pe),
+            "quality": "complete",
+            "price_basis_date": pd.Timestamp(row.observation_month).strftime("%Y-%m-%d"),
+            "eps_basis_date": pd.Timestamp(row.observation_month).strftime("%Y-%m-%d"),
+            "price_source": "robert_shiller_monthly",
+        }
+        for row in complete_frame.itertuples()
+    }
+    if latest_eps is not None and latest_eps_month is not None:
+        price_only = frame.loc[
+            (frame["observation_month"] > latest_complete_month)
+            & frame["spx_level"].notna()
+            & (frame["spx_level"] > 0)
+        ]
+        for row in price_only.itertuples():
+            month = pd.Timestamp(row.observation_month)
+            display_points[month] = {
+                "month": month.strftime("%Y-%m-%d"),
+                "trailing_pe": float(row.spx_level) / latest_eps,
+                "quality": "provisional",
+                "price_basis_date": month.strftime("%Y-%m-%d"),
+                "eps_basis_date": latest_eps_month.strftime("%Y-%m-%d"),
+                "price_source": "robert_shiller_monthly",
+            }
+
+        spx_date = pd.to_datetime((current_spx or {}).get("date"), errors="coerce")
+        spx_price = pd.to_numeric((current_spx or {}).get("price"), errors="coerce")
+        if not pd.isna(spx_date) and not pd.isna(spx_price) and float(spx_price) > 0:
+            current_month = pd.Timestamp(spx_date).to_period("M").to_timestamp()
+            if current_month > latest_complete_month:
+                display_points[current_month] = {
+                    "month": current_month.strftime("%Y-%m-%d"),
+                    "trailing_pe": float(spx_price) / latest_eps,
+                    "quality": "provisional",
+                    "price_basis_date": pd.Timestamp(spx_date).strftime("%Y-%m-%d"),
+                    "eps_basis_date": latest_eps_month.strftime("%Y-%m-%d"),
+                    "price_source": "spx_eod",
+                }
+
+    series = [display_points[key] for key in sorted(display_points)][-int(official_window):]
+    current_point = series[-1]
+    current_pe = float(current_point["trailing_pe"])
     current_log = math.log(current_pe)
     current_z = (current_log - official["mean_log"]) / official["std_log"]
     sensitivity_z = (
@@ -82,13 +147,6 @@ def calculate_multiple_regime(
     bucket = _bucket(current_z)
     sensitivity_bucket = _bucket(sensitivity_z)
 
-    series = [
-        {
-            "month": row.observation_month.strftime("%Y-%m-%d"),
-            "trailing_pe": float(row.trailing_pe),
-        }
-        for row in official_frame.itertuples()
-    ]
     return {
         "status": "READY",
         "window_months": int(official_window),
@@ -100,7 +158,12 @@ def calculate_multiple_regime(
         "plus_1sigma": official["plus_1sigma"],
         "plus_2sigma": official["plus_2sigma"],
         "current_pe": current_pe,
-        "current_basis_date": series[-1]["month"],
+        "current_basis_date": current_point["price_basis_date"],
+        "current_price_basis_date": current_point["price_basis_date"],
+        "current_eps_basis_date": current_point["eps_basis_date"],
+        "current_is_provisional": current_point["quality"] == "provisional",
+        "latest_complete_pe": float(latest_complete["trailing_pe"]),
+        "latest_complete_basis_date": latest_complete_month.strftime("%Y-%m-%d"),
         "current_z": current_z,
         "bucket": bucket,
         "sensitivity": {
@@ -111,10 +174,13 @@ def calculate_multiple_regime(
             "bucket": sensitivity_bucket,
         },
         "period_sensitive": bucket != sensitivity_bucket,
-        "basis_start": series[0]["month"],
-        "basis_end": series[-1]["month"],
+        "basis_start": official_frame.iloc[0]["observation_month"].strftime("%Y-%m-%d"),
+        "basis_end": official_frame.iloc[-1]["observation_month"].strftime("%Y-%m-%d"),
+        "distribution_basis_start": official_frame.iloc[0]["observation_month"].strftime("%Y-%m-%d"),
+        "display_start": series[0]["month"],
+        "display_end": series[-1]["month"],
         "methodology": "월별 후행 PER의 자연로그 평균과 표본 표준편차",
-        "limitation": "이 구간은 상대적 가치평가 범위이며 확률적 신뢰구간이 아닙니다.",
+        "limitation": "잠정 PER는 최신 확인 EPS를 유지한 표시값이며 평균·표준편차 표본에는 포함하지 않습니다.",
     }
 
 
@@ -531,7 +597,7 @@ def build_sp500_valuation_read_model(
         )
     spx = _price_evidence(current_prices, "^GSPC")
     spy = _price_evidence(current_prices, "SPY")
-    multiple = calculate_multiple_regime(monthly_rows)
+    multiple = calculate_multiple_regime(monthly_rows, current_spx=spx)
     current_ttm_eps = float(
         ttm_evidence.get("current_ttm_eps") or ttm_evidence.get("ttm_eps") or 0
     )

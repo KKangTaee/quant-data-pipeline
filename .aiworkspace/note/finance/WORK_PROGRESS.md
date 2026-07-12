@@ -5959,3 +5959,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Graph 1은 대칭 `-2σ/-1σ/center/+1σ/+2σ`와 hover inspector로 개선했다.
 - Graph 2는 다음 달 SEP activation과 observation-year target을 적용한 12개월 actual-vs-reconstructed SPX band를 추가했다.
 - 테스트, 실제 DB smoke, desktop/420px Browser QA 근거는 active task `RUNS.md`를 본다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.3
+
+- Graph 1의 60개월 분포는 2026-03 완결 PER까지만 유지하고, EPS 미발표 2026-04~07은 March EPS를 유지한 잠정 PER 점선으로 연장했다.
+- current SPX EOD와 price/EPS basis date, latest complete PER를 service contract에 추가하고 React hover inspector를 선택 점 옆으로 이동·경계 반전·상단 clamp했다.
+- 33 valuation tests, 34 Market Context contracts, DB smoke, desktop/420px Browser QA를 완료했으며 generated V1.3 screenshot은 커밋하지 않는다.
+- Graph 2의 1/3/5년 선택은 older SEP vintage backfill과 Shiller EPS PIT 경계를 함께 다루는 후속 차수로 남긴다.

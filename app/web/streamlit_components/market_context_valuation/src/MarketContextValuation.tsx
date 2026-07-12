@@ -3,7 +3,14 @@ import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-co
 import "./style.css";
 
 type NumericMap = Record<string, number>;
-type MultiplePoint = { month: string; trailing_pe: number };
+type MultiplePoint = {
+  month: string;
+  trailing_pe: number;
+  quality: "complete" | "provisional";
+  price_basis_date?: string;
+  eps_basis_date?: string;
+  price_source?: string;
+};
 type ScenarioHistoryPoint = {
   month: string;
   actual_spx: number;
@@ -36,6 +43,8 @@ type ValuationPayload = {
     mean_multiple?: number; minus_2sigma?: number; minus_1sigma?: number;
     plus_1sigma?: number; plus_2sigma?: number;
     period_sensitive?: boolean; basis_start?: string; basis_end?: string; current_basis_date?: string;
+    current_is_provisional?: boolean; current_price_basis_date?: string; current_eps_basis_date?: string;
+    latest_complete_pe?: number; latest_complete_basis_date?: string; display_end?: string;
     series?: MultiplePoint[];
     sensitivity?: { bucket?: string; mean_multiple?: number; current_z?: number };
     limitation?: string;
@@ -96,6 +105,15 @@ function MultipleChart({ model }: { model: ValuationPayload["multiple_regime"] }
   const path = points.map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(point.trailing_pe).toFixed(1)}`).join(" ");
   const area = `${path} L${x(points.length - 1)},${top + height} L${left},${top + height} Z`;
   const active = points[Math.min(selected, points.length - 1)];
+  const completeEndIndex = points.reduce((latest, point, index) => point.quality === "complete" ? index : latest, -1);
+  const completePath = points.slice(0, completeEndIndex + 1).map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(point.trailing_pe).toFixed(1)}`).join(" ");
+  const provisionalStartIndex = Math.max(0, completeEndIndex);
+  const provisionalPath = points.slice(provisionalStartIndex).map((point, index) => `${index ? "L" : "M"}${x(provisionalStartIndex + index).toFixed(1)},${y(point.trailing_pe).toFixed(1)}`).join(" ");
+  const inspectorRight = x(selected) > left + width * .72;
+  const inspectorStyle = {
+    left: `${x(selected) / viewWidth * 100}%`,
+    top: `${Math.max(72, y(active.trailing_pe)) / 310 * 100}%`,
+  };
   const bands = [
     { key: "minus2", label: "-2σ", value: model.minus_2sigma, tone: "deep-low" },
     { key: "minus1", label: "-1σ", value: model.minus_1sigma, tone: "low" },
@@ -105,7 +123,9 @@ function MultipleChart({ model }: { model: ValuationPayload["multiple_regime"] }
   ];
   const zone = (upper?: number, lower?: number, className = "") => upper == null || lower == null ? null : <rect className={`multiple-zone ${className}`} x={left} y={y(upper)} width={width} height={Math.max(0, y(lower) - y(upper))} />;
 
-  return <div className="chart-shell multiple-chart-shell">
+  return <div className="multiple-chart-wrap">
+    <div className="multiple-legend"><span className="legend-complete">완결 PER</span><span className="legend-provisional">잠정 PER · 최신 EPS 유지</span></div>
+    <div className="chart-shell multiple-chart-shell">
     <svg viewBox={`0 0 ${viewWidth} 310`} role="img" aria-label="최근 5년 후행 PER과 대칭 표준편차 구간" onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}>
       <defs>
         <linearGradient id="multipleArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#355f82" stopOpacity=".18"/><stop offset="100%" stopColor="#355f82" stopOpacity="0"/></linearGradient>
@@ -117,13 +137,15 @@ function MultipleChart({ model }: { model: ValuationPayload["multiple_regime"] }
       {[0, 1, 2, 3, 4].map((index) => <line key={index} className="chart-grid" x1={left} x2={left + width} y1={top + index * height / 4} y2={top + index * height / 4} />)}
       {bands.map((band) => band.value == null ? null : <g key={band.key}><line className={`multiple-band band-${band.tone}`} x1={left} x2={left + width} y1={y(band.value)} y2={y(band.value)} /><text className={`band-label label-${band.tone}`} x={left + width + 14} y={y(band.value) + 4}>{band.label} <tspan>{n(band.value, 1)}x</tspan></text></g>)}
       <path className="multiple-area" d={area} />
-      <path className="multiple-line" d={path} />
+      <path className="multiple-line" d={completePath} />
+      {completeEndIndex < points.length - 1 ? <path className="provisional-line" d={provisionalPath} /> : null}
       <line className="hover-rule" x1={x(selected)} x2={x(selected)} y1={top} y2={top + height} />
       <circle className="hover-dot" cx={x(selected)} cy={y(active.trailing_pe)} r="5" />
-      <circle className="current-ring" cx={x(points.length - 1)} cy={y(points[points.length - 1].trailing_pe)} r="8" />
+      <circle className={`current-ring ${model.current_is_provisional ? "provisional-current" : ""}`} cx={x(points.length - 1)} cy={y(points[points.length - 1].trailing_pe)} r="8" />
       {[0, 12, 24, 36, 48, points.length - 1].filter((value, index, all) => value < points.length && all.indexOf(value) === index).map((index) => <text key={index} className="axis-label" x={x(index)} y="294" textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}>{monthLabel(points[index].month)}</text>)}
     </svg>
-    <div className="chart-inspector"><span>{monthLabel(active.month)}</span><strong>{n(active.trailing_pe, 2)}x</strong><small>월별 후행 PER</small></div>
+    <div className={`chart-inspector ${inspectorRight ? "inspector-right" : ""}`} style={inspectorStyle}><span>{monthLabel(active.month)}</span><strong>{n(active.trailing_pe, 2)}x</strong><small>{active.quality === "provisional" ? `잠정 PER · EPS ${monthLabel(active.eps_basis_date || "-")}` : "완결 PER"}</small></div>
+    </div>
   </div>;
 }
 
@@ -185,9 +207,9 @@ function MarketContextValuation({ args }: Props) {
   const gapLabel = index.valuation_position === "ABOVE_BASELINE" ? "기준 시나리오 대비 고평가" : index.valuation_position === "BELOW_BASELINE" ? "기준 시나리오 대비 저평가" : "기준 시나리오와 유사";
   return <main className="valuation-workbench" data-status={payload.status}>
     <header className="valuation-header"><div><span className="eyebrow">S&amp;P 500 VALUATION</span><h2>멀티플과 예상 실적을 한 화면에서 비교</h2><p>과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다.</p></div><div className="basis"><span>기준일</span><strong>{payload.basis?.spx?.date || "-"}</strong><small>{payload.basis?.eps_basis || "As-Reported actual TTM"}</small></div></header>
-    <section className="valuation-section"><div className="section-head"><div><span>그래프 1</span><h3>최근 5년 멀티플 구간</h3><p>월별 SPX ÷ 당시 TTM EPS의 log(PER) 분포</p></div><div className={`regime regime-${multiple.bucket || "blocked"}`}>{bucketLabel[multiple.bucket || ""] || "자료 확인 필요"}</div></div>
-      <div className="metrics"><div><span>현재 PER</span><strong>{n(multiple.current_pe, 2)}x</strong></div><div><span>5년 중심</span><strong>{n(multiple.mean_multiple, 2)}x</strong></div><div><span>현재 Z</span><strong>{n(multiple.current_z, 2)}</strong></div><div><span>3년 민감도</span><strong>{bucketLabel[multiple.sensitivity?.bucket || ""] || "-"}</strong></div></div>
-      <MultipleChart model={multiple}/><p className="basis-note">Shiller 최신 PER 기준 {multiple.current_basis_date || multiple.basis_end || "-"}</p>{multiple.period_sensitive ? <p className="notice">3년과 5년 판정이 달라 기간 민감도가 큽니다.</p> : null}<p className="limitation">{multiple.limitation}</p>
+    <section className="valuation-section"><div className="section-head"><div><span>그래프 1</span><h3>최근 5년 멀티플 구간</h3><p>완결 월별 PER 분포와 최신 EPS를 유지한 잠정 PER</p></div><div className={`regime regime-${multiple.bucket || "blocked"}`}>{bucketLabel[multiple.bucket || ""] || "자료 확인 필요"}</div></div>
+      <div className="metrics"><div><span>{multiple.current_is_provisional ? "현재 잠정 PER" : "현재 PER"}</span><strong>{n(multiple.current_pe, 2)}x</strong><small>최근 완결 {n(multiple.latest_complete_pe, 2)}x · {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}</small></div><div><span>5년 중심</span><strong>{n(multiple.mean_multiple, 2)}x</strong></div><div><span>현재 Z</span><strong>{n(multiple.current_z, 2)}</strong></div><div><span>3년 민감도</span><strong>{bucketLabel[multiple.sensitivity?.bucket || ""] || "-"}</strong></div></div>
+      <MultipleChart model={multiple}/><p className="basis-note">실선 완결 PER {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}까지 · 점선 잠정 PER {multiple.display_end?.slice(0, 7) || "-"}까지 · EPS 기준 {multiple.current_eps_basis_date || "-"} · 현재 SPX {multiple.current_price_basis_date || "-"}</p>{multiple.period_sensitive ? <p className="notice">3년과 5년 판정이 달라 기간 민감도가 큽니다.</p> : null}<p className="limitation">{multiple.limitation}</p>
     </section>
     <section className="valuation-section"><div className="section-head"><div><span>그래프 2</span><h3>FOMC 예상 실적 기반 지수 시나리오 · 적정 SPX 구간</h3><p>현재 TTM EPS에 SEP 실질 GDP와 PCE 물가상승률을 합산 적용</p></div><div className="release"><span>SEP 발표</span><strong>{earnings.release_date || "-"}</strong></div></div>
       <div className="source-row"><div><span>EPS 출처</span><strong>{earnings.eps_source || "Robert Shiller TTM EPS"}</strong><small>EPS 기준 {earnings.eps_basis_date || "-"}</small></div><span className={`source-badge quality-${earnings.eps_source_quality || "unknown"}`}>{sourceQualityLabel[earnings.eps_source_quality || ""] || "출처 확인 필요"}</span></div>

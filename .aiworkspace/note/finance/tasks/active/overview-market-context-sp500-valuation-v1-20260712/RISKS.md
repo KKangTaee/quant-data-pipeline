@@ -31,6 +31,12 @@ Shiller monthly, S&P earnings, SEP quarterly, and SPX/SPY EOD sources update at 
 
 V1.2 retains this cadence mismatch visibly. SEP backfill is bounded to the official vintages needed by the 1-year view; a longer 5-year view would require expanding the historical release set and is not implemented.
 
+V1.3 mitigation: Graph 1 no longer stops at the latest EPS month. April-July values are explicitly labeled provisional and use the latest March TTM EPS, but they remain excluded from the 60-month distribution and are not presented as completed historical PER observations.
+
+### Longer Graph 2 Window
+
+The current reconstructed flow is 1 year. A 3-year or 5-year selector is feasible, but requires a correspondingly older official SEP vintage backfill and must retain the non-strict-PIT Shiller EPS warning. It remains a separately approved follow-up, not part of V1.3.
+
 ### Existing Workspace Changes
 
 The worktree contains unrelated untracked Market Movers research and generated QA screenshots. They must not be staged, modified, or deleted by this task.

@@ -7137,6 +7137,26 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ):
             self.assertIn(token, component_source)
 
+    def test_market_context_multiple_chart_moves_hover_and_marks_provisional_per(self) -> None:
+        component_source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text(encoding="utf-8")
+        style_source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "current_is_provisional",
+            "latest_complete_pe",
+            "provisional-line",
+            "완결 PER",
+            "잠정 PER",
+            "inspector-right",
+            "left:",
+            "top:",
+        ):
+            self.assertIn(token, component_source + style_source)
+
     def test_overview_events_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")

@@ -86,3 +86,13 @@ Last Updated: 2026-07-12
 - QA screenshot: `market-context-sp500-valuation-v1-2-qa.png` (generated, not committed).
 - Fresh final scoped gates: 31 valuation tests, 33 Market Context contracts, Python compile, TypeScript, Vite build, 5-vintage/12-point DB assertions, and `git diff --check` passed.
 - Full `tests.test_service_contracts`: 743 tests, 2 pre-existing out-of-scope failures. Sentiment still expects removed `payload.summary.metrics.map`; Market Movers still reads persisted limited-history DB state and reports 2 instead of isolated 65 rows.
+
+## V1.3 Graph 1 Provisional Extension Verification
+
+- TDD RED reproduced the missing `current_spx` input/provisional quality fields and missing React provisional/inspector contracts.
+- GREEN focused/full runs reached 33 valuation tests and 34 Market Context contracts; TypeScript and Vite production build passed.
+- DB-backed read model returned current provisional PER `28.9443x` at SPX EOD `2026-07-10`, latest complete PER `25.4254x` at `2026-03-01`, distribution basis `2021-04` through `2026-03`, and display through `2026-07`.
+- Browser QA on `http://localhost:8528` confirmed solid complete/dashed provisional line, `2026.07` x-axis/current inspector, point-adjacent right-edge-flipped card, desktop layout, 420px outer/iframe horizontal overflow 0, and browser warning/error log 0.
+- QA screenshot: `market-context-sp500-valuation-v1-3-qa.png` (generated, not committed).
+- Fresh final gates: 33 valuation tests, 34 Market Context contracts, Python compile, TypeScript, Vite build, live DB assertions, and `git diff --check` passed.
+- Full `tests.test_service_contracts`: 744 tests, the same 2 out-of-scope failures remained: Sentiment source-string expectation and Market Movers persisted limited-history isolation (`2` vs `65`).

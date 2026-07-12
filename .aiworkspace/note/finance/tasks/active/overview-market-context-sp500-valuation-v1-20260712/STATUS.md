@@ -1,6 +1,6 @@
 # Overview Market Context S&P 500 Valuation V1 Status
 
-Status: In Progress
+Status: Complete
 Last Updated: 2026-07-12
 
 ## Current Progress
@@ -22,19 +22,21 @@ Last Updated: 2026-07-12
 - Latest user policy removed the uploader from current scope and kept the existing importer as an optional extension.
 - V1.1 graph independence, EPS resolver, additive SEP EPS, fair SPX band, React source/date/fallback UI, and Browser QA are implemented.
 - V1.2 official SEP history backfill, Shiller price-only latest rows, symmetric 2σ chart, 12-month PIT SEP reconstruction, React hover redesign, live DB smoke, and Browser QA are implemented.
+- V1.3 Graph 1 now separates complete distribution rows from April-July provisional PER display rows, uses current SPX EOD for the latest marker, and exposes price/EPS basis dates and quality.
+- React renders complete PER as a solid navy line, provisional PER as a dashed orange line, and places the inspector beside the selected point with right-edge flip and top clipping guard.
 
 ## Current Stage
 
-V1.3 Graph 1 provisional extension의 승인 설계와 TDD 계획을 확정했다. Service RED-GREEN부터 진행한다.
+V1.3 Graph 1 provisional extension 구현, live DB smoke, desktop/420px Browser QA, documentation sync, and final verification are complete.
 
 ## Next Action
 
-1. Complete/provisional PER service contract를 RED-GREEN으로 구현한다.
-2. Moving hover와 solid/dashed React contract를 구현한다.
-3. 실제 DB/Browser QA, 문서 동기화, 검증, 커밋을 완료한다.
+1. 후속 승인 시 Graph 2의 1년/3년/5년 기간 선택을 별도 차수로 구현한다.
+2. 3년/5년 선택 전에 필요한 SEP vintage backfill 범위와 Shiller EPS PIT 한계를 화면 계약에 유지한다.
 
 ## V1 Completion
 
 - 1차 through 5차 complete; no required implementation stage remains.
 - V1.1 1차 through 5차 complete; no required implementation stage remains.
 - V1.2 1차 through 5차 complete; no required implementation stage remains.
+- V1.3 Graph 1 provisional extension complete; no required implementation stage remains.
