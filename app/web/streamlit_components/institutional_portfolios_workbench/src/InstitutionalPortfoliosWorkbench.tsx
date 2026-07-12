@@ -390,40 +390,30 @@ function volumeLabel(value: unknown) {
   return numeric.toFixed(0);
 }
 
+const CHART_VIEWBOX_WIDTH = 960;
+
 function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
   const [chartStyle, setChartStyle] = useState<"line" | "candle">("line");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [windowStart, setWindowStart] = useState(0);
-  const [chartWidth, setChartWidth] = useState(640);
-  const stageRef = useRef<HTMLDivElement | null>(null);
   const dragStartRef = useRef<{ x: number; start: number } | null>(null);
+  const pointSignature = useMemo(() => {
+    const first = points?.[0]?.date || "";
+    const last = points?.[points.length - 1]?.date || "";
+    return `${points?.length || 0}:${first}:${last}`;
+  }, [points]);
 
   useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) {
-      return undefined;
-    }
-    const updateWidth = (value?: number) => {
-      const measured = value || stage.getBoundingClientRect().width || 640;
-      setChartWidth(Math.max(640, Math.round(measured)));
-    };
-    updateWidth();
-    if (!("ResizeObserver" in window)) {
-      const handleResize = () => updateWidth();
-      window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
-    }
-    const observer = new ResizeObserver((entries) => {
-      updateWidth(entries[0]?.contentRect.width);
-    });
-    observer.observe(stage);
-    return () => observer.disconnect();
-  }, []);
+    setWindowStart(0);
+    setHoveredIndex(null);
+    dragStartRef.current = null;
+  }, [pointSignature]);
 
   if (!points || points.length < 2) {
     return <div className="ip-chart-empty">가격 데이터 없음</div>;
   }
   const height = 276;
+  const chartWidth = CHART_VIEWBOX_WIDTH;
   const padX = 26;
   const padRight = 58;
   const padTop = 18;
@@ -518,9 +508,9 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
           </button>
         </div>
       </div>
-      <div className="ip-chart-stage" ref={stageRef}>
+      <div className="ip-chart-stage">
         <svg
-          viewBox={`0 0 ${chartWidth} ${height}`}
+          viewBox={`0 0 ${CHART_VIEWBOX_WIDTH} ${height}`}
           role="img"
           aria-label="저장 가격 차트"
           onMouseMove={handlePointerMove}

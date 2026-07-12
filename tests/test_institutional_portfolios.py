@@ -1220,10 +1220,13 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
             "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("ResizeObserver", component_source)
-        self.assertIn("stageRef", component_source)
-        self.assertIn("chartWidth", component_source)
-        self.assertIn("viewBox={`0 0 ${chartWidth} ${height}`}", component_source)
+        self.assertIn("CHART_VIEWBOX_WIDTH", component_source)
+        self.assertIn("const chartWidth = CHART_VIEWBOX_WIDTH", component_source)
+        self.assertIn("viewBox={`0 0 ${CHART_VIEWBOX_WIDTH} ${height}`}", component_source)
+        self.assertIn("pointSignature", component_source)
+        self.assertIn("setWindowStart(0)", component_source)
+        self.assertNotIn("ResizeObserver", component_source)
+        self.assertNotIn("setChartWidth", component_source)
         self.assertIn("dateTicks", component_source)
         self.assertIn("ip-chart-date-tick", component_source)
         self.assertIn("tick.point.date", component_source)
