@@ -6,6 +6,7 @@ from typing import Any
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_data_coverage_audit import build_data_coverage_audit
+from app.services.backtest_evidence_closure import build_evidence_closure_contract
 from app.services.backtest_final_review_guidance import (
     build_pattern_guide as _build_pattern_guide_v2,
     build_pattern_guide_contract as _build_pattern_guide_contract_v2,
@@ -2111,6 +2112,54 @@ def _level2_review_cards(validation: dict[str, Any]) -> list[dict[str, Any]]:
     return cards
 
 
+def _closure_review_cards(closure: dict[str, Any]) -> list[dict[str, Any]]:
+    """Adapt root issues to the existing Final Review disposition payload shape."""
+
+    cards: list[dict[str, Any]] = []
+    for raw_issue in list(closure.get("issues") or []):
+        issue = dict(raw_issue or {})
+        root_issue_id = _safe_text(issue.get("root_issue_id"), "")
+        if not root_issue_id or root_issue_id.startswith("missing_contract:"):
+            continue
+        resolution_class = _safe_text(issue.get("resolution_class"), "accepted_limit")
+        if issue.get("gate_effect") == "block_final_review":
+            role = "final_readiness_blocker"
+            status = "BLOCKED"
+        elif resolution_class == "monitoring_transfer":
+            role = "monitoring_followup"
+            status = "REVIEW"
+        elif resolution_class == "final_decision":
+            role = "final_decision_input"
+            status = "REVIEW"
+        else:
+            role = "pv_data_caution"
+            status = "REVIEW"
+        cards.append(
+            {
+                "root_issue_id": root_issue_id,
+                "module_id": root_issue_id,
+                "display_label": _safe_text(issue.get("title"), root_issue_id),
+                "status": status,
+                "review_role": role,
+                "review_role_label": {
+                    "final_readiness_blocker": "저장 전 보강",
+                    "monitoring_followup": "Monitoring 추적",
+                    "final_decision_input": "최종 판단 참고",
+                    "pv_data_caution": "데이터 주의",
+                }[role],
+                "stage_decision_surface": _safe_text(issue.get("owner_stage"), "Final Review"),
+                "current_problem": _safe_text(issue.get("observed"), "-"),
+                "resolution_action": _safe_text(issue.get("completion_criteria"), "-"),
+                "observed_value": _safe_text(issue.get("observed"), "-"),
+                "threshold": _safe_text(issue.get("expected"), "-"),
+                "evidence_source": _safe_text(issue.get("cause"), "evidence closure"),
+                "trace_status_override": "derived",
+                "trace_label_override": f"root 근거 {len(issue.get('derived_checks') or [])}개 확인",
+            }
+        )
+    return cards
+
+
 def _level2_review_action(role: str) -> dict[str, str]:
     actions = {
         "pv_data_caution": {
@@ -2762,6 +2811,15 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
     """Classify Practical Validation REVIEW handoff items for Final Review consumption."""
 
     validation = dict(validation or {})
+    has_stored_closure = isinstance(validation.get("evidence_closure"), dict)
+    closure = dict(validation.get("evidence_closure") or build_evidence_closure_contract(validation))
+    closure_cards = _closure_review_cards(closure)
+    missing_module_ids = {
+        str(issue.get("root_issue_id") or "").split(":", 1)[1]
+        for issue in list(closure.get("issues") or [])
+        if isinstance(issue, dict)
+        and str(issue.get("root_issue_id") or "").startswith("missing_contract:")
+    }
     groups: dict[str, list[dict[str, Any]]] = {
         "blocker": [],
         "warning": [],
@@ -2769,7 +2827,13 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
         "monitoring_followup": [],
     }
     seen: set[tuple[str, str, str]] = set()
-    for raw_card in _level2_review_cards(validation):
+    legacy_cards = [
+        card
+        for card in _level2_review_cards(validation)
+        if _safe_text(card.get("module_id") or card.get("Module"), "") not in missing_module_ids
+    ]
+    review_cards = closure_cards if has_stored_closure else legacy_cards
+    for raw_card in review_cards:
         card = dict(raw_card or {})
         status = _safe_text(card.get("status") or card.get("Status") or card.get("Current"), "")
         role = _safe_text(card.get("review_role"), "")
@@ -2837,7 +2901,10 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
                     evidence_as_of=evidence_as_of,
                 )
             )
-        if observed_value != "-" and threshold != "-" and direct_trace:
+        if card.get("trace_status_override"):
+            trace_status = _safe_text(card.get("trace_status_override"), "derived")
+            trace_label = _safe_text(card.get("trace_label_override"), "root 근거 확인")
+        elif observed_value != "-" and threshold != "-" and direct_trace:
             trace_status = "measured"
             trace_label = "측정 근거 확인"
         elif normalized_role in {"final_decision_input", "monitoring_followup"}:
@@ -2880,6 +2947,7 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
         groups[disposition].append(
             {
                 "title": title,
+                "root_issue_id": _safe_text(card.get("root_issue_id"), "-"),
                 "status": status.upper() or "REVIEW",
                 "role": normalized_role,
                 "role_label": _safe_text(card.get("review_role_label"), "최종 판단 참고"),
@@ -3036,6 +3104,8 @@ def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) 
             "inherited_limit": action_type_counts.get("inherited_limit", 0),
         },
         "trace_actions": trace_actions,
+        "closure_summary": dict(closure.get("summary") or {}),
+        "closure_issues": [dict(row or {}) for row in list(closure.get("issues") or []) if isinstance(row, dict)],
         "data_enrichment_action": _build_final_review_data_enrichment_action(validation),
         "boundary": {
             "validation_rerun": False,

@@ -1,0 +1,376 @@
+"""Normalize Practical Validation evidence into root-level closure issues.
+
+This service is Streamlit-free and read-only. Audit/module rows remain available
+as derived checks, while Final Review consumes one issue per root cause.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import pandas as pd
+
+
+EVIDENCE_CLOSURE_SCHEMA_VERSION = "backtest_evidence_closure_v1"
+
+_PASS_STATUSES = {"PASS", "READY", "OK", "NOT_APPLICABLE"}
+_KNOWN_MODULE_ROOTS = {
+    "source_integrity": "source_integrity",
+    "benchmark_parity": "benchmark_comparator_parity",
+    "validation_efficacy": "validation_method_strength",
+    "construction_risk": "construction_risk",
+    "backtest_realism": "backtest_realism",
+    "stress_robustness": "stress_robustness",
+    "provider_investability": "provider_investability",
+    "leverage_inverse": "leverage_inverse_suitability",
+    "risk_contribution": "risk_contribution",
+    "component_role_weight": "component_role_weight",
+    "macro_regime": "macro_regime_fit",
+    "monitoring_baseline": "monitoring_baseline",
+    "tax_account_scope": "tax_account_scope",
+    "selected_route_preflight": "selected_route_preflight",
+    "pre_final_data_enrichment": "pre_final_data_enrichment",
+}
+
+
+def _date_text(value: Any) -> str | None:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return pd.Timestamp(parsed).strftime("%Y-%m-%d")
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _status(value: Any) -> str:
+    return str(value or "").strip().upper()
+
+
+def _is_non_pass(value: Any) -> bool:
+    status = _status(value)
+    return bool(status) and status not in _PASS_STATUSES
+
+
+def _module_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = validation.get("validation_modules") or validation.get("validation_module_display_rows") or []
+    return [dict(row) for row in list(rows) if isinstance(row, dict)]
+
+
+def _module_id(row: dict[str, Any]) -> str:
+    return str(row.get("module_id") or row.get("Module") or "").strip()
+
+
+def _audit_rows(validation: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    payload = dict(validation.get(key) or {})
+    return [dict(row) for row in list(payload.get("rows") or []) if isinstance(row, dict)]
+
+
+def _audit_row(validation: dict[str, Any], criteria: str) -> dict[str, Any]:
+    return next(
+        (
+            row
+            for row in _audit_rows(validation, "data_coverage_audit")
+            if str(row.get("Criteria") or "").strip() == criteria
+        ),
+        {},
+    )
+
+
+def build_latest_replay_evidence(validation: dict[str, Any]) -> dict[str, Any]:
+    """Read stored replay provenance without inventing a new threshold."""
+
+    curve = dict(validation.get("curve_evidence") or {})
+    provenance = dict(curve.get("curve_provenance") or {})
+    period = dict(curve.get("period_coverage") or provenance.get("period_coverage") or {})
+    requested_period = dict(period.get("requested_period") or {})
+    actual_period = dict(period.get("actual_period") or {})
+    return {
+        "requested_market_date": _date_text(
+            period.get("requested_market_date") or requested_period.get("end")
+        ),
+        "latest_common_price_date": _date_text(period.get("latest_common_price_date")),
+        "last_complete_rebalance_date": _date_text(period.get("last_complete_rebalance_date")),
+        "latest_valuation_date": _date_text(period.get("latest_valuation_date")),
+        "actual_result_date": _date_text(
+            period.get("actual_result_date") or actual_period.get("end")
+        ),
+        "end_gap_days": _optional_int(period.get("end_gap_days")),
+        "runtime_status": _status(
+            provenance.get("runtime_recheck_status")
+            or dict(curve.get("replay_attempt") or {}).get("status")
+        ),
+        "period_status": _status(
+            provenance.get("period_coverage_status") or period.get("status")
+        ),
+        "source": str(
+            curve.get("portfolio_curve_source")
+            or provenance.get("portfolio_curve_source")
+            or "stored_curve_provenance"
+        ),
+    }
+
+
+def _base_issue(
+    *,
+    root_issue_id: str,
+    title: str,
+    observed: str,
+    expected: str,
+    cause: str,
+    derived_checks: list[str],
+    resolution_class: str,
+    owner_stage: str,
+    actionable_now: bool,
+    action_id: str | None,
+    completion_criteria: str,
+    applicability: str,
+    criticality: str,
+    gate_effect: str,
+    terminal_state: str = "open",
+    period: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "root_issue_id": root_issue_id,
+        "title": title,
+        "observed": observed,
+        "expected": expected,
+        "cause": cause,
+        "derived_checks": list(derived_checks),
+        "resolution_class": resolution_class,
+        "owner_stage": owner_stage,
+        "actionable_now": actionable_now,
+        "action_id": action_id,
+        "completion_criteria": completion_criteria,
+        "applicability": applicability,
+        "criticality": criticality,
+        "gate_effect": gate_effect,
+        "accepted_reason": None,
+        "monitoring_condition": None,
+        "terminal_state": terminal_state,
+        "period": dict(period or {}),
+        "score_impact": 0,
+    }
+
+
+def _replay_issue(validation: dict[str, Any], modules: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+    replay_module = modules.get("latest_replay") or {}
+    pit_row = _audit_row(validation, "PIT price window coverage")
+    if not _is_non_pass(replay_module.get("status") or replay_module.get("Status")) and not _is_non_pass(
+        pit_row.get("Status")
+    ):
+        return None
+    period = build_latest_replay_evidence(validation)
+    requested = period.get("requested_market_date") or "-"
+    actual = period.get("actual_result_date") or "-"
+    gap = period.get("end_gap_days")
+    gap_text = f"{gap}일 gap" if gap is not None else "gap 미확인"
+    derived = []
+    if replay_module:
+        derived.append("latest_replay")
+    if pit_row:
+        derived.append("pit_price_window_coverage")
+    return _base_issue(
+        root_issue_id="replay_period_coverage",
+        title="최신 재검증 기간 충족 여부",
+        observed=f"요청 {requested} / 실제 {actual} / {gap_text}",
+        expected="latest common price date까지 valuation evidence 확보",
+        cause="stored runtime period coverage",
+        derived_checks=derived,
+        resolution_class="resolve_now",
+        owner_stage="practical_validation",
+        actionable_now=True,
+        action_id="run_practical_validation_replay",
+        completion_criteria="period coverage가 PASS이거나 partial-month monitoring transfer로 분류됨",
+        applicability="required",
+        criticality="critical",
+        gate_effect="block_final_review",
+        period=period,
+    )
+
+
+def _historical_universe_issue(validation: dict[str, Any]) -> dict[str, Any] | None:
+    listing = _audit_row(validation, "Universe / listing evidence")
+    survivorship = _audit_row(validation, "Survivorship / delisting control")
+    if not _is_non_pass(listing.get("Status")) and not _is_non_pass(survivorship.get("Status")):
+        return None
+    derived = []
+    if listing:
+        derived.append("universe_listing_evidence")
+    if survivorship:
+        derived.append("survivorship_delisting_control")
+    evidence = " / ".join(
+        str(row.get("Current") or row.get("Evidence") or "-")
+        for row in (listing, survivorship)
+        if row
+    )
+    return _base_issue(
+        root_issue_id="historical_universe_coverage",
+        title="과거 universe와 상장폐지 반영 범위",
+        observed=evidence or "historical universe evidence missing",
+        expected="universe 적용 방식에 맞는 lifecycle / survivorship evidence",
+        cause="historical lifecycle coverage",
+        derived_checks=derived,
+        resolution_class="accepted_limit",
+        owner_stage="final_review",
+        actionable_now=False,
+        action_id=None,
+        completion_criteria="static/dynamic universe applicability에 맞는 종결 상태 저장",
+        applicability="pending_universe_contract",
+        criticality="noncritical",
+        gate_effect="final_review_closure",
+    )
+
+
+def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
+    module_id = _module_id(module)
+    if not module_id or module_id in {"latest_replay", "data_coverage"}:
+        return None
+    status = module.get("status") or module.get("Status") or module.get("Current")
+    if not _is_non_pass(status):
+        return None
+    requirement = str(module.get("requirement") or module.get("Requirement") or "").upper()
+    role = str(module.get("review_role") or "")
+    known_root = _KNOWN_MODULE_ROOTS.get(module_id)
+    if not known_root and requirement == "REQUIRED":
+        return _base_issue(
+            root_issue_id=f"missing_contract:{module_id}",
+            title=str(module.get("label") or module.get("Module") or module_id),
+            observed=f"{_status(status) or 'REVIEW'} / required trace adapter missing",
+            expected="required module evidence adapter",
+            cause="product contract missing",
+            derived_checks=[module_id],
+            resolution_class="engineering_required",
+            owner_stage="development",
+            actionable_now=False,
+            action_id=None,
+            completion_criteria="adapter 구현 후 새 validation 저장",
+            applicability="required",
+            criticality="critical",
+            gate_effect="block_final_review",
+            terminal_state="deferred",
+        )
+    if not known_root:
+        return None
+    if role == "monitoring_followup":
+        resolution_class = "monitoring_transfer"
+        owner_stage = "final_review"
+    elif role == "final_decision_input":
+        resolution_class = "final_decision"
+        owner_stage = "final_review"
+    else:
+        resolution_class = "accepted_limit"
+        owner_stage = "final_review"
+    return _base_issue(
+        root_issue_id=known_root,
+        title=str(module.get("label") or module.get("Module") or module_id),
+        observed=str(module.get("reason") or module.get("Reason") or status),
+        expected=str(module.get("resolution_action") or module.get("Next Action") or "explicit closure"),
+        cause=f"validation module {module_id}",
+        derived_checks=[module_id],
+        resolution_class=resolution_class,
+        owner_stage=owner_stage,
+        actionable_now=False,
+        action_id=None,
+        completion_criteria="Final Review route/reason or Monitoring condition records terminal state",
+        applicability="module_applies",
+        criticality="noncritical",
+        gate_effect="final_review_closure",
+    )
+
+
+def _merge_root_issues(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for candidate in candidates:
+        root_issue_id = str(candidate.get("root_issue_id") or "").strip()
+        if not root_issue_id:
+            continue
+        if root_issue_id not in merged:
+            merged[root_issue_id] = dict(candidate)
+            order.append(root_issue_id)
+            continue
+        current = merged[root_issue_id]
+        current["derived_checks"] = list(
+            dict.fromkeys(
+                [*list(current.get("derived_checks") or []), *list(candidate.get("derived_checks") or [])]
+            )
+        )
+    return [merged[root_issue_id] for root_issue_id in order]
+
+
+def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
+    unresolved_actionable_count = sum(
+        1
+        for issue in issues
+        if issue.get("actionable_now") and issue.get("terminal_state") == "open"
+    )
+    critical_engineering_count = sum(
+        1
+        for issue in issues
+        if issue.get("resolution_class") == "engineering_required"
+        and issue.get("criticality") == "critical"
+        and issue.get("terminal_state") not in {"resolved", "accepted", "monitoring_transferred"}
+    )
+    missing_contract_count = sum(
+        1 for issue in issues if str(issue.get("root_issue_id") or "").startswith("missing_contract:")
+    )
+    return {
+        "total": len(issues),
+        "unresolved_actionable_count": unresolved_actionable_count,
+        "critical_engineering_count": critical_engineering_count,
+        "missing_contract_count": missing_contract_count,
+    }
+
+
+def build_evidence_closure_contract(validation: dict[str, Any]) -> dict[str, Any]:
+    """Build one closure issue per root cause from stored validation evidence."""
+
+    validation_row = dict(validation or {})
+    module_list = _module_rows(validation_row)
+    modules = {_module_id(row): row for row in module_list if _module_id(row)}
+    candidates: list[dict[str, Any]] = []
+    replay_issue = _replay_issue(validation_row, modules)
+    if replay_issue:
+        candidates.append(replay_issue)
+    universe_issue = _historical_universe_issue(validation_row)
+    if universe_issue:
+        candidates.append(universe_issue)
+    candidates.extend(
+        issue
+        for issue in (_generic_module_issue(module) for module in module_list)
+        if issue is not None
+    )
+    issues = _merge_root_issues(candidates)
+    summary = _closure_summary(issues)
+    return {
+        "schema_version": EVIDENCE_CLOSURE_SCHEMA_VERSION,
+        "validation_id": validation_row.get("validation_id"),
+        "selection_source_id": validation_row.get("selection_source_id"),
+        "issues": issues,
+        "summary": summary,
+        "current_final_review_eligible": (
+            summary["unresolved_actionable_count"] == 0
+            and summary["critical_engineering_count"] == 0
+            and summary["missing_contract_count"] == 0
+        ),
+        "boundary": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "db_write": False,
+            "registry_write": False,
+        },
+    }
+
+
+__all__ = [
+    "EVIDENCE_CLOSURE_SCHEMA_VERSION",
+    "build_evidence_closure_contract",
+    "build_latest_replay_evidence",
+]

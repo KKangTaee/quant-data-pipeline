@@ -23,6 +23,7 @@ from app.services.backtest_practical_validation_source import (
     source_components_dataframe,
 )
 from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+from app.services.backtest_evidence_closure import build_evidence_closure_contract
 from app.services.overview.sentiment import build_market_sentiment_snapshot
 from app.runtime import append_portfolio_selection_source, append_practical_validation_result
 from finance.data.etf_provider import (
@@ -74,6 +75,7 @@ def build_practical_validation_result(
     result["provider_gap_collection_plan"] = provider_plan
     pre_final_gate = build_pre_final_enrichment_gate(result, provider_plan=provider_plan)
     _apply_pre_final_enrichment_gate(result, pre_final_gate)
+    result["evidence_closure"] = build_evidence_closure_contract(result)
     result["practical_validation_workspace"] = build_practical_validation_workspace(result)
     return result
 
