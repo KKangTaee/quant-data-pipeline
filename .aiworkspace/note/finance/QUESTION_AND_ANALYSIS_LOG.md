@@ -9158,3 +9158,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 이전 수정은 `.ov-mm-list-row`에만 적용돼 React Sector Breadth와 무관했다. 하단은 Streamlit selector/tabs/HTML과 React iframe이 섞여 있으므로 raw HTML wrapper보다 keyed `st.container`가 안정적인 부모 경계다.
 - Follow-up: Sector outer/lane tint와 keyed investigation workspace를 구현하고 desktop/mobile Browser QA를 완료했다. 이후 화면 구조 설명은 가능한 경우 ASCII tree로 계층을 함께 제시한다.
 - Follow-up clarification: `모드별 상세 표 전체 높이로 보기`는 Sector Breadth 상세가 아니라 Ranking Board의 모드별 원자료이므로 Sector Breadth에 합치지 않고 Ranking Board keyed 부모의 마지막 행으로 이동했다.
+
+### 2026-07-12 - S&P 500 고평가/저평가를 두 그래프로 어떻게 나눌 것인가
+
+- User request: 기존 Market Context UI를 제거하고 최근 멀티플 구간과 FOMC 점도표 기반 예상 EPS/지수 구간을 React로 개발하며, SEP 최신화·QA·커밋까지 1차~5차로 진행해 달라고 요청함.
+- Interpreted goal: 과거 대비 현재 가격 배수와 미래 거시 실적 가정을 한 숫자로 섞지 않고, `현재 상대 멀티플`과 `예상 실적 기반 지수 시나리오`를 별도 그래프로 비교해야 함.
+- Analysis result: 공식 window는 60개월 log(PER), 36개월은 민감도다. TTM actual EPS는 완료된 actual As-Reported 네 분기 합이며, SEP GDP/PCE는 복리 결합한 민감도일 뿐 consensus EPS가 아니다. trailing multiple × macro EPS는 공식 적정가/신뢰구간/거래 신호가 아니다.
+- Follow-up: DB-backed 3-source vintage pipeline, SPX/SPY same-date guard, stale/mixed/insufficient blocking states, React two-chart UI, daily SEP discovery automation, Browser QA를 완료했다. S&P EPS workbook이 설정되지 않은 환경은 숫자를 대체하지 않고 차단 상태로 유지한다.

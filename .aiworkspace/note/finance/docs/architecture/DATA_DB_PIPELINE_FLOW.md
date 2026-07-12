@@ -45,6 +45,9 @@ external source
 | ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
 | FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
 | Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
+| Robert Shiller `ie_data.xls` | Market Context 월별 SPX 가격·보간 EPS·CAPE source. 공식 Shiller 페이지에서 현재 XLS 링크를 발견해 `sp500_monthly_valuation`에 저장 |
+| S&P Index Earnings workbook | Market Context index EPS source. explicit period/status/EPS columns와 release date가 있는 operator-supplied workbook만 import하며 actual/estimate를 위치나 색상으로 추론하지 않음 |
+| Federal Reserve SEP accessible HTML | Market Context GDP/PCE projection source. FOMC calendar의 최신 `fomcprojtablYYYYMMDD.htm`을 발견하고 release vintage별로 `fomc_sep_projection`에 저장 |
 | BLS official release schedule HTML / `.ics` file | Overview Events macro calendar source. CPI / PPI / Employment Situation release dates를 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT` row로 저장. 네트워크 정책상 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있다 |
 | BEA official release schedule HTML | Overview Events macro calendar source. national GDP release dates를 `MACRO_GDP` row로 저장 |
 | Yahoo / yfinance ticker calendar | Overview Events earnings primary free provider estimate source. bounded symbol set만 조회해 `market_event_calendar`에 `EARNINGS` row로 저장하고, row가 없는 ticker는 job result의 `symbol_diagnostics`에 missing / failure reason을 남긴다 |
@@ -69,6 +72,9 @@ external source
 | `finance/data/futures_market.py` | Overview futures OHLCV 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. `app/services/futures_market_monitoring.py`는 stored 1m candle chart / diagnostic context를 최신 저장 candle 기준으로 읽고 stale 여부를 별도 계산한다. `Futures Macro`는 stored daily futures rows를 읽어 current scoring과 lazy historical validation을 만들며, validation은 read-only이고 새 materialized table을 만들지 않는다 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
+| `finance/data/sp500_valuation.py` | S&P 500 valuation source 경계. Shiller workbook discovery/read, explicit S&P index earnings import, latest SEP discovery/parse, 3-table schema bootstrap, parameterized UPSERT를 소유한다 |
+| `finance/loaders/sp500_valuation.py` | 월별 P/E, 최근 4개 actual As-Reported quarter TTM, latest SEP vintage DB read 경계. estimate/mixed EPS를 actual로 대체하지 않는다 |
+| `app/services/overview/sp500_valuation.py` | 60m official/36m sensitivity log(PER), FOMC macro-implied EPS, SPX scenario와 same-date SPY proportional conversion을 계산하는 Streamlit-free read model 경계 |
 | `finance/data/sentiment.py` | CNN Fear & Greed / AAII Sentiment Survey 수집 / 저장 경계. 별도 table을 만들지 않고 `macro_series_observation`에 sentiment series를 idempotent UPSERT한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |

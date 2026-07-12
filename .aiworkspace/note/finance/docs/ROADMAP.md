@@ -1,15 +1,20 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-11
+Last Verified: 2026-07-12
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
 
-현재 active task는 없다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
+- 목적: 기존 Market Context brief/cockpit/sector/event visible composition을 제거하고, 현재 S&P 500의 상대 멀티플 위치와 FOMC 기반 예상 EPS/지수 시나리오를 숫자로 비교한다.
+- 주요 변경: Shiller 월별 가격·EPS, explicit S&P Index Earnings actual As-Reported quarter, Federal Reserve SEP vintage, SPX/SPY EOD를 `Ingestion -> DB -> Loader -> Service -> React`로 연결했다. 공식 멀티플 window는 60개월, 36개월은 민감도다. SEP는 매일 최신 accessible-material URL을 확인하고 release vintage를 보존한다.
+- 경계: FOMC EPS는 애널리스트 컨센서스가 아니며, trailing multiple과 macro-implied EPS 결합은 공식 적정가/투자 신호가 아니다. S&P actual EPS 파일이 없으면 예상 지수 시나리오를 차단한다.
+- QA: valuation 18 tests, Market Context 31 contracts, TypeScript, Vite build, 실제 Shiller/SEP/SPX-SPY ingestion, Browser QA를 통과했다. 전체 759 service-contract run에는 task 외부 Sentiment source-string contract 1건과 DB limited-history state를 격리하지 않는 Market Movers expectation 1건이 남아 있다.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`다.
 
 - 목적: Market Movers 비-Daily 상단의 긴 설명형 버튼을 간결하게 만들고, Monthly full-window 갱신 성공 뒤에도 provider 가용 이력이 짧은 종목이 같은 갱신 대상으로 반복되는 문제를 해결했다.
 - 주요 변경: action button에는 행동명만 남기고 대상/기간/제외 설명은 버튼 아래 한 줄로 분리했다. Full-window 수집 후에도 period row threshold가 부족한 symbol은 `market_data_issue(issue_type=limited_price_history)`로 기록하며, 이후 preflight에서는 현재 랭킹 제외 상태로 설명하고 같은 수집 action을 다시 제안하지 않는다.

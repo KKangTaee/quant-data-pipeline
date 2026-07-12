@@ -1,11 +1,11 @@
 :root { font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: transparent; }
 * { box-sizing: border-box; }
 body { margin: 0; background: transparent; }
-.valuation-workbench { display: grid; gap: 18px; padding: 4px 2px 16px; }
+.valuation-workbench { display: grid; gap: 18px; padding: 4px 2px 16px; color: #172033; }
 .valuation-header, .section-head { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
 .valuation-header { padding: 22px 24px; border: 1px solid #dbe3ee; border-radius: 18px; background: linear-gradient(135deg,#f8fbff,#f2f7f6); }
 .eyebrow, .section-head > div > span, .basis span, .release span { color: #668092; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-h2, h3, p { margin: 0; } h2 { margin-top: 6px; font-size: 22px; } h3 { margin: 5px 0; font-size: 19px; }
+h2, h3, p { margin: 0; } h2, h3, .metrics strong, .basis strong, .release strong { color: #172033; } h2 { margin-top: 6px; font-size: 22px; } h3 { margin: 5px 0; font-size: 19px; }
 .valuation-header p, .section-head p { margin-top: 7px; color: #657487; font-size: 13px; }
 .basis, .release { min-width: 142px; display: grid; gap: 4px; text-align: right; }.basis strong,.release strong { font-size: 16px; }.basis small { color: #748397; }
 .valuation-section { border: 1px solid #dbe3ee; border-radius: 18px; background: #fff; padding: 22px 24px 18px; box-shadow: 0 8px 24px rgba(42,59,79,.05); }

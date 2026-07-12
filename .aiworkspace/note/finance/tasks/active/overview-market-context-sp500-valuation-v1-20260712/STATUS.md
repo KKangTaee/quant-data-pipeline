@@ -1,6 +1,6 @@
 # Overview Market Context S&P 500 Valuation V1 Status
 
-Status: 4차 완료 / 5차 진행 대기
+Status: Complete
 Last Updated: 2026-07-12
 
 ## Current Progress
@@ -17,17 +17,18 @@ Last Updated: 2026-07-12
 - 3차 FOMC macro-implied EPS, SPX scenario band, same-date SPY conversion, and blocked-state read model completed.
 - 4차 Market Context entrypoint now renders only the React-first two-chart valuation surface.
 - Existing cockpit/refresh/brief/sector/event visible composition has been removed from the Market Context entrypoint.
+- 5차 daily SEP/Shiller/SPX-SPY automation, schema bootstrap, live ingestion smoke, Browser QA, and durable documentation sync completed.
 
 ## Current Stage
 
-전체 5차 중 4차까지 구현과 검증이 완료되었고 5차 최신화 자동화·Browser QA·문서 동기화로 이동한다.
+전체 5차 구현, QA, 문서 동기화까지 완료되었다.
 
 ## Next Action
 
-1. Commit 4차 React UI replacement unit.
-2. Add valuation collection JobResult and scheduled refresh specs.
-3. Run Browser QA, attach one screenshot, sync durable documentation, and close the task.
+1. Import an explicit S&P Index Earnings workbook with release date when actual EPS rows are available.
+2. Re-run the daily automation or `run_collect_sp500_valuation_context` and confirm the two charts become READY.
+3. Keep the trailing-to-forward methodology limitation visible until a licensed historical forward consensus source is adopted.
 
-## Remaining
+## Completion
 
-- 5차 automation/QA/docs.
+- 1차 through 5차 complete; no required implementation stage remains.

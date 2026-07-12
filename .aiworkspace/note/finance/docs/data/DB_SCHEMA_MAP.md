@@ -40,6 +40,9 @@ Last Verified: 2026-07-08
 | `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
 | `etf_exposure_snapshot` | ETF holdings 또는 provider aggregate에서 만든 asset class / sector / country / currency exposure summary |
 | `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
+| `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장 |
+| `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
+| `fomc_sep_projection` | SEP release/year/variable/statistic unique vintage row. real GDP/PCE median 및 central-tendency endpoints 저장 |
 
 ### `finance_price`
 

@@ -5938,3 +5938,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Sector Breadth는 3% outer surface와 lane별 direction tint를 사용하며, 조사 selector/panel/tabs/Snapshot/chart는 keyed 부모 container 하나로 읽힌다.
 - 후속으로 Ranking Board의 모드별 전체 표 expander를 Ranking Board keyed 부모 안으로 이동해 Sector Breadth와 선택 종목 조사 사이의 독립 박스를 제거했다.
 - Market Movers 81 tests, React build, desktop/mobile Browser QA를 통과했고 데이터/payload/provider/DB 경계는 변경하지 않았다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1
+
+- 기존 Market Context visible cockpit/brief/sector/event/refresh composition을 제거하고 5년 후행 PER 구간과 FOMC 예상 EPS/SPX 시나리오 React 화면으로 교체했다.
+- Shiller 월별 valuation, S&P index earnings release vintage, Federal Reserve SEP vintage 3-table pipeline과 loader/service/read-model 경계를 추가했다.
+- SEP 최신 링크를 매일 확인하는 automation과 optional EPS table bootstrap을 추가했고, 실제 수집·TypeScript/Vite·18 valuation tests·31 Market Context contracts·Browser QA를 완료했다.
+- S&P actual earnings workbook이 없으면 예상 지수 시나리오를 차단하며, generated QA screenshot은 커밋하지 않는다.

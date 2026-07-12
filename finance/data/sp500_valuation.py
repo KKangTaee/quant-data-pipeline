@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from html import unescape
 from io import StringIO
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,8 @@ from .db.schema import VALUATION_SCHEMAS, sync_table_schema
 FEDERAL_RESERVE_BASE_URL = "https://www.federalreserve.gov"
 FOMC_CALENDAR_URL = f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomccalendars.htm"
 SHILLER_SOURCE = "robert_shiller_irrational_exuberance"
-SHILLER_SOURCE_URL = "https://www.econ.yale.edu/~shiller/data/ie_data.xls"
+SHILLER_PAGE_URL = "https://shillerdata.com/"
+SHILLER_SOURCE_URL = SHILLER_PAGE_URL
 SP500_EARNINGS_SOURCE = "sp_dow_jones_index_earnings"
 FOMC_SEP_SOURCE = "federal_reserve_sep"
 DB_META = "finance_meta"
@@ -87,8 +89,20 @@ def normalize_shiller_monthly_frame(
     return rows
 
 
+def discover_shiller_workbook_url(page_html: str) -> str:
+    """Discover the current official ie_data XLS link from Shiller's data page."""
+    matches = re.findall(
+        r'href=["\']([^"\']*ie_data(?:-[^"\']*)?\.xls(?:\?[^"\']*)?)["\']',
+        str(page_html or ""),
+        flags=re.IGNORECASE,
+    )
+    if not matches:
+        raise ValueError("Shiller ie_data.xls download link was not found.")
+    return urljoin(SHILLER_PAGE_URL, unescape(matches[0]))
+
+
 def read_shiller_workbook(
-    source_ref: str = SHILLER_SOURCE_URL,
+    source_ref: str,
     *,
     collected_at: str | None = None,
 ) -> list[dict[str, Any]]:
@@ -412,6 +426,29 @@ def _open_meta_db(
     return db
 
 
+def ensure_sp500_valuation_schemas(
+    *,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> None:
+    """Create all valuation tables even when an optional source is unavailable."""
+    db = _open_meta_db(
+        db_factory, host=host, user=user, password=password, port=port
+    )
+    try:
+        for table_name in (
+            "sp500_monthly_valuation",
+            "sp500_index_earnings",
+            "fomc_sep_projection",
+        ):
+            _ensure_table(db, table_name)
+    finally:
+        db.close()
+
+
 def _upsert_monthly_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
@@ -478,7 +515,8 @@ def _upsert_sep_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
 
 def collect_and_store_shiller_monthly_valuation(
     *,
-    source_ref: str = SHILLER_SOURCE_URL,
+    source_ref: str | None = None,
+    page_fetcher: Any = _fetch_text,
     workbook_reader: Any = read_shiller_workbook,
     db_factory: Any = MySQLClient,
     host: str = "localhost",
@@ -487,7 +525,10 @@ def collect_and_store_shiller_monthly_valuation(
     port: int = 3306,
 ) -> dict[str, Any]:
     """Collect and idempotently store Shiller monthly price/earnings history."""
-    rows = workbook_reader(source_ref=source_ref)
+    resolved_source_ref = source_ref or discover_shiller_workbook_url(
+        page_fetcher(SHILLER_PAGE_URL)
+    )
+    rows = workbook_reader(source_ref=resolved_source_ref)
     db = _open_meta_db(
         db_factory, host=host, user=user, password=password, port=port
     )
@@ -499,7 +540,7 @@ def collect_and_store_shiller_monthly_valuation(
     return {
         "rows_written": len(rows),
         "source": SHILLER_SOURCE,
-        "source_ref": source_ref,
+        "source_ref": resolved_source_ref,
         "warnings": [] if rows else ["정규화 가능한 Shiller 월별 행이 없습니다."],
     }
 

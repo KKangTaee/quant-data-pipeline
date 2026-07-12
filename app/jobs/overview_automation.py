@@ -16,6 +16,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_fomc_calendar,
     run_collect_macro_calendar,
     run_collect_market_intraday_snapshot,
+    run_collect_sp500_valuation_context,
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
 )
@@ -131,6 +132,13 @@ def _run_earnings_calendar(_: datetime) -> JobResult:
     )
 
 
+def _run_sp500_valuation(_: datetime) -> JobResult:
+    return run_collect_sp500_valuation_context(
+        index_earnings_path=os.getenv("SP500_INDEX_EARNINGS_PATH") or None,
+        source_release_date=os.getenv("SP500_INDEX_EARNINGS_RELEASE_DATE") or None,
+    )
+
+
 OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
     ScheduledJobSpec(
         job_id="sp500_universe",
@@ -191,6 +199,16 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         market_hours_only=True,
         runner=_run_intraday_snapshot("NASDAQ", 5000, fallback_to_yfinance=False),
         description="Collect Nasdaq-listed quote-fast daily movers snapshot during US market hours.",
+    ),
+    ScheduledJobSpec(
+        job_id="sp500_valuation",
+        job_name="collect_sp500_valuation_context",
+        label="S&P 500 Valuation Context",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad"),
+        market_hours_only=False,
+        runner=_run_sp500_valuation,
+        description="Discover the newest SEP vintage and refresh Shiller plus SPX/SPY valuation inputs.",
     ),
     ScheduledJobSpec(
         job_id="fomc_calendar",

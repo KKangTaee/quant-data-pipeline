@@ -9,7 +9,7 @@ Last Updated: 2026-07-12
 
 Official Index Earnings workbook automation may be blocked or subject to usage terms. V1 must support deterministic local/uploaded source ingestion and preserve source identity.
 
-Mitigation implemented in 1차: deterministic local `.xlsx` import with mandatory source release date and explicit status columns. Fully automated official download remains open for 5차 refresh integration.
+Mitigation implemented: deterministic local `.xlsx` import with mandatory source release date and explicit status columns. Daily automation imports it when `SP500_INDEX_EARNINGS_PATH` and `SP500_INDEX_EARNINGS_RELEASE_DATE` are configured; otherwise the UI remains blocked rather than substituting another estimate.
 
 ### Monthly Earnings PIT
 
@@ -34,3 +34,7 @@ The worktree contains unrelated untracked Market Movers research and generated Q
 ### Pre-existing Sentiment Contract Failure
 
 The full service-contract suite currently has one failure expecting `payload.summary.metrics.map` in the Sentiment React source. Market Context valuation changes do not touch that source; targeted valuation tests and later Market Context contracts remain the acceptance gate for this task.
+
+### Non-isolated Market Movers Contract
+
+The full suite can persist `limited_price_history` rows and a later Market Movers EOD repair test reads that DB state without patching it. In the final run this made the test consume only the 2-row quality repair instead of its isolated 65-row expectation. Market Context valuation code does not touch the Market Movers plan or issue table; this remains an external test-isolation gap.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from unittest.mock import Mock
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -72,6 +73,20 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertIn("value_status ENUM('actual','estimate','mixed')", earnings)
         self.assertIn("UNIQUE KEY uk_sep_release_year_variable_stat", sep)
 
+    def test_schema_bootstrap_creates_all_valuation_tables(self) -> None:
+        from finance.data.sp500_valuation import ensure_sp500_valuation_schemas
+
+        db = Mock()
+        db.query.return_value = [{"cnt": 0}]
+
+        ensure_sp500_valuation_schemas(db_factory=lambda *_args, **_kwargs: db)
+
+        executed = "\n".join(call.args[0] for call in db.execute.call_args_list)
+        self.assertIn("sp500_monthly_valuation", executed)
+        self.assertIn("sp500_index_earnings", executed)
+        self.assertIn("fomc_sep_projection", executed)
+        db.close.assert_called_once()
+
     def test_shiller_normalizer_emits_positive_monthly_per(self) -> None:
         from finance.data.sp500_valuation import normalize_shiller_monthly_frame
 
@@ -87,6 +102,16 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(rows[0]["observation_month"], "2026-03-01")
         self.assertAlmostEqual(rows[0]["trailing_pe"], 25.4254, places=4)
         self.assertEqual(rows[0]["data_quality"], "interpolated")
+
+    def test_shiller_page_discovery_uses_current_xls_download(self) -> None:
+        from finance.data.sp500_valuation import discover_shiller_workbook_url
+
+        page = '<a href="https://cdn.example/downloads/ie_data.xls?ver=20260708">Download</a>'
+
+        self.assertEqual(
+            discover_shiller_workbook_url(page),
+            "https://cdn.example/downloads/ie_data.xls?ver=20260708",
+        )
 
     def test_index_earnings_normalizer_keeps_actual_as_reported_quarters(self) -> None:
         from finance.data.sp500_valuation import normalize_index_earnings_frame
@@ -162,6 +187,7 @@ class Sp500ValuationDataTests(unittest.TestCase):
         )
 
         result = collect_and_store_shiller_monthly_valuation(
+            source_ref="fixture.xls",
             workbook_reader=reader,
             db_factory=lambda *_args, **_kwargs: db,
         )
@@ -316,6 +342,42 @@ class Sp500ValuationDataTests(unittest.TestCase):
 
         self.assertEqual(model["earnings_scenario"]["status"], "STALE_SEP")
         self.assertEqual(model["index_scenario"]["status"], "BLOCKED")
+
+    def test_valuation_collection_job_reports_source_results(self) -> None:
+        from app.jobs.ingestion_jobs import run_collect_sp500_valuation_context
+
+        with patch(
+            "app.jobs.ingestion_jobs.ensure_sp500_valuation_schemas",
+        ), patch(
+            "app.jobs.ingestion_jobs.collect_and_store_shiller_monthly_valuation",
+            return_value={"rows_written": 60, "source": "shiller"},
+        ), patch(
+            "app.jobs.ingestion_jobs.collect_and_store_fomc_sep",
+            return_value={"rows_written": 12, "source": "federal_reserve_sep", "release_date": "2026-06-17"},
+        ), patch(
+            "app.jobs.ingestion_jobs.import_and_store_sp500_index_earnings",
+            return_value={"rows_written": 8, "source": "sp_index_earnings"},
+        ), patch(
+            "app.jobs.ingestion_jobs.run_collect_ohlcv",
+            return_value={"status": "success", "rows_written": 10, "message": "ok"},
+        ):
+            result = run_collect_sp500_valuation_context(
+                index_earnings_path="fixture.xlsx",
+                source_release_date="2026-07-01",
+            )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 90)
+        self.assertEqual(result["details"]["pipeline_type"], "sp500_valuation_context")
+
+    def test_overview_automation_includes_daily_sep_vintage_check(self) -> None:
+        from app.jobs.overview_automation import OVERVIEW_AUTOMATION_JOB_SPECS
+
+        spec = next(item for item in OVERVIEW_AUTOMATION_JOB_SPECS if item.job_id == "sp500_valuation")
+
+        self.assertEqual(spec.job_name, "collect_sp500_valuation_context")
+        self.assertEqual(spec.cadence_minutes, 24 * 60)
+        self.assertFalse(spec.market_hours_only)
 
 
 if __name__ == "__main__":

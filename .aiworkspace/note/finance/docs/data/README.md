@@ -45,6 +45,9 @@ Last Verified: 2026-07-08
 | `market_intraday_snapshot` | Overview daily market movers and sector/group leadership intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 / Nasdaq-listed current snapshot coverage. Current UI reads this through Market Movers / Market Context, not a standalone Sector / Industry primary tab |
 | `market_data_issue` | Overview quote gap 같은 반복 market data issue를 symbol / universe 단위로 누적 추적 |
 | `market_event_calendar` | Overview Events calendar snapshot for FOMC, macro releases, earnings, market-structure events, fixed-income calendar events, and corporate-action candidates. Rows use normalized taxonomy fields such as `event_family`, `event_subtype`, `universe_scope`, and `source_authority`; macro/FOMC/Treasury rows are official schedule context, while earnings rows remain provider estimates unless issuer/official confirmation is stored. |
+| `sp500_monthly_valuation` | Shiller monthly price/EPS-derived trailing P/E and CAPE history. `data_quality=interpolated`; descriptive 60m/36m valuation zones only, not strict PIT signal history. |
+| `sp500_index_earnings` | S&P index EPS by period/basis/status/release vintage. Market Context actual TTM requires four distinct completed `quarterly + as_reported + actual` rows. |
+| `fomc_sep_projection` | Federal Reserve SEP GDP/PCE values stored by release vintage, target year, and statistic. New releases append by `release_date`; prior vintages are not overwritten. |
 | `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
 | `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |

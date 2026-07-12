@@ -99,6 +99,38 @@ yfinance
 
 ## Overview market intelligence 흐름
 
+### S&P 500 Market Context valuation
+
+```text
+Robert Shiller official page -> current ie_data.xls discovery
+  -> finance.data.sp500_valuation.collect_and_store_shiller_monthly_valuation()
+  -> finance_meta.sp500_monthly_valuation
+
+operator-supplied S&P Index Earnings workbook + source release date
+  -> import_and_store_sp500_index_earnings()
+  -> finance_meta.sp500_index_earnings
+
+Federal Reserve FOMC calendar -> latest fomcprojtablYYYYMMDD.htm
+  -> collect_and_store_fomc_sep()
+  -> finance_meta.fomc_sep_projection (release vintage preserved)
+
+yfinance EOD ^GSPC / SPY
+  -> finance_price.nyse_price_history
+
+finance.loaders.sp500_valuation + finance.loaders.price
+  -> app.services.overview.sp500_valuation.build_sp500_valuation_read_model()
+  -> React Market Context valuation component
+```
+
+의미:
+
+- 60개월 log(PER)가 공식 상대 구간이며 36개월은 기간 민감도다.
+- Shiller monthly EPS는 S&P four-quarter total의 월별 보간 연구 자료이므로 strict PIT timing proof가 아니다.
+- current TTM actual EPS는 최근 완료된 네 개의 distinct quarterly As-Reported actual row 합계다. estimate/mixed는 사용하지 않는다.
+- FOMC 성장률은 `(1 + real GDP) × (1 + PCE) - 1` 민감도이며 S&P 애널리스트 컨센서스가 아니다.
+- SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
+- 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
+
 ```text
 Wikipedia S&P 500 constituents
   -> finance.data.market_intelligence.collect_and_store_sp500_universe()

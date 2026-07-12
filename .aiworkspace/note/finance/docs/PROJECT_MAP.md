@@ -211,12 +211,17 @@ Backtest Analysis
 | Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
 | Playwright output | `.playwright-mcp/` | generated artifact, 커밋 금지 |
 
+### Current Market Context Valuation Boundary
+
+`Workspace > Overview > Market Context`의 current visible surface는 legacy macro cockpit이 아니라 S&P 500 valuation V1이다. `finance/data/sp500_valuation.py`가 Shiller/S&P Earnings/Fed SEP를 수집·UPSERT하고, `finance/loaders/sp500_valuation.py`가 DB를 읽으며, `app/services/overview/sp500_valuation.py`가 60m/36m log(PER), actual TTM EPS, FOMC EPS, SPX/SPY scenario read model을 계산한다. `app/web/overview/market_context.py`는 `market_context_helpers.py`를 통해 `market_context_react_component.py`와 `app/web/streamlit_components/market_context_valuation/`만 렌더링한다. 기존 `app/services/overview/market_context.py`와 `app/web/overview/components/market_context.py` cockpit/analog helper는 retained compatibility code이며 current Market Context entrypoint에서 렌더링하지 않는다.
+
 Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/jobs should not recreate legacy `.note/finance` paths directly.
 
 ## Where To Look
 
 | Situation | Start Here |
 |---|---|
+| S&P 500 Market Context valuation / EPS / SEP / React 수정 | `finance/data/sp500_valuation.py`, `finance/loaders/sp500_valuation.py`, `app/services/overview/sp500_valuation.py`, `app/web/overview/market_context.py`, `app/web/overview/market_context_helpers.py`, `app/web/overview/market_context_react_component.py`, `app/web/streamlit_components/market_context_valuation/`, `app/jobs/overview_automation.py` |
 | Overview macro context cockpit / historical analog / market movers / Why It Moved / sector leadership / futures monitor / sentiment 수정 | `app/jobs/overview_actions.py`, `app/services/overview/`, `app/services/overview_market_context_analog.py`, `app/services/futures_market_monitoring.py`, `app/services/futures_macro_thermometer.py`, `app/services/futures_macro_validation.py`, `finance/data/sentiment.py`, `finance/loaders/sentiment.py`, `app/web/overview_dashboard.py`, `app/web/overview/`, `app/web/overview/components/`, `app/web/overview_dashboard_helpers.py`, `app/web/overview_ui_components.py` |
 | S&P 500 / Nasdaq-listed universe, intraday snapshot, market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/symbol_directory.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_actions.py`, `app/services/overview/market_movers.py`, `app/services/overview/events.py` |
 | Overview 자동 수집 cadence / cron / launchd runner 수정 | `app/jobs/overview_automation.py`, `app/jobs/overview_actions.py`, `app/jobs/run_history.py`, `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` |

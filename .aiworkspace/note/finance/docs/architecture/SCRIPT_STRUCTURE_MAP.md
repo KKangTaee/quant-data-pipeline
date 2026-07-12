@@ -136,7 +136,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/jobs/ingestion_jobs.py` + `app/jobs/ingestion/common.py` | `Workspace > Ingestion`과 승인된 action facade에서 사용하는 수집 / refresh job wrapper. `ingestion_jobs.py` wraps OHLCV, legacy fundamentals compatibility, EDGAR statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, quote gap diagnostics, FOMC / macro / earnings calendar jobs as standard `JobResult`. `app/jobs/ingestion/common.py` owns symbol parsing, normalized result creation, progress event helpers, execution profile resolution, and pipeline status helpers |
+| `app/jobs/ingestion_jobs.py` + `app/jobs/ingestion/common.py` | `Workspace > Ingestion`과 승인된 action facade에서 사용하는 수집 / refresh job wrapper. `ingestion_jobs.py` wraps OHLCV, legacy fundamentals compatibility, EDGAR statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence, S&P 500 universe / intraday snapshot, S&P 500 valuation context, quote gap diagnostics, FOMC / macro / earnings calendar jobs as standard `JobResult`. `app/jobs/ingestion/common.py` owns symbol parsing, normalized result creation, progress event helpers, execution profile resolution, and pipeline status helpers |
 | `app/jobs/overview_actions.py` | `Workspace > Overview`의 bounded refresh action facade. Overview UI 대신 market intraday snapshot, futures OHLCV, events, sentiment, quote-gap diagnostics, browser-session auto refresh, run-history append 호출을 모은다. Market Context refresh bundle은 S&P 500 movers, sentiment, event calendars만 소유하며 Top1000 / Top2000 / Futures refresh는 전용 Market Movers / Futures Macro / Ingestion 흐름에 둔다 |
 | `app/jobs/overview_automation.py` | Overview market intelligence run-once automation orchestrator. `standard`, `safe`, `events`, `browser_safe` profile의 cadence, US market-hours guard, lock, run history metadata를 처리 |
 
@@ -184,6 +184,7 @@
 | `finance/data/market_intelligence.py` | S&P 500 current constituent parsing / 저장, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot 수집 / 저장, quote gap diagnostics / issue persistence, Fed 공식 FOMC calendar parsing / 저장, BLS / BEA macro calendar 수집 및 BLS `.ics` import, yfinance earnings estimate 수집, Nasdaq earnings cross-check, earnings lifecycle cleanup, Overview market event calendar persistence helper |
 | `finance/data/etf_provider.py` | ETF provider source map discovery, ETF operability / holdings / exposure snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, commodity gold exposure row 생성, holdings canonical refresh, exposure aggregation, UPSERT 저장 |
 | `finance/data/macro.py` | FRED macro context series 수집. VIX / yield curve / credit spread series를 `macro_series_observation`에 UPSERT 저장 |
+| `finance/data/sp500_valuation.py` / `finance/loaders/sp500_valuation.py` | Shiller monthly valuation, explicit S&P index earnings release vintage, Federal Reserve SEP release vintage 수집·UPSERT와 DB read. 최신 actual As-Reported 네 분기 TTM과 최신 SEP를 반환한다 |
 | `finance/data/fundamentals.py` | Fundamentals 수집 |
 | `finance/data/financial_statements.py` | Financial statement 수집 |
 | `finance/data/factors.py` | Factor 생성 / 저장 pipeline |

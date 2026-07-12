@@ -527,3 +527,41 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - UI / 해석 보조 layer
 - strict loader의 source of truth가 아니다.
 - 실제 statement value 판단은 `nyse_financial_statement_values`를 중심으로 읽는다.
+
+## `sp500_monthly_valuation`
+
+역할:
+
+- Shiller 월별 SPX price / interpolated EPS에서 계산한 후행 PER과 CAPE를 저장한다.
+- `observation_month + source` unique key로 재수집을 idempotent UPSERT한다.
+
+주의:
+
+- `data_quality=interpolated`이며 strict historical release timing proof가 아니다.
+- 60개월 log(PER) 상대평가와 36개월 민감도에만 사용한다. 표준편차 band는 신뢰구간이 아니다.
+
+## `sp500_index_earnings`
+
+역할:
+
+- S&P index EPS를 `period_end`, `period_type`, `earnings_basis`, `value_status`, `source_release_date`로 보존한다.
+- 동일 period라도 release vintage가 다르면 별도 row로 유지한다.
+
+주의:
+
+- Market Context TTM actual은 최신 네 개의 distinct `quarterly + as_reported + actual` row만 합산한다.
+- `estimate` 또는 `mixed` row는 actual 부족을 채우는 fallback이 아니다.
+- importer는 workbook 색상이나 위치로 상태를 추론하지 않고 explicit status column을 요구한다.
+
+## `fomc_sep_projection`
+
+역할:
+
+- Federal Reserve SEP real GDP / PCE inflation을 `release_date`, `target_year`, `statistic_name`별로 저장한다.
+- median과 central-tendency lower/upper endpoint를 분리해 보존한다.
+
+주의:
+
+- 새 SEP는 새 release vintage로 저장하며 이전 release를 덮어쓰지 않는다.
+- central-tendency endpoint 조합은 sensitivity scenario이지 participant joint distribution이나 confidence interval이 아니다.
+- latest SPX 기준일보다 release가 180일 넘게 오래되면 UI scenario는 `STALE_SEP`로 차단한다.
