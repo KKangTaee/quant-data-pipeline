@@ -20,7 +20,7 @@ Nasdaq-100 가치평가 그래프에 필요한 60개월 trailing P/E와 current/
 
 | Source | Direct NDX P/E | Direct NDX EPS | 60m Backfill | Automation | Cost Signal | Evidence | Fit |
 |---|---:|---:|---:|---:|---|---|---|
-| GuruFocus Economic Data API | 일별 | 분기별 | 가능성이 높음(5Y/20Y chart 및 historical endpoint) | REST | PAYG $0.10/request, Economic Data add-on +$90/month 표시 | Documented | V1 권장 |
+| GuruFocus Economic Data API | 일별 | 분기별 | 가능성이 높음(5Y/20Y chart 및 historical endpoint) | REST | Free 100 requests 표시는 있으나 Economic entitlement 불명확; PAYG $0.10/request/add-on +$90 | Documented | 조건부 V1 권장 |
 | FactSet Benchmarks API | index ratios endpoint | per-share/aggregate content 기반 | 가능 | REST/SDK | entitlement/quote | Documented | Enterprise 최우선 |
 | LSEG I/B/E/S Global Aggregates / Datastream | major index aggregate/valuation | actual/estimate aggregate 계열 | 가능성이 높음 | DSWS/FTP/SFTP | enterprise quote | Documented + NDX coverage는 확인 필요 | Enterprise 대안 |
 | Bloomberg Data License | historical fundamentals/estimates/price | field entitlement에 따라 가능 | 가능성이 높음 | REST/SFTP/cloud | enterprise quote | Claimed; exact NDX field unknown | 교차검증/대안 |
@@ -46,7 +46,9 @@ Nasdaq-100 가치평가 그래프에 필요한 60개월 trailing P/E와 current/
 - Limit:
   - aggregate 계산 방법과 release-vintage가 공개되지 않음
   - `EPS` indicator가 TTM인지 설명에 명시되지 않으므로, production label은 direct TTM으로 단정하지 않고 trailing P/E 기반 역산값을 primary로 사용해야 함
-  - 데이터 장기 저장/표시 권한은 Data API Agreement 확인 필요
+  - Free plan의 Economic Data 실제 호출 권한은 authenticated smoke가 필요
+  - 데이터 장기 저장/내부 chart 표시/계약 종료 후 보유 권한은 Data API Agreement 확인 필요
+  - public indicator HTML scraping은 사용하지 않음
 - Evidence label: Documented + current cross-check Inferred
 
 ### FactSet Benchmarks API

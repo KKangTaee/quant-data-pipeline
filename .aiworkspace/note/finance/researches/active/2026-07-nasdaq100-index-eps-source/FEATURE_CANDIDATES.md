@@ -7,8 +7,9 @@ Last Updated: 2026-07-12
 
 ### P0 Source Contract Spike
 
-- GuruFocus indicators 6778/5870의 실제 API response, history start, revision behavior, license 확인
-- 완료 조건: 60개월 이상 P/E와 분기 EPS가 test fixture로 고정됨
+- Free GuruFocus token으로 indicators 6778/5870의 실제 API response/entitlement 확인
+- history start, revision behavior, internal DB 저장/파생값 표시/attribution/retention 권한 확인
+- 완료 조건: 60개월 이상 P/E와 분기 EPS가 합법적으로 저장 가능한 test fixture로 고정됨
 
 ### P1 Generic Index Valuation Storage
 

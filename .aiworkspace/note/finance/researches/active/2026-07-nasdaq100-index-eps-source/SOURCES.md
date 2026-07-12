@@ -20,53 +20,63 @@ Access date: 2026-07-12
    - Type: official API docs
    - Evidence: Documented
 4. [GuruFocus Data API Pricing](https://www.gurufocus.com/data-api/pricing)
-   - Supports: Economic Data add-on/PAYG and commercial packaging signals
+   - Supports: Free 월 100 requests 표시, Economic Data add-on/PAYG, commercial packaging signals
    - Type: official pricing page
    - Evidence: Documented
-   - Limitation: pricing and rights can change; agreement controls actual use
+   - Limitation: Free API 표와 Economic Data add-on 표가 함께 있어 실제 free endpoint entitlement는 authenticated smoke가 필요함
+5. [GuruFocus Terms of Use](https://www.gurufocus.com/term-of-use)
+   - Supports: personal/professional internal research boundary, external end-user/redistribution restriction, public-site automated monitoring restriction
+   - Type: official terms
+   - Evidence: Documented
+   - Limitation: accepted Data API Agreement and account plan terms take precedence for API storage/retention details
+6. [GuruFocus Sample License Agreement](https://userupload.gurufocus.com/1803094042721021952.pdf)
+   - Supports: one negotiated agreement permits internal development/testing/use while prohibiting external redistribution of provider data and derived results
+   - Type: official-hosted customer-specific agreement example
+   - Evidence: Observed
+   - Limitation: customer-specific Exhibit A; not a universal Data API contract
 
 ## Nasdaq
 
-5. [Nasdaq Index Data](https://www.nasdaq.com/solutions/global-indexes/data)
+7. [Nasdaq Index Data](https://www.nasdaq.com/solutions/global-indexes/data)
    - Supports: GIDS/GIW/GIFFD roles, licensing requirement
    - Type: official product page
    - Evidence: Documented
-6. [Global Index Watch](https://www.nasdaq.com/solutions/global-indexes/data/giw)
+8. [Global Index Watch](https://www.nasdaq.com/solutions/global-indexes/data/giw)
    - Supports: historical/current composition, weights, corporate actions for subscribers
    - Type: official product page
    - Evidence: Documented
-7. [GIW Web Service Specification](https://www.nasdaq.com/docs/GIW_WebService_Spec.pdf)
+9. [GIW Web Service Specification](https://www.nasdaq.com/docs/GIW_WebService_Spec.pdf)
    - Supports: weights/history/divisor service fields
    - Type: official specification
    - Evidence: Documented
-8. [GIDS 2.0 Specification](https://www.nasdaqtrader.com/content/technicalsupport/specifications/dataproducts/globalindex2-0.pdf)
+10. [GIDS 2.0 Specification](https://www.nasdaqtrader.com/content/technicalsupport/specifications/dataproducts/globalindex2-0.pdf)
    - Supports: index value/summary and ETP valuation message fields; no public EPS/P-E field found
    - Type: official specification
    - Evidence: Observed
-9. [NDX Overview](https://indexes.nasdaq.com/Index/Overview/NDX)
+11. [NDX Overview](https://indexes.nasdaq.com/Index/Overview/NDX)
    - Supports: official index level, divisor and research links
    - Type: official index page
    - Evidence: Observed
-10. [NDX Q4 2025 Earnings Update](https://indexes.nasdaq.com/docs/NDX_Earnings_Update_-_Q4_2025.pdf)
+12. [NDX Q4 2025 Earnings Update](https://indexes.nasdaq.com/docs/NDX_Earnings_Update_-_Q4_2025.pdf)
     - Supports: Nasdaq research uses FactSet for index-weighted earnings analysis
     - Type: official research PDF
     - Evidence: Documented
 
 ## Enterprise Providers
 
-11. [FactSet Benchmarks API](https://developer.factset.com/api-catalog/factset-benchmarks-api)
+13. [FactSet Benchmarks API](https://developer.factset.com/api-catalog/factset-benchmarks-api)
     - Supports: index ratios endpoint and rolling constituent aggregate method
     - Type: official API catalog
     - Evidence: Documented
-12. [LSEG I/B/E/S Estimates and Global Aggregates](https://www.lseg.com/en/data-analytics/financial-data/company-data/ibes-estimates)
+14. [LSEG I/B/E/S Estimates and Global Aggregates](https://www.lseg.com/en/data-analytics/financial-data/company-data/ibes-estimates)
     - Supports: index/country/sector aggregate earnings, weekly/monthly delivery, deep history
     - Type: official product page
     - Evidence: Documented
-13. [LSEG Nasdaq Indices](https://www.lseg.com/en/data-analytics/financial-data/indices/equity-indices/third-party/nasdaq-indices)
+15. [LSEG Nasdaq Indices](https://www.lseg.com/en/data-analytics/financial-data/indices/equity-indices/third-party/nasdaq-indices)
     - Supports: Nasdaq-100 coverage and delivery channels
     - Type: official product page
     - Evidence: Documented
-14. [Bloomberg Data License](https://professional.bloomberg.com/products/data/data-management/data-license/)
+16. [Bloomberg Data License](https://professional.bloomberg.com/products/data/data-management/data-license/)
     - Supports: historical pricing/fundamentals/estimates and REST/SFTP/cloud delivery
     - Type: official product page
     - Evidence: Claimed
@@ -74,7 +84,7 @@ Access date: 2026-07-12
 
 ## Public Filing Source
 
-15. [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
+17. [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
     - Supports: filing metadata and XBRL company facts without API key
     - Type: official API docs
     - Evidence: Documented
