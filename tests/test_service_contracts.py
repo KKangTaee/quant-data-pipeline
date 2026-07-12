@@ -27001,6 +27001,98 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["operability_official"], ["TLT"])
         self.assertEqual(plan["operability_bridge"], ["TLT"])
 
+    def test_collectable_stale_operability_requires_pre_final_enrichment(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        build_gate = getattr(service, "build_pre_final_enrichment_gate", None)
+        self.assertIsNotNone(build_gate)
+        validation = {
+            "selection_source_id": "source-stale-provider",
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+
+        with patch.object(service, "load_etf_provider_source_map", return_value=verified_rows):
+            gate = build_gate(validation)
+
+        self.assertTrue(gate["required"])
+        self.assertTrue(gate["blocking"])
+        self.assertEqual(gate["item_count"], 1)
+        self.assertEqual(gate["symbol_count"], 1)
+        self.assertEqual(gate["items"][0]["category"], "operability")
+        self.assertEqual(gate["items"][0]["symbols"], ["TLT"])
+
+    def test_non_collectable_review_does_not_require_pre_final_enrichment(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        build_gate = getattr(service, "build_pre_final_enrichment_gate", None)
+        self.assertIsNotNone(build_gate)
+
+        gate = build_gate({"provider_coverage": {"coverage": {}}})
+
+        self.assertFalse(gate["required"])
+        self.assertFalse(gate["blocking"])
+        self.assertEqual(gate["items"], [])
+        self.assertIn("없습니다", gate["reason"])
+
+    def test_practical_validation_result_blocks_final_review_until_collectable_gap_is_rechecked(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        base_result = {
+            "selection_source_id": "source-stale-provider",
+            "validation_modules": [],
+            "final_review_gate": {
+                "route": "READY_WITH_REVIEW",
+                "can_save_and_move": True,
+                "verdict": "review allowed",
+                "next_action": "move",
+                "blocking_modules": [],
+                "review_modules": [],
+            },
+            "final_review_handoff": {"route": "READY_WITH_REVIEW", "allowed": True},
+        }
+        provider_plan = {
+            "source_map_discovery": [],
+            "source_symbols": ["TLT"],
+            "operability_stale": ["TLT"],
+            "operability_official": ["TLT"],
+            "operability_bridge": ["TLT"],
+            "holdings_exposure": [],
+            "mapping_needed": [],
+            "macro": False,
+        }
+
+        with (
+            patch.object(service, "_build_practical_validation_result", return_value=base_result),
+            patch.object(service, "build_provider_gap_collection_plan", return_value=provider_plan),
+            patch.object(service, "build_practical_validation_workspace", return_value={}),
+        ):
+            result = service.build_practical_validation_result({})
+
+        self.assertIn("pre_final_enrichment_gate", result)
+        self.assertTrue(result["pre_final_enrichment_gate"]["blocking"])
+        self.assertFalse(result["final_review_gate"]["can_save_and_move"])
+        self.assertEqual(result["final_review_gate"]["route"], "BLOCKED_FOR_FINAL_REVIEW")
+        self.assertEqual(
+            result["final_review_gate"]["blocking_modules"][-1]["module_id"],
+            "pre_final_data_enrichment",
+        )
+        self.assertFalse(result["final_review_handoff"]["allowed"])
+
     def test_provider_gap_collection_runs_planned_jobs_and_records_history(self) -> None:
         from app.services import backtest_practical_validation as service
 
