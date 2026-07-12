@@ -267,6 +267,7 @@ type Props = ComponentProps & {
 };
 
 type ViewName = "overview" | "holdings" | "security" | "popularity";
+type WorkspaceSection = "portfolio" | "security";
 
 type PendingAction =
   | { kind: "manager"; cik: string; label: string }
@@ -907,6 +908,9 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     return <div className="ip-empty">Institutional portfolio payload is unavailable.</div>;
   }
 
+  const activeWorkspaceSection: WorkspaceSection =
+    activeView === "overview" || activeView === "holdings" ? "portfolio" : "security";
+
   const sendEvent = (event: Record<string, unknown>) => {
     Streamlit.setComponentValue({ event: { ...event, nonce: `${Date.now()}-${Math.random()}` } });
     syncFrameHeightSoon();
@@ -917,6 +921,13 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
     setActiveView(view);
     restoreHostScroll(position);
     syncFrameHeightSoon();
+  };
+
+  const switchWorkspaceSection = (section: WorkspaceSection) => {
+    if (section === activeWorkspaceSection) {
+      return;
+    }
+    switchView(section === "portfolio" ? "overview" : "security");
   };
 
   const handleDrilldown = (query: string) => {
@@ -1076,28 +1087,70 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         </div>
       </section>
 
-      <nav className="ip-view-tabs ip-view-tabs--grouped" aria-label="Institutional portfolio workspace views">
-        <div className="ip-tab-group" aria-label="포트폴리오 보기">
-          <span className="ip-tab-group__label">포트폴리오</span>
-          <div className="ip-tab-group__buttons">
-            <button className={activeView === "overview" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("overview")}>
-              요약
-            </button>
-            <button className={activeView === "holdings" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("holdings")}>
-              전체 보유
-            </button>
-          </div>
+      <nav className="ip-view-navigation" aria-label="Institutional portfolio workspace views">
+        <div className="ip-primary-tabs" role="tablist" aria-label="작업 영역">
+          <button
+            className={activeWorkspaceSection === "portfolio" ? "ip-primary-tabs__active" : ""}
+            type="button"
+            aria-selected={activeWorkspaceSection === "portfolio"}
+            onClick={() => switchWorkspaceSection("portfolio")}
+          >
+            포트폴리오
+          </button>
+          <button
+            className={activeWorkspaceSection === "security" ? "ip-primary-tabs__active" : ""}
+            type="button"
+            aria-selected={activeWorkspaceSection === "security"}
+            onClick={() => switchWorkspaceSection("security")}
+          >
+            종목 분석
+          </button>
         </div>
-        <div className="ip-tab-group" aria-label="종목 분석 보기">
-          <span className="ip-tab-group__label">종목 분석</span>
-          <div className="ip-tab-group__buttons">
-            <button className={activeView === "security" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("security")}>
-              종목 상세
-            </button>
-            <button className={activeView === "popularity" ? "ip-view-tabs__active" : ""} type="button" onClick={() => switchView("popularity")}>
-              기관 보유 랭킹
-            </button>
-          </div>
+
+        <div
+          className="ip-secondary-tabs"
+          role="tablist"
+          aria-label={activeWorkspaceSection === "portfolio" ? "포트폴리오 세부 보기" : "종목 분석 세부 보기"}
+        >
+          {activeWorkspaceSection === "portfolio" ? (
+            <>
+              <button
+                className={activeView === "overview" ? "ip-secondary-tabs__active" : ""}
+                type="button"
+                aria-selected={activeView === "overview"}
+                onClick={() => switchView("overview")}
+              >
+                요약
+              </button>
+              <button
+                className={activeView === "holdings" ? "ip-secondary-tabs__active" : ""}
+                type="button"
+                aria-selected={activeView === "holdings"}
+                onClick={() => switchView("holdings")}
+              >
+                전체 보유
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className={activeView === "security" ? "ip-secondary-tabs__active" : ""}
+                type="button"
+                aria-selected={activeView === "security"}
+                onClick={() => switchView("security")}
+              >
+                종목 상세
+              </button>
+              <button
+                className={activeView === "popularity" ? "ip-secondary-tabs__active" : ""}
+                type="button"
+                aria-selected={activeView === "popularity"}
+                onClick={() => switchView("popularity")}
+              >
+                기관 보유 랭킹
+              </button>
+            </>
+          )}
         </div>
       </nav>
 

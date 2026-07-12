@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `institutional-portfolios-portfolio-security-ia-v1-20260712` closeout. |
+| none | - | No active task after `institutional-portfolios-two-tier-tabs-v1-20260712` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `institutional-portfolios-two-tier-tabs-v1-20260712` | Completed record | Workbench tabs now use primary `포트폴리오 / 종목 분석` tabs with context-specific secondary tabs. |
 | `institutional-portfolios-portfolio-security-ia-v1-20260712` | Completed record | Workbench tabs now separate manager portfolio views from ticker/security analysis views. |
 | `institutional-portfolios-interactive-security-chart-v1-20260712` | Completed record | Selected-security chart now uses stored OHLCV payload with hover tooltip, dotted guides, range slider, pan controls, and line/candle mode. |
 | `institutional-portfolios-holding-chart-refresh-v1-20260712` | Completed record | Selected-security chart can resolve stored DB prices through safe CUSIP-symbol mapping and trigger bounded OHLCV collection when missing. |

@@ -24,7 +24,8 @@ Last Verified: 2026-07-12
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Institutional Portfolios Portfolio / Security IA V1 2026-07-12](../tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
+- Latest completed task: [Institutional Portfolios Two-Tier Tabs V1 2026-07-12](../tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Portfolio / Security IA V1 2026-07-12](../tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Interactive Security Chart V1 2026-07-12](../tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Holding Chart Refresh V1 2026-07-12](../tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios UX Detail / Performance V1 2026-07-11](../tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/STATUS.md).

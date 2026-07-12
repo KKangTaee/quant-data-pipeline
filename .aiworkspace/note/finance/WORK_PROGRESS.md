@@ -23,13 +23,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-portfolio-security-ia-v1-20260712](./tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
+  - Latest completed task is [institutional-portfolios-two-tier-tabs-v1-20260712](./tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
 
+- Institutional Portfolios Two-Tier Tabs V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/`에서 React workbench tab IA를 상위 `포트폴리오 / 종목 분석` 탭과 context-specific 하위 탭으로 분리했다.
+  - 기존 한 줄 group-label 탭의 시각적 어색함을 줄였고, DB / ingestion / provider / trading boundary는 변경하지 않았다.
 - Institutional Portfolios Portfolio / Security IA V1 2026-07-12:
   - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/`에서 React workbench tab IA를 `포트폴리오`와 `종목 분석` 그룹으로 나눴다.
   - `요약 / 전체 보유`는 manager portfolio view로, `종목 상세 / 기관 보유 랭킹`은 ticker / security analysis view로 읽히게 했다.

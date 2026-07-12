@@ -985,7 +985,7 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("ip-security-detail", component_source)
         self.assertIn("ip-performance-panel", component_source)
 
-    def test_workbench_groups_portfolio_and_security_analysis_views(self) -> None:
+    def test_workbench_uses_two_tier_portfolio_and_security_tabs(self) -> None:
         component_source = Path(
             "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
         ).read_text(encoding="utf-8")
@@ -994,17 +994,24 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         )
 
         self.assertIn('type ViewName = "overview" | "holdings" | "security" | "popularity";', component_source)
-        self.assertIn('aria-label="포트폴리오 보기"', component_source)
-        self.assertIn('aria-label="종목 분석 보기"', component_source)
-        self.assertIn("ip-tab-group__label", component_source)
+        self.assertIn('type WorkspaceSection = "portfolio" | "security";', component_source)
+        self.assertIn("activeWorkspaceSection", component_source)
+        self.assertIn("switchWorkspaceSection", component_source)
+        self.assertIn('aria-label="작업 영역"', component_source)
+        self.assertIn('"포트폴리오 세부 보기"', component_source)
+        self.assertIn('"종목 분석 세부 보기"', component_source)
         self.assertIn("포트폴리오", component_source)
         self.assertIn("종목 분석", component_source)
         self.assertIn("종목 상세", component_source)
         self.assertIn('setActiveView("security")', component_source)
         self.assertIn('activeView === "security"', component_source)
         self.assertNotIn("보유 기관 조회", component_source)
-        self.assertIn(".ip-view-tabs--grouped", style_source)
-        self.assertIn(".ip-tab-group", style_source)
+        self.assertIn(".ip-view-navigation", style_source)
+        self.assertIn(".ip-primary-tabs", style_source)
+        self.assertIn(".ip-secondary-tabs", style_source)
+        self.assertIn(".ip-primary-tabs__active", style_source)
+        self.assertNotIn("ip-tab-group__label", component_source)
+        self.assertNotIn(".ip-tab-group", style_source)
 
     def test_selected_security_price_collection_button_routes_through_python_job_boundary(self) -> None:
         page_source = Path("app/web/institutional_portfolios.py").read_text(encoding="utf-8")

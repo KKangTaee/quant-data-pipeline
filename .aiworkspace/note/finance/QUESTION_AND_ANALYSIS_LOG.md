@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-portfolio-security-ia-v1-20260712](./tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
+  - Latest completed task is [institutional-portfolios-two-tier-tabs-v1-20260712](./tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-12 - Institutional Portfolios tab groups should become true two-tier tabs
+
+- User request: 사용자가 직전 `포트폴리오 / 종목 분석` 그룹 라벨 탭이 여전히 어색해 보이며, 탭을 아예 분리하거나 다른 방식으로 더 예쁘게 바꿀 수 있는지 물음.
+- Interpreted goal: 기능을 늘리기보다 visual hierarchy를 명확히 해 `작업 영역`과 `세부 보기`가 서로 다른 레벨로 읽히게 한다.
+- Analysis result: 한 줄 안의 group label은 category와 tab이 같은 depth처럼 보이므로, 상위 탭 `포트폴리오 / 종목 분석`과 하위 탭 `요약 / 전체 보유` 또는 `종목 상세 / 기관 보유 랭킹`의 2단 구조가 더 적합하다.
+- Follow-up: `institutional-portfolios-two-tier-tabs-v1-20260712`에서 React tab markup/CSS, TDD source contract, focused tests, React build, Browser QA를 완료했다. DB / ingestion / provider / trading semantics는 변경하지 않았다.
 
 ### 2026-07-12 - Institutional Portfolios tabs must separate portfolio context from ticker context
 

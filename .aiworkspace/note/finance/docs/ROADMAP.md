@@ -9,13 +9,19 @@ Last Verified: 2026-07-12
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios`에서 `포트폴리오 / 종목 분석` 구분이 한 줄 안의 그룹 라벨처럼 보여 어색했던 탭 UX를 줄였다.
+- 주요 변경: React workbench tab bar를 상위 탭(`포트폴리오`, `종목 분석`)과 현재 상위 영역에 따른 하위 탭(`요약 / 전체 보유` 또는 `종목 상세 / 기관 보유 랭킹`)으로 분리했다.
+- 이번 차수에서 하지 않은 일: DB schema 변경, ingestion 변경, provider 변경, true holding-duration metric, 추천 / trading semantics 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/`다.
 
 - 목적: `Workspace > Institutional Portfolios`에서 기관 포트폴리오 탭과 티커 / 기업 분석 탭이 같은 1차 레벨에 섞여 보이는 IA 혼선을 줄였다.
 - 주요 변경: React workbench tab bar를 `포트폴리오` 그룹(`요약`, `전체 보유`)과 `종목 분석` 그룹(`종목 상세`, `기관 보유 랭킹`)으로 분리했다. 기존 `보유 기관 조회` 기능은 `종목 상세` 안의 보유 기관 리스트로 유지한다.
 - 이번 차수에서 하지 않은 일: true multi-quarter holding duration metric, DB schema 변경, ingestion 변경, external provider, 추천 / trading semantics 추가.
 
-Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/`다.
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/`다.
 
 - 목적: `Workspace > Institutional Portfolios` 보유기관조회의 선택 종목 차트를 단순 mini line chart에서 hover / dotted guide / range 이동 / 라인-캔들 toggle이 있는 저장 OHLCV 기반 interactive chart로 개선했다.
 - 주요 변경: selected-security chart payload에 `open/high/low/close/volume`을 포함하고, React `InteractiveSecurityChart`가 tooltip, crosshair, high-low guide, range slider, pan controls, line/candle mode를 렌더링한다.
