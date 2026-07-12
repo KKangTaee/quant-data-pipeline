@@ -34,6 +34,11 @@ from finance.data.futures_market import (
     normalize_futures_symbols,
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
+from finance.data.nasdaq100_valuation import (
+    collect_and_store_qqq_sec_holdings,
+    ensure_nasdaq100_valuation_schemas,
+    materialize_and_store_nasdaq100_monthly,
+)
 from finance.data.sentiment import collect_and_store_market_sentiment
 from finance.data.sp500_valuation import (
     collect_and_store_fomc_sep,
@@ -302,6 +307,71 @@ def run_collect_sp500_valuation_context(
                 "finance_meta.sp500_monthly_valuation",
                 "finance_meta.sp500_index_earnings",
                 "finance_meta.fomc_sep_projection",
+                "finance_price.nyse_price_history",
+            ],
+            "steps": steps,
+        },
+    )
+
+
+def run_collect_nasdaq100_valuation_context() -> JobResult:
+    """Refresh official QQQ holdings and the gated Nasdaq-100 monthly proxy."""
+    job_name = "collect_nasdaq100_valuation_context"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        ensure_nasdaq100_valuation_schemas()
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name, status="failed", started_at=started_at,
+            finished_at=_now_str(), duration_sec=perf_counter() - t0,
+            rows_written=0, symbols_requested=1, symbols_processed=0,
+            message=f"Nasdaq-100 valuation context refresh failed: {exc}",
+            details={"pipeline_type": "nasdaq100_valuation_context", "steps": []},
+        )
+
+    steps: list[dict[str, Any]] = []
+
+    def collect_step(label: str, collector: Callable[[], dict[str, Any]]) -> None:
+        try:
+            payload = dict(collector() or {})
+            steps.append({"label": label, "status": "success", **payload})
+        except Exception as exc:
+            steps.append(
+                {"label": label, "status": "failed", "rows_written": 0, "message": str(exc)}
+            )
+
+    collect_step("SEC QQQ holdings", collect_and_store_qqq_sec_holdings)
+    price = run_collect_ohlcv(
+        ["QQQ"], period="1mo", interval="1d", execution_profile="managed_safe"
+    )
+    steps.append(
+        {
+            "label": "QQQ EOD", "status": str(price.get("status") or "failed"),
+            "rows_written": int(price.get("rows_written") or 0),
+            "message": price.get("message"),
+        }
+    )
+    collect_step("Nasdaq-100 monthly proxy", materialize_and_store_nasdaq100_monthly)
+    succeeded = [step for step in steps if step["status"] in {"success", "partial_success"}]
+    degraded = [step for step in steps if step["status"] != "success"]
+    status = "partial_success" if degraded and succeeded else "failed" if degraded else "success"
+    rows_written = sum(int(step.get("rows_written") or 0) for step in steps)
+    return _build_result(
+        job_name=job_name, status=status, started_at=started_at,
+        finished_at=_now_str(), duration_sec=perf_counter() - t0,
+        rows_written=rows_written, symbols_requested=1,
+        symbols_processed=1 if price.get("status") == "success" else 0,
+        message=(
+            "Nasdaq-100 valuation context refresh completed."
+            if status == "success"
+            else "Nasdaq-100 valuation context refresh completed with source failures."
+        ),
+        details={
+            "pipeline_type": "nasdaq100_valuation_context",
+            "target_tables": [
+                "finance_meta.etf_holdings_snapshot",
+                "finance_meta.nasdaq100_monthly_valuation",
                 "finance_price.nyse_price_history",
             ],
             "steps": steps,

@@ -1,7 +1,7 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-13
 
 ## Feature Runbooks
 

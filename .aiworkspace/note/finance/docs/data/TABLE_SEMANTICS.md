@@ -342,6 +342,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - current snapshot이므로 과거 특정 시점의 holdings truth로 바로 해석하면 안 된다.
 - `AOR`은 현재 1차 ETF holdings만 저장한다. Aggregate Underlying 2차 look-through는 후속이다.
 - `GLD`, `IAU`는 금 현물 ETF 특성상 row-level stock holdings 대신 `commodity_gold` 100% gold row를 저장한다.
+- QQQ SEC N-PORT/N-30B-2 row는 `cusip`, `isin`, `lei`, `issuer_cik`, `filing_date`, `accession_no`, `holding_snapshot_quality`을 optional evidence로 저장한다. `annual_anchor` / `quarterly_anchor` / `current_issuer_snapshot`은 같은 정밀도의 PIT truth가 아니다.
 
 ## `etf_exposure_snapshot`
 
@@ -540,6 +541,19 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - EPS가 있는 월은 `data_quality=interpolated`, EPS 미발표 price-only 월은 `data_quality=missing`이다. 어느 쪽도 strict historical release timing proof가 아니다.
 - 60개월 log(PER) 상대평가, 36개월 민감도, 12개월 reconstructed actual-SPX 비교에 사용한다. 표준편차 band는 신뢰구간이 아니다.
 - Market Context graph 2는 공식 actual 4분기 TTM이 없을 때 이 table의 최신 양수 `trailing_eps`를 `interpolated_ttm_proxy`로 선택한다. UI는 이를 S&P 공식 EPS나 애널리스트 컨센서스로 표시하지 않는다.
+
+## `nasdaq100_monthly_valuation`
+
+역할:
+
+- QQQ holdings weight, 구성종목 filing-aware actual diluted EPS, DB EOD를 결합한 monthly QQQ EPS/PER proxy와 coverage evidence를 저장한다.
+- `(observation_month, proxy_symbol, source)` key로 READY와 BLOCKED 월을 모두 repeat-safe UPSERT한다.
+
+주의:
+
+- `reconstructed_actual`은 weighted EPS/price coverage 95% 이상인 월만 허용한다. `blocked`는 pass가 아니며 값이 없어도 삭제하지 않는다.
+- QQQ proxy는 공식 Nasdaq-100 index-level P/E/EPS가 아니다. acquired/delisted EOD, ADR/foreign unit, share class가 불명확한 weight는 coverage에 포함하지 않는다.
+- 2026-07-13 actual materialization은 119개월 중 5개월 READY, 114개월 BLOCKED이며 최신 coverage는 94.47%다.
 
 ## `sp500_index_earnings`
 

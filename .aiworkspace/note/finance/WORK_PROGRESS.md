@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is none.
+  - Current active task is [overview-market-context-nasdaq100-valuation-v1-20260712](./tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md). Implementation/QA is complete; the 95% data-quality gate remains active.
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -6123,3 +6123,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - no-account V1 권고를 `QQQ N-PORT + SEC actual + QQQ EOD` 공개 공시 기반 재구성으로 변경했다.
 - 공식 Nasdaq P/E가 아니라 `Nasdaq-100 (QQQ proxy)`로 표시하며, ADR/복수 클래스/foreign issuer mapping과 공개 P/E calibration을 구현 전 quality gate로 둔다.
 - 상세 근거와 구현 후보는 `.aiworkspace/note/finance/researches/active/2026-07-nasdaq100-index-eps-source/`를 본다.
+## 2026-07-13 - Nasdaq-100 QQQ Public-Filing Valuation V1
+
+- `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/`의 1차~5차 pipeline/service/React/automation/QA를 완료했다.
+- 실제 job은 SEC holdings 3,060행을 정규화해 3,049 unique key를 저장했고, QQQ EOD 20행과 monthly proxy 119행을 처리했다. Monthly quality는 READY 5 / BLOCKED 114다.
+- Market Context는 S&P 500 / Nasdaq-100 selector를 제공하며 Nasdaq은 최신 coverage 94.47%가 95% 기준 미달이라 값을 숨기고 blocker evidence를 표시한다.
+- 구현 커밋은 `50fe4059`, `10a973f4`, `287d359f`, `6ed08d0e`; 5차 closeout은 task `STATUS.md`와 `RUNS.md`를 본다.

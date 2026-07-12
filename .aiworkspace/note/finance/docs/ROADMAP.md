@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-13
 
 ## Current State After Master Merge
 
@@ -10,8 +10,9 @@ Last Verified: 2026-07-12
 현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/`다.
 
 - 목적: account/token/subscription 없이 SEC QQQ holdings와 SEC company actual을 결합해 `Nasdaq-100 · QQQ proxy` 가치평가를 추가한다.
-- 현재 단계: QQQ 가격 기준 Graph 2, 60개월 reconstructed P/E, FOMC GDP+PCE, 1/3/5년 history의 written design review다. 구현 코드는 아직 시작하지 않았다.
+- 현재 단계: 1차~5차 pipeline/service/selector/automation/QA 구현을 완료했다. 실제 DB는 119개월 중 5개월만 95% gate를 통과해 Nasdaq surface가 coverage blocker를 표시한다.
 - 품질 경계: weighted coverage 95% 이상, public P/E calibration median 5%/maximum 10% 이하여야 production-ready read model을 허용한다. 공식 Nasdaq index-level P/E/EPS로 표시하지 않는다.
+- 다음 data step: acquired/delisted constituent historical EOD의 무료·안정적 source contract가 승인되기 전에는 gate를 낮추거나 blocked 월을 보간하지 않는다.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다.
 

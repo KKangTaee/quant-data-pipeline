@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is none.
+  - Current active task is [overview-market-context-nasdaq100-valuation-v1-20260712](./tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md). Implementation is complete and Nasdaq output remains coverage-blocked.
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -9396,3 +9396,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: scraping이나 접근 우회 없이 무료 공개자료만 사용하고, 1년뿐 아니라 가능하면 5년 흐름도 즉시 backfill해야 함.
 - Analysis result: SEC EDGAR에 QQQ N-PORT 22개 분기와 기업 XBRL actual이 인증 없이 존재하므로 QQQ proxy trailing P/E/EPS 재구성이 가능하다. 다만 이는 공식 Nasdaq index-level P/E가 아니다.
 - Follow-up: 구현 전 22개 holdings parse, identifier/ADR/class mapping, weighted actual coverage 95%, 공개 Nasdaq P/E calibration을 P0 gate로 검증한다. 통과하면 기존 SEP GDP+PCE와 1/3/5년 React 흐름을 재사용한다.
+### 2026-07-13 - Coverage gate가 막혀도 2차~5차 구현을 진행할 수 있는가
+
+- User request: 승인된 무료·무계정 QQQ proxy 방향에서 2차부터 5차까지 단계별 구현 요청.
+- Interpreted goal: 95% 기준을 낮추지 않고 DB pipeline, service isolation, selector, automation, Browser QA까지 완성해 현재 부족분을 사용자에게 정직하게 보여준다.
+- Analysis result: 구현은 가능하지만 production-ready Nasdaq graph는 불가능하다. actual 119개월 중 5개월만 gate를 통과했고 최신 coverage는 94.47%다.
+- Follow-up: S&P는 READY를 유지하고 Nasdaq은 94.47% / 95% blocker surface를 렌더링한다. acquired/delisted historical EOD source가 승인되기 전 보간·gate 완화는 하지 않는다.

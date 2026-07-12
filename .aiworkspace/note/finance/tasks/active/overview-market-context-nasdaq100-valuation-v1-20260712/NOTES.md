@@ -1,6 +1,6 @@
 # Overview Market Context Nasdaq-100 Valuation V1 Notes
 
-Last Updated: 2026-07-12
+Last Updated: 2026-07-13
 
 ## Confirmed Decisions
 
@@ -40,3 +40,11 @@ Last Updated: 2026-07-12
 - Existing DB has no EOD rows for several later-delisted/acquired 2021 constituents. Current yfinance requests return delisted/404 for these tickers.
 - Stooq's unauthenticated CSV endpoint currently returns a proof-of-work verification page, so it is not a stable automated ingestion source for this task.
 - Holding the missing ticker weight constant, interpolating N-PORT quarter prices, lowering 95%, or treating annual-only foreign EPS as current TTM would change the approved calculation contract and was not done.
+
+## Implemented Boundary
+
+- `finance_meta.etf_holdings_snapshot`은 SEC identity/timing field를 additive column으로 받으며 기존 Invesco rows는 null 호환이다.
+- `finance_meta.nasdaq100_monthly_valuation`은 blocked month도 삭제하지 않고 `(observation_month, proxy_symbol, source)`로 UPSERT한다.
+- combined service는 instrument별 예외를 격리한다. 실제 smoke에서 S&P `READY`, Nasdaq `BLOCKED`가 동시에 반환됐다.
+- React는 운영 row/job panel을 추가하지 않고 사용자의 판단 질문에 필요한 selector와 coverage gate만 제공한다.
+- 무료·무계정 방향은 SEC holdings/company facts와 DB QQQ EOD를 사용한다. 화면은 SEC/Invesco/Yahoo를 직접 호출하지 않는다.

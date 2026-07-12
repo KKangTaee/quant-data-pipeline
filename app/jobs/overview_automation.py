@@ -16,6 +16,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_fomc_calendar,
     run_collect_macro_calendar,
     run_collect_market_intraday_snapshot,
+    run_collect_nasdaq100_valuation_context,
     run_collect_sp500_valuation_context,
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
@@ -139,6 +140,10 @@ def _run_sp500_valuation(_: datetime) -> JobResult:
     )
 
 
+def _run_nasdaq100_valuation(_: datetime) -> JobResult:
+    return run_collect_nasdaq100_valuation_context()
+
+
 OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
     ScheduledJobSpec(
         job_id="sp500_universe",
@@ -209,6 +214,16 @@ OVERVIEW_AUTOMATION_JOB_SPECS: tuple[ScheduledJobSpec, ...] = (
         market_hours_only=False,
         runner=_run_sp500_valuation,
         description="Discover the newest SEP vintage and refresh Shiller plus SPX/SPY valuation inputs.",
+    ),
+    ScheduledJobSpec(
+        job_id="nasdaq100_valuation",
+        job_name="collect_nasdaq100_valuation_context",
+        label="Nasdaq-100 QQQ Valuation Context",
+        cadence_minutes=24 * 60,
+        profiles=("safe", "standard", "broad"),
+        market_hours_only=False,
+        runner=_run_nasdaq100_valuation,
+        description="Refresh official QQQ holdings, QQQ EOD, and the 95%-gated monthly proxy.",
     ),
     ScheduledJobSpec(
         job_id="fomc_calendar",

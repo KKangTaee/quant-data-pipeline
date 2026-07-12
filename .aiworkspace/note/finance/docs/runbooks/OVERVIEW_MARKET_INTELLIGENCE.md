@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-13
 
 ## Purpose
 
@@ -16,6 +16,7 @@ Last Verified: 2026-07-08
 - 저장된 선물 OHLCV와 일봉 매크로 상태를 Overview Futures Macro에서 확인하고 싶을 때
 - CNN Fear & Greed / AAII bearish sentiment context를 갱신하거나 freshness를 확인해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
+- Market Context의 S&P/Nasdaq valuation source와 coverage gate를 갱신할 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
 
 ## App Startup
@@ -31,6 +32,31 @@ http://localhost:8501
 ```
 
 이미 포트가 사용 중이면 다른 포트를 지정한다.
+
+## Valuation Refresh
+
+Nasdaq-100 QQQ proxy job의 due/skip 계획과 강제 실행은 아래처럼 확인한다.
+
+```bash
+.venv/bin/python -m app.jobs.overview_automation --profile safe --job nasdaq100_valuation --dry-run
+.venv/bin/python -m app.jobs.overview_automation --profile safe --job nasdaq100_valuation --force --json
+```
+
+이 job은 SEC QQQ holdings, QQQ EOD, stored DB 기반 monthly materialization을 순서대로 실행한다. `success`는 파이프라인 실행 성공이지 valuation coverage 통과를 뜻하지 않는다. `finance_meta.nasdaq100_monthly_valuation.data_quality=blocked`와 `coverage_weight_pct < 95`이면 UI는 그래프 대신 coverage blocker를 표시한다.
+
+Expected result:
+
+- job result의 `details.steps`에 `SEC QQQ holdings`, `QQQ EOD`, `Nasdaq-100 monthly proxy`가 각각 남는다.
+- 동일 source/business key 재실행은 새 중복 row를 만들지 않는다.
+- 95% 미만 monthly row는 `blocked`와 error reason을 유지한다.
+
+Failure handling:
+
+- 한 source step이 실패하면 `partial_success`와 step message를 확인하고 latest-good DB row로 materialization/read가 가능한지 분리해 본다.
+- schema bootstrap failure는 전체 `failed`다. `finance_meta` 연결과 `schema.py` sync 결과를 먼저 확인한다.
+- `success`인데 화면이 blocked인 경우 job을 반복 실행해 해결하려 하지 말고 active task의 acquired/delisted EOD gap을 확인한다.
+
+Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../data/TABLE_SEMANTICS.md), [active task status](../../tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md).
 
 ## Refresh Order
 

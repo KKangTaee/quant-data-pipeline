@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-13
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Last Verified: 2026-07-12
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: [Nasdaq-100 Valuation V1 2026-07-12](../tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md) — written design review; implementation has not started.
+- Current active task: [Nasdaq-100 Valuation V1 2026-07-12](../tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md) — 1차~5차 implementation/QA complete; actual valuation remains blocked by the approved 95% coverage gate.
 - Latest completed task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
 - Previous completed task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
 - Previous completed task: [Practical Validation Recheck Handoff Loop Fix V1 2026-07-12](../tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -78,7 +78,7 @@ Last Verified: 2026-07-12
 - Recent Overview helper extraction task: [Overview Tab Helper Extraction V11-V16 2026-06-25](../tasks/active/overview-tab-helper-extraction-v11-v16-20260625/STATUS.md).
 - Recent Backtest strategy contract task: [Risk Parity / Dual Momentum 5B 2026-06-10](../tasks/active/risk-parity-dual-momentum-5b-20260610/STATUS.md).
 - Recent Reference merge-review fix: [Merge Review Fixes 2026-06-08](../tasks/active/merge-review-fixes-20260608/STATUS.md).
-- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`; each tab keeps its thin entrypoint, helper bridge, visual components, and service read model boundary. `Market Context` now renders two React valuation surfaces: a Shiller-only 60-month log(PER) relative-zone chart with complete/provisional price separation, and a FOMC SEP GDP+PCE-based EPS/SPX scenario chart with 1/3/5-year reconstructed history. `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. Backtest strict quarterly remains formal `Strict Quarterly` while legacy `_prototype` keys are replay compatibility, and GTAA keeps `interval` as strategy-owned rebalance cadence. See [Roadmap](./ROADMAP.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`; each tab keeps its thin entrypoint, helper bridge, visual components, and service read model boundary. `Market Context` valuation has an S&P 500 / Nasdaq-100 selector. S&P retains the Shiller/SEP 60m/36m and 1/3/5-year flow; Nasdaq uses a QQQ public-filing proxy and currently shows a 94.47% versus 95% coverage blocker instead of a valuation graph. `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. See [Roadmap](./ROADMAP.md).
 - Current Final Review evidence state: [Final Review Evidence Closure Contract V1](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md) is completed. Practical Validation closes actionable root issues before handoff, while Final Review records accepted limits / Monitoring transfers as terminal states instead of treating REVIEW count as unfinished work.
 
 ## By Purpose

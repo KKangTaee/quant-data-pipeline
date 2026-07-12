@@ -85,6 +85,26 @@ class MarketContextValuationTests(unittest.TestCase):
             self.assertIn(token, component)
         self.assertIn("build_market_context_valuation_read_model", helper)
 
+    def test_nasdaq_collection_job_reports_holdings_and_monthly_steps(self) -> None:
+        from app.jobs.ingestion_jobs import run_collect_nasdaq100_valuation_context
+
+        with patch("app.jobs.ingestion_jobs.ensure_nasdaq100_valuation_schemas"), \
+             patch("app.jobs.ingestion_jobs.collect_and_store_qqq_sec_holdings", return_value={"rows_written": 505}), \
+             patch("app.jobs.ingestion_jobs.materialize_and_store_nasdaq100_monthly", return_value={"rows_written": 17, "blocked_rows": 17}), \
+             patch("app.jobs.ingestion_jobs.run_collect_ohlcv", return_value={"status": "success", "rows_written": 5, "message": "ok"}):
+            result = run_collect_nasdaq100_valuation_context()
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 527)
+        self.assertEqual(result["details"]["pipeline_type"], "nasdaq100_valuation_context")
+
+    def test_automation_includes_daily_nasdaq_valuation_job(self) -> None:
+        from app.jobs.overview_automation import OVERVIEW_AUTOMATION_JOB_SPECS
+
+        spec = next(item for item in OVERVIEW_AUTOMATION_JOB_SPECS if item.job_id == "nasdaq100_valuation")
+        self.assertEqual(spec.cadence_minutes, 24 * 60)
+        self.assertFalse(spec.market_hours_only)
+
 
 if __name__ == "__main__":
     unittest.main()

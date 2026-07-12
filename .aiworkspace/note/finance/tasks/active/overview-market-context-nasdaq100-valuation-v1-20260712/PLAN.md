@@ -1,6 +1,6 @@
 # Overview Market Context Nasdaq-100 Valuation V1 Plan
 
-Status: Approved — Detailed Execution Plan
+Status: Executed Through 5차 — Nasdaq Output Remains Coverage-Blocked
 Last Updated: 2026-07-13
 
 ## 이걸 하는 이유?
@@ -16,6 +16,8 @@ Last Updated: 2026-07-13
 - 모든 원격 수집은 ingestion에서 수행하고 UI는 DB-backed read model만 렌더링한다.
 
 ## Five-Stage Roadmap
+
+Execution result: 1차~5차 구현·QA는 완료했다. 사용자의 후속 진행 승인에 따라 1차 stop condition 뒤에도 2차~5차를 구현했지만, 95% gate 자체는 완화하지 않았다. 따라서 S&P는 READY이고 Nasdaq은 coverage evidence와 함께 BLOCKED다.
 
 ### 1차 — Public Source Coverage Spike
 

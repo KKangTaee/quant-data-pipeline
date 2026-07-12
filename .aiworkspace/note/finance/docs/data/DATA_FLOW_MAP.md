@@ -136,6 +136,29 @@ finance.loaders.sp500_valuation + finance.loaders.price
 - SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
 - 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
 
+### Nasdaq-100 QQQ proxy Market Context valuation
+
+```text
+SEC QQQ N-PORT / N-30B-2
+  -> finance.data.nasdaq100_valuation.collect_and_store_qqq_sec_holdings()
+  -> finance_meta.etf_holdings_snapshot
+
+stored QQQ holdings + finance_fundamental statement values + finance_price EOD
+  -> materialize_and_store_nasdaq100_monthly()
+  -> finance_meta.nasdaq100_monthly_valuation
+  -> finance.loaders.nasdaq100_valuation
+  -> app.services.overview.nasdaq100_valuation
+  -> app.services.overview.market_context_valuation
+  -> React S&P 500 / Nasdaq-100 selector
+```
+
+의미:
+
+- UI render는 DB-backed payload만 읽고 SEC 또는 가격 provider를 직접 호출하지 않는다.
+- weighted coverage 95% 미만 월은 `blocked`로 저장하고 그래프·시나리오 값을 숨긴다.
+- current actual state는 119개월 중 5개월만 complete이므로 Nasdaq 선택 화면은 94.47% coverage blocker를 표시한다.
+- QQQ는 무료·무계정 거래 가능 proxy이며 공식 Nasdaq aggregate나 analyst consensus가 아니다.
+
 ```text
 Wikipedia S&P 500 constituents
   -> finance.data.market_intelligence.collect_and_store_sp500_universe()
