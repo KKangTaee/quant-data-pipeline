@@ -34,6 +34,10 @@ from .fundamentals import (
     load_statement_shadow_coverage_summary,
 )
 from .macro import load_macro_series_observations, load_macro_snapshot
+from .nasdaq100_valuation import (
+    load_latest_nasdaq100_ttm_proxy,
+    load_nasdaq100_monthly_valuation,
+)
 from .price import (
     load_latest_market_date,
     load_latest_prices,
@@ -78,6 +82,8 @@ __all__ = [
     "load_statement_shadow_coverage_summary",
     "load_macro_series_observations",
     "load_macro_snapshot",
+    "load_nasdaq100_monthly_valuation",
+    "load_latest_nasdaq100_ttm_proxy",
     "load_factors",
     "load_factor_snapshot",
     "load_factor_matrix",

@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import math
+import json
 import re
 import statistics
 import time
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Mapping
+from datetime import datetime, timezone
 from io import StringIO
 from typing import Any
 from urllib.request import Request, urlopen
 
 import pandas as pd
+
+from .db.mysql import MySQLClient
+from .db.schema import PROVIDER_SCHEMAS, VALUATION_SCHEMAS, sync_table_schema
 
 
 QQQ_CIK = "0001067839"
@@ -20,6 +25,149 @@ MINIMUM_COVERAGE_PCT = 95.0
 CALIBRATION_MEDIAN_LIMIT_PCT = 5.0
 CALIBRATION_MAX_LIMIT_PCT = 10.0
 SEC_USER_AGENT = "quant-data-pipeline/1.0 contact: local-research@example.com"
+DB_META = "finance_meta"
+
+
+def _open_meta_db(
+    db_factory: Any,
+    *,
+    host: str,
+    user: str,
+    password: str,
+    port: int,
+) -> MySQLClient:
+    db = db_factory(host, user, password, port)
+    db.use_db(DB_META)
+    return db
+
+
+def ensure_nasdaq100_valuation_schemas(
+    *,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> None:
+    """Create or extend the QQQ holdings and Nasdaq-100 valuation tables."""
+    db = _open_meta_db(
+        db_factory, host=host, user=user, password=password, port=port
+    )
+    try:
+        for table_name, schema in (
+            ("etf_holdings_snapshot", PROVIDER_SCHEMAS["etf_holdings_snapshot"]),
+            ("nasdaq100_monthly_valuation", VALUATION_SCHEMAS["nasdaq100_monthly_valuation"]),
+        ):
+            db.execute(schema)
+            sync_table_schema(db, table_name, schema, DB_META)
+    finally:
+        db.close()
+
+
+def store_qqq_holdings_rows(
+    rows: list[dict[str, Any]],
+    *,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    """Idempotently persist official QQQ holdings without deleting other providers."""
+    if not rows:
+        return 0
+    db = _open_meta_db(
+        db_factory, host=host, user=user, password=password, port=port
+    )
+    try:
+        db.executemany(
+            """
+            INSERT INTO etf_holdings_snapshot (
+              fund_symbol, as_of_date, source, source_type, source_ref,
+              holding_id, holding_symbol, holding_name, holding_type,
+              cusip, isin, lei, issuer_cik, filing_date, accession_no,
+              holding_snapshot_quality, weight_pct, shares, market_value,
+              sector, asset_class, country, currency, coverage_status,
+              missing_fields_json, collected_at, error_msg
+            ) VALUES (
+              %(fund_symbol)s, %(as_of_date)s, %(source)s, %(source_type)s, %(source_ref)s,
+              %(holding_id)s, %(holding_symbol)s, %(holding_name)s, %(holding_type)s,
+              %(cusip)s, %(isin)s, %(lei)s, %(issuer_cik)s, %(filing_date)s, %(accession_no)s,
+              %(holding_snapshot_quality)s, %(weight_pct)s, %(shares)s, %(market_value)s,
+              %(sector)s, %(asset_class)s, %(country)s, %(currency)s, %(coverage_status)s,
+              %(missing_fields_json)s, %(collected_at)s, %(error_msg)s
+            )
+            ON DUPLICATE KEY UPDATE
+              holding_symbol = VALUES(holding_symbol), holding_name = VALUES(holding_name),
+              holding_type = VALUES(holding_type), cusip = VALUES(cusip), isin = VALUES(isin),
+              lei = VALUES(lei), issuer_cik = VALUES(issuer_cik), filing_date = VALUES(filing_date),
+              accession_no = VALUES(accession_no),
+              holding_snapshot_quality = VALUES(holding_snapshot_quality),
+              weight_pct = VALUES(weight_pct), shares = VALUES(shares),
+              market_value = VALUES(market_value), sector = VALUES(sector),
+              asset_class = VALUES(asset_class), country = VALUES(country),
+              currency = VALUES(currency), coverage_status = VALUES(coverage_status),
+              missing_fields_json = VALUES(missing_fields_json),
+              collected_at = VALUES(collected_at), error_msg = VALUES(error_msg),
+              source_ref = VALUES(source_ref)
+            """,
+            rows,
+        )
+    finally:
+        db.close()
+    return len(rows)
+
+
+def store_nasdaq100_monthly_rows(
+    rows: list[dict[str, Any]],
+    *,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    """Idempotently preserve both ready and coverage-blocked monthly evidence."""
+    if not rows:
+        return 0
+    db = _open_meta_db(
+        db_factory, host=host, user=user, password=password, port=port
+    )
+    try:
+        db.executemany(
+            """
+            INSERT INTO nasdaq100_monthly_valuation (
+              observation_month, proxy_symbol, qqq_price, reconstructed_ttm_eps,
+              trailing_pe, earnings_yield, coverage_weight_pct, unmapped_weight_pct,
+              holding_snapshot_date, holding_snapshot_quality,
+              earnings_available_through, price_basis_date, data_quality,
+              source, source_ref, collected_at, error_msg
+            ) VALUES (
+              %(observation_month)s, %(proxy_symbol)s, %(qqq_price)s,
+              %(reconstructed_ttm_eps)s, %(trailing_pe)s, %(earnings_yield)s,
+              %(coverage_weight_pct)s, %(unmapped_weight_pct)s,
+              %(holding_snapshot_date)s, %(holding_snapshot_quality)s,
+              %(earnings_available_through)s, %(price_basis_date)s, %(data_quality)s,
+              %(source)s, %(source_ref)s, %(collected_at)s, %(error_msg)s
+            )
+            ON DUPLICATE KEY UPDATE
+              qqq_price = VALUES(qqq_price),
+              reconstructed_ttm_eps = VALUES(reconstructed_ttm_eps),
+              trailing_pe = VALUES(trailing_pe), earnings_yield = VALUES(earnings_yield),
+              coverage_weight_pct = VALUES(coverage_weight_pct),
+              unmapped_weight_pct = VALUES(unmapped_weight_pct),
+              holding_snapshot_date = VALUES(holding_snapshot_date),
+              holding_snapshot_quality = VALUES(holding_snapshot_quality),
+              earnings_available_through = VALUES(earnings_available_through),
+              price_basis_date = VALUES(price_basis_date), data_quality = VALUES(data_quality),
+              source_ref = VALUES(source_ref), collected_at = VALUES(collected_at),
+              error_msg = VALUES(error_msg)
+            """,
+            rows,
+        )
+    finally:
+        db.close()
+    return len(rows)
 
 
 def fetch_sec_text(
@@ -745,7 +893,15 @@ def materialize_monthly_valuation_rows(
             as_of_date=calendar_end.strftime("%Y-%m-%d"),
         )
         qqq = month_prices.get("QQQ")
-        quality = str(snapshot[0].get("holding_snapshot_quality") or "quarterly_anchor")
+        raw_quality = snapshot[0].get("holding_snapshot_quality")
+        if raw_quality is None or pd.isna(raw_quality) or str(raw_quality).lower() == "nan":
+            quality = (
+                "current_issuer_snapshot"
+                if str(snapshot[0].get("source") or "").startswith("invesco")
+                else "quarterly_anchor"
+            )
+        else:
+            quality = str(raw_quality)
         if qqq is None:
             row = {
                 "observation_month": month.strftime("%Y-%m-%d"),
@@ -835,4 +991,229 @@ def evaluate_pe_calibration(
         "median_limit_pct": float(median_limit_pct),
         "max_limit_pct": float(max_limit_pct),
         "observations": observations,
+    }
+
+
+def _load_qqq_identity_rows(
+    *,
+    db_factory: Any,
+    host: str,
+    user: str,
+    password: str,
+    port: int,
+) -> list[dict[str, Any]]:
+    db = _open_meta_db(db_factory, host=host, user=user, password=password, port=port)
+    try:
+        holdings = db.query(
+            """
+            SELECT cusip, holding_symbol AS symbol, issuer_cik, holding_name AS name
+            FROM etf_holdings_snapshot
+            WHERE fund_symbol = 'QQQ' AND holding_symbol IS NOT NULL
+            ORDER BY as_of_date DESC
+            """,
+            (),
+        )
+        lifecycle = db.query(
+            """
+            SELECT NULL AS cusip, symbol, related_cik AS issuer_cik, name
+            FROM nyse_symbol_lifecycle
+            WHERE kind = 'stock' AND name IS NOT NULL
+            """,
+            (),
+        )
+        return list(holdings) + list(lifecycle)
+    finally:
+        db.close()
+
+
+def collect_and_store_qqq_sec_holdings(
+    *,
+    submissions_payload: Mapping[str, Any] | None = None,
+    identity_rows: Iterable[dict[str, Any]] | None = None,
+    start_date: str = "2016-09-01",
+    end_date: str | None = None,
+    fetch_text_fn: Any = fetch_sec_text,
+    rows_writer: Any = store_qqq_holdings_rows,
+    collected_at: str | None = None,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Collect free, accountless official QQQ holdings filings and upsert normalized rows."""
+    if submissions_payload is None:
+        submissions_payload = json.loads(
+            fetch_text_fn(f"https://data.sec.gov/submissions/CIK{QQQ_CIK}.json")
+        )
+    identities = list(identity_rows) if identity_rows is not None else _load_qqq_identity_rows(
+        db_factory=db_factory, host=host, user=user, password=password, port=port
+    )
+    start = pd.Timestamp(start_date)
+    end = pd.Timestamp(end_date) if end_date else pd.Timestamp.now(tz="UTC").tz_localize(None)
+    filings = [
+        row for row in discover_qqq_sec_filings(submissions_payload)
+        if start <= pd.Timestamp(row["report_date"]) <= end
+    ]
+    # N-30B-2 is the pre-NPORT annual anchor; prefer NPORT if both exist for a date.
+    selected: dict[str, dict[str, Any]] = {}
+    for filing in filings:
+        key = str(filing["report_date"])
+        existing = selected.get(key)
+        if existing is None or str(filing.get("form", "")).startswith("NPORT"):
+            selected[key] = filing
+
+    normalized: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    timestamp = collected_at or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    for filing in sorted(selected.values(), key=lambda row: row["report_date"]):
+        try:
+            document = fetch_text_fn(filing["source_url"])
+            parsed = (
+                parse_qqq_nport_xml(document, filing=filing)
+                if str(filing.get("form", "")).startswith("NPORT")
+                else parse_qqq_n30b2_html(document, filing=filing)
+            )
+        except Exception as exc:
+            warnings.append(f"{filing['report_date']}: {exc}")
+            continue
+        for row in resolve_holding_identities(parsed, identities):
+            missing = [field for field in ("holding_symbol", "issuer_cik") if not row.get(field)]
+            row.update(
+                {
+                    "fund_symbol": "QQQ",
+                    "source_type": "official",
+                    "sector": row.get("sector"),
+                    "country": row.get("country"),
+                    "currency": row.get("currency") or "USD",
+                    "coverage_status": "actual" if not missing else "partial",
+                    "missing_fields_json": json.dumps(missing) if missing else None,
+                    "collected_at": timestamp,
+                    "error_msg": None,
+                }
+            )
+            normalized.append(row)
+    rows_writer(
+        normalized,
+        db_factory=db_factory,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    return {
+        "rows_written": len(normalized),
+        "snapshot_count": len({row["as_of_date"] for row in normalized}),
+        "unresolved_rows": sum(not row.get("holding_symbol") for row in normalized),
+        "warnings": warnings,
+    }
+
+
+def _load_nasdaq100_materialization_inputs(
+    *,
+    start_month: str,
+    end_month: str,
+    db_factory: Any,
+    host: str,
+    user: str,
+    password: str,
+    port: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    db = db_factory(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        holdings = db.query(
+            """
+            SELECT as_of_date, source, holding_symbol, weight_pct, holding_snapshot_quality
+            FROM etf_holdings_snapshot
+            WHERE fund_symbol = 'QQQ' AND asset_class = 'Equity'
+              AND as_of_date <= %s
+            ORDER BY as_of_date, weight_pct DESC
+            """,
+            (end_month,),
+        )
+        symbols = sorted({str(row["holding_symbol"]) for row in holdings if row.get("holding_symbol")})
+        statements: list[dict[str, Any]] = []
+        prices: list[dict[str, Any]] = []
+        if symbols:
+            placeholders = ",".join(["%s"] * len(symbols))
+            db.use_db("finance_fundamental")
+            statements = db.query(
+                f"""
+                SELECT symbol,
+                       CASE WHEN concept LIKE '%%:%%' THEN concept
+                            ELSE CONCAT(COALESCE(taxonomy, 'us-gaap'), ':', concept) END AS concept,
+                       unit, source_period_type, period_type, fiscal_year, fiscal_quarter,
+                       period_start, period_end, value, available_at, form_type, accession_no
+                FROM nyse_financial_statement_values
+                WHERE symbol IN ({placeholders})
+                  AND (concept LIKE '%%EarningsPerShareDiluted'
+                       OR concept LIKE '%%DilutedEarningsLossPerShare')
+                  AND unit IN ('USD per share', 'USD/shares', 'USD/share')
+                  AND available_at <= %s
+                """,
+                tuple(symbols) + (end_month,),
+            )
+            db.use_db("finance_price")
+            prices = db.query(
+                f"""
+                SELECT symbol, `date`, close, adj_close
+                FROM nyse_price_history
+                WHERE symbol IN ({','.join(['%s'] * (len(symbols) + 1))})
+                  AND timeframe = '1d' AND `date` BETWEEN %s AND %s
+                ORDER BY symbol, `date`
+                """,
+                tuple(symbols + ["QQQ"]) + (start_month, end_month),
+            )
+        return list(holdings), list(statements), list(prices)
+    finally:
+        db.close()
+
+
+def materialize_and_store_nasdaq100_monthly(
+    *,
+    start_month: str = "2016-09-01",
+    end_month: str | None = None,
+    holding_rows: Iterable[dict[str, Any]] | None = None,
+    statement_rows: Iterable[dict[str, Any]] | None = None,
+    price_rows: Iterable[dict[str, Any]] | None = None,
+    rows_writer: Any = store_nasdaq100_monthly_rows,
+    collected_at: str | None = None,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Materialize DB-backed monthly rows while retaining failed coverage gates."""
+    resolved_end = end_month or pd.Timestamp.today().strftime("%Y-%m-%d")
+    if holding_rows is None or statement_rows is None or price_rows is None:
+        holding_rows, statement_rows, price_rows = _load_nasdaq100_materialization_inputs(
+            start_month=start_month, end_month=resolved_end, db_factory=db_factory,
+            host=host, user=user, password=password, port=port,
+        )
+    rows = materialize_monthly_valuation_rows(
+        holding_rows, statement_rows, price_rows,
+        start_month=start_month, end_month=resolved_end,
+    )
+    timestamp = collected_at or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    source_ref = f"https://www.sec.gov/Archives/edgar/data/{int(QQQ_CIK)}"
+    for row in rows:
+        row.update(
+            {
+                "source": "sec_qqq_holdings_sec_actual",
+                "source_ref": source_ref,
+                "collected_at": timestamp,
+                "error_msg": row.pop("error_code", None),
+            }
+        )
+    rows_writer(
+        rows, db_factory=db_factory, host=host, user=user, password=password, port=port
+    )
+    return {
+        "rows_written": len(rows),
+        "ready_rows": sum(row["data_quality"] == "reconstructed_actual" for row in rows),
+        "blocked_rows": sum(row["data_quality"] == "blocked" for row in rows),
+        "latest_coverage_weight_pct": rows[-1]["coverage_weight_pct"] if rows else None,
+        "warnings": [] if rows else ["materialization inputs produced no monthly rows"],
     }

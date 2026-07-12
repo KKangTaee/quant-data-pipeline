@@ -748,6 +748,14 @@ PROVIDER_SCHEMAS = {
           holding_name VARCHAR(512) NOT NULL,
           holding_type VARCHAR(128) NULL,
 
+          cusip VARCHAR(32) NULL,
+          isin VARCHAR(32) NULL,
+          lei VARCHAR(32) NULL,
+          issuer_cik VARCHAR(16) NULL,
+          filing_date DATE NULL,
+          accession_no VARCHAR(32) NULL,
+          holding_snapshot_quality ENUM('annual_anchor','quarterly_anchor','current_issuer_snapshot') NULL,
+
           weight_pct DOUBLE NULL,
           shares DOUBLE NULL,
           market_value DOUBLE NULL,
@@ -836,6 +844,38 @@ PROVIDER_SCHEMAS = {
 
 
 VALUATION_SCHEMAS = {
+    "nasdaq100_monthly_valuation": """
+        CREATE TABLE IF NOT EXISTS nasdaq100_monthly_valuation (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          observation_month DATE NOT NULL,
+          proxy_symbol VARCHAR(20) NOT NULL DEFAULT 'QQQ',
+          qqq_price DOUBLE NULL,
+          reconstructed_ttm_eps DOUBLE NULL,
+          trailing_pe DOUBLE NULL,
+          earnings_yield DOUBLE NULL,
+
+          coverage_weight_pct DOUBLE NOT NULL DEFAULT 0,
+          unmapped_weight_pct DOUBLE NOT NULL DEFAULT 100,
+          holding_snapshot_date DATE NULL,
+          holding_snapshot_quality ENUM('annual_anchor','quarterly_anchor','current_issuer_snapshot') NULL,
+          earnings_available_through DATE NULL,
+          price_basis_date DATE NULL,
+
+          data_quality ENUM('reconstructed_actual','partial','blocked') NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_nasdaq100_month_proxy_source (observation_month, proxy_symbol, source),
+          KEY ix_nasdaq100_month (observation_month),
+          KEY ix_nasdaq100_quality (data_quality)
+        );
+    """,
     "sp500_monthly_valuation": """
         CREATE TABLE IF NOT EXISTS sp500_monthly_valuation (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,
