@@ -604,6 +604,79 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 
 ---
 
+## V1.1 Data Activation Implementation Plan — 2026-07-12
+
+### Task 6: 1차 — Graph 1 Shiller Independence
+
+**Files:**
+- Modify: `tests/test_sp500_valuation.py`
+- Modify: `app/services/overview/sp500_valuation.py`
+
+**Produces:** `calculate_multiple_regime(monthly_rows, official_window=60, sensitivity_window=36)` whose current marker is the latest Shiller trailing PER.
+
+- [ ] Add `test_multiple_regime_uses_latest_shiller_per_as_current_marker` and `test_read_model_keeps_graph_one_ready_without_official_eps`.
+- [ ] Run both tests and confirm RED because the current API requires current SPX/EPS and the read model shares the official-EPS gate.
+- [ ] Remove the graph-1 dependency on current SPX/current EPS, derive `current_pe` and `current_basis_date` from the latest valid monthly row, and calculate graph 1 before resolving graph 2 inputs.
+- [ ] Run the focused tests and the full valuation test module; expect GREEN.
+
+### Task 7: 2차 — EPS Source Resolver
+
+**Files:**
+- Modify: `tests/test_sp500_valuation.py`
+- Modify: `finance/loaders/sp500_valuation.py`
+- Modify: `finance/loaders/__init__.py`
+
+**Produces:** `load_latest_shiller_ttm_eps()` and `resolve_sp500_ttm_eps()` returning `current_ttm_eps`, `eps_source`, `eps_source_quality`, `eps_basis_date`, and `fallback_reason`.
+
+- [ ] Add tests for latest positive Shiller EPS, official-first selection, and Shiller fallback when official history is empty.
+- [ ] Run the tests and confirm RED because the loader/resolver functions do not exist.
+- [ ] Implement the two functions with injectable query/evidence inputs and no persistence or provider call.
+- [ ] Run the focused loader tests and the full valuation test module; expect GREEN.
+
+### Task 8: 3차 — SEP EPS And Fair SPX Band
+
+**Files:**
+- Modify: `tests/test_sp500_valuation.py`
+- Modify: `app/services/overview/sp500_valuation.py`
+
+**Produces:** median GDP+PCE expected growth, one baseline expected EPS, `-1σ/mean/+1σ` SPX band, `current_vs_baseline_gap_pct`, and date-mismatch evidence.
+
+- [ ] Change the SEP formula test to expect `2.2 + 3.6 = 5.8%` and `270 × 1.058 = 285.66`.
+- [ ] Add a read-model test asserting source fields, SEP inputs, SPX band, and positive/negative current-vs-baseline interpretation.
+- [ ] Run the tests and confirm RED against the compounded-growth and mixed EPS/multiple implementation.
+- [ ] Implement the additive median formula and apply the same baseline projected EPS to the three PER anchors.
+- [ ] Run focused calculation/read-model tests and the full valuation module; expect GREEN.
+
+### Task 9: 4차 — React Source And Decision UI
+
+**Files:**
+- Modify: `tests/test_service_contracts.py`
+- Modify: `app/web/overview/market_context_helpers.py`
+- Modify: `app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx`
+- Modify: `app/web/streamlit_components/market_context_valuation/src/style.css`
+- Generate: `app/web/streamlit_components/market_context_valuation/component_static/*`
+
+**Produces:** two independent graph states plus visible EPS source/basis, SEP inputs, expected growth, fallback reason, and current valuation gap.
+
+- [ ] Add source-string/read-model contract assertions for `Robert Shiller TTM EPS`, `eps_source_quality`, `fallback_reason`, `real_gdp_pct`, `pce_inflation_pct`, and `current_vs_baseline_gap_pct`.
+- [ ] Run the Market Context contracts and confirm RED.
+- [ ] Update React types and rendering; keep source/fallback explanation visible and keep job/status/uploader controls absent.
+- [ ] Update the Streamlit fallback with the same essential decision fields.
+- [ ] Run Market Context contracts, `tsc --noEmit`, and Vite build; expect GREEN.
+
+### Task 10: 5차 — Refresh Verification, Browser QA, Docs, Commit
+
+**Files:**
+- Verify: `finance/data/sp500_valuation.py`, `app/jobs/ingestion_jobs.py`, `app/jobs/overview_automation.py`
+- Modify: task docs and affected canonical finance docs
+- Generate but do not stage: `market-context-sp500-valuation-v1-1-qa.png`
+
+- [ ] Verify the existing Shiller and SEP automation remains `Ingestion -> DB -> Loader -> Service -> React` and does not require S&P workbook configuration.
+- [ ] Run full valuation tests, focused Market Context/service contracts, Python compile, TypeScript check, Vite build, DB-backed read-model smoke, and `git diff --check`.
+- [ ] Run Streamlit Browser QA, verify both charts and source/date copy against the service payload, and capture one untracked screenshot.
+- [ ] Synchronize task `STATUS/NOTES/RUNS/RISKS`, durable finance docs, and 3–5 line root handoff logs.
+- [ ] Review the owned diff, stage only owned files, and create a coherent Korean commit.
+
 ## Final Self-Review Checklist
 
 - [ ] Every production function was introduced after a failing test.

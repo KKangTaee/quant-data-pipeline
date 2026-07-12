@@ -446,3 +446,57 @@ S&P 공식 Index Earnings 링크 열기
 - S&P 라이선스/SFTP 계약 구현.
 - EDGAR constituent EPS 재구성과 index divisor 복제.
 - fallback을 official actual 또는 애널리스트 consensus로 표현하는 행위.
+
+## V1.1 Final Implementation Contract — 2026-07-12
+
+### 왜 기존 설계를 좁히는가?
+
+후속 source 조사 뒤 사용자는 S&P official Index Earnings를 현재 기능의 필수 입력에서 제외하고, DB에 공식 actual EPS가 없으면 Shiller 최신 TTM EPS로 자동 계산을 계속하도록 확정했다. 따라서 위 `공식 XLSX 등록 흐름`은 선택적 미래 확장으로만 남기며 이번 구현에는 uploader, download helper, job/status panel을 추가하지 않는다.
+
+### 선택한 구조
+
+1. `finance/loaders/sp500_valuation.py`가 공식 actual 4분기 TTM과 최신 Shiller TTM EPS를 각각 읽는다.
+2. 같은 loader 계층의 resolver가 `official_actual`을 우선하고, 준비되지 않았으면 `interpolated_ttm_proxy`를 선택한다.
+3. `app/services/overview/sp500_valuation.py`는 선택된 EPS evidence를 계산에 사용하되, 그래프 1은 EPS resolver와 완전히 독립적으로 최신 Shiller `trailing_pe`를 current marker로 사용한다.
+4. React는 `eps_source`, `eps_source_quality`, `eps_basis_date`, `fallback_reason`과 SEP 입력을 그대로 설명하며 source 선택이나 재무 계산을 수행하지 않는다.
+
+Service가 두 DB source를 직접 조회·선택하는 대안은 source policy가 계산 계층으로 새어 나가므로 선택하지 않는다. 공식 EPS가 없을 때 그래프 2를 계속 차단하는 대안은 이번 완료 조건을 만족하지 못한다.
+
+### 그래프 1 계약
+
+- 필요한 입력은 유효한 Shiller 월별 `trailing_pe` 60개뿐이다.
+- current PER와 marker는 최신 유효 Shiller 관측월의 `trailing_pe`다.
+- 60개월 log(PER) 평균·표본 표준편차가 공식 구간이고, 36개월 결과는 민감도다.
+- 최신 SPX, 공식 S&P EPS, SEP가 없어도 그래프 1 status는 독립적으로 `READY`가 될 수 있다.
+
+### 그래프 2 계약
+
+- EPS 우선순위는 `S&P 공식 실제 EPS` 다음 `Robert Shiller TTM EPS`다.
+- resolver는 `current_ttm_eps`, `eps_source`, `eps_source_quality`, `eps_basis_date`, `fallback_reason`을 반환한다.
+- 최신 SEP target year의 median `Change in real GDP`와 median `PCE inflation`을 사용한다.
+
+```text
+expected_eps_growth_pct = real_gdp_pct + pce_inflation_pct
+projected_eps = current_ttm_eps * (1 + expected_eps_growth_pct / 100)
+lower_spx = projected_eps * five_year_minus_1sigma_multiple
+baseline_spx = projected_eps * five_year_mean_multiple
+upper_spx = projected_eps * five_year_plus_1sigma_multiple
+current_vs_baseline_gap_pct = current_spx / baseline_spx - 1
+```
+
+양수 괴리율은 현재 SPX가 기준 시나리오보다 높은 상태, 음수는 낮은 상태다. 이는 애널리스트 컨센서스나 공식 적정가가 아니라 FOMC 거시 지표 기반 자체 시나리오다.
+
+### UI 계약
+
+- 그래프 1과 그래프 2의 readiness/error state를 분리한다.
+- EPS 출처 badge, EPS 기준일, SEP 발표일, 적용 GDP, 적용 PCE, 계산 성장률을 그래프 2에 표시한다.
+- Shiller fallback이면 `Robert Shiller TTM EPS`와 fallback 이유를 본문에 표시한다.
+- EPS/SPX/SEP 기준일이 다르면 숨기지 않고 근거 영역에 표시한다.
+- uploader, provider 직접 fetch, 운영 job/status 패널은 추가하지 않는다.
+
+### 검증 계약
+
+- 공식 EPS 0건 + Shiller 60개월 이상이면 그래프 1과 그래프 2가 모두 `READY`여야 한다.
+- 공식 actual 4분기가 있으면 Shiller보다 자동 우선해야 한다.
+- 실제 DB smoke에서 Shiller 2026-03 EPS, SEP 2026-06-17, SPX 2026-07-10 기준값이 read model에 남아야 한다.
+- React source contract, TypeScript/Vite build, focused Python tests, DB-backed smoke, Browser QA를 모두 통과한 뒤 완료로 표시한다.

@@ -1,6 +1,6 @@
 # Overview Market Context S&P 500 Valuation V1 Status
 
-Status: V1.1 Data Activation Written Design Review
+Status: V1.1 Data Activation Implementation Planned
 Last Updated: 2026-07-12
 
 ## Current Progress
@@ -22,13 +22,13 @@ Last Updated: 2026-07-12
 
 ## Current Stage
 
-V1은 완료되었고, live run에서 확인된 data activation gap을 해결하는 V1.1 written design review 단계다.
+V1은 완료되었고, live run에서 확인된 data activation gap을 해결하는 V1.1 implementation plan이 최신 사용자 정책에 맞춰 확정됐다.
 
 ## Next Action
 
-1. User reviews the V1.1 section in `DESIGN.md`.
-2. Write the V1.1 TDD implementation plan.
-3. Implement graph independence, source hierarchy, official workbook registration, QA, docs, and commit.
+1. Implement graph 1 independence with latest Shiller PER.
+2. Implement official-first/Shiller-fallback EPS resolver.
+3. Connect additive SEP EPS growth and SPX band, then complete React QA/docs/commit.
 
 ## V1 Completion
 
