@@ -15,3 +15,10 @@ Last Updated: 2026-07-13
 - 기존 `market_data_issue`에 `limited_price_history` evidence와 반복 full-window 요청 방지 계약이 있음을 확인했다.
 - unsupported source의 지속성 표현이 모호했던 부분을 기존 issue evidence 재사용과 deterministic issuer/form 분류로 명확히 했다.
 - 구현 파일은 변경하지 않았고 task 설계 문서만 design commit 범위로 유지했다.
+
+## Detailed Implementation Plan
+
+- 사용자 written spec 승인을 받은 뒤 `writing-plans` contract에 맞춰 1차~5차를 RED/GREEN/commit 단위로 분해했다.
+- planner, resumable ingestion, strict rematerialization, React event/progress, actual DB/Browser QA의 정확한 interface와 명령을 `PLAN.md`에 기록했다.
+- placeholder scan, spec coverage, 함수명/type consistency, `git diff --check`를 확인했다.
+- sub-agent 요청이 없으므로 현재 세션의 inline execution으로 진행한다.
