@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.backtest_evidence_closure import normalize_evidence_issue
 from app.services.backtest_practical_validation_stage_roles import review_role_fields
 from app.services.backtest_validation_status_policy import normalize_validation_status
 
@@ -1798,29 +1797,14 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
 
     validation_row = dict(validation or {})
     closure = dict(validation_row.get("evidence_closure") or {})
-    closure_issues = [
-        normalize_evidence_issue(dict(issue))
-        for issue in list(closure.get("issues") or [])
-        if isinstance(issue, dict)
-    ]
-    closure_group_specs = (
-        ("resolve_now", "지금 해결 가능", "Level 2에서 실행하고 새 validation을 저장해야 닫힙니다."),
-        ("engineering_required", "개발 필요", "현재 제품 기능으로 해결할 수 없어 Final Review 승격을 막습니다."),
-        ("accepted_limit", "한계 인수 가능", "자동 해소할 수 없는 비핵심 한계로 Final Review에서 종결합니다."),
-    )
-    evidence_closure_groups = [
-        {
-            "group_id": resolution_class,
-            "label": label,
-            "purpose": purpose,
-            "items": [
-                issue
-                for issue in closure_issues
-                if issue.get("resolution_class") == resolution_class
-            ],
-        }
-        for resolution_class, label, purpose in closure_group_specs
-    ]
+    closure_issues = _dict_list(closure.get("issues"))
+    final_review_limit_root_issue_ids = {
+        str(issue.get("root_issue_id") or "").strip()
+        for issue in closure_issues
+        if issue.get("resolution_class") == "accepted_limit"
+        and str(issue.get("root_issue_id") or "").strip()
+    }
+    final_review_limit_count = len(final_review_limit_root_issue_ids)
     modules = _dict_list(validation_row.get("validation_modules"))
     gate = dict(validation_row.get("final_review_gate") or {})
     evidence_rows_by_module = _module_evidence_row_map(validation_row)
@@ -1979,6 +1963,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
             "conditional_group_count": len(conditional_groups),
             "downstream_reference_group_count": len(downstream_groups),
             "handoff_summary_group_count": len(handoff_summary_groups),
+            "final_review_limit_count": final_review_limit_count,
         },
         "gate_summary": gate_summary,
         "fix_queue": fix_queue,
@@ -1992,7 +1977,6 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "stage_ownership_inventory": stage_ownership_inventory,
         "category_result_groups": category_groups,
         "handoff_summary_groups": handoff_summary_groups,
-        "evidence_closure_groups": evidence_closure_groups,
         "technical_details": {
             "raw_diagnostics": _dict_list(validation_row.get("diagnostics")),
             "module_display_rows": _dict_list(validation_row.get("validation_module_display_rows")),

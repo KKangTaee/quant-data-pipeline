@@ -92,6 +92,7 @@ type StreamlitArgs = {
   verdict?: string
   nextAction?: string
   canSaveAndMove?: boolean
+  finalReviewLimitCount?: number
   fixItems?: FixItem[]
   coreGroups?: CoreGroup[]
   criteriaGroups?: CriteriaGroup[]
@@ -110,6 +111,7 @@ function App({ args }: AppProps) {
       verdict={args?.verdict ?? "-"}
       nextAction={args?.nextAction ?? ""}
       canSaveAndMove={Boolean(args?.canSaveAndMove)}
+      finalReviewLimitCount={Math.max(Number(args?.finalReviewLimitCount ?? 0), 0)}
       fixItems={Array.isArray(args?.fixItems) ? args.fixItems : []}
       coreGroups={Array.isArray(args?.coreGroups) ? args.coreGroups : []}
       criteriaGroups={Array.isArray(args?.criteriaGroups) ? args.criteriaGroups : []}

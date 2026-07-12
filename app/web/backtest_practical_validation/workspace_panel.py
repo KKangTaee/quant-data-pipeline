@@ -301,6 +301,12 @@ def _render_validation_conclusion_summary(
         tone=str(summary.get("overall_outcome_tone") or ("positive" if gate_summary.get("can_save_and_move") else "danger")),
     )
     render_pv_card_grid(cards, min_width=250)
+    final_review_limit_count = max(int(summary.get("final_review_limit_count") or 0), 0)
+    if final_review_limit_count:
+        st.caption(
+            f"Final Review 판단에 반영할 한계 {final_review_limit_count}건 · "
+            "즉시 해결하거나 개발해야 할 차단 항목은 위 Gate에서 별도로 확인합니다."
+        )
 
 
 def _render_next_stage_action_fallback(next_stage_action: dict[str, Any]) -> dict[str, Any] | None:
@@ -356,6 +362,7 @@ def render_practical_validation_workspace_overview(validation_result: dict[str, 
             verdict=practical_verdict,
             next_action=practical_next_action,
             can_save_and_move=practical_validation_ready,
+            final_review_limit_count=int(summary.get("final_review_limit_count") or 0),
             fix_items=_react_fix_queue_items(fix_queue),
             core_groups=_react_core_group_items(core_groups),
             criteria_groups=_react_criteria_group_items(criteria_groups),

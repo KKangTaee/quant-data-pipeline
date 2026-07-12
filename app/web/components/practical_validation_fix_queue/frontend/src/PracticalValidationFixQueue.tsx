@@ -88,6 +88,7 @@ type PracticalValidationFixQueueProps = {
   verdict: string
   nextAction: string
   canSaveAndMove: boolean
+  finalReviewLimitCount: number
   fixItems: FixItem[]
   coreGroups: CoreGroup[]
   criteriaGroups: CriteriaGroup[]
@@ -230,7 +231,11 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
         <div className="pv-react-fix__status">
           <span>{props.statusLabel}</span>
           <b>{displayedNextStageStatusLabel}</b>
-          <small>{props.fixItems.length > 0 ? `보강 항목 ${props.fixItems.length}` : "현재 보강 기준 없음"}</small>
+          <small>
+            {props.fixItems.length > 0
+              ? `보강 항목 ${props.fixItems.length}`
+              : "즉시 해결하거나 개발해야 할 차단 항목 없음"}
+          </small>
         </div>
       </header>
 
@@ -244,6 +249,9 @@ export function PracticalValidationFixQueue(props: PracticalValidationFixQueuePr
           </span>
           <span>
             <b>{criteriaGroups.length || coreGroups.length}</b> 검증 카테고리
+          </span>
+          <span>
+            <b>{props.finalReviewLimitCount}</b> Final Review 판단에 반영할 한계
           </span>
         </div>
 
