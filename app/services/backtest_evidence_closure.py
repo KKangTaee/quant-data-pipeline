@@ -13,6 +13,30 @@ import pandas as pd
 
 EVIDENCE_CLOSURE_SCHEMA_VERSION = "backtest_evidence_closure_v1"
 
+ACTION_HANDLER_CONTRACTS = {
+    "run_practical_validation_replay": {
+        "owner_stage": "practical_validation",
+        "handler": "app.web.backtest_practical_validation.page:_render_actual_replay_panel",
+    },
+}
+
+_RESOLUTION_ACTION_LABELS = {
+    "resolve_now": "지금 해결",
+    "engineering_required": "개발 후 재검토",
+    "accepted_limit": "Final Review에서 한계 인수",
+    "final_decision": "Final Review에서 판단",
+    "monitoring_transfer": "Monitoring 조건으로 이관",
+}
+
+_TERMINAL_STATE_LABELS = {
+    "open": "미정",
+    "resolved": "해결됨",
+    "accepted": "한계 인수",
+    "monitoring_transferred": "Monitoring 이관",
+    "deferred": "개발 후 재검토",
+    "blocked": "차단됨",
+}
+
 _PASS_STATUSES = {"PASS", "READY", "OK", "NOT_APPLICABLE"}
 _KNOWN_MODULE_ROOTS = {
     "source_integrity": "source_integrity",
@@ -56,6 +80,47 @@ def _status(value: Any) -> str:
 def _is_non_pass(value: Any) -> bool:
     status = _status(value)
     return bool(status) and status not in _PASS_STATUSES
+
+
+def has_action_handler(action_id: Any) -> bool:
+    """Return whether an action is backed by a registered Python handler."""
+
+    return str(action_id or "").strip() in ACTION_HANDLER_CONTRACTS
+
+
+def normalize_evidence_issue(issue: dict[str, Any]) -> dict[str, Any]:
+    """Normalize actionability without turning an unimplemented intent into a CTA."""
+
+    normalized = dict(issue or {})
+    resolution_class = str(normalized.get("resolution_class") or "engineering_required").strip()
+    terminal_state = str(normalized.get("terminal_state") or "open").strip()
+    action_id = str(normalized.get("action_id") or "").strip() or None
+    if resolution_class == "resolve_now" and not has_action_handler(action_id):
+        resolution_class = "engineering_required"
+        action_id = None
+        normalized["gate_effect"] = "block_final_review"
+        normalized["owner_stage"] = "development"
+        if terminal_state == "open":
+            terminal_state = "deferred"
+
+    normalized.update(
+        {
+            "resolution_class": resolution_class,
+            "terminal_state": terminal_state,
+            "action_id": action_id,
+            "actionable_now": (
+                resolution_class == "resolve_now"
+                and terminal_state == "open"
+                and has_action_handler(action_id)
+            ),
+            "action_label": _RESOLUTION_ACTION_LABELS.get(
+                resolution_class,
+                "개발 후 재검토",
+            ),
+            "terminal_state_label": _TERMINAL_STATE_LABELS.get(terminal_state, terminal_state),
+        }
+    )
+    return normalized
 
 
 def _module_rows(validation: dict[str, Any]) -> list[dict[str, Any]]:
@@ -302,7 +367,7 @@ def _merge_root_issues(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]
                 [*list(current.get("derived_checks") or []), *list(candidate.get("derived_checks") or [])]
             )
         )
-    return [merged[root_issue_id] for root_issue_id in order]
+    return [normalize_evidence_issue(merged[root_issue_id]) for root_issue_id in order]
 
 
 def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
@@ -329,6 +394,17 @@ def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+def is_current_final_review_eligible(contract: dict[str, Any]) -> bool:
+    """Require every Level 2 actionable or engineering state to be terminal."""
+
+    summary = dict(contract.get("summary") or {})
+    return (
+        int(summary.get("unresolved_actionable_count") or 0) == 0
+        and int(summary.get("critical_engineering_count") or 0) == 0
+        and int(summary.get("missing_contract_count") or 0) == 0
+    )
+
+
 def build_evidence_closure_contract(validation: dict[str, Any]) -> dict[str, Any]:
     """Build one closure issue per root cause from stored validation evidence."""
 
@@ -349,17 +425,13 @@ def build_evidence_closure_contract(validation: dict[str, Any]) -> dict[str, Any
     )
     issues = _merge_root_issues(candidates)
     summary = _closure_summary(issues)
-    return {
+    contract = {
         "schema_version": EVIDENCE_CLOSURE_SCHEMA_VERSION,
         "validation_id": validation_row.get("validation_id"),
         "selection_source_id": validation_row.get("selection_source_id"),
         "issues": issues,
         "summary": summary,
-        "current_final_review_eligible": (
-            summary["unresolved_actionable_count"] == 0
-            and summary["critical_engineering_count"] == 0
-            and summary["missing_contract_count"] == 0
-        ),
+        "current_final_review_eligible": False,
         "boundary": {
             "validation_rerun": False,
             "provider_fetch": False,
@@ -367,10 +439,16 @@ def build_evidence_closure_contract(validation: dict[str, Any]) -> dict[str, Any
             "registry_write": False,
         },
     }
+    contract["current_final_review_eligible"] = is_current_final_review_eligible(contract)
+    return contract
 
 
 __all__ = [
+    "ACTION_HANDLER_CONTRACTS",
     "EVIDENCE_CLOSURE_SCHEMA_VERSION",
     "build_evidence_closure_contract",
     "build_latest_replay_evidence",
+    "has_action_handler",
+    "is_current_final_review_eligible",
+    "normalize_evidence_issue",
 ]

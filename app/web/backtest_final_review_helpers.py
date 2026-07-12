@@ -13,7 +13,10 @@ from app.services.backtest_evidence_read_model import (
     build_final_review_status_display,
     build_selected_route_gate,
 )
-from app.services.backtest_evidence_closure import build_evidence_closure_contract
+from app.services.backtest_evidence_closure import (
+    build_evidence_closure_contract,
+    is_current_final_review_eligible,
+)
 from app.services.backtest_selected_route_preflight import (
     build_practical_validation_selected_route_preflight,
 )
@@ -92,7 +95,7 @@ def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
     if not base_eligible:
         return False
     closure = dict(validation.get("evidence_closure") or build_evidence_closure_contract(validation))
-    if int(dict(closure.get("summary") or {}).get("missing_contract_count") or 0) > 0:
+    if not is_current_final_review_eligible(closure):
         return False
     preflight = dict(validation.get("selected_route_preflight") or {})
     if "select_allowed" not in preflight:

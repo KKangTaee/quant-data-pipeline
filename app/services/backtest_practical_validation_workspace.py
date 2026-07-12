@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.backtest_evidence_closure import normalize_evidence_issue
 from app.services.backtest_practical_validation_stage_roles import review_role_fields
 from app.services.backtest_validation_status_policy import normalize_validation_status
 
@@ -1796,6 +1797,30 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     """Build a screen-oriented Practical Validation workspace model from validation evidence."""
 
     validation_row = dict(validation or {})
+    closure = dict(validation_row.get("evidence_closure") or {})
+    closure_issues = [
+        normalize_evidence_issue(dict(issue))
+        for issue in list(closure.get("issues") or [])
+        if isinstance(issue, dict)
+    ]
+    closure_group_specs = (
+        ("resolve_now", "지금 해결 가능", "Level 2에서 실행하고 새 validation을 저장해야 닫힙니다."),
+        ("engineering_required", "개발 필요", "현재 제품 기능으로 해결할 수 없어 Final Review 승격을 막습니다."),
+        ("accepted_limit", "한계 인수 가능", "자동 해소할 수 없는 비핵심 한계로 Final Review에서 종결합니다."),
+    )
+    evidence_closure_groups = [
+        {
+            "group_id": resolution_class,
+            "label": label,
+            "purpose": purpose,
+            "items": [
+                issue
+                for issue in closure_issues
+                if issue.get("resolution_class") == resolution_class
+            ],
+        }
+        for resolution_class, label, purpose in closure_group_specs
+    ]
     modules = _dict_list(validation_row.get("validation_modules"))
     gate = dict(validation_row.get("final_review_gate") or {})
     evidence_rows_by_module = _module_evidence_row_map(validation_row)
@@ -1967,6 +1992,7 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
         "stage_ownership_inventory": stage_ownership_inventory,
         "category_result_groups": category_groups,
         "handoff_summary_groups": handoff_summary_groups,
+        "evidence_closure_groups": evidence_closure_groups,
         "technical_details": {
             "raw_diagnostics": _dict_list(validation_row.get("diagnostics")),
             "module_display_rows": _dict_list(validation_row.get("validation_module_display_rows")),

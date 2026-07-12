@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from pathlib import Path
 
 
 def _issue(contract: dict[str, object], root_issue_id: str) -> dict[str, object]:
@@ -61,6 +62,107 @@ def _grs_validation_fixture() -> dict[str, object]:
 
 
 class EvidenceClosureContractTests(unittest.TestCase):
+    def test_resolve_now_without_registered_handler_has_no_cta_and_blocks(self) -> None:
+        from app.services.backtest_evidence_closure import normalize_evidence_issue
+
+        issue = normalize_evidence_issue(
+            {
+                "root_issue_id": "unknown_action",
+                "resolution_class": "resolve_now",
+                "action_id": "missing_handler",
+                "terminal_state": "open",
+            }
+        )
+
+        self.assertFalse(issue["actionable_now"])
+        self.assertEqual(issue["resolution_class"], "engineering_required")
+        self.assertEqual(issue["gate_effect"], "block_final_review")
+        self.assertEqual(issue["action_label"], "개발 후 재검토")
+
+    def test_current_final_review_eligibility_requires_zero_unresolved_actionable(self) -> None:
+        from app.web.backtest_final_review_helpers import _is_final_review_eligible_validation_result
+
+        validation = {
+            "validation_id": "validation-actionable",
+            "selection_source_id": "source-actionable",
+            "final_review_gate": {"can_save_and_move": True},
+            "selected_route_preflight": {"select_allowed": True},
+            "evidence_closure": {
+                "summary": {
+                    "unresolved_actionable_count": 1,
+                    "critical_engineering_count": 0,
+                    "missing_contract_count": 0,
+                }
+            },
+        }
+
+        self.assertFalse(_is_final_review_eligible_validation_result(validation))
+
+    def test_workspace_separates_now_engineering_and_accepted_limit(self) -> None:
+        from app.services.backtest_practical_validation_workspace import (
+            build_practical_validation_workspace,
+        )
+
+        validation = {
+            "evidence_closure": {
+                "issues": [
+                    {
+                        "root_issue_id": "replay_period_coverage",
+                        "title": "최신 재검증 기간 충족 여부",
+                        "resolution_class": "resolve_now",
+                        "terminal_state": "open",
+                        "actionable_now": True,
+                        "action_id": "run_practical_validation_replay",
+                        "completion_criteria": "새 validation 저장",
+                    },
+                    {
+                        "root_issue_id": "missing_contract:dynamic_universe",
+                        "title": "과거 universe 근거",
+                        "resolution_class": "engineering_required",
+                        "terminal_state": "deferred",
+                        "actionable_now": False,
+                        "action_id": None,
+                        "completion_criteria": "provider 개발 후 재검토",
+                    },
+                    {
+                        "root_issue_id": "historical_universe_coverage",
+                        "title": "상장폐지 반영 한계",
+                        "resolution_class": "accepted_limit",
+                        "terminal_state": "open",
+                        "actionable_now": False,
+                        "action_id": None,
+                        "completion_criteria": "Final Review 판단 사유에 반영",
+                    },
+                ],
+                "summary": {
+                    "unresolved_actionable_count": 1,
+                    "critical_engineering_count": 1,
+                    "missing_contract_count": 1,
+                },
+            },
+            "validation_modules": [],
+            "final_review_gate": {"can_save_and_move": False},
+        }
+
+        workspace = build_practical_validation_workspace(validation)
+
+        self.assertEqual(
+            [group["label"] for group in workspace["evidence_closure_groups"]],
+            ["지금 해결 가능", "개발 필요", "한계 인수 가능"],
+        )
+        engineering_card = workspace["evidence_closure_groups"][1]["items"][0]
+        self.assertFalse(engineering_card["actionable_now"])
+        self.assertEqual(engineering_card["action_label"], "개발 후 재검토")
+
+    def test_level2_closure_cards_only_reference_registered_python_replay_action(self) -> None:
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('action_id == "run_practical_validation_replay"', page_source)
+        self.assertIn("_render_evidence_closure_groups(validation_result)", page_source)
+        self.assertNotIn('action_id == "missing_handler"', page_source)
+
     def test_latest_replay_adapter_uses_stored_requested_actual_and_gap(self) -> None:
         from app.services.backtest_evidence_closure import build_evidence_closure_contract
 
