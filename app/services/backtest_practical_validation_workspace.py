@@ -1825,6 +1825,27 @@ def build_practical_validation_workspace(validation: dict[str, Any]) -> dict[str
     criteria_groups = _criteria_detail_groups(category_groups)
     visible_criteria_groups = _visible_criteria_detail_groups(criteria_groups)
     criteria_summary = _criteria_summary(criteria_groups)
+    enrichment_gate = dict(gate.get("pre_final_enrichment_gate") or {})
+    if (
+        enrichment_gate.get("blocking")
+        and criteria_summary.get("overall_outcome_key") != "not_practical"
+    ):
+        repair_text = OUTCOME_TEXT["repair_required"]
+        criteria_summary.update(
+            {
+                "overall_outcome_key": "repair_required",
+                "overall_outcome_label": repair_text["label"],
+                "overall_outcome_detail": (
+                    "Final Review 이동 전 해결 가능한 필수 외부 데이터를 보강하고 Flow 2 재검증을 다시 실행해야 합니다."
+                ),
+                "overall_outcome_headline": "필수 데이터 보강 후 재검증이 필요합니다.",
+                "overall_outcome_tone": repair_text["tone"],
+                "overall_outcome_count": max(
+                    int(criteria_summary.get("overall_outcome_count") or 0),
+                    int(enrichment_gate.get("item_count") or 1),
+                ),
+            }
+        )
     stage_ownership_inventory = _stage_ownership_inventory(modules)
     data_action_board = _data_action_board(
         validation_row,

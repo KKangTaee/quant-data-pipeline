@@ -3923,26 +3923,45 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
         source_chain = dict(packet.get("source_chain") or {})
         summary = dict(packet.get("summary") or {})
         action_label, primary_reason, priority_label = _candidate_board_action(cockpit)
+        recovery_action = _build_final_review_data_enrichment_action(validation)
+        recovery_required = bool(recovery_action.get("available"))
+        if recovery_required:
+            action_label = "2단계 보강 후 재검증"
+            primary_reason = _safe_text(
+                recovery_action.get("detail"),
+                "현재 보강 기준을 충족한 새 Practical Validation 결과가 필요합니다.",
+            )
+            priority_label = "복구 필요"
         metrics = dict(cockpit.get("metrics") or {})
         packet_score = packet.get("score")
         try:
             sortable_score = float(packet_score or 0.0)
         except (TypeError, ValueError):
             sortable_score = 0.0
-        state_priority = _candidate_board_state_priority(cockpit.get("state"))
+        state_priority = _candidate_board_state_priority(
+            "HOLD_OR_RE_REVIEW" if recovery_required else cockpit.get("state")
+        )
         rows.append(
             {
                 "Rank": index,
                 "Review Priority": f"P{index}",
                 "Priority Label": priority_label,
                 "Candidate": cockpit.get("source_title") or candidate.get("label") or "-",
-                "Decision State": cockpit.get("state_label"),
-                "Suggested Decision": cockpit.get("suggested_decision_label"),
+                "Decision State": "2단계 재검증 필요" if recovery_required else cockpit.get("state_label"),
+                "Suggested Decision": "재검토 필요" if recovery_required else cockpit.get("suggested_decision_label"),
                 "Board Action": action_label,
                 "Primary Reason": primary_reason,
-                "Next Review Focus": cockpit.get("next_action") or "-",
-                "Gate Outcome": cockpit.get("gate_outcome") or "-",
-                "Select Allowed": "Yes" if cockpit.get("select_allowed") else "No",
+                "Next Review Focus": (
+                    _safe_text(recovery_action.get("next_step"), "2단계에서 보강 후 다시 검증합니다.")
+                    if recovery_required
+                    else cockpit.get("next_action") or "-"
+                ),
+                "Gate Outcome": (
+                    "pre_final_recheck_required"
+                    if recovery_required
+                    else cockpit.get("gate_outcome") or "-"
+                ),
+                "Select Allowed": "Yes" if cockpit.get("select_allowed") and not recovery_required else "No",
                 "Blockers": metrics.get("policy_blockers", 0),
                 "Review Required": metrics.get("policy_review_required", 0),
                 "Open Review": metrics.get("open_review_items", 0),

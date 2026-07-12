@@ -244,6 +244,7 @@ def _build_final_review_decision_desk_model(
     first_reason = str(candidate_summary.get("first_review_reason") or "-")
     first_action = str(candidate_summary.get("first_review_action") or "-")
     has_candidate = first_candidate not in {"", "-"}
+    has_select_ready = int(candidate_summary.get("select_ready", 0) or 0) > 0
     monitoring_badge = "연결 가능" if route_tone == "positive" else "확인 필요"
     return {
         "eyebrow": "Final Review Decision Desk",
@@ -263,7 +264,10 @@ def _build_final_review_decision_desk_model(
             "recommendation": route_detail,
             "next_action": first_action if first_action != "-" else "Practical Validation에서 Gate 통과 후보를 먼저 만듭니다.",
             "badges": [
-                {"label": "Gate", "value": "통과" if has_candidate else "대상 없음"},
+                {
+                    "label": "Gate",
+                    "value": "통과" if has_select_ready else "재검증 필요" if has_candidate else "대상 없음",
+                },
                 {"label": "선택 가능", "value": int(candidate_summary.get("select_ready", 0) or 0)},
                 {"label": "Monitoring", "value": monitoring_badge},
             ],

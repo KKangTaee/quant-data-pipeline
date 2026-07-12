@@ -2894,10 +2894,14 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
             }
         )
         enrichment_action = enrichment_workspace["next_stage_action"]
+        enrichment_summary = enrichment_workspace["summary"]
         self.assertFalse(enrichment_action["primary_action"]["enabled"])
         self.assertEqual(enrichment_action["status_label"], "데이터 보강 후 재검증 필요")
         self.assertIn("필수 데이터 보강", enrichment_action["disabled_reason"])
         self.assertIn("Flow 2", enrichment_action["disabled_reason"])
+        self.assertEqual(enrichment_summary["overall_outcome_key"], "repair_required")
+        self.assertEqual(enrichment_summary["overall_outcome_label"], "보강 후 재검증 필요")
+        self.assertNotIn("막는 항목은 없습니다", enrichment_summary["overall_outcome_detail"])
 
         ready_workspace = build_practical_validation_workspace(
             {
@@ -12620,6 +12624,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             [item["label"] for item in model["featured_candidate"]["badges"]],
             ["Gate", "선택 가능", "Monitoring"],
         )
+        self.assertEqual(model["featured_candidate"]["badges"][0]["value"], "통과")
         self.assertEqual(
             [item["label"] for item in model["kpis"]],
             ["올라온 후보", "선택 가능", "보류 / 재검토", "숨김", "저장된 판단", "Monitoring 연결"],
@@ -12629,6 +12634,27 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Saved PV", joined)
         self.assertNotIn("Review Queue", joined)
         self.assertNotIn("Selected Dashboard 후보", joined)
+
+        recovery_model = _build_final_review_decision_desk_model(
+            candidate_summary={
+                "total_candidates": 1,
+                "select_ready": 0,
+                "hold_or_re_review": 1,
+                "blocked": 0,
+                "first_review_candidate": "Legacy candidate",
+                "first_review_reason": "최신 보강 기준 재확인 필요",
+                "first_review_action": "2단계 보강 후 재검증",
+            },
+            practical_validation_count=1,
+            eligible_count=1,
+            hidden_validation_count=0,
+            final_decision_count=0,
+            dashboard_selected_count=0,
+            route_value="재검토 필요",
+            route_detail="2단계에서 보강하고 다시 검증합니다.",
+            route_tone="warning",
+        )
+        self.assertEqual(recovery_model["featured_candidate"]["badges"][0]["value"], "재검증 필요")
 
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
@@ -27972,6 +27998,68 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(board_rows[0]["Select Allowed"], "Yes")
         self.assertEqual(board_rows[0]["Open Review"], 0)
         self.assertEqual(board_rows[0]["Candidate"], "Ready candidate")
+
+    def test_final_review_candidate_board_marks_legacy_data_recovery_as_recheck_not_ready(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_candidate_board,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["provider_coverage"] = {
+            "symbols": ["TLT"],
+            "symbol_weights": {"TLT": 1.0},
+            "coverage": {
+                "operability": {
+                    "missing_symbols": [],
+                    "provenance": {"stale_symbols": ["TLT"]},
+                },
+                "holdings": {"missing_symbols": []},
+                "exposure": {"missing_symbols": []},
+                "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+            },
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Legacy recovery board candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        with patch.object(
+            practical_service,
+            "load_etf_provider_source_map",
+            return_value=[
+                {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"}
+            ],
+        ):
+            board = build_final_review_candidate_board(
+                [
+                    {
+                        "source": source,
+                        "validation": validation,
+                        "paper_observation": paper,
+                        "decision_evidence": evidence,
+                        "investability_packet": packet,
+                    }
+                ]
+            )
+
+        row = board["rows"][0]
+        self.assertEqual(row["Decision State"], "2단계 재검증 필요")
+        self.assertEqual(row["Select Allowed"], "No")
+        self.assertEqual(row["Suggested Decision"], "재검토 필요")
+        self.assertIn("2단계", row["Board Action"])
+        self.assertEqual(board["summary"]["select_ready"], 0)
+        self.assertEqual(board["summary"]["hold_or_re_review"], 1)
 
     def test_final_review_decision_cockpit_surfaces_blocked_candidate_board_row(self) -> None:
         from app.services.backtest_evidence_read_model import (
