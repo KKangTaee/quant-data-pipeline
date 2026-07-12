@@ -758,3 +758,43 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 - [x] Synchronize STATUS/NOTES/RUNS/RISKS and the smallest durable doc set.
 - [x] Run fresh valuation tests, Market Context contracts, Python compile, TypeScript, Vite, DB smoke, `git diff --check`, and owned-diff review.
 - [x] Stage only owned code/docs/build assets and create a coherent Korean commit; leave all unrelated untracked research/QA files untouched.
+
+---
+
+## V1.3 Graph 1 Provisional Extension Implementation Plan — 2026-07-12
+
+**Goal:** Graph 1을 최신 가격월까지 정직하게 연장하고, 완결/잠정 PER를 구분하며 hover inspector를 선택 지점 옆으로 이동한다.
+
+**Architecture:** Python service가 complete distribution과 provisional display series를 분리 계산하고 React는 payload의 quality/source evidence를 그대로 시각화한다. Existing Shiller/price ingestion과 DB schema는 변경하지 않는다.
+
+### Task 16: Service Contract RED-GREEN
+
+**Files:** `tests/test_sp500_valuation.py`, `app/services/overview/sp500_valuation.py`
+
+**Produces:** `calculate_multiple_regime(monthly_rows, current_spx=None)` with `quality`, `current_is_provisional`, `current_price_basis_date`, `current_eps_basis_date`, `latest_complete_pe`, `latest_complete_basis_date`, and 60-calendar-point display series.
+
+- [ ] Add a failing test with 60+ complete rows followed by April-July price-only rows and a newer current EOD point.
+- [ ] Assert distribution anchors equal the complete-only calculation, the display ends in July, June/July are provisional, and the current value uses EOD price divided by March EPS.
+- [ ] Run the focused test and confirm RED against the missing provisional contract.
+- [ ] Implement the minimal complete/provisional separation and pass current SPX from the read-model builder.
+- [ ] Run the focused and full valuation suites; expect GREEN.
+
+### Task 17: React Hover And Line Contract RED-GREEN
+
+**Files:** `tests/test_service_contracts.py`, `app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx`, `app/web/streamlit_components/market_context_valuation/src/style.css`, compiled assets.
+
+**Produces:** solid complete path, dashed provisional path, moving/flipping inspector, current/complete basis copy.
+
+- [ ] Add a failing source contract for `provisional`, `latest_complete_pe`, `inspector-right`, dynamic `left/top`, and complete/provisional legend copy.
+- [ ] Run the focused Market Context contract and confirm RED.
+- [ ] Update React types/chart paths/metrics/basis copy and position the inspector from the selected SVG point.
+- [ ] Run contract, `tsc --noEmit`, and Vite build; expect GREEN.
+
+### Task 18: Live QA, Docs, Verification, Commit
+
+**Files:** active task docs, smallest affected durable docs, generated untracked V1.3 screenshot.
+
+- [ ] Verify DB-backed Graph 1 ends at current July EOD, includes June provisional PER, and keeps distribution basis through March.
+- [ ] Browser QA desktop/420px: moving hover card, right-edge flip, solid/dashed line, July x-axis, no overflow/console error.
+- [ ] Run valuation tests, Market Context contracts, Python compile, TypeScript, Vite, DB smoke, full service-contract audit, and `git diff --check`.
+- [ ] Synchronize docs, stage only owned files/build assets, keep screenshots/research untracked, and create a Korean commit.

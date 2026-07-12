@@ -11,6 +11,30 @@ Last Updated: 2026-07-12
 - Shiller price-only months after the latest EPS publication remain stored. The history carries the last positive TTM EPS forward and exposes its `eps_basis_date` instead of implying that a new EPS was published.
 - The history is labeled `과거 시점 재구성 시나리오`, not a strict PIT backtest, because Shiller EPS is not a preserved release-vintage series.
 
+## V1.3 Graph 1 Provisional Extension — Approved 2026-07-12
+
+### Problem And Root Cause
+
+- Shiller price rows exist through 2026-07, while positive TTM EPS/PER ends at 2026-03.
+- `calculate_multiple_regime()` intentionally drops null `trailing_pe`, so the chart ends at the latest complete EPS month.
+- The hover inspector updates its value but CSS fixes its position at the chart's top-left corner.
+
+### Approved Display Contract
+
+- Complete Shiller PER through 2026-03 remains a solid line and is the only input to the 60-month/36-month log(PER) distributions.
+- Price-only Shiller months after the complete EPS month use the last positive TTM EPS as a clearly labeled `provisional` PER and render as a dashed line.
+- The current month overlays the latest SPX EOD price when its date is newer than the Shiller monthly price; the EPS basis remains visible.
+- `current_pe`, `current_z`, and the regime badge describe the latest provisional point. `latest_complete_pe` and `latest_complete_basis_date` remain in the payload and UI evidence.
+- The display window remains 60 calendar points ending at the latest displayed month. Distribution anchors may therefore start earlier than the visible line and retain their separate `basis_start/basis_end` evidence.
+- The hover inspector is positioned beside the selected point, flips left near the right edge, and resets to the current point on mouse leave. Mobile keeps the inspector within the chart bounds.
+
+### Error And Boundary Rules
+
+- If no positive EPS exists, provisional PER is not created.
+- If no current SPX EOD exists, the latest stored Shiller price is used.
+- A provisional point is never relabeled as actual/complete and never enters the mean or standard-deviation sample.
+- Graph 2 history and the deferred `1년/3년/5년` selector are unchanged in this amendment.
+
 ## Decision Summary
 
 `Workspace > Overview > Market Context`를 S&P 500 가치평가 전용 surface로 교체한다. 기존 마지막 거래일 정보, 시장 브리프, Top Mover, Breadth, 섹터 압력 지도, 이벤트 타임라인, sentiment summary, 자료 보강 패널은 더 이상 이 탭에서 렌더링하지 않는다.

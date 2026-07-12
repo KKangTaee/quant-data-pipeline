@@ -1,6 +1,6 @@
 # Overview Market Context S&P 500 Valuation V1 Status
 
-Status: Complete
+Status: In Progress
 Last Updated: 2026-07-12
 
 ## Current Progress
@@ -25,13 +25,13 @@ Last Updated: 2026-07-12
 
 ## Current Stage
 
-V1.2 1차~5차 implementation, live backfill, fresh verification, Browser QA, documentation sync, owned-diff review를 완료했다.
+V1.3 Graph 1 provisional extension의 승인 설계와 TDD 계획을 확정했다. Service RED-GREEN부터 진행한다.
 
 ## Next Action
 
-1. Daily latest SEP collector로 이후 release vintage를 계속 보존한다.
-2. Shiller가 새 EPS를 게시하면 price-only 최신 월이 정상적으로 보강되는지 같은 DB/Browser smoke를 반복한다.
-3. 5년 시계열 selector는 별도 승인 범위로 남긴다.
+1. Complete/provisional PER service contract를 RED-GREEN으로 구현한다.
+2. Moving hover와 solid/dashed React contract를 구현한다.
+3. 실제 DB/Browser QA, 문서 동기화, 검증, 커밋을 완료한다.
 
 ## V1 Completion
 

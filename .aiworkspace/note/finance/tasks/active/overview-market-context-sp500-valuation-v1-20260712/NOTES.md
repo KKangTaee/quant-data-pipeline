@@ -19,6 +19,14 @@ Last Updated: 2026-07-12
 - 1년 visible series는 12 points, multiple warmup은 60 completed PER months다. 실제 DB 결과는 2025-08~2026-07 12개 지점과 2025-09/12, 2026-03/06 marker를 반환했다.
 - React redesign은 외부 chart dependency 없이 responsive SVG, hover inspector, actual/baseline/band/SEP legend를 사용한다.
 
+## V1.3 Approved Decision
+
+- DB evidence confirmed 2026-04~07 positive price rows with null EPS/PER and latest complete EPS/PER at 2026-03.
+- Graph 1 distribution remains complete-only; post-March values are provisional display/current-position evidence only.
+- June provisional PER is approximately `7450.03 / 261.723 = 28.47x`; July current EOD provisional PER is approximately `7575.39 / 261.723 = 28.94x`.
+- Hover value changes already worked; only the inspector position was fixed by CSS. V1.3 moves it beside the selected point and flips it near the right edge.
+- The earlier 1/3/5-year Graph 2 selector discussion remains deferred because the user approved this Graph 1 fix specifically.
+
 ## Confirmed Decisions
 
 - Exactly two primary valuation surfaces.
