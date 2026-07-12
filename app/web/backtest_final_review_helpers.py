@@ -99,6 +99,33 @@ def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
     return bool(preflight.get("select_allowed"))
 
 
+def _latest_practical_validation_rows_by_source(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Keep the newest validation per source before applying Final Review eligibility."""
+
+    ordered = sorted(
+        [dict(row or {}) for row in list(rows or [])],
+        key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""),
+        reverse=True,
+    )
+    latest_rows: list[dict[str, Any]] = []
+    seen_source_ids: set[str] = set()
+    for row in ordered:
+        source_snapshot = dict(row.get("selection_source_snapshot") or {})
+        source_id = str(
+            row.get("selection_source_id")
+            or source_snapshot.get("selection_source_id")
+            or row.get("validation_id")
+            or ""
+        ).strip()
+        if not source_id or source_id in seen_source_ids:
+            continue
+        seen_source_ids.add(source_id)
+        latest_rows.append(row)
+    return latest_rows
+
+
 def _build_final_review_source_options(
     current_rows: list[dict[str, Any]],
     proposal_rows: list[dict[str, Any]],
@@ -124,7 +151,7 @@ def _build_final_review_source_options(
     seen_validation_ids = {
         str(session_validation.get("validation_id") or "").strip()
     } if session_validation else set()
-    for row in list(practical_validation_rows or []):
+    for row in _latest_practical_validation_rows_by_source(list(practical_validation_rows or [])):
         validation_id = str(row.get("validation_id") or "").strip()
         if validation_id and validation_id in seen_validation_ids:
             continue

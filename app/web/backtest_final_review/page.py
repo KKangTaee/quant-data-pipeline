@@ -26,6 +26,7 @@ from app.web.backtest_final_review_helpers import (
     _build_final_review_source_options,
     _build_final_review_validation,
     _is_final_review_eligible_validation_result,
+    _latest_practical_validation_rows_by_source,
 )
 from app.web.backtest_final_review.components import (
     render_fr_action_panel,
@@ -698,9 +699,12 @@ def render_final_review_workspace() -> None:
     proposal_rows = load_portfolio_proposals()
     pre_live_rows = load_pre_live_candidate_registry_latest()
     practical_validation_rows = load_practical_validation_results()
+    latest_practical_validation_rows = _latest_practical_validation_rows_by_source(
+        practical_validation_rows
+    )
     eligible_practical_validation_rows = [
         row
-        for row in practical_validation_rows
+        for row in latest_practical_validation_rows
         if _is_final_review_eligible_validation_result(dict(row or {}))
     ]
     final_decision_rows = load_current_final_selection_decisions()
@@ -734,7 +738,7 @@ def render_final_review_workspace() -> None:
     route_value, route_detail, route_tone = _candidate_board_route(candidate_summary)
     dashboard_handoff = build_selected_dashboard_handoff_review(final_decision_rows)
     dashboard_summary = dict(dashboard_handoff.get("summary") or {})
-    hidden_validation_count = len(practical_validation_rows) - len(eligible_practical_validation_rows)
+    hidden_validation_count = len(latest_practical_validation_rows) - len(eligible_practical_validation_rows)
     decision_desk = _build_final_review_decision_desk_model(
         candidate_summary=candidate_summary,
         practical_validation_count=len(practical_validation_rows),

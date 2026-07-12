@@ -8,3 +8,5 @@
 - 두 수집 경로를 공통 completion helper로 통합한 뒤 focused 3개, py_compile, `git diff --check`를 통과했다.
 - 2차 recovery progress / replay save guard RED 2개를 확인하고 4단계 progress read model과 저장 방어를 구현했다.
 - Practical Validation / BacktestRuntime focused 115개, py_compile, `git diff --check`를 통과했다.
+- 3차 latest-before-eligibility / new stable-key handoff RED 2개를 확인했다.
+- source별 최신 validation 선택, blocked-latest fallback 방지, save-and-move 자동 선택·확정을 구현한 뒤 focused 184개, py_compile, `git diff --check`를 통과했다.

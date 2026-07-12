@@ -2363,9 +2363,14 @@ def _consume_practical_validation_next_stage_action(
         validation_result=validation_result,
         persist_validation=True,
     )
-    st.session_state.final_review_practical_validation_source = handoff.session_payload
-    st.session_state.final_review_practical_validation_notice = handoff.notice
-    st.session_state.backtest_requested_panel = handoff.requested_panel
+    validation_key = f"practical_validation_result:{validation_id}"
+    st.session_state["final_review_practical_validation_source"] = handoff.session_payload
+    st.session_state["final_review_practical_validation_notice"] = handoff.notice
+    st.session_state["final_review_source_selected"] = validation_key
+    st.session_state["final_review_confirmed_candidate_key"] = validation_key
+    source_id = str(validation_result.get("selection_source_id") or "source").strip() or "source"
+    st.session_state.pop(_enrichment_progress_state_key(source_id), None)
+    st.session_state["backtest_requested_panel"] = handoff.requested_panel
     st.rerun()
 
 

@@ -12776,6 +12776,52 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(_final_review_candidate_key(second), "practical_validation_result:validation-b")
         self.assertNotEqual(_final_review_candidate_key(first), _final_review_candidate_key(second))
 
+    def test_final_review_uses_latest_validation_per_source_before_eligibility_filter(self) -> None:
+        from app.web.backtest_final_review_helpers import (
+            _build_final_review_source_options,
+            _latest_practical_validation_rows_by_source,
+        )
+
+        older_ready = {
+            "validation_id": "validation-old-ready",
+            "selection_source_id": "source-same",
+            "source_title": "Same candidate",
+            "updated_at": "2026-07-12T09:00:00",
+            "validation_route": "READY_FOR_FINAL_REVIEW",
+            "final_review_gate": {"can_save_and_move": True},
+            "selected_route_preflight": {"select_allowed": True},
+        }
+        latest_blocked = {
+            **older_ready,
+            "validation_id": "validation-latest-blocked",
+            "updated_at": "2026-07-12T10:00:00",
+            "validation_route": "BLOCKED_FOR_FINAL_REVIEW",
+            "final_review_gate": {"can_save_and_move": False},
+            "pre_final_enrichment_gate": {"blocking": True},
+            "selected_route_preflight": {"select_allowed": False},
+        }
+        other_source = {
+            **older_ready,
+            "validation_id": "validation-other-ready",
+            "selection_source_id": "source-other",
+            "updated_at": "2026-07-12T08:00:00",
+        }
+
+        latest_rows = _latest_practical_validation_rows_by_source(
+            [older_ready, other_source, latest_blocked]
+        )
+        self.assertEqual(
+            [row["validation_id"] for row in latest_rows],
+            ["validation-latest-blocked", "validation-other-ready"],
+        )
+        options = _build_final_review_source_options(
+            [],
+            [],
+            practical_validation_rows=[older_ready, latest_blocked],
+            include_legacy_sources=False,
+        )
+        self.assertEqual(options, [])
+
     def test_final_review_candidate_must_be_confirmed_before_decision_surfaces_render(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
@@ -13953,6 +13999,59 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn(
             "Flow 2 재검증",
             fake_st.session_state["backtest_practical_validation_notice"],
+        )
+
+    def test_practical_validation_save_and_move_confirms_new_validation_key(self) -> None:
+        import app.web.backtest_practical_validation.page as practical_page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {
+            "practical_validation_enrichment_progress_source-new": {
+                "status": "recheck_required"
+            }
+        }
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        handoff = MagicMock()
+        handoff.session_payload = {
+            "validation_result": {"validation_id": "validation-new"}
+        }
+        handoff.notice = "새 검증 결과를 Final Review로 보냈습니다."
+        handoff.requested_panel = "Final Review"
+
+        with (
+            patch.object(practical_page, "st", fake_st),
+            patch.object(
+                practical_page,
+                "prepare_final_review_handoff_from_validation",
+                return_value=handoff,
+            ) as handoff_mock,
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            practical_page._consume_practical_validation_next_stage_action(
+                {
+                    "action": "save_and_move",
+                    "source": "practical_validation_fix_queue",
+                    "nonce": "save-new-validation",
+                },
+                source={"selection_source_id": "source-new"},
+                validation_result={
+                    "validation_id": "validation-new",
+                    "selection_source_id": "source-new",
+                    "final_review_gate": {"can_save_and_move": True},
+                },
+                replay_result={"status": "PASS", "replay_id": "fresh-replay"},
+            )
+
+        handoff_mock.assert_called_once()
+        stable_key = "practical_validation_result:validation-new"
+        self.assertEqual(fake_st.session_state["final_review_source_selected"], stable_key)
+        self.assertEqual(
+            fake_st.session_state["final_review_confirmed_candidate_key"],
+            stable_key,
+        )
+        self.assertNotIn(
+            "practical_validation_enrichment_progress_source-new",
+            fake_st.session_state,
         )
 
     def test_practical_validation_data_action_board_react_component_is_ui_only(self) -> None:
