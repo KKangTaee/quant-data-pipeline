@@ -532,3 +532,85 @@ current_vs_baseline_gap_pct = current_spx / baseline_spx - 1
 - 공식 actual 4분기가 있으면 Shiller보다 자동 우선해야 한다.
 - 실제 DB smoke에서 Shiller 2026-03 EPS, SEP 2026-06-17, SPX 2026-07-10 기준값이 read model에 남아야 한다.
 - React source contract, TypeScript/Vite build, focused Python tests, DB-backed smoke, Browser QA를 모두 통과한 뒤 완료로 표시한다.
+
+---
+
+## V1.4 Graph 2 1·3·5 Year Selector — 2026-07-12
+
+### 이걸 하는 이유?
+
+V1.2는 DB에 저장된 SEP vintage가 2025-06 이후 다섯 개뿐이어서 최근 1년 재구성 그래프부터 제공했다. 사용자는 1년 화면을 확인한 뒤 같은 계산 경계로 3년과 5년 흐름도 선택해 비교할 수 있어야 한다고 승인했다. 단순히 현재 SEP를 과거 전체에 복제하면 당시 전망을 왜곡하므로, 공식 과거 SEP vintage를 DB에 보강하는 작업이 기간 selector보다 먼저 필요하다.
+
+### 검토한 접근
+
+1. **공식 SEP 전체 backfill + 기간별 Python read model (선택):** Federal Reserve calendar에서 2021-03 이후 공개된 21개 projection URL을 발견하고, DB에 없는 release만 idempotent UPSERT한다. Python service가 12/36/60개월 결과를 각각 계산해 React에 전달한다.
+2. **현재 SEP 고정 연장:** 과거 월에도 현재 SEP를 적용하므로 point-in-time 의미가 깨져 제외한다.
+3. **SEP 없는 과거 구간 공백:** 정직하지만 3년/5년 흐름이 단절되고 사용 가치가 낮아 제외한다.
+
+### Data Flow
+
+```text
+Federal Reserve FOMC calendar
+  -> discover_fomc_sep_urls()
+  -> collect_and_store_fomc_sep_history()
+     -> stored release_date는 skip
+     -> missing official page만 fetch/parse
+  -> finance_meta.fomc_sep_projection
+  -> load_fomc_sep_projection_history()
+  -> calculate_historical_index_scenario(... visible_months=12/36/60)
+  -> index_scenario.history_options[1y|3y|5y]
+  -> React local selector
+```
+
+UI에서 Federal Reserve나 다른 provider를 직접 호출하지 않는다. DB schema와 unique key는 그대로 유지하며, backfill은 기존 vintage UPSERT 계약을 재사용한다.
+
+### Service Contract
+
+- `calculate_historical_index_scenario`는 `visible_months`에 따라 `label`, `window_years`, `observation_count`, `coverage_start`, `coverage_end`를 반환한다.
+- `build_sp500_valuation_read_model`은 기존 `index_scenario.history`를 1년 호환값으로 유지하고, 다음 mapping을 추가한다.
+
+```python
+index["history_options"] = {
+    "1y": calculate_historical_index_scenario(..., visible_months=12),
+    "3y": calculate_historical_index_scenario(..., visible_months=36),
+    "5y": calculate_historical_index_scenario(..., visible_months=60),
+}
+index["history"] = index["history_options"]["1y"]
+```
+
+- 월중 SEP는 기존 규칙대로 다음 달 월별 지점부터 적용한다.
+- 각 지점은 해당 시점 이전 최신 SEP와 관측 연도 target을 사용한다.
+- Shiller EPS 미발표 월은 마지막 확인 TTM EPS를 유지하고 basis date를 노출한다.
+- 60개월 rolling log(PER) band 계산은 표시 기간과 무관하게 유지한다.
+
+### React Contract
+
+- 그래프 상단에 `1년 / 3년 / 5년` segmented selector를 둔다.
+- 기본값은 현재 동작을 보존하는 `1년`이다.
+- 선택 시 heading, eyebrow, SVG aria-label, points, SEP marker, inspector가 같은 기간 결과로 바뀐다.
+- 실제 SPX, 기준 적정가, 하단-상단 band와 모든 SEP marker line은 유지한다.
+- 3년/5년에서는 x-axis와 SEP text label을 최대 7개 수준으로 줄여 겹침을 방지한다. Marker line 자체는 생략하지 않는다.
+- `과거 시점 재구성`, Shiller EPS PIT 한계, 공식 적정가/매매 신호가 아니라는 문구는 모든 기간에서 유지한다.
+
+### Error And Coverage Handling
+
+- 선택 기간 결과가 2개 미만이면 해당 기간만 `INSUFFICIENT_HISTORY`로 표시한다.
+- backfill 중 일부 official page가 실패하면 기존 stored vintage를 보존하고 job은 partial evidence를 반환한다. 이번 live backfill은 모든 missing page 성공을 완료 조건으로 둔다.
+- 5년 시작점은 current 2026-07 기준 2021-08이다. 2021-06 SEP가 이미 발표된 시점이므로 60개월 모두 당시 vintage를 선택할 수 있어야 한다.
+- Shiller monthly EPS는 strict release-vintage PIT source가 아니므로 그래프를 backtest나 당시 시장 consensus라고 표현하지 않는다.
+
+### Verification
+
+- collector가 calendar discovery 결과 중 stored release를 제외한 missing URL만 fetch하는지 검증한다.
+- 12/36/60개월 history가 각각 요청 길이, 동적 label, coverage date를 반환하는지 검증한다.
+- read model의 `history_options`와 1년 compatibility alias를 검증한다.
+- React source contract, TypeScript, Vite build를 통과한다.
+- 실제 DB에 2021-03~2026-06 공식 vintage 21개를 저장하고 1/3/5년이 각각 12/36/60 points인지 확인한다.
+- desktop/420px Browser QA에서 selector 전환, sparse labels, hover evidence, overflow와 console error를 확인한다.
+
+### Out Of Scope
+
+- Shiller EPS release-vintage 복원 또는 애널리스트 consensus EPS 도입.
+- Federal Reserve 이외 출처로 SEP 값을 합성하는 fallback.
+- Graph 1의 5년 공식 분포/3년 sensitivity 의미 변경.
+- S&P workbook 403 우회, scraping, proxy, cookie 또는 headless download.

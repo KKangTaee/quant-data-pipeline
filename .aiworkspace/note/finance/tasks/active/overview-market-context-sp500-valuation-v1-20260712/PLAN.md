@@ -798,3 +798,87 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 - [x] Browser QA desktop/420px: point-adjacent/right-edge-flipped inspector, solid/dashed line, July x-axis, no overflow/console error.
 - [x] Run valuation tests, Market Context contracts, Python compile, TypeScript, Vite, DB smoke, full service-contract audit, and `git diff --check`.
 - [x] Synchronize docs, stage only owned files/build assets, keep screenshots/research untracked, and create a Korean commit.
+
+---
+
+## V1.4 Graph 2 1·3·5 Year Selector Implementation Plan — 2026-07-12
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox syntax for tracking.
+
+**Goal:** Graph 2의 reconstructed SPX 흐름을 공식 SEP vintage 기반 1년·3년·5년으로 선택해 볼 수 있게 한다.
+
+**Architecture:** Federal Reserve calendar discovery를 history collector의 기본 source list로 사용하고 기존 release-date UPSERT로 missing vintage만 저장한다. Python service는 12/36/60개월 history option을 계산하며 React는 받은 option 중 하나를 local state로 선택해 SVG를 렌더링한다.
+
+**Tech Stack:** Python 3.12, pandas, MySQL, unittest, React 19, TypeScript, responsive SVG, Vite.
+
+## Global Constraints
+
+- `Ingestion -> DB -> Loader -> Service -> React`를 유지하고 UI에서 provider를 호출하지 않는다.
+- 월중 발표 SEP는 다음 달 월별 지점부터 적용한다.
+- Shiller EPS를 strict release-vintage PIT 또는 consensus EPS로 표현하지 않는다.
+- Graph 1의 60개월 공식 분포/36개월 sensitivity 계약은 변경하지 않는다.
+- unrelated untracked research와 기존 QA 이미지를 stage하지 않는다.
+
+### Task 19: Dynamic Official SEP History Backfill
+
+**Files:**
+- Modify: `finance/data/sp500_valuation.py`
+- Test: `tests/test_sp500_valuation.py`
+
+**Interfaces:**
+- Consumes: `discover_fomc_sep_urls(calendar_html: str) -> list[str]`, existing `fomc_sep_projection` release-date unique UPSERT.
+- Produces: `collect_and_store_fomc_sep_history(source_refs=None, calendar_url=..., calendar_fetcher=..., sep_fetcher=...)` that discovers the official history when explicit refs are absent and fetches only missing releases.
+
+- [ ] Add a failing test whose calendar fixture exposes three official URLs, DB already contains one release, and assertions require only the two missing URLs to be fetched.
+- [ ] Run `.venv/bin/python -m unittest tests.test_sp500_valuation.Sp500ValuationDataTests.test_sep_history_collector_discovers_calendar_and_fetches_only_missing_vintages` and confirm RED because the collector does not accept/discover calendar input.
+- [ ] Implement calendar discovery as the default `source_refs=None` path while preserving explicit refs for deterministic callers/tests.
+- [ ] Run the focused test and full `tests.test_sp500_valuation`; expect GREEN.
+
+### Task 20: 12/36/60-Month Service Options
+
+**Files:**
+- Modify: `app/services/overview/sp500_valuation.py`
+- Test: `tests/test_sp500_valuation.py`
+
+**Interfaces:**
+- Consumes: all stored SEP vintages and monthly Shiller rows.
+- Produces: dynamic `window_years`, `label`, `observation_count`, `coverage_start/end`, plus `index_scenario.history_options` keys `1y`, `3y`, `5y`; `index_scenario.history` remains the `1y` alias.
+
+- [ ] Add a failing calculator test using 2021-06~2026-06 SEP fixtures and enough monthly rows; assert 12/36/60 calls return the requested lengths and dynamic labels.
+- [ ] Add a failing read-model test asserting `history_options` keys and the 1-year compatibility alias.
+- [ ] Run the two focused tests and confirm RED for fixed label/missing options.
+- [ ] Implement the minimal dynamic metadata and three service calls without moving financial formulas into React.
+- [ ] Run focused and full valuation suites; expect GREEN.
+
+### Task 21: React Period Selector And Sparse Labels
+
+**Files:**
+- Modify: `tests/test_service_contracts.py`
+- Modify: `app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx`
+- Modify: `app/web/streamlit_components/market_context_valuation/src/style.css`
+- Generate: `app/web/streamlit_components/market_context_valuation/component_static/`
+
+**Interfaces:**
+- Consumes: `index_scenario.history_options["1y"|"3y"|"5y"]`.
+- Produces: default 1-year segmented selector, dynamic heading/aria-label/history graph, maximum roughly seven axis/SEP text labels while retaining all SEP marker lines.
+
+- [ ] Add a failing Market Context source contract for `history_options`, `1년`, `3년`, `5년`, `setHistoryPeriod`, `aria-pressed`, and sparse label step logic.
+- [ ] Run `.venv/bin/python -m unittest tests.test_service_contracts -k market_context` and confirm RED.
+- [ ] Implement the selector, dynamic copy/data selection, responsive styles, and sparse labels.
+- [ ] Run Market Context contracts, `npx tsc --noEmit`, and `npm run build`; expect GREEN.
+
+### Task 22: Live Backfill, Browser QA, Documentation, Commit
+
+**Files:**
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
+- Modify: smallest affected `docs/`, `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md` set.
+- Generate: one untracked V1.4 QA screenshot.
+
+**Interfaces:**
+- Consumes: production Federal Reserve calendar/pages and current local DB.
+- Produces: 21 stored SEP vintages and DB-backed 12/36/60-point histories with verified React selector behavior.
+
+- [ ] Run the official history collector and assert stored release count/range and 12/36/60 history lengths.
+- [ ] Browser QA desktop and 420px: switch 1/3/5, verify dynamic title/range, hover inspector, sparse labels, no horizontal overflow, and zero current-app console errors.
+- [ ] Run fresh valuation tests, Market Context contracts, Python compile, TypeScript, Vite build, DB smoke, full service-contract audit, and `git diff --check`.
+- [ ] Synchronize task/canonical/root docs, stage only owned files/build assets, leave screenshots/research untracked, and create a coherent Korean commit.
