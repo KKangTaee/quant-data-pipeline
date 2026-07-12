@@ -59,6 +59,8 @@ def _candidate_board_route(summary: dict[str, Any]) -> tuple[str, str, str]:
         return "검토 후보 없음", "Final Review Gate를 통과한 후보가 없습니다.", "warning"
     if int(summary.get("select_ready", 0) or 0) > 0:
         return "모니터링 후보 있음", "저장 가능한 후보를 확인하고 Portfolio Monitoring 추적 후보로 저장합니다.", "positive"
+    if int(summary.get("recheck_required", 0) or 0) > 0:
+        return "2단계 재검증 필요", "필수 데이터를 보강하고 새 Practical Validation 결과를 저장한 뒤 다시 검토합니다.", "warning"
     if int(summary.get("blocked", 0) or 0) > 0:
         return "차단 원인 확인", "먼저 볼 후보의 blocker를 해소해야 정식 저장이 활성화됩니다.", "danger"
     return "재검토 필요", "review-required 근거를 확인하고 모니터링 후보 가능 상태로 보강합니다.", "warning"

@@ -4004,6 +4004,7 @@ def build_final_review_candidate_board(candidates: list[dict[str, Any]]) -> dict
     total = len(rows)
     select_ready = sum(1 for row in rows if row.get("Decision State") == "모니터링 후보 가능")
     blocked = sum(1 for row in rows if row.get("Decision State") == "선정 차단")
+    recheck_required = sum(1 for row in rows if row.get("Decision State") == "2단계 재검증 필요")
     hold_or_re_review = max(0, total - select_ready - blocked)
     first_row = dict(rows[0] or {}) if rows else {}
     queue_rows = [
@@ -4024,6 +4025,7 @@ def build_final_review_candidate_board(candidates: list[dict[str, Any]]) -> dict
             "select_ready": select_ready,
             "hold_or_re_review": hold_or_re_review,
             "blocked": blocked,
+            "recheck_required": recheck_required,
             "first_review_candidate": first_row.get("Candidate") or "-",
             "first_review_action": first_row.get("Board Action") or "-",
             "first_review_reason": first_row.get("Primary Reason") or "-",

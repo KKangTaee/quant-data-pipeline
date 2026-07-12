@@ -12588,7 +12588,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Selected Dashboard Handoff", final_review_page_source)
 
     def test_final_review_decision_desk_model_prioritizes_candidate_status(self) -> None:
-        from app.web.backtest_final_review.page import _build_final_review_decision_desk_model
+        from app.web.backtest_final_review.page import (
+            _build_final_review_decision_desk_model,
+            _candidate_board_route,
+        )
 
         model = _build_final_review_decision_desk_model(
             candidate_summary={
@@ -12655,6 +12658,16 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             route_tone="warning",
         )
         self.assertEqual(recovery_model["featured_candidate"]["badges"][0]["value"], "재검증 필요")
+        recovery_route = _candidate_board_route(
+            {
+                "total_candidates": 1,
+                "select_ready": 0,
+                "blocked": 0,
+                "recheck_required": 1,
+            }
+        )
+        self.assertEqual(recovery_route[0], "2단계 재검증 필요")
+        self.assertIn("Practical Validation", recovery_route[1])
 
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
@@ -28060,6 +28073,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("2단계", row["Board Action"])
         self.assertEqual(board["summary"]["select_ready"], 0)
         self.assertEqual(board["summary"]["hold_or_re_review"], 1)
+        self.assertEqual(board["summary"]["recheck_required"], 1)
 
     def test_final_review_decision_cockpit_surfaces_blocked_candidate_board_row(self) -> None:
         from app.services.backtest_evidence_read_model import (
