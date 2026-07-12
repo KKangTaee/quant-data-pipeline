@@ -28,11 +28,11 @@
 - Produces: `_complete_provider_gap_collection(validation_result: dict[str, Any], results: list[dict[str, Any]], *, origin: str) -> None`
 - Preserves: `run_provider_gap_collection(validation_result)` as the only provider execution boundary.
 
-- [ ] Write a failing test that patches Streamlit session state and proves both collection entry paths call one completion helper which clears `practical_validation_recheck_<source>_*` keys.
-- [ ] Run the focused test and confirm it fails because the Final Review handoff path leaves replay state intact.
-- [ ] Implement the shared completion helper and route both buttons through it.
-- [ ] Run Practical Validation and BacktestRuntime focused tests.
-- [ ] Commit with `Practical Validation 수집 후 재검증을 강제`.
+- [x] Write a failing test that patches Streamlit session state and proves both collection entry paths call one completion helper which clears `practical_validation_recheck_<source>_*` keys.
+- [x] Run the focused test and confirm it fails because the Final Review handoff path leaves replay state intact.
+- [x] Implement the shared completion helper and route both buttons through it.
+- [x] Run Practical Validation and BacktestRuntime focused tests.
+- [x] Commit with `Practical Validation 수집 후 재검증을 강제`.
 
 ### Task 2: Level2 완료 순서와 저장 방어
 
@@ -45,12 +45,12 @@
 - Produces: `build_practical_validation_recovery_progress(*, collection_completed: bool, replay_completed: bool, can_save_and_move: bool, blocking: bool) -> dict[str, Any]`
 - Consumes: provider collection session marker, current replay result, `final_review_gate`.
 
-- [ ] Write failing service tests for collected/recheck-pending, replay-blocked, and save-ready states.
-- [ ] Run tests and confirm the progress contract is absent.
-- [ ] Implement the pure progress read model and compact Level2 action sequence.
-- [ ] Add a page-level defense that refuses save-and-move without current replay evidence.
-- [ ] Run focused tests, py_compile, and `git diff --check`.
-- [ ] Commit with `Practical Validation 보강 완료 순서를 명확화`.
+- [x] Write failing service tests for collected/recheck-pending, replay-blocked, and save-ready states.
+- [x] Run tests and confirm the progress contract is absent.
+- [x] Implement the pure progress read model and compact Level2 action sequence.
+- [x] Add a page-level defense that refuses save-and-move without current replay evidence.
+- [x] Run focused tests, py_compile, and `git diff --check`.
+- [x] Commit with `Practical Validation 보강 완료 순서를 명확화`.
 
 ### Task 3: 새 validation 자동 연결과 구형 row 분리
 
@@ -64,12 +64,12 @@
 - Produces: `_latest_practical_validation_rows_by_source(rows: list[dict[str, Any]]) -> list[dict[str, Any]]`
 - Produces stable selected key: `practical_validation_result:<validation_id>`.
 
-- [ ] Write failing tests proving latest row wins per `selection_source_id` and a latest blocked row prevents fallback to an older eligible row.
-- [ ] Write a failing handoff test proving save-and-move sets the new validation selector and confirmed key.
-- [ ] Implement latest-row selection before eligibility filtering.
-- [ ] Set new stable key in Final Review session state after successful save-and-move.
-- [ ] Run Final Review / Practical Validation / BacktestRuntime focused tests.
-- [ ] Commit with `Final Review를 최신 재검증 결과로 연결`.
+- [x] Write failing tests proving latest row wins per `selection_source_id` and a latest blocked row prevents fallback to an older eligible row.
+- [x] Write a failing handoff test proving save-and-move sets the new validation selector and confirmed key.
+- [x] Implement latest-row selection before eligibility filtering.
+- [x] Set new stable key in Final Review session state after successful save-and-move.
+- [x] Run Final Review / Practical Validation / BacktestRuntime focused tests.
+- [x] Commit with `Final Review를 최신 재검증 결과로 연결`.
 
 ### Task 4: Browser QA와 문서 closeout
 
@@ -83,11 +83,10 @@
 - Modify: `.aiworkspace/note/finance/tasks/active/README.md`
 - Modify: `.aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md`
 
-- [ ] Run focused service / contract tests.
-- [ ] Run React production build.
-- [ ] Run target Python `py_compile` and `git diff --check`.
-- [ ] Browser QA the exact legacy recovery -> collection -> replay -> save -> new Final Review path without executing a real provider collection unless the existing local state safely permits it.
-- [ ] Verify compact viewport has no horizontal overflow and save remains disabled before replay.
-- [ ] Keep registry / saved / run history / screenshots unstaged.
-- [ ] Sync durable docs and commit with `Practical Validation 재검증 handoff QA와 문서 동기화`.
-
+- [x] Run focused service / contract tests.
+- [x] Run React production build.
+- [x] Run target Python `py_compile` and `git diff --check`.
+- [x] Browser QA the exact legacy recovery -> collection -> replay -> save -> new Final Review path without executing a real provider collection unless the existing local state safely permits it. 실제 provider 수집은 실행하지 않았고 custom component rerun 자동화 한계는 RISKS에 남겼다.
+- [x] Verify compact viewport has no horizontal overflow and save remains disabled before replay.
+- [x] Keep registry / saved / run history / screenshots unstaged.
+- [x] Sync durable docs and commit with `Practical Validation 재검증 handoff QA와 문서 동기화`.

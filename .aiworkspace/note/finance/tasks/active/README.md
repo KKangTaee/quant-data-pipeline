@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-recheck-handoff-loop-fix-v1-20260712` | Completed record | 자료 보강 뒤 replay를 강제 초기화하고, Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동을 막는다. Final Review는 source별 최신 validation만 사용한다. |
 | `practical-validation-pre-final-enrichment-gate-v1-20260712` | Completed record | 해결 가능한 필수 provider gap을 Practical Validation 승격 전 blocker로 바꾸고, Final Review의 legacy / stale 검토서는 2단계 재검증 전 읽기 전용 복구 상태로 제한했다. |
 | `final-review-readable-review-evidence-v1-20260711` | Completed record | `남은 판단 근거`를 사용자 언어와 개선 행동으로 바꾸고, 실행 가능한 provider gap만 같은 후보의 Practical Validation 보강 화면으로 연결했다. |
 | `final-review-guidance-actionability-v1-20260711` | Completed record | 10개 Monitoring 패턴을 structured applicability/action state로 바꾸고, 첫 화면 최대 6개 행동 가이드, 접힌 technical trace, Level2/Final Review stage ownership, 총평 직후 해석 4행을 구현했다. |

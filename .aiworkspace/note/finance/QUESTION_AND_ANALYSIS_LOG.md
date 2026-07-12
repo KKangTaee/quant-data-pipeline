@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
+  - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
+  - Previous completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
   - Latest completed Final Review UX task is [final-review-readable-review-evidence-v1-20260711](./tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
@@ -35,6 +36,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-12 - 자료 보강 뒤에는 새 재검증 결과만 Final Review로 연결한다
+
+- User request: Level3에서 보강 요청을 따라 Level2 자료 수집을 실행해도 같은 구형 검토서와 보강 요청이 반복되는 사이클을 해결해 달라고 요청함.
+- Interpreted goal: 수집, 재검증, validation 저장을 서로 다른 완료 경계로 분리하고 사용자가 중간 단계를 건너뛰어 과거 Final Review row로 돌아가지 못하게 해야 한다.
+- Analysis result: Final Review recovery 수집 경로가 replay state를 지우지 않았고, Final Review가 source별 최신 row보다 개별 eligible history를 먼저 보아 과거 row fallback이 가능했다. 수집 성공은 evidence 갱신일 뿐 validation 성공이 아니다.
+- Follow-up: collection completion은 replay를 강제 초기화하고 Level2가 4단계 진행 상태를 표시한다. current replay 없는 save-and-move를 거부하며, Final Review는 source별 latest-before-eligibility를 적용하고 새 validation stable key만 자동 선택·확정한다.
 
 ### 2026-07-12 - 해결 가능한 자료는 2단계에서 닫고 3단계는 판단만 맡는다
 

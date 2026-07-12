@@ -9,6 +9,13 @@ Last Verified: 2026-07-12
 
 현재 active task는 없다.
 
+Latest completed Practical Validation recheck handoff task는 `.aiworkspace/note/finance/tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/`다.
+
+- 목적: Final Review에서 Level2 보강으로 돌아간 뒤 자료만 수집하고 구형 검토서를 다시 여는 반복을 차단한다.
+- 주요 변경: 두 provider collection 완료 경로가 replay state를 공통으로 초기화하고, Level2가 `자료 보강 -> Flow 2 재검증 -> 새 결과 저장 -> Final Review 확인` 순서를 표시한다. current-session replay가 없으면 save-and-move를 거부한다.
+- Final Review: append-only history는 보존하되 source별 최신 validation을 eligibility보다 먼저 선택한다. 최신 row가 blocked면 과거 eligible row로 fallback하지 않으며, 명시적인 save-and-move만 새 stable key를 선택·확정한다.
+- QA: focused service / contract tests 188개, React production build, target py_compile, `git diff --check`, Final Review 재검증 상태 / 판단 비활성 / 760px no-overflow Browser QA를 통과했다. 실제 provider 수집과 registry append는 실행하지 않았다. in-app Browser의 custom component rerun은 자동화에서 관측하지 못해 Python intent consumer와 recovery contract test로 보완했다.
+
 Latest completed Practical Validation pre-Final enrichment gate task는 `.aiworkspace/note/finance/tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/`다.
 
 - 목적: 현재 Python collector로 해결 가능한 필수 외부 데이터 gap을 Final Review 숙제로 넘기지 않고 Practical Validation에서 보강·재검증한 뒤에만 승격한다.

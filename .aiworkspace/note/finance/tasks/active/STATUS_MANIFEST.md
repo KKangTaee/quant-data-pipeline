@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `practical-validation-pre-final-enrichment-gate-v1-20260712`
+- `practical-validation-recheck-handoff-loop-fix-v1-20260712`
 
 Previous completed task:
 
-- `final-review-readable-review-evidence-v1-20260711`
+- `practical-validation-pre-final-enrichment-gate-v1-20260712`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-recheck-handoff-loop-fix-v1-20260712`: provider collection completion은 current replay를 지우고 Flow 2 재검증을 요구한다. current replay 없는 save-and-move를 막고, Final Review는 source별 최신 validation만 사용해 과거 eligible row fallback을 허용하지 않는다.
 - `practical-validation-pre-final-enrichment-gate-v1-20260712`: 수집 가능한 필수 외부 데이터는 Practical Validation에서 보강하고 Flow 2 재검증 후에만 Final Review로 승격한다. legacy / stale Final Review 검토서는 읽기 전용 복구 상태로 유지한다.
 - `final-review-readable-review-evidence-v1-20260711`: `남은 판단 근거`를 사용자 언어의 검증명 / 관측 / 판단 이유 / 개선 행동으로 정리하고, 실제 provider plan이 있는 항목만 같은 후보의 Practical Validation 데이터 보강으로 연결했다. React는 표시와 navigation intent만 담당한다.
 - `final-review-guidance-actionability-v1-20260711`: 10개 Monitoring 패턴을 named evidence adapter 기반 `판단 가능 / 조건부 추적 / 추가 검증 필요 / 적용 제외`로 바꾸고 first-read를 최대 6개로 제한했다. technical trace는 접힌 상세로 이동했고, REVIEW는 Final Review 직접 결정 / 2단계 인수 제한 / Monitoring 조건 / blocker로 분리했다. 총평 직후에는 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 표시한다.
