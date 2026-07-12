@@ -165,7 +165,7 @@ body {
   border-top: 1px solid rgba(148, 163, 184, 0.24);
   display: grid;
   gap: 0.9rem;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(260px, 1fr) auto;
   margin-top: 0.95rem;
   padding-top: 0.9rem;
 }
@@ -181,8 +181,53 @@ body {
 .pv-react-fix__action p {
   color: #64748b;
   font-size: 0.9rem;
+  grid-column: 1 / -1;
   line-height: 1.48;
   margin: 0;
+}
+
+.pv-react-fix__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.pv-react-fix__button {
+  border: 1px solid var(--accent);
+  border-radius: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 850;
+  line-height: 1.25;
+  min-height: 2.55rem;
+  padding: 0.62rem 0.82rem;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+}
+
+.pv-react-fix__button--primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.pv-react-fix__button--secondary {
+  background: #ffffff;
+  color: var(--accent);
+}
+
+.pv-react-fix__button:hover:not(:disabled) {
+  opacity: 0.86;
+}
+
+.pv-react-fix__button:disabled {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
 }
 
 .pv-react-fix__body {
@@ -361,6 +406,14 @@ body {
 
   .pv-react-fix__summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pv-react-fix__buttons {
+    justify-content: stretch;
+  }
+
+  .pv-react-fix__button {
+    flex: 1 1 100%;
   }
 }
 

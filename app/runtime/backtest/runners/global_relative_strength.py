@@ -184,6 +184,19 @@ def run_global_relative_strength_backtest_from_db(
         score_weights=normalized_score_weights,
     )
     bundle["meta"]["grs_top_n_concentration"] = _build_grs_top_n_concentration_summary(result_df)
+    stored_period_contract = dict(result_df.attrs.get("grs_period_contract") or {})
+    if not stored_period_contract:
+        result_dates = pd.to_datetime(result_df.get("Date"), errors="coerce")
+        latest_result_date = result_dates.dropna().max() if not result_dates.dropna().empty else pd.NaT
+        latest_text = latest_result_date.strftime("%Y-%m-%d") if pd.notna(latest_result_date) else None
+        stored_period_contract = {
+            "requested_market_date": str(end) if end else None,
+            "latest_common_price_date": latest_text,
+            "last_complete_rebalance_date": latest_text,
+            "latest_valuation_date": latest_text,
+            "valuation_row_count": 0,
+        }
+    bundle["meta"]["grs_period_contract"] = stored_period_contract
     return _runtime_hook("_apply_real_money_hardening", _apply_real_money_hardening, __name__)(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),

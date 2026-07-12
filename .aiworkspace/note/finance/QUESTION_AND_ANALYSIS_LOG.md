@@ -17,6 +17,20 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Current active task is none.
+  - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
+  - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
+  - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
+  - Previous completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
+  - Latest completed Final Review UX task is [final-review-readable-review-evidence-v1-20260711](./tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
+  - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
+  - Previous completed Final Review UX task is [final-review-confirmed-review-flow-v1-20260711](./tasks/active/final-review-confirmed-review-flow-v1-20260711/STATUS.md).
+  - Previous completed Final Review top UX task is [final-review-top-ux-cleanup-v1-v4-20260709](./tasks/active/final-review-top-ux-cleanup-v1-v4-20260709/STATUS.md).
+  - Previous completed Final Review scorecard task is [final-review-detailed-scorecard-v1-v6-20260709](./tasks/active/final-review-detailed-scorecard-v1-v6-20260709/STATUS.md).
+  - Latest completed Practical Validation UI task is [practical-validation-stage-ownership-v1](./tasks/active/practical-validation-stage-ownership-v1/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-action-center-v1-20260709](./tasks/active/practical-validation-flow4-action-center-v1-20260709/STATUS.md).
+  - Previous completed Practical Validation UI task is [practical-validation-flow4-data-action-board-v1-20260709](./tasks/active/practical-validation-flow4-data-action-board-v1-20260709/STATUS.md).
   - Latest completed docs / code-flow refresh is [post-merge-docs-flow-refresh-20260708](./tasks/active/post-merge-docs-flow-refresh-20260708/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
@@ -67,6 +81,117 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 전체 Market Movers 자동 분석이나 추천기가 아니라, 사용자가 선택한 종목 1개에 대해 명시적으로 버튼을 눌렀을 때 조사 시작점을 모아주는 수동 패널을 만든다.
 - Analysis result: V1은 DB schema 변경 없이 기존 Why It Moved metadata와 외부 원문 링크를 결합하고, SEC 13F는 official durable candidate / delayed institutional context로만 표시한다. 13F durable ingestion은 CUSIP-symbol mapping과 quarter comparison 정책이 필요하므로 별도 승인 후 진행한다.
 - Follow-up: `overview-market-interest-evidence-v1-20260708`에서 read model, selected-symbol action/tab, conservative statuses, source caveats, focused tests, docs sync를 진행했다. 추천, 점수화, 매매 신호, article/report/filing body 저장, live trading 연결은 추가하지 않았다.
+### 2026-07-12 - 자료 보강 뒤에는 새 재검증 결과만 Final Review로 연결한다
+
+- User request: Level3에서 보강 요청을 따라 Level2 자료 수집을 실행해도 같은 구형 검토서와 보강 요청이 반복되는 사이클을 해결해 달라고 요청함.
+- Interpreted goal: 수집, 재검증, validation 저장을 서로 다른 완료 경계로 분리하고 사용자가 중간 단계를 건너뛰어 과거 Final Review row로 돌아가지 못하게 해야 한다.
+- Analysis result: Final Review recovery 수집 경로가 replay state를 지우지 않았고, Final Review가 source별 최신 row보다 개별 eligible history를 먼저 보아 과거 row fallback이 가능했다. 수집 성공은 evidence 갱신일 뿐 validation 성공이 아니다.
+- Follow-up: collection completion은 replay를 강제 초기화하고 Level2가 4단계 진행 상태를 표시한다. current replay 없는 save-and-move를 거부하며, Final Review는 source별 latest-before-eligibility를 적용하고 새 validation stable key만 자동 선택·확정한다.
+
+### 2026-07-12 - 해결 가능한 자료는 2단계에서 닫고 3단계는 판단만 맡는다
+
+- User request: Final Review의 `2단계에서 보강 가능한 데이터`를 왜 3단계에서 다시 보여주는지 진단하고, 수집 가능 항목은 2단계에서 해결해 3단계 검증 부담을 줄이는 방향으로 진행해 달라고 요청함.
+- Interpreted goal: provider 수집, 재검증, 승격 Gate는 Practical Validation이 끝내고 Final Review는 수집으로 해결되지 않는 잔여 제한과 사용자의 선택 판단만 소비해야 한다.
+- Analysis result: 수집 성공은 검증 성공이 아니므로 executable gap은 승격 전 blocker가 되고, 수집 후 Flow 2 replay와 새 validation 저장이 필요하다. 기존 저장 검토서는 audit 보존을 위해 삭제하지 않되 최신 기준 충족 전에는 새 판단을 만들 수 없다.
+- Follow-up: current blocking row는 Final Review 후보에서 제외하고 legacy / stale row는 읽기 전용 recovery로 표시했다. 기간 밖 stress, 미구현 검증, survivorship historical source, 세금·계좌 판단은 자동 수집 대상이 아니다.
+
+### 2026-07-11 - 남은 판단 근거는 확인 내용과 개선 행동을 함께 답한다
+
+- User request: 코드형 관측·판단 근거, 불명확한 `세부 audit에서 연결`, 빈 값과 기간 미포함의 원인을 조사하고 부족 데이터를 일괄 갱신할 수 있는지 1~4차로 개발해 달라고 요청함.
+- Interpreted goal: 사용자가 각 REVIEW 항목의 의미와 다음 행동을 한 카드에서 이해하되, 모든 공백을 데이터 최신화 문제로 오인하지 않게 해야 한다.
+- Analysis result: 공백은 provider freshness, 검증 기간 밖, 검증 기능 미구현, historical lifecycle source, 사용자 세금·계좌 판단으로 원인이 달랐다. 저장 evidence 표현과 action routing만 바꾸고 새 점수 판정은 만들지 않았다.
+- Follow-up: 사용자 언어 mapping과 action taxonomy를 만들고, 실행 가능한 provider plan만 같은 후보의 Practical Validation 보강 화면으로 연결했다. 실제 수집 후에는 Flow 2 재검증과 새 Final Review 확인이 필요하다.
+
+### 2026-07-11 - Final Review 가이드는 판단 상태와 stage ownership을 함께 설명한다
+
+- User request: Monitoring 방향 가이드의 모든 카드가 같은 보류 문장으로 끝나고, source code path와 Level2 잔재가 전면에 보이며, Final Review 확인 필요가 무엇을 하라는지 불명확하므로 1~4차로 개선하라고 요청함.
+- Interpreted goal: 저장 evidence 안에서 현실적인 10종 prototype을 정형화하되, 근거가 없는 시장 반응을 생성하지 않고 사용자가 지금 판단할 일과 2단계에서 이미 처리된 제한을 분리해야 한다.
+- Analysis result: 전체 payload keyword scan은 무관한 텍스트도 pattern signal로 승격했다. named evidence adapter와 applicability contract가 필요하며, Level2 data/practical caution은 Final Review action이 아니라 근거 신뢰도에 반영된 인수 제한이다.
+- Follow-up: pattern을 `판단 가능 / 조건부 추적 / 추가 검증 필요 / 적용 제외`로 판정하고 행동형 카드, 접힌 technical trace, stage-owned REVIEW section, 총평 직후 4행 해석을 구현했다. 새 validation / provider fetch / registry write / live action은 추가하지 않았다.
+
+### 2026-07-11 - 구형 후보는 현재 1차 → 2차 → 3차 계약으로 다시 생성한다
+
+- User request: 기존 3단계 포트폴리오와 legacy saved file을 삭제하고 동일 포트폴리오를 1단계부터 3단계까지 다시 세팅해 달라고 요청함.
+- Interpreted goal: display fallback만 고치는 것이 아니라 실제 active source / validation / final decision chain을 최신 workspace / REVIEW role 계약으로 다시 만들어야 한다.
+- Analysis result: 기존 Final Review 판단 6개 중 단일 GRS 4개는 decision row의 replay contract로, weighted mix 2개는 selection source의 prefill contract로 복원 가능했다. 모두 stored-period replay와 selected-route gate를 통과했다.
+- Follow-up: 새 source / validation / schema-v3 decision 각 6개와 Monitoring setup 3개를 생성하고 legacy `SAVED_PORTFOLIOS.jsonl`을 제거했다. live approval / order / auto rebalance는 생성하지 않았다.
+
+### 2026-07-11 - Final Review 점수와 Monitoring 방향은 근거 수준을 분리한다
+
+- User request: 투자 검토서 상단 중복 상태와 기술 용어를 줄이고, 총평 / 강점과 약점 / 향후 방향을 보여주며 Level2 REVIEW 감점 근거를 명확히 하라고 요청함.
+- Interpreted goal: 측정된 투자 매력, 근거 공백, 저장 / 추적 준비를 한 점수처럼 섞지 않고 사용자가 무엇을 믿고 무엇을 확인할지 구분해야 한다.
+- Analysis result: open REVIEW 개수는 투자 매력도를 자동 감점하지 않는다. Python service가 세 점수 축과 REVIEW trace를 만들고, 10개 패턴은 저장 evidence 수준에 따라 `supported / indicative / insufficient`로만 조건부 해석한다.
+- Follow-up: 1차~6차 구현 / QA / commit을 완료했다. 대안은 counterfactual backtest 전에는 점수 개선으로 예측하지 않으며 새 검증 / provider fetch / registry write / live action은 추가하지 않았다.
+
+### 2026-07-11 - Final Review는 후보 선택과 검토서 확인을 분리한다
+
+- User request: 후보 selectbox 변경 즉시 투자 검토서가 바뀌어 검증 없이 결과가 나온 듯 보이고 빠른 전환 시 stale / 멈춤 혼동이 생기므로, stable key 선택과 명시적 확인 경계, Level2 REVIEW 행동형 노출을 요청함.
+- Interpreted goal: 후보 탐색과 저장된 evidence를 최종 판단 surface로 여는 행동을 분리하고, REVIEW가 감점 숫자가 아니라 사용자가 확인할 일로 읽혀야 한다.
+- Analysis result: selector는 stable identity만 소유하고 `최종 검토서 확인`이 confirmed candidate session state를 만든다. confirmed key가 현재 selector와 다르면 후보별 downstream을 렌더링하지 않는다. REVIEW 역할과 행동 결과는 Python service가 만들고 React는 표시만 한다.
+- Follow-up: `final-review-confirmed-review-flow-v1-20260711`에서 1차~4차 구현 / QA / commit을 완료했다. 새 검증, provider fetch, DB 수집, registry / saved rewrite, live approval / order / auto rebalance는 추가하지 않았다.
+
+### 2026-07-10 - Final Review 후보 선택은 별도 Step이 아니라 Decision Desk 상세다
+
+- User request: 사용자가 Final Review `Step 1 / Candidate Board`의 4개 카드가 상단 `후보 현황과 다음 판단`과 겹치므로 제거하고, Review Queue / Candidate Board detail / 검토 대상 정보를 상단으로 옮겨 Step 1 자체를 없애도 될 것 같다고 요청함.
+- Interpreted goal: Final Review first-read는 Level2에서 승격한 후보 현황과 오늘 볼 대상을 한 곳에서 고르게 해야 하며, 같은 후보 상태를 별도 단계와 카드로 반복하면 판단 흐름이 느려진다.
+- Analysis result: Candidate Board read model은 계속 필요하지만 화면에서는 별도 stage가 아니라 Decision Desk의 후보 선택 상세로 소비하는 편이 맞다. 투자 검토서 이후 섹션도 numbered Step 대신 역할 이름으로 읽는 편이 자연스럽다.
+- Follow-up: `final-review-candidate-selection-integration-v1-20260710`에서 standalone `Step 1 / Candidate Board`를 제거하고 Review Queue / `검토 대상` selector / 후보 비교 상세를 Decision Desk 아래로 통합했다. score / gate / 저장 / provider fetch / registry write 경계는 변경하지 않았다.
+
+### 2026-07-10 - Final Review first-read는 시장심리 패널을 소유하지 않는다
+
+- User request: 사용자가 Final Review의 `Market Context / 시장 심리` 영역이 어떤 역할인지, 불필요하면 제거하고 필요하다면 Final Review 목적에 맞게 바꾸라고 요청함.
+- Interpreted goal: Final Review는 후보 비교 / 최종 선택 / Monitoring handoff 판단에 집중해야 하며, 판단 근거가 아닌 CNN / AAII sentiment가 큰 패널과 raw table로 보이면 사용자가 decision evidence처럼 오해할 수 있다.
+- Analysis result: 시장심리를 마켓타이밍이나 리밸런싱 지표로 쓰려면 별도 research와 look-ahead-safe 검증이 필요하다. 현재는 gate / score / 저장 / monitoring signal 소유자가 아니므로 Final Review first-read에서 제거하는 것이 맞다.
+- Follow-up: `final-review-sentiment-scope-cleanup-v1-20260710`에서 Final Review sentiment render path와 docs contract를 제거했다. 상세 심리 해석은 `Workspace > Overview > Sentiment`, 운영 중 read-only 맥락은 `Operations > Portfolio Monitoring`에 남긴다.
+
+### 2026-07-09 - Final Review 상단은 후보 판단 중심으로 읽는다
+
+- User request: 사용자가 Final Review 상단 안내, `모니터링 후보선별`, 시장심리 공포우위 영역을 분석하고 1차~4차를 development -> QA -> commit 순서로 개선하라고 요청함.
+- Interpreted goal: Final Review first-read surface는 가이드 / reference copy가 아니라 어떤 후보가 올라왔고, 무엇이 선택 가능하며, 다음 판단이 무엇인지 빠르게 보여줘야 한다.
+- Analysis result: Reference help와 1~5 card guide는 상단 판단 흐름을 흐리므로 제거하고, Decision Desk는 candidate status 중심으로 재구성한다. CNN / AAII sentiment는 현재 market backdrop일 뿐이며 timing / rebalance signal로 쓰려면 별도 리서치와 look-ahead-safe 검증이 필요하다.
+- Follow-up: `final-review-top-ux-cleanup-v1-v4-20260709`에서 top summary, 후보 현황 command center, compact sentiment context, docs boundary를 개발 / QA / 커밋했다. `sentiment timing / rebalance research`는 후속 리서치 후보로만 남겼다.
+
+### 2026-07-09 - Final Review Level3는 투자 검토서와 handoff 경계로 읽는다
+
+- User request: 사용자가 Final Review 2차부터 6차까지 development -> QA -> commit 순서로 진행하되, UI는 다른 레벨과 동일하게 React로 만들고 판단 / 계산 / 저장은 Python service 경계에 남기라고 요청함.
+- Interpreted goal: Final Review는 raw evidence table이 아니라 실전 투입 후보를 사람이 최종 선별하는 투자 검토서여야 하며, Level2 REVIEW 처리와 Monitoring handoff 조건을 한 화면에서 읽을 수 있어야 한다.
+- Analysis result: React는 investment report, scorecard, REVIEW disposition, save handoff, weakness proposal을 표시하는 presentation surface로 두고, Python `backtest_evidence_read_model`이 classification / score / handoff / weakness proposal payload를 소유해야 한다.
+- Follow-up: `final-review-level3-react-v2-v6-20260709`에서 V2 report shell, V3 Level2 REVIEW disposition, V4 scorecard, V5 save / handoff boundary, V6 weakness improvement proposal을 각각 개발 / QA / 커밋했다. 개선 portfolio 생성 / 자동 backtest 비교 / registry 또는 saved rewrite는 후속 개발로 남겼다.
+
+### 2026-07-09 - Final Review 저장 record와 Monitoring handoff를 분리한다
+
+- User request: 사용자가 Backtest `Final Review / Level3` 개선을 시작하며 현재 코드 / 기능 / read model / 저장 / Monitoring handoff 경계를 분석하고, 오래된 저장 기준이 비효율적이면 변경해도 된다고 승인함.
+- Interpreted goal: Final Review는 실전 투입 가능한 포트폴리오를 최종 선별하는 단계이며, 보류 / 탈락 / 재검토 판단도 기록으로 남겨야 한다. 다만 Portfolio Monitoring으로 올라가는 대상은 더 좁게 관리해야 한다.
+- Analysis result: 기존 구현은 UI와 save gate가 `SELECT_FOR_PRACTICAL_PORTFOLIO`만 저장 가능한 구조라 Final Review 판단 history와 Monitoring handoff가 섞여 있었다.
+- Follow-up: `final-review-level3-redesign-analysis-v1-20260709`에서 Final Review judgment persistence와 Monitoring handoff를 분리했다. v3 row는 `monitoring_candidate` / `monitoring_handoff_state`를 포함하고, 기존 registry / saved JSONL은 재작성하지 않는다. analyst-style narrative / score와 weakness-improvement flow는 후속 차수다.
+
+### 2026-07-09 - PV REVIEW는 Final Review 숙제가 아니라 role로 분리해야 한다
+
+- User request: 사용자가 Practical Validation 검증 항목이 2개만 남은 것처럼 보이는 이유와 REVIEW 모듈이 Final Review에서 모두 처리되어야 하는지 질문하고, 1차~6차 개선을 승인함.
+- Interpreted goal: 1단계 데이터 / 기본 검증, 2단계 Practical Validation 실용성 판단, 3단계 Final Review 수익성 / benchmark / 후보 비교 / 최종 판단, Monitoring 추적 책임을 다시 분리해야 함.
+- Analysis result: 검증 모듈은 사라진 것이 아니라 REVIEW-only category를 숨기고 모든 REVIEW를 `Final Review review`로 표시한 UI/read-model 계약이 문제였다.
+- Follow-up: `practical-validation-stage-ownership-v1`에서 `review_role` taxonomy를 추가하고 Flow4 category visibility, `ETF 운용사 / 공식 외부 데이터` 중심 data action wording, Final Review copy, docs를 갱신했다. 새 provider fetch path, DB schema, gate threshold, registry / saved rewrite는 만들지 않았다.
+
+### 2026-07-09 - PV Flow4 데이터 보강 영역은 하나의 action center로 읽혀야 한다
+
+- User request: 사용자가 Flow4의 `카테고리별 검증 결과`, `데이터 보강 대상`, `Provider 보강 액션`의 차이와 중복 여부, provider 수집 버튼이 무엇을 수집하는지 불명확한 점을 질문하고 superpower 기반 재분석 후 개선을 요청함.
+- Interpreted goal: `카테고리별 검증 결과`는 판정판, `데이터 보강 대상`은 해결 가능한 데이터 gap 번역판, Python 수집 버튼은 실행 영역이므로 내부 역할은 다르지만 사용자 화면에서는 하나의 `데이터 보강 / 수집 실행` 흐름으로 보여야 한다.
+- Analysis result: `Provider`는 broker가 아니라 ETF issuer / holdings / exposure / FRED / source map 같은 외부 데이터 근거 path다. first-read title에서는 낮추고, 버튼 주변에는 수집하는 것 / 하지 않는 것 / 실행 후 Flow 2 재검증을 명확히 써야 한다.
+- Follow-up: `practical-validation-flow4-action-center-v1-20260709`에서 Flow4 action center copy / wiring / raw detail 배치를 정리했다. 새 수집 엔진, DB schema, provider fetch path, gate policy, registry / saved rewrite는 만들지 않았다.
+
+### 2026-07-09 - PV Flow4 data action board는 표시 전용이어야 한다
+
+- User request: 사용자가 Practical Validation Flow4에서 `단계별 검증 소유권`, `수집 대상 근거`, `근거 부록` expander 중심 UI를 정리하고, React는 표시 / 레이아웃만 담당하며 수집 / 실행 / 계산 / gate / 저장은 Python 경계에 남기라고 요청함.
+- Interpreted goal: Flow4는 지금 Practical Validation에서 보강할 데이터 항목을 먼저 보여주고, Final Review / Monitoring 판단 항목과 원자료 검산 영역은 first-read UI에서 반복하지 않아야 한다.
+- Analysis result: `data_action_board`는 기존 provider collection plan과 compact evidence rows를 읽는 display read model이면 충분하다. `Final Review Readiness Preview` 같은 downstream 판단 항목은 `no_action` 카드로도 PV 메인 보드에 반복 노출하면 안 된다.
+- Follow-up: `practical-validation-flow4-data-action-board-v1-20260709`에서 React display board, Streamlit wiring, docs sync, Browser QA를 완료했다. 새 수집 엔진 / DB schema / provider fetch path / registry write / gate threshold는 변경하지 않았다.
+
+### 2026-07-08 - PV 카테고리 결과에서 empty/review-only 상태는 기본 노출하지 않는다
+
+- User request: 사용자가 Flow 4 `카테고리별 검증 결과`의 `보강 항목 없음`이 포트폴리오 검증 조건상 비적용인지, 현재 검증 중 필요 없는 항목이면 숨기는 편이 낫지 않은지 질문하고 1차~3차 수정을 승인함.
+- Interpreted goal: Practical Validation은 사용자가 지금 보강하거나 통과 여부를 읽는 화면이어야 하며, Final Review 판단용 REVIEW-only 그룹이나 empty 상태를 PV category result처럼 보여 혼동을 만들면 안 된다.
+- Analysis result: `applies=False` module은 이미 category group에서 제외되고 있었다. 문제는 REVIEW-only group이 `보강 항목 없음` fallback으로 보이고, React가 이를 pass-like 상태로 해석하는 데 있었다.
+- Follow-up: `practical-validation-category-empty-state-v1-20260708`에서 `visible_criteria_detail_groups` / `visible_in_practical_validation`을 추가하고 Flow 3 / Flow 4 visible UI가 이 목록만 읽도록 수정했다. Full read model에는 REVIEW metadata를 유지해 Final Review가 이어서 해석할 수 있게 했다.
 
 ### 2026-07-08 - Post-merge docs refresh must verify code-flow labels, not only Markdown
 
@@ -1326,11 +1451,12 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request:
   - Final Review에서 비선정 저장 판단이 필요한지 질문했고, 정식 저장은 최종 통과 후보에만 활성화되도록 요청함.
 - Interpreted goal:
-  - Final Review의 주 action을 모니터링 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
+  - 당시 기준으로 Final Review의 주 action을 모니터링 후보 선정 저장으로 좁히고, 보류 / 거절 / 재검토는 저장 row가 아니라 상태 안내와 보강 방향으로 낮춘다.
 - Analysis result:
   - 구현 기준은 `SELECT_FOR_PRACTICAL_PORTFOLIO` + selected-route gate pass + operator reason + unique decision id다.
-  - 기존 hold / reject / re-review row는 Saved Decision Review / read model 호환을 위해 읽을 수 있지만, 새 UI의 정식 저장 action은 만들지 않는다.
+  - 당시 구현은 기존 hold / reject / re-review row를 Saved Decision Review / read model 호환으로만 읽고, 새 저장 action은 selected route로 제한했다.
 - Follow-up:
+  - 이 저장 정책은 2026-07-09 Final Review Level3 storage boundary 작업에서 superseded되었다. 현재는 보류 / 거절 / 재검토도 Final Review 판단 record로 저장할 수 있고, Portfolio Monitoring handoff만 `monitoring_candidate` row로 제한한다.
   - Selected Dashboard는 계속 selected row만 읽는다. 보류 후보 queue를 별도 운영 대상으로 관리하고 싶다면 나중에 별도 lightweight queue 기능으로 분리한다.
 
 ### 2026-05-31 - Final Review should feel like a user-facing decision desk
@@ -9045,6 +9171,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Flow 3은 Final Review 이동 결론과 먼저 해결할 일을 빠르게 읽는 판정판이어야 하고, Flow 4는 그 판단의 기준별 근거와 보강 위치를 확인하는 상세 보드여야 한다.
 - Analysis result: Backtest Analysis UI를 그대로 복제하면 1차 source 등록과 2차 Final Review 이동 판단이 섞일 수 있다. 따라서 visual grammar만 빌리고, Flow 3에는 save / move action을 두지 않으며, Flow 4 첫 board에서 Source / Validation / Final Review readiness criteria를 자세히 보여주는 것이 맞다.
 - Follow-up: Flow 3 React Fix Queue와 Flow 4 criteria detail board를 구현했다. Gate policy, replay execution, provider collection, persistence semantics는 바꾸지 않았다.
+- Superseded note: 2026-07-09 Flow5 CTA Integration V1에서 save / move는 새 검증이 아니라 Flow3 결론의 next action으로 재분류했다. React는 intent만 보내고 Python이 persistence / handoff를 소유한다.
 
 ### 2026-07-06 - Practical Validation blocker는 내부 audit 용어보다 먼저 행동 언어로 읽혀야 한다
 
@@ -9193,3 +9320,72 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 SEP를 과거에 복제하지 않고, 각 월 당시의 공식 SEP vintage와 동일한 60개월 rolling multiple 계산으로 기간만 선택해야 함.
 - Analysis result: Federal Reserve calendar에는 2021-03 이후 21개 official projection page가 있고 모두 기존 parser로 읽혔다. 5년 visible history에는 60개월 rolling warmup까지 총 119개월이 필요해 기존 84개월 loader가 live smoke에서 25 points로 잘리는 원인이었다.
 - Follow-up: calendar-discovered missing vintage backfill, 120개월 loader, Python 12/36/60 history options, React selector/sparse labels, DB/Browser QA를 구현했다. Shiller EPS는 여전히 strict release-vintage PIT가 아니다.
+### 2026-07-08 - Practical Validation은 재검증 후에만 결론과 상세를 보여야 한다
+
+- User request: 사용자가 Practical Validation 탭 진입만으로 Flow 3가 실행되어 보이는 문제, Flow 4 수집 가능 gap, 단계별 검증 소유권, 하단 evidence tabs / Provider 부족근거 정리를 1차~4차 개발 / QA / 커밋으로 진행해 달라고 요청함.
+- Interpreted goal: Flow 2 replay 실행 전에는 검증 결론을 보여주지 않고, Flow 4는 현재 단계에서 보강할 기준과 수집 가능한 데이터 action만 먼저 읽혀야 함.
+- Analysis result: Flow 3 / Flow 4는 현재 세션 replay gate가 없었고, 하단 evidence tabs와 Provider 부족근거가 기준 상세보다 큰 덩어리처럼 보여 사용자의 판단 경로를 흐렸다. 데이터 수집으로 해결 가능한 gap은 provider snapshot / holdings / exposure / macro context 계열로 제한하는 것이 안전했다.
+- Follow-up: Flow 2 current-session replay gate, 수집 가능 criteria CTA, 단계별 검증 소유권 inventory, 접힌 `근거 부록`, `수집 대상 근거` copy를 구현했다. Gate threshold, registry / saved JSONL, provider ingestion 신규 경로, Final Review 판단, live approval / broker order는 변경하지 않았다.
+
+### 2026-07-09 - Flow5는 별도 검증 단계가 아니라 Flow3 결론의 실행부다
+
+- User request: 사용자가 Flow5가 다음 단계 승격 가능 여부 판단이라면 Flow3 결론 카드의 버튼 활성화 방식으로 통합하는 것이 맞지 않느냐고 물었고 1차~6차 개발을 승인함.
+- Interpreted goal: Practical Validation의 결론과 다음 행동을 같은 first-read surface에 두되, React가 저장 / handoff / gate / provider / registry logic을 직접 소유하지 않게 해야 함.
+- Analysis result: 기존 Flow5는 새 검증이 아니라 save-only audit append와 Final Review handoff 버튼이었다. 따라서 별도 visible Flow5는 사용자 흐름을 늘리고, Flow3 `검증 결론`의 CTA로 흡수하는 것이 맞다.
+- Follow-up: Flow3 React에 `검증 결과 저장(기록용)` / `저장하고 Final Review로 이동` intent-only CTA를 추가하고, Python page/service가 기존 save / Final Review handoff를 처리하게 했다. Raw JSON은 Flow4 `상세 근거 / 원자료`로 낮췄다.
+
+### 2026-07-09 - Level2 노란불은 차단이 아니라 주의 포함 통과다
+
+- User request: 사용자가 Level2 실전검증 개선 후 리뷰와 수정 / 제거 / 개선점 점검을 요청함.
+- Interpreted goal: Flow3/Flow4가 Final Review 검증을 떠안는 것처럼 보이거나, REVIEW 노란불인데 버튼이 무조건 초록 통과처럼 보이는 잔여 혼선을 제거해야 함.
+- Analysis result: 실제 QA에서 PV-owned `데이터 주의` / `2단계 실용성 주의` 카드가 남아도 gate 이동이 가능한 케이스가 있었고, Flow3 CTA가 단순 `이동 가능`으로 표시돼 사용자가 노란불 의미를 다시 묻게 만들 수 있었다.
+- Follow-up: Flow3 CTA 상태를 `주의 포함 이동 가능`으로 표시하고, stale Flow5 copy / unused gate module board helpers / `Required for Final Review` display group 잔여물을 정리했다. Gate policy, provider fetch, registry / saved write, Final Review 판단 경계는 변경하지 않았다.
+
+### 2026-07-09 - Final Review 점수는 세분화하고 cap으로 과대평가를 막는다
+
+- User request: 사용자가 Final Review 종합점수가 너무 단순한지 묻고, 종합점수 기반 세부 점수 / 구현 방향 / 최종 포트폴리오 선별 흐름을 정한 뒤 1차~6차 개발 / QA / 커밋을 요청함.
+- Interpreted goal: Final Review는 실전 투입 가능한 포트폴리오 선별 단계이므로, 점수의 이유 / 약점 / Level2 REVIEW 영향 / Monitoring handoff 조건을 사용자가 바로 읽어야 함.
+- Analysis result: Level2 REVIEW는 Final Review에서 다시 검증하지 않고 score impact와 선택 사유로 소비한다. blocker / selected-route not-ready / gate review-required / 과도한 open review는 높은 원점수라도 추천권으로 보이지 않게 score cap을 적용해야 한다.
+- Follow-up: Python read model에 5개 weighted dimension, REVIEW score impact, score cap, selection rationale, required decision notes를 추가했고, React investment report는 이를 표시만 하게 했다. registry / saved JSONL / run_history / generated QA artifact는 stage하지 않았다.
+
+### 2026-07-10 - Final Review 투자 검토서는 선택 판단 요약을 먼저 보여야 한다
+
+- User request: 사용자가 Step2 투자 검토서가 여전히 난잡하고, 핵심 근거 / 다음 행동 / 최종 선택 사유 / 판단 저장 전 메모 / 강점과 약점 하단 카드가 중복 또는 guide처럼 보인다고 지적하고 1차~4차 단계 개발을 승인함.
+- Interpreted goal: 투자 검토서는 이 후보가 Monitoring 후보인지, 왜 추천되는지, 강점과 확인 지점이 무엇인지 먼저 읽혀야 하며 React는 계속 Python payload 표시만 맡아야 함.
+- Analysis result: old first-read layout은 selection rationale과 required memo를 반복해 보여 실제 판단 근거보다 저장 전 안내가 커졌다. 강점은 policy pass만 있었고, 약점이 없을 때 빈 공간이 컸으며 하단 해석 카드는 실제 해석보다 안내문에 가까웠다.
+- Follow-up: Python read model에 `decision_summary`, high-score dimension strengths, compact watch items, actual interpretation cards를 추가하고 React를 `선택 판단 요약`, `강점`, `확인 지점`, `해석` 중심으로 정리했다. score / gate / save / Monitoring handoff / provider / registry 경계는 변경하지 않았다.
+
+### 2026-07-10 - Final Review 투자 검토서는 카드 대시보드가 아니라 판단서처럼 읽혀야 한다
+
+- User request: 사용자가 투자 검토서 UI가 박스 안에 박스가 반복되어 엉망이고, Upbit / Toss Securities 같은 투자 앱 벤치마킹 관점으로 UI 문제를 진단한 뒤 1차~4차 단계 개발을 요청함.
+- Interpreted goal: first-read는 후보 상태, 왜 후보인지, 무엇을 확인해야 하는지에 집중하고, detailed score / Level2 / handoff / monitoring 조건은 검산용 하위 근거로 낮춰야 함.
+- Analysis result: 상용 투자 앱류의 scan-first 패턴은 핵심 상태와 다음 판단을 압축하고 상세 근거는 뒤로 접는다. 기존 React report는 facts, decision grid, card list, mini grid가 같은 박스 문법을 반복해 사용자가 판단보다 UI 구조를 먼저 읽게 했다.
+- Follow-up: React report를 meta strip, two-column decision brief, evidence rows, interpretation rows, lower detail disclosures로 평면화했고, source contract로 old first-read card classes를 금지했다. Python read model, score / gate / save / handoff / provider / registry boundary는 유지했다.
+
+### 2026-07-11 - Final Review 투자 검토서 하단 상세는 탭으로 전환한다
+
+- User request: 사용자가 하단 `근거 상세`, `저장 경계`, `개선 후보` 등 expander가 세로로 반복되는 대신 탭을 눌렀을 때 하단에 해당 내용만 보이게 해달라고 요청하고 1차~4차 개발을 승인함.
+- Interpreted goal: first-read 아래 검산용 근거를 한 번에 펼치는 목록이 아니라, 사용자가 관심 있는 상세 범주 하나를 선택해 읽는 tabbed detail panel로 바꿔야 함.
+- Analysis result: expander는 여러 섹션을 동시에 열 수 있지만 화면 높이를 늘리고 제목 / 열기 버튼 반복을 만든다. 현재 흐름에서는 탭이 세부 근거 탐색 부담을 줄인다.
+- Follow-up: React investment report의 lower detail 영역을 `DetailTabs`로 교체했고, source contract는 old `detail-disclosure` class를 금지한다. 탭 상태는 React local state이며 Python read model, score / gate / save / handoff / provider / registry boundary는 유지했다.
+
+### 2026-07-11 - Final Review 하단 근거와 최종 판단은 하나의 사용자 흐름으로 읽혀야 한다
+
+- User request: 사용자가 점수 / REVIEW / 대안 실험 탭의 연결감과 목적, 비어 있는 REVIEW 근거, Decision Cockpit 필요성, Final Decision Action 위치와 정보량을 분석한 뒤 단계별 개발을 승인함.
+- Interpreted goal: 투자 검토서에서 점수 이유와 남은 판단을 확인한 뒤, 별도 중복 요약을 거치지 않고 최종 판단을 기록할 수 있어야 한다.
+- Analysis result: REVIEW 빈칸은 재승격 문제가 아니라 summary card와 stored audit row 사이 adapter 공백이었다. 대안 실험은 자동 실행 기능이 아닌 후속 counterfactual 가설이고, Cockpit read model은 필요하지만 standalone UI는 투자 검토서와 중복됐다.
+- Follow-up: stored audit trace adapter, 상위 3개 정형 실험 가설, connected tabs와 통합 판단 기록을 구현했다. React는 표시만 맡고 Python이 gate / trace / 저장 / Monitoring handoff를 계속 소유한다.
+
+### 2026-07-11 - Final Review는 총평 직후 판단을 끝내고 과거 ledger를 반복하지 않는다
+
+- User request: 사용자가 하단 `판단 기록`을 총평 가까이 올려 Level1 / Level2 action과 통일하고, Evidence Appendix와 Saved Decisions가 실제로 필요한지 검증해 불필요하면 제거해 달라고 요청함.
+- Interpreted goal: 현재 후보의 총평과 핵심 해석을 읽은 직후 route와 판단 사유를 기록하고, 중복 원본 근거 / 과거 판단 조회 때문에 완료 지점이 흐려지지 않아야 함.
+- Analysis result: Appendix는 Practical Validation과 report audit trace를 반복했고 Saved Decisions는 현재 판단과 과거 ledger / Monitoring handoff를 한 화면에 섞었다. selected row 운영 확인은 Portfolio Monitoring 소유가 자연스럽다.
+- Follow-up: React report 총평 / 4행 해석 직후 route / reason / gate CTA를 배치하고 intent만 Python에 전달한다. Python은 자동 Decision ID, save evaluation, route template, append를 소유한다. Evidence Appendix와 Saved Decisions / Dossier / Raw JSON은 Final Review에서 제거했으며 기존 decision row는 보존한다.
+
+### 2026-07-12 - Final Review 근거의 완료 기준은 미정 상태 0개다
+
+- User request: 승인된 설계대로 1차~4차 개발, QA, distinct commit을 완료하고 기존 active task를 이어서 closeout한다.
+- Interpreted goal: 해결 가능한 근거는 Level2에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 보낸다.
+- Analysis result: replay/PIT와 universe/survivorship 중복 root를 통합했고, GRS 6월 유실은 BIL/위험자산 월말 exact-date 차이였다. 숫자 감점은 role이 아니라 explicit measurement만 소유해야 한다.
+- Follow-up: 1차~4차 구현과 실제 DB/Browser QA를 완료했다. dynamic historical universe provider는 후속 승인 전까지 critical blocker다.

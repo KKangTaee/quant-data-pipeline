@@ -1063,6 +1063,7 @@ def global_relative_strength_allocation(
     prev_total_balance: float | None = None
     prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
     rows: list[dict] = []
+    signal_index = 0
 
     def _concentration_status(
         *,
@@ -1078,6 +1079,8 @@ def global_relative_strength_allocation(
         return "balanced_top_n"
 
     for i, date in enumerate(dates):
+        row_kind = str(base_df.iloc[i].get("Row Kind") or "signal").strip().lower()
+        valuation_only = row_kind == "valuation"
         close_now: dict[str, float] = {}
         score_now: dict[str, float] = {}
         ma_now: dict[str, float] = {}
@@ -1114,7 +1117,9 @@ def global_relative_strength_allocation(
             total_balance = float(sum(end_balances) + cash)
             total_return = np.nan if prev_total_balance is None else (total_balance / prev_total_balance) - 1
 
-        rebalancing = (i == 0) or (i % rebalance_interval == 0)
+        rebalancing = (not valuation_only) and (
+            signal_index == 0 or signal_index % rebalance_interval == 0
+        )
         raw_selected_tickers: list[str] = []
         raw_selected_scores: list[float] = []
         trend_rejected_tickers: list[str] = []
@@ -1171,6 +1176,7 @@ def global_relative_strength_allocation(
 
         row = {
             "Date": date,
+            "Row Kind": "valuation" if valuation_only else "signal",
             "End Ticker": list(held),
             "Next Ticker": list(held),
             "Raw Selected Ticker": raw_selected_tickers,
@@ -1208,6 +1214,9 @@ def global_relative_strength_allocation(
             "Rebalancing": rebalancing,
         }
         rows.append(row)
+
+        if not valuation_only:
+            signal_index += 1
 
         prev_total_balance = float(total_balance)
         for ticker in tickers:

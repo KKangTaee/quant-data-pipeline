@@ -31,6 +31,11 @@ def _render_strict_factor_data_readiness_note(
         st.caption(f"Current mode: `{mode_label}`")
 
 
+def _strict_factor_date_input(label: str, *, default: date, key: str) -> date:
+    value = "today" if key in st.session_state else default
+    return st.date_input(label, value=value, key=key)
+
+
 def _render_quality_snapshot_form() -> None:
     st.markdown("### Quality Snapshot")
     st.caption(
@@ -218,9 +223,13 @@ def _render_quality_snapshot_strict_annual_form() -> None:
     with st.form("quality_snapshot_strict_annual_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qss_start")
+            start_date = _strict_factor_date_input(
+                "Start Date",
+                default=_default_strict_factor_start_date(),
+                key="qss_start",
+            )
         with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qss_end")
+            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qss_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -480,9 +489,13 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
     with st.form("quality_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qsqp_start")
+            start_date = _strict_factor_date_input(
+                "Start Date",
+                default=_default_strict_factor_start_date(),
+                key="qsqp_start",
+            )
         with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qsqp_end")
+            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qsqp_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -697,9 +710,13 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
     with st.form("value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="vsqp_start")
+            start_date = _strict_factor_date_input(
+                "Start Date",
+                default=_default_strict_factor_start_date(),
+                key="vsqp_start",
+            )
         with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="vsqp_end")
+            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="vsqp_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -910,9 +927,13 @@ def _render_value_snapshot_strict_annual_form() -> None:
     with st.form("value_snapshot_strict_annual_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="vss_start")
+            start_date = _strict_factor_date_input(
+                "Start Date",
+                default=_default_strict_factor_start_date(),
+                key="vss_start",
+            )
         with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="vss_end")
+            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="vss_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -1175,9 +1196,13 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
     with st.form("quality_value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qvqp_start")
+            start_date = _strict_factor_date_input(
+                "Start Date",
+                default=_default_strict_factor_start_date(),
+                key="qvqp_start",
+            )
         with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qvqp_end")
+            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qvqp_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -1400,9 +1425,13 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
     with st.form("quality_value_snapshot_strict_annual_backtest_form", clear_on_submit=False):
         col1, col2, col3 = st.columns(3)
         with col1:
-            start_date = st.date_input("Start Date", value=_default_strict_factor_start_date(), key="qvss_start")
+            start_date = _strict_factor_date_input(
+                "Start Date",
+                default=_default_strict_factor_start_date(),
+                key="qvss_start",
+            )
         with col2:
-            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qvss_end")
+            end_date = _strict_factor_date_input("End Date", default=DEFAULT_BACKTEST_END_DATE, key="qvss_end")
         with col3:
             top_n = st.number_input(
                 "Top N",

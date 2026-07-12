@@ -49,7 +49,7 @@ from app.runtime.backtest import (
     run_gtaa_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
 )
-from finance.loaders import load_latest_market_date
+from finance.loaders import load_latest_market_date, load_price_freshness_summary
 from finance.performance import make_monthly_weighted_portfolio, portfolio_performance_summary
 from finance.sample import (
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS,
@@ -210,6 +210,70 @@ def _source_period(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _replay_component_symbols(source: dict[str, Any]) -> list[str]:
+    """Collect only the active source tickers required by the replay runtime."""
+
+    source_row = dict(source or {})
+    components = [dict(row) for row in list(source_row.get("components") or []) if isinstance(row, dict)]
+    if not components:
+        components = [source_row]
+    symbols: list[str] = []
+    for component in components:
+        payload = _component_payload(source_row, component)
+        symbols.extend(_list_from_value(payload.get("tickers")))
+        symbols.extend(_list_from_value(payload.get("cash_ticker")))
+    return list(dict.fromkeys(symbols))
+
+
+def build_replay_market_date_contract(
+    source: dict[str, Any],
+    *,
+    requested_end: Any | None = None,
+) -> dict[str, Any]:
+    """Separate whole-DB request date from source-specific common price coverage."""
+
+    requested_market_date = _date_text(requested_end)
+    symbols = _replay_component_symbols(source)
+    if not symbols:
+        return {
+            "requested_market_date": requested_market_date,
+            "latest_common_price_date": requested_market_date,
+            "last_complete_rebalance_date": None,
+            "latest_valuation_date": requested_market_date,
+            "limiting_symbols": [],
+            "missing_symbols": [],
+            "symbols": [],
+        }
+    freshness = load_price_freshness_summary(
+        symbols=symbols,
+        end=requested_market_date,
+        timeframe="1d",
+    )
+    rows = freshness.copy() if isinstance(freshness, pd.DataFrame) else pd.DataFrame()
+    if not rows.empty:
+        rows["symbol"] = rows["symbol"].astype(str).str.upper()
+        rows["latest_date"] = pd.to_datetime(rows["latest_date"], errors="coerce")
+        rows = rows.dropna(subset=["latest_date"])
+    present = set(rows["symbol"].tolist()) if not rows.empty else set()
+    missing_symbols = [symbol for symbol in symbols if symbol not in present]
+    latest_common_ts = rows["latest_date"].min() if not rows.empty and not missing_symbols else pd.NaT
+    latest_common_price_date = _date_text(latest_common_ts)
+    limiting_symbols = (
+        sorted(rows.loc[rows["latest_date"] == latest_common_ts, "symbol"].tolist())
+        if pd.notna(latest_common_ts)
+        else list(missing_symbols)
+    )
+    return {
+        "requested_market_date": requested_market_date,
+        "latest_common_price_date": latest_common_price_date,
+        "last_complete_rebalance_date": None,
+        "latest_valuation_date": latest_common_price_date,
+        "limiting_symbols": limiting_symbols,
+        "missing_symbols": missing_symbols,
+        "symbols": symbols,
+    }
+
+
 def build_practical_validation_recheck_plan(
     source: dict[str, Any],
     *,
@@ -224,9 +288,22 @@ def build_practical_validation_recheck_plan(
     stored_end = _date_text(source_period.get("actual_end") or source_period.get("end"))
     latest_market_date: str | None = None
     latest_error: str | None = None
+    market_date_contract: dict[str, Any] = {
+        "requested_market_date": stored_end,
+        "latest_common_price_date": stored_end,
+        "last_complete_rebalance_date": stored_end,
+        "latest_valuation_date": stored_end,
+        "limiting_symbols": [],
+        "missing_symbols": [],
+        "symbols": [],
+    }
     if normalized_mode == RECHECK_MODE_EXTEND_TO_LATEST:
         try:
             latest_market_date = _date_text(load_latest_market_date(timeframe="1d"))
+            market_date_contract = build_replay_market_date_contract(
+                source_row,
+                requested_end=_date_text(end_override) or latest_market_date,
+            )
         except Exception as exc:
             latest_error = str(exc)
 
@@ -235,8 +312,9 @@ def build_practical_validation_recheck_plan(
     if override_end:
         requested_end = override_end
     elif normalized_mode == RECHECK_MODE_EXTEND_TO_LATEST and latest_market_date:
-        stored_gap = _day_gap(stored_end, latest_market_date)
-        requested_end = latest_market_date if stored_gap is None or stored_gap > 0 else stored_end
+        source_common_end = market_date_contract.get("latest_common_price_date") or latest_market_date
+        stored_gap = _day_gap(stored_end, source_common_end)
+        requested_end = source_common_end if stored_gap is None or stored_gap > 0 else stored_end
 
     requested_start = stored_start
     extension_gap = _day_gap(stored_end, requested_end)
@@ -272,6 +350,7 @@ def build_practical_validation_recheck_plan(
         },
         "latest_market_date": latest_market_date,
         "latest_market_date_error": latest_error,
+        "market_date_contract": market_date_contract,
         "extension_days": extension_days,
         "uses_latest_db_date": normalized_mode == RECHECK_MODE_EXTEND_TO_LATEST,
         "curve_source": (
@@ -671,6 +750,17 @@ def run_practical_validation_actual_replay(
     for index, component in enumerate(components):
         title = str(component.get("title") or component.get("strategy_name") or f"Component {index + 1}")
         payload = _component_payload(source_row, component, period_override=requested_period)
+        if (
+            payload.get("strategy_key") == "global_relative_strength"
+            and recheck_plan.get("mode") == RECHECK_MODE_EXTEND_TO_LATEST
+        ):
+            requested_market_date = dict(recheck_plan.get("market_date_contract") or {}).get(
+                "requested_market_date"
+            )
+            if requested_market_date:
+                # GRS needs the untrimmed request window to distinguish a
+                # partial-month latest-common valuation from a true signal row.
+                payload["end"] = requested_market_date
         component_id = str(component.get("component_id") or component.get("registry_id") or f"component_{index + 1}")
         if not payload.get("strategy_key"):
             component_outputs.append(
@@ -718,6 +808,7 @@ def run_practical_validation_actual_replay(
                     "actual_start": meta.get("actual_result_start") or summary.get("start_date"),
                     "actual_end": meta.get("actual_result_end") or summary.get("end_date"),
                     "summary": summary,
+                    "period_contract": dict(meta.get("grs_period_contract") or {}),
                     "payload_preview": {
                         key: value
                         for key, value in payload.items()
@@ -806,6 +897,35 @@ def run_practical_validation_actual_replay(
         {key: value for key, value in row.items() if key != "_result_df"}
         for row in component_outputs
     ]
+    market_date_contract = dict(recheck_plan.get("market_date_contract") or {})
+    runtime_period_contracts = [
+        dict(row.get("period_contract") or {})
+        for row in successful
+        if dict(row.get("period_contract") or {})
+    ]
+    if runtime_period_contracts:
+        runtime_contract = runtime_period_contracts[0]
+        for key in ("last_complete_rebalance_date", "latest_valuation_date"):
+            if runtime_contract.get(key):
+                market_date_contract[key] = runtime_contract[key]
+        market_date_contract["valuation_row_count"] = sum(
+            int(contract.get("valuation_row_count") or 0)
+            for contract in runtime_period_contracts
+        )
+    period_coverage.update(
+        {
+            key: value
+            for key, value in market_date_contract.items()
+            if key
+            in {
+                "requested_market_date",
+                "latest_common_price_date",
+                "last_complete_rebalance_date",
+                "latest_valuation_date",
+                "limiting_symbols",
+            }
+        }
+    )
     return {
         "replay_id": replay_id,
         "attempted_at": attempted_at,
@@ -827,6 +947,7 @@ def run_practical_validation_actual_replay(
         "requested_period": recheck_plan.get("requested_period"),
         "actual_period": period_coverage.get("actual_period"),
         "period_coverage": period_coverage,
+        "market_date_contract": market_date_contract,
         "latest_market_date": recheck_plan.get("latest_market_date"),
         "extension_days": recheck_plan.get("extension_days"),
         "curve_source": recheck_plan.get("curve_source"),

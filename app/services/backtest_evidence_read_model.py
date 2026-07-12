@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.services.backtest_component_role_weight_audit import build_component_role_weight_audit
 from app.services.backtest_construction_risk_audit import build_construction_risk_audit
 from app.services.backtest_data_coverage_audit import build_data_coverage_audit
+from app.services.backtest_evidence_closure import build_evidence_closure_contract
+from app.services.backtest_final_review_guidance import (
+    build_pattern_guide as _build_pattern_guide_v2,
+    build_pattern_guide_contract as _build_pattern_guide_contract_v2,
+)
 from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_risk_contribution_audit import build_risk_contribution_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
@@ -16,6 +22,98 @@ DECISION_SOURCE_CONSISTENCY_SCHEMA_VERSION = "selected_decision_source_consisten
 CANDIDATE_BOARD_SCHEMA_VERSION = "final_review_candidate_board_v1"
 DECISION_RECORD_GUIDE_SCHEMA_VERSION = "final_review_decision_record_guide_v1"
 SAVED_DECISION_REVIEW_SCHEMA_VERSION = "final_review_saved_decision_review_v1"
+INVESTMENT_REPORT_SCHEMA_VERSION = "final_review_investment_report_v1"
+LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION = "final_review_level2_review_disposition_v1"
+FINAL_REVIEW_SCORECARD_SCHEMA_VERSION = "final_review_scorecard_v1"
+SAVE_HANDOFF_SUMMARY_SCHEMA_VERSION = "final_review_save_handoff_summary_v1"
+WEAKNESS_IMPROVEMENT_SCHEMA_VERSION = "final_review_weakness_improvement_v1"
+SELECTION_RATIONALE_SCHEMA_VERSION = "final_review_selection_rationale_v1"
+DECISION_SUMMARY_SCHEMA_VERSION = "final_review_decision_summary_v1"
+INTERPRETATION_CARD_SCHEMA_VERSION = "final_review_interpretation_card_v1"
+PATTERN_GUIDE_CONTRACT_SCHEMA_VERSION = "final_review_pattern_guide_contract_v2"
+
+FINAL_REVIEW_PATTERN_CATALOG = (
+    {
+        "key": "concentration",
+        "label": "주식 / 섹터 집중도",
+        "question": "특정 자산, 섹터 또는 보유 종목에 성과와 위험이 과도하게 집중되는가?",
+        "experiment_change": "최대 비중이 큰 구성요소를 낮추고 나머지 비중을 비례 재배분합니다.",
+        "primary_evidence": ["construction_risk_audit", "component_role_weight_audit"],
+        "required_signals": ["component_weight", "holdings_or_exposure_concentration"],
+    },
+    {
+        "key": "stock_bond_diversification",
+        "label": "주식-채권 분산과 상관",
+        "question": "주식과 채권의 역할 및 상관 변화에도 분산 효과가 유지되는가?",
+        "experiment_change": "채권 역할 구성요소의 비중을 한 단계 높인 대안을 만듭니다.",
+        "primary_evidence": ["risk_contribution_audit", "component_role_weight_audit"],
+        "required_signals": ["component_role", "correlation_or_component_return_matrix"],
+    },
+    {
+        "key": "rate_duration",
+        "label": "금리 / 듀레이션 민감도",
+        "question": "금리 상승 또는 하락 구간에서 어떤 노출이 후보를 강화하거나 약화하는가?",
+        "experiment_change": "듀레이션 민감 구성요소의 비중을 낮추거나 단기채 역할로 교체합니다.",
+        "primary_evidence": ["macro_regime_evidence", "construction_risk_audit"],
+        "required_signals": ["rate_regime_result", "duration_or_rate_sensitive_exposure"],
+    },
+    {
+        "key": "inflation",
+        "label": "인플레이션 민감도",
+        "question": "인플레이션 유형과 구간 변화에서 후보의 방어력은 어떻게 달라지는가?",
+        "experiment_change": "인플레이션 방어 역할 구성요소를 추가하거나 비중을 높입니다.",
+        "primary_evidence": ["macro_regime_evidence", "stress_robustness_evidence"],
+        "required_signals": ["inflation_regime_result", "inflation_sensitive_exposure"],
+    },
+    {
+        "key": "tail_risk",
+        "label": "변동성 / 낙폭 / tail risk",
+        "question": "급격한 변동성과 낙폭 구간에서 손실 구조와 회복력이 확인되는가?",
+        "experiment_change": "낙폭 기여가 큰 구성요소 비중을 낮춘 방어형 대안을 만듭니다.",
+        "primary_evidence": ["stress_robustness_evidence", "risk_contribution_audit"],
+        "required_signals": ["drawdown_or_stress_result", "recovery_or_tail_metric"],
+    },
+    {
+        "key": "trend_regime",
+        "label": "추세 / 모멘텀 체제",
+        "question": "추세장과 반전 또는 횡보장에서 전략 성과가 어떻게 달라지는가?",
+        "experiment_change": "추세 신호 또는 리밸런싱 주기 한 가지만 바꾼 대안을 만듭니다.",
+        "primary_evidence": ["macro_regime_evidence", "validation_efficacy_audit"],
+        "required_signals": ["trend_regime_result", "out_of_sample_or_regime_split"],
+    },
+    {
+        "key": "component_dependency",
+        "label": "위험 기여도 / 구성요소 의존",
+        "question": "한 구성요소 제거 또는 변동성 확대가 포트폴리오 전체를 좌우하는가?",
+        "experiment_change": "위험 기여도가 가장 큰 구성요소를 제외하거나 비중을 낮춥니다.",
+        "primary_evidence": ["risk_contribution_audit", "component_role_weight_audit"],
+        "required_signals": ["risk_contribution", "drop_one_or_dependency_result"],
+    },
+    {
+        "key": "liquidity_cost",
+        "label": "유동성 / 비용 / turnover",
+        "question": "거래비용, 회전율, 유동성이 순성과와 실제 운용 가능성을 훼손하는가?",
+        "experiment_change": "리밸런싱 빈도를 낮추거나 비용 가정을 높인 대안을 만듭니다.",
+        "primary_evidence": ["backtest_realism_audit", "construction_risk_audit"],
+        "required_signals": ["turnover_or_cost", "liquidity_or_capacity"],
+    },
+    {
+        "key": "benchmark_dependency",
+        "label": "벤치마크 의존 / 상대 성과",
+        "question": "동일 기간과 빈도의 비교 기준에서 상대 우위와 열위가 반복되는가?",
+        "experiment_change": "전략 구성은 유지하고 비교 benchmark 또는 비교 구간을 바꿉니다.",
+        "primary_evidence": ["benchmark_parity_evidence", "validation_efficacy_audit"],
+        "required_signals": ["benchmark_parity", "relative_performance"],
+    },
+    {
+        "key": "parameter_sensitivity",
+        "label": "파라미터 / 리밸런싱 민감도",
+        "question": "파라미터와 리밸런싱 주기를 바꿔도 결론이 유지되는가?",
+        "experiment_change": "핵심 파라미터 또는 리밸런싱 주기 한 가지만 인접 값으로 바꿉니다.",
+        "primary_evidence": ["stress_robustness_evidence", "validation_efficacy_audit"],
+        "required_signals": ["sensitivity_result", "rebalance_or_parameter_range"],
+    },
+)
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "모니터링 후보 선정",
@@ -26,7 +124,7 @@ FINAL_REVIEW_DECISION_LABELS = {
 FINAL_REVIEW_STATUS_DISPLAY = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
         "route": "FINAL_REVIEW_DECISION_COMPLETE",
-        "verdict": "최종 판단 완료: Selected Dashboard 모니터링 후보로 선정됨",
+        "verdict": "최종 판단 완료: Portfolio Monitoring 후보로 선정됨",
         "next_action": "이 기록은 모니터링 후보 선정 판단입니다. 실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다.",
     },
     "HOLD_FOR_MORE_PAPER_TRACKING": {
@@ -47,9 +145,9 @@ FINAL_REVIEW_STATUS_DISPLAY = {
 }
 FINAL_REVIEW_DECISION_RECORD_TEMPLATES = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: {
-        "reason": "Decision Cockpit과 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Selected Dashboard 추적 후보로 기록한다.",
+        "reason": "투자 검토서와 selection gate가 모니터링 후보 선정 가능 상태이며, 남은 blocker 없이 Portfolio Monitoring 추적 후보로 기록한다.",
         "constraints": "실제 투자 전 투입 금액, 리밸런싱 규칙, 중단 / 재검토 기준, 세금 / 계좌 조건은 별도로 확인한다.",
-        "next_action": "Selected Portfolio Dashboard에서 read-only monitoring / recheck 기준을 확인한다.",
+        "next_action": "Operations > Portfolio Monitoring에서 read-only monitoring / recheck 기준을 확인한다.",
     },
     "HOLD_FOR_MORE_PAPER_TRACKING": {
         "reason": "critical blocker는 아니지만 review-required evidence나 관찰 공백이 남아 있어 선정 전 추가 paper tracking이 필요하다.",
@@ -803,15 +901,15 @@ def build_investability_gate_policy(
     if blockers:
         outcome = "blocked"
         suggested_decision_route = "RE_REVIEW_REQUIRED"
-        next_action = "critical blocker를 해소한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "critical blocker를 해소한 뒤 Final Review에서 판단 route와 Monitoring handoff 가능 여부를 다시 확인합니다."
     elif review_required:
         outcome = "hold_or_re_review"
         suggested_decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
-        next_action = "부족한 evidence를 보강한 뒤 Final Review에서 모니터링 후보 선정 가능 여부를 다시 확인합니다."
+        next_action = "부족한 evidence를 보강하거나 보류 / 재검토 판단으로 기록한 뒤 Monitoring handoff 가능 여부를 다시 확인합니다."
     else:
         outcome = "select_ready"
         suggested_decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
-        next_action = "Final Review에서 Selected Dashboard 모니터링 후보 선정 저장을 진행합니다."
+        next_action = "Final Review에서 판단 route를 저장하고, 선택 route라면 Portfolio Monitoring 후보 handoff를 남깁니다."
     return {
         "schema_version": (
             SELECTION_GATE_POLICY_SCHEMA_VERSION
@@ -1199,7 +1297,7 @@ def build_investability_evidence_packet(
             "Section": "Selection Gate Policy",
             "Ready": bool(selection_gate_policy.get("select_allowed")),
             "Current": selection_gate_policy.get("outcome") or "-",
-            "Meaning": "Final Review selection gate가 Dashboard 추적 후보 선정 가능 여부를 판정합니다.",
+            "Meaning": "Final Review selection gate가 Portfolio Monitoring 추적 후보 선정 가능 여부를 판정합니다.",
         }
     )
     checks.append(
@@ -1226,8 +1324,8 @@ def build_investability_evidence_packet(
         next_action = "부족한 evidence를 보강한 뒤 selected-route gate를 다시 확인합니다."
     elif decision_evidence.get("route") == "READY_FOR_FINAL_DECISION":
         route = "INVESTABILITY_PACKET_READY"
-        verdict = "Selected Dashboard에서 추적할 모니터링 후보로 기록 가능한 evidence packet입니다."
-        next_action = "Final Review에서 모니터링 후보 선정 저장을 진행하고 open review item은 Dashboard / Live Readiness에서 이어서 확인합니다."
+        verdict = "Portfolio Monitoring에서 추적할 모니터링 후보로 기록 가능한 evidence packet입니다."
+        next_action = "Final Review 판단을 저장하고, 선택 route라면 open review item은 Portfolio Monitoring / Live Readiness에서 이어서 확인합니다."
     else:
         route = "INVESTABILITY_PACKET_NEEDS_REVIEW"
         verdict = "hard blocker는 없지만 Final Review evidence가 아직 완전하지 않습니다."
@@ -1294,9 +1392,9 @@ def build_selected_route_gate(
         "Ready": ready,
         "Current": current,
         "Meaning": (
-            "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 가능합니다. live 투입 판단은 별도 단계입니다."
+            "Monitoring 후보 handoff는 Final Review selection gate가 허용할 때만 가능합니다. live 투입 판단은 별도 단계입니다."
             if selected
-            else "보류 / 거절 / 재검토는 정식 저장하지 않는 상태 안내입니다."
+            else "보류 / 거절 / 재검토 판단은 저장할 수 있지만 Monitoring 후보 handoff는 만들지 않습니다."
         ),
     }
 
@@ -1332,19 +1430,19 @@ def build_final_review_decision_record_guide(
     )
     if selected and not bool(selected_gate.get("Ready")):
         route_state = "SELECT_ROUTE_BLOCKED"
-        route_state_label = "선정 저장 차단"
+        route_state_label = "Monitoring handoff 차단"
         notice_level = "warning"
-        notice = "모니터링 후보 선정 저장은 Final Review selection gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 저장하지 않는 상태 안내로만 표시합니다."
+        notice = "Monitoring 후보 handoff는 Final Review selection gate가 허용할 때만 활성화됩니다. 보류 / 재검토 / 거절은 Final Review 판단 기록으로 저장할 수 있습니다."
     elif selected:
         route_state = "SELECT_ROUTE_READY"
         route_state_label = "선정 기록 가능"
         notice_level = "success"
         notice = "현재 selection gate가 선정 기록을 허용합니다. 판단 사유를 남기면 최종 검토 기록으로 저장할 수 있습니다."
     else:
-        route_state = "NON_SELECT_NOT_STORED"
-        route_state_label = "상태 안내만 표시"
+        route_state = "JUDGMENT_ROUTE_READY" if valid_route else "INVALID_ROUTE"
+        route_state_label = "판단 기록 가능" if valid_route else "판단 route 확인 필요"
         notice_level = "info"
-        notice = "보류 / 거절 / 재검토는 정식 저장 대상이 아닙니다. Final Review의 저장 버튼은 모니터링 후보 선정이 가능할 때만 활성화됩니다."
+        notice = "보류 / 거절 / 재검토는 Final Review 판단 기록으로 저장됩니다. Monitoring 후보 handoff는 선택 route가 gate를 통과할 때만 만들어집니다."
     checklist_rows = [
         {
             "Criteria": "Suggested decision",
@@ -1359,10 +1457,10 @@ def build_final_review_decision_record_guide(
             "Meaning": "최종 판단으로 저장될 route입니다.",
         },
         {
-            "Criteria": "Official selection route",
-            "Ready": selected,
-            "Current": "selection save" if selected else "status only",
-            "Meaning": "Final Review의 정식 저장은 모니터링 후보 선정 route만 허용합니다.",
+            "Criteria": "Monitoring handoff",
+            "Ready": True,
+            "Current": "requested" if selected else "not requested",
+            "Meaning": "Monitoring 후보 handoff는 선택 route에서만 요청됩니다. non-select route는 판단 기록으로만 남습니다.",
         },
         selected_gate,
         {
@@ -1390,16 +1488,74 @@ def build_final_review_decision_record_guide(
         "notice_level": notice_level,
         "notice": notice,
         "selected_route_gate": selected_gate,
-        "recordable_route": valid_route and selected and bool(selected_gate.get("Ready")),
+        "recordable_route": valid_route and ((not selected) or bool(selected_gate.get("Ready"))),
+        "monitoring_handoff_candidate": valid_route and selected and bool(selected_gate.get("Ready")),
         "checklist_rows": checklist_rows,
         "blockers": blockers,
         "route_templates": route_templates,
         "record_boundary": {
-            "write_policy": "append_final_selection_decision_only",
+            "write_policy": "append_final_review_decision_record",
             "validation_rerun": False,
             "provider_fetch": False,
             "waiver_persistence": False,
-            "non_select_persistence": False,
+            "non_select_persistence": True,
+            "monitoring_handoff": valid_route and selected and bool(selected_gate.get("Ready")),
+            "live_approval": False,
+            "order_instruction": False,
+            "account_sync": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
+def build_final_review_save_handoff_summary(*, decision_record_guide: dict[str, Any]) -> dict[str, Any]:
+    """Summarize the difference between judgment persistence and Monitoring handoff."""
+
+    guide = dict(decision_record_guide or {})
+    decision_route = str(guide.get("decision_route") or "").strip()
+    selected_route = decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO
+    recordable = bool(guide.get("recordable_route"))
+    handoff_candidate = bool(guide.get("monitoring_handoff_candidate"))
+    selected_gate = dict(guide.get("selected_route_gate") or {})
+    if handoff_candidate:
+        handoff_state = "ready"
+        handoff_label = "Monitoring handoff ready"
+        handoff_detail = "선택 route와 selection gate가 모두 통과해 Portfolio Monitoring 후보로 연결됩니다."
+        record_type = "monitoring_candidate"
+    elif selected_route:
+        handoff_state = "blocked"
+        handoff_label = "Monitoring handoff blocked"
+        handoff_detail = "선택 route를 요청했지만 selection gate가 통과하지 않아 Monitoring handoff가 차단됩니다."
+        record_type = "blocked_selected_route"
+    else:
+        handoff_state = "not_requested"
+        handoff_label = "Decision only"
+        handoff_detail = "보류 / 거절 / 재검토는 Final Review 판단 기록으로만 남고 Monitoring 후보로 연결되지 않습니다."
+        record_type = "judgment_decision"
+    return {
+        "schema_version": SAVE_HANDOFF_SUMMARY_SCHEMA_VERSION,
+        "decision_route": decision_route,
+        "decision_label": guide.get("decision_label") or _decision_route_label(decision_route),
+        "record_type": record_type,
+        "judgment_record": {
+            "ready": recordable,
+            "label": "Final Review 판단 저장 가능" if recordable else "Final Review 판단 저장 확인 필요",
+            "detail": guide.get("notice") or "-",
+        },
+        "monitoring_handoff": {
+            "candidate": handoff_candidate,
+            "state": handoff_state,
+            "label": handoff_label,
+            "detail": handoff_detail,
+            "selected_gate_ready": bool(selected_gate.get("Ready")),
+            "selected_gate_current": selected_gate.get("Current") or "-",
+        },
+        "boundaries": {
+            "append_final_review_decision_record": True,
+            "non_select_persistence": True,
+            "monitoring_handoff_requires_selected_route": True,
+            "validation_rerun": False,
+            "provider_fetch": False,
             "live_approval": False,
             "order_instruction": False,
             "account_sync": False,
@@ -1410,6 +1566,15 @@ def build_final_review_decision_record_guide(
 
 def _decision_route_label(route: Any) -> str:
     return FINAL_REVIEW_DECISION_LABELS.get(_safe_text(route, ""), "재검토 필요")
+
+
+def _is_monitoring_handoff_candidate(row: dict[str, Any]) -> bool:
+    if "monitoring_candidate" in row:
+        return row.get("monitoring_candidate") is True
+    return (
+        row.get("selected_practical_portfolio") is True
+        or str(row.get("decision_route") or "").strip() == SELECT_FOR_PRACTICAL_PORTFOLIO
+    )
 
 
 def _policy_rows_by_severity(gate_policy: dict[str, Any], severity: str) -> list[dict[str, Any]]:
@@ -1428,13 +1593,13 @@ def _decision_cockpit_state(gate_policy: dict[str, Any], packet: dict[str, Any])
         return (
             "SELECT_READY",
             "모니터링 후보 가능",
-            "현재 gate policy상 Selected Dashboard 모니터링 후보로 저장할 수 있습니다.",
+            "현재 gate policy상 Portfolio Monitoring 후보로 저장할 수 있습니다.",
         )
     if outcome == "blocked" or route == "INVESTABILITY_PACKET_BLOCKED":
         return (
             "SELECT_BLOCKED",
             "선정 차단",
-            "critical blocker가 남아 있어 모니터링 후보 선정 저장이 차단됩니다.",
+            "critical blocker가 남아 있어 Monitoring 후보 handoff가 차단됩니다.",
         )
     return (
         "HOLD_OR_RE_REVIEW",
@@ -1466,7 +1631,7 @@ def _candidate_board_action(cockpit: dict[str, Any]) -> tuple[str, str, str]:
     if state == "SELECT_READY":
         return (
             "모니터링 후보 선정",
-            "모니터링 후보로 저장 가능한 상태입니다. Decision Cockpit을 확인한 뒤 Selected Dashboard 추적 후보로 저장합니다.",
+            "모니터링 후보로 저장 가능한 상태입니다. 투자 검토서와 선정 조건을 확인한 뒤 Portfolio Monitoring 추적 후보로 저장합니다.",
             "모니터링 후보 가능",
         )
     if state == "SELECT_BLOCKED":
@@ -1564,6 +1729,2318 @@ def build_final_review_decision_cockpit(
     }
 
 
+def _report_tone_from_state(state: Any) -> str:
+    state_text = str(state or "").upper()
+    if state_text == "SELECT_READY":
+        return "positive"
+    if state_text == "SELECT_BLOCKED":
+        return "danger"
+    return "warning"
+
+
+def _score_band(score: Any, state: Any) -> str:
+    numeric = _float_or_none(score)
+    state_text = str(state or "").upper()
+    if state_text == "SELECT_BLOCKED":
+        return "차단"
+    if numeric is None:
+        return "미산정"
+    if state_text == "SELECT_READY" and numeric < 6.0:
+        return "선정 가능 / 보강 추적"
+    if numeric >= 8.0:
+        return "강함"
+    if numeric >= 6.0:
+        return "보류권"
+    return "취약"
+
+
+def _report_policy_card(row: dict[str, Any], *, fallback_title: str, tone: str) -> dict[str, Any]:
+    return {
+        "title": _safe_text(row.get("Criteria") or row.get("Group"), fallback_title),
+        "detail": _safe_text(row.get("Evidence") or row.get("Current"), "-"),
+        "action": _safe_text(row.get("Required Action") or row.get("Next Action"), "-"),
+        "severity": _safe_text(row.get("Severity"), "PASS"),
+        "tone": tone,
+    }
+
+
+def _score_limit_summary(score_limits: list[dict[str, Any]]) -> str:
+    if not score_limits:
+        return "score cap 없음"
+    caps = [int(limit.get("cap") or 100) for limit in score_limits if isinstance(limit, dict)]
+    cap = min(caps) if caps else 100
+    return f"score cap {cap} 적용"
+
+
+def _report_dimension_strengths(scorecard: dict[str, Any]) -> list[dict[str, Any]]:
+    strengths: list[dict[str, Any]] = []
+    for dimension in list(dict(scorecard or {}).get("dimensions") or []):
+        if not isinstance(dimension, dict):
+            continue
+        score = int(dimension.get("score") or 0)
+        if score < 80:
+            continue
+        strengths.append(
+            {
+                "title": _safe_text(dimension.get("label"), "Score strength"),
+                "detail": f"{score}/100 - {_safe_text(dimension.get('interpretation'), '-')}",
+                "action": _safe_text(dimension.get("evidence"), "현재 Final Review scorecard 근거를 유지합니다."),
+                "severity": "HIGH_SCORE",
+                "tone": _safe_text(dimension.get("tone"), "positive"),
+            }
+        )
+    return strengths[:4]
+
+
+def _report_strengths(cockpit: dict[str, Any], packet: dict[str, Any], scorecard: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    dimension_strengths = _report_dimension_strengths(scorecard or {})
+    policy_strengths = [
+        _report_policy_card(dict(row or {}), fallback_title="Evidence ready", tone="positive")
+        for row in list(cockpit.get("ready_rows") or [])
+        if isinstance(row, dict)
+    ]
+    strengths = dimension_strengths + policy_strengths
+    if strengths:
+        deduped: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for strength in strengths:
+            title = _safe_text(strength.get("title"), "")
+            if title in seen:
+                continue
+            seen.add(title)
+            deduped.append(strength)
+        return deduped[:6]
+    fallback_rows = [
+        dict(row or {})
+        for row in list(packet.get("checks") or [])
+        if isinstance(row, dict) and _ready_from_check(dict(row or {}))
+    ]
+    return [
+        {
+            "title": _safe_text(row.get("Section") or row.get("Criteria"), "Evidence ready"),
+            "detail": _safe_text(row.get("Meaning") or row.get("Current"), "-"),
+            "action": "추가 조치 없음",
+            "severity": "PASS",
+            "tone": "positive",
+        }
+        for row in fallback_rows[:6]
+    ]
+
+
+def _dimension_by_rank(scorecard: dict[str, Any], *, strongest: bool) -> dict[str, Any]:
+    dimensions = [dict(row or {}) for row in list(dict(scorecard or {}).get("dimensions") or []) if isinstance(row, dict)]
+    if not dimensions:
+        return {}
+    return (max if strongest else min)(dimensions, key=lambda row: int(row.get("score") or 0))
+
+
+def _dimension_detail(dimension: dict[str, Any]) -> str:
+    if not dimension:
+        return "확인할 세부 점수 없음"
+    return (
+        f"{_safe_text(dimension.get('label'), '-')} {int(dimension.get('score') or 0)}/100 - "
+        f"{_safe_text(dimension.get('interpretation'), '-')}"
+    )
+
+
+def _build_decision_summary(
+    *,
+    scorecard: dict[str, Any],
+    selection_rationale: dict[str, Any],
+) -> dict[str, Any]:
+    overall = int(dict(scorecard or {}).get("overall_score") or 0)
+    pre_cap = int(dict(scorecard or {}).get("pre_cap_score") or overall)
+    score_limits = [dict(row or {}) for row in list(dict(scorecard or {}).get("score_limits") or []) if isinstance(row, dict)]
+    strongest = _dimension_by_rank(scorecard, strongest=True)
+    weakest = _dimension_by_rank(scorecard, strongest=False)
+    dimensions = {str(row.get("key") or ""): dict(row or {}) for row in list(dict(scorecard or {}).get("dimensions") or []) if isinstance(row, dict)}
+    readiness = dimensions.get("readiness", {})
+    classification_label = _safe_text(scorecard.get("classification_label"), _safe_text(selection_rationale.get("classification_label"), "-"))
+    monitoring_candidate = bool(scorecard.get("monitoring_candidate"))
+    headline = (
+        "모니터링 후보로 검토할 수 있습니다"
+        if monitoring_candidate
+        else f"{classification_label} 상태로 추가 판단 필요"
+    )
+    limit_summary = _score_limit_summary(score_limits)
+    inputs = dict(dict(scorecard or {}).get("inputs") or {})
+    review_summary = (
+        f"warning {int(inputs.get('warning_count') or 0)}, "
+        f"open {int(inputs.get('open_review_count') or 0)}, "
+        f"monitoring {int(inputs.get('monitoring_followup_count') or 0)}"
+    )
+    items = [
+        {
+            "label": "최종 선택 사유",
+            "detail": _safe_text(selection_rationale.get("decision_reason"), "-"),
+            "tone": "positive" if monitoring_candidate else "warning",
+            "source": "selection_rationale",
+        },
+        {
+            "label": "가장 강한 근거",
+            "detail": _dimension_detail(strongest),
+            "tone": _safe_text(strongest.get("tone"), "neutral"),
+            "source": "scorecard",
+        },
+        {
+            "label": "Monitoring 준비도",
+            "detail": _dimension_detail(readiness),
+            "tone": _safe_text(readiness.get("tone"), "neutral"),
+            "source": "scorecard",
+        },
+        {
+            "label": "가장 큰 확인 지점",
+            "detail": _dimension_detail(weakest),
+            "tone": _safe_text(weakest.get("tone"), "neutral"),
+            "source": "scorecard",
+        },
+        {
+            "label": "Level2 REVIEW 반영",
+            "detail": review_summary,
+            "tone": "warning" if int(inputs.get("open_review_count") or 0) else "neutral",
+            "source": "level2_review_disposition",
+        },
+    ]
+    if score_limits:
+        items.append(
+            {
+                "label": "점수 제한",
+                "detail": "; ".join(_safe_text(limit.get("detail"), _safe_text(limit.get("label"), "-")) for limit in score_limits),
+                "tone": "warning",
+                "source": "scorecard",
+            }
+        )
+    return {
+        "schema_version": DECISION_SUMMARY_SCHEMA_VERSION,
+        "headline": headline,
+        "status_label": classification_label,
+        "score_line": f"종합 {overall}/100, 원점수 {pre_cap}/100, {limit_summary}",
+        "items": items,
+        "boundary": {
+            "provider_fetch": False,
+            "storage_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
+def _build_interpretation_cards(
+    *,
+    scorecard: dict[str, Any],
+    cockpit: dict[str, Any],
+    packet: dict[str, Any],
+    monitoring: dict[str, Any],
+) -> list[dict[str, Any]]:
+    dimensions = {str(row.get("key") or ""): dict(row or {}) for row in list(dict(scorecard or {}).get("dimensions") or []) if isinstance(row, dict)}
+    inputs = dict(dict(scorecard or {}).get("inputs") or {})
+    trigger_count = len(list(dict(monitoring or {}).get("review_triggers") or []))
+    blocker_count = int(inputs.get("blocker_count") or 0)
+    open_review_count = int(inputs.get("open_review_count") or 0)
+    inherited_limit_count = int(inputs.get("warning_count") or 0)
+    score_limits = [dict(row or {}) for row in list(dict(scorecard or {}).get("score_limits") or []) if isinstance(row, dict)]
+    investment = dimensions.get("investment", {})
+    evidence_quality = dimensions.get("evidence_quality", {})
+    weakest = _dimension_by_rank(scorecard, strongest=False)
+    weakest_label = {
+        "investment": "투자 매력도",
+        "evidence_quality": "근거 신뢰도",
+        "readiness": "선정 준비도",
+        "monitoring_suitability": "Monitoring 적합성",
+    }.get(str(weakest.get("key") or ""), _safe_text(weakest.get("label"), "확인 지점"))
+    weakest_summary = f"{weakest_label} {int(weakest.get('score') or 0)}/100"
+    overall = int(dict(scorecard or {}).get("overall_score") or 0)
+    cadence_raw = _safe_text(monitoring.get("review_cadence"), "미지정")
+    cadence_label = {
+        "monthly_or_rebalance_review": "월 1회 또는 리밸런싱 시점",
+        "monthly": "월 1회",
+        "quarterly": "분기 1회",
+    }.get(cadence_raw, cadence_raw)
+    benchmark = _safe_text(monitoring.get("tracking_benchmark"), "미지정")
+    return [
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "performance_interpretation",
+            "title": "성과 해석",
+            "detail": (
+                f"과거 성과와 실전성 근거를 합친 투자 매력도는 {int(investment.get('score') or 0)}/100입니다. "
+                "미래 수익 예측이 아니라 현재 후보끼리 비교하기 위한 점수입니다."
+            ),
+            "tone": _safe_text(investment.get("tone"), "neutral"),
+            "badges": [
+                f"투자 매력도 {int(investment.get('score') or 0)}/100",
+                f"종합 {overall}/100",
+                f"점수 상한 {min(int(row.get('cap') or 100) for row in score_limits)}/100" if score_limits else "점수 제한 없음",
+            ],
+        },
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "risk_interpretation",
+            "title": "위험 해석",
+            "detail": (
+                f"현재 가장 약한 판단 축은 {weakest_summary}입니다. "
+                f"선정 차단 {blocker_count}개, 사용자가 결정할 항목 {open_review_count}개를 구분해 봅니다."
+            ),
+            "tone": "danger" if blocker_count else ("warning" if int(weakest.get("score") or 0) < 70 else "positive"),
+            "badges": [
+                f"선정 차단 {blocker_count}",
+                f"직접 결정 {open_review_count}",
+            ],
+        },
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "evidence_confidence",
+            "title": "근거 신뢰도",
+            "detail": (
+                f"저장된 검증 근거의 신뢰도는 {int(evidence_quality.get('score') or 0)}/100입니다. "
+                f"2단계에서 허용한 제한 {inherited_limit_count}개는 투자 매력도와 분리해 해석 확신에 반영했습니다."
+            ),
+            "tone": _safe_text(evidence_quality.get("tone"), "neutral"),
+            "badges": [
+                f"근거 신뢰도 {int(evidence_quality.get('score') or 0)}/100",
+                f"인수 제한 {inherited_limit_count}",
+            ],
+        },
+        {
+            "schema_version": INTERPRETATION_CARD_SCHEMA_VERSION,
+            "kind": "monitoring_fit",
+            "title": "Monitoring 적합성",
+            "detail": (
+                f"선정한다면 {cadence_label}에 {trigger_count}개 변화 조건을 확인합니다. "
+                f"비교 기준은 {benchmark}이며, 조건 이탈 시 후보를 다시 검토합니다."
+            ),
+            "tone": _safe_text(dimensions.get("monitoring_suitability", {}).get("tone"), "neutral"),
+            "badges": [f"점검 주기 {cadence_label}", f"변화 조건 {trigger_count}개"],
+        },
+    ]
+
+
+def _build_watch_items(
+    *,
+    weaknesses: list[dict[str, Any]],
+    scorecard: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if weaknesses:
+        return [dict(row or {}) for row in weaknesses[:4] if isinstance(row, dict)]
+    weakest = _dimension_by_rank(scorecard, strongest=False)
+    score_limits = [dict(row or {}) for row in list(dict(scorecard or {}).get("score_limits") or []) if isinstance(row, dict)]
+    items = [
+        {
+            "title": "확인 지점",
+            "detail": _dimension_detail(weakest),
+            "action": "Monitoring에서 이 차원의 score 변화와 review trigger를 같이 봅니다.",
+            "severity": "WATCH",
+            "tone": _safe_text(weakest.get("tone"), "neutral"),
+        }
+    ]
+    for limit in score_limits[:2]:
+        items.append(
+            {
+                "title": _safe_text(limit.get("label"), "점수 제한"),
+                "detail": _safe_text(limit.get("detail") or limit.get("reason"), "-"),
+                "action": f"cap {int(limit.get('cap') or 0)} 기준을 확인합니다.",
+                "severity": "SCORE_CAP",
+                "tone": _safe_text(limit.get("tone"), "warning"),
+            }
+        )
+    return items[:4]
+
+
+def _report_weaknesses(cockpit: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for gap in list(cockpit.get("critical_gaps") or []):
+        if not isinstance(gap, dict):
+            continue
+        gap_row = dict(gap or {})
+        severity = "BLOCK" if str(gap_row.get("Severity") or "").upper() == "BLOCK" else "REVIEW_REQUIRED"
+        rows.append(
+            {
+                "title": _safe_text(gap_row.get("Area"), "Critical gap"),
+                "detail": _safe_text(gap_row.get("Gap"), "-"),
+                "action": _safe_text(gap_row.get("Required Action"), "-"),
+                "severity": severity,
+                "tone": "danger" if severity == "BLOCK" else "warning",
+            }
+        )
+    for row in list(cockpit.get("must_fix_rows") or []):
+        if isinstance(row, dict):
+            rows.append(_report_policy_card(dict(row or {}), fallback_title="Selection blocker", tone="danger"))
+    for row in list(cockpit.get("must_review_rows") or []):
+        if isinstance(row, dict):
+            rows.append(_report_policy_card(dict(row or {}), fallback_title="Review required", tone="warning"))
+    return rows[:6]
+
+
+def _review_disposition_for_role(role: str, status: str) -> tuple[str, str, str]:
+    role_text = str(role or "").strip()
+    status_text = str(status or "").strip().upper()
+    if status_text in {"BLOCKED", "NEEDS_INPUT", "NOT_RUN"} or role_text == "final_readiness_blocker":
+        return "blocker", "Blocker", "danger"
+    if role_text in {"pv_data_caution", "pv_practical_caution"}:
+        return "warning", "Warning", "warning"
+    if role_text == "monitoring_followup":
+        return "monitoring_followup", "Monitoring follow-up", "neutral"
+    return "open_review", "Open review", "warning"
+
+
+def _level2_review_cards(validation: dict[str, Any]) -> list[dict[str, Any]]:
+    workspace = dict(validation.get("practical_validation_workspace") or {})
+    groups = list(workspace.get("criteria_detail_groups") or workspace.get("visible_criteria_detail_groups") or [])
+    cards = [
+        dict(card or {})
+        for group in groups
+        for card in list(dict(group or {}).get("criteria_cards") or [])
+        if isinstance(card, dict)
+    ]
+    fallback_rows = [
+        *list(validation.get("validation_module_display_rows") or []),
+        *list(validation.get("validation_modules") or []),
+    ]
+    fallback_cards = [dict(row or {}) for row in fallback_rows if isinstance(row, dict)]
+    if not cards:
+        return fallback_cards
+    # The workspace contains the most readable Level2 cautions, while the module
+    # contract can contain Final Review / Monitoring roles omitted from that view.
+    existing_roles = {str(card.get("review_role") or "") for card in cards}
+    cards.extend(
+        card
+        for card in fallback_cards
+        if str(card.get("review_role") or "")
+        and str(card.get("review_role") or "") not in existing_roles
+    )
+    return cards
+
+
+def _closure_review_cards(closure: dict[str, Any]) -> list[dict[str, Any]]:
+    """Adapt root issues to the existing Final Review disposition payload shape."""
+
+    cards: list[dict[str, Any]] = []
+    for raw_issue in list(closure.get("issues") or []):
+        issue = dict(raw_issue or {})
+        root_issue_id = _safe_text(issue.get("root_issue_id"), "")
+        if not root_issue_id or root_issue_id.startswith("missing_contract:"):
+            continue
+        resolution_class = _safe_text(issue.get("resolution_class"), "accepted_limit")
+        if issue.get("gate_effect") == "block_final_review":
+            role = "final_readiness_blocker"
+            status = "BLOCKED"
+        elif resolution_class == "monitoring_transfer":
+            role = "monitoring_followup"
+            status = "REVIEW"
+        elif resolution_class == "final_decision":
+            role = "final_decision_input"
+            status = "REVIEW"
+        else:
+            role = "pv_data_caution"
+            status = "REVIEW"
+        cards.append(
+            {
+                "root_issue_id": root_issue_id,
+                "module_id": root_issue_id,
+                "display_label": _safe_text(issue.get("title"), root_issue_id),
+                "status": status,
+                "review_role": role,
+                "review_role_label": {
+                    "final_readiness_blocker": "저장 전 보강",
+                    "monitoring_followup": "Monitoring 추적",
+                    "final_decision_input": "최종 판단 참고",
+                    "pv_data_caution": "데이터 주의",
+                }[role],
+                "stage_decision_surface": _safe_text(issue.get("owner_stage"), "Final Review"),
+                "current_problem": _safe_text(issue.get("observed"), "-"),
+                "resolution_action": _safe_text(issue.get("completion_criteria"), "-"),
+                "observed_value": _safe_text(issue.get("observed"), "-"),
+                "threshold": _safe_text(issue.get("expected"), "-"),
+                "evidence_source": _safe_text(issue.get("cause"), "evidence closure"),
+                "trace_status_override": "derived",
+                "trace_label_override": f"root 근거 {len(issue.get('derived_checks') or [])}개 확인",
+            }
+        )
+    return cards
+
+
+def _level2_review_action(role: str) -> dict[str, str]:
+    actions = {
+        "pv_data_caution": {
+            "action_outcome": "score_reflected",
+            "action_label": "이미 신뢰도에 반영",
+            "action_detail": "2단계에서 인수한 데이터 제한입니다. Final Review에서 다시 해결하지 않습니다.",
+        },
+        "pv_practical_caution": {
+            "action_outcome": "score_reflected",
+            "action_label": "이미 신뢰도에 반영",
+            "action_detail": "2단계에서 허용한 측정 제한입니다. Final Review에서는 판단의 확신 수준에만 반영합니다.",
+        },
+        "final_decision_input": {
+            "action_outcome": "pre_save_check",
+            "action_label": "선택·보류 사유에 반영",
+            "action_detail": "사용자가 지금 선택 또는 보류 판단에 반영해야 하는 항목입니다.",
+        },
+        "monitoring_followup": {
+            "action_outcome": "monitoring_condition",
+            "action_label": "추적 조건으로 확정",
+            "action_detail": "선정한다면 Portfolio Monitoring에서 추적할 조건으로 확정합니다.",
+        },
+        "final_readiness_blocker": {
+            "action_outcome": "blocker",
+            "action_label": "2단계에서 해소 필요",
+            "action_detail": "해소 전에는 Monitoring 후보로 선정할 수 없습니다.",
+        },
+    }
+    return dict(actions.get(role) or actions["final_decision_input"])
+
+
+def _review_trace_value(card: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = card.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return "-"
+
+
+_FINAL_REVIEW_TRACE_SOURCES: dict[str, tuple[str, str]] = {
+    "data_coverage": ("data_coverage_audit", "데이터 품질 / 편향 통제 audit"),
+    "backtest_realism": ("backtest_realism_audit", "실전 운용 현실성 audit"),
+    "validation_efficacy": ("validation_efficacy_audit", "검증 방법론 강도 audit"),
+    "construction_risk": ("construction_risk_audit", "포트폴리오 구성 audit"),
+    "risk_contribution": ("risk_contribution_audit", "위험 기여 audit"),
+    "component_role_weight": ("component_role_weight_audit", "Component 역할 / 비중 audit"),
+    "provider_investability": ("provider_coverage", "ETF 운용사 evidence"),
+    "stress_robustness": ("robustness_validation", "Stress / sensitivity evidence"),
+}
+
+
+_FINAL_REVIEW_TRACE_PRESENTATION: dict[str, tuple[str, str]] = {
+    "Provider snapshot freshness": (
+        "ETF·외부 데이터 최신성",
+        "ETF 비용·운용성·보유 종목 자료가 현재 판단에 사용할 만큼 최근 자료인지 확인합니다.",
+    ),
+    "Universe / listing evidence": (
+        "종목 목록과 상장 이력 반영",
+        "현재 종목 목록뿐 아니라 상장 시점과 종목별 데이터 이력이 검증 기간에 맞게 반영됐는지 확인합니다.",
+    ),
+    "Survivorship / delisting control": (
+        "상장폐지 종목 포함 여부",
+        "현재 살아남은 종목만 사용해 성과가 과대평가되는 생존편향을 통제했는지 확인합니다.",
+    ),
+    "Price DB window coverage": (
+        "가격 데이터 기간 충족 여부",
+        "후보를 구성하는 각 종목의 가격 데이터가 선택한 백테스트 기간을 모두 덮는지 확인합니다.",
+    ),
+    "PIT price window coverage": (
+        "시점 기준 가격 재현 범위",
+        "당시 알 수 있었던 가격만 사용해 같은 기간을 다시 계산할 수 있는지 확인합니다.",
+    ),
+    "Cost / slippage sensitivity evidence": (
+        "거래비용 변화 민감도",
+        "수수료와 체결 오차를 높였을 때에도 결과 해석이 유지되는지 확인합니다.",
+    ),
+    "Liquidity / operability evidence": (
+        "실제 거래 가능성과 유동성",
+        "후보 ETF를 현실적으로 거래할 수 있는지와 관련 자료가 충분히 최신인지 확인합니다.",
+    ),
+    "Tax / account scope": (
+        "세금·계좌 조건 반영 범위",
+        "세금과 계좌 유형에 따라 달라지는 실현 성과를 현재 검증이 어디까지 반영했는지 확인합니다.",
+    ),
+    "Walk-forward temporal validation": (
+        "기간을 이동한 반복 검증",
+        "검증 구간을 순차적으로 옮겨도 특정 한 시기에만 좋은 결과가 나오는지 확인합니다.",
+    ),
+    "Regime split validation": (
+        "시장 국면별 성과 검증",
+        "시장 환경을 여러 구간으로 나눴을 때 취약한 국면이 있는지 확인합니다.",
+    ),
+    "Exclude last 12M": (
+        "최근 12개월 제외 검증",
+        "최근 성과를 제외해도 장기 결과의 방향이 유지되는지 확인합니다.",
+    ),
+    "Exclude first 12M": (
+        "초기 12개월 제외 검증",
+        "초기 구간의 우연한 성과를 제외해도 결과가 유지되는지 확인합니다.",
+    ),
+    "Relative Strength perturbation": (
+        "모멘텀 기간 변경 검증",
+        "상대강도 계산 기간을 바꿔도 전략 결과가 과도하게 흔들리지 않는지 확인합니다.",
+    ),
+    "GTAA parameter perturbation": (
+        "GTAA 설정 변경 검증",
+        "리밸런싱 주기 등 GTAA 핵심 설정을 바꿔도 결과가 유지되는지 확인합니다.",
+    ),
+    "Component weight concentration": (
+        "구성 비중 집중도",
+        "한 전략 또는 구성요소의 비중이 포트폴리오 전체를 지배하는지 확인합니다.",
+    ),
+    "Provider look-through coverage": (
+        "ETF 내부 구성 확인 범위",
+        "ETF 내부 보유 종목과 자산 노출을 실제 자료로 얼마나 확인했는지 측정합니다.",
+    ),
+    "Top holding concentration": (
+        "상위 보유 종목 집중도",
+        "ETF 내부의 한 종목이 전체 포트폴리오 위험을 과도하게 좌우하는지 확인합니다.",
+    ),
+    "Holdings overlap": (
+        "ETF 간 보유 종목 중복",
+        "서로 다른 ETF가 같은 종목을 반복 보유해 분산 효과가 약해지는지 확인합니다.",
+    ),
+    "Pairwise correlation": (
+        "구성요소 간 상관관계",
+        "구성요소가 함께 움직여 기대한 분산 효과가 약해지는지 확인합니다.",
+    ),
+    "Risk contribution concentration": (
+        "위험 기여 집중도",
+        "표면 비중과 별개로 한 구성요소가 실제 변동 위험을 과도하게 만들고 있는지 확인합니다.",
+    ),
+    "Profile-aware weight discipline": (
+        "목표 성격에 맞는 비중",
+        "후보의 운용 목적과 비교해 특정 구성요소 비중이 지나치게 큰지 확인합니다.",
+    ),
+    "Role concentration discipline": (
+        "구성 역할 집중도",
+        "방어·성장·헤지 같은 하나의 역할에 포트폴리오가 과도하게 치우쳤는지 확인합니다.",
+    ),
+    "ETF Operability": (
+        "ETF 거래 가능성 근거",
+        "ETF 비용과 거래 가능성을 공식 자료 또는 DB 근거로 확인할 수 있는지 봅니다.",
+    ),
+    "ETF Holdings": (
+        "ETF 보유 종목 근거",
+        "ETF 내부 보유 종목을 공식 자료로 얼마나 확인했는지 봅니다.",
+    ),
+    "ETF Exposure": (
+        "ETF 자산·섹터 노출 근거",
+        "ETF의 자산군과 섹터 노출을 공식 자료로 얼마나 확인했는지 봅니다.",
+    ),
+    "Dot-com bust / early-2000s bear market": (
+        "닷컴버블 붕괴 구간",
+        "2000년대 초 장기 약세장에서 후보가 어떻게 움직였을지 확인하는 역사적 충격 검증입니다.",
+    ),
+    "9/11 market closure and reopening stress": (
+        "9·11 시장 충격 구간",
+        "시장 폐쇄와 재개가 있었던 단기 충격 구간에서의 반응을 확인합니다.",
+    ),
+    "Global financial crisis bear market": (
+        "글로벌 금융위기 구간",
+        "2007~2009년 금융위기 약세장에서의 손실과 회복력을 확인합니다.",
+    ),
+}
+
+
+def _review_trace_presentation(label: str) -> tuple[str, str]:
+    normalized_label = label.lower().replace("/", " ")
+    if "tax" in normalized_label and "account" in normalized_label:
+        return _FINAL_REVIEW_TRACE_PRESENTATION["Tax / account scope"]
+    if label.startswith("Drop-one: "):
+        component = label.split(":", 1)[1].strip()
+        return (
+            f"{component} 제외 검증",
+            "해당 구성요소를 제외했을 때 성과와 위험이 얼마나 달라지는지 확인합니다.",
+        )
+    return _FINAL_REVIEW_TRACE_PRESENTATION.get(
+        label,
+        (label, "저장된 2단계 세부 근거를 사용해 이 항목이 최종 판단에 미치는 영향을 확인합니다."),
+    )
+
+
+def _review_trace_status_label(status: str, observed_value: str) -> str:
+    normalized = str(status or "").strip().upper()
+    if str(observed_value or "").strip() == "기간 미포함":
+        return "검증 기간 밖"
+    return {
+        "PASS": "충분",
+        "READY": "충분",
+        "REVIEW": "일부 확인",
+        "NEEDS_INPUT": "자료 필요",
+        "NOT_RUN": "확인하지 못함",
+        "NOT_APPLICABLE": "해당 없음",
+        "BLOCKED": "차단",
+    }.get(normalized, normalized or "확인 필요")
+
+
+def _review_trace_observed_copy(label: str, observed_value: str, status: str) -> str:
+    observed = str(observed_value or "").strip()
+    if observed == "기간 미포함":
+        return "선택한 백테스트 기간에 이 충격 구간이 포함되지 않습니다."
+    if observed in {"", "-"}:
+        return "아직 계산된 결과가 없습니다." if str(status or "").upper() == "NOT_RUN" else "수치로 자동 판정하지 않는 항목입니다."
+    if label == "Provider snapshot freshness":
+        return "최신 자료와 오래된 자료가 함께 있어 기준일 확인이 필요합니다."
+    if label == "Universe / listing evidence":
+        profiles = re.search(r"profiles=(\d+)", observed)
+        covered = re.search(r"covered=(\d+)", observed)
+        partial = re.search(r"partial=(\d+)", observed)
+        if profiles and covered and partial:
+            return (
+                f"대상 종목 {profiles.group(1)}개 중 상장 이력을 충분히 확인한 종목은 "
+                f"{covered.group(1)}개, 부분 확인은 {partial.group(1)}개입니다."
+            )
+    if label == "Survivorship / delisting control" and "not proven" in observed.lower():
+        covered = re.search(r"covered=(\d+)", observed)
+        partial = re.search(r"partial=(\d+)", observed)
+        suffix = f" 확인 완료 {covered.group(1)}개, 부분 확인 {partial.group(1)}개" if covered and partial else ""
+        return f"상장폐지 종목 반영이 충분히 입증되지 않았습니다.{suffix}"
+    if label == "Tax / account scope" and "not modeled" in observed.lower():
+        return "세금과 계좌 유형별 차이는 현재 결과에 계산되지 않았습니다."
+    if label == "Cost / slippage sensitivity evidence":
+        generic = re.search(r"generic=(\d+)", observed)
+        follow_up = re.search(r"runtime follow-up=(\d+)", observed)
+        if generic and follow_up:
+            return f"기본 민감도 결과 {generic.group(1)}개를 계산했고 전략 전용 후속 검증 {follow_up.group(1)}개가 남았습니다."
+    if label == "Liquidity / operability evidence":
+        coverage = re.search(r"coverage=([\d.]+)", observed)
+        coverage_text = f"확인 비중은 {float(coverage.group(1)):.1f}%이며 " if coverage else ""
+        return f"{coverage_text}거래 가능성 자료의 기준일이 오래됐습니다."
+    if label == "Component weight concentration":
+        maximum = re.search(r"max ([\d.]+)%", observed)
+        components = re.search(r"components (\d+)", observed)
+        if maximum and components:
+            return f"구성요소 {components.group(1)}개 중 최대 비중은 {maximum.group(1)}%입니다."
+    if label == "Provider look-through coverage":
+        holdings = re.search(r"holdings ([\d.]+)%", observed)
+        exposure = re.search(r"exposure ([\d.]+)%", observed)
+        if holdings and exposure:
+            return f"ETF 보유 종목은 {holdings.group(1)}%, 자산·섹터 노출은 {exposure.group(1)}%까지 확인했습니다."
+    if label == "ETF Operability":
+        coverage = re.search(r"covers ([\d.]+)%", observed)
+        return f"포트폴리오 비중의 {coverage.group(1)}%에서 ETF 거래 가능성 자료를 확인했습니다." if coverage else observed
+    if label == "ETF Holdings":
+        coverage = re.search(r"covers ([\d.]+)%", observed)
+        top = re.search(r"top holding ([\d.]+)%", observed)
+        overlap = re.search(r"top overlap ([\d.]+)%", observed)
+        if coverage:
+            suffix = f" 상위 종목 {top.group(1)}%, 최대 중복 {overlap.group(1)}%입니다." if top and overlap else ""
+            return f"포트폴리오 비중의 {coverage.group(1)}%에서 ETF 내부 종목을 확인했습니다.{suffix}"
+    if label == "ETF Exposure":
+        coverage = re.search(r"covers ([\d.]+)%", observed)
+        return f"포트폴리오 비중의 {coverage.group(1)}%에서 자산·섹터 노출을 확인했습니다." if coverage else observed
+    if label == "Walk-forward temporal validation":
+        windows = re.search(r"windows=(\d+)", observed)
+        return f"기간을 이동한 반복 검증 {windows.group(1)}개를 계산했고 일부 구간에서 비교 기준을 하회했습니다." if windows else observed
+    if label == "Regime split validation":
+        buckets = re.search(r"buckets=(\d+)", observed)
+        months = re.search(r"months=(\d+)", observed)
+        if buckets and months:
+            return f"총 {months.group(1)}개월을 {buckets.group(1)}개 시장 국면으로 나눠 성과 차이를 확인했습니다."
+    replacements = (
+        ("windows=", "반복 검증 구간 "),
+        ("negative share=", "비교 기준 하회 비율 "),
+        ("profiles=", "종목 정보 "),
+        ("lifecycle=", "상장 이력 "),
+        ("symbols=", "대상 종목 "),
+        ("generic=", "기본 민감도 결과 "),
+        ("runtime follow-up=", "전략 전용 후속 검증 "),
+        ("freshness=stale", "자료 최신성=오래됨"),
+        ("stale_or_unknown_provider_snapshot", "오래됐거나 기준일을 확인하지 못한 ETF 자료"),
+        ("coverage=", "확인 비중="),
+        ("holdings ", "보유 종목 "),
+        ("exposure ", "자산·섹터 노출 "),
+        ("max ", "최대 "),
+        ("total ", "합계 "),
+        ("components ", "구성요소 "),
+        ("avg ", "평균 "),
+        ("CAGR Delta", "연복리수익률 변화"),
+        ("MDD Delta", "최대낙폭 변화"),
+        ("CAGR", "연복리수익률"),
+        ("MDD", "최대낙폭"),
+    )
+    readable = observed
+    for source, target in replacements:
+        readable = readable.replace(source, target)
+    return readable
+
+
+def _review_trace_basis_copy(label: str, basis: str) -> str:
+    text = str(basis or "").strip()
+    normalized_label = label.lower().replace("/", " ")
+    if "tax" in normalized_label and "account" in normalized_label:
+        return "세금과 계좌 조건은 공통 자동 기준으로 판정하지 않으므로 사용자의 실제 계좌 조건을 직접 확인해야 합니다."
+    if label in {"ETF Operability", "ETF Holdings", "ETF Exposure"} and text in {"", "-"}:
+        return "공식 또는 DB snapshot의 확인 범위와 최신성이 충분한지 판단합니다."
+    if text in {"", "-"} and label in {"Universe / listing evidence", "Survivorship / delisting control"}:
+        return "상장폐지 종목을 실제 포함했다는 근거가 아직 없어 과거 종목 이력 보강이 필요합니다."
+    if text in {"", "-"}:
+        return "비교 기준이 저장된 근거에 포함되지 않아 세부 기준 확인이 필요합니다."
+    if text == "return / MDD / benchmark spread":
+        return "해당 충격 구간의 수익률·최대낙폭·비교 기준 대비 차이를 계산해야 합니다."
+    if label == "Provider snapshot freshness":
+        return "최신 자료와 오래된 자료가 함께 있어 오래된 ETF와 실제 기준일을 확인해야 합니다."
+    if label in {"Universe / listing evidence", "Survivorship / delisting control"}:
+        partial = re.search(r"partial=([^/]+)", text)
+        partial_symbols = partial.group(1).strip() if partial else "일부 종목"
+        return f"상장 이력을 부분 확인한 종목은 {partial_symbols}이며, 상장폐지 종목을 실제 포함했다는 근거는 아직 없습니다."
+    if label == "Liquidity / operability evidence":
+        coverage = re.search(r"covers ([\d.]+)%", text)
+        return (
+            f"ETF 거래 가능성 자료는 목표 비중의 {coverage.group(1)}%를 덮지만 최신성 기준을 충족하지 못했습니다."
+            if coverage
+            else "ETF 거래 가능성 자료의 범위와 최신성을 함께 확인합니다."
+        )
+    if label == "Component weight concentration":
+        coverage = re.search(r"covers ([\d.]+)%", text)
+        top = re.search(r"top holding ([\d.]+)%", text)
+        overlap = re.search(r"top overlap ([\d.]+)%", text)
+        if coverage and top and overlap:
+            return (
+                f"ETF 내부 종목 확인 비중 {coverage.group(1)}%, 상위 종목 {top.group(1)}%, "
+                f"최대 중복 {overlap.group(1)}%를 구성 집중 판단에 사용했습니다."
+            )
+    if label in {"ETF Operability", "ETF Holdings", "ETF Exposure"}:
+        return "공식 또는 DB snapshot의 확인 범위와 최신성이 충분한지 판단합니다."
+    if label == "Walk-forward temporal validation":
+        worst = re.search(r"worst excess ([\-\d.]+)%", text)
+        negative = re.search(r"negative share ([\d.]+)%", text)
+        if worst and negative:
+            return f"최악 초과성과 {worst.group(1)}%, 비교 기준 하회 구간 비율 {negative.group(1)}%를 확인 기준으로 사용했습니다."
+    if label == "Regime split validation":
+        worst = re.search(r"worst excess ([\-\d.]+)%", text)
+        return f"가장 약한 시장 국면의 초과성과 {worst.group(1)}%를 확인 기준으로 사용했습니다." if worst else text
+    if label == "Cost / slippage sensitivity evidence":
+        follow_up = re.search(r"(?:runtime 항목은|runtime 후속 항목은) (\d+)개", text)
+        suffix = f" 전략 전용 후속 검증 {follow_up.group(1)}개가 남았습니다." if follow_up else ""
+        return f"기본 비용·슬리피지 민감도와 기간 이동 검증을 계산했습니다.{suffix}"
+    replacements = (
+        ("review line", "확인 기준"),
+        ("max correlation", "최대 상관계수"),
+        ("max weight", "최대 비중"),
+        ("volatility contribution proxy", "변동성 기반 위험 기여 추정치"),
+        ("role review line", "역할 집중 확인 기준"),
+        ("holdings coverage", "보유 종목 확인 비중"),
+        ("window gaps=", "전체 기간을 채우지 못한 종목="),
+        ("stored_period", "저장된 백테스트 기간"),
+        ("cadence 민감도", "리밸런싱 주기 변경 결과가 필요합니다."),
+        ("momentum window 민감도", "모멘텀 계산 기간 변경 결과가 필요합니다."),
+        ("특정 component 의존성", "특정 구성요소를 제외했을 때 결과 변화가 확인 기준입니다."),
+    )
+    readable = text
+    for source, target in replacements:
+        readable = readable.replace(source, target)
+    return readable
+
+
+_FINAL_REVIEW_TRACE_MEANINGS: dict[str, str] = {
+    "Provider snapshot freshness": "일부 ETF 자료의 기준일이 오래되어 현재 거래 조건을 설명하는 확신이 낮아질 수 있습니다.",
+    "Universe / listing evidence": "현재 종목 정보는 있으나 일부 종목의 과거 상장 이력이 완전하지 않아 기간 전체의 재현성을 주의해야 합니다.",
+    "Survivorship / delisting control": "상장폐지 종목이 충분히 포함됐다는 근거가 없어 백테스트 성과가 실제보다 좋아 보일 가능성을 배제하지 못합니다.",
+    "Price DB window coverage": "일부 종목의 가격 시작일이 늦으면 후보별 비교 기간과 실제 투자 가능 시점이 달라질 수 있습니다.",
+    "PIT price window coverage": "재실행은 가능하지만 일부 가격 기간 gap 때문에 시점 기준 재현의 확신이 낮아질 수 있습니다.",
+    "Cost / slippage sensitivity evidence": "기본 비용 민감도는 계산됐지만 전략 전용 설정 변화까지 모두 확인된 것은 아닙니다.",
+    "Liquidity / operability evidence": "거래 가능성 근거가 오래됐거나 일부만 확인돼 현재 운용 현실성을 다시 확인해야 합니다.",
+    "Tax / account scope": "세금과 계좌 조건을 반영하지 않은 성과이므로 사용자의 실제 계좌에서는 결과가 달라질 수 있습니다.",
+    "Walk-forward temporal validation": "기간을 옮긴 반복 검증에서 비교 기준을 자주 하회하면 특정 시기 의존 가능성이 있습니다.",
+    "Regime split validation": "시장 국면별 성과 차이가 있어 후보가 약해지는 환경을 최종 판단과 Monitoring 조건에 반영해야 합니다.",
+    "Exclude last 12M": "최근 구간을 제외했을 때 성과가 크게 달라지면 최근 성과 의존 가능성이 있습니다.",
+    "Exclude first 12M": "초기 구간을 제외했을 때 성과가 크게 달라지면 시작 시점 의존 가능성이 있습니다.",
+    "Relative Strength perturbation": "모멘텀 기간 변경 결과가 없어 현재 설정값에 대한 의존도를 판단할 수 없습니다.",
+    "GTAA parameter perturbation": "GTAA 설정 변경 결과가 없어 현재 리밸런싱 규칙에 대한 의존도를 판단할 수 없습니다.",
+    "Component weight concentration": "한 구성요소 비중이 크면 그 구성요소의 약세가 포트폴리오 전체에 직접 영향을 줍니다.",
+    "Provider look-through coverage": "ETF 내부 구성을 확인하지 못한 비중만큼 실제 자산·섹터 집중도를 과소평가할 수 있습니다.",
+    "Top holding concentration": "상위 보유 종목 비중이 크면 ETF가 여러 개여도 실제 분산 효과가 제한될 수 있습니다.",
+    "Holdings overlap": "ETF 간 중복 보유가 크면 서로 다른 상품을 담아도 동일 종목 위험이 반복됩니다.",
+    "Pairwise correlation": "구성요소 간 상관이 높으면 시장 충격에서 함께 하락해 기대한 분산 효과가 약해질 수 있습니다.",
+    "Risk contribution concentration": "표면 비중보다 실제 위험 기여가 한쪽에 집중돼 특정 구성요소가 손실을 주도할 수 있습니다.",
+    "Profile-aware weight discipline": "후보의 목표보다 한 구성요소 비중이 커 의도한 운용 성격이 왜곡될 수 있습니다.",
+    "Role concentration discipline": "같은 역할의 구성요소가 많으면 이름이 달라도 동일한 시장 환경에 함께 취약할 수 있습니다.",
+    "ETF Operability": "ETF 거래 가능성 자료의 범위 또는 최신성이 충분하지 않아 실제 운용 조건을 보수적으로 봐야 합니다.",
+    "ETF Holdings": "확인하지 못한 ETF 내부 종목 때문에 실제 집중도와 중복 보유를 완전히 계산하지 못했습니다.",
+    "ETF Exposure": "확인하지 못한 ETF 자산·섹터 노출 때문에 시장 환경별 민감도를 완전히 설명하지 못했습니다.",
+}
+
+
+def _review_trace_guidance(label: str, status: str, observed_value: str) -> dict[str, str]:
+    normalized_status = str(status or "").strip().upper()
+    observed = str(observed_value or "").strip()
+    display_label, _ = _review_trace_presentation(label)
+    if observed == "기간 미포함":
+        return {
+            "meaning": "이 검증은 실패한 것이 아니라 현재 백테스트 시작일보다 과거의 충격 구간이라 계산할 수 없었습니다.",
+            "action_type": "period_outside",
+            "action_label": "기간 확장 또는 대체 검증",
+            "improvement_action": "과거 가격 이력이 충분하면 백테스트 시작일을 확장하고, 어렵다면 최근 유사 충격 구간이나 별도 프록시 스트레스 검증을 사용합니다.",
+            "action_owner": "Backtest Analysis / Practical Validation",
+            "action_tone": "neutral",
+        }
+    normalized_label = label.lower().replace("/", " ")
+    if "tax" in normalized_label and "account" in normalized_label:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS["Tax / account scope"],
+            "action_type": "user_decision",
+            "action_label": "판단 사유에 기록",
+            "improvement_action": "현재 계좌의 세금·수수료 조건을 별도로 확인하고, 이 제한을 수용하는 이유를 선택 또는 보류 사유에 기록합니다.",
+            "action_owner": "Final Review 사용자 판단",
+            "action_tone": "neutral",
+        }
+    if normalized_status == "NOT_RUN":
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS.get(label, f"{display_label} 결과가 없어 현재 설정에 대한 의존도를 판단할 수 없습니다."),
+            "action_type": "implementation_gap",
+            "action_label": "검증 기능 추가 필요",
+            "improvement_action": "이 전략에 맞는 설정 변경 runner를 구현한 뒤 2단계 검증을 다시 실행합니다. 일반 데이터 갱신으로는 해결되지 않습니다.",
+            "action_owner": "Practical Validation 검증 개발",
+            "action_tone": "warning",
+        }
+    if label in {
+        "Provider snapshot freshness",
+        "Liquidity / operability evidence",
+        "Provider look-through coverage",
+        "ETF Operability",
+        "ETF Holdings",
+        "ETF Exposure",
+    }:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS.get(label, "ETF 외부 데이터의 범위 또는 최신성이 충분하지 않습니다."),
+            "action_type": "refreshable_data",
+            "action_label": "2단계 데이터 보강 가능",
+            "improvement_action": "Practical Validation의 데이터 보강에서 수집 가능한 ETF snapshot을 갱신하고, 2단계 재검증 후 새 결과를 저장합니다.",
+            "action_owner": "Practical Validation 데이터 보강",
+            "action_tone": "warning",
+        }
+    if label in {"Universe / listing evidence", "Survivorship / delisting control"}:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS[label],
+            "action_type": "source_discovery",
+            "action_label": "과거 종목 이력 보강 필요",
+            "improvement_action": "현재 snapshot 갱신이 아니라 과거 상장·상장폐지 이력을 제공하는 source와 point-in-time universe 계약을 보강한 뒤 재검증합니다.",
+            "action_owner": "데이터 파이프라인 / Practical Validation",
+            "action_tone": "warning",
+        }
+    if label in {"Price DB window coverage", "PIT price window coverage"}:
+        return {
+            "meaning": _FINAL_REVIEW_TRACE_MEANINGS[label],
+            "action_type": "rerun_required",
+            "action_label": "가격 보강 후 재검증",
+            "improvement_action": "부족한 종목의 DB 가격 기간을 보강한 뒤 같은 후보를 2단계에서 다시 검증합니다.",
+            "action_owner": "가격 ingestion / Practical Validation",
+            "action_tone": "warning",
+        }
+    if label.startswith("Drop-one: "):
+        meaning = "구성요소를 제외했을 때 성과 변화가 커 해당 구성요소 의존도를 최종 판단에 반영해야 합니다."
+    else:
+        meaning = _FINAL_REVIEW_TRACE_MEANINGS.get(
+            label,
+            "저장된 검증 결과가 확인 기준을 완전히 충족하지 않아 후보의 한계로 함께 해석해야 합니다.",
+        )
+    return {
+        "meaning": meaning,
+        "action_type": "inherited_limit",
+        "action_label": "현재 제한 수용 여부 판단",
+        "improvement_action": "현재 결과를 후보의 약점으로 받아들일지 판단하고, 선정한다면 재검토 조건으로 Monitoring에 넘깁니다. 데이터 갱신만으로 수치가 바뀌지는 않습니다.",
+        "action_owner": "Final Review / Portfolio Monitoring",
+        "action_tone": "neutral",
+    }
+
+
+def _review_trace_row_status(row: dict[str, Any]) -> str:
+    return _review_trace_value(row, "Status", "Result Status", "Diagnostic Status", "status").upper()
+
+
+def _review_trace_row_observed(row: dict[str, Any]) -> str:
+    observed = _review_trace_value(row, "Current", "Summary", "Judgment", "Coverage", "current_value")
+    if observed != "-":
+        return observed
+    metric_parts = []
+    for key in ("CAGR", "MDD", "CAGR Delta", "MDD Delta", "Coverage Weight"):
+        value = row.get(key)
+        if value is None or value == "":
+            continue
+        if isinstance(value, (int, float)) and key != "Coverage Weight":
+            metric_parts.append(f"{key} {float(value) * 100:.2f}%")
+        else:
+            metric_parts.append(f"{key} {value}")
+    return " / ".join(metric_parts) or "-"
+
+
+def _review_trace_item(
+    *,
+    label: str,
+    status: str,
+    observed_value: str,
+    judgment_basis: str,
+    evidence_source: str,
+    evidence_as_of: str,
+) -> dict[str, str]:
+    display_label, validation_description = _review_trace_presentation(label)
+    guidance = _review_trace_guidance(label, status, observed_value)
+    return {
+        "label": label,
+        "display_label": display_label,
+        "validation_description": validation_description,
+        "status": status,
+        "status_label": _review_trace_status_label(status, observed_value),
+        "observed_value": observed_value,
+        "observed_label": "현재 확인된 내용",
+        "display_observed_value": _review_trace_observed_copy(label, observed_value, status),
+        "judgment_basis": judgment_basis,
+        "judgment_basis_label": "왜 확인이 필요한가",
+        "display_judgment_basis": _review_trace_basis_copy(label, judgment_basis),
+        **guidance,
+        "evidence_source": evidence_source,
+        "evidence_as_of": evidence_as_of,
+    }
+
+
+def _review_trace_rows(validation: dict[str, Any], module_id: str) -> tuple[list[dict[str, str]], str]:
+    """Connect a Level2 summary card to stored audit rows without inventing thresholds."""
+
+    source_spec = _FINAL_REVIEW_TRACE_SOURCES.get(module_id)
+    if not source_spec:
+        return [], "-"
+    source_key, source_label = source_spec
+    source_payload = validation.get(source_key)
+    raw_rows: list[Any] = []
+    if module_id == "provider_investability":
+        provider = dict(source_payload) if isinstance(source_payload, dict) else {}
+        raw_rows = list(validation.get("provider_coverage_display_rows") or provider.get("display_rows") or [])
+    elif module_id == "stress_robustness":
+        robustness = dict(source_payload) if isinstance(source_payload, dict) else {}
+        raw_rows = [
+            *list(robustness.get("sensitivity_rows") or validation.get("sensitivity_rows") or []),
+            *list(robustness.get("stress_summary_rows") or validation.get("stress_window_rows") or []),
+        ]
+    else:
+        audit = dict(source_payload) if isinstance(source_payload, dict) else {}
+        raw_rows = list(audit.get("rows") or [])
+    non_pass_rows = [
+        dict(row or {})
+        for row in raw_rows
+        if isinstance(row, dict)
+        and _review_trace_row_status(dict(row or {})) not in {"", "PASS", "READY", "OK"}
+    ]
+    traces: list[dict[str, str]] = []
+    for row in non_pass_rows[:3]:
+        label = _review_trace_value(row, "Criteria", "Scenario", "Area", "Module", "label")
+        status = _review_trace_row_status(row) or "REVIEW"
+        observed_value = _review_trace_row_observed(row)
+        judgment_basis = _review_trace_value(
+            row,
+            "Target",
+            "Expected Check",
+            "Evidence",
+            "Meaning",
+            "criterion",
+        )
+        row_source = _review_trace_value(
+            row,
+            "Source",
+            "Source Strength",
+            "Source Mix",
+            "evidence_source",
+        )
+        traces.append(
+            _review_trace_item(
+                label=label,
+                status=status,
+                observed_value=observed_value,
+                judgment_basis=judgment_basis,
+                evidence_source=row_source if row_source != "-" else source_label,
+                evidence_as_of=_review_trace_value(
+                    row,
+                    "As Of",
+                    "As Of Range",
+                    "as_of",
+                    "snapshot_at",
+                ),
+            )
+        )
+    return traces, source_label
+
+
+def _build_final_review_data_enrichment_action(validation: dict[str, Any]) -> dict[str, Any]:
+    """Expose only legacy or newly stale recovery work on the Final Review report."""
+
+    from app.services.backtest_practical_validation import build_pre_final_enrichment_gate
+
+    current_gate = build_pre_final_enrichment_gate(dict(validation or {}))
+    has_saved_contract = "pre_final_enrichment_gate" in validation
+    saved_gate = dict(validation.get("pre_final_enrichment_gate") or {})
+    current_required = bool(current_gate.get("blocking"))
+    saved_blocking = bool(saved_gate.get("blocking"))
+    if not current_required or (has_saved_contract and saved_blocking):
+        mode = "hidden"
+        available = False
+    elif not has_saved_contract:
+        mode = "legacy_recovery"
+        available = True
+    else:
+        mode = "stale_recovery"
+        available = True
+    items = [
+        {
+            "key": _safe_text(item.get("category"), "data"),
+            "label": _safe_text(item.get("label"), "외부 데이터"),
+            "symbols": list(item.get("symbols") or []),
+            "detail": _safe_text(item.get("detail"), "2단계에서 데이터를 보강합니다."),
+            "tone": "warning",
+        }
+        for item in list(current_gate.get("items") or [])
+    ] if available else []
+    selection_source = dict(validation.get("selection_source_snapshot") or {})
+    selection_source_id = _safe_text(
+        selection_source.get("selection_source_id") or validation.get("selection_source_id"),
+        "-",
+    )
+    return {
+        "available": available,
+        "mode": mode,
+        "title": (
+            "저장된 검토서가 최신 보강 기준을 충족하지 않습니다"
+            if mode == "legacy_recovery"
+            else "검토서 확인 후 필수 외부 데이터가 다시 오래됐습니다"
+            if mode == "stale_recovery"
+            else "2단계 데이터 보강 완료"
+        ),
+        "detail": (
+            "과거 기준으로 승격된 검토서입니다. 현재 해결 가능한 필수 데이터는 2단계에서 보강하고 새 검증 결과를 저장해야 합니다."
+            if mode == "legacy_recovery"
+            else "저장 당시에는 통과했지만 현재 최신성 기준을 벗어났습니다. 2단계에서 최신화하고 다시 검증합니다."
+            if mode == "stale_recovery"
+            else "현재 Final Review에서 되돌릴 필수 데이터 보강이 없습니다."
+        ),
+        "item_count": len(items),
+        "symbol_count": int(current_gate.get("symbol_count") or 0) if available else 0,
+        "items": items,
+        "selection_source_id": selection_source_id,
+        "validation_id": _safe_text(validation.get("validation_id"), "-"),
+        "button_label": "2단계에서 보강하고 다시 검증",
+        "next_step": "Flow 2 재검증과 새 결과 저장이 끝난 뒤 Final Review에서 새 검토서를 다시 확인합니다.",
+        "boundary": "Final Review는 provider를 직접 호출하지 않습니다. 같은 후보를 Practical Validation 복구 흐름으로 전달합니다.",
+    }
+
+
+def build_final_review_level2_review_disposition(*, validation: dict[str, Any]) -> dict[str, Any]:
+    """Classify Practical Validation REVIEW handoff items for Final Review consumption."""
+
+    validation = dict(validation or {})
+    has_stored_closure = isinstance(validation.get("evidence_closure"), dict)
+    closure = dict(validation.get("evidence_closure") or build_evidence_closure_contract(validation))
+    closure_cards = _closure_review_cards(closure)
+    missing_module_ids = {
+        str(issue.get("root_issue_id") or "").split(":", 1)[1]
+        for issue in list(closure.get("issues") or [])
+        if isinstance(issue, dict)
+        and str(issue.get("root_issue_id") or "").startswith("missing_contract:")
+    }
+    groups: dict[str, list[dict[str, Any]]] = {
+        "blocker": [],
+        "warning": [],
+        "open_review": [],
+        "monitoring_followup": [],
+    }
+    seen: set[tuple[str, str, str]] = set()
+    legacy_cards = [
+        card
+        for card in _level2_review_cards(validation)
+        if _safe_text(card.get("module_id") or card.get("Module"), "") not in missing_module_ids
+    ]
+    review_cards = closure_cards if has_stored_closure else legacy_cards
+    for raw_card in review_cards:
+        card = dict(raw_card or {})
+        status = _safe_text(card.get("status") or card.get("Status") or card.get("Current"), "")
+        role = _safe_text(card.get("review_role"), "")
+        if status.upper() == "PASS" or status.upper() == "READY":
+            continue
+        if status.upper() != "REVIEW" and role not in {"final_readiness_blocker"}:
+            continue
+        disposition, disposition_label, tone = _review_disposition_for_role(role, status)
+        title = _safe_text(
+            card.get("display_label")
+            or card.get("label")
+            or card.get("Criteria")
+            or card.get("Module")
+            or card.get("module_id"),
+            "Review item",
+        )
+        key = (title, role, disposition)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized_role = role or "final_decision_input"
+        observed_value = _review_trace_value(card, "observed_value", "current_value", "metric_value", "Value")
+        threshold = _review_trace_value(card, "threshold", "pass_criteria", "criterion", "Target")
+        evidence_source = _review_trace_value(
+            card,
+            "evidence_source",
+            "source_label",
+            "provider",
+            "module_id",
+            "Module",
+        )
+        evidence_as_of = _review_trace_value(card, "as_of", "snapshot_at", "collected_at", "updated_at", "generated_at")
+        trace_items: list[dict[str, str]] = []
+        direct_trace = observed_value != "-" or threshold != "-"
+        if direct_trace:
+            trace_items.append(
+                _review_trace_item(
+                    label=title,
+                    status=status.upper() or "REVIEW",
+                    observed_value=observed_value,
+                    judgment_basis=threshold,
+                    evidence_source=evidence_source,
+                    evidence_as_of=evidence_as_of,
+                )
+            )
+        else:
+            trace_items, adapter_source = _review_trace_rows(
+                validation,
+                _safe_text(card.get("module_id") or card.get("Module"), ""),
+            )
+            if trace_items:
+                first_trace = trace_items[0]
+                observed_value = _safe_text(first_trace.get("observed_value"), "-")
+                threshold = _safe_text(first_trace.get("judgment_basis"), "-")
+                evidence_source = _safe_text(first_trace.get("evidence_source"), adapter_source)
+                evidence_as_of = _safe_text(first_trace.get("evidence_as_of"), "-")
+        if not trace_items and normalized_role in {"final_decision_input", "monitoring_followup"}:
+            trace_items.append(
+                _review_trace_item(
+                    label=title,
+                    status=status.upper() or "REVIEW",
+                    observed_value=observed_value,
+                    judgment_basis=threshold,
+                    evidence_source=evidence_source,
+                    evidence_as_of=evidence_as_of,
+                )
+            )
+        if card.get("trace_status_override"):
+            trace_status = _safe_text(card.get("trace_status_override"), "derived")
+            trace_label = _safe_text(card.get("trace_label_override"), "root 근거 확인")
+        elif observed_value != "-" and threshold != "-" and direct_trace:
+            trace_status = "measured"
+            trace_label = "측정 근거 확인"
+        elif normalized_role in {"final_decision_input", "monitoring_followup"}:
+            trace_status = "qualitative"
+            trace_label = "사용자 판단 항목"
+        elif trace_items:
+            trace_status = "derived"
+            trace_label = f"세부 근거 {len(trace_items)}개 확인"
+        else:
+            trace_status = "missing_contract"
+            trace_label = "세부 설명 준비 안 됨"
+        ownership = {
+            "pv_data_caution": "level2_inherited_limit",
+            "pv_practical_caution": "level2_inherited_limit",
+            "final_decision_input": "final_review_decision",
+            "monitoring_followup": "monitoring_handoff",
+            "final_readiness_blocker": "selection_blocker",
+        }.get(normalized_role, "final_review_decision")
+        user_instruction = {
+            "pv_data_caution": "총평과 근거 신뢰도에 이 제한이 반영됐는지만 확인합니다. 보강 작업은 2단계 책임입니다.",
+            "pv_practical_caution": "선택 판단의 확신을 낮추는 제한으로 받아들입니다. Final Review에서 검증을 다시 실행하지 않습니다.",
+            "final_decision_input": "이 항목을 수용할지 판단하고 선택 또는 보류 사유에 기록합니다.",
+            "monitoring_followup": "선정한다면 어떤 변화에서 재검토할지 Monitoring 조건으로 확정합니다.",
+            "final_readiness_blocker": "Final Review를 중단하고 2단계로 돌아가 이 항목을 먼저 해소합니다.",
+        }.get(normalized_role, "선택 또는 보류 사유에 반영합니다.")
+        why_visible = {
+            "level2_inherited_limit": "2단계에서 통과는 허용했지만 판단 확신과 점수 해석에 영향을 주는 제한입니다.",
+            "final_review_decision": "검증으로 자동 결정할 수 없어 사용자의 최종 판단이 필요합니다.",
+            "monitoring_handoff": "선정 후에도 조건 변화 여부를 지속해서 확인해야 합니다.",
+            "selection_blocker": "선정 전에 반드시 해소해야 하는 차단 항목입니다.",
+        }[ownership]
+        raw_resolution_action = _safe_text(
+            card.get("resolution_action")
+            or card.get("next_action_summary")
+            or card.get("action_label")
+            or card.get("Next Action")
+            or card.get("Required Action"),
+            "-",
+        )
+        groups[disposition].append(
+            {
+                "title": title,
+                "root_issue_id": _safe_text(card.get("root_issue_id"), "-"),
+                "status": status.upper() or "REVIEW",
+                "role": normalized_role,
+                "role_label": _safe_text(card.get("review_role_label"), "최종 판단 참고"),
+                "stage_surface": _safe_text(card.get("stage_decision_surface"), "Final Review"),
+                "disposition": disposition,
+                "disposition_label": disposition_label,
+                "detail": _safe_text(
+                    card.get("evidence")
+                    or card.get("current_problem")
+                    or card.get("missing_summary")
+                    or card.get("Meaning")
+                    or card.get("Current"),
+                    "-",
+                ),
+                "action": user_instruction,
+                "user_instruction": user_instruction,
+                "why_visible": why_visible,
+                "ownership": ownership,
+                "final_review_action_required": ownership != "level2_inherited_limit",
+                "level2_resolution_action": raw_resolution_action,
+                "observed_value": observed_value,
+                "threshold": threshold,
+                "evidence_source": evidence_source,
+                "evidence_as_of": evidence_as_of,
+                "trace_status": trace_status,
+                "trace_label": trace_label,
+                "trace_items": trace_items,
+                "tone": tone,
+                **_level2_review_action(normalized_role),
+            }
+        )
+    total = sum(len(items) for items in groups.values())
+    all_items = [item for items in groups.values() for item in items]
+    role_specs = [
+        ("pv_data_caution", "데이터 주의", "warning"),
+        ("pv_practical_caution", "2단계 실용성 주의", "warning"),
+        ("final_decision_input", "최종 판단 참고", "warning"),
+        ("monitoring_followup", "Monitoring 추적", "warning"),
+        ("final_readiness_blocker", "저장 전 보강", "danger"),
+    ]
+    role_sections = []
+    for role, label, tone in role_specs:
+        action = _level2_review_action(role)
+        items = [dict(item) for item in all_items if item.get("role") == role]
+        role_sections.append(
+            {
+                "role": role,
+                "label": label,
+                "tone": tone,
+                "count": len(items),
+                "items": items,
+                **action,
+            }
+        )
+    final_review_section_specs = [
+        (
+            "decision",
+            "최종 판단에서 결정할 것",
+            "선택·보류 사유에 반영",
+            "검증으로 자동 결정할 수 없는 조건을 사용자가 수용하거나 보류합니다.",
+            {"final_decision_input"},
+            "warning",
+        ),
+        (
+            "inherited_limits",
+            "2단계에서 인수한 제한사항",
+            "이미 점수·신뢰도에 반영",
+            "2단계에서 통과를 허용한 제한입니다. Final Review에서 보강 작업을 다시 수행하지 않습니다.",
+            {"pv_data_caution", "pv_practical_caution"},
+            "neutral",
+        ),
+        (
+            "monitoring_handoff",
+            "Monitoring으로 넘길 조건",
+            "추적 조건으로 확정",
+            "선정 후 어떤 변화에서 재검토할지 운영 조건으로 넘깁니다.",
+            {"monitoring_followup"},
+            "warning",
+        ),
+        (
+            "selection_blockers",
+            "선정 전 해소할 차단 항목",
+            "2단계에서 해소 필요",
+            "이 항목이 있으면 Final Review에서 선정하지 않고 2단계로 돌아갑니다.",
+            {"final_readiness_blocker"},
+            "danger",
+        ),
+    ]
+    final_review_sections = []
+    for key, label, action_label, detail, roles, tone in final_review_section_specs:
+        items = [dict(item) for item in all_items if item.get("role") in roles]
+        if not items:
+            continue
+        final_review_sections.append(
+            {
+                "key": key,
+                "label": label,
+                "tone": tone,
+                "count": len(items),
+                "action_label": action_label,
+                "action_detail": detail,
+                "items": items,
+            }
+        )
+    trace_actions: list[dict[str, str]] = []
+    seen_trace_actions: set[tuple[str, str, str]] = set()
+    for item in all_items:
+        for trace in list(item.get("trace_items") or []):
+            if not isinstance(trace, dict):
+                continue
+            action_type = _safe_text(trace.get("action_type"), "inherited_limit")
+            action_key = (
+                _safe_text(trace.get("display_label") or trace.get("label"), "세부 근거"),
+                action_type,
+                _safe_text(trace.get("observed_value"), "-"),
+            )
+            if action_key in seen_trace_actions:
+                continue
+            seen_trace_actions.add(action_key)
+            trace_actions.append(
+                {
+                    "label": action_key[0],
+                    "action_type": action_type,
+                    "action_label": _safe_text(trace.get("action_label"), "현재 제한 확인"),
+                    "improvement_action": _safe_text(trace.get("improvement_action"), "최종 판단에 반영합니다."),
+                    "action_owner": _safe_text(trace.get("action_owner"), "Final Review"),
+                    "tone": _safe_text(trace.get("action_tone"), "neutral"),
+                }
+            )
+    action_type_counts: dict[str, int] = {}
+    for trace in trace_actions:
+        action_type = trace["action_type"]
+        action_type_counts[action_type] = action_type_counts.get(action_type, 0) + 1
+    return {
+        "schema_version": LEVEL2_REVIEW_DISPOSITION_SCHEMA_VERSION,
+        "summary": {
+            "total": total,
+            "blocker": len(groups["blocker"]),
+            "warning": len(groups["warning"]),
+            "open_review": len(groups["open_review"]),
+            "monitoring_followup": len(groups["monitoring_followup"]),
+        },
+        "groups": groups,
+        "role_sections": role_sections,
+        "final_review_sections": final_review_sections,
+        "trace_action_summary": {
+            "total": len(trace_actions),
+            "refreshable_data": action_type_counts.get("refreshable_data", 0),
+            "source_discovery": action_type_counts.get("source_discovery", 0),
+            "rerun_required": action_type_counts.get("rerun_required", 0),
+            "period_outside": action_type_counts.get("period_outside", 0),
+            "implementation_gap": action_type_counts.get("implementation_gap", 0),
+            "user_decision": action_type_counts.get("user_decision", 0),
+            "inherited_limit": action_type_counts.get("inherited_limit", 0),
+        },
+        "trace_actions": trace_actions,
+        "closure_summary": dict(closure.get("summary") or {}),
+        "closure_issues": [dict(row or {}) for row in list(closure.get("issues") or []) if isinstance(row, dict)],
+        "data_enrichment_action": _build_final_review_data_enrichment_action(validation),
+        "boundary": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "storage_write": False,
+            "solves_level2_review": False,
+            "final_review_consumes_evidence": True,
+        },
+    }
+
+
+def _clamped_score(value: float, *, lower: float = 0.0, upper: float = 100.0) -> int:
+    return int(round(max(lower, min(upper, value))))
+
+
+def build_final_review_pattern_guide_contract() -> dict[str, Any]:
+    """Describe the structured evidence contract for conditional guidance."""
+
+    return _build_pattern_guide_contract_v2(FINAL_REVIEW_PATTERN_CATALOG)
+
+
+def build_final_review_pattern_guide(
+    *,
+    validation: dict[str, Any],
+    investability_packet: dict[str, Any],
+) -> dict[str, Any]:
+    """Evaluate ten patterns from named evidence adapters without new I/O."""
+
+    return _build_pattern_guide_v2(
+        validation=validation,
+        investability_packet=investability_packet,
+        catalog=FINAL_REVIEW_PATTERN_CATALOG,
+    )
+
+
+def _scorecard_category(category: str, score: int, evidence: str, effect: str) -> dict[str, Any]:
+    if score >= 80:
+        tone = "positive"
+    elif score >= 60:
+        tone = "warning"
+    else:
+        tone = "danger"
+    return {
+        "category": category,
+        "score": score,
+        "evidence": evidence,
+        "effect": effect,
+        "tone": tone,
+    }
+
+
+def _scorecard_dimension(
+    *,
+    key: str,
+    label: str,
+    score: int,
+    weight: float,
+    evidence: str,
+    interpretation: str,
+) -> dict[str, Any]:
+    if score >= 80:
+        tone = "positive"
+    elif score >= 60:
+        tone = "warning"
+    else:
+        tone = "danger"
+    return {
+        "key": key,
+        "label": label,
+        "score": _clamped_score(score),
+        "weight": weight,
+        "evidence": evidence,
+        "interpretation": interpretation,
+        "tone": tone,
+    }
+
+
+def _weighted_dimension_score(dimensions: list[dict[str, Any]]) -> int:
+    total = 0.0
+    for dimension in dimensions:
+        total += float(dimension.get("score") or 0.0) * float(dimension.get("weight") or 0.0)
+    return _clamped_score(total)
+
+
+def _score_limit(*, code: str, label: str, cap: int, detail: str, tone: str = "warning") -> dict[str, Any]:
+    return {
+        "code": code,
+        "label": label,
+        "cap": _clamped_score(cap),
+        "detail": detail,
+        "tone": tone,
+    }
+
+
+def _closure_score_impacts(disposition: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return one measured score impact per root issue, never per display role."""
+
+    impacts: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw_issue in list(disposition.get("closure_issues") or []):
+        issue = dict(raw_issue or {})
+        root_issue_id = _safe_text(issue.get("root_issue_id"), "")
+        if not root_issue_id or root_issue_id in seen or root_issue_id.startswith("missing_contract:"):
+            continue
+        measurement = dict(issue.get("measurement") or {})
+        observed = _float_or_none(measurement.get("observed"))
+        threshold = _float_or_none(measurement.get("threshold"))
+        if observed is None or threshold is None:
+            continue
+        seen.add(root_issue_id)
+        score_effect = int(_float_or_none(measurement.get("score_effect")) or 0)
+        impacts.append(
+            {
+                "root_issue_id": root_issue_id,
+                "title": _safe_text(issue.get("title"), root_issue_id),
+                "role": "root_measurement",
+                "role_label": "측정 근거",
+                "disposition": _safe_text(issue.get("resolution_class"), "measured"),
+                "target_dimension": _safe_text(
+                    measurement.get("target_dimension"),
+                    "evidence_confidence",
+                ),
+                "score_effect": score_effect,
+                "score_policy": "measured_threshold_only",
+                "measurement": measurement,
+                "observed_value": observed,
+                "threshold": threshold,
+                "evidence_source": _safe_text(issue.get("cause"), "evidence closure"),
+                "evidence_as_of": _safe_text(measurement.get("as_of"), "-"),
+                "trace_status": "measured",
+                "trace_label": "측정값과 기준 확인",
+                "trace_items": [],
+                "rationale": _safe_text(
+                    measurement.get("rationale"),
+                    "저장된 관측값과 기준의 명시적 score effect만 반영합니다.",
+                ),
+                "tone": "warning" if score_effect < 0 else "neutral",
+            }
+        )
+    return impacts
+
+
+def build_final_review_scorecard(
+    *,
+    investability_packet: dict[str, Any],
+    level2_review_disposition: dict[str, Any],
+) -> dict[str, Any]:
+    """Build the Final Review recommendation taxonomy from existing gate evidence."""
+
+    packet = dict(investability_packet or {})
+    gate_policy = dict(packet.get("selection_gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
+    disposition = dict(level2_review_disposition or {})
+    disposition_summary = dict(disposition.get("summary") or {})
+    gate_outcome = str(gate_policy.get("outcome") or packet.get("route") or "").strip()
+    packet_score = _float_or_none(packet.get("score")) or 0.0
+    gate_blocker_count = len(gate_policy.get("blockers") or [])
+    blocker_count = gate_blocker_count + int(disposition_summary.get("blocker", 0) or 0)
+    review_required_count = len(gate_policy.get("review_required") or [])
+    warning_count = int(disposition_summary.get("warning", 0) or 0)
+    open_review_count = int(disposition_summary.get("open_review", 0) or 0)
+    monitoring_followup_count = int(disposition_summary.get("monitoring_followup", 0) or 0)
+    review_impacts = _closure_score_impacts(disposition)
+    impact_deductions = {
+        key: sum(
+            abs(int(impact.get("score_effect") or 0))
+            for impact in review_impacts
+            if impact.get("target_dimension") == key
+        )
+        for key in ("evidence_confidence", "monitoring_readiness")
+    }
+    select_ready = bool(gate_policy.get("select_allowed")) or gate_outcome == "select_ready"
+    gate_score = 100 if select_ready else 35 if gate_outcome == "blocked" else 65
+    evidence_score = _clamped_score(packet_score * 10.0)
+    weights = {
+        "investment": 0.30,
+        "risk": 0.20,
+        "readiness": 0.20,
+        "evidence_quality": 0.20,
+        "monitoring_suitability": 0.10,
+    }
+    investment_score = evidence_score
+    risk_score = evidence_score
+    readiness_score = _clamped_score(
+        gate_score - min(45, gate_blocker_count * 20 + review_required_count * 5 + impact_deductions["monitoring_readiness"])
+    )
+    evidence_quality_score = _clamped_score(
+        evidence_score - min(40, impact_deductions["evidence_confidence"])
+    )
+    monitoring_score = _clamped_score(
+        (90 if select_ready else 55) - min(40, gate_blocker_count * 20 + impact_deductions["monitoring_readiness"])
+    )
+    dimensions = [
+        _scorecard_dimension(
+            key="investment",
+            label="투자 성과 매력도",
+            score=investment_score,
+            weight=weights["investment"],
+            evidence=f"investability packet {packet_score:.1f} / 10; REVIEW 개수 자동 감점 없음",
+            interpretation="성과 / benchmark / 전략 매력도 기반의 최종 선택 매력도",
+        ),
+        _scorecard_dimension(
+            key="risk",
+            label="위험 방어력",
+            score=risk_score,
+            weight=weights["risk"],
+            evidence="저장 evidence의 risk / robustness 해석; REVIEW 개수 자동 감점 없음",
+            interpretation="측정된 drawdown / robustness / construction 근거의 위험 방어력",
+        ),
+        _scorecard_dimension(
+            key="readiness",
+            label="선정 준비도",
+            score=readiness_score,
+            weight=weights["readiness"],
+            evidence=gate_outcome or "-",
+            interpretation="Final Review 판단 저장과 Monitoring handoff 준비도",
+        ),
+        _scorecard_dimension(
+            key="evidence_quality",
+            label="근거 품질",
+            score=evidence_quality_score,
+            weight=weights["evidence_quality"],
+            evidence=f"근거 신뢰도 조정 {impact_deductions['evidence_confidence']}점",
+            interpretation="데이터 / 검증 공백이 결론의 신뢰도에 미치는 영향",
+        ),
+        _scorecard_dimension(
+            key="monitoring_suitability",
+            label="Monitoring 적합성",
+            score=monitoring_score,
+            weight=weights["monitoring_suitability"],
+            evidence=f"Monitoring 준비도 조정 {impact_deductions['monitoring_readiness']}점",
+            interpretation="Monitoring에 올렸을 때 추적 조건을 관리할 수 있는지",
+        ),
+    ]
+    attractiveness_score = _clamped_score(investment_score * 0.65 + risk_score * 0.35)
+    monitoring_readiness_score = _clamped_score(readiness_score * 0.65 + monitoring_score * 0.35)
+    headline_scores = [
+        _scorecard_dimension(
+            key="attractiveness",
+            label="투자 매력도",
+            score=attractiveness_score,
+            weight=1.0,
+            evidence="투자 성과 매력도 65% + 위험 방어력 35%",
+            interpretation="측정된 성과와 위험 근거만 반영하며 REVIEW 개수로 감점하지 않습니다.",
+        ),
+        _scorecard_dimension(
+            key="evidence_confidence",
+            label="근거 신뢰도",
+            score=evidence_quality_score,
+            weight=1.0,
+            evidence=f"근거 품질 조정 {impact_deductions['evidence_confidence']}점",
+            interpretation="미측정과 데이터 주의가 결론의 신뢰도에 미치는 영향입니다.",
+        ),
+        _scorecard_dimension(
+            key="monitoring_readiness",
+            label="Monitoring 준비도",
+            score=monitoring_readiness_score,
+            weight=1.0,
+            evidence=f"gate {gate_outcome or '-'}; 준비도 조정 {impact_deductions['monitoring_readiness']}점",
+            interpretation="저장 전 blocker와 Monitoring 추적 준비 상태입니다.",
+        ),
+    ]
+    pre_cap_score = attractiveness_score
+    overall = attractiveness_score
+    score_limits: list[dict[str, Any]] = []
+    cap_applied = False
+    route_constraints = []
+    closure_summary = dict(disposition.get("closure_summary") or {})
+    closure_blocker_count = sum(
+        int(closure_summary.get(key) or 0)
+        for key in (
+            "unresolved_actionable_count",
+            "critical_engineering_count",
+            "missing_contract_count",
+        )
+    )
+    if closure_blocker_count:
+        route_constraints.append(
+            {
+                "code": "evidence_closure_blocker",
+                "label": "미정 근거 종결 필요",
+                "tone": "danger",
+            }
+        )
+        blocker_count += closure_blocker_count
+    if blocker_count:
+        route_constraints.append({"code": "hard_blocker", "label": "저장 전 blocker", "tone": "danger"})
+    if not select_ready:
+        route_constraints.append({"code": "selected_route_not_ready", "label": "선택 route 준비 필요", "tone": "warning"})
+    if review_required_count:
+        route_constraints.append({"code": "gate_review_required", "label": "gate 확인 필요", "tone": "warning"})
+    strongest_dimension = max(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
+    weakest_dimension = min(dimensions, key=lambda dimension: int(dimension.get("score") or 0))
+    positive_drivers = [
+        {
+            "label": strongest_dimension["label"],
+            "detail": strongest_dimension["interpretation"],
+            "score": strongest_dimension["score"],
+            "tone": strongest_dimension["tone"],
+        },
+        {
+            "label": "선정 가능 조건",
+            "detail": "selected-route gate 통과 상태" if select_ready else "selected-route gate 추가 확인 필요",
+            "score": gate_score,
+            "tone": "positive" if select_ready else "warning",
+        },
+    ]
+    negative_drivers = [
+        {
+            "label": weakest_dimension["label"],
+            "detail": weakest_dimension["interpretation"],
+            "score": weakest_dimension["score"],
+            "tone": weakest_dimension["tone"],
+        },
+        {
+            "label": "근거 신뢰도",
+            "detail": f"데이터 / 실용성 근거 조정 {impact_deductions['evidence_confidence']}점; 최종 판단 참고는 자동 감점 없음",
+            "score": evidence_quality_score,
+            "tone": "warning" if impact_deductions["evidence_confidence"] else "neutral",
+        },
+    ]
+    if blocker_count:
+        classification = "REVIEW_REQUIRED"
+        classification_label = "재검토 필요"
+        decision_route = "RE_REVIEW_REQUIRED"
+    elif select_ready and overall >= 80:
+        classification = "MONITORING_CANDIDATE"
+        classification_label = "추천 / 모니터링 후보"
+        decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
+    elif select_ready:
+        classification = "MONITORING_CANDIDATE_WITH_WATCH"
+        classification_label = "모니터링 후보 / 보강 추적"
+        decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO
+    elif overall >= 55:
+        classification = "HOLD"
+        classification_label = "보류 / 추가 관찰"
+        decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
+    elif overall >= 35:
+        classification = "REVIEW_REQUIRED"
+        classification_label = "재검토 필요"
+        decision_route = "RE_REVIEW_REQUIRED"
+    else:
+        classification = "REJECT"
+        classification_label = "탈락 / 실전 사용 제외"
+        decision_route = "REJECT_FOR_PRACTICAL_USE"
+    if overall >= 80:
+        score_band = "강함"
+    elif overall >= 70:
+        score_band = "선정 가능 / 보강 추적"
+    elif overall >= 55:
+        score_band = "보류권"
+    elif overall >= 35:
+        score_band = "재검토권"
+    else:
+        score_band = "탈락권"
+    return {
+        "schema_version": FINAL_REVIEW_SCORECARD_SCHEMA_VERSION,
+        "overall_score": overall,
+        "pre_cap_score": pre_cap_score,
+        "score_band": score_band,
+        "classification": classification,
+        "classification_label": classification_label,
+        "decision_route": decision_route,
+        "decision_label": _decision_route_label(decision_route),
+        "monitoring_candidate": decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO and select_ready and blocker_count == 0,
+        "basis": "투자 매력도와 근거 신뢰도, Monitoring 준비도를 분리한 evidence-only scorecard",
+        "weights": weights,
+        "dimensions": dimensions,
+        "headline_scores": headline_scores,
+        "review_impacts": review_impacts,
+        "score_drivers": {
+            "positive": positive_drivers,
+            "negative": negative_drivers,
+        },
+        "score_limits": score_limits,
+        "route_constraints": route_constraints,
+        "cap_applied": cap_applied,
+        "inputs": {
+            "gate_outcome": gate_outcome,
+            "packet_score_0_10": packet_score,
+            "blocker_count": blocker_count,
+            "review_required_count": review_required_count,
+            "warning_count": warning_count,
+            "open_review_count": open_review_count,
+            "monitoring_followup_count": monitoring_followup_count,
+            "review_impact_count": len(review_impacts),
+        },
+        "categories": [
+            _scorecard_category(
+                "Selection Gate",
+                gate_score,
+                gate_outcome or "-",
+                "Monitoring 후보 handoff 가능 여부",
+            ),
+            _scorecard_category(
+                "Evidence Packet",
+                evidence_score,
+                f"{packet_score:.1f} / 10",
+                "기존 investability evidence ready-check",
+            ),
+            _scorecard_category(
+                "투자 매력도",
+                attractiveness_score,
+                "측정된 성과 / 위험 evidence",
+                "REVIEW 개수 자동 감점 없음",
+            ),
+            _scorecard_category(
+                "근거 신뢰도",
+                evidence_quality_score,
+                f"근거 품질 조정 {impact_deductions['evidence_confidence']}점",
+                "미측정 / 데이터 주의 분리",
+            ),
+            _scorecard_category(
+                "Monitoring 준비도",
+                monitoring_readiness_score,
+                f"준비도 조정 {impact_deductions['monitoring_readiness']}점",
+                "blocker / 추적 조건 분리",
+            ),
+        ],
+        "boundaries": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "storage_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
+def build_final_review_weakness_improvement_plan(
+    *,
+    weaknesses: list[dict[str, Any]],
+    scorecard: dict[str, Any],
+) -> dict[str, Any]:
+    """Suggest verifiable weakness mitigations without generating a new strategy."""
+
+    weakness_rows = [dict(row or {}) for row in list(weaknesses or []) if isinstance(row, dict)]
+    current_score = int(dict(scorecard or {}).get("overall_score") or 0)
+    proposals: list[dict[str, Any]] = []
+    for row in weakness_rows[:5]:
+        title = _safe_text(row.get("title"), "약점")
+        action = _safe_text(row.get("action"), "근거를 보강하고 Final Review scorecard를 다시 확인합니다.")
+        proposals.append(
+            {
+                "weakness": title,
+                "current_gap": _safe_text(row.get("detail"), "-"),
+                "proposed_change": action,
+                "expected_effect": "이 변경의 효과는 별도 재검증 전에는 점수 개선으로 추정하지 않습니다.",
+                "verification_step": f"{action} 이후 Practical Validation 검증 결과와 Final Review scorecard를 다시 비교합니다.",
+                "scope": "evidence_and_validation",
+                "auto_generate_strategy": False,
+            }
+        )
+    if not proposals:
+        proposals.append(
+            {
+                "weakness": "선택 차단 약점 없음",
+                "current_gap": "현재 selected-route blocker는 없습니다.",
+                "proposed_change": "새 비중이나 전략을 자동 생성하지 않고, Monitoring trigger와 open review를 추적합니다.",
+                "expected_effect": "현재 후보 상태를 유지하면서 사후 recheck에서 성과 악화나 근거 stale을 확인합니다.",
+                "verification_step": "Portfolio Monitoring에서 정해진 review trigger와 scorecard 변화를 검증합니다.",
+                "scope": "monitoring_followup",
+                "auto_generate_strategy": False,
+            }
+        )
+    return {
+        "schema_version": WEAKNESS_IMPROVEMENT_SCHEMA_VERSION,
+        "proposals": proposals,
+        "comparison": {
+            "current_score": current_score,
+            "weakness_count": len(weakness_rows),
+            "score_projection_available": False,
+            "verification_status": "counterfactual_required" if weakness_rows else "monitoring_required",
+            "projection_note": "대안 적용 후 Practical Validation과 counterfactual backtest 전에는 예상 점수 범위를 제공하지 않습니다.",
+        },
+        "boundary": {
+            "auto_generate_strategy": False,
+            "auto_backtest": False,
+            "auto_save_portfolio": False,
+            "verification_required": bool(weakness_rows),
+            "provider_fetch": False,
+            "storage_write": False,
+        },
+    }
+
+
+def build_final_review_selection_rationale(*, scorecard: dict[str, Any]) -> dict[str, Any]:
+    """Summarize why the final route is selectable, held, rejected, or needs review."""
+
+    scorecard = dict(scorecard or {})
+    dimensions = [dict(row or {}) for row in list(scorecard.get("dimensions") or []) if isinstance(row, dict)]
+    headline_scores = {
+        str(row.get("key") or ""): dict(row or {})
+        for row in list(scorecard.get("headline_scores") or [])
+        if isinstance(row, dict)
+    }
+    strongest = max(dimensions, key=lambda row: int(row.get("score") or 0)) if dimensions else {}
+    weakest = min(dimensions, key=lambda row: int(row.get("score") or 0)) if dimensions else {}
+    inputs = dict(scorecard.get("inputs") or {})
+    score_limits = [dict(row or {}) for row in list(scorecard.get("score_limits") or []) if isinstance(row, dict)]
+    decision_route = _safe_text(scorecard.get("decision_route"), "HOLD_FOR_MORE_PAPER_TRACKING")
+    overall_score = int(scorecard.get("overall_score") or 0)
+    pre_cap_score = int(scorecard.get("pre_cap_score") or overall_score)
+    classification_label = _safe_text(scorecard.get("classification_label"), _decision_route_label(decision_route))
+    attractiveness = int(dict(headline_scores.get("attractiveness") or {}).get("score") or overall_score)
+    evidence_confidence = int(dict(headline_scores.get("evidence_confidence") or {}).get("score") or 0)
+    monitoring_readiness = int(dict(headline_scores.get("monitoring_readiness") or {}).get("score") or 0)
+    route_constraints = [
+        dict(row or {})
+        for row in list(scorecard.get("route_constraints") or [])
+        if isinstance(row, dict)
+    ]
+    if decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO:
+        headline = "Monitoring 후보로 올릴 수 있는 최종 선택 근거입니다."
+    elif decision_route == "HOLD_FOR_MORE_PAPER_TRACKING":
+        headline = "선정 전 추가 관찰로 보류해야 하는 근거입니다."
+    elif decision_route == "RE_REVIEW_REQUIRED":
+        headline = "실전 후보 판단 전에 재검토해야 하는 근거입니다."
+    else:
+        headline = "실전 사용 후보에서 제외해야 하는 근거입니다."
+    limit_summary = "투자 매력도 자동 cap 없음"
+    route_summary = (
+        ", ".join(_safe_text(item.get("label"), "route 확인") for item in route_constraints)
+        if route_constraints
+        else "선택 route 제약 없음"
+    )
+    review_summary = (
+        f"Level2 REVIEW warning {int(inputs.get('warning_count') or 0)}, "
+        f"open {int(inputs.get('open_review_count') or 0)}, "
+        f"monitoring follow-up {int(inputs.get('monitoring_followup_count') or 0)}"
+    )
+    decision_reason = (
+        f"{classification_label}. 투자 매력도 {attractiveness}/100, 근거 신뢰도 {evidence_confidence}/100, "
+        f"Monitoring 준비도 {monitoring_readiness}/100입니다. {route_summary}."
+    )
+    key_points = [
+        {
+            "label": "투자 매력도",
+            "detail": f"{attractiveness}/100 ({_safe_text(scorecard.get('score_band'), '-')})",
+            "tone": "positive" if overall_score >= 80 else "warning" if overall_score >= 55 else "danger",
+        },
+        {
+            "label": "가장 강한 근거",
+            "detail": f"{_safe_text(strongest.get('label'), '-')} {int(strongest.get('score') or 0)}/100 - {_safe_text(strongest.get('interpretation'), '-')}",
+            "tone": _safe_text(strongest.get("tone"), "neutral"),
+        },
+        {
+            "label": "가장 큰 확인 지점",
+            "detail": f"{_safe_text(weakest.get('label'), '-')} {int(weakest.get('score') or 0)}/100 - {_safe_text(weakest.get('interpretation'), '-')}",
+            "tone": _safe_text(weakest.get("tone"), "neutral"),
+        },
+        {
+            "label": "Level2 REVIEW 반영",
+            "detail": review_summary,
+            "tone": "warning" if int(inputs.get("open_review_count") or 0) else "neutral",
+        },
+    ]
+    if score_limits:
+        key_points.append(
+            {
+                "label": "점수 제한",
+                "detail": "; ".join(_safe_text(limit.get("detail"), _safe_text(limit.get("label"), "-")) for limit in score_limits),
+                "tone": "warning",
+            }
+        )
+    return {
+        "schema_version": SELECTION_RATIONALE_SCHEMA_VERSION,
+        "headline": headline,
+        "decision_route": decision_route,
+        "decision_label": _decision_route_label(decision_route),
+        "classification": scorecard.get("classification"),
+        "classification_label": classification_label,
+        "score_summary": (
+            f"투자 매력도 {attractiveness}/100, 근거 신뢰도 {evidence_confidence}/100, "
+            f"Monitoring 준비도 {monitoring_readiness}/100, {limit_summary}, {route_summary}"
+        ),
+        "decision_reason": decision_reason,
+        "key_points": key_points,
+        "monitoring_handoff_reason": (
+            "Monitoring 후보로 올리고 review trigger를 추적합니다."
+            if bool(scorecard.get("monitoring_candidate"))
+            else "Monitoring handoff 전에 보강 또는 추가 관찰이 필요합니다."
+        ),
+        "boundary": {
+            "provider_fetch": False,
+            "storage_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
+def build_final_review_required_decision_notes(*, scorecard: dict[str, Any], selection_rationale: dict[str, Any]) -> list[dict[str, Any]]:
+    """Describe the user-authored notes needed before saving a Final Review judgment."""
+
+    scorecard = dict(scorecard or {})
+    inputs = dict(scorecard.get("inputs") or {})
+    score_limits = [dict(row or {}) for row in list(scorecard.get("score_limits") or []) if isinstance(row, dict)]
+    review_count = int(inputs.get("review_impact_count") or 0)
+    notes = [
+        {
+            "kind": "decision_reason",
+            "label": "선택 / 보류 / 탈락 사유",
+            "prompt": _safe_text(selection_rationale.get("decision_reason"), "최종 판단 사유를 기록합니다."),
+            "required": True,
+            "source": "selection_rationale",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+        {
+            "kind": "score",
+            "label": "점수 해석과 route 조건",
+            "prompt": _safe_text(selection_rationale.get("score_summary"), "세 점수와 route 조건을 구분해 기록합니다."),
+            "required": True,
+            "source": "scorecard",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+        {
+            "kind": "level2_review",
+            "label": "Level2 REVIEW 처리 메모",
+            "prompt": f"Final Review에서 해결하지 않는 REVIEW {review_count}개를 최종 판단 근거 또는 Monitoring 추적 조건으로 기록합니다.",
+            "required": bool(review_count or score_limits),
+            "source": "level2_review_disposition",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+        {
+            "kind": "monitoring_handoff",
+            "label": "Monitoring 추적 조건",
+            "prompt": _safe_text(selection_rationale.get("monitoring_handoff_reason"), "Monitoring handoff 조건을 기록합니다."),
+            "required": bool(scorecard.get("monitoring_candidate")),
+            "source": "monitoring_conditions",
+            "boundary": {"storage_write": False, "provider_fetch": False},
+        },
+    ]
+    return notes
+
+
+def build_final_review_investment_report(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    paper_observation: dict[str, Any],
+    decision_evidence: dict[str, Any],
+    investability_packet: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a human-readable Final Review report from existing evidence only."""
+
+    source = dict(source or {})
+    validation = dict(validation or {})
+    paper_observation = dict(paper_observation or {})
+    decision_evidence = dict(decision_evidence or {})
+    packet = dict(investability_packet or {})
+    cockpit = build_final_review_decision_cockpit(
+        source=source,
+        validation=validation,
+        paper_observation=paper_observation,
+        decision_evidence=decision_evidence,
+        investability_packet=packet,
+    )
+    state = str(cockpit.get("state") or "")
+    suggested_route = str(cockpit.get("suggested_decision_route") or SELECT_FOR_PRACTICAL_PORTFOLIO)
+    score_value = _float_or_none(packet.get("score") if packet.get("score") is not None else decision_evidence.get("score"))
+    score_value = round(score_value, 1) if score_value is not None else 0.0
+    tone = _report_tone_from_state(state)
+    monitoring = dict(cockpit.get("monitoring_handoff") or {})
+    weaknesses = _report_weaknesses(cockpit)
+    level2_review_disposition = build_final_review_level2_review_disposition(validation=validation)
+    evidence_closure = dict(
+        validation.get("evidence_closure")
+        or build_evidence_closure_contract(validation)
+    )
+    closure_issues = [
+        dict(row)
+        for row in list(evidence_closure.get("issues") or [])
+        if isinstance(row, dict)
+    ]
+    pre_selection_unresolved_items = [
+        {
+            "root_issue_id": issue.get("root_issue_id"),
+            "title": issue.get("title") or issue.get("root_issue_id"),
+            "detail": issue.get("observed") or issue.get("cause") or "선정 전 근거 종결 필요",
+            "action": issue.get("completion_criteria") or "Practical Validation에서 종결 후 새 결과를 저장합니다.",
+            "terminal_state": issue.get("terminal_state"),
+            "tone": "danger",
+        }
+        for issue in closure_issues
+        if issue.get("terminal_state") == "open"
+        and (
+            issue.get("actionable_now")
+            or issue.get("criticality") == "critical"
+            or str(issue.get("root_issue_id") or "").startswith("missing_contract:")
+        )
+    ]
+    accepted_limits_and_decisions = [
+        {
+            "root_issue_id": issue.get("root_issue_id"),
+            "title": issue.get("title") or issue.get("root_issue_id"),
+            "detail": issue.get("observed") or issue.get("cause") or "Final Review 판단에 반영",
+            "action": issue.get("completion_criteria") or "판단 사유 또는 Monitoring 조건으로 종결합니다.",
+            "resolution_class": issue.get("resolution_class"),
+            "terminal_state": issue.get("terminal_state"),
+            "derived_checks": list(issue.get("derived_checks") or []),
+            "tone": "warning" if issue.get("resolution_class") != "monitoring_transfer" else "neutral",
+        }
+        for issue in closure_issues
+        if issue.get("gate_effect") != "block_final_review"
+        and issue.get("resolution_class") in {"accepted_limit", "final_decision", "monitoring_transfer"}
+    ]
+    data_enrichment_action = dict(level2_review_disposition.get("data_enrichment_action") or {})
+    recovery_required = bool(data_enrichment_action.get("available"))
+    scorecard = build_final_review_scorecard(
+        investability_packet=packet,
+        level2_review_disposition=level2_review_disposition,
+    )
+    if recovery_required:
+        # Legacy/stale reports remain inspectable, but current selection readiness must
+        # never be inferred from evidence that predates the pre-Final enrichment gate.
+        scorecard = dict(scorecard)
+        scorecard.update(
+            {
+                "classification": "RECHECK_REQUIRED",
+                "classification_label": "최신 보강 후 재검토",
+                "decision_route": "RE_REVIEW_REQUIRED",
+                "decision_label": _decision_route_label("RE_REVIEW_REQUIRED"),
+                "monitoring_candidate": False,
+            }
+        )
+        scorecard["route_constraints"] = [
+            *list(scorecard.get("route_constraints") or []),
+            {
+                "key": "pre_final_data_enrichment_recheck",
+                "label": "2단계 데이터 보강 후 재검증",
+                "detail": _safe_text(
+                    data_enrichment_action.get("next_step"),
+                    "Practical Validation에서 데이터를 보강하고 새 검증 결과를 저장합니다.",
+                ),
+                "tone": "warning",
+            },
+        ]
+        state = "RECHECK_REQUIRED"
+        tone = "warning"
+    strengths = _report_strengths(cockpit, packet, scorecard)
+    suggested_route = str(scorecard.get("decision_route") or suggested_route)
+    decision_record_guide = build_final_review_decision_record_guide(
+        decision_route=suggested_route,
+        decision_evidence=decision_evidence,
+        investability_packet=packet,
+    )
+    save_handoff_summary = build_final_review_save_handoff_summary(
+        decision_record_guide=decision_record_guide,
+    )
+    weakness_improvement = build_final_review_weakness_improvement_plan(
+        weaknesses=weaknesses,
+        scorecard=scorecard,
+    )
+    selection_rationale = build_final_review_selection_rationale(scorecard=scorecard)
+    required_final_decision_notes = build_final_review_required_decision_notes(
+        scorecard=scorecard,
+        selection_rationale=selection_rationale,
+    )
+    decision_summary = _build_decision_summary(
+        scorecard=scorecard,
+        selection_rationale=selection_rationale,
+    )
+    interpretation_cards = _build_interpretation_cards(
+        scorecard=scorecard,
+        cockpit=cockpit,
+        packet=packet,
+        monitoring=monitoring,
+    )
+    watch_items = _build_watch_items(
+        weaknesses=weaknesses,
+        scorecard=scorecard,
+    )
+    decision_questions = []
+    question_effects = {
+        "decision_reason": "최종 판단 기록",
+        "score": "점수 해석",
+        "level2_review": "저장 전 확인",
+        "monitoring_handoff": "Monitoring 조건",
+    }
+    for note in required_final_decision_notes:
+        decision_questions.append(
+            {
+                "kind": note.get("kind"),
+                "label": note.get("label"),
+                "question": note.get("prompt"),
+                "required": bool(note.get("required")),
+                "effect": question_effects.get(str(note.get("kind") or ""), "판단 참고"),
+                "source": note.get("source"),
+            }
+        )
+    pattern_guide = build_final_review_pattern_guide(
+        validation=validation,
+        investability_packet=packet,
+    )
+    score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
+    if recovery_required:
+        headline = "최신 필수 데이터를 보강한 뒤 다시 확인해야 하는 과거 검토서입니다."
+    elif state == "SELECT_READY":
+        headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
+    elif state == "SELECT_BLOCKED":
+        headline = "Monitoring handoff 전에 반드시 해소해야 할 차단 항목이 있습니다."
+    else:
+        headline = "선정 전 추가 관찰 또는 재검토가 필요한 후보입니다."
+    return {
+        "schema_version": INVESTMENT_REPORT_SCHEMA_VERSION,
+        "source": {
+            "title": source.get("source_title") or cockpit.get("source_title") or "-",
+            "type": source.get("source_type") or cockpit.get("source_type") or "-",
+            "source_id": source.get("source_id") or dict(packet.get("source_chain") or {}).get("source_id") or "-",
+            "validation_id": validation.get("validation_id") or dict(packet.get("source_chain") or {}).get("validation_id") or "-",
+        },
+        "recommendation": {
+            "route": suggested_route,
+            "label": _decision_route_label(suggested_route),
+            "classification": scorecard.get("classification"),
+            "classification_label": scorecard.get("classification_label"),
+            "state": state,
+            "state_label": "2단계 재검증 필요" if recovery_required else cockpit.get("state_label") or "-",
+            "tone": tone,
+            "monitoring_candidate": bool(scorecard.get("monitoring_candidate")),
+            "monitoring_handoff_state": "blocked" if recovery_required else "ready" if cockpit.get("select_allowed") else "blocked",
+        },
+        "score": {
+            "value": score_value,
+            "label": scorecard.get("score_band") or _score_band(score_value, state),
+            "scale": "0-10",
+            "basis": scorecard.get("basis") or "Investability packet ready-check ratio",
+        },
+        "scorecard": scorecard,
+        "decision_summary": decision_summary,
+        "report_narrative": {
+            "total_assessment": {
+                "label": "총평",
+                "headline": selection_rationale.get("classification_label"),
+                "detail": selection_rationale.get("decision_reason"),
+                "tone": "positive" if scorecard.get("monitoring_candidate") else "warning",
+            },
+            "decision_questions": decision_questions,
+            "boundary_note": "저장된 Practical Validation evidence를 해석한 결과이며 새 검증이나 투자 주문을 실행하지 않습니다.",
+        },
+        "pattern_guide_contract": build_final_review_pattern_guide_contract(),
+        "pattern_guide": pattern_guide,
+        "selection_rationale": selection_rationale,
+        "required_final_decision_notes": required_final_decision_notes,
+        "save_handoff_summary": save_handoff_summary,
+        "weakness_improvement": weakness_improvement,
+        "summary": {
+            "headline": headline,
+            "verdict": (
+                "이 점수와 판단 근거는 과거 근거를 설명하기 위한 열람용입니다. 최신 보강과 재검증 전에는 새 최종판단을 기록하지 않습니다."
+                if recovery_required
+                else cockpit.get("verdict") or packet.get("verdict") or "-"
+            ),
+            "next_action": (
+                _safe_text(data_enrichment_action.get("next_step"), "2단계에서 데이터 보강 후 다시 검증합니다.")
+                if recovery_required
+                else cockpit.get("next_action") or packet.get("next_action") or "-"
+            ),
+            "strongest_evidence": strengths[0]["title"] if strengths else "근거 확인 필요",
+            "weakest_constraint": weaknesses[0]["title"] if weaknesses else "현재 선택 차단 약점 없음",
+        },
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "watch_items": watch_items,
+        "interpretation_cards": interpretation_cards,
+        "performance_interpretation": {
+            "title": "성과 해석",
+            "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "performance_interpretation"), ""),
+                cockpit.get("verdict") or "-",
+            ),
+            "score": score_value,
+        },
+        "scenario_fit": {
+            "title": "환경 적합성",
+            "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "monitoring_fit"), ""),
+                monitoring.get("tracking_benchmark"),
+            ),
+            "review_cadence": monitoring.get("review_cadence") or "-",
+        },
+        "expected_range_and_risk": {
+            "title": "위험 해석",
+            "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "risk_interpretation"), ""),
+                "open review와 blocker를 기준으로 추적합니다.",
+            ),
+            "open_review_items": int(dict(cockpit.get("metrics") or {}).get("open_review_items", 0) or 0),
+            "policy_blockers": int(dict(cockpit.get("metrics") or {}).get("policy_blockers", 0) or 0),
+        },
+        "benchmark_rationale": {
+            "title": "Benchmark / 대체 전략 대비 선택 이유",
+            "detail": _safe_text(
+                next((card.get("detail") for card in interpretation_cards if card.get("kind") == "benchmark_rationale"), ""),
+                next(
+                    (
+                        dict(row or {}).get("Evidence") or dict(row or {}).get("Current")
+                        for row in list(dict(packet.get("selection_gate_policy_snapshot") or {}).get("policy_rows") or [])
+                        if str(dict(row or {}).get("Group") or "") == "benchmark"
+                    ),
+                    "",
+                ),
+            ),
+        },
+        "level2_review_disposition": level2_review_disposition,
+        "pre_selection_unresolved_items": pre_selection_unresolved_items,
+        "accepted_limits_and_decisions": accepted_limits_and_decisions,
+        "evidence_closure_summary": {
+            **dict(evidence_closure.get("summary") or {}),
+            "pre_selection_unresolved_count": len(pre_selection_unresolved_items),
+            "accepted_limits_and_decisions_count": len(accepted_limits_and_decisions),
+        },
+        "monitoring_conditions": {
+            "handoff_ready": bool(cockpit.get("select_allowed")) and not recovery_required,
+            "tracking_benchmark": monitoring.get("tracking_benchmark") or "-",
+            "review_cadence": monitoring.get("review_cadence") or "-",
+            "review_triggers": list(monitoring.get("review_triggers") or []),
+            "active_components": int(monitoring.get("active_components") or 0),
+            "target_weight_total": monitoring.get("target_weight_total"),
+        },
+        "boundaries": {
+            "validation_rerun": False,
+            "provider_fetch": False,
+            "registry_write": False,
+            "storage_append": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "account_sync": False,
+            "auto_rebalance": False,
+        },
+    }
+
+
 def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flatten Final Review eligible candidates into a comparison board."""
 
@@ -1591,26 +4068,45 @@ def build_final_review_candidate_board_rows(candidates: list[dict[str, Any]]) ->
         source_chain = dict(packet.get("source_chain") or {})
         summary = dict(packet.get("summary") or {})
         action_label, primary_reason, priority_label = _candidate_board_action(cockpit)
+        recovery_action = _build_final_review_data_enrichment_action(validation)
+        recovery_required = bool(recovery_action.get("available"))
+        if recovery_required:
+            action_label = "2단계 보강 후 재검증"
+            primary_reason = _safe_text(
+                recovery_action.get("detail"),
+                "현재 보강 기준을 충족한 새 Practical Validation 결과가 필요합니다.",
+            )
+            priority_label = "복구 필요"
         metrics = dict(cockpit.get("metrics") or {})
         packet_score = packet.get("score")
         try:
             sortable_score = float(packet_score or 0.0)
         except (TypeError, ValueError):
             sortable_score = 0.0
-        state_priority = _candidate_board_state_priority(cockpit.get("state"))
+        state_priority = _candidate_board_state_priority(
+            "HOLD_OR_RE_REVIEW" if recovery_required else cockpit.get("state")
+        )
         rows.append(
             {
                 "Rank": index,
                 "Review Priority": f"P{index}",
                 "Priority Label": priority_label,
                 "Candidate": cockpit.get("source_title") or candidate.get("label") or "-",
-                "Decision State": cockpit.get("state_label"),
-                "Suggested Decision": cockpit.get("suggested_decision_label"),
+                "Decision State": "2단계 재검증 필요" if recovery_required else cockpit.get("state_label"),
+                "Suggested Decision": "재검토 필요" if recovery_required else cockpit.get("suggested_decision_label"),
                 "Board Action": action_label,
                 "Primary Reason": primary_reason,
-                "Next Review Focus": cockpit.get("next_action") or "-",
-                "Gate Outcome": cockpit.get("gate_outcome") or "-",
-                "Select Allowed": "Yes" if cockpit.get("select_allowed") else "No",
+                "Next Review Focus": (
+                    _safe_text(recovery_action.get("next_step"), "2단계에서 보강 후 다시 검증합니다.")
+                    if recovery_required
+                    else cockpit.get("next_action") or "-"
+                ),
+                "Gate Outcome": (
+                    "pre_final_recheck_required"
+                    if recovery_required
+                    else cockpit.get("gate_outcome") or "-"
+                ),
+                "Select Allowed": "Yes" if cockpit.get("select_allowed") and not recovery_required else "No",
                 "Blockers": metrics.get("policy_blockers", 0),
                 "Review Required": metrics.get("policy_review_required", 0),
                 "Open Review": metrics.get("open_review_items", 0),
@@ -1653,6 +4149,7 @@ def build_final_review_candidate_board(candidates: list[dict[str, Any]]) -> dict
     total = len(rows)
     select_ready = sum(1 for row in rows if row.get("Decision State") == "모니터링 후보 가능")
     blocked = sum(1 for row in rows if row.get("Decision State") == "선정 차단")
+    recheck_required = sum(1 for row in rows if row.get("Decision State") == "2단계 재검증 필요")
     hold_or_re_review = max(0, total - select_ready - blocked)
     first_row = dict(rows[0] or {}) if rows else {}
     queue_rows = [
@@ -1673,6 +4170,7 @@ def build_final_review_candidate_board(candidates: list[dict[str, Any]]) -> dict
             "select_ready": select_ready,
             "hold_or_re_review": hold_or_re_review,
             "blocked": blocked,
+            "recheck_required": recheck_required,
             "first_review_candidate": first_row.get("Candidate") or "-",
             "first_review_action": first_row.get("Board Action") or "-",
             "first_review_reason": first_row.get("Primary Reason") or "-",
@@ -1796,7 +4294,7 @@ def build_saved_final_review_decision_review(rows: list[dict[str, Any]]) -> dict
                 "Gate Outcome": gate_policy.get("outcome") or "-",
                 "Select Allowed": "Yes" if bool(gate_policy.get("select_allowed")) else "No",
                 "Evidence Issues": issue_count,
-                "Dashboard Eligible": "Yes" if route == SELECT_FOR_PRACTICAL_PORTFOLIO else "No",
+                "Dashboard Eligible": "Yes" if _is_monitoring_handoff_candidate(row) else "No",
                 "Operator Reason": _safe_text(operator.get("reason"), "-"),
                 "Next Action": _safe_text(operator.get("next_action") or status_display.get("next_action"), "-"),
                 "Live Approval": "Disabled",
@@ -1990,7 +4488,7 @@ def _decision_source_contract(
             "live_approval": False,
             "order_instruction": False,
             "auto_rebalance": False,
-            "notes": "Decision Dossier reads the saved Final Decision row and optional Selected Dashboard session timeline only.",
+            "notes": "Decision Dossier reads the saved Final Decision row and optional Portfolio Monitoring session timeline only.",
         },
     }
 
@@ -2095,7 +4593,7 @@ def _decision_dossier_markdown(dossier: dict[str, Any]) -> str:
             )
         )
     else:
-        lines.append("- 현재 dossier에는 Selected Dashboard session timeline이 포함되지 않았습니다.")
+        lines.append("- 현재 dossier에는 Portfolio Monitoring session timeline이 포함되지 않았습니다.")
     lines.extend(
         [
             "",

@@ -1,0 +1,13 @@
+# Runs
+
+## 2026-07-10
+
+- `RED`: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_final_review_investment_report_react_component_is_ui_only tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_prioritizes_monitoring_decision_summary tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_translates_high_score_dimensions_into_strengths` failed as expected before implementation because `decision_summary` / high-score strengths were missing and old React labels were still present.
+- `pytest attempt`: `.venv/bin/python -m pytest ...` failed because the local `.venv` does not have `pytest` installed. Continued with repository unittest contract coverage.
+- `Service GREEN`: `.venv/bin/python -m unittest tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_prioritizes_monitoring_decision_summary tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_translates_high_score_dimensions_into_strengths` passed.
+- `React build`: `npm run build` in `app/web/components/final_review_investment_report/frontend` passed.
+- `Focused GREEN`: `.venv/bin/python -m unittest tests.test_service_contracts.BacktestRuntimeContractTests.test_final_review_investment_report_react_component_is_ui_only tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_prioritizes_monitoring_decision_summary tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_investment_report_translates_high_score_dimensions_into_strengths` passed.
+- `Expanded focused`: `.venv/bin/python -m unittest tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests tests.test_service_contracts.BacktestRuntimeContractTests.test_final_review_investment_report_react_component_is_ui_only tests.test_service_contracts.BacktestRuntimeContractTests.test_final_review_candidate_queue_is_integrated_into_decision_desk tests.test_service_contracts.BacktestRuntimeContractTests.test_final_review_first_read_excludes_market_sentiment_panel` passed, 51 tests.
+- `py_compile`: `.venv/bin/python -m py_compile app/services/backtest_evidence_read_model.py app/web/backtest_final_review/page.py app/web/components/final_review_investment_report/component.py` passed.
+- `diff check`: `git diff --check` passed.
+- `Browser QA`: `http://localhost:8537/backtest` Final Review showed `선택 판단 요약`, `확인 지점`, `Readiness Score`, and did not show `판단 저장 전 메모`. Screenshot artifact: `final-review-investment-report-ia-v1-qa.png`.

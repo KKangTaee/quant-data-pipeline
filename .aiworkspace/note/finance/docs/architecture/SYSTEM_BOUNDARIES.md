@@ -124,7 +124,7 @@ CNN / AAII sentiment overlay is context-only and cannot change PASS / BLOCKER, s
 
 Final Review owns the selection-readiness decision for monitoring candidates.
 
-It reads Gate-passed Practical Validation rows, shows Candidate Board / Decision Cockpit / Evidence Appendix, and appends compact selected-route decisions to `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` only when the selection gate allows `SELECT_FOR_PRACTICAL_PORTFOLIO`.
+It reads Gate-passed Practical Validation rows, shows the Decision Desk / investment report / integrated decision record / Evidence Appendix, and appends compact selected-route decisions to `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` only when the selection gate allows `SELECT_FOR_PRACTICAL_PORTFOLIO`. The selection-readiness model remains Python-owned, but a standalone Decision Cockpit is not rendered.
 
 Hold, reject, and re-review are current UI state guidance and compatibility read paths, not new official save actions.
 Final Review does not create broker orders, live approval, account sync, auto rebalance, or automatic report files.

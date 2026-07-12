@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-12
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,25 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `post-merge-docs-flow-refresh-20260708` closeout. |
+| 없음 | - | 새 task는 사용자 승인 범위가 정해질 때 연다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `final-review-evidence-closure-contract-v1-20260712` | Completed record | Level2 actionable gap을 Final Review 승격 전에 닫고, Final Review의 accepted limit / Monitoring transfer / defer / block terminal state와 measured-only score impact를 구현했다. |
+| `overview-market-context-sp500-valuation-v1-20260712` | Completed record | Market Context를 Shiller 상대 멀티플과 FOMC SEP 기반 1/3/5년 SPX valuation scenario의 두 React 그래프로 교체했다. |
+| `practical-validation-recheck-handoff-loop-fix-v1-20260712` | Completed record | 자료 보강 뒤 replay를 강제 초기화하고, Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동을 막는다. Final Review는 source별 최신 validation만 사용한다. |
+| `practical-validation-pre-final-enrichment-gate-v1-20260712` | Completed record | 해결 가능한 필수 provider gap을 Practical Validation 승격 전 blocker로 바꾸고, Final Review의 legacy / stale 검토서는 2단계 재검증 전 읽기 전용 복구 상태로 제한했다. |
+| `final-review-readable-review-evidence-v1-20260711` | Completed record | `남은 판단 근거`를 사용자 언어와 개선 행동으로 바꾸고, 실행 가능한 provider gap만 같은 후보의 Practical Validation 보강 화면으로 연결했다. |
+| `final-review-guidance-actionability-v1-20260711` | Completed record | 10개 Monitoring 패턴을 structured applicability/action state로 바꾸고, 첫 화면 최대 6개 행동 가이드, 접힌 technical trace, Level2/Final Review stage ownership, 총평 직후 해석 4행을 구현했다. |
+| `portfolio-workflow-legacy-reset-rebuild-20260711` | Completed record | 기존 6개 Final Review 후보를 current source → Practical Validation → Final Review schema로 재생성하고 Monitoring setup을 새 decision ID에 연결했다. legacy `SAVED_PORTFOLIOS.jsonl`은 요청대로 제거했다. |
+| `final-review-candidate-selection-integration-v1-20260710` | Completed record | Final Review standalone `Step 1 / Candidate Board`를 제거하고, Review Queue / 검토 대상 selector / 후보 비교 상세를 Decision Desk 아래 후보 선택 패널로 통합했다. |
+| `final-review-sentiment-scope-cleanup-v1-20260710` | Completed record | Final Review first-read에서 CNN / AAII 시장심리 패널과 raw detail expander를 제거했다. 시장심리 해석은 `Workspace > Overview > Sentiment`가 소유하고, Final Review gate / score / 저장 / Monitoring signal에는 연결하지 않는다. |
+| `practical-validation-flow4-action-center-v1-20260709` | Completed record | Practical Validation Flow 4 `데이터 보강 대상`과 기존 Python 수집 버튼을 `데이터 보강 / 수집 실행` action center로 묶고, 버튼 주변에 `수집하는 것 / 하지 않는 것 / 실행 후 다음 단계`를 명확히 표시한다. |
+| `practical-validation-flow4-data-action-board-v1-20260709` | Completed record | Practical Validation Flow 4 now reads `카테고리별 검증 결과 -> 데이터 보강 대상 / 액션 -> 상세 근거 / 원자료`; React board is display-only and Python keeps provider collection / validation / gate / persistence boundaries. |
+| `practical-validation-flow-gating-evidence-ia-v1-20260708` | Completed record | Flow 2 current-session replay gates Flow 3 / Flow 4 / Flow 5 rendering and Flow 4 lower evidence IA was lowered behind provider action flow. |
+| `practical-validation-category-empty-state-v1-20260708` | Completed record | Flow 4 visible category result hides REVIEW-only / empty groups while retaining them in the internal read model. |
 | `post-merge-docs-flow-refresh-20260708` | Completed record | 2026-07-08 master 병합 후 current pointer, code flow docs, Overview surface names, and runbook boundaries were refreshed without changing code behavior or registry / saved JSONL. |
 | `practical-validation-boundary-cleanup-v1-20260708` | Completed record | Practical Validation Flow 3 / Flow 4 visible UI now separates current validation fix work from Final Review judgment items. |
 | `practical-validation-flow4-final-review-handoff-v1-20260708` | Completed record | Flow 4 reduced Final Review-only REVIEW items from current validation problem detail; later Boundary Cleanup removed the visible handoff count from Flow 3 / Flow 4. |

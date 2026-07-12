@@ -966,6 +966,54 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             self.assertNotIn("value=date(2016, 1, 1)", body)
             self.assertNotIn("Research-only defaults", body)
 
+    def test_strict_factor_session_state_prefill_date_inputs_avoid_default_duplication_warning(self) -> None:
+        source = Path("app/web/backtest_single_forms/strict_factor.py").read_text(encoding="utf-8")
+
+        self.assertIn("def _strict_factor_date_input(", source)
+        for key in (
+            "qss_start",
+            "qss_end",
+            "qsqp_start",
+            "qsqp_end",
+            "vsqp_start",
+            "vsqp_end",
+            "vss_start",
+            "vss_end",
+            "qvqp_start",
+            "qvqp_end",
+            "qvss_start",
+            "qvss_end",
+        ):
+            self.assertIn(f'key="{key}"', source)
+            self.assertNotIn(
+                f'st.date_input("Start Date", value=_default_strict_factor_start_date(), key="{key}")',
+                source,
+            )
+            self.assertNotIn(
+                f'st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="{key}")',
+                source,
+            )
+
+    def test_backtest_state_init_does_not_eagerly_seed_strict_form_widget_keys(self) -> None:
+        source = Path("app/web/backtest_common.py").read_text(encoding="utf-8")
+
+        for key in (
+            "qss_end",
+            "qss_trend_filter_enabled",
+            "vss_end",
+            "vss_trend_filter_enabled",
+            "qvss_end",
+            "qvss_trend_filter_enabled",
+            "qsqp_end",
+            "qsqp_trend_filter_enabled",
+            "vsqp_end",
+            "vsqp_trend_filter_enabled",
+            "qvqp_end",
+            "qvqp_trend_filter_enabled",
+        ):
+            self.assertNotIn(f'st.session_state["{key}"] =', source)
+        self.assertIn("Migrate old strict-annual default factor selections", source)
+
     def test_etf_like_single_forms_stay_form_first_without_runtime_wrapper_copy(self) -> None:
         form_paths = [
             Path("app/web/backtest_single_forms/equal_weight.py"),
@@ -2419,12 +2467,15 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
             {row["module_id"] for row in gate["review_modules"]}
             >= {"construction_risk", "backtest_realism"}
         )
-        self.assertTrue(
-            all(row["gate_effect"] == "Final Review review" for row in gate["review_modules"])
-        )
+        review_rows = {row["module_id"]: row for row in gate["review_modules"]}
+        self.assertEqual(review_rows["construction_risk"]["gate_effect"], "Practical Validation caution")
+        self.assertEqual(review_rows["backtest_realism"]["gate_effect"], "Practical Validation caution")
+        self.assertEqual(review_rows["construction_risk"]["review_role_label"], "2단계 실용성 주의")
         display_rows = {row["Module"]: row for row in plan["module_display_rows"]}
         self.assertIn("Benchmark / Comparator Parity", display_rows)
         self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Gate Effect"], "Ready")
+        self.assertEqual(display_rows["Benchmark / Comparator Parity"]["Group"], "Practical Validation Core")
+        self.assertNotIn("Required for Final Review", {row["Group"] for row in plan["module_display_rows"]})
 
     def test_validation_module_gate_reviews_missing_default_robustness_without_blocking(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
@@ -2475,7 +2526,8 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(gate["route"], "READY_WITH_REVIEW")
         self.assertEqual(gate["blocking_modules"], [])
         self.assertEqual(modules["stress_robustness"]["status"], "REVIEW")
-        self.assertEqual(modules["stress_robustness"]["gate_effect"], "Final Review review")
+        self.assertEqual(modules["stress_robustness"]["gate_effect"], "Practical Validation caution")
+        self.assertEqual(modules["stress_robustness"]["review_role_label"], "2단계 실용성 주의")
 
     def test_validation_module_gate_skips_construction_risk_for_single_factor_source(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
@@ -2767,6 +2819,216 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(workspace["technical_details"]["board_display_rows"][0]["Board"], "Input Evidence")
         self.assertEqual(workspace["summary"]["blocker_count"], 2)
         self.assertEqual(workspace["summary"]["review_count"], 1)
+
+    def test_practical_validation_workspace_builds_flow3_next_stage_action(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        blocked_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "latest_replay",
+                        "label": "Latest Runtime Replay",
+                        "status": "NOT_RUN",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "BLOCKED_FOR_FINAL_REVIEW",
+                    "can_save_and_move": False,
+                    "verdict": "필수 검증 모듈에 보강이 필요한 항목이 있습니다.",
+                    "next_action": "필수 모듈의 NOT_RUN 항목을 먼저 해결합니다.",
+                    "blocking_modules": [
+                        {"module_id": "latest_replay", "label": "Latest Runtime Replay", "status": "NOT_RUN"}
+                    ],
+                    "review_modules": [],
+                },
+            }
+        )
+
+        blocked_action = blocked_workspace["next_stage_action"]
+        self.assertEqual(blocked_action["target_stage"], "Final Review")
+        self.assertFalse(blocked_action["primary_action"]["enabled"])
+        self.assertEqual(blocked_action["primary_action"]["id"], "save_and_move")
+        self.assertEqual(blocked_action["primary_action"]["label"], "저장하고 Final Review로 이동")
+        self.assertEqual(blocked_action["secondary_action"]["id"], "save_audit_only")
+        self.assertTrue(blocked_action["secondary_action"]["enabled"])
+        self.assertEqual(blocked_action["blocker_count"], 1)
+        self.assertIn("Flow4", blocked_action["disabled_reason"])
+        self.assertIn("audit trail", blocked_action["secondary_action"]["detail"])
+        self.assertFalse(blocked_action["side_effects"]["react_executes_storage"])
+        self.assertTrue(blocked_action["side_effects"]["python_executes_storage"])
+
+        enrichment_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "pre_final_data_enrichment",
+                        "label": "승격 전 필수 데이터 보강",
+                        "status": "NEEDS_INPUT",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "BLOCKED_FOR_FINAL_REVIEW",
+                    "can_save_and_move": False,
+                    "blocking_modules": [
+                        {
+                            "module_id": "pre_final_data_enrichment",
+                            "label": "승격 전 필수 데이터 보강",
+                            "status": "NEEDS_INPUT",
+                        }
+                    ],
+                    "review_modules": [],
+                    "pre_final_enrichment_gate": {
+                        "required": True,
+                        "blocking": True,
+                        "item_count": 1,
+                        "symbol_count": 1,
+                    },
+                },
+            }
+        )
+        enrichment_action = enrichment_workspace["next_stage_action"]
+        enrichment_summary = enrichment_workspace["summary"]
+        self.assertFalse(enrichment_action["primary_action"]["enabled"])
+        self.assertEqual(enrichment_action["status_label"], "데이터 보강 후 재검증 필요")
+        self.assertIn("필수 데이터 보강", enrichment_action["disabled_reason"])
+        self.assertIn("Flow 2", enrichment_action["disabled_reason"])
+        self.assertEqual(enrichment_summary["overall_outcome_key"], "repair_required")
+        self.assertEqual(enrichment_summary["overall_outcome_label"], "보강 후 재검증 필요")
+        self.assertNotIn("막는 항목은 없습니다", enrichment_summary["overall_outcome_detail"])
+
+        ready_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "source_integrity",
+                        "label": "Source Integrity",
+                        "status": "PASS",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "READY_FOR_FINAL_REVIEW",
+                    "can_save_and_move": True,
+                    "verdict": "필수 검증 모듈이 통과되어 Final Review로 이동할 수 있습니다.",
+                    "next_action": "검증 결과를 저장하고 Final Review에서 최종 판단을 이어갑니다.",
+                    "blocking_modules": [],
+                    "review_modules": [],
+                },
+            }
+        )
+
+        ready_action = ready_workspace["next_stage_action"]
+        self.assertTrue(ready_action["primary_action"]["enabled"])
+        self.assertEqual(ready_action["primary_action"]["tone"], "positive")
+        self.assertEqual(ready_action["status_label"], "이동 가능")
+        self.assertEqual(ready_action["disabled_reason"], "")
+        self.assertIn("최종 승인", ready_action["boundary_note"])
+        self.assertIn("수익성", ready_action["boundary_note"])
+
+        review_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "REVIEW",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "READY_WITH_REVIEW",
+                    "can_save_and_move": True,
+                    "verdict": "Final Review 이동 가능하지만 REVIEW 항목은 PASS가 아닙니다.",
+                    "next_action": "REVIEW 항목은 2단계 실용성 주의로 남깁니다.",
+                    "blocking_modules": [],
+                    "review_modules": [
+                        {
+                            "module_id": "validation_efficacy",
+                            "label": "Validation Method Strength",
+                            "status": "REVIEW",
+                            "review_role_label": "2단계 실용성 주의",
+                        }
+                    ],
+                },
+            }
+        )
+
+        review_action = review_workspace["next_stage_action"]
+        self.assertTrue(review_action["primary_action"]["enabled"])
+        self.assertEqual(review_action["status_label"], "주의 포함 이동 가능")
+        self.assertIn("REVIEW 주의 신호", review_action["primary_action"]["detail"])
+
+        category_caution_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "REVIEW",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "READY_FOR_FINAL_REVIEW",
+                    "can_save_and_move": True,
+                    "verdict": "Final Review 이동을 막는 항목은 없습니다.",
+                    "next_action": "주의 신호를 남기고 Final Review로 이동합니다.",
+                    "blocking_modules": [],
+                    "review_modules": [],
+                },
+            }
+        )
+
+        category_caution_action = category_caution_workspace["next_stage_action"]
+        self.assertTrue(category_caution_action["primary_action"]["enabled"])
+        self.assertEqual(category_caution_action["status_label"], "주의 포함 이동 가능")
+        self.assertIn("REVIEW 주의 신호", category_caution_action["primary_action"]["detail"])
+
+    def test_practical_validation_recovery_progress_requires_recheck_before_save(self) -> None:
+        from app.services.backtest_practical_validation_workspace import (
+            build_practical_validation_recovery_progress,
+        )
+
+        recheck_required = build_practical_validation_recovery_progress(
+            collection_completed=True,
+            replay_completed=False,
+            can_save_and_move=False,
+            blocking=False,
+        )
+        blocked = build_practical_validation_recovery_progress(
+            collection_completed=True,
+            replay_completed=True,
+            can_save_and_move=False,
+            blocking=True,
+        )
+        save_ready = build_practical_validation_recovery_progress(
+            collection_completed=True,
+            replay_completed=True,
+            can_save_and_move=True,
+            blocking=False,
+        )
+
+        self.assertEqual(recheck_required["state"], "recheck_required")
+        self.assertEqual(recheck_required["steps"][1]["status"], "current")
+        self.assertEqual(recheck_required["steps"][2]["status"], "pending")
+        self.assertEqual(blocked["state"], "blocked")
+        self.assertEqual(blocked["steps"][2]["status"], "blocked")
+        self.assertEqual(save_ready["state"], "save_ready")
+        self.assertEqual(save_ready["steps"][2]["status"], "current")
+        self.assertIn("저장", save_ready["next_action"])
 
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
@@ -4331,6 +4593,54 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
 
 
 class DataCoverageAuditContractTests(unittest.TestCase):
+    def test_universe_contract_distinguishes_static_manual_from_dynamic_historical(self) -> None:
+        from app.services.backtest_data_coverage_audit import build_data_coverage_audit
+
+        base = {
+            "data_coverage_context": {
+                "symbols": ["SPY"],
+                "symbol_weights": {"SPY": 100.0},
+                "requested_start": "2020-01-01",
+                "requested_end": "2020-12-31",
+                "price_window_rows": [
+                    {
+                        "symbol": "SPY",
+                        "first_window_date": "2020-01-01",
+                        "latest_window_date": "2020-12-31",
+                        "window_row_count": 252,
+                    }
+                ],
+                "asset_profile_rows": [{"symbol": "SPY", "status": "active"}],
+            },
+            "provider_coverage_display_rows": [{"Diagnostic Status": "PASS", "Freshness": "fresh"}],
+            "curve_evidence": {
+                "portfolio_curve_source": "actual_runtime_replay",
+                "curve_provenance": {
+                    "runtime_recheck_status": "PASS",
+                    "period_coverage_status": "PASS",
+                },
+                "period_coverage": {"status": "PASS"},
+            },
+        }
+
+        static_audit = build_data_coverage_audit(
+            {**base, "selection_source_snapshot": {"settings_snapshot": {"universe_mode": "manual_tickers"}}}
+        )
+        dynamic_audit = build_data_coverage_audit(
+            {
+                **base,
+                "selection_source_snapshot": {
+                    "settings_snapshot": {"universe_mode": "pit_monthly_snapshot"}
+                },
+            }
+        )
+        dynamic_rows = {row["Criteria"]: row for row in dynamic_audit["rows"]}
+
+        self.assertEqual(static_audit["universe_contract"]["mode"], "static_manual")
+        self.assertEqual(dynamic_audit["universe_contract"]["mode"], "dynamic_historical")
+        self.assertTrue(dynamic_audit["universe_contract"]["requires_pit_membership"])
+        self.assertEqual(dynamic_rows["Survivorship / delisting control"]["Status"], "NEEDS_INPUT")
+
     def test_ready_audit_uses_db_price_provider_and_survivorship_evidence_without_writes(self) -> None:
         from app.services.backtest_data_coverage_audit import (
             DATA_COVERAGE_READY,
@@ -12082,11 +12392,16 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("검증 결론", component_source)
         self.assertIn("카테고리별 검증 요약", component_source)
         self.assertIn("Flow 4에서 확인합니다", component_source)
+        self.assertIn("roleAwareGroupOutcome", component_source)
+        self.assertIn("데이터 주의", component_source)
+        self.assertIn("2단계 실용성 주의", component_source)
+        self.assertIn("최종 판단 참고", component_source)
+        self.assertIn("Monitoring 추적", component_source)
+        self.assertNotIn('return { label: "확인 필요"', component_source)
         self.assertNotIn("reviewCount", component_source)
         self.assertNotIn("group.reviewCriteria", component_source)
         self.assertNotIn("Final Review 이동 가능", component_source)
         self.assertNotIn("Final Review 이동 보류", component_source)
-        self.assertNotIn("Final Review로 이동", component_source)
         self.assertNotIn("보류 항목", component_source)
         self.assertIn("보강 항목", component_source)
         self.assertNotIn("Final Review 이동을 막는 이슈", component_source)
@@ -12095,10 +12410,13 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("검증 결론", build_source)
         self.assertIn("카테고리별 검증 요약", build_source)
         self.assertIn("Flow 4에서 확인합니다", build_source)
+        self.assertIn("데이터 주의", build_source)
+        self.assertIn("2단계 실용성 주의", build_source)
+        self.assertIn("최종 판단 참고", build_source)
+        self.assertIn("Monitoring 추적", build_source)
         self.assertNotIn("reviewCount", build_source)
         self.assertNotIn("Final Review 이동 가능", build_source)
         self.assertNotIn("Final Review 이동 보류", build_source)
-        self.assertNotIn("Final Review로 이동", build_source)
         self.assertNotIn("보류 항목", build_source)
         self.assertIn("보강 항목", build_source)
         self.assertNotIn("Final Review 이동을 막는 이슈", build_source)
@@ -12114,16 +12432,33 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("부족한 점", component_source)
         self.assertNotIn("해야 할 일", component_source)
         self.assertIn("다음 단계", component_source)
-        self.assertIn("Flow 5에서 검증 결과 저장", component_source)
+        self.assertIn("저장하고 Final Review로 이동", component_source)
+        self.assertIn("검증 결과 저장(기록용)", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertIn('action: "save_and_move"', component_source)
+        self.assertIn('action: "save_audit_only"', component_source)
+        self.assertNotIn("Flow 5에서 검증 결과 저장", component_source)
+        self.assertIn("저장하고 Final Review로 이동", build_source)
+        self.assertIn("검증 결과 저장(기록용)", build_source)
+        self.assertIn("setComponentValue", build_source)
+        self.assertIn('action:"save_and_move"', build_source.replace(" ", ""))
+        self.assertIn('action:"save_audit_only"', build_source.replace(" ", ""))
+        self.assertNotIn("Flow 5에서 검증 결과 저장", build_source)
         self.assertIn("criteriaGroups", component_source)
         self.assertNotIn("NEEDS_INPUT row", component_source)
         self.assertNotIn("2차 검증 결론 / Fix Queue", component_source)
         self.assertIn("fixItems", component_source)
         self.assertIn("coreGroups", component_source)
-        self.assertNotIn("Streamlit.setComponentValue", component_source)
         self.assertNotIn("from app.services", wrapper_source)
         self.assertNotIn("from app.runtime", wrapper_source)
         self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("next_stage_action", wrapper_source)
+        self.assertIn("nextStageAction", wrapper_source)
+        self.assertEqual(component_source.count("canSaveAndMove: boolean"), 1)
+        self.assertIn("nextStageAction.statusLabel", component_source)
+        self.assertIn("hasVisibleReviewCaution", component_source)
+        self.assertIn("주의 포함 이동 가능", component_source)
+        self.assertNotIn('props.canSaveAndMove ? "검증 보강 완료" : "검증 보강 필요"', component_source)
         self.assertIn("border-radius: 0;", style_source)
         self.assertIn("streamlit-component-lib", package_source)
         self.assertIn("render_practical_validation_workspace_overview(", page_source)
@@ -12135,6 +12470,668 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("criteriaGroups", wrapper_source)
         self.assertNotIn("reviewCount", wrapper_source)
 
+    def test_final_review_investment_report_react_component_emits_intent_only(self) -> None:
+        component_root = Path("app/web/components/final_review_investment_report")
+        wrapper_path = component_root / "component.py"
+        package_path = component_root / "frontend/package.json"
+        entry_path = component_root / "frontend/src/FinalReviewInvestmentReport.tsx"
+        index_path = component_root / "frontend/src/index.tsx"
+        style_path = component_root / "frontend/src/style.css"
+        build_entry_path = component_root / "frontend/build/index.html"
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        practical_page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+        self.assertTrue(build_entry_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+        build_source = "".join(
+            path.read_text(encoding="utf-8")
+            for path in build_entry_path.parent.glob("assets/*.js")
+        )
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_final_review_investment_report_available", wrapper_source)
+        self.assertIn("render_final_review_investment_report", wrapper_source)
+        self.assertIn("FinalReviewInvestmentReport", component_source)
+        self.assertIn("Final Review 투자 검토서", component_source)
+        self.assertIn("강점", component_source)
+        self.assertIn("약점", component_source)
+        self.assertIn("Monitoring 조건", component_source)
+        self.assertIn("점수 근거", component_source)
+        self.assertIn("세부 점수", component_source)
+        self.assertIn("점수 영향", component_source)
+        self.assertIn("점수 / route 정책", component_source)
+        self.assertIn("REVIEW 개수 자동 감점 없음", component_source)
+        self.assertIn("검증별 남은 판단 근거", component_source)
+        self.assertIn("남은 판단 근거", component_source)
+        self.assertIn("다음 실험 아이디어", component_source)
+        self.assertIn("counterfactual backtest", component_source)
+        self.assertIn("정보 · 자동 실행 없음", component_source)
+        self.assertIn("<dt>바꿀 것</dt>", component_source)
+        self.assertIn("<dt>같게 둘 것</dt>", component_source)
+        self.assertIn("<dt>확인할 것</dt>", component_source)
+        self.assertIn("decisionSummary", component_source)
+        self.assertIn("총평", component_source)
+        self.assertIn("약점과 한계", component_source)
+        self.assertIn("저장 전 확인 질문", component_source)
+        self.assertIn("MetaStrip", component_source)
+        self.assertIn('label: "직접 결정"', component_source)
+        self.assertIn("fr-invest-report__status", component_source)
+        self.assertIn("headlineScores", component_source)
+        self.assertIn("투자 매력도", component_source)
+        self.assertIn('"현재 확인된 내용"', component_source)
+        self.assertIn('"왜 확인이 필요한가"', component_source)
+        self.assertIn("기술 근거 보기", component_source)
+        self.assertIn("사용자용 세부 설명이 아직 없습니다", component_source)
+        self.assertIn("이 결과가 뜻하는 것", component_source)
+        self.assertIn("개선 방법", component_source)
+        self.assertIn("처리 위치", component_source)
+        self.assertIn("2단계 데이터 보강으로 이동", component_source)
+        self.assertIn("기존 검토서 복구", component_source)
+        self.assertIn("자료 최신화 후 재검증", component_source)
+        self.assertIn("fr-invest-report__data-enrichment--recovery", component_source)
+        self.assertIn('action: "open_practical_validation_data_enrichment"', component_source)
+        self.assertIn("_consume_final_review_data_enrichment_intent", page_source)
+        self.assertNotIn("run_provider_gap_collection", page_source)
+        self.assertIn("_render_final_review_data_enrichment_handoff", practical_page_source)
+        self.assertIn("부족하거나 오래된 외부 데이터 일괄 수집 / 보강", practical_page_source)
+        self.assertIn("감점 없음", component_source)
+        self.assertNotIn('label: "Handoff"', component_source)
+        self.assertNotIn('label: "Monitoring 후보"', component_source)
+        self.assertNotIn('label: "Level2 open"', component_source)
+        self.assertIn("AssessmentPanel", component_source)
+        self.assertIn("이 후보를 읽는 네 가지 기준", component_source)
+        self.assertIn("fr-invest-report__interpretation-index", component_source)
+        self.assertIn(
+            "<AssessmentPanel narrative={reportNarrative} />\n\n      <InterpretationRows cards={interpretationCards} />",
+            component_source,
+        )
+        self.assertIn("FinalDecisionAction", component_source)
+        self.assertIn('action: "record_final_decision"', component_source)
+        self.assertIn('aria-label="판단 사유"', component_source)
+        self.assertIn("자동 문구가 아닌 사용자의 판단 이유", page_source)
+        self.assertIn(
+            "<InterpretationRows cards={interpretationCards} />\n\n      {decisionAction",
+            component_source,
+        )
+        self.assertIn("DecisionQuestionList", component_source)
+        self.assertIn("PatternGuidePanel", component_source)
+        self.assertIn("Monitoring 방향 가이드", component_source)
+        self.assertIn("저장 evidence 기반 조건부 가이드", component_source)
+        self.assertIn("판단 가능", component_source)
+        self.assertIn("조건부 추적", component_source)
+        self.assertIn("추가 검증", component_source)
+        self.assertIn("적용 제외", component_source)
+        self.assertIn("현재 진단", component_source)
+        self.assertIn("변화 조건", component_source)
+        self.assertIn("다음 행동", component_source)
+        self.assertIn("근거 및 기술 정보 보기", component_source)
+        self.assertIn("나머지", component_source)
+        self.assertNotIn("Source / 기준일", component_source)
+        self.assertNotIn("보강 필요", component_source)
+        self.assertNotIn("DecisionBriefPanel", component_source)
+        self.assertIn("EvidenceRows", component_source)
+        self.assertIn("DetailTabs", component_source)
+        self.assertIn("DetailTab", component_source)
+        self.assertIn("fr-invest-report__meta-strip", component_source)
+        self.assertIn("fr-invest-report__assessment", component_source)
+        self.assertIn("fr-invest-report__questions", component_source)
+        self.assertIn("fr-invest-report__patterns", component_source)
+        self.assertIn("fr-invest-report__evidence-row", component_source)
+        self.assertIn("fr-invest-report__detail-tabs", component_source)
+        self.assertIn("fr-invest-report__detail-tablist", component_source)
+        self.assertIn("fr-invest-report__detail-tab", component_source)
+        self.assertIn("fr-invest-report__detail-panel", component_source)
+        self.assertIn("왜 이 점수인가?", component_source)
+        self.assertIn("무엇을 수용하거나 확인해야 하나?", component_source)
+        self.assertNotIn("fr-invest-report__detail-panel-head", component_source)
+        self.assertIn("aria-selected", component_source)
+        self.assertNotIn("DetailDisclosure", component_source)
+        self.assertNotIn("fr-invest-report__detail-disclosure", component_source)
+        self.assertNotIn("fr-invest-report__facts", component_source)
+        self.assertNotIn("fr-invest-report__decision-grid", component_source)
+        self.assertNotIn("fr-invest-report__card", component_source)
+        self.assertIn("<dt>다음 행동</dt>", component_source)
+        self.assertNotIn("판단 저장 전 메모", component_source)
+        self.assertIn("/ 100", component_source)
+        self.assertNotIn("저장 / Monitoring handoff", component_source)
+        self.assertNotIn("Final Review 판단 저장", component_source)
+        self.assertNotIn("현재 후보와 개선 기대 범위", component_source)
+        self.assertIn("Final Review에서 결정할 것", component_source)
+        self.assertIn("ReviewActionBoard", component_source)
+        self.assertIn("이미 2단계에서 점수에 반영한 제한", component_source)
+        self.assertIn("왜 보이나", component_source)
+        self.assertIn("사용자 판단", component_source)
+        self.assertNotIn("Level2 REVIEW handoff", component_source)
+        self.assertIn("최종 판단 점수", component_source)
+        self.assertIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("append_current_final_selection_decision", component_source)
+        self.assertNotIn("build_final_review_save_evaluation", component_source)
+        self.assertNotIn("fetch(", component_source)
+        self.assertNotIn("localStorage", component_source)
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertIn(".fr-invest-report__meta-strip", style_source)
+        self.assertIn(".fr-invest-report__assessment", style_source)
+        self.assertIn(".fr-invest-report__questions", style_source)
+        self.assertIn(".fr-invest-report__patterns", style_source)
+        self.assertIn(".fr-invest-report__evidence-row", style_source)
+        self.assertIn(".fr-invest-report__detail-tabs", style_source)
+        self.assertIn(".fr-invest-report__detail-tablist", style_source)
+        self.assertIn(".fr-invest-report__detail-tab", style_source)
+        self.assertIn(".fr-invest-report__detail-panel", style_source)
+        self.assertIn(".fr-invest-report__final-decision", style_source)
+        self.assertIn(".fr-invest-report__decision-routes", style_source)
+        self.assertIn(".fr-invest-report__decision-submit:disabled", style_source)
+        self.assertIn(".fr-invest-report__review-impact > div:first-child", style_source)
+        self.assertNotIn(".fr-invest-report__review-impact > div,", style_source)
+        self.assertIn("grid-template-columns: minmax(0, 1fr);", style_source)
+        self.assertIn("overflow-wrap: anywhere;", style_source)
+        self.assertIn("word-break: break-word;", style_source)
+        self.assertIn("@media (max-width: 980px)", style_source)
+        self.assertNotIn(".fr-invest-report__detail-disclosure", style_source)
+        self.assertNotIn(".fr-invest-report__facts", style_source)
+        self.assertNotIn(".fr-invest-report__decision-grid", style_source)
+        self.assertNotIn(".fr-invest-report__selection-rationale", style_source)
+        self.assertNotIn(".fr-invest-report__mini-grid", style_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertIn("Final Review 투자 검토서", build_source)
+        self.assertIn("강점", build_source)
+        self.assertIn("약점", build_source)
+        self.assertIn("Monitoring 조건", build_source)
+        self.assertIn("점수 근거", build_source)
+        self.assertIn("세부 점수", build_source)
+        self.assertIn("점수 영향", build_source)
+        self.assertIn("점수 / route 정책", build_source)
+        self.assertIn("REVIEW 개수 자동 감점 없음", build_source)
+        self.assertIn("검증별 남은 판단 근거", build_source)
+        self.assertIn("남은 판단 근거", build_source)
+        self.assertIn("다음 실험 아이디어", build_source)
+        self.assertIn("counterfactual backtest", build_source)
+        self.assertIn("decisionSummary", build_source)
+        self.assertIn("총평", build_source)
+        self.assertIn("약점과 한계", build_source)
+        self.assertIn("저장 전 확인 질문", build_source)
+        self.assertIn("Monitoring 방향 가이드", build_source)
+        self.assertIn("저장 evidence 기반 조건부 가이드", build_source)
+        self.assertIn("fr-invest-report__meta-strip", build_source)
+        self.assertIn("확인 필요", build_source)
+        self.assertIn("fr-invest-report__status", build_source)
+        self.assertNotIn("Level2 open", build_source)
+        self.assertIn("투자 매력도", build_source)
+        self.assertIn("판단 근거", build_source)
+        self.assertIn("감점 없음", build_source)
+        self.assertIn("fr-invest-report__assessment", build_source)
+        self.assertIn("이 후보를 읽는 네 가지 기준", build_source)
+        self.assertIn("fr-invest-report__questions", build_source)
+        self.assertIn("fr-invest-report__patterns", build_source)
+        self.assertIn("fr-invest-report__evidence-row", build_source)
+        self.assertIn("fr-invest-report__detail-tabs", build_source)
+        self.assertIn("fr-invest-report__detail-tablist", build_source)
+        self.assertIn("fr-invest-report__detail-tab", build_source)
+        self.assertIn("fr-invest-report__detail-panel", build_source)
+        self.assertIn("fr-invest-report__final-decision", build_source)
+        self.assertIn("record_final_decision", build_source)
+        self.assertNotIn("fr-invest-report__detail-disclosure", build_source)
+        self.assertNotIn("fr-invest-report__facts", build_source)
+        self.assertNotIn("fr-invest-report__decision-grid", build_source)
+        self.assertNotIn("fr-invest-report__card", build_source)
+        self.assertIn("다음 행동", build_source)
+        self.assertIn("근거 및 기술 정보 보기", build_source)
+        self.assertNotIn("Source / 기준일", build_source)
+        self.assertNotIn("판단 저장 전 메모", build_source)
+        self.assertIn("/ 100", build_source)
+        self.assertNotIn("저장 / Monitoring handoff", build_source)
+        self.assertIn("판단 사유", build_source)
+        self.assertNotIn("Decision ID", build_source)
+        self.assertNotIn("운영 전 조건", build_source)
+        self.assertNotIn("현재 후보와 개선 기대 범위", build_source)
+        self.assertIn("Final Review에서 결정할 것", build_source)
+        self.assertIn("왜 보이나", build_source)
+        self.assertIn("사용자 판단", build_source)
+        self.assertNotIn("Level2 REVIEW handoff", build_source)
+        self.assertIn("build_final_review_investment_report", page_source)
+        self.assertIn("render_final_review_investment_report", page_source)
+        self.assertIn("점수 근거", page_source)
+        self.assertIn("남은 판단 근거", page_source)
+        self.assertIn("다음 실험 아이디어", page_source)
+        self.assertNotIn('st.tabs(["강점", "약점", "해석", "점수 체계", "저장 경계", "약점 개선안"])', page_source)
+        self.assertIn("Level2 REVIEW", page_source)
+
+    def test_final_review_top_summary_is_short_and_action_focused(self) -> None:
+        from app.web.backtest_final_review.page import _build_final_review_top_summary
+
+        summary = _build_final_review_top_summary()
+
+        self.assertEqual(summary["title"], "Final Review")
+        self.assertIn("Gate 통과 후보", summary["caption"])
+        self.assertIn("모니터링 후보", summary["caption"])
+        self.assertEqual(summary["destination"], "Operations > Portfolio Monitoring")
+        self.assertLessEqual(len(summary["caption"]), 110)
+
+        joined = " ".join(str(value) for value in summary.values())
+        self.assertNotIn("과거 실행 기록은 Operations > Backtest Run History", joined)
+        self.assertNotIn("Reference help - Backtest > Final Review", joined)
+        self.assertNotIn("Candidate Board와 Decision Cockpit으로 최종 판단 상태를 먼저 보고", joined)
+
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_intro = page_source.split("def render_final_review_workspace", 1)[1]
+        workspace_intro = workspace_intro.split("current_rows = load_current_candidate_registry_latest()", 1)[0]
+        self.assertNotIn("render_reference_contextual_help(\"final_review\")", workspace_intro)
+
+        backtest_page_source = Path("app/web/backtest_page.py").read_text(encoding="utf-8")
+        self.assertIn("Portfolio Monitoring 후보 여부", backtest_page_source)
+        self.assertNotIn("Selected Dashboard 모니터링 후보 여부", backtest_page_source)
+        self.assertNotIn("과거 실행 기록은 `Operations > Backtest Run History`", backtest_page_source)
+
+        final_review_page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        self.assertNotIn("Selected Dashboard 추적 후보", final_review_page_source)
+        self.assertNotIn("Selected Dashboard Handoff", final_review_page_source)
+
+    def test_final_review_decision_desk_model_prioritizes_candidate_status(self) -> None:
+        from app.web.backtest_final_review.page import (
+            _build_final_review_decision_desk_model,
+            _candidate_board_route,
+        )
+
+        model = _build_final_review_decision_desk_model(
+            candidate_summary={
+                "total_candidates": 3,
+                "select_ready": 1,
+                "hold_or_re_review": 2,
+                "blocked": 0,
+                "first_review_candidate": "Balanced Mix",
+                "first_review_reason": "open review 2개",
+                "first_review_action": "Decision Cockpit 확인",
+            },
+            practical_validation_count=5,
+            eligible_count=3,
+            hidden_validation_count=2,
+            final_decision_count=4,
+            dashboard_selected_count=1,
+            route_value="모니터링 후보 있음",
+            route_detail="저장 가능한 후보를 확인합니다.",
+            route_tone="positive",
+        )
+
+        self.assertEqual(model["title"], "후보 현황과 다음 판단")
+        self.assertIn("Gate 통과 후보 3개", model["detail"])
+        self.assertEqual(model["route_value"], "모니터링 후보 있음")
+        self.assertNotIn("먼저 볼 후보:", model["route_detail"])
+        self.assertNotIn("이유:", model["route_detail"])
+        self.assertNotIn("다음 행동:", model["route_detail"])
+        self.assertEqual(model["featured_candidate"]["candidate"], "Balanced Mix")
+        self.assertEqual(model["featured_candidate"]["reason"], "open review 2개")
+        self.assertEqual(model["featured_candidate"]["recommendation"], "저장 가능한 후보를 확인합니다.")
+        self.assertEqual(model["featured_candidate"]["next_action"], "Decision Cockpit 확인")
+        self.assertEqual(
+            [item["label"] for item in model["featured_candidate"]["badges"]],
+            ["Gate", "선택 가능", "Monitoring"],
+        )
+        self.assertEqual(model["featured_candidate"]["badges"][0]["value"], "통과")
+        self.assertEqual(
+            [item["label"] for item in model["kpis"]],
+            ["올라온 후보", "선택 가능", "보류 / 재검토", "숨김", "저장된 판단", "Monitoring 연결"],
+        )
+
+        joined = " ".join(str(value) for value in model.values())
+        self.assertNotIn("Saved PV", joined)
+        self.assertNotIn("Review Queue", joined)
+        self.assertNotIn("Selected Dashboard 후보", joined)
+
+        recovery_model = _build_final_review_decision_desk_model(
+            candidate_summary={
+                "total_candidates": 1,
+                "select_ready": 0,
+                "hold_or_re_review": 1,
+                "blocked": 0,
+                "first_review_candidate": "Legacy candidate",
+                "first_review_reason": "최신 보강 기준 재확인 필요",
+                "first_review_action": "2단계 보강 후 재검증",
+            },
+            practical_validation_count=1,
+            eligible_count=1,
+            hidden_validation_count=0,
+            final_decision_count=0,
+            dashboard_selected_count=0,
+            route_value="재검토 필요",
+            route_detail="2단계에서 보강하고 다시 검증합니다.",
+            route_tone="warning",
+        )
+        self.assertEqual(recovery_model["featured_candidate"]["badges"][0]["value"], "재검증 필요")
+        recovery_route = _candidate_board_route(
+            {
+                "total_candidates": 1,
+                "select_ready": 0,
+                "blocked": 0,
+                "recheck_required": 1,
+            }
+        )
+        self.assertEqual(recovery_route[0], "2단계 재검증 필요")
+        self.assertIn("Practical Validation", recovery_route[1])
+
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        workspace_body = workspace_body.split("if hidden_validation_count > 0:", 1)[0]
+        self.assertNotIn("render_fr_flow(", workspace_body)
+
+        component_source = Path("app/web/backtest_final_review/components.py").read_text(encoding="utf-8")
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", component_source)
+        self.assertIn(".fr-featured-field", component_source)
+        self.assertIn(".fr-featured-badges", component_source)
+        self.assertNotIn("grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));", component_source)
+
+    def test_final_review_candidate_queue_is_integrated_into_decision_desk(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        candidate_selection_area = workspace_body.split("investment_report = build_final_review_investment_report", 1)[0]
+
+        self.assertIn("def _render_candidate_selection_panel", page_source)
+        self.assertIn("_render_candidate_selection_panel(candidate_contexts)", candidate_selection_area)
+        self.assertNotIn('eyebrow="Step 1"', candidate_selection_area)
+        self.assertNotIn('title="Candidate Board"', candidate_selection_area)
+        self.assertNotIn("_render_candidate_board(candidate_contexts)", candidate_selection_area)
+        self.assertNotIn('eyebrow="Step ', workspace_body)
+        investment_report_area = workspace_body.split("investment_report = build_final_review_investment_report", 1)[1]
+        investment_report_area = investment_report_area.split('eyebrow="최종 판단"', 1)[0]
+        self.assertNotIn('eyebrow="Investment Report"', workspace_body)
+        self.assertNotIn("with st.container(border=True):", investment_report_area)
+        self.assertIn("_render_investment_report(", investment_report_area)
+        self.assertIn("decision_action=decision_action", investment_report_area)
+        self.assertNotIn('eyebrow="Selection Readiness"', workspace_body)
+        self.assertNotIn('eyebrow="Decision Record"', workspace_body)
+        self.assertNotIn('eyebrow="최종 판단"', workspace_body)
+        self.assertNotIn('eyebrow="Evidence Appendix"', workspace_body)
+        self.assertNotIn("_render_evidence_appendix(", workspace_body)
+        self.assertNotIn("_render_saved_final_review_decisions(", workspace_body)
+        self.assertNotIn('title="Decision History / Portfolio Monitoring Handoff"', workspace_body)
+        self.assertNotIn('"고급: 저장 ID / 운영 전 조건 / 다음 행동 확인"', workspace_body)
+        self.assertNotIn('"판단 근거와 저장 경계"', workspace_body)
+
+        helper_body = page_source.split("def _render_candidate_selection_panel", 1)[1]
+        helper_body = helper_body.split("def _render_decision_cockpit", 1)[0]
+        self.assertNotIn("Review Queue", helper_body)
+        self.assertIn('"검토 대상"', helper_body)
+        self.assertIn('"후보 비교 상세"', helper_body)
+        self.assertIn("options=candidate_keys", helper_body)
+        self.assertIn("format_func=lambda candidate_key", helper_body)
+        self.assertNotIn("labels.index", helper_body)
+        self.assertIn('"최종 검토서 확인"', helper_body)
+        self.assertIn('st.session_state["final_review_confirmed_candidate_key"] = selected_key', helper_body)
+        self.assertIn('"검토 대상이 변경되었습니다. 다시 확인하세요"', helper_body)
+        self.assertIn("새 검증을 실행하지 않습니다", helper_body)
+        self.assertNotIn("render_fr_lane_grid", helper_body)
+        self.assertNotIn('"Select Ready"', helper_body)
+        self.assertNotIn('"Hold / Re-review"', helper_body)
+        self.assertNotIn('"Blocked"', helper_body)
+        self.assertNotIn('"Candidate Board detail"', helper_body)
+
+    def test_final_review_candidate_selector_key_does_not_depend_on_duplicate_labels(self) -> None:
+        from app.web.backtest_final_review.page import _final_review_candidate_key
+
+        first = {
+            "label": "중복 후보명",
+            "source": {"source_type": "practical_validation_result", "source_id": "validation-a"},
+            "validation": {"validation_id": "validation-a", "selection_source_id": "source-a"},
+        }
+        second = {
+            "label": "중복 후보명",
+            "source": {"source_type": "practical_validation_result", "source_id": "validation-b"},
+            "validation": {"validation_id": "validation-b", "selection_source_id": "source-b"},
+        }
+
+        self.assertEqual(_final_review_candidate_key(first), "practical_validation_result:validation-a")
+        self.assertEqual(_final_review_candidate_key(second), "practical_validation_result:validation-b")
+        self.assertNotEqual(_final_review_candidate_key(first), _final_review_candidate_key(second))
+
+    def test_final_review_uses_latest_validation_per_source_before_eligibility_filter(self) -> None:
+        from app.web.backtest_final_review_helpers import (
+            _build_final_review_source_options,
+            _latest_practical_validation_rows_by_source,
+        )
+
+        older_ready = {
+            "validation_id": "validation-old-ready",
+            "selection_source_id": "source-same",
+            "source_title": "Same candidate",
+            "updated_at": "2026-07-12T09:00:00",
+            "validation_route": "READY_FOR_FINAL_REVIEW",
+            "final_review_gate": {"can_save_and_move": True},
+            "selected_route_preflight": {"select_allowed": True},
+        }
+        latest_blocked = {
+            **older_ready,
+            "validation_id": "validation-latest-blocked",
+            "updated_at": "2026-07-12T10:00:00",
+            "validation_route": "BLOCKED_FOR_FINAL_REVIEW",
+            "final_review_gate": {"can_save_and_move": False},
+            "pre_final_enrichment_gate": {"blocking": True},
+            "selected_route_preflight": {"select_allowed": False},
+        }
+        other_source = {
+            **older_ready,
+            "validation_id": "validation-other-ready",
+            "selection_source_id": "source-other",
+            "updated_at": "2026-07-12T08:00:00",
+        }
+
+        latest_rows = _latest_practical_validation_rows_by_source(
+            [older_ready, other_source, latest_blocked]
+        )
+        self.assertEqual(
+            [row["validation_id"] for row in latest_rows],
+            ["validation-latest-blocked", "validation-other-ready"],
+        )
+        options = _build_final_review_source_options(
+            [],
+            [],
+            practical_validation_rows=[older_ready, latest_blocked],
+            include_legacy_sources=False,
+        )
+        self.assertEqual(options, [])
+
+    def test_final_review_candidate_must_be_confirmed_before_decision_surfaces_render(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        selection_position = workspace_body.index("candidate_selection = _render_candidate_selection_panel")
+        confirmation_guard_position = workspace_body.index('if not bool(candidate_selection.get("is_confirmed"))')
+        report_build_position = workspace_body.index("investment_report = build_final_review_investment_report")
+        decision_model_position = workspace_body.index("decision_action = _build_final_review_decision_action_model")
+        report_render_position = workspace_body.index("decision_intent = _render_investment_report")
+        decision_consume_position = workspace_body.index("_consume_final_review_decision_intent(")
+
+        self.assertLess(selection_position, confirmation_guard_position)
+        self.assertLess(confirmation_guard_position, report_build_position)
+        self.assertLess(report_build_position, decision_model_position)
+        self.assertLess(decision_model_position, report_render_position)
+        self.assertLess(report_render_position, decision_consume_position)
+        self.assertNotIn('_render_decision_cockpit(cockpit)', workspace_body)
+        self.assertNotIn('title="Final Decision Action"', workspace_body)
+        self.assertNotIn('title="Final Review Save Readiness"', workspace_body)
+        self.assertNotIn('"Live Approval / Order"', workspace_body)
+        self.assertIn('"모니터링 후보로 선정"', page_source)
+        self.assertIn("append_current_final_selection_decision(final_row)", page_source)
+        self.assertNotIn('title="판단 기록"', workspace_body)
+        self.assertNotIn('"판단 근거와 저장 경계"', workspace_body)
+        self.assertNotIn('"Evidence Appendix"', workspace_body)
+        self.assertNotIn('"Saved Decisions"', workspace_body)
+
+    def test_final_review_decision_action_model_keeps_save_authority_in_python(self) -> None:
+        from app.services.backtest_evidence_read_model import SELECT_FOR_PRACTICAL_PORTFOLIO
+        from app.web.backtest_final_review.page import _build_final_review_decision_action_model
+
+        ready_packet = {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "selection_gate_policy_snapshot": {
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                "blockers": [],
+                "review_required": [],
+            },
+            "gate_policy_snapshot": {
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            },
+        }
+        model = _build_final_review_decision_action_model(
+            cockpit={
+                "verdict": "Monitoring 후보로 기록할 수 있습니다.",
+                "state_label": "모니터링 후보 가능",
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            },
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=ready_packet,
+            decision_id="final-auto-id",
+            existing_decision_ids=set(),
+        )
+
+        routes = {option["route"]: option for option in model["options"]}
+        self.assertEqual(model["suggested_route"], SELECT_FOR_PRACTICAL_PORTFOLIO)
+        self.assertTrue(routes[SELECT_FOR_PRACTICAL_PORTFOLIO]["recordable"])
+        self.assertEqual(routes[SELECT_FOR_PRACTICAL_PORTFOLIO]["button_label"], "모니터링 후보로 선정")
+        self.assertEqual(routes["HOLD_FOR_MORE_PAPER_TRACKING"]["button_label"], "보류로 기록")
+        self.assertIn("사용자의 판단 이유", model["reason_help"])
+        self.assertNotIn("decision_id", model)
+        self.assertNotIn("storage", model)
+
+    def test_final_review_decision_action_is_read_only_until_legacy_data_is_revalidated(self) -> None:
+        from app.services.backtest_evidence_read_model import SELECT_FOR_PRACTICAL_PORTFOLIO
+        from app.web.backtest_final_review.page import _build_final_review_decision_action_model
+
+        model = _build_final_review_decision_action_model(
+            cockpit={
+                "verdict": "과거 검토 근거입니다.",
+                "state_label": "모니터링 후보 가능",
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            },
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet={
+                "route": "INVESTABILITY_PACKET_READY",
+                "select_ready": True,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                    "blockers": [],
+                    "review_required": [],
+                },
+                "gate_policy_snapshot": {
+                    "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                },
+            },
+            decision_id="final-legacy-id",
+            existing_decision_ids=set(),
+            data_enrichment_action={
+                "available": True,
+                "mode": "legacy_recovery",
+                "next_step": "Flow 2 재검증과 새 결과 저장이 필요합니다.",
+            },
+        )
+
+        self.assertEqual(model["status_label"], "2단계 재검증 필요")
+        self.assertEqual(model["suggested_route"], "RE_REVIEW_REQUIRED")
+        self.assertTrue(all(not option["recordable"] for option in model["options"]))
+        self.assertTrue(
+            all("2단계" in option["disabled_reason"] for option in model["options"])
+        )
+
+    def test_final_review_decision_intent_appends_once_in_python(self) -> None:
+        import app.web.backtest_final_review.page as final_review_page
+        from app.services.backtest_evidence_read_model import SELECT_FOR_PRACTICAL_PORTFOLIO
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        append_mock = MagicMock()
+        ready_packet = {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "selection_gate_policy_snapshot": {
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                "blockers": [],
+                "review_required": [],
+            },
+        }
+        intent = {
+            "action": "record_final_decision",
+            "intent_id": "intent-once",
+            "decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            "operator_reason": "총평과 Monitoring 조건을 확인해 추적 후보로 선정한다.",
+        }
+
+        with (
+            patch.object(final_review_page, "st", fake_st),
+            patch.object(final_review_page, "append_current_final_selection_decision", append_mock),
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            final_review_page._consume_final_review_decision_intent(
+                intent,
+                source={"source_id": "validation-a", "source_type": "practical_validation_result", "source_title": "Candidate A"},
+                validation={"validation_id": "validation-a", "selection_source_id": "source-a"},
+                paper_observation={"active_components": []},
+                evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+                investability_packet=ready_packet,
+                decision_id="final-auto-id",
+                decision_id_key="final_review_decision_id_v2_validation_a",
+                existing_decision_ids=set(),
+            )
+
+        append_mock.assert_called_once()
+        saved_row = append_mock.call_args.args[0]
+        self.assertEqual(saved_row["decision_id"], "final-auto-id")
+        self.assertEqual(saved_row["operator_decision"]["reason"], intent["operator_reason"])
+        self.assertTrue(saved_row["operator_decision"]["constraints"])
+        self.assertTrue(saved_row["operator_decision"]["next_action"])
+        self.assertEqual(fake_st.session_state["final_review_consumed_decision_intent_validation_a"], "intent-once")
+
+    def test_final_review_first_read_excludes_market_sentiment_panel(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_final_review_workspace", 1)[1]
+        first_read_body = workspace_body.split("if hidden_validation_count > 0:", 1)[0]
+
+        self.assertNotIn("build_market_sentiment_context_overlay", page_source)
+        self.assertNotIn("_render_market_sentiment_context_overlay", page_source)
+        self.assertNotIn("_build_final_review_sentiment_display_model", page_source)
+        self.assertNotIn("_format_sentiment_score", page_source)
+        self.assertNotIn("_format_sentiment_pct", page_source)
+        self.assertNotIn("CNN / AAII detail", page_source)
+        self.assertNotIn("Timing / Rebalance", page_source)
+        self.assertNotIn("Context only", page_source)
+        self.assertNotIn("Market Context", first_read_body)
+
+    def test_final_review_sentiment_timing_rebalance_boundary_is_documented(self) -> None:
+        portfolio_flow = Path(".aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md").read_text(
+            encoding="utf-8"
+        )
+        backtest_flow = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(
+            encoding="utf-8"
+        )
+        roadmap = Path(".aiworkspace/note/finance/docs/ROADMAP.md").read_text(encoding="utf-8")
+
+        required_boundary = (
+            "시장심리 timing / rebalance 활용은 별도 리서치와 look-ahead-safe 검증 전까지 "
+            "Final Review gate나 Portfolio Monitoring signal로 쓰지 않는다"
+        )
+        self.assertIn("Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다", portfolio_flow)
+        self.assertIn(required_boundary, portfolio_flow)
+        self.assertIn("Workspace > Overview > Sentiment", backtest_flow)
+        self.assertIn("Final Review first-read에서는 CNN / AAII 시장심리 패널을 렌더링하지 않는다", backtest_flow)
+        self.assertIn(required_boundary, backtest_flow)
+        self.assertIn("sentiment timing / rebalance research", roadmap)
+
     def test_practical_validation_flow3_excludes_final_review_reference_from_actionable_summary(self) -> None:
         from app.web.backtest_practical_validation.workspace_panel import (
             _conclusion_group_detail,
@@ -12145,21 +13142,25 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "label": "Stress / Robustness",
             "display_label": "강건성",
             "status": "REVIEW",
-            "display_status": "보강 항목 없음",
+            "display_status": "최종 판단 참고 1",
             "passed_criteria": [],
             "remaining_issues": [],
             "review_criteria": ["Stress / sensitivity interpretation"],
             "final_review_reference_count": 1,
-            "decision_summary": "Practical Validation에서 보강할 항목은 없습니다.",
+            "decision_summary": "최종 판단 메모에서 참고할 기준 1개가 있습니다.",
+            "visible_in_practical_validation": False,
         }
 
         self.assertEqual(
             _conclusion_group_detail(group),
-            ("통과", "Practical Validation에서 보강할 항목은 없습니다.", "positive"),
+            ("참고", "최종 판단 메모에서 참고할 기준 1개가 있습니다.", "neutral"),
         )
-        react_item = _react_criteria_group_items([group])[0]
-        self.assertEqual(react_item["reviewCriteria"], [])
-        self.assertEqual(react_item["status"], "보강 항목 없음")
+        self.assertEqual(_react_criteria_group_items([group]), [])
+
+        component_source = Path(
+            "app/web/components/practical_validation_fix_queue/frontend/src/PracticalValidationFixQueue.tsx"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("보강 항목 없음", component_source)
 
     def test_practical_validation_flow3_uses_conclusion_summary(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
@@ -12169,11 +13170,15 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         self.assertNotIn("render_pv_step_rail(", page_source)
         self.assertIn('title="검증 결론"', flow3_body)
-        self.assertIn("카테고리별 통과 / 실패만 요약", flow3_body)
-        self.assertIn("자세한 원인과 보강 기준은 Flow 4", flow3_body)
+        self.assertIn("카테고리별 통과 / 실패와 Final Review 이동 가능 여부", flow3_body)
+        self.assertIn("저장 / 이동 action을 처리", flow3_body)
+        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", flow3_body)
+        self.assertIn("_consume_practical_validation_next_stage_action(", flow3_body)
         self.assertNotIn("Fix Queue", flow3_body)
         self.assertNotIn("_render_validation_gate_section(validation_result)", flow3_body)
         self.assertNotIn("검증 모듈 / 기술 상세", flow3_body)
+        self.assertIn("Final Review 이동 가능 여부를 확인", panel_source)
+        self.assertIn("_render_next_stage_action_fallback", panel_source)
         self.assertIn("_react_criteria_group_items", panel_source)
         self.assertIn("overall_outcome_label", panel_source)
         self.assertIn("overall_outcome_headline", panel_source)
@@ -12208,6 +13213,32 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertLess(
             flow2_body.index("_render_validation_profile_form()"),
             flow2_body.index("_render_actual_replay_panel(source)"),
+        )
+
+    def test_practical_validation_downstream_flows_wait_for_explicit_replay(self) -> None:
+        from app.web.backtest_practical_validation import page as practical_page
+
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        workspace_body = page_source.split("def render_practical_validation_workspace", 1)[1]
+        flow2_to_flow3 = workspace_body.split('eyebrow="Flow 3"', 1)[0]
+
+        self.assertFalse(practical_page._has_current_session_replay_result(None))
+        self.assertFalse(practical_page._has_current_session_replay_result({}))
+        self.assertFalse(practical_page._has_current_session_replay_result({"status": "NOT_RUN"}))
+        self.assertTrue(
+            practical_page._has_current_session_replay_result(
+                {"status": "BLOCKED", "replay_id": "pv_recheck_blocked"}
+            )
+        )
+        self.assertTrue(
+            practical_page._has_current_session_replay_result(
+                {"status": "REVIEW", "attempted_at": "2026-07-08T10:00:00"}
+            )
+        )
+        self.assertIn("_has_current_session_replay_result(replay_result)", flow2_to_flow3)
+        self.assertLess(
+            flow2_to_flow3.index("_has_current_session_replay_result(replay_result)"),
+            workspace_body.index("build_practical_validation_result("),
         )
 
     def test_practical_validation_source_tables_are_arrow_safe_display_tables(self) -> None:
@@ -12318,7 +13349,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "status": "REVIEW",
                         "applies": True,
                         "reason": "stress / rolling / sensitivity 근거를 확인합니다.",
-                        "gate_reason": "Final Review에서 확인합니다.",
+                        "gate_reason": "2단계 실용성 주의로 확인합니다.",
                         "resolution_surface": "Flow4 > 강건성 > Stress / sensitivity 상세",
                     },
                     {
@@ -12342,7 +13373,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                         "Criteria": "Provider / freshness evidence",
                         "Status": "REVIEW",
                         "Evidence": "provider freshness review",
-                        "Next Action": "provider freshness를 Final Review에서 확인합니다.",
+                        "Next Action": "provider freshness를 데이터 주의로 확인합니다.",
                     },
                 ],
                 "validation_efficacy_display_rows": [
@@ -12383,7 +13414,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(data_card["outcome_label"], "보강 후 재검증 필요")
         self.assertEqual(data_card["resolution_surface"], "Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세")
         self.assertIn("가격 window 보강 필요", data_card["evidence"])
-        self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가")
+        self.assertEqual(data_card["display_label"], "검증에 필요한 가격 / ETF 운용사 / 생존편향 데이터가 충분한가")
         self.assertIn("가격", data_card["current_problem"])
         self.assertIn("PASS", data_card["completion_criteria"])
         self.assertIn("데이터 품질 / 편향 통제", data_card["fix_location"])
@@ -12396,29 +13427,200 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("가격 window를 최신 DB 기준으로 보강", data_card["resolution_guide"]["next_action"])
         self.assertIn("가격 window를 최신 DB 기준으로 보강", data_card["resolution_guide"]["action_steps"][0])
         self.assertTrue(
-            any("Provider / Data 보강 액션" in step for step in data_card["resolution_guide"]["action_steps"])
+            any("데이터 보강 / 수집 실행" in step for step in data_card["resolution_guide"]["action_steps"])
         )
         self.assertTrue(
             any("Flow 2 재검증" in step for step in data_card["resolution_guide"]["action_steps"])
         )
         self.assertIn("PASS", data_card["resolution_guide"]["pass_criteria"])
-        self.assertIn("provider gap", data_card["resolution_guide"]["pass_criteria"])
+        self.assertIn("외부 데이터 gap", data_card["resolution_guide"]["pass_criteria"])
         self.assertIn("Flow4 > 데이터 > 데이터 품질 / 편향 통제 상세", data_card["resolution_guide"]["location"])
-        self.assertIn("Provider / Data 보강 액션", data_card["resolution_guide"]["location"])
+        self.assertIn("데이터 보강 / 수집 실행", data_card["resolution_guide"]["location"])
+        collection_action = data_card["resolution_guide"]["collection_action"]
+        self.assertTrue(collection_action["available"])
+        self.assertEqual(collection_action["label"], "수집하기")
+        self.assertEqual(collection_action["target_anchor"], "pv-provider-data-action")
+        self.assertIn("데이터 보강 / 수집 실행", collection_action["surface"])
+        self.assertIn("수집 가능한", collection_action["detail"])
         self.assertEqual(data_group["passed_criteria"], [])
-        self.assertIn("검증에 필요한 가격 / provider / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
+        self.assertIn("검증에 필요한 가격 / ETF 운용사 / 생존편향 데이터가 충분한가", data_group["remaining_issues"][0])
         self.assertIn("보강 필요", data_group["decision_summary"])
+        method_group = next(group for group in groups if group["label"] == "Validation Method Strength")
+        method_card = method_group["criteria_cards"][0]
+        self.assertFalse(method_card["resolution_guide"]["collection_action"]["available"])
         stress_group = next(group for group in groups if group["label"] == "Stress / Robustness")
         stress_card = stress_group["criteria_cards"][0]
         self.assertEqual(stress_card["outcome_key"], "review_required")
-        self.assertEqual(stress_card["outcome_label"], "Final Review 판단 필요")
+        self.assertEqual(stress_card["outcome_label"], "2단계 실용성 주의")
+        self.assertEqual(stress_card["review_role"], "pv_practical_caution")
         self.assertIn("설정 변화", stress_group["review_criteria"][0])
         self.assertEqual(
             workspace["handoff_summary_groups"][0]["modules"][0]["module_id"],
             "selected_route_preflight",
         )
 
-    def test_practical_validation_flow4_keeps_final_review_items_as_handoff_reference(self) -> None:
+    def test_practical_validation_workspace_builds_data_action_board(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "provider_gap_collection_plan": {
+                    "operability_official": ["SPY"],
+                    "operability_bridge": ["TLT"],
+                    "holdings_exposure": ["GLD"],
+                    "source_map_discovery": ["MYST"],
+                    "mapping_needed": ["ALT"],
+                    "macro": True,
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "data_coverage",
+                        "label": "Data Coverage",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                    {
+                        "module_id": "tax_account_scope",
+                        "label": "Tax / Account Scope",
+                        "status": "REVIEW",
+                        "applies": True,
+                        "requirement": "REFERENCE",
+                        "stage_owner": "final_review",
+                    },
+                    {
+                        "module_id": "selected_route_preflight",
+                        "label": "Final Review Readiness Preview",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                    {
+                        "module_id": "final_review_gate",
+                        "label": "Final Review Readiness Preview",
+                        "group": "Final Review Readiness Preview",
+                        "status": "NEEDS_INPUT",
+                        "applies": True,
+                        "stage_owner": "practical_validation",
+                    },
+                ],
+                "data_coverage_display_rows": [
+                    {
+                        "Criteria": "Provider / freshness evidence",
+                        "Status": "NEEDS_INPUT",
+                        "Ticker": "SPY",
+                        "Evidence": "provider snapshot missing",
+                        "Next Action": "Flow4 데이터 보강 / 수집 실행에서 수집합니다.",
+                    },
+                    {
+                        "Criteria": "Price DB window coverage",
+                        "Status": "NEEDS_INPUT",
+                        "Ticker": "QQQ",
+                        "Evidence": "stored price window is short",
+                        "Next Action": "DB price ingestion으로 보강한 뒤 Flow 2 재검증을 실행합니다.",
+                    },
+                ],
+                "validation_efficacy_display_rows": [
+                    {
+                        "Criteria": "Walk-forward temporal validation",
+                        "Status": "NEEDS_INPUT",
+                        "Evidence": "walk-forward missing",
+                        "Next Action": "검증 방법론 강도 상세에서 보강합니다.",
+                    }
+                ],
+            }
+        )
+
+        board = workspace["data_action_board"]
+        self.assertEqual(board["title"], "데이터 보강 대상")
+        self.assertIn("수집 실행", board["detail"])
+        self.assertEqual(board["summary"]["immediate_collect_count"], 4)
+        self.assertEqual(board["summary"]["source_map_discovery_count"], 1)
+        self.assertEqual(board["summary"]["connector_needed_count"], 1)
+        self.assertEqual(board["summary"]["no_action_count"], 2)
+        self.assertNotIn("tax_account_scope", {item.get("module_id") for item in board["items"]})
+        self.assertNotIn("selected_route_preflight", {item.get("module_id") for item in board["items"]})
+        self.assertNotIn("final_review_gate", {item.get("module_id") for item in board["items"]})
+
+        groups = {group["group_id"]: group for group in board["groups"]}
+        immediate_items = groups["immediate_collect"]["items"]
+        immediate_labels = {item["category"] for item in immediate_items}
+        self.assertIn("ETF operability", immediate_labels)
+        self.assertIn("ETF holdings / exposure", immediate_labels)
+        self.assertIn("Macro context", immediate_labels)
+        self.assertTrue(any("SPY" in item["tickers"] for item in immediate_items))
+        self.assertTrue(any("GLD" in item["tickers"] for item in immediate_items))
+        self.assertTrue(any(item["availability"] == "기존 Python 수집 경계에서 실행 가능" for item in immediate_items))
+
+        source_map_item = groups["source_map_discovery"]["items"][0]
+        self.assertEqual(source_map_item["tickers"], ["MYST"])
+        self.assertIn("자동 source map 탐색", source_map_item["next_action"])
+
+        connector_item = groups["connector_needed"]["items"][0]
+        self.assertEqual(connector_item["tickers"], ["ALT"])
+        self.assertIn("수동 connector mapping", connector_item["availability"])
+
+        no_action_items = groups["no_action"]["items"]
+        self.assertTrue(any(item["module_id"] == "data_coverage" and "QQQ" in item["tickers"] for item in no_action_items))
+        self.assertTrue(any(item["module_id"] == "validation_efficacy" for item in no_action_items))
+        self.assertTrue(all("Final Review" not in item["category"] for item in no_action_items))
+
+    def test_practical_validation_service_attaches_provider_plan_to_data_action_board(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        base_result = {
+            "selection_source_id": "source-data-actions",
+            "validation_modules": [
+                {
+                    "module_id": "data_coverage",
+                    "label": "Data Coverage",
+                    "status": "NEEDS_INPUT",
+                    "applies": True,
+                }
+            ],
+            "data_coverage_display_rows": [
+                {
+                    "Criteria": "Provider / freshness evidence",
+                    "Status": "NEEDS_INPUT",
+                    "Ticker": "SPY",
+                    "Evidence": "provider snapshot missing",
+                    "Next Action": "Flow4 데이터 보강 / 수집 실행에서 수집합니다.",
+                }
+            ],
+        }
+
+        with (
+            patch.object(service, "_build_practical_validation_result", return_value=dict(base_result)),
+            patch.object(
+                service,
+                "build_provider_gap_collection_plan",
+                return_value={
+                    "operability_official": ["SPY"],
+                    "operability_bridge": [],
+                    "holdings_exposure": [],
+                    "source_map_discovery": [],
+                    "mapping_needed": [],
+                    "macro": False,
+                },
+            ) as plan_builder,
+        ):
+            result = service.build_practical_validation_result({"selection_source_id": "source-data-actions"})
+
+        plan_builder.assert_called_once()
+        self.assertEqual(result["provider_gap_collection_plan"]["operability_official"], ["SPY"])
+        board = result["practical_validation_workspace"]["data_action_board"]
+        immediate = next(group for group in board["groups"] if group["group_id"] == "immediate_collect")
+        self.assertEqual(immediate["items"][0]["tickers"], ["SPY"])
+        self.assertEqual(immediate["items"][0]["availability"], "기존 Python 수집 경계에서 실행 가능")
+
+    def test_practical_validation_flow4_keeps_review_only_categories_visible_with_stage_role(self) -> None:
         from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
 
         workspace = build_practical_validation_workspace(
@@ -12426,7 +13628,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                 "final_review_gate": {
                     "route": "READY_WITH_REVIEW",
                     "can_save_and_move": True,
-                    "verdict": "Final Review에서 확인할 항목이 있습니다.",
+                    "verdict": "역할별 REVIEW 항목이 있습니다.",
                     "review_modules": [
                         {
                             "module_id": "stress_robustness",
@@ -12455,17 +13657,95 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
         summary = workspace["summary"]
         self.assertEqual(summary["criteria_review_count"], 1)
-        self.assertEqual(summary["final_review_reference_count"], 1)
+        self.assertEqual(summary["final_review_reference_count"], 0)
+        self.assertEqual(summary["pv_practical_caution_count"], 1)
         self.assertEqual(summary["overall_outcome_key"], "pass")
         self.assertEqual(summary["overall_outcome_label"], "통과")
 
         stress_group = next(group for group in workspace["criteria_detail_groups"] if group["label"] == "Stress / Robustness")
         self.assertEqual(stress_group["remaining_issues"], [])
-        self.assertEqual(stress_group["final_review_reference_count"], 1)
+        self.assertEqual(stress_group["final_review_reference_count"], 0)
+        self.assertEqual(stress_group["pv_practical_caution_count"], 1)
         self.assertEqual(
             stress_group["decision_summary"],
-            "Practical Validation에서 보강할 항목은 없습니다.",
+            "실용성 판단에서 주의할 REVIEW 기준 1개가 있습니다.",
         )
+        self.assertTrue(stress_group["visible_in_practical_validation"])
+        self.assertEqual(stress_group["display_status"], "2단계 실용성 주의 1")
+        stress_card = stress_group["criteria_cards"][0]
+        self.assertEqual(stress_card["review_role"], "pv_practical_caution")
+        self.assertEqual(stress_card["review_role_label"], "2단계 실용성 주의")
+        self.assertEqual(stress_card["stage_decision_surface"], "Practical Validation")
+        self.assertEqual(stress_card["final_review_visibility"], "evidence_appendix")
+        visible_labels = [group["label"] for group in workspace["visible_criteria_detail_groups"]]
+        self.assertEqual(visible_labels, ["Source & Replay", "Stress / Robustness"])
+        self.assertNotIn(
+            "보강 항목 없음",
+            [str(group.get("display_status") or "") for group in workspace["visible_criteria_detail_groups"]],
+        )
+
+    def test_practical_validation_workspace_builds_stage_ownership_inventory(self) -> None:
+        from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+
+        workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "latest_replay",
+                        "label": "Latest Runtime Replay",
+                        "status": "NOT_RUN",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                        "resolution_surface": "Flow 2 · 실전 재검증 실행",
+                    },
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "PASS",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    },
+                    {
+                        "module_id": "tax_account_scope",
+                        "label": "Tax / Account Scope",
+                        "status": "REVIEW",
+                        "requirement": "REFERENCE",
+                        "stage_owner": "final_review",
+                        "applies": True,
+                        "resolution_surface": "Final Review",
+                    },
+                    {
+                        "module_id": "monitoring_baseline",
+                        "label": "Monitoring Baseline",
+                        "status": "REVIEW",
+                        "requirement": "REFERENCE",
+                        "stage_owner": "selected_dashboard",
+                        "applies": True,
+                        "resolution_surface": "Operations > Portfolio Monitoring",
+                    },
+                ]
+            }
+        )
+
+        inventory = workspace["stage_ownership_inventory"]
+        self.assertEqual(
+            [stage["stage"] for stage in inventory["stage_summaries"]],
+            ["Backtest Analysis", "Practical Validation", "Final Review", "Operations > Portfolio Monitoring"],
+        )
+        rows = {row["module_id"]: row for row in inventory["rows"]}
+        self.assertEqual(rows["latest_replay"]["stage"], "Practical Validation")
+        self.assertEqual(rows["latest_replay"]["visibility"], "현재 단계 보강")
+        self.assertEqual(rows["tax_account_scope"]["stage"], "Final Review")
+        self.assertEqual(rows["tax_account_scope"]["visibility"], "후속 단계 판단")
+        self.assertEqual(rows["monitoring_baseline"]["stage"], "Operations > Portfolio Monitoring")
+        practical_summary = next(
+            stage for stage in inventory["stage_summaries"] if stage["stage"] == "Practical Validation"
+        )
+        self.assertEqual(practical_summary["module_count"], 2)
+        self.assertEqual(practical_summary["blocking_count"], 1)
+        self.assertEqual(inventory["misplaced_downstream_blocker_count"], 0)
 
     def test_practical_validation_module_plan_preserves_review_input_checks(self) -> None:
         from app.services.backtest_practical_validation_modules import build_validation_module_plan
@@ -12627,12 +13907,19 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
     def test_practical_validation_flow4_uses_criteria_detail_board(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        workspace_source = Path("app/services/backtest_practical_validation_workspace.py").read_text(encoding="utf-8")
+        component_source = Path("app/web/backtest_practical_validation/components.py").read_text(encoding="utf-8")
+        data_action_wrapper = Path("app/web/components/practical_validation_data_action_board/component.py")
         flow4_body = page_source.split('eyebrow="Flow 4"', 1)[1]
-        flow4_body = flow4_body.split('eyebrow="Flow 5"', 1)[0]
+        evidence_body = page_source.split("def _render_validation_evidence_boards", 1)[1]
+        evidence_body = evidence_body.split("def _render_validation_action_boards", 1)[0]
+        provider_gap_body = page_source.split("def _render_provider_gap_section", 1)[1]
+        provider_gap_body = provider_gap_body.split("def _provider_look_through_board", 1)[0]
+        render_body = page_source.split("def render_practical_validation_workspace", 1)[1]
 
         self.assertIn("def _render_validation_criteria_detail_board", page_source)
         self.assertIn("_render_validation_criteria_detail_board(validation_result)", flow4_body)
-        self.assertIn("_render_validation_evidence_boards(validation_result)", flow4_body)
+        self.assertIn("_render_validation_evidence_boards(validation_result, source=source)", flow4_body)
         self.assertNotIn("_render_validation_gate_section(validation_result)", flow4_body)
         self.assertNotIn("검증 모듈 / 기술 상세", flow4_body)
         self.assertIn("카테고리별 검증 결과", page_source)
@@ -12644,6 +13931,22 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("##### Input Evidence", page_source)
         self.assertIn("실전성 진단", page_source)
         self.assertNotIn("##### Practical Diagnostics", page_source)
+        self.assertIn("상세 근거 / 원자료", evidence_body)
+        self.assertIn("카테고리별 검증 결과와 데이터 보강 대상 보드를 먼저 확인", evidence_body)
+        self.assertIn('st.expander("상세 근거 / 원자료", expanded=False)', evidence_body)
+        self.assertIn('st.expander("Selection Source JSON", expanded=False)', evidence_body)
+        self.assertIn('st.expander("Practical Validation Result JSON", expanded=False)', evidence_body)
+        self.assertNotIn('eyebrow="Flow 5"', page_source)
+        self.assertNotIn('title="저장 / Final Review 이동"', page_source)
+        self.assertNotIn("Flow 5 저장 / Final Review 이동", workspace_source)
+        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", render_body)
+        self.assertIn("_consume_practical_validation_next_stage_action(", render_body)
+        after_flow4_evidence = render_body.split("_render_validation_evidence_boards(validation_result, source=source)", 1)[1]
+        self.assertNotIn('st.expander("Selection Source JSON", expanded=False)', after_flow4_evidence)
+        self.assertNotIn('st.expander("Practical Validation Result JSON", expanded=False)', after_flow4_evidence)
+        self.assertNotIn("수집 대상 근거", provider_gap_body)
+        self.assertNotIn("수집 대상 상세", provider_gap_body)
+        self.assertNotIn("Provider 부족 근거", page_source)
         self.assertNotIn("검증 근거 보드", page_source)
         self.assertNotIn("Evidence workspace", page_source)
         self.assertNotIn("_board_summary_cards", page_source)
@@ -12675,20 +13978,246 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("Validation Readiness", flow4_body)
         self.assertNotIn("Final Review Readiness Preview", flow4_body)
         self.assertIn("pv-criteria-board", page_source)
+        self.assertIn("pv-provider-data-action", page_source)
+        self.assertIn("collection_action", page_source)
+        self.assertIn("pv-criteria-collect-action", page_source)
+        self.assertIn("pv-criteria-collect-button", component_source)
+        self.assertIn("render_practical_validation_data_action_board", page_source)
+        self.assertIn("_render_data_action_board(validation_result)", flow4_body)
+        self.assertTrue(data_action_wrapper.exists())
+        self.assertIn('title="데이터 보강 / 수집 실행"', page_source)
+        self.assertNotIn('title="Provider 보강 액션"', provider_gap_body)
+        self.assertIn('else "수집 실행"', provider_gap_body)
+        self.assertIn("수집하는 것", provider_gap_body)
+        self.assertIn("하지 않는 것", provider_gap_body)
+        self.assertIn("실행 후 다음 단계", provider_gap_body)
+        self.assertIn("백테스트 재실행", provider_gap_body)
+        self.assertIn("Final Review 판단", provider_gap_body)
+        self.assertIn("Flow 2 재검증", provider_gap_body)
+        self.assertIn("필수 데이터 보강", provider_gap_body)
+        self.assertIn("필수 외부 데이터 보강 실행", provider_gap_body)
+        self.assertIn("_complete_provider_gap_collection", provider_gap_body)
+        self.assertIn("재검증 전에는 Final Review로 이동할 수 없습니다", provider_gap_body)
+        self.assertNotIn('st.expander("보강 작업 상세 테이블"', provider_gap_body)
+        self.assertIn("보강 작업 상세 / 수집 원자료", evidence_body)
+        self.assertNotIn("_render_stage_ownership_inventory(validation_result)", flow4_body)
+        self.assertNotIn("단계별 검증 소유권", page_source)
         criteria_board_body = page_source.split("def _render_validation_criteria_detail_board", 1)[1]
         criteria_board_body = criteria_board_body.split("def _render_validation_efficacy_audit", 1)[0]
         self.assertNotIn("Final Review 참고", criteria_board_body)
         self.assertNotIn("Final Review 이동 요약", criteria_board_body)
         self.assertNotIn("final_review_reference_html", criteria_board_body)
         self.assertNotIn("handoff_html", criteria_board_body)
+        self.assertNotIn("def _render_validation_gate_section", page_source)
+        self.assertNotIn("def _render_validation_module_board", page_source)
+        self.assertNotIn("def _render_applied_validation_map", page_source)
+        self.assertNotIn("Required for Final Review", page_source)
+        self.assertNotIn('str(card.get("status") or "") != "REVIEW"', criteria_board_body)
+        self.assertIn("review_role_label", criteria_board_body)
+        self.assertIn("2단계 실용성 주의", page_source)
         self.assertLess(
             flow4_body.index("_render_validation_criteria_detail_board(validation_result)"),
-            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
+            flow4_body.index("_render_data_action_board(validation_result)"),
         )
         self.assertLess(
-            flow4_body.index("_render_validation_evidence_boards(validation_result)"),
             flow4_body.index("_render_validation_action_boards(validation_result)"),
+            flow4_body.index("_render_validation_evidence_boards(validation_result, source=source)"),
         )
+        self.assertLess(
+            flow4_body.index("_render_data_action_board(validation_result)"),
+            flow4_body.index("_render_validation_evidence_boards(validation_result, source=source)"),
+        )
+
+    def test_provider_collection_completion_clears_replay_for_regular_and_final_review_origins(self) -> None:
+        import app.web.backtest_practical_validation.page as practical_page
+
+        validation = {
+            "selection_source_id": "source-recheck-loop",
+            "validation_id": "validation-recheck-loop",
+        }
+        for origin in ("flow4", "final_review_recovery"):
+            fake_st = MagicMock()
+            fake_st.session_state = {
+                "practical_validation_recheck_source-recheck-loop_STORED_PERIOD": {
+                    "status": "PASS",
+                    "replay_id": "stale-replay",
+                },
+                "backtest_practical_validation_data_enrichment_handoff": {"validation_result": validation},
+            }
+            with patch.object(practical_page, "st", fake_st):
+                practical_page._complete_provider_gap_collection(
+                    validation,
+                    [{"status": "SUCCESS", "rows_written": 6}],
+                    origin=origin,
+                )
+
+            self.assertNotIn(
+                "practical_validation_recheck_source-recheck-loop_STORED_PERIOD",
+                fake_st.session_state,
+            )
+            self.assertEqual(
+                fake_st.session_state[
+                    "practical_validation_enrichment_progress_source-recheck-loop"
+                ]["status"],
+                "recheck_required",
+            )
+            self.assertEqual(
+                fake_st.session_state[
+                    "practical_validation_enrichment_progress_source-recheck-loop"
+                ]["origin"],
+                origin,
+            )
+            self.assertNotIn(
+                "backtest_practical_validation_data_enrichment_handoff",
+                fake_st.session_state,
+            )
+
+    def test_both_provider_collection_buttons_use_shared_recheck_completion_boundary(self) -> None:
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        regular_body = page_source.split("def _render_provider_gap_section", 1)[1].split(
+            "def _render_final_review_data_enrichment_handoff", 1
+        )[0]
+        recovery_body = page_source.split("def _render_final_review_data_enrichment_handoff", 1)[1].split(
+            "def _provider_look_through_board", 1
+        )[0]
+
+        self.assertIn("_complete_provider_gap_collection(", regular_body)
+        self.assertIn("origin=\"flow4\"", regular_body)
+        self.assertIn("_complete_provider_gap_collection(", recovery_body)
+        self.assertIn("origin=\"final_review_recovery\"", recovery_body)
+
+    def test_practical_validation_save_and_move_rejects_missing_current_replay(self) -> None:
+        import app.web.backtest_practical_validation.page as practical_page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        handoff_mock = MagicMock()
+
+        with (
+            patch.object(practical_page, "st", fake_st),
+            patch.object(practical_page, "prepare_final_review_handoff_from_validation", handoff_mock),
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            practical_page._consume_practical_validation_next_stage_action(
+                {
+                    "action": "save_and_move",
+                    "source": "practical_validation_fix_queue",
+                    "nonce": "replay-guard",
+                },
+                source={"selection_source_id": "source-replay-guard"},
+                validation_result={
+                    "validation_id": "validation-replay-guard",
+                    "final_review_gate": {"can_save_and_move": True},
+                },
+                replay_result={"status": "NOT_RUN"},
+            )
+
+        handoff_mock.assert_not_called()
+        self.assertIn(
+            "Flow 2 재검증",
+            fake_st.session_state["backtest_practical_validation_notice"],
+        )
+
+    def test_practical_validation_save_and_move_confirms_new_validation_key(self) -> None:
+        import app.web.backtest_practical_validation.page as practical_page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {
+            "practical_validation_enrichment_progress_source-new": {
+                "status": "recheck_required"
+            }
+        }
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        handoff = MagicMock()
+        handoff.session_payload = {
+            "validation_result": {"validation_id": "validation-new"}
+        }
+        handoff.notice = "새 검증 결과를 Final Review로 보냈습니다."
+        handoff.requested_panel = "Final Review"
+
+        with (
+            patch.object(practical_page, "st", fake_st),
+            patch.object(
+                practical_page,
+                "prepare_final_review_handoff_from_validation",
+                return_value=handoff,
+            ) as handoff_mock,
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            practical_page._consume_practical_validation_next_stage_action(
+                {
+                    "action": "save_and_move",
+                    "source": "practical_validation_fix_queue",
+                    "nonce": "save-new-validation",
+                },
+                source={"selection_source_id": "source-new"},
+                validation_result={
+                    "validation_id": "validation-new",
+                    "selection_source_id": "source-new",
+                    "final_review_gate": {"can_save_and_move": True},
+                },
+                replay_result={"status": "PASS", "replay_id": "fresh-replay"},
+            )
+
+        handoff_mock.assert_called_once()
+        stable_key = "practical_validation_result:validation-new"
+        self.assertEqual(fake_st.session_state["final_review_source_selected"], stable_key)
+        self.assertEqual(
+            fake_st.session_state["final_review_confirmed_candidate_key"],
+            stable_key,
+        )
+        self.assertNotIn(
+            "practical_validation_enrichment_progress_source-new",
+            fake_st.session_state,
+        )
+
+    def test_practical_validation_data_action_board_react_component_is_ui_only(self) -> None:
+        wrapper_path = Path("app/web/components/practical_validation_data_action_board/component.py")
+        init_path = Path("app/web/components/practical_validation_data_action_board/__init__.py")
+        package_path = Path("app/web/components/practical_validation_data_action_board/frontend/package.json")
+        entry_path = Path(
+            "app/web/components/practical_validation_data_action_board/frontend/src/PracticalValidationDataActionBoard.tsx"
+        )
+        index_path = Path("app/web/components/practical_validation_data_action_board/frontend/src/index.tsx")
+        style_path = Path("app/web/components/practical_validation_data_action_board/frontend/src/style.css")
+
+        self.assertTrue(wrapper_path.exists())
+        self.assertTrue(init_path.exists())
+        self.assertTrue(package_path.exists())
+        self.assertTrue(entry_path.exists())
+        self.assertTrue(index_path.exists())
+        self.assertTrue(style_path.exists())
+
+        wrapper_source = wrapper_path.read_text(encoding="utf-8")
+        component_source = entry_path.read_text(encoding="utf-8")
+        index_source = index_path.read_text(encoding="utf-8")
+        style_source = style_path.read_text(encoding="utf-8")
+        package_source = package_path.read_text(encoding="utf-8")
+
+        self.assertIn("declare_component", wrapper_source)
+        self.assertIn("is_practical_validation_data_action_board_available", wrapper_source)
+        self.assertIn("render_practical_validation_data_action_board", wrapper_source)
+        self.assertIn("PracticalValidationDataActionBoard", component_source)
+        self.assertIn("데이터 보강 대상", component_source)
+        self.assertIn("데이터 보강 / 수집 실행", component_source)
+        self.assertIn("immediate_collect", component_source)
+        self.assertIn("source_map_discovery", component_source)
+        self.assertIn("connector_needed", component_source)
+        self.assertIn("no_action", component_source)
+        self.assertIn("ticker", component_source.lower())
+        self.assertIn("nextAction", component_source)
+        self.assertIn("availability", component_source)
+        self.assertIn("withStreamlitConnection", index_source)
+        self.assertIn("streamlit-component-lib", package_source)
+        self.assertIn("border-radius: 0;", style_source)
+        self.assertNotIn("Streamlit.setComponentValue", component_source)
+        self.assertNotIn("fetch(", component_source)
+        self.assertNotIn("axios", component_source)
+        self.assertNotIn("provider", component_source.lower().replace("provider / data", ""))
+        self.assertNotIn("from app.services", wrapper_source)
+        self.assertNotIn("from app.runtime", wrapper_source)
+        self.assertNotIn("from finance", wrapper_source)
 
     def test_backtest_handoff_react_adoption_decision_is_documented(self) -> None:
         flow_doc = Path(".aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md").read_text(encoding="utf-8")
@@ -26513,6 +28042,156 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
             "practical_validation_provider_gap_results_source-provider-gap",
         )
 
+    def test_provider_gap_plan_includes_stale_operability_snapshots(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-stale-provider",
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+
+        with patch.object(service, "load_etf_provider_source_map", return_value=verified_rows):
+            rows = service.build_provider_gap_rows(validation)
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(rows[0]["Operability"], "오래됨")
+        self.assertEqual(rows[0]["Action"], "운용성 최신화")
+        self.assertEqual(plan["operability_stale"], ["TLT"])
+        self.assertEqual(plan["operability_official"], ["TLT"])
+        self.assertEqual(plan["operability_bridge"], ["TLT"])
+
+    def test_collectable_stale_operability_requires_pre_final_enrichment(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        build_gate = getattr(service, "build_pre_final_enrichment_gate", None)
+        self.assertIsNotNone(build_gate)
+        validation = {
+            "selection_source_id": "source-stale-provider",
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+
+        with patch.object(service, "load_etf_provider_source_map", return_value=verified_rows):
+            gate = build_gate(validation)
+
+        self.assertTrue(gate["required"])
+        self.assertTrue(gate["blocking"])
+        self.assertEqual(gate["item_count"], 1)
+        self.assertEqual(gate["symbol_count"], 1)
+        self.assertEqual(gate["items"][0]["category"], "operability")
+        self.assertEqual(gate["items"][0]["symbols"], ["TLT"])
+
+    def test_non_collectable_review_does_not_require_pre_final_enrichment(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        build_gate = getattr(service, "build_pre_final_enrichment_gate", None)
+        self.assertIsNotNone(build_gate)
+
+        gate = build_gate({"provider_coverage": {"coverage": {}}})
+
+        self.assertFalse(gate["required"])
+        self.assertFalse(gate["blocking"])
+        self.assertEqual(gate["items"], [])
+        self.assertIn("없습니다", gate["reason"])
+
+    def test_db_bridge_operability_requires_pre_final_enrichment(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "provider_gap_collection_plan": {
+                "source_map_discovery": [],
+                "source_symbols": ["XYZ"],
+                "operability_stale": ["XYZ"],
+                "operability_official": [],
+                "operability_bridge": ["XYZ"],
+                "holdings_exposure": [],
+                "mapping_needed": [],
+                "macro": False,
+            }
+        }
+
+        gate = service.build_pre_final_enrichment_gate(
+            validation,
+            provider_plan=validation["provider_gap_collection_plan"],
+        )
+
+        self.assertTrue(gate["blocking"])
+        self.assertEqual(gate["items"][0]["category"], "operability")
+        self.assertEqual(gate["items"][0]["symbols"], ["XYZ"])
+
+    def test_practical_validation_result_blocks_final_review_until_collectable_gap_is_rechecked(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        base_result = {
+            "selection_source_id": "source-stale-provider",
+            "validation_modules": [],
+            "final_review_gate": {
+                "route": "READY_WITH_REVIEW",
+                "can_save_and_move": True,
+                "verdict": "review allowed",
+                "next_action": "move",
+                "blocking_modules": [],
+                "review_modules": [],
+            },
+            "final_review_handoff": {"route": "READY_WITH_REVIEW", "allowed": True},
+        }
+        provider_plan = {
+            "source_map_discovery": [],
+            "source_symbols": ["TLT"],
+            "operability_stale": ["TLT"],
+            "operability_official": ["TLT"],
+            "operability_bridge": ["TLT"],
+            "holdings_exposure": [],
+            "mapping_needed": [],
+            "macro": False,
+        }
+
+        with (
+            patch.object(service, "_build_practical_validation_result", return_value=base_result),
+            patch.object(service, "build_provider_gap_collection_plan", return_value=provider_plan),
+            patch.object(service, "build_practical_validation_workspace", return_value={}),
+        ):
+            result = service.build_practical_validation_result({})
+
+        self.assertIn("pre_final_enrichment_gate", result)
+        self.assertTrue(result["pre_final_enrichment_gate"]["blocking"])
+        self.assertFalse(result["final_review_gate"]["can_save_and_move"])
+        self.assertEqual(result["final_review_gate"]["route"], "BLOCKED_FOR_FINAL_REVIEW")
+        self.assertEqual(
+            result["final_review_gate"]["blocking_modules"][-1]["module_id"],
+            "pre_final_data_enrichment",
+        )
+        self.assertFalse(result["final_review_handoff"]["allowed"])
+
     def test_provider_gap_collection_runs_planned_jobs_and_records_history(self) -> None:
         from app.services import backtest_practical_validation as service
 
@@ -26845,6 +28524,117 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
 
 
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
+    def test_final_review_pattern_guide_contract_defines_ten_bounded_patterns(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_pattern_guide_contract
+
+        contract = build_final_review_pattern_guide_contract()
+        patterns = contract["patterns"]
+
+        self.assertEqual(contract["schema_version"], "final_review_pattern_guide_contract_v2")
+        self.assertEqual(len(patterns), 10)
+        self.assertEqual([pattern["rank"] for pattern in patterns], list(range(1, 11)))
+        self.assertEqual(
+            [pattern["key"] for pattern in patterns],
+            [
+                "concentration",
+                "stock_bond_diversification",
+                "rate_duration",
+                "inflation",
+                "tail_risk",
+                "trend_regime",
+                "component_dependency",
+                "liquidity_cost",
+                "benchmark_dependency",
+                "parameter_sensitivity",
+            ],
+        )
+        self.assertTrue(all(pattern["primary_evidence"] for pattern in patterns))
+        self.assertTrue(all(pattern["required_signals"] for pattern in patterns))
+        self.assertTrue(all(pattern["experiment_change"] for pattern in patterns))
+        self.assertTrue(
+            all(
+                set(pattern["support_contract"])
+                == {"actionable", "conditional", "needs_validation", "not_applicable"}
+                for pattern in patterns
+            )
+        )
+        self.assertEqual(
+            [state["key"] for state in contract["support_states"]],
+            ["actionable", "conditional", "needs_validation", "not_applicable"],
+        )
+        self.assertTrue(contract["rules"]["stored_evidence_only"])
+        self.assertFalse(contract["rules"]["freeform_generation"])
+        self.assertTrue(contract["rules"]["alternative_allocation_requires_counterfactual_backtest"])
+        self.assertFalse(contract["boundaries"]["provider_fetch"])
+        self.assertFalse(contract["boundaries"]["investment_advice"])
+
+    def test_final_review_pattern_guide_uses_structured_applicability_and_action_states(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_pattern_guide
+
+        guide = build_final_review_pattern_guide(
+            validation={
+                "construction_risk_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Top holding concentration and exposure",
+                            "Current": "42%",
+                            "threshold": "35%",
+                            "evidence_source": "provider holdings snapshot",
+                            "as_of": "2026-07-10",
+                        },
+                        {
+                            "Criteria": "Treasury duration exposure",
+                            "Current": "8.2 years",
+                            "evidence_source": "provider exposure snapshot",
+                        },
+                    ]
+                },
+                "component_role_weight_audit": {
+                    "rows": [{"Criteria": "Component weight", "Current": "equity 60%"}]
+                },
+            },
+            investability_packet={},
+        )
+
+        cards = {card["key"]: card for card in guide["cards"]}
+        self.assertEqual(len(cards), 10)
+        self.assertEqual(cards["concentration"]["support"], "actionable")
+        self.assertTrue(cards["concentration"]["applicable"])
+        self.assertTrue(cards["concentration"]["direct_scenario_claim"])
+        self.assertEqual(cards["concentration"]["evidence_as_of"], "2026-07-10")
+        self.assertEqual(cards["rate_duration"]["support"], "needs_validation")
+        self.assertFalse(cards["rate_duration"]["direct_scenario_claim"])
+        self.assertIn("듀레이션", cards["rate_duration"]["next_action"])
+        self.assertEqual(cards["benchmark_dependency"]["support"], "not_applicable")
+        self.assertTrue(cards["benchmark_dependency"]["missing_signals"])
+        self.assertLessEqual(len(guide["visible_cards"]), 6)
+        self.assertTrue(all(card["visible_first_read"] for card in guide["visible_cards"]))
+        self.assertTrue(cards["concentration"]["evidence_trace"])
+        self.assertIn("technical_path", cards["concentration"]["evidence_trace"][0])
+        self.assertIn("최대 비중", cards["concentration"]["experiment_plan"]["change"])
+        self.assertIn("동일 기간", cards["concentration"]["experiment_plan"]["comparison"])
+        self.assertEqual(cards["concentration"]["experiment_plan"]["learning"], cards["concentration"]["question"])
+        self.assertIn("자동 실행", cards["concentration"]["experiment_plan"]["execution_boundary"])
+        self.assertFalse(guide["boundaries"]["freeform_generation"])
+        self.assertFalse(guide["boundaries"]["provider_fetch"])
+
+    def test_final_review_pattern_guide_does_not_promote_unrelated_keyword_matches(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_pattern_guide
+
+        guide = build_final_review_pattern_guide(
+            validation={
+                "notes": {
+                    "summary": "benchmark rate duration inflation turnover correlation sensitivity",
+                    "Current": "all pattern words appear only in an unrelated note",
+                }
+            },
+            investability_packet={},
+        )
+
+        self.assertEqual(len(guide["cards"]), 10)
+        self.assertTrue(all(card["support"] == "not_applicable" for card in guide["cards"]))
+        self.assertEqual(guide["visible_cards"], [])
+
     def _integrated_gate_ready_validation(self) -> dict:
         return {
             "selection_source_id": "source-integrated-ready",
@@ -27171,6 +28961,69 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(board_rows[0]["Open Review"], 0)
         self.assertEqual(board_rows[0]["Candidate"], "Ready candidate")
 
+    def test_final_review_candidate_board_marks_legacy_data_recovery_as_recheck_not_ready(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_candidate_board,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["provider_coverage"] = {
+            "symbols": ["TLT"],
+            "symbol_weights": {"TLT": 1.0},
+            "coverage": {
+                "operability": {
+                    "missing_symbols": [],
+                    "provenance": {"stale_symbols": ["TLT"]},
+                },
+                "holdings": {"missing_symbols": []},
+                "exposure": {"missing_symbols": []},
+                "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+            },
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Legacy recovery board candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        with patch.object(
+            practical_service,
+            "load_etf_provider_source_map",
+            return_value=[
+                {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"}
+            ],
+        ):
+            board = build_final_review_candidate_board(
+                [
+                    {
+                        "source": source,
+                        "validation": validation,
+                        "paper_observation": paper,
+                        "decision_evidence": evidence,
+                        "investability_packet": packet,
+                    }
+                ]
+            )
+
+        row = board["rows"][0]
+        self.assertEqual(row["Decision State"], "2단계 재검증 필요")
+        self.assertEqual(row["Select Allowed"], "No")
+        self.assertEqual(row["Suggested Decision"], "재검토 필요")
+        self.assertIn("2단계", row["Board Action"])
+        self.assertEqual(board["summary"]["select_ready"], 0)
+        self.assertEqual(board["summary"]["hold_or_re_review"], 1)
+        self.assertEqual(board["summary"]["recheck_required"], 1)
+
     def test_final_review_decision_cockpit_surfaces_blocked_candidate_board_row(self) -> None:
         from app.services.backtest_evidence_read_model import (
             build_final_review_candidate_board_rows,
@@ -27228,6 +29081,1259 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(board_rows[0]["Select Allowed"], "No")
         self.assertGreaterEqual(board_rows[0]["Blockers"], 1)
         self.assertEqual(board_rows[0]["NOT_RUN"], 1)
+
+    def test_final_review_investment_report_turns_packet_into_readable_review(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Ready candidate",
+        }
+        paper = {
+            "route": "PAPER_OBSERVATION_READY",
+            "blockers": [],
+            "review_cadence": "monthly_or_rebalance_review",
+            "tracking_benchmark": "SPY",
+            "review_triggers": ["CAGR deterioration review", "MDD breach review"],
+            "active_components": [{"title": "Ready component", "target_weight": 100.0}],
+            "baseline_snapshot": {"target_weight_total": 100.0},
+        }
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(report["schema_version"], "final_review_investment_report_v1")
+        self.assertEqual(report["recommendation"]["route"], "SELECT_FOR_PRACTICAL_PORTFOLIO")
+        self.assertEqual(report["recommendation"]["label"], "모니터링 후보 선정")
+        self.assertEqual(report["recommendation"]["state"], "SELECT_READY")
+        self.assertTrue(report["recommendation"]["monitoring_candidate"])
+        self.assertGreaterEqual(report["score"]["value"], 8.0)
+        self.assertGreaterEqual(len(report["strengths"]), 3)
+        self.assertEqual(report["weaknesses"], [])
+        self.assertEqual(report["monitoring_conditions"]["tracking_benchmark"], "SPY")
+        self.assertIn("MDD breach review", report["monitoring_conditions"]["review_triggers"])
+        self.assertFalse(report["boundaries"]["live_approval"])
+        self.assertFalse(report["boundaries"]["provider_fetch"])
+        narrative = report["report_narrative"]
+        self.assertEqual(narrative["total_assessment"]["label"], "총평")
+        self.assertIn("투자 매력도", narrative["total_assessment"]["detail"])
+        self.assertEqual(len(narrative["decision_questions"]), 4)
+        self.assertEqual(
+            {item["effect"] for item in narrative["decision_questions"]},
+            {"최종 판단 기록", "점수 해석", "저장 전 확인", "Monitoring 조건"},
+        )
+        self.assertIn("새 검증", narrative["boundary_note"])
+        self.assertEqual(len(report["pattern_guide"]["cards"]), 10)
+        self.assertFalse(report["pattern_guide"]["boundaries"]["freeform_generation"])
+        self.assertFalse(report["pattern_guide"]["boundaries"]["provider_fetch"])
+        interpretation_cards = report["interpretation_cards"]
+        self.assertEqual(
+            [card["title"] for card in interpretation_cards],
+            ["성과 해석", "위험 해석", "근거 신뢰도", "Monitoring 적합성"],
+        )
+        self.assertEqual(len(interpretation_cards), 4)
+        self.assertTrue(all("Investment Score" not in card["detail"] for card in interpretation_cards))
+        self.assertTrue(all("Evidence Packet" not in card["detail"] for card in interpretation_cards))
+        self.assertTrue(all("Evidence Quality Score" not in card["detail"] for card in interpretation_cards))
+        self.assertTrue(all("monthly_or_rebalance_review" not in card["detail"] for card in interpretation_cards))
+
+    def test_final_review_legacy_recovery_report_is_read_only_and_does_not_claim_monitoring_readiness(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["provider_coverage"] = {
+            "symbols": ["TLT"],
+            "symbol_weights": {"TLT": 1.0},
+            "coverage": {
+                "operability": {
+                    "missing_symbols": [],
+                    "provenance": {"stale_symbols": ["TLT"]},
+                },
+                "holdings": {"missing_symbols": []},
+                "exposure": {"missing_symbols": []},
+                "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+            },
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Legacy recovery candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        with patch.object(
+            practical_service,
+            "load_etf_provider_source_map",
+            return_value=[
+                {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"}
+            ],
+        ):
+            report = build_final_review_investment_report(
+                source=source,
+                validation=validation,
+                paper_observation=paper,
+                decision_evidence=evidence,
+                investability_packet=packet,
+            )
+
+        self.assertEqual(report["recommendation"]["state"], "RECHECK_REQUIRED")
+        self.assertEqual(report["recommendation"]["state_label"], "2단계 재검증 필요")
+        self.assertFalse(report["recommendation"]["monitoring_candidate"])
+        self.assertEqual(report["recommendation"]["monitoring_handoff_state"], "blocked")
+        self.assertFalse(report["monitoring_conditions"]["handoff_ready"])
+        self.assertIn("최신 보강", report["decision_summary"]["headline"])
+        self.assertIn("과거 근거", report["summary"]["verdict"])
+
+    def test_final_review_investment_report_prioritizes_monitoring_decision_summary(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Decision summary candidate",
+        }
+        paper = {
+            "route": "PAPER_OBSERVATION_READY",
+            "blockers": [],
+            "review_cadence": "monthly_or_rebalance_review",
+            "tracking_benchmark": "SPY",
+            "review_triggers": ["CAGR deterioration review", "MDD breach review"],
+        }
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        summary = report["decision_summary"]
+        summary_labels = {item["label"] for item in summary["items"]}
+
+        self.assertEqual(summary["schema_version"], "final_review_decision_summary_v1")
+        self.assertIn("모니터링 후보", summary["headline"])
+        self.assertIn("종합", summary["score_line"])
+        self.assertIn("최종 선택 사유", summary_labels)
+        self.assertIn("가장 강한 근거", summary_labels)
+        self.assertIn("가장 큰 확인 지점", summary_labels)
+        self.assertNotIn("다음 행동", summary_labels)
+        self.assertTrue(any("선정 준비도" in item["detail"] for item in summary["items"]))
+        self.assertTrue(any(card["kind"] == "monitoring_fit" for card in report["interpretation_cards"]))
+        self.assertTrue(all("미래 수익 보장" not in card["detail"] for card in report["interpretation_cards"]))
+        self.assertTrue(all("Portfolio Monitoring에서 추적할 모니터링 후보" not in card["detail"] for card in report["interpretation_cards"]))
+
+    def test_final_review_investment_report_translates_high_score_dimensions_into_strengths(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Strength dimension candidate",
+        }
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+            investability_packet=packet,
+        )
+
+        strength_titles = {row["title"] for row in report["strengths"]}
+
+        self.assertIn("선정 준비도", strength_titles)
+        self.assertTrue(any(row["severity"] == "HIGH_SCORE" for row in report["strengths"]))
+        self.assertTrue(any("Monitoring handoff" in row["detail"] for row in report["strengths"]))
+
+    def test_final_review_investment_report_surfaces_weaknesses_when_blocked(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-blocked-report"
+        validation["not_run_critical_domains"] = [
+            {
+                "domain": "stress_scenario_diagnostics",
+                "title": "Stress scenario diagnostics",
+                "next_action": "Run stress diagnostics before selection.",
+            }
+        ]
+        validation["diagnostic_summary"]["status_counts"]["NOT_RUN"] = 1
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": "validation-blocked-report",
+            "source_title": "Blocked candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(report["recommendation"]["route"], "RE_REVIEW_REQUIRED")
+        self.assertEqual(report["recommendation"]["state"], "SELECT_BLOCKED")
+        self.assertFalse(report["recommendation"]["monitoring_candidate"])
+        self.assertGreaterEqual(len(report["weaknesses"]), 1)
+        self.assertIn("Stress", report["weaknesses"][0]["title"])
+        self.assertIn("Run stress diagnostics before selection.", report["weaknesses"][0]["action"])
+        self.assertIn("critical blocker", report["summary"]["next_action"])
+        self.assertFalse(report["boundaries"]["order_instruction"])
+
+    def test_final_review_level2_review_disposition_splits_stage_roles(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_final_review_level2_review_disposition,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["practical_validation_workspace"] = {
+            "criteria_detail_groups": [
+                {
+                    "display_label": "Data Quality",
+                    "criteria_cards": [
+                        {
+                            "display_label": "Provider freshness",
+                            "status": "REVIEW",
+                            "review_role": "pv_data_caution",
+                            "review_role_label": "데이터 주의",
+                            "stage_decision_surface": "Practical Validation",
+                            "evidence": "provider snapshot is stale",
+                            "resolution_action": "Refresh provider snapshot if this becomes material.",
+                        },
+                        {
+                            "display_label": "Stress window coverage",
+                            "status": "REVIEW",
+                            "review_role": "pv_practical_caution",
+                            "review_role_label": "2단계 실용성 주의",
+                            "stage_decision_surface": "Practical Validation",
+                            "evidence": "stress windows are partial",
+                            "resolution_action": "Track stress windows during final judgement.",
+                        },
+                    ],
+                },
+                {
+                    "display_label": "Final / Monitoring",
+                    "criteria_cards": [
+                        {
+                            "display_label": "Tax account scope",
+                            "status": "REVIEW",
+                            "review_role": "final_decision_input",
+                            "review_role_label": "최종 판단 참고",
+                            "stage_decision_surface": "Final Review",
+                            "evidence": "tax scope not modeled",
+                            "resolution_action": "Mention account scope in the final reason.",
+                        },
+                        {
+                            "display_label": "Monitoring baseline",
+                            "status": "REVIEW",
+                            "review_role": "monitoring_followup",
+                            "review_role_label": "Monitoring 추적",
+                            "stage_decision_surface": "Operations > Portfolio Monitoring",
+                            "evidence": "baseline trigger should be tracked",
+                            "resolution_action": "Add tracking trigger to monitoring.",
+                        },
+                        {
+                            "display_label": "Selected-route preflight",
+                            "status": "REVIEW",
+                            "review_role": "final_readiness_blocker",
+                            "review_role_label": "저장 전 보강",
+                            "stage_decision_surface": "Practical Validation",
+                            "evidence": "selected route preflight needs confirmation",
+                            "resolution_action": "Re-run selected-route preflight.",
+                        },
+                    ],
+                },
+            ]
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Role split candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["review trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        disposition = build_final_review_level2_review_disposition(validation=validation)
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(disposition["schema_version"], "final_review_level2_review_disposition_v1")
+        self.assertEqual(disposition["summary"]["total"], 5)
+        self.assertEqual(disposition["summary"]["blocker"], 1)
+        self.assertEqual(disposition["summary"]["warning"], 2)
+        self.assertEqual(disposition["summary"]["open_review"], 1)
+        self.assertEqual(disposition["summary"]["monitoring_followup"], 1)
+        self.assertEqual(disposition["groups"]["blocker"][0]["title"], "Selected-route preflight")
+        self.assertEqual(disposition["groups"]["warning"][0]["role_label"], "데이터 주의")
+        self.assertEqual(disposition["groups"]["open_review"][0]["title"], "Tax account scope")
+        self.assertEqual(disposition["groups"]["monitoring_followup"][0]["title"], "Monitoring baseline")
+        role_sections = disposition["role_sections"]
+        self.assertEqual(
+            [section["label"] for section in role_sections],
+            ["데이터 주의", "2단계 실용성 주의", "최종 판단 참고", "Monitoring 추적", "저장 전 보강"],
+        )
+        self.assertEqual(
+            [section["action_label"] for section in role_sections],
+            ["이미 신뢰도에 반영", "이미 신뢰도에 반영", "선택·보류 사유에 반영", "추적 조건으로 확정", "2단계에서 해소 필요"],
+        )
+        self.assertEqual([section["count"] for section in role_sections], [1, 1, 1, 1, 1])
+        self.assertEqual(role_sections[0]["items"][0]["action_outcome"], "score_reflected")
+        self.assertEqual(role_sections[3]["items"][0]["action_outcome"], "monitoring_condition")
+        self.assertEqual(role_sections[4]["items"][0]["action_outcome"], "blocker")
+        self.assertFalse(role_sections[0]["items"][0]["final_review_action_required"])
+        self.assertEqual(role_sections[0]["items"][0]["ownership"], "level2_inherited_limit")
+        self.assertEqual(role_sections[2]["items"][0]["ownership"], "final_review_decision")
+        self.assertNotIn("Refresh provider snapshot", role_sections[0]["items"][0]["action"])
+        self.assertEqual(
+            [section["label"] for section in disposition["final_review_sections"]],
+            [
+                "최종 판단에서 결정할 것",
+                "2단계에서 인수한 제한사항",
+                "Monitoring으로 넘길 조건",
+                "선정 전 해소할 차단 항목",
+            ],
+        )
+        self.assertEqual(report["level2_review_disposition"]["summary"]["total"], 5)
+        self.assertFalse(report["level2_review_disposition"]["boundary"]["validation_rerun"])
+
+    def test_final_review_disposition_supplements_final_decision_role_omitted_from_workspace(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        disposition = build_final_review_level2_review_disposition(
+            validation={
+                "practical_validation_workspace": {
+                    "criteria_detail_groups": [
+                        {
+                            "criteria_cards": [
+                                {
+                                    "display_label": "Data coverage",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_data_caution",
+                                    "resolution_action": "Flow4 데이터 보강 / 수집 실행",
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "validation_modules": [
+                    {
+                        "module_id": "tax_account_scope",
+                        "status": "REVIEW",
+                        "review_role": "final_decision_input",
+                        "evidence": "tax scope is not modeled",
+                        "resolution_action": "세금·계좌 조건을 선택 사유에 남깁니다.",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(disposition["summary"]["total"], 2)
+        self.assertEqual(disposition["groups"]["open_review"][0]["title"], "tax_account_scope")
+        self.assertIn("수용할지 판단", disposition["groups"]["open_review"][0]["action"])
+        self.assertNotIn("Flow4", disposition["groups"]["warning"][0]["action"])
+
+    def test_final_review_disposition_connects_summary_review_to_stored_audit_rows(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        disposition = build_final_review_level2_review_disposition(
+            validation={
+                "practical_validation_workspace": {
+                    "criteria_detail_groups": [
+                        {
+                            "criteria_cards": [
+                                {
+                                    "display_label": "검증이 좋은 구간에만 기대지 않는가",
+                                    "module_id": "validation_efficacy",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_practical_caution",
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "validation_efficacy_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Walk-forward temporal validation",
+                            "Status": "REVIEW",
+                            "Current": "windows=79 / negative share=73.42%",
+                            "Evidence": "worst excess -50.63%",
+                        },
+                        {
+                            "Criteria": "OOS holdout validation",
+                            "Status": "PASS",
+                            "Current": "in=58 / out=57",
+                        },
+                    ]
+                },
+            }
+        )
+
+        item = disposition["groups"]["warning"][0]
+        self.assertEqual(item["trace_status"], "derived")
+        self.assertEqual(item["trace_label"], "세부 근거 1개 확인")
+        self.assertEqual(item["observed_value"], "windows=79 / negative share=73.42%")
+        self.assertEqual(item["threshold"], "worst excess -50.63%")
+        self.assertEqual(item["evidence_source"], "검증 방법론 강도 audit")
+        self.assertEqual(len(item["trace_items"]), 1)
+        self.assertEqual(item["trace_items"][0]["label"], "Walk-forward temporal validation")
+        self.assertEqual(item["trace_items"][0]["display_label"], "기간을 이동한 반복 검증")
+        self.assertEqual(item["trace_items"][0]["status_label"], "일부 확인")
+        self.assertIn("특정 한 시기", item["trace_items"][0]["validation_description"])
+        self.assertIn("반복 검증 79개", item["trace_items"][0]["display_observed_value"])
+
+    def test_final_review_disposition_classifies_trace_resolution_actions(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        disposition = build_final_review_level2_review_disposition(
+            validation={
+                "practical_validation_workspace": {
+                    "criteria_detail_groups": [
+                        {
+                            "criteria_cards": [
+                                {
+                                    "display_label": "데이터 범위",
+                                    "module_id": "data_coverage",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_data_caution",
+                                },
+                                {
+                                    "display_label": "충격과 설정 변화",
+                                    "module_id": "stress_robustness",
+                                    "status": "REVIEW",
+                                    "review_role": "pv_practical_caution",
+                                },
+                                {
+                                    "display_label": "Tax account scope",
+                                    "module_id": "tax_account_scope",
+                                    "status": "REVIEW",
+                                    "review_role": "final_decision_input",
+                                },
+                            ]
+                        }
+                    ]
+                },
+                "data_coverage_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Provider snapshot freshness",
+                            "Status": "REVIEW",
+                            "Current": "PASS, REVIEW",
+                            "Evidence": "freshness=fresh, stale",
+                        },
+                        {
+                            "Criteria": "Survivorship / delisting control",
+                            "Status": "REVIEW",
+                            "Current": "not proven / covered=4 / partial=3",
+                        },
+                    ]
+                },
+                "robustness_validation": {
+                    "sensitivity_rows": [
+                        {
+                            "Scenario": "Relative Strength perturbation",
+                            "Result Status": "NOT_RUN",
+                            "Judgment": "-",
+                            "Expected Check": "momentum window 민감도",
+                        }
+                    ],
+                    "stress_summary_rows": [
+                        {
+                            "Scenario": "Dot-com bust / early-2000s bear market",
+                            "Result Status": "NOT_RUN",
+                            "Judgment": "기간 미포함",
+                            "Expected Check": "return / MDD / benchmark spread",
+                        }
+                    ],
+                },
+            }
+        )
+
+        traces = [
+            trace
+            for section in disposition["final_review_sections"]
+            for item in section["items"]
+            for trace in item["trace_items"]
+        ]
+        by_label = {trace["label"]: trace for trace in traces}
+        self.assertEqual(by_label["Provider snapshot freshness"]["action_type"], "refreshable_data")
+        self.assertEqual(by_label["Survivorship / delisting control"]["action_type"], "source_discovery")
+        self.assertEqual(by_label["Relative Strength perturbation"]["action_type"], "implementation_gap")
+        self.assertEqual(by_label["Dot-com bust / early-2000s bear market"]["action_type"], "period_outside")
+        self.assertEqual(by_label["Tax account scope"]["action_type"], "user_decision")
+        self.assertNotIn("freshness=", by_label["Provider snapshot freshness"]["display_judgment_basis"])
+        self.assertIn("실제 기준일", by_label["Provider snapshot freshness"]["display_judgment_basis"])
+        self.assertIn("상장폐지 종목을 실제 포함", by_label["Survivorship / delisting control"]["display_judgment_basis"])
+        self.assertIn(
+            "일반 데이터 갱신으로는 해결되지 않습니다",
+            by_label["Relative Strength perturbation"]["improvement_action"],
+        )
+        self.assertEqual(disposition["trace_action_summary"]["refreshable_data"], 1)
+        self.assertEqual(disposition["trace_action_summary"]["period_outside"], 1)
+        self.assertEqual(disposition["trace_action_summary"]["user_decision"], 1)
+
+    def test_final_review_disposition_exposes_only_executable_data_enrichment_handoff(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        validation = {
+            "validation_id": "validation-readable-action",
+            "selection_source_id": "source-readable-action",
+            "selection_source_snapshot": {"selection_source_id": "source-readable-action"},
+            "provider_coverage": {
+                "symbols": ["TLT", "LQD"],
+                "symbol_weights": {"TLT": 0.5, "LQD": 0.5},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": ["LQD"]},
+                    "exposure": {"missing_symbols": ["LQD"]},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+            {"symbol": "LQD", "data_kind": "holdings", "provider": "ishares", "parser": "holdings_csv"},
+        ]
+
+        with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):
+            action = build_final_review_level2_review_disposition(validation=validation)["data_enrichment_action"]
+
+        self.assertTrue(action["available"])
+        self.assertIn("mode", action)
+        self.assertEqual(action["mode"], "legacy_recovery")
+        self.assertIn("최신 보강 기준", action["title"])
+        self.assertEqual(action["selection_source_id"], "source-readable-action")
+        self.assertEqual(action["validation_id"], "validation-readable-action")
+        self.assertEqual(action["item_count"], 2)
+        self.assertEqual(action["symbol_count"], 2)
+        self.assertEqual([item["key"] for item in action["items"]], ["operability", "holdings_exposure"])
+        self.assertIn("과거 기준", action["detail"])
+        self.assertIn("Flow 2 재검증", action["next_step"])
+
+    def test_final_review_data_enrichment_is_hidden_for_current_clean_validation_and_marks_later_stale_data(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        clean_validation = {
+            "validation_id": "validation-current-clean",
+            "selection_source_id": "source-current-clean",
+            "selection_source_snapshot": {"selection_source_id": "source-current-clean"},
+            "pre_final_enrichment_gate": {"required": False, "blocking": False},
+            "provider_coverage": {"coverage": {}},
+        }
+        clean_action = build_final_review_level2_review_disposition(
+            validation=clean_validation
+        )["data_enrichment_action"]
+        self.assertFalse(clean_action["available"])
+        self.assertIn("mode", clean_action)
+        self.assertEqual(clean_action["mode"], "hidden")
+
+        stale_validation = {
+            **clean_validation,
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+        with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):
+            stale_action = build_final_review_level2_review_disposition(
+                validation=stale_validation
+            )["data_enrichment_action"]
+
+        self.assertTrue(stale_action["available"])
+        self.assertEqual(stale_action["mode"], "stale_recovery")
+        self.assertIn("다시 오래", stale_action["title"])
+
+    def test_legacy_final_review_recomputes_current_enrichment_instead_of_using_stored_plan(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        validation = {
+            "validation_id": "validation-legacy-plan",
+            "selection_source_id": "source-legacy-plan",
+            "selection_source_snapshot": {"selection_source_id": "source-legacy-plan"},
+            "provider_gap_collection_plan": {
+                "source_map_discovery": [],
+                "source_symbols": ["TLT"],
+                "operability_stale": [],
+                "operability_official": [],
+                "operability_bridge": [],
+                "holdings_exposure": [],
+                "mapping_needed": [],
+                "macro": False,
+            },
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+
+        with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):
+            action = build_final_review_level2_review_disposition(
+                validation=validation
+            )["data_enrichment_action"]
+
+        self.assertTrue(action["available"])
+        self.assertEqual(action["mode"], "legacy_recovery")
+        self.assertEqual(action["items"][0]["symbols"], ["TLT"])
+
+    def test_final_review_eligibility_rejects_inconsistent_new_enrichment_blocker_but_keeps_legacy_row(self) -> None:
+        from app.web.backtest_final_review_helpers import _is_final_review_eligible_validation_result
+
+        common = {
+            "final_review_gate": {"can_save_and_move": True},
+            "selected_route_preflight": {"select_allowed": True},
+        }
+        self.assertTrue(_is_final_review_eligible_validation_result(common))
+        self.assertFalse(
+            _is_final_review_eligible_validation_result(
+                {
+                    **common,
+                    "pre_final_enrichment_gate": {"required": True, "blocking": True},
+                }
+            )
+        )
+
+    def test_final_review_scorecard_does_not_apply_role_fixed_deductions(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-review-impact"
+        validation["practical_validation_workspace"] = {
+            "criteria_detail_groups": [
+                {
+                    "display_label": "Review impact",
+                    "criteria_cards": [
+                        {
+                            "display_label": "Provider freshness",
+                            "status": "REVIEW",
+                            "review_role": "pv_data_caution",
+                            "review_role_label": "데이터 주의",
+                            "evidence": "provider snapshot is stale",
+                            "observed_value": "41 days old",
+                            "threshold": "30 days or less",
+                            "evidence_source": "provider snapshot",
+                            "as_of": "2026-07-10",
+                            "resolution_action": "Refresh provider snapshot if material.",
+                        },
+                        {
+                            "display_label": "Stress window coverage",
+                            "status": "REVIEW",
+                            "review_role": "pv_practical_caution",
+                            "review_role_label": "2단계 실용성 주의",
+                            "evidence": "stress windows are partial",
+                            "resolution_action": "Track stress windows.",
+                        },
+                        {
+                            "display_label": "Tax account scope",
+                            "status": "REVIEW",
+                            "review_role": "final_decision_input",
+                            "review_role_label": "최종 판단 참고",
+                            "evidence": "tax scope not modeled",
+                            "resolution_action": "Mention account scope.",
+                        },
+                        {
+                            "display_label": "Monitoring baseline",
+                            "status": "REVIEW",
+                            "review_role": "monitoring_followup",
+                            "review_role_label": "Monitoring 추적",
+                            "evidence": "baseline trigger should be tracked",
+                            "resolution_action": "Add tracking trigger.",
+                        },
+                        {
+                            "display_label": "Selected-route preflight",
+                            "status": "REVIEW",
+                            "review_role": "final_readiness_blocker",
+                            "review_role_label": "저장 전 보강",
+                            "evidence": "selected route preflight needs confirmation",
+                            "resolution_action": "Re-run selected-route preflight.",
+                        },
+                    ],
+                }
+            ]
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Review impact candidate",
+        }
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+            investability_packet=packet,
+        )
+
+        impacts = report["scorecard"]["review_impacts"]
+        self.assertEqual(impacts, [])
+        self.assertEqual(report["scorecard"]["inputs"]["review_impact_count"], 0)
+        self.assertEqual(
+            report["scorecard"]["headline_scores"][1]["score"],
+            int(round(float(packet["score"]) * 10.0)),
+        )
+
+    def test_final_review_scorecard_maps_gate_to_recommendation_taxonomy(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Ready score candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        scorecard = report["scorecard"]
+        self.assertEqual(scorecard["schema_version"], "final_review_scorecard_v1")
+        self.assertEqual(scorecard["classification"], "MONITORING_CANDIDATE")
+        self.assertEqual(scorecard["decision_route"], "SELECT_FOR_PRACTICAL_PORTFOLIO")
+        self.assertGreaterEqual(scorecard["overall_score"], 80)
+        self.assertEqual(report["recommendation"]["classification"], "MONITORING_CANDIDATE")
+        self.assertEqual(report["score"]["scale"], "0-10")
+        self.assertEqual(report["save_handoff_summary"]["monitoring_handoff"]["state"], "ready")
+        self.assertEqual(scorecard["categories"][0]["category"], "Selection Gate")
+        self.assertFalse(scorecard["boundaries"]["live_approval"])
+        self.assertEqual(report["pre_selection_unresolved_items"], [])
+        self.assertEqual(report["evidence_closure_summary"]["pre_selection_unresolved_count"], 0)
+
+    def test_final_review_detailed_scorecard_exposes_weighted_dimensions(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Detailed score candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        scorecard = report["scorecard"]
+        dimension_keys = [dimension["key"] for dimension in scorecard["dimensions"]]
+        self.assertEqual(
+            dimension_keys,
+            [
+                "investment",
+                "risk",
+                "readiness",
+                "evidence_quality",
+                "monitoring_suitability",
+            ],
+        )
+        self.assertEqual(scorecard["weights"]["investment"], 0.30)
+        self.assertEqual(scorecard["weights"]["risk"], 0.20)
+        self.assertEqual(scorecard["weights"]["readiness"], 0.20)
+        self.assertEqual(scorecard["weights"]["evidence_quality"], 0.20)
+        self.assertEqual(scorecard["weights"]["monitoring_suitability"], 0.10)
+        self.assertGreaterEqual(scorecard["pre_cap_score"], 0)
+        self.assertLessEqual(scorecard["pre_cap_score"], 100)
+        self.assertGreaterEqual(scorecard["overall_score"], 0)
+        self.assertLessEqual(scorecard["overall_score"], 100)
+        self.assertTrue(scorecard["score_drivers"]["positive"])
+        self.assertTrue(scorecard["score_drivers"]["negative"])
+        self.assertEqual(scorecard["score_limits"], [])
+
+    def test_final_review_scorecard_separates_attractiveness_from_route_constraints(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_scorecard
+
+        empty_disposition = {
+            "summary": {"blocker": 0, "warning": 0, "open_review": 0, "monitoring_followup": 0},
+            "groups": {},
+        }
+
+        hard_blocked = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.7,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [{"title": "Missing selected-route validation"}],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertGreaterEqual(hard_blocked["overall_score"], 90)
+        self.assertEqual(hard_blocked["score_limits"], [])
+        self.assertIn("hard_blocker", {item["code"] for item in hard_blocked["route_constraints"]})
+        self.assertFalse(hard_blocked["cap_applied"])
+        self.assertEqual(hard_blocked["decision_route"], "RE_REVIEW_REQUIRED")
+        self.assertFalse(hard_blocked["monitoring_candidate"])
+
+        route_not_ready = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.4,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "review_required",
+                    "select_allowed": False,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertGreaterEqual(route_not_ready["overall_score"], 90)
+        self.assertIn("selected_route_not_ready", {item["code"] for item in route_not_ready["route_constraints"]})
+        self.assertEqual(route_not_ready["decision_route"], "HOLD_FOR_MORE_PAPER_TRACKING")
+
+        gate_review = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.2,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                    "review_required": [{"title": "Tax account scope"}],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertGreaterEqual(gate_review["overall_score"], 90)
+        self.assertIn("gate_review_required", {item["code"] for item in gate_review["route_constraints"]})
+        self.assertFalse(gate_review["cap_applied"])
+
+        many_open_reviews = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.5,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition={
+                "summary": {"blocker": 0, "warning": 0, "open_review": 10, "monitoring_followup": 0},
+                "groups": {},
+            },
+        )
+        no_open_reviews = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.5,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition=empty_disposition,
+        )
+        self.assertEqual(many_open_reviews["overall_score"], no_open_reviews["overall_score"])
+        self.assertNotIn("excessive_open_review", {item["code"] for item in many_open_reviews["route_constraints"]})
+        self.assertEqual(many_open_reviews["classification"], "MONITORING_CANDIDATE")
+        self.assertEqual(
+            [item["key"] for item in many_open_reviews["headline_scores"]],
+            ["attractiveness", "evidence_confidence", "monitoring_readiness"],
+        )
+        self.assertEqual(
+            [item["label"] for item in many_open_reviews["headline_scores"]],
+            ["투자 매력도", "근거 신뢰도", "Monitoring 준비도"],
+        )
+
+    def test_final_review_investment_report_exposes_selection_rationale_and_required_notes(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Selection rationale candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["monthly drawdown watch"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        rationale = report["selection_rationale"]
+        self.assertEqual(rationale["schema_version"], "final_review_selection_rationale_v1")
+        self.assertTrue(rationale["headline"])
+        self.assertTrue(rationale["decision_reason"])
+        self.assertTrue(rationale["score_summary"])
+        self.assertGreaterEqual(len(rationale["key_points"]), 3)
+        self.assertIn(rationale["decision_route"], {
+            "SELECT_FOR_PRACTICAL_PORTFOLIO",
+            "HOLD_FOR_MORE_PAPER_TRACKING",
+            "RE_REVIEW_REQUIRED",
+            "REJECT_FOR_PRACTICAL_USE",
+        })
+        self.assertFalse(rationale["boundary"]["storage_write"])
+
+        notes = report["required_final_decision_notes"]
+        self.assertGreaterEqual(len(notes), 2)
+        self.assertEqual(notes[0]["kind"], "decision_reason")
+        self.assertTrue(notes[0]["required"])
+        self.assertIn("score", {note["kind"] for note in notes})
+        self.assertTrue(all(note["boundary"]["storage_write"] is False for note in notes))
+
+    def test_final_review_scorecard_downgrades_blocked_candidate(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-score-blocked"
+        validation["not_run_critical_domains"] = [
+            {
+                "domain": "stress_scenario_diagnostics",
+                "title": "Stress scenario diagnostics",
+                "next_action": "Run stress diagnostics before selection.",
+            }
+        ]
+        validation["diagnostic_summary"]["status_counts"]["NOT_RUN"] = 1
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": "validation-score-blocked",
+            "source_title": "Blocked score candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        scorecard = report["scorecard"]
+        self.assertEqual(scorecard["classification"], "REVIEW_REQUIRED")
+        self.assertEqual(scorecard["decision_route"], "RE_REVIEW_REQUIRED")
+        headline_scores = {item["key"]: item["score"] for item in scorecard["headline_scores"]}
+        self.assertEqual(scorecard["overall_score"], headline_scores["attractiveness"])
+        self.assertLess(headline_scores["monitoring_readiness"], headline_scores["attractiveness"])
+        self.assertIn("hard_blocker", {item["code"] for item in scorecard["route_constraints"]})
+        self.assertEqual(report["recommendation"]["classification"], "REVIEW_REQUIRED")
+        self.assertEqual(report["recommendation"]["route"], "RE_REVIEW_REQUIRED")
+        self.assertEqual(report["save_handoff_summary"]["record_type"], "judgment_decision")
+        self.assertFalse(scorecard["monitoring_candidate"])
+
+    def test_final_review_save_handoff_summary_separates_judgment_and_monitoring(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_final_review_decision_record_guide,
+            build_final_review_save_handoff_summary,
+        )
+
+        ready_packet = {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "selection_gate_policy_snapshot": {
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                "blockers": [],
+                "review_required": [],
+            },
+        }
+        selected_guide = build_final_review_decision_record_guide(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=ready_packet,
+        )
+        hold_guide = build_final_review_decision_record_guide(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=ready_packet,
+        )
+
+        selected_summary = build_final_review_save_handoff_summary(decision_record_guide=selected_guide)
+        hold_summary = build_final_review_save_handoff_summary(decision_record_guide=hold_guide)
+
+        self.assertEqual(selected_summary["schema_version"], "final_review_save_handoff_summary_v1")
+        self.assertTrue(selected_summary["judgment_record"]["ready"])
+        self.assertEqual(selected_summary["monitoring_handoff"]["state"], "ready")
+        self.assertEqual(selected_summary["record_type"], "monitoring_candidate")
+        self.assertTrue(selected_summary["boundaries"]["append_final_review_decision_record"])
+        self.assertFalse(selected_summary["boundaries"]["live_approval"])
+        self.assertTrue(hold_summary["judgment_record"]["ready"])
+        self.assertEqual(hold_summary["monitoring_handoff"]["state"], "not_requested")
+        self.assertEqual(hold_summary["record_type"], "judgment_decision")
+        self.assertFalse(hold_summary["monitoring_handoff"]["candidate"])
+
+    def test_final_review_save_handoff_summary_blocks_selected_handoff_when_gate_blocks(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_final_review_decision_record_guide,
+            build_final_review_save_handoff_summary,
+        )
+
+        blocked_packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "selection_gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "suggested_decision_route": "RE_REVIEW_REQUIRED",
+                "blockers": ["Data Coverage: survivorship evidence missing"],
+                "review_required": [],
+            },
+        }
+        guide = build_final_review_decision_record_guide(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=blocked_packet,
+        )
+
+        summary = build_final_review_save_handoff_summary(decision_record_guide=guide)
+
+        self.assertFalse(summary["judgment_record"]["ready"])
+        self.assertEqual(summary["monitoring_handoff"]["state"], "blocked")
+        self.assertEqual(summary["record_type"], "blocked_selected_route")
+        self.assertIn("selection gate", summary["monitoring_handoff"]["detail"])
+
+    def test_final_review_weakness_improvement_plan_proposes_verifiable_changes(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_id"] = "validation-improvement-blocked"
+        validation["not_run_critical_domains"] = [
+            {
+                "domain": "stress_scenario_diagnostics",
+                "title": "Stress scenario diagnostics",
+                "next_action": "Run stress diagnostics before selection.",
+            }
+        ]
+        validation["diagnostic_summary"]["status_counts"]["NOT_RUN"] = 1
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": "validation-improvement-blocked",
+            "source_title": "Improvement candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        improvement = report["weakness_improvement"]
+        self.assertEqual(improvement["schema_version"], "final_review_weakness_improvement_v1")
+        self.assertGreaterEqual(len(improvement["proposals"]), 1)
+        self.assertIn("Stress", improvement["proposals"][0]["weakness"])
+        self.assertIn("검증", improvement["proposals"][0]["verification_step"])
+        self.assertFalse(improvement["comparison"]["score_projection_available"])
+        self.assertNotIn("expected_score_low", improvement["comparison"])
+        self.assertNotIn("expected_score_high", improvement["comparison"])
+        self.assertEqual(improvement["comparison"]["verification_status"], "counterfactual_required")
+        self.assertIn("예상 점수 범위를 제공하지 않습니다", improvement["comparison"]["projection_note"])
+        self.assertTrue(improvement["boundary"]["verification_required"])
+        self.assertFalse(improvement["boundary"]["auto_generate_strategy"])
+
+    def test_final_review_weakness_improvement_plan_keeps_monitoring_for_no_blocker_candidate(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "No blocker improvement candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": [], "review_triggers": ["score trigger"]}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        report = build_final_review_investment_report(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+            investability_packet=packet,
+        )
+
+        improvement = report["weakness_improvement"]
+        self.assertEqual(improvement["proposals"][0]["weakness"], "선택 차단 약점 없음")
+        self.assertEqual(improvement["comparison"]["verification_status"], "monitoring_required")
+        self.assertFalse(improvement["boundary"]["auto_backtest"])
 
     def test_final_review_candidate_board_prioritizes_ready_candidates(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_candidate_board
@@ -27344,7 +30450,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertIn("Investability evidence packet", guide["blockers"])
         self.assertFalse(guide["record_boundary"]["live_approval"])
 
-    def test_final_review_decision_record_guide_treats_non_select_route_as_status_only(self) -> None:
+    def test_final_review_decision_record_guide_records_non_select_judgment_without_monitoring_handoff(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_decision_record_guide
 
         packet = {
@@ -27365,12 +30471,14 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             investability_packet=packet,
         )
 
-        self.assertEqual(guide["route_state"], "NON_SELECT_NOT_STORED")
-        self.assertFalse(guide["recordable_route"])
+        self.assertEqual(guide["route_state"], "JUDGMENT_ROUTE_READY")
+        self.assertTrue(guide["recordable_route"])
+        self.assertFalse(guide["monitoring_handoff_candidate"])
         self.assertTrue(guide["selected_route_gate"]["Ready"])
-        self.assertIn("Official selection route", guide["blockers"])
+        self.assertNotIn("Official selection route", guide["blockers"])
         self.assertIn("paper tracking", guide["route_templates"]["reason"])
-        self.assertFalse(guide["record_boundary"]["non_select_persistence"])
+        self.assertTrue(guide["record_boundary"]["non_select_persistence"])
+        self.assertFalse(guide["record_boundary"]["monitoring_handoff"])
         self.assertFalse(guide["record_boundary"]["waiver_persistence"])
 
     def test_evidence_rows_expand_current_and_wrapped_decision_shapes(self) -> None:
@@ -28880,8 +31988,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
 
         self.assertFalse(selected["can_save"])
         self.assertIn("Investability evidence packet", selected["blockers"])
-        self.assertFalse(hold["can_save"])
-        self.assertIn("Official selection route", hold["blockers"])
+        self.assertTrue(hold["can_save"])
+        self.assertEqual(hold["route"], "FINAL_REVIEW_JUDGMENT_SAVE_READY")
+        self.assertFalse(hold["monitoring_handoff_candidate"])
+        self.assertNotIn("Official selection route", hold["blockers"])
 
     def test_final_review_decision_row_stores_compact_gate_policy_snapshot(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_decision_row
@@ -28932,6 +32042,45 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(row["selection_gate_policy_snapshot"]["schema_version"], "final_review_selection_gate_policy_v1")
         self.assertEqual(row["deployment_readiness_policy_snapshot"]["schema_version"], "deployment_readiness_gate_policy_v1")
         self.assertEqual(row["open_review_items"][0]["Group"], "provider_coverage")
+        self.assertTrue(row["selected_practical_portfolio"])
+        self.assertTrue(row["monitoring_candidate"])
+        self.assertEqual(row["evidence_closure_snapshot"]["validation_id"], "validation-row")
+        self.assertEqual(row["evidence_closure_snapshot"]["open_count"], 0)
+
+    def test_final_review_decision_row_stores_non_select_judgment_without_monitoring_candidate(self) -> None:
+        from app.web.backtest_final_review_helpers import _build_final_review_decision_row
+
+        packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "selection_gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "policy_rows": [],
+            },
+            "open_review_items": [{"Group": "data_coverage", "Criteria": "Coverage"}],
+        }
+
+        row = _build_final_review_decision_row(
+            source={"source_id": "source-hold", "source_type": "practical_validation_result"},
+            validation={"selection_source_id": "source-hold", "validation_id": "validation-hold"},
+            paper_observation={"active_components": [], "checks": []},
+            evidence={"route": "BLOCKED_FOR_FINAL_DECISION", "checks": [], "blockers": ["Coverage"]},
+            investability_packet=packet,
+            decision_id="decision-hold",
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            operator_reason="hold until data coverage is fixed",
+            operator_constraints="data coverage review",
+            operator_next_action="monitor after evidence refresh",
+        )
+
+        self.assertEqual(row["decision_route"], "HOLD_FOR_MORE_PAPER_TRACKING")
+        self.assertFalse(row["selected_practical_portfolio"])
+        self.assertFalse(row["monitoring_candidate"])
+        self.assertEqual(row["final_review_record_type"], "judgment_decision")
+        self.assertEqual(row["monitoring_handoff_state"], "not_requested")
+        self.assertFalse(row["live_approval"])
+        self.assertFalse(row["order_instruction"])
 
 
 class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
@@ -29726,13 +32875,13 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
 
         self.assertEqual(handoff["schema_version"], SELECTED_DASHBOARD_HANDOFF_SCHEMA_VERSION)
         self.assertEqual(handoff["route"], "HANDOFF_READY")
-        self.assertEqual(handoff["destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["destination"], "Operations > Portfolio Monitoring")
         self.assertEqual(handoff["summary"]["final_decision_count"], 1)
         self.assertEqual(handoff["summary"]["selected_decision_count"], 1)
         self.assertEqual(handoff["summary"]["dashboard_row_count"], 1)
         self.assertEqual(handoff["summary"]["monitorable_count"], 1)
         self.assertEqual(handoff["rows"][0]["Decision ID"], "decision-selected")
-        self.assertEqual(handoff["rows"][0]["Handoff Destination"], "Operations > Selected Portfolio Dashboard")
+        self.assertEqual(handoff["rows"][0]["Handoff Destination"], "Operations > Portfolio Monitoring")
         self.assertEqual(handoff["rows"][0]["Live Approval"], "Disabled")
         checks = {row["Check"]: row for row in handoff["checklist"]}
         self.assertEqual(checks["Selected route record"]["Status"], "PASS")
@@ -29761,6 +32910,24 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(checks["Final Review decision record"]["Status"], "PASS")
         self.assertEqual(checks["Selected route record"]["Status"], "NEEDS_INPUT")
         self.assertFalse(handoff["execution_boundary"]["auto_rebalance"])
+
+    def test_selected_dashboard_handoff_review_respects_explicit_monitoring_candidate_flag(self) -> None:
+        from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review
+
+        row = dict(self._selected_row()["raw_decision"])
+        row["schema_version"] = 3
+        row["decision_route"] = "SELECT_FOR_PRACTICAL_PORTFOLIO"
+        row["selected_practical_portfolio"] = False
+        row["monitoring_candidate"] = False
+        row["monitoring_handoff_state"] = "blocked"
+
+        handoff = build_selected_dashboard_handoff_review([row])
+
+        self.assertEqual(handoff["route"], "HANDOFF_NO_SELECTED_DECISION")
+        self.assertEqual(handoff["summary"]["final_decision_count"], 1)
+        self.assertEqual(handoff["summary"]["selected_decision_count"], 0)
+        self.assertEqual(handoff["summary"]["dashboard_row_count"], 0)
+        self.assertEqual(handoff["rows"], [])
 
     def test_selected_dashboard_handoff_review_surfaces_blocked_dashboard_contract(self) -> None:
         from app.runtime.backtest.read_models.final_selected_portfolios import build_selected_dashboard_handoff_review
@@ -30896,7 +34063,7 @@ class DecisionDossierContractTests(unittest.TestCase):
             "operator_decision": {
                 "reason": "검증 근거가 충분합니다.",
                 "constraints": "실제 투자 전 금액과 중단 기준 확인",
-                "next_action": "Selected Dashboard에서 사후 점검",
+                "next_action": "Operations > Portfolio Monitoring에서 사후 점검",
             },
         }
 
