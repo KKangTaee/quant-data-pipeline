@@ -269,8 +269,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `institutional_13f_manager`는 manager / filer identity와 latest filing pointer를 저장한다.
 - `institutional_13f_filing`은 accession, report period, filing date, amendment flag, source data set, source link를 저장한다.
 - `institutional_13f_holding`은 13F information table row를 저장한다.
-- `institutional_13f_cusip_symbol_map`은 CUSIP 기반 display symbol 보조 mapping을 저장한다.
-- `institutional_13f_manager_watchlist`는 Berkshire Hathaway, Pershing Square, Appaloosa, Baupost 같은 화면 rail seed metadata를 저장할 수 있다.
+- `institutional_13f_cusip_symbol_map`은 CUSIP 기반 display symbol 보조 mapping을 저장한다. 완전한 security master가 아니므로 service read model은 ambiguous mapping을 차트 / 가격 성과용 ticker로 쓰지 않는다.
+- `institutional_13f_manager_watchlist`는 Berkshire Hathaway, Pershing Square, Appaloosa, Baupost, Duquesne 같은 화면 rail seed metadata와 투자자 alias 검색 metadata를 저장할 수 있다. 저장 row가 없으면 service seed watchlist를 fallback으로 사용한다.
 - `institutional_13f_refresh_status`는 마지막 SEC dataset 수집 결과, 최신 보고분기 / filing date, row counts, stale reason을 저장한다.
 
 성격:

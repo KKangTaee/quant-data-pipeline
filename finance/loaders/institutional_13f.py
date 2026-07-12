@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from typing import Any
 
@@ -313,6 +314,44 @@ def load_institutional_13f_managers_by_ciks(
         )
     finally:
         db.close()
+    return _frame(rows)
+
+
+def load_institutional_13f_manager_watchlist(
+    *,
+    active_only: bool = True,
+    limit: int = 200,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> pd.DataFrame:
+    """Load curated manager watchlist metadata from finance_meta without fetching external data."""
+    db = _connect(host, user, password, port)
+    try:
+        where = "WHERE active = 1" if active_only else ""
+        rows = db.query(
+            f"""
+            SELECT cik, display_name, watchlist_label, alias, priority,
+                   tags_json, external_links_json, source, notes
+            FROM institutional_13f_manager_watchlist
+            {where}
+            ORDER BY priority ASC, display_name ASC
+            LIMIT %s
+            """,
+            (int(limit),),
+        )
+    finally:
+        db.close()
+
+    for row in rows:
+        for field in ("tags_json", "external_links_json"):
+            value = row.get(field)
+            if isinstance(value, str) and value.strip():
+                try:
+                    row[field] = json.loads(value)
+                except json.JSONDecodeError:
+                    row[field] = None
     return _frame(rows)
 
 

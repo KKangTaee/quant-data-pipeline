@@ -91,6 +91,8 @@ type PriceAction = {
   start_date?: string | null;
   available: boolean;
   needs_collection?: boolean;
+  state?: "ready" | "price_missing" | "symbol_missing" | "mapping_ambiguous" | string;
+  reason_code?: string;
   reason?: string;
 };
 
@@ -112,6 +114,8 @@ type SelectedSecurity = {
     cusip?: string | null;
     sector?: string | null;
     industry?: string | null;
+    symbol_source?: string | null;
+    mapping_status?: string | null;
   };
   portfolio_position?: {
     weight_label: string;
@@ -792,7 +796,18 @@ function SecurityDetail({
               {priceAction.label || "가격 데이터 수집"}
             </button>
           ) : null}
-          {!chartHasPoints && priceAction?.reason ? <p className="ip-price-reason">{priceAction.reason}</p> : null}
+          {!chartHasPoints && priceAction?.reason ? (
+            <p className={`ip-price-reason ip-price-reason--${priceAction.state || "unknown"}`}>
+              {priceAction.state === "price_missing"
+                ? "가격 DB 보강 필요 · "
+                : priceAction.state === "symbol_missing"
+                  ? "티커 매핑 필요 · "
+                  : priceAction.state === "mapping_ambiguous"
+                    ? "매핑 확인 필요 · "
+                    : ""}
+              {priceAction.reason}
+            </p>
+          ) : null}
           {priceRefreshText ? <p className="ip-price-result">{priceRefreshText}</p> : null}
           <p className="ip-note">{detail?.caveat}</p>
         </div>
@@ -1001,7 +1016,13 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
         start_date: payload.hero.latest_report_period,
         available: Boolean(row.symbol),
         needs_collection: !hasFallbackChart,
-        reason: hasFallbackChart ? "저장된 가격 DB 기준 차트가 표시 중입니다." : "저장된 가격 row가 없어 차트가 비어 있습니다.",
+        state: row.symbol ? (hasFallbackChart ? "ready" : "price_missing") : "symbol_missing",
+        reason_code: row.symbol ? (hasFallbackChart ? "price_history_ready" : "price_history_missing") : "cusip_symbol_mapping_missing",
+        reason: hasFallbackChart
+          ? "저장된 가격 DB 기준 차트가 표시 중입니다."
+          : row.symbol
+            ? "저장된 가격 row가 없어 차트가 비어 있습니다."
+            : "이 13F 보유 종목은 아직 가격 DB ticker로 안전하게 매핑되지 않았습니다.",
       },
       holders: payload.interest.holders,
       holder_count: payload.interest.holder_count,

@@ -282,7 +282,12 @@ def _render_requested_refresh_status_panel(refresh_status: dict[str, Any]) -> bo
     return True
 
 
-def _resolve_selected_manager(managers: list[dict[str, Any]], selected_cik: str | None) -> dict[str, Any] | None:
+def _resolve_selected_manager(
+    managers: list[dict[str, Any]],
+    selected_cik: str | None,
+    *,
+    search_active: bool = False,
+) -> dict[str, Any] | None:
     if not managers:
         manager_rows: list[dict[str, Any]] = []
     else:
@@ -295,6 +300,14 @@ def _resolve_selected_manager(managers: list[dict[str, Any]], selected_cik: str 
             by_cik[cik] = dict(row, cik=cik)
 
     selected = _cik_text(selected_cik)
+    if search_active:
+        if selected and selected in by_cik and by_cik[selected].get("query_match"):
+            return by_cik[selected]
+        for row in manager_rows:
+            if row.get("query_match"):
+                return row
+        return manager_rows[0] if manager_rows else None
+
     if selected and selected in by_cik:
         return by_cik[selected]
 
@@ -318,8 +331,12 @@ def _resolve_selected_manager(managers: list[dict[str, Any]], selected_cik: str 
     return manager_rows[0] if manager_rows else None
 
 
-def _selected_manager(managers: list[dict[str, Any]]) -> dict[str, Any] | None:
-    selected = _resolve_selected_manager(managers, str(st.session_state.get("institutional_portfolios_selected_cik") or ""))
+def _selected_manager(managers: list[dict[str, Any]], *, search_active: bool = False) -> dict[str, Any] | None:
+    selected = _resolve_selected_manager(
+        managers,
+        str(st.session_state.get("institutional_portfolios_selected_cik") or ""),
+        search_active=search_active,
+    )
     if selected is not None:
         st.session_state["institutional_portfolios_selected_cik"] = str(selected.get("cik") or "")
     return selected
@@ -476,7 +493,8 @@ def render_institutional_portfolios_page(
         return
 
     managers = list(manager_result.get("managers") or [])
-    selected_manager = _selected_manager(managers)
+    search_active = bool(str(search or "").strip())
+    selected_manager = _selected_manager(managers, search_active=search_active)
     if selected_manager is None:
         payload = build_institutional_preview_workbench_payload("Local 13F DB has no manager rows yet. Preview mode is shown until data is collected.")
         _render_workbench_or_fallback(payload, key="institutional_portfolios_preview_empty")
@@ -547,6 +565,7 @@ def render_institutional_portfolios_page(
         price_refresh_result=dict(st.session_state.get("institutional_price_refresh_result") or {}),
         mode="live",
         refresh_status=refresh_status,
+        preserve_manager_order=search_active,
     )
     _render_workbench_or_fallback(payload, key="institutional_portfolios_workbench")
     if not refresh_panel_rendered:

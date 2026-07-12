@@ -5949,3 +5949,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/`에서 보유기관조회 차트 empty 원인을 실제 DB 기준으로 진단했다.
 - Berkshire 상위 13F holdings는 ticker가 비어 있었지만 가격 DB에는 KO/BAC/CVX/OXY/GOOGL 등 row가 이미 있어, service-level safe CUSIP resolver로 차트를 연결했다.
 - `KO` 같은 curated symbol reverse lookup은 오염된 generic map보다 curated CUSIP를 먼저 사용하며, 차트가 비면 React 버튼이 Python `run_collect_ohlcv` 수집 job을 실행한다.
+
+## 2026-07-12 KST - Institutional Portfolios Watchlist / Mapping V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/`에서 대가 watchlist / alias 검색과 가격 차트 empty 사유 분리를 구현했다.
+- Duquesne / Stanley Druckenmiller 등 확장 seed와 DB-backed `institutional_13f_manager_watchlist` loader 경계를 추가했고, alias 검색 CIK를 우선 정렬한다.
+- Ambiguous CUSIP-symbol mapping은 차트용 symbol로 쓰지 않으며, selected-security price action은 symbol missing / ambiguous mapping / price missing / ready 상태로 나뉜다.

@@ -9171,3 +9171,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 차트 empty가 가격 DB 부재인지, 13F ticker mapping 문제인지, UI event 문제인지 분리하고 실제 사용 흐름 안에서 해결해야 함.
 - Analysis result: Berkshire KO/BAC/CVX/OXY/GOOGL 등은 13F holding row에 ticker가 없지만 가격 DB row는 이미 있었다. 따라서 1차 원인은 수집 부재가 아니라 CUSIP-symbol resolution gap이었다. 추가로 generic symbol lookup은 오염된 map row를 탈 수 있어 curated symbol은 curated CUSIP 우선 조회가 필요했다.
 - Follow-up: service-level safe CUSIP resolver, selected-security price action payload, React price collection button, Python `run_collect_ohlcv` event boundary를 추가했다.
+
+### 2026-07-12 KST - 기관 포트폴리오의 대가 alias / OHLCV 출처 / 추가 수집 가능성
+
+- User request: OHLCV 데이터가 어디서 오는지, 기관 포트폴리오와 대가 포트폴리오가 따로 나뉜 것인지, 드러켄밀러 같은 대가 포트폴리오를 더 수집할 수 있는지 확인하고 1차~4차 개발을 요청함.
+- Interpreted goal: 13F holdings source는 유지하되, 대가 alias 검색과 CUSIP-symbol mapping 품질을 높여 실제 탐색성을 개선해야 함.
+- Analysis result: OHLCV는 `finance_price.nyse_price_history` DB를 읽고 비면 `run_collect_ohlcv`가 yfinance로 보강한다. 대가 포트폴리오는 별도 source가 아니라 SEC manager row 위의 watchlist / alias layer다. Duquesne Family Office LLC는 local 13F DB에 이미 존재하지만 alias가 없어 찾기 어려웠다.
+- Follow-up: expanded guru seed, DB-backed manager watchlist loader, alias-first manager search, ambiguous mapping guard, price action state separation을 구현했다. Dataroma / Fintel scraping과 WhaleWisdom / OpenFIGI adapter는 후속 검토로 남겼다.

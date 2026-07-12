@@ -494,6 +494,69 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertEqual(detail["price_action"]["action_id"], "collect_price_history")
         self.assertEqual(detail["price_action"]["symbol"], "KO")
         self.assertTrue(detail["price_action"]["available"])
+        self.assertEqual(detail["price_action"]["state"], "price_missing")
+        self.assertEqual(detail["price_action"]["reason_code"], "price_history_missing")
+
+    def test_selected_security_model_blocks_price_action_when_symbol_mapping_is_missing(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model, build_institutional_selected_security_model
+
+        portfolio = build_institutional_portfolio_model(
+            manager={"cik": "0001536411", "manager_name": "DUQUESNE FAMILY OFFICE LLC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=pd.DataFrame(
+                [
+                    {
+                        "cusip": "632307104",
+                        "holding_symbol": None,
+                        "issuer_name": "NATERA INC",
+                        "reported_value": 1200,
+                        "shares_or_principal_amount": 40,
+                    }
+                ]
+            ),
+            previous_filing=None,
+            previous_holdings=pd.DataFrame(),
+        )
+
+        detail = build_institutional_selected_security_model(
+            portfolio_model=portfolio,
+            query="632307104",
+            interest_model={"holders": [], "holder_count": 0},
+            price_history=pd.DataFrame(),
+        )
+
+        self.assertIsNone(detail["security"]["symbol"])
+        self.assertFalse(detail["price_action"]["available"])
+        self.assertEqual(detail["price_action"]["state"], "symbol_missing")
+        self.assertEqual(detail["price_action"]["reason_code"], "cusip_symbol_mapping_missing")
+        self.assertIn("티커 매핑", detail["price_action"]["reason"])
+
+    def test_portfolio_model_marks_ambiguous_cusip_symbol_mapping_unresolved(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_portfolio_model
+
+        model = build_institutional_portfolio_model(
+            manager={"cik": "0001536411", "manager_name": "DUQUESNE FAMILY OFFICE LLC"},
+            latest_filing={"period_of_report": "2026-03-31", "filing_date": "2026-05-15"},
+            latest_holdings=pd.DataFrame(
+                [
+                    {
+                        "cusip": "46137V357",
+                        "holding_symbol": "AVGO",
+                        "symbol_source": "ambiguous_cusip_symbol_map",
+                        "issuer_name": "INVESCO EXCHANGE TRADED FD T",
+                        "reported_value": 1200,
+                        "shares_or_principal_amount": 40,
+                    }
+                ]
+            ),
+            previous_filing=None,
+            previous_holdings=pd.DataFrame(),
+        )
+
+        holding = model["holdings"][0]
+        self.assertIsNone(holding["holding_symbol"])
+        self.assertEqual(holding["symbol_source"], "ambiguous_cusip_symbol_map")
+        self.assertEqual(holding["mapping_status"], "ambiguous")
 
     def test_popularity_model_ranks_stocks_by_report_period_holder_count(self) -> None:
         from app.services.institutional_portfolios import build_institutional_popularity_model
@@ -814,6 +877,79 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertTrue(rail[0]["selected"])
         self.assertTrue(rail[0]["external_links"])
 
+    def test_watchlist_manager_rail_includes_expanded_guru_alias_seeds(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_manager_rail
+
+        rail = build_institutional_manager_rail(
+            managers=[
+                {"cik": "0001536411", "manager_name": "Duquesne Family Office LLC", "latest_report_period": "2026-03-31"},
+            ],
+            selected_cik="0001536411",
+        )
+
+        duquesne = next(item for item in rail if item["cik"] == "0001536411")
+        self.assertEqual(duquesne["watchlist_label"], "Stanley Druckenmiller")
+        self.assertIn("Druckenmiller", duquesne["search_aliases"])
+        self.assertTrue(duquesne["selected"])
+
+    def test_watchlist_manager_rail_respects_search_result_order(self) -> None:
+        from app.services.institutional_portfolios import build_institutional_manager_rail
+
+        rail = build_institutional_manager_rail(
+            managers=[
+                {"cik": "0001536411", "manager_name": "Duquesne Family Office LLC", "latest_report_period": "2026-03-31"},
+                {"cik": "0001067983", "manager_name": "BERKSHIRE HATHAWAY INC", "latest_report_period": "2026-03-31"},
+            ],
+            selected_cik="0001536411",
+            preserve_manager_order=True,
+        )
+
+        self.assertEqual(rail[0]["cik"], "0001536411")
+        self.assertEqual(rail[0]["watchlist_label"], "Stanley Druckenmiller")
+        self.assertTrue(rail[0]["selected"])
+
+    def test_manager_choices_search_uses_watchlist_alias_before_exact_sec_name(self) -> None:
+        import app.services.institutional_portfolios as service
+
+        calls: list[object] = []
+        original_search = service.load_institutional_13f_managers
+        original_by_ciks = service.load_institutional_13f_managers_by_ciks
+
+        def fake_search(query: str | None = None, *, limit: int = 100) -> pd.DataFrame:
+            calls.append(("search", query))
+            return pd.DataFrame()
+
+        def fake_by_ciks(ciks: list[str]) -> pd.DataFrame:
+            calls.append(("by_ciks", tuple(ciks)))
+            return pd.DataFrame(
+                [
+                    {
+                        "cik": "0001067983",
+                        "manager_name": "Berkshire Hathaway Inc",
+                        "latest_report_period": "2026-03-31",
+                        "latest_filing_date": "2026-05-15",
+                    },
+                    {
+                        "cik": "0001536411",
+                        "manager_name": "Duquesne Family Office LLC",
+                        "latest_report_period": "2026-03-31",
+                        "latest_filing_date": "2026-05-15",
+                    }
+                ]
+            )
+
+        try:
+            service.load_institutional_13f_managers = fake_search
+            service.load_institutional_13f_managers_by_ciks = fake_by_ciks
+            result = service.load_institutional_manager_choices("드러켄밀러")
+        finally:
+            service.load_institutional_13f_managers = original_search
+            service.load_institutional_13f_managers_by_ciks = original_by_ciks
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["managers"][0]["cik"], "0001536411")
+        self.assertIn(("search", "드러켄밀러"), calls)
+
     def test_preview_workbench_payload_is_labeled_and_not_live_data(self) -> None:
         from app.services.institutional_portfolios import build_institutional_preview_workbench_payload
 
@@ -866,6 +1002,31 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIsNotNone(selected)
         self.assertEqual(selected["cik"], "0001067983")
         self.assertEqual(selected["manager_name"], "BERKSHIRE HATHAWAY INC")
+
+    def test_selected_manager_resolver_prefers_query_match_during_search(self) -> None:
+        from app.web.institutional_portfolios import _resolve_selected_manager
+
+        selected = _resolve_selected_manager(
+            managers=[
+                {
+                    "cik": "0001536411",
+                    "manager_name": "Duquesne Family Office LLC",
+                    "latest_report_period": "2026-03-31",
+                    "query_match": True,
+                },
+                {
+                    "cik": "0001067983",
+                    "manager_name": "BERKSHIRE HATHAWAY INC",
+                    "latest_report_period": "2026-03-31",
+                    "query_match": False,
+                },
+            ],
+            selected_cik="0001067983",
+            search_active=True,
+        )
+
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected["cik"], "0001536411")
 
     def test_workbench_event_consumption_skips_replayed_component_value(self) -> None:
         from app.web.institutional_portfolios import _consume_workbench_event

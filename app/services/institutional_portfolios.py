@@ -9,6 +9,7 @@ import pandas as pd
 from finance.data.institutional_13f import DEFAULT_SEC_13F_DATASET_LABEL, DEFAULT_SEC_13F_DATASET_URL, SEC_13F_SOURCE_CAVEATS
 from finance.loaders.institutional_13f import (
     load_institutional_13f_interest,
+    load_institutional_13f_manager_watchlist,
     load_institutional_13f_managers,
     load_institutional_13f_managers_by_ciks,
     load_institutional_13f_portfolio_bundle,
@@ -61,6 +62,7 @@ INSTITUTIONAL_MANAGER_WATCHLIST = [
         "cik": "0001067983",
         "manager_name": "BERKSHIRE HATHAWAY INC",
         "watchlist_label": "Warren Buffett",
+        "search_aliases": ["Warren Buffett", "Buffett", "버핏", "버크셔"],
         "priority": 10,
         "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1067983"}],
     },
@@ -68,6 +70,7 @@ INSTITUTIONAL_MANAGER_WATCHLIST = [
         "cik": "0001336528",
         "manager_name": "PERSHING SQUARE CAPITAL MANAGEMENT, L.P.",
         "watchlist_label": "Bill Ackman",
+        "search_aliases": ["Bill Ackman", "Ackman", "애크먼", "퍼싱"],
         "priority": 20,
         "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1336528"}],
     },
@@ -75,6 +78,7 @@ INSTITUTIONAL_MANAGER_WATCHLIST = [
         "cik": "0001656456",
         "manager_name": "APPALOOSA LP",
         "watchlist_label": "David Tepper",
+        "search_aliases": ["David Tepper", "Tepper", "테퍼", "아팔루사"],
         "priority": 30,
         "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1656456"}],
     },
@@ -82,8 +86,73 @@ INSTITUTIONAL_MANAGER_WATCHLIST = [
         "cik": "0001061768",
         "manager_name": "BAUPOST GROUP LLC/MA",
         "watchlist_label": "Seth Klarman",
+        "search_aliases": ["Seth Klarman", "Klarman", "클라먼", "바우포스트"],
         "priority": 40,
         "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1061768"}],
+    },
+    {
+        "cik": "0001536411",
+        "manager_name": "DUQUESNE FAMILY OFFICE LLC",
+        "watchlist_label": "Stanley Druckenmiller",
+        "search_aliases": ["Stanley Druckenmiller", "Druckenmiller", "드러켄밀러", "Duquesne"],
+        "priority": 50,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1536411"}],
+    },
+    {
+        "cik": "0001350694",
+        "manager_name": "BRIDGEWATER ASSOCIATES, LP",
+        "watchlist_label": "Ray Dalio",
+        "search_aliases": ["Ray Dalio", "Dalio", "레이 달리오", "달리오", "Bridgewater"],
+        "priority": 60,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1350694"}],
+    },
+    {
+        "cik": "0001040273",
+        "manager_name": "THIRD POINT LLC",
+        "watchlist_label": "Daniel Loeb",
+        "search_aliases": ["Daniel Loeb", "Loeb", "다니엘 롭", "서드포인트", "Third Point"],
+        "priority": 70,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1040273"}],
+    },
+    {
+        "cik": "0001412093",
+        "manager_name": "ICAHN CAPITAL LP",
+        "watchlist_label": "Carl Icahn",
+        "search_aliases": ["Carl Icahn", "Icahn", "아이칸"],
+        "priority": 80,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1412093"}],
+    },
+    {
+        "cik": "0001167483",
+        "manager_name": "TIGER GLOBAL MANAGEMENT LLC",
+        "watchlist_label": "Chase Coleman",
+        "search_aliases": ["Chase Coleman", "Coleman", "체이스 콜먼", "Tiger Global"],
+        "priority": 90,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1167483"}],
+    },
+    {
+        "cik": "0001061165",
+        "manager_name": "LONE PINE CAPITAL LLC",
+        "watchlist_label": "Stephen Mandel",
+        "search_aliases": ["Stephen Mandel", "Mandel", "스티븐 맨델", "Lone Pine"],
+        "priority": 100,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1061165"}],
+    },
+    {
+        "cik": "0001029160",
+        "manager_name": "SOROS FUND MANAGEMENT LLC",
+        "watchlist_label": "George Soros",
+        "search_aliases": ["George Soros", "Soros", "조지 소로스", "소로스"],
+        "priority": 110,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1029160"}],
+    },
+    {
+        "cik": "0001112520",
+        "manager_name": "AKRE CAPITAL MANAGEMENT LLC",
+        "watchlist_label": "Chuck Akre",
+        "search_aliases": ["Chuck Akre", "Akre", "척 애크리"],
+        "priority": 120,
+        "external_links": [{"label": "SEC filings", "url": "https://www.sec.gov/edgar/browse/?CIK=1112520"}],
     },
 ]
 CURATED_13F_CUSIP_SYMBOL_SEED: dict[str, dict[str, Any]] = {
@@ -283,6 +352,91 @@ def _symbol(value: Any) -> str | None:
     return text.upper() if text else None
 
 
+def _jsonish_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return parsed if isinstance(parsed, list) else []
+    return []
+
+
+def _watchlist_aliases(row: dict[str, Any]) -> list[str]:
+    aliases: list[str] = []
+    for field in ("watchlist_label", "manager_name", "display_name", "alias"):
+        value = _text(row.get(field))
+        if value:
+            aliases.append(value)
+    aliases.extend(str(item) for item in _jsonish_list(row.get("search_aliases")) if str(item).strip())
+    aliases.extend(str(item) for item in _jsonish_list(row.get("tags_json")) if str(item).strip())
+    seen: set[str] = set()
+    out: list[str] = []
+    for alias in aliases:
+        text = alias.strip()
+        key = text.casefold()
+        if text and key not in seen:
+            out.append(text)
+            seen.add(key)
+    return out
+
+
+def _normalize_watchlist_row(row: dict[str, Any]) -> dict[str, Any] | None:
+    cik = _cik_text(row.get("cik"))
+    if not cik:
+        return None
+    display_name = _text(row.get("display_name")) or _text(row.get("manager_name")) or "Unknown manager"
+    external_links = _jsonish_list(row.get("external_links_json")) or _jsonish_list(row.get("external_links"))
+    if not external_links:
+        external_links = [{"label": "SEC filings", "url": f"https://www.sec.gov/edgar/browse/?CIK={int(cik)}"}]
+    normalized = {
+        "cik": cik,
+        "manager_name": display_name,
+        "watchlist_label": _text(row.get("watchlist_label")),
+        "alias": _text(row.get("alias")),
+        "priority": int(_num(row.get("priority"), 100)),
+        "external_links": external_links,
+        "source": _text(row.get("source")) or "seed_config",
+        "search_aliases": [],
+    }
+    normalized["search_aliases"] = _watchlist_aliases({**normalized, **row})
+    return normalized
+
+
+def _stored_manager_watchlist_rows() -> list[dict[str, Any]]:
+    try:
+        return _records(load_institutional_13f_manager_watchlist())
+    except Exception:
+        return []
+
+
+def _manager_watchlist_rows(stored_rows: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    by_cik: dict[str, dict[str, Any]] = {}
+    for row in INSTITUTIONAL_MANAGER_WATCHLIST:
+        normalized = _normalize_watchlist_row(row)
+        if normalized:
+            by_cik[normalized["cik"]] = normalized
+    for row in stored_rows or []:
+        normalized = _normalize_watchlist_row(row)
+        if not normalized:
+            continue
+        existing = by_cik.get(normalized["cik"], {})
+        by_cik[normalized["cik"]] = {**existing, **{k: v for k, v in normalized.items() if v not in (None, "", [])}}
+    return sorted(by_cik.values(), key=lambda row: (int(row.get("priority") or 100), str(row.get("manager_name") or "")))
+
+
+def _watchlist_matches_query(row: dict[str, Any], query: str | None) -> bool:
+    token = str(query or "").strip().casefold()
+    if not token:
+        return True
+    candidates = _watchlist_aliases(row)
+    return any(token in candidate.casefold() for candidate in candidates)
+
+
 def _issuer_search_text(value: Any) -> str:
     text = _text(value) or ""
     return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
@@ -306,6 +460,7 @@ def _curated_identity_for_holding(row: dict[str, Any]) -> dict[str, Any] | None:
     return {
         "symbol": _symbol(seed.get("symbol")),
         "symbol_source": "curated_13f_cusip_seed",
+        "mapping_status": "mapped",
         "sector": _text(seed.get("sector")),
         "industry": _text(seed.get("industry")),
     }
@@ -319,17 +474,29 @@ def _curated_cusip_for_symbol(query: str | None) -> str | None:
 
 
 def _resolved_holding_identity(row: dict[str, Any]) -> dict[str, Any]:
+    explicit_status = (_text(row.get("mapping_status")) or "").lower()
+    symbol_source = _text(row.get("symbol_source"))
+    if explicit_status == "ambiguous" or "ambiguous" in str(symbol_source or "").lower():
+        return {
+            "symbol": None,
+            "symbol_source": symbol_source or "ambiguous_cusip_symbol_map",
+            "mapping_status": "ambiguous",
+            "sector": _text(row.get("sector")),
+            "industry": _text(row.get("industry")),
+        }
     symbol = _symbol(row.get("holding_symbol"))
     if symbol:
         return {
             "symbol": symbol,
-            "symbol_source": _text(row.get("symbol_source")),
+            "symbol_source": symbol_source,
+            "mapping_status": "mapped",
             "sector": _text(row.get("sector")),
             "industry": _text(row.get("industry")),
         }
     return _curated_identity_for_holding(row) or {
         "symbol": None,
-        "symbol_source": _text(row.get("symbol_source")),
+        "symbol_source": symbol_source,
+        "mapping_status": "unmapped",
         "sector": _text(row.get("sector")),
         "industry": _text(row.get("industry")),
     }
@@ -368,7 +535,7 @@ def _prepared_holdings(frame: pd.DataFrame | None) -> tuple[list[dict[str, Any]]
         bucket = grouped[key]
         bucket["reported_value"] = _num(bucket.get("reported_value")) + _num(row.get("reported_value"))
         bucket["shares_or_principal_amount"] = _num(bucket.get("shares_or_principal_amount")) + _num(row.get("shares_or_principal_amount"))
-        for field in ["holding_symbol", "figi", "sector", "industry", "source_ref", "symbol_source"]:
+        for field in ["holding_symbol", "figi", "sector", "industry", "source_ref", "symbol_source", "mapping_status"]:
             if not _text(bucket.get(field)) and _text(row.get(field)):
                 bucket[field] = row.get(field)
 
@@ -384,6 +551,7 @@ def _prepared_holdings(frame: pd.DataFrame | None) -> tuple[list[dict[str, Any]]
                 "issuer_name": _text(row.get("issuer_name")) or "-",
                 "holding_symbol": identity.get("symbol"),
                 "symbol_source": identity.get("symbol_source"),
+                "mapping_status": identity.get("mapping_status"),
                 "cusip": _text(row.get("cusip")),
                 "figi": _text(row.get("figi")),
                 "title_of_class": _text(row.get("title_of_class")),
@@ -611,18 +779,39 @@ def _charts_have_points(charts: dict[str, Any]) -> bool:
     return False
 
 
-def _price_action_payload(symbol: str | None, charts: dict[str, Any], *, start_date: str | None = None) -> dict[str, Any]:
+def _price_action_payload(
+    symbol: str | None,
+    charts: dict[str, Any],
+    *,
+    start_date: str | None = None,
+    mapping_status: str | None = None,
+) -> dict[str, Any]:
     resolved_symbol = _symbol(symbol)
     has_chart = _charts_have_points(charts)
-    if not resolved_symbol:
+    normalized_status = str(mapping_status or "").strip().lower()
+    if normalized_status == "ambiguous":
         return {
             "action_id": "collect_price_history",
-            "label": "가격 데이터 수집",
+            "label": "가격 데이터 수집 불가",
             "symbol": None,
             "start_date": start_date,
             "available": False,
             "needs_collection": False,
-            "reason": "13F row를 가격 DB ticker로 안전하게 매핑하지 못했습니다. 원문 filing의 CUSIP를 먼저 확인하세요.",
+            "state": "mapping_ambiguous",
+            "reason_code": "cusip_symbol_mapping_ambiguous",
+            "reason": "동일 CUSIP에 여러 ticker 후보가 있어 가격 차트를 안전하게 연결하지 않았습니다. 원문 filing과 CUSIP-symbol 매핑을 먼저 확인하세요.",
+        }
+    if not resolved_symbol:
+        return {
+            "action_id": "collect_price_history",
+            "label": "가격 데이터 수집 불가",
+            "symbol": None,
+            "start_date": start_date,
+            "available": False,
+            "needs_collection": False,
+            "state": "symbol_missing",
+            "reason_code": "cusip_symbol_mapping_missing",
+            "reason": "이 13F 보유 종목은 아직 가격 DB ticker로 안전하게 매핑되지 않았습니다. 원문 filing의 CUSIP와 티커 매핑을 먼저 확인하세요.",
         }
     return {
         "action_id": "collect_price_history",
@@ -631,6 +820,8 @@ def _price_action_payload(symbol: str | None, charts: dict[str, Any], *, start_d
         "start_date": start_date,
         "available": True,
         "needs_collection": not has_chart,
+        "state": "ready" if has_chart else "price_missing",
+        "reason_code": "price_history_ready" if has_chart else "price_history_missing",
         "reason": "저장된 가격 row가 없어 차트가 비어 있습니다." if not has_chart else "저장된 가격 DB 기준 차트가 표시 중입니다.",
     }
 
@@ -652,7 +843,13 @@ def _find_holding(holdings: list[dict[str, Any]], query: str) -> dict[str, Any] 
     return None
 
 
-def build_institutional_manager_rail(managers: list[dict[str, Any]], selected_cik: str | None) -> list[dict[str, Any]]:
+def build_institutional_manager_rail(
+    managers: list[dict[str, Any]],
+    selected_cik: str | None,
+    *,
+    watchlist_rows: list[dict[str, Any]] | None = None,
+    preserve_manager_order: bool = False,
+) -> list[dict[str, Any]]:
     """Merge stored manager search results with the curated watchlist rail."""
     selected = _cik_text(selected_cik)
     by_cik: dict[str, dict[str, Any]] = {}
@@ -663,17 +860,47 @@ def build_institutional_manager_rail(managers: list[dict[str, Any]], selected_ci
 
     items: list[dict[str, Any]] = []
     included: set[str] = set()
-    for seed in sorted(INSTITUTIONAL_MANAGER_WATCHLIST, key=lambda row: int(row.get("priority") or 100)):
-        cik = str(seed["cik"])
+    seed_by_cik = {str(row["cik"]): row for row in _manager_watchlist_rows(watchlist_rows) if row.get("cik")}
+
+    def _manager_rail_item(cik: str, row: dict[str, Any], *, fallback_period: str = "-") -> dict[str, Any]:
+        seed = seed_by_cik.get(cik, {})
+        merged = {**seed, **row}
+        latest_period = _date_label(merged.get("latest_report_period")) or _text(merged.get("latest_report_period")) or fallback_period
+        links = list(merged.get("external_links") or seed.get("external_links") or [])
+        if not links:
+            links = [{"label": "SEC filings", "url": f"https://www.sec.gov/edgar/browse/?CIK={int(cik)}"}]
+        return {
+            "cik": cik,
+            "manager_name": _text(merged.get("manager_name")) or "Unknown manager",
+            "latest_report_period": latest_period,
+            "watchlist_label": _text(merged.get("watchlist_label") or seed.get("watchlist_label")),
+            "watchlist_priority": int(merged.get("watchlist_priority") or merged.get("priority") or seed.get("priority") or 0) or None,
+            "search_aliases": list(merged.get("search_aliases") or seed.get("search_aliases") or []),
+            "external_links": links,
+            "selected": bool(cik and selected and cik == selected),
+        }
+
+    if preserve_manager_order:
+        for row in managers[:24]:
+            cik = _cik_text(row.get("cik"))
+            if not cik or cik in included:
+                continue
+            items.append(_manager_rail_item(cik, dict(row), fallback_period="-"))
+            included.add(cik)
+        return items
+
+    for cik, seed in seed_by_cik.items():
         row = {**seed, **by_cik.get(cik, {})}
-        latest_period = _date_label(row.get("latest_report_period")) or _text(row.get("latest_report_period")) or "Collect 13F data"
         items.append(
             {
                 "cik": cik,
                 "manager_name": _text(row.get("manager_name")) or "Unknown manager",
-                "latest_report_period": latest_period,
+                "latest_report_period": _date_label(row.get("latest_report_period"))
+                or _text(row.get("latest_report_period"))
+                or "Collect 13F data",
                 "watchlist_label": _text(seed.get("watchlist_label")),
                 "watchlist_priority": int(seed.get("priority") or 100),
+                "search_aliases": list(seed.get("search_aliases") or []),
                 "external_links": list(seed.get("external_links") or []),
                 "selected": bool(cik and selected and cik == selected),
             }
@@ -684,23 +911,21 @@ def build_institutional_manager_rail(managers: list[dict[str, Any]], selected_ci
         cik = _cik_text(row.get("cik"))
         if not cik or cik in included:
             continue
-        latest_period = _date_label(row.get("latest_report_period")) or _text(row.get("latest_report_period")) or "-"
-        items.append(
-            {
-                "cik": cik,
-                "manager_name": _text(row.get("manager_name")) or "Unknown manager",
-                "latest_report_period": latest_period,
-                "watchlist_label": None,
-                "watchlist_priority": None,
-                "external_links": [{"label": "SEC filings", "url": f"https://www.sec.gov/edgar/browse/?CIK={int(cik)}"}],
-                "selected": bool(cik and selected and cik == selected),
-            }
-        )
+        items.append(_manager_rail_item(cik, dict(row), fallback_period="-"))
     return items
 
 
-def _manager_picker_items(managers: list[dict[str, Any]], selected_cik: str | None) -> list[dict[str, Any]]:
-    return build_institutional_manager_rail(managers, selected_cik)[:24]
+def _manager_picker_items(
+    managers: list[dict[str, Any]],
+    selected_cik: str | None,
+    *,
+    preserve_manager_order: bool = False,
+) -> list[dict[str, Any]]:
+    return build_institutional_manager_rail(
+        managers,
+        selected_cik,
+        preserve_manager_order=preserve_manager_order,
+    )[:24]
 
 
 def _parse_source_limitations(value: Any) -> list[str]:
@@ -1028,6 +1253,8 @@ def build_institutional_selected_security_model(
         "cusip": _text(holding.get("cusip")),
         "sector": _text(holding.get("sector")) or "Unmapped",
         "industry": _text(holding.get("industry")),
+        "symbol_source": _text(holding.get("symbol_source")),
+        "mapping_status": _text(holding.get("mapping_status")) or ("mapped" if symbol else "unmapped"),
     }
     holders = list((interest_model or {}).get("holders") or [])
     return {
@@ -1043,7 +1270,7 @@ def build_institutional_selected_security_model(
             "shares_label": f"{_num(holding.get('shares_or_principal_amount')):,.0f}",
         },
         "charts": charts,
-        "price_action": _price_action_payload(symbol, charts, start_date=report_period),
+        "price_action": _price_action_payload(symbol, charts, start_date=report_period, mapping_status=security["mapping_status"]),
         "holders": holders[:50],
         "holder_count": int((interest_model or {}).get("holder_count") or len(holders)),
         "caveat": "차트는 저장된 가격 DB 기준이며 13F 보고 이후 실제 거래를 의미하지 않습니다.",
@@ -1127,6 +1354,7 @@ def build_institutional_workbench_payload(
     refresh_status: dict[str, Any] | None = None,
     allocation_limit: int = 10,
     row_limit: int = 12,
+    preserve_manager_order: bool = False,
 ) -> dict[str, Any]:
     summary = dict(model.get("summary") or {})
     holdings = list(model.get("holdings") or [])
@@ -1160,7 +1388,11 @@ def build_institutional_workbench_payload(
         },
         "manager_picker": {
             "selected_cik": selected_cik,
-            "items": _manager_picker_items(list(managers or []), selected_cik),
+            "items": _manager_picker_items(
+                list(managers or []),
+                selected_cik,
+                preserve_manager_order=preserve_manager_order,
+            ),
         },
         "freshness": freshness,
         "refresh_action": _refresh_action_payload(),
@@ -1421,22 +1653,43 @@ def build_institutional_interest_model(query: str, holder_rows: pd.DataFrame | N
 
 
 def load_institutional_manager_choices(query: str | None = None, *, limit: int = 100) -> dict[str, Any]:
+    matched_ciks: list[str] = []
+    query_text = str(query or "").strip()
     try:
+        stored_watchlist = _stored_manager_watchlist_rows()
+        watchlist_rows = _manager_watchlist_rows(stored_watchlist)
+        if query_text:
+            matched_ciks = [str(row["cik"]) for row in watchlist_rows if _watchlist_matches_query(row, query)]
+            watchlist_ciks = list(dict.fromkeys(matched_ciks))
+        else:
+            watchlist_ciks = [str(row["cik"]) for row in watchlist_rows if row.get("cik")]
         frame = load_institutional_13f_managers(query, limit=limit)
-        watchlist_ciks = [str(row["cik"]) for row in INSTITUTIONAL_MANAGER_WATCHLIST if row.get("cik")]
         watchlist_frame = load_institutional_13f_managers_by_ciks(watchlist_ciks)
     except Exception as exc:
         return {"status": "error", "message": str(exc), "managers": []}
+    watchlist_by_cik = {str(row["cik"]): row for row in watchlist_rows if row.get("cik")}
     rows_by_cik: dict[str, dict[str, Any]] = {}
     for row in _records(frame):
         cik = _cik_text(row.get("cik"))
         if cik:
-            rows_by_cik[cik] = row
+            meta = watchlist_by_cik.get(cik, {})
+            rows_by_cik[cik] = {**meta, **row, "query_match": bool(query_text)}
     for row in _records(watchlist_frame):
         cik = _cik_text(row.get("cik"))
         if cik:
-            rows_by_cik.setdefault(cik, row)
-    return {"status": "ok", "message": "", "managers": list(rows_by_cik.values())}
+            meta = watchlist_by_cik.get(cik, {})
+            rows_by_cik.setdefault(cik, {**meta, **row, "query_match": bool(cik in set(matched_ciks))})
+    managers = list(rows_by_cik.values())
+    matched_set = set(matched_ciks)
+    managers.sort(
+        key=lambda row: (
+            0 if row.get("query_match") else 1,
+            0 if (matched_set and str(row.get("cik")) in matched_set) else 1,
+            int(row.get("priority") or row.get("watchlist_priority") or 999),
+            str(row.get("manager_name") or ""),
+        )
+    )
+    return {"status": "ok", "message": "", "managers": managers}
 
 
 def load_institutional_refresh_status() -> dict[str, Any]:

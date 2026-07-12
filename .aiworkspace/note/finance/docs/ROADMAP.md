@@ -9,7 +9,13 @@ Last Verified: 2026-07-12
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios`에서 유명 투자자 alias 검색과 CUSIP-symbol mapping 상태가 부족해 드러켄밀러 같은 대가 포트폴리오를 찾기 어렵고, 가격 차트 empty 원인을 구분하기 어려웠던 문제를 줄였다.
+- 주요 변경: manager watchlist / alias seed를 Duquesne, Bridgewater, Third Point, Icahn, Tiger Global, Lone Pine, Soros, Akre 등으로 확장하고 DB watchlist loader 경계를 열었다. manager search는 alias 매칭 CIK를 우선 보여주고 검색 중 rail / selection도 검색 결과 순서를 따른다. ambiguous CUSIP-symbol mapping은 차트용 ticker로 쓰지 않는다. selected-security price action은 `symbol_missing`, `mapping_ambiguous`, `price_missing`, `ready` 상태로 분리된다.
+- 이번 차수에서 하지 않은 일: Dataroma / Fintel scraping, WhaleWisdom / OpenFIGI adapter 구현, 새 가격 provider, DB schema 변경, 추천 / trading semantics 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
 
 - 목적: `Workspace > Institutional Portfolios > 종목 분석 > 종목 상세`에서 차트와 보유 기관 리스트가 2-column으로 나뉘고 기본 range slider가 어색했던 종목 상세 UX를 줄였다.
 - 주요 변경: selected-security detail을 선택 종목 / 포트폴리오 내 위치 overview card, full-width stored-OHLCV chart row, 하단 scrollable holder-list row로 재배치했다. 차트는 OHLC / volume strip, volume bars, price scale, mini navigator, line/candle toggle, hover crosshair를 유지한다.

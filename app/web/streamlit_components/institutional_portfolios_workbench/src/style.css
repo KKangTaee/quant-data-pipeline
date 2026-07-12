@@ -1332,6 +1332,15 @@ a {
   color: #64748b;
 }
 
+.ip-price-reason--price_missing {
+  color: #1d4ed8;
+}
+
+.ip-price-reason--symbol_missing,
+.ip-price-reason--mapping_ambiguous {
+  color: #b45309;
+}
+
 .ip-price-result {
   color: #166534;
   font-weight: 700;
