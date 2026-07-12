@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `institutional-portfolios-interactive-security-chart-v1-20260712` closeout. |
+| none | - | No active task after `institutional-portfolios-portfolio-security-ia-v1-20260712` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `institutional-portfolios-portfolio-security-ia-v1-20260712` | Completed record | Workbench tabs now separate manager portfolio views from ticker/security analysis views. |
 | `institutional-portfolios-interactive-security-chart-v1-20260712` | Completed record | Selected-security chart now uses stored OHLCV payload with hover tooltip, dotted guides, range slider, pan controls, and line/candle mode. |
 | `institutional-portfolios-holding-chart-refresh-v1-20260712` | Completed record | Selected-security chart can resolve stored DB prices through safe CUSIP-symbol mapping and trigger bounded OHLCV collection when missing. |
 | `institutional-portfolios-live-sec13f-v1-20260709` | Completed record | SEC official 13F live data path, refresh status, watchlist rail, secondary refresh action, conservative CUSIP-symbol enrichment, docs, and Browser QA. |

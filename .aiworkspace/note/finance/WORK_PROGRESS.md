@@ -23,13 +23,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-interactive-security-chart-v1-20260712](./tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
+  - Latest completed task is [institutional-portfolios-portfolio-security-ia-v1-20260712](./tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
 
+- Institutional Portfolios Portfolio / Security IA V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/`에서 React workbench tab IA를 `포트폴리오`와 `종목 분석` 그룹으로 나눴다.
+  - `요약 / 전체 보유`는 manager portfolio view로, `종목 상세 / 기관 보유 랭킹`은 ticker / security analysis view로 읽히게 했다.
+  - 기존 보유 기관 조회 기능은 `종목 상세` 안의 보유 기관 리스트로 유지했고, DB / ingestion / provider / trading boundary는 변경하지 않았다.
 - Institutional Portfolios Interactive Security Chart V1 2026-07-12:
   - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/`에서 보유기관조회 선택 종목 차트를 stored OHLCV 기반 interactive chart로 개선했다.
   - 라인 / 캔들 toggle, hover tooltip, crosshair, high-low dotted guides, range slider, pan controls를 추가했고, UI external fetch / 추천 / live trading 경계는 그대로 유지했다.

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-interactive-security-chart-v1-20260712](./tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
+  - Latest completed task is [institutional-portfolios-portfolio-security-ia-v1-20260712](./tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-12 - Institutional Portfolios tabs must separate portfolio context from ticker context
+
+- User request: 사용자가 `요약 / 전체 보유`는 기관 포트폴리오 탭이지만 `보유 기관 조회 / 기관 보유 랭킹`은 티커 / 기업 카테고리라 같은 1차 탭에 있는 것이 어색하다고 지적함.
+- Interpreted goal: 기능을 늘리기보다 IA를 정리해 사용자가 현재 `기관 포트폴리오`를 보고 있는지, `종목 분석`을 보고 있는지 바로 알게 해야 한다.
+- Analysis result: 1차 tab bar는 `포트폴리오` 그룹과 `종목 분석` 그룹으로 분리하는 것이 맞다. 기존 `보유 기관 조회`는 별도 1차 탭 이름이 아니라 `종목 상세` 안의 holder list로 흡수하고, `기관 보유 랭킹`은 종목 분석의 보조 탐색 탭으로 둔다.
+- Follow-up: `institutional-portfolios-portfolio-security-ia-v1-20260712`에서 React tab IA, copy, CSS, source contract tests, Browser QA를 완료했다. true holding-duration metric, DB schema, provider, trading semantics는 추가하지 않았다.
 
 ### 2026-07-12 - Institutional Portfolios selected-security chart should be interactive but still DB-backed
 
