@@ -12769,6 +12769,47 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("decision_id", model)
         self.assertNotIn("storage", model)
 
+    def test_final_review_decision_action_is_read_only_until_legacy_data_is_revalidated(self) -> None:
+        from app.services.backtest_evidence_read_model import SELECT_FOR_PRACTICAL_PORTFOLIO
+        from app.web.backtest_final_review.page import _build_final_review_decision_action_model
+
+        model = _build_final_review_decision_action_model(
+            cockpit={
+                "verdict": "과거 검토 근거입니다.",
+                "state_label": "모니터링 후보 가능",
+                "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+            },
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet={
+                "route": "INVESTABILITY_PACKET_READY",
+                "select_ready": True,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                    "blockers": [],
+                    "review_required": [],
+                },
+                "gate_policy_snapshot": {
+                    "suggested_decision_route": SELECT_FOR_PRACTICAL_PORTFOLIO,
+                },
+            },
+            decision_id="final-legacy-id",
+            existing_decision_ids=set(),
+            data_enrichment_action={
+                "available": True,
+                "mode": "legacy_recovery",
+                "next_step": "Flow 2 재검증과 새 결과 저장이 필요합니다.",
+            },
+        )
+
+        self.assertEqual(model["status_label"], "2단계 재검증 필요")
+        self.assertEqual(model["suggested_route"], "RE_REVIEW_REQUIRED")
+        self.assertTrue(all(not option["recordable"] for option in model["options"]))
+        self.assertTrue(
+            all("2단계" in option["disabled_reason"] for option in model["options"])
+        )
+
     def test_final_review_decision_intent_appends_once_in_python(self) -> None:
         import app.web.backtest_final_review.page as final_review_page
         from app.services.backtest_evidence_read_model import SELECT_FOR_PRACTICAL_PORTFOLIO
@@ -28061,6 +28102,64 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(all("Evidence Packet" not in card["detail"] for card in interpretation_cards))
         self.assertTrue(all("Evidence Quality Score" not in card["detail"] for card in interpretation_cards))
         self.assertTrue(all("monthly_or_rebalance_review" not in card["detail"] for card in interpretation_cards))
+
+    def test_final_review_legacy_recovery_report_is_read_only_and_does_not_claim_monitoring_readiness(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import (
+            build_final_review_investment_report,
+            build_investability_evidence_packet,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["provider_coverage"] = {
+            "symbols": ["TLT"],
+            "symbol_weights": {"TLT": 1.0},
+            "coverage": {
+                "operability": {
+                    "missing_symbols": [],
+                    "provenance": {"stale_symbols": ["TLT"]},
+                },
+                "holdings": {"missing_symbols": []},
+                "exposure": {"missing_symbols": []},
+                "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+            },
+        }
+        source = {
+            "source_type": "practical_validation_result",
+            "source_id": validation["validation_id"],
+            "source_title": "Legacy recovery candidate",
+        }
+        paper = {"route": "PAPER_OBSERVATION_READY", "blockers": []}
+        evidence = {"route": "READY_FOR_FINAL_DECISION", "blockers": []}
+        packet = build_investability_evidence_packet(
+            source=source,
+            validation=validation,
+            paper_observation=paper,
+            decision_evidence=evidence,
+        )
+
+        with patch.object(
+            practical_service,
+            "load_etf_provider_source_map",
+            return_value=[
+                {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"}
+            ],
+        ):
+            report = build_final_review_investment_report(
+                source=source,
+                validation=validation,
+                paper_observation=paper,
+                decision_evidence=evidence,
+                investability_packet=packet,
+            )
+
+        self.assertEqual(report["recommendation"]["state"], "RECHECK_REQUIRED")
+        self.assertEqual(report["recommendation"]["state_label"], "2단계 재검증 필요")
+        self.assertFalse(report["recommendation"]["monitoring_candidate"])
+        self.assertEqual(report["recommendation"]["monitoring_handoff_state"], "blocked")
+        self.assertFalse(report["monitoring_conditions"]["handoff_ready"])
+        self.assertIn("최신 보강", report["decision_summary"]["headline"])
+        self.assertIn("과거 근거", report["summary"]["verdict"])
 
     def test_final_review_investment_report_prioritizes_monitoring_decision_summary(self) -> None:
         from app.services.backtest_evidence_read_model import (

@@ -3676,10 +3676,39 @@ def build_final_review_investment_report(
     monitoring = dict(cockpit.get("monitoring_handoff") or {})
     weaknesses = _report_weaknesses(cockpit)
     level2_review_disposition = build_final_review_level2_review_disposition(validation=validation)
+    data_enrichment_action = dict(level2_review_disposition.get("data_enrichment_action") or {})
+    recovery_required = bool(data_enrichment_action.get("available"))
     scorecard = build_final_review_scorecard(
         investability_packet=packet,
         level2_review_disposition=level2_review_disposition,
     )
+    if recovery_required:
+        # Legacy/stale reports remain inspectable, but current selection readiness must
+        # never be inferred from evidence that predates the pre-Final enrichment gate.
+        scorecard = dict(scorecard)
+        scorecard.update(
+            {
+                "classification": "RECHECK_REQUIRED",
+                "classification_label": "최신 보강 후 재검토",
+                "decision_route": "RE_REVIEW_REQUIRED",
+                "decision_label": _decision_route_label("RE_REVIEW_REQUIRED"),
+                "monitoring_candidate": False,
+            }
+        )
+        scorecard["route_constraints"] = [
+            *list(scorecard.get("route_constraints") or []),
+            {
+                "key": "pre_final_data_enrichment_recheck",
+                "label": "2단계 데이터 보강 후 재검증",
+                "detail": _safe_text(
+                    data_enrichment_action.get("next_step"),
+                    "Practical Validation에서 데이터를 보강하고 새 검증 결과를 저장합니다.",
+                ),
+                "tone": "warning",
+            },
+        ]
+        state = "RECHECK_REQUIRED"
+        tone = "warning"
     strengths = _report_strengths(cockpit, packet, scorecard)
     suggested_route = str(scorecard.get("decision_route") or suggested_route)
     decision_record_guide = build_final_review_decision_record_guide(
@@ -3736,7 +3765,9 @@ def build_final_review_investment_report(
         investability_packet=packet,
     )
     score_value = round(float(scorecard.get("overall_score") or 0.0) / 10.0, 1)
-    if state == "SELECT_READY":
+    if recovery_required:
+        headline = "최신 필수 데이터를 보강한 뒤 다시 확인해야 하는 과거 검토서입니다."
+    elif state == "SELECT_READY":
         headline = "모니터링 후보로 올릴 수 있는 Final Review 근거입니다."
     elif state == "SELECT_BLOCKED":
         headline = "Monitoring handoff 전에 반드시 해소해야 할 차단 항목이 있습니다."
@@ -3756,10 +3787,10 @@ def build_final_review_investment_report(
             "classification": scorecard.get("classification"),
             "classification_label": scorecard.get("classification_label"),
             "state": state,
-            "state_label": cockpit.get("state_label") or "-",
+            "state_label": "2단계 재검증 필요" if recovery_required else cockpit.get("state_label") or "-",
             "tone": tone,
             "monitoring_candidate": bool(scorecard.get("monitoring_candidate")),
-            "monitoring_handoff_state": "ready" if cockpit.get("select_allowed") else "blocked",
+            "monitoring_handoff_state": "blocked" if recovery_required else "ready" if cockpit.get("select_allowed") else "blocked",
         },
         "score": {
             "value": score_value,
@@ -3787,8 +3818,16 @@ def build_final_review_investment_report(
         "weakness_improvement": weakness_improvement,
         "summary": {
             "headline": headline,
-            "verdict": cockpit.get("verdict") or packet.get("verdict") or "-",
-            "next_action": cockpit.get("next_action") or packet.get("next_action") or "-",
+            "verdict": (
+                "이 점수와 판단 근거는 과거 근거를 설명하기 위한 열람용입니다. 최신 보강과 재검증 전에는 새 최종판단을 기록하지 않습니다."
+                if recovery_required
+                else cockpit.get("verdict") or packet.get("verdict") or "-"
+            ),
+            "next_action": (
+                _safe_text(data_enrichment_action.get("next_step"), "2단계에서 데이터 보강 후 다시 검증합니다.")
+                if recovery_required
+                else cockpit.get("next_action") or packet.get("next_action") or "-"
+            ),
             "strongest_evidence": strengths[0]["title"] if strengths else "근거 확인 필요",
             "weakest_constraint": weaknesses[0]["title"] if weaknesses else "현재 선택 차단 약점 없음",
         },
@@ -3837,7 +3876,7 @@ def build_final_review_investment_report(
         },
         "level2_review_disposition": level2_review_disposition,
         "monitoring_conditions": {
-            "handoff_ready": bool(cockpit.get("select_allowed")),
+            "handoff_ready": bool(cockpit.get("select_allowed")) and not recovery_required,
             "tracking_benchmark": monitoring.get("tracking_benchmark") or "-",
             "review_cadence": monitoring.get("review_cadence") or "-",
             "review_triggers": list(monitoring.get("review_triggers") or []),

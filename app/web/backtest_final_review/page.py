@@ -86,6 +86,7 @@ def _build_final_review_decision_action_model(
     investability_packet: dict[str, Any],
     decision_id: str,
     existing_decision_ids: set[str],
+    data_enrichment_action: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the display-only route choices used by the React decision intent form."""
 
@@ -100,6 +101,15 @@ def _build_final_review_decision_action_model(
     if suggested_route not in route_options:
         route_options.append(suggested_route)
 
+    recovery_action = dict(data_enrichment_action or {})
+    recovery_required = bool(recovery_action.get("available"))
+    recovery_next_step = str(
+        recovery_action.get("next_step")
+        or "Flow 2 재검증 결과를 새로 저장해야 합니다."
+    )
+    recovery_reason = f"2단계 데이터 보강 후 재검증이 필요합니다. {recovery_next_step}"
+    if recovery_required:
+        suggested_route = "RE_REVIEW_REQUIRED"
     options: list[dict[str, Any]] = []
     for route in route_options:
         guide = build_final_review_decision_record_guide(
@@ -116,7 +126,11 @@ def _build_final_review_decision_action_model(
             operator_reason="preview reason",
             existing_decision_ids=existing_decision_ids,
         )
-        disabled_reason = " · ".join(str(item) for item in list(preview.get("blockers") or []))
+        disabled_reason = (
+            recovery_reason
+            if recovery_required
+            else " · ".join(str(item) for item in list(preview.get("blockers") or []))
+        )
         reason_placeholder = str(templates.get("reason") or "왜 이 판단을 선택했는지 직접 작성합니다.")
         if route == SELECT_FOR_PRACTICAL_PORTFOLIO and not bool(preview.get("can_save")):
             reason_placeholder = "현재 blocker가 남아 있어 Monitoring 후보로 선정할 수 없습니다. 다른 판단을 선택하거나 근거를 보강합니다."
@@ -126,7 +140,7 @@ def _build_final_review_decision_action_model(
                 "label": FINAL_REVIEW_DECISION_LABELS.get(route, route),
                 "description": FINAL_REVIEW_ROUTE_DESCRIPTIONS.get(route, "최종 판단 기록으로 저장합니다."),
                 "tone": _FINAL_REVIEW_ROUTE_TONES.get(route, "neutral"),
-                "recordable": bool(preview.get("can_save")),
+                "recordable": bool(preview.get("can_save")) and not recovery_required,
                 "disabled_reason": disabled_reason,
                 "reason_placeholder": reason_placeholder,
                 "button_label": _FINAL_REVIEW_ROUTE_BUTTON_LABELS.get(route, "최종 판단 저장"),
@@ -134,9 +148,21 @@ def _build_final_review_decision_action_model(
         )
 
     return {
-        "title": "이 후보를 Monitoring 대상으로 기록할까요?",
-        "detail": str(cockpit.get("verdict") or "투자 검토서의 총평과 핵심 해석을 바탕으로 최종 판단을 기록합니다."),
-        "status_label": str(cockpit.get("state_label") or "판단 확인"),
+        "title": (
+            "2단계 재검증 후 최종 판단을 기록합니다"
+            if recovery_required
+            else "이 후보를 Monitoring 대상으로 기록할까요?"
+        ),
+        "detail": (
+            recovery_reason
+            if recovery_required
+            else str(cockpit.get("verdict") or "투자 검토서의 총평과 핵심 해석을 바탕으로 최종 판단을 기록합니다.")
+        ),
+        "status_label": (
+            "2단계 재검증 필요"
+            if recovery_required
+            else str(cockpit.get("state_label") or "판단 확인")
+        ),
         "suggested_route": suggested_route,
         "suggested_label": FINAL_REVIEW_DECISION_LABELS.get(suggested_route, suggested_route),
         "reason_label": "판단 사유",
@@ -772,6 +798,10 @@ def render_final_review_workspace() -> None:
         investability_packet=investability_packet,
         decision_id=decision_id,
         existing_decision_ids=existing_decision_ids,
+        data_enrichment_action=dict(
+            dict(investment_report.get("level2_review_disposition") or {}).get("data_enrichment_action")
+            or {}
+        ),
     )
     decision_intent = _render_investment_report(
         investment_report,
