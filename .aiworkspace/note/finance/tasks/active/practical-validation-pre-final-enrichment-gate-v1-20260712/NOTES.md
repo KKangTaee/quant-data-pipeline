@@ -11,3 +11,9 @@
 - 승격 blocker는 공식·검증된 operability source, 검증된 holdings/exposure source, 필요한 macro collector처럼 실제 해결 가능성이 확인된 plan만 사용한다.
 - source map discovery와 bridge-only target은 실행 가능성 탐색 단계이므로 v1의 강제 blocker에서 제외한다.
 - 기존 module 판정은 보존하고 wrapper가 synthetic `pre_final_data_enrichment` NEEDS_INPUT blocker를 합성한다.
+
+## 2026-07-12 Practical Validation Completion Flow
+
+- Flow 3은 pre-final enrichment blocker를 일반 `보강 필요`와 구분해 `데이터 보강 후 재검증 필요`로 표시한다.
+- Flow 4의 필수 보강 action은 기존 Python collector만 실행하고, 완료 즉시 해당 source의 current replay state를 초기화한다.
+- 수집 결과는 검증 결과가 아니므로 사용자가 Flow 2 재검증을 완료하기 전에는 Final Review 이동이 계속 비활성화된다.

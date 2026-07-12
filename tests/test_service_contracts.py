@@ -2861,6 +2861,44 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertFalse(blocked_action["side_effects"]["react_executes_storage"])
         self.assertTrue(blocked_action["side_effects"]["python_executes_storage"])
 
+        enrichment_workspace = build_practical_validation_workspace(
+            {
+                "validation_modules": [
+                    {
+                        "module_id": "pre_final_data_enrichment",
+                        "label": "승격 전 필수 데이터 보강",
+                        "status": "NEEDS_INPUT",
+                        "requirement": "REQUIRED",
+                        "stage_owner": "practical_validation",
+                        "applies": True,
+                    }
+                ],
+                "final_review_gate": {
+                    "route": "BLOCKED_FOR_FINAL_REVIEW",
+                    "can_save_and_move": False,
+                    "blocking_modules": [
+                        {
+                            "module_id": "pre_final_data_enrichment",
+                            "label": "승격 전 필수 데이터 보강",
+                            "status": "NEEDS_INPUT",
+                        }
+                    ],
+                    "review_modules": [],
+                    "pre_final_enrichment_gate": {
+                        "required": True,
+                        "blocking": True,
+                        "item_count": 1,
+                        "symbol_count": 1,
+                    },
+                },
+            }
+        )
+        enrichment_action = enrichment_workspace["next_stage_action"]
+        self.assertFalse(enrichment_action["primary_action"]["enabled"])
+        self.assertEqual(enrichment_action["status_label"], "데이터 보강 후 재검증 필요")
+        self.assertIn("필수 데이터 보강", enrichment_action["disabled_reason"])
+        self.assertIn("Flow 2", enrichment_action["disabled_reason"])
+
         ready_workspace = build_practical_validation_workspace(
             {
                 "validation_modules": [
@@ -13669,13 +13707,17 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertTrue(data_action_wrapper.exists())
         self.assertIn('title="데이터 보강 / 수집 실행"', page_source)
         self.assertNotIn('title="Provider 보강 액션"', provider_gap_body)
-        self.assertIn('title="수집 실행"', provider_gap_body)
+        self.assertIn('else "수집 실행"', provider_gap_body)
         self.assertIn("수집하는 것", provider_gap_body)
         self.assertIn("하지 않는 것", provider_gap_body)
         self.assertIn("실행 후 다음 단계", provider_gap_body)
         self.assertIn("백테스트 재실행", provider_gap_body)
         self.assertIn("Final Review 판단", provider_gap_body)
         self.assertIn("Flow 2 재검증", provider_gap_body)
+        self.assertIn("필수 데이터 보강", provider_gap_body)
+        self.assertIn("필수 외부 데이터 보강 실행", provider_gap_body)
+        self.assertIn("_clear_practical_validation_replay_state", provider_gap_body)
+        self.assertIn("재검증 전에는 Final Review로 이동할 수 없습니다", provider_gap_body)
         self.assertNotIn('st.expander("보강 작업 상세 테이블"', provider_gap_body)
         self.assertIn("보강 작업 상세 / 수집 원자료", evidence_body)
         self.assertNotIn("_render_stage_ownership_inventory(validation_result)", flow4_body)

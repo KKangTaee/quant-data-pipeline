@@ -1152,6 +1152,8 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         return False
 
     plan = build_provider_gap_collection_plan(validation_result)
+    enrichment_gate = dict(validation_result.get("pre_final_enrichment_gate") or {})
+    enrichment_required = bool(enrichment_gate.get("blocking"))
     actionable_rows = [row for row in gap_rows if str(row.get("Action") or "") != "조치 없음"]
     collectable_count = sum(
         len(plan[key])
@@ -1165,8 +1167,12 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
     ) + (1 if plan.get("macro") else 0)
     render_pv_section_header(
         eyebrow="Action center",
-        title="수집 실행",
-        detail="위 데이터 보강 대상 중 기존 Python 수집 경계로 처리 가능한 운용사 / 공식 외부 데이터 근거만 실행합니다.",
+        title="필수 데이터 보강" if enrichment_required else "수집 실행",
+        detail=(
+            "Final Review 이동 전에 해결할 수 있는 필수 외부 데이터를 보강합니다. 수집 후 Flow 2 재검증이 필요합니다."
+            if enrichment_required
+            else "위 데이터 보강 대상 중 기존 Python 수집 경계로 처리 가능한 운용사 / 공식 외부 데이터 근거만 실행합니다."
+        ),
         tone="warning" if actionable_rows else "positive",
     )
     render_pv_card_grid(
@@ -1189,7 +1195,10 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
                 "kicker": "Next",
                 "title": "실행 후 다음 단계",
                 "status": "Flow 2 재검증",
-                "detail": "수집이 끝나면 Flow 2에서 전략 재검증을 다시 실행해 보강된 DB 근거를 검증 결과에 반영합니다.",
+                "detail": (
+                    "수집이 끝나면 기존 replay가 초기화됩니다. Flow 2에서 전략 재검증을 다시 실행해야 하며, "
+                    "재검증 전에는 Final Review로 이동할 수 없습니다."
+                ),
                 "tone": "positive" if collectable_count else "neutral",
             },
         ],
@@ -1241,10 +1250,16 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
         st.info("현재 버튼으로 수집 가능한 외부 데이터 gap은 없습니다. 남은 부족 ETF는 connector source mapping 추가가 필요합니다.")
         return True
 
-    if st.button("부족한 외부 데이터 일괄 수집 / 보강", key=f"{result_key}_run", width="stretch"):
+    button_label = "필수 외부 데이터 보강 실행" if enrichment_required else "부족한 외부 데이터 일괄 수집 / 보강"
+    if st.button(button_label, key=f"{result_key}_run", width="stretch"):
         with st.spinner("현재 source에 필요한 외부 데이터 근거를 수집 / 보강 중입니다...", show_time=True):
             results = run_provider_gap_collection(validation_result)
         st.session_state[result_key] = results
+        _clear_practical_validation_replay_state(str(validation_result.get("selection_source_id") or ""))
+        st.session_state.backtest_practical_validation_notice = (
+            f"외부 데이터 보강 작업 {len(results)}개를 실행했습니다. "
+            "기존 재검증 결과를 초기화했으므로 Flow 2에서 전략 재검증을 다시 실행하세요."
+        )
         st.rerun()
     return True
 

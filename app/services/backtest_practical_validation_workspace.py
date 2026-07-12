@@ -1663,13 +1663,19 @@ def _fix_queue(
 def _next_stage_action(gate: dict[str, Any], *, blocker_count: int, caution_count: int = 0) -> dict[str, Any]:
     can_save_and_move = bool(gate.get("can_save_and_move"))
     route = str(gate.get("route") or "").strip().upper()
+    enrichment_gate = dict(gate.get("pre_final_enrichment_gate") or {})
+    requires_enrichment = bool(enrichment_gate.get("blocking"))
     ready_with_review = can_save_and_move and (
         route == "READY_WITH_REVIEW" or bool(gate.get("review_modules")) or int(caution_count or 0) > 0
     )
     disabled_reason = (
         ""
         if can_save_and_move
-        else "Flow4에서 보강 항목을 확인하고 Flow2 재검증을 다시 실행한 뒤 Final Review로 이동할 수 있습니다."
+        else (
+            "Flow4의 필수 데이터 보강을 실행하고 Flow 2 재검증을 다시 완료해야 Final Review로 이동할 수 있습니다."
+            if requires_enrichment
+            else "Flow4에서 보강 항목을 확인하고 Flow2 재검증을 다시 실행한 뒤 Final Review로 이동할 수 있습니다."
+        )
     )
     if ready_with_review:
         status_label = "주의 포함 이동 가능"
@@ -1680,6 +1686,9 @@ def _next_stage_action(gate: dict[str, Any], *, blocker_count: int, caution_coun
     elif can_save_and_move:
         status_label = "이동 가능"
         primary_detail = "검증 결과를 저장하고 Final Review에서 수익성, 벤치마크, 후보 비교, 모니터링 후보 선정 판단을 이어갑니다."
+    elif requires_enrichment:
+        status_label = "데이터 보강 후 재검증 필요"
+        primary_detail = disabled_reason
     else:
         status_label = "보강 필요"
         primary_detail = disabled_reason
