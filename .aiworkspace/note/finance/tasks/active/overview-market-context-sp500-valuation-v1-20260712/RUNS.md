@@ -40,3 +40,13 @@ Last Updated: 2026-07-12
 - `.venv/bin/python -m unittest tests.test_sp500_valuation`: 14 tests passed.
 - `.venv/bin/python -m py_compile app/services/overview/sp500_valuation.py finance/loaders/sp500_valuation.py`: passed.
 - `git diff --check`: passed.
+
+## 4차 Verification
+
+- New React scaffold contract failed before component creation as expected.
+- `npm install`: 0 vulnerabilities.
+- `npx tsc --noEmit`: passed after declaring React type dependencies and explicit Streamlit callback boundary types.
+- `npm run build`: Vite production build passed; compiled assets generated under `component_static/`.
+- `.venv/bin/python -m unittest tests.test_service_contracts -k market_context`: 31 tests passed.
+- Focused entrypoint/component plus valuation suite: 17 tests passed.
+- Python compile for Market Context entrypoint/helpers/component wrapper: passed.

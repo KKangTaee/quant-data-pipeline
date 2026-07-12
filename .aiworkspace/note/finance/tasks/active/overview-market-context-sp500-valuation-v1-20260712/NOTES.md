@@ -56,3 +56,11 @@ This supports 5y as the primary window and 3y as regime sensitivity, not the mai
 - SPY equivalents are proportional convenience values only and are omitted when SPX/SPY EOD dates differ.
 - SEP older than 180 days relative to the SPX as-of date is marked `STALE_SEP` and blocks the index scenario.
 - Mixed or non-actual EPS never enters the calculation; the read model returns Korean blocking reasons.
+
+## 4차 Implementation Decisions
+
+- The Market Context entrypoint owns only header + valuation render calls; old cockpit and refresh functions are no longer visible.
+- React is presentation-only and receives a JSON-safe Python read model; no provider fetch or valuation formula runs in TypeScript.
+- Both charts use responsive SVG and introduce no chart dependency.
+- The main screen prioritizes valuation questions and evidence; source/method limitations are collapsed in a secondary disclosure.
+- A compact Streamlit fallback exists only when the compiled React asset is unavailable.

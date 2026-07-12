@@ -6666,9 +6666,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "forbidden": "_legacy._render_overview_market_context_tab",
                 "required": [
                     "render_market_context_header()",
-                    "load_market_context_cockpit_model()",
-                    "render_macro_context_cockpit(",
-                    "render_market_context_refresh_bar(",
+                    "render_market_context_valuation()",
                 ],
             },
             "app/web/overview/market_movers.py": {
@@ -6754,12 +6752,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("render_market_session_banner(", page_source)
         self.assertNotIn("_legacy.render_market_session_banner(", page_source)
 
-        self.assertIn(
-            "from app.web.overview.components.market_context import render_macro_context_cockpit",
-            market_context_source,
-        )
-        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", market_context_source)
-        self.assertNotIn("_legacy.render_macro_context_cockpit(", market_context_source)
+        self.assertIn("render_market_context_valuation", market_context_source)
+        self.assertNotIn("render_macro_context_cockpit", market_context_source)
+        self.assertNotIn("render_market_context_refresh_bar", market_context_source)
 
         self.assertIn("from app.web.overview.components.events import (", events_helper_source)
         self.assertIn("render_events_summary_strip(", events_helper_source)
@@ -7076,19 +7071,31 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("legacy_dashboard", source)
         self.assertNotIn("_legacy.", source)
 
-        for function_name in (
-            "render_market_context_header",
-            "render_market_context_refresh_reflection",
-            "load_market_context_cockpit_model",
-            "render_market_context_refresh_bar",
-        ):
+        for function_name in ("render_market_context_header", "render_market_context_valuation"):
             self.assertIn(f"def {function_name}", helper_source)
 
         self.assertNotIn("legacy_dashboard", helper_source)
         self.assertNotIn("_legacy.", helper_source)
-        self.assertIn("load_overview_macro_context_cockpit(", helper_source)
-        self.assertIn("run_overview_market_context_refresh_smart(", helper_source)
-        self.assertIn("run_overview_market_context_refresh_all(", helper_source)
+        self.assertIn("build_sp500_valuation_read_model", helper_source)
+        self.assertIn("render_market_context_valuation_component", helper_source)
+
+    def test_market_context_entrypoint_uses_only_valuation_surface(self) -> None:
+        source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
+
+        self.assertIn("render_market_context_valuation()", source)
+        self.assertNotIn("render_macro_context_cockpit", source)
+        self.assertNotIn("render_market_context_refresh_bar", source)
+        self.assertNotIn("render_market_context_refresh_reflection", source)
+
+    def test_market_context_valuation_react_scaffold_exists(self) -> None:
+        root = Path("app/web/streamlit_components/market_context_valuation")
+        component = root / "src" / "MarketContextValuation.tsx"
+
+        self.assertTrue(component.exists())
+        source = component.read_text(encoding="utf-8")
+        self.assertIn("최근 5년 멀티플 구간", source)
+        self.assertIn("FOMC 예상 실적 기반", source)
+        self.assertIn("<svg", source)
 
     def test_overview_events_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
@@ -8268,34 +8275,28 @@ class OverviewAutomationContractTests(unittest.TestCase):
             render_body.index("_render_selected_overview_tab("),
         )
 
-    def test_overview_dashboard_renders_macro_context_cockpit_inside_market_context_tab(self) -> None:
+    def test_overview_dashboard_renders_valuation_inside_market_context_tab(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
         helper_body = source[source.index("def render_market_context_tab"):]
 
-        self.assertIn("cockpit_model = load_market_context_cockpit_model()", helper_body)
-        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
-        self.assertIn("render_market_context_refresh_bar(cockpit_model)", helper_body)
-        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        refresh_index = helper_body.index("render_market_context_refresh_bar(cockpit_model)")
-        self.assertLess(cockpit_index, refresh_index)
-        self.assertIn("load_market_context_cockpit_model", helper_body)
-        self.assertIn("render_macro_context_cockpit", helper_body)
-        self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
-        self.assertNotIn("render_macro_context_reading_flow(", helper_body)
-        self.assertNotIn("_render_overview_historical_analog_repair_action(", helper_body)
-        self.assertNotIn("render_overview_ia_closeout_guide(load_overview_ia_closeout_model())", helper_body)
+        self.assertIn("render_market_context_header()", helper_body)
+        self.assertIn("render_market_context_valuation()", helper_body)
+        self.assertNotIn("render_macro_context_cockpit", helper_body)
+        self.assertNotIn("render_market_context_refresh_bar", helper_body)
+        self.assertNotIn("render_market_context_refresh_reflection", helper_body)
         self.assertNotIn("legacy_dashboard", helper_source)
         self.assertNotIn("_legacy.", helper_source)
-        self.assertIn("load_overview_macro_context_cockpit(", helper_source)
-        self.assertIn("run_overview_market_context_refresh_smart(", helper_source)
+        self.assertIn("load_sp500_valuation_model", helper_source)
+        self.assertIn("render_market_context_valuation_component", helper_source)
 
     def test_overview_dashboard_keeps_deep_tab_guide_out_of_market_context_brief(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_body = source[source.index("def render_market_context_tab"):]
 
-        self.assertIn("cockpit_model = load_market_context_cockpit_model()", helper_body)
-        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertIn("render_market_context_valuation()", helper_body)
+        self.assertNotIn("render_macro_context_cockpit", helper_body)
+        self.assertNotIn("render_market_context_refresh_bar", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("load_overview_ia_closeout_model", helper_body)
@@ -8758,13 +8759,12 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_body = helper_body[helper_body.index("def render_market_context_tab"):]
 
-        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertIn("render_market_context_valuation()", helper_body)
         self.assertNotIn("_legacy._render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
-        cockpit_index = helper_body.index("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)")
-        refresh_bar_index = helper_body.index("render_market_context_refresh_bar(cockpit_model)")
-        self.assertLess(cockpit_index, refresh_bar_index)
+        self.assertNotIn("render_macro_context_cockpit", helper_body)
+        self.assertNotIn("render_market_context_refresh_bar", helper_body)
 
     def test_overview_market_context_keeps_historical_analog_controls_available_but_not_rendered(self) -> None:
         source = Path("app/web/overview/components/market_context.py").read_text(encoding="utf-8")
@@ -8781,7 +8781,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("pattern_window=str(initial_analog_controls", helper_body)
         self.assertNotIn("as_of_date=analog_controls", helper_body)
         self.assertNotIn("pattern_window=str(analog_controls", helper_body)
-        self.assertIn("render_macro_context_cockpit(cockpit_model, include_reading_flow=False)", helper_body)
+        self.assertIn("render_market_context_valuation()", helper_body)
+        self.assertNotIn("render_macro_context_cockpit", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
 
     def test_overview_market_context_historical_analog_can_reuse_visible_sector_snapshot(self) -> None:
@@ -9617,47 +9618,20 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("color: inherit;", value_block)
 
     def test_overview_market_context_copy_uses_korean_summary_first_language(self) -> None:
-        import inspect
+        dashboard_source = Path("app/web/overview/market_context_helpers.py").read_text(encoding="utf-8")
+        component_source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text(encoding="utf-8")
 
-        from app.web.overview import market_context, market_context_helpers
-        from app.web import overview_ui_components
-
-        dashboard_source = "\n".join(
-            [
-                inspect.getsource(market_context),
-                inspect.getsource(market_context_helpers),
-            ]
-        )
-        component_source = "\n".join(
-            [
-                inspect.getsource(overview_ui_components.render_macro_context_cockpit),
-                inspect.getsource(overview_ui_components._macro_context_cockpit_html),
-                inspect.getsource(overview_ui_components._macro_cockpit_brief_rows_html),
-                inspect.getsource(overview_ui_components._macro_cockpit_next_checks_html),
-                inspect.getsource(overview_ui_components._macro_cockpit_interpretation_cues_html),
-                inspect.getsource(overview_ui_components._macro_cockpit_row_meta_html),
-                inspect.getsource(overview_ui_components._macro_cockpit_source_confidence_html),
-            ]
-        )
-
-        self.assertIn("시장 맥락", dashboard_source)
-        self.assertIn("저장된 시장 자료로 현재 세션의 움직임, 확산, 이벤트 배경을 빠르게 확인합니다.", dashboard_source)
-        self.assertIn("필요 자료 보강", dashboard_source)
-        self.assertNotIn("보조 갱신", dashboard_source)
-        self.assertIn("오늘의 시장 맥락", component_source)
-        self.assertIn("시장 브리프", component_source)
-        self.assertNotIn("브리프 신뢰도", component_source)
-        self.assertNotIn("맥락 검토 결과", component_source)
-        self.assertIn("자료 영역", component_source)
-        self.assertNotIn("핵심 요약", component_source)
-        self.assertNotIn("해석 전 확인", component_source)
-        self.assertNotIn("해석할 때 같이 볼 변수", component_source)
-        self.assertNotIn("다음 확인 순서", component_source)
-        self.assertNotIn("확인 위치", component_source)
-        self.assertNotIn("Overview Macro Context", component_source)
-        self.assertNotIn("다음에 볼 Deep Tab", component_source)
-        self.assertNotIn("Source Confidence / 출처 신뢰도", component_source)
-        self.assertNotIn("Freshness: ", component_source)
+        self.assertIn("S&P 500의 최근 멀티플 위치와 FOMC 기반 예상 실적", dashboard_source)
+        self.assertIn("최근 5년 멀티플 구간", component_source)
+        self.assertIn("FOMC 예상 실적 기반 지수 시나리오", component_source)
+        self.assertIn("산식·자료 출처·한계 보기", component_source)
+        self.assertNotIn("오늘의 시장 맥락", component_source)
+        self.assertNotIn("시장 브리프", component_source)
+        self.assertNotIn("필요 자료 보강", component_source)
+        self.assertNotIn("매수", component_source)
+        self.assertNotIn("매도", component_source)
 
     def test_overview_ui_css_defines_ia_closeout_guide(self) -> None:
         from app.web.overview_ui_components import overview_ui_css

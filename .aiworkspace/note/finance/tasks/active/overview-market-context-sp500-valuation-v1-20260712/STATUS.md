@@ -1,6 +1,6 @@
 # Overview Market Context S&P 500 Valuation V1 Status
 
-Status: 3차 완료 / 4차 진행 대기
+Status: 4차 완료 / 5차 진행 대기
 Last Updated: 2026-07-12
 
 ## Current Progress
@@ -15,17 +15,19 @@ Last Updated: 2026-07-12
 - 2차 DB loaders and 60m/36m log(PER) valuation engine completed.
 - TTM actual EPS is derived only from the latest four distinct completed actual As-Reported quarters.
 - 3차 FOMC macro-implied EPS, SPX scenario band, same-date SPY conversion, and blocked-state read model completed.
+- 4차 Market Context entrypoint now renders only the React-first two-chart valuation surface.
+- Existing cockpit/refresh/brief/sector/event visible composition has been removed from the Market Context entrypoint.
 
 ## Current Stage
 
-전체 5차 중 3차까지 구현과 검증이 완료되었고 4차 React Market Context 교체로 이동한다.
+전체 5차 중 4차까지 구현과 검증이 완료되었고 5차 최신화 자동화·Browser QA·문서 동기화로 이동한다.
 
 ## Next Action
 
-1. Commit 3차 scenario/read-model unit.
-2. Remove old visible Market Context composition and add the two-chart React surface.
-3. Continue 5차 refresh automation, Browser QA, and durable documentation sync.
+1. Commit 4차 React UI replacement unit.
+2. Add valuation collection JobResult and scheduled refresh specs.
+3. Run Browser QA, attach one screenshot, sync durable documentation, and close the task.
 
 ## Remaining
 
-- 4차 React UI, 5차 automation/QA/docs.
+- 5차 automation/QA/docs.
