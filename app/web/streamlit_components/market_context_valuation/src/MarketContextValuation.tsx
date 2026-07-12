@@ -50,9 +50,12 @@ type ValuationPayload = {
   basis: {
     eps_basis?: string;
     spx?: { date?: string; price?: number };
+    qqq?: { date?: string; price?: number };
     official_window_months?: number;
     sensitivity_window_months?: number;
   };
+  instrument?: { id: string; label: string; proxy_symbol: string; price_label: string; multiple_label?: string; method_label?: string };
+  coverage?: { minimum_required_pct?: number; coverage_weight_pct?: number; unmapped_weight_pct?: number; holding_snapshot_date?: string; holding_snapshot_quality?: string; error_code?: string };
   multiple_regime: {
     status?: string; bucket?: string; current_pe?: number; current_z?: number;
     mean_multiple?: number; minus_2sigma?: number; minus_1sigma?: number;
@@ -74,7 +77,7 @@ type ValuationPayload = {
     limitation?: string;
   };
   index_scenario: {
-    status?: string; as_of?: string; current_spx?: number; spx_scenarios?: NumericMap;
+    status?: string; as_of?: string; current_spx?: number; current_price?: number; spx_scenarios?: NumericMap; price_scenarios?: NumericMap;
     gap_pct?: NumericMap; spy_status?: string; spy_equivalent?: NumericMap | null;
     current_vs_baseline_gap_pct?: number; valuation_position?: string;
     basis_dates?: { eps?: string; sep?: string; spx?: string }; basis_date_mismatch?: boolean;
@@ -86,12 +89,14 @@ type ValuationPayload = {
   limitations?: string[];
 };
 
-type Props = ComponentProps & { args: { payload?: ValuationPayload } };
+type CombinedPayload = { schema_version: string; default_instrument: string; instruments: Record<string, ValuationPayload> };
+type Props = ComponentProps & { args: { payload?: ValuationPayload | CombinedPayload } };
 const n = (value?: number, digits = 1) => value == null || !Number.isFinite(value) ? "-" : value.toLocaleString("ko-KR", { maximumFractionDigits: digits });
 const signed = (value?: number, digits = 1) => value == null || !Number.isFinite(value) ? "-" : `${value > 0 ? "+" : ""}${n(value, digits)}%`;
 const monthLabel = (value: string) => value.slice(0, 7).replace("-", ".");
 const bucketLabel: Record<string, string> = { LOW: "상대적 저평가", NEUTRAL: "중립 구간", HIGH: "상대적 고평가", EXTREME_HIGH: "매우 높은 구간" };
-const sourceQualityLabel: Record<string, string> = { official_actual: "공식 actual", interpolated_ttm_proxy: "보간 TTM 대체 기준" };
+const sourceQualityLabel: Record<string, string> = { official_actual: "공식 actual", interpolated_ttm_proxy: "보간 TTM 대체 기준", reconstructed_actual: "SEC actual 재구성" };
+const instrumentLabel: Record<string, string> = { sp500: "S&P 500", nasdaq100: "Nasdaq-100" };
 
 function pointerIndex(event: React.MouseEvent<SVGSVGElement>, count: number, left: number, width: number, viewWidth: number) {
   const rect = event.currentTarget.getBoundingClientRect();
@@ -162,8 +167,8 @@ function MultipleChart({ model }: { model: ValuationPayload["multiple_regime"] }
 }
 
 function ScenarioChart({ model }: { model: ValuationPayload["index_scenario"] }) {
-  const scenarios = model.spx_scenarios || {};
-  const lower = scenarios.lower, upper = scenarios.upper, baseline = scenarios.baseline, current = model.current_spx;
+  const scenarios = model.price_scenarios || model.spx_scenarios || {};
+  const lower = scenarios.lower, upper = scenarios.upper, baseline = scenarios.baseline, current = model.current_price ?? model.current_spx;
   if ([lower, upper, baseline, current].some((value) => value == null)) return <div className="empty">예상 EPS와 현재 SPX 근거가 갖춰지면 시나리오가 표시됩니다.</div>;
   const lo = Math.min(lower, current!) * .95, hi = Math.max(upper, current!) * 1.05, range = Math.max(1, hi - lo);
   const x = (value: number) => 72 + (value - lo) / range * 776;
@@ -221,30 +226,37 @@ function ScenarioHistoryChart({ historyOptions, fallbackHistory }: { historyOpti
 }
 
 function MarketContextValuation({ args }: Props) {
-  const payload = args.payload;
-  useEffect(() => { Streamlit.setFrameHeight(); window.setTimeout(() => Streamlit.setFrameHeight(), 160); }, [payload]);
+  const root = args.payload;
+  const combined = root && "instruments" in root ? root as CombinedPayload : null;
+  const [selectedInstrument, setSelectedInstrument] = useState(combined?.default_instrument || "sp500");
+  const payload = combined?.instruments[selectedInstrument] || root as ValuationPayload | undefined;
+  useEffect(() => { Streamlit.setFrameHeight(); window.setTimeout(() => Streamlit.setFrameHeight(), 160); }, [payload, selectedInstrument]);
   if (!payload) return null;
   const multiple = payload.multiple_regime || {}, earnings = payload.earnings_scenario || {}, index = payload.index_scenario || {};
+  const instrument = payload.instrument || { id: "sp500", label: "S&P 500", proxy_symbol: "SPX / SPY", price_label: "SPX 지수", multiple_label: "후행 PER", method_label: "지수 직접 기준" };
+  const priceBasis = payload.basis?.spx || payload.basis?.qqq;
   const baseline = earnings.baseline;
   const gap = index.current_vs_baseline_gap_pct;
   const gapLabel = index.valuation_position === "ABOVE_BASELINE" ? "기준 시나리오 대비 고평가" : index.valuation_position === "BELOW_BASELINE" ? "기준 시나리오 대비 저평가" : "기준 시나리오와 유사";
   return <main className="valuation-workbench" data-status={payload.status}>
-    <header className="valuation-header"><div><span className="eyebrow">S&amp;P 500 VALUATION</span><h2>멀티플과 예상 실적을 한 화면에서 비교</h2><p>과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다.</p></div><div className="basis"><span>기준일</span><strong>{payload.basis?.spx?.date || "-"}</strong><small>{payload.basis?.eps_basis || "As-Reported actual TTM"}</small></div></header>
+    {combined ? <nav className="instrument-selector" aria-label="가치평가 지수 선택">{Object.entries(combined.instruments).map(([key, model]) => <button key={key} type="button" aria-pressed={selectedInstrument === key} onClick={() => setSelectedInstrument(key)}><span>{model.instrument?.label || instrumentLabel[key] || key}</span><small>{model.instrument?.proxy_symbol}</small></button>)}</nav> : null}
+    <header className="valuation-header"><div><span className="eyebrow">{instrument.label.toUpperCase()} VALUATION</span><h2>멀티플과 예상 실적을 한 화면에서 비교</h2><p>과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다.</p></div><div className="basis"><span>기준일</span><strong>{priceBasis?.date || "-"}</strong><small>{instrument.method_label || payload.basis?.eps_basis || "As-Reported actual TTM"}</small></div></header>
+    {payload.status !== "READY" && instrument.id === "nasdaq100" ? <section className="coverage-block" aria-live="polite"><div><span>QQQ PROXY · COVERAGE GATE</span><h3>아직 가치평가 값을 확정하지 않습니다</h3><p>실제 희석 EPS로 설명되는 보유 비중이 승인 기준에 못 미쳐 멀티플과 시나리오를 숨겼습니다.</p></div><div className="coverage-meter"><span style={{ width: `${Math.min(100, payload.coverage?.coverage_weight_pct || 0)}%` }} /></div><div className="coverage-facts"><div><span>확인 coverage</span><strong>{n(payload.coverage?.coverage_weight_pct, 2)}%</strong></div><div><span>minimum_required_pct</span><strong>{n(payload.coverage?.minimum_required_pct, 0)}%</strong></div><div><span>미확인 비중</span><strong>{n(payload.coverage?.unmapped_weight_pct, 2)}%</strong></div><div><span>보유 기준일</span><strong>{payload.coverage?.holding_snapshot_date || "-"}</strong></div></div><p className="coverage-reason">{payload.coverage?.error_code || earnings.reason || "INSUFFICIENT_EARNINGS_COVERAGE"}</p></section> : <>
     <section className="valuation-section"><div className="section-head"><div><span>그래프 1</span><h3>최근 5년 멀티플 구간</h3><p>완결 월별 PER 분포와 최신 EPS를 유지한 잠정 PER</p></div><div className={`regime regime-${multiple.bucket || "blocked"}`}>{bucketLabel[multiple.bucket || ""] || "자료 확인 필요"}</div></div>
       <div className="metrics"><div><span>{multiple.current_is_provisional ? "현재 잠정 PER" : "현재 PER"}</span><strong>{n(multiple.current_pe, 2)}x</strong><small>최근 완결 {n(multiple.latest_complete_pe, 2)}x · {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}</small></div><div><span>5년 중심</span><strong>{n(multiple.mean_multiple, 2)}x</strong></div><div><span>현재 Z</span><strong>{n(multiple.current_z, 2)}</strong></div><div><span>3년 민감도</span><strong>{bucketLabel[multiple.sensitivity?.bucket || ""] || "-"}</strong></div></div>
-      <MultipleChart model={multiple}/><p className="basis-note">실선 완결 PER {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}까지 · 점선 잠정 PER {multiple.display_end?.slice(0, 7) || "-"}까지 · EPS 기준 {multiple.current_eps_basis_date || "-"} · 현재 SPX {multiple.current_price_basis_date || "-"}</p>{multiple.period_sensitive ? <p className="notice">3년과 5년 판정이 달라 기간 민감도가 큽니다.</p> : null}<p className="limitation">{multiple.limitation}</p>
+      <MultipleChart model={multiple}/><p className="basis-note">실선 완결 PER {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}까지 · 점선 잠정 PER {multiple.display_end?.slice(0, 7) || "-"}까지 · EPS 기준 {multiple.current_eps_basis_date || "-"} · 현재 {instrument.proxy_symbol} {multiple.current_price_basis_date || "-"}</p>{multiple.period_sensitive ? <p className="notice">3년과 5년 판정이 달라 기간 민감도가 큽니다.</p> : null}<p className="limitation">{multiple.limitation}</p>
     </section>
-    <section className="valuation-section"><div className="section-head"><div><span>그래프 2</span><h3>FOMC 예상 실적 기반 지수 시나리오 · 적정 SPX 구간</h3><p>현재 TTM EPS에 SEP 실질 GDP와 PCE 물가상승률을 합산 적용</p></div><div className="release"><span>SEP 발표</span><strong>{earnings.release_date || "-"}</strong></div></div>
+    <section className="valuation-section"><div className="section-head"><div><span>그래프 2</span><h3>FOMC 예상 실적 기반 지수 시나리오 · 적정 {instrument.proxy_symbol} 구간</h3><p>현재 TTM EPS에 SEP 실질 GDP와 PCE 물가상승률을 합산 적용</p></div><div className="release"><span>SEP 발표</span><strong>{earnings.release_date || "-"}</strong></div></div>
       <div className="source-row"><div><span>EPS 출처</span><strong>{earnings.eps_source || "Robert Shiller TTM EPS"}</strong><small>EPS 기준 {earnings.eps_basis_date || "-"}</small></div><span className={`source-badge quality-${earnings.eps_source_quality || "unknown"}`}>{sourceQualityLabel[earnings.eps_source_quality || ""] || "출처 확인 필요"}</span></div>
       {earnings.fallback_reason ? <p className="fallback-note">{earnings.fallback_reason}</p> : null}
       <div className="metrics metrics-five"><div><span>현재 TTM EPS</span><strong>{n(earnings.current_ttm_eps, 2)}</strong></div><div><span>적용 GDP</span><strong>{n(baseline?.real_gdp_pct, 1)}%</strong></div><div><span>적용 PCE</span><strong>{n(baseline?.pce_inflation_pct, 1)}%</strong></div><div><span>예상 EPS 성장률</span><strong>{n(baseline?.growth_pct, 1)}%</strong></div><div><span>예상 EPS</span><strong>{n(baseline?.projected_eps, 2)}</strong></div></div>
       <p className="method-note">거시 지표 기반 자체 예상이며 애널리스트 컨센서스가 아닙니다.</p>
       {index.status === "READY" ? <ScenarioChart model={index}/> : <div className="empty">{index.reason || earnings.reason || "시나리오 근거를 확인해 주세요."}</div>}
-      {gap != null ? <div className={`valuation-gap position-${index.valuation_position || "unknown"}`}><span>{gapLabel}</span><strong>{signed(gap)}</strong><small>현재 SPX와 기준 예상 EPS × 5년 중심 PER 비교</small></div> : null}
+      {gap != null ? <div className={`valuation-gap position-${index.valuation_position || "unknown"}`}><span>{gapLabel}</span><strong>{signed(gap)}</strong><small>현재 {instrument.price_label}과 기준 예상 EPS × 5년 중심 PER 비교</small></div> : null}
       {index.gap_pct ? <div className="gap-row"><span>현재 대비 하단 {signed(index.gap_pct.lower)}</span><strong>기준 {signed(index.gap_pct.baseline)}</strong><span>상단 {signed(index.gap_pct.upper)}</span></div> : null}
       <ScenarioHistoryChart historyOptions={index.history_options} fallbackHistory={index.history}/>
       {index.basis_date_mismatch ? <p className="basis-note">계산 기준일이 다릅니다 · EPS {index.basis_dates?.eps || "-"} · SEP {index.basis_dates?.sep || "-"} · SPX {index.basis_dates?.spx || "-"}</p> : null}<p className="limitation">{index.limitation || earnings.limitation}</p>
-    </section>
+    </section></>}
     <details className="evidence"><summary>산식·자료 출처·한계 보기</summary><div className="evidence-grid">{(payload.sources || []).map((source: { name: string; role: string }) => <div key={source.name}><strong>{source.name}</strong><span>{source.role}</span></div>)}</div><ul>{(payload.limitations || []).map((item: string) => <li key={item}>{item}</li>)}</ul></details>
   </main>;
 }

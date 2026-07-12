@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from unittest.mock import patch
+from pathlib import Path
 
 import pandas as pd
 
@@ -75,6 +76,14 @@ class MarketContextValuationTests(unittest.TestCase):
 
         self.assertEqual(model["instruments"]["sp500"]["status"], "READY")
         self.assertEqual(model["instruments"]["nasdaq100"]["status"], "ERROR")
+
+    def test_react_surface_has_instrument_selector_and_coverage_block(self) -> None:
+        component = Path("app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx").read_text()
+        helper = Path("app/web/overview/market_context_helpers.py").read_text()
+
+        for token in ("instrument-selector", "Nasdaq-100", "coverage-block", "minimum_required_pct"):
+            self.assertIn(token, component)
+        self.assertIn("build_market_context_valuation_read_model", helper)
 
 
 if __name__ == "__main__":

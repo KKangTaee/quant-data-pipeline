@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from html import escape
 from typing import Any
@@ -40,7 +41,7 @@ GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 def render_market_context_header() -> None:
     """Render the compact Market Context tab heading."""
     st.markdown("### 시장 맥락")
-    st.caption("S&P 500의 최근 멀티플 위치와 FOMC 기반 예상 실적 시나리오를 함께 비교합니다.")
+    st.caption("S&P 500과 Nasdaq-100의 최근 멀티플 위치를 같은 기준으로 전환해 비교합니다.")
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -51,9 +52,22 @@ def load_sp500_valuation_model() -> dict[str, Any]:
     return build_sp500_valuation_read_model()
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_market_context_valuation_model() -> dict[str, Any]:
+    """Load the independently isolated S&P 500 and Nasdaq-100 read models."""
+    from app.services.overview.market_context_valuation import (
+        build_market_context_valuation_read_model,
+    )
+
+    model = build_market_context_valuation_read_model()
+    return json.loads(json.dumps(model, default=str))
+
+
 def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:
     """Keep the valuation question readable when the React build is unavailable."""
     st.info("가치평가 화면 빌드를 찾지 못해 핵심 수치만 표시합니다.")
+    instruments = dict(payload.get("instruments") or {})
+    payload = dict(instruments.get(payload.get("default_instrument") or "sp500") or payload)
     multiple = dict(payload.get("multiple_regime") or {})
     earnings = dict(payload.get("earnings_scenario") or {})
     index = dict(payload.get("index_scenario") or {})
@@ -89,9 +103,9 @@ def render_market_context_valuation() -> None:
     )
 
     try:
-        payload = load_sp500_valuation_model()
+        payload = load_market_context_valuation_model()
     except Exception as exc:  # pragma: no cover - UI resilience only
-        st.warning(f"S&P 500 가치평가 자료를 불러오지 못했습니다: {exc}")
+        st.warning(f"시장 가치평가 자료를 불러오지 못했습니다: {exc}")
         return
     if market_context_valuation_component_available():
         render_market_context_valuation_component(payload)
