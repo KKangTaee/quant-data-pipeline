@@ -42,7 +42,7 @@ Last Verified: 2026-07-08
 | `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
 | `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장. EPS 미발표 최신 월은 price-only `missing` row로 유지 |
 | `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
-| `fomc_sep_projection` | SEP release/year/variable/statistic unique vintage row. real GDP/PCE median 및 central-tendency endpoints와 1년 reconstruction용 과거 release 저장 |
+| `fomc_sep_projection` | SEP release/year/variable/statistic unique vintage row. real GDP/PCE median 및 central-tendency endpoints와 1/3/5년 reconstruction용 calendar-discovered 과거 release 저장 |
 
 ### `finance_price`
 

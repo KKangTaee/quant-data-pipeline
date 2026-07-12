@@ -5,7 +5,7 @@ Last Updated: 2026-07-12
 
 ## V1.2 Approved Direction
 
-- 최근 1년 화면에는 2025-06/09/12, 2026-03/06 공식 SEP vintage가 필요하며 현재 DB의 2026-06을 제외한 네 release를 backfill한다.
+- V1.2의 최근 1년 화면에는 2025-06/09/12, 2026-03/06 공식 SEP vintage가 필요해 당시 네 release를 backfill했다. V1.4는 이 고정 범위를 Federal Reserve calendar 기반 21개 vintage로 대체했다.
 - 월별 과거 지점은 월중 발표된 SEP를 다음 달부터 적용한다. 최신 EOD 지점만 기준일 이전 최신 release를 즉시 적용한다.
 - target year는 관측 월의 calendar year를 선택한다.
 - 시계열은 Shiller EPS가 strict historical release vintage가 아니므로 `과거 시점 재구성 시나리오`로 표시한다.
@@ -29,6 +29,10 @@ Last Updated: 2026-07-12
 - Distribution anchors and z-score continue to use the latest 60 complete Shiller PER observations ending 2026-03; provisional April-July values are presentation evidence only.
 - July provisional PER uses current `^GSPC` EOD 7,575.39 at 2026-07-10 divided by March Shiller TTM EPS 261.723, while April-June use their stored Shiller monthly prices with the same EPS basis.
 - Inspector position is calculated from the selected SVG point. It flips left after 72% of plot width and clamps the vertical anchor so high-multiple points do not clip the card at the chart top.
+- V1.4 uses Federal Reserve calendar discovery rather than extending a hardcoded URL tuple. The live calendar exposed 21 parseable official releases from 2021-03-17 through 2026-06-17.
+- A 60-month visible reconstruction with a 60-month rolling multiple needs 119 monthly rows including the first visible month. The loader default changed from 84 to 120 after live smoke showed 3y/5y histories truncating at 25 points.
+- React receives `history_options` for `1y`, `3y`, and `5y`; selection only switches already-computed DB-backed evidence and never fetches or calculates provider data in the browser.
+- Long windows retain every SEP marker line but render at most seven SEP text labels and seven x-axis labels to prevent overlap.
 
 ## Confirmed Decisions
 

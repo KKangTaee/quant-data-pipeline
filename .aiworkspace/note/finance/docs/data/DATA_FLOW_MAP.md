@@ -130,8 +130,9 @@ finance.loaders.sp500_valuation + finance.loaders.price
 - graph 1 분포와 z-score는 최신 완결 Shiller PER 60개월만 사용한다. 화면은 그 이후 price-only 월과 current SPX EOD를 마지막 확인 Shiller EPS로 나눈 값을 `provisional`로 계산해 점선 표시하고, price/EPS basis date를 함께 노출한다.
 - graph 2 current TTM EPS는 최근 완료된 네 개의 distinct quarterly As-Reported actual row 합계를 우선하고, 준비되지 않으면 최신 Shiller TTM EPS를 `interpolated_ttm_proxy`로 사용한다. estimate/mixed는 official actual로 승격하지 않는다.
 - FOMC 예상 EPS 성장률은 최신 SEP target year median의 `real GDP + PCE`이며 S&P 애널리스트 컨센서스가 아니다.
-- 최근 1년 flow는 각 월 이전에 발표된 최신 SEP를 사용한다. 월중 release는 다음 달부터 적용하고, EPS 미발표 최신 월은 마지막 확인 Shiller EPS를 basis date와 함께 유지한다.
-- 1년 flow는 Shiller EPS vintage 제약 때문에 strict PIT backtest가 아니라 `과거 시점 재구성 시나리오`다.
+- 1/3/5년 flow는 각 월 이전에 발표된 최신 SEP를 사용한다. 월중 release는 다음 달부터 적용하고, EPS 미발표 최신 월은 마지막 확인 Shiller EPS를 basis date와 함께 유지한다.
+- 5년 화면과 60개월 rolling multiple warmup을 함께 확보하기 위해 loader는 최근 120개월 Shiller rows를 읽는다.
+- 모든 기간 flow는 Shiller EPS vintage 제약 때문에 strict PIT backtest가 아니라 `과거 시점 재구성 시나리오`다.
 - SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
 - 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
 

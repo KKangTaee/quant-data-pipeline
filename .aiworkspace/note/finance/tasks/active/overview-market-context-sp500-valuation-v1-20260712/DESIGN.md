@@ -595,7 +595,7 @@ index["history"] = index["history_options"]["1y"]
 ### Error And Coverage Handling
 
 - 선택 기간 결과가 2개 미만이면 해당 기간만 `INSUFFICIENT_HISTORY`로 표시한다.
-- backfill 중 일부 official page가 실패하면 기존 stored vintage를 보존하고 job은 partial evidence를 반환한다. 이번 live backfill은 모든 missing page 성공을 완료 조건으로 둔다.
+- backfill 중 official page 하나라도 실패하면 기존 stored vintage를 보존한 채 history step을 실패 처리한다. 이번 live backfill은 모든 missing page 성공을 완료 조건으로 둔다.
 - 5년 시작점은 current 2026-07 기준 2021-08이다. 2021-06 SEP가 이미 발표된 시점이므로 60개월 모두 당시 vintage를 선택할 수 있어야 한다.
 - Shiller monthly EPS는 strict release-vintage PIT source가 아니므로 그래프를 backtest나 당시 시장 consensus라고 표현하지 않는다.
 

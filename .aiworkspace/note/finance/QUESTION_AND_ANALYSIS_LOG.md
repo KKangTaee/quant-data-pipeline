@@ -9186,3 +9186,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: EPS 발표 지연을 숨기거나 최신 가격을 버리지 않고 완결 PER와 잠정 PER를 시각적으로 분리하며, hover 카드는 선택 지점 근처에서 읽혀야 함.
 - Analysis result: DB에는 April-July price-only Shiller rows와 July SPX EOD가 있었지만 service가 null PER를 제거해 March에서 끝났고, CSS가 inspector를 고정했다. 분포는 complete-only로 유지하고 최신 EPS carry-forward 값은 provisional display evidence로만 쓰는 것이 통계와 최신성을 함께 보존한다.
 - Follow-up: April-July dashed provisional series, current/complete basis evidence, point-adjacent/right-edge-flipped/top-clamped inspector, desktop/420px Browser QA를 구현했다. Graph 2 1/3/5년 선택은 별도 후속 차수다.
+
+### 2026-07-12 - 적정 SPX 재구성 흐름을 1년·3년·5년으로 전환할 수 있는가
+
+- User request: 사용자가 1년 화면만 구현된 것을 확인하고 이전에 요청한 3년·5년 선택도 실제 개발해 달라고 재승인함.
+- Interpreted goal: 현재 SEP를 과거에 복제하지 않고, 각 월 당시의 공식 SEP vintage와 동일한 60개월 rolling multiple 계산으로 기간만 선택해야 함.
+- Analysis result: Federal Reserve calendar에는 2021-03 이후 21개 official projection page가 있고 모두 기존 parser로 읽혔다. 5년 visible history에는 60개월 rolling warmup까지 총 119개월이 필요해 기존 84개월 loader가 live smoke에서 25 points로 잘리는 원인이었다.
+- Follow-up: calendar-discovered missing vintage backfill, 120개월 loader, Python 12/36/60 history options, React selector/sparse labels, DB/Browser QA를 구현했다. Shiller EPS는 여전히 strict release-vintage PIT가 아니다.

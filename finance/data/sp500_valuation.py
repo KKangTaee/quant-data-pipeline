@@ -22,13 +22,6 @@ SHILLER_SOURCE_URL = SHILLER_PAGE_URL
 SP500_EARNINGS_SOURCE = "sp_dow_jones_index_earnings"
 FOMC_SEP_SOURCE = "federal_reserve_sep"
 DB_META = "finance_meta"
-DEFAULT_FOMC_SEP_HISTORY_URLS = (
-    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20250618.htm",
-    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20250917.htm",
-    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20251210.htm",
-    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20260318.htm",
-    f"{FEDERAL_RESERVE_BASE_URL}/monetarypolicy/fomcprojtabl20260617.htm",
-)
 
 
 def _fetch_text(url: str, *, timeout: int = 30) -> str:
@@ -635,6 +628,8 @@ def collect_and_store_fomc_sep(
 def collect_and_store_fomc_sep_history(
     *,
     source_refs: list[str] | tuple[str, ...] | None = None,
+    calendar_url: str = FOMC_CALENDAR_URL,
+    calendar_fetcher: Any = _fetch_text,
     sep_fetcher: Any = _fetch_text,
     db_factory: Any = MySQLClient,
     host: str = "localhost",
@@ -643,7 +638,12 @@ def collect_and_store_fomc_sep_history(
     port: int = 3306,
 ) -> dict[str, Any]:
     """Backfill missing official SEP vintages without re-fetching stored releases."""
-    refs = list(dict.fromkeys(source_refs or DEFAULT_FOMC_SEP_HISTORY_URLS))
+    discovered_refs = (
+        discover_fomc_sep_urls(calendar_fetcher(calendar_url))
+        if source_refs is None
+        else list(source_refs)
+    )
+    refs = list(dict.fromkeys(discovered_refs))
     dated_refs = sorted(
         ((_sep_release_date(ref, ""), ref) for ref in refs),
         key=lambda item: item[0],

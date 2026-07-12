@@ -24,15 +24,18 @@ Last Updated: 2026-07-12
 - V1.2 official SEP history backfill, Shiller price-only latest rows, symmetric 2σ chart, 12-month PIT SEP reconstruction, React hover redesign, live DB smoke, and Browser QA are implemented.
 - V1.3 Graph 1 now separates complete distribution rows from April-July provisional PER display rows, uses current SPX EOD for the latest marker, and exposes price/EPS basis dates and quality.
 - React renders complete PER as a solid navy line, provisional PER as a dashed orange line, and places the inspector beside the selected point with right-edge flip and top clipping guard.
+- V1.4 Federal Reserve calendar discovery backfilled 21 official SEP vintages from 2021-03 through 2026-06 without changing the existing release-vintage table schema.
+- Graph 2 now exposes Python-calculated 12/36/60-month histories and a React `1년 / 3년 / 5년` selector with sparse long-window labels.
+- The monthly Shiller loader now reads 120 months so a 5-year display retains the preceding 60-month rolling-multiple warmup.
 
 ## Current Stage
 
-V1.3 Graph 1 provisional extension 구현, live DB smoke, desktop/420px Browser QA, documentation sync, and final verification are complete.
+V1.4 Graph 2 1·3·5-year selector, official history backfill, live DB smoke, desktop/420px Browser QA, documentation sync, and final verification are complete.
 
 ## Next Action
 
-1. 후속 승인 시 Graph 2의 1년/3년/5년 기간 선택을 별도 차수로 구현한다.
-2. 3년/5년 선택 전에 필요한 SEP vintage backfill 범위와 Shiller EPS PIT 한계를 화면 계약에 유지한다.
+1. 현재 승인 범위에 남은 구현 차수는 없다.
+2. 향후 strict historical backtest가 필요하면 Shiller EPS release-vintage source를 별도 데이터 과제로 검토한다.
 
 ## V1 Completion
 
@@ -40,3 +43,4 @@ V1.3 Graph 1 provisional extension 구현, live DB smoke, desktop/420px Browser 
 - V1.1 1차 through 5차 complete; no required implementation stage remains.
 - V1.2 1차 through 5차 complete; no required implementation stage remains.
 - V1.3 Graph 1 provisional extension complete; no required implementation stage remains.
+- V1.4 Graph 2 1·3·5-year selector complete; no required implementation stage remains.

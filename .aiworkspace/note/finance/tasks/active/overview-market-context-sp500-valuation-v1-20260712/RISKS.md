@@ -15,7 +15,7 @@ Mitigation implemented: deterministic local `.xlsx` import remains optional with
 
 Shiller monthly earnings are interpolated research data. They support current descriptive valuation bands but not strict historical signal timing claims.
 
-V1.2 mitigation: the 1-year line is explicitly labeled `과거 시점 재구성 시나리오`. EPS 미발표 월은 최신 확인 EPS를 유지하고 `eps_basis_date`/carry-forward 상태를 노출한다. Strict as-known historical EPS backtest remains out of scope.
+V1.4 mitigation: all 1/3/5-year lines are explicitly labeled `과거 시점 재구성 시나리오`. EPS 미발표 월은 최신 확인 EPS를 유지하고 `eps_basis_date`/carry-forward 상태를 노출한다. Strict as-known historical EPS backtest remains out of scope.
 
 ### Trailing-To-Forward Multiple Mismatch
 
@@ -29,13 +29,13 @@ Real GDP plus PCE does not fully explain S&P 500 EPS. Margins, wages, FX, taxes,
 
 Shiller monthly, S&P earnings, SEP quarterly, and SPX/SPY EOD sources update at different cadences. Same-date evidence and stale-state behavior require explicit tests.
 
-V1.2 retains this cadence mismatch visibly. SEP backfill is bounded to the official vintages needed by the 1-year view; a longer 5-year view would require expanding the historical release set and is not implemented.
+V1.4 retains this cadence mismatch visibly. Official SEP history is backfilled from 2021-03 and future automation discovers the current Federal Reserve calendar list, while prior vintages remain append-only.
 
 V1.3 mitigation: Graph 1 no longer stops at the latest EPS month. April-July values are explicitly labeled provisional and use the latest March TTM EPS, but they remain excluded from the 60-month distribution and are not presented as completed historical PER observations.
 
 ### Longer Graph 2 Window
 
-The current reconstructed flow is 1 year. A 3-year or 5-year selector is feasible, but requires a correspondingly older official SEP vintage backfill and must retain the non-strict-PIT Shiller EPS warning. It remains a separately approved follow-up, not part of V1.3.
+Mitigation implemented: Graph 2 now provides 1/3/5-year options backed by 21 official SEP vintages and 120 Shiller months including rolling warmup. The remaining limitation is Shiller EPS release timing, not SEP coverage.
 
 ### Existing Workspace Changes
 

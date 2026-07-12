@@ -29,11 +29,11 @@ def _query_meta(
 
 
 def load_sp500_monthly_valuation(
-    months: int = 84,
+    months: int = 120,
     *,
     query_fn: QueryFn | None = None,
 ) -> pd.DataFrame:
-    """Load the latest monthly Shiller price/EPS observations from finance_meta."""
+    """Load five display years plus the rolling-multiple warmup from finance_meta."""
     limit = max(1, int(months))
     rows = _query_meta(
         """

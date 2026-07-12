@@ -5966,3 +5966,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - current SPX EOD와 price/EPS basis date, latest complete PER를 service contract에 추가하고 React hover inspector를 선택 점 옆으로 이동·경계 반전·상단 clamp했다.
 - 33 valuation tests, 34 Market Context contracts, DB smoke, desktop/420px Browser QA를 완료했으며 generated V1.3 screenshot은 커밋하지 않는다.
 - Graph 2의 1/3/5년 선택은 older SEP vintage backfill과 Shiller EPS PIT 경계를 함께 다루는 후속 차수로 남긴다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.4
+
+- Federal Reserve calendar에서 공식 SEP 21개 vintage(2021-03~2026-06)를 발견해 missing 16개 release 326 rows를 idempotent backfill했다.
+- Graph 2 service는 120개월 Shiller warmup으로 12/36/60-point history options를 만들고 React는 `1년 / 3년 / 5년` selector로 전환한다.
+- 37 valuation tests, 35 Market Context contracts, DB smoke, desktop/420px Browser QA를 완료했고 V1.4 screenshot은 커밋하지 않는다.
+- Shiller EPS release-vintage 한계와 `과거 시점 재구성` 경계는 모든 기간에 유지한다.

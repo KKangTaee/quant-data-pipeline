@@ -7121,7 +7121,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("fallback_reason", helper_source)
         self.assertNotIn("file_uploader", helper_source)
 
-    def test_market_context_valuation_renders_symmetric_bands_and_one_year_history(self) -> None:
+    def test_market_context_valuation_renders_symmetric_bands_and_reconstructed_history(self) -> None:
         component_source = Path(
             "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
         ).read_text(encoding="utf-8")
@@ -7130,7 +7130,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "minus_2sigma",
             "-2σ",
             "과거 시점 재구성",
-            "최근 1년 적정 SPX 흐름",
+            "최근 {periodYears}년 적정 SPX 흐름",
             "sep_releases",
             "gap_to_baseline_pct",
             "onMouseMove",
@@ -7154,6 +7154,27 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "inspector-right",
             "left:",
             "top:",
+        ):
+            self.assertIn(token, component_source + style_source)
+
+    def test_market_context_history_offers_one_three_and_five_year_periods(self) -> None:
+        component_source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text(encoding="utf-8")
+        style_source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/style.css"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "history_options",
+            "1년",
+            "3년",
+            "5년",
+            "setHistoryPeriod",
+            "aria-pressed",
+            "axisLabelStep",
+            "releaseLabelStep",
+            "history-period-selector",
         ):
             self.assertIn(token, component_source + style_source)
 

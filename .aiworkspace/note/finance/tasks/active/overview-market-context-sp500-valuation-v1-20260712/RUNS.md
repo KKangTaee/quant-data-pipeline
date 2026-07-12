@@ -96,3 +96,14 @@ Last Updated: 2026-07-12
 - QA screenshot: `market-context-sp500-valuation-v1-3-qa.png` (generated, not committed).
 - Fresh final gates: 33 valuation tests, 34 Market Context contracts, Python compile, TypeScript, Vite build, live DB assertions, and `git diff --check` passed.
 - Full `tests.test_service_contracts`: 744 tests, the same 2 out-of-scope failures remained: Sentiment source-string expectation and Market Movers persisted limited-history isolation (`2` vs `65`).
+
+## V1.4 Graph 2 1·3·5-Year Verification
+
+- Baseline: 33 valuation tests and 34 Market Context contracts passed in the existing linked `codex/sub-dev` worktree.
+- TDD RED/GREEN covered calendar-discovered missing-vintage fetch, dynamic 12/36/60-month metadata, read-model `history_options`, React selector/sparse labels, and the 120-month loader warmup regression.
+- All 21 current official Federal Reserve projection pages parsed successfully before DB mutation. Live backfill wrote 326 rows for 16 missing releases; DB now has 21 release vintages from `2021-03-17` through `2026-06-17`.
+- Initial live read-model smoke exposed the 84-month loader warmup gap: 3y/5y returned only 25 points. After the TDD fix, DB-backed options returned 12 points (`2025-08~2026-07`), 36 (`2023-08~2026-07`), and 60 (`2021-08~2026-07`).
+- Browser QA on `http://localhost:8529` switched 1y→3y→5y and verified dynamic headings/aria labels. The 5y chart kept 19 SEP marker lines while limiting SEP/x-axis text labels to 7 each.
+- Desktop and 420px Browser QA returned outer/iframe horizontal overflow 0 and current-app warning/error log 0. Screenshot: `market-context-sp500-valuation-v1-4-qa.png` (generated, not committed).
+- Fresh scoped gates: 37 valuation tests, 35 Market Context contracts, Python compile, TypeScript, Vite build, live DB assertions, and `git diff --check` passed.
+- Full `tests.test_service_contracts`: 745 tests with the same 2 out-of-scope failures: Sentiment source-string expectation and Market Movers persisted limited-history isolation (`2` vs `65`).

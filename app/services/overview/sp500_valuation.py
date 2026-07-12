@@ -368,7 +368,10 @@ def calculate_historical_index_scenario(
     visible_months: int = 12,
     rolling_window: int = 60,
 ) -> dict[str, Any]:
-    """Reconstruct a one-year macro-implied SPX path using only effective SEP vintages."""
+    """Reconstruct a bounded macro-implied SPX path using effective SEP vintages."""
+    window_months = max(1, int(visible_months))
+    window_years = window_months // 12 if window_months % 12 == 0 else None
+    window_label = f"{window_years}년" if window_years else f"{window_months}개월"
     frame = pd.DataFrame(monthly_rows).copy()
     sep_frame = pd.DataFrame(sep_rows).copy()
     required_monthly = {"observation_month", "spx_level", "trailing_eps"}
@@ -382,7 +385,8 @@ def calculate_historical_index_scenario(
     if frame.empty or sep_frame.empty or not required_monthly.issubset(frame.columns) or not required_sep.issubset(sep_frame.columns):
         return {
             "status": "INSUFFICIENT_HISTORY",
-            "window_months": int(visible_months),
+            "window_months": window_months,
+            "window_years": window_years,
             "series": [],
             "sep_releases": [],
         }
@@ -403,7 +407,8 @@ def calculate_historical_index_scenario(
     if frame.empty:
         return {
             "status": "INSUFFICIENT_HISTORY",
-            "window_months": int(visible_months),
+            "window_months": window_months,
+            "window_years": window_years,
             "series": [],
             "sep_releases": [],
         }
@@ -446,7 +451,8 @@ def calculate_historical_index_scenario(
     if sep_frame.empty:
         return {
             "status": "INSUFFICIENT_HISTORY",
-            "window_months": int(visible_months),
+            "window_months": window_months,
+            "window_years": window_years,
             "series": [],
             "sep_releases": [],
         }
@@ -457,7 +463,7 @@ def calculate_historical_index_scenario(
         if not pd.isna(spx_date)
         else frame["observation_month"].max()
     )
-    start_month = end_month - pd.DateOffset(months=max(1, int(visible_months)) - 1)
+    start_month = end_month - pd.DateOffset(months=window_months - 1)
     visible = frame.loc[
         (frame["observation_month"] >= start_month)
         & (frame["observation_month"] <= end_month)
@@ -519,11 +525,15 @@ def calculate_historical_index_scenario(
     )
     return {
         "status": "READY" if len(series) >= 2 else "INSUFFICIENT_HISTORY",
-        "window_months": int(visible_months),
+        "window_months": window_months,
+        "window_years": window_years,
+        "observation_count": len(series),
+        "coverage_start": series[0]["month"] if series else None,
+        "coverage_end": series[-1]["month"] if series else None,
         "rolling_multiple_months": int(rolling_window),
         "series": series,
         "sep_releases": visible_releases,
-        "label": "최근 1년 과거 시점 재구성 시나리오",
+        "label": f"최근 {window_label} 과거 시점 재구성 시나리오",
         "methodology": "각 월에 당시 사용 가능한 최신 SEP와 60개월 rolling log(PER)를 적용",
         "limitation": "Shiller EPS는 release-vintage PIT 원본이 아니며 미발표 월은 최신 확인 TTM EPS를 유지합니다.",
     }
@@ -656,11 +666,17 @@ def build_sp500_valuation_read_model(
         index["basis_dates"] = basis_dates
         index["basis_date_mismatch"] = len(distinct_dates) > 1
 
-    index["history"] = calculate_historical_index_scenario(
-        monthly_rows,
-        [] if sep_history_rows is None else sep_history_rows,
-        current_spx=spx,
-    )
+    history_options = {
+        key: calculate_historical_index_scenario(
+            monthly_rows,
+            [] if sep_history_rows is None else sep_history_rows,
+            current_spx=spx,
+            visible_months=months,
+        )
+        for key, months in (("1y", 12), ("3y", 36), ("5y", 60))
+    }
+    index["history_options"] = history_options
+    index["history"] = history_options["1y"]
 
     overall = "READY" if index.get("status") == "READY" else "BLOCKED"
     return {

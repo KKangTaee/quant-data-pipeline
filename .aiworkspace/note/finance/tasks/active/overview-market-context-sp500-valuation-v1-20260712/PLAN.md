@@ -829,10 +829,10 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 - Consumes: `discover_fomc_sep_urls(calendar_html: str) -> list[str]`, existing `fomc_sep_projection` release-date unique UPSERT.
 - Produces: `collect_and_store_fomc_sep_history(source_refs=None, calendar_url=..., calendar_fetcher=..., sep_fetcher=...)` that discovers the official history when explicit refs are absent and fetches only missing releases.
 
-- [ ] Add a failing test whose calendar fixture exposes three official URLs, DB already contains one release, and assertions require only the two missing URLs to be fetched.
-- [ ] Run `.venv/bin/python -m unittest tests.test_sp500_valuation.Sp500ValuationDataTests.test_sep_history_collector_discovers_calendar_and_fetches_only_missing_vintages` and confirm RED because the collector does not accept/discover calendar input.
-- [ ] Implement calendar discovery as the default `source_refs=None` path while preserving explicit refs for deterministic callers/tests.
-- [ ] Run the focused test and full `tests.test_sp500_valuation`; expect GREEN.
+- [x] Add a failing test whose calendar fixture exposes three official URLs, DB already contains one release, and assertions require only the two missing URLs to be fetched.
+- [x] Run `.venv/bin/python -m unittest tests.test_sp500_valuation.Sp500ValuationDataTests.test_sep_history_collector_discovers_calendar_and_fetches_only_missing_vintages` and confirm RED because the collector does not accept/discover calendar input.
+- [x] Implement calendar discovery as the default `source_refs=None` path while preserving explicit refs for deterministic callers/tests.
+- [x] Run the focused test and full `tests.test_sp500_valuation`; expect GREEN.
 
 ### Task 20: 12/36/60-Month Service Options
 
@@ -844,11 +844,11 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 - Consumes: all stored SEP vintages and monthly Shiller rows.
 - Produces: dynamic `window_years`, `label`, `observation_count`, `coverage_start/end`, plus `index_scenario.history_options` keys `1y`, `3y`, `5y`; `index_scenario.history` remains the `1y` alias.
 
-- [ ] Add a failing calculator test using 2021-06~2026-06 SEP fixtures and enough monthly rows; assert 12/36/60 calls return the requested lengths and dynamic labels.
-- [ ] Add a failing read-model test asserting `history_options` keys and the 1-year compatibility alias.
-- [ ] Run the two focused tests and confirm RED for fixed label/missing options.
-- [ ] Implement the minimal dynamic metadata and three service calls without moving financial formulas into React.
-- [ ] Run focused and full valuation suites; expect GREEN.
+- [x] Add a failing calculator test using 2021-06~2026-06 SEP fixtures and enough monthly rows; assert 12/36/60 calls return the requested lengths and dynamic labels.
+- [x] Add a failing read-model test asserting `history_options` keys and the 1-year compatibility alias.
+- [x] Run the two focused tests and confirm RED for fixed label/missing options.
+- [x] Implement the minimal dynamic metadata and three service calls without moving financial formulas into React.
+- [x] Run focused and full valuation suites; expect GREEN.
 
 ### Task 21: React Period Selector And Sparse Labels
 
@@ -862,10 +862,10 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 - Consumes: `index_scenario.history_options["1y"|"3y"|"5y"]`.
 - Produces: default 1-year segmented selector, dynamic heading/aria-label/history graph, maximum roughly seven axis/SEP text labels while retaining all SEP marker lines.
 
-- [ ] Add a failing Market Context source contract for `history_options`, `1년`, `3년`, `5년`, `setHistoryPeriod`, `aria-pressed`, and sparse label step logic.
-- [ ] Run `.venv/bin/python -m unittest tests.test_service_contracts -k market_context` and confirm RED.
-- [ ] Implement the selector, dynamic copy/data selection, responsive styles, and sparse labels.
-- [ ] Run Market Context contracts, `npx tsc --noEmit`, and `npm run build`; expect GREEN.
+- [x] Add a failing Market Context source contract for `history_options`, `1년`, `3년`, `5년`, `setHistoryPeriod`, `aria-pressed`, and sparse label step logic.
+- [x] Run `.venv/bin/python -m unittest tests.test_service_contracts -k market_context` and confirm RED.
+- [x] Implement the selector, dynamic copy/data selection, responsive styles, and sparse labels.
+- [x] Run Market Context contracts, `npx tsc --noEmit`, and `npm run build`; expect GREEN.
 
 ### Task 22: Live Backfill, Browser QA, Documentation, Commit
 
@@ -878,7 +878,7 @@ git commit -m "S&P 500 가치평가 자동화와 QA 문서 정렬"
 - Consumes: production Federal Reserve calendar/pages and current local DB.
 - Produces: 21 stored SEP vintages and DB-backed 12/36/60-point histories with verified React selector behavior.
 
-- [ ] Run the official history collector and assert stored release count/range and 12/36/60 history lengths.
-- [ ] Browser QA desktop and 420px: switch 1/3/5, verify dynamic title/range, hover inspector, sparse labels, no horizontal overflow, and zero current-app console errors.
-- [ ] Run fresh valuation tests, Market Context contracts, Python compile, TypeScript, Vite build, DB smoke, full service-contract audit, and `git diff --check`.
-- [ ] Synchronize task/canonical/root docs, stage only owned files/build assets, leave screenshots/research untracked, and create a coherent Korean commit.
+- [x] Run the official history collector and assert stored release count/range and 12/36/60 history lengths.
+- [x] Browser QA desktop and 420px: switch 1/3/5, verify dynamic title/range, hover inspector, sparse labels, no horizontal overflow, and zero current-app console errors.
+- [x] Run fresh valuation tests, Market Context contracts, Python compile, TypeScript, Vite build, DB smoke, full service-contract audit, and `git diff --check`.
+- [x] Synchronize task/canonical/root docs, stage only owned files/build assets, leave screenshots/research untracked, and create a coherent Korean commit.
