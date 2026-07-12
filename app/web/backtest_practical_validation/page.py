@@ -26,6 +26,9 @@ from app.services.backtest_practical_validation_replay import (
     build_practical_validation_recheck_plan,
     run_practical_validation_actual_replay,
 )
+from app.services.backtest_practical_validation_workspace import (
+    build_practical_validation_recovery_progress,
+)
 from app.web.backtest_practical_validation.components import (
     render_pv_alert_panel,
     render_pv_card_grid,
@@ -740,6 +743,61 @@ def _has_current_session_replay_result(replay_result: Any) -> bool:
     if status and status != "NOT_RUN":
         return True
     return False
+
+
+def _render_practical_validation_recovery_progress(
+    source: dict[str, Any],
+    *,
+    replay_result: dict[str, Any] | None,
+    validation_result: dict[str, Any] | None = None,
+) -> None:
+    """Show the user task sequence only for a Final Review recovery cycle."""
+
+    source_id = str(source.get("selection_source_id") or "source").strip() or "source"
+    progress = dict(st.session_state.get(_enrichment_progress_state_key(source_id)) or {})
+    handoff = dict(st.session_state.get("backtest_practical_validation_data_enrichment_handoff") or {})
+    handoff_validation = dict(handoff.get("validation_result") or {})
+    handoff_source_id = str(handoff_validation.get("selection_source_id") or "").strip()
+    if not progress and handoff_source_id != source_id:
+        return
+
+    replay_completed = _has_current_session_replay_result(replay_result)
+    gate = dict((validation_result or {}).get("final_review_gate") or {})
+    can_save_and_move = bool(gate.get("can_save_and_move")) if replay_completed else False
+    model = build_practical_validation_recovery_progress(
+        collection_completed=bool(progress),
+        replay_completed=replay_completed,
+        can_save_and_move=can_save_and_move,
+        blocking=replay_completed and not can_save_and_move,
+    )
+    render_pv_section_header(
+        eyebrow="복구 진행",
+        title=str(model.get("headline") or "Practical Validation 복구 진행"),
+        detail=str(model.get("next_action") or ""),
+        tone="positive" if model.get("state") == "save_ready" else "warning",
+    )
+    render_pv_card_grid(
+        [
+            {
+                "kicker": str(step.get("status") or "pending"),
+                "title": str(step.get("label") or "-"),
+                "status": str(step.get("status") or "pending"),
+                "detail": str(step.get("detail") or "-"),
+                "tone": (
+                    "positive"
+                    if step.get("status") in {"completed", "next"}
+                    else "danger"
+                    if step.get("status") == "blocked"
+                    else "warning"
+                    if step.get("status") == "current"
+                    else "neutral"
+                ),
+            }
+            for step in list(model.get("steps") or [])
+        ],
+        min_width=180,
+    )
+    st.caption(str(model.get("boundary") or ""))
 
 
 def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None:
@@ -2258,6 +2316,7 @@ def _consume_practical_validation_next_stage_action(
     *,
     source: dict[str, Any],
     validation_result: dict[str, Any],
+    replay_result: dict[str, Any] | None,
 ) -> None:
     if not isinstance(action_value, dict):
         return
@@ -2275,6 +2334,13 @@ def _consume_practical_validation_next_stage_action(
         if st.session_state.get(consumed_key) == nonce:
             return
         st.session_state[consumed_key] = nonce
+
+    if action == "save_and_move" and not _has_current_session_replay_result(replay_result):
+        st.session_state["backtest_practical_validation_notice"] = (
+            "데이터 보강 후 Flow 2 재검증이 아직 완료되지 않았습니다. 전략 재검증 실행 후 새 결과를 저장하세요."
+        )
+        st.rerun()
+        return
 
     gate = dict(validation_result.get("final_review_gate") or {})
     can_save_and_move = bool(gate.get("can_save_and_move"))
@@ -2393,6 +2459,10 @@ def render_practical_validation_workspace() -> None:
         replay_result = _render_actual_replay_panel(source)
 
     if not _has_current_session_replay_result(replay_result):
+        _render_practical_validation_recovery_progress(
+            source,
+            replay_result=replay_result,
+        )
         st.info("Flow 2에서 `전략 재검증 실행`을 실행하면 검증 결론과 기준 상세가 이어서 표시됩니다.")
         return
 
@@ -2400,6 +2470,11 @@ def render_practical_validation_workspace() -> None:
         source,
         validation_profile=validation_profile,
         replay_result=replay_result,
+    )
+    _render_practical_validation_recovery_progress(
+        source,
+        replay_result=replay_result,
+        validation_result=validation_result,
     )
 
     with st.container(border=True):
@@ -2414,6 +2489,7 @@ def render_practical_validation_workspace() -> None:
             action_value,
             source=source,
             validation_result=validation_result,
+            replay_result=replay_result,
         )
 
     with st.container(border=True):

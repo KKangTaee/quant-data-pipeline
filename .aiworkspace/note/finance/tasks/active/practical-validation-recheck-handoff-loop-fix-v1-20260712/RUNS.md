@@ -6,3 +6,5 @@
 - 구현 전 Practical Validation / Provider Gap / Final Review / BacktestRuntime baseline 178개 테스트가 통과했다.
 - 1차 RED 2개에서 shared completion helper 부재와 Final Review recovery 수집의 replay 미초기화를 확인했다.
 - 두 수집 경로를 공통 completion helper로 통합한 뒤 focused 3개, py_compile, `git diff --check`를 통과했다.
+- 2차 recovery progress / replay save guard RED 2개를 확인하고 4단계 progress read model과 저장 방어를 구현했다.
+- Practical Validation / BacktestRuntime focused 115개, py_compile, `git diff --check`를 통과했다.

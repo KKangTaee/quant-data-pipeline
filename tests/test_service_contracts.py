@@ -2997,6 +2997,39 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         self.assertEqual(category_caution_action["status_label"], "주의 포함 이동 가능")
         self.assertIn("REVIEW 주의 신호", category_caution_action["primary_action"]["detail"])
 
+    def test_practical_validation_recovery_progress_requires_recheck_before_save(self) -> None:
+        from app.services.backtest_practical_validation_workspace import (
+            build_practical_validation_recovery_progress,
+        )
+
+        recheck_required = build_practical_validation_recovery_progress(
+            collection_completed=True,
+            replay_completed=False,
+            can_save_and_move=False,
+            blocking=False,
+        )
+        blocked = build_practical_validation_recovery_progress(
+            collection_completed=True,
+            replay_completed=True,
+            can_save_and_move=False,
+            blocking=True,
+        )
+        save_ready = build_practical_validation_recovery_progress(
+            collection_completed=True,
+            replay_completed=True,
+            can_save_and_move=True,
+            blocking=False,
+        )
+
+        self.assertEqual(recheck_required["state"], "recheck_required")
+        self.assertEqual(recheck_required["steps"][1]["status"], "current")
+        self.assertEqual(recheck_required["steps"][2]["status"], "pending")
+        self.assertEqual(blocked["state"], "blocked")
+        self.assertEqual(blocked["steps"][2]["status"], "blocked")
+        self.assertEqual(save_ready["state"], "save_ready")
+        self.assertEqual(save_ready["steps"][2]["status"], "current")
+        self.assertIn("저장", save_ready["next_action"])
+
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
 import sys
@@ -13888,6 +13921,39 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("origin=\"flow4\"", regular_body)
         self.assertIn("_complete_provider_gap_collection(", recovery_body)
         self.assertIn("origin=\"final_review_recovery\"", recovery_body)
+
+    def test_practical_validation_save_and_move_rejects_missing_current_replay(self) -> None:
+        import app.web.backtest_practical_validation.page as practical_page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        handoff_mock = MagicMock()
+
+        with (
+            patch.object(practical_page, "st", fake_st),
+            patch.object(practical_page, "prepare_final_review_handoff_from_validation", handoff_mock),
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            practical_page._consume_practical_validation_next_stage_action(
+                {
+                    "action": "save_and_move",
+                    "source": "practical_validation_fix_queue",
+                    "nonce": "replay-guard",
+                },
+                source={"selection_source_id": "source-replay-guard"},
+                validation_result={
+                    "validation_id": "validation-replay-guard",
+                    "final_review_gate": {"can_save_and_move": True},
+                },
+                replay_result={"status": "NOT_RUN"},
+            )
+
+        handoff_mock.assert_not_called()
+        self.assertIn(
+            "Flow 2 재검증",
+            fake_st.session_state["backtest_practical_validation_notice"],
+        )
 
     def test_practical_validation_data_action_board_react_component_is_ui_only(self) -> None:
         wrapper_path = Path("app/web/components/practical_validation_data_action_board/component.py")
