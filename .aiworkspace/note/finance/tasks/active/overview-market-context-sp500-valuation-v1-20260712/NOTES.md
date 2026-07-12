@@ -64,3 +64,10 @@ This supports 5y as the primary window and 3y as regime sensitivity, not the mai
 - Both charts use responsive SVG and introduce no chart dependency.
 - The main screen prioritizes valuation questions and evidence; source/method limitations are collapsed in a secondary disclosure.
 - A compact Streamlit fallback exists only when the compiled React asset is unavailable.
+
+## V1.1 Data Activation Decision
+
+- Root cause 1: graph 1 was incorrectly nested under the actual-EPS readiness gate even though 1,863 Shiller monthly rows existed.
+- Root cause 2: the S&P workbook connector was import-only and official automated download returned 403, leaving zero EPS rows.
+- User approved an explicit hierarchy: official S&P actual quarters first, Shiller completed-quarter TTM proxy second.
+- Official file acquisition stays a visible browser/manual step; the app owns validation, preview, status confirmation, vintage UPSERT, and automatic source promotion.

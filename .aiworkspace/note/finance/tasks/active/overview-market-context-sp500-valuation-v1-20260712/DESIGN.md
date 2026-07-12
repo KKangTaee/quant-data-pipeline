@@ -346,3 +346,103 @@ Coherent commits:
 6. QA hardening and durable docs alignment
 
 Generated artifacts, registry JSONL, saved JSONL, run history, existing user screenshots, and unrelated Market Movers work remain uncommitted.
+
+---
+
+## V1.1 Data Activation Follow-up — 2026-07-12
+
+### 이걸 하는 이유?
+
+V1 live QA에서 `sp500_monthly_valuation` 1,863행과 SPX/SPY EOD가 저장됐는데도 S&P actual EPS가 없으면 그래프 1까지 `60개월 실제 PER 이력이 필요합니다`로 차단됐다. 그래프 2는 S&P Index Earnings importer는 있지만 공식 XLSX 자동 요청이 403으로 차단되어 기본 환경에서 `sp500_index_earnings`가 비어 있었다. 사용자가 실제 화면에서 두 그래프를 읽으려면 그래프 1 의존성을 분리하고, 그래프 2에 명시적 source hierarchy와 공식 파일 등록 흐름이 필요하다.
+
+### 승인된 접근
+
+완전 자동 403 우회, scraper, headless-browser impersonation은 구현하지 않는다. 대신 다음 두 경로를 결합한다.
+
+1. 자동 무료 경로: Shiller 월별 자료에서 최신 60개월 PER와 최신 완료 분기 TTM EPS 대체 기준을 읽는다.
+2. 공식 우선 경로: 사용자가 공식 Index Earnings XLSX를 브라우저로 내려받아 등록하면 S&P actual As-Reported quarter를 release vintage로 저장하고 즉시 우선 사용한다.
+
+### 그래프 1 독립 계산
+
+- 그래프 1은 `sp500_monthly_valuation`만 필요로 한다.
+- 공식 60개월 window와 36개월 민감도는 마지막 유효 월별 `trailing_pe`로 계산한다.
+- current marker는 마지막 Shiller 관측월의 `trailing_pe`다.
+- `sp500_index_earnings`, current TTM actual EPS, SPX EOD 누락 때문에 그래프 1을 차단하지 않는다.
+- source basis는 `Shiller 월별 보간 TTM EPS`와 최신 관측월을 표시한다.
+
+### 그래프 2 EPS Source Hierarchy
+
+```text
+1순위: S&P Index Earnings
+  quarterly + as_reported + actual
+  latest distinct 4 quarters
+  -> source_quality = official_actual
+
+2순위: Shiller latest completed-quarter E
+  month in 03 / 06 / 09 / 12
+  positive trailing_eps
+  -> source_quality = interpolated_ttm_proxy
+```
+
+- 1순위가 READY면 기존 actual TTM 계산을 사용한다.
+- 1순위가 없거나 4분기 미만이면 2순위를 명시적으로 선택한다.
+- Shiller fallback은 `실제 EPS`로 표기하지 않고 `Shiller TTM 대체 기준`으로 표시한다.
+- read model은 `eps_source`, `eps_source_quality`, `eps_basis_date`, `fallback_reason`을 React에 전달한다.
+- S&P official actual이 새로 저장되면 별도 migration 없이 다음 read에서 자동 승격한다.
+
+### 공식 XLSX 등록 흐름
+
+Market Context React 본문 아래 secondary Streamlit expander에 `S&P 공식 EPS 연결`을 둔다. 이는 job/status 진단 패널이 아니라 그래프 2의 누락 입력을 해결하는 bounded data action이다.
+
+```text
+S&P 공식 Index Earnings 링크 열기
+  -> 사용자가 브라우저에서 XLSX 다운로드
+  -> Market Context 파일 uploader에 등록
+  -> workbook sheet/header 탐색
+  -> quarterly date / As-Reported EPS 후보 preview
+  -> 사용자가 source release date와 마지막 actual quarter 확인
+  -> actual/estimate 상태 명시
+  -> finance_meta.sp500_index_earnings vintage UPSERT
+  -> cache clear / rerun
+  -> official_actual source로 자동 승격
+```
+
+- XLS/XLSX 원본은 registry나 repo에 저장하지 않고 메모리에서 파싱한다.
+- sheet/header는 첫 30행에서 date, As-Reported, Operating 관련 header를 탐색한다.
+- 상태가 workbook cell에 명시돼 있으면 이를 사용한다.
+- 상태가 명시되지 않으면 행 위치나 색상으로 추론하지 않고 사용자가 선택한 `마지막 actual quarter`를 cutoff로 적용한다.
+- release date는 workbook 안에서 신뢰할 수 있게 파싱되면 제안값으로 보여주되 사용자가 확인한다.
+- preview가 quarterly date와 As-Reported EPS를 찾지 못하면 DB write 없이 구체적 오류를 표시한다.
+
+### UI 변경
+
+- 그래프 1 blocked copy는 월별 이력이 실제로 60개 미만일 때만 노출한다.
+- 그래프 2 상단의 `현재 TTM EPS` label은 source에 따라 `S&P actual TTM EPS` 또는 `Shiller TTM 대체 기준`으로 바뀐다.
+- source-quality badge는 `공식 actual`과 `보간 대체 기준`을 구분한다.
+- fallback 상태에서도 FOMC EPS/SPX scenario는 계산하되 limitation에 공식 actual 미연결을 표시한다.
+- uploader expander는 secondary action이며 두 그래프보다 먼저 나오지 않는다.
+
+### Error Handling
+
+- Shiller 60개월 미만: 그래프 1만 `INSUFFICIENT_HISTORY`.
+- S&P 4분기 미만 + Shiller completed-quarter EPS 없음: 그래프 2만 `BLOCKED`.
+- official XLSX header 미탐지: preview 단계에서 차단, DB write 없음.
+- actual cutoff가 candidate 범위 밖: validation error, DB write 없음.
+- official import 뒤에도 4 distinct actual quarters 미만: official incomplete evidence를 보존하되 graph 2는 Shiller fallback 유지.
+- SEP stale, SPX/SPY date mismatch 방어는 V1 계약을 유지한다.
+
+### Test Design
+
+- S&P EPS가 비어 있어도 60개월 Shiller graph 1이 READY인지 검증.
+- latest completed-quarter Shiller EPS loader와 source-quality payload 검증.
+- official 4-quarter evidence가 Shiller fallback보다 우선하는지 검증.
+- generic workbook header discovery, preview, user-confirmed cutoff, no-write error tests.
+- import 후 cache clear/rerun contract와 React source label contract 검증.
+- Browser QA에서 초기 fallback 상태와 official fixture import 후 승격 상태를 각각 확인한다.
+
+### Out Of Scope
+
+- 403 회피용 cookie forging, proxy, scraper, headless browser download.
+- S&P 라이선스/SFTP 계약 구현.
+- EDGAR constituent EPS 재구성과 index divisor 복제.
+- fallback을 official actual 또는 애널리스트 consensus로 표현하는 행위.
