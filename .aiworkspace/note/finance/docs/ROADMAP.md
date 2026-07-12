@@ -7,7 +7,7 @@ Last Verified: 2026-07-12
 
 현재 active phase는 없다.
 
-현재 active task는 없다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다. `남은 판단 근거`를 Level2 해결, 한계 수용, Monitoring 이관, 개발 후 재검토, 선정 차단 terminal state로 종결하는 설계를 검토 중이며 구현은 사용자 설계 승인과 PLAN.md 확정 뒤 새 세션에서 시작한다.
 
 Latest completed Practical Validation recheck handoff task는 `.aiworkspace/note/finance/tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/`다.
 

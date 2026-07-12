@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | 현재 실행 중인 active task는 없다. |
+| `final-review-evidence-closure-contract-v1-20260712` | Design Review | `남은 판단 근거`를 resolve / accept / Monitoring transfer / defer / block terminal state로 종결하고 Level2 actionable gap의 Final Review 승격을 막는 설계 task다. |
 
 ## Recent Completed / Retained Current Work
 

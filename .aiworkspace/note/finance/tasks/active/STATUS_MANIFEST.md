@@ -7,7 +7,7 @@ Last Verified: 2026-07-12
 
 Current active task:
 
-- none
+- `final-review-evidence-closure-contract-v1-20260712` — Design Review
 
 Latest completed task:
 
