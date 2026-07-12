@@ -24,3 +24,19 @@ Last Updated: 2026-07-12
 - Reconstructed trailing P/E is a real P/E calculation, not sentiment or a price-only indicator.
 - Reconstructed QQQ TTM EPS is `QQQ price / reconstructed P/E`.
 - The result is not an official Nasdaq index aggregate because QQQ weights, missing foreign issuers, ADR conversion, and provider conventions can differ.
+
+## 2026-07-13 Coverage Spike Result
+
+- SEC filing discovery returned 30 required anchors from 2016-09 through 2026-03: 3 annual N-30B-2 warmup anchors and 27 quarterly N-PORT anchors.
+- Strict parser output was 101~107 equity rows per anchor with approximately 100% weight.
+- CUSIP/name/reviewed rename mapping raised identity coverage to 99.60% for 2016-09, 99.62% for 2017-09, 100% for 2018-09, and 99.74% for the previously weak 2020-12 N-PORT anchor.
+- Filing-aware diluted EPS plus existing component/QQQ EOD produced 119 monthly rows for 2016-09~2026-07.
+- Approved 95% gate result: latest 60 months complete `5/60`; minimum coverage `92.63%`; 2026-07 coverage `94.47%`.
+- If the coverage gate is temporarily disabled only for diagnosis, 2026-07 reconstructed trailing P/E is `31.91997`; public fixture `31.89` absolute percentage error is `0.094%`.
+
+## Blocking Source Boundary
+
+- SEC CIK-based companyfacts can recover USD/share EPS for current and delisted issuers without ticker lookup. Examples verified: STX, FISV, LULU, PTON, ATVI, WBA, ALXN, XLNX, ANSS, SGEN, MXIM, CERN.
+- Existing DB has no EOD rows for several later-delisted/acquired 2021 constituents. Current yfinance requests return delisted/404 for these tickers.
+- Stooq's unauthenticated CSV endpoint currently returns a proof-of-work verification page, so it is not a stable automated ingestion source for this task.
+- Holding the missing ticker weight constant, interpolating N-PORT quarter prices, lowering 95%, or treating annual-only foreign EPS as current TTM would change the approved calculation contract and was not done.

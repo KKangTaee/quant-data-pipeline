@@ -15,3 +15,4 @@ Last Updated: 2026-07-12
 | historical holding symbol mapping | survivorship/coverage 저하 | CUSIP exact, SEC identity, reviewed overrides, coverage gate |
 | current DB statements/prices missing | derived month gaps | missing weighted coverage를 명시하고 95% 미만 block |
 | remote SEC format/rate changes | ingestion failure | User-Agent, bounded requests, fixture tests, latest good DB state 유지 |
+| acquired/delisted constituent EOD gap | latest 60개월 coverage가 92.63~95% 범위에서 흔들리고 2026-07도 94.47%로 block | 별도 승인된 historical price source 또는 5년/95% 계약 변경 전 2차 DB materialization을 시작하지 않음 |
