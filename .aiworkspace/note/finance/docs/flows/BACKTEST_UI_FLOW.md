@@ -953,6 +953,14 @@ Backtest > Final Review
   -> selected row의 운영 확인은 Operations > Portfolio Monitoring에서 이어감
 ```
 
+근거 종결 계약:
+
+- Practical Validation은 `지금 해결 가능 / 개발 필요 / 한계 인수 가능`으로 root issue를 분류한다. 등록된 Python replay handler가 있는 항목만 현재 단계 CTA를 가진다.
+- current Final Review eligible validation은 unresolved actionable, critical engineering, missing contract count가 모두 0이어야 한다.
+- Final Review는 `선정 전 미해결 항목`과 `인수한 한계와 최종 판단 항목`을 분리한다. current eligible 후보의 전자는 항상 0이다.
+- selected route는 accepted limit / final decision을 `accepted`, Monitoring transfer를 `monitoring_transferred`로 저장한다. hold/re-review는 `deferred`, reject는 `blocked`로 decision row의 `evidence_closure_snapshot`에 남긴다.
+- 정성 role은 고정 감점하지 않는다. 숫자 score impact는 root issue의 numeric measurement 계약이 있을 때만 계산한다.
+
 구분:
 
 - Final Review는 현재 active workflow의 마지막 panel이다.

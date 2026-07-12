@@ -31,3 +31,12 @@
 - `build_practical_validation_recheck_plan()`은 source universe 공통 최신일이 아니라 `load_latest_market_date()` 전체 DB max를 requested end로 사용한다.
 - GRS는 `filter_by_period() -> align_dates()` exact intersection으로 ticker별 6월 마지막 거래일 차이를 제거하며 valuation-only row contract가 없다.
 - focused baseline은 `unittest` 75개가 통과했다. 이 worktree `.venv`에는 `pytest`가 설치되어 있지 않다.
+
+## 2026-07-12 Implementation Decisions
+
+- `backtest_evidence_closure_v1`은 replay/PIT와 universe/survivorship derived check를 각각 하나의 root issue로 합친다.
+- 등록된 Python replay handler만 `resolve_now` CTA가 될 수 있다. handler가 없으면 `engineering_required`로 정규화하고 승격을 차단한다.
+- static manual universe의 사후 선택 한계는 비핵심 `accepted_limit`, dynamic historical universe의 PIT membership/delisting 부재는 critical `engineering_required`다.
+- GRS는 signal row와 latest-common valuation row를 분리한다. current DB 기준 요청일 `2026-07-10`, 공통일 `2026-06-26`, 마지막 signal `2026-05-29`, valuation `2026-06-26`이다.
+- Final Review decision row는 같은 validation의 `evidence_closure_snapshot`을 저장한다. accepted / monitoring_transferred / deferred / blocked는 기존 route와 operator reason에서 파생한다.
+- role 고정 -6/-4 감점은 제거했다. 숫자 score effect는 root issue에 numeric observed/threshold와 명시적 effect가 있을 때만 적용하고, missing/open/critical은 Gate로 처리한다.

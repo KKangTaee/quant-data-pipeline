@@ -6035,3 +6035,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 연결된 세 탭 shell, 한국어 세부 점수, stored audit trace와 정성 판단 구분, 상위 3개 counterfactual 가설을 적용했다.
 - standalone Decision Cockpit / 반복 Save Readiness / disabled order action을 제거하고 Python-owned 통합 `판단 기록`으로 정리했다.
 - service 53개 / page 8개 test, React build, py_compile, diff check, Browser QA를 통과했으며 generated screenshot과 run history는 stage하지 않는다.
+
+## 2026-07-12 - Final Review Evidence Closure Contract V1
+
+- `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`의 계획과 1차~4차 구현 / QA를 완료했다.
+- root issue dedup, Level2 actionability Gate, GRS signal/valuation 분리, static/dynamic survivorship policy, Final Review terminal snapshot, measured-only score를 적용했다.
+- 구현 커밋: `697a119b`, `65eacc92`, `cb2af299`, `4a05ae2f`; closeout 상세는 active task `STATUS.md`와 `RUNS.md`를 본다.
+- 후속은 dynamic historical universe용 PIT membership / delisting provider 승인 여부다.

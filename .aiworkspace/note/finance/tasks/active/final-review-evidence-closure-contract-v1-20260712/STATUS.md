@@ -1,6 +1,6 @@
 # Status
 
-Status: Implementation Planning
+Status: Completed
 Last Updated: 2026-07-12
 
 ## Progress
@@ -10,12 +10,20 @@ Last Updated: 2026-07-12
 - [x] actionability / terminal-state / dedup / score / Gate 설계 작성
 - [x] 사용자 DESIGN.md 검토와 승인
 - [x] writing-plans 기반 1~4차 PLAN.md 작성 및 self-review
-- [ ] PLAN.md 계획 커밋
-- [ ] 1차 Evidence Truth / Root Dedup 구현
-- [ ] 2차 Level2 Actionability / Gate 구현과 Browser QA
-- [ ] 3차 GRS Period / Survivorship Applicability 구현
-- [ ] 4차 Final Review Closure / Score / QA / docs closeout
+- [x] PLAN.md 계획 커밋
+- [x] 1차 Evidence Truth / Root Dedup 구현
+- [x] 2차 Level2 Actionability / Gate 구현과 Browser QA
+- [x] 3차 GRS Period / Survivorship Applicability 구현
+- [x] 4차 Final Review Closure / Score / QA / docs closeout
 
 ## Next Action
 
-`PLAN.md` self-review와 계획 커밋을 완료한 뒤 1차 RED test부터 실행한다.
+후속 작업은 dynamic historical universe용 PIT membership / delisting provider가 승인될 때 별도 task로 연다. 현재 구현은 해당 근거가 없으면 Final Review 승격을 차단한다.
+
+## Commits
+
+- `2a7bde86` Final Review 근거 종결 계약 구현 계획
+- `697a119b` Final Review 근거 root issue 계약 도입
+- `65eacc92` Practical Validation 근거 종결 Gate 강화
+- `cb2af299` GRS 기간과 생존편향 적용성 계약 보강
+- `4a05ae2f` Final Review 근거 종결과 점수 계약 완성

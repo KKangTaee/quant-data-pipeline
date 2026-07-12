@@ -7,3 +7,10 @@
 - 고정 감점을 제거한 뒤 기존 종합 점수와 UI copy가 어긋날 수 있다. score contract migration test가 필요하다.
 - 현재 registry 변경은 사용자 실행 결과다. implementation / doc commit에서 stage하거나 재작성하지 않는다.
 - historical universe / delisting source 신규 수집은 이 task의 구현 범위가 아니다. dynamic universe는 근거가 없으면 defer/block해야 한다.
+
+## Closeout Residuals
+
+- dynamic historical universe는 PIT membership / delisting provider가 없으므로 의도대로 `engineering_required + critical`에서 멈춘다.
+- weighted portfolio의 component별 마지막 날짜는 다를 수 있다. portfolio 월간 결과와 GRS의 `latest_common_price_date / last_complete_rebalance_date / latest_valuation_date`를 혼동하지 않아야 한다.
+- 과거 validation row는 새 closure payload가 없어서 legacy read adapter로 계속 읽는다. 기존 JSONL row는 rewrite하지 않았다.
+- score effect를 만들 새 measurement adapter는 observed / threshold / comparison / target dimension / explicit effect를 모두 저장해야 한다. 정성 REVIEW에는 숫자 감점을 다시 도입하지 않는다.

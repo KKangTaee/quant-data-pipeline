@@ -716,3 +716,9 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 - Update `PROJECT_MAP.md` when ownership boundaries or entry points change.
 - Update architecture / flow / data docs when runtime, storage, or user workflow boundaries change.
 - Use `docs/architecture/SYSTEM_BOUNDARIES.md` as the first checkpoint for layer / storage / product surface boundary changes.
+
+## 2026-07-12 Completed Foundation: Final Review Evidence Closure V1
+
+- 1차~4차 완료: root issue dedup, Level2 action handler Gate, GRS signal/valuation 기간 계약, static/dynamic survivorship policy, Final Review terminal-state snapshot, measured-only score impact.
+- current Final Review 후보 계약은 `unresolved_actionable=0`, `critical_engineering=0`, `missing_contract=0`을 요구한다.
+- 다음 승인 후보는 dynamic historical universe용 PIT membership / delisting provider이며, 도입 전에는 해당 후보를 defer/block한다.

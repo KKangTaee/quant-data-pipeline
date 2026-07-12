@@ -9289,3 +9289,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 후보의 총평과 핵심 해석을 읽은 직후 route와 판단 사유를 기록하고, 중복 원본 근거 / 과거 판단 조회 때문에 완료 지점이 흐려지지 않아야 함.
 - Analysis result: Appendix는 Practical Validation과 report audit trace를 반복했고 Saved Decisions는 현재 판단과 과거 ledger / Monitoring handoff를 한 화면에 섞었다. selected row 운영 확인은 Portfolio Monitoring 소유가 자연스럽다.
 - Follow-up: React report 총평 / 4행 해석 직후 route / reason / gate CTA를 배치하고 intent만 Python에 전달한다. Python은 자동 Decision ID, save evaluation, route template, append를 소유한다. Evidence Appendix와 Saved Decisions / Dossier / Raw JSON은 Final Review에서 제거했으며 기존 decision row는 보존한다.
+
+### 2026-07-12 - Final Review 근거의 완료 기준은 미정 상태 0개다
+
+- User request: 승인된 설계대로 1차~4차 개발, QA, distinct commit을 완료하고 기존 active task를 이어서 closeout한다.
+- Interpreted goal: 해결 가능한 근거는 Level2에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 보낸다.
+- Analysis result: replay/PIT와 universe/survivorship 중복 root를 통합했고, GRS 6월 유실은 BIL/위험자산 월말 exact-date 차이였다. 숫자 감점은 role이 아니라 explicit measurement만 소유해야 한다.
+- Follow-up: 1차~4차 구현과 실제 DB/Browser QA를 완료했다. dynamic historical universe provider는 후속 승인 전까지 critical blocker다.

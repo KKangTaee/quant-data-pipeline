@@ -204,6 +204,16 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, Overview structure / boundary guard, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
+| `tests/test_backtest_evidence_closure.py` | root issue dedup, action handler, eligibility, GRS market-date contract, survivorship applicability, terminal-state finalization, measured-only score 계약 검증 |
+
+## Backtest Evidence Closure
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `app/services/backtest_evidence_closure.py` | stored validation을 root issue로 정규화하고 actionability, criticality, Gate, terminal state, Final Review closure snapshot을 계산하는 pure service |
+| `app/services/backtest_practical_validation_replay.py` | whole-DB requested date와 source common date를 분리하고 기존 Python runtime replay를 실행 |
+| `finance/transform.py`, `finance/sample.py`, `finance/strategy.py` | GRS month-end signal과 latest-common valuation row를 분리해 가짜 rebalance를 방지 |
+| `app/services/backtest_evidence_read_model.py` | root closure issue를 Final Review report, measured-only score impact, unresolved/accepted section으로 변환 |
 
 ## 같이 볼 상세 문서
 
