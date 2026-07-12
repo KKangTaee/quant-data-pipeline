@@ -11,10 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `institutional-portfolios-two-tier-tabs-v1-20260712`
+- `institutional-portfolios-security-detail-chart-layout-v1-20260712`
 
 Previous completed task:
 
+- `institutional-portfolios-two-tier-tabs-v1-20260712`
 - `institutional-portfolios-portfolio-security-ia-v1-20260712`
 - `institutional-portfolios-interactive-security-chart-v1-20260712`
 - `institutional-portfolios-holding-chart-refresh-v1-20260712`

@@ -395,11 +395,14 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
   if (!points || points.length < 2) {
     return <div className="ip-chart-empty">가격 데이터 없음</div>;
   }
-  const width = 520;
-  const height = 214;
-  const padX = 22;
+  const width = 640;
+  const height = 276;
+  const padX = 26;
+  const padRight = 58;
   const padTop = 18;
-  const padBottom = 26;
+  const padBottom = 36;
+  const volumeHeight = 34;
+  const volumeGap = 12;
   const maxVisible = Math.min(points.length, 56);
   const maxWindowStart = Math.max(0, points.length - maxVisible);
   const safeWindowStart = Math.min(windowStart, maxWindowStart);
@@ -414,10 +417,12 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
   const min = Math.min(...rangeValues);
   const max = Math.max(...rangeValues);
   const span = max - min || 1;
-  const plotWidth = width - padX * 2;
-  const plotHeight = height - padTop - padBottom;
+  const plotWidth = width - padX - padRight;
+  const mainBottom = height - padBottom - volumeHeight - volumeGap;
+  const volumeTop = mainBottom + volumeGap;
+  const plotHeight = mainBottom - padTop;
   const xFor = (idx: number) => padX + (idx / Math.max(1, visiblePoints.length - 1)) * plotWidth;
-  const yFor = (value: unknown) => height - padBottom - ((chartNumber(value, min) - min) / span) * plotHeight;
+  const yFor = (value: unknown) => mainBottom - ((chartNumber(value, min) - min) / span) * plotHeight;
   const candleWidth = Math.max(4, Math.min(10, plotWidth / Math.max(1, visiblePoints.length) * 0.55));
   const path = visiblePoints
     .map((point, idx) => {
@@ -431,12 +436,17 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
   const hoverPoint = hoveredIndex === null ? null : visiblePoints[hoveredIndex];
   const hoverX = hoveredIndex === null ? 0 : xFor(hoveredIndex);
   const hoverY = hoverPoint ? yFor(hoverPoint.price) : 0;
+  const activePoint = hoverPoint || visiblePoints[visiblePoints.length - 1];
+  const mid = min + span / 2;
+  const maxVolume = Math.max(...visiblePoints.map((point) => chartNumber(point.volume, 0)), 1);
+  const navigatorLeft = maxWindowStart > 0 ? (safeWindowStart / points.length) * 100 : 0;
+  const navigatorWidth = Math.min(100, (maxVisible / points.length) * 100);
   const panWindow = (delta: number) => {
     setWindowStart((current) => Math.max(0, Math.min(maxWindowStart, current + delta)));
   };
   const handlePointerMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const localX = Math.max(padX, Math.min(width - padX, ((event.clientX - rect.left) / rect.width) * width));
+    const localX = Math.max(padX, Math.min(width - padRight, ((event.clientX - rect.left) / rect.width) * width));
     if (dragStartRef.current) {
       const dragDelta = event.clientX - dragStartRef.current.x;
       if (Math.abs(dragDelta) > 18) {
@@ -450,6 +460,14 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
 
   return (
     <div className="ip-interactive-chart">
+      <div className="ip-chart-market-strip">
+        <strong>{activePoint?.date}</strong>
+        <span>시 {priceLabel(activePoint?.open ?? activePoint?.price)}</span>
+        <span>고 {priceLabel(activePoint?.high ?? activePoint?.price)}</span>
+        <span>저 {priceLabel(activePoint?.low ?? activePoint?.price)}</span>
+        <span>종 {priceLabel(activePoint?.close ?? activePoint?.price)}</span>
+        <em>거래량 {volumeLabel(activePoint?.volume)}</em>
+      </div>
       <div className="ip-chart-toolbar">
         <div className="ip-chart-style-toggle" aria-label="차트 스타일">
           <button type="button" className={chartStyle === "line" ? "ip-chart-style-toggle__active" : ""} onClick={() => setChartStyle("line")}>
@@ -485,14 +503,24 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
             dragStartRef.current = null;
           }}
         >
-        <line x1={padX} x2={width - padX} y1={height - padBottom} y2={height - padBottom} className="ip-chart-axis" />
-        <line x1={padX} x2={width - padX} y1={highY} y2={highY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
-        <line x1={padX} x2={width - padX} y1={lowY} y2={lowY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
+        <line x1={padX} x2={width - padRight} y1={mainBottom} y2={mainBottom} className="ip-chart-axis" />
+        <line x1={padX} x2={width - padRight} y1={volumeTop + volumeHeight} y2={volumeTop + volumeHeight} className="ip-chart-axis" />
+        <line x1={padX} x2={width - padRight} y1={highY} y2={highY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
+        <line x1={padX} x2={width - padRight} y1={lowY} y2={lowY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
         <text x={padX} y={Math.max(10, highY - 4)} className="ip-chart-guide-label">
           H {priceLabel(highPoint.high ?? highPoint.price)}
         </text>
         <text x={padX} y={Math.min(height - 8, lowY + 12)} className="ip-chart-guide-label">
           L {priceLabel(lowPoint.low ?? lowPoint.price)}
+        </text>
+        <text x={width - padRight + 8} y={padTop + 4} className="ip-chart-price-scale">
+          {priceLabel(max)}
+        </text>
+        <text x={width - padRight + 8} y={yFor(mid) + 4} className="ip-chart-price-scale">
+          {priceLabel(mid)}
+        </text>
+        <text x={width - padRight + 8} y={mainBottom + 4} className="ip-chart-price-scale">
+          {priceLabel(min)}
         </text>
         {chartStyle === "candle" ? (
           visiblePoints.map((point, idx) => {
@@ -516,13 +544,42 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
         ) : (
           <polyline points={path} className="ip-price-line" />
         )}
+        <g className="ip-volume-bars">
+          {visiblePoints.map((point, idx) => {
+            const volume = chartNumber(point.volume, 0);
+            const barHeight = Math.max(1, (volume / maxVolume) * volumeHeight);
+            const open = chartNumber(point.open, chartNumber(point.price));
+            const close = chartNumber(point.close, chartNumber(point.price));
+            const rising = close >= open;
+            return (
+              <rect
+                key={`${point.date}-volume-${idx}`}
+                className={rising ? "ip-volume-bar--up" : "ip-volume-bar--down"}
+                x={xFor(idx) - candleWidth / 2}
+                y={volumeTop + volumeHeight - barHeight}
+                width={candleWidth}
+                height={barHeight}
+                rx="1.5"
+              />
+            );
+          })}
+        </g>
         {hoverPoint ? (
           <g>
-            <line x1={hoverX} x2={hoverX} y1={padTop} y2={height - padBottom} className="ip-chart-crosshair" strokeDasharray="3 4" />
-            <line x1={padX} x2={width - padX} y1={hoverY} y2={hoverY} className="ip-chart-crosshair" strokeDasharray="3 4" />
+            <line x1={hoverX} x2={hoverX} y1={padTop} y2={volumeTop + volumeHeight} className="ip-chart-crosshair" strokeDasharray="3 4" />
+            <line x1={padX} x2={width - padRight} y1={hoverY} y2={hoverY} className="ip-chart-crosshair" strokeDasharray="3 4" />
             <circle cx={hoverX} cy={hoverY} r="3.8" className="ip-chart-hover-dot" />
           </g>
         ) : null}
+        <text x={padX} y={height - 10} className="ip-chart-time-label">
+          {visiblePoints[0]?.date}
+        </text>
+        <text x={padX + plotWidth / 2} y={height - 10} className="ip-chart-time-label ip-chart-time-label--center">
+          {activePoint ? priceLabel(activePoint.price) : ""}
+        </text>
+        <text x={width - padRight} y={height - 10} className="ip-chart-time-label ip-chart-time-label--end">
+          {visiblePoints[visiblePoints.length - 1]?.date}
+        </text>
       </svg>
         {hoverPoint ? (
           <div
@@ -539,21 +596,22 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
           </div>
         ) : null}
       </div>
-      <div className="ip-mini-chart__axis">
-        <span>{visiblePoints[0]?.date}</span>
-        <strong>{hoverPoint ? priceLabel(hoverPoint.price) : priceLabel(visiblePoints[visiblePoints.length - 1]?.price)}</strong>
-        <span>{visiblePoints[visiblePoints.length - 1]?.date}</span>
+      <div className="ip-chart-navigator" aria-label="차트 구간 탐색">
+        <button type="button" className="ip-pan-button" disabled={safeWindowStart <= 0} onClick={() => panWindow(-8)}>
+          이전
+        </button>
+        <div className="ip-navigator-track" aria-hidden="true">
+          {points.map((point, idx) => {
+            const close = chartNumber(point.close, chartNumber(point.price));
+            const open = chartNumber(point.open, chartNumber(point.price));
+            return <span key={`${point.date}-nav-${idx}`} className={close >= open ? "ip-nav-bar--up" : "ip-nav-bar--down"} />;
+          })}
+          <span className="ip-navigator-window" style={{ left: `${navigatorLeft}%`, width: `${navigatorWidth}%` }} />
+        </div>
+        <button type="button" className="ip-pan-button" disabled={safeWindowStart >= maxWindowStart} onClick={() => panWindow(8)}>
+          다음
+        </button>
       </div>
-      <input
-        className="ip-chart-range"
-        type="range"
-        min="0"
-        max={maxWindowStart}
-        value={safeWindowStart}
-        disabled={maxWindowStart === 0}
-        onChange={(event) => setWindowStart(Number(event.currentTarget.value))}
-        aria-label="차트 구간 이동"
-      />
     </div>
   );
 }
@@ -617,6 +675,7 @@ function SecurityDetail({
   priceRefresh,
   disabled,
   onCollectPrice,
+  portfolioName,
 }: {
   detail?: SelectedSecurity;
   interest: WorkbenchPayload["interest"];
@@ -624,6 +683,7 @@ function SecurityDetail({
   priceRefresh?: PriceRefreshResult;
   disabled?: boolean;
   onCollectPrice: (action: PriceAction) => void;
+  portfolioName?: string;
 }) {
   const [chartMode, setChartMode] = useState<"daily" | "weekly" | "monthly">("daily");
   const charts = detail?.charts;
@@ -640,6 +700,7 @@ function SecurityDetail({
           priceRefresh.rows_written?.toLocaleString?.() || 0
         } rows`
       : "";
+  const portfolioContextTitle = portfolioName ? `${portfolioName} 포트폴리오 내 종목 위치` : "포트폴리오 내 종목 위치";
 
   if (!interest.query && detail?.status !== "ok") {
     return <div className="ip-interest-empty">{interest.empty_text}</div>;
@@ -648,28 +709,39 @@ function SecurityDetail({
   return (
     <div className="ip-security-detail">
       {notice ? <div className="ip-board-note">{notice}</div> : null}
-      <div className="ip-security-detail__summary">
-        <div>
+      <div className="ip-security-overview">
+        <div className="ip-security-identity">
           <span className="ip-security-detail__kicker">선택 종목</span>
           <h3>{detail?.security?.symbol || interest.query || "-"}</h3>
           <p>{detail?.security?.issuer_name || detail?.empty_text || interest.empty_text}</p>
+          <div className="ip-security-meta">
+            {detail?.security?.sector ? <span>{detail.security.sector}</span> : null}
+            {detail?.security?.industry ? <span>{detail.security.industry}</span> : null}
+            {detail?.security?.cusip ? <span>CUSIP {detail.security.cusip}</span> : null}
+          </div>
         </div>
-        <div className="ip-security-detail__stats">
+        <div className="ip-security-context-card">
           <div>
-            <span>포트폴리오 비중</span>
-            <strong>{detail?.portfolio_position?.weight_label || "-"}</strong>
+            <span>현재 선택한 기관 포트폴리오 기준</span>
+            <h4>{portfolioContextTitle}</h4>
           </div>
-          <div>
-            <span>보고 평가액</span>
-            <strong>{detail?.portfolio_position?.value_label || "-"}</strong>
-          </div>
-          <div>
-            <span>보유 기관</span>
-            <strong>{holderCount.toLocaleString()}</strong>
+          <div className="ip-security-detail__stats">
+            <div>
+              <span>포트폴리오 비중</span>
+              <strong>{detail?.portfolio_position?.weight_label || "-"}</strong>
+            </div>
+            <div>
+              <span>보고 평가액</span>
+              <strong>{detail?.portfolio_position?.value_label || "-"}</strong>
+            </div>
+            <div>
+              <span>보유 기관</span>
+              <strong>{holderCount.toLocaleString()}</strong>
+            </div>
           </div>
         </div>
       </div>
-      <div className="ip-security-detail__body">
+      <div className="ip-security-chart-row">
         <div className="ip-chart-panel">
           <div className="ip-chart-tabs">
             {(["daily", "weekly", "monthly"] as const).map((mode) => (
@@ -693,17 +765,19 @@ function SecurityDetail({
           {priceRefreshText ? <p className="ip-price-result">{priceRefreshText}</p> : null}
           <p className="ip-note">{detail?.caveat}</p>
         </div>
-        <div className="ip-holder-panel">
-          <div className="ip-section-head">
-            <div>
-              <h3>보유 기관 리스트</h3>
-              <p>저장된 최신 13F filing 기준입니다.</p>
-            </div>
-            <strong>{holderCount.toLocaleString()}</strong>
+      </div>
+      <div className="ip-holder-panel ip-holder-panel--scroll">
+        <div className="ip-section-head">
+          <div>
+            <h3>보유 기관 리스트</h3>
+            <p>저장된 최신 13F filing 기준입니다. 표시 중 {holders.length.toLocaleString()}개</p>
           </div>
+          <strong>{holderCount.toLocaleString()}</strong>
+        </div>
+        <div className="ip-holder-scroll">
           <div className="ip-interest-list">
             {holders.length ? (
-              holders.slice(0, 24).map((holder) => (
+              holders.map((holder) => (
                 <a href={holder.source_ref || "#"} target="_blank" rel="noreferrer" key={`${holder.cik}-${holder.manager_name}`}>
                   <span>
                     <strong>{holder.manager_name}</strong>
@@ -1261,6 +1335,7 @@ function InstitutionalPortfoliosWorkbench({ args }: Props) {
               priceRefresh={payload.price_refresh_result}
               disabled={Boolean(pendingAction)}
               onCollectPrice={handlePriceCollect}
+              portfolioName={payload.hero.manager_name}
             />
           </section>
         ) : null}

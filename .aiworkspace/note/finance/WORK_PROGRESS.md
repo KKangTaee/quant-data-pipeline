@@ -23,13 +23,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-two-tier-tabs-v1-20260712](./tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
+  - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
 
+- Institutional Portfolios Security Detail Chart Layout V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`에서 `종목 분석 > 종목 상세` 1차~3차를 완료했다.
+  - 선택 종목 / 포트폴리오 내 위치 overview card, full-width stored-OHLCV chart row, volume/navigator lower area, 하단 scrollable holder list로 재배치했다.
+  - DB / ingestion / provider / recommendation / trading boundary는 변경하지 않았다.
 - Institutional Portfolios Two-Tier Tabs V1 2026-07-12:
   - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/`에서 React workbench tab IA를 상위 `포트폴리오 / 종목 분석` 탭과 context-specific 하위 탭으로 분리했다.
   - 기존 한 줄 group-label 탭의 시각적 어색함을 줄였고, DB / ingestion / provider / trading boundary는 변경하지 않았다.

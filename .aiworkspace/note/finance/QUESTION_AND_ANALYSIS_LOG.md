@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-two-tier-tabs-v1-20260712](./tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
+  - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-12 - Institutional Portfolios selected-security detail should read chart first, holders below
+
+- User request: 사용자가 `종목 상세`에서 차트와 보유기관 리스트가 2-column으로 나뉘어 어색하고, 그래프 하단이 실전 증권 앱보다 낮은 품질로 보인다고 지적하며 1차~3차 개발을 승인함.
+- Interpreted goal: 선택 종목 화면은 티커 분석 흐름으로 읽혀야 하므로, 상단에는 기업 / 포트폴리오 내 위치 / 차트를 두고, 보유기관 리스트는 하단의 full-width scroll panel로 내려야 한다.
+- Analysis result: 기존 range input은 금융 차트 탐색 문법과 맞지 않아 volume bars, price scale, OHLC / volume strip, mini navigator로 대체하는 것이 적합하다. 단, UI는 저장 가격 DB payload만 읽고 외부 provider / SEC / broker를 직접 fetch하지 않는다.
+- Follow-up: `institutional-portfolios-security-detail-chart-layout-v1-20260712`에서 React layout/CSS, source contract tests, focused tests, React build, Browser QA를 완료했다. DB / ingestion / provider / recommendation / trading semantics는 변경하지 않았다.
 
 ### 2026-07-12 - Institutional Portfolios tab groups should become true two-tier tabs
 

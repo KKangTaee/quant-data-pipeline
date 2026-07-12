@@ -1040,14 +1040,43 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("ip-chart-crosshair", component_source)
         self.assertIn("ip-chart-high-low-guide", component_source)
         self.assertIn("ip-candle", component_source)
-        self.assertIn("ip-chart-range", component_source)
+        self.assertIn("ip-chart-market-strip", component_source)
+        self.assertIn("ip-volume-bars", component_source)
+        self.assertIn("ip-chart-navigator", component_source)
         self.assertIn("panWindow", component_source)
         self.assertIn("캔들", component_source)
         self.assertIn("strokeDasharray", component_source)
         self.assertIn(".ip-chart-tooltip", style_source)
-        self.assertIn(".ip-chart-range", style_source)
+        self.assertIn(".ip-chart-market-strip", style_source)
+        self.assertIn(".ip-volume-bars", style_source)
+        self.assertIn(".ip-chart-navigator", style_source)
         self.assertIn(".ip-chart-style-toggle", style_source)
         self.assertIn("stroke-dasharray", style_source)
+        self.assertNotIn('type="range"', component_source)
+
+    def test_selected_security_detail_uses_two_row_chart_and_scrollable_holder_layout(self) -> None:
+        component_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        style_source = Path("app/web/streamlit_components/institutional_portfolios_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("ip-security-overview", component_source)
+        self.assertIn("ip-security-context-card", component_source)
+        self.assertIn("ip-security-chart-row", component_source)
+        self.assertIn("ip-holder-panel--scroll", component_source)
+        self.assertIn("ip-holder-scroll", component_source)
+        self.assertIn("포트폴리오 내 종목 위치", component_source)
+        self.assertIn("현재 선택한 기관 포트폴리오 기준", component_source)
+        self.assertIn("표시 중", component_source)
+        self.assertIn("holders.map", component_source)
+        self.assertNotIn("holders.slice(0, 24)", component_source)
+        self.assertIn(".ip-security-overview", style_source)
+        self.assertIn(".ip-security-chart-row", style_source)
+        self.assertIn(".ip-holder-panel--scroll", style_source)
+        self.assertIn(".ip-holder-scroll", style_source)
+        self.assertIn("overflow-y: auto", style_source)
 
 
 if __name__ == "__main__":

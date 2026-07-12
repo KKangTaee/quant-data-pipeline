@@ -9,7 +9,13 @@ Last Verified: 2026-07-12
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios > 종목 분석 > 종목 상세`에서 차트와 보유 기관 리스트가 2-column으로 나뉘고 기본 range slider가 어색했던 종목 상세 UX를 줄였다.
+- 주요 변경: selected-security detail을 선택 종목 / 포트폴리오 내 위치 overview card, full-width stored-OHLCV chart row, 하단 scrollable holder-list row로 재배치했다. 차트는 OHLC / volume strip, volume bars, price scale, mini navigator, line/candle toggle, hover crosshair를 유지한다.
+- 이번 차수에서 하지 않은 일: DB schema 변경, ingestion 변경, provider 변경, full chart library 도입, true holding-duration metric, 추천 / trading semantics 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/`다.
 
 - 목적: `Workspace > Institutional Portfolios`에서 `포트폴리오 / 종목 분석` 구분이 한 줄 안의 그룹 라벨처럼 보여 어색했던 탭 UX를 줄였다.
 - 주요 변경: React workbench tab bar를 상위 탭(`포트폴리오`, `종목 분석`)과 현재 상위 영역에 따른 하위 탭(`요약 / 전체 보유` 또는 `종목 상세 / 기관 보유 랭킹`)으로 분리했다.
