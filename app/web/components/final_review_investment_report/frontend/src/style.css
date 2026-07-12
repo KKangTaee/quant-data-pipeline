@@ -1287,6 +1287,21 @@
   padding: 13px 14px;
 }
 
+.fr-invest-report__data-enrichment--recovery {
+  border-color: #f2c879;
+  border-left-color: #c77b00;
+  background: #fffaf0;
+}
+
+.fr-invest-report__data-enrichment--recovery .fr-invest-report__data-enrichment-head span,
+.fr-invest-report__data-enrichment--recovery .fr-invest-report__data-enrichment-head > strong {
+  color: #9a5b00;
+}
+
+.fr-invest-report__data-enrichment--recovery .fr-invest-report__data-enrichment-items article {
+  border-top-color: #f1ddb5;
+}
+
 .fr-invest-report__data-enrichment-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

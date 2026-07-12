@@ -277,6 +277,7 @@ type Level2ReviewDisposition = {
 
 type DataEnrichmentAction = {
   available?: boolean
+  mode?: "hidden" | "legacy_recovery" | "stale_recovery"
   title?: string
   detail?: string
   itemCount?: number
@@ -1239,6 +1240,8 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
 function DataEnrichmentActionPanel({ model }: { model: DataEnrichmentAction }) {
   if (!model.available) return null
   const items = model.items ?? []
+  const mode = model.mode ?? "legacy_recovery"
+  const eyebrow = mode === "legacy_recovery" ? "기존 검토서 복구" : "자료 최신화 후 재검증"
   const itemCount = field(model.itemCount, model.item_count) ?? items.length
   const symbolCount = field(model.symbolCount, model.symbol_count) ?? 0
   const openPracticalValidation = () => {
@@ -1250,10 +1253,10 @@ function DataEnrichmentActionPanel({ model }: { model: DataEnrichmentAction }) {
     })
   }
   return (
-    <section className="fr-invest-report__data-enrichment" aria-label="2단계 데이터 보강">
+    <section className="fr-invest-report__data-enrichment fr-invest-report__data-enrichment--recovery" aria-label="2단계 데이터 보강">
       <div className="fr-invest-report__data-enrichment-head">
         <div>
-          <span>해결 가능한 데이터만 분리</span>
+          <span>{eyebrow}</span>
           <h5>{compact(model.title)}</h5>
           <p>{compact(model.detail)}</p>
         </div>

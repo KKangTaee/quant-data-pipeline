@@ -72,6 +72,9 @@ def _is_final_review_eligible_validation_result(row: dict[str, Any]) -> bool:
     """Return whether a saved Practical Validation result may appear in Final Review."""
 
     validation = dict(row or {})
+    enrichment_gate = dict(validation.get("pre_final_enrichment_gate") or {})
+    if enrichment_gate.get("blocking"):
+        return False
     gate = dict(validation.get("final_review_gate") or {})
     base_eligible = False
     if "can_save_and_move" in gate:

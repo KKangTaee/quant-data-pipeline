@@ -72,7 +72,7 @@ def build_practical_validation_result(
     )
     provider_plan = build_provider_gap_collection_plan(result)
     result["provider_gap_collection_plan"] = provider_plan
-    pre_final_gate = build_pre_final_enrichment_gate(result)
+    pre_final_gate = build_pre_final_enrichment_gate(result, provider_plan=provider_plan)
     _apply_pre_final_enrichment_gate(result, pre_final_gate)
     result["practical_validation_workspace"] = build_practical_validation_workspace(result)
     return result
@@ -428,21 +428,26 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
     }
 
 
-def build_pre_final_enrichment_gate(validation_result: dict[str, Any]) -> dict[str, Any]:
+def build_pre_final_enrichment_gate(
+    validation_result: dict[str, Any],
+    *,
+    provider_plan: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Identify executable provider gaps that must be resolved before Final Review."""
 
-    plan = dict(validation_result.get("provider_gap_collection_plan") or {})
-    if not plan:
-        plan = build_provider_gap_collection_plan(validation_result)
+    plan = dict(provider_plan or build_provider_gap_collection_plan(validation_result))
     items: list[dict[str, Any]] = []
-    operability_symbols = sorted(set(plan.get("operability_official") or []))
+    operability_symbols = sorted(
+        set(plan.get("operability_official") or [])
+        | set(plan.get("operability_bridge") or [])
+    )
     if operability_symbols:
         items.append(
             {
                 "category": "operability",
                 "label": "ETF 거래 가능성 자료",
                 "symbols": operability_symbols,
-                "detail": "공식 또는 검증된 source에서 오래되거나 누락된 운용성 자료를 갱신합니다.",
+                "detail": "공식 source 또는 DB bridge에서 오래되거나 누락된 운용성 자료를 갱신합니다.",
             }
         )
     holdings_symbols = sorted(set(plan.get("holdings_exposure") or []))

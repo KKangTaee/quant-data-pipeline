@@ -2697,93 +2697,64 @@ def _review_trace_rows(validation: dict[str, Any], module_id: str) -> tuple[list
 
 
 def _build_final_review_data_enrichment_action(validation: dict[str, Any]) -> dict[str, Any]:
-    """Describe only provider jobs the existing Level2 Python boundary can run."""
+    """Expose only legacy or newly stale recovery work on the Final Review report."""
 
-    from app.services.backtest_practical_validation import build_provider_gap_collection_plan
+    from app.services.backtest_practical_validation import build_pre_final_enrichment_gate
 
-    plan = build_provider_gap_collection_plan(dict(validation or {}))
-    operability_symbols = sorted(
+    current_gate = build_pre_final_enrichment_gate(dict(validation or {}))
+    has_saved_contract = "pre_final_enrichment_gate" in validation
+    saved_gate = dict(validation.get("pre_final_enrichment_gate") or {})
+    current_required = bool(current_gate.get("blocking"))
+    saved_blocking = bool(saved_gate.get("blocking"))
+    if not current_required or (has_saved_contract and saved_blocking):
+        mode = "hidden"
+        available = False
+    elif not has_saved_contract:
+        mode = "legacy_recovery"
+        available = True
+    else:
+        mode = "stale_recovery"
+        available = True
+    items = [
         {
-            *list(plan.get("operability_official") or []),
-            *list(plan.get("operability_bridge") or []),
+            "key": _safe_text(item.get("category"), "data"),
+            "label": _safe_text(item.get("label"), "외부 데이터"),
+            "symbols": list(item.get("symbols") or []),
+            "detail": _safe_text(item.get("detail"), "2단계에서 데이터를 보강합니다."),
+            "tone": "warning",
         }
-    )
-    stale_symbols = sorted(set(plan.get("operability_stale") or []))
-    holdings_symbols = sorted(set(plan.get("holdings_exposure") or []))
-    discovery_symbols = sorted(set(plan.get("source_map_discovery") or []))
-    items: list[dict[str, Any]] = []
-    if operability_symbols:
-        items.append(
-            {
-                "key": "operability",
-                "label": "ETF 거래 가능성 자료",
-                "symbols": operability_symbols,
-                "detail": (
-                    f"오래된 snapshot {len(stale_symbols)}개를 포함해 비용·거래 가능성 자료를 갱신합니다."
-                    if stale_symbols
-                    else "누락된 비용·거래 가능성 자료를 보강합니다."
-                ),
-                "tone": "warning",
-            }
-        )
-    if holdings_symbols:
-        items.append(
-            {
-                "key": "holdings_exposure",
-                "label": "ETF 보유 종목·노출",
-                "symbols": holdings_symbols,
-                "detail": "검증된 공식 source가 있는 holdings·exposure를 수집합니다.",
-                "tone": "warning",
-            }
-        )
-    if discovery_symbols:
-        items.append(
-            {
-                "key": "source_map_discovery",
-                "label": "ETF 공식 source 탐색",
-                "symbols": discovery_symbols,
-                "detail": "holdings·exposure 수집 전 공식 원천 위치를 찾아 수집 가능 여부를 다시 확인합니다.",
-                "tone": "neutral",
-            }
-        )
-    if bool(plan.get("macro")):
-        items.append(
-            {
-                "key": "macro",
-                "label": "시장 환경 자료",
-                "symbols": ["VIXCLS", "T10Y3M", "BAA10Y"],
-                "detail": "부족하거나 오래된 FRED 시장 환경 series를 갱신합니다.",
-                "tone": "warning",
-            }
-        )
-    unique_symbols = sorted(
-        {
-            str(symbol)
-            for item in items
-            for symbol in list(item.get("symbols") or [])
-            if str(symbol).strip()
-        }
-    )
+        for item in list(current_gate.get("items") or [])
+    ] if available else []
     selection_source = dict(validation.get("selection_source_snapshot") or {})
     selection_source_id = _safe_text(
         selection_source.get("selection_source_id") or validation.get("selection_source_id"),
         "-",
     )
     return {
-        "available": bool(items),
-        "title": "2단계에서 보강 가능한 데이터",
+        "available": available,
+        "mode": mode,
+        "title": (
+            "저장된 검토서가 최신 보강 기준을 충족하지 않습니다"
+            if mode == "legacy_recovery"
+            else "검토서 확인 후 필수 외부 데이터가 다시 오래됐습니다"
+            if mode == "stale_recovery"
+            else "2단계 데이터 보강 완료"
+        ),
         "detail": (
-            "현재 Python 수집 경계에서 보강할 수 있는 자료만 모았습니다. "
-            "기간 밖 stress, 미구현 검증, 세금·계좌 판단은 이 작업에 포함되지 않습니다."
+            "과거 기준으로 승격된 검토서입니다. 현재 해결 가능한 필수 데이터는 2단계에서 보강하고 새 검증 결과를 저장해야 합니다."
+            if mode == "legacy_recovery"
+            else "저장 당시에는 통과했지만 현재 최신성 기준을 벗어났습니다. 2단계에서 최신화하고 다시 검증합니다."
+            if mode == "stale_recovery"
+            else "현재 Final Review에서 되돌릴 필수 데이터 보강이 없습니다."
         ),
         "item_count": len(items),
-        "symbol_count": len(unique_symbols),
+        "symbol_count": int(current_gate.get("symbol_count") or 0) if available else 0,
         "items": items,
         "selection_source_id": selection_source_id,
         "validation_id": _safe_text(validation.get("validation_id"), "-"),
-        "button_label": "2단계 데이터 보강으로 이동",
-        "next_step": "데이터 보강 후 Flow 2 재검증을 실행하고 새 결과를 저장한 뒤 Final Review에서 검토서를 다시 확인합니다.",
-        "boundary": "이 버튼은 Final Review에서 provider를 직접 호출하지 않고, 같은 후보를 Practical Validation 데이터 보강으로 전달합니다.",
+        "button_label": "2단계에서 보강하고 다시 검증",
+        "next_step": "Flow 2 재검증과 새 결과 저장이 끝난 뒤 Final Review에서 새 검토서를 다시 확인합니다.",
+        "boundary": "Final Review는 provider를 직접 호출하지 않습니다. 같은 후보를 Practical Validation 복구 흐름으로 전달합니다.",
     }
 
 

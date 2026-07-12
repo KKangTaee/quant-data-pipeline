@@ -12380,6 +12380,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("개선 방법", component_source)
         self.assertIn("처리 위치", component_source)
         self.assertIn("2단계 데이터 보강으로 이동", component_source)
+        self.assertIn("기존 검토서 복구", component_source)
+        self.assertIn("자료 최신화 후 재검증", component_source)
+        self.assertIn("fr-invest-report__data-enrichment--recovery", component_source)
         self.assertIn('action: "open_practical_validation_data_enrichment"', component_source)
         self.assertIn("_consume_final_review_data_enrichment_intent", page_source)
         self.assertNotIn("run_provider_gap_collection", page_source)
@@ -27091,6 +27094,31 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertEqual(gate["items"], [])
         self.assertIn("없습니다", gate["reason"])
 
+    def test_db_bridge_operability_requires_pre_final_enrichment(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "provider_gap_collection_plan": {
+                "source_map_discovery": [],
+                "source_symbols": ["XYZ"],
+                "operability_stale": ["XYZ"],
+                "operability_official": [],
+                "operability_bridge": ["XYZ"],
+                "holdings_exposure": [],
+                "mapping_needed": [],
+                "macro": False,
+            }
+        }
+
+        gate = service.build_pre_final_enrichment_gate(
+            validation,
+            provider_plan=validation["provider_gap_collection_plan"],
+        )
+
+        self.assertTrue(gate["blocking"])
+        self.assertEqual(gate["items"][0]["category"], "operability")
+        self.assertEqual(gate["items"][0]["symbols"], ["XYZ"])
+
     def test_practical_validation_result_blocks_final_review_until_collectable_gap_is_rechecked(self) -> None:
         from app.services import backtest_practical_validation as service
 
@@ -28500,13 +28528,124 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             action = build_final_review_level2_review_disposition(validation=validation)["data_enrichment_action"]
 
         self.assertTrue(action["available"])
+        self.assertIn("mode", action)
+        self.assertEqual(action["mode"], "legacy_recovery")
+        self.assertIn("최신 보강 기준", action["title"])
         self.assertEqual(action["selection_source_id"], "source-readable-action")
         self.assertEqual(action["validation_id"], "validation-readable-action")
         self.assertEqual(action["item_count"], 2)
         self.assertEqual(action["symbol_count"], 2)
         self.assertEqual([item["key"] for item in action["items"]], ["operability", "holdings_exposure"])
-        self.assertIn("기간 밖 stress", action["detail"])
+        self.assertIn("과거 기준", action["detail"])
         self.assertIn("Flow 2 재검증", action["next_step"])
+
+    def test_final_review_data_enrichment_is_hidden_for_current_clean_validation_and_marks_later_stale_data(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        clean_validation = {
+            "validation_id": "validation-current-clean",
+            "selection_source_id": "source-current-clean",
+            "selection_source_snapshot": {"selection_source_id": "source-current-clean"},
+            "pre_final_enrichment_gate": {"required": False, "blocking": False},
+            "provider_coverage": {"coverage": {}},
+        }
+        clean_action = build_final_review_level2_review_disposition(
+            validation=clean_validation
+        )["data_enrichment_action"]
+        self.assertFalse(clean_action["available"])
+        self.assertIn("mode", clean_action)
+        self.assertEqual(clean_action["mode"], "hidden")
+
+        stale_validation = {
+            **clean_validation,
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+        with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):
+            stale_action = build_final_review_level2_review_disposition(
+                validation=stale_validation
+            )["data_enrichment_action"]
+
+        self.assertTrue(stale_action["available"])
+        self.assertEqual(stale_action["mode"], "stale_recovery")
+        self.assertIn("다시 오래", stale_action["title"])
+
+    def test_legacy_final_review_recomputes_current_enrichment_instead_of_using_stored_plan(self) -> None:
+        from app.services import backtest_practical_validation as practical_service
+        from app.services.backtest_evidence_read_model import build_final_review_level2_review_disposition
+
+        validation = {
+            "validation_id": "validation-legacy-plan",
+            "selection_source_id": "source-legacy-plan",
+            "selection_source_snapshot": {"selection_source_id": "source-legacy-plan"},
+            "provider_gap_collection_plan": {
+                "source_map_discovery": [],
+                "source_symbols": ["TLT"],
+                "operability_stale": [],
+                "operability_official": [],
+                "operability_bridge": [],
+                "holdings_exposure": [],
+                "mapping_needed": [],
+                "macro": False,
+            },
+            "provider_coverage": {
+                "symbols": ["TLT"],
+                "symbol_weights": {"TLT": 1.0},
+                "coverage": {
+                    "operability": {
+                        "missing_symbols": [],
+                        "provenance": {"stale_symbols": ["TLT"]},
+                    },
+                    "holdings": {"missing_symbols": []},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {"diagnostic_status": "PASS", "series_count": 3, "stale_count": 0},
+                },
+            },
+        }
+        verified_rows = [
+            {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+        ]
+
+        with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):
+            action = build_final_review_level2_review_disposition(
+                validation=validation
+            )["data_enrichment_action"]
+
+        self.assertTrue(action["available"])
+        self.assertEqual(action["mode"], "legacy_recovery")
+        self.assertEqual(action["items"][0]["symbols"], ["TLT"])
+
+    def test_final_review_eligibility_rejects_inconsistent_new_enrichment_blocker_but_keeps_legacy_row(self) -> None:
+        from app.web.backtest_final_review_helpers import _is_final_review_eligible_validation_result
+
+        common = {
+            "final_review_gate": {"can_save_and_move": True},
+            "selected_route_preflight": {"select_allowed": True},
+        }
+        self.assertTrue(_is_final_review_eligible_validation_result(common))
+        self.assertFalse(
+            _is_final_review_eligible_validation_result(
+                {
+                    **common,
+                    "pre_final_enrichment_gate": {"required": True, "blocking": True},
+                }
+            )
+        )
 
     def test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts(self) -> None:
         from app.services.backtest_evidence_read_model import (
