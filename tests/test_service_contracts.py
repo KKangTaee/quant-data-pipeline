@@ -7097,6 +7097,30 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("FOMC 예상 실적 기반", source)
         self.assertIn("<svg", source)
 
+    def test_market_context_valuation_explains_eps_fallback_and_macro_inputs(self) -> None:
+        component_source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text(encoding="utf-8")
+        helper_source = Path("app/web/overview/market_context_helpers.py").read_text(
+            encoding="utf-8"
+        )
+
+        for token in (
+            "EPS 출처",
+            "Robert Shiller TTM EPS",
+            "거시 지표 기반 자체 예상",
+            "eps_source_quality",
+            "fallback_reason",
+            "real_gdp_pct",
+            "pce_inflation_pct",
+            "current_vs_baseline_gap_pct",
+            "basis_date_mismatch",
+        ):
+            self.assertIn(token, component_source)
+        self.assertIn("EPS 출처", helper_source)
+        self.assertIn("fallback_reason", helper_source)
+        self.assertNotIn("file_uploader", helper_source)
+
     def test_overview_events_entrypoint_uses_tab_helper_module(self) -> None:
         source = Path("app/web/overview/events.py").read_text(encoding="utf-8")
         helper_source = Path("app/web/overview/events_helpers.py").read_text(encoding="utf-8")

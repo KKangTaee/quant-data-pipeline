@@ -73,8 +73,8 @@ external source
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/sp500_valuation.py` | S&P 500 valuation source 경계. Shiller workbook discovery/read, explicit S&P index earnings import, latest SEP discovery/parse, 3-table schema bootstrap, parameterized UPSERT를 소유한다 |
-| `finance/loaders/sp500_valuation.py` | 월별 P/E, 최근 4개 actual As-Reported quarter TTM, latest SEP vintage DB read 경계. estimate/mixed EPS를 actual로 대체하지 않는다 |
-| `app/services/overview/sp500_valuation.py` | 60m official/36m sensitivity log(PER), FOMC macro-implied EPS, SPX scenario와 same-date SPY proportional conversion을 계산하는 Streamlit-free read model 경계 |
+| `finance/loaders/sp500_valuation.py` | 월별 P/E, 최근 4개 actual As-Reported quarter TTM, 최신 Shiller interpolated TTM EPS, latest SEP vintage DB read 경계. graph 2 resolver는 official actual을 우선하고 준비되지 않으면 Shiller proxy를 source/quality/basis/fallback evidence와 함께 반환한다 |
+| `app/services/overview/sp500_valuation.py` | Shiller-only 60m official/36m sensitivity log(PER), SEP median GDP+PCE macro-implied EPS, 동일 예상 EPS에 적용한 SPX scenario와 same-date SPY proportional conversion을 계산하는 Streamlit-free read model 경계 |
 | `finance/data/sentiment.py` | CNN Fear & Greed / AAII Sentiment Survey 수집 / 저장 경계. 별도 table을 만들지 않고 `macro_series_observation`에 sentiment series를 idempotent UPSERT한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |

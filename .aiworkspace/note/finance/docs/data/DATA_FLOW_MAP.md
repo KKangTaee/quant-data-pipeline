@@ -118,6 +118,7 @@ yfinance EOD ^GSPC / SPY
   -> finance_price.nyse_price_history
 
 finance.loaders.sp500_valuation + finance.loaders.price
+  -> official actual TTM first, latest Shiller interpolated TTM fallback
   -> app.services.overview.sp500_valuation.build_sp500_valuation_read_model()
   -> React Market Context valuation component
 ```
@@ -126,8 +127,9 @@ finance.loaders.sp500_valuation + finance.loaders.price
 
 - 60개월 log(PER)가 공식 상대 구간이며 36개월은 기간 민감도다.
 - Shiller monthly EPS는 S&P four-quarter total의 월별 보간 연구 자료이므로 strict PIT timing proof가 아니다.
-- current TTM actual EPS는 최근 완료된 네 개의 distinct quarterly As-Reported actual row 합계다. estimate/mixed는 사용하지 않는다.
-- FOMC 성장률은 `(1 + real GDP) × (1 + PCE) - 1` 민감도이며 S&P 애널리스트 컨센서스가 아니다.
+- graph 1 current PER는 최신 유효 Shiller 월의 `trailing_pe`이며 S&P earnings table이나 현재 SPX readiness와 무관하다.
+- graph 2 current TTM EPS는 최근 완료된 네 개의 distinct quarterly As-Reported actual row 합계를 우선하고, 준비되지 않으면 최신 Shiller TTM EPS를 `interpolated_ttm_proxy`로 사용한다. estimate/mixed는 official actual로 승격하지 않는다.
+- FOMC 예상 EPS 성장률은 최신 SEP target year median의 `real GDP + PCE`이며 S&P 애널리스트 컨센서스가 아니다.
 - SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
 - 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
 

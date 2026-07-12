@@ -71,3 +71,11 @@ This supports 5y as the primary window and 3y as regime sensitivity, not the mai
 - Root cause 2: the S&P workbook connector was import-only and official automated download returned 403, leaving zero EPS rows.
 - User approved an explicit hierarchy: official S&P actual quarters first, Shiller completed-quarter TTM proxy second.
 - Official file acquisition stays a visible browser/manual step; the app owns validation, preview, status confirmation, vintage UPSERT, and automatic source promotion.
+
+## V1.1 Final Implementation Decisions
+
+- Latest user policy supersedes the planned uploader: no official workbook upload UI or download workaround is part of this implementation.
+- Graph 1 derives current PER from the latest valid Shiller row and is independent of official EPS, current SPX, and SEP readiness.
+- Graph 2 loader hierarchy is `official_actual` first and `interpolated_ttm_proxy` second; every selected result carries source, basis date, quality, and fallback reason.
+- SEP expected EPS growth is median `real GDP + PCE`, not compounded growth. One baseline expected EPS is multiplied by the 5-year `-1σ / mean / +1σ` PER anchors.
+- `current_vs_baseline_gap_pct` is positive when current SPX is above the baseline scenario and negative when below it.

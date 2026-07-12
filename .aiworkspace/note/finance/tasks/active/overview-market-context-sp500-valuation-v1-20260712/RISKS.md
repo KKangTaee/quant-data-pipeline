@@ -9,7 +9,7 @@ Last Updated: 2026-07-12
 
 Official Index Earnings workbook automation may be blocked or subject to usage terms. V1 must support deterministic local/uploaded source ingestion and preserve source identity.
 
-Mitigation implemented: deterministic local `.xlsx` import with mandatory source release date and explicit status columns. Daily automation imports it when `SP500_INDEX_EARNINGS_PATH` and `SP500_INDEX_EARNINGS_RELEASE_DATE` are configured; otherwise the UI remains blocked rather than substituting another estimate.
+Mitigation implemented: deterministic local `.xlsx` import remains optional with mandatory source release date and explicit status columns. Daily automation imports it when `SP500_INDEX_EARNINGS_PATH` and `SP500_INDEX_EARNINGS_RELEASE_DATE` are configured; otherwise graph 2 uses the latest Shiller TTM EPS as a visibly labeled `interpolated_ttm_proxy` rather than blocking or pretending it is official actual.
 
 ### Monthly Earnings PIT
 

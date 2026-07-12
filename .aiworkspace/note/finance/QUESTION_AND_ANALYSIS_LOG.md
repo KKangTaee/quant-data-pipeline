@@ -9163,5 +9163,12 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 - User request: 기존 Market Context UI를 제거하고 최근 멀티플 구간과 FOMC 점도표 기반 예상 EPS/지수 구간을 React로 개발하며, SEP 최신화·QA·커밋까지 1차~5차로 진행해 달라고 요청함.
 - Interpreted goal: 과거 대비 현재 가격 배수와 미래 거시 실적 가정을 한 숫자로 섞지 않고, `현재 상대 멀티플`과 `예상 실적 기반 지수 시나리오`를 별도 그래프로 비교해야 함.
-- Analysis result: 공식 window는 60개월 log(PER), 36개월은 민감도다. TTM actual EPS는 완료된 actual As-Reported 네 분기 합이며, SEP GDP/PCE는 복리 결합한 민감도일 뿐 consensus EPS가 아니다. trailing multiple × macro EPS는 공식 적정가/신뢰구간/거래 신호가 아니다.
-- Follow-up: DB-backed 3-source vintage pipeline, SPX/SPY same-date guard, stale/mixed/insufficient blocking states, React two-chart UI, daily SEP discovery automation, Browser QA를 완료했다. S&P EPS workbook이 설정되지 않은 환경은 숫자를 대체하지 않고 차단 상태로 유지한다.
+- Analysis result: V1의 공식 window는 60개월 log(PER), 36개월은 민감도다. 당시 TTM actual EPS는 완료된 actual As-Reported 네 분기 합이며, SEP GDP/PCE 복리 민감도와 trailing multiple 결합은 공식 적정가/신뢰구간/거래 신호가 아니라고 정의했다.
+- Follow-up: DB-backed 3-source vintage pipeline, SPX/SPY same-date guard, stale/mixed/insufficient blocking states, React two-chart UI, daily SEP discovery automation, Browser QA를 완료했다. 공식 workbook 미설정 차단과 복리 공식은 바로 아래 V1.1 사용자 결정으로 대체됐다.
+
+### 2026-07-12 - S&P 공식 EPS가 없을 때 Market Context를 어떻게 계속 계산할 것인가
+
+- User request: S&P Index Earnings 자동 접근을 우회하지 않고, 공식 EPS가 DB에 없으면 Shiller 최신 TTM EPS로 두 번째 그래프까지 계산하도록 요청함.
+- Interpreted goal: graph 1은 Shiller 월별 PER만으로 독립 실행하고, graph 2는 official-first/Shiller-fallback source hierarchy와 basis date를 숨기지 않아야 함.
+- Analysis result: Shiller EPS는 S&P four-quarter total의 월별 보간 proxy이므로 `interpolated_ttm_proxy`로만 사용한다. SEP median GDP+PCE는 consensus가 아닌 자체 예상 성장률이며, current SPX / baseline SPX gap의 양수는 기준 시나리오보다 높은 상태다.
+- Follow-up: loader resolver, 독립 graph states, React source/date/fallback 안내, 실제 DB/Browser QA를 완료했다. 공식 workbook importer는 optional extension으로 유지한다.

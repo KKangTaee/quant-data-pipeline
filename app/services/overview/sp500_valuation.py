@@ -37,17 +37,10 @@ def _distribution(values: list[float], window_months: int) -> dict[str, Any]:
 def calculate_multiple_regime(
     monthly_rows: pd.DataFrame | list[dict[str, Any]],
     *,
-    current_spx: float,
-    current_ttm_eps: float,
     official_window: int = 60,
     sensitivity_window: int = 36,
 ) -> dict[str, Any]:
     """Calculate descriptive log(P/E) zones over 60m with a 36m sensitivity view."""
-    current_spx = float(current_spx)
-    current_ttm_eps = float(current_ttm_eps)
-    if current_spx <= 0 or current_ttm_eps <= 0:
-        raise ValueError("current_spx and current_ttm_eps must be positive.")
-
     frame = pd.DataFrame(monthly_rows).copy()
     if frame.empty or "observation_month" not in frame or "trailing_pe" not in frame:
         return {
@@ -79,7 +72,7 @@ def calculate_multiple_regime(
     values = frame["trailing_pe"].astype(float).tolist()
     official = _distribution(values, int(official_window))
     sensitivity = _distribution(values, int(sensitivity_window))
-    current_pe = current_spx / current_ttm_eps
+    current_pe = float(official_frame.iloc[-1]["trailing_pe"])
     current_log = math.log(current_pe)
     current_z = (current_log - official["mean_log"]) / official["std_log"]
     sensitivity_z = (
@@ -105,6 +98,7 @@ def calculate_multiple_regime(
         "plus_1sigma": official["plus_1sigma"],
         "plus_2sigma": official["plus_2sigma"],
         "current_pe": current_pe,
+        "current_basis_date": series[-1]["month"],
         "current_z": current_z,
         "bucket": bucket,
         "sensitivity": {
@@ -122,8 +116,8 @@ def calculate_multiple_regime(
     }
 
 
-def _compound_growth(real_gdp_pct: float, pce_pct: float) -> float:
-    return ((1.0 + (real_gdp_pct / 100.0)) * (1.0 + (pce_pct / 100.0)) - 1.0) * 100.0
+def _macro_growth(real_gdp_pct: float, pce_pct: float) -> float:
+    return float(real_gdp_pct) + float(pce_pct)
 
 
 def calculate_fomc_eps_scenarios(
@@ -187,11 +181,12 @@ def calculate_fomc_eps_scenarios(
         "target_year": selected_year,
         "release_date": release_date,
         "source_ref": source_ref,
-        "formula": "(1 + real_GDP) × (1 + PCE) - 1",
+        "formula": "real GDP growth + PCE inflation",
+        "method": "fomc_sep_macro_additive_growth",
         "limitation": "GDP와 PCE만 반영한 민감도이며 기업 마진·환율·자사주 효과는 포함하지 않습니다.",
     }
     for scenario, inputs in selected.items():
-        growth_pct = _compound_growth(
+        growth_pct = _macro_growth(
             inputs["real_gdp"], inputs["pce_inflation"]
         )
         result[scenario] = {
@@ -218,17 +213,22 @@ def calculate_index_scenario(
     if spx_price <= 0 or not spx_date:
         return {"status": "BLOCKED", "reason": "현재 SPX 기준값이 없습니다."}
 
+    projected_eps = float(eps_scenarios["baseline"]["projected_eps"])
     values = {
-        "lower": eps_scenarios["conservative"]["projected_eps"]
-        * multiple_regime["minus_1sigma"],
-        "baseline": eps_scenarios["baseline"]["projected_eps"]
-        * multiple_regime["mean_multiple"],
-        "upper": eps_scenarios["optimistic"]["projected_eps"]
-        * multiple_regime["plus_1sigma"],
+        "lower": projected_eps * multiple_regime["minus_1sigma"],
+        "baseline": projected_eps * multiple_regime["mean_multiple"],
+        "upper": projected_eps * multiple_regime["plus_1sigma"],
     }
     gaps = {
         key: ((value / spx_price) - 1.0) * 100.0 for key, value in values.items()
     }
+    current_vs_baseline_gap_pct = ((spx_price / values["baseline"]) - 1.0) * 100.0
+    if current_vs_baseline_gap_pct > 0:
+        valuation_position = "ABOVE_BASELINE"
+    elif current_vs_baseline_gap_pct < 0:
+        valuation_position = "BELOW_BASELINE"
+    else:
+        valuation_position = "AT_BASELINE"
 
     spy_equivalent = None
     spy_status = "UNAVAILABLE"
@@ -248,6 +248,8 @@ def calculate_index_scenario(
         "current_spx": spx_price,
         "spx_scenarios": values,
         "gap_pct": gaps,
+        "current_vs_baseline_gap_pct": current_vs_baseline_gap_pct,
+        "valuation_position": valuation_position,
         "spy_status": spy_status,
         "spy_equivalent": spy_equivalent,
         "label": "예상 실적 기반 지수 시나리오",
@@ -284,12 +286,12 @@ def build_sp500_valuation_read_model(
         from finance.loaders.price import load_latest_prices
         from finance.loaders.sp500_valuation import (
             load_latest_fomc_sep_projection,
-            load_latest_sp500_ttm_actual_eps,
             load_sp500_monthly_valuation,
+            resolve_sp500_ttm_eps,
         )
 
         monthly_rows = monthly_rows if monthly_rows is not None else load_sp500_monthly_valuation()
-        ttm_evidence = ttm_evidence or load_latest_sp500_ttm_actual_eps()
+        ttm_evidence = ttm_evidence if ttm_evidence is not None else resolve_sp500_ttm_eps()
         sep_rows = sep_rows if sep_rows is not None else load_latest_fomc_sep_projection()
         current_prices = (
             current_prices
@@ -298,30 +300,55 @@ def build_sp500_valuation_read_model(
         )
 
     ttm_evidence = dict(ttm_evidence or {})
+    if (
+        not ttm_evidence.get("eps_source_quality")
+        and ttm_evidence.get("status", "READY") == "READY"
+        and ttm_evidence.get("value_status") == "actual"
+        and float(ttm_evidence.get("ttm_eps") or 0) > 0
+    ):
+        ttm_evidence.update(
+            {
+                "current_ttm_eps": float(ttm_evidence["ttm_eps"]),
+                "eps_source": "S&P 공식 실제 EPS",
+                "eps_source_quality": "official_actual",
+                "eps_basis_date": ttm_evidence.get("latest_period_end"),
+                "fallback_reason": None,
+            }
+        )
     spx = _price_evidence(current_prices, "^GSPC")
     spy = _price_evidence(current_prices, "SPY")
-    actual_ready = (
-        ttm_evidence.get("value_status") == "actual"
-        and float(ttm_evidence.get("ttm_eps") or 0) > 0
+    multiple = calculate_multiple_regime(monthly_rows)
+    current_ttm_eps = float(
+        ttm_evidence.get("current_ttm_eps") or ttm_evidence.get("ttm_eps") or 0
+    )
+    eps_ready = (
+        current_ttm_eps > 0
         and ttm_evidence.get("status", "READY") == "READY"
+        and ttm_evidence.get("eps_source_quality")
+        in {"official_actual", "interpolated_ttm_proxy"}
     )
     blocked = {
         "status": "BLOCKED",
-        "reason": "완료된 최근 4개 분기의 실제 EPS가 필요합니다.",
+        "reason": (
+            ttm_evidence.get("fallback_reason")
+            or "S&P 공식 실제 EPS 또는 Robert Shiller TTM EPS가 필요합니다."
+        ),
     }
-    if not actual_ready or spx is None:
-        multiple = dict(blocked)
+    if not eps_ready:
         earnings = dict(blocked)
-        index = {"status": "BLOCKED", "reason": "실제 EPS 또는 SPX 기준값이 없습니다."}
+        index = {"status": "BLOCKED", "reason": "EPS 기준값이 없습니다."}
     else:
-        multiple = calculate_multiple_regime(
-            monthly_rows,
-            current_spx=spx["price"],
-            current_ttm_eps=float(ttm_evidence["ttm_eps"]),
+        earnings = calculate_fomc_eps_scenarios(current_ttm_eps, sep_rows)
+        earnings.update(
+            {
+                "eps_source": ttm_evidence.get("eps_source"),
+                "eps_source_quality": ttm_evidence.get("eps_source_quality"),
+                "eps_basis_date": ttm_evidence.get("eps_basis_date"),
+                "fallback_reason": ttm_evidence.get("fallback_reason"),
+            }
         )
-        earnings = calculate_fomc_eps_scenarios(float(ttm_evidence["ttm_eps"]), sep_rows)
         sep_release = pd.to_datetime(earnings.get("release_date"), errors="coerce")
-        spx_date = pd.to_datetime(spx["date"], errors="coerce")
+        spx_date = pd.to_datetime(spx["date"], errors="coerce") if spx else pd.NaT
         if (
             earnings.get("status") == "READY"
             and not pd.isna(sep_release)
@@ -331,6 +358,8 @@ def build_sp500_valuation_read_model(
             earnings["status"] = "STALE_SEP"
             earnings["reason"] = "최신 SPX 기준일보다 SEP 발표가 180일 넘게 오래되었습니다."
             index = {"status": "BLOCKED", "reason": earnings["reason"]}
+        elif spx is None:
+            index = {"status": "BLOCKED", "reason": "현재 SPX 기준값이 없습니다."}
         else:
             index = calculate_index_scenario(
                 multiple_regime=multiple,
@@ -338,13 +367,21 @@ def build_sp500_valuation_read_model(
                 current_spx=spx,
                 current_spy=spy,
             )
+        basis_dates = {
+            "eps": ttm_evidence.get("eps_basis_date"),
+            "sep": earnings.get("release_date"),
+            "spx": spx.get("date") if spx else None,
+        }
+        distinct_dates = {str(value) for value in basis_dates.values() if value}
+        index["basis_dates"] = basis_dates
+        index["basis_date_mismatch"] = len(distinct_dates) > 1
 
     overall = "READY" if index.get("status") == "READY" else "BLOCKED"
     return {
         "schema_version": "sp500_valuation_v1",
         "status": overall,
         "basis": {
-            "eps_basis": "As-Reported actual TTM",
+            "eps_basis": ttm_evidence.get("eps_source") or "EPS 기준 없음",
             "ttm_evidence": ttm_evidence,
             "spx": spx,
             "spy": spy,
@@ -356,7 +393,10 @@ def build_sp500_valuation_read_model(
         "index_scenario": index,
         "sources": [
             {"name": "Shiller 월별 가격·EPS", "role": "후행 PER 이력"},
-            {"name": "S&P Index Earnings", "role": "actual As-Reported TTM EPS"},
+            {
+                "name": ttm_evidence.get("eps_source") or "EPS source 미확정",
+                "role": "그래프 2 현재 TTM EPS 기준",
+            },
             {"name": "Federal Reserve SEP", "role": "GDP·PCE 민감도"},
             {"name": "SPX·SPY EOD", "role": "현재 지수와 동일 기준일 환산"},
         ],

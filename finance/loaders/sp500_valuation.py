@@ -123,6 +123,123 @@ def load_latest_sp500_ttm_actual_eps(
     }
 
 
+def load_latest_shiller_ttm_eps(
+    *,
+    query_fn: QueryFn | None = None,
+) -> dict[str, Any]:
+    """Load the latest positive Shiller interpolated TTM EPS observation."""
+    rows = _query_meta(
+        """
+        SELECT observation_month, trailing_eps, data_quality, source, source_ref,
+               source_version, collected_at
+        FROM sp500_monthly_valuation
+        WHERE trailing_eps > 0
+          AND source = %s
+        ORDER BY observation_month DESC
+        LIMIT 1
+        """,
+        ("robert_shiller_irrational_exuberance",),
+        query_fn=query_fn,
+    )
+    frame = pd.DataFrame(rows)
+    if frame.empty:
+        return {
+            "status": "INSUFFICIENT_HISTORY",
+            "current_ttm_eps": None,
+            "eps_source": "Robert Shiller TTM EPS",
+            "eps_source_quality": "interpolated_ttm_proxy",
+            "eps_basis_date": None,
+            "fallback_reason": None,
+        }
+    row = frame.iloc[0]
+    basis_date = pd.to_datetime(row.get("observation_month"), errors="coerce")
+    eps = pd.to_numeric(row.get("trailing_eps"), errors="coerce")
+    if pd.isna(basis_date) or pd.isna(eps) or float(eps) <= 0:
+        return {
+            "status": "INSUFFICIENT_HISTORY",
+            "current_ttm_eps": None,
+            "eps_source": "Robert Shiller TTM EPS",
+            "eps_source_quality": "interpolated_ttm_proxy",
+            "eps_basis_date": None,
+            "fallback_reason": None,
+        }
+    return {
+        "status": "READY",
+        "current_ttm_eps": float(eps),
+        "ttm_eps": float(eps),
+        "eps_source": "Robert Shiller TTM EPS",
+        "eps_source_quality": "interpolated_ttm_proxy",
+        "eps_basis_date": pd.Timestamp(basis_date).strftime("%Y-%m-%d"),
+        "fallback_reason": None,
+        "value_status": "interpolated",
+        "basis": "sp500_four_quarter_total_interpolated",
+        "source": row.get("source"),
+        "source_ref": row.get("source_ref"),
+        "data_quality": row.get("data_quality") or "interpolated",
+    }
+
+
+def resolve_sp500_ttm_eps(
+    *,
+    official_evidence: dict[str, Any] | None = None,
+    shiller_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Prefer official actual EPS and fall back transparently to Shiller TTM EPS."""
+    official = (
+        dict(official_evidence)
+        if official_evidence is not None
+        else load_latest_sp500_ttm_actual_eps()
+    )
+    official_eps = float(official.get("ttm_eps") or 0)
+    if (
+        official.get("status") == "READY"
+        and official.get("value_status") == "actual"
+        and official_eps > 0
+    ):
+        return {
+            **official,
+            "current_ttm_eps": official_eps,
+            "eps_source": "S&P 공식 실제 EPS",
+            "eps_source_quality": "official_actual",
+            "eps_basis_date": official.get("latest_period_end"),
+            "fallback_reason": None,
+        }
+
+    shiller = (
+        dict(shiller_evidence)
+        if shiller_evidence is not None
+        else load_latest_shiller_ttm_eps()
+    )
+    shiller_eps = float(shiller.get("current_ttm_eps") or shiller.get("ttm_eps") or 0)
+    if shiller.get("status") == "READY" and shiller_eps > 0:
+        return {
+            **shiller,
+            "current_ttm_eps": shiller_eps,
+            "ttm_eps": shiller_eps,
+            "eps_source": "Robert Shiller TTM EPS",
+            "eps_source_quality": "interpolated_ttm_proxy",
+            "fallback_reason": (
+                "S&P 공식 actual EPS가 완료된 4개 분기 기준으로 준비되지 않아 "
+                "Robert Shiller TTM EPS를 사용합니다."
+            ),
+            "official_evidence": official,
+        }
+
+    return {
+        "status": "INSUFFICIENT_HISTORY",
+        "current_ttm_eps": None,
+        "ttm_eps": None,
+        "eps_source": None,
+        "eps_source_quality": "unavailable",
+        "eps_basis_date": None,
+        "fallback_reason": (
+            "S&P 공식 actual EPS와 Robert Shiller TTM EPS가 모두 준비되지 않았습니다."
+        ),
+        "official_evidence": official,
+        "shiller_evidence": shiller,
+    }
+
+
 def load_latest_fomc_sep_projection(
     *,
     query_fn: QueryFn | None = None,

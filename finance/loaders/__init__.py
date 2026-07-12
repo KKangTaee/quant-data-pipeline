@@ -46,8 +46,10 @@ from .provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot, lo
 from .runtime_adapter import adapt_price_history_to_strategy_dfs, load_price_strategy_dfs
 from .sp500_valuation import (
     load_latest_fomc_sep_projection,
+    load_latest_shiller_ttm_eps,
     load_latest_sp500_ttm_actual_eps,
     load_sp500_monthly_valuation,
+    resolve_sp500_ttm_eps,
 )
 from .futures import load_futures_ohlcv
 from .universe import (
@@ -100,5 +102,7 @@ __all__ = [
     "load_pit_universe_membership_snapshots",
     "load_sp500_monthly_valuation",
     "load_latest_sp500_ttm_actual_eps",
+    "load_latest_shiller_ttm_eps",
     "load_latest_fomc_sep_projection",
+    "resolve_sp500_ttm_eps",
 ]

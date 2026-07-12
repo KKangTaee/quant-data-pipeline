@@ -5944,4 +5944,11 @@ Detailed historical logs were archived on `2026-04-13`.
 - 기존 Market Context visible cockpit/brief/sector/event/refresh composition을 제거하고 5년 후행 PER 구간과 FOMC 예상 EPS/SPX 시나리오 React 화면으로 교체했다.
 - Shiller 월별 valuation, S&P index earnings release vintage, Federal Reserve SEP vintage 3-table pipeline과 loader/service/read-model 경계를 추가했다.
 - SEP 최신 링크를 매일 확인하는 automation과 optional EPS table bootstrap을 추가했고, 실제 수집·TypeScript/Vite·18 valuation tests·31 Market Context contracts·Browser QA를 완료했다.
-- S&P actual earnings workbook이 없으면 예상 지수 시나리오를 차단하며, generated QA screenshot은 커밋하지 않는다.
+- V1 당시에는 S&P actual earnings workbook이 없으면 예상 지수 시나리오를 차단했다. 이 제약은 아래 V1.1 fallback 구현으로 대체됐으며 generated QA screenshot은 커밋하지 않는다.
+
+## 2026-07-12 - Overview Market Context S&P 500 Valuation V1.1
+
+- 그래프 1을 official EPS/SPX readiness에서 분리하고 최신 Shiller 월별 PER를 current marker로 사용했다.
+- 그래프 2는 official actual 4분기를 우선하고 없으면 최신 Robert Shiller TTM EPS를 source/quality/basis/fallback evidence와 함께 사용한다.
+- SEP median GDP+PCE 예상 EPS와 동일 EPS × 5년 PER band, 현재 SPX 괴리율을 React에 연결했다.
+- 상세 실행과 QA는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`를 본다.

@@ -1,6 +1,6 @@
 # Overview Market Context S&P 500 Valuation V1 Status
 
-Status: V1.1 Data Activation Implementation Planned
+Status: Complete
 Last Updated: 2026-07-12
 
 ## Current Progress
@@ -19,17 +19,20 @@ Last Updated: 2026-07-12
 - Existing cockpit/refresh/brief/sector/event visible composition has been removed from the Market Context entrypoint.
 - 5차 daily SEP/Shiller/SPX-SPY automation, schema bootstrap, live ingestion smoke, Browser QA, and durable documentation sync completed.
 - User confirmed V1.1 combined activation: graph 1 independence, Shiller TTM fallback, and browser-assisted official XLSX registration.
+- Latest user policy removed the uploader from current scope and kept the existing importer as an optional extension.
+- V1.1 graph independence, EPS resolver, additive SEP EPS, fair SPX band, React source/date/fallback UI, and Browser QA are implemented.
 
 ## Current Stage
 
-V1은 완료되었고, live run에서 확인된 data activation gap을 해결하는 V1.1 implementation plan이 최신 사용자 정책에 맞춰 확정됐다.
+V1.1 1차~5차 implementation, fresh verification, Browser QA, documentation sync, integration review를 완료했다.
 
 ## Next Action
 
-1. Implement graph 1 independence with latest Shiller PER.
-2. Implement official-first/Shiller-fallback EPS resolver.
-3. Connect additive SEP EPS growth and SPX band, then complete React QA/docs/commit.
+1. Keep the optional S&P workbook importer available for future official actual source promotion.
+2. Re-run the same DB/Browser checks when a newer Shiller workbook or SEP vintage arrives.
+3. Leave the unrelated Sentiment and Market Movers full-suite isolation failures to their owning tasks.
 
 ## V1 Completion
 
 - 1차 through 5차 complete; no required implementation stage remains.
+- V1.1 1차 through 5차 complete; no required implementation stage remains.

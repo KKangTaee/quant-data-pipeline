@@ -539,6 +539,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - `data_quality=interpolated`이며 strict historical release timing proof가 아니다.
 - 60개월 log(PER) 상대평가와 36개월 민감도에만 사용한다. 표준편차 band는 신뢰구간이 아니다.
+- Market Context graph 2는 공식 actual 4분기 TTM이 없을 때 이 table의 최신 양수 `trailing_eps`를 `interpolated_ttm_proxy`로 선택한다. UI는 이를 S&P 공식 EPS나 애널리스트 컨센서스로 표시하지 않는다.
 
 ## `sp500_index_earnings`
 

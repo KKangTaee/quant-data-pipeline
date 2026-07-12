@@ -245,20 +245,36 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["rows_written"], 12)
         self.assertIn("release_date = VALUES(release_date)", db.executemany.call_args.args[0])
 
-    def test_multiple_regime_uses_60_months_and_36_month_sensitivity(self) -> None:
+    def test_multiple_regime_uses_latest_shiller_per_as_current_marker(self) -> None:
         from app.services.overview.sp500_valuation import calculate_multiple_regime
 
-        result = calculate_multiple_regime(
-            monthly_pe_frame(72),
-            current_spx=7200.0,
-            current_ttm_eps=280.0,
-        )
+        result = calculate_multiple_regime(monthly_pe_frame(72))
 
         self.assertEqual(result["window_months"], 60)
         self.assertEqual(result["sensitivity"]["window_months"], 36)
-        self.assertAlmostEqual(result["current_pe"], 25.7142857)
+        self.assertAlmostEqual(result["current_pe"], 28.65)
         self.assertIn(result["bucket"], {"LOW", "NEUTRAL", "HIGH", "EXTREME_HIGH"})
         self.assertEqual(len(result["series"]), 60)
+        self.assertEqual(result["current_basis_date"], "2025-12-01")
+
+    def test_read_model_keeps_graph_one_ready_without_official_eps(self) -> None:
+        from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+
+        model = build_sp500_valuation_read_model(
+            monthly_rows=monthly_pe_frame(60),
+            ttm_evidence={
+                "status": "INSUFFICIENT_HISTORY",
+                "quarter_count": 0,
+                "ttm_eps": None,
+                "value_status": "actual",
+            },
+            sep_rows=pd.DataFrame(),
+            current_prices=pd.DataFrame(),
+        )
+
+        self.assertEqual(model["multiple_regime"]["status"], "READY")
+        self.assertAlmostEqual(model["multiple_regime"]["current_pe"], 26.85)
+        self.assertEqual(model["earnings_scenario"]["status"], "BLOCKED")
 
     def test_ttm_loader_sums_latest_four_completed_actual_quarters(self) -> None:
         from finance.loaders.sp500_valuation import load_latest_sp500_ttm_actual_eps
@@ -278,14 +294,156 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["value_status"], "actual")
         self.assertEqual(result["basis"], "as_reported")
 
-    def test_fomc_eps_scenario_compounds_real_gdp_and_pce(self) -> None:
+    def test_shiller_ttm_loader_returns_latest_positive_eps_with_basis_date(self) -> None:
+        from finance.loaders.sp500_valuation import load_latest_shiller_ttm_eps
+
+        captured: dict[str, object] = {}
+        rows = [
+            {
+                "observation_month": "2026-03-01",
+                "trailing_eps": 261.723,
+                "source": "robert_shiller_irrational_exuberance",
+                "source_ref": "https://www.econ.yale.edu/~shiller/data.htm",
+                "data_quality": "interpolated",
+            }
+        ]
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return rows
+
+        result = load_latest_shiller_ttm_eps(query_fn=query)
+
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(result["current_ttm_eps"], 261.723)
+        self.assertEqual(result["eps_source"], "Robert Shiller TTM EPS")
+        self.assertEqual(result["eps_source_quality"], "interpolated_ttm_proxy")
+        self.assertEqual(result["eps_basis_date"], "2026-03-01")
+        self.assertIn("source = %s", str(captured["sql"]))
+        self.assertEqual(
+            captured["params"],
+            ("robert_shiller_irrational_exuberance",),
+        )
+
+    def test_eps_resolver_prefers_official_actual_over_shiller(self) -> None:
+        from finance.loaders.sp500_valuation import resolve_sp500_ttm_eps
+
+        result = resolve_sp500_ttm_eps(
+            official_evidence={
+                "status": "READY",
+                "ttm_eps": 270.0,
+                "value_status": "actual",
+                "latest_period_end": "2026-03-31",
+            },
+            shiller_evidence={
+                "status": "READY",
+                "current_ttm_eps": 261.723,
+                "eps_basis_date": "2026-03-01",
+            },
+        )
+
+        self.assertEqual(result["current_ttm_eps"], 270.0)
+        self.assertEqual(result["eps_source"], "S&P 공식 실제 EPS")
+        self.assertEqual(result["eps_source_quality"], "official_actual")
+        self.assertIsNone(result["fallback_reason"])
+
+    def test_eps_resolver_uses_shiller_when_official_actual_is_missing(self) -> None:
+        from finance.loaders.sp500_valuation import resolve_sp500_ttm_eps
+
+        result = resolve_sp500_ttm_eps(
+            official_evidence={
+                "status": "INSUFFICIENT_HISTORY",
+                "quarter_count": 0,
+                "ttm_eps": None,
+            },
+            shiller_evidence={
+                "status": "READY",
+                "current_ttm_eps": 261.723,
+                "eps_source": "Robert Shiller TTM EPS",
+                "eps_source_quality": "interpolated_ttm_proxy",
+                "eps_basis_date": "2026-03-01",
+            },
+        )
+
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(result["current_ttm_eps"], 261.723)
+        self.assertEqual(result["eps_source"], "Robert Shiller TTM EPS")
+        self.assertIn("공식 actual EPS", result["fallback_reason"])
+
+    def test_fomc_eps_scenario_adds_real_gdp_and_pce(self) -> None:
         from app.services.overview.sp500_valuation import calculate_fomc_eps_scenarios
 
         result = calculate_fomc_eps_scenarios(270.0, sep_projection_frame())
 
-        self.assertAlmostEqual(result["baseline"]["growth_pct"], 5.8792, places=4)
-        self.assertAlmostEqual(result["baseline"]["projected_eps"], 285.87384, places=5)
+        self.assertAlmostEqual(result["baseline"]["growth_pct"], 5.8, places=4)
+        self.assertAlmostEqual(result["baseline"]["projected_eps"], 285.66, places=5)
         self.assertEqual(result["target_year"], 2026)
+
+    def test_index_scenario_applies_one_expected_eps_to_multiple_band(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_index_scenario
+
+        result = calculate_index_scenario(
+            multiple_regime={
+                "status": "READY",
+                "minus_1sigma": 20.0,
+                "mean_multiple": 25.0,
+                "plus_1sigma": 30.0,
+            },
+            eps_scenarios={
+                "status": "READY",
+                "conservative": {"projected_eps": 90.0},
+                "baseline": {"projected_eps": 100.0},
+                "optimistic": {"projected_eps": 110.0},
+            },
+            current_spx={"date": "2026-07-10", "price": 2600.0},
+        )
+
+        self.assertEqual(
+            result["spx_scenarios"],
+            {"lower": 2000.0, "baseline": 2500.0, "upper": 3000.0},
+        )
+        self.assertAlmostEqual(result["current_vs_baseline_gap_pct"], 4.0)
+        self.assertEqual(result["valuation_position"], "ABOVE_BASELINE")
+
+    def test_read_model_uses_shiller_fallback_and_reports_macro_inputs(self) -> None:
+        from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+
+        model = build_sp500_valuation_read_model(
+            monthly_rows=monthly_pe_frame(60),
+            ttm_evidence={
+                "status": "READY",
+                "current_ttm_eps": 261.723,
+                "ttm_eps": 261.723,
+                "eps_source": "Robert Shiller TTM EPS",
+                "eps_source_quality": "interpolated_ttm_proxy",
+                "eps_basis_date": "2026-03-01",
+                "fallback_reason": "공식 actual EPS가 없어 Shiller 기준을 사용합니다.",
+            },
+            sep_rows=sep_projection_frame(),
+            current_prices=pd.DataFrame(
+                [
+                    {"symbol": "^GSPC", "latest_date": "2026-07-10", "price": 7200.0},
+                    {"symbol": "SPY", "latest_date": "2026-07-10", "price": 720.0},
+                ]
+            ),
+        )
+
+        earnings = model["earnings_scenario"]
+        index = model["index_scenario"]
+        self.assertEqual(model["status"], "READY")
+        self.assertEqual(earnings["eps_source"], "Robert Shiller TTM EPS")
+        self.assertEqual(earnings["eps_source_quality"], "interpolated_ttm_proxy")
+        self.assertEqual(earnings["eps_basis_date"], "2026-03-01")
+        self.assertEqual(earnings["baseline"]["real_gdp_pct"], 2.2)
+        self.assertEqual(earnings["baseline"]["pce_inflation_pct"], 3.6)
+        self.assertAlmostEqual(earnings["baseline"]["growth_pct"], 5.8)
+        expected_eps = earnings["baseline"]["projected_eps"]
+        self.assertAlmostEqual(
+            index["spx_scenarios"]["lower"],
+            expected_eps * model["multiple_regime"]["minus_1sigma"],
+        )
+        self.assertTrue(index["basis_date_mismatch"])
 
     def test_index_scenario_blocks_spy_conversion_when_dates_differ(self) -> None:
         from app.services.overview.sp500_valuation import (
@@ -295,9 +453,7 @@ class Sp500ValuationDataTests(unittest.TestCase):
         )
 
         result = calculate_index_scenario(
-            multiple_regime=calculate_multiple_regime(
-                monthly_pe_frame(60), current_spx=7200.0, current_ttm_eps=270.0
-            ),
+            multiple_regime=calculate_multiple_regime(monthly_pe_frame(60)),
             eps_scenarios=calculate_fomc_eps_scenarios(270.0, sep_projection_frame()),
             current_spx={"date": "2026-07-10", "price": 7200.0},
             current_spy={"date": "2026-07-09", "price": 720.0},

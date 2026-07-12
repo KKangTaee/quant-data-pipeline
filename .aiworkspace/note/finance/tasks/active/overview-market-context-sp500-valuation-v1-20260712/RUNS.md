@@ -63,3 +63,14 @@ Last Updated: 2026-07-12
 - Durable index/roadmap/project/architecture/data/flow docs and root handoff logs synchronized.
 - Final full service-contract run: 759 tests, 2 out-of-scope failures. Sentiment still expects removed `payload.summary.metrics.map`; Market Movers EOD repair test reads persisted limited-history DB state and returns the first mocked 2-row repair only instead of isolated 65-row expectation.
 - Final scoped gates passed after that run: 18 valuation tests, 31 Market Context contracts, Python compile, TypeScript check, Vite build, and `git diff --check`.
+
+## V1.1 Data Activation Verification
+
+- Baseline reproduced: existing 18 valuation tests and 31 Market Context contracts passed, while the DB-backed read model returned graph 1/2 `BLOCKED` because official EPS rows were zero.
+- TDD RED confirmed graph 1 required current SPX/EPS, resolver functions were absent, SEP used compounded growth, and React omitted source/fallback/macro input fields.
+- GREEN: 24 valuation tests and 32 Market Context contracts passed; `npx tsc --noEmit` and Vite production build passed.
+- DB-backed smoke returned both graphs `READY`: Shiller PER `25.4254x`, Shiller EPS `261.723` at `2026-03-01`, SEP `2026-06-17`, expected EPS `276.902934`, SPX band `6266.55 / 6958.23 / 7726.27`, current-vs-baseline gap `+8.87%`.
+- Browser QA at desktop and 420px confirmed both charts, source/basis/fallback copy, no horizontal overflow, and zero browser console errors. Screenshot: `market-context-sp500-valuation-v1-1-qa.png` (generated, not committed).
+- Fresh final gates repeated 24 valuation tests, 32 Market Context contracts, Python compile, DB assertions, TypeScript, Vite build, and `git diff --check` successfully.
+- Full `tests.test_service_contracts` ran 742 tests with the same 2 out-of-scope failures already tracked here: Sentiment source-string expectation and Market Movers persisted limited-history isolation.
+- Final integration review added an explicit canonical Shiller source predicate to the fallback loader and repeated the 24-test valuation/DB smoke successfully.
