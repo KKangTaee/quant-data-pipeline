@@ -11,6 +11,31 @@ type ReportCard = {
   tone?: Tone
 }
 
+type EvidenceClosureIssue = ReportCard & {
+  rootIssueId?: string
+  root_issue_id?: string
+  resolutionClass?: string
+  resolution_class?: string
+  terminalState?: string
+  terminal_state?: string
+  derivedChecks?: string[]
+  derived_checks?: string[]
+}
+
+type EvidenceClosureSummary = {
+  total?: number
+  unresolvedActionableCount?: number
+  unresolved_actionable_count?: number
+  criticalEngineeringCount?: number
+  critical_engineering_count?: number
+  missingContractCount?: number
+  missing_contract_count?: number
+  preSelectionUnresolvedCount?: number
+  pre_selection_unresolved_count?: number
+  acceptedLimitsAndDecisionsCount?: number
+  accepted_limits_and_decisions_count?: number
+}
+
 type Recommendation = {
   route?: string
   label?: string
@@ -623,6 +648,12 @@ export type InvestmentReport = {
   benchmark_rationale?: ReportSection
   level2ReviewDisposition?: Level2ReviewDisposition
   level2_review_disposition?: Level2ReviewDisposition
+  preSelectionUnresolvedItems?: EvidenceClosureIssue[]
+  pre_selection_unresolved_items?: EvidenceClosureIssue[]
+  acceptedLimitsAndDecisions?: EvidenceClosureIssue[]
+  accepted_limits_and_decisions?: EvidenceClosureIssue[]
+  evidenceClosureSummary?: EvidenceClosureSummary
+  evidence_closure_summary?: EvidenceClosureSummary
   monitoringConditions?: MonitoringConditions
   monitoring_conditions?: MonitoringConditions
   boundaries?: Record<string, boolean>
@@ -1082,6 +1113,17 @@ function ReviewActionBoard({ sections }: { sections: ReviewRoleSection[] }) {
   )
 }
 
+function EvidenceClosureSections({ report }: { report: InvestmentReport }) {
+  const unresolved = field(report.preSelectionUnresolvedItems, report.pre_selection_unresolved_items) ?? []
+  const closable = field(report.acceptedLimitsAndDecisions, report.accepted_limits_and_decisions) ?? []
+  return (
+    <section className="fr-invest-report__closure-shell" aria-label="근거 종결 상태">
+      <EvidenceRows title="선정 전 미해결 항목" items={unresolved} emptyLabel="현재 후보 0개" limit={6} />
+      <EvidenceRows title="인수한 한계와 최종 판단 항목" items={closable} emptyLabel="종결할 항목 없음" limit={8} />
+    </section>
+  )
+}
+
 function ScorecardDimensionList({ dimensions }: { dimensions: ScorecardDimension[] }) {
   return (
     <div className="fr-invest-report__scorecard-dimensions" aria-label="세부 점수">
@@ -1155,7 +1197,7 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
       <h5>검증별 남은 판단 근거</h5>
       {impacts.length > 0 ? (
         impacts.map((impact, index) => {
-          const scoreEffect = field(impact.scoreEffect, impact.score_effect)
+          const explicitImpact = field(impact.scoreEffect, impact.score_effect)
           const scorePolicy = field(impact.scorePolicy, impact.score_policy)
           const evidenceSource = field(impact.evidenceSource, impact.evidence_source)
           const evidenceAsOf = field(impact.evidenceAsOf, impact.evidence_as_of)
@@ -1166,9 +1208,9 @@ function ReviewImpactList({ impacts }: { impacts: ReviewImpact[] }) {
             <section className={`fr-invest-report__review-impact fr-invest-report__review-impact--${toneClass(impact.tone)}`} key={`${impact.role ?? "review"}-${impact.title ?? index}`}>
               <div>
                 <strong>{compact(impact.title)}</strong>
-                <span>{compact(traceLabel, Number(scoreEffect) === 0 ? "정성 판단" : "근거 확인")}</span>
+                <span>{compact(traceLabel, Number(explicitImpact) === 0 ? "정성 판단" : "근거 확인")}</span>
               </div>
-              <small>{compact(field(impact.roleLabel, impact.role_label))} · {Number(scoreEffect) === 0 ? "감점 없음" : `${formattedScore(scoreEffect)} 반영`}</small>
+              <small>{compact(field(impact.roleLabel, impact.role_label))} · {Number(explicitImpact) === 0 ? "감점 없음" : `${formattedScore(explicitImpact)} 반영`}</small>
               <p>{compact(impact.rationale ?? impact.detail)}</p>
               {traceItems.length > 0 ? (
                 <div className="fr-invest-report__review-trace-list">
@@ -1441,6 +1483,8 @@ export function FinalReviewInvestmentReport({ report, decisionAction }: FinalRev
       <InterpretationRows cards={interpretationCards} />
 
       {decisionAction && (decisionAction.options ?? []).length > 0 ? <FinalDecisionAction model={decisionAction} /> : null}
+
+      <EvidenceClosureSections report={report} />
 
       <div className="fr-invest-report__evidence">
         <EvidenceRows title="강점" items={report.strengths ?? []} emptyLabel="강점 근거 없음" limit={3} />

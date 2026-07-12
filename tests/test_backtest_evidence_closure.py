@@ -62,6 +62,161 @@ def _grs_validation_fixture() -> dict[str, object]:
 
 
 class EvidenceClosureContractTests(unittest.TestCase):
+    def test_selected_decision_finalizes_limits_and_monitoring_for_same_validation(self) -> None:
+        from app.services.backtest_evidence_closure import finalize_evidence_closure
+
+        contract = {
+            "validation_id": "validation-1",
+            "issues": [
+                {
+                    "root_issue_id": "static_universe_limit",
+                    "resolution_class": "accepted_limit",
+                    "terminal_state": "open",
+                    "title": "정적 universe 사후 선택 한계",
+                },
+                {
+                    "root_issue_id": "monitoring_baseline",
+                    "resolution_class": "monitoring_transfer",
+                    "terminal_state": "open",
+                    "title": "Monitoring baseline",
+                    "completion_criteria": "월별 drawdown trigger 추적",
+                },
+            ],
+            "summary": {},
+        }
+
+        snapshot = finalize_evidence_closure(
+            contract,
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+            operator_reason="한계를 확인하고 추적 조건을 수용함",
+        )
+
+        self.assertEqual(snapshot["validation_id"], "validation-1")
+        self.assertEqual(snapshot["terminal_state_counts"]["accepted"], 1)
+        self.assertEqual(snapshot["terminal_state_counts"]["monitoring_transferred"], 1)
+        self.assertEqual(snapshot["open_count"], 0)
+        self.assertEqual(snapshot["monitoring_conditions"], ["월별 drawdown trigger 추적"])
+
+    def test_score_impact_is_measured_and_root_deduplicated(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_scorecard
+
+        measured_issue = {
+            "root_issue_id": "replay_period_coverage",
+            "title": "최신 재검증 기간",
+            "measurement": {
+                "observed": 42,
+                "threshold": 30,
+                "comparison": "less_than_or_equal",
+                "target_dimension": "evidence_confidence",
+                "score_effect": -3,
+            },
+        }
+        scorecard = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.0,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition={
+                "summary": {"blocker": 0, "warning": 1, "open_review": 0, "monitoring_followup": 0},
+                "groups": {},
+                "closure_summary": {
+                    "unresolved_actionable_count": 0,
+                    "critical_engineering_count": 0,
+                    "missing_contract_count": 0,
+                },
+                "closure_issues": [measured_issue, dict(measured_issue)],
+            },
+        )
+
+        impacts = scorecard["review_impacts"]
+        self.assertEqual([row["root_issue_id"] for row in impacts], ["replay_period_coverage"])
+        self.assertEqual(impacts[0]["score_effect"], -3)
+        self.assertEqual(impacts[0]["measurement"]["observed"], 42)
+
+    def test_missing_contract_and_open_actionable_are_gate_not_score(self) -> None:
+        from app.services.backtest_evidence_read_model import build_final_review_scorecard
+
+        scorecard = build_final_review_scorecard(
+            investability_packet={
+                "score": 9.0,
+                "selection_gate_policy_snapshot": {
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                },
+            },
+            level2_review_disposition={
+                "summary": {"blocker": 0, "warning": 0, "open_review": 0, "monitoring_followup": 0},
+                "groups": {},
+                "closure_summary": {
+                    "unresolved_actionable_count": 1,
+                    "critical_engineering_count": 0,
+                    "missing_contract_count": 1,
+                },
+                "closure_issues": [
+                    {
+                        "root_issue_id": "missing_contract:required_unknown",
+                        "resolution_class": "engineering_required",
+                        "terminal_state": "deferred",
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(scorecard["review_impacts"], [])
+        self.assertIn(
+            "evidence_closure_blocker",
+            [row["code"] for row in scorecard["route_constraints"]],
+        )
+
+    def test_decision_row_does_not_promote_selected_route_with_engineering_blocker(self) -> None:
+        from app.web.backtest_final_review_helpers import _build_final_review_decision_row
+
+        validation = {
+            "validation_id": "validation-blocked",
+            "selection_source_id": "source-blocked",
+            "evidence_closure": {
+                "validation_id": "validation-blocked",
+                "issues": [
+                    {
+                        "root_issue_id": "historical_universe_coverage",
+                        "title": "PIT membership 근거",
+                        "resolution_class": "engineering_required",
+                        "criticality": "critical",
+                        "terminal_state": "deferred",
+                    }
+                ],
+                "summary": {"critical_engineering_count": 1},
+            },
+        }
+        packet = {
+            "selection_gate_policy_snapshot": {
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "blockers": [],
+            }
+        }
+
+        row = _build_final_review_decision_row(
+            source={"source_id": "source-blocked", "source_type": "practical_validation_result"},
+            validation=validation,
+            paper_observation={"active_components": []},
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=packet,
+            decision_id="decision-blocked",
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+            operator_reason="근거 확인",
+            operator_constraints="",
+            operator_next_action="",
+        )
+
+        self.assertFalse(row["monitoring_candidate"])
+        self.assertEqual(row["evidence_closure_snapshot"]["selection_blocker_count"], 1)
+
     def test_recheck_plan_uses_component_common_date_not_whole_db_max(self) -> None:
         import pandas as pd
         from unittest.mock import patch
@@ -241,6 +396,17 @@ class EvidenceClosureContractTests(unittest.TestCase):
         self.assertIn('action_id == "run_practical_validation_replay"', page_source)
         self.assertIn("_render_evidence_closure_groups(validation_result)", page_source)
         self.assertNotIn('action_id == "missing_handler"', page_source)
+
+    def test_final_review_react_renders_python_closure_sections_without_domain_recalculation(self) -> None:
+        source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/FinalReviewInvestmentReport.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("선정 전 미해결 항목", source)
+        self.assertIn("인수한 한계와 최종 판단 항목", source)
+        self.assertNotIn("resolutionClass ===", source)
+        self.assertNotIn("fetch(", source)
+        self.assertNotIn("scoreEffect =", source)
 
     def test_latest_replay_adapter_uses_stored_requested_actual_and_gap(self) -> None:
         from app.services.backtest_evidence_closure import build_evidence_closure_contract

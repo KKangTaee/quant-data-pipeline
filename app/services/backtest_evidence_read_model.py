@@ -3200,39 +3200,52 @@ def _score_limit(*, code: str, label: str, cap: int, detail: str, tone: str = "w
     }
 
 
-def _review_impact_for_item(item: dict[str, Any]) -> dict[str, Any]:
-    role = _safe_text(item.get("role"), "final_decision_input")
-    mapping = {
-        "pv_data_caution": ("evidence_confidence", 6, "confidence_adjustment", "데이터 주의는 투자 매력도가 아니라 근거 신뢰도를 낮춥니다."),
-        "pv_practical_caution": ("evidence_confidence", 4, "confidence_adjustment", "미측정 실용성 공백은 투자 매력도가 아니라 근거 신뢰도를 낮춥니다."),
-        "final_decision_input": ("evidence_confidence", 0, "no_score_effect", "관측값과 기준이 없는 최종 판단 참고는 자동 감점하지 않습니다."),
-        "monitoring_followup": ("monitoring_readiness", 4, "readiness_adjustment", "Monitoring 추적 항목은 추적 준비도에만 반영합니다."),
-        "final_readiness_blocker": ("monitoring_readiness", 20, "blocker", "저장 전 보강 항목은 Monitoring 준비 blocker입니다."),
-    }
-    target_dimension, deduction, score_policy, rationale = mapping.get(
-        role,
-        ("evidence_confidence", 0, "no_score_effect", "근거가 없는 일반 REVIEW는 자동 감점하지 않습니다."),
-    )
-    return {
-        "title": _safe_text(item.get("title"), "Review item"),
-        "role": role,
-        "role_label": _safe_text(item.get("role_label"), "최종 판단 참고"),
-        "disposition": _safe_text(item.get("disposition"), "open_review"),
-        "target_dimension": target_dimension,
-        "score_effect": -deduction,
-        "score_policy": score_policy,
-        "detail": _safe_text(item.get("detail"), "-"),
-        "action": _safe_text(item.get("action"), "-"),
-        "observed_value": _safe_text(item.get("observed_value"), "-"),
-        "threshold": _safe_text(item.get("threshold"), "-"),
-        "evidence_source": _safe_text(item.get("evidence_source"), "-"),
-        "evidence_as_of": _safe_text(item.get("evidence_as_of"), "-"),
-        "trace_status": _safe_text(item.get("trace_status"), "context_only"),
-        "trace_label": _safe_text(item.get("trace_label"), "근거 상태"),
-        "trace_items": [dict(row or {}) for row in list(item.get("trace_items") or []) if isinstance(row, dict)],
-        "rationale": rationale,
-        "tone": _safe_text(item.get("tone"), "warning"),
-    }
+def _closure_score_impacts(disposition: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return one measured score impact per root issue, never per display role."""
+
+    impacts: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw_issue in list(disposition.get("closure_issues") or []):
+        issue = dict(raw_issue or {})
+        root_issue_id = _safe_text(issue.get("root_issue_id"), "")
+        if not root_issue_id or root_issue_id in seen or root_issue_id.startswith("missing_contract:"):
+            continue
+        measurement = dict(issue.get("measurement") or {})
+        observed = _float_or_none(measurement.get("observed"))
+        threshold = _float_or_none(measurement.get("threshold"))
+        if observed is None or threshold is None:
+            continue
+        seen.add(root_issue_id)
+        score_effect = int(_float_or_none(measurement.get("score_effect")) or 0)
+        impacts.append(
+            {
+                "root_issue_id": root_issue_id,
+                "title": _safe_text(issue.get("title"), root_issue_id),
+                "role": "root_measurement",
+                "role_label": "측정 근거",
+                "disposition": _safe_text(issue.get("resolution_class"), "measured"),
+                "target_dimension": _safe_text(
+                    measurement.get("target_dimension"),
+                    "evidence_confidence",
+                ),
+                "score_effect": score_effect,
+                "score_policy": "measured_threshold_only",
+                "measurement": measurement,
+                "observed_value": observed,
+                "threshold": threshold,
+                "evidence_source": _safe_text(issue.get("cause"), "evidence closure"),
+                "evidence_as_of": _safe_text(measurement.get("as_of"), "-"),
+                "trace_status": "measured",
+                "trace_label": "측정값과 기준 확인",
+                "trace_items": [],
+                "rationale": _safe_text(
+                    measurement.get("rationale"),
+                    "저장된 관측값과 기준의 명시적 score effect만 반영합니다.",
+                ),
+                "tone": "warning" if score_effect < 0 else "neutral",
+            }
+        )
+    return impacts
 
 
 def build_final_review_scorecard(
@@ -3254,11 +3267,7 @@ def build_final_review_scorecard(
     warning_count = int(disposition_summary.get("warning", 0) or 0)
     open_review_count = int(disposition_summary.get("open_review", 0) or 0)
     monitoring_followup_count = int(disposition_summary.get("monitoring_followup", 0) or 0)
-    review_impacts: list[dict[str, Any]] = []
-    for items in dict(disposition.get("groups") or {}).values():
-        for item in list(items or []):
-            if isinstance(item, dict):
-                review_impacts.append(_review_impact_for_item(item))
+    review_impacts = _closure_score_impacts(disposition)
     impact_deductions = {
         key: sum(
             abs(int(impact.get("score_effect") or 0))
@@ -3363,6 +3372,24 @@ def build_final_review_scorecard(
     score_limits: list[dict[str, Any]] = []
     cap_applied = False
     route_constraints = []
+    closure_summary = dict(disposition.get("closure_summary") or {})
+    closure_blocker_count = sum(
+        int(closure_summary.get(key) or 0)
+        for key in (
+            "unresolved_actionable_count",
+            "critical_engineering_count",
+            "missing_contract_count",
+        )
+    )
+    if closure_blocker_count:
+        route_constraints.append(
+            {
+                "code": "evidence_closure_blocker",
+                "label": "미정 근거 종결 필요",
+                "tone": "danger",
+            }
+        )
+        blocker_count += closure_blocker_count
     if blocker_count:
         route_constraints.append({"code": "hard_blocker", "label": "저장 전 blocker", "tone": "danger"})
     if not select_ready:
@@ -3746,6 +3773,47 @@ def build_final_review_investment_report(
     monitoring = dict(cockpit.get("monitoring_handoff") or {})
     weaknesses = _report_weaknesses(cockpit)
     level2_review_disposition = build_final_review_level2_review_disposition(validation=validation)
+    evidence_closure = dict(
+        validation.get("evidence_closure")
+        or build_evidence_closure_contract(validation)
+    )
+    closure_issues = [
+        dict(row)
+        for row in list(evidence_closure.get("issues") or [])
+        if isinstance(row, dict)
+    ]
+    pre_selection_unresolved_items = [
+        {
+            "root_issue_id": issue.get("root_issue_id"),
+            "title": issue.get("title") or issue.get("root_issue_id"),
+            "detail": issue.get("observed") or issue.get("cause") or "선정 전 근거 종결 필요",
+            "action": issue.get("completion_criteria") or "Practical Validation에서 종결 후 새 결과를 저장합니다.",
+            "terminal_state": issue.get("terminal_state"),
+            "tone": "danger",
+        }
+        for issue in closure_issues
+        if issue.get("terminal_state") == "open"
+        and (
+            issue.get("actionable_now")
+            or issue.get("criticality") == "critical"
+            or str(issue.get("root_issue_id") or "").startswith("missing_contract:")
+        )
+    ]
+    accepted_limits_and_decisions = [
+        {
+            "root_issue_id": issue.get("root_issue_id"),
+            "title": issue.get("title") or issue.get("root_issue_id"),
+            "detail": issue.get("observed") or issue.get("cause") or "Final Review 판단에 반영",
+            "action": issue.get("completion_criteria") or "판단 사유 또는 Monitoring 조건으로 종결합니다.",
+            "resolution_class": issue.get("resolution_class"),
+            "terminal_state": issue.get("terminal_state"),
+            "derived_checks": list(issue.get("derived_checks") or []),
+            "tone": "warning" if issue.get("resolution_class") != "monitoring_transfer" else "neutral",
+        }
+        for issue in closure_issues
+        if issue.get("gate_effect") != "block_final_review"
+        and issue.get("resolution_class") in {"accepted_limit", "final_decision", "monitoring_transfer"}
+    ]
     data_enrichment_action = dict(level2_review_disposition.get("data_enrichment_action") or {})
     recovery_required = bool(data_enrichment_action.get("available"))
     scorecard = build_final_review_scorecard(
@@ -3945,6 +4013,13 @@ def build_final_review_investment_report(
             ),
         },
         "level2_review_disposition": level2_review_disposition,
+        "pre_selection_unresolved_items": pre_selection_unresolved_items,
+        "accepted_limits_and_decisions": accepted_limits_and_decisions,
+        "evidence_closure_summary": {
+            **dict(evidence_closure.get("summary") or {}),
+            "pre_selection_unresolved_count": len(pre_selection_unresolved_items),
+            "accepted_limits_and_decisions_count": len(accepted_limits_and_decisions),
+        },
         "monitoring_conditions": {
             "handoff_ready": bool(cockpit.get("select_allowed")) and not recovery_required,
             "tracking_benchmark": monitoring.get("tracking_benchmark") or "-",

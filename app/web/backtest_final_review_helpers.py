@@ -15,6 +15,7 @@ from app.services.backtest_evidence_read_model import (
 )
 from app.services.backtest_evidence_closure import (
     build_evidence_closure_contract,
+    finalize_evidence_closure,
     is_current_final_review_eligible,
 )
 from app.services.backtest_selected_route_preflight import (
@@ -511,6 +512,13 @@ def _build_final_review_decision_row(
     )
     selected_route = str(decision_route or "").strip() == SELECT_FOR_PRACTICAL_PORTFOLIO
     monitoring_candidate = selected_route and bool(selected_gate.get("Ready"))
+    closure_snapshot = finalize_evidence_closure(
+        dict(validation.get("evidence_closure") or build_evidence_closure_contract(validation)),
+        decision_route=str(decision_route or "").strip(),
+        operator_reason=str(operator_reason or "").strip(),
+    )
+    if closure_snapshot.get("open_count") or closure_snapshot.get("selection_blocker_count"):
+        monitoring_candidate = False
     row = {
         "schema_version": FINAL_SELECTION_DECISION_CURRENT_SCHEMA_VERSION,
         "decision_id": str(decision_id or "").strip(),
@@ -536,6 +544,7 @@ def _build_final_review_decision_row(
         "selection_gate_policy_snapshot": selection_gate_policy_snapshot,
         "deployment_readiness_policy_snapshot": deployment_readiness_policy_snapshot,
         "open_review_items": open_review_items,
+        "evidence_closure_snapshot": closure_snapshot,
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),
             "validation_score": validation.get("validation_score"),

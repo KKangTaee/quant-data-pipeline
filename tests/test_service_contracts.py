@@ -29119,7 +29119,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             )
         )
 
-    def test_final_review_scorecard_maps_level2_review_roles_to_dimension_impacts(self) -> None:
+    def test_final_review_scorecard_does_not_apply_role_fixed_deductions(self) -> None:
         from app.services.backtest_evidence_read_model import (
             build_final_review_investment_report,
             build_investability_evidence_packet,
@@ -29201,26 +29201,12 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         )
 
         impacts = report["scorecard"]["review_impacts"]
-        impact_map = {impact["role"]: impact["target_dimension"] for impact in impacts}
-        self.assertEqual(impact_map["pv_data_caution"], "evidence_confidence")
-        self.assertEqual(impact_map["pv_practical_caution"], "evidence_confidence")
-        self.assertEqual(impact_map["final_decision_input"], "evidence_confidence")
-        self.assertEqual(impact_map["monitoring_followup"], "monitoring_readiness")
-        self.assertEqual(impact_map["final_readiness_blocker"], "monitoring_readiness")
-        impact_by_role = {impact["role"]: impact for impact in impacts}
-        self.assertEqual(impact_by_role["final_decision_input"]["score_effect"], 0)
-        self.assertEqual(impact_by_role["final_decision_input"]["score_policy"], "no_score_effect")
-        self.assertEqual(impact_by_role["final_decision_input"]["observed_value"], "-")
-        self.assertEqual(impact_by_role["final_decision_input"]["threshold"], "-")
-        self.assertEqual(impact_by_role["final_decision_input"]["trace_status"], "qualitative")
-        self.assertEqual(impact_by_role["final_decision_input"]["trace_label"], "사용자 판단 항목")
-        self.assertEqual(impact_by_role["pv_data_caution"]["observed_value"], "41 days old")
-        self.assertEqual(impact_by_role["pv_data_caution"]["threshold"], "30 days or less")
-        self.assertEqual(impact_by_role["pv_data_caution"]["evidence_source"], "provider snapshot")
-        self.assertEqual(impact_by_role["pv_data_caution"]["evidence_as_of"], "2026-07-10")
-        self.assertEqual(impact_by_role["pv_data_caution"]["trace_status"], "measured")
-        self.assertEqual(impact_by_role["pv_data_caution"]["trace_label"], "측정 근거 확인")
-        self.assertEqual(report["scorecard"]["inputs"]["review_impact_count"], 5)
+        self.assertEqual(impacts, [])
+        self.assertEqual(report["scorecard"]["inputs"]["review_impact_count"], 0)
+        self.assertEqual(
+            report["scorecard"]["headline_scores"][1]["score"],
+            int(round(float(packet["score"]) * 10.0)),
+        )
 
     def test_final_review_scorecard_maps_gate_to_recommendation_taxonomy(self) -> None:
         from app.services.backtest_evidence_read_model import (
@@ -29261,6 +29247,8 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(report["save_handoff_summary"]["monitoring_handoff"]["state"], "ready")
         self.assertEqual(scorecard["categories"][0]["category"], "Selection Gate")
         self.assertFalse(scorecard["boundaries"]["live_approval"])
+        self.assertEqual(report["pre_selection_unresolved_items"], [])
+        self.assertEqual(report["evidence_closure_summary"]["pre_selection_unresolved_count"], 0)
 
     def test_final_review_detailed_scorecard_exposes_weighted_dimensions(self) -> None:
         from app.services.backtest_evidence_read_model import (
@@ -31378,6 +31366,8 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(row["open_review_items"][0]["Group"], "provider_coverage")
         self.assertTrue(row["selected_practical_portfolio"])
         self.assertTrue(row["monitoring_candidate"])
+        self.assertEqual(row["evidence_closure_snapshot"]["validation_id"], "validation-row")
+        self.assertEqual(row["evidence_closure_snapshot"]["open_count"], 0)
 
     def test_final_review_decision_row_stores_non_select_judgment_without_monitoring_candidate(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_decision_row

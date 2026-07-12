@@ -475,6 +475,18 @@ def _render_investment_report_fallback(report: dict[str, Any]) -> None:
         ],
     )
     disposition = dict(report.get("level2_review_disposition") or {})
+    unresolved_items = list(report.get("pre_selection_unresolved_items") or [])
+    accepted_items = list(report.get("accepted_limits_and_decisions") or [])
+    st.markdown("##### 선정 전 미해결 항목")
+    if unresolved_items:
+        st.dataframe(pd.DataFrame(unresolved_items), width="stretch", hide_index=True)
+    else:
+        st.success("현재 Final Review 후보의 선정 전 미해결 항목은 0개입니다.")
+    st.markdown("##### 인수한 한계와 최종 판단 항목")
+    if accepted_items:
+        st.dataframe(pd.DataFrame(accepted_items), width="stretch", hide_index=True)
+    else:
+        st.caption("현재 Final Review에서 종결할 한계 또는 Monitoring 이관 항목이 없습니다.")
     role_sections = list(disposition.get("role_sections") or [])
     st.markdown("##### Final Review 확인 필요")
     st.caption(

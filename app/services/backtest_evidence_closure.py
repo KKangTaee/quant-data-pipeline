@@ -438,6 +438,96 @@ def is_current_final_review_eligible(contract: dict[str, Any]) -> bool:
     )
 
 
+def finalize_evidence_closure(
+    contract: dict[str, Any],
+    *,
+    decision_route: str,
+    operator_reason: str,
+) -> dict[str, Any]:
+    """Project Final Review judgment into terminal root-issue states."""
+
+    snapshot = dict(contract or {})
+    route = str(decision_route or "").strip()
+    reason = str(operator_reason or "").strip()
+    selected = route == "SELECT_FOR_PRACTICAL_PORTFOLIO"
+    hold_routes = {"HOLD_FOR_MORE_PAPER_TRACKING", "RE_REVIEW_REQUIRED"}
+    reject = route == "REJECT_FOR_PRACTICAL_USE"
+    issues: list[dict[str, Any]] = []
+    for raw_issue in list(snapshot.get("issues") or []):
+        issue = normalize_evidence_issue(dict(raw_issue or {}))
+        terminal_state = str(issue.get("terminal_state") or "open")
+        if terminal_state in {"resolved", "accepted", "monitoring_transferred", "blocked"}:
+            issues.append(issue)
+            continue
+        resolution_class = str(issue.get("resolution_class") or "")
+        if selected and resolution_class in {"accepted_limit", "final_decision"}:
+            issue["terminal_state"] = "accepted"
+            issue["terminal_state_label"] = _TERMINAL_STATE_LABELS["accepted"]
+            issue["accepted_reason"] = reason
+        elif selected and resolution_class == "monitoring_transfer":
+            issue["terminal_state"] = "monitoring_transferred"
+            issue["terminal_state_label"] = _TERMINAL_STATE_LABELS["monitoring_transferred"]
+            issue["monitoring_condition"] = str(
+                issue.get("monitoring_condition")
+                or issue.get("completion_criteria")
+                or reason
+            ).strip()
+        elif route in hold_routes:
+            issue["terminal_state"] = "deferred"
+            issue["terminal_state_label"] = _TERMINAL_STATE_LABELS["deferred"]
+            issue["accepted_reason"] = reason
+        elif reject:
+            issue["terminal_state"] = "blocked"
+            issue["terminal_state_label"] = _TERMINAL_STATE_LABELS["blocked"]
+            issue["accepted_reason"] = reason
+        issues.append(issue)
+
+    terminal_state_counts = {
+        state: sum(1 for issue in issues if issue.get("terminal_state") == state)
+        for state in _TERMINAL_STATE_LABELS
+    }
+    open_count = sum(
+        1
+        for issue in issues
+        if issue.get("terminal_state") == "open"
+        and issue.get("resolution_class") in {"resolve_now", "engineering_required", "accepted_limit", "final_decision", "monitoring_transfer"}
+    )
+    selection_blocker_count = sum(
+        1
+        for issue in issues
+        if issue.get("resolution_class") in {"resolve_now", "engineering_required"}
+        and issue.get("terminal_state") not in {"resolved", "accepted", "monitoring_transferred"}
+    )
+    snapshot.update(
+        {
+            "issues": issues,
+            "decision_route": route,
+            "terminal_state_counts": terminal_state_counts,
+            "accepted_limit_summary": [
+                str(issue.get("title") or issue.get("root_issue_id") or "")
+                for issue in issues
+                if issue.get("terminal_state") == "accepted"
+            ],
+            "monitoring_conditions": [
+                str(issue.get("monitoring_condition") or "")
+                for issue in issues
+                if issue.get("terminal_state") == "monitoring_transferred"
+                and str(issue.get("monitoring_condition") or "").strip()
+            ],
+            "decision_reason_summary": reason,
+            "open_count": open_count,
+            "selection_blocker_count": selection_blocker_count,
+            "boundary": {
+                **dict(snapshot.get("boundary") or {}),
+                "provider_fetch": False,
+                "validation_rerun": False,
+                "registry_write": False,
+            },
+        }
+    )
+    return snapshot
+
+
 def build_evidence_closure_contract(validation: dict[str, Any]) -> dict[str, Any]:
     """Build one closure issue per root cause from stored validation evidence."""
 
@@ -481,6 +571,7 @@ __all__ = [
     "EVIDENCE_CLOSURE_SCHEMA_VERSION",
     "build_evidence_closure_contract",
     "build_latest_replay_evidence",
+    "finalize_evidence_closure",
     "has_action_handler",
     "is_current_final_review_eligible",
     "normalize_evidence_issue",
