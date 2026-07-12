@@ -354,10 +354,46 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         )
         prices = pd.DataFrame(
             [
-                {"symbol": "AAPL", "date": "2026-03-31", "adj_close": 100.0, "close": 100.0},
-                {"symbol": "AAPL", "date": "2026-04-01", "adj_close": 102.0, "close": 102.0},
-                {"symbol": "AAPL", "date": "2026-05-01", "adj_close": 105.0, "close": 105.0},
-                {"symbol": "AAPL", "date": "2026-07-07", "adj_close": 110.0, "close": 110.0},
+                {
+                    "symbol": "AAPL",
+                    "date": "2026-03-31",
+                    "open": 99.0,
+                    "high": 103.0,
+                    "low": 98.0,
+                    "close": 100.0,
+                    "adj_close": 100.0,
+                    "volume": 1000,
+                },
+                {
+                    "symbol": "AAPL",
+                    "date": "2026-04-01",
+                    "open": 100.0,
+                    "high": 104.0,
+                    "low": 99.0,
+                    "close": 102.0,
+                    "adj_close": 102.0,
+                    "volume": 1100,
+                },
+                {
+                    "symbol": "AAPL",
+                    "date": "2026-05-01",
+                    "open": 102.0,
+                    "high": 106.0,
+                    "low": 101.0,
+                    "close": 105.0,
+                    "adj_close": 105.0,
+                    "volume": 1200,
+                },
+                {
+                    "symbol": "AAPL",
+                    "date": "2026-07-07",
+                    "open": 106.0,
+                    "high": 112.0,
+                    "low": 105.0,
+                    "close": 110.0,
+                    "adj_close": 110.0,
+                    "volume": 1300,
+                },
             ]
         )
 
@@ -377,6 +413,12 @@ class InstitutionalPortfolioReadModelTests(unittest.TestCase):
         self.assertIn("weekly", detail["charts"])
         self.assertIn("monthly", detail["charts"])
         self.assertTrue(detail["charts"]["daily"]["points"])
+        first_daily_point = detail["charts"]["daily"]["points"][0]
+        self.assertEqual(first_daily_point["open"], 99.0)
+        self.assertEqual(first_daily_point["high"], 103.0)
+        self.assertEqual(first_daily_point["low"], 98.0)
+        self.assertEqual(first_daily_point["close"], 100.0)
+        self.assertEqual(first_daily_point["volume"], 1000)
 
     def test_portfolio_model_resolves_safe_curated_cusip_symbols_for_charts(self) -> None:
         from app.services.institutional_portfolios import build_institutional_portfolio_model
@@ -955,6 +997,29 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn('id: "collect_price_history"', component_source)
         self.assertIn("가격 데이터 수집", component_source)
         self.assertIn("ip-price-action", component_source)
+
+    def test_selected_security_chart_supports_hover_candles_guides_and_pan_controls(self) -> None:
+        component_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+        style_source = Path("app/web/streamlit_components/institutional_portfolios_workbench/src/style.css").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("function InteractiveSecurityChart", component_source)
+        self.assertIn("setHoveredIndex", component_source)
+        self.assertIn("ip-chart-tooltip", component_source)
+        self.assertIn("ip-chart-crosshair", component_source)
+        self.assertIn("ip-chart-high-low-guide", component_source)
+        self.assertIn("ip-candle", component_source)
+        self.assertIn("ip-chart-range", component_source)
+        self.assertIn("panWindow", component_source)
+        self.assertIn("캔들", component_source)
+        self.assertIn("strokeDasharray", component_source)
+        self.assertIn(".ip-chart-tooltip", style_source)
+        self.assertIn(".ip-chart-range", style_source)
+        self.assertIn(".ip-chart-style-toggle", style_source)
+        self.assertIn("stroke-dasharray", style_source)
 
 
 if __name__ == "__main__":

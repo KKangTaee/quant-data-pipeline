@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-12
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,12 +27,14 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `institutional-portfolios-live-sec13f-v1-20260709` closeout. |
+| none | - | No active task after `institutional-portfolios-interactive-security-chart-v1-20260712` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `institutional-portfolios-interactive-security-chart-v1-20260712` | Completed record | Selected-security chart now uses stored OHLCV payload with hover tooltip, dotted guides, range slider, pan controls, and line/candle mode. |
+| `institutional-portfolios-holding-chart-refresh-v1-20260712` | Completed record | Selected-security chart can resolve stored DB prices through safe CUSIP-symbol mapping and trigger bounded OHLCV collection when missing. |
 | `institutional-portfolios-live-sec13f-v1-20260709` | Completed record | SEC official 13F live data path, refresh status, watchlist rail, secondary refresh action, conservative CUSIP-symbol enrichment, docs, and Browser QA. |
 | `institutional-portfolios-react-workbench-v1-20260709` | Completed record | React visual workbench for Institutional Portfolios first screen, with preview fallback and visual payload contract. |
 | `post-merge-docs-flow-refresh-20260708` | Completed record | 2026-07-08 master 병합 후 current pointer, code flow docs, Overview surface names, and runbook boundaries were refreshed without changing code behavior or registry / saved JSONL. |

@@ -888,6 +888,7 @@ a {
 }
 
 .ip-mini-chart,
+.ip-interactive-chart,
 .ip-chart-empty {
   min-height: 210px;
   border: 1px solid #e2e8f0;
@@ -895,27 +896,169 @@ a {
   background: #fbfdff;
 }
 
-.ip-mini-chart {
+.ip-mini-chart,
+.ip-interactive-chart {
   padding: 10px;
 }
 
-.ip-mini-chart svg {
+.ip-mini-chart svg,
+.ip-chart-stage svg {
   display: block;
   width: 100%;
-  height: 180px;
+  height: 214px;
 }
 
-.ip-mini-chart line {
+.ip-mini-chart line,
+.ip-chart-axis {
   stroke: #e2e8f0;
   stroke-width: 1;
 }
 
-.ip-mini-chart polyline {
+.ip-mini-chart polyline,
+.ip-price-line {
   fill: none;
   stroke: #2563eb;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.5;
+}
+
+.ip-chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ip-chart-style-toggle,
+.ip-chart-pan {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ip-chart-style-toggle button,
+.ip-pan-button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ip-chart-style-toggle__active {
+  border-color: #2563eb !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.ip-pan-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ip-chart-stage {
+  position: relative;
+  min-height: 214px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.84), rgba(255, 255, 255, 0.96)),
+    #ffffff;
+}
+
+.ip-chart-stage svg {
+  cursor: crosshair;
+  user-select: none;
+}
+
+.ip-chart-high-low-guide,
+.ip-chart-crosshair {
+  stroke: #94a3b8;
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+
+.ip-chart-guide-label {
+  fill: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ip-chart-hover-dot {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.ip-candle {
+  color: #64748b;
+}
+
+.ip-candle line {
+  stroke: currentColor;
+  stroke-width: 1.2;
+}
+
+.ip-candle rect {
+  fill: currentColor;
+  opacity: 0.78;
+}
+
+.ip-candle--up {
+  color: #16a34a;
+}
+
+.ip-candle--down {
+  color: #dc2626;
+}
+
+.ip-chart-tooltip {
+  position: absolute;
+  z-index: 3;
+  min-width: 150px;
+  padding: 8px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  pointer-events: none;
+  transform: translate(-6px, -10px);
+}
+
+.ip-chart-tooltip strong,
+.ip-chart-tooltip span,
+.ip-chart-tooltip em {
+  display: block;
+  line-height: 1.35;
+}
+
+.ip-chart-tooltip strong {
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.ip-chart-tooltip span,
+.ip-chart-tooltip em {
+  color: #475569;
+  font-size: 11px;
+}
+
+.ip-chart-tooltip em {
+  font-style: normal;
+}
+
+.ip-chart-range {
+  width: 100%;
+  margin-top: 8px;
+  accent-color: #2563eb;
 }
 
 .ip-mini-chart__axis {

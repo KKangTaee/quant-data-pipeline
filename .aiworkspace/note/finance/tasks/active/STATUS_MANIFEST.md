@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-12
 
 ## Current State
 
@@ -11,10 +11,12 @@ Current active task:
 
 Latest completed task:
 
-- `institutional-portfolios-live-sec13f-v1-20260709`
+- `institutional-portfolios-interactive-security-chart-v1-20260712`
 
 Previous completed task:
 
+- `institutional-portfolios-holding-chart-refresh-v1-20260712`
+- `institutional-portfolios-live-sec13f-v1-20260709`
 - `institutional-portfolios-react-workbench-v1-20260709`
 
 Latest completed docs cleanup task:

@@ -23,13 +23,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-react-workbench-v1-20260709](./tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
+  - Latest completed task is [institutional-portfolios-interactive-security-chart-v1-20260712](./tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Current active phase is still none; new phase work requires a user-approved concrete scope.
 
 ## Recent Milestones
 
+- Institutional Portfolios Interactive Security Chart V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/`에서 보유기관조회 선택 종목 차트를 stored OHLCV 기반 interactive chart로 개선했다.
+  - 라인 / 캔들 toggle, hover tooltip, crosshair, high-low dotted guides, range slider, pan controls를 추가했고, UI external fetch / 추천 / live trading 경계는 그대로 유지했다.
+  - Browser QA에서 AAPL chart stage, range, guide, hover tooltip / crosshair 생성과 current-port console error 없음까지 확인했다.
 - Institutional Portfolios React Workbench V1 2026-07-09:
   - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-react-workbench-v1-20260709/`에서 1차~6차 scope를 진행했다.
   - `Workspace > Institutional Portfolios`를 table-first / ingestion-like 화면에서 React visual workbench로 바꿨다. 첫 화면은 manager rail, allocation donut, top holdings, reported quarter changes, sector exposure를 보여주고, holdings click은 institutional interest drill-down event로 연결한다.

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Latest completed task is [institutional-portfolios-react-workbench-v1-20260709](./tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
+  - Latest completed task is [institutional-portfolios-interactive-security-chart-v1-20260712](./tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
   - Latest completed structure work is Refactor Round Closeout 10차 in [refactor-round-closeout-20260607](./tasks/active/refactor-round-closeout-20260607/AUDIT.md).
   - Recent merged work should be read as five product areas: Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary.
   - Market context surfaces are not approval or signal owners; Portfolio Monitoring remains read-only and explicit-action based.
@@ -25,6 +25,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-12 - Institutional Portfolios selected-security chart should be interactive but still DB-backed
+
+- User request: 사용자가 `보유 기관 조회`의 종목 차트가 hover, 스크롤 / 이동, 캔들 같은 기본 탐색 기능이 없어 퀄리티가 낮다고 지적함.
+- Interpreted goal: UI가 직접 외부 가격 provider를 fetch하지 않는 경계를 유지하면서, service가 저장 가격 DB의 OHLCV payload를 내려주고 React가 이를 인터랙티브 차트로 보여줘야 한다.
+- Analysis result: 기존 mini line chart는 가격 close line만 보여 사용자가 날짜별 가격 / 고가 / 저가 / 거래량을 읽기 어려웠다. selected-security detail은 line / candle mode, crosshair tooltip, high-low dotted guide, range movement를 갖는 lightweight SVG chart로 충분히 개선 가능하다.
+- Follow-up: `institutional-portfolios-interactive-security-chart-v1-20260712`에서 OHLCV payload, React interactive chart, tests, npm build, Browser QA를 완료했다. 새 provider, DB schema, 추천 / trading semantics는 추가하지 않았다.
 
 ### 2026-07-09 - Institutional Portfolios must be a visual portfolio explorer, not an ingestion console
 

@@ -514,10 +514,10 @@ def _price_column(frame: pd.DataFrame) -> str | None:
 
 def _price_frame(price_history: pd.DataFrame | None, symbol: str | None = None) -> pd.DataFrame:
     if price_history is None or price_history.empty:
-        return pd.DataFrame(columns=["symbol", "date", "price"])
+        return pd.DataFrame(columns=["symbol", "date", "price", "open", "high", "low", "close", "volume"])
     price_column = _price_column(price_history)
     if price_column is None or "date" not in price_history.columns:
-        return pd.DataFrame(columns=["symbol", "date", "price"])
+        return pd.DataFrame(columns=["symbol", "date", "price", "open", "high", "low", "close", "volume"])
     work = price_history.copy()
     if "symbol" not in work.columns:
         work["symbol"] = symbol or ""
@@ -526,11 +526,19 @@ def _price_frame(price_history: pd.DataFrame | None, symbol: str | None = None) 
         work = work[work["symbol"] == symbol.upper()]
     work["date"] = pd.to_datetime(work["date"], errors="coerce")
     work["price"] = pd.to_numeric(work[price_column], errors="coerce")
+    for column in ["open", "high", "low", "close", "volume"]:
+        if column in work.columns:
+            work[column] = pd.to_numeric(work[column], errors="coerce")
+        else:
+            work[column] = None
+    for column in ["open", "high", "low", "close"]:
+        work[column] = work[column].fillna(work["price"])
+    work["volume"] = work["volume"].fillna(0)
     work = work.dropna(subset=["date", "price"])
     work = work[work["price"] > 0]
     if work.empty:
-        return pd.DataFrame(columns=["symbol", "date", "price"])
-    return work[["symbol", "date", "price"]].sort_values(["symbol", "date"])
+        return pd.DataFrame(columns=["symbol", "date", "price", "open", "high", "low", "close", "volume"])
+    return work[["symbol", "date", "price", "open", "high", "low", "close", "volume"]].sort_values(["symbol", "date"])
 
 
 def _price_points(frame: pd.DataFrame, *, max_points: int = 90) -> list[dict[str, Any]]:
@@ -539,18 +547,42 @@ def _price_points(frame: pd.DataFrame, *, max_points: int = 90) -> list[dict[str
     if len(frame) > max_points:
         step = max(1, len(frame) // max_points)
         frame = frame.iloc[::step].tail(max_points)
-    return [
-        {"date": row["date"].date().isoformat(), "price": round(float(row["price"]), 4)}
-        for _, row in frame.iterrows()
-        if pd.notna(row.get("date")) and pd.notna(row.get("price"))
-    ]
+    points: list[dict[str, Any]] = []
+    for _, row in frame.iterrows():
+        if pd.isna(row.get("date")) or pd.isna(row.get("price")):
+            continue
+        point = {
+            "date": row["date"].date().isoformat(),
+            "price": round(float(row["price"]), 4),
+            "open": round(float(row.get("open") or row["price"]), 4),
+            "high": round(float(row.get("high") or row["price"]), 4),
+            "low": round(float(row.get("low") or row["price"]), 4),
+            "close": round(float(row.get("close") or row["price"]), 4),
+            "volume": int(_num(row.get("volume"))),
+        }
+        points.append(point)
+    return points
 
 
 def _resample_price_points(frame: pd.DataFrame, rule: str) -> list[dict[str, Any]]:
     if frame.empty:
         return []
-    work = frame.set_index("date")[["price"]].sort_index()
-    sampled = work.resample(rule).last().dropna().reset_index()
+    work = frame.set_index("date")[["price", "open", "high", "low", "close", "volume"]].sort_index()
+    sampled = (
+        work.resample(rule)
+        .agg(
+            {
+                "price": "last",
+                "open": "first",
+                "high": "max",
+                "low": "min",
+                "close": "last",
+                "volume": "sum",
+            }
+        )
+        .dropna(subset=["price"])
+        .reset_index()
+    )
     return _price_points(sampled, max_points=90)
 
 

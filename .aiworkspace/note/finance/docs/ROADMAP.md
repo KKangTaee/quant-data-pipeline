@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-12
 
 ## Current State After Master Merge
 
@@ -9,7 +9,13 @@ Last Verified: 2026-07-09
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios` 보유기관조회의 선택 종목 차트를 단순 mini line chart에서 hover / dotted guide / range 이동 / 라인-캔들 toggle이 있는 저장 OHLCV 기반 interactive chart로 개선했다.
+- 주요 변경: selected-security chart payload에 `open/high/low/close/volume`을 포함하고, React `InteractiveSecurityChart`가 tooltip, crosshair, high-low guide, range slider, pan controls, line/candle mode를 렌더링한다.
+- 이번 차수에서 하지 않은 일: 새 가격 provider, UI external fetch, DB schema 변경, live trading / 추천 / broker / auto rebalance 연결.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/`다.
 
 - 목적: `Workspace > Institutional Portfolios` 보유기관조회에서 선택 종목 차트가 비어 보이는 원인을 실제 DB 기준으로 분리하고, DB에 이미 있는 가격 row는 차트로 연결하며, 가격 row가 없을 때는 버튼으로 기존 OHLCV 수집 job을 실행하게 한다.
 - 주요 변경: service-level safe CUSIP-symbol resolver, curated symbol -> CUSIP 우선 reverse lookup, selected-security price action payload, React 가격 데이터 수집 버튼, Streamlit event -> `run_collect_ohlcv` boundary를 추가했다.

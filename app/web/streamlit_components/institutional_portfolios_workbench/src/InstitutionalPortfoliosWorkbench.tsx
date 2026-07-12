@@ -77,6 +77,11 @@ type InterestHolder = {
 type ChartPoint = {
   date: string;
   price: number;
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  close?: number | null;
+  volume?: number | null;
 };
 
 type PriceAction = {
@@ -350,36 +355,204 @@ function AllocationDonut({ segments }: { segments: Segment[] }) {
   );
 }
 
-function MiniLineChart({ points }: { points: ChartPoint[] }) {
+function chartNumber(value: unknown, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function priceLabel(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  return numeric.toFixed(2);
+}
+
+function volumeLabel(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "-";
+  }
+  if (numeric >= 1_000_000_000) {
+    return `${(numeric / 1_000_000_000).toFixed(1)}B`;
+  }
+  if (numeric >= 1_000_000) {
+    return `${(numeric / 1_000_000).toFixed(1)}M`;
+  }
+  if (numeric >= 1_000) {
+    return `${(numeric / 1_000).toFixed(1)}K`;
+  }
+  return numeric.toFixed(0);
+}
+
+function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
+  const [chartStyle, setChartStyle] = useState<"line" | "candle">("line");
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [windowStart, setWindowStart] = useState(0);
+  const dragStartRef = useRef<{ x: number; start: number } | null>(null);
+
   if (!points || points.length < 2) {
     return <div className="ip-chart-empty">가격 데이터 없음</div>;
   }
   const width = 520;
-  const height = 180;
-  const pad = 14;
-  const prices = points.map((point) => Number(point.price)).filter((value) => Number.isFinite(value));
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
+  const height = 214;
+  const padX = 22;
+  const padTop = 18;
+  const padBottom = 26;
+  const maxVisible = Math.min(points.length, 56);
+  const maxWindowStart = Math.max(0, points.length - maxVisible);
+  const safeWindowStart = Math.min(windowStart, maxWindowStart);
+  const visiblePoints = points.slice(safeWindowStart, safeWindowStart + maxVisible);
+  const rangeValues = visiblePoints.flatMap((point) => [
+    chartNumber(point.high, chartNumber(point.price)),
+    chartNumber(point.low, chartNumber(point.price)),
+    chartNumber(point.open, chartNumber(point.price)),
+    chartNumber(point.close, chartNumber(point.price)),
+    chartNumber(point.price),
+  ]);
+  const min = Math.min(...rangeValues);
+  const max = Math.max(...rangeValues);
   const span = max - min || 1;
-  const path = points
+  const plotWidth = width - padX * 2;
+  const plotHeight = height - padTop - padBottom;
+  const xFor = (idx: number) => padX + (idx / Math.max(1, visiblePoints.length - 1)) * plotWidth;
+  const yFor = (value: unknown) => height - padBottom - ((chartNumber(value, min) - min) / span) * plotHeight;
+  const candleWidth = Math.max(4, Math.min(10, plotWidth / Math.max(1, visiblePoints.length) * 0.55));
+  const path = visiblePoints
     .map((point, idx) => {
-      const x = pad + (idx / Math.max(1, points.length - 1)) * (width - pad * 2);
-      const y = height - pad - ((Number(point.price) - min) / span) * (height - pad * 2);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
+      return `${xFor(idx).toFixed(1)},${yFor(point.price).toFixed(1)}`;
     })
     .join(" ");
+  const highPoint = visiblePoints.reduce((best, point) => (chartNumber(point.high, point.price) > chartNumber(best.high, best.price) ? point : best));
+  const lowPoint = visiblePoints.reduce((best, point) => (chartNumber(point.low, point.price) < chartNumber(best.low, best.price) ? point : best));
+  const highY = yFor(highPoint.high ?? highPoint.price);
+  const lowY = yFor(lowPoint.low ?? lowPoint.price);
+  const hoverPoint = hoveredIndex === null ? null : visiblePoints[hoveredIndex];
+  const hoverX = hoveredIndex === null ? 0 : xFor(hoveredIndex);
+  const hoverY = hoverPoint ? yFor(hoverPoint.price) : 0;
+  const panWindow = (delta: number) => {
+    setWindowStart((current) => Math.max(0, Math.min(maxWindowStart, current + delta)));
+  };
+  const handlePointerMove = (event: React.MouseEvent<SVGSVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const localX = Math.max(padX, Math.min(width - padX, ((event.clientX - rect.left) / rect.width) * width));
+    if (dragStartRef.current) {
+      const dragDelta = event.clientX - dragStartRef.current.x;
+      if (Math.abs(dragDelta) > 18) {
+        const step = Math.trunc(dragDelta / 18);
+        setWindowStart(Math.max(0, Math.min(maxWindowStart, dragStartRef.current.start - step)));
+      }
+    }
+    const idx = Math.round(((localX - padX) / plotWidth) * Math.max(1, visiblePoints.length - 1));
+    setHoveredIndex(Math.max(0, Math.min(visiblePoints.length - 1, idx)));
+  };
 
   return (
-    <div className="ip-mini-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="저장 가격 차트">
-        <line x1={pad} x2={width - pad} y1={height - pad} y2={height - pad} />
-        <polyline points={path} />
-      </svg>
-      <div className="ip-mini-chart__axis">
-        <span>{points[0]?.date}</span>
-        <strong>{points[points.length - 1]?.price?.toFixed?.(2) || points[points.length - 1]?.price}</strong>
-        <span>{points[points.length - 1]?.date}</span>
+    <div className="ip-interactive-chart">
+      <div className="ip-chart-toolbar">
+        <div className="ip-chart-style-toggle" aria-label="차트 스타일">
+          <button type="button" className={chartStyle === "line" ? "ip-chart-style-toggle__active" : ""} onClick={() => setChartStyle("line")}>
+            라인
+          </button>
+          <button type="button" className={chartStyle === "candle" ? "ip-chart-style-toggle__active" : ""} onClick={() => setChartStyle("candle")}>
+            캔들
+          </button>
+        </div>
+        <div className="ip-chart-pan">
+          <button type="button" className="ip-pan-button" disabled={safeWindowStart <= 0} onClick={() => panWindow(-8)}>
+            이전
+          </button>
+          <button type="button" className="ip-pan-button" disabled={safeWindowStart >= maxWindowStart} onClick={() => panWindow(8)}>
+            다음
+          </button>
+        </div>
       </div>
+      <div className="ip-chart-stage">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label="저장 가격 차트"
+          onMouseMove={handlePointerMove}
+          onMouseLeave={() => {
+            setHoveredIndex(null);
+            dragStartRef.current = null;
+          }}
+          onMouseDown={(event) => {
+            dragStartRef.current = { x: event.clientX, start: safeWindowStart };
+          }}
+          onMouseUp={() => {
+            dragStartRef.current = null;
+          }}
+        >
+        <line x1={padX} x2={width - padX} y1={height - padBottom} y2={height - padBottom} className="ip-chart-axis" />
+        <line x1={padX} x2={width - padX} y1={highY} y2={highY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
+        <line x1={padX} x2={width - padX} y1={lowY} y2={lowY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
+        <text x={padX} y={Math.max(10, highY - 4)} className="ip-chart-guide-label">
+          H {priceLabel(highPoint.high ?? highPoint.price)}
+        </text>
+        <text x={padX} y={Math.min(height - 8, lowY + 12)} className="ip-chart-guide-label">
+          L {priceLabel(lowPoint.low ?? lowPoint.price)}
+        </text>
+        {chartStyle === "candle" ? (
+          visiblePoints.map((point, idx) => {
+            const x = xFor(idx);
+            const open = chartNumber(point.open, chartNumber(point.price));
+            const close = chartNumber(point.close, chartNumber(point.price));
+            const high = chartNumber(point.high, Math.max(open, close));
+            const low = chartNumber(point.low, Math.min(open, close));
+            const rising = close >= open;
+            const yOpen = yFor(open);
+            const yClose = yFor(close);
+            const bodyTop = Math.min(yOpen, yClose);
+            const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
+            return (
+              <g key={`${point.date}-${idx}`} className={`ip-candle ${rising ? "ip-candle--up" : "ip-candle--down"}`}>
+                <line x1={x} x2={x} y1={yFor(high)} y2={yFor(low)} />
+                <rect x={x - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyHeight} rx="1.5" />
+              </g>
+            );
+          })
+        ) : (
+          <polyline points={path} className="ip-price-line" />
+        )}
+        {hoverPoint ? (
+          <g>
+            <line x1={hoverX} x2={hoverX} y1={padTop} y2={height - padBottom} className="ip-chart-crosshair" strokeDasharray="3 4" />
+            <line x1={padX} x2={width - padX} y1={hoverY} y2={hoverY} className="ip-chart-crosshair" strokeDasharray="3 4" />
+            <circle cx={hoverX} cy={hoverY} r="3.8" className="ip-chart-hover-dot" />
+          </g>
+        ) : null}
+      </svg>
+        {hoverPoint ? (
+          <div
+            className="ip-chart-tooltip"
+            style={{
+              left: `${Math.min(78, Math.max(6, (hoverX / width) * 100))}%`,
+              top: `${Math.max(6, Math.min(62, (hoverY / height) * 100))}%`,
+            }}
+          >
+            <strong>{hoverPoint.date}</strong>
+            <span>O {priceLabel(hoverPoint.open ?? hoverPoint.price)} · H {priceLabel(hoverPoint.high ?? hoverPoint.price)}</span>
+            <span>L {priceLabel(hoverPoint.low ?? hoverPoint.price)} · C {priceLabel(hoverPoint.close ?? hoverPoint.price)}</span>
+            <em>Vol {volumeLabel(hoverPoint.volume)}</em>
+          </div>
+        ) : null}
+      </div>
+      <div className="ip-mini-chart__axis">
+        <span>{visiblePoints[0]?.date}</span>
+        <strong>{hoverPoint ? priceLabel(hoverPoint.price) : priceLabel(visiblePoints[visiblePoints.length - 1]?.price)}</strong>
+        <span>{visiblePoints[visiblePoints.length - 1]?.date}</span>
+      </div>
+      <input
+        className="ip-chart-range"
+        type="range"
+        min="0"
+        max={maxWindowStart}
+        value={safeWindowStart}
+        disabled={maxWindowStart === 0}
+        onChange={(event) => setWindowStart(Number(event.currentTarget.value))}
+        aria-label="차트 구간 이동"
+      />
     </div>
   );
 }
@@ -509,7 +682,7 @@ function SecurityDetail({
               </button>
             ))}
           </div>
-          <MiniLineChart points={chart?.points || []} />
+          <InteractiveSecurityChart points={chart?.points || []} />
           {!chartHasPoints && priceAction?.available ? (
             <button type="button" className="ip-price-action" disabled={disabled} onClick={() => onCollectPrice(priceAction)}>
               {priceAction.label || "가격 데이터 수집"}

@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-09
+Last Verified: 2026-07-12
 
 ## Purpose
 
@@ -24,7 +24,8 @@ Last Verified: 2026-07-09
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
 - Current active task: none.
-- Latest completed task: [Institutional Portfolios Holding Chart Refresh V1 2026-07-12](../tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/STATUS.md).
+- Latest completed task: [Institutional Portfolios Interactive Security Chart V1 2026-07-12](../tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Holding Chart Refresh V1 2026-07-12](../tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios UX Detail / Performance V1 2026-07-11](../tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/STATUS.md).
 - Previous completed task: [Institutional Portfolios Live SEC 13F V1 2026-07-09](../tasks/active/institutional-portfolios-live-sec13f-v1-20260709/STATUS.md).
 - Previous completed task: [Institutional Portfolios React Workbench V1 2026-07-09](../tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
