@@ -700,6 +700,35 @@ def _clear_practical_validation_replay_state(source_id: str | None = None) -> No
             del st.session_state[key]
 
 
+def _enrichment_progress_state_key(source_id: str) -> str:
+    return f"practical_validation_enrichment_progress_{source_id or 'source'}"
+
+
+def _complete_provider_gap_collection(
+    validation_result: dict[str, Any],
+    results: list[dict[str, Any]],
+    *,
+    origin: str,
+) -> None:
+    """Record collection output and require a fresh Flow 2 replay for every entry path."""
+
+    source_id = str(validation_result.get("selection_source_id") or "source").strip() or "source"
+    st.session_state[provider_gap_state_key(validation_result)] = list(results or [])
+    _clear_practical_validation_replay_state(source_id)
+    st.session_state[_enrichment_progress_state_key(source_id)] = {
+        "status": "recheck_required",
+        "source_id": source_id,
+        "validation_id": str(validation_result.get("validation_id") or "").strip(),
+        "result_count": len(results or []),
+        "origin": str(origin or "flow4"),
+    }
+    st.session_state.pop("backtest_practical_validation_data_enrichment_handoff", None)
+    st.session_state["backtest_practical_validation_notice"] = (
+        f"외부 데이터 보강 작업 {len(results or [])}개를 실행했습니다. "
+        "기존 재검증 결과를 초기화했으므로 Flow 2에서 전략 재검증을 다시 실행하세요."
+    )
+
+
 def _has_current_session_replay_result(replay_result: Any) -> bool:
     """Return True only after the user has attempted Flow 2 replay in this session."""
 
@@ -1254,11 +1283,10 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> bool:
     if st.button(button_label, key=f"{result_key}_run", width="stretch"):
         with st.spinner("현재 source에 필요한 외부 데이터 근거를 수집 / 보강 중입니다...", show_time=True):
             results = run_provider_gap_collection(validation_result)
-        st.session_state[result_key] = results
-        _clear_practical_validation_replay_state(str(validation_result.get("selection_source_id") or ""))
-        st.session_state.backtest_practical_validation_notice = (
-            f"외부 데이터 보강 작업 {len(results)}개를 실행했습니다. "
-            "기존 재검증 결과를 초기화했으므로 Flow 2에서 전략 재검증을 다시 실행하세요."
+        _complete_provider_gap_collection(
+            validation_result,
+            results,
+            origin="flow4",
         )
         st.rerun()
     return True
@@ -1356,11 +1384,10 @@ def _render_final_review_data_enrichment_handoff(source: dict[str, Any]) -> None
     ):
         with st.spinner("현재 후보에 필요한 외부 데이터를 수집 / 보강 중입니다...", show_time=True):
             results = run_provider_gap_collection(validation_result)
-        st.session_state[provider_gap_state_key(validation_result)] = results
-        st.session_state.pop("backtest_practical_validation_data_enrichment_handoff", None)
-        st.session_state.backtest_practical_validation_notice = (
-            f"외부 데이터 보강 작업 {len(results)}개를 실행했습니다. "
-            "이제 아래 Flow 2에서 전략 재검증을 실행해 새 근거를 계산하세요."
+        _complete_provider_gap_collection(
+            validation_result,
+            results,
+            origin="final_review_recovery",
         )
         st.rerun()
 

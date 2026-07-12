@@ -13799,7 +13799,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("Flow 2 재검증", provider_gap_body)
         self.assertIn("필수 데이터 보강", provider_gap_body)
         self.assertIn("필수 외부 데이터 보강 실행", provider_gap_body)
-        self.assertIn("_clear_practical_validation_replay_state", provider_gap_body)
+        self.assertIn("_complete_provider_gap_collection", provider_gap_body)
         self.assertIn("재검증 전에는 Final Review로 이동할 수 없습니다", provider_gap_body)
         self.assertNotIn('st.expander("보강 작업 상세 테이블"', provider_gap_body)
         self.assertIn("보강 작업 상세 / 수집 원자료", evidence_body)
@@ -13830,6 +13830,64 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             flow4_body.index("_render_data_action_board(validation_result)"),
             flow4_body.index("_render_validation_evidence_boards(validation_result, source=source)"),
         )
+
+    def test_provider_collection_completion_clears_replay_for_regular_and_final_review_origins(self) -> None:
+        import app.web.backtest_practical_validation.page as practical_page
+
+        validation = {
+            "selection_source_id": "source-recheck-loop",
+            "validation_id": "validation-recheck-loop",
+        }
+        for origin in ("flow4", "final_review_recovery"):
+            fake_st = MagicMock()
+            fake_st.session_state = {
+                "practical_validation_recheck_source-recheck-loop_STORED_PERIOD": {
+                    "status": "PASS",
+                    "replay_id": "stale-replay",
+                },
+                "backtest_practical_validation_data_enrichment_handoff": {"validation_result": validation},
+            }
+            with patch.object(practical_page, "st", fake_st):
+                practical_page._complete_provider_gap_collection(
+                    validation,
+                    [{"status": "SUCCESS", "rows_written": 6}],
+                    origin=origin,
+                )
+
+            self.assertNotIn(
+                "practical_validation_recheck_source-recheck-loop_STORED_PERIOD",
+                fake_st.session_state,
+            )
+            self.assertEqual(
+                fake_st.session_state[
+                    "practical_validation_enrichment_progress_source-recheck-loop"
+                ]["status"],
+                "recheck_required",
+            )
+            self.assertEqual(
+                fake_st.session_state[
+                    "practical_validation_enrichment_progress_source-recheck-loop"
+                ]["origin"],
+                origin,
+            )
+            self.assertNotIn(
+                "backtest_practical_validation_data_enrichment_handoff",
+                fake_st.session_state,
+            )
+
+    def test_both_provider_collection_buttons_use_shared_recheck_completion_boundary(self) -> None:
+        page_source = Path("app/web/backtest_practical_validation/page.py").read_text(encoding="utf-8")
+        regular_body = page_source.split("def _render_provider_gap_section", 1)[1].split(
+            "def _render_final_review_data_enrichment_handoff", 1
+        )[0]
+        recovery_body = page_source.split("def _render_final_review_data_enrichment_handoff", 1)[1].split(
+            "def _provider_look_through_board", 1
+        )[0]
+
+        self.assertIn("_complete_provider_gap_collection(", regular_body)
+        self.assertIn("origin=\"flow4\"", regular_body)
+        self.assertIn("_complete_provider_gap_collection(", recovery_body)
+        self.assertIn("origin=\"final_review_recovery\"", recovery_body)
 
     def test_practical_validation_data_action_board_react_component_is_ui_only(self) -> None:
         wrapper_path = Path("app/web/components/practical_validation_data_action_board/component.py")
