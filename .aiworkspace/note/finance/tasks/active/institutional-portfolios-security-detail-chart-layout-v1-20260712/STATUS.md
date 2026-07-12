@@ -9,6 +9,7 @@ Started: 2026-07-12
 - 2026-07-12: Added RED source-contract tests for market-like chart lower area, 2-row selected-security layout, and scrollable holder list.
 - 2026-07-12: Implemented selected-security overview cards, full-width chart row with OHLC/volume strip, volume bars, chart navigator, and lower holder-list scroll panel.
 - 2026-07-12: Browser QA confirmed `종목 분석 > 종목 상세` after selecting visible KO top holding: selected security card, portfolio-position context, stored price chart, navigator, and holder-list DOM rendered.
+- 2026-07-12: Follow-up chart fix: chart stage now measures actual width for SVG viewBox / hover math, so wide layouts no longer center a narrow fixed-ratio SVG; bottom axis now shows spaced date ticks instead of a center price label.
 
 ## Closeout
 

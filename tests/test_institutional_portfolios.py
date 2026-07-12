@@ -1054,6 +1054,20 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertIn("stroke-dasharray", style_source)
         self.assertNotIn('type="range"', component_source)
 
+    def test_selected_security_chart_stretches_and_uses_date_axis_ticks(self) -> None:
+        component_source = Path(
+            "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("ResizeObserver", component_source)
+        self.assertIn("stageRef", component_source)
+        self.assertIn("chartWidth", component_source)
+        self.assertIn("viewBox={`0 0 ${chartWidth} ${height}`}", component_source)
+        self.assertIn("dateTicks", component_source)
+        self.assertIn("ip-chart-date-tick", component_source)
+        self.assertIn("tick.point.date", component_source)
+        self.assertNotIn("activePoint ? priceLabel(activePoint.price) : \"\"", component_source)
+
     def test_selected_security_detail_uses_two_row_chart_and_scrollable_holder_layout(self) -> None:
         component_source = Path(
             "app/web/streamlit_components/institutional_portfolios_workbench/src/InstitutionalPortfoliosWorkbench.tsx"

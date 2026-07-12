@@ -390,12 +390,35 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
   const [chartStyle, setChartStyle] = useState<"line" | "candle">("line");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [windowStart, setWindowStart] = useState(0);
+  const [chartWidth, setChartWidth] = useState(640);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const dragStartRef = useRef<{ x: number; start: number } | null>(null);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return undefined;
+    }
+    const updateWidth = (value?: number) => {
+      const measured = value || stage.getBoundingClientRect().width || 640;
+      setChartWidth(Math.max(640, Math.round(measured)));
+    };
+    updateWidth();
+    if (!("ResizeObserver" in window)) {
+      const handleResize = () => updateWidth();
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
+    const observer = new ResizeObserver((entries) => {
+      updateWidth(entries[0]?.contentRect.width);
+    });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   if (!points || points.length < 2) {
     return <div className="ip-chart-empty">가격 데이터 없음</div>;
   }
-  const width = 640;
   const height = 276;
   const padX = 26;
   const padRight = 58;
@@ -417,7 +440,7 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
   const min = Math.min(...rangeValues);
   const max = Math.max(...rangeValues);
   const span = max - min || 1;
-  const plotWidth = width - padX - padRight;
+  const plotWidth = chartWidth - padX - padRight;
   const mainBottom = height - padBottom - volumeHeight - volumeGap;
   const volumeTop = mainBottom + volumeGap;
   const plotHeight = mainBottom - padTop;
@@ -441,12 +464,17 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
   const maxVolume = Math.max(...visiblePoints.map((point) => chartNumber(point.volume, 0)), 1);
   const navigatorLeft = maxWindowStart > 0 ? (safeWindowStart / points.length) * 100 : 0;
   const navigatorWidth = Math.min(100, (maxVisible / points.length) * 100);
+  const dateTicks = [0, 0.25, 0.5, 0.75, 1]
+    .map((ratio) => Math.round(ratio * Math.max(0, visiblePoints.length - 1)))
+    .filter((index, position, indexes) => indexes.indexOf(index) === position)
+    .map((index) => ({ index, point: visiblePoints[index] }))
+    .filter((tick) => tick.point);
   const panWindow = (delta: number) => {
     setWindowStart((current) => Math.max(0, Math.min(maxWindowStart, current + delta)));
   };
   const handlePointerMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const localX = Math.max(padX, Math.min(width - padRight, ((event.clientX - rect.left) / rect.width) * width));
+    const localX = Math.max(padX, Math.min(chartWidth - padRight, ((event.clientX - rect.left) / rect.width) * chartWidth));
     if (dragStartRef.current) {
       const dragDelta = event.clientX - dragStartRef.current.x;
       if (Math.abs(dragDelta) > 18) {
@@ -486,9 +514,9 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
           </button>
         </div>
       </div>
-      <div className="ip-chart-stage">
+      <div className="ip-chart-stage" ref={stageRef}>
         <svg
-          viewBox={`0 0 ${width} ${height}`}
+          viewBox={`0 0 ${chartWidth} ${height}`}
           role="img"
           aria-label="저장 가격 차트"
           onMouseMove={handlePointerMove}
@@ -503,23 +531,23 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
             dragStartRef.current = null;
           }}
         >
-        <line x1={padX} x2={width - padRight} y1={mainBottom} y2={mainBottom} className="ip-chart-axis" />
-        <line x1={padX} x2={width - padRight} y1={volumeTop + volumeHeight} y2={volumeTop + volumeHeight} className="ip-chart-axis" />
-        <line x1={padX} x2={width - padRight} y1={highY} y2={highY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
-        <line x1={padX} x2={width - padRight} y1={lowY} y2={lowY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
+        <line x1={padX} x2={chartWidth - padRight} y1={mainBottom} y2={mainBottom} className="ip-chart-axis" />
+        <line x1={padX} x2={chartWidth - padRight} y1={volumeTop + volumeHeight} y2={volumeTop + volumeHeight} className="ip-chart-axis" />
+        <line x1={padX} x2={chartWidth - padRight} y1={highY} y2={highY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
+        <line x1={padX} x2={chartWidth - padRight} y1={lowY} y2={lowY} className="ip-chart-high-low-guide" strokeDasharray="4 5" />
         <text x={padX} y={Math.max(10, highY - 4)} className="ip-chart-guide-label">
           H {priceLabel(highPoint.high ?? highPoint.price)}
         </text>
         <text x={padX} y={Math.min(height - 8, lowY + 12)} className="ip-chart-guide-label">
           L {priceLabel(lowPoint.low ?? lowPoint.price)}
         </text>
-        <text x={width - padRight + 8} y={padTop + 4} className="ip-chart-price-scale">
+        <text x={chartWidth - padRight + 8} y={padTop + 4} className="ip-chart-price-scale">
           {priceLabel(max)}
         </text>
-        <text x={width - padRight + 8} y={yFor(mid) + 4} className="ip-chart-price-scale">
+        <text x={chartWidth - padRight + 8} y={yFor(mid) + 4} className="ip-chart-price-scale">
           {priceLabel(mid)}
         </text>
-        <text x={width - padRight + 8} y={mainBottom + 4} className="ip-chart-price-scale">
+        <text x={chartWidth - padRight + 8} y={mainBottom + 4} className="ip-chart-price-scale">
           {priceLabel(min)}
         </text>
         {chartStyle === "candle" ? (
@@ -567,25 +595,28 @@ function InteractiveSecurityChart({ points }: { points: ChartPoint[] }) {
         {hoverPoint ? (
           <g>
             <line x1={hoverX} x2={hoverX} y1={padTop} y2={volumeTop + volumeHeight} className="ip-chart-crosshair" strokeDasharray="3 4" />
-            <line x1={padX} x2={width - padRight} y1={hoverY} y2={hoverY} className="ip-chart-crosshair" strokeDasharray="3 4" />
+            <line x1={padX} x2={chartWidth - padRight} y1={hoverY} y2={hoverY} className="ip-chart-crosshair" strokeDasharray="3 4" />
             <circle cx={hoverX} cy={hoverY} r="3.8" className="ip-chart-hover-dot" />
           </g>
         ) : null}
-        <text x={padX} y={height - 10} className="ip-chart-time-label">
-          {visiblePoints[0]?.date}
-        </text>
-        <text x={padX + plotWidth / 2} y={height - 10} className="ip-chart-time-label ip-chart-time-label--center">
-          {activePoint ? priceLabel(activePoint.price) : ""}
-        </text>
-        <text x={width - padRight} y={height - 10} className="ip-chart-time-label ip-chart-time-label--end">
-          {visiblePoints[visiblePoints.length - 1]?.date}
-        </text>
+        {dateTicks.map((tick) => (
+          <text
+            key={`${tick.point.date}-${tick.index}`}
+            x={xFor(tick.index)}
+            y={height - 10}
+            className={`ip-chart-time-label ip-chart-date-tick ${
+              tick.index === 0 ? "" : tick.index === visiblePoints.length - 1 ? "ip-chart-time-label--end" : "ip-chart-time-label--center"
+            }`}
+          >
+            {tick.point.date}
+          </text>
+        ))}
       </svg>
         {hoverPoint ? (
           <div
             className="ip-chart-tooltip"
             style={{
-              left: `${Math.min(78, Math.max(6, (hoverX / width) * 100))}%`,
+              left: `${Math.min(78, Math.max(6, (hoverX / chartWidth) * 100))}%`,
               top: `${Math.max(6, Math.min(62, (hoverY / height) * 100))}%`,
             }}
           >
