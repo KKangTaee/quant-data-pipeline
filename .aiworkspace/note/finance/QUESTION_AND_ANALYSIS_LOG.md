@@ -9389,3 +9389,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 해결 가능한 근거는 Level2에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 보낸다.
 - Analysis result: replay/PIT와 universe/survivorship 중복 root를 통합했고, GRS 6월 유실은 BIL/위험자산 월말 exact-date 차이였다. 숫자 감점은 role이 아니라 explicit measurement만 소유해야 한다.
 - Follow-up: 1차~4차 구현과 실제 DB/Browser QA를 완료했다. dynamic historical universe provider는 후속 승인 전까지 critical blocker다.
+
+### 2026-07-12 - Practical Validation은 accepted-limit 상세 카드를 반복하지 않는다
+
+- User request: 갑자기 생긴 Flow 4 `근거 종결 경로`가 무엇인지, Level 2 UI와 맞출지 제거할지 판단하고 승인된 방향으로 수정해 달라고 요청함.
+- Interpreted goal: Level 2에서는 지금 해결할 일과 이동 가능 여부가 먼저 읽혀야 하고, Final Review에서 종결할 비핵심 한계를 raw contract 카드로 반복하지 않아야 함.
+- Analysis result: 독립 closure card는 기존 category criteria와 중복되고 internal metric / 영문 contract / `미정`을 노출했다. 분류와 Gate는 필요하지만 상세 presentation은 Final Review 소유가 맞다.
+- Follow-up: Flow 4 독립 카드 묶음을 제거하고 Flow 3 summary band에 accepted-limit root count와 blocker 유무만 표시했다. Python closure / Gate / registry contract는 변경하지 않았다.

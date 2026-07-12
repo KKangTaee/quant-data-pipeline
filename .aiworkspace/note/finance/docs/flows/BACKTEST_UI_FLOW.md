@@ -956,6 +956,7 @@ Backtest > Final Review
 근거 종결 계약:
 
 - Practical Validation은 `지금 해결 가능 / 개발 필요 / 한계 인수 가능`으로 root issue를 분류한다. 등록된 Python replay handler가 있는 항목만 현재 단계 CTA를 가진다.
+- 이 분류는 Python Gate / 저장 계약으로 유지하되 Practical Validation Flow 4에 독립적인 closure card 묶음으로 반복하지 않는다. Flow 3은 root-dedup된 `Final Review 판단에 반영할 한계` 개수와 즉시 해결·개발 blocker 유무만 compact하게 보여주고, 상세 한계와 terminal decision은 Final Review가 소유한다.
 - current Final Review eligible validation은 unresolved actionable, critical engineering, missing contract count가 모두 0이어야 한다.
 - Final Review는 `선정 전 미해결 항목`과 `인수한 한계와 최종 판단 항목`을 분리한다. current eligible 후보의 전자는 항상 0이다.
 - selected route는 accepted limit / final decision을 `accepted`, Monitoring transfer를 `monitoring_transferred`로 저장한다. hold/re-review는 `deferred`, reject는 `blocked`로 decision row의 `evidence_closure_snapshot`에 남긴다.

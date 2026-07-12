@@ -900,3 +900,129 @@ Stop and report before continuing only if one of these occurs:
 - [x] `root_issue_id`, `resolution_class`, `action_id`, `terminal_state`, `evidence_closure`, `evidence_closure_snapshot` names are consistent across service, workspace, Final Review, React, and tests.
 - [x] Date contract consistently uses `requested_market_date`, `latest_common_price_date`, `last_complete_rebalance_date`, `latest_valuation_date`.
 - [x] Final Review uses Python snake_case payload with existing React camel/snake `field()` compatibility.
+
+---
+
+## Follow-up UX Correction — Practical Validation Closure Summary (2026-07-12)
+
+**Goal:** Flow 4의 중복 `근거 종결 경로` 카드 묶음을 제거하고, Final Review에서 판단할 비핵심 한계의 개수만 기존 Flow 3 검증 결론 요약에 표시한다.
+
+**Architecture:** Python은 기존 `evidence_closure` 분류와 Gate를 그대로 소유하고 `accepted_limit` root issue 개수만 workspace summary로 전달한다. React는 그 개수를 Flow 3의 기존 4열 summary band에 표시하고, Flow 4는 기존 카테고리별 기준 상세와 action board만 렌더링한다.
+
+**Tech Stack:** Python 3, Streamlit, React/TypeScript, unittest, Vite
+
+### Global Constraints
+
+- registry / saved JSONL 기존 row를 재작성하거나 삭제하지 않는다.
+- `PRACTICAL_VALIDATION_RESULTS.jsonl`, `BACKTEST_RUN_HISTORY.jsonl`, generated QA artifact를 stage/commit하지 않는다.
+- `evidence_closure`, Final Review Gate, replay, score, 저장 계약은 변경하지 않는다.
+- React는 전달받은 개수를 표시할 뿐 분류나 종결 상태를 계산하지 않는다.
+
+### Task 5.1: Flow 4 closure card 제거와 Flow 3 compact handoff
+
+**Files:**
+- Modify: `tests/test_backtest_evidence_closure.py`
+- Modify: `app/services/backtest_practical_validation_workspace.py`
+- Modify: `app/web/backtest_practical_validation/page.py`
+- Modify: `app/web/backtest_practical_validation/workspace_panel.py`
+- Modify: `app/web/components/practical_validation_fix_queue/component.py`
+- Modify: `app/web/components/practical_validation_fix_queue/frontend/src/index.tsx`
+- Modify: `app/web/components/practical_validation_fix_queue/frontend/src/PracticalValidationFixQueue.tsx`
+
+**Interfaces:**
+- Consumes: `validation["evidence_closure"]["issues"][].resolution_class`
+- Produces: `workspace["summary"]["final_review_limit_count"]: int`
+- Produces: React prop `finalReviewLimitCount: number`
+
+- [x] **Step 1: Write the failing workspace and source contract tests**
+
+```python
+workspace = build_practical_validation_workspace(validation)
+self.assertEqual(workspace["summary"]["final_review_limit_count"], 1)
+self.assertNotIn("evidence_closure_groups", workspace)
+self.assertNotIn("_render_evidence_closure_groups", page_source)
+self.assertIn("Final Review 판단에 반영할 한계", component_source)
+```
+
+- [x] **Step 2: Run RED and confirm the old card contract fails**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_evidence_closure.EvidenceClosureContractTests.test_workspace_summarizes_final_review_limits_without_closure_card_groups \
+  tests.test_backtest_evidence_closure.EvidenceClosureContractTests.test_level2_hides_standalone_closure_cards_and_uses_compact_final_review_handoff
+```
+
+Expected: FAIL because `final_review_limit_count` is absent and the old renderer/source remains.
+
+- [x] **Step 3: Implement the minimal Python read-model and UI change**
+
+```python
+final_review_limit_root_issue_ids = {
+    str(issue.get("root_issue_id") or "").strip()
+    for issue in closure_issues
+    if issue.get("resolution_class") == "accepted_limit"
+}
+final_review_limit_count = len(final_review_limit_root_issue_ids - {""})
+```
+
+Remove the workspace `evidence_closure_groups` field, `_render_evidence_closure_groups()`, and its Flow 4 call. Pass `final_review_limit_count` through the existing component wrapper; render it as the fourth Flow 3 summary cell labelled `Final Review 판단에 반영할 한계`. Replace the empty blocker copy with `즉시 해결하거나 개발해야 할 차단 항목 없음`.
+
+- [x] **Step 4: Run GREEN and focused regressions**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_evidence_closure
+npm run build --prefix app/web/components/practical_validation_fix_queue/frontend
+```
+
+Expected: all focused tests pass and Vite exits 0.
+
+- [x] **Step 5: Verify and commit the implementation unit**
+
+Run target `py_compile`, `git diff --check`, and confirm staged files exclude registry/run-history/artifacts.
+
+```bash
+git commit -m "Practical Validation 근거 종결 UI 중복 제거"
+```
+
+### Task 5.2: Browser QA and durable flow sync
+
+**Files:**
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+
+- [x] **Step 1: Run Browser QA at desktop and 760px**
+
+Verify Flow 3 shows the compact Final Review limit count and zero immediate/development blockers; Flow 4 starts with category criteria and contains no `근거 종결 경로`, raw closure diagnostic, or `미정` closure card. Capture one untracked screenshot.
+
+- [x] **Step 2: Run fresh completion verification**
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_evidence_closure tests.test_service_contracts.PracticalValidationServiceContractTests
+.venv/bin/python -m py_compile app/services/backtest_practical_validation_workspace.py app/web/backtest_practical_validation/page.py app/web/backtest_practical_validation/workspace_panel.py app/web/components/practical_validation_fix_queue/component.py
+npm run build --prefix app/web/components/practical_validation_fix_queue/frontend
+git diff --check
+```
+
+Expected: 0 failures / 0 errors and every non-test command exits 0.
+
+- [x] **Step 3: Synchronize docs and commit**
+
+Record the presentation correction, RED/GREEN commands, Browser QA scope, and the unchanged internal Gate/closure contract.
+
+```bash
+git commit -m "Practical Validation 근거 종결 UX 문서 동기화"
+```
+
+### Follow-up Self-Review
+
+- [x] The plan removes only the redundant presentation surface; closure classification and Final Review persistence stay unchanged.
+- [x] The accepted-limit count is calculated once in Python by root issue, then displayed without React domain logic.
+- [x] Flow 3 and Flow 4 ownership, RED/GREEN evidence, build, Browser QA, docs, and artifact exclusions are covered.
+- [x] Function, field, test, and commit names are consistent and no placeholder remains.

@@ -6116,3 +6116,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - root issue dedup, Level2 actionability Gate, GRS signal/valuation 분리, static/dynamic survivorship policy, Final Review terminal snapshot, measured-only score를 적용했다.
 - 구현 커밋: `697a119b`, `65eacc92`, `cb2af299`, `4a05ae2f`; closeout 상세는 active task `STATUS.md`와 `RUNS.md`를 본다.
 - 후속은 dynamic historical universe용 PIT membership / delisting provider 승인 여부다.
+
+## 2026-07-12 - Practical Validation Closure Summary UX Correction
+
+- Flow 4의 중복 `근거 종결 경로`와 `미정` closure card를 제거했다.
+- Flow 3 기존 검증 결론에 Python root-dedup accepted-limit count와 즉시 해결·개발 blocker 유무를 compact하게 통합했다.
+- 내부 closure / Gate / save / Final Review 계약은 유지했으며 구현 커밋은 `b5e1cd68`이다.
+- focused 45 tests, Vite build, py_compile, 760px current GRS Browser QA를 통과했다.
