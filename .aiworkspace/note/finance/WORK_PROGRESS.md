@@ -23,6 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
+  - Latest completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
   - Latest completed Final Review UX task is [final-review-readable-review-evidence-v1-20260711](./tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-decision-flow-simplification-v1-20260711](./tasks/active/final-review-decision-flow-simplification-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
@@ -41,6 +42,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Practical Validation Pre-Final Enrichment Gate V1:
+  - 실행 가능한 operability / holdings·exposure / required macro gap을 Practical Validation 승격 전 blocker로 분리했다. 수집 성공 뒤에도 Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동이 활성화되지 않는다.
+  - Final Review의 legacy / stale 검토서는 과거 근거 열람과 2단계 복구 navigation만 허용하고 Decision Desk, recommendation, 판단 저장을 `2단계 재검증 필요`로 잠갔다.
+  - Browser QA에서 단계 요약 일관성, 복구 handoff, 비활성 판단 CTA, 760px no-overflow를 확인했다. registry / saved / run history / generated screenshot은 커밋하지 않았다.
 - Final Review Readable Review Evidence V1:
   - `남은 판단 근거`를 사용자 언어의 검증명, 현재 확인 내용, 판단 이유, 개선 행동으로 정리하고 raw source / 기준일은 접힌 상세로 낮췄다.
   - 수집 가능한 provider gap만 같은 후보의 Practical Validation 보강 화면으로 넘기며 기간 밖 / 미구현 / source 탐색 / 사용자 판단은 별도 행동으로 분리했다.

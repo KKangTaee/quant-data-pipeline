@@ -17,6 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
   - Latest completed Final Review UX task is [final-review-readable-review-evidence-v1-20260711](./tasks/active/final-review-readable-review-evidence-v1-20260711/STATUS.md).
   - Latest completed portfolio workflow reset is [portfolio-workflow-legacy-reset-rebuild-20260711](./tasks/active/portfolio-workflow-legacy-reset-rebuild-20260711/STATUS.md).
   - Previous completed Final Review UX task is [final-review-investment-report-redesign-v1-20260711](./tasks/active/final-review-investment-report-redesign-v1-20260711/STATUS.md).
@@ -34,6 +35,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-12 - 해결 가능한 자료는 2단계에서 닫고 3단계는 판단만 맡는다
+
+- User request: Final Review의 `2단계에서 보강 가능한 데이터`를 왜 3단계에서 다시 보여주는지 진단하고, 수집 가능 항목은 2단계에서 해결해 3단계 검증 부담을 줄이는 방향으로 진행해 달라고 요청함.
+- Interpreted goal: provider 수집, 재검증, 승격 Gate는 Practical Validation이 끝내고 Final Review는 수집으로 해결되지 않는 잔여 제한과 사용자의 선택 판단만 소비해야 한다.
+- Analysis result: 수집 성공은 검증 성공이 아니므로 executable gap은 승격 전 blocker가 되고, 수집 후 Flow 2 replay와 새 validation 저장이 필요하다. 기존 저장 검토서는 audit 보존을 위해 삭제하지 않되 최신 기준 충족 전에는 새 판단을 만들 수 없다.
+- Follow-up: current blocking row는 Final Review 후보에서 제외하고 legacy / stale row는 읽기 전용 recovery로 표시했다. 기간 밖 stress, 미구현 검증, survivorship historical source, 세금·계좌 판단은 자동 수집 대상이 아니다.
 
 ### 2026-07-11 - 남은 판단 근거는 확인 내용과 개선 행동을 함께 답한다
 

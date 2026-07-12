@@ -24,3 +24,9 @@
 - pre-final Gate 계약이 없는 기존 row는 현재 coverage로 plan을 재계산하고 `legacy_recovery`로 표시한다.
 - 저장 당시 non-blocking이었지만 이후 자료가 다시 오래지면 `stale_recovery`, 현재 필수 보강이 없으면 `hidden`이다.
 - legacy row의 구형 stored provider plan을 신뢰하지 않고 현재 coverage에서 다시 계산한다. 새 validation 생성 중에는 wrapper가 방금 계산한 provider plan을 명시적으로 전달한다.
+
+## 2026-07-12 Read-Only Recovery Guard
+
+- legacy / stale recovery 후보는 과거 점수와 근거를 열람할 수 있지만 recommendation, Decision Desk, Monitoring handoff는 현재 선택 가능 상태로 표시하지 않는다.
+- recovery가 필요한 동안 Final Decision Action의 모든 route 저장을 비활성화하고 `RE_REVIEW_REQUIRED`를 기본 route로 제시한다.
+- Flow 3 category 자체가 통과여도 pre-final enrichment Gate가 blocking이면 first-read 요약은 `필수 데이터 보강 후 재검증 필요`로 덮어써서 상충 문구를 제거한다.

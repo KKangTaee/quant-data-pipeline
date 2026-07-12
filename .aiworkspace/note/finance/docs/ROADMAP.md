@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-11
+Last Verified: 2026-07-12
 
 ## Current State After Master Merge
 
@@ -9,7 +9,14 @@ Last Verified: 2026-07-11
 
 현재 active task는 없다.
 
-Latest completed Final Review readable review evidence task는 `.aiworkspace/note/finance/tasks/active/final-review-readable-review-evidence-v1-20260711/`다.
+Latest completed Practical Validation pre-Final enrichment gate task는 `.aiworkspace/note/finance/tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/`다.
+
+- 목적: 현재 Python collector로 해결 가능한 필수 외부 데이터 gap을 Final Review 숙제로 넘기지 않고 Practical Validation에서 보강·재검증한 뒤에만 승격한다.
+- 주요 변경: executable operability / holdings·exposure / required macro plan을 synthetic `pre_final_data_enrichment` blocker로 합성하고, Flow 4 수집 뒤 Flow 2 replay를 초기화해 재검증과 새 validation 저장을 강제한다.
+- Final Review: current blocking validation은 후보에서 제외한다. legacy / later-stale 검토서는 복구 안내와 과거 근거만 읽을 수 있고, Decision Desk / recommendation / Final Decision Action은 `2단계 재검증 필요` 상태로 잠긴다.
+- QA: focused service / contract tests, React build, py_compile, `git diff --check`, Practical Validation ↔ Final Review Browser QA, 760px no-overflow 검증을 통과했다. provider 수집과 판단 저장은 실행하지 않았고 registry / saved / run history / screenshot을 커밋하지 않았다.
+
+Previous completed Final Review readable review evidence task는 `.aiworkspace/note/finance/tasks/active/final-review-readable-review-evidence-v1-20260711/`다.
 
 - 목적: `남은 판단 근거`의 raw audit 이름과 코드형 관측·판단 근거를 사용자 언어로 바꾸고, 각 항목이 무엇이며 어떻게 개선할지를 같은 카드에서 끝내게 한다.
 - 주요 변경: stored audit 값을 새로 판정하지 않고 한국어 title / 검증 설명 / 현재 확인 내용 / 판단 이유로 번역했다. 각 trace는 데이터 최신화, source 탐색, 재검증, 기간 확장, 검증 기능 보강, 사용자 판단, 인수 제한 중 하나의 행동으로 분류한다.

@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-11
+Last Verified: 2026-07-12
 
 ## Current State
 
@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `final-review-readable-review-evidence-v1-20260711`
+- `practical-validation-pre-final-enrichment-gate-v1-20260712`
 
 Previous completed task:
 
-- `portfolio-workflow-legacy-reset-rebuild-20260711`
+- `final-review-readable-review-evidence-v1-20260711`
 
 Latest completed docs cleanup task:
 
@@ -52,6 +52,7 @@ Recent Reference records:
 
 Recent portfolio selection records:
 
+- `practical-validation-pre-final-enrichment-gate-v1-20260712`: 수집 가능한 필수 외부 데이터는 Practical Validation에서 보강하고 Flow 2 재검증 후에만 Final Review로 승격한다. legacy / stale Final Review 검토서는 읽기 전용 복구 상태로 유지한다.
 - `final-review-readable-review-evidence-v1-20260711`: `남은 판단 근거`를 사용자 언어의 검증명 / 관측 / 판단 이유 / 개선 행동으로 정리하고, 실제 provider plan이 있는 항목만 같은 후보의 Practical Validation 데이터 보강으로 연결했다. React는 표시와 navigation intent만 담당한다.
 - `final-review-guidance-actionability-v1-20260711`: 10개 Monitoring 패턴을 named evidence adapter 기반 `판단 가능 / 조건부 추적 / 추가 검증 필요 / 적용 제외`로 바꾸고 first-read를 최대 6개로 제한했다. technical trace는 접힌 상세로 이동했고, REVIEW는 Final Review 직접 결정 / 2단계 인수 제한 / Monitoring 조건 / blocker로 분리했다. 총평 직후에는 성과 / 위험 / 근거 신뢰도 / Monitoring 적합성 4행을 표시한다.
 - `portfolio-workflow-legacy-reset-rebuild-20260711`: 기존 Final Review 6개 후보를 current 1차 source / 2차 Practical Validation / 3차 Final Review 판단으로 다시 생성했다. 새 validation은 workspace / REVIEW role 계약을 포함하고, Monitoring setup은 새 decision ID만 참조한다. legacy `SAVED_PORTFOLIOS.jsonl`은 사용자 요청으로 제거했다.

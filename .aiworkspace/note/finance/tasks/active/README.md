@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-11
+Last Verified: 2026-07-12
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `practical-validation-pre-final-enrichment-gate-v1-20260712` | Completed record | 해결 가능한 필수 provider gap을 Practical Validation 승격 전 blocker로 바꾸고, Final Review의 legacy / stale 검토서는 2단계 재검증 전 읽기 전용 복구 상태로 제한했다. |
 | `final-review-readable-review-evidence-v1-20260711` | Completed record | `남은 판단 근거`를 사용자 언어와 개선 행동으로 바꾸고, 실행 가능한 provider gap만 같은 후보의 Practical Validation 보강 화면으로 연결했다. |
 | `final-review-guidance-actionability-v1-20260711` | Completed record | 10개 Monitoring 패턴을 structured applicability/action state로 바꾸고, 첫 화면 최대 6개 행동 가이드, 접힌 technical trace, Level2/Final Review stage ownership, 총평 직후 해석 4행을 구현했다. |
 | `portfolio-workflow-legacy-reset-rebuild-20260711` | Completed record | 기존 6개 Final Review 후보를 current source → Practical Validation → Final Review schema로 재생성하고 Monitoring setup을 새 decision ID에 연결했다. legacy `SAVED_PORTFOLIOS.jsonl`은 요청대로 제거했다. |
