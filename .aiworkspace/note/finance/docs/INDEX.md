@@ -23,7 +23,7 @@ Last Verified: 2026-07-12
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: none.
+- Current active task: [Nasdaq-100 Valuation V1 2026-07-12](../tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md) — written design review; implementation has not started.
 - Latest completed task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
 - Previous completed task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
 - Previous completed task: [Practical Validation Recheck Handoff Loop Fix V1 2026-07-12](../tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
