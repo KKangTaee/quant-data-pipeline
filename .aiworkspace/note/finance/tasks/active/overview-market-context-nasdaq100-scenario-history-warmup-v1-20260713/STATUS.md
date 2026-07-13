@@ -10,6 +10,7 @@ Last Updated: 2026-07-13
 - Written design was approved by the user.
 - Detailed five-stage TDD implementation plan is ready for inline execution.
 - 1차 complete: shared history payload now explains exact rolling PER warmup requirements while preserving S&P 12/36/60 READY output.
+- 2차 complete: the existing resumable planner/job now has an explicit 119-month history contract while retaining the 60-month blocker default.
 
 ## Five-Stage Roadmap
 
@@ -21,4 +22,4 @@ Last Updated: 2026-07-13
 
 ## Next Action
 
-Execute stage 2 exact 119-month repair contract, then continue through stage 5 actual repair and QA.
+Execute stage 3 Nasdaq history action and EPS provenance, then continue through stage 5 actual repair and QA.

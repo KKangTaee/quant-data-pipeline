@@ -100,7 +100,7 @@ Commit message: `적정구간 rolling 이력 부족 계약 추가`
 - Reuses: `nasdaq100_repair_window` and `run_repair_nasdaq100_valuation_coverage(months=...)`.
 - Preserves: Overview facade default `months=60`.
 
-- [ ] **Step 1: Write failing exact-window and facade tests.**
+- [x] **Step 1: Write failing exact-window and facade tests.**
 
 ```python
 self.assertEqual(NASDAQ100_SCENARIO_HISTORY_REPAIR_MONTHS, 119)
@@ -116,13 +116,13 @@ runner.assert_called_once_with(months=119, progress_callback=None)
 self.assertEqual(result["details"]["requested_months"], 119)
 ```
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
 Run: `.venv/bin/python -m unittest tests.test_nasdaq100_valuation tests.test_market_context_valuation -v`
 
 Expected: the constant and requested-month evidence are absent.
 
-- [ ] **Step 3: Add the constant and dynamic facade evidence.**
+- [x] **Step 3: Add the constant and dynamic facade evidence.**
 
 ```python
 NASDAQ100_SCENARIO_HISTORY_REPAIR_MONTHS = 119
@@ -130,13 +130,13 @@ details["requested_months"] = int(months)
 details["purpose"] = f"Market Context Nasdaq-100 {int(months)}-month valuation/history repair"
 ```
 
-- [ ] **Step 4: Run GREEN.**
+- [x] **Step 4: Run GREEN.**
 
 Run: `.venv/bin/python -m unittest tests.test_nasdaq100_valuation tests.test_market_context_valuation -v`
 
 Expected: all focused tests pass and 60-month behavior remains compatible.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 Commit message: `나스닥100 적정구간 119개월 보강 계약 추가`
 

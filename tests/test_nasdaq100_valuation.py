@@ -191,6 +191,21 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
         self.assertEqual(input_loader.call_args.kwargs["end_month"], "2026-07-31")
         issue_loader.assert_called_once()
 
+    def test_scenario_history_repair_window_covers_119_inclusive_months(self) -> None:
+        from finance.data.nasdaq100_valuation import (
+            NASDAQ100_SCENARIO_HISTORY_REPAIR_MONTHS,
+            nasdaq100_repair_window,
+        )
+
+        self.assertEqual(NASDAQ100_SCENARIO_HISTORY_REPAIR_MONTHS, 119)
+        self.assertEqual(
+            nasdaq100_repair_window(
+                end_month="2026-07-31",
+                months=NASDAQ100_SCENARIO_HISTORY_REPAIR_MONTHS,
+            ),
+            ("2016-09-01", "2026-07-31"),
+        )
+
     def test_repair_input_collection_keeps_successful_batches_and_reports_failures(self) -> None:
         from app.jobs.ingestion_jobs import collect_nasdaq100_repair_inputs
 

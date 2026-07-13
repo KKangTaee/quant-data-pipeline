@@ -223,7 +223,11 @@ def run_overview_nasdaq100_valuation_repair(
     details.update(
         {
             "source_job_name": "repair_nasdaq100_valuation_coverage",
-            "purpose": "Market Context Nasdaq-100 60-month valuation coverage repair",
+            "purpose": (
+                f"Market Context Nasdaq-100 {int(months)}-month "
+                "valuation/history repair"
+            ),
+            "requested_months": int(months),
         }
     )
     result["details"] = details

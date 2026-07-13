@@ -182,6 +182,18 @@ class MarketContextValuationTests(unittest.TestCase):
         self.assertEqual(result["job_name"], "overview_nasdaq100_valuation_repair")
         self.assertEqual(result["details"]["after"]["ready_months"], 48)
 
+    def test_overview_repair_facade_forwards_history_warmup_months(self) -> None:
+        from app.jobs.overview_actions import run_overview_nasdaq100_valuation_repair
+
+        with patch(
+            "app.jobs.overview_actions.run_repair_nasdaq100_valuation_coverage",
+            return_value={"status": "success", "details": {}},
+        ) as runner:
+            result = run_overview_nasdaq100_valuation_repair(months=119)
+
+        runner.assert_called_once_with(months=119, progress_callback=None)
+        self.assertEqual(result["details"]["requested_months"], 119)
+
     def test_market_context_repair_event_runs_once_then_clears_cache_and_reruns(self) -> None:
         from app.web.overview import market_context_helpers
 
