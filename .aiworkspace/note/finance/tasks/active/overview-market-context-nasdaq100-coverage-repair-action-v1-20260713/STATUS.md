@@ -1,6 +1,6 @@
 # Overview Market Context Nasdaq-100 Coverage Repair Action V1 Status
 
-Status: 2차 Complete — 3차 Pending
+Status: 3차 Complete — 4차 Pending
 Last Updated: 2026-07-13
 
 ## Current Position
@@ -11,10 +11,11 @@ Last Updated: 2026-07-13
 - written spec 승인을 받았고 1차~5차 상세 TDD 실행 계획을 확정했다.
 - 1차 Coverage Repair Planner, non-equity filter, strict observation-month price check, DB-backed loader를 구현했다.
 - 2차 planned SEC quarterly statement/EOD batch collection, progress, partial failure, exhausted price evidence를 구현했다.
+- 3차 before/after plan, 60개월 materialization, strict 60/60 success, BLOCKED repair action contract를 구현했다.
 
 ## Next Action
 
-3차 60개월 rematerialization과 strict result contract의 failing test부터 시작한다.
+4차 React action event, synchronous progress, cache clear/rerun의 failing test부터 시작한다.
 
 ## Roadmap Progress
 
@@ -23,4 +24,5 @@ Last Updated: 2026-07-13
 - detailed implementation plan: 완료
 - 1차 planner: 완료
 - 2차 resumable ingestion: 완료
-- 3차~5차 구현: 미시작
+- 3차 strict rematerialization/result: 완료
+- 4차~5차 구현: 미시작

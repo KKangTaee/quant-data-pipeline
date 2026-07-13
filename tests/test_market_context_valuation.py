@@ -67,6 +67,67 @@ class MarketContextValuationTests(unittest.TestCase):
         self.assertEqual(model["multiple_regime"]["observation_count"], 60)
         self.assertIn("price_scenarios", model["index_scenario"])
 
+    def test_nasdaq_repair_action_is_exposed_only_while_blocked(self) -> None:
+        from app.services.overview.nasdaq100_valuation import build_nasdaq100_valuation_read_model
+
+        blocked = build_nasdaq100_valuation_read_model(
+            monthly_rows=[
+                {
+                    "observation_month": "2026-07-01",
+                    "qqq_price": 709.43,
+                    "coverage_weight_pct": 94.47,
+                    "unmapped_weight_pct": 5.53,
+                    "data_quality": "blocked",
+                    "error_msg": "INSUFFICIENT_EARNINGS_COVERAGE",
+                }
+            ],
+            ttm_evidence={
+                "status": "BLOCKED",
+                "coverage_weight_pct": 94.47,
+                "unmapped_weight_pct": 5.53,
+                "error_code": "INSUFFICIENT_EARNINGS_COVERAGE",
+            },
+            sep_rows=_sep_rows(),
+            sep_history_rows=_sep_rows(),
+            current_prices=[{"symbol": "QQQ", "latest_date": "2026-07-10", "price": 709.43}],
+        )
+        ready_rows = [
+            {
+                "observation_month": date,
+                "qqq_price": 500.0 + index,
+                "reconstructed_ttm_eps": 20.0,
+                "trailing_pe": 20.0 + index / 20,
+                "coverage_weight_pct": 97.0,
+                "unmapped_weight_pct": 3.0,
+                "data_quality": "reconstructed_actual",
+            }
+            for index, date in enumerate(pd.date_range("2021-08-01", periods=60, freq="MS"))
+        ]
+        ready = build_nasdaq100_valuation_read_model(
+            monthly_rows=ready_rows,
+            ttm_evidence={
+                "status": "READY",
+                "current_ttm_eps": 20.0,
+                "coverage_weight_pct": 97.0,
+                "unmapped_weight_pct": 3.0,
+                "eps_source_quality": "reconstructed_actual",
+            },
+            sep_rows=_sep_rows(),
+            sep_history_rows=_sep_rows(),
+            current_prices=[{"symbol": "QQQ", "latest_date": "2026-07-10", "price": 700.0}],
+        )
+
+        self.assertEqual(
+            blocked["coverage"]["repair_action"],
+            {
+                "id": "repair_nasdaq100_60m",
+                "label": "60개월 가치평가 자료 보강",
+                "detail": "누락된 구성 종목 EPS와 가격 이력을 보강한 뒤 다시 계산합니다.",
+                "enabled": True,
+            },
+        )
+        self.assertNotIn("repair_action", ready["coverage"])
+
     def test_combined_model_isolates_one_instrument_failure(self) -> None:
         from app.services.overview.market_context_valuation import build_market_context_valuation_read_model
 

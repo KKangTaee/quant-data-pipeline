@@ -39,3 +39,12 @@ Last Updated: 2026-07-13
 - successful price attempt 뒤에도 동일 gap이 남은 종목만 `limited_price_history` issue로 저장하며 transient failed symbol은 제외한다.
 - 회귀: `.venv/bin/python -m unittest tests.test_nasdaq100_valuation -v` 24 tests, `OK`.
 - 문법/형식: `py_compile app/jobs/ingestion_jobs.py finance/data/nasdaq100_valuation.py`, `git diff --check` 통과.
+
+## 3차 — Strict Rematerialization / Result Contract
+
+- RED: repair orchestration과 BLOCKED service action이 없는 상태를 확인했다.
+- GREEN: before plan -> collection -> 60-month materialization -> after plan 순서와 compact JobResult를 구현했다.
+- collection partial/failed symbol이 있어도 저장된 usable input으로 materialization을 계속하며 after `ready_months == window.months`일 때만 `success`다.
+- BLOCKED Nasdaq coverage payload만 `repair_nasdaq100_60m` action을 제공하고 READY에서는 제거한다.
+- 회귀: Nasdaq + Market Context 33 tests, `OK`.
+- 문법/형식: `py_compile app/jobs/ingestion_jobs.py app/services/overview/nasdaq100_valuation.py`, `git diff --check` 통과.

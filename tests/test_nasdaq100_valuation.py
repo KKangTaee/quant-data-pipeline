@@ -301,6 +301,81 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
             end_month="2026-07-31",
         )
         self.assertEqual(result["price_limit_issues"]["rows_written"], 1)
+
+    def test_repair_job_rematerializes_after_partial_collection_and_reports_before_after(self) -> None:
+        from app.jobs.ingestion_jobs import run_repair_nasdaq100_valuation_coverage
+
+        before = {
+            "window": {"start_month": "2021-08-01", "end_month": "2026-07-31", "months": 60},
+            "targets": [{"symbol": "OLD", "needs": ["eod_price"]}],
+            "unsupported": [],
+            "before": {"ready_months": 5, "blocked_months": 55},
+        }
+        after = {
+            "window": dict(before["window"]),
+            "targets": [{"symbol": "OLD", "needs": ["eod_price"]}],
+            "unsupported": [{"symbol": "OLD", "reason": "unsupported_free_source"}],
+            "before": {"ready_months": 48, "blocked_months": 12},
+        }
+        plan_loader = Mock(side_effect=[before, after])
+        input_collector = Mock(
+            return_value={
+                "status": "partial_success",
+                "rows_written": 10,
+                "failed_symbols": ["OLD"],
+                "steps": [],
+                "price_limit_issues": {"symbols": [], "rows_written": 0},
+            }
+        )
+        materializer = Mock(
+            return_value={"rows_written": 60, "ready_rows": 48, "blocked_rows": 12}
+        )
+        events: list[dict[str, object]] = []
+
+        result = run_repair_nasdaq100_valuation_coverage(
+            months=60,
+            plan_loader=plan_loader,
+            input_collector=input_collector,
+            materializer=materializer,
+            progress_callback=events.append,
+        )
+
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 70)
+        self.assertEqual(result["failed_symbols"], ["OLD"])
+        self.assertEqual(result["details"]["before"], before["before"])
+        self.assertEqual(result["details"]["after"], after["before"])
+        input_collector.assert_called_once_with(
+            before,
+            batch_size=20,
+            progress_callback=events.append,
+        )
+        materializer.assert_called_once_with(
+            start_month="2021-08-01",
+            end_month="2026-07-31",
+        )
+        self.assertEqual(
+            [event["stage"] for event in events if event["event"] == "stage_start"],
+            ["diagnose", "materialize"],
+        )
+
+    def test_repair_job_only_succeeds_when_all_requested_months_are_ready(self) -> None:
+        from app.jobs.ingestion_jobs import run_repair_nasdaq100_valuation_coverage
+
+        complete = {
+            "window": {"start_month": "2021-08-01", "end_month": "2026-07-31", "months": 60},
+            "targets": [],
+            "unsupported": [],
+            "before": {"ready_months": 60, "blocked_months": 0},
+        }
+        result = run_repair_nasdaq100_valuation_coverage(
+            plan_loader=Mock(side_effect=[complete, complete]),
+            input_collector=Mock(),
+            materializer=Mock(return_value={"rows_written": 60, "ready_rows": 60, "blocked_rows": 0}),
+        )
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["details"]["after"]["ready_months"], 60)
     def test_parses_companyfacts_diluted_eps_with_filing_availability(self) -> None:
         from finance.data.nasdaq100_valuation import parse_sec_companyfacts_diluted_eps
 

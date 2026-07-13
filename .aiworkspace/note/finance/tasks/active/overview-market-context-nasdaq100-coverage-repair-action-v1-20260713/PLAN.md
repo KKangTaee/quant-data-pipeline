@@ -431,7 +431,7 @@ git commit -m "나스닥100 누락 자료 재수집 파이프라인 추가"
 - Consumes: Task 1 planner and Task 2 collection result
 - Produces: `run_repair_nasdaq100_valuation_coverage(*, months=60, batch_size=20, progress_callback=None) -> JobResult`; BLOCKED `coverage.repair_action`
 
-- [ ] **Step 1: Write failing orchestration tests for success, partial success, and failure.**
+- [x] **Step 1: Write failing orchestration tests for success, partial success, and failure.**
 
 Assert call order `before plan -> collection -> materialization -> after plan`, partial collection still materializes, and `success` requires `after.ready_months == after.window.months`.
 
@@ -449,11 +449,11 @@ def test_repair_job_rematerializes_after_partial_collection(self) -> None:
     self.assertEqual(result["details"]["after"]["ready_months"], 48)
 ```
 
-- [ ] **Step 2: Run orchestration tests and verify RED.**
+- [x] **Step 2: Run orchestration tests and verify RED.**
 
 Expected: missing `run_repair_nasdaq100_valuation_coverage` failure.
 
-- [ ] **Step 3: Implement strict orchestration and compact summary.**
+- [x] **Step 3: Implement strict orchestration and compact summary.**
 
 ```python
 def run_repair_nasdaq100_valuation_coverage(
@@ -511,11 +511,11 @@ def run_repair_nasdaq100_valuation_coverage(
 
 Emit `diagnose`, `eps`, `prices`, `materialize`, `complete`. A zero-target 60/60 plan is success; zero targets with unresolved gaps is partial success.
 
-- [ ] **Step 4: Write the failing service action test.**
+- [x] **Step 4: Write the failing service action test.**
 
 BLOCKED Nasdaq must expose action id/label/detail/enabled. READY Nasdaq must omit or disable it.
 
-- [ ] **Step 5: Add the BLOCKED repair-action contract.**
+- [x] **Step 5: Add the BLOCKED repair-action contract.**
 
 ```python
 coverage["repair_action"] = {
@@ -526,7 +526,7 @@ coverage["repair_action"] = {
 }
 ```
 
-- [ ] **Step 6: Run job/service tests and verify GREEN.**
+- [x] **Step 6: Run job/service tests and verify GREEN.**
 
 ```bash
 .venv/bin/python -m unittest tests.test_nasdaq100_valuation tests.test_market_context_valuation -v
@@ -534,7 +534,7 @@ coverage["repair_action"] = {
 git diff --check
 ```
 
-- [ ] **Step 7: Record evidence and commit 3차.**
+- [x] **Step 7: Record evidence and commit 3차.**
 
 ```bash
 git add app/jobs/ingestion_jobs.py app/services/overview/nasdaq100_valuation.py \

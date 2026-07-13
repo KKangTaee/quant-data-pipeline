@@ -33,3 +33,9 @@ Last Updated: 2026-07-13
 - price batch는 requested start와 end+1 provider boundary를 사용해 마지막 observation date를 포함한다.
 - provider exception/failed symbol은 다음 실행에서 재시도한다.
 - 수집 성공 뒤에도 planner가 같은 EOD gap을 반환한 종목만 existing `market_data_issue.limited_price_history`에 기록한다.
+
+## 3차 Decisions
+
+- repair job의 성공 의미는 provider job 성공이 아니라 after plan의 requested-month 전체 READY다.
+- partial collection도 이미 저장된 usable rows를 반영하기 위해 materialization을 계속한다.
+- 화면 action은 최신 EPS coverage뿐 아니라 60개월 history 부족도 보강할 수 있도록 final Nasdaq status가 BLOCKED인 동안 제공한다.

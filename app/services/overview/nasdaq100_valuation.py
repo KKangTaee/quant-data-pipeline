@@ -149,6 +149,13 @@ def build_nasdaq100_valuation_read_model(
     index["history_options"] = history_options
     index["history"] = history_options["1y"]
     status = "READY" if index.get("status") == "READY" else "BLOCKED"
+    if status == "BLOCKED":
+        coverage["repair_action"] = {
+            "id": "repair_nasdaq100_60m",
+            "label": "60개월 가치평가 자료 보강",
+            "detail": "누락된 구성 종목 EPS와 가격 이력을 보강한 뒤 다시 계산합니다.",
+            "enabled": True,
+        }
     return {
         "schema_version": "nasdaq100_valuation_v1",
         "status": status,

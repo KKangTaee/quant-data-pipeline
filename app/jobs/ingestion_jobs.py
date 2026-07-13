@@ -3042,6 +3042,138 @@ def persist_nasdaq100_exhausted_price_targets(
     return {"symbols": symbols, "rows_written": rows_written}
 
 
+def run_repair_nasdaq100_valuation_coverage(
+    *,
+    months: int = 60,
+    batch_size: int = 20,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    plan_loader: Callable[..., dict[str, Any]] = load_nasdaq100_coverage_repair_plan,
+    input_collector: Callable[..., dict[str, Any]] = collect_nasdaq100_repair_inputs,
+    materializer: Callable[..., dict[str, Any]] = materialize_and_store_nasdaq100_monthly,
+) -> JobResult:
+    """Repair stored inputs, rematerialize the window, and report strict readiness."""
+    job_name = "repair_nasdaq100_valuation_coverage"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "stage": "diagnose",
+                    "completed": 0,
+                    "total": 1,
+                    "message": "60개월 누락 자료를 확인합니다.",
+                }
+            )
+        before = plan_loader(months=months)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": "diagnose",
+                    "completed": 1,
+                    "total": 1,
+                    "message": f"보강 대상 {len(before.get('targets') or [])}개를 확인했습니다.",
+                }
+            )
+        if before.get("targets"):
+            collection = input_collector(
+                before,
+                batch_size=batch_size,
+                progress_callback=progress_callback,
+            )
+        else:
+            collection = {
+                "status": "success",
+                "rows_written": 0,
+                "failed_symbols": [],
+                "steps": [],
+                "price_limit_issues": {"symbols": [], "rows_written": 0},
+            }
+
+        window = dict(before.get("window") or {})
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "stage": "materialize",
+                    "completed": 0,
+                    "total": 1,
+                    "message": "60개월 가치평가를 다시 계산합니다.",
+                }
+            )
+        materialized = materializer(
+            start_month=str(window["start_month"]),
+            end_month=str(window["end_month"]),
+        )
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": "materialize",
+                    "completed": 1,
+                    "total": 1,
+                    "message": "60개월 가치평가 재계산을 마쳤습니다.",
+                }
+            )
+        after = plan_loader(months=months)
+        after_summary = dict(after.get("before") or {})
+        requested_months = int(dict(after.get("window") or {}).get("months") or months)
+        ready_months = int(after_summary.get("ready_months") or 0)
+        status = "success" if ready_months == requested_months else "partial_success"
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": "complete",
+                    "completed": ready_months,
+                    "total": requested_months,
+                    "message": f"{requested_months}개월 중 {ready_months}개월이 준비됐습니다.",
+                }
+            )
+        failed_symbols = list(collection.get("failed_symbols") or [])
+        target_count = len(before.get("targets") or [])
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=int(collection.get("rows_written") or 0)
+            + int(materialized.get("rows_written") or 0),
+            symbols_requested=target_count,
+            symbols_processed=max(0, target_count - len(failed_symbols)),
+            failed_symbols=failed_symbols,
+            message=(
+                f"Nasdaq-100 60-month repair completed with {ready_months}/{requested_months} ready months."
+            ),
+            details={
+                "pipeline_type": "nasdaq100_valuation_repair",
+                "window": dict(after.get("window") or window),
+                "before": dict(before.get("before") or {}),
+                "after": after_summary,
+                "collection": collection,
+                "materialization": materialized,
+                "remaining_targets": list(after.get("targets") or []),
+                "unsupported": list(after.get("unsupported") or []),
+            },
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message=f"Nasdaq-100 60-month repair failed: {exc}",
+            details={"pipeline_type": "nasdaq100_valuation_repair"},
+        )
+
+
 def run_strict_annual_shadow_refresh(
     symbols: str | Iterable[str] | None,
     *,
