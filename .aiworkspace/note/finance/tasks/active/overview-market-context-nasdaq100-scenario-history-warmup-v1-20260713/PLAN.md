@@ -37,7 +37,7 @@
 - Consumes: `calculate_historical_index_scenario(..., visible_months=12, rolling_window=60)`.
 - Produces: `reason_code`, `required_history_months`, `available_history_months`, `missing_history_months`, `requested_display_months`, `rolling_window_months`.
 
-- [ ] **Step 1: Write the failing 60-month warmup regression.**
+- [x] **Step 1: Write the failing 60-month warmup regression.**
 
 ```python
 result = calculate_historical_index_scenario(
@@ -54,13 +54,13 @@ self.assertEqual(result["available_history_months"], 60)
 self.assertEqual(result["missing_history_months"], 59)
 ```
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
 Run: `.venv/bin/python -m unittest tests.test_sp500_valuation.Sp500ValuationTests.test_historical_scenario_explains_rolling_warmup_shortfall -v`
 
 Expected: missing diagnostic fields.
 
-- [ ] **Step 3: Implement the minimal diagnostic.**
+- [x] **Step 3: Implement the minimal diagnostic.**
 
 ```python
 required_history_months = int(rolling_window) + window_months - 1
@@ -76,13 +76,13 @@ available_history_months = int(
 
 Attach the six fields to the normal return and set `INSUFFICIENT_ROLLING_PER_WARMUP` only when the result is not READY and available history is below required history.
 
-- [ ] **Step 4: Run GREEN and S&P regression.**
+- [x] **Step 4: Run GREEN and S&P regression.**
 
 Run: `.venv/bin/python -m unittest tests.test_sp500_valuation -v`
 
 Expected: all tests pass, including existing 12/36/60-point READY assertions.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 Commit message: `적정구간 rolling 이력 부족 계약 추가`
 

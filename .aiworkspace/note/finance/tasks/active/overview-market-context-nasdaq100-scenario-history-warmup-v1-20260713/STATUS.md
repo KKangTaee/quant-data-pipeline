@@ -9,6 +9,7 @@ Last Updated: 2026-07-13
 - User approved expanding actual-data repair to at most 119 months without lowering the 60-month rolling window or 95% coverage gate.
 - Written design was approved by the user.
 - Detailed five-stage TDD implementation plan is ready for inline execution.
+- 1차 complete: shared history payload now explains exact rolling PER warmup requirements while preserving S&P 12/36/60 READY output.
 
 ## Five-Stage Roadmap
 
@@ -20,4 +21,4 @@ Last Updated: 2026-07-13
 
 ## Next Action
 
-Execute stage 1 RED/GREEN, then continue through stage 5 actual repair and QA.
+Execute stage 2 exact 119-month repair contract, then continue through stage 5 actual repair and QA.

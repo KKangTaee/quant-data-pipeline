@@ -769,6 +769,27 @@ class Sp500ValuationDataTests(unittest.TestCase):
             self.assertEqual(result["coverage_end"], "2026-07-01")
             self.assertEqual(result["label"], f"최근 {expected_years}년 과거 시점 재구성 시나리오")
 
+    def test_historical_scenario_explains_rolling_warmup_shortfall(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_historical_index_scenario
+
+        result = calculate_historical_index_scenario(
+            monthly_pe_frame(60, start="2021-08-01"),
+            five_year_sep_history_frame(),
+            current_spx={"date": "2026-07-10", "price": 7575.0},
+            visible_months=60,
+        )
+
+        self.assertEqual(result["status"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(result["observation_count"], 1)
+        self.assertEqual(
+            result["reason_code"], "INSUFFICIENT_ROLLING_PER_WARMUP"
+        )
+        self.assertEqual(result["requested_display_months"], 60)
+        self.assertEqual(result["rolling_window_months"], 60)
+        self.assertEqual(result["required_history_months"], 119)
+        self.assertEqual(result["available_history_months"], 60)
+        self.assertEqual(result["missing_history_months"], 59)
+
     def test_read_model_exposes_one_year_reconstructed_history(self) -> None:
         from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
 
