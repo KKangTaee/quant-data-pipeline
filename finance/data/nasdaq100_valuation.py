@@ -26,6 +26,13 @@ CALIBRATION_MEDIAN_LIMIT_PCT = 5.0
 CALIBRATION_MAX_LIMIT_PCT = 10.0
 SEC_USER_AGENT = "quant-data-pipeline/1.0 contact: local-research@example.com"
 DB_META = "finance_meta"
+NON_EQUITY_ASSET_CLASSES = {
+    "cash",
+    "currency",
+    "future",
+    "index future",
+    "synthetic cash",
+}
 
 
 def _open_meta_db(
@@ -714,6 +721,33 @@ def _price_at(
     return _optional_float((prices.get(symbol) or {}).get(date_value))
 
 
+def nasdaq100_repair_window(*, end_month: str, months: int = 60) -> tuple[str, str]:
+    """Return an inclusive calendar-month repair window."""
+    end = pd.Timestamp(end_month).to_period("M").to_timestamp()
+    start = end - pd.DateOffset(months=max(1, int(months)) - 1)
+    return (
+        start.strftime("%Y-%m-%d"),
+        (end + pd.offsets.MonthEnd(0)).strftime("%Y-%m-%d"),
+    )
+
+
+def is_nasdaq100_equity_holding(row: Mapping[str, Any]) -> bool:
+    """Exclude cash and derivative rows even when a provider labels them Equity."""
+    asset_class = str(row.get("asset_class") or "equity").strip().lower()
+    name = str(row.get("holding_name") or "").strip().lower()
+    symbol = str(row.get("holding_symbol") or "").strip().upper()
+    if asset_class in NON_EQUITY_ASSET_CLASSES or symbol == "USD":
+        return False
+    return "future" not in name and "synthetic cash" not in name
+
+
+def _holding_symbol(row: Mapping[str, Any]) -> str:
+    value = row.get("holding_symbol")
+    if value is None or pd.isna(value):
+        return ""
+    return str(value).strip().upper()
+
+
 def drift_holding_weights(
     holdings: Iterable[dict[str, Any]],
     prices: Mapping[str, Mapping[str, Any]],
@@ -843,6 +877,22 @@ def _latest_prices_as_of(frame: pd.DataFrame, as_of: pd.Timestamp) -> dict[str, 
     }
 
 
+def _latest_prices_in_month(frame: pd.DataFrame, month_end: pd.Timestamp) -> dict[str, dict[str, Any]]:
+    """Return latest prices only when the symbol traded in the observation month."""
+    month_start = month_end.to_period("M").to_timestamp()
+    eligible = frame.loc[(frame["date"] >= month_start) & (frame["date"] <= month_end)]
+    if eligible.empty:
+        return {}
+    latest = eligible.groupby("symbol", as_index=False).tail(1)
+    return {
+        str(row.symbol): {
+            "date": pd.Timestamp(row.date).strftime("%Y-%m-%d"),
+            "price": float(row.price),
+        }
+        for row in latest.itertuples()
+    }
+
+
 def materialize_monthly_valuation_rows(
     holding_rows: Iterable[dict[str, Any]],
     statement_rows: Iterable[dict[str, Any]],
@@ -853,7 +903,9 @@ def materialize_monthly_valuation_rows(
     minimum_coverage_pct: float = MINIMUM_COVERAGE_PCT,
 ) -> list[dict[str, Any]]:
     """Build monthly reconstructed QQQ rows from normalized in-memory source rows."""
-    holdings = pd.DataFrame(list(holding_rows))
+    holdings = pd.DataFrame(
+        [dict(row) for row in holding_rows if is_nasdaq100_equity_holding(row)]
+    )
     prices = _price_history_frame(price_rows)
     statements = list(statement_rows)
     if holdings.empty or prices.empty or "as_of_date" not in holdings:
@@ -874,7 +926,7 @@ def materialize_monthly_valuation_rows(
         snapshot_date = pd.Timestamp(eligible_snapshots.max())
         snapshot = holdings.loc[holdings["as_of_date"] == snapshot_date].to_dict("records")
         snapshot_prices = _latest_prices_as_of(prices, snapshot_date)
-        month_prices = _latest_prices_as_of(prices, calendar_end)
+        month_prices = _latest_prices_in_month(prices, calendar_end)
         drift_prices = {
             symbol: {
                 snapshot_date.strftime("%Y-%m-%d"): evidence["price"],
@@ -934,6 +986,159 @@ def materialize_monthly_valuation_rows(
         )
         rows.append(row)
     return rows
+
+
+def build_nasdaq100_coverage_repair_plan(
+    holding_rows: Iterable[dict[str, Any]],
+    statement_rows: Iterable[dict[str, Any]],
+    price_rows: Iterable[dict[str, Any]],
+    issue_rows: Iterable[dict[str, Any]] | None = None,
+    *,
+    start_month: str,
+    end_month: str,
+) -> dict[str, Any]:
+    """Build repeat-safe missing EPS and price targets for a monthly QQQ window."""
+    normalized_holdings = [
+        dict(row) for row in holding_rows if is_nasdaq100_equity_holding(row)
+    ]
+    holdings = pd.DataFrame(normalized_holdings)
+    prices = _price_history_frame(price_rows)
+    statements = list(statement_rows)
+    start = pd.Timestamp(start_month).to_period("M").to_timestamp()
+    end = pd.Timestamp(end_month).to_period("M").to_timestamp()
+    months = list(pd.date_range(start, end, freq="MS"))
+    exhausted_prices = {
+        str(row.get("symbol") or "").strip().upper()
+        for row in list(issue_rows or [])
+        if str(row.get("latest_status") or "active").strip().lower() == "active"
+    }
+    targets: dict[str, dict[str, Any]] = {}
+    unsupported_map: dict[tuple[str | None, str], dict[str, Any]] = {}
+
+    if not holdings.empty and "as_of_date" in holdings:
+        holdings["as_of_date"] = pd.to_datetime(holdings["as_of_date"], errors="coerce")
+        holdings = holdings.dropna(subset=["as_of_date"]).sort_values("as_of_date")
+
+    for month in months:
+        calendar_end = month + pd.offsets.MonthEnd(0)
+        if holdings.empty:
+            continue
+        eligible = holdings.loc[holdings["as_of_date"] <= calendar_end]
+        if eligible.empty:
+            continue
+        snapshot_date = pd.Timestamp(eligible["as_of_date"].max())
+        snapshot = eligible.loc[eligible["as_of_date"] == snapshot_date].to_dict("records")
+        snapshot_prices = _latest_prices_as_of(prices, snapshot_date)
+        month_prices = _latest_prices_in_month(prices, calendar_end)
+        eps_by_symbol = derive_filing_aware_ttm_eps(
+            statements,
+            as_of_date=calendar_end.strftime("%Y-%m-%d"),
+        )
+        month_text = month.strftime("%Y-%m-%d")
+        for holding in snapshot:
+            symbol = _holding_symbol(holding)
+            weight = _optional_float(holding.get("weight_pct")) or 0.0
+            if not symbol:
+                key = (None, "missing_identity")
+                row = unsupported_map.setdefault(
+                    key,
+                    {
+                        "symbol": None,
+                        "holding_name": holding.get("holding_name"),
+                        "reason": "missing_identity",
+                        "affected_months": 0,
+                        "max_weight_pct": 0.0,
+                    },
+                )
+                row["affected_months"] += 1
+                row["max_weight_pct"] = max(float(row["max_weight_pct"]), weight)
+                continue
+
+            needs: set[str] = set()
+            if symbol not in eps_by_symbol:
+                needs.add("quarterly_diluted_eps")
+            if symbol not in snapshot_prices or symbol not in month_prices:
+                if symbol in exhausted_prices:
+                    key = (symbol, "unsupported_free_source")
+                    row = unsupported_map.setdefault(
+                        key,
+                        {
+                            "symbol": symbol,
+                            "holding_name": holding.get("holding_name"),
+                            "reason": "unsupported_free_source",
+                            "affected_months": 0,
+                            "max_weight_pct": 0.0,
+                        },
+                    )
+                    row["affected_months"] += 1
+                    row["max_weight_pct"] = max(float(row["max_weight_pct"]), weight)
+                else:
+                    needs.add("eod_price")
+            if not needs:
+                continue
+            target = targets.setdefault(
+                symbol,
+                {
+                    "symbol": symbol,
+                    "issuer_cik": holding.get("issuer_cik"),
+                    "needs": set(),
+                    "affected_months_set": set(),
+                    "max_weight_pct": 0.0,
+                    "start_date": snapshot_date.strftime("%Y-%m-%d"),
+                    "end_date": calendar_end.strftime("%Y-%m-%d"),
+                },
+            )
+            target["needs"].update(needs)
+            target["affected_months_set"].add(month_text)
+            target["max_weight_pct"] = max(float(target["max_weight_pct"]), weight)
+            target["start_date"] = min(
+                str(target["start_date"]), snapshot_date.strftime("%Y-%m-%d")
+            )
+            target["end_date"] = max(
+                str(target["end_date"]), calendar_end.strftime("%Y-%m-%d")
+            )
+
+    normalized_targets = []
+    for target in targets.values():
+        affected = target.pop("affected_months_set")
+        normalized_targets.append(
+            {
+                **target,
+                "needs": sorted(target["needs"]),
+                "affected_months": len(affected),
+            }
+        )
+    materialized = materialize_monthly_valuation_rows(
+        normalized_holdings,
+        statements,
+        list(price_rows) if isinstance(price_rows, list) else prices.rename(
+            columns={"price": "close"}
+        ).to_dict("records"),
+        start_month=start_month,
+        end_month=end_month,
+    )
+    ready_rows = [
+        row for row in materialized if row.get("data_quality") == "reconstructed_actual"
+    ]
+    return {
+        "window": {
+            "start_month": start.strftime("%Y-%m-%d"),
+            "end_month": (end + pd.offsets.MonthEnd(0)).strftime("%Y-%m-%d"),
+            "months": len(months),
+        },
+        "targets": sorted(
+            normalized_targets,
+            key=lambda row: (-float(row["max_weight_pct"]), str(row["symbol"])),
+        ),
+        "unsupported": sorted(
+            unsupported_map.values(),
+            key=lambda row: (-float(row["max_weight_pct"]), str(row.get("symbol") or "")),
+        ),
+        "before": {
+            "ready_months": len(ready_rows),
+            "blocked_months": max(0, len(months) - len(ready_rows)),
+        },
+    }
 
 
 def evaluate_pe_calibration(
@@ -1124,15 +1329,21 @@ def _load_nasdaq100_materialization_inputs(
         db.use_db(DB_META)
         holdings = db.query(
             """
-            SELECT as_of_date, source, holding_symbol, weight_pct, holding_snapshot_quality
+            SELECT as_of_date, source, holding_symbol, holding_name, asset_class,
+                   issuer_cik, weight_pct, holding_snapshot_quality
             FROM etf_holdings_snapshot
-            WHERE fund_symbol = 'QQQ' AND asset_class = 'Equity'
-              AND as_of_date <= %s
+            WHERE fund_symbol = 'QQQ' AND as_of_date <= %s
             ORDER BY as_of_date, weight_pct DESC
             """,
             (end_month,),
         )
-        symbols = sorted({str(row["holding_symbol"]) for row in holdings if row.get("holding_symbol")})
+        symbols = sorted(
+            {
+                str(row["holding_symbol"])
+                for row in holdings
+                if row.get("holding_symbol") and is_nasdaq100_equity_holding(row)
+            }
+        )
         statements: list[dict[str, Any]] = []
         prices: list[dict[str, Any]] = []
         if symbols:
@@ -1155,6 +1366,9 @@ def _load_nasdaq100_materialization_inputs(
                 tuple(symbols) + (end_month,),
             )
             db.use_db("finance_price")
+            price_start = (
+                pd.Timestamp(start_month) - pd.DateOffset(years=1)
+            ).strftime("%Y-%m-%d")
             prices = db.query(
                 f"""
                 SELECT symbol, `date`, close, adj_close
@@ -1163,11 +1377,82 @@ def _load_nasdaq100_materialization_inputs(
                   AND timeframe = '1d' AND `date` BETWEEN %s AND %s
                 ORDER BY symbol, `date`
                 """,
-                tuple(symbols + ["QQQ"]) + (start_month, end_month),
+                tuple(symbols + ["QQQ"]) + (price_start, end_month),
             )
         return list(holdings), list(statements), list(prices)
     finally:
         db.close()
+
+
+def _load_nasdaq100_limited_price_issues(
+    *,
+    db_factory: Any,
+    host: str,
+    user: str,
+    password: str,
+    port: int,
+) -> list[dict[str, Any]]:
+    db = db_factory(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        return list(
+            db.query(
+                """
+                SELECT symbol, latest_status, diagnosis, latest_evidence
+                FROM market_data_issue
+                WHERE universe_code = 'NASDAQ100'
+                  AND issue_type = 'limited_price_history'
+                  AND latest_status = 'active'
+                ORDER BY symbol
+                """,
+                (),
+            )
+        )
+    finally:
+        db.close()
+
+
+def load_nasdaq100_coverage_repair_plan(
+    *,
+    months: int = 60,
+    end_month: str | None = None,
+    input_loader: Any = None,
+    issue_loader: Any = None,
+    db_factory: Any = MySQLClient,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Load stored inputs and return a deterministic Nasdaq repair plan."""
+    resolved_end = end_month or pd.Timestamp.today().strftime("%Y-%m-%d")
+    start, end = nasdaq100_repair_window(end_month=resolved_end, months=months)
+    load_inputs = input_loader or _load_nasdaq100_materialization_inputs
+    load_issues = issue_loader or _load_nasdaq100_limited_price_issues
+    holdings, statements, prices = load_inputs(
+        start_month=start,
+        end_month=end,
+        db_factory=db_factory,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    issues = load_issues(
+        db_factory=db_factory,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    return build_nasdaq100_coverage_repair_plan(
+        holdings,
+        statements,
+        prices,
+        issues,
+        start_month=start,
+        end_month=end,
+    )
 
 
 def materialize_and_store_nasdaq100_monthly(

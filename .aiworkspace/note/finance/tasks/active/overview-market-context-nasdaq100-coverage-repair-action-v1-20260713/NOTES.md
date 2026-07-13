@@ -19,3 +19,10 @@ Last Updated: 2026-07-13
 - combined valuation cache/renderer: `app/web/overview/market_context_helpers.py`
 - React component event bridge: `app/web/overview/market_context_react_component.py`
 - blocker surface: `app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx`
+
+## 1차 Discoveries
+
+- provider가 `Equity`로 잘못 분류한 USD/future도 symbol/name 기준 보조 필터가 필요하다.
+- 기존 latest-as-of price는 과거 마지막 가격을 이후 월까지 carry-forward해 상장폐지/거래중단 gap을 숨길 수 있었다.
+- monthly valuation의 종목 가격은 observation month 안의 실제 EOD가 있을 때만 coverage로 인정한다.
+- pandas DataFrame의 unresolved symbol은 `None`이 `NaN`으로 바뀌므로 identity normalization에서 null-like 처리가 필요하다.

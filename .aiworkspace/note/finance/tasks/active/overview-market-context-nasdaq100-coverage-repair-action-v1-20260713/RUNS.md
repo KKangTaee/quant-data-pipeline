@@ -22,3 +22,11 @@ Last Updated: 2026-07-13
 - planner, resumable ingestion, strict rematerialization, React event/progress, actual DB/Browser QA의 정확한 interface와 명령을 `PLAN.md`에 기록했다.
 - placeholder scan, spec coverage, 함수명/type consistency, `git diff --check`를 확인했다.
 - sub-agent 요청이 없으므로 현재 세션의 inline execution으로 진행한다.
+
+## 1차 — Coverage Repair Planner
+
+- Baseline: `tests.test_nasdaq100_valuation` + `tests.test_market_context_valuation` 23 tests, `OK`.
+- RED: non-equity 6%가 기존 materialization coverage를 94%로 남겨 `blocked`; planner/loader import가 없어 실패하는 것을 확인했다.
+- GREEN: non-equity filter, same-observation-month EOD rule, EPS/price/identity/unsupported 분류, inclusive window, DB-backed loader를 구현했다.
+- 회귀: `.venv/bin/python -m unittest tests.test_nasdaq100_valuation -v` 21 tests, `OK`.
+- 문법/형식: `py_compile finance/data/nasdaq100_valuation.py`, `git diff --check` 통과.

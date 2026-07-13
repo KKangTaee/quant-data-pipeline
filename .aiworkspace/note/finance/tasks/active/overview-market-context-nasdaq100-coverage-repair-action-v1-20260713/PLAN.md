@@ -129,7 +129,7 @@ git status --short
 - Consumes: `derive_filing_aware_ttm_eps`, `_price_history_frame`, `_latest_prices_as_of`, `materialize_monthly_valuation_rows`
 - Produces: `nasdaq100_repair_window`, `is_nasdaq100_equity_holding`, `build_nasdaq100_coverage_repair_plan`, `load_nasdaq100_coverage_repair_plan`
 
-- [ ] **Step 1: Write the failing planner tests.**
+- [x] **Step 1: Write the failing planner tests.**
 
 Use fixtures containing a covered equity, missing-EPS equity, missing-price equity, unresolved holding, Currency, and Index Future. Assert exact `needs`, date range, affected month count, excluded non-equity symbols, unsupported reasons, and `before.ready_months`.
 
@@ -152,7 +152,7 @@ def test_builds_repair_plan_without_non_equity_targets(self) -> None:
     self.assertNotIn("NQZ6", by_symbol)
 ```
 
-- [ ] **Step 2: Run the new test and verify RED.**
+- [x] **Step 2: Run the new test and verify RED.**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -161,7 +161,7 @@ def test_builds_repair_plan_without_non_equity_targets(self) -> None:
 
 Expected: missing `build_nasdaq100_coverage_repair_plan` failure.
 
-- [ ] **Step 3: Implement the repair window and non-equity boundary.**
+- [x] **Step 3: Implement the repair window and non-equity boundary.**
 
 ```python
 NON_EQUITY_ASSET_CLASSES = {"currency", "cash", "index future", "future", "synthetic cash"}
@@ -178,7 +178,7 @@ def is_nasdaq100_equity_holding(row: Mapping[str, Any]) -> bool:
     return asset_class not in NON_EQUITY_ASSET_CLASSES and symbol != "USD" and "future" not in name
 ```
 
-- [ ] **Step 4: Implement deterministic monthly diagnosis and target merge.**
+- [x] **Step 4: Implement deterministic monthly diagnosis and target merge.**
 
 For each month select the latest eligible snapshot, derive filing-aware TTM EPS, inspect snapshot/month-end prices, and merge symbol targets. Return JSON-safe targets sorted by descending `max_weight_pct`, then symbol.
 
@@ -267,7 +267,7 @@ def build_nasdaq100_coverage_repair_plan(
 
 Required reasons are `missing_quarterly_eps`, `missing_price_history`, `missing_identity`, `non_equity`, and `unsupported_free_source`.
 
-- [ ] **Step 5: Add the DB-backed planner loader.**
+- [x] **Step 5: Add the DB-backed planner loader.**
 
 Extend the holdings input query with `holding_name`, `asset_class`, and `issuer_cik`; load existing `limited_price_history` evidence for Nasdaq targets; then call the pure planner.
 
@@ -292,7 +292,7 @@ def load_nasdaq100_coverage_repair_plan(
     )
 ```
 
-- [ ] **Step 6: Run the full planner suite and verify GREEN.**
+- [x] **Step 6: Run the full planner suite and verify GREEN.**
 
 ```bash
 .venv/bin/python -m unittest tests.test_nasdaq100_valuation -v
@@ -302,7 +302,7 @@ git diff --check
 
 Expected: unittest `OK`, compile exit `0`, empty diff check.
 
-- [ ] **Step 7: Record evidence and commit 1차.**
+- [x] **Step 7: Record evidence and commit 1차.**
 
 ```bash
 git add finance/data/nasdaq100_valuation.py tests/test_nasdaq100_valuation.py \

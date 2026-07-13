@@ -43,7 +43,150 @@ N30B2_HTML = """
 """
 
 
+def _quarterly_eps_rows(symbol: str) -> list[dict[str, object]]:
+    return [
+        {
+            "symbol": symbol,
+            "concept": "us-gaap:EarningsPerShareDiluted",
+            "unit": "USD per share",
+            "source_period_type": "duration",
+            "period_type": "Q",
+            "fiscal_year": 2025,
+            "fiscal_quarter": quarter,
+            "period_end": period_end,
+            "value": 1.0,
+            "available_at": "2026-05-01",
+        }
+        for quarter, period_end in enumerate(
+            ("2025-06-30", "2025-09-30", "2025-12-31", "2026-03-31"),
+            1,
+        )
+    ]
+
+
+def _repair_holdings_fixture() -> list[dict[str, object]]:
+    base = {"as_of_date": "2026-05-29", "source": "invesco_current_csv"}
+    return [
+        {**base, "holding_symbol": "FULL", "holding_name": "Full Corp", "issuer_cik": "1", "weight_pct": 40.0, "asset_class": "Equity"},
+        {**base, "holding_symbol": "MISS_EPS", "holding_name": "Missing EPS Corp", "issuer_cik": "2", "weight_pct": 25.0, "asset_class": "Equity"},
+        {**base, "holding_symbol": "MISS_PRICE", "holding_name": "Missing Price Corp", "issuer_cik": "3", "weight_pct": 20.0, "asset_class": "Equity"},
+        {**base, "holding_symbol": None, "holding_name": "Unknown Plc", "issuer_cik": None, "weight_pct": 5.0, "asset_class": "Equity"},
+        {**base, "holding_symbol": "USD", "holding_name": "United States Dollar", "issuer_cik": None, "weight_pct": 5.0, "asset_class": "Currency"},
+        {**base, "holding_symbol": "NQZ6", "holding_name": "Nasdaq 100 E-mini Index Future", "issuer_cik": None, "weight_pct": 5.0, "asset_class": "Index Future"},
+    ]
+
+
+def _repair_price_fixture() -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for symbol in ("FULL", "MISS_EPS"):
+        rows.extend(
+            {"symbol": symbol, "date": date_value, "close": price}
+            for date_value, price in (
+                ("2026-05-29", 100.0),
+                ("2026-06-30", 101.0),
+                ("2026-07-31", 102.0),
+            )
+        )
+    rows.append({"symbol": "MISS_PRICE", "date": "2026-05-29", "close": 50.0})
+    rows.extend(
+        {"symbol": "QQQ", "date": date_value, "close": price}
+        for date_value, price in (("2026-06-30", 700.0), ("2026-07-31", 710.0))
+    )
+    return rows
+
+
 class Nasdaq100ValuationCoverageTests(unittest.TestCase):
+    def test_materialization_excludes_non_equity_holdings_before_weight_normalization(self) -> None:
+        from finance.data.nasdaq100_valuation import materialize_monthly_valuation_rows
+
+        rows = materialize_monthly_valuation_rows(
+            [
+                {"as_of_date": "2026-05-29", "holding_symbol": "FULL", "holding_name": "Full Corp", "weight_pct": 94.0, "asset_class": "Equity"},
+                {"as_of_date": "2026-05-29", "holding_symbol": "USD", "holding_name": "United States Dollar", "weight_pct": 6.0, "asset_class": "Currency"},
+            ],
+            _quarterly_eps_rows("FULL"),
+            [
+                {"symbol": "FULL", "date": "2026-05-29", "close": 100.0},
+                {"symbol": "FULL", "date": "2026-06-30", "close": 101.0},
+                {"symbol": "QQQ", "date": "2026-06-30", "close": 700.0},
+            ],
+            start_month="2026-06-01",
+            end_month="2026-06-30",
+        )
+
+        self.assertEqual(rows[0]["data_quality"], "reconstructed_actual")
+        self.assertAlmostEqual(rows[0]["coverage_weight_pct"], 100.0)
+
+    def test_builds_repair_plan_without_non_equity_targets(self) -> None:
+        from finance.data.nasdaq100_valuation import build_nasdaq100_coverage_repair_plan
+
+        plan = build_nasdaq100_coverage_repair_plan(
+            holding_rows=_repair_holdings_fixture(),
+            statement_rows=_quarterly_eps_rows("FULL") + _quarterly_eps_rows("MISS_PRICE"),
+            price_rows=_repair_price_fixture(),
+            issue_rows=[],
+            start_month="2026-06-01",
+            end_month="2026-07-31",
+        )
+
+        by_symbol = {row["symbol"]: row for row in plan["targets"]}
+        self.assertEqual(by_symbol["MISS_EPS"]["needs"], ["quarterly_diluted_eps"])
+        self.assertEqual(by_symbol["MISS_PRICE"]["needs"], ["eod_price"])
+        self.assertEqual(by_symbol["MISS_EPS"]["affected_months"], 2)
+        self.assertNotIn("USD", by_symbol)
+        self.assertNotIn("NQZ6", by_symbol)
+        self.assertEqual(plan["window"]["months"], 2)
+        self.assertEqual(plan["before"], {"ready_months": 0, "blocked_months": 2})
+        self.assertEqual(
+            {row["reason"] for row in plan["unsupported"]},
+            {"missing_identity"},
+        )
+
+    def test_repair_plan_does_not_repeat_exhausted_price_history(self) -> None:
+        from finance.data.nasdaq100_valuation import build_nasdaq100_coverage_repair_plan
+
+        plan = build_nasdaq100_coverage_repair_plan(
+            holding_rows=_repair_holdings_fixture(),
+            statement_rows=_quarterly_eps_rows("FULL") + _quarterly_eps_rows("MISS_PRICE"),
+            price_rows=_repair_price_fixture(),
+            issue_rows=[{"symbol": "MISS_PRICE", "latest_status": "active"}],
+            start_month="2026-06-01",
+            end_month="2026-07-31",
+        )
+
+        self.assertNotIn("MISS_PRICE", {row["symbol"] for row in plan["targets"]})
+        self.assertIn(
+            ("MISS_PRICE", "unsupported_free_source"),
+            {(row.get("symbol"), row["reason"]) for row in plan["unsupported"]},
+        )
+
+    def test_load_repair_plan_resolves_inclusive_month_window(self) -> None:
+        from finance.data.nasdaq100_valuation import load_nasdaq100_coverage_repair_plan
+
+        input_loader = Mock(
+            return_value=(
+                _repair_holdings_fixture(),
+                _quarterly_eps_rows("FULL") + _quarterly_eps_rows("MISS_PRICE"),
+                _repair_price_fixture(),
+            )
+        )
+        issue_loader = Mock(return_value=[])
+
+        plan = load_nasdaq100_coverage_repair_plan(
+            months=2,
+            end_month="2026-07-13",
+            input_loader=input_loader,
+            issue_loader=issue_loader,
+        )
+
+        self.assertEqual(
+            plan["window"],
+            {"start_month": "2026-06-01", "end_month": "2026-07-31", "months": 2},
+        )
+        input_loader.assert_called_once()
+        self.assertEqual(input_loader.call_args.kwargs["start_month"], "2026-06-01")
+        self.assertEqual(input_loader.call_args.kwargs["end_month"], "2026-07-31")
+        issue_loader.assert_called_once()
     def test_parses_companyfacts_diluted_eps_with_filing_availability(self) -> None:
         from finance.data.nasdaq100_valuation import parse_sec_companyfacts_diluted_eps
 
