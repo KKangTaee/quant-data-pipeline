@@ -7417,7 +7417,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         for token in (
             "EPS 출처",
-            "Robert Shiller TTM EPS",
+            "EPS 출처 미확정",
             "거시 지표 기반 자체 예상",
             "eps_source_quality",
             "fallback_reason",
@@ -7440,7 +7440,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "minus_2sigma",
             "-2σ",
             "과거 시점 재구성",
-            "최근 {periodYears}년 적정 SPX 흐름",
+            "최근 {periodYears}년 적정 {instrument.proxy_symbol} 흐름",
             "sep_releases",
             "gap_to_baseline_pct",
             "onMouseMove",

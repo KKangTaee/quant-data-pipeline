@@ -12,6 +12,7 @@ Last Updated: 2026-07-13
 - 1차 complete: shared history payload now explains exact rolling PER warmup requirements while preserving S&P 12/36/60 READY output.
 - 2차 complete: the existing resumable planner/job now has an explicit 119-month history contract while retaining the 60-month blocker default.
 - 3차 complete: READY Nasdaq payload exposes the 119-month history action and actual QQQ constituent diluted-EPS source/basis metadata.
+- 4차 complete: Python maps the two approved action ids to 60/119 months and React renders exact warmup evidence, history repair CTA, and instrument-aware QQQ labels.
 
 ## Five-Stage Roadmap
 
@@ -23,4 +24,4 @@ Last Updated: 2026-07-13
 
 ## Next Action
 
-Execute stage 4 Python/React action routing and actionable history empty state.
+Execute stage 5 dry plan, actual DB repair, full regression/Browser QA, and documentation closeout.

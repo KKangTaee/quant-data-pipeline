@@ -30,9 +30,15 @@ type ScenarioHistoryPoint = {
 };
 type ScenarioHistory = {
   status?: string;
+  reason_code?: string;
   window_months?: number;
   window_years?: number;
   observation_count?: number;
+  requested_display_months?: number;
+  rolling_window_months?: number;
+  required_history_months?: number;
+  available_history_months?: number;
+  missing_history_months?: number;
   coverage_start?: string;
   coverage_end?: string;
   rolling_multiple_months?: number;
@@ -43,10 +49,11 @@ type ScenarioHistory = {
   series?: ScenarioHistoryPoint[];
 };
 type HistoryPeriod = "1y" | "3y" | "5y";
-type RepairAction = { id: string; label: string; detail: string; enabled: boolean };
+type RepairAction = { id: string; label: string; detail: string; months?: number; enabled: boolean };
 type RepairResult = {
   status: string;
   message?: string;
+  requested_months?: number;
   before?: { ready_months?: number; blocked_months?: number };
   after?: { ready_months?: number; blocked_months?: number };
   remaining_target_count?: number;
@@ -94,6 +101,7 @@ type ValuationPayload = {
     basis_dates?: { eps?: string; sep?: string; spx?: string }; basis_date_mismatch?: boolean;
     history?: ScenarioHistory;
     history_options?: Record<HistoryPeriod, ScenarioHistory>;
+    history_repair_action?: RepairAction;
     reason?: string; limitation?: string;
   };
   sources?: { name: string; role: string }[];
@@ -192,7 +200,23 @@ function ScenarioChart({ model }: { model: ValuationPayload["index_scenario"] })
   </svg></div>;
 }
 
-function ScenarioHistoryChart({ historyOptions, fallbackHistory }: { historyOptions?: ValuationPayload["index_scenario"]["history_options"]; fallbackHistory?: ScenarioHistory }) {
+function ScenarioHistoryChart({
+  historyOptions,
+  fallbackHistory,
+  instrument,
+  repairAction,
+  repairResult,
+  pendingRepair,
+  onRepair,
+}: {
+  historyOptions?: ValuationPayload["index_scenario"]["history_options"];
+  fallbackHistory?: ScenarioHistory;
+  instrument: { proxy_symbol: string };
+  repairAction?: RepairAction;
+  repairResult?: RepairResult;
+  pendingRepair: boolean;
+  onRepair: (actionId: string) => void;
+}) {
   const periods: { key: HistoryPeriod; label: string; years: number }[] = [
     { key: "1y", label: "1년", years: 1 },
     { key: "3y", label: "3년", years: 3 },
@@ -204,7 +228,18 @@ function ScenarioHistoryChart({ historyOptions, fallbackHistory }: { historyOpti
   const [selected, setSelected] = useState(Math.max(0, points.length - 1));
   useEffect(() => setSelected(Math.max(0, points.length - 1)), [points.length]);
   const periodYears = history?.window_years || periods.find((period) => period.key === historyPeriod)?.years || 1;
-  if (history?.status !== "READY" || points.length < 2) return <div className="history-block"><div className="history-period-selector" role="group" aria-label="적정 SPX 흐름 기간">{periods.map((period) => <button key={period.key} type="button" aria-pressed={historyPeriod === period.key} onClick={() => setHistoryPeriod(period.key)}>{period.label}</button>)}</div><div className="empty compact-empty">과거 SEP vintage가 준비되면 최근 {periodYears}년 흐름이 표시됩니다.</div></div>;
+  const required = history?.required_history_months;
+  const available = history?.available_history_months;
+  const retry = Boolean(repairResult && repairResult.status !== "success");
+  const repairButtonLabel = pendingRepair
+    ? "과거 적정구간 자료를 보강하는 중"
+    : retry
+      ? "남은 적정구간 자료 다시 보강"
+      : repairAction?.label;
+  if (history?.status !== "READY" || points.length < 2) return <div className="history-block">
+    <div className="history-period-selector" role="group" aria-label={`적정 ${instrument.proxy_symbol} 흐름 기간`}>{periods.map((period) => <button key={period.key} type="button" aria-pressed={historyPeriod === period.key} onClick={() => setHistoryPeriod(period.key)}>{period.label}</button>)}</div>
+    <div className="empty compact-empty history-empty"><strong>적정구간 계산 이력이 부족합니다</strong><span>{required != null && available != null ? `${periodYears}년 흐름에는 ${required}개월이 필요하지만 현재 ${available}개월이 준비됐습니다.` : `최근 ${periodYears}년 흐름을 계산할 과거 자료가 부족합니다.`}</span>{history?.reason_code === "INSUFFICIENT_ROLLING_PER_WARMUP" ? <small>60개월 rolling PER 사전 이력을 포함해 부족한 EPS와 가격을 보강합니다.</small> : <small>SEP와 월별 PER 입력 상태를 다시 확인합니다.</small>}{repairAction?.enabled ? <button type="button" disabled={pendingRepair} onClick={() => onRepair(repairAction.id)}>{repairButtonLabel}</button> : null}</div>
+  </div>;
   const values = points.flatMap((point) => [point.actual_spx, point.lower_spx, point.upper_spx]);
   const min = Math.min(...values) * .97, max = Math.max(...values) * 1.03, range = Math.max(1, max - min);
   const left = 58, width = 792, top = 30, height = 250, viewWidth = 920;
@@ -219,9 +254,9 @@ function ScenarioHistoryChart({ historyOptions, fallbackHistory }: { historyOpti
   const axisLabelStep = Math.max(1, Math.ceil((points.length - 1) / 6));
   const releaseLabelStep = Math.max(1, Math.ceil(Math.max(1, releases.length - 1) / 6));
   return <div className="history-block">
-    <div className="subsection-head"><div><span>{periodYears} YEAR · RECONSTRUCTED</span><h4>최근 {periodYears}년 적정 SPX 흐름</h4><p>실제 SPX와 당시 최신 SEP를 적용한 5년 rolling 적정 구간</p></div><div className="history-head-actions"><div className="history-period-selector" role="group" aria-label="적정 SPX 흐름 기간">{periods.map((period) => <button key={period.key} type="button" aria-pressed={historyPeriod === period.key} onClick={() => setHistoryPeriod(period.key)}>{period.label}</button>)}</div><div className="reconstruction-badge">과거 시점 재구성</div></div></div>
-    <div className="chart-legend"><span className="legend-actual">실제 SPX</span><span className="legend-baseline">기준 적정가</span><span className="legend-band">하단–상단</span><span className="legend-sep">SEP 발표</span></div>
-    <div className="chart-shell history-chart-shell"><svg viewBox="0 0 920 330" role="img" aria-label={`최근 ${periodYears}년 실제 SPX와 재구성 적정 SPX 흐름`} onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}>
+    <div className="subsection-head"><div><span>{periodYears} YEAR · RECONSTRUCTED</span><h4>최근 {periodYears}년 적정 {instrument.proxy_symbol} 흐름</h4><p>실제 {instrument.proxy_symbol}와 당시 최신 SEP를 적용한 60개월 rolling 적정 구간</p></div><div className="history-head-actions"><div className="history-period-selector" role="group" aria-label={`적정 ${instrument.proxy_symbol} 흐름 기간`}>{periods.map((period) => <button key={period.key} type="button" aria-pressed={historyPeriod === period.key} onClick={() => setHistoryPeriod(period.key)}>{period.label}</button>)}</div><div className="reconstruction-badge">과거 시점 재구성</div></div></div>
+    <div className="chart-legend"><span className="legend-actual">실제 {instrument.proxy_symbol}</span><span className="legend-baseline">기준 적정가</span><span className="legend-band">하단–상단</span><span className="legend-sep">SEP 발표</span></div>
+    <div className="chart-shell history-chart-shell"><svg viewBox="0 0 920 330" role="img" aria-label={`최근 ${periodYears}년 실제 ${instrument.proxy_symbol}와 재구성 적정 ${instrument.proxy_symbol} 흐름`} onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}>
       {[0, 1, 2, 3, 4].map((index) => <line key={index} className="chart-grid" x1={left} x2={left + width} y1={top + index * height / 4} y2={top + index * height / 4}/>)}
       <path className="history-band" d={bandPath}/>
       {releases.map((release, index) => <g key={release}><line className="sep-marker" x1={releaseX(release)} x2={releaseX(release)} y1={top} y2={top + height}/>{index % releaseLabelStep === 0 || index === releases.length - 1 ? <text className="sep-label" x={releaseX(release) + 4} y={top + 12}>SEP {release.slice(2, 4)}.{release.slice(5, 7)}</text> : null}</g>)}
@@ -230,7 +265,7 @@ function ScenarioHistoryChart({ historyOptions, fallbackHistory }: { historyOpti
       <circle className="history-hover-dot" cx={x(selected)} cy={y(active.actual_spx)} r="5"/><circle className="history-baseline-dot" cx={x(selected)} cy={y(active.baseline_spx)} r="5"/>
       {points.map((point, index) => index % axisLabelStep === 0 || index === points.length - 1 ? <text key={point.month} className="axis-label" x={x(index)} y="316" textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}>{periodYears === 1 ? `${point.month.slice(5, 7)}월` : monthLabel(point.month)}</text> : null)}
     </svg>
-      <div className="history-inspector"><div><span>{monthLabel(active.month)}</span><strong>{n(active.actual_spx, 0)}</strong><small>실제 SPX</small></div><div><span>적정 구간</span><strong>{n(active.lower_spx, 0)}–{n(active.upper_spx, 0)}</strong><small>기준 {n(active.baseline_spx, 0)}</small></div><div><span>기준 대비</span><strong className={active.gap_to_baseline_pct > 0 ? "gap-high" : "gap-low"}>{signed(active.gap_to_baseline_pct)}</strong><small>실제 ÷ 기준</small></div><div><span>적용 SEP</span><strong>{active.sep_release_date}</strong><small>GDP {n(active.real_gdp_pct, 1)}% + PCE {n(active.pce_inflation_pct, 1)}%</small></div><div><span>EPS 기준</span><strong>{active.eps_basis_date}</strong><small>{active.eps_carried_forward ? "최신 확인 EPS 유지" : "해당 월 EPS"}</small></div></div>
+      <div className="history-inspector"><div><span>{monthLabel(active.month)}</span><strong>{n(active.actual_spx, 0)}</strong><small>실제 {instrument.proxy_symbol}</small></div><div><span>적정 구간</span><strong>{n(active.lower_spx, 0)}–{n(active.upper_spx, 0)}</strong><small>기준 {n(active.baseline_spx, 0)}</small></div><div><span>기준 대비</span><strong className={active.gap_to_baseline_pct > 0 ? "gap-high" : "gap-low"}>{signed(active.gap_to_baseline_pct)}</strong><small>실제 ÷ 기준</small></div><div><span>적용 SEP</span><strong>{active.sep_release_date}</strong><small>GDP {n(active.real_gdp_pct, 1)}% + PCE {n(active.pce_inflation_pct, 1)}%</small></div><div><span>EPS 기준</span><strong>{active.eps_basis_date}</strong><small>{active.eps_carried_forward ? "최신 확인 EPS 유지" : "해당 월 EPS"}</small></div></div>
     </div>
     <p className="limitation">{history?.limitation}</p>
   </div>;
@@ -243,7 +278,7 @@ function NasdaqCoverageBlock({
 }: {
   payload: ValuationPayload;
   pendingRepair: boolean;
-  onRepair: () => void;
+  onRepair: (actionId: string) => void;
 }) {
   const coverage = payload.coverage || {};
   const action = coverage.repair_action;
@@ -262,7 +297,7 @@ function NasdaqCoverageBlock({
     <div className="coverage-facts"><div><span>확인 coverage</span><strong>{n(coverage.coverage_weight_pct, 2)}%</strong></div><div><span>minimum_required_pct</span><strong>{n(coverage.minimum_required_pct, 0)}%</strong></div><div><span>미확인 비중</span><strong>{n(coverage.unmapped_weight_pct, 2)}%</strong></div><div><span>보유 기준일</span><strong>{coverage.holding_snapshot_date || "-"}</strong></div></div>
     <p className="coverage-reason">{coverage.error_code || payload.earnings_scenario?.reason || "INSUFFICIENT_EARNINGS_COVERAGE"}</p>
     {result ? <div className={`repair-result repair-result-${result.status}`}><strong>{result.status === "failed" ? "자료 보강을 완료하지 못했습니다" : "일부 자료를 보강했지만 기준에 아직 못 미칩니다."}</strong><span>{beforeReady ?? 0}개월 → {afterReady ?? 0}개월 준비 · 남은 대상 {result.remaining_target_count ?? 0}개 · 무료 원천 미지원 {result.unsupported_count ?? 0}개</span>{result.message ? <small>{result.message}</small> : null}</div> : null}
-    {action?.enabled ? <div className="repair-action"><div><strong>최근 60개월 자료를 다시 확인합니다</strong><span>{action.detail}</span></div><button type="button" disabled={pendingRepair} onClick={onRepair}>{buttonLabel}</button></div> : null}
+    {action?.enabled ? <div className="repair-action"><div><strong>최근 60개월 자료를 다시 확인합니다</strong><span>{action.detail}</span></div><button type="button" disabled={pendingRepair} onClick={() => onRepair(action.id)}>{buttonLabel}</button></div> : null}
   </section>;
 }
 
@@ -281,30 +316,30 @@ function MarketContextValuation({ args }: Props) {
   const baseline = earnings.baseline;
   const gap = index.current_vs_baseline_gap_pct;
   const gapLabel = index.valuation_position === "ABOVE_BASELINE" ? "기준 시나리오 대비 고평가" : index.valuation_position === "BELOW_BASELINE" ? "기준 시나리오 대비 저평가" : "기준 시나리오와 유사";
-  const emitRepair = () => {
+  const emitRepair = (actionId: string) => {
     setPendingRepair(true);
     Streamlit.setComponentValue({
-      event: { id: "repair_nasdaq100_60m", nonce: Date.now() },
+      event: { id: actionId, nonce: Date.now() },
     });
   };
   return <main className="valuation-workbench" data-status={payload.status}>
     {combined ? <nav className="instrument-selector" aria-label="가치평가 지수 선택">{Object.entries(combined.instruments).map(([key, model]) => <button key={key} type="button" aria-pressed={selectedInstrument === key} onClick={() => setSelectedInstrument(key)}><span>{model.instrument?.label || instrumentLabel[key] || key}</span><small>{model.instrument?.proxy_symbol}</small></button>)}</nav> : null}
     <header className="valuation-header"><div><span className="eyebrow">{instrument.label.toUpperCase()} VALUATION</span><h2>멀티플과 예상 실적을 한 화면에서 비교</h2><p>과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다.</p></div><div className="basis"><span>기준일</span><strong>{priceBasis?.date || "-"}</strong><small>{instrument.method_label || payload.basis?.eps_basis || "As-Reported actual TTM"}</small></div></header>
-    {payload.repair_result?.status === "success" ? <div className="repair-success" role="status"><strong>60개월 가치평가 자료 보강을 마쳤습니다.</strong><span>{payload.repair_result.after?.ready_months ?? 60}개월 자료로 그래프를 다시 표시합니다.</span></div> : null}
+    {payload.repair_result?.status === "success" ? <div className="repair-success" role="status"><strong>{payload.repair_result.requested_months ?? 60}개월 자료 보강을 마쳤습니다.</strong><span>{payload.repair_result.after?.ready_months ?? payload.repair_result.requested_months ?? 60}개월 자료로 그래프를 다시 표시합니다.</span></div> : null}
     {payload.status !== "READY" && instrument.id === "nasdaq100" ? <NasdaqCoverageBlock payload={payload} pendingRepair={pendingRepair} onRepair={emitRepair} /> : <>
     <section className="valuation-section"><div className="section-head"><div><span>그래프 1</span><h3>최근 5년 멀티플 구간</h3><p>완결 월별 PER 분포와 최신 EPS를 유지한 잠정 PER</p></div><div className={`regime regime-${multiple.bucket || "blocked"}`}>{bucketLabel[multiple.bucket || ""] || "자료 확인 필요"}</div></div>
       <div className="metrics"><div><span>{multiple.current_is_provisional ? "현재 잠정 PER" : "현재 PER"}</span><strong>{n(multiple.current_pe, 2)}x</strong><small>최근 완결 {n(multiple.latest_complete_pe, 2)}x · {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}</small></div><div><span>5년 중심</span><strong>{n(multiple.mean_multiple, 2)}x</strong></div><div><span>현재 Z</span><strong>{n(multiple.current_z, 2)}</strong></div><div><span>3년 민감도</span><strong>{bucketLabel[multiple.sensitivity?.bucket || ""] || "-"}</strong></div></div>
       <MultipleChart model={multiple}/><p className="basis-note">실선 완결 PER {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}까지 · 점선 잠정 PER {multiple.display_end?.slice(0, 7) || "-"}까지 · EPS 기준 {multiple.current_eps_basis_date || "-"} · 현재 {instrument.proxy_symbol} {multiple.current_price_basis_date || "-"}</p>{multiple.period_sensitive ? <p className="notice">3년과 5년 판정이 달라 기간 민감도가 큽니다.</p> : null}<p className="limitation">{multiple.limitation}</p>
     </section>
     <section className="valuation-section"><div className="section-head"><div><span>그래프 2</span><h3>FOMC 예상 실적 기반 지수 시나리오 · 적정 {instrument.proxy_symbol} 구간</h3><p>현재 TTM EPS에 SEP 실질 GDP와 PCE 물가상승률을 합산 적용</p></div><div className="release"><span>SEP 발표</span><strong>{earnings.release_date || "-"}</strong></div></div>
-      <div className="source-row"><div><span>EPS 출처</span><strong>{earnings.eps_source || "Robert Shiller TTM EPS"}</strong><small>EPS 기준 {earnings.eps_basis_date || "-"}</small></div><span className={`source-badge quality-${earnings.eps_source_quality || "unknown"}`}>{sourceQualityLabel[earnings.eps_source_quality || ""] || "출처 확인 필요"}</span></div>
+      <div className="source-row"><div><span>EPS 출처</span><strong>{earnings.eps_source || "EPS 출처 미확정"}</strong><small>EPS 기준 {earnings.eps_basis_date || "-"}</small></div><span className={`source-badge quality-${earnings.eps_source_quality || "unknown"}`}>{sourceQualityLabel[earnings.eps_source_quality || ""] || "출처 확인 필요"}</span></div>
       {earnings.fallback_reason ? <p className="fallback-note">{earnings.fallback_reason}</p> : null}
       <div className="metrics metrics-five"><div><span>현재 TTM EPS</span><strong>{n(earnings.current_ttm_eps, 2)}</strong></div><div><span>적용 GDP</span><strong>{n(baseline?.real_gdp_pct, 1)}%</strong></div><div><span>적용 PCE</span><strong>{n(baseline?.pce_inflation_pct, 1)}%</strong></div><div><span>예상 EPS 성장률</span><strong>{n(baseline?.growth_pct, 1)}%</strong></div><div><span>예상 EPS</span><strong>{n(baseline?.projected_eps, 2)}</strong></div></div>
       <p className="method-note">거시 지표 기반 자체 예상이며 애널리스트 컨센서스가 아닙니다.</p>
       {index.status === "READY" ? <ScenarioChart model={index}/> : <div className="empty">{index.reason || earnings.reason || "시나리오 근거를 확인해 주세요."}</div>}
       {gap != null ? <div className={`valuation-gap position-${index.valuation_position || "unknown"}`}><span>{gapLabel}</span><strong>{signed(gap)}</strong><small>현재 {instrument.price_label}과 기준 예상 EPS × 5년 중심 PER 비교</small></div> : null}
       {index.gap_pct ? <div className="gap-row"><span>현재 대비 하단 {signed(index.gap_pct.lower)}</span><strong>기준 {signed(index.gap_pct.baseline)}</strong><span>상단 {signed(index.gap_pct.upper)}</span></div> : null}
-      <ScenarioHistoryChart historyOptions={index.history_options} fallbackHistory={index.history}/>
+      <ScenarioHistoryChart historyOptions={index.history_options} fallbackHistory={index.history} instrument={instrument} repairAction={index.history_repair_action} repairResult={payload.repair_result} pendingRepair={pendingRepair} onRepair={emitRepair}/>
       {index.basis_date_mismatch ? <p className="basis-note">계산 기준일이 다릅니다 · EPS {index.basis_dates?.eps || "-"} · SEP {index.basis_dates?.sep || "-"} · SPX {index.basis_dates?.spx || "-"}</p> : null}<p className="limitation">{index.limitation || earnings.limitation}</p>
     </section></>}
     <details className="evidence"><summary>산식·자료 출처·한계 보기</summary><div className="evidence-grid">{(payload.sources || []).map((source: { name: string; role: string }) => <div key={source.name}><strong>{source.name}</strong><span>{source.role}</span></div>)}</div><ul>{(payload.limitations || []).map((item: string) => <li key={item}>{item}</li>)}</ul></details>

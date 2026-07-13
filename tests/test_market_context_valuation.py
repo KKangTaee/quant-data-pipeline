@@ -177,13 +177,29 @@ class MarketContextValuationTests(unittest.TestCase):
         ).read_text()
 
         for token in (
-            "repair_nasdaq100_60m",
+            "action.id",
             "Streamlit.setComponentValue",
             "60개월 가치평가 자료 보강",
             "남은 자료 다시 보강",
             "pendingRepair",
         ):
             self.assertIn(token, component)
+
+    def test_react_history_shortfall_is_actionable_and_instrument_aware(self) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text()
+        helper = Path("app/web/overview/market_context_helpers.py").read_text()
+
+        for token in (
+            "적정구간 계산 이력이 부족합니다",
+            "required_history_months",
+            "available_history_months",
+            "EPS 출처 미확정",
+            "instrument.proxy_symbol",
+        ):
+            self.assertIn(token, component)
+        self.assertIn('"repair_nasdaq100_history_119m": 119', helper)
 
     def test_overview_repair_facade_preserves_result_and_changes_job_name(self) -> None:
         from app.jobs.overview_actions import run_overview_nasdaq100_valuation_repair
@@ -255,10 +271,32 @@ class MarketContextValuationTests(unittest.TestCase):
 
         self.assertTrue(first)
         self.assertFalse(second)
-        run_action.assert_called_once_with()
+        run_action.assert_called_once_with(60)
         store_result.assert_called_once_with(run_action.return_value)
         clear_cache.assert_called_once_with()
         rerun.assert_called_once_with()
+
+    def test_history_repair_event_runs_119_month_action_once(self) -> None:
+        from app.web.overview import market_context_helpers
+
+        run_action = Mock(
+            return_value={
+                "job_name": "overview_nasdaq100_valuation_repair",
+                "status": "success",
+                "details": {"requested_months": 119},
+            }
+        )
+        handled = market_context_helpers._handle_market_context_valuation_event(
+            {"event": {"id": "repair_nasdaq100_history_119m", "nonce": 456}},
+            state={},
+            run_action=run_action,
+            store_result=Mock(),
+            clear_cache=Mock(),
+            rerun=Mock(),
+        )
+
+        self.assertTrue(handled)
+        run_action.assert_called_once_with(119)
 
     def test_nasdaq_collection_job_reports_holdings_and_monthly_steps(self) -> None:
         from app.jobs.ingestion_jobs import run_collect_nasdaq100_valuation_context

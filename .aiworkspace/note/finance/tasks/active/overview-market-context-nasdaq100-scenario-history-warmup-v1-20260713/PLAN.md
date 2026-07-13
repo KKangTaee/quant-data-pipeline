@@ -210,7 +210,7 @@ Commit message: `나스닥100 적정구간 상태와 EPS 출처 보완`
 - Maps `repair_nasdaq100_60m` to `60` and `repair_nasdaq100_history_119m` to `119`.
 - `ScenarioHistoryChart` consumes instrument/action/result/pending props and emits the selected action id.
 
-- [ ] **Step 1: Write failing Python and TSX contract tests.**
+- [x] **Step 1: Write failing Python and TSX contract tests.**
 
 ```python
 handled = market_context_helpers._handle_market_context_valuation_event(
@@ -224,13 +224,13 @@ run_action.assert_called_once_with(119)
 
 Assert the component contains `적정구간 계산 이력이 부족합니다`, `required_history_months`, `available_history_months`, and dynamic QQQ history labels.
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
 Expected: only the 60-month event is accepted and the empty state still blames SEP.
 
-- [ ] **Step 3: Generalize Python routing.**
+- [x] **Step 3: Generalize Python routing.**
 
 ```python
 NASDAQ100_REPAIR_MONTHS_BY_ACTION = {
@@ -241,11 +241,11 @@ NASDAQ100_REPAIR_MONTHS_BY_ACTION = {
 
 Change `_run_nasdaq100_repair_for_ui(*, months: int)` and injected `run_action` so the handler passes the selected month count. Include `requested_months` in the repair reflection and dynamic status copy.
 
-- [ ] **Step 4: Implement the actionable history empty state.**
+- [x] **Step 4: Implement the actionable history empty state.**
 
 For the selected period render `5년 흐름에는 119개월이 필요하지만 현재 60개월이 준비됐습니다.` and emit `repairAction.id`. Replace history-only hardcoded `SPX` with `instrument.proxy_symbol`; replace the earnings fallback with `EPS 출처 미확정`.
 
-- [ ] **Step 5: Run GREEN and build.**
+- [x] **Step 5: Run GREEN and build.**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
@@ -255,7 +255,7 @@ Run: `.venv/bin/python -m py_compile app/web/overview/market_context_helpers.py`
 
 Expected: tests/build/compile pass.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 Commit message: `나스닥100 적정구간 보강 화면 연결`
 

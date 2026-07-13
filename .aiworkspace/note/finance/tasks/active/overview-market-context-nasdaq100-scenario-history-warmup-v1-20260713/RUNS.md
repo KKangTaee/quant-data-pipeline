@@ -29,3 +29,12 @@ Last Updated: 2026-07-13
 - GREEN: rolling-warmup insufficiency exposes `repair_nasdaq100_history_119m`; blocked valuation retains the separate 60-month coverage action.
 - EPS source is now `QQQ 구성종목 실제 희석 EPS 재구성`, quality `reconstructed_actual`, with the actual evidence basis date.
 - Market Context 11 tests, `OK`.
+
+## 4차 — Python / React Repair UX
+
+- RED: the 119-month event was rejected and the UI still blamed missing SEP.
+- GREEN: approved action ids map to exact 60/119 month calls with nonce dedup; result reflection records requested months.
+- The selected period now shows required/current history months and an explicit repair action; history labels follow SPX or QQQ dynamically.
+- Missing EPS source no longer defaults to Robert Shiller; the neutral fallback is `EPS 출처 미확정`.
+- Market Context 13 tests and two focused service contracts, `OK`; React Vite build and Python compile passed.
+- A first focused service-contract command used the wrong unittest class name; rerun under `OverviewAutomationContractTests` passed.
