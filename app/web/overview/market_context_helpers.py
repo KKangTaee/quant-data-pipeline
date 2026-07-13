@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from html import escape
-from typing import Any
+from typing import Any, Callable
 
 import altair as alt
 import pandas as pd
@@ -13,6 +13,7 @@ from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_market_context_refresh_all,
     run_overview_market_context_refresh_smart,
+    run_overview_nasdaq100_valuation_repair,
 )
 from app.web.overview.session_helpers import _market_context_session_payload
 from app.web.overview_dashboard_helpers import (
@@ -34,6 +35,8 @@ from app.web.overview.components.common import (
 
 MARKET_CONTEXT_REFRESH_RESULT_KEY = "overview_market_context_refresh_all_result"
 MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflection"
+NASDAQ100_REPAIR_RESULT_KEY = "overview_nasdaq100_valuation_repair_result"
+NASDAQ100_REPAIR_EVENT_KEY = "overview_nasdaq100_valuation_repair_last_event"
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 
@@ -95,8 +98,101 @@ def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:
     st.caption("거시 지표 기반 자체 예상이며 애널리스트 컨센서스가 아닙니다.")
 
 
+def _market_context_valuation_event_payload(
+    event: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {}
+    nested = event.get("event")
+    return dict(nested) if isinstance(nested, dict) else dict(event)
+
+
+def _consume_market_context_valuation_event(
+    payload: dict[str, Any],
+    *,
+    state: Any,
+) -> bool:
+    action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
+    if action_id != "repair_nasdaq100_60m":
+        return False
+    nonce = payload.get("nonce") or payload.get("token") or action_id
+    event_token = f"{action_id}:{nonce}"
+    if state.get(NASDAQ100_REPAIR_EVENT_KEY) == event_token:
+        return False
+    state[NASDAQ100_REPAIR_EVENT_KEY] = event_token
+    return True
+
+
+def _render_nasdaq100_repair_progress(status: Any, update: dict[str, Any]) -> None:
+    stage_labels = {
+        "diagnose": "대상 확인",
+        "eps": "EPS 보강",
+        "prices": "가격 이력 보강",
+        "materialize": "가치평가 재계산",
+        "complete": "완료",
+    }
+    stage = str(update.get("stage") or "")
+    message = str(update.get("message") or stage_labels.get(stage) or "자료를 보강합니다.")
+    status.write(f"{stage_labels.get(stage, stage or '진행')} · {message}")
+
+
+def _run_nasdaq100_repair_for_ui() -> dict[str, Any]:
+    with st.status("60개월 가치평가 자료를 보강하는 중입니다.", expanded=True) as status:
+        result = run_overview_nasdaq100_valuation_repair(
+            months=60,
+            progress_callback=lambda update: _render_nasdaq100_repair_progress(
+                status, update
+            ),
+        )
+        result_status = str(result.get("status") or "failed").lower()
+        if result_status == "success":
+            status.update(label="60개월 가치평가 자료 보강을 마쳤습니다.", state="complete")
+        elif result_status == "partial_success":
+            status.update(label="자료를 보강했지만 일부 기간은 아직 차단됩니다.", state="complete")
+        else:
+            status.update(label="자료 보강을 완료하지 못했습니다.", state="error")
+    return result
+
+
+def _handle_market_context_valuation_event(
+    event: dict[str, Any] | None,
+    *,
+    state: Any = None,
+    run_action: Callable[[], dict[str, Any]] | None = None,
+    store_result: Callable[[dict[str, Any]], None] | None = None,
+    clear_cache: Callable[[], None] | None = None,
+    rerun: Callable[[], None] | None = None,
+) -> bool:
+    resolved_state = state if state is not None else st.session_state
+    payload = _market_context_valuation_event_payload(event)
+    if not _consume_market_context_valuation_event(payload, state=resolved_state):
+        return False
+    result = (run_action or _run_nasdaq100_repair_for_ui)()
+    if store_result is not None:
+        store_result(result)
+    else:
+        _store_overview_job_result(NASDAQ100_REPAIR_RESULT_KEY, result)
+    if str(result.get("status") or "").lower() != "failed":
+        (clear_cache or load_market_context_valuation_model.clear)()
+    (rerun or st.rerun)()
+    return True
+
+
+def _nasdaq100_repair_reflection(result: dict[str, Any]) -> dict[str, Any]:
+    details = dict(result.get("details") or {})
+    return {
+        "status": str(result.get("status") or "failed"),
+        "message": str(result.get("message") or ""),
+        "before": dict(details.get("before") or {}),
+        "after": dict(details.get("after") or {}),
+        "remaining_target_count": len(details.get("remaining_targets") or []),
+        "unsupported_count": len(details.get("unsupported") or []),
+        "failed_symbol_count": len(result.get("failed_symbols") or []),
+    }
+
+
 def render_market_context_valuation() -> None:
-    """Render the React-first two-chart S&P 500 valuation surface."""
+    """Render the React-first valuation surface and consume explicit repair actions."""
     from app.web.overview.market_context_react_component import (
         market_context_valuation_component_available,
         render_market_context_valuation_component,
@@ -107,8 +203,17 @@ def render_market_context_valuation() -> None:
     except Exception as exc:  # pragma: no cover - UI resilience only
         st.warning(f"시장 가치평가 자료를 불러오지 못했습니다: {exc}")
         return
+    payload = json.loads(json.dumps(payload, default=str))
+    repair_result = st.session_state.pop(NASDAQ100_REPAIR_RESULT_KEY, None)
+    if isinstance(repair_result, dict):
+        instruments = dict(payload.get("instruments") or {})
+        nasdaq = dict(instruments.get("nasdaq100") or {})
+        nasdaq["repair_result"] = _nasdaq100_repair_reflection(repair_result)
+        instruments["nasdaq100"] = nasdaq
+        payload["instruments"] = instruments
     if market_context_valuation_component_available():
-        render_market_context_valuation_component(payload)
+        event = render_market_context_valuation_component(payload)
+        _handle_market_context_valuation_event(event)
         return
     _render_market_context_valuation_fallback(payload)
 

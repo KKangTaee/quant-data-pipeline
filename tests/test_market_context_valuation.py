@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 import pandas as pd
@@ -145,6 +145,83 @@ class MarketContextValuationTests(unittest.TestCase):
         for token in ("instrument-selector", "Nasdaq-100", "coverage-block", "minimum_required_pct"):
             self.assertIn(token, component)
         self.assertIn("build_market_context_valuation_read_model", helper)
+
+    def test_react_coverage_block_emits_repair_action_with_pending_and_retry_copy(self) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text()
+
+        for token in (
+            "repair_nasdaq100_60m",
+            "Streamlit.setComponentValue",
+            "60개월 가치평가 자료 보강",
+            "남은 자료 다시 보강",
+            "pendingRepair",
+        ):
+            self.assertIn(token, component)
+
+    def test_overview_repair_facade_preserves_result_and_changes_job_name(self) -> None:
+        from app.jobs.overview_actions import run_overview_nasdaq100_valuation_repair
+
+        progress = Mock()
+        with patch(
+            "app.jobs.overview_actions.run_repair_nasdaq100_valuation_coverage",
+            return_value={
+                "job_name": "repair_nasdaq100_valuation_coverage",
+                "status": "partial_success",
+                "rows_written": 70,
+                "details": {"after": {"ready_months": 48}},
+            },
+        ) as runner:
+            result = run_overview_nasdaq100_valuation_repair(
+                months=60,
+                progress_callback=progress,
+            )
+
+        runner.assert_called_once_with(months=60, progress_callback=progress)
+        self.assertEqual(result["job_name"], "overview_nasdaq100_valuation_repair")
+        self.assertEqual(result["details"]["after"]["ready_months"], 48)
+
+    def test_market_context_repair_event_runs_once_then_clears_cache_and_reruns(self) -> None:
+        from app.web.overview import market_context_helpers
+
+        state: dict[str, object] = {}
+        run_action = Mock(
+            return_value={
+                "job_name": "overview_nasdaq100_valuation_repair",
+                "status": "partial_success",
+                "message": "48/60 ready",
+                "details": {"after": {"ready_months": 48}},
+            }
+        )
+        store_result = Mock()
+        clear_cache = Mock()
+        rerun = Mock()
+        event = {"event": {"id": "repair_nasdaq100_60m", "nonce": 123}}
+
+        first = market_context_helpers._handle_market_context_valuation_event(
+            event,
+            state=state,
+            run_action=run_action,
+            store_result=store_result,
+            clear_cache=clear_cache,
+            rerun=rerun,
+        )
+        second = market_context_helpers._handle_market_context_valuation_event(
+            event,
+            state=state,
+            run_action=run_action,
+            store_result=store_result,
+            clear_cache=clear_cache,
+            rerun=rerun,
+        )
+
+        self.assertTrue(first)
+        self.assertFalse(second)
+        run_action.assert_called_once_with()
+        store_result.assert_called_once_with(run_action.return_value)
+        clear_cache.assert_called_once_with()
+        rerun.assert_called_once_with()
 
     def test_nasdaq_collection_job_reports_holdings_and_monthly_steps(self) -> None:
         from app.jobs.ingestion_jobs import run_collect_nasdaq100_valuation_context

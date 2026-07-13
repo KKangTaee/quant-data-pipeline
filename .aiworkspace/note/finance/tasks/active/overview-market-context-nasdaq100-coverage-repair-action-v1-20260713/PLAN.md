@@ -559,7 +559,7 @@ git commit -m "나스닥100 60개월 재계산과 결과 계약 추가"
 - Consumes: Task 3 repair job and action payload
 - Produces: `run_overview_nasdaq100_valuation_repair`, `_handle_market_context_valuation_event`; React `{event: {id, nonce}}`
 
-- [ ] **Step 1: Write failing Python event tests.**
+- [x] **Step 1: Write failing Python event tests.**
 
 Assert nested event parsing, nonce dedup, facade invocation once, result storage, `load_market_context_valuation_model.clear()`, and `st.rerun()`.
 
@@ -571,18 +571,18 @@ def test_market_context_repair_event_runs_once_and_clears_cache(self) -> None:
     valuation_cache.clear.assert_called_once()
 ```
 
-- [ ] **Step 2: Write failing React source contracts.**
+- [x] **Step 2: Write failing React source contracts.**
 
 Assert exact tokens `repair_nasdaq100_60m`, `Streamlit.setComponentValue`, `60개월 가치평가 자료 보강`, `남은 자료 다시 보강`, and pending disabled state.
 
-- [ ] **Step 3: Run new UI/event tests and verify RED.**
+- [x] **Step 3: Run new UI/event tests and verify RED.**
 
 ```bash
 .venv/bin/python -m unittest tests.test_market_context_valuation -v
 .venv/bin/python -m unittest tests.test_service_contracts -k market_context_valuation_repair -v
 ```
 
-- [ ] **Step 4: Add the Overview action facade.**
+- [x] **Step 4: Add the Overview action facade.**
 
 ```python
 def run_overview_nasdaq100_valuation_repair(
@@ -596,7 +596,7 @@ def run_overview_nasdaq100_valuation_repair(
     return result
 ```
 
-- [ ] **Step 5: Add event consume/dedup and synchronous progress.**
+- [x] **Step 5: Add event consume/dedup and synchronous progress.**
 
 ```python
 def _handle_market_context_valuation_event(event: dict[str, Any] | None) -> bool:
@@ -616,7 +616,7 @@ def _handle_market_context_valuation_event(event: dict[str, Any] | None) -> bool
 
 Inject the compact previous result into the Nasdaq payload before render. The first screen shows user stages, not raw rows.
 
-- [ ] **Step 6: Add the React CTA, pending state, and result reflection.**
+- [x] **Step 6: Add the React CTA, pending state, and result reflection.**
 
 ```tsx
 const [pendingRepair, setPendingRepair] = useState(false);
@@ -630,7 +630,7 @@ const emitRepair = () => {
 
 Render only for BLOCKED Nasdaq. Partial results keep the blocker and show before/after summary plus retry; READY rerun shows a one-time success notice above graphs.
 
-- [ ] **Step 7: Add responsive CSS and rebuild the component.**
+- [x] **Step 7: Add responsive CSS and rebuild the component.**
 
 ```bash
 npm run build --prefix app/web/streamlit_components/market_context_valuation
@@ -638,7 +638,7 @@ npm run build --prefix app/web/streamlit_components/market_context_valuation
 
 Expected: Vite exits `0`; current hashed assets/index are regenerated.
 
-- [ ] **Step 8: Run UI/service regression and verify GREEN.**
+- [x] **Step 8: Run UI/service regression and verify GREEN.**
 
 ```bash
 .venv/bin/python -m unittest tests.test_market_context_valuation -v
@@ -647,7 +647,7 @@ Expected: Vite exits `0`; current hashed assets/index are regenerated.
 git diff --check
 ```
 
-- [ ] **Step 9: Record evidence and commit 4차.**
+- [x] **Step 9: Record evidence and commit 4차.**
 
 ```bash
 git add app/jobs/overview_actions.py app/web/overview/market_context_helpers.py \

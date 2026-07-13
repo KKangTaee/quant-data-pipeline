@@ -48,3 +48,13 @@ Last Updated: 2026-07-13
 - BLOCKED Nasdaq coverage payload만 `repair_nasdaq100_60m` action을 제공하고 READY에서는 제거한다.
 - 회귀: Nasdaq + Market Context 33 tests, `OK`.
 - 문법/형식: `py_compile app/jobs/ingestion_jobs.py app/services/overview/nasdaq100_valuation.py`, `git diff --check` 통과.
+
+## 4차 — React Action / Synchronous Progress UX
+
+- RED: Overview facade, Python event handler, React repair action/pending/retry copy가 없는 상태를 확인했다.
+- GREEN: React `{id: repair_nasdaq100_60m, nonce}` event, Python session token dedup, synchronous `st.status`, result storage, non-failed cache clear/rerun을 구현했다.
+- BLOCKED card는 `60개월 가치평가 자료 보강`, pending, partial/failed summary, `남은 자료 다시 보강` 흐름을 제공한다.
+- READY rerun은 one-time success reflection을 그래프 위에 표시한다.
+- `npm run build --prefix app/web/streamlit_components/market_context_valuation` 성공; 새 hashed CSS/JS asset을 생성했다.
+- 회귀: Market Context 10 tests + focused service contracts 3 tests, `OK`.
+- 문법/형식: overview action/helper py_compile, `git diff --check` 통과.

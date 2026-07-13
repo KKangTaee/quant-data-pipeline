@@ -43,6 +43,16 @@ type ScenarioHistory = {
   series?: ScenarioHistoryPoint[];
 };
 type HistoryPeriod = "1y" | "3y" | "5y";
+type RepairAction = { id: string; label: string; detail: string; enabled: boolean };
+type RepairResult = {
+  status: string;
+  message?: string;
+  before?: { ready_months?: number; blocked_months?: number };
+  after?: { ready_months?: number; blocked_months?: number };
+  remaining_target_count?: number;
+  unsupported_count?: number;
+  failed_symbol_count?: number;
+};
 
 type ValuationPayload = {
   schema_version: string;
@@ -55,7 +65,8 @@ type ValuationPayload = {
     sensitivity_window_months?: number;
   };
   instrument?: { id: string; label: string; proxy_symbol: string; price_label: string; multiple_label?: string; method_label?: string };
-  coverage?: { minimum_required_pct?: number; coverage_weight_pct?: number; unmapped_weight_pct?: number; holding_snapshot_date?: string; holding_snapshot_quality?: string; error_code?: string };
+  coverage?: { minimum_required_pct?: number; coverage_weight_pct?: number; unmapped_weight_pct?: number; holding_snapshot_date?: string; holding_snapshot_quality?: string; error_code?: string; repair_action?: RepairAction };
+  repair_result?: RepairResult;
   multiple_regime: {
     status?: string; bucket?: string; current_pe?: number; current_z?: number;
     mean_multiple?: number; minus_2sigma?: number; minus_1sigma?: number;
@@ -225,12 +236,44 @@ function ScenarioHistoryChart({ historyOptions, fallbackHistory }: { historyOpti
   </div>;
 }
 
+function NasdaqCoverageBlock({
+  payload,
+  pendingRepair,
+  onRepair,
+}: {
+  payload: ValuationPayload;
+  pendingRepair: boolean;
+  onRepair: () => void;
+}) {
+  const coverage = payload.coverage || {};
+  const action = coverage.repair_action;
+  const result = payload.repair_result;
+  const beforeReady = result?.before?.ready_months;
+  const afterReady = result?.after?.ready_months;
+  const retry = Boolean(result && result.status !== "success");
+  const buttonLabel = pendingRepair
+    ? "자료 보강을 시작하는 중"
+    : retry
+      ? "남은 자료 다시 보강"
+      : action?.label || "60개월 가치평가 자료 보강";
+  return <section className="coverage-block" aria-live="polite">
+    <div><span>QQQ PROXY · COVERAGE GATE</span><h3>아직 가치평가 값을 확정하지 않습니다</h3><p>실제 희석 EPS로 설명되는 보유 비중이 승인 기준에 못 미쳐 멀티플과 시나리오를 숨겼습니다.</p></div>
+    <div className="coverage-meter"><span style={{ width: `${Math.min(100, coverage.coverage_weight_pct || 0)}%` }} /></div>
+    <div className="coverage-facts"><div><span>확인 coverage</span><strong>{n(coverage.coverage_weight_pct, 2)}%</strong></div><div><span>minimum_required_pct</span><strong>{n(coverage.minimum_required_pct, 0)}%</strong></div><div><span>미확인 비중</span><strong>{n(coverage.unmapped_weight_pct, 2)}%</strong></div><div><span>보유 기준일</span><strong>{coverage.holding_snapshot_date || "-"}</strong></div></div>
+    <p className="coverage-reason">{coverage.error_code || payload.earnings_scenario?.reason || "INSUFFICIENT_EARNINGS_COVERAGE"}</p>
+    {result ? <div className={`repair-result repair-result-${result.status}`}><strong>{result.status === "failed" ? "자료 보강을 완료하지 못했습니다" : "일부 자료를 보강했지만 기준에 아직 못 미칩니다."}</strong><span>{beforeReady ?? 0}개월 → {afterReady ?? 0}개월 준비 · 남은 대상 {result.remaining_target_count ?? 0}개 · 무료 원천 미지원 {result.unsupported_count ?? 0}개</span>{result.message ? <small>{result.message}</small> : null}</div> : null}
+    {action?.enabled ? <div className="repair-action"><div><strong>최근 60개월 자료를 다시 확인합니다</strong><span>{action.detail}</span></div><button type="button" disabled={pendingRepair} onClick={onRepair}>{buttonLabel}</button></div> : null}
+  </section>;
+}
+
 function MarketContextValuation({ args }: Props) {
   const root = args.payload;
   const combined = root && "instruments" in root ? root as CombinedPayload : null;
   const [selectedInstrument, setSelectedInstrument] = useState(combined?.default_instrument || "sp500");
+  const [pendingRepair, setPendingRepair] = useState(false);
   const payload = combined?.instruments[selectedInstrument] || root as ValuationPayload | undefined;
   useEffect(() => { Streamlit.setFrameHeight(); window.setTimeout(() => Streamlit.setFrameHeight(), 160); }, [payload, selectedInstrument]);
+  useEffect(() => setPendingRepair(false), [payload?.repair_result?.status]);
   if (!payload) return null;
   const multiple = payload.multiple_regime || {}, earnings = payload.earnings_scenario || {}, index = payload.index_scenario || {};
   const instrument = payload.instrument || { id: "sp500", label: "S&P 500", proxy_symbol: "SPX / SPY", price_label: "SPX 지수", multiple_label: "후행 PER", method_label: "지수 직접 기준" };
@@ -238,10 +281,17 @@ function MarketContextValuation({ args }: Props) {
   const baseline = earnings.baseline;
   const gap = index.current_vs_baseline_gap_pct;
   const gapLabel = index.valuation_position === "ABOVE_BASELINE" ? "기준 시나리오 대비 고평가" : index.valuation_position === "BELOW_BASELINE" ? "기준 시나리오 대비 저평가" : "기준 시나리오와 유사";
+  const emitRepair = () => {
+    setPendingRepair(true);
+    Streamlit.setComponentValue({
+      event: { id: "repair_nasdaq100_60m", nonce: Date.now() },
+    });
+  };
   return <main className="valuation-workbench" data-status={payload.status}>
     {combined ? <nav className="instrument-selector" aria-label="가치평가 지수 선택">{Object.entries(combined.instruments).map(([key, model]) => <button key={key} type="button" aria-pressed={selectedInstrument === key} onClick={() => setSelectedInstrument(key)}><span>{model.instrument?.label || instrumentLabel[key] || key}</span><small>{model.instrument?.proxy_symbol}</small></button>)}</nav> : null}
     <header className="valuation-header"><div><span className="eyebrow">{instrument.label.toUpperCase()} VALUATION</span><h2>멀티플과 예상 실적을 한 화면에서 비교</h2><p>과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다.</p></div><div className="basis"><span>기준일</span><strong>{priceBasis?.date || "-"}</strong><small>{instrument.method_label || payload.basis?.eps_basis || "As-Reported actual TTM"}</small></div></header>
-    {payload.status !== "READY" && instrument.id === "nasdaq100" ? <section className="coverage-block" aria-live="polite"><div><span>QQQ PROXY · COVERAGE GATE</span><h3>아직 가치평가 값을 확정하지 않습니다</h3><p>실제 희석 EPS로 설명되는 보유 비중이 승인 기준에 못 미쳐 멀티플과 시나리오를 숨겼습니다.</p></div><div className="coverage-meter"><span style={{ width: `${Math.min(100, payload.coverage?.coverage_weight_pct || 0)}%` }} /></div><div className="coverage-facts"><div><span>확인 coverage</span><strong>{n(payload.coverage?.coverage_weight_pct, 2)}%</strong></div><div><span>minimum_required_pct</span><strong>{n(payload.coverage?.minimum_required_pct, 0)}%</strong></div><div><span>미확인 비중</span><strong>{n(payload.coverage?.unmapped_weight_pct, 2)}%</strong></div><div><span>보유 기준일</span><strong>{payload.coverage?.holding_snapshot_date || "-"}</strong></div></div><p className="coverage-reason">{payload.coverage?.error_code || earnings.reason || "INSUFFICIENT_EARNINGS_COVERAGE"}</p></section> : <>
+    {payload.repair_result?.status === "success" ? <div className="repair-success" role="status"><strong>60개월 가치평가 자료 보강을 마쳤습니다.</strong><span>{payload.repair_result.after?.ready_months ?? 60}개월 자료로 그래프를 다시 표시합니다.</span></div> : null}
+    {payload.status !== "READY" && instrument.id === "nasdaq100" ? <NasdaqCoverageBlock payload={payload} pendingRepair={pendingRepair} onRepair={emitRepair} /> : <>
     <section className="valuation-section"><div className="section-head"><div><span>그래프 1</span><h3>최근 5년 멀티플 구간</h3><p>완결 월별 PER 분포와 최신 EPS를 유지한 잠정 PER</p></div><div className={`regime regime-${multiple.bucket || "blocked"}`}>{bucketLabel[multiple.bucket || ""] || "자료 확인 필요"}</div></div>
       <div className="metrics"><div><span>{multiple.current_is_provisional ? "현재 잠정 PER" : "현재 PER"}</span><strong>{n(multiple.current_pe, 2)}x</strong><small>최근 완결 {n(multiple.latest_complete_pe, 2)}x · {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}</small></div><div><span>5년 중심</span><strong>{n(multiple.mean_multiple, 2)}x</strong></div><div><span>현재 Z</span><strong>{n(multiple.current_z, 2)}</strong></div><div><span>3년 민감도</span><strong>{bucketLabel[multiple.sensitivity?.bucket || ""] || "-"}</strong></div></div>
       <MultipleChart model={multiple}/><p className="basis-note">실선 완결 PER {multiple.latest_complete_basis_date?.slice(0, 7) || "-"}까지 · 점선 잠정 PER {multiple.display_end?.slice(0, 7) || "-"}까지 · EPS 기준 {multiple.current_eps_basis_date || "-"} · 현재 {instrument.proxy_symbol} {multiple.current_price_basis_date || "-"}</p>{multiple.period_sensitive ? <p className="notice">3년과 5년 판정이 달라 기간 민감도가 큽니다.</p> : null}<p className="limitation">{multiple.limitation}</p>

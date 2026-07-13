@@ -29,6 +29,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_market_structure_calendar,
     run_collect_market_sentiment,
     run_collect_market_intraday_snapshot,
+    run_repair_nasdaq100_valuation_coverage,
     run_collect_ohlcv,
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
@@ -203,6 +204,30 @@ def run_overview_event_calendars_refresh_all(*, years: Iterable[int] | None = No
 
 def run_overview_sp500_universe() -> JobResult:
     return run_collect_sp500_universe()
+
+
+def run_overview_nasdaq100_valuation_repair(
+    *,
+    months: int = 60,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Run the approved Nasdaq valuation repair through the ingestion boundary."""
+    result = dict(
+        run_repair_nasdaq100_valuation_coverage(
+            months=months,
+            progress_callback=progress_callback,
+        )
+    )
+    result["job_name"] = "overview_nasdaq100_valuation_repair"
+    details = dict(result.get("details") or {})
+    details.update(
+        {
+            "source_job_name": "repair_nasdaq100_valuation_coverage",
+            "purpose": "Market Context Nasdaq-100 60-month valuation coverage repair",
+        }
+    )
+    result["details"] = details
+    return result
 
 
 def run_overview_nasdaq_symbol_directory() -> JobResult:

@@ -39,3 +39,10 @@ Last Updated: 2026-07-13
 - repair job의 성공 의미는 provider job 성공이 아니라 after plan의 requested-month 전체 READY다.
 - partial collection도 이미 저장된 usable rows를 반영하기 위해 materialization을 계속한다.
 - 화면 action은 최신 EPS coverage뿐 아니라 60개월 history 부족도 보강할 수 있도록 final Nasdaq status가 BLOCKED인 동안 제공한다.
+
+## 4차 Decisions
+
+- React는 action id/nonce만 전달하고 collection/progress/cache는 Python이 소유한다.
+- duplicate event는 React pending state가 아니라 Python session token을 최종 경계로 차단한다.
+- repair result는 다음 rerun payload에 한 번만 주입해 성공/부분/실패를 사용자 중심 summary로 보여준다.
+- failed job은 기존 cache를 유지하고, partial/success만 valuation cache를 clear한다.
