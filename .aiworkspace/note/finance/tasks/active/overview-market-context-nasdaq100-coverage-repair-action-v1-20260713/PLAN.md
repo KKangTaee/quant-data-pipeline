@@ -322,7 +322,7 @@ git commit -m "나스닥100 60개월 coverage 보강 계획 추가"
 - Consumes: Task 1 `load_nasdaq100_coverage_repair_plan()` payload
 - Produces: `collect_nasdaq100_repair_inputs(plan, *, batch_size=20, progress_callback=None, statement_runner=run_collect_financial_statements, price_runner=run_collect_ohlcv)`
 
-- [ ] **Step 1: Write failing batch, progress, and partial-failure tests.**
+- [x] **Step 1: Write failing batch, progress, and partial-failure tests.**
 
 ```python
 def test_repair_collection_keeps_successful_batches(self) -> None:
@@ -339,11 +339,11 @@ def test_repair_collection_keeps_successful_batches(self) -> None:
     self.assertEqual(result["failed_symbols"], ["MISS_EPS_2"])
 ```
 
-- [ ] **Step 2: Run the new test and verify RED.**
+- [x] **Step 2: Run the new test and verify RED.**
 
 Expected: missing `collect_nasdaq100_repair_inputs` failure.
 
-- [ ] **Step 3: Implement stable EPS and price batches.**
+- [x] **Step 3: Implement stable EPS and price batches.**
 
 ```python
 def collect_nasdaq100_repair_inputs(
@@ -397,11 +397,11 @@ def collect_nasdaq100_repair_inputs(
 
 EPS uses quarterly canonical SEC statement ingestion. Price uses explicit plan `start_date`/`end_date`, `interval="1d"`, and `execution_profile="managed_safe"`. Every callback contains `event`, `stage`, `completed`, `total`, and `message`.
 
-- [ ] **Step 4: Persist exhausted price-history evidence.**
+- [x] **Step 4: Persist exhausted price-history evidence.**
 
 After attempted full-window price collection, rebuild the plan. Persist symbols still missing price history through existing `build_price_history_limit_issue_rows` and `upsert_market_data_issue_rows` with `universe_code="NASDAQ100"` and `period="max"`.
 
-- [ ] **Step 5: Run ingestion tests and verify GREEN.**
+- [x] **Step 5: Run ingestion tests and verify GREEN.**
 
 ```bash
 .venv/bin/python -m unittest tests.test_nasdaq100_valuation -v
@@ -409,7 +409,7 @@ After attempted full-window price collection, rebuild the plan. Persist symbols 
 git diff --check
 ```
 
-- [ ] **Step 6: Record evidence and commit 2차.**
+- [x] **Step 6: Record evidence and commit 2차.**
 
 ```bash
 git add app/jobs/ingestion_jobs.py finance/data/nasdaq100_valuation.py \

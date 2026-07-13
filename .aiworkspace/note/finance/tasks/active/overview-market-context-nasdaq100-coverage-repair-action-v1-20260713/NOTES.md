@@ -26,3 +26,10 @@ Last Updated: 2026-07-13
 - 기존 latest-as-of price는 과거 마지막 가격을 이후 월까지 carry-forward해 상장폐지/거래중단 gap을 숨길 수 있었다.
 - monthly valuation의 종목 가격은 observation month 안의 실제 EOD가 있을 때만 coverage로 인정한다.
 - pandas DataFrame의 unresolved symbol은 `None`이 `NaN`으로 바뀌므로 identity normalization에서 null-like 처리가 필요하다.
+
+## 2차 Decisions
+
+- EPS batch는 canonical `run_collect_financial_statements(freq=quarterly)`만 사용한다.
+- price batch는 requested start와 end+1 provider boundary를 사용해 마지막 observation date를 포함한다.
+- provider exception/failed symbol은 다음 실행에서 재시도한다.
+- 수집 성공 뒤에도 planner가 같은 EOD gap을 반환한 종목만 existing `market_data_issue.limited_price_history`에 기록한다.

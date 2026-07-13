@@ -3,6 +3,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import Mock
 
+import pandas as pd
+
 
 NPORT_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <edgarSubmission xmlns="http://www.sec.gov/edgar/nport">
@@ -187,6 +189,118 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
         self.assertEqual(input_loader.call_args.kwargs["start_month"], "2026-06-01")
         self.assertEqual(input_loader.call_args.kwargs["end_month"], "2026-07-31")
         issue_loader.assert_called_once()
+
+    def test_repair_input_collection_keeps_successful_batches_and_reports_failures(self) -> None:
+        from app.jobs.ingestion_jobs import collect_nasdaq100_repair_inputs
+
+        plan = {
+            "targets": [
+                {"symbol": "EPS_A", "needs": ["quarterly_diluted_eps"], "start_date": "2021-08-01", "end_date": "2026-07-31"},
+                {"symbol": "EPS_B", "needs": ["quarterly_diluted_eps"], "start_date": "2021-08-01", "end_date": "2026-07-31"},
+                {"symbol": "PRICE_A", "needs": ["eod_price"], "start_date": "2021-08-01", "end_date": "2026-07-31"},
+            ]
+        }
+        events: list[dict[str, object]] = []
+        statement_calls: list[list[str]] = []
+        price_calls: list[list[str]] = []
+
+        def statement_runner(symbols, **_kwargs):
+            statement_calls.append(list(symbols))
+            if list(symbols) == ["EPS_B"]:
+                raise RuntimeError("SEC unavailable")
+            return {"status": "success", "rows_written": 4, "failed_symbols": []}
+
+        def price_runner(symbols, **_kwargs):
+            price_calls.append(list(symbols))
+            return {"status": "success", "rows_written": 10, "failed_symbols": []}
+
+        result = collect_nasdaq100_repair_inputs(
+            plan,
+            batch_size=1,
+            progress_callback=events.append,
+            statement_runner=statement_runner,
+            price_runner=price_runner,
+            price_limit_persister=lambda *_args, **_kwargs: {"symbols": [], "rows_written": 0},
+        )
+
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 14)
+        self.assertEqual(result["failed_symbols"], ["EPS_B"])
+        self.assertEqual(statement_calls, [["EPS_A"], ["EPS_B"]])
+        self.assertEqual(price_calls, [["PRICE_A"]])
+        self.assertEqual(
+            [event["stage"] for event in events if event["event"] == "stage_start"],
+            ["eps", "prices"],
+        )
+
+    def test_persists_only_successfully_attempted_price_targets_that_remain_missing(self) -> None:
+        from app.jobs.ingestion_jobs import persist_nasdaq100_exhausted_price_targets
+
+        issue_builder = Mock(return_value=[{"issue_key": "issue-1"}])
+        issue_writer = Mock(return_value=1)
+        result = persist_nasdaq100_exhausted_price_targets(
+            [
+                {"symbol": "PRICE_A", "start_date": "2021-08-01", "end_date": "2026-07-31"},
+                {"symbol": "RECOVERED", "start_date": "2021-08-01", "end_date": "2026-07-31"},
+            ],
+            months=60,
+            end_month="2026-07-31",
+            plan_loader=lambda **_kwargs: {
+                "targets": [
+                    {"symbol": "PRICE_A", "needs": ["eod_price"], "affected_months": 12}
+                ]
+            },
+            freshness_loader=lambda **_kwargs: pd.DataFrame(
+                [
+                    {
+                        "symbol": "PRICE_A",
+                        "first_date": "2021-08-02",
+                        "latest_date": "2025-12-31",
+                        "row_count": 1100,
+                    }
+                ]
+            ),
+            issue_builder=issue_builder,
+            issue_writer=issue_writer,
+        )
+
+        self.assertEqual(result, {"symbols": ["PRICE_A"], "rows_written": 1})
+        evidence = issue_builder.call_args.args[0]
+        self.assertEqual(evidence[0]["symbol"], "PRICE_A")
+        self.assertEqual(evidence[0]["min_rows"], 12)
+        issue_builder.assert_called_once_with(evidence, universe_code="NASDAQ100")
+        issue_writer.assert_called_once_with([{"issue_key": "issue-1"}])
+
+    def test_repair_collection_persists_only_successful_price_attempts(self) -> None:
+        from app.jobs.ingestion_jobs import collect_nasdaq100_repair_inputs
+
+        persister = Mock(return_value={"symbols": ["PRICE_A"], "rows_written": 1})
+        result = collect_nasdaq100_repair_inputs(
+            {
+                "window": {"months": 60, "end_month": "2026-07-31"},
+                "targets": [
+                    {"symbol": "PRICE_A", "needs": ["eod_price"], "start_date": "2021-08-01", "end_date": "2026-07-31"},
+                    {"symbol": "PRICE_B", "needs": ["eod_price"], "start_date": "2021-08-01", "end_date": "2026-07-31"},
+                ],
+            },
+            batch_size=2,
+            statement_runner=Mock(),
+            price_runner=lambda *_args, **_kwargs: {
+                "status": "partial_success",
+                "rows_written": 100,
+                "failed_symbols": ["PRICE_B"],
+            },
+            price_limit_persister=persister,
+        )
+
+        attempted = persister.call_args.args[0]
+        self.assertEqual([row["symbol"] for row in attempted], ["PRICE_A"])
+        persister.assert_called_once_with(
+            attempted,
+            months=60,
+            end_month="2026-07-31",
+        )
+        self.assertEqual(result["price_limit_issues"]["rows_written"], 1)
     def test_parses_companyfacts_diluted_eps_with_filing_availability(self) -> None:
         from finance.data.nasdaq100_valuation import parse_sec_companyfacts_diluted_eps
 

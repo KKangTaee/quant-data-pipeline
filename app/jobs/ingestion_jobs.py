@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from time import perf_counter
 from app.jobs.ingestion.common import (
     JobResult,
@@ -14,7 +15,7 @@ from app.jobs.ingestion.common import (
     parse_symbols,
     split_valid_invalid_symbols,
 )
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 
 from finance.data.data import store_ohlcv_to_mysql
 from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
@@ -37,8 +38,10 @@ from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_ser
 from finance.data.nasdaq100_valuation import (
     collect_and_store_qqq_sec_holdings,
     ensure_nasdaq100_valuation_schemas,
+    load_nasdaq100_coverage_repair_plan,
     materialize_and_store_nasdaq100_monthly,
 )
+from finance.loaders.price import load_price_freshness_summary
 from finance.data.sentiment import collect_and_store_market_sentiment
 from finance.data.sp500_valuation import (
     collect_and_store_fomc_sep,
@@ -48,6 +51,7 @@ from finance.data.sp500_valuation import (
     import_and_store_sp500_index_earnings,
 )
 from finance.data.market_intelligence import (
+    build_price_history_limit_issue_rows,
     collect_and_store_bls_macro_calendar_ics,
     collect_and_store_earnings_calendar,
     collect_and_store_fomc_calendar,
@@ -57,6 +61,7 @@ from finance.data.market_intelligence import (
     collect_and_store_sp500_universe,
     diagnose_market_quote_gaps,
     persist_quote_gap_diagnostics,
+    upsert_market_data_issue_rows,
 )
 from finance.data.sec_company_tickers import collect_and_store_sec_company_ticker_crosscheck
 from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
@@ -2819,6 +2824,222 @@ def run_collect_financial_statements(
                 "period": period,
             },
         )
+
+
+def collect_nasdaq100_repair_inputs(
+    plan: Mapping[str, Any],
+    *,
+    batch_size: int = 20,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    statement_runner: Callable[..., JobResult] = run_collect_financial_statements,
+    price_runner: Callable[..., JobResult] = run_collect_ohlcv,
+    price_limit_persister: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect planned EPS and EOD gaps without rolling back successful batches."""
+    targets = [dict(row) for row in plan.get("targets", []) if row.get("symbol")]
+    stages = (
+        (
+            "eps",
+            [
+                row
+                for row in targets
+                if "quarterly_diluted_eps" in set(row.get("needs") or [])
+            ],
+        ),
+        (
+            "prices",
+            [row for row in targets if "eod_price" in set(row.get("needs") or [])],
+        ),
+    )
+    resolved_batch_size = max(1, int(batch_size))
+    results: list[dict[str, Any]] = []
+    failed_symbols: list[str] = []
+    successful_price_targets: list[dict[str, Any]] = []
+
+    for stage, stage_targets in stages:
+        total = len(stage_targets)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_start",
+                    "stage": stage,
+                    "completed": 0,
+                    "total": total,
+                    "message": f"{stage} 보강을 시작합니다.",
+                }
+            )
+        for offset in range(0, total, resolved_batch_size):
+            batch = stage_targets[offset : offset + resolved_batch_size]
+            symbols = [str(row["symbol"]).strip().upper() for row in batch]
+            try:
+                if stage == "eps":
+                    payload = dict(
+                        statement_runner(
+                            symbols,
+                            freq="quarterly",
+                            periods=0,
+                            period="quarterly",
+                        )
+                    )
+                else:
+                    inclusive_end = max(str(row["end_date"]) for row in batch)
+                    provider_end = (
+                        datetime.strptime(inclusive_end, "%Y-%m-%d") + timedelta(days=1)
+                    ).strftime("%Y-%m-%d")
+                    payload = dict(
+                        price_runner(
+                            symbols,
+                            start=min(str(row["start_date"]) for row in batch),
+                            end=provider_end,
+                            interval="1d",
+                            execution_profile="managed_safe",
+                        )
+                    )
+            except Exception as exc:
+                payload = {
+                    "status": "failed",
+                    "rows_written": 0,
+                    "failed_symbols": symbols,
+                    "message": str(exc),
+                }
+            batch_failures = [
+                str(symbol).strip().upper()
+                for symbol in payload.get("failed_symbols") or []
+                if str(symbol).strip()
+            ]
+            if str(payload.get("status") or "failed").lower() in {"failed", "error"}:
+                batch_failures = batch_failures or symbols
+            elif stage == "prices":
+                failed_set = set(batch_failures)
+                successful_price_targets.extend(
+                    row
+                    for row in batch
+                    if str(row.get("symbol") or "").strip().upper() not in failed_set
+                )
+            failed_symbols.extend(batch_failures)
+            results.append({"stage": stage, "symbols": symbols, **payload})
+            completed = min(offset + len(batch), total)
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "event": "stage_progress",
+                        "stage": stage,
+                        "completed": completed,
+                        "total": total,
+                        "message": f"{stage} {completed}/{total}",
+                    }
+                )
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "stage_complete",
+                    "stage": stage,
+                    "completed": total,
+                    "total": total,
+                    "message": f"{stage} 보강 단계를 마쳤습니다.",
+                }
+            )
+
+    price_limit_issues: dict[str, Any] = {"symbols": [], "rows_written": 0}
+    if successful_price_targets:
+        persist_price_limits = (
+            price_limit_persister or persist_nasdaq100_exhausted_price_targets
+        )
+        window = dict(plan.get("window") or {})
+        resolved_end = str(
+            window.get("end_month")
+            or max(str(row.get("end_date")) for row in successful_price_targets)
+        )
+        try:
+            price_limit_issues = dict(
+                persist_price_limits(
+                    successful_price_targets,
+                    months=int(window.get("months") or 60),
+                    end_month=resolved_end,
+                )
+            )
+        except Exception as exc:
+            price_limit_issues = {
+                "symbols": [],
+                "rows_written": 0,
+                "error": str(exc),
+            }
+
+    unique_failures = list(dict.fromkeys(failed_symbols))
+    statuses = {str(row.get("status") or "failed").lower() for row in results}
+    if results and statuses <= {"failed", "error"}:
+        status = "failed"
+    elif unique_failures or statuses & {"partial_success", "failed", "error"}:
+        status = "partial_success"
+    else:
+        status = "success"
+    return {
+        "status": status,
+        "rows_written": sum(int(row.get("rows_written") or 0) for row in results),
+        "failed_symbols": unique_failures,
+        "steps": results,
+        "price_limit_issues": price_limit_issues,
+    }
+
+
+def persist_nasdaq100_exhausted_price_targets(
+    attempted_targets: Iterable[Mapping[str, Any]],
+    *,
+    months: int,
+    end_month: str,
+    plan_loader: Callable[..., dict[str, Any]] = load_nasdaq100_coverage_repair_plan,
+    freshness_loader: Callable[..., Any] = load_price_freshness_summary,
+    issue_builder: Callable[..., list[dict[str, Any]]] = build_price_history_limit_issue_rows,
+    issue_writer: Callable[[list[dict[str, Any]]], int] = upsert_market_data_issue_rows,
+) -> dict[str, Any]:
+    """Persist full-window price gaps only after a successful collection attempt."""
+    attempted = {
+        str(row.get("symbol") or "").strip().upper(): dict(row)
+        for row in attempted_targets
+        if str(row.get("symbol") or "").strip()
+    }
+    if not attempted:
+        return {"symbols": [], "rows_written": 0}
+    after = plan_loader(months=months, end_month=end_month)
+    remaining = {
+        str(row.get("symbol") or "").strip().upper(): dict(row)
+        for row in after.get("targets") or []
+        if "eod_price" in set(row.get("needs") or [])
+        and str(row.get("symbol") or "").strip().upper() in attempted
+    }
+    if not remaining:
+        return {"symbols": [], "rows_written": 0}
+    symbols = sorted(remaining)
+    freshness = freshness_loader(symbols=symbols, end=end_month, timeframe="1d")
+    freshness_rows = [] if getattr(freshness, "empty", True) else freshness.to_dict("records")
+    by_symbol = {
+        str(row.get("symbol") or "").strip().upper(): row for row in freshness_rows
+    }
+
+    def date_text(value: Any) -> str:
+        if value is None:
+            return "-"
+        if hasattr(value, "strftime"):
+            return str(value.strftime("%Y-%m-%d"))
+        return str(value)[:10]
+
+    evidence = []
+    for symbol in symbols:
+        row = by_symbol.get(symbol) or {}
+        target = remaining[symbol]
+        evidence.append(
+            {
+                "symbol": symbol,
+                "period": "max",
+                "first_date": date_text(row.get("first_date")),
+                "latest_date": date_text(row.get("latest_date")),
+                "row_count": int(row.get("row_count") or 0),
+                "min_rows": max(1, int(target.get("affected_months") or 1)),
+            }
+        )
+    issue_rows = issue_builder(evidence, universe_code="NASDAQ100")
+    rows_written = int(issue_writer(issue_rows) or 0) if issue_rows else 0
+    return {"symbols": symbols, "rows_written": rows_written}
 
 
 def run_strict_annual_shadow_refresh(
