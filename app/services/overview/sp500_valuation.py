@@ -523,7 +523,9 @@ def calculate_historical_index_scenario(
             if start_month <= pd.Timestamp(value) <= (pd.Timestamp(spx_date) if not pd.isna(spx_date) else end_month + pd.offsets.MonthEnd(0))
         }
     )
-    status = "READY" if len(series) >= 2 else "INSUFFICIENT_HISTORY"
+    status = (
+        "READY" if len(series) >= window_months else "INSUFFICIENT_HISTORY"
+    )
     required_history_months = int(rolling_window) + window_months - 1
     available_history_months = int(
         frame.loc[

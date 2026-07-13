@@ -273,19 +273,19 @@ Commit message: `나스닥100 적정구간 보강 화면 연결`
 - Full success returns 1y/3y/5y history with 12/36/60 points.
 - Honest partial success retains required/current/missing evidence and never synthesizes blocked months.
 
-- [ ] **Step 1: Run a read-only 119-month repair plan.**
+- [x] **Step 1: Run a read-only 119-month repair plan.**
 
 Call `load_nasdaq100_coverage_repair_plan(months=119)` and print only window, target count, unsupported count, and before READY/BLOCKED counts.
 
-- [ ] **Step 2: Run a bounded smoke and actual 119-month repair.**
+- [x] **Step 2: Run a bounded smoke and actual 119-month repair.**
 
 Call `run_overview_nasdaq100_valuation_repair(months=119)` through the canonical ingestion path. Do not write repository temp artifacts.
 
-- [ ] **Step 3: Verify DB/service parity.**
+- [x] **Step 3: Verify DB/service parity.**
 
 Check unique observation months, READY/BLOCKED counts, latest coverage, and each history option's point/required/available fields. Full success is 119 READY months and 12/36/60 points; otherwise document exact remaining free-source gaps.
 
-- [ ] **Step 4: Run full automated verification.**
+- [x] **Step 4: Run full automated verification.**
 
 Run: `.venv/bin/python -m unittest tests.test_nasdaq100_valuation tests.test_sp500_valuation tests.test_market_context_valuation -v`
 
@@ -297,15 +297,15 @@ Run: `npm run build --prefix app/web/streamlit_components/market_context_valuati
 
 Run: `git diff --check`
 
-- [ ] **Step 5: Perform desktop and 420px Browser QA.**
+- [x] **Step 5: Perform desktop and 420px Browser QA.**
 
 Verify graph 1, graph 2 options/action, QQQ EPS source/labels, pending/result reflection, zero console errors, and zero horizontal overflow. Keep one screenshot outside the repository and do not stage it.
 
-- [ ] **Step 6: Synchronize docs and task evidence.**
+- [x] **Step 6: Synchronize docs and task evidence.**
 
 Record actual counts, test commands, Browser QA, residual gaps, and the distinction between 60-month coverage repair and 119-month history warmup. Keep root logs concise.
 
-- [ ] **Step 7: Review and commit closeout.**
+- [x] **Step 7: Review and commit closeout.**
 
 Run: `git status --short`
 

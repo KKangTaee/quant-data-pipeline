@@ -790,6 +790,22 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["available_history_months"], 60)
         self.assertEqual(result["missing_history_months"], 59)
 
+    def test_historical_scenario_does_not_label_partial_visible_window_ready(self) -> None:
+        from app.services.overview.sp500_valuation import calculate_historical_index_scenario
+
+        result = calculate_historical_index_scenario(
+            monthly_pe_frame(66, start="2021-02-01"),
+            five_year_sep_history_frame(),
+            current_spx={"date": "2026-07-10", "price": 7575.0},
+            visible_months=60,
+        )
+
+        self.assertEqual(result["observation_count"], 7)
+        self.assertEqual(result["status"], "INSUFFICIENT_HISTORY")
+        self.assertEqual(
+            result["reason_code"], "INSUFFICIENT_ROLLING_PER_WARMUP"
+        )
+
     def test_read_model_exposes_one_year_reconstructed_history(self) -> None:
         from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
 

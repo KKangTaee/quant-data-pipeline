@@ -23,7 +23,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md). 1차~5차 implementation/QA is complete; local actual DB is 60/60 READY and the strict 95% gate remains active.
+  - Current active task is [overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713](./tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md). 1차~5차 implementation/QA is complete; local actual DB is 66/119 READY and the 60-month rolling/95% coverage contracts remain active.
+  - Previous completed Nasdaq task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -46,6 +47,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Nasdaq-100 적정구간 119개월 warmup V1:
+  - READY valuation의 1/3/5년 이력 부족을 SEP가 아닌 60개월 rolling warmup 문제로 설명하고, 선택 기간별 필요/현재 월 수와 별도 보강 action을 연결했다.
+  - actual repair는 172,240 rows를 저장해 READY 월을 62에서 66으로 늘렸다. acquired/delisted 및 foreign issuer 무료 원천 gap 때문에 71/95/119개월 요구에는 미달하며 합성 없이 partial 상태를 유지한다.
+  - focused/full service tests, React build, desktop/420px Browser QA 상세는 [task status](./tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md)를 본다.
 - Nasdaq-100 60개월 coverage repair action V1:
   - blocker 카드에 `60개월 가치평가 자료 보강`을 추가하고 planner -> canonical EPS/EOD 수집 -> strict rematerialization을 같은 화면에서 동기 실행하도록 연결했다.
   - SEC가 basic/diluted EPS를 동일값으로 공시한 actual concept을 보수적 fallback으로 허용해 local actual DB를 60/60 READY로 복구했다.

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is [overview-market-context-nasdaq100-valuation-v1-20260712](./tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md). Implementation is complete and Nasdaq output remains coverage-blocked.
+  - Current active task is [overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713](./tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md). Implementation/QA is complete; actual free-source repair remains partial at 66/119 READY months.
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -39,6 +39,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-13 - Nasdaq 적정구간 이력은 SEP가 아니라 rolling PER warmup이 부족했다
+
+- User request: QQQ 적정구간 1년·3년·5년 그래프가 비어 있는 원인을 확인하고, 기존 화면에서 최대 60개월 과거 자료까지 한 번에 보강하는 버튼을 구현해 달라고 요청함.
+- Interpreted goal: 60개월 rolling PER와 95% actual coverage 기준을 낮추지 않고, 최대 119개월 입력을 명시 action으로 보강해 1/3/5년 전체 선택 기간을 복구하거나 잔여 부족량을 정확히 보여준다.
+- Analysis result: 각 기간은 71/95/119개의 positive READY 월이 필요하다. Canonical actual repair는 172,240 rows를 저장해 62에서 66 READY 월로 개선했지만 acquired/delisted와 foreign issuer 무료 원천 gap이 남아 현재는 7개 계산점뿐이다. 부분 점을 READY로 표시하지 않고 각 탭에 필요/현재 월 수와 재보강 action을 유지한다.
+- Follow-up: source 확장은 별도 승인 대상이며, 그 전에는 blocked 월을 합성하거나 coverage gate를 낮추지 않는다.
 
 ### 2026-07-11 - Monthly 짧은 가격 이력은 실패한 갱신과 구분한다
 

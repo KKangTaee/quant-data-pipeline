@@ -7,13 +7,19 @@ Last Verified: 2026-07-13
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/`다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/`다.
 
-- 목적: account/token/subscription 없이 SEC QQQ holdings와 SEC company actual을 결합한 `Nasdaq-100 · QQQ proxy`의 coverage blocker에서 최근 60개월 부족 자료를 사용자가 직접 보강할 수 있게 한다.
-- 현재 단계: 1차 planner, 2차 resumable ingestion, 3차 strict rematerialization, 4차 synchronous React action, 5차 actual DB/Browser QA와 문서 정렬을 완료했다. local QA는 combined basic/diluted actual fallback을 포함해 60개월 모두 95% gate를 통과했다.
-- 품질 경계: weighted coverage 95% 이상, public P/E calibration median 5%/maximum 10% 이하여야 production-ready read model을 허용한다. 공식 Nasdaq index-level P/E/EPS로 표시하지 않는다.
-- 운영 경계: 화면 진입만으로 provider를 호출하지 않는다. blocker의 `60개월 가치평가 자료 보강`을 눌렀을 때만 동기 수집하며, 무료 원천 gap이 남으면 partial result와 blocker를 유지한다.
-- 다음 data step: acquired/delisted constituent historical EOD의 무료·안정적 source contract가 승인되기 전에는 gate를 낮추거나 blocked 월을 보간하지 않는다.
+- 목적: Nasdaq valuation이 READY여도 60개월 rolling PER warmup 부족으로 비어 있던 1/3/5년 적정구간을, 사용자가 최대 119개월 실제 자료 보강으로 복구하거나 정확한 잔여 부족량을 확인하게 한다.
+- 현재 단계: 1차 warmup 진단, 2차 119개월 resumable repair, 3차 history action/EPS 출처, 4차 React/Python UX, 5차 actual DB/Browser QA와 문서 정렬을 완료했다.
+- actual QA: canonical repair는 172,240 rows를 저장했고 READY 월을 62에서 66으로 늘렸다. 현재 1/3/5년은 각각 71/95/119개월 중 66개월이 준비돼 7개 계산점만 있으며, 전체 선택 기간이 준비될 때까지 `INSUFFICIENT_HISTORY`로 유지한다.
+- 품질 경계: 60개월 rolling log(PER), 월별 actual diluted EPS/price weighted coverage 95%, filing availability를 유지한다. blocked 월을 보간하거나 공식 Nasdaq index-level P/E/EPS로 표시하지 않는다.
+- 운영 경계: 화면 진입만으로 provider를 호출하지 않는다. valuation blocker의 60개월 action과 READY-state history의 119개월 action을 분리하고, 명시 클릭에서만 동기 수집한다.
+- 다음 data step: acquired/delisted historical constituents와 foreign issuer의 무료·안정적 EPS/EOD source contract가 승인되기 전에는 gate를 낮추거나 blocked 월을 합성하지 않는다.
+
+Previous completed Nasdaq coverage task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/`다.
+
+- 목적: SEC QQQ holdings와 SEC company actual을 결합한 QQQ proxy의 최근 60개월 valuation coverage blocker를 사용자 action으로 보강한다.
+- 결과: planner, canonical EPS/EOD 수집, strict rematerialization, synchronous blocker CTA를 완료했고 당시 local 60개월 gate를 복구했다.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다.
 

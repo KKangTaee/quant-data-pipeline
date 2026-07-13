@@ -392,6 +392,41 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["details"]["after"]["ready_months"], 60)
+
+    def test_repair_job_progress_uses_requested_119_month_window(self) -> None:
+        from app.jobs.ingestion_jobs import run_repair_nasdaq100_valuation_coverage
+
+        complete = {
+            "window": {
+                "start_month": "2016-09-01",
+                "end_month": "2026-07-31",
+                "months": 119,
+            },
+            "targets": [],
+            "unsupported": [],
+            "before": {"ready_months": 119, "blocked_months": 0},
+        }
+        events: list[dict[str, object]] = []
+        result = run_repair_nasdaq100_valuation_coverage(
+            months=119,
+            plan_loader=Mock(side_effect=[complete, complete]),
+            input_collector=Mock(),
+            materializer=Mock(
+                return_value={
+                    "rows_written": 119,
+                    "ready_rows": 119,
+                    "blocked_rows": 0,
+                }
+            ),
+            progress_callback=events.append,
+        )
+
+        self.assertEqual(result["status"], "success")
+        messages = [str(event.get("message") or "") for event in events]
+        self.assertTrue(any("119개월 누락 자료" in message for message in messages))
+        self.assertTrue(any("119개월 가치평가" in message for message in messages))
+        self.assertIn("119-month repair", result["message"])
+
     def test_parses_companyfacts_diluted_eps_with_filing_availability(self) -> None:
         from finance.data.nasdaq100_valuation import parse_sec_companyfacts_diluted_eps
 

@@ -3055,6 +3055,7 @@ def run_repair_nasdaq100_valuation_coverage(
     job_name = "repair_nasdaq100_valuation_coverage"
     started_at = _now_str()
     t0 = perf_counter()
+    requested_months = max(1, int(months))
     try:
         if progress_callback is not None:
             progress_callback(
@@ -3063,10 +3064,10 @@ def run_repair_nasdaq100_valuation_coverage(
                     "stage": "diagnose",
                     "completed": 0,
                     "total": 1,
-                    "message": "60개월 누락 자료를 확인합니다.",
+                    "message": f"{requested_months}개월 누락 자료를 확인합니다.",
                 }
             )
-        before = plan_loader(months=months)
+        before = plan_loader(months=requested_months)
         if progress_callback is not None:
             progress_callback(
                 {
@@ -3100,7 +3101,7 @@ def run_repair_nasdaq100_valuation_coverage(
                     "stage": "materialize",
                     "completed": 0,
                     "total": 1,
-                    "message": "60개월 가치평가를 다시 계산합니다.",
+                    "message": f"{requested_months}개월 가치평가를 다시 계산합니다.",
                 }
             )
         materialized = materializer(
@@ -3114,12 +3115,14 @@ def run_repair_nasdaq100_valuation_coverage(
                     "stage": "materialize",
                     "completed": 1,
                     "total": 1,
-                    "message": "60개월 가치평가 재계산을 마쳤습니다.",
+                    "message": f"{requested_months}개월 가치평가 재계산을 마쳤습니다.",
                 }
             )
-        after = plan_loader(months=months)
+        after = plan_loader(months=requested_months)
         after_summary = dict(after.get("before") or {})
-        requested_months = int(dict(after.get("window") or {}).get("months") or months)
+        requested_months = int(
+            dict(after.get("window") or {}).get("months") or requested_months
+        )
         ready_months = int(after_summary.get("ready_months") or 0)
         status = "success" if ready_months == requested_months else "partial_success"
         if progress_callback is not None:
@@ -3146,7 +3149,8 @@ def run_repair_nasdaq100_valuation_coverage(
             symbols_processed=max(0, target_count - len(failed_symbols)),
             failed_symbols=failed_symbols,
             message=(
-                f"Nasdaq-100 60-month repair completed with {ready_months}/{requested_months} ready months."
+                f"Nasdaq-100 {requested_months}-month repair completed with "
+                f"{ready_months}/{requested_months} ready months."
             ),
             details={
                 "pipeline_type": "nasdaq100_valuation_repair",

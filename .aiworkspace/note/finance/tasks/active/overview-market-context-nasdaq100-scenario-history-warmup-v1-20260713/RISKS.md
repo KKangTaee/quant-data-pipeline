@@ -14,3 +14,9 @@ Last Updated: 2026-07-13
    - Add S&P 12/36/60 READY regression coverage before changing the shared function.
 5. A successful collection can still leave fewer than 119 READY months.
    - Treat actual 12/36/60 graph points as the success evidence; otherwise retain accurate partial UI and retry action.
+
+## Actual Residual Risk
+
+- The 119-month run stopped at 66 READY / 53 BLOCKED months. The remaining 50 planner targets are concentrated in historical acquired/delisted constituents and foreign/non-standard issuer coverage.
+- Repeating the same free-source action is resumable and idempotent, but may not improve coverage until those upstream sources expose more history.
+- The UI therefore keeps all three options in an actionable partial state; it does not render the existing 7 points as a complete 1/3/5-year graph.
