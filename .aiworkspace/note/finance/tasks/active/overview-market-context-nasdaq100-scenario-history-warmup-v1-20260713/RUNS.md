@@ -22,3 +22,10 @@ Last Updated: 2026-07-13
 - GREEN: the inclusive window is 2016-09-01 through 2026-07-31 for 119 months.
 - Overview facade forwards `months=119` and records dynamic valuation/history repair purpose without changing its 60-month default.
 - Nasdaq 30 tests and Market Context 11 tests, `OK`.
+
+## 3차 — History Action / EPS Provenance
+
+- RED: the 60-month READY Nasdaq model lacked `history_repair_action` and calculated earnings provenance.
+- GREEN: rolling-warmup insufficiency exposes `repair_nasdaq100_history_119m`; blocked valuation retains the separate 60-month coverage action.
+- EPS source is now `QQQ 구성종목 실제 희석 EPS 재구성`, quality `reconstructed_actual`, with the actual evidence basis date.
+- Market Context 11 tests, `OK`.

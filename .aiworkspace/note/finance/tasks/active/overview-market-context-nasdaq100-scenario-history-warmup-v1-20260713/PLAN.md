@@ -152,7 +152,7 @@ Commit message: `나스닥100 적정구간 119개월 보강 계약 추가`
 - Produces `index_scenario.history_repair_action` only when valuation is READY and rolling warmup is insufficient.
 - Produces Nasdaq `earnings_scenario.eps_source`, `eps_source_quality`, `eps_basis_date`.
 
-- [ ] **Step 1: Write failing service assertions.**
+- [x] **Step 1: Write failing service assertions.**
 
 ```python
 self.assertEqual(
@@ -168,13 +168,13 @@ self.assertEqual(model["earnings_scenario"]["eps_source_quality"], "reconstructe
 self.assertEqual(model["earnings_scenario"]["eps_basis_date"], "2026-07-01")
 ```
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
 Expected: READY Nasdaq has no history action and calculated earnings omit source metadata.
 
-- [ ] **Step 3: Add provenance and conditional history action.**
+- [x] **Step 3: Add provenance and conditional history action.**
 
 ```python
 earnings.update({
@@ -187,13 +187,13 @@ earnings.update({
 
 The action id is `repair_nasdaq100_history_119m`, label is `1·3·5년 적정구간 자료 보강`, and detail explains the 60-month rolling warmup. Do not expose it after all three options are READY.
 
-- [ ] **Step 4: Run GREEN and focused service contracts.**
+- [x] **Step 4: Run GREEN and focused service contracts.**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 Commit message: `나스닥100 적정구간 상태와 EPS 출처 보완`
 

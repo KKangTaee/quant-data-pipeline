@@ -58,7 +58,8 @@ class MarketContextValuationTests(unittest.TestCase):
             monthly_rows=rows,
             ttm_evidence={"status": "READY", "current_ttm_eps": 20.0,
                           "coverage_weight_pct": 97.0, "unmapped_weight_pct": 3.0,
-                          "eps_source_quality": "reconstructed_actual"},
+                          "eps_source_quality": "reconstructed_actual",
+                          "eps_basis_date": "2026-07-01"},
             sep_rows=_sep_rows(), sep_history_rows=_sep_rows(),
             current_prices=[{"symbol": "QQQ", "latest_date": "2026-07-10", "price": 700.0}],
         )
@@ -66,6 +67,30 @@ class MarketContextValuationTests(unittest.TestCase):
         self.assertEqual(model["multiple_regime"]["status"], "READY")
         self.assertEqual(model["multiple_regime"]["observation_count"], 60)
         self.assertIn("price_scenarios", model["index_scenario"])
+        self.assertEqual(
+            model["index_scenario"]["history_repair_action"],
+            {
+                "id": "repair_nasdaq100_history_119m",
+                "label": "1·3·5년 적정구간 자료 보강",
+                "detail": (
+                    "60개월 rolling PER 사전 이력을 포함해 부족한 EPS와 "
+                    "가격을 보강합니다."
+                ),
+                "months": 119,
+                "enabled": True,
+            },
+        )
+        self.assertEqual(
+            model["earnings_scenario"]["eps_source"],
+            "QQQ 구성종목 실제 희석 EPS 재구성",
+        )
+        self.assertEqual(
+            model["earnings_scenario"]["eps_source_quality"],
+            "reconstructed_actual",
+        )
+        self.assertEqual(
+            model["earnings_scenario"]["eps_basis_date"], "2026-07-01"
+        )
 
     def test_nasdaq_repair_action_is_exposed_only_while_blocked(self) -> None:
         from app.services.overview.nasdaq100_valuation import build_nasdaq100_valuation_read_model

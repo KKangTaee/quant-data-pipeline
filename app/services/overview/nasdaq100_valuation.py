@@ -10,6 +10,9 @@ from app.services.overview.sp500_valuation import (
     calculate_index_scenario,
     calculate_multiple_regime,
 )
+from finance.data.nasdaq100_valuation import (
+    NASDAQ100_SCENARIO_HISTORY_REPAIR_MONTHS,
+)
 
 
 INSTRUMENT = {
@@ -119,6 +122,14 @@ def build_nasdaq100_valuation_read_model(
         earnings = calculate_fomc_eps_scenarios(
             current_eps, [] if sep_rows is None else sep_rows
         )
+        earnings.update(
+            {
+                "eps_source": "QQQ 구성종목 실제 희석 EPS 재구성",
+                "eps_source_quality": evidence.get("eps_source_quality"),
+                "eps_basis_date": evidence.get("eps_basis_date")
+                or evidence.get("earnings_available_through"),
+            }
+        )
         index = (
             _adapt_index_contract(
                 calculate_index_scenario(
@@ -149,6 +160,20 @@ def build_nasdaq100_valuation_read_model(
     index["history_options"] = history_options
     index["history"] = history_options["1y"]
     status = "READY" if index.get("status") == "READY" else "BLOCKED"
+    if status == "READY" and any(
+        option.get("reason_code") == "INSUFFICIENT_ROLLING_PER_WARMUP"
+        for option in history_options.values()
+    ):
+        index["history_repair_action"] = {
+            "id": "repair_nasdaq100_history_119m",
+            "label": "1·3·5년 적정구간 자료 보강",
+            "detail": (
+                "60개월 rolling PER 사전 이력을 포함해 부족한 EPS와 "
+                "가격을 보강합니다."
+            ),
+            "months": NASDAQ100_SCENARIO_HISTORY_REPAIR_MONTHS,
+            "enabled": True,
+        }
     if status == "BLOCKED":
         coverage["repair_action"] = {
             "id": "repair_nasdaq100_60m",

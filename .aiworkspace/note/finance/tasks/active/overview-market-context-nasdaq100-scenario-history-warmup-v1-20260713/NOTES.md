@@ -17,3 +17,4 @@ Last Updated: 2026-07-13
 - Keep synchronous user-triggered collection and existing resumable planner.
 - Keep current 60-month coverage-blocker repair action separate from the 119-month history warmup action.
 - Do not add a diagnostic operations panel; show only actionable required/current month evidence in the empty state.
+- Nasdaq earnings source metadata is attached after the shared FOMC calculation so the shared S&P calculator remains instrument-neutral.

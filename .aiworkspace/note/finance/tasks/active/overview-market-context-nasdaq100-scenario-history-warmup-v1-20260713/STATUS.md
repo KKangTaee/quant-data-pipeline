@@ -11,6 +11,7 @@ Last Updated: 2026-07-13
 - Detailed five-stage TDD implementation plan is ready for inline execution.
 - 1차 complete: shared history payload now explains exact rolling PER warmup requirements while preserving S&P 12/36/60 READY output.
 - 2차 complete: the existing resumable planner/job now has an explicit 119-month history contract while retaining the 60-month blocker default.
+- 3차 complete: READY Nasdaq payload exposes the 119-month history action and actual QQQ constituent diluted-EPS source/basis metadata.
 
 ## Five-Stage Roadmap
 
@@ -22,4 +23,4 @@ Last Updated: 2026-07-13
 
 ## Next Action
 
-Execute stage 3 Nasdaq history action and EPS provenance, then continue through stage 5 actual repair and QA.
+Execute stage 4 Python/React action routing and actionable history empty state.
