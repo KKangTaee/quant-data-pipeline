@@ -33,6 +33,11 @@ NON_EQUITY_ASSET_CLASSES = {
     "index future",
     "synthetic cash",
 }
+DILUTED_EPS_CONCEPT_SUFFIXES = (
+    "EarningsPerShareDiluted",
+    "EarningsPerShareBasicAndDiluted",
+    "DilutedEarningsLossPerShare",
+)
 
 
 def _open_meta_db(
@@ -499,6 +504,8 @@ def parse_sec_companyfacts_diluted_eps(
     """Normalize explicit USD/share discrete-quarter and FY diluted EPS facts."""
     concept_paths = (
         ("us-gaap", "EarningsPerShareDiluted"),
+        # Some issuers report a single value because basic and diluted EPS are equal.
+        ("us-gaap", "EarningsPerShareBasicAndDiluted"),
         ("ifrs-full", "DilutedEarningsLossPerShare"),
     )
     rows: list[dict[str, Any]] = []
@@ -628,8 +635,8 @@ def _eligible_statement_rows(
     concept = frame.get("concept", pd.Series("", index=frame.index)).astype(str)
     unit = frame.get("unit", pd.Series("", index=frame.index)).astype(str).str.lower()
     source_period_type = frame.get("source_period_type", pd.Series("duration", index=frame.index)).astype(str).str.lower()
-    return frame.loc[
-        concept.str.endswith("EarningsPerShareDiluted")
+    eligible = frame.loc[
+        concept.str.endswith(DILUTED_EPS_CONCEPT_SUFFIXES)
         & unit.isin({"usd per share", "usd/shares", "usd/share"})
         & source_period_type.eq("duration")
         & frame["period_type"].astype(str).str.upper().isin({"Q", "FY"})
@@ -638,6 +645,10 @@ def _eligible_statement_rows(
         & frame["period_end"].notna()
         & frame["value"].notna()
     ].copy()
+    eligible["eps_concept_priority"] = concept.loc[eligible.index].map(
+        lambda value: 1 if value.endswith("EarningsPerShareBasicAndDiluted") else 2
+    )
+    return eligible
 
 
 def derive_filing_aware_ttm_eps(
@@ -651,7 +662,9 @@ def derive_filing_aware_ttm_eps(
         return {}
     frame["fiscal_year"] = pd.to_numeric(frame.get("fiscal_year"), errors="coerce")
     frame["fiscal_quarter"] = pd.to_numeric(frame.get("fiscal_quarter"), errors="coerce")
-    frame = frame.sort_values(["symbol", "period_end", "available_at"])
+    frame = frame.sort_values(
+        ["symbol", "period_end", "available_at", "eps_concept_priority"]
+    )
     results: dict[str, dict[str, Any]] = {}
     for symbol, symbol_rows in frame.groupby("symbol"):
         discrete: list[dict[str, Any]] = []
@@ -1359,6 +1372,7 @@ def _load_nasdaq100_materialization_inputs(
                 FROM nyse_financial_statement_values
                 WHERE symbol IN ({placeholders})
                   AND (concept LIKE '%%EarningsPerShareDiluted'
+                       OR concept LIKE '%%EarningsPerShareBasicAndDiluted'
                        OR concept LIKE '%%DilutedEarningsLossPerShare')
                   AND unit IN ('USD per share', 'USD/shares', 'USD/share')
                   AND available_at <= %s

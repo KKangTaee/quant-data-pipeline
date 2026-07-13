@@ -675,7 +675,7 @@ git commit -m "나스닥100 60개월 자료 보강 버튼 연결"
 - Consumes: completed Tasks 1–4
 - Produces: fresh verification, actual DB outcome, Browser QA screenshot, runbook, closeout commit
 
-- [ ] **Step 1: Run complete automated verification.**
+- [x] **Step 1: Run complete automated verification.**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -692,7 +692,7 @@ git diff --check
 
 Expected: unittest `OK`, compile/build exit `0`, empty diff check.
 
-- [ ] **Step 2: Run the actual DB repair-plan diagnostic without remote writes.**
+- [x] **Step 2: Run the actual DB repair-plan diagnostic without remote writes.**
 
 ```bash
 .venv/bin/python - <<'PY'
@@ -706,11 +706,11 @@ PY
 
 Record target counts, reason counts, window, and before-ready months in task `RUNS.md`.
 
-- [ ] **Step 3: Run a bounded real collection smoke.**
+- [x] **Step 3: Run a bounded real collection smoke.**
 
 Run the first small planner batch through `collect_nasdaq100_repair_inputs`. Confirm DB rows persist and the next planner run removes or narrows completed needs. Do not manually insert fixtures into production tables.
 
-- [ ] **Step 4: Run the full synchronous 60-month repair.**
+- [x] **Step 4: Run the full synchronous 60-month repair.**
 
 ```bash
 .venv/bin/python - <<'PY'
@@ -725,19 +725,19 @@ PY
 
 Record status, rows written, before/after ready months, latest/minimum coverage, failed symbols, and unsupported counts. Never report partial success as READY.
 
-- [ ] **Step 5: Verify the DB materialization directly.**
+- [x] **Step 5: Verify the DB materialization directly.**
 
 Query the latest 60 `finance_meta.nasdaq100_monthly_valuation` rows. Confirm unique business keys, READY/BLOCKED counts, and latest coverage parity with the service payload.
 
-- [ ] **Step 6: Run desktop and 420px Browser QA.**
+- [x] **Step 6: Run desktop and 420px Browser QA.**
 
 Verify one CTA, one event per click, synchronous progress order, partial blocker retention or READY graph transition, S&P regression, console errors, and horizontal overflow. Save one screenshot outside staged paths.
 
-- [ ] **Step 7: Synchronize durable docs and runbook.**
+- [x] **Step 7: Synchronize durable docs and runbook.**
 
 Document the one-click flow, strict gate, resume semantics, actual source gaps, command fallback, and current DB outcome. Keep detailed logs in task docs; root logs receive only 3–5 lines.
 
-- [ ] **Step 8: Run final integration review.**
+- [x] **Step 8: Run final integration review.**
 
 ```bash
 git status --short
@@ -748,7 +748,7 @@ git diff --name-status
 
 Confirm registry/saved/run-history/generated screenshot/unrelated research paths are unstaged.
 
-- [ ] **Step 9: Commit 5차 closeout.**
+- [x] **Step 9: Commit 5차 closeout.**
 
 ```bash
 git add .aiworkspace/note/finance/docs \

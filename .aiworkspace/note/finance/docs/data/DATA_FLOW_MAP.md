@@ -150,13 +150,21 @@ stored QQQ holdings + finance_fundamental statement values + finance_price EOD
   -> app.services.overview.nasdaq100_valuation
   -> app.services.overview.market_context_valuation
   -> React S&P 500 / Nasdaq-100 selector
+
+blocked React action intent
+  -> app.jobs.overview_actions.run_overview_nasdaq100_valuation_repair()
+  -> diagnose missing 60m EPS / EOD targets
+  -> canonical statement / OHLCV ingestion
+  -> strict 60m rematerialization
+  -> cache clear + stored read model rerun
 ```
 
 의미:
 
 - UI render는 DB-backed payload만 읽고 SEC 또는 가격 provider를 직접 호출하지 않는다.
 - weighted coverage 95% 미만 월은 `blocked`로 저장하고 그래프·시나리오 값을 숨긴다.
-- current actual state는 119개월 중 5개월만 complete이므로 Nasdaq 선택 화면은 94.47% coverage blocker를 표시한다.
+- blocker의 `60개월 가치평가 자료 보강`은 사용자가 명시적으로 눌렀을 때만 동기 실행되며, historical holdings universe에서 부족한 분기 EPS/EOD만 repeat-safe하게 보강한다.
+- 2026-07-13 local QA에서는 combined basic/diluted actual fallback 보완 후 요청 60개월이 모두 95% gate를 통과했다. source gap이 남는 다른 환경에서는 blocker와 partial result를 유지한다.
 - QQQ는 무료·무계정 거래 가능 proxy이며 공식 Nasdaq aggregate나 analyst consensus가 아니다.
 
 ```text

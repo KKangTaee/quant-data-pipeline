@@ -1,6 +1,6 @@
 # Overview Market Context Nasdaq-100 Coverage Repair Action V1 Status
 
-Status: 4차 Complete — 5차 In Progress
+Status: 1차~5차 Complete
 Last Updated: 2026-07-13
 
 ## Current Position
@@ -13,10 +13,14 @@ Last Updated: 2026-07-13
 - 2차 planned SEC quarterly statement/EOD batch collection, progress, partial failure, exhausted price evidence를 구현했다.
 - 3차 before/after plan, 60개월 materialization, strict 60/60 success, BLOCKED repair action contract를 구현했다.
 - 4차 Overview facade, nonce dedup, synchronous status, cache clear/rerun, React CTA/result reflection을 구현했다.
+- 5차 actual DB repair, combined basic/diluted SEC actual fallback, 60/60 rematerialization, desktop/420px Browser QA, durable docs sync를 완료했다.
 
-## Next Action
+## Completion Evidence
 
-5차 actual DB diagnostic/bounded smoke/full repair, Browser QA, durable docs sync를 진행한다.
+- actual full repair 첫 실행: 59/60 READY, 108,602 rows written, provider 실패 symbol은 partial evidence로 유지.
+- root cause 보완: DOCU/OKTA의 `EarningsPerShareBasicAndDiluted` actual을 canonical income statement row와 Nasdaq diluted fallback으로 허용.
+- actual rematerialization: 60/60 READY, 0 BLOCKED, latest coverage 97.95%.
+- Browser QA: desktop/420px에서 Nasdaq selector, READY graph, no horizontal overflow를 확인했고 current 8501 console error는 0건이다.
 
 ## Roadmap Progress
 
@@ -27,4 +31,4 @@ Last Updated: 2026-07-13
 - 2차 resumable ingestion: 완료
 - 3차 strict rematerialization/result: 완료
 - 4차 React synchronous action UX: 완료
-- 5차 QA/docs: 진행 예정
+- 5차 QA/docs: 완료

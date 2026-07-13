@@ -46,3 +46,11 @@ Last Updated: 2026-07-13
 - duplicate event는 React pending state가 아니라 Python session token을 최종 경계로 차단한다.
 - repair result는 다음 rerun payload에 한 번만 주입해 성공/부분/실패를 사용자 중심 summary로 보여준다.
 - failed job은 기존 cache를 유지하고, partial/success만 valuation cache를 clear한다.
+
+## 5차 Findings And Decisions
+
+- 첫 actual full repair는 2021-08 coverage 94.83% 때문에 59/60으로 끝났다. 기준을 낮추지 않고 missing weight를 다시 추적했다.
+- DOCU/OKTA는 당시 basic EPS와 diluted EPS가 동일해 SEC US-GAAP `EarningsPerShareBasicAndDiluted` concept으로 공시했다. edgartools가 이 concept의 `statement_type`을 비워 반환해 canonical statement collector가 유효한 actual을 버리고 있었다.
+- 이 combined concept은 이름 그대로 basic/diluted 동일 actual이므로 income statement row와 diluted EPS fallback으로 허용한다. `EarningsPerShareBasic` 단독, FY-only annual proxy, estimate는 계속 제외한다.
+- actual DB에 DOCU/OKTA를 재적재하고 60개월을 다시 materialize해 60/60 READY를 확인했다.
+- repair plan은 월 gate가 READY여도 구성 종목별 source gap target을 남길 수 있다. 화면 action은 final Nasdaq status가 BLOCKED일 때만 제공하므로 READY 화면에서 불필요한 재수집은 노출되지 않는다.

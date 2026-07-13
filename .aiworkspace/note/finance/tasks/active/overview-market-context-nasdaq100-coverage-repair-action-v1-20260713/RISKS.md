@@ -2,7 +2,7 @@
 
 Last Updated: 2026-07-13
 
-## Open Risks
+## Residual Risks
 
 1. 과거 편입·퇴출 종목 가격은 현재 무료 OHLCV provider에서 제공되지 않을 수 있다.
    - 대응: 합성하지 않고 `unsupported_free_source`로 남기며 95% gate를 유지한다.
@@ -12,5 +12,9 @@ Last Updated: 2026-07-13
    - 대응: small batch, progress callback, per-symbol persistence, resumable planner를 사용한다.
 4. React component event가 Streamlit rerun에서 반복 소비될 수 있다.
    - 대응: nonce와 session-state token으로 Python boundary에서 중복을 차단한다.
-5. 자료 보강 기능 구현 완료와 실제 60/60 READY는 다른 결과다.
-   - 대응: source gap이 남으면 feature는 partial-success evidence와 blocker를 제공하며 READY라고 보고하지 않는다.
+5. 자료 보강 기능 구현 완료와 실제 60/60 READY는 환경별로 다른 결과일 수 있다.
+   - 대응: local actual QA는 60/60 READY를 확인했지만 source gap이 남는 환경에서는 partial-success evidence와 blocker를 유지한다.
+
+## Closed In This Task
+
+- 2021-08의 마지막 0.17%p gap은 provider 부재가 아니라 combined basic/diluted SEC actual을 canonical collector가 누락한 문제였다. narrow concept fallback과 회귀 테스트로 닫았다.

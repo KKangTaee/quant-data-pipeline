@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [overview-market-context-nasdaq100-valuation-v1-20260712](./tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md). Implementation/QA is complete; the 95% data-quality gate remains active.
+  - Current active task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md). 1차~5차 implementation/QA is complete; local actual DB is 60/60 READY and the strict 95% gate remains active.
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -46,6 +46,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Nasdaq-100 60개월 coverage repair action V1:
+  - blocker 카드에 `60개월 가치평가 자료 보강`을 추가하고 planner -> canonical EPS/EOD 수집 -> strict rematerialization을 같은 화면에서 동기 실행하도록 연결했다.
+  - SEC가 basic/diluted EPS를 동일값으로 공시한 actual concept을 보수적 fallback으로 허용해 local actual DB를 60/60 READY로 복구했다.
+  - focused tests, React build, desktop/420px Browser QA를 완료했다. 상세는 [task status](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md)를 본다.
 - Overview Market Movers 상단 action / Monthly 짧은 이력 V1:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`에서 긴 버튼 detail을 버튼 밖 한 줄 설명으로 분리했다.
   - FDXF/HONA의 Monthly 반복 갱신 원인을 provider 가용 이력 31/1 rows로 확인하고 `limited_price_history` evidence를 저장해 같은 full-window 수집 제안을 제거했다.

@@ -58,3 +58,29 @@ Last Updated: 2026-07-13
 - `npm run build --prefix app/web/streamlit_components/market_context_valuation` 성공; 새 hashed CSS/JS asset을 생성했다.
 - 회귀: Market Context 10 tests + focused service contracts 3 tests, `OK`.
 - 문법/형식: overview action/helper py_compile, `git diff --check` 통과.
+
+## 5차 — Actual DB Repair / Root Cause
+
+- initial DB plan: 2021-08~2026-07 60개월 중 5 READY / 55 BLOCKED, 42 target을 확인했다.
+- bounded LULU statement smoke는 성공했고 quarterly canonical statement row 9,260개를 저장했다.
+- full synchronous repair는 EPS 41/41, price 10/10 batch를 끝내고 108,602 rows를 기록했다. provider 실패 9개를 보존한 채 59/60 READY까지 복구했다.
+- remaining 2021-08 row는 coverage 94.8305%로 기준보다 약 0.17%p 부족했다. DOCU/OKTA raw SEC facts에는 `EarningsPerShareBasicAndDiluted` actual이 있으나 edgartools statement type 누락으로 canonical values에 저장되지 않은 것을 재현했다.
+- RED/GREEN: combined concept companyfacts parse, canonical row inference, filing-aware TTM fallback 테스트를 추가하고 실패/통과를 확인했다.
+- DOCU 5,573 values / 2,511 labels / 33 filings, OKTA 5,830 values / 2,613 labels / 37 filings을 재적재했다.
+- strict rematerialization 결과: 60 rows written, 60 READY / 0 BLOCKED, latest coverage 97.9546%, latest trailing P/E 32.3173x.
+
+## 5차 — Browser QA
+
+- running sub-dev app `http://localhost:8501`에서 Market Context를 열고 Nasdaq-100 selector를 선택했다.
+- desktop: 기준일 2026-07-10, 현재 PER 32.32x, 5년 중심 16.22x, READY graph가 표시되는 것을 확인했다.
+- 420x900: selector가 세로 배치되고 Nasdaq header/graph가 viewport 안에서 잘리지 않음을 확인했다.
+- current 8501 browser console error는 0건이다. generated screenshots는 `/tmp/codex-nasdaq100-qa-desktop.png`, `/tmp/codex-nasdaq100-qa-mobile.png`에 두고 commit에서 제외한다.
+
+## 5차 — Fresh Closeout Verification
+
+- Nasdaq/S&P/combined valuation 76 tests: `OK`.
+- Market Context service contracts 35 tests: `OK`. S&P-only header copy assertion은 현재 S&P/Nasdaq selector 문구로 동기화했다.
+- Python compile: financial statements, Nasdaq valuation, ingestion/Overview action, service/helper targets 통과.
+- React Vite production build: 170 modules, exit 0; hashed assets는 기존 committed build와 동일하다.
+- direct DB/service parity: latest 60 rows / 60 unique keys / 60 READY / 0 BLOCKED, latest coverage 97.9546%, P/E 32.3173x, service history 60 points와 일치.
+- `git diff --check`: 통과. unrelated untracked research bundle과 generated screenshots는 stage 대상에서 제외한다.

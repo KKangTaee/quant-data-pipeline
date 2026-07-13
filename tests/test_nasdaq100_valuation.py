@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pandas as pd
@@ -403,6 +404,78 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
         self.assertEqual(rows[1]["fiscal_quarter"], 2)
         self.assertEqual(rows[1]["available_at"], "2025-08-01")
 
+    def test_parses_basic_and_diluted_eps_as_combined_diluted_fallback(self) -> None:
+        from finance.data.nasdaq100_valuation import parse_sec_companyfacts_diluted_eps
+
+        payload = {
+            "facts": {
+                "us-gaap": {
+                    "EarningsPerShareBasicAndDiluted": {
+                        "units": {
+                            "USD/shares": [
+                                {
+                                    "start": "2020-02-01",
+                                    "end": "2020-04-30",
+                                    "val": -0.26,
+                                    "accn": "combined-q1",
+                                    "fy": 2021,
+                                    "fp": "Q1",
+                                    "form": "10-Q",
+                                    "filed": "2020-06-05",
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+
+        rows = parse_sec_companyfacts_diluted_eps(payload, symbol="DOCU")
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["concept"], "us-gaap:EarningsPerShareBasicAndDiluted")
+        self.assertEqual(rows[0]["value"], -0.26)
+
+    def test_canonical_statement_rows_keep_combined_eps_when_edgar_omits_statement_type(self) -> None:
+        from finance.data.financial_statements import _iter_value_rows_from_source
+
+        fact = SimpleNamespace(
+            statement_type=None,
+            form_type="10-Q",
+            fiscal_period="Q1",
+            label="Basic and diluted earnings per share",
+            concept="us-gaap:EarningsPerShareBasicAndDiluted",
+            period_start="2020-02-01",
+            period_end="2020-04-30",
+            numeric_value=-0.26,
+            filing_date="2020-06-05",
+            accession="combined-q1",
+            unit="USD per share",
+            fiscal_year=2021,
+            period_type="duration",
+            taxonomy="us-gaap",
+            data_quality=None,
+            is_audited=None,
+            is_restated=None,
+            is_estimated=None,
+            confidence_score=None,
+        )
+        source = {
+            "facts": [fact],
+            "filings_by_accession": {
+                "combined-q1": {
+                    "accepted_at": "2020-06-05 16:00:00",
+                    "report_date": "2020-04-30",
+                }
+            },
+        }
+
+        rows = _iter_value_rows_from_source("DOCU", source, "quarterly", 0)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["statement_type"], "income_statement")
+        self.assertEqual(rows[0]["concept"], "us-gaap:EarningsPerShareBasicAndDiluted")
+
     def test_sec_fetch_retries_bounded_connection_failure(self) -> None:
         from finance.data.nasdaq100_valuation import fetch_sec_text
 
@@ -535,6 +608,28 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
         self.assertAlmostEqual(result["ABC"]["ttm_eps"], 4.0)
         self.assertAlmostEqual(result["ABC"]["quarters"][-1]["eps"], 1.5)
         self.assertEqual(result["ABC"]["quarters"][-1]["derivation"], "fy_minus_q1_q2_q3")
+
+    def test_derives_ttm_from_combined_basic_and_diluted_eps_fallback(self) -> None:
+        from finance.data.nasdaq100_valuation import derive_filing_aware_ttm_eps
+
+        base = {
+            "symbol": "DOCU",
+            "concept": "us-gaap:EarningsPerShareBasicAndDiluted",
+            "unit": "USD per share",
+            "source_period_type": "duration",
+            "fiscal_year": 2021,
+        }
+        rows = [
+            {**base, "period_type": "Q", "fiscal_quarter": 1, "period_end": "2020-04-30", "value": -0.26, "available_at": "2020-06-05"},
+            {**base, "period_type": "Q", "fiscal_quarter": 2, "period_end": "2020-07-31", "value": -0.35, "available_at": "2020-09-04"},
+            {**base, "period_type": "Q", "fiscal_quarter": 3, "period_end": "2020-10-31", "value": -0.31, "available_at": "2020-12-04"},
+            {**base, "period_type": "FY", "fiscal_quarter": None, "period_end": "2021-01-31", "value": -1.31, "available_at": "2021-03-31"},
+        ]
+
+        result = derive_filing_aware_ttm_eps(rows, as_of_date="2021-08-31")
+
+        self.assertEqual(result["DOCU"]["quarter_count"], 4)
+        self.assertAlmostEqual(result["DOCU"]["ttm_eps"], -1.31)
 
     def test_drift_weights_by_security_price_and_renormalizes(self) -> None:
         from finance.data.nasdaq100_valuation import drift_holding_weights

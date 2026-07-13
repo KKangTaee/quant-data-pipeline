@@ -44,19 +44,24 @@ Nasdaq-100 QQQ proxy job의 due/skip 계획과 강제 실행은 아래처럼 확
 
 이 job은 SEC QQQ holdings, QQQ EOD, stored DB 기반 monthly materialization을 순서대로 실행한다. `success`는 파이프라인 실행 성공이지 valuation coverage 통과를 뜻하지 않는다. `finance_meta.nasdaq100_monthly_valuation.data_quality=blocked`와 `coverage_weight_pct < 95`이면 UI는 그래프 대신 coverage blocker를 표시한다.
 
+blocker가 표시되면 같은 카드의 `60개월 가치평가 자료 보강`을 누른다. 화면은 최근 60개월 historical holdings universe에서 부족한 분기 EPS와 EOD만 계획하고, canonical ingestion job으로 종목별 UPSERT한 뒤 60개월을 다시 materialize한다. 실행 중에는 같은 화면에서 단계별 진행 상태를 표시하며 완료까지 기다린다. React는 action intent만 전달하고 SEC/가격 수집, DB write, cache clear와 재계산은 Python job 경계가 맡는다.
+
 Expected result:
 
 - job result의 `details.steps`에 `SEC QQQ holdings`, `QQQ EOD`, `Nasdaq-100 monthly proxy`가 각각 남는다.
 - 동일 source/business key 재실행은 새 중복 row를 만들지 않는다.
 - 95% 미만 monthly row는 `blocked`와 error reason을 유지한다.
+- 보강 뒤 60개월 모두 95% gate를 통과하면 blocker 대신 Nasdaq-100 QQQ proxy 그래프가 표시된다.
+- `EarningsPerShareBasicAndDiluted`는 기본/희석 EPS가 동일하다고 공시한 US-GAAP actual이므로 diluted EPS fallback으로 허용한다. 별도 basic EPS나 FY-only proxy는 허용하지 않는다.
 
 Failure handling:
 
 - 한 source step이 실패하면 `partial_success`와 step message를 확인하고 latest-good DB row로 materialization/read가 가능한지 분리해 본다.
 - schema bootstrap failure는 전체 `failed`다. `finance_meta` 연결과 `schema.py` sync 결과를 먼저 확인한다.
-- `success`인데 화면이 blocked인 경우 job을 반복 실행해 해결하려 하지 말고 active task의 acquired/delisted EOD gap을 확인한다.
+- `부분 완료` 뒤에도 blocker가 남으면 `남은 자료 다시 보강`으로 transient 실패만 재시도한다. 무료 원천에서 확보할 수 없는 acquired/delisted EOD, foreign/FY-only, unresolved identity는 합성하거나 95% gate를 낮추지 않는다.
+- 화면 action이 실패하면 기존 latest-good cache를 유지한다. 로그의 failed symbol과 `market_data_issue.limited_price_history` evidence를 확인한 뒤 재시도한다.
 
-Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../data/TABLE_SEMANTICS.md), [active task status](../../tasks/active/overview-market-context-nasdaq100-valuation-v1-20260712/STATUS.md).
+Related docs: [Data Flow Map](../data/DATA_FLOW_MAP.md), [Table Semantics](../data/TABLE_SEMANTICS.md), [coverage repair task status](../../tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
 
 ## Refresh Order
 

@@ -9402,3 +9402,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 95% 기준을 낮추지 않고 DB pipeline, service isolation, selector, automation, Browser QA까지 완성해 현재 부족분을 사용자에게 정직하게 보여준다.
 - Analysis result: 구현은 가능하지만 production-ready Nasdaq graph는 불가능하다. actual 119개월 중 5개월만 gate를 통과했고 최신 coverage는 94.47%다.
 - Follow-up: S&P는 READY를 유지하고 Nasdaq은 94.47% / 95% blocker surface를 렌더링한다. acquired/delisted historical EOD source가 승인되기 전 보간·gate 완화는 하지 않는다.
+
+### 2026-07-13 - Nasdaq blocker에서 최근 60개월 자료를 직접 보강한다
+
+- User request: coverage blocker가 보일 때 버튼으로 최근 60개월 자료를 수집하고, 같은 화면에서 완료까지 기다리는 방식의 1차~5차 개발 요청.
+- Interpreted goal: 화면 진입 자동 수집이 아니라 사용자의 명시 action으로 부족한 historical EPS/EOD만 repeat-safe하게 수집하고 strict 95% gate 결과를 즉시 다시 보여준다.
+- Analysis result: 첫 full repair는 59/60이었고, 2021-08 DOCU/OKTA가 당시 유효한 `EarningsPerShareBasicAndDiluted` 공시를 썼지만 canonical parser가 statement type 누락으로 버린 것이 마지막 gap의 원인이었다.
+- Follow-up: combined basic/diluted actual을 diluted fallback으로 허용하고 별도 basic/FY proxy와 gate 완화는 금지했다. local DB 60/60 READY, desktop/420px graph 렌더링을 확인했다.

@@ -10014,7 +10014,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("S&P 500의 최근 멀티플 위치와 FOMC 기반 예상 실적", dashboard_source)
+        self.assertIn(
+            "S&P 500과 Nasdaq-100의 최근 멀티플 위치를 같은 기준으로 전환해 비교합니다.",
+            dashboard_source,
+        )
         self.assertIn("최근 5년 멀티플 구간", component_source)
         self.assertIn("FOMC 예상 실적 기반 지수 시나리오", component_source)
         self.assertIn("산식·자료 출처·한계 보기", component_source)

@@ -552,8 +552,9 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - `reconstructed_actual`은 weighted EPS/price coverage 95% 이상인 월만 허용한다. `blocked`는 pass가 아니며 값이 없어도 삭제하지 않는다.
+- diluted EPS는 `EarningsPerShareDiluted`, IFRS `DilutedEarningsLossPerShare`, 또는 issuer가 basic/diluted를 동일값으로 공시한 `EarningsPerShareBasicAndDiluted` actual만 허용한다. 별도 basic EPS, FY-only annual proxy, 추정 EPS는 fallback으로 사용하지 않는다.
 - QQQ proxy는 공식 Nasdaq-100 index-level P/E/EPS가 아니다. acquired/delisted EOD, ADR/foreign unit, share class가 불명확한 weight는 coverage에 포함하지 않는다.
-- 2026-07-13 actual materialization은 119개월 중 5개월 READY, 114개월 BLOCKED이며 최신 coverage는 94.47%다.
+- 2026-07-13 coverage repair QA는 최근 60개월을 60 READY / 0 BLOCKED로 materialize했다. 이는 local stored-source 검증 결과이며 무료 원천 gap이 남는 환경에서 gate를 우회한다는 뜻이 아니다.
 
 ## `sp500_index_earnings`
 

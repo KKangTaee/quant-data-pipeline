@@ -851,7 +851,14 @@ def _iter_value_rows_from_source(
     now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     for fact in source["facts"]:
+        concept = _none_if_nan(getattr(fact, "concept", None))
         statement_type = _normalize_statement_type(getattr(fact, "statement_type", None))
+        # edgartools leaves statement_type empty for the valid US-GAAP concept
+        # used when basic and diluted EPS are reported as one identical value.
+        if statement_type is None and str(concept or "").endswith(
+            "EarningsPerShareBasicAndDiluted"
+        ):
+            statement_type = "income_statement"
         if statement_type is None:
             continue
 
@@ -864,7 +871,6 @@ def _iter_value_rows_from_source(
             continue
 
         label = _none_if_nan(getattr(fact, "label", None))
-        concept = _none_if_nan(getattr(fact, "concept", None))
         period_end = _coerce_date(getattr(fact, "period_end", None))
         if not label or not concept or period_end is None:
             continue
