@@ -6158,3 +6158,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Tiingo 무료 EOD catalog가 historical price gap 23개 중 22개 exact symbol과 `SYMC -> GEN` successor 후보를 제공하며, SEC/N-PORT가 EPS와 price anchor를 제공한다.
 - 미국 상장 누락분만 복구한 upper-bound에서도 119/119개월이 95%를 넘고 최저 96.319%여서 기능은 구현 가능 판정이다.
 - 권장 순서는 계산 정확도 -> SEC identity/actual -> optional Tiingo EOD -> 119개월 calibration -> QA이며 상세는 research bundle을 본다.
+
+## 2026-07-14 - 미국 개별주식 가치평가 V1 설계
+
+- Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체하는 방향을 승인했다.
+- 월말 가격 + filing-aware quarterly TTM EPS carry-forward로 monthly P/E를 만들고, Graph 2는 FOMC macro + 기업 초과 EPS 성장률을 사용한다.
+- 상세 설계와 1차~5차 roadmap은 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-valuation-v1-20260714/`에 고정했다.
+- 현재는 written spec review 단계이며 구현 코드는 변경하지 않았다.

@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-13
+Last Verified: 2026-07-14
 
 ## Purpose
 
@@ -23,7 +23,8 @@ Last Verified: 2026-07-13
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: [Nasdaq-100 Scenario History Warmup V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md) — 1차~5차 implementation/QA complete; 60개월 rolling 계약을 유지한 최대 119개월 보강 action과 선택 기간별 정확한 부족 안내를 추가했다. Local actual QA는 66/119 READY이며 무료 원천 gap은 합성하지 않는다.
+- Current active task: [US Stock Valuation V1 2026-07-14](../tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md) — Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체하는 설계가 승인됐다. 월말 가격과 filing-aware quarterly TTM EPS carry-forward로 monthly P/E를 만들고, Graph 2는 FOMC macro와 기업 초과 EPS 성장률을 결합한다. Written spec review 중이며 구현은 시작하지 않았다.
+- Previous completed task: [Nasdaq-100 Scenario History Warmup V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md) — 1차~5차 implementation/QA complete; 60개월 rolling 계약을 유지한 최대 119개월 보강 action과 선택 기간별 정확한 부족 안내를 추가했다. Local actual QA는 66/119 READY이며 무료 원천 gap은 합성하지 않는다.
 - Previous completed task: [Nasdaq-100 60m Coverage Repair Action V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md) — valuation coverage blocker용 60개월 보강과 strict rematerialization을 완료했다.
 - Latest completed task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
 - Previous completed task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).

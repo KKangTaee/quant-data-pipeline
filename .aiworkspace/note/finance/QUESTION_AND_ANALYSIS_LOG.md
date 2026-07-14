@@ -9437,3 +9437,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: provider 목록 나열이 아니라 현재 119개월 coverage gap을 닫을 수 있는 합법적 source와 코드 경로를 확정한다.
 - Analysis result: 기능은 가능하다. 계산 오류 수정과 SEC actual 확대가 선행돼야 하며, 무료 계정을 허용하면 Tiingo EOD가 23개 historical price gap을 사실상 모두 보강할 수 있다. 미국 상장 누락분 복구 upper-bound는 119/119개월, 최저 96.319%다.
 - Follow-up: 구현 승인 시 1차 계산 정확도, 2차 SEC identity/actual, 3차 optional Tiingo, 4차 119개월 calibration, 5차 QA 순으로 진행한다. Tiingo token과 internal-only 조건은 3차 전에 별도 승인한다.
+
+### 2026-07-14 - Nasdaq 가치평가 대신 미국 개별주 상대가치를 제공한다
+
+- User request: Nasdaq 탭을 제거하고 기업명·ticker 검색 후 선택 미국기업의 고평가·저평가, EPS 구조, 1·3·5년 상대가치 시나리오를 같은 UI에서 보고 싶다고 요청함.
+- Interpreted goal: index constituent reconstruction 대신 한 기업의 DB 가격과 SEC actual을 사용하고, 검색은 read-only로 유지하되 부족한 raw data만 명시 action으로 수집해야 함.
+- Analysis result: 월별 EPS 원천은 필요하지 않다. 각 월말까지 공개된 최신 four-quarter TTM diluted EPS를 carry-forward하고 월말 주가로 monthly P/E를 계산할 수 있다. FOMC GDP+PCE는 기업 EPS 자체가 아니므로 기업 historical excess EPS growth와 결합한다.
+- Follow-up: approved design을 `overview-market-context-us-stock-valuation-v1-20260714` task에 기록했다. Written spec 승인 후 새 세션에서 상세 TDD plan과 1차~5차 구현을 진행한다.
