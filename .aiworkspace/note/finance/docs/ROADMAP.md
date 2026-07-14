@@ -10,11 +10,12 @@ Last Verified: 2026-07-14
 현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-valuation-v1-20260714/`다.
 
 - 목적: Market Context의 Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체한다.
-- 현재 단계: conversation-approved design을 written spec으로 고정했으며 사용자 문서 검토 전이다. 구현은 시작하지 않았다.
+- 현재 단계: 1차 계산 정확도, 2차 엔진, 3차 검색·수집, 4차 UI 교체, 5차 actual/Browser QA와 문서 정렬을 완료했다.
 - 계산 계약: 월말 가격과 filing-aware quarterly TTM diluted EPS carry-forward로 monthly P/E를 만들며 EPS를 월별 보간하지 않는다.
 - Graph 2 계약: FOMC real GDP + PCE를 macro proxy로 두고, 기업의 historical TTM EPS excess growth P25/P50/P75를 결합한다.
 - 운영 경계: 검색/화면 진입은 DB read-only이고 selected-symbol price/SEC 수집은 명시 action에서만 실행한다.
-- 다음 단계: written spec 승인 후 detailed TDD implementation plan을 작성하고 새 세션에서 1차~5차를 실행한다.
+- 결과: AAPL/NVDA/META/TSLA actual DB는 READY이며 loss/short-listing/SEC-gap/split/foreign issuer 경계도 distinct state로 검증했다. S&P 화면은 유지하고 기존 Nasdaq backend는 보존했다.
+- 다음 단계: 필수 후속은 없다. 더 긴 3/5년 이력을 원하면 누락 월을 합성하거나 gate를 낮추지 않고 historical filing/SEP coverage를 별도 보강한다.
 
 Previous completed Nasdaq history task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/`다.
 

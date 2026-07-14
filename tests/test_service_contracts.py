@@ -7424,7 +7424,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "real_gdp_pct",
             "pce_inflation_pct",
             "current_vs_baseline_gap_pct",
-            "basis_date_mismatch",
+            "current_eps_basis_date",
+            "future filing 소급 없음",
         ):
             self.assertIn(token, component_source)
         self.assertIn("EPS 출처", helper_source)
@@ -7439,8 +7440,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         for token in (
             "minus_2sigma",
             "-2σ",
-            "과거 시점 재구성",
-            "최근 {periodYears}년 적정 {instrument.proxy_symbol} 흐름",
+            "ScenarioHistoryChart",
+            "최근 {years}년 상대가치 흐름",
             "sep_releases",
             "gap_to_baseline_pct",
             "onMouseMove",
@@ -7480,11 +7481,14 @@ class OverviewAutomationContractTests(unittest.TestCase):
             "1년",
             "3년",
             "5년",
-            "setHistoryPeriod",
+            "setPeriod",
             "aria-pressed",
-            "axisLabelStep",
-            "releaseLabelStep",
+            "POINT-IN-TIME",
+            "Math.ceil((points.length - 1) / 6)",
             "history-period-selector",
+            "INSUFFICIENT_PIT_EVIDENCE",
+            "observation_count",
+            "filing·SEP가 모두 갖춰진 과거 평가점",
         ):
             self.assertIn(token, component_source + style_source)
 
@@ -10015,9 +10019,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn(
-            "S&P 500과 Nasdaq-100의 최근 멀티플 위치를 같은 기준으로 전환해 비교합니다.",
+            "S&P 500 또는 미국 개별주식의 현재 멀티플과 상대가치 시나리오를 확인합니다.",
             dashboard_source,
         )
+        self.assertIn("미국 개별주식", component_source)
+        self.assertNotIn("Nasdaq-100", component_source)
         self.assertIn("최근 5년 멀티플 구간", component_source)
         self.assertIn("FOMC 예상 실적 기반 지수 시나리오", component_source)
         self.assertIn("산식·자료 출처·한계 보기", component_source)

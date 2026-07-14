@@ -68,3 +68,8 @@ Last Updated: 2026-07-14
 - External selected-symbol collection still requires an exact CIK link; the same explicit action obtains selected-symbol SEC identity first and re-plans before provider calls.
 - Recent lifecycle refresh dates no longer create false short-listing classifications because stored price history participates in the listing-duration boundary.
 - Non-U.S. issuer profiles without verified share-unit evidence are NOT_APPLICABLE instead of COLLECTABLE.
+
+## Remaining After V1
+
+- Some older 3/5-year points remain unavailable even when raw positive-P/E months exceed the rolling warmup because complete historical filing+SEP evidence is not present at every visible month. The UI reports the exact complete-point count and does not synthesize the missing months.
+- The repository-wide isolated full run has four unrelated existing contract failures recorded in `RUNS.md`. All Market Context/U.S. stock/S&P/Nasdaq backend scope tests pass.

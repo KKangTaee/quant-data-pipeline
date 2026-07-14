@@ -136,7 +136,37 @@ finance.loaders.sp500_valuation + finance.loaders.price
 - SPY 환산은 SPX/SPY EOD 기준일이 같을 때만 제공한다.
 - 화면은 source를 직접 fetch하지 않고 DB-backed read model만 렌더링한다.
 
-### Nasdaq-100 QQQ proxy Market Context valuation
+### 미국 개별주식 Market Context relative valuation
+
+```text
+current listing/profile + optional SEC lifecycle
+  -> finance.loaders.us_stock_valuation.search_us_common_stocks()
+  -> DB read-only 기업명·티커 검색
+
+selected common stock price + detailed SEC statements + FOMC SEP
+  -> finance.loaders.us_stock_valuation.load_us_stock_valuation_inputs()
+  -> finance.data.us_stock_valuation.build_monthly_pit_valuation()
+  -> app.services.overview.us_stock_valuation
+  -> app.services.overview.market_context_valuation
+  -> React S&P 500 / 미국 개별주식 selector
+
+COLLECTABLE React action intent
+  -> app.jobs.overview_actions.run_overview_us_stock_valuation_collection()
+  -> selected-symbol SEC identity 확인
+  -> exact missing price / statement range preflight
+  -> canonical synchronous ingestion
+  -> stored read model rerun
+```
+
+의미:
+
+- 검색, 선택, 화면 진입은 DB read-only이며 UI/React가 provider를 직접 호출하지 않는다.
+- 각 월말까지 공개된 최신 4개 분기 diluted EPS를 합산하고, price와 EPS를 같은 as-of split basis로 맞춘 뒤 positive TTM EPS에만 P/E를 계산한다.
+- Graph 1은 최근 60개월 positive log(P/E)와 36개월 민감도, Graph 2는 FOMC real GDP+PCE macro proxy와 최근 3년 기업 초과 TTM EPS 성장 P25/P50/P75를 결합한다.
+- raw 가격·SEC gap만 `COLLECTABLE`이며 적자, 짧은 상장 이력, 검증되지 않은 ADR 단위는 `NOT_APPLICABLE`이다.
+- V1은 새 valuation materialization table을 만들지 않고 선택한 한 종목의 bounded stored evidence를 read-time 계산한다.
+
+### Retained Nasdaq-100 QQQ proxy valuation backend
 
 ```text
 SEC QQQ N-PORT / N-30B-2
@@ -148,10 +178,8 @@ stored QQQ holdings + finance_fundamental statement values + finance_price EOD
   -> finance_meta.nasdaq100_monthly_valuation
   -> finance.loaders.nasdaq100_valuation
   -> app.services.overview.nasdaq100_valuation
-  -> app.services.overview.market_context_valuation
-  -> React S&P 500 / Nasdaq-100 selector
 
-blocked React action intent
+retained bounded repair facade
   -> app.jobs.overview_actions.run_overview_nasdaq100_valuation_repair()
   -> diagnose missing 60m EPS / EOD targets
   -> canonical statement / OHLCV ingestion
@@ -161,7 +189,7 @@ blocked React action intent
 
 의미:
 
-- UI render는 DB-backed payload만 읽고 SEC 또는 가격 provider를 직접 호출하지 않는다.
+- 이 data/materialization/collector 경계는 보존하지만 current Market Context user-facing selector/action path에서는 호출하지 않는다.
 - weighted coverage 95% 미만 월은 `blocked`로 저장하고 그래프·시나리오 값을 숨긴다.
 - blocker의 `60개월 가치평가 자료 보강`은 사용자가 명시적으로 눌렀을 때만 동기 실행되며, historical holdings universe에서 부족한 분기 EPS/EOD만 repeat-safe하게 보강한다.
 - 2026-07-13 local QA에서는 combined basic/diluted actual fallback 보완 후 요청 60개월이 모두 95% gate를 통과했다. source gap이 남는 다른 환경에서는 blocker와 partial result를 유지한다.

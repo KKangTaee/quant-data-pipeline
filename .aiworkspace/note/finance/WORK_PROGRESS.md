@@ -6165,3 +6165,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 월말 가격 + filing-aware quarterly TTM EPS carry-forward로 monthly P/E를 만들고, Graph 2는 FOMC macro + 기업 초과 EPS 성장률을 사용한다.
 - 상세 설계와 1차~5차 roadmap은 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-valuation-v1-20260714/`에 고정했다.
 - 현재는 written spec review 단계이며 구현 코드는 변경하지 않았다.
+
+## 2026-07-14 - 미국 개별주식 가치평가 V1 구현 완료
+
+- Market Context selector를 `S&P 500 | 미국 개별주식`으로 교체하고 DB-only 검색, filing-aware monthly TTM EPS/PER, 60m/36m multiple, FOMC+기업 초과성장 상대가치 시나리오를 연결했다.
+- comparative FY false-Q4와 split-unit drift를 real-like TDD fixture로 먼저 수정했고, raw gap만 explicit synchronous collection을 허용한다.
+- AAPL/NVDA/META/TSLA actual READY와 loss/short-listing/SEC-gap/split/foreign issuer 경계를 검증했으며 S&P와 retained Nasdaq backend는 보존했다.
+- 상세 구현·QA·남은 full-suite unrelated failures는 `tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md`와 `RUNS.md`를 본다.

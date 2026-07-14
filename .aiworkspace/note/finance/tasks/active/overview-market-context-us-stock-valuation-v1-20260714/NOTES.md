@@ -76,6 +76,7 @@ Last Updated: 2026-07-14
 - Listing duration uses the earliest stored price date and lifecycle first-seen date, preventing a recently refreshed listing snapshot from misclassifying a long-listed company as a new IPO.
 - Profile exchanges `NMS/NGM/NCM/NYQ/ASE` are normalized to user-facing Nasdaq/NYSE/NYSE American labels.
 - A non-U.S. issuer profile without explicit per-share/ADR-ratio evidence is conservatively `ADR_UNIT_UNVERIFIED` and cannot expose a collection action.
+- A longer history can have enough stored positive-P/E months but still lack complete filing+SEP evidence at every visible month. The UI now reports complete PIT evaluation points such as `24/36개월` rather than the contradictory raw-month message `107/95개월`.
 
 ## Product Language
 

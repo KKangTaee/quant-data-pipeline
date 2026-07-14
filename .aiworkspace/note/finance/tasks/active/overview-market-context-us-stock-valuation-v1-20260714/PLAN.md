@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task in the current `codex/sub-dev` worktree. Do not create a new worktree and do not dispatch subagents.
 
-Status: Approved Design — Detailed TDD Plan Ready For Inline Execution
+Status: Implemented — 1차~5차 Complete
 Last Updated: 2026-07-14
 
 **Goal:** Market Context의 Nasdaq-100 사용자 화면을 DB 기반 미국 개별주식 검색·filing-aware 상대가치 화면으로 교체하면서 S&P 500 화면과 기존 Nasdaq 원천/collector를 보존한다.

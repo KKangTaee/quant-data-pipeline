@@ -40,6 +40,7 @@ type ScenarioHistory = {
   reason_code?: string;
   window_months?: number;
   window_years?: number;
+  observation_count?: number;
   required_history_months?: number;
   available_history_months?: number;
   limitation?: string;
@@ -252,6 +253,21 @@ const historyValue = (point: ScenarioHistoryPoint, key: "actual" | "lower" | "ba
   return point.upper_price ?? point.upper_spx ?? 0;
 };
 
+const historyGapMessage = (history?: ScenarioHistory) => {
+  if (history?.reason_code === "INSUFFICIENT_PIT_EVIDENCE") {
+    const complete = history.observation_count ?? 0;
+    const target = history.window_months ?? 0;
+    const stored = history.available_history_months;
+    return stored != null
+      ? `positive PER 원자료 ${stored}개월은 있지만 filing·SEP가 모두 갖춰진 과거 평가점은 ${complete}/${target}개월입니다.`
+      : `filing·SEP가 모두 갖춰진 과거 평가점은 ${complete}/${target}개월입니다.`;
+  }
+  if (history?.required_history_months && history.available_history_months != null) {
+    return `${history.required_history_months}개월이 필요하지만 현재 ${history.available_history_months}개월이 준비됐습니다.`;
+  }
+  return "과거 시점 자료가 충분해지면 흐름을 표시합니다.";
+};
+
 function ScenarioHistoryChart({ options, fallback, symbol, isStock }: { options?: Record<HistoryPeriod, ScenarioHistory>; fallback?: ScenarioHistory; symbol: string; isStock: boolean }) {
   const periods: { key: HistoryPeriod; label: string; years: number }[] = [{ key: "1y", label: "1년", years: 1 }, { key: "3y", label: "3년", years: 3 }, { key: "5y", label: "5년", years: 5 }];
   const [period, setPeriod] = useState<HistoryPeriod>("1y");
@@ -260,7 +276,7 @@ function ScenarioHistoryChart({ options, fallback, symbol, isStock }: { options?
   const [selected, setSelected] = useState(Math.max(0, points.length - 1));
   useEffect(() => setSelected(Math.max(0, points.length - 1)), [points.length, period]);
   const years = history?.window_years || periods.find((item) => item.key === period)?.years || 1;
-  if (history?.status !== "READY" || points.length < 2) return <div className="history-block"><div className="history-period-selector">{periods.map((item) => <button key={item.key} type="button" aria-pressed={period === item.key} onClick={() => setPeriod(item.key)}>{item.label}</button>)}</div><div className="empty compact-empty history-empty"><strong>상대가치 계산 이력이 부족합니다</strong><span>{history?.required_history_months && history?.available_history_months != null ? `${history.required_history_months}개월이 필요하지만 현재 ${history.available_history_months}개월이 준비됐습니다.` : "과거 시점 자료가 충분해지면 흐름을 표시합니다."}</span></div></div>;
+  if (history?.status !== "READY" || points.length < 2) return <div className="history-block"><div className="history-period-selector">{periods.map((item) => <button key={item.key} type="button" aria-pressed={period === item.key} onClick={() => setPeriod(item.key)}>{item.label}</button>)}</div><div className="empty compact-empty history-empty"><strong>상대가치 계산 이력이 부족합니다</strong><span>{historyGapMessage(history)}</span></div></div>;
   const values = points.flatMap((point) => [historyValue(point, "actual"), historyValue(point, "lower"), historyValue(point, "upper")]);
   const min = Math.min(...values) * .97, max = Math.max(...values) * 1.03, range = Math.max(1, max - min);
   const left = 58, width = 792, top = 30, height = 250, viewWidth = 920;

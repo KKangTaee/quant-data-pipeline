@@ -69,3 +69,20 @@ Last Updated: 2026-07-14
 - Actual split evidence: NVDA stored 10:1 on 2024-06-10 and 4:1 on 2021-07-20, covered by the split-neutral calculation regression.
 - Actual SEC-missing evidence: Visa returned COLLECTABLE with `sec_identity + sec_statements`; TSM initially exposed an ADR gap, then returned ADR_UNIT_UNVERIFIED after country-based share-unit hardening.
 - Fresh focused individual-stock suite passed `35 tests` after identity, CIK-first collection, listing-duration, and foreign-issuer regressions.
+
+## 5차 Browser QA
+
+- Started the actual Streamlit app at `127.0.0.1:8509` and exercised the React component through browser automation.
+- Desktop QA searched `AAPL`, selected `Apple Inc.`, and rendered current P/E `38.26x`, 60-month Graph 1, FOMC/company-growth Graph 2, and 1/3/5-year controls from stored DB evidence.
+- Desktop horizontal overflow was false for both the outer document (`1345/1345`) and component iframe (`1174/1174`).
+- 420px QA kept the outer document at `420/420` and component iframe at `377/377`, both with horizontal overflow false.
+- Browser console reported `0` errors. The 3-year AAPL state now explains `positive PER 원자료 107개월` versus complete filing/SEP evaluation points `24/36개월` instead of showing a contradictory raw-month count.
+- Representative 420px screenshot was moved outside the repository to `/tmp/market-context-us-stock-mobile-qa.png` and was not staged.
+
+## 5차 Full Verification Evidence
+
+- A single-process `unittest discover -s tests` collected 1,030 tests but produced Streamlit singleton cascades after test-local module replacement; this runner is not process-isolated.
+- Re-ran all 23 `tests/test_*.py` modules in independent Python processes. All 1,030 tests executed: 1,026 passed and 4 unrelated existing contract assertions failed.
+- The unrelated failures are two Practical Validation exact-call-string assertions that omit the current `source=source` argument, one Market Movers expected `rows_written=65` versus current `2`, and one Sentiment React source-token assertion for `payload.summary.metrics.map`.
+- Market Context copy/history contract drift found by the full run was corrected; the five affected Market Context service-contract tests pass.
+- Fresh component production build passed (`170 modules transformed`) and generated `component_static/assets/index-BOxsSxTV.js`.

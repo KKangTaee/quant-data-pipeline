@@ -9444,3 +9444,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: index constituent reconstruction 대신 한 기업의 DB 가격과 SEC actual을 사용하고, 검색은 read-only로 유지하되 부족한 raw data만 명시 action으로 수집해야 함.
 - Analysis result: 월별 EPS 원천은 필요하지 않다. 각 월말까지 공개된 최신 four-quarter TTM diluted EPS를 carry-forward하고 월말 주가로 monthly P/E를 계산할 수 있다. FOMC GDP+PCE는 기업 EPS 자체가 아니므로 기업 historical excess EPS growth와 결합한다.
 - Follow-up: approved design을 `overview-market-context-us-stock-valuation-v1-20260714` task에 기록했다. Written spec 승인 후 새 세션에서 상세 TDD plan과 1차~5차 구현을 진행한다.
+
+### 2026-07-14 - 승인된 개별주 설계를 1차~5차로 구현한다
+
+- User request: authoritative `DESIGN.md`와 설계 커밋을 기준으로 detailed TDD plan을 먼저 공유하고 추가 승인 없이 1차~5차 구현·QA·커밋을 완료해 달라고 요청함.
+- Interpreted goal: S&P는 그대로 유지하면서 Nasdaq 사용자 연결만 제거하고, 선택 종목 한 개의 DB evidence로 point-in-time 상대가치를 계산하며 수집은 explicit action에만 둔다.
+- Analysis result: comparative FY false-Q4와 split-unit drift를 먼저 닫은 뒤 DB-only 검색, selected-symbol service, explicit sync collection, React states를 연결했다. Actual DB는 AAPL/NVDA/META/TSLA READY이며 구조적/수집 가능 gap을 구분한다.
+- Follow-up: 1차~5차와 Browser QA·문서 정렬을 완료했다. 더 긴 history는 filing/SEP evidence를 실제로 보강할 때만 확장하고 누락 월은 합성하지 않는다.
