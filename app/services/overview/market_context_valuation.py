@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from app.services.overview.nasdaq100_valuation import build_nasdaq100_valuation_read_model
 from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
 
 
 SP500_INSTRUMENT = {
@@ -29,16 +29,30 @@ def _isolated(builder: Callable[[], dict[str, Any]], instrument: dict[str, Any])
         }
 
 
-def build_market_context_valuation_read_model() -> dict[str, Any]:
+def build_market_context_valuation_read_model(
+    *,
+    selected_symbol: str | None = None,
+    search_query: str | None = None,
+) -> dict[str, Any]:
     """Load each instrument independently so one provider gap cannot blank the other."""
     return {
-        "schema_version": "market_context_valuation_v2",
+        "schema_version": "market_context_valuation_v3",
         "default_instrument": "sp500",
         "instruments": {
             "sp500": _isolated(build_sp500_valuation_read_model, SP500_INSTRUMENT),
-            "nasdaq100": _isolated(build_nasdaq100_valuation_read_model, {
-                "id": "nasdaq100", "label": "Nasdaq-100", "proxy_symbol": "QQQ",
-                "price_label": "QQQ 가격", "multiple_label": "재구성 후행 PER", "method_label": "QQQ 보유종목 기반",
-            }),
+            "us_stock": _isolated(
+                lambda: build_us_stock_valuation_read_model(
+                    selected_symbol=selected_symbol,
+                    search_query=search_query,
+                ),
+                {
+                    "id": "us_stock",
+                    "label": "미국 개별주식",
+                    "proxy_symbol": None,
+                    "price_label": "선택 종목 주가",
+                    "multiple_label": "후행 PER",
+                    "method_label": "기업 자체 이력 기반",
+                },
+            ),
         },
     }

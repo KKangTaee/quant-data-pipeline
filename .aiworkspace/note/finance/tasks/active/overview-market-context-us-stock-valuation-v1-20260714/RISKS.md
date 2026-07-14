@@ -54,3 +54,10 @@ Last Updated: 2026-07-14
 - Collection rejects ticker/CIK mismatch before price or SEC runners are called.
 - Exact price range, SEC scope, partial-success recheck, narrowed retry, and READY no-op behavior are covered.
 - The 119-month loader window no longer incorrectly turns a valid 60-month main valuation into COLLECTABLE.
+
+## Closed In 4차
+
+- Combined-service regression preserves the S&P payload while isolating selected-stock failures.
+- UI events cannot run the former Nasdaq repair path and cannot collect a ticker different from the current selected ticker.
+- The React branch exposes collection only for COLLECTABLE and keeps explicit relative-value/non-target-price language next to Graph 2.
+- Nasdaq data and collector preservation is covered by the retained backend/facade/automation regression tests.

@@ -13,7 +13,7 @@ from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_market_context_refresh_all,
     run_overview_market_context_refresh_smart,
-    run_overview_nasdaq100_valuation_repair,
+    run_overview_us_stock_valuation_collection,
 )
 from app.web.overview.session_helpers import _market_context_session_payload
 from app.web.overview_dashboard_helpers import (
@@ -35,11 +35,14 @@ from app.web.overview.components.common import (
 
 MARKET_CONTEXT_REFRESH_RESULT_KEY = "overview_market_context_refresh_all_result"
 MARKET_CONTEXT_REFRESH_REFLECTION_KEY = "overview_market_context_refresh_reflection"
-NASDAQ100_REPAIR_RESULT_KEY = "overview_nasdaq100_valuation_repair_result"
-NASDAQ100_REPAIR_EVENT_KEY = "overview_nasdaq100_valuation_repair_last_event"
-NASDAQ100_REPAIR_MONTHS_BY_ACTION = {
-    "repair_nasdaq100_60m": 60,
-    "repair_nasdaq100_history_119m": 119,
+US_STOCK_SEARCH_QUERY_KEY = "overview_us_stock_valuation_search_query"
+US_STOCK_SELECTED_SYMBOL_KEY = "overview_us_stock_valuation_selected_symbol"
+US_STOCK_COLLECTION_RESULT_KEY = "overview_us_stock_valuation_collection_result"
+US_STOCK_EVENT_KEY = "overview_us_stock_valuation_last_event"
+US_STOCK_EVENT_IDS = {
+    "search_us_stock",
+    "select_us_stock",
+    "collect_us_stock_valuation",
 }
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
@@ -48,7 +51,7 @@ GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 def render_market_context_header() -> None:
     """Render the compact Market Context tab heading."""
     st.markdown("### 시장 맥락")
-    st.caption("S&P 500과 Nasdaq-100의 최근 멀티플 위치를 같은 기준으로 전환해 비교합니다.")
+    st.caption("S&P 500 또는 미국 개별주식의 현재 멀티플과 상대가치 시나리오를 확인합니다.")
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -60,13 +63,19 @@ def load_sp500_valuation_model() -> dict[str, Any]:
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def load_market_context_valuation_model() -> dict[str, Any]:
-    """Load the independently isolated S&P 500 and Nasdaq-100 read models."""
+def load_market_context_valuation_model(
+    selected_symbol: str | None = None,
+    search_query: str | None = None,
+) -> dict[str, Any]:
+    """Load independently isolated S&P 500 and selected-stock read models."""
     from app.services.overview.market_context_valuation import (
         build_market_context_valuation_read_model,
     )
 
-    model = build_market_context_valuation_read_model()
+    model = build_market_context_valuation_read_model(
+        selected_symbol=selected_symbol,
+        search_query=search_query,
+    )
     return json.loads(json.dumps(model, default=str))
 
 
@@ -117,30 +126,21 @@ def _consume_market_context_valuation_event(
     state: Any,
 ) -> bool:
     action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
-    if action_id not in NASDAQ100_REPAIR_MONTHS_BY_ACTION:
+    if action_id not in US_STOCK_EVENT_IDS:
         return False
     nonce = payload.get("nonce") or payload.get("token") or action_id
     event_token = f"{action_id}:{nonce}"
-    if state.get(NASDAQ100_REPAIR_EVENT_KEY) == event_token:
+    if state.get(US_STOCK_EVENT_KEY) == event_token:
         return False
-    state[NASDAQ100_REPAIR_EVENT_KEY] = event_token
+    state[US_STOCK_EVENT_KEY] = event_token
     return True
 
 
-def _market_context_valuation_repair_months(
-    payload: dict[str, Any],
-) -> int | None:
-    """Resolve only approved valuation repair actions to bounded month counts."""
-    action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
-    return NASDAQ100_REPAIR_MONTHS_BY_ACTION.get(action_id)
-
-
-def _render_nasdaq100_repair_progress(status: Any, update: dict[str, Any]) -> None:
+def _render_us_stock_collection_progress(status: Any, update: dict[str, Any]) -> None:
     stage_labels = {
-        "diagnose": "대상 확인",
-        "eps": "EPS 보강",
-        "prices": "가격 이력 보강",
-        "materialize": "가치평가 재계산",
+        "preflight": "누락 구간 확인",
+        "prices": "가격 수집",
+        "sec": "SEC 분기 실적 수집",
         "complete": "완료",
     }
     stage = str(update.get("stage") or "")
@@ -148,28 +148,27 @@ def _render_nasdaq100_repair_progress(status: Any, update: dict[str, Any]) -> No
     status.write(f"{stage_labels.get(stage, stage or '진행')} · {message}")
 
 
-def _run_nasdaq100_repair_for_ui(months: int = 60) -> dict[str, Any]:
-    repair_label = "적정구간" if int(months) > 60 else "가치평가"
+def _run_us_stock_collection_for_ui(symbol: str) -> dict[str, Any]:
     with st.status(
-        f"{int(months)}개월 {repair_label} 자료를 보강하는 중입니다.",
+        f"{symbol} 가치평가 자료를 수집하는 중입니다.",
         expanded=True,
     ) as status:
-        result = run_overview_nasdaq100_valuation_repair(
-            months=int(months),
-            progress_callback=lambda update: _render_nasdaq100_repair_progress(
+        result = run_overview_us_stock_valuation_collection(
+            symbol,
+            progress_callback=lambda update: _render_us_stock_collection_progress(
                 status, update
             ),
         )
         result_status = str(result.get("status") or "failed").lower()
         if result_status == "success":
             status.update(
-                label=f"{int(months)}개월 {repair_label} 자료 보강을 마쳤습니다.",
+                label=f"{symbol} 가치평가 자료 수집을 마쳤습니다.",
                 state="complete",
             )
         elif result_status == "partial_success":
-            status.update(label="자료를 보강했지만 일부 기간은 아직 차단됩니다.", state="complete")
+            status.update(label="일부 자료를 수집했지만 누락 구간이 남았습니다.", state="complete")
         else:
-            status.update(label="자료 보강을 완료하지 못했습니다.", state="error")
+            status.update(label="가치평가 자료 수집을 완료하지 못했습니다.", state="error")
     return result
 
 
@@ -177,62 +176,84 @@ def _handle_market_context_valuation_event(
     event: dict[str, Any] | None,
     *,
     state: Any = None,
-    run_action: Callable[[int], dict[str, Any]] | None = None,
+    run_action: Callable[[str], dict[str, Any]] | None = None,
     store_result: Callable[[dict[str, Any]], None] | None = None,
     clear_cache: Callable[[], None] | None = None,
     rerun: Callable[[], None] | None = None,
 ) -> bool:
     resolved_state = state if state is not None else st.session_state
     payload = _market_context_valuation_event_payload(event)
-    months = _market_context_valuation_repair_months(payload)
-    if months is None:
+    action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
+    if action_id not in US_STOCK_EVENT_IDS:
         return False
+    if action_id == "collect_us_stock_valuation":
+        selected = str(resolved_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or "").upper()
+        event_symbol = str(payload.get("symbol") or "").strip().upper()
+        if not selected or event_symbol != selected:
+            return False
     if not _consume_market_context_valuation_event(payload, state=resolved_state):
         return False
-    result = (run_action or _run_nasdaq100_repair_for_ui)(months)
+    if action_id == "search_us_stock":
+        resolved_state[US_STOCK_SEARCH_QUERY_KEY] = str(payload.get("query") or "").strip()
+        resolved_state.pop(US_STOCK_SELECTED_SYMBOL_KEY, None)
+        (rerun or st.rerun)()
+        return True
+    if action_id == "select_us_stock":
+        symbol = str(payload.get("symbol") or "").strip().upper()
+        if not symbol:
+            return False
+        resolved_state[US_STOCK_SELECTED_SYMBOL_KEY] = symbol
+        (rerun or st.rerun)()
+        return True
+
+    symbol = str(resolved_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or "").upper()
+    result = (run_action or _run_us_stock_collection_for_ui)(symbol)
     if store_result is not None:
         store_result(result)
     else:
-        _store_overview_job_result(NASDAQ100_REPAIR_RESULT_KEY, result)
+        _store_overview_job_result(US_STOCK_COLLECTION_RESULT_KEY, result)
     if str(result.get("status") or "").lower() != "failed":
         (clear_cache or load_market_context_valuation_model.clear)()
     (rerun or st.rerun)()
     return True
 
 
-def _nasdaq100_repair_reflection(result: dict[str, Any]) -> dict[str, Any]:
-    details = dict(result.get("details") or {})
+def _us_stock_collection_reflection(result: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": str(result.get("status") or "failed"),
         "message": str(result.get("message") or ""),
-        "before": dict(details.get("before") or {}),
-        "after": dict(details.get("after") or {}),
-        "remaining_target_count": len(details.get("remaining_targets") or []),
-        "unsupported_count": len(details.get("unsupported") or []),
-        "failed_symbol_count": len(result.get("failed_symbols") or []),
-        "requested_months": int(details.get("requested_months") or 60),
+        "rows_written": int(result.get("rows_written") or 0),
     }
 
 
 def render_market_context_valuation() -> None:
-    """Render the React-first valuation surface and consume explicit repair actions."""
+    """Render the React-first valuation surface and consume explicit stock actions."""
     from app.web.overview.market_context_react_component import (
         market_context_valuation_component_available,
         render_market_context_valuation_component,
     )
 
+    selected_symbol = str(
+        st.session_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or ""
+    ).strip().upper()
+    search_query = str(
+        st.session_state.get(US_STOCK_SEARCH_QUERY_KEY) or ""
+    ).strip()
     try:
-        payload = load_market_context_valuation_model()
+        payload = load_market_context_valuation_model(
+            selected_symbol or None,
+            search_query or None,
+        )
     except Exception as exc:  # pragma: no cover - UI resilience only
         st.warning(f"시장 가치평가 자료를 불러오지 못했습니다: {exc}")
         return
     payload = json.loads(json.dumps(payload, default=str))
-    repair_result = st.session_state.pop(NASDAQ100_REPAIR_RESULT_KEY, None)
-    if isinstance(repair_result, dict):
+    collection_result = st.session_state.pop(US_STOCK_COLLECTION_RESULT_KEY, None)
+    if isinstance(collection_result, dict):
         instruments = dict(payload.get("instruments") or {})
-        nasdaq = dict(instruments.get("nasdaq100") or {})
-        nasdaq["repair_result"] = _nasdaq100_repair_reflection(repair_result)
-        instruments["nasdaq100"] = nasdaq
+        stock = dict(instruments.get("us_stock") or {})
+        stock["collection_result"] = _us_stock_collection_reflection(collection_result)
+        instruments["us_stock"] = stock
         payload["instruments"] = instruments
     if market_context_valuation_component_available():
         event = render_market_context_valuation_component(payload)

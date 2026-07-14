@@ -153,53 +153,82 @@ class MarketContextValuationTests(unittest.TestCase):
         )
         self.assertNotIn("repair_action", ready["coverage"])
 
-    def test_combined_model_isolates_one_instrument_failure(self) -> None:
+    def test_combined_model_keeps_sp500_payload_and_isolates_stock_failure(self) -> None:
         from app.services.overview.market_context_valuation import build_market_context_valuation_read_model
 
-        with patch("app.services.overview.market_context_valuation.build_sp500_valuation_read_model", return_value={"status": "READY"}), \
-             patch("app.services.overview.market_context_valuation.build_nasdaq100_valuation_read_model", side_effect=RuntimeError("db unavailable")):
-            model = build_market_context_valuation_read_model()
+        sp500 = {
+            "status": "READY",
+            "instrument": {"id": "sp500", "label": "S&P 500"},
+            "marker": "unchanged",
+        }
+        with patch(
+            "app.services.overview.market_context_valuation.build_sp500_valuation_read_model",
+            return_value=sp500,
+        ), patch(
+            "app.services.overview.market_context_valuation.build_us_stock_valuation_read_model",
+            side_effect=RuntimeError("db unavailable"),
+        ) as stock_builder:
+            model = build_market_context_valuation_read_model(
+                selected_symbol="AAPL",
+                search_query="apple",
+            )
 
-        self.assertEqual(model["instruments"]["sp500"]["status"], "READY")
-        self.assertEqual(model["instruments"]["nasdaq100"]["status"], "ERROR")
+        self.assertEqual(model["schema_version"], "market_context_valuation_v3")
+        self.assertEqual(set(model["instruments"]), {"sp500", "us_stock"})
+        self.assertEqual(model["instruments"]["sp500"], sp500)
+        self.assertEqual(model["instruments"]["us_stock"]["status"], "ERROR")
+        stock_builder.assert_called_once_with(
+            selected_symbol="AAPL",
+            search_query="apple",
+        )
 
-    def test_react_surface_has_instrument_selector_and_coverage_block(self) -> None:
+    def test_react_surface_has_stock_selector_search_and_status_contract(self) -> None:
         component = Path("app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx").read_text()
         helper = Path("app/web/overview/market_context_helpers.py").read_text()
 
-        for token in ("instrument-selector", "Nasdaq-100", "coverage-block", "minimum_required_pct"):
+        for token in (
+            "instrument-selector",
+            "미국 개별주식",
+            "stock-search",
+            "search_us_stock",
+            "select_us_stock",
+            "COLLECTABLE",
+            "NOT_APPLICABLE",
+        ):
             self.assertIn(token, component)
+        self.assertNotIn("Nasdaq-100", component)
+        self.assertNotIn("QQQ", component)
         self.assertIn("build_market_context_valuation_read_model", helper)
 
-    def test_react_coverage_block_emits_repair_action_with_pending_and_retry_copy(self) -> None:
+    def test_react_stock_collection_is_explicit_and_relative_value_copy_is_clear(self) -> None:
         component = Path(
             "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
         ).read_text()
 
         for token in (
-            "action.id",
+            "collect_us_stock_valuation",
             "Streamlit.setComponentValue",
-            "60개월 가치평가 자료 보강",
-            "남은 자료 다시 보강",
-            "pendingRepair",
+            "가치평가 자료 수집",
+            "수집하는 중",
+            "상대가치 시나리오",
+            "공식 적정가·목표주가·매매 신호가 아닙니다",
         ):
             self.assertIn(token, component)
 
-    def test_react_history_shortfall_is_actionable_and_instrument_aware(self) -> None:
+    def test_react_stock_scenario_shows_macro_company_growth_and_history_periods(self) -> None:
         component = Path(
             "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
         ).read_text()
-        helper = Path("app/web/overview/market_context_helpers.py").read_text()
 
         for token in (
-            "적정구간 계산 이력이 부족합니다",
-            "required_history_months",
-            "available_history_months",
-            "EPS 출처 미확정",
-            "instrument.proxy_symbol",
+            "FOMC 거시 기준",
+            "기업 초과성장",
+            "예상 EPS",
+            'key: "1y"',
+            'key: "3y"',
+            'key: "5y"',
         ):
             self.assertIn(token, component)
-        self.assertIn('"repair_nasdaq100_history_119m": 119', helper)
 
     def test_overview_repair_facade_preserves_result_and_changes_job_name(self) -> None:
         from app.jobs.overview_actions import run_overview_nasdaq100_valuation_repair
@@ -235,22 +264,60 @@ class MarketContextValuationTests(unittest.TestCase):
         runner.assert_called_once_with(months=119, progress_callback=None)
         self.assertEqual(result["details"]["requested_months"], 119)
 
-    def test_market_context_repair_event_runs_once_then_clears_cache_and_reruns(self) -> None:
+    def test_market_context_search_and_selection_are_read_only_state_events(self) -> None:
         from app.web.overview import market_context_helpers
 
         state: dict[str, object] = {}
+        run_action = Mock()
+        rerun = Mock()
+
+        searched = market_context_helpers._handle_market_context_valuation_event(
+            {"event": {"id": "search_us_stock", "query": "apple", "nonce": 123}},
+            state=state,
+            run_action=run_action,
+            rerun=rerun,
+        )
+        selected = market_context_helpers._handle_market_context_valuation_event(
+            {"event": {"id": "select_us_stock", "symbol": "aapl", "nonce": 124}},
+            state=state,
+            run_action=run_action,
+            rerun=rerun,
+        )
+
+        self.assertTrue(searched)
+        self.assertTrue(selected)
+        self.assertEqual(
+            state[market_context_helpers.US_STOCK_SEARCH_QUERY_KEY], "apple"
+        )
+        self.assertEqual(
+            state[market_context_helpers.US_STOCK_SELECTED_SYMBOL_KEY], "AAPL"
+        )
+        run_action.assert_not_called()
+        self.assertEqual(rerun.call_count, 2)
+
+    def test_market_context_collection_validates_selection_and_runs_once(self) -> None:
+        from app.web.overview import market_context_helpers
+
+        state: dict[str, object] = {
+            market_context_helpers.US_STOCK_SELECTED_SYMBOL_KEY: "AAPL"
+        }
         run_action = Mock(
             return_value={
-                "job_name": "overview_nasdaq100_valuation_repair",
-                "status": "partial_success",
-                "message": "48/60 ready",
-                "details": {"after": {"ready_months": 48}},
+                "job_name": "overview_us_stock_valuation_collection",
+                "status": "success",
+                "rows_written": 168,
             }
         )
         store_result = Mock()
         clear_cache = Mock()
         rerun = Mock()
-        event = {"event": {"id": "repair_nasdaq100_60m", "nonce": 123}}
+        event = {
+            "event": {
+                "id": "collect_us_stock_valuation",
+                "symbol": "AAPL",
+                "nonce": 456,
+            }
+        }
 
         first = market_context_helpers._handle_market_context_valuation_event(
             event,
@@ -268,35 +335,40 @@ class MarketContextValuationTests(unittest.TestCase):
             clear_cache=clear_cache,
             rerun=rerun,
         )
+        rejected = market_context_helpers._handle_market_context_valuation_event(
+            {
+                "event": {
+                    "id": "collect_us_stock_valuation",
+                    "symbol": "MSFT",
+                    "nonce": 457,
+                }
+            },
+            state=state,
+            run_action=run_action,
+            store_result=store_result,
+            clear_cache=clear_cache,
+            rerun=rerun,
+        )
 
         self.assertTrue(first)
         self.assertFalse(second)
-        run_action.assert_called_once_with(60)
+        self.assertFalse(rejected)
+        run_action.assert_called_once_with("AAPL")
         store_result.assert_called_once_with(run_action.return_value)
         clear_cache.assert_called_once_with()
         rerun.assert_called_once_with()
 
-    def test_history_repair_event_runs_119_month_action_once(self) -> None:
+    def test_old_nasdaq_repair_events_are_no_longer_user_actions(self) -> None:
         from app.web.overview import market_context_helpers
 
-        run_action = Mock(
-            return_value={
-                "job_name": "overview_nasdaq100_valuation_repair",
-                "status": "success",
-                "details": {"requested_months": 119},
-            }
-        )
         handled = market_context_helpers._handle_market_context_valuation_event(
-            {"event": {"id": "repair_nasdaq100_history_119m", "nonce": 456}},
+            {"event": {"id": "repair_nasdaq100_60m", "nonce": 999}},
             state={},
-            run_action=run_action,
-            store_result=Mock(),
-            clear_cache=Mock(),
+            run_action=Mock(),
             rerun=Mock(),
         )
 
-        self.assertTrue(handled)
-        run_action.assert_called_once_with(119)
+        self.assertFalse(handled)
 
     def test_nasdaq_collection_job_reports_holdings_and_monthly_steps(self) -> None:
         from app.jobs.ingestion_jobs import run_collect_nasdaq100_valuation_context

@@ -59,6 +59,16 @@ Last Updated: 2026-07-14
 - The synchronous runner validates ticker/CIK before any provider call, preserves partial-success writes, and converts inclusive UI price end to the collector's exclusive end.
 - Overview retries re-run preflight and execute only remaining scopes; an already READY plan is an idempotent no-op.
 
+## 4차 Implementation Decisions
+
+- The combined contract is now `market_context_valuation_v3` with exactly `sp500` and `us_stock`; each builder remains isolated so selected-stock failure cannot alter the S&P payload.
+- Search and selection events only update Streamlit session state and re-read cached DB-backed models; only `collect_us_stock_valuation` can cross into the synchronous ingestion action.
+- Collection validates that the event ticker matches the current selected ticker and consumes each nonce once before calling the job boundary.
+- The React surface always exposes the exact `S&P 500 | 미국 개별주식` selector and keeps search above the selected-stock state/result.
+- `COLLECTABLE` is the only state with a collection action; NOT_SELECTED, NOT_APPLICABLE, and ERROR render explanations without provider actions.
+- S&P keeps its existing read model, provisional P/E presentation, macro inputs, and 1/3/5-year history route while the stock branch uses filing-aware terminology and relative-value disclaimers.
+- The old Nasdaq model, repair facade, ingestion job, automation spec, tables, and tests remain in the repository; only the user-facing combined/UI connection was removed.
+
 ## Product Language
 
 - Prefer: `상대적 고평가/저평가`, `상대가치 시나리오`, `자체 재구성`

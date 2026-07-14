@@ -51,3 +51,11 @@ Last Updated: 2026-07-14
 - RED/GREEN ingestion tests covered exact synchronous price/SEC calls, progress order, and pre-provider CIK mismatch rejection.
 - Overview action tests covered partial-success after-state, narrowed statement-only resume, and READY no-op idempotency.
 - Main readiness regression proves 60 complete months can be READY even when the optional 119-month history window remains incomplete.
+
+## 4차 Market Context UI Replacement
+
+- RED/GREEN combined-model tests prove the exact `sp500/us_stock` key set, selected/search argument forwarding, stock failure isolation, and unchanged S&P payload.
+- RED/GREEN event tests prove read-only search/selection, selected-symbol validation, once-only collection nonce handling, and rejection of former Nasdaq repair action IDs.
+- Static UI contract tests prove the new selector, stock search/selection actions, readiness states, explicit collection action, macro/company-growth evidence, 1/3/5-year history, and target-price disclaimer.
+- Source scan found no `Nasdaq-100`, `QQQ`, or `repair_nasdaq` token in the new React/Streamlit/combined user path.
+- Fresh React production build passed; focused U.S. stock, S&P, Nasdaq-backend, and combined regression passed `113 tests`.
