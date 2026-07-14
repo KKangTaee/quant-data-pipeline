@@ -139,6 +139,7 @@ def _consume_market_context_valuation_event(
 def _render_us_stock_collection_progress(status: Any, update: dict[str, Any]) -> None:
     stage_labels = {
         "preflight": "누락 구간 확인",
+        "identity": "SEC CIK 연결",
         "prices": "가격 수집",
         "sec": "SEC 분기 실적 수집",
         "complete": "완료",

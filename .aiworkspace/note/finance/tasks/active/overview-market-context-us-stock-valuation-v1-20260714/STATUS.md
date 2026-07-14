@@ -17,12 +17,12 @@ Last Updated: 2026-07-14
 
 ## Current Stage
 
-1차~4차 complete; 5차 actual DB evidence, full regression, Browser QA, and durable documentation alignment are next.
+1차~4차 complete; 5차 actual DB evidence and QA-discovered identity/ADR hardening are complete. Full regression, Browser QA, and durable documentation alignment remain.
 
 ## Next Action
 
-1. Run AAPL, NVDA, META, and TSLA actual DB read-model validation and record edge-case evidence.
-2. Run full Python regression, fresh React build, and desktop/420px Browser QA with console/overflow checks.
+1. Run full Python regression and a fresh React production build.
+2. Run desktop/420px Browser QA with console and horizontal-overflow checks and retain one generated screenshot outside the commit.
 3. Align durable docs and root handoff logs, self-review the integrated diff, and create the final coherent commit.
 
 ## Roadmap Position
@@ -32,4 +32,4 @@ Last Updated: 2026-07-14
 - 2차: complete
 - 3차: complete
 - 4차: complete
-- 5차: not started
+- 5차: in progress — actual DB/edge audit complete; final verification, Browser QA, and docs remain

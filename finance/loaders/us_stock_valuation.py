@@ -24,6 +24,25 @@ SUPPORTED_EXCHANGES = {
     "NYSE",
     "NYSE AMERICAN",
     "NYSEAMERICAN",
+    "NMS",
+    "NGM",
+    "NCM",
+    "NYQ",
+    "ASE",
+}
+EXCHANGE_LABELS = {
+    "NMS": "Nasdaq",
+    "NGM": "Nasdaq",
+    "NCM": "Nasdaq",
+    "NASDAQ": "Nasdaq",
+    "NASDAQGS": "Nasdaq",
+    "NASDAQGM": "Nasdaq",
+    "NASDAQCM": "Nasdaq",
+    "NYQ": "NYSE",
+    "NYSE": "NYSE",
+    "ASE": "NYSE American",
+    "NYSE AMERICAN": "NYSE American",
+    "NYSEAMERICAN": "NYSE American",
 }
 
 
@@ -50,6 +69,30 @@ def _cik_text(value: Any) -> str | None:
     except (TypeError, ValueError):
         return None
     return f"{number:010d}" if number > 0 else None
+
+
+def _exchange_label(value: Any) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    return EXCHANGE_LABELS.get(text.upper(), text)
+
+
+def _adr_unit_status(row: dict[str, Any], name: str) -> str:
+    """Require explicit share-unit evidence before treating foreign issuers as common stock."""
+    country = str(row.get("country") or "").strip().lower()
+    foreign_issuer = bool(country) and country not in {
+        "united states",
+        "united states of america",
+        "usa",
+        "us",
+    }
+    name_lower = name.lower()
+    return (
+        "unverified"
+        if foreign_issuer or "adr" in name_lower or "depositary" in name_lower
+        else "not_adr"
+    )
 
 
 def _is_supported_common_stock_row(row: dict[str, Any]) -> bool:
@@ -84,19 +127,38 @@ def search_us_common_stocks(
     rows = _query(
         "finance_meta",
         f"""
-        SELECT l.symbol, l.name, l.related_cik, l.kind, l.listing_status,
-               l.evidence_json,
-               JSON_UNQUOTE(JSON_EXTRACT(l.evidence_json, '$.exchange')) AS exchange,
-               p.quote_type
+        SELECT l.symbol,
+               COALESCE(NULLIF(p.long_name, ''), NULLIF(l.name, ''), l.symbol) AS name,
+               sec.related_cik,
+               l.kind, l.listing_status, l.source, l.evidence_json,
+               COALESCE(
+                 NULLIF(p.exchange, ''),
+                 JSON_UNQUOTE(JSON_EXTRACT(l.evidence_json, '$.exchange'))
+               ) AS exchange,
+               p.quote_type, p.status AS profile_status, p.country
         FROM nyse_symbol_lifecycle l
         LEFT JOIN nyse_asset_profile p
           ON p.symbol = l.symbol AND p.kind = 'stock'
+        LEFT JOIN (
+          SELECT symbol, MAX(related_cik) AS related_cik
+          FROM nyse_symbol_lifecycle
+          WHERE kind = 'stock'
+            AND listing_status = 'active'
+            AND source = 'sec_company_tickers_exchange'
+            AND related_cik IS NOT NULL
+          GROUP BY symbol
+        ) sec ON sec.symbol = l.symbol
         WHERE l.kind = 'stock'
           AND l.listing_status = 'active'
-          AND l.source = 'sec_company_tickers_exchange'
-          AND l.related_cik IS NOT NULL
-          AND (UPPER(l.symbol) LIKE %s OR UPPER(l.name) LIKE %s)
-        ORDER BY l.symbol ASC
+          AND COALESCE(p.status, 'active') = 'active'
+          AND (
+            UPPER(l.symbol) LIKE %s
+            OR UPPER(COALESCE(NULLIF(p.long_name, ''), l.name, '')) LIKE %s
+          )
+        ORDER BY (sec.related_cik IS NOT NULL) DESC,
+                 COALESCE(p.market_cap, 0) DESC,
+                 l.symbol ASC,
+                 COALESCE(l.event_date, DATE(l.collected_at)) DESC
         LIMIT {resolved_limit * 5}
         """,
         (f"{normalized}%", f"%{normalized}%"),
@@ -117,22 +179,21 @@ def search_us_common_stocks(
         if not _is_supported_common_stock_row(row):
             continue
         symbol = str(row.get("symbol") or "").strip().upper()
+        if any(candidate["symbol"] == symbol for candidate in candidates):
+            continue
         name = str(row.get("name") or "").strip()
         cik = _cik_text(row.get("related_cik"))
-        if not symbol or not name or cik is None:
+        if not symbol or not name:
             continue
         candidates.append(
             {
                 "symbol": symbol,
                 "name": name,
-                "exchange": str(row.get("exchange") or "").strip() or None,
+                "exchange": _exchange_label(row.get("exchange")),
                 "cik": cik,
+                "cik_link_status": "linked" if cik else "missing",
                 "instrument_type": "common_stock",
-                "adr_unit_status": (
-                    "unverified"
-                    if "adr" in name.lower() or "depositary" in name.lower()
-                    else "not_adr"
-                ),
+                "adr_unit_status": _adr_unit_status(row, name),
             }
         )
 
@@ -164,16 +225,35 @@ def load_us_stock_identity(
     rows = _query(
         "finance_meta",
         """
-        SELECT symbol, name, related_cik, first_seen_date, last_seen_date,
-               evidence_json,
-               JSON_UNQUOTE(JSON_EXTRACT(evidence_json, '$.exchange')) AS exchange
-        FROM nyse_symbol_lifecycle
-        WHERE symbol = %s
-          AND kind = 'stock'
-          AND listing_status = 'active'
-          AND source = 'sec_company_tickers_exchange'
-          AND related_cik IS NOT NULL
-        ORDER BY collected_at DESC, updated_at DESC
+        SELECT l.symbol,
+               COALESCE(NULLIF(p.long_name, ''), NULLIF(l.name, ''), l.symbol) AS name,
+               sec.related_cik,
+               l.first_seen_date, l.last_seen_date, l.source,
+               l.evidence_json,
+               COALESCE(
+                 NULLIF(p.exchange, ''),
+                 JSON_UNQUOTE(JSON_EXTRACT(l.evidence_json, '$.exchange'))
+               ) AS exchange,
+               p.quote_type, p.status AS profile_status, p.country
+        FROM nyse_symbol_lifecycle l
+        LEFT JOIN nyse_asset_profile p
+          ON p.symbol = l.symbol AND p.kind = 'stock'
+        LEFT JOIN (
+          SELECT symbol, MAX(related_cik) AS related_cik
+          FROM nyse_symbol_lifecycle
+          WHERE kind = 'stock'
+            AND listing_status = 'active'
+            AND source = 'sec_company_tickers_exchange'
+            AND related_cik IS NOT NULL
+          GROUP BY symbol
+        ) sec ON sec.symbol = l.symbol
+        WHERE l.symbol = %s
+          AND l.kind = 'stock'
+          AND l.listing_status = 'active'
+          AND COALESCE(p.status, 'active') = 'active'
+        ORDER BY (sec.related_cik IS NOT NULL) DESC,
+                 COALESCE(l.event_date, DATE(l.collected_at)) DESC,
+                 l.collected_at DESC, l.updated_at DESC
         LIMIT 1
         """,
         (normalized,),
@@ -182,6 +262,10 @@ def load_us_stock_identity(
     if not rows:
         return None
     row = dict(rows[0])
+    row.setdefault("kind", "stock")
+    row.setdefault("listing_status", "active")
+    if not _is_supported_common_stock_row(row):
+        return None
     evidence = row.get("evidence_json")
     if isinstance(evidence, str):
         try:
@@ -190,18 +274,21 @@ def load_us_stock_identity(
             evidence = {}
     if not isinstance(evidence, dict):
         evidence = {}
-    exchange = str(row.get("exchange") or evidence.get("exchange") or "").strip() or None
+    exchange = _exchange_label(row.get("exchange") or evidence.get("exchange"))
     name = str(row.get("name") or "").strip() or normalized
+    cik = _cik_text(row.get("related_cik"))
     return {
         "symbol": normalized,
         "name": name,
         "exchange": exchange,
-        "cik": _cik_text(row.get("related_cik")),
+        "cik": cik,
+        "cik_link_status": "linked" if cik else "missing",
         "instrument_type": "common_stock",
-        "adr_unit_status": "unverified" if "adr" in name.lower() else "not_adr",
+        "adr_unit_status": _adr_unit_status(row, name),
+        "country": str(row.get("country") or "").strip() or None,
         "first_seen_date": row.get("first_seen_date"),
         "last_seen_date": row.get("last_seen_date"),
-        "identity_source": "sec_company_tickers_exchange",
+        "identity_source": str(row.get("source") or "current_listing_snapshot"),
     }
 
 
@@ -230,9 +317,12 @@ def _coverage(
         if not available.empty:
             latest_statement_available_at = available.max().strftime("%Y-%m-%d")
     first_seen = pd.to_datetime((identity or {}).get("first_seen_date"), errors="coerce")
+    first_price = pd.to_datetime(first_price_date, errors="coerce")
+    listing_starts = [value for value in (first_seen, first_price) if not pd.isna(value)]
+    listing_start = min(listing_starts) if listing_starts else pd.NaT
     listing_months = (
-        int((as_of.to_period("M") - pd.Timestamp(first_seen).to_period("M")).n) + 1
-        if not pd.isna(first_seen)
+        int((as_of.to_period("M") - pd.Timestamp(listing_start).to_period("M")).n) + 1
+        if not pd.isna(listing_start)
         else None
     )
     return {
@@ -439,6 +529,8 @@ def build_us_stock_valuation_collection_plan(
         }
     if not scopes:
         return {**base, "status": "READY", "reason_code": None, "reason": None}
+    if not _cik_text(identity.get("cik")):
+        scopes.insert(0, "sec_identity")
     return {
         **base,
         "status": "COLLECTABLE",

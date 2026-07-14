@@ -591,6 +591,8 @@ def classify_us_stock_readiness(
     if coverage.get("statement_missing"):
         missing_scopes.append("sec_statements")
     if missing_scopes:
+        if not str(identity.get("cik") or "").strip():
+            missing_scopes.insert(0, "sec_identity")
         return {
             "status": "COLLECTABLE",
             "reason_code": "RAW_DATA_GAP",

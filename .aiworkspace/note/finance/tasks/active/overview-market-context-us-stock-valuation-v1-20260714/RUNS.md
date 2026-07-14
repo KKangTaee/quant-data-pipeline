@@ -59,3 +59,13 @@ Last Updated: 2026-07-14
 - Static UI contract tests prove the new selector, stock search/selection actions, readiness states, explicit collection action, macro/company-growth evidence, 1/3/5-year history, and target-price disclaimer.
 - Source scan found no `Nasdaq-100`, `QQQ`, or `repair_nasdaq` token in the new React/Streamlit/combined user path.
 - Fresh React production build passed; focused U.S. stock, S&P, Nasdaq-backend, and combined regression passed `113 tests`.
+
+## 5차 Actual DB And Edge Audit
+
+- Initial actual read reproduced AAPL/NVDA/META/TSLA as ERROR because the local DB had active listing/profile rows but no current SEC lifecycle rows. Regression-driven fallback restored all four to READY without remote calls.
+- Actual READY evidence: all four had 60 positive P/E months; AAPL/NVDA/META/TSLA calculations each completed in about 2.5 seconds uncached. AAPL/NVDA/META/TSLA current P/E values were approximately 38.26/40.19/21.07/503.62 on stored evidence.
+- Actual history evidence: all four had READY 1-year scenario history; META also had READY 3-year history, while missing 3/5-year warmup remained explicit rather than synthesized.
+- Actual edge evidence: LCID returned NON_POSITIVE_EPS; RDDT returned 29-month and RIVN 57-month STRUCTURALLY_SHORT_LISTING; none exposed collection.
+- Actual split evidence: NVDA stored 10:1 on 2024-06-10 and 4:1 on 2021-07-20, covered by the split-neutral calculation regression.
+- Actual SEC-missing evidence: Visa returned COLLECTABLE with `sec_identity + sec_statements`; TSM initially exposed an ADR gap, then returned ADR_UNIT_UNVERIFIED after country-based share-unit hardening.
+- Fresh focused individual-stock suite passed `35 tests` after identity, CIK-first collection, listing-duration, and foreign-issuer regressions.

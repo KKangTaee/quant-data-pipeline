@@ -69,6 +69,14 @@ Last Updated: 2026-07-14
 - S&P keeps its existing read model, provisional P/E presentation, macro inputs, and 1/3/5-year history route while the stock branch uses filing-aware terminology and relative-value disclaimers.
 - The old Nasdaq model, repair facade, ingestion job, automation spec, tables, and tests remain in the repository; only the user-facing combined/UI connection was removed.
 
+## 5차 Actual-DB Hardening Decisions
+
+- Current listing identity can come from any active stored lifecycle snapshot plus active equity profile; a missing `sec_company_tickers_exchange` snapshot must not block read-only valuation of already stored price/EPS evidence.
+- CIK is optional for DB-only search/read but mandatory before external collection. When raw gaps and CIK are both missing, the explicit collection action first runs the existing selected-symbol SEC ticker/CIK crosscheck, re-plans, then runs only remaining price/statement scopes.
+- Listing duration uses the earliest stored price date and lifecycle first-seen date, preventing a recently refreshed listing snapshot from misclassifying a long-listed company as a new IPO.
+- Profile exchanges `NMS/NGM/NCM/NYQ/ASE` are normalized to user-facing Nasdaq/NYSE/NYSE American labels.
+- A non-U.S. issuer profile without explicit per-share/ADR-ratio evidence is conservatively `ADR_UNIT_UNVERIFIED` and cannot expose a collection action.
+
 ## Product Language
 
 - Prefer: `상대적 고평가/저평가`, `상대가치 시나리오`, `자체 재구성`

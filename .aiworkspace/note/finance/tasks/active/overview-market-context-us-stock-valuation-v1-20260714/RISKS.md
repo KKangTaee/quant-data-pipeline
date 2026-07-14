@@ -61,3 +61,10 @@ Last Updated: 2026-07-14
 - UI events cannot run the former Nasdaq repair path and cannot collect a ticker different from the current selected ticker.
 - The React branch exposes collection only for COLLECTABLE and keeps explicit relative-value/non-target-price language next to Graph 2.
 - Nasdaq data and collector preservation is covered by the retained backend/facade/automation regression tests.
+
+## Closed In 5차 Actual Audit
+
+- A missing current SEC lifecycle snapshot no longer blanks read-only valuation when current listing/profile plus stored raw evidence exist.
+- External selected-symbol collection still requires an exact CIK link; the same explicit action obtains selected-symbol SEC identity first and re-plans before provider calls.
+- Recent lifecycle refresh dates no longer create false short-listing classifications because stored price history participates in the listing-duration boundary.
+- Non-U.S. issuer profiles without verified share-unit evidence are NOT_APPLICABLE instead of COLLECTABLE.

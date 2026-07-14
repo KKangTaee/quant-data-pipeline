@@ -32,6 +32,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_market_intraday_snapshot,
     run_repair_nasdaq100_valuation_coverage,
     run_collect_ohlcv,
+    run_collect_sec_company_ticker_crosscheck,
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
     run_collect_us_stock_valuation_inputs,
@@ -241,6 +242,7 @@ def run_overview_us_stock_valuation_collection(
     *,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
     plan_builder: Callable[..., dict[str, Any]] = build_us_stock_valuation_collection_plan,
+    identity_runner: Callable[..., JobResult] = run_collect_sec_company_ticker_crosscheck,
     collection_runner: Callable[..., JobResult] = run_collect_us_stock_valuation_inputs,
 ) -> JobResult:
     """Preflight, synchronously collect, and recheck one selected stock."""
@@ -277,9 +279,63 @@ def run_overview_us_stock_valuation_collection(
             "details": {"before": before, "after": before},
         }
 
-    identity = dict(before.get("identity") or {})
-    scopes = set(before.get("scopes") or [])
-    ranges = dict(before.get("missing_ranges") or {})
+    active_plan = before
+    identity_result: dict[str, Any] | None = None
+    if "sec_identity" in set(before.get("scopes") or []):
+        if progress_callback is not None:
+            progress_callback(
+                {"event": "stage", "stage": "identity", "symbol": normalized}
+            )
+        identity_result = dict(
+            identity_runner([normalized], progress_callback=None)
+        )
+        active_plan = dict(plan_builder(normalized))
+        active_identity = dict(active_plan.get("identity") or {})
+        if not str(active_identity.get("cik") or "").strip():
+            return {
+                **identity_result,
+                "job_name": "overview_us_stock_valuation_collection",
+                "status": "failed",
+                "failed_symbols": [normalized],
+                "message": f"{normalized} SEC CIK identity could not be linked.",
+                "details": {
+                    "identity_step": identity_result,
+                    "before": before,
+                    "after": active_plan,
+                },
+            }
+        if active_plan.get("status") == "READY":
+            return {
+                **identity_result,
+                "job_name": "overview_us_stock_valuation_collection",
+                "status": "success",
+                "message": f"{normalized} valuation inputs are ready.",
+                "details": {
+                    "identity_step": identity_result,
+                    "before": before,
+                    "after": active_plan,
+                },
+            }
+        if active_plan.get("status") != "COLLECTABLE":
+            return {
+                **identity_result,
+                "job_name": "overview_us_stock_valuation_collection",
+                "status": "failed",
+                "failed_symbols": [normalized],
+                "message": str(
+                    active_plan.get("reason")
+                    or f"{normalized} is not collectable after SEC identity refresh."
+                ),
+                "details": {
+                    "identity_step": identity_result,
+                    "before": before,
+                    "after": active_plan,
+                },
+            }
+
+    identity = dict(active_plan.get("identity") or {})
+    scopes = set(active_plan.get("scopes") or [])
+    ranges = dict(active_plan.get("missing_ranges") or {})
     price_range = dict(ranges.get("prices") or {})
     collected = dict(
         collection_runner(
@@ -308,10 +364,14 @@ def run_overview_us_stock_valuation_collection(
             "after": after,
         }
     )
+    if identity_result is not None:
+        details["identity_step"] = identity_result
     return {
         **collected,
         "job_name": "overview_us_stock_valuation_collection",
         "status": status,
+        "rows_written": int(collected.get("rows_written") or 0)
+        + int((identity_result or {}).get("rows_written") or 0),
         "message": (
             f"{normalized} valuation inputs are ready."
             if status == "success"
