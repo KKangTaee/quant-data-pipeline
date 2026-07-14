@@ -1,6 +1,6 @@
 # Overview Market Context US Stock Valuation V1 Status
 
-Last Updated: 2026-07-14
+Last Updated: 2026-07-15
 
 ## Current State
 
@@ -19,13 +19,13 @@ Last Updated: 2026-07-14
 
 ## Current Stage
 
-1차~5차 complete.
+Original 1차~5차 complete; 2026-07-15 correctness follow-up 1/3차 in progress.
 
 ## Next Action
 
-- Required implementation work is complete.
-- Optional follow-up is improving older PIT filing/SEP coverage so more symbols can render complete 3/5-year history without relaxing or synthesizing evidence.
-- Repository-wide unrelated contract failures are recorded in `RUNS.md` and remain outside this task.
+1. Add AMD-like comparative-Q and NVDA-like split-year FY→Q4 RED fixtures.
+2. Correct shared period identity and month-end share-basis normalization.
+3. Separate Graph 1 screen readiness from Graph 2 growth evidence, then run actual/Browser regression.
 
 ## Roadmap Position
 
@@ -35,3 +35,6 @@ Last Updated: 2026-07-14
 - 3차: complete
 - 4차: complete
 - 5차: complete — actual/edge audit, Browser QA, verification, docs, and commit closeout complete
+- Correctness follow-up 1차: in progress — resolver and split-year TDD
+- Correctness follow-up 2차: pending — section readiness isolation
+- Correctness follow-up 3차: pending — actual/Browser QA, docs, commit

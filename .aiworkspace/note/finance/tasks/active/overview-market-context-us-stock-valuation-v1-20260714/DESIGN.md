@@ -383,3 +383,27 @@ Completion: evidence-backed READY/non-READY behavior, screenshot outside repo, u
 - background queue/daemon
 - all-U.S.-stocks precomputation
 - existing Nasdaq raw data/schema destructive cleanup
+
+## 2026-07-15 Comparative-Quarter Correctness Repair Addendum
+
+### 이걸 하는 이유?
+
+AMD actual DB 진단에서 raw 가격·SEC EPS·SEP evidence는 충분했지만 후속 10-Q의 전년도 comparative quarter가 원 공시 quarter를 대체했다. Provider `fiscal_year`는 filing context일 수 있는데 resolver가 이를 actual fiscal-period identity로 사용하면서 FY-derived Q4가 후속 filing마다 바뀌었다. 그 결과 AMD의 최근 3년 growth observation이 7개로 축소되고, Graph 1이 READY인데도 전체 화면이 NOT_APPLICABLE로 차단됐다.
+
+### Approved Repair Contract
+
+- DB schema와 raw statement rows는 변경하거나 재수집하지 않는다.
+- Direct Q/FY fact는 `report_date == period_end`를 primary proof로 사용한다. `report_date`가 없는 legacy row만 `available_at - period_end` 0~180일 fallback을 허용한다.
+- Later filing의 comparative Q/FY fact는 원 공시 period identity를 덮어쓰거나 다른 fiscal year의 Q1/Q2/Q3로 참여하지 않는다.
+- Split이 fiscal year 중간에 있으면 Q1/Q2/Q3와 FY fact를 해당 valuation month-end의 동일 share basis로 먼저 정규화한 뒤 Q4를 `FY - Q1 - Q2 - Q3`로 계산한다.
+- Future split과 future filing은 해당 month-end 이전 값에 소급하지 않는다.
+- 10-Q/A·10-K/A처럼 실제 amendment/restatement가 같은 primary period를 갱신하면 그 `available_at` 이후에만 반영한다.
+- Main screen readiness는 Graph 1의 valid P/E readiness를 소유한다. Growth observation이 8개 미만이면 Graph 2만 BLOCKED하며 Graph 1을 숨기거나 `PER 방식으로 평가 불가`로 표현하지 않는다.
+- `NOT_APPLICABLE`은 current non-positive TTM EPS, structurally short listing, unsupported instrument, unverified ADR unit처럼 실제 P/E 적용 불가 사유에만 사용한다.
+
+### No-Distortion Invariants
+
+- AMD-like later comparative Q fixture에서 true FY-derived Q4는 later filing 때문에 변하지 않는다.
+- NVDA-like in-year split fixture에서 FY와 Q1/Q2/Q3가 common share basis로 정규화된 뒤 Q4와 TTM이 정확히 FY total과 일치한다.
+- AAPL/NVDA 비달력 fiscal year, standard-calendar AMD/MSFT/META/TSLA, negative TTM, amendment available-at를 실제/fixture 회귀로 확인한다.
+- 기존 S&P read model과 retained Nasdaq backend contract는 회귀시키지 않는다.

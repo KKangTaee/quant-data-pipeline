@@ -275,3 +275,188 @@ Last Updated: 2026-07-14
 - Placeholder scan: 실행을 미루는 TBD/TODO가 없다. 환경 의존 full regression/actual DB는 실패 시에도 exact evidence를 기록하도록 정의했다.
 - Type consistency: `selected_symbol`, `identity`, `monthly_rows`, `multiple_regime`, `earnings_scenario`, `index_scenario`, `collection_action`이 loader→service→combined payload→React에서 동일한 이름으로 연결된다.
 - Scope check: 새 materialization table, Nasdaq raw cleanup, analyst consensus, DCF/P/FFO는 포함하지 않는다.
+
+## 2026-07-15 Correctness Follow-up TDD Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` inline in the current `codex/sub-dev` worktree. Do not create a new worktree or dispatch subagents.
+
+**Goal:** comparative quarter fiscal-context drift와 split-year FY→Q4 단위 혼합을 수정하고, Graph 2 evidence 부족이 READY Graph 1을 숨기지 않게 한다.
+
+**Architecture:** shared SEC resolver는 primary filing-period fact만 discrete quarter identity로 사용한다. Individual-stock monthly calculator는 각 month-end까지 공개된 statement fact를 그 month-end share basis로 정규화한 뒤 resolver를 호출한다. Top-level readiness는 P/E 화면 가능 여부를 소유하고 company-growth evidence는 Graph 2 section status로 분리한다.
+
+**Tech Stack:** Python 3.12, pandas, unittest, React/TypeScript static contract, Streamlit Browser QA.
+
+### Global Constraints
+
+- `available_at` 이후에만 filing/restatement를 사용한다.
+- split date 이전 month에 future split을 소급하지 않는다.
+- missing/negative EPS를 합성하거나 positive P/E로 바꾸지 않는다.
+- DB schema, raw rows, collector, S&P, retained Nasdaq backend를 보존한다.
+- unrelated research folder와 generated QA artifact를 stage하지 않는다.
+
+### Task 11: Comparative Q fiscal-period identity
+
+**Files:**
+- Modify: `tests/test_nasdaq100_valuation.py`
+- Modify: `finance/data/nasdaq100_valuation.py`
+
+**Interfaces:**
+- Consumes: SEC duration EPS rows with `period_end`, `report_date`, `available_at`, `fiscal_year`, `fiscal_quarter`.
+- Produces: `derive_filing_aware_ttm_eps(...)->quarters[]` where later comparative Q/FY facts cannot replace the primary reported period.
+
+- [ ] Add an AMD-like failing regression containing a true FY2023 fact, reported Q1/Q2/Q3, an older comparative Q1 carrying fiscal-year context, and a later Q1 comparative row. Assert the FY2023 Q4 remains `0.42` before and after the later filing.
+
+```python
+before = derive_filing_aware_ttm_eps(rows, as_of_date="2024-01-31")
+after = derive_filing_aware_ttm_eps(rows, as_of_date="2024-05-31")
+self.assertAlmostEqual(before["AMD"]["quarters"][-1]["eps"], 0.42)
+self.assertAlmostEqual(after["AMD"]["quarters"][-1]["eps"], 0.42)
+```
+
+- [ ] Run the exact test and confirm RED because current Q4 changes to `-0.23`.
+
+```bash
+.venv/bin/python -m unittest tests.test_nasdaq100_valuation.Nasdaq100ValuationCoverageTests.test_ttm_resolver_keeps_q4_stable_when_later_filing_repeats_comparative_quarter
+```
+
+- [ ] Generalize the true-period predicate to Q and FY. Prefer `report_date == period_end`; keep the bounded 180-day fallback only when report date is absent.
+
+```python
+quarter_rows = quarter_rows.loc[
+    [_is_primary_filing_period_fact(row) for row in quarter_rows.itertuples()]
+]
+fy_rows = fy_rows.loc[
+    [_is_primary_filing_period_fact(row) for row in fy_rows.itertuples()]
+]
+```
+
+- [ ] Re-run the regression and full Nasdaq valuation tests; expected GREEN with existing non-calendar FY behavior retained.
+- [ ] Commit the resolver unit with Korean message `comparative 분기 TTM 귀속 오류 수정`.
+
+### Task 12: Split-normalized FY-derived Q4
+
+**Files:**
+- Modify: `tests/test_us_stock_valuation.py`
+- Modify: `finance/data/us_stock_valuation.py`
+
+**Interfaces:**
+- Consumes: raw statement `value/available_at` plus price split rows.
+- Produces: month-end TTM quarters whose direct Q and FY-derived Q4 are on the same share basis before summation.
+
+- [ ] Add an NVDA-like failing fixture with Q1 `5.98` before a 10:1 split, Q2 `0.67`, Q3 `0.78`, FY `2.94`; assert Q4 `0.892` and TTM `2.94` at FY availability.
+
+```python
+row = build_monthly_pit_valuation(
+    statements,
+    prices,
+    start_month="2025-02-01",
+    end_month="2025-02-28",
+)[0]
+self.assertAlmostEqual(row["quarters"][-1]["eps"], 0.892)
+self.assertAlmostEqual(row["ttm_eps"], 2.94)
+```
+
+- [ ] Assert a month before the split does not use the future 10:1 factor.
+
+```python
+self.assertAlmostEqual(pre_split_row["split_factor"], 1.0)
+self.assertAlmostEqual(post_split_row["split_factor"], 10.0)
+```
+
+- [ ] Run the exact test and confirm RED because current resolver derives Q4 before share-basis normalization.
+
+```bash
+.venv/bin/python -m unittest tests.test_us_stock_valuation.UsStockValuationCalculationTests.test_split_year_normalizes_quarters_before_deriving_q4
+```
+
+- [ ] Normalize every eligible statement fact to the valuation month-end share basis before resolving discrete quarters; remove the later double adjustment of resolved quarters.
+
+```python
+normalized_statements = [
+    {
+        **row,
+        "value": float(row["value"])
+        / split_factor_between(prices, after=str(row["available_at"]), through=month_end),
+    }
+    for row in statements
+]
+resolved = derive_filing_aware_ttm_eps(
+    normalized_statements,
+    as_of_date=month_end.strftime("%Y-%m-%d"),
+)
+```
+
+- [ ] Re-run U.S. stock calculation tests plus the resolver suite; expected GREEN for split/no-look-ahead/carry-forward cases.
+- [ ] Commit with Korean message `분할 연도 FY와 분기 EPS 단위 일치`.
+
+### Task 13: Graph 1 and Graph 2 readiness isolation
+
+**Files:**
+- Modify: `tests/test_us_stock_valuation.py`
+- Modify: `finance/data/us_stock_valuation.py`
+- Modify: `app/services/overview/us_stock_valuation.py`
+- Modify as needed: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Top-level `status=READY` means the selected stock's Graph 1 P/E screen is renderable.
+- `earnings_scenario.status` and `index_scenario.status` independently return `BLOCKED` with `INSUFFICIENT_GROWTH_HISTORY` and exact `observation_count/required_observations` evidence.
+
+- [ ] Add a failing classifier test: 60 complete positive P/E months plus 7/8 growth observations returns top-level READY.
+
+```python
+result = classify_us_stock_readiness(
+    identity,
+    complete_coverage,
+    ready_rows,
+    {"status": "INSUFFICIENT_HISTORY", "observation_count": 7},
+)
+self.assertEqual(result["status"], "READY")
+```
+
+- [ ] Add a failing service test: the same input keeps `multiple_regime.status=READY`, while earnings/index scenarios are BLOCKED and contain `7/8` evidence.
+
+```python
+self.assertEqual(result["status"], "READY")
+self.assertEqual(result["multiple_regime"]["status"], "READY")
+self.assertEqual(result["earnings_scenario"]["status"], "BLOCKED")
+self.assertEqual(result["earnings_scenario"]["observation_count"], 7)
+self.assertEqual(result["earnings_scenario"]["required_observations"], 8)
+self.assertEqual(result["index_scenario"]["status"], "BLOCKED")
+```
+
+- [ ] Run both tests and confirm RED because current classifier/service returns whole-model NOT_APPLICABLE.
+- [ ] Remove growth from intrinsic P/E applicability, preserve section-specific reason/evidence, and keep COLLECTABLE/NOT_APPLICABLE action rules unchanged.
+- [ ] Re-run U.S. stock, combined Market Context, S&P, and static UI contract tests.
+- [ ] Commit with Korean message `개별주 그래프별 준비 상태 분리`.
+
+### Task 14: Actual DB, Browser, docs, final verification
+
+**Files:**
+- Modify: active task `STATUS.md`, `NOTES.md`, `RISKS.md`, `RUNS.md`
+- Modify if stale: `docs/data/TABLE_SEMANTICS.md`, `docs/architecture/DATA_DB_PIPELINE_FLOW.md`, `docs/INDEX.md`, `docs/ROADMAP.md`
+- Modify: `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`
+
+- [ ] Run AMD/AAPL/MSFT/NVDA/META/TSLA read-only actual DB comparison; record latest TTM, P/E, growth observation count, and section statuses.
+
+```bash
+.venv/bin/python -m unittest tests.test_us_stock_valuation tests.test_nasdaq100_valuation tests.test_market_context_valuation tests.test_sp500_valuation
+```
+
+- [ ] Verify AMD Q4 stability and NVDA split-year identity with exact stored facts; verify current non-positive EPS remains NOT_APPLICABLE.
+- [ ] Run focused valuation/service tests, independent full regression, Python compile, `git diff --check`, and React production build.
+
+```bash
+.venv/bin/python -m py_compile finance/data/nasdaq100_valuation.py finance/data/us_stock_valuation.py app/services/overview/us_stock_valuation.py
+npm run build --prefix app/web/streamlit_components/market_context_valuation
+git diff --check
+```
+- [ ] Run actual Streamlit desktop and 420px Browser QA. Confirm AMD Graph 1 renders, Graph 2 section status is accurate, S&P remains unchanged, console errors are zero, and horizontal overflow is absent.
+- [ ] Store one screenshot outside the repository and include it in the final report.
+- [ ] Apply `finance-doc-sync`, audit staged paths, leave the unrelated research folder untouched, and create the final Korean closeout commit.
+
+### Follow-up Plan Self-Review
+
+- Spec coverage: comparative Q, split-before-Q4, no-look-ahead, section isolation, actual symbols, S&P/Nasdaq preservation, Browser QA, docs, commits are mapped.
+- Placeholder scan: no TBD/TODO or unspecified implementation step remains.
+- Type consistency: existing `status`, `readiness`, `multiple_regime`, `earnings_scenario`, and `index_scenario` keys are retained; no new DB/materialization contract is introduced.
+- Scope check: no blanket comparative-row deletion, provider fetch on read, schema migration, raw backfill, or unrelated valuation metric is included.
