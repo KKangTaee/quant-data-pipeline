@@ -47,3 +47,10 @@ Last Updated: 2026-07-14
 - Graph 2 refuses fewer than eight positive-to-positive quarterly observations and keeps applicable SEP release dates in evidence.
 - Negative EPS, structural short listing, raw data gaps, and unverified ADR units have distinct readiness regression cases.
 - The selected-stock service returns JSON-safe stable shapes for READY, COLLECTABLE, NOT_APPLICABLE, ERROR, and NOT_SELECTED.
+
+## Closed In 3차
+
+- Search cannot trigger remote fetches and excludes stored non-common/inactive rows with regression coverage.
+- Collection rejects ticker/CIK mismatch before price or SEC runners are called.
+- Exact price range, SEC scope, partial-success recheck, narrowed retry, and READY no-op behavior are covered.
+- The 119-month loader window no longer incorrectly turns a valid 60-month main valuation into COLLECTABLE.

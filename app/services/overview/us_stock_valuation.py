@@ -14,7 +14,10 @@ from finance.data.us_stock_valuation import (
     calculate_stock_scenarios,
     classify_us_stock_readiness,
 )
-from finance.loaders.us_stock_valuation import load_us_stock_valuation_inputs
+from finance.loaders.us_stock_valuation import (
+    load_us_stock_valuation_inputs,
+    search_us_common_stocks,
+)
 
 
 INSTRUMENT = {
@@ -172,12 +175,19 @@ def _json_safe(value: Any) -> Any:
 def build_us_stock_valuation_read_model(
     *,
     selected_symbol: str | None = None,
+    search_query: str | None = None,
     loaded_inputs: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one selected stock's DB-backed relative-value read model."""
     symbol = str(selected_symbol or "").strip().upper()
     if not symbol:
-        return _empty_model("NOT_SELECTED")
+        query = str(search_query or "").strip()
+        model = _empty_model("NOT_SELECTED")
+        model["search"] = {
+            "query": query,
+            "results": search_us_common_stocks(query) if len(query) >= 2 else [],
+        }
+        return model
     try:
         inputs = dict(loaded_inputs or load_us_stock_valuation_inputs(symbol))
         identity = inputs.get("identity")
@@ -205,7 +215,16 @@ def build_us_stock_valuation_read_model(
             inputs.get("sep_rows") or [],
             as_of_date=as_of_date,
         )
-        readiness_coverage = {**coverage, "requested_months": 60}
+        price_months = pd.to_numeric(coverage.get("price_months"), errors="coerce")
+        readiness_coverage = {
+            **coverage,
+            "requested_months": 60,
+            "price_missing": (
+                int(price_months) < 60
+                if not pd.isna(price_months)
+                else bool(coverage.get("price_missing"))
+            ),
+        }
         readiness = classify_us_stock_readiness(
             identity,
             readiness_coverage,

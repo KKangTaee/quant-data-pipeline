@@ -43,3 +43,11 @@ Last Updated: 2026-07-14
 - RED/GREEN engine tests covered 59/60-month Graph 1 boundary, 36-month sensitivity, applicable SEP, Tukey clipping, eight-observation gate, scenario formulas, 60-month historical warmup, and readiness taxonomy.
 - RED/GREEN service tests covered NOT_SELECTED no-load behavior, READY JSON safety, exact COLLECTABLE action ranges, NOT_APPLICABLE action suppression, and stable ERROR shape.
 - Fresh 2차 verification: all `16` U.S. stock tests passed; data/loader/service modules compiled; `git diff --check` passed.
+
+## 3차 Search And Collection
+
+- RED/GREEN search tests covered no-query DB silence, ticker/name ranking, and non-common/inactive exclusion.
+- RED/GREEN preflight tests covered exact price/SEC gaps, structural short listing, negative EPS, and READY inputs.
+- RED/GREEN ingestion tests covered exact synchronous price/SEC calls, progress order, and pre-provider CIK mismatch rejection.
+- Overview action tests covered partial-success after-state, narrowed statement-only resume, and READY no-op idempotency.
+- Main readiness regression proves 60 complete months can be READY even when the optional 119-month history window remains incomplete.

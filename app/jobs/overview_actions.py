@@ -19,6 +19,7 @@ from finance.data.market_intelligence import (
     upsert_market_symbol_aliases,
 )
 from finance.loaders.price import load_latest_prices, load_price_freshness_summary
+from finance.loaders.us_stock_valuation import build_us_stock_valuation_collection_plan
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -33,6 +34,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_ohlcv,
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
+    run_collect_us_stock_valuation_inputs,
     run_diagnose_market_quote_gaps,
     run_extended_statement_refresh,
 )
@@ -232,6 +234,91 @@ def run_overview_nasdaq100_valuation_repair(
     )
     result["details"] = details
     return result
+
+
+def run_overview_us_stock_valuation_collection(
+    symbol: str,
+    *,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    plan_builder: Callable[..., dict[str, Any]] = build_us_stock_valuation_collection_plan,
+    collection_runner: Callable[..., JobResult] = run_collect_us_stock_valuation_inputs,
+) -> JobResult:
+    """Preflight, synchronously collect, and recheck one selected stock."""
+    normalized = str(symbol or "").strip().upper()
+    before = dict(plan_builder(normalized))
+    if before.get("status") == "READY":
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": "overview_us_stock_valuation_collection",
+            "status": "success",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 1,
+            "failed_symbols": [],
+            "message": f"{normalized} valuation inputs are already complete.",
+            "details": {"before": before, "after": before},
+        }
+    if before.get("status") != "COLLECTABLE":
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            "job_name": "overview_us_stock_valuation_collection",
+            "status": "failed",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 0,
+            "failed_symbols": [normalized],
+            "message": str(before.get("reason") or "Selected stock is not collectable."),
+            "details": {"before": before, "after": before},
+        }
+
+    identity = dict(before.get("identity") or {})
+    scopes = set(before.get("scopes") or [])
+    ranges = dict(before.get("missing_ranges") or {})
+    price_range = dict(ranges.get("prices") or {})
+    collected = dict(
+        collection_runner(
+            normalized,
+            cik=str(identity.get("cik") or ""),
+            identity_cik=str(identity.get("cik") or ""),
+            price_start=price_range.get("start"),
+            price_end=price_range.get("end"),
+            collect_prices="prices" in scopes,
+            collect_statements="sec_statements" in scopes,
+            progress_callback=progress_callback,
+        )
+    )
+    after = dict(plan_builder(normalized))
+    if after.get("status") == "READY":
+        status = "success"
+    elif after.get("status") == "COLLECTABLE" and collected.get("status") != "failed":
+        status = "partial_success"
+    else:
+        status = str(collected.get("status") or "failed")
+    details = dict(collected.get("details") or {})
+    details.update(
+        {
+            "source_job_name": collected.get("job_name"),
+            "before": before,
+            "after": after,
+        }
+    )
+    return {
+        **collected,
+        "job_name": "overview_us_stock_valuation_collection",
+        "status": status,
+        "message": (
+            f"{normalized} valuation inputs are ready."
+            if status == "success"
+            else f"{normalized} collection finished; remaining ranges are shown."
+        ),
+        "details": details,
+    }
 
 
 def run_overview_nasdaq_symbol_directory() -> JobResult:

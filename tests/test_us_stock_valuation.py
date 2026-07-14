@@ -139,6 +139,55 @@ class UsStockValuationCalculationTests(unittest.TestCase):
 
 
 class UsStockValuationLoaderTests(unittest.TestCase):
+    def test_search_is_db_only_and_ignores_empty_or_one_character_query(self) -> None:
+        from finance.loaders.us_stock_valuation import search_us_common_stocks
+
+        query_fn = Mock()
+
+        self.assertEqual(search_us_common_stocks("", query_fn=query_fn), [])
+        self.assertEqual(search_us_common_stocks("a", query_fn=query_fn), [])
+        query_fn.assert_not_called()
+
+    def test_search_ranks_ticker_prefix_before_company_name_match(self) -> None:
+        from finance.loaders.us_stock_valuation import search_us_common_stocks
+
+        query_fn = Mock(
+            return_value=[
+                {"symbol": "ZZZ", "name": "Apple Hospitality REIT", "exchange": "NYSE", "related_cik": 1, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+                {"symbol": "AAPL", "name": "Apple Inc.", "exchange": "Nasdaq", "related_cik": 320193, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+                {"symbol": "APLE", "name": "Apple Hospitality REIT, Inc.", "exchange": "NYSE", "related_cik": 1418121, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+            ]
+        )
+
+        result = search_us_common_stocks("apple", limit=12, query_fn=query_fn)
+
+        database, sql, params = query_fn.call_args.args
+        self.assertEqual(database, "finance_meta")
+        self.assertIn("nyse_symbol_lifecycle", sql)
+        self.assertEqual(params[:2], ("APPLE%", "%APPLE%"))
+        self.assertEqual([row["symbol"] for row in result], ["AAPL", "APLE", "ZZZ"])
+        self.assertTrue(all(row["cik"] for row in result))
+
+    def test_search_excludes_non_common_and_inactive_security_rows(self) -> None:
+        from finance.loaders.us_stock_valuation import search_us_common_stocks
+
+        rows = [
+            {"symbol": "GOOD", "name": "Good Company Common Stock", "exchange": "NYSE", "related_cik": 100, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+            {"symbol": "ETF", "name": "Example ETF", "exchange": "Nasdaq", "related_cik": 101, "kind": "etf", "listing_status": "active", "quote_type": "ETF"},
+            {"symbol": "PREF", "name": "Example Preferred Stock", "exchange": "NYSE", "related_cik": 102, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+            {"symbol": "WARR", "name": "Example Warrant", "exchange": "Nasdaq", "related_cik": 103, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+            {"symbol": "UNIT", "name": "Example Unit", "exchange": "NYSE American", "related_cik": 104, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+            {"symbol": "RIGHT", "name": "Example Rights", "exchange": "NYSE", "related_cik": 105, "kind": "stock", "listing_status": "active", "quote_type": "EQUITY"},
+            {"symbol": "OLD", "name": "Old Company", "exchange": "NYSE", "related_cik": 106, "kind": "stock", "listing_status": "inactive", "quote_type": "EQUITY"},
+        ]
+
+        result = search_us_common_stocks(
+            "example",
+            query_fn=Mock(return_value=rows),
+        )
+
+        self.assertEqual([row["symbol"] for row in result], ["GOOD"])
+
     def test_loader_identity_requires_current_active_stock_and_sec_cik(self) -> None:
         from finance.loaders.us_stock_valuation import load_us_stock_identity
 
@@ -417,6 +466,32 @@ def _ready_loaded_inputs() -> dict[str, object]:
 
 
 class UsStockValuationServiceTests(unittest.TestCase):
+    def test_service_search_reads_db_results_without_loading_valuation(self) -> None:
+        from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
+
+        search_result = [
+            {
+                "symbol": "AAPL",
+                "name": "Apple Inc.",
+                "exchange": "Nasdaq",
+                "cik": "0000320193",
+                "instrument_type": "common_stock",
+                "adr_unit_status": "not_adr",
+            }
+        ]
+        with patch(
+            "app.services.overview.us_stock_valuation.search_us_common_stocks",
+            return_value=search_result,
+        ) as search, patch(
+            "app.services.overview.us_stock_valuation.load_us_stock_valuation_inputs"
+        ) as loader:
+            result = build_us_stock_valuation_read_model(search_query="apple")
+
+        search.assert_called_once_with("apple")
+        loader.assert_not_called()
+        self.assertEqual(result["status"], "NOT_SELECTED")
+        self.assertEqual(result["search"], {"query": "apple", "results": search_result})
+
     def test_service_not_selected_does_not_invoke_loader(self) -> None:
         from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
 
@@ -486,6 +561,24 @@ class UsStockValuationServiceTests(unittest.TestCase):
         self.assertEqual(loss["status"], "NOT_APPLICABLE")
         self.assertNotIn("collection_action", loss)
 
+    def test_service_main_ready_gate_does_not_require_all_119_history_months(self) -> None:
+        from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
+
+        inputs = _ready_loaded_inputs()
+        inputs["coverage"] = {
+            **inputs["coverage"],
+            "price_months": 60,
+            "price_missing": True,
+        }
+
+        result = build_us_stock_valuation_read_model(
+            selected_symbol="AAPL",
+            loaded_inputs=inputs,
+        )
+
+        self.assertEqual(result["status"], "READY")
+        self.assertNotIn("collection_action", result)
+
     def test_service_schema_error_returns_stable_error_shape(self) -> None:
         from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
 
@@ -501,6 +594,238 @@ class UsStockValuationServiceTests(unittest.TestCase):
         self.assertEqual(result["multiple_regime"]["status"], "ERROR")
         self.assertEqual(result["earnings_scenario"]["status"], "ERROR")
         self.assertEqual(result["index_scenario"]["status"], "ERROR")
+
+
+class UsStockValuationCollectionTests(unittest.TestCase):
+    def test_preflight_distinguishes_exact_raw_gaps_from_structural_short_listing(self) -> None:
+        from finance.loaders.us_stock_valuation import build_us_stock_valuation_collection_plan
+
+        monthly = _monthly_points(60, start="2021-08-01")
+        monthly[5] = {**monthly[5], "price": None, "price_basis_date": None, "trailing_pe": None, "quality": "missing_price"}
+        monthly[8] = {**monthly[8], "ttm_eps": None, "eps_basis_date": None, "trailing_pe": None, "quality": "insufficient_eps"}
+        loaded = {
+            "identity": _ready_loaded_inputs()["identity"],
+            "monthly_rows": monthly,
+            "window": {
+                "valuation_start": "2016-09-01",
+                "statement_start": "2015-03-01",
+                "as_of_date": "2026-07-14",
+                "valuation_months": 119,
+            },
+            "coverage": {"listing_months": 240},
+        }
+
+        collectable = build_us_stock_valuation_collection_plan(
+            "AAPL",
+            loaded_inputs=loaded,
+        )
+        short = build_us_stock_valuation_collection_plan(
+            "AAPL",
+            loaded_inputs={**loaded, "coverage": {"listing_months": 20}},
+        )
+
+        self.assertEqual(collectable["status"], "COLLECTABLE")
+        self.assertEqual(collectable["scopes"], ["prices", "sec_statements"])
+        self.assertEqual(
+            collectable["missing_ranges"]["prices"],
+            {"start": "2022-01-01", "end": "2022-01-31"},
+        )
+        self.assertEqual(
+            collectable["missing_ranges"]["sec_statements"],
+            {"start": "2015-03-01", "end": "2026-07-14"},
+        )
+        self.assertEqual(short["status"], "NOT_APPLICABLE")
+        self.assertEqual(short["reason_code"], "STRUCTURALLY_SHORT_LISTING")
+        self.assertEqual(short["scopes"], [])
+
+    def test_preflight_negative_eps_is_not_collectable_and_complete_inputs_are_ready(self) -> None:
+        from finance.loaders.us_stock_valuation import build_us_stock_valuation_collection_plan
+
+        ready_inputs = _ready_loaded_inputs()
+        ready = build_us_stock_valuation_collection_plan("AAPL", loaded_inputs=ready_inputs)
+        negative_rows = list(ready_inputs["monthly_rows"])
+        negative_rows[-1] = {
+            **negative_rows[-1],
+            "ttm_eps": -1.0,
+            "trailing_pe": None,
+            "quality": "non_positive_eps",
+        }
+        negative = build_us_stock_valuation_collection_plan(
+            "AAPL",
+            loaded_inputs={**ready_inputs, "monthly_rows": negative_rows},
+        )
+
+        self.assertEqual(ready["status"], "READY")
+        self.assertEqual(ready["scopes"], [])
+        self.assertEqual(negative["status"], "NOT_APPLICABLE")
+        self.assertEqual(negative["reason_code"], "NON_POSITIVE_EPS")
+        self.assertEqual(negative["scopes"], [])
+
+    def test_selected_symbol_collection_runs_exact_scopes_synchronously(self) -> None:
+        from app.jobs.ingestion_jobs import run_collect_us_stock_valuation_inputs
+
+        price_runner = Mock(return_value={"status": "success", "rows_written": 120, "failed_symbols": []})
+        statement_runner = Mock(return_value={"status": "success", "rows_written": 48, "failed_symbols": []})
+        events: list[dict[str, object]] = []
+
+        result = run_collect_us_stock_valuation_inputs(
+            "AAPL",
+            cik="0000320193",
+            identity_cik="0000320193",
+            price_start="2021-01-01",
+            price_end="2021-06-30",
+            collect_prices=True,
+            collect_statements=True,
+            progress_callback=events.append,
+            price_runner=price_runner,
+            statement_runner=statement_runner,
+        )
+
+        price_runner.assert_called_once_with(
+            ["AAPL"],
+            start="2021-01-01",
+            end="2021-07-01",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+        statement_runner.assert_called_once_with(
+            ["AAPL"],
+            freq="quarterly",
+            periods=0,
+            period="quarterly",
+        )
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 168)
+        self.assertEqual(
+            [event["stage"] for event in events],
+            ["preflight", "prices", "sec", "complete"],
+        )
+
+    def test_selected_symbol_collection_rejects_cik_mismatch_before_provider_calls(self) -> None:
+        from app.jobs.ingestion_jobs import run_collect_us_stock_valuation_inputs
+
+        price_runner = Mock()
+        statement_runner = Mock()
+
+        result = run_collect_us_stock_valuation_inputs(
+            "AAPL",
+            cik="0000320193",
+            identity_cik="0000000001",
+            price_start="2021-01-01",
+            price_end="2021-06-30",
+            collect_prices=True,
+            collect_statements=True,
+            price_runner=price_runner,
+            statement_runner=statement_runner,
+        )
+
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("CIK", result["message"])
+        price_runner.assert_not_called()
+        statement_runner.assert_not_called()
+
+    def test_overview_collection_rechecks_plan_and_narrows_retry_scope(self) -> None:
+        from app.jobs.overview_actions import run_overview_us_stock_valuation_collection
+
+        before = {
+            "status": "COLLECTABLE",
+            "identity": {"symbol": "AAPL", "cik": "0000320193"},
+            "scopes": ["prices", "sec_statements"],
+            "missing_ranges": {
+                "prices": {"start": "2021-01-01", "end": "2021-06-30"},
+                "sec_statements": {"start": "2020-01-01", "end": "2026-07-14"},
+            },
+        }
+        after = {
+            "status": "COLLECTABLE",
+            "identity": before["identity"],
+            "scopes": ["sec_statements"],
+            "missing_ranges": {"sec_statements": before["missing_ranges"]["sec_statements"]},
+        }
+        plan_builder = Mock(side_effect=[before, after])
+        collector = Mock(
+            return_value={
+                "status": "partial_success",
+                "rows_written": 120,
+                "failed_symbols": [],
+                "message": "price stored; SEC remains",
+                "details": {},
+            }
+        )
+
+        result = run_overview_us_stock_valuation_collection(
+            "AAPL",
+            plan_builder=plan_builder,
+            collection_runner=collector,
+        )
+
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["details"]["after"]["scopes"], ["sec_statements"])
+        collector.assert_called_once_with(
+            "AAPL",
+            cik="0000320193",
+            identity_cik="0000320193",
+            price_start="2021-01-01",
+            price_end="2021-06-30",
+            collect_prices=True,
+            collect_statements=True,
+            progress_callback=None,
+        )
+
+    def test_overview_collection_resume_skips_satisfied_price_scope_and_ready_is_noop(self) -> None:
+        from app.jobs.overview_actions import run_overview_us_stock_valuation_collection
+
+        statement_only = {
+            "status": "COLLECTABLE",
+            "identity": {"symbol": "AAPL", "cik": "0000320193"},
+            "scopes": ["sec_statements"],
+            "missing_ranges": {
+                "sec_statements": {"start": "2020-01-01", "end": "2026-07-14"}
+            },
+        }
+        ready = {
+            "status": "READY",
+            "identity": statement_only["identity"],
+            "scopes": [],
+            "missing_ranges": {},
+        }
+        collector = Mock(
+            return_value={
+                "job_name": "collect_us_stock_valuation_inputs",
+                "status": "success",
+                "rows_written": 48,
+                "failed_symbols": [],
+                "message": "ok",
+                "details": {},
+            }
+        )
+
+        resumed = run_overview_us_stock_valuation_collection(
+            "AAPL",
+            plan_builder=Mock(side_effect=[statement_only, ready]),
+            collection_runner=collector,
+        )
+        noop_collector = Mock()
+        noop = run_overview_us_stock_valuation_collection(
+            "AAPL",
+            plan_builder=Mock(return_value=ready),
+            collection_runner=noop_collector,
+        )
+
+        collector.assert_called_once_with(
+            "AAPL",
+            cik="0000320193",
+            identity_cik="0000320193",
+            price_start=None,
+            price_end=None,
+            collect_prices=False,
+            collect_statements=True,
+            progress_callback=None,
+        )
+        self.assertEqual(resumed["status"], "success")
+        noop_collector.assert_not_called()
+        self.assertEqual(noop["status"], "success")
+        self.assertEqual(noop["rows_written"], 0)
 
 
 if __name__ == "__main__":

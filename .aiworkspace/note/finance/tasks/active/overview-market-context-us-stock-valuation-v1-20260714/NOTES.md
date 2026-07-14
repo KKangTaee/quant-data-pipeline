@@ -50,6 +50,15 @@ Last Updated: 2026-07-14
 - The service preserves `index_scenario` as the generic chart handoff key for compatibility, but its label and limitation are explicitly stock-relative rather than index target-price language.
 - Missing price/statement raw data can become COLLECTABLE; negative EPS, short listing, unverified ADR units, and structurally insufficient growth remain non-collectable.
 
+## 3차 Implementation Decisions
+
+- Search starts at two characters, reads only current `sec_company_tickers_exchange` lifecycle evidence, and ranks exact/prefix ticker matches before company-name matches.
+- `kind=stock` is not treated as sufficient security-type proof; quote type, exchange, name patterns, active status, and CIK are defensively filtered.
+- Main READY uses 60 complete months even though the loader reads up to 119 months for optional 5-year scenario warmup.
+- Preflight derives price gaps from explicit monthly missing rows and uses the bounded statement lookback for SEC gap collection.
+- The synchronous runner validates ticker/CIK before any provider call, preserves partial-success writes, and converts inclusive UI price end to the collector's exclusive end.
+- Overview retries re-run preflight and execute only remaining scopes; an already READY plan is an idempotent no-op.
+
 ## Product Language
 
 - Prefer: `상대적 고평가/저평가`, `상대가치 시나리오`, `자체 재구성`
