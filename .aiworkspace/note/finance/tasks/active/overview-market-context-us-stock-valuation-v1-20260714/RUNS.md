@@ -36,3 +36,10 @@ Last Updated: 2026-07-14
 - GREEN: true fiscal year-end predicate fixed the regression; two resolver tests and full Nasdaq file passed.
 - RED/GREEN: split-neutral, monthly carry-forward, future filing, non-positive EPS, and missing-price tests passed.
 - Fresh 1차 verification: `76 tests` across Nasdaq, U.S. stock pure calculation, and S&P passed; both changed Python modules compiled; `git diff --check` passed.
+
+## 2차 US Stock Valuation Engine
+
+- RED/GREEN loader tests proved current active SEC-linked identity plus one-symbol bounded price/statement/SEP queries.
+- RED/GREEN engine tests covered 59/60-month Graph 1 boundary, 36-month sensitivity, applicable SEP, Tukey clipping, eight-observation gate, scenario formulas, 60-month historical warmup, and readiness taxonomy.
+- RED/GREEN service tests covered NOT_SELECTED no-load behavior, READY JSON safety, exact COLLECTABLE action ranges, NOT_APPLICABLE action suppression, and stable ERROR shape.
+- Fresh 2차 verification: all `16` U.S. stock tests passed; data/loader/service modules compiled; `git diff --check` passed.

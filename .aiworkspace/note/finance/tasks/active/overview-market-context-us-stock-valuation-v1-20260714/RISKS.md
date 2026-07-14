@@ -40,3 +40,10 @@ Last Updated: 2026-07-14
 - Comparative FY false-Q4 regression is covered by an AMZN-like later-filing fixture.
 - True non-calendar fiscal-year Q4 derivation is covered by an AAPL-like fixture.
 - Split-unit drift is covered by an NVDA-like 10-for-1 monthly P/E fixture with a future-split no-look-ahead assertion.
+
+## Closed In 2차
+
+- Loader window widening is prevented by exact one-symbol price/statement/SEP query assertions.
+- Graph 2 refuses fewer than eight positive-to-positive quarterly observations and keeps applicable SEP release dates in evidence.
+- Negative EPS, structural short listing, raw data gaps, and unverified ADR units have distinct readiness regression cases.
+- The selected-stock service returns JSON-safe stable shapes for READY, COLLECTABLE, NOT_APPLICABLE, ERROR, and NOT_SELECTED.

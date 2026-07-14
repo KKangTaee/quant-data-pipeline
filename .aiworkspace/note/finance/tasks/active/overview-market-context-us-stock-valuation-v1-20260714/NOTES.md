@@ -42,6 +42,14 @@ Last Updated: 2026-07-14
 - Each discrete quarter is normalized independently, preventing a TTM assembled from mixed pre/post-split filings from changing share units mid-sum.
 - Monthly rows remain explicit when price or EPS is missing; no neighboring month is substituted and invalid/non-positive EPS never produces P/E.
 
+## 2차 Implementation Decisions
+
+- The loader reads one symbol across the existing `finance_meta`, `finance_price`, and `finance_fundamental` databases with no new table or write path.
+- Main READY classification uses 60 complete positive P/E months; 1/3/5-year history separately reports its 71/95/119-month rolling warmup requirement.
+- Company growth uses positive-to-positive quarterly TTM YoY observations only, selects the latest applicable SEP median vintage at each filing availability date, and Tukey-clips rather than deleting outliers.
+- The service preserves `index_scenario` as the generic chart handoff key for compatibility, but its label and limitation are explicitly stock-relative rather than index target-price language.
+- Missing price/statement raw data can become COLLECTABLE; negative EPS, short listing, unverified ADR units, and structurally insufficient growth remain non-collectable.
+
 ## Product Language
 
 - Prefer: `상대적 고평가/저평가`, `상대가치 시나리오`, `자체 재구성`
