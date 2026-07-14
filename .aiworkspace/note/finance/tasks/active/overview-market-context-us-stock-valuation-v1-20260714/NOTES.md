@@ -34,6 +34,14 @@ Last Updated: 2026-07-14
 - Raw-close drift can create split discontinuities.
 - Individual-stock work must begin by fixing these shared correctness issues with real-like regressions.
 
+## 1차 Implementation Decisions
+
+- FY-derived Q4 accepts `report_date == period_end` as the primary true-year-end proof.
+- Legacy normalized FY rows without `report_date` are accepted only within a bounded 180-day first-filing lag; later comparative facts are rejected.
+- A split affects an EPS fact only when the split date is after that fact's `available_at` and on or before the valuation month-end.
+- Each discrete quarter is normalized independently, preventing a TTM assembled from mixed pre/post-split filings from changing share units mid-sum.
+- Monthly rows remain explicit when price or EPS is missing; no neighboring month is substituted and invalid/non-positive EPS never produces P/E.
+
 ## Product Language
 
 - Prefer: `상대적 고평가/저평가`, `상대가치 시나리오`, `자체 재구성`

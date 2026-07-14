@@ -34,3 +34,9 @@ Last Updated: 2026-07-14
 - REIT P/FFO and sector-specific valuation metrics are separate follow-up work.
 - Analyst consensus availability/license is outside free·accountless V1.
 - Delisted historical-company search remains outside current user workflow.
+
+## Closed In 1차
+
+- Comparative FY false-Q4 regression is covered by an AMZN-like later-filing fixture.
+- True non-calendar fiscal-year Q4 derivation is covered by an AAPL-like fixture.
+- Split-unit drift is covered by an NVDA-like 10-for-1 monthly P/E fixture with a future-split no-look-ahead assertion.

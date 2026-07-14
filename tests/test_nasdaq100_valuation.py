@@ -659,6 +659,70 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
         self.assertAlmostEqual(result["ABC"]["quarters"][-1]["eps"], 1.5)
         self.assertEqual(result["ABC"]["quarters"][-1]["derivation"], "fy_minus_q1_q2_q3")
 
+    def test_ttm_resolver_ignores_later_filing_comparative_fy_fact(self) -> None:
+        from finance.data.nasdaq100_valuation import derive_filing_aware_ttm_eps
+
+        base = {
+            "symbol": "AMZN",
+            "concept": "us-gaap:EarningsPerShareDiluted",
+            "unit": "USD per share",
+            "source_period_type": "duration",
+            "fiscal_year": 2024,
+        }
+        rows = [
+            {**base, "period_type": "Q", "fiscal_quarter": 1, "period_end": "2024-03-31", "report_date": "2024-03-31", "value": 0.98, "available_at": "2024-04-30"},
+            {**base, "period_type": "Q", "fiscal_quarter": 2, "period_end": "2024-06-30", "report_date": "2024-06-30", "value": 1.26, "available_at": "2024-08-02"},
+            {**base, "period_type": "Q", "fiscal_quarter": 3, "period_end": "2024-09-30", "report_date": "2024-09-30", "value": 1.43, "available_at": "2024-11-01"},
+            {
+                **base,
+                "period_type": "FY",
+                "fiscal_quarter": None,
+                "period_end": "2023-12-31",
+                "report_date": "2024-12-31",
+                "value": 2.90,
+                "available_at": "2025-02-07",
+                "accession_no": "2024-10k-comparative-2023",
+            },
+        ]
+
+        result = derive_filing_aware_ttm_eps(rows, as_of_date="2025-02-28")
+
+        self.assertNotIn("AMZN", result)
+
+    def test_ttm_resolver_derives_q4_only_from_true_fiscal_year_end(self) -> None:
+        from finance.data.nasdaq100_valuation import derive_filing_aware_ttm_eps
+
+        base = {
+            "symbol": "AAPL",
+            "concept": "us-gaap:EarningsPerShareDiluted",
+            "unit": "USD per share",
+            "source_period_type": "duration",
+            "fiscal_year": 2025,
+        }
+        rows = [
+            {**base, "period_type": "Q", "fiscal_quarter": 1, "period_end": "2024-12-28", "report_date": "2024-12-28", "value": 0.90, "available_at": "2025-01-31"},
+            {**base, "period_type": "Q", "fiscal_quarter": 2, "period_end": "2025-03-29", "report_date": "2025-03-29", "value": 1.40, "available_at": "2025-05-02"},
+            {**base, "period_type": "Q", "fiscal_quarter": 3, "period_end": "2025-06-28", "report_date": "2025-06-28", "value": 1.60, "available_at": "2025-08-01"},
+            {
+                **base,
+                "period_type": "FY",
+                "fiscal_quarter": None,
+                "period_end": "2025-09-27",
+                "report_date": "2025-09-27",
+                "value": 6.00,
+                "available_at": "2025-10-31",
+                "accession_no": "2025-10k",
+            },
+        ]
+
+        result = derive_filing_aware_ttm_eps(rows, as_of_date="2025-11-30")
+
+        quarters = result["AAPL"]["quarters"]
+        self.assertEqual([row["fiscal_quarter"] for row in quarters], [1, 2, 3, 4])
+        self.assertAlmostEqual(quarters[-1]["eps"], 2.10)
+        self.assertEqual(quarters[-1]["period_end"], "2025-09-27")
+        self.assertEqual(quarters[-1]["derivation"], "fy_minus_q1_q2_q3")
+
     def test_derives_ttm_from_combined_basic_and_diluted_eps_fallback(self) -> None:
         from finance.data.nasdaq100_valuation import derive_filing_aware_ttm_eps
 

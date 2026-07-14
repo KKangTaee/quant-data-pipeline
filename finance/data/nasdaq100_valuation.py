@@ -652,6 +652,22 @@ def _eligible_statement_rows(
     return eligible
 
 
+def _is_true_fiscal_year_end_fact(row: Any) -> bool:
+    """Reject comparative FY facts carried by a later fiscal-year filing."""
+    period_end = pd.to_datetime(getattr(row, "period_end", None), errors="coerce")
+    report_date = pd.to_datetime(getattr(row, "report_date", None), errors="coerce")
+    if pd.isna(period_end):
+        return False
+    if not pd.isna(report_date):
+        return pd.Timestamp(report_date).normalize() == pd.Timestamp(period_end).normalize()
+
+    available_at = pd.to_datetime(getattr(row, "available_at", None), errors="coerce")
+    if pd.isna(available_at):
+        return False
+    filing_lag_days = int((pd.Timestamp(available_at).normalize() - pd.Timestamp(period_end).normalize()).days)
+    return 0 <= filing_lag_days <= 180
+
+
 def derive_filing_aware_ttm_eps(
     statement_rows: Iterable[dict[str, Any]],
     *,
@@ -683,6 +699,9 @@ def derive_filing_aware_ttm_eps(
                 }
             )
         fy_rows = symbol_rows.loc[symbol_rows["period_type"].astype(str).str.upper() == "FY"]
+        fy_rows = fy_rows.loc[
+            [_is_true_fiscal_year_end_fact(row) for row in fy_rows.itertuples()]
+        ]
         fy_rows = fy_rows.drop_duplicates(["period_end"], keep="last")
         for fy in fy_rows.itertuples():
             fiscal_year = int(fy.fiscal_year) if not pd.isna(fy.fiscal_year) else None

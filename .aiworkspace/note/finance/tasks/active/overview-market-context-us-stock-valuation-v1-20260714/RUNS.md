@@ -23,3 +23,16 @@ Last Updated: 2026-07-14
 - Placeholder, contradiction, scope, and `git diff --check` review passed after the correction.
 - Required-file checks, staged-path audit, and `git diff --cached --check` passed; the unrelated untracked research folder remains unstaged.
 - Implementation commands/tests have not been run because code implementation has not started.
+
+## 2026-07-14 Implementation Baseline
+
+- Confirmed current path is an existing linked worktree on `codex/sub-dev`; no new worktree was created.
+- `pytest` is not installed in `.venv`; repository `unittest` runner is used instead.
+- Baseline: `83 tests` across Nasdaq, S&P, and combined Market Context passed.
+
+## 1차 Calculation Correctness
+
+- RED reproduced a comparative FY fact creating a false `-0.77` Q4.
+- GREEN: true fiscal year-end predicate fixed the regression; two resolver tests and full Nasdaq file passed.
+- RED/GREEN: split-neutral, monthly carry-forward, future filing, non-positive EPS, and missing-price tests passed.
+- Fresh 1차 verification: `76 tests` across Nasdaq, U.S. stock pure calculation, and S&P passed; both changed Python modules compiled; `git diff --check` passed.
