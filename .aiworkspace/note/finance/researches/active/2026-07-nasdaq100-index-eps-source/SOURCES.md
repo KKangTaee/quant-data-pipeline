@@ -196,15 +196,28 @@ Access date: 2026-07-14
    - Evidence: Observed
    - Limitation: trailing P/E가 아니며 automated API/download는 free production contract가 아님
 40. [MacroMicro Enterprise/API](https://en.macromicro.me/subscribe-enterprise)
-   - Supports: historical CSV/API integration is paid Business/Custom scope and some partner data cannot be redistributed or used for derivatives
+   - Supports: Business AI data download, API Essential historical integration, Custom exclusive-indicator/commercial licensing
    - Type: official pricing/FAQ page
    - Evidence: Documented
-41. [Nasdaq NDX Extended Presentation](https://indexes.nasdaq.com/docs/NDX%20Extended%20Presentation.pdf)
+   - Limitation: series `23955`의 개별 entitlement는 로그인된 dataset list 또는 provider 확인이 필요함
+41. [MacroMicro Help - Can I download data after subscribing?](https://support.macromicro.me/en/faq/152)
+   - Supports: Prime/Max individual plans do not include raw CSV; raw download/API belongs to Enterprise
+   - Type: official Help Center
+   - Evidence: Documented
+42. [MacroMicro Help - Free member benefits](https://support.macromicro.me/en/faq/131)
+   - Supports: free member has limited chart views/save limits; Business adds data download
+   - Type: official Help Center
+   - Evidence: Documented
+43. [MacroMicro Terms of Service](https://en.macromicro.me/terms)
+   - Supports: prior written consent requirement for data download/citation/reposting; restrictions on database reconstruction, redistribution and derivative works
+   - Type: official terms
+   - Evidence: Documented
+44. [Nasdaq NDX Extended Presentation](https://indexes.nasdaq.com/docs/NDX%20Extended%20Presentation.pdf)
    - Supports: long-run NDX trailing P/E/earnings chart through 2025
    - Type: official research PDF
    - Evidence: Documented
    - Limitation: chart-only, underlying source Bloomberg, no monthly machine-readable value contract
-42. [World PE Ratio Nasdaq-100](https://worldperatio.com/index/nasdaq-100/)
+45. [World PE Ratio Nasdaq-100](https://worldperatio.com/index/nasdaq-100/)
    - Supports: account-free QQQ-based historical P/E chart and period statistics
    - Type: public chart page
    - Evidence: Observed

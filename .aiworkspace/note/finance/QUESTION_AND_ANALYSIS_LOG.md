@@ -9423,3 +9423,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 유료 결제나 약관이 불명확한 collector를 먼저 구현하지 않고, 60개월 direct aggregate를 합법적으로 자동 수집할 수 있는 무료 경로만 승인한다.
 - Analysis result: Economic Data는 GuruFocus base plan 제외 add-on이며 무료 direct 대체 외부 원천도 확인되지 않았다. 가격 API나 기업 재무 API는 있어도 NDX P/E/EPS aggregate를 제공하지 않는다.
 - Follow-up: GuruFocus 구현은 중단한다. 무료를 유지하면 SEC QQQ N-PORT + issuer actual 재구성 개선만 남고, direct series가 필요하면 유료 provider를 별도 승인한다.
+
+### 2026-07-14 - MacroMicro 월별 Nasdaq-100 P/E를 자동 수집할 수 있는가
+
+- User request: MacroMicro가 제공하는 Nasdaq-100 월별 P/E를 현재 1/3/5년 graph 보강 원천으로 수집·개발할 수 있는지 검토 요청함.
+- Interpreted goal: forward/trailing 의미, 60개월 이력, 무료 CSV/API, 자동 저장·파생 사용권을 먼저 확인하고 구현 여부를 결정한다.
+- Analysis result: series는 monthly forward P/E이며 공개 차트 조회만 무료다. raw CSV/API는 Enterprise 유료 범위이고 exact-series entitlement와 파생 사용권은 추가 확인이 필요하다.
+- Follow-up: 무료 collector와 trailing history 대체는 기각한다. 유료 도입을 원하면 series `23955` sample과 서면 license를 받은 뒤 별도 forward-valuation track으로 설계한다.

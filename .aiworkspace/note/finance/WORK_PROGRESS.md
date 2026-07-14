@@ -6144,3 +6144,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - GuruFocus 가격표의 동적 contract를 확인해 Economic Data가 무료 core가 아니라 `+$90/month` add-on 또는 PAYG임을 확정했다.
 - 무료 대체 원천을 다시 비교했지만 60개월 direct Nasdaq-100 P/E/EPS와 자동 수집·내부 저장 권리를 함께 충족한 외부 source는 찾지 못했다.
 - 무료 production 경로는 기존 `QQQ N-PORT + SEC actual` 자체 재구성뿐이며, 상세 근거는 `researches/active/2026-07-nasdaq100-index-eps-source/`를 본다.
+
+## 2026-07-14 - MacroMicro Nasdaq-100 Forward P/E 수집 조건 검증
+
+- 월별 series `23955`는 공개되지만 forward P/E이며 현재 QQQ actual trailing P/E graph의 결측 대체 원천이 아니다.
+- 로그아웃 화면과 공식 Help를 확인해 Free/Prime/Max raw CSV 및 무계정 API 경로가 없고, CSV/API는 Business/API Essential/Custom 범위임을 확인했다.
+- exact-series entitlement와 DB retention/파생 차트 권한은 공개 정보만으로 확정되지 않아 유료 검토 시 서면 확인이 필요하다.
+- 현재 무료 V1에는 MacroMicro collector를 추가하지 않으며, 도입 시 별도 forward-valuation track으로만 검토한다.

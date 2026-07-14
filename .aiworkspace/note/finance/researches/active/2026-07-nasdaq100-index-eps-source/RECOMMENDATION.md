@@ -30,6 +30,16 @@ GuruFocus 무료 가능성은 가격표의 동적 feature cell과 Data API Agree
 - 무료 공개 chart: 자동 수집/재사용 권리 또는 방법론이 불충분해 production source로 부적합
 - 유효한 무료 production 경로: SEC EDGAR QQQ N-PORT + SEC issuer actual 자체 재구성
 
+### MacroMicro Verdict
+
+- 확인된 것: 월별 Nasdaq-100 **forward P/E** 공개 차트와 기업용 historical CSV/API 상품이 존재한다.
+- 무료 조건: 로그아웃 화면에는 CSV trigger가 노출되지 않고, 공식 Help는 Free/Prime/Max에 raw CSV가 포함되지 않는다고 명시한다.
+- 자동화 조건: API Essential은 연 `$5,000`, Business AI는 연 `$6,000`으로 표시되며 exact series `23955`의 포함 여부는 로그인 목록 또는 provider 확인이 필요하다.
+- 사용권 조건: 공개 차트 scraping이나 hidden download endpoint 호출은 승인하지 않는다. DB 저장, 파생 밴드 표시, 상업적/공개 사용은 서면 권한 확인이 선행돼야 한다.
+- 산식 조건: forward P/E는 현재 trailing P/E 결측을 보강하는 원천이 아니다. 도입하더라도 기존 graph를 대체하지 않고 별도 `Forward P/E` track으로 설계한다.
+
+따라서 MacroMicro collector는 현재 무료 V1에 구현하지 않는다. 사용자가 유료 forward-valuation 기능을 별도로 승인하면 `series 23955 제공 여부 -> 60개월 payload smoke -> revision/retention/derivative license -> 별도 데이터 모델·UI` 순서로 재검토한다.
+
 ## Final Recommendation
 
 사용자가 account/token 없는 경로를 우선했으므로 V1의 권장 조달 경로를 공개 공시 기반 자체 재구성으로 변경한다.
@@ -113,6 +123,7 @@ GuruFocus 무료 가능성은 가격표의 동적 feature cell과 Data API Agree
 ## Upgrade Path
 
 - GuruFocus 유료 Economic Data access/license가 승인되면 indicator `6778`을 primary P/E 후보로, reconstructed series를 교차검증/fallback으로 사용한다.
+- MacroMicro 유료 도입은 trailing source upgrade가 아니라 별도 forward P/E 제품 기능으로 취급한다. Business/API Essential/Custom 중 series `23955` entitlement와 파생 차트 권한을 서면 확인한 뒤에만 collector를 설계한다.
 - FactSet 계약이 가능하면 `/ratios` 기반 NDX aggregate를 production primary로 승격한다.
 - LSEG/Bloomberg entitlement가 이미 있다면 같은 60개월 샘플과 공개 재구성값을 비교한다.
 - 공식 NDX constituent/divisor 재현이 필요할 때만 Nasdaq GIW/GIFFD license를 검토한다.

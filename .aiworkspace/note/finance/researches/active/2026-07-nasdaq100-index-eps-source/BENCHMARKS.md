@@ -97,11 +97,33 @@ reconstructed QQQ EPS = QQQ price / reconstructed P/E
 - **Nasdaq/FRED/Alpha Vantage/nfin**: 무료 또는 무계정 NDX/QQQ 가격 이력은 제공하지만 historical index P/E/EPS는 제공하지 않는다.
 - **Nasdaq research PDFs / Invesco QQQ fact sheet**: 장기 P/E chart 또는 분기 현재 P/E snapshot은 있으나 월별 machine-readable series/API가 아니다. Nasdaq chart의 underlying source도 Bloomberg/FactSet이므로 chart digitization을 production source로 사용하지 않는다.
 - **Business Quant Free API**: SEC 기반 기업 TTM statements, CIK/CUSIP/ticker mapping, corporate actions를 무료 계정/API key로 제공해 constituent reconstruction 보조에는 유용하다. 다만 direct NDX aggregate가 없고, pricing table상 Free financial statement history는 3년이며 30 calls/day라 5년 direct 대체 원천은 아니다.
-- **MacroMicro**: 월별 Nasdaq-100 forward P/E를 보여주지만 trailing P/E와 의미가 다르며 CSV/API 자동 통합은 유료 Business/Custom 범위다.
+- **MacroMicro**: 월별 Nasdaq-100 forward P/E를 보여주지만 trailing P/E와 의미가 다르며 CSV/API 자동 통합은 유료 Business/API Essential/Custom 범위다. 로그아웃 화면에는 CSV 실행 control이 노출되지 않는다.
 - **World PE Ratio**: 계정 없이 QQQ 기반 historical P/E chart를 보여주지만 documented API, 원천 계약, 자동 수집/재사용 허용 범위를 찾지 못했다. 사람용 cross-check만 허용한다.
 - **Trendonify/VCP Scanner**: 공개 history가 있어도 Terms가 scraping/automated extraction을 금지하므로 collector 후보에서 제외한다.
 
 결론적으로 `무료 + 60개월 + direct Nasdaq-100 aggregate + 자동화 + 내부 DB 저장 권리`를 동시에 만족한다고 검증된 외부 원천은 찾지 못했다. 무료 경로는 SEC QQQ N-PORT와 SEC actual을 결합한 자체 재구성뿐이다.
+
+### MacroMicro Nasdaq-100 Forward P/E
+
+- Public series observation:
+  - series `23955`의 공식 제목은 `US - NASDAQ 100 Index - Forward PE Ratio`다.
+  - frequency는 Month이고 최신 월·값은 로그아웃 상태에서도 표시된다.
+  - 페이지 DOM에는 CSV 동의 모달이 포함되지만, 로그아웃 상태의 실제 visible control은 Share/Custom/Image/DIY/Enlarge뿐이며 CSV download trigger는 노출되지 않는다.
+- Free/account boundary:
+  - 공식 Help Center는 Free member를 제한된 chart viewing/save 용도로 설명하고, raw CSV는 Free/Prime/Max에 포함되지 않는다고 명시한다.
+  - raw CSV download는 MM Business, 자동 API는 MM API Essential 또는 Custom 범위다.
+  - 2026-07-14 표시 가격은 Business AI 연 `$6,000`, API Essential 연 `$5,000`이며 API Essential은 full historical data와 월 5,000 calls/downloads를 표방한다.
+- Exact-series entitlement gap:
+  - 공식 FAQ는 MacroMicro 자체 compiled exclusive indicator는 Custom에서만 download/API 가능하고 일부 partner data는 계약상 download/API가 불가능할 수 있다고 설명한다.
+  - 공개 화면만으로 series `23955`가 Business/API Essential 목록에 실제 포함되는지 확정할 수 없다. 유료 검토 시 series ID를 지정해 payload sample, history 시작월, revision 정책, 내부 DB retention, 파생 차트 권한을 서면 확인해야 한다.
+- Metric compatibility:
+  - 현재 QQQ graph는 실제 희석 TTM EPS에서 계산한 trailing P/E 분포다.
+  - MacroMicro 값은 예상 이익에 기초한 forward P/E이므로 기존 1/3/5년 중심·표준편차와 EPS/SEP 시나리오에 결측 대체값으로 섞을 수 없다.
+  - 사용하려면 `Nasdaq-100 Forward P/E`라는 별도 analyst-consensus valuation track으로 분리하고 source/methodology를 다시 승인해야 한다.
+- License boundary:
+  - Terms는 사전 서면 동의 없는 data download와 재가공·배포를 금지하고, 일반 subscription data의 commercial-profit use와 derivative works도 제한한다.
+  - 따라서 공개 chart scraping, 숨겨진 CSV modal 호출, undocumented endpoint 재현은 production collector 후보가 아니다.
+- Verdict: **무료·무계정 trailing P/E source로 기각**. 유료 별도 forward-valuation 기능은 series entitlement와 서면 사용권을 받은 뒤에만 기술 검토 가능하다.
 
 ### Public Historical Chart Sites
 

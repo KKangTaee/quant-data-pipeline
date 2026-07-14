@@ -28,6 +28,13 @@ Last Updated: 2026-07-14
 - User problem: historical series를 당시 알 수 있던 release vintage로 오해
 - Interaction shape: 기존 `과거 시점 재구성` badge와 함께 `provider history는 strict release-vintage PIT가 아님` 표시
 
+### Forward Versus Trailing Separation
+
+- User problem: MacroMicro forward P/E를 기존 actual trailing P/E의 결측 보강값으로 오해할 수 있음
+- Interaction shape: source selector가 아니라 metric-level tab 또는 독립 card로 `실적 기준 Trailing P/E`와 `예상 실적 기준 Forward P/E`를 분리
+- Required copy: forward track에는 `애널리스트 예상 이익 기반`, provider, forecast horizon과 revision 성격을 함께 표시
+- Avoid: 두 metric을 같은 평균·표준편차 표본에 혼합하거나 forward series로 현재 trailing graph의 빈 달을 채우는 표현
+
 ## Patterns That Conflict With Current Boundaries
 
 - UI에서 GuruFocus/Nasdaq/FactSet API 직접 호출

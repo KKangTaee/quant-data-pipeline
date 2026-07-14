@@ -21,6 +21,9 @@ Last Updated: 2026-07-14
 | 무료 direct aggregate 원천 부재 | 외부 무료 API 교체만으로 60개월 gap을 닫을 수 없음 | SEC reconstruction을 유지하고 mapping/foreign issuer/corporate-action coverage를 개선 |
 | 무료 보조 API의 짧은 history·호출량 | Business Quant 등으로도 100종목 5년을 즉시 완전 대체하지 못함 | 보조 cross-check로만 사용하고 canonical raw source는 SEC EDGAR로 유지 |
 | 일반 membership과 API/redistribution 권한 혼동 | 내부 앱 또는 외부 공유가 약관을 벗어날 수 있음 | internal-only 범위를 문서화하고 provider 서면 확인 |
+| MacroMicro 공개 chart와 무료 CSV/API 권한 혼동 | visible monthly value만 보고 무계정 collector가 가능하다고 오판 | 공식 Help/plan contract를 적용하고 hidden modal/undocumented endpoint 호출 금지 |
+| MacroMicro forward P/E와 현재 trailing P/E 혼합 | 밴드 중심·표준편차·EPS 시나리오 의미가 바뀌어 시계열이 비일관적 | 별도 forward valuation track으로만 허용하고 기존 trailing history 결측 대체 금지 |
+| MacroMicro series `23955` 유료 entitlement 불명확 | 결제 후에도 API/download가 막히거나 파생 차트 권한이 없을 수 있음 | 구매 전 series ID, history, payload, retention, derivative/display 권한을 서면 확인 |
 | PE/EPS revision | 과거 결과가 재수집 때 바뀔 수 있음 | collected_at/source_version 저장, revision diff 기록 |
 | NDX/P-E date mismatch | derived EPS 오류 | same-date 또는 bounded prior-date join만 허용 |
 | P/E zero/null/outlier | log distribution 실패 | positive finite filter와 explicit missing quality |
