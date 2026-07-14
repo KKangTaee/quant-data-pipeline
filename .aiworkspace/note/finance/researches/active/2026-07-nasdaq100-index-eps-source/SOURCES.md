@@ -20,10 +20,10 @@ Access date: 2026-07-14
    - Type: official API docs
    - Evidence: Documented
 4. [GuruFocus Data API Pricing](https://www.gurufocus.com/data-api/pricing)
-   - Supports: Free 월 100 requests 표시, Economic Data add-on/PAYG, commercial packaging signals
+   - Supports: Free 월 100 requests, Economic Data가 base plan 제외 add-on임을 보여주는 feature table/endpoint explorer, `+$90/month`, PAYG `$0.10/request`, 초기 `$100` top-up
    - Type: official pricing page
-   - Evidence: Documented
-   - Limitation: Free API 표와 Economic Data add-on 표가 함께 있어 실제 free endpoint entitlement는 authenticated smoke가 필요함
+   - Evidence: Observed + Documented
+   - Limitation: 동적 icon cell은 text-only crawler에서 누락될 수 있어 2026-07-14 실제 DOM을 교차확인함
 5. [GuruFocus Terms of Use](https://www.gurufocus.com/term-of-use)
    - Supports: personal/professional internal research boundary, external end-user/redistribution restriction, public-site automated monitoring restriction
    - Type: official terms
@@ -158,3 +158,54 @@ Access date: 2026-07-14
     - Type: issuer fact sheet
     - Evidence: Documented
     - Limitation: stable five-year machine-readable archive/API was not found; suitable for current calibration, not primary history
+
+## 2026-07-14 Free Alternative Verification
+
+33. [Alpha Vantage API Documentation](https://www.alphavantage.co/documentation/)
+   - Supports: free-key NDX historical price OHLC endpoint
+   - Type: official API docs
+   - Evidence: Documented
+   - Limitation: historical Nasdaq-100 P/E/EPS endpoint는 확인되지 않음
+34. [FRED NASDAQ-100](https://fred.stlouisfed.org/series/NASDAQ100)
+   - Supports: official-source daily NDX closing level
+   - Type: official public data page
+   - Evidence: Documented
+   - Limitation: P/E/EPS가 없고 Nasdaq copyright/pre-approval note가 있음
+35. [nfin API](https://nfin.dev/)
+   - Supports: anonymous Nasdaq quotes, index snapshots and historical price rows
+   - Type: public API documentation
+   - Evidence: Documented
+   - Limitation: index fundamental P/E/EPS route가 없고 upstream redistribution contract가 공개 문서에서 명확하지 않음
+36. [Business Quant Financial Statements API](https://businessquant.com/docs/api/financial-statements)
+   - Supports: free-key SEC-derived annual/quarterly/TTM statements including foreign issuer filings
+   - Type: official API docs
+   - Evidence: Documented
+   - Limitation: direct NDX aggregate가 아니며 pricing table상 Free financial statement history는 3년
+37. [Business Quant Pricing](https://businessquant.com/pricing)
+   - Supports: Free `$0`, no credit card, 30 API calls/day, 0.1GB/month, Free financial statements 3 years, Enterprise commercial-use signal
+   - Type: official pricing page
+   - Evidence: Documented
+38. [Business Quant Terms of Use](https://businessquant.com/terms-of-use)
+   - Supports: website/data accuracy disclaimer, credential sharing restriction, no general data IP license grant
+   - Type: official terms
+   - Evidence: Documented
+   - Limitation: API-specific retention/derived-output grant가 명확하지 않음
+39. [MacroMicro Nasdaq-100 Forward P/E](https://en.macromicro.me/series/23955/nasdaq-100-pe)
+   - Supports: monthly forward P/E surface
+   - Type: public chart page
+   - Evidence: Observed
+   - Limitation: trailing P/E가 아니며 automated API/download는 free production contract가 아님
+40. [MacroMicro Enterprise/API](https://en.macromicro.me/subscribe-enterprise)
+   - Supports: historical CSV/API integration is paid Business/Custom scope and some partner data cannot be redistributed or used for derivatives
+   - Type: official pricing/FAQ page
+   - Evidence: Documented
+41. [Nasdaq NDX Extended Presentation](https://indexes.nasdaq.com/docs/NDX%20Extended%20Presentation.pdf)
+   - Supports: long-run NDX trailing P/E/earnings chart through 2025
+   - Type: official research PDF
+   - Evidence: Documented
+   - Limitation: chart-only, underlying source Bloomberg, no monthly machine-readable value contract
+42. [World PE Ratio Nasdaq-100](https://worldperatio.com/index/nasdaq-100/)
+   - Supports: account-free QQQ-based historical P/E chart and period statistics
+   - Type: public chart page
+   - Evidence: Observed
+   - Limitation: documented API, raw source, automated extraction and reuse license were not found

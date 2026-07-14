@@ -6138,3 +6138,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 실제 job은 SEC holdings 3,060행을 정규화해 3,049 unique key를 저장했고, QQQ EOD 20행과 monthly proxy 119행을 처리했다. Monthly quality는 READY 5 / BLOCKED 114다.
 - Market Context는 S&P 500 / Nasdaq-100 selector를 제공하며 Nasdaq은 최신 coverage 94.47%가 95% 기준 미달이라 값을 숨기고 blocker evidence를 표시한다.
 - 구현 커밋은 `50fe4059`, `10a973f4`, `287d359f`, `6ed08d0e`; 5차 closeout은 task `STATUS.md`와 `RUNS.md`를 본다.
+
+## 2026-07-14 - Nasdaq-100 무료 direct aggregate 원천 재검증
+
+- GuruFocus 가격표의 동적 contract를 확인해 Economic Data가 무료 core가 아니라 `+$90/month` add-on 또는 PAYG임을 확정했다.
+- 무료 대체 원천을 다시 비교했지만 60개월 direct Nasdaq-100 P/E/EPS와 자동 수집·내부 저장 권리를 함께 충족한 외부 source는 찾지 못했다.
+- 무료 production 경로는 기존 `QQQ N-PORT + SEC actual` 자체 재구성뿐이며, 상세 근거는 `researches/active/2026-07-nasdaq100-index-eps-source/`를 본다.

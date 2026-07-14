@@ -1,7 +1,7 @@
 # UI Patterns
 
 Status: Complete
-Last Updated: 2026-07-12
+Last Updated: 2026-07-14
 
 ## Summary
 
@@ -13,7 +13,8 @@ Last Updated: 2026-07-12
 
 - User problem: 사용자가 역산 EPS를 Nasdaq 공식 EPS로 오해할 수 있음
 - Interaction shape: `EPS 출처`, `계산 방식`, `기준일`, `품질` badge
-- Recommended copy: `GuruFocus Nasdaq-100 trailing P/E 기반 역산 EPS`
+- Recommended copy for the free route: `QQQ 공개 공시·SEC 기업 실적 기반 재구성 EPS`
+- Paid-provider copy, only after a separate source decision: `외부 Nasdaq-100 trailing P/E 기반 QQQ 환산 EPS`
 - Avoid: `Nasdaq 공식 EPS`, `애널리스트 컨센서스 EPS`
 
 ### Compact Cross-Check Evidence

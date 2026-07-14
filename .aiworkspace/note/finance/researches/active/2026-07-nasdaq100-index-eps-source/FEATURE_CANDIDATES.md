@@ -39,6 +39,6 @@ P0 coverage/calibration을 통과하기 전 P1~P4를 구현하지 않는다. 이
 ## Parking Lot
 
 - strict PIT NDX constituent/divisor reconstruction
-- GuruFocus free/paid API 교차검증
+- GuruFocus 유료 Economic Data API 교차검증
 - analyst consensus EPS와 FOMC 자체 시나리오 병렬 비교
 - Nasdaq Composite(COMP) 별도 가치평가

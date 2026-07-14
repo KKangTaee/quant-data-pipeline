@@ -9416,3 +9416,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 화면 진입 자동 수집이 아니라 사용자의 명시 action으로 부족한 historical EPS/EOD만 repeat-safe하게 수집하고 strict 95% gate 결과를 즉시 다시 보여준다.
 - Analysis result: 첫 full repair는 59/60이었고, 2021-08 DOCU/OKTA가 당시 유효한 `EarningsPerShareBasicAndDiluted` 공시를 썼지만 canonical parser가 statement type 누락으로 버린 것이 마지막 gap의 원인이었다.
 - Follow-up: combined basic/diluted actual을 diluted fallback으로 허용하고 별도 basic/FY proxy와 gate 완화는 금지했다. local DB 60/60 READY, desktop/420px graph 렌더링을 확인했다.
+
+### 2026-07-14 - GuruFocus 무료 조건과 대체 원천을 먼저 확정한다
+
+- User request: GuruFocus의 무료 권한·token·license 조건을 먼저 확인하고, 실패하면 다른 무료 source를 조사해 없으면 없다고 결론내릴 것을 요청함.
+- Interpreted goal: 유료 결제나 약관이 불명확한 collector를 먼저 구현하지 않고, 60개월 direct aggregate를 합법적으로 자동 수집할 수 있는 무료 경로만 승인한다.
+- Analysis result: Economic Data는 GuruFocus base plan 제외 add-on이며 무료 direct 대체 외부 원천도 확인되지 않았다. 가격 API나 기업 재무 API는 있어도 NDX P/E/EPS aggregate를 제공하지 않는다.
+- Follow-up: GuruFocus 구현은 중단한다. 무료를 유지하면 SEC QQQ N-PORT + issuer actual 재구성 개선만 남고, direct series가 필요하면 유료 provider를 별도 승인한다.
