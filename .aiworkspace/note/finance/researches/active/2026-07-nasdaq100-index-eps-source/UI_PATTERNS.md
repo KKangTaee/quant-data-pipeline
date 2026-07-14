@@ -35,6 +35,13 @@ Last Updated: 2026-07-14
 - Required copy: forward track에는 `애널리스트 예상 이익 기반`, provider, forecast horizon과 revision 성격을 함께 표시
 - Avoid: 두 metric을 같은 평균·표준편차 표본에 혼합하거나 forward series로 현재 trailing graph의 빈 달을 채우는 표현
 
+### Actual Quality Tier Separation
+
+- User problem: 20-F annual actual 또는 N-PORT anchor 기반 proxy가 strict quarterly TTM 실제값처럼 보일 수 있음
+- Interaction shape: 기본 graph는 `strict_ttm_actual`만 확정값으로 사용하고, 승인된 fallback은 별도 quality label과 점선/설명으로 구분
+- Recommended copy: `연간 실적 기준 보수적 보강`, `분기 보유내역 기준 anchor`
+- Avoid: quality가 다른 값을 같은 60개월 평균·표준편차 표본에 조용히 혼합
+
 ## Patterns That Conflict With Current Boundaries
 
 - UI에서 GuruFocus/Nasdaq/FactSet API 직접 호출

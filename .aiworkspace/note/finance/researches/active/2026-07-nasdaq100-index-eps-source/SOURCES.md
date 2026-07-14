@@ -222,3 +222,53 @@ Access date: 2026-07-14
    - Type: public chart page
    - Evidence: Observed
    - Limitation: documented API, raw source, automated extraction and reuse license were not found
+
+## 2026-07-14 Implementation Feasibility Sources
+
+46. [Tiingo End-of-Day Product](https://www.tiingo.com/products/end-of-day-stock-price-data)
+   - Supports: 60+ years, raw/adjusted prices, split/dividend fields, REST, free 50 requests/hour and 1,000/day
+   - Type: official product/pricing page
+   - Evidence: Documented
+   - Limitation: free license is internal use only
+47. [Tiingo EOD API Documentation](https://www.tiingo.com/documentation/end-of-day)
+   - Supports: historical date-range/monthly resample endpoint, token requirement, adjusted fields, daily supported ticker catalog
+   - Type: official API docs
+   - Evidence: Documented
+48. [Tiingo API Pricing](https://www.tiingo.com/about/pricing)
+   - Supports: Starter `$0`, 500 unique symbols/month, 50 requests/hour, 1,000/day, 1GB/month, internal-only definition
+   - Type: official pricing page
+   - Evidence: Documented
+49. [Tiingo Symbology](https://www.tiingo.com/documentation/appendix/symbology)
+   - Supports: share-class symbol rules and delisted coverage caveat
+   - Type: official API docs
+   - Evidence: Documented
+50. [Tiingo Supported Tickers Catalog](https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip)
+   - Supports: 22/23 exact historical EOD gap symbols plus `GEN` successor candidate for `SYMC`
+   - Type: official daily catalog
+   - Evidence: Observed local catalog smoke
+   - Limitation: actual price payload requires free account token; recycled tickers require identity validation
+51. [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
+   - Supports: no-auth companyfacts/submissions and official ticker-to-CIK mapping
+   - Type: official API docs
+   - Evidence: Documented + payload smoke
+52. [SEC Form N-PORT Data Sets](https://www.sec.gov/data-research/sec-markets-data/form-n-port-data-sets)
+   - Supports: public structured holdings data, quarterly data-set publication and archive from 2019
+   - Type: official SEC data page
+   - Evidence: Documented
+53. [SEC N-PORT Compliance Delay](https://www.sec.gov/rules-regulations/2025/04/s7-26-22)
+   - Supports: monthly public-reporting amendment compliance delayed to 2027/2028
+   - Type: official final-rule page
+   - Evidence: Documented
+54. [Alpha Vantage API Documentation](https://www.alphavantage.co/documentation/)
+   - Supports: listing-status active/delisted catalog; full daily history boundary
+   - Type: official API docs
+   - Evidence: Documented
+55. [Alpha Vantage Premium / Limits](https://www.alphavantage.co/premium/)
+   - Supports: standard free limit 25 requests/day and premium feature boundary
+   - Type: official pricing page
+   - Evidence: Documented
+56. [SimFin Pricing](https://www.simfin.com/en/prices/)
+   - Supports: free account, API/bulk download, five-year chart and fundamentals history
+   - Type: official pricing page
+   - Evidence: Documented
+   - Limitation: five years is shorter than the 119-month input window

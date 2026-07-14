@@ -9430,3 +9430,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: forward/trailing 의미, 60개월 이력, 무료 CSV/API, 자동 저장·파생 사용권을 먼저 확인하고 구현 여부를 결정한다.
 - Analysis result: series는 monthly forward P/E이며 공개 차트 조회만 무료다. raw CSV/API는 Enterprise 유료 범위이고 exact-series entitlement와 파생 사용권은 추가 확인이 필요하다.
 - Follow-up: 무료 collector와 trailing history 대체는 기각한다. 유료 도입을 원하면 series `23955` sample과 서면 license를 받은 뒤 별도 forward-valuation track으로 설계한다.
+
+### 2026-07-14 - Direct 무료 PER/EPS가 없어도 Nasdaq-100 1/3/5년 기능을 완성할 수 있는가
+
+- User request: 다른 무료 대안을 조사하되 실제 구현 가능성까지 검증해 달라고 요청함.
+- Interpreted goal: provider 목록 나열이 아니라 현재 119개월 coverage gap을 닫을 수 있는 합법적 source와 코드 경로를 확정한다.
+- Analysis result: 기능은 가능하다. 계산 오류 수정과 SEC actual 확대가 선행돼야 하며, 무료 계정을 허용하면 Tiingo EOD가 23개 historical price gap을 사실상 모두 보강할 수 있다. 미국 상장 누락분 복구 upper-bound는 119/119개월, 최저 96.319%다.
+- Follow-up: 구현 승인 시 1차 계산 정확도, 2차 SEC identity/actual, 3차 optional Tiingo, 4차 119개월 calibration, 5차 QA 순으로 진행한다. Tiingo token과 internal-only 조건은 3차 전에 별도 승인한다.

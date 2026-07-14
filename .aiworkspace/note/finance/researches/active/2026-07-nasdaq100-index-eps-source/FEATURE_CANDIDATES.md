@@ -1,7 +1,20 @@
 # Feature Candidates
 
 Status: Research Handoff
-Last Updated: 2026-07-12
+Last Updated: 2026-07-14
+
+## Post-V1 Recovery Candidates
+
+| Candidate | Impact | Effort | Risk | Priority | Decision |
+|---|---:|---:|---:|---|---|
+| FY-to-Q4 TTM bug + split-aware drift 수정 | 5 | 2 | 2 | Now | 외부 source 추가 전 필수 |
+| SEC CIK lifecycle + actual fallback 확대 | 5 | 4 | 3 | Now | canonical EPS 복구 경로 |
+| Tiingo free EOD optional fallback | 5 | 3 | 3 | Next | 무료 계정/internal-only 승인 조건 |
+| N-PORT implied-price anchor validator | 4 | 2 | 1 | Next | alias/split/source 검증에 사용 |
+| 20-F annual actual quality tier | 3 | 4 | 4 | Later/conditional | strict TTM과 분리해 표시 |
+| N-PORT anchor-held monthly proxy | 2 | 2 | 5 | Parking lot | 실제 monthly EOD가 아니므로 별도 방법론 승인 필요 |
+
+우선순위는 `Impact 1~5`, `Effort 1~5`, `Risk 1~5`의 상대평가다. upper-bound는 119/119 통과 가능성을 보여주지만 actual payload spike 전에는 Tiingo 경로를 완료로 간주하지 않는다.
 
 ## Candidate Implementation Units
 
@@ -34,7 +47,7 @@ Last Updated: 2026-07-12
 
 ## Priority
 
-P0 coverage/calibration을 통과하기 전 P1~P4를 구현하지 않는다. 이 연구는 phase/task 승인이 아니라 source decision handoff다.
+기존 P1~P4는 이미 구현됐다. 후속은 계산 정확도 수정과 source recovery를 먼저 수행한 뒤 119개월 coverage/calibration을 다시 통과시키는 작업이다. 이 연구는 구현 승인이 아니라 feasibility와 권장 순서 handoff다.
 
 ## Parking Lot
 

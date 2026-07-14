@@ -1,11 +1,41 @@
 # Recommendation
 
-Status: Recommended - Free Public Filing Reconstruction Only
+Status: Recommended - Staged Free Reconstruction Recovery
 Last Updated: 2026-07-14
 
 ## One-Line Recommendation
 
-계정·API token·데이터 구독 없이 진행하려면 QQQ SEC N-PORT와 SEC 기업 실적을 결합한 공개 공시 기반 재구성값을 V1 source로 사용한다.
+이 기능은 만들 수 있다. direct Nasdaq-100 P/E/EPS 원천을 찾는 대신 `계산기 정확도 수정 -> SEC actual 복구 -> 선택적 Tiingo 무료 EOD 보강 -> 119개월 재검증` 순서로 기존 QQQ 공개 공시 재구성을 완성한다.
+
+## 2026-07-14 Feasibility Verdict
+
+- **1년 graph: 구현 가능성 높음.** 계산 오류 수정으로 3개월이 우선 복구되고, 최근 near-gate 달은 미국 상장 1~2개 issuer actual 복구만으로 95%를 넘을 수 있다.
+- **3년 graph: 구현 가능성 중상.** SEC CIK/filing lifecycle과 Tiingo historical EOD를 함께 적용해야 한다.
+- **5년 graph: 구현 가능하지만 spike 조건부.** 미국 상장 누락분 복구 upper bound는 119/119개월 통과했지만 실제 token payload·ticker alias·calibration을 끝내기 전 production 완료를 보장하지 않는다.
+- **무료·무계정만 고수할 경우:** SEC/N-PORT만으로 정확도와 EPS는 상당 부분 개선할 수 있지만, quarterly anchor 사이 delisted EOD의 엄격한 월별 실제값을 모두 보장하기 어렵다.
+- **무료 계정/token을 허용할 경우:** Tiingo EOD가 현재 확인된 historical price gap을 실질적으로 닫는 가장 구현 가능한 대안이다.
+
+## Recommended Five-Stage Implementation
+
+1. **계산 정확도 복구**
+   - true fiscal year-end가 아닌 비교 FY fact에서 Q4를 만들지 않도록 TTM resolver를 수정한다.
+   - weight drift에는 split-adjusted price, EPS/price identity에는 raw close를 사용한다.
+   - 완료 조건: 2020-04~06의 비정상 음수 aggregate 해소, 기존 READY regression 없음.
+2. **SEC identity와 actual 확대**
+   - official ticker-to-CIK, historical CIK/security lifecycle, diluted EPS 우선, net income/diluted shares fallback을 추가한다.
+   - 20-F annual actual은 strict quarterly TTM과 섞지 않고 `annual_actual_stale` 품질로 분리한다.
+   - 완료 조건: target별 source/available-at/unit/ADR evidence와 coverage delta가 재현됨.
+3. **Tiingo EOD optional connector**
+   - 사용자가 무료 계정/token과 internal-only 조건을 승인할 때만 추가한다.
+   - 23개 target의 metadata/name/start/end와 N-PORT implied-price anchor를 대조하고, `SYMC -> GEN` 같은 alias는 review fixture로 고정한다.
+   - 기존 price table은 source provenance 없이 symbol/date upsert하면 Yahoo row를 덮을 수 있으므로 source-aware observation 또는 missing-only additive contract를 먼저 적용한다.
+4. **119개월 repair/calibration spike**
+   - 2016-09~2026-07 전체를 다시 materialize하고 71/95/119 최신 window의 READY 연속성을 확인한다.
+   - 95% gate를 낮추지 않고 Invesco/Nasdaq 공개 관측값 및 N-PORT anchors와 오차를 검증한다.
+   - 완료 조건: 목표 graph별 연속 READY, split/alias/ADR audit, 허용 오차 통과.
+5. **QA·문서·운영 마감**
+   - 버튼의 기다리는 흐름, 실패/재시도, source/quality copy, 1/3/5년 Browser QA를 수행한다.
+   - token 부재 시 no-account SEC 경로는 계속 동작하고 Tiingo는 optional fallback이어야 한다.
 
 ## 2026-07-14 Provider Refresh
 
@@ -42,7 +72,7 @@ GuruFocus 무료 가능성은 가격표의 동적 feature cell과 Data API Agree
 
 ## Final Recommendation
 
-사용자가 account/token 없는 경로를 우선했으므로 V1의 권장 조달 경로를 공개 공시 기반 자체 재구성으로 변경한다.
+기존 공개 공시 기반 자체 재구성은 폐기하지 않는다. SEC를 canonical EPS source로 유지하고, Tiingo는 상장폐지·합병 종목의 historical EOD gap에만 선택적으로 사용한다.
 
 1. SEC EDGAR에서 QQQ CIK `0001067839`의 분기별 N-PORT holdings를 수집한다.
 2. 2020-12-31~2026-03-31 사이 확인된 22개 분기 snapshot의 종목·수량·평가액·비중을 저장한다.

@@ -6151,3 +6151,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 로그아웃 화면과 공식 Help를 확인해 Free/Prime/Max raw CSV 및 무계정 API 경로가 없고, CSV/API는 Business/API Essential/Custom 범위임을 확인했다.
 - exact-series entitlement와 DB retention/파생 차트 권한은 공개 정보만으로 확정되지 않아 유료 검토 시 서면 확인이 필요하다.
 - 현재 무료 V1에는 MacroMicro collector를 추가하지 않으며, 도입 시 별도 forward-valuation track으로만 검토한다.
+
+## 2026-07-14 - Nasdaq-100 대안 원천 구현 가능성 재검증
+
+- 현재 DB는 119개월 중 READY 66 / BLOCKED 53이며, 계산기 FY-to-Q4 오류 수정으로 최소 69개월까지 우선 복구 가능함을 확인했다.
+- Tiingo 무료 EOD catalog가 historical price gap 23개 중 22개 exact symbol과 `SYMC -> GEN` successor 후보를 제공하며, SEC/N-PORT가 EPS와 price anchor를 제공한다.
+- 미국 상장 누락분만 복구한 upper-bound에서도 119/119개월이 95%를 넘고 최저 96.319%여서 기능은 구현 가능 판정이다.
+- 권장 순서는 계산 정확도 -> SEC identity/actual -> optional Tiingo EOD -> 119개월 calibration -> QA이며 상세는 research bundle을 본다.

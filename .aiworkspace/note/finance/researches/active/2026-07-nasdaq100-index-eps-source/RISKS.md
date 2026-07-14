@@ -5,6 +5,13 @@ Last Updated: 2026-07-14
 
 | Risk | Impact | Mitigation |
 |---|---|---|
+| FY comparative fact를 true year-end로 오인 | 가짜 음수 Q4와 `NON_POSITIVE_AGGREGATE_EARNINGS` 발생 | fiscal period sequence/period-end 검증 후에만 FY-Q1-Q2-Q3 derivation, 2020 regression fixture |
+| raw close로 split 구간 weight drift | 과거 보유비중과 earnings yield 왜곡 | drift는 adjusted return, EPS identity는 raw close로 용도 분리 |
+| Tiingo free token/계정 필요 | 기존 no-account 운영 조건과 다름 | optional connector로 분리하고 사용자 승인 후 secret 설정 |
+| Tiingo internal-only license | 다중 사용자/공개 화면에서 사용권 위반 가능 | 개인 내부 사용만 허용; 공유/배포 전 별도 license 확인 |
+| recycled/successor ticker alias | 다른 issuer 가격을 잘못 결합 | name/date/CIK/CUSIP/N-PORT implied price fixture, 수동 승인 alias registry |
+| price table source provenance 부재 | Tiingo upsert가 기존 Yahoo observation을 덮을 수 있음 | source-aware raw observation 또는 missing-only additive 저장 계약 선행 |
+| feasibility upper bound와 실제 payload 차이 | 119/119를 조기 확정할 위험 | token smoke, full materialization, calibration 전에는 conditional로 표시 |
 | QQQ proxy와 공식 NDX aggregate 차이 | 공식 P/E처럼 오인 가능 | `public_filing_reconstructed_proxy` 표시, 공식 Nasdaq P/E 명칭 금지, calibration 공개 |
 | N-PORT 분기 cadence | 월별 weight가 실제 rebalance/flow를 완전히 반영하지 못함 | 분기 anchor 사이 price drift, special rebalance event 반영 |
 | CUSIP/ISIN -> ticker/CIK mapping 누락 | aggregate earnings coverage 저하 | security master와 coverage threshold, unmapped weight 표시 |
@@ -20,6 +27,7 @@ Last Updated: 2026-07-14
 | provider별 current P/E 불일치 | 평균·표준편차와 valuation label이 source 선택에 따라 크게 변경 | source contract를 고정하고 12개월 overlap/revision diff를 승인 기준으로 사용 |
 | 무료 direct aggregate 원천 부재 | 외부 무료 API 교체만으로 60개월 gap을 닫을 수 없음 | SEC reconstruction을 유지하고 mapping/foreign issuer/corporate-action coverage를 개선 |
 | 무료 보조 API의 짧은 history·호출량 | Business Quant 등으로도 100종목 5년을 즉시 완전 대체하지 못함 | 보조 cross-check로만 사용하고 canonical raw source는 SEC EDGAR로 유지 |
+| N-PORT monthly public disclosure 지연 | 앞으로 공개될 monthly data가 현재 historical gap을 곧 해결한다고 오판 | 현행 quarterly public anchor만 사용; 2027/2028 compliance 전제 금지 |
 | 일반 membership과 API/redistribution 권한 혼동 | 내부 앱 또는 외부 공유가 약관을 벗어날 수 있음 | internal-only 범위를 문서화하고 provider 서면 확인 |
 | MacroMicro 공개 chart와 무료 CSV/API 권한 혼동 | visible monthly value만 보고 무계정 collector가 가능하다고 오판 | 공식 Help/plan contract를 적용하고 hidden modal/undocumented endpoint 호출 금지 |
 | MacroMicro forward P/E와 현재 trailing P/E 혼합 | 밴드 중심·표준편차·EPS 시나리오 의미가 바뀌어 시계열이 비일관적 | 별도 forward valuation track으로만 허용하고 기존 trailing history 결측 대체 금지 |

@@ -21,6 +21,10 @@ Nasdaq-100 가치평가 그래프에 필요한 60개월 trailing P/E와 current/
 | Source | Direct NDX P/E | Direct NDX EPS | 60m Backfill | Automation | Cost Signal | Evidence | Fit |
 |---|---:|---:|---:|---:|---|---|---|
 | QQQ SEC N-PORT + SEC actual 자체 산출 | 직접 제공 아님 | 직접 제공 아님 | 가능(22 quarterly snapshots, 2020-12~2026-03) | SEC public API/XML | 무료, 계정/token 불필요 | Documented inputs + Inferred formula | no-auth V1 권장 |
+| SEC actual + Tiingo EOD 보강 | 직접 제공 아님 | SEC에서 자체 계산 | 가능성이 높음 | SEC public API + Tiingo REST | 가격은 무료 계정/token, 월 500 symbols·일 1,000 calls, internal-only | Documented + catalog smoke | 현재 gap 복구 최우선 대안 |
+| SEC N-PORT implied price anchor | 직접 제공 아님 | 직접 제공 아님 | 분기 공개 snapshot | SEC public filing/data set | 무료, 계정/token 불필요 | Observed local DB + Documented fields | anchor 검증/제한적 fallback |
+| Alpha Vantage Free | 없음 | 없음 | delisted full history는 불가 | REST + free key | 무료 25 calls/day, full daily history는 premium | Documented | primary gap 복구 부적합 |
+| SimFin Free | 없음 | constituent fundamentals | 5년 | API/bulk + free account | 무료, 5년 delayed/history | Documented | 119개월에는 부족 |
 | GuruFocus Economic Data API | 일별 | 분기별 | 가능성이 높음(5Y/20Y chart 및 historical endpoint) | REST + account token | Economic Data는 base plan 제외 add-on `+$90/month` 또는 PAYG `$0.10/request`이며 PAYG 초기 `$100` top-up 필요 | Observed + Documented | 무료 후보 제외, 유료 선택지 |
 | FactSet Benchmarks API | index ratios endpoint | per-share/aggregate content 기반 | 가능 | REST/SDK | entitlement/quote | Documented | Enterprise 최우선 |
 | LSEG I/B/E/S Global Aggregates / Datastream | major index aggregate/valuation | actual/estimate aggregate 계열 | 가능성이 높음 | DSWS/FTP/SFTP | enterprise quote | Documented + NDX coverage는 확인 필요 | Enterprise 대안 |
@@ -102,6 +106,38 @@ reconstructed QQQ EPS = QQQ price / reconstructed P/E
 - **Trendonify/VCP Scanner**: 공개 history가 있어도 Terms가 scraping/automated extraction을 금지하므로 collector 후보에서 제외한다.
 
 결론적으로 `무료 + 60개월 + direct Nasdaq-100 aggregate + 자동화 + 내부 DB 저장 권리`를 동시에 만족한다고 검증된 외부 원천은 찾지 못했다. 무료 경로는 SEC QQQ N-PORT와 SEC actual을 결합한 자체 재구성뿐이다.
+
+### 2026-07-14 Implementation Feasibility Recheck
+
+#### Tiingo EOD free account
+
+- 공식 EOD product는 raw/adjusted OHLC, dividend, split을 REST로 제공하고 최대 60년 이상 history를 표방한다.
+- Starter는 `$0/month`, 시간당 50회, 일 1,000회, 월 1GB, 월 500 unique symbols이며 token이 필요하다. 23개 gap symbol backfill은 요청량 한도 안이다.
+- 공식 `supported_tickers.zip`을 내려받아 local repair target과 대조한 결과 historical EOD가 필요한 23개 중 22개 exact symbol이 있었다: `ALXN`, `ANSS`, `ATVI`, `CA`, `CELG`, `CERN`, `CTXS`, `DISH`, `LLTC`, `MXIM`, `MYL`, `QRTEA`, `QVCA`, `SGEN`, `SHPG`, `SPLK`, `SRCL`, `VIAB`, `WBA`, `WFM`, `XLNX`, `YHOO`.
+- exact `SYMC`는 없지만 successor `GEN` series가 1990년부터 존재한다. `SYMC -> NLOK -> GEN` alias를 issuer/name/date로 검증한 뒤만 사용한다.
+- `CA`, `QRTEA`처럼 재사용 가능성이 있는 ticker는 symbol 문자열만 믿지 않고 name/start/end와 N-PORT identifier를 함께 검증한다.
+- Tiingo fundamentals는 별도 add-on이므로 EOD만 보강하고 EPS canonical source는 SEC로 유지한다.
+- free license는 개인 internal use에 한정된다. 다른 사용자에게 raw/derived Tiingo data를 표시하거나 공개 배포하려면 별도 license가 필요하다.
+
+#### SEC reconstruction hardening
+
+- 공식 SEC ticker-to-CIK 파일에서 현재 foreign/ADR target 16개 모두 CIK가 확인됐다. current identity 누락은 무료 public mapping으로 개선 가능하다.
+- companyfacts smoke에서 ASML·BIDU·PDD·NXPI·AZN의 EPS 또는 net income/diluted shares fact가 확인됐다. non-USD/share, IFRS tag, 20-F cadence와 ADR ratio를 처리하면 기존 missing weight를 줄일 수 있다.
+- 미국 상장 누락 종목만 복구하고 foreign/ADR는 계속 누락으로 둔 보수적 upper-bound 시뮬레이션도 119/119개월 coverage 95% 이상, 최저 96.319%를 만들었다.
+- 단, 현재 FY-to-Q4 계산 오류와 split drift를 먼저 고치지 않으면 외부 데이터를 추가해도 잘못된 음수 EPS와 weight가 남는다.
+
+#### N-PORT price anchor
+
+- N-PORT position의 `market_value / shares`는 snapshot 시점의 실제 security-unit implied price다.
+- local DB에서 historical EOD gap 23개 모두에 총 171개 implied-price anchor가 확인됐다.
+- 이 값은 Tiingo payload 검증, symbol alias, split 검증에 강한 no-account 기준점이다.
+- 현재 공개 N-PORT는 quarterly anchor만 제공하므로 anchor 사이 모든 월의 실제 EOD를 대체하지는 못한다. monthly public disclosure 확대도 2027/2028년으로 연기돼 현재 5년 backfill을 해결하지 않는다.
+
+#### Rejected free alternatives
+
+- Alpha Vantage는 free key와 delisted listing catalog는 유용하지만 daily full history가 premium이고 무료 호출량도 25/day라 historical delisted EOD primary source가 될 수 없다.
+- SimFin Free는 API/bulk를 제공하지만 fundamentals/chart history가 5년이라 60개월 rolling band를 포함한 119개월 input window에 부족하다.
+- direct public chart scraping은 앞선 약관·방법론 문제 때문에 계속 제외한다.
 
 ### MacroMicro Nasdaq-100 Forward P/E
 
