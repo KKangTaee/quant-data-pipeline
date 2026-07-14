@@ -1,7 +1,7 @@
 # Nasdaq-100 Index EPS / P/E Source Benchmarks
 
 Status: Complete
-Last Updated: 2026-07-12
+Last Updated: 2026-07-14
 
 ## Research Question
 
@@ -21,7 +21,7 @@ Nasdaq-100 가치평가 그래프에 필요한 60개월 trailing P/E와 current/
 | Source | Direct NDX P/E | Direct NDX EPS | 60m Backfill | Automation | Cost Signal | Evidence | Fit |
 |---|---:|---:|---:|---:|---|---|---|
 | QQQ SEC N-PORT + SEC actual 자체 산출 | 직접 제공 아님 | 직접 제공 아님 | 가능(22 quarterly snapshots, 2020-12~2026-03) | SEC public API/XML | 무료, 계정/token 불필요 | Documented inputs + Inferred formula | no-auth V1 권장 |
-| GuruFocus Economic Data API | 일별 | 분기별 | 가능성이 높음(5Y/20Y chart 및 historical endpoint) | REST | Free 100 requests 표시는 있으나 Economic entitlement 불명확; PAYG $0.10/request/add-on +$90 | Documented | 조건부 교차검증 |
+| GuruFocus Economic Data API | 일별 | 분기별 | 가능성이 높음(5Y/20Y chart 및 historical endpoint) | REST + account token | Free 표에 Economic Data와 월 100 requests가 함께 표시됨; 실제 indicator entitlement는 authenticated smoke 필요. PAYG $0.10/request/add-on +$90 | Documented | free-account primary 후보 |
 | FactSet Benchmarks API | index ratios endpoint | per-share/aggregate content 기반 | 가능 | REST/SDK | entitlement/quote | Documented | Enterprise 최우선 |
 | LSEG I/B/E/S Global Aggregates / Datastream | major index aggregate/valuation | actual/estimate aggregate 계열 | 가능성이 높음 | DSWS/FTP/SFTP | enterprise quote | Documented + NDX coverage는 확인 필요 | Enterprise 대안 |
 | Bloomberg Data License | historical fundamentals/estimates/price | field entitlement에 따라 가능 | 가능성이 높음 | REST/SFTP/cloud | enterprise quote | Claimed; exact NDX field unknown | 교차검증/대안 |
@@ -80,6 +80,28 @@ reconstructed QQQ EPS = QQQ price / reconstructed P/E
   - 데이터 장기 저장/내부 chart 표시/계약 종료 후 보유 권한은 Data API Agreement 확인 필요
   - public indicator HTML scraping은 사용하지 않음
 - Evidence label: Documented + current cross-check Inferred
+
+#### 2026-07-14 access refresh
+
+- 공개 가격표의 Free 열에는 Economic Data와 월 100 requests가 함께 표시된다.
+- `GET /data/economic/6778` 무인증 호출은 `401 Invalid token`을 반환하므로 Shiller 파일처럼 no-account/no-token으로 받을 수는 없다.
+- indicator `6778`은 일별 Nasdaq-100 P/E, `5870`은 분기 Nasdaq-100 EPS를 공개 페이지에서 계속 제공한다.
+- 가격표에는 Economic Data `+$90/month` add-on과 `$0.10/request` PAYG도 함께 표시되므로, 실제 Free token으로 두 indicator의 전체 history가 반환되는지는 가입 후 1회 smoke로 확정해야 한다.
+- 내부 사용자용 앱에는 일반 Terms의 personal/professional research 범위가 맞을 가능성이 있지만, 장기 DB 저장과 파생 차트 표시는 가입 시 Data API Agreement를 확인한다.
+- 현재 화면이 QQQ 가격 단위이면 `5870`의 NDX EPS를 직접 넣지 않는다. `6778` P/E를 월말 downsample하고 `QQQ price / P/E`로 QQQ-unit EPS proxy를 파생하며, `5870`은 NDX same-date identity check에만 사용한다.
+
+### Public Historical Chart Sites
+
+- World PE Ratio는 QQQ 기반 Nasdaq-100 월별 P/E를 1990년부터 HTML chart data로 노출한다.
+  - 장점: 계정 없이 5년 이상을 기술적으로 읽을 수 있다.
+  - 한계: 원천 provider, aggregate earnings 산식, revision/PIT 계약, 자동 수집/재사용 권리가 명확하지 않다.
+  - 판정: 사람용 교차검증만 허용하고 production collector에는 사용하지 않는다.
+- Trendonify는 1990년부터의 월별 Nasdaq-100 P/E 표를 공개한다.
+  - 한계: Terms가 사전 서면 허가 없는 scraping/crawling/automated extraction을 명시적으로 금지한다.
+  - 판정: 자동 수집 source에서 제외한다.
+- VCP Scanner는 SEC filings와 개별 종목 financials로 계산한 Nasdaq-100 P/E history를 공개한다.
+  - 한계: Terms가 bulk scraping/harvesting을 금지하고, 공개값도 다른 provider보다 materially 높아 방법론 일치가 필요하다.
+  - 판정: 화면 수동 교차검증 외에는 사용하지 않는다.
 
 ### FactSet Benchmarks API
 

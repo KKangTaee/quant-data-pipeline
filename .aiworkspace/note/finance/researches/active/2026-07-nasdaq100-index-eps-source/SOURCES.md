@@ -1,7 +1,7 @@
 # Sources
 
 Status: Complete
-Access date: 2026-07-12
+Access date: 2026-07-14
 
 ## GuruFocus
 
@@ -123,3 +123,38 @@ Access date: 2026-07-12
     - Type: official Federal Reserve data page
     - Evidence: Documented
     - Limitation: series notes mark Nasdaq copyright/pre-approval; QQQ EOD is the safer no-license V1 price proxy
+
+## Public Chart Automation Review
+
+26. [World PE Ratio Nasdaq-100](https://worldperatio.com/index/nasdaq-100/)
+    - Supports: account-free monthly QQQ-based P/E chart history embedded in public HTML
+    - Type: public chart page
+    - Evidence: Observed
+    - Limitation: underlying provider, aggregate earnings method, revision/PIT contract and automated reuse rights are not identified
+27. [Trendonify Nasdaq-100 P/E](https://trendonify.com/united-states/stock-market/nasdaq-100/pe-ratio)
+    - Supports: public monthly Nasdaq-100 P/E table from 1990
+    - Type: public chart/data page
+    - Evidence: Observed
+    - Limitation: data source is generic and latest observation was stale at review time
+28. [Trendonify Terms](https://trendonify.com/terms)
+    - Supports: scraping, crawling and automated extraction require prior written permission
+    - Type: official site terms
+    - Evidence: Documented
+29. [VCP Scanner Nasdaq-100 Valuation](https://vcpscanner.com/market-valuation/nasdaq-100)
+    - Supports: daily constituent-financial-based P/E history and current aggregate
+    - Type: public product page
+    - Evidence: Observed
+    - Limitation: current value materially differs from other sources and exact index aggregate contract needs validation
+30. [VCP Scanner Methodology](https://vcpscanner.com/methodology)
+    - Supports: SEC EDGAR statements, exchange price feeds and constituent-level metric computation
+    - Type: official methodology page
+    - Evidence: Documented
+31. [VCP Scanner Terms](https://vcpscanner.com/terms)
+    - Supports: bulk scraping/harvesting and systematic API extraction are prohibited without permission
+    - Type: official site terms
+    - Evidence: Documented
+32. [Invesco QQQ Fact Sheet](https://www.invesco.com/content/dam/invesco/us/en/product-documents/etf/fact-sheet/qqq-invesco-qqq-etf-fact-sheet.pdf)
+    - Supports: official current-quarter QQQ weighted harmonic trailing P/E and calculation description
+    - Type: issuer fact sheet
+    - Evidence: Documented
+    - Limitation: stable five-year machine-readable archive/API was not found; suitable for current calibration, not primary history

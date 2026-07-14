@@ -1,11 +1,34 @@
 # Recommendation
 
 Status: Recommended - Public Filing Reconstruction Pilot
-Last Updated: 2026-07-12
+Last Updated: 2026-07-14
 
 ## One-Line Recommendation
 
 계정·API token·데이터 구독 없이 진행하려면 QQQ SEC N-PORT와 SEC 기업 실적을 결합한 공개 공시 기반 재구성값을 V1 source로 사용한다.
+
+## 2026-07-14 Provider Refresh
+
+현재 선택지는 사용자 조건에 따라 둘로 나뉜다.
+
+1. **무료·무계정 조건 유지**
+   - 기존 QQQ SEC N-PORT + SEC actual 재구성을 유지한다.
+   - 공개 차트 HTML scraping은 출처·방법론·자동 수집 권리가 불충분하므로 source로 승격하지 않는다.
+2. **무료 계정·API token 허용**
+   - GuruFocus Economic Data API indicator `6778`을 direct Nasdaq-100 trailing P/E primary 후보로 smoke한다.
+   - 가격표상 Free plan에 Economic Data와 월 100 requests가 표시되며, 이 화면의 월별 갱신량에는 충분하다.
+   - 무인증 호출은 401이므로 account/token은 필수다.
+   - indicator `5870`의 NDX EPS는 QQQ-unit EPS와 단위가 다르므로 화면 값으로 직접 섞지 않고 provider identity check에 사용한다.
+
+free token이 두 indicator의 full historical payload를 실제 반환하고 Data API Agreement가 내부 DB 저장·파생 차트를 허용하면, GuruFocus P/E를 primary로 전환하고 현재 재구성값은 검증/fallback으로 낮추는 것이 가장 효율적이다. 이 경우 상폐·합병 종목의 개별 EPS/가격 공백 때문에 119개월 history 전체가 막히는 문제를 피할 수 있다.
+
+### Recommended access spike
+
+1. 사용자가 만든 Free API token을 환경변수/secret에만 저장한다.
+2. `/economic/6778`과 `/economic/5870`을 각각 1회 호출해 status, earliest/latest date, observation count를 확인한다.
+3. 60/119개월 범위의 월말 P/E 완전성과 positive finite 비율을 확인한다.
+4. 같은 날짜의 `NDX level / P-E`와 indicator `5870` EPS를 비교해 단위·시차를 검증한다.
+5. 현재 QQQ reconstruction과 최근 12개월 편차를 측정한 뒤 source 전환을 승인한다.
 
 ## Final Recommendation
 
@@ -45,7 +68,7 @@ Last Updated: 2026-07-12
 - 공개 indicator 페이지 조회는 무료다.
 - 공개 웹페이지를 robot/scraping으로 반복 수집해 DB에 저장하는 방식은 GuruFocus Terms of Use 경계와 맞지 않으므로 사용하지 않는다.
 - Data API 가격표에는 Free `$0`, 월 100 requests가 표시되지만, 같은 페이지에서 Economic Data를 `+$90/month` add-on 및 `$0.10/request` PAYG로도 표시한다.
-- 따라서 free token이 indicators `6778`/`5870`의 실제 historical payload를 허용한다고 문서만으로 확정할 수 없다.
+- Free 표에는 Economic Data와 월 100 requests가 함께 표시되지만, 무인증 호출은 401이며 free token이 indicators `6778`/`5870`의 전체 historical payload를 허용하는지는 authenticated smoke로 확정해야 한다.
 - PAYG는 Economic Data `$0.10/request`이지만 초기 `$100` credit top-up이 표시된다.
 - Builder는 `$200/month billed annually`이며 Economic Data add-on은 `+$90/month`로 표시된다.
 - 일반 Terms of Use는 개인/기관 내부 research를 허용하는 방향이지만, 외부 end-user 앱과 재배포는 commercial data license가 필요하다고 명시한다.
@@ -89,7 +112,7 @@ Last Updated: 2026-07-12
 
 ## Upgrade Path
 
-- GuruFocus API access/license가 확인되면 reconstructed series의 저비용 교차검증 source로 사용한다.
+- GuruFocus Free API access/license가 확인되면 indicator `6778`을 primary P/E 후보로, reconstructed series를 교차검증/fallback으로 사용한다.
 - FactSet 계약이 가능하면 `/ratios` 기반 NDX aggregate를 production primary로 승격한다.
 - LSEG/Bloomberg entitlement가 이미 있다면 같은 60개월 샘플과 공개 재구성값을 비교한다.
 - 공식 NDX constituent/divisor 재현이 필요할 때만 Nasdaq GIW/GIFFD license를 검토한다.
