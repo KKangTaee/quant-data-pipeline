@@ -1,10 +1,11 @@
 # Risks
 
-## Open Risks
+## Residual Risks
 
-- concept family가 회계적으로 동등하지 않은 issuer-specific 사례가 있을 수 있다. explicit allowlist와 strict guards를 유지하고 mixed-concept regression을 추가해야 한다.
-- TTM 표시를 모든 point에 badge로 반복하면 chart가 복잡해질 수 있다. source-quarter marker와 active inspector 중심으로 제한한다.
-- actual MRNA는 profile CIK가 없는 상태라 external statement refresh는 blocked일 수 있으나, 현재 저장된 historical statement와 Q4 산출 검증에는 영향을 주지 않는다.
+- concept family가 회계적으로 동등하지 않은 issuer-specific 사례가 있을 수 있다. 현재 mixed-concept regression과 explicit allowlist/strict guards는 유지하고, 새 family 추가 전 회계 동등성 audit을 별도로 수행해야 한다.
+- source-quarter marker는 chart 안의 중립 원형으로 제한하고, 상세 badge/formula는 active inspector에만 표시해 반복 복잡도를 줄였다.
+- actual MRNA의 external statement refresh가 identity 상태에 따라 blocked일 수 있으나, 저장된 historical statement와 read-time Q4 산출 계약에는 영향을 주지 않는다.
+- repository isolated regression의 기존 unrelated 4 failures는 이번 task 소유 범위 밖이며 새 회귀는 아니다.
 
 ## Constraints
 

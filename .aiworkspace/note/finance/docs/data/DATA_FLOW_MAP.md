@@ -172,7 +172,7 @@ COLLECTABLE React action intent
 - 검색, 선택, 화면 진입은 DB read-only이며 UI/React가 provider를 직접 호출하지 않는다.
 - 각 월말까지 공개된 최신 4개 분기 diluted EPS를 합산하고, price와 EPS를 같은 as-of split basis로 맞춘 뒤 positive TTM EPS에만 P/E를 계산한다.
 - Graph 1은 최근 60개월 positive log(P/E)와 36개월 민감도, Graph 2는 FOMC real GDP+PCE macro proxy와 최근 3년 기업 초과 TTM EPS 성장 P25/P50/P75를 결합한다.
-- 전환 분석은 direct Q와 compatible H1/9M/FY subtraction으로 discrete quarter를 복원하고, missing slot을 유지한 채 TTM operating/cash series를 만든다. milestone과 runway/debt/dilution risk는 서로 독립이다.
+- 전환 분석은 direct Q와 compatible H1/9M/FY subtraction으로 discrete quarter를 복원한다. Exact concept 처리 뒤 missing Q4만 explicit equivalent-concept family의 같은 symbol/fiscal year/unit 및 primary-period/PIT 조건으로 보완하며, per-metric `REPORTED/FILING_DERIVED`와 TTM derived-input provenance를 함께 전달한다. Guard 실패는 missing slot과 끊긴 선으로 유지한다. milestone과 runway/debt/dilution risk는 서로 독립이다.
 - positive current TTM EPS와 Graph 1 READY를 모두 만족할 때만 PER를 기본 추천한다. negative P/E는 만들지 않고 전환 분석 valuation도 fresh/aligned USD input이 없으면 숫자를 숨긴다.
 - raw profile·가격·SEC gap만 `COLLECTABLE`이며 적자, 짧은 상장 이력, 검증되지 않은 ADR 단위, unsupported sector는 provider 수집으로 해결할 수 없는 분석/가치평가 상태다. SEC CIK가 없으면 기존 분석을 보존하고 collection만 `BLOCKED`다.
 - V1은 새 valuation materialization table을 만들지 않고 선택한 한 종목의 bounded stored evidence를 read-time 계산한다.

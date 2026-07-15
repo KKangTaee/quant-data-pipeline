@@ -9509,3 +9509,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 마음에 든 6개 요소는 유지하되 established profitable company가 적자/실패처럼 보이지 않아야 한다.
 - Analysis result: 영업 항목은 +1.0%p acceleration threshold 미달이고, EPS/PER READY 누락은 turnaround loader가 DB의 `USD per share`를 읽지 않는 버그다. EPS 양전은 TTM이 아직 음수인 early-turn 신호라 already-positive와 별도다.
 - Follow-up: unit fix, UI-local established state, 사용자 문구 보정을 1차~3차로 구현하기 위한 written spec review 후 상세 TDD plan으로 전환한다.
+
+### 2026-07-16 - Moderna 전환 차트 결측을 공시 기반 산출로 복구한다
+
+- User request: Moderna 영업·현금 전환 그래프의 끊긴 구간 원인을 확인하고, 확실한 공시 데이터로 복구한 부분만 표와 차트에서 구분해 표시하도록 승인함.
+- Interpreted goal: 결측을 보간하거나 추정하지 않고, 동등한 SEC concept의 FY/Q1/Q2/Q3 확정 공시가 모두 있을 때만 missing Q4를 계산하고 사용자에게 산식을 공개한다.
+- Analysis result: 2023년 revenue concept rename 때문에 exact-concept Q4 계산이 실패했다. Explicit family fallback으로 Q4 revenue `2.811B`, GP `1.882B`, operating income `0.006B`를 재현하고 TTM 연속성을 복구했다.
+- Follow-up: 1차 resolver, 2차 provenance, 3차 UI, 4차 actual/Browser QA와 문서 정렬을 완료했다. 새 concept family 확대는 별도 회계 동등성 audit 후 진행한다.

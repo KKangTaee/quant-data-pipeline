@@ -14,3 +14,7 @@
 - 사용자 문구는 `공시 기반 산출`이다.
 - 직접 공시 Q4가 최우선이고 family fallback은 missing Q4에만 사용한다.
 - 차트 gap-preserving renderer는 수정 대상이 아니다.
+- exact-concept resolver가 먼저 실행되고, explicit metric concept family 안에서만 missing Q4 fallback을 허용한다.
+- family fallback은 `(symbol, fiscal year, unit)`과 primary-period/PIT cutoff를 모두 만족한 FY/Q1/Q2/Q3만 결합한다.
+- `FILING_DERIVED`는 forecast나 보간이 아니라 확정 공시 operand의 산술 결과다. 화면 문구도 `추정`이 아니라 `공시 기반 산출`을 사용한다.
+- source-quarter marker와 active inspector는 분기 자체의 derived 여부를, TTM notice는 최근 4개 input 중 derived 값 포함 여부를 각각 표시한다.

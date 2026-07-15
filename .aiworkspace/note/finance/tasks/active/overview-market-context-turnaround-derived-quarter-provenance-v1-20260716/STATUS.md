@@ -5,8 +5,8 @@ Last Updated: 2026-07-16
 ## Current Stage
 
 - 전체 roadmap: 1차 데이터 RED/GREEN -> 2차 provenance -> 3차 UI -> 4차 QA/docs
-- 현재: 1차~3차 구현 완료, 4차 actual/Browser QA 준비
-- 구현 완료 차수: 3/4
+- 현재: 1차~4차 구현·검증·문서 정렬 완료
+- 구현 완료 차수: 4/4
 
 ## Completed
 
@@ -32,7 +32,12 @@ Last Updated: 2026-07-16
 - active inspector에 derived badge, known-rule 계산식, TTM derived-input notice를 추가했다.
 - 420px에서 derived heading/badge가 세로 wrapping되도록 보강했다.
 - 관련 테스트 71/71과 Vite production build를 통과했다.
+- Actual MRNA DB-only read에서 2023-Q4 매출 `2.811B`, 원가 `0.929B`, GP `1.882B`, 영업이익 `0.006B`와 mixed-concept operand를 재현했다.
+- 2024-Q1~Q3 TTM GP/영업 margin이 모두 유한값으로 이어지고 derived-input provenance를 유지함을 확인했다.
+- 최종 focused 회귀 112/112와 isolated repository 회귀 1,103/1,107을 확인했다. 남은 4건은 기존 Practical Validation 2건, Market Movers 1건, Sentiment 1건이다.
+- 실제 MRNA desktop/420px Browser QA에서 marker, badge, `FY − Q1 − Q2 − Q3` 산식, TTM notice, continuous line, overflow 0, 신규 console error 0을 확인했다.
+- 장기 data/architecture/project 문서와 root handoff log를 구현 계약에 맞춰 정렬했다.
 
 ## Next Action
 
-- Task 4의 actual MRNA DB-only 검증과 Browser QA를 수행한다.
+- 필수 후속은 없다. 새 concept family를 추가해야 하는 issuer 사례가 발견되면 별도 회계 동등성 audit task로 검토한다.

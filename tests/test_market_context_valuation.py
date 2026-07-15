@@ -475,6 +475,7 @@ class MarketContextValuationTests(unittest.TestCase):
             "공시 기반 산출값 포함",
             "turnaround-derived-marker",
             "turnaround-derived-badge",
+            "activeTtmValueAvailable",
         ):
             self.assertIn(token, source + style)
         self.assertNotIn("추정값", source)

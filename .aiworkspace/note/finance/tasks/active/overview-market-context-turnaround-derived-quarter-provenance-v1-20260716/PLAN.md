@@ -323,7 +323,7 @@ Stage source/tests/styles/product static bundle only and commit `전환분석 �
 - Consumes: Tasks 1~3 complete source and tests.
 - Produces: actual MRNA evidence, QA screenshot, durable handoff, final commit.
 
-- [ ] **Step 1: Verify actual MRNA DB-only values**
+- [x] **Step 1: Verify actual MRNA DB-only values**
 
 Provider call 없이 current read model을 만들고 다음을 기록한다.
 
@@ -335,7 +335,7 @@ Provider call 없이 current read model을 만들고 다음을 기록한다.
 
 AAPL direct-data와 RIVN transition model에는 false derived badge가 생기지 않아야 한다.
 
-- [ ] **Step 2: Run final regression**
+- [x] **Step 2: Run final regression**
 
 ```bash
 .venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation -v
@@ -347,15 +347,15 @@ git status --short
 
 Repository-established broader unittest command도 실행하고 baseline 외 실패는 별도로 기록한다.
 
-- [ ] **Step 3: Perform Browser QA**
+- [x] **Step 3: Perform Browser QA**
 
 Current runbook으로 Finance app을 실행한다. MRNA desktop/420px에서 marker, badge, formula, TTM notice, continuous line, overflow 0, new console error 0을 확인한다. AAPL/RIVN false badge도 확인하고 screenshot 한 장을 staged files 밖에 저장한다.
 
-- [ ] **Step 4: Synchronize docs and verify completion**
+- [x] **Step 4: Synchronize docs and verify completion**
 
 `finance-doc-sync`로 implemented behavior와 PIT/provenance 의미를 정렬한다. 모든 docs/static 변경 후 `verification-before-completion` 명령을 fresh-run한다.
 
-- [ ] **Step 5: Commit closeout**
+- [x] **Step 5: Commit closeout**
 
 Owned source/tests/docs/static bundle만 stage하고 commit `전환분석 분기 산출 QA와 문서 정렬`.
 

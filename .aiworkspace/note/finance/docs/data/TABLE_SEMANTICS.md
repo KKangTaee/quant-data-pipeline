@@ -575,12 +575,13 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 역할:
 
 - 새 table을 만들지 않고 선택 종목의 bounded `nyse_financial_statement_values`, `nyse_asset_profile`, `nyse_price_history`, lifecycle identity를 읽어 quarterly operating/cash 전환, survival risk, valuation readiness를 계산한다.
-- duration fact와 instant fact는 별도 query/계산 경계다. duration은 direct Q를 우선하고 compatible same-concept/unit/fiscal-year `H1-Q1`, `9M-H1`, `FY-Q1-Q2-Q3`만 discrete quarter로 복원한다.
+- duration fact와 instant fact는 별도 query/계산 경계다. duration은 direct Q를 우선하고 compatible same-concept/unit/fiscal-year `H1-Q1`, `9M-H1`, `FY-Q1-Q2-Q3`를 먼저 discrete quarter로 복원한다. Missing Q4만 explicit metric concept family 안에서 같은 symbol/fiscal year/unit 및 primary-period/PIT 조건의 FY/Q1/Q2/Q3를 결합할 수 있다.
 - revenue, gross profit, operating/net income, OCF, CapEx, FCF proxy, diluted EPS/share를 gap-preserving quarter timeline과 TTM으로 만든다. direct gross profit이 없으면 같은 filing/quarter/unit의 revenue-cost만 fallback으로 허용한다.
 
 주의:
 
-- later comparative fact는 primary quarter를 덮지 못하고 derived quarter의 `available_at`은 operand 중 가장 늦은 공개일이다. missing operand/quarter는 다른 기간으로 대체하거나 보간하지 않는다.
+- later comparative fact는 primary quarter를 덮지 못하고 derived quarter의 `available_at`은 operand 중 가장 늦은 공개일이다. direct/exact Q4가 family fallback보다 우선하며 allowlist 밖 concept, 다른 unit/year/symbol, future filing은 결합하지 않는다. missing operand/quarter는 다른 기간으로 대체하거나 보간하지 않는다.
+- timeline은 metric별 `source_kind`, rule, operands와 `derived_metrics`, `ttm_derived_metrics`를 read-time payload에 포함한다. `FILING_DERIVED`는 확정 공시의 산술 결과이며 forecast/estimate가 아니다.
 - milestone은 sequential pass chain이 아니다. operating improvement, two-consecutive positive TTM OCF, earnings turn, PER handoff를 독립 evidence로 표시한다. runway, debt/interest, split-neutral dilution도 milestone과 별도 risk overlay다.
 - numeric valuation은 market cap/price/statement basis가 7일 이내로 정렬되고 USD/unit/sector/denominator 조건을 충족할 때만 허용한다. P/E handoff, P/FCF, P/OCF, EV/EBITDA, EV/Gross Profit, EV/Sales 순서를 사용하며 target price나 매매 신호가 아니다.
 - 검색·선택·분석 전환은 provider call 0회다. raw gap 수집은 SEC CIK를 확인한 selected symbol의 explicit action만 가능하다. CIK가 없으면 `BLOCKED/CIK_MISSING`으로 수집을 막되 저장 facts로 만든 READY 분석은 유지한다.

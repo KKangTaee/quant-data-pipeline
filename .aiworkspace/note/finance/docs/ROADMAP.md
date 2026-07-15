@@ -11,7 +11,16 @@ Last Verified: 2026-07-16
 
 새 범위는 사용자 승인 후 별도 task로 연다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`다.
+
+- 목적: taxonomy concept rename 때문에 끊긴 전환분석 Q4/TTM을 동등한 확정 공시 concept family로 복구하고, 직접 공시와 산출값을 화면에서 구분한다.
+- 완료: 1차 mixed-concept Q4 resolver, 2차 per-metric/TTM provenance, 3차 neutral marker/inspector disclosure, 4차 actual/Browser QA와 docs.
+- 계산 계약: exact concept와 direct Q4가 우선이다. missing Q4만 explicit family의 같은 symbol/fiscal year/unit 및 primary-period/PIT 조건을 만족한 FY/Q1/Q2/Q3로 계산한다.
+- 사용자 계약: `FILING_DERIVED`는 forecast가 아닌 `공시 기반 산출`이며 source-quarter marker, active formula, TTM input notice로 표시한다. guard 실패는 계속 결측이고 선을 보간하지 않는다.
+- actual QA: MRNA 2023-Q4 revenue `2.811B`, GP `1.882B`, operating income `0.006B`; desktop/420px overflow 0과 신규 console error 0을 확인했다.
+- 제외: taxonomy 문자열 유사도 매칭, schema/provider/collector 변경, 자동 backfill, universe-wide concept audit.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/`다.
 
 - 목적: AAPL의 stored diluted EPS가 전환분석 unit filter에서 누락되는 버그를 수정하고, 6개 rail에서 transition과 already-positive state를 구분했다.
 - 완료: 1차 EPS reader/operating evidence, 2차 rail semantics/copy, 3차 actual/Browser QA와 docs.
@@ -736,11 +745,11 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` — 1차~3차 complete
+- `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716` — 1차~4차 complete
 
 Previous completed task:
 
-- `overview-market-context-us-stock-freshness-refresh-v1-20260715` — 1차~3차 complete
+- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` — 1차~3차 complete
 
 Recent completed docs cleanup tasks:
 

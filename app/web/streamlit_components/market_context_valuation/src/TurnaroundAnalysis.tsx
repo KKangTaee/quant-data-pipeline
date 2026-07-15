@@ -269,7 +269,10 @@ function OperatingChart({ points }: { points: TurnaroundPoint[] }) {
   const activeDerivation = primaryDerivation(active, operatingMetrics);
   const activeFormula = derivationFormula(activeDerivation?.provenance);
   const activeSourceDerived = hasDerivedMetric(active, operatingMetrics);
-  const activeTtmDerived = ttmHasDerivedMetric(active, operatingMetrics);
+  const activeTtmValueAvailable = finite(active?.ttm_gross_margin_pct)
+    || finite(active?.ttm_operating_margin_pct);
+  const activeTtmDerived = activeTtmValueAvailable
+    && ttmHasDerivedMetric(active, operatingMetrics);
   return <div className="turnaround-chart-shell">
     <div className="turnaround-chart-legend">
       <span className="legend-revenue">매출 YoY</span>
@@ -321,7 +324,9 @@ function CashChart({ points }: { points: TurnaroundPoint[] }) {
   const activeDerivation = primaryDerivation(active, cashMetrics);
   const activeFormula = derivationFormula(activeDerivation?.provenance);
   const activeSourceDerived = hasDerivedMetric(active, cashMetrics);
-  const activeTtmDerived = ttmHasDerivedMetric(active, cashMetrics);
+  const activeTtmValueAvailable = finite(active?.ttm_ocf) || finite(active?.ttm_fcf);
+  const activeTtmDerived = activeTtmValueAvailable
+    && ttmHasDerivedMetric(active, cashMetrics);
   return <div className="turnaround-chart-shell">
     <div className="turnaround-chart-legend">
       <span className="legend-ocf">TTM OCF</span>

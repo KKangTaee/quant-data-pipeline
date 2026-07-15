@@ -6225,3 +6225,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - AAPL PER는 READY/TTM EPS `7.90`인데 turnaround EPS가 null인 원인을 `USD per share` unit allowlist 누락으로 확정했다.
 - 영업손실 축소/EPS 양전 미확인이 적자 의미로 보이는 문제를 transition과 already-positive 상태 혼동으로 분리했다.
 - 6요소 rail과 threshold는 유지하고 EPS unit, 사용자 문구, UI-local established state를 1차~3차로 보정하는 written spec을 active task에 기록했다.
+
+## 2026-07-16 - 전환분석 공시 기반 분기 산출·표시 완료
+
+- MRNA의 revenue concept rename으로 비어 있던 2023-Q4를 explicit family의 확정 FY/Q1/Q2/Q3로 안전하게 산출해 TTM 선을 복구했다.
+- Per-metric/TTM provenance와 `공시 기반 산출` marker·badge·산식을 React inspector에 추가했고 보간·forecast는 만들지 않았다.
+- Focused 112/112, isolated repository 1,103/1,107(기존 unrelated 4건), actual DB 및 desktop/420px Browser QA를 완료했다.
+- 상세 evidence와 후속 경계는 `tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`를 본다.
