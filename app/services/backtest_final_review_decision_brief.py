@@ -1026,9 +1026,74 @@ def build_final_review_decision_brief(
     }
 
 
+def build_final_review_decision_brief_snapshot(
+    decision_brief: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep durable judgment and Monitoring fields without chart payload bulk."""
+
+    brief = _as_dict(decision_brief)
+    verdict = _as_dict(brief.get("verdict"))
+    confidence = _as_dict(brief.get("evidence_confidence"))
+    disclosures = _as_dict(brief.get("disclosures"))
+
+    def unique_values(rows: list[Any], key: str) -> list[str]:
+        values: list[str] = []
+        for raw_row in rows:
+            value = str(_as_dict(raw_row).get(key) or "").strip()
+            if value and value not in values:
+                values.append(value)
+        return values
+
+    monitoring_conditions = [
+        {
+            "observation_id": str(row.get("observation_id") or "").strip(),
+            "title": str(row.get("title") or "").strip(),
+            "threshold": str(row.get("threshold") or "").strip(),
+            "cadence": str(row.get("cadence") or "").strip(),
+            "re_review_action": str(row.get("re_review_action") or "").strip(),
+        }
+        for row in (
+            _as_dict(raw_row)
+            for raw_row in list(brief.get("monitoring_conditions") or [])
+        )
+        if str(row.get("observation_id") or "").strip()
+    ]
+    return {
+        "schema_version": "decision_brief_snapshot_v1",
+        "verdict": {
+            "route": str(verdict.get("route") or "").strip(),
+            "label": str(verdict.get("label") or "").strip(),
+            "headline": str(verdict.get("headline") or "").strip(),
+        },
+        "evidence_confidence": {
+            "value": _as_non_negative_int(confidence.get("value")),
+            "basis": str(confidence.get("basis") or "").strip(),
+        },
+        "strength_observation_ids": unique_values(
+            list(brief.get("strengths") or []),
+            "observation_id",
+        ),
+        "weakness_observation_ids": unique_values(
+            list(brief.get("weaknesses") or []),
+            "observation_id",
+        ),
+        "monitoring_conditions": monitoring_conditions,
+        "accepted_limit_root_issue_ids": unique_values(
+            list(disclosures.get("accepted_limits") or []),
+            "root_issue_id",
+        ),
+        "source_gaps": [
+            str(value).strip()
+            for value in list(disclosures.get("source_gaps") or [])
+            if str(value).strip()
+        ],
+    }
+
+
 __all__ = [
     "DECISION_BRIEF_ROUTE_PRESENTATION",
     "DECISION_BRIEF_SCHEMA_VERSION",
     "build_final_review_candidate_selector",
     "build_final_review_decision_brief",
+    "build_final_review_decision_brief_snapshot",
 ]

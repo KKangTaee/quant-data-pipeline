@@ -28529,6 +28529,89 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
 
 
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
+    @staticmethod
+    def _decision_brief_snapshot_fixture(
+        route: str = "SELECT_FOR_PRACTICAL_PORTFOLIO",
+    ) -> dict[str, Any]:
+        labels = {
+            "SELECT_FOR_PRACTICAL_PORTFOLIO": "계속 추적",
+            "HOLD_FOR_MORE_PAPER_TRACKING": "관찰 후 재검토",
+            "REJECT_FOR_PRACTICAL_USE": "추적 대상에서 제외",
+            "RE_REVIEW_REQUIRED": "Level2로 돌려보내기",
+        }
+        return {
+            "schema_version": "decision_brief_v1",
+            "verdict": {
+                "route": route,
+                "label": labels[route],
+                "headline": "저장된 근거에 따른 판단입니다.",
+            },
+            "evidence_confidence": {
+                "value": 75,
+                "basis": "저장된 ready check 비율",
+            },
+            "strengths": [{"observation_id": "benchmark-relative-terminal"}],
+            "weaknesses": [{"observation_id": "concentration-pressure"}],
+            "monitoring_conditions": [
+                {
+                    "observation_id": "drawdown-recovery-path",
+                    "title": "낙폭과 회복 경로 재확인",
+                    "threshold": "-20% 이하",
+                    "cadence": "월간",
+                    "re_review_action": "손실 감내 조건을 다시 검토합니다.",
+                    "evidence_refs": ["behavior_board.underwater_series"],
+                }
+            ],
+            "disclosures": {
+                "accepted_limits": [
+                    {"root_issue_id": "static-universe-limit", "title": "정적 universe 한계"}
+                ],
+                "source_gaps": ["거래비용 적용 증명이 없습니다."],
+            },
+        }
+
+    def _build_persistence_row(
+        self,
+        *,
+        decision_route: str = "SELECT_FOR_PRACTICAL_PORTFOLIO",
+        decision_brief: dict[str, Any] | None = None,
+        validation: dict[str, Any] | None = None,
+        investability_packet: dict[str, Any] | None = None,
+        operator_reason: str = "저장된 관측값을 근거로 판단함",
+    ) -> dict[str, Any]:
+        from app.web.backtest_final_review_helpers import _build_final_review_decision_row
+
+        ready_policy = {
+            "schema_version": "final_review_selection_gate_policy_v1",
+            "outcome": "select_ready",
+            "select_allowed": True,
+            "policy_rows": [],
+        }
+        packet = investability_packet or {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "gate_policy_snapshot": ready_policy,
+            "selection_gate_policy_snapshot": ready_policy,
+        }
+        return _build_final_review_decision_row(
+            source={"source_id": "source-persistence", "source_type": "practical_validation_result"},
+            validation=validation
+            or {"selection_source_id": "source-persistence", "validation_id": "validation-persistence"},
+            paper_observation={
+                "active_components": [],
+                "checks": [],
+                "review_triggers": ["legacy trigger"],
+            },
+            evidence={"route": "READY_FOR_FINAL_DECISION", "checks": [], "blockers": []},
+            investability_packet=packet,
+            decision_brief=decision_brief or self._decision_brief_snapshot_fixture(decision_route),
+            decision_id=f"decision-{decision_route.lower()}",
+            decision_route=decision_route,
+            operator_reason=operator_reason,
+            operator_constraints="constraints",
+            operator_next_action="next",
+        )
+
     def test_final_review_page_uses_decision_brief_not_legacy_investment_report(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         render_body = page_source.split("def render_final_review_workspace", 1)[1]
@@ -32221,6 +32304,89 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertFalse(row["live_approval"])
         self.assertFalse(row["order_instruction"])
 
+    def test_final_review_decision_row_stores_compact_decision_brief_snapshot(self) -> None:
+        brief = self._decision_brief_snapshot_fixture()
+
+        row = self._build_persistence_row(decision_brief=brief)
+        snapshot = row["decision_brief_snapshot"]
+
+        self.assertEqual(snapshot["schema_version"], "decision_brief_snapshot_v1")
+        self.assertEqual(snapshot["verdict"]["route"], brief["verdict"]["route"])
+        self.assertEqual(snapshot["strength_observation_ids"], ["benchmark-relative-terminal"])
+        self.assertEqual(snapshot["weakness_observation_ids"], ["concentration-pressure"])
+        self.assertEqual(snapshot["monitoring_conditions"][0]["observation_id"], "drawdown-recovery-path")
+        self.assertEqual(snapshot["accepted_limit_root_issue_ids"], ["static-universe-limit"])
+        self.assertEqual(snapshot["source_gaps"], ["거래비용 적용 증명이 없습니다."])
+
+    def test_selected_route_still_requires_existing_gate_and_closed_evidence(self) -> None:
+        blocked_packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+            "selection_gate_policy_snapshot": {
+                "outcome": "blocked",
+                "select_allowed": False,
+                "policy_rows": [],
+            },
+        }
+        open_validation = {
+            "selection_source_id": "source-persistence",
+            "validation_id": "validation-open",
+            "evidence_closure": {
+                "validation_id": "validation-open",
+                "issues": [
+                    {
+                        "root_issue_id": "historical-universe-coverage",
+                        "title": "PIT membership 근거",
+                        "resolution_class": "engineering_required",
+                        "criticality": "critical",
+                        "terminal_state": "deferred",
+                    }
+                ],
+                "summary": {"critical_engineering_count": 1},
+            },
+        }
+
+        cases = {
+            "gate_blocked": self._build_persistence_row(investability_packet=blocked_packet),
+            "closure_open": self._build_persistence_row(validation=open_validation),
+        }
+        for name, row in cases.items():
+            with self.subTest(name=name):
+                self.assertFalse(row["monitoring_candidate"])
+                self.assertEqual(row["final_review_record_type"], "judgment_decision")
+
+    def test_non_select_route_records_judgment_without_monitoring_handoff(self) -> None:
+        brief = self._decision_brief_snapshot_fixture("HOLD_FOR_MORE_PAPER_TRACKING")
+
+        row = self._build_persistence_row(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            decision_brief=brief,
+            operator_reason="추가 관찰이 필요함",
+        )
+
+        self.assertEqual(row["final_review_record_type"], "judgment_decision")
+        self.assertEqual(row["monitoring_handoff_state"], "not_requested")
+        self.assertFalse(row["monitoring_candidate"])
+        self.assertEqual(row["operator_decision"]["reason"], "추가 관찰이 필요함")
+        self.assertEqual(row["decision_brief_snapshot"]["verdict"]["route"], "HOLD_FOR_MORE_PAPER_TRACKING")
+
+    def test_existing_canonical_route_values_are_unchanged(self) -> None:
+        from app.services.backtest_evidence_read_model import FINAL_REVIEW_DECISION_LABELS
+
+        expected_routes = {
+            "SELECT_FOR_PRACTICAL_PORTFOLIO",
+            "HOLD_FOR_MORE_PAPER_TRACKING",
+            "REJECT_FOR_PRACTICAL_USE",
+            "RE_REVIEW_REQUIRED",
+        }
+
+        self.assertEqual(set(FINAL_REVIEW_DECISION_LABELS), expected_routes)
+        for route in expected_routes:
+            with self.subTest(route=route):
+                row = self._build_persistence_row(decision_route=route)
+                self.assertEqual(row["decision_route"], route)
+                self.assertEqual(row["monitoring_candidate"], route == "SELECT_FOR_PRACTICAL_PORTFOLIO")
+
 
 class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
     def _selected_row(self) -> dict:
@@ -32315,6 +32481,44 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
                 "watch_symbol_count": 0,
             },
         }
+
+    def test_monitoring_read_model_prefers_structured_brief_conditions(self) -> None:
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
+            build_final_selected_portfolio_dashboard_row,
+        )
+
+        raw = dict(self._selected_row()["raw_decision"])
+        raw["decision_brief_snapshot"] = {
+            "schema_version": "decision_brief_snapshot_v1",
+            "monitoring_conditions": [
+                {
+                    "observation_id": "drawdown-recovery-path",
+                    "title": "낙폭과 회복 경로 재확인",
+                    "threshold": "-20% 이하",
+                    "cadence": "월간",
+                    "re_review_action": "손실 감내 조건을 다시 검토합니다.",
+                }
+            ],
+        }
+
+        dashboard = build_final_selected_portfolio_dashboard_row(raw)
+
+        self.assertEqual(
+            dashboard["review_triggers"],
+            ["낙폭과 회복 경로 재확인 · 기준 -20% 이하 · 월간 · 손실 감내 조건을 다시 검토합니다."],
+        )
+
+    def test_monitoring_read_model_falls_back_for_legacy_rows(self) -> None:
+        from app.runtime.backtest.read_models.final_selected_portfolios import (
+            build_final_selected_portfolio_dashboard_row,
+        )
+
+        raw = dict(self._selected_row()["raw_decision"])
+        raw.pop("decision_brief_snapshot", None)
+
+        dashboard = build_final_selected_portfolio_dashboard_row(raw)
+
+        self.assertEqual(dashboard["review_triggers"], ["CAGR deterioration review"])
 
     def _selected_row_with_open_issue(self) -> dict:
         row = self._selected_row()

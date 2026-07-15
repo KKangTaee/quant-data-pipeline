@@ -404,11 +404,12 @@ class EvidenceClosureContractTests(unittest.TestCase):
 
     def test_final_review_react_renders_python_closure_sections_without_domain_recalculation(self) -> None:
         source = Path(
-            "app/web/components/final_review_investment_report/frontend/src/FinalReviewInvestmentReport.tsx"
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("선정 전 미해결 항목", source)
-        self.assertIn("인수한 한계와 최종 판단 항목", source)
+        self.assertIn("brief.monitoring_conditions", source)
+        self.assertIn("brief.disclosures.accepted_limits", source)
+        self.assertIn("brief.disclosures.source_gaps", source)
         self.assertNotIn("resolutionClass ===", source)
         self.assertNotIn("fetch(", source)
         self.assertNotIn("scoreEffect =", source)

@@ -348,6 +348,27 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
         self.assertEqual(period["latest_valuation_date"], "2026-06-30")
         self.assertEqual(period["last_complete_rebalance_date"], "2026-05-29")
 
+    def test_decision_brief_snapshot_excludes_curve_points_and_keeps_trigger_contract(self) -> None:
+        from app.services.backtest_final_review_decision_brief import (
+            build_final_review_decision_brief_snapshot,
+        )
+
+        brief = self._build(self._grs_inputs())
+        snapshot = build_final_review_decision_brief_snapshot(brief)
+        serialized = json.dumps(snapshot, ensure_ascii=False, sort_keys=True)
+
+        self.assertEqual(snapshot["schema_version"], "decision_brief_snapshot_v1")
+        self.assertNotIn("behavior_board", snapshot)
+        self.assertNotIn('"points"', serialized)
+        self.assertEqual(
+            set(snapshot["monitoring_conditions"][0]),
+            {"observation_id", "title", "threshold", "cadence", "re_review_action"},
+        )
+        self.assertEqual(
+            snapshot["monitoring_conditions"][0]["observation_id"],
+            brief["monitoring_conditions"][0]["observation_id"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

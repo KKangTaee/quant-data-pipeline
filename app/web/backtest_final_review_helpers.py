@@ -18,6 +18,9 @@ from app.services.backtest_evidence_closure import (
     finalize_evidence_closure,
     is_current_final_review_eligible,
 )
+from app.services.backtest_final_review_decision_brief import (
+    build_final_review_decision_brief_snapshot,
+)
 from app.services.backtest_selected_route_preflight import (
     build_practical_validation_selected_route_preflight,
 )
@@ -489,6 +492,7 @@ def _build_final_review_decision_row(
     paper_observation: dict[str, Any],
     evidence: dict[str, Any],
     investability_packet: dict[str, Any] | None = None,
+    decision_brief: dict[str, Any] | None = None,
     decision_id: str,
     decision_route: str,
     operator_reason: str,
@@ -545,6 +549,9 @@ def _build_final_review_decision_row(
         "deployment_readiness_policy_snapshot": deployment_readiness_policy_snapshot,
         "open_review_items": open_review_items,
         "evidence_closure_snapshot": closure_snapshot,
+        "decision_brief_snapshot": build_final_review_decision_brief_snapshot(
+            dict(decision_brief or {})
+        ),
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),
             "validation_score": validation.get("validation_score"),
