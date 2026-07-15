@@ -1,0 +1,143 @@
+{
+  "source": {
+    "source_id": "validation-grs-2026-06",
+    "source_type": "practical_validation_result",
+    "source_title": "Global Relative Strength",
+    "updated_at": "2026-06-30T18:00:00+09:00",
+    "result_curve": [
+      {"Date": "2026-03-31", "Total Balance": 100.0},
+      {"Date": "2026-04-30", "Total Balance": 105.0},
+      {"Date": "2026-05-29", "Total Balance": 103.0}
+    ],
+    "benchmark_curve": [
+      {"Date": "2026-03-31", "Total Balance": 100.0},
+      {"Date": "2026-04-30", "Total Balance": 101.0},
+      {"Date": "2026-05-29", "Total Balance": 102.0}
+    ]
+  },
+  "validation": {
+    "validation_id": "validation-grs-2026-06",
+    "selection_source_id": "selection-grs-2026-06",
+    "updated_at": "2026-06-30T18:00:00+09:00",
+    "requested_market_date": "2026-06-30",
+    "last_complete_rebalance_date": "2026-05-29",
+    "latest_valuation_date": "2026-06-30",
+    "curve_evidence": {
+      "replay_attempt": {
+        "status": "PASS",
+        "portfolio_curve": [
+          {"Date": "2026-03-31", "Total Balance": 100.0},
+          {"Date": "2026-04-30", "Total Balance": 120.0},
+          {"Date": "2026-05-29", "Total Balance": 90.0},
+          {"Date": "2026-06-30", "Total Balance": 120.0, "Row Kind": "valuation", "Rebalancing": false}
+        ],
+        "benchmark_curve": [
+          {"Date": "2026-03-31", "Total Balance": 100.0},
+          {"Date": "2026-04-30", "Total Balance": 110.0},
+          {"Date": "2026-05-29", "Total Balance": 100.0},
+          {"Date": "2026-06-30", "Total Balance": 115.0}
+        ]
+      }
+    },
+    "selection_source_snapshot": {
+      "source_snapshot": {
+        "cost_model_snapshot": {
+          "transaction_cost_bps": 10.0,
+          "cost_application_status": "applied_to_result_curve",
+          "cost_model_source": "strategy runtime"
+        },
+        "turnover_evidence_snapshot": {
+          "avg_turnover": 0.4,
+          "max_turnover": 0.6,
+          "turnover_estimation_status": "estimated_from_holdings",
+          "turnover_source": "stored holdings delta"
+        }
+      }
+    },
+    "metrics": {
+      "max_weight": 45.0
+    },
+    "validation_profile": {
+      "thresholds": {
+        "max_weight_review": 60.0,
+        "avg_turnover_review": 0.3,
+        "transaction_cost_bps_review": 20.0,
+        "max_drawdown_review_pct": 20.0
+      }
+    },
+    "provider_coverage": {
+      "coverage": {
+        "operability": {
+          "diagnostic_status": "PASS",
+          "coverage_weight": 100.0,
+          "metrics": {
+            "review_count": 0,
+            "min_avg_daily_dollar_volume": 10000000.0
+          },
+          "provenance": {
+            "freshness_status": "fresh",
+            "as_of_range": "2026-06-30",
+            "source_type_weights": {"official": 100.0},
+            "coverage_status_weights": {"actual": 100.0}
+          }
+        }
+      }
+    },
+    "evidence_closure": {
+      "summary": {
+        "unresolved_actionable_count": 0,
+        "critical_engineering_count": 0,
+        "missing_contract_count": 0
+      },
+      "issues": []
+    }
+  },
+  "paper_observation": {
+    "review_trigger_details": [
+      {
+        "observation_id": "benchmark-relative-terminal",
+        "title": "Benchmark 상대 성과 재확인",
+        "observation": "동일 기간 누적 성과 차이",
+        "measured_value": 4.3478,
+        "display_value": "+4.35%p",
+        "threshold": "0%p 이하",
+        "threshold_or_comparator": 0.0,
+        "cadence": "월간",
+        "re_review_action": "상대 성과가 0%p 이하이면 후보 thesis를 다시 검토합니다.",
+        "evidence_refs": ["behavior_board.cumulative_series", "behavior_board.benchmark_series"],
+        "as_of": "2026-06-30"
+      },
+      {
+        "observation_id": "drawdown-recovery-path",
+        "title": "낙폭과 회복 경로 재확인",
+        "observation": "최대 underwater drawdown",
+        "measured_value": -25.0,
+        "display_value": "-25.00%",
+        "threshold": "-20% 이하",
+        "threshold_or_comparator": -20.0,
+        "cadence": "월간",
+        "re_review_action": "underwater가 -20% 아래로 내려가면 손실 감내 조건을 다시 검토합니다.",
+        "evidence_refs": ["behavior_board.underwater_series"],
+        "as_of": "2026-06-30"
+      }
+    ]
+  },
+  "decision_evidence": {
+    "suggested_decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO"
+  },
+  "investability_packet": {
+    "checks": [
+      {"Check": "source", "Ready": true},
+      {"Check": "benchmark", "Ready": true},
+      {"Check": "cost", "Ready": true},
+      {"Check": "liquidity", "Ready": true}
+    ],
+    "selection_gate_policy_snapshot": {
+      "select_allowed": true,
+      "suggested_decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+      "blockers": [],
+      "review_required": []
+    }
+  },
+  "decision_id": "decision-grs-2026-06"
+}

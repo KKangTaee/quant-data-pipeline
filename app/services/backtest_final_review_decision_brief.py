@@ -9,6 +9,14 @@ from __future__ import annotations
 
 from typing import Any
 
+import pandas as pd
+
+from app.services.backtest_practical_validation_curve import normalize_result_curve
+from app.services.backtest_realism_audit import (
+    build_cost_model_source_contract,
+    build_liquidity_capacity_contract,
+    build_turnover_evidence_contract,
+)
 
 DECISION_BRIEF_SCHEMA_VERSION = "decision_brief_v1"
 
@@ -306,46 +314,583 @@ def _unmeasured_series(*, label: str, basis: str, reason: str) -> dict[str, Any]
     }
 
 
-def _build_behavior_board() -> dict[str, Any]:
-    missing_reason = "저장된 curve 관측값이 아직 Decision Brief 행동 근거로 투영되지 않았습니다."
+def _optional_float(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return None if pd.isna(numeric) else numeric
+
+
+def _date_text(value: Any) -> str | None:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return pd.Timestamp(parsed).strftime("%Y-%m-%d")
+
+
+def _nested_date(validation: dict[str, Any], key: str) -> str | None:
+    direct = _date_text(validation.get(key))
+    if direct:
+        return direct
+    replay = _as_dict(_as_dict(validation.get("curve_evidence")).get("replay_attempt"))
+    market_contract = _as_dict(replay.get("market_date_contract"))
+    return _date_text(market_contract.get(key))
+
+
+def _first_curve(
+    candidates: list[tuple[Any, str]],
+) -> tuple[pd.DataFrame, str | None]:
+    for value, source in candidates:
+        normalized = normalize_result_curve(value)
+        if not normalized.empty:
+            return normalized, source
+    return pd.DataFrame(), None
+
+
+def _stored_curve_inputs(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve stored curves by provenance priority without replaying anything."""
+
+    replay = _as_dict(_as_dict(validation.get("curve_evidence")).get("replay_attempt"))
+    selection_snapshot = _as_dict(validation.get("selection_source_snapshot"))
+    portfolio_curve, portfolio_source = _first_curve(
+        [
+            (
+                replay.get("portfolio_curve"),
+                "validation.curve_evidence.replay_attempt.portfolio_curve",
+            ),
+            (
+                selection_snapshot.get("result_curve"),
+                "validation.selection_source_snapshot.result_curve",
+            ),
+            (source.get("result_curve"), "source.result_curve"),
+        ]
+    )
+    benchmark_curve, benchmark_source = _first_curve(
+        [
+            (
+                replay.get("benchmark_curve"),
+                "validation.curve_evidence.replay_attempt.benchmark_curve",
+            ),
+            (
+                selection_snapshot.get("benchmark_curve"),
+                "validation.selection_source_snapshot.benchmark_curve",
+            ),
+            (source.get("benchmark_curve"), "source.benchmark_curve"),
+        ]
+    )
     return {
-        "period": {"start": None, "end": None, "frequency": "stored_curve"},
-        "cumulative_series": _unmeasured_series(
-            label="후보 누적 성과 미측정",
-            basis="stored_curve_cost_unverified",
-            reason=missing_reason,
-        ),
-        "benchmark_series": _unmeasured_series(
-            label="Benchmark 누적 성과 미측정",
-            basis="benchmark",
-            reason=missing_reason,
-        ),
-        "underwater_series": _unmeasured_series(
-            label="Underwater drawdown 미측정",
-            basis="stored_curve_cost_unverified",
-            reason=missing_reason,
-        ),
-        "execution_observations": [],
+        "portfolio_curve": portfolio_curve,
+        "portfolio_source": portfolio_source,
+        "benchmark_curve": benchmark_curve,
+        "benchmark_source": benchmark_source,
     }
 
 
-def _build_trait_map() -> dict[str, Any]:
+def _curve_frequency(curve: pd.DataFrame) -> str:
+    if len(curve) < 2:
+        return "unknown"
+    step_days = curve["Date"].sort_values().diff().dropna().dt.days.median()
+    if pd.isna(step_days):
+        return "unknown"
+    if float(step_days) <= 3:
+        return "daily"
+    if 25 <= float(step_days) <= 35:
+        return "monthly"
+    return f"step_{float(step_days):.0f}d"
+
+
+def _rebased_points(curve: pd.DataFrame) -> list[dict[str, Any]]:
+    if curve.empty:
+        return []
+    first_balance = _optional_float(curve.iloc[0]["Total Balance"])
+    if first_balance is None or first_balance == 0:
+        return []
+    return [
+        {
+            "date": pd.Timestamp(row["Date"]).strftime("%Y-%m-%d"),
+            "value": round(float(row["Total Balance"]) / first_balance * 100.0, 4),
+        }
+        for _, row in curve.iterrows()
+    ]
+
+
+def _underwater_points(curve: pd.DataFrame) -> list[dict[str, Any]]:
+    cumulative = _rebased_points(curve)
+    running_peak = 0.0
+    points: list[dict[str, Any]] = []
+    for point in cumulative:
+        value = float(point["value"])
+        running_peak = max(running_peak, value)
+        underwater = round((value / running_peak - 1.0) * 100.0, 4) if running_peak else 0.0
+        points.append({"date": point["date"], "value": underwater})
+    return points
+
+
+def _measured_series(
+    *,
+    label: str,
+    source: str | None,
+    basis: str,
+    points: list[dict[str, Any]],
+) -> dict[str, Any]:
     return {
-        "axes": [
+        "status": "measured",
+        "label": label,
+        "source": source,
+        "basis": basis,
+        "missing_reason": None,
+        "points": points,
+    }
+
+
+def _profile_thresholds(validation: dict[str, Any]) -> dict[str, Any]:
+    return _as_dict(_as_dict(validation.get("validation_profile")).get("thresholds"))
+
+
+def _display_percent(value: float, *, ratio: bool = False) -> str:
+    displayed = value * 100.0 if ratio else value
+    return f"{displayed:.2f}%"
+
+
+def _observation(
+    *,
+    observation_id: str,
+    title: str,
+    interpretation: str,
+    measured_value: float | str,
+    display_value: str,
+    threshold_or_comparator: float | str | None,
+    evidence_refs: list[str],
+    as_of: str | None,
+    comparison: str | None = None,
+    trait_axis: str | None = None,
+    finding_eligible: bool = True,
+    root_issue_id: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "observation_id": observation_id,
+        "root_issue_id": root_issue_id,
+        "title": title,
+        "interpretation": interpretation,
+        "measured_value": measured_value,
+        "display_value": display_value,
+        "threshold_or_comparator": threshold_or_comparator,
+        "evidence_refs": evidence_refs,
+        "as_of": as_of,
+        "_comparison": comparison,
+        "_trait_axis": trait_axis,
+        "_finding_eligible": finding_eligible,
+    }
+
+
+def _public_observation(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if not key.startswith("_")}
+
+
+def _build_execution_observations(
+    *,
+    validation: dict[str, Any],
+    behavior_board: dict[str, Any],
+    cost_contract: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Normalize only structured measurements; prose is never parsed as data."""
+
+    thresholds = _profile_thresholds(validation)
+    metrics = _as_dict(validation.get("metrics"))
+    period = _as_dict(behavior_board.get("period"))
+    as_of = str(period.get("end") or _nested_date(validation, "latest_valuation_date") or "") or None
+    observations: list[dict[str, Any]] = []
+
+    max_weight = _optional_float(metrics.get("max_weight"))
+    max_weight_threshold = _optional_float(thresholds.get("max_weight_review"))
+    if max_weight is not None:
+        observations.append(
+            _observation(
+                observation_id="concentration-pressure",
+                title="최대 구성 비중",
+                interpretation="가장 큰 구성요소 비중을 저장된 profile review 기준과 비교합니다.",
+                measured_value=max_weight,
+                display_value=_display_percent(max_weight),
+                threshold_or_comparator=max_weight_threshold,
+                evidence_refs=["validation.metrics.max_weight", "validation.validation_profile.thresholds.max_weight_review"],
+                as_of=as_of,
+                comparison="less_or_equal",
+                trait_axis="concentration_pressure",
+            )
+        )
+
+    turnover = build_turnover_evidence_contract(validation)
+    avg_turnover = _optional_float(turnover.get("avg_turnover"))
+    turnover_threshold = _optional_float(
+        thresholds.get("avg_turnover_review")
+        or thresholds.get("turnover_review")
+    )
+    if avg_turnover is not None:
+        observations.append(
+            _observation(
+                observation_id="turnover-burden",
+                title="평균 회전율",
+                interpretation="저장된 holdings 기반 평균 회전율을 명시된 review 기준과 비교합니다.",
+                measured_value=avg_turnover,
+                display_value=_display_percent(avg_turnover, ratio=True),
+                threshold_or_comparator=turnover_threshold,
+                evidence_refs=["validation.backtest_realism_audit.turnover_evidence_contract.avg_turnover"],
+                as_of=as_of,
+                comparison="less_or_equal",
+                trait_axis="turnover_burden",
+            )
+        )
+
+    transaction_cost_bps = _optional_float(cost_contract.get("transaction_cost_bps"))
+    cost_threshold = _optional_float(thresholds.get("transaction_cost_bps_review"))
+    cost_applied = str(cost_contract.get("application_status") or "").startswith(
+        "applied_to_result_curve"
+    )
+    if transaction_cost_bps is not None:
+        observations.append(
+            _observation(
+                observation_id="cost-burden",
+                title="거래비용 가정",
+                interpretation="거래비용 bps와 result curve 적용 증명을 함께 확인합니다.",
+                measured_value=transaction_cost_bps,
+                display_value=f"{transaction_cost_bps:.2f} bps",
+                threshold_or_comparator=cost_threshold,
+                evidence_refs=["validation.backtest_realism_audit.cost_model_contract.transaction_cost_bps"],
+                as_of=as_of,
+                comparison="less_or_equal",
+                trait_axis="cost_burden",
+                finding_eligible=cost_applied,
+            )
+        )
+
+    liquidity = build_liquidity_capacity_contract(validation)
+    liquidity_status = str(liquidity.get("proof_status") or "").strip()
+    if liquidity_status:
+        observations.append(
+            _observation(
+                observation_id="liquidity-capacity",
+                title="유동성·capacity 근거",
+                interpretation="저장된 provider operability와 freshness 근거 상태입니다.",
+                measured_value=liquidity_status,
+                display_value=liquidity_status,
+                threshold_or_comparator="official_fresh_capacity_evidence",
+                evidence_refs=["validation.backtest_realism_audit.liquidity_capacity_contract"],
+                as_of=as_of,
+                finding_eligible=False,
+            )
+        )
+
+    underwater_points = list(_as_dict(behavior_board.get("underwater_series")).get("points") or [])
+    drawdown_threshold = _optional_float(thresholds.get("max_drawdown_review_pct"))
+    if underwater_points:
+        max_drawdown = min(float(point.get("value") or 0.0) for point in underwater_points)
+        observations.append(
+            _observation(
+                observation_id="drawdown-recovery-path",
+                title="최대 underwater 낙폭",
+                interpretation="저장된 curve의 running peak 대비 최대 낙폭 압력입니다.",
+                measured_value=abs(max_drawdown),
+                display_value=_display_percent(max_drawdown),
+                threshold_or_comparator=abs(drawdown_threshold) if drawdown_threshold is not None else None,
+                evidence_refs=["behavior_board.underwater_series"],
+                as_of=as_of,
+                comparison="less_or_equal",
+                trait_axis="drawdown_pressure",
+            )
+        )
+
+    cumulative = list(_as_dict(behavior_board.get("cumulative_series")).get("points") or [])
+    benchmark = list(_as_dict(behavior_board.get("benchmark_series")).get("points") or [])
+    if cumulative and benchmark:
+        relative_terminal = round(float(cumulative[-1]["value"]) - float(benchmark[-1]["value"]), 4)
+        observations.append(
+            _observation(
+                observation_id="benchmark-relative-terminal",
+                title="동일 기간 Benchmark 상대 성과",
+                interpretation="공통일·공통 기준점으로 정렬한 terminal 누적 성과 차이입니다.",
+                measured_value=relative_terminal,
+                display_value=f"{relative_terminal:+.2f}%p",
+                threshold_or_comparator=0.0,
+                evidence_refs=["behavior_board.cumulative_series", "behavior_board.benchmark_series"],
+                as_of=as_of,
+                comparison="greater_or_equal",
+            )
+        )
+    return observations
+
+
+def _build_behavior_board(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
+    curve_inputs = _stored_curve_inputs(source=source, validation=validation)
+    portfolio_curve = curve_inputs["portfolio_curve"]
+    benchmark_curve = curve_inputs["benchmark_curve"]
+    portfolio_source = curve_inputs["portfolio_source"]
+    benchmark_source = curve_inputs["benchmark_source"]
+    cost_contract = build_cost_model_source_contract(validation)
+    cost_applied = str(cost_contract.get("application_status") or "").startswith(
+        "applied_to_result_curve"
+    )
+    candidate_basis = "net_cost_applied" if cost_applied else "stored_curve_cost_unverified"
+    candidate_label = "후보 누적 순성과" if cost_applied else "후보 누적 성과"
+    source_gaps: list[str] = []
+
+    if portfolio_curve.empty:
+        candidate_reason = "저장된 후보 curve가 없어 누적 성과를 측정하지 못했습니다."
+        source_gaps.append(candidate_reason)
+    else:
+        candidate_reason = "Benchmark와 공통인 저장일이 2개 미만이라 상대 누적 성과를 측정하지 못했습니다."
+    if benchmark_curve.empty:
+        parity_reason = "저장된 Benchmark curve가 없어 공통 기간 상대 성과를 측정하지 못했습니다."
+        source_gaps.append(parity_reason)
+    else:
+        parity_reason = candidate_reason
+
+    aligned = pd.DataFrame()
+    if not portfolio_curve.empty and not benchmark_curve.empty:
+        candidate = portfolio_curve.drop_duplicates(subset=["Date"], keep="last")
+        benchmark = benchmark_curve.drop_duplicates(subset=["Date"], keep="last")
+        aligned = candidate[["Date", "Total Balance"]].merge(
+            benchmark[["Date", "Total Balance"]],
+            on="Date",
+            how="inner",
+            suffixes=("_candidate", "_benchmark"),
+        ).sort_values("Date")
+
+    if len(aligned) >= 2:
+        candidate_aligned = aligned[["Date", "Total Balance_candidate"]].rename(
+            columns={"Total Balance_candidate": "Total Balance"}
+        )
+        benchmark_aligned = aligned[["Date", "Total Balance_benchmark"]].rename(
+            columns={"Total Balance_benchmark": "Total Balance"}
+        )
+        candidate_points = _rebased_points(candidate_aligned)
+        benchmark_points = _rebased_points(benchmark_aligned)
+        cumulative_series = _measured_series(
+            label=candidate_label,
+            source=portfolio_source,
+            basis=candidate_basis,
+            points=candidate_points,
+        )
+        benchmark_series = _measured_series(
+            label="Benchmark 누적 성과",
+            source=benchmark_source,
+            basis="benchmark",
+            points=benchmark_points,
+        )
+        period_curve = candidate_aligned
+    else:
+        if not portfolio_curve.empty and not benchmark_curve.empty:
+            source_gaps.append(parity_reason)
+        cumulative_series = _unmeasured_series(
+            label="후보 누적 성과 미측정",
+            basis=candidate_basis,
+            reason=parity_reason if not benchmark_curve.empty or not portfolio_curve.empty else candidate_reason,
+        )
+        benchmark_series = _unmeasured_series(
+            label="Benchmark 누적 성과 미측정",
+            basis="benchmark",
+            reason=parity_reason,
+        )
+        period_curve = portfolio_curve
+
+    underwater_points = _underwater_points(portfolio_curve)
+    if underwater_points:
+        underwater_series = _measured_series(
+            label="Underwater drawdown",
+            source=portfolio_source,
+            basis=candidate_basis,
+            points=underwater_points,
+        )
+    else:
+        underwater_series = _unmeasured_series(
+            label="Underwater drawdown 미측정",
+            basis=candidate_basis,
+            reason=candidate_reason,
+        )
+    if not portfolio_curve.empty and not cost_applied:
+        source_gaps.append("거래비용이 저장 curve에 적용됐다는 증명이 없어 순성과로 표시하지 않습니다.")
+
+    period_start = _date_text(period_curve["Date"].min()) if not period_curve.empty else None
+    period_end = _date_text(period_curve["Date"].max()) if not period_curve.empty else None
+    behavior_board = {
+        "period": {
+            "start": period_start,
+            "end": period_end,
+            "frequency": _curve_frequency(period_curve),
+            "requested_market_date": _nested_date(validation, "requested_market_date"),
+            "last_complete_rebalance_date": _nested_date(validation, "last_complete_rebalance_date"),
+            "latest_valuation_date": _nested_date(validation, "latest_valuation_date"),
+        },
+        "cumulative_series": cumulative_series,
+        "benchmark_series": benchmark_series,
+        "underwater_series": underwater_series,
+        "execution_observations": [],
+    }
+    internal_observations = _build_execution_observations(
+        validation=validation,
+        behavior_board=behavior_board,
+        cost_contract=cost_contract,
+    )
+    behavior_board["execution_observations"] = [
+        _public_observation(row) for row in internal_observations
+    ]
+    return behavior_board, internal_observations, list(dict.fromkeys(source_gaps))
+
+
+def _build_trait_map(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    by_axis = {
+        str(row.get("_trait_axis")): row
+        for row in observations
+        if str(row.get("_trait_axis") or "").strip()
+    }
+    axes: list[dict[str, Any]] = []
+    for axis_id, label in _TRAIT_AXES:
+        observation = by_axis.get(axis_id, {})
+        measured = _optional_float(observation.get("measured_value"))
+        threshold = _optional_float(observation.get("threshold_or_comparator"))
+        if measured is None or threshold is None or threshold <= 0:
+            axes.append(
+                {
+                    "axis_id": axis_id,
+                    "label": label,
+                    "normalized_value": None,
+                    "status": "unmeasured",
+                    "measured_value": measured,
+                    "threshold_or_comparator": threshold,
+                    "evidence_refs": list(observation.get("evidence_refs") or []),
+                    "as_of": observation.get("as_of"),
+                }
+            )
+            continue
+        axes.append(
             {
                 "axis_id": axis_id,
                 "label": label,
-                "normalized_value": None,
-                "status": "unmeasured",
-                "measured_value": None,
-                "threshold_or_comparator": None,
-                "evidence_refs": [],
-                "as_of": None,
+                "normalized_value": round(max(0.0, min(100.0, abs(measured) / abs(threshold) * 50.0)), 1),
+                "status": "measured",
+                "measured_value": measured,
+                "threshold_or_comparator": threshold,
+                "evidence_refs": list(observation.get("evidence_refs") or []),
+                "as_of": observation.get("as_of"),
             }
-            for axis_id, label in _TRAIT_AXES
-        ],
-        "aggregate_score": None,
-    }
+        )
+    return {"axes": axes, "aggregate_score": None}
+
+
+def _build_findings(
+    observations: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    strengths: list[dict[str, Any]] = []
+    weaknesses: list[dict[str, Any]] = []
+    for observation in observations:
+        measured = _optional_float(observation.get("measured_value"))
+        comparator = _optional_float(observation.get("threshold_or_comparator"))
+        comparison = str(observation.get("_comparison") or "")
+        if (
+            measured is None
+            or comparator is None
+            or not comparison
+            or not bool(observation.get("_finding_eligible"))
+        ):
+            continue
+        favorable = (
+            measured <= comparator
+            if comparison == "less_or_equal"
+            else measured >= comparator
+        )
+        role = "strength" if favorable else "weakness"
+        finding = {
+            **_public_observation(observation),
+            "interpretation": (
+                f"{observation['display_value']} 관측값이 저장된 비교 기준 "
+                f"{comparator:g} {'이내' if favorable and comparison == 'less_or_equal' else '이상' if favorable else '밖'}입니다."
+            ),
+            "primary_role": role,
+        }
+        (strengths if favorable else weaknesses).append(finding)
+    return strengths, weaknesses
+
+
+def _build_monitoring_conditions(
+    *,
+    paper_observation: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    conditions: list[dict[str, Any]] = []
+    unstructured: list[str] = []
+    for raw_row in list(paper_observation.get("review_trigger_details") or []):
+        row = _as_dict(raw_row)
+        observation_id = str(row.get("observation_id") or "").strip()
+        observation = str(row.get("observation") or "").strip()
+        threshold = str(row.get("threshold") or "").strip()
+        cadence = str(row.get("cadence") or "").strip()
+        action = str(row.get("re_review_action") or "").strip()
+        evidence_refs = [str(value) for value in list(row.get("evidence_refs") or []) if str(value).strip()]
+        measured_value = row.get("measured_value")
+        comparator = row.get("threshold_or_comparator")
+        if not (
+            observation_id
+            and observation
+            and threshold
+            and cadence
+            and action
+            and evidence_refs
+            and _optional_float(measured_value) is not None
+            and _optional_float(comparator) is not None
+        ):
+            text = str(row.get("title") or observation or row.get("trigger") or "").strip()
+            if text:
+                unstructured.append(text)
+            continue
+        conditions.append(
+            {
+                "observation_id": observation_id,
+                "root_issue_id": str(row.get("root_issue_id") or "").strip() or None,
+                "title": str(row.get("title") or observation),
+                "interpretation": action,
+                "measured_value": measured_value,
+                "display_value": str(row.get("display_value") or measured_value),
+                "threshold_or_comparator": comparator,
+                "evidence_refs": evidence_refs,
+                "as_of": _date_text(row.get("as_of")),
+                "observation": observation,
+                "threshold": threshold,
+                "cadence": cadence,
+                "re_review_action": action,
+                "primary_role": "monitoring",
+            }
+        )
+        if len(conditions) == 4:
+            break
+    return conditions, unstructured
+
+
+def _build_thesis(
+    *,
+    strengths: list[dict[str, Any]],
+    weaknesses: list[dict[str, Any]],
+    source_gaps: list[str],
+) -> str:
+    if strengths and weaknesses:
+        return (
+            f"{strengths[0]['title']}은 저장된 비교 기준에서 강점으로 관측됐습니다. "
+            f"반면 {weaknesses[0]['title']}은 가장 먼저 추적할 trade-off입니다."
+        )
+    if strengths:
+        gap = source_gaps[0] if source_gaps else "반대편 trade-off는 미측정입니다."
+        return f"{strengths[0]['title']}은 직접 관측된 강점입니다. {gap}"
+    if weaknesses:
+        return f"{weaknesses[0]['title']}은 직접 관측된 trade-off이며, 강점 근거는 아직 미측정입니다."
+    return source_gaps[0] if source_gaps else "비교 가능한 행동 관측값이 아직 미측정입니다."
 
 
 def build_final_review_decision_brief(
@@ -376,10 +921,18 @@ def build_final_review_decision_brief(
     )
     route_presentation = _ROUTE_PRESENTATION[route]
     evidence_confidence = _build_evidence_confidence(investability_packet)
+    behavior_board, internal_observations, source_gaps = _build_behavior_board(
+        source=source,
+        validation=validation,
+    )
+    projected_strengths, projected_weaknesses = _build_findings(internal_observations)
+    projected_conditions, unstructured_triggers = _build_monitoring_conditions(
+        paper_observation=paper_observation,
+    )
     strengths, weaknesses, monitoring_conditions = _deduplicate_primary_roles(
-        strengths=[],
-        weaknesses=[],
-        monitoring_conditions=[],
+        strengths=projected_strengths,
+        weaknesses=projected_weaknesses,
+        monitoring_conditions=projected_conditions,
     )
     decision_action = _build_decision_action(
         route=route,
@@ -398,13 +951,15 @@ def build_final_review_decision_brief(
             for row in closure_issues
             if str(row.get("resolution_class") or "") == "accepted_limit"
         ],
-        "source_gaps": [],
+        "source_gaps": source_gaps,
         "provenance": [
             str(row.get("root_issue_id"))
             for row in closure_issues
             if str(row.get("root_issue_id") or "").strip()
         ],
     }
+    if unstructured_triggers:
+        disclosures["unstructured_monitoring_triggers"] = unstructured_triggers
     if int(eligibility.get("pre_selection_unresolved_count") or 0) > 0:
         disclosures["pre_selection_unresolved"] = unresolved_issues or [
             {
@@ -419,7 +974,6 @@ def build_final_review_decision_brief(
         or validation.get("validation_id")
         or ""
     ).strip()
-    behavior_board = _build_behavior_board()
     capabilities = {
         "can_record_decision": any(
             bool(option.get("recordable")) for option in decision_action["options"]
@@ -454,13 +1008,15 @@ def build_final_review_decision_brief(
             "label": DECISION_BRIEF_ROUTE_PRESENTATION[route],
             "tone": route_presentation["tone"],
             "headline": route_presentation["headline"],
-            "thesis": (
-                "저장된 관측값을 행동 근거로 투영하기 전까지 포트폴리오의 강점과 trade-off는 미측정으로 유지합니다."
+            "thesis": _build_thesis(
+                strengths=strengths,
+                weaknesses=weaknesses,
+                source_gaps=source_gaps,
             ),
         },
         "evidence_confidence": evidence_confidence,
         "behavior_board": behavior_board,
-        "trait_map": _build_trait_map(),
+        "trait_map": _build_trait_map(internal_observations),
         "strengths": strengths,
         "weaknesses": weaknesses,
         "monitoring_conditions": monitoring_conditions,
