@@ -57,6 +57,7 @@ def _quarterly_eps_rows(symbol: str) -> list[dict[str, object]]:
             "fiscal_year": 2025,
             "fiscal_quarter": quarter,
             "period_end": period_end,
+            "report_date": period_end,
             "value": 1.0,
             "available_at": "2026-05-01",
         }
@@ -689,6 +690,91 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
 
         self.assertNotIn("AMZN", result)
 
+    def test_ttm_resolver_keeps_q4_stable_when_later_filing_repeats_comparative_quarter(self) -> None:
+        from finance.data.nasdaq100_valuation import derive_filing_aware_ttm_eps
+
+        base = {
+            "symbol": "AMD",
+            "concept": "us-gaap:EarningsPerShareDiluted",
+            "unit": "USD per share",
+            "source_period_type": "duration",
+        }
+        rows = [
+            {
+                **base,
+                "period_type": "Q",
+                "fiscal_year": 2023,
+                "fiscal_quarter": 1,
+                "period_end": "2022-03-26",
+                "report_date": "2023-04-01",
+                "value": 0.56,
+                "available_at": "2023-05-03",
+                "accession_no": "2023-q1-comparative-2022",
+            },
+            {
+                **base,
+                "period_type": "Q",
+                "fiscal_year": 2023,
+                "fiscal_quarter": 1,
+                "period_end": "2023-04-01",
+                "report_date": "2023-04-01",
+                "value": -0.09,
+                "available_at": "2023-05-03",
+                "accession_no": "2023-q1",
+            },
+            {
+                **base,
+                "period_type": "Q",
+                "fiscal_year": 2023,
+                "fiscal_quarter": 2,
+                "period_end": "2023-07-01",
+                "report_date": "2023-07-01",
+                "value": 0.02,
+                "available_at": "2023-08-02",
+                "accession_no": "2023-q2",
+            },
+            {
+                **base,
+                "period_type": "Q",
+                "fiscal_year": 2023,
+                "fiscal_quarter": 3,
+                "period_end": "2023-09-30",
+                "report_date": "2023-09-30",
+                "value": 0.18,
+                "available_at": "2023-11-01",
+                "accession_no": "2023-q3",
+            },
+            {
+                **base,
+                "period_type": "FY",
+                "fiscal_year": 2023,
+                "fiscal_quarter": None,
+                "period_end": "2023-12-30",
+                "report_date": "2023-12-30",
+                "value": 0.53,
+                "available_at": "2024-01-31",
+                "accession_no": "2023-10k",
+            },
+            {
+                **base,
+                "period_type": "Q",
+                "fiscal_year": 2024,
+                "fiscal_quarter": 1,
+                "period_end": "2023-04-01",
+                "report_date": "2024-03-30",
+                "value": -0.09,
+                "available_at": "2024-05-01",
+                "accession_no": "2024-q1-comparative-2023",
+            },
+        ]
+
+        before = derive_filing_aware_ttm_eps(rows, as_of_date="2024-01-31")
+        after = derive_filing_aware_ttm_eps(rows, as_of_date="2024-05-31")
+
+        self.assertAlmostEqual(before["AMD"]["quarters"][-1]["eps"], 0.42)
+        self.assertAlmostEqual(after["AMD"]["quarters"][-1]["eps"], 0.42)
+        self.assertEqual(after["AMD"]["quarters"][-1]["derivation"], "fy_minus_q1_q2_q3")
+
     def test_ttm_resolver_derives_q4_only_from_true_fiscal_year_end(self) -> None:
         from finance.data.nasdaq100_valuation import derive_filing_aware_ttm_eps
 
@@ -829,6 +915,7 @@ class Nasdaq100ValuationCoverageTests(unittest.TestCase):
                         "fiscal_year": 2025,
                         "fiscal_quarter": quarter,
                         "period_end": period_end,
+                        "report_date": period_end,
                         "value": eps,
                         "available_at": "2025-04-15",
                     }

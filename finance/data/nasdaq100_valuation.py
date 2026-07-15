@@ -652,8 +652,8 @@ def _eligible_statement_rows(
     return eligible
 
 
-def _is_true_fiscal_year_end_fact(row: Any) -> bool:
-    """Reject comparative FY facts carried by a later fiscal-year filing."""
+def _is_primary_filing_period_fact(row: Any) -> bool:
+    """Reject Q/FY comparative facts carried by a later filing context."""
     period_end = pd.to_datetime(getattr(row, "period_end", None), errors="coerce")
     report_date = pd.to_datetime(getattr(row, "report_date", None), errors="coerce")
     if pd.isna(period_end):
@@ -686,6 +686,9 @@ def derive_filing_aware_ttm_eps(
     for symbol, symbol_rows in frame.groupby("symbol"):
         discrete: list[dict[str, Any]] = []
         quarter_rows = symbol_rows.loc[symbol_rows["period_type"].astype(str).str.upper() == "Q"]
+        quarter_rows = quarter_rows.loc[
+            [_is_primary_filing_period_fact(row) for row in quarter_rows.itertuples()]
+        ]
         quarter_rows = quarter_rows.drop_duplicates(["period_end"], keep="last")
         for row in quarter_rows.itertuples():
             discrete.append(
@@ -700,7 +703,7 @@ def derive_filing_aware_ttm_eps(
             )
         fy_rows = symbol_rows.loc[symbol_rows["period_type"].astype(str).str.upper() == "FY"]
         fy_rows = fy_rows.loc[
-            [_is_true_fiscal_year_end_fact(row) for row in fy_rows.itertuples()]
+            [_is_primary_filing_period_fact(row) for row in fy_rows.itertuples()]
         ]
         fy_rows = fy_rows.drop_duplicates(["period_end"], keep="last")
         for fy in fy_rows.itertuples():
