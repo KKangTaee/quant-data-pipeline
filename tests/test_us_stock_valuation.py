@@ -589,6 +589,28 @@ class UsStockValuationEngineTests(unittest.TestCase):
         self.assertEqual(adr["status"], "NOT_APPLICABLE")
         self.assertEqual(adr["reason_code"], "ADR_UNIT_UNVERIFIED")
 
+    def test_growth_gap_blocks_scenario_but_keeps_main_pe_ready(self) -> None:
+        from finance.data.us_stock_valuation import classify_us_stock_readiness
+
+        result = classify_us_stock_readiness(
+            {
+                "instrument_type": "common_stock",
+                "adr_unit_status": "not_adr",
+                "cik": "0000002488",
+            },
+            {
+                "requested_months": 60,
+                "price_missing": False,
+                "statement_missing": False,
+                "listing_months": 200,
+            },
+            _monthly_points(60),
+            {"status": "INSUFFICIENT_HISTORY", "observation_count": 7},
+        )
+
+        self.assertEqual(result["status"], "READY")
+        self.assertIsNone(result["reason_code"])
+
 
 def _ready_loaded_inputs() -> dict[str, object]:
     return {
@@ -680,6 +702,32 @@ class UsStockValuationServiceTests(unittest.TestCase):
         self.assertIn("FOMC", result["earnings_scenario"]["methodology"])
         self.assertIn("상대가치", result["index_scenario"]["label"])
         json.dumps(result, ensure_ascii=False)
+
+    def test_service_keeps_graph_one_ready_when_growth_history_only_blocks_graph_two(self) -> None:
+        from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
+
+        inputs = _ready_loaded_inputs()
+        inputs["quarterly_ttm_rows"] = _quarterly_ttm_points(
+            11,
+            start="2023-03-31",
+        )
+
+        result = build_us_stock_valuation_read_model(
+            selected_symbol="AAPL",
+            loaded_inputs=inputs,
+        )
+
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(result["multiple_regime"]["status"], "READY")
+        self.assertEqual(result["earnings_scenario"]["status"], "BLOCKED")
+        self.assertEqual(
+            result["earnings_scenario"]["reason_code"],
+            "INSUFFICIENT_GROWTH_HISTORY",
+        )
+        self.assertEqual(result["earnings_scenario"]["observation_count"], 7)
+        self.assertEqual(result["earnings_scenario"]["required_observations"], 8)
+        self.assertEqual(result["index_scenario"]["status"], "BLOCKED")
+        self.assertIn("7/8", result["index_scenario"]["reason"])
 
     def test_service_collectable_exposes_exact_action_but_not_applicable_does_not(self) -> None:
         from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model

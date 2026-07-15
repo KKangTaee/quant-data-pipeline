@@ -245,15 +245,12 @@ def build_us_stock_valuation_read_model(
         }
 
         status = str(readiness.get("status") or "ERROR")
-        if status == "READY" and scenarios.get("status") != "READY":
-            status = "NOT_APPLICABLE"
-            readiness = {
-                "status": status,
-                "reason_code": "SCENARIO_EVIDENCE_INSUFFICIENT",
-                "reason": scenarios.get("reason") or "기업 초과성장 시나리오 근거가 충분하지 않습니다.",
-            }
         earnings = {
             "status": "READY" if scenarios.get("status") == "READY" else "BLOCKED",
+            "reason_code": scenarios.get("reason_code"),
+            "reason": scenarios.get("reason"),
+            "observation_count": growth.get("observation_count"),
+            "required_observations": 8,
             "current_ttm_eps": current_eps if current_eps else None,
             "eps_basis_date": (latest or {}).get("eps_basis_date"),
             "eps_source": "SEC filing-aware diluted EPS TTM",

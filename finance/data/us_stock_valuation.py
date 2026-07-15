@@ -463,8 +463,21 @@ def calculate_stock_scenarios(
     eps = float(current_ttm_eps)
     if eps <= 0:
         return {"status": "NOT_APPLICABLE", "reason_code": "NON_POSITIVE_EPS"}
-    if multiple_regime.get("status") != "READY" or excess_growth.get("status") != "READY":
-        return {"status": "BLOCKED", "reason": "멀티플 또는 기업 초과성장 근거가 충분하지 않습니다."}
+    if multiple_regime.get("status") != "READY":
+        return {
+            "status": "BLOCKED",
+            "reason_code": "MULTIPLE_HISTORY_INSUFFICIENT",
+            "reason": "최근 positive P/E 멀티플 근거가 충분하지 않습니다.",
+        }
+    if excess_growth.get("status") != "READY":
+        observations = int(excess_growth.get("observation_count") or 0)
+        return {
+            "status": "BLOCKED",
+            "reason_code": "INSUFFICIENT_GROWTH_HISTORY",
+            "reason": f"최근 3년 positive-to-positive TTM EPS 성장 관측이 {observations}/8개입니다.",
+            "observation_count": observations,
+            "required_observations": 8,
+        }
     macro = float(excess_growth["current_macro_pct"])
     definitions = {
         "conservative": ("p25_pct", "minus_1sigma"),
@@ -640,11 +653,5 @@ def classify_us_stock_readiness(
             "reason_code": "INCOMPLETE_MONTHLY_RAW_DATA",
             "reason": f"positive P/E 월이 {complete_count}/60개입니다.",
             "collection_scopes": ["prices", "sec_statements"],
-        }
-    if growth_evidence.get("status") != "READY":
-        return {
-            "status": "NOT_APPLICABLE",
-            "reason_code": "INSUFFICIENT_GROWTH_HISTORY",
-            "reason": "최근 3년 positive-to-positive TTM EPS 성장 관측이 8개 미만입니다.",
         }
     return {"status": "READY", "reason_code": None, "reason": None}
