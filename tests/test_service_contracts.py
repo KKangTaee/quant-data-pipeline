@@ -28669,7 +28669,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         positions = [
             render_body.index(token)
             for token in (
-                "<CandidateSelector",
+                "<WorkspaceHeader",
                 "<VerdictHero",
                 "<BehaviorBoard",
                 "<StrengthWeaknessSection",

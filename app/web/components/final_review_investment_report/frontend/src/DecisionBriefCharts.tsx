@@ -156,8 +156,8 @@ export function CumulativeComparisonChart({
       title="누적 성과와 Benchmark"
       description="Python에서 같은 날짜로 정렬하고 100 기준으로 전달한 후보와 benchmark 누적 성과입니다."
       series={[
-        { label: candidate.label, color: "#166534", points: candidate.points },
-        { label: benchmark.label, color: "#64748b", points: benchmark.points },
+        { label: candidate.label, color: "#274764", points: candidate.points },
+        { label: benchmark.label, color: "#269789", points: benchmark.points },
       ]}
     />
   )
@@ -171,7 +171,7 @@ export function UnderwaterChart({ series }: { series: DecisionBriefSeries }) {
     <SvgLineChart
       title="Underwater drawdown"
       description="Python이 running peak 기준으로 계산해 전달한 drawdown과 recovery 경로입니다."
-      series={[{ label: series.label, color: "#b45309", points: series.points }]}
+      series={[{ label: series.label, color: "#e2763b", points: series.points }]}
     />
   )
 }

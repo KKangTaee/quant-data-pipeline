@@ -41,13 +41,16 @@ function CandidateSelector({
   model: CandidateSelectorModel
   onIntent: WorkspaceProps["onIntent"]
 }) {
+  const selectedIndex = model.options.findIndex((option) => option.selected)
+  const selected = model.options[selectedIndex]
   return (
-    <section className="db-candidate-bar" aria-labelledby="db-candidate-title">
-      <div>
-        <p className="db-kicker">Review candidate</p>
-        <h2 id="db-candidate-title">검토할 후보</h2>
+    <aside className="db-candidate-summary" aria-labelledby="db-candidate-title">
+      <div className="db-candidate-summary-heading">
+        <small>검토 후보 · {selectedIndex >= 0 ? selectedIndex + 1 : 0} / {model.options.length}</small>
+        <strong id="db-candidate-title">{selected?.title || "검토할 후보를 선택하세요"}</strong>
+        <span>{selected?.validation_id || selected?.source_type || "저장된 검증 없음"}</span>
       </div>
-      <div className="db-candidate-options" role="list">
+      <div className="db-candidate-options" role="list" aria-label="Final Review 후보 선택">
         {model.options.map((option) => (
           <button
             type="button"
@@ -69,7 +72,29 @@ function CandidateSelector({
           </button>
         ))}
       </div>
-    </section>
+    </aside>
+  )
+}
+
+function WorkspaceHeader({
+  brief,
+  model,
+  onIntent,
+}: {
+  brief: DecisionBrief
+  model: CandidateSelectorModel
+  onIntent: WorkspaceProps["onIntent"]
+}) {
+  return (
+    <header className="db-workspace-header" aria-labelledby="db-workspace-title">
+      <div className="db-workspace-intro">
+        <p className="db-kicker">Final Review Decision Workspace</p>
+        <h1 id="db-workspace-title">이 포트폴리오를 실제 투자 검토 대상으로<br />계속 추적할 가치가 있는가?</h1>
+        <p>새 검증을 실행하는 화면이 아니라, 저장된 근거로 추적 가치를 판단하고 이유를 기록하는 화면입니다.</p>
+        <span className="db-header-state">{brief.verdict.label}</span>
+      </div>
+      <CandidateSelector model={model} onIntent={onIntent} />
+    </header>
   )
 }
 
@@ -78,16 +103,21 @@ function VerdictHero({ brief }: { brief: DecisionBrief }) {
   return (
     <section className={`db-verdict db-tone-${brief.verdict.tone}`} aria-labelledby="db-verdict-title">
       <div className="db-verdict-main">
-        <p className="db-kicker">Tracking-worth conclusion</p>
         <span className="db-route-label">{brief.verdict.label}</span>
         <h1 id="db-verdict-title">{brief.verdict.headline}</h1>
         <p className="db-thesis">{brief.verdict.thesis}</p>
+        <div className="db-basis-chips" aria-label="판단 기준">
+          <span>관측 {period.start || "미측정"} → {period.end || "미측정"}</span>
+          <span>기준일 {brief.candidate.as_of || period.latest_valuation_date || "미측정"}</span>
+          <span>{period.frequency || "빈도 미측정"}</span>
+        </div>
       </div>
-      <dl className="db-context-list">
-        <div><dt>후보</dt><dd>{brief.candidate.title}</dd></div>
-        <div><dt>관측 기간</dt><dd>{period.start || "미측정"} → {period.end || "미측정"}</dd></div>
-        <div><dt>기준일</dt><dd>{brief.candidate.as_of || period.latest_valuation_date || "미측정"}</dd></div>
-      </dl>
+      <aside className="db-confidence" aria-label="근거 신뢰도">
+        <span>근거 신뢰도</span>
+        <strong>{brief.evidence_confidence.value}</strong>
+        <small>{brief.evidence_confidence.label}</small>
+        <p>{brief.evidence_confidence.ready_checks} / {brief.evidence_confidence.total_checks} ready checks</p>
+      </aside>
     </section>
   )
 }
@@ -349,7 +379,7 @@ export function DecisionBriefWorkspace({ decisionBrief, candidateSelector, onInt
 
   return (
     <main className="db-workspace" data-candidate={selectedCandidate?.source_id || decisionBrief.candidate.source_id}>
-      <CandidateSelector model={candidateSelector} onIntent={onIntent} />
+      <WorkspaceHeader brief={decisionBrief} model={candidateSelector} onIntent={onIntent} />
       <VerdictHero brief={decisionBrief} />
       <BehaviorBoard brief={decisionBrief} />
       <StrengthWeaknessSection brief={decisionBrief} />
