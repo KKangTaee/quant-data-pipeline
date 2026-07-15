@@ -4,8 +4,8 @@ Last Updated: 2026-07-16
 
 ## Current Stage
 
-- 전체 roadmap: 설계 승인 -> 1차 데이터 RED/GREEN -> 2차 provenance -> 3차 UI -> 4차 QA/docs
-- 현재: written spec review
+- 전체 roadmap: 1차 데이터 RED/GREEN -> 2차 provenance -> 3차 UI -> 4차 QA/docs
+- 현재: implementation plan 확정, 1차 RED 준비
 - 구현 완료 차수: 0/4
 
 ## Completed
@@ -16,7 +16,9 @@ Last Updated: 2026-07-16
 - 보간, strict missing 유지, explicit concept-family fallback 세 접근을 비교했다.
 - 사용자는 concept-family fallback과 `공시 기반 산출` 표기 방향을 승인했다.
 - authoritative design과 안전 조건을 `DESIGN.md`에 기록했다.
+- 사용자가 written spec을 확인하고 구현 진행을 승인했다.
+- TDD/commit/QA 단위를 4개 task로 나눈 implementation plan을 `PLAN.md`에 확정했다.
 
 ## Next Action
 
-- written spec 사용자 확인 후 implementation plan을 작성한다.
+- Task 1의 MRNA-like mixed-concept Q4 실패 테스트를 작성하고 RED를 확인한다.
