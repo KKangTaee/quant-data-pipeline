@@ -176,7 +176,7 @@ class MarketContextValuationTests(unittest.TestCase):
                 search_query="apple",
             )
 
-        self.assertEqual(model["schema_version"], "market_context_valuation_v4")
+        self.assertEqual(model["schema_version"], "market_context_valuation_v5")
         self.assertEqual(set(model["instruments"]), {"sp500", "us_stock"})
         self.assertEqual(model["instruments"]["sp500"], sp500)
         self.assertEqual(model["instruments"]["us_stock"]["status"], "ERROR")
@@ -249,6 +249,49 @@ class MarketContextValuationTests(unittest.TestCase):
             selected_symbol="RIVN",
             per_model=per,
         )
+
+    def test_combined_model_exposes_one_selected_stock_freshness_contract(self) -> None:
+        from app.services.overview.market_context_valuation import (
+            build_market_context_valuation_read_model,
+        )
+
+        per = {
+            "status": "NOT_APPLICABLE",
+            "selection": {
+                "symbol": "NET",
+                "name": "Cloudflare Inc",
+                "cik": None,
+                "latest_price_date": "2026-07-07",
+            },
+            "multiple_regime": {"status": "INSUFFICIENT_HISTORY", "current_pe": None},
+        }
+        turnaround = {
+            "status": "READY",
+            "coverage": {
+                "profile_basis_date": "2026-02-04",
+                "price_basis_date": "2026-07-07",
+                "statement_period_end": "2026-03-31",
+                "statement_available_at": "2026-05-08",
+                "statement_core_missing": False,
+            },
+            "collection_plan": {"scopes": []},
+        }
+        with patch(
+            "app.services.overview.market_context_valuation.build_sp500_valuation_read_model",
+            return_value={"status": "READY", "instrument": {"id": "sp500"}},
+        ), patch(
+            "app.services.overview.market_context_valuation.build_us_stock_valuation_read_model",
+            return_value=per,
+        ), patch(
+            "app.services.overview.market_context_valuation.build_us_stock_turnaround_read_model",
+            return_value=turnaround,
+        ):
+            model = build_market_context_valuation_read_model(selected_symbol="NET")
+
+        freshness = model["instruments"]["us_stock"]["data_freshness"]
+        self.assertEqual(freshness["status"], "REFRESH_AVAILABLE")
+        self.assertEqual(freshness["action"]["symbol"], "NET")
+        self.assertEqual(freshness["action"]["scopes"], ["asset_profile", "prices"])
 
     def test_react_surface_has_stock_selector_search_and_status_contract(self) -> None:
         component = Path("app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx").read_text()

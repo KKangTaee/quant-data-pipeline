@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from app.services.overview.sp500_valuation import build_sp500_valuation_read_model
+from app.services.overview.us_stock_freshness import build_us_stock_data_freshness
 from app.services.overview.us_stock_turnaround import build_us_stock_turnaround_read_model
 from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
 
@@ -77,12 +78,17 @@ def build_market_context_valuation_read_model(
     stock = {
         **stock_per,
         "turnaround_analysis": turnaround,
+        "data_freshness": build_us_stock_data_freshness(
+            selected_symbol or "",
+            per_model=stock_per,
+            turnaround_model=turnaround,
+        ),
         "recommended_analysis": (
             "per" if per_ready else "turnaround" if selected_symbol else None
         ),
     }
     return {
-        "schema_version": "market_context_valuation_v4",
+        "schema_version": "market_context_valuation_v5",
         "default_instrument": "sp500",
         "instruments": {
             "sp500": sp500,

@@ -889,6 +889,10 @@ class TurnaroundLoaderTests(unittest.TestCase):
         self.assertEqual(result["profile"]["currency"], "USD")
         self.assertEqual(result["latest_price"]["currency"], "USD")
         self.assertEqual(result["window"]["fiscal_years"], 7)
+        self.assertEqual(result["coverage"]["profile_basis_date"], "2026-07-14")
+        self.assertEqual(result["coverage"]["price_basis_date"], "2026-07-14")
+        self.assertIsNone(result["coverage"]["statement_period_end"])
+        self.assertIsNone(result["coverage"]["statement_available_at"])
 
     def test_collection_plan_maps_only_repairable_raw_gaps_to_exact_scopes(self) -> None:
         from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collection_plan

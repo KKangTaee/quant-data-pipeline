@@ -109,7 +109,13 @@ def _coverage(
     )
     return {
         "profile_stale": bool(profile_stale),
+        "profile_basis_date": (
+            None
+            if pd.isna(profile_date)
+            else pd.Timestamp(profile_date).strftime("%Y-%m-%d")
+        ),
         "price_missing": bool(price_missing),
+        "price_basis_date": latest_text,
         "price_missing_range": {
             "start": latest_text or price_start,
             "end": as_of.strftime("%Y-%m-%d"),
@@ -117,6 +123,8 @@ def _coverage(
         if price_missing
         else None,
         "statement_core_missing": bool(statement_core_missing),
+        "statement_period_end": latest.get("period_end"),
+        "statement_available_at": latest.get("available_at"),
         "available_quarters": len(available),
         "missing_concepts": missing_concepts,
     }
