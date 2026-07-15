@@ -540,12 +540,36 @@ def calculate_historical_stock_scenario(
     frame["month"] = pd.to_datetime(frame["month"], errors="coerce")
     frame["trailing_pe"] = pd.to_numeric(frame["trailing_pe"], errors="coerce")
     frame = frame.dropna(subset=["month"]).sort_values("month").drop_duplicates("month", keep="last")
-    end_month = pd.Timestamp(frame["month"].max())
-    visible_frame = frame.tail(visible)
+    end_month = pd.Timestamp(frame["month"].max()).to_period("M").to_timestamp()
+    visible_index = pd.date_range(end=end_month, periods=visible, freq="MS")
+    visible_frame = (
+        frame.set_index("month")
+        .reindex(visible_index)
+        .rename_axis("month")
+        .reset_index()
+    )
     series: list[dict[str, Any]] = []
-    for row in visible_frame.itertuples():
+    timeline: list[dict[str, Any]] = []
+    missing_reason_counts: dict[str, int] = {}
+    for slot_index, row in enumerate(visible_frame.itertuples()):
         month = pd.Timestamp(row.month)
         month_end = month + pd.offsets.MonthEnd(0)
+        eps = pd.to_numeric(getattr(row, "ttm_eps", None), errors="coerce")
+        price = pd.to_numeric(getattr(row, "price", None), errors="coerce")
+        slot: dict[str, Any] = {
+            "month": month.strftime("%Y-%m-%d"),
+            "slot_index": slot_index,
+            "status": "MISSING",
+            "reason_code": None,
+            "actual_price": float(price) if not pd.isna(price) else None,
+        }
+        if pd.isna(price):
+            slot["reason_code"] = "PRICE_MISSING"
+        elif pd.isna(eps):
+            slot["reason_code"] = "INSUFFICIENT_PIT_EVIDENCE"
+        elif float(eps) <= 0:
+            slot["reason_code"] = "NON_POSITIVE_EPS"
+
         history_rows = frame.loc[frame["month"] <= month].to_dict("records")
         multiple = calculate_stock_multiple_regime(
             [{**item, "month": pd.Timestamp(item["month"]).strftime("%Y-%m-%d")} for item in history_rows],
@@ -557,37 +581,58 @@ def calculate_historical_stock_scenario(
             sep_rows,
             as_of_date=month_end.strftime("%Y-%m-%d"),
         )
-        eps = pd.to_numeric(getattr(row, "ttm_eps", None), errors="coerce")
-        price = pd.to_numeric(getattr(row, "price", None), errors="coerce")
-        if multiple.get("status") != "READY" or excess.get("status") != "READY" or pd.isna(eps) or pd.isna(price):
+        if slot["reason_code"] is None and multiple.get("status") != "READY":
+            slot["reason_code"] = "INSUFFICIENT_ROLLING_PER_WARMUP"
+        if slot["reason_code"] is None and excess.get("status") != "READY":
+            slot["reason_code"] = "INSUFFICIENT_PIT_EVIDENCE"
+        if slot["reason_code"] is not None:
+            reason = str(slot["reason_code"])
+            missing_reason_counts[reason] = missing_reason_counts.get(reason, 0) + 1
+            timeline.append(slot)
             continue
         scenario = calculate_stock_scenarios(float(eps), multiple, excess)
         if scenario.get("status") != "READY":
+            slot["reason_code"] = "INSUFFICIENT_PIT_EVIDENCE"
+            missing_reason_counts["INSUFFICIENT_PIT_EVIDENCE"] = (
+                missing_reason_counts.get("INSUFFICIENT_PIT_EVIDENCE", 0) + 1
+            )
+            timeline.append(slot)
             continue
-        series.append(
-            {
-                "month": month.strftime("%Y-%m-%d"),
-                "actual_price": float(price),
-                "current_ttm_eps": float(eps),
-                "sep_release_date": excess.get("current_sep_release_date"),
-                "current_macro_pct": excess.get("current_macro_pct"),
-                "lower_price": scenario["conservative"]["price"],
-                "baseline_price": scenario["baseline"]["price"],
-                "upper_price": scenario["optimistic"]["price"],
-                "gap_to_baseline_pct": (
-                    (float(price) / float(scenario["baseline"]["price"])) - 1.0
-                )
-                * 100.0,
-            }
-        )
+        point = {
+            **slot,
+            "status": "AVAILABLE",
+            "reason_code": None,
+            "current_ttm_eps": float(eps),
+            "eps_basis_date": getattr(row, "eps_basis_date", None),
+            "sep_release_date": excess.get("current_sep_release_date"),
+            "current_macro_pct": excess.get("current_macro_pct"),
+            "lower_price": scenario["conservative"]["price"],
+            "baseline_price": scenario["baseline"]["price"],
+            "upper_price": scenario["optimistic"]["price"],
+            "gap_to_baseline_pct": (
+                (float(price) / float(scenario["baseline"]["price"])) - 1.0
+            )
+            * 100.0,
+        }
+        series.append(point)
+        timeline.append(point)
     positive = frame.loc[frame["trailing_pe"].notna() & (frame["trailing_pe"] > 0), "month"]
     available = int(positive.nunique())
-    status = "READY" if len(series) == visible else "INSUFFICIENT_HISTORY"
+    status = (
+        "READY"
+        if len(series) == visible
+        else "PARTIAL"
+        if len(series) >= 2
+        else "INSUFFICIENT_HISTORY"
+    )
     result = {
         "status": status,
         "window_months": visible,
         "observation_count": len(series),
         "series": series,
+        "timeline": timeline,
+        "missing_point_count": max(0, visible - len(series)),
+        "missing_reason_counts": missing_reason_counts,
         "required_history_months": required_history,
         "available_history_months": available,
         "missing_history_months": max(0, required_history - available),

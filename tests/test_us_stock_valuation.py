@@ -537,27 +537,101 @@ class UsStockValuationEngineTests(unittest.TestCase):
         self.assertAlmostEqual(result["baseline"]["price"], 208.0)
         self.assertAlmostEqual(result["optimistic"]["price"], 265.0)
 
-    def test_historical_stock_scenario_requires_complete_visible_points_after_60m_warmup(self) -> None:
+    def test_historical_stock_scenario_keeps_warmup_gap_at_original_slot(self) -> None:
         from finance.data.us_stock_valuation import calculate_historical_stock_scenario
 
         ready = calculate_historical_stock_scenario(
             _monthly_points(71),
-            _quarterly_ttm_points(20),
-            _sep_history(),
+            _quarterly_ttm_points(52, start="2013-03-31"),
+            _sep_history(start_year=2013, end_year=2027),
             visible_months=12,
         )
-        insufficient = calculate_historical_stock_scenario(
+        partial = calculate_historical_stock_scenario(
             _monthly_points(70),
-            _quarterly_ttm_points(20),
-            _sep_history(),
+            _quarterly_ttm_points(52, start="2013-03-31"),
+            _sep_history(start_year=2013, end_year=2027),
             visible_months=12,
         )
 
         self.assertEqual(ready["status"], "READY")
         self.assertEqual(ready["observation_count"], 12)
         self.assertEqual(ready["required_history_months"], 71)
-        self.assertEqual(insufficient["status"], "INSUFFICIENT_HISTORY")
-        self.assertEqual(insufficient["reason_code"], "INSUFFICIENT_ROLLING_PER_WARMUP")
+        self.assertEqual(partial["status"], "PARTIAL")
+        self.assertEqual(partial["observation_count"], 11)
+        self.assertEqual(partial["missing_point_count"], 1)
+        self.assertEqual(len(partial["timeline"]), 12)
+        self.assertEqual(
+            partial["timeline"][0]["reason_code"],
+            "INSUFFICIENT_ROLLING_PER_WARMUP",
+        )
+        self.assertEqual(
+            [slot["slot_index"] for slot in partial["timeline"]],
+            list(range(12)),
+        )
+
+    def test_historical_stock_scenario_returns_partial_timeline_for_non_positive_eps_gap(self) -> None:
+        from finance.data.us_stock_valuation import calculate_historical_stock_scenario
+
+        monthly_rows = _monthly_points(95, start="2016-01-01")
+        for row in monthly_rows[-36:-33]:
+            row.update(
+                {
+                    "ttm_eps": -0.06,
+                    "trailing_pe": None,
+                    "quality": "non_positive_eps",
+                }
+            )
+
+        result = calculate_historical_stock_scenario(
+            monthly_rows,
+            _quarterly_ttm_points(52, start="2013-03-31"),
+            _sep_history(start_year=2013, end_year=2027),
+            visible_months=36,
+        )
+
+        self.assertEqual(result["status"], "PARTIAL")
+        self.assertEqual(result["observation_count"], 33)
+        self.assertEqual(result["missing_point_count"], 3)
+        self.assertEqual(len(result["timeline"]), 36)
+        self.assertEqual(
+            [slot["reason_code"] for slot in result["timeline"][:3]],
+            ["NON_POSITIVE_EPS"] * 3,
+        )
+        self.assertEqual(
+            result["missing_reason_counts"],
+            {"NON_POSITIVE_EPS": 3},
+        )
+        self.assertEqual(result["series"][0]["slot_index"], 3)
+
+    def test_historical_stock_scenario_does_not_replace_missing_calendar_month(self) -> None:
+        from finance.data.us_stock_valuation import calculate_historical_stock_scenario
+
+        monthly_rows = _monthly_points(71)
+        monthly_rows = [row for row in monthly_rows if row["month"] != "2025-05-01"]
+
+        result = calculate_historical_stock_scenario(
+            monthly_rows,
+            _quarterly_ttm_points(52, start="2013-03-31"),
+            _sep_history(start_year=2013, end_year=2027),
+            visible_months=12,
+        )
+
+        self.assertEqual(result["status"], "PARTIAL")
+        self.assertEqual(result["observation_count"], 11)
+        self.assertEqual(result["timeline"][0]["month"], "2024-12-01")
+        missing = [slot for slot in result["timeline"] if slot["status"] == "MISSING"]
+        self.assertEqual(
+            missing,
+            [
+                {
+                    "month": "2025-05-01",
+                    "slot_index": 5,
+                    "status": "MISSING",
+                    "reason_code": "PRICE_MISSING",
+                    "actual_price": None,
+                }
+            ],
+        )
 
     def test_readiness_distinguishes_collectable_from_structural_not_applicable(self) -> None:
         from finance.data.us_stock_valuation import classify_us_stock_readiness
@@ -728,6 +802,33 @@ class UsStockValuationServiceTests(unittest.TestCase):
         self.assertEqual(result["earnings_scenario"]["required_observations"], 8)
         self.assertEqual(result["index_scenario"]["status"], "BLOCKED")
         self.assertIn("7/8", result["index_scenario"]["reason"])
+
+    def test_service_exposes_partial_three_year_history_without_compressing_gap(self) -> None:
+        from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
+
+        inputs = _ready_loaded_inputs()
+        monthly_rows = inputs["monthly_rows"]
+        for row in monthly_rows[-36:-33]:
+            row.update(
+                {
+                    "ttm_eps": -0.06,
+                    "trailing_pe": None,
+                    "quality": "non_positive_eps",
+                }
+            )
+
+        result = build_us_stock_valuation_read_model(
+            selected_symbol="AAPL",
+            loaded_inputs=inputs,
+        )
+
+        history = result["index_scenario"]["history_options"]["3y"]
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(history["status"], "PARTIAL")
+        self.assertEqual(history["observation_count"], 33)
+        self.assertEqual(history["window_months"], 36)
+        self.assertEqual(history["timeline"][0]["status"], "MISSING")
+        self.assertEqual(history["series"][0]["slot_index"], 3)
 
     def test_service_collectable_exposes_exact_action_but_not_applicable_does_not(self) -> None:
         from app.services.overview.us_stock_valuation import build_us_stock_valuation_read_model
