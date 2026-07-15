@@ -22,6 +22,10 @@ from finance.loaders.price import load_latest_prices, load_price_freshness_summa
 from finance.loaders.us_stock_valuation import build_us_stock_valuation_collection_plan
 from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collection_plan
 
+from app.services.overview.market_context_valuation import (
+    build_market_context_valuation_read_model,
+)
+
 from app.jobs.ingestion_jobs import (
     JobResult,
     run_collect_earnings_calendar,
@@ -37,6 +41,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
     run_collect_us_stock_valuation_inputs,
+    run_collect_us_stock_refresh_inputs,
     run_collect_us_stock_turnaround_inputs,
     run_diagnose_market_quote_gaps,
     run_extended_statement_refresh,
@@ -237,6 +242,181 @@ def run_overview_nasdaq100_valuation_repair(
     )
     result["details"] = details
     return result
+
+
+def _selected_stock_from_market_context(model: dict[str, Any]) -> dict[str, Any]:
+    return dict(dict(model.get("instruments") or {}).get("us_stock") or {})
+
+
+def _selected_stock_refresh_result(
+    *,
+    job_name: str,
+    normalized: str,
+    started_at: datetime,
+    status: str,
+    message: str,
+    results: list[dict[str, Any]],
+    before: dict[str, Any],
+    after: dict[str, Any],
+) -> JobResult:
+    failed_symbols = list(
+        dict.fromkeys(
+            str(item).strip().upper()
+            for result in results
+            for item in (result.get("failed_symbols") or [])
+            if str(item).strip()
+        )
+    )
+    return {
+        "job_name": job_name,
+        "status": status,
+        "started_at": started_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "finished_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "duration_sec": round((datetime.now() - started_at).total_seconds(), 3),
+        "rows_written": sum(int(result.get("rows_written") or 0) for result in results),
+        "symbols_requested": 1,
+        "symbols_processed": 0 if status == "failed" else 1,
+        "failed_symbols": failed_symbols,
+        "message": message,
+        "details": {
+            "symbol": normalized,
+            "before": before,
+            "after": after,
+            "steps": results,
+        },
+    }
+
+
+def run_overview_us_stock_data_refresh(
+    symbol: str,
+    *,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    model_builder: Callable[..., dict[str, Any]] = build_market_context_valuation_read_model,
+    identity_runner: Callable[..., JobResult] = run_collect_sec_company_ticker_crosscheck,
+    collection_runner: Callable[..., JobResult] = run_collect_us_stock_refresh_inputs,
+) -> JobResult:
+    """Refresh one selected stock, preserving market writes before SEC identity."""
+    job_name = "overview_us_stock_data_refresh"
+    normalized = str(symbol or "").strip().upper()
+    started_at = datetime.now()
+    before_stock = _selected_stock_from_market_context(
+        dict(model_builder(selected_symbol=normalized))
+    )
+    before = dict(before_stock.get("data_freshness") or {})
+    action = dict(before.get("action") or {})
+    if before.get("status") == "READY":
+        return _selected_stock_refresh_result(
+            job_name=job_name,
+            normalized=normalized,
+            started_at=started_at,
+            status="success",
+            message=f"{normalized} 자료가 이미 최신 상태입니다.",
+            results=[],
+            before=before,
+            after=before,
+        )
+    if (
+        action.get("id") != "refresh_us_stock_data"
+        or str(action.get("symbol") or "").strip().upper() != normalized
+        or not action.get("enabled")
+    ):
+        return _selected_stock_refresh_result(
+            job_name=job_name,
+            normalized=normalized,
+            started_at=started_at,
+            status="failed",
+            message=str(before.get("reason") or "선택 종목의 갱신 범위를 확인할 수 없습니다."),
+            results=[],
+            before=before,
+            after=before,
+        )
+
+    scopes = set(action.get("scopes") or [])
+    results: list[dict[str, Any]] = []
+    market_scopes = scopes & {"asset_profile", "prices"}
+    if market_scopes:
+        results.append(
+            dict(
+                collection_runner(
+                    normalized,
+                    cik="",
+                    identity_cik="",
+                    price_start=(
+                        before.get("price_basis_date")
+                        or before.get("expected_price_date")
+                    ),
+                    price_end=before.get("expected_price_date"),
+                    collect_profile="asset_profile" in market_scopes,
+                    collect_prices="prices" in market_scopes,
+                    collect_statements=False,
+                    progress_callback=progress_callback,
+                )
+            )
+        )
+
+    identity_stock = before_stock
+    if "sec_identity" in scopes:
+        if progress_callback is not None:
+            progress_callback(
+                {"event": "stage", "stage": "identity", "symbol": normalized}
+            )
+        results.append(dict(identity_runner([normalized], progress_callback=None)))
+        identity_stock = _selected_stock_from_market_context(
+            dict(model_builder(selected_symbol=normalized))
+        )
+
+    identity_freshness = dict(identity_stock.get("data_freshness") or {})
+    identity_action = dict(identity_freshness.get("action") or {})
+    identity_scopes = set(identity_action.get("scopes") or [])
+    identity = dict(identity_stock.get("selection") or {})
+    cik = str(identity.get("cik") or "").strip()
+    if "sec_statements" in identity_scopes and cik:
+        results.append(
+            dict(
+                collection_runner(
+                    normalized,
+                    cik=cik,
+                    identity_cik=cik,
+                    price_start=None,
+                    price_end=None,
+                    collect_profile=False,
+                    collect_prices=False,
+                    collect_statements=True,
+                    progress_callback=progress_callback,
+                )
+            )
+        )
+
+    after_stock = _selected_stock_from_market_context(
+        dict(model_builder(selected_symbol=normalized))
+    )
+    after = dict(after_stock.get("data_freshness") or {})
+    successful_step = any(
+        str(result.get("status") or "").lower() in {"success", "partial_success"}
+        for result in results
+    )
+    if after.get("status") == "READY":
+        status = "success"
+    elif successful_step:
+        status = "partial_success"
+    else:
+        status = "failed"
+    return _selected_stock_refresh_result(
+        job_name=job_name,
+        normalized=normalized,
+        started_at=started_at,
+        status=status,
+        message=(
+            f"{normalized} 최신 자료를 반영했습니다."
+            if status == "success"
+            else f"{normalized} 수집 가능한 자료를 반영했고 남은 항목이 있습니다."
+            if status == "partial_success"
+            else f"{normalized} 최신 자료를 반영하지 못했습니다."
+        ),
+        results=results,
+        before=before,
+        after=after,
+    )
 
 
 def run_overview_us_stock_valuation_collection(
