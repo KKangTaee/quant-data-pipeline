@@ -9495,3 +9495,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Level 2에서는 지금 해결할 일과 이동 가능 여부가 먼저 읽혀야 하고, Final Review에서 종결할 비핵심 한계를 raw contract 카드로 반복하지 않아야 함.
 - Analysis result: 독립 closure card는 기존 category criteria와 중복되고 internal metric / 영문 contract / `미정`을 노출했다. 분류와 Gate는 필요하지만 상세 presentation은 Final Review 소유가 맞다.
 - Follow-up: Flow 4 독립 카드 묶음을 제거하고 Flow 3 summary band에 accepted-limit root count와 blocker 유무만 표시했다. Python closure / Gate / registry contract는 변경하지 않았다.
+
+### 2026-07-16 - Final Review는 점수표보다 저장된 행동과 변화 조건으로 판단한다
+
+- User request: 기존 active task와 worktree에서 승인된 Decision Workspace 1~4차를 TDD, Browser QA, distinct commit, finance docs sync까지 완료한다.
+- Interpreted goal: 사용자가 후보를 바꿔가며 실제 성과/손실 경로와 measured trade-off를 읽고 canonical route와 사유를 한 화면에서 기록할 수 있어야 한다.
+- Analysis result: Python Decision Brief가 exact-common curve, underwater, measured finding/trait, structured Monitoring condition과 Gate capability를 소유하고 React는 presentation intent만 맡는 one-shell이 맞다. overall/headline score는 current 화면에서 제거한다.
+- Follow-up: 4개 구현 커밋과 210-test completion suite, 1440/760 QA, compact snapshot/legacy fallback 문서 동기화를 완료했다. protected registry에는 QA row를 쓰지 않았다.

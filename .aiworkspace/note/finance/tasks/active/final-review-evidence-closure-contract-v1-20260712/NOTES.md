@@ -47,3 +47,34 @@
 - accepted-limit 항목은 Practical Validation에서 사용자가 해결할 action이 아니므로 큰 카드 목록과 `미정` 표시를 제거했다.
 - Python은 accepted-limit root issue를 dedup해 `final_review_limit_count`만 workspace summary에 전달한다.
 - Flow 3 React는 이 개수와 즉시 해결·개발 blocker 유무를 기존 summary band에서 표시하고, 상세 terminal 판단은 Final Review에 남긴다.
+
+## 2026-07-16 Decision Workspace 1차
+
+- `decision_brief_v1`은 evidence confidence를 investability ready-check 비율인 보조 metadata로만 전달하며 verdict/route의 입력으로 사용하지 않는다.
+- canonical route 4종과 새 사용자 label은 Python service에서 1:1로 고정했다.
+- current eligibility는 closure 3개 count, pre-selection unresolved count, selected-route Gate를 모두 Python에서 확인한다.
+- behavior/trait은 2차 projection 전까지 가짜 값 대신 명시적 `unmeasured` / `None` 상태로 전달한다.
+
+## 2026-07-16 Decision Workspace 2차
+
+- behavior curve는 latest stored replay → stored selection snapshot → source snapshot 순으로만 읽고, replay/DB/provider 호출은 하지 않는다.
+- 후보와 benchmark는 exact common date에서 각각 100으로 rebase하며, 공통점이 2개 미만이면 상대 lane을 `unmeasured`로 남긴다.
+- curve의 거래비용 적용이 증명되지 않으면 measured curve는 유지하되 `stored_curve_cost_unverified`로 표시하고 순성과로 부르지 않는다.
+- strength/weakness와 trait axis는 structured measurement와 explicit comparator가 모두 있을 때만 만든다. Monitoring condition이 선택한 observation은 다른 primary role에서 제거한다.
+- GRS fixture는 2026-05-29 signal/rebalance와 2026-06-30 valuation point를 분리해 chart가 valuation을 보존하면서 fake rebalance를 만들지 않게 고정한다.
+
+## 2026-07-16 Decision Workspace 3차
+
+- Final Review 본문은 후보 selector를 포함한 React one-shell 하나만 렌더하고, Python은 eligibility, Decision Brief projection, intent 검증, 저장을 계속 소유한다.
+- 렌더 순서는 결론 → 행동 근거 → 실제 강점/약점 → trait map → Monitoring 변화 조건 → 최종 판단 → disclosure로 고정했다.
+- candidate switch는 `select_candidate` intent만 전달하며 registry append 없이 Python session selection을 바꾸고 rerun한다.
+- React는 Gate, 공식, dedup, persistence를 계산하지 않는다. 미측정 trait axis는 0으로 연결하지 않고 segment를 끊는다.
+- tracked frontend build를 함께 갱신해 Streamlit custom component가 source와 동일한 production bundle을 사용하게 했다.
+
+## 2026-07-16 Decision Workspace 4차
+
+- `decision_brief_snapshot_v1`은 verdict, evidence confidence, strength/weakness observation id, 5-field Monitoring condition, accepted-limit root id, source gap만 저장하고 chart point / behavior bulk는 제외한다.
+- 화면에 전달한 같은 active Decision Brief를 Python decision row builder에 넘긴다. snapshot은 기존 canonical route, save evaluation, selected-route Gate, closure finalization을 우회하지 않는다.
+- selected route만 Gate와 closed evidence를 모두 통과할 때 Monitoring 후보가 된다. non-select route는 판단 사유와 snapshot을 보존하지만 `judgment_decision / not_requested`다.
+- Portfolio Monitoring은 structured snapshot condition을 우선 user-facing trigger string으로 변환하고, snapshot이 없는 legacy row는 기존 paper trigger string을 그대로 읽는다. 기존 JSONL row는 rewrite하지 않았다.
+- legacy `FinalReviewInvestmentReport.tsx`는 compatibility export다. current React owner와 source contract는 `DecisionBriefWorkspace.tsx`다.
