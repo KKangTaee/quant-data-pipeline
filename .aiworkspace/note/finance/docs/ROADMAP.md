@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-14
+Last Verified: 2026-07-15
 
 ## Current State After Master Merge
 
@@ -15,6 +15,7 @@ Last Verified: 2026-07-14
 - Graph 2 계약: FOMC real GDP + PCE를 macro proxy로 두고, 기업의 historical TTM EPS excess growth P25/P50/P75를 결합한다.
 - 운영 경계: 검색/화면 진입은 DB read-only이고 selected-symbol price/SEC 수집은 명시 action에서만 실행한다.
 - 결과: AAPL/NVDA/META/TSLA actual DB는 READY이며 loss/short-listing/SEC-gap/split/foreign issuer 경계도 distinct state로 검증했다. S&P 화면은 유지하고 기존 Nasdaq backend는 보존했다.
+- 정확성 후속: comparative Q/FY는 primary filing period만 사용하고 split-year Q/FY를 같은 share basis로 맞춘 뒤 Q4를 계산한다. AMD actual은 TTM EPS `3.05`, P/E `169.22x`, 성장 관측 `10/8`로 READY이며 Graph 1/Graph 2 상태를 독립 판정한다.
 - 다음 단계: 필수 후속은 없다. 더 긴 3/5년 이력을 원하면 누락 월을 합성하거나 gate를 낮추지 않고 historical filing/SEP coverage를 별도 보강한다.
 
 Previous completed Nasdaq history task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/`다.

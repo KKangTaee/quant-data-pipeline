@@ -1,6 +1,6 @@
 # Overview Market Context US Stock Valuation V1 Notes
 
-Last Updated: 2026-07-14
+Last Updated: 2026-07-15
 
 ## Confirmed Product Decisions
 
@@ -77,6 +77,15 @@ Last Updated: 2026-07-14
 - Profile exchanges `NMS/NGM/NCM/NYQ/ASE` are normalized to user-facing Nasdaq/NYSE/NYSE American labels.
 - A non-U.S. issuer profile without explicit per-share/ADR-ratio evidence is conservatively `ADR_UNIT_UNVERIFIED` and cannot expose a collection action.
 - A longer history can have enough stored positive-P/E months but still lack complete filing+SEP evidence at every visible month. The UI now reports complete PIT evaluation points such as `24/36개월` rather than the contradictory raw-month message `107/95개월`.
+
+## 2026-07-15 Correctness Follow-up Decisions
+
+- `report_date == period_end` is primary filing-period evidence for both quarterly and FY duration facts. A later 10-Q/10-K comparative duration fact is historical disclosure context, not a replacement observation for the later filing's own fiscal period.
+- When `report_date` is absent, the resolver retains only the bounded first-filing fallback (`available_at - period_end <= 180 days`); it does not delete all legacy facts or infer a new quarter.
+- Split normalization happens on every eligible raw Q/FY fact before FY-minus-Q1/Q2/Q3 derives Q4. This keeps all operands on the valuation month-end share basis and prevents a pre-split quarter from being subtracted from a post-split FY value.
+- No future split is applied before its effective date, and no future filing is visible before `available_at`. Monthly TTM remains a carry-forward of the last four available discrete quarters without interpolation.
+- Top-level `READY` represents whether the positive-P/E Graph 1 can render. Growth evidence belongs to Graph 2: fewer than eight positive-to-positive YoY observations returns section-level `BLOCKED/INSUFFICIENT_GROWTH_HISTORY` with exact observed/required counts rather than hiding Graph 1.
+- AMD's corrected current TTM EPS/P/E is `3.05 / 169.22x` on stored evidence. The earlier `3.42 / 150.91x` was not an alternate scenario; it was the arithmetic result of a comparative quarter being assigned to the wrong fiscal-period identity.
 
 ## Product Language
 

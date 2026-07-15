@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-07-14
+Last Verified: 2026-07-15
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Last Verified: 2026-07-14
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: [US Stock Valuation V1 2026-07-14](../tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md) — 1차~5차 complete. Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체했고, 월말 filing-aware TTM EPS/PER, 60m/36m multiple, FOMC+기업 초과성장 시나리오, DB-only 검색과 explicit selected-symbol 수집을 연결했다. 기존 Nasdaq backend는 보존한다.
+- Current active task: [US Stock Valuation V1 2026-07-14](../tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md) — original 1차~5차와 2026-07-15 정확성 후속 1차~3차 complete. Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체했고, primary-period filing-aware TTM EPS/PER, split-year share-basis 정규화, 60m/36m Graph 1과 독립 Graph 2 readiness, DB-only 검색과 explicit selected-symbol 수집을 연결했다. 기존 Nasdaq backend는 보존한다.
 - Previous completed task: [Nasdaq-100 Scenario History Warmup V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md) — 1차~5차 implementation/QA complete; 60개월 rolling 계약을 유지한 최대 119개월 보강 action과 선택 기간별 정확한 부족 안내를 추가했다. Local actual QA는 66/119 READY이며 무료 원천 gap은 합성하지 않는다.
 - Previous completed task: [Nasdaq-100 60m Coverage Repair Action V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md) — valuation coverage blocker용 60개월 보강과 strict rematerialization을 완료했다.
 - Latest completed task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
@@ -80,7 +80,7 @@ Last Verified: 2026-07-14
 - Recent Overview helper extraction task: [Overview Tab Helper Extraction V11-V16 2026-06-25](../tasks/active/overview-tab-helper-extraction-v11-v16-20260625/STATUS.md).
 - Recent Backtest strategy contract task: [Risk Parity / Dual Momentum 5B 2026-06-10](../tasks/active/risk-parity-dual-momentum-5b-20260610/STATUS.md).
 - Recent Reference merge-review fix: [Merge Review Fixes 2026-06-08](../tasks/active/merge-review-fixes-20260608/STATUS.md).
-- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`; each tab keeps its thin entrypoint, helper bridge, visual components, and service read model boundary. `Market Context` valuation has an S&P 500 / 미국 개별주식 selector. S&P retains the Shiller/SEP 60m/36m and 1/3/5-year flow. 개별주는 DB-only 기업 검색, selected-symbol filing-aware TTM EPS/PER, 60m/36m multiple, FOMC+기업 초과성장 relative scenario와 READY/COLLECTABLE/NOT_APPLICABLE/ERROR 상태를 제공한다. 화면 진입은 read-only이고 raw gap 보강은 명시 action에서만 동기 실행한다. 기존 Nasdaq QQQ public-filing backend/materialization/collector는 보존하지만 current selector에는 연결되지 않는다. `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. See [Roadmap](./ROADMAP.md).
+- Current product state: recent merged work is grouped as Overview / Market Context, Backtest Analysis, Practical Validation / Final Review, Operations / Portfolio Monitoring, and UI / Engine Boundary. Overview primary tabs are `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, and `Events`; each tab keeps its thin entrypoint, helper bridge, visual components, and service read model boundary. `Market Context` valuation has an S&P 500 / 미국 개별주식 selector. S&P retains the Shiller/SEP 60m/36m and 1/3/5-year flow. 개별주는 DB-only 기업 검색, primary filing-period 기반 selected-symbol TTM EPS/PER, split-neutral 60m/36m multiple, FOMC+기업 초과성장 relative scenario와 READY/COLLECTABLE/NOT_APPLICABLE/ERROR 상태를 제공한다. Graph 1은 P/E readiness, Graph 2는 growth-evidence readiness를 각각 소유한다. 화면 진입은 read-only이고 raw gap 보강은 명시 action에서만 동기 실행한다. 기존 Nasdaq QQQ public-filing backend/materialization/collector는 보존하지만 current selector에는 연결되지 않는다. `Futures Monitor` / `Sector / Industry` are not primary navigation surfaces. See [Roadmap](./ROADMAP.md).
 - Current Final Review evidence state: [Final Review Evidence Closure Contract V1](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md) is completed. Practical Validation closes actionable root issues before handoff, while Final Review records accepted limits / Monitoring transfers as terminal states instead of treating REVIEW count as unfinished work.
 
 ## By Purpose

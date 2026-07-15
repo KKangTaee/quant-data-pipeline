@@ -556,6 +556,20 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - QQQ proxy는 공식 Nasdaq-100 index-level P/E/EPS가 아니다. acquired/delisted EOD, ADR/foreign unit, share class가 불명확한 weight는 coverage에 포함하지 않는다.
 - 2026-07-13 coverage repair QA는 최근 60개월을 60 READY / 0 BLOCKED로 materialize했다. 이는 local stored-source 검증 결과이며 무료 원천 gap이 남는 환경에서 gate를 우회한다는 뜻이 아니다.
 
+## 미국 개별주식 read-time valuation contract
+
+역할:
+
+- V1은 새 materialization table을 만들지 않는다. 선택된 한 종목의 bounded `nyse_price_history`, `nyse_financial_statement_values`, `fomc_sep_projection` row를 읽어 월말 PIT TTM EPS/PER와 상대가치 시나리오를 계산한다.
+- quarterly/FY duration fact는 해당 filing의 primary period만 discrete-period 후보로 사용한다. `report_date == period_end`가 우선 증거이고, report date가 없는 legacy row만 최초 공시로 볼 수 있는 180일 이내 availability fallback을 허용한다.
+
+주의:
+
+- later filing의 prior-year comparative Q/FY fact는 새 quarter identity가 아니며 기존 분기나 FY-derived Q4를 덮어쓰지 않는다.
+- split이 있는 회계연도는 raw Q/FY fact를 각 관측 월말 share basis로 먼저 정규화한 뒤 `FY - Q1 - Q2 - Q3`를 계산한다. split effective date 이전 월에는 future split을 적용하지 않는다.
+- 월별 EPS를 만들거나 보간하지 않는다. `available_at <= month_end`인 최신 four discrete quarters만 carry-forward하며 positive TTM EPS와 positive month-end price에서만 PER를 계산한다.
+- Graph 1의 60개월 positive P/E readiness와 Graph 2의 최소 8개 positive-to-positive TTM EPS 성장 관측은 독립 상태다. 성장 이력 부족은 Graph 2만 BLOCKED하며 계산 가능한 Graph 1을 NOT_APPLICABLE로 낮추지 않는다.
+
 ## `sp500_index_earnings`
 
 역할:

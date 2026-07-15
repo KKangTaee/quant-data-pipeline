@@ -1,6 +1,6 @@
 # Overview Market Context US Stock Valuation V1 Risks
 
-Last Updated: 2026-07-14
+Last Updated: 2026-07-15
 
 ## Open Risks
 
@@ -73,3 +73,10 @@ Last Updated: 2026-07-14
 
 - Some older 3/5-year points remain unavailable even when raw positive-P/E months exceed the rolling warmup because complete historical filing+SEP evidence is not present at every visible month. The UI reports the exact complete-point count and does not synthesize the missing months.
 - The repository-wide isolated full run has four unrelated existing contract failures recorded in `RUNS.md`. All Market Context/U.S. stock/S&P/Nasdaq backend scope tests pass.
+
+## Closed In 2026-07-15 Correctness Follow-up
+
+- Comparative quarterly facts can no longer overwrite the primary reported period or change an already derived Q4 when a later filing repeats prior-year figures.
+- Split-year FY/Q operands are normalized to one as-of share basis before Q4 derivation; the NVDA-like 10:1 regression proves `FY 2.94 - Q1 0.598 - Q2 0.67 - Q3 0.78 = Q4 0.892`.
+- Graph 2's minimum growth-history gate no longer turns an otherwise valid 60-month Graph 1 into whole-screen NOT_APPLICABLE.
+- Actual AMD resolver runtime was reduced from about 5.9 seconds to about 2.5 seconds by prefiltering bounded split events; this changes execution cost only, not valuation values.

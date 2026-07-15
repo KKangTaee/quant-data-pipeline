@@ -16,16 +16,16 @@ Last Updated: 2026-07-15
 - Comparative FY rows now require a true fiscal year-end predicate before Q4 derivation.
 - Monthly PIT valuation keeps raw month-end price and each available quarter EPS on the same as-of split basis without future-split look-ahead.
 - AAPL/NVDA/META/TSLA are READY on stored DB evidence; loss, short-listing, SEC-gap, split, and foreign-issuer cases retain distinct non-synthetic outcomes.
+- 2026-07-15 correctness follow-up fixed comparative quarterly fact reassignment, normalized split-year Q/FY facts before Q4 derivation, and separated Graph 1 readiness from Graph 2 growth evidence.
+- Actual AMD now stays READY with TTM EPS `3.05`, current P/E `169.22x`, Graph 1 READY, and `10/8` company-growth observations; the previous `3.42`/`150.91x` path came from a later filing's comparative quarter overwriting the original fiscal period.
 
 ## Current Stage
 
-Original 1차~5차 complete; 2026-07-15 correctness follow-up 1/3차 in progress.
+Original 1차~5차 complete; 2026-07-15 correctness follow-up 3/3차 complete.
 
 ## Next Action
 
-1. Add AMD-like comparative-Q and NVDA-like split-year FY→Q4 RED fixtures.
-2. Correct shared period identity and month-end share-basis normalization.
-3. Separate Graph 1 screen readiness from Graph 2 growth evidence, then run actual/Browser regression.
+No mandatory implementation stage remains. Future work should open a separate task only if longer historical filing/SEP coverage or a non-P/E valuation method is approved.
 
 ## Roadmap Position
 
@@ -35,6 +35,6 @@ Original 1차~5차 complete; 2026-07-15 correctness follow-up 1/3차 in progress
 - 3차: complete
 - 4차: complete
 - 5차: complete — actual/edge audit, Browser QA, verification, docs, and commit closeout complete
-- Correctness follow-up 1차: in progress — resolver and split-year TDD
-- Correctness follow-up 2차: pending — section readiness isolation
-- Correctness follow-up 3차: pending — actual/Browser QA, docs, commit
+- Correctness follow-up 1차: complete — comparative Q/FY period identity and split-year Q4 TDD
+- Correctness follow-up 2차: complete — Graph 1 / Graph 2 section readiness isolation
+- Correctness follow-up 3차: complete — actual DB matrix, focused/full regression, Browser QA, docs, and commits

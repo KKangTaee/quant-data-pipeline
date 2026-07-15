@@ -9451,3 +9451,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: S&P는 그대로 유지하면서 Nasdaq 사용자 연결만 제거하고, 선택 종목 한 개의 DB evidence로 point-in-time 상대가치를 계산하며 수집은 explicit action에만 둔다.
 - Analysis result: comparative FY false-Q4와 split-unit drift를 먼저 닫은 뒤 DB-only 검색, selected-symbol service, explicit sync collection, React states를 연결했다. Actual DB는 AAPL/NVDA/META/TSLA READY이며 구조적/수집 가능 gap을 구분한다.
 - Follow-up: 1차~5차와 Browser QA·문서 정렬을 완료했다. 더 긴 history는 filing/SEP evidence를 실제로 보강할 때만 확장하고 누락 월은 합성하지 않는다.
+
+### 2026-07-15 - AMD의 분기 자료가 충분한데도 평가가 막히는 원인을 수정한다
+
+- User request: AMD 화면이 growth history 부족으로 NOT_APPLICABLE인 원인을 확인하고, TTM EPS `3.42 -> 3.05` 및 PER `150.91x -> 169.22x` 보정 의미를 설명한 뒤 승인된 방향으로 수정해 달라고 요청함.
+- Interpreted goal: 저장 자료를 새로 추정하거나 월별 EPS를 합성하지 않고, existing SEC comparative fact와 split-year share unit의 귀속 오류를 고쳐 Graph 1과 Graph 2를 가능한 범위대로 표시해야 함.
+- Analysis result: later filing의 comparative quarter가 원래 fiscal period를 덮어써 AMD Q4/TTM을 바꿨고, split-year는 pre/post-split Q/FY를 섞은 채 Q4를 빼고 있었다. 성장 관측 gate도 Graph 2 사유를 whole-screen NOT_APPLICABLE로 승격했다.
+- Follow-up: primary-period predicate, split-before-Q4 normalization, section readiness 분리를 TDD로 적용했다. AMD actual은 TTM EPS `3.05`, P/E `169.22x`, Graph 1/2 READY이며 S&P와 retained Nasdaq backend를 보존했다.

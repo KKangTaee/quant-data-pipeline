@@ -304,7 +304,7 @@ Last Updated: 2026-07-14
 - Consumes: SEC duration EPS rows with `period_end`, `report_date`, `available_at`, `fiscal_year`, `fiscal_quarter`.
 - Produces: `derive_filing_aware_ttm_eps(...)->quarters[]` where later comparative Q/FY facts cannot replace the primary reported period.
 
-- [ ] Add an AMD-like failing regression containing a true FY2023 fact, reported Q1/Q2/Q3, an older comparative Q1 carrying fiscal-year context, and a later Q1 comparative row. Assert the FY2023 Q4 remains `0.42` before and after the later filing.
+- [x] Add an AMD-like failing regression containing a true FY2023 fact, reported Q1/Q2/Q3, an older comparative Q1 carrying fiscal-year context, and a later Q1 comparative row. Assert the FY2023 Q4 remains `0.42` before and after the later filing.
 
 ```python
 before = derive_filing_aware_ttm_eps(rows, as_of_date="2024-01-31")
@@ -313,13 +313,13 @@ self.assertAlmostEqual(before["AMD"]["quarters"][-1]["eps"], 0.42)
 self.assertAlmostEqual(after["AMD"]["quarters"][-1]["eps"], 0.42)
 ```
 
-- [ ] Run the exact test and confirm RED because current Q4 changes to `-0.23`.
+- [x] Run the exact test and confirm RED because current Q4 changes to `-0.23`.
 
 ```bash
 .venv/bin/python -m unittest tests.test_nasdaq100_valuation.Nasdaq100ValuationCoverageTests.test_ttm_resolver_keeps_q4_stable_when_later_filing_repeats_comparative_quarter
 ```
 
-- [ ] Generalize the true-period predicate to Q and FY. Prefer `report_date == period_end`; keep the bounded 180-day fallback only when report date is absent.
+- [x] Generalize the true-period predicate to Q and FY. Prefer `report_date == period_end`; keep the bounded 180-day fallback only when report date is absent.
 
 ```python
 quarter_rows = quarter_rows.loc[
@@ -330,8 +330,8 @@ fy_rows = fy_rows.loc[
 ]
 ```
 
-- [ ] Re-run the regression and full Nasdaq valuation tests; expected GREEN with existing non-calendar FY behavior retained.
-- [ ] Commit the resolver unit with Korean message `comparative 분기 TTM 귀속 오류 수정`.
+- [x] Re-run the regression and full Nasdaq valuation tests; expected GREEN with existing non-calendar FY behavior retained.
+- [x] Commit the resolver unit with Korean message `comparative 분기 TTM 귀속 오류 수정`.
 
 ### Task 12: Split-normalized FY-derived Q4
 
@@ -343,7 +343,7 @@ fy_rows = fy_rows.loc[
 - Consumes: raw statement `value/available_at` plus price split rows.
 - Produces: month-end TTM quarters whose direct Q and FY-derived Q4 are on the same share basis before summation.
 
-- [ ] Add an NVDA-like failing fixture with Q1 `5.98` before a 10:1 split, Q2 `0.67`, Q3 `0.78`, FY `2.94`; assert Q4 `0.892` and TTM `2.94` at FY availability.
+- [x] Add an NVDA-like failing fixture with Q1 `5.98` before a 10:1 split, Q2 `0.67`, Q3 `0.78`, FY `2.94`; assert Q4 `0.892` and TTM `2.94` at FY availability.
 
 ```python
 row = build_monthly_pit_valuation(
@@ -356,20 +356,20 @@ self.assertAlmostEqual(row["quarters"][-1]["eps"], 0.892)
 self.assertAlmostEqual(row["ttm_eps"], 2.94)
 ```
 
-- [ ] Assert a month before the split does not use the future 10:1 factor.
+- [x] Assert a month before the split does not use the future 10:1 factor.
 
 ```python
 self.assertAlmostEqual(pre_split_row["split_factor"], 1.0)
 self.assertAlmostEqual(post_split_row["split_factor"], 10.0)
 ```
 
-- [ ] Run the exact test and confirm RED because current resolver derives Q4 before share-basis normalization.
+- [x] Run the exact test and confirm RED because current resolver derives Q4 before share-basis normalization.
 
 ```bash
 .venv/bin/python -m unittest tests.test_us_stock_valuation.UsStockValuationCalculationTests.test_split_year_normalizes_quarters_before_deriving_q4
 ```
 
-- [ ] Normalize every eligible statement fact to the valuation month-end share basis before resolving discrete quarters; remove the later double adjustment of resolved quarters.
+- [x] Normalize every eligible statement fact to the valuation month-end share basis before resolving discrete quarters; remove the later double adjustment of resolved quarters.
 
 ```python
 normalized_statements = [
@@ -386,8 +386,8 @@ resolved = derive_filing_aware_ttm_eps(
 )
 ```
 
-- [ ] Re-run U.S. stock calculation tests plus the resolver suite; expected GREEN for split/no-look-ahead/carry-forward cases.
-- [ ] Commit with Korean message `분할 연도 FY와 분기 EPS 단위 일치`.
+- [x] Re-run U.S. stock calculation tests plus the resolver suite; expected GREEN for split/no-look-ahead/carry-forward cases.
+- [x] Commit with Korean message `분할 연도 FY와 분기 EPS 단위 일치`.
 
 ### Task 13: Graph 1 and Graph 2 readiness isolation
 
@@ -401,7 +401,7 @@ resolved = derive_filing_aware_ttm_eps(
 - Top-level `status=READY` means the selected stock's Graph 1 P/E screen is renderable.
 - `earnings_scenario.status` and `index_scenario.status` independently return `BLOCKED` with `INSUFFICIENT_GROWTH_HISTORY` and exact `observation_count/required_observations` evidence.
 
-- [ ] Add a failing classifier test: 60 complete positive P/E months plus 7/8 growth observations returns top-level READY.
+- [x] Add a failing classifier test: 60 complete positive P/E months plus 7/8 growth observations returns top-level READY.
 
 ```python
 result = classify_us_stock_readiness(
@@ -413,7 +413,7 @@ result = classify_us_stock_readiness(
 self.assertEqual(result["status"], "READY")
 ```
 
-- [ ] Add a failing service test: the same input keeps `multiple_regime.status=READY`, while earnings/index scenarios are BLOCKED and contain `7/8` evidence.
+- [x] Add a failing service test: the same input keeps `multiple_regime.status=READY`, while earnings/index scenarios are BLOCKED and contain `7/8` evidence.
 
 ```python
 self.assertEqual(result["status"], "READY")
@@ -424,10 +424,10 @@ self.assertEqual(result["earnings_scenario"]["required_observations"], 8)
 self.assertEqual(result["index_scenario"]["status"], "BLOCKED")
 ```
 
-- [ ] Run both tests and confirm RED because current classifier/service returns whole-model NOT_APPLICABLE.
-- [ ] Remove growth from intrinsic P/E applicability, preserve section-specific reason/evidence, and keep COLLECTABLE/NOT_APPLICABLE action rules unchanged.
-- [ ] Re-run U.S. stock, combined Market Context, S&P, and static UI contract tests.
-- [ ] Commit with Korean message `개별주 그래프별 준비 상태 분리`.
+- [x] Run both tests and confirm RED because current classifier/service returns whole-model NOT_APPLICABLE.
+- [x] Remove growth from intrinsic P/E applicability, preserve section-specific reason/evidence, and keep COLLECTABLE/NOT_APPLICABLE action rules unchanged.
+- [x] Re-run U.S. stock, combined Market Context, S&P, and static UI contract tests.
+- [x] Commit with Korean message `개별주 그래프별 준비 상태 분리`.
 
 ### Task 14: Actual DB, Browser, docs, final verification
 
@@ -436,23 +436,23 @@ self.assertEqual(result["index_scenario"]["status"], "BLOCKED")
 - Modify if stale: `docs/data/TABLE_SEMANTICS.md`, `docs/architecture/DATA_DB_PIPELINE_FLOW.md`, `docs/INDEX.md`, `docs/ROADMAP.md`
 - Modify: `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`
 
-- [ ] Run AMD/AAPL/MSFT/NVDA/META/TSLA read-only actual DB comparison; record latest TTM, P/E, growth observation count, and section statuses.
+- [x] Run AMD/AAPL/MSFT/NVDA/META/TSLA read-only actual DB comparison; record latest TTM, P/E, growth observation count, and section statuses.
 
 ```bash
 .venv/bin/python -m unittest tests.test_us_stock_valuation tests.test_nasdaq100_valuation tests.test_market_context_valuation tests.test_sp500_valuation
 ```
 
-- [ ] Verify AMD Q4 stability and NVDA split-year identity with exact stored facts; verify current non-positive EPS remains NOT_APPLICABLE.
-- [ ] Run focused valuation/service tests, independent full regression, Python compile, `git diff --check`, and React production build.
+- [x] Verify AMD Q4 stability and NVDA split-year identity with exact stored facts; verify current non-positive EPS remains NOT_APPLICABLE.
+- [x] Run focused valuation/service tests, independent full regression, Python compile, `git diff --check`, and React production build.
 
 ```bash
 .venv/bin/python -m py_compile finance/data/nasdaq100_valuation.py finance/data/us_stock_valuation.py app/services/overview/us_stock_valuation.py
 npm run build --prefix app/web/streamlit_components/market_context_valuation
 git diff --check
 ```
-- [ ] Run actual Streamlit desktop and 420px Browser QA. Confirm AMD Graph 1 renders, Graph 2 section status is accurate, S&P remains unchanged, console errors are zero, and horizontal overflow is absent.
-- [ ] Store one screenshot outside the repository and include it in the final report.
-- [ ] Apply `finance-doc-sync`, audit staged paths, leave the unrelated research folder untouched, and create the final Korean closeout commit.
+- [x] Run actual Streamlit desktop and 420px Browser QA. Confirm AMD Graph 1 renders, Graph 2 section status is accurate, S&P remains unchanged, console errors are zero, and horizontal overflow is absent.
+- [x] Store one screenshot outside the repository and include it in the final report.
+- [x] Apply `finance-doc-sync`, audit staged paths, leave the unrelated research folder untouched, and create the final Korean closeout commit.
 
 ### Follow-up Plan Self-Review
 

@@ -6172,3 +6172,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - comparative FY false-Q4와 split-unit drift를 real-like TDD fixture로 먼저 수정했고, raw gap만 explicit synchronous collection을 허용한다.
 - AAPL/NVDA/META/TSLA actual READY와 loss/short-listing/SEC-gap/split/foreign issuer 경계를 검증했으며 S&P와 retained Nasdaq backend는 보존했다.
 - 상세 구현·QA·남은 full-suite unrelated failures는 `tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md`와 `RUNS.md`를 본다.
+
+## 2026-07-15 - 미국 개별주식 가치평가 정확성 후속 완료
+
+- comparative Q/FY fact를 primary filing period로 제한하고, split-year Q/FY를 동일한 월말 share basis로 정규화한 뒤 Q4를 파생하도록 real-like TDD로 수정했다.
+- Graph 1의 positive-P/E readiness와 Graph 2의 최소 8개 growth 관측 readiness를 분리해, 성장 이력 부족이 계산 가능한 P/E 화면을 숨기지 않게 했다.
+- AMD actual은 TTM EPS `3.05`, P/E `169.22x`, growth `10/8`로 READY이며 AAPL/MSFT/NVDA/META/TSLA, LCID, RDDT/RIVN, S&P 화면을 함께 회귀 검증했다.
+- focused 125개 통과, isolated full 1,030/1,034 통과(기존 unrelated 4건), desktop/420px Browser QA와 no-overflow/zero-console-error 확인을 완료했다. 상세는 active task `RUNS.md`를 본다.

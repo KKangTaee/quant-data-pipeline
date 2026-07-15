@@ -1,6 +1,6 @@
 # Overview Market Context US Stock Valuation V1 Runs
 
-Last Updated: 2026-07-14
+Last Updated: 2026-07-15
 
 ## Design Feasibility Audit
 
@@ -86,3 +86,25 @@ Last Updated: 2026-07-14
 - The unrelated failures are two Practical Validation exact-call-string assertions that omit the current `source=source` argument, one Market Movers expected `rows_written=65` versus current `2`, and one Sentiment React source-token assertion for `payload.summary.metrics.map`.
 - Market Context copy/history contract drift found by the full run was corrected; the five affected Market Context service-contract tests pass.
 - Fresh component production build passed (`170 modules transformed`) and generated `component_static/assets/index-BOxsSxTV.js`.
+
+## 2026-07-15 Correctness Follow-up TDD
+
+- AMD-like RED fixture reproduced the defect: a later filing's comparative quarter changed stored FY2023 Q4 from `0.42` to `-0.23`. The generalized primary-period predicate restored Q4 stability; the Nasdaq valuation module passed `34 tests`.
+- NVDA-like RED fixture reproduced mixed share units: Q1 `5.98`, Q2 `0.67`, Q3 `0.78`, FY `2.94` derived false Q4 `-4.49`. Normalizing Q/FY facts before Q4 derivation produced Q4 `0.892` and TTM `2.94` while retaining future-split no-look-ahead.
+- A 60-month positive-P/E fixture with only `7/8` company-growth observations now returns main/Graph 1 READY and Graph 2 BLOCKED with exact evidence rather than whole-screen NOT_APPLICABLE.
+- Focused follow-up verification passed `125 tests` across Market Context contract, retained Nasdaq backend, S&P, and U.S. stock valuation modules.
+
+## 2026-07-15 Actual DB Matrix
+
+- AMD: TTM EPS `3.05`, P/E `169.2164x`, growth `10/8`, Graph 1/Graph 2 READY; price basis `2026-07-07`, EPS basis `2026-05-05`.
+- AAPL: `7.90`, `39.3241x`, `13/8`; MSFT: `15.99`, `24.3177x`, `12/8`; NVDA: `4.90`, `40.1898x`, `12/8`; META: `27.50`, `22.3847x`, `12/8`; TSLA: `1.09`, `369.6330x`, `12/8`. All main and both graph sections were READY on stored DB evidence.
+- AMD FY2023 Q4 remained `0.42` from February 2024 through January 2025 despite later comparative filings. NVDA FY2025 Q4 remained `0.892` across the post-filing monthly window.
+- LCID remained NOT_APPLICABLE/NON_POSITIVE_EPS. RDDT (`29` months) and RIVN (`57` months) remained NOT_APPLICABLE/STRUCTURALLY_SHORT_LISTING.
+- Bounded split prefilter reduced uncached AMD calculation from about `5.9s` to `2.52s` without changing results.
+
+## 2026-07-15 Full Regression And Browser QA
+
+- Re-ran all 23 `tests/test_*.py` modules in isolated processes: `1,034` tests executed, `1,030` passed, and the same four unrelated contract assertions failed (two Practical Validation source-string assertions, one Market Movers rows-written assertion, one Sentiment React token assertion).
+- Actual Streamlit desktop QA searched and selected AMD. The screen rendered current P/E `169.22x`, TTM EPS `3.05`, Graph 1, and Graph 2 with stored evidence; S&P still rendered its existing `28.94x` screen.
+- Desktop document/component widths were `1280/1280` and `1109/1109`; 420px widths were `420/420` and `377/377`. Browser console errors were zero in both viewports.
+- Representative mobile screenshot is `/tmp/market-context-amd-correctness-mobile-qa.png`; it remains outside the repository and is not staged.
