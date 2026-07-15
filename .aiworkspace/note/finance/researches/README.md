@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-07-final-review-decision-workspace-redesign/` | Final Review를 validation contract inspector가 아닌 질문 중심 Decision Workspace로 재정의하고, portfolio strength/weakness·Level2 경계·React-first UI 방향을 정리 |
 | `active/2026-07-institutional-portfolios-source-extension/` | Institutional Portfolios의 OHLCV 출처, guru/watchlist alias 구조, Dataroma / WhaleWisdom / Fintel / OpenFIGI source-extension 가능성 조사 |
 | `active/2026-07-practical-validation-validation-audit/` | Practical Validation Flow 4를 Final Review 이동 기준 중심이 아니라 카테고리별 검증 결과 중심으로 재정리하기 위한 현행 module / gate / evidence 감사와 구현 가이드 |
 | `active/2026-06-futures-monitor-ui-benchmark/` | Workspace > Overview > Futures Monitor를 완성형 제품 UI로 재설계하기 위한 TradingView / Koyfin / IBKR / Datadog / Grafana / Stripe / Linear / Toss Securities 벤치마킹과 구현 가이드 |
