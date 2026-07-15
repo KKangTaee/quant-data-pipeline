@@ -1,21 +1,25 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-15
+Last Verified: 2026-07-16
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/`다.
+현재 active task는 없다.
 
-- 목적: AAPL의 stored diluted EPS가 전환분석 unit filter에서 누락되는 버그를 수정하고, 6개 rail에서 transition과 already-positive state를 구분한다.
-- 현재 단계: 0/3차. approved direction을 written spec으로 고정했으며 detailed TDD plan 전 review gate다.
-- 1차: EPS loader unit/milestone evidence, 2차: rail semantics/copy, 3차: actual/Browser QA와 docs.
-- 보존: independent milestone threshold, PER 상대가치 판단, DB-only selector, explicit refresh, S&P/PER payload.
+새 범위는 사용자 승인 후 별도 task로 연다.
+
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/`다.
+
+- 목적: AAPL의 stored diluted EPS가 전환분석 unit filter에서 누락되는 버그를 수정하고, 6개 rail에서 transition과 already-positive state를 구분했다.
+- 완료: 1차 EPS reader/operating evidence, 2차 rail semantics/copy, 3차 actual/Browser QA와 docs.
+- 의미: `USD per share`를 canonical diluted-EPS unit으로 읽고, backend milestone threshold는 유지한다. React의 `ESTABLISHED`만 이미 흑자인 영업/EPS 상태를 전환 `MET`과 구분한다.
+- actual QA: AAPL PER/turnaround TTM EPS `7.90`, headline `PER_READY`; RIVN TTM EPS `-3.07`, `PER_READY=NOT_MET`. desktop/420px overflow 0과 신규 console error 0을 확인했다.
 - 제외: schema/provider/자동수집/진단 panel/universe screener.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/`다.
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/`다.
 
 - 목적: PER와 전환 분석 공통 상단에 `최신 데이터로 다시 계산` action 하나를 두고, 실제 repairable freshness gap만 selected-symbol 범위로 수집한다.
 - 현재 단계: 1차 공용 calendar/freshness/CIK-independent collection, 2차 unified event/UI, 3차 actual/Browser QA와 문서 정렬을 완료했다.
@@ -728,9 +732,13 @@ Current active phase:
 
 Current active task:
 
-- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` — 0/3차, approved direction written spec review
+- none
 
 Latest completed task:
+
+- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` — 1차~3차 complete
+
+Previous completed task:
 
 - `overview-market-context-us-stock-freshness-refresh-v1-20260715` — 1차~3차 complete
 

@@ -23,7 +23,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS unit gap과 six-rail semantics를 1차~3차로 보정하는 written spec review 단계다.
+  - Current active task is none. New work opens only after a user-approved scope.
+  - Latest completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
   - Previous completed Nasdaq task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -47,6 +48,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+- Overview Market Context turnaround stage semantics V1:
+  - `USD per share` diluted EPS를 turnaround duration reader에 포함해 AAPL PER/turnaround TTM EPS를 `7.90`으로 정렬했다.
+  - backend threshold는 유지하고, 6개 rail에서 전환 `MET`, 이미 양수인 UI-local `ESTABLISHED`, 미확인을 구분했다. AAPL/RIVN actual과 desktop/420px Browser QA를 완료했다.
+  - focused 118 tests/build/compile은 통과했고, monolithic discovery는 기존과 같은 4 failures/154 Streamlit isolation errors다.
 - Nasdaq-100 적정구간 119개월 warmup V1:
   - READY valuation의 1/3/5년 이력 부족을 SEP가 아닌 60개월 rolling warmup 문제로 설명하고, 선택 기간별 필요/현재 월 수와 별도 보강 action을 연결했다.
   - actual repair는 172,240 rows를 저장해 READY 월을 62에서 66으로 늘렸다. acquired/delisted 및 foreign issuer 무료 원천 gap 때문에 71/95/119개월 요구에는 미달하며 합성 없이 partial 상태를 유지한다.

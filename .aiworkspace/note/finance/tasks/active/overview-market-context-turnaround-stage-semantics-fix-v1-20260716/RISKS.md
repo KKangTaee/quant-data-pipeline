@@ -10,7 +10,12 @@ Last Updated: 2026-07-16
 4. copy change must preserve color-independent status text and 420px layout.
 5. existing S&P/PER payload and selected-analysis switch must not regress.
 
-## Open Until Implementation
+## Closed By Verification
 
-- actual negative-EPS company Browser QA symbol selection
-- repository-wide unrelated existing test failures classification
+- actual negative-EPS company Browser QA는 RIVN으로 완료했다.
+- repository-wide 1100-test run은 기존과 같은 4 failures와 154 Streamlit reimport isolation errors로 분류했다.
+
+## Residual
+
+- monolithic discovery의 Streamlit module isolation 오류와 다른 영역 assertion 4건은 이 task 범위 밖의 기존 baseline이다.
+- 새 unit alias를 추가할 때는 duration fact unit allowlist와 public-loader query test를 함께 갱신해야 한다.

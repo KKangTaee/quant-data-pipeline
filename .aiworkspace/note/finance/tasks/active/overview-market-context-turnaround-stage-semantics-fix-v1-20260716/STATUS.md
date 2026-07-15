@@ -5,8 +5,8 @@ Last Updated: 2026-07-16
 ## Current Stage
 
 - 전체 roadmap: 1차~3차
-- 현재: 2차 six-rail semantic display 완료, 3차 actual/Browser QA 시작 전
-- 구현 완료 차수: 2/3
+- 현재: 1차~3차 구현·actual QA·Browser QA·문서 정렬 완료
+- 구현 완료 차수: 3/3
 
 ## Completed
 
@@ -23,7 +23,11 @@ Last Updated: 2026-07-16
 - 6개 rail 문구를 전환 신호/현재 양수 상태/PER 적용 가능 기준으로 분리했다.
 - `ESTABLISHED`를 UI-local 상태로 추가해 `MET` 및 미확인 상태와 시각적으로 구분했다.
 - headline/status badge를 한국어로 바꾸고 React source tests 2개, focused regression 104/104, Vite production build를 통과했다.
+- actual AAPL에서 PER/전환 TTM EPS `7.90`, headline `PER_READY`, rail `PER_READY=MET`의 일치를 확인했다.
+- actual RIVN에서 TTM EPS `-3.07`, `PER_READY=NOT_MET`, recommended analysis `turnaround`를 확인했다.
+- desktop/420px Browser QA에서 AAPL established rail, RIVN negative-EPS rail, horizontal overflow 0, 서버 재시작 후 신규 console error 0을 확인했다.
+- focused 118/118 pass와 repository-wide baseline-equivalent 4 failures/154 Streamlit isolation errors를 확인했다.
 
 ## Next Action
 
-- 3차 actual AAPL과 negative-EPS 종목을 read-only 검증한 뒤 desktop/mobile Browser QA와 문서 정렬을 수행한다.
+- 완료 기록으로 유지한다. 후속 변경은 새 user-approved task로 연다.

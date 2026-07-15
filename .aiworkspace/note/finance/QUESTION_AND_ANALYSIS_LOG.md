@@ -17,8 +17,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정한다.
-  - Latest completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
+  - Current active task is none. New work opens only after a user-approved scope.
+  - Latest completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
+  - Previous completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -40,6 +41,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-16 - 전환단계는 단계형 rail이지만 profitable company를 실패로 표시하지 않는다
+
+- User request: AAPL은 PER/EPS가 양수인데 전환단계의 영업손실 축소·EPS 양전·PER Ready가 비활성인 원인 확인과 수정을 요청함.
+- Interpreted goal: 6개 independent 요소 컨셉은 유지하되 데이터 누락과 transition/already-positive 의미를 분리해 실제 기업 상태를 오해하지 않게 한다.
+- Analysis result: AAPL diluted EPS unit `USD per share`가 turnaround allowlist에서 빠져 있었고, 영업이익률은 `32.38%` 흑자지만 최근 개선폭 threshold에는 미달했다. EPS reader를 복구하고, threshold를 낮추지 않은 채 UI-local `ESTABLISHED`로 `흑자 · 개선폭 미달`과 `이미 양수`를 표시한다.
+- Follow-up: AAPL은 `PER 적용 가능`, RIVN은 음수 EPS와 미확인 PER을 유지했다. actual/focused/build/desktop/420px QA를 완료했으며 provider/schema/자동 수집은 추가하지 않았다.
 
 ### 2026-07-13 - Nasdaq 적정구간 이력은 SEP가 아니라 rolling PER warmup이 부족했다
 

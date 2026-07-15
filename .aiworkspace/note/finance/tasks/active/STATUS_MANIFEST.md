@@ -1,21 +1,21 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-15
+Last Verified: 2026-07-16
 
 ## Current State
 
 Current active task:
 
-- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`
+- none
 
 Latest completed task:
 
-- `overview-market-context-us-stock-freshness-refresh-v1-20260715`
+- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`
 
 Previous completed task:
 
-- `overview-market-context-us-stock-turnaround-analysis-v1-20260715`
+- `overview-market-context-us-stock-freshness-refresh-v1-20260715`
 
 Latest completed docs cleanup task:
 

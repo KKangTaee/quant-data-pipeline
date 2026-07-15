@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-15
+Last Verified: 2026-07-16
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -25,14 +25,13 @@ tasks/active/<task-name>/
 
 ## Current Active Tasks
 
-| Task | Status | Notes |
-|---|---|---|
-| `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` | Written spec review | AAPL EPS `USD per share` 누락을 수정하고 6개 rail에서 전환 신호·이미 양수·PER 적용 가능·개선폭 미달을 구분한다. 1차~3차 구현 전 written spec을 검토한다. |
+현재 active task는 없다. 새 범위는 사용자 승인 후 별도 task로 연다.
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` | Completed record | AAPL canonical `USD per share` EPS reader를 복구하고, 6개 rail에서 전환 신호·이미 양수·PER 적용 가능·흑자지만 개선폭 미달을 독립적으로 구분했다. |
 | `overview-market-context-us-stock-freshness-refresh-v1-20260715` | Completed record | 선택 종목 cached UI를 DB-only로 열고, 마지막 완료 NYSE 거래일보다 자료가 뒤처질 때만 상단 single CTA로 exact scope를 갱신한다. profile/price는 CIK 없이 실행하고 SEC statement만 identity를 요구한다. |
 | `overview-market-context-us-stock-turnaround-analysis-v1-20260715` | Completed record | 미국 개별주식 내부에 `PER 상대가치 | 전환 분석`을 추가하고 quarterly filing 기반 영업·현금 전환, survival risk, stage-appropriate valuation readiness를 selected-company 범위로 구현했다. |
 | `overview-market-context-us-stock-valuation-v1-20260714` | Completed record | searchable 미국 개별주 DB-only PER 상대가치, split-neutral filing-aware TTM, 부분 1/3/5년 history와 explicit selected-symbol 수집 경계를 구현했다. |

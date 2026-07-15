@@ -334,7 +334,7 @@ git commit -m "전환단계 기성 흑자 상태 표현 개선"
 - Verifies: one negative-EPS transition company preserves early-turn/missing states without established auto-pass.
 - Produces: one Browser QA screenshot outside git.
 
-- [ ] **Step 1: Verify actual AAPL read model**
+- [x] **Step 1: Verify actual AAPL read model**
 
 Run a read-only script using `build_market_context_valuation_read_model(selected_symbol="AAPL")` and assert/record:
 
@@ -349,11 +349,11 @@ assert abs(float(latest["ttm_eps"]) - float(per_eps)) < 1e-9
 
 Expected: both TTM EPS values are `7.90` with current stored data.
 
-- [ ] **Step 2: Verify one negative-EPS actual symbol read-only**
+- [x] **Step 2: Verify one negative-EPS actual symbol read-only**
 
 Read RIVN first, with LCID fallback only if RIVN lacks current evidence. Confirm `PER_READY` is not auto-passed and the selected symbol remains recommended to turnaround analysis. Do not run a provider collection action.
 
-- [ ] **Step 3: Run focused and repository regression checks**
+- [x] **Step 3: Run focused and repository regression checks**
 
 Run:
 
@@ -365,7 +365,7 @@ Run:
 
 Expected: all focused tests PASS. Record every repository-wide failure/error by exact test id and distinguish existing Streamlit isolation/other-area contracts from task regressions.
 
-- [ ] **Step 4: Perform actual Browser QA at desktop and 420px**
+- [x] **Step 4: Perform actual Browser QA at desktop and 420px**
 
 Verify AAPL:
 
@@ -382,11 +382,11 @@ Verify RIVN or LCID:
 
 For both widths confirm horizontal overflow 0 and new browser console errors 0. Save one representative screenshot under `/Users/taeho/.codex/visualizations/2026/07/15/019f65a4-445f-79b2-8e17-0e3b374b88b3/` and do not stage it.
 
-- [ ] **Step 5: Synchronize durable docs**
+- [x] **Step 5: Synchronize durable docs**
 
 Use `finance-doc-sync`. Set task status to 3/3 complete, clear active task pointers, register this as latest completed task, and record the canonical EPS-unit reader boundary plus UI-local established semantics at the smallest durable doc set.
 
-- [ ] **Step 6: Run final verification and audit scope**
+- [x] **Step 6: Run final verification and audit scope**
 
 Run fresh:
 
@@ -399,7 +399,7 @@ git status --short
 
 Expected: focused tests and build PASS, no whitespace error, only intended closeout docs plus preserved unrelated research folder remain.
 
-- [ ] **Step 7: Commit 3차 closeout**
+- [x] **Step 7: Commit 3차 closeout**
 
 ```bash
 git add .aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716 .aiworkspace/note/finance/docs/INDEX.md .aiworkspace/note/finance/docs/ROADMAP.md .aiworkspace/note/finance/docs/architecture/DATA_DB_PIPELINE_FLOW.md .aiworkspace/note/finance/tasks/active/README.md .aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md

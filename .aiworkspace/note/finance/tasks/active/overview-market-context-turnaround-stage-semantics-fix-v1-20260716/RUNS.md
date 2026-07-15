@@ -33,3 +33,13 @@ Last Updated: 2026-07-16
 - A profitable-but-below-threshold operating state now reads `흑자 · 개선폭 미달`; positive TTM EPS reads `이미 양수`; neither changes backend milestone statuses.
 - Focused regression: `.venv/bin/python -m unittest tests.test_market_context_valuation tests.test_us_stock_turnaround tests.test_us_stock_valuation` -> 104 tests passed.
 - Production asset build: `npm run build` transformed 171 modules and emitted new hashed JS/CSS assets; `git diff --check` exited 0.
+
+## 3차 Actual, Regression, And Browser QA
+
+- Actual AAPL DB-only read: PER TTM EPS and turnaround latest TTM EPS both `7.90`; headline `PER_READY`; `PER_READY=MET`; current operating margin `32.38%` with latest YoY delta `+0.63pp` and 0 recent threshold hits.
+- Actual RIVN DB-only read: TTM EPS `-3.07`; `EARNINGS_TURN`, `PER_CANDIDATE`, and `PER_READY` remain `NOT_MET`; recommended analysis remains `turnaround`.
+- Focused final scope: calendar/freshness/turnaround/valuation/Market Context 118 tests passed; four changed Python modules compiled.
+- Repository discovery: 1100 tests, 4 failures, 154 errors. This matches the pre-task baseline after adding four new passing tests: the same two Practical Validation source-contract failures, one Market Movers contract failure, one Sentiment contract failure, and the same Streamlit reimport isolation errors.
+- Browser QA after restarting the no-file-watcher local server: AAPL showed `PER 적용 가능 / 분석 가능`, `흑자 · 개선폭 미달`, `이미 양수`, and `적용 가능`; PER tab retained `상대적 고평가`.
+- RIVN at 420px showed operating improvement only while OCF/FCF/EPS/PER remained independent and unconfirmed. Desktop and 420px outer/component horizontal overflow were 0; no new console errors occurred after restart.
+- Representative screenshot: `/Users/taeho/.codex/visualizations/2026/07/15/019f65a4-445f-79b2-8e17-0e3b374b88b3/turnaround-stage-aapl-desktop-20260716.png` (generated artifact, not staged).
