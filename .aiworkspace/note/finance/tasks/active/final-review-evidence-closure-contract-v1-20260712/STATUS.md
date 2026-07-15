@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete — Decision Workspace continuation closed
+Status: In Progress — Market Context visual fidelity correction
 Last Updated: 2026-07-16
 
 ## Progress
@@ -26,10 +26,16 @@ Last Updated: 2026-07-16
 - [x] 2차 Portfolio Behavior projection 구현
 - [x] 3차 React Decision Workspace 구현과 Browser QA
 - [x] 4차 persistence / Monitoring handoff / full QA / docs closeout
+- [x] 사용자 승인 A안과 actual Market Context 대비 visual drift 원인 재현
+- [x] visual fidelity correction DESIGN/PLAN self-review
+- [ ] Market Context visual source contract RED → GREEN
+- [ ] React presentation 교정과 production build
+- [ ] 1440px / 760px side-by-side Browser QA
+- [ ] correction docs closeout
 
 ## Next Action
 
-Decision Workspace continuation 1~4차는 완료됐다. 다음 개발 위치는 별도 승인이 필요한 dynamic historical universe용 PIT membership / delisting provider이며, 그 전까지 해당 source는 기존 Final Review Gate에서 계속 차단한다.
+Decision Workspace 기능 1~4차는 완료됐지만, 승인 A안의 Market Context visual language가 구현되지 않은 drift를 교정 중이다. 교정은 React presentation과 visual contract test에 한정하고 Python/Gate/persistence는 유지한다.
 
 ## Commits
 

@@ -1736,3 +1736,172 @@ Stop and report before continuing only if one of these occurs:
 - [x] Python snake_case is canonical; TypeScript consumes it directly without duplicate camel/snake domain fields.
 - [x] React computes SVG coordinates only; every financial classification and stored value comes from Python.
 - [x] `build_final_review_investment_report()` remains inactive compatibility code and is absent from the current page render path.
+
+# Final Review Market Context Visual Fidelity Correction Plan — 2026-07-16
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` for inline execution. Every source change follows `superpowers:test-driven-development`; completion and commits follow `superpowers:verification-before-completion`.
+
+**Goal:** 승인한 A안과 실제 `Workspace > Overview > 시장 맥락`의 visual language를 Final Review Decision Workspace에 적용하되, 이미 검증된 Python Decision Brief·Gate·저장 계약은 변경하지 않는다.
+
+**Architecture:** React presentation owner 세 파일만 구조/스타일을 교정한다. `DecisionBriefWorkspace.tsx`가 질문과 후보 selector를 하나의 header로 결합하고, `DecisionBriefCharts.tsx`는 Python points를 그대로 그리면서 chart palette만 기준 화면과 맞춘다. `style.css`는 Market Context의 font/color/radius/shadow/responsive token을 명시적으로 사용한다. Python, registry, run history, saved JSONL은 읽거나 쓰지 않는다.
+
+**Tech Stack:** React 18, TypeScript, dependency-free SVG, CSS, Python `unittest` source contract, Vite production build, in-app Browser QA.
+
+## Global Constraints
+
+- 새 task/worktree를 만들지 않고 현재 active task와 `codex/backtest-dev`를 사용한다.
+- `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`, `.aiworkspace/note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl`, `.superpowers/`, screenshot/run artifact를 stage/commit하지 않는다.
+- Python projection, route, Gate, scoring, replay, persistence, Monitoring snapshot contract를 수정하지 않는다.
+- `Workspace > Overview > 시장 맥락` component를 직접 수정하거나 공용 component 추출로 scope를 넓히지 않는다.
+- A안의 question-first hierarchy와 Market Context의 exact visual token을 함께 만족해야 한다.
+- RED → GREEN → build → Browser QA → diff check 후 distinct Korean commit을 만든다.
+
+## File Structure
+
+- Create: `tests/test_final_review_market_context_visual_contract.py`
+  - approved question-first structure, canonical CSS token, removed editorial drift token, chart palette를 검증한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+  - `WorkspaceHeader`를 추가해 primary question과 `CandidateSelector`를 한 rounded header에 배치한다.
+  - `VerdictHero`에 compact verdict, thesis, period/as-of basis, secondary evidence confidence를 배치한다.
+  - approved section order와 intent payload는 유지한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx`
+  - candidate `#274764`, benchmark `#269789`, underwater `#e2763b` palette를 사용한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+  - one-column 18px workbench rhythm, 20px panels, 17px chart shells, 14px metric bands, compact type scale, 760/460 responsive contract로 전면 교체한다.
+- Update tracked build output under `frontend/build/` only after Vite build.
+
+## Task 7.1: Visual Contract RED
+
+- [ ] **Step 1: Add the failing source-contract test**
+
+Create `FinalReviewMarketContextVisualContractTests` with three tests:
+
+```python
+def test_workspace_uses_approved_question_first_header(self):
+    source = WORKSPACE.read_text(encoding="utf-8")
+    render = source.split("export function DecisionBriefWorkspace", 1)[1]
+    self.assertIn("function WorkspaceHeader", source)
+    self.assertIn("이 포트폴리오를 실제 투자 검토 대상으로", source)
+    self.assertLess(render.index("<WorkspaceHeader"), render.index("<VerdictHero"))
+
+def test_style_uses_market_context_visual_tokens_without_editorial_drift(self):
+    style = STYLE.read_text(encoding="utf-8")
+    for token in ("#152033", "#647589", "#dae4ee", "border-radius: 20px", "border-radius: 17px", "0 10px 30px rgba(33, 53, 72, .055)"):
+        self.assertIn(token, style)
+    for token in ("--db-ink: #172019", "grid-template-columns: repeat(12", "border-radius: 2px", "4.3vw", "52px"):
+        self.assertNotIn(token, style)
+
+def test_charts_use_market_context_visual_family(self):
+    source = CHARTS.read_text(encoding="utf-8")
+    for color in ("#274764", "#269789", "#e2763b"):
+        self.assertIn(color, source)
+```
+
+- [ ] **Step 2: Run RED**
+
+```bash
+.venv/bin/python -m unittest tests.test_final_review_market_context_visual_contract -v
+```
+
+Expected: FAIL because `WorkspaceHeader` and canonical tokens/palette are absent while editorial tokens remain.
+
+## Task 7.2: React Presentation GREEN
+
+- [ ] **Step 1: Implement the question-first shell**
+
+Add `WorkspaceHeader({brief, model, onIntent})`; move `CandidateSelector` into its right-side summary area. Keep the existing `select_candidate` intent unchanged. Replace the top-level `<CandidateSelector>` call with `<WorkspaceHeader>` and keep all later section calls in their approved order.
+
+- [ ] **Step 2: Compact the verdict**
+
+Render `brief.verdict.label`, `headline`, `thesis`, candidate period/as-of basis and `brief.evidence_confidence` in a soft answer panel. Evidence confidence remains secondary metadata and never becomes a route/score calculation.
+
+- [ ] **Step 3: Apply canonical visual tokens**
+
+Replace the 12-column/editorial CSS with:
+
+```css
+.db-workspace { display: grid; gap: 18px; padding: 4px 2px 18px; }
+.db-workspace-header { border: 1px solid #dae4ee; border-radius: 20px; background: linear-gradient(135deg, #f8fbff 0%, #f1f7f7 100%); }
+.db-section { border: 1px solid #dae4ee; border-radius: 20px; background: #fff; box-shadow: 0 10px 30px rgba(33, 53, 72, .055); }
+.db-chart-shell { border-radius: 17px; background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%); }
+.db-observation-strip { overflow: hidden; border-radius: 14px; }
+```
+
+Use 23/20/18px heading hierarchy and 760/460px responsive breakpoints. Keep visible focus, disabled, alert, table scroll and unmeasured states.
+
+- [ ] **Step 4: Align chart strokes**
+
+Change only presentation colors in `DecisionBriefCharts.tsx`: candidate `#274764`, benchmark `#269789`, underwater `#e2763b`. Do not change series alignment, path calculation, trait segmentation or accessible labels.
+
+- [ ] **Step 5: Run GREEN and focused regression**
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+npm run build --prefix app/web/components/final_review_investment_report/frontend
+git diff --check
+```
+
+Expected: all focused tests pass, Vite build exits 0, diff check exits 0.
+
+- [ ] **Step 6: Browser QA against the actual reference**
+
+Desktop 1440px:
+
+- open `Workspace > Overview > 시장 맥락` and Final Review in the same local app;
+- compare font, blue-gray palette, 20px outer radius, soft shadow, 17px chart shell, 14px metric band, compact heading hierarchy;
+- verify primary question, candidate switch, verdict, charts, findings, trait, Monitoring, route/reason appear in order;
+- verify there is no angular green top-border hero or 52px editorial headline.
+
+Narrow 760px:
+
+- verify header, chart, finding, monitoring and route grids collapse without horizontal overflow;
+- verify candidate switch, route selection, reason input, disclosure remain usable;
+- do not click the append/save CTA against the protected registry.
+
+Capture `qa-final-review-market-context-visual-parity-760.png` as an untracked artifact and do not stage it.
+
+- [ ] **Step 7: Commit the implementation unit**
+
+Stage only the new visual test, three React source files and tracked Vite build output. Verify the staged list excludes registry, run history, `.superpowers`, screenshots and other generated artifacts.
+
+```bash
+git commit -m "Final Review 시장 맥락 시각 체계 적용"
+```
+
+## Task 7.3: Closeout Documentation
+
+- [ ] **Step 1: Record RED/GREEN/build/Browser QA evidence** in active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
+- [ ] **Step 2: Correct durable UI wording** in the Decision Workspace research recommendation/UI patterns and Backtest flow docs so future work treats Market Context as both projection and visual-language reference.
+- [ ] **Step 3: Add a concise root handoff milestone** without copying detailed QA logs.
+- [ ] **Step 4: Run fresh completion verification**:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+npm run build --prefix app/web/components/final_review_investment_report/frontend
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review/page.py \
+  app/web/components/final_review_investment_report/component.py
+git diff --check
+git status --short
+```
+
+- [ ] **Step 5: Commit closeout docs** with `git commit -m "Final Review 시각 교정 QA와 문서 동기화"`.
+
+## Correction Plan Self-Review
+
+- [x] Approved A안 and actual Market Context reference are both named.
+- [x] Exact font/color/radius/shadow/type/spacing tokens replace subjective “similar” wording.
+- [x] Python/data/Gate/persistence owners are unchanged.
+- [x] Tests fail on the current angular/editorial implementation before source changes.
+- [x] Browser QA includes side-by-side reference comparison at 1440px and overflow/interaction checks at 760px.
+- [x] Protected registry, run history, `.superpowers`, screenshots and saved JSONL remain unstaged.
+- [x] Implementation and closeout docs are distinct Korean commits.

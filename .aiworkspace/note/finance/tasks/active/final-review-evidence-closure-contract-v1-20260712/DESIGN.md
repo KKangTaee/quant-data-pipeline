@@ -339,3 +339,42 @@ role별 고정 `-6 / -4` 정책은 제거한다.
 6. static / dynamic universe가 서로 다른 survivorship policy를 사용한다.
 7. GRS replay 기간 부족이 ticker/date/root cause와 함께 설명된다.
 8. Python service boundary와 React presentation-only 경계가 유지된다.
+
+## 2026-07-16 Visual Fidelity Correction
+
+사용자가 웹에서 승인한 A안은 정보 순서만이 아니라 `Workspace > Overview > 시장 맥락`과 같은 시각 언어까지 포함한다. 현재 구현의 각진 녹색 editorial report는 승인안과 다르므로, Python Decision Brief / Gate / persistence 계약은 그대로 두고 React presentation만 교정한다.
+
+### Canonical visual references
+
+- 승인한 A안: 질문 중심 Decision Brief mockup의 둥근 workbench, compact heading, soft neutral panel, 결론 badge, 후보 summary, metric band, progressive disclosure.
+- 실행 중 기준 화면: `app/web/streamlit_components/market_context_valuation/src/style.css`와 `MarketContextValuation.tsx`.
+- Final Review 고유 정보 구조: 결론 → 행동 근거 → 실제 강점/약점 → trait map → Monitoring 변화 조건 → 최종 판단 → disclosure.
+
+### Exact visual contract
+
+- font stack: `Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+- primary text `#152033`, secondary text `#647589`, border `#dae4ee`
+- outer rhythm: one-column `18px` gap; 12-column editorial grid를 사용하지 않는다.
+- question header: `20px` radius, blue-gray/teal light gradient, `22px 24px` desktop padding.
+- content section: `20px` radius, white background, `0 10px 30px rgba(33, 53, 72, .055)` shadow.
+- inner chart shell: `17px` radius and white-to-cool-neutral gradient.
+- metric/observation band: `14px` radius, shared border between cells.
+- headline hierarchy: page question `23px`, section heading `20px`, subsection `18px`; 기존 `52px` verdict headline을 사용하지 않는다.
+- state colors are restrained teal `#17695e`, orange `#a24d19`, blue-gray `#284e69`; 상태를 얇은 각진 top border로 표현하지 않는다.
+- responsive: `760px`에서 header/chart/finding/decision grid를 한 열로 만들고, `460px`에서 padding과 metric grid를 다시 줄인다.
+
+### Ownership and non-goals
+
+- `DecisionBriefWorkspace.tsx`는 approved question-first shell과 candidate intent 배치를 소유한다.
+- `DecisionBriefCharts.tsx`는 좌표 계산을 유지하고 chart stroke palette만 Market Context 계열로 맞춘다.
+- `style.css`가 visual token과 responsive layout을 소유한다.
+- Python projection, route mapping, Gate, evidence classification, persistence, registry는 변경하지 않는다.
+- Market Context component 자체를 공용화해 기존 Overview 화면에 회귀 위험을 만들지 않는다. 이번 교정은 Final Review가 canonical token을 소비하는 focused presentation correction이다.
+
+### Visual acceptance
+
+1. 첫 화면에서 질문과 후보 선택이 하나의 rounded gradient header로 읽힌다.
+2. verdict는 compact highlighted answer panel이며 거대한 editorial headline이 아니다.
+3. chart, metric, finding, monitoring, decision, disclosure가 Market Context의 radius/palette/shadow rhythm을 공유한다.
+4. 1440px와 760px Browser QA에서 기준 화면과 나란히 비교하고, 760px document/component horizontal overflow가 0이다.
+5. source-contract test가 canonical token, question-first hierarchy, chart palette를 고정해 같은 drift를 다시 허용하지 않는다.
