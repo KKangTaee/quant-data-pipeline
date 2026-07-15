@@ -33,3 +33,10 @@ Last Updated: 2026-07-15
 - Placeholder scan found no `TBD`/`TODO` or incomplete implementation requirement.
 - Self-review aligned the current task index/roadmap/root handoff and confirmed `git diff --check` passes.
 - Implementation commands/tests have not been run because written spec review precedes code changes.
+
+## Detailed TDD Planning
+
+- Confirmed design commit `067cc954` is current `HEAD`; no implementation diff exists after the approved design.
+- Re-read `AGENTS.md`, finance INDEX/ROADMAP/PROJECT_MAP, all six active task documents, current U.S.-stock PER calculator/loader/service/action/event/React/test boundaries, and the raw statement/profile schema.
+- Expanded `PLAN.md` into exact 1차~5차 file ownership, interfaces, RED/GREEN commands, regression gates, Browser QA, documentation sync, and coherent commit units.
+- Plan self-review found no uncovered design requirement or unresolved placeholder; `git diff --check` passed before the planning commit.
