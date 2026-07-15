@@ -5,8 +5,8 @@ Last Updated: 2026-07-16
 ## Current Stage
 
 - 전체 roadmap: 1차 데이터 RED/GREEN -> 2차 provenance -> 3차 UI -> 4차 QA/docs
-- 현재: 1차~2차 데이터/provenance 완료, 3차 UI RED 준비
-- 구현 완료 차수: 2/4
+- 현재: 1차~3차 구현 완료, 4차 actual/Browser QA 준비
+- 구현 완료 차수: 3/4
 
 ## Completed
 
@@ -27,7 +27,12 @@ Last Updated: 2026-07-16
 - MRNA-like Q4는 revenue `2.811B`, GP `1.882B`, operating income `0.006B`와 구조화 근거를 노출한다.
 - 기존 service `_json_safe`가 nested provenance를 별도 수정 없이 보존함을 검증했다.
 - turnaround/Market Context 70/70, service focused test, target py_compile과 diff check를 통과했다.
+- React source contract가 provenance types/copy/styles 부재로 실패하는 RED를 확인했다.
+- 영업·현금 chart에 neutral source-quarter marker와 `공시 기반 산출` legend를 추가했다.
+- active inspector에 derived badge, known-rule 계산식, TTM derived-input notice를 추가했다.
+- 420px에서 derived heading/badge가 세로 wrapping되도록 보강했다.
+- 관련 테스트 71/71과 Vite production build를 통과했다.
 
 ## Next Action
 
-- Task 3의 React source contract 실패 테스트를 작성하고 RED를 확인한다.
+- Task 4의 actual MRNA DB-only 검증과 Browser QA를 수행한다.

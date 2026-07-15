@@ -25,3 +25,11 @@ No production code or tests changed during diagnosis/design.
 - TTM: 2024-Q1 carries revenue/GP in `ttm_derived_metrics`; direct-only fixture lists remain empty.
 - Service: nested operands survive recursive JSON-safe conversion and `json.dumps`.
 - Regression: turnaround/Market Context 70/70 PASS; target `py_compile` and `git diff --check` exit 0.
+
+## 2026-07-16 Task 3 — UI Disclosure
+
+- RED: React contract failed because provenance types, marker, badge and disclosure copy were absent.
+- GREEN: source marker, neutral badge, known-rule formula and TTM derived-input notice are present without `추정값` copy.
+- Regression: Market Context/turnaround 71/71 PASS.
+- Build: Vite 6.4.3 transformed 171 modules and emitted production bundle successfully.
+- Static: hashed JS/CSS assets were replaced by the new product build; no screenshot/temp artifact was staged.

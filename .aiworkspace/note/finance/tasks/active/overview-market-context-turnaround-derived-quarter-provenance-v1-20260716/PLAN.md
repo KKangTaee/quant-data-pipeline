@@ -245,7 +245,7 @@ Update task evidence and commit `전환분석 분기 산출 근거 계약 추가
 - Produces: source-quarter SVG marker, active inspector badge/formula, TTM derived-input notice.
 - Preserves: gap segments, pointer selection, 8/12/20 windows, zero axes, existing layout.
 
-- [ ] **Step 1: Write the failing React contract**
+- [x] **Step 1: Write the failing React contract**
 
 ```python
 def test_turnaround_discloses_filing_derived_quarters_without_calling_them_estimates(self) -> None:
@@ -264,11 +264,11 @@ def test_turnaround_discloses_filing_derived_quarters_without_calling_them_estim
     self.assertNotIn("추정값", source)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 새 test method를 `-v`로 실행한다. Expected: provenance types, copy and styles are absent.
 
-- [ ] **Step 3: Add typed provenance helpers**
+- [x] **Step 3: Add typed provenance helpers**
 
 `MetricOperand`, `MetricProvenance`와 optional point fields를 추가한다. `derivationFormula`는 known rules만 다음처럼 표현한다.
 
@@ -281,7 +281,7 @@ revenue_minus_cost -> 매출 ... − 원가 ...
 
 Unknown rule은 badge는 유지하지만 formula를 만들지 않는다.
 
-- [ ] **Step 4: Render source marker and disclosure**
+- [x] **Step 4: Render source marker and disclosure**
 
 - legend에 `공시 기반 산출`을 추가한다.
 - `derived_metrics.length > 0`인 source quarter에 neutral SVG circle과 `<title>`을 추가한다.
@@ -290,11 +290,11 @@ Unknown rule은 badge는 유지하지만 formula를 만들지 않는다.
 - margin TTM이 revenue/gross-profit/operating-income 산출 input을 포함하면 `TTM 지표에 공시 기반 산출값 포함`을 표시한다.
 - Cash chart도 OCF/CapEx source marker와 TTM 포함 notice를 같은 규칙으로 표시한다.
 
-- [ ] **Step 5: Add neutral responsive styles**
+- [x] **Step 5: Add neutral responsive styles**
 
 `.turnaround-derived-marker`, `.legend-derived`, `.turnaround-derived-heading`, `.turnaround-derived-badge`, `.turnaround-derived-detail`, `.turnaround-derived-note`를 blue-gray neutral palette로 추가하고 420px에서 wrapping되게 한다.
 
-- [ ] **Step 6: Verify GREEN, build and commit**
+- [x] **Step 6: Verify GREEN, build and commit**
 
 ```bash
 .venv/bin/python -m unittest tests.test_market_context_valuation tests.test_us_stock_turnaround -v

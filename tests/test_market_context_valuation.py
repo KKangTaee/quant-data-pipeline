@@ -459,6 +459,26 @@ class MarketContextValuationTests(unittest.TestCase):
         ):
             self.assertIn(token, style)
 
+    def test_turnaround_discloses_filing_derived_quarters_without_calling_them_estimates(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/TurnaroundAnalysis.tsx"
+        ).read_text()
+        style = Path(
+            "app/web/streamlit_components/market_context_valuation/src/style.css"
+        ).read_text()
+
+        for token in (
+            "metric_provenance?: Record<string, MetricProvenance>",
+            "derived_metrics?: string[]",
+            "ttm_derived_metrics?: string[]",
+            "공시 기반 산출",
+            "공시 기반 산출값 포함",
+            "turnaround-derived-marker",
+            "turnaround-derived-badge",
+        ):
+            self.assertIn(token, source + style)
+        self.assertNotIn("추정값", source)
+
     def test_turnaround_styles_stack_risk_cards_at_phone_width(self) -> None:
         style = Path(
             "app/web/streamlit_components/market_context_valuation/src/style.css"

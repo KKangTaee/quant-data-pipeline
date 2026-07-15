@@ -1,5 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+type MetricOperand = {
+  metric?: string;
+  concept?: string;
+  unit?: string;
+  period_start?: string | null;
+  period_end?: string | null;
+  available_at?: string | null;
+  value?: number | null;
+};
+
+type MetricProvenance = {
+  source_kind?: "REPORTED" | "FILING_DERIVED" | string;
+  rule?: string;
+  operands?: MetricOperand[];
+};
+
 export type TurnaroundPoint = {
   slot_index?: number;
   slot_key?: string;
@@ -17,6 +33,9 @@ export type TurnaroundPoint = {
   revenue_yoy_pct?: number | null;
   ttm_ocf?: number | null;
   ttm_fcf?: number | null;
+  metric_provenance?: Record<string, MetricProvenance>;
+  derived_metrics?: string[];
+  ttm_derived_metrics?: string[];
 };
 
 type Milestone = { status?: string; evidence?: Record<string, unknown> };
@@ -77,6 +96,47 @@ const compact = (value: unknown) => {
   return fmt(value, 1);
 };
 const slotLabel = (point?: TurnaroundPoint) => point?.slot_key || point?.period_end || "-";
+
+const metricLabels: Record<string, string> = {
+  revenue: "매출",
+  gross_profit: "매출총이익",
+  operating_income: "영업이익",
+  ocf: "영업현금흐름",
+  capex: "자본지출",
+};
+
+const hasDerivedMetric = (point: TurnaroundPoint | undefined, metrics: string[]) => (
+  (point?.derived_metrics || []).some((metric) => metrics.includes(metric))
+);
+
+const ttmHasDerivedMetric = (point: TurnaroundPoint | undefined, metrics: string[]) => (
+  (point?.ttm_derived_metrics || []).some((metric) => metrics.includes(metric))
+);
+
+const primaryDerivation = (point: TurnaroundPoint | undefined, metrics: string[]) => {
+  for (const metric of metrics) {
+    const provenance = point?.metric_provenance?.[metric];
+    if (provenance?.source_kind === "FILING_DERIVED") return { metric, provenance };
+  }
+  return null;
+};
+
+const derivationFormula = (provenance?: MetricProvenance) => {
+  const operands = provenance?.operands || [];
+  if (provenance?.rule === "fy_minus_q1_q2_q3" && operands.length >= 4) {
+    return `FY ${compact(operands[0].value)} − Q1 ${compact(operands[1].value)} − Q2 ${compact(operands[2].value)} − Q3 ${compact(operands[3].value)}`;
+  }
+  if (provenance?.rule === "h1_minus_q1" && operands.length >= 2) {
+    return `H1 ${compact(operands[0].value)} − Q1 ${compact(operands[1].value)}`;
+  }
+  if (provenance?.rule === "nine_months_minus_h1" && operands.length >= 2) {
+    return `9M ${compact(operands[0].value)} − H1 ${compact(operands[1].value)}`;
+  }
+  if (provenance?.rule === "revenue_minus_cost" && operands.length >= 2) {
+    return `매출 ${compact(operands[0].value)} − 원가 ${compact(operands[1].value)}`;
+  }
+  return null;
+};
 
 export function contiguousTurnaroundSegments(
   points: TurnaroundPoint[],
@@ -192,6 +252,7 @@ function OperatingChart({ points }: { points: TurnaroundPoint[] }) {
   useEffect(() => setSelected(Math.max(0, points.length - 1)), [points.length]);
   if (!points.length) return <div className="empty">영업 전환을 계산할 분기 근거가 없습니다.</div>;
   const left = 60, width = 800, viewWidth = 920;
+  const operatingMetrics = ["revenue", "gross_profit", "operating_income"];
   const x = (index: number) => left + index / Math.max(1, points.length - 1) * width;
   const growthValues = points.map((point) => point.revenue_yoy_pct).filter(finite);
   const growthMin = Math.min(0, ...growthValues), growthMax = Math.max(0, ...growthValues);
@@ -205,14 +266,51 @@ function OperatingChart({ points }: { points: TurnaroundPoint[] }) {
   const marginZero = marginY(0);
   const line = (segment: IndexedPoint[], key: "ttm_gross_margin_pct" | "ttm_operating_margin_pct") => segment.map(({ point, index }, itemIndex) => `${itemIndex ? "L" : "M"}${x(index).toFixed(1)},${marginY(point[key] as number).toFixed(1)}`).join(" ");
   const active = points[Math.min(selected, points.length - 1)];
-  return <div className="turnaround-chart-shell"><div className="turnaround-chart-legend"><span className="legend-revenue">매출 YoY</span><span className="legend-gross">TTM GP margin</span><span className="legend-operating">TTM 영업 margin</span></div><svg viewBox="0 0 920 375" role="img" aria-label="그래프 1 · 영업 전환" onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}><text className="turnaround-panel-label" x={left} y="17">QUARTERLY REVENUE YOY</text><line className="zero-axis" x1={left} x2={left + width} y1={growthZero} y2={growthZero}/>{points.map((point, index) => !finite(point.revenue_yoy_pct) ? null : <rect key={`revenue-${index}`} className={point.revenue_yoy_pct >= 0 ? "turnaround-bar-positive" : "turnaround-bar-negative"} x={x(index) - Math.min(16, width / points.length * .3)} y={Math.min(growthY(point.revenue_yoy_pct), growthZero)} width={Math.min(32, width / points.length * .6)} height={Math.max(1, Math.abs(growthY(point.revenue_yoy_pct) - growthZero))}/>) }<text className="turnaround-panel-label" x={left} y="190">TTM MARGINS</text><line className="zero-axis" x1={left} x2={left + width} y1={marginZero} y2={marginZero}/>{contiguousTurnaroundSegments(points, "ttm_gross_margin_pct").map((segment, index) => <path key={`gross-${index}`} className="turnaround-line-gross" d={line(segment, "ttm_gross_margin_pct")}/>)}{contiguousTurnaroundSegments(points, "ttm_operating_margin_pct").map((segment, index) => <path key={`operating-${index}`} className="turnaround-line-operating" d={line(segment, "ttm_operating_margin_pct")}/>)}<line className="hover-rule" x1={x(selected)} x2={x(selected)} y1="24" y2="325"/>{points.map((point, index) => index % Math.max(1, Math.ceil(points.length / 6)) === 0 || index === points.length - 1 ? <text key={`label-${index}`} className="axis-label" x={x(index)} y="355" textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}>{slotLabel(point)}</text> : null)}</svg><div className="turnaround-inspector"><strong>{slotLabel(active)}</strong><span>분기 매출 {compact(active?.revenue)}</span><span>분기 영업 {compact(active?.operating_income)}</span><span>매출 YoY {signed(active?.revenue_yoy_pct)}</span><span>TTM GP {signed(active?.ttm_gross_margin_pct)}</span><span>TTM 영업 {signed(active?.ttm_operating_margin_pct)}</span><small>filing 공개 {active?.available_at || "-"}</small></div></div>;
+  const activeDerivation = primaryDerivation(active, operatingMetrics);
+  const activeFormula = derivationFormula(activeDerivation?.provenance);
+  const activeSourceDerived = hasDerivedMetric(active, operatingMetrics);
+  const activeTtmDerived = ttmHasDerivedMetric(active, operatingMetrics);
+  return <div className="turnaround-chart-shell">
+    <div className="turnaround-chart-legend">
+      <span className="legend-revenue">매출 YoY</span>
+      <span className="legend-gross">TTM GP margin</span>
+      <span className="legend-operating">TTM 영업 margin</span>
+      <span className="legend-derived">공시 기반 산출</span>
+    </div>
+    <svg viewBox="0 0 920 375" role="img" aria-label="그래프 1 · 영업 전환" onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}>
+      <text className="turnaround-panel-label" x={left} y="17">QUARTERLY REVENUE YOY</text>
+      <line className="zero-axis" x1={left} x2={left + width} y1={growthZero} y2={growthZero}/>
+      {points.map((point, index) => !finite(point.revenue_yoy_pct) ? null : <rect key={`revenue-${index}`} className={point.revenue_yoy_pct >= 0 ? "turnaround-bar-positive" : "turnaround-bar-negative"} x={x(index) - Math.min(16, width / points.length * .3)} y={Math.min(growthY(point.revenue_yoy_pct), growthZero)} width={Math.min(32, width / points.length * .6)} height={Math.max(1, Math.abs(growthY(point.revenue_yoy_pct) - growthZero))}/>)}
+      <text className="turnaround-panel-label" x={left} y="190">TTM MARGINS</text>
+      <line className="zero-axis" x1={left} x2={left + width} y1={marginZero} y2={marginZero}/>
+      {contiguousTurnaroundSegments(points, "ttm_gross_margin_pct").map((segment, index) => <path key={`gross-${index}`} className="turnaround-line-gross" d={line(segment, "ttm_gross_margin_pct")}/>)}
+      {contiguousTurnaroundSegments(points, "ttm_operating_margin_pct").map((segment, index) => <path key={`operating-${index}`} className="turnaround-line-operating" d={line(segment, "ttm_operating_margin_pct")}/>)}
+      <line className="hover-rule" x1={x(selected)} x2={x(selected)} y1="24" y2="325"/>
+      {points.map((point, index) => hasDerivedMetric(point, operatingMetrics) ? <circle key={`derived-${index}`} className="turnaround-derived-marker" cx={x(index)} cy="334" r="4"><title>{`${slotLabel(point)} 공시 기반 산출`}</title></circle> : null)}
+      {points.map((point, index) => index % Math.max(1, Math.ceil(points.length / 6)) === 0 || index === points.length - 1 ? <text key={`label-${index}`} className="axis-label" x={x(index)} y="355" textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}>{slotLabel(point)}</text> : null)}
+    </svg>
+    <div className="turnaround-inspector">
+      <div className="turnaround-derived-heading">
+        <strong>{slotLabel(active)}</strong>
+        {activeSourceDerived ? <span className="turnaround-derived-badge">공시 기반 산출</span> : null}
+      </div>
+      <span>분기 매출 {compact(active?.revenue)}</span>
+      <span>분기 영업 {compact(active?.operating_income)}</span>
+      <span>매출 YoY {signed(active?.revenue_yoy_pct)}</span>
+      <span>TTM GP {signed(active?.ttm_gross_margin_pct)}</span>
+      <span>TTM 영업 {signed(active?.ttm_operating_margin_pct)}</span>
+      {activeDerivation && activeFormula ? <small className="turnaround-derived-detail">{metricLabels[activeDerivation.metric] || activeDerivation.metric}: {activeFormula}</small> : null}
+      {activeTtmDerived ? <small className="turnaround-derived-note">TTM 지표에 공시 기반 산출값 포함</small> : null}
+      <small>filing 공개 {active?.available_at || "-"}</small>
+    </div>
+  </div>;
 }
-
 function CashChart({ points }: { points: TurnaroundPoint[] }) {
   const [selected, setSelected] = useState(Math.max(0, points.length - 1));
   useEffect(() => setSelected(Math.max(0, points.length - 1)), [points.length]);
   if (!points.length) return <div className="empty">현금 전환을 계산할 분기 근거가 없습니다.</div>;
   const left = 60, width = 800, top = 35, height = 250, viewWidth = 920;
+  const cashMetrics = ["ocf", "capex"];
   const x = (index: number) => left + index / Math.max(1, points.length - 1) * width;
   const values = points.flatMap((point) => [point.ttm_ocf, point.ttm_fcf]).filter(finite);
   const min = Math.min(0, ...values), max = Math.max(0, ...values), range = Math.max(1, max - min);
@@ -220,9 +318,40 @@ function CashChart({ points }: { points: TurnaroundPoint[] }) {
   const zero = y(0);
   const barWidth = Math.min(15, width / points.length * .24);
   const active = points[Math.min(selected, points.length - 1)];
-  return <div className="turnaround-chart-shell"><div className="turnaround-chart-legend"><span className="legend-ocf">TTM OCF</span><span className="legend-fcf">TTM FCF proxy</span></div><svg viewBox="0 0 920 340" role="img" aria-label="그래프 2 · 현금 전환" onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}><line className="zero-axis" x1={left} x2={left + width} y1={zero} y2={zero}/>{points.flatMap((point, index) => ([{ key: "ocf", value: point.ttm_ocf, offset: -barWidth - 1 }, { key: "fcf", value: point.ttm_fcf, offset: 1 }]).map((item) => !finite(item.value) ? null : <rect key={`${item.key}-${index}`} className={`turnaround-cash-bar cash-${item.key} ${item.value < 0 ? "cash-negative" : ""}`} x={x(index) + item.offset} y={Math.min(y(item.value), zero)} width={barWidth} height={Math.max(1, Math.abs(y(item.value) - zero))}/>))}<line className="hover-rule" x1={x(selected)} x2={x(selected)} y1={top} y2={top + height}/>{points.map((point, index) => index % Math.max(1, Math.ceil(points.length / 6)) === 0 || index === points.length - 1 ? <text key={`cash-label-${index}`} className="axis-label" x={x(index)} y="318" textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}>{slotLabel(point)}</text> : null)}</svg><div className="turnaround-inspector"><strong>{slotLabel(active)}</strong><span>TTM OCF {compact(active?.ttm_ocf)}</span><span>TTM FCF {compact(active?.ttm_fcf)}</span><span>분기 OCF {compact(active?.ocf)}</span><small>filing 공개 {active?.available_at || "-"}</small></div></div>;
+  const activeDerivation = primaryDerivation(active, cashMetrics);
+  const activeFormula = derivationFormula(activeDerivation?.provenance);
+  const activeSourceDerived = hasDerivedMetric(active, cashMetrics);
+  const activeTtmDerived = ttmHasDerivedMetric(active, cashMetrics);
+  return <div className="turnaround-chart-shell">
+    <div className="turnaround-chart-legend">
+      <span className="legend-ocf">TTM OCF</span>
+      <span className="legend-fcf">TTM FCF proxy</span>
+      <span className="legend-derived">공시 기반 산출</span>
+    </div>
+    <svg viewBox="0 0 920 340" role="img" aria-label="그래프 2 · 현금 전환" onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}>
+      <line className="zero-axis" x1={left} x2={left + width} y1={zero} y2={zero}/>
+      {points.flatMap((point, index) => ([
+        { key: "ocf", value: point.ttm_ocf, offset: -barWidth - 1 },
+        { key: "fcf", value: point.ttm_fcf, offset: 1 },
+      ]).map((item) => !finite(item.value) ? null : <rect key={`${item.key}-${index}`} className={`turnaround-cash-bar cash-${item.key} ${item.value < 0 ? "cash-negative" : ""}`} x={x(index) + item.offset} y={Math.min(y(item.value), zero)} width={barWidth} height={Math.max(1, Math.abs(y(item.value) - zero))}/>))}
+      <line className="hover-rule" x1={x(selected)} x2={x(selected)} y1={top} y2={top + height}/>
+      {points.map((point, index) => hasDerivedMetric(point, cashMetrics) ? <circle key={`cash-derived-${index}`} className="turnaround-derived-marker" cx={x(index)} cy="296" r="4"><title>{`${slotLabel(point)} 공시 기반 산출`}</title></circle> : null)}
+      {points.map((point, index) => index % Math.max(1, Math.ceil(points.length / 6)) === 0 || index === points.length - 1 ? <text key={`cash-label-${index}`} className="axis-label" x={x(index)} y="318" textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}>{slotLabel(point)}</text> : null)}
+    </svg>
+    <div className="turnaround-inspector">
+      <div className="turnaround-derived-heading">
+        <strong>{slotLabel(active)}</strong>
+        {activeSourceDerived ? <span className="turnaround-derived-badge">공시 기반 산출</span> : null}
+      </div>
+      <span>TTM OCF {compact(active?.ttm_ocf)}</span>
+      <span>TTM FCF {compact(active?.ttm_fcf)}</span>
+      <span>분기 OCF {compact(active?.ocf)}</span>
+      {activeDerivation && activeFormula ? <small className="turnaround-derived-detail">{metricLabels[activeDerivation.metric] || activeDerivation.metric}: {activeFormula}</small> : null}
+      {activeTtmDerived ? <small className="turnaround-derived-note">TTM 지표에 공시 기반 산출값 포함</small> : null}
+      <small>filing 공개 {active?.available_at || "-"}</small>
+    </div>
+  </div>;
 }
-
 const riskLabel: Record<string, string> = {
   OK: "안정",
   WATCH: "확인 필요",

@@ -255,6 +255,7 @@ svg text { fill: #718096; font-size: 10px; }
 .turnaround-chart-legend .legend-operating::before { background: #b06a43; }
 .turnaround-chart-legend .legend-ocf::before { height: 8px; background: #507b99; }
 .turnaround-chart-legend .legend-fcf::before { height: 8px; background: #c29153; }
+.turnaround-chart-legend .legend-derived::before { width: 8px; height: 8px; border: 2px solid #648399; border-radius: 50%; background: #fff; }
 .zero-axis { stroke: #778795; stroke-width: 1.5; }
 .turnaround-panel-label { fill: #6e8294; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
 .turnaround-bar-positive { fill: #79a9b6; }
@@ -262,12 +263,17 @@ svg text { fill: #718096; font-size: 10px; }
 .turnaround-line-gross, .turnaround-line-operating { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .turnaround-line-gross { stroke: #2f8478; }
 .turnaround-line-operating { stroke: #b06a43; }
+.turnaround-derived-marker { fill: #fff; stroke: #648399; stroke-width: 2.5; }
 .turnaround-cash-bar { fill: #507b99; }
 .turnaround-cash-bar.cash-fcf { fill: #c29153; }
 .turnaround-cash-bar.cash-negative { opacity: .74; }
 .turnaround-inspector { display: grid; grid-template-columns: repeat(4, minmax(0, auto)); gap: 5px 16px; padding: 11px 14px; border-top: 1px solid #e3e9ee; color: #566d80; background: #f8fafb; font-size: 10px; }
 .turnaround-inspector strong { color: #203d54; font-size: 12px; }
 .turnaround-inspector small { grid-column: 1 / -1; color: #7d8d99; }
+.turnaround-derived-heading { display: flex; grid-column: 1 / -1; align-items: center; gap: 8px; min-width: 0; }
+.turnaround-derived-badge { padding: 3px 7px; border: 1px solid #cbd9e3; border-radius: 999px; color: #496a80; background: #edf3f7; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.turnaround-inspector .turnaround-derived-detail { color: #4c687c; font-weight: 700; overflow-wrap: anywhere; }
+.turnaround-inspector .turnaround-derived-note { color: #61798b; }
 .turnaround-risk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
 .turnaround-risk-card { display: grid; gap: 6px; padding: 15px; border: 1px solid #dfe7ec; border-left: 4px solid #8ca0af; border-radius: 13px; background: #f8fafb; }
 .turnaround-risk-card > span { color: #687c8d; font-size: 10px; font-weight: 800; }
@@ -334,6 +340,7 @@ svg text { fill: #718096; font-size: 10px; }
   .turnaround-chart-grid { grid-template-columns: 1fr; }
   .turnaround-chart-grid > article { padding: 10px; }
   .turnaround-inspector { grid-template-columns: 1fr 1fr; }
+  .turnaround-derived-heading { align-items: flex-start; flex-direction: column; }
   .turnaround-valuation-card { grid-template-columns: 1fr; }
   .turnaround-valuation-number { justify-items: start; }
   .freshness-bar { grid-template-columns: 1fr; }
