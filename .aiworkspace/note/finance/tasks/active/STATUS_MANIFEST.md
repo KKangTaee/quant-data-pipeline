@@ -7,7 +7,7 @@ Last Verified: 2026-07-15
 
 Current active task:
 
-- none
+- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`
 
 Latest completed task:
 

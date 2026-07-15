@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| - | None | 새 범위는 사용자 승인 후 연다. |
+| `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` | Written spec review | AAPL EPS `USD per share` 누락을 수정하고 6개 rail에서 전환 신호·이미 양수·PER 적용 가능·개선폭 미달을 구분한다. 1차~3차 구현 전 written spec을 검토한다. |
 
 ## Recent Completed / Retained Current Work
 

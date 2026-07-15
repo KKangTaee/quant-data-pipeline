@@ -7,7 +7,13 @@ Last Verified: 2026-07-15
 
 현재 active phase는 없다.
 
-현재 active task는 없다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/`다.
+
+- 목적: AAPL의 stored diluted EPS가 전환분석 unit filter에서 누락되는 버그를 수정하고, 6개 rail에서 transition과 already-positive state를 구분한다.
+- 현재 단계: 0/3차. approved direction을 written spec으로 고정했으며 detailed TDD plan 전 review gate다.
+- 1차: EPS loader unit/milestone evidence, 2차: rail semantics/copy, 3차: actual/Browser QA와 docs.
+- 보존: independent milestone threshold, PER 상대가치 판단, DB-only selector, explicit refresh, S&P/PER payload.
+- 제외: schema/provider/자동수집/진단 panel/universe screener.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/`다.
 
@@ -722,11 +728,11 @@ Current active phase:
 
 Current active task:
 
-- `overview-market-context-us-stock-freshness-refresh-v1-20260715` — 0/3차 detailed TDD plan complete, 1차 시작 전
+- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` — 0/3차, approved direction written spec review
 
 Latest completed task:
 
-- `overview-market-context-us-stock-turnaround-analysis-v1-20260715` — 1차~5차 complete
+- `overview-market-context-us-stock-freshness-refresh-v1-20260715` — 1차~3차 complete
 
 Recent completed docs cleanup tasks:
 

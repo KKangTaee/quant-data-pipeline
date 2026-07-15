@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is none. Latest completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md); 1차~3차 implementation/actual/Browser QA is complete.
+  - Current active task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS unit gap과 six-rail semantics를 1차~3차로 보정하는 written spec review 단계다.
   - Previous completed Nasdaq task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -6214,3 +6214,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - Header와 PER/전환 selector 사이에 stale일 때만 CTA 하나를 표시하고 가격·재무·공개 기준일을 분리했다. 자동 provider 수집과 run/job/row 진단 panel은 추가하지 않았다.
 - Actual NET는 explicit action 뒤 price `2026-07-14`, profile `2026-07-15`, statement `2026-03-31`/available `2026-05-08`로 READY가 됐고 AAPL stale desktop/420px Browser QA에서 CTA 중복·overflow·console error가 모두 0이었다.
 - Focused 114개와 React build가 통과했다. 전체 discovery의 기존 unrelated assertion 4건과 Streamlit reimport isolation error 154건은 task `RUNS.md`에 구분해 기록했다.
+
+## 2026-07-16 - 전환단계 AAPL 의미 보정 설계
+
+- AAPL PER는 READY/TTM EPS `7.90`인데 turnaround EPS가 null인 원인을 `USD per share` unit allowlist 누락으로 확정했다.
+- 영업손실 축소/EPS 양전 미확인이 적자 의미로 보이는 문제를 transition과 already-positive 상태 혼동으로 분리했다.
+- 6요소 rail과 threshold는 유지하고 EPS unit, 사용자 문구, UI-local established state를 1차~3차로 보정하는 written spec을 active task에 기록했다.

@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is none.
+  - Current active task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정한다.
   - Latest completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -9494,3 +9494,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 기업 선택은 빠른 DB read로 유지하고, repairable stale gap이 있을 때만 사용자가 같은 화면에서 한 번 눌러 exact selected symbol을 최신화해야 함.
 - Analysis result: 공용 NYSE 완료-session과 unified freshness/action을 구현했다. profile/price는 CIK 없이 먼저 저장하고 SEC statement만 identity gate를 거치며, 재무 period end가 과거라는 이유만으로 stale 처리하지 않는다.
 - Follow-up: 1차~3차와 actual/Browser QA를 완료했다. NET는 price `2026-07-14` 기준 READY이고, 필수 후속은 없다. SEC identity 자동 복구나 provider basis 정밀화는 별도 승인 범위다.
+
+### 2026-07-16 - 전환단계는 전환 신호와 이미 양수인 상태를 구분한다
+
+- User request: AAPL이 PER/EPS 양수인데 영업손실 축소와 EPS 양전이 미확인인 이유를 확인하고 개선해 달라고 요청함.
+- Interpreted goal: 마음에 든 6개 요소는 유지하되 established profitable company가 적자/실패처럼 보이지 않아야 한다.
+- Analysis result: 영업 항목은 +1.0%p acceleration threshold 미달이고, EPS/PER READY 누락은 turnaround loader가 DB의 `USD per share`를 읽지 않는 버그다. EPS 양전은 TTM이 아직 음수인 early-turn 신호라 already-positive와 별도다.
+- Follow-up: unit fix, UI-local established state, 사용자 문구 보정을 1차~3차로 구현하기 위한 written spec review 후 상세 TDD plan으로 전환한다.
