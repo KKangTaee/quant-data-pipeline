@@ -15,3 +15,9 @@ Last Updated: 2026-07-15
 - User approved cached DB UI first, automatic freshness diagnosis, and explicit provider refresh CTA.
 - Expanded `PLAN.md` into six TDD tasks covering shared calendar, unified freshness, CIK-independent collection, Streamlit event, React UI, and actual/Browser QA closeout.
 - Self-review checked spec coverage, placeholder patterns, interface names, scope exclusions, and step/commit boundaries before implementation.
+
+## Baseline
+
+- Confirmed the current directory is an existing linked worktree on `codex/sub-dev`; no new worktree or branch was created.
+- The local `.venv` does not include `pytest`, so the plan commands were corrected to the repository's available `unittest` runner before code changes.
+- Baseline: `python -m unittest tests.test_us_stock_valuation tests.test_us_stock_turnaround tests.test_market_context_valuation` -> 96 tests passed.

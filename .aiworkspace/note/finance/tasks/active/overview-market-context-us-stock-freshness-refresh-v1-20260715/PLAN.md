@@ -6,7 +6,7 @@
 
 **Architecture:** 공용 NYSE 완료-session helper가 가격 기대일을 계산하고, Overview freshness service가 기존 PER/turnaround read model을 하나의 `data_freshness` 계약으로 합친다. Explicit Streamlit event만 Overview facade를 통해 canonical ingestion job을 실행하며, profile/price는 CIK 없이 먼저 보존하고 SEC statement만 identity 검증 뒤 실행한다.
 
-**Tech Stack:** Python 3, pandas, Streamlit, MySQL-backed finance loaders, React 18, TypeScript, Vite, unittest/pytest.
+**Tech Stack:** Python 3, pandas, Streamlit, MySQL-backed finance loaders, React 18, TypeScript, Vite, unittest.
 
 ## Global Constraints
 
@@ -51,7 +51,7 @@ def test_latest_completed_session_handles_weekend_holiday_and_early_close():
 
 - [ ] **Step 2: Run the new tests and confirm RED**
 
-Run: `.venv/bin/python -m pytest tests/test_nyse_calendar.py -q`
+Run: `.venv/bin/python -m unittest tests.test_nyse_calendar -v`
 
 Expected: FAIL with `ModuleNotFoundError: app.services.nyse_calendar`.
 
@@ -92,7 +92,7 @@ from app.services.nyse_calendar import (
 
 - [ ] **Step 4: Run calendar and backtest refresh regressions**
 
-Run: `.venv/bin/python -m pytest tests/test_nyse_calendar.py tests/test_service_contracts.py -q -k 'backtest_price_refresh_plan or nyse_calendar'`
+Run: `.venv/bin/python -m unittest tests.test_nyse_calendar tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_price_refresh_plan_uses_latest_completed_trading_day -v`
 
 Expected: all selected tests PASS.
 
@@ -168,7 +168,7 @@ def test_statement_gap_adds_identity_but_keeps_market_scopes_collectable():
 
 - [ ] **Step 2: Run the freshness tests and confirm RED**
 
-Run: `.venv/bin/python -m pytest tests/test_us_stock_freshness.py -q`
+Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness -v`
 
 Expected: FAIL because `app.services.overview.us_stock_freshness` does not exist.
 
@@ -259,7 +259,7 @@ Keep S&P unchanged and increment the combined schema to `market_context_valuatio
 
 - [ ] **Step 6: Run focused read-model regressions**
 
-Run: `.venv/bin/python -m pytest tests/test_us_stock_freshness.py tests/test_us_stock_turnaround.py tests/test_market_context_valuation.py -q`
+Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness tests.test_us_stock_turnaround tests.test_market_context_valuation`
 
 Expected: all tests PASS; S&P isolation and PER/turnaround recommendation tests remain green.
 
@@ -312,7 +312,7 @@ def test_invalid_symbol_runs_no_scope():
 
 - [ ] **Step 2: Run the low-level tests and confirm RED**
 
-Run: `.venv/bin/python -m pytest tests/test_us_stock_freshness.py -q -k 'market_scopes or invalid_symbol'`
+Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness -v`
 
 Expected: FAIL because `run_collect_us_stock_refresh_inputs` is missing.
 
@@ -403,7 +403,7 @@ def test_facade_preserves_market_success_when_identity_remains_missing():
 
 - [ ] **Step 5: Run facade tests and confirm RED**
 
-Run: `.venv/bin/python -m pytest tests/test_us_stock_freshness.py -q -k 'facade'`
+Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness -v`
 
 Expected: FAIL because `run_overview_us_stock_data_refresh` is missing.
 
@@ -453,7 +453,7 @@ Use `price_basis_date` as the exact start and `expected_price_date` as end. A RE
 
 - [ ] **Step 7: Run focused ingestion/facade compatibility tests**
 
-Run: `.venv/bin/python -m pytest tests/test_us_stock_freshness.py tests/test_us_stock_valuation.py tests/test_us_stock_turnaround.py -q`
+Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness tests.test_us_stock_valuation tests.test_us_stock_turnaround`
 
 Expected: all tests PASS, including legacy selected-symbol jobs.
 
@@ -490,7 +490,7 @@ def test_search_and_selection_still_never_run_refresh():
 
 - [ ] **Step 2: Run event tests and confirm RED**
 
-Run: `.venv/bin/python -m pytest tests/test_market_context_valuation.py -q -k 'unified_refresh or search_and_selection'`
+Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
 Expected: unified refresh event is rejected before implementation.
 
@@ -528,7 +528,7 @@ The internal JobResult still retains rows for logs/tests; current React receives
 
 - [ ] **Step 5: Run Streamlit bridge tests**
 
-Run: `.venv/bin/python -m pytest tests/test_market_context_valuation.py -q`
+Run: `.venv/bin/python -m unittest tests.test_market_context_valuation`
 
 Expected: all event dedup, symbol mismatch, search/selection read-only, and S&P isolation tests PASS.
 
@@ -572,7 +572,7 @@ def test_basis_labels_separate_price_statement_and_filing_availability():
 
 - [ ] **Step 2: Run source-contract tests and confirm RED**
 
-Run: `.venv/bin/python -m pytest tests/test_market_context_valuation.py -q -k 'header_refresh or basis_labels'`
+Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
 Expected: FAIL because the unified bar and copy are absent.
 
@@ -634,7 +634,7 @@ const refresh = () => {
 
 - [ ] **Step 6: Run React source tests and production build**
 
-Run: `.venv/bin/python -m pytest tests/test_market_context_valuation.py -q`
+Run: `.venv/bin/python -m unittest tests.test_market_context_valuation`
 
 Run: `npm run build`
 
@@ -670,7 +670,7 @@ git commit -m "개별주 상단 최신 데이터 재계산 UI 추가"
 
 - [ ] **Step 1: Run focused Python tests**
 
-Run: `.venv/bin/python -m pytest tests/test_nyse_calendar.py tests/test_us_stock_freshness.py tests/test_us_stock_valuation.py tests/test_us_stock_turnaround.py tests/test_market_context_valuation.py -q`
+Run: `.venv/bin/python -m unittest tests.test_nyse_calendar tests.test_us_stock_freshness tests.test_us_stock_valuation tests.test_us_stock_turnaround tests.test_market_context_valuation`
 
 Expected: all focused tests PASS.
 
@@ -686,7 +686,7 @@ Expected: both commands exit 0.
 
 - [ ] **Step 3: Run isolated finance test suite and classify unrelated failures**
 
-Run: `.venv/bin/python -m pytest tests -q`
+Run: `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`
 
 Expected: no new failure in freshness/PER/turnaround/Market Context; any known unrelated baseline failure is recorded with its exact test id.
 
