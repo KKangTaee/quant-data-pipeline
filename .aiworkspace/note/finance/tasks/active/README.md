@@ -27,12 +27,13 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `overview-market-context-us-stock-freshness-refresh-v1-20260715` | Detailed TDD plan complete | 선택 종목 상단 single CTA로 마지막 완료 NYSE 거래일·시장가치/가격 정렬·실제 재무 gap을 판정하고 exact scope만 갱신한다. profile/price는 CIK 없이 실행하고 SEC statement만 CIK를 요구한다. 1차~3차를 순차 구현한다. |
+| - | None | 새 범위는 사용자 승인 후 연다. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-us-stock-freshness-refresh-v1-20260715` | Completed record | 선택 종목 cached UI를 DB-only로 열고, 마지막 완료 NYSE 거래일보다 자료가 뒤처질 때만 상단 single CTA로 exact scope를 갱신한다. profile/price는 CIK 없이 실행하고 SEC statement만 identity를 요구한다. |
 | `overview-market-context-us-stock-turnaround-analysis-v1-20260715` | Completed record | 미국 개별주식 내부에 `PER 상대가치 | 전환 분석`을 추가하고 quarterly filing 기반 영업·현금 전환, survival risk, stage-appropriate valuation readiness를 selected-company 범위로 구현했다. |
 | `overview-market-context-us-stock-valuation-v1-20260714` | Completed record | searchable 미국 개별주 DB-only PER 상대가치, split-neutral filing-aware TTM, 부분 1/3/5년 history와 explicit selected-symbol 수집 경계를 구현했다. |
 | `final-review-evidence-closure-contract-v1-20260712` | Completed record | Level2 actionable gap을 Final Review 승격 전에 닫고, Final Review의 accepted limit / Monitoring transfer / defer / block terminal state와 measured-only score impact를 구현했다. |

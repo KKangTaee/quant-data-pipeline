@@ -7,15 +7,15 @@ Last Verified: 2026-07-15
 
 Current active task:
 
-- `overview-market-context-us-stock-freshness-refresh-v1-20260715`
+- none
 
 Latest completed task:
 
-- `overview-market-context-us-stock-turnaround-analysis-v1-20260715`
+- `overview-market-context-us-stock-freshness-refresh-v1-20260715`
 
 Previous completed task:
 
-- `overview-market-context-us-stock-valuation-v1-20260714`
+- `overview-market-context-us-stock-turnaround-analysis-v1-20260715`
 
 Latest completed docs cleanup task:
 

@@ -7,16 +7,19 @@ Last Verified: 2026-07-15
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/`다.
+현재 active task는 없다.
+
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/`다.
 
 - 목적: PER와 전환 분석 공통 상단에 `최신 데이터로 다시 계산` action 하나를 두고, 실제 repairable freshness gap만 selected-symbol 범위로 수집한다.
-- 현재 단계: 0/3차 detailed TDD plan complete. 1차 공용 calendar/freshness/CIK-independent collection 경계부터 순차 구현한다.
+- 현재 단계: 1차 공용 calendar/freshness/CIK-independent collection, 2차 unified event/UI, 3차 actual/Browser QA와 문서 정렬을 완료했다.
 - 최신성 계약: 가격은 마지막 완료 NYSE session, 시장가치는 profile snapshot과 가격 기준일 7일 정렬, 재무는 기존 raw coverage gap만 사용한다.
 - 수집 계약: 검색·선택·분석 전환은 DB-only다. explicit click에서 profile/price는 CIK 없이 실행하고 SEC statement만 CIK identity를 요구한다.
 - UI 계약: PER/전환 selector 바깥의 CTA 하나가 두 분석을 함께 다시 읽으며, generic 기준일을 가격·재무·공개일로 구분한다.
+- actual QA: NET는 explicit action 뒤 price `2026-07-14`, profile `2026-07-15`, statement period `2026-03-31` / available `2026-05-08`로 READY가 됐다. AAPL stale 화면은 CTA 1개와 desktop/420px overflow 0을 확인했다.
 - 범위 제외: 자동 수집, 전체 종목 갱신, 새 진단 패널, 새 table/schema, 발표되지 않은 filing calendar 추정.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/`다.
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/`다.
 
 - 목적: 미국 개별주식 내부에 `PER 상대가치 | 전환 분석`을 추가해 P/E가 성립하지 않는 selected company를 quarterly filing evidence로 분석한다.
 - 현재 단계: 1차 분기 계산 정확도, 2차 분석 엔진, 3차 loader/service/collection, 4차 UI, 5차 actual/Browser QA와 문서 정렬을 완료했다.

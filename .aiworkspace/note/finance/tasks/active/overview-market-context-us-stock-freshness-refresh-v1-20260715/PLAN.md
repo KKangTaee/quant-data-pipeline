@@ -475,7 +475,7 @@ git commit -m "개별주 최신 자료 수집 경계를 분리"
 - Produces event id: `refresh_us_stock_data`.
 - Preserves event ids: `search_us_stock`, `select_us_stock`; both remain read-only.
 
-- [ ] **Step 1: Write failing event tests**
+- [x] **Step 1: Write failing event tests**
 
 ```python
 def test_unified_refresh_validates_selected_symbol_and_runs_once():
@@ -488,13 +488,13 @@ def test_search_and_selection_still_never_run_refresh():
     run_action.assert_not_called()
 ```
 
-- [ ] **Step 2: Run event tests and confirm RED**
+- [x] **Step 2: Run event tests and confirm RED**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
 Expected: unified refresh event is rejected before implementation.
 
-- [ ] **Step 3: Replace current UI dispatch with the unified action**
+- [x] **Step 3: Replace current UI dispatch with the unified action**
 
 ```python
 US_STOCK_EVENT_IDS = {"search_us_stock", "select_us_stock", "refresh_us_stock_data"}
@@ -514,7 +514,7 @@ def _run_us_stock_refresh_for_ui(symbol: str) -> dict[str, Any]:
 
 Collection validation must accept only a symbol equal to `US_STOCK_SELECTED_SYMBOL_KEY`. After any non-failed result, clear `load_market_context_valuation_model` once and rerun once.
 
-- [ ] **Step 4: Remove row-count reflection from the user payload**
+- [x] **Step 4: Remove row-count reflection from the user payload**
 
 ```python
 def _us_stock_collection_reflection(result):
@@ -526,13 +526,13 @@ def _us_stock_collection_reflection(result):
 
 The internal JobResult still retains rows for logs/tests; current React receives no visible row-count diagnostic.
 
-- [ ] **Step 5: Run Streamlit bridge tests**
+- [x] **Step 5: Run Streamlit bridge tests**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation`
 
 Expected: all event dedup, symbol mismatch, search/selection read-only, and S&P isolation tests PASS.
 
-- [ ] **Step 6: Commit the unified event bridge**
+- [x] **Step 6: Commit the unified event bridge**
 
 ```bash
 git add app/web/overview/market_context_helpers.py tests/test_market_context_valuation.py
@@ -552,7 +552,7 @@ git commit -m "개별주 최신화 단일 이벤트 연결"
 - Produces: one `FreshnessBar` between `.valuation-header` and `.analysis-selector`.
 - Removes from current React: child `collect_us_stock_valuation`, child `collect_us_stock_turnaround`, and visible `rows_written` result strip.
 
-- [ ] **Step 1: Write failing React source-contract tests**
+- [x] **Step 1: Write failing React source-contract tests**
 
 ```python
 def test_selected_stock_renders_one_header_refresh_action_outside_analysis_selector():
@@ -570,13 +570,13 @@ def test_basis_labels_separate_price_statement_and_filing_availability():
     assert "공개" in source
 ```
 
-- [ ] **Step 2: Run source-contract tests and confirm RED**
+- [x] **Step 2: Run source-contract tests and confirm RED**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation -v`
 
 Expected: FAIL because the unified bar and copy are absent.
 
-- [ ] **Step 3: Add the typed freshness contract and component**
+- [x] **Step 3: Add the typed freshness contract and component**
 
 ```tsx
 type DataFreshness = {
@@ -604,7 +604,7 @@ function FreshnessBar({ freshness, collecting, result, onRefresh }: FreshnessBar
 }
 ```
 
-- [ ] **Step 4: Render one CTA and remove child collection banners**
+- [x] **Step 4: Render one CTA and remove child collection banners**
 
 ```tsx
 const refresh = () => {
@@ -620,7 +620,7 @@ const refresh = () => {
 
 `StockState` and `TurnaroundAnalysis` keep their analysis states but render no collection button. Change header label to `가격 기준일` for PER and `재무 기준일` for turnaround; turnaround small copy includes `공개 {statement_available_at} · 가격 {price_basis_date}`.
 
-- [ ] **Step 5: Add responsive styles**
+- [x] **Step 5: Add responsive styles**
 
 ```css
 .freshness-bar { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:16px; padding:14px 18px; border:1px solid #d9e5ec; border-radius:16px; background:#f7fbfd; }
@@ -632,7 +632,7 @@ const refresh = () => {
 }
 ```
 
-- [ ] **Step 6: Run React source tests and production build**
+- [x] **Step 6: Run React source tests and production build**
 
 Run: `.venv/bin/python -m unittest tests.test_market_context_valuation`
 
@@ -642,7 +642,7 @@ Working directory: `app/web/streamlit_components/market_context_valuation`
 
 Expected: Python tests PASS; TypeScript/Vite production build exits 0.
 
-- [ ] **Step 7: Commit the 2차 UI**
+- [x] **Step 7: Commit the 2차 UI**
 
 ```bash
 git add app/web/streamlit_components/market_context_valuation/src tests/test_market_context_valuation.py
@@ -668,13 +668,13 @@ git commit -m "개별주 상단 최신 데이터 재계산 UI 추가"
 - Verifies: actual DB-only NET preflight and, only through the explicit action, selected-symbol collection.
 - Produces: one desktop or 420px Browser QA screenshot outside git.
 
-- [ ] **Step 1: Run focused Python tests**
+- [x] **Step 1: Run focused Python tests**
 
 Run: `.venv/bin/python -m unittest tests.test_nyse_calendar tests.test_us_stock_freshness tests.test_us_stock_valuation tests.test_us_stock_turnaround tests.test_market_context_valuation`
 
 Expected: all focused tests PASS.
 
-- [ ] **Step 2: Run compile and React build verification**
+- [x] **Step 2: Run compile and React build verification**
 
 Run: `.venv/bin/python -m py_compile app/services/nyse_calendar.py app/services/overview/us_stock_freshness.py app/services/overview/market_context_valuation.py app/jobs/ingestion_jobs.py app/jobs/overview_actions.py app/web/overview/market_context_helpers.py`
 
@@ -684,13 +684,13 @@ Working directory: `app/web/streamlit_components/market_context_valuation`
 
 Expected: both commands exit 0.
 
-- [ ] **Step 3: Run isolated finance test suite and classify unrelated failures**
+- [x] **Step 3: Run isolated finance test suite and classify unrelated failures**
 
 Run: `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`
 
 Expected: no new failure in freshness/PER/turnaround/Market Context; any known unrelated baseline failure is recorded with its exact test id.
 
-- [ ] **Step 4: Verify actual NET DB-only preflight before provider mutation**
+- [x] **Step 4: Verify actual NET DB-only preflight before provider mutation**
 
 ```python
 model = build_market_context_valuation_read_model(selected_symbol="NET")
@@ -702,11 +702,11 @@ assert "asset_profile" in freshness["action"]["scopes"]
 
 Record expected price date, stored price/profile/statement dates, scopes, and CIK state in `RUNS.md`.
 
-- [ ] **Step 5: Exercise the explicit selected-symbol action once if provider access is available**
+- [x] **Step 5: Exercise the explicit selected-symbol action once if provider access is available**
 
 Call only `run_overview_us_stock_data_refresh("NET")`. Confirm result symbol is NET, no universe scope is present, successful market writes survive missing SEC identity, and the after-plan reflects remaining gaps. If provider access is unavailable, do not substitute broad collection; record the exact block and complete UI QA with a deterministic stale payload.
 
-- [ ] **Step 6: Perform Browser QA at desktop and 420px**
+- [x] **Step 6: Perform Browser QA at desktop and 420px**
 
 Verify:
 
@@ -719,11 +719,11 @@ Verify:
 
 Save one representative screenshot under `/Users/taeho/.codex/visualizations/2026/07/15/019f65a4-445f-79b2-8e17-0e3b374b88b3/` and do not stage it.
 
-- [ ] **Step 7: Synchronize durable docs and task closeout**
+- [x] **Step 7: Synchronize durable docs and task closeout**
 
 Set `STATUS.md` to 3/3 complete only after evidence is recorded. Update `PROJECT_MAP.md` with the shared NYSE calendar, unified freshness service, explicit action, and CIK split. Keep root logs to 3-5 concise milestone lines and move command output to `RUNS.md`.
 
-- [ ] **Step 8: Run final repository checks**
+- [x] **Step 8: Run final repository checks**
 
 Run: `git diff --check`
 
@@ -731,7 +731,7 @@ Run: `git status --short`
 
 Expected: no whitespace error; only intended task/code/docs plus the preserved unrelated research folder appear.
 
-- [ ] **Step 9: Commit the 3차 closeout**
+- [x] **Step 9: Commit the 3차 closeout**
 
 ```bash
 git add .aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715 .aiworkspace/note/finance/docs/PROJECT_MAP.md .aiworkspace/note/finance/docs/ROADMAP.md .aiworkspace/note/finance/docs/INDEX.md .aiworkspace/note/finance/tasks/active/README.md .aiworkspace/note/finance/tasks/active/STATUS_MANIFEST.md .aiworkspace/note/finance/WORK_PROGRESS.md .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md app/services app/jobs app/web finance/loaders tests

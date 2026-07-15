@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is [overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713](./tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md). 1차~5차 implementation/QA is complete; local actual DB is 66/119 READY and the 60-month rolling/95% coverage contracts remain active.
+  - Current active task is none. Latest completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md); 1차~3차 implementation/actual/Browser QA is complete.
   - Previous completed Nasdaq task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
@@ -6207,3 +6207,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 가격은 마지막 완료 NYSE session, 시장가치는 profile/가격 7일 정렬, 재무는 실제 raw coverage gap만 최신성 판단에 사용한다.
 - Cloudflare처럼 CIK가 없어도 profile/price는 갱신하고 SEC statement만 별도 잔여 gap으로 남기는 partial-success 경계를 설계했다.
 - 상세는 `tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/DESIGN.md`, `PLAN.md`를 본다. Cached UI 우선 + 자동 freshness 판정 + 명시적 CTA를 승인했고 현재 0/3차 detailed TDD plan complete다.
+
+## 2026-07-15 - 미국 개별주식 최신 데이터 재계산 V1 완료
+
+- 공용 NYSE 완료-session freshness, CIK-independent profile/price와 SEC-only identity gate, unified `refresh_us_stock_data` event를 1차~2차로 구현했다.
+- Header와 PER/전환 selector 사이에 stale일 때만 CTA 하나를 표시하고 가격·재무·공개 기준일을 분리했다. 자동 provider 수집과 run/job/row 진단 panel은 추가하지 않았다.
+- Actual NET는 explicit action 뒤 price `2026-07-14`, profile `2026-07-15`, statement `2026-03-31`/available `2026-05-08`로 READY가 됐고 AAPL stale desktop/420px Browser QA에서 CTA 중복·overflow·console error가 모두 0이었다.
+- Focused 114개와 React build가 통과했다. 전체 discovery의 기존 unrelated assertion 4건과 Streamlit reimport isolation error 154건은 task `RUNS.md`에 구분해 기록했다.

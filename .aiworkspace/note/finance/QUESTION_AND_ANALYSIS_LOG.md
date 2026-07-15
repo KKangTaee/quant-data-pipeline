@@ -17,7 +17,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is [overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713](./tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md). Implementation/QA is complete; actual free-source repair remains partial at 66/119 READY months.
+  - Current active task is none.
+  - Latest completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
   - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -9486,3 +9487,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 화면 진입 자동 수집이나 분석별 중복 버튼 없이, 사용자가 명시적으로 한 번 실행해 repairable 가격·시장가치·재무 gap만 갱신하고 두 분석을 함께 다시 읽어야 함.
 - Analysis result: 가격은 오늘이 아니라 마지막 완료 NYSE session을 기준으로 해야 하며, Cloudflare의 현재 blocker는 오래된 profile/가격 정렬과 CIK_MISSING이 섞여 있다. profile/price는 CIK가 필요 없으므로 SEC scope와 수집 경계를 분리해야 한다.
 - Follow-up: cached UI 우선 + 자동 freshness 판정 + 명시적 CTA를 승인하고 detailed TDD plan을 고정했다. 1차 freshness/collection boundary, 2차 single CTA/rerun, 3차 actual/Browser QA와 docs 순으로 구현한다.
+
+### 2026-07-15 - 개별주 최신화는 자동 수집이 아니라 상태 기반 단일 action으로 완료한다
+
+- User request: 승인한 hybrid 흐름을 단계별로 구현해 달라고 요청함.
+- Interpreted goal: 기업 선택은 빠른 DB read로 유지하고, repairable stale gap이 있을 때만 사용자가 같은 화면에서 한 번 눌러 exact selected symbol을 최신화해야 함.
+- Analysis result: 공용 NYSE 완료-session과 unified freshness/action을 구현했다. profile/price는 CIK 없이 먼저 저장하고 SEC statement만 identity gate를 거치며, 재무 period end가 과거라는 이유만으로 stale 처리하지 않는다.
+- Follow-up: 1차~3차와 actual/Browser QA를 완료했다. NET는 price `2026-07-14` 기준 READY이고, 필수 후속은 없다. SEC identity 자동 복구나 provider basis 정밀화는 별도 승인 범위다.
