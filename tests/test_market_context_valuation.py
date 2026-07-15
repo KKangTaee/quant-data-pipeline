@@ -230,6 +230,20 @@ class MarketContextValuationTests(unittest.TestCase):
         ):
             self.assertIn(token, component)
 
+    def test_react_stock_history_renders_partial_timeline_without_connecting_gaps(self) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text()
+
+        for token in (
+            'history.status === "PARTIAL"',
+            "history.timeline",
+            "contiguousHistorySegments",
+            "계산 가능",
+            "결측 월은 연결·보간하지 않습니다",
+        ):
+            self.assertIn(token, component)
+
     def test_overview_repair_facade_preserves_result_and_changes_job_name(self) -> None:
         from app.jobs.overview_actions import run_overview_nasdaq100_valuation_repair
 

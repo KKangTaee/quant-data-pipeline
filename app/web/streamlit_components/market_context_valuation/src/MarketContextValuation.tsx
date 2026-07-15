@@ -19,6 +19,9 @@ type MultiplePoint = {
 };
 type ScenarioHistoryPoint = {
   month: string;
+  slot_index?: number;
+  status?: "AVAILABLE" | "MISSING";
+  reason_code?: string | null;
   actual_spx?: number;
   actual_price?: number;
   lower_spx?: number;
@@ -27,7 +30,7 @@ type ScenarioHistoryPoint = {
   baseline_price?: number;
   upper_spx?: number;
   upper_price?: number;
-  gap_to_baseline_pct: number;
+  gap_to_baseline_pct?: number;
   eps_basis_date?: string;
   eps_carried_forward?: boolean;
   sep_release_date?: string;
@@ -41,11 +44,14 @@ type ScenarioHistory = {
   window_months?: number;
   window_years?: number;
   observation_count?: number;
+  missing_point_count?: number;
+  missing_reason_counts?: Record<string, number>;
   required_history_months?: number;
   available_history_months?: number;
   limitation?: string;
   sep_releases?: string[];
   series?: ScenarioHistoryPoint[];
+  timeline?: ScenarioHistoryPoint[];
 };
 type Scenario = {
   growth_pct?: number;
@@ -253,6 +259,32 @@ const historyValue = (point: ScenarioHistoryPoint, key: "actual" | "lower" | "ba
   return point.upper_price ?? point.upper_spx ?? 0;
 };
 
+const historyPointAvailable = (point: ScenarioHistoryPoint) => point.status !== "MISSING"
+  && (["actual", "lower", "baseline", "upper"] as const).every((key) => Number.isFinite(historyValue(point, key)) && historyValue(point, key) > 0);
+
+function contiguousHistorySegments(timeline: ScenarioHistoryPoint[]) {
+  const segments: ScenarioHistoryPoint[][] = [];
+  timeline.forEach((point, index) => {
+    if (!historyPointAvailable(point)) return;
+    const slot = point.slot_index ?? index;
+    const current = segments[segments.length - 1];
+    const previous = current?.[current.length - 1];
+    if (!previous || slot !== (previous.slot_index ?? slot - 1) + 1) {
+      segments.push([point]);
+    } else {
+      current.push(point);
+    }
+  });
+  return segments;
+}
+
+const historyGapReasonLabel: Record<string, string> = {
+  NON_POSITIVE_EPS: "당시 TTM EPS가 0 이하라 PER가 성립하지 않습니다.",
+  INSUFFICIENT_ROLLING_PER_WARMUP: "당시 60개월 positive PER 이력이 충분하지 않습니다.",
+  INSUFFICIENT_PIT_EVIDENCE: "당시 공개된 filing·SEP 근거가 충분하지 않습니다.",
+  PRICE_MISSING: "해당 월의 저장 가격이 없습니다.",
+};
+
 const historyGapMessage = (history?: ScenarioHistory) => {
   if (history?.reason_code === "INSUFFICIENT_PIT_EVIDENCE") {
     const complete = history.observation_count ?? 0;
@@ -273,19 +305,30 @@ function ScenarioHistoryChart({ options, fallback, symbol, isStock }: { options?
   const [period, setPeriod] = useState<HistoryPeriod>("1y");
   const history = options?.[period] || fallback;
   const points = history?.series || [];
-  const [selected, setSelected] = useState(Math.max(0, points.length - 1));
-  useEffect(() => setSelected(Math.max(0, points.length - 1)), [points.length, period]);
+  const timeline = history && history.timeline?.length
+    ? history.timeline
+    : points.map((point, index) => ({ ...point, slot_index: point.slot_index ?? index, status: "AVAILABLE" as const }));
+  const availablePoints = timeline.filter(historyPointAvailable);
+  const lastAvailableSlot = availablePoints[availablePoints.length - 1]?.slot_index ?? Math.max(0, timeline.length - 1);
+  const [selected, setSelected] = useState(lastAvailableSlot);
+  useEffect(() => setSelected(lastAvailableSlot), [lastAvailableSlot, period]);
   const years = history?.window_years || periods.find((item) => item.key === period)?.years || 1;
-  if (history?.status !== "READY" || points.length < 2) return <div className="history-block"><div className="history-period-selector">{periods.map((item) => <button key={item.key} type="button" aria-pressed={period === item.key} onClick={() => setPeriod(item.key)}>{item.label}</button>)}</div><div className="empty compact-empty history-empty"><strong>상대가치 계산 이력이 부족합니다</strong><span>{historyGapMessage(history)}</span></div></div>;
-  const values = points.flatMap((point) => [historyValue(point, "actual"), historyValue(point, "lower"), historyValue(point, "upper")]);
+  const partial = Boolean(isStock && history && history.status === "PARTIAL");
+  if (!history || (history.status !== "READY" && !partial) || availablePoints.length < 2) return <div className="history-block"><div className="history-period-selector">{periods.map((item) => <button key={item.key} type="button" aria-pressed={period === item.key} onClick={() => setPeriod(item.key)}>{item.label}</button>)}</div><div className="empty compact-empty history-empty"><strong>상대가치 계산 이력이 부족합니다</strong><span>{historyGapMessage(history)}</span></div></div>;
+  const values = availablePoints.flatMap((point) => [historyValue(point, "actual"), historyValue(point, "lower"), historyValue(point, "upper")]);
   const min = Math.min(...values) * .97, max = Math.max(...values) * 1.03, range = Math.max(1, max - min);
   const left = 58, width = 792, top = 30, height = 250, viewWidth = 920;
-  const x = (index: number) => left + index / Math.max(1, points.length - 1) * width;
+  const x = (slot: number) => left + slot / Math.max(1, timeline.length - 1) * width;
   const y = (value: number) => top + (max - value) / range * height;
-  const line = (key: "actual" | "baseline") => points.map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(historyValue(point, key)).toFixed(1)}`).join(" ");
-  const band = `${points.map((point, index) => `${index ? "L" : "M"}${x(index).toFixed(1)},${y(historyValue(point, "upper")).toFixed(1)}`).join(" ")} ${points.slice().reverse().map((point, reverseIndex) => `L${x(points.length - 1 - reverseIndex).toFixed(1)},${y(historyValue(point, "lower")).toFixed(1)}`).join(" ")} Z`;
-  const active = points[Math.min(selected, points.length - 1)];
-  return <div className="history-block"><div className="subsection-head"><div><span>{years} YEAR · POINT-IN-TIME</span><h4>최근 {years}년 상대가치 흐름</h4><p>실제 {symbol} 가격과 당시 공개된 filing·SEP만 사용한 재구성</p></div><div className="history-period-selector">{periods.map((item) => <button key={item.key} type="button" aria-pressed={period === item.key} onClick={() => setPeriod(item.key)}>{item.label}</button>)}</div></div><div className="chart-legend"><span className="legend-actual">실제 {symbol}</span><span className="legend-baseline">기준 시나리오</span><span className="legend-band">보수–낙관</span></div><div className="chart-shell history-chart-shell"><svg viewBox="0 0 920 330" role="img" aria-label={`최근 ${years}년 ${symbol} 상대가치 흐름`} onMouseMove={(event) => setSelected(pointerIndex(event, points.length, left, width, viewWidth))} onMouseLeave={() => setSelected(points.length - 1)}>{[0, 1, 2, 3, 4].map((index) => <line key={index} className="chart-grid" x1={left} x2={left + width} y1={top + index * height / 4} y2={top + index * height / 4}/>)}<path className="history-band" d={band}/><path className="history-baseline" d={line("baseline")}/><path className="history-actual" d={line("actual")}/><line className="hover-rule" x1={x(selected)} x2={x(selected)} y1={top} y2={top + height}/><circle className="history-hover-dot" cx={x(selected)} cy={y(historyValue(active, "actual"))} r="5"/><circle className="history-baseline-dot" cx={x(selected)} cy={y(historyValue(active, "baseline"))} r="5"/>{points.map((point, index) => index % Math.max(1, Math.ceil((points.length - 1) / 6)) === 0 || index === points.length - 1 ? <text key={point.month} className="axis-label" x={x(index)} y="316" textAnchor={index === 0 ? "start" : index === points.length - 1 ? "end" : "middle"}>{years === 1 ? `${point.month.slice(5, 7)}월` : monthLabel(point.month)}</text> : null)}</svg><div className="history-inspector"><div><span>{monthLabel(active.month)}</span><strong>{n(historyValue(active, "actual"), 0)}</strong><small>실제 가격</small></div><div><span>상대가치 구간</span><strong>{n(historyValue(active, "lower"), 0)}–{n(historyValue(active, "upper"), 0)}</strong><small>기준 {n(historyValue(active, "baseline"), 0)}</small></div><div><span>기준 대비</span><strong className={active.gap_to_baseline_pct > 0 ? "gap-high" : "gap-low"}>{signed(active.gap_to_baseline_pct)}</strong><small>실제 ÷ 기준</small></div><div><span>FOMC 거시 기준</span><strong>{signed(active.current_macro_pct ?? ((active.real_gdp_pct || 0) + (active.pce_inflation_pct || 0)))}</strong><small>SEP {active.sep_release_date || "-"}</small></div><div><span>EPS 기준</span><strong>{isStock ? active.eps_basis_date || "filing-aware" : active.eps_basis_date || "-"}</strong><small>future filing 소급 없음</small></div></div></div><p className="limitation">각 월말 당시 공개된 근거만 사용한 상대가치 재구성입니다.</p></div>;
+  const segments = contiguousHistorySegments(timeline);
+  const line = (segment: ScenarioHistoryPoint[], key: "actual" | "baseline") => segment.map((point, index) => `${index ? "L" : "M"}${x(point.slot_index ?? index).toFixed(1)},${y(historyValue(point, key)).toFixed(1)}`).join(" ");
+  const band = (segment: ScenarioHistoryPoint[]) => `${segment.map((point, index) => `${index ? "L" : "M"}${x(point.slot_index ?? index).toFixed(1)},${y(historyValue(point, "upper")).toFixed(1)}`).join(" ")} ${segment.slice().reverse().map((point) => `L${x(point.slot_index ?? 0).toFixed(1)},${y(historyValue(point, "lower")).toFixed(1)}`).join(" ")} Z`;
+  const active = timeline[Math.min(selected, timeline.length - 1)] as ScenarioHistoryPoint;
+  const activeAvailable = historyPointAvailable(active);
+  const missingTarget = history.window_months ?? timeline.length;
+  const missingCount = history.missing_point_count ?? Math.max(0, missingTarget - availablePoints.length);
+  const missingSummary = Object.entries(history.missing_reason_counts || {}).map(([reason, count]) => `${historyGapReasonLabel[reason] || reason} ${count}개월`).join(" · ");
+  return <div className="history-block"><div className="subsection-head"><div><span>{years} YEAR · POINT-IN-TIME</span><h4>최근 {years}년 상대가치 흐름</h4><p>실제 {symbol} 가격과 당시 공개된 filing·SEP만 사용한 재구성</p></div><div className="history-period-selector">{periods.map((item) => <button key={item.key} type="button" aria-pressed={period === item.key} onClick={() => setPeriod(item.key)}>{item.label}</button>)}</div></div>{partial ? <div className="history-partial-notice" role="status"><strong>부분 이력 · 계산 가능 {availablePoints.length}/{missingTarget}개월</strong><span>누락 {missingCount}개월{missingSummary ? ` · ${missingSummary}` : ""}</span><small>결측 월은 연결·보간하지 않습니다.</small></div> : null}<div className="chart-legend"><span className="legend-actual">실제 {symbol}</span><span className="legend-baseline">기준 시나리오</span><span className="legend-band">보수–낙관</span></div><div className="chart-shell history-chart-shell"><svg viewBox="0 0 920 330" role="img" aria-label={`최근 ${years}년 ${symbol} 상대가치 흐름`} onMouseMove={(event) => setSelected(pointerIndex(event, timeline.length, left, width, viewWidth))} onMouseLeave={() => setSelected(lastAvailableSlot)}>{[0, 1, 2, 3, 4].map((index) => <line key={index} className="chart-grid" x1={left} x2={left + width} y1={top + index * height / 4} y2={top + index * height / 4}/>)}{segments.map((segment) => <path key={`band-${segment[0].month}`} className="history-band" d={band(segment)}/>)}{segments.map((segment) => <path key={`baseline-${segment[0].month}`} className="history-baseline" d={line(segment, "baseline")}/>)}{segments.map((segment) => <path key={`actual-${segment[0].month}`} className="history-actual" d={line(segment, "actual")}/>)}<line className="hover-rule" x1={x(selected)} x2={x(selected)} y1={top} y2={top + height}/>{activeAvailable ? <><circle className="history-hover-dot" cx={x(selected)} cy={y(historyValue(active, "actual"))} r="5"/><circle className="history-baseline-dot" cx={x(selected)} cy={y(historyValue(active, "baseline"))} r="5"/></> : null}{timeline.map((point, index) => index % Math.max(1, Math.ceil((timeline.length - 1) / 6)) === 0 || index === timeline.length - 1 ? <text key={point.month} className="axis-label" x={x(index)} y="316" textAnchor={index === 0 ? "start" : index === timeline.length - 1 ? "end" : "middle"}>{years === 1 ? `${point.month.slice(5, 7)}월` : monthLabel(point.month)}</text> : null)}</svg>{activeAvailable ? <div className="history-inspector"><div><span>{monthLabel(active.month)}</span><strong>{n(historyValue(active, "actual"), 0)}</strong><small>실제 가격</small></div><div><span>상대가치 구간</span><strong>{n(historyValue(active, "lower"), 0)}–{n(historyValue(active, "upper"), 0)}</strong><small>기준 {n(historyValue(active, "baseline"), 0)}</small></div><div><span>기준 대비</span><strong className={(active.gap_to_baseline_pct || 0) > 0 ? "gap-high" : "gap-low"}>{signed(active.gap_to_baseline_pct)}</strong><small>실제 ÷ 기준</small></div><div><span>FOMC 거시 기준</span><strong>{signed(active.current_macro_pct ?? ((active.real_gdp_pct || 0) + (active.pce_inflation_pct || 0)))}</strong><small>SEP {active.sep_release_date || "-"}</small></div><div><span>EPS 기준</span><strong>{isStock ? active.eps_basis_date || "filing-aware" : active.eps_basis_date || "-"}</strong><small>future filing 소급 없음</small></div></div> : <div className="history-gap-inspector"><span>{monthLabel(active.month)}</span><strong>상대가치 계산 공백</strong><small>{historyGapReasonLabel[active.reason_code || ""] || "당시 계산 근거가 충분하지 않습니다."}</small></div>}</div><p className="limitation">각 월말 당시 공개된 근거만 사용한 상대가치 재구성입니다.</p></div>;
 }
 
 function ReadyValuation({ payload, isStock }: { payload: ValuationPayload; isStock: boolean }) {
