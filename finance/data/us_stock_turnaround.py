@@ -177,6 +177,20 @@ def _resolved_as_operand(row: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _resolved_fact_operand(metric: str, row: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep one resolved metric result as structured timeline provenance."""
+    return {
+        "metric": metric,
+        "accession_no": row.get("accession_no"),
+        "concept": row.get("concept"),
+        "unit": row.get("unit"),
+        "period_start": row.get("period_start"),
+        "period_end": row.get("period_end"),
+        "available_at": row.get("available_at"),
+        "value": row.get("value"),
+    }
+
+
 def resolve_discrete_quarters(
     statement_rows: Iterable[Mapping[str, Any]],
     *,
@@ -681,6 +695,8 @@ def build_turnaround_quarterly_series(
             "fiscal_quarter": quarter,
             "status": "MISSING",
             "metric_reasons": metric_reasons,
+            "metric_provenance": {},
+            "derived_metrics": [],
         }
         evidence_rows: list[dict[str, Any]] = []
         for metric in TURNAROUND_CONCEPT_FAMILIES:
@@ -694,6 +710,19 @@ def build_turnaround_quarterly_series(
             row[metric] = None if value is None else float(value)
             if fact is not None:
                 evidence_rows.append(fact)
+                derivation = str(fact.get("derivation") or "reported_quarter")
+                source_kind = (
+                    "REPORTED" if derivation == "reported_quarter" else "FILING_DERIVED"
+                )
+                row["metric_provenance"][metric] = {
+                    "source_kind": source_kind,
+                    "rule": derivation,
+                    "operands": list(
+                        dict(fact.get("provenance") or {}).get("operands") or []
+                    ),
+                }
+                if source_kind == "FILING_DERIVED":
+                    row["derived_metrics"].append(metric)
         if row["gross_profit"] is None and row["revenue"] is not None and row["cost_of_revenue"] is not None:
             revenue_fact = maps["revenue"].get(key) or {}
             cost_fact = maps["cost_of_revenue"].get(key) or {}
@@ -705,8 +734,18 @@ def build_turnaround_quarterly_series(
             if compatible:
                 row["gross_profit"] = float(row["revenue"]) - float(row["cost_of_revenue"])
                 row["gross_profit_derivation"] = "revenue_minus_cost"
+                row["metric_provenance"]["gross_profit"] = {
+                    "source_kind": "FILING_DERIVED",
+                    "rule": "revenue_minus_cost",
+                    "operands": [
+                        _resolved_fact_operand("revenue", revenue_fact),
+                        _resolved_fact_operand("cost_of_revenue", cost_fact),
+                    ],
+                }
+                row["derived_metrics"].append("gross_profit")
             else:
                 metric_reasons["gross_profit"] = "INCOMPATIBLE_REVENUE_COST_PROVENANCE"
+        row["derived_metrics"] = sorted(set(row["derived_metrics"]))
         available_dates = [pd.to_datetime(item.get("available_at"), errors="coerce") for item in evidence_rows]
         available_dates = [pd.Timestamp(value) for value in available_dates if not pd.isna(value)]
         period_ends = [str(item.get("period_end")) for item in evidence_rows if item.get("period_end")]
@@ -717,6 +756,17 @@ def build_turnaround_quarterly_series(
         timeline.append(row)
 
     for index, row in enumerate(timeline):
+        row["ttm_derived_metrics"] = (
+            sorted(
+                {
+                    metric
+                    for position in range(index - 3, index + 1)
+                    for metric in timeline[position].get("derived_metrics", [])
+                }
+            )
+            if index >= 3
+            else []
+        )
         for metric in _TTM_METRICS:
             ttm_key = f"ttm_{metric}"
             row[ttm_key] = _sum_window(timeline, index=index, metric=metric)

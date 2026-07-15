@@ -17,3 +17,11 @@ No production code or tests changed during diagnosis/design.
 - GREEN: the same test passed with revenue Q4 `2.811B`, available-at `2024-02-23`, and both revenue concepts in operands.
 - Guards: direct Q4 precedence, explicit allowlist, future FY cutoff all PASS.
 - Regression: resolver 9/9 and `tests.test_us_stock_turnaround` 40/40 PASS; target `py_compile` and `git diff --check` exit 0.
+
+## 2026-07-16 Task 2 — Provenance
+
+- RED: MRNA series and direct-only series failed with missing `metric_provenance` / `derived_metrics` keys.
+- GREEN: MRNA Q4 revenue `2.811B`, GP `1.882B`, operating income `0.006B`; revenue/GP are `FILING_DERIVED`.
+- TTM: 2024-Q1 carries revenue/GP in `ttm_derived_metrics`; direct-only fixture lists remain empty.
+- Service: nested operands survive recursive JSON-safe conversion and `json.dumps`.
+- Regression: turnaround/Market Context 70/70 PASS; target `py_compile` and `git diff --check` exit 0.

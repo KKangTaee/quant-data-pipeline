@@ -519,6 +519,31 @@ def _core_statement_rows() -> list[dict[str, object]]:
     return [row for metric, metric_values in values.items() for row in _metric_facts(metric, metric_values)]
 
 
+def _mrna_mixed_concept_statement_rows() -> list[dict[str, object]]:
+    old_revenue = "us-gaap:Revenues"
+    current_revenue = "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax"
+    cost = "us-gaap:CostOfGoodsAndServicesSold"
+    operating = "us-gaap:OperatingIncomeLoss"
+    rows = [
+        _fact(value=1_862_000_000.0, period_start="2023-01-01", period_end="2023-03-31", available_at="2023-05-04", fiscal_year=2023, fiscal_quarter=1, concept=old_revenue, symbol="MRNA"),
+        _fact(value=344_000_000.0, period_start="2023-04-01", period_end="2023-06-30", available_at="2023-08-03", fiscal_year=2023, fiscal_quarter=2, concept=old_revenue, symbol="MRNA"),
+        _fact(value=1_831_000_000.0, period_start="2023-07-01", period_end="2023-09-30", available_at="2023-11-03", fiscal_year=2023, fiscal_quarter=3, concept=current_revenue, symbol="MRNA"),
+        _fact(value=6_848_000_000.0, period_start="2023-01-01", period_end="2023-12-31", available_at="2024-02-23", fiscal_year=2023, fiscal_quarter=None, period_type="FY", concept=current_revenue, symbol="MRNA", accession_no="2023-FY"),
+        _fact(value=792_000_000.0, period_start="2023-01-01", period_end="2023-03-31", available_at="2023-05-04", fiscal_year=2023, fiscal_quarter=1, concept=cost, symbol="MRNA"),
+        _fact(value=731_000_000.0, period_start="2023-04-01", period_end="2023-06-30", available_at="2023-08-03", fiscal_year=2023, fiscal_quarter=2, concept=cost, symbol="MRNA"),
+        _fact(value=2_241_000_000.0, period_start="2023-07-01", period_end="2023-09-30", available_at="2023-11-03", fiscal_year=2023, fiscal_quarter=3, concept=cost, symbol="MRNA"),
+        _fact(value=4_693_000_000.0, period_start="2023-01-01", period_end="2023-12-31", available_at="2024-02-23", fiscal_year=2023, fiscal_quarter=None, period_type="FY", concept=cost, symbol="MRNA", accession_no="2023-FY"),
+        _fact(value=-366_000_000.0, period_start="2023-01-01", period_end="2023-03-31", available_at="2023-05-04", fiscal_year=2023, fiscal_quarter=1, concept=operating, symbol="MRNA"),
+        _fact(value=-1_867_000_000.0, period_start="2023-04-01", period_end="2023-06-30", available_at="2023-08-03", fiscal_year=2023, fiscal_quarter=2, concept=operating, symbol="MRNA"),
+        _fact(value=-2_012_000_000.0, period_start="2023-07-01", period_end="2023-09-30", available_at="2023-11-03", fiscal_year=2023, fiscal_quarter=3, concept=operating, symbol="MRNA"),
+        _fact(value=-4_239_000_000.0, period_start="2023-01-01", period_end="2023-12-31", available_at="2024-02-23", fiscal_year=2023, fiscal_quarter=None, period_type="FY", concept=operating, symbol="MRNA", accession_no="2023-FY"),
+        _fact(value=167_000_000.0, period_start="2024-01-01", period_end="2024-03-31", available_at="2024-05-03", fiscal_year=2024, fiscal_quarter=1, concept=current_revenue, symbol="MRNA"),
+        _fact(value=500_000_000.0, period_start="2024-01-01", period_end="2024-03-31", available_at="2024-05-03", fiscal_year=2024, fiscal_quarter=1, concept=cost, symbol="MRNA"),
+        _fact(value=-1_300_000_000.0, period_start="2024-01-01", period_end="2024-03-31", available_at="2024-05-03", fiscal_year=2024, fiscal_quarter=1, concept=operating, symbol="MRNA"),
+    ]
+    return rows
+
+
 class TurnaroundSeriesTests(unittest.TestCase):
     def test_series_builds_canonical_quarters_ttm_margins_and_cash_flow(self) -> None:
         from finance.data.us_stock_turnaround import build_turnaround_quarterly_series
@@ -570,6 +595,46 @@ class TurnaroundSeriesTests(unittest.TestCase):
             incompatible_result["timeline"][-1]["metric_reasons"]["gross_profit"],
             "INCOMPATIBLE_REVENUE_COST_PROVENANCE",
         )
+
+    def test_series_exposes_filing_derived_quarter_and_ttm_provenance(self) -> None:
+        from finance.data.us_stock_turnaround import build_turnaround_quarterly_series
+
+        result = build_turnaround_quarterly_series(
+            _mrna_mixed_concept_statement_rows(),
+            [],
+            as_of_date="2024-06-01",
+        )
+
+        q4 = next(row for row in result["timeline"] if row["slot_key"] == "2023-Q4")
+        self.assertEqual(q4["revenue"], 2_811_000_000.0)
+        self.assertEqual(q4["gross_profit"], 1_882_000_000.0)
+        self.assertEqual(q4["operating_income"], 6_000_000.0)
+        self.assertEqual(
+            q4["metric_provenance"]["revenue"]["source_kind"],
+            "FILING_DERIVED",
+        )
+        self.assertEqual(
+            q4["metric_provenance"]["gross_profit"]["rule"],
+            "revenue_minus_cost",
+        )
+        self.assertIn("revenue", q4["derived_metrics"])
+        self.assertIn("gross_profit", q4["derived_metrics"])
+
+        q1_2024 = next(row for row in result["timeline"] if row["slot_key"] == "2024-Q1")
+        self.assertIn("revenue", q1_2024["ttm_derived_metrics"])
+        self.assertIn("gross_profit", q1_2024["ttm_derived_metrics"])
+
+    def test_direct_only_series_has_no_derived_provenance_flags(self) -> None:
+        from finance.data.us_stock_turnaround import build_turnaround_quarterly_series
+
+        result = build_turnaround_quarterly_series(
+            _core_statement_rows(),
+            [],
+            as_of_date="2025-03-31",
+        )
+
+        self.assertTrue(all(row["derived_metrics"] == [] for row in result["timeline"]))
+        self.assertEqual(result["timeline"][-1]["ttm_derived_metrics"], [])
 
     def test_missing_quarter_keeps_fiscal_slot_and_breaks_ttm(self) -> None:
         from finance.data.us_stock_turnaround import build_turnaround_quarterly_series
@@ -1236,6 +1301,49 @@ class TurnaroundServiceTests(unittest.TestCase):
         self.assertEqual(result["collection_action"]["id"], "collect_us_stock_turnaround")
         self.assertEqual(result["collection_action"]["scopes"], ["asset_profile"])
         self.assertIn("sections", result)
+
+    def test_selected_service_preserves_json_safe_derived_provenance(self) -> None:
+        from app.services.overview.us_stock_turnaround import build_us_stock_turnaround_read_model
+
+        inputs = {
+            "identity": {
+                "symbol": "MRNA",
+                "name": "Moderna Inc.",
+                "cik": "0001682852",
+                "instrument_type": "common_stock",
+                "adr_unit_status": "not_adr",
+            },
+            "profile": {
+                "market_cap": 10_000_000_000,
+                "last_collected_at": "2024-05-31",
+                "currency": "USD",
+                "sector": "Healthcare",
+                "industry": "Biotechnology",
+            },
+            "latest_price": {"date": "2024-05-31", "close": 120.0, "currency": "USD"},
+            "price_rows": [],
+            "statement_rows": _mrna_mixed_concept_statement_rows(),
+            "window": {"as_of_date": "2024-06-01"},
+            "coverage": {"statement_core_missing": False},
+        }
+
+        with patch(
+            "app.services.overview.us_stock_turnaround.build_us_stock_turnaround_collection_plan",
+            return_value={"status": "COMPLETE", "symbol": "MRNA", "scopes": []},
+        ):
+            result = build_us_stock_turnaround_read_model(
+                selected_symbol="MRNA",
+                loaded_inputs=inputs,
+                per_model={"status": "NOT_APPLICABLE", "multiple_regime": {"status": "BLOCKED"}},
+            )
+
+        json.dumps(result)
+        q4 = next(row for row in result["series"]["timeline"] if row["slot_key"] == "2023-Q4")
+        self.assertEqual(
+            q4["metric_provenance"]["revenue"]["source_kind"],
+            "FILING_DERIVED",
+        )
+        self.assertEqual(len(q4["metric_provenance"]["revenue"]["operands"]), 4)
 
 
 class TurnaroundCollectionTests(unittest.TestCase):

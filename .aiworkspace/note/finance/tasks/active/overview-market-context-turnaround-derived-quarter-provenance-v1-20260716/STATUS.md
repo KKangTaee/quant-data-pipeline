@@ -5,8 +5,8 @@ Last Updated: 2026-07-16
 ## Current Stage
 
 - 전체 roadmap: 1차 데이터 RED/GREEN -> 2차 provenance -> 3차 UI -> 4차 QA/docs
-- 현재: 1차 데이터 RED/GREEN 완료, 2차 provenance 준비
-- 구현 완료 차수: 1/4
+- 현재: 1차~2차 데이터/provenance 완료, 3차 UI RED 준비
+- 구현 완료 차수: 2/4
 
 ## Completed
 
@@ -22,7 +22,12 @@ Last Updated: 2026-07-16
 - exact-concept selection 뒤에만 실행되는 explicit family fallback을 추가했다.
 - direct Q4 우선, allowlist 밖 concept 제외, future FY cutoff guard를 회귀 테스트로 고정했다.
 - resolver 9/9, turnaround 40/40, target py_compile과 diff check를 통과했다.
+- quarterly/TTM provenance test가 missing keys로 실패하는 RED를 확인했다.
+- timeline에 metric별 `REPORTED/FILING_DERIVED`, rule, operands와 derived metric lists를 추가했다.
+- MRNA-like Q4는 revenue `2.811B`, GP `1.882B`, operating income `0.006B`와 구조화 근거를 노출한다.
+- 기존 service `_json_safe`가 nested provenance를 별도 수정 없이 보존함을 검증했다.
+- turnaround/Market Context 70/70, service focused test, target py_compile과 diff check를 통과했다.
 
 ## Next Action
 
-- Task 2의 quarterly/TTM provenance 실패 테스트를 작성하고 RED를 확인한다.
+- Task 3의 React source contract 실패 테스트를 작성하고 RED를 확인한다.
