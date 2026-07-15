@@ -9,3 +9,11 @@
 - UI inspection: `contiguousTurnaroundSegments` intentionally breaks non-finite slots; screen copy states no interpolation.
 
 No production code or tests changed during diagnosis/design.
+
+## 2026-07-16 Task 1 — Mixed-concept Q4
+
+- Baseline: turnaround/PER/Market Context 104 tests PASS.
+- RED: `test_resolver_derives_q4_across_allowlisted_revenue_concepts` failed with `StopIteration`; Q4 was absent.
+- GREEN: the same test passed with revenue Q4 `2.811B`, available-at `2024-02-23`, and both revenue concepts in operands.
+- Guards: direct Q4 precedence, explicit allowlist, future FY cutoff all PASS.
+- Regression: resolver 9/9 and `tests.test_us_stock_turnaround` 40/40 PASS; target `py_compile` and `git diff --check` exit 0.

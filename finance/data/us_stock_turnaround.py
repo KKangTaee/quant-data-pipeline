@@ -283,6 +283,59 @@ def resolve_discrete_quarters(
     ):
         key = (row.get("symbol"), row.get("fiscal_year"), row.get("fiscal_quarter"))
         selected.setdefault(key, row)
+
+    # SEC taxonomy names can change within one fiscal year. Only after exact-concept
+    # resolution fails, combine operands from the caller's explicit metric family.
+    fiscal_year_families: dict[tuple[Any, int, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        fiscal_year = row.get("fiscal_year_number")
+        if fiscal_year is None or _duration_kind(row) != "FY":
+            continue
+        family_key = (
+            row.get("symbol"),
+            int(fiscal_year),
+            str(row.get("unit") or "").casefold(),
+        )
+        fiscal_year_families.setdefault(family_key, []).append(row)
+
+    for (symbol, fiscal_year, unit), fiscal_year_rows in fiscal_year_families.items():
+        q4_key = (symbol, fiscal_year, 4)
+        if q4_key in selected:
+            continue
+        quarter_rows = [selected.get((symbol, fiscal_year, quarter)) for quarter in (1, 2, 3)]
+        if any(row is None for row in quarter_rows):
+            continue
+        complete_quarters = [row for row in quarter_rows if row is not None]
+        if any(str(row.get("unit") or "").casefold() != unit for row in complete_quarters):
+            continue
+        minimum_priority = min(
+            int(row.get("concept_priority") or 0) for row in fiscal_year_rows
+        )
+        fiscal_year_row = _latest(
+            [
+                row
+                for row in fiscal_year_rows
+                if int(row.get("concept_priority") or 0) == minimum_priority
+            ]
+        )
+        if fiscal_year_row is None:
+            continue
+        logical_operands = [fiscal_year_row] + [
+            _resolved_as_operand(row) for row in complete_quarters
+        ]
+        selected[q4_key] = _resolved_row(
+            fiscal_year_row,
+            metric=metric,
+            fiscal_quarter=4,
+            value=float(fiscal_year_row["value_number"])
+            - sum(float(row["value"]) for row in complete_quarters),
+            available_at=max(
+                [fiscal_year_row["available_at_ts"]]
+                + [pd.Timestamp(row["available_at"]) for row in complete_quarters]
+            ),
+            derivation="fy_minus_q1_q2_q3",
+            operands=logical_operands,
+        )
     return sorted(
         selected.values(),
         key=lambda row: (row["period_end"], row["available_at"], row["fiscal_quarter"]),

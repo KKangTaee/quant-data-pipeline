@@ -5,8 +5,8 @@ Last Updated: 2026-07-16
 ## Current Stage
 
 - 전체 roadmap: 1차 데이터 RED/GREEN -> 2차 provenance -> 3차 UI -> 4차 QA/docs
-- 현재: implementation plan 확정, 1차 RED 준비
-- 구현 완료 차수: 0/4
+- 현재: 1차 데이터 RED/GREEN 완료, 2차 provenance 준비
+- 구현 완료 차수: 1/4
 
 ## Completed
 
@@ -18,7 +18,11 @@ Last Updated: 2026-07-16
 - authoritative design과 안전 조건을 `DESIGN.md`에 기록했다.
 - 사용자가 written spec을 확인하고 구현 진행을 승인했다.
 - TDD/commit/QA 단위를 4개 task로 나눈 implementation plan을 `PLAN.md`에 확정했다.
+- MRNA-like fixture가 기존 코드에서 Q4 `StopIteration`으로 실패하는 RED를 확인했다.
+- exact-concept selection 뒤에만 실행되는 explicit family fallback을 추가했다.
+- direct Q4 우선, allowlist 밖 concept 제외, future FY cutoff guard를 회귀 테스트로 고정했다.
+- resolver 9/9, turnaround 40/40, target py_compile과 diff check를 통과했다.
 
 ## Next Action
 
-- Task 1의 MRNA-like mixed-concept Q4 실패 테스트를 작성하고 RED를 확인한다.
+- Task 2의 quarterly/TTM provenance 실패 테스트를 작성하고 RED를 확인한다.

@@ -85,7 +85,7 @@ Moderna 2023년 매출은 Q1/Q2의 `Revenues`와 Q3/FY의 `RevenueFromContractWi
 - Produces: guarded family가 완전할 때 기존 resolved-row schema의 Q4 하나.
 - Preserves: direct-quarter priority, primary-period filter, PIT cutoff, honest missingness.
 
-- [ ] **Step 1: Write the MRNA-like failing test**
+- [x] **Step 1: Write the MRNA-like failing test**
 
 `TurnaroundQuarterResolverTests`에 다음 핵심 fixture를 추가한다.
 
@@ -108,7 +108,7 @@ self.assertEqual(q4["derivation"], "fy_minus_q1_q2_q3")
 self.assertEqual({item["concept"] for item in q4["provenance"]["operands"]}, {old, current})
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 .venv/bin/python -m unittest tests.test_us_stock_turnaround.TurnaroundQuarterResolverTests.test_resolver_derives_q4_across_allowlisted_revenue_concepts -v
@@ -116,7 +116,7 @@ self.assertEqual({item["concept"] for item in q4["provenance"]["operands"]}, {ol
 
 Expected: `next(...)` ERROR because no exact concept group owns FY plus Q1/Q2/Q3.
 
-- [ ] **Step 3: Implement minimal guarded fallback**
+- [x] **Step 3: Implement minimal guarded fallback**
 
 기존 exact selection 뒤 normalized FY rows를 `(symbol, fiscal_year, normalized unit)`로 묶는다. Q4가 없고 selected Q1/Q2/Q3가 모두 같은 unit이면 priority가 가장 높은 FY row를 골라 다음 계산을 수행한다.
 
@@ -134,11 +134,11 @@ selected[q4_key] = _resolved_row(
 )
 ```
 
-- [ ] **Step 4: Add guard regressions**
+- [x] **Step 4: Add guard regressions**
 
 allowlist 밖 concept가 operand가 되지 않음, direct Q4가 FY subtraction보다 우선함, FY filing이 `as_of_date` 이후면 Q4가 생기지 않음을 각각 assert한다.
 
-- [ ] **Step 5: Verify GREEN and commit**
+- [x] **Step 5: Verify GREEN and commit**
 
 ```bash
 .venv/bin/python -m unittest tests.test_us_stock_turnaround.TurnaroundQuarterResolverTests -v

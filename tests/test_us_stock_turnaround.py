@@ -148,6 +148,141 @@ class TurnaroundQuarterResolverTests(unittest.TestCase):
         self.assertEqual(q2["value"], 155.0)
         self.assertEqual(q2["derivation"], "reported_quarter")
 
+    def test_resolver_derives_q4_across_allowlisted_revenue_concepts(self) -> None:
+        from finance.data.us_stock_turnaround import resolve_discrete_quarters
+
+        old = "us-gaap:Revenues"
+        current = "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax"
+        rows = [
+            _fact(
+                value=1_862_000_000.0,
+                period_start="2023-01-01",
+                period_end="2023-03-31",
+                available_at="2023-05-04",
+                fiscal_year=2023,
+                fiscal_quarter=1,
+                concept=old,
+                symbol="MRNA",
+            ),
+            _fact(
+                value=344_000_000.0,
+                period_start="2023-04-01",
+                period_end="2023-06-30",
+                available_at="2023-08-03",
+                fiscal_year=2023,
+                fiscal_quarter=2,
+                concept=old,
+                symbol="MRNA",
+            ),
+            _fact(
+                value=1_831_000_000.0,
+                period_start="2023-07-01",
+                period_end="2023-09-30",
+                available_at="2023-11-03",
+                fiscal_year=2023,
+                fiscal_quarter=3,
+                concept=current,
+                symbol="MRNA",
+            ),
+            _fact(
+                value=6_848_000_000.0,
+                period_start="2023-01-01",
+                period_end="2023-12-31",
+                available_at="2024-02-23",
+                fiscal_year=2023,
+                fiscal_quarter=None,
+                period_type="FY",
+                concept=current,
+                symbol="MRNA",
+                accession_no="2023-FY",
+            ),
+        ]
+
+        resolved = resolve_discrete_quarters(
+            rows,
+            metric="revenue",
+            concepts=(current, old),
+            units=("USD",),
+            as_of_date="2024-03-01",
+        )
+
+        q4 = next(row for row in resolved if row["fiscal_quarter"] == 4)
+        self.assertEqual(q4["value"], 2_811_000_000.0)
+        self.assertEqual(q4["available_at"], "2024-02-23")
+        self.assertEqual(q4["derivation"], "fy_minus_q1_q2_q3")
+        self.assertEqual(
+            {item["concept"] for item in q4["provenance"]["operands"]},
+            {old, current},
+        )
+
+    def test_family_fallback_never_uses_a_concept_outside_the_allowlist(self) -> None:
+        from finance.data.us_stock_turnaround import resolve_discrete_quarters
+
+        current = "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax"
+        rows = [
+            _fact(value=100.0, period_start="2024-01-01", period_end="2024-03-31", available_at="2024-05-01", fiscal_year=2024, fiscal_quarter=1, concept="custom:ProductRevenue"),
+            _fact(value=110.0, period_start="2024-04-01", period_end="2024-06-30", available_at="2024-08-01", fiscal_year=2024, fiscal_quarter=2, concept=current),
+            _fact(value=120.0, period_start="2024-07-01", period_end="2024-09-30", available_at="2024-11-01", fiscal_year=2024, fiscal_quarter=3, concept=current),
+            _fact(value=500.0, period_start="2024-01-01", period_end="2024-12-31", available_at="2025-02-20", fiscal_year=2024, fiscal_quarter=None, period_type="FY", concept=current),
+        ]
+
+        resolved = resolve_discrete_quarters(
+            rows,
+            metric="revenue",
+            concepts=(current,),
+            units=("USD",),
+            as_of_date="2025-03-01",
+        )
+
+        self.assertNotIn(4, [row["fiscal_quarter"] for row in resolved])
+
+    def test_direct_q4_wins_over_family_fallback(self) -> None:
+        from finance.data.us_stock_turnaround import resolve_discrete_quarters
+
+        old = "us-gaap:Revenues"
+        current = "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax"
+        rows = [
+            _fact(value=100.0, period_start="2024-01-01", period_end="2024-03-31", available_at="2024-05-01", fiscal_year=2024, fiscal_quarter=1, concept=old),
+            _fact(value=110.0, period_start="2024-04-01", period_end="2024-06-30", available_at="2024-08-01", fiscal_year=2024, fiscal_quarter=2, concept=old),
+            _fact(value=120.0, period_start="2024-07-01", period_end="2024-09-30", available_at="2024-11-01", fiscal_year=2024, fiscal_quarter=3, concept=current),
+            _fact(value=170.0, period_start="2024-10-01", period_end="2024-12-31", available_at="2025-02-20", fiscal_year=2024, fiscal_quarter=4, concept=current, accession_no="2024-Q4"),
+            _fact(value=520.0, period_start="2024-01-01", period_end="2024-12-31", available_at="2025-02-20", fiscal_year=2024, fiscal_quarter=None, period_type="FY", concept=current, accession_no="2024-FY"),
+        ]
+
+        resolved = resolve_discrete_quarters(
+            rows,
+            metric="revenue",
+            concepts=(current, old),
+            units=("USD",),
+            as_of_date="2025-03-01",
+        )
+        q4 = next(row for row in resolved if row["fiscal_quarter"] == 4)
+
+        self.assertEqual(q4["value"], 170.0)
+        self.assertEqual(q4["derivation"], "reported_quarter")
+
+    def test_future_fy_filing_cannot_create_family_fallback_q4(self) -> None:
+        from finance.data.us_stock_turnaround import resolve_discrete_quarters
+
+        old = "us-gaap:Revenues"
+        current = "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax"
+        rows = [
+            _fact(value=100.0, period_start="2024-01-01", period_end="2024-03-31", available_at="2024-05-01", fiscal_year=2024, fiscal_quarter=1, concept=old),
+            _fact(value=110.0, period_start="2024-04-01", period_end="2024-06-30", available_at="2024-08-01", fiscal_year=2024, fiscal_quarter=2, concept=old),
+            _fact(value=120.0, period_start="2024-07-01", period_end="2024-09-30", available_at="2024-11-01", fiscal_year=2024, fiscal_quarter=3, concept=current),
+            _fact(value=500.0, period_start="2024-01-01", period_end="2024-12-31", available_at="2025-02-20", fiscal_year=2024, fiscal_quarter=None, period_type="FY", concept=current),
+        ]
+
+        resolved = resolve_discrete_quarters(
+            rows,
+            metric="revenue",
+            concepts=(current, old),
+            units=("USD",),
+            as_of_date="2024-12-31",
+        )
+
+        self.assertNotIn(4, [row["fiscal_quarter"] for row in resolved])
+
     def test_later_comparative_fact_does_not_overwrite_primary_quarter(self) -> None:
         from finance.data.us_stock_turnaround import resolve_discrete_quarters
 
