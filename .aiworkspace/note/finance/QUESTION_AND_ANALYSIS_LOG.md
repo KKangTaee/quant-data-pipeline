@@ -9472,3 +9472,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: negative P/E를 노출하지 않으면서 같은 selected company의 매출·margin·OCF·FCF·EPS 전환과 cash runway/debt/dilution risk를 분기 evidence로 읽어야 함.
 - Analysis result: 내부 `PER 상대가치 | 전환 분석`이 적합하다. 다만 operating milestone은 distress risk와 분리해야 하고, cumulative H1/9M/FY resolver와 stale market-cap EV gate가 선행돼야 왜곡이 없다.
 - Follow-up: selected-company V1 설계를 새 active task에 기록했다. Written spec 승인 후 1차 resolver 정확도부터 5차 actual/Browser QA까지 TDD로 진행하며, universe-wide discovery/peer ranking은 후속으로 둔다.
+
+### 2026-07-15 - 전환 분석은 계산 가능성과 수집 가능성을 분리한다
+
+- User request: 승인된 전환기업 설계를 detailed TDD plan에 따라 1차~5차 구현·QA·커밋까지 완료해 달라고 요청함.
+- Interpreted goal: negative P/E를 만들지 않으면서 저장 quarterly filing으로 전환 근거를 표시하고, 기존 S&P/PER와 explicit selected-symbol collection 경계를 보존해야 함.
+- Analysis result: direct/cumulative discrete-quarter resolver와 independent milestone/risk/valuation을 연결했다. SEC CIK가 없어 raw 수집이 막혀도 stored facts로 계산한 READY 분석은 유효하므로 collection만 `BLOCKED/CIK_MISSING`이어야 한다.
+- Follow-up: 1차~5차와 actual/Browser QA를 완료했다. V1 필수 후속은 없고 all-stock discovery, peer valuation, historical EV는 별도 승인 범위다.

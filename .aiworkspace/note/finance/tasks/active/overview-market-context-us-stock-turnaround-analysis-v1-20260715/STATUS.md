@@ -5,8 +5,8 @@ Last Updated: 2026-07-15
 ## Current Stage
 
 - 전체 roadmap: 1차~5차
-- 현재: 4차 내부 selector와 UI 완료, 5차 Actual QA · Docs · Final Verification 착수 전
-- 구현 완료 차수: 4/5
+- 현재: 5차 Actual QA · Docs · Final Verification 완료
+- 구현 완료 차수: 5/5
 
 ## Completed
 
@@ -31,14 +31,20 @@ Last Updated: 2026-07-15
 - 4차: milestone rail, shared 8/12/20분기 Graph 1/2, 결측 단절, 0축, inspector, runway/debt/dilution, valuation reason card를 구현했다.
 - 4차: 420px risk/selector/card one-column responsive CSS와 새 `component_static` production bundle을 생성했다.
 - 4차 S&P/PER/turnaround 회귀 95 tests와 Vite production build를 통과했다.
+- 5차: actual DB에서 RIVN `17/18`, LCID `23/24`, PLTR `21/22` quarter slot을 확인했고 각각 `OPERATING_IMPROVEMENT`, `LOSS_BASELINE`, `CASH_FLOW_TURN`으로 전환 분석 READY를 표시했다.
+- 5차: AMD/AAPL은 기존 PER payload를 바꾸지 않고 `recommended_analysis=per`, Graph 1 READY, current P/E `169.2164x` / `39.3241x`를 유지했다.
+- 5차: SEC CIK가 비어 있어 수집을 실행할 수 없는 경우 collection plan을 `BLOCKED/CIK_MISSING`으로 두되 이미 READY인 분석을 ERROR로 덮지 않도록 TDD 회귀를 추가했다.
+- 5차: focused 96 tests를 통과했고, 24개 test module 격리 전체 회귀는 1,073/1,077 통과했다. 실패 4건은 이전부터 존재한 Practical Validation 2건, Market Movers 1건, Sentiment 1건이다.
+- 5차: actual Streamlit desktop에서 RIVN/LCID/PLTR 전환 분석, AMD/AAPL PER handoff와 selector 전환을 확인했다. 420px iframe/body/outer overflow는 모두 0px, browser console error는 0건이다.
+- 5차: external collection, DB/schema 변경, registry/saved write는 실행하지 않았다.
 
 ## Next Action
 
-- 5차 actual DB read-only service QA로 RIVN/LCID/PLTR와 AMD/AAPL 계약을 확인한다.
-- 이어서 전체 unittest, desktop/420px Browser QA, finance-doc-sync와 fresh verification을 수행한다.
+- V1의 필수 후속은 없다. 다음 확장은 별도 승인 범위로 all-stock turnaround discovery/ranking, peer-relative valuation, historical enterprise-value snapshot 중 하나를 선택한다.
+- 실제 원자료 보강이 필요하면 먼저 symbol lifecycle에 SEC CIK를 연결한 뒤 선택 종목의 명시 수집 action으로만 실행한다.
 
-## Not Started
+## Remaining Boundaries
 
-- external collection
-- DB/schema changes
-- Browser QA
+- 전환 단계는 독립 evidence 요약이며 매수/매도 신호가 아니다.
+- read-time latency는 actual DB 기준 약 `1.7s~7.2s`였고, universe-wide discovery에는 별도 materialization/performance 설계가 필요하다.
+- 저장소 전체 회귀의 기존 unrelated 4 failures는 이 task 범위에서 수정하지 않았다.

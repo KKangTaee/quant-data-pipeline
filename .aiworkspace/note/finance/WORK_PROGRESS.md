@@ -6193,3 +6193,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - cumulative SEC duration fact의 filing-aware discrete-quarter resolver, operating milestone/risk overlay 분리, EV freshness gate를 authoritative design에 기록했다.
 - actual DB에서 RIVN/PLTR 16~19분기, LCID core flow 15~18분기 evidence를 read-only 확인했고 GrossProfit tag gap을 same-quarter revenue-cost fallback 대상으로 분리했다.
 - 상세는 `tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/DESIGN.md`를 본다. 현재 0/5차이며 written spec review 후 TDD plan으로 이어진다.
+
+## 2026-07-15 - 미국 개별주식 전환 분석 V1 구현 완료
+
+- `PER 상대가치 | 전환 분석` 내부 selector와 filing-aware discrete-quarter 영업·현금 chart, independent milestone/risk, fresh-input valuation readiness를 1차~5차로 구현했다.
+- Actual DB에서 RIVN/LCID/PLTR는 전환 분석, AMD/AAPL은 기존 PER를 추천했고 기존 S&P/PER payload를 보존했다.
+- focused 96개 통과, isolated full 1,073/1,077 통과(기존 unrelated 4건), desktop/420px Browser QA와 overflow 0 / console error 0을 확인했다.
+- 상세 구현·actual matrix·남은 CIK/latency 경계는 `tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/STATUS.md`, `RUNS.md`, `RISKS.md`를 본다.

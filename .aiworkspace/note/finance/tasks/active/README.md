@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-15
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -33,6 +33,8 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-us-stock-turnaround-analysis-v1-20260715` | Completed record | 미국 개별주식 내부에 `PER 상대가치 | 전환 분석`을 추가하고 quarterly filing 기반 영업·현금 전환, survival risk, stage-appropriate valuation readiness를 selected-company 범위로 구현했다. |
+| `overview-market-context-us-stock-valuation-v1-20260714` | Completed record | searchable 미국 개별주 DB-only PER 상대가치, split-neutral filing-aware TTM, 부분 1/3/5년 history와 explicit selected-symbol 수집 경계를 구현했다. |
 | `final-review-evidence-closure-contract-v1-20260712` | Completed record | Level2 actionable gap을 Final Review 승격 전에 닫고, Final Review의 accepted limit / Monitoring transfer / defer / block terminal state와 measured-only score impact를 구현했다. |
 | `overview-market-context-sp500-valuation-v1-20260712` | Completed record | Market Context를 Shiller 상대 멀티플과 FOMC SEP 기반 1/3/5년 SPX valuation scenario의 두 React 그래프로 교체했다. |
 | `practical-validation-recheck-handoff-loop-fix-v1-20260712` | Completed record | 자료 보강 뒤 replay를 강제 초기화하고, Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동을 막는다. Final Review는 source별 최신 validation만 사용한다. |

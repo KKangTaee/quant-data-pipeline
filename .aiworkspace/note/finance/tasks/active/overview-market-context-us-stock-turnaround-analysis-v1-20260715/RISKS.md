@@ -2,7 +2,7 @@
 
 Last Updated: 2026-07-15
 
-## Open Risks
+## Guarded Risks
 
 1. **Cumulative duration facts can create false quarters.**
    - H1/9M/FY subtraction, primary-period ownership, comparative non-overwrite를 real-like tests로 먼저 고정한다.
@@ -25,9 +25,21 @@ Last Updated: 2026-07-15
 10. **Turnaround screen can be mistaken for a screener or signal.**
     - selected-company V1, no ranking, no target price, no buy/sell language를 유지한다.
 11. **Adding a second analysis can slow every selected-stock render.**
-    - one-symbol bounded queries and cache를 측정하고 actual latency evidence가 필요할 때만 lazy loading을 검토한다.
+    - one-symbol bounded queries와 cache를 적용했다. actual latency는 `1.7s~7.2s`였으므로 selected-company V1에는 유지하되 broad discovery로 확장할 때는 별도 materialization/lazy-loading 설계가 필요하다.
 12. **Current S&P/PER UI can regress during React split.**
-    - existing payload and focused/browser regressions을 각 차수 completion gate로 둔다.
+    - existing payload value equality, focused regression, AMD/AAPL actual, desktop/browser regressions을 completion gate로 통과했다.
+
+## Open Risks
+
+1. **Actual lifecycle CIK gap blocks raw repair.**
+   - RIVN/LCID/PLTR/AMD/AAPL의 stored analysis는 계산됐지만 QA 시점 lifecycle identity에는 SEC CIK가 없었다.
+   - collection plan은 `BLOCKED/CIK_MISSING`으로 두어 분석을 보존한다. 실제 보강 전에는 lifecycle CIK 연결을 먼저 검증해야 한다.
+2. **Read-time calculation is not a screener architecture.**
+   - AAPL cold read가 `7.231s`까지 걸렸다. all-stock discovery/ranking은 현재 loader를 반복 호출하지 말고 PIT universe와 materialization 비용을 별도로 설계해야 한다.
+3. **Repository-wide unrelated contract drift remains.**
+   - isolated full regression `1,073/1,077`이며 Practical Validation 2건, Market Movers 1건, Sentiment 1건이 기존 상태로 실패한다. 이번 task 소유 파일과 무관해 수정하지 않았다.
+4. **External collection path was not exercised against providers.**
+   - read-only actual QA와 identity preflight까지 검증했다. 명시 action은 CIK가 준비된 selected symbol에서만 별도 실행할 수 있다.
 
 ## Deferred Risks
 

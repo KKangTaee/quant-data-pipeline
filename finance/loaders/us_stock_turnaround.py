@@ -291,9 +291,9 @@ def build_us_stock_turnaround_collection_plan(
     if not str(identity.get("cik") or "").strip():
         return {
             **base,
-            "status": "ERROR",
+            "status": "BLOCKED",
             "reason_code": "CIK_MISSING",
-            "reason": "선택 종목의 SEC CIK를 확인할 수 없어 수집할 수 없습니다.",
+            "reason": "현재 분석은 유지하지만 SEC CIK를 확인하기 전에는 원자료를 수집할 수 없습니다.",
         }
     return {
         **base,

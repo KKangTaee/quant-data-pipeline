@@ -34,3 +34,19 @@ Last Updated: 2026-07-15
 - runway는 constant-burn mechanical estimate다.
 - 1.0pp/5%/10%/4분기/8분기 threshold는 V1 materiality/risk display heuristic이며 보편적 투자 법칙이 아니다.
 - partial metric coverage는 pass로 처리하지 않고 UNKNOWN/PARTIAL로 남긴다.
+
+## Implementation Decisions
+
+- duration resolver는 direct Q를 우선하고 `H1-Q1`, `9M-H1`, `FY-Q1-Q2-Q3`만 허용한다. concept/unit/fiscal identity가 다르거나 operand가 빠지면 quarter를 만들지 않는다.
+- later comparative filing은 original primary quarter를 덮지 못하고, derived quarter의 `available_at`은 사용한 operand 중 가장 늦은 공개일이다.
+- selected-symbol loader는 duration/instant query를 분리하고 최대 7 fiscal years만 읽는다. 분석 selector 전환은 React local state이며 provider/action event를 내지 않는다.
+- service recommendation은 positive current TTM EPS와 기존 Graph 1 READY를 모두 만족할 때만 `per`다. 그 외에는 전환 분석을 기본으로 열되 사용자는 같은 종목에서 PER 상태를 확인할 수 있다.
+- SEC CIK가 없으면 raw repair는 `BLOCKED/CIK_MISSING`이다. 이 collection limitation은 저장 facts로 만든 READY 분석의 status를 ERROR로 낮추지 않는다.
+- numeric valuation은 fresh/aligned USD profile·price·statement input이 있을 때만 허용한다. stale market cap은 operating/cash/risk section을 숨기지 않고 valuation section만 BLOCKED로 둔다.
+
+## Actual QA Interpretation
+
+- RIVN/LCID/PLTR는 저장 quarter evidence만으로 전환 분석이 READY였지만 실제 lifecycle CIK가 비어 있어 명시 수집은 차단됐다. 이번 QA는 read-only로 끝냈고 외부 source를 호출하지 않았다.
+- AMD/AAPL은 기존 PER 분석이 적용 가능하므로 내부 selector의 추천이 PER로 유지됐다. turnaround payload 추가 전후의 기존 PER field/value는 동일했다.
+- symbol-keyed selector는 새 종목에서 service 추천을 따르고 같은 종목의 명시 선택은 rerender 후에도 보존한다. Browser QA에서 RIVN의 전환 분석과 PER `NOT_APPLICABLE/STRUCTURALLY_SHORT_LISTING`을 왕복 확인했다.
+- actual read-time latency는 RIVN `1.739s`, LCID `2.065s`, PLTR `2.128s`, AMD `3.627s`, AAPL `7.231s`였다. selected-company V1에는 허용했지만 broad discovery로 일반화하지 않는다.

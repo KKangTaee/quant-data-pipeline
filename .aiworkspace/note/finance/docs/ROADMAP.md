@@ -7,14 +7,18 @@ Last Verified: 2026-07-15
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/`다.
+현재 active task는 없다.
+
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/`다.
 
 - 목적: 미국 개별주식 내부에 `PER 상대가치 | 전환 분석`을 추가해 P/E가 성립하지 않는 selected company를 quarterly filing evidence로 분석한다.
-- 현재 단계: written spec review. 구현 1차~5차는 시작하지 않았다.
+- 현재 단계: 1차 분기 계산 정확도, 2차 분석 엔진, 3차 loader/service/collection, 4차 UI, 5차 actual/Browser QA와 문서 정렬을 완료했다.
 - 계산 계약: cumulative H1/9M/FY를 discrete Q2/Q3/Q4로 filing-aware 복원하고, TTM 매출·margin·OCF·FCF·EPS를 quarterly available_at 기준으로 만든다.
 - 판단 계약: operating milestone과 cash runway/debt/dilution risk를 분리하고 negative/zero denominator를 valid multiple로 바꾸지 않는다.
 - UI 계약: selected stock 안에서 PER/전환 selector를 제공하며 negative EPS는 전환 분석을 기본으로 연다. Graph는 monthly PER 복제가 아니라 8/12/20-quarter 영업·현금 전환이다.
 - 가치평가 계약: current input freshness와 numerator/denominator consistency가 검증될 때만 stage-appropriate multiple/yield를 표시하며 target price/매매 신호를 만들지 않는다.
+- 운영 경계: 검색·선택·분석 전환은 DB read-only다. raw 보강은 SEC CIK를 확인한 selected symbol의 명시 action만 허용하고, missing CIK는 분석을 보존한 채 collection만 BLOCKED로 둔다.
+- actual QA: RIVN/LCID/PLTR는 전환 분석, AMD/AAPL은 기존 PER를 추천했다. 420px overflow와 browser console error는 0이었다.
 - 범위: V1은 selected-company analysis다. all-U.S.-stock discovery/ranking과 peer-relative valuation은 후속이다.
 
 Previous completed U.S. stock valuation task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-valuation-v1-20260714/`다.
@@ -27,7 +31,7 @@ Previous completed U.S. stock valuation task는 `.aiworkspace/note/finance/tasks
 - 결과: AAPL/NVDA/META/TSLA actual DB는 READY이며 loss/short-listing/SEC-gap/split/foreign issuer 경계도 distinct state로 검증했다. S&P 화면은 유지하고 기존 Nasdaq backend는 보존했다.
 - 정확성 후속: comparative Q/FY는 primary filing period만 사용하고 split-year Q/FY를 같은 share basis로 맞춘 뒤 Q4를 계산한다. AMD actual은 TTM EPS `3.05`, P/E `169.22x`, 성장 관측 `10/8`로 READY이며 Graph 1/Graph 2 상태를 독립 판정한다.
 - 부분 이력 후속: 개별주 1/3/5년은 요청한 전체 달력 월을 유지하면서 `READY/PARTIAL/INSUFFICIENT_HISTORY`를 구분한다. 계산 가능한 월만 원래 위치에 그리며, missing price/EPS, non-positive EPS, rolling warmup, PIT evidence gap을 연결·보간하지 않는다. Actual AAPL은 3년 `36/36`, 5년 `42/60`; AMD는 `33/36`, `39/60`이다.
-- 다음 단계: 현재 PER 화면의 필수 후속은 없다. 전환 분석 V1이 별도 active task로 설계 review 중이며 historical SEP/PIT coverage backfill은 독립 후속이다.
+- 다음 단계: 현재 PER/전환 분석의 필수 후속은 없다. historical SEP/PIT coverage backfill, all-stock turnaround discovery, peer-relative valuation은 각각 독립 승인 범위다.
 
 Previous completed Nasdaq history task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/`다.
 
@@ -43,7 +47,7 @@ Previous completed Nasdaq coverage task는 `.aiworkspace/note/finance/tasks/acti
 - 목적: SEC QQQ holdings와 SEC company actual을 결합한 QQQ proxy의 최근 60개월 valuation coverage blocker를 사용자 action으로 보강한다.
 - 결과: planner, canonical EPS/EOD 수집, strict rematerialization, synchronous blocker CTA를 완료했고 당시 local 60개월 gate를 복구했다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다.
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다.
 
 - 목적: 해결 가능한 근거는 Practical Validation에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 전달한다.
 - 주요 변경: root issue dedup, Level2 actionability Gate, GRS 기간과 survivorship applicability 계약, Final Review terminal-state snapshot, measured-only score impact를 완료했다.
@@ -708,7 +712,11 @@ Current active phase:
 
 Current active task:
 
-- `overview-market-context-us-stock-valuation-v1-20260714` — original 1차~5차, 정확성 후속 1차~3차, 부분 이력 후속 1차~3차 complete
+- none
+
+Latest completed task:
+
+- `overview-market-context-us-stock-turnaround-analysis-v1-20260715` — 1차~5차 complete
 
 Recent completed docs cleanup tasks:
 

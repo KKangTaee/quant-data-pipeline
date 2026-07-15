@@ -277,27 +277,27 @@ def run_overview_us_stock_turnaround_collection(symbol: str, ...) -> JobResult: 
 
 ### Task 5.1: Actual DB and edge-case verification
 
-- [ ] Run read-only services for RIVN, LCID, PLTR and record discrete-quarter counts, headline, section readiness, missing reasons, and latency.
-- [ ] Run AMD/AAPL and confirm `recommended_analysis=per`, existing Graph 1 READY, and unchanged current PER payload values.
-- [ ] Exercise fixture cases for missing gross profit, stale profile, dilution, debt/interest, split, future filing/restatement, and intrinsic unsupported sector.
-- [ ] Do not collect externally unless an actual selected-symbol gap explicitly requires the approved action; record any unrun collection accurately.
+- [x] Run read-only services for RIVN, LCID, PLTR and record discrete-quarter counts, headline, section readiness, missing reasons, and latency.
+- [x] Run AMD/AAPL and confirm `recommended_analysis=per`, existing Graph 1 READY, and unchanged current PER payload values.
+- [x] Exercise fixture cases for missing gross profit, stale profile, dilution, debt/interest, split, future filing/restatement, and intrinsic unsupported sector.
+- [x] Do not collect externally unless an actual selected-symbol gap explicitly requires the approved action; record any unrun collection accurately.
 
 ### Task 5.2: Focused/full regression and Browser QA
 
-- [ ] Run `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation -v`.
-- [ ] Run isolated full regression with the repository's established unittest command; record pass/fail and unrelated failures separately.
-- [ ] Run `npm run build` in `app/web/streamlit_components/market_context_valuation`.
-- [ ] Run target `py_compile`, `git diff --check`, and `git status --short`.
-- [ ] Start the Finance app and perform actual Browser QA for desktop and 420px: RIVN/LCID/PLTR turnaround, AMD/AAPL PER handoff, selector switching, collection CTA presence only, console errors 0, horizontal overflow 0.
-- [ ] Save one generated QA screenshot outside staged files and attach it in the final report.
+- [x] Run `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation -v`.
+- [x] Run isolated full regression with the repository's established unittest command; record pass/fail and unrelated failures separately.
+- [x] Run `npm run build` in `app/web/streamlit_components/market_context_valuation`.
+- [x] Run target `py_compile`, `git diff --check`, and `git status --short`.
+- [x] Start the Finance app and perform actual Browser QA for desktop and 420px: RIVN/LCID/PLTR turnaround, AMD/AAPL PER handoff, selector switching, collection CTA presence only, console errors 0, horizontal overflow 0.
+- [x] Save one generated QA screenshot outside staged files and attach it in the final report.
 
 ### Task 5.3: Documentation alignment and closeout
 
-- [ ] Update `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md` with actual evidence and remaining gaps.
-- [ ] Use `finance-doc-sync` to align `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, relevant architecture/flow/data docs, and concise root handoff logs.
-- [ ] Fresh-run completion verification under `superpowers:verification-before-completion`.
-- [ ] Stage only owned source/tests/docs/static bundle; exclude research folder, screenshot, run history, temp files, and Playwright artifacts.
-- [ ] Commit coherent closeout as `전환 분석 QA와 문서 정렬`.
+- [x] Update `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md` with actual evidence and remaining gaps.
+- [x] Use `finance-doc-sync` to align `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`, relevant architecture/flow/data docs, and concise root handoff logs.
+- [x] Fresh-run completion verification under `superpowers:verification-before-completion`.
+- [x] Stage only owned source/tests/docs/static bundle; exclude research folder, screenshot, run history, temp files, and Playwright artifacts.
+- [x] Commit coherent closeout as `전환 분석 QA와 문서 정렬`.
 
 **5차 완료 조건:** fresh focused/full/build/browser evidence가 남고, actual DB에서 RIVN/LCID/PLTR 전환 분석과 AMD/AAPL PER handoff를 검증하며 문서와 코드 상태가 일치한다.
 

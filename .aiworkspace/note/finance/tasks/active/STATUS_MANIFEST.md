@@ -1,7 +1,7 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-15
 
 ## Current State
 
@@ -11,11 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `final-review-evidence-closure-contract-v1-20260712`
+- `overview-market-context-us-stock-turnaround-analysis-v1-20260715`
 
 Previous completed task:
 
-- `overview-market-context-sp500-valuation-v1-20260712`
+- `overview-market-context-us-stock-valuation-v1-20260714`
 
 Latest completed docs cleanup task:
 

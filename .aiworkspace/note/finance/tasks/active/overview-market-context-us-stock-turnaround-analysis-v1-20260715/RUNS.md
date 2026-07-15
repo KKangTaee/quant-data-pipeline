@@ -70,3 +70,29 @@ Last Updated: 2026-07-15
 - RED/GREEN: added color-independent milestone labels, shared 8/12/20-quarter slots, separate revenue-YoY/margin scales, TTM OCF/FCF bars, explicit zero axes, gap-safe line segments, raw/TTM/available-at inspectors, risk cards, and exact valuation-block reasons.
 - Responsive: added compact selector, stacked charts, and one-column risk/collection/valuation cards at phone width without a fixed chart minimum width.
 - Verification: Market Context + turnaround + existing PER regression ran 95 tests with 0 failures; `npm run build` completed 171 module transforms and refreshed the hashed `component_static` bundle; `git diff --check` passed.
+
+## 5차 — Actual DB Read-Only Matrix
+
+- RIVN: latency `1.739s`, `17/18` available quarter slots, `OPERATING_IMPROVEMENT`; operating/cash/risk sections READY, valuation BLOCKED `INPUT_STALE`. PER remained NOT_APPLICABLE with Graph 1 `INSUFFICIENT_HISTORY`, so recommendation was turnaround.
+- LCID: latency `2.065s`, `23/24`, `LOSS_BASELINE`; operating/cash/risk READY, valuation BLOCKED `INPUT_STALE`. PER remained NOT_APPLICABLE and recommendation was turnaround.
+- PLTR: latency `2.128s`, `21/22`, `CASH_FLOW_TURN`; operating/cash/risk READY, valuation BLOCKED `INPUT_STALE`. PER preflight remained COLLECTABLE/Graph 1 `INSUFFICIENT_HISTORY`, so recommendation was turnaround.
+- AMD: latency `3.627s`, `25/25`, turnaround `CASH_FLOW_TURN`; existing PER remained READY/Graph 1 READY/current P/E `169.21638863985658`, recommendation `per`, turnaround valuation `P_E_HANDOFF`.
+- AAPL: latency `7.231s`, `25/25`; existing PER remained READY/Graph 1 READY/current P/E `39.324051096469546`, recommendation `per`, turnaround valuation `P_E_HANDOFF`.
+- Compared the combined service before/after turnaround attachment and confirmed every pre-existing U.S.-stock PER payload key/value remained unchanged.
+- Actual lifecycle identity had no SEC CIK for the QA symbols. RED reproduced READY analysis being overwritten by collection-plan ERROR; GREEN changed only missing-CIK collection status to `BLOCKED/CIK_MISSING` and kept analysis READY. No provider call or external collection was run.
+
+## 5차 — Focused And Full Regression
+
+- Focused command `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation -v` ran `96` tests with 0 failures.
+- Single-process `unittest discover` ran `1,078` tests but produced Streamlit singleton/test-stub cascades (`4` failures, `153` errors); this runner is not process-isolated and is not the completion signal.
+- Re-ran all `24` `tests/test_*.py` modules in independent Python processes. `1,077` tests executed: `1,073` passed and the same four unrelated existing assertions failed.
+- Existing unrelated failures: two Practical Validation exact source-call contracts, one Market Movers `rows_written` expectation, and one Sentiment React source-token expectation. Turnaround `34`, U.S.-stock PER `41`, Market Context `21`, and S&P `39` tests each passed in isolation.
+- Fresh closeout gate re-ran focused `96/96`, the same isolated full `1,073/1,077`, touched-module `py_compile`, `git diff --check`, and Vite production build (`171` modules, `index-C6yg2AR0.js`) immediately before staging.
+
+## 5차 — Actual Browser QA
+
+- Started the actual Streamlit app at `http://localhost:8512` and used the in-app Browser against the production component bundle.
+- Desktop: searched and selected RIVN, LCID, PLTR, AMD, and AAPL. RIVN/LCID/PLTR opened the turnaround recommendation with both charts; AMD/AAPL opened `PER 상대가치 적용 가능` with numeric current P/E and the existing relative-value scenario.
+- RIVN selector switching showed turnaround evidence first and PER `NOT APPLICABLE / STRUCTURALLY_SHORT_LISTING` without a fabricated P/E number.
+- 420px RIVN rendered the stock card, inner selector, milestone rail, and one-column evidence layout. Component html/body widths were `377/377`, outer Streamlit main was `409/409`; horizontal overflow was 0 and browser console errors were 0.
+- Representative generated screenshot: `/Users/taeho/.codex/visualizations/2026/07/15/019f65a4-445f-79b2-8e17-0e3b374b88b3/turnaround-rivn-420.png`. It is outside the repository and is not staged.

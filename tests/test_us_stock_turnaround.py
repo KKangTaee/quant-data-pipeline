@@ -939,6 +939,47 @@ class TurnaroundLoaderTests(unittest.TestCase):
         self.assertEqual(mismatch["status"], "ERROR")
         self.assertEqual(mismatch["reason_code"], "IDENTITY_MISMATCH")
 
+    def test_missing_cik_blocks_collection_without_overwriting_ready_analysis(self) -> None:
+        from app.services.overview.us_stock_turnaround import build_us_stock_turnaround_read_model
+        from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collection_plan
+
+        inputs = {
+            "identity": {
+                "symbol": "RIVN",
+                "cik": None,
+                "instrument_type": "common_stock",
+                "adr_unit_status": "not_adr",
+            },
+            "profile": {
+                "market_cap": 45_000_000_000,
+                "last_collected_at": "2025-03-30",
+                "currency": "USD",
+                "sector": "Consumer Cyclical",
+            },
+            "latest_price": {"date": "2025-03-31", "close": 14.25, "currency": "USD"},
+            "price_rows": [],
+            "statement_rows": _core_statement_rows(),
+            "window": {"statement_start": "2020-01-01", "price_start": "2020-01-01", "as_of_date": "2025-03-31"},
+            "coverage": {
+                "profile_stale": True,
+                "price_missing": False,
+                "statement_core_missing": False,
+            },
+        }
+
+        plan = build_us_stock_turnaround_collection_plan("RIVN", loaded_inputs=inputs)
+        model = build_us_stock_turnaround_read_model(
+            selected_symbol="RIVN",
+            loaded_inputs=inputs,
+            per_model={"status": "NOT_APPLICABLE", "multiple_regime": {"status": "BLOCKED"}},
+        )
+
+        self.assertEqual(plan["status"], "BLOCKED")
+        self.assertEqual(plan["reason_code"], "CIK_MISSING")
+        self.assertEqual(plan["scopes"], [])
+        self.assertEqual(model["status"], "READY")
+        self.assertNotIn("collection_action", model)
+
 
 class TurnaroundServiceTests(unittest.TestCase):
     def test_not_selected_returns_without_loader_or_provider_call(self) -> None:
