@@ -478,7 +478,7 @@ class MarketContextValuationTests(unittest.TestCase):
         run_action.assert_not_called()
         self.assertEqual(rerun.call_count, 2)
 
-    def test_market_context_collection_validates_selection_and_runs_once(self) -> None:
+    def test_market_context_unified_refresh_validates_selection_and_runs_once(self) -> None:
         from app.web.overview import market_context_helpers
 
         state: dict[str, object] = {
@@ -486,7 +486,7 @@ class MarketContextValuationTests(unittest.TestCase):
         }
         run_action = Mock(
             return_value={
-                "job_name": "overview_us_stock_valuation_collection",
+                "job_name": "overview_us_stock_data_refresh",
                 "status": "success",
                 "rows_written": 168,
             }
@@ -496,7 +496,7 @@ class MarketContextValuationTests(unittest.TestCase):
         rerun = Mock()
         event = {
             "event": {
-                "id": "collect_us_stock_valuation",
+                "id": "refresh_us_stock_data",
                 "symbol": "AAPL",
                 "nonce": 456,
             }
@@ -521,7 +521,7 @@ class MarketContextValuationTests(unittest.TestCase):
         rejected = market_context_helpers._handle_market_context_valuation_event(
             {
                 "event": {
-                    "id": "collect_us_stock_valuation",
+                    "id": "refresh_us_stock_data",
                     "symbol": "MSFT",
                     "nonce": 457,
                 }
@@ -541,7 +541,7 @@ class MarketContextValuationTests(unittest.TestCase):
         clear_cache.assert_called_once_with()
         rerun.assert_called_once_with()
 
-    def test_market_context_turnaround_collection_is_explicit_and_analysis_switch_is_local(self) -> None:
+    def test_legacy_collection_events_and_analysis_switch_are_not_python_actions(self) -> None:
         from app.web.overview import market_context_helpers
 
         state: dict[str, object] = {
@@ -551,7 +551,7 @@ class MarketContextValuationTests(unittest.TestCase):
         clear_cache = Mock()
         rerun = Mock()
 
-        handled = market_context_helpers._handle_market_context_valuation_event(
+        legacy = market_context_helpers._handle_market_context_valuation_event(
             {
                 "event": {
                     "id": "collect_us_stock_turnaround",
@@ -572,11 +572,32 @@ class MarketContextValuationTests(unittest.TestCase):
             rerun=rerun,
         )
 
-        self.assertTrue(handled)
+        self.assertFalse(legacy)
         self.assertFalse(local_switch)
-        run_action.assert_called_once_with("RIVN")
-        clear_cache.assert_called_once_with()
-        rerun.assert_called_once_with()
+        run_action.assert_not_called()
+        clear_cache.assert_not_called()
+        rerun.assert_not_called()
+
+    def test_collection_reflection_excludes_visible_row_diagnostics(self) -> None:
+        from app.web.overview.market_context_helpers import (
+            _us_stock_collection_reflection,
+        )
+
+        reflection = _us_stock_collection_reflection(
+            {
+                "status": "partial_success",
+                "message": "시장 자료 반영 완료, SEC identity 확인 필요",
+                "rows_written": 42,
+            }
+        )
+
+        self.assertEqual(
+            reflection,
+            {
+                "status": "partial_success",
+                "message": "시장 자료 반영 완료, SEC identity 확인 필요",
+            },
+        )
 
     def test_old_nasdaq_repair_events_are_no_longer_user_actions(self) -> None:
         from app.web.overview import market_context_helpers

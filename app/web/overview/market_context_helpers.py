@@ -13,8 +13,7 @@ from app.jobs.overview_actions import (
     record_overview_action_result,
     run_overview_market_context_refresh_all,
     run_overview_market_context_refresh_smart,
-    run_overview_us_stock_valuation_collection,
-    run_overview_us_stock_turnaround_collection,
+    run_overview_us_stock_data_refresh,
 )
 from app.web.overview.session_helpers import _market_context_session_payload
 from app.web.overview_dashboard_helpers import (
@@ -43,8 +42,7 @@ US_STOCK_EVENT_KEY = "overview_us_stock_valuation_last_event"
 US_STOCK_EVENT_IDS = {
     "search_us_stock",
     "select_us_stock",
-    "collect_us_stock_valuation",
-    "collect_us_stock_turnaround",
+    "refresh_us_stock_data",
 }
 GROUP_TREND_HEATMAP_MIN_HEIGHT = 280
 GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
@@ -142,6 +140,7 @@ def _render_us_stock_collection_progress(status: Any, update: dict[str, Any]) ->
     stage_labels = {
         "preflight": "누락 구간 확인",
         "identity": "SEC CIK 연결",
+        "profile": "시장가치 수집",
         "prices": "가격 수집",
         "sec": "SEC 분기 실적 수집",
         "complete": "완료",
@@ -151,12 +150,12 @@ def _render_us_stock_collection_progress(status: Any, update: dict[str, Any]) ->
     status.write(f"{stage_labels.get(stage, stage or '진행')} · {message}")
 
 
-def _run_us_stock_collection_for_ui(symbol: str) -> dict[str, Any]:
+def _run_us_stock_refresh_for_ui(symbol: str) -> dict[str, Any]:
     with st.status(
-        f"{symbol} 가치평가 자료를 수집하는 중입니다.",
+        f"{symbol} 최신 자료를 확인하는 중입니다.",
         expanded=True,
     ) as status:
-        result = run_overview_us_stock_valuation_collection(
+        result = run_overview_us_stock_data_refresh(
             symbol,
             progress_callback=lambda update: _render_us_stock_collection_progress(
                 status, update
@@ -165,34 +164,13 @@ def _run_us_stock_collection_for_ui(symbol: str) -> dict[str, Any]:
         result_status = str(result.get("status") or "failed").lower()
         if result_status == "success":
             status.update(
-                label=f"{symbol} 가치평가 자료 수집을 마쳤습니다.",
+                label=f"{symbol} 최신 자료 확인을 마쳤습니다.",
                 state="complete",
             )
         elif result_status == "partial_success":
-            status.update(label="일부 자료를 수집했지만 누락 구간이 남았습니다.", state="complete")
+            status.update(label="수집 가능한 자료를 반영했고 남은 항목이 있습니다.", state="complete")
         else:
-            status.update(label="가치평가 자료 수집을 완료하지 못했습니다.", state="error")
-    return result
-
-
-def _run_us_stock_turnaround_collection_for_ui(symbol: str) -> dict[str, Any]:
-    with st.status(
-        f"{symbol} 전환 분석 자료를 수집하는 중입니다.",
-        expanded=True,
-    ) as status:
-        result = run_overview_us_stock_turnaround_collection(
-            symbol,
-            progress_callback=lambda update: _render_us_stock_collection_progress(
-                status, update
-            ),
-        )
-        result_status = str(result.get("status") or "failed").lower()
-        if result_status == "success":
-            status.update(label=f"{symbol} 전환 분석 자료 수집을 마쳤습니다.", state="complete")
-        elif result_status == "partial_success":
-            status.update(label="일부 자료를 수집했지만 누락 범위가 남았습니다.", state="complete")
-        else:
-            status.update(label="전환 분석 자료 수집을 완료하지 못했습니다.", state="error")
+            status.update(label="최신 자료를 반영하지 못했습니다.", state="error")
     return result
 
 
@@ -210,7 +188,7 @@ def _handle_market_context_valuation_event(
     action_id = str(payload.get("id") or payload.get("action_id") or "").strip()
     if action_id not in US_STOCK_EVENT_IDS:
         return False
-    if action_id in {"collect_us_stock_valuation", "collect_us_stock_turnaround"}:
+    if action_id == "refresh_us_stock_data":
         selected = str(resolved_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or "").upper()
         event_symbol = str(payload.get("symbol") or "").strip().upper()
         if not selected or event_symbol != selected:
@@ -231,12 +209,7 @@ def _handle_market_context_valuation_event(
         return True
 
     symbol = str(resolved_state.get(US_STOCK_SELECTED_SYMBOL_KEY) or "").upper()
-    default_runner = (
-        _run_us_stock_turnaround_collection_for_ui
-        if action_id == "collect_us_stock_turnaround"
-        else _run_us_stock_collection_for_ui
-    )
-    result = (run_action or default_runner)(symbol)
+    result = (run_action or _run_us_stock_refresh_for_ui)(symbol)
     if store_result is not None:
         store_result(result)
     else:
@@ -251,7 +224,6 @@ def _us_stock_collection_reflection(result: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": str(result.get("status") or "failed"),
         "message": str(result.get("message") or ""),
-        "rows_written": int(result.get("rows_written") or 0),
     }
 
 
