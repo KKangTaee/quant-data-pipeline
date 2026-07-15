@@ -6179,3 +6179,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Graph 1의 positive-P/E readiness와 Graph 2의 최소 8개 growth 관측 readiness를 분리해, 성장 이력 부족이 계산 가능한 P/E 화면을 숨기지 않게 했다.
 - AMD actual은 TTM EPS `3.05`, P/E `169.22x`, growth `10/8`로 READY이며 AAPL/MSFT/NVDA/META/TSLA, LCID, RDDT/RIVN, S&P 화면을 함께 회귀 검증했다.
 - focused 125개 통과, isolated full 1,030/1,034 통과(기존 unrelated 4건), desktop/420px Browser QA와 no-overflow/zero-console-error 확인을 완료했다. 상세는 active task `RUNS.md`를 본다.
+
+## 2026-07-15 - 미국 개별주식 PER 부분 이력 표시 완료
+
+- 1/3/5년 이력에 full-month `timeline`과 `PARTIAL` 상태를 추가해 계산 가능한 월을 원래 위치에 표시하고 결측 월의 선·band를 끊었다.
+- Actual AAPL은 3년 `36/36`, 5년 `42/60`; AMD는 3년 `33/36`, 5년 `39/60`이며 누락 원인을 화면에서 구분한다.
+- focused 129개 통과, isolated full 1,033/1,037 통과(기존 unrelated 4건), S&P 회귀와 desktop/420px Browser QA를 완료했다.
+- 현재 PER 화면 후속은 완료했다. 다음 선택 범위는 historical SEP/PIT backfill 또는 적자기업 전용 비-P/E 분석 화면이다.

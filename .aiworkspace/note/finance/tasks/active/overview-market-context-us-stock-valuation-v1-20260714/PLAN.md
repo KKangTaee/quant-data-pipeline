@@ -2,8 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task in the current `codex/sub-dev` worktree. Do not create a new worktree and do not dispatch subagents.
 
-Status: Implemented — 1차~5차 Complete
-Last Updated: 2026-07-14
+Status: Implemented — original 1차~5차, correctness follow-up 1차~3차, partial-history follow-up 1차~3차 Complete
+Last Updated: 2026-07-15
 
 **Goal:** Market Context의 Nasdaq-100 사용자 화면을 DB 기반 미국 개별주식 검색·filing-aware 상대가치 화면으로 교체하면서 S&P 500 화면과 기존 Nasdaq 원천/collector를 보존한다.
 
@@ -469,7 +469,7 @@ git diff --check
 
 **Architecture:** pure calculator는 기존 valid-only `series`와 함께 full-month `timeline` 및 `PARTIAL` 상태를 반환한다. React history chart는 timeline slot을 x축으로 사용하고 연속 AVAILABLE segment별 SVG path를 만들어 missing slot을 건너 연결하지 않는다. S&P payload는 timeline이 없을 때 기존 series를 full timeline으로 해석해 현재 동작을 유지한다.
 
-**Tech Stack:** Python 3.12, pandas, unittest, React 18, TypeScript, Vite, Streamlit Browser QA.
+**Tech Stack:** Python 3.12, pandas, unittest, React 19, TypeScript, Vite, Streamlit Browser QA.
 
 ### Global Constraints
 
@@ -490,11 +490,11 @@ git diff --check
 - `calculate_historical_stock_scenario(...)->dict` retains `series` and adds `timeline`, `missing_point_count`, `missing_reason_counts`.
 - Timeline slot keys are `month`, `slot_index`, `status`, `reason_code`, `actual_price`; AVAILABLE slots also contain the existing scenario fields.
 
-- [ ] Add an AMD-like failing test with 95 monthly rows and non-positive TTM EPS in the first three visible 3-year slots. Assert `status == "PARTIAL"`, `observation_count == 33`, `missing_point_count == 3`, timeline length `36`, and three `NON_POSITIVE_EPS` gaps.
-- [ ] Add a failing warmup test where 70 rows produce 11/12 available points. Assert the first timeline slot is `MISSING/INSUFFICIENT_ROLLING_PER_WARMUP` and the remaining slot indices are not compressed.
-- [ ] Run `.venv/bin/python -m unittest tests.test_us_stock_valuation.UsStockValuationEngineTests.test_historical_stock_scenario_returns_partial_timeline_for_non_positive_eps_gap tests.test_us_stock_valuation.UsStockValuationEngineTests.test_historical_stock_scenario_keeps_warmup_gap_at_original_slot`; expect failures because current status is `INSUFFICIENT_HISTORY` and timeline metadata is absent.
-- [ ] Implement one slot per visible month, deterministic gap reason priority, `READY/PARTIAL/INSUFFICIENT_HISTORY`, and valid-only backward-compatible `series`.
-- [ ] Re-run the two tests and the full `tests.test_us_stock_valuation` module.
+- [x] Add an AMD-like failing test with 95 monthly rows and non-positive TTM EPS in the first three visible 3-year slots. Assert `status == "PARTIAL"`, `observation_count == 33`, `missing_point_count == 3`, timeline length `36`, and three `NON_POSITIVE_EPS` gaps.
+- [x] Add a failing warmup test where 70 rows produce 11/12 available points. Assert the first timeline slot is `MISSING/INSUFFICIENT_ROLLING_PER_WARMUP` and the remaining slot indices are not compressed.
+- [x] Run `.venv/bin/python -m unittest tests.test_us_stock_valuation.UsStockValuationEngineTests.test_historical_stock_scenario_returns_partial_timeline_for_non_positive_eps_gap tests.test_us_stock_valuation.UsStockValuationEngineTests.test_historical_stock_scenario_keeps_warmup_gap_at_original_slot`; expect failures because current status is `INSUFFICIENT_HISTORY` and timeline metadata is absent.
+- [x] Implement one slot per visible month, deterministic gap reason priority, `READY/PARTIAL/INSUFFICIENT_HISTORY`, and valid-only backward-compatible `series`.
+- [x] Re-run the two tests and the full `tests.test_us_stock_valuation` module.
 
 ### Task 16: Service history handoff regression
 
@@ -505,10 +505,10 @@ git diff --check
 **Interfaces:**
 - Existing `index_scenario.history_options` forwards each calculator result without schema conversion.
 
-- [ ] Add a failing service test that changes the first three months of the latest 36-month window to non-positive EPS and asserts `history_options["3y"]` is `PARTIAL` with `33/36` and timeline gap metadata.
-- [ ] Run the exact test; expect failure on current `INSUFFICIENT_HISTORY` status.
-- [ ] Make no service change if the pure result already passes through; otherwise add only the minimal JSON-safe handoff needed.
-- [ ] Re-run the exact test plus combined Market Context service tests.
+- [x] Add a failing service test that changes the first three months of the latest 36-month window to non-positive EPS and asserts `history_options["3y"]` is `PARTIAL` with `33/36` and timeline gap metadata.
+- [x] Run the exact test; expect failure on current `INSUFFICIENT_HISTORY` status.
+- [x] Make no service change if the pure result already passes through; otherwise add only the minimal JSON-safe handoff needed.
+- [x] Re-run the exact test plus combined Market Context service tests.
 
 ### Task 17: React partial timeline rendering
 
@@ -522,12 +522,12 @@ git diff --check
 - `ScenarioHistory.timeline` consumes monthly slot status/reason and optional scenario values.
 - `contiguousHistorySegments()` returns AVAILABLE point arrays split whenever adjacent `slot_index` values differ by more than one.
 
-- [ ] Add a failing static contract test requiring `PARTIAL`, `timeline`, `contiguousHistorySegments`, `계산 가능`, and `결측 월은 연결·보간하지 않습니다` in the React source.
-- [ ] Run the exact Python static test; expect failure because React currently rejects every non-READY history.
-- [ ] Extend TypeScript history types and derive a full timeline fallback from legacy series for S&P.
-- [ ] Render READY/PARTIAL charts, a PARTIAL coverage banner, missing-slot inspector copy, and separate actual/baseline/band paths per contiguous AVAILABLE segment.
-- [ ] Add minimal responsive styles for the coverage banner and gap inspector.
-- [ ] Re-run the static test and `npm run build --prefix app/web/streamlit_components/market_context_valuation`.
+- [x] Add a failing static contract test requiring `PARTIAL`, `timeline`, `contiguousHistorySegments`, `계산 가능`, and `결측 월은 연결·보간하지 않습니다` in the React source.
+- [x] Run the exact Python static test; expect failure because React currently rejects every non-READY history.
+- [x] Extend TypeScript history types and derive a full timeline fallback from legacy series for S&P.
+- [x] Render READY/PARTIAL charts, a PARTIAL coverage banner, missing-slot inspector copy, and separate actual/baseline/band paths per contiguous AVAILABLE segment.
+- [x] Add minimal responsive styles for the coverage banner and gap inspector.
+- [x] Re-run the static test and `npm run build --prefix app/web/streamlit_components/market_context_valuation`.
 
 ### Task 18: Actual QA, docs, review, commit
 
@@ -536,13 +536,13 @@ git diff --check
 - Modify if stale: `docs/INDEX.md`, `docs/ROADMAP.md`, `docs/PROJECT_MAP.md`
 - Modify: `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`
 
-- [ ] Run read-only AAPL/AMD actual service smoke and assert AAPL `3y READY 36/36`, AAPL `5y PARTIAL 42/60`, AMD `3y PARTIAL 33/36`, AMD `5y PARTIAL 39/60` on current DB evidence.
-- [ ] Run focused U.S. stock/Market Context/S&P/Nasdaq backend tests and the repository's isolated-module full regression command.
-- [ ] Run fresh React build, Python compile, `git diff --check`, and staged-path audit.
-- [ ] Use `browser:control-in-app-browser` for actual desktop and 420px QA. Verify partial badge, left/interior gap, selector interaction, S&P regression, zero console errors, and no horizontal overflow.
-- [ ] Capture one representative screenshot outside the repository and include its absolute path in the final report.
-- [ ] Apply `finance-doc-sync` and `finance-integration-review`; record durable contract only, keep run details in `RUNS.md`, and leave the unrelated research folder untouched.
-- [ ] Commit the implementation/docs as coherent Korean units without amending prior commits.
+- [x] Run read-only AAPL/AMD actual service smoke and assert AAPL `3y READY 36/36`, AAPL `5y PARTIAL 42/60`, AMD `3y PARTIAL 33/36`, AMD `5y PARTIAL 39/60` on current DB evidence.
+- [x] Run focused U.S. stock/Market Context/S&P/Nasdaq backend tests and the repository's isolated-module full regression command.
+- [x] Run fresh React build, Python compile, `git diff --check`, and staged-path audit.
+- [x] Use `browser:control-in-app-browser` for actual desktop and 420px QA. Verify partial badge, left/interior gap, selector interaction, S&P regression, zero console errors, and no horizontal overflow.
+- [x] Capture one representative screenshot outside the repository and include its absolute path in the final report.
+- [x] Apply `finance-doc-sync` and `finance-integration-review`; record durable contract only, keep run details in `RUNS.md`, and leave the unrelated research folder untouched.
+- [x] Commit the implementation/docs as coherent Korean units without amending prior commits.
 
 ### Partial-History Plan Self-Review
 

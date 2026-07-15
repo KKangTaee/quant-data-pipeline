@@ -16,7 +16,8 @@ Last Verified: 2026-07-15
 - 운영 경계: 검색/화면 진입은 DB read-only이고 selected-symbol price/SEC 수집은 명시 action에서만 실행한다.
 - 결과: AAPL/NVDA/META/TSLA actual DB는 READY이며 loss/short-listing/SEC-gap/split/foreign issuer 경계도 distinct state로 검증했다. S&P 화면은 유지하고 기존 Nasdaq backend는 보존했다.
 - 정확성 후속: comparative Q/FY는 primary filing period만 사용하고 split-year Q/FY를 같은 share basis로 맞춘 뒤 Q4를 계산한다. AMD actual은 TTM EPS `3.05`, P/E `169.22x`, 성장 관측 `10/8`로 READY이며 Graph 1/Graph 2 상태를 독립 판정한다.
-- 다음 단계: 필수 후속은 없다. 더 긴 3/5년 이력을 원하면 누락 월을 합성하거나 gate를 낮추지 않고 historical filing/SEP coverage를 별도 보강한다.
+- 부분 이력 후속: 개별주 1/3/5년은 요청한 전체 달력 월을 유지하면서 `READY/PARTIAL/INSUFFICIENT_HISTORY`를 구분한다. 계산 가능한 월만 원래 위치에 그리며, missing price/EPS, non-positive EPS, rolling warmup, PIT evidence gap을 연결·보간하지 않는다. Actual AAPL은 3년 `36/36`, 5년 `42/60`; AMD는 `33/36`, `39/60`이다.
+- 다음 단계: 현재 PER 화면의 필수 후속은 없다. 추가 범위는 historical SEP/PIT coverage backfill과, P/E가 성립하지 않는 적자기업을 위한 별도 분석 화면이다.
 
 Previous completed Nasdaq history task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/`다.
 
@@ -697,7 +698,7 @@ Current active phase:
 
 Current active task:
 
-- `overview-market-context-us-stock-valuation-v1-20260714` — written spec review; implementation not started
+- `overview-market-context-us-stock-valuation-v1-20260714` — original 1차~5차, 정확성 후속 1차~3차, 부분 이력 후속 1차~3차 complete
 
 Recent completed docs cleanup tasks:
 

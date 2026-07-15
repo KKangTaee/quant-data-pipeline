@@ -108,3 +108,19 @@ Last Updated: 2026-07-15
 - Actual Streamlit desktop QA searched and selected AMD. The screen rendered current P/E `169.22x`, TTM EPS `3.05`, Graph 1, and Graph 2 with stored evidence; S&P still rendered its existing `28.94x` screen.
 - Desktop document/component widths were `1280/1280` and `1109/1109`; 420px widths were `420/420` and `377/377`. Browser console errors were zero in both viewports.
 - Representative mobile screenshot is `/tmp/market-context-amd-correctness-mobile-qa.png`; it remains outside the repository and is not staged.
+
+## 2026-07-15 Partial-History TDD
+
+- RED: AMD-like 3-year history remained `INSUFFICIENT_HISTORY` instead of exposing `33/36`; a 12-month warmup fixture also hid `11/12`, and a missing calendar month was compressed out of its original slot.
+- GREEN: the calculator now emits an exact visible-month `timeline`, valid-only compatibility `series`, deterministic gap counts/reasons, and `READY/PARTIAL/INSUFFICIENT_HISTORY`. The U.S. stock module passed `41 tests`.
+- Service regression proved the 3-year `PARTIAL 33/36` timeline is forwarded unchanged. React source/build regression proved `PARTIAL` rendering, full-timeline x-axis, explicit coverage/gap copy, and separate contiguous SVG segments.
+- Focused U.S. stock, Market Context, S&P, and retained Nasdaq backend verification passed `129 tests`.
+
+## 2026-07-15 Partial-History Actual And Browser QA
+
+- AAPL actual: 1-year `READY 12/12`, 3-year `READY 36/36`, 5-year `PARTIAL 42/60`; the 18 missing 5-year months are `INSUFFICIENT_PIT_EVIDENCE`.
+- AMD actual: 1-year `READY 12/12`, 3-year `PARTIAL 33/36` with three `NON_POSITIVE_EPS` months, and 5-year `PARTIAL 39/60` with 18 rolling-warmup plus three non-positive-EPS months.
+- Isolated full regression executed `1,037` tests: `1,033` passed and the same four unrelated existing assertions failed (two Practical Validation exact source-call strings, one Market Movers rows-written expectation, and one Sentiment React source-token assertion).
+- Actual Streamlit desktop QA kept S&P at its existing `28.94x` screen, selected AMD at `169.22x`, and verified the 3-year `33/36` and 5-year `39/60` partial banners plus non-interpolation copy.
+- Desktop widths were outer `1280/1280` and component `1109/1109`; 420px widths were `420/420` and `377/377`. Browser console errors were zero in both viewports.
+- Representative 420px screenshot is `/tmp/market-context-amd-partial-history-mobile-qa.png`; it remains outside the repository and is not staged.

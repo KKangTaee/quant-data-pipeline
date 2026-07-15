@@ -18,15 +18,16 @@ Last Updated: 2026-07-15
 - AAPL/NVDA/META/TSLA are READY on stored DB evidence; loss, short-listing, SEC-gap, split, and foreign-issuer cases retain distinct non-synthetic outcomes.
 - 2026-07-15 correctness follow-up fixed comparative quarterly fact reassignment, normalized split-year Q/FY facts before Q4 derivation, and separated Graph 1 readiness from Graph 2 growth evidence.
 - Actual AMD now stays READY with TTM EPS `3.05`, current P/E `169.22x`, Graph 1 READY, and `10/8` company-growth observations; the previous `3.42`/`150.91x` path came from a later filing's comparative quarter overwriting the original fiscal period.
-- User approved a partial-history follow-up for the current PER screen. AAPL/AMD 3/5-year valid points will render at their original monthly positions with explicit non-interpolated gaps.
+- The approved partial-history follow-up is complete. U.S. stock 1/3/5-year results now preserve every requested calendar-month slot, render calculable months at their original positions, and expose explicit non-interpolated gap reasons.
+- Actual AAPL is `3y READY 36/36`, `5y PARTIAL 42/60`; AMD is `3y PARTIAL 33/36`, `5y PARTIAL 39/60` on current stored evidence.
 
 ## Current Stage
 
-Original 1차~5차 complete; correctness follow-up 3/3차 complete; partial-history follow-up 1/3차 in progress.
+Original 1차~5차 complete; correctness follow-up 3/3차 complete; partial-history follow-up 3/3차 complete.
 
 ## Next Action
 
-Implement the approved U.S.-stock `PARTIAL` history calculator/service/UI contract, then run actual AAPL/AMD and Browser QA. SEP backfill and non-P/E valuation remain later stages.
+No required action remains for the current PER partial-history screen. Optional later stages are historical SEP/PIT coverage backfill and a separate non-P/E loss-company analysis surface.
 
 ## Roadmap Position
 
@@ -39,6 +40,6 @@ Implement the approved U.S.-stock `PARTIAL` history calculator/service/UI contra
 - Correctness follow-up 1차: complete — comparative Q/FY period identity and split-year Q4 TDD
 - Correctness follow-up 2차: complete — Graph 1 / Graph 2 section readiness isolation
 - Correctness follow-up 3차: complete — actual DB matrix, focused/full regression, Browser QA, docs, and commits
-- Partial-history follow-up 1차: in progress — calculator/service timeline contract
-- Partial-history follow-up 2차: pending — React gap/coverage rendering
-- Partial-history follow-up 3차: pending — actual/Browser QA, docs, and commits
+- Partial-history follow-up 1차: complete — calculator/service full-month timeline and deterministic gap contract
+- Partial-history follow-up 2차: complete — React partial coverage, reason copy, and non-connecting SVG segments
+- Partial-history follow-up 3차: complete — actual AAPL/AMD, S&P regression, desktop/420px Browser QA, docs, and commits

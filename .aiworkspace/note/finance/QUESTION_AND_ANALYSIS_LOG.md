@@ -9458,3 +9458,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 저장 자료를 새로 추정하거나 월별 EPS를 합성하지 않고, existing SEC comparative fact와 split-year share unit의 귀속 오류를 고쳐 Graph 1과 Graph 2를 가능한 범위대로 표시해야 함.
 - Analysis result: later filing의 comparative quarter가 원래 fiscal period를 덮어써 AMD Q4/TTM을 바꿨고, split-year는 pre/post-split Q/FY를 섞은 채 Q4를 빼고 있었다. 성장 관측 gate도 Graph 2 사유를 whole-screen NOT_APPLICABLE로 승격했다.
 - Follow-up: primary-period predicate, split-before-Q4 normalization, section readiness 분리를 TDD로 적용했다. AMD actual은 TTM EPS `3.05`, P/E `169.22x`, Graph 1/2 READY이며 S&P와 retained Nasdaq backend를 보존했다.
+
+### 2026-07-15 - 계산 가능한 개별주 3년·5년 PER 이력을 부분 표시한다
+
+- User request: 적자기업 분석은 별도 화면으로 두고, 먼저 AAPL/AMD처럼 일부 과거 월만 계산 가능한 기업의 현재 PER 상대가치 3년·5년 이력을 표시해 달라고 요청함.
+- Interpreted goal: 부족한 월을 합성하거나 다른 월로 대체하지 않으면서, 계산 가능한 지점까지 전부 보여주고 누락 이유와 범위를 사용자가 이해하게 해야 함.
+- Analysis result: 기존 all-or-nothing history gate가 유효한 월도 함께 숨겼다. full-month timeline과 contiguous segment rendering이면 PIT/positive-PER 계약을 유지하면서 부분 이력을 표시할 수 있다.
+- Follow-up: `READY/PARTIAL/INSUFFICIENT_HISTORY`, 원래 slot 유지, gap reason, non-connecting path를 TDD로 구현했다. Actual AAPL/AMD, S&P, desktop/420px Browser QA를 완료했으며 SEP backfill과 적자기업 분석은 별도 후속이다.

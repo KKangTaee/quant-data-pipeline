@@ -87,6 +87,15 @@ Last Updated: 2026-07-15
 - Top-level `READY` represents whether the positive-P/E Graph 1 can render. Growth evidence belongs to Graph 2: fewer than eight positive-to-positive YoY observations returns section-level `BLOCKED/INSUFFICIENT_GROWTH_HISTORY` with exact observed/required counts rather than hiding Graph 1.
 - AMD's corrected current TTM EPS/P/E is `3.05 / 169.22x` on stored evidence. The earlier `3.42 / 150.91x` was not an alternate scenario; it was the arithmetic result of a comparative quarter being assigned to the wrong fiscal-period identity.
 
+## 2026-07-15 Partial-History Display Decisions
+
+- A U.S. stock history option is `READY` only when every requested visible month is calculable, `PARTIAL` when at least two requested months are calculable, and `INSUFFICIENT_HISTORY` below that minimum.
+- `series` remains valid-only for backward compatibility. `timeline` owns every requested calendar month with its original `slot_index`, `AVAILABLE/MISSING` state, and reason code; a missing calendar month is never replaced with an earlier row.
+- Gap reason priority is price missing, EPS missing, non-positive EPS, rolling positive-P/E warmup, then PIT filing/SEP evidence. These reasons describe calculation applicability and do not create a collection action unless the existing readiness contract independently identifies a raw price/SEC gap.
+- React uses the full timeline for the x-axis and draws separate SVG paths for contiguous AVAILABLE runs. It never bridges, interpolates, or synthesizes a missing slot.
+- S&P has no new payload requirement: its existing valid series is interpreted as a complete legacy timeline, so the S&P calculation and screen remain unchanged.
+- Actual stored evidence currently yields AAPL `36/36` for 3 years and `42/60` for 5 years; AMD yields `33/36` and `39/60`. The partial screen reports the limitation instead of hiding all valid history.
+
 ## Product Language
 
 - Prefer: `상대적 고평가/저평가`, `상대가치 시나리오`, `자체 재구성`
