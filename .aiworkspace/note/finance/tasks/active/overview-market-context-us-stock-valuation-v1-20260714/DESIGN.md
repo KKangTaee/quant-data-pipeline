@@ -167,9 +167,11 @@ optimistic_price   = optimistic_projected_EPS   * plus_1_sigma_PE
 - 각 historical month는 그 월말까지 공개된 SEC filing과 당시 사용 가능했던 SEP vintage만 사용한다.
 - future filing, future ticker mapping, future SEP를 소급하지 않는다.
 - 각 월의 60개월 rolling P/E anchor와 당시 latest TTM EPS/excess-growth distribution을 다시 계산한다.
-- 1/3/5년 visible history는 각각 12/36/60개 완전한 monthly points를 요구한다.
+- 1/3/5년 visible history는 각각 12/36/60개 monthly slot을 유지한다. 모든 slot이 계산 가능하면 `READY`, 두 개 이상의 계산 가능한 point가 있으면 `PARTIAL`, 그보다 적으면 `INSUFFICIENT_HISTORY`다.
+- `PARTIAL`은 계산 가능한 월만 원래 시간축 위치에 표시한다. non-positive TTM EPS, rolling warmup, filing/SEP 근거 부족 등 계산 불가 월은 명시적 gap으로 남기고 앞뒤 point를 연결하거나 보간하지 않는다.
+- UI는 `계산 가능 개월/선택 개월`, 누락 개월 수, 누락 사유를 함께 표시해 shorter series를 완전한 3년/5년 이력처럼 오인하지 않게 한다.
 - 5년 visible history의 최대 warmup은 기존과 같이 119개월 monthly P/E history이며, selected issuer EPS history도 같은 시작 범위를 충족해야 한다.
-- 신규 상장 등 구조적으로 history가 짧으면 shorter chart를 READY처럼 표시하지 않고 정확한 available/required 기간을 설명한다.
+- 신규 상장 등 구조적으로 main 60개월 P/E 자체를 만들 수 없으면 기존 `NOT_APPLICABLE` 계약을 유지한다. 현재 main screen이 READY인 종목의 historical option만 `PARTIAL` 표시 대상이다.
 
 ## Readiness Contract
 
@@ -407,3 +409,27 @@ AMD actual DB 진단에서 raw 가격·SEC EPS·SEP evidence는 충분했지만 
 - NVDA-like in-year split fixture에서 FY와 Q1/Q2/Q3가 common share basis로 정규화된 뒤 Q4와 TTM이 정확히 FY total과 일치한다.
 - AAPL/NVDA 비달력 fiscal year, standard-calendar AMD/MSFT/META/TSLA, negative TTM, amendment available-at를 실제/fixture 회귀로 확인한다.
 - 기존 S&P read model과 retained Nasdaq backend contract는 회귀시키지 않는다.
+
+## 2026-07-15 Partial Historical Display Addendum
+
+### 이걸 하는 이유?
+
+현재 AAPL 5년은 `42/60`, AMD 3년은 `33/36`, AMD 5년은 `39/60`개의 point-in-time 상대가치 point를 실제 DB 근거로 계산할 수 있다. 기존 all-or-nothing history status와 React gate는 한 달이라도 부족하면 계산 가능한 나머지 point까지 전부 숨긴다. 이는 no-look-ahead 정확성 요구가 아니라 표시 정책의 문제다.
+
+### Approved Display Contract
+
+- 변경 대상은 미국 개별주식의 historical 1/3/5-year option이다. S&P 500 history service와 표시 계약은 바꾸지 않는다.
+- `calculate_historical_stock_scenario()`는 선택 기간의 월별 slot과 각 slot의 `AVAILABLE/MISSING` 상태, `slot_index`, reason code를 반환한다.
+- `READY`는 모든 slot이 계산 가능할 때, `PARTIAL`은 두 개 이상의 slot이 계산 가능하지만 일부가 없을 때, `INSUFFICIENT_HISTORY`는 계산 가능한 point가 두 개 미만일 때 사용한다.
+- `series`는 기존 consumer 호환을 위해 계산 가능한 point만 유지하고, `timeline`은 선택 기간의 모든 월과 명시적 gap을 보존한다.
+- `NON_POSITIVE_EPS`, `INSUFFICIENT_ROLLING_PER_WARMUP`, `INSUFFICIENT_PIT_EVIDENCE`, `PRICE_MISSING`을 최소 gap reason으로 구분한다.
+- React는 original monthly slot 위치를 x축으로 사용하고, 상대가치 band/baseline/actual path를 연속된 AVAILABLE segment별로 따로 그린다. gap 양쪽을 하나의 path로 연결하지 않는다.
+- PARTIAL banner에는 `계산 가능 N/M개월`, 누락 개월 수, `결측 월은 연결·보간하지 않음`을 표시한다.
+- historical gap은 collection CTA를 새로 만들지 않는다. 과거 SEP backfill과 적자기업 대체 valuation은 후속 차수다.
+
+### No-Distortion Invariants
+
+- AMD-like 3년 fixture의 첫 3개월 non-positive TTM EPS는 빈 slot으로 남고 나머지 `33/36`개월만 표시된다.
+- AAPL-like 초기 PIT evidence gap은 원래 시간축 앞부분의 빈 구간으로 남고 사용 가능한 point가 왼쪽으로 압축되지 않는다.
+- interior gap 앞뒤의 band/line을 연결하지 않는다.
+- `available_at`, positive EPS/P-E, 60개월 rolling log(P/E), applicable SEP vintage 계산식은 변경하지 않는다.
