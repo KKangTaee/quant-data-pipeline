@@ -207,7 +207,7 @@ class UsStockRefreshIngestionTests(unittest.TestCase):
         price_runner.assert_called_once_with(
             ["NET"],
             start="2026-07-07",
-            end="2026-07-16",
+            end="2026-07-15",
             interval="1d",
             execution_profile="managed_safe",
         )

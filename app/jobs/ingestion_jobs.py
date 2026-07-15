@@ -2919,14 +2919,11 @@ def run_collect_us_stock_refresh_inputs(
                 "message": "Exact price range is required.",
             }
         else:
-            provider_end = (
-                datetime.strptime(str(price_end), "%Y-%m-%d") + timedelta(days=1)
-            ).strftime("%Y-%m-%d")
             price_result = dict(
                 price_runner(
                     [normalized_symbol],
                     start=str(price_start),
-                    end=provider_end,
+                    end=str(price_end),
                     interval="1d",
                     execution_profile="managed_safe",
                 )
