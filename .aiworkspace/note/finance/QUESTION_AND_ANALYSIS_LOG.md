@@ -9502,3 +9502,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 사용자가 후보를 바꿔가며 실제 성과/손실 경로와 measured trade-off를 읽고 canonical route와 사유를 한 화면에서 기록할 수 있어야 한다.
 - Analysis result: Python Decision Brief가 exact-common curve, underwater, measured finding/trait, structured Monitoring condition과 Gate capability를 소유하고 React는 presentation intent만 맡는 one-shell이 맞다. overall/headline score는 current 화면에서 제거한다.
 - Follow-up: 4개 구현 커밋과 210-test completion suite, 1440/760 QA, compact snapshot/legacy fallback 문서 동기화를 완료했다. protected registry에는 QA row를 쓰지 않았다.
+
+### 2026-07-16 - 승인 A안은 Market Context의 시각 언어까지 포함한다
+
+- User request: 다른 세션 구현이 웹에서 선택한 A안과 `Workspace > Overview > 시장 맥락` 스타일로 보이지 않는 이유를 확인하고 같은 방향으로 교정해 달라고 요청함.
+- Interpreted goal: 질문 중심 정보 순서만 유지하는 것이 아니라 기존 제품의 blue-gray palette, rounded surface, soft shadow, compact type hierarchy까지 Final Review에 적용해야 함.
+- Analysis result: research audit의 `색상이 아니라 projection` 문장이 구현 범위를 과도하게 좁혀 12-column·각진 green editorial report로 drift했다. Python Decision Brief와 저장 계약은 정상이라 React presentation만 교정하는 것이 맞았다.
+- Follow-up: visual contract RED/GREEN, React/CSS/chart palette 교정, 112-test regression, build, 1280/1440/760 Browser QA를 완료하고 protected registry 저장은 실행하지 않았다.

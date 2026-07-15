@@ -33,3 +33,9 @@
 - missing benchmark는 interpolation이나 provider fetch로 메우지 않고 unmeasured lane과 source gap으로 남는다.
 - dynamic historical universe / delisting source는 여전히 범위 밖이다. 해당 근거가 필요한 후보를 snapshot 존재만으로 selected-route에 올릴 수 없다.
 - Browser QA는 protected registry mutation을 수행하지 않았다. append-only writer의 실제 UI 저장은 격리된 disposable registry가 준비된 경우에만 추가 검증한다.
+
+## Visual Fidelity Correction Residuals
+
+- 긴 validation id는 compact candidate summary에서 ellipsis로 낮췄다. 사용자가 전체 provenance를 확인할 때는 disclosure/source detail이 canonical 위치다.
+- current GRS row의 structured Monitoring condition 미측정은 시각 교정으로 감추지 않았다. producer가 measurement / comparator / cadence / action을 제공하기 전까지 empty state가 정상이다.
+- 1440px in-app screenshot capture는 브라우저 surface가 빈 shell을 반환한 적이 있으나 live DOM/computed layout은 1269px workbench, 2열 header/chart, 4열 route를 확인했다. 760px screenshot과 1280px visual comparison을 delivery evidence로 사용한다.

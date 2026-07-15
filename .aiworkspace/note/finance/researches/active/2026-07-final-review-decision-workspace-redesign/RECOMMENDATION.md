@@ -37,6 +37,8 @@ Final Review가 하지 않는 일:
 
 선택안은 `Decision Brief + Evidence Disclosure`다.
 
+승인한 A안은 이 정보 순서와 함께 `Workspace > Overview > 시장 맥락`의 visual language를 채택한다. React workbench는 blue-gray palette, rounded panel, soft shadow, compact type hierarchy를 사용하고, 각진 green editorial report나 12-column magazine layout으로 해석하지 않는다.
+
 검토한 대안:
 
 - 3단계 wizard: 순서는 분명하지만 근거를 앞뒤로 다시 보기 어렵고 양식 작성처럼 느껴진다.

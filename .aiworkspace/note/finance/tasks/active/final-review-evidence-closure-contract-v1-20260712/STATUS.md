@@ -1,6 +1,6 @@
 # Status
 
-Status: In Progress — Market Context visual fidelity correction
+Status: Complete — Market Context visual fidelity correction
 Last Updated: 2026-07-16
 
 ## Progress
@@ -28,17 +28,19 @@ Last Updated: 2026-07-16
 - [x] 4차 persistence / Monitoring handoff / full QA / docs closeout
 - [x] 사용자 승인 A안과 actual Market Context 대비 visual drift 원인 재현
 - [x] visual fidelity correction DESIGN/PLAN self-review
-- [ ] Market Context visual source contract RED → GREEN
-- [ ] React presentation 교정과 production build
-- [ ] 1440px / 760px side-by-side Browser QA
-- [ ] correction docs closeout
+- [x] Market Context visual source contract RED → GREEN
+- [x] React presentation 교정과 production build
+- [x] 1440px / 760px side-by-side Browser QA
+- [x] correction docs closeout
 
 ## Next Action
 
-Decision Workspace 기능 1~4차는 완료됐지만, 승인 A안의 Market Context visual language가 구현되지 않은 drift를 교정 중이다. 교정은 React presentation과 visual contract test에 한정하고 Python/Gate/persistence는 유지한다.
+Decision Workspace 기능 1~4차와 승인 A안의 Market Context visual language 교정을 모두 완료했다. 다음 제품 위험은 dynamic historical universe용 PIT membership / delisting provider 부재이며, 이 범위는 별도 승인 전까지 critical blocker로 유지한다.
 
 ## Commits
 
+- `587757e9` Final Review 시장 맥락 시각 체계 적용
+- `a6ed5a02` Final Review 시장 맥락 시각 교정 계획 수립
 - `eaa8ce6a` Final Review Decision Brief 계약 도입
 - `b920d699` Final Review 포트폴리오 행동 근거 투영
 - `3f4350d9` Final Review Decision Workspace UI 전환

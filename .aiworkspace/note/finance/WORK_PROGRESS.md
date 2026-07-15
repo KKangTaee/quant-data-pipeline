@@ -6207,3 +6207,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - fresh completion suite 210 tests, Vite 176-module build, target compile, 1440/760 Browser QA를 통과했다.
 - protected registry / run history / saved data와 generated QA screenshot은 stage하지 않았다.
 - 다음 검토 위치는 dynamic historical universe용 PIT membership / delisting provider 승인 여부다.
+
+## 2026-07-16 - Final Review Market Context Visual Fidelity Correction
+
+- 승인 A안이 정보 구조뿐 아니라 `Workspace > Overview > 시장 맥락`의 시각 언어도 포함한다는 기준으로 drift를 교정했다.
+- React workspace에 blue-gray palette, rounded surface, soft shadow, compact type과 responsive hierarchy를 적용했고 Python/Gate/persistence는 유지했다.
+- 구현 커밋은 `587757e9`; focused 112 tests, Vite build, 1280/1440/760 Browser QA와 console error 0건을 확인했다.
+- 다음 검토 위치는 동일 active task의 `STATUS.md`, `RUNS.md`, `RISKS.md`다.

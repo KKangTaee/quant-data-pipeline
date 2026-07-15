@@ -13,6 +13,8 @@ Confirmed primary question:
 
 ## Internal Reference: Overview > Market Context
 
+이 reference는 information projection과 visual language를 모두 포함한다. Final Review는 Market Context component를 복제하거나 공용화하지 않지만, blue-gray palette, 20px rounded outer surface, soft shadow, 17px chart shell, 14px metric band, compact heading scale을 같은 제품 문법으로 사용한다.
+
 | Layer | Market Context behavior | Final Review implication |
 | --- | --- | --- |
 | Primary question | 최근 멀티플과 예상 실적을 함께 비교 | Monitoring 후보로 선정할지 판단 |
@@ -21,6 +23,14 @@ Confirmed primary question:
 | Assumptions | EPS source, SEP, 기준일을 화면 가까이에 표시 | portfolio/benchmark/period/cost/rebalance 기준을 가까이에 표시 |
 | Disclosure | 산식·출처·한계는 접기 | Level2 closure/provenance는 접기 |
 | Action | 해석 surface 자체가 목적 | 최종 route/reason 저장을 같은 React surface에서 완료 |
+
+Canonical presentation tokens:
+
+- text / muted / border: `#152033` / `#647589` / `#dae4ee`
+- candidate / benchmark / underwater: `#274764` / `#269789` / `#e2763b`
+- outer / chart / metric radius: `20px` / `17px` / `14px`
+- section shadow: `0 10px 30px rgba(33, 53, 72, .055)`
+- workbench rhythm: one-column `18px` gap with 760px / 460px responsive collapse
 
 ## Pattern 1. One Question, One Decision Surface
 

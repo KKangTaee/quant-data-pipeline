@@ -75,3 +75,16 @@
 - protected registry append를 피하기 위해 save CTA는 클릭하지 않았다. duplicate/stale guard, selected-only handoff, append row는 contract test로 검증했다.
 - QA screenshot: `qa-final-review-decision-workspace-760.png` generated artifact로 남기고 commit하지 않는다.
 - commit: `316e409b Final Review 판단과 Monitoring 조건 저장 통합`.
+
+## 2026-07-16 Market Context Visual Fidelity Correction
+
+- baseline: 기존 Decision Workspace focused regression 109 tests, `OK`.
+- RED: `tests.test_final_review_market_context_visual_contract` 3 tests가 question-first header, canonical token, chart palette 부재로 모두 실패했다.
+- GREEN: 같은 visual contract 3 tests, `OK`.
+- focused regression: visual contract + Decision Brief + Final Review evidence read model + boundary 112 tests, `OK`.
+- Vite production build: 176 modules, CSS 15.08 kB, JS 337.26 kB, `OK`; `git diff --check` 통과.
+- Browser QA 1280/1440: actual Market Context와 Final Review의 gradient, `#152033` text, 20px outer radius, soft shadow, 17px chart, 14px metric band가 같은 computed visual contract임을 확인했다.
+- Browser QA 760: outer/component horizontal overflow 없음, header/chart/finding 단일 열, route 2열, reason/disclosure 유지, reason 입력 시 save CTA 활성화, console error 0건을 확인했다. protected registry를 지키기 위해 save CTA는 클릭하지 않았다.
+- QA screenshot: `qa-final-review-market-context-visual-parity-760.png`를 generated artifact로 남기고 stage하지 않는다.
+- commit: `587757e9 Final Review 시장 맥락 시각 체계 적용`.
+- fresh completion verification: 같은 focused suite 112 tests `OK`, Vite 176-module build `OK`, Decision Brief service / Final Review page / component target `py_compile`, `git diff --check` 모두 통과했다.

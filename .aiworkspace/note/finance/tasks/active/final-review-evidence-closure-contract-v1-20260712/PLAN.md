@@ -1772,7 +1772,7 @@ Stop and report before continuing only if one of these occurs:
 
 ## Task 7.1: Visual Contract RED
 
-- [ ] **Step 1: Add the failing source-contract test**
+- [x] **Step 1: Add the failing source-contract test**
 
 Create `FinalReviewMarketContextVisualContractTests` with three tests:
 
@@ -1797,7 +1797,7 @@ def test_charts_use_market_context_visual_family(self):
         self.assertIn(color, source)
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 .venv/bin/python -m unittest tests.test_final_review_market_context_visual_contract -v
@@ -1807,15 +1807,15 @@ Expected: FAIL because `WorkspaceHeader` and canonical tokens/palette are absent
 
 ## Task 7.2: React Presentation GREEN
 
-- [ ] **Step 1: Implement the question-first shell**
+- [x] **Step 1: Implement the question-first shell**
 
 Add `WorkspaceHeader({brief, model, onIntent})`; move `CandidateSelector` into its right-side summary area. Keep the existing `select_candidate` intent unchanged. Replace the top-level `<CandidateSelector>` call with `<WorkspaceHeader>` and keep all later section calls in their approved order.
 
-- [ ] **Step 2: Compact the verdict**
+- [x] **Step 2: Compact the verdict**
 
 Render `brief.verdict.label`, `headline`, `thesis`, candidate period/as-of basis and `brief.evidence_confidence` in a soft answer panel. Evidence confidence remains secondary metadata and never becomes a route/score calculation.
 
-- [ ] **Step 3: Apply canonical visual tokens**
+- [x] **Step 3: Apply canonical visual tokens**
 
 Replace the 12-column/editorial CSS with:
 
@@ -1829,11 +1829,11 @@ Replace the 12-column/editorial CSS with:
 
 Use 23/20/18px heading hierarchy and 760/460px responsive breakpoints. Keep visible focus, disabled, alert, table scroll and unmeasured states.
 
-- [ ] **Step 4: Align chart strokes**
+- [x] **Step 4: Align chart strokes**
 
 Change only presentation colors in `DecisionBriefCharts.tsx`: candidate `#274764`, benchmark `#269789`, underwater `#e2763b`. Do not change series alignment, path calculation, trait segmentation or accessible labels.
 
-- [ ] **Step 5: Run GREEN and focused regression**
+- [x] **Step 5: Run GREEN and focused regression**
 
 ```bash
 .venv/bin/python -m unittest \
@@ -1847,7 +1847,7 @@ git diff --check
 
 Expected: all focused tests pass, Vite build exits 0, diff check exits 0.
 
-- [ ] **Step 6: Browser QA against the actual reference**
+- [x] **Step 6: Browser QA against the actual reference**
 
 Desktop 1440px:
 
@@ -1864,7 +1864,7 @@ Narrow 760px:
 
 Capture `qa-final-review-market-context-visual-parity-760.png` as an untracked artifact and do not stage it.
 
-- [ ] **Step 7: Commit the implementation unit**
+- [x] **Step 7: Commit the implementation unit**
 
 Stage only the new visual test, three React source files and tracked Vite build output. Verify the staged list excludes registry, run history, `.superpowers`, screenshots and other generated artifacts.
 
@@ -1874,10 +1874,10 @@ git commit -m "Final Review 시장 맥락 시각 체계 적용"
 
 ## Task 7.3: Closeout Documentation
 
-- [ ] **Step 1: Record RED/GREEN/build/Browser QA evidence** in active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
-- [ ] **Step 2: Correct durable UI wording** in the Decision Workspace research recommendation/UI patterns and Backtest flow docs so future work treats Market Context as both projection and visual-language reference.
-- [ ] **Step 3: Add a concise root handoff milestone** without copying detailed QA logs.
-- [ ] **Step 4: Run fresh completion verification**:
+- [x] **Step 1: Record RED/GREEN/build/Browser QA evidence** in active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
+- [x] **Step 2: Correct durable UI wording** in the Decision Workspace research recommendation/UI patterns and Backtest flow docs so future work treats Market Context as both projection and visual-language reference.
+- [x] **Step 3: Add a concise root handoff milestone** without copying detailed QA logs.
+- [x] **Step 4: Run fresh completion verification**:
 
 ```bash
 .venv/bin/python -m unittest \
@@ -1894,7 +1894,7 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 5: Commit closeout docs** with `git commit -m "Final Review 시각 교정 QA와 문서 동기화"`.
+- [x] **Step 5: Commit closeout docs** with `git commit -m "Final Review 시각 교정 QA와 문서 동기화"`.
 
 ## Correction Plan Self-Review
 

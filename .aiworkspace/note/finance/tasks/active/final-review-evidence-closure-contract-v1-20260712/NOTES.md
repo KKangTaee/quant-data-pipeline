@@ -78,3 +78,11 @@
 - selected route만 Gate와 closed evidence를 모두 통과할 때 Monitoring 후보가 된다. non-select route는 판단 사유와 snapshot을 보존하지만 `judgment_decision / not_requested`다.
 - Portfolio Monitoring은 structured snapshot condition을 우선 user-facing trigger string으로 변환하고, snapshot이 없는 legacy row는 기존 paper trigger string을 그대로 읽는다. 기존 JSONL row는 rewrite하지 않았다.
 - legacy `FinalReviewInvestmentReport.tsx`는 compatibility export다. current React owner와 source contract는 `DecisionBriefWorkspace.tsx`다.
+
+## 2026-07-16 Market Context Visual Fidelity Correction
+
+- 승인한 A안은 질문 중심 정보 구조만이 아니라 `Workspace > Overview > 시장 맥락`의 blue-gray palette, rounded panel, soft shadow, compact type hierarchy까지 포함한다.
+- 이전 구현은 research audit의 `둥근 카드나 색상이 아니라 질문 중심 projection` 문장을 과도하게 좁게 적용해 12-column·각진 green editorial report로 drift했다.
+- Python Decision Brief, Gate, route, persistence, Monitoring snapshot은 변경하지 않고 React presentation owner와 source contract test만 교정했다.
+- canonical visual contract는 `#152033 / #647589 / #dae4ee`, outer radius 20px, chart radius 17px, metric radius 14px, 18px one-column rhythm, compact 23/20/18px heading이다.
+- chart는 계산을 유지한 채 candidate `#274764`, benchmark `#269789`, underwater `#e2763b` presentation palette만 적용했다.

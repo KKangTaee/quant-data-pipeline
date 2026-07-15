@@ -139,6 +139,6 @@ Final Review를 `최종 검토 보고서`가 아니라 **Decision Workspace**로
 
 현재 Final Review의 큰 gate/persistence 계약은 버릴 대상이 아니다. 버려야 할 것은 그 계약의 모든 중간 상태를 사용자 본문에 같은 비중으로 노출하는 방식이다.
 
-Market Context에서 가져와야 할 핵심은 둥근 카드나 색상이 아니라 **질문 중심 projection**이다. Final Review도 저장된 많은 근거를 그대로 보여주는 대신, 후보의 투자 행동과 최종 결정에 필요한 몇 가지 문장·차트·조건으로 먼저 압축해야 한다. validation 상태는 그 결론의 신뢰도를 설명하는 secondary disclosure가 되어야 한다.
+Market Context에서 가져와야 할 핵심은 **질문 중심 projection과 그 질문을 한 화면으로 읽게 만드는 시각 언어**다. Final Review도 저장된 많은 근거를 그대로 보여주는 대신, 후보의 투자 행동과 최종 결정에 필요한 몇 가지 문장·차트·조건으로 먼저 압축하고, Market Context의 blue-gray palette, rounded panel, soft shadow, compact type hierarchy를 같은 제품 문법으로 사용한다. validation 상태는 그 결론의 신뢰도를 설명하는 secondary disclosure가 되어야 한다.
 
 primary decision, Decision Brief 접근, score 제거, 행동 chart 중심 근거, 보조 성격 지도, React-first 책임 구조가 승인됐다. canonical 설계와 구현 순서는 `RECOMMENDATION.md`를 따른다.
