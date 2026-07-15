@@ -425,6 +425,40 @@ class MarketContextValuationTests(unittest.TestCase):
         self.assertNotIn("trailing_pe", component)
         self.assertNotIn("collect_us_stock_turnaround", component)
 
+    def test_turnaround_rail_distinguishes_transition_from_established_state(self) -> None:
+        source = Path(
+            "app/web/streamlit_components/market_context_valuation/src/TurnaroundAnalysis.tsx"
+        ).read_text()
+
+        for token in (
+            'type MilestoneDisplayState = "MET" | "ESTABLISHED" | "NOT_MET" | "UNKNOWN"',
+            "매출 성장 / GP 개선",
+            "영업 수익성 개선",
+            "OCF 양수 지속",
+            "FCF 양수",
+            "EPS 양전 신호",
+            "TTM EPS 양수",
+            "PER 적용 가능",
+            "이미 양수",
+            "흑자 · 개선폭 미달",
+            "분석 가능",
+        ):
+            self.assertIn(token, source)
+        self.assertNotIn('label: "영업손실 축소"', source)
+        self.assertNotIn('label: "PER READY"', source)
+
+    def test_turnaround_established_state_has_distinct_non_failure_style(self) -> None:
+        style = Path(
+            "app/web/streamlit_components/market_context_valuation/src/style.css"
+        ).read_text()
+
+        for token in (
+            ".milestone-established",
+            ".milestone-established > span",
+            ".milestone-established strong",
+        ):
+            self.assertIn(token, style)
+
     def test_turnaround_styles_stack_risk_cards_at_phone_width(self) -> None:
         style = Path(
             "app/web/streamlit_components/market_context_valuation/src/style.css"

@@ -118,26 +118,70 @@ function WindowSelector({ value, onChange }: { value: WindowSize; onChange: (val
   </div>;
 }
 
+type MilestoneDisplayState = "MET" | "ESTABLISHED" | "NOT_MET" | "UNKNOWN";
+type MilestoneDisplayItem = {
+  key: string;
+  label: string;
+  status: MilestoneDisplayState;
+  detail: string;
+};
+
+const milestoneHeadlineLabels: Record<string, string> = {
+  PER_READY: "PER 적용 가능",
+  PER_CANDIDATE: "PER 후보",
+  EARNINGS_TURN: "EPS 양전 신호",
+  CASH_FLOW_TURN: "현금흐름 전환",
+  OPERATING_IMPROVEMENT: "영업 개선",
+  LOSS_BASELINE: "손실 기준",
+  UNCONFIRMED: "근거 확인 중",
+};
+
+const analysisStatusLabels: Record<string, string> = {
+  READY: "분석 가능",
+  PARTIAL: "근거 일부",
+  BLOCKED: "분석 전",
+};
+
 function MilestoneRail({ model }: { model: TurnaroundPayload["milestones"] }) {
   const milestones = model?.milestones || {};
   const operating = milestones.OPERATING_IMPROVEMENT || {};
   const cash = milestones.CASH_FLOW_TURN || {};
+  const earnings = milestones.EARNINGS_TURN || {};
+  const perCandidate = milestones.PER_CANDIDATE || {};
+  const perReady = milestones.PER_READY || {};
   const operatingEvidence = operating.evidence || {};
   const cashEvidence = cash.evidence || {};
-  const items = [
-    { key: "REVENUE_GP", label: "매출/GP 개선", status: operatingEvidence.revenue_direction || operatingEvidence.gross_margin_improvement ? "MET" : operating.status },
-    { key: "OPERATING_IMPROVEMENT", label: "영업손실 축소", status: operatingEvidence.operating_margin_improvement ? "MET" : operating.status },
-    { key: "CASH_FLOW_TURN", label: "OCF 양전", status: cash.status },
-    { key: "FCF_TURN", label: "FCF 양전", status: cashEvidence.fcf_confirmed ? "MET" : cash.status === "UNCONFIRMED" ? "UNCONFIRMED" : "NOT_MET" },
-    { key: "EARNINGS_TURN", label: "EPS 양전", status: milestones.EARNINGS_TURN?.status },
-    { key: "PER_READY", label: "PER READY", status: milestones.PER_READY?.status },
+  const currentOperatingMargin = operatingEvidence.current_operating_margin_pct;
+  const currentTtmEps = earnings.evidence?.current_ttm_eps;
+  const operatingEstablished = finite(currentOperatingMargin)
+    && currentOperatingMargin > 0
+    && !operatingEvidence.operating_margin_improvement;
+  const epsEstablished = perCandidate.status === "MET"
+    || perReady.status === "MET"
+    || (finite(currentTtmEps) && currentTtmEps > 0);
+  const unresolved = (status?: string): MilestoneDisplayState => (
+    status === "UNKNOWN" || status === "UNCONFIRMED" ? "UNKNOWN" : "NOT_MET"
+  );
+  const operatingBaseMet = Boolean(
+    operatingEvidence.revenue_direction || operatingEvidence.gross_margin_improvement,
+  );
+  const items: MilestoneDisplayItem[] = [
+    { key: "REVENUE_GP", label: "매출 성장 / GP 개선", status: operatingBaseMet ? "MET" : unresolved(operating.status), detail: operatingBaseMet ? "확인" : "아직 미확인" },
+    { key: "OPERATING_IMPROVEMENT", label: "영업 수익성 개선", status: operatingEvidence.operating_margin_improvement ? "MET" : operatingEstablished ? "ESTABLISHED" : unresolved(operating.status), detail: operatingEvidence.operating_margin_improvement ? "개선 확인" : operatingEstablished ? "흑자 · 개선폭 미달" : "아직 미확인" },
+    { key: "CASH_FLOW_TURN", label: "OCF 양수 지속", status: cash.status === "MET" ? "MET" : unresolved(cash.status), detail: cash.status === "MET" ? "확인" : "아직 미확인" },
+    { key: "FCF_TURN", label: "FCF 양수", status: cashEvidence.fcf_confirmed ? "MET" : unresolved(cash.status), detail: cashEvidence.fcf_confirmed ? "확인" : "아직 미확인" },
+    { key: "EARNINGS_TURN", label: epsEstablished ? "TTM EPS 양수" : "EPS 양전 신호", status: earnings.status === "MET" ? "MET" : epsEstablished ? "ESTABLISHED" : unresolved(earnings.status), detail: earnings.status === "MET" ? "전환 확인" : epsEstablished ? "이미 양수" : "아직 미확인" },
+    { key: "PER_READY", label: "PER 적용 가능", status: perReady.status === "MET" ? "MET" : unresolved(perReady.status), detail: perReady.status === "MET" ? "적용 가능" : "아직 미확인" },
   ];
   const headline = model?.headline || "LOSS_BASELINE";
+  const headlineLabel = milestoneHeadlineLabels[headline] || headline.replaceAll("_", " ");
+  const analysisStatus = model?.status || "BLOCKED";
   return <section className="turnaround-stage-panel">
-    <div className="turnaround-section-head"><div><span>전환 단계</span><h3>{headline.replaceAll("_", " ")}</h3><p>영업·현금·이익 근거를 서로 독립적으로 확인합니다.</p></div><span className={`turnaround-status status-${model?.status || "BLOCKED"}`}>{model?.status || "BLOCKED"}</span></div>
+    <div className="turnaround-section-head"><div><span>전환 단계</span><h3>{headlineLabel}</h3><p>영업·현금·이익 근거를 서로 독립적으로 확인합니다.</p></div><span className={`turnaround-status status-${analysisStatus}`}>{analysisStatusLabels[analysisStatus] || analysisStatus}</span></div>
     <div className="turnaround-milestone-rail">{items.map((item) => {
-      const tone = item.status === "MET" ? "met" : item.status === "UNCONFIRMED" ? "unconfirmed" : "not-met";
-      return <div key={item.key} className={`milestone milestone-${tone}`}><span aria-hidden="true">{tone === "met" ? "✓" : tone === "unconfirmed" ? "?" : "–"}</span><strong>{item.label}</strong><small>{tone === "met" ? "확인" : tone === "unconfirmed" ? "근거 부족" : "미확인"}</small></div>;
+      const tone = item.status === "MET" ? "met" : item.status === "ESTABLISHED" ? "established" : item.status === "UNKNOWN" ? "unconfirmed" : "not-met";
+      const icon = item.status === "MET" ? "✓" : item.status === "ESTABLISHED" ? "●" : item.status === "UNKNOWN" ? "?" : "–";
+      return <div key={item.key} className={`milestone milestone-${tone}`}><span aria-hidden="true">{icon}</span><strong>{item.label}</strong><small>{item.status === "UNKNOWN" ? "근거 부족" : item.detail}</small></div>;
     })}</div>
     {model?.evidence?.burn_improving ? <p className="turnaround-support-note">현금 소진 속도는 개선 중이지만 현금흐름 전환과 동일하게 보지 않습니다.</p> : null}
   </section>;

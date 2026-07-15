@@ -25,3 +25,11 @@ Last Updated: 2026-07-16
 - Evidence GREEN: exposed current operating margin, latest YoY delta, and recent threshold-hit count without changing the existing `>= 1.0pp`/2-of-3 threshold.
 - Focused regression: `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation` -> 102 tests passed.
 - Compile and scope checks: `py_compile` for both changed Python modules and `git diff --check` exited 0.
+
+## 2차 Six-Rail Semantic Display
+
+- React contract RED: both new tests failed because `ESTABLISHED`, the revised rail copy, and its styles did not exist.
+- React contract GREEN: added typed UI-local display state, Korean headline/status labels, distinct established-state styles, and six independent display rows.
+- A profitable-but-below-threshold operating state now reads `흑자 · 개선폭 미달`; positive TTM EPS reads `이미 양수`; neither changes backend milestone statuses.
+- Focused regression: `.venv/bin/python -m unittest tests.test_market_context_valuation tests.test_us_stock_turnaround tests.test_us_stock_valuation` -> 104 tests passed.
+- Production asset build: `npm run build` transformed 171 modules and emitted new hashed JS/CSS assets; `git diff --check` exited 0.

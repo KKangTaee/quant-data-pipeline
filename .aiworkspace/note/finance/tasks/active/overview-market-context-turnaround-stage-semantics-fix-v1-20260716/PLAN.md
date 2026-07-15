@@ -172,7 +172,7 @@ git commit -m "전환분석 EPS와 영업 근거 경계 보정"
 - Produces: UI-local display state `"MET" | "ESTABLISHED" | "NOT_MET" | "UNKNOWN"`.
 - Preserves: backend payload and Streamlit event behavior.
 
-- [ ] **Step 1: Write failing React source-contract tests**
+- [x] **Step 1: Write failing React source-contract tests**
 
 Add to `MarketContextValuationTests`:
 
@@ -202,7 +202,7 @@ def test_turnaround_established_state_has_distinct_non_failure_style(self) -> No
         self.assertIn(token, style)
 ```
 
-- [ ] **Step 2: Run the new source tests and confirm RED**
+- [x] **Step 2: Run the new source tests and confirm RED**
 
 Run:
 
@@ -212,7 +212,7 @@ Run:
 
 Expected: FAIL because `ESTABLISHED`, new copy, and style are absent.
 
-- [ ] **Step 3: Add typed semantic state and label maps**
+- [x] **Step 3: Add typed semantic state and label maps**
 
 Add above `MilestoneRail`:
 
@@ -237,7 +237,7 @@ const analysisStatusLabels: Record<string, string> = {
 };
 ```
 
-- [ ] **Step 4: Build six display items without backend auto-pass**
+- [x] **Step 4: Build six display items without backend auto-pass**
 
 Inside `MilestoneRail`, derive:
 
@@ -267,7 +267,7 @@ const items: MilestoneDisplayItem[] = [
 
 Render `ESTABLISHED` with `milestone-established`, a `●` icon, and the item-specific `detail`. Render UNKNOWN as `? / 근거 부족` and keep `MET` as `✓`.
 
-- [ ] **Step 5: Render Korean headline and analysis status**
+- [x] **Step 5: Render Korean headline and analysis status**
 
 Use:
 
@@ -278,7 +278,7 @@ const analysisStatus = model?.status || "BLOCKED";
 
 Render `headlineLabel` and `analysisStatusLabels[analysisStatus] || analysisStatus` while preserving the existing status CSS class.
 
-- [ ] **Step 6: Add established styles**
+- [x] **Step 6: Add established styles**
 
 Add:
 
@@ -288,7 +288,7 @@ Add:
 .milestone-established strong { color: #315a73; }
 ```
 
-- [ ] **Step 7: Run 2차 regressions and production build**
+- [x] **Step 7: Run 2차 regressions and production build**
 
 Run:
 
@@ -302,7 +302,7 @@ Working directory for `npm run build`: `app/web/streamlit_components/market_cont
 
 Expected: selected tests PASS; Vite exits 0; new hashed assets are produced; diff check exits 0.
 
-- [ ] **Step 8: Record and commit 2차**
+- [x] **Step 8: Record and commit 2차**
 
 Update task `RUNS.md` and `STATUS.md` to 2/3 complete, then:
 

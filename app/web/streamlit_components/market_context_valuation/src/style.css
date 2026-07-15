@@ -233,6 +233,9 @@ svg text { fill: #718096; font-size: 10px; }
 .milestone-met { border-color: #b9dcd3; background: #f1faf7; }
 .milestone-met > span { color: #fff; background: #2d7e70; }
 .milestone-met strong { color: #17695e; }
+.milestone-established { border-color: #c8d9e6; background: #f2f7fb; }
+.milestone-established > span { color: #fff; background: #567f9b; }
+.milestone-established strong { color: #315a73; }
 .milestone-not-met { border-style: dashed; }
 .milestone-unconfirmed { border-color: #e3d4b4; background: #fffaf0; }
 .milestone-unconfirmed > span { color: #8c642f; background: #f2e5c9; }
