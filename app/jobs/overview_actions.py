@@ -20,6 +20,7 @@ from finance.data.market_intelligence import (
 )
 from finance.loaders.price import load_latest_prices, load_price_freshness_summary
 from finance.loaders.us_stock_valuation import build_us_stock_valuation_collection_plan
+from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collection_plan
 
 from app.jobs.ingestion_jobs import (
     JobResult,
@@ -36,6 +37,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_sp500_universe,
     run_collect_symbol_directory_snapshots,
     run_collect_us_stock_valuation_inputs,
+    run_collect_us_stock_turnaround_inputs,
     run_diagnose_market_quote_gaps,
     run_extended_statement_refresh,
 )
@@ -376,6 +378,91 @@ def run_overview_us_stock_valuation_collection(
             f"{normalized} valuation inputs are ready."
             if status == "success"
             else f"{normalized} collection finished; remaining ranges are shown."
+        ),
+        "details": details,
+    }
+
+
+def run_overview_us_stock_turnaround_collection(
+    symbol: str,
+    *,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    plan_builder: Callable[..., dict[str, Any]] = build_us_stock_turnaround_collection_plan,
+    collection_runner: Callable[..., JobResult] = run_collect_us_stock_turnaround_inputs,
+) -> JobResult:
+    """Preflight, collect, and recheck exact selected-stock turnaround scopes."""
+    normalized = str(symbol or "").strip().upper()
+    before = dict(plan_builder(normalized))
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if before.get("status") == "READY":
+        return {
+            "job_name": "overview_us_stock_turnaround_collection",
+            "status": "success",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 1,
+            "failed_symbols": [],
+            "message": f"{normalized} turnaround inputs are already complete.",
+            "details": {"before": before, "after": before},
+        }
+    if before.get("status") != "COLLECTABLE":
+        return {
+            "job_name": "overview_us_stock_turnaround_collection",
+            "status": "failed",
+            "started_at": now,
+            "finished_at": now,
+            "duration_sec": 0.0,
+            "rows_written": 0,
+            "symbols_requested": 1,
+            "symbols_processed": 0,
+            "failed_symbols": [normalized],
+            "message": str(before.get("reason") or "Selected stock is not collectable."),
+            "details": {"before": before, "after": before},
+        }
+
+    identity = dict(before.get("identity") or {})
+    scopes = set(before.get("scopes") or [])
+    ranges = dict(before.get("missing_ranges") or {})
+    price_range = dict(ranges.get("prices") or {})
+    collected = dict(
+        collection_runner(
+            normalized,
+            cik=str(identity.get("cik") or ""),
+            identity_cik=str(identity.get("cik") or ""),
+            price_start=price_range.get("start"),
+            price_end=price_range.get("end"),
+            collect_profile="asset_profile" in scopes,
+            collect_prices="prices" in scopes,
+            collect_statements="sec_statements" in scopes,
+            progress_callback=progress_callback,
+        )
+    )
+    after = dict(plan_builder(normalized))
+    if after.get("status") == "READY":
+        status = "success"
+    elif after.get("status") == "COLLECTABLE" and collected.get("status") != "failed":
+        status = "partial_success"
+    else:
+        status = str(collected.get("status") or "failed")
+    details = dict(collected.get("details") or {})
+    details.update(
+        {
+            "source_job_name": collected.get("job_name"),
+            "before": before,
+            "after": after,
+        }
+    )
+    return {
+        **collected,
+        "job_name": "overview_us_stock_turnaround_collection",
+        "status": status,
+        "message": (
+            f"{normalized} turnaround inputs are ready."
+            if status == "success"
+            else f"{normalized} collection finished; remaining scopes are shown."
         ),
         "details": details,
     }

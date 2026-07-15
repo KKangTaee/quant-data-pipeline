@@ -1840,15 +1840,30 @@ def run_metadata_refresh(
 def run_collect_asset_profiles(
     *,
     kinds: tuple[str, ...] = ("stock", "etf"),
+    symbols: Iterable[str] | None = None,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_asset_profiles"
     started_at = _now_str()
     t0 = perf_counter()
+    selected_symbols = (
+        list(
+            dict.fromkeys(
+                str(symbol or "").strip().upper()
+                for symbol in symbols
+                if str(symbol or "").strip()
+            )
+        )
+        if symbols is not None
+        else None
+    )
 
     try:
         _emit_stage_progress(progress_callback, event="stage_start", stage="asset_profiles")
-        failed_rows = collect_and_store_asset_profiles(kinds=kinds)
+        failed_rows = collect_and_store_asset_profiles(
+            kinds=kinds,
+            symbols=selected_symbols,
+        )
         _emit_stage_progress(progress_callback, event="stage_complete", stage="asset_profiles")
         finished_at = _now_str()
         failure_count = len(failed_rows)
@@ -1860,12 +1875,17 @@ def run_collect_asset_profiles(
             finished_at=finished_at,
             duration_sec=perf_counter() - t0,
             rows_written=None,
-            symbols_requested=None,
-            symbols_processed=None,
+            symbols_requested=len(selected_symbols) if selected_symbols is not None else None,
+            symbols_processed=(
+                max(0, len(selected_symbols) - failure_count)
+                if selected_symbols is not None
+                else None
+            ),
             failed_symbols=[row["symbol"] for row in failed_rows[:20] if row.get("symbol")],
             message="Asset profile collection completed." if failure_count == 0 else "Asset profile collection completed with failures.",
             details={
                 "kinds": list(kinds),
+                "symbols": selected_symbols,
                 "failure_count": failure_count,
             },
         )
@@ -1878,10 +1898,10 @@ def run_collect_asset_profiles(
             finished_at=finished_at,
             duration_sec=perf_counter() - t0,
             rows_written=0,
-            symbols_requested=None,
+            symbols_requested=len(selected_symbols) if selected_symbols is not None else None,
             symbols_processed=0,
             message=f"Asset profile collection failed: {exc}",
-            details={"kinds": list(kinds)},
+            details={"kinds": list(kinds), "symbols": selected_symbols},
         )
 
 
@@ -2948,6 +2968,137 @@ def run_collect_us_stock_valuation_inputs(
     )
 
 
+def run_collect_us_stock_turnaround_inputs(
+    symbol: str,
+    *,
+    cik: str,
+    identity_cik: str,
+    price_start: str | None,
+    price_end: str | None,
+    collect_profile: bool,
+    collect_prices: bool,
+    collect_statements: bool,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    profile_runner: Callable[..., JobResult] = run_collect_asset_profiles,
+    price_runner: Callable[..., JobResult] = run_collect_ohlcv,
+    statement_runner: Callable[..., JobResult] = run_collect_financial_statements,
+) -> JobResult:
+    """Collect only explicitly approved one-symbol turnaround input scopes."""
+    job_name = "collect_us_stock_turnaround_inputs"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid = split_valid_invalid_symbols([symbol])
+    normalized_cik = str(cik or "").strip().lstrip("0")
+    normalized_identity_cik = str(identity_cik or "").strip().lstrip("0")
+    if not parsed or invalid or not normalized_cik or normalized_cik != normalized_identity_cik:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=1,
+            symbols_processed=0,
+            failed_symbols=[str(symbol or "").strip().upper()],
+            message="Selected symbol/CIK identity validation failed before collection.",
+            details={"cik": cik, "identity_cik": identity_cik},
+        )
+    normalized_symbol = parsed[0]
+
+    def emit(stage: str) -> None:
+        if progress_callback is not None:
+            progress_callback({"event": "stage", "stage": stage, "symbol": normalized_symbol})
+
+    emit("preflight")
+    steps: list[dict[str, Any]] = []
+    if collect_profile:
+        emit("profile")
+        profile_result = dict(
+            profile_runner(
+                kinds=("stock",),
+                symbols=[normalized_symbol],
+                progress_callback=None,
+            )
+        )
+        steps.append({"stage": "profile", **profile_result})
+    if collect_prices:
+        emit("prices")
+        if not price_start or not price_end:
+            price_result: dict[str, Any] = {
+                "status": "failed",
+                "rows_written": 0,
+                "failed_symbols": [normalized_symbol],
+                "message": "Exact price range is required.",
+            }
+        else:
+            provider_end = (
+                datetime.strptime(str(price_end), "%Y-%m-%d") + timedelta(days=1)
+            ).strftime("%Y-%m-%d")
+            price_result = dict(
+                price_runner(
+                    [normalized_symbol],
+                    start=str(price_start),
+                    end=provider_end,
+                    interval="1d",
+                    execution_profile="managed_safe",
+                )
+            )
+        steps.append({"stage": "prices", **price_result})
+    if collect_statements:
+        emit("sec")
+        statement_result = dict(
+            statement_runner(
+                [normalized_symbol],
+                freq="quarterly",
+                periods=0,
+                period="quarterly",
+            )
+        )
+        steps.append({"stage": "sec", **statement_result})
+    emit("complete")
+
+    statuses = [str(step.get("status") or "failed").lower() for step in steps]
+    if not steps or all(value == "success" for value in statuses):
+        status = "success"
+    elif all(value in {"failed", "error"} for value in statuses):
+        status = "failed"
+    else:
+        status = "partial_success"
+    failures = list(
+        dict.fromkeys(
+            str(item).strip().upper()
+            for step in steps
+            for item in (step.get("failed_symbols") or [])
+            if str(item).strip()
+        )
+    )
+    rows_written = sum(int(step.get("rows_written") or 0) for step in steps)
+    return _build_result(
+        job_name=job_name,
+        status=status,
+        started_at=started_at,
+        finished_at=_now_str(),
+        duration_sec=perf_counter() - t0,
+        rows_written=rows_written,
+        symbols_requested=1,
+        symbols_processed=0 if status == "failed" else 1,
+        failed_symbols=failures,
+        message=(
+            f"{normalized_symbol} turnaround inputs collected synchronously."
+            if status == "success"
+            else f"{normalized_symbol} turnaround collection completed with remaining gaps."
+        ),
+        details={
+            "symbol": normalized_symbol,
+            "cik": str(cik),
+            "collect_profile": bool(collect_profile),
+            "collect_prices": bool(collect_prices),
+            "collect_statements": bool(collect_statements),
+            "price_range": {"start": price_start, "end": price_end},
+            "steps": steps,
+        },
+    )
 def collect_nasdaq100_repair_inputs(
     plan: Mapping[str, Any],
     *,

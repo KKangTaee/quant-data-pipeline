@@ -431,7 +431,7 @@ _TURNAROUND_METRIC_UNITS: dict[str, tuple[str, ...]] = {
     "diluted_shares": ("shares",),
 }
 
-_INSTANT_CONCEPT_FAMILIES: dict[str, tuple[str, ...]] = {
+TURNAROUND_INSTANT_CONCEPT_FAMILIES: dict[str, tuple[str, ...]] = {
     "cash": ("us-gaap:CashAndCashEquivalentsAtCarryingValue",),
     "short_term_investments": (
         "us-gaap:ShortTermInvestments",
@@ -451,6 +451,8 @@ _INSTANT_CONCEPT_FAMILIES: dict[str, tuple[str, ...]] = {
         "us-gaap:LongTermDebtNoncurrent",
     ),
 }
+
+_INSTANT_CONCEPT_FAMILIES = TURNAROUND_INSTANT_CONCEPT_FAMILIES
 
 _TTM_METRICS = (
     "revenue",

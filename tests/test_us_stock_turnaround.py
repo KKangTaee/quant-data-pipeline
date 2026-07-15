@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import unittest
+from unittest.mock import Mock, patch
 
 import pandas as pd
 
@@ -815,6 +817,351 @@ class TurnaroundValuationTests(unittest.TestCase):
         self.assertEqual(result["sections"]["cash_chart"]["status"], "READY")
         self.assertIn(result["sections"]["valuation"]["status"], {"PARTIAL", "BLOCKED"})
         self.assertIn(result["status"], {"READY", "PARTIAL"})
+
+
+class TurnaroundLoaderTests(unittest.TestCase):
+    def test_loader_bounds_one_symbol_duration_instant_price_and_profile_queries(self) -> None:
+        from finance.loaders.us_stock_turnaround import load_us_stock_turnaround_inputs
+
+        calls: list[tuple[str, str, tuple[object, ...]]] = []
+
+        def query(database: str, sql: str, params: tuple[object, ...]):
+            calls.append((database, sql, params))
+            if "FROM nyse_symbol_lifecycle" in sql:
+                return [
+                    {
+                        "symbol": "RIVN",
+                        "name": "Rivian Automotive",
+                        "related_cik": 1874178,
+                        "exchange": "NASDAQ",
+                        "quote_type": "EQUITY",
+                        "profile_status": "active",
+                        "country": "United States",
+                        "first_seen_date": "2021-11-10",
+                        "last_seen_date": "2026-07-15",
+                        "source": "sec_company_tickers_exchange",
+                    }
+                ]
+            if "FROM nyse_asset_profile" in sql:
+                return [
+                    {
+                        "symbol": "RIVN",
+                        "market_cap": 45_000_000_000,
+                        "sector": "Consumer Cyclical",
+                        "industry": "Auto Manufacturers",
+                        "country": "United States",
+                        "last_collected_at": "2026-07-14 12:00:00",
+                    }
+                ]
+            if "FROM nyse_price_history" in sql:
+                return [
+                    {
+                        "symbol": "RIVN",
+                        "date": "2026-07-14",
+                        "close": 14.25,
+                        "adj_close": 14.25,
+                        "stock_splits": 0,
+                    }
+                ]
+            return []
+
+        result = load_us_stock_turnaround_inputs(
+            "rivn",
+            as_of_date="2026-07-15",
+            query_fn=query,
+        )
+
+        statement_calls = [call for call in calls if "nyse_financial_statement_values" in call[1]]
+        self.assertEqual(len(statement_calls), 2)
+        self.assertTrue(any("source_period_type = 'duration'" in sql for _, sql, _ in statement_calls))
+        self.assertTrue(any("source_period_type = 'instant'" in sql for _, sql, _ in statement_calls))
+        for _, sql, params in statement_calls:
+            self.assertIn("symbol = %s", sql)
+            self.assertIn("available_at <= %s", sql)
+            self.assertIn("fiscal_year BETWEEN %s AND %s", sql)
+            self.assertIn("concept IN", sql)
+            self.assertEqual(params[0], "RIVN")
+            self.assertEqual(params[1:4], (2020, 2026, "2026-07-15"))
+        profile_call = next(call for call in calls if "FROM nyse_asset_profile" in call[1])
+        price_call = next(call for call in calls if "FROM nyse_price_history" in call[1])
+        self.assertEqual(profile_call[2], ("RIVN",))
+        self.assertEqual(price_call[2], ("RIVN", "2020-01-01", "2026-07-15"))
+        self.assertEqual(result["profile"]["currency"], "USD")
+        self.assertEqual(result["latest_price"]["currency"], "USD")
+        self.assertEqual(result["window"]["fiscal_years"], 7)
+
+    def test_collection_plan_maps_only_repairable_raw_gaps_to_exact_scopes(self) -> None:
+        from finance.loaders.us_stock_turnaround import build_us_stock_turnaround_collection_plan
+
+        base = {
+            "identity": {
+                "symbol": "RIVN",
+                "cik": "0001874178",
+                "instrument_type": "common_stock",
+                "adr_unit_status": "not_adr",
+            },
+            "profile": {"market_cap": 1_000.0, "last_collected_at": "2026-06-01"},
+            "latest_price": {"date": "2026-07-15", "close": 10.0},
+            "window": {"statement_start": "2020-01-01", "price_start": "2020-01-01", "as_of_date": "2026-07-15"},
+            "coverage": {
+                "profile_stale": True,
+                "price_missing": False,
+                "statement_core_missing": True,
+                "missing_concepts": ["ocf"],
+            },
+        }
+
+        collectable = build_us_stock_turnaround_collection_plan("RIVN", loaded_inputs=base)
+        intrinsic = build_us_stock_turnaround_collection_plan(
+            "RIVN",
+            loaded_inputs={
+                **base,
+                "coverage": {
+                    "profile_stale": False,
+                    "price_missing": False,
+                    "statement_core_missing": False,
+                },
+                "analysis": {
+                    "valuation": {"reason_code": "NEGATIVE_OR_ZERO_DENOMINATOR"}
+                },
+            },
+        )
+        mismatch = build_us_stock_turnaround_collection_plan(
+            "RIVN",
+            loaded_inputs={**base, "identity": {"symbol": "LCID", "cik": "0001811210"}},
+        )
+
+        self.assertEqual(collectable["status"], "COLLECTABLE")
+        self.assertEqual(collectable["scopes"], ["asset_profile", "sec_statements"])
+        self.assertEqual(collectable["missing_concepts"], ["ocf"])
+        self.assertEqual(intrinsic["status"], "READY")
+        self.assertEqual(intrinsic["scopes"], [])
+        self.assertEqual(mismatch["status"], "ERROR")
+        self.assertEqual(mismatch["reason_code"], "IDENTITY_MISMATCH")
+
+
+class TurnaroundServiceTests(unittest.TestCase):
+    def test_not_selected_returns_without_loader_or_provider_call(self) -> None:
+        from app.services.overview.us_stock_turnaround import build_us_stock_turnaround_read_model
+
+        with patch("app.services.overview.us_stock_turnaround.load_us_stock_turnaround_inputs") as loader:
+            result = build_us_stock_turnaround_read_model(selected_symbol=None)
+
+        loader.assert_not_called()
+        self.assertEqual(result["status"], "NOT_SELECTED")
+        self.assertEqual(result["schema_version"], "us_stock_turnaround_v1")
+
+    def test_selected_service_is_json_safe_and_exposes_exact_collection_action(self) -> None:
+        from app.services.overview.us_stock_turnaround import build_us_stock_turnaround_read_model
+
+        inputs = {
+            "identity": {
+                "symbol": "RIVN",
+                "name": "Rivian Automotive",
+                "cik": "0001874178",
+                "instrument_type": "common_stock",
+                "adr_unit_status": "not_adr",
+            },
+            "profile": {
+                "market_cap": 45_000_000_000,
+                "last_collected_at": pd.Timestamp("2026-06-01"),
+                "currency": "USD",
+                "sector": "Consumer Cyclical",
+                "industry": "Auto Manufacturers",
+            },
+            "latest_price": {"date": pd.Timestamp("2026-07-15"), "close": 14.25, "currency": "USD"},
+            "price_rows": [],
+            "statement_rows": _core_statement_rows(),
+            "window": {"statement_start": "2020-01-01", "price_start": "2020-01-01", "as_of_date": "2026-07-15"},
+            "coverage": {
+                "profile_stale": True,
+                "price_missing": False,
+                "statement_core_missing": False,
+            },
+        }
+
+        result = build_us_stock_turnaround_read_model(
+            selected_symbol="RIVN",
+            loaded_inputs=inputs,
+            per_model={"status": "NOT_APPLICABLE", "multiple_regime": {"status": "BLOCKED"}},
+        )
+
+        json.dumps(result)
+        self.assertIn(result["status"], {"COLLECTABLE", "PARTIAL", "READY"})
+        self.assertEqual(result["selection"]["symbol"], "RIVN")
+        self.assertEqual(result["collection_action"]["id"], "collect_us_stock_turnaround")
+        self.assertEqual(result["collection_action"]["scopes"], ["asset_profile"])
+        self.assertIn("sections", result)
+
+
+class TurnaroundCollectionTests(unittest.TestCase):
+    def test_selected_profile_collection_never_expands_to_full_universe_and_default_stays_broad(self) -> None:
+        from finance.data.asset_profile import collect_and_store_asset_profiles
+
+        db = Mock()
+        db.query.return_value = [{"symbol": "AAPL"}, {"symbol": "MSFT"}]
+
+        def profile(symbol: str, kind: str, _ticker: object) -> dict[str, object]:
+            return {
+                "symbol": symbol,
+                "kind": kind,
+                "status": "active",
+                "last_collected_at": "2026-07-15 12:00:00",
+            }
+
+        with patch("finance.data.asset_profile.MySQLClient", return_value=db), patch(
+            "finance.data.asset_profile.sync_table_schema"
+        ), patch(
+            "finance.data.asset_profile.yf.Tickers",
+            side_effect=lambda text: Mock(
+                tickers={symbol: Mock() for symbol in text.split()}
+            ),
+        ) as tickers, patch(
+            "finance.data.asset_profile._extract_profile", side_effect=profile
+        ), patch("finance.data.asset_profile._upsert_profiles") as upsert, patch(
+            "finance.data.asset_profile.time.sleep"
+        ), patch("finance.data.asset_profile.random.random", return_value=0.0):
+            collect_and_store_asset_profiles(
+                kinds=("stock",),
+                symbols=["rivn"],
+                sleep=0,
+                save_fail_csv=False,
+            )
+            db.query.assert_not_called()
+            tickers.assert_called_once_with("RIVN")
+            self.assertEqual(upsert.call_args.args[1][0]["symbol"], "RIVN")
+
+            db.query.reset_mock()
+            tickers.reset_mock()
+            upsert.reset_mock()
+            collect_and_store_asset_profiles(
+                kinds=("stock",),
+                sleep=0,
+                save_fail_csv=False,
+            )
+            db.query.assert_called_once_with("SELECT symbol FROM nyse_stock")
+            tickers.assert_called_once_with("AAPL MSFT")
+
+    def test_low_level_collection_validates_identity_then_runs_each_exact_scope_once(self) -> None:
+        from app.jobs.ingestion_jobs import run_collect_us_stock_turnaround_inputs
+
+        profile_runner = Mock(
+            return_value={"status": "success", "rows_written": 1, "failed_symbols": []}
+        )
+        price_runner = Mock(
+            return_value={"status": "success", "rows_written": 25, "failed_symbols": []}
+        )
+        statement_runner = Mock(
+            return_value={"status": "partial_success", "rows_written": 120, "failed_symbols": []}
+        )
+        result = run_collect_us_stock_turnaround_inputs(
+            "rivn",
+            cik="0001874178",
+            identity_cik="1874178",
+            price_start="2026-06-01",
+            price_end="2026-07-15",
+            collect_profile=True,
+            collect_prices=True,
+            collect_statements=True,
+            profile_runner=profile_runner,
+            price_runner=price_runner,
+            statement_runner=statement_runner,
+        )
+
+        profile_runner.assert_called_once_with(
+            kinds=("stock",),
+            symbols=["RIVN"],
+            progress_callback=None,
+        )
+        price_runner.assert_called_once_with(
+            ["RIVN"],
+            start="2026-06-01",
+            end="2026-07-16",
+            interval="1d",
+            execution_profile="managed_safe",
+        )
+        statement_runner.assert_called_once_with(
+            ["RIVN"],
+            freq="quarterly",
+            periods=0,
+            period="quarterly",
+        )
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 146)
+
+        invalid_profile = Mock()
+        invalid_price = Mock()
+        invalid_statement = Mock()
+        rejected = run_collect_us_stock_turnaround_inputs(
+            "RIVN",
+            cik="0001874178",
+            identity_cik="0001811210",
+            price_start="2026-06-01",
+            price_end="2026-07-15",
+            collect_profile=True,
+            collect_prices=True,
+            collect_statements=True,
+            profile_runner=invalid_profile,
+            price_runner=invalid_price,
+            statement_runner=invalid_statement,
+        )
+        self.assertEqual(rejected["status"], "failed")
+        invalid_profile.assert_not_called()
+        invalid_price.assert_not_called()
+        invalid_statement.assert_not_called()
+
+    def test_overview_collection_preserves_partial_success_and_retry_narrows_scopes(self) -> None:
+        from app.jobs.overview_actions import run_overview_us_stock_turnaround_collection
+
+        identity = {"symbol": "RIVN", "cik": "0001874178"}
+        first = {
+            "status": "COLLECTABLE",
+            "identity": identity,
+            "scopes": ["asset_profile", "prices"],
+            "missing_ranges": {
+                "prices": {"start": "2026-06-01", "end": "2026-07-15"}
+            },
+        }
+        remaining = {
+            "status": "COLLECTABLE",
+            "identity": identity,
+            "scopes": ["sec_statements"],
+            "missing_ranges": {
+                "sec_statements": {"start": "2020-01-01", "end": "2026-07-15"}
+            },
+        }
+        ready = {"status": "READY", "identity": identity, "scopes": [], "missing_ranges": {}}
+        collector = Mock(
+            return_value={
+                "job_name": "collect_us_stock_turnaround_inputs",
+                "status": "success",
+                "rows_written": 30,
+                "failed_symbols": [],
+                "details": {},
+            }
+        )
+
+        partial = run_overview_us_stock_turnaround_collection(
+            "RIVN",
+            plan_builder=Mock(side_effect=[first, remaining]),
+            collection_runner=collector,
+        )
+        completed = run_overview_us_stock_turnaround_collection(
+            "RIVN",
+            plan_builder=Mock(side_effect=[remaining, ready]),
+            collection_runner=collector,
+        )
+
+        self.assertEqual(partial["status"], "partial_success")
+        self.assertEqual(partial["details"]["after"]["scopes"], ["sec_statements"])
+        self.assertEqual(completed["status"], "success")
+        self.assertEqual(collector.call_count, 2)
+        self.assertEqual(collector.call_args_list[0].kwargs["collect_profile"], True)
+        self.assertEqual(collector.call_args_list[0].kwargs["collect_prices"], True)
+        self.assertEqual(collector.call_args_list[0].kwargs["collect_statements"], False)
+        self.assertEqual(collector.call_args_list[1].kwargs["collect_profile"], False)
+        self.assertEqual(collector.call_args_list[1].kwargs["collect_prices"], False)
+        self.assertEqual(collector.call_args_list[1].kwargs["collect_statements"], True)
 
 
 if __name__ == "__main__":

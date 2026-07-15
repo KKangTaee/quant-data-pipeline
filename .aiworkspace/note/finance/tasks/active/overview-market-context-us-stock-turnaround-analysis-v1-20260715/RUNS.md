@@ -55,3 +55,11 @@ Last Updated: 2026-07-15
 - RED/GREEN: fixed runway, meaningful positive-operating-income interest coverage, net-debt/negative-OCF, and split-neutral dilution overlays.
 - RED/GREEN: fixed valuation priority and numerator consistency, including P/FCF, P/OCF, EV/EBITDA, EV/Gross Profit, EV/Sales, direct-debt precedence, aligned statement components, freshness, USD-unit, denominator, and specialized-sector gates.
 - Verification: `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation -v` ran 67 tests with 0 failures; target `py_compile` and `git diff --check` passed.
+
+## 3차 — Loader, Service, Collection
+
+- RED/GREEN: added query-spy coverage for exact selected symbol, seven fiscal years, as-of cutoff, separate duration/instant queries, relevant concept/unit filters, bounded profile and price reads, and USD share/currency evidence.
+- RED/GREEN: added JSON-safe selected-stock turnaround service, `NOT_SELECTED` no-loader path, exact raw-gap action scopes, combined schema v4, unchanged S&P/PER fields, isolated turnaround failure, and positive READY PER-only recommendation.
+- RED/GREEN: added optional one-symbol asset-profile collection while preserving the default broad query; symbol/CIK validation now precedes profile/price/SEC runners.
+- RED/GREEN: added explicit `collect_us_stock_turnaround` Streamlit event, synchronous overview facade, partial-success preservation, and remaining-scope-only retry.
+- Verification: `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation -v` ran 92 tests with 0 failures; touched Python modules passed `py_compile`.

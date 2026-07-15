@@ -201,9 +201,9 @@ def build_us_stock_turnaround_collection_plan(
 ) -> dict[str, Any]: ...
 ```
 
-- [ ] Write RED query-spy tests requiring exact symbol predicate, `available_at <= as_of`, duration+instant separation, relevant concept/unit filters, maximum seven fiscal years, and bounded price/profile rows.
-- [ ] Assert identity mismatch is ERROR, raw gaps map only to `asset_profile/prices/sec_statements`, and intrinsic economic/sector limitations never become collection scopes.
-- [ ] Implement loader/preflight and run focused tests to GREEN.
+- [x] Write RED query-spy tests requiring exact symbol predicate, `available_at <= as_of`, duration+instant separation, relevant concept/unit filters, maximum seven fiscal years, and bounded price/profile rows.
+- [x] Assert identity mismatch is ERROR, raw gaps map only to `asset_profile/prices/sec_statements`, and intrinsic economic/sector limitations never become collection scopes.
+- [x] Implement loader/preflight and run focused tests to GREEN.
 
 ### Task 3.2: JSON-safe service and combined failure isolation
 
@@ -220,10 +220,10 @@ def build_us_stock_turnaround_read_model(
 ) -> dict[str, Any]: ...
 ```
 
-- [ ] Write RED tests that no symbol returns `NOT_SELECTED` without loader/provider calls; selected symbol produces JSON-safe timeline/sections and exact action scopes.
-- [ ] Write RED combined-service tests: S&P stays byte-equivalent, PER result fields stay unchanged, turnaround failure is isolated, and `recommended_analysis` is `per` only when current positive TTM EPS plus existing Graph 1 READY contract holds.
-- [ ] Implement the service and attach `turnaround_analysis`/`recommended_analysis` to the existing U.S.-stock payload; bump only combined schema version.
-- [ ] Run service and Market Context tests to GREEN.
+- [x] Write RED tests that no symbol returns `NOT_SELECTED` without loader/provider calls; selected symbol produces JSON-safe timeline/sections and exact action scopes.
+- [x] Write RED combined-service tests: S&P stays byte-equivalent, PER result fields stay unchanged, turnaround failure is isolated, and `recommended_analysis` is `per` only when current positive TTM EPS plus existing Graph 1 READY contract holds.
+- [x] Implement the service and attach `turnaround_analysis`/`recommended_analysis` to the existing U.S.-stock payload; bump only combined schema version.
+- [x] Run service and Market Context tests to GREEN.
 
 ### Task 3.3: Selected profile/price/SEC synchronous collection and resume
 
@@ -237,12 +237,12 @@ def run_collect_us_stock_turnaround_inputs(..., collect_profile: bool, collect_p
 def run_overview_us_stock_turnaround_collection(symbol: str, ...) -> JobResult: ...
 ```
 
-- [ ] Write RED tests that selected-symbol profile collection never expands to the full stock universe and existing default broad collection remains unchanged.
-- [ ] Assert symbol/CIK mismatch fails before all runners, exact scopes call each runner at most once, partial successes persist, and recheck narrows the retry scopes.
-- [ ] Assert search/render/local analysis-tab switch perform zero action/provider calls.
-- [ ] Implement selected-symbol filtering, the validated low-level job, overview facade, Streamlit event id `collect_us_stock_turnaround`, cache clear, and result reflection.
-- [ ] Run turnaround, existing U.S.-stock valuation, and Market Context regression tests.
-- [ ] Update task evidence and commit `전환 분석 로더와 선택 종목 수집 연결`.
+- [x] Write RED tests that selected-symbol profile collection never expands to the full stock universe and existing default broad collection remains unchanged.
+- [x] Assert symbol/CIK mismatch fails before all runners, exact scopes call each runner at most once, partial successes persist, and recheck narrows the retry scopes.
+- [x] Assert search/render/local analysis-tab switch perform zero action/provider calls.
+- [x] Implement selected-symbol filtering, the validated low-level job, overview facade, Streamlit event id `collect_us_stock_turnaround`, cache clear, and result reflection.
+- [x] Run turnaround, existing U.S.-stock valuation, and Market Context regression tests.
+- [x] Update task evidence and commit `전환 분석 로더와 선택 종목 수집 연결`.
 
 **3차 완료 조건:** read path는 provider call 0회이고, 명시 action만 identity-validated one-symbol scopes를 수집하며 partial retry가 이미 충족된 scope를 반복하지 않는다.
 

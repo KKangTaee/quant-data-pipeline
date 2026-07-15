@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
-from typing import Optional, Literal
+from typing import Iterable, Optional, Literal
 
 from .db.mysql import MySQLClient
 from .db.schema import NYSE_SCHEMAS, sync_table_schema
@@ -172,6 +172,7 @@ def _upsert_profiles(db: MySQLClient, rows: list[dict]):
 
 def collect_and_store_asset_profiles(
     kinds: tuple[str, ...] = ("stock", "etf"),
+    symbols: Iterable[str] | None = None,
     chunk_size: int = 50,
     sleep: float = 0.4,
     max_retry: int = 3,
@@ -184,16 +185,30 @@ def collect_and_store_asset_profiles(
 ):
     db = MySQLClient(host, user, password, port)
     out_fail = []
+    selected_symbols = (
+        list(
+            dict.fromkeys(
+                str(symbol or "").strip().upper()
+                for symbol in symbols
+                if str(symbol or "").strip()
+            )
+        )
+        if symbols is not None
+        else None
+    )
 
     try:
         db.use_db(DB_NAME)
         sync_table_schema(db, "nyse_asset_profile", NYSE_SCHEMAS["asset_profile"], DB_NAME)
 
         for kind in kinds:
-            symbols = db.query(f"SELECT symbol FROM nyse_{kind}")
-            symbols = [r["symbol"] for r in symbols if r.get("symbol")]
+            if selected_symbols is None:
+                symbol_rows = db.query(f"SELECT symbol FROM nyse_{kind}")
+                kind_symbols = [r["symbol"] for r in symbol_rows if r.get("symbol")]
+            else:
+                kind_symbols = selected_symbols
 
-            for batch in _chunked(symbols, chunk_size):
+            for batch in _chunked(kind_symbols, chunk_size):
                 tickers = yf.Tickers(" ".join(batch)).tickers
 
                 rows = []

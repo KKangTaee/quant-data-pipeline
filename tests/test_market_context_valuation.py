@@ -167,19 +167,87 @@ class MarketContextValuationTests(unittest.TestCase):
         ), patch(
             "app.services.overview.market_context_valuation.build_us_stock_valuation_read_model",
             side_effect=RuntimeError("db unavailable"),
-        ) as stock_builder:
+        ) as stock_builder, patch(
+            "app.services.overview.market_context_valuation.build_us_stock_turnaround_read_model",
+            return_value={"status": "ERROR", "reason": "turnaround unavailable"},
+        ):
             model = build_market_context_valuation_read_model(
                 selected_symbol="AAPL",
                 search_query="apple",
             )
 
-        self.assertEqual(model["schema_version"], "market_context_valuation_v3")
+        self.assertEqual(model["schema_version"], "market_context_valuation_v4")
         self.assertEqual(set(model["instruments"]), {"sp500", "us_stock"})
         self.assertEqual(model["instruments"]["sp500"], sp500)
         self.assertEqual(model["instruments"]["us_stock"]["status"], "ERROR")
         stock_builder.assert_called_once_with(
             selected_symbol="AAPL",
             search_query="apple",
+        )
+
+    def test_combined_model_preserves_per_fields_and_isolates_turnaround_failure(self) -> None:
+        from app.services.overview.market_context_valuation import build_market_context_valuation_read_model
+
+        per = {
+            "schema_version": "us_stock_valuation_v1",
+            "status": "READY",
+            "selection": {"symbol": "AAPL"},
+            "multiple_regime": {"status": "READY", "current_pe": 31.5},
+            "marker": {"nested": "unchanged"},
+        }
+        with patch(
+            "app.services.overview.market_context_valuation.build_sp500_valuation_read_model",
+            return_value={"status": "READY", "instrument": {"id": "sp500"}},
+        ), patch(
+            "app.services.overview.market_context_valuation.build_us_stock_valuation_read_model",
+            return_value=per,
+        ), patch(
+            "app.services.overview.market_context_valuation.build_us_stock_turnaround_read_model",
+            side_effect=RuntimeError("statement schema unavailable"),
+        ):
+            model = build_market_context_valuation_read_model(selected_symbol="AAPL")
+
+        stock = model["instruments"]["us_stock"]
+        for key, value in per.items():
+            self.assertEqual(stock[key], value)
+        self.assertEqual(stock["turnaround_analysis"]["status"], "ERROR")
+        self.assertEqual(stock["recommended_analysis"], "per")
+
+    def test_combined_model_recommends_turnaround_without_positive_ready_per(self) -> None:
+        from app.services.overview.market_context_valuation import build_market_context_valuation_read_model
+
+        per = {
+            "status": "NOT_APPLICABLE",
+            "selection": {"symbol": "RIVN"},
+            "multiple_regime": {"status": "BLOCKED", "current_pe": None},
+            "instrument": {
+                "id": "us_stock",
+                "label": "미국 개별주식",
+                "proxy_symbol": None,
+                "price_label": "선택 종목 주가",
+                "multiple_label": "후행 PER",
+                "method_label": "기업 자체 이력 기반",
+            },
+        }
+        turnaround = {"status": "READY", "selection": {"symbol": "RIVN"}}
+        with patch(
+            "app.services.overview.market_context_valuation.build_sp500_valuation_read_model",
+            return_value={"status": "READY", "instrument": {"id": "sp500"}},
+        ), patch(
+            "app.services.overview.market_context_valuation.build_us_stock_valuation_read_model",
+            return_value=per,
+        ), patch(
+            "app.services.overview.market_context_valuation.build_us_stock_turnaround_read_model",
+            return_value=turnaround,
+        ) as turnaround_builder:
+            model = build_market_context_valuation_read_model(selected_symbol="RIVN")
+
+        stock = model["instruments"]["us_stock"]
+        self.assertEqual(stock["turnaround_analysis"], turnaround)
+        self.assertEqual(stock["recommended_analysis"], "turnaround")
+        turnaround_builder.assert_called_once_with(
+            selected_symbol="RIVN",
+            per_model=per,
         )
 
     def test_react_surface_has_stock_selector_search_and_status_contract(self) -> None:
@@ -369,6 +437,43 @@ class MarketContextValuationTests(unittest.TestCase):
         self.assertFalse(rejected)
         run_action.assert_called_once_with("AAPL")
         store_result.assert_called_once_with(run_action.return_value)
+        clear_cache.assert_called_once_with()
+        rerun.assert_called_once_with()
+
+    def test_market_context_turnaround_collection_is_explicit_and_analysis_switch_is_local(self) -> None:
+        from app.web.overview import market_context_helpers
+
+        state: dict[str, object] = {
+            market_context_helpers.US_STOCK_SELECTED_SYMBOL_KEY: "RIVN"
+        }
+        run_action = Mock(return_value={"status": "success", "rows_written": 44})
+        clear_cache = Mock()
+        rerun = Mock()
+
+        handled = market_context_helpers._handle_market_context_valuation_event(
+            {
+                "event": {
+                    "id": "collect_us_stock_turnaround",
+                    "symbol": "RIVN",
+                    "nonce": 700,
+                }
+            },
+            state=state,
+            run_action=run_action,
+            clear_cache=clear_cache,
+            rerun=rerun,
+        )
+        local_switch = market_context_helpers._handle_market_context_valuation_event(
+            {"event": {"id": "switch_us_stock_analysis", "analysis": "per", "nonce": 701}},
+            state=state,
+            run_action=run_action,
+            clear_cache=clear_cache,
+            rerun=rerun,
+        )
+
+        self.assertTrue(handled)
+        self.assertFalse(local_switch)
+        run_action.assert_called_once_with("RIVN")
         clear_cache.assert_called_once_with()
         rerun.assert_called_once_with()
 
