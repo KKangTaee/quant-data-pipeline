@@ -5,8 +5,8 @@ Last Updated: 2026-07-15
 ## Current Stage
 
 - 전체 roadmap: 1차~3차
-- 현재: detailed TDD plan complete · 1차 시작 전
-- 구현 완료 차수: 0/3
+- 현재: 1차 complete · 2차 unified event/UI 시작 전
+- 구현 완료 차수: 1/3
 
 ## Completed
 
@@ -15,7 +15,9 @@ Last Updated: 2026-07-15
 - 별도 button과 automatic refresh를 제외하고 exact-scope unified action을 authoritative design으로 정리했다.
 - 사용자가 cached UI 즉시 표시 + 자동 최신성 판정 + 명시적 상단 CTA의 hybrid 흐름을 승인했다.
 - file/interface/RED-GREEN/commit 단위의 상세 TDD 계획을 `PLAN.md`에 고정했다.
+- 공용 NYSE 완료 session helper, unified freshness read model, CIK-independent profile/price와 SEC-only identity gate를 RED-GREEN으로 구현했다.
+- 1차 focused calendar/freshness/PER/turnaround/Market Context 111개 테스트와 target py_compile을 통과했다.
 
 ## Next Action
 
-- `superpowers:executing-plans`와 TDD로 1차 공용 calendar/freshness/CIK-independent collection 경계를 구현한다.
+- 2차 unified `refresh_us_stock_data` Streamlit event와 header freshness bar/single CTA를 TDD로 구현한다.

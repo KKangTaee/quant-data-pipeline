@@ -21,3 +21,10 @@ Last Updated: 2026-07-15
 - Confirmed the current directory is an existing linked worktree on `codex/sub-dev`; no new worktree or branch was created.
 - The local `.venv` does not include `pytest`, so the plan commands were corrected to the repository's available `unittest` runner before code changes.
 - Baseline: `python -m unittest tests.test_us_stock_valuation tests.test_us_stock_turnaround tests.test_market_context_valuation` -> 96 tests passed.
+
+## 1차 — Freshness / Collection Boundary
+
+- RED: missing `app.services.nyse_calendar`, missing `us_stock_freshness`, missing unified ingestion/facade functions, and missing coverage basis keys all failed for the expected contract reason.
+- GREEN commits: `3645fb40` shared NYSE session; `9cc8edd9` unified freshness/basis; `49413211` market-first collection and partial-success facade.
+- Focused verification: 111 calendar/freshness/PER/turnaround/Market Context tests passed; target `py_compile` and `git diff --check` passed.
+- No provider call, DB write, schema change, registry append, or generated artifact occurred in 1차.

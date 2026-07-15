@@ -33,7 +33,7 @@
 - Produces: `previous_nyse_trading_day(value: date) -> date`
 - Preserves: `app.services.backtest_price_refresh._latest_completed_nyse_session` private compatibility alias.
 
-- [ ] **Step 1: Write failing calendar tests**
+- [x] **Step 1: Write failing calendar tests**
 
 ```python
 def test_latest_completed_session_uses_previous_day_before_regular_close():
@@ -49,13 +49,13 @@ def test_latest_completed_session_handles_weekend_holiday_and_early_close():
     assert latest_completed_nyse_session(datetime(2026, 11, 27, 13, 1, tzinfo=US_EASTERN_TZ)) == date(2026, 11, 27)
 ```
 
-- [ ] **Step 2: Run the new tests and confirm RED**
+- [x] **Step 2: Run the new tests and confirm RED**
 
 Run: `.venv/bin/python -m unittest tests.test_nyse_calendar -v`
 
 Expected: FAIL with `ModuleNotFoundError: app.services.nyse_calendar`.
 
-- [ ] **Step 3: Extract the existing calendar logic without changing semantics**
+- [x] **Step 3: Extract the existing calendar logic without changing semantics**
 
 ```python
 US_EASTERN_TZ = ZoneInfo("America/New_York")
@@ -90,13 +90,13 @@ from app.services.nyse_calendar import (
 )
 ```
 
-- [ ] **Step 4: Run calendar and backtest refresh regressions**
+- [x] **Step 4: Run calendar and backtest refresh regressions**
 
 Run: `.venv/bin/python -m unittest tests.test_nyse_calendar tests.test_service_contracts.BacktestRuntimeContractTests.test_backtest_price_refresh_plan_uses_latest_completed_trading_day -v`
 
 Expected: all selected tests PASS.
 
-- [ ] **Step 5: Commit the calendar extraction**
+- [x] **Step 5: Commit the calendar extraction**
 
 ```bash
 git add app/services/nyse_calendar.py app/services/backtest_price_refresh.py tests/test_nyse_calendar.py
@@ -117,7 +117,7 @@ git commit -m "NYSE 완료 거래일 계산을 공용화"
 - Produces: `build_us_stock_data_freshness(symbol: str, *, per_model: Mapping[str, Any], turnaround_model: Mapping[str, Any], now: datetime | None = None) -> dict[str, Any]`.
 - Produces on combined stock payload: `data_freshness.status`, basis dates, ordered gaps, and optional `refresh_us_stock_data` action.
 
-- [ ] **Step 1: Write failing NET-like freshness tests**
+- [x] **Step 1: Write failing NET-like freshness tests**
 
 ```python
 def test_net_like_stale_market_data_remains_refreshable_without_cik():
@@ -166,13 +166,13 @@ def test_statement_gap_adds_identity_but_keeps_market_scopes_collectable():
     assert result["action"]["scopes"] == ["asset_profile", "prices", "sec_identity", "sec_statements"]
 ```
 
-- [ ] **Step 2: Run the freshness tests and confirm RED**
+- [x] **Step 2: Run the freshness tests and confirm RED**
 
 Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness -v`
 
 Expected: FAIL because `app.services.overview.us_stock_freshness` does not exist.
 
-- [ ] **Step 3: Expose exact basis evidence from the turnaround loader**
+- [x] **Step 3: Expose exact basis evidence from the turnaround loader**
 
 Extend `_coverage()` with JSON-safe dates while preserving existing keys:
 
@@ -190,7 +190,7 @@ return {
 }
 ```
 
-- [ ] **Step 4: Implement the pure unified freshness builder**
+- [x] **Step 4: Implement the pure unified freshness builder**
 
 ```python
 SCOPE_ORDER = ("asset_profile", "prices", "sec_identity", "sec_statements")
@@ -238,7 +238,7 @@ def build_us_stock_data_freshness(symbol, *, per_model, turnaround_model, now=No
 
 Each gap must use one exact reason code: `PRICE_BEHIND_COMPLETED_SESSION`, `PROFILE_PRICE_BASIS_MISALIGNED`, `SEC_IDENTITY_MISSING`, or `STATEMENT_RAW_GAP`.
 
-- [ ] **Step 5: Attach freshness to the combined selected-stock model**
+- [x] **Step 5: Attach freshness to the combined selected-stock model**
 
 ```python
 freshness = build_us_stock_data_freshness(
@@ -257,13 +257,13 @@ stock = {
 
 Keep S&P unchanged and increment the combined schema to `market_context_valuation_v5`.
 
-- [ ] **Step 6: Run focused read-model regressions**
+- [x] **Step 6: Run focused read-model regressions**
 
 Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness tests.test_us_stock_turnaround tests.test_market_context_valuation`
 
 Expected: all tests PASS; S&P isolation and PER/turnaround recommendation tests remain green.
 
-- [ ] **Step 7: Commit the freshness contract**
+- [x] **Step 7: Commit the freshness contract**
 
 ```bash
 git add app/services/overview/us_stock_freshness.py finance/loaders/us_stock_turnaround.py app/services/overview/market_context_valuation.py tests/test_us_stock_freshness.py tests/test_market_context_valuation.py
@@ -284,7 +284,7 @@ git commit -m "개별주 최신성 판정 계약 추가"
 - Produces: `run_overview_us_stock_data_refresh(symbol: str, *, progress_callback=None, model_builder=build_market_context_valuation_read_model, identity_runner=run_collect_sec_company_ticker_crosscheck, collection_runner=run_collect_us_stock_refresh_inputs) -> JobResult`.
 - Preserves: legacy valuation/turnaround jobs and facades for compatibility; current UI will stop emitting their ids in Task 4.
 
-- [ ] **Step 1: Write failing low-level collection boundary tests**
+- [x] **Step 1: Write failing low-level collection boundary tests**
 
 ```python
 def test_market_scopes_run_without_cik_and_statement_scope_is_rejected_separately():
@@ -310,13 +310,13 @@ def test_invalid_symbol_runs_no_scope():
     price_runner.assert_not_called()
 ```
 
-- [ ] **Step 2: Run the low-level tests and confirm RED**
+- [x] **Step 2: Run the low-level tests and confirm RED**
 
 Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness -v`
 
 Expected: FAIL because `run_collect_us_stock_refresh_inputs` is missing.
 
-- [ ] **Step 3: Implement the unified low-level job**
+- [x] **Step 3: Implement the unified low-level job**
 
 ```python
 def run_collect_us_stock_refresh_inputs(
@@ -381,7 +381,7 @@ def run_collect_us_stock_refresh_inputs(
     )
 ```
 
-- [ ] **Step 4: Write failing facade sequence and replan tests**
+- [x] **Step 4: Write failing facade sequence and replan tests**
 
 ```python
 def test_facade_collects_market_before_identity_then_sec_and_replans():
@@ -401,13 +401,13 @@ def test_facade_preserves_market_success_when_identity_remains_missing():
     assert result["details"]["after"]["action"]["scopes"] == ["sec_identity", "sec_statements"]
 ```
 
-- [ ] **Step 5: Run facade tests and confirm RED**
+- [x] **Step 5: Run facade tests and confirm RED**
 
 Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness -v`
 
 Expected: FAIL because `run_overview_us_stock_data_refresh` is missing.
 
-- [ ] **Step 6: Implement market-first, identity-second, statement-third orchestration**
+- [x] **Step 6: Implement market-first, identity-second, statement-third orchestration**
 
 ```python
 before_model = model_builder(selected_symbol=normalized)
@@ -451,13 +451,13 @@ after = dict(after_stock.get("data_freshness") or {})
 
 Use `price_basis_date` as the exact start and `expected_price_date` as end. A READY no-op must call neither identity nor collection runner.
 
-- [ ] **Step 7: Run focused ingestion/facade compatibility tests**
+- [x] **Step 7: Run focused ingestion/facade compatibility tests**
 
 Run: `.venv/bin/python -m unittest tests.test_us_stock_freshness tests.test_us_stock_valuation tests.test_us_stock_turnaround`
 
 Expected: all tests PASS, including legacy selected-symbol jobs.
 
-- [ ] **Step 8: Commit the 1차 collection boundary**
+- [x] **Step 8: Commit the 1차 collection boundary**
 
 ```bash
 git add app/jobs/ingestion_jobs.py app/jobs/overview_actions.py tests/test_us_stock_freshness.py tests/test_us_stock_valuation.py tests/test_us_stock_turnaround.py
