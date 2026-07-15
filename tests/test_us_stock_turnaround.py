@@ -532,6 +532,26 @@ def _analysis_timeline(
 
 
 class TurnaroundMilestoneAndRiskTests(unittest.TestCase):
+    def test_profitable_but_below_threshold_operating_margin_exposes_context(self) -> None:
+        from finance.data.us_stock_turnaround import classify_turnaround_milestones
+
+        timeline = _analysis_timeline(ttm_eps=[4.0] * 8)
+        margins = [31.1, 31.3, 31.5, 31.75, 31.81, 31.87, 31.97, 32.38]
+        deltas = [None, None, None, None, 0.99, 0.83, 0.59, 0.63]
+        for row, margin, delta in zip(timeline, margins, deltas):
+            row["ttm_operating_margin_pct"] = margin
+            row["operating_margin_yoy_delta_pp"] = delta
+
+        evidence = classify_turnaround_milestones(
+            {"timeline": timeline},
+            per_status="READY",
+        )["milestones"]["OPERATING_IMPROVEMENT"]["evidence"]
+
+        self.assertFalse(evidence["operating_margin_improvement"])
+        self.assertEqual(evidence["current_operating_margin_pct"], 32.38)
+        self.assertEqual(evidence["latest_operating_margin_yoy_delta_pp"], 0.63)
+        self.assertEqual(evidence["recent_operating_improvement_count"], 0)
+
     def test_operating_and_cash_milestones_are_independent(self) -> None:
         from finance.data.us_stock_turnaround import classify_turnaround_milestones
 
@@ -820,6 +840,50 @@ class TurnaroundValuationTests(unittest.TestCase):
 
 
 class TurnaroundLoaderTests(unittest.TestCase):
+    def test_loader_reads_canonical_usd_per_share_eps_rows(self) -> None:
+        from finance.loaders.us_stock_turnaround import load_us_stock_turnaround_inputs
+
+        def query(database: str, sql: str, params: tuple[object, ...]):
+            if "FROM nyse_symbol_lifecycle" in sql:
+                return [
+                    {
+                        "symbol": "AAPL",
+                        "name": "Apple Inc.",
+                        "related_cik": 320193,
+                        "exchange": "NASDAQ",
+                        "quote_type": "EQUITY",
+                        "profile_status": "active",
+                        "country": "United States",
+                        "source": "sec_company_tickers_exchange",
+                    }
+                ]
+            if "source_period_type = 'duration'" in sql:
+                return (
+                    _metric_facts(
+                        "diluted_eps",
+                        [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7],
+                        symbol="AAPL",
+                    )
+                    if "USD per share" in params
+                    else []
+                )
+            return []
+
+        result = load_us_stock_turnaround_inputs(
+            "AAPL",
+            as_of_date="2026-07-16",
+            query_fn=query,
+        )
+        available = [
+            row
+            for row in result["series"]["timeline"]
+            if row.get("status") == "AVAILABLE"
+        ]
+
+        self.assertTrue(available)
+        self.assertAlmostEqual(available[-1]["ttm_eps"], 6.2)
+        self.assertNotIn("diluted_eps", result["coverage"]["missing_concepts"])
+
     def test_loader_bounds_one_symbol_duration_instant_price_and_profile_queries(self) -> None:
         from finance.loaders.us_stock_turnaround import load_us_stock_turnaround_inputs
 

@@ -35,7 +35,7 @@
 - Extends: `OPERATING_IMPROVEMENT.evidence` with `current_operating_margin_pct`, `latest_operating_margin_yoy_delta_pp`, and `recent_operating_improvement_count`.
 - Preserves: all milestone status names, headline priority, thresholds, and JSON shape outside added evidence keys.
 
-- [ ] **Step 1: Write a failing public-loader EPS unit test**
+- [x] **Step 1: Write a failing public-loader EPS unit test**
 
 Add to `TurnaroundLoaderTests`:
 
@@ -58,7 +58,7 @@ def test_loader_reads_canonical_usd_per_share_eps_rows(self) -> None:
     self.assertNotIn("diluted_eps", result["coverage"]["missing_concepts"])
 ```
 
-- [ ] **Step 2: Run the loader test and confirm RED**
+- [x] **Step 2: Run the loader test and confirm RED**
 
 Run:
 
@@ -68,7 +68,7 @@ Run:
 
 Expected: FAIL at `self.assertTrue(available)` because duration query params omit `USD per share`.
 
-- [ ] **Step 3: Add the canonical EPS unit**
+- [x] **Step 3: Add the canonical EPS unit**
 
 Change the constant to:
 
@@ -76,13 +76,13 @@ Change the constant to:
 _DURATION_UNITS = ("USD", "USD per share", "USD/share", "USD/shares", "shares")
 ```
 
-- [ ] **Step 4: Run the loader test and confirm GREEN**
+- [x] **Step 4: Run the loader test and confirm GREEN**
 
 Run the Step 2 command.
 
 Expected: PASS with latest TTM EPS `6.2` and no diluted-EPS coverage gap.
 
-- [ ] **Step 5: Write a failing operating-evidence test**
+- [x] **Step 5: Write a failing operating-evidence test**
 
 Add to `TurnaroundMilestoneAndRiskTests`:
 
@@ -108,7 +108,7 @@ def test_profitable_but_below_threshold_operating_margin_exposes_context(self) -
     self.assertEqual(evidence["recent_operating_improvement_count"], 0)
 ```
 
-- [ ] **Step 6: Run the evidence test and confirm RED**
+- [x] **Step 6: Run the evidence test and confirm RED**
 
 Run:
 
@@ -118,7 +118,7 @@ Run:
 
 Expected: ERROR/FAIL with missing `current_operating_margin_pct` evidence key.
 
-- [ ] **Step 7: Expose exact evidence without changing the threshold**
+- [x] **Step 7: Expose exact evidence without changing the threshold**
 
 Before `operating_improvement`, calculate:
 
@@ -135,7 +135,7 @@ latest_operating_margin_yoy_delta_pp=latest_operating_margin_yoy_delta_pp,
 recent_operating_improvement_count=recent_operating_improvement_count,
 ```
 
-- [ ] **Step 8: Run 1차 regressions**
+- [x] **Step 8: Run 1차 regressions**
 
 Run:
 
@@ -147,7 +147,7 @@ git diff --check
 
 Expected: all selected tests PASS; compile and diff check exit 0.
 
-- [ ] **Step 9: Record and commit 1차**
+- [x] **Step 9: Record and commit 1차**
 
 Update task `RUNS.md` with RED/GREEN commands and `STATUS.md` to 1/3 complete, then:
 

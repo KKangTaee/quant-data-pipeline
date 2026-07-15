@@ -14,7 +14,7 @@ from finance.loaders.us_stock_valuation import QueryFn, _query, load_us_stock_id
 
 
 InputLoader = Callable[..., dict[str, Any]]
-_DURATION_UNITS = ("USD", "USD/share", "USD/shares", "shares")
+_DURATION_UNITS = ("USD", "USD per share", "USD/share", "USD/shares", "shares")
 _INSTANT_UNITS = ("USD", "shares")
 
 

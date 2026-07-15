@@ -782,8 +782,14 @@ def classify_turnaround_milestones(
     ]
     operating_margin = latest.get("ttm_operating_margin_pct")
     prior_operating_margin = prior_year.get("ttm_operating_margin_pct")
+    recent_operating_improvement_count = sum(
+        delta >= 1.0 for delta in operating_deltas
+    )
+    latest_operating_margin_yoy_delta_pp = latest.get(
+        "operating_margin_yoy_delta_pp"
+    )
     operating_improvement = bool(
-        sum(delta >= 1.0 for delta in operating_deltas) >= 2
+        recent_operating_improvement_count >= 2
         and operating_margin is not None
         and prior_operating_margin is not None
         and float(operating_margin) - float(prior_operating_margin) >= 1.0
@@ -836,6 +842,9 @@ def classify_turnaround_milestones(
             revenue_direction=revenue_direction,
             gross_margin_improvement=gross_improvement,
             operating_margin_improvement=operating_improvement,
+            current_operating_margin_pct=operating_margin,
+            latest_operating_margin_yoy_delta_pp=latest_operating_margin_yoy_delta_pp,
+            recent_operating_improvement_count=recent_operating_improvement_count,
             evidence_count=operating_evidence_count,
         ),
         "CASH_FLOW_TURN": _milestone(

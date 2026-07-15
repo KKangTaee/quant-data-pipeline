@@ -5,8 +5,8 @@ Last Updated: 2026-07-16
 ## Current Stage
 
 - 전체 roadmap: 1차~3차
-- 현재: detailed TDD implementation plan complete, 1차 RED 시작 전
-- 구현 완료 차수: 0/3
+- 현재: 1차 EPS reader/operating evidence 완료, 2차 rail semantic display 시작 전
+- 구현 완료 차수: 1/3
 
 ## Completed
 
@@ -17,7 +17,10 @@ Last Updated: 2026-07-16
 - 사용자가 written spec을 승인했다.
 - loader/evidence, React semantics, actual/Browser QA의 3개 task와 RED/GREEN/commit 단위를 `PLAN.md`에 고정했다.
 - linked `codex/sub-dev` worktree와 focused baseline 100/100 pass를 확인했다.
+- public loader가 canonical `USD per share` diluted EPS를 읽도록 보정했다.
+- 영업 개선 판정 임계값은 유지하면서 current margin, latest YoY delta, recent threshold count를 evidence에 추가했다.
+- 신규 RED/GREEN 테스트 2개와 focused regression 102/102 pass를 확인했다.
 
 ## Next Action
 
-- 1차 public-loader `USD per share` RED test부터 실행한다.
+- 2차 React source-contract RED test로 `ESTABLISHED` 상태와 6개 rail 문구를 고정한다.

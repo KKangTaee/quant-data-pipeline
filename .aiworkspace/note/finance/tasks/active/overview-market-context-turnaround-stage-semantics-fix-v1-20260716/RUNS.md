@@ -16,3 +16,12 @@ Last Updated: 2026-07-16
 - Focused baseline `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation` -> 100 tests passed.
 - Expanded `PLAN.md` into 1차 EPS reader/evidence, 2차 six-rail semantic display, 3차 actual/Browser QA/docs with exact RED/GREEN commands and commits.
 - Self-review found no placeholder, uncovered spec requirement, class-name mismatch, or interface/type contradiction.
+
+## 1차 EPS Reader And Operating Evidence
+
+- Loader RED: `TurnaroundLoaderTests.test_loader_reads_canonical_usd_per_share_eps_rows` failed because no timeline row was available while `USD per share` was absent from duration query params.
+- Loader GREEN: added canonical `USD per share` to `_DURATION_UNITS`; the same public-loader test passed with latest TTM EPS `6.2` and no diluted-EPS coverage gap.
+- Evidence RED: `TurnaroundMilestoneAndRiskTests.test_profitable_but_below_threshold_operating_margin_exposes_context` errored with missing `current_operating_margin_pct`.
+- Evidence GREEN: exposed current operating margin, latest YoY delta, and recent threshold-hit count without changing the existing `>= 1.0pp`/2-of-3 threshold.
+- Focused regression: `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation` -> 102 tests passed.
+- Compile and scope checks: `py_compile` for both changed Python modules and `git diff --check` exited 0.
