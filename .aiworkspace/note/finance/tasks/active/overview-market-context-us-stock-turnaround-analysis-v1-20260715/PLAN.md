@@ -67,12 +67,12 @@ def resolve_discrete_quarters(
 
 Each resolved row exposes `symbol`, `metric`, `concept`, `unit`, `fiscal_year`, `fiscal_quarter`, `period_start`, `period_end`, `value`, `available_at`, `accession_no`, `derivation`, and `provenance`.
 
-- [ ] Write LCID/RIVN/PLTR/AAPL-like failing tests for direct Q, `H1-Q1`, `9M-H1`, and `FY-Q1-Q2-Q3`.
-- [ ] Assert later comparative facts cannot replace the original primary quarter and every derived `available_at` equals the latest operand date.
-- [ ] Assert concept/unit/fiscal-year mismatch and a missing operand leave the target quarter missing.
-- [ ] Run `.venv/bin/python -m unittest tests.test_us_stock_turnaround.TurnaroundQuarterResolverTests -v`; expect import/assertion failures.
-- [ ] Implement duration classification from `period_start/period_end`, primary-period ownership from `report_date/period_end`, ordered concept priority, deterministic dedupe, and provenance.
-- [ ] Re-run the resolver class; expect PASS.
+- [x] Write LCID/RIVN/PLTR/AAPL-like failing tests for direct Q, `H1-Q1`, `9M-H1`, and `FY-Q1-Q2-Q3`.
+- [x] Assert later comparative facts cannot replace the original primary quarter and every derived `available_at` equals the latest operand date.
+- [x] Assert concept/unit/fiscal-year mismatch and a missing operand leave the target quarter missing.
+- [x] Run `.venv/bin/python -m unittest tests.test_us_stock_turnaround.TurnaroundQuarterResolverTests -v`; expect import/assertion failures.
+- [x] Implement duration classification from `period_start/period_end`, primary-period ownership from `report_date/period_end`, ordered concept priority, deterministic dedupe, and provenance.
+- [x] Re-run the resolver class; expect PASS.
 
 ### Task 1.2: Instant separation and split-neutral diluted shares
 
@@ -96,12 +96,12 @@ def build_split_neutral_share_series(
 ) -> list[dict[str, Any]]: ...
 ```
 
-- [ ] Write failing tests that duration rows never enter instant facts, instant rows never enter quarter arithmetic, and a future split/restatement cannot change an earlier as-of result.
-- [ ] Assert split-adjusted diluted-share YoY is unchanged by a pure stock split but detects real 5%/10% issuance.
-- [ ] Run the two focused tests; expect RED.
-- [ ] Implement PIT cutoff filters and reuse the existing split-factor semantics without applying splits after `as_of_date`.
-- [ ] Run the full turnaround test file plus `tests.test_us_stock_valuation.UsStockValuationCalculationTests`; expect PASS.
-- [ ] Update `STATUS.md`/`RUNS.md` with 1차 evidence and commit `전환 분석 분기 계산 정확도 구현`.
+- [x] Write failing tests that duration rows never enter instant facts, instant rows never enter quarter arithmetic, and a future split/restatement cannot change an earlier as-of result.
+- [x] Assert split-adjusted diluted-share basis is unchanged by a pure stock split; 5%/10% risk classification remains in Task 2.2.
+- [x] Run the two focused tests; expect RED.
+- [x] Implement PIT cutoff filters and reuse the existing split-factor semantics without applying splits after `as_of_date`.
+- [x] Run the full turnaround test file plus `tests.test_us_stock_valuation.UsStockValuationCalculationTests`; expect PASS.
+- [x] Update `STATUS.md`/`RUNS.md` with 1차 evidence and commit `전환 분석 분기 계산 정확도 구현`.
 
 **1차 완료 조건:** fake quarter, comparative overwrite, future filing/restatement/split, instant/duration mixing이 모두 test로 차단되고 real-like fixtures가 deterministic discrete quarter를 만든다.
 

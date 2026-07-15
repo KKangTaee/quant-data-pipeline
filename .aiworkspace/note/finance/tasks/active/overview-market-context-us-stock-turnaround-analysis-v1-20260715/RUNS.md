@@ -40,3 +40,10 @@ Last Updated: 2026-07-15
 - Re-read `AGENTS.md`, finance INDEX/ROADMAP/PROJECT_MAP, all six active task documents, current U.S.-stock PER calculator/loader/service/action/event/React/test boundaries, and the raw statement/profile schema.
 - Expanded `PLAN.md` into exact 1차~5차 file ownership, interfaces, RED/GREEN commands, regression gates, Browser QA, documentation sync, and coherent commit units.
 - Plan self-review found no uncovered design requirement or unresolved placeholder; `git diff --check` passed before the planning commit.
+
+## 1차 — Quarter Resolver Accuracy
+
+- RED: new turnaround tests first failed on the missing module, then on empty resolver results after a callable stub exposed the intended assertions.
+- GREEN: implemented direct-quarter duration classification, cumulative `H1-Q1`, `9M-H1`, `FY-Q1-Q2-Q3`, primary-period comparative filtering, max-operand `available_at`, and operand provenance.
+- GREEN: implemented instant fact isolation and PIT split-neutral weighted-share normalization that ignores split events after the requested as-of date.
+- Verification: `tests.test_us_stock_turnaround` plus `tests.test_us_stock_valuation` ran 48 tests with 0 failures; target `py_compile` and `git diff --check` passed.
