@@ -9,6 +9,7 @@ Last Updated: 2026-07-15
 - 재무 period end가 과거라는 이유만으로 수집하지 않는다.
 - profile/price 수집은 CIK와 분리하고 SEC statement에만 CIK identity equality를 요구한다.
 - action의 제품 가치는 갱신된 기준일과 재계산 결과이며 별도 진단 panel을 만들지 않는다.
+- 기업 선택 시 cached DB UI를 즉시 표시하고 freshness만 자동 판정한다. Provider 수집은 상단 CTA 클릭에만 허용한다.
 
 ## Actual NET Evidence
 

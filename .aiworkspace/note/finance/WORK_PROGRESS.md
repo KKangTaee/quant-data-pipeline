@@ -6206,4 +6206,4 @@ Detailed historical logs were archived on `2026-04-13`.
 - PER와 전환 분석 공통 상단에 `최신 데이터로 다시 계산` action 하나를 두는 방향을 승인 범위로 고정했다.
 - 가격은 마지막 완료 NYSE session, 시장가치는 profile/가격 7일 정렬, 재무는 실제 raw coverage gap만 최신성 판단에 사용한다.
 - Cloudflare처럼 CIK가 없어도 profile/price는 갱신하고 SEC statement만 별도 잔여 gap으로 남기는 partial-success 경계를 설계했다.
-- 상세는 `tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/DESIGN.md`를 본다. 현재 0/3차 written spec review이며 확인 후 상세 TDD plan과 구현으로 이어진다.
+- 상세는 `tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/DESIGN.md`, `PLAN.md`를 본다. Cached UI 우선 + 자동 freshness 판정 + 명시적 CTA를 승인했고 현재 0/3차 detailed TDD plan complete다.

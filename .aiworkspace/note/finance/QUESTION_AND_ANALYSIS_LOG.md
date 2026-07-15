@@ -9485,4 +9485,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: PER와 전환 분석에서 기준일이 최신 완료 자료보다 뒤처지면 버튼 하나로 선택 종목 자료를 수집하고 다시 계산하도록 진행해 달라고 승인함.
 - Interpreted goal: 화면 진입 자동 수집이나 분석별 중복 버튼 없이, 사용자가 명시적으로 한 번 실행해 repairable 가격·시장가치·재무 gap만 갱신하고 두 분석을 함께 다시 읽어야 함.
 - Analysis result: 가격은 오늘이 아니라 마지막 완료 NYSE session을 기준으로 해야 하며, Cloudflare의 현재 blocker는 오래된 profile/가격 정렬과 CIK_MISSING이 섞여 있다. profile/price는 CIK가 필요 없으므로 SEC scope와 수집 경계를 분리해야 한다.
-- Follow-up: authoritative design을 `overview-market-context-us-stock-freshness-refresh-v1-20260715` task에 기록했다. Written spec 확인 후 1차 freshness/collection boundary, 2차 single CTA/rerun, 3차 actual/Browser QA와 docs 순으로 구현한다.
+- Follow-up: cached UI 우선 + 자동 freshness 판정 + 명시적 CTA를 승인하고 detailed TDD plan을 고정했다. 1차 freshness/collection boundary, 2차 single CTA/rerun, 3차 actual/Browser QA와 docs 순으로 구현한다.

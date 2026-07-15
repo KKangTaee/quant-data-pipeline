@@ -10,7 +10,7 @@ Last Verified: 2026-07-15
 현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/`다.
 
 - 목적: PER와 전환 분석 공통 상단에 `최신 데이터로 다시 계산` action 하나를 두고, 실제 repairable freshness gap만 selected-symbol 범위로 수집한다.
-- 현재 단계: 0/3차 written spec review. 상세 TDD plan과 구현은 written spec 확인 뒤 시작한다.
+- 현재 단계: 0/3차 detailed TDD plan complete. 1차 공용 calendar/freshness/CIK-independent collection 경계부터 순차 구현한다.
 - 최신성 계약: 가격은 마지막 완료 NYSE session, 시장가치는 profile snapshot과 가격 기준일 7일 정렬, 재무는 기존 raw coverage gap만 사용한다.
 - 수집 계약: 검색·선택·분석 전환은 DB-only다. explicit click에서 profile/price는 CIK 없이 실행하고 SEC statement만 CIK identity를 요구한다.
 - UI 계약: PER/전환 selector 바깥의 CTA 하나가 두 분석을 함께 다시 읽으며, generic 기준일을 가격·재무·공개일로 구분한다.
@@ -719,7 +719,7 @@ Current active phase:
 
 Current active task:
 
-- `overview-market-context-us-stock-freshness-refresh-v1-20260715` — 0/3차 written spec review
+- `overview-market-context-us-stock-freshness-refresh-v1-20260715` — 0/3차 detailed TDD plan complete, 1차 시작 전
 
 Latest completed task:
 

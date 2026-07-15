@@ -1,6 +1,6 @@
 # Overview Market Context US Stock Freshness Refresh V1 Design
 
-Status: Awaiting Written Spec Review
+Status: Approved for Implementation
 Last Updated: 2026-07-15
 
 ## 이걸 하는 이유?
