@@ -9479,3 +9479,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: negative P/E를 만들지 않으면서 저장 quarterly filing으로 전환 근거를 표시하고, 기존 S&P/PER와 explicit selected-symbol collection 경계를 보존해야 함.
 - Analysis result: direct/cumulative discrete-quarter resolver와 independent milestone/risk/valuation을 연결했다. SEC CIK가 없어 raw 수집이 막혀도 stored facts로 계산한 READY 분석은 유효하므로 collection만 `BLOCKED/CIK_MISSING`이어야 한다.
 - Follow-up: 1차~5차와 actual/Browser QA를 완료했다. V1 필수 후속은 없고 all-stock discovery, peer valuation, historical EV는 별도 승인 범위다.
+
+### 2026-07-15 - 뒤처진 개별주 자료를 한 번에 최신화한다
+
+- User request: PER와 전환 분석에서 기준일이 최신 완료 자료보다 뒤처지면 버튼 하나로 선택 종목 자료를 수집하고 다시 계산하도록 진행해 달라고 승인함.
+- Interpreted goal: 화면 진입 자동 수집이나 분석별 중복 버튼 없이, 사용자가 명시적으로 한 번 실행해 repairable 가격·시장가치·재무 gap만 갱신하고 두 분석을 함께 다시 읽어야 함.
+- Analysis result: 가격은 오늘이 아니라 마지막 완료 NYSE session을 기준으로 해야 하며, Cloudflare의 현재 blocker는 오래된 profile/가격 정렬과 CIK_MISSING이 섞여 있다. profile/price는 CIK가 필요 없으므로 SEC scope와 수집 경계를 분리해야 한다.
+- Follow-up: authoritative design을 `overview-market-context-us-stock-freshness-refresh-v1-20260715` task에 기록했다. Written spec 확인 후 1차 freshness/collection boundary, 2차 single CTA/rerun, 3차 actual/Browser QA와 docs 순으로 구현한다.

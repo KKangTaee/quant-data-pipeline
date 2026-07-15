@@ -7,7 +7,7 @@ Last Verified: 2026-07-15
 
 Current active task:
 
-- none
+- `overview-market-context-us-stock-freshness-refresh-v1-20260715`
 
 Latest completed task:
 

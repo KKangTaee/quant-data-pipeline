@@ -6200,3 +6200,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Actual DB에서 RIVN/LCID/PLTR는 전환 분석, AMD/AAPL은 기존 PER를 추천했고 기존 S&P/PER payload를 보존했다.
 - focused 96개 통과, isolated full 1,073/1,077 통과(기존 unrelated 4건), desktop/420px Browser QA와 overflow 0 / console error 0을 확인했다.
 - 상세 구현·actual matrix·남은 CIK/latency 경계는 `tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/STATUS.md`, `RUNS.md`, `RISKS.md`를 본다.
+
+## 2026-07-15 - 미국 개별주식 최신 데이터 재계산 V1 설계
+
+- PER와 전환 분석 공통 상단에 `최신 데이터로 다시 계산` action 하나를 두는 방향을 승인 범위로 고정했다.
+- 가격은 마지막 완료 NYSE session, 시장가치는 profile/가격 7일 정렬, 재무는 실제 raw coverage gap만 최신성 판단에 사용한다.
+- Cloudflare처럼 CIK가 없어도 profile/price는 갱신하고 SEC statement만 별도 잔여 gap으로 남기는 partial-success 경계를 설계했다.
+- 상세는 `tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/DESIGN.md`를 본다. 현재 0/3차 written spec review이며 확인 후 상세 TDD plan과 구현으로 이어진다.

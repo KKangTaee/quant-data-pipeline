@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| 없음 | - | 새 task는 사용자 승인 범위가 정해질 때 연다. |
+| `overview-market-context-us-stock-freshness-refresh-v1-20260715` | Written spec review | 선택 종목 상단 single CTA로 마지막 완료 NYSE 거래일·시장가치/가격 정렬·실제 재무 gap을 판정하고 exact scope만 갱신한다. profile/price는 CIK 없이 실행하고 SEC statement만 CIK를 요구한다. |
 
 ## Recent Completed / Retained Current Work
 
