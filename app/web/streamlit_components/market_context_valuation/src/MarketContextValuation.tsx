@@ -1,5 +1,6 @@
 import React, { FormEvent, useEffect, useState } from "react";
 import { ComponentProps, Streamlit, withStreamlitConnection } from "streamlit-component-lib";
+import TurnaroundAnalysis, { TurnaroundPayload } from "./TurnaroundAnalysis";
 import "./style.css";
 
 type NumericMap = Record<string, number>;
@@ -64,7 +65,7 @@ type Scenario = {
   price?: number;
 };
 type CollectionAction = {
-  id: "collect_us_stock_valuation";
+  id: "collect_us_stock_valuation" | "collect_us_stock_turnaround";
   label: string;
   detail: string;
   symbol: string;
@@ -93,6 +94,8 @@ type ValuationPayload = {
   readiness?: { status?: string; reason_code?: string; reason?: string };
   collection_action?: CollectionAction;
   collection_result?: { status?: string; message?: string; rows_written?: number };
+  turnaround_analysis?: TurnaroundPayload;
+  recommended_analysis?: "per" | "turnaround" | null;
   basis?: {
     eps_basis?: string;
     spx?: { date?: string; price?: number };
@@ -162,6 +165,7 @@ type CombinedPayload = {
   instruments: Record<string, ValuationPayload>;
 };
 type Props = ComponentProps & { args: { payload?: ValuationPayload | CombinedPayload } };
+type AnalysisChoice = "per" | "turnaround";
 
 const n = (value?: number, digits = 1) => value == null || !Number.isFinite(value) ? "-" : value.toLocaleString("ko-KR", { maximumFractionDigits: digits });
 const signed = (value?: number, digits = 1) => value == null || !Number.isFinite(value) ? "-" : `${value > 0 ? "+" : ""}${n(value, digits)}%`;
@@ -349,19 +353,50 @@ function MarketContextValuation({ args }: Props) {
   const combined = root && "instruments" in root ? root as CombinedPayload : null;
   const [selectedInstrument, setSelectedInstrument] = useState(combined?.default_instrument || "sp500");
   const [collecting, setCollecting] = useState(false);
+  const [analysisBySymbol, setAnalysisBySymbol] = useState<Record<string, AnalysisChoice>>({});
   const payload = combined?.instruments[selectedInstrument] || root as ValuationPayload | undefined;
-  useEffect(() => { Streamlit.setFrameHeight(); window.setTimeout(() => Streamlit.setFrameHeight(), 180); }, [payload, selectedInstrument, collecting]);
-  useEffect(() => setCollecting(false), [payload?.collection_result?.status, payload?.status]);
+  useEffect(() => { Streamlit.setFrameHeight(); window.setTimeout(() => Streamlit.setFrameHeight(), 180); }, [payload, selectedInstrument, collecting, analysisBySymbol]);
+  useEffect(() => setCollecting(false), [payload?.collection_result?.status, payload?.status, payload?.turnaround_analysis?.status]);
   if (!payload) return null;
   const isStock = payload.instrument?.id === "us_stock" || selectedInstrument === "us_stock";
   const symbol = payload.selection?.symbol || payload.instrument?.proxy_symbol || "-";
-  const basisDate = isStock ? payload.selection?.latest_price_date || payload.basis?.price?.price_basis_date : payload.basis?.spx?.date;
-  const collect = () => {
-    if (!payload.collection_action?.enabled || payload.collection_action.id !== "collect_us_stock_valuation") return;
-    setCollecting(true);
-    emitEvent("collect_us_stock_valuation", { symbol: payload.collection_action.symbol });
+  const recommended: AnalysisChoice = payload.recommended_analysis === "per" ? "per" : "turnaround";
+  const selectedAnalysis: AnalysisChoice = isStock && payload.selection?.symbol
+    ? analysisBySymbol[payload.selection.symbol] || recommended
+    : "per";
+  const showTurnaround = Boolean(isStock && payload.selection?.symbol && selectedAnalysis === "turnaround");
+  const turnaroundBasis = payload.turnaround_analysis?.valuation?.price_basis_date
+    || payload.turnaround_analysis?.series?.timeline?.slice(-1)[0]?.period_end;
+  const basisDate = isStock
+    ? showTurnaround
+      ? turnaroundBasis
+      : payload.selection?.latest_price_date || payload.basis?.price?.price_basis_date
+    : payload.basis?.spx?.date;
+  const chooseAnalysis = (choice: AnalysisChoice) => {
+    if (!payload.selection?.symbol) return;
+    setAnalysisBySymbol((current) => ({ ...current, [payload.selection!.symbol!]: choice }));
   };
-  return <main className="valuation-workbench" data-status={payload.status}>{combined ? <nav className="instrument-selector" aria-label="가치평가 대상 선택"><button type="button" aria-pressed={selectedInstrument === "sp500"} onClick={() => setSelectedInstrument("sp500")}><span>S&amp;P 500</span><small>시장 지수</small></button><button type="button" aria-pressed={selectedInstrument === "us_stock"} onClick={() => setSelectedInstrument("us_stock")}><span>미국 개별주식</span><small>기업명·티커 검색</small></button></nav> : null}{isStock ? <StockSearch payload={payload}/> : null}<header className="valuation-header"><div><span className="eyebrow">{isStock ? "U.S. STOCK RELATIVE VALUATION" : "S&P 500 VALUATION"}</span><h2>{isStock && payload.selection ? `${payload.selection.name || symbol} 상대가치 평가` : "멀티플과 예상 실적을 한 화면에서 비교"}</h2><p>{isStock ? "한 기업의 filing-aware EPS와 자체 멀티플 이력으로 현재 위치를 읽습니다." : "과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다."}</p></div><div className="basis"><span>기준일</span><strong>{basisDate || "-"}</strong><small>{payload.instrument?.method_label || "As-Reported actual TTM"}</small></div></header>{payload.collection_result ? <div className={`collection-result result-${payload.collection_result.status}`} role="status"><strong>{payload.collection_result.status === "success" ? "가치평가 자료 수집을 마쳤습니다." : "자료 수집 결과를 확인해 주세요."}</strong><span>{payload.collection_result.message || ""} · 저장 {payload.collection_result.rows_written || 0} rows</span></div> : null}{isStock && payload.status !== "READY" ? <StockState payload={payload} collecting={collecting} onCollect={collect}/> : <ReadyValuation payload={payload} isStock={isStock}/>}<details className="evidence"><summary>산식·자료 출처·한계 보기</summary><div className="evidence-grid">{(payload.sources || []).map((source) => <div key={source.name}><strong>{source.name}</strong><span>{source.role}</span></div>)}</div><ul>{(payload.limitations || []).map((item) => <li key={item}>{item}</li>)}</ul></details></main>;
+  const collect = (choice: AnalysisChoice = "per") => {
+    const action = choice === "turnaround"
+      ? payload.turnaround_analysis?.collection_action
+      : payload.collection_action;
+    if (!action?.enabled || action.id !== (choice === "turnaround" ? "collect_us_stock_turnaround" : "collect_us_stock_valuation")) return;
+    setCollecting(true);
+    emitEvent(action.id, { symbol: action.symbol });
+  };
+  return <main className="valuation-workbench" data-status={showTurnaround ? payload.turnaround_analysis?.status : payload.status}>
+    {combined ? <nav className="instrument-selector" aria-label="가치평가 대상 선택"><button type="button" aria-pressed={selectedInstrument === "sp500"} onClick={() => setSelectedInstrument("sp500")}><span>S&amp;P 500</span><small>시장 지수</small></button><button type="button" aria-pressed={selectedInstrument === "us_stock"} onClick={() => setSelectedInstrument("us_stock")}><span>미국 개별주식</span><small>기업명·티커 검색</small></button></nav> : null}
+    {isStock ? <StockSearch payload={payload}/> : null}
+    <header className="valuation-header"><div><span className="eyebrow">{isStock ? showTurnaround ? "U.S. STOCK TURNAROUND ANALYSIS" : "U.S. STOCK RELATIVE VALUATION" : "S&P 500 VALUATION"}</span><h2>{isStock && payload.selection ? `${payload.selection.name || symbol} ${showTurnaround ? "전환 분석" : "상대가치 평가"}` : "멀티플과 예상 실적을 한 화면에서 비교"}</h2><p>{isStock ? showTurnaround ? "분기 filing 근거로 영업·현금 전환과 생존 위험을 먼저 읽습니다." : "한 기업의 filing-aware EPS와 자체 멀티플 이력으로 현재 위치를 읽습니다." : "과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다."}</p></div><div className="basis"><span>기준일</span><strong>{basisDate || "-"}</strong><small>{showTurnaround ? "filing-aware discrete quarters" : payload.instrument?.method_label || "As-Reported actual TTM"}</small></div></header>
+    {isStock && payload.selection?.symbol ? <nav className="analysis-selector" aria-label="개별주식 분석 선택"><button type="button" aria-pressed={selectedAnalysis === "per"} onClick={() => chooseAnalysis("per")}><span>PER 상대가치</span><small>{payload.multiple_regime?.status === "READY" ? "적용 가능" : "적용 전"}</small></button><button type="button" aria-pressed={selectedAnalysis === "turnaround"} onClick={() => chooseAnalysis("turnaround")}><span>전환 분석</span><small>{payload.turnaround_analysis?.status || "확인 중"}</small></button></nav> : null}
+    {payload.collection_result ? <div className={`collection-result result-${payload.collection_result.status}`} role="status"><strong>{payload.collection_result.status === "success" ? "선택 종목 자료 수집을 마쳤습니다." : "자료 수집 결과를 확인해 주세요."}</strong><span>{payload.collection_result.message || ""} · 저장 {payload.collection_result.rows_written || 0} rows</span></div> : null}
+    {showTurnaround
+      ? <TurnaroundAnalysis payload={payload.turnaround_analysis} collecting={collecting} onCollect={() => collect("turnaround")}/>
+      : isStock && payload.status !== "READY"
+        ? <StockState payload={payload} collecting={collecting} onCollect={() => collect("per")}/>
+        : <ReadyValuation payload={payload} isStock={isStock}/>}
+    {!showTurnaround ? <details className="evidence"><summary>산식·자료 출처·한계 보기</summary><div className="evidence-grid">{(payload.sources || []).map((source) => <div key={source.name}><strong>{source.name}</strong><span>{source.role}</span></div>)}</div><ul>{(payload.limitations || []).map((item) => <li key={item}>{item}</li>)}</ul></details> : null}
+  </main>;
 }
 
 export default withStreamlitConnection(MarketContextValuation);

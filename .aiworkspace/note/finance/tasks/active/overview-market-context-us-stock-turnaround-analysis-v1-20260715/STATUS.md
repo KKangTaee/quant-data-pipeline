@@ -5,8 +5,8 @@ Last Updated: 2026-07-15
 ## Current Stage
 
 - 전체 roadmap: 1차~5차
-- 현재: 3차 Loader · Service · Collection 완료, 4차 내부 selector와 UI 착수 전
-- 구현 완료 차수: 3/5
+- 현재: 4차 내부 selector와 UI 완료, 5차 Actual QA · Docs · Final Verification 착수 전
+- 구현 완료 차수: 4/5
 
 ## Completed
 
@@ -27,11 +27,15 @@ Last Updated: 2026-07-15
 - 3차: JSON-safe turnaround service와 S&P/PER/turnaround 독립 격리, positive READY PER 기준 `recommended_analysis`를 구현했다.
 - 3차: selected profile/price/SEC 동기 수집, CIK 선검증, partial-success 보존, retry scope 축소, explicit Streamlit event를 구현했다.
 - 3차 turnaround/PER/Market Context 회귀 92 tests와 target py_compile을 통과했다.
+- 4차: 선택 종목에만 `PER 상대가치 | 전환 분석` selector를 추가하고 symbol별 로컬 선택과 service 추천 기본값을 연결했다.
+- 4차: milestone rail, shared 8/12/20분기 Graph 1/2, 결측 단절, 0축, inspector, runway/debt/dilution, valuation reason card를 구현했다.
+- 4차: 420px risk/selector/card one-column responsive CSS와 새 `component_static` production bundle을 생성했다.
+- 4차 S&P/PER/turnaround 회귀 95 tests와 Vite production build를 통과했다.
 
 ## Next Action
 
-- 4차 React source/contract RED부터 시작한다.
-- 이어서 symbol-keyed 내부 selector, milestone/charts/risk/valuation UI와 420px responsive layout을 구현한다.
+- 5차 actual DB read-only service QA로 RIVN/LCID/PLTR와 AMD/AAPL 계약을 확인한다.
+- 이어서 전체 unittest, desktop/420px Browser QA, finance-doc-sync와 fresh verification을 수행한다.
 
 ## Not Started
 

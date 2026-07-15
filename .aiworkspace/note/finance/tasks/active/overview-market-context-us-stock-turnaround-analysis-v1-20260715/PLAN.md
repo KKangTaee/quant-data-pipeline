@@ -254,20 +254,20 @@ def run_overview_us_stock_turnaround_collection(symbol: str, ...) -> JobResult: 
 
 **Files:** Create `TurnaroundAnalysis.tsx`; Modify `MarketContextValuation.tsx`; Modify `tests/test_market_context_valuation.py`.
 
-- [ ] Write RED source/contract tests for `PER 상대가치`, `전환 분석`, `recommended_analysis`, selected-symbol-only selector, and no negative P/E rendering on the turnaround default.
-- [ ] Implement symbol-keyed local analysis state: a new symbol adopts the service recommendation; user choice persists for the same symbol across rerenders.
-- [ ] Keep current `ReadyValuation` and PER `StockState` unchanged inside the PER branch; render turnaround independently even when PER is NOT_APPLICABLE/COLLECTABLE.
-- [ ] Run Market Context tests to GREEN.
+- [x] Write RED source/contract tests for `PER 상대가치`, `전환 분석`, `recommended_analysis`, selected-symbol-only selector, and no negative P/E rendering on the turnaround default.
+- [x] Implement symbol-keyed local analysis state: a new symbol adopts the service recommendation; user choice persists for the same symbol across rerenders.
+- [x] Keep current `ReadyValuation` and PER `StockState` unchanged inside the PER branch; render turnaround independently even when PER is NOT_APPLICABLE/COLLECTABLE.
+- [x] Run Market Context tests to GREEN.
 
 ### Task 4.2: Milestone rail, charts, risk and valuation cards
 
-- [ ] Write RED contracts for 8/12/20-quarter selector, Graph 1 revenue YoY plus separate margin scale, Graph 2 TTM OCF/FCF, zero axes, gap segments, runway/debt/dilution cards, and valuation blocked reasons.
-- [ ] Implement `TurnaroundAnalysis.tsx` with color-independent labels, keyboard-operable buttons, semantic SVG labels, and inspector fields for raw quarter/TTM/available_at.
-- [ ] Ensure the period selector slices visible slots only and never recomputes metric definitions.
-- [ ] Add responsive CSS: charts stack, risk cards become one column, and no component width exceeds the 420px viewport.
-- [ ] Run TypeScript/Vite build; expect success and update the existing `component_static` product bundle.
-- [ ] Run existing S&P/PER React source contracts and focused Python tests.
-- [ ] Update task evidence and commit `미국 개별주식 전환 분석 화면 추가`.
+- [x] Write RED contracts for 8/12/20-quarter selector, Graph 1 revenue YoY plus separate margin scale, Graph 2 TTM OCF/FCF, zero axes, gap segments, runway/debt/dilution cards, and valuation blocked reasons.
+- [x] Implement `TurnaroundAnalysis.tsx` with color-independent labels, keyboard-operable buttons, semantic SVG labels, and inspector fields for raw quarter/TTM/available_at.
+- [x] Ensure the period selector slices visible slots only and never recomputes metric definitions.
+- [x] Add responsive CSS: charts stack, risk cards become one column, and no component width exceeds the 420px viewport.
+- [x] Run TypeScript/Vite build; expect success and update the existing `component_static` product bundle.
+- [x] Run existing S&P/PER React source contracts and focused Python tests.
+- [x] Update task evidence and commit `미국 개별주식 전환 분석 화면 추가`.
 
 **4차 완료 조건:** 적자/PER-history 부족 종목은 전환 분석이 기본이고, 사용자는 같은 종목에서 기존 PER로 전환할 수 있으며 S&P/PER 화면은 회귀하지 않는다.
 

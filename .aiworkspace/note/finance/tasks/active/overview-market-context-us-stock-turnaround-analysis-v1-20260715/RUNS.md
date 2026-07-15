@@ -63,3 +63,10 @@ Last Updated: 2026-07-15
 - RED/GREEN: added optional one-symbol asset-profile collection while preserving the default broad query; symbol/CIK validation now precedes profile/price/SEC runners.
 - RED/GREEN: added explicit `collect_us_stock_turnaround` Streamlit event, synchronous overview facade, partial-success preservation, and remaining-scope-only retry.
 - Verification: `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation tests.test_market_context_valuation -v` ran 92 tests with 0 failures; touched Python modules passed `py_compile`.
+
+## 4차 — Inner Selector And Turnaround UI
+
+- RED/GREEN: added selected-symbol-only `PER 상대가치 | 전환 분석` source contracts and symbol-keyed local selection; a new symbol follows `recommended_analysis`, while rerenders preserve an explicit same-symbol choice without a Streamlit event.
+- RED/GREEN: added color-independent milestone labels, shared 8/12/20-quarter slots, separate revenue-YoY/margin scales, TTM OCF/FCF bars, explicit zero axes, gap-safe line segments, raw/TTM/available-at inspectors, risk cards, and exact valuation-block reasons.
+- Responsive: added compact selector, stacked charts, and one-column risk/collection/valuation cards at phone width without a fixed chart minimum width.
+- Verification: Market Context + turnaround + existing PER regression ran 95 tests with 0 failures; `npm run build` completed 171 module transforms and refreshed the hashed `component_static` bundle; `git diff --check` passed.

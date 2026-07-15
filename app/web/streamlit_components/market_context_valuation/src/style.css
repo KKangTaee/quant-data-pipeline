@@ -13,6 +13,11 @@ h2, h3, h4, p { margin: 0; }
 .instrument-selector button span { font-size: 13px; font-weight: 800; }
 .instrument-selector button small { font-size: 10px; opacity: .8; }
 .instrument-selector button[aria-pressed="true"] { color: #fff; background: #284e69; box-shadow: 0 4px 12px rgba(40, 78, 105, .2); }
+.analysis-selector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; padding: 5px; border: 1px solid #d8e2ea; border-radius: 15px; background: #f0f4f7; }
+.analysis-selector button { display: grid; justify-items: start; gap: 3px; padding: 11px 16px; border: 0; border-radius: 11px; color: #627487; background: transparent; font: inherit; cursor: pointer; }
+.analysis-selector button span { font-size: 13px; font-weight: 850; }
+.analysis-selector button small { font-size: 10px; opacity: .8; }
+.analysis-selector button[aria-pressed="true"] { color: #fff; background: #355e78; box-shadow: 0 4px 12px rgba(40, 78, 105, .18); }
 .stock-search { display: grid; gap: 13px; padding: 18px 20px; border: 1px solid #d7e2ec; border-radius: 18px; background: #f8fbfd; }
 .stock-search form { display: grid; gap: 7px; }
 .stock-search form label { color: #304b63; font-size: 13px; font-weight: 800; }
@@ -207,6 +212,81 @@ svg text { fill: #718096; font-size: 10px; }
 .evidence-grid span { color: #7a8796; }
 .evidence ul { margin: 8px 0 0; padding-left: 18px; }
 
+.turnaround-analysis { display: grid; gap: 18px; }
+.turnaround-stage-panel, .turnaround-chart-section, .turnaround-risk-section, .turnaround-valuation-card { padding: 23px 25px; border: 1px solid #dae4ec; border-radius: 20px; background: #fff; box-shadow: 0 10px 28px rgba(35, 54, 72, .05); }
+.turnaround-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.turnaround-section-head > div > span, .turnaround-valuation-card > div > span { color: #607b90; font-size: 10px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.turnaround-section-head h3, .turnaround-valuation-card h3 { margin: 5px 0 4px; color: #18354c; font-size: 19px; }
+.turnaround-section-head p, .turnaround-valuation-card p { color: #66798a; font-size: 12px; line-height: 1.5; }
+.turnaround-status { width: fit-content; padding: 7px 10px; border-radius: 999px; color: #486377; background: #edf3f6; font-size: 10px; font-weight: 850; }
+.status-READY { color: #17695e; background: #e9f5f2; }
+.status-PARTIAL, .status-COLLECTABLE { color: #8a5c25; background: #fff3e3; }
+.turnaround-milestone-rail { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 20px; }
+.milestone { position: relative; display: grid; min-width: 0; gap: 4px; padding: 13px 11px; border: 1px solid #dfe7ed; border-radius: 13px; background: #f8fafb; }
+.milestone::after { position: absolute; top: 25px; right: -9px; width: 9px; border-top: 1px solid #cbd8e1; content: ""; }
+.milestone:last-child::after { display: none; }
+.milestone > span { display: grid; width: 21px; height: 21px; place-items: center; border-radius: 50%; color: #627789; background: #e7edf1; font-size: 11px; font-weight: 900; }
+.milestone strong { min-height: 30px; color: #2c4458; font-size: 11px; line-height: 1.35; }
+.milestone small { color: #7c8b97; font-size: 9px; }
+.milestone-met { border-color: #b9dcd3; background: #f1faf7; }
+.milestone-met > span { color: #fff; background: #2d7e70; }
+.milestone-met strong { color: #17695e; }
+.milestone-not-met { border-style: dashed; }
+.milestone-unconfirmed { border-color: #e3d4b4; background: #fffaf0; }
+.milestone-unconfirmed > span { color: #8c642f; background: #f2e5c9; }
+.turnaround-support-note { margin-top: 14px; padding: 9px 11px; border-left: 3px solid #d49b54; color: #745c3c; background: #fff8ed; font-size: 11px; }
+.turnaround-window-selector { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid #d8e3eb; border-radius: 11px; background: #f1f5f8; }
+.turnaround-window-selector button { min-width: 56px; padding: 7px 9px; border: 0; border-radius: 8px; color: #617589; background: transparent; font: inherit; font-size: 10px; font-weight: 850; cursor: pointer; }
+.turnaround-window-selector button[aria-pressed="true"] { color: #fff; background: #315a73; }
+.turnaround-chart-grid { display: grid; grid-template-columns: 1fr; gap: 18px; margin-top: 20px; }
+.turnaround-chart-grid > article { min-width: 0; padding: 17px; border: 1px solid #e1e8ed; border-radius: 16px; background: #fbfcfd; }
+.turnaround-chart-grid h4 { margin-bottom: 11px; color: #2b455a; font-size: 14px; }
+.turnaround-chart-shell { overflow: hidden; border: 1px solid #e2e9ef; border-radius: 14px; background: #fff; }
+.turnaround-chart-shell svg { display: block; width: 100%; min-width: 0; }
+.turnaround-chart-legend { display: flex; flex-wrap: wrap; gap: 9px 17px; padding: 12px 14px 2px; color: #62778a; font-size: 10px; }
+.turnaround-chart-legend span::before { display: inline-block; width: 16px; height: 3px; margin-right: 6px; border-radius: 3px; vertical-align: middle; background: #507794; content: ""; }
+.turnaround-chart-legend .legend-revenue::before { height: 8px; background: #7fa7ba; }
+.turnaround-chart-legend .legend-gross::before { background: #2f8478; }
+.turnaround-chart-legend .legend-operating::before { background: #b06a43; }
+.turnaround-chart-legend .legend-ocf::before { height: 8px; background: #507b99; }
+.turnaround-chart-legend .legend-fcf::before { height: 8px; background: #c29153; }
+.zero-axis { stroke: #778795; stroke-width: 1.5; }
+.turnaround-panel-label { fill: #6e8294; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.turnaround-bar-positive { fill: #79a9b6; }
+.turnaround-bar-negative { fill: #c98262; }
+.turnaround-line-gross, .turnaround-line-operating { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.turnaround-line-gross { stroke: #2f8478; }
+.turnaround-line-operating { stroke: #b06a43; }
+.turnaround-cash-bar { fill: #507b99; }
+.turnaround-cash-bar.cash-fcf { fill: #c29153; }
+.turnaround-cash-bar.cash-negative { opacity: .74; }
+.turnaround-inspector { display: grid; grid-template-columns: repeat(4, minmax(0, auto)); gap: 5px 16px; padding: 11px 14px; border-top: 1px solid #e3e9ee; color: #566d80; background: #f8fafb; font-size: 10px; }
+.turnaround-inspector strong { color: #203d54; font-size: 12px; }
+.turnaround-inspector small { grid-column: 1 / -1; color: #7d8d99; }
+.turnaround-risk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.turnaround-risk-card { display: grid; gap: 6px; padding: 15px; border: 1px solid #dfe7ec; border-left: 4px solid #8ca0af; border-radius: 13px; background: #f8fafb; }
+.turnaround-risk-card > span { color: #687c8d; font-size: 10px; font-weight: 800; }
+.turnaround-risk-card > strong { color: #213f57; font-size: 18px; }
+.turnaround-risk-card > small { color: #788995; font-size: 10px; line-height: 1.4; }
+.risk-ok { border-left-color: #3d8a7d; background: #f1faf7; }
+.risk-watch { border-left-color: #d29a50; background: #fff9ef; }
+.risk-high { border-left-color: #b76752; background: #fff6f2; }
+.turnaround-risk-flags { margin: 13px 0 0; padding: 10px 10px 10px 29px; border-radius: 11px; color: #7a503d; background: #fff5ef; font-size: 11px; }
+.turnaround-valuation-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 24px; }
+.turnaround-valuation-number { display: grid; justify-items: end; gap: 4px; }
+.turnaround-valuation-number strong { color: #173d56; font-size: 26px; }
+.turnaround-valuation-number span { color: #2c7569; font-size: 11px; font-weight: 800; }
+.turnaround-valuation-card footer { grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid #e3e9ee; color: #7c8b97; font-size: 10px; }
+.valuation-blocked { border-color: #e5d4bd; background: #fffaf3; }
+.turnaround-collection-banner { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 18px 20px; border: 1px solid #e4cca8; border-radius: 16px; background: #fff9ef; }
+.turnaround-collection-banner > div { display: grid; gap: 4px; }
+.turnaround-collection-banner span, .turnaround-collection-banner small { color: #856a45; font-size: 10px; }
+.turnaround-collection-banner strong { color: #583e1f; font-size: 14px; }
+.turnaround-collection-banner p { color: #766347; font-size: 11px; }
+.turnaround-collection-banner button { padding: 11px 15px; border: 1px solid #8d622c; border-radius: 11px; color: #fff; background: #8d622c; font: inherit; font-size: 11px; font-weight: 850; cursor: pointer; }
+.turnaround-collection-banner button:disabled { cursor: wait; opacity: .62; }
+.turnaround-evidence { box-shadow: none; }
+
 @media (max-width: 760px) {
   .valuation-header, .section-head, .subsection-head { display: grid; }
   .basis, .release { text-align: left; }
@@ -223,6 +303,11 @@ svg text { fill: #718096; font-size: 10px; }
   .repair-action button { width: 100%; min-width: 0; }
   .collection-action { grid-template-columns: 1fr; }
   .collection-action button { width: 100%; min-width: 0; }
+  .turnaround-milestone-rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .milestone:nth-child(3)::after, .milestone:last-child::after { display: none; }
+  .turnaround-section-head { display: grid; }
+  .turnaround-risk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .turnaround-risk-card:last-child { grid-column: 1 / -1; }
 }
 @media (max-width: 460px) {
   .valuation-section, .valuation-header { padding: 18px; }
@@ -244,4 +329,16 @@ svg text { fill: #718096; font-size: 10px; }
   .stock-selection { align-items: stretch; flex-direction: column; }
   .stock-selection button { width: 100%; }
   .stock-state { padding: 20px; }
+  .analysis-selector { grid-template-columns: 1fr; }
+  .turnaround-stage-panel, .turnaround-chart-section, .turnaround-risk-section, .turnaround-valuation-card { padding: 17px; }
+  .turnaround-milestone-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .milestone:nth-child(2n)::after { display: none; }
+  .turnaround-risk-grid { grid-template-columns: 1fr; }
+  .turnaround-risk-card:last-child { grid-column: auto; }
+  .turnaround-chart-grid { grid-template-columns: 1fr; }
+  .turnaround-chart-grid > article { padding: 10px; }
+  .turnaround-inspector { grid-template-columns: 1fr 1fr; }
+  .turnaround-valuation-card, .turnaround-collection-banner { grid-template-columns: 1fr; }
+  .turnaround-valuation-number { justify-items: start; }
+  .turnaround-collection-banner button { width: 100%; }
 }

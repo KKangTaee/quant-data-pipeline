@@ -312,6 +312,64 @@ class MarketContextValuationTests(unittest.TestCase):
         ):
             self.assertIn(token, component)
 
+    def test_react_selected_stock_has_symbol_keyed_per_turnaround_selector(self) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text()
+
+        for token in (
+            'import TurnaroundAnalysis',
+            'type AnalysisChoice = "per" | "turnaround"',
+            "recommended_analysis",
+            "analysisBySymbol",
+            "PER 상대가치",
+            "전환 분석",
+            "analysis-selector",
+            "payload.selection?.symbol",
+        ):
+            self.assertIn(token, component)
+        self.assertNotIn('emitEvent("switch_us_stock_analysis"', component)
+
+    def test_turnaround_surface_has_gap_safe_shared_window_charts_and_no_pe_rendering(self) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/TurnaroundAnalysis.tsx"
+        ).read_text()
+
+        for token in (
+            "전환 단계",
+            "OPERATING_IMPROVEMENT",
+            "CASH_FLOW_TURN",
+            "PER_READY",
+            "8분기",
+            "12분기",
+            "20분기",
+            "contiguousTurnaroundSegments",
+            "zero-axis",
+            "그래프 1 · 영업 전환",
+            "그래프 2 · 현금 전환",
+            "생존·자본 위험",
+            "현재 적용 가능한 가치평가 프레임",
+            "collect_us_stock_turnaround",
+        ):
+            self.assertIn(token, component)
+        self.assertNotIn("current_pe", component)
+        self.assertNotIn("trailing_pe", component)
+
+    def test_turnaround_styles_stack_risk_cards_at_phone_width(self) -> None:
+        style = Path(
+            "app/web/streamlit_components/market_context_valuation/src/style.css"
+        ).read_text()
+
+        for token in (
+            ".analysis-selector",
+            ".turnaround-milestone-rail",
+            ".turnaround-risk-grid",
+            ".turnaround-chart-grid",
+            "@media (max-width: 460px)",
+            ".turnaround-risk-grid { grid-template-columns: 1fr; }",
+        ):
+            self.assertIn(token, style)
+
     def test_overview_repair_facade_preserves_result_and_changes_job_name(self) -> None:
         from app.jobs.overview_actions import run_overview_nasdaq100_valuation_repair
 
