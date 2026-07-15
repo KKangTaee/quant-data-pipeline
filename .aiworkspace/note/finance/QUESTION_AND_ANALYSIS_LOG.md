@@ -9465,3 +9465,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 부족한 월을 합성하거나 다른 월로 대체하지 않으면서, 계산 가능한 지점까지 전부 보여주고 누락 이유와 범위를 사용자가 이해하게 해야 함.
 - Analysis result: 기존 all-or-nothing history gate가 유효한 월도 함께 숨겼다. full-month timeline과 contiguous segment rendering이면 PIT/positive-PER 계약을 유지하면서 부분 이력을 표시할 수 있다.
 - Follow-up: `READY/PARTIAL/INSUFFICIENT_HISTORY`, 원래 slot 유지, gap reason, non-connecting path를 TDD로 구현했다. Actual AAPL/AMD, S&P, desktop/420px Browser QA를 완료했으며 SEP backfill과 적자기업 분석은 별도 후속이다.
+
+### 2026-07-15 - 적자·전환기업은 미국 개별주식 내부의 별도 분석으로 읽는다
+
+- User request: 검토한 전환기업 분석패턴을 실제 제품에서 별도 탭과 그래프로 제공하는 구조로 진행해 달라고 요청함.
+- Interpreted goal: negative P/E를 노출하지 않으면서 같은 selected company의 매출·margin·OCF·FCF·EPS 전환과 cash runway/debt/dilution risk를 분기 evidence로 읽어야 함.
+- Analysis result: 내부 `PER 상대가치 | 전환 분석`이 적합하다. 다만 operating milestone은 distress risk와 분리해야 하고, cumulative H1/9M/FY resolver와 stale market-cap EV gate가 선행돼야 왜곡이 없다.
+- Follow-up: selected-company V1 설계를 새 active task에 기록했다. Written spec 승인 후 1차 resolver 정확도부터 5차 actual/Browser QA까지 TDD로 진행하며, universe-wide discovery/peer ranking은 후속으로 둔다.

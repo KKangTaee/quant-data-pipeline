@@ -6186,3 +6186,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Actual AAPL은 3년 `36/36`, 5년 `42/60`; AMD는 3년 `33/36`, 5년 `39/60`이며 누락 원인을 화면에서 구분한다.
 - focused 129개 통과, isolated full 1,033/1,037 통과(기존 unrelated 4건), S&P 회귀와 desktop/420px Browser QA를 완료했다.
 - 현재 PER 화면 후속은 완료했다. 다음 선택 범위는 historical SEP/PIT backfill 또는 적자기업 전용 비-P/E 분석 화면이다.
+
+## 2026-07-15 - 미국 개별주식 전환 분석 V1 설계
+
+- 미국 개별주식 내부의 `PER 상대가치 | 전환 분석` selector와 selected-company V1 범위를 승인 방향으로 고정했다.
+- cumulative SEC duration fact의 filing-aware discrete-quarter resolver, operating milestone/risk overlay 분리, EV freshness gate를 authoritative design에 기록했다.
+- actual DB에서 RIVN/PLTR 16~19분기, LCID core flow 15~18분기 evidence를 read-only 확인했고 GrossProfit tag gap을 same-quarter revenue-cost fallback 대상으로 분리했다.
+- 상세는 `tasks/active/overview-market-context-us-stock-turnaround-analysis-v1-20260715/DESIGN.md`를 본다. 현재 0/5차이며 written spec review 후 TDD plan으로 이어진다.
