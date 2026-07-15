@@ -27,12 +27,20 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| 없음 | - | 새 task는 사용자 승인 범위가 정해질 때 연다. |
+| none | - | No active task after `institutional-portfolios-security-detail-chart-layout-v1-20260712` closeout. |
 
 ## Recent Completed / Retained Current Work
 
 | Task | Status | Notes |
 |---|---|---|
+| `institutional-portfolios-security-detail-chart-layout-v1-20260712` | Completed record | Selected-security detail now uses overview/context cards, full-width stored-OHLCV chart row with volume/navigator, and lower scrollable holder list. |
+| `institutional-portfolios-watchlist-mapping-v1-20260712` | Completed record | Expanded guru aliases and DB-backed watchlist lookup, alias-prioritized manager search, ambiguous CUSIP-symbol guardrails, and distinct selected-security price states. |
+| `institutional-portfolios-two-tier-tabs-v1-20260712` | Completed record | Workbench tabs now use primary `포트폴리오 / 종목 분석` tabs with context-specific secondary tabs. |
+| `institutional-portfolios-portfolio-security-ia-v1-20260712` | Completed record | Workbench tabs now separate manager portfolio views from ticker/security analysis views. |
+| `institutional-portfolios-interactive-security-chart-v1-20260712` | Completed record | Selected-security chart now uses stored OHLCV payload with hover tooltip, dotted guides, range slider, pan controls, and line/candle mode. |
+| `institutional-portfolios-holding-chart-refresh-v1-20260712` | Completed record | Selected-security chart can resolve stored DB prices through safe CUSIP-symbol mapping and trigger bounded OHLCV collection when missing. |
+| `institutional-portfolios-live-sec13f-v1-20260709` | Completed record | SEC official 13F live data path, refresh status, watchlist rail, secondary refresh action, conservative CUSIP-symbol enrichment, docs, and Browser QA. |
+| `institutional-portfolios-react-workbench-v1-20260709` | Completed record | React visual workbench for Institutional Portfolios first screen, with preview fallback and visual payload contract. |
 | `final-review-evidence-closure-contract-v1-20260712` | Completed record | Level2 actionable gap을 Final Review 승격 전에 닫고, Final Review의 accepted limit / Monitoring transfer / defer / block terminal state와 measured-only score impact를 구현했다. |
 | `overview-market-context-sp500-valuation-v1-20260712` | Completed record | Market Context를 Shiller 상대 멀티플과 FOMC SEP 기반 1/3/5년 SPX valuation scenario의 두 React 그래프로 교체했다. |
 | `practical-validation-recheck-handoff-loop-fix-v1-20260712` | Completed record | 자료 보강 뒤 replay를 강제 초기화하고, Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동을 막는다. Final Review는 source별 최신 validation만 사용한다. |

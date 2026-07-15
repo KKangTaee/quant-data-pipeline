@@ -189,6 +189,21 @@ INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "target_tables": ["finance_meta.nyse_symbol_lifecycle"],
         "progress": "stage",
     },
+    "collect_sec_13f_dataset": {
+        "section": INGESTION_COLLECTION_OPERATIONAL,
+        "mode": "operational_low_frequency",
+        "active": True,
+        "compatibility": False,
+        "write_behavior": "db_write",
+        "target_tables": [
+            "finance_meta.institutional_13f_manager",
+            "finance_meta.institutional_13f_filing",
+            "finance_meta.institutional_13f_holding",
+            "finance_meta.institutional_13f_cusip_symbol_map",
+            "finance_meta.institutional_13f_refresh_status",
+        ],
+        "progress": "stage",
+    },
     "collect_symbol_directory_snapshots": {
         "section": INGESTION_COLLECTION_OPERATIONAL,
         "mode": "operational",

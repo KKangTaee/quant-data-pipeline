@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-07-08
+Last Verified: 2026-07-12
 
 ## 목적
 
@@ -12,7 +12,7 @@ Last Verified: 2026-07-08
 
 | DB | 역할 |
 |---|---|
-| `finance_meta` | universe, listing, asset profile 같은 meta data |
+| `finance_meta` | universe, listing, asset profile, institutional 13F 같은 meta data |
 | `finance_price` | price history |
 | `finance_fundamental` | fundamentals, factors, detailed financial statements |
 
@@ -32,6 +32,12 @@ Last Verified: 2026-07-08
 | `market_liquidity_universe_member` | Market Movers Top1000 / Top2000용 current liquidity universe membership. listing source 후보 중 `nyse_price_history` 최신 거래일 row가 있는 종목을 최근 20거래일 평균 거래대금으로 ranking해 저장 |
 | `market_symbol_alias` | Market Movers ticker-change repair alias store. Quote-missing old ticker와 replacement ticker 후보 / 적용 상태를 저장해 future intraday quote lookup에서 사용 |
 | `market_event_calendar` | Overview Events calendar용 event snapshot. FOMC / macro / earnings 등 공통 event row와 earnings source validation / lifecycle status를 저장 |
+| `institutional_13f_manager` | SEC Form 13F manager / filer master와 latest filing pointer |
+| `institutional_13f_filing` | SEC Form 13F filing metadata. accession, report period, filing date, amendment, source link를 저장 |
+| `institutional_13f_holding` | SEC Form 13F information table holdings row ledger. reported value, shares / principal amount, put/call, discretion, voting authority, source link를 저장 |
+| `institutional_13f_cusip_symbol_map` | 13F row에서 얻은 best-effort CUSIP-symbol display mapping과 추후 enrichment source |
+| `institutional_13f_manager_watchlist` | Institutional Portfolios manager rail용 curated seed metadata. CIK, label, priority, external links를 저장할 수 있음 |
+| `institutional_13f_refresh_status` | SEC 13F dataset 수집 freshness state. latest report period, filing date, row counts, stale reason을 저장 |
 | `market_data_issue` | Overview Market Movers quote gap과 full-window 뒤에도 짧은 가격 이력 같은 반복 데이터 이슈를 symbol / universe 단위로 누적 추적 |
 | `futures_instrument` | Overview futures용 watchlist preset / display metadata. 1차 source는 yfinance provider symbol이다 |
 | `futures_market_monitor_run` | Futures OHLCV 수집 run diagnostics. 최근 run status, failed symbols, latest candle time을 저장 |
@@ -88,6 +94,8 @@ Phase 8 source migration closeout 기준으로 production financial statement so
 | issue tracking | 반복되는 수집 / coverage 이슈를 운영 판단용으로 누적 | `market_data_issue` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |
+| holdings filing ledger | delayed regulatory holdings filings and reported positions | `institutional_13f_manager`, `institutional_13f_filing`, `institutional_13f_holding`, `institutional_13f_cusip_symbol_map` |
+| freshness metadata | product surface data readiness / collection status | `institutional_13f_refresh_status`, `institutional_13f_manager_watchlist` |
 | broad summary | provider-normalized legacy compatibility summary | `nyse_fundamentals` |
 | derived | 계산된 factor table 또는 holdings aggregate. `nyse_factors`는 legacy compatibility, `etf_exposure_snapshot`은 provider/holdings aggregate | `nyse_factors`, `etf_exposure_snapshot` |
 | shadow | statement raw ledger에서 재구성한 canonical 재무제표 / strict annual factor layer | `nyse_fundamentals_statement`, `nyse_factors_statement` |

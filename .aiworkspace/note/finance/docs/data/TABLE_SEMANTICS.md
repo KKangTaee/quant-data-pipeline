@@ -263,6 +263,36 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
 
+## `institutional_13f_manager`, `institutional_13f_filing`, `institutional_13f_holding`, `institutional_13f_cusip_symbol_map`, `institutional_13f_manager_watchlist`, `institutional_13f_refresh_status`
+
+역할:
+
+- `Workspace > Institutional Portfolios`가 투자 대가 / 기관별 SEC Form 13F portfolio를 탐색할 때 쓰는 delayed regulatory holdings ledger다.
+- `institutional_13f_manager`는 manager / filer identity와 latest filing pointer를 저장한다.
+- `institutional_13f_filing`은 accession, report period, filing date, amendment flag, source data set, source link를 저장한다.
+- `institutional_13f_holding`은 13F information table row를 저장한다.
+- `institutional_13f_cusip_symbol_map`은 CUSIP 기반 display symbol 보조 mapping을 저장한다. 완전한 security master가 아니므로 service read model은 ambiguous mapping을 차트 / 가격 성과용 ticker로 쓰지 않는다.
+- `institutional_13f_manager_watchlist`는 Berkshire Hathaway, Pershing Square, Appaloosa, Baupost, Duquesne 같은 화면 rail seed metadata와 투자자 alias 검색 metadata를 저장할 수 있다. 저장 row가 없으면 service seed watchlist를 fallback으로 사용한다.
+- `institutional_13f_refresh_status`는 마지막 SEC dataset 수집 결과, 최신 보고분기 / filing date, row counts, stale reason을 저장한다.
+
+성격:
+
+- official SEC Form 13F quarterly data set에서 온 filing / holdings ledger다.
+- 반복 수집은 source dataset / accession / CUSIP / row identity 기준 UPSERT로 idempotent하게 동작한다.
+- 화면은 최신 filing과 직전 filing을 비교해 신규 보고, 증가, 감소, 전량 매도 후보를 만든다.
+- sector / industry exposure는 row에 있는 field 또는 CUSIP-symbol mapping / conservative asset profile name-match enrichment를 사용하며, 없으면 `Unmapped`로 표시한다.
+- refresh status는 product freshness metadata이며 full source row를 대체하지 않는다.
+
+주의:
+
+- 13F는 quarter-end 이후 최대 45일 늦게 제출될 수 있으므로 실시간 보유나 "지금 사고 있다" 근거가 아니다.
+- 13F는 주로 reportable long positions를 보여주며 shorts, cash, derivatives, hedges, non-13F securities, full trading intent를 완전히 보여주지 않는다.
+- amendment, confidential treatment, filer error, SEC extraction issue가 있을 수 있으므로 원문 filing / source link를 함께 확인해야 한다.
+- `period_of_report`와 `filing_date` / SEC acceptance timing을 구분해야 하며, backtest에 쓰려면 filing availability 기준 PIT 처리가 별도로 필요하다.
+- CUSIP-symbol mapping은 완전한 security master가 아니며 ticker change, share class, ADR, delisting, CUSIP reuse / change를 완전히 해결하지 않는다.
+- asset profile name-match enrichment는 issuer name이 고유하게 매칭될 때만 보수적으로 저장하는 display helper다. 충돌하거나 불명확한 회사명은 mapping하지 않는다.
+- 이 table의 reported change는 추천, 매수 / 매도 신호, Practical Validation PASS / BLOCKER, Final Review selection, monitoring signal, broker order, auto rebalance를 만들지 않는다.
+
 ## `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`
 
 역할:

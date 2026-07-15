@@ -10413,6 +10413,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 },
                 create=True,
             ),
+            patch.object(
+                overview_actions,
+                "_load_market_movers_limited_history_symbols",
+                return_value=set(),
+            ),
             patch.object(overview_actions, "_market_movers_today", return_value=date(2026, 7, 7), create=True),
             patch.object(
                 overview_actions,

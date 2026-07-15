@@ -17,8 +17,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
   - Current active task is none.
-  - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
+  - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
   - Previous completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
@@ -39,6 +41,59 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-12 - master 병합 충돌은 기능별 소유권을 보존해 해소한다
+
+- User request: `codex/main-dev`에서 master 병합 중 발생한 Finance 충돌을 integration review 기준으로 해결해 달라고 요청함.
+- Interpreted goal: 기관 포트폴리오 변경과 master의 Final Review / Market Context 변경 중 어느 한쪽도 버리지 않고, 문서 current pointer와 DB schema를 일관되게 통합한다.
+- Analysis result: `finance/data/db/schema.py`의 SEC 13F schema와 S&P 500 valuation / EPS / SEP schema는 같은 위치에 추가된 독립 기능이므로 두 schema group을 모두 유지해야 한다. 최신 완료 task는 실제 HEAD 이력 기준 Institutional Portfolios chart layout 후속 수정이다.
+- Follow-up: 충돌 문서는 역할별로 병합하고, current/latest pointer는 하나로 정렬하며, master에 이미 포함된 승인된 registry / saved reset migration은 그대로 보존한다. Incoming master의 EOD repair 테스트 격리 누락은 보정했고, 양쪽 baseline에 공통인 Sentiment React source-contract drift는 별도 후속으로 남긴다.
+
+> Track: Institutional Portfolios. Entries in this track are newest-first.
+
+### 2026-07-12 - Institutional Portfolios selected-security detail should read chart first, holders below
+
+- User request: 사용자가 `종목 상세`에서 차트와 보유기관 리스트가 2-column으로 나뉘어 어색하고, 그래프 하단이 실전 증권 앱보다 낮은 품질로 보인다고 지적하며 1차~3차 개발을 승인함.
+- Interpreted goal: 선택 종목 화면은 티커 분석 흐름으로 읽혀야 하므로, 상단에는 기업 / 포트폴리오 내 위치 / 차트를 두고, 보유기관 리스트는 하단의 full-width scroll panel로 내려야 한다.
+- Analysis result: 기존 range input은 금융 차트 탐색 문법과 맞지 않아 volume bars, price scale, OHLC / volume strip, mini navigator로 대체하는 것이 적합하다. 단, UI는 저장 가격 DB payload만 읽고 외부 provider / SEC / broker를 직접 fetch하지 않는다.
+- Follow-up: `institutional-portfolios-security-detail-chart-layout-v1-20260712`에서 React layout/CSS, source contract tests, focused tests, React build, Browser QA를 완료했다. DB / ingestion / provider / recommendation / trading semantics는 변경하지 않았다.
+
+### 2026-07-12 - Institutional Portfolios tab groups should become true two-tier tabs
+
+- User request: 사용자가 직전 `포트폴리오 / 종목 분석` 그룹 라벨 탭이 여전히 어색해 보이며, 탭을 아예 분리하거나 다른 방식으로 더 예쁘게 바꿀 수 있는지 물음.
+- Interpreted goal: 기능을 늘리기보다 visual hierarchy를 명확히 해 `작업 영역`과 `세부 보기`가 서로 다른 레벨로 읽히게 한다.
+- Analysis result: 한 줄 안의 group label은 category와 tab이 같은 depth처럼 보이므로, 상위 탭 `포트폴리오 / 종목 분석`과 하위 탭 `요약 / 전체 보유` 또는 `종목 상세 / 기관 보유 랭킹`의 2단 구조가 더 적합하다.
+- Follow-up: `institutional-portfolios-two-tier-tabs-v1-20260712`에서 React tab markup/CSS, TDD source contract, focused tests, React build, Browser QA를 완료했다. DB / ingestion / provider / trading semantics는 변경하지 않았다.
+
+### 2026-07-12 - Institutional Portfolios tabs must separate portfolio context from ticker context
+
+- User request: 사용자가 `요약 / 전체 보유`는 기관 포트폴리오 탭이지만 `보유 기관 조회 / 기관 보유 랭킹`은 티커 / 기업 카테고리라 같은 1차 탭에 있는 것이 어색하다고 지적함.
+- Interpreted goal: 기능을 늘리기보다 IA를 정리해 사용자가 현재 `기관 포트폴리오`를 보고 있는지, `종목 분석`을 보고 있는지 바로 알게 해야 한다.
+- Analysis result: 1차 tab bar는 `포트폴리오` 그룹과 `종목 분석` 그룹으로 분리하는 것이 맞다. 기존 `보유 기관 조회`는 별도 1차 탭 이름이 아니라 `종목 상세` 안의 holder list로 흡수하고, `기관 보유 랭킹`은 종목 분석의 보조 탐색 탭으로 둔다.
+- Follow-up: `institutional-portfolios-portfolio-security-ia-v1-20260712`에서 React tab IA, copy, CSS, source contract tests, Browser QA를 완료했다. true holding-duration metric, DB schema, provider, trading semantics는 추가하지 않았다.
+
+### 2026-07-12 - Institutional Portfolios selected-security chart should be interactive but still DB-backed
+
+- User request: 사용자가 `보유 기관 조회`의 종목 차트가 hover, 스크롤 / 이동, 캔들 같은 기본 탐색 기능이 없어 퀄리티가 낮다고 지적함.
+- Interpreted goal: UI가 직접 외부 가격 provider를 fetch하지 않는 경계를 유지하면서, service가 저장 가격 DB의 OHLCV payload를 내려주고 React가 이를 인터랙티브 차트로 보여줘야 한다.
+- Analysis result: 기존 mini line chart는 가격 close line만 보여 사용자가 날짜별 가격 / 고가 / 저가 / 거래량을 읽기 어려웠다. selected-security detail은 line / candle mode, crosshair tooltip, high-low dotted guide, range movement를 갖는 lightweight SVG chart로 충분히 개선 가능하다.
+- Follow-up: `institutional-portfolios-interactive-security-chart-v1-20260712`에서 OHLCV payload, React interactive chart, tests, npm build, Browser QA를 완료했다. 새 provider, DB schema, 추천 / trading semantics는 추가하지 않았다.
+
+### 2026-07-09 - Institutional Portfolios must be a visual portfolio explorer, not an ingestion console
+
+- User request: 사용자가 기존 `Workspace > Institutional Portfolios`가 대가 / 기관 포트폴리오를 시각적으로 보여주는 화면이 아니라 ingestion / raw DB 조회처럼 보인다고 지적하고, Upbit / Toss Securities 같은 금융 UI benchmark를 참고해 React component 기반으로 UI와 Python engine을 분리해 달라고 요청함.
+- Interpreted goal: SEC 13F ingestion / DB / loader 경계는 유지하되 첫 화면의 주인공을 수집 안내가 아니라 manager 선택, allocation donut, top holdings, reported quarter change, sector exposure, institutional interest drill-down으로 바꾼다.
+- Analysis result: `Workspace` 위치는 유지한다. `Operations`는 사용자 portfolio monitoring, `Reference`는 static guidance에 가까워 이 기능의 primary IA로 맞지 않다. React component가 visual layout과 click event를 맡고, Python service가 visual payload / caveat / DB read model을 만든다.
+- Follow-up: `institutional-portfolios-react-workbench-v1-20260709`에서 React workbench, Streamlit component bridge, visual payload / preview payload, page shell, docs sync, Browser QA를 진행했다. Preview data는 clearly labeled sample이며 official current holdings로 표현하지 않는다.
+
+### 2026-07-08 - Institutional Portfolios belongs in Workspace, not Market Movers or Operations
+
+- User request: 투자 대가 / 기관별 전체 portfolio와 보유 변화 탐색 기능을 Market Movers와 분리된 새 Workspace tab으로 1차~6차 개발 / QA / 커밋 순서로 진행해 달라고 요청함.
+- Interpreted goal: Market Movers의 선택 종목 관심 근거와 delayed SEC Form 13F manager portfolio research를 분리하고, DB-backed ingestion / loader / service / UI 경계를 지킨다.
+- Analysis result: `Workspace > Institutional Portfolios`가 맞다. `Operations`는 사용자 포트폴리오 monitoring / action queue 의미가 강하고, `Reference`는 static guidance에 가까워 실제 manager / holding exploration surface로 약하다.
+- Follow-up: `institutional-portfolios-workspace-v1-20260708`에서 SEC official dataset schema / parser / ingestion action / loader / read model / UI / docs를 추가했다. 13F delay, short / cash / derivatives / hedge omission, CUSIP-symbol caveat는 visible boundary로 남겼고 trading signal / broker / auto rebalance에는 연결하지 않았다.
+
+> Track: Overview / Market Interest. Entries in this track are newest-first.
 
 ### 2026-07-11 - Monthly 짧은 가격 이력은 실패한 갱신과 구분한다
 
@@ -81,6 +136,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 전체 Market Movers 자동 분석이나 추천기가 아니라, 사용자가 선택한 종목 1개에 대해 명시적으로 버튼을 눌렀을 때 조사 시작점을 모아주는 수동 패널을 만든다.
 - Analysis result: V1은 DB schema 변경 없이 기존 Why It Moved metadata와 외부 원문 링크를 결합하고, SEC 13F는 official durable candidate / delayed institutional context로만 표시한다. 13F durable ingestion은 CUSIP-symbol mapping과 quarter comparison 정책이 필요하므로 별도 승인 후 진행한다.
 - Follow-up: `overview-market-interest-evidence-v1-20260708`에서 read model, selected-symbol action/tab, conservative statuses, source caveats, focused tests, docs sync를 진행했다. 추천, 점수화, 매매 신호, article/report/filing body 저장, live trading 연결은 추가하지 않았다.
+
+> Track: Practical Validation / Final Review. Entries in this track are newest-first.
+
 ### 2026-07-12 - 자료 보강 뒤에는 새 재검증 결과만 Final Review로 연결한다
 
 - User request: Level3에서 보강 요청을 따라 Level2 자료 수집을 실행해도 같은 구형 검토서와 보강 요청이 반복되는 사이클을 해결해 달라고 요청함.
@@ -318,6 +376,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 2단계 화면은 Final Review 최종 선정 판단을 앞당겨 보여주는 곳이 아니라, 후보가 Final Review로 넘어갈 만큼 검증 근거를 갖췄는지 빠르게 판단하는 workspace여야 함.
 - Analysis result: diagnostics는 raw evidence, audits는 user-facing evidence rows, validation modules는 gate owner, board map은 technical explanation으로 분리하고, first-read 화면은 workspace read model과 Fix Queue 중심으로 읽는 것이 가장 작고 안전한 구조다.
 - Follow-up: V1-V8에서 workspace read model, Final Review readiness wording, 5-flow page, read-only React Fix Queue, workspace panel split, normalized first-read status, durable docs alignment를 완료했다. Registry / saved / provider collection / threshold / live approval 경계는 변경하지 않았다.
+
+> Track: Earlier Overview / Data work. Entries in this track are newest-first unless an explicit product subtrack says otherwise.
 
 ### 2026-07-08 - Market Movers basic indicator charts should extend, not replace, the table
 
@@ -5294,6 +5354,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - roadmap / index에서는 `complete / superseded_by_later_phase`로 재분류했다
   - Phase 27 입력은 data integrity / backtest trust, Phase 28 입력은 strategy family parity, Phase 29 입력은 candidate review workflow, Phase 30 입력은 portfolio proposal / pre-live monitoring으로 나눴다
   - Live Readiness / Final Approval은 여전히 Phase 30 이후 별도 phase로 둔다
+
 ### 2026-04-22 - Phase 26 QA 완료 및 Phase 27 진입 준비
 - User request:
   - Phase 26 QA 완료를 선언함
@@ -6726,6 +6787,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase32 checklist, TODO, completion summary, next phase preparation, roadmap, doc index, comprehensive analysis, work log를 closeout 상태로 동기화했다
   - Phase33 후보 방향은 `Paper Portfolio Tracking Ledger`다
+
 ### 2026-05-03 - Phase34 Final Selection Decision 구현 완료
 - User request:
   - Phase34 TODO의 첫 번째 작업부터 네 번째 작업까지 모두 완료하고 checklist 확인 단계까지 진행해 달라고 요청함
@@ -7947,6 +8009,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Practical Validation handoff는 검증 metric이 아니라 Next Action으로 배치해야 한다
 - Follow-up:
   - 구현 기록은 `.aiworkspace/note/finance/tasks/active/backtest-analysis-ux-checkpoint-v1/`에서 확인한다
+
 ### 2026-05-28 - Overview를 market intelligence entry point로 바꿀 수 있는지 조사한다
 - User request:
   - 사용자가 Overview에 일/주/月 top movers, 월별 sector / industry Top N, FOMC/earnings calendar 탭을 넣을 수 있는지 개발 전 조사와 청사진을 요청함
@@ -9271,6 +9334,41 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result: 새 `market_symbol_alias` table보다 기존 `nyse_symbol_lifecycle(event_type=ticker_change, related_symbol, related_cik)`를 공용 source로 쓰는 것이 Backtest / Data Coverage 경계와 맞다.
 - Follow-up: Symbol Resolver V1 1차~5차에서 candidate / active repair, source evidence scoring, LOW-confidence 수동 확인, metadata-only PIT split contract, Factor Readiness UX / action feedback, docs / QA closeout을 완료했다. 실제 old/new ticker price series stitching과 official corporate-action feed 신규 수집은 후속 범위다.
 
+### 2026-07-09 - Institutional Portfolios를 preview가 아닌 실제 SEC 13F 기능으로 전환한다
+
+- User request: `Workspace > Institutional Portfolios`를 수집 job 화면이 아니라 투자 대가 / 기관 포트폴리오 탐색 화면으로 만들고, SEC 13F 공식 dataset을 primary source로 삼아 1차~6차 개발 / QA / 커밋까지 진행해달라고 요청함.
+- Interpreted goal: 첫 화면은 manager portfolio workbench로 유지하고, 수동 refresh는 보조 패널로 낮추며, UI는 `DB -> loader -> service payload`만 읽고 수집은 explicit job path로 분리해야 함.
+- Analysis result: Dataroma / WhaleWisdom / Fintel은 UI benchmark 또는 licensed API 후보일 뿐 scraping source로 삼지 않는다. SEC official 13F dataset이 primary ingestion source이고, refresh status / watchlist / CUSIP-symbol display mapping이 실제 사용성을 막는 핵심 gap이었다.
+- Follow-up: refresh status / watchlist schema, ingestion status upsert, conservative asset-profile name-match enrichment, service freshness payload, React freshness strip, secondary refresh panel, docs / QA closeout을 완료했다. Full official SEC ZIP load는 사용자가 실행할 운영 action으로 남겼다.
+
+### 2026-07-10 KST - Institutional Portfolios manager rail 클릭 후 계속 로딩처럼 보인다
+
+- User request: 기관 카드 클릭 시 처음에는 바뀌지만 이후 브라우저 탭이 계속 로딩되는 것처럼 보이고 포트폴리오가 변경되지 않는 문제를 먼저 진단한 뒤 단계별 개발을 진행해달라고 요청함.
+- Interpreted goal: 클릭은 수집 job 실행이 아니라 저장된 13F 포트폴리오 선택 변경이어야 하며, 처리 중에는 사용자가 상태를 볼 수 있어야 함. Runtime / Build 표시는 제거하고 주요 내용은 한글화해야 함.
+- Analysis result: watchlist CIK가 manager search result에 없으면 첫 DB row로 fallback되고, 같은 component key에서 이전 manager-select event가 재처리되며 rerun loop처럼 보일 수 있었다. 별도 병목으로 reverse lookup SQL이 최신 filing holder 조회에 약 10초를 쓰고 있었다.
+- Follow-up: watchlist-aware selection, event nonce consumption, loading banner, Korean copy, Runtime / Build 제거, reverse lookup SQL/index 최적화를 완료했다. Browser QA에서 Baupost / Pershing / Berkshire / Appaloosa 반복 선택이 정상 settle됨을 확인했다.
+
+### 2026-07-11 KST - Institutional Portfolios 종목 상세 / 기관 보유 랭킹 / 보고일 이후 성과
+
+- User request: 포트폴리오 탭 / manager rail 스크롤이 유지되고, 도넛 옆 종목 클릭 시 기업 정보 / 일봉·주봉·월봉 / 보유기관 리스트가 같은 흐름에 나오며, 보고 기준 분기 기준 기관 보유 랭킹과 보고일 이후 가정 성과를 추가해달라고 요청함.
+- Interpreted goal: Institutional Portfolios는 수집 화면이 아니라 실제 탐색 workbench여야 하며, 클릭 후 로딩 상태와 fallback이 명확해야 한다.
+- Analysis result: 변화 board의 증가 / 감소 / 더 이상 보고 안 됨 0은 local DB에 이전 filing이 없어서 생긴 상태다. 기존 raw holdings display는 같은 CUSIP가 여러 row로 보일 수 있고, CUSIP-symbol map은 일부 오염 가능성이 있어 보수적 표시가 필요했다.
+- Follow-up: service read model에서 CUSIP-level aggregation, report-period performance coverage, selected-security chart payload, popularity ranking payload를 추가했다. React workbench는 selected-security detail, ranking tab, scroll preserve, pending timeout fallback을 제공한다.
+
+### 2026-07-12 KST - 보유기관조회에서 그래프가 안 나오는 이유
+
+- User request: 보유 기관 조회에서 그래프가 안 나오는 원인을 DB까지 확인하고, 자동 수집이 어렵다면 버튼 클릭으로 수집하게 수정해달라고 요청함.
+- Interpreted goal: 차트 empty가 가격 DB 부재인지, 13F ticker mapping 문제인지, UI event 문제인지 분리하고 실제 사용 흐름 안에서 해결해야 함.
+- Analysis result: Berkshire KO/BAC/CVX/OXY/GOOGL 등은 13F holding row에 ticker가 없지만 가격 DB row는 이미 있었다. 따라서 1차 원인은 수집 부재가 아니라 CUSIP-symbol resolution gap이었다. 추가로 generic symbol lookup은 오염된 map row를 탈 수 있어 curated symbol은 curated CUSIP 우선 조회가 필요했다.
+- Follow-up: service-level safe CUSIP resolver, selected-security price action payload, React price collection button, Python `run_collect_ohlcv` event boundary를 추가했다.
+
+### 2026-07-12 KST - 기관 포트폴리오의 대가 alias / OHLCV 출처 / 추가 수집 가능성
+
+- User request: OHLCV 데이터가 어디서 오는지, 기관 포트폴리오와 대가 포트폴리오가 따로 나뉜 것인지, 드러켄밀러 같은 대가 포트폴리오를 더 수집할 수 있는지 확인하고 1차~4차 개발을 요청함.
+- Interpreted goal: 13F holdings source는 유지하되, 대가 alias 검색과 CUSIP-symbol mapping 품질을 높여 실제 탐색성을 개선해야 함.
+- Analysis result: OHLCV는 `finance_price.nyse_price_history` DB를 읽고 비면 `run_collect_ohlcv`가 yfinance로 보강한다. 대가 포트폴리오는 별도 source가 아니라 SEC manager row 위의 watchlist / alias layer다. Duquesne Family Office LLC는 local 13F DB에 이미 존재하지만 alias가 없어 찾기 어려웠다.
+- Follow-up: expanded guru seed, DB-backed manager watchlist loader, alias-first manager search, ambiguous mapping guard, price action state separation을 구현했다. Dataroma / Fintel scraping과 WhaleWisdom / OpenFIGI adapter는 후속 검토로 남겼다.
+
 ### 2026-07-09 - Market Movers 애널리스트 관심은 무료/공개 출처로 어디까지 가능한가
 
 - User request: 사용자가 Nasdaq.com, WSJ Markets, Yahoo Finance, MarketWatch의 애널리스트 평가를 선택 종목 버튼 방식으로 여러 출처에서 보여줄 수 있는지 묻고 개발을 승인함.
@@ -9320,6 +9418,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 현재 SEP를 과거에 복제하지 않고, 각 월 당시의 공식 SEP vintage와 동일한 60개월 rolling multiple 계산으로 기간만 선택해야 함.
 - Analysis result: Federal Reserve calendar에는 2021-03 이후 21개 official projection page가 있고 모두 기존 parser로 읽혔다. 5년 visible history에는 60개월 rolling warmup까지 총 119개월이 필요해 기존 84개월 loader가 live smoke에서 25 points로 잘리는 원인이었다.
 - Follow-up: calendar-discovered missing vintage backfill, 120개월 loader, Python 12/36/60 history options, React selector/sparse labels, DB/Browser QA를 구현했다. Shiller EPS는 여전히 strict release-vintage PIT가 아니다.
+
 ### 2026-07-08 - Practical Validation은 재검증 후에만 결론과 상세를 보여야 한다
 
 - User request: 사용자가 Practical Validation 탭 진입만으로 Flow 3가 실행되어 보이는 문제, Flow 4 수집 가능 gap, 단계별 검증 소유권, 하단 evidence tabs / Provider 부족근거 정리를 1차~4차 개발 / QA / 커밋으로 진행해 달라고 요청함.

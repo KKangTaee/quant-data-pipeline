@@ -11,10 +11,18 @@ Current active task:
 
 Latest completed task:
 
-- `final-review-evidence-closure-contract-v1-20260712`
+- `institutional-portfolios-security-detail-chart-layout-v1-20260712`
 
 Previous completed task:
 
+- `institutional-portfolios-watchlist-mapping-v1-20260712`
+- `institutional-portfolios-two-tier-tabs-v1-20260712`
+- `institutional-portfolios-portfolio-security-ia-v1-20260712`
+- `institutional-portfolios-interactive-security-chart-v1-20260712`
+- `institutional-portfolios-holding-chart-refresh-v1-20260712`
+- `institutional-portfolios-live-sec13f-v1-20260709`
+- `institutional-portfolios-react-workbench-v1-20260709`
+- `final-review-evidence-closure-contract-v1-20260712`
 - `overview-market-context-sp500-valuation-v1-20260712`
 
 Latest completed docs cleanup task:

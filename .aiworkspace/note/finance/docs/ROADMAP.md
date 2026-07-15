@@ -9,7 +9,66 @@ Last Verified: 2026-07-12
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios > 종목 분석 > 종목 상세`에서 차트와 보유 기관 리스트가 2-column으로 나뉘고 기본 range slider가 어색했던 종목 상세 UX를 줄였다.
+- 주요 변경: selected-security detail을 선택 종목 / 포트폴리오 내 위치 overview card, full-width stored-OHLCV chart row, 하단 scrollable holder-list row로 재배치했다. 차트는 OHLC / volume strip, volume bars, price scale, mini navigator, line/candle toggle, hover crosshair를 유지한다.
+- 이번 차수에서 하지 않은 일: DB schema 변경, ingestion 변경, provider 변경, full chart library 도입, true holding-duration metric, 추천 / trading semantics 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios`에서 유명 투자자 alias 검색과 CUSIP-symbol mapping 상태가 부족해 드러켄밀러 같은 대가 포트폴리오를 찾기 어렵고, 가격 차트 empty 원인을 구분하기 어려웠던 문제를 줄였다.
+- 주요 변경: manager watchlist / alias seed를 Duquesne, Bridgewater, Third Point, Icahn, Tiger Global, Lone Pine, Soros, Akre 등으로 확장하고 DB watchlist loader 경계를 열었다. manager search는 alias 매칭 CIK를 우선 보여주고 검색 중 rail / selection도 검색 결과 순서를 따른다. ambiguous CUSIP-symbol mapping은 차트용 ticker로 쓰지 않는다. selected-security price action은 `symbol_missing`, `mapping_ambiguous`, `price_missing`, `ready` 상태로 분리된다.
+- 이번 차수에서 하지 않은 일: Dataroma / Fintel scraping, WhaleWisdom / OpenFIGI adapter 구현, 새 가격 provider, DB schema 변경, 추천 / trading semantics 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios`에서 `포트폴리오 / 종목 분석` 구분이 한 줄 안의 그룹 라벨처럼 보여 어색했던 탭 UX를 줄였다.
+- 주요 변경: React workbench tab bar를 상위 탭(`포트폴리오`, `종목 분석`)과 현재 상위 영역에 따른 하위 탭(`요약 / 전체 보유` 또는 `종목 상세 / 기관 보유 랭킹`)으로 분리했다.
+- 이번 차수에서 하지 않은 일: DB schema 변경, ingestion 변경, provider 변경, true holding-duration metric, 추천 / trading semantics 추가.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios`에서 기관 포트폴리오 탭과 티커 / 기업 분석 탭이 같은 1차 레벨에 섞여 보이는 IA 혼선을 줄였다.
+- 주요 변경: React workbench tab bar를 `포트폴리오` 그룹(`요약`, `전체 보유`)과 `종목 분석` 그룹(`종목 상세`, `기관 보유 랭킹`)으로 분리했다. 기존 `보유 기관 조회` 기능은 `종목 상세` 안의 보유 기관 리스트로 유지한다.
+- 이번 차수에서 하지 않은 일: true multi-quarter holding duration metric, DB schema 변경, ingestion 변경, external provider, 추천 / trading semantics 추가.
+
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios` 보유기관조회의 선택 종목 차트를 단순 mini line chart에서 hover / dotted guide / range 이동 / 라인-캔들 toggle이 있는 저장 OHLCV 기반 interactive chart로 개선했다.
+- 주요 변경: selected-security chart payload에 `open/high/low/close/volume`을 포함하고, React `InteractiveSecurityChart`가 tooltip, crosshair, high-low guide, range slider, pan controls, line/candle mode를 렌더링한다.
+- 이번 차수에서 하지 않은 일: 새 가격 provider, UI external fetch, DB schema 변경, live trading / 추천 / broker / auto rebalance 연결.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/`다.
+
+- 목적: `Workspace > Institutional Portfolios` 보유기관조회에서 선택 종목 차트가 비어 보이는 원인을 실제 DB 기준으로 분리하고, DB에 이미 있는 가격 row는 차트로 연결하며, 가격 row가 없을 때는 버튼으로 기존 OHLCV 수집 job을 실행하게 한다.
+- 주요 변경: service-level safe CUSIP-symbol resolver, curated symbol -> CUSIP 우선 reverse lookup, selected-security price action payload, React 가격 데이터 수집 버튼, Streamlit event -> `run_collect_ohlcv` boundary를 추가했다.
+- 이번 차수에서 하지 않은 일: DB schema 변경, external site scraping, full security master 구축, 추천 / 매매 신호 / live trading / auto rebalance 연결.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/`다.
+
+- 목적: Institutional Portfolios의 selected-security detail, report-period performance, institution-count ranking, scroll / pending fallback을 보강했다.
+- 주요 변경: CUSIP-level aggregation, selected-security chart payload, report-period performance panel, institution-count ranking tab을 추가했다.
+
+Earlier completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-live-sec13f-v1-20260709/`다.
+
+- 목적: React workbench가 preview sample에 머무르지 않고 SEC official 13F DB snapshot을 실제로 읽는 제품 화면이 되게 한다.
+- 주요 변경: refresh status / watchlist schema, official SEC 13F ingestion status row, secondary refresh panel, workbench freshness payload, conservative CUSIP-symbol enrichment, docs / QA를 정렬했다.
+- 이번 차수에서 하지 않은 일: Dataroma / WhaleWisdom / Fintel scraping, paid API adapter, broker / live trading / auto rebalance, 완전한 security master 구축.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-react-workbench-v1-20260709/`다.
+
+- 목적: 기존 `Workspace > Institutional Portfolios` V1이 SEC 13F ingestion / DB 조회 중심으로 보여 실제 투자 대가 / 기관 포트폴리오를 시각적으로 탐색하는 제품 경험이 약했던 문제를 해결했다.
+- 주요 변경: `app/web/streamlit_components/institutional_portfolios_workbench/` React workbench를 추가하고, Python service에 visual payload / preview payload contract를 만들었다. 첫 화면은 manager rail, allocation donut, top holdings, reported quarter change board, sector exposure, holdings tab, institutional interest drill-down을 보여준다. DB empty 상태는 clearly labeled preview로 표시하고 raw DB error는 setup expander에만 둔다.
+- 이번 차수에서 하지 않은 일: 새 provider / paid API integration, Dataroma / WhaleWisdom scraping, broker / live trading / auto rebalance 연동, 완전한 security master 수준 CUSIP-symbol mapping.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-workspace-v1-20260708/`다.
+
+- 목적: Market Movers의 선택 종목 조사단서와 분리해, 투자 대가 / 기관별 전체 SEC Form 13F portfolio와 reported holdings change를 Workspace에서 탐색하는 read-only surface를 만들었다.
+- 주요 변경: `Workspace > Institutional Portfolios` navigation, SEC 13F official data set ingestion action, `finance_meta.institutional_13f_*` schema, parser / loader / service read model, holdings / reported changes / sector exposure / reverse lookup UI, source caveat / runbook / flow docs를 추가했다.
+- 이번 차수에서 하지 않은 일: Dataroma / WhaleWisdom scraping, paid API integration, broker / live trading / auto rebalance 연동, Backtest / Practical Validation / Final Review gate 연결, 완전한 security master 수준의 CUSIP-symbol mapping.
+
+Recent completed Final Review task는 `.aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/`다.
 
 - 목적: 해결 가능한 근거는 Practical Validation에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 전달한다.
 - 주요 변경: root issue dedup, Level2 actionability Gate, GRS 기간과 survivorship applicability 계약, Final Review terminal-state snapshot, measured-only score impact를 완료했다.

@@ -23,4 +23,3 @@
 - 애널리스트 관심 첫 화면에서 구조화 조회와 원문 교차확인 출처가 구분된다.
 - MarketWatch/WSJ/Nasdaq은 크롤링이 아니라 원문 확인 상태임이 보인다.
 - 기존 selected-symbol explicit-button 흐름과 보수적 product boundary가 유지된다.
-

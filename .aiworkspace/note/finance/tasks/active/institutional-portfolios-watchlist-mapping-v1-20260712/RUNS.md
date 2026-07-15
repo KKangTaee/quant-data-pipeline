@@ -1,0 +1,11 @@
+# Institutional Portfolios Watchlist / Mapping V1 Runs
+
+- RED: `.venv/bin/python -m unittest tests.test_institutional_portfolios.InstitutionalPortfolioReadModelTests.test_selected_security_model_exposes_price_collection_action_when_chart_missing tests.test_institutional_portfolios.InstitutionalPortfolioReadModelTests.test_selected_security_model_blocks_price_action_when_symbol_mapping_is_missing tests.test_institutional_portfolios.InstitutionalPortfolioReadModelTests.test_portfolio_model_marks_ambiguous_cusip_symbol_mapping_unresolved tests.test_institutional_portfolios.InstitutionalPortfolioReadModelTests.test_watchlist_manager_rail_includes_expanded_guru_alias_seeds tests.test_institutional_portfolios.InstitutionalPortfolioReadModelTests.test_manager_choices_search_uses_watchlist_alias_before_exact_sec_name` failed as expected before implementation.
+- GREEN: same focused command passed after implementation.
+- Regression: `.venv/bin/python -m unittest tests.test_institutional_portfolios` passed 39 tests.
+- Smoke: `load_institutional_manager_choices("드러켄밀러")` returned CIK `0001536411` / `Duquesne Family Office LLC` first.
+- Smoke: Duquesne selected security for unmapped CUSIP `632307104` returned `symbol_missing` / `cusip_symbol_mapping_missing`.
+- RED/GREEN: added `test_watchlist_manager_rail_respects_search_result_order` and `test_selected_manager_resolver_prefers_query_match_during_search`; both failed before the search-active rail / selection fix and passed after implementation.
+- Smoke: search-active rail contract for `드러켄밀러` returned first item `0001536411` / `Duquesne Family Office LLC` with `selected=True`.
+- Browser QA: `http://localhost:8540/institutional-portfolios` rendered without alert after server restart; DOM contained `Duquesne Family Office LLC` / `Stanley Druckenmiller`. Viewport screenshot stored at `institutional-portfolios-watchlist-mapping-qa.png` and left untracked.
+- Final verification: py_compile passed for Institutional Portfolios service / page / loader files; `npm run build` passed for the React workbench; `git diff --check` passed. Boundary scan found only DB loader reads and explicit Streamlit job-action boundaries, no direct UI external fetch.
