@@ -10,18 +10,15 @@ import pandas as pd
 from finance.data.nasdaq100_valuation import derive_filing_aware_ttm_eps
 
 
-def split_factor_between(
-    price_rows: Iterable[Mapping[str, Any]],
+def _split_factor_from_frame(
+    frame: pd.DataFrame,
     *,
     after: str | pd.Timestamp,
     through: str | pd.Timestamp,
 ) -> float:
-    """Return only splits known after a fact and through the valuation cutoff."""
-    frame = pd.DataFrame([dict(row) for row in price_rows])
+    """Multiply split events after a fact and no later than the PIT cutoff."""
     if frame.empty or not {"date", "stock_splits"}.issubset(frame.columns):
         return 1.0
-    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
-    frame["stock_splits"] = pd.to_numeric(frame["stock_splits"], errors="coerce")
     start = pd.to_datetime(after, errors="coerce")
     end = pd.to_datetime(through, errors="coerce")
     if pd.isna(start) or pd.isna(end):
@@ -34,9 +31,22 @@ def split_factor_between(
         & (frame["stock_splits"] > 0),
         "stock_splits",
     ]
-    if events.empty:
+    return float(events.product()) if not events.empty else 1.0
+
+
+def split_factor_between(
+    price_rows: Iterable[Mapping[str, Any]],
+    *,
+    after: str | pd.Timestamp,
+    through: str | pd.Timestamp,
+) -> float:
+    """Return only splits known after a fact and through the valuation cutoff."""
+    frame = pd.DataFrame([dict(row) for row in price_rows])
+    if frame.empty or not {"date", "stock_splits"}.issubset(frame.columns):
         return 1.0
-    return float(events.product())
+    frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    frame["stock_splits"] = pd.to_numeric(frame["stock_splits"], errors="coerce")
+    return _split_factor_from_frame(frame, after=after, through=through)
 
 
 def _price_frame(price_rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -99,24 +109,42 @@ def build_monthly_pit_valuation(
             else None
         )
 
+        normalized_statements: list[dict[str, Any]] = []
+        for statement in statements:
+            available_at = pd.to_datetime(statement.get("available_at"), errors="coerce")
+            value = pd.to_numeric(statement.get("value"), errors="coerce")
+            if pd.isna(available_at) or pd.isna(value) or pd.Timestamp(available_at) > month_end:
+                continue
+            fact_split_factor = _split_factor_from_frame(
+                price_frame,
+                after=pd.Timestamp(available_at),
+                through=month_end,
+            )
+            normalized_statements.append(
+                {
+                    **statement,
+                    "value": float(value) / fact_split_factor,
+                }
+            )
+
         resolved = derive_filing_aware_ttm_eps(
-            statements,
+            normalized_statements,
             as_of_date=month_end.strftime("%Y-%m-%d"),
         )
         evidence = resolved.get(symbol) if symbol else None
         quarters = list((evidence or {}).get("quarters") or [])
         adjusted_quarters: list[dict[str, Any]] = []
         for quarter in quarters:
-            factor = split_factor_between(
-                prices,
+            factor = _split_factor_from_frame(
+                price_frame,
                 after=str(quarter["available_at"]),
                 through=month_end,
             )
             adjusted_quarters.append(
                 {
                     **quarter,
-                    "raw_eps": float(quarter["eps"]),
-                    "eps": float(quarter["eps"]) / factor,
+                    "raw_eps": float(quarter["eps"]) * factor,
+                    "eps": float(quarter["eps"]),
                     "split_factor": factor,
                 }
             )

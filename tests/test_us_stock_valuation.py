@@ -61,6 +61,62 @@ class UsStockValuationCalculationTests(unittest.TestCase):
         self.assertAlmostEqual(rows[1]["trailing_pe"], 10.0)
         self.assertAlmostEqual(rows[1]["split_factor"], 10.0)
 
+    def test_split_year_normalizes_quarters_before_deriving_q4(self) -> None:
+        from finance.data.us_stock_valuation import build_monthly_pit_valuation
+
+        statements = [
+            _quarter(
+                period_end="2024-04-28",
+                available_at="2024-05-29",
+                value=5.98,
+                fiscal_year=2025,
+                fiscal_quarter=1,
+            ),
+            _quarter(
+                period_end="2024-07-28",
+                available_at="2024-08-28",
+                value=0.67,
+                fiscal_year=2025,
+                fiscal_quarter=2,
+            ),
+            _quarter(
+                period_end="2024-10-27",
+                available_at="2024-11-20",
+                value=0.78,
+                fiscal_year=2025,
+                fiscal_quarter=3,
+            ),
+            {
+                "symbol": "NVDA",
+                "concept": "us-gaap:EarningsPerShareDiluted",
+                "unit": "USD per share",
+                "source_period_type": "duration",
+                "period_type": "FY",
+                "fiscal_year": 2025,
+                "fiscal_quarter": None,
+                "period_end": "2025-01-26",
+                "report_date": "2025-01-26",
+                "value": 2.94,
+                "available_at": "2025-02-26",
+            },
+        ]
+        prices = [
+            {"symbol": "NVDA", "date": "2024-05-31", "close": 1_100.0, "stock_splits": 0.0},
+            {"symbol": "NVDA", "date": "2024-06-10", "close": 121.0, "stock_splits": 10.0},
+            {"symbol": "NVDA", "date": "2025-02-28", "close": 120.0, "stock_splits": 0.0},
+        ]
+
+        row = build_monthly_pit_valuation(
+            statements,
+            prices,
+            start_month="2025-02-01",
+            end_month="2025-02-28",
+        )[0]
+
+        self.assertAlmostEqual(row["quarters"][-1]["eps"], 0.892)
+        self.assertAlmostEqual(row["ttm_eps"], 2.94)
+        self.assertAlmostEqual(row["trailing_pe"], 120.0 / 2.94)
+
     def test_monthly_ttm_carries_forward_without_interpolation(self) -> None:
         from finance.data.us_stock_valuation import build_monthly_pit_valuation
 
