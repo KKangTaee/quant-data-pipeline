@@ -1,16 +1,17 @@
-import React from "react"
+import React, { useEffect } from "react"
 import { createRoot } from "react-dom/client"
 import { Streamlit, withStreamlitConnection } from "streamlit-component-lib"
+import { DecisionBriefWorkspace } from "./DecisionBriefWorkspace"
 import {
-  FinalDecisionActionModel,
-  FinalReviewInvestmentReport,
-  InvestmentReport,
-} from "./FinalReviewInvestmentReport"
+  CandidateSelectorModel,
+  DecisionBrief,
+  DecisionWorkspaceIntent,
+} from "./decisionBriefTypes"
 import "./style.css"
 
 type StreamlitArgs = {
-  report?: Record<string, unknown>
-  decision_action?: Record<string, unknown>
+  decision_brief?: Record<string, unknown>
+  candidate_selector?: Record<string, unknown>
 }
 
 type AppProps = {
@@ -18,10 +19,15 @@ type AppProps = {
 }
 
 function App({ args }: AppProps) {
+  useEffect(() => {
+    Streamlit.setFrameHeight()
+  }, [args])
+
   return (
-    <FinalReviewInvestmentReport
-      decisionAction={(args?.decision_action ?? {}) as FinalDecisionActionModel}
-      report={(args?.report ?? {}) as InvestmentReport}
+    <DecisionBriefWorkspace
+      candidateSelector={(args?.candidate_selector ?? { options: [] }) as CandidateSelectorModel}
+      decisionBrief={(args?.decision_brief ?? {}) as DecisionBrief}
+      onIntent={(intent: DecisionWorkspaceIntent) => Streamlit.setComponentValue(intent)}
     />
   )
 }

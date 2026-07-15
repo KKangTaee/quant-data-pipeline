@@ -11,8 +11,11 @@ from app.services.backtest_evidence_read_model import (
     SELECT_FOR_PRACTICAL_PORTFOLIO,
     build_final_review_candidate_board,
     build_final_review_decision_cockpit,
-    build_final_review_investment_report,
     build_final_review_decision_record_guide,
+)
+from app.services.backtest_final_review_decision_brief import (
+    build_final_review_candidate_selector,
+    build_final_review_decision_brief,
 )
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
@@ -33,8 +36,8 @@ from app.web.backtest_final_review.components import (
     render_fr_command_center,
 )
 from app.web.components.final_review_investment_report import (
-    is_final_review_investment_report_available,
-    render_final_review_investment_report,
+    is_final_review_decision_workspace_available,
+    render_final_review_decision_workspace,
 )
 from app.web.backtest_portfolio_proposal_helpers import _paper_ledger_slug
 from app.web.backtest_workflow_routes import (
@@ -191,7 +194,9 @@ def _render_final_review_decision_fallback(
         "최종 판단",
         options=route_values,
         index=route_values.index(suggested_route) if suggested_route in route_values else 0,
-        format_func=lambda route: FINAL_REVIEW_DECISION_LABELS.get(route, route),
+        format_func=lambda route: str(
+            next((option.get("label") for option in options if option.get("route") == route), route)
+        ),
         horizontal=True,
         key=f"{key}_route",
     )
@@ -587,6 +592,147 @@ def _render_investment_report(
     return _render_final_review_decision_fallback(decision_action, key=key)
 
 
+def _render_final_review_decision_brief_fallback(
+    decision_brief: dict[str, Any],
+    *,
+    candidate_selector: dict[str, Any],
+    key: str,
+) -> dict[str, Any] | None:
+    """Render the same compact Decision Brief when the React build is unavailable."""
+
+    options = [dict(row or {}) for row in list(candidate_selector.get("options") or [])]
+    active_option = next((row for row in options if row.get("selected")), options[0] if options else {})
+    if options:
+        source_ids = [str(row.get("source_id") or "") for row in options]
+        active_source_id = str(active_option.get("source_id") or source_ids[0])
+        selected_source_id = st.selectbox(
+            "검토할 후보",
+            options=source_ids,
+            index=source_ids.index(active_source_id) if active_source_id in source_ids else 0,
+            format_func=lambda source_id: str(
+                next((row.get("title") for row in options if row.get("source_id") == source_id), source_id)
+            ),
+            key=f"{key}_candidate",
+        )
+        if selected_source_id != active_source_id:
+            return {
+                "action": "select_candidate",
+                "intent_id": uuid4().hex,
+                "source_id": selected_source_id,
+            }
+
+    verdict = dict(decision_brief.get("verdict") or {})
+    behavior_board = dict(decision_brief.get("behavior_board") or {})
+    strengths = list(decision_brief.get("strengths") or [])
+    weaknesses = list(decision_brief.get("weaknesses") or [])
+    trait_map = dict(decision_brief.get("trait_map") or {})
+    monitoring_conditions = list(decision_brief.get("monitoring_conditions") or [])
+    decision_action = dict(decision_brief.get("decision_action") or {})
+    disclosures = dict(decision_brief.get("disclosures") or {})
+
+    st.markdown(f"#### {verdict.get('headline') or '추적 가치 결론 미측정'}")
+    st.write(str(verdict.get("thesis") or "비교 가능한 관측값이 없습니다."))
+    period = dict(behavior_board.get("period") or {})
+    st.caption(
+        f"관측 기간 {period.get('start') or '미측정'} → {period.get('end') or '미측정'} · "
+        f"frequency {period.get('frequency') or 'unknown'}"
+    )
+
+    series_rows = []
+    for series_key in ("cumulative_series", "benchmark_series", "underwater_series"):
+        series = dict(behavior_board.get(series_key) or {})
+        series_rows.append(
+            {
+                "근거": series.get("label") or series_key,
+                "상태": series.get("status") or "unmeasured",
+                "마지막 값": (
+                    list(series.get("points") or [])[-1].get("value")
+                    if list(series.get("points") or [])
+                    else "미측정"
+                ),
+                "누락 이유": series.get("missing_reason") or "-",
+            }
+        )
+    st.markdown("##### 포트폴리오 행동 근거")
+    st.dataframe(pd.DataFrame(series_rows), width="stretch", hide_index=True)
+    execution_rows = list(behavior_board.get("execution_observations") or [])
+    if execution_rows:
+        st.dataframe(pd.DataFrame(execution_rows), width="stretch", hide_index=True)
+
+    st.markdown("##### 실제 강점과 약점")
+    finding_rows = [
+        {"구분": "강점", **dict(row or {})} for row in strengths
+    ] + [
+        {"구분": "약점", **dict(row or {})} for row in weaknesses
+    ]
+    if finding_rows:
+        st.dataframe(pd.DataFrame(finding_rows), width="stretch", hide_index=True)
+    else:
+        st.info("직접 비교 가능한 강점과 약점이 미측정입니다.")
+
+    st.markdown("##### Portfolio trait map")
+    trait_rows = list(trait_map.get("axes") or [])
+    st.dataframe(pd.DataFrame(trait_rows), width="stretch", hide_index=True)
+
+    st.markdown("##### Monitoring 변화 조건")
+    if monitoring_conditions:
+        st.dataframe(pd.DataFrame(monitoring_conditions), width="stretch", hide_index=True)
+    else:
+        st.info("구조화된 Monitoring 변화 조건이 미측정입니다.")
+
+    decision_intent = _render_final_review_decision_fallback(decision_action, key=key)
+    with st.expander("Evidence confidence / accepted limits / provenance", expanded=False):
+        st.json(disclosures)
+    return decision_intent
+
+
+def _render_final_review_decision_workspace(
+    decision_brief: dict[str, Any],
+    *,
+    candidate_selector: dict[str, Any],
+    key: str,
+) -> dict[str, Any] | None:
+    if is_final_review_decision_workspace_available():
+        return render_final_review_decision_workspace(
+            decision_brief=decision_brief,
+            candidate_selector=candidate_selector,
+            key=key,
+        )
+    return _render_final_review_decision_brief_fallback(
+        decision_brief,
+        candidate_selector=candidate_selector,
+        key=key,
+    )
+
+
+def _consume_final_review_candidate_intent(
+    intent: dict[str, Any] | None,
+    *,
+    source_options: list[dict[str, Any]],
+) -> None:
+    """Validate a presentation-only candidate switch and rerun without writing."""
+
+    payload = dict(intent or {})
+    if payload.get("action") != "select_candidate":
+        return
+    intent_id = str(payload.get("intent_id") or "").strip()
+    source_id = str(payload.get("source_id") or "").strip()
+    allowed_source_ids = {
+        str(row.get("source_id") or "").strip()
+        for row in source_options
+        if bool(row.get("eligible")) and str(row.get("source_id") or "").strip()
+    }
+    consumed_key = "final_review_consumed_candidate_intent"
+    if not intent_id or st.session_state.get(consumed_key) == intent_id:
+        return
+    if source_id not in allowed_source_ids:
+        st.error("현재 Final Review 후보 목록에 없는 요청입니다. 후보를 다시 선택하세요.")
+        return
+    st.session_state[consumed_key] = intent_id
+    st.session_state["final_review_active_decision_brief_source_id"] = source_id
+    st.rerun()
+
+
 def _consume_final_review_decision_intent(
     intent: dict[str, Any] | None,
     *,
@@ -703,9 +849,8 @@ def _consume_final_review_data_enrichment_intent(
 
 
 def render_final_review_workspace() -> None:
-    top_summary = _build_final_review_top_summary()
-    st.markdown(f"### {top_summary['title']}")
-    st.caption(top_summary["caption"])
+    st.markdown("### Final Review")
+    st.caption("이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?")
 
     current_rows = load_current_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
@@ -736,74 +881,53 @@ def render_final_review_workspace() -> None:
         session_practical_source=session_practical_source if isinstance(session_practical_source, dict) else None,
         include_legacy_sources=False,
     )
-    candidate_contexts = (
-        _build_candidate_contexts(
-            source_options,
-            current_rows=current_rows,
-            pre_live_rows=pre_live_rows,
-        )
-        if source_options
-        else []
-    )
-    candidate_board = build_final_review_candidate_board(candidate_contexts) if candidate_contexts else {}
-    candidate_summary = dict(candidate_board.get("summary") or {})
-    route_value, route_detail, route_tone = _candidate_board_route(candidate_summary)
-    dashboard_handoff = build_selected_dashboard_handoff_review(final_decision_rows)
-    dashboard_summary = dict(dashboard_handoff.get("summary") or {})
-    hidden_validation_count = len(latest_practical_validation_rows) - len(eligible_practical_validation_rows)
-    decision_desk = _build_final_review_decision_desk_model(
-        candidate_summary=candidate_summary,
-        practical_validation_count=len(practical_validation_rows),
-        eligible_count=len(eligible_practical_validation_rows),
-        hidden_validation_count=hidden_validation_count,
-        final_decision_count=len(final_decision_rows),
-        dashboard_selected_count=int(dashboard_summary.get("selected_decision_count", 0) or 0),
-        route_value=route_value,
-        route_detail=route_detail,
-        route_tone=route_tone,
-    )
-    render_fr_command_center(
-        eyebrow=str(decision_desk["eyebrow"]),
-        title=str(decision_desk["title"]),
-        detail=str(decision_desk["detail"]),
-        route_label=str(decision_desk["route_label"]),
-        route_value=str(decision_desk["route_value"]),
-        route_detail=str(decision_desk["route_detail"]),
-        route_tone=str(decision_desk["route_tone"]),
-        kpis=list(decision_desk["kpis"]),
-        featured_candidate=dict(decision_desk["featured_candidate"]),
-    )
-    if hidden_validation_count > 0:
-        st.caption(
-            f"Practical Validation 저장 기록 {hidden_validation_count}개는 Final Review Gate를 통과하지 않아 검토 대상 목록에서 숨겼습니다."
-        )
-
     if not source_options:
         st.info("Final Review Gate를 통과한 Practical Validation 후보가 없습니다.")
-        st.caption("검증 결과만 저장한 blocked / needs input / not run 후보는 기록으로 남지만, Final Review 검토 대상에는 표시되지 않습니다.")
-        st.caption("기존에 선정한 Monitoring 후보와 운영 상태는 Operations > Portfolio Monitoring에서 확인합니다.")
+        st.caption("Practical Validation에서 미해결 근거를 종결하고 새 결과를 저장한 뒤 다시 확인하세요.")
         return
 
-    with st.container(border=True):
-        candidate_selection = _render_candidate_selection_panel(candidate_contexts)
-    if not bool(candidate_selection.get("is_confirmed")):
-        return
-    selected_context = dict(candidate_selection["context"])
-    source = dict(selected_context["source"])
-
-    validation = dict(selected_context["validation"])
-    paper_observation = dict(selected_context["paper_observation"])
-    evidence = dict(selected_context["decision_evidence"])
-    investability_packet = dict(selected_context["investability_packet"])
-    cockpit = dict(selected_context["cockpit"])
-    investment_report = build_final_review_investment_report(
-        source=source,
-        validation=validation,
-        paper_observation=paper_observation,
-        decision_evidence=evidence,
-        investability_packet=investability_packet,
+    candidate_contexts = _build_candidate_contexts(
+        source_options,
+        current_rows=current_rows,
+        pre_live_rows=pre_live_rows,
     )
-
+    selector_candidates = [
+        {
+            "source_id": str(context.get("candidate_key") or ""),
+            "validation_id": str(dict(context.get("validation") or {}).get("validation_id") or ""),
+            "title": str(
+                dict(context.get("source") or {}).get("source_title")
+                or context.get("label")
+                or context.get("candidate_key")
+                or "후보"
+            ),
+            "source_type": str(dict(context.get("source") or {}).get("source_type") or ""),
+            "eligible": True,
+        }
+        for context in candidate_contexts
+    ]
+    allowed_source_ids = [str(row.get("source_id") or "") for row in selector_candidates]
+    active_source_id = str(
+        st.session_state.get("final_review_active_decision_brief_source_id")
+        or allowed_source_ids[0]
+    )
+    if active_source_id not in allowed_source_ids:
+        active_source_id = allowed_source_ids[0]
+    st.session_state["final_review_active_decision_brief_source_id"] = active_source_id
+    candidate_selector = build_final_review_candidate_selector(
+        selector_candidates,
+        active_source_id=active_source_id,
+    )
+    selected_context = next(
+        context
+        for context in candidate_contexts
+        if str(context.get("candidate_key") or "") == active_source_id
+    )
+    source = dict(selected_context.get("source") or {})
+    validation = dict(selected_context.get("validation") or {})
+    paper_observation = dict(selected_context.get("paper_observation") or {})
+    evidence = dict(selected_context.get("decision_evidence") or {})
+    investability_packet = dict(selected_context.get("investability_packet") or {})
     existing_decision_ids = {
         str(row.get("decision_id") or "").strip()
         for row in final_decision_rows
@@ -814,28 +938,26 @@ def render_final_review_workspace() -> None:
     if not str(st.session_state.get(decision_id_key) or "").strip():
         st.session_state[decision_id_key] = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
     decision_id = str(st.session_state[decision_id_key])
-    decision_action = _build_final_review_decision_action_model(
-        cockpit=cockpit,
-        evidence=evidence,
+    decision_brief = build_final_review_decision_brief(
+        source=source,
+        validation=validation,
+        paper_observation=paper_observation,
+        decision_evidence=evidence,
         investability_packet=investability_packet,
         decision_id=decision_id,
         existing_decision_ids=existing_decision_ids,
-        data_enrichment_action=dict(
-            dict(investment_report.get("level2_review_disposition") or {}).get("data_enrichment_action")
-            or {}
-        ),
     )
-    decision_intent = _render_investment_report(
-        investment_report,
-        decision_action=decision_action,
-        key=f"final_review_investment_report_{validation.get('validation_id') or source.get('source_id') or 'current'}",
+    workspace_intent = _render_final_review_decision_workspace(
+        decision_brief,
+        candidate_selector=candidate_selector,
+        key=f"final_review_decision_workspace_{validation.get('validation_id') or source.get('source_id') or 'current'}",
     )
-    _consume_final_review_data_enrichment_intent(
-        decision_intent,
-        validation=validation,
+    _consume_final_review_candidate_intent(
+        workspace_intent,
+        source_options=list(candidate_selector.get("options") or []),
     )
     _consume_final_review_decision_intent(
-        decision_intent,
+        workspace_intent,
         source=source,
         validation=validation,
         paper_observation=paper_observation,

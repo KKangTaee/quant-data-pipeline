@@ -216,14 +216,14 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
         render_body = source.split("def render_practical_validation_workspace", 1)[1]
 
-        self.assertIn("render_practical_validation_workspace_overview(validation_result)", render_body)
+        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", render_body)
         self.assertIn('title="후보 Source 확인"', render_body)
         self.assertIn('title="검증 기준 설정 / 실전 재검증 실행"', render_body)
         self.assertIn('title="검증 결론"', render_body)
-        self.assertIn("카테고리별 통과 / 실패만 요약", render_body)
+        self.assertIn("카테고리별 통과 / 실패와 Final Review 이동 가능 여부", render_body)
         self.assertNotIn('title="2차 검증 결론 / Fix Queue"', render_body)
         self.assertIn('title="검증 기준 상세"', render_body)
-        self.assertIn('title="저장 / Final Review 이동"', render_body)
+        self.assertNotIn('title="저장 / Final Review 이동"', render_body)
         self.assertNotIn("_render_validation_control_center(", render_body)
         self.assertNotIn('"marker": "6"', render_body)
         self.assertNotIn('"marker": "7"', render_body)
@@ -239,7 +239,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             "from app.web.backtest_practical_validation.workspace_panel import",
             page_source,
         )
-        self.assertIn("render_practical_validation_workspace_overview(validation_result)", page_source)
+        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", page_source)
         self.assertNotIn("def _render_practical_validation_workspace_overview", page_source)
         self.assertIn("def render_practical_validation_workspace_overview", panel_source)
         self.assertIn('validation_result.get("practical_validation_workspace")', panel_source)
@@ -305,6 +305,39 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("background: #ffffff;", source)
         self.assertNotIn("border-radius: 8px;", source)
         self.assertIn("border-radius: 0;", source)
+
+    def test_final_review_decision_brief_service_owns_domain_projection(self) -> None:
+        service_source = (
+            PROJECT_ROOT / "app/services/backtest_final_review_decision_brief.py"
+        ).read_text()
+        workspace_source = (
+            PROJECT_ROOT
+            / "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+        ).read_text()
+        chart_source = (
+            PROJECT_ROOT
+            / "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx"
+        ).read_text()
+
+        for token in (
+            "_build_eligibility",
+            "_stored_curve_inputs",
+            "_underwater_points",
+            "_build_trait_map",
+            "_deduplicate_primary_roles",
+            "_build_decision_action",
+        ):
+            self.assertIn(token, service_source)
+        react_source = workspace_source + chart_source
+        for forbidden in (
+            "select_allowed",
+            "Total Balance",
+            "running_peak",
+            "threshold * 50",
+            "append_current_final_selection_decision",
+            "PRACTICAL_VALIDATION_RESULTS",
+        ):
+            self.assertNotIn(forbidden, react_source)
 
 
 if __name__ == "__main__":

@@ -28529,6 +28529,140 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
 
 
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
+    def test_final_review_page_uses_decision_brief_not_legacy_investment_report(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        render_body = page_source.split("def render_final_review_workspace", 1)[1]
+
+        self.assertIn("from app.services.backtest_final_review_decision_brief import", page_source)
+        self.assertIn("build_final_review_decision_brief(", render_body)
+        self.assertIn("build_final_review_candidate_selector(", render_body)
+        self.assertNotIn("build_final_review_investment_report(", render_body)
+        self.assertNotIn("render_fr_command_center(", render_body)
+        self.assertNotIn("_render_candidate_selection_panel(", render_body)
+
+    def test_final_review_page_keeps_python_candidate_and_save_intent_guards(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        candidate_body = page_source.split("def _consume_final_review_candidate_intent", 1)[1]
+        candidate_body = candidate_body.split("def ", 1)[0]
+        save_body = page_source.split("def _consume_final_review_decision_intent", 1)[1]
+        save_body = save_body.split("def ", 1)[0]
+
+        self.assertIn('payload.get("action") != "select_candidate"', candidate_body)
+        self.assertIn("allowed_source_ids", candidate_body)
+        self.assertIn("final_review_active_decision_brief_source_id", candidate_body)
+        self.assertIn("st.rerun()", candidate_body)
+        self.assertNotIn("append_current_final_selection_decision", candidate_body)
+        for token in (
+            "intent_id",
+            "decision_id",
+            "operator_reason",
+            "_build_final_review_save_evaluation",
+            "append_current_final_selection_decision(final_row)",
+        ):
+            self.assertIn(token, save_body)
+
+    def test_final_review_component_accepts_decision_brief_and_candidate_selector(self) -> None:
+        component_source = Path(
+            "app/web/components/final_review_investment_report/component.py"
+        ).read_text(encoding="utf-8")
+        index_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/index.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("def render_final_review_decision_workspace", component_source)
+        self.assertIn("decision_brief=decision_brief", component_source)
+        self.assertIn("candidate_selector=candidate_selector", component_source)
+        self.assertNotIn("report=report", component_source)
+        self.assertIn("decision_brief?:", index_source)
+        self.assertIn("candidate_selector?:", index_source)
+        self.assertNotIn("decision_action?:", index_source)
+        self.assertNotIn("report?:", index_source)
+
+    def test_final_review_react_source_has_approved_reading_order(self) -> None:
+        workspace_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        render_body = workspace_source.split("export function DecisionBriefWorkspace", 1)[1]
+        positions = [
+            render_body.index(token)
+            for token in (
+                "<CandidateSelector",
+                "<VerdictHero",
+                "<BehaviorBoard",
+                "<StrengthWeaknessSection",
+                "<PortfolioTraitMap",
+                "<MonitoringConditions",
+                "<DecisionAction",
+                "<EvidenceDisclosure",
+            )
+        ]
+
+        self.assertEqual(positions, sorted(positions))
+
+    def test_final_review_react_source_removes_scores_questions_patterns_and_level2_cards(self) -> None:
+        workspace_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        for forbidden in (
+            "투자 매력도",
+            "핵심 점수 구분",
+            "이 후보를 읽는 네 가지 기준",
+            "저장 전 확인 질문",
+            "Monitoring 방향 가이드",
+            "PatternGuide",
+            "Level2ReviewDisposition",
+            "WeaknessImprovement",
+        ):
+            self.assertNotIn(forbidden, workspace_source)
+
+    def test_final_review_react_does_not_own_gate_normalization_dedup_or_persistence(self) -> None:
+        paths = [
+            Path("app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"),
+            Path("app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx"),
+        ]
+        source = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+
+        for forbidden in (
+            "select_allowed",
+            "Total Balance",
+            "runningPeak",
+            "threshold_or_comparator * 50",
+            "new Map",
+            "registry",
+            "append_current_final_selection_decision",
+        ):
+            self.assertNotIn(forbidden, source)
+
+    def test_final_review_trait_map_breaks_on_unmeasured_axis(self) -> None:
+        chart_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("splitMeasuredSegments", chart_source)
+        self.assertIn('axis.status === "measured"', chart_source)
+        self.assertIn("axis.normalized_value !== null", chart_source)
+        self.assertNotIn("normalized_value ?? 0", chart_source)
+
+    def test_final_review_fallback_uses_same_decision_brief_sections(self) -> None:
+        page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
+        fallback_body = page_source.split("def _render_final_review_decision_brief_fallback", 1)[1]
+        fallback_body = fallback_body.split("def ", 1)[0]
+
+        for token in (
+            "verdict",
+            "behavior_board",
+            "strengths",
+            "weaknesses",
+            "trait_map",
+            "monitoring_conditions",
+            "decision_action",
+            "disclosures",
+        ):
+            self.assertIn(token, fallback_body)
+        for forbidden in ("scorecard", "pattern_guide", "level2_review_disposition"):
+            self.assertNotIn(forbidden, fallback_body)
+
     def test_final_review_pattern_guide_contract_defines_ten_bounded_patterns(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_pattern_guide_contract
 
