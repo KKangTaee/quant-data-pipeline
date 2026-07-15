@@ -79,6 +79,12 @@ def build_monthly_pit_valuation(
     statements = [dict(row) for row in statement_rows]
     prices = [dict(row) for row in price_rows]
     price_frame = _price_frame(prices)
+    split_events = price_frame.loc[
+        price_frame["date"].notna()
+        & price_frame["stock_splits"].notna()
+        & (price_frame["stock_splits"] > 0),
+        ["date", "stock_splits"],
+    ].copy()
     start = pd.Timestamp(start_month).to_period("M").to_timestamp()
     end = pd.Timestamp(end_month).to_period("M").to_timestamp()
     symbols = {
@@ -116,7 +122,7 @@ def build_monthly_pit_valuation(
             if pd.isna(available_at) or pd.isna(value) or pd.Timestamp(available_at) > month_end:
                 continue
             fact_split_factor = _split_factor_from_frame(
-                price_frame,
+                split_events,
                 after=pd.Timestamp(available_at),
                 through=month_end,
             )
@@ -136,7 +142,7 @@ def build_monthly_pit_valuation(
         adjusted_quarters: list[dict[str, Any]] = []
         for quarter in quarters:
             factor = _split_factor_from_frame(
-                price_frame,
+                split_events,
                 after=str(quarter["available_at"]),
                 through=month_end,
             )
