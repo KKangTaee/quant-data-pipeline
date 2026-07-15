@@ -1,7 +1,7 @@
 # Status
 
-Status: Completed
-Last Updated: 2026-07-12
+Status: Ready for Decision Workspace execution
+Last Updated: 2026-07-16
 
 ## Progress
 
@@ -16,10 +16,20 @@ Last Updated: 2026-07-12
 - [x] 3차 GRS Period / Survivorship Applicability 구현
 - [x] 4차 Final Review Closure / Score / QA / docs closeout
 - [x] 후속 UX 보정: Flow 4 중복 closure card 제거와 Flow 3 compact handoff
+- [x] current Final Review 문제 진단과 Workspace Overview 기준 내부 제품 audit
+- [x] Decision Brief + Evidence Disclosure 방향, primary question, 정보 순서, score/visual 정책 사용자 승인
+- [x] Decision Workspace 설계 bundle 작성·strict 검증·커밋
+- [x] 기존 active task PLAN.md에 2026-07-16 continuation 상세 계획 작성
+- [x] continuation PLAN.md self-review 완료
+- [x] continuation PLAN.md 계획 커밋
+- [ ] 1차 Decision Brief contract 구현
+- [ ] 2차 Portfolio Behavior projection 구현
+- [ ] 3차 React Decision Workspace 구현과 Browser QA
+- [ ] 4차 persistence / Monitoring handoff / full QA / docs closeout
 
 ## Next Action
 
-후속 작업은 dynamic historical universe용 PIT membership / delisting provider가 승인될 때 별도 task로 연다. 현재 구현은 해당 근거가 없으면 Final Review 승격을 차단한다.
+실행 방식을 선택한 뒤 1차 Decision Brief contract부터 RED → GREEN 순서로 진행한다. 기존 current session/worktree에서 직접 실행하는 방식은 `superpowers:executing-plans`, 명시적으로 subagent 실행을 승인하면 task별 `superpowers:subagent-driven-development`를 사용한다. dynamic historical universe용 PIT membership / delisting provider는 이번 continuation에서도 범위 밖이며, 해당 근거가 없으면 기존 Final Review Gate가 계속 차단한다.
 
 ## Commits
 
@@ -29,6 +39,15 @@ Last Updated: 2026-07-12
 - `cb2af299` GRS 기간과 생존편향 적용성 계약 보강
 - `4a05ae2f` Final Review 근거 종결과 점수 계약 완성
 - `b5e1cd68` Practical Validation 근거 종결 UI 중복 제거
+- `740cc4e3` Final Review Decision Workspace 재설계 확정
+
+## Decision Workspace Continuation
+
+- Primary question: `이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?`
+- Chosen direction: Decision Brief + Evidence Disclosure, React-first one-shell flow
+- Approved order: 결론 → 행동 근거 → 실제 강점/약점 → trait map → Monitoring 변화 조건 → 최종 판단 → disclosure
+- Score policy: overall investment score와 기존 3개 headline score 제거, evidence confidence만 보조 metadata로 유지
+- Visual policy: cumulative vs benchmark와 underwater가 주 visual, trait map은 측정된 pressure/exposure만 표시하고 미측정 axis는 연결하지 않음
 
 ## Follow-up UX Result
 
