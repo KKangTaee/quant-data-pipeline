@@ -311,20 +311,47 @@ class MarketContextValuationTests(unittest.TestCase):
         self.assertNotIn("QQQ", component)
         self.assertIn("build_market_context_valuation_read_model", helper)
 
-    def test_react_stock_collection_is_explicit_and_relative_value_copy_is_clear(self) -> None:
+    def test_react_stock_refresh_is_explicit_and_relative_value_copy_is_clear(self) -> None:
         component = Path(
             "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
         ).read_text()
 
         for token in (
-            "collect_us_stock_valuation",
+            "refresh_us_stock_data",
             "Streamlit.setComponentValue",
-            "가치평가 자료 수집",
-            "수집하는 중",
+            "최신 데이터로 다시 계산",
+            "갱신 중",
             "상대가치 시나리오",
             "공식 적정가·목표주가·매매 신호가 아닙니다",
         ):
             self.assertIn(token, component)
+        self.assertNotIn("collect_us_stock_valuation", component)
+        self.assertNotIn("collect_us_stock_turnaround", component)
+        self.assertNotIn("rows_written", component)
+
+    def test_selected_stock_renders_one_header_refresh_action_before_analysis_selector(self) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text()
+
+        self.assertIn("function FreshnessBar", component)
+        self.assertIn('emitEvent(action.id, { symbol: action.symbol })', component)
+        self.assertEqual(component.count("<FreshnessBar"), 1)
+        self.assertLess(
+            component.index("<FreshnessBar"),
+            component.index('className="analysis-selector"', component.index("<FreshnessBar")),
+        )
+        self.assertNotIn('className={`collection-result', component)
+
+    def test_selected_stock_basis_labels_separate_price_statement_and_availability(self) -> None:
+        component = Path(
+            "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
+        ).read_text()
+
+        self.assertIn("가격 기준일", component)
+        self.assertIn("재무 기준일", component)
+        self.assertIn("statement_available_at", component)
+        self.assertIn("공개", component)
 
     def test_react_stock_scenario_shows_macro_company_growth_and_history_periods(self) -> None:
         component = Path(
@@ -392,11 +419,11 @@ class MarketContextValuationTests(unittest.TestCase):
             "그래프 2 · 현금 전환",
             "생존·자본 위험",
             "현재 적용 가능한 가치평가 프레임",
-            "collect_us_stock_turnaround",
         ):
             self.assertIn(token, component)
         self.assertNotIn("current_pe", component)
         self.assertNotIn("trailing_pe", component)
+        self.assertNotIn("collect_us_stock_turnaround", component)
 
     def test_turnaround_styles_stack_risk_cards_at_phone_width(self) -> None:
         style = Path(
@@ -405,11 +432,14 @@ class MarketContextValuationTests(unittest.TestCase):
 
         for token in (
             ".analysis-selector",
+            ".freshness-bar",
             ".turnaround-milestone-rail",
             ".turnaround-risk-grid",
             ".turnaround-chart-grid",
             "@media (max-width: 460px)",
             ".turnaround-risk-grid { grid-template-columns: 1fr; }",
+            ".freshness-bar { grid-template-columns: 1fr; }",
+            ".freshness-bar button { width: 100%; }",
         ):
             self.assertIn(token, style)
 

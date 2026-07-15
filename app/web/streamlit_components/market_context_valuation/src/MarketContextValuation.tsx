@@ -64,12 +64,26 @@ type Scenario = {
   multiple?: number;
   price?: number;
 };
-type CollectionAction = {
-  id: "collect_us_stock_valuation" | "collect_us_stock_turnaround";
-  label: string;
-  detail: string;
-  symbol: string;
-  enabled: boolean;
+type DataFreshness = {
+  status?: "READY" | "REFRESH_AVAILABLE" | "PARTIAL" | "BLOCKED" | string;
+  expected_price_date?: string;
+  price_basis_date?: string | null;
+  profile_basis_date?: string | null;
+  statement_period_end?: string | null;
+  statement_available_at?: string | null;
+  gaps?: { scope: string; reason_code: string; repairable: boolean }[];
+  action?: {
+    id: "refresh_us_stock_data";
+    label: string;
+    detail?: string;
+    symbol: string;
+    scopes?: string[];
+    enabled: boolean;
+  };
+};
+type CollectionResult = {
+  status?: string;
+  message?: string;
 };
 type ValuationPayload = {
   schema_version: string;
@@ -92,8 +106,8 @@ type ValuationPayload = {
     eps_basis_date?: string;
   } | null;
   readiness?: { status?: string; reason_code?: string; reason?: string };
-  collection_action?: CollectionAction;
-  collection_result?: { status?: string; message?: string; rows_written?: number };
+  data_freshness?: DataFreshness;
+  collection_result?: CollectionResult;
   turnaround_analysis?: TurnaroundPayload;
   recommended_analysis?: "per" | "turnaround" | null;
   basis?: {
@@ -202,7 +216,7 @@ function StockSearch({ payload }: { payload: ValuationPayload }) {
   </section>;
 }
 
-function StockState({ payload, collecting, onCollect }: { payload: ValuationPayload; collecting: boolean; onCollect: () => void }) {
+function StockState({ payload }: { payload: ValuationPayload }) {
   const readiness = payload.readiness || {};
   const statusCopy: Record<string, { title: string; detail: string }> = {
     NOT_SELECTED: { title: "평가할 미국 개별주식을 선택하세요", detail: "기업명 또는 티커를 검색한 뒤 한 종목을 선택하면 DB 자료만으로 먼저 평가 가능 여부를 확인합니다." },
@@ -211,11 +225,9 @@ function StockState({ payload, collecting, onCollect }: { payload: ValuationPayl
     ERROR: { title: "가치평가 자료를 확인하지 못했습니다", detail: readiness.reason || "DB identity 또는 저장 자료 구조를 확인해 주세요." },
   };
   const copy = statusCopy[payload.status] || statusCopy.ERROR;
-  const action = payload.collection_action;
   return <section className={`stock-state stock-state-${payload.status.toLowerCase()}`} aria-live="polite">
     <span>{payload.status.replace("_", " ")}</span><h3>{copy.title}</h3><p>{copy.detail}</p>
     {readiness.reason_code ? <code>{readiness.reason_code}</code> : null}
-    {payload.status === "COLLECTABLE" && action?.enabled ? <div className="collection-action"><div><strong>{action.label}</strong><small>{action.detail}</small></div><button type="button" disabled={collecting} onClick={onCollect}>{collecting ? "수집하는 중" : "가치평가 자료 수집"}</button></div> : null}
   </section>;
 }
 
@@ -348,6 +360,27 @@ function ReadyValuation({ payload, isStock }: { payload: ValuationPayload; isSto
   return <><section className="valuation-section"><div className="section-head"><div><span>그래프 1</span><h3>{isStock ? "최근 60개월 멀티플 구간" : "최근 5년 멀티플 구간"}</h3><p>{isStock ? "positive 월별 PER의 로그 분포와 최근 36개월 민감도를 함께 봅니다." : "완결 월별 PER 분포와 최신 EPS를 유지한 잠정 PER"}</p></div><div className={`regime regime-${multiple.bucket || "blocked"}`}>{bucketLabel[multiple.bucket || ""] || "자료 확인 필요"}</div></div><div className="metrics"><div><span>{!isStock && multiple.current_is_provisional ? "현재 잠정 PER" : "현재 PER"}</span><strong>{n(multiple.current_pe, 2)}x</strong><small>가격 {multiple.current_price_basis_date || "-"}</small></div><div><span>{isStock ? "60개월 중심" : "5년 중심"}</span><strong>{n(multiple.mean_multiple, 2)}x</strong></div><div><span>현재 Z</span><strong>{n(multiple.current_z, 2)}</strong></div><div><span>{isStock ? "36개월 민감도" : "3년 민감도"}</span><strong>{bucketLabel[multiple.sensitivity?.bucket || ""] || "-"}</strong></div></div><MultipleChart model={multiple} isStock={isStock}/><p className="basis-note">EPS 기준 {multiple.current_eps_basis_date || earnings.eps_basis_date || "-"} · {isStock ? "월말까지 공개된 최신 4개 분기 희석 EPS TTM" : "As-Reported actual TTM"}</p>{multiple.period_sensitive ? <p className="notice">{isStock ? "36개월과 60개월" : "3년과 5년"} 판정이 달라 기간 민감도가 큽니다.</p> : null}<p className="limitation">{multiple.limitation}</p></section><section className="valuation-section"><div className="section-head"><div><span>그래프 2</span><h3>{isStock ? `${symbol} 거시·기업 실적 결합 상대가치 시나리오` : `FOMC 예상 실적 기반 지수 시나리오 · 적정 ${symbol} 구간`}</h3><p>{isStock ? "FOMC real GDP + PCE에 최근 3년 기업 초과 EPS 성장 P25/P50/P75를 결합합니다." : "현재 TTM EPS에 SEP 실질 GDP와 PCE 물가상승률을 합산 적용"}</p></div><div className="release"><span>SEP 발표</span><strong>{earnings.release_date || "-"}</strong></div></div><div className="source-row"><div><span>EPS 출처</span><strong>{earnings.eps_source || "EPS 출처 미확정"}</strong><small>EPS 기준 {earnings.eps_basis_date || "-"}</small></div><span className={`source-badge quality-${earnings.eps_source_quality || "unknown"}`}>{sourceQualityLabel[earnings.eps_source_quality || ""] || "출처 확인 필요"}</span></div>{isStock ? <div className="metrics metrics-five"><div><span>현재 TTM EPS</span><strong>{n(earnings.current_ttm_eps, 2)}</strong></div><div><span>FOMC 거시 기준</span><strong>{signed(earnings.current_macro_pct)}</strong><small>GDP {n(earnings.real_gdp_pct, 1)}% + PCE {n(earnings.pce_inflation_pct, 1)}%</small></div><div><span>기업 초과성장</span><strong>{signed(excess?.p50_pct)}</strong><small>P25 {signed(excess?.p25_pct)} · P75 {signed(excess?.p75_pct)}</small></div><div><span>예상 EPS 성장률</span><strong>{signed(baseline?.growth_pct)}</strong></div><div><span>예상 EPS</span><strong>{n(baseline?.projected_eps, 2)}</strong></div></div> : <div className="metrics metrics-five"><div><span>현재 TTM EPS</span><strong>{n(earnings.current_ttm_eps, 2)}</strong></div><div><span>적용 GDP</span><strong>{n(baseline?.real_gdp_pct, 1)}%</strong></div><div><span>적용 PCE</span><strong>{n(baseline?.pce_inflation_pct, 1)}%</strong></div><div><span>예상 EPS 성장률</span><strong>{n(baseline?.growth_pct, 1)}%</strong></div><div><span>예상 EPS</span><strong>{n(baseline?.projected_eps, 2)}</strong></div></div>}<p className="method-note">{isStock ? "기업 자체 이력과 FOMC 거시 proxy를 결합한 상대가치 시나리오입니다." : "거시 지표 기반 자체 예상이며 애널리스트 컨센서스가 아닙니다."}</p>{index.status === "READY" ? <ScenarioChart model={index} label={symbol}/> : <div className="empty">{index.reason || earnings.reason || "시나리오 근거를 확인해 주세요."}</div>}{gap != null ? <div className={`valuation-gap position-${index.valuation_position || "unknown"}`}><span>{gapLabel}</span><strong>{signed(gap)}</strong><small>현재 가격과 기준 예상 EPS × 자체 60개월 중심 PER 비교</small></div> : null}{index.gap_pct ? <div className="gap-row"><span>보수 {signed(index.gap_pct.lower)}</span><strong>기준 {signed(index.gap_pct.baseline)}</strong><span>낙관 {signed(index.gap_pct.upper)}</span></div> : null}<p className="scenario-disclaimer">공식 적정가·목표주가·매매 신호가 아닙니다.</p><ScenarioHistoryChart options={index.history_options} fallback={index.history} symbol={symbol} isStock={isStock}/><p className="limitation">{index.limitation || earnings.limitation}</p></section></>;
 }
 
+function FreshnessBar({ freshness, collecting, result, onRefresh }: { freshness?: DataFreshness; collecting: boolean; result?: CollectionResult; onRefresh: () => void }) {
+  const action = freshness?.action;
+  const statusLabel: Record<string, string> = {
+    READY: "최신 자료 확인됨",
+    REFRESH_AVAILABLE: "최신화 가능",
+    PARTIAL: "일부 자료 확인 필요",
+    BLOCKED: "최신화 조건 확인 필요",
+  };
+  const gapLabels: Record<string, string> = {
+    asset_profile: "시장가치",
+    prices: "가격",
+    sec_identity: "SEC 기업 연결",
+    sec_statements: "재무제표",
+  };
+  const gapSummary = (freshness?.gaps || []).map((gap) => gapLabels[gap.scope] || gap.scope).join(" · ");
+  return <section className={`freshness-bar freshness-${(freshness?.status || "blocked").toLowerCase()}`} aria-label="선택 기업 데이터 최신화">
+    <div className="freshness-basis"><span>자료 기준</span><strong>가격 {freshness?.price_basis_date || "-"} · 시장가치 {freshness?.profile_basis_date || "-"} · 재무 {freshness?.statement_period_end || "-"}</strong><small>공개 {freshness?.statement_available_at || "-"} · 최신 완료 거래일 {freshness?.expected_price_date || "-"}</small></div>
+    <div className="freshness-action"><span>{statusLabel[freshness?.status || ""] || "자료 상태 확인 중"}</span><p>{result?.message || action?.detail || (gapSummary ? `${gapSummary} 자료를 다시 확인할 수 있습니다.` : "현재 저장 자료로 분석합니다.")}</p>{action?.enabled ? <button type="button" disabled={collecting} onClick={onRefresh}>{collecting ? "갱신 중" : action.label || "최신 데이터로 다시 계산"}</button> : null}</div>
+  </section>;
+}
+
 function MarketContextValuation({ args }: Props) {
   const root = args.payload;
   const combined = root && "instruments" in root ? root as CombinedPayload : null;
@@ -356,7 +389,7 @@ function MarketContextValuation({ args }: Props) {
   const [analysisBySymbol, setAnalysisBySymbol] = useState<Record<string, AnalysisChoice>>({});
   const payload = combined?.instruments[selectedInstrument] || root as ValuationPayload | undefined;
   useEffect(() => { Streamlit.setFrameHeight(); window.setTimeout(() => Streamlit.setFrameHeight(), 180); }, [payload, selectedInstrument, collecting, analysisBySymbol]);
-  useEffect(() => setCollecting(false), [payload?.collection_result?.status, payload?.status, payload?.turnaround_analysis?.status]);
+  useEffect(() => setCollecting(false), [payload?.collection_result?.status, payload?.data_freshness?.status]);
   if (!payload) return null;
   const isStock = payload.instrument?.id === "us_stock" || selectedInstrument === "us_stock";
   const symbol = payload.selection?.symbol || payload.instrument?.proxy_symbol || "-";
@@ -365,35 +398,32 @@ function MarketContextValuation({ args }: Props) {
     ? analysisBySymbol[payload.selection.symbol] || recommended
     : "per";
   const showTurnaround = Boolean(isStock && payload.selection?.symbol && selectedAnalysis === "turnaround");
-  const turnaroundBasis = payload.turnaround_analysis?.valuation?.price_basis_date
-    || payload.turnaround_analysis?.series?.timeline?.slice(-1)[0]?.period_end;
   const basisDate = isStock
     ? showTurnaround
-      ? turnaroundBasis
-      : payload.selection?.latest_price_date || payload.basis?.price?.price_basis_date
+      ? payload.data_freshness?.statement_period_end
+      : payload.data_freshness?.price_basis_date || payload.selection?.latest_price_date || payload.basis?.price?.price_basis_date
     : payload.basis?.spx?.date;
+  const basisLabel = isStock ? showTurnaround ? "재무 기준일" : "가격 기준일" : "기준일";
   const chooseAnalysis = (choice: AnalysisChoice) => {
     if (!payload.selection?.symbol) return;
     setAnalysisBySymbol((current) => ({ ...current, [payload.selection!.symbol!]: choice }));
   };
-  const collect = (choice: AnalysisChoice = "per") => {
-    const action = choice === "turnaround"
-      ? payload.turnaround_analysis?.collection_action
-      : payload.collection_action;
-    if (!action?.enabled || action.id !== (choice === "turnaround" ? "collect_us_stock_turnaround" : "collect_us_stock_valuation")) return;
+  const refresh = () => {
+    const action = payload.data_freshness?.action;
+    if (!action?.enabled || action.id !== "refresh_us_stock_data") return;
     setCollecting(true);
     emitEvent(action.id, { symbol: action.symbol });
   };
   return <main className="valuation-workbench" data-status={showTurnaround ? payload.turnaround_analysis?.status : payload.status}>
     {combined ? <nav className="instrument-selector" aria-label="가치평가 대상 선택"><button type="button" aria-pressed={selectedInstrument === "sp500"} onClick={() => setSelectedInstrument("sp500")}><span>S&amp;P 500</span><small>시장 지수</small></button><button type="button" aria-pressed={selectedInstrument === "us_stock"} onClick={() => setSelectedInstrument("us_stock")}><span>미국 개별주식</span><small>기업명·티커 검색</small></button></nav> : null}
     {isStock ? <StockSearch payload={payload}/> : null}
-    <header className="valuation-header"><div><span className="eyebrow">{isStock ? showTurnaround ? "U.S. STOCK TURNAROUND ANALYSIS" : "U.S. STOCK RELATIVE VALUATION" : "S&P 500 VALUATION"}</span><h2>{isStock && payload.selection ? `${payload.selection.name || symbol} ${showTurnaround ? "전환 분석" : "상대가치 평가"}` : "멀티플과 예상 실적을 한 화면에서 비교"}</h2><p>{isStock ? showTurnaround ? "분기 filing 근거로 영업·현금 전환과 생존 위험을 먼저 읽습니다." : "한 기업의 filing-aware EPS와 자체 멀티플 이력으로 현재 위치를 읽습니다." : "과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다."}</p></div><div className="basis"><span>기준일</span><strong>{basisDate || "-"}</strong><small>{showTurnaround ? "filing-aware discrete quarters" : payload.instrument?.method_label || "As-Reported actual TTM"}</small></div></header>
+    <header className="valuation-header"><div><span className="eyebrow">{isStock ? showTurnaround ? "U.S. STOCK TURNAROUND ANALYSIS" : "U.S. STOCK RELATIVE VALUATION" : "S&P 500 VALUATION"}</span><h2>{isStock && payload.selection ? `${payload.selection.name || symbol} ${showTurnaround ? "전환 분석" : "상대가치 평가"}` : "멀티플과 예상 실적을 한 화면에서 비교"}</h2><p>{isStock ? showTurnaround ? "분기 filing 근거로 영업·현금 전환과 생존 위험을 먼저 읽습니다." : "한 기업의 filing-aware EPS와 자체 멀티플 이력으로 현재 위치를 읽습니다." : "과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다."}</p></div><div className="basis"><span>{basisLabel}</span><strong>{basisDate || "-"}</strong><small>{showTurnaround ? `공개 ${payload.data_freshness?.statement_available_at || "-"} · 가격 ${payload.data_freshness?.price_basis_date || "-"}` : payload.instrument?.method_label || "As-Reported actual TTM"}</small></div></header>
+    {isStock && payload.selection?.symbol ? <FreshnessBar freshness={payload.data_freshness} collecting={collecting} result={payload.collection_result} onRefresh={refresh}/> : null}
     {isStock && payload.selection?.symbol ? <nav className="analysis-selector" aria-label="개별주식 분석 선택"><button type="button" aria-pressed={selectedAnalysis === "per"} onClick={() => chooseAnalysis("per")}><span>PER 상대가치</span><small>{payload.multiple_regime?.status === "READY" ? "적용 가능" : "적용 전"}</small></button><button type="button" aria-pressed={selectedAnalysis === "turnaround"} onClick={() => chooseAnalysis("turnaround")}><span>전환 분석</span><small>{payload.turnaround_analysis?.status || "확인 중"}</small></button></nav> : null}
-    {payload.collection_result ? <div className={`collection-result result-${payload.collection_result.status}`} role="status"><strong>{payload.collection_result.status === "success" ? "선택 종목 자료 수집을 마쳤습니다." : "자료 수집 결과를 확인해 주세요."}</strong><span>{payload.collection_result.message || ""} · 저장 {payload.collection_result.rows_written || 0} rows</span></div> : null}
     {showTurnaround
-      ? <TurnaroundAnalysis payload={payload.turnaround_analysis} collecting={collecting} onCollect={() => collect("turnaround")}/>
+      ? <TurnaroundAnalysis payload={payload.turnaround_analysis}/>
       : isStock && payload.status !== "READY"
-        ? <StockState payload={payload} collecting={collecting} onCollect={() => collect("per")}/>
+        ? <StockState payload={payload}/>
         : <ReadyValuation payload={payload} isStock={isStock}/>}
     {!showTurnaround ? <details className="evidence"><summary>산식·자료 출처·한계 보기</summary><div className="evidence-grid">{(payload.sources || []).map((source) => <div key={source.name}><strong>{source.name}</strong><span>{source.role}</span></div>)}</div><ul>{(payload.limitations || []).map((item) => <li key={item}>{item}</li>)}</ul></details> : null}
   </main>;

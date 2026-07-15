@@ -20,15 +20,6 @@ export type TurnaroundPoint = {
 };
 
 type Milestone = { status?: string; evidence?: Record<string, unknown> };
-type CollectionAction = {
-  id: "collect_us_stock_turnaround";
-  label: string;
-  detail: string;
-  symbol: string;
-  scopes?: string[];
-  enabled: boolean;
-};
-
 export type TurnaroundPayload = {
   schema_version?: string;
   status?: string;
@@ -63,7 +54,6 @@ export type TurnaroundPayload = {
     handoff?: string;
   };
   sections?: Record<string, { status?: string; reason_code?: string | null }>;
-  collection_action?: CollectionAction;
   sources?: string[];
   limitations?: string[];
 };
@@ -232,15 +222,13 @@ function ValuationCard({ valuation }: { valuation: TurnaroundPayload["valuation"
   return <section className={`turnaround-valuation-card valuation-${(valuation?.status || "BLOCKED").toLowerCase()}`}><div><span>현재 적용 가능한 가치평가 프레임</span><h3>{method}</h3><p>{ready ? "현재 단계에서 성립하는 가장 우선순위 높은 방법입니다." : reasonLabel[valuation?.reason_code || ""] || "숫자를 만들기보다 영업·현금 전환 근거를 먼저 확인합니다."}</p></div>{ready && valuation?.method !== "P_E_HANDOFF" ? <div className="turnaround-valuation-number"><strong>{fmt(valuation?.multiple, 2)}x</strong>{finite(valuation?.yield_pct) ? <span>yield {signed(valuation.yield_pct)}</span> : null}</div> : <span className="turnaround-status">{valuation?.status || "BLOCKED"}</span>}<footer>가격 {valuation?.price_basis_date || "-"} · 시장가치 {valuation?.market_cap_basis_date || "-"} · 재무제표 {valuation?.statement_basis_date || "-"}</footer></section>;
 }
 
-export default function TurnaroundAnalysis({ payload, collecting, onCollect }: { payload?: TurnaroundPayload; collecting: boolean; onCollect: () => void }) {
+export default function TurnaroundAnalysis({ payload }: { payload?: TurnaroundPayload }) {
   const [windowSize, setWindowSize] = useState<WindowSize>(12);
   const timeline = payload?.series?.timeline || [];
   const points = useMemo(() => timeline.slice(-windowSize), [timeline, windowSize]);
   if (!payload || payload.status === "NOT_SELECTED") return <div className="empty">전환 분석할 종목을 먼저 선택하세요.</div>;
   if (payload.status === "ERROR" || payload.status === "NOT_APPLICABLE") return <section className="stock-state"><span>{payload.status}</span><h3>전환 분석을 표시할 수 없습니다</h3><p>{payload.reason || "저장된 identity와 재무제표 구조를 확인해 주세요."}</p></section>;
-  const action = payload.collection_action;
   return <div className="turnaround-analysis" data-status={payload.status}>
-    {payload.status === "COLLECTABLE" && action?.id === "collect_us_stock_turnaround" && action.enabled ? <section className="turnaround-collection-banner"><div><span>보강 가능한 원자료</span><strong>{action.label}</strong><p>{action.detail}</p><small>{(action.scopes || []).join(" · ")}</small></div><button type="button" disabled={collecting} onClick={onCollect}>{collecting ? "수집하는 중" : "분석 자료 수집"}</button></section> : null}
     <MilestoneRail model={payload.milestones}/>
     <section className="turnaround-chart-section"><div className="turnaround-section-head"><div><span>영업 · 현금 전환</span><h3>분기 흐름을 같은 시간축에서 확인</h3><p>결측 분기는 연결·보간하지 않고 0 기준선을 항상 유지합니다.</p></div><WindowSelector value={windowSize} onChange={setWindowSize}/></div><div className="turnaround-chart-grid"><article><h4>그래프 1 · 영업 전환</h4><OperatingChart points={points}/></article><article><h4>그래프 2 · 현금 전환</h4><CashChart points={points}/></article></div></section>
     <RiskCards risks={payload.risks}/>
