@@ -47,3 +47,11 @@ Last Updated: 2026-07-15
 - GREEN: implemented direct-quarter duration classification, cumulative `H1-Q1`, `9M-H1`, `FY-Q1-Q2-Q3`, primary-period comparative filtering, max-operand `available_at`, and operand provenance.
 - GREEN: implemented instant fact isolation and PIT split-neutral weighted-share normalization that ignores split events after the requested as-of date.
 - Verification: `tests.test_us_stock_turnaround` plus `tests.test_us_stock_valuation` ran 48 tests with 0 failures; target `py_compile` and `git diff --check` passed.
+
+## 2차 — Turnaround Analysis Engine
+
+- RED/GREEN: added canonical metric fixtures for revenue, gross profit fallback, operating/net income, OCF, CapEx, FCF proxy, EPS, diluted shares, gap-preserving TTM, YoY, and instant balance components.
+- RED/GREEN: fixed independent milestone contracts for 8-quarter evidence, operating improvement, two consecutive positive TTM OCF observations, quarterly/TTM EPS separation, and PER handoff readiness.
+- RED/GREEN: fixed runway, meaningful positive-operating-income interest coverage, net-debt/negative-OCF, and split-neutral dilution overlays.
+- RED/GREEN: fixed valuation priority and numerator consistency, including P/FCF, P/OCF, EV/EBITDA, EV/Gross Profit, EV/Sales, direct-debt precedence, aligned statement components, freshness, USD-unit, denominator, and specialized-sector gates.
+- Verification: `.venv/bin/python -m unittest tests.test_us_stock_turnaround tests.test_us_stock_valuation -v` ran 67 tests with 0 failures; target `py_compile` and `git diff --check` passed.

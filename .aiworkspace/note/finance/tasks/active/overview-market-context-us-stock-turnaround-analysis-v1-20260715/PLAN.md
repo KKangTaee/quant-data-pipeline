@@ -128,10 +128,10 @@ def build_turnaround_quarterly_series(
 
 The result contains full calendar-quarter `timeline`, valid metric `series`, per-quarter raw/TTM values, `available_at`, provenance, and metric-level missing reasons.
 
-- [ ] Write failing tests for revenue, direct/derived gross profit, operating income, net income, OCF, positive CapEx magnitude, FCF proxy, EPS, and diluted shares.
-- [ ] Assert gross profit fallback uses same-quarter/same-unit compatible revenue-cost only; assert TTM margins sum numerator/denominator before division.
-- [ ] Assert a missing quarter remains a `MISSING` timeline slot and breaks TTM rather than borrowing another quarter.
-- [ ] Implement ordered canonical families and TTM/YoY helpers; run focused tests to GREEN.
+- [x] Write failing tests for revenue, direct/derived gross profit, operating income, net income, OCF, positive CapEx magnitude, FCF proxy, EPS, and diluted shares.
+- [x] Assert gross profit fallback uses same-quarter/same-unit compatible revenue-cost only; assert TTM margins sum numerator/denominator before division.
+- [x] Assert a missing quarter remains a `MISSING` timeline slot and breaks TTM rather than borrowing another quarter.
+- [x] Implement ordered canonical families and TTM/YoY helpers; run focused tests to GREEN.
 
 ### Task 2.2: Milestones and independent risk overlays
 
@@ -142,10 +142,10 @@ def classify_turnaround_milestones(series: Mapping[str, Any], *, per_status: str
 def evaluate_turnaround_risks(series: Mapping[str, Any]) -> dict[str, Any]: ...
 ```
 
-- [ ] Write failing tests for `LOSS_BASELINE`, `OPERATING_IMPROVEMENT`, two-consecutive-TTM `CASH_FLOW_TURN`, `EARNINGS_TURN`, `PER_CANDIDATE`, and `PER_READY`.
-- [ ] Assert milestone statuses are independent: earnings turn does not pass cash-flow turn, burn improvement is not cash-flow turn, quarterly EPS turn is not positive TTM EPS.
-- [ ] Write failing tests for runway 4/8-quarter boundaries, interest coverage meaningfulness, net debt with negative OCF, and 5%/10% split-neutral dilution.
-- [ ] Implement raw deltas plus 1.0pp/2-of-3 rules and independent overlays; run tests to GREEN.
+- [x] Write failing tests for `LOSS_BASELINE`, `OPERATING_IMPROVEMENT`, two-consecutive-TTM `CASH_FLOW_TURN`, `EARNINGS_TURN`, `PER_CANDIDATE`, and `PER_READY`.
+- [x] Assert milestone statuses are independent: earnings turn does not pass cash-flow turn, burn improvement is not cash-flow turn, quarterly EPS turn is not positive TTM EPS.
+- [x] Write failing tests for runway 4/8-quarter boundaries, interest coverage meaningfulness, net debt with negative OCF, and 5%/10% split-neutral dilution.
+- [x] Implement raw deltas plus 1.0pp/2-of-3 rules and independent overlays; run tests to GREEN.
 
 ### Task 2.3: Fresh-input valuation router and section readiness
 
@@ -164,12 +164,12 @@ def route_turnaround_valuation(
 def build_turnaround_analysis(... ) -> dict[str, Any]: ...
 ```
 
-- [ ] Write failing tests for method priority `P/E handoff -> FCF -> OCF -> EBITDA -> gross profit -> sales -> survival only`.
-- [ ] Assert stale market cap (>7 calendar days from latest price basis), missing cash/debt, non-USD unit, unsupported sector, and non-positive denominator suppress numeric output with exact reason codes.
-- [ ] Assert a blocked D&A/valuation section does not hide READY operating/cash charts.
-- [ ] Implement EV/equity numerator consistency, basis-date disclosure, `READY/PARTIAL/BLOCKED` section statuses, and limitations.
-- [ ] Run `tests.test_us_stock_turnaround` and existing `tests.test_us_stock_valuation`; expect PASS.
-- [ ] Update task evidence and commit `전환 분석 엔진과 가치평가 경계 구현`.
+- [x] Write failing tests for method priority `P/E handoff -> FCF -> OCF -> EBITDA -> gross profit -> sales -> survival only`.
+- [x] Assert stale market cap (>7 calendar days from latest price basis), missing cash/debt, non-USD unit, unsupported sector, and non-positive denominator suppress numeric output with exact reason codes.
+- [x] Assert a blocked D&A/valuation section does not hide READY operating/cash charts.
+- [x] Implement EV/equity numerator consistency, basis-date disclosure, `READY/PARTIAL/BLOCKED` section statuses, and limitations.
+- [x] Run `tests.test_us_stock_turnaround` and existing `tests.test_us_stock_valuation`; expect PASS.
+- [x] Update task evidence and commit `전환 분석 엔진과 가치평가 경계 구현`.
 
 **2차 완료 조건:** milestone, risk, valuation, section readiness가 pure tests로 고정되고 negative/zero/stale input이 숫자로 노출되지 않는다.
 

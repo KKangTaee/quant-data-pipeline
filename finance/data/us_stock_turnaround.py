@@ -374,3 +374,820 @@ def build_split_neutral_share_series(
             }
         )
     return sorted(resolved, key=lambda row: (str(row.get("period_end") or ""), str(row.get("available_at") or "")))
+
+
+TURNAROUND_CONCEPT_FAMILIES: dict[str, tuple[str, ...]] = {
+    "revenue": (
+        "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+        "us-gaap:Revenues",
+        "us-gaap:SalesRevenueNet",
+    ),
+    "gross_profit": ("us-gaap:GrossProfit",),
+    "cost_of_revenue": (
+        "us-gaap:CostOfRevenue",
+        "us-gaap:CostOfGoodsAndServicesSold",
+        "us-gaap:CostOfGoodsSold",
+    ),
+    "operating_income": ("us-gaap:OperatingIncomeLoss",),
+    "net_income": ("us-gaap:NetIncomeLoss", "us-gaap:ProfitLoss"),
+    "ocf": ("us-gaap:NetCashProvidedByUsedInOperatingActivities",),
+    "capex": ("us-gaap:PaymentsToAcquirePropertyPlantAndEquipment",),
+    "diluted_eps": (
+        "us-gaap:EarningsPerShareDiluted",
+        "us-gaap:EarningsPerShareBasicAndDiluted",
+        "ifrs-full:DilutedEarningsLossPerShare",
+    ),
+    "diluted_shares": (
+        "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+        "us-gaap:WeightedAverageNumberOfShareOutstandingBasicAndDiluted",
+    ),
+    "interest_expense": (
+        "us-gaap:InterestExpenseNonOperating",
+        "us-gaap:InterestAndDebtExpense",
+        "us-gaap:InterestExpense",
+    ),
+    "da": (
+        "us-gaap:DepreciationDepletionAndAmortization",
+        "us-gaap:DepreciationDepletionAndAmortizationPropertyPlantAndEquipment",
+    ),
+}
+
+_TURNAROUND_METRIC_UNITS: dict[str, tuple[str, ...]] = {
+    **{
+        metric: ("USD",)
+        for metric in (
+            "revenue",
+            "gross_profit",
+            "cost_of_revenue",
+            "operating_income",
+            "net_income",
+            "ocf",
+            "capex",
+            "interest_expense",
+            "da",
+        )
+    },
+    "diluted_eps": ("USD per share", "USD/shares", "USD/share"),
+    "diluted_shares": ("shares",),
+}
+
+_INSTANT_CONCEPT_FAMILIES: dict[str, tuple[str, ...]] = {
+    "cash": ("us-gaap:CashAndCashEquivalentsAtCarryingValue",),
+    "short_term_investments": (
+        "us-gaap:ShortTermInvestments",
+        "us-gaap:MarketableSecuritiesCurrent",
+    ),
+    "debt_direct": (
+        "us-gaap:LongTermDebtAndFinanceLeaseObligations",
+        "us-gaap:DebtAndCapitalLeaseObligations",
+    ),
+    "debt_current": (
+        "us-gaap:LongTermDebtAndFinanceLeaseObligationsCurrent",
+        "us-gaap:LongTermDebtCurrent",
+        "us-gaap:ShortTermBorrowings",
+    ),
+    "debt_noncurrent": (
+        "us-gaap:LongTermDebtAndFinanceLeaseObligationsNoncurrent",
+        "us-gaap:LongTermDebtNoncurrent",
+    ),
+}
+
+_TTM_METRICS = (
+    "revenue",
+    "gross_profit",
+    "operating_income",
+    "net_income",
+    "ocf",
+    "capex",
+    "diluted_eps",
+    "interest_expense",
+    "da",
+)
+
+
+def _slot_ordinal(fiscal_year: int, fiscal_quarter: int) -> int:
+    return int(fiscal_year) * 4 + int(fiscal_quarter) - 1
+
+
+def _slot_identity(ordinal: int) -> tuple[int, int]:
+    return int(ordinal // 4), int(ordinal % 4) + 1
+
+
+def _metric_map(rows: Iterable[Mapping[str, Any]]) -> dict[tuple[int, int], dict[str, Any]]:
+    mapped: dict[tuple[int, int], dict[str, Any]] = {}
+    for raw in rows:
+        row = dict(raw)
+        year = row.get("fiscal_year")
+        quarter = row.get("fiscal_quarter")
+        if year is None or quarter not in {1, 2, 3, 4}:
+            continue
+        mapped[(int(year), int(quarter))] = row
+    return mapped
+
+
+def _sum_window(
+    timeline: Sequence[Mapping[str, Any]],
+    *,
+    index: int,
+    metric: str,
+) -> float | None:
+    if index < 3:
+        return None
+    values = [timeline[position].get(metric) for position in range(index - 3, index + 1)]
+    if any(value is None for value in values):
+        return None
+    return float(sum(float(value) for value in values))
+
+
+def _pct_change(current: Any, previous: Any) -> float | None:
+    if current is None or previous is None:
+        return None
+    denominator = float(previous)
+    if denominator == 0:
+        return None
+    return (float(current) / denominator - 1.0) * 100.0
+
+
+def _build_current_balance(
+    statements: Sequence[Mapping[str, Any]],
+    *,
+    as_of_date: str,
+) -> dict[str, Any]:
+    instant_rows = {
+        metric: resolve_instant_facts(
+            statements,
+            metric=metric,
+            concepts=concepts,
+            units=("USD",),
+            as_of_date=as_of_date,
+        )
+        for metric, concepts in _INSTANT_CONCEPT_FAMILIES.items()
+    }
+    latest = {
+        metric: sorted(rows, key=lambda item: (item["period_end"], item["available_at"]))[-1]
+        for metric, rows in instant_rows.items()
+        if rows
+    }
+    balance: dict[str, Any] = {
+        metric: row.get("value")
+        for metric, row in latest.items()
+        if metric in {"cash", "short_term_investments"}
+    }
+    debt_sources: list[dict[str, Any]] = []
+    if "debt_direct" in latest:
+        balance["total_debt"] = latest["debt_direct"].get("value")
+        debt_sources = [latest["debt_direct"]]
+    elif {"debt_current", "debt_noncurrent"}.issubset(latest):
+        current = latest["debt_current"]
+        noncurrent = latest["debt_noncurrent"]
+        if (
+            current.get("period_end") == noncurrent.get("period_end")
+            and current.get("accession_no") == noncurrent.get("accession_no")
+        ):
+            balance["total_debt"] = float(current.get("value") or 0.0) + float(
+                noncurrent.get("value") or 0.0
+            )
+            debt_sources = [current, noncurrent]
+    used_sources = [
+        row
+        for metric, row in latest.items()
+        if metric in {"cash", "short_term_investments"}
+    ] + debt_sources
+    if used_sources:
+        component_keys = {
+            (str(row.get("period_end") or ""), str(row.get("accession_no") or ""))
+            for row in used_sources
+        }
+        balance.update(
+            {
+                "currency": "USD",
+                "basis_date": max(row["period_end"] for row in used_sources),
+                "available_at": max(row["available_at"] for row in used_sources),
+                "accession_no": max(
+                    (str(row.get("accession_no") or "") for row in used_sources),
+                    default=None,
+                )
+                or None,
+                "component_alignment": len(component_keys) == 1,
+            }
+        )
+    return balance
+
+
+def build_turnaround_quarterly_series(
+    statement_rows: Iterable[Mapping[str, Any]],
+    price_rows: Iterable[Mapping[str, Any]],
+    *,
+    as_of_date: str,
+) -> dict[str, Any]:
+    """Build a gap-preserving fiscal-quarter timeline from stored filing facts."""
+    statements = [dict(row) for row in statement_rows]
+    prices = [dict(row) for row in price_rows]
+    current_balance = _build_current_balance(statements, as_of_date=as_of_date)
+    resolved: dict[str, list[dict[str, Any]]] = {
+        metric: resolve_discrete_quarters(
+            statements,
+            metric=metric,
+            concepts=concepts,
+            units=_TURNAROUND_METRIC_UNITS[metric],
+            as_of_date=as_of_date,
+        )
+        for metric, concepts in TURNAROUND_CONCEPT_FAMILIES.items()
+    }
+    resolved["diluted_shares"] = build_split_neutral_share_series(
+        resolved["diluted_shares"],
+        prices,
+        as_of_date=as_of_date,
+    )
+    maps = {metric: _metric_map(rows) for metric, rows in resolved.items()}
+    keys = {
+        key
+        for metric_rows in maps.values()
+        for key in metric_rows
+    }
+    if not keys:
+        return {
+            "status": "BLOCKED",
+            "timeline": [],
+            "series": [],
+            "current_balance": current_balance,
+            "currency": "USD",
+        }
+    ordinals = [_slot_ordinal(year, quarter) for year, quarter in keys]
+    timeline: list[dict[str, Any]] = []
+    for ordinal in range(min(ordinals), max(ordinals) + 1):
+        year, quarter = _slot_identity(ordinal)
+        key = (year, quarter)
+        metric_reasons: dict[str, str] = {}
+        row: dict[str, Any] = {
+            "slot_index": len(timeline),
+            "slot_key": f"{year}-Q{quarter}",
+            "fiscal_year": year,
+            "fiscal_quarter": quarter,
+            "status": "MISSING",
+            "metric_reasons": metric_reasons,
+        }
+        evidence_rows: list[dict[str, Any]] = []
+        for metric in TURNAROUND_CONCEPT_FAMILIES:
+            fact = maps[metric].get(key)
+            value_key = (
+                "split_neutral_value" if metric == "diluted_shares" else "value"
+            )
+            value = None if fact is None else fact.get(value_key)
+            if metric == "capex" and value is not None:
+                value = abs(float(value))
+            row[metric] = None if value is None else float(value)
+            if fact is not None:
+                evidence_rows.append(fact)
+        if row["gross_profit"] is None and row["revenue"] is not None and row["cost_of_revenue"] is not None:
+            revenue_fact = maps["revenue"].get(key) or {}
+            cost_fact = maps["cost_of_revenue"].get(key) or {}
+            compatible = (
+                revenue_fact.get("accession_no") == cost_fact.get("accession_no")
+                and str(revenue_fact.get("unit") or "").casefold()
+                == str(cost_fact.get("unit") or "").casefold()
+            )
+            if compatible:
+                row["gross_profit"] = float(row["revenue"]) - float(row["cost_of_revenue"])
+                row["gross_profit_derivation"] = "revenue_minus_cost"
+            else:
+                metric_reasons["gross_profit"] = "INCOMPATIBLE_REVENUE_COST_PROVENANCE"
+        available_dates = [pd.to_datetime(item.get("available_at"), errors="coerce") for item in evidence_rows]
+        available_dates = [pd.Timestamp(value) for value in available_dates if not pd.isna(value)]
+        period_ends = [str(item.get("period_end")) for item in evidence_rows if item.get("period_end")]
+        row["available_at"] = max(available_dates).strftime("%Y-%m-%d") if available_dates else None
+        row["period_end"] = max(period_ends) if period_ends else None
+        if any(row.get(metric) is not None for metric in ("revenue", "operating_income", "ocf", "diluted_eps")):
+            row["status"] = "AVAILABLE"
+        timeline.append(row)
+
+    for index, row in enumerate(timeline):
+        for metric in _TTM_METRICS:
+            ttm_key = f"ttm_{metric}"
+            row[ttm_key] = _sum_window(timeline, index=index, metric=metric)
+            if index >= 3 and row[ttm_key] is None:
+                row["metric_reasons"][ttm_key] = "MISSING_QUARTER_IN_WINDOW"
+        row["ttm_eps"] = row.get("ttm_diluted_eps")
+        if row["ttm_ocf"] is not None and row["ttm_capex"] is not None:
+            row["ttm_fcf"] = float(row["ttm_ocf"]) - float(row["ttm_capex"])
+        else:
+            row["ttm_fcf"] = None
+        revenue = row.get("ttm_revenue")
+        if revenue is not None and float(revenue) > 0:
+            row["ttm_gross_margin_pct"] = (
+                float(row["ttm_gross_profit"]) / float(revenue) * 100.0
+                if row.get("ttm_gross_profit") is not None
+                else None
+            )
+            row["ttm_operating_margin_pct"] = (
+                float(row["ttm_operating_income"]) / float(revenue) * 100.0
+                if row.get("ttm_operating_income") is not None
+                else None
+            )
+        else:
+            row["ttm_gross_margin_pct"] = None
+            row["ttm_operating_margin_pct"] = None
+        if index >= 4:
+            previous = timeline[index - 4]
+            row["revenue_yoy_pct"] = _pct_change(row.get("revenue"), previous.get("revenue"))
+            row["ttm_revenue_yoy_pct"] = _pct_change(row.get("ttm_revenue"), previous.get("ttm_revenue"))
+            current_margin = row.get("ttm_operating_margin_pct")
+            previous_margin = previous.get("ttm_operating_margin_pct")
+            row["operating_margin_yoy_delta_pp"] = (
+                float(current_margin) - float(previous_margin)
+                if current_margin is not None and previous_margin is not None
+                else None
+            )
+        else:
+            row["revenue_yoy_pct"] = None
+            row["ttm_revenue_yoy_pct"] = None
+            row["operating_margin_yoy_delta_pp"] = None
+        row["split_neutral_diluted_shares"] = row.get("diluted_shares")
+
+    available_series = [dict(row) for row in timeline if row["status"] == "AVAILABLE"]
+    core_ready = len(timeline) >= 8 and any(
+        row.get("ttm_revenue") is not None and row.get("ttm_ocf") is not None
+        for row in timeline[-1:]
+    )
+    return {
+        "status": "READY" if core_ready else "PARTIAL",
+        "timeline": timeline,
+        "series": available_series,
+        "current_balance": current_balance,
+        "currency": "USD",
+    }
+
+
+def _milestone(status: str, **evidence: Any) -> dict[str, Any]:
+    return {"status": status, "evidence": evidence}
+
+
+def classify_turnaround_milestones(
+    series: Mapping[str, Any],
+    *,
+    per_status: str,
+) -> dict[str, Any]:
+    """Classify independent evidence milestones without funnel auto-passing."""
+    timeline = [
+        dict(row)
+        for row in series.get("timeline") or []
+        if str(row.get("status") or "AVAILABLE") == "AVAILABLE"
+    ]
+    names = (
+        "LOSS_BASELINE",
+        "OPERATING_IMPROVEMENT",
+        "CASH_FLOW_TURN",
+        "EARNINGS_TURN",
+        "PER_CANDIDATE",
+        "PER_READY",
+    )
+    if len(timeline) < 8:
+        return {
+            "status": "PARTIAL",
+            "headline": "UNCONFIRMED",
+            "milestones": {name: _milestone("UNKNOWN") for name in names},
+            "evidence": {"quarter_count": len(timeline), "required_quarters": 8},
+        }
+
+    latest = timeline[-1]
+    previous = timeline[-2]
+    prior_year = timeline[-5]
+    current_growth = latest.get("ttm_revenue_yoy_pct")
+    previous_growth = previous.get("ttm_revenue_yoy_pct")
+    revenue_direction = bool(
+        current_growth is not None
+        and (
+            float(current_growth) > 0
+            or (
+                previous_growth is not None
+                and float(current_growth) - float(previous_growth) >= 1.0
+            )
+        )
+    )
+    gross_margin = latest.get("ttm_gross_margin_pct")
+    prior_gross_margin = prior_year.get("ttm_gross_margin_pct")
+    gross_improvement = bool(
+        latest.get("ttm_gross_profit") is not None
+        and float(latest.get("ttm_gross_profit") or 0) > 0
+        and gross_margin is not None
+        and prior_gross_margin is not None
+        and float(gross_margin) - float(prior_gross_margin) >= 1.0
+    )
+    operating_deltas = [
+        float(row["operating_margin_yoy_delta_pp"])
+        for row in timeline[-3:]
+        if row.get("operating_margin_yoy_delta_pp") is not None
+    ]
+    operating_margin = latest.get("ttm_operating_margin_pct")
+    prior_operating_margin = prior_year.get("ttm_operating_margin_pct")
+    operating_improvement = bool(
+        sum(delta >= 1.0 for delta in operating_deltas) >= 2
+        and operating_margin is not None
+        and prior_operating_margin is not None
+        and float(operating_margin) - float(prior_operating_margin) >= 1.0
+    )
+    operating_evidence_count = sum(
+        (revenue_direction, gross_improvement, operating_improvement)
+    )
+    operating_met = operating_evidence_count >= 2
+
+    ocf_values = [row.get("ttm_ocf") for row in timeline[-2:]]
+    cash_met = len(ocf_values) == 2 and all(
+        value is not None and float(value) > 0 for value in ocf_values
+    )
+    recent_eps = [row.get("diluted_eps") for row in timeline[-3:]]
+    current_ttm_eps = latest.get("ttm_eps")
+    earnings_met = (
+        sum(value is not None and float(value) > 0 for value in recent_eps) >= 2
+        and (current_ttm_eps is None or float(current_ttm_eps) <= 0)
+    )
+    per_candidate = current_ttm_eps is not None and float(current_ttm_eps) > 0
+    recent_ttm_eps = [row.get("ttm_eps") for row in timeline[-4:]]
+    per_ready = (
+        str(per_status).upper() == "READY"
+        and len(recent_ttm_eps) == 4
+        and all(value is not None and float(value) > 0 for value in recent_ttm_eps)
+    )
+    improvement_present = operating_met or cash_met or earnings_met or per_candidate
+    loss_baseline = (
+        (current_ttm_eps is None or float(current_ttm_eps) <= 0)
+        and not improvement_present
+    )
+    prior_ocf = prior_year.get("ttm_ocf")
+    prior_fcf = prior_year.get("ttm_fcf")
+    burn_improving = bool(
+        (
+            latest.get("ttm_ocf") is not None
+            and prior_ocf is not None
+            and float(latest["ttm_ocf"]) > float(prior_ocf)
+        )
+        or (
+            latest.get("ttm_fcf") is not None
+            and prior_fcf is not None
+            and float(latest["ttm_fcf"]) > float(prior_fcf)
+        )
+    )
+    milestones = {
+        "LOSS_BASELINE": _milestone("MET" if loss_baseline else "NOT_MET"),
+        "OPERATING_IMPROVEMENT": _milestone(
+            "MET" if operating_met else "NOT_MET",
+            revenue_direction=revenue_direction,
+            gross_margin_improvement=gross_improvement,
+            operating_margin_improvement=operating_improvement,
+            evidence_count=operating_evidence_count,
+        ),
+        "CASH_FLOW_TURN": _milestone(
+            "MET" if cash_met else "NOT_MET",
+            consecutive_positive_ttm_ocf=cash_met,
+            fcf_confirmed=(
+                latest.get("ttm_fcf") is not None and float(latest["ttm_fcf"]) > 0
+            ),
+        ),
+        "EARNINGS_TURN": _milestone(
+            "MET" if earnings_met else "NOT_MET",
+            recent_positive_quarters=sum(
+                value is not None and float(value) > 0 for value in recent_eps
+            ),
+            current_ttm_eps=current_ttm_eps,
+        ),
+        "PER_CANDIDATE": _milestone("MET" if per_candidate else "NOT_MET"),
+        "PER_READY": _milestone("MET" if per_ready else "NOT_MET"),
+    }
+    headline = next(
+        (
+            name
+            for name in (
+                "PER_READY",
+                "PER_CANDIDATE",
+                "EARNINGS_TURN",
+                "CASH_FLOW_TURN",
+                "OPERATING_IMPROVEMENT",
+                "LOSS_BASELINE",
+            )
+            if milestones[name]["status"] == "MET"
+        ),
+        "LOSS_BASELINE",
+    )
+    return {
+        "status": "READY",
+        "headline": headline,
+        "milestones": milestones,
+        "evidence": {
+            "quarter_count": len(timeline),
+            "burn_improving": burn_improving,
+            "current_ttm_eps": current_ttm_eps,
+        },
+    }
+
+
+def _number(value: Any) -> float | None:
+    number = pd.to_numeric(value, errors="coerce")
+    return None if pd.isna(number) else float(number)
+
+
+def evaluate_turnaround_risks(series: Mapping[str, Any]) -> dict[str, Any]:
+    """Evaluate survival and capital risks independently of operating stage."""
+    timeline = [dict(row) for row in series.get("timeline") or []]
+    latest = timeline[-1] if timeline else {}
+    balance = dict(series.get("current_balance") or {})
+    cash = _number(balance.get("cash"))
+    investments = _number(balance.get("short_term_investments"))
+    debt = _number(balance.get("total_debt"))
+    liquidity = (
+        float(cash or 0.0) + float(investments or 0.0)
+        if cash is not None or investments is not None
+        else None
+    )
+    ttm_fcf = _number(latest.get("ttm_fcf"))
+    runway_quarters = (
+        4.0 * float(liquidity) / abs(float(ttm_fcf))
+        if liquidity is not None and ttm_fcf is not None and ttm_fcf < 0
+        else None
+    )
+    runway_status = (
+        "HIGH_RISK"
+        if runway_quarters is not None and runway_quarters < 4
+        else "WATCH"
+        if runway_quarters is not None and runway_quarters < 8
+        else "OK"
+        if runway_quarters is not None
+        else "NOT_APPLICABLE"
+    )
+
+    operating_income = _number(latest.get("ttm_operating_income"))
+    interest = _number(latest.get("ttm_interest_expense"))
+    coverage = (
+        float(operating_income) / float(interest)
+        if operating_income is not None
+        and operating_income > 0
+        and interest is not None
+        and interest > 0
+        else None
+    )
+    debt_status = (
+        "NOT_MEANINGFUL"
+        if operating_income is not None and operating_income <= 0
+        else "UNKNOWN"
+        if coverage is None
+        else "HIGH_RISK"
+        if coverage < 1.0
+        else "WATCH"
+        if coverage < 2.0
+        else "OK"
+    )
+
+    current_shares = _number(latest.get("split_neutral_diluted_shares"))
+    prior_shares = (
+        _number(timeline[-5].get("split_neutral_diluted_shares"))
+        if len(timeline) >= 5
+        else None
+    )
+    dilution_yoy = _pct_change(current_shares, prior_shares)
+    dilution_status = (
+        "HIGH_RISK"
+        if dilution_yoy is not None and dilution_yoy >= 10.0 - 1e-9
+        else "WATCH"
+        if dilution_yoy is not None and dilution_yoy >= 5.0 - 1e-9
+        else "OK"
+        if dilution_yoy is not None
+        else "UNKNOWN"
+    )
+    net_debt = (
+        float(debt) - float(cash or 0.0) - float(investments or 0.0)
+        if debt is not None and liquidity is not None
+        else None
+    )
+    ttm_ocf = _number(latest.get("ttm_ocf"))
+    flags: list[str] = []
+    if net_debt is not None and net_debt > 0 and ttm_ocf is not None and ttm_ocf <= 0:
+        flags.append("NET_DEBT_WITH_NEGATIVE_OCF")
+    return {
+        "cash_runway": {
+            "status": runway_status,
+            "quarters": runway_quarters,
+            "liquidity": liquidity,
+            "ttm_fcf": ttm_fcf,
+        },
+        "debt_service": {
+            "status": debt_status,
+            "interest_coverage": coverage,
+            "net_debt": net_debt,
+        },
+        "dilution": {"status": dilution_status, "yoy_pct": dilution_yoy},
+        "flags": flags,
+    }
+
+
+_UNSUPPORTED_VALUATION_SECTOR_TERMS = (
+    "bank",
+    "insurance",
+    "reit",
+    "biotechnology",
+    "oil & gas",
+    "metals & mining",
+)
+
+
+def _valuation_block(reason_code: str, *, method: str | None = None) -> dict[str, Any]:
+    return {
+        "status": "BLOCKED",
+        "method": method,
+        "reason_code": reason_code,
+        "multiple": None,
+        "yield_pct": None,
+    }
+
+
+def route_turnaround_valuation(
+    *,
+    series: Mapping[str, Any],
+    profile: Mapping[str, Any],
+    latest_price: Mapping[str, Any] | None,
+    per_status: str,
+    as_of_date: str,
+) -> dict[str, Any]:
+    """Expose only the highest-priority stage-appropriate valuation method."""
+    if str(per_status).upper() == "READY":
+        return {
+            "status": "READY",
+            "method": "P_E_HANDOFF",
+            "reason_code": None,
+            "multiple": None,
+            "yield_pct": None,
+            "handoff": "PER 상대가치",
+        }
+    timeline = [dict(row) for row in series.get("timeline") or []]
+    latest = timeline[-1] if timeline else {}
+    balance = dict(series.get("current_balance") or {})
+    market_cap = _number(profile.get("market_cap"))
+    profile_date = pd.to_datetime(profile.get("last_collected_at"), errors="coerce")
+    price_date = pd.to_datetime((latest_price or {}).get("date"), errors="coerce")
+    if market_cap is None or market_cap <= 0 or pd.isna(profile_date) or pd.isna(price_date):
+        return _valuation_block("COMPONENT_MISSING")
+    if abs((pd.Timestamp(profile_date).normalize() - pd.Timestamp(price_date).normalize()).days) > 7:
+        return _valuation_block("INPUT_STALE")
+    currency_values = (
+        profile.get("currency"),
+        (latest_price or {}).get("currency"),
+        series.get("currency") or balance.get("currency"),
+    )
+    if any(str(value or "").strip().upper() != "USD" for value in currency_values):
+        return _valuation_block("UNIT_UNVERIFIED")
+    sector_text = " ".join(
+        str(profile.get(key) or "").strip().lower() for key in ("sector", "industry")
+    )
+    if profile.get("valuation_method_supported") is False or any(
+        term in sector_text for term in _UNSUPPORTED_VALUATION_SECTOR_TERMS
+    ):
+        return _valuation_block("SECTOR_METHOD_UNSUPPORTED")
+
+    base = {
+        "status": "READY",
+        "reason_code": None,
+        "market_cap": market_cap,
+        "market_cap_basis_date": pd.Timestamp(profile_date).strftime("%Y-%m-%d"),
+        "price_basis_date": pd.Timestamp(price_date).strftime("%Y-%m-%d"),
+        "statement_basis_date": balance.get("basis_date"),
+        "as_of_date": pd.Timestamp(as_of_date).strftime("%Y-%m-%d"),
+    }
+    ttm_fcf = _number(latest.get("ttm_fcf"))
+    if ttm_fcf is not None and ttm_fcf > 0:
+        return {
+            **base,
+            "method": "P_FCF",
+            "multiple": market_cap / ttm_fcf,
+            "yield_pct": ttm_fcf / market_cap * 100.0,
+            "denominator": ttm_fcf,
+        }
+    ttm_ocf = _number(latest.get("ttm_ocf"))
+    if ttm_ocf is not None and ttm_ocf > 0:
+        return {
+            **base,
+            "method": "P_OCF",
+            "multiple": market_cap / ttm_ocf,
+            "yield_pct": ttm_ocf / market_cap * 100.0,
+            "denominator": ttm_ocf,
+        }
+
+    required_balance_keys = {"cash", "short_term_investments", "total_debt"}
+    if (
+        not required_balance_keys.issubset(balance)
+        or balance.get("basis_date") is None
+        or balance.get("component_alignment") is False
+    ):
+        return _valuation_block("COMPONENT_MISSING")
+    cash = _number(balance.get("cash"))
+    investments = _number(balance.get("short_term_investments"))
+    debt = _number(balance.get("total_debt"))
+    if cash is None or investments is None or debt is None:
+        return _valuation_block("COMPONENT_MISSING")
+    enterprise_value = market_cap + debt - cash - investments
+    if enterprise_value <= 0:
+        return _valuation_block("NEGATIVE_OR_ZERO_NUMERATOR")
+    ttm_operating_income = _number(latest.get("ttm_operating_income"))
+    ttm_da = _number(latest.get("ttm_da"))
+    ebitda = (
+        ttm_operating_income + ttm_da
+        if ttm_operating_income is not None and ttm_da is not None
+        else None
+    )
+    if ebitda is not None and ebitda > 0 and ttm_da is not None and ttm_da > 0:
+        return {
+            **base,
+            "method": "EV_EBITDA",
+            "multiple": enterprise_value / ebitda,
+            "yield_pct": None,
+            "enterprise_value": enterprise_value,
+            "denominator": ebitda,
+        }
+    ttm_gross_profit = _number(latest.get("ttm_gross_profit"))
+    if ttm_gross_profit is not None and ttm_gross_profit > 0:
+        return {
+            **base,
+            "method": "EV_GROSS_PROFIT",
+            "multiple": enterprise_value / ttm_gross_profit,
+            "yield_pct": None,
+            "enterprise_value": enterprise_value,
+            "denominator": ttm_gross_profit,
+        }
+    ttm_revenue = _number(latest.get("ttm_revenue"))
+    if ttm_revenue is not None and ttm_revenue > 0:
+        return {
+            **base,
+            "method": "EV_SALES",
+            "multiple": enterprise_value / ttm_revenue,
+            "yield_pct": None,
+            "enterprise_value": enterprise_value,
+            "denominator": ttm_revenue,
+        }
+    return _valuation_block("NEGATIVE_OR_ZERO_DENOMINATOR")
+
+
+def build_turnaround_analysis(
+    *,
+    statement_rows: Iterable[Mapping[str, Any]],
+    price_rows: Iterable[Mapping[str, Any]],
+    profile: Mapping[str, Any],
+    latest_price: Mapping[str, Any] | None,
+    per_status: str,
+    as_of_date: str,
+) -> dict[str, Any]:
+    """Compose the pure selected-company turnaround analysis contract."""
+    series = build_turnaround_quarterly_series(
+        statement_rows,
+        price_rows,
+        as_of_date=as_of_date,
+    )
+    milestones = classify_turnaround_milestones(series, per_status=per_status)
+    risks = evaluate_turnaround_risks(series)
+    valuation = route_turnaround_valuation(
+        series=series,
+        profile=profile,
+        latest_price=latest_price,
+        per_status=per_status,
+        as_of_date=as_of_date,
+    )
+    timeline = list(series.get("timeline") or [])
+    latest = dict(timeline[-1]) if timeline else {}
+    operating_ready = (
+        len(timeline) >= 8
+        and latest.get("ttm_revenue") is not None
+        and latest.get("ttm_operating_income") is not None
+    )
+    cash_ready = (
+        len(timeline) >= 8
+        and latest.get("ttm_ocf") is not None
+        and latest.get("ttm_fcf") is not None
+    )
+    sections = {
+        "operating_chart": {
+            "status": "READY" if operating_ready else "BLOCKED",
+            "reason_code": None if operating_ready else "INSUFFICIENT_QUARTERS",
+        },
+        "cash_chart": {
+            "status": "READY" if cash_ready else "BLOCKED",
+            "reason_code": None if cash_ready else "INSUFFICIENT_QUARTERS",
+        },
+        "risks": {
+            "status": "READY" if series.get("current_balance") else "PARTIAL",
+        },
+        "valuation": {
+            "status": "READY" if valuation.get("status") == "READY" else "BLOCKED",
+            "reason_code": valuation.get("reason_code"),
+        },
+    }
+    overall_status = (
+        "READY"
+        if operating_ready and cash_ready and milestones.get("status") == "READY"
+        else "PARTIAL"
+        if timeline
+        else "BLOCKED"
+    )
+    return {
+        "status": overall_status,
+        "series": series,
+        "milestones": milestones,
+        "risks": risks,
+        "valuation": valuation,
+        "sections": sections,
+    }
