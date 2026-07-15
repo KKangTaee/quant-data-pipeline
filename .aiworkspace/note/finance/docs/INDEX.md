@@ -31,7 +31,17 @@ Last Verified: 2026-07-16
 - Previous completed task: [US Stock Valuation V1 2026-07-14](../tasks/active/overview-market-context-us-stock-valuation-v1-20260714/STATUS.md) — original 1차~5차, 2026-07-15 정확성 후속 1차~3차, 부분 이력 후속 1차~3차 complete. Nasdaq-100 user-facing selector를 searchable 미국 개별주식 상대가치 화면으로 교체했고, primary-period filing-aware TTM EPS/PER, split-year share-basis 정규화, 60m/36m Graph 1과 독립 Graph 2 readiness, DB-only 검색과 explicit selected-symbol 수집을 연결했다. 1/3/5년은 계산 가능한 월을 원래 달력 위치에 표시하고 결측 구간을 연결·보간하지 않는다. 기존 Nasdaq backend는 보존한다.
 - Previous completed task: [Nasdaq-100 Scenario History Warmup V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-scenario-history-warmup-v1-20260713/STATUS.md) — 1차~5차 implementation/QA complete; 60개월 rolling 계약을 유지한 최대 119개월 보강 action과 선택 기간별 정확한 부족 안내를 추가했다. Local actual QA는 66/119 READY이며 무료 원천 gap은 합성하지 않는다.
 - Previous completed task: [Nasdaq-100 60m Coverage Repair Action V1 2026-07-13](../tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md) — valuation coverage blocker용 60개월 보강과 strict rematerialization을 완료했다.
-- Earlier completed task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
+- Recent completed Institutional Portfolios task: [Institutional Portfolios Security Detail Chart Layout V1 2026-07-12](../tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Watchlist / Mapping V1 2026-07-12](../tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Two-Tier Tabs V1 2026-07-12](../tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Portfolio / Security IA V1 2026-07-12](../tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Interactive Security Chart V1 2026-07-12](../tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios Holding Chart Refresh V1 2026-07-12](../tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/STATUS.md).
+- Previous completed task: [Institutional Portfolios UX Detail / Performance V1 2026-07-11](../tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/STATUS.md).
+- Previous completed task: [Institutional Portfolios Live SEC 13F V1 2026-07-09](../tasks/active/institutional-portfolios-live-sec13f-v1-20260709/STATUS.md).
+- Previous completed task: [Institutional Portfolios React Workbench V1 2026-07-09](../tasks/active/institutional-portfolios-react-workbench-v1-20260709/STATUS.md).
+- Previous completed task: [Institutional Portfolios Workspace V1 2026-07-08](../tasks/active/institutional-portfolios-workspace-v1-20260708/STATUS.md).
+- Recent completed Final Review task: [Final Review Evidence Closure Contract V1 2026-07-12](../tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
 - Previous completed task: [S&P 500 Valuation V1 2026-07-12](../tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
 - Previous completed task: [Practical Validation Recheck Handoff Loop Fix V1 2026-07-12](../tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
 - Previous completed task: [Practical Validation Pre-Final Enrichment Gate V1 2026-07-12](../tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).

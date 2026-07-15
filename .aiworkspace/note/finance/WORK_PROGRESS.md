@@ -24,9 +24,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none. New work opens only after a user-approved scope.
-  - Latest completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
+  - Latest completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Explicit concept family의 확정 공시로 missing Q4를 안전하게 산출하고 provenance와 `공시 기반 산출` 표시를 1차~4차로 완료했다.
+  - Previous completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
+  - Previous completed Overview / Market Context task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI는 DB-only로 유지하고 stale repair는 explicit single action으로 제한한다.
   - Previous completed Nasdaq task is [overview-market-context-nasdaq100-coverage-repair-action-v1-20260713](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md).
-  - Latest completed task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
+  - Recent completed Institutional Portfolios task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
+  - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
+  - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md). It closes Level2 actionable gaps and records Final Review accepted-limit / Monitoring / defer terminal states.
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
   - Previous completed Practical Validation / Final Review boundary task is [practical-validation-pre-final-enrichment-gate-v1-20260712](./tasks/active/practical-validation-pre-final-enrichment-gate-v1-20260712/STATUS.md).
@@ -48,6 +52,8 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+### Overview / Market Context Track
+
 - Overview Market Context turnaround stage semantics V1:
   - `USD per share` diluted EPS를 turnaround duration reader에 포함해 AAPL PER/turnaround TTM EPS를 `7.90`으로 정렬했다.
   - backend threshold는 유지하고, 6개 rail에서 전환 `MET`, 이미 양수인 UI-local `ESTABLISHED`, 미확인을 구분했다. AAPL/RIVN actual과 desktop/420px Browser QA를 완료했다.
@@ -60,6 +66,34 @@ Detailed historical logs were archived on `2026-04-13`.
   - blocker 카드에 `60개월 가치평가 자료 보강`을 추가하고 planner -> canonical EPS/EOD 수집 -> strict rematerialization을 같은 화면에서 동기 실행하도록 연결했다.
   - SEC가 basic/diluted EPS를 동일값으로 공시한 actual concept을 보수적 fallback으로 허용해 local actual DB를 60/60 READY로 복구했다.
   - focused tests, React build, desktop/420px Browser QA를 완료했다. 상세는 [task status](./tasks/active/overview-market-context-nasdaq100-coverage-repair-action-v1-20260713/STATUS.md)를 본다.
+
+### Institutional Portfolios Track
+
+- Institutional Portfolios Security Detail Chart Layout V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`에서 `종목 분석 > 종목 상세` 1차~3차를 완료했다.
+  - 선택 종목 / 포트폴리오 내 위치 overview card, full-width stored-OHLCV chart row, volume/navigator lower area, 하단 scrollable holder list로 재배치했다.
+  - DB / ingestion / provider / recommendation / trading boundary는 변경하지 않았다.
+- Institutional Portfolios Two-Tier Tabs V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/`에서 React workbench tab IA를 상위 `포트폴리오 / 종목 분석` 탭과 context-specific 하위 탭으로 분리했다.
+  - 기존 한 줄 group-label 탭의 시각적 어색함을 줄였고, DB / ingestion / provider / trading boundary는 변경하지 않았다.
+- Institutional Portfolios Portfolio / Security IA V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-portfolio-security-ia-v1-20260712/`에서 React workbench tab IA를 `포트폴리오`와 `종목 분석` 그룹으로 나눴다.
+  - `요약 / 전체 보유`는 manager portfolio view로, `종목 상세 / 기관 보유 랭킹`은 ticker / security analysis view로 읽히게 했다.
+  - 기존 보유 기관 조회 기능은 `종목 상세` 안의 보유 기관 리스트로 유지했고, DB / ingestion / provider / trading boundary는 변경하지 않았다.
+- Institutional Portfolios Interactive Security Chart V1 2026-07-12:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-interactive-security-chart-v1-20260712/`에서 보유기관조회 선택 종목 차트를 stored OHLCV 기반 interactive chart로 개선했다.
+  - 라인 / 캔들 toggle, hover tooltip, crosshair, high-low dotted guides, range slider, pan controls를 추가했고, UI external fetch / 추천 / live trading 경계는 그대로 유지했다.
+  - Browser QA에서 AAPL chart stage, range, guide, hover tooltip / crosshair 생성과 current-port console error 없음까지 확인했다.
+- Institutional Portfolios React Workbench V1 2026-07-09:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-react-workbench-v1-20260709/`에서 1차~6차 scope를 진행했다.
+  - `Workspace > Institutional Portfolios`를 table-first / ingestion-like 화면에서 React visual workbench로 바꿨다. 첫 화면은 manager rail, allocation donut, top holdings, reported quarter changes, sector exposure를 보여주고, holdings click은 institutional interest drill-down event로 연결한다.
+  - DB empty 상태는 clearly labeled preview로 표시하며, raw DB error는 setup expander에만 둔다. 13F delayed / no trade signal / no live workflow boundary는 유지했다.
+- Institutional Portfolios Workspace V1 2026-07-08:
+  - `.aiworkspace/note/finance/tasks/active/institutional-portfolios-workspace-v1-20260708/`에서 1차~6차 scope를 진행했다.
+  - `Workspace > Institutional Portfolios`를 Market Movers와 분리된 delayed SEC Form 13F research surface로 추가하고, SEC official dataset ingestion / schema / loader / service / UI / docs / runbook을 연결했다.
+  - 13F 45일 지연, shorts / cash / derivatives / hedge omission, CUSIP-symbol mapping caveat를 visible boundary로 남겼고, Backtest / Practical Validation / Final Review / Operations live workflow에는 연결하지 않았다.
+### Overview / Market Interest Track
+
 - Overview Market Movers 상단 action / Monthly 짧은 이력 V1:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-top-actions-monthly-history-v1-20260711/`에서 긴 버튼 detail을 버튼 밖 한 줄 설명으로 분리했다.
   - FDXF/HONA의 Monthly 반복 갱신 원인을 provider 가용 이력 31/1 rows로 확인하고 `limited_price_history` evidence를 저장해 같은 full-window 수집 제안을 제거했다.
@@ -84,6 +118,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-interest-evidence-v1-20260708/`에서 1차~4차 selected-symbol 조사 보조 패널을 개발했다.
   - Market Movers 선택 종목 하단에 수동 `시장 관심 근거 확인` action과 `시장 관심` 탭을 추가해 애널리스트 / 뉴스·SEC / 13F 지연 맥락 / 원문 링크를 확인하게 했다.
   - 추천, 점수화, 자동 catalyst 판정, 매수·매도 신호, article/report/filing body 저장, 13F DB ingestion은 추가하지 않았다.
+### Practical Validation / Final Review Track
+
 - Practical Validation Pre-Final Enrichment Gate V1:
   - 실행 가능한 operability / holdings·exposure / required macro gap을 Practical Validation 승격 전 blocker로 분리했다. 수집 성공 뒤에도 Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동이 활성화되지 않는다.
   - Final Review의 legacy / stale 검토서는 과거 근거 열람과 2단계 복구 navigation만 허용하고 Decision Desk, recommendation, 판단 저장을 `2단계 재검증 필요`로 잠갔다.
@@ -236,6 +272,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-taxonomy-roadmap-v1-20260705/`에서 Practical Validation 개편 V1-V8을 개발 / QA / 커밋 순서로 완료했다.
   - 주요 결과는 workspace read model, Final Review readiness wording, 5-flow 화면, read-only React Fix Queue, Flow 3 workspace panel split, first-read status normalization이다.
   - registry / saved JSONL, provider 수집, validation threshold, Final Review selected-route 저장 정책, live approval / broker / auto rebalance 경계는 변경하지 않았다.
+### Earlier Overview / Data Track
+
 - Overview Market Movers 기본지표 그래프 2026-07-08:
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-fundamental-charts-20260708/`에서 1차~4차를 완료했다.
   - 기존 PER / EPS / 당기순이익 표는 유지하고, 하단에 PER / EPS / 당기순이익 / 유동비율 / FCF 지표 탭과 연간 / 분기 막대 그래프를 추가했다.
@@ -327,6 +365,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-movers-redesign-v2-01-20260629/`에서 사용자의 prototype UI 피드백을 1~6차 재설계 흐름으로 전환했다.
   - 1차는 새 데이터 / provider 없이 Market Movers의 화면 언어를 `변동 종목`, `랭킹 기준`, `상승 / 하락 / 거래량 / 이상 거래량 / 섹터`로 정리했다.
   - Benchmark 근거는 `.aiworkspace/note/finance/researches/active/2026-06-market-movers-redesign-v2-benchmark/`에 남겼고, 2차부터 metric-card 중심 화면을 market-board형 list / tape로 재구성한다.
+### Earlier Backtest Track
+
 - Backtest Policy Signal Help Board V1:
   - `.aiworkspace/note/finance/tasks/active/backtest-policy-signal-help-board-v1-20260705/`에서 `검증 기준 상세`을 1차 기준 category board + click help UI로 개선했다.
   - `Data Trust`, `Execution Source`, `Validation Source` 중심으로 무엇을 검증했는지 `plain_explanation` / `checked_items`로 보여준다.
@@ -454,6 +494,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - archived before the 2026-05 `.aiworkspace/note/finance` rebuild; use task/phase docs for detailed current work history.
 
 ## Entries
+
+## 2026-07-12 KST - Master Merge Conflict Integration
+
+- `finance/data/db/schema.py`에서 Institutional 13F schema 6개와 S&P 500 valuation / EPS / SEP schema 3개를 독립 group으로 모두 보존했다.
+- Finance durable docs와 root handoff logs는 Institutional Portfolios, Final Review, Market Context 변경을 함께 유지하되 current/latest task pointer를 실제 HEAD 이력 기준 하나로 정렬했다.
+- master에 포함된 registry / saved reset migration은 기존 승인된 task 결과로 보존하고, untracked QA PNG는 병합 대상에서 제외했다.
+- 검증은 JSONL 21행, staged Python compile, Institutional Portfolios 39개, S&P 500 valuation 37개, evidence closure 18개, GRS 5개를 통과했다. Service contracts는 805개 중 804개가 통과했고, 양쪽 baseline에 공통인 Sentiment React source-contract 1건은 별도 후속으로 남겼다.
 
 ### 2026-07-02 - Market Movers investigation actions are tab-local
 - Completed `.aiworkspace/note/finance/tasks/active/overview-market-movers-tab-actions-statement-refresh-20260702/` after the user approved splitting selected-symbol investigation actions.
@@ -5928,6 +5975,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Backtest Analysis visible surface에서 `2차 확인 큐` count / `2차 전달` Data Trust 표시 / readiness score를 제거하고, 1차 source 등록 기준과 버튼 활성화만 남겼다.
   - `promotion_decision=hold` 등 review focus는 버튼을 막지 않고 source contract `entry_gate.review_focus_rows`로만 Practical Validation에 전달한다.
   - Practical Validation `Backtest에서 넘어온 2차 확인 항목` 상세 표시와 registry / saved / strategy runtime 계약은 유지했다.
+
 ## 2026-07-05 - Backtest Data Trust Price Refresh V1
 
 - Added Backtest Data Trust price refresh planning / execution path so stale OHLCV can be repaired for the current backtest ticker set.
@@ -6025,6 +6073,38 @@ Detailed historical logs were archived on `2026-04-13`.
 - Factor Readiness는 후보쌍 / 신뢰도 / 기간 경계 / 다음 행동을 보여주고, repair 후 readiness 재확인과 백테스트 재실행을 안내한다.
 - 후속 범위: official corporate-action feed 신규 수집과 실제 old/new ticker price series stitching.
 
+## 2026-07-09 - Institutional Portfolios Live SEC 13F V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-live-sec13f-v1-20260709/`에서 1차~6차 개발 / QA / docs closeout을 완료했다.
+- SEC 13F ingestion은 refresh status row와 conservative CUSIP-symbol enrichment를 기록하고, Institutional Portfolios는 watchlist rail / freshness payload / secondary refresh panel을 갖게 됐다.
+- QA: focused tests 12개, py_compile, npm build, git diff --check, UI/engine boundary check, Browser QA screenshot 완료. Full official SEC ZIP load는 사용자가 명시 실행할 수 있는 후속 운영 action으로 남겼다.
+
+## 2026-07-10 KST - Institutional Portfolios Selection Loading V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-selection-loading-v1-20260709/`에서 manager rail 클릭 후 반복 로딩처럼 보이던 선택 전환 문제를 진단하고 수정했다.
+- 원인은 watchlist 선택 CIK가 search result에 없을 때 첫 DB row로 fallback되고, custom component의 이전 event가 재처리될 수 있던 흐름이었다.
+- Watchlist-aware selected manager resolver, event nonce 소비, reverse lookup lazy cache, 한글 loading banner, Runtime / Build 제거를 적용했다.
+- QA: focused tests 18개, py_compile, npm build, git diff --check, Browser 반복 클릭 QA 완료. 후속 범위는 SEC full ZIP 운영 refresh와 CUSIP-symbol map 품질 개선이다.
+
+## 2026-07-11 KST - Institutional Portfolios UX Detail / Performance V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-ux-detail-performance-v1-20260711/`에서 selected-security detail, report-period performance, institution-count ranking, scroll/pending fallback을 구현했다.
+- 13F raw holdings는 service read model에서 CUSIP / put-call 기준으로 합산해 도넛 / holdings / change board / performance 중복 표시를 줄였다.
+- Ranking loader는 `ix_report_period_cusip_cik` 접근을 사용하고, React는 pending timeout fallback으로 클릭 후 무한 로딩처럼 보이지 않게 했다.
+- QA: focused tests 24개, py_compile, npm build, git diff --check, UI/engine boundary scan, Browser QA screenshot 완료.
+
+## 2026-07-12 KST - Institutional Portfolios Holding Chart Refresh V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-holding-chart-refresh-v1-20260712/`에서 보유기관조회 차트 empty 원인을 실제 DB 기준으로 진단했다.
+- Berkshire 상위 13F holdings는 ticker가 비어 있었지만 가격 DB에는 KO/BAC/CVX/OXY/GOOGL 등 row가 이미 있어, service-level safe CUSIP resolver로 차트를 연결했다.
+- `KO` 같은 curated symbol reverse lookup은 오염된 generic map보다 curated CUSIP를 먼저 사용하며, 차트가 비면 React 버튼이 Python `run_collect_ohlcv` 수집 job을 실행한다.
+
+## 2026-07-12 KST - Institutional Portfolios Watchlist / Mapping V1
+
+- `.aiworkspace/note/finance/tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/`에서 대가 watchlist / alias 검색과 가격 차트 empty 사유 분리를 구현했다.
+- Duquesne / Stanley Druckenmiller 등 확장 seed와 DB-backed `institutional_13f_manager_watchlist` loader 경계를 추가했고, alias 검색 CIK를 우선 정렬한다.
+- Ambiguous CUSIP-symbol mapping은 차트용 symbol로 쓰지 않으며, selected-security price action은 symbol missing / ambiguous mapping / price missing / ready 상태로 나뉜다.
+
 ## 2026-07-09 - Market Movers Analyst Interest Multi-Source V1
 
 - `.aiworkspace/note/finance/tasks/active/overview-market-interest-analyst-multisource-20260709/`에서 Market Movers 선택 종목의 `애널리스트 관심`을 link-only에서 yfinance 구조화 세션 단서로 보강했다.
@@ -6073,6 +6153,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Graph 2 service는 120개월 Shiller warmup으로 12/36/60-point history options를 만들고 React는 `1년 / 3년 / 5년` selector로 전환한다.
 - 37 valuation tests, 35 Market Context contracts, DB smoke, desktop/420px Browser QA를 완료했고 V1.4 screenshot은 커밋하지 않는다.
 - Shiller EPS release-vintage 한계와 `과거 시점 재구성` 경계는 모든 기간에 유지한다.
+
 ## 2026-07-08 - Practical Validation Flow Gating / Evidence IA V1
 
 - `.aiworkspace/note/finance/tasks/active/practical-validation-flow-gating-evidence-ia-v1-20260708/`에서 1차~4차 Practical Validation flow 정리를 완료했다.
@@ -6130,6 +6211,13 @@ Detailed historical logs were archived on `2026-04-13`.
 - root issue dedup, Level2 actionability Gate, GRS signal/valuation 분리, static/dynamic survivorship policy, Final Review terminal snapshot, measured-only score를 적용했다.
 - 구현 커밋: `697a119b`, `65eacc92`, `cb2af299`, `4a05ae2f`; closeout 상세는 active task `STATUS.md`와 `RUNS.md`를 본다.
 - 후속은 dynamic historical universe용 PIT membership / delisting provider 승인 여부다.
+
+## 2026-07-12 - Practical Validation Closure Summary UX Correction
+
+- Flow 4의 중복 `근거 종결 경로`와 `미정` closure card를 제거했다.
+- Flow 3 기존 검증 결론에 Python root-dedup accepted-limit count와 즉시 해결·개발 blocker 유무를 compact하게 통합했다.
+- 내부 closure / Gate / save / Final Review 계약은 유지했으며 구현 커밋은 `b5e1cd68`이다.
+- focused 45 tests, Vite build, py_compile, 760px current GRS Browser QA를 통과했다.
 
 ## 2026-07-12 - Nasdaq-100 무계정 공개 데이터 경로 조사
 
@@ -6232,3 +6320,11 @@ Detailed historical logs were archived on `2026-04-13`.
 - Per-metric/TTM provenance와 `공시 기반 산출` marker·badge·산식을 React inspector에 추가했고 보간·forecast는 만들지 않았다.
 - Focused 112/112, isolated repository 1,103/1,107(기존 unrelated 4건), actual DB 및 desktop/420px Browser QA를 완료했다.
 - 상세 evidence와 후속 경계는 `tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`를 본다.
+
+## 2026-07-16 - sub-dev master 통합 충돌 해결
+
+- Finance 문서 충돌 9개를 문서 역할과 시간순으로 통합해 Overview / Market Context와 Institutional Portfolios 양쪽 완료 이력을 보존했다.
+- current active task는 `none`, latest completed task는 `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`으로 Index / Roadmap / task manifest / root pointer를 정렬했다.
+- SEC 13F collector와 selected-stock freshness / turnaround data flow 설명을 함께 유지하고 중복된 짧은 경로 설명은 제거했다.
+- 기관 포트폴리오 39 tests, py_compile, React production build, Browser QA는 통과했다. Backtest/service contract 823개 중 822개가 통과했고 남은 Sentiment 1건은 병합 전 HEAD에도 존재하는 unrelated source-contract drift다.
+- 미추적 `2026-07-market-interest-free-source-benchmark/` 리서치와 QA screenshot은 병합 범위 밖 generated/local artifact로 두고 stage하지 않았다.

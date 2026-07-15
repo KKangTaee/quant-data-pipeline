@@ -11,11 +11,24 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`
+- `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`
 
 Previous completed task:
 
+- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`
 - `overview-market-context-us-stock-freshness-refresh-v1-20260715`
+- `overview-market-context-us-stock-turnaround-analysis-v1-20260715`
+- `overview-market-context-us-stock-valuation-v1-20260714`
+- `institutional-portfolios-security-detail-chart-layout-v1-20260712`
+- `institutional-portfolios-watchlist-mapping-v1-20260712`
+- `institutional-portfolios-two-tier-tabs-v1-20260712`
+- `institutional-portfolios-portfolio-security-ia-v1-20260712`
+- `institutional-portfolios-interactive-security-chart-v1-20260712`
+- `institutional-portfolios-holding-chart-refresh-v1-20260712`
+- `institutional-portfolios-live-sec13f-v1-20260709`
+- `institutional-portfolios-react-workbench-v1-20260709`
+- `final-review-evidence-closure-contract-v1-20260712`
+- `overview-market-context-sp500-valuation-v1-20260712`
 
 Latest completed docs cleanup task:
 

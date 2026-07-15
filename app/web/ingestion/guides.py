@@ -180,6 +180,22 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "caveats": ["current identity row이며 delisting이나 historical membership proof가 아닙니다."],
         "next_action": "requested missing symbol은 SEC ticker mapping 한계를 따로 확인하세요.",
     },
+    "collect_sec_13f_dataset": {
+        "title": "SEC Form 13F 데이터셋 수집",
+        "purpose": "SEC 공식 Form 13F quarterly data set zip을 읽어 기관별 filing과 holdings row를 저장합니다.",
+        "targets": [
+            "finance_meta.institutional_13f_manager",
+            "finance_meta.institutional_13f_filing",
+            "finance_meta.institutional_13f_holding",
+            "finance_meta.institutional_13f_cusip_symbol_map",
+        ],
+        "used_by": ["Workspace > Institutional Portfolios"],
+        "caveats": [
+            "분기 지연 공시이며 실시간 매수 / 매도 의도가 아닙니다.",
+            "CUSIP-symbol mapping은 별도 verified mapping이 없으면 partial입니다.",
+        ],
+        "next_action": "수집 후 Workspace > Institutional Portfolios에서 manager search와 reverse lookup을 확인하세요.",
+    },
     "collect_computed_snapshot_lifecycle": {
         "title": "반복 관찰 lifecycle 요약",
         "purpose": "기존 current snapshot rows의 반복 관찰 window를 보수적인 partial lifecycle evidence로 요약합니다.",
@@ -300,6 +316,7 @@ LIFECYCLE_EVIDENCE_JOBS = {
     "collect_sec_company_ticker_crosscheck",
     "collect_computed_snapshot_lifecycle",
 }
+INSTITUTIONAL_13F_JOBS = {"collect_sec_13f_dataset"}
 PARTIAL_LIFECYCLE_EVIDENCE_JOBS = {
     "collect_symbol_directory_snapshots",
     "collect_sec_company_ticker_crosscheck",
@@ -331,6 +348,7 @@ PROGRESS_ENABLED_ACTIONS = (
     | ETF_PROVIDER_JOBS
     | EVENT_CALENDAR_JOBS
     | MACRO_CONTEXT_JOBS
+    | INSTITUTIONAL_13F_JOBS
     | DIAGNOSTIC_PROGRESS_JOBS
     | {
         "weekly_fundamental_refresh",

@@ -40,3 +40,10 @@
 - GRS는 signal row와 latest-common valuation row를 분리한다. current DB 기준 요청일 `2026-07-10`, 공통일 `2026-06-26`, 마지막 signal `2026-05-29`, valuation `2026-06-26`이다.
 - Final Review decision row는 같은 validation의 `evidence_closure_snapshot`을 저장한다. accepted / monitoring_transferred / deferred / blocked는 기존 route와 operator reason에서 파생한다.
 - role 고정 -6/-4 감점은 제거했다. 숫자 score effect는 root issue에 numeric observed/threshold와 명시적 effect가 있을 때만 적용하고, missing/open/critical은 Gate로 처리한다.
+
+## 2026-07-12 Follow-up UX Decision
+
+- Flow 4의 `근거 종결 경로`는 internal closure contract와 category criteria를 동시에 노출해 같은 문제를 반복했다.
+- accepted-limit 항목은 Practical Validation에서 사용자가 해결할 action이 아니므로 큰 카드 목록과 `미정` 표시를 제거했다.
+- Python은 accepted-limit root issue를 dedup해 `final_review_limit_count`만 workspace summary에 전달한다.
+- Flow 3 React는 이 개수와 즉시 해결·개발 blocker 유무를 기존 summary band에서 표시하고, 상세 terminal 판단은 Final Review에 남긴다.

@@ -34,6 +34,7 @@ from finance.data.futures_market import (
     collect_and_store_futures_ohlcv,
     normalize_futures_symbols,
 )
+from finance.data.institutional_13f import collect_and_store_sec_13f_dataset
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.nasdaq100_valuation import (
     collect_and_store_qqq_sec_holdings,
@@ -2164,6 +2165,105 @@ def run_collect_sec_form25_delistings(
                 "target_table": "finance_meta.nyse_symbol_lifecycle",
                 "include_archive_files": bool(include_archive_files),
                 "max_archive_files": int(max_archive_files),
+            },
+        )
+
+
+def run_collect_sec_13f_dataset(
+    *,
+    dataset_url: str | None = None,
+    dataset_zip_path: str | None = None,
+    source_dataset: str | None = None,
+    user_agent: str | None = None,
+    request_timeout: float = 60.0,
+    request_sleep: float = 0.0,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Collect an official SEC Form 13F data set zip into institutional holdings tables."""
+    job_name = "collect_sec_13f_dataset"
+    started_at = _now_str()
+    t0 = perf_counter()
+
+    if not dataset_url and not dataset_zip_path:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=[],
+            message="SEC Form 13F collection requires a dataset URL or local zip path.",
+            details={
+                "target_tables": [
+                    "finance_meta.institutional_13f_manager",
+                    "finance_meta.institutional_13f_filing",
+                    "finance_meta.institutional_13f_holding",
+                    "finance_meta.institutional_13f_refresh_status",
+                ],
+            },
+        )
+
+    try:
+        _emit_stage_progress(progress_callback, event="stage_start", stage="sec_13f_dataset")
+        summary = collect_and_store_sec_13f_dataset(
+            dataset_zip_path=dataset_zip_path,
+            dataset_url=dataset_url,
+            source_dataset=source_dataset,
+            user_agent=user_agent,
+            request_timeout=float(request_timeout),
+            request_sleep=float(request_sleep),
+        )
+        _emit_stage_progress(progress_callback, event="stage_complete", stage="sec_13f_dataset")
+        rows_written = int(summary.get("rows_written") or 0)
+        holdings_written = int(summary.get("holdings_written") or 0)
+        if rows_written <= 0:
+            status = "failed"
+            message = "SEC Form 13F data set collection wrote no DB rows."
+        else:
+            status = "success"
+            message = "SEC Form 13F data set collection completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=None,
+            symbols_processed=holdings_written,
+            failed_symbols=[],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=[],
+            message=f"SEC Form 13F data set collection failed: {exc}",
+            details={
+                "dataset_url": dataset_url,
+                "dataset_zip_path": dataset_zip_path,
+                "source_dataset": source_dataset,
+                "target_tables": [
+                    "finance_meta.institutional_13f_manager",
+                    "finance_meta.institutional_13f_filing",
+                    "finance_meta.institutional_13f_holding",
+                    "finance_meta.institutional_13f_refresh_status",
+                ],
             },
         )
 

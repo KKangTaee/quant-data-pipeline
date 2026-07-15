@@ -31,10 +31,19 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
+| `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716` | Completed record | Explicit concept family의 확정 FY/Q1/Q2/Q3로 missing Q4를 안전하게 산출하고 per-metric/TTM provenance와 `공시 기반 산출` 표시를 추가했다. |
 | `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` | Completed record | AAPL canonical `USD per share` EPS reader를 복구하고, 6개 rail에서 전환 신호·이미 양수·PER 적용 가능·흑자지만 개선폭 미달을 독립적으로 구분했다. |
 | `overview-market-context-us-stock-freshness-refresh-v1-20260715` | Completed record | 선택 종목 cached UI를 DB-only로 열고, 마지막 완료 NYSE 거래일보다 자료가 뒤처질 때만 상단 single CTA로 exact scope를 갱신한다. profile/price는 CIK 없이 실행하고 SEC statement만 identity를 요구한다. |
 | `overview-market-context-us-stock-turnaround-analysis-v1-20260715` | Completed record | 미국 개별주식 내부에 `PER 상대가치 | 전환 분석`을 추가하고 quarterly filing 기반 영업·현금 전환, survival risk, stage-appropriate valuation readiness를 selected-company 범위로 구현했다. |
 | `overview-market-context-us-stock-valuation-v1-20260714` | Completed record | searchable 미국 개별주 DB-only PER 상대가치, split-neutral filing-aware TTM, 부분 1/3/5년 history와 explicit selected-symbol 수집 경계를 구현했다. |
+| `institutional-portfolios-security-detail-chart-layout-v1-20260712` | Completed record | Selected-security detail now uses overview/context cards, full-width stored-OHLCV chart row with volume/navigator, and lower scrollable holder list. |
+| `institutional-portfolios-watchlist-mapping-v1-20260712` | Completed record | Expanded guru aliases and DB-backed watchlist lookup, alias-prioritized manager search, ambiguous CUSIP-symbol guardrails, and distinct selected-security price states. |
+| `institutional-portfolios-two-tier-tabs-v1-20260712` | Completed record | Workbench tabs now use primary `포트폴리오 / 종목 분석` tabs with context-specific secondary tabs. |
+| `institutional-portfolios-portfolio-security-ia-v1-20260712` | Completed record | Workbench tabs now separate manager portfolio views from ticker/security analysis views. |
+| `institutional-portfolios-interactive-security-chart-v1-20260712` | Completed record | Selected-security chart now uses stored OHLCV payload with hover tooltip, dotted guides, range slider, pan controls, and line/candle mode. |
+| `institutional-portfolios-holding-chart-refresh-v1-20260712` | Completed record | Selected-security chart can resolve stored DB prices through safe CUSIP-symbol mapping and trigger bounded OHLCV collection when missing. |
+| `institutional-portfolios-live-sec13f-v1-20260709` | Completed record | SEC official 13F live data path, refresh status, watchlist rail, secondary refresh action, conservative CUSIP-symbol enrichment, docs, and Browser QA. |
+| `institutional-portfolios-react-workbench-v1-20260709` | Completed record | React visual workbench for Institutional Portfolios first screen, with preview fallback and visual payload contract. |
 | `final-review-evidence-closure-contract-v1-20260712` | Completed record | Level2 actionable gap을 Final Review 승격 전에 닫고, Final Review의 accepted limit / Monitoring transfer / defer / block terminal state와 measured-only score impact를 구현했다. |
 | `overview-market-context-sp500-valuation-v1-20260712` | Completed record | Market Context를 Shiller 상대 멀티플과 FOMC SEP 기반 1/3/5년 SPX valuation scenario의 두 React 그래프로 교체했다. |
 | `practical-validation-recheck-handoff-loop-fix-v1-20260712` | Completed record | 자료 보강 뒤 replay를 강제 초기화하고, Flow 2 재검증과 새 validation 저장 전에는 Final Review 이동을 막는다. Final Review는 source별 최신 validation만 사용한다. |

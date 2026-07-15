@@ -27,3 +27,12 @@
 - Browser QA: stale selector가 이전 report를 숨기고 재확인을 요구함, report에 `선정 전 미해결 항목 0`, `인수한 한계와 최종 판단 항목`, 기존 route/reason 표시, `세부 설명 준비 안 됨` 미노출, 760px overflow 없음.
 - QA screenshot: `qa-final-review-evidence-closure-final-760.png` generated artifact로 남기고 commit하지 않음.
 - closeout fresh focused suite: 계획에 명시한 8개 module/class, 126 tests, `OK`.
+
+## 2026-07-12 Follow-up UX Correction
+
+- RED: 새 workspace / source contract 2개가 `final_review_limit_count` 부재와 기존 `_render_evidence_closure_groups` 잔존으로 실패했다.
+- GREEN: 같은 2개 test가 통과했다.
+- focused regression: `tests.test_backtest_evidence_closure` + `PracticalValidationServiceContractTests`, 45 tests, `OK`.
+- Practical Validation fix queue Vite production build, target `py_compile`, `git diff --check` 통과.
+- Browser QA: current GRS replay 후 Flow 3 accepted-limit root count 5, immediate/development blocker 0, Flow 4 old closure path 없음, `· 미정` 없음, 760px document `clientWidth=760 / scrollWidth=760`, console error 0.
+- QA screenshot: `qa-practical-validation-closure-summary-760.png` generated artifact로 남기고 commit하지 않는다.

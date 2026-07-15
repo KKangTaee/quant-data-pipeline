@@ -332,7 +332,7 @@ class EvidenceClosureContractTests(unittest.TestCase):
 
         self.assertFalse(_is_final_review_eligible_validation_result(validation))
 
-    def test_workspace_separates_now_engineering_and_accepted_limit(self) -> None:
+    def test_workspace_summarizes_final_review_limits_without_closure_card_groups(self) -> None:
         from app.services.backtest_practical_validation_workspace import (
             build_practical_validation_workspace,
         )
@@ -380,22 +380,27 @@ class EvidenceClosureContractTests(unittest.TestCase):
 
         workspace = build_practical_validation_workspace(validation)
 
-        self.assertEqual(
-            [group["label"] for group in workspace["evidence_closure_groups"]],
-            ["지금 해결 가능", "개발 필요", "한계 인수 가능"],
-        )
-        engineering_card = workspace["evidence_closure_groups"][1]["items"][0]
-        self.assertFalse(engineering_card["actionable_now"])
-        self.assertEqual(engineering_card["action_label"], "개발 후 재검토")
+        self.assertEqual(workspace["summary"]["final_review_limit_count"], 1)
+        self.assertNotIn("evidence_closure_groups", workspace)
 
-    def test_level2_closure_cards_only_reference_registered_python_replay_action(self) -> None:
+    def test_level2_hides_standalone_closure_cards_and_uses_compact_final_review_handoff(self) -> None:
         page_source = Path("app/web/backtest_practical_validation/page.py").read_text(
             encoding="utf-8"
         )
+        panel_source = Path(
+            "app/web/backtest_practical_validation/workspace_panel.py"
+        ).read_text(encoding="utf-8")
+        component_source = Path(
+            "app/web/components/practical_validation_fix_queue/frontend/src/"
+            "PracticalValidationFixQueue.tsx"
+        ).read_text(encoding="utf-8")
 
-        self.assertIn('action_id == "run_practical_validation_replay"', page_source)
-        self.assertIn("_render_evidence_closure_groups(validation_result)", page_source)
-        self.assertNotIn('action_id == "missing_handler"', page_source)
+        self.assertNotIn("_render_evidence_closure_groups", page_source)
+        self.assertNotIn("근거 종결 경로", page_source)
+        self.assertNotIn('or "미정"', page_source)
+        self.assertIn("final_review_limit_count", panel_source)
+        self.assertIn("Final Review 판단에 반영할 한계", component_source)
+        self.assertIn("즉시 해결하거나 개발해야 할 차단 항목 없음", component_source)
 
     def test_final_review_react_renders_python_closure_sections_without_domain_recalculation(self) -> None:
         source = Path(

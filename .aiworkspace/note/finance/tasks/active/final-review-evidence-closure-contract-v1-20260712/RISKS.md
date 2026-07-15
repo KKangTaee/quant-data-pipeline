@@ -14,3 +14,7 @@
 - weighted portfolio의 component별 마지막 날짜는 다를 수 있다. portfolio 월간 결과와 GRS의 `latest_common_price_date / last_complete_rebalance_date / latest_valuation_date`를 혼동하지 않아야 한다.
 - 과거 validation row는 새 closure payload가 없어서 legacy read adapter로 계속 읽는다. 기존 JSONL row는 rewrite하지 않았다.
 - score effect를 만들 새 measurement adapter는 observed / threshold / comparison / target dimension / explicit effect를 모두 저장해야 한다. 정성 REVIEW에는 숫자 감점을 다시 도입하지 않는다.
+
+## Follow-up UX Residual
+
+- Flow 3의 accepted-limit 개수는 Final Review로 넘길 판단 입력 수이지 이미 수용이 완료됐다는 뜻이 아니다. 상세 항목과 terminal state는 Final Review에서 확인하고 종결해야 한다.

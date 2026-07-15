@@ -94,6 +94,22 @@
 - fallback 계산값은 accounting-grade precision이 아닐 수 있다.
 - provider account label과 coverage가 ticker별로 다를 수 있다.
 
+## Institutional 13F holdings
+
+좋은 점:
+
+- SEC 공식 quarterly Form 13F data set에서 온 manager / filing / holdings row를 DB에 보존한다.
+- 기관별 latest / previous filing 비교, 전체 holdings, reported weight, sector / industry exposure, symbol / CUSIP reverse lookup을 만들 수 있다.
+
+주의점:
+
+- 13F는 quarter-end 이후 최대 45일 늦게 제출될 수 있으므로 실시간 매수 / 매도 흐름이 아니다.
+- `period_of_report`는 portfolio report period이고, `filing_date` / SEC acceptance timing은 사용 가능 시점이다. PIT backtest나 event study에 쓰려면 filing availability 기준으로 별도 처리해야 한다.
+- 13F는 shorts, cash, derivatives, hedge structure, non-reportable securities, full trading intent를 완전히 보여주지 않는다.
+- amendment, confidential treatment, filer error, SEC extraction / flattening issue가 있을 수 있어 원문 filing 확인이 필요하다.
+- `CUSIP -> symbol` mapping은 best-effort display helper다. ticker change, share class, ADR, CUSIP change / reuse를 완전하게 해결하지 않는다.
+- 화면의 신규 / 증가 / 감소 / 전량 매도 후보는 두 보고 분기 사이의 reported holdings 차이이며 추천이나 live trading signal이 아니다.
+
 ## Detailed financial statements
 
 좋은 점:

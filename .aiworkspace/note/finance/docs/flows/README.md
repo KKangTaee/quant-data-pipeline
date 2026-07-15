@@ -7,6 +7,7 @@ Last Verified: 2026-07-08
 
 ```text
 Workspace > Ingestion
+  -> Workspace > Institutional Portfolios
   -> Workspace > Overview
   -> Backtest > Backtest Analysis
   -> Backtest > Practical Validation
@@ -16,6 +17,7 @@ Workspace > Ingestion
 ```
 
 `Workspace > Overview`는 Backtest의 필수 선행 단계가 아니라 시장 context / data health 확인 표면이다.
+`Workspace > Institutional Portfolios`도 Backtest의 필수 선행 단계가 아니라 delayed SEC 13F institutional holdings를 탐색하는 별도 research surface다.
 Sentiment, futures macro, Why It Moved는 판단 보조 정보이며 validation gate, trade signal, monitoring signal을 만들지 않는다.
 현재 Overview primary tabs는 `Market Context`, `Market Movers`, `Futures Macro`, `Sentiment`, `Events`다.
 `Market Context`는 S&P 500의 최근 60개월 후행 PER 상대 구간과 FOMC SEP 기반 EPS/SPX 시나리오를 두 React 그래프로 읽는다. 36개월은 민감도이며, actual As-Reported TTM EPS가 없으면 예상 지수 숫자를 표시하지 않는다.
@@ -78,6 +80,7 @@ Workspace > Ingestion
 | Need | Document |
 |---|---|
 | 화면 stage와 code / storage boundary가 섞일 때 | [System Boundaries](../architecture/SYSTEM_BOUNDARIES.md) |
+| 투자 대가 / 기관별 delayed SEC Form 13F portfolio 탐색 | [INSTITUTIONAL_PORTFOLIOS_FLOW.md](./INSTITUTIONAL_PORTFOLIOS_FLOW.md) |
 | Backtest UI, history, saved replay, Practical Validation, Final Review 화면 흐름 | [BACKTEST_UI_FLOW.md](./BACKTEST_UI_FLOW.md) |
 | Backtest Analysis 1단계 closeout 현재 상태 | [BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md](./BACKTEST_ANALYSIS_STAGE1_CLOSEOUT.md) |
 | 후보 생성부터 최종 선정 후 dashboard까지의 Portfolio Selection 흐름 | [PORTFOLIO_SELECTION_FLOW.md](./PORTFOLIO_SELECTION_FLOW.md) |

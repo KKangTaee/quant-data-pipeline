@@ -56,6 +56,16 @@ from .sp500_valuation import (
     resolve_sp500_ttm_eps,
 )
 from .futures import load_futures_ohlcv
+from .institutional_13f import (
+    load_institutional_13f_holdings,
+    load_institutional_13f_interest,
+    load_institutional_13f_latest_filing,
+    load_institutional_13f_managers,
+    load_institutional_13f_managers_by_ciks,
+    load_institutional_13f_portfolio_bundle,
+    load_institutional_13f_popularity_ranking,
+    load_institutional_13f_previous_filing,
+)
 from .universe import (
     load_asset_profile_status_summary,
     load_pit_universe_members,
@@ -102,6 +112,14 @@ __all__ = [
     "apply_financial_source_contract",
     "adapt_price_history_to_strategy_dfs",
     "load_price_strategy_dfs",
+    "load_institutional_13f_managers",
+    "load_institutional_13f_managers_by_ciks",
+    "load_institutional_13f_latest_filing",
+    "load_institutional_13f_previous_filing",
+    "load_institutional_13f_holdings",
+    "load_institutional_13f_portfolio_bundle",
+    "load_institutional_13f_popularity_ranking",
+    "load_institutional_13f_interest",
     "load_asset_profile_status_summary",
     "load_symbol_lifecycle_coverage_summary",
     "load_pit_universe_members",

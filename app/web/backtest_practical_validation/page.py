@@ -1906,42 +1906,6 @@ def _render_data_action_board(validation_result: dict[str, Any]) -> None:
         _render_data_action_board_fallback(board)
 
 
-def _render_evidence_closure_groups(validation_result: dict[str, Any]) -> None:
-    """Render Python-classified Level 2 work without inventing frontend actions."""
-
-    workspace = dict(validation_result.get("practical_validation_workspace") or {})
-    groups = [
-        dict(group)
-        for group in list(workspace.get("evidence_closure_groups") or [])
-        if isinstance(group, dict) and list(group.get("items") or [])
-    ]
-    if not groups:
-        return
-    st.markdown("##### 근거 종결 경로")
-    st.caption("남은 근거를 지금 해결할 일, 개발이 필요한 일, Final Review에서 인수할 한계로 구분합니다.")
-    for group in groups:
-        st.markdown(f"**{escape(str(group.get('label') or '-'))}**")
-        if group.get("purpose"):
-            st.caption(str(group["purpose"]))
-        for raw_item in list(group.get("items") or []):
-            item = dict(raw_item or {})
-            action_id = str(item.get("action_id") or "").strip()
-            title = str(item.get("title") or item.get("root_issue_id") or "근거 항목")
-            terminal_label = str(item.get("terminal_state_label") or item.get("terminal_state") or "미정")
-            with st.container(border=True):
-                st.markdown(f"**{escape(title)}** · {escape(terminal_label)}")
-                if item.get("observed"):
-                    st.caption(f"현재: {item['observed']}")
-                if item.get("completion_criteria"):
-                    st.caption(f"종결 기준: {item['completion_criteria']}")
-                if action_id == "run_practical_validation_replay" and item.get("actionable_now"):
-                    st.info("Flow 2의 전략 재검증 실행 후 새 validation을 저장하면 이 항목을 닫을 수 있습니다.")
-                elif item.get("resolution_class") == "engineering_required":
-                    st.warning("개발 후 재검토가 필요하며 현재 후보의 Final Review 승격은 차단됩니다.")
-                else:
-                    st.caption(str(item.get("action_label") or "Final Review에서 종결"))
-
-
 def _render_validation_criteria_detail_board(validation_result: dict[str, Any]) -> None:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     summary = dict(workspace.get("summary") or {})
@@ -2540,7 +2504,6 @@ def render_practical_validation_workspace() -> None:
             detail="카테고리별 통과 / 보강 필요 / 차단 항목을 먼저 보고, 데이터 보강 / 수집 실행과 상세 근거를 이어서 확인합니다.",
             tone="neutral",
         )
-        _render_evidence_closure_groups(validation_result)
         _render_validation_criteria_detail_board(validation_result)
         _render_data_action_board(validation_result)
         st.markdown('<span id="pv-provider-data-action"></span>', unsafe_allow_html=True)
