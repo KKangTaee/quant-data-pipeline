@@ -738,3 +738,261 @@ stored와 derived가 같은 semantic condition이면 canonical monitoring id로 
 - [x] current observation과 future monitoring condition의 의미/identifier를 분리했다.
 - [x] Python owner, unchanged React consumer, persistence compatibility가 명확하다.
 - [x] testable acceptance criteria와 empty-state 조건이 모두 정의됐다.
+
+---
+
+## Final Review Observation Freshness Refresh Addendum — 2026-07-16
+
+### 이걸 하는 이유?
+
+Final Review의 누적 성과와 underwater 낙폭은 저장된 Practical Validation replay curve를 읽는다. current GRS 후보의 차트 종료일은 `2026-06-26`인데, 현재 시점의 최신 완료 NYSE session은 `2026-07-15`다. 사용자는 Final Review에서 최종 판단을 내리기 전에 현재 확보 가능한 가격까지 같은 전략을 다시 계산하고 싶지만, 기존 화면에는 최신성 상태나 갱신 action이 없다.
+
+이 문제 때문에 Level2 화면으로 이동시키는 것은 사용자 흐름에 맞지 않는다. 검증 기준이나 해결 항목을 다시 고르는 일이 아니라, 이미 Final Review에 올라온 같은 후보의 관측 기간을 최신 데이터로 갱신하는 작업이기 때문이다.
+
+### Root cause and current evidence
+
+분석 기준 current validation:
+
+- validation id: `validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_7bca4e1a`
+- stored / replay actual end: `2026-06-26`
+- requested market date: `2026-07-10`
+- latest completed NYSE session: `2026-07-15`
+- current source-specific common price date: `2026-06-26`
+- limiting symbol: `BIL`
+
+현재 DB의 component별 latest date:
+
+| Symbol | Latest stored daily price |
+|---|---|
+| BIL | `2026-06-26` |
+| GLD / IEF / TLT | `2026-07-07` |
+| QQQ / SPY | `2026-07-10` |
+
+기존 `extend_to_latest` replay는 전체 DB 최신일을 요청하더라도 source universe의 공통 가격일을 계산한다. BIL이 `2026-06-26`에 머물러 있으므로 replay만 다시 실행해서는 차트가 늘어나지 않는다. 먼저 기존 OHLCV ingestion job으로 stale component 가격을 수집하고, 그 뒤 동일 source를 replay해야 한다.
+
+### Considered approaches
+
+#### A. Level2로 이동해 가격 수집과 replay를 다시 수행
+
+- 장점: 기존 stage ownership을 그대로 유지한다.
+- 단점: 사용자가 이미 Final Review에서 보고 있는 같은 후보를 다시 찾고 Flow 2부터 실행해야 한다. 최신 관측 갱신과 미해결 검증 종결을 같은 일로 오해하게 만든다.
+- 결정: 채택하지 않는다.
+
+#### B. Final Review에 가격 수집과 replay 버튼을 각각 제공
+
+- 장점: 실행 단계를 기술적으로 구분하기 쉽다.
+- 단점: 어떤 버튼을 먼저 눌러야 하는지 사용자가 판단해야 하고, 수집 성공 후 replay 또는 validation 저장을 빠뜨릴 수 있다.
+- 결정: 채택하지 않는다.
+
+#### C. Final Review one-click observation refresh
+
+- 장점: 사용자는 `최신 데이터로 다시 계산` 한 번으로 현재 확보 가능한 공통 가격일까지 같은 후보를 갱신한다. Python이 수집 필요 여부, replay, 새 validation 저장을 순서대로 처리한다.
+- 단점: Final Review가 기존 read-only review 경계에서 제한적인 Python orchestration intent를 새로 소유한다.
+- 결정: 채택한다.
+
+### Product contract
+
+Final Review의 행동 차트 위에 compact freshness strip을 둔다.
+
+- `현재 차트 기준일`
+- `최신 완료 시장일`
+- `현재 DB 공통일`
+- `제한 종목`
+- 필요한 경우에만 `최신 데이터로 다시 계산`
+
+UI는 job row나 raw ingestion 결과를 주 화면으로 만들지 않는다. 사용자가 알아야 하는 것은 현재 차트가 최신인지, 어디까지 갱신 가능한지, 무엇이 제한하는지, 다음 행동이 무엇인지다.
+
+action 실행 결과는 다음 중 하나의 짧은 사용자 결과로 표시한다.
+
+| State | Meaning | User result |
+|---|---|---|
+| `up_to_date` | 저장 curve가 현재 source-specific common date까지 반영됨 | action 숨김, 최신 상태 표시 |
+| `replay_available` | DB 공통 가격일이 curve보다 최신 | 수집 없이 replay / validation 저장 |
+| `price_refresh_available` | 필수 symbol 가격 수집 후 더 최신 replay 가능 | 수집 → replay → validation 저장 |
+| `partial_refresh` | 일부 가격은 갱신됐지만 provider gap 또는 공통일 제한이 남음 | 실제 도달일과 제한 symbol 표시 |
+| `blocked` | source/replay contract가 없거나 실행 불가 | 기존 차트 유지, 원인과 재검토 안내 |
+| `failed` | 수집, replay 또는 validation build/save 실패 | 기존 차트 유지, 완료된 단계와 재시도 안내 |
+
+### Python ownership
+
+새 pure-oriented service `app/services/backtest_final_review_refresh.py`가 다음을 소유한다.
+
+```python
+def build_final_review_refresh_status(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    now: datetime | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] | None = None,
+) -> dict[str, Any]:
+    ...
+
+
+def run_final_review_observation_refresh(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    now: datetime | None = None,
+    price_refresh_runner: Callable[..., Mapping[str, Any]] | None = None,
+    replay_runner: Callable[..., dict[str, Any]] | None = None,
+    validation_builder: Callable[..., dict[str, Any]] | None = None,
+    validation_saver: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    ...
+```
+
+`build_final_review_refresh_status()`는 다음 날짜를 혼동하지 않는다.
+
+- `latest_completed_market_date`: 현재 시점에 완료된 최신 NYSE session
+- `stored_curve_end`: 현재 Decision Brief가 읽는 replay curve 종료일
+- `db_common_price_date`: source 필수 symbol의 현재 공통 DB 가격일
+- `refresh_target_date`: 최신 완료 session을 넘지 않는 수집 / replay 목표일
+- `refreshed_curve_end`: action 이후 새 replay가 실제로 만든 curve 종료일
+
+`run_final_review_observation_refresh()` 실행 순서:
+
+1. source / validation stable identity와 replay contract를 검증한다.
+2. 현재 source-specific freshness를 다시 읽는다.
+3. DB 공통일이 curve보다 최신이면 가격 수집 없이 replay한다.
+4. 필수 symbol 가격이 부족하면 기존 `run_backtest_price_refresh()`로 stale / missing target을 수집한다.
+5. 수집 후 source-specific freshness를 다시 읽고 실제 공통 가격일을 확정한다.
+6. 기존 `run_practical_validation_actual_replay(..., mode="extend_to_latest")`로 같은 source를 재실행한다.
+7. replay 결과로 `build_practical_validation_result()`를 새로 만든다. 기존 validation의 `validation_profile`을 그대로 사용한다.
+8. 새 validation이 Final Review Gate를 통과하고 replay curve가 이전보다 뒤로 가지 않았을 때만 append-only 저장한다.
+9. 성공하면 새 validation id와 actual curve end를 반환하고 Streamlit rerun이 source별 최신 저장 row를 자동 선택하게 한다.
+
+기존 validation row를 수정하거나 삭제하지 않는다.
+
+### Price refresh adapter
+
+기존 `run_backtest_price_refresh()`는 Backtest result `meta.price_freshness` 형태를 입력으로 받는다. Final Review refresh service는 current source에서 다음 adapter meta를 만든다.
+
+```text
+tickers / symbols
+start
+end = latest_completed_market_date
+actual_result_end = stored_curve_end
+price_freshness.details.common_latest_date
+price_freshness.details.stale_symbols_all
+price_freshness.details.missing_symbols_all
+price_freshness.details.classification_rows
+```
+
+stale symbol은 source 필수 symbol별 latest date가 refresh target보다 이전인 항목이다. provider/source gap 분류는 기존 price refresh service의 정책을 그대로 소비하며 Final Review에서 별도 provider 규칙을 만들지 않는다.
+
+### Validation profile and append safety
+
+- 새 validation은 current validation의 `validation_profile.profile_id`와 `answers`를 재사용한다.
+- replay 결과 없이 validation을 저장하지 않는다.
+- replay status가 `BLOCKED`이거나 portfolio curve가 비어 있으면 저장하지 않는다.
+- 새 validation의 `selection_source_id`는 current source와 같아야 한다.
+- 새 validation id는 builder가 새로 생성한다.
+- 저장 후 source별 latest-row selection이 새 row를 읽게 하며 기존 eligible row로 fallback하지 않는다.
+- UI QA에서는 protected registry에 실제 row를 append하지 않는다. orchestration save는 injectable saver와 temporary registry contract test로 검증한다.
+
+### Selection gate
+
+관측값이 안전하게 최신화 가능한데 current curve가 오래된 상태라면 `SELECT_FOR_PRACTICAL_PORTFOLIO`만 일시적으로 recordable하지 않게 한다.
+
+- `HOLD_FOR_MORE_PAPER_TRACKING`
+- `REJECT_FOR_PRACTICAL_USE`
+- `RE_REVIEW_REQUIRED`
+
+위 판단은 계속 저장 가능하다. 최신성은 “이 후보를 선택해도 되는가”의 현재 관측 근거 문제이지, 보류·탈락·재검토 기록 자체를 막을 이유가 아니기 때문이다.
+
+action 이후에도 provider gap 때문에 최신 완료 session까지 도달하지 못할 수 있다. 이때 실제 common date까지 새 validation이 정상 생성되고 기존 evidence closure Gate를 통과하면 `partial_refresh`로 표시할 수 있다. 다만 refresh 가능한 stale gap이 계속 남아 있으면 selected route는 계속 차단한다.
+
+### React and Streamlit boundary
+
+React가 새로 보내는 intent:
+
+```typescript
+type RefreshObservationIntent = {
+  action: "refresh_observation"
+  intent_id: string
+  source_id: string
+  validation_id: string
+}
+```
+
+React는 다음만 담당한다.
+
+- freshness strip 표시
+- action button과 진행 중 disabled presentation
+- Python이 반환한 compact result 표시
+- `refresh_observation` intent 전달
+
+Python은 다음을 담당한다.
+
+- 최신 완료 session 계산
+- source symbol / common date / limiting symbol 계산
+- 수집 필요 여부
+- ingestion job 실행
+- replay
+- validation build / Gate
+- append-only 저장
+- stale identity / duplicate intent guard
+
+Streamlit fallback도 같은 freshness model과 intent를 사용한다.
+
+### Error and recovery contract
+
+- action 시작 전 source id / validation id가 current confirmed candidate와 다르면 실행하지 않는다.
+- 같은 `intent_id`는 한 번만 소비한다.
+- 가격 수집이 성공하고 replay가 실패한 경우 DB row를 되돌리지 않는다. 결과는 `failed_after_price_refresh`로 남기며 재시도 시 freshness를 다시 읽고 replay부터 이어갈 수 있다.
+- validation build 또는 save 실패 시 기존 chart와 current validation을 유지한다.
+- 새 validation 저장이 성공한 뒤 rerun하면 latest-row policy로 새 chart가 보인다.
+- action 중 Final Review decision save는 UI에서 비활성화한다.
+
+### Ownership by file
+
+| Responsibility | Owner |
+|---|---|
+| freshness read model / orchestration / result contract | 새 `app/services/backtest_final_review_refresh.py` |
+| latest completed NYSE session public adapter | `app/services/backtest_price_refresh.py` |
+| replay / source-specific common date reuse | `app/services/backtest_practical_validation_replay.py` |
+| validation build / append | `app/services/backtest_practical_validation.py` |
+| intent validation / spinner / rerun / session feedback | `app/web/backtest_final_review/page.py` |
+| Decision Brief freshness projection / selected-route capability | `app/services/backtest_final_review_decision_brief.py` |
+| TypeScript intent / compact freshness UI | `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`, `DecisionBriefWorkspace.tsx`, `style.css` |
+| focused service / page / source contract tests | 새 `tests/test_backtest_final_review_refresh.py`, 기존 `tests/test_backtest_final_review_decision_brief.py`, `tests/test_service_contracts.py`, `tests/test_final_review_market_context_visual_contract.py` |
+
+### Delivery slices
+
+1. **Freshness truth and selected-route Gate**: source-specific date model, limiting symbols, `up_to_date / replay_available / price_refresh_available`, selected-route-only block.
+2. **Python one-click orchestration**: price refresh adapter, replay, validation build, append safety, partial/failure recovery.
+3. **Final Review intent and UI**: compact freshness strip, React intent, Streamlit consumer/fallback, rerun to latest validation.
+4. **QA and documentation**: focused regression, current GRS runtime probe, React build, Browser QA, durable docs / active task / root handoff sync.
+
+### Non-goals
+
+- Level2 검증 기준 편집 또는 Flow 2 UI 복제
+- 별도 refresh job dashboard나 raw ingestion result panel
+- 신규 provider, historical universe, delisting source 도입
+- registry 기존 row rewrite / delete
+- 자동 주기 갱신, background scheduler, alert notification
+- live approval, broker order, account sync, auto rebalance
+- React의 provider fetch, replay, Gate, score, persistence 계산
+
+### Acceptance criteria
+
+1. current GRS에서 `2026-06-26` curve end, `2026-07-15` target, BIL limiter가 Python freshness model과 UI에 일치한다.
+2. DB 공통일이 curve보다 최신이면 ingestion 없이 replay한다.
+3. DB 공통일이 curve와 같고 source symbol이 stale이면 price refresh 후 replay한다.
+4. 성공한 action은 같은 selection source의 새 validation row를 append하고 Final Review rerun에서 새 row를 선택한다.
+5. 실패한 action은 기존 validation / chart를 유지하며 완료 단계와 재시도 이유를 표시한다.
+6. refresh 가능한 stale 상태에서는 selected route만 차단하고 hold / reject / re-review는 유지한다.
+7. React는 `refresh_observation` intent만 보내고 Python이 source / validation identity를 재검증한다.
+8. GRS latest valuation row는 signal / rebalance row와 계속 분리돼 가짜 rebalance를 만들지 않는다.
+9. Browser QA에서 desktop / 760px freshness strip, action state, no horizontal overflow를 확인한다.
+10. protected registry, run history, generated QA artifact는 stage하거나 commit하지 않는다.
+
+### Addendum self-review
+
+- [x] current stale curve의 원인이 DB common date와 limiting symbol로 재현됐다.
+- [x] Level2 이동 없이 Final Review one-click flow를 선택한 사용자 결정을 반영했다.
+- [x] 기존 read-only boundary 예외가 explicit user intent와 Python orchestration으로 제한됐다.
+- [x] price refresh, replay, validation build, append 순서와 partial failure semantics가 정의됐다.
+- [x] selected route만 stale Gate 영향을 받고 다른 판단 route는 유지된다.
+- [x] append-only registry 보호와 Browser QA 비쓰기 경계가 명확하다.
+- [x] 함수, 소유 파일, delivery slice, acceptance criteria에 placeholder가 없다.
