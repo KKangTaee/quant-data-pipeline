@@ -280,6 +280,10 @@ def _replay_issue(validation: dict[str, Any], modules: dict[str, dict[str, Any]]
         period.get("requested_market_date"),
         errors="coerce",
     )
+    latest_common_date = pd.to_datetime(
+        period.get("latest_common_price_date"),
+        errors="coerce",
+    )
     last_complete_date = pd.to_datetime(
         period.get("last_complete_rebalance_date"),
         errors="coerce",
@@ -288,11 +292,51 @@ def _replay_issue(validation: dict[str, Any], modules: dict[str, dict[str, Any]]
         period.get("latest_valuation_date"),
         errors="coerce",
     )
+    actual_result_date = pd.to_datetime(
+        period.get("actual_result_date"),
+        errors="coerce",
+    )
+    requested_month = (
+        requested_date.to_period("M")
+        if not pd.isna(requested_date)
+        else None
+    )
+    last_complete_month = (
+        last_complete_date.to_period("M")
+        if not pd.isna(last_complete_date)
+        else None
+    )
+    latest_common_month = (
+        latest_common_date.to_period("M")
+        if not pd.isna(latest_common_date)
+        else None
+    )
+    latest_valuation_month = (
+        latest_valuation_date.to_period("M")
+        if not pd.isna(latest_valuation_date)
+        else None
+    )
+    actual_result_month = (
+        actual_result_date.to_period("M")
+        if not pd.isna(actual_result_date)
+        else None
+    )
     partial_month_proven = (
         not pd.isna(requested_date)
+        and not pd.isna(latest_common_date)
         and not pd.isna(last_complete_date)
         and not pd.isna(latest_valuation_date)
-        and last_complete_date <= latest_valuation_date <= requested_date
+        and not pd.isna(actual_result_date)
+        and gap is not None
+        and 0 <= gap <= 31
+        and last_complete_month == requested_month - 1
+        and latest_common_month in {last_complete_month, requested_month}
+        and latest_valuation_month == requested_month
+        and actual_result_month == last_complete_month
+        and actual_result_date == last_complete_date
+        and latest_common_date >= last_complete_date - pd.Timedelta(days=7)
+        and latest_common_date <= latest_valuation_date
+        and last_complete_date < latest_valuation_date <= requested_date
         and last_complete_date < requested_date
     )
     derived = []

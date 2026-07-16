@@ -28324,6 +28324,268 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["source_map_discovery"], [])
         self.assertEqual(plan["mapping_needed"], ["VNQ"])
 
+    def test_failed_discovery_run_preserves_requested_symbols_for_lifecycle(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-failed-discovery-run",
+            "provider_coverage": {
+                "symbols": ["VNQ"],
+                "symbol_weights": {"VNQ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["VNQ"]},
+                    "exposure": {"missing_symbols": ["VNQ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        with patch.object(service, "append_run_history"):
+            record = service._record_provider_gap_result(
+                {"status": "FAILED", "details": {}},
+                source_id="source-failed-discovery-run",
+                area="etf_provider_source_map",
+                requested_symbols=["VNQ"],
+            )
+
+        self.assertEqual(
+            record["run_metadata"]["input_params"]["requested_symbols"],
+            ["VNQ"],
+        )
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], []],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=[record],
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["mapping_needed"], ["VNQ"])
+
+    def test_unverified_candidate_source_contract_stays_discoverable(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-candidate-contract",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": ["XYZ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        candidate_rows = [
+            {
+                "symbol": "XYZ",
+                "data_kind": "holdings",
+                "provider": "ishares",
+                "parser": "ishares_csv",
+                "source_status": "candidate",
+            }
+        ]
+
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], candidate_rows],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=[],
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], ["XYZ"])
+        self.assertEqual(plan["mapping_needed"], [])
+
+    def test_unrelated_operability_contract_does_not_close_holdings_discovery(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-operability-only",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": []},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        operability_rows = [
+            {
+                "symbol": "XYZ",
+                "data_kind": "operability",
+                "provider": "official",
+                "parser": "factsheet",
+                "source_status": "verified",
+            }
+        ]
+
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], operability_rows],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=[],
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], ["XYZ"])
+        self.assertEqual(plan["mapping_needed"], [])
+
+    def test_terminal_source_map_status_outranks_candidate_regardless_of_row_order(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-mixed-contract-status",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": ["XYZ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        candidate = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_a",
+            "parser": "ishares_csv",
+            "source_status": "candidate",
+        }
+        failed = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_b",
+            "parser": "ishares_csv",
+            "source_status": "failed",
+        }
+
+        for rows in ([candidate, failed], [failed, candidate]):
+            with self.subTest(status_order=[row["source_status"] for row in rows]):
+                with (
+                    patch.object(
+                        service,
+                        "load_etf_provider_source_map",
+                        side_effect=[[], rows],
+                    ),
+                    patch.object(
+                        service,
+                        "load_run_history",
+                        return_value=[],
+                    ),
+                ):
+                    plan = service.build_provider_gap_collection_plan(validation)
+
+                self.assertEqual(plan["source_map_discovery"], [])
+                self.assertEqual(plan["mapping_needed"], ["XYZ"])
+
+    def test_collectable_verified_holdings_contract_outranks_unsupported_row_order(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-multiple-verified-contracts",
+            "provider_coverage": {
+                "symbols": ["XYZ"],
+                "symbol_weights": {"XYZ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["XYZ"]},
+                    "exposure": {"missing_symbols": ["XYZ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        supported = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_a",
+            "parser": "ishares_csv",
+            "source_status": "verified",
+        }
+        unsupported = {
+            "symbol": "XYZ",
+            "data_kind": "holdings",
+            "provider": "provider_b",
+            "parser": "ishares_workbook",
+            "source_status": "verified",
+        }
+
+        for rows in ([supported, unsupported], [unsupported, supported]):
+            with self.subTest(parser_order=[row["parser"] for row in rows]):
+                with (
+                    patch.object(
+                        service,
+                        "load_etf_provider_source_map",
+                        side_effect=[rows, rows],
+                    ),
+                    patch.object(
+                        service,
+                        "load_run_history",
+                        return_value=[],
+                    ),
+                ):
+                    plan = service.build_provider_gap_collection_plan(validation)
+
+                self.assertEqual(plan["source_map_discovery"], [])
+                self.assertEqual(plan["holdings_exposure"], ["XYZ"])
+                self.assertEqual(plan["mapping_needed"], [])
+
     def test_practical_validation_result_blocks_final_review_until_collectable_gap_is_rechecked(self) -> None:
         from app.services import backtest_practical_validation as service
 

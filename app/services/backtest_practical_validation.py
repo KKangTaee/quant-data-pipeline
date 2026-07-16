@@ -269,6 +269,20 @@ def provider_gap_state_key(validation_result: dict[str, Any]) -> str:
     return f"{PROVIDER_GAP_STATE_PREFIX}_{source_id}"
 
 
+def _verified_source_map_priority(
+    data_kind: str,
+    row: dict[str, Any] | None,
+) -> int:
+    """Prefer verified contracts the current collector can actually execute."""
+
+    if not row:
+        return -1
+    if data_kind != "holdings":
+        return 1
+    parser = str(row.get("parser") or "").strip().lower()
+    return 2 if parser in SUPPORTED_HOLDINGS_COLLECTOR_PARSERS else 0
+
+
 def _verified_provider_source_maps(symbols: set[str]) -> dict[str, dict[str, dict[str, Any]]]:
     if not symbols:
         return {"operability": {}, "holdings": {}, "exposure": {}}
@@ -282,8 +296,28 @@ def _verified_provider_source_maps(symbols: set[str]) -> dict[str, dict[str, dic
         symbol = str(row.get("symbol") or "").strip().upper()
         data_kind = str(row.get("data_kind") or "").strip().lower()
         if symbol and data_kind in maps:
-            maps[data_kind][symbol] = dict(row)
+            current = maps[data_kind].get(symbol)
+            if _verified_source_map_priority(
+                data_kind,
+                dict(row),
+            ) > _verified_source_map_priority(data_kind, current):
+                maps[data_kind][symbol] = dict(row)
     return maps
+
+
+def _is_terminal_provider_source_map(row: dict[str, Any] | None) -> bool:
+    """Distinguish completed/failed contracts from unverified discovery candidates."""
+
+    if not row:
+        return False
+    source_status = str(row.get("source_status") or "").strip().lower()
+    return source_status not in {
+        "candidate",
+        "draft",
+        "pending",
+        "discovered",
+        "unverified",
+    }
 
 
 def _known_provider_source_maps(
@@ -310,7 +344,15 @@ def _known_provider_source_maps(
         symbol = str(row.get("symbol") or "").strip().upper()
         data_kind = str(row.get("data_kind") or "").strip().lower()
         if symbol and data_kind in maps:
-            maps[data_kind][symbol] = dict(row)
+            current = maps[data_kind].get(symbol)
+            if (
+                not current
+                or (
+                    _is_terminal_provider_source_map(dict(row))
+                    and not _is_terminal_provider_source_map(current)
+                )
+            ):
+                maps[data_kind][symbol] = dict(row)
     return maps
 
 
@@ -337,6 +379,7 @@ def _attempted_provider_source_map_symbols(source_id: str) -> set[str]:
         ):
             continue
         details = dict(dict(row or {}).get("details") or {})
+        symbols.update(_upper_symbol_set(input_params.get("requested_symbols")))
         symbols.update(_upper_symbol_set(details.get("symbols")))
         symbols.update(_upper_symbol_set(dict(row or {}).get("failed_symbols")))
     return symbols
@@ -485,18 +528,21 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
     for symbol in holdings_targets:
         if symbol in holdings_missing:
             collectable = _holdings_source_status(symbol, source_maps)[1]
-            known_contract = bool(
+            known_contract = _is_terminal_provider_source_map(
                 dict(known_source_maps.get("holdings") or {}).get(symbol)
-                or dict(known_source_maps.get("operability") or {}).get(symbol)
-                or dict(known_source_maps.get("exposure") or {}).get(symbol)
-                or HOLDINGS_PROVIDER_SOURCES.get(symbol)
+            ) or bool(
+                HOLDINGS_PROVIDER_SOURCES.get(symbol)
             )
         else:
             collectable = _exposure_source_status(symbol, source_maps)[1]
-            known_contract = bool(
-                dict(known_source_maps.get("exposure") or {}).get(symbol)
-                or dict(known_source_maps.get("holdings") or {}).get(symbol)
-                or EXPOSURE_PROVIDER_SOURCES.get(symbol)
+            known_contract = any(
+                _is_terminal_provider_source_map(row)
+                for row in (
+                    dict(known_source_maps.get("exposure") or {}).get(symbol),
+                    dict(known_source_maps.get("holdings") or {}).get(symbol),
+                )
+            ) or bool(
+                EXPOSURE_PROVIDER_SOURCES.get(symbol)
                 or HOLDINGS_PROVIDER_SOURCES.get(symbol)
             )
         if collectable:
@@ -782,9 +828,18 @@ def _apply_pre_final_enrichment_gate(
     validation_result["final_review_handoff"] = handoff
 
 
-def _record_provider_gap_result(result: dict[str, Any], *, source_id: str, area: str) -> dict[str, Any]:
+def _record_provider_gap_result(
+    result: dict[str, Any],
+    *,
+    source_id: str,
+    area: str,
+    requested_symbols: list[str] | None = None,
+) -> dict[str, Any]:
     record = dict(result)
     metadata = dict(record.get("run_metadata") or {})
+    normalized_requested_symbols = sorted(
+        _upper_symbol_set(requested_symbols)
+    )
     metadata.update(
         {
             "pipeline_type": "practical_validation_provider_gap_collection",
@@ -797,6 +852,7 @@ def _record_provider_gap_result(result: dict[str, Any], *, source_id: str, area:
             "input_params": {
                 "selection_source_id": source_id,
                 "provider_area": area,
+                "requested_symbols": normalized_requested_symbols,
             },
         }
     )
@@ -813,11 +869,22 @@ def run_provider_gap_collection(validation_result: dict[str, Any]) -> list[dict[
     results: list[dict[str, Any]] = []
 
     if plan["source_map_discovery"]:
+        requested_symbols = (
+            plan["source_symbols"]
+            or plan["source_map_discovery"]
+        )
         result = run_discover_etf_provider_source_map(
-            plan["source_symbols"] or plan["source_map_discovery"],
+            requested_symbols,
             verify=True,
         )
-        results.append(_record_provider_gap_result(result, source_id=source_id, area="etf_provider_source_map"))
+        results.append(
+            _record_provider_gap_result(
+                result,
+                source_id=source_id,
+                area="etf_provider_source_map",
+                requested_symbols=requested_symbols,
+            )
+        )
         plan = build_provider_gap_collection_plan(validation_result)
 
     if plan["operability_official"]:

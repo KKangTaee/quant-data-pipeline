@@ -533,6 +533,66 @@ class EvidenceClosureContractTests(unittest.TestCase):
         self.assertIsNone(replay_issue["action_id"])
         self.assertIn("2026-07-08", replay_issue["observed"])
 
+    def test_long_replay_gap_is_not_downgraded_to_partial_month_monitoring(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        period = validation["curve_evidence"]["curve_provenance"]["period_coverage"]
+        period.update(
+            {
+                "requested_market_date": "2026-12-31",
+                "latest_common_price_date": "2026-01-02",
+                "last_complete_rebalance_date": "2025-12-31",
+                "latest_valuation_date": "2026-01-02",
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2025-12-31",
+                },
+                "end_gap_days": 365,
+            }
+        )
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(validation),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "engineering_required")
+        self.assertEqual(replay_issue["owner_stage"], "development")
+        self.assertEqual(replay_issue["criticality"], "critical")
+        self.assertEqual(replay_issue["gate_effect"], "block_final_review")
+
+    def test_inconsistent_partial_month_dates_remain_engineering_required(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        period = validation["curve_evidence"]["curve_provenance"]["period_coverage"]
+        period.update(
+            {
+                "requested_market_date": "2026-08-31",
+                "latest_common_price_date": "2026-07-01",
+                "last_complete_rebalance_date": "2026-07-31",
+                "latest_valuation_date": "2026-08-01",
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-07-01",
+                },
+                "end_gap_days": 31,
+            }
+        )
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(validation),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "engineering_required")
+        self.assertEqual(replay_issue["gate_effect"], "block_final_review")
+
     def test_replay_and_pit_rows_become_one_root_issue(self) -> None:
         from app.services.backtest_evidence_closure import build_evidence_closure_contract
 
