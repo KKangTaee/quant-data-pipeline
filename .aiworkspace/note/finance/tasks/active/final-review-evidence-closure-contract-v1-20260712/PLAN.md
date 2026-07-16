@@ -3741,11 +3741,11 @@ class FinalReviewRefreshStatusTests(unittest.TestCase):
             source=source_fixture(),
             validation=validation_fixture(),
             now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
-            freshness_loader=lambda **_: freshness_frame("2026-07-10", "2026-07-10"),
+            freshness_loader=lambda **_: freshness_frame("2026-07-15", "2026-07-15"),
         )
 
         self.assertEqual(status["status"], "replay_available")
-        self.assertEqual(status["db_common_price_date"], "2026-07-10")
+        self.assertEqual(status["db_common_price_date"], "2026-07-15")
         self.assertTrue(status["can_refresh"])
 
     def test_curve_at_target_is_up_to_date(self) -> None:
@@ -3942,8 +3942,8 @@ Implement `build_final_review_refresh_status()` so it:
 2. computes target with `latest_completed_nyse_session(now).isoformat()`;
 3. calls `build_replay_market_date_contract(..., freshness_loader=freshness_loader)`;
 4. subtracts same-target `observation_refresh_snapshot.provider_gap_symbols` from stale symbols;
-5. returns `replay_available` when common date is newer than curve;
-6. returns `price_refresh_available` when refreshable stale/missing symbols remain;
+5. returns `price_refresh_available` first when refreshable stale/missing symbols remain, even if common date is newer than curve;
+6. returns `replay_available` when common date is newer than curve and no automatic price refresh target remains;
 7. returns `partial_refresh` when only known provider gaps remain;
 8. returns `up_to_date` when curve/common/target are aligned;
 9. returns `blocked` when source, symbols, curve, or date contract is missing.
@@ -4036,7 +4036,7 @@ class FinalReviewRefreshOrchestrationTests(unittest.TestCase):
         )
 
         price_runner = MagicMock()
-        replay_runner = MagicMock(return_value=replay_result(end="2026-07-10"))
+        replay_runner = MagicMock(return_value=replay_result(end="2026-07-15"))
         validation_builder = MagicMock(
             return_value={
                 "validation_id": "validation-grs-refreshed",
@@ -4050,7 +4050,7 @@ class FinalReviewRefreshOrchestrationTests(unittest.TestCase):
             source=source_fixture(),
             validation=validation_fixture(),
             now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
-            freshness_loader=lambda **_: freshness_frame("2026-07-10", "2026-07-10"),
+            freshness_loader=lambda **_: freshness_frame("2026-07-15", "2026-07-15"),
             price_refresh_runner=price_runner,
             replay_runner=replay_runner,
             validation_builder=validation_builder,
@@ -4060,7 +4060,7 @@ class FinalReviewRefreshOrchestrationTests(unittest.TestCase):
         price_runner.assert_not_called()
         replay_runner.assert_called_once()
         saver.assert_called_once()
-        self.assertEqual(result["status"], "partial_refresh")
+        self.assertEqual(result["status"], "refreshed")
         self.assertEqual(result["new_validation_id"], "validation-grs-refreshed")
         self.assertTrue(result["validation_saved"])
 
