@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 from importlib import import_module
+from types import SimpleNamespace
+from unittest.mock import patch
 
 
 class PracticalValidationTruthContractTests(unittest.TestCase):
@@ -438,6 +440,88 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertIn("Regime split validation", verified_titles)
         self.assertIn("windows=103", method_issue["observed"])
         self.assertNotIn("근거 없음", method_issue["observed"])
+
+    def test_engineering_blockers_are_counted_once_per_root_issue(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        validation = self._validation()
+        validation["evidence_closure"] = {
+            "issues": [
+                {
+                    "root_issue_id": root_issue_id,
+                    "title": root_issue_id,
+                    "resolution_class": "engineering_required",
+                    "criticality": "critical",
+                    "terminal_state": "deferred",
+                    "actionable_now": False,
+                }
+                for root_issue_id in ("missing-provider", "missing-contract")
+            ],
+            "summary": {
+                "unresolved_actionable_count": 0,
+                "critical_engineering_count": 2,
+                "missing_contract_count": 0,
+            },
+        }
+        validation["final_review_gate"]["can_save_and_move"] = False
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result={"status": "PASS", "replay_id": "replay-current"},
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        self.assertEqual(model["summary"]["engineering_blocker_count"], 2)
+        self.assertEqual(
+            len(model["resolution_lanes"]["engineering_required"]),
+            2,
+        )
+
+    def test_same_replay_and_profile_reuse_validation_result_id(self) -> None:
+        from app.web.backtest_practical_validation import page
+
+        fake_streamlit = SimpleNamespace(session_state={})
+        source = self._source()
+        profile = {
+            "profile_id": "balanced_core",
+            "answers": {"primary_goal": "balanced"},
+        }
+        replay = {
+            "status": "PASS",
+            "replay_id": "replay-current",
+        }
+        with (
+            patch.object(page, "st", fake_streamlit),
+            patch.object(
+                page,
+                "build_practical_validation_result",
+                side_effect=[
+                    {"validation_id": "validation-stable"},
+                    {"validation_id": "validation-changed"},
+                ],
+            ) as builder,
+        ):
+            first = page._build_or_reuse_decision_workspace_validation_result(
+                source=source,
+                validation_profile=profile,
+                replay_result=replay,
+            )
+            second = page._build_or_reuse_decision_workspace_validation_result(
+                source=source,
+                validation_profile=profile,
+                replay_result=replay,
+            )
+
+        self.assertEqual(first["validation_id"], "validation-stable")
+        self.assertEqual(second["validation_id"], "validation-stable")
+        self.assertEqual(builder.call_count, 1)
 
 
 if __name__ == "__main__":

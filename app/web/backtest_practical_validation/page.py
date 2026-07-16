@@ -12,6 +12,7 @@ from app.services.backtest_practical_validation import (
     VALIDATION_PROFILE_QUESTIONS,
     build_provider_gap_collection_plan,
     build_provider_gap_rows,
+    build_practical_validation_decision_workspace,
     build_practical_validation_result,
     build_validation_profile,
     prepare_final_review_handoff_from_validation,
@@ -20,6 +21,7 @@ from app.services.backtest_practical_validation import (
     save_practical_validation_result,
     source_components_dataframe,
 )
+from app.services.backtest_evidence_closure import has_action_handler
 from app.services.backtest_practical_validation_replay import (
     RECHECK_MODE_EXTEND_TO_LATEST,
     RECHECK_MODE_LABELS,
@@ -32,13 +34,12 @@ from app.services.backtest_practical_validation_workspace import (
 from app.web.backtest_practical_validation.components import (
     render_pv_alert_panel,
     render_pv_card_grid,
-    render_pv_command_center,
     render_pv_profile_summary_strip,
     render_pv_section_header,
     render_pv_styles,
 )
 from app.web.backtest_practical_validation.workspace_panel import (
-    render_practical_validation_workspace_overview,
+    render_practical_validation_decision_workspace_fallback,
 )
 from app.web.backtest_practical_validation.status_display import (
     validation_status_tone as _status_tone,
@@ -47,12 +48,13 @@ from app.web.components.practical_validation_data_action_board import (
     is_practical_validation_data_action_board_available,
     render_practical_validation_data_action_board,
 )
+from app.web.components.practical_validation_decision_workspace import (
+    is_practical_validation_decision_workspace_available,
+    render_practical_validation_decision_workspace,
+)
 from app.web.backtest_ui_components import render_badge_strip
 from app.runtime import (
-    PORTFOLIO_SELECTION_SOURCE_FILE,
-    PRACTICAL_VALIDATION_RESULT_FILE,
     load_portfolio_selection_sources,
-    load_practical_validation_results,
 )
 
 
@@ -686,6 +688,87 @@ def _render_validation_profile_form() -> dict[str, Any]:
     return {"profile_id": profile_id, "answers": answers}
 
 
+def _current_validation_profile_from_session() -> dict[str, Any]:
+    """Build the Python-owned profile used by the one-shell workspace."""
+
+    profile_id = str(
+        st.session_state.get("practical_validation_profile_id")
+        or "balanced_core"
+    )
+    if profile_id not in VALIDATION_PROFILE_OPTIONS:
+        profile_id = "balanced_core"
+    answers: dict[str, Any] = {}
+    for question_key, question in VALIDATION_PROFILE_QUESTIONS.items():
+        options = list(dict(question.get("options") or {}).keys())
+        if not options:
+            continue
+        default_value = (
+            question.get("default")
+            if question.get("default") in options
+            else options[0]
+        )
+        state_value = st.session_state.get(
+            f"practical_validation_profile_answer_{question_key}",
+            default_value,
+        )
+        answers[question_key] = (
+            state_value if state_value in options else default_value
+        )
+    return build_validation_profile(profile_id, answers)
+
+
+def _build_or_reuse_decision_workspace_validation_result(
+    *,
+    source: dict[str, Any],
+    validation_profile: dict[str, Any],
+    replay_result: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep one validation id stable while React intents round-trip."""
+
+    source_id = str(source.get("selection_source_id") or "source")
+    period_coverage = dict(replay_result.get("period_coverage") or {})
+    fingerprint = {
+        "selection_source_id": source_id,
+        "replay_id": str(replay_result.get("replay_id") or ""),
+        "attempted_at": str(replay_result.get("attempted_at") or ""),
+        "status": str(replay_result.get("status") or ""),
+        "requested_period": dict(
+            period_coverage.get("requested_period")
+            or replay_result.get("requested_period")
+            or {}
+        ),
+        "actual_period": dict(
+            period_coverage.get("actual_period")
+            or replay_result.get("actual_period")
+            or {}
+        ),
+        "profile_id": str(validation_profile.get("profile_id") or ""),
+        "profile_answers": dict(validation_profile.get("answers") or {}),
+    }
+    state_key = (
+        f"practical_validation_decision_result_{source_id}"
+    )
+    cached = dict(st.session_state.get(state_key) or {})
+    cached_result = cached.get("validation_result")
+    if (
+        cached.get("fingerprint") == fingerprint
+        and isinstance(cached_result, dict)
+        and cached_result
+    ):
+        return dict(cached_result)
+
+    validation_result = build_practical_validation_result(
+        source,
+        validation_profile=validation_profile,
+        replay_result=replay_result,
+    )
+    st.session_state[state_key] = {
+        "fingerprint": fingerprint,
+        "validation_result": validation_result,
+    }
+    return dict(validation_result or {})
+
+
 def _replay_state_key(source: dict[str, Any], mode: str) -> str:
     return f"practical_validation_recheck_{source.get('selection_source_id') or 'source'}_{mode}"
 
@@ -814,6 +897,18 @@ def _render_practical_validation_recovery_progress(
     st.caption(str(model.get("boundary") or ""))
 
 
+def _execute_practical_validation_replay(
+    source: dict[str, Any],
+    *,
+    mode: str = RECHECK_MODE_EXTEND_TO_LATEST,
+) -> dict[str, Any]:
+    """Run replay through one Python execution boundary and retain session proof."""
+
+    replay_result = run_practical_validation_actual_replay(source, mode=mode)
+    st.session_state[_replay_state_key(source, mode)] = replay_result
+    return dict(replay_result or {})
+
+
 def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None:
     source_id = source.get("selection_source_id") or "source"
     mode = st.radio(
@@ -865,8 +960,10 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
     )
     if st.button("전략 재검증 실행", key=f"{replay_key}_run", width="stretch"):
         with st.spinner("기존 strategy runtime으로 Practical Validation source를 재검증 중입니다...", show_time=True):
-            replay_result = run_practical_validation_actual_replay(source, mode=mode)
-        st.session_state[replay_key] = replay_result
+            replay_result = _execute_practical_validation_replay(
+                source,
+                mode=mode,
+            )
         if replay_result.get("status") == "PASS":
             st.success("전략 재검증이 완료되었습니다.")
         elif replay_result.get("status") == "REVIEW":
@@ -2325,6 +2422,143 @@ def _render_data_coverage_audit(validation_result: dict[str, Any]) -> None:
         st.caption(str(audit.get("conclusion")))
 
 
+def _consume_practical_validation_decision_workspace_intent(
+    intent: dict[str, Any] | None,
+    *,
+    sources: list[dict[str, Any]],
+    source: dict[str, Any],
+    validation_result: dict[str, Any] | None,
+    replay_result: dict[str, Any] | None,
+) -> None:
+    """Validate presentation intent against the current Python workspace state."""
+
+    if not isinstance(intent, dict):
+        return
+    action = str(intent.get("action") or "").strip()
+    intent_id = str(intent.get("intent_id") or "").strip()
+    if not action or not intent_id:
+        return
+    consumed_key = "practical_validation_workspace_last_intent_id"
+    if st.session_state.get(consumed_key) == intent_id:
+        return
+    st.session_state[consumed_key] = intent_id
+
+    current_source_id = str(source.get("selection_source_id") or "")
+    intent_source_id = str(intent.get("selection_source_id") or "")
+    source_by_id = {
+        str(row.get("selection_source_id") or ""): row
+        for row in sources
+    }
+    if action == "select_source":
+        if intent_source_id not in source_by_id:
+            st.session_state["backtest_practical_validation_notice"] = (
+                "현재 후보 목록에 없는 source intent를 무시했습니다."
+            )
+            st.rerun()
+        st.session_state[
+            "practical_validation_selected_source_id"
+        ] = intent_source_id
+        _clear_practical_validation_replay_state()
+        st.rerun()
+
+    if intent_source_id != current_source_id:
+        st.session_state["backtest_practical_validation_notice"] = (
+            "후보가 바뀌어 이전 화면 action을 실행하지 않았습니다."
+        )
+        st.rerun()
+
+    if action == "select_profile_preset":
+        profile_id = str(intent.get("profile_id") or "")
+        if profile_id not in VALIDATION_PROFILE_OPTIONS:
+            st.session_state["backtest_practical_validation_notice"] = (
+                "지원하지 않는 검증 프로필입니다."
+            )
+            st.rerun()
+        st.session_state["practical_validation_profile_id"] = profile_id
+        _clear_practical_validation_replay_state(current_source_id)
+        st.rerun()
+
+    if action == "run_replay":
+        mode = str(
+            st.session_state.get(
+                f"practical_validation_recheck_mode_{current_source_id}",
+                RECHECK_MODE_EXTEND_TO_LATEST,
+            )
+        )
+        if mode not in RECHECK_MODE_LABELS:
+            mode = RECHECK_MODE_EXTEND_TO_LATEST
+        _execute_practical_validation_replay(source, mode=mode)
+        st.session_state["backtest_practical_validation_notice"] = (
+            "최신 데이터 기준 재검증을 완료했습니다."
+        )
+        st.rerun()
+
+    if action == "run_resolution_action":
+        if not validation_result:
+            st.session_state["backtest_practical_validation_notice"] = (
+                "현재 검증 결과가 없어 action을 실행하지 않았습니다."
+            )
+            st.rerun()
+        validation_id = str(validation_result.get("validation_id") or "")
+        if str(intent.get("validation_result_id") or "") != validation_id:
+            st.session_state["backtest_practical_validation_notice"] = (
+                "검증 결과가 바뀌어 이전 action을 실행하지 않았습니다."
+            )
+            st.rerun()
+        closure = dict(validation_result.get("evidence_closure") or {})
+        issue = next(
+            (
+                dict(row)
+                for row in list(closure.get("issues") or [])
+                if str(dict(row).get("root_issue_id") or "")
+                == str(intent.get("root_issue_id") or "")
+            ),
+            {},
+        )
+        action_id = str(intent.get("action_id") or "")
+        if (
+            not issue
+            or not issue.get("actionable_now")
+            or str(issue.get("action_id") or "") != action_id
+            or not has_action_handler(action_id)
+        ):
+            st.session_state["backtest_practical_validation_notice"] = (
+                "현재 실행 가능한 해결 action이 아닙니다."
+            )
+            st.rerun()
+        if action_id == "run_practical_validation_provider_gap_collection":
+            _execute_practical_validation_provider_gap_collection(
+                validation_result
+            )
+            st.rerun()
+        if action_id == "run_practical_validation_replay":
+            _execute_practical_validation_replay(source)
+            st.rerun()
+
+    if action in {"save_audit_only", "save_and_move"}:
+        validation_id = str(
+            dict(validation_result or {}).get("validation_id") or ""
+        )
+        if (
+            not validation_id
+            or str(intent.get("validation_result_id") or "") != validation_id
+        ):
+            st.session_state["backtest_practical_validation_notice"] = (
+                "검증 결과가 바뀌어 이전 저장 action을 실행하지 않았습니다."
+            )
+            st.rerun()
+        _consume_practical_validation_next_stage_action(
+            {
+                "action": action,
+                "source": "practical_validation_decision_workspace",
+                "nonce": intent_id,
+            },
+            source=source,
+            validation_result=dict(validation_result or {}),
+            replay_result=replay_result,
+        )
+
+
 def _consume_practical_validation_next_stage_action(
     action_value: dict[str, Any] | None,
     *,
@@ -2338,7 +2572,11 @@ def _consume_practical_validation_next_stage_action(
     if action not in {"save_and_move", "save_audit_only"}:
         return
     event_source = str(action_value.get("source") or "").strip()
-    if event_source not in {"practical_validation_fix_queue", "practical_validation_fix_queue_fallback"}:
+    if event_source not in {
+        "practical_validation_decision_workspace",
+        "practical_validation_fix_queue",
+        "practical_validation_fix_queue_fallback",
+    }:
         return
 
     validation_id = str(validation_result.get("validation_id") or "validation").strip() or "validation"
@@ -2388,16 +2626,84 @@ def _consume_practical_validation_next_stage_action(
     st.rerun()
 
 
+def _render_decision_workspace_advanced_controls(
+    *,
+    source: dict[str, Any],
+    replay_result: dict[str, Any] | None,
+    validation_result: dict[str, Any] | None,
+) -> None:
+    """Keep technical controls and raw evidence secondary to the decision flow."""
+
+    st.markdown("##### 검증 기준 세부 조정")
+    question_items = list(VALIDATION_PROFILE_QUESTIONS.items())
+    for start in range(0, len(question_items), 2):
+        columns = st.columns(2, gap="small")
+        for offset, column in enumerate(columns):
+            if start + offset >= len(question_items):
+                continue
+            question_key, question = question_items[start + offset]
+            options = list(dict(question.get("options") or {}).keys())
+            if not options:
+                continue
+            labels = dict(question.get("options") or {})
+            default_value = (
+                question.get("default")
+                if question.get("default") in options
+                else options[0]
+            )
+            state_key = (
+                f"practical_validation_profile_answer_{question_key}"
+            )
+            current_value = st.session_state.get(state_key, default_value)
+            with column:
+                st.selectbox(
+                    str(question.get("label") or question_key),
+                    options=options,
+                    format_func=lambda option, labels=labels: labels.get(
+                        option,
+                        option,
+                    ),
+                    index=(
+                        options.index(current_value)
+                        if current_value in options
+                        else 0
+                    ),
+                    key=state_key,
+                )
+
+    if source:
+        source_id = str(source.get("selection_source_id") or "source")
+        st.markdown("##### 재검증 방식")
+        st.radio(
+            "고급 재검증 방식",
+            options=list(RECHECK_MODE_LABELS.keys()),
+            format_func=lambda value: RECHECK_MODE_LABELS.get(value, value),
+            horizontal=True,
+            key=f"practical_validation_recheck_mode_{source_id}",
+        )
+        st.markdown("##### 후보 원본 근거")
+        _render_source_summary(source)
+
+    st.markdown("##### 현재 read model 원본")
+    st.json(
+        {
+            "source": source,
+            "replay_result": replay_result,
+            "validation_result": validation_result,
+        },
+        expanded=False,
+    )
+
+
 def render_practical_validation_workspace() -> None:
     render_pv_styles()
     st.markdown("### Practical Validation")
     st.caption(
-        "Backtest Analysis에서 선택한 후보를 Final Review로 넘기기 전 검증 근거로 구조화합니다. "
-        "최종 사용자 메모와 최종 판단은 Final Review에서만 남깁니다."
+        "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가? "
+        "해결할 항목과 Final Review에서 판단할 항목을 구분해 확인합니다."
     )
 
     sources = load_portfolio_selection_sources(limit=100)
-    validation_rows = load_practical_validation_results(limit=100)
     session_source = st.session_state.get("backtest_practical_validation_source")
     notice = st.session_state.pop("backtest_practical_validation_notice", None)
     if st.session_state.pop("practical_validation_reset_replay_on_entry", False):
@@ -2405,29 +2711,6 @@ def render_practical_validation_workspace() -> None:
         st.session_state.pop("practical_validation_active_source_id", None)
     if notice:
         st.success(str(notice))
-
-    render_pv_command_center(
-        eyebrow="실전 검증 센터",
-        title="Final Review 이동 전 검증 상태",
-        detail=(
-            "이 후보가 Final Review로 넘어갈 수 있는지, 막힌 항목과 필요한 보강을 먼저 확인합니다. "
-            "최종 선택 판단과 사용자 메모는 Final Review에서만 남깁니다."
-        ),
-        route_label="업무 경계",
-        route_value="Final Review 전용",
-        route_detail=(
-            f"후보 source 기록: {PORTFOLIO_SELECTION_SOURCE_FILE.name}. "
-            f"검증 결과 기록: {PRACTICAL_VALIDATION_RESULT_FILE.name}. "
-            "Live 승인과 최종 메모는 이 화면에서 만들지 않습니다."
-        ),
-        route_tone="neutral",
-        kpis=[
-            {"label": "후보 Source", "value": len(sources), "detail": "검증 입력"},
-            {"label": "검증 결과", "value": len(validation_rows), "detail": "저장 기록"},
-            {"label": "최종 메모", "value": "Final Review", "detail": "여기서 저장 안 함"},
-            {"label": "Live 승인", "value": "비활성", "detail": "읽기 전용 근거"},
-        ],
-    )
 
     selectable_sources: list[dict[str, Any]] = []
     if isinstance(session_source, dict) and session_source:
@@ -2439,87 +2722,100 @@ def render_practical_validation_workspace() -> None:
             continue
         selectable_sources.append(dict(row))
 
-    if not selectable_sources:
-        st.info("아직 Practical Validation으로 보낸 current selection source가 없습니다.")
-        st.caption("Backtest Analysis에서 Single / Portfolio Mix / Saved Mix 결과를 선택하면 여기에 표시됩니다.")
-        return
+    source_by_id = {
+        str(row.get("selection_source_id") or ""): row
+        for row in selectable_sources
+        if str(row.get("selection_source_id") or "")
+    }
+    selected_source_id = str(
+        st.session_state.get("practical_validation_selected_source_id")
+        or ""
+    )
+    if selected_source_id not in source_by_id:
+        session_source_id = str(
+            dict(session_source or {}).get("selection_source_id") or ""
+        )
+        selected_source_id = (
+            session_source_id
+            if session_source_id in source_by_id
+            else next(iter(source_by_id), "")
+        )
+        st.session_state[
+            "practical_validation_selected_source_id"
+        ] = selected_source_id
+    source = dict(source_by_id.get(selected_source_id) or {})
 
-    labels = [_source_label(row) for row in selectable_sources]
-    selected_label = st.selectbox("검증할 후보 source", options=labels, key="practical_validation_source_selected")
-    source = selectable_sources[labels.index(selected_label)]
-    selected_source_id = str(source.get("selection_source_id") or "source")
-    if st.session_state.get("practical_validation_active_source_id") != selected_source_id:
+    active_source_id = str(
+        st.session_state.get("practical_validation_active_source_id") or ""
+    )
+    if selected_source_id and active_source_id != selected_source_id:
         _clear_practical_validation_replay_state()
-        st.session_state.practical_validation_active_source_id = selected_source_id
+    st.session_state[
+        "practical_validation_active_source_id"
+    ] = selected_source_id
 
-    _render_final_review_data_enrichment_handoff(source)
-
-    with st.container(border=True):
-        render_pv_section_header(
-            eyebrow="Flow 1",
-            title="후보 Source 확인",
-            detail="Backtest Analysis에서 넘어온 current selection source와 저장된 백테스트 근거를 확인합니다.",
-            tone="neutral",
+    validation_profile = _current_validation_profile_from_session()
+    replay_result: dict[str, Any] | None = None
+    validation_result: dict[str, Any] | None = None
+    if source:
+        mode_key = f"practical_validation_recheck_mode_{selected_source_id}"
+        replay_mode = str(
+            st.session_state.get(mode_key, RECHECK_MODE_EXTEND_TO_LATEST)
         )
-        _render_backtest_entry_gate_review_queue(source)
-        _render_source_summary(source)
-
-    with st.container(border=True):
-        render_pv_section_header(
-            eyebrow="Flow 2",
-            title="검증 기준 설정 / 실전 재검증 실행",
-            detail="Final Review 이동 전 적용할 판정 기준을 고르고 Latest Runtime Replay를 해소합니다.",
-            tone="warning",
+        if replay_mode not in RECHECK_MODE_LABELS:
+            replay_mode = RECHECK_MODE_EXTEND_TO_LATEST
+            st.session_state[mode_key] = replay_mode
+        active_mode_key = (
+            f"practical_validation_active_recheck_mode_{selected_source_id}"
         )
-        st.markdown("##### 검증 기준")
-        validation_profile = _render_validation_profile_form()
-        st.divider()
-        st.markdown("##### 실전 재검증 실행")
-        replay_result = _render_actual_replay_panel(source)
-
-    if not _has_current_session_replay_result(replay_result):
-        _render_practical_validation_recovery_progress(
-            source,
-            replay_result=replay_result,
+        previous_mode = st.session_state.get(active_mode_key)
+        if previous_mode is not None and previous_mode != replay_mode:
+            _clear_practical_validation_replay_state(selected_source_id)
+        st.session_state[active_mode_key] = replay_mode
+        replay_candidate = st.session_state.get(
+            _replay_state_key(source, replay_mode)
         )
-        st.info("Flow 2에서 `전략 재검증 실행`을 실행하면 검증 결론과 기준 상세가 이어서 표시됩니다.")
-        return
+        if _has_current_session_replay_result(replay_candidate):
+            replay_result = dict(replay_candidate)
+            validation_result = (
+                _build_or_reuse_decision_workspace_validation_result(
+                    source=source,
+                    validation_profile=validation_profile,
+                    replay_result=replay_result,
+                )
+            )
 
-    validation_result = build_practical_validation_result(
-        source,
+    workspace_model = build_practical_validation_decision_workspace(
+        source=source,
         validation_profile=validation_profile,
         replay_result=replay_result,
-    )
-    _render_practical_validation_recovery_progress(
-        source,
-        replay_result=replay_result,
         validation_result=validation_result,
+        source_options=selectable_sources,
     )
 
-    with st.container(border=True):
-        render_pv_section_header(
-            eyebrow="Flow 3",
-            title="검증 결론",
-            detail="카테고리별 통과 / 실패와 Final Review 이동 가능 여부를 확인하고, 저장 / 이동 action을 처리합니다.",
-            tone=_status_tone(dict(validation_result.get("final_review_gate") or {}).get("route")),
+    if is_practical_validation_decision_workspace_available():
+        intent = render_practical_validation_decision_workspace(
+            workspace=workspace_model,
+            key=(
+                "practical-validation-decision-workspace-"
+                f"{selected_source_id or 'source-required'}"
+            ),
         )
-        action_value = render_practical_validation_workspace_overview(validation_result, source=source)
-        _consume_practical_validation_next_stage_action(
-            action_value,
-            source=source,
-            validation_result=validation_result,
-            replay_result=replay_result,
+    else:
+        intent = render_practical_validation_decision_workspace_fallback(
+            workspace_model
         )
+    _consume_practical_validation_decision_workspace_intent(
+        intent,
+        sources=selectable_sources,
+        source=source,
+        validation_result=validation_result,
+        replay_result=replay_result,
+    )
 
-    with st.container(border=True):
-        render_pv_section_header(
-            eyebrow="Flow 4",
-            title="검증 기준 상세",
-            detail="카테고리별 통과 / 보강 필요 / 차단 항목을 먼저 보고, 데이터 보강 / 수집 실행과 상세 근거를 이어서 확인합니다.",
-            tone="neutral",
+    with st.expander("고급 설정과 원본 근거", expanded=False):
+        _render_decision_workspace_advanced_controls(
+            source=source,
+            replay_result=replay_result,
+            validation_result=validation_result,
         )
-        _render_validation_criteria_detail_board(validation_result)
-        _render_data_action_board(validation_result)
-        st.markdown('<span id="pv-provider-data-action"></span>', unsafe_allow_html=True)
-        _render_validation_action_boards(validation_result)
-        _render_validation_evidence_boards(validation_result, source=source)

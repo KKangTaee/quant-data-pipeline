@@ -16,7 +16,10 @@ EVIDENCE_CLOSURE_SCHEMA_VERSION = "backtest_evidence_closure_v1"
 ACTION_HANDLER_CONTRACTS = {
     "run_practical_validation_replay": {
         "owner_stage": "practical_validation",
-        "handler": "app.web.backtest_practical_validation.page:_render_actual_replay_panel",
+        "handler": (
+            "app.web.backtest_practical_validation.page:"
+            "_execute_practical_validation_replay"
+        ),
     },
     "run_practical_validation_provider_gap_collection": {
         "owner_stage": "practical_validation",

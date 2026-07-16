@@ -212,21 +212,48 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertTrue((PROJECT_ROOT / "app/web/backtest_final_review/page.py").exists())
         self.assertTrue((PROJECT_ROOT / "app/web/backtest_final_review/decision_cockpit.py").exists())
 
-    def test_practical_validation_page_uses_workspace_first_read_flow(self) -> None:
-        source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
-        render_body = source.split("def render_practical_validation_workspace", 1)[1]
+    def test_practical_validation_page_uses_one_decision_workspace(self) -> None:
+        page_source = (
+            PROJECT_ROOT / "app/web/backtest_practical_validation/page.py"
+        ).read_text()
+        render_body = page_source.split(
+            "def render_practical_validation_workspace", 1
+        )[1]
 
-        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", render_body)
-        self.assertIn('title="후보 Source 확인"', render_body)
-        self.assertIn('title="검증 기준 설정 / 실전 재검증 실행"', render_body)
-        self.assertIn('title="검증 결론"', render_body)
-        self.assertIn("카테고리별 통과 / 실패와 Final Review 이동 가능 여부", render_body)
-        self.assertNotIn('title="2차 검증 결론 / Fix Queue"', render_body)
-        self.assertIn('title="검증 기준 상세"', render_body)
-        self.assertNotIn('title="저장 / Final Review 이동"', render_body)
-        self.assertNotIn("_render_validation_control_center(", render_body)
-        self.assertNotIn('"marker": "6"', render_body)
-        self.assertNotIn('"marker": "7"', render_body)
+        self.assertIn(
+            "render_practical_validation_decision_workspace(",
+            render_body,
+        )
+        self.assertIn(
+            "build_practical_validation_decision_workspace(",
+            render_body,
+        )
+        self.assertNotIn(
+            "render_practical_validation_workspace_overview(",
+            render_body,
+        )
+        self.assertNotIn(
+            "_render_data_action_board(validation_result)",
+            render_body,
+        )
+        self.assertNotIn(
+            "_render_final_review_data_enrichment_handoff(source)",
+            render_body,
+        )
+        self.assertNotIn(
+            "_render_practical_validation_recovery_progress(",
+            render_body,
+        )
+        self.assertNotIn("render_pv_command_center(", render_body)
+        self.assertNotIn("PORTFOLIO_SELECTION_SOURCE_FILE", render_body)
+        self.assertNotIn("PRACTICAL_VALIDATION_RESULT_FILE", render_body)
+        self.assertNotIn("validation_rows", render_body)
+        self.assertNotIn('title="검증 기준 상세"', render_body)
+        self.assertIn("고급 설정과 원본 근거", render_body)
+        self.assertIn(
+            "render_practical_validation_decision_workspace_fallback(",
+            render_body,
+        )
 
     def test_practical_validation_workspace_panel_owns_first_read_surface(self) -> None:
         page_source = (PROJECT_ROOT / "app/web/backtest_practical_validation/page.py").read_text()
@@ -239,13 +266,27 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             "from app.web.backtest_practical_validation.workspace_panel import",
             page_source,
         )
-        self.assertIn("render_practical_validation_workspace_overview(validation_result, source=source)", page_source)
-        self.assertNotIn("def _render_practical_validation_workspace_overview", page_source)
-        self.assertIn("def render_practical_validation_workspace_overview", panel_source)
-        self.assertIn('validation_result.get("practical_validation_workspace")', panel_source)
-        self.assertIn("is_practical_validation_fix_queue_available()", panel_source)
-        self.assertNotIn("render_pv_alert_panel", panel_source)
-        self.assertNotIn("render_badge_strip", panel_source)
+        self.assertIn(
+            "render_practical_validation_decision_workspace_fallback",
+            page_source,
+        )
+        self.assertNotIn(
+            "def _render_practical_validation_decision_workspace_fallback",
+            page_source,
+        )
+        self.assertIn(
+            "def render_practical_validation_decision_workspace_fallback",
+            panel_source,
+        )
+        fallback_body = panel_source.split(
+            "def render_practical_validation_decision_workspace_fallback",
+            1,
+        )[1]
+        self.assertIn('workspace.get("resolution_lanes")', fallback_body)
+        self.assertNotIn(
+            "is_practical_validation_fix_queue_available()",
+            fallback_body,
+        )
         self.assertNotIn("from app.web.backtest_practical_validation.page import", panel_source)
 
     def test_practical_validation_status_display_normalizes_raw_routes(self) -> None:
@@ -277,34 +318,35 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn('render_reference_contextual_help("practical_validation")', render_body)
         self.assertNotIn("_render_market_sentiment_context_overlay()", render_body)
         self.assertNotIn("검증 근거를 위한 후보 통제 화면", render_body)
-        self.assertIn("Final Review 이동 전 검증 상태", render_body)
-        self.assertIn("막힌 항목과 필요한 보강을 먼저 확인합니다.", render_body)
+        self.assertIn(
+            "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?",
+            render_body,
+        )
 
-    def test_practical_validation_visual_shell_uses_light_square_surfaces(self) -> None:
-        source = (PROJECT_ROOT / "app/web/backtest_practical_validation/components.py").read_text()
-
-        self.assertIn("--pv-panel: #ffffff;", source)
-        self.assertIn("--pv-panel-2: #ffffff;", source)
-        self.assertIn("--pv-panel-3: #f3f4f6;", source)
-        self.assertIn("--pv-text: #111827;", source)
-        self.assertNotIn("--pv-panel: #0b111c;", source)
-        self.assertNotIn("--pv-panel-2: #111a28;", source)
-        self.assertNotIn("border-radius: 8px;", source)
-        self.assertIn(".pv-command {", source)
-        self.assertIn("border-radius: 0;", source)
-
-    def test_practical_validation_fix_queue_react_surface_is_square(self) -> None:
+    def test_practical_validation_react_is_intent_only(self) -> None:
         source = (
             PROJECT_ROOT
-            / "app/web/components/practical_validation_fix_queue/frontend/src/style.css"
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/"
+            "PracticalValidationDecisionWorkspace.tsx"
         ).read_text()
 
-        self.assertIn(".pv-react-fix {", source)
-        self.assertIn(".pv-react-fix__decision", source)
-        self.assertIn(".pv-react-fix__criteria-preview", source)
-        self.assertIn("background: #ffffff;", source)
-        self.assertNotIn("border-radius: 8px;", source)
-        self.assertIn("border-radius: 0;", source)
+        for action in (
+            "select_source",
+            "select_profile_preset",
+            "run_replay",
+            "run_resolution_action",
+            "save_audit_only",
+            "save_and_move",
+        ):
+            self.assertIn(action, source)
+        for forbidden in (
+            "fetch(",
+            "resolution_class ===",
+            "can_save_and_move =",
+            "run_provider_gap_collection(",
+            "save_practical_validation_result(",
+        ):
+            self.assertNotIn(forbidden, source)
 
     def test_final_review_decision_brief_service_owns_domain_projection(self) -> None:
         service_source = (
