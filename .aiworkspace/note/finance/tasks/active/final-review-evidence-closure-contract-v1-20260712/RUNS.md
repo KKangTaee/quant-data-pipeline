@@ -97,5 +97,15 @@
 - chart GREEN: visual contract 6 tests `OK`; focused Decision Brief / Final Review read-model / boundary suite 115 tests `OK`; Vite production build 176 modules `OK`; 구현 커밋 `54b11008`.
 - desktop Browser QA: 누적 성과 hover가 latest `2026-06-26 / 530 / 183`에서 과거 `2018-09-28 / 162 / 120`으로 갱신됐고, Underwater도 `2018-07-31 / 0.00%`로 갱신됐다. 두 crosshair와 총 3개 focus dot을 확인했다.
 - 760px Browser QA: component `717/717`로 horizontal overflow 0, chart 1열, observation 2×3, 긴 `weak_source_or_proxy_liquidity_evidence` 전체 줄바꿈, tooltip card 내부 유지, 섹션 detail이 title copy 아래로 배치됨을 확인했다.
+
+## 2026-07-16 Portfolio Character And Review Pressure Separation
+
+- Python RED: 새 4개 character/pressure contract가 `character_profile` / `review_pressure` 부재와 기존 `trait_map` 잔존으로 3 errors + 1 failure를 냈다. 0 criterion test는 기존 division path의 `ZeroDivisionError`를 재현했다.
+- Python GREEN: Decision Brief module 23 tests `OK`; 0 criterion은 명시적 contract error로 처리했다. 구현 커밋 `86170a91`.
+- UI RED: reading order, 새 presentation owner, fallback parity, responsive layout 4개 contract가 missing component/field와 old radar 의존으로 실패했다.
+- UI GREEN: focused visual / Decision Brief / Final Review read-model / boundary suite 120 tests `OK`; React production build 177 modules, target `py_compile`, `git diff --check` 통과. 구현 커밋 `bbe4449d`.
+- Browser QA current GRS: 새 Streamlit 프로세스에서 actual 5개와 pressure 5개를 확인했다. concentration `기준 초과`, drawdown `기준 이내`, turnover/cost `기준 미설정`, regime `분석 근거 없음`이며 radar/83.3 score는 없다.
+- 760px Browser QA: character/pressure가 1열로 전환됐고 character value 빈 값 0, character card clipping 0, pressure row clipping 0을 확인했다. screenshot `qa-final-review-character-pressure-760.png`는 generated artifact로 남기고 stage하지 않는다.
+- 기존 장기 실행 Streamlit 프로세스에서는 새 React bundle과 캐시된 구 Python payload가 잠시 충돌해 component error를 재현했다. 프로세스 재기동 후 새 계약으로 정상 렌더링됐고 이후 component error는 재현되지 않았다. Final Review save CTA는 클릭하지 않았다.
 - QA screenshot: `qa-final-review-chart-hover-content-polish-760.png`는 generated artifact로 남기고 stage하지 않는다. Final Review save CTA는 클릭하지 않았다.
 - fresh completion verification: focused 115 tests `OK`, Vite 176-module production build `OK`, Decision Brief service / Final Review page / component `py_compile`와 `git diff --check` 모두 통과했다. status에는 protected registry, run history와 generated artifact만 의도대로 남았다.

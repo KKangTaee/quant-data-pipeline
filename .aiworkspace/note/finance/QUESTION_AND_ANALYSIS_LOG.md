@@ -42,6 +42,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-16 - Final Review actual character와 review pressure는 서로 다른 정보다
+
+- User request: 사용자는 기존 포트폴리오 성격 지도에서 대부분이 `미측정`으로 보여 원하는 포트폴리오 성격을 알 수 없다고 지적하고 실제 성격이 노출되도록 개선을 승인함.
+- Interpreted goal: 데이터 부재와 기준 부재를 혼동하지 않고, 저장된 raw 관측값은 그대로 보여주되 관리 기준 비교는 별도 surface에서만 수행한다.
+- Analysis result: current GRS는 집중·낙폭·회전·비용 값이 존재하지만 turnover/cost criterion과 regime evidence가 없다. 따라서 radar normalization을 제거하고 `actual character`와 `within/exceeds/criterion missing/evidence missing` pressure 상태를 분리하는 것이 맞다.
+- Follow-up: Python이 character/pressure projection과 drawdown alias를 소유하고 React/fallback은 표시만 한다. regime evidence와 turnover/cost criterion producer는 별도 승인 전까지 잔여 위험으로 둔다.
+
 ### 2026-07-12 - master 병합 충돌은 기능별 소유권을 보존해 해소한다
 
 - User request: `codex/main-dev`에서 master 병합 중 발생한 Finance 충돌을 integration review 기준으로 해결해 달라고 요청함.

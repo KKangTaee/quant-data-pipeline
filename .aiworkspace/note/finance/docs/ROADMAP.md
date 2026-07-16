@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-16
 
 ## Current State After Master Merge
 
@@ -72,6 +72,7 @@ Recent completed Final Review task는 `.aiworkspace/note/finance/tasks/active/fi
 
 - 목적: 해결 가능한 근거는 Practical Validation에서 닫고, 핵심 미구현은 block/defer하며, Final Review에는 수용 또는 Monitoring 이관으로 종결할 비핵심 한계만 전달한다.
 - 주요 변경: root issue dedup, Level2 actionability Gate, GRS 기간과 survivorship applicability 계약, Final Review terminal-state snapshot, measured-only score impact를 완료했다.
+- 후속 Decision Workspace 보정: 포트폴리오 실제 성격과 관리 기준 대비 압력을 분리하고 기존 radar/임의 normalization을 제거했다. 집중·낙폭·회전·비용 raw value는 criterion이 없어도 보이며, 기준 미설정과 분석 근거 없음을 구분한다.
 - QA: focused service/source contract tests, 실제 DB 확인, React build, py_compile, diff check, Browser QA를 완료했다. Dynamic historical universe용 PIT membership/delisting provider는 후속 승인 전까지 blocker로 남긴다.
 
 Previous completed Overview / Market Context task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-sp500-valuation-v1-20260712/`다.

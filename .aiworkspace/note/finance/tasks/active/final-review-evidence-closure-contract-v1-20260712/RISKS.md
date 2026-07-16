@@ -45,3 +45,9 @@
 - hover는 pointer presentation이며 수치 표 fallback과 SVG title/desc는 유지했다. 별도 keyboard cursor 탐색은 이번 요청 범위에 포함하지 않았다.
 - visual source contract는 DOM/class/semantic copy 회귀를 막고 Browser QA는 current GRS fixture의 실제 배치를 검증한다. 모든 데이터 길이와 언어 조합을 pixel snapshot으로 고정하지는 않는다.
 - legend의 raw series label `Underwater drawdown`은 Python projection provenance와 호환을 위해 유지했다. 사용자 의미는 한글 제목과 0%/음수 설명에서 명시한다.
+
+## Portfolio Character And Review Pressure Residuals
+
+- 국면 의존은 current stored validation에 regime별 성과 분산 structured evidence가 없어 `분석 근거 없음`으로 남는다. UI가 임의 점수나 proxy로 채우지 않는다.
+- turnover와 cost는 관측값은 있지만 별도 review criterion이 없어 `기준 미설정`이다. future producer가 명시적 criterion을 저장하기 전까지 quality/pressure 결론으로 과해석하지 않는다.
+- tracked React build와 Python payload schema를 동시에 바꿀 때 장기 실행 Streamlit 프로세스는 구 module cache를 들고 있을 수 있다. 배포/QA에서는 production build 뒤 앱 프로세스를 재기동해 contract parity를 확인한다.

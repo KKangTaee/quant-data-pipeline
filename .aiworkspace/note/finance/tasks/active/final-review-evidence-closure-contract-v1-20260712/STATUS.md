@@ -1,6 +1,6 @@
 # Status
 
-Status: Design Review — portfolio character / review pressure separation
+Status: Complete — portfolio character / review pressure separation
 Last Updated: 2026-07-16
 
 ## Progress
@@ -45,16 +45,19 @@ Last Updated: 2026-07-16
 - [x] 작성된 DESIGN 사용자 확인
 - [x] writing-plans 기반 상세 PLAN 작성과 self-review
 - [x] 상세 PLAN 계획 커밋
-- [ ] 1차 Python character/review contract 구현
-- [ ] 2차 React/fallback presentation 구현과 Browser QA
-- [ ] 3차 fresh verification / docs closeout
+- [x] 1차 Python character/review contract 구현
+- [x] 2차 React/fallback presentation 구현과 Browser QA
+- [x] 3차 fresh verification / docs closeout
 
 ## Next Action
 
-상세 PLAN을 계획 커밋으로 고정한 뒤 inline executing-plans 방식으로 1차 Python contract부터 RED → GREEN 구현한다. 새 task/worktree는 만들지 않는다.
+후속 검토가 필요하면 `RISKS.md`의 국면 의존 근거와 turnover/cost review criterion producer 여부부터 확인한다. dynamic historical universe provider는 계속 별도 승인 범위다.
 
 ## Commits
 
+- `bbe4449d` Final Review 실제 성격과 관리 압력 UI 분리
+- `86170a91` Final Review 실제 성격과 관리 압력 계약 도입
+- `b4c4d73d` Final Review 실제 성격 분리 구현 계획 수립
 - `293cc3c0` Final Review 성격 분리 설계 소유 경로 보정
 - `adcbd80d` Final Review 실제 성격과 관리 압력 분리 설계
 - `54b11008` Final Review 차트 축과 hover 상호작용 개선
@@ -79,9 +82,9 @@ Last Updated: 2026-07-16
 
 - Primary question: `이 포트폴리오를 실제 투자 검토 대상으로 계속 추적할 가치가 있는가?`
 - Chosen direction: Decision Brief + Evidence Disclosure, React-first one-shell flow
-- Approved order: 결론 → 행동 근거 → 실제 강점/약점 → trait map → Monitoring 변화 조건 → 최종 판단 → disclosure
+- Approved order: 결론 → 행동 근거 → 실제 강점/약점 → 실제 성격/관리 압력 → Monitoring 변화 조건 → 최종 판단 → disclosure
 - Score policy: overall investment score와 기존 3개 headline score 제거, evidence confidence만 보조 metadata로 유지
-- Visual policy: cumulative vs benchmark와 underwater가 주 visual, trait map은 측정된 pressure/exposure만 표시하고 미측정 axis는 연결하지 않음
+- Visual policy: cumulative vs benchmark와 underwater가 주 visual이며, 실제 성격은 raw observation card, 관리 압력은 explicit criterion comparison row로 분리한다. radar와 임의 0~100 normalization은 사용하지 않는다.
 
 ## Follow-up UX Result
 

@@ -6221,3 +6221,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 누적 성과와 고점 대비 낙폭 chart에 실제 X/Y축, crosshair, focus dot, date/value hover를 추가하고 Underwater의 0%/음수 의미를 명시했다.
 - 구현 커밋은 `88fc62c7`, `54b11008`; focused 115 tests, 176-module build, desktop/760 Browser QA를 통과했다.
 - 상세 RED/GREEN과 잔여 위험은 active task `RUNS.md`, `RISKS.md`를 본다. protected registry와 run history는 변경하거나 stage하지 않았다.
+
+## 2026-07-16 - Final Review Portfolio Character / Review Pressure Separation
+
+- 기존 `포트폴리오 성격 지도` radar를 실제 성격 raw value와 관리 기준 대비 압력의 두 surface로 분리했다.
+- 집중/낙폭/회전/비용은 criterion 유무와 무관하게 표시하고, `기준 미설정`과 `분석 근거 없음`을 구분한다. Python이 projection/comparison을 소유한다.
+- 구현 커밋은 `86170a91`, `bbe4449d`; focused 120 tests, 177-module build, py_compile, desktop/760 Browser QA를 통과했다.
+- 다음 검토 위치는 active task `STATUS.md`, `RUNS.md`, `RISKS.md`이며 registry/run history/screenshot은 stage하지 않았다.

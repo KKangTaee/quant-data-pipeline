@@ -2434,7 +2434,7 @@ git commit -m "Final Review 차트 상호작용 QA와 문서 동기화"
 - Produces payload fields: `character_profile.items[]`, `review_pressure.items[]`.
 - Removes current payload field: `trait_map`.
 
-- [ ] **Step 1: Add a current-character fixture helper and failing contract tests**
+- [x] **Step 1: Add a current-character fixture helper and failing contract tests**
 
 Add to `FinalReviewDecisionBriefContractTests`:
 
@@ -2506,7 +2506,7 @@ def test_character_contract_has_no_trait_map_or_arbitrary_score(self) -> None:
 
 Delete `test_trait_axes_keep_unmeasured_as_none_without_aggregate_score` because the approved contract removes `trait_map` rather than preserving it.
 
-- [ ] **Step 2: Run RED and confirm the old contract is the failure cause**
+- [x] **Step 2: Run RED and confirm the old contract is the failure cause**
 
 Run:
 
@@ -2520,7 +2520,7 @@ Run:
 
 Expected: 4 errors/failures because `character_profile` and `review_pressure` are absent and `trait_map` still exists.
 
-- [ ] **Step 3: Canonicalize character axes and drawdown comparison**
+- [x] **Step 3: Canonicalize character axes and drawdown comparison**
 
 Replace `_TRAIT_AXES` with metadata that separates user character labels from missing evidence copy:
 
@@ -2562,7 +2562,7 @@ def _criterion_favorable(measured: float, criterion: float, comparison: str) -> 
     raise ValueError(f"unsupported review comparison: {comparison}")
 ```
 
-- [ ] **Step 4: Build actual character and review pressure projections**
+- [x] **Step 4: Build actual character and review pressure projections**
 
 Replace `_build_trait_map` with these focused builders:
 
@@ -2696,7 +2696,7 @@ In `build_final_review_decision_brief`, replace `trait_map` with:
 "review_pressure": _build_review_pressure(internal_observations),
 ```
 
-- [ ] **Step 5: Run GREEN and focused Python regression**
+- [x] **Step 5: Run GREEN and focused Python regression**
 
 Run:
 
@@ -2708,7 +2708,7 @@ git diff --check
 
 Expected: 22 Decision Brief tests pass; compile and diff check exit 0.
 
-- [ ] **Step 6: Commit the Python contract unit**
+- [x] **Step 6: Commit the Python contract unit**
 
 Stage only the service and Decision Brief tests, confirm the protected registry is absent from cached names, then commit:
 
@@ -2735,7 +2735,7 @@ git commit -m "Final Review 실제 성격과 관리 압력 계약 도입"
 - Produces: `DecisionBriefCharacter({ characterItems, pressureItems })`.
 - Removes: `TraitAxis`, `splitMeasuredSegments`, `PortfolioTraitMap`, `brief.trait_map`.
 
-- [ ] **Step 1: Write failing React/fallback source-contract tests**
+- [x] **Step 1: Write failing React/fallback source-contract tests**
 
 Replace `test_final_review_trait_map_breaks_on_unmeasured_axis` in `tests/test_service_contracts.py` with:
 
@@ -2779,7 +2779,7 @@ def test_character_profile_keeps_market_context_layout_and_responsive_order(self
     self.assertNotIn("83.3 / 100", source)
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -2793,7 +2793,7 @@ Run:
 
 Expected: failures/errors because `DecisionBriefCharacter.tsx`, new section token and fallback fields do not exist and old radar remains.
 
-- [ ] **Step 3: Replace TypeScript trait types with the approved contract**
+- [x] **Step 3: Replace TypeScript trait types with the approved contract**
 
 In `decisionBriefTypes.ts`, delete `TraitAxis` and `trait_map`; add:
 
@@ -2835,7 +2835,7 @@ character_profile: { items: CharacterProfileItem[] }
 review_pressure: { items: ReviewPressureItem[] }
 ```
 
-- [ ] **Step 4: Create the focused character presentation owner**
+- [x] **Step 4: Create the focused character presentation owner**
 
 Create `DecisionBriefCharacter.tsx`:
 
@@ -2902,7 +2902,7 @@ export function DecisionBriefCharacter({
 }
 ```
 
-- [ ] **Step 5: Wire the workspace and remove the radar**
+- [x] **Step 5: Wire the workspace and remove the radar**
 
 In `DecisionBriefWorkspace.tsx`, replace the chart import and section function with:
 
@@ -2928,7 +2928,7 @@ function PortfolioCharacterSection({ brief }: { brief: DecisionBrief }) {
 
 Replace `<PortfolioTraitMap brief={decisionBrief} />` with `<PortfolioCharacterSection brief={decisionBrief} />`. In `DecisionBriefCharts.tsx`, delete `TraitAxis` import and all code from `splitMeasuredSegments` through `PortfolioTraitMap`; keep cumulative and underwater chart code unchanged.
 
-- [ ] **Step 6: Implement responsive visual contract**
+- [x] **Step 6: Implement responsive visual contract**
 
 Delete `.db-trait-*` radar/list rules and add:
 
@@ -2989,7 +2989,7 @@ Delete `.db-trait-*` radar/list rules and add:
 
 At `max-width: 760px`, set `.db-character-layout { grid-template-columns: 1fr; }`. At `max-width: 460px`, set `.db-character-list { grid-template-columns: 1fr; }`. Apply `overflow-wrap: anywhere` to card copy and values.
 
-- [ ] **Step 7: Synchronize the Streamlit fallback**
+- [x] **Step 7: Synchronize the Streamlit fallback**
 
 In `_render_final_review_decision_brief_fallback`, replace `trait_map` and its dataframe with:
 
@@ -3024,7 +3024,7 @@ pressure_rows = [
 st.dataframe(pd.DataFrame(pressure_rows), width="stretch", hide_index=True)
 ```
 
-- [ ] **Step 8: Run GREEN, focused regression and production build**
+- [x] **Step 8: Run GREEN, focused regression and production build**
 
 Run:
 
@@ -3042,9 +3042,9 @@ npm run build --prefix app/web/components/final_review_investment_report/fronten
 git diff --check
 ```
 
-Expected: 119 focused tests pass, Vite transforms 177 modules after adding the new component, compile and diff check exit 0.
+Expected: 120 focused tests pass, Vite transforms 177 modules after adding the new component, compile and diff check exit 0.
 
-- [ ] **Step 9: Commit the presentation unit**
+- [x] **Step 9: Commit the presentation unit**
 
 Stage only React source, fallback, related tests and tracked build output. Verify registry/run history/screenshots are excluded, then commit:
 
@@ -3063,7 +3063,7 @@ git commit -m "Final Review 실제 성격과 관리 압력 UI 분리"
 **Interfaces:**
 - Verifies current Python payload and React/fallback presentation; no new product contract.
 
-- [ ] **Step 1: Run desktop Browser QA on the current GRS candidate**
+- [x] **Step 1: Run desktop Browser QA on the current GRS candidate**
 
 Open `Backtest > Final Review` without clicking the save CTA. Verify:
 
@@ -3073,11 +3073,11 @@ Open `Backtest > Final Review` without clicking the save CTA. Verify:
 - no `83.3 / 100`, radar polygon, aggregate score or generic `미측정` remains in the character section;
 - chart hover and prior Final Review decision controls still work.
 
-- [ ] **Step 2: Run 760px responsive Browser QA**
+- [x] **Step 2: Run 760px responsive Browser QA**
 
 Set temporary viewport to `760×900`, verify component/document horizontal overflow is 0, character panel precedes pressure panel in one column, character cards remain 2 columns until 460px, long summaries wrap, and decision controls remain visible. Save `qa-final-review-character-pressure-760.png` as a generated artifact, then reset viewport. Do not click Final Review save.
 
-- [ ] **Step 3: Synchronize durable and task documentation**
+- [x] **Step 3: Synchronize durable and task documentation**
 
 Record:
 
@@ -3088,7 +3088,7 @@ Record:
 - `BACKTEST_UI_FLOW.md`: actual character appears independently of review criterion, pressure is a separate comparison surface;
 - root logs: 3–5 line milestone and next review location only.
 
-- [ ] **Step 4: Run fresh completion verification**
+- [x] **Step 4: Run fresh completion verification**
 
 Run:
 
@@ -3107,9 +3107,9 @@ git diff --check
 git status --short
 ```
 
-Expected: 119 tests pass, Vite transforms 177 modules, compile/diff check exit 0; only protected registry, run history and generated artifacts remain outside the staged doc set.
+Expected: 120 tests pass, Vite transforms 177 modules, compile/diff check exit 0; only protected registry, run history and generated artifacts remain outside the staged doc set.
 
-- [ ] **Step 5: Commit closeout docs**
+- [x] **Step 5: Commit closeout docs**
 
 Stage only the listed docs, verify protected/generated paths are excluded, then commit:
 

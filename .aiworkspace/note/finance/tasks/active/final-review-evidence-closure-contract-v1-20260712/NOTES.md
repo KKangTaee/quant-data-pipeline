@@ -94,3 +94,11 @@
 - 누적 성과는 관측 시작일을 100으로 rebasing한 index다. X축은 실제 관측 날짜, Y축은 index 값을 표시하며 hover는 같은 날짜의 후보와 Benchmark 값을 함께 읽는다.
 - Underwater는 현재 값이 이전 running peak보다 얼마나 낮은지를 뜻한다. 0%는 이전 최고점 회복, 음수는 최고점 대비 하락률이며 percent scale의 상단은 정확히 0%로 고정했다.
 - chart hover는 React local presentation state다. Python curve, exact-common alignment, running-peak 계산, Gate, route, registry append에는 영향을 주지 않는다.
+
+## 2026-07-16 Portfolio Character And Review Pressure Separation
+
+- 포트폴리오의 실제 성격은 review criterion 유무와 독립적으로 관측값을 먼저 보여준다. current GRS는 집중 100.00%, 최대 낙폭 -12.43%, 평균 회전율 3.20%, 비용 가정 10.00 bps가 관측되며 국면 의존만 structured evidence가 없다.
+- 관리 압력은 `within_limit / exceeds_limit / criterion_missing / evidence_missing`을 분리한다. criterion이 없다는 사실은 데이터가 없다는 뜻이 아니며, raw value를 숨기지 않는다.
+- drawdown은 profile의 `max_drawdown_review_pct`를 우선하고 legacy `mdd_review_line`을 alias로 읽는다. 화면에는 signed 값과 관리선을 유지하되 비교와 차이는 절댓값 기준이다.
+- `one_way_cost_bps`는 거래비용 가정이지 허용 한계가 아니므로 cost review criterion으로 승격하지 않는다. turnover와 cost의 별도 criterion이 없으면 `기준 미설정`이 정상이다.
+- Python이 분류·비교·상태를 소유하고 React/Streamlit fallback은 `character_profile`과 `review_pressure`를 표현만 한다. Gate, route, persistence, Monitoring snapshot은 변경하지 않았다.
