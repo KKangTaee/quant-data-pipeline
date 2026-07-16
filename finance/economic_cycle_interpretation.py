@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import date, datetime
 
 REASON_LABELS = {
     "NOT_COLLECTED": "필수 지표가 아직 수집되지 않았습니다.",
@@ -56,16 +57,29 @@ ASSET_CONTEXT = {
         },
         "change_condition": "생산·고용과 금융여건이 같은 방향으로 개선되고 물가 부담이 낮아지는지 확인합니다.",
     },
-    "gold_dollar": {
-        "label": "금·달러",
-        "summary_subject": "금·달러의 방어 맥락",
+    "gold": {
+        "label": "금",
+        "summary_subject": "금의 방어 맥락",
+        "price_symbol": "GC=F",
         "orientations": {
             "activity_score": -1,
             "labor_income_score": -1,
             "financial_leading_score": -1,
             "inflation_policy_score": 1,
         },
-        "change_condition": "위험회피·실질금리·정책 불확실성 중 어느 신호가 우세해지는지 확인합니다.",
+        "change_condition": "경제 배경과 금 가격이 같은 방향으로 확인되는지 점검합니다.",
+    },
+    "dollar": {
+        "label": "달러",
+        "summary_subject": "달러 환경",
+        "price_symbol": "DX-Y.NYB",
+        "orientations": {
+            "activity_score": 1,
+            "labor_income_score": 1,
+            "financial_leading_score": -1,
+            "inflation_policy_score": 1,
+        },
+        "change_condition": "미국 성장·정책 배경과 달러인덱스 가격이 같은 방향인지 확인합니다.",
     },
     "commodities": {
         "label": "원자재",
@@ -85,6 +99,20 @@ ASSESSMENT_LABELS = {
     "BURDEN": "부담",
     "MIXED": "혼재",
     "INSUFFICIENT": "자료 부족",
+}
+
+PRICE_STATUS_LABELS = {
+    "RISING": "상승 확인",
+    "FALLING": "하락 확인",
+    "MIXED": "방향 혼재",
+    "UNAVAILABLE": "자료 부족",
+}
+
+ALIGNMENT_LABELS = {
+    "ALIGNED": "배경과 가격 일치",
+    "DIVERGENCE": "배경과 가격 불일치",
+    "MIXED": "종합 혼재",
+    "PRICE_PENDING": "가격 확인 대기",
 }
 
 
@@ -201,9 +229,117 @@ def _display_drivers(
     return ranked[:2]
 
 
+def _date_value(value: object) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value or "").strip()[:10])
+    except ValueError:
+        return None
+
+
+def _unavailable_price_context(
+    symbol: str,
+    *,
+    reason_code: str,
+    as_of_date: date | None = None,
+) -> dict[str, object]:
+    return {
+        "symbol": symbol,
+        "as_of_date": as_of_date.isoformat() if as_of_date else None,
+        "status": "UNAVAILABLE",
+        "status_label": PRICE_STATUS_LABELS["UNAVAILABLE"],
+        "reason_code": reason_code,
+        "returns": {
+            "one_week": None,
+            "one_month": None,
+            "three_months": None,
+        },
+        "source_basis": "stored continuous futures daily OHLCV",
+    }
+
+
+def _price_context(
+    symbol: str,
+    price_rows: Sequence[Mapping[str, object]],
+    *,
+    reference_date: object = None,
+) -> dict[str, object]:
+    by_date: dict[date, dict[str, object]] = {}
+    for raw in price_rows:
+        if str(raw.get("provider_symbol") or "").strip().upper() != symbol:
+            continue
+        candle_date = _date_value(raw.get("candle_time_utc"))
+        try:
+            close = float(raw.get("close"))
+        except (TypeError, ValueError):
+            continue
+        if candle_date is None or close <= 0:
+            continue
+        by_date[candle_date] = {"date": candle_date, "close": close, **dict(raw)}
+
+    ordered = [by_date[key] for key in sorted(by_date)]
+    if not ordered:
+        return _unavailable_price_context(symbol, reason_code="NOT_COLLECTED")
+    latest_date = ordered[-1]["date"]
+    if len(ordered) < 64:
+        return _unavailable_price_context(
+            symbol,
+            reason_code="INSUFFICIENT_HISTORY",
+            as_of_date=latest_date,
+        )
+    resolved_reference = _date_value(reference_date) or date.today()
+    if (resolved_reference - latest_date).days >= 7:
+        return _unavailable_price_context(
+            symbol,
+            reason_code="STALE",
+            as_of_date=latest_date,
+        )
+
+    latest_close = float(ordered[-1]["close"])
+    returns = {
+        "one_week": latest_close / float(ordered[-6]["close"]) - 1.0,
+        "one_month": latest_close / float(ordered[-22]["close"]) - 1.0,
+        "three_months": latest_close / float(ordered[-64]["close"]) - 1.0,
+    }
+    if returns["one_month"] > 0.01 and returns["three_months"] > 0.01:
+        status = "RISING"
+    elif returns["one_month"] < -0.01 and returns["three_months"] < -0.01:
+        status = "FALLING"
+    else:
+        status = "MIXED"
+    return {
+        "symbol": symbol,
+        "as_of_date": latest_date.isoformat(),
+        "status": status,
+        "status_label": PRICE_STATUS_LABELS[status],
+        "reason_code": None,
+        "returns": returns,
+        "source_basis": "stored continuous futures daily OHLCV",
+    }
+
+
+def _alignment(assessment: str, price_status: str) -> str:
+    if price_status == "UNAVAILABLE":
+        return "PRICE_PENDING"
+    if assessment in {"MIXED", "INSUFFICIENT"} or price_status == "MIXED":
+        return "MIXED"
+    if (assessment, price_status) in {
+        ("FAVORABLE", "RISING"),
+        ("BURDEN", "FALLING"),
+    }:
+        return "ALIGNED"
+    return "DIVERGENCE"
+
+
 def build_market_implications(
     horizons: Sequence[Mapping[str, object]],
     evidence: Sequence[Mapping[str, object]],
+    price_rows: Sequence[Mapping[str, object]] = (),
+    *,
+    price_reference_date: object = None,
 ) -> list[dict[str, object]]:
     """Translate cycle evidence into conditional asset context, not return forecasts."""
 
@@ -287,5 +423,21 @@ def build_market_implications(
                 "is_directional_forecast": False,
             }
         )
+
+        price_symbol = str(config.get("price_symbol") or "")
+        if price_symbol:
+            price_context = _price_context(
+                price_symbol,
+                price_rows,
+                reference_date=price_reference_date,
+            )
+            alignment = _alignment(assessment, str(price_context["status"]))
+            implications[-1].update(
+                {
+                    "price_context": price_context,
+                    "alignment": alignment,
+                    "alignment_label": ALIGNMENT_LABELS[alignment],
+                }
+            )
 
     return implications

@@ -267,19 +267,22 @@ def test_market_implications_are_conditional_context_not_directional_predictions
     assert [item["asset_group"] for item in implications] == [
         "rates",
         "equities",
-        "gold_dollar",
+        "gold",
+        "dollar",
         "commodities",
     ]
     assert [item["assessment"] for item in implications] == [
         "MIXED",
         "BURDEN",
         "FAVORABLE",
+        "BURDEN",
         "MIXED",
     ]
     assert [item["assessment_label"] for item in implications] == [
         "혼재",
         "부담",
         "우호",
+        "부담",
         "혼재",
     ]
     assert all(len(item["drivers"]) == 2 for item in implications)
@@ -289,7 +292,7 @@ def test_market_implications_are_conditional_context_not_directional_predictions
     } == {"FAVORABLE", "BURDEN"}
     assert {
         driver["impact"]
-        for driver in implications[3]["drivers"]
+        for driver in implications[4]["drivers"]
     } == {"FAVORABLE", "BURDEN"}
     assert all(item["change_condition"] for item in implications)
     assert all(item["is_directional_forecast"] is False for item in implications)
