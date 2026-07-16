@@ -930,9 +930,33 @@ def _build_findings(
 def _build_monitoring_conditions(
     *,
     paper_observation: dict[str, Any],
+    observations: list[dict[str, Any]],
+    behavior_period: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[str]]:
+    """Project complete stored triggers, then derive only explicit safe fallbacks."""
+
+    cadence_labels = {
+        "monthly_or_rebalance_review": "월간 또는 리밸런싱 시점",
+        "monthly": "월간",
+        "quarterly": "분기",
+        "rebalance": "리밸런싱 시점",
+    }
+    stored_cadence = str(paper_observation.get("review_cadence") or "").strip()
+    if stored_cadence:
+        cadence = cadence_labels.get(stored_cadence, stored_cadence)
+    else:
+        frequency = str(behavior_period.get("frequency") or "").strip().lower()
+        cadence = {"monthly": "월간", "quarterly": "분기"}.get(frequency, "")
+
     conditions: list[dict[str, Any]] = []
     unstructured: list[str] = []
+    covered_semantics: set[str] = set()
+    semantic_ids = {
+        "drawdown-recovery-path": "drawdown",
+        "monitoring:drawdown-breach": "drawdown",
+        "benchmark-relative-terminal": "benchmark",
+        "monitoring:benchmark-underperformance": "benchmark",
+    }
     for raw_row in list(paper_observation.get("review_trigger_details") or []):
         row = _as_dict(raw_row)
         observation_id = str(row.get("observation_id") or "").strip()
@@ -975,9 +999,132 @@ def _build_monitoring_conditions(
                 "primary_role": "monitoring",
             }
         )
+        semantic = semantic_ids.get(observation_id)
+        if semantic:
+            covered_semantics.add(semantic)
         if len(conditions) == 4:
             break
-    return conditions, unstructured
+
+    observations_by_id = {
+        str(row.get("observation_id") or "").strip(): row
+        for row in observations
+        if str(row.get("observation_id") or "").strip()
+    }
+
+    drawdown = observations_by_id.get("drawdown-recovery-path", {})
+    drawdown_measured = _optional_float(drawdown.get("measured_value"))
+    drawdown_comparator = _optional_float(drawdown.get("threshold_or_comparator"))
+    drawdown_evidence = [
+        str(value)
+        for value in list(drawdown.get("evidence_refs") or [])
+        if str(value).strip()
+    ]
+    drawdown_as_of = _date_text(drawdown.get("as_of"))
+    if (
+        len(conditions) < 4
+        and "drawdown" not in covered_semantics
+        and drawdown_measured is not None
+        and drawdown_comparator is not None
+        and str(drawdown.get("_comparison") or "") == "absolute_less_or_equal"
+        and cadence
+        and drawdown_evidence
+        and drawdown_as_of
+    ):
+        display_value = str(
+            drawdown.get("display_value") or _display_percent(drawdown_measured)
+        )
+        criterion_display = _display_percent(drawdown_comparator)
+        conditions.append(
+            {
+                "observation_id": "monitoring:drawdown-breach",
+                "root_issue_id": None,
+                "title": "낙폭 관리선 이탈 재검토",
+                "interpretation": (
+                    "최대 낙폭이 관리선을 벗어나면 손실 감내 조건과 "
+                    "계속 추적 thesis를 다시 검토합니다."
+                ),
+                "measured_value": drawdown_measured,
+                "display_value": display_value,
+                "threshold_or_comparator": drawdown_comparator,
+                "evidence_refs": drawdown_evidence,
+                "as_of": drawdown_as_of,
+                "observation": f"현재 최대 underwater 낙폭 {display_value}",
+                "threshold": f"최대 낙폭이 {criterion_display} 이하로 악화",
+                "cadence": cadence,
+                "re_review_action": (
+                    "손실 감내 조건과 계속 추적 thesis를 다시 검토합니다."
+                ),
+                "primary_role": "monitoring",
+            }
+        )
+        covered_semantics.add("drawdown")
+
+    benchmark = observations_by_id.get("benchmark-relative-terminal", {})
+    benchmark_measured = _optional_float(benchmark.get("measured_value"))
+    benchmark_comparator = _optional_float(benchmark.get("threshold_or_comparator"))
+    benchmark_evidence = [
+        str(value)
+        for value in list(benchmark.get("evidence_refs") or [])
+        if str(value).strip()
+    ]
+    benchmark_as_of = _date_text(benchmark.get("as_of"))
+    if (
+        len(conditions) < 4
+        and "benchmark" not in covered_semantics
+        and benchmark_measured is not None
+        and benchmark_comparator is not None
+        and str(benchmark.get("_comparison") or "") == "greater_or_equal"
+        and cadence
+        and benchmark_evidence
+        and benchmark_as_of
+    ):
+        display_value = str(
+            benchmark.get("display_value") or f"{benchmark_measured:+.2f}%p"
+        )
+        conditions.append(
+            {
+                "observation_id": "monitoring:benchmark-underperformance",
+                "root_issue_id": None,
+                "title": "Benchmark 상대 성과 재검토",
+                "interpretation": (
+                    "동일 기간 상대 성과가 0%p 이하로 내려가면 "
+                    "Benchmark 대비 추적 가치를 다시 검토합니다."
+                ),
+                "measured_value": benchmark_measured,
+                "display_value": display_value,
+                "threshold_or_comparator": benchmark_comparator,
+                "evidence_refs": benchmark_evidence,
+                "as_of": benchmark_as_of,
+                "observation": (
+                    f"현재 동일 기간 Benchmark 상대 성과 {display_value}"
+                ),
+                "threshold": (
+                    "동일 기간 Benchmark 상대 성과가 "
+                    f"{benchmark_comparator:.2f}%p 이하"
+                ),
+                "cadence": cadence,
+                "re_review_action": (
+                    "Benchmark 대비 추적 가치와 최종 route를 다시 검토합니다."
+                ),
+                "primary_role": "monitoring",
+            }
+        )
+        covered_semantics.add("benchmark")
+
+    for raw_trigger in list(paper_observation.get("review_triggers") or []):
+        trigger = str(raw_trigger or "").strip()
+        normalized = trigger.lower()
+        if not trigger:
+            continue
+        if "drawdown" in covered_semantics and (
+            "mdd" in normalized or "drawdown" in normalized
+        ):
+            continue
+        if "benchmark" in covered_semantics and "benchmark" in normalized:
+            continue
+        unstructured.append(trigger)
+
+    return conditions[:4], list(dict.fromkeys(unstructured))
 
 
 def _build_thesis(
@@ -1034,6 +1181,8 @@ def build_final_review_decision_brief(
     projected_strengths, projected_weaknesses = _build_findings(internal_observations)
     projected_conditions, unstructured_triggers = _build_monitoring_conditions(
         paper_observation=paper_observation,
+        observations=internal_observations,
+        behavior_period=_as_dict(behavior_board.get("period")),
     )
     strengths, weaknesses, monitoring_conditions = _deduplicate_primary_roles(
         strengths=projected_strengths,

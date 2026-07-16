@@ -88,6 +88,23 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
         ] = 105.084
         return inputs
 
+    def _current_monitoring_inputs(self) -> dict[str, object]:
+        inputs = self._current_character_inputs()
+        paper = inputs["paper_observation"]
+        paper.pop("review_trigger_details", None)
+        paper.update(
+            {
+                "review_cadence": "monthly_or_rebalance_review",
+                "review_triggers": [
+                    "CAGR deterioration review",
+                    "MDD expansion review",
+                    "Benchmark-relative underperformance review",
+                    "Data Trust refresh review",
+                ],
+            }
+        )
+        return inputs
+
     def test_decision_brief_has_v1_schema_without_investment_scores(self) -> None:
         brief = self._build()
         serialized = json.dumps(brief, ensure_ascii=False, sort_keys=True)
@@ -418,6 +435,52 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
                 self.assertTrue(condition[key])
             self.assertEqual(condition["primary_role"], "monitoring")
             self.assertNotIn(condition["observation_id"], finding_ids)
+
+    def test_current_grs_derives_drawdown_and_benchmark_monitoring_conditions(self) -> None:
+        brief = self._build(self._current_monitoring_inputs())
+        conditions = {
+            row["observation_id"]: row for row in brief["monitoring_conditions"]
+        }
+
+        self.assertEqual(
+            set(conditions),
+            {
+                "monitoring:drawdown-breach",
+                "monitoring:benchmark-underperformance",
+            },
+        )
+        drawdown = conditions["monitoring:drawdown-breach"]
+        self.assertEqual(drawdown["measured_value"], -12.43)
+        self.assertEqual(drawdown["threshold_or_comparator"], -15.0)
+        self.assertEqual(drawdown["cadence"], "월간 또는 리밸런싱 시점")
+        self.assertIn("-15.00%", drawdown["threshold"])
+        self.assertEqual(drawdown["evidence_refs"], ["behavior_board.underwater_series"])
+        benchmark = conditions["monitoring:benchmark-underperformance"]
+        self.assertEqual(benchmark["threshold_or_comparator"], 0.0)
+        self.assertIn("0.00%p 이하", benchmark["threshold"])
+        self.assertEqual(
+            benchmark["evidence_refs"],
+            ["behavior_board.cumulative_series", "behavior_board.benchmark_series"],
+        )
+
+    def test_derived_monitoring_conditions_preserve_current_findings(self) -> None:
+        brief = self._build(self._current_monitoring_inputs())
+        findings = {
+            row["observation_id"]
+            for row in [*brief["strengths"], *brief["weaknesses"]]
+        }
+
+        self.assertIn("drawdown-recovery-path", findings)
+        self.assertIn("benchmark-relative-terminal", findings)
+        self.assertIn("concentration-pressure", findings)
+
+    def test_monitoring_producer_does_not_invent_cagr_or_data_trust_thresholds(self) -> None:
+        brief = self._build(self._current_monitoring_inputs())
+        serialized = json.dumps(brief["monitoring_conditions"], ensure_ascii=False)
+
+        self.assertNotIn("CAGR", serialized)
+        self.assertNotIn("Data Trust", serialized)
+        self.assertNotIn("deterioration", serialized)
 
     def test_current_grs_fixture_keeps_2026_06_valuation_in_behavior_series(self) -> None:
         brief = self._build(self._grs_inputs())
