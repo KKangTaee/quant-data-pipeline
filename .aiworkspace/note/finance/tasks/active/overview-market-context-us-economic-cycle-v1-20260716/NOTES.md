@@ -51,3 +51,12 @@ The model estimates a data-defined macro regime with uncertainty. It does not re
 - The main reading order is three four-phase probability cards, 18-month cycle clock, real-economy/forecast-context evidence, conditional market implications, then a 121-month regime ribbon.
 - Model phase and NBER recession are visually and semantically separate. LIMITED months use a hatch, and LIMITED horizons render a reason instead of a fabricated `0%`.
 - The cycle component emits no provider, materialization, refresh, or trading action; 420px CSS stacks the main regions without horizontal scroll.
+
+## 5차 Decisions
+
+- Schema sync succeeded for all three tables and verified the raw/artifact/snapshot unique contracts. Local row count is 0 for each table.
+- `FRED_API_KEY` is absent in this worktree environment. The explicit collection wrapper failed safely before provider/DB mutation, so actual training, replay, and official metadata spot audit were not fabricated.
+- `NOT_MATERIALIZED` maps to a usable `LIMITED` read model with no numeric horizons. This satisfies the approved failure branch; actual model performance remains unknown until official vintages are collected.
+- Browser QA found one real Streamlit selector-state defect: the widget key was reassigned after instantiation. A RED regression test now prevents post-widget assignment and invalid legacy values are removed before widget creation without pre-seeding the key.
+- Existing service contracts that described Market Context as direct valuation-only were updated to the approved outer router. The remaining Sentiment literal-source assertion fails on the pre-existing branch state and is unrelated to this feature.
+- QA screenshot is a generated artifact outside git staging: `/Users/taeho/.codex/qa/economic-cycle/overview-economic-cycle-desktop-20260716.png`.

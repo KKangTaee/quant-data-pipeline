@@ -19,6 +19,46 @@ def test_market_context_mode_order_default_and_unknown_fallback() -> None:
     assert module.normalize_market_context_mode("sp500") == "sp500"
 
 
+def test_mode_selector_never_reassigns_widget_key_after_instantiation() -> None:
+    module = importlib.import_module("app.web.overview.market_context")
+
+    class WidgetState(dict):
+        locked = False
+
+        def __setitem__(self, key, value):
+            if self.locked and key == module.MARKET_CONTEXT_MODE_KEY:
+                raise RuntimeError("widget-owned key cannot be reassigned")
+            super().__setitem__(key, value)
+
+    state = WidgetState()
+
+    def segmented_control(*_args, **_kwargs):
+        assert module.MARKET_CONTEXT_MODE_KEY not in state
+        state.locked = True
+        return "economic_cycle"
+
+    with patch.object(module.st, "segmented_control", side_effect=segmented_control):
+        selected = module.render_market_context_mode_selector(state=state)
+
+    assert selected == "economic_cycle"
+    assert module.MARKET_CONTEXT_MODE_KEY not in state
+
+
+def test_mode_selector_removes_legacy_widget_value_before_instantiation() -> None:
+    module = importlib.import_module("app.web.overview.market_context")
+    state = {module.MARKET_CONTEXT_MODE_KEY: "valuation"}
+
+    def segmented_control(*_args, **kwargs):
+        assert module.MARKET_CONTEXT_MODE_KEY not in state
+        assert kwargs["default"] == "economic_cycle"
+        return "economic_cycle"
+
+    with patch.object(module.st, "segmented_control", side_effect=segmented_control):
+        selected = module.render_market_context_mode_selector(state=state)
+
+    assert selected == "economic_cycle"
+
+
 def test_economic_cycle_mode_renders_only_cycle_surface() -> None:
     module = importlib.import_module("app.web.overview.market_context")
     cycle_renderer = Mock()

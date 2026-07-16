@@ -43,3 +43,18 @@ Last Updated: 2026-07-16
 - `economic_cycle_workbench`: `npm install` completed with 0 vulnerabilities; production build emitted HTML/CSS/JS static assets.
 - `market_context_valuation`: compatibility production build passed with the outer-selector flag.
 - Python compile and `git diff --check`: passed before 4차 closeout.
+
+### 5차 — Actual failure-path, regression, Browser QA, docs
+
+- Schema sync succeeded for `macro_series_vintage_observation`, `economic_cycle_model_artifact`, and `economic_cycle_snapshot`. Verified unique keys are raw `(series_id, observation_date, realtime_start, source)`, artifact `(model_version, trained_through)`, and snapshot `(as_of_date, model_version, run_kind)`; current row counts are all 0.
+- Environment audit found no `FRED_API_KEY`. Explicit vintage collection returned `failed` with `FRED_API_KEY is required; revised CSV cannot substitute for vintages`, before any provider/DB write.
+- Actual DB-only read model returned `economic_cycle_v1`, `LIMITED`, `NOT_MATERIALIZED`, and zero numeric horizons. Live training metrics, official metadata spot checks, and replay idempotence were not fabricated.
+- Initial focused cycle suite: 98 passed with three unrelated `edgar` deprecation warnings. Browser QA then exposed a Streamlit widget-owned session-key reassignment; a RED regression test reproduced it and the selector stopped writing its key before/after widget instantiation.
+- Overview boundary regression after updating seven stale direct-valuation-only contracts: 346 passed, 460 deselected, three warnings when excluding one pre-existing Sentiment literal-source assertion. The full filter leaves only that unrelated assertion failing.
+- Browser desktop verified the exact three-option selector, economic-cycle default, LIMITED copy without percentages, cycle clock, evidence, four conditional market implications, regime ribbon, S&P/U.S.-stock navigation without duplicate selector, and zero console errors.
+- Browser 420x900 verified page and iframe horizontal overflow `0`; method disclosure remained keyboard focusable with visible outline. Final viewport returned to 1280x900.
+- QA screenshot: `/Users/taeho/.codex/qa/economic-cycle/overview-economic-cycle-desktop-20260716.png` (generated, unstaged).
+- Final fresh focused suite: `100 passed, 3 warnings`; Overview/Market Context boundary excluding the unrelated Sentiment assertion: `346 passed, 460 deselected, 3 warnings`.
+- Full Overview/Market Context filter: `1 failed, 346 passed, 459 deselected, 3 warnings`; the only failure is the documented pre-existing Sentiment literal-source assertion.
+- Python compile passed for all economic-cycle modules and the Market Context router. Both economic-cycle and valuation Vite production builds passed.
+- Finance refinement hygiene reported no missing checklist items; UI/engine boundary reported `Hard violations: none`, `Result: PASS`.

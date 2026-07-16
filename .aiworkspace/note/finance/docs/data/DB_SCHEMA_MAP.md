@@ -1,7 +1,7 @@
 # DB Schema Map
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-16
 
 ## 목적
 
@@ -46,6 +46,9 @@ Last Verified: 2026-07-12
 | `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
 | `etf_exposure_snapshot` | ETF holdings 또는 provider aggregate에서 만든 asset class / sector / country / currency exposure summary |
 | `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
+| `macro_series_vintage_observation` | 경제 사이클 17개 FRED/ALFRED series의 observation별 real-time revision interval을 저장. unique key는 `(series_id, observation_date, realtime_start, source)`이고 strict as-of loader가 과거 origin 당시 값을 선택한다 |
+| `economic_cycle_model_artifact` | 경제 사이클 model version과 학습 cutoff, horizon별 parameter/calibration/rolling-origin gate 판정을 저장. unique key는 `(model_version, trained_through)`이다 |
+| `economic_cycle_snapshot` | current/historical replay별 compact 국면 확률·근거·source date를 저장. unique key는 `(as_of_date, model_version, run_kind)`이며 미승인 horizon 숫자는 저장하지 않는다 |
 | `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장. EPS 미발표 최신 월은 price-only `missing` row로 유지 |
 | `nasdaq100_monthly_valuation` | QQQ proxy 월별 price/reconstructed EPS/PER/earnings yield와 weighted coverage, holdings/price basis, blocked reason 저장. `(observation_month, proxy_symbol, source)` unique UPSERT |
 | `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
@@ -92,6 +95,9 @@ Phase 8 source migration closeout 기준으로 production financial statement so
 | alias mapping | provider quote ticker drift를 명시적으로 복구하기 위한 current alias state | `market_symbol_alias` |
 | connector metadata | provider endpoint / parser mapping cache | `etf_provider_source_map` |
 | provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation`, `market_intraday_snapshot`, `market_event_calendar`, `futures_ohlcv`, `futures_market_monitor_run` |
+| raw vintage ledger | source의 real-time revision interval을 보존하는 PIT 원장 | `macro_series_vintage_observation` |
+| model artifact | 재현 가능한 학습 cutoff·parameter·검증·publication 판정 | `economic_cycle_model_artifact` |
+| compact materialized snapshot | 승인된 수치와 제한 사유만 UI 소비 형태로 저장 | `economic_cycle_snapshot` |
 | issue tracking | 반복되는 수집 / coverage 이슈를 운영 판단용으로 누적 | `market_data_issue` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |

@@ -99,6 +99,30 @@ yfinance
 
 ## Overview market intelligence 흐름
 
+### U.S. economic cycle regime forecast
+
+```text
+FRED/ALFRED observations API output_type=2 + FRED_API_KEY
+  -> finance.data.economic_cycle_vintages
+  -> finance_meta.macro_series_vintage_observation
+  -> finance.loaders.economic_cycle strict as-of selection
+  -> finance.economic_cycle_features / economic_cycle_labels
+  -> finance.economic_cycle_model / economic_cycle_validation
+  -> finance.economic_cycle_pipeline
+  -> finance_meta.economic_cycle_model_artifact
+  -> finance_meta.economic_cycle_snapshot
+  -> app.services.overview.economic_cycle
+  -> Workspace > Overview > 시장 맥락 > 경제 사이클 React workbench
+```
+
+의미:
+
+- 17개 고정 catalog는 real-time revision interval을 보존하고, 각 forecast origin은 당시 발표되어 유효한 row만 읽는다.
+- h0 label/model은 activity/labor 중심이며 h1/h2는 financial-leading/inflation-policy context를 보조 입력으로 사용할 수 있다.
+- h0/h1/h2는 각각 rolling-origin gate를 통과한 경우에만 네 국면 숫자 확률을 materialize한다. 미승인 horizon은 `LIMITED`와 reason만 남는다.
+- 수집, 학습/검증, current materialization, 10년 replay는 명시적인 backend 실행이다. Overview render는 compact snapshot/history DB row만 읽고 provider나 model job을 호출하지 않는다.
+- 기존 revised `macro_series_observation`과 달리 이 경로에는 CSV fallback이 없다. `FRED_API_KEY`가 없으면 수집을 실패시키고 latest-good snapshot 또는 `NOT_MATERIALIZED` LIMITED 상태를 유지한다.
+
 ### S&P 500 Market Context valuation
 
 ```text
@@ -433,6 +457,7 @@ CNN Fear & Greed JSON / AAII official historical HTML
 - P2-4 초기 series는 `VIXCLS`, `T10Y3M`, `BAA10Y`다.
 - API key가 있으면 FRED API를 쓰고, 없으면 official `fredgraph.csv` download를 사용한다.
 - Overview sentiment는 `CNN_FEAR_GREED`, CNN component score, `AAII_BULLISH`, `AAII_NEUTRAL`, `AAII_BEARISH`, `AAII_BULL_BEAR_SPREAD`를 같은 long-form table에 저장한다.
+- 이 section의 `macro_series_observation`은 revised-latest context table이라 FRED official CSV fallback을 허용한다. 경제 사이클 학습/replay는 별도 `macro_series_vintage_observation`을 사용하며 key가 없는 CSV fallback을 금지한다.
 - AAII official page는 backend default HTTP client가 interstitial을 받을 수 있어 browser-like document request / TLS impersonation path를 사용한다. 실패하면 값을 꾸미지 않고 job result와 Overview status에 failed / missing state를 남긴다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
 - `load_market_sentiment_snapshot()`은 Overview Sentiment tab에서 latest CNN / AAII context를 읽고, `load_market_sentiment_history()`는 CNN Fear & Greed, AAII bearish / bull-bear spread, CNN 7개 component history를 read model에 제공한다. Overview service는 latest 값의 최근 percentile / min-max range, CNN headline / component / AAII divergence, CNN component latest-vs-previous change context를 계산한다. surface-specific overlay는 Practical Validation / Final Review / Portfolio Monitoring에서도 같은 latest context를 읽는다. 이 context는 trade signal, PASS / BLOCKER, selected-route gate, monitoring signal, live approval, order, auto rebalance가 아니다.

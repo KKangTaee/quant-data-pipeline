@@ -1,6 +1,6 @@
 # Overview Market Context U.S. Economic Cycle V1 Status
 
-Status: Active — 1차~4차 Complete, 5차 Next
+Status: Complete — 1차~5차
 Last Updated: 2026-07-16
 
 ## Progress
@@ -13,15 +13,22 @@ Last Updated: 2026-07-16
 | 2차 Current engine/history | Complete | Leakage-safe transforms/scaling, real-economy labels, h0 Gaussian probabilities, artifact/snapshot persistence |
 | 3차 Forecast/validation | Complete | Direct h1/h2, transition prior, OOF calibration, rolling-origin gates, training/materialization/replay jobs |
 | 4차 Overview UI | Complete | DB-only read model, same-level selector, probability/cycle/evidence/ribbon React workbench |
-| 5차 Actual QA/docs | Not started | — |
+| 5차 Actual QA/docs | Complete | Three schemas/indexes ready; missing key failure branch stayed LIMITED/NOT_MATERIALIZED; desktop/420px Browser and valuation navigation regression passed; durable docs synchronized |
 
-## Current Handoff
+## Final Handoff
 
-- Overall implementation progress: `4/5`.
-- Next task: detailed plan Task 15, actual vintage bootstrap and publication behavior verification.
-- 4차 tests prove the cycle surface reads compact DB rows only, outer modes build only their selected model, LIMITED horizons never render fake percentages, and legacy valuation callers retain their internal selector.
+- Overall implementation progress: `5/5`.
+- Local actual DB: the three schemas and unique/index contracts are ready; all three tables contain 0 rows because `FRED_API_KEY` is not configured.
+- Actual read model: `schema_version=economic_cycle_v1`, `status=LIMITED`, `reason_code=NOT_MATERIALIZED`, numeric horizons `0`.
+- Collection fails before HTTP/write with `FRED_API_KEY is required; revised CSV cannot substitute for vintages`. No threshold, artifact status, or data was hand-edited.
+- Browser QA passed the exact outer selector, economic-cycle default, LIMITED no-number copy, cycle clock/evidence/market implications/ribbon, S&P/U.S.-stock navigation, 420px no-overflow, visible keyboard focus, and zero console errors.
 - Existing revised macro table remains unchanged; S&P 500/U.S.-stock behavior is preserved behind the new same-level selector.
+
+## Optional Follow-up
+
+- Configure `FRED_API_KEY` and run the manual runbook to collect/validate/materialize actual vintage data. The expected outcome may still be horizon-specific `LIMITED` if evidence gates fail.
+- ADS/WEI or multi-country expansion requires a separately approved connector/vintage research task.
 
 ## Completion Rule
 
-Do not mark this task complete after only implementing a current-phase card. Completion requires all five stages, or an explicit user decision to stop with remaining stages documented.
+All five stages are complete. Actual numeric publication remains conditional on official vintage availability and horizon-level validation gates.

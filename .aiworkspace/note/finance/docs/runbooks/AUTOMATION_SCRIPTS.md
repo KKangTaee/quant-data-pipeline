@@ -15,6 +15,9 @@
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
 | `app/jobs/overview_automation.py` | 브라우저 없이 Overview Market Intelligence 수집 job을 cadence / market-hours / lock 기준으로 실행하는 run-once CLI |
+| `app/jobs/ingestion_jobs.py::run_collect_economic_cycle_vintages` | 승인된 17-series FRED/ALFRED vintage catalog를 명시적으로 수집하는 `JobResult` wrapper. `FRED_API_KEY` 필수 |
+| `app/jobs/ingestion_jobs.py::run_materialize_economic_cycle` | provider 호출 없이 approved artifact와 stored vintages로 current compact snapshot을 만드는 명시적 `JobResult` wrapper |
+| `finance/economic_cycle_pipeline.py` | 경제 사이클 train/validate, current materialization, origin-specific month-end replay 함수. CLI scheduler가 아니라 runbook 기반 backend entry |
 
 ## Phase bundle bootstrap
 
@@ -163,6 +166,8 @@ uv run python -m app.jobs.overview_automation --profile browser_safe
 - `browser_safe`는 Overview가 열린 브라우저 세션에서 호출하는 1차 auto refresh profile이며 S&P 500 Daily intraday snapshot만 평가한다.
 - Intraday snapshot은 기본적으로 미국 정규장 시간에만 실행된다.
 - 실행 결과는 각 ingestion job result로 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`에 남고, Data Health가 그 기록을 읽는다.
+
+경제 사이클은 이 scheduled profile에 포함하지 않는다. vintage collection, model validation, current/10년 replay는 [Overview Market Intelligence Runbook](./OVERVIEW_MARKET_INTELLIGENCE.md)의 명시적 backend 절차로만 실행한다.
 
 ## 새 script를 추가할 때 기록 기준
 

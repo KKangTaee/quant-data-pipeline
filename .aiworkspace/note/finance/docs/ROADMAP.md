@@ -7,19 +7,18 @@ Last Verified: 2026-07-16
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-economic-cycle-v1-20260716/`다.
+현재 active task는 없다.
+
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-economic-cycle-v1-20260716/`다.
 
 - 목적: 사용자의 회복·확장·둔화·침체 학습 프레임을 미국 vintage-aware 데이터로 확장해 현재·1개월 후·2개월 후의 네 국면 확률과 근거를 Market Context에 제공한다.
-- 승인 상태: 명세 승인과 상세 구현 계획 작성을 완료했다. 제품 코드 구현은 아직 시작하지 않아 전체 진행률은 `0/5`다.
-- 1차: raw vintage schema/catalog/collector/strict as-of loader.
-- 2차: leakage-safe feature/label/current model과 artifact/snapshot history.
-- 3차: direct +1M/+2M model, transition prior, calibration, rolling-origin publication gate.
-- 4차: `경제 사이클 | S&P 500 | 미국 개별주식` selector와 별도 React visualization.
-- 5차: actual vintage/gate QA, desktop/420px Browser QA, regression, durable docs closeout.
+- 완료: 1차 raw vintage data, 2차 current/history engine, 3차 direct +1M/+2M calibration/publication gate, 4차 same-level selector/React visualization, 5차 actual failure-path/desktop·420px Browser QA/regression/docs까지 `5/5`를 닫았다.
+- actual 상태: schema와 unique/index 계약은 준비됐지만 local `FRED_API_KEY`가 없어 세 table row는 0이며 read model은 `LIMITED/NOT_MATERIALIZED`, numeric horizon은 0개다. 이는 임의 fallback이나 threshold 완화 없이 설계된 완료 상태다.
+- QA: focused economic-cycle `100 passed`, Overview boundary excluding unrelated Sentiment `346 passed`, 두 React production build, desktop/420px navigation/overflow/focus/console QA를 통과했다. 병합 전부터 있던 Sentiment source-contract drift 1건은 별도 unrelated gap으로 남긴다.
 - 완료 경계: 검증을 통과한 horizon만 숫자 확률을 표시한다. 미통과 결과는 threshold 완화 없이 `LIMITED`로 유지한다.
 - 상세 계획: `docs/superpowers/plans/2026-07-16-us-economic-cycle-regime-forecast.md`.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`다.
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`다.
 
 - 목적: taxonomy concept rename 때문에 끊긴 전환분석 Q4/TTM을 동등한 확정 공시 concept family로 복구하고, 직접 공시와 산출값을 화면에서 구분한다.
 - 완료: 1차 mixed-concept Q4 resolver, 2차 per-metric/TTM provenance, 3차 neutral marker/inspector disclosure, 4차 actual/Browser QA와 docs.

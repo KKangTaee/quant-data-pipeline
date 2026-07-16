@@ -6993,7 +6993,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
                 "forbidden": "_legacy._render_overview_market_context_tab",
                 "required": [
                     "render_market_context_header()",
-                    "render_market_context_valuation()",
+                    "render_market_context_mode_selector()",
+                    "render_market_context_content(mode)",
                 ],
             },
             "app/web/overview/market_movers.py": {
@@ -7406,10 +7407,13 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("build_sp500_valuation_read_model", helper_source)
         self.assertIn("render_market_context_valuation_component", helper_source)
 
-    def test_market_context_entrypoint_uses_only_valuation_surface(self) -> None:
+    def test_market_context_entrypoint_uses_only_approved_cycle_valuation_router(self) -> None:
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
 
-        self.assertIn("render_market_context_valuation()", source)
+        self.assertIn("render_market_context_mode_selector()", source)
+        self.assertIn("render_market_context_content(mode)", source)
+        self.assertIn('normalized == "economic_cycle"', source)
+        self.assertIn("valuation_renderer(", source)
         self.assertNotIn("render_macro_context_cockpit", source)
         self.assertNotIn("render_market_context_refresh_bar", source)
         self.assertNotIn("render_market_context_refresh_reflection", source)
@@ -8695,7 +8699,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = source[source.index("def render_market_context_tab"):]
 
         self.assertIn("render_market_context_header()", helper_body)
-        self.assertIn("render_market_context_valuation()", helper_body)
+        self.assertIn("render_market_context_mode_selector()", helper_body)
+        self.assertIn("render_market_context_content(mode)", helper_body)
         self.assertNotIn("render_macro_context_cockpit", helper_body)
         self.assertNotIn("render_market_context_refresh_bar", helper_body)
         self.assertNotIn("render_market_context_refresh_reflection", helper_body)
@@ -8708,7 +8713,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         source = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_body = source[source.index("def render_market_context_tab"):]
 
-        self.assertIn("render_market_context_valuation()", helper_body)
+        self.assertIn("render_market_context_mode_selector()", helper_body)
+        self.assertIn("render_market_context_content(mode)", helper_body)
         self.assertNotIn("render_macro_context_cockpit", helper_body)
         self.assertNotIn("render_market_context_refresh_bar", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
@@ -9173,7 +9179,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         helper_body = Path("app/web/overview/market_context.py").read_text(encoding="utf-8")
         helper_body = helper_body[helper_body.index("def render_market_context_tab"):]
 
-        self.assertIn("render_market_context_valuation()", helper_body)
+        self.assertIn("render_market_context_mode_selector()", helper_body)
+        self.assertIn("render_market_context_content(mode)", helper_body)
         self.assertNotIn("_legacy._render_overview_historical_analog_repair_action(cockpit_model)", helper_body)
         self.assertNotIn("_render_overview_historical_analog_controls()", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
@@ -9195,7 +9202,8 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("pattern_window=str(initial_analog_controls", helper_body)
         self.assertNotIn("as_of_date=analog_controls", helper_body)
         self.assertNotIn("pattern_window=str(analog_controls", helper_body)
-        self.assertIn("render_market_context_valuation()", helper_body)
+        self.assertIn("render_market_context_mode_selector()", helper_body)
+        self.assertIn("render_market_context_content(mode)", helper_body)
         self.assertNotIn("render_macro_context_cockpit", helper_body)
         self.assertNotIn("render_macro_context_reading_flow(", helper_body)
 
@@ -10038,7 +10046,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn(
-            "S&P 500 또는 미국 개별주식의 현재 멀티플과 상대가치 시나리오를 확인합니다.",
+            "미국 경제사이클과 S&P 500·개별주식의 시장 맥락을 나란히 확인합니다.",
             dashboard_source,
         )
         self.assertIn("미국 개별주식", component_source)

@@ -23,6 +23,13 @@ Last Updated: 2026-07-16
 7. UI는 snapshot/history DB read만 수행하며 provider fetch, training, materialization, registry write를 하지 않는다.
 8. 경제 사이클 React component는 기존 valuation React component와 분리한다.
 
+## Actual Publication Outcome
+
+- Local schema와 business-key index는 준비됐다.
+- Local `FRED_API_KEY` 부재 때문에 실제 vintage rows/artifact/snapshot은 아직 materialize되지 않았다.
+- 이 상태의 승인된 화면 결과는 `LIMITED/NOT_MATERIALIZED`이며 current/+1M/+2M 숫자를 숨긴다. 이는 구현 미완료가 아니라 명세의 failure/publication contract를 실제 환경에서 확인한 결과다.
+- key와 actual data가 준비돼도 각 horizon이 rolling-origin gate를 통과하기 전에는 numeric probability를 공개하지 않는다.
+
 ## Authoritative Detail
 
 전체 rationale, data roles, statistical semantics, visualization, limitations는 [`docs/superpowers/specs/2026-07-16-us-economic-cycle-regime-forecast-design.md`](../../../../../../docs/superpowers/specs/2026-07-16-us-economic-cycle-regime-forecast-design.md)를 따른다. 구현 중 설계 변경이 필요하면 코드보다 명세와 사용자 재승인이 먼저다.

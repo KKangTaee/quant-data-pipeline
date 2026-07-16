@@ -73,10 +73,14 @@
 - `validation-efficacy-gate-policy-refinement-v2` 이후 temporal / OOS / regime non-PASS row는 Final Review selected-route gate evidence에도 병합된다. `REVIEW`는 hold / re-review 요구이고, `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker다.
 - `look-through-exposure-board-v1` 이후 holdings / exposure snapshot은 compact board로만 workflow에 전달된다.
   이 board는 1차 ETF holdings / exposure 기준이며, ETF-of-ETF 2차 look-through는 아직 보장하지 않는다.
-- `macro_series_observation`은 FRED observation date 기준 market-context series다.
-  FRED API key가 없으면 official CSV download를 사용하며, Practical Validation에서는 최신 관측값과 staleness를 함께 봐야 한다.
-  vintage / revision point-in-time까지 보장하는 ALFRED 계층은 아직 구현하지 않았다.
-  Macro freshness threshold는 기존 Practical Validation 기준인 10일을 유지한다.
+- `macro_series_observation`은 FRED observation date 기준 revised-latest market-context series다.
+  FRED API key가 없으면 official CSV download를 사용하며, Practical Validation에서는 최신 관측값과 staleness를 함께 봐야 한다. 이 table 자체는 strict historical PIT evidence가 아니다.
+- 경제 사이클 전용 `macro_series_vintage_observation`은 FRED/ALFRED `output_type=2`의 `realtime_start` / `realtime_end` revision interval을 보존한다.
+  strict loader는 `realtime_start <= forecast origin <= realtime_end`인 row만 선택하므로 이후 발표·수정값을 과거 origin에 소급하지 않는다.
+- 경제 사이클 feature scaling은 expanding history, calibration/validation은 rolling-origin OOF만 사용한다.
+  retrospective label은 activity/labor와 해당 origin에 eligible한 `USREC`만 사용해 financial/inflation 변수가 현재 국면 의미를 바꾸지 못하게 한다.
+- `FRED_API_KEY`가 없으면 경제 사이클 vintage 수집은 실패한다. revised CSV를 training/replay substitute로 사용하거나 publication threshold를 낮추지 않는다.
+  기존 revised macro context의 freshness threshold는 Practical Validation 기준인 10일을 유지한다.
 
 ## Fundamentals / factors
 

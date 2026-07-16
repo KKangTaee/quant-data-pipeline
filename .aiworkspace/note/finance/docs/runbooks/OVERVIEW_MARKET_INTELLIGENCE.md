@@ -1,7 +1,7 @@
 # Overview Market Intelligence Runbook
 
 Status: Active
-Last Verified: 2026-07-13
+Last Verified: 2026-07-16
 
 ## Purpose
 
@@ -17,6 +17,7 @@ Last Verified: 2026-07-13
 - CNN Fear & Greed / AAII bearish sentiment context를 갱신하거나 freshness를 확인해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
 - Market Context의 S&P/Nasdaq valuation source와 coverage gate를 갱신할 때
+- Market Context 경제 사이클 vintage를 수집하고 학습·검증·current/10년 replay snapshot을 명시적으로 materialize할 때
 - 브라우저를 켜지 않고 scheduled refresh runner를 cron / launchd / 외부 automation으로 호출하고 싶을 때
 
 ## App Startup
@@ -32,6 +33,63 @@ http://localhost:8501
 ```
 
 이미 포트가 사용 중이면 다른 포트를 지정한다.
+
+## Economic Cycle Vintage / Model Refresh
+
+이 작업은 화면 render나 unattended Overview scheduler가 실행하지 않는다. 운영자가 `FRED_API_KEY`를 설정하고 backend에서 명시적으로 실행한 뒤, `Workspace > Overview > Market Context > 경제 사이클`은 저장된 compact snapshot만 읽는다.
+
+### 1. Prerequisite와 schema
+
+```bash
+export FRED_API_KEY='<local secret>'
+uv run python -c "from finance.data.economic_cycle_vintages import ensure_economic_cycle_vintage_schema; from finance.data.economic_cycle_results import ensure_economic_cycle_result_schemas; ensure_economic_cycle_vintage_schema(); ensure_economic_cycle_result_schemas(); print('economic-cycle schemas ready')"
+```
+
+- credential과 raw provider payload를 문서, run history, commit에 남기지 않는다.
+- 생성 대상은 `macro_series_vintage_observation`, `economic_cycle_model_artifact`, `economic_cycle_snapshot` 세 table이다.
+- `FRED_API_KEY`가 없으면 vintage collection은 `failed`여야 한다. revised FRED CSV로 대체하지 않는다.
+
+### 2. Locked 17-series vintage collection
+
+```bash
+uv run python -c "from app.jobs.ingestion_jobs import run_collect_economic_cycle_vintages; print(run_collect_economic_cycle_vintages())"
+```
+
+확인할 내용:
+
+- `source_mode=fred_output_type_2`와 series별 row/date coverage
+- raw unique key `(series_id, observation_date, realtime_start, source)`
+- 동일 범위 재실행 뒤 business row 수가 증가하지 않는지
+- `.`/non-finite value가 0이 아니라 `MISSING_VALUE` row로 남는지
+
+### 3. Train, validate, current materialization
+
+아래 날짜는 latest fully available month에 맞게 운영자가 지정한다.
+
+```bash
+uv run python -c "from finance.economic_cycle_pipeline import train_validate_economic_cycle_model, materialize_economic_cycle_snapshot; trained_through='YYYY-MM-DD'; as_of_date='YYYY-MM-DD'; result=train_validate_economic_cycle_model(trained_through=trained_through); print(result['model_version'], result['publication_status']); print(materialize_economic_cycle_snapshot(as_of_date=as_of_date, model_version=result['model_version'], artifact_row=result['artifact_row']))"
+```
+
+- h0/h1/h2별 origin count, phase support, recession episode, complete-feature ratio, Brier, log loss, ECE, persistence/historical-transition baseline, reason code를 확인한다.
+- horizon별 gate를 모두 통과한 경우에만 숫자 확률이 snapshot에 들어간다. 일부 horizon만 실패하면 나머지는 유지하고 실패 horizon만 `LIMITED`로 저장한다.
+- validation metadata 누락이나 실행 오류가 있으면 latest approved artifact/snapshot을 ERROR row로 덮지 않는다.
+
+### 4. Ten-year month-end replay와 idempotence
+
+```bash
+uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cycle_history; print(replay_economic_cycle_history(start_date='YYYY-MM-DD', end_date='YYYY-MM-DD'))"
+```
+
+- 각 origin은 직전 month-end까지 학습한 origin-specific artifact와 그 origin 당시 eligible vintage를 사용한다.
+- 같은 날짜 범위를 한 번 더 실행하고 `(as_of_date, model_version, run_kind)` business key가 중복되지 않는지 확인한다.
+- payroll series 한 origin과 recession-era 한 origin을 표본으로 골라 stored eligible `realtime_start/realtime_end`가 official FRED/ALFRED response metadata와 일치하는지 확인한다.
+
+### 5. Failure / recovery
+
+- `FRED_API_KEY` 부재: 수집을 중단하고 UI의 `NOT_MATERIALIZED` 또는 latest-good LIMITED/READY snapshot을 유지한다.
+- sparse phase/coverage 또는 baseline 성능 미달: 해당 horizon을 `LIMITED`로 둔다. threshold를 낮추거나 artifact status를 손으로 바꾸지 않는다.
+- stale/vintage gap: missing series/date/revision interval을 공식 API에서 보강한 뒤 collection부터 재실행한다.
+- 화면은 run/job/row 진단 panel이 아니다. 운영 근거는 backend 결과와 DB audit에서 확인하고 사용자는 국면 확률, evidence, source date, 제한 사유를 읽는다.
 
 ## Valuation Refresh
 

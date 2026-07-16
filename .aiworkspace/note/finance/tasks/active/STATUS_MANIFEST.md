@@ -7,14 +7,15 @@ Last Verified: 2026-07-16
 
 Current active task:
 
-- `overview-market-context-us-economic-cycle-v1-20260716` — specification approved, detailed 1차~5차 implementation plan complete, implementation `0/5`
+- none
 
 Latest completed task:
 
-- `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`
+- `overview-market-context-us-economic-cycle-v1-20260716` — 1차~5차 complete; local actual은 missing `FRED_API_KEY`로 `LIMITED/NOT_MATERIALIZED`
 
 Previous completed task:
 
+- `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`
 - `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`
 - `overview-market-context-us-stock-freshness-refresh-v1-20260715`
 - `overview-market-context-us-stock-turnaround-analysis-v1-20260715`

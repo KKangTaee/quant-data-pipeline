@@ -417,6 +417,32 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - Practical Validation result JSONL에는 full series를 저장하지 않고 compact snapshot / staleness만 저장하는 방향이다.
 - Practical Validation result JSONL에는 source mode / observation range / stale series 같은 compact macro provenance만 저장한다.
 
+## `macro_series_vintage_observation`, `economic_cycle_model_artifact`, `economic_cycle_snapshot`
+
+역할:
+
+- `macro_series_vintage_observation`은 미국 경제 사이클 17개 지표의 발표 당시 값과 이후 revision interval을 raw ledger로 보존한다.
+- `economic_cycle_model_artifact`는 model version, `trained_through`, horizon별 parameter·temperature calibration·rolling-origin metric·publication gate를 보존한다.
+- `economic_cycle_snapshot`은 current 또는 historical replay가 만든 compact 네 국면 확률, evidence, source date, 제한 사유를 저장하며 Overview read model의 source-of-truth다.
+
+성격과 business key:
+
+- raw vintage key는 `(series_id, observation_date, realtime_start, source)`다. `realtime_end`와 수집 metadata는 같은 key 재수집 때 갱신되며 누락값 row도 `coverage_status=MISSING_VALUE`로 보존한다.
+- artifact key는 `(model_version, trained_through)`다. validation metadata가 완전하지 않으면 approved artifact로 승격하지 않으며 기존 latest-good row를 덮지 않는다.
+- snapshot key는 `(as_of_date, model_version, run_kind)`다. `run_kind`는 current materialization과 historical replay를 분리하고, 재실행은 같은 business key를 UPSERT한다.
+
+PIT / publication 계약:
+
+- historical origin은 `realtime_start <= origin <= realtime_end`인 version 중 최신 eligible row 하나만 읽는다. 이후 발표·수정값은 관측일이 과거여도 사용할 수 없다.
+- feature scaling은 expanding history만, calibration/validation은 rolling-origin out-of-fold만 사용한다. retrospective label은 activity/labor와 해당 origin에 eligible한 `USREC`만 사용한다.
+- 각 h0/h1/h2 horizon은 독립적으로 `READY/LIMITED`를 판정한다. `LIMITED` horizon은 reason evidence를 남기되 numeric probabilities는 snapshot과 UI 모두에서 비운다.
+- raw full series와 model parameter는 DB에 남고 UI service는 최대 121개월 compact history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
+
+주의:
+
+- 이 경로는 FRED observations API의 `output_type=2`와 `FRED_API_KEY`를 요구한다. revised-latest CSV fallback은 historical vintage 증거가 아니므로 허용하지 않는다.
+- 국면은 data-defined macro regime이며 NBER 공식 판정, 자산 수익률 예측, 매수·매도 지시가 아니다.
+
 ## `nyse_price_history`
 
 역할:
