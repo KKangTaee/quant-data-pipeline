@@ -34,3 +34,12 @@ Last Updated: 2026-07-16
 - Task 10 RED: 6 missing rolling-origin/gate contracts failed. GREEN: validation suite 6; combined model/validation suite 19 passed.
 - Task 11 RED: 5 missing pipeline/job contracts failed. GREEN: pipeline suite 6, including a forecast-origin cache leakage regression.
 - Full economic-cycle verification: 51 tests passed; Python compile and `git diff --check` passed. Three existing `edgar` deprecation warnings remain unrelated.
+
+### 4차 — Overview service and visualization
+
+- Task 12 RED: 7 missing service/interpretation boundary contracts failed. GREEN: all 7 DB-only read-model tests passed.
+- Task 13 RED: 7 selector/routing/compatibility contracts failed. GREEN: focused cycle/valuation suite 36 passed.
+- Task 14 RED: 4 missing component/compatibility source contracts failed. GREEN: focused service/selector/component suite 47 plus service boundary 1 passed.
+- `economic_cycle_workbench`: `npm install` completed with 0 vulnerabilities; production build emitted HTML/CSS/JS static assets.
+- `market_context_valuation`: compatibility production build passed with the outer-selector flag.
+- Python compile and `git diff --check`: passed before 4차 closeout.

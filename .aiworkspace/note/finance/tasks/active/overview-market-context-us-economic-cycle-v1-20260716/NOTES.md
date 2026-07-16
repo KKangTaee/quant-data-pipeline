@@ -42,3 +42,12 @@ The model estimates a data-defined macro regime with uncertainty. It does not re
 - Artifact hashes include the training cutoff, horizon parameters, and decisions; replay always passes its origin-specific artifact directly instead of selecting a later current artifact.
 - Replay caches a strict vintage read only under its true forecast origin. The origin row is never bound to the preceding training cutoff.
 - Manual collection and materialization jobs were added without an unattended schedule or a visible run/status panel.
+
+## 4차 Decisions
+
+- The Overview service parses only persisted artifact/snapshot/history rows and returns the stable `economic_cycle_v1` JSON contract; it never imports the vintage collector.
+- The same-level selector order is `경제 사이클 | S&P 500 | 미국 개별주식`, with economic cycle as the default and unknown legacy values falling back safely.
+- Explicit S&P 500/U.S.-stock modes build only their selected valuation model and hide the React component's internal instrument selector; legacy callers still build both.
+- The main reading order is three four-phase probability cards, 18-month cycle clock, real-economy/forecast-context evidence, conditional market implications, then a 121-month regime ribbon.
+- Model phase and NBER recession are visually and semantically separate. LIMITED months use a hatch, and LIMITED horizons render a reason instead of a fabricated `0%`.
+- The cycle component emits no provider, materialization, refresh, or trading action; 420px CSS stacks the main regions without horizontal scroll.

@@ -1,6 +1,6 @@
 # Overview Market Context U.S. Economic Cycle V1 Plan
 
-Status: Active — 1차~3차 Complete, 4차 Next
+Status: Active — 1차~4차 Complete, 5차 Next
 Last Updated: 2026-07-16
 
 ## 이걸 하는 이유?
@@ -36,7 +36,7 @@ Last Updated: 2026-07-16
    - 범위: actual run, desktop/420px QA, data/architecture/runbook/roadmap/task docs.
    - 완료 조건: 검증 통과 horizon만 숫자를 표시하며 관련 회귀와 문서가 일치한다.
 
-현재 완료 범위는 명세 승인, 구현 계획, 1차 vintage 데이터 계약, 2차 현재 국면/과거 snapshot 엔진, 3차 horizon별 예측·검증·materialization이며 구현 진행률은 `3/5`다.
+현재 완료 범위는 명세 승인, 구현 계획, 1차 vintage 데이터 계약, 2차 현재 국면/과거 snapshot 엔진, 3차 horizon별 예측·검증·materialization, 4차 Overview 서비스·선택기·시각화이며 구현 진행률은 `4/5`다.
 
 ## Scope
 

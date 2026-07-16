@@ -176,6 +176,7 @@ type ValuationPayload = {
 type CombinedPayload = {
   schema_version: string;
   default_instrument: string;
+  show_instrument_selector?: boolean;
   instruments: Record<string, ValuationPayload>;
 };
 type Props = ComponentProps & { args: { payload?: ValuationPayload | CombinedPayload } };
@@ -388,6 +389,7 @@ function MarketContextValuation({ args }: Props) {
   const [collecting, setCollecting] = useState(false);
   const [analysisBySymbol, setAnalysisBySymbol] = useState<Record<string, AnalysisChoice>>({});
   const payload = combined?.instruments[selectedInstrument] || root as ValuationPayload | undefined;
+  const showCombinedSelector = Boolean(combined && combined.show_instrument_selector !== false && Object.keys(combined.instruments).length > 1);
   useEffect(() => { Streamlit.setFrameHeight(); window.setTimeout(() => Streamlit.setFrameHeight(), 180); }, [payload, selectedInstrument, collecting, analysisBySymbol]);
   useEffect(() => setCollecting(false), [payload?.collection_result?.status, payload?.data_freshness?.status]);
   if (!payload) return null;
@@ -415,7 +417,7 @@ function MarketContextValuation({ args }: Props) {
     emitEvent(action.id, { symbol: action.symbol });
   };
   return <main className="valuation-workbench" data-status={showTurnaround ? payload.turnaround_analysis?.status : payload.status}>
-    {combined ? <nav className="instrument-selector" aria-label="가치평가 대상 선택"><button type="button" aria-pressed={selectedInstrument === "sp500"} onClick={() => setSelectedInstrument("sp500")}><span>S&amp;P 500</span><small>시장 지수</small></button><button type="button" aria-pressed={selectedInstrument === "us_stock"} onClick={() => setSelectedInstrument("us_stock")}><span>미국 개별주식</span><small>기업명·티커 검색</small></button></nav> : null}
+    {showCombinedSelector ? <nav className="instrument-selector" aria-label="가치평가 대상 선택"><button type="button" aria-pressed={selectedInstrument === "sp500"} onClick={() => setSelectedInstrument("sp500")}><span>S&amp;P 500</span><small>시장 지수</small></button><button type="button" aria-pressed={selectedInstrument === "us_stock"} onClick={() => setSelectedInstrument("us_stock")}><span>미국 개별주식</span><small>기업명·티커 검색</small></button></nav> : null}
     {isStock ? <StockSearch payload={payload}/> : null}
     <header className="valuation-header"><div><span className="eyebrow">{isStock ? showTurnaround ? "U.S. STOCK TURNAROUND ANALYSIS" : "U.S. STOCK RELATIVE VALUATION" : "S&P 500 VALUATION"}</span><h2>{isStock && payload.selection ? `${payload.selection.name || symbol} ${showTurnaround ? "전환 분석" : "상대가치 평가"}` : "멀티플과 예상 실적을 한 화면에서 비교"}</h2><p>{isStock ? showTurnaround ? "분기 filing 근거로 영업·현금 전환과 생존 위험을 먼저 읽습니다." : "한 기업의 filing-aware EPS와 자체 멀티플 이력으로 현재 위치를 읽습니다." : "과거 대비 현재 가격 수준과 FOMC 거시 가정을 분리해 읽습니다."}</p></div><div className="basis"><span>{basisLabel}</span><strong>{basisDate || "-"}</strong><small>{showTurnaround ? `공개 ${payload.data_freshness?.statement_available_at || "-"} · 가격 ${payload.data_freshness?.price_basis_date || "-"}` : payload.instrument?.method_label || "As-Reported actual TTM"}</small></div></header>
     {isStock && payload.selection?.symbol ? <FreshnessBar freshness={payload.data_freshness} collecting={collecting} result={payload.collection_result} onRefresh={refresh}/> : null}

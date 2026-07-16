@@ -51,7 +51,16 @@ GROUP_TREND_HEATMAP_ROW_HEIGHT = 54
 def render_market_context_header() -> None:
     """Render the compact Market Context tab heading."""
     st.markdown("### 시장 맥락")
-    st.caption("S&P 500 또는 미국 개별주식의 현재 멀티플과 상대가치 시나리오를 확인합니다.")
+    st.caption("미국 경제사이클과 S&P 500·개별주식의 시장 맥락을 나란히 확인합니다.")
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_economic_cycle_model(as_of_date: str | None = None) -> dict[str, Any]:
+    """Load the persisted DB-only economic-cycle read model."""
+    from app.services.overview.economic_cycle import build_economic_cycle_read_model
+
+    model = build_economic_cycle_read_model(as_of_date=as_of_date)
+    return json.loads(json.dumps(model, default=str))
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -66,6 +75,8 @@ def load_sp500_valuation_model() -> dict[str, Any]:
 def load_market_context_valuation_model(
     selected_symbol: str | None = None,
     search_query: str | None = None,
+    default_instrument: str | None = None,
+    show_instrument_selector: bool = True,
 ) -> dict[str, Any]:
     """Load independently isolated S&P 500 and selected-stock read models."""
     from app.services.overview.market_context_valuation import (
@@ -75,8 +86,47 @@ def load_market_context_valuation_model(
     model = build_market_context_valuation_read_model(
         selected_symbol=selected_symbol,
         search_query=search_query,
+        default_instrument=default_instrument,
+        show_instrument_selector=show_instrument_selector,
     )
     return json.loads(json.dumps(model, default=str))
+
+
+def _render_economic_cycle_fallback(payload: dict[str, Any]) -> None:
+    """Keep the core cycle reading available before the React build exists."""
+    headline = dict(payload.get("headline") or {})
+    if payload.get("status") == "ERROR":
+        st.warning(str(headline.get("summary") or "경제사이클 결과를 읽지 못했습니다."))
+        return
+    st.markdown(f"#### {headline.get('phase_label') or '판단 제한'}")
+    st.caption(str(headline.get("summary") or "저장된 결과가 아직 없습니다."))
+    for item in payload.get("horizons") or []:
+        label = str(item.get("label") or "-")
+        probabilities = item.get("probabilities")
+        if not isinstance(probabilities, dict):
+            st.caption(f"{label} · {item.get('reason') or '판단 제한'}")
+            continue
+        dominant = str(item.get("dominant_phase_label") or "-")
+        confidence = float(item.get("confidence") or 0.0) * 100.0
+        st.caption(f"{label} · {dominant} {confidence:.0f}%")
+
+
+def render_economic_cycle() -> None:
+    """Render the DB-only cycle workbench without emitting operational events."""
+    from app.web.overview.economic_cycle_react_component import (
+        economic_cycle_component_available,
+        render_economic_cycle_component,
+    )
+
+    try:
+        payload = load_economic_cycle_model()
+    except Exception as exc:  # pragma: no cover - UI resilience only
+        st.warning(f"경제사이클 자료를 불러오지 못했습니다: {exc}")
+        return
+    if economic_cycle_component_available():
+        render_economic_cycle_component(payload)
+        return
+    _render_economic_cycle_fallback(payload)
 
 
 def _render_market_context_valuation_fallback(payload: dict[str, Any]) -> None:
@@ -227,7 +277,11 @@ def _us_stock_collection_reflection(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_market_context_valuation() -> None:
+def render_market_context_valuation(
+    *,
+    default_instrument: str | None = None,
+    show_instrument_selector: bool = True,
+) -> None:
     """Render the React-first valuation surface and consume explicit stock actions."""
     from app.web.overview.market_context_react_component import (
         market_context_valuation_component_available,
@@ -244,6 +298,8 @@ def render_market_context_valuation() -> None:
         payload = load_market_context_valuation_model(
             selected_symbol or None,
             search_query or None,
+            default_instrument,
+            show_instrument_selector,
         )
     except Exception as exc:  # pragma: no cover - UI resilience only
         st.warning(f"시장 가치평가 자료를 불러오지 못했습니다: {exc}")
@@ -257,7 +313,10 @@ def render_market_context_valuation() -> None:
         instruments["us_stock"] = stock
         payload["instruments"] = instruments
     if market_context_valuation_component_available():
-        event = render_market_context_valuation_component(payload)
+        event = render_market_context_valuation_component(
+            payload,
+            key=f"market_context_valuation_{default_instrument or 'legacy'}",
+        )
         _handle_market_context_valuation_event(event)
         return
     _render_market_context_valuation_fallback(payload)

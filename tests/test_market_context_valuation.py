@@ -25,6 +25,24 @@ def _sep_rows() -> pd.DataFrame:
 
 
 class MarketContextValuationTests(unittest.TestCase):
+    def test_outer_mode_payload_can_hide_internal_instrument_selector(self) -> None:
+        from app.services.overview.market_context_valuation import (
+            build_market_context_valuation_read_model,
+        )
+
+        with patch(
+            "app.services.overview.market_context_valuation.build_sp500_valuation_read_model",
+            return_value={"status": "READY", "instrument": {"id": "sp500"}},
+        ):
+            model = build_market_context_valuation_read_model(
+                default_instrument="sp500",
+                show_instrument_selector=False,
+            )
+
+        self.assertEqual(list(model["instruments"]), ["sp500"])
+        self.assertEqual(model["default_instrument"], "sp500")
+        self.assertFalse(model["show_instrument_selector"])
+
     def test_nasdaq_model_preserves_coverage_block_evidence(self) -> None:
         from app.services.overview.nasdaq100_valuation import build_nasdaq100_valuation_read_model
 

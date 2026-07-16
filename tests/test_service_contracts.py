@@ -16,6 +16,23 @@ from unittest.mock import MagicMock, call, patch
 import pandas as pd
 
 
+class EconomicCycleOverviewServiceBoundaryTests(unittest.TestCase):
+    def test_market_context_cycle_boundary_never_imports_vintage_collector_in_ui(self) -> None:
+        service_source = Path("app/services/overview/economic_cycle.py").read_text(
+            encoding="utf-8"
+        )
+        ui_sources = [
+            Path("app/web/overview/market_context.py"),
+            Path("app/web/overview/market_context_helpers.py"),
+        ]
+
+        self.assertIn("finance.loaders.economic_cycle", service_source)
+        self.assertNotIn("finance.data.economic_cycle_vintages", service_source)
+        for source_path in ui_sources:
+            source = source_path.read_text(encoding="utf-8")
+            self.assertNotIn("finance.data.economic_cycle_vintages", source)
+
+
 def _macro_regime_rows(
     dates: pd.DatetimeIndex,
     *,
