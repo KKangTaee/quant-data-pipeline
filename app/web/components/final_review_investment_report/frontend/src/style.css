@@ -415,6 +415,14 @@ summary:focus-visible {
   letter-spacing: -.025em;
 }
 
+.db-chart-subtitle {
+  max-width: 500px;
+  margin: 7px 0 0;
+  color: var(--db-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .db-legend {
   display: flex;
   flex-wrap: wrap;
@@ -439,8 +447,9 @@ summary:focus-visible {
 .db-line-chart {
   display: block;
   width: 100%;
-  height: 260px;
+  height: auto;
   overflow: visible;
+  touch-action: pan-y;
 }
 
 .db-grid-line {
@@ -449,11 +458,84 @@ summary:focus-visible {
   vector-effect: non-scaling-stroke;
 }
 
-.db-chart-axis {
-  display: flex;
-  justify-content: space-between;
-  color: #8391a1;
+.db-chart-plot {
+  position: relative;
+  min-width: 0;
+}
+
+.db-chart-y-label,
+.db-chart-x-label {
+  fill: #7c8b9b;
   font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.db-chart-hover-rule {
+  stroke: #8da0b2;
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.db-chart-focus-dot {
+  stroke: #fff;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.db-chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  top: 18px;
+  min-width: 154px;
+  padding: 9px 10px;
+  pointer-events: none;
+  transform: translateX(10px);
+  border: 1px solid rgba(205, 217, 228, .95);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 8px 24px rgba(35, 55, 75, .1);
+  backdrop-filter: blur(6px);
+}
+
+.db-chart-tooltip.is-right {
+  transform: translateX(calc(-100% - 10px));
+}
+
+.db-chart-tooltip > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #53687d;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.db-chart-tooltip > div {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.db-chart-tooltip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.db-chart-tooltip small {
+  overflow: hidden;
+  color: var(--db-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-chart-tooltip strong {
+  color: var(--db-ink);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 
 .db-chart-table {
@@ -1040,10 +1122,6 @@ summary:focus-visible {
     text-align: left;
   }
 
-  .db-line-chart {
-    height: 220px;
-  }
-
   .db-chart-heading {
     display: grid;
   }
@@ -1098,5 +1176,15 @@ summary:focus-visible {
 
   .db-basis-chips {
     display: grid;
+  }
+
+  .db-chart-tooltip {
+    min-width: 138px;
+    padding: 7px 8px;
+  }
+
+  .db-chart-tooltip small,
+  .db-chart-tooltip strong {
+    font-size: 8px;
   }
 }

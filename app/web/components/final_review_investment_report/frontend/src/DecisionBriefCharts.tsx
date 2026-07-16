@@ -1,4 +1,4 @@
-import React, { useId } from "react"
+import React, { useEffect, useId, useState } from "react"
 import {
   DecisionBriefSeries,
   SeriesPoint,
@@ -11,29 +11,70 @@ type LineSeries = {
   points: SeriesPoint[]
 }
 
-function extent(values: number[]): [number, number] {
-  if (values.length === 0) return [0, 1]
-  const minimum = Math.min(...values)
-  const maximum = Math.max(...values)
-  if (minimum === maximum) return [minimum - 1, maximum + 1]
-  const padding = Math.max((maximum - minimum) * 0.12, 0.5)
-  return [minimum - padding, maximum + padding]
+type ChartUnit = "index" | "percent"
+
+const CHART = { width: 720, height: 300, left: 58, right: 16, top: 20, bottom: 44 }
+const plotWidth = CHART.width - CHART.left - CHART.right
+const plotBottom = CHART.height - CHART.bottom
+const plotHeight = plotBottom - CHART.top
+
+function niceExtent(values: number[], unit: ChartUnit): [number, number] {
+  if (!values.length) return unit === "percent" ? [-5, 0] : [0, 100]
+  const rawMin = unit === "percent" ? Math.min(...values, 0) : Math.min(...values)
+  const rawMax = unit === "percent" ? 0 : Math.max(...values)
+  if (rawMin === rawMax) return unit === "percent" ? [rawMin - 1, 0] : [rawMin - 1, rawMax + 1]
+  const roughStep = Math.max(.01, (rawMax - rawMin) / 4)
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep))
+  const normalized = roughStep / magnitude
+  const step = (normalized <= 1.5 ? 1 : normalized <= 3 ? 2 : normalized <= 7 ? 5 : 10) * magnitude
+  return [
+    Math.floor(rawMin / step) * step,
+    unit === "percent" ? 0 : Math.ceil(rawMax / step) * step,
+  ]
 }
 
-function linePath(points: SeriesPoint[], minY: number, maxY: number): string {
-  if (points.length === 0) return ""
-  return points
-    .map((point, index) => {
-      const x = points.length === 1 ? 50 : 8 + (index / (points.length - 1)) * 84
-      const y = 88 - ((point.value - minY) / (maxY - minY)) * 72
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`
-    })
-    .join(" ")
+function buildTickIndices(count: number, maximumTicks = 6): number[] {
+  if (count <= 0) return []
+  const tickCount = Math.min(count, maximumTicks)
+  return Array.from(new Set(Array.from({ length: tickCount }, (_, index) =>
+    Math.round(index * (count - 1) / Math.max(1, tickCount - 1)),
+  )))
 }
 
-function formatAxisValue(value: number): string {
-  const magnitude = Math.abs(value)
-  return magnitude >= 100 ? value.toFixed(0) : value.toFixed(magnitude >= 10 ? 1 : 2)
+function buildYTicks(minimum: number, maximum: number, count = 5): number[] {
+  return Array.from({ length: count }, (_, index) =>
+    maximum - index * (maximum - minimum) / Math.max(1, count - 1),
+  )
+}
+
+function xAt(index: number, count: number): number {
+  return count <= 1
+    ? CHART.left + plotWidth / 2
+    : CHART.left + index / (count - 1) * plotWidth
+}
+
+function yAt(value: number, minimum: number, maximum: number): number {
+  return plotBottom - (value - minimum) / Math.max(.0001, maximum - minimum) * plotHeight
+}
+
+function linePath(points: SeriesPoint[], minimum: number, maximum: number): string {
+  return points.map((point, index) =>
+    `${index ? "L" : "M"} ${xAt(index, points.length).toFixed(2)} ${yAt(point.value, minimum, maximum).toFixed(2)}`,
+  ).join(" ")
+}
+
+function pointerIndex(event: React.PointerEvent<SVGSVGElement>, count: number): number {
+  if (count <= 1) return 0
+  const rect = event.currentTarget.getBoundingClientRect()
+  const cursor = (event.clientX - rect.left) / Math.max(1, rect.width) * CHART.width
+  const ratio = Math.max(0, Math.min(1, (cursor - CHART.left) / plotWidth))
+  return Math.round(ratio * (count - 1))
+}
+
+function formatChartValue(value: number | undefined, unit: ChartUnit): string {
+  if (value == null || !Number.isFinite(value)) return "-"
+  const formatted = Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(2)
+  return unit === "percent" ? `${formatted}%` : formatted
 }
 
 function EvidenceTable({ series }: { series: LineSeries[] }) {
@@ -67,18 +108,30 @@ function EvidenceTable({ series }: { series: LineSeries[] }) {
 
 function SvgLineChart({
   title,
+  subtitle,
   description,
+  unit,
   series,
 }: {
   title: string
+  subtitle: string
   description: string
+  unit: ChartUnit
   series: LineSeries[]
 }) {
   const chartId = useId()
+  const pointCount = series[0]?.points.length ?? 0
+  const [activeIndex, setActiveIndex] = useState(Math.max(0, pointCount - 1))
+  useEffect(() => setActiveIndex(Math.max(0, pointCount - 1)), [pointCount])
+  const safeIndex = Math.min(activeIndex, Math.max(0, pointCount - 1))
   const values = series.flatMap((item) => item.points.map((point) => point.value))
-  const [minY, maxY] = extent(values)
-  const firstDate = series[0]?.points[0]?.date ?? "-"
-  const lastDate = series[0]?.points.at(-1)?.date ?? "-"
+  const [minY, maxY] = niceExtent(values, unit)
+  const yTicks = buildYTicks(minY, maxY)
+  const xTickIndices = buildTickIndices(pointCount)
+  const activeX = xAt(safeIndex, pointCount)
+  const activeDate = series[0]?.points[safeIndex]?.date ?? "-"
+  const tooltipRight = activeX > CHART.width * .68
+  const tooltipStyle = { left: `${activeX / CHART.width * 100}%` }
 
   return (
     <div className="db-chart-shell">
@@ -86,6 +139,7 @@ function SvgLineChart({
         <div>
           <p className="db-kicker">Portfolio behavior</p>
           <h3>{title}</h3>
+          <p className="db-chart-subtitle">{subtitle}</p>
         </div>
         <div className="db-legend" aria-label="차트 범례">
           {series.map((item) => (
@@ -93,33 +147,68 @@ function SvgLineChart({
           ))}
         </div>
       </div>
-      <svg
-        className="db-line-chart"
-        viewBox="0 0 100 100"
-        role="img"
-        aria-labelledby={`${chartId}-title ${chartId}-desc`}
-        preserveAspectRatio="none"
-      >
-        <title id={`${chartId}-title`}>{title}</title>
-        <desc id={`${chartId}-desc`}>{description}</desc>
-        {[16, 34, 52, 70, 88].map((y) => (
-          <line key={y} x1="8" x2="92" y1={y} y2={y} className="db-grid-line" />
-        ))}
-        {series.map((item) => (
-          <path
-            key={item.label}
-            d={linePath(item.points, minY, maxY)}
-            fill="none"
-            stroke={item.color}
-            strokeWidth="1.7"
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
-      </svg>
-      <div className="db-chart-axis" aria-hidden="true">
-        <span>{firstDate}</span>
-        <span>{formatAxisValue(minY)} – {formatAxisValue(maxY)}</span>
-        <span>{lastDate}</span>
+      <div className="db-chart-plot">
+        <svg
+          className="db-line-chart"
+          viewBox={`0 0 ${CHART.width} ${CHART.height}`}
+          role="img"
+          aria-labelledby={`${chartId}-title ${chartId}-desc`}
+          onPointerMove={(event) => setActiveIndex(pointerIndex(event, pointCount))}
+          onPointerLeave={() => setActiveIndex(Math.max(0, pointCount - 1))}
+        >
+          <title id={`${chartId}-title`}>{title}</title>
+          <desc id={`${chartId}-desc`}>{description}</desc>
+          {yTicks.map((value) => {
+            const y = yAt(value, minY, maxY)
+            return (
+              <g key={value}>
+                <line x1={CHART.left} x2={CHART.width - CHART.right} y1={y} y2={y} className="db-grid-line" />
+                <text x={CHART.left - 10} y={y + 4} textAnchor="end" className="db-chart-y-label">
+                  {formatChartValue(value, unit)}
+                </text>
+              </g>
+            )
+          })}
+          {xTickIndices.map((index) => (
+            <text key={index} x={xAt(index, pointCount)} y={CHART.height - 12} textAnchor="middle" className="db-chart-x-label">
+              {series[0]?.points[index]?.date ?? "-"}
+            </text>
+          ))}
+          {series.map((item) => (
+            <path
+              key={item.label}
+              d={linePath(item.points, minY, maxY)}
+              fill="none"
+              stroke={item.color}
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          <line className="db-chart-hover-rule" x1={activeX} x2={activeX} y1={CHART.top} y2={plotBottom} />
+          {series.map((item) => {
+            const point = item.points[safeIndex]
+            return point ? (
+              <circle
+                key={item.label}
+                className="db-chart-focus-dot"
+                cx={activeX}
+                cy={yAt(point.value, minY, maxY)}
+                r="4"
+                style={{ fill: item.color }}
+              />
+            ) : null
+          })}
+        </svg>
+        <div className={`db-chart-tooltip ${tooltipRight ? "is-right" : ""}`} style={tooltipStyle}>
+          <span>{activeDate}</span>
+          {series.map((item) => (
+            <div key={item.label}>
+              <i style={{ background: item.color }} />
+              <small>{item.label}</small>
+              <strong>{formatChartValue(item.points[safeIndex]?.value, unit)}</strong>
+            </div>
+          ))}
+        </div>
       </div>
       <EvidenceTable series={series} />
     </div>
@@ -154,7 +243,9 @@ export function CumulativeComparisonChart({
   return (
     <SvgLineChart
       title="누적 성과와 Benchmark"
+      subtitle="100은 관측 시작일의 기준값입니다. 같은 날짜의 후보와 Benchmark 경로를 비교합니다."
       description="Python에서 같은 날짜로 정렬하고 100 기준으로 전달한 후보와 benchmark 누적 성과입니다."
+      unit="index"
       series={[
         { label: candidate.label, color: "#274764", points: candidate.points },
         { label: benchmark.label, color: "#269789", points: benchmark.points },
@@ -165,12 +256,14 @@ export function CumulativeComparisonChart({
 
 export function UnderwaterChart({ series }: { series: DecisionBriefSeries }) {
   if (series.status !== "measured") {
-    return <MissingChart title="Underwater drawdown" reason={series.missing_reason || "낙폭 curve가 없습니다."} />
+    return <MissingChart title="고점 대비 낙폭 (Underwater)" reason={series.missing_reason || "낙폭 curve가 없습니다."} />
   }
   return (
     <SvgLineChart
-      title="Underwater drawdown"
+      title="고점 대비 낙폭 (Underwater)"
+      subtitle="0%는 이전 최고점 회복, 음수는 최고점 대비 하락률입니다."
       description="Python이 running peak 기준으로 계산해 전달한 drawdown과 recovery 경로입니다."
+      unit="percent"
       series={[{ label: series.label, color: "#e2763b", points: series.points }]}
     />
   )

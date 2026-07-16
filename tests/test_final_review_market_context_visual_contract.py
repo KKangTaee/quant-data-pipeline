@@ -78,6 +78,26 @@ class FinalReviewMarketContextVisualContractTests(unittest.TestCase):
         )[0]
         self.assertNotIn("background: #e1e8f0;", observation_block)
 
+    def test_charts_expose_ticks_hover_tooltip_and_underwater_meaning(self) -> None:
+        source = CHARTS.read_text(encoding="utf-8")
+        style = STYLE.read_text(encoding="utf-8")
+
+        for token in (
+            "type ChartUnit",
+            "function niceExtent",
+            "function buildTickIndices",
+            "function buildYTicks",
+            "function pointerIndex",
+            "onPointerMove",
+            "db-chart-hover-rule",
+            "db-chart-focus-dot",
+            "db-chart-tooltip",
+            'unit="percent"',
+            "고점 대비 낙폭 (Underwater)",
+            "0%는 이전 최고점 회복",
+        ):
+            self.assertIn(token, source + style)
+
 
 if __name__ == "__main__":
     unittest.main()
