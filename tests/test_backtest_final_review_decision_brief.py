@@ -66,6 +66,28 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
         inputs["existing_decision_ids"] = set()
         return inputs
 
+    def _current_character_inputs(self) -> dict[str, object]:
+        inputs = self._grs_inputs()
+        validation = inputs["validation"]
+        validation["metrics"]["max_weight"] = 100.0
+        validation["validation_profile"]["thresholds"] = {
+            "max_weight_review": 60.0,
+            "mdd_review_line": -15.0,
+            "one_way_cost_bps": 10.0,
+        }
+        source_snapshot = validation["selection_source_snapshot"]["source_snapshot"]
+        source_snapshot["turnover_evidence_snapshot"]["avg_turnover"] = 0.032
+        source_snapshot["cost_model_snapshot"].update(
+            {
+                "transaction_cost_bps": 10.0,
+                "cost_application_status": "applied_to_result_curve",
+            }
+        )
+        validation["curve_evidence"]["replay_attempt"]["portfolio_curve"][2][
+            "Total Balance"
+        ] = 105.084
+        return inputs
+
     def test_decision_brief_has_v1_schema_without_investment_scores(self) -> None:
         brief = self._build()
         serialized = json.dumps(brief, ensure_ascii=False, sort_keys=True)
@@ -298,16 +320,75 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
             self.assertTrue(observation["evidence_refs"])
             self.assertEqual(observation["as_of"], "2026-06-30")
 
-    def test_trait_axes_keep_unmeasured_as_none_without_aggregate_score(self) -> None:
-        brief = self._build(self._grs_inputs())
-        trait_map = brief["trait_map"]
-        axes = {axis["axis_id"]: axis for axis in trait_map["axes"]}
+    def test_character_profile_exposes_observed_values_without_criteria(self) -> None:
+        brief = self._build(self._current_character_inputs())
+        items = {
+            row["axis_id"]: row for row in brief["character_profile"]["items"]
+        }
 
-        self.assertEqual(len(axes), 5)
-        self.assertEqual(axes["concentration_pressure"]["normalized_value"], 37.5)
-        self.assertEqual(axes["regime_dependency"]["status"], "unmeasured")
-        self.assertIsNone(axes["regime_dependency"]["normalized_value"])
-        self.assertIsNone(trait_map["aggregate_score"])
+        self.assertEqual(
+            list(items),
+            ["concentration", "drawdown", "turnover", "cost", "regime_dependency"],
+        )
+        self.assertEqual(items["concentration"]["display_value"], "100.00%")
+        self.assertEqual(items["drawdown"]["display_value"], "-12.43%")
+        self.assertEqual(items["turnover"]["display_value"], "3.20%")
+        self.assertEqual(items["cost"]["display_value"], "10.00 bps")
+        self.assertEqual(
+            items["regime_dependency"]["measurement_status"], "evidence_missing"
+        )
+        self.assertEqual(
+            items["regime_dependency"]["display_value"], "분석 근거 없음"
+        )
+
+    def test_review_pressure_links_drawdown_alias_and_separates_missing_states(
+        self,
+    ) -> None:
+        brief = self._build(self._current_character_inputs())
+        pressure = {
+            row["axis_id"]: row for row in brief["review_pressure"]["items"]
+        }
+
+        self.assertEqual(pressure["concentration"]["status"], "exceeds_limit")
+        self.assertEqual(pressure["concentration"]["delta_value"], 40.0)
+        self.assertEqual(pressure["drawdown"]["status"], "within_limit")
+        self.assertEqual(pressure["drawdown"]["criterion_value"], -15.0)
+        self.assertEqual(pressure["drawdown"]["delta_value"], -2.57)
+        self.assertIn("관리선 -15.00%", pressure["drawdown"]["summary"])
+        self.assertEqual(pressure["turnover"]["status"], "criterion_missing")
+        self.assertEqual(pressure["cost"]["status"], "criterion_missing")
+        self.assertEqual(pressure["regime_dependency"]["status"], "evidence_missing")
+
+    def test_one_way_cost_assumption_is_not_used_as_review_limit(self) -> None:
+        brief = self._build(self._current_character_inputs())
+        cost = next(
+            row
+            for row in brief["review_pressure"]["items"]
+            if row["axis_id"] == "cost"
+        )
+
+        self.assertEqual(cost["display_value"], "10.00 bps")
+        self.assertIsNone(cost["criterion_value"])
+        self.assertEqual(cost["status"], "criterion_missing")
+
+    def test_character_contract_has_no_trait_map_or_arbitrary_score(self) -> None:
+        brief = self._build(self._current_character_inputs())
+        serialized = json.dumps(brief, ensure_ascii=False, sort_keys=True)
+
+        self.assertNotIn("trait_map", brief)
+        self.assertNotIn("aggregate_score", serialized)
+        self.assertNotIn("normalized_value", serialized)
+
+    def test_zero_review_criterion_is_contract_error(self) -> None:
+        inputs = self._current_character_inputs()
+        inputs["validation"]["validation_profile"]["thresholds"][
+            "max_weight_review"
+        ] = 0.0
+
+        with self.assertRaisesRegex(
+            ValueError, "zero review criterion is invalid for concentration"
+        ):
+            self._build(inputs)
 
     def test_strengths_and_weaknesses_require_measurement_and_comparator(self) -> None:
         inputs = self._grs_inputs()

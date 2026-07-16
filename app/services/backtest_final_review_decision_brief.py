@@ -59,12 +59,17 @@ _ROUTE_PRESENTATION = {
     },
 }
 
-_TRAIT_AXES = (
-    ("concentration_pressure", "집중 위험"),
-    ("drawdown_pressure", "낙폭 압력"),
-    ("turnover_burden", "회전 부담"),
-    ("cost_burden", "비용 부담"),
-    ("regime_dependency", "국면 의존"),
+_CHARACTER_AXES = (
+    ("concentration", "집중 성향", "percent", "최대 구성 비중 근거가 없습니다."),
+    ("drawdown", "손실 특성", "percent", "running-peak 낙폭 curve가 없습니다."),
+    ("turnover", "회전 성향", "ratio_percent", "holdings 기반 회전율 근거가 없습니다."),
+    ("cost", "비용 가정", "bps", "거래비용 가정 근거가 없습니다."),
+    (
+        "regime_dependency",
+        "국면 의존",
+        "text",
+        "국면별 성과 분산을 계산할 structured evidence가 없습니다.",
+    ),
 )
 
 
@@ -470,7 +475,7 @@ def _observation(
     evidence_refs: list[str],
     as_of: str | None,
     comparison: str | None = None,
-    trait_axis: str | None = None,
+    character_axis: str | None = None,
     finding_eligible: bool = True,
     root_issue_id: str | None = None,
 ) -> dict[str, Any]:
@@ -485,7 +490,7 @@ def _observation(
         "evidence_refs": evidence_refs,
         "as_of": as_of,
         "_comparison": comparison,
-        "_trait_axis": trait_axis,
+        "_character_axis": character_axis,
         "_finding_eligible": finding_eligible,
     }
 
@@ -522,7 +527,7 @@ def _build_execution_observations(
                 evidence_refs=["validation.metrics.max_weight", "validation.validation_profile.thresholds.max_weight_review"],
                 as_of=as_of,
                 comparison="less_or_equal",
-                trait_axis="concentration_pressure",
+                character_axis="concentration",
             )
         )
 
@@ -544,7 +549,7 @@ def _build_execution_observations(
                 evidence_refs=["validation.backtest_realism_audit.turnover_evidence_contract.avg_turnover"],
                 as_of=as_of,
                 comparison="less_or_equal",
-                trait_axis="turnover_burden",
+                character_axis="turnover",
             )
         )
 
@@ -565,7 +570,7 @@ def _build_execution_observations(
                 evidence_refs=["validation.backtest_realism_audit.cost_model_contract.transaction_cost_bps"],
                 as_of=as_of,
                 comparison="less_or_equal",
-                trait_axis="cost_burden",
+                character_axis="cost",
                 finding_eligible=cost_applied,
             )
         )
@@ -589,6 +594,8 @@ def _build_execution_observations(
 
     underwater_points = list(_as_dict(behavior_board.get("underwater_series")).get("points") or [])
     drawdown_threshold = _optional_float(thresholds.get("max_drawdown_review_pct"))
+    if drawdown_threshold is None:
+        drawdown_threshold = _optional_float(thresholds.get("mdd_review_line"))
     if underwater_points:
         max_drawdown = min(float(point.get("value") or 0.0) for point in underwater_points)
         observations.append(
@@ -596,13 +603,13 @@ def _build_execution_observations(
                 observation_id="drawdown-recovery-path",
                 title="최대 underwater 낙폭",
                 interpretation="저장된 curve의 running peak 대비 최대 낙폭 압력입니다.",
-                measured_value=abs(max_drawdown),
+                measured_value=max_drawdown,
                 display_value=_display_percent(max_drawdown),
-                threshold_or_comparator=abs(drawdown_threshold) if drawdown_threshold is not None else None,
+                threshold_or_comparator=drawdown_threshold,
                 evidence_refs=["behavior_board.underwater_series"],
                 as_of=as_of,
-                comparison="less_or_equal",
-                trait_axis="drawdown_pressure",
+                comparison="absolute_less_or_equal",
+                character_axis="drawdown",
             )
         )
 
@@ -747,44 +754,147 @@ def _build_behavior_board(
     return behavior_board, internal_observations, list(dict.fromkeys(source_gaps))
 
 
-def _build_trait_map(observations: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_character_profile(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Project actual stored traits independently from review criteria."""
+
     by_axis = {
-        str(row.get("_trait_axis")): row
+        str(row.get("_character_axis")): row
         for row in observations
-        if str(row.get("_trait_axis") or "").strip()
+        if str(row.get("_character_axis") or "").strip()
     }
-    axes: list[dict[str, Any]] = []
-    for axis_id, label in _TRAIT_AXES:
+    items: list[dict[str, Any]] = []
+    for axis_id, label, unit, missing_reason in _CHARACTER_AXES:
         observation = by_axis.get(axis_id, {})
         measured = _optional_float(observation.get("measured_value"))
-        threshold = _optional_float(observation.get("threshold_or_comparator"))
-        if measured is None or threshold is None or threshold <= 0:
-            axes.append(
-                {
-                    "axis_id": axis_id,
-                    "label": label,
-                    "normalized_value": None,
-                    "status": "unmeasured",
-                    "measured_value": measured,
-                    "threshold_or_comparator": threshold,
-                    "evidence_refs": list(observation.get("evidence_refs") or []),
-                    "as_of": observation.get("as_of"),
-                }
-            )
-            continue
-        axes.append(
+        observed = measured is not None
+        items.append(
             {
                 "axis_id": axis_id,
                 "label": label,
-                "normalized_value": round(max(0.0, min(100.0, abs(measured) / abs(threshold) * 50.0)), 1),
-                "status": "measured",
+                "measurement_status": "observed" if observed else "evidence_missing",
                 "measured_value": measured,
-                "threshold_or_comparator": threshold,
+                "display_value": (
+                    str(observation.get("display_value"))
+                    if observed
+                    else "분석 근거 없음"
+                ),
+                "unit": unit,
+                "interpretation": (
+                    str(observation.get("interpretation") or "")
+                    if observed
+                    else missing_reason
+                ),
                 "evidence_refs": list(observation.get("evidence_refs") or []),
                 "as_of": observation.get("as_of"),
             }
         )
-    return {"axes": axes, "aggregate_score": None}
+    return {"items": items}
+
+
+def _criterion_display(axis_id: str, value: float) -> str:
+    if axis_id == "cost":
+        return f"{value:.2f} bps"
+    if axis_id == "turnover":
+        return _display_percent(value, ratio=True)
+    return _display_percent(value)
+
+
+def _delta_display(axis_id: str, delta: float, *, favorable: bool) -> str:
+    displayed = delta * 100.0 if axis_id == "turnover" else delta
+    unit = "bps" if axis_id == "cost" else "%p"
+    return f"{abs(displayed):.2f}{unit} {'이내' if favorable else '초과'}"
+
+
+def _criterion_favorable(measured: float, criterion: float, comparison: str) -> bool:
+    if comparison == "absolute_less_or_equal":
+        return abs(measured) <= abs(criterion)
+    if comparison == "less_or_equal":
+        return measured <= criterion
+    if comparison == "greater_or_equal":
+        return measured >= criterion
+    raise ValueError(f"unsupported review comparison: {comparison}")
+
+
+def _build_review_pressure(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compare observed traits only when an explicit review criterion exists."""
+
+    by_axis = {
+        str(row.get("_character_axis")): row
+        for row in observations
+        if str(row.get("_character_axis") or "").strip()
+    }
+    items: list[dict[str, Any]] = []
+    for axis_id, label, _unit, missing_reason in _CHARACTER_AXES:
+        observation = by_axis.get(axis_id, {})
+        measured = _optional_float(observation.get("measured_value"))
+        criterion = _optional_float(observation.get("threshold_or_comparator"))
+        comparison = str(observation.get("_comparison") or "")
+        common = {
+            "axis_id": axis_id,
+            "label": label,
+            "evidence_refs": list(observation.get("evidence_refs") or []),
+            "as_of": observation.get("as_of"),
+        }
+        if measured is None:
+            items.append(
+                {
+                    **common,
+                    "status": "evidence_missing",
+                    "measured_value": None,
+                    "display_value": "분석 근거 없음",
+                    "criterion_value": None,
+                    "criterion_display": None,
+                    "comparison": None,
+                    "delta_value": None,
+                    "delta_display": None,
+                    "ratio_to_criterion": None,
+                    "summary": missing_reason,
+                }
+            )
+            continue
+        display_value = str(observation.get("display_value") or measured)
+        if criterion is None or not comparison:
+            items.append(
+                {
+                    **common,
+                    "status": "criterion_missing",
+                    "measured_value": measured,
+                    "display_value": display_value,
+                    "criterion_value": None,
+                    "criterion_display": None,
+                    "comparison": comparison or None,
+                    "delta_value": None,
+                    "delta_display": None,
+                    "ratio_to_criterion": None,
+                    "summary": f"{label} 값은 관측됐지만 review 기준이 설정되지 않았습니다.",
+                }
+            )
+            continue
+        if criterion == 0:
+            raise ValueError(f"zero review criterion is invalid for {axis_id}")
+        favorable = _criterion_favorable(measured, criterion, comparison)
+        delta = round(abs(measured) - abs(criterion), 4)
+        criterion_display = _criterion_display(axis_id, criterion)
+        delta_display = _delta_display(axis_id, delta, favorable=favorable)
+        criterion_prefix = "관리선" if axis_id == "drawdown" else "기준"
+        items.append(
+            {
+                **common,
+                "status": "within_limit" if favorable else "exceeds_limit",
+                "measured_value": measured,
+                "display_value": display_value,
+                "criterion_value": criterion,
+                "criterion_display": criterion_display,
+                "comparison": comparison,
+                "delta_value": (
+                    round(delta * 100.0, 4) if axis_id == "turnover" else delta
+                ),
+                "delta_display": delta_display,
+                "ratio_to_criterion": round(abs(measured) / abs(criterion), 4),
+                "summary": f"{criterion_prefix} {criterion_display} 대비 {delta_display}",
+            }
+        )
+    return {"items": items}
 
 
 def _build_findings(
@@ -803,17 +913,13 @@ def _build_findings(
             or not bool(observation.get("_finding_eligible"))
         ):
             continue
-        favorable = (
-            measured <= comparator
-            if comparison == "less_or_equal"
-            else measured >= comparator
-        )
+        favorable = _criterion_favorable(measured, comparator, comparison)
         role = "strength" if favorable else "weakness"
         finding = {
             **_public_observation(observation),
             "interpretation": (
                 f"{observation['display_value']} 관측값이 저장된 비교 기준 "
-                f"{comparator:g} {'이내' if favorable and comparison == 'less_or_equal' else '이상' if favorable else '밖'}입니다."
+                f"{comparator:g} {'이내' if favorable and comparison in {'less_or_equal', 'absolute_less_or_equal'} else '이상' if favorable else '밖'}입니다."
             ),
             "primary_role": role,
         }
@@ -1016,7 +1122,8 @@ def build_final_review_decision_brief(
         },
         "evidence_confidence": evidence_confidence,
         "behavior_board": behavior_board,
-        "trait_map": _build_trait_map(internal_observations),
+        "character_profile": _build_character_profile(internal_observations),
+        "review_pressure": _build_review_pressure(internal_observations),
         "strengths": strengths,
         "weaknesses": weaknesses,
         "monitoring_conditions": monitoring_conditions,
