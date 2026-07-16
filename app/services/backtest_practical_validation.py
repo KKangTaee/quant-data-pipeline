@@ -23,6 +23,9 @@ from app.services.backtest_practical_validation_source import (
     source_components_dataframe,
 )
 from app.services.backtest_practical_validation_workspace import build_practical_validation_workspace
+from app.services.backtest_practical_validation_decision_workspace import (
+    build_practical_validation_decision_workspace,
+)
 from app.services.backtest_evidence_closure import build_evidence_closure_contract
 from app.services.overview.sentiment import build_market_sentiment_snapshot
 from app.runtime import append_portfolio_selection_source, append_practical_validation_result
@@ -661,6 +664,7 @@ __all__ = [
     "build_provider_gap_collection_plan",
     "build_provider_gap_rows",
     "build_practical_validation_result",
+    "build_practical_validation_decision_workspace",
     "build_validation_profile",
     "prepare_final_review_handoff_from_validation",
     "prepare_practical_validation_source_handoff",
