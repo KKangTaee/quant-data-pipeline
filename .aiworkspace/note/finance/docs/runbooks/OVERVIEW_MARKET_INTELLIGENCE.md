@@ -57,10 +57,10 @@ uv run python -c "from app.jobs.ingestion_jobs import run_collect_economic_cycle
 
 확인할 내용:
 
-- `source_mode=fred_output_type_2`와 series별 row/date coverage
+- `source_mode=fred_output_type_1_realtime_intervals`와 series별 row/date coverage
 - raw unique key `(series_id, observation_date, realtime_start, source)`
 - 동일 범위 재실행 뒤 business row 수가 증가하지 않는지
-- `.`/non-finite value가 0이 아니라 `MISSING_VALUE` row로 남는지
+- `.`/non-finite value가 0이 아니라 `coverage_status=missing` row로 남는지
 
 ### 3. Train, validate, current materialization
 

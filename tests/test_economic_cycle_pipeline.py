@@ -246,6 +246,47 @@ def test_training_does_not_cache_forecast_origin_rows_under_prior_cutoff() -> No
     assert loader.remembered == []
 
 
+def test_default_loader_builds_and_reuses_one_bulk_pit_panel() -> None:
+    module = _load_module()
+    loader = module.EconomicCyclePipelineLoader(
+        history_start=date(2020, 1, 31)
+    )
+    source_rows = [
+        {
+            "series_id": "PAYEMS",
+            "observation_date": "2020-01-01",
+            "realtime_start": "2020-01-15",
+            "realtime_end": "9999-12-31",
+            "value": 100.0,
+            "source": "fred",
+        }
+    ]
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        history_calls: list[date] = []
+
+        def load_history(*_args, as_of_date, **_kwargs):
+            history_calls.append(as_of_date)
+            return source_rows
+
+        monkeypatch.setattr(module, "load_economic_cycle_vintage_history", load_history)
+        monkeypatch.setattr(
+            module,
+            "load_economic_cycle_vintages",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("panel construction must not issue one query per origin")
+            ),
+        )
+        loader.prime_panel(date(2020, 3, 31))
+        shorter = loader._panel_through(date(2020, 2, 29))
+
+    assert history_calls == [date(2020, 3, 31)]
+    assert shorter["forecast_origin"].dt.date.tolist() == [
+        date(2020, 1, 31),
+        date(2020, 2, 29),
+    ]
+
+
 def test_economic_cycle_jobs_delegate_without_registering_a_schedule() -> None:
     jobs = importlib.import_module("app.jobs.ingestion_jobs")
     collected: list[dict[str, object]] = []

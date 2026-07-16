@@ -5,7 +5,7 @@ import importlib.util
 import json
 import math
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
 
@@ -112,11 +112,24 @@ class _Response:
 
 class _PagedSession:
     def __init__(self) -> None:
+        self.urls: list[str] = []
         self.params: list[dict[str, object]] = []
 
-    def get(self, _url: str, *, params: dict[str, object], timeout: int):
+    def get(self, url: str, *, params: dict[str, object], timeout: int):
         assert timeout == 20
+        self.urls.append(url)
         self.params.append(dict(params))
+        if url.endswith("/series/vintagedates"):
+            return _Response(
+                {
+                    "count": 3,
+                    "vintage_dates": [
+                        "2020-02-01",
+                        "2020-04-01",
+                        "2020-05-01",
+                    ],
+                }
+            )
         offset = int(params["offset"])
         pages = {
             0: {
@@ -160,14 +173,157 @@ def test_fetch_fred_vintages_paginates_and_preserves_versions() -> None:
     )
 
     assert len(rows) == 3
-    assert [params["offset"] for params in session.params] == [0, 2]
-    assert all(params["output_type"] == 2 for params in session.params)
-    assert all(params["realtime_start"] == "1776-07-04" for params in session.params)
-    assert all(params["realtime_end"] == "9999-12-31" for params in session.params)
+    observation_params = [
+        params
+        for url, params in zip(session.urls, session.params)
+        if url.endswith("/series/observations")
+    ]
+    assert [params["offset"] for params in observation_params] == [0, 2]
+    assert all(params["output_type"] == 1 for params in observation_params)
+    assert all(
+        params["realtime_start"] == "1776-07-04"
+        for params in observation_params
+    )
+    assert all(
+        params["realtime_end"] == "9999-12-31"
+        for params in observation_params
+    )
     assert [row["realtime_start"] for row in rows[:2]] == [
         "2020-02-01",
         "2020-04-01",
     ]
+
+
+def test_fetch_fred_vintages_splits_more_than_2000_vintage_dates() -> None:
+    module = _load_vintage_module()
+    first = date(2018, 1, 1)
+    vintage_dates = [
+        (first + timedelta(days=offset)).isoformat() for offset in range(2001)
+    ]
+
+    class Session:
+        def __init__(self) -> None:
+            self.observation_params: list[dict[str, object]] = []
+
+        def get(self, url: str, *, params: dict[str, object], timeout: int):
+            assert timeout == 20
+            if url.endswith("/series/vintagedates"):
+                return _Response(
+                    {"count": len(vintage_dates), "vintage_dates": vintage_dates}
+                )
+            self.observation_params.append(dict(params))
+            return _Response({"count": 0, "observations": []})
+
+    session = Session()
+    assert (
+        module.fetch_fred_vintages(
+            "T10Y3M", api_key="x" * 32, session=session, limit=2
+        )
+        == []
+    )
+
+    assert len(session.observation_params) == 2
+    first_window, second_window = session.observation_params
+    assert first_window["realtime_start"] == "1776-07-04"
+    assert first_window["realtime_end"] == (
+        date.fromisoformat(vintage_dates[2000]) - timedelta(days=1)
+    ).isoformat()
+    assert second_window["realtime_start"] == vintage_dates[2000]
+    assert second_window["realtime_end"] == "9999-12-31"
+    assert all(item["output_type"] == 1 for item in session.observation_params)
+
+
+def test_session_http_failure_does_not_expose_api_key() -> None:
+    module = _load_vintage_module()
+    secret = "sensitive-test-key"
+
+    class Response:
+        status_code = 403
+
+        def raise_for_status(self) -> None:
+            raise RuntimeError(f"request failed with api_key={secret}")
+
+    class Session:
+        def get(self, *_args, **_kwargs):
+            return Response()
+
+    try:
+        module.fetch_fred_vintage_dates(
+            "PAYEMS",
+            api_key=secret,
+            session=Session(),
+        )
+    except module.EconomicCycleVintageError as exc:
+        assert secret not in str(exc)
+        assert "403" in str(exc)
+    else:
+        raise AssertionError("provider error must fail the vintage request")
+
+
+def test_collect_vintages_upserts_each_page_without_accumulating_all_rows() -> None:
+    module = _load_vintage_module()
+    session = _PagedSession()
+
+    class Connection:
+        def __init__(self) -> None:
+            self.batch_sizes: list[int] = []
+
+        def executemany(self, _sql: str, values: list[dict[str, object]]) -> None:
+            self.batch_sizes.append(len(values))
+
+    connection = Connection()
+    summary = module.collect_economic_cycle_vintages(
+        series_ids=["PAYEMS"],
+        api_key="x" * 32,
+        connection=connection,
+        session=session,
+        page_size=2,
+    )
+
+    assert summary["stored"] == 3
+    assert connection.batch_sizes == [2, 1]
+
+
+def test_collect_vintages_reuses_one_owned_database_connection() -> None:
+    module = _load_vintage_module()
+    session = _PagedSession()
+
+    class Connection:
+        def __init__(self) -> None:
+            self.batch_sizes: list[int] = []
+            self.databases: list[str] = []
+            self.closed = False
+
+        def use_db(self, database: str) -> None:
+            self.databases.append(database)
+
+        def execute(self, _sql: str) -> None:
+            return None
+
+        def executemany(self, _sql: str, values: list[dict[str, object]]) -> None:
+            self.batch_sizes.append(len(values))
+
+        def close(self) -> None:
+            self.closed = True
+
+    connection = Connection()
+    with (
+        patch.object(module, "MySQLClient", return_value=connection) as client,
+        patch.object(module, "sync_table_schema") as sync_schema,
+    ):
+        summary = module.collect_economic_cycle_vintages(
+            series_ids=["PAYEMS"],
+            api_key="x" * 32,
+            session=session,
+            page_size=2,
+        )
+
+    assert summary["stored"] == 3
+    assert connection.batch_sizes == [2, 1]
+    assert connection.databases == ["finance_meta"]
+    assert connection.closed is True
+    client.assert_called_once_with("localhost", "root", "1234", 3306)
+    sync_schema.assert_called_once()
 
 
 def test_normalize_fred_vintage_rows_keeps_missing_values_explicit() -> None:
@@ -419,4 +575,51 @@ def test_as_of_loader_query_is_parameterized_and_bounded() -> None:
         "2020-01-31",
         "2020-02-29",
         "2020-02-29",
+    )
+
+
+def test_history_loader_returns_all_intervals_that_can_affect_requested_origins() -> None:
+    module = _load_vintage_loader_module()
+    captured: dict[str, object] = {}
+    fixture = _revision_fixture() + [
+        {
+            **_revision_fixture()[0],
+            "series_id": "INDPRO",
+            "observation_date": "2021-01-01",
+            "realtime_start": "2021-02-01",
+            "realtime_end": "9999-12-31",
+        },
+        {
+            **_revision_fixture()[0],
+            "observation_date": "2018-01-01",
+            "realtime_start": "2018-02-01",
+            "realtime_end": "2018-12-31",
+        },
+    ]
+
+    def query_fn(database: str, sql: str, params: tuple[object, ...]):
+        captured.update(database=database, sql=sql, params=params)
+        return fixture
+
+    rows = module.load_economic_cycle_vintage_history(
+        ["PAYEMS"],
+        start_date="2019-01-01",
+        end_date="2020-12-31",
+        as_of_date="2022-06-30",
+        query_fn=query_fn,
+    )
+
+    assert [row["value"] for row in rows] == [100.0, 110.0]
+    assert captured["database"] == "finance_meta"
+    sql = str(captured["sql"])
+    assert "ROW_NUMBER() OVER" not in sql
+    assert "realtime_start <= %s" in sql
+    assert "realtime_end >= %s" in sql
+    assert "PAYEMS" not in sql and "2022-06-30" not in sql
+    assert tuple(captured["params"]) == (
+        "PAYEMS",
+        "2019-01-01",
+        "2020-12-31",
+        "2022-06-30",
+        "2019-01-01",
     )

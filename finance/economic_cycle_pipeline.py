@@ -41,6 +41,7 @@ from finance.economic_cycle_validation import (
     run_rolling_origin_validation,
 )
 from finance.loaders.economic_cycle import (
+    load_economic_cycle_vintage_history,
     load_economic_cycle_vintages,
     load_latest_approved_cycle_artifact,
 )
@@ -103,6 +104,8 @@ class EconomicCyclePipelineLoader:
     def __init__(self, *, history_start: date = DEFAULT_HISTORY_START) -> None:
         self.history_start = history_start
         self._origin_rows: dict[str, list[dict[str, object]]] = {}
+        self._panel_cache_cutoff: date | None = None
+        self._panel_cache: pd.DataFrame | None = None
 
     def remember_origin(
         self,
@@ -125,22 +128,38 @@ class EconomicCyclePipelineLoader:
         return [dict(row) for row in self._origin_rows[key]]
 
     def _panel_through(self, cutoff: date) -> pd.DataFrame:
-        origins = month_end_origins(self.history_start, cutoff)
-        unique_rows: dict[tuple[object, ...], dict[str, object]] = {}
-        for origin in origins:
-            for row in self.load_for_origin(origin):
-                key = (
-                    row.get("series_id"),
-                    row.get("observation_date"),
-                    row.get("realtime_start"),
-                    row.get("source"),
-                )
-                unique_rows[key] = row
-        return build_monthly_feature_panel(
-            unique_rows.values(),
+        if (
+            self._panel_cache is not None
+            and self._panel_cache_cutoff is not None
+            and self._panel_cache_cutoff >= cutoff
+        ):
+            origins = pd.to_datetime(
+                self._panel_cache["forecast_origin"], errors="coerce"
+            )
+            return self._panel_cache.loc[
+                origins <= pd.Timestamp(cutoff)
+            ].reset_index(drop=True).copy()
+        return self.prime_panel(cutoff)
+
+    def prime_panel(self, cutoff: str | date) -> pd.DataFrame:
+        """Build one bounded PIT panel and reuse safe prefixes during replay."""
+
+        resolved_cutoff = _as_date(cutoff, field="cutoff")
+        origins = month_end_origins(self.history_start, resolved_cutoff)
+        rows = load_economic_cycle_vintage_history(
+            [item.series_id for item in get_economic_cycle_catalog()],
+            start_date=self.history_start,
+            end_date=resolved_cutoff,
+            as_of_date=resolved_cutoff,
+        )
+        panel = build_monthly_feature_panel(
+            rows,
             get_economic_cycle_catalog(),
             forecast_origins=origins,
         )
+        self._panel_cache_cutoff = resolved_cutoff
+        self._panel_cache = panel.reset_index(drop=True).copy()
+        return self._panel_cache.copy()
 
     def load_training_data(
         self,
@@ -568,6 +587,10 @@ def replay_economic_cycle_history(
     origins = month_end_origins(start_date, end_date)
     resolved_loader = loader or EconomicCyclePipelineLoader()
     resolved_writer = writer or EconomicCyclePipelineWriter()
+    if hasattr(resolved_loader, "prime_panel"):
+        getattr(resolved_loader, "prime_panel")(
+            _as_date(end_date, field="end_date")
+        )
     model_versions: list[str] = []
     for origin in origins:
         vintage_rows = getattr(resolved_loader, "load_for_origin")(origin)

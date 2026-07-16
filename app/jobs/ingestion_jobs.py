@@ -114,7 +114,7 @@ def run_collect_economic_cycle_vintages(
             details={
                 "source": summary.get("source") or "fred",
                 "source_mode": summary.get("source_mode")
-                or "fred_output_type_2",
+                or "fred_output_type_1_realtime_intervals",
                 "coverage": summary.get("coverage") or {},
                 "missing": summary.get("missing") or [],
                 "target_table": "finance_meta.macro_series_vintage_observation",
@@ -132,7 +132,7 @@ def run_collect_economic_cycle_vintages(
             message=f"Economic-cycle vintage collection failed: {exc}",
             details={
                 "source": "fred",
-                "source_mode": "fred_output_type_2",
+                "source_mode": "fred_output_type_1_realtime_intervals",
                 "target_table": "finance_meta.macro_series_vintage_observation",
             },
         )

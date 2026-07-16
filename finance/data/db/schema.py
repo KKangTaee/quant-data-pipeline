@@ -850,7 +850,7 @@ PROVIDER_SCHEMAS = {
           realtime_end DATE NOT NULL,
           source VARCHAR(64) NOT NULL DEFAULT 'fred',
           source_type ENUM('official','database_bridge','computed_proxy') NOT NULL DEFAULT 'official',
-          source_mode VARCHAR(64) NOT NULL DEFAULT 'fred_output_type_2',
+          source_mode VARCHAR(64) NOT NULL DEFAULT 'fred_output_type_1_realtime_intervals',
           source_ref VARCHAR(1024) NULL,
 
           series_name VARCHAR(255) NULL,

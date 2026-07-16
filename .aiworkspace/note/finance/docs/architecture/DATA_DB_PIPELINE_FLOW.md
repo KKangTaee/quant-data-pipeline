@@ -46,7 +46,7 @@ external source
 | ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
 | ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
 | FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
-| FRED/ALFRED observations API `output_type=2` | Overview 경제 사이클 17-series vintage source. `FRED_API_KEY`가 필수이며 revised CSV fallback은 금지한다 |
+| FRED/ALFRED `series/vintagedates` + observations API `output_type=1` | Overview 경제 사이클 17-series long-form revision interval source. `FRED_API_KEY`가 필수이며 revised CSV fallback은 금지한다 |
 | Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
 | Robert Shiller `ie_data.xls` | Market Context 월별 SPX 가격·보간 EPS·CAPE source. 공식 Shiller 페이지에서 현재 XLS 링크를 발견하며 EPS 미발표 최신 월도 price-only row로 `sp500_monthly_valuation`에 저장 |
 | SEC QQQ N-PORT / N-30B-2 | Market Context Nasdaq-100 QQQ proxy holdings source. CUSIP/ISIN/LEI, filing/accession, annual/quarterly anchor를 `etf_holdings_snapshot`에 저장하며 공식 Nasdaq aggregate로 취급하지 않는다 |

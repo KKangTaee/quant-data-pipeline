@@ -75,7 +75,7 @@
   이 board는 1차 ETF holdings / exposure 기준이며, ETF-of-ETF 2차 look-through는 아직 보장하지 않는다.
 - `macro_series_observation`은 FRED observation date 기준 revised-latest market-context series다.
   FRED API key가 없으면 official CSV download를 사용하며, Practical Validation에서는 최신 관측값과 staleness를 함께 봐야 한다. 이 table 자체는 strict historical PIT evidence가 아니다.
-- 경제 사이클 전용 `macro_series_vintage_observation`은 FRED/ALFRED `output_type=2`의 `realtime_start` / `realtime_end` revision interval을 보존한다.
+- 경제 사이클 전용 `macro_series_vintage_observation`은 FRED/ALFRED long-form `output_type=1`의 `realtime_start` / `realtime_end` revision interval을 보존한다. `series/vintagedates`로 요청 구간을 나눠 일별 series도 provider의 2,000-vintage-date 제한을 넘지 않는다.
   strict loader는 `realtime_start <= forecast origin <= realtime_end`인 row만 선택하므로 이후 발표·수정값을 과거 origin에 소급하지 않는다.
 - 경제 사이클 feature scaling은 expanding history, calibration/validation은 rolling-origin OOF만 사용한다.
   retrospective label은 activity/labor와 해당 origin에 eligible한 `USREC`만 사용해 financial/inflation 변수가 현재 국면 의미를 바꾸지 못하게 한다.

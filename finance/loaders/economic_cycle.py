@@ -150,6 +150,82 @@ def load_economic_cycle_vintages(
     ]
 
 
+def load_economic_cycle_vintage_history(
+    series_ids: Iterable[str],
+    *,
+    start_date: str | date,
+    end_date: str | date,
+    as_of_date: str | date,
+    query_fn: QueryFn | None = None,
+) -> list[dict[str, object]]:
+    """Load all raw intervals that can affect any origin in a bounded PIT panel."""
+
+    resolved_series = _normalized_series_ids(series_ids)
+    start = _date_value(start_date, field="start_date")
+    end = _date_value(end_date, field="end_date")
+    as_of = _date_value(as_of_date, field="as_of_date")
+    if start > end:
+        raise ValueError("start_date must be earlier than or equal to end_date")
+    if end > as_of:
+        end = as_of
+
+    placeholders = ",".join(["%s"] * len(resolved_series))
+    sql = f"""
+    SELECT
+      series_id, observation_date, realtime_start, realtime_end,
+      source, value, coverage_status, updated_at
+    FROM macro_series_vintage_observation
+    WHERE series_id IN ({placeholders})
+      AND observation_date >= %s
+      AND observation_date <= %s
+      AND realtime_start <= %s
+      AND realtime_end >= %s
+    ORDER BY series_id ASC, observation_date ASC, realtime_start ASC
+    """
+    params: tuple[Any, ...] = (
+        *resolved_series,
+        start.isoformat(),
+        end.isoformat(),
+        as_of.isoformat(),
+        start.isoformat(),
+    )
+    raw_rows = _query(DB_META, sql, params, query_fn=query_fn)
+
+    eligible: dict[tuple[str, date, date, str], dict[str, object]] = {}
+    for raw in raw_rows:
+        row = dict(raw)
+        series_id = str(row.get("series_id") or "").strip().upper()
+        if series_id not in resolved_series:
+            continue
+        observation = _date_value(row.get("observation_date"), field="observation_date")
+        realtime_start = _date_value(row.get("realtime_start"), field="realtime_start")
+        realtime_end = _date_value(row.get("realtime_end"), field="realtime_end")
+        if not (start <= observation <= end):
+            continue
+        if realtime_start > as_of or realtime_end < start:
+            continue
+        source = str(row.get("source") or "")
+        key = (series_id, observation, realtime_start, source)
+        current = eligible.get(key)
+        if current is not None and _updated_sort_value(
+            row.get("updated_at")
+        ) <= _updated_sort_value(current.get("updated_at")):
+            continue
+        row["series_id"] = series_id
+        row["observation_date"] = observation.isoformat()
+        row["realtime_start"] = realtime_start.isoformat()
+        row["realtime_end"] = realtime_end.isoformat()
+        eligible[key] = row
+
+    return [
+        eligible[key]
+        for key in sorted(
+            eligible,
+            key=lambda item: (item[0], item[1], item[2], item[3]),
+        )
+    ]
+
+
 def load_economic_cycle_series_coverage(
     *,
     as_of_date: str | date,

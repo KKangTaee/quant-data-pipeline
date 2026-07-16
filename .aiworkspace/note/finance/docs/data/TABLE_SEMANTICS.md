@@ -440,7 +440,7 @@ PIT / publication 계약:
 
 주의:
 
-- 이 경로는 FRED observations API의 `output_type=2`와 `FRED_API_KEY`를 요구한다. revised-latest CSV fallback은 historical vintage 증거가 아니므로 허용하지 않는다.
+- 이 경로는 FRED `series/vintagedates`와 observations API의 long-form `output_type=1`, `FRED_API_KEY`를 요구한다. provider의 요청당 2,000 vintage-date 제한은 실제 vintage date 경계로 분할하며, revised-latest CSV fallback은 historical vintage 증거가 아니므로 허용하지 않는다.
 - 국면은 data-defined macro regime이며 NBER 공식 판정, 자산 수익률 예측, 매수·매도 지시가 아니다.
 
 ## `nyse_price_history`

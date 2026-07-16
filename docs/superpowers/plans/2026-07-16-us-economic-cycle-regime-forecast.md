@@ -145,7 +145,7 @@ class IndicatorSpec:
 - Modify: `tests/test_economic_cycle_vintages.py`
 
 **Interfaces:**
-- `fetch_fred_vintages(series_id, *, api_key, session=None, limit=100_000) -> list[dict[str, object]]` calls official `series/observations` with `output_type=2`, JSON pagination, and explicit real-time bounds.
+- `fetch_fred_vintages(series_id, *, api_key, session=None, limit=100_000) -> list[dict[str, object]]` calls official `series/observations` with long-form `output_type=1`, JSON pagination, and explicit real-time bounds. It first reads `series/vintagedates` and partitions requests at the provider's 2,000-vintage-date limit.
 - `normalize_fred_vintage_rows(spec, payload_rows, *, collected_at) -> list[dict[str, object]]` produces schema rows.
 - `upsert_economic_cycle_vintages(rows, *, connection=None) -> int` uses the business key above.
 - `collect_economic_cycle_vintages(*, series_ids=None, api_key=None, connection=None) -> dict[str, object]` fails closed without a key.
@@ -155,7 +155,7 @@ params = {
     "series_id": series_id,
     "api_key": api_key,
     "file_type": "json",
-    "output_type": 2,
+    "output_type": 1,
     "limit": limit,
     "offset": offset,
 }

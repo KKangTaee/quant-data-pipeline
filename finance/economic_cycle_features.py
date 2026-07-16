@@ -240,25 +240,21 @@ def _eligible_rows_for_origin(
     series_id: str,
     origin: pd.Timestamp,
 ) -> pd.DataFrame:
-    subset = rows.loc[rows["series_id"] == series_id].copy()
+    subset = rows
+    if not subset.empty and not (
+        subset["series_id"].eq(series_id).all()
+    ):
+        subset = subset.loc[subset["series_id"] == series_id]
     if subset.empty:
-        return subset
-    subset["observation_date"] = pd.to_datetime(
-        subset["observation_date"], errors="coerce"
-    )
-    subset = subset.loc[subset["observation_date"] <= origin]
+        return subset.copy()
+    mask = subset["observation_date"] <= origin
     if "realtime_start" in subset:
-        subset["realtime_start"] = pd.to_datetime(
-            subset["realtime_start"], errors="coerce"
+        mask &= subset["realtime_start"] <= origin
+    if "_realtime_end_open" in subset and "_realtime_end_parsed" in subset:
+        mask &= subset["_realtime_end_open"] | (
+            subset["_realtime_end_parsed"] >= origin
         )
-        subset = subset.loc[subset["realtime_start"] <= origin]
-    if "realtime_end" in subset:
-        end_text = subset["realtime_end"].astype(str)
-        open_ended = end_text.str.startswith("9999-")
-        parsed_end = pd.to_datetime(
-            subset["realtime_end"].where(~open_ended), errors="coerce"
-        )
-        subset = subset.loc[open_ended | (parsed_end >= origin)]
+    subset = subset.loc[mask].copy()
     sort_columns = ["observation_date"]
     if "realtime_start" in subset:
         sort_columns.append("realtime_start")
@@ -283,6 +279,26 @@ def build_monthly_feature_panel(
     if "series_id" not in source:
         source["series_id"] = ""
     source["series_id"] = source["series_id"].astype(str).str.upper()
+    source["observation_date"] = pd.to_datetime(
+        source.get("observation_date"), errors="coerce"
+    )
+    if "realtime_start" in source:
+        source["realtime_start"] = pd.to_datetime(
+            source["realtime_start"], errors="coerce"
+        )
+    if "realtime_end" in source:
+        end_text = source["realtime_end"].astype(str)
+        source["_realtime_end_open"] = end_text.str.startswith("9999-")
+        source["_realtime_end_parsed"] = pd.to_datetime(
+            source["realtime_end"].where(~source["_realtime_end_open"]),
+            errors="coerce",
+        )
+    series_frames = {
+        series_id: frame.copy()
+        for series_id, frame in source.groupby("series_id", sort=False)
+    }
+    empty_source = source.iloc[0:0].copy()
+    del source
 
     records: list[dict[str, object]] = []
     for origin_value in forecast_origins:
@@ -293,7 +309,9 @@ def build_monthly_feature_panel(
         record: dict[str, object] = {"forecast_origin": origin}
         for spec in specs:
             eligible = _eligible_rows_for_origin(
-                source, series_id=spec.series_id, origin=origin
+                series_frames.get(spec.series_id, empty_source),
+                series_id=spec.series_id,
+                origin=origin,
             )
             monthly = aggregate_observations_monthly(
                 eligible, aggregation=spec.aggregation

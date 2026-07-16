@@ -102,7 +102,7 @@ yfinance
 ### U.S. economic cycle regime forecast
 
 ```text
-FRED/ALFRED observations API output_type=2 + FRED_API_KEY
+FRED/ALFRED vintage-dates API + observations API output_type=1 + FRED_API_KEY
   -> finance.data.economic_cycle_vintages
   -> finance_meta.macro_series_vintage_observation
   -> finance.loaders.economic_cycle strict as-of selection
