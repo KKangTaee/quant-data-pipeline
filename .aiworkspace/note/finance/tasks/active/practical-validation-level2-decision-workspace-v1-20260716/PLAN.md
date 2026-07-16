@@ -2846,20 +2846,20 @@ focused regression, 한국어 commit 순서로 실행한다.
 - Produces fragment rerun boundary for selection / replay / resolution
 - Preserves app rerun for Final Review navigation
 
-- [ ] Add RED boundary tests for `1A. 검증할 후보 선택`,
+- [x] Add RED boundary tests for `1A. 검증할 후보 선택`,
   `1B. 어떤 관점으로 검증할까요?`, selected active state, and no
   selected-button disabled opacity.
-- [ ] Add RED service tests for `weighted_portfolio_mix -> 혼합 포트폴리오`,
+- [x] Add RED service tests for `weighted_portfolio_mix -> 혼합 포트폴리오`,
   `latest_backtest_run -> 단일 전략 실행`.
-- [ ] Add RED page tests proving replay and selection use
+- [x] Add RED page tests proving replay and selection use
   `st.rerun(scope="fragment")`, while `save_and_move` route navigation uses
   app rerun.
-- [ ] Extract the one-shell interaction into an `@st.fragment` render boundary.
-- [ ] Keep the same Python intent validation and current-session replay guards.
-- [ ] Add React pending state so only Step 2/result content shows revalidation
+- [x] Extract the one-shell interaction into an `@st.fragment` render boundary.
+- [x] Keep the same Python intent validation and current-session replay guards.
+- [x] Add React pending state so only Step 2/result content shows revalidation
   progress while Step 1 remains mounted.
-- [ ] Run focused UI boundary tests, React production build, py_compile.
-- [ ] Commit: `Practical Validation 후보 선택과 부분 재검증 개선`.
+- [x] Run focused UI boundary tests, React production build, py_compile.
+- [x] Commit: `Practical Validation 후보 선택과 부분 재검증 개선`.
 
 ### Task 7: Plain-Language Explanation And Category Evidence UI
 

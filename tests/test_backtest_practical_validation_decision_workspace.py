@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from importlib import import_module
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 
 class PracticalValidationTruthContractTests(unittest.TestCase):
@@ -341,6 +341,45 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertFalse(model["actions"]["save_audit_only"]["enabled"])
         self.assertFalse(model["actions"]["save_and_move"]["enabled"])
 
+    def test_source_kind_is_presented_as_user_language(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        weighted_source = {
+            **self._source(),
+            "source_kind": "weighted_portfolio_mix",
+            "source_type": "",
+        }
+        single_source = {
+            **self._source(),
+            "selection_source_id": "source-single",
+            "source_kind": "latest_backtest_run",
+            "source_type": "",
+        }
+        model = build_practical_validation_decision_workspace(
+            source=weighted_source,
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result=None,
+            validation_result=None,
+            source_options=[weighted_source, single_source],
+        )
+
+        labels = {
+            row["selection_source_id"]: row["source_type_label"]
+            for row in model["candidate_selector"]["options"]
+        }
+        self.assertEqual(labels["source-grs-current"], "혼합 포트폴리오")
+        self.assertEqual(labels["source-single"], "단일 전략 실행")
+        self.assertEqual(
+            model["candidate"]["source_type_label"],
+            "혼합 포트폴리오",
+        )
+        self.assertNotIn("selection_source", set(labels.values()))
+
     def test_replay_required_hides_result_and_save_actions(self) -> None:
         from app.services.backtest_practical_validation_decision_workspace import (
             build_practical_validation_decision_workspace,
@@ -598,6 +637,39 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertEqual(first["validation_id"], "validation-stable")
         self.assertEqual(second["validation_id"], "validation-stable")
         self.assertEqual(builder.call_count, 1)
+
+    def test_replay_intent_requests_fragment_scoped_rerun(self) -> None:
+        from app.web.backtest_practical_validation import page
+
+        fake_streamlit = SimpleNamespace(
+            session_state={},
+            rerun=MagicMock(),
+        )
+        source = self._source()
+        with (
+            patch.object(page, "st", fake_streamlit),
+            patch.object(
+                page,
+                "_execute_practical_validation_replay",
+                return_value={"status": "PASS"},
+            ) as replay,
+        ):
+            page._consume_practical_validation_decision_workspace_intent(
+                {
+                    "action": "run_replay",
+                    "intent_id": "intent-fragment-replay",
+                    "selection_source_id": "source-grs-current",
+                    "validation_result_id": "",
+                },
+                sources=[source],
+                source=source,
+                validation_result=None,
+                replay_result=None,
+                rerun_scope="fragment",
+            )
+
+        replay.assert_called_once()
+        fake_streamlit.rerun.assert_called_once_with(scope="fragment")
 
 
 if __name__ == "__main__":

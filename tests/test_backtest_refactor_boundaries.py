@@ -348,6 +348,44 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
+    def test_practical_validation_separates_candidate_and_policy_selection(self) -> None:
+        source = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/"
+            "PracticalValidationDecisionWorkspace.tsx"
+        ).read_text()
+        style = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/"
+            "style.css"
+        ).read_text()
+
+        self.assertIn("1A. 검증할 후보 선택", source)
+        self.assertIn("1B. 어떤 관점으로 검증할까요?", source)
+        self.assertIn('aria-pressed={option.selected}', source)
+        self.assertNotIn("disabled={option.selected || !option.eligible}", source)
+        self.assertNotIn("disabled={option.selected}", source)
+        self.assertIn(".pv2-candidate-section", style)
+        self.assertIn(".pv2-policy-section", style)
+
+    def test_practical_validation_workspace_uses_fragment_interaction_boundary(
+        self,
+    ) -> None:
+        source = (
+            PROJECT_ROOT / "app/web/backtest_practical_validation/page.py"
+        ).read_text()
+        render_body = source.split(
+            "def render_practical_validation_workspace", 1
+        )[1]
+
+        self.assertIn("@st.fragment", source)
+        self.assertIn(
+            "_render_practical_validation_decision_workspace_fragment()",
+            render_body,
+        )
+        self.assertIn('rerun_scope="fragment"', source)
+        self.assertIn('st.rerun(scope="app")', source)
+
     def test_final_review_decision_brief_service_owns_domain_projection(self) -> None:
         service_source = (
             PROJECT_ROOT / "app/services/backtest_final_review_decision_brief.py"

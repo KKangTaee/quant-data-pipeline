@@ -169,6 +169,75 @@ summary:focus-visible {
   margin-top: 14px;
 }
 
+.pv2-selection-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 14px;
+}
+
+.pv2-candidate-section {
+  background: #f8fbfd;
+}
+
+.pv2-policy-section {
+  background: #fbfaf7;
+}
+
+.pv2-subsection-title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.pv2-subsection-title > span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--pv2-blue);
+  background: #e9f1f5;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pv2-subsection-title h3,
+.pv2-subsection-title p {
+  margin: 0;
+}
+
+.pv2-subsection-title h3 {
+  font-size: 15px;
+}
+
+.pv2-subsection-title p {
+  margin-top: 4px;
+  color: var(--pv2-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pv2-selection-section .pv2-choice-grid,
+.pv2-selection-section .pv2-profile-grid {
+  margin-top: 0;
+}
+
+.pv2-candidate-summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  border-left: 3px solid #6f91a7;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.pv2-candidate-summary span,
+.pv2-candidate-summary small {
+  color: var(--pv2-muted);
+  font-size: 10px;
+}
+
 .pv2-choice-grid button,
 .pv2-profile-grid button {
   display: grid;
@@ -189,6 +258,14 @@ summary:focus-visible {
   gap: 14px;
   align-items: center;
   margin-top: 14px;
+}
+
+.pv2-replay-step.is-pending {
+  border-color: #9bb3c3;
+}
+
+.pv2-replay-step.is-pending .pv2-replay {
+  background: #f3f8fb;
 }
 
 .pv2-replay > div {
@@ -400,7 +477,8 @@ button:disabled {
   .pv2-verdict dl,
   .pv2-choice-grid,
   .pv2-profile-grid,
-  .pv2-card-grid {
+  .pv2-card-grid,
+  .pv2-subsection-title {
     grid-template-columns: 1fr;
   }
 

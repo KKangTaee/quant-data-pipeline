@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import { Streamlit } from "streamlit-component-lib"
 import { DecisionWorkspace, Issue, WorkspaceIntent } from "./types"
 
@@ -68,6 +68,8 @@ export function PracticalValidationDecisionWorkspace({
 }: {
   workspace: DecisionWorkspace
 }) {
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
+
   useEffect(() => {
     const resize = () => Streamlit.setFrameHeight()
     resize()
@@ -76,6 +78,10 @@ export function PracticalValidationDecisionWorkspace({
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    setPendingAction(null)
+  }, [workspace.replay.replay_id, workspace.validation_result_id])
+
   const resolveNow = workspace.resolution_lanes.resolve_now ?? []
   const engineeringRequired =
     workspace.resolution_lanes.engineering_required ?? []
@@ -83,6 +89,7 @@ export function PracticalValidationDecisionWorkspace({
   const measuredCautions = workspace.measured_cautions ?? []
   const visibleVerified = workspace.verified_findings.slice(0, 8)
   const validationResultId = workspace.validation_result_id
+  const replayPending = pendingAction === "run_replay"
 
   return (
     <main className="pv2-workspace">
@@ -109,53 +116,90 @@ export function PracticalValidationDecisionWorkspace({
           title="무엇을 어떤 기준으로 검증하는가"
           detail="후보와 판정 기준을 먼저 고정합니다."
         />
-        <div className="pv2-choice-grid">
-          {workspace.candidate_selector.options.map((option) => (
-            <button
-              type="button"
-              className={option.selected ? "is-selected" : ""}
-              disabled={option.selected || !option.eligible}
-              key={option.selection_source_id}
-              onClick={() =>
-                emit({
-                  action: "select_source",
-                  intent_id: intentId("source"),
-                  selection_source_id: option.selection_source_id,
-                  validation_result_id: workspace.validation_result_id,
-                })
-              }
-            >
-              <strong>{option.title}</strong>
-              <span>{option.source_type}</span>
-            </button>
-          ))}
+        <div className="pv2-selection-section pv2-candidate-section">
+          <div className="pv2-subsection-title">
+            <span>1A</span>
+            <div>
+              <h3>1A. 검증할 후보 선택</h3>
+              <p>목록에서 실제로 재검증할 포트폴리오를 고릅니다.</p>
+            </div>
+          </div>
+          <div className="pv2-choice-grid">
+            {workspace.candidate_selector.options.map((option) => (
+              <button
+                type="button"
+                className={option.selected ? "is-selected" : ""}
+                aria-pressed={option.selected}
+                disabled={!option.eligible}
+                key={option.selection_source_id}
+                onClick={() => {
+                  if (option.selected) return
+                  emit({
+                    action: "select_source",
+                    intent_id: intentId("source"),
+                    selection_source_id: option.selection_source_id,
+                    validation_result_id: workspace.validation_result_id,
+                  })
+                }}
+              >
+                <strong>{option.title}</strong>
+                <span>{option.source_type_label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="pv2-candidate-summary">
+            <span>현재 검증 후보</span>
+            <strong>{workspace.candidate.title}</strong>
+            <small>
+              {workspace.candidate.source_type_label} ·{" "}
+              {workspace.candidate.as_of || "기준일 미측정"}
+            </small>
+          </div>
         </div>
-        <div className="pv2-profile-grid">
-          {workspace.profile.options.map((option) => (
-            <button
-              type="button"
-              className={option.selected ? "is-selected" : ""}
-              disabled={option.selected}
-              key={option.profile_id}
-              onClick={() =>
-                emit({
-                  action: "select_profile_preset",
-                  intent_id: intentId("profile"),
-                  selection_source_id:
-                    workspace.candidate.selection_source_id,
-                  validation_result_id: workspace.validation_result_id,
-                  profile_id: option.profile_id,
-                })
-              }
-            >
-              <strong>{option.label}</strong>
-              <span>{option.description}</span>
-            </button>
-          ))}
+        <div className="pv2-selection-section pv2-policy-section">
+          <div className="pv2-subsection-title">
+            <span>1B</span>
+            <div>
+              <h3>1B. 어떤 관점으로 검증할까요?</h3>
+              <p>
+                포트폴리오 설계가 아니라 손실 허용도와 운용 목적에 맞는 판정
+                기준을 선택합니다.
+              </p>
+            </div>
+          </div>
+          <div className="pv2-profile-grid">
+            {workspace.profile.options.map((option) => (
+              <button
+                type="button"
+                className={option.selected ? "is-selected" : ""}
+                aria-pressed={option.selected}
+                key={option.profile_id}
+                onClick={() => {
+                  if (option.selected) return
+                  emit({
+                    action: "select_profile_preset",
+                    intent_id: intentId("profile"),
+                    selection_source_id:
+                      workspace.candidate.selection_source_id,
+                    validation_result_id: workspace.validation_result_id,
+                    profile_id: option.profile_id,
+                  })
+                }}
+              >
+                <strong>{option.label}</strong>
+                <span>{option.description}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="pv2-step">
+      <section
+        className={`pv2-step pv2-replay-step ${
+          replayPending ? "is-pending" : ""
+        }`}
+        aria-busy={replayPending}
+      >
         <StepTitle
           step="2. 최신 데이터 기준 재검증"
           title="현재 저장 데이터로 다시 재현하는가"
@@ -169,17 +213,20 @@ export function PracticalValidationDecisionWorkspace({
           </div>
           <button
             type="button"
-            disabled={!workspace.actions.run_replay.enabled}
-            onClick={() =>
+            disabled={!workspace.actions.run_replay.enabled || replayPending}
+            onClick={() => {
+              setPendingAction("run_replay")
               emit({
                 action: "run_replay",
                 intent_id: intentId("replay"),
                 selection_source_id: workspace.candidate.selection_source_id,
                 validation_result_id: workspace.validation_result_id,
               })
-            }
+            }}
           >
-            {workspace.actions.run_replay.label}
+            {replayPending
+              ? "최신 데이터로 재검증 중"
+              : workspace.actions.run_replay.label}
           </button>
         </div>
       </section>
@@ -196,6 +243,10 @@ export function PracticalValidationDecisionWorkspace({
           <div>
             <dt>측정 주의</dt>
             <dd>{workspace.summary.measured_caution_count ?? 0}</dd>
+          </div>
+          <div>
+            <dt>Level2 주의</dt>
+            <dd>{workspace.summary.validated_caution_count ?? 0}</dd>
           </div>
           <div>
             <dt>지금 해결</dt>

@@ -70,7 +70,7 @@ export type DecisionWorkspace = {
     options: Array<{
       selection_source_id: string
       title: string
-      source_type: string
+      source_type_label: string
       selected: boolean
       eligible: boolean
     }>
@@ -78,7 +78,7 @@ export type DecisionWorkspace = {
   candidate: {
     selection_source_id: string
     title: string
-    source_type: string
+    source_type_label: string
     as_of: string
   }
   profile: {
@@ -101,6 +101,7 @@ export type DecisionWorkspace = {
     detail: string
     category_id: string
   }>
+  validated_cautions: Issue[]
   measured_cautions: Issue[]
   resolution_lanes: {
     resolve_now: Issue[]

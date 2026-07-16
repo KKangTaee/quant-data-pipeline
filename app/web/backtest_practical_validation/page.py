@@ -2429,6 +2429,7 @@ def _consume_practical_validation_decision_workspace_intent(
     source: dict[str, Any],
     validation_result: dict[str, Any] | None,
     replay_result: dict[str, Any] | None,
+    rerun_scope: str = "app",
 ) -> None:
     """Validate presentation intent against the current Python workspace state."""
 
@@ -2454,18 +2455,21 @@ def _consume_practical_validation_decision_workspace_intent(
             st.session_state["backtest_practical_validation_notice"] = (
                 "현재 후보 목록에 없는 source intent를 무시했습니다."
             )
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
         st.session_state[
             "practical_validation_selected_source_id"
         ] = intent_source_id
         _clear_practical_validation_replay_state()
-        st.rerun()
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
 
     if intent_source_id != current_source_id:
         st.session_state["backtest_practical_validation_notice"] = (
             "후보가 바뀌어 이전 화면 action을 실행하지 않았습니다."
         )
-        st.rerun()
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
 
     if action == "select_profile_preset":
         profile_id = str(intent.get("profile_id") or "")
@@ -2473,10 +2477,12 @@ def _consume_practical_validation_decision_workspace_intent(
             st.session_state["backtest_practical_validation_notice"] = (
                 "지원하지 않는 검증 프로필입니다."
             )
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
         st.session_state["practical_validation_profile_id"] = profile_id
         _clear_practical_validation_replay_state(current_source_id)
-        st.rerun()
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
 
     if action == "run_replay":
         mode = str(
@@ -2491,20 +2497,23 @@ def _consume_practical_validation_decision_workspace_intent(
         st.session_state["backtest_practical_validation_notice"] = (
             "최신 데이터 기준 재검증을 완료했습니다."
         )
-        st.rerun()
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
 
     if action == "run_resolution_action":
         if not validation_result:
             st.session_state["backtest_practical_validation_notice"] = (
                 "현재 검증 결과가 없어 action을 실행하지 않았습니다."
             )
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
         validation_id = str(validation_result.get("validation_id") or "")
         if str(intent.get("validation_result_id") or "") != validation_id:
             st.session_state["backtest_practical_validation_notice"] = (
                 "검증 결과가 바뀌어 이전 action을 실행하지 않았습니다."
             )
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
         closure = dict(validation_result.get("evidence_closure") or {})
         issue = next(
             (
@@ -2525,15 +2534,18 @@ def _consume_practical_validation_decision_workspace_intent(
             st.session_state["backtest_practical_validation_notice"] = (
                 "현재 실행 가능한 해결 action이 아닙니다."
             )
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
         if action_id == "run_practical_validation_provider_gap_collection":
             _execute_practical_validation_provider_gap_collection(
                 validation_result
             )
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
         if action_id == "run_practical_validation_replay":
             _execute_practical_validation_replay(source)
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
 
     if action in {"save_audit_only", "save_and_move"}:
         validation_id = str(
@@ -2546,7 +2558,8 @@ def _consume_practical_validation_decision_workspace_intent(
             st.session_state["backtest_practical_validation_notice"] = (
                 "검증 결과가 바뀌어 이전 저장 action을 실행하지 않았습니다."
             )
-            st.rerun()
+            _rerun_practical_validation_workspace(scope=rerun_scope)
+            return
         _consume_practical_validation_next_stage_action(
             {
                 "action": action,
@@ -2556,7 +2569,17 @@ def _consume_practical_validation_decision_workspace_intent(
             source=source,
             validation_result=dict(validation_result or {}),
             replay_result=replay_result,
+            rerun_scope=rerun_scope,
         )
+
+
+def _rerun_practical_validation_workspace(*, scope: str = "app") -> None:
+    """Rerun only the interaction fragment unless navigation changes the route."""
+
+    if scope == "fragment":
+        st.rerun(scope="fragment")
+        return
+    st.rerun(scope="app")
 
 
 def _consume_practical_validation_next_stage_action(
@@ -2565,6 +2588,7 @@ def _consume_practical_validation_next_stage_action(
     source: dict[str, Any],
     validation_result: dict[str, Any],
     replay_result: dict[str, Any] | None,
+    rerun_scope: str = "app",
 ) -> None:
     if not isinstance(action_value, dict):
         return
@@ -2591,7 +2615,7 @@ def _consume_practical_validation_next_stage_action(
         st.session_state["backtest_practical_validation_notice"] = (
             "데이터 보강 후 Flow 2 재검증이 아직 완료되지 않았습니다. 전략 재검증 실행 후 새 결과를 저장하세요."
         )
-        st.rerun()
+        _rerun_practical_validation_workspace(scope=rerun_scope)
         return
 
     gate = dict(validation_result.get("final_review_gate") or {})
@@ -2602,13 +2626,15 @@ def _consume_practical_validation_next_stage_action(
         if not can_save_and_move:
             notice += " 이 기록은 Final Review 후보 목록에는 표시되지 않습니다."
         st.session_state.backtest_practical_validation_notice = notice
-        st.rerun()
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
 
     if not can_save_and_move:
         st.session_state.backtest_practical_validation_notice = (
             "Final Review 이동 전 보강 항목이 남아 있습니다. Flow4 기준 상세와 데이터 보강 대상을 먼저 확인하세요."
         )
-        st.rerun()
+        _rerun_practical_validation_workspace(scope=rerun_scope)
+        return
 
     handoff = prepare_final_review_handoff_from_validation(
         source=source,
@@ -2623,7 +2649,7 @@ def _consume_practical_validation_next_stage_action(
     source_id = str(validation_result.get("selection_source_id") or "source").strip() or "source"
     st.session_state.pop(_enrichment_progress_state_key(source_id), None)
     st.session_state["backtest_requested_panel"] = handoff.requested_panel
-    st.rerun()
+    _rerun_practical_validation_workspace(scope="app")
 
 
 def _render_decision_workspace_advanced_controls(
@@ -2702,6 +2728,12 @@ def render_practical_validation_workspace() -> None:
         "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가? "
         "해결할 항목과 Final Review에서 판단할 항목을 구분해 확인합니다."
     )
+    _render_practical_validation_decision_workspace_fragment()
+
+
+@st.fragment
+def _render_practical_validation_decision_workspace_fragment() -> None:
+    """Render selection, replay, and result updates without resetting the page."""
 
     sources = load_portfolio_selection_sources(limit=100)
     session_source = st.session_state.get("backtest_practical_validation_source")
@@ -2811,6 +2843,7 @@ def render_practical_validation_workspace() -> None:
         source=source,
         validation_result=validation_result,
         replay_result=replay_result,
+        rerun_scope="fragment",
     )
 
     with st.expander("고급 설정과 원본 근거", expanded=False):

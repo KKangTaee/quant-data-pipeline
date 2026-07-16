@@ -76,3 +76,20 @@
   - focused closure / workspace / boundary / service 85 tests `OK`.
   - target py_compile과 `git diff --check` 통과.
 - protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.
+
+## 2026-07-16 Correction Task 6
+
+- RED:
+  - 후보 source kind가 `selection_source` 같은 내부 값으로 노출됨을 확인.
+  - 후보 선택과 검증 정책이 같은 카드 묶음으로 렌더링됨을 확인.
+  - 최신 재검증 intent가 전체 앱 rerun만 호출해 Step 1까지 다시 마운트됨을 확인.
+- GREEN:
+  - 후보 선택을 `1A`, 검증 관점을 `1B` 독립 영역으로 분리하고 현재 선택을
+    disabled opacity 대신 active state로 표현.
+  - source kind를 `혼합 포트폴리오`, `단일 전략 실행` 사용자 언어로 projection.
+  - selection / profile / replay / Level2 resolution은 `@st.fragment` 범위로
+    rerun하고 Final Review 이동만 app scope rerun을 유지.
+  - React pending state는 Step 2 재검증 영역에만 표시.
+  - focused 89 tests `OK`, React production build 175 modules 통과.
+  - target py_compile과 `git diff --check` 통과.
+- protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.

@@ -14166,6 +14166,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             )
 
         handoff_mock.assert_called_once()
+        fake_st.rerun.assert_called_once_with(scope="app")
         stable_key = "practical_validation_result:validation-new"
         self.assertEqual(fake_st.session_state["final_review_source_selected"], stable_key)
         self.assertEqual(

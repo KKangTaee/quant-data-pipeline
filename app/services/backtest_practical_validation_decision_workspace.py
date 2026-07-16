@@ -39,6 +39,13 @@ _AUDIT_LABELS = {
     "data_coverage_audit": "데이터 범위와 최신성",
 }
 
+_SOURCE_KIND_LABELS = {
+    "weighted_portfolio_mix": "혼합 포트폴리오",
+    "saved_portfolio_mix": "저장 포트폴리오",
+    "latest_backtest_run": "단일 전략 실행",
+    "single_strategy": "단일 전략 실행",
+}
+
 
 def _dict_rows(value: Any) -> list[dict[str, Any]]:
     return [dict(row) for row in list(value or []) if isinstance(row, dict)]
@@ -77,6 +84,15 @@ def _technical_row(row: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _source_type_label(row: dict[str, Any]) -> str:
+    source_kind = str(
+        row.get("source_kind")
+        or row.get("source_type")
+        or ""
+    ).strip().lower()
+    return _SOURCE_KIND_LABELS.get(source_kind, "검증 후보")
+
+
 def _source_option(row: dict[str, Any], selected_id: str) -> dict[str, Any]:
     source_id = str(row.get("selection_source_id") or "").strip()
     return {
@@ -88,7 +104,7 @@ def _source_option(row: dict[str, Any], selected_id: str) -> dict[str, Any]:
             or source_id
             or "후보"
         ),
-        "source_type": str(row.get("source_type") or "selection_source"),
+        "source_type_label": _source_type_label(row),
         "selected": source_id == selected_id,
         "eligible": True,
     }
@@ -531,7 +547,7 @@ def build_practical_validation_decision_workspace(
                 or selected_source_id
                 or "후보"
             ),
-            "source_type": str(source.get("source_type") or "selection_source"),
+            "source_type_label": _source_type_label(source),
             "as_of": str(
                 dict(source.get("period") or {}).get("actual_end")
                 or validation.get("created_at")
