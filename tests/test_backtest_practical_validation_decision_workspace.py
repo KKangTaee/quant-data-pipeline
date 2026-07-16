@@ -458,7 +458,7 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         )
         self.assertFalse(model["actions"]["save_and_move"]["enabled"])
 
-    def test_explicit_measurement_is_one_caution_not_a_duplicate_handoff(self) -> None:
+    def test_measured_accepted_limit_remains_final_review_handoff(self) -> None:
         from app.services.backtest_practical_validation_decision_workspace import (
             build_practical_validation_decision_workspace,
         )
@@ -497,13 +497,16 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             source_options=[self._source()],
         )
 
-        self.assertEqual(model["summary"]["measured_caution_count"], 1)
-        self.assertEqual(model["summary"]["accepted_limit_count"], 0)
+        self.assertEqual(model["summary"]["measured_caution_count"], 0)
+        self.assertEqual(model["summary"]["accepted_limit_count"], 1)
+        self.assertEqual(model["measured_cautions"], [])
         self.assertEqual(
-            [row["root_issue_id"] for row in model["measured_cautions"]],
+            [
+                row["root_issue_id"]
+                for row in model["resolution_lanes"]["final_review_handoff"]
+            ],
             ["provider_liquidity_pressure"],
         )
-        self.assertEqual(model["resolution_lanes"]["final_review_handoff"], [])
 
     def test_method_strength_separates_computed_passes_from_remaining_review(
         self,

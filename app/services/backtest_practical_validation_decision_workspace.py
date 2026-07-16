@@ -145,7 +145,7 @@ def _issue_model(
         else measurement.get("comparator")
     )
     measured_caution = (
-        resolution_class not in {"resolve_now", "engineering_required"}
+        resolution_class == "validated_caution"
         and observed is not None
         and comparator is not None
     )
@@ -563,8 +563,7 @@ def build_practical_validation_decision_workspace(
     final_review_handoff = [
         issue
         for issue in issues
-        if issue["finding_kind"] != "measured_caution"
-        and issue["resolution_class"]
+        if issue["resolution_class"]
         in {"accepted_limit", "final_decision", "monitoring_transfer"}
     ]
     legacy_actions = dict(
