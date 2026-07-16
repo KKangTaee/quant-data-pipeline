@@ -4,6 +4,8 @@ import {
   DecisionBrief,
   DecisionBriefObservation,
   DecisionWorkspaceIntent,
+  Level2HandoffItem,
+  Level2MonitoringCondition,
   MonitoringCondition,
   Tone,
 } from "./decisionBriefTypes"
@@ -283,6 +285,72 @@ function PortfolioCharacterSection({ brief }: { brief: DecisionBrief }) {
   )
 }
 
+function HandoffItemCard({ item }: { item: Level2HandoffItem }) {
+  return (
+    <article className="db-handoff-card">
+      <h4>{item.title}</h4>
+      {item.observed && <p>{item.observed}</p>}
+      {item.decision_guidance && <strong>{item.decision_guidance}</strong>}
+      <small>Level2에서 확인한 근거 {item.evidence_refs.length}개</small>
+    </article>
+  )
+}
+
+function HandoffMonitoringCard({ item }: { item: Level2MonitoringCondition }) {
+  return (
+    <article className="db-handoff-card">
+      <h4>{item.title}</h4>
+      <p>{item.observation}</p>
+      <dl>
+        <div><dt>변화 조건</dt><dd>{item.threshold}</dd></div>
+        <div><dt>확인 주기</dt><dd>{item.cadence}</dd></div>
+        <div><dt>다시 할 판단</dt><dd>{item.re_review_action}</dd></div>
+      </dl>
+      <small>Level2 근거 {item.evidence_refs.length}개</small>
+    </article>
+  )
+}
+
+function Level2Handoff({ brief }: { brief: DecisionBrief }) {
+  const handoff = brief.level2_handoff
+  return (
+    <section className="db-section db-handoff" aria-labelledby="db-handoff-title">
+      <SectionHeading
+        eyebrow="Level2 validated handoff"
+        title="Level2에서 이어받은 판단"
+        detail="Level2에서 해결할 일은 끝났습니다. 여기서는 확인된 근거를 최종 route 사유와 Monitoring 조건에 반영합니다."
+      />
+      {handoff.state === "blocked" ? (
+        <div className="db-empty">Level2 차단 항목이 남아 있어 아직 Final Review 판단으로 승격되지 않았습니다.</div>
+      ) : (
+        <div className="db-handoff-grid">
+          <div className="db-handoff-lane">
+            <header><h3>최종 판단 입력</h3><span>{handoff.summary.final_decision_count}</span></header>
+            <p>계좌·운용 목적처럼 이 화면에서 route 사유로 결정할 내용입니다.</p>
+            {handoff.final_decisions.length ? handoff.final_decisions.map((item) => (
+              <HandoffItemCard item={item} key={item.root_issue_id} />
+            )) : <small className="db-handoff-empty">추가 판단 입력 없음</small>}
+          </div>
+          <div className="db-handoff-lane">
+            <header><h3>인수한 검증 한계</h3><span>{handoff.summary.accepted_limit_count}</span></header>
+            <p>Level2에서 근거를 확인했지만 결과 해석에 남겨야 하는 제한입니다.</p>
+            {handoff.accepted_limits.length ? handoff.accepted_limits.map((item) => (
+              <HandoffItemCard item={item} key={item.root_issue_id} />
+            )) : <small className="db-handoff-empty">인수할 추가 한계 없음</small>}
+          </div>
+          <div className="db-handoff-lane">
+            <header><h3>Monitoring 이관 조건</h3><span>{handoff.summary.monitoring_condition_count}</span></header>
+            <p>관측값·조건·주기·재검토 행동이 모두 확인된 항목만 전달됩니다.</p>
+            {handoff.monitoring_conditions.length ? handoff.monitoring_conditions.map((item) => (
+              <HandoffMonitoringCard item={item} key={item.root_issue_id} />
+            )) : <small className="db-handoff-empty">구조화된 이관 조건 없음</small>}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
 function ConditionRow({ condition, index }: { condition: MonitoringCondition; index: number }) {
   return (
     <article className="db-condition-row">
@@ -391,33 +459,19 @@ function DecisionAction({
   )
 }
 
-function disclosureLabel(value: unknown): string {
-  if (typeof value === "string") return value
-  if (value && typeof value === "object") {
-    const row = value as Record<string, unknown>
-    return String(row.title || row.root_issue_id || "근거 항목")
-  }
-  return "근거 항목"
-}
-
 function EvidenceDisclosure({ brief }: { brief: DecisionBrief }) {
-  const limits = brief.disclosures.accepted_limits ?? []
   const gaps = brief.disclosures.source_gaps ?? []
   const provenance = brief.disclosures.provenance ?? []
   return (
     <section className="db-disclosure">
       <details>
-        <summary>Evidence confidence · accepted limits · provenance</summary>
+        <summary>Evidence confidence · source gaps · provenance</summary>
         <div className="db-disclosure-grid">
           <div>
             <h3>Evidence confidence</h3>
             <strong>{brief.evidence_confidence.value} / 100 · {brief.evidence_confidence.label}</strong>
             <p>{brief.evidence_confidence.basis}</p>
             <small>{brief.evidence_confidence.ready_checks} / {brief.evidence_confidence.total_checks} ready checks</small>
-          </div>
-          <div>
-            <h3>Accepted limits</h3>
-            {limits.length ? <ul>{limits.map((item, index) => <li key={index}>{disclosureLabel(item)}</li>)}</ul> : <p>인수한 한계 없음</p>}
           </div>
           <div>
             <h3>Source gaps</h3>
@@ -451,6 +505,7 @@ export function DecisionBriefWorkspace({ decisionBrief, candidateSelector, onInt
       <BehaviorBoard brief={decisionBrief} onIntent={onIntent} />
       <StrengthWeaknessSection brief={decisionBrief} />
       <PortfolioCharacterSection brief={decisionBrief} />
+      <Level2Handoff brief={decisionBrief} />
       <MonitoringConditions brief={decisionBrief} />
       <DecisionAction brief={decisionBrief} onIntent={onIntent} />
       <EvidenceDisclosure brief={decisionBrief} />

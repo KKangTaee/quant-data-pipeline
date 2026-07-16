@@ -399,10 +399,13 @@ def _render_workspace_issue_lane(
     issues: list[dict[str, Any]],
     workspace: dict[str, Any],
     action_enabled: bool,
+    detail: str = "",
 ) -> dict[str, Any] | None:
     if not issues:
         return None
     st.markdown(f"##### {title}")
+    if detail:
+        st.caption(detail)
     for issue in issues:
         root_issue_id = str(issue.get("root_issue_id") or "issue")
         with st.container(border=True):
@@ -600,7 +603,10 @@ def render_practical_validation_decision_workspace_fallback(
     if intent:
         return intent
     intent = _render_workspace_issue_lane(
-        title="Final Review로 넘길 것",
+        title=str(
+            dict(workspace.get("handoff_presentation") or {}).get("title")
+            or "Final Review에서 이어서 판단할 항목"
+        ),
         issues=[
             dict(row)
             for row in list(resolution_lanes.get("final_review_handoff") or [])
@@ -608,6 +614,10 @@ def render_practical_validation_decision_workspace_fallback(
         ],
         workspace=workspace,
         action_enabled=False,
+        detail=str(
+            dict(workspace.get("handoff_presentation") or {}).get("detail")
+            or ""
+        ),
     )
     if intent:
         return intent

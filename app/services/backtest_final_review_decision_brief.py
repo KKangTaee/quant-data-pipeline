@@ -11,6 +11,12 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.backtest_evidence_closure import (
+    build_structured_monitoring_condition,
+)
+from app.services.backtest_practical_validation_explanation import (
+    explain_practical_validation_row,
+)
 from app.services.backtest_practical_validation_curve import normalize_result_curve
 from app.services.backtest_realism_audit import (
     build_cost_model_source_contract,
@@ -162,10 +168,16 @@ def _pre_selection_unresolved_issues(validation: dict[str, Any]) -> list[dict[st
         root_issue_id = str(issue.get("root_issue_id") or "").strip()
         if str(issue.get("terminal_state") or "").strip() != "open":
             continue
+        incomplete_monitoring = (
+            str(issue.get("resolution_class") or "").strip()
+            == "monitoring_transfer"
+            and build_structured_monitoring_condition(issue) is None
+        )
         if not (
             bool(issue.get("actionable_now"))
             or str(issue.get("criticality") or "").strip() == "critical"
             or root_issue_id.startswith("missing_contract:")
+            or incomplete_monitoring
         ):
             continue
         unresolved.append(
@@ -175,6 +187,122 @@ def _pre_selection_unresolved_issues(validation: dict[str, Any]) -> list[dict[st
             }
         )
     return unresolved
+
+
+def _build_level2_handoff(
+    *,
+    validation_id: str,
+    closure_issues: list[dict[str, Any]],
+    eligible: bool,
+) -> dict[str, Any]:
+    """Project each eligible Level2 root into exactly one Final Review lane."""
+
+    empty = {
+        "state": "blocked" if not eligible else "promoted",
+        "validation_id": validation_id,
+        "summary": {
+            "final_decision_count": 0,
+            "accepted_limit_count": 0,
+            "monitoring_condition_count": 0,
+        },
+        "final_decisions": [],
+        "accepted_limits": [],
+        "monitoring_conditions": [],
+    }
+    if not eligible:
+        return empty
+
+    seen_root_issue_ids: set[str] = set()
+    final_decisions: list[dict[str, Any]] = []
+    accepted_limits: list[dict[str, Any]] = []
+    monitoring_conditions: list[dict[str, Any]] = []
+    for issue in closure_issues:
+        root_issue_id = str(issue.get("root_issue_id") or "").strip()
+        resolution_class = str(issue.get("resolution_class") or "").strip()
+        if (
+            not root_issue_id
+            or root_issue_id in seen_root_issue_ids
+            or resolution_class
+            not in {"final_decision", "accepted_limit", "monitoring_transfer"}
+        ):
+            continue
+        seen_root_issue_ids.add(root_issue_id)
+        explanation = explain_practical_validation_row(
+            {
+                "Criteria": issue.get("title") or root_issue_id,
+                "Status": "REVIEW",
+                "Current": issue.get("observed") or "",
+                "Next Action": (
+                    issue.get("completion_criteria")
+                    or issue.get("expected")
+                    or ""
+                ),
+            },
+            stage_owner="final_review",
+        )
+        if root_issue_id == "historical_universe_coverage":
+            observed = (
+                "현재 구성은 정적 universe를 사용합니다. 과거 편입·퇴출 "
+                "전체 이력은 재현하지 않습니다."
+            )
+            guidance = (
+                "이 범위가 성과를 유리하게 보이게 할 수 있음을 한계로 "
+                "인수하고 최종 판단 사유에 남깁니다."
+            )
+        elif root_issue_id == "tax_account_scope":
+            observed = (
+                "세금, 계좌 유형, 최소 주문 단위는 현재 백테스트가 아니라 "
+                "사용자의 실제 운용 조건에서 결정합니다."
+            )
+            guidance = (
+                "적용할 계좌 조건과 수용 가능한 비용 범위를 최종 판단 "
+                "사유에 기록합니다."
+            )
+        else:
+            observed = str(explanation.get("result_summary") or "").strip()
+            guidance = str(explanation.get("next_action") or "").strip()
+        base = {
+            "root_issue_id": root_issue_id,
+            "title": str(
+                explanation.get("display_title")
+                or issue.get("title")
+                or root_issue_id
+            ),
+            "observed": observed,
+            "decision_guidance": guidance,
+            "evidence_refs": [
+                str(value).strip()
+                for value in list(issue.get("derived_checks") or [])
+                if str(value).strip()
+            ],
+        }
+        if resolution_class == "final_decision":
+            final_decisions.append(base)
+        elif resolution_class == "accepted_limit":
+            accepted_limits.append(base)
+        else:
+            condition = build_structured_monitoring_condition(issue)
+            if condition is not None:
+                monitoring_conditions.append(
+                    {
+                        **condition,
+                        "root_issue_id": root_issue_id,
+                        "title": str(issue.get("title") or root_issue_id),
+                    }
+                )
+
+    return {
+        "state": "promoted",
+        "validation_id": validation_id,
+        "summary": {
+            "final_decision_count": len(final_decisions),
+            "accepted_limit_count": len(accepted_limits),
+            "monitoring_condition_count": len(monitoring_conditions),
+        },
+        "final_decisions": final_decisions,
+        "accepted_limits": accepted_limits,
+        "monitoring_conditions": monitoring_conditions,
+    }
 
 
 def _build_eligibility(
@@ -1209,15 +1337,16 @@ def build_final_review_decision_brief(
     )
     closure = _as_dict(validation.get("evidence_closure"))
     closure_issues = [_as_dict(row) for row in list(closure.get("issues") or []) if isinstance(row, dict)]
+    validation_id = str(
+        validation.get("validation_id") or source.get("source_id") or ""
+    ).strip()
+    level2_handoff = _build_level2_handoff(
+        validation_id=validation_id,
+        closure_issues=closure_issues,
+        eligible=bool(eligibility.get("eligible")),
+    )
     disclosures: dict[str, Any] = {
-        "accepted_limits": [
-            {
-                "root_issue_id": str(row.get("root_issue_id") or ""),
-                "title": str(row.get("title") or row.get("root_issue_id") or "인수한 한계"),
-            }
-            for row in closure_issues
-            if str(row.get("resolution_class") or "") == "accepted_limit"
-        ],
+        "accepted_limits": list(level2_handoff["accepted_limits"]),
         "source_gaps": source_gaps,
         "provenance": [
             str(row.get("root_issue_id"))
@@ -1259,7 +1388,7 @@ def build_final_review_decision_brief(
         "schema_version": DECISION_BRIEF_SCHEMA_VERSION,
         "candidate": {
             "source_id": candidate_source_id,
-            "validation_id": str(validation.get("validation_id") or source.get("source_id") or "").strip(),
+            "validation_id": validation_id,
             "title": str(
                 source.get("source_title")
                 or validation.get("source_title")
@@ -1289,6 +1418,7 @@ def build_final_review_decision_brief(
         "strengths": strengths,
         "weaknesses": weaknesses,
         "monitoring_conditions": monitoring_conditions,
+        "level2_handoff": level2_handoff,
         "decision_action": decision_action,
         "observation_freshness": observation_freshness,
         "disclosures": disclosures,

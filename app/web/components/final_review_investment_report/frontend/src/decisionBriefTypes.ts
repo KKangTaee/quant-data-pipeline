@@ -35,6 +35,25 @@ export type MonitoringCondition = DecisionBriefObservation & {
   primary_role: "monitoring"
 }
 
+export type Level2HandoffItem = {
+  root_issue_id: string
+  title: string
+  observed: string
+  decision_guidance: string
+  evidence_refs: string[]
+}
+
+export type Level2MonitoringCondition = {
+  root_issue_id: string
+  observation_id: string
+  title: string
+  observation: string
+  threshold: string
+  cadence: string
+  re_review_action: string
+  evidence_refs: string[]
+}
+
 export type CharacterProfileItem = {
   axis_id: string
   label: string
@@ -153,6 +172,18 @@ export type DecisionBrief = {
   strengths: DecisionBriefObservation[]
   weaknesses: DecisionBriefObservation[]
   monitoring_conditions: MonitoringCondition[]
+  level2_handoff: {
+    state: "promoted" | "blocked"
+    validation_id: string
+    summary: {
+      final_decision_count: number
+      accepted_limit_count: number
+      monitoring_condition_count: number
+    }
+    final_decisions: Level2HandoffItem[]
+    accepted_limits: Level2HandoffItem[]
+    monitoring_conditions: Level2MonitoringCondition[]
+  }
   decision_action: {
     suggested_route: string
     suggested_label: string

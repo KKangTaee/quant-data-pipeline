@@ -125,6 +125,11 @@ export type DecisionWorkspace = {
     engineering_required: Issue[]
     final_review_handoff: Issue[]
   }
+  handoff_presentation: {
+    state: "prospective" | "promoted"
+    title: string
+    detail: string
+  }
   category_disclosures: Array<{
     category_id: string
     title: string

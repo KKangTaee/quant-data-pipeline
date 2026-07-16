@@ -379,7 +379,10 @@ export function PracticalValidationDecisionWorkspace({
         )}
         {handoff.length > 0 && (
           <div className="pv2-lane">
-            <h3>Final Review로 넘길 것</h3>
+            <h3>{workspace.handoff_presentation.title}</h3>
+            <p className="pv2-lane-detail">
+              {workspace.handoff_presentation.detail}
+            </p>
             <div className="pv2-card-grid">
               {handoff.map((issue) => (
                 <IssueCard

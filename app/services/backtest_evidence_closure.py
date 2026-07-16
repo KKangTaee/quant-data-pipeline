@@ -100,6 +100,63 @@ def has_action_handler(action_id: Any) -> bool:
     return str(action_id or "").strip() in ACTION_HANDLER_CONTRACTS
 
 
+def build_structured_monitoring_condition(
+    issue: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return a complete Monitoring handoff without filling unknown evidence."""
+
+    root_issue_id = str(issue.get("root_issue_id") or "").strip()
+    raw_condition = issue.get("monitoring_condition")
+    condition = dict(raw_condition) if isinstance(raw_condition, dict) else {}
+    required_text = (
+        "observation",
+        "threshold",
+        "cadence",
+        "re_review_action",
+    )
+    evidence_refs = [
+        str(value).strip()
+        for value in list(condition.get("evidence_refs") or [])
+        if str(value).strip()
+    ]
+    if all(str(condition.get(key) or "").strip() for key in required_text) and evidence_refs:
+        return {
+            **condition,
+            "observation_id": str(
+                condition.get("observation_id")
+                or f"monitoring:{root_issue_id}"
+            ).strip(),
+            "evidence_refs": evidence_refs,
+        }
+
+    period = dict(issue.get("period") or {})
+    if (
+        root_issue_id == "replay_period_coverage"
+        and str(issue.get("applicability") or "") == "partial_month_monitoring"
+    ):
+        requested = _date_text(period.get("requested_market_date"))
+        latest_valuation = _date_text(period.get("latest_valuation_date"))
+        last_complete = _date_text(period.get("last_complete_rebalance_date"))
+        if requested and latest_valuation and last_complete:
+            return {
+                "observation_id": "monitoring:next-complete-rebalance",
+                "observation": (
+                    f"최신 평가는 {latest_valuation}, 마지막 완결 리밸런싱은 "
+                    f"{last_complete}입니다."
+                ),
+                "threshold": f"{requested} 이후 첫 완결 리밸런싱 결과가 저장될 때",
+                "cadence": "다음 완결 리밸런싱 시점",
+                "re_review_action": (
+                    "새 완결 리밸런싱 결과로 최신 평가와 포트폴리오 판단을 "
+                    "다시 확인합니다."
+                ),
+                "evidence_refs": [
+                    "evidence_closure.replay_period_coverage.period"
+                ],
+            }
+    return None
+
+
 def normalize_evidence_issue(issue: dict[str, Any]) -> dict[str, Any]:
     """Normalize actionability without turning an unimplemented intent into a CTA."""
 
@@ -765,6 +822,7 @@ __all__ = [
     "EVIDENCE_CLOSURE_SCHEMA_VERSION",
     "build_evidence_closure_contract",
     "build_latest_replay_evidence",
+    "build_structured_monitoring_condition",
     "finalize_evidence_closure",
     "has_action_handler",
     "is_current_final_review_eligible",

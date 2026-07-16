@@ -149,6 +149,92 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
                 self.assertEqual(brief["verdict"]["route"], "RE_REVIEW_REQUIRED")
                 self.assertFalse(brief["capabilities"]["can_select_for_monitoring"])
 
+    def test_level2_handoff_promotes_distinct_root_deduplicated_sections(self) -> None:
+        inputs = deepcopy(self._inputs())
+        inputs["validation"]["evidence_closure"]["issues"] = [
+            {
+                "root_issue_id": "tax_account_scope",
+                "title": "세금·계좌 조건 반영 범위",
+                "resolution_class": "final_decision",
+                "terminal_state": "open",
+                "observed": "세금과 최소 주문 단위는 사용자 계좌별 최종 판단입니다.",
+                "completion_criteria": "최종 route 사유에 적용할 계좌 조건을 기록합니다.",
+                "derived_checks": ["tax_account_scope"],
+            },
+            {
+                "root_issue_id": "tax_account_scope",
+                "title": "중복 세금 항목",
+                "resolution_class": "accepted_limit",
+                "terminal_state": "open",
+            },
+            {
+                "root_issue_id": "historical_universe_coverage",
+                "title": "과거 종목 목록과 상장 이력",
+                "resolution_class": "accepted_limit",
+                "terminal_state": "open",
+                "observed": "profiles=7 / lifecycle=covered=4 / partial=3 / missing=0",
+                "completion_criteria": "정적 universe 한계를 알고 판단 사유에 반영합니다.",
+                "derived_checks": ["universe_listing_evidence"],
+            },
+            {
+                "root_issue_id": "replay_period_coverage",
+                "title": "월중 최신 평가와 완결 리밸런싱 구분",
+                "resolution_class": "monitoring_transfer",
+                "terminal_state": "open",
+                "monitoring_condition": {
+                    "observation_id": "monitoring:next-complete-rebalance",
+                    "observation": "최신 평가일과 마지막 완결 리밸런싱일의 차이",
+                    "threshold": "다음 완결 리밸런싱 결과 저장 시",
+                    "cadence": "다음 리밸런싱 시점",
+                    "re_review_action": "새 완결 리밸런싱 결과로 후보 판단을 다시 확인합니다.",
+                    "evidence_refs": ["evidence_closure.replay_period_coverage.period"],
+                },
+            },
+        ]
+
+        brief = self._build(inputs)
+        handoff = brief["level2_handoff"]
+
+        self.assertEqual(handoff["state"], "promoted")
+        self.assertEqual(handoff["summary"], {
+            "final_decision_count": 1,
+            "accepted_limit_count": 1,
+            "monitoring_condition_count": 1,
+        })
+        self.assertEqual(
+            [row["root_issue_id"] for row in handoff["final_decisions"]],
+            ["tax_account_scope"],
+        )
+        self.assertEqual(
+            [row["root_issue_id"] for row in handoff["accepted_limits"]],
+            ["historical_universe_coverage"],
+        )
+        self.assertEqual(
+            [row["root_issue_id"] for row in handoff["monitoring_conditions"]],
+            ["replay_period_coverage"],
+        )
+        self.assertNotIn("profiles=", json.dumps(handoff, ensure_ascii=False))
+        self.assertIn("정적 universe", handoff["accepted_limits"][0]["observed"])
+
+    def test_incomplete_monitoring_transfer_blocks_promotion(self) -> None:
+        inputs = deepcopy(self._inputs())
+        inputs["validation"]["evidence_closure"]["issues"] = [
+            {
+                "root_issue_id": "monitoring_baseline",
+                "title": "Monitoring 기준",
+                "resolution_class": "monitoring_transfer",
+                "terminal_state": "open",
+                "completion_criteria": "나중에 Monitoring에서 확인합니다.",
+            }
+        ]
+
+        brief = self._build(inputs)
+
+        self.assertFalse(brief["eligibility"]["eligible"])
+        self.assertEqual(brief["level2_handoff"]["state"], "blocked")
+        self.assertEqual(brief["level2_handoff"]["monitoring_conditions"], [])
+        self.assertEqual(brief["verdict"]["route"], "RE_REVIEW_REQUIRED")
+
     def test_refreshable_stale_observation_blocks_only_selected_route(self) -> None:
         inputs = self._inputs()
         inputs["observation_freshness"] = {

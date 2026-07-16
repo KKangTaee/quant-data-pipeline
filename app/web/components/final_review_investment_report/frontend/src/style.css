@@ -918,6 +918,134 @@ summary:focus-visible {
 .db-pressure-row.is-criterion_missing strong,
 .db-pressure-row.is-evidence_missing strong { color: #647589; }
 
+.db-handoff {
+  border-color: #ccdce7;
+  background: linear-gradient(145deg, #fff 0%, #f7fafc 100%);
+}
+
+.db-handoff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.db-handoff-lane {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #dde6ee;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .9);
+}
+
+.db-handoff-lane > header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.db-handoff-lane h3,
+.db-handoff-card h4,
+.db-handoff-lane p,
+.db-handoff-card p {
+  margin: 0;
+}
+
+.db-handoff-lane h3 {
+  color: var(--db-ink);
+  font-size: 13px;
+}
+
+.db-handoff-lane > header span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  color: #315f77;
+  background: #e8f1f6;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.db-handoff-lane > p {
+  min-height: 48px;
+  margin: 7px 0 11px;
+  color: var(--db-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.db-handoff-card {
+  min-width: 0;
+  margin-top: 8px;
+  padding: 13px;
+  border: 1px solid #e3e9ef;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.db-handoff-card h4 {
+  color: var(--db-ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.db-handoff-card p,
+.db-handoff-card strong,
+.db-handoff-card small,
+.db-handoff-empty {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.db-handoff-card p {
+  margin-top: 7px;
+  color: #51677b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.db-handoff-card strong {
+  margin-top: 8px;
+  color: #315f77;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.db-handoff-card small,
+.db-handoff-empty {
+  margin-top: 9px;
+  color: #7a8897;
+  font-size: 9px;
+}
+
+.db-handoff-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 9px 0 0;
+}
+
+.db-handoff-card dl div {
+  padding-top: 6px;
+  border-top: 1px solid #e1e7ed;
+}
+
+.db-handoff-card dt {
+  color: #7a8897;
+  font-size: 9px;
+  font-weight: 760;
+}
+
+.db-handoff-card dd {
+  margin: 3px 0 0;
+  color: #3d5266;
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .db-condition-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1252,6 +1380,14 @@ summary:focus-visible {
 
   .db-character-layout {
     grid-template-columns: 1fr;
+  }
+
+  .db-handoff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .db-handoff-lane > p {
+    min-height: 0;
   }
 
   .db-condition-list {

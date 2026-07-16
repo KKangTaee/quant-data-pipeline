@@ -632,6 +632,7 @@ def _render_final_review_decision_brief_fallback(
     character_profile = dict(decision_brief.get("character_profile") or {})
     review_pressure = dict(decision_brief.get("review_pressure") or {})
     monitoring_conditions = list(decision_brief.get("monitoring_conditions") or [])
+    level2_handoff = dict(decision_brief.get("level2_handoff") or {})
     decision_action = dict(decision_brief.get("decision_action") or {})
     disclosures = dict(decision_brief.get("disclosures") or {})
     observation_freshness = dict(decision_brief.get("observation_freshness") or {})
@@ -740,6 +741,58 @@ def _render_final_review_decision_brief_fallback(
         for row in list(review_pressure.get("items") or [])
     ]
     st.dataframe(pd.DataFrame(pressure_rows), width="stretch", hide_index=True)
+
+    st.markdown("##### Level2에서 이어받은 판단")
+    st.caption(
+        "Level2에서 해결할 일은 끝났습니다. 확인된 근거만 최종 route 사유와 "
+        "Monitoring 조건에 반영합니다."
+    )
+    if level2_handoff.get("state") == "blocked":
+        st.warning(
+            "Level2 차단 항목이 남아 있어 아직 Final Review 판단으로 "
+            "승격되지 않았습니다."
+        )
+    else:
+        handoff_groups = (
+            (
+                "최종 판단 입력",
+                "계좌·운용 목적처럼 이 화면에서 route 사유로 결정할 내용입니다.",
+                list(level2_handoff.get("final_decisions") or []),
+            ),
+            (
+                "인수한 검증 한계",
+                "Level2에서 근거를 확인했지만 결과 해석에 남겨야 하는 제한입니다.",
+                list(level2_handoff.get("accepted_limits") or []),
+            ),
+            (
+                "Monitoring 이관 조건",
+                "관측값·조건·주기·재검토 행동이 모두 확인된 항목만 전달됩니다.",
+                list(level2_handoff.get("monitoring_conditions") or []),
+            ),
+        )
+        for title, detail, rows in handoff_groups:
+            st.markdown(f"###### {title} · {len(rows)}")
+            st.caption(detail)
+            if not rows:
+                st.caption("해당 항목 없음")
+                continue
+            for row in rows:
+                item = dict(row or {})
+                with st.container(border=True):
+                    st.markdown(
+                        f"**{item.get('title') or item.get('root_issue_id') or '인계 항목'}**"
+                    )
+                    if item.get("observation") or item.get("observed"):
+                        st.write(str(item.get("observation") or item.get("observed")))
+                    if item.get("decision_guidance"):
+                        st.caption(str(item["decision_guidance"]))
+                    if item.get("threshold"):
+                        st.caption(
+                            f"변화 조건 {item.get('threshold')} · "
+                            f"확인 주기 {item.get('cadence') or '-'}"
+                        )
+                    if item.get("re_review_action"):
+                        st.caption(f"다시 할 판단: {item['re_review_action']}")
 
     st.markdown("##### Monitoring 변화 조건")
     if monitoring_conditions:

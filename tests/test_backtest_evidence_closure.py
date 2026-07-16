@@ -466,7 +466,10 @@ class EvidenceClosureContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("brief.monitoring_conditions", source)
-        self.assertIn("brief.disclosures.accepted_limits", source)
+        self.assertIn("brief.level2_handoff", source)
+        self.assertIn("handoff.final_decisions", source)
+        self.assertIn("handoff.accepted_limits", source)
+        self.assertIn("handoff.monitoring_conditions", source)
         self.assertIn("brief.disclosures.source_gaps", source)
         self.assertNotIn("resolutionClass ===", source)
         self.assertNotIn("fetch(", source)

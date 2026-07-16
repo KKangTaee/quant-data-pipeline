@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.backtest_evidence_closure import has_action_handler
+from app.services.backtest_evidence_closure import (
+    build_structured_monitoring_condition,
+    has_action_handler,
+)
 from app.services.backtest_practical_validation_explanation import (
     PRACTICAL_VALIDATION_EVIDENCE_CATEGORIES,
     explain_practical_validation_row,
@@ -137,6 +140,11 @@ def _issue_model(
     resolution_class = str(
         issue.get("resolution_class") or "engineering_required"
     )
+    monitoring_condition = (
+        build_structured_monitoring_condition(issue)
+        if resolution_class == "monitoring_transfer"
+        else None
+    )
     measurement = dict(issue.get("measurement") or {})
     observed = measurement.get("observed")
     comparator = (
@@ -157,6 +165,10 @@ def _issue_model(
         and has_action_handler(action_id)
     )
     if resolution_class == "resolve_now" and not actionable:
+        resolution_class = "engineering_required"
+        terminal_state = "deferred"
+        action_id = None
+    elif resolution_class == "monitoring_transfer" and monitoring_condition is None:
         resolution_class = "engineering_required"
         terminal_state = "deferred"
         action_id = None
@@ -230,7 +242,12 @@ def _issue_model(
             )
         ),
         "cause": str(issue.get("cause") or ""),
-        "criticality": str(issue.get("criticality") or "noncritical"),
+        "criticality": (
+            "critical"
+            if str(issue.get("resolution_class") or "") == "monitoring_transfer"
+            and monitoring_condition is None
+            else str(issue.get("criticality") or "noncritical")
+        ),
         "terminal_state": terminal_state,
         "actionable_now": actionable,
         "action_id": action_id if actionable else None,
@@ -238,7 +255,28 @@ def _issue_model(
         "completion_criteria": str(issue.get("completion_criteria") or ""),
         "derived_checks": list(issue.get("derived_checks") or []),
         "measurement": measurement,
+        "monitoring_condition": monitoring_condition,
         "explanations": explanations,
+    }
+
+
+def _handoff_presentation(state: str) -> dict[str, str]:
+    if state in {"ready", "ready_with_handoff"}:
+        return {
+            "state": "promoted",
+            "title": "Final Review에서 이어서 판단할 항목",
+            "detail": (
+                "Level2 근거를 통과한 항목만 최종 판단 입력, 인수한 한계, "
+                "Monitoring 조건으로 전달합니다."
+            ),
+        }
+    return {
+        "state": "prospective",
+        "title": "검증 통과 후 Final Review에서 확인할 항목",
+        "detail": (
+            "아래 항목은 아직 승격되지 않았습니다. Level2 차단 항목이 "
+            "모두 해결된 뒤 Final Review에서 확인합니다."
+        ),
     }
 
 
@@ -637,6 +675,7 @@ def build_practical_validation_decision_workspace(
             "engineering_required": engineering_required,
             "final_review_handoff": final_review_handoff,
         },
+        "handoff_presentation": _handoff_presentation(state),
         "category_disclosures": _category_disclosures(validation),
         "actions": {
             "run_replay": {

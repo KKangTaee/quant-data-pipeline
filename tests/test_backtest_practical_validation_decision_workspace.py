@@ -327,6 +327,88 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertEqual(len(model["validated_cautions"]), 5)
         self.assertEqual(len(model["resolution_lanes"]["final_review_handoff"]), 2)
         self.assertIn("Final Review로 이동할 수 있습니다", model["verdict"]["headline"])
+        self.assertEqual(model["handoff_presentation"]["state"], "promoted")
+        self.assertEqual(
+            model["handoff_presentation"]["title"],
+            "Final Review에서 이어서 판단할 항목",
+        )
+
+    def test_blocked_workspace_labels_handoff_as_prospective(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        validation = self._validation()
+        validation["evidence_closure"]["issues"].append(
+            {
+                "root_issue_id": "missing_contract:required_validator",
+                "title": "필수 검증기 개발 필요",
+                "resolution_class": "engineering_required",
+                "criticality": "critical",
+                "terminal_state": "deferred",
+            }
+        )
+        validation["evidence_closure"]["summary"]["critical_engineering_count"] = 1
+        validation["final_review_gate"]["can_save_and_move"] = False
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            replay_result={"status": "PASS", "replay_id": "replay-current"},
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        self.assertEqual(model["state"], "resolution_required")
+        self.assertEqual(model["handoff_presentation"]["state"], "prospective")
+        self.assertEqual(
+            model["handoff_presentation"]["title"],
+            "검증 통과 후 Final Review에서 확인할 항목",
+        )
+        self.assertIn("아직 승격되지 않았습니다", model["handoff_presentation"]["detail"])
+
+    def test_incomplete_monitoring_transfer_becomes_engineering_blocker(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        validation = self._validation()
+        validation["evidence_closure"]["issues"] = [
+            {
+                "root_issue_id": "monitoring_baseline",
+                "title": "Monitoring 기준",
+                "resolution_class": "monitoring_transfer",
+                "criticality": "noncritical",
+                "terminal_state": "open",
+                "completion_criteria": "Final Review에서 확인",
+            }
+        ]
+        validation["evidence_closure"]["summary"].update(
+            {
+                "critical_engineering_count": 0,
+                "monitoring_transfer_count": 1,
+                "accepted_limit_count": 0,
+                "final_decision_count": 0,
+            }
+        )
+        validation["final_review_gate"]["can_save_and_move"] = False
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={"profile_id": "balanced_core", "profile_label": "균형형"},
+            replay_result={"status": "PASS", "replay_id": "replay-current"},
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        self.assertEqual(model["state"], "resolution_required")
+        self.assertEqual(model["summary"]["monitoring_transfer_count"], 0)
+        self.assertEqual(model["summary"]["engineering_blocker_count"], 1)
+        self.assertEqual(model["resolution_lanes"]["final_review_handoff"], [])
+        self.assertEqual(
+            model["resolution_lanes"]["engineering_required"][0]["root_issue_id"],
+            "monitoring_baseline",
+        )
 
     def test_source_required_disables_replay_and_save(self) -> None:
         from app.services.backtest_practical_validation_decision_workspace import (

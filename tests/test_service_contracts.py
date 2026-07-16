@@ -29221,6 +29221,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "<BehaviorBoard",
                 "<StrengthWeaknessSection",
                 "<PortfolioCharacterSection",
+                "<Level2Handoff",
                 "<MonitoringConditions",
                 "<DecisionAction",
                 "<EvidenceDisclosure",
@@ -29228,6 +29229,14 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         ]
 
         self.assertEqual(positions, sorted(positions))
+
+        for token in (
+            "Level2에서 이어받은 판단",
+            "최종 판단 입력",
+            "인수한 검증 한계",
+            "Monitoring 이관 조건",
+        ):
+            self.assertIn(token, workspace_source)
 
     def test_final_review_react_source_removes_scores_questions_patterns_and_level2_cards(self) -> None:
         workspace_source = Path(

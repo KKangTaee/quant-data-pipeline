@@ -361,6 +361,11 @@ summary:focus-visible {
   font-size: 15px;
 }
 
+.pv2-lane-detail {
+  margin: 5px 0 10px;
+  font-size: 12px;
+}
+
 .pv2-card-grid article,
 .pv2-issue-card {
   min-width: 0;
