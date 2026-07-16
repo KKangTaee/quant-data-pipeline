@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-17
 
 ## Project Summary
 
@@ -223,7 +223,7 @@ Backtest Analysis
 
 ### Current Market Context Economic Cycle / Valuation Boundary
 
-`Workspace > Overview > Market Context`의 same-level selector는 `경제 사이클 | S&P 500 | 미국 개별주식`이며 기본값은 경제 사이클이다. 경제 사이클 branch는 `finance/data/economic_cycle_vintages.py -> finance/loaders/economic_cycle.py -> finance/economic_cycle_* -> economic_cycle_model_artifact/economic_cycle_snapshot -> app/services/overview/economic_cycle.py` 경계를 따른다. UI는 compact DB snapshot/history만 읽고, 미수집·미검증 horizon에는 숫자를 표시하지 않으며 provider/model job action을 제공하지 않는다. 자산별 확인 포인트는 저장된 activity/labor/financial-leading/inflation-policy evidence를 조건부 `우호·부담·혼재·자료 부족`으로 번역할 뿐 별도 가격 데이터나 수익률 예측을 만들지 않는다.
+`Workspace > Overview > Market Context`의 same-level selector는 `경제 사이클 | S&P 500 | 미국 개별주식`이며 기본값은 경제 사이클이다. 경제 사이클 branch는 `finance/data/economic_cycle_vintages.py -> finance/loaders/economic_cycle.py -> finance/economic_cycle_* -> economic_cycle_model_artifact/economic_cycle_snapshot -> app/services/overview/economic_cycle.py` 경계를 따른다. UI는 compact DB snapshot/history만 읽고, 미수집·미검증 horizon에는 숫자를 표시하지 않으며 provider/model job action을 제공하지 않는다. 자산별 확인 포인트는 저장된 activity/labor/financial-leading/inflation-policy evidence를 조건부 `우호·부담·혼재·자료 부족`으로 번역한다. 금과 달러는 별도 카드이며 `finance/loaders/economic_cycle_assets.py`가 기존 `futures_ohlcv`의 `GC=F` / `DX-Y.NYB` 일봉만 읽어 5/21/63거래일 실제 가격 확인과 경제 배경의 일치·불일치를 제공한다. 가격 확인은 예측·목표가격·매매 신호가 아니다.
 
 S&P 500 V1.4는 기존 Shiller/SEP flow를 유지한다. 개별주는 선택 종목 내부에 `PER 상대가치 | 전환 분석`을 둔다. PER branch는 `finance/data/us_stock_valuation.py -> finance/loaders/us_stock_valuation.py -> app/services/overview/us_stock_valuation.py`에서 bounded 가격·SEC statement·SEP DB 자료를 read-time 계산한다. 월말까지 공개된 최신 4개 분기 diluted EPS로 filing-aware TTM을 만들고, 같은 시점의 split-neutral price/EPS 단위로 positive monthly P/E만 계산한다. 1/3/5년 history는 모든 달력 월을 `timeline` slot으로 유지하고 결측 구간을 연결·보간하지 않는다. Turnaround branch는 `finance/data/us_stock_turnaround.py -> finance/loaders/us_stock_turnaround.py -> app/services/overview/us_stock_turnaround.py`에서 duration/instant fact를 분리하고 direct Q, H1/9M/FY cumulative derivation, explicit equivalent-concept family의 guarded missing-Q4 fallback, per-metric/TTM provenance, TTM operating/cash series, independent milestone/risk, fresh-input valuation readiness를 만든다. Direct Q4와 exact-concept 계산이 우선이며, guard를 통과한 산출값만 React에서 `공시 기반 산출`로 구분한다. `app/services/nyse_calendar.py`와 `app/services/overview/us_stock_freshness.py`는 마지막 완료 NYSE session, profile/가격 7일 정렬, 실제 statement raw gap을 하나의 freshness 계약으로 합친다. `app/services/overview/market_context_valuation.py`는 S&P, PER, turnaround failure를 각각 격리하고 positive Graph 1 READY PER만 기본 추천한다. explicit valuation mode는 기존 React 내부 instrument selector를 숨기고, legacy caller는 compatibility selector를 유지한다. 검색·화면 진입·분석 전환은 DB read-only이며 repairable gap이 있을 때만 header와 분석 selector 사이에 `최신 데이터로 다시 계산` action 하나를 표시한다. 명시 클릭은 exact selected symbol만 수집하고 profile/price는 CIK 없이 먼저 보존하며 SEC statement만 identity equality를 요구한다. 기존 Nasdaq data/materialization/collector 코드는 retained backend로 남지만 current user-facing selector/action path에서는 호출하지 않는다. 기존 Market Context cockpit/analog helper도 retained compatibility code이며 current entrypoint에서 렌더링하지 않는다.
 

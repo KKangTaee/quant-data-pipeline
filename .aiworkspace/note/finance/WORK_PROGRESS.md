@@ -24,7 +24,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
+  - Latest completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 일봉의 1주·1개월·3개월 가격 흐름과 경제 배경의 일치·불일치를 표시한다.
+  - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
   - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 유효 LIMITED 확률을 잠정 추정으로 공개하고 READY/계산불가와 분리했으며, 최근 12개월 2×2 hover 경로·실제 월수 기반 최근 60개월+2개월 ribbon·actual 122 snapshot 보존을 완료했다.
   - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 17-series vintage/PIT engine과 horizon별 publication gate를 구현했다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Explicit concept family의 확정 공시로 missing Q4를 안전하게 산출하고 provenance와 `공시 기반 산출` 표시를 1차~4차로 완료했다.
@@ -57,6 +58,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### Overview / Market Context Track
 
+- Economic Cycle Gold / Dollar Price Confirmation V1:
+  - 금과 달러를 별도 카드로 분리하고 `GC=F` / `DX-Y.NYB` 저장 일봉의 5/21/63거래일 가격 흐름을 경제 배경과 독립 표시한다.
+  - Actual 2026-07-16은 금 `하락 확인`, 달러 `상승 확인`이며 두 카드 모두 2026-06-30 경제 배경과 불일치한다. 달러의 1주 하락도 1·3개월 상승과 함께 그대로 보인다.
+  - 33개 focused tests, futures 계약 선택 테스트, React build, compile/diff check를 통과했다. 연속선물 롤 효과와 비실시간 원천 경계는 화면과 문서에 유지한다.
 - Economic Cycle Asset Context V1:
   - 정적 네 문장을 `자산별 확인 포인트` 2×2 카드로 교체하고 상태 → 두 근거 → 바뀌는 조건 순서로 읽게 했다.
   - 네 canonical factor를 자산별로 번역하되 우호/부담 차이가 작으면 `혼재`, 비중립 근거가 두 개 미만이면 `자료 부족`으로 남긴다.

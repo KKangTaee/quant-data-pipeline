@@ -1,7 +1,7 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-17
 
 ## Current State After Master Merge
 
@@ -9,7 +9,15 @@ Last Verified: 2026-07-16
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-context-v1-20260716/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/`다.
+
+- 목적: `금·달러 회복 국면`이라는 한 문장이 경제 배경과 실제 가격을 혼동하게 하던 문제를 해소한다.
+- 완료: 1차 달러인덱스 종목·DB-only 가격 loader, 2차 금/달러 분리·5/21/63거래일 가격 판정·service error isolation, 3차 5개 React 카드·actual backfill·regression/docs를 닫았다.
+- actual 상태: 경제 기준일 2026-06-30, 가격 기준일 2026-07-16이다. 금은 경제 배경 `우호`와 가격 `하락 확인`이 불일치하며 1주 `-3.1%`, 1개월 `-4.9%`, 3개월 `-15.9%`다. 달러는 경제 배경 `부담`과 가격 `상승 확인`이 불일치하며 1주 `-0.2%`, 1개월 `+1.1%`, 3개월 `+2.7%`다.
+- 품질 경계: `GC=F`와 `DX-Y.NYB` 저장 연속선물 일봉을 사용하므로 롤 효과가 섞일 수 있다. UI/provider 직접 호출, 목표가격, 매수·매도 신호, 경제사이클 publication gate 변경은 없다.
+- 상세 계획: `docs/superpowers/plans/2026-07-17-economic-cycle-gold-dollar-price-confirmation.md`.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-context-v1-20260716/`다.
 
 - 목적: 경제사이클 결과 아래의 정적인 네 문장을 실제 evidence 기반 자산별 확인 흐름으로 바꾼다.
 - 완료: 1차 자산별 orientation/read model, 2차 2×2 React 카드·actual read model·regression/docs를 닫았다.

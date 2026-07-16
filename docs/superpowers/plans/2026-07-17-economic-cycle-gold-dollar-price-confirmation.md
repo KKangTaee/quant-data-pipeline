@@ -31,7 +31,7 @@
 - Produces: `load_economic_cycle_asset_prices(symbols: Sequence[str] = ("GC=F", "DX-Y.NYB"), lookback_rows: int = 80, query_fn: QueryFn | None = None) -> list[dict[str, object]]`
 - Persists: existing `finance_price.futures_ohlcv` using existing idempotent unique key
 
-- [ ] **Step 1: Write failing catalog and loader tests**
+- [x] **Step 1: Write failing catalog and loader tests**
 
 ```python
 def test_dollar_index_is_a_core_daily_futures_instrument():
@@ -43,13 +43,13 @@ def test_asset_price_loader_reads_only_stored_daily_rows():
     assert "FROM futures_ohlcv" in captured_sql
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_economic_cycle_asset_prices.py -q`
 
 Expected: FAIL because `DX-Y.NYB` and the loader do not exist.
 
-- [ ] **Step 3: Add instrument and minimal loader**
+- [x] **Step 3: Add instrument and minimal loader**
 
 ```python
 {"provider_symbol": "DX-Y.NYB", "display_name": "US Dollar Index", "futures_group": "FX Futures", "exchange": "ICE", "contract_hint": "US Dollar Index futures", "sort_order": 305}
@@ -59,13 +59,13 @@ def load_economic_cycle_asset_prices(...):
     return _query("finance_price", sql, params, query_fn=query_fn)
 ```
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_economic_cycle_asset_prices.py -q`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit data unit**
+- [x] **Step 5: Commit data unit**
 
 ```bash
 git add finance/data/futures_market.py finance/loaders/economic_cycle_assets.py tests/test_economic_cycle_asset_prices.py
@@ -84,7 +84,7 @@ git commit -m "달러인덱스 가격 원천 추가"
 - Produces: five implication groups `rates`, `equities`, `gold`, `dollar`, `commodities`
 - Produces per gold/dollar card: `price_context`, `alignment`, `alignment_label`
 
-- [ ] **Step 1: Write failing return/status/alignment tests**
+- [x] **Step 1: Write failing return/status/alignment tests**
 
 ```python
 assert gold["price_context"]["returns"] == {
@@ -99,13 +99,13 @@ assert [row["asset_group"] for row in result] == [
 ]
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_economic_cycle_asset_prices.py tests/test_economic_cycle_service.py -k 'price or implication' -q`
 
 Expected: FAIL because combined `gold_dollar` has no price context.
 
-- [ ] **Step 3: Implement price metrics and split orientations**
+- [x] **Step 3: Implement price metrics and split orientations**
 
 ```python
 def build_market_implications(horizons, evidence, price_rows=(), *, price_reference_date=None):
@@ -122,13 +122,13 @@ price_context = {
 }
 ```
 
-- [ ] **Step 4: Verify GREEN and edge cases**
+- [x] **Step 4: Verify GREEN and edge cases**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_economic_cycle_asset_prices.py tests/test_economic_cycle_service.py -q`
 
 Expected: PASS including stale, insufficient, threshold boundary, and divergence cases.
 
-- [ ] **Step 5: Commit interpretation unit**
+- [x] **Step 5: Commit interpretation unit**
 
 ```bash
 git add finance/economic_cycle_interpretation.py tests/test_economic_cycle_asset_prices.py tests/test_economic_cycle_service.py
@@ -145,7 +145,7 @@ git commit -m "금·달러 가격 확인 판정 추가"
 - Consumes: `load_economic_cycle_asset_prices`
 - Produces: existing `economic_cycle_v1` payload with extended implication rows
 
-- [ ] **Step 1: Write failing DB-only injection and failure-isolation tests**
+- [x] **Step 1: Write failing DB-only injection and failure-isolation tests**
 
 ```python
 model = build_economic_cycle_read_model(
@@ -161,13 +161,13 @@ assert model["status"] in {"READY", "LIMITED"}
 assert model["market_implications"][2]["price_context"]["status"] == "UNAVAILABLE"
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_economic_cycle_service.py -k asset_price -q`
 
 Expected: FAIL because the service has no price loader boundary.
 
-- [ ] **Step 3: Inject loader and isolate price read errors**
+- [x] **Step 3: Inject loader and isolate price read errors**
 
 ```python
 load_prices = asset_price_loader or load_economic_cycle_asset_prices
@@ -177,13 +177,13 @@ except Exception:
     price_rows = []
 ```
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_economic_cycle_service.py -q`
 
 Expected: PASS; price failure does not replace the economic model with `READ_ERROR`.
 
-- [ ] **Step 5: Commit service unit**
+- [x] **Step 5: Commit service unit**
 
 ```bash
 git add app/services/overview/economic_cycle.py tests/test_economic_cycle_service.py
@@ -202,7 +202,7 @@ git commit -m "경제 사이클 가격 확인 연결"
 - Consumes: implication `assessment`, optional `price_context`, optional `alignment`
 - Produces: 2-column responsive five-card surface
 
-- [ ] **Step 1: Write failing source contract**
+- [x] **Step 1: Write failing source contract**
 
 ```python
 for token in (
@@ -212,13 +212,13 @@ for token in (
     assert token in source
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_market_context_economic_cycle.py -k full_reading_flow -q`
 
 Expected: FAIL on the new labels.
 
-- [ ] **Step 3: Implement card and responsive layout**
+- [x] **Step 3: Implement card and responsive layout**
 
 ```tsx
 <strong>경제 국면: {item.phase_context}</strong>
@@ -230,7 +230,7 @@ Expected: FAIL on the new labels.
 @media (max-width: 760px) { .implication-card:last-child:nth-child(odd) { grid-column: auto; } }
 ```
 
-- [ ] **Step 4: Build and verify**
+- [x] **Step 4: Build and verify**
 
 Run: `npm run build`
 
@@ -238,7 +238,7 @@ Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_market_context_economi
 
 Expected: build and tests PASS.
 
-- [ ] **Step 5: Commit UI unit**
+- [x] **Step 5: Commit UI unit**
 
 ```bash
 git add app/web/streamlit_components/economic_cycle_workbench tests/test_market_context_economic_cycle.py
@@ -261,7 +261,7 @@ git commit -m "금·달러 가격 확인 화면 추가"
 - Persists: initial `DX-Y.NYB` 5y/1d rows through the existing idempotent collector
 - Verifies: local DB read model and running Streamlit surface
 
-- [ ] **Step 1: Backfill the dollar index**
+- [x] **Step 1: Backfill the dollar index**
 
 Run:
 
@@ -277,7 +277,7 @@ PY
 
 Expected: success and stored daily rows for `DX-Y.NYB`.
 
-- [ ] **Step 2: Run full focused verification**
+- [x] **Step 2: Run full focused verification**
 
 Run: `PYTHONPATH=. uv run --with pytest pytest tests/test_economic_cycle_asset_prices.py tests/test_economic_cycle_service.py tests/test_market_context_economic_cycle.py -q`
 
@@ -287,7 +287,7 @@ Run: `git diff --check`
 
 Expected: all PASS.
 
-- [ ] **Step 3: Verify actual read model**
+- [x] **Step 3: Verify actual read model**
 
 ```python
 model = build_economic_cycle_read_model()
@@ -300,7 +300,7 @@ assert [row["asset_group"] for row in model["market_implications"]] == [
 
 Check desktop and 420px: five cards, no horizontal overflow, separate economic/price dates, visible gold/dollar returns, no console/page errors. Capture one screenshot when browser runtime is available.
 
-- [ ] **Step 5: Sync docs and commit closeout**
+- [x] **Step 5: Sync docs and commit closeout**
 
 ```bash
 git add .aiworkspace/note/finance

@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-17
 
 ## Purpose
 
@@ -56,7 +56,7 @@ Last Verified: 2026-07-16
 | `sp500_index_earnings` | S&P index EPS by period/basis/status/release vintage. Four distinct completed `quarterly + as_reported + actual` rows are the preferred graph 2 EPS source; their absence no longer blocks the graph because the loader can select the latest Shiller TTM proxy. |
 | `fomc_sep_projection` | Federal Reserve SEP GDP/PCE values stored by release vintage, target year, and statistic. FOMC calendar에서 발견한 2021-03 이후 official history를 missing-release 방식으로 backfill하며, daily discovery가 이후 release를 append한다. 1/3/5년 reconstruction이 같은 append-only vintage를 읽고 prior release는 덮어쓰지 않는다. |
 | `futures_instrument` | Overview futures watchlist preset / display metadata for yfinance pilot futures symbols |
-| `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation |
+| `futures_ohlcv` | Overview futures 1m / daily OHLCV candle ledger for selected futures symbols. 1m rows support stored-candle chart / diagnostics; daily rows feed Futures Macro current scores and point-in-time historical validation. Economic Cycle은 저장된 `GC=F` / `DX-Y.NYB` daily row만 읽어 금·달러의 5/21/63거래일 가격 확인을 표시한다 |
 | `futures_market_monitor_run` | Futures OHLCV collection run diagnostics, latest candle, failed symbols, and provider status |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |

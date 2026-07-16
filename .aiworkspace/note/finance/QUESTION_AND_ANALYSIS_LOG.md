@@ -18,7 +18,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 경제사이클 evidence를 자산별 우호/부담/혼재/자료 부족과 두 근거/변경 조건으로 번역하는 `2/2` 개선을 완료했다.
+  - Latest completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
+  - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 경제사이클 evidence를 자산별 우호/부담/혼재/자료 부족과 두 근거/변경 조건으로 번역하는 `2/2` 개선을 완료했다.
   - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 계산 결과와 검증 상태를 분리하고 2×2 혼합형·actual 잠정 확률·Browser QA를 `5/5` 완료했다.
   - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Vintage/PIT engine과 horizon별 publication gate를 구현했다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
@@ -49,6 +50,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Entries
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
+
+### 2026-07-17 - 금·달러의 경제 배경과 실제 가격은 따로 읽고 다시 종합한다
+
+- User request: `금·달러 회복 국면`이라는 표현이 실제 금 가격과 달러인덱스 하락을 반영하는지 질문하고, 금·달러 분리 및 가격 확인 개선을 승인함.
+- Interpreted goal: 경제사이클 factor가 만든 조건부 배경을 자산 가격 방향으로 오인하지 않도록 금과 달러를 분리하고, 실제 1주·1개월·3개월 가격을 같은 카드에서 독립 확인한다.
+- Analysis result: 가격 기준은 저장된 `GC=F` / `DX-Y.NYB` 5/21/63거래일 수익률이다. 1개월과 3개월이 같은 ±1% 방향일 때만 상승/하락을 확인하고 나머지는 혼재로 둔다. 실제 2026-07-16 금은 세 구간 모두 하락, 달러는 1주 하락이지만 1·3개월 상승이다.
+- Follow-up: 두 카드에 경제 배경, 가격 확인, 종합 판단, 서로 다른 기준일을 표시했다. 이는 목표가격·매매 신호가 아니며 연속선물 롤 효과가 포함될 수 있다.
 
 ### 2026-07-16 - 경제 사이클 다음 질문은 자산별 상태·근거·변경 조건으로 읽는다
 
