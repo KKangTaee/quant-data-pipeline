@@ -877,6 +877,57 @@ PROVIDER_SCHEMAS = {
 }
 
 
+ECONOMIC_CYCLE_SCHEMAS = {
+    "economic_cycle_model_artifact": """
+        CREATE TABLE IF NOT EXISTS economic_cycle_model_artifact (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          model_version VARCHAR(128) NOT NULL,
+          trained_through DATE NOT NULL,
+          feature_schema_version VARCHAR(128) NOT NULL,
+          parameters_json LONGTEXT NOT NULL,
+          validation_metrics_json LONGTEXT NOT NULL,
+          publication_status ENUM('READY','LIMITED','ERROR') NOT NULL,
+          publication_status_json LONGTEXT NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_cycle_model_trained (model_version, trained_through),
+          KEY ix_cycle_model_status_trained (publication_status, trained_through)
+        );
+    """,
+    "economic_cycle_snapshot": """
+        CREATE TABLE IF NOT EXISTS economic_cycle_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          as_of_date DATE NOT NULL,
+          model_version VARCHAR(128) NOT NULL,
+          run_kind ENUM('historical_replay','current') NOT NULL,
+          training_cutoff_date DATE NOT NULL,
+          data_cutoff_date DATE NOT NULL,
+          status ENUM('READY','LIMITED','ERROR') NOT NULL,
+          current_phase ENUM('recovery','expansion','slowdown','recession') NULL,
+          expected_transition VARCHAR(128) NULL,
+          nber_recession TINYINT(1) NOT NULL DEFAULT 0,
+
+          probabilities_json LONGTEXT NOT NULL,
+          forecast_path_json LONGTEXT NOT NULL,
+          factor_contributions_json LONGTEXT NOT NULL,
+          top_evidence_json LONGTEXT NOT NULL,
+          warnings_json LONGTEXT NOT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_cycle_snapshot (as_of_date, model_version, run_kind),
+          KEY ix_cycle_snapshot_date_status (as_of_date, status),
+          KEY ix_cycle_snapshot_kind_date (run_kind, as_of_date)
+        );
+    """,
+}
+
+
 INSTITUTIONAL_13F_SCHEMAS = {
     "institutional_13f_manager": """
         CREATE TABLE IF NOT EXISTS institutional_13f_manager (

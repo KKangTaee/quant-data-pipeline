@@ -19,3 +19,10 @@ Last Updated: 2026-07-16
 - Task 2 RED: 5 expected collector module failures. GREEN: focused 5 passed; vintage suite 8 passed.
 - Task 3 RED: 4 expected loader module failures. GREEN: focused 5 passed; full vintage suite 12 passed.
 - `git diff --check`: passed before the 1차 commit.
+
+### 2차 — Current phase and history engine
+
+- Task 4 RED: 5 expected feature module failures. GREEN: 5 monthly transform/scaling/coverage/staleness tests passed.
+- Task 5 RED: 5 expected label module failures. GREEN: 5 label tests; combined feature/label suite 10 passed.
+- Task 6 RED: 5 expected model module failures. GREEN: 5 h0 fit/allowlist/support/simplex/explanation tests passed.
+- Task 7 RED: 4 expected result schema/module/loader failures. GREEN: 4 artifact/snapshot persistence tests passed.

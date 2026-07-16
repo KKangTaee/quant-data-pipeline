@@ -204,3 +204,117 @@ def load_economic_cycle_series_coverage(
         "available_series": len(latest),
         "series": items,
     }
+
+
+def load_latest_approved_cycle_artifact(
+    *,
+    as_of_date: str | date | None = None,
+    query_fn: QueryFn | None = None,
+) -> dict[str, object] | None:
+    """Load the latest READY artifact trained no later than the requested date."""
+
+    as_of = _date_value(as_of_date or date.today(), field="as_of_date")
+    sql = """
+    SELECT *
+    FROM economic_cycle_model_artifact
+    WHERE publication_status = 'READY'
+      AND trained_through <= %s
+    ORDER BY trained_through DESC, updated_at DESC
+    """
+    rows = _query(DB_META, sql, (as_of.isoformat(),), query_fn=query_fn)
+    eligible = [
+        dict(row)
+        for row in rows
+        if str(row.get("publication_status")) == "READY"
+        and _date_value(row.get("trained_through"), field="trained_through") <= as_of
+    ]
+    if not eligible:
+        return None
+    selected = max(
+        eligible,
+        key=lambda row: (
+            _date_value(row["trained_through"], field="trained_through"),
+            _updated_sort_value(row.get("updated_at")),
+        ),
+    )
+    selected["trained_through"] = _date_value(
+        selected["trained_through"], field="trained_through"
+    ).isoformat()
+    return selected
+
+
+def load_cycle_snapshot(
+    *,
+    as_of_date: str | date | None = None,
+    model_version: str | None = None,
+    run_kind: str = "current",
+    query_fn: QueryFn | None = None,
+) -> dict[str, object] | None:
+    """Load one compact persisted snapshot without calculating or fetching."""
+
+    resolved_kind = str(run_kind)
+    if resolved_kind not in {"current", "historical_replay"}:
+        raise ValueError(f"Unsupported run_kind: {run_kind}")
+    cutoff = _date_value(as_of_date or date.today(), field="as_of_date")
+    where = ["run_kind = %s", "as_of_date <= %s"]
+    params: list[object] = [resolved_kind, cutoff.isoformat()]
+    if model_version is not None:
+        where.append("model_version = %s")
+        params.append(str(model_version))
+    sql = f"""
+    SELECT *
+    FROM economic_cycle_snapshot
+    WHERE {' AND '.join(where)}
+    ORDER BY as_of_date DESC, updated_at DESC
+    LIMIT 1
+    """
+    rows = _query(DB_META, sql, tuple(params), query_fn=query_fn)
+    eligible = []
+    for raw in rows:
+        row = dict(raw)
+        if str(row.get("run_kind")) != resolved_kind:
+            continue
+        if model_version is not None and str(row.get("model_version")) != str(model_version):
+            continue
+        observed = _date_value(row.get("as_of_date"), field="as_of_date")
+        if observed <= cutoff:
+            row["as_of_date"] = observed.isoformat()
+            eligible.append(row)
+    return (
+        max(eligible, key=lambda row: str(row["as_of_date"]))
+        if eligible
+        else None
+    )
+
+
+def load_cycle_history(
+    *,
+    start_date: str | date,
+    end_date: str | date,
+    query_fn: QueryFn | None = None,
+) -> list[dict[str, object]]:
+    """Load bounded month-end replay snapshots in chronological order."""
+
+    start = _date_value(start_date, field="start_date")
+    end = _date_value(end_date, field="end_date")
+    if start > end:
+        raise ValueError("start_date must be earlier than or equal to end_date")
+    sql = """
+    SELECT *
+    FROM economic_cycle_snapshot
+    WHERE run_kind = 'historical_replay'
+      AND as_of_date >= %s
+      AND as_of_date <= %s
+    ORDER BY as_of_date ASC
+    """
+    rows = _query(
+        DB_META, sql, (start.isoformat(), end.isoformat()), query_fn=query_fn
+    )
+    eligible: list[dict[str, object]] = []
+    for raw in rows:
+        row = dict(raw)
+        observed = _date_value(row.get("as_of_date"), field="as_of_date")
+        if start <= observed <= end:
+            row["as_of_date"] = observed.isoformat()
+            eligible.append(row)
+    return sorted(eligible, key=lambda row: str(row["as_of_date"]))

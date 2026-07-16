@@ -25,3 +25,11 @@ The model estimates a data-defined macro regime with uncertainty. It does not re
 - Official vintage mode is FRED `output_type=2` with explicit `1776-07-04` to `9999-12-31` real-time bounds and pagination.
 - `.` and non-finite values persist as explicit missing rows; they are never coerced to zero or dropped.
 - Loader applies both SQL window selection and a defensive Python as-of filter for injected/legacy duplicate readers.
+
+## 2차 Decisions
+
+- Transform values remain explicit monthly signals; expanding median/MAD scaling uses only values available through each origin and clamps to `[-4, 4]`.
+- Every modeled factor needs at least two indicators and total available coverage must be at least 75%; stale evidence lowers status to `LIMITED`.
+- Retrospective current labels use only activity/labor level and three-month momentum, with origin-eligible `USREC` as an override.
+- The h0 Gaussian artifact rejects financial/inflation features by contract and cannot publish if any phase has no training support.
+- Full model parameters live in `economic_cycle_model_artifact`; UI/history reads compact `economic_cycle_snapshot` rows only.
