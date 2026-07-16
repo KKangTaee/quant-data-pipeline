@@ -34,6 +34,7 @@ DEFAULT_FUTURES_INSTRUMENTS: tuple[dict[str, Any], ...] = (
     {"provider_symbol": "SI=F", "display_name": "Silver", "futures_group": "Commodities", "exchange": "COMEX", "contract_hint": "Silver futures", "sort_order": 230},
     {"provider_symbol": "HG=F", "display_name": "Copper", "futures_group": "Commodities", "exchange": "COMEX", "contract_hint": "Copper futures", "sort_order": 240},
     {"provider_symbol": "NG=F", "display_name": "Natural Gas", "futures_group": "Commodities", "exchange": "NYMEX", "contract_hint": "Natural gas futures", "sort_order": 250},
+    {"provider_symbol": "DX-Y.NYB", "display_name": "US Dollar Index", "futures_group": "FX Futures", "exchange": "ICE", "contract_hint": "US Dollar Index futures", "sort_order": 305},
     {"provider_symbol": "6E=F", "display_name": "Euro FX", "futures_group": "FX Futures", "exchange": "CME", "contract_hint": "EUR/USD futures", "sort_order": 310},
     {"provider_symbol": "6J=F", "display_name": "Japanese Yen", "futures_group": "FX Futures", "exchange": "CME", "contract_hint": "JPY/USD futures", "sort_order": 320},
     {"provider_symbol": "6B=F", "display_name": "British Pound", "futures_group": "FX Futures", "exchange": "CME", "contract_hint": "GBP/USD futures", "sort_order": 330},
