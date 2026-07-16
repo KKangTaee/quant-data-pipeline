@@ -2928,20 +2928,23 @@ focused regression, 한국어 commit 순서로 실행한다.
 - Modify active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
 - Modify root handoff logs
 
-- [ ] Reproject the current latest GRS row read-only and record Level2
+- [x] Reproject the current latest GRS row read-only and record Level2
   validated-caution / action / engineering / explicit handoff counts.
-- [ ] Run all focused closure / service / boundary / visual contract tests.
-- [ ] Run React production build, target py_compile, `git diff --check`.
-- [ ] Restart only the Streamlit process serving this worktree if needed.
+- [x] Add a RED/GREEN regression proving measured accepted-limit evidence
+  remains a Final Review handoff instead of disappearing into the Level2
+  measured-caution lane.
+- [x] Run all focused closure / service / boundary / visual contract tests.
+- [x] Run React production build, target py_compile, `git diff --check`.
+- [x] Restart only the Streamlit process serving this worktree if needed.
 - [ ] Execute desktop and 760px Browser QA, including replay partial refresh,
   console, outer/component overflow, candidate/policy separation, readable
   evidence, and empty-action suppression.
 - [ ] Capture generated screenshots and keep them unstaged.
-- [ ] Synchronize canonical flow / architecture docs, active task, INDEX /
+- [x] Synchronize canonical flow / architecture docs, active task, INDEX /
   ROADMAP, and root handoff logs.
-- [ ] Confirm protected registries, run history, saved JSONL, screenshots,
+- [x] Confirm protected registries, run history, saved JSONL, screenshots,
   `.superpowers/`, and run artifacts are absent from staged files.
-- [ ] Commit: `Practical Validation Level2 보정 QA와 문서 동기화`.
+- [x] Commit: `Practical Validation Level2 보정 QA와 문서 동기화`.
 
 ## Correction Completion Gate
 

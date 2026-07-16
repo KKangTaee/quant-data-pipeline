@@ -15,7 +15,7 @@ Latest completed task:
 
 Current active task status:
 
-- `practical-validation-level2-decision-workspace-v1-20260716`: implementation and non-visual verification complete; desktop / 760px Browser QA pending.
+- `practical-validation-level2-decision-workspace-v1-20260716`: correction implementation and non-visual verification complete; focused 124 tests, React build, latest GRS projection, docs sync complete; desktop / 760px Browser QA pending.
 
 Previous completed task:
 

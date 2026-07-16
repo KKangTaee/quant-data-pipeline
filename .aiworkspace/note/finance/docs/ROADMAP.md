@@ -11,7 +11,7 @@ Last Verified: 2026-07-16
 
 - 목적: Practical Validation Level2를 `후보와 기준 확인 -> 최신 재검증 -> 결과 해석과 해결 구분 -> 저장 / Final Review 이동`의 4단계 question-first workspace로 재구성한다.
 - 설계 방향: Python이 finding / applicability / root dedup / Gate / action / persistence를 소유하고, React는 Final Review와 같은 visual language로 one-shell presentation과 intent만 담당한다.
-- 현재 상태: 1차 truth contract, 2차 pure Decision Workspace read model, 3차 one-shell React / Python intent integration과 4차 read-only runtime / focused verification / docs sync까지 완료했다. desktop / 760px Browser QA는 현재 세션의 Browser JS 제어 도구가 노출되지 않아 closeout gate로 남아 있다.
+- 현재 상태: 1차 truth contract, 2차 pure Decision Workspace read model, 3차 one-shell React / Python intent integration과 사용자 피드백 보정을 완료했다. 후보/검증 관점 분리, fragment replay, 사용자 설명/5개 상세 category, missing-validator blocker, measured handoff 분류를 반영했고 latest GRS read-only projection, focused 124 tests, React build, py_compile, diff-check, docs sync를 통과했다. desktop / 760px Browser QA는 현재 세션의 Browser JS 제어 도구가 노출되지 않아 closeout gate로 남아 있다.
 - 이번 task에서 하지 않는 일: historical universe / delisting provider, DB schema, strategy runtime 재설계, Final Review route 변경, live approval / broker order / auto rebalance.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
@@ -826,9 +826,9 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 
 - visible flow는 `후보와 검증 기준 확인 -> 최신 데이터 기준 재검증 -> 결과 해석과 해결 구분 -> 저장하고 Final Review로 이동`의 4단계 one-shell이다.
 - `상세 검증 근거`는 Step 3 disclosure이며 별도 Flow 5가 아니다. custom profile / advanced replay / raw evidence만 `고급 설정과 원본 근거`에 둔다.
-- `app/services/backtest_practical_validation_decision_workspace.py`가 verified / measured caution / resolve-now / engineering-required / Final Review handoff를 root issue 기준으로 투영한다.
+- `app/services/backtest_practical_validation_decision_workspace.py`가 verified / measured caution / validated caution / resolve-now / engineering-required / Final Review handoff를 root issue 기준으로 투영한다. 사용자 설명은 별도 pure explanation service가 소유한다.
 - React는 presentation과 intent만 소유하고, Python은 applicability, finding, Gate, handler 검증, replay, save, Final Review handoff를 소유한다.
 - old Fix Queue / Data Action Board는 compatibility code로 유지하지만 active first-read에서는 렌더링하지 않는다.
 - current eligible 계약은 unresolved actionable / critical engineering / missing contract가 모두 0인 상태다. accepted limit / final decision / monitoring transfer는 Level2 수리 목록이 아니라 Final Review handoff다.
-- 구현 커밋은 `a2352f01`, `0e180f93`, `b661e83a`이며 focused completion 82 tests와 React 175 modules build, target py_compile, diff-check, current GRS read-only projection을 통과했다.
-- 남은 closeout gate는 desktop / 760px Browser QA와 screenshot이다. historical universe PIT membership / delisting provider는 별도 승인 전 critical engineering risk로 유지한다.
+- 구현/보정 커밋은 `a2352f01`, `0e180f93`, `b661e83a`, `96571a15`, `d26fccb6`, `e3797e9f`, `4ac2a83a`, `d968b6a4`다. latest GRS는 verified 22, validated caution 5, resolve-now 0, engineering blocker 0, accepted limit 1, final decision 1로 read-only 투영됐고 focused completion 124 tests와 React 175 modules build, target py_compile, diff-check를 통과했다.
+- 남은 closeout gate는 desktop / 760px Browser QA와 새 screenshot이다. historical universe PIT membership / delisting provider는 별도 승인 전 critical engineering risk로 유지한다.

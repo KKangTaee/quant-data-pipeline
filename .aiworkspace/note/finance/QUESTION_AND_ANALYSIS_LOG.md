@@ -9551,3 +9551,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 사용자가 어떤 후보를 어떤 기준으로 재검증했고, 지금 해결할 일과 Final Review로 넘길 한계를 한 화면에서 구분해야 함.
 - Analysis result: 현재 contract test는 정상이나 REVIEW 의미 혼합, accepted limit / final decision handoff 불완전, empty action board, module-level 중복, square Streamlit / React surface가 사용자 판단을 흐린다.
 - Follow-up: 4단계 Hybrid One-Shell, Python-owned finding/applicability/Gate/action contract, Level3 visual token, technical disclosure 구조를 DESIGN에 고정하고 상세 PLAN을 작성한다.
+
+### 2026-07-16 - Practical Validation은 후보 선택, 검증 정책, Level2 종결, Final Review 인계를 분명히 나눠야 한다
+
+- User request: 후보 목록과 검증 정책을 분리하고, 최신 재검증 때 상단이
+  리셋되지 않게 하며, raw 코드 근거를 사용자 설명으로 바꾸고 Level2에서
+  검증할 항목은 이 단계에서 종결해 달라고 요청함.
+- Interpreted goal: Level2는 확인된 주의를 자체 종결하고 실제 미검증은
+  개발 차단으로 남기며, 근거가 있는 구조적 한계/사용자 판단만 Level3에
+  전달해야 함.
+- Analysis result: full app rerun, raw audit projection, generic
+  `pv_practical_caution -> accepted_limit` fallback, measured handoff의 lane
+  누락이 직접 원인이었다.
+- Follow-up: 1A/1B UI, fragment rerun, pure explanation service, 5개 category,
+  evidence state/missing-validator Gate, handoff class 보정을 구현했다.
+  automated verification은 완료했고 Browser QA만 도구 제약으로 남았다.

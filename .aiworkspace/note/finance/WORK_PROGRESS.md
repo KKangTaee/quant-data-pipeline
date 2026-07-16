@@ -6256,3 +6256,15 @@ Detailed historical logs were archived on `2026-04-13`.
 - `후보와 기준 확인 -> 최신 재검증 -> 결과 해석과 해결 구분 -> 저장 / Final Review 이동`의 4단계 Hybrid One-Shell 설계를 채택했다.
 - 새 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-level2-decision-workspace-v1-20260716/`이며 DESIGN과 1~4차 상세 PLAN을 완료했다.
 - 다음 작업은 새 세션에서 PLAN의 1차 Validation Truth RED부터 실행하는 것이다.
+
+## 2026-07-16 - Practical Validation Level2 Decision Workspace 보정 구현
+
+- 후보/검증 관점 분리, fragment 재검증, 사용자 설명/5개 상세 category,
+  missing-validator blocker, Level2 validated caution 계약을 구현했다.
+- 최신 GRS read-only projection은 verified 22, validated caution 5,
+  resolve-now/engineering 0, Final Review handoff 2건이다.
+- focused 124 tests, React 175 modules build, target py_compile, diff-check,
+  Streamlit health/HTTP와 canonical docs sync를 완료했다.
+- desktop / 760px Browser QA와 새 screenshot은 Browser JS 제어 도구가
+  노출되는 세션에서 이어서 확인한다. 상세는 active task `RUNS.md`와
+  `RISKS.md`를 본다.

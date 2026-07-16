@@ -35,7 +35,7 @@
 
 ## 2026-07-16 Runtime Observation
 
-- Final Review의 latest-per-source selector가 고른 최신 eligible GRS-shaped row는 `validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_d289e7e8`이며, `ready_with_handoff`, resolve-now 0, critical engineering 0, missing contract 0, accepted limit 6, final decision 1이었다.
+- 초기 계약으로 Final Review의 latest-per-source selector가 고른 최신 eligible GRS-shaped row는 `validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_d289e7e8`이며, `ready_with_handoff`, resolve-now 0, critical engineering 0, missing contract 0, accepted limit 6, final decision 1이었다.
 - 직전 `7bca4e1a` row의 accepted limit 5건과 달리 2026-07-16 observation refresh row에는 historical universe accepted limit가 포함된다. append-only registry를 재작성하지 않고 최신 row를 read-only로 투영했다.
 
 ## 2026-07-16 User Feedback Correction
@@ -55,3 +55,18 @@
   종결하고, evidence가 없는 required validation은 engineering blocker로
   유지한다. explicit applicability가 있는 구조적 한계와 실제 사용자 판단만
   Final Review로 넘긴다.
+
+## 2026-07-16 Correction Runtime Result
+
+- 최신 GRS row를 현재 module / enrichment / closure / decision-workspace
+  계약으로 read-only 재투영한 결과는 `ready_with_handoff`다.
+- verified 22, validated caution 5, resolve-now 0, engineering blocker 0,
+  missing contract 0이며 provider enrichment action도 0건이다.
+- Final Review handoff는 `historical_universe_coverage / accepted_limit`과
+  `tax_account_scope / final_decision` 두 root만 남는다.
+- 실제 projection에서 summary에는 handoff 2건이 있지만 lane이 비는 회귀를
+  발견했다. 원인은 measurement가 있는 모든 non-blocker를
+  `measured_caution`으로 덮어쓴 것이었다.
+- measured caution은 `validated_caution`에만 적용하고 accepted limit /
+  final decision / monitoring transfer는 measurement가 있어도 원래
+  handoff class를 유지하도록 TDD로 보정했다.

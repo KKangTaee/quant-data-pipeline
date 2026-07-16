@@ -23,7 +23,7 @@ Last Verified: 2026-07-16
 - Latest completed phase: [Phase 13 First-Cycle Hardening Closeout](../phases/done/phase13-hardening-cycle-closeout.md)
 - Previous completed phase: [Phase 12 Selected Monitoring / Recheck Operations](../phases/done/phase12-selected-monitoring-recheck-operations.md)
 - Current active phase: none. New phase work should be opened only after a user-approved scope is selected from current research / carry-forward material.
-- Current active task: [Practical Validation Level2 Decision Workspace V1 2026-07-16](../tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md). 구현 1~3차와 read-only runtime 검증은 완료됐고, desktop / 760px Browser QA만 남아 있다.
+- Current active task: [Practical Validation Level2 Decision Workspace V1 2026-07-16](../tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md). 1~3차 구현과 사용자 피드백 보정, latest GRS read-only projection, focused 124 tests, React build, py_compile, diff-check, docs sync를 완료했다. desktop / 760px Browser QA와 새 screenshot만 남아 있다.
 - Latest completed task: [Institutional Portfolios Security Detail Chart Layout V1 2026-07-12](../tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Watchlist / Mapping V1 2026-07-12](../tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
 - Previous completed task: [Institutional Portfolios Two-Tier Tabs V1 2026-07-12](../tasks/active/institutional-portfolios-two-tier-tabs-v1-20260712/STATUS.md).

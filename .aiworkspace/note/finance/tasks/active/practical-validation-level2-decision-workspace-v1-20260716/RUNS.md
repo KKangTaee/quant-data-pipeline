@@ -136,3 +136,47 @@
   - focused producer / module / closure 75 tests `OK`.
   - 6 target py_compile과 `git diff --check` 통과.
 - protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.
+
+## 2026-07-16 Correction Task 9
+
+- current GRS read-only projection:
+  - validation:
+    `validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_d289e7e8`
+  - state: `ready_with_handoff`
+  - verified 22 / measured caution 0 / validated caution 5
+  - resolve-now 0 / engineering blocker 0 / missing contract 0
+  - enrichment required false / item count 0
+  - Final Review handoff:
+    `historical_universe_coverage / accepted_limit`,
+    `tax_account_scope / final_decision`
+- runtime projection RED:
+  - summary는 accepted limit 1 / final decision 1이었지만 measurement가 있는
+    handoff issue가 measured-caution으로 덮여 lane이 비는 회귀를 확인.
+  - failing test:
+    `test_measured_accepted_limit_remains_final_review_handoff`.
+- runtime projection GREEN:
+  - measured caution을 `validated_caution`에만 한정.
+  - accepted limit / final decision / monitoring transfer는 measurement가
+    있어도 Final Review handoff class를 유지.
+  - focused decision-workspace / hardening 22 tests `OK`.
+  - commit:
+    `d968b6a4 Practical Validation Final Review 인계 분류 보정`.
+- completion verification:
+  - focused closure / service / boundary / visual contract 124 tests `OK`.
+  - Vite 5.4.21 production build, 175 modules, CSS
+    `index-DAxIKqih.css`, JS `index-Bywe31X0.js`.
+  - target py_compile 통과.
+  - `git diff --check` 통과.
+  - restarted worktree Streamlit on 8505; `/_stcore/health=ok`,
+    `/backtest=HTTP 200`.
+- Browser QA:
+  - installed Browser skill이 요구하는 `mcp__node_repl__js` control tool이
+    현재 세션 tool surface에 노출되지 않아 desktop / 760px interaction,
+    console, overflow, screenshot QA를 실행하지 못했다.
+  - 외부 Playwright / Computer Use 대체는 Browser skill contract에 따라
+    사용하지 않았다.
+- protected scope:
+  - `PRACTICAL_VALIDATION_RESULTS.jsonl` modified / unstaged.
+  - `BACKTEST_RUN_HISTORY.jsonl`, generated screenshot, `.superpowers/`
+    untracked / unstaged.
+  - saved JSONL과 run artifact는 stage하지 않음.

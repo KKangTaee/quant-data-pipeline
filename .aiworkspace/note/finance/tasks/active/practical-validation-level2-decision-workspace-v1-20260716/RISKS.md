@@ -20,3 +20,6 @@
   이동은 app rerun이어야 한다. 모든 intent를 fragment scope로 강제하지 않는다.
 - Final Review의 private explanation helper를 직접 import하면 stage 간 결합이
   생긴다. Level2 pure explanation service가 필요한 mapping을 독립적으로 소유한다.
+- current automated verification은 measured accepted-limit / final-decision
+  handoff lane 회귀를 잡았지만, 실제 화면에서 두 handoff 카드가 의도한
+  정보 밀도로 보이는지는 desktop / 760px Browser QA가 남아 있다.

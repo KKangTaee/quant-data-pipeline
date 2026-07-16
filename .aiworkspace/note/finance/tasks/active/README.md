@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `practical-validation-level2-decision-workspace-v1-20260716` | Browser QA pending | 1~3차 구현과 focused 82 tests / React build / py_compile / diff-check / read-only runtime projection / docs sync 완료. desktop / 760px Browser QA와 screenshot만 남았다. |
+| `practical-validation-level2-decision-workspace-v1-20260716` | Browser QA pending | 1~3차 구현과 사용자 피드백 보정, focused 124 tests / React build / py_compile / diff-check / latest GRS read-only projection / docs sync 완료. desktop / 760px Browser QA와 새 screenshot만 남았다. |
 
 ## Recent Completed / Retained Current Work
 

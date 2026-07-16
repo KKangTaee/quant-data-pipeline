@@ -8,8 +8,8 @@ Last Updated: 2026-07-16
 - [x] 1차 Validation Truth / Finding Contract
 - [x] 2차 Level2 Decision Workspace Read Model
 - [x] 3차 One-Shell UI / Intent Integration
-- [ ] 4차 QA / Docs / Closeout
-- [ ] 5차 사용자 피드백 기반 계약 / 상호작용 / 설명 보정
+- [ ] 4차 QA / Docs / Closeout — non-visual verification / docs 완료, Browser QA pending
+- [ ] 5차 사용자 피드백 기반 계약 / 상호작용 / 설명 보정 — 구현 완료, Browser QA pending
 
 ## Current Progress
 
@@ -19,7 +19,7 @@ Last Updated: 2026-07-16
 - [x] root issue dedup, measured caution, verified / handoff 분리
 - [x] four-step React one-shell과 same-read-model Streamlit fallback
 - [x] Python intent validation / replay / provider action / save boundary
-- [x] focused 82 tests, React 175 modules build, target py_compile, diff-check
+- [x] final focused 124 tests, React 175 modules build, target py_compile, diff-check
 - [x] current eligible GRS read-only projection과 8505 restart / HTTP health
 - [x] canonical docs와 active task / root handoff sync
 - [ ] desktop / 760px Browser QA, console / overflow 확인, screenshot
@@ -27,6 +27,9 @@ Last Updated: 2026-07-16
 - [x] correction Task 6: 후보/검증 정책 분리와 fragment 재검증
 - [x] correction Task 7: 사용자 설명 계약과 범주별 상세 검증 UI
 - [x] correction Task 8: 누락 검증과 audit 집계 경계 강화
+- [x] correction Task 9: latest GRS read-only projection, handoff lane
+  regression TDD, focused 124 tests, React build, py_compile, diff-check,
+  HTTP health, docs sync
 
 ## Current Position
 
@@ -37,8 +40,10 @@ Task 5~9를 진행한다.
 
 ## Next Action
 
-Task 9의 current GRS read-only projection, 전체 검증, desktop / 760px
-Browser QA, canonical docs 동기화를 진행한다.
+현재 세션에 Browser skill이 요구하는 Node JS 제어 도구가 노출되는 환경에서
+desktop / 760px Browser QA, console / overflow, replay partial refresh,
+candidate/policy separation, readable evidence, empty-action suppression을
+확인하고 새 screenshot을 남긴다.
 
 남은 제품 위험은 dynamic historical universe의 PIT membership / delisting provider이며 별도 승인 전까지 critical blocker로 유지한다.
 
@@ -51,3 +56,5 @@ Browser QA, canonical docs 동기화를 진행한다.
 - `96571a15` Practical Validation Level2 주의 종결 계약 보정
 - `d26fccb6` Practical Validation 후보 선택과 부분 재검증 개선
 - `e3797e9f` Practical Validation 검증 설명과 상세 근거 개선
+- `4ac2a83a` Practical Validation 미검증 항목과 집계 기준 보강
+- `d968b6a4` Practical Validation Final Review 인계 분류 보정

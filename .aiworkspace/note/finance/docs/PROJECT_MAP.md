@@ -85,7 +85,8 @@ Last Verified: 2026-07-16
 | Practical Validation status policy service | `app/services/backtest_validation_status_policy.py` |
 | Practical Validation board map service | `app/services/backtest_practical_validation_board_registry.py` |
 | Practical Validation workspace read model service | `app/services/backtest_practical_validation_workspace.py`; includes Flow 3 conclusion fields, Flow 4 criteria status summary groups, criteria-level resolution guides with numbered action steps, and Flow 4 display-only `data_action_board` built from provider collection plan / compact evidence rows |
-| Practical Validation Level2 Decision Workspace service | `app/services/backtest_practical_validation_decision_workspace.py`; root issue를 verified / measured caution / resolve-now / engineering-required / Final Review handoff로 한 번만 투영하고 `source_required / replay_required / resolution_required / ready_with_handoff / ready`, top-level `validation_result_id`, seven summary counts, four-step actions를 만든다 |
+| Practical Validation Level2 Decision Workspace service | `app/services/backtest_practical_validation_decision_workspace.py`; root issue를 verified / measured caution / validated caution / resolve-now / engineering-required / Final Review handoff로 한 번만 투영하고 `source_required / replay_required / resolution_required / ready_with_handoff / ready`, top-level `validation_result_id`, summary counts, four-step actions를 만든다. accepted limit / final decision / monitoring transfer는 측정값이 있어도 Final Review handoff로 유지한다 |
+| Practical Validation explanation service | `app/services/backtest_practical_validation_explanation.py`; raw audit row를 사용자 언어의 검증명 / 확인 결과 / 의미 / 다음 행동으로 바꾸고 5개 evidence category와 secondary technical trace를 만든다 |
 | Construction risk audit service | `app/services/backtest_construction_risk_audit.py` |
 | Risk contribution audit service | `app/services/backtest_risk_contribution_audit.py` |
 | Component role / weight audit service | `app/services/backtest_component_role_weight_audit.py` |
@@ -173,7 +174,7 @@ Last Verified: 2026-07-16
 | `app/web/backtest_practical_validation/components.py` | Practical Validation 전용 product shell / CSS helper. White square Command Center, section header, card grid, step rail, alert panel을 담당하며 검증 로직이나 저장 계약은 포함하지 않는다 |
 | `app/web/backtest_practical_validation/workspace_panel.py` | current read model 기반 four-step fallback과 legacy Flow 3 compatibility renderer를 함께 소유한다 |
 | `app/web/backtest_practical_validation/status_display.py` | Practical Validation UI display helper. `BLOCKED_FOR_FINAL_REVIEW`, `READY_WITH_REVIEW`, `READY_FOR_FINAL_REVIEW` 같은 raw route-like status를 first-read labels `BLOCKED`, `REVIEW`, `PASS`로 정규화한다 |
-| `app/web/components/practical_validation_decision_workspace/` | current Level2 one-shell React component. seven summary counts와 non-empty lane, Step 3 disclosure, final actions를 렌더링하며 ResizeObserver로 iframe 높이를 동기화하고 760px에서 단일 열로 접힌다 |
+| `app/web/components/practical_validation_decision_workspace/` | current Level2 one-shell React component. 분리된 후보/검증 관점, summary counts, non-empty lane, 5개 category Step 3 disclosure, final actions를 렌더링하며 ResizeObserver로 iframe 높이를 동기화하고 760px에서 단일 열로 접힌다 |
 | `app/web/components/practical_validation_fix_queue/`, `app/web/components/practical_validation_data_action_board/` | compatibility-only legacy components. active page는 새 one-shell을 사용한다 |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
