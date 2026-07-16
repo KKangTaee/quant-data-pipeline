@@ -42,15 +42,21 @@ Last Updated: 2026-07-16
 - [x] 포트폴리오 실제 성격과 관리 기준 대비 압력 분리 방향 사용자 승인
 - [x] current GRS 값/criterion/alias root cause 재확인
 - [x] character profile / review pressure continuation DESIGN 작성과 self-review
-- [ ] 작성된 DESIGN 사용자 확인
-- [ ] writing-plans 기반 상세 PLAN과 구현
+- [x] 작성된 DESIGN 사용자 확인
+- [x] writing-plans 기반 상세 PLAN 작성과 self-review
+- [x] 상세 PLAN 계획 커밋
+- [ ] 1차 Python character/review contract 구현
+- [ ] 2차 React/fallback presentation 구현과 Browser QA
+- [ ] 3차 fresh verification / docs closeout
 
 ## Next Action
 
-작성된 character/review separation DESIGN을 사용자에게 확인받은 뒤 writing-plans 절차로 구현 계획을 작성한다. 새 task/worktree는 만들지 않고 같은 active task를 이어간다.
+상세 PLAN을 계획 커밋으로 고정한 뒤 inline executing-plans 방식으로 1차 Python contract부터 RED → GREEN 구현한다. 새 task/worktree는 만들지 않는다.
 
 ## Commits
 
+- `293cc3c0` Final Review 성격 분리 설계 소유 경로 보정
+- `adcbd80d` Final Review 실제 성격과 관리 압력 분리 설계
 - `54b11008` Final Review 차트 축과 hover 상호작용 개선
 - `88fc62c7` Final Review 제목 계층과 관측 목록 보정
 - `95cc2341` Final Review 차트 상호작용 구현 계획 수립

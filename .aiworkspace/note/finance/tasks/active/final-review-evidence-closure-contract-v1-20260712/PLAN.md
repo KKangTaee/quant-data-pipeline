@@ -2372,3 +2372,759 @@ git commit -m "Final Review 차트 상호작용 QA와 문서 동기화"
 - [x] Desktop and 760px Browser QA cover hover, axes, wrapping and overflow without save mutation.
 - [x] Plan, heading/list, chart interaction and closeout docs are distinct Korean commits.
 - [x] 금지된 미완성 표식과 구체화되지 않은 오류 처리 단계가 새 계획 구간에 남아 있지 않다.
+
+# Final Review Portfolio Character And Review Pressure Implementation Plan — 2026-07-16
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` for inline execution. Every behavior change follows `superpowers:test-driven-development`; completion and commits follow `superpowers:verification-before-completion`. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Final Review에서 실제 포트폴리오 성격을 threshold 유무와 관계없이 보여주고, 저장된 관리 기준 대비 이내·초과·기준 미설정·근거 없음 상태를 별도 영역으로 정확히 표시한다.
+
+**Architecture:** `app/services/backtest_final_review_decision_brief.py`가 기존 structured execution observation을 한 번 만들고 `character_profile`과 `review_pressure`를 파생한다. 새 React owner `DecisionBriefCharacter.tsx`는 두 Python payload를 표시만 하며 radar/임의 0~100 normalization을 제거한다. Streamlit fallback도 같은 순서를 소비하고 Gate, route, persistence, Monitoring snapshot은 변경하지 않는다.
+
+**Tech Stack:** Python 3.12, `unittest`, React 18, TypeScript, CSS, Vite, Streamlit fallback, in-app Browser QA.
+
+## Global Constraints
+
+- 기존 `codex/backtest-dev` worktree와 active task를 계속 사용하고 새 task/worktree를 만들지 않는다.
+- `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`, run history, saved JSONL, `.superpowers/`, QA screenshot을 stage/commit하지 않는다.
+- raw character와 review pressure는 같은 Python observation/evidence ref에서 파생한다. React는 threshold alias, comparison, delta를 계산하지 않는다.
+- `mdd_review_line`은 canonical drawdown review criterion alias로 Python에서 연결한다.
+- `one_way_cost_bps`는 비용 가정 자체이므로 cost review limit으로 사용하지 않는다.
+- turnover/cost criterion을 임의 기본값으로 만들지 않고, regime provider/analytics도 추가하지 않는다.
+- `trait_map`, `normalized_value`, `aggregate_score`, `83.3 / 100` pressure score와 radar polygon을 current payload/UI에서 제거한다.
+- Final Review는 provider fetch, replay, DB ingestion, validation profile edit, registry append를 실행하지 않는다.
+- RED → GREEN → focused regression → production build → Browser QA → fresh completion verification 순서를 지킨다.
+
+---
+
+## File Structure And Interfaces
+
+- Modify: `app/services/backtest_final_review_decision_brief.py`
+  - character measurement와 review criterion comparison을 소유한다.
+- Modify: `tests/test_backtest_final_review_decision_brief.py`
+  - current GRS character/criterion fixture와 Python contract를 고정한다.
+- Create: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharacter.tsx`
+  - 실제 성격과 관리 압력 presentation을 소유한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`
+  - `CharacterProfileItem`, `ReviewPressureItem`과 brief field를 정의한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+  - section order와 새 component orchestration만 소유한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx`
+  - trait radar code와 `TraitAxis` 의존성을 제거하고 behavior chart만 유지한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+  - desktop 2열 / 760px 1열 character layout과 status presentation을 소유한다.
+- Modify: `app/web/backtest_final_review/page.py`
+  - React build unavailable 시 동일 character/pressure fallback을 렌더한다.
+- Modify: `tests/test_service_contracts.py`
+  - React reading order, presentation-only boundary, fallback parity를 고정한다.
+- Modify: `tests/test_final_review_market_context_visual_contract.py`
+  - Market Context visual family와 character responsive source contract를 고정한다.
+- Modify: tracked `frontend/build/` output after GREEN.
+
+## Task 9.1: Python Character And Review Pressure Contract
+
+**Files:**
+- Modify: `tests/test_backtest_final_review_decision_brief.py`
+- Modify: `app/services/backtest_final_review_decision_brief.py`
+
+**Interfaces:**
+- Produces: `_build_character_profile(observations: list[dict[str, Any]]) -> dict[str, Any]`.
+- Produces: `_build_review_pressure(observations: list[dict[str, Any]]) -> dict[str, Any]`.
+- Produces: `_criterion_favorable(measured: float, criterion: float, comparison: str) -> bool`.
+- Produces payload fields: `character_profile.items[]`, `review_pressure.items[]`.
+- Removes current payload field: `trait_map`.
+
+- [ ] **Step 1: Add a current-character fixture helper and failing contract tests**
+
+Add to `FinalReviewDecisionBriefContractTests`:
+
+```python
+def _current_character_inputs(self) -> dict[str, object]:
+    inputs = self._grs_inputs()
+    validation = inputs["validation"]
+    validation["metrics"]["max_weight"] = 100.0
+    validation["validation_profile"]["thresholds"] = {
+        "max_weight_review": 60.0,
+        "mdd_review_line": -15.0,
+        "one_way_cost_bps": 10.0,
+    }
+    source_snapshot = validation["selection_source_snapshot"]["source_snapshot"]
+    source_snapshot["turnover_evidence_snapshot"]["avg_turnover"] = 0.032
+    source_snapshot["cost_model_snapshot"].update(
+        {
+            "transaction_cost_bps": 10.0,
+            "cost_application_status": "applied_to_result_curve",
+        }
+    )
+    validation["curve_evidence"]["replay_attempt"]["portfolio_curve"][2][
+        "Total Balance"
+    ] = 105.084
+    return inputs
+
+def test_character_profile_exposes_observed_values_without_criteria(self) -> None:
+    brief = self._build(self._current_character_inputs())
+    items = {row["axis_id"]: row for row in brief["character_profile"]["items"]}
+
+    self.assertEqual(list(items), ["concentration", "drawdown", "turnover", "cost", "regime_dependency"])
+    self.assertEqual(items["concentration"]["display_value"], "100.00%")
+    self.assertEqual(items["drawdown"]["display_value"], "-12.43%")
+    self.assertEqual(items["turnover"]["display_value"], "3.20%")
+    self.assertEqual(items["cost"]["display_value"], "10.00 bps")
+    self.assertEqual(items["regime_dependency"]["measurement_status"], "evidence_missing")
+    self.assertEqual(items["regime_dependency"]["display_value"], "분석 근거 없음")
+
+def test_review_pressure_links_drawdown_alias_and_separates_missing_states(self) -> None:
+    brief = self._build(self._current_character_inputs())
+    pressure = {row["axis_id"]: row for row in brief["review_pressure"]["items"]}
+
+    self.assertEqual(pressure["concentration"]["status"], "exceeds_limit")
+    self.assertEqual(pressure["concentration"]["delta_value"], 40.0)
+    self.assertEqual(pressure["drawdown"]["status"], "within_limit")
+    self.assertEqual(pressure["drawdown"]["criterion_value"], -15.0)
+    self.assertEqual(pressure["drawdown"]["delta_value"], -2.57)
+    self.assertIn("관리선 -15.00%", pressure["drawdown"]["summary"])
+    self.assertEqual(pressure["turnover"]["status"], "criterion_missing")
+    self.assertEqual(pressure["cost"]["status"], "criterion_missing")
+    self.assertEqual(pressure["regime_dependency"]["status"], "evidence_missing")
+
+def test_one_way_cost_assumption_is_not_used_as_review_limit(self) -> None:
+    brief = self._build(self._current_character_inputs())
+    cost = next(row for row in brief["review_pressure"]["items"] if row["axis_id"] == "cost")
+
+    self.assertEqual(cost["display_value"], "10.00 bps")
+    self.assertIsNone(cost["criterion_value"])
+    self.assertEqual(cost["status"], "criterion_missing")
+
+def test_character_contract_has_no_trait_map_or_arbitrary_score(self) -> None:
+    brief = self._build(self._current_character_inputs())
+    serialized = json.dumps(brief, ensure_ascii=False, sort_keys=True)
+
+    self.assertNotIn("trait_map", brief)
+    self.assertNotIn("aggregate_score", serialized)
+    self.assertNotIn("normalized_value", serialized)
+```
+
+Delete `test_trait_axes_keep_unmeasured_as_none_without_aggregate_score` because the approved contract removes `trait_map` rather than preserving it.
+
+- [ ] **Step 2: Run RED and confirm the old contract is the failure cause**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_character_profile_exposes_observed_values_without_criteria \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_review_pressure_links_drawdown_alias_and_separates_missing_states \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_one_way_cost_assumption_is_not_used_as_review_limit \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_character_contract_has_no_trait_map_or_arbitrary_score -v
+```
+
+Expected: 4 errors/failures because `character_profile` and `review_pressure` are absent and `trait_map` still exists.
+
+- [ ] **Step 3: Canonicalize character axes and drawdown comparison**
+
+Replace `_TRAIT_AXES` with metadata that separates user character labels from missing evidence copy:
+
+```python
+_CHARACTER_AXES = (
+    ("concentration", "집중 성향", "percent", "최대 구성 비중 근거가 없습니다."),
+    ("drawdown", "손실 특성", "percent", "running-peak 낙폭 curve가 없습니다."),
+    ("turnover", "회전 성향", "ratio_percent", "holdings 기반 회전율 근거가 없습니다."),
+    ("cost", "비용 가정", "bps", "거래비용 가정 근거가 없습니다."),
+    ("regime_dependency", "국면 의존", "text", "국면별 성과 분산을 계산할 structured evidence가 없습니다."),
+)
+```
+
+Rename `_observation(..., trait_axis=...)` to `_observation(..., character_axis=...)`, store `_character_axis`, and use `concentration`, `turnover`, `cost`, `drawdown` in the four measured observation calls.
+
+Resolve drawdown criterion without treating `0` as missing and preserve the signed observation:
+
+```python
+drawdown_threshold = _optional_float(thresholds.get("max_drawdown_review_pct"))
+if drawdown_threshold is None:
+    drawdown_threshold = _optional_float(thresholds.get("mdd_review_line"))
+
+measured_value=max_drawdown,
+threshold_or_comparator=drawdown_threshold,
+comparison="absolute_less_or_equal",
+character_axis="drawdown",
+```
+
+Add a shared comparison helper and use it in `_build_findings`:
+
+```python
+def _criterion_favorable(measured: float, criterion: float, comparison: str) -> bool:
+    if comparison == "absolute_less_or_equal":
+        return abs(measured) <= abs(criterion)
+    if comparison == "less_or_equal":
+        return measured <= criterion
+    if comparison == "greater_or_equal":
+        return measured >= criterion
+    raise ValueError(f"unsupported review comparison: {comparison}")
+```
+
+- [ ] **Step 4: Build actual character and review pressure projections**
+
+Replace `_build_trait_map` with these focused builders:
+
+```python
+def _build_character_profile(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    by_axis = {
+        str(row.get("_character_axis")): row
+        for row in observations
+        if str(row.get("_character_axis") or "").strip()
+    }
+    items: list[dict[str, Any]] = []
+    for axis_id, label, unit, missing_reason in _CHARACTER_AXES:
+        observation = by_axis.get(axis_id, {})
+        measured = _optional_float(observation.get("measured_value"))
+        observed = measured is not None
+        items.append(
+            {
+                "axis_id": axis_id,
+                "label": label,
+                "measurement_status": "observed" if observed else "evidence_missing",
+                "measured_value": measured,
+                "display_value": (
+                    str(observation.get("display_value")) if observed else "분석 근거 없음"
+                ),
+                "unit": unit,
+                "interpretation": (
+                    str(observation.get("interpretation") or "") if observed else missing_reason
+                ),
+                "evidence_refs": list(observation.get("evidence_refs") or []),
+                "as_of": observation.get("as_of"),
+            }
+        )
+    return {"items": items}
+
+def _criterion_display(axis_id: str, value: float) -> str:
+    if axis_id == "cost":
+        return f"{value:.2f} bps"
+    if axis_id == "turnover":
+        return _display_percent(value, ratio=True)
+    return _display_percent(value)
+
+def _delta_display(axis_id: str, delta: float, *, favorable: bool) -> str:
+    displayed = delta * 100.0 if axis_id == "turnover" else delta
+    unit = "bps" if axis_id == "cost" else "%p"
+    return f"{abs(displayed):.2f}{unit} {'이내' if favorable else '초과'}"
+
+def _build_review_pressure(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    by_axis = {
+        str(row.get("_character_axis")): row
+        for row in observations
+        if str(row.get("_character_axis") or "").strip()
+    }
+    items: list[dict[str, Any]] = []
+    for axis_id, label, _unit, missing_reason in _CHARACTER_AXES:
+        observation = by_axis.get(axis_id, {})
+        measured = _optional_float(observation.get("measured_value"))
+        criterion = _optional_float(observation.get("threshold_or_comparator"))
+        comparison = str(observation.get("_comparison") or "")
+        if measured is None:
+            items.append(
+                {
+                    "axis_id": axis_id,
+                    "label": label,
+                    "status": "evidence_missing",
+                    "measured_value": None,
+                    "display_value": "분석 근거 없음",
+                    "criterion_value": None,
+                    "criterion_display": None,
+                    "comparison": None,
+                    "delta_value": None,
+                    "delta_display": None,
+                    "ratio_to_criterion": None,
+                    "summary": missing_reason,
+                    "evidence_refs": [],
+                    "as_of": None,
+                }
+            )
+            continue
+        if criterion is None or not comparison:
+            items.append(
+                {
+                    "axis_id": axis_id,
+                    "label": label,
+                    "status": "criterion_missing",
+                    "measured_value": measured,
+                    "display_value": str(observation.get("display_value") or measured),
+                    "criterion_value": None,
+                    "criterion_display": None,
+                    "comparison": comparison or None,
+                    "delta_value": None,
+                    "delta_display": None,
+                    "ratio_to_criterion": None,
+                    "summary": f"{label} 값은 관측됐지만 review 기준이 설정되지 않았습니다.",
+                    "evidence_refs": list(observation.get("evidence_refs") or []),
+                    "as_of": observation.get("as_of"),
+                }
+            )
+            continue
+        if criterion == 0:
+            raise ValueError(f"zero review criterion is invalid for {axis_id}")
+        favorable = _criterion_favorable(measured, criterion, comparison)
+        delta = round(abs(measured) - abs(criterion), 4)
+        criterion_display = _criterion_display(axis_id, criterion)
+        delta_display = _delta_display(axis_id, delta, favorable=favorable)
+        criterion_prefix = "관리선" if axis_id == "drawdown" else "기준"
+        items.append(
+            {
+                "axis_id": axis_id,
+                "label": label,
+                "status": "within_limit" if favorable else "exceeds_limit",
+                "measured_value": measured,
+                "display_value": str(observation.get("display_value") or measured),
+                "criterion_value": criterion,
+                "criterion_display": criterion_display,
+                "comparison": comparison,
+                "delta_value": round(delta * 100.0, 4) if axis_id == "turnover" else delta,
+                "delta_display": delta_display,
+                "ratio_to_criterion": round(abs(measured) / abs(criterion), 4),
+                "summary": f"{criterion_prefix} {criterion_display} 대비 {delta_display}",
+                "evidence_refs": list(observation.get("evidence_refs") or []),
+                "as_of": observation.get("as_of"),
+            }
+        )
+    return {"items": items}
+```
+
+In `build_final_review_decision_brief`, replace `trait_map` with:
+
+```python
+"character_profile": _build_character_profile(internal_observations),
+"review_pressure": _build_review_pressure(internal_observations),
+```
+
+- [ ] **Step 5: Run GREEN and focused Python regression**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_final_review_decision_brief -v
+.venv/bin/python -m py_compile app/services/backtest_final_review_decision_brief.py
+git diff --check
+```
+
+Expected: 22 Decision Brief tests pass; compile and diff check exit 0.
+
+- [ ] **Step 6: Commit the Python contract unit**
+
+Stage only the service and Decision Brief tests, confirm the protected registry is absent from cached names, then commit:
+
+```bash
+git commit -m "Final Review 실제 성격과 관리 압력 계약 도입"
+```
+
+## Task 9.2: React And Streamlit Presentation Separation
+
+**Files:**
+- Create: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharacter.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+- Modify: `app/web/backtest_final_review/page.py`
+- Modify: `tests/test_service_contracts.py`
+- Modify: `tests/test_final_review_market_context_visual_contract.py`
+- Modify: tracked `frontend/build/` after GREEN.
+
+**Interfaces:**
+- Consumes: `DecisionBrief.character_profile.items: CharacterProfileItem[]`.
+- Consumes: `DecisionBrief.review_pressure.items: ReviewPressureItem[]`.
+- Produces: `DecisionBriefCharacter({ characterItems, pressureItems })`.
+- Removes: `TraitAxis`, `splitMeasuredSegments`, `PortfolioTraitMap`, `brief.trait_map`.
+
+- [ ] **Step 1: Write failing React/fallback source-contract tests**
+
+Replace `test_final_review_trait_map_breaks_on_unmeasured_axis` in `tests/test_service_contracts.py` with:
+
+```python
+def test_final_review_character_ui_separates_actual_values_from_review_pressure(self) -> None:
+    workspace = Path(
+        "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+    ).read_text(encoding="utf-8")
+    character = Path(
+        "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharacter.tsx"
+    ).read_text(encoding="utf-8")
+    charts = Path(
+        "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx"
+    ).read_text(encoding="utf-8")
+
+    self.assertIn("<PortfolioCharacterSection", workspace)
+    self.assertIn("포트폴리오 실제 성격", character)
+    self.assertIn("관리 기준 대비 압력", character)
+    self.assertIn("기준 미설정", character)
+    self.assertIn("분석 근거 없음", character)
+    self.assertNotIn("PortfolioTraitMap", workspace + charts)
+    self.assertNotIn("splitMeasuredSegments", charts)
+```
+
+Update the reading-order test token from `<PortfolioTraitMap` to `<PortfolioCharacterSection`. Update fallback parity tokens to require `character_profile` and `review_pressure`, and forbid `trait_map` in the fallback body.
+
+Add to `tests/test_final_review_market_context_visual_contract.py`:
+
+```python
+CHARACTER = FINAL_REVIEW_ROOT / "DecisionBriefCharacter.tsx"
+
+def test_character_profile_keeps_market_context_layout_and_responsive_order(self) -> None:
+    source = CHARACTER.read_text(encoding="utf-8")
+    style = STYLE.read_text(encoding="utf-8")
+
+    self.assertIn("db-character-layout", source + style)
+    self.assertIn("db-character-list", source + style)
+    self.assertIn("db-pressure-list", source + style)
+    self.assertIn("grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);", style)
+    self.assertIn(".db-character-layout", style.split("@media (max-width: 760px)", 1)[1])
+    self.assertNotIn("83.3 / 100", source)
+```
+
+- [ ] **Step 2: Run RED**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_character_ui_separates_actual_values_from_review_pressure \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_react_source_has_approved_reading_order \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_fallback_uses_same_decision_brief_sections \
+  tests.test_final_review_market_context_visual_contract.FinalReviewMarketContextVisualContractTests.test_character_profile_keeps_market_context_layout_and_responsive_order -v
+```
+
+Expected: failures/errors because `DecisionBriefCharacter.tsx`, new section token and fallback fields do not exist and old radar remains.
+
+- [ ] **Step 3: Replace TypeScript trait types with the approved contract**
+
+In `decisionBriefTypes.ts`, delete `TraitAxis` and `trait_map`; add:
+
+```tsx
+export type CharacterProfileItem = {
+  axis_id: string
+  label: string
+  measurement_status: "observed" | "evidence_missing"
+  measured_value: number | null
+  display_value: string
+  unit: "percent" | "ratio_percent" | "bps" | "text"
+  interpretation: string
+  evidence_refs: string[]
+  as_of: string | null
+}
+
+export type ReviewPressureItem = {
+  axis_id: string
+  label: string
+  status: "within_limit" | "exceeds_limit" | "criterion_missing" | "evidence_missing"
+  measured_value: number | null
+  display_value: string
+  criterion_value: number | null
+  criterion_display: string | null
+  comparison: "less_or_equal" | "absolute_less_or_equal" | "greater_or_equal" | null
+  delta_value: number | null
+  delta_display: string | null
+  ratio_to_criterion: number | null
+  summary: string
+  evidence_refs: string[]
+  as_of: string | null
+}
+```
+
+Add to `DecisionBrief`:
+
+```tsx
+character_profile: { items: CharacterProfileItem[] }
+review_pressure: { items: ReviewPressureItem[] }
+```
+
+- [ ] **Step 4: Create the focused character presentation owner**
+
+Create `DecisionBriefCharacter.tsx`:
+
+```tsx
+import React from "react"
+import { CharacterProfileItem, ReviewPressureItem } from "./decisionBriefTypes"
+
+const PRESSURE_LABELS: Record<ReviewPressureItem["status"], string> = {
+  within_limit: "기준 이내",
+  exceeds_limit: "기준 초과",
+  criterion_missing: "기준 미설정",
+  evidence_missing: "분석 근거 없음",
+}
+
+export function DecisionBriefCharacter({
+  characterItems,
+  pressureItems,
+}: {
+  characterItems: CharacterProfileItem[]
+  pressureItems: ReviewPressureItem[]
+}) {
+  return (
+    <div className="db-character-layout">
+      <section className="db-character-panel" aria-labelledby="db-character-profile-title">
+        <div className="db-character-panel-heading">
+          <p className="db-kicker">Observed character</p>
+          <h3 id="db-character-profile-title">포트폴리오 실제 성격</h3>
+          <p>저장된 관측값을 기준 유무와 관계없이 먼저 읽습니다.</p>
+        </div>
+        <div className="db-character-list">
+          {characterItems.map((item) => (
+            <article key={item.axis_id} className={`db-character-card is-${item.measurement_status}`}>
+              <span>{item.label}</span>
+              <strong>{item.display_value}</strong>
+              <p>{item.interpretation}</p>
+              <small>{item.as_of ? `기준일 ${item.as_of}` : "저장된 기준일 없음"}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="db-pressure-panel" aria-labelledby="db-review-pressure-title">
+        <div className="db-character-panel-heading">
+          <p className="db-kicker">Review pressure</p>
+          <h3 id="db-review-pressure-title">관리 기준 대비 압력</h3>
+          <p>점수가 아니라 저장된 review criterion과의 차이입니다.</p>
+        </div>
+        <div className="db-pressure-list">
+          {pressureItems.map((item) => (
+            <article key={item.axis_id} className={`db-pressure-row is-${item.status}`}>
+              <div>
+                <span>{item.label}</span>
+                <strong>{PRESSURE_LABELS[item.status]}</strong>
+              </div>
+              <p>{item.summary}</p>
+              {item.criterion_display && (
+                <small>관측 {item.display_value} · 기준 {item.criterion_display}</small>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+```
+
+- [ ] **Step 5: Wire the workspace and remove the radar**
+
+In `DecisionBriefWorkspace.tsx`, replace the chart import and section function with:
+
+```tsx
+import { DecisionBriefCharacter } from "./DecisionBriefCharacter"
+
+function PortfolioCharacterSection({ brief }: { brief: DecisionBrief }) {
+  return (
+    <section className="db-section db-character" aria-labelledby="db-character-title">
+      <SectionHeading
+        eyebrow="Portfolio character"
+        title="포트폴리오 성격"
+        detail="실제 관측값과 관리 기준 대비 상태를 분리해 읽습니다."
+      />
+      <DecisionBriefCharacter
+        characterItems={brief.character_profile.items}
+        pressureItems={brief.review_pressure.items}
+      />
+    </section>
+  )
+}
+```
+
+Replace `<PortfolioTraitMap brief={decisionBrief} />` with `<PortfolioCharacterSection brief={decisionBrief} />`. In `DecisionBriefCharts.tsx`, delete `TraitAxis` import and all code from `splitMeasuredSegments` through `PortfolioTraitMap`; keep cumulative and underwater chart code unchanged.
+
+- [ ] **Step 6: Implement responsive visual contract**
+
+Delete `.db-trait-*` radar/list rules and add:
+
+```css
+.db-character-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);
+  gap: 14px;
+}
+
+.db-character-panel,
+.db-pressure-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #dae4ee;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #fff 0%, #f8fbfd 100%);
+}
+
+.db-character-list,
+.db-pressure-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.db-character-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.db-character-card,
+.db-pressure-row {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid #e1e8f0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .88);
+}
+
+.db-character-card strong {
+  display: block;
+  margin-top: 5px;
+  color: #152033;
+  font-size: 20px;
+}
+
+.db-pressure-row > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.db-pressure-row.is-within_limit strong { color: #17695e; }
+.db-pressure-row.is-exceeds_limit strong { color: #a24d19; }
+.db-pressure-row.is-criterion_missing strong,
+.db-pressure-row.is-evidence_missing strong { color: #647589; }
+```
+
+At `max-width: 760px`, set `.db-character-layout { grid-template-columns: 1fr; }`. At `max-width: 460px`, set `.db-character-list { grid-template-columns: 1fr; }`. Apply `overflow-wrap: anywhere` to card copy and values.
+
+- [ ] **Step 7: Synchronize the Streamlit fallback**
+
+In `_render_final_review_decision_brief_fallback`, replace `trait_map` and its dataframe with:
+
+```python
+character_profile = dict(decision_brief.get("character_profile") or {})
+review_pressure = dict(decision_brief.get("review_pressure") or {})
+
+st.markdown("##### 포트폴리오 실제 성격")
+character_rows = [
+    {
+        "특성": row.get("label"),
+        "관측값": row.get("display_value"),
+        "상태": "관측됨" if row.get("measurement_status") == "observed" else "분석 근거 없음",
+        "의미": row.get("interpretation"),
+        "기준일": row.get("as_of") or "-",
+    }
+    for row in list(character_profile.get("items") or [])
+]
+st.dataframe(pd.DataFrame(character_rows), width="stretch", hide_index=True)
+
+st.markdown("##### 관리 기준 대비 압력")
+pressure_rows = [
+    {
+        "특성": row.get("label"),
+        "상태": row.get("status"),
+        "관측값": row.get("display_value"),
+        "관리 기준": row.get("criterion_display") or "기준 미설정",
+        "해석": row.get("summary"),
+    }
+    for row in list(review_pressure.get("items") or [])
+]
+st.dataframe(pd.DataFrame(pressure_rows), width="stretch", hide_index=True)
+```
+
+- [ ] **Step 8: Run GREEN, focused regression and production build**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+npm run build --prefix app/web/components/final_review_investment_report/frontend
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review/page.py \
+  app/web/components/final_review_investment_report/component.py
+git diff --check
+```
+
+Expected: 119 focused tests pass, Vite transforms 177 modules after adding the new component, compile and diff check exit 0.
+
+- [ ] **Step 9: Commit the presentation unit**
+
+Stage only React source, fallback, related tests and tracked build output. Verify registry/run history/screenshots are excluded, then commit:
+
+```bash
+git commit -m "Final Review 실제 성격과 관리 압력 UI 분리"
+```
+
+## Task 9.3: Current GRS Browser QA And Documentation Closeout
+
+**Files:**
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: root `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`
+- Generated only: `qa-final-review-character-pressure-760.png`
+
+**Interfaces:**
+- Verifies current Python payload and React/fallback presentation; no new product contract.
+
+- [ ] **Step 1: Run desktop Browser QA on the current GRS candidate**
+
+Open `Backtest > Final Review` without clicking the save CTA. Verify:
+
+- `포트폴리오 실제 성격` appears before `관리 기준 대비 압력` and before `실제 강점과 약점`;
+- character values show `100.00%`, `-12.43%`, `3.20%`, `10.00 bps` and only regime shows `분석 근거 없음`;
+- concentration shows `기준 초과`, drawdown shows `기준 이내`, turnover/cost show `기준 미설정`, regime shows `분석 근거 없음`;
+- no `83.3 / 100`, radar polygon, aggregate score or generic `미측정` remains in the character section;
+- chart hover and prior Final Review decision controls still work.
+
+- [ ] **Step 2: Run 760px responsive Browser QA**
+
+Set temporary viewport to `760×900`, verify component/document horizontal overflow is 0, character panel precedes pressure panel in one column, character cards remain 2 columns until 460px, long summaries wrap, and decision controls remain visible. Save `qa-final-review-character-pressure-760.png` as a generated artifact, then reset viewport. Do not click Final Review save.
+
+- [ ] **Step 3: Synchronize durable and task documentation**
+
+Record:
+
+- `STATUS.md`: 3-slice completion and commit ids;
+- `NOTES.md`: raw measurement vs criterion semantics, drawdown alias, cost assumption non-limit;
+- `RUNS.md`: RED/GREEN output, focused count, build, desktop/760 QA;
+- `RISKS.md`: regime evidence remains unavailable; turnover/cost criterion remains intentionally unset;
+- `BACKTEST_UI_FLOW.md`: actual character appears independently of review criterion, pressure is a separate comparison surface;
+- root logs: 3–5 line milestone and next review location only.
+
+- [ ] **Step 4: Run fresh completion verification**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+npm run build --prefix app/web/components/final_review_investment_report/frontend
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review/page.py \
+  app/web/components/final_review_investment_report/component.py
+git diff --check
+git status --short
+```
+
+Expected: 119 tests pass, Vite transforms 177 modules, compile/diff check exit 0; only protected registry, run history and generated artifacts remain outside the staged doc set.
+
+- [ ] **Step 5: Commit closeout docs**
+
+Stage only the listed docs, verify protected/generated paths are excluded, then commit:
+
+```bash
+git commit -m "Final Review 실제 성격 QA와 문서 동기화"
+```
+
+## Portfolio Character Plan Self-Review
+
+- [x] DESIGN의 actual character, review pressure, status taxonomy, alias, non-goals가 모두 task와 test에 연결된다.
+- [x] Python function names, payload field names, TypeScript types와 React props가 일치한다.
+- [x] `decisionBriefTypes.ts`와 새 `DecisionBriefCharacter.tsx`의 실제 경로가 file map과 code step에서 일치한다.
+- [x] raw drawdown은 signed value를 유지하고 comparison/delta는 magnitude 기준이라는 규칙이 Python helper와 test에 반영된다.
+- [x] cost `one_way_cost_bps` non-limit, turnover/cost criterion missing, regime evidence missing을 각각 별도 test/QA로 고정한다.
+- [x] radar/normalized score 제거, fallback parity, Market Context visual family와 760px responsive QA가 포함된다.
+- [x] Gate, route, persistence, Monitoring, provider/replay/DB, registry rewrite가 범위 밖으로 고정된다.
+- [x] Python contract, presentation, closeout이 서로 독립적으로 검토·커밋 가능한 세 단위다.
+- [x] 새 PLAN 구간에 `TBD`, `TODO`, 구체화되지 않은 error handling 또는 정의되지 않은 함수 참조가 없다.
