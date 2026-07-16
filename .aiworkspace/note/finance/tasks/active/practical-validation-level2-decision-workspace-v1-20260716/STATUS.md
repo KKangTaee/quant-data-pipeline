@@ -1,15 +1,15 @@
 # Status
 
-Status: Approved correction implementation in progress
-Last Updated: 2026-07-16
+Status: Complete
+Last Updated: 2026-07-17
 
 ## 전체 Roadmap
 
 - [x] 1차 Validation Truth / Finding Contract
 - [x] 2차 Level2 Decision Workspace Read Model
 - [x] 3차 One-Shell UI / Intent Integration
-- [ ] 4차 QA / Docs / Closeout — non-visual verification / docs 완료, Browser QA pending
-- [ ] 5차 사용자 피드백 기반 계약 / 상호작용 / 설명 보정 — 구현 완료, Browser QA pending
+- [x] 4차 QA / Docs / Closeout
+- [x] 사용자 피드백 기반 계약 / 상호작용 / 설명 보정
 
 ## Current Progress
 
@@ -22,7 +22,7 @@ Last Updated: 2026-07-16
 - [x] final focused 124 tests, React 175 modules build, target py_compile, diff-check
 - [x] current eligible GRS read-only projection과 8505 restart / HTTP health
 - [x] canonical docs와 active task / root handoff sync
-- [ ] desktop / 760px Browser QA, console / overflow 확인, screenshot
+- [x] desktop / 760px Browser QA, overflow 확인, screenshot
 - [x] correction Task 5: Level2-owned caution / evidence-state contract
 - [x] correction Task 6: 후보/검증 정책 분리와 fragment 재검증
 - [x] correction Task 7: 사용자 설명 계약과 범주별 상세 검증 UI
@@ -33,19 +33,15 @@ Last Updated: 2026-07-16
 
 ## Current Position
 
-초기 1~3차 구현 뒤 실화면 확인에서 후보/검증 정책 혼합, 전체 탭 rerun,
-raw 기술 근거 노출, Level2 caution의 과도한 Final Review handoff가 확인됐다.
-사용자 승인에 따라 기존 Browser-QA-only closeout을 중단하고 correction
-Task 5~9를 진행한다.
+초기 1~3차 구현 뒤 실화면에서 확인된 후보/검증 정책 혼합, 전체 탭 rerun,
+raw 기술 근거, 반복 action lifecycle을 보정했다. 이어서 실제 공식 provider
+수집기와 Final Review의 Level2 handoff 소비 계약을 구현했고, 지정 후보가
+개발 차단 없이 Final Review 이동 가능 상태가 되는 것을 Browser QA로 확인했다.
 
 ## Next Action
 
-현재 세션에 Browser skill이 요구하는 Node JS 제어 도구가 노출되는 환경에서
-desktop / 760px Browser QA, console / overflow, replay partial refresh,
-candidate/policy separation, readable evidence, empty-action suppression을
-확인하고 새 screenshot을 남긴다.
-
-남은 제품 위험은 dynamic historical universe의 PIT membership / delisting provider이며 별도 승인 전까지 critical blocker로 유지한다.
+별도 승인 전에는 dynamic historical universe / delisting provider를 추가하지
+않는다. 후속 제품 검토는 필요할 때 현재 task의 `RISKS.md`에서 이어간다.
 
 ## Implementation Commits
 
@@ -61,6 +57,9 @@ candidate/policy separation, readable evidence, empty-action suppression을
 - `6b0629be` Practical Validation 후보와 검증 관점 배치 개선
 - `bfafdc5c` Practical Validation 해결 작업 재노출 수정
 - `96e15fc2` Practical Validation 해결 생명주기 경계 강화
+- `f9cc47a9` ETF 공식 보유종목 수집 어댑터 보강
+- `ebe29cd6` Final Review Level2 인계 판단 화면 보강
+- `c95765a3` ETF 채권 보유종목 식별자 충돌 수정
 
 ## 2026-07-16 Follow-up Status
 
@@ -74,11 +73,11 @@ candidate/policy separation, readable evidence, empty-action suppression을
 - [x] 지정 후보 actual replay / provider plan / decision workspace read-only 재검증
 - [x] fresh focused 154 tests, React 175 modules build, target py_compile, diff-check
 - [x] final code review Critical / Important 잔여 0건
-- [ ] desktop / 760px Browser interaction / overflow / screenshot QA
+- [x] desktop / 760px Browser interaction / overflow / screenshot QA
 
 지정 후보 `GTAA U3/U5 + GRS Compact Monitoring Candidate 20260608`의
-current 투영은 replay PASS, resolve-now 0, engineering blocker 3,
-Final Review handoff 3이었다. 즉 두 `지금 해결` 항목의 반복 노출은 버그였고,
-자동 처리 불가능한 ETF holdings/exposure 계약과 미구현 검증기는 Level2
-개발 필요 항목으로 남긴다. code-review 보정 뒤 동일 actual projection과
-전체 completion suite를 다시 실행해 유지됨을 확인했다.
+최신 재검증은 verified 27, resolve-now 0, engineering blocker 0,
+accepted limit 1, monitoring transfer 1이며 save-and-move가 활성화됐다.
+COMT/EFA/IWD/IWM/IWN/LQD/TIP/VNQ는 기존 DB snapshot 경로로 공식
+holdings/exposure를 읽는다. Final Review는 eligible row에서 Level2 handoff를
+`최종 판단 입력 / 인수한 검증 한계 / Monitoring 이관 조건`으로 분리한다.

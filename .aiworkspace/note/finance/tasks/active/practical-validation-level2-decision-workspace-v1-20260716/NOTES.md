@@ -107,3 +107,29 @@
   COMT / TIP / XLE다.
 - 현재 자동 수집기로 해결할 수 없는 holdings/exposure 계약은
   COMT / EFA / IWD / IWM / IWN / LQD / TIP / VNQ 8종이다.
+
+## 2026-07-17 Provider And Final Review Handoff Correction
+
+- 새 수집 job이나 DB schema가 필요했던 문제가 아니었다. 기존
+  `collect_etf_holdings_exposure`와 snapshot tables는 충분했고, 공식 payload를
+  normalized row로 바꾸는 iShares SpreadsheetML / Vanguard JSON adapter가
+  빠져 있었다.
+- COMT/EFA/LQD/TIP는 iShares workbook, VNQ는 Vanguard JSON 계약을 추가했다.
+  IWD/IWM/IWN도 같은 iShares discovery와 parser로 수집할 수 있어 별도
+  ticker-specific 수집기를 만들지 않았다.
+- LQD 재수집에서 같은 이름/만기/coupon을 가진 채권 두 건이 fallback holding ID로
+  충돌했다. effective/accrual date를 identity seed에 포함해 3,141개 row와
+  3,141개 unique holding ID를 유지한다.
+- 8개 지정 ETF의 latest holdings consumer는 COMT 168, EFA 701, IWD 877,
+  IWM 1,980, IWN 1,400, LQD 3,141, TIP 50, VNQ 144 rows를 읽는다.
+  iShares seven funds의 weight sum은 99.9999~100.0002%, VNQ는 provider
+  snapshot 기준 99.45%다.
+- 지정 후보 재검증은 verified 27, Level2 caution 7, resolve-now 0,
+  engineering blocker 0, accepted limit 1, monitoring transfer 1로 투영됐고
+  `저장하고 Final Review로 이동`이 활성화됐다.
+- Final Review는 Level2 handoff를 `최종 판단 입력 / 인수한 검증 한계 /
+  Monitoring 이관 조건` 세 lane으로 직접 소비한다. Level2가 막힌 상태에서는
+  같은 항목을 prospective copy로만 표시하고 실제 승격으로 표현하지 않는다.
+- Browser QA에서는 protected validation registry에 새 save row를 쓰지 않았다.
+  지정 후보는 사용자가 Step 4에서 저장·이동을 실행할 때 append되고,
+  Final Review UI 구조는 기존 eligible row로 세 lane 표시를 확인했다.

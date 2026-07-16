@@ -6281,3 +6281,14 @@ Detailed historical logs were archived on `2026-04-13`.
   fresh 154 tests / 175-module build / py_compile / diff-check와 지정 후보
   actual projection을 통과했고 Critical / Important 잔여 finding은 없다.
   Browser QA는 control tool 부재로 남아 있다.
+
+## 2026-07-17 - Practical Validation ETF 수집 / Final Review 인계 Closeout
+
+- 기존 ETF collection job에 iShares SpreadsheetML / Vanguard JSON adapter를
+  연결하고 지정 후보 8개 ETF의 official holdings/exposure를 실제 수집했다.
+- 지정 GTAA U3/U5 + GRS 후보는 재검증 뒤 resolve-now/engineering 0,
+  save-and-move enabled가 됐고 Final Review의 Level2 handoff 3-lane을 확인했다.
+- desktop / 760px Browser QA와 overflow check를 완료했다. 상세 수집 row,
+  RED/GREEN, screenshot 경로는 active task `RUNS.md`를 본다.
+- protected registry/run history/saved data와 generated screenshot은 closeout
+  commit에서 제외한다.

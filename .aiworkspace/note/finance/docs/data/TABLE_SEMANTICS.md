@@ -363,13 +363,19 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 성격:
 
 - provider snapshot table이다.
-- P2-3 초기 구현은 iShares holdings CSV, SSGA daily holdings XLSX, Invesco holdings API를 official source로 사용한다.
+- official source adapter는 iShares holdings CSV·SpreadsheetML workbook,
+  SSGA daily holdings XLSX, Invesco holdings API, Vanguard holdings JSON을 지원한다.
 - `weight_pct`는 decimal fraction이 아니라 provider가 표시하는 percent point다. 예: `34.13`은 34.13%다.
 - 반복 수집은 기본적으로 fund / as_of_date / source 범위를 canonical refresh한다.
+- provider가 안정적인 ticker / CUSIP / ISIN을 주지 않는 채권 row의 fallback
+  `holding_id`는 name, maturity, coupon, effective/accrual date를 함께 사용한다.
+  같은 이름·만기·coupon이라도 effective date가 다른 row를 덮어쓰지 않는다.
 
 주의:
 
 - current snapshot이므로 과거 특정 시점의 holdings truth로 바로 해석하면 안 된다.
+- provider가 표시한 holdings 합계는 강제로 100%로 정규화하지 않는다. 예를 들어
+  VNQ 최신 official snapshot은 99.45%이며 residual은 원천 coverage 특성으로 남긴다.
 - `AOR`은 현재 1차 ETF holdings만 저장한다. Aggregate Underlying 2차 look-through는 후속이다.
 - `GLD`, `IAU`는 금 현물 ETF 특성상 row-level stock holdings 대신 `commodity_gold` 100% gold row를 저장한다.
 

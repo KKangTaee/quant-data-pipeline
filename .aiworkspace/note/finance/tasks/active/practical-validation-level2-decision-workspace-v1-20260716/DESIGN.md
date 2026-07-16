@@ -582,3 +582,61 @@ closeout보다 우선한다.
     종결되고, 근거가 없으면 Final Review가 아니라 engineering blocker가 된다.
 14. first-read와 상세 근거에 raw 함수 경로나 해석되지 않은 `key=value`
     문자열이 사용자 설명으로 노출되지 않는다.
+
+## Approved Provider And Final Review Handoff Correction
+
+2026-07-17 사용자 실화면 확인에서 ETF provider 수집 차단과 Final Review
+handoff 소비 불일치가 확인됐다. 기존 수집 job과 snapshot schema는 유지하고
+provider normalization과 cross-stage read model만 보강한다.
+
+### Provider collection boundary
+
+- COMT, EFA, LQD, TIP의 공식 iShares download는 기존 CSV endpoint가 아니라
+  SpreadsheetML 형식의 fund workbook을 반환한다.
+- VNQ는 Vanguard 공식 `portfolio-holding/stock.json`을 통해 normalized holdings를
+  제공하지만 현재 source discovery와 parser가 없다.
+- 새 DB table이나 별도 ingestion job을 만들지 않는다.
+- `etf_provider_source_map -> etf_holdings_snapshot -> etf_exposure_snapshot` 경로와
+  Practical Validation의 기존 provider collection handler를 재사용한다.
+- provider payload parser는 source verification과 collection 양쪽에서 동일 계약을
+  사용하고, malformed/empty payload는 verified로 승격하지 않는다.
+
+### Final Review handoff boundary
+
+Level2 closure의 세 handoff class를 Final Review가 root issue 기준으로 직접 소비한다.
+
+- `final_decision`: route 선택 전에 사용자가 선택/보류 사유에 반영할 판단 입력
+- `accepted_limit`: Level2에서 근거를 확인하고 인수한 제한으로, Final Review의
+  추가 수리 항목이 아니라 confidence disclosure
+- `monitoring_transfer`: observation, threshold, cadence, re-review action, evidence
+  reference가 모두 있는 경우에만 구조화된 Monitoring 조건
+
+Final Review eligibility가 막힌 동안 Level2에는 이들을 실제 승격으로 표현하지 않고
+`검증 통과 후 Final Review에서 확인할 항목`으로 표시한다. eligible validation을
+저장한 뒤에는 Final Review 본문에서 `최종 판단 입력 / 인수한 검증 한계 /
+Monitoring 조건`으로 분리한다. 동일 root issue는 한 section과 count에 한 번만
+반영한다.
+
+### File ownership extension
+
+| 책임 | 파일 |
+|---|---|
+| iShares SpreadsheetML / Vanguard JSON parser와 source discovery | `finance/data/etf_provider.py` |
+| provider parser / discovery / collection regression | `tests/test_service_contracts.py` 또는 focused provider test |
+| Final Review handoff projection | `app/services/backtest_final_review_decision_brief.py` |
+| Level2 prospective/eligible handoff copy | `app/services/backtest_practical_validation_decision_workspace.py` |
+| Final Review React presentation | `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`, `decisionBriefTypes.ts`, `style.css` |
+| Python fallback | `app/web/backtest_final_review/page.py` |
+
+### Additional acceptance criteria
+
+15. COMT, EFA, LQD, TIP workbook payload와 VNQ JSON payload가 기존 normalized
+    holdings row로 변환된다.
+16. source discovery가 iShares workbook과 Vanguard JSON을 verified candidate로
+    만들 수 있다.
+17. 다섯 종목 수집 뒤 holdings/exposure consumer가 동일 snapshot schema를 읽는다.
+18. Final Review 본문에서 final decision, accepted limit, monitoring transfer가 서로
+    다른 의미와 행동으로 보인다.
+19. 구조화 근거가 부족한 REVIEW는 Final Review handoff로 승격되지 않고 Level2
+    engineering blocker로 남는다.
+20. blocked workspace는 prospective handoff를 실제 승격처럼 표현하지 않는다.

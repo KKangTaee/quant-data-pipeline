@@ -263,3 +263,80 @@
   - Browser skill이 요구하는 Node JS control tool이 현재 tool surface에 없어
     desktop / 760px interaction, console, overflow, 새 screenshot은 실행하지 못함.
   - generated artifact와 기존 screenshot은 stage하지 않음.
+
+## 2026-07-17 Task 10 Provider Adapter RED / GREEN
+
+- RED:
+  - iShares SpreadsheetML과 Vanguard JSON fixture가 source verification / parser
+    contract를 통과하지 못하는 것을 확인했다.
+  - LQD fixture에서 서로 다른 두 채권이 같은 fallback holding ID로 합쳐지는
+    회귀를 별도 test로 재현했다.
+- GREEN:
+  - iShares workbook, Vanguard JSON discovery / verification / parsing을 기존
+    provider source-map과 holdings collection path에 연결했다.
+  - focused provider/source-map/collection 32 tests `OK`.
+  - actual collection 1차: COMT/EFA/LQD/TIP/VNQ holdings 4,204 rows,
+    exposure 108 rows, failure 0.
+  - LQD identity 보정 뒤 재수집: holdings 3,141 / unique ID 3,141 /
+    exposure 39 / weight 100.0002%.
+  - commits: `f9cc47a9 ETF 공식 보유종목 수집 어댑터 보강`,
+    `c95765a3 ETF 채권 보유종목 식별자 충돌 수정`.
+
+## 2026-07-17 Task 11 Final Review Handoff RED / GREEN
+
+- RED:
+  - Final Review brief에 Level2 resolution class별 section이 없고 incomplete
+    Monitoring condition도 handoff로 소비할 수 있음을 확인했다.
+  - blocked Level2의 prospective item과 eligible promotion copy가 구분되지 않았다.
+- GREEN:
+  - `level2_handoff.final_decisions / accepted_limits /
+    monitoring_conditions`를 root-dedup projection으로 추가했다.
+  - incomplete monitoring은 engineering blocker로 유지하고 eligible brief만
+    세 lane을 표시한다.
+  - focused service / closure / boundary / visual contract 196 tests `OK`.
+  - 두 React production build, target py_compile, diff-check 통과.
+  - commit: `ebe29cd6 Final Review Level2 인계 판단 화면 보강`.
+
+## 2026-07-17 Task 12 Actual Runtime And Browser QA
+
+- IWD/IWM/IWN source-map discovery: requested 3, verified 6 source contracts,
+  failure 0. 기존 iShares workbook adapter를 그대로 재사용했다.
+- IWD/IWM/IWN actual collection: holdings 4,257, exposure 93, failure 0.
+- 8개 ETF read-only latest projection:
+  - COMT 168 / EFA 701 / IWD 877 / IWM 1,980 / IWN 1,400 /
+    LQD 3,141 / TIP 50 / VNQ 144 holdings rows
+  - 모든 symbol의 unique holding ID는 row count와 같음
+  - iShares as-of 2026-07-15, VNQ as-of 2026-06-30
+- 지정 후보 Browser replay:
+  - `필수 데이터 수집기 개발 필요` 없음
+  - `개발 후 재검토` lane 0, `지금 해결` 0
+  - `Final Review에서 이어서 판단할 항목` 표시
+  - save-and-move enabled
+- Final Review Browser QA:
+  - `Level2에서 이어받은 판단`
+  - `최종 판단 입력 / 인수한 검증 한계 / Monitoring 이관 조건` 세 lane
+  - 760px outer/body scroll width 760, component iframe 717/717로 가로 overflow 0
+- generated screenshots:
+  - `/tmp/practical-validation-level2-handoff-desktop-20260717.png`
+  - `/tmp/practical-validation-level2-handoff-760px-20260717.png`
+  - `/tmp/final-review-level2-handoff-desktop-20260717.png`
+  - `/tmp/final-review-level2-handoff-760px-20260717.png`
+- protected registry save action은 실행하지 않았고 screenshot도 repository에
+  생성하거나 stage하지 않았다.
+
+## 2026-07-17 Fresh Completion Verification
+
+- Python focused completion suite:
+  - provider adapters / ETF evidence / ingestion split
+  - provider gap / provenance / Final Review evidence service contracts
+  - Final Review brief / refresh
+  - Practical Validation workspace / explanation / closure / hardening
+  - refactor boundaries / both visual contracts
+  - result: `Ran 241 tests in 1.743s`, `OK`
+- React production builds:
+  - Practical Validation: Vite 5.4.21, 175 modules, success
+  - Final Review: Vite 5.4.21, 177 modules, success
+- `py_compile`: evidence closure, Final Review brief, Practical Validation wrapper /
+  workspace, both Python pages/fallback, ETF provider/loader, ingestion job targets
+  exit 0.
+- `git diff --check`, cached diff-check, committed continuation diff-check exit 0.

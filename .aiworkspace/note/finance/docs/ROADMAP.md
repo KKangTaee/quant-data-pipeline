@@ -830,5 +830,13 @@ Legacy `.note/` was removed after user approval and is no longer part of the cur
 - React는 presentation과 intent만 소유하고, Python은 applicability, finding, Gate, handler 검증, replay, save, Final Review handoff를 소유한다.
 - old Fix Queue / Data Action Board는 compatibility code로 유지하지만 active first-read에서는 렌더링하지 않는다.
 - current eligible 계약은 unresolved actionable / critical engineering / missing contract가 모두 0인 상태다. accepted limit / final decision / monitoring transfer는 Level2 수리 목록이 아니라 Final Review handoff다.
-- 구현/보정 커밋은 `a2352f01`, `0e180f93`, `b661e83a`, `96571a15`, `d26fccb6`, `e3797e9f`, `4ac2a83a`, `d968b6a4`다. latest GRS는 verified 22, validated caution 5, resolve-now 0, engineering blocker 0, accepted limit 1, final decision 1로 read-only 투영됐고 focused completion 124 tests와 React 175 modules build, target py_compile, diff-check를 통과했다.
-- 남은 closeout gate는 desktop / 760px Browser QA와 새 screenshot이다. historical universe PIT membership / delisting provider는 별도 승인 전 critical engineering risk로 유지한다.
+- 사용자 피드백 보정과 provider/handoff continuation까지 구현했다. iShares
+  SpreadsheetML과 Vanguard JSON을 기존 source-map / holdings / exposure job에
+  연결했고 COMT/EFA/IWD/IWM/IWN/LQD/TIP/VNQ latest official snapshot을
+  실제 수집했다. Final Review는 Level2 handoff를 `최종 판단 입력 / 인수한
+  검증 한계 / Monitoring 이관 조건`으로 분리한다.
+- 지정 GTAA U3/U5 + GRS 후보는 Browser replay에서 verified 27,
+  resolve-now 0, engineering blocker 0, accepted limit 1, monitoring transfer 1로
+  이동 가능 상태가 됐다. desktop / 760px Browser QA와 overflow 확인을 완료했다.
+- 구현/보정 커밋은 active task `STATUS.md`에 정리한다. historical universe PIT
+  membership / delisting provider는 별도 승인 전 범위 밖 위험으로 유지한다.

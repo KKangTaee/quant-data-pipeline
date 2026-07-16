@@ -44,7 +44,7 @@ external source
 | local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
 | ETF provider source map | `nyse_etf` / `nyse_asset_profile`와 issuer 공식 URL 검증을 이용해 ETF별 수집 endpoint / parser mapping을 저장 |
 | ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
-| ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
+| ETF issuer holdings downloads / APIs | ETF holdings / exposure source. iShares CSV·SpreadsheetML workbook, SSGA XLSX, Invesco holdings / sector API, Vanguard holdings JSON을 지원한다 |
 | FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
 | Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
 | Robert Shiller `ie_data.xls` | Market Context 월별 SPX 가격·보간 EPS·CAPE source. 공식 Shiller 페이지에서 현재 XLS 링크를 발견하며 EPS 미발표 최신 월도 price-only row로 `sp500_monthly_valuation`에 저장 |
@@ -72,7 +72,7 @@ external source
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, Nasdaq-listed Symbol Directory current snapshot read helper, Market Movers Top1000 / Top2000 최근 20거래일 평균 거래대금 universe materialize/read helper, S&P 500 / Top1000 / Top2000 / Nasdaq-listed intraday previous-close snapshot, ticker-change alias candidate / active alias persistence, missing quote gap diagnostics와 반복 issue persistence, full-window 뒤에도 짧은 EOD 이력의 compact issue evidence, FOMC calendar collector, macro release calendar collector, earnings estimate collector, earnings symbol diagnostics, Nasdaq cross-check, earnings lifecycle cleanup, market event UPSERT/read helper를 제공한다. Intraday snapshot은 Market Movers daily와 Market Context / Market Movers sector-group leadership read path가 공유한다 |
 | `finance/data/futures_market.py` | Overview futures OHLCV 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. `app/services/futures_market_monitoring.py`는 stored 1m candle chart / diagnostic context를 최신 저장 candle 기준으로 읽고 stale 여부를 별도 계산한다. `Futures Macro`는 stored daily futures rows를 읽어 current scoring과 lazy historical validation을 만들며, validation은 read-only이고 새 materialized table을 만들지 않는다 |
-| `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
+| `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, iShares CSV·SpreadsheetML, SSGA XLSX, Invesco API, Vanguard JSON을 normalized official row로 변환해 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/sp500_valuation.py` | S&P 500 valuation source 경계. Shiller workbook discovery/read와 price-only 최신 월, explicit S&P index earnings import, Federal Reserve calendar 기반 latest/missing-history SEP discovery/parse, 3-table schema bootstrap, parameterized UPSERT를 소유한다 |
 | `finance/loaders/sp500_valuation.py` | rolling warmup을 포함한 최근 120개월 price/EPS/PER, 최근 4개 actual As-Reported quarter TTM, 최신 Shiller interpolated TTM EPS, latest/all SEP vintage DB read 경계. graph 2 resolver는 official actual을 우선하고 준비되지 않으면 Shiller proxy를 source/quality/basis/fallback evidence와 함께 반환한다 |
@@ -118,13 +118,16 @@ external source
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
   P2-5A부터 `Workspace > Ingestion > Practical Validation 검증 데이터 보강`에서
   해당 ingestion을 수동 실행할 수 있다.
-  `Provider Source Map` tab은 `nyse_etf`와 `nyse_asset_profile`을 기준으로 iShares / SSGA / Invesco 공식 endpoint 후보를 검증해
+  `Provider Source Map` tab은 `nyse_etf`와 `nyse_asset_profile`을 기준으로 iShares / SSGA / Invesco / Vanguard 공식 endpoint 후보를 검증해
   `etf_provider_source_map`에 저장한다. 이후 snapshot collector는 이 verified source map을 static map보다 먼저 사용한다.
   P2-5B부터 `app/services/backtest_practical_validation_provider_context.py`가 loader 결과를 compact provider context로 바꾸고,
   Practical Validation diagnostics가 이 context를 proxy보다 우선 사용한다.
   `etf_operability_snapshot`은 기존 DB의 price/profile 기반 bridge/proxy snapshot과
   iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.
-  `etf_holdings_snapshot`은 official holdings download/API row를 저장하고,
+  `etf_holdings_snapshot`은 official holdings download/API row를 저장한다.
+  iShares workbook의 bond row처럼 ticker가 없는 경우 name / maturity / coupon뿐
+  아니라 effective/accrual date도 fallback identity에 포함해 서로 다른 채권을
+  한 holding으로 합치지 않는다.
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
   `macro_series_observation`은 FRED market-context observation과 CNN / AAII sentiment observation을 long-form으로 저장하고,
   `finance/loaders/macro.py`가 validation 기준일 근처 FRED snapshot과 staleness를 읽으며 `finance/loaders/sentiment.py`가 Overview Sentiment latest/history를 읽는다.

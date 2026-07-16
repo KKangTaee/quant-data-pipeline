@@ -2959,3 +2959,70 @@ Do not close this task until:
 - desktop / 760px Browser QA and screenshots exist.
 - focused tests, React build, py_compile, and diff-check pass freshly.
 - protected files and generated artifacts remain unstaged and uncommitted.
+
+---
+
+## Approved Provider And Final Review Handoff Execution
+
+2026-07-17 사용자 승인에 따라 기존 closeout 뒤 발견된 provider adapter와
+Final Review handoff 소비 불일치를 아래 Task 10~12로 보정한다.
+
+### Task 10: ETF Provider Adapter Contract
+
+**Files:**
+- Modify: `finance/data/etf_provider.py`
+- Modify: focused provider tests
+
+**Interfaces:**
+- Produces parser `ishares_workbook`
+- Produces parser `vanguard_json`
+- Reuses `finance_meta.etf_provider_source_map`
+- Reuses `finance_meta.etf_holdings_snapshot`
+- Reuses `finance_meta.etf_exposure_snapshot`
+
+- [x] Add RED tests for COMT/EFA/LQD/TIP SpreadsheetML verification and parsing.
+- [x] Add RED tests for VNQ source discovery, verification, and JSON parsing.
+- [x] Implement the two provider adapters without schema or ingestion-job changes.
+- [x] Run focused provider/source-map/collection tests and py_compile.
+- [x] Commit: `ETF 공식 보유종목 수집 어댑터 보강`.
+
+### Task 11: Final Review Handoff Promotion Contract
+
+**Files:**
+- Modify: `app/services/backtest_final_review_decision_brief.py`
+- Modify: `app/services/backtest_practical_validation_decision_workspace.py`
+- Modify: `app/web/backtest_final_review/page.py`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+- Modify: focused Final Review / Level2 tests
+
+**Interfaces:**
+- Produces `level2_handoff` with distinct `final_decisions`, `accepted_limits`,
+  `monitoring_conditions`
+- Preserves Final Review route and persistence ownership
+- Suppresses incomplete unstructured monitoring transfer
+
+- [x] Add RED tests proving each resolution class has one explicit Final Review section.
+- [x] Add RED tests proving duplicate root issues and incomplete monitoring conditions are excluded.
+- [x] Add RED tests for blocked Level2 prospective copy and eligible promotion copy.
+- [x] Implement Python projection, React presentation, and Streamlit fallback.
+- [x] Run focused service / boundary / visual tests, React build, py_compile.
+- [x] Commit: `Final Review Level2 인계 판단 화면 보강`.
+
+### Task 12: Runtime QA, Docs, And Closeout
+
+**Files:**
+- Modify canonical finance docs where source and handoff behavior changed
+- Modify active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify root handoff logs
+
+- [x] Run actual official-source collection for COMT, EFA, LQD, TIP, VNQ through the
+  existing job and verify read-only snapshot projection.
+- [x] Re-run designated candidate Level2 projection and Final Review read model.
+- [x] Run fresh focused and completion test suites.
+- [x] Run both React production builds, target py_compile, and `git diff --check`.
+- [x] Execute desktop and 760px Browser QA and keep screenshots unstaged.
+- [x] Synchronize canonical docs, active task, and root handoff logs.
+- [x] Confirm protected registry/run-history/saved/artifact files are not committed.
+- [x] Commit: `ETF 수집과 Final Review 인계 QA 문서 동기화`.

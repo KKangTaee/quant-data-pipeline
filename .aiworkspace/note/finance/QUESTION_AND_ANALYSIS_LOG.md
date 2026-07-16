@@ -9582,3 +9582,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   provider -> replay cache invalidation, attempted/unsupported ->
   engineering-required, verified monthly partial-month -> monitoring-transfer
   계약을 적용했다. 지정 후보의 current resolve-now는 0건이다.
+
+### 2026-07-17 - 기존 수집기를 확장하고 검증된 handoff만 Final Review가 소비한다
+
+- User request: `필수 데이터 수집기 개발 필요`가 실제 수집 기능 부재인지
+  확인해 없으면 개발하고, `Final Review로 넘길 것`이 실제 다음 단계에서
+  확인되도록 승격해 달라고 요청함.
+- Interpreted goal: 새 ingestion workflow를 중복 생성하지 않고 현재 공식 source
+  gap을 닫으며, Level2 근거를 통과한 판단만 Final Review의 명시적 업무가 되어야 함.
+- Analysis result: DB schema와 수집 job은 있었고 iShares workbook / Vanguard JSON
+  adapter만 빠져 있었다. Final Review brief도 closure class를 직접 소비하지 않아
+  인계 의미가 불분명했다.
+- Follow-up: 두 provider adapter와 bond identity 보정을 기존 job에 연결하고,
+  Level2 handoff를 final decision / accepted limit / structured monitoring 세 lane으로
+  구현했다. 지정 후보는 actual replay에서 engineering blocker 0이 됐다.

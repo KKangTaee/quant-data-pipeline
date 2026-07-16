@@ -10,7 +10,6 @@
 - structured measurement가 없는 prose를 `measured_caution`으로 해석하면 숫자를 발명하게 된다. observation과 threshold / comparator가 모두 있는 경우만 해당 finding_kind를 만든다.
 - React build와 Python payload schema를 함께 변경한 뒤 장기 실행 Streamlit process가 stale module / bundle을 들 수 있으므로 Browser QA 전 재기동이 필요하다.
 - protected registry와 run history는 사용자 실사용 결과다. 구현 / QA / docs commit에서 stage하거나 rewrite하지 않는다.
-- current session에는 Browser / Computer Use가 요구하는 Node JS UI control tool이 노출되지 않았다. automated / HTTP verification만으로는 desktop / 760px layout, component console, outer/component overflow, screenshot을 증명할 수 없으므로 task closeout 전 visual QA가 필요하다.
 - `npm install`은 transitive dependency에서 moderate 1건, high 1건을 보고했다. `npm audit fix --force`는 Vite / Streamlit component compatibility를 깨뜨릴 수 있어 이번 scope에서 실행하지 않았으며 별도 dependency upgrade 검토가 필요하다.
 - legacy Fix Queue / Data Action Board는 active path에서 제거됐지만 물리 파일은 남아 있다. usage audit 없이 삭제하지 않는다.
 - `validated_caution`을 raw `REVIEW`만 보고 만들면 미구현 validator를 다시
@@ -20,16 +19,16 @@
   이동은 app rerun이어야 한다. 모든 intent를 fragment scope로 강제하지 않는다.
 - Final Review의 private explanation helper를 직접 import하면 stage 간 결합이
   생긴다. Level2 pure explanation service가 필요한 mapping을 독립적으로 소유한다.
-- current automated verification은 measured accepted-limit / final-decision
-  handoff lane 회귀를 잡았지만, 실제 화면에서 두 handoff 카드가 의도한
-  정보 밀도로 보이는지는 desktop / 760px Browser QA가 남아 있다.
-- 지정 후보는 resolve-now 재노출은 제거됐지만 `backtest_realism`,
-  `selected_route_preflight`, `pre_final_data_contract` 3개 engineering
-  blocker가 남는다. UI에서 이를 자동 해결 가능한 action처럼 보이지 않게
-  유지해야 한다.
-- COMT / EFA / IWD / IWM / IWN / LQD / TIP / VNQ holdings/exposure는
-  공식 source 계약 또는 지원 parser/evidence adapter 개발 전까지
-  Final Review eligible로 승격할 수 없다.
+- iShares workbook과 Vanguard JSON은 provider-owned payload 계약이다. column
+  label이나 response envelope가 바뀌면 verification이 empty/malformed payload를
+  거부하고 Level2가 다시 engineering blocker로 남겨야 한다.
+- 공식 holdings는 current snapshot이다. 8개 ETF의 최신 coverage가 생겼어도
+  historical point-in-time membership / delisting truth를 증명하지 않는다.
+- VNQ provider snapshot의 weight 합은 99.45%다. 이를 억지로 100% 정규화하지
+  않고 provider 원문 coverage로 보존하며, 후속 분석은 residual을 고려해야 한다.
+- 지정 후보를 Browser QA에서 저장하지 않았으므로 Final Review registry에는
+  이번 session validation row가 append되지 않았다. 사용자가 Step 4 저장·이동을
+  실행해야 해당 validation_result_id가 durable handoff source가 된다.
 - provider source-map discovery 시도 여부는 bounded run history를 읽어
   반복 CTA를 방지한다. 장기적으로 이 lifecycle을 durable source-contract
   상태에 저장할지 검토할 수 있지만, protected run history/schema 재설계는
