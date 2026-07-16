@@ -233,9 +233,13 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         '2: "2개월 후"',
         'className="probability-bar"',
         ".slice(-18)",
-        'className="cycle-clock"',
-        'className="solid-trace"',
-        'className="forecast-marker dotted"',
+        'className="cycle-quadrant"',
+        'className="observed-path"',
+        'className="forecast-path"',
+        "probabilityCoordinate",
+        "resolveEstimateStatus",
+        "잠정 모델 추정",
+        "검증된 모델 추정",
         'evidence.group === "real_economy"',
         'evidence.group === "forecast_context"',
         'className="market-implications"',
@@ -255,11 +259,27 @@ def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> N
     ).read_text()
 
     assert "PHASE_ORDER.map((phase)" in source
-    assert 'horizon.publication_status === "READY" && horizon.probabilities' in source
+    assert "horizon.probabilities" in source
+    assert 'horizon.estimate_status === "PROVISIONAL"' in source
+    assert 'horizon.estimate_status === "VERIFIED"' in source
     assert "formatPercent(horizon.probabilities[phase])" in source
     assert "horizon.probabilities ?? { recovery: 0" not in source
     assert "formatPercent(0)" not in source
-    assert "판단 제한" in source
+    assert "판단 불가" in source
+
+
+def test_cycle_component_breaks_paths_at_unavailable_months_and_horizons() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+
+    assert "splitPointSegments" in source
+    assert "payload.history.slice(-18)" in source
+    assert "const forecastSlots = [0, 1, 2].map" in source
+    assert "observedSegments.map" in source
+    assert "forecastSegments.map" in source
+    assert "payload.history\n    .filter" not in source
+    assert "payload.horizons\n    .filter" not in source
 
 
 def test_cycle_component_has_no_fetch_job_trading_or_refresh_loop() -> None:

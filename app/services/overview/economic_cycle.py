@@ -27,6 +27,11 @@ PHASE_LABELS = {
     "slowdown": "둔화",
     "recession": "침체",
 }
+ESTIMATE_LABELS = {
+    "VERIFIED": "검증된 모델 추정",
+    "PROVISIONAL": "잠정 모델 추정",
+    "UNAVAILABLE": "판단 불가",
+}
 
 
 def _json_value(value: object, fallback: object) -> object:
@@ -71,6 +76,8 @@ def _empty_model(
             "dominant_phase": None,
             "confidence": None,
             "publication_status": "LIMITED",
+            "estimate_status": "UNAVAILABLE",
+            "estimate_label": ESTIMATE_LABELS["UNAVAILABLE"],
             "reason_code": reason_code,
             "reason": reason,
         }
@@ -114,15 +121,21 @@ def _horizons(snapshot: Mapping[str, object]) -> list[dict[str, object]]:
         raw = indexed.get(horizon, {})
         status = str(raw.get("publication_status") or "LIMITED").upper()
         reason_code = str(raw.get("reason") or "VALIDATION_FAILED").upper()
-        probabilities = (
-            _probabilities(raw.get("probabilities")) if status == "READY" else None
-        )
-        if probabilities is None:
-            status = "LIMITED"
+        probabilities = _probabilities(raw.get("probabilities"))
+        status = "READY" if status == "READY" and probabilities is not None else "LIMITED"
         dominant = str(raw.get("dominant_phase") or "")
-        if dominant not in PHASES or probabilities is None:
+        if probabilities is not None and dominant not in PHASES:
+            dominant = max(PHASES, key=probabilities.__getitem__)
+        if probabilities is None:
             dominant = None
         confidence = probabilities.get(dominant) if probabilities and dominant else None
+        estimate_status = (
+            "VERIFIED"
+            if status == "READY"
+            else "PROVISIONAL"
+            if probabilities is not None
+            else "UNAVAILABLE"
+        )
         output.append(
             {
                 "horizon_months": horizon,
@@ -132,6 +145,8 @@ def _horizons(snapshot: Mapping[str, object]) -> list[dict[str, object]]:
                 "dominant_phase_label": PHASE_LABELS.get(dominant),
                 "confidence": confidence,
                 "publication_status": status,
+                "estimate_status": estimate_status,
+                "estimate_label": ESTIMATE_LABELS[estimate_status],
                 "reason_code": reason_code if status == "LIMITED" else None,
                 "reason": (
                     translate_reason_code(reason_code) if status == "LIMITED" else None
@@ -147,14 +162,22 @@ def _history(rows: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
         phase = str(raw.get("current_phase") or "")
         status = str(raw.get("status") or "LIMITED").upper()
         probabilities = _probabilities(raw.get("probabilities_json"))
-        if status != "READY":
-            probabilities = None
+        if probabilities is not None and phase not in PHASES:
+            phase = max(PHASES, key=probabilities.__getitem__)
+        estimate_status = (
+            "VERIFIED"
+            if status == "READY" and probabilities is not None
+            else "PROVISIONAL"
+            if probabilities is not None
+            else "UNAVAILABLE"
+        )
         normalized.append(
             {
                 "date": str(raw.get("as_of_date") or "")[:10],
                 "phase": phase if phase in PHASES else None,
                 "probabilities": probabilities,
                 "status": "READY" if status == "READY" else "LIMITED",
+                "estimate_status": estimate_status,
                 "nber_recession": bool(raw.get("nber_recession")),
             }
         )
@@ -273,6 +296,7 @@ def build_economic_cycle_read_model(
             "horizon_months": item["horizon_months"],
             "phase": item["dominant_phase"],
             "status": item["publication_status"],
+            "estimate_status": item["estimate_status"],
         }
         for item in horizons[1:]
     ]

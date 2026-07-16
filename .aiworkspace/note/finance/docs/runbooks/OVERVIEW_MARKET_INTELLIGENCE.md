@@ -72,7 +72,7 @@ uv run python -c "from finance.economic_cycle_pipeline import train_validate_eco
 ```
 
 - h0/h1/h2별 origin count, phase support, recession episode, complete-feature ratio, Brier, log loss, ECE, persistence/historical-transition baseline, reason code를 확인한다.
-- horizon별 gate를 모두 통과한 경우에만 숫자 확률이 snapshot에 들어간다. 일부 horizon만 실패하면 나머지는 유지하고 실패 horizon만 `LIMITED`로 저장한다.
+- horizon별 gate는 `READY/LIMITED` publication status를 결정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 숫자 확률을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, phase support·parameter·입력이 불완전하면 `판단 불가`다.
 - validation metadata 누락이나 실행 오류가 있으면 latest approved artifact/snapshot을 ERROR row로 덮지 않는다.
 
 ### 4. Ten-year month-end replay와 idempotence
@@ -88,7 +88,8 @@ uv run python -c "from finance.economic_cycle_pipeline import replay_economic_cy
 ### 5. Failure / recovery
 
 - `FRED_API_KEY` 부재: 수집을 중단하고 UI의 `NOT_MATERIALIZED` 또는 latest-good LIMITED/READY snapshot을 유지한다.
-- sparse phase/coverage 또는 baseline 성능 미달: 해당 horizon을 `LIMITED`로 둔다. threshold를 낮추거나 artifact status를 손으로 바꾸지 않는다.
+- sparse coverage/calibration/origin/baseline 성능 미달: 해당 horizon을 `LIMITED`로 두고 계산 가능하면 잠정 추정으로 공개한다. threshold를 낮추거나 artifact status를 손으로 바꾸지 않는다.
+- missing phase support 또는 불완전 parameter/input: 해당 horizon은 `UNAVAILABLE`로 materialize하고 다른 horizon·origin 처리는 계속한다.
 - stale/vintage gap: missing series/date/revision interval을 공식 API에서 보강한 뒤 collection부터 재실행한다.
 - 화면은 run/job/row 진단 panel이 아니다. 운영 근거는 backend 결과와 DB audit에서 확인하고 사용자는 국면 확률, evidence, source date, 제한 사유를 읽는다.
 

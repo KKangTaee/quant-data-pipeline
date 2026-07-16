@@ -11,10 +11,11 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-us-economic-cycle-v1-20260716` — 1차~5차 + actual bootstrap complete; 17-series `1,232,856` raw intervals와 121개월 replay를 적재했고 h0/h1/h2는 validation gate 미통과로 `LIMITED`
+- `overview-market-context-economic-cycle-provisional-hybrid-v2-20260716` — 1차~5차 complete; LIMITED/READY/계산불가를 잠정 추정/검증된 추정/판단 불가로 분리하고 2×2 경로·ribbon과 actual 122 snapshot 갱신을 완료
 
 Previous completed task:
 
+- `overview-market-context-us-economic-cycle-v1-20260716`
 - `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716`
 - `overview-market-context-turnaround-stage-semantics-fix-v1-20260716`
 - `overview-market-context-us-stock-freshness-refresh-v1-20260715`

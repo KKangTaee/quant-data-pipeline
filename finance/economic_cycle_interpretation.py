@@ -21,6 +21,9 @@ REASON_LABELS = {
     "CALIBRATION_ERROR": "확률 보정 오차가 공개 기준을 넘었습니다.",
     "INVALID_PROBABILITIES": "확률 결과의 완결성을 확인하지 못했습니다.",
     "BASELINE_UNDERPERFORMANCE": "단순 기준모형보다 확률 품질이 낮습니다.",
+    "MISSING_PHASE_SUPPORT": "일부 국면의 학습 표본이 없어 확률을 계산할 수 없습니다.",
+    "MODEL_NOT_SCORABLE": "모델 파라미터가 완전하지 않아 확률을 계산할 수 없습니다.",
+    "MODEL_INPUT_UNAVAILABLE": "현재 입력 지표가 부족해 확률을 계산할 수 없습니다.",
 }
 
 

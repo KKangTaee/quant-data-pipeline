@@ -156,7 +156,7 @@
 | `finance/display.py` | CLI / notebook 성격의 display helper |
 | `finance/visualize.py` | 백테스트 결과 시각화 helper |
 | `finance/economic_cycle_catalog.py` / `economic_cycle_features.py` / `economic_cycle_labels.py` | 17-series 역할/변환 계약, leakage-safe 월별 factor, activity/labor+eligible USREC retrospective label |
-| `finance/economic_cycle_model.py` / `economic_cycle_validation.py` / `economic_cycle_pipeline.py` / `economic_cycle_interpretation.py` | horizon별 확률 모델·transition prior·temperature calibration·rolling-origin publication gate·artifact/snapshot orchestration·시장 맥락 해석 |
+| `finance/economic_cycle_model.py` / `economic_cycle_validation.py` / `economic_cycle_pipeline.py` / `economic_cycle_interpretation.py` | horizon별 확률 모델·transition prior·temperature calibration·rolling-origin publication gate·artifact/snapshot orchestration·시장 맥락 해석. Pipeline은 계산 가능한 LIMITED artifact를 잠정 확률로 materialize하되 validation status를 변경하지 않는다 |
 
 ## Finance Loaders
 

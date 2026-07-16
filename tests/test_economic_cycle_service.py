@@ -122,6 +122,7 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         "2개월 후",
     ]
     assert all(set(item["probabilities"]) == set(PHASES) for item in model["horizons"])
+    assert all(item["estimate_status"] == "VERIFIED" for item in model["horizons"])
     assert model["cycle_clock"]["expected_transition"] == "expansion_to_slowdown"
     assert {item["direction"] for item in model["evidence"]} <= {
         "강화",
@@ -132,21 +133,25 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
     assert len(model["history"]) == 121
     assert model["history"] == sorted(model["history"], key=lambda item: item["date"])
     assert all("nber_recession" in item for item in model["history"])
-    assert all("phase" in item and "probabilities" in item for item in model["history"])
+    assert all(
+        "phase" in item
+        and "probabilities" in item
+        and "estimate_status" in item
+        for item in model["history"]
+    )
     json.dumps(model, allow_nan=False)
 
 
-def test_limited_horizon_hides_only_its_numeric_probabilities() -> None:
+def test_limited_horizon_exposes_provisional_probabilities_with_validation_reason() -> (
+    None
+):
     service = _load_service()
     snapshot = _ready_snapshot()
     horizons = json.loads(str(snapshot["forecast_path_json"]))
     horizons[1].update(
         {
-            "probabilities": None,
-            "dominant_phase": None,
-            "confidence": None,
             "publication_status": "LIMITED",
-            "reason": "VALIDATION_FAILED",
+            "reason": "CALIBRATION_ERROR",
         }
     )
     snapshot["forecast_path_json"] = json.dumps(horizons)
@@ -157,10 +162,37 @@ def test_limited_horizon_hides_only_its_numeric_probabilities() -> None:
     )
 
     assert model["horizons"][0]["probabilities"] is not None
-    assert model["horizons"][1]["probabilities"] is None
-    assert model["horizons"][1]["dominant_phase"] is None
-    assert "검증" in model["horizons"][1]["reason"]
+    assert model["horizons"][1]["probabilities"] == _probabilities("slowdown")
+    assert model["horizons"][1]["dominant_phase"] == "slowdown"
+    assert model["horizons"][1]["estimate_status"] == "PROVISIONAL"
+    assert model["horizons"][1]["estimate_label"] == "잠정 모델 추정"
+    assert "확률 보정" in model["horizons"][1]["reason"]
     assert model["horizons"][2]["probabilities"] is not None
+
+
+def test_missing_limited_probabilities_are_unavailable_instead_of_provisional() -> None:
+    service = _load_service()
+    snapshot = _ready_snapshot()
+    horizons = json.loads(str(snapshot["forecast_path_json"]))
+    horizons[2].update(
+        {
+            "probabilities": None,
+            "dominant_phase": None,
+            "confidence": None,
+            "publication_status": "LIMITED",
+            "reason": "PARTIAL_FACTORS",
+        }
+    )
+    snapshot["forecast_path_json"] = json.dumps(horizons)
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: snapshot,
+        history_loader=lambda **_kwargs: [],
+    )
+
+    assert model["horizons"][2]["estimate_status"] == "UNAVAILABLE"
+    assert model["horizons"][2]["estimate_label"] == "판단 불가"
+    assert model["horizons"][2]["probabilities"] is None
 
 
 def test_no_snapshot_and_read_failure_have_stable_states_without_collector() -> None:

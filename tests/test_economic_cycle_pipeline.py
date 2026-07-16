@@ -131,7 +131,9 @@ def test_training_never_approves_missing_gate_metadata_and_records_partial_statu
     assert statuses["2"]["status"] == "LIMITED"
 
 
-def test_materialization_hides_probabilities_for_limited_horizons() -> None:
+def test_materialization_persists_provisional_probabilities_for_limited_horizons() -> (
+    None
+):
     module = _load_module()
     panel, labels = _panel()
     writer = Writer()
@@ -162,10 +164,93 @@ def test_materialization_hides_probabilities_for_limited_horizons() -> None:
 
     assert snapshot.horizons[0].probabilities is not None
     assert snapshot.horizons[0].dominant_phase in PHASES
+    assert snapshot.horizons[1].probabilities is not None
+    assert snapshot.horizons[1].dominant_phase in PHASES
+    assert snapshot.horizons[1].confidence is not None
+    assert snapshot.horizons[1].publication_status == "LIMITED"
+    assert snapshot.horizons[1].reason is not None
+    assert snapshot.horizons[2].probabilities is not None
+    assert snapshot.horizons[2].dominant_phase in PHASES
+    assert snapshot.horizons[2].confidence is not None
+    assert snapshot.horizons[2].publication_status == "LIMITED"
+    assert snapshot.warnings
+
+
+def test_materialization_marks_incomplete_artifact_unavailable_without_aborting() -> (
+    None
+):
+    module = _load_module()
+    panel, labels = _panel()
+    keep = labels != "recession"
+    limited_panel = panel.loc[keep].reset_index(drop=True)
+    limited_labels = labels.loc[keep].reset_index(drop=True)
+    writer = Writer()
+    training = module.train_validate_economic_cycle_model(
+        trained_through="2002-07-31",
+        loader=TrainingLoader(limited_panel, limited_labels),
+        writer=writer,
+        validator=lambda *_args, **_kwargs: ValidationReport(
+            horizons={
+                horizon: _horizon_validation(ready=False)
+                for horizon in (0, 1, 2)
+            },
+            predictions=(),
+        ),
+    )
+
+    class Loader:
+        def load_artifact(self, **_kwargs):
+            return training["artifact_row"]
+
+        def load_prediction_data(self, _as_of_date):
+            return limited_panel.iloc[-1].to_dict()
+
+    snapshot = module.materialize_economic_cycle_snapshot(
+        as_of_date="2002-08-31", loader=Loader(), writer=writer
+    )
+
+    assert snapshot.status == "LIMITED"
+    assert all(item.probabilities is None for item in snapshot.horizons)
+    assert all(item.dominant_phase is None for item in snapshot.horizons)
+    assert all(item.publication_status == "LIMITED" for item in snapshot.horizons)
+
+
+def test_materialization_isolates_one_horizon_with_missing_phase_parameter_map() -> (
+    None
+):
+    module = _load_module()
+    panel, labels = _panel()
+    writer = Writer()
+    training = module.train_validate_economic_cycle_model(
+        trained_through="2002-07-31",
+        loader=TrainingLoader(panel, labels),
+        writer=writer,
+        validator=lambda *_args, **_kwargs: ValidationReport(
+            horizons={horizon: _horizon_validation() for horizon in (0, 1, 2)},
+            predictions=(),
+        ),
+    )
+    artifact_row = dict(training["artifact_row"])
+    parameters = json.loads(str(artifact_row["parameters_json"]))
+    del parameters["horizons"]["1"]["means"]["recession"]
+    artifact_row["parameters_json"] = json.dumps(parameters)
+
+    class Loader:
+        def load_artifact(self, **_kwargs):
+            return artifact_row
+
+        def load_prediction_data(self, _as_of_date):
+            return panel.iloc[-1].to_dict()
+
+    snapshot = module.materialize_economic_cycle_snapshot(
+        as_of_date="2002-08-31", loader=Loader(), writer=writer
+    )
+
+    assert snapshot.horizons[0].probabilities is not None
     assert snapshot.horizons[1].probabilities is None
     assert snapshot.horizons[1].dominant_phase is None
-    assert snapshot.horizons[2].confidence is None
-    assert snapshot.warnings
+    assert snapshot.horizons[1].publication_status == "LIMITED"
+    assert snapshot.horizons[2].probabilities is not None
 
 
 def test_replay_uses_one_strict_origin_load_and_origin_specific_artifact() -> None:

@@ -9,14 +9,16 @@ Last Verified: 2026-07-16
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-economic-cycle-v1-20260716/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/`다.
 
-- 목적: 사용자의 회복·확장·둔화·침체 학습 프레임을 미국 vintage-aware 데이터로 확장해 현재·1개월 후·2개월 후의 네 국면 확률과 근거를 Market Context에 제공한다.
-- 완료: 1차 raw vintage data, 2차 current/history engine, 3차 direct +1M/+2M calibration/publication gate, 4차 same-level selector/React visualization, 5차 actual bootstrap/desktop·420px Browser QA/regression/docs까지 `5/5`를 닫았다.
-- actual 상태: 17개 series `1,232,856` raw interval, 121 artifacts, historical replay 121개월과 current snapshot 1개를 적재했다. Read model은 `LIMITED`, numeric horizon은 0개다. h0는 coverage/calibration, h1/h2는 origin/baseline/calibration gate를 통과하지 못했으며 임의 fallback이나 threshold 완화는 하지 않았다.
-- QA: focused economic-cycle `100 passed`, Overview boundary excluding unrelated Sentiment `346 passed`, 두 React production build, desktop/420px navigation/overflow/focus/console QA를 통과했다. 병합 전부터 있던 Sentiment source-contract drift 1건은 별도 unrelated gap으로 남긴다.
-- 완료 경계: 검증을 통과한 horizon만 숫자 확률을 표시한다. 미통과 결과는 threshold 완화 없이 `LIMITED`로 유지한다.
-- 상세 계획: `docs/superpowers/plans/2026-07-16-us-economic-cycle-regime-forecast.md`.
+- 목적: 계산 가능한 `LIMITED` 결과를 전부 숨기던 V1을 `잠정 모델 추정 / 검증된 모델 추정 / 판단 불가`로 분리하고, 원형 clock을 승인된 2×2 혼합형으로 교체한다.
+- 완료: 1차 contract 확인, 2차 provisional persistence/read model, 3차 2×2 확률 경로·ribbon, 4차 122 snapshot 재물질화·desktop/420px Browser QA, 5차 docs/regression을 닫았다.
+- actual 상태: publication gate는 h0/h1/h2 모두 `LIMITED`지만 세 horizon의 유효 계산값은 `PROVISIONAL`이다. 2026-06-30 우세 결과는 현재 회복 `46.7%`, +1M 회복 `40.5%`, +2M 회복 `47.4%`이며 history 121개월 모두 확률 경로를 제공한다.
+- 품질 경계: rolling-origin threshold와 PIT 원칙은 변경하지 않았다. parameter/입력이 불완전한 horizon만 `UNAVAILABLE`로 남기고 유효 LIMITED 확률은 검증 사유와 함께 공개한다.
+- UI: 현재/+1M/+2M 확률 카드, 2×2 회복·확장·둔화·침체 좌표, 과거 실선, 미래 점선, 121개월+2개월 ribbon을 표시한다.
+- 상세 계획: `docs/superpowers/plans/2026-07-16-us-economic-cycle-provisional-hybrid.md`.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-economic-cycle-v1-20260716/`다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`다.
 

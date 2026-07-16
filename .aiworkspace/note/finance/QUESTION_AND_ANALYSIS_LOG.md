@@ -18,7 +18,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Vintage/PIT engine, horizon별 publication gate, selector/React UI, actual 17-series bootstrap과 Browser QA를 `5/5` 완료했다.
+  - Latest completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 계산 결과와 검증 상태를 분리하고 2×2 혼합형·actual 잠정 확률·Browser QA를 `5/5` 완료했다.
+  - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Vintage/PIT engine과 horizon별 publication gate를 구현했다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
   - Previous completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
   - Previous completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
@@ -47,6 +48,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Entries
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
+
+### 2026-07-16 - 경제 사이클 계산 결과와 검증 상태를 분리한다
+
+- User request: 모든 결과가 판단 제한으로 가려진 화면을 개선하고, 잠정 추정과 검증된 추정을 구분하며 처음 선택한 2×2 혼합형 시각화를 구현해 달라고 요청함.
+- Interpreted goal: validation threshold와 PIT 원칙은 유지하되 계산 가능한 LIMITED 확률을 숨기지 않고 사용자가 현재·+1M·+2M과 과거 경로를 읽게 한다.
+- Analysis result: 유효 LIMITED 확률은 `PROVISIONAL`, READY는 `VERIFIED`, parameter/input 불완전은 `UNAVAILABLE`다. 2×2 좌표는 네 국면 확률을 성장 레벨·모멘텀으로 projection하며 과거 실선, 미래 점선, ribbon hatch로 검증 상태를 분리한다.
+- Follow-up: actual 122 snapshot을 재물질화했다. 2026-06-30 현재/+1M/+2M은 회복 우세 `46.7% / 40.5% / 47.4%`의 잠정 추정이며 desktop/420px console·overflow QA를 통과했다.
 
 ### 2026-07-16 - 경제 사이클은 vintage-aware 확률과 검증 gate로 구현한다
 

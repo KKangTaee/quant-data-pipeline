@@ -383,7 +383,14 @@ def _decode_artifact_bundle(
         raw = horizons.get(str(horizon))
         if raw is None:
             continue
-        decoded[horizon] = deserialize_horizon_model_artifact(_canonical_json(raw))
+        try:
+            decoded[horizon] = deserialize_horizon_model_artifact(
+                _canonical_json(raw)
+            )
+        except (KeyError, TypeError, ValueError):
+            # A legacy or partially written horizon must not suppress otherwise
+            # usable horizons in the same artifact bundle.
+            continue
     return decoded
 
 
@@ -393,7 +400,13 @@ def _predict_horizon(
     *,
     current_phase: str | None,
 ) -> dict[str, float]:
-    likelihood = predict_phase_probabilities(artifact, feature_row, temperature=1.0)
+    # The public model API continues to reject LIMITED artifacts. Materialization
+    # uses an explicit scoring copy so provisional estimates cannot be mistaken
+    # for a change to the artifact's validation state.
+    scoring_artifact = replace(artifact, publication_status="READY")
+    likelihood = predict_phase_probabilities(
+        scoring_artifact, feature_row, temperature=1.0
+    )
     if artifact.horizon_months == 0 or current_phase not in PHASES:
         blended = likelihood
     else:
@@ -402,6 +415,22 @@ def _predict_horizon(
             blend_likelihood_and_transition(likelihood, prior) if prior else likelihood
         )
     return apply_temperature(blended, artifact.temperature)
+
+
+def _artifact_can_score(artifact: HorizonModelArtifact) -> bool:
+    """Return whether every phase has a complete parameter vector."""
+
+    for phase in PHASES:
+        if int(artifact.phase_support.get(phase, 0)) <= 0:
+            return False
+        means = artifact.means.get(phase) or {}
+        variances = artifact.variances.get(phase) or {}
+        if any(
+            feature not in means or feature not in variances
+            for feature in artifact.feature_names
+        ):
+            return False
+    return True
 
 
 def _snapshot_row(
@@ -446,7 +475,7 @@ def materialize_economic_cycle_snapshot(
     artifact_row: Mapping[str, object] | None = None,
     preloaded_vintage_rows: Sequence[Mapping[str, object]] | None = None,
 ) -> CycleSnapshot:
-    """Materialize only horizon probabilities that passed their own gate."""
+    """Materialize estimates while preserving each horizon's validation state."""
 
     if run_kind not in {"current", "historical_replay"}:
         raise ValueError(f"Unsupported run_kind: {run_kind}")
@@ -479,7 +508,7 @@ def materialize_economic_cycle_snapshot(
         publication_status = str(status_item.get("status") or "LIMITED")
         reasons = tuple(str(item) for item in status_item.get("reason_codes") or ())
         artifact = artifacts.get(horizon)
-        if publication_status != "READY" or artifact is None:
+        if artifact is None:
             reason = reasons[0] if reasons else "MISSING_APPROVED_HORIZON"
             horizons.append(
                 HorizonProbability(
@@ -493,26 +522,68 @@ def materialize_economic_cycle_snapshot(
             )
             warnings.append(f"{horizon}개월 지평은 제한적입니다: {reason}")
             continue
-        probabilities = _predict_horizon(
-            artifact, feature_row, current_phase=current_phase
-        )
+        if not _artifact_can_score(artifact):
+            reason = (
+                artifact.reason_codes[0]
+                if artifact.reason_codes
+                else reasons[0]
+                if reasons
+                else "MODEL_NOT_SCORABLE"
+            )
+            horizons.append(
+                HorizonProbability(
+                    horizon_months=horizon,
+                    probabilities=None,
+                    dominant_phase=None,
+                    confidence=None,
+                    publication_status="LIMITED",
+                    reason=reason,
+                )
+            )
+            warnings.append(f"{horizon}개월 지평은 계산할 수 없습니다: {reason}")
+            continue
+        try:
+            probabilities = _predict_horizon(
+                artifact, feature_row, current_phase=current_phase
+            )
+        except (ArithmeticError, KeyError, TypeError, ValueError):
+            reason = "MODEL_INPUT_UNAVAILABLE"
+            horizons.append(
+                HorizonProbability(
+                    horizon_months=horizon,
+                    probabilities=None,
+                    dominant_phase=None,
+                    confidence=None,
+                    publication_status="LIMITED",
+                    reason=reason,
+                )
+            )
+            warnings.append(f"{horizon}개월 지평은 계산할 수 없습니다: {reason}")
+            continue
         dominant = max(PHASES, key=probabilities.__getitem__)
         if horizon == 0:
             current_phase = dominant
+        resolved_status = "READY" if publication_status == "READY" else "LIMITED"
+        reason = reasons[0] if reasons and resolved_status == "LIMITED" else None
         horizons.append(
             HorizonProbability(
                 horizon_months=horizon,
                 probabilities=probabilities,
                 dominant_phase=dominant,
                 confidence=probabilities[dominant],
-                publication_status="READY",
+                publication_status=resolved_status,
+                reason=reason,
             )
         )
+        if reason:
+            warnings.append(f"{horizon}개월 지평은 잠정 추정입니다: {reason}")
 
     h0_artifact = artifacts.get(0)
     explanation: dict[str, object] = {}
-    if h0_artifact is not None and horizons[0].publication_status == "READY":
-        explanation = explain_phase_prediction(h0_artifact, feature_row)
+    if h0_artifact is not None and horizons[0].probabilities is not None:
+        explanation = explain_phase_prediction(
+            replace(h0_artifact, publication_status="READY"), feature_row
+        )
     contributions = tuple(
         {
             "factor": name,

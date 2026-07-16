@@ -119,7 +119,7 @@ FRED/ALFRED vintage-dates API + observations API output_type=1 + FRED_API_KEY
 
 - 17개 고정 catalog는 real-time revision interval을 보존하고, 각 forecast origin은 당시 발표되어 유효한 row만 읽는다.
 - h0 label/model은 activity/labor 중심이며 h1/h2는 financial-leading/inflation-policy context를 보조 입력으로 사용할 수 있다.
-- h0/h1/h2는 각각 rolling-origin gate를 통과한 경우에만 네 국면 숫자 확률을 materialize한다. 미승인 horizon은 `LIMITED`와 reason만 남는다.
+- h0/h1/h2는 각각 rolling-origin gate로 `READY/LIMITED`를 판정한다. 완전한 artifact와 입력으로 계산 가능한 LIMITED horizon은 확률·우세 국면을 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`, parameter/입력 불완전은 `판단 불가`다.
 - 수집, 학습/검증, current materialization, 10년 replay는 명시적인 backend 실행이다. Overview render는 compact snapshot/history DB row만 읽고 provider나 model job을 호출하지 않는다.
 - 기존 revised `macro_series_observation`과 달리 이 경로에는 CSV fallback이 없다. `FRED_API_KEY`가 없으면 수집을 실패시키고 latest-good snapshot 또는 `NOT_MATERIALIZED` LIMITED 상태를 유지한다.
 

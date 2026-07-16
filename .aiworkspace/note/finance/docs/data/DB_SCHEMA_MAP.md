@@ -48,7 +48,7 @@ Last Verified: 2026-07-16
 | `macro_series_observation` | FRED macro context plus CNN Fear & Greed / AAII sentiment context series observation. VIX / yield curve / credit spread, CNN score / component score, AAII bullish / neutral / bearish / bull-bear spread를 long-form으로 저장 |
 | `macro_series_vintage_observation` | 경제 사이클 17개 FRED/ALFRED series의 observation별 real-time revision interval을 저장. unique key는 `(series_id, observation_date, realtime_start, source)`이고 strict as-of loader가 과거 origin 당시 값을 선택한다 |
 | `economic_cycle_model_artifact` | 경제 사이클 model version과 학습 cutoff, horizon별 parameter/calibration/rolling-origin gate 판정을 저장. unique key는 `(model_version, trained_through)`이다 |
-| `economic_cycle_snapshot` | current/historical replay별 compact 국면 확률·근거·source date를 저장. unique key는 `(as_of_date, model_version, run_kind)`이며 미승인 horizon 숫자는 저장하지 않는다 |
+| `economic_cycle_snapshot` | current/historical replay별 compact 국면 확률·근거·source date·publication status를 저장. unique key는 `(as_of_date, model_version, run_kind)`이며 계산 가능한 LIMITED 확률도 잠정 추정용으로 보존하고 계산 불가 horizon만 비운다 |
 | `sp500_monthly_valuation` | Shiller 월별 P/E 이력. month+source unique UPSERT, price/EPS/PER/CAPE/quality/source reference 저장. EPS 미발표 최신 월은 price-only `missing` row로 유지 |
 | `nasdaq100_monthly_valuation` | QQQ proxy 월별 price/reconstructed EPS/PER/earnings yield와 weighted coverage, holdings/price basis, blocked reason 저장. `(observation_month, proxy_symbol, source)` unique UPSERT |
 | `sp500_index_earnings` | S&P index EPS의 period type, As-Reported/Operating basis, actual/estimate/mixed status, source release vintage 저장 |
