@@ -11,7 +11,7 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-us-economic-cycle-v1-20260716` — 1차~5차 complete; local actual은 missing `FRED_API_KEY`로 `LIMITED/NOT_MATERIALIZED`
+- `overview-market-context-us-economic-cycle-v1-20260716` — 1차~5차 + actual bootstrap complete; 17-series `1,232,856` raw intervals와 121개월 replay를 적재했고 h0/h1/h2는 validation gate 미통과로 `LIMITED`
 
 Previous completed task:
 

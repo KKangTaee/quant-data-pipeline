@@ -5,8 +5,10 @@ import importlib.util
 import json
 import math
 import re
+import traceback
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
+from urllib.error import URLError
 
 
 def _load_catalog_module():
@@ -116,7 +118,7 @@ class _PagedSession:
         self.params: list[dict[str, object]] = []
 
     def get(self, url: str, *, params: dict[str, object], timeout: int):
-        assert timeout == 20
+        assert timeout == 60
         self.urls.append(url)
         self.params.append(dict(params))
         if url.endswith("/series/vintagedates"):
@@ -206,7 +208,7 @@ def test_fetch_fred_vintages_splits_more_than_2000_vintage_dates() -> None:
             self.observation_params: list[dict[str, object]] = []
 
         def get(self, url: str, *, params: dict[str, object], timeout: int):
-            assert timeout == 20
+            assert timeout == 60
             if url.endswith("/series/vintagedates"):
                 return _Response(
                     {"count": len(vintage_dates), "vintage_dates": vintage_dates}
@@ -254,10 +256,102 @@ def test_session_http_failure_does_not_expose_api_key() -> None:
             session=Session(),
         )
     except module.EconomicCycleVintageError as exc:
+        formatted_traceback = traceback.format_exc()
         assert secret not in str(exc)
+        assert secret not in formatted_traceback
         assert "403" in str(exc)
     else:
         raise AssertionError("provider error must fail the vintage request")
+
+
+def test_urllib_failure_does_not_expose_provider_reason_or_api_key() -> None:
+    module = _load_vintage_module()
+    secret = "sensitive-test-key"
+    reason = f"https://provider.test/failure?api_key={secret}"
+
+    with patch.object(module, "urlopen", side_effect=URLError(reason)):
+        try:
+            module.fetch_fred_vintage_dates(
+                "PAYEMS",
+                api_key=secret,
+                retries=1,
+            )
+        except module.EconomicCycleVintageError as exc:
+            formatted_traceback = traceback.format_exc()
+            assert secret not in str(exc)
+            assert reason not in str(exc)
+            assert secret not in formatted_traceback
+            assert reason not in formatted_traceback
+            assert "URL error" in str(exc)
+        else:
+            raise AssertionError("provider error must fail the vintage request")
+
+
+def test_session_timeout_retries_until_configured_attempt_succeeds() -> None:
+    module = _load_vintage_module()
+
+    class Session:
+        def __init__(self) -> None:
+            self.attempts = 0
+
+        def get(self, *_args, **_kwargs):
+            self.attempts += 1
+            if self.attempts < 3:
+                raise TimeoutError("transient timeout")
+            return _Response({"vintage_dates": []})
+
+    session = Session()
+    with patch.object(module.time, "sleep") as sleep:
+        payload = module._request_json(
+            module.FRED_VINTAGE_DATES_URL,
+            {"api_key": "sensitive-test-key"},
+            session=session,
+            timeout=60,
+            retries=3,
+        )
+
+    assert payload == {"vintage_dates": []}
+    assert session.attempts == 3
+    assert sleep.call_args_list == [((0.4,), {}), ((0.8,), {})]
+
+
+def test_session_does_not_retry_successful_fred_api_error_payload() -> None:
+    module = _load_vintage_module()
+
+    class Session:
+        def __init__(self) -> None:
+            self.attempts = 0
+
+        def get(self, *_args, **_kwargs):
+            self.attempts += 1
+            return _Response(
+                {"error_code": 400, "error_message": "Invalid request"}
+            )
+
+    session = Session()
+    with patch.object(module.time, "sleep") as sleep:
+        try:
+            module._request_json(
+                module.FRED_VINTAGE_DATES_URL,
+                {"api_key": "sensitive-test-key"},
+                session=session,
+                timeout=60,
+                retries=3,
+            )
+        except module.EconomicCycleVintageError as exc:
+            assert "FRED API error 400" in str(exc)
+        else:
+            raise AssertionError("FRED API error payload must fail the request")
+
+    assert session.attempts == 1
+    sleep.assert_not_called()
+
+
+def test_large_series_defaults_use_actual_safe_page_contract() -> None:
+    module = _load_vintage_module()
+
+    assert module.DEFAULT_OBSERVATION_PAGE_SIZE == 50_000
+    assert module.DEFAULT_TIMEOUT == 60
 
 
 def test_collect_vintages_upserts_each_page_without_accumulating_all_rows() -> None:

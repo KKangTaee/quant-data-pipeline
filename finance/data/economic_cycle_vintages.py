@@ -28,9 +28,9 @@ OPEN_ENDED_REALTIME_DATE = "9999-12-31"
 FRED_SOURCE_MODE = "fred_output_type_1_realtime_intervals"
 MAX_VINTAGE_DATES_PER_REQUEST = 2_000
 MAX_VINTAGE_DATE_PAGE_SIZE = 10_000
-DEFAULT_OBSERVATION_PAGE_SIZE = 10_000
+DEFAULT_OBSERVATION_PAGE_SIZE = 50_000
 VINTAGE_UPSERT_MAX_STATEMENT_LENGTH = 16 * 1024 * 1024
-DEFAULT_TIMEOUT = 20
+DEFAULT_TIMEOUT = 60
 DEFAULT_RETRIES = 3
 
 LOGGER = logging.getLogger(__name__)
@@ -81,9 +81,9 @@ def _safe_fetch_error(exc: Exception) -> str:
     """Describe provider failures without leaking the API key embedded in the URL."""
 
     if isinstance(exc, HTTPError):
-        return f"HTTP {exc.code}: {exc.reason}"
+        return f"HTTP {exc.code}"
     if isinstance(exc, URLError):
-        return f"URL error: {exc.reason}"
+        return "URL error"
     return type(exc).__name__
 
 
@@ -112,7 +112,7 @@ def _urllib_json(
             if attempt + 1 < max(1, int(retries)):
                 time.sleep(0.4 * (attempt + 1))
     detail = _safe_fetch_error(last_error) if last_error is not None else "unknown error"
-    raise EconomicCycleVintageError(f"FRED vintage fetch failed: {detail}") from last_error
+    raise EconomicCycleVintageError(f"FRED vintage fetch failed: {detail}") from None
 
 
 def _request_json(
@@ -131,17 +131,34 @@ def _request_json(
             retries=int(retries),
         )
     else:
-        response: Any = None
-        try:
-            response = session.get(endpoint, params=params, timeout=int(timeout))
-            response.raise_for_status()
-            payload = response.json()
-        except Exception as exc:
-            status = getattr(response, "status_code", None)
-            detail = f"HTTP {status}" if status is not None else type(exc).__name__
+        last_error: Exception | None = None
+        last_status: object | None = None
+        attempts = max(1, int(retries))
+        for attempt in range(attempts):
+            response: Any = None
+            try:
+                response = session.get(
+                    endpoint,
+                    params=params,
+                    timeout=int(timeout),
+                )
+                response.raise_for_status()
+                payload = response.json()
+                break
+            except Exception as exc:
+                last_error = exc
+                last_status = getattr(response, "status_code", None)
+                if attempt + 1 < attempts:
+                    time.sleep(0.4 * (attempt + 1))
+        else:
+            detail = (
+                f"HTTP {last_status}"
+                if last_status is not None
+                else type(last_error).__name__
+            )
             raise EconomicCycleVintageError(
                 f"FRED vintage fetch failed: {detail}"
-            ) from exc
+            ) from None
     if not isinstance(payload, dict):
         raise EconomicCycleVintageError("FRED response must be a JSON object")
     if payload.get("error_code") is not None:

@@ -1,6 +1,6 @@
 # Overview Market Context U.S. Economic Cycle V1 Plan
 
-Status: Complete — 1차~5차
+Status: Complete — 1차~5차 + actual bootstrap
 Last Updated: 2026-07-16
 
 ## 이걸 하는 이유?
@@ -36,7 +36,7 @@ Last Updated: 2026-07-16
    - 범위: actual run, desktop/420px QA, data/architecture/runbook/roadmap/task docs.
    - 완료 조건: 검증 통과 horizon만 숫자를 표시하며 관련 회귀와 문서가 일치한다.
 
-명세 승인, 구현 계획, 1차 vintage 데이터 계약, 2차 현재 국면/과거 snapshot 엔진, 3차 horizon별 예측·검증·materialization, 4차 Overview 서비스·선택기·시각화, 5차 actual failure-path·Browser QA·회귀·문서 정렬까지 완료해 진행률은 `5/5`다. Local actual 환경에는 `FRED_API_KEY`가 없어 숫자를 만들지 않고 `LIMITED/NOT_MATERIALIZED`로 닫았다.
+명세 승인, 구현 계획, 1차 vintage 데이터 계약, 2차 현재 국면/과거 snapshot 엔진, 3차 horizon별 예측·검증·materialization, 4차 Overview 서비스·선택기·시각화, 5차 actual bootstrap·Browser QA·회귀·문서 정렬까지 완료해 진행률은 `5/5`다. 후속으로 발급된 key를 세션 환경에서만 사용해 17개 시계열 1,232,856행과 121개월 replay를 적재했다. Actual gate는 h0/h1/h2 모두 `LIMITED`이므로 숫자 확률은 공개하지 않는다.
 
 ## Scope
 

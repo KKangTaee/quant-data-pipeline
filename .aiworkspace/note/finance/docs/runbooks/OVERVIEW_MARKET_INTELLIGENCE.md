@@ -58,6 +58,7 @@ uv run python -c "from app.jobs.ingestion_jobs import run_collect_economic_cycle
 확인할 내용:
 
 - `source_mode=fred_output_type_1_realtime_intervals`와 series별 row/date coverage
+- large-series default는 observation page 50,000행, timeout 60초다. 현재 catalog의 full bootstrap 기대치는 17 series / 1,232,856 rows이며 ANFCI가 1,014,042 rows를 차지한다.
 - raw unique key `(series_id, observation_date, realtime_start, source)`
 - 동일 범위 재실행 뒤 business row 수가 증가하지 않는지
 - `.`/non-finite value가 0이 아니라 `coverage_status=missing` row로 남는지

@@ -12,8 +12,8 @@ Last Verified: 2026-07-16
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-economic-cycle-v1-20260716/`다.
 
 - 목적: 사용자의 회복·확장·둔화·침체 학습 프레임을 미국 vintage-aware 데이터로 확장해 현재·1개월 후·2개월 후의 네 국면 확률과 근거를 Market Context에 제공한다.
-- 완료: 1차 raw vintage data, 2차 current/history engine, 3차 direct +1M/+2M calibration/publication gate, 4차 same-level selector/React visualization, 5차 actual failure-path/desktop·420px Browser QA/regression/docs까지 `5/5`를 닫았다.
-- actual 상태: schema와 unique/index 계약은 준비됐지만 local `FRED_API_KEY`가 없어 세 table row는 0이며 read model은 `LIMITED/NOT_MATERIALIZED`, numeric horizon은 0개다. 이는 임의 fallback이나 threshold 완화 없이 설계된 완료 상태다.
+- 완료: 1차 raw vintage data, 2차 current/history engine, 3차 direct +1M/+2M calibration/publication gate, 4차 same-level selector/React visualization, 5차 actual bootstrap/desktop·420px Browser QA/regression/docs까지 `5/5`를 닫았다.
+- actual 상태: 17개 series `1,232,856` raw interval, 121 artifacts, historical replay 121개월과 current snapshot 1개를 적재했다. Read model은 `LIMITED`, numeric horizon은 0개다. h0는 coverage/calibration, h1/h2는 origin/baseline/calibration gate를 통과하지 못했으며 임의 fallback이나 threshold 완화는 하지 않았다.
 - QA: focused economic-cycle `100 passed`, Overview boundary excluding unrelated Sentiment `346 passed`, 두 React production build, desktop/420px navigation/overflow/focus/console QA를 통과했다. 병합 전부터 있던 Sentiment source-contract drift 1건은 별도 unrelated gap으로 남긴다.
 - 완료 경계: 검증을 통과한 horizon만 숫자 확률을 표시한다. 미통과 결과는 threshold 완화 없이 `LIMITED`로 유지한다.
 - 상세 계획: `docs/superpowers/plans/2026-07-16-us-economic-cycle-regime-forecast.md`.

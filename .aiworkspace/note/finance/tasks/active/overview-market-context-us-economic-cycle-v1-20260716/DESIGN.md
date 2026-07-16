@@ -25,10 +25,10 @@ Last Updated: 2026-07-16
 
 ## Actual Publication Outcome
 
-- Local schema와 business-key index는 준비됐다.
-- Local `FRED_API_KEY` 부재 때문에 실제 vintage rows/artifact/snapshot은 아직 materialize되지 않았다.
-- 이 상태의 승인된 화면 결과는 `LIMITED/NOT_MATERIALIZED`이며 current/+1M/+2M 숫자를 숨긴다. 이는 구현 미완료가 아니라 명세의 failure/publication contract를 실제 환경에서 확인한 결과다.
-- key와 actual data가 준비돼도 각 horizon이 rolling-origin gate를 통과하기 전에는 numeric probability를 공개하지 않는다.
+- Local schema와 business-key index를 준비하고, 17개 공식 FRED/ALFRED series의 raw vintage interval `1,232,856`행을 적재했다.
+- `2016-06-30`부터 `2026-06-30`까지 121개월 historical replay와 `2026-06-30` current snapshot을 origin-specific artifact로 materialize했다.
+- Actual h0/h1/h2는 모두 rolling-origin gate를 통과하지 못해 `LIMITED`다. 현재 화면은 저장된 evidence와 제한 사유를 표시하되 current/+1M/+2M 숫자를 숨긴다.
+- h0는 feature coverage/calibration, h1/h2는 origin count와 baseline/calibration 증거가 부족하다. Key와 actual data가 존재해도 gate를 통과하기 전에는 numeric probability를 공개하지 않는다는 승인 계약이 실제로 적용됐다.
 
 ## Authoritative Detail
 

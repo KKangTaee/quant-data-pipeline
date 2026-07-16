@@ -24,7 +24,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 17-series vintage/PIT engine, horizon별 publication gate, same-level selector, Browser QA, durable docs를 `5/5` 완료했다. Local actual은 missing key로 `LIMITED/NOT_MATERIALIZED`다.
+  - Latest completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 17-series vintage/PIT engine, horizon별 publication gate, same-level selector, Browser QA, durable docs를 `5/5` 완료하고 actual `1,232,856` raw intervals와 121개월 replay를 적재했다. h0/h1/h2는 검증 gate 미통과로 `LIMITED`다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Explicit concept family의 확정 공시로 missing Q4를 안전하게 산출하고 provenance와 `공시 기반 산출` 표시를 1차~4차로 완료했다.
   - Previous completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
   - Previous completed Overview / Market Context task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI는 DB-only로 유지하고 stale repair는 explicit single action으로 제한한다.
@@ -58,7 +58,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - U.S. Economic Cycle V1:
   - 현재·1개월 후·2개월 후의 회복/확장/둔화/침체 확률을 vintage-aware 데이터와 rolling-origin publication gate로 계산하는 17개 TDD task를 `5/5` 완료했다.
   - raw vintage -> strict as-of feature/label/model -> approved artifact/snapshot -> DB-only service/UI 경계와 `경제 사이클 | S&P 500 | 미국 개별주식` selector를 구현했다.
-  - Local key 부재에서는 숫자를 만들지 않고 `LIMITED/NOT_MATERIALIZED`를 표시하며 desktop/420px Browser QA를 통과했다. 상세는 [task status](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md)를 본다.
+  - Actual bootstrap 뒤에도 h0/h1/h2가 publication gate를 통과하지 못해 숫자는 숨기고 `LIMITED` 사유를 표시한다. desktop/420px Browser QA를 통과했다. 상세는 [task status](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md)를 본다.
 - Overview Market Context turnaround stage semantics V1:
   - `USD per share` diluted EPS를 turnaround duration reader에 포함해 AAPL PER/turnaround TTM EPS를 `7.90`으로 정렬했다.
   - backend threshold는 유지하고, 6개 rail에서 전환 `MET`, 이미 양수인 UI-local `ESTABLISHED`, 미확인을 구분했다. AAPL/RIVN actual과 desktop/420px Browser QA를 완료했다.
@@ -6338,5 +6338,5 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - 사용자의 회복·확장·둔화·침체 프레임을 17-series FRED/ALFRED vintage, strict as-of, h0/h1/h2 rolling-origin publication gate, compact DB snapshot으로 확장했다.
 - `경제 사이클 | S&P 500 | 미국 개별주식` same-level selector와 별도 React workbench를 연결하고 desktop/420px Browser QA를 완료했다.
-- Local `FRED_API_KEY` 부재로 actual은 `LIMITED/NOT_MATERIALIZED`이며 숫자를 표시하지 않는다. 자세한 실행·위험·후속은 `tasks/active/overview-market-context-us-economic-cycle-v1-20260716/`를 본다.
-- 전체 roadmap `5/5` 완료. actual 숫자 publication은 runbook에 따라 official vintage를 수집한 뒤 horizon별 gate를 통과할 때만 가능하다.
+- 후속 actual bootstrap으로 17-series `1,232,856`행과 121개월 replay를 적재했다. h0/h1/h2는 각각 coverage/calibration/origin/baseline gate 미통과로 `LIMITED`이며 숫자를 표시하지 않는다.
+- 전체 roadmap `5/5` 완료. 향후 숫자 publication은 더 많은 forecast-safe 증거를 확보해 horizon별 gate를 통과할 때만 가능하다.

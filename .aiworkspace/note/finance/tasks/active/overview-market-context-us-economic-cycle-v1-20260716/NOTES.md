@@ -25,6 +25,9 @@ The model estimates a data-defined macro regime with uncertainty. It does not re
 - Official vintage mode is FRED long-form `output_type=1` with explicit `1776-07-04` to `9999-12-31` real-time bounds and pagination. `series/vintagedates` partitions daily series into at most 2,000 vintage dates per request, and each observation page is normalized and UPSERTed before the next page.
 - `.` and non-finite values persist as explicit missing rows; they are never coerced to zero or dropped.
 - Loader applies both SQL window selection and a defensive Python as-of filter for injected/legacy duplicate readers.
+- Both urllib and injected HTTP-session paths apply the same bounded retry/backoff contract; a transient session timeout no longer bypasses `retries`.
+- Sanitized terminal provider errors suppress the original exception chain so API keys embedded by a third-party session error cannot reappear in formatted tracebacks.
+- urllib error summaries retain only the HTTP status code or generic URL-error class; provider-controlled `reason` text is not echoed because it may contain the secret-bearing request URL.
 
 ## 2차 Decisions
 
@@ -54,9 +57,16 @@ The model estimates a data-defined macro regime with uncertainty. It does not re
 
 ## 5차 Decisions
 
-- Schema sync succeeded for all three tables and verified the raw/artifact/snapshot unique contracts. Local row count is 0 for each table.
-- `FRED_API_KEY` is absent in this worktree environment. The explicit collection wrapper failed safely before provider/DB mutation, so actual training, replay, and official metadata spot audit were not fabricated.
-- `NOT_MATERIALIZED` maps to a usable `LIMITED` read model with no numeric horizons. This satisfies the approved failure branch; actual model performance remains unknown until official vintages are collected.
+- Schema sync succeeded for all three tables and verified the raw/artifact/snapshot unique contracts.
+- The issued `FRED_API_KEY` was used only through the active shell environment and was not written to a file, document, command log, or commit.
+- Actual collection stores 17 series and 1,232,856 raw intervals with `source_mode=fred_output_type_1_realtime_intervals`. Series API counts and DB counts match exactly; a BAMLH0A0HYM2 re-run stayed at 794 business rows.
+- Large-series follow-up uses 50,000-row observation pages, 60-second request timeout, and a 16MB PyMySQL statement bound. A TDD regression also confirmed injected sessions retry transient timeouts three times with bounded backoff.
+- Security follow-up expanded the API-key redaction assertion from the outer message to the full formatted traceback and removed secret-bearing exception chaining in both urllib and injected-session terminal failures.
+- A second urllib-specific regression confirmed that secret-bearing `URLError.reason` content is absent from both the outer error and formatted traceback.
+- PAYEMS and USREC 2020 recession-era spot checks matched official value and `realtime_start/realtime_end` metadata. The ICE high-yield series exposes official vintages only from 2023-07, and this provider limitation is preserved rather than backfilled from revised CSV.
+- Actual 2026-06-30 materialization uses training through 2026-05-31. h0 is `LIMITED` for `LOW_FEATURE_COVERAGE` and `CALIBRATION_ERROR`; h1/h2 are `LIMITED` for insufficient origins and baseline/calibration evidence. No numeric probability is persisted for a failed horizon.
+- The latest factor evidence is activity `-0.8180`, labor/income `-0.4378`, financial leading `+0.2209`, inflation/policy `+0.7899`; real-economy three-month momenta are both negative. These are evidence values, not an approved phase probability.
+- Ten-year month-end replay from 2016-06-30 through 2026-06-30 produced 121 `historical_replay` snapshots, all `LIMITED` under their origin-specific gates.
 - Browser QA found one real Streamlit selector-state defect: the widget key was reassigned after instantiation. A RED regression test now prevents post-widget assignment and invalid legacy values are removed before widget creation without pre-seeding the key.
 - Existing service contracts that described Market Context as direct valuation-only were updated to the approved outer router. The remaining Sentiment literal-source assertion fails on the pre-existing branch state and is unrelated to this feature.
 - QA screenshot is a generated artifact outside git staging: `/Users/taeho/.codex/qa/economic-cycle/overview-economic-cycle-desktop-20260716.png`.

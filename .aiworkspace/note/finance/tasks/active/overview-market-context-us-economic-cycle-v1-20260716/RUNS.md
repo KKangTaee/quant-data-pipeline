@@ -44,11 +44,15 @@ Last Updated: 2026-07-16
 - `market_context_valuation`: compatibility production build passed with the outer-selector flag.
 - Python compile and `git diff --check`: passed before 4차 closeout.
 
-### 5차 — Actual failure-path, regression, Browser QA, docs
+### 5차 — Actual bootstrap, regression, Browser QA, docs
 
-- Schema sync succeeded for `macro_series_vintage_observation`, `economic_cycle_model_artifact`, and `economic_cycle_snapshot`. Verified unique keys are raw `(series_id, observation_date, realtime_start, source)`, artifact `(model_version, trained_through)`, and snapshot `(as_of_date, model_version, run_kind)`; current row counts are all 0.
-- Environment audit found no `FRED_API_KEY`. Explicit vintage collection returned `failed` with `FRED_API_KEY is required; revised CSV cannot substitute for vintages`, before any provider/DB write.
-- Actual DB-only read model returned `economic_cycle_v1`, `LIMITED`, `NOT_MATERIALIZED`, and zero numeric horizons. Live training metrics, official metadata spot checks, and replay idempotence were not fabricated.
+- Schema sync succeeded for `macro_series_vintage_observation`, `economic_cycle_model_artifact`, and `economic_cycle_snapshot`. Verified unique keys are raw `(series_id, observation_date, realtime_start, source)`, artifact `(model_version, trained_through)`, and snapshot `(as_of_date, model_version, run_kind)`.
+- Before the key was issued, the explicit failure-path check returned `FRED_API_KEY is required; revised CSV cannot substitute for vintages` before provider/DB mutation.
+- The issued key was then passed only through the active shell environment. Full collection stored 17 series and 1,232,856 raw intervals; ANFCI accounts for 1,014,042 rows and BAMLH0A0HYM2 for 794 rows.
+- PAYEMS/USREC official metadata spot checks matched stored `realtime_start/realtime_end`. Re-running BAMLH0A0HYM2 preserved 794 business rows, confirming idempotence.
+- Current materialization uses `as_of_date=2026-06-30`, `trained_through=2026-05-31`, model `economic-cycle-v1-59ba078b22ba`. DB contains 121 artifacts and 122 snapshots: 121 historical replay rows plus one current row.
+- Actual gate metrics: h0 origin count 192, complete-feature ratio `0.7402`, ECE `0.1694`; h1/h2 origin counts 104/103. All horizons are `LIMITED`, so no numeric probability was persisted.
+- Actual DB-only service returned `economic_cycle_v1`, `LIMITED`, 121 history rows, 4 evidence rows, and horizon reasons `LOW_FEATURE_COVERAGE`, `INSUFFICIENT_ORIGINS`, `INSUFFICIENT_ORIGINS`.
 - Initial focused cycle suite: 98 passed with three unrelated `edgar` deprecation warnings. Browser QA then exposed a Streamlit widget-owned session-key reassignment; a RED regression test reproduced it and the selector stopped writing its key before/after widget instantiation.
 - Overview boundary regression after updating seven stale direct-valuation-only contracts: 346 passed, 460 deselected, three warnings when excluding one pre-existing Sentiment literal-source assertion. The full filter leaves only that unrelated assertion failing.
 - Browser desktop verified the exact three-option selector, economic-cycle default, LIMITED copy without percentages, cycle clock, evidence, four conditional market implications, regime ribbon, S&P/U.S.-stock navigation without duplicate selector, and zero console errors.
@@ -58,3 +62,12 @@ Last Updated: 2026-07-16
 - Full Overview/Market Context filter: `1 failed, 346 passed, 459 deselected, 3 warnings`; the only failure is the documented pre-existing Sentiment literal-source assertion.
 - Python compile passed for all economic-cycle modules and the Market Context router. Both economic-cycle and valuation Vite production builds passed.
 - Finance refinement hygiene reported no missing checklist items; UI/engine boundary reported `Hard violations: none`, `Result: PASS`.
+
+### Actual bootstrap follow-up verification
+
+- Read-only DB audit reconfirmed `1,232,856` vintage rows across 17 series, `121` artifact rows, `121` historical replay snapshots, and `1` current snapshot.
+- Current snapshot remains `LIMITED`; probabilities are absent for h0/h1/h2 exactly as required by the publication contract.
+- TDD retry regression: the new injected-session timeout case failed before the fix because only one request was made, then passed after `_request_json` applied the configured bounded retry/backoff loop.
+- TDD secret-redaction regression: the formatted traceback initially exposed a key embedded in the original session exception; both sanitized terminal error paths now suppress that exception chain, and the traceback assertion passes.
+- TDD urllib-redaction regression: a secret-bearing `URLError.reason` initially appeared in the outer error; HTTP/URL summaries now omit provider-controlled reason text and the full traceback assertion passes.
+- Focused verification after the large-series page/timeout/retry adjustment: vintage suite `22 passed`; remaining economic-cycle and Market Context suites `90 passed, 3 warnings` (`112` focused tests total).

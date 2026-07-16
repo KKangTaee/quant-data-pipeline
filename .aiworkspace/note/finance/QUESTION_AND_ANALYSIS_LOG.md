@@ -18,7 +18,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Vintage/PIT engine, horizon별 publication gate, selector/React UI, actual failure path와 Browser QA를 `5/5` 완료했다.
+  - Latest completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Vintage/PIT engine, horizon별 publication gate, selector/React UI, actual 17-series bootstrap과 Browser QA를 `5/5` 완료했다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
   - Previous completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
   - Previous completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
@@ -53,7 +53,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - User request: 사용자의 경제 사이클 학습 내용을 확장해 현재 위치와 향후 1·2개월을 예측하는 기능의 명세를 승인하고 구현 계획을 작성해 달라고 요청함.
 - Interpreted goal: 회복·확장·둔화·침체를 단일 확정 라벨이 아니라 현재/+1M/+2M 네 국면 확률, 근거, 10년 history로 보여주되 point-in-time과 검증 실패를 숨기지 않는다.
 - Analysis result: 기존 revised macro table을 건드리지 않고 vintage raw, model artifact, monthly snapshot을 분리한다. 실물·고용이 현재 label/h0를 소유하고 금융·정책은 forecast context만 맡으며 rolling-origin gate 통과 horizon만 숫자를 공개한다.
-- Follow-up: 17개 TDD task의 1차 data, 2차 current/history, 3차 forecast/validation, 4차 UI, 5차 actual QA/docs를 모두 완료했다. Local missing key는 `LIMITED/NOT_MATERIALIZED`로 닫았고 actual 숫자는 official vintage 수집과 horizon gate 통과 뒤에만 공개한다.
+- Follow-up: 17개 TDD task의 1차 data, 2차 current/history, 3차 forecast/validation, 4차 UI, 5차 actual QA/docs를 모두 완료했다. Official vintage `1,232,856`행과 121개월 replay를 적재했지만 h0/h1/h2 모두 gate를 통과하지 못해 `LIMITED`이며 숫자는 공개하지 않는다.
 
 ### 2026-07-16 - 전환단계는 단계형 rail이지만 profitable company를 실패로 표시하지 않는다
 
@@ -9645,5 +9645,5 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 - User request: 사용자가 공부한 회복·확장·둔화·침체 내용을 연구로 보강하고, 현재 위치와 향후 1·2개월을 시각화해 Overview 시장 맥락 새 선택지로 순차 개발해 달라고 요청함.
 - Interpreted goal: 당시 공개된 vintage만 사용하는 미국 4국면 확률 기능을 만들고, 검증되지 않은 horizon은 숫자를 숨기며 기존 S&P 500/개별주식 흐름을 보존해야 함.
-- Analysis result: 17-series revision ledger, strict as-of feature/label/model, horizon별 rolling-origin gate, compact artifact/snapshot, same-level React UI를 1차~5차로 완료했다. Local key 부재는 `LIMITED/NOT_MATERIALIZED`로 정직하게 처리했다.
-- Follow-up: 필수 구현은 완료했다. 실제 숫자는 `FRED_API_KEY` 설정 후 runbook의 collection/train/validate/materialize/replay를 실행하고 각 horizon gate를 통과할 때만 공개한다. ADS/WEI나 다국가는 별도 승인 범위다.
+- Analysis result: 17-series revision ledger, strict as-of feature/label/model, horizon별 rolling-origin gate, compact artifact/snapshot, same-level React UI를 1차~5차로 완료했다. Actual bootstrap은 `1,232,856` raw intervals와 121개월 replay를 만들었고, 세 horizon은 validation gate 미통과로 `LIMITED`다.
+- Follow-up: 필수 구현과 actual bootstrap은 완료했다. 숫자 공개를 개선하려면 더 긴 PIT source와 forecast-safe calibration을 별도 연구하며 현재 threshold를 낮추지 않는다. ADS/WEI나 다국가는 별도 승인 범위다.
