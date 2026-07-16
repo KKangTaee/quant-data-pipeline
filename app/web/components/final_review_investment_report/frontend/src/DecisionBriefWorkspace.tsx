@@ -27,9 +27,11 @@ function nextIntentId(prefix: string) {
 function SectionHeading({ eyebrow, title, detail }: { eyebrow: string; title: string; detail?: string }) {
   return (
     <header className="db-section-heading">
-      <p className="db-kicker">{eyebrow}</p>
-      <h2>{title}</h2>
-      {detail && <p>{detail}</p>}
+      <div className="db-section-heading-copy">
+        <p className="db-kicker">{eyebrow}</p>
+        <h2>{title}</h2>
+      </div>
+      {detail && <p className="db-section-detail">{detail}</p>}
     </header>
   )
 }

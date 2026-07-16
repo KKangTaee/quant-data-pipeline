@@ -55,6 +55,29 @@ class FinalReviewMarketContextVisualContractTests(unittest.TestCase):
         for old_color in ("#166534", "#64748b", "#b45309"):
             self.assertNotIn(old_color, source)
 
+    def test_section_heading_groups_eyebrow_above_korean_title(self) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+        heading = source.split("function SectionHeading", 1)[1].split(
+            "function CandidateSelector", 1
+        )[0]
+
+        self.assertIn('className="db-section-heading-copy"', heading)
+        self.assertLess(heading.index("{eyebrow}"), heading.index("<h2>{title}</h2>"))
+
+    def test_observation_strip_has_complete_responsive_grid_and_wraps_long_values(
+        self,
+    ) -> None:
+        style = STYLE.read_text(encoding="utf-8")
+
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", style)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", style)
+        self.assertIn("overflow-wrap: anywhere;", style)
+        self.assertIn("word-break: break-word;", style)
+        observation_block = style.split(".db-observation-strip {", 1)[1].split(
+            ".db-empty,", 1
+        )[0]
+        self.assertNotIn("background: #e1e8f0;", observation_block)
+
 
 if __name__ == "__main__":
     unittest.main()

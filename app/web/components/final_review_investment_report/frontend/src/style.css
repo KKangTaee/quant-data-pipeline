@@ -339,6 +339,10 @@ summary:focus-visible {
   margin-bottom: 18px;
 }
 
+.db-section-heading-copy {
+  min-width: 0;
+}
+
 .db-section-heading h2,
 .db-chart-heading h3,
 .db-trait-copy h3 {
@@ -353,7 +357,7 @@ summary:focus-visible {
   line-height: 1.35;
 }
 
-.db-section-heading > p:last-child {
+.db-section-detail {
   max-width: 430px;
   margin: 2px 0 0;
   color: var(--db-muted);
@@ -492,18 +496,20 @@ summary:focus-visible {
 
 .db-observation-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
   margin-top: 14px;
-  overflow: hidden;
-  border: 1px solid #e1e8f0;
+  overflow: visible;
+  border: 0;
   border-radius: 14px;
-  background: #e1e8f0;
+  background: transparent;
 }
 
 .db-observation-strip article {
   min-width: 0;
   padding: 14px 15px;
+  border: 1px solid #e1e8f0;
+  border-radius: 14px;
   background: #f8fafc;
 }
 
@@ -529,6 +535,13 @@ summary:focus-visible {
   color: #576b7e;
   font-size: 11px;
   line-height: 1.5;
+}
+
+.db-observation-strip strong,
+.db-observation-strip p,
+.db-observation-strip small {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .db-empty,
@@ -1022,7 +1035,7 @@ summary:focus-visible {
     gap: 7px;
   }
 
-  .db-section-heading > p:last-child {
+  .db-section-detail {
     max-width: none;
     text-align: left;
   }
