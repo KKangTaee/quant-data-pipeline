@@ -18,6 +18,7 @@ from finance.economic_cycle_interpretation import (
 )
 from finance.economic_cycle_model import PHASES
 from finance.loaders.economic_cycle import load_cycle_history, load_cycle_snapshot
+from finance.loaders.economic_cycle_assets import load_economic_cycle_asset_prices
 
 SCHEMA_VERSION = "economic_cycle_v1"
 HORIZON_LABELS = {0: "현재", 1: "1개월 후", 2: "2개월 후"}
@@ -68,6 +69,7 @@ def _empty_model(
     as_of_date: object = None,
 ) -> dict[str, object]:
     reason = translate_reason_code(reason_code)
+    economic_as_of_date = str(as_of_date or "") or None
     horizons = [
         {
             "horizon_months": horizon,
@@ -83,6 +85,9 @@ def _empty_model(
         }
         for horizon in (0, 1, 2)
     ]
+    market_implications = build_market_implications(horizons, [])
+    for item in market_implications:
+        item["economic_as_of_date"] = economic_as_of_date
     return {
         "schema_version": SCHEMA_VERSION,
         "status": status,
@@ -102,7 +107,7 @@ def _empty_model(
             "expected_transition": None,
         },
         "evidence": [],
-        "market_implications": build_market_implications(horizons, []),
+        "market_implications": market_implications,
         "history": [],
         "sources": [],
         "limitations": [reason, "NBER 공식 판정이나 투자 지시가 아닙니다."],
@@ -248,6 +253,8 @@ def build_economic_cycle_read_model(
     as_of_date: str | date | None = None,
     snapshot_loader: Callable[..., Mapping[str, object] | None] | None = None,
     history_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
+    asset_price_loader: Callable[[], Sequence[Mapping[str, object]]] | None = None,
+    price_reference_date: str | date | None = None,
 ) -> dict[str, object]:
     """Adapt persisted compact rows; never fetch, fit, write, or mutate UI state."""
 
@@ -280,6 +287,19 @@ def build_economic_cycle_read_model(
     horizons = _horizons(resolved_snapshot)
     history = _history(history_rows)
     evidence = _evidence(resolved_snapshot)
+    load_asset_prices = asset_price_loader or load_economic_cycle_asset_prices
+    try:
+        asset_price_rows = list(load_asset_prices())
+    except Exception:
+        asset_price_rows = []
+    market_implications = build_market_implications(
+        horizons,
+        evidence,
+        asset_price_rows,
+        price_reference_date=price_reference_date,
+    )
+    for item in market_implications:
+        item["economic_as_of_date"] = snapshot_date or None
     current = horizons[0]
     current_phase = current.get("dominant_phase")
     status = str(resolved_snapshot.get("status") or "LIMITED").upper()
@@ -327,7 +347,7 @@ def build_economic_cycle_read_model(
             "expected_transition": resolved_snapshot.get("expected_transition"),
         },
         "evidence": evidence,
-        "market_implications": build_market_implications(horizons, evidence),
+        "market_implications": market_implications,
         "history": history,
         "sources": _sources(resolved_snapshot, evidence),
         "limitations": limitations,

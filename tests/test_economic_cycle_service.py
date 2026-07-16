@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -316,6 +317,53 @@ def test_market_implications_do_not_invent_reasons_when_factor_coverage_is_low()
     assert all(item["assessment_label"] == "자료 부족" for item in implications)
     assert all(item["drivers"] == [] for item in implications)
     assert all("2개 이상" in item["change_condition"] for item in implications)
+
+
+def test_asset_price_loader_is_db_only_and_price_failure_is_isolated() -> None:
+    service = _load_service()
+    end = date(2026, 7, 16)
+    price_rows = [
+        {
+            "provider_symbol": symbol,
+            "candle_time_utc": end - timedelta(days=63 - index),
+            "close": latest if index == 63 else 100.0,
+            "source": "yfinance",
+            "provider_status": "ok",
+        }
+        for symbol, latest in (("GC=F", 90.0), ("DX-Y.NYB", 110.0))
+        for index in range(64)
+    ]
+    calls: list[str] = []
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        history_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda: calls.append("prices") or price_rows,
+        price_reference_date=date(2026, 7, 17),
+    )
+
+    assert calls == ["prices"]
+    assert model["market_implications"][2]["price_context"]["status"] == "FALLING"
+    assert model["market_implications"][3]["price_context"]["status"] == "RISING"
+    assert all(
+        item["economic_as_of_date"] == "2026-06-30"
+        for item in model["market_implications"]
+    )
+
+    def broken_price_loader():
+        raise RuntimeError("price table unavailable")
+
+    isolated = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        history_loader=lambda **_kwargs: [],
+        asset_price_loader=broken_price_loader,
+        price_reference_date=date(2026, 7, 17),
+    )
+
+    assert isolated["status"] == "READY"
+    assert isolated["market_implications"][2]["price_context"]["status"] == "UNAVAILABLE"
+    assert isolated["market_implications"][3]["price_context"]["status"] == "UNAVAILABLE"
+    assert "price table unavailable" not in json.dumps(isolated, ensure_ascii=False)
 
 
 def test_all_stable_reason_codes_have_concise_korean_labels() -> None:
