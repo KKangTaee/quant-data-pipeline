@@ -422,3 +422,207 @@ role별 고정 `-6 / -4` 정책은 제거한다.
 4. observation 6개는 desktop 3×2, 760px 2×3, 460px 1×6으로 배치되고 큰 빈 회색 면이 없다.
 5. `weak_source_or_proxy_liquidity_evidence`와 `official_fresh_capacity_evidence` 같은 긴 값이 잘리지 않고 여러 줄로 표시된다.
 6. 기존 수치 표, SVG 접근성 label, chart series 계산, Python/data contract가 유지된다.
+
+## 2026-07-16 Portfolio Character Profile And Review Pressure Separation
+
+사용자가 `포트폴리오 성격 지도`에서 실제 포트폴리오 특성이 보이기를 원한다. 현재 radar는 이름과 달리 `측정값 ÷ review threshold`를 0~100 pressure로 정규화한 화면이다. 값이 저장돼 있어도 threshold가 없으면 `미측정`이 되므로, 실제 성격과 관리 기준 대비 압력을 서로 다른 contract와 UI로 분리한다.
+
+### 이걸 하는 이유?
+
+current GRS 화면에는 다음 값이 이미 존재한다.
+
+- 최대 구성 비중 `100.00%`
+- 최대 underwater 낙폭 `-12.43%`
+- 평균 회전율 `3.20%`
+- 거래비용 가정 `10.00 bps`
+
+하지만 current trait map은 집중 위험만 `83.3 / 100`으로 그리고 나머지를 `미측정`으로 표시한다. 이는 raw measurement 부재만의 문제가 아니다.
+
+- 집중 위험은 `max_weight=100`과 `max_weight_review=60`이 모두 있어 pressure를 계산한다.
+- 낙폭은 curve에서 `-12.43%`를 측정했고 profile에 `mdd_review_line=-15`가 있지만 projector가 `max_drawdown_review_pct`만 찾아 threshold를 연결하지 못한다.
+- 회전율은 `avg_turnover=0.032`가 있으나 명시적 review threshold가 없다.
+- 비용은 `transaction_cost_bps=10`과 curve 적용 증명이 있으나 `one_way_cost_bps=10`은 비용 가정 자체이지 허용 한도가 아니므로 review threshold로 재사용할 수 없다.
+- 국면 의존은 현재 structured measurement와 comparator가 없다.
+
+`미측정` 하나로 이 원인을 합치면 사용자는 값이 없는지, 기준만 없는지, 제품 adapter가 끊겼는지 구분할 수 없다. 또한 `83.3 / 100`은 투자 품질 점수처럼 보이지만 실제로는 threshold가 50 지점이 되도록 변환한 pressure 표현이다.
+
+### Considered approaches
+
+#### A. Threshold-only radar 유지
+
+- 장점: 현재 계산과 UI 변경이 작다.
+- 단점: threshold가 없는 실제 관측값을 계속 숨기며, 한 축만 있는 radar가 포트폴리오 성격을 설명하지 못한다.
+- 결정: 채택하지 않는다.
+
+#### B. Raw 값을 임의 0~100 점수로 환산
+
+- 장점: 모든 축을 radar polygon으로 그릴 수 있다.
+- 단점: %, bps, 낙폭, regime 값을 근거 없는 공통 범위로 변환해 가짜 비교와 종합점수를 만든다.
+- 결정: 채택하지 않는다.
+
+#### C. Actual Character + Review Pressure 분리
+
+- 실제 관측값은 threshold 유무와 관계없이 `포트폴리오 실제 성격`에 표시한다.
+- 명시적 review criterion이 있는 항목만 `관리 기준 대비 압력`에서 비교한다.
+- raw 값이 없을 때만 `분석 근거 없음`, 값은 있으나 criterion이 없으면 `기준 미설정`으로 표시한다.
+- 결정: 사용자 승인으로 채택한다.
+
+### Product meaning
+
+첫 영역의 질문은 `이 포트폴리오는 실제로 어떤 특성을 보였는가?`다. 두 번째 영역의 질문은 `그 특성이 저장된 관리 기준을 넘었는가?`다.
+
+`포트폴리오 실제 성격`은 좋고 나쁨을 임의로 판정하지 않는다. 측정값, 단위, 관측 의미, 기준일, source를 보여준다. `관리 기준 대비 압력`만 explicit comparator에 따라 `기준 이내 / 기준 초과 / 기준 미설정 / 분석 근거 없음`을 표시한다.
+
+### Python contract
+
+`app/services/backtest_final_review_decision_brief.py`가 기존 structured execution observation을 한 번 만들고, 같은 observation에서 두 projection을 파생한다. React는 raw validation이나 threshold key를 읽지 않는다.
+
+```text
+character_profile.items[]
+  axis_id
+  label
+  measurement_status = observed | evidence_missing
+  measured_value
+  display_value
+  unit
+  interpretation
+  evidence_refs[]
+  as_of
+
+review_pressure.items[]
+  axis_id
+  label
+  status = within_limit | exceeds_limit | criterion_missing | evidence_missing
+  measured_value
+  display_value
+  criterion_value
+  criterion_display
+  comparison
+  delta_value
+  delta_display
+  ratio_to_criterion
+  summary
+  evidence_refs[]
+  as_of
+```
+
+`aggregate_score`, role별 고정 점수, 임의 normalization은 만들지 않는다. `ratio_to_criterion`은 비교 설명을 위한 실제 비율이며 0~100 품질 점수가 아니다.
+
+`less_or_equal` risk criterion은 measurement와 criterion의 절댓값 크기로 비교한다. `delta_value = abs(measured) - abs(criterion)`이며 양수는 초과, 0 이하는 기준 이내 buffer다. 사용자 화면은 원래 부호와 단위를 보존해 concentration은 `%p`, drawdown은 signed `%`, cost는 `bps`로 설명한다. `ratio_to_criterion`은 cap하지 않는다.
+
+### Canonical measurement and criterion mapping
+
+| Axis | Measurement | Criterion | Current behavior |
+|---|---|---|---|
+| `concentration` | `metrics.max_weight` | `max_weight_review` | 실제 값과 `기준 60% 대비 +40%p 초과` 표시 |
+| `drawdown` | running-peak underwater의 minimum | `max_drawdown_review_pct` 또는 canonical alias `mdd_review_line` | signed display `-12.43%`; magnitude로 `-15% 관리선 이내 2.57%p` 비교 |
+| `turnover` | turnover evidence contract의 `avg_turnover` | `avg_turnover_review` 또는 `turnover_review` | raw `3.20%` 표시; criterion 없으면 `기준 미설정` |
+| `cost` | cost contract의 `transaction_cost_bps` | `transaction_cost_bps_review` | raw `10bps`와 curve 적용 상태 표시; `one_way_cost_bps`를 허용 기준으로 사용하지 않음 |
+| `regime_dependency` | explicit regime dispersion/dependency observation | 해당 observation의 explicit comparator | current source가 없으면 `분석 근거 없음`; prose나 가짜 0으로 채우지 않음 |
+
+threshold alias 정규화는 Python service가 소유한다. `mdd_review_line`은 명백한 drawdown review line이므로 canonical drawdown criterion으로 연결한다. contract alias 누락을 사용자에게 `기준 연결 필요`로 노출하지 않는다. 필수 alias가 다시 끊기면 source-contract test가 실패해야 한다.
+
+### UI structure
+
+기존 `포트폴리오 성격 지도` section을 다음 한 section 안의 두 계층으로 교체한다.
+
+1. `포트폴리오 실제 성격`
+   - 5개 trait row/card를 사용한다.
+   - 각 row는 한국어 label, 큰 raw value, 한 줄 의미, 기준일을 보여준다.
+   - threshold가 없어도 observed value는 항상 노출한다.
+   - 국면 의존처럼 measurement가 없을 때만 `분석 근거 없음` empty state를 사용한다.
+2. `관리 기준 대비 압력`
+   - radar polygon과 `83.3 / 100` 표현을 제거한다.
+   - 각 항목을 horizontal comparison row로 표시한다.
+   - criterion이 있으면 actual, criterion, 차이와 `기준 이내 / 초과`를 표시한다.
+   - criterion이 없으면 actual을 반복하지 않고 `기준 미설정`과 그 의미만 표시한다.
+
+desktop에서는 실제 성격과 관리 압력을 2열로 배치하고, 760px 이하에서는 실제 성격 다음에 관리 압력을 한 열로 쌓는다. `Workspace > Overview > 시장 맥락`의 blue-gray palette, rounded surface, soft shadow, compact typography를 유지한다.
+
+### User reading flow
+
+```text
+행동 차트와 관측값
+  -> 포트폴리오 실제 성격에서 raw 특성 확인
+  -> 관리 기준 대비 압력에서 초과/이내/기준 미설정 확인
+  -> 실제 강점과 약점
+  -> Monitoring 변화 조건
+  -> 최종 판단
+```
+
+성격 section은 Final Review에서 새 remediation을 수행하지 않는다. criterion이 없다는 사실은 Level2 action으로 자동 승격하지 않으며, selected-route Gate도 이 presentation만으로 변경하지 않는다.
+
+### Fallback and compatibility
+
+- Streamlit fallback도 radar text list 대신 같은 `실제 성격 / 관리 기준 대비 압력` 순서를 사용한다.
+- current `decision_brief_v1`의 `trait_map`은 current React와 fallback consumer를 함께 전환한 뒤 제거한다. stored final-decision snapshot에는 chart/trait bulk가 저장되지 않으므로 기존 JSONL row rewrite는 필요하지 않다.
+- legacy report compatibility service, score, route, closure snapshot, Monitoring snapshot은 변경하지 않는다.
+- Python observation은 한 번만 만들고 character/review projection이 같은 `axis_id`와 evidence ref를 공유해 중복 근거를 만들지 않는다.
+
+### Error and empty-state policy
+
+- measurement가 없으면 `분석 근거 없음`과 필요한 근거 종류를 표시한다.
+- measurement는 있으나 criterion이 없으면 `기준 미설정`으로 표시하며 `미측정`이라고 부르지 않는다.
+- measurement와 criterion이 있으면 comparison을 반드시 계산한다. 계산 불가능한 단위/비교 방향이면 contract error로 test에서 차단한다.
+- `mdd_review_line` alias처럼 known criterion이 연결되지 않는 상태는 사용자 empty state가 아니라 product contract regression이다.
+- UI는 provider fetch, replay, DB ingestion, threshold 저장을 실행하지 않는다.
+
+### Ownership by file
+
+| Responsibility | Owner |
+|---|---|
+| character/review projection, drawdown alias, comparison/delta | `app/services/backtest_final_review_decision_brief.py` |
+| current fallback rendering | `app/web/backtest_final_review/page.py` |
+| TypeScript payload contract | `frontend/src/types.ts` |
+| actual character and review pressure presentation | `frontend/src/DecisionBriefWorkspace.tsx`, `frontend/src/DecisionBriefCharts.tsx` |
+| responsive visual contract | `frontend/src/style.css` |
+| Python/service/source contract tests | `tests/test_backtest_final_review_decision_brief.py`, `tests/test_service_contracts.py`, `tests/test_final_review_market_context_visual_contract.py` |
+
+### Delivery slices
+
+1. **Character contract**: RED tests, `character_profile` / `review_pressure`, drawdown threshold alias, removal of aggregate 0~100 pressure score.
+2. **Decision Workspace presentation**: radar를 actual character rows와 review comparison rows로 교체하고 fallback을 동기화한다.
+3. **QA and docs**: current GRS fixture regression, production build, desktop/760px Browser QA, durable flow/active task/root handoff sync.
+
+### Verification design
+
+- current GRS fixture에서 concentration, drawdown, turnover, cost가 `observed`이고 regime만 `evidence_missing`인 service test
+- drawdown `mdd_review_line=-15`가 `-12.43%` observation과 연결돼 `within_limit`이 되는 alias regression test
+- turnover/cost raw value는 보이지만 criterion이 없을 때 `criterion_missing`인 test
+- `one_way_cost_bps`가 cost review limit으로 오용되지 않는 test
+- aggregate score와 arbitrary normalized value가 payload/UI에 없는 contract test
+- current React가 radar/`미측정` 통합 label을 렌더하지 않고 실제 성격/관리 압력 순서를 유지하는 source contract test
+- Streamlit fallback parity test
+- Vite production build, target `py_compile`, `git diff --check`
+- Browser QA desktop/760px: raw value visibility, drawdown 기준 연결, criterion/evidence 상태 구분, no horizontal overflow, Final Review save CTA 미실행
+
+### Non-goals
+
+- 새 regime provider 또는 historical regime analytics 구현
+- turnover/cost 허용 기준을 임의 기본값으로 추가
+- raw units를 공통 0~100 성격 점수로 변환
+- overall investment score 또는 radar aggregate 재도입
+- Final Review에서 validation profile을 편집하거나 저장
+- registry / saved JSONL 기존 row rewrite
+- Gate, canonical route, broker/live approval/auto rebalance 변경
+
+### Acceptance criteria
+
+1. current GRS에서 집중도, 낙폭, 회전율, 비용의 실제 값이 criterion 유무와 관계없이 보인다.
+2. 국면 의존만 현재 structured evidence 부재로 `분석 근거 없음`을 표시한다.
+3. 낙폭 `mdd_review_line`이 canonical criterion으로 연결되고 `-12.43% / 관리선 -15% / 기준 이내`가 함께 읽힌다.
+4. 회전율과 비용은 `미측정`이 아니라 `기준 미설정`으로 구분된다.
+5. `83.3 / 100` 같은 임의 pressure score와 한 축 radar polygon이 current UI에서 제거된다.
+6. actual character와 review pressure는 같은 Python observation/evidence ref를 사용하고 React가 계산하지 않는다.
+7. Gate, route, persistence, Monitoring snapshot, protected registry는 변경되지 않는다.
+8. desktop과 760px에서 실제 성격 → 관리 압력 → 강점/약점 흐름과 가로 overflow 0을 확인한다.
+
+### Design self-review
+
+- [x] `TBD`, `TODO`, placeholder 또는 구체화되지 않은 소유 파일이 없다.
+- [x] raw character와 criterion-based pressure가 서로 다른 사용자 질문과 payload로 분리돼 있다.
+- [x] drawdown의 signed display, magnitude comparison, delta 방향이 일관된다.
+- [x] turnover/cost criterion을 임의 생성하지 않고 regime provider 도입도 범위 밖으로 고정했다.
+- [x] current React와 Streamlit fallback을 함께 전환하고 기존 JSONL row를 rewrite하지 않는다.
+- [x] Python projection owner / React presentation-only / Gate·route·persistence 불변 경계가 명확하다.
+- [x] 3개 delivery slice와 RED contract, build, desktop/760px QA 완료 조건이 연결된다.

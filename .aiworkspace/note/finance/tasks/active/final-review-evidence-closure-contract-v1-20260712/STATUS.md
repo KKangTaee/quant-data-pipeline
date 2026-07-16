@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete — Final Review chart interaction and content polish
+Status: Design Review — portfolio character / review pressure separation
 Last Updated: 2026-07-16
 
 ## Progress
@@ -39,10 +39,15 @@ Last Updated: 2026-07-16
 - [x] React chart / layout 구현과 production build
 - [x] desktop hover / 760px Browser QA
 - [x] closeout docs와 distinct commit
+- [x] 포트폴리오 실제 성격과 관리 기준 대비 압력 분리 방향 사용자 승인
+- [x] current GRS 값/criterion/alias root cause 재확인
+- [x] character profile / review pressure continuation DESIGN 작성과 self-review
+- [ ] 작성된 DESIGN 사용자 확인
+- [ ] writing-plans 기반 상세 PLAN과 구현
 
 ## Next Action
 
-차트 상호작용과 content polish까지 완료했다. 다음 검토 위치는 dynamic historical universe용 PIT membership / delisting provider 승인 여부이며, 이번 후속 작업에서도 Python/Gate/persistence는 변경하지 않았다.
+작성된 character/review separation DESIGN을 사용자에게 확인받은 뒤 writing-plans 절차로 구현 계획을 작성한다. 새 task/worktree는 만들지 않고 같은 active task를 이어간다.
 
 ## Commits
 
