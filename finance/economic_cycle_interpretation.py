@@ -37,7 +37,6 @@ FACTOR_LABELS = {
 ASSET_CONTEXT = {
     "rates": {
         "label": "채권·금리",
-        "summary_subject": "채권의 금리 민감도",
         "orientations": {
             "activity_score": -1,
             "labor_income_score": -1,
@@ -48,7 +47,6 @@ ASSET_CONTEXT = {
     },
     "equities": {
         "label": "주식",
-        "summary_subject": "주식 환경",
         "orientations": {
             "activity_score": 1,
             "labor_income_score": 1,
@@ -59,8 +57,13 @@ ASSET_CONTEXT = {
     },
     "gold": {
         "label": "금",
-        "summary_subject": "금의 방어 맥락",
         "price_symbol": "GC=F",
+        "macro_signal_labels": {
+            "FAVORABLE": "금을 지지",
+            "BURDEN": "금에 부담",
+            "MIXED": "금 신호 혼재",
+            "INSUFFICIENT": "판단 자료 부족",
+        },
         "orientations": {
             "activity_score": -1,
             "labor_income_score": -1,
@@ -71,8 +74,13 @@ ASSET_CONTEXT = {
     },
     "dollar": {
         "label": "달러",
-        "summary_subject": "달러 환경",
         "price_symbol": "DX-Y.NYB",
+        "macro_signal_labels": {
+            "FAVORABLE": "달러를 지지",
+            "BURDEN": "달러에 부담",
+            "MIXED": "달러 신호 혼재",
+            "INSUFFICIENT": "판단 자료 부족",
+        },
         "orientations": {
             "activity_score": 1,
             "labor_income_score": 1,
@@ -83,7 +91,6 @@ ASSET_CONTEXT = {
     },
     "commodities": {
         "label": "원자재",
-        "summary_subject": "원자재 수요 환경",
         "orientations": {
             "activity_score": 1,
             "labor_income_score": 1,
@@ -113,6 +120,27 @@ ALIGNMENT_LABELS = {
     "DIVERGENCE": "배경과 가격 불일치",
     "MIXED": "종합 혼재",
     "PRICE_PENDING": "가격 확인 대기",
+}
+
+CURRENT_ENVIRONMENT_LABELS = {
+    "FAVORABLE": "지지 요인 우세",
+    "BURDEN": "부담 요인 우세",
+    "MIXED": "신호 혼재",
+    "INSUFFICIENT": "자료 부족",
+}
+
+PRICE_DIRECTION_LABELS = {
+    "RISING": "상승",
+    "FALLING": "하락",
+    "MIXED": "방향 혼재",
+    "UNAVAILABLE": "확인 대기",
+}
+
+RELATIONSHIP_LABELS = {
+    "ALIGNED": "같은 방향",
+    "DIVERGENCE": "서로 다른 방향",
+    "MIXED": "판단 유보",
+    "PRICE_PENDING": "비교 대기",
 }
 
 
@@ -189,19 +217,110 @@ def _canonical_factor_evidence(
     return canonical
 
 
-def _assessment_summary(
-    *,
-    assessment: str,
-    summary_subject: str,
-    phase_label: str,
-) -> str:
+def _join_driver_phrases(drivers: Sequence[Mapping[str, object]]) -> str:
+    phrases = [
+        f"{str(driver.get('label') or '').strip()} {str(driver.get('direction') or '').strip()}".strip()
+        for driver in drivers
+        if str(driver.get("label") or "").strip()
+    ]
+    if not phrases:
+        return "확인 가능한 경제 근거"
+    if len(phrases) == 1:
+        return phrases[0]
+    if len(phrases) == 2:
+        return f"{phrases[0]}와 {phrases[1]}"
+    return f"{', '.join(phrases[:-1])}와 {phrases[-1]}"
+
+
+def _drivers_for_assessment(
+    drivers: Sequence[dict[str, object]], assessment: str
+) -> list[dict[str, object]]:
     if assessment == "FAVORABLE":
-        return f"{phase_label} 국면의 현재 근거 조합은 {summary_subject}에 상대적으로 우호적입니다."
-    if assessment == "BURDEN":
-        return f"{phase_label} 국면의 현재 근거 조합은 {summary_subject}에 부담 요인이 우세합니다."
+        selected = [driver for driver in drivers if driver["impact"] == "FAVORABLE"]
+    elif assessment == "BURDEN":
+        selected = [driver for driver in drivers if driver["impact"] == "BURDEN"]
+    else:
+        selected = list(drivers)
+    return sorted(
+        selected,
+        key=lambda driver: abs(float(driver.get("value") or 0.0)),
+        reverse=True,
+    )
+
+
+def _environment_summary(
+    *,
+    asset_label: str,
+    assessment: str,
+    drivers: Sequence[dict[str, object]],
+) -> str:
+    if assessment == "INSUFFICIENT":
+        return "자산별 조건을 판정할 미국 경기 근거가 아직 부족합니다."
+    selected = _drivers_for_assessment(drivers, assessment)
     if assessment == "MIXED":
-        return f"{phase_label} 국면에서 우호와 부담 근거가 맞서 한 방향으로 읽기 어렵습니다."
-    return "자산별 조건을 판정할 경제 근거가 아직 부족합니다."
+        selected = _display_drivers(drivers, assessment=assessment)
+        return (
+            f"미국 경기지표에서는 {_join_driver_phrases(selected)}의 자산 영향이 "
+            "엇갈려 현재 신호가 한 방향으로 모이지 않습니다."
+        )
+    direction = "지지" if assessment == "FAVORABLE" else "부담"
+    return (
+        f"미국 경기지표에서는 {_join_driver_phrases(selected)} 등 "
+        f"{asset_label}에 {direction} 요인이 우세합니다."
+    )
+
+
+def _price_aware_summary(
+    *,
+    asset_group: str,
+    assessment: str,
+    drivers: Sequence[dict[str, object]],
+    price_status: str,
+    alignment: str,
+) -> str:
+    if assessment == "INSUFFICIENT":
+        macro_phrase = "판정할 미국 경기 근거가 부족하고"
+    elif assessment == "MIXED":
+        macro_phrase = (
+            f"{_join_driver_phrases(_display_drivers(drivers, assessment=assessment))}의 "
+            "영향이 엇갈리고"
+        )
+    else:
+        selected = _drivers_for_assessment(drivers, assessment)
+        if asset_group == "gold":
+            condition = "금을 지지하는" if assessment == "FAVORABLE" else "금에 부담인"
+        else:
+            condition = (
+                "달러를 지지하는"
+                if assessment == "FAVORABLE"
+                else "달러에 부담이 되는"
+            )
+        macro_phrase = (
+            f"{_join_driver_phrases(selected)} 등 {condition} 조건이 우세하지만"
+        )
+
+    price_subject = "실제 달러지수는" if asset_group == "dollar" else "실제 가격은"
+    if price_status == "RISING":
+        price_phrase = f"{price_subject} 최근 1개월과 3개월 모두 상승"
+    elif price_status == "FALLING":
+        price_phrase = f"{price_subject} 최근 1개월과 3개월 모두 하락"
+    elif price_status == "MIXED":
+        price_phrase = f"{price_subject} 기간별 방향이 엇갈려"
+    else:
+        return (
+            f"미국 경기지표에서는 {macro_phrase}, 실제 가격 자료가 부족해 "
+            "두 신호를 아직 비교할 수 없습니다."
+        )
+
+    if alignment == "ALIGNED":
+        relationship_phrase = "해 두 신호가 같은 방향입니다."
+    elif alignment == "DIVERGENCE":
+        relationship_phrase = "해 두 신호가 엇갈립니다."
+    else:
+        relationship_phrase = "해 두 신호 관계의 판단을 유보합니다."
+    return (
+        f"미국 경기지표에서는 {macro_phrase}, {price_phrase}{relationship_phrase}"
+    )
 
 
 def _display_drivers(
@@ -403,10 +522,10 @@ def build_market_implications(
             change_condition = str(config["change_condition"])
 
         asset_label = str(config["label"])
-        summary = _assessment_summary(
+        summary = _environment_summary(
+            asset_label=asset_label,
             assessment=assessment,
-            summary_subject=str(config["summary_subject"]),
-            phase_label=phase_label,
+            drivers=drivers,
         )
         implications.append(
             {
@@ -415,6 +534,7 @@ def build_market_implications(
                 "phase_context": phase_label,
                 "assessment": assessment,
                 "assessment_label": ASSESSMENT_LABELS[assessment],
+                "current_environment_label": CURRENT_ENVIRONMENT_LABELS[assessment],
                 "summary": summary,
                 "context": summary,
                 "drivers": displayed_drivers,
@@ -432,11 +552,28 @@ def build_market_implications(
                 reference_date=price_reference_date,
             )
             alignment = _alignment(assessment, str(price_context["status"]))
+            macro_signal_labels = config.get("macro_signal_labels") or {}
+            summary = _price_aware_summary(
+                asset_group=asset_group,
+                assessment=assessment,
+                drivers=drivers,
+                price_status=str(price_context["status"]),
+                alignment=alignment,
+            )
             implications[-1].update(
                 {
                     "price_context": price_context,
                     "alignment": alignment,
                     "alignment_label": ALIGNMENT_LABELS[alignment],
+                    "macro_signal_label": str(
+                        macro_signal_labels.get(assessment) or "판단 자료 부족"
+                    ),
+                    "price_direction_label": PRICE_DIRECTION_LABELS[
+                        str(price_context["status"])
+                    ],
+                    "relationship_label": RELATIONSHIP_LABELS[alignment],
+                    "summary": summary,
+                    "context": summary,
                 }
             )
 

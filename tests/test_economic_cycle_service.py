@@ -319,6 +319,68 @@ def test_market_implications_do_not_invent_reasons_when_factor_coverage_is_low()
     assert all("2개 이상" in item["change_condition"] for item in implications)
 
 
+def test_price_aware_implications_explain_macro_price_relationship() -> None:
+    interpretation = importlib.import_module("finance.economic_cycle_interpretation")
+    end = date(2026, 7, 16)
+    horizons = json.loads(str(_ready_snapshot()["forecast_path_json"]))
+    evidence = [
+        {"factor": "activity_score", "value": -0.82},
+        {"factor": "labor_income_score", "value": -0.44},
+        {"factor": "financial_leading_score", "value": 0.22},
+        {"factor": "inflation_policy_score", "value": 0.79},
+    ]
+    price_rows = [
+        {
+            "provider_symbol": symbol,
+            "candle_time_utc": end - timedelta(days=63 - index),
+            "close": latest if index == 63 else 100.0,
+        }
+        for symbol, latest in (("GC=F", 90.0), ("DX-Y.NYB", 110.0))
+        for index in range(64)
+    ]
+
+    implications = interpretation.build_market_implications(
+        horizons,
+        evidence,
+        price_rows,
+        price_reference_date=date(2026, 7, 17),
+    )
+    gold = next(row for row in implications if row["asset_group"] == "gold")
+    dollar = next(row for row in implications if row["asset_group"] == "dollar")
+
+    assert gold["macro_signal_label"] == "금을 지지"
+    assert gold["price_direction_label"] == "하락"
+    assert gold["relationship_label"] == "서로 다른 방향"
+    assert "미국 경기지표에서는" in gold["summary"]
+    assert "생산·소비 활동 약화" in gold["summary"]
+    assert "고용·소득 약화" in gold["summary"]
+    assert "실제 가격은 최근 1개월과 3개월 모두 하락" in gold["summary"]
+    assert dollar["macro_signal_label"] == "달러에 부담"
+    assert dollar["price_direction_label"] == "상승"
+    assert dollar["relationship_label"] == "서로 다른 방향"
+    assert "실제 달러지수는 최근 1개월과 3개월 모두 상승" in dollar["summary"]
+
+
+def test_signal_labels_keep_mixed_and_price_pending_conservative() -> None:
+    interpretation = importlib.import_module("finance.economic_cycle_interpretation")
+    evidence = [
+        {"factor": "activity_score", "value": -0.82},
+        {"factor": "labor_income_score", "value": -0.44},
+        {"factor": "financial_leading_score", "value": 0.22},
+        {"factor": "inflation_policy_score", "value": 0.79},
+    ]
+
+    implications = interpretation.build_market_implications([], evidence)
+    rates = next(row for row in implications if row["asset_group"] == "rates")
+    gold = next(row for row in implications if row["asset_group"] == "gold")
+
+    assert rates["current_environment_label"] == "신호 혼재"
+    assert gold["price_direction_label"] == "확인 대기"
+    assert gold["relationship_label"] == "비교 대기"
+    assert "실제 가격 자료가 부족" in gold["summary"]
+    assert "실제 가격은 최근" not in gold["summary"]
+
+
 def test_asset_price_loader_is_db_only_and_price_failure_is_isolated() -> None:
     service = _load_service()
     end = date(2026, 7, 16)
