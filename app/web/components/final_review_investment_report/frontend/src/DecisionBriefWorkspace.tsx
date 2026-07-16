@@ -142,7 +142,68 @@ function ObservationStrip({ observations }: { observations: DecisionBriefObserva
   )
 }
 
-function BehaviorBoard({ brief }: { brief: DecisionBrief }) {
+function ObservationFreshness({
+  brief,
+  onIntent,
+}: {
+  brief: DecisionBrief
+  onIntent: WorkspaceProps["onIntent"]
+}) {
+  const freshness = brief.observation_freshness
+  const [pending, setPending] = useState(false)
+  const limiter = freshness.limiting_symbols.length
+    ? freshness.limiting_symbols.join(", ")
+    : "없음"
+
+  return (
+    <section
+      className={`db-freshness-strip db-tone-${freshness.tone}`}
+      aria-label="관측 최신성"
+    >
+      <div className="db-freshness-state">
+        <span>{freshness.label}</span>
+        <strong>{freshness.summary}</strong>
+        <p>{freshness.detail}</p>
+      </div>
+      <dl className="db-freshness-dates">
+        <div><dt>현재 차트</dt><dd>{freshness.stored_curve_end || "미측정"}</dd></div>
+        <div><dt>최신 완료 시장일</dt><dd>{freshness.latest_completed_market_date || "미측정"}</dd></div>
+        <div><dt>DB 공통일</dt><dd>{freshness.db_common_price_date || "미측정"}</dd></div>
+        <div><dt>제한 종목</dt><dd>{limiter}</dd></div>
+      </dl>
+      {freshness.last_result?.message && (
+        <p className="db-freshness-result">{freshness.last_result.message}</p>
+      )}
+      {freshness.can_refresh && (
+        <button
+          type="button"
+          className="db-freshness-action"
+          disabled={pending}
+          onClick={() => {
+            if (pending) return
+            setPending(true)
+            onIntent({
+              action: "refresh_observation",
+              intent_id: nextIntentId("refresh"),
+              source_id: freshness.selection_source_id,
+              validation_id: freshness.validation_id,
+            })
+          }}
+        >
+          {pending ? "다시 계산하는 중..." : freshness.button_label || "최신 데이터로 다시 계산"}
+        </button>
+      )}
+    </section>
+  )
+}
+
+function BehaviorBoard({
+  brief,
+  onIntent,
+}: {
+  brief: DecisionBrief
+  onIntent: WorkspaceProps["onIntent"]
+}) {
   const board = brief.behavior_board
   return (
     <section className="db-section db-behavior" aria-labelledby="db-behavior-title">
@@ -151,6 +212,7 @@ function BehaviorBoard({ brief }: { brief: DecisionBrief }) {
         title="누적 성과, 손실 경로, 실행 현실성"
         detail="차트와 관측값은 저장된 curve와 structured evidence만 사용합니다."
       />
+      <ObservationFreshness brief={brief} onIntent={onIntent} />
       <div className="db-chart-grid">
         <CumulativeComparisonChart candidate={board.cumulative_series} benchmark={board.benchmark_series} />
         <UnderwaterChart series={board.underwater_series} />
@@ -386,7 +448,7 @@ export function DecisionBriefWorkspace({ decisionBrief, candidateSelector, onInt
     <main className="db-workspace" data-candidate={selectedCandidate?.source_id || decisionBrief.candidate.source_id}>
       <WorkspaceHeader brief={decisionBrief} model={candidateSelector} onIntent={onIntent} />
       <VerdictHero brief={decisionBrief} />
-      <BehaviorBoard brief={decisionBrief} />
+      <BehaviorBoard brief={decisionBrief} onIntent={onIntent} />
       <StrengthWeaknessSection brief={decisionBrief} />
       <PortfolioCharacterSection brief={decisionBrief} />
       <MonitoringConditions brief={decisionBrief} />

@@ -366,6 +366,101 @@ summary:focus-visible {
   text-align: right;
 }
 
+.db-freshness-strip {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(360px, 1.8fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid #dae4ee;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f3f7f8 100%);
+}
+
+.db-freshness-state {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.db-freshness-state span {
+  color: #284e69;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.db-freshness-state strong {
+  color: #152033;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.db-freshness-state p,
+.db-freshness-result {
+  margin: 0;
+  color: #647589;
+  font-size: 10px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.db-freshness-dates {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #dae4ee;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .86);
+}
+
+.db-freshness-dates div {
+  min-width: 0;
+  padding: 10px 11px;
+  border-right: 1px solid #dae4ee;
+}
+
+.db-freshness-dates div:last-child {
+  border-right: 0;
+}
+
+.db-freshness-dates dt {
+  color: #7a8998;
+  font-size: 9px;
+}
+
+.db-freshness-dates dd {
+  margin: 3px 0 0;
+  color: #24364a;
+  font-size: 11px;
+  font-weight: 760;
+  overflow-wrap: anywhere;
+}
+
+.db-freshness-action {
+  min-height: 42px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: #284e69;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.db-freshness-action:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.db-freshness-result {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid #dae4ee;
+}
+
 .db-chart-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
@@ -1079,7 +1174,8 @@ summary:focus-visible {
 
 @media (max-width: 960px) {
   .db-workspace-header,
-  .db-chart-grid {
+  .db-chart-grid,
+  .db-freshness-strip {
     grid-template-columns: 1fr;
   }
 
@@ -1142,6 +1238,18 @@ summary:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .db-freshness-dates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .db-freshness-dates div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .db-freshness-dates div:nth-child(-n + 2) {
+    border-bottom: 1px solid #dae4ee;
+  }
+
   .db-character-layout {
     grid-template-columns: 1fr;
   }
@@ -1175,6 +1283,24 @@ summary:focus-visible {
   .db-character-list,
   .db-route-options {
     grid-template-columns: 1fr;
+  }
+
+  .db-freshness-dates {
+    grid-template-columns: 1fr;
+  }
+
+  .db-freshness-dates div,
+  .db-freshness-dates div:nth-child(2n) {
+    border-right: 0;
+    border-bottom: 1px solid #dae4ee;
+  }
+
+  .db-freshness-dates div:last-child {
+    border-bottom: 0;
+  }
+
+  .db-freshness-action {
+    width: 100%;
   }
 
   .db-chart-shell {

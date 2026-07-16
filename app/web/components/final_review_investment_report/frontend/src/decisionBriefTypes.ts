@@ -74,6 +74,35 @@ export type DecisionOption = {
   button_label: string
 }
 
+export type ObservationFreshness = {
+  schema_version: "final_review_observation_freshness_v1"
+  status: "up_to_date" | "replay_available" | "price_refresh_available" | "partial_refresh" | "blocked"
+  tone: Tone
+  label: string
+  summary: string
+  detail: string
+  selection_source_id: string
+  validation_id: string
+  stored_curve_end: string | null
+  latest_completed_market_date: string | null
+  db_common_price_date: string | null
+  refresh_target_date: string | null
+  limiting_symbols: string[]
+  stale_symbols: string[]
+  missing_symbols: string[]
+  provider_gap_symbols: string[]
+  refreshable_symbols: string[]
+  can_refresh: boolean
+  selection_blocked: boolean
+  button_label: string
+  last_result?: {
+    status: string
+    message: string
+    previous_curve_end?: string | null
+    refreshed_curve_end?: string | null
+  }
+}
+
 export type DecisionBrief = {
   schema_version: "decision_brief_v1"
   candidate: {
@@ -120,6 +149,7 @@ export type DecisionBrief = {
   }
   character_profile: { items: CharacterProfileItem[] }
   review_pressure: { items: ReviewPressureItem[] }
+  observation_freshness: ObservationFreshness
   strengths: DecisionBriefObservation[]
   weaknesses: DecisionBriefObservation[]
   monitoring_conditions: MonitoringCondition[]
@@ -142,6 +172,7 @@ export type DecisionBrief = {
     provider_fetch: false
     validation_rerun: false
     storage_append_in_react: false
+    can_refresh_observation: boolean
   }
 }
 
@@ -172,4 +203,14 @@ export type FinalDecisionIntent = {
   operator_reason: string
 }
 
-export type DecisionWorkspaceIntent = CandidateSelectionIntent | FinalDecisionIntent
+export type RefreshObservationIntent = {
+  action: "refresh_observation"
+  intent_id: string
+  source_id: string
+  validation_id: string
+}
+
+export type DecisionWorkspaceIntent =
+  | CandidateSelectionIntent
+  | RefreshObservationIntent
+  | FinalDecisionIntent

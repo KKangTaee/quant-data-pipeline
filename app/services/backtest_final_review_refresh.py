@@ -159,11 +159,25 @@ def build_final_review_refresh_status(
             detail="현재 후보의 저장 source와 replay curve를 확인한 뒤 다시 시도하세요.",
         )
 
-    market_contract = build_replay_market_date_contract(
-        source_row,
-        requested_end=target,
-        freshness_loader=freshness_loader,
-    )
+    try:
+        market_contract = build_replay_market_date_contract(
+            source_row,
+            requested_end=target,
+            freshness_loader=freshness_loader,
+        )
+    except Exception as exc:
+        return _status_payload(
+            status="blocked",
+            selection_source_id=source_id,
+            validation_id=validation_id,
+            stored_curve_end=curve_end,
+            latest_completed_market_date=target,
+            market_contract=empty_contract,
+            provider_gap_symbols=[],
+            refreshable_symbols=[],
+            summary="구성 종목의 최신 가격 범위 조회에 실패했습니다.",
+            detail=f"DB freshness를 다시 확인하세요: {exc}",
+        )
     symbols = _normalize_symbols(market_contract.get("symbols"))
     if not symbols:
         return _status_payload(

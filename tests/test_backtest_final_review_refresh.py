@@ -166,6 +166,23 @@ class FinalReviewRefreshStatusTests(unittest.TestCase):
         self.assertFalse(status["can_refresh"])
         self.assertTrue(status["selection_blocked"])
 
+    def test_freshness_loader_failure_is_blocked_without_crashing_final_review(self) -> None:
+        from app.services.backtest_final_review_refresh import build_final_review_refresh_status
+
+        def failing_loader(**_: object) -> pd.DataFrame:
+            raise RuntimeError("database unavailable")
+
+        status = build_final_review_refresh_status(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=failing_loader,
+        )
+
+        self.assertEqual(status["status"], "blocked")
+        self.assertIn("조회", status["summary"])
+        self.assertFalse(status["can_refresh"])
+
 
 class FinalReviewRefreshOrchestrationTests(unittest.TestCase):
     def test_replay_available_skips_ingestion_and_appends_new_validation(self) -> None:

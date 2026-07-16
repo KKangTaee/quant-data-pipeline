@@ -634,6 +634,7 @@ def _render_final_review_decision_brief_fallback(
     monitoring_conditions = list(decision_brief.get("monitoring_conditions") or [])
     decision_action = dict(decision_brief.get("decision_action") or {})
     disclosures = dict(decision_brief.get("disclosures") or {})
+    observation_freshness = dict(decision_brief.get("observation_freshness") or {})
 
     st.markdown(f"#### {verdict.get('headline') or '추적 가치 결론 미측정'}")
     st.write(str(verdict.get("thesis") or "비교 가능한 관측값이 없습니다."))
@@ -642,6 +643,41 @@ def _render_final_review_decision_brief_fallback(
         f"관측 기간 {period.get('start') or '미측정'} → {period.get('end') or '미측정'} · "
         f"frequency {period.get('frequency') or 'unknown'}"
     )
+    with st.container(border=True):
+        st.caption(
+            f"{observation_freshness.get('label') or '관측 최신성'} · "
+            f"{observation_freshness.get('summary') or '최신성 상태를 확인할 수 없습니다.'}"
+        )
+        freshness_columns = st.columns(4)
+        freshness_columns[0].metric(
+            "현재 차트",
+            observation_freshness.get("stored_curve_end") or "미측정",
+        )
+        freshness_columns[1].metric(
+            "최신 완료 시장일",
+            observation_freshness.get("latest_completed_market_date") or "미측정",
+        )
+        freshness_columns[2].metric(
+            "DB 공통일",
+            observation_freshness.get("db_common_price_date") or "미측정",
+        )
+        freshness_columns[3].metric(
+            "제한 종목",
+            ", ".join(observation_freshness.get("limiting_symbols") or []) or "없음",
+        )
+        if observation_freshness.get("detail"):
+            st.caption(str(observation_freshness["detail"]))
+        if bool(observation_freshness.get("can_refresh")) and st.button(
+            str(observation_freshness.get("button_label") or "최신 데이터로 다시 계산"),
+            key=f"{key}_refresh_observation",
+            type="primary",
+        ):
+            return {
+                "action": "refresh_observation",
+                "intent_id": uuid4().hex,
+                "source_id": str(observation_freshness.get("selection_source_id") or ""),
+                "validation_id": str(observation_freshness.get("validation_id") or ""),
+            }
 
     series_rows = []
     for series_key in ("cumulative_series", "benchmark_series", "underwater_series"):

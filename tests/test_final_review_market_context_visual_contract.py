@@ -116,6 +116,30 @@ class FinalReviewMarketContextVisualContractTests(unittest.TestCase):
         self.assertIn("grid-template-columns: 1fr;", responsive)
         self.assertNotIn("83.3 / 100", source)
 
+    def test_observation_freshness_is_compact_and_intent_only(self) -> None:
+        workspace = WORKSPACE.read_text(encoding="utf-8")
+        types = (FINAL_REVIEW_ROOT / "decisionBriefTypes.ts").read_text(
+            encoding="utf-8"
+        )
+        style = STYLE.read_text(encoding="utf-8")
+
+        behavior_body = workspace.split("function BehaviorBoard", 1)[1]
+        behavior_body = behavior_body.split("function FindingColumn", 1)[0]
+
+        self.assertIn("ObservationFreshness", behavior_body)
+        self.assertIn("현재 차트", workspace)
+        self.assertIn("최신 완료 시장일", workspace)
+        self.assertIn("DB 공통일", workspace)
+        self.assertIn("제한 종목", workspace)
+        self.assertIn("최신 데이터로 다시 계산", workspace)
+        self.assertIn('action: "refresh_observation"', workspace)
+        self.assertIn("RefreshObservationIntent", types)
+        self.assertIn(".db-freshness-strip", style)
+        self.assertIn(".db-freshness-action", style)
+        self.assertNotIn("fetch(", workspace)
+        self.assertNotIn("registry", workspace.lower())
+        self.assertNotIn("run_practical_validation", workspace)
+
 
 if __name__ == "__main__":
     unittest.main()

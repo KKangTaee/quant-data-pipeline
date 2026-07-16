@@ -28831,6 +28831,26 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
+    def test_final_review_refresh_observation_stays_intent_only_in_source_and_build(self) -> None:
+        frontend = Path(
+            "app/web/components/final_review_investment_report/frontend"
+        )
+        workspace_source = (
+            frontend / "src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        build_source = "".join(
+            path.read_text(encoding="utf-8")
+            for path in (frontend / "build/assets").glob("*.js")
+        )
+
+        for source in (workspace_source, build_source):
+            self.assertIn("refresh_observation", source)
+            self.assertIn("최신 데이터로 다시 계산", source)
+            self.assertNotIn("run_practical_validation_actual_replay", source)
+            self.assertNotIn("run_backtest_price_refresh", source)
+            self.assertNotIn("append_practical_validation_result", source)
+        self.assertNotIn("fetch(", workspace_source)
+
     def test_final_review_character_ui_separates_actual_values_from_review_pressure(self) -> None:
         workspace_source = Path(
             "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
