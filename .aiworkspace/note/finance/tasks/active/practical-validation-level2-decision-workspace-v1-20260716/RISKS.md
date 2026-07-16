@@ -13,3 +13,10 @@
 - current session에는 Browser / Computer Use가 요구하는 Node JS UI control tool이 노출되지 않았다. automated / HTTP verification만으로는 desktop / 760px layout, component console, outer/component overflow, screenshot을 증명할 수 없으므로 task closeout 전 visual QA가 필요하다.
 - `npm install`은 transitive dependency에서 moderate 1건, high 1건을 보고했다. `npm audit fix --force`는 Vite / Streamlit component compatibility를 깨뜨릴 수 있어 이번 scope에서 실행하지 않았으며 별도 dependency upgrade 검토가 필요하다.
 - legacy Fix Queue / Data Action Board는 active path에서 제거됐지만 물리 파일은 남아 있다. usage audit 없이 삭제하지 않는다.
+- `validated_caution`을 raw `REVIEW`만 보고 만들면 미구현 validator를 다시
+  통과시킬 수 있다. producer가 explicit `evidence_state`를 제공하고 closure는
+  누락 시 보수적으로 engineering-required로 분류한다.
+- fragment rerun은 replay 실행 중 상단 context를 보존하지만 Final Review route
+  이동은 app rerun이어야 한다. 모든 intent를 fragment scope로 강제하지 않는다.
+- Final Review의 private explanation helper를 직접 import하면 stage 간 결합이
+  생긴다. Level2 pure explanation service가 필요한 mapping을 독립적으로 소유한다.

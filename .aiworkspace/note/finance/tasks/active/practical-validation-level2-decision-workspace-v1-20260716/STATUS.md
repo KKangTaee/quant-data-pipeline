@@ -1,6 +1,6 @@
 # Status
 
-Status: Browser QA pending
+Status: Approved correction implementation in progress
 Last Updated: 2026-07-16
 
 ## 전체 Roadmap
@@ -9,6 +9,7 @@ Last Updated: 2026-07-16
 - [x] 2차 Level2 Decision Workspace Read Model
 - [x] 3차 One-Shell UI / Intent Integration
 - [ ] 4차 QA / Docs / Closeout
+- [ ] 5차 사용자 피드백 기반 계약 / 상호작용 / 설명 보정
 
 ## Current Progress
 
@@ -25,11 +26,14 @@ Last Updated: 2026-07-16
 
 ## Current Position
 
-전체 1~4차 중 1~3차 구현은 완료됐다. 4차의 non-visual runtime / automated verification / docs sync는 완료됐고, 현재 세션에 Browser JS 제어 도구가 노출되지 않아 visual QA만 남아 있다.
+초기 1~3차 구현 뒤 실화면 확인에서 후보/검증 정책 혼합, 전체 탭 rerun,
+raw 기술 근거 노출, Level2 caution의 과도한 Final Review handoff가 확인됐다.
+사용자 승인에 따라 기존 Browser-QA-only closeout을 중단하고 correction
+Task 5~9를 진행한다.
 
 ## Next Action
 
-Browser 제어가 가능한 세션에서 `http://localhost:8505/backtest` desktop / 760px QA와 screenshot을 실행한다. 통과 후 active pointer를 `none`으로 돌리고 closeout commit을 만든다.
+Task 5의 Level2-owned caution / evidence-state RED 테스트부터 구현한다.
 
 남은 제품 위험은 dynamic historical universe의 PIT membership / delisting provider이며 별도 승인 전까지 critical blocker로 유지한다.
 

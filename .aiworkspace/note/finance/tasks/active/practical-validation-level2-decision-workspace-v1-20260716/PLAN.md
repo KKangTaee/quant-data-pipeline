@@ -2791,3 +2791,168 @@ Do not claim completion until all are freshly true:
 - current eligible result has no unresolved actionable, critical engineering, or missing contract.
 - zero-action result has no empty action board.
 - protected registry / run history / saved JSONL / generated screenshots remain unstaged.
+
+---
+
+## Approved Correction Execution
+
+2026-07-16 실화면 확인 후 승인된 correction이다. 아래 Task 5~9가 기존
+Browser-QA-only closeout을 대체한다. 각 task는 RED 확인, 최소 GREEN 구현,
+focused regression, 한국어 commit 순서로 실행한다.
+
+### Task 5: Level2-Owned Caution And Evidence-State Contract
+
+**Files:**
+- Modify: `app/services/backtest_evidence_closure.py`
+- Modify: `app/services/backtest_practical_validation_modules.py`
+- Modify: `app/services/backtest_practical_validation_decision_workspace.py`
+- Modify: `tests/test_backtest_evidence_closure.py`
+- Modify: `tests/test_backtest_practical_validation_decision_workspace.py`
+
+**Interfaces:**
+- Produces closure class `validated_caution`
+- Produces module field `evidence_state`
+- Produces summary field `validated_caution_count`
+- Preserves explicit static-universe `accepted_limit`
+- Blocks missing required validation as `engineering_required`
+
+- [ ] Add a RED test proving a `pv_practical_caution` module with
+  `evidence_state=computed` becomes `validated_caution`, owner
+  `practical_validation`, terminal `resolved`.
+- [ ] Add a RED test proving the same role with `evidence_state=missing`
+  becomes critical `engineering_required`.
+- [ ] Change the current six-default-accepted-limit GRS fixture so Level2
+  cautions no longer appear in `final_review_handoff`.
+- [ ] Add explicit module evidence-state projection from audit / diagnostic
+  status without parsing prose into fabricated measurements.
+- [ ] Run focused closure / workspace / service regressions and py_compile.
+- [ ] Commit: `Practical Validation Level2 주의 종결 계약 보정`.
+
+### Task 6: Candidate/Policy Separation And Fragment Revalidation
+
+**Files:**
+- Modify: `app/services/backtest_practical_validation_decision_workspace.py`
+- Modify: `app/web/backtest_practical_validation/page.py`
+- Modify: `app/web/backtest_practical_validation/workspace_panel.py`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/PracticalValidationDecisionWorkspace.tsx`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/style.css`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/types.ts`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: relevant `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Produces human source labels from `source_kind`
+- Produces separate candidate summary and validation-policy model
+- Produces fragment rerun boundary for selection / replay / resolution
+- Preserves app rerun for Final Review navigation
+
+- [ ] Add RED boundary tests for `1A. 검증할 후보 선택`,
+  `1B. 어떤 관점으로 검증할까요?`, selected active state, and no
+  selected-button disabled opacity.
+- [ ] Add RED service tests for `weighted_portfolio_mix -> 혼합 포트폴리오`,
+  `latest_backtest_run -> 단일 전략 실행`.
+- [ ] Add RED page tests proving replay and selection use
+  `st.rerun(scope="fragment")`, while `save_and_move` route navigation uses
+  app rerun.
+- [ ] Extract the one-shell interaction into an `@st.fragment` render boundary.
+- [ ] Keep the same Python intent validation and current-session replay guards.
+- [ ] Add React pending state so only Step 2/result content shows revalidation
+  progress while Step 1 remains mounted.
+- [ ] Run focused UI boundary tests, React production build, py_compile.
+- [ ] Commit: `Practical Validation 후보 선택과 부분 재검증 개선`.
+
+### Task 7: Plain-Language Explanation And Category Evidence UI
+
+**Files:**
+- Create: `app/services/backtest_practical_validation_explanation.py`
+- Modify: `app/services/backtest_practical_validation_decision_workspace.py`
+- Modify: `app/web/backtest_practical_validation/workspace_panel.py`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/PracticalValidationDecisionWorkspace.tsx`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/style.css`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/types.ts`
+- Create: `tests/test_backtest_practical_validation_explanation.py`
+- Modify: `tests/test_backtest_practical_validation_decision_workspace.py`
+- Modify: `tests/test_practical_validation_market_context_visual_contract.py`
+
+**Interfaces:**
+- Produces `explain_practical_validation_row(row, *, stage_owner) -> dict`
+- Produces `display_title`, `status_label`, `what_was_checked`,
+  `result_summary`, `meaning`, `next_action`, `evidence_state`,
+  `technical_trace`
+- Produces five normalized evidence categories and per-category counts
+
+- [ ] Add RED tests for walk-forward, regime split, provider freshness,
+  cost sensitivity, tax/account, NOT_RUN, and NOT_APPLICABLE explanations.
+- [ ] Add RED tests proving first-read text contains no raw function path and
+  technical trace is nested separately.
+- [ ] Implement the pure explanation mapping without importing private Final
+  Review functions.
+- [ ] Project verified findings, cautions, and technical rows through the new
+  explanation contract.
+- [ ] Replace the all-expanded detail list with category selectors and one
+  active category panel.
+- [ ] Mirror the same explanation order in Python fallback.
+- [ ] Run focused service / visual contract tests, React build, py_compile.
+- [ ] Commit: `Practical Validation 검증 설명과 상세 근거 개선`.
+
+### Task 8: In-Scope Missing Validation And Aggregation Hardening
+
+**Files:**
+- Modify as required:
+  `app/services/backtest_validation_efficacy.py`,
+  `app/services/backtest_construction_risk_audit.py`,
+  `app/services/backtest_realism_audit.py`,
+  `app/services/backtest_practical_validation_modules.py`,
+  `app/services/backtest_evidence_closure.py`
+- Modify focused tests for each changed producer
+
+**Constraints:**
+- Do not add a historical universe / delisting provider.
+- Do not redesign DB schema or strategy runtime.
+- Reuse existing replay / provider collection handlers only.
+
+- [ ] Add RED tests proving PASS / NOT_APPLICABLE rows do not keep a module in
+  REVIEW solely because of an irrelevant row.
+- [ ] Add RED tests distinguishing stress `기간 미포함` from a missing validator.
+- [ ] Add RED tests ensuring required strategy-specific validation that is
+  genuinely NOT_RUN becomes engineering-required rather than handoff.
+- [ ] Connect refreshable provider gaps to the existing registered Level2
+  collection action; leave non-refreshable missing validators blocked.
+- [ ] Run focused producer / module / closure regressions and py_compile.
+- [ ] Commit: `Practical Validation 미검증 항목과 집계 기준 보강`.
+
+### Task 9: Runtime QA, Documentation, And Closeout
+
+**Files:**
+- Modify canonical finance docs only where behavior changed
+- Modify active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify root handoff logs
+
+- [ ] Reproject the current latest GRS row read-only and record Level2
+  validated-caution / action / engineering / explicit handoff counts.
+- [ ] Run all focused closure / service / boundary / visual contract tests.
+- [ ] Run React production build, target py_compile, `git diff --check`.
+- [ ] Restart only the Streamlit process serving this worktree if needed.
+- [ ] Execute desktop and 760px Browser QA, including replay partial refresh,
+  console, outer/component overflow, candidate/policy separation, readable
+  evidence, and empty-action suppression.
+- [ ] Capture generated screenshots and keep them unstaged.
+- [ ] Synchronize canonical flow / architecture docs, active task, INDEX /
+  ROADMAP, and root handoff logs.
+- [ ] Confirm protected registries, run history, saved JSONL, screenshots,
+  `.superpowers/`, and run artifacts are absent from staged files.
+- [ ] Commit: `Practical Validation Level2 보정 QA와 문서 동기화`.
+
+## Correction Completion Gate
+
+Do not close this task until:
+
+- Task 5~9 Korean commits exist.
+- Level2 caution is not blindly handed to Final Review.
+- missing required validation blocks instead of becoming accepted limit.
+- candidate and validation policy are visually distinct.
+- replay keeps the upper selection context stable.
+- user-facing validation evidence is plain Korean with raw trace secondary.
+- desktop / 760px Browser QA and screenshots exist.
+- focused tests, React build, py_compile, and diff-check pass freshly.
+- protected files and generated artifacts remain unstaged and uncommitted.

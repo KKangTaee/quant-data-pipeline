@@ -37,3 +37,21 @@
 
 - Final Review의 latest-per-source selector가 고른 최신 eligible GRS-shaped row는 `validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_d289e7e8`이며, `ready_with_handoff`, resolve-now 0, critical engineering 0, missing contract 0, accepted limit 6, final decision 1이었다.
 - 직전 `7bca4e1a` row의 accepted limit 5건과 달리 2026-07-16 observation refresh row에는 historical universe accepted limit가 포함된다. append-only registry를 재작성하지 않고 최신 row를 read-only로 투영했다.
+
+## 2026-07-16 User Feedback Correction
+
+- 후보 카드와 검증 profile이 같은 grid / card 문법을 사용해 profile이 포트폴리오
+  설계안처럼 읽혔다. 두 선택을 1A / 1B subsection으로 분리한다.
+- React component intent 뒤 Python이 replay를 실행하고 다시 full `st.rerun()`을
+  호출해 전체 탭 reset처럼 보였다. one-shell을 fragment boundary로 격리한다.
+- decision workspace가 raw `Criteria`, `Evidence`, `Current`를 그대로 표시해
+  함수 경로와 `key=value`가 사용자 설명으로 노출됐다.
+- `backtest_practical_validation_stage_roles.py`는 `pv_data_caution`과
+  `pv_practical_caution`을 Practical Validation 소유로 선언하지만,
+  `_generic_module_issue()`는 이 role을 모두 `accepted_limit / final_review`로
+  fallback했다. 이 stage-ownership 불일치가 current GRS handoff 6건의 핵심
+  regression 원인이다.
+- 승인된 보정은 evidence가 있는 caution을 Level2 `validated_caution`으로
+  종결하고, evidence가 없는 required validation은 engineering blocker로
+  유지한다. explicit applicability가 있는 구조적 한계와 실제 사용자 판단만
+  Final Review로 넘긴다.
