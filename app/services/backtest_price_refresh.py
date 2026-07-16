@@ -223,6 +223,12 @@ def _latest_completed_nyse_session(now: datetime | None = None) -> date:
     return session_date
 
 
+def latest_completed_nyse_session(now: datetime | None = None) -> date:
+    """Return the latest NYSE session whose regular or early close has completed."""
+
+    return _latest_completed_nyse_session(now)
+
+
 def _coerce_date(value: Any) -> date | None:
     if value in (None, ""):
         return None
