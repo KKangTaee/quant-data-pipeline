@@ -297,6 +297,14 @@ def build_monthly_feature_panel(
         series_id: frame.copy()
         for series_id, frame in source.groupby("series_id", sort=False)
     }
+    series_first_realtime = {
+        series_id: (
+            frame["realtime_start"].min()
+            if "realtime_start" in frame
+            else pd.NaT
+        )
+        for series_id, frame in series_frames.items()
+    }
     empty_source = source.iloc[0:0].copy()
     del source
 
@@ -308,8 +316,14 @@ def build_monthly_feature_panel(
         origin = origin.normalize()
         record: dict[str, object] = {"forecast_origin": origin}
         for spec in specs:
+            first_realtime = series_first_realtime.get(spec.series_id, pd.NaT)
+            source_frame = (
+                empty_source
+                if pd.notna(first_realtime) and origin < first_realtime
+                else series_frames.get(spec.series_id, empty_source)
+            )
             eligible = _eligible_rows_for_origin(
-                series_frames.get(spec.series_id, empty_source),
+                source_frame,
                 series_id=spec.series_id,
                 origin=origin,
             )

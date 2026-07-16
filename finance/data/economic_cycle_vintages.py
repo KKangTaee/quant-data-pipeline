@@ -29,6 +29,7 @@ FRED_SOURCE_MODE = "fred_output_type_1_realtime_intervals"
 MAX_VINTAGE_DATES_PER_REQUEST = 2_000
 MAX_VINTAGE_DATE_PAGE_SIZE = 10_000
 DEFAULT_OBSERVATION_PAGE_SIZE = 10_000
+VINTAGE_UPSERT_MAX_STATEMENT_LENGTH = 16 * 1024 * 1024
 DEFAULT_TIMEOUT = 20
 DEFAULT_RETRIES = 3
 
@@ -450,7 +451,14 @@ def upsert_economic_cycle_vintages(
           missing_fields_json = VALUES(missing_fields_json),
           collected_at = VALUES(collected_at), error_msg = VALUES(error_msg)
         """
-        db.executemany(sql, rows)
+        raw_connection = getattr(db, "conn", None)
+        if raw_connection is None:
+            db.executemany(sql, rows)
+        else:
+            with raw_connection.cursor() as cursor:
+                if hasattr(cursor, "max_stmt_length"):
+                    cursor.max_stmt_length = VINTAGE_UPSERT_MAX_STATEMENT_LENGTH
+                cursor.executemany(sql, rows)
         return len(rows)
     finally:
         if owns_connection:

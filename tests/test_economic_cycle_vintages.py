@@ -326,6 +326,55 @@ def test_collect_vintages_reuses_one_owned_database_connection() -> None:
     sync_schema.assert_called_once()
 
 
+def test_upsert_uses_larger_safe_statement_for_mysql_connection() -> None:
+    catalog = _load_catalog_module()
+    module = _load_vintage_module()
+    rows = module.normalize_fred_vintage_rows(
+        catalog.get_indicator_spec("PAYEMS"),
+        [
+            {
+                "date": "2020-01-01",
+                "realtime_start": "2020-02-01",
+                "realtime_end": "9999-12-31",
+                "value": "100",
+            }
+        ],
+        collected_at=datetime(2026, 7, 16, tzinfo=timezone.utc),
+    )
+
+    class Cursor:
+        def __init__(self) -> None:
+            self.max_stmt_length = 1_024_000
+            self.batch_size = 0
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+        def executemany(self, _sql: str, values: list[dict[str, object]]) -> None:
+            self.batch_size = len(values)
+
+    cursor = Cursor()
+
+    class RawConnection:
+        def cursor(self):
+            return cursor
+
+    class Connection:
+        conn = RawConnection()
+
+        def executemany(self, *_args) -> None:
+            raise AssertionError("raw MySQL cursor should own the optimized batch")
+
+    stored = module.upsert_economic_cycle_vintages(rows, connection=Connection())
+
+    assert stored == 1
+    assert cursor.batch_size == 1
+    assert cursor.max_stmt_length == 16 * 1024 * 1024
+
+
 def test_normalize_fred_vintage_rows_keeps_missing_values_explicit() -> None:
     catalog = _load_catalog_module()
     module = _load_vintage_module()
