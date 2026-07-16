@@ -784,6 +784,28 @@ def _clear_practical_validation_replay_state(source_id: str | None = None) -> No
             continue
         if key_text.startswith(source_prefix):
             del st.session_state[key]
+    decision_prefix = "practical_validation_decision_result_"
+    decision_key = f"{decision_prefix}{source_id}" if source_id else None
+    for key in list(st.session_state.keys()):
+        key_text = str(key)
+        if (
+            key_text == decision_key
+            if decision_key is not None
+            else key_text.startswith(decision_prefix)
+        ):
+            del st.session_state[key]
+
+
+def _current_practical_validation_recheck_mode(source_id: str) -> str:
+    """Return the validated replay mode used by every workspace replay intent."""
+
+    mode = str(
+        st.session_state.get(
+            f"practical_validation_recheck_mode_{source_id}",
+            RECHECK_MODE_EXTEND_TO_LATEST,
+        )
+    )
+    return mode if mode in RECHECK_MODE_LABELS else RECHECK_MODE_EXTEND_TO_LATEST
 
 
 def _enrichment_progress_state_key(source_id: str) -> str:
@@ -2485,14 +2507,7 @@ def _consume_practical_validation_decision_workspace_intent(
         return
 
     if action == "run_replay":
-        mode = str(
-            st.session_state.get(
-                f"practical_validation_recheck_mode_{current_source_id}",
-                RECHECK_MODE_EXTEND_TO_LATEST,
-            )
-        )
-        if mode not in RECHECK_MODE_LABELS:
-            mode = RECHECK_MODE_EXTEND_TO_LATEST
+        mode = _current_practical_validation_recheck_mode(current_source_id)
         _execute_practical_validation_replay(source, mode=mode)
         st.session_state["backtest_practical_validation_notice"] = (
             "최신 데이터 기준 재검증을 완료했습니다."
@@ -2543,7 +2558,12 @@ def _consume_practical_validation_decision_workspace_intent(
             _rerun_practical_validation_workspace(scope=rerun_scope)
             return
         if action_id == "run_practical_validation_replay":
-            _execute_practical_validation_replay(source)
+            _execute_practical_validation_replay(
+                source,
+                mode=_current_practical_validation_recheck_mode(
+                    current_source_id
+                ),
+            )
             _rerun_practical_validation_workspace(scope=rerun_scope)
             return
 

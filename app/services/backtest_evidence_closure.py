@@ -65,6 +65,7 @@ _KNOWN_MODULE_ROOTS = {
     "tax_account_scope": "tax_account_scope",
     "selected_route_preflight": "selected_route_preflight",
     "pre_final_data_enrichment": "pre_final_data_enrichment",
+    "pre_final_data_contract": "pre_final_data_contract",
 }
 
 
@@ -275,26 +276,75 @@ def _replay_issue(validation: dict[str, Any], modules: dict[str, dict[str, Any]]
     actual = period.get("actual_result_date") or "-"
     gap = period.get("end_gap_days")
     gap_text = f"{gap}일 gap" if gap is not None else "gap 미확인"
+    requested_date = pd.to_datetime(
+        period.get("requested_market_date"),
+        errors="coerce",
+    )
+    last_complete_date = pd.to_datetime(
+        period.get("last_complete_rebalance_date"),
+        errors="coerce",
+    )
+    latest_valuation_date = pd.to_datetime(
+        period.get("latest_valuation_date"),
+        errors="coerce",
+    )
+    partial_month_proven = (
+        not pd.isna(requested_date)
+        and not pd.isna(last_complete_date)
+        and not pd.isna(latest_valuation_date)
+        and last_complete_date <= latest_valuation_date <= requested_date
+        and last_complete_date < requested_date
+    )
     derived = []
     if replay_module:
         derived.append("latest_replay")
     if pit_row:
         derived.append("pit_price_window_coverage")
+    if partial_month_proven:
+        latest_valuation = period.get("latest_valuation_date") or "-"
+        last_complete = period.get("last_complete_rebalance_date") or "-"
+        return _base_issue(
+            root_issue_id="replay_period_coverage",
+            title="월중 최신 평가와 완결 리밸런싱 구분",
+            observed=(
+                f"요청 {requested} / 완결 리밸런싱 {last_complete} / "
+                f"최신 평가 {latest_valuation}"
+            ),
+            expected="완결 리밸런싱과 월중 valuation 근거를 분리해 저장",
+            cause="partial-month valuation after the last complete rebalance",
+            derived_checks=derived,
+            resolution_class="monitoring_transfer",
+            owner_stage="final_review",
+            actionable_now=False,
+            action_id=None,
+            completion_criteria=(
+                "Final Review에서 최신 평가일과 다음 완결 리밸런싱 확인 조건을 "
+                "Monitoring handoff로 기록합니다."
+            ),
+            applicability="partial_month_monitoring",
+            criticality="noncritical",
+            gate_effect="final_review_closure",
+            period=period,
+        )
     return _base_issue(
         root_issue_id="replay_period_coverage",
         title="최신 재검증 기간 충족 여부",
         observed=f"요청 {requested} / 실제 {actual} / {gap_text}",
-        expected="latest common price date까지 valuation evidence 확보",
-        cause="stored runtime period coverage",
+        expected="latest common price date까지 설명 가능한 runtime period contract 확보",
+        cause="completed replay still has an unexplained period gap",
         derived_checks=derived,
-        resolution_class="resolve_now",
-        owner_stage="practical_validation",
-        actionable_now=True,
-        action_id="run_practical_validation_replay",
-        completion_criteria="period coverage가 PASS이거나 partial-month monitoring transfer로 분류됨",
+        resolution_class="engineering_required",
+        owner_stage="development",
+        actionable_now=False,
+        action_id=None,
+        completion_criteria=(
+            "같은 replay 재실행으로 해결되지 않는 기간 gap 원인을 보강하고 "
+            "새 validation에서 period coverage PASS를 저장합니다."
+        ),
         applicability="required",
         criticality="critical",
         gate_effect="block_final_review",
+        terminal_state="deferred",
         period=period,
     )
 
@@ -444,7 +494,8 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         owner_stage=owner_stage,
         actionable_now=resolution_class == "resolve_now",
         action_id=action_id,
-        completion_criteria=(
+        completion_criteria=str(module.get("completion_criteria") or "").strip()
+        or (
             "Level2 계산 / 관측 근거와 주의 판정을 저장함"
             if resolution_class == "validated_caution"
             else (

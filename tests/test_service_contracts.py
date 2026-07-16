@@ -14047,6 +14047,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                     "status": "PASS",
                     "replay_id": "stale-replay",
                 },
+                "practical_validation_decision_result_source-recheck-loop": {
+                    "fingerprint": {"replay_id": "stale-replay"},
+                    "validation_result": validation,
+                },
                 "backtest_practical_validation_data_enrichment_handoff": {"validation_result": validation},
             }
             with patch.object(practical_page, "st", fake_st):
@@ -14058,6 +14062,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
             self.assertNotIn(
                 "practical_validation_recheck_source-recheck-loop_STORED_PERIOD",
+                fake_st.session_state,
+            )
+            self.assertNotIn(
+                "practical_validation_decision_result_source-recheck-loop",
                 fake_st.session_state,
             )
             self.assertEqual(
@@ -28026,13 +28034,17 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
 
         verified_rows = [
             {"symbol": "SPY", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
-            {"symbol": "SPY", "data_kind": "holdings", "provider": "ishares", "parser": "holdings_csv"},
+            {"symbol": "SPY", "data_kind": "holdings", "provider": "ishares", "parser": "ishares_csv"},
             {"symbol": "SPY", "data_kind": "exposure", "provider": "ishares", "parser": "provider_aggregate"},
         ]
 
         with patch.object(service, "load_etf_provider_source_map", return_value=verified_rows):
             rows = service.build_provider_gap_rows(self._validation_result())
             plan = service.build_provider_gap_collection_plan(self._validation_result())
+            gate = service.build_pre_final_enrichment_gate(
+                self._validation_result(),
+                provider_plan=plan,
+            )
 
         rows_by_symbol = {row["ETF"]: row for row in rows}
         self.assertEqual(rows_by_symbol["SPY"]["Action"], "운용성 보강, holdings/exposure 수집")
@@ -28043,6 +28055,13 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertEqual(plan["operability_bridge"], ["SPY", "XYZ"])
         self.assertEqual(plan["holdings_exposure"], ["SPY"])
         self.assertTrue(plan["macro"])
+        self.assertTrue(gate["required"])
+        self.assertFalse(gate["engineering_required"])
+        self.assertEqual(
+            gate["items"][0]["category"],
+            "source_map_discovery",
+        )
+        self.assertEqual(gate["items"][0]["symbols"], ["XYZ"])
         self.assertEqual(
             service.provider_gap_state_key(self._validation_result()),
             "practical_validation_provider_gap_results_source-provider-gap",
@@ -28153,6 +28172,157 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertTrue(gate["blocking"])
         self.assertEqual(gate["items"][0]["category"], "operability")
         self.assertEqual(gate["items"][0]["symbols"], ["XYZ"])
+
+    def test_unsupported_verified_holdings_parser_requires_engineering_not_retry(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-unsupported-holdings",
+            "provider_coverage": {
+                "symbols": ["LQD"],
+                "symbol_weights": {"LQD": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["LQD"]},
+                    "exposure": {"missing_symbols": ["LQD"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        known_rows = [
+            {
+                "symbol": "LQD",
+                "data_kind": "holdings",
+                "provider": "ishares",
+                "parser": "ishares_workbook",
+                "source_status": "verified",
+            }
+        ]
+
+        with patch.object(
+            service,
+            "load_etf_provider_source_map",
+            return_value=known_rows,
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+            gate = service.build_pre_final_enrichment_gate(
+                validation,
+                provider_plan=plan,
+            )
+
+        self.assertEqual(plan["holdings_exposure"], [])
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["mapping_needed"], ["LQD"])
+        self.assertFalse(gate["required"])
+        self.assertFalse(gate["blocking"])
+        self.assertTrue(gate["engineering_required"])
+        self.assertEqual(
+            gate["engineering_items"][0]["symbols"],
+            ["LQD"],
+        )
+
+    def test_failed_source_discovery_becomes_engineering_gap_instead_of_repeat_action(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-failed-discovery",
+            "provider_coverage": {
+                "symbols": ["COMT"],
+                "symbol_weights": {"COMT": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["COMT"]},
+                    "exposure": {"missing_symbols": ["COMT"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        failed_rows = [
+            {
+                "symbol": "COMT",
+                "data_kind": "holdings",
+                "provider": "ishares",
+                "parser": "ishares_csv",
+                "source_status": "failed",
+            }
+        ]
+
+        with patch.object(
+            service,
+            "load_etf_provider_source_map",
+            side_effect=[[], failed_rows],
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["mapping_needed"], ["COMT"])
+
+    def test_attempted_discovery_without_source_contract_does_not_repeat_action(
+        self,
+    ) -> None:
+        from app.services import backtest_practical_validation as service
+
+        validation = {
+            "selection_source_id": "source-known-provider",
+            "provider_coverage": {
+                "symbols": ["VNQ"],
+                "symbol_weights": {"VNQ": 1.0},
+                "coverage": {
+                    "operability": {"missing_symbols": []},
+                    "holdings": {"missing_symbols": ["VNQ"]},
+                    "exposure": {"missing_symbols": ["VNQ"]},
+                    "macro": {
+                        "diagnostic_status": "PASS",
+                        "series_count": 3,
+                        "stale_count": 0,
+                    },
+                },
+            },
+        }
+        discovery_history = [
+            {
+                "details": {"symbols": ["VNQ"]},
+                "run_metadata": {
+                    "pipeline_type": (
+                        "practical_validation_provider_gap_collection"
+                    ),
+                    "input_params": {
+                        "selection_source_id": "source-known-provider",
+                        "provider_area": "etf_provider_source_map",
+                    },
+                },
+            }
+        ]
+
+        with (
+            patch.object(
+                service,
+                "load_etf_provider_source_map",
+                side_effect=[[], []],
+            ),
+            patch.object(
+                service,
+                "load_run_history",
+                return_value=discovery_history,
+                create=True,
+            ),
+        ):
+            plan = service.build_provider_gap_collection_plan(validation)
+
+        self.assertEqual(plan["source_map_discovery"], [])
+        self.assertEqual(plan["mapping_needed"], ["VNQ"])
 
     def test_practical_validation_result_blocks_final_review_until_collectable_gap_is_rechecked(self) -> None:
         from app.services import backtest_practical_validation as service
@@ -30043,7 +30213,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         }
         verified_rows = [
             {"symbol": "TLT", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
-            {"symbol": "LQD", "data_kind": "holdings", "provider": "ishares", "parser": "holdings_csv"},
+            {"symbol": "LQD", "data_kind": "holdings", "provider": "ishares", "parser": "ishares_csv"},
         ]
 
         with patch.object(practical_service, "load_etf_provider_source_map", return_value=verified_rows):

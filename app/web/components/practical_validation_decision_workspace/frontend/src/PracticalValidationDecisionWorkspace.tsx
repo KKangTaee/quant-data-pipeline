@@ -30,9 +30,13 @@ function StepTitle({
 function IssueCard({
   issue,
   workspace,
+  pendingAction,
+  onActionStart,
 }: {
   issue: Issue
   workspace: DecisionWorkspace
+  pendingAction?: string | null
+  onActionStart?: (actionId: string) => void
 }) {
   return (
     <article className="pv2-issue-card">
@@ -45,7 +49,9 @@ function IssueCard({
       {issue.actionable_now && issue.action_id && (
         <button
           type="button"
-          onClick={() =>
+          disabled={pendingAction !== null && pendingAction !== undefined}
+          onClick={() => {
+            onActionStart?.(issue.action_id!)
             emit({
               action: "run_resolution_action",
               intent_id: intentId("resolution"),
@@ -54,9 +60,11 @@ function IssueCard({
               root_issue_id: issue.root_issue_id,
               action_id: issue.action_id!,
             })
-          }
+          }}
         >
-          {issue.action_label || "지금 해결"}
+          {pendingAction === issue.action_id
+            ? "처리 중"
+            : issue.action_label || "지금 해결"}
         </button>
       )}
     </article>
@@ -347,6 +355,8 @@ export function PracticalValidationDecisionWorkspace({
                 <IssueCard
                   issue={issue}
                   workspace={workspace}
+                  pendingAction={pendingAction}
+                  onActionStart={setPendingAction}
                   key={issue.root_issue_id}
                 />
               ))}

@@ -201,6 +201,16 @@ def _issue_model(
                 ),
             )
         ]
+    explained_observed = " ".join(
+        str(row.get("result_summary") or "")
+        for row in explanations
+        if row.get("result_summary")
+    )
+    observed_text = (
+        str(issue.get("observed") or "").strip()
+        if not evidence_rows and str(issue.get("observed") or "").strip()
+        else explained_observed
+    )
     return {
         "root_issue_id": root_issue_id,
         "title": str(
@@ -211,11 +221,7 @@ def _issue_model(
         ),
         "finding_kind": "measured_caution" if measured_caution else resolution_class,
         "resolution_class": resolution_class,
-        "observed": " ".join(
-            str(row.get("result_summary") or "")
-            for row in explanations
-            if row.get("result_summary")
-        ),
+        "observed": observed_text,
         "expected": " ".join(
             dict.fromkeys(
                 str(row.get("next_action") or "")
@@ -555,6 +561,11 @@ def build_practical_validation_decision_workspace(
         for issue in issues
         if issue["finding_kind"] == "resolve_now" and issue["actionable_now"]
     ]
+    provider_resolution_required = any(
+        issue.get("action_id")
+        == "run_practical_validation_provider_gap_collection"
+        for issue in resolve_now
+    )
     engineering_required = [
         issue
         for issue in issues
@@ -630,8 +641,13 @@ def build_practical_validation_decision_workspace(
         "actions": {
             "run_replay": {
                 "id": "run_replay",
-                "label": "최신 데이터 기준 재검증",
-                "enabled": bool(selected_source_id),
+                "label": (
+                    "데이터 보강 후 재검증"
+                    if provider_resolution_required
+                    else "최신 데이터 기준 재검증"
+                ),
+                "enabled": bool(selected_source_id)
+                and not provider_resolution_required,
             },
             "save_audit_only": {
                 "id": "save_audit_only",

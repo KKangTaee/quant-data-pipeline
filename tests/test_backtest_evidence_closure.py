@@ -486,6 +486,53 @@ class EvidenceClosureContractTests(unittest.TestCase):
         self.assertEqual(replay_issue["period"]["actual_result_date"], "2026-05-29")
         self.assertEqual(replay_issue["period"]["end_gap_days"], 42)
 
+    def test_completed_review_replay_is_not_offered_as_the_same_action_again(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(_grs_validation_fixture()),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "engineering_required")
+        self.assertFalse(replay_issue["actionable_now"])
+        self.assertIsNone(replay_issue["action_id"])
+        self.assertIn("재실행으로 해결되지 않는", replay_issue["completion_criteria"])
+
+    def test_partial_month_replay_with_structured_dates_becomes_monitoring_handoff(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import build_evidence_closure_contract
+
+        validation = _grs_validation_fixture()
+        period = validation["curve_evidence"]["curve_provenance"]["period_coverage"]
+        period.update(
+            {
+                "requested_market_date": "2026-07-10",
+                "latest_common_price_date": "2026-07-08",
+                "last_complete_rebalance_date": "2026-06-30",
+                "latest_valuation_date": "2026-07-08",
+                "actual_period": {
+                    "start": "2016-01-29",
+                    "end": "2026-06-30",
+                },
+                "end_gap_days": 10,
+            }
+        )
+
+        replay_issue = _issue(
+            build_evidence_closure_contract(validation),
+            "replay_period_coverage",
+        )
+
+        self.assertEqual(replay_issue["resolution_class"], "monitoring_transfer")
+        self.assertEqual(replay_issue["owner_stage"], "final_review")
+        self.assertFalse(replay_issue["actionable_now"])
+        self.assertIsNone(replay_issue["action_id"])
+        self.assertIn("2026-07-08", replay_issue["observed"])
+
     def test_replay_and_pit_rows_become_one_root_issue(self) -> None:
         from app.services.backtest_evidence_closure import build_evidence_closure_contract
 

@@ -55,6 +55,7 @@ class PracticalValidationTruthContractTests(unittest.TestCase):
                         "review_role": "final_readiness_blocker",
                         "action_id": "run_practical_validation_provider_gap_collection",
                         "gate_effect": "Blocks Final Review",
+                        "completion_criteria": "데이터 보강 후 새 replay에서 blocker 0건",
                     }
                 ],
             }
@@ -66,6 +67,10 @@ class PracticalValidationTruthContractTests(unittest.TestCase):
         self.assertEqual(
             issue["action_id"],
             "run_practical_validation_provider_gap_collection",
+        )
+        self.assertEqual(
+            issue["completion_criteria"],
+            "데이터 보강 후 새 replay에서 blocker 0건",
         )
         self.assertEqual(contract["summary"]["resolve_now_count"], 1)
         self.assertEqual(contract["summary"]["unresolved_actionable_count"], 1)
@@ -456,7 +461,68 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             [row["root_issue_id"] for row in model["resolution_lanes"]["engineering_required"]],
             ["unknown-action"],
         )
+        self.assertFalse(model["actions"]["run_replay"]["enabled"])
+        self.assertEqual(
+            model["actions"]["run_replay"]["label"],
+            "데이터 보강 후 재검증",
+        )
         self.assertFalse(model["actions"]["save_and_move"]["enabled"])
+
+    def test_root_issue_without_audit_adapter_keeps_readable_observed_reason(
+        self,
+    ) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        validation = self._validation()
+        validation["evidence_closure"] = {
+            "issues": [
+                {
+                    "root_issue_id": "pre_final_data_contract",
+                    "title": "필수 데이터 수집기 개발 필요",
+                    "observed": (
+                        "COMT, LQD의 보유종목 근거는 검증 가능한 공식 source "
+                        "계약이 없거나 현재 자동 수집기가 처리하지 못합니다."
+                    ),
+                    "resolution_class": "engineering_required",
+                    "criticality": "critical",
+                    "terminal_state": "deferred",
+                    "actionable_now": False,
+                    "action_id": None,
+                    "completion_criteria": (
+                        "지원 parser 구현 후 holdings/exposure 근거를 저장합니다."
+                    ),
+                }
+            ],
+            "summary": {
+                "unresolved_actionable_count": 0,
+                "critical_engineering_count": 1,
+                "missing_contract_count": 0,
+                "resolve_now_count": 0,
+                "engineering_required_count": 1,
+                "accepted_limit_count": 0,
+                "final_decision_count": 0,
+                "monitoring_transfer_count": 0,
+            },
+        }
+        validation["final_review_gate"]["can_save_and_move"] = False
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result={"status": "PASS", "replay_id": "replay-current"},
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        issue = model["resolution_lanes"]["engineering_required"][0]
+        self.assertIn("COMT, LQD", issue["observed"])
+        self.assertIn("현재 자동 수집기가 처리하지 못합니다", issue["observed"])
+        self.assertIn("지원 parser 구현", issue["completion_criteria"])
 
     def test_measured_accepted_limit_remains_final_review_handoff(self) -> None:
         from app.services.backtest_practical_validation_decision_workspace import (
@@ -745,6 +811,63 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             )
 
         replay.assert_called_once()
+        fake_streamlit.rerun.assert_called_once_with(scope="fragment")
+
+    def test_replay_resolution_intent_uses_the_selected_recheck_mode(self) -> None:
+        from app.services.backtest_practical_validation_replay import (
+            RECHECK_MODE_STORED_PERIOD,
+        )
+        from app.web.backtest_practical_validation import page
+
+        source = self._source()
+        fake_streamlit = SimpleNamespace(
+            session_state={
+                "practical_validation_recheck_mode_source-grs-current": (
+                    RECHECK_MODE_STORED_PERIOD
+                )
+            },
+            rerun=MagicMock(),
+        )
+        validation = {
+            "validation_id": "validation-replay-mode",
+            "evidence_closure": {
+                "issues": [
+                    {
+                        "root_issue_id": "replay_period_coverage",
+                        "actionable_now": True,
+                        "action_id": "run_practical_validation_replay",
+                    }
+                ]
+            },
+        }
+        with (
+            patch.object(page, "st", fake_streamlit),
+            patch.object(
+                page,
+                "_execute_practical_validation_replay",
+                return_value={"status": "PASS"},
+            ) as replay,
+        ):
+            page._consume_practical_validation_decision_workspace_intent(
+                {
+                    "action": "run_resolution_action",
+                    "intent_id": "intent-resolution-replay-mode",
+                    "selection_source_id": "source-grs-current",
+                    "validation_result_id": "validation-replay-mode",
+                    "root_issue_id": "replay_period_coverage",
+                    "action_id": "run_practical_validation_replay",
+                },
+                sources=[source],
+                source=source,
+                validation_result=validation,
+                replay_result={"status": "REVIEW"},
+                rerun_scope="fragment",
+            )
+
+        replay.assert_called_once_with(
+            source,
+            mode=RECHECK_MODE_STORED_PERIOD,
+        )
         fake_streamlit.rerun.assert_called_once_with(scope="fragment")
 
 

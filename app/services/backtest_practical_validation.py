@@ -12,7 +12,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_macro_market_context,
     run_discover_etf_provider_source_map,
 )
-from app.jobs.run_history import append_run_history
+from app.jobs.run_history import append_run_history, load_run_history
 from app.services.backtest_practical_validation_diagnostics import (
     build_practical_validation_result as _build_practical_validation_result,
 )
@@ -38,6 +38,14 @@ from finance.data.etf_provider import (
 
 
 PROVIDER_GAP_STATE_PREFIX = "practical_validation_provider_gap_results"
+SUPPORTED_HOLDINGS_COLLECTOR_PARSERS = frozenset(
+    {
+        "commodity_gold",
+        "invesco_json",
+        "ishares_csv",
+        "ssga_xlsx",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -278,6 +286,62 @@ def _verified_provider_source_maps(symbols: set[str]) -> dict[str, dict[str, dic
     return maps
 
 
+def _known_provider_source_maps(
+    symbols: set[str],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Load attempted provider contracts, including failed or unsupported rows."""
+
+    if not symbols:
+        return {"operability": {}, "holdings": {}, "exposure": {}}
+    try:
+        rows = load_etf_provider_source_map(
+            sorted(symbols),
+            only_verified=False,
+        )
+    except Exception:
+        return {"operability": {}, "holdings": {}, "exposure": {}}
+
+    maps: dict[str, dict[str, dict[str, Any]]] = {
+        "operability": {},
+        "holdings": {},
+        "exposure": {},
+    }
+    for row in rows:
+        symbol = str(row.get("symbol") or "").strip().upper()
+        data_kind = str(row.get("data_kind") or "").strip().lower()
+        if symbol and data_kind in maps:
+            maps[data_kind][symbol] = dict(row)
+    return maps
+
+
+def _attempted_provider_source_map_symbols(source_id: str) -> set[str]:
+    """Return symbols already included in this source's discovery action."""
+
+    if not source_id:
+        return set()
+    try:
+        rows = load_run_history(limit=500)
+    except Exception:
+        return set()
+    symbols: set[str] = set()
+    for row in rows:
+        metadata = dict(dict(row or {}).get("run_metadata") or {})
+        input_params = dict(metadata.get("input_params") or {})
+        if (
+            metadata.get("pipeline_type")
+            != "practical_validation_provider_gap_collection"
+            or input_params.get("provider_area")
+            != "etf_provider_source_map"
+            or str(input_params.get("selection_source_id") or "")
+            != source_id
+        ):
+            continue
+        details = dict(dict(row or {}).get("details") or {})
+        symbols.update(_upper_symbol_set(details.get("symbols")))
+        symbols.update(_upper_symbol_set(dict(row or {}).get("failed_symbols")))
+    return symbols
+
+
 def _source_map_status(row: dict[str, Any], *, fallback_label: str) -> str:
     provider = str(row.get("provider") or fallback_label).strip() or fallback_label
     parser = str(row.get("parser") or "").strip()
@@ -293,13 +357,21 @@ def _holdings_source_status(
 ) -> tuple[str, bool]:
     mapped = dict((source_maps or {}).get("holdings") or {}).get(symbol)
     if mapped:
+        parser = str(mapped.get("parser") or "").strip().lower()
+        if parser not in SUPPORTED_HOLDINGS_COLLECTOR_PARSERS:
+            provider = str(mapped.get("provider") or "official").strip() or "official"
+            parser_label = parser or "parser 미지정"
+            return (
+                f"{provider} / {parser_label}는 현재 자동 수집기 미지원",
+                False,
+            )
         return _source_map_status(mapped, fallback_label="official"), True
     source_info = HOLDINGS_PROVIDER_SOURCES.get(symbol)
     if not source_info:
         return "source map 미검증 / 자동 탐색 필요", False
     parser = str(source_info.get("parser") or "").strip().lower()
-    if parser == "pending":
-        return "source 준비 중", False
+    if parser not in SUPPORTED_HOLDINGS_COLLECTOR_PARSERS:
+        return "현재 자동 수집기가 지원하지 않는 holdings source", False
     return f"{source_info.get('source') or 'official'} 수집 가능", True
 
 
@@ -403,22 +475,42 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
         | exposure_missing
     )
     source_maps = _verified_provider_source_maps(set(provider_symbols))
-    holdings_collectable = [
-        symbol
-        for symbol in holdings_targets
-        if _holdings_source_status(symbol, source_maps)[1] or _exposure_source_status(symbol, source_maps)[1]
-    ]
-    source_map_discovery = sorted(
-        symbol
-        for symbol in holdings_targets
-        if symbol not in set(holdings_collectable)
+    known_source_maps = _known_provider_source_maps(set(provider_symbols))
+    attempted_discovery = _attempted_provider_source_map_symbols(
+        str(validation_result.get("selection_source_id") or "")
     )
+    holdings_collectable: list[str] = []
+    source_map_discovery: list[str] = []
+    mapping_needed: list[str] = []
+    for symbol in holdings_targets:
+        if symbol in holdings_missing:
+            collectable = _holdings_source_status(symbol, source_maps)[1]
+            known_contract = bool(
+                dict(known_source_maps.get("holdings") or {}).get(symbol)
+                or dict(known_source_maps.get("operability") or {}).get(symbol)
+                or dict(known_source_maps.get("exposure") or {}).get(symbol)
+                or HOLDINGS_PROVIDER_SOURCES.get(symbol)
+            )
+        else:
+            collectable = _exposure_source_status(symbol, source_maps)[1]
+            known_contract = bool(
+                dict(known_source_maps.get("exposure") or {}).get(symbol)
+                or dict(known_source_maps.get("holdings") or {}).get(symbol)
+                or EXPOSURE_PROVIDER_SOURCES.get(symbol)
+                or HOLDINGS_PROVIDER_SOURCES.get(symbol)
+            )
+        if collectable:
+            holdings_collectable.append(symbol)
+        elif known_contract or symbol in attempted_discovery:
+            mapping_needed.append(symbol)
+        else:
+            source_map_discovery.append(symbol)
     macro = dict(coverage.get("macro") or {})
     macro_needs_collection = str(macro.get("diagnostic_status") or "").upper() in {"NOT_RUN", "REVIEW"} and (
         int(macro.get("series_count") or 0) < 3 or int(macro.get("stale_count") or 0) > 0
     )
     return {
-        "source_map_discovery": source_map_discovery,
+        "source_map_discovery": sorted(source_map_discovery),
         "source_symbols": provider_symbols,
         "operability_stale": sorted(operability_stale),
         "operability_official": sorted(
@@ -427,8 +519,8 @@ def build_provider_gap_collection_plan(validation_result: dict[str, Any]) -> dic
             if symbol in OFFICIAL_PROVIDER_SOURCES or symbol in dict(source_maps.get("operability") or {})
         ),
         "operability_bridge": sorted(operability_targets),
-        "holdings_exposure": holdings_collectable,
-        "mapping_needed": [],
+        "holdings_exposure": sorted(holdings_collectable),
+        "mapping_needed": sorted(mapping_needed),
         "macro": macro_needs_collection,
     }
 
@@ -442,6 +534,19 @@ def build_pre_final_enrichment_gate(
 
     plan = dict(provider_plan or build_provider_gap_collection_plan(validation_result))
     items: list[dict[str, Any]] = []
+    discovery_symbols = sorted(set(plan.get("source_map_discovery") or []))
+    if discovery_symbols:
+        items.append(
+            {
+                "category": "source_map_discovery",
+                "label": "ETF 공식 source 계약 확인",
+                "symbols": discovery_symbols,
+                "detail": (
+                    "현재 source 계약이 없는 ETF를 공식 provider 목록에서 한 번 확인합니다. "
+                    "확인 후에도 계약이 없으면 개발 필요 항목으로 전환합니다."
+                ),
+            }
+        )
     operability_symbols = sorted(
         set(plan.get("operability_official") or [])
         | set(plan.get("operability_bridge") or [])
@@ -474,6 +579,22 @@ def build_pre_final_enrichment_gate(
                 "detail": "현재 검증에 필요한 FRED 시장 환경 series를 갱신합니다.",
             }
         )
+    engineering_symbols = sorted(set(plan.get("mapping_needed") or []))
+    engineering_items = (
+        [
+            {
+                "category": "holdings_contract",
+                "label": "ETF 보유종목 수집기",
+                "symbols": engineering_symbols,
+                "detail": (
+                    "검증 가능한 공식 source 계약이 없거나 현재 자동 수집기가 처리할 수 없어 "
+                    "지원 parser 또는 evidence adapter 개발이 필요합니다."
+                ),
+            }
+        ]
+        if engineering_symbols
+        else []
+    )
     unique_symbols = {
         str(symbol)
         for item in items
@@ -481,20 +602,30 @@ def build_pre_final_enrichment_gate(
         if str(symbol).strip()
     }
     required = bool(items)
+    engineering_required = bool(engineering_items)
     return {
         "required": required,
         "blocking": required,
+        "engineering_required": engineering_required,
+        "engineering_blocking": engineering_required,
         "item_count": len(items),
         "symbol_count": len(unique_symbols),
         "items": items,
+        "engineering_item_count": len(engineering_items),
+        "engineering_symbol_count": len(engineering_symbols),
+        "engineering_items": engineering_items,
         "reason": (
             "현재 수집 가능한 필수 외부 데이터가 남아 있습니다."
             if required
+            else "현재 자동 수집기로 해결할 수 없는 필수 데이터 계약이 남아 있습니다."
+            if engineering_required
             else "승격 전 필수 데이터 보강이 없습니다."
         ),
         "next_action": (
             "필수 데이터를 보강한 뒤 Flow 2 재검증을 실행합니다."
             if required
+            else "지원 parser 또는 evidence adapter를 개발한 뒤 Flow 2 재검증을 실행합니다."
+            if engineering_required
             else "Final Review 판단을 이어갑니다."
         ),
     }
@@ -504,62 +635,135 @@ def _apply_pre_final_enrichment_gate(
     validation_result: dict[str, Any],
     enrichment_gate: dict[str, Any],
 ) -> None:
-    """Merge the pre-Final data requirement into the existing module Gate result."""
+    """Merge executable and engineering provider gaps into the Final Review Gate."""
 
     gate_contract = dict(enrichment_gate or {})
     validation_result["pre_final_enrichment_gate"] = gate_contract
-    if not gate_contract.get("blocking"):
+    blockers: list[dict[str, Any]] = []
+    if gate_contract.get("blocking"):
+        blockers.append(
+            {
+                "module_id": "pre_final_data_enrichment",
+                "label": "승격 전 필수 데이터 보강",
+                "group": "Final Review Readiness Preview",
+                "status": "NEEDS_INPUT",
+                "requirement": "REQUIRED",
+                "module_type": "Required",
+                "stage_owner": "practical_validation",
+                "applies": True,
+                "reason": "현재 자동으로 보강할 수 있는 필수 외부 데이터가 남아 있습니다.",
+                "next_action": "필수 데이터를 보강한 뒤 최신 데이터 기준 재검증을 실행합니다.",
+                "resolution_surface": "3단계 · 지금 해야 할 일",
+                "resolution_action": "필수 데이터 보강을 먼저 실행하고, 이어서 최신 데이터 기준 재검증을 실행합니다.",
+                "gate_effect": "Blocks Final Review",
+                "gate_reason": "Final Review 이동 전 실행 가능한 필수 외부 데이터 보강과 새 replay가 필요합니다.",
+                "review_role": "final_readiness_blocker",
+                "review_role_label": "저장 전 보강",
+                "action_id": "run_practical_validation_provider_gap_collection",
+                "actionable_now": True,
+                "completion_criteria": (
+                    "필수 데이터 보강 후 새 replay에서 실행 가능한 데이터 blocker가 "
+                    "0건인지 확인합니다."
+                ),
+                "stage_decision_surface": "Practical Validation",
+                "pv_visibility": "handoff_reference",
+                "final_review_visibility": "selected_route_gate",
+                "monitoring_visibility": "hidden",
+                "item_count": int(gate_contract.get("item_count") or 0),
+                "symbol_count": int(gate_contract.get("symbol_count") or 0),
+                "items": list(gate_contract.get("items") or []),
+                "evidence_state": "observed",
+            }
+        )
+    if gate_contract.get("engineering_required"):
+        engineering_symbols = sorted(
+            {
+                str(symbol)
+                for item in list(gate_contract.get("engineering_items") or [])
+                for symbol in list(dict(item or {}).get("symbols") or [])
+                if str(symbol).strip()
+            }
+        )
+        symbol_text = ", ".join(engineering_symbols[:8])
+        if len(engineering_symbols) > 8:
+            symbol_text += f" 외 {len(engineering_symbols) - 8}개"
+        blockers.append(
+            {
+                "module_id": "pre_final_data_contract",
+                "label": "필수 데이터 수집기 개발 필요",
+                "group": "Final Review Readiness Preview",
+                "status": "NOT_RUN",
+                "requirement": "REQUIRED",
+                "module_type": "Required",
+                "stage_owner": "development",
+                "applies": True,
+                "reason": (
+                    f"{symbol_text or '일부 ETF'}의 보유종목 근거는 검증 가능한 공식 source "
+                    "계약이 없거나 현재 자동 수집기가 처리하지 못합니다."
+                ),
+                "next_action": "지원 parser 또는 evidence adapter를 개발한 뒤 새 replay로 검증합니다.",
+                "resolution_surface": "개발 후 재검토",
+                "resolution_action": "지원 parser 또는 evidence adapter를 구현하고 동일 후보를 다시 검증합니다.",
+                "gate_effect": "Blocks Final Review",
+                "gate_reason": "검증되지 않은 필수 데이터 계약은 Final Review로 넘기지 않습니다.",
+                "review_role": "final_readiness_blocker",
+                "review_role_label": "개발 필요",
+                "action_id": None,
+                "actionable_now": False,
+                "completion_criteria": (
+                    "지원 parser 또는 evidence adapter 구현 후 해당 ETF의 holdings/exposure "
+                    "근거가 새 validation에 저장됩니다."
+                ),
+                "stage_decision_surface": "Development",
+                "pv_visibility": "engineering_required",
+                "final_review_visibility": "blocked",
+                "monitoring_visibility": "hidden",
+                "item_count": int(gate_contract.get("engineering_item_count") or 0),
+                "symbol_count": int(gate_contract.get("engineering_symbol_count") or 0),
+                "items": list(gate_contract.get("engineering_items") or []),
+                "evidence_state": "missing",
+            }
+        )
+    if not blockers:
         return
 
-    blocker = {
-        "module_id": "pre_final_data_enrichment",
-        "label": "승격 전 필수 데이터 보강",
-        "group": "Final Review Readiness Preview",
-        "status": "NEEDS_INPUT",
-        "requirement": "REQUIRED",
-        "module_type": "Required",
-        "stage_owner": "practical_validation",
-        "applies": True,
-        "reason": str(gate_contract.get("reason") or "수집 가능한 필수 외부 데이터가 남아 있습니다."),
-        "next_action": str(gate_contract.get("next_action") or "필수 데이터를 보강한 뒤 재검증합니다."),
-        "resolution_surface": "Flow 4 · 데이터 보강 / 수집 실행",
-        "resolution_action": "필수 데이터 보강을 실행한 뒤 Flow 2에서 전략 재검증을 다시 실행합니다.",
-        "gate_effect": "Blocks Final Review",
-        "gate_reason": "Final Review 이동 전 수집 가능한 필수 외부 데이터를 보강하고 재검증해야 합니다.",
-        "review_role": "final_readiness_blocker",
-        "review_role_label": "저장 전 보강",
-        "action_id": "run_practical_validation_provider_gap_collection",
-        "actionable_now": True,
-        "completion_criteria": (
-            "필수 데이터 보강 실행 후 current-session replay를 다시 실행하고 "
-            "새 validation을 저장합니다."
-        ),
-        "stage_decision_surface": "Practical Validation",
-        "pv_visibility": "handoff_reference",
-        "final_review_visibility": "selected_route_gate",
-        "monitoring_visibility": "hidden",
-        "item_count": int(gate_contract.get("item_count") or 0),
-        "symbol_count": int(gate_contract.get("symbol_count") or 0),
-        "items": list(gate_contract.get("items") or []),
-    }
+    blocker_ids = {str(blocker.get("module_id") or "") for blocker in blockers}
     modules = list(validation_result.get("validation_modules") or [])
-    modules = [module for module in modules if module.get("module_id") != blocker["module_id"]]
-    modules.append(blocker)
+    modules = [
+        module
+        for module in modules
+        if str(dict(module or {}).get("module_id") or "") not in blocker_ids
+    ]
+    modules.extend(blockers)
     validation_result["validation_modules"] = modules
 
     final_gate = dict(validation_result.get("final_review_gate") or {})
     blocking_modules = [
         dict(module)
         for module in list(final_gate.get("blocking_modules") or [])
-        if dict(module).get("module_id") != blocker["module_id"]
+        if str(dict(module).get("module_id") or "") not in blocker_ids
     ]
-    blocking_modules.append(blocker)
+    blocking_modules.extend(blockers)
+    has_actionable = any(blocker.get("actionable_now") for blocker in blockers)
+    has_engineering = any(
+        blocker.get("module_id") == "pre_final_data_contract"
+        for blocker in blockers
+    )
+    if has_actionable and has_engineering:
+        verdict = "자동 보강 항목과 수집기 개발 항목이 남아 있어 Final Review 이동을 막습니다."
+        next_action = "자동 보강을 실행하고, 미지원 데이터 수집기를 개발한 뒤 새 replay를 실행합니다."
+    elif has_actionable:
+        verdict = "수집 가능한 필수 외부 데이터가 남아 있어 Final Review 이동을 막습니다."
+        next_action = blockers[0]["resolution_action"]
+    else:
+        verdict = "현재 자동 수집기가 지원하지 않는 필수 데이터 계약이 Final Review 이동을 막습니다."
+        next_action = blockers[0]["resolution_action"]
     final_gate.update(
         {
             "route": "BLOCKED_FOR_FINAL_REVIEW",
             "can_save_and_move": False,
-            "verdict": "수집 가능한 필수 외부 데이터가 남아 있어 Final Review 이동을 막습니다.",
-            "next_action": blocker["resolution_action"],
+            "verdict": verdict,
+            "next_action": next_action,
             "blocking_modules": blocking_modules,
             "pre_final_enrichment_gate": gate_contract,
         }
