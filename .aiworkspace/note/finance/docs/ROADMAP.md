@@ -7,9 +7,17 @@ Last Verified: 2026-07-16
 
 현재 active phase는 없다.
 
-현재 active task는 없다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-us-economic-cycle-v1-20260716/`다.
 
-새 범위는 사용자 승인 후 별도 task로 연다.
+- 목적: 사용자의 회복·확장·둔화·침체 학습 프레임을 미국 vintage-aware 데이터로 확장해 현재·1개월 후·2개월 후의 네 국면 확률과 근거를 Market Context에 제공한다.
+- 승인 상태: 명세 승인과 상세 구현 계획 작성을 완료했다. 제품 코드 구현은 아직 시작하지 않아 전체 진행률은 `0/5`다.
+- 1차: raw vintage schema/catalog/collector/strict as-of loader.
+- 2차: leakage-safe feature/label/current model과 artifact/snapshot history.
+- 3차: direct +1M/+2M model, transition prior, calibration, rolling-origin publication gate.
+- 4차: `경제 사이클 | S&P 500 | 미국 개별주식` selector와 별도 React visualization.
+- 5차: actual vintage/gate QA, desktop/420px Browser QA, regression, durable docs closeout.
+- 완료 경계: 검증을 통과한 horizon만 숫자 확률을 표시한다. 미통과 결과는 threshold 완화 없이 `LIMITED`로 유지한다.
+- 상세 계획: `docs/superpowers/plans/2026-07-16-us-economic-cycle-regime-forecast.md`.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/`다.
 

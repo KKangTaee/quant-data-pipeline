@@ -7,7 +7,7 @@ Last Verified: 2026-07-16
 
 Current active task:
 
-- none
+- `overview-market-context-us-economic-cycle-v1-20260716` — specification approved, detailed 1차~5차 implementation plan complete, implementation `0/5`
 
 Latest completed task:
 

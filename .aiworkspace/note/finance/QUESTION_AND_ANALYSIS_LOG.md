@@ -17,7 +17,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
-  - Current active task is none. New work opens only after a user-approved scope.
+  - Current active task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Approved specification and 1차~5차 implementation plan are complete; implementation is `0/5`.
   - Latest completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
   - Previous completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
   - Previous completed task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI remains DB-only; stale repair is an explicit single action.
@@ -46,6 +46,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Entries
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
+
+### 2026-07-16 - 경제 사이클은 vintage-aware 확률과 검증 gate로 구현한다
+
+- User request: 사용자의 경제 사이클 학습 내용을 확장해 현재 위치와 향후 1·2개월을 예측하는 기능의 명세를 승인하고 구현 계획을 작성해 달라고 요청함.
+- Interpreted goal: 회복·확장·둔화·침체를 단일 확정 라벨이 아니라 현재/+1M/+2M 네 국면 확률, 근거, 10년 history로 보여주되 point-in-time과 검증 실패를 숨기지 않는다.
+- Analysis result: 기존 revised macro table을 건드리지 않고 vintage raw, model artifact, monthly snapshot을 분리한다. 실물·고용이 현재 label/h0를 소유하고 금융·정책은 forecast context만 맡으며 rolling-origin gate 통과 horizon만 숫자를 공개한다.
+- Follow-up: 17개 TDD task의 1차 data, 2차 current/history, 3차 forecast/validation, 4차 UI, 5차 actual QA/docs 계획을 확정했다. 구현 진행률은 `0/5`다.
 
 ### 2026-07-16 - 전환단계는 단계형 rail이지만 profitable company를 실패로 표시하지 않는다
 

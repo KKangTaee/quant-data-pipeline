@@ -1,6 +1,6 @@
 # 미국 경제 사이클 국면·확률 예측 기능 설계
 
-Status: Approved for Implementation Planning
+Status: Approved
 Approved: 2026-07-16
 Scope: `finance` package and Finance Streamlit `Workspace > Overview > 시장 맥락`
 

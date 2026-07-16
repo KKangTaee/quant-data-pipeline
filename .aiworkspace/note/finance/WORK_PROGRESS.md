@@ -23,7 +23,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - current code map:
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
-  - Current active task is none. New work opens only after a user-approved scope.
+  - Current active task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 명세 승인과 17개 TDD task의 1차~5차 구현 계획을 완료했고 구현은 `0/5`다.
   - Latest completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Explicit concept family의 확정 공시로 missing Q4를 안전하게 산출하고 provenance와 `공시 기반 산출` 표시를 1차~4차로 완료했다.
   - Previous completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
   - Previous completed Overview / Market Context task is [overview-market-context-us-stock-freshness-refresh-v1-20260715](./tasks/active/overview-market-context-us-stock-freshness-refresh-v1-20260715/STATUS.md). Cached selected-stock UI는 DB-only로 유지하고 stale repair는 explicit single action으로 제한한다.
@@ -54,6 +54,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### Overview / Market Context Track
 
+- U.S. Economic Cycle V1 planning:
+  - 현재·1개월 후·2개월 후의 회복/확장/둔화/침체 확률을 vintage-aware 데이터와 rolling-origin publication gate로 계산하는 명세를 승인했다.
+  - raw vintage -> strict as-of feature/label/model -> approved artifact/snapshot -> DB-only service/UI 경계를 17개 TDD task로 확정했다.
+  - `경제 사이클 | S&P 500 | 미국 개별주식` selector와 probability header/cycle clock/evidence/10년 ribbon을 4차에 구현한다. 현재 전체 진행률은 `0/5`다.
 - Overview Market Context turnaround stage semantics V1:
   - `USD per share` diluted EPS를 turnaround duration reader에 포함해 AAPL PER/turnaround TTM EPS를 `7.90`으로 정렬했다.
   - backend threshold는 유지하고, 6개 rail에서 전환 `MET`, 이미 양수인 UI-local `ESTABLISHED`, 미확인을 구분했다. AAPL/RIVN actual과 desktop/420px Browser QA를 완료했다.
