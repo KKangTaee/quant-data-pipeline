@@ -3128,3 +3128,330 @@ git commit -m "Final Review 실제 성격 QA와 문서 동기화"
 - [x] Gate, route, persistence, Monitoring, provider/replay/DB, registry rewrite가 범위 밖으로 고정된다.
 - [x] Python contract, presentation, closeout이 서로 독립적으로 검토·커밋 가능한 세 단위다.
 - [x] 새 PLAN 구간에 `TBD`, `TODO`, 구체화되지 않은 error handling 또는 정의되지 않은 함수 참조가 없다.
+
+---
+
+# Final Review Monitoring Change Condition Producer Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. This work stays inline in the existing worktree; do not create a new task, worktree, or sub-agent.
+
+**Goal:** 현재 GRS에 이미 저장된 낙폭·Benchmark 관측과 explicit comparator를 Final Review의 구조화된 Monitoring 변화 조건으로 투영해 empty state를 제거한다.
+
+**Architecture:** `app/services/backtest_final_review_decision_brief.py`가 stored complete `review_trigger_details`를 우선 소비하고, 부족할 때 이미 생성한 internal observation에서 drawdown과 Benchmark 조건을 파생한다. React와 Streamlit fallback은 기존 `monitoring_conditions` contract를 그대로 표시하며 registry row를 재작성하지 않는다.
+
+**Tech Stack:** Python 3.12, `unittest`, Streamlit, React/TypeScript tracked production bundle, in-app Browser QA.
+
+## Global Constraints
+
+- 기존 `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` row를 수정·stage·commit하지 않는다.
+- `.aiworkspace/note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl`, saved JSONL, QA screenshot을 stage하지 않는다.
+- CAGR/Data Trust에 임의 threshold를 만들거나 문장형 trigger에서 숫자를 파싱하지 않는다.
+- Final Review에서 provider fetch, replay, DB ingestion, save CTA 실행을 하지 않는다.
+- current strengths/weaknesses observation을 Monitoring으로 이동시켜 비우지 않는다.
+- Gate, canonical route, score, persistence schema version은 변경하지 않는다.
+
+---
+
+## Task 10.1: Python Monitoring Condition Producer
+
+**Files:**
+
+- Modify: `app/services/backtest_final_review_decision_brief.py`
+- Modify: `tests/test_backtest_final_review_decision_brief.py`
+
+**Interfaces:**
+
+- Consumes: `_build_behavior_board()`의 `internal_observations`, `behavior_board["period"]`, `paper_observation.review_trigger_details`, `paper_observation.review_cadence`.
+- Produces:
+
+```python
+def _build_monitoring_conditions(
+    *,
+    paper_observation: dict[str, Any],
+    observations: list[dict[str, Any]],
+    behavior_period: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    ...
+```
+
+- Stable derived ids:
+  - `monitoring:drawdown-breach`
+  - `monitoring:benchmark-underperformance`
+- Complete condition fields remain `observation_id`, `root_issue_id`, `title`, `interpretation`, `measured_value`, `display_value`, `threshold_or_comparator`, `evidence_refs`, `as_of`, `observation`, `threshold`, `cadence`, `re_review_action`, `primary_role`.
+
+- [ ] **Step 1: Add the current production-shape helper and failing tests**
+
+Add:
+
+```python
+def _current_monitoring_inputs(self) -> dict[str, object]:
+    inputs = self._current_character_inputs()
+    paper = inputs["paper_observation"]
+    paper.pop("review_trigger_details", None)
+    paper.update(
+        {
+            "review_cadence": "monthly_or_rebalance_review",
+            "review_triggers": [
+                "CAGR deterioration review",
+                "MDD expansion review",
+                "Benchmark-relative underperformance review",
+                "Data Trust refresh review",
+            ],
+        }
+    )
+    return inputs
+```
+
+Add three tests:
+
+```python
+def test_current_grs_derives_drawdown_and_benchmark_monitoring_conditions(self) -> None:
+    brief = self._build(self._current_monitoring_inputs())
+    conditions = {
+        row["observation_id"]: row for row in brief["monitoring_conditions"]
+    }
+
+    self.assertEqual(
+        set(conditions),
+        {
+            "monitoring:drawdown-breach",
+            "monitoring:benchmark-underperformance",
+        },
+    )
+    drawdown = conditions["monitoring:drawdown-breach"]
+    self.assertEqual(drawdown["measured_value"], -12.43)
+    self.assertEqual(drawdown["threshold_or_comparator"], -15.0)
+    self.assertEqual(drawdown["cadence"], "월간 또는 리밸런싱 시점")
+    self.assertIn("-15.00%", drawdown["threshold"])
+    self.assertEqual(drawdown["evidence_refs"], ["behavior_board.underwater_series"])
+    benchmark = conditions["monitoring:benchmark-underperformance"]
+    self.assertEqual(benchmark["threshold_or_comparator"], 0.0)
+    self.assertIn("0.00%p 이하", benchmark["threshold"])
+    self.assertEqual(
+        benchmark["evidence_refs"],
+        ["behavior_board.cumulative_series", "behavior_board.benchmark_series"],
+    )
+```
+
+```python
+def test_derived_monitoring_conditions_preserve_current_findings(self) -> None:
+    brief = self._build(self._current_monitoring_inputs())
+    findings = {
+        row["observation_id"] for row in [*brief["strengths"], *brief["weaknesses"]]
+    }
+
+    self.assertIn("drawdown-recovery-path", findings)
+    self.assertIn("benchmark-relative-terminal", findings)
+    self.assertIn("concentration-pressure", findings)
+```
+
+```python
+def test_monitoring_producer_does_not_invent_cagr_or_data_trust_thresholds(self) -> None:
+    brief = self._build(self._current_monitoring_inputs())
+    serialized = json.dumps(brief["monitoring_conditions"], ensure_ascii=False)
+
+    self.assertNotIn("CAGR", serialized)
+    self.assertNotIn("Data Trust", serialized)
+    self.assertNotIn("deterioration", serialized)
+```
+
+- [ ] **Step 2: Run RED**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_current_grs_derives_drawdown_and_benchmark_monitoring_conditions \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_derived_monitoring_conditions_preserve_current_findings \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_monitoring_producer_does_not_invent_cagr_or_data_trust_thresholds
+```
+
+Expected: first test fails because current production-shaped input yields zero conditions. The finding test may pass before implementation; if so, keep it as a regression guard and verify the first test is the required RED.
+
+- [ ] **Step 3: Add cadence normalization and complete stored-row adapter**
+
+Add:
+
+```python
+def _monitoring_cadence(
+    paper_observation: dict[str, Any],
+    behavior_period: dict[str, Any],
+) -> str:
+    stored = str(paper_observation.get("review_cadence") or "").strip()
+    labels = {
+        "monthly_or_rebalance_review": "월간 또는 리밸런싱 시점",
+        "monthly": "월간",
+        "quarterly": "분기",
+        "rebalance": "리밸런싱 시점",
+    }
+    if stored:
+        return labels.get(stored, stored)
+    frequency = str(behavior_period.get("frequency") or "").strip().lower()
+    return {"monthly": "월간", "quarterly": "분기"}.get(frequency, "")
+```
+
+Refactor the current `review_trigger_details` loop into a helper that returns a complete condition or `None`. Keep incomplete stored detail titles in `unstructured_monitoring_triggers`.
+
+- [ ] **Step 4: Derive the two safe conditions**
+
+Index observations by `observation_id`. When the required numeric value/comparator/comparison, cadence, evidence refs, and as-of exist, build:
+
+```python
+{
+    "observation_id": "monitoring:drawdown-breach",
+    "root_issue_id": None,
+    "title": "낙폭 관리선 이탈 재검토",
+    "interpretation": "최대 낙폭이 관리선을 벗어나면 손실 감내 조건과 계속 추적 thesis를 다시 검토합니다.",
+    "measured_value": drawdown["measured_value"],
+    "display_value": drawdown["display_value"],
+    "threshold_or_comparator": drawdown["threshold_or_comparator"],
+    "evidence_refs": drawdown["evidence_refs"],
+    "as_of": drawdown["as_of"],
+    "observation": f"현재 최대 underwater 낙폭 {drawdown['display_value']}",
+    "threshold": f"최대 낙폭이 {criterion_display} 관리선을 벗어남",
+    "cadence": cadence,
+    "re_review_action": "손실 감내 조건과 계속 추적 thesis를 다시 검토합니다.",
+    "primary_role": "monitoring",
+}
+```
+
+and:
+
+```python
+{
+    "observation_id": "monitoring:benchmark-underperformance",
+    "root_issue_id": None,
+    "title": "Benchmark 상대 성과 재검토",
+    "interpretation": "동일 기간 상대 성과가 0%p 이하로 내려가면 Benchmark 대비 추적 가치를 다시 검토합니다.",
+    "measured_value": benchmark["measured_value"],
+    "display_value": benchmark["display_value"],
+    "threshold_or_comparator": benchmark["threshold_or_comparator"],
+    "evidence_refs": benchmark["evidence_refs"],
+    "as_of": benchmark["as_of"],
+    "observation": f"현재 동일 기간 Benchmark 상대 성과 {benchmark['display_value']}",
+    "threshold": "동일 기간 Benchmark 상대 성과가 0.00%p 이하",
+    "cadence": cadence,
+    "re_review_action": "Benchmark 대비 추적 가치와 최종 route를 다시 검토합니다.",
+    "primary_role": "monitoring",
+}
+```
+
+Use a canonical id set to prevent duplicate stored/derived conditions. Stored complete details remain first. Keep the four-condition cap.
+
+- [ ] **Step 5: Wire the builder**
+
+Change:
+
+```python
+projected_conditions, unstructured_triggers = _build_monitoring_conditions(
+    paper_observation=paper_observation,
+    observations=internal_observations,
+    behavior_period=_as_dict(behavior_board.get("period")),
+)
+```
+
+Do not change React types, fallback, snapshot schema, Gate, route, or persistence.
+
+- [ ] **Step 6: Run GREEN and focused regression**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest tests.test_backtest_final_review_decision_brief
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review/page.py
+git diff --check
+```
+
+Expected: Decision Brief 26 tests and full focused suite 123 tests pass.
+
+- [ ] **Step 7: Commit the producer**
+
+Stage only service and its contract test:
+
+```bash
+git add \
+  app/services/backtest_final_review_decision_brief.py \
+  tests/test_backtest_final_review_decision_brief.py
+git diff --cached --name-only
+git diff --cached --check
+git commit -m "Final Review Monitoring 변화 조건 생성"
+```
+
+## Task 10.2: Current GRS Browser QA And Closeout
+
+**Files:**
+
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: root `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`
+- Generated only: `qa-final-review-monitoring-conditions-760.png`
+
+**Interfaces:**
+
+- Consumes unchanged React `MonitoringConditions` component and new Python payload.
+- Produces no new product API.
+
+- [ ] **Step 1: Run current GRS desktop Browser QA**
+
+Restart the Streamlit process after Python contract changes. Open `Backtest > Final Review`, do not click the save CTA, and verify:
+
+- empty state is absent;
+- `낙폭 관리선 이탈 재검토` and `Benchmark 상대 성과 재검토` are visible;
+- each card shows 변화 조건, 확인 주기, 재검토 행동;
+- strengths still show drawdown/Benchmark and weakness still shows concentration;
+- Final Review route/reason controls remain visible.
+
+- [ ] **Step 2: Run 760px QA**
+
+Set viewport `760×900`, verify the two condition cards fit without horizontal overflow or clipped copy, capture `qa-final-review-monitoring-conditions-760.png`, and reset the viewport. Treat the screenshot as generated and do not stage it.
+
+- [ ] **Step 3: Synchronize task and durable docs**
+
+Record the production contract gap, derived-condition policy, verification results, commit ids, and residuals. Do not mark CAGR/Data Trust as implemented conditions.
+
+- [ ] **Step 4: Run fresh completion verification**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+npm run build --prefix app/web/components/final_review_investment_report/frontend
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review/page.py \
+  app/web/components/final_review_investment_report/component.py
+git diff --check
+git status --short
+```
+
+Expected: 123 focused tests, 177-module production build, compile/diff check exit 0; only protected registry, run history, `.superpowers`, and generated QA artifacts remain unstaged.
+
+- [ ] **Step 5: Commit closeout docs**
+
+Stage only the listed docs and commit:
+
+```bash
+git commit -m "Final Review Monitoring 조건 QA와 문서 동기화"
+```
+
+## Monitoring Producer Plan Self-Review
+
+- [x] production root cause and current stored input shape are reflected in tests.
+- [x] complete stored detail priority and derived fallback order are explicit.
+- [x] drawdown and Benchmark mappings use existing observations and comparators.
+- [x] current findings are preserved by separate monitoring stable ids.
+- [x] CAGR/Data Trust arbitrary threshold and prose number parsing are prohibited.
+- [x] registry rewrite, provider/replay/DB, Gate/route/score changes are excluded.
+- [x] RED/GREEN commands, focused counts, Browser QA, commit boundaries are concrete.
+- [x] no undefined function, placeholder, `TBD`, or incomplete error policy remains.
