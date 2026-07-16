@@ -28673,7 +28673,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "<VerdictHero",
                 "<BehaviorBoard",
                 "<StrengthWeaknessSection",
-                "<PortfolioTraitMap",
+                "<PortfolioCharacterSection",
                 "<MonitoringConditions",
                 "<DecisionAction",
                 "<EvidenceDisclosure",
@@ -28717,15 +28717,28 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
-    def test_final_review_trait_map_breaks_on_unmeasured_axis(self) -> None:
+    def test_final_review_character_ui_separates_actual_values_from_review_pressure(self) -> None:
+        workspace_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        character_source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharacter.tsx"
+        ).read_text(encoding="utf-8")
         chart_source = Path(
             "app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("splitMeasuredSegments", chart_source)
-        self.assertIn('axis.status === "measured"', chart_source)
-        self.assertIn("axis.normalized_value !== null", chart_source)
-        self.assertNotIn("normalized_value ?? 0", chart_source)
+        self.assertIn("<PortfolioCharacterSection", workspace_source)
+        for token in (
+            "포트폴리오 실제 성격",
+            "관리 기준 대비 압력",
+            "기준 미설정",
+            "분석 근거 없음",
+        ):
+            self.assertIn(token, character_source)
+        source = workspace_source + chart_source
+        self.assertNotIn("PortfolioTraitMap", source)
+        self.assertNotIn("splitMeasuredSegments", chart_source)
 
     def test_final_review_fallback_uses_same_decision_brief_sections(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
@@ -28737,7 +28750,8 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             "behavior_board",
             "strengths",
             "weaknesses",
-            "trait_map",
+            "character_profile",
+            "review_pressure",
             "monitoring_conditions",
             "decision_action",
             "disclosures",
@@ -28745,6 +28759,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             self.assertIn(token, fallback_body)
         for forbidden in ("scorecard", "pattern_guide", "level2_review_disposition"):
             self.assertNotIn(forbidden, fallback_body)
+        self.assertNotIn("trait_map", fallback_body)
 
     def test_final_review_pattern_guide_contract_defines_ten_bounded_patterns(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_pattern_guide_contract

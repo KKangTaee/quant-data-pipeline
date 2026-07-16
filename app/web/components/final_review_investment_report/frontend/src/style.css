@@ -345,7 +345,7 @@ summary:focus-visible {
 
 .db-section-heading h2,
 .db-chart-heading h3,
-.db-trait-copy h3 {
+.db-character-panel-heading h3 {
   margin: 0;
   color: var(--db-ink);
 }
@@ -723,87 +723,105 @@ summary:focus-visible {
   font-size: 12px;
 }
 
-.db-trait-layout {
+.db-character-layout {
   display: grid;
-  grid-template-columns: minmax(180px, .8fr) minmax(300px, 1.25fr) minmax(190px, .8fr);
-  gap: 22px;
-  align-items: center;
-  padding: 18px;
-  border: 1px solid #e8edf3;
-  border-radius: 17px;
-  background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%);
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+  gap: 14px;
 }
 
-.db-trait-copy h3 {
+.db-character-panel,
+.db-pressure-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #dae4ee;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #fff 0%, #f8fbfd 100%);
+}
+
+.db-character-panel-heading h3 {
   font-size: 18px;
   letter-spacing: -.025em;
 }
 
-.db-trait-copy p:last-child {
+.db-character-panel-heading > p:last-child {
+  margin: 6px 0 0;
   color: var(--db-muted);
   font-size: 12px;
   line-height: 1.65;
 }
 
-.db-trait-chart {
-  display: block;
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-  overflow: visible;
-}
-
-.db-trait-grid,
-.db-trait-axis {
-  fill: none;
-  stroke: #dce5ed;
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.db-trait-segment {
-  fill: none;
-  stroke: #269789;
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.db-trait-label {
-  fill: var(--db-ink);
-  font-size: 8px;
-  font-weight: 680;
-}
-
-.db-trait-missing {
-  fill: var(--db-warning);
-  font-size: 7px;
-}
-
-.db-trait-list {
+.db-character-list,
+.db-pressure-list {
   display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--db-line);
-  list-style: none;
+  gap: 9px;
+  margin-top: 15px;
 }
 
-.db-trait-list li {
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--db-line);
+.db-character-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.db-character-card,
+.db-pressure-row {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid #e1e8f0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .88);
+}
+
+.db-character-card span,
+.db-pressure-row span {
+  color: var(--db-muted);
   font-size: 11px;
 }
 
-.db-trait-list strong {
-  color: #304f69;
+.db-character-card strong {
+  display: block;
+  margin-top: 5px;
+  color: #152033;
+  font-size: 20px;
   font-variant-numeric: tabular-nums;
+}
+
+.db-character-card p,
+.db-pressure-row p {
+  margin: 7px 0;
+  color: var(--db-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.db-character-card small,
+.db-pressure-row small {
+  color: #718196;
+  font-size: 10px;
+}
+
+.db-character-card strong,
+.db-character-card p,
+.db-pressure-row strong,
+.db-pressure-row p,
+.db-pressure-row small {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.db-pressure-row > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.db-pressure-row > div strong {
+  font-size: 11px;
   white-space: nowrap;
 }
+
+.db-pressure-row.is-within_limit strong { color: #17695e; }
+.db-pressure-row.is-exceeds_limit strong { color: #a24d19; }
+.db-pressure-row.is-criterion_missing strong,
+.db-pressure-row.is-evidence_missing strong { color: #647589; }
 
 .db-condition-list {
   display: grid;
@@ -1061,22 +1079,12 @@ summary:focus-visible {
 
 @media (max-width: 960px) {
   .db-workspace-header,
-  .db-chart-grid,
-  .db-trait-layout {
+  .db-chart-grid {
     grid-template-columns: 1fr;
   }
 
   .db-candidate-summary {
     width: 100%;
-  }
-
-  .db-trait-copy {
-    max-width: 620px;
-  }
-
-  .db-trait-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 18px;
   }
 
   .db-route-options {
@@ -1134,8 +1142,8 @@ summary:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .db-trait-chart {
-    max-width: 340px;
+  .db-character-layout {
+    grid-template-columns: 1fr;
   }
 
   .db-condition-list {
@@ -1164,13 +1172,12 @@ summary:focus-visible {
 
   .db-candidate-options,
   .db-observation-strip,
-  .db-trait-list,
+  .db-character-list,
   .db-route-options {
     grid-template-columns: 1fr;
   }
 
-  .db-chart-shell,
-  .db-trait-layout {
+  .db-chart-shell {
     padding: 14px;
   }
 

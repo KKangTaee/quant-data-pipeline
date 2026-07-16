@@ -7,6 +7,7 @@ FINAL_REVIEW_ROOT = Path(
 )
 WORKSPACE = FINAL_REVIEW_ROOT / "DecisionBriefWorkspace.tsx"
 CHARTS = FINAL_REVIEW_ROOT / "DecisionBriefCharts.tsx"
+CHARACTER = FINAL_REVIEW_ROOT / "DecisionBriefCharacter.tsx"
 STYLE = FINAL_REVIEW_ROOT / "style.css"
 MARKET_CONTEXT_STYLE = Path(
     "app/web/streamlit_components/market_context_valuation/src/style.css"
@@ -97,6 +98,23 @@ class FinalReviewMarketContextVisualContractTests(unittest.TestCase):
             "0%는 이전 최고점 회복",
         ):
             self.assertIn(token, source + style)
+
+    def test_character_and_review_pressure_use_bounded_responsive_layout(self) -> None:
+        source = CHARACTER.read_text(encoding="utf-8")
+        style = STYLE.read_text(encoding="utf-8")
+
+        for token in (
+            "db-character-layout",
+            "db-character-list",
+            "db-pressure-list",
+        ):
+            self.assertIn(token, source + style)
+        layout = style.split(".db-character-layout {", 1)[1].split("}", 1)[0]
+        self.assertIn("grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);", layout)
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+        self.assertIn(".db-character-layout", responsive)
+        self.assertIn("grid-template-columns: 1fr;", responsive)
+        self.assertNotIn("83.3 / 100", source)
 
 
 if __name__ == "__main__":

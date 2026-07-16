@@ -2,7 +2,6 @@ import React, { useEffect, useId, useState } from "react"
 import {
   DecisionBriefSeries,
   SeriesPoint,
-  TraitAxis,
 } from "./decisionBriefTypes"
 
 type LineSeries = {
@@ -266,106 +265,5 @@ export function UnderwaterChart({ series }: { series: DecisionBriefSeries }) {
       unit="percent"
       series={[{ label: series.label, color: "#e2763b", points: series.points }]}
     />
-  )
-}
-
-export function splitMeasuredSegments(axes: TraitAxis[]): TraitAxis[][] {
-  const segments: TraitAxis[][] = []
-  let current: TraitAxis[] = []
-  axes.forEach((axis) => {
-    const measured = axis.status === "measured" && axis.normalized_value !== null
-    if (measured) {
-      current.push(axis)
-    } else {
-      if (current.length >= 2) segments.push(current)
-      current = []
-    }
-  })
-  if (current.length >= 2) segments.push(current)
-  const allMeasured = axes.length > 2 && axes.every(
-    (axis) => axis.status === "measured" && axis.normalized_value !== null,
-  )
-  if (allMeasured) return [[...axes, axes[0]]]
-  const first = axes[0]
-  const last = axes.at(-1)
-  if (
-    first && last
-    && first.status === "measured" && first.normalized_value !== null
-    && last.status === "measured" && last.normalized_value !== null
-  ) {
-    segments.push([last, first])
-  }
-  return segments
-}
-
-function traitPoint(axis: TraitAxis, index: number, count: number, radius = 82) {
-  if (axis.normalized_value === null) return null
-  const angle = -Math.PI / 2 + (index / count) * Math.PI * 2
-  const distance = (axis.normalized_value / 100) * radius
-  return {
-    x: 120 + Math.cos(angle) * distance,
-    y: 120 + Math.sin(angle) * distance,
-  }
-}
-
-function traitLabelPoint(index: number, count: number) {
-  const angle = -Math.PI / 2 + (index / count) * Math.PI * 2
-  return {
-    x: 120 + Math.cos(angle) * 104,
-    y: 120 + Math.sin(angle) * 104,
-  }
-}
-
-export function PortfolioTraitMap({ axes }: { axes: TraitAxis[] }) {
-  const segments = splitMeasuredSegments(axes)
-  const indexForAxis = (axis: TraitAxis) => axes.findIndex((candidate) => candidate.axis_id === axis.axis_id)
-
-  return (
-    <div className="db-trait-layout">
-      <div className="db-trait-copy">
-        <p className="db-kicker">Pressure / exposure</p>
-        <h3>Portfolio trait map</h3>
-        <p>바깥쪽은 더 좋다는 뜻이 아닙니다. 저장된 review 기준 대비 부담이 커지는 방향입니다.</p>
-      </div>
-      <svg className="db-trait-chart" viewBox="0 0 240 240" role="img" aria-label="측정된 pressure와 미측정 axis를 구분한 포트폴리오 성격 지도">
-        {[0.25, 0.5, 0.75, 1].map((ratio) => (
-          <circle key={ratio} cx="120" cy="120" r={82 * ratio} className="db-trait-grid" />
-        ))}
-        {axes.map((axis, index) => {
-          const label = traitLabelPoint(index, axes.length)
-          return (
-            <g key={axis.axis_id}>
-              <line x1="120" y1="120" x2={label.x} y2={label.y} className="db-trait-axis" />
-              <text x={label.x} y={label.y} className="db-trait-label" textAnchor={label.x < 110 ? "end" : label.x > 130 ? "start" : "middle"}>
-                {axis.label}
-              </text>
-              {axis.status === "unmeasured" && (
-                <text x={label.x} y={label.y + 12} className="db-trait-missing" textAnchor={label.x < 110 ? "end" : label.x > 130 ? "start" : "middle"}>
-                  미측정
-                </text>
-              )}
-            </g>
-          )
-        })}
-        {segments.map((segment, segmentIndex) => {
-          const path = segment
-            .map((axis, itemIndex) => {
-              const point = traitPoint(axis, indexForAxis(axis), axes.length)
-              return point ? `${itemIndex === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}` : ""
-            })
-            .filter(Boolean)
-            .join(" ")
-          return <path key={`${segmentIndex}-${path}`} d={path} className="db-trait-segment" />
-        })}
-      </svg>
-      <ul className="db-trait-list">
-        {axes.map((axis) => (
-          <li key={axis.axis_id}>
-            <span>{axis.label}</span>
-            <strong>{axis.status === "measured" ? `${axis.normalized_value?.toFixed(1)} / 100` : "미측정"}</strong>
-          </li>
-        ))}
-      </ul>
-    </div>
   )
 }

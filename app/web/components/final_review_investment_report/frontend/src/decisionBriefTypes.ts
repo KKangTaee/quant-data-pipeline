@@ -35,13 +35,31 @@ export type MonitoringCondition = DecisionBriefObservation & {
   primary_role: "monitoring"
 }
 
-export type TraitAxis = {
+export type CharacterProfileItem = {
   axis_id: string
   label: string
-  normalized_value: number | null
-  status: "measured" | "unmeasured"
+  measurement_status: "observed" | "evidence_missing"
   measured_value: number | null
-  threshold_or_comparator: number | null
+  display_value: string
+  unit: "percent" | "ratio_percent" | "bps" | "text"
+  interpretation: string
+  evidence_refs: string[]
+  as_of: string | null
+}
+
+export type ReviewPressureItem = {
+  axis_id: string
+  label: string
+  status: "within_limit" | "exceeds_limit" | "criterion_missing" | "evidence_missing"
+  measured_value: number | null
+  display_value: string
+  criterion_value: number | null
+  criterion_display: string | null
+  comparison: "less_or_equal" | "absolute_less_or_equal" | "greater_or_equal" | null
+  delta_value: number | null
+  delta_display: string | null
+  ratio_to_criterion: number | null
+  summary: string
   evidence_refs: string[]
   as_of: string | null
 }
@@ -100,10 +118,8 @@ export type DecisionBrief = {
     underwater_series: DecisionBriefSeries
     execution_observations: DecisionBriefObservation[]
   }
-  trait_map: {
-    axes: TraitAxis[]
-    aggregate_score: null
-  }
+  character_profile: { items: CharacterProfileItem[] }
+  review_pressure: { items: ReviewPressureItem[] }
   strengths: DecisionBriefObservation[]
   weaknesses: DecisionBriefObservation[]
   monitoring_conditions: MonitoringCondition[]

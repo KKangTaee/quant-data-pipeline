@@ -625,7 +625,8 @@ def _render_final_review_decision_brief_fallback(
     behavior_board = dict(decision_brief.get("behavior_board") or {})
     strengths = list(decision_brief.get("strengths") or [])
     weaknesses = list(decision_brief.get("weaknesses") or [])
-    trait_map = dict(decision_brief.get("trait_map") or {})
+    character_profile = dict(decision_brief.get("character_profile") or {})
+    review_pressure = dict(decision_brief.get("review_pressure") or {})
     monitoring_conditions = list(decision_brief.get("monitoring_conditions") or [])
     decision_action = dict(decision_brief.get("decision_action") or {})
     disclosures = dict(decision_brief.get("disclosures") or {})
@@ -670,9 +671,35 @@ def _render_final_review_decision_brief_fallback(
     else:
         st.info("직접 비교 가능한 강점과 약점이 미측정입니다.")
 
-    st.markdown("##### Portfolio trait map")
-    trait_rows = list(trait_map.get("axes") or [])
-    st.dataframe(pd.DataFrame(trait_rows), width="stretch", hide_index=True)
+    st.markdown("##### 포트폴리오 실제 성격")
+    character_rows = [
+        {
+            "특성": row.get("label"),
+            "관측값": row.get("display_value"),
+            "상태": (
+                "관측됨"
+                if row.get("measurement_status") == "observed"
+                else "분석 근거 없음"
+            ),
+            "의미": row.get("interpretation"),
+            "기준일": row.get("as_of") or "-",
+        }
+        for row in list(character_profile.get("items") or [])
+    ]
+    st.dataframe(pd.DataFrame(character_rows), width="stretch", hide_index=True)
+
+    st.markdown("##### 관리 기준 대비 압력")
+    pressure_rows = [
+        {
+            "특성": row.get("label"),
+            "상태": row.get("status"),
+            "관측값": row.get("display_value"),
+            "관리 기준": row.get("criterion_display") or "기준 미설정",
+            "해석": row.get("summary"),
+        }
+        for row in list(review_pressure.get("items") or [])
+    ]
+    st.dataframe(pd.DataFrame(pressure_rows), width="stretch", hide_index=True)
 
     st.markdown("##### Monitoring 변화 조건")
     if monitoring_conditions:

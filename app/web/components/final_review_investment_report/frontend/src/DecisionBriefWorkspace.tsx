@@ -9,9 +9,9 @@ import {
 } from "./decisionBriefTypes"
 import {
   CumulativeComparisonChart,
-  PortfolioTraitMap as PortfolioTraitMapChart,
   UnderwaterChart,
 } from "./DecisionBriefCharts"
+import { DecisionBriefCharacter } from "./DecisionBriefCharacter"
 
 type WorkspaceProps = {
   decisionBrief: DecisionBrief
@@ -205,15 +205,18 @@ function StrengthWeaknessSection({ brief }: { brief: DecisionBrief }) {
   )
 }
 
-function PortfolioTraitMap({ brief }: { brief: DecisionBrief }) {
+function PortfolioCharacterSection({ brief }: { brief: DecisionBrief }) {
   return (
-    <section className="db-section db-traits" aria-labelledby="db-traits-title">
+    <section className="db-section db-character" aria-labelledby="db-character-title">
       <SectionHeading
-        eyebrow="Portfolio pressure map"
-        title="포트폴리오 성격 지도"
-        detail="품질 점수나 순위가 아니라 threshold 대비 pressure와 exposure를 읽습니다."
+        eyebrow="Portfolio character"
+        title="포트폴리오 성격"
+        detail="실제 관측값과 관리 기준 대비 상태를 분리해 읽습니다."
       />
-      <PortfolioTraitMapChart axes={brief.trait_map.axes} />
+      <DecisionBriefCharacter
+        characterItems={brief.character_profile.items}
+        pressureItems={brief.review_pressure.items}
+      />
     </section>
   )
 }
@@ -385,7 +388,7 @@ export function DecisionBriefWorkspace({ decisionBrief, candidateSelector, onInt
       <VerdictHero brief={decisionBrief} />
       <BehaviorBoard brief={decisionBrief} />
       <StrengthWeaknessSection brief={decisionBrief} />
-      <PortfolioTraitMap brief={decisionBrief} />
+      <PortfolioCharacterSection brief={decisionBrief} />
       <MonitoringConditions brief={decisionBrief} />
       <DecisionAction brief={decisionBrief} onIntent={onIntent} />
       <EvidenceDisclosure brief={decisionBrief} />

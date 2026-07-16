@@ -323,7 +323,8 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             "_build_eligibility",
             "_stored_curve_inputs",
             "_underwater_points",
-            "_build_trait_map",
+            "_build_character_profile",
+            "_build_review_pressure",
             "_deduplicate_primary_roles",
             "_build_decision_action",
         ):
