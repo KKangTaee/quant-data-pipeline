@@ -131,9 +131,13 @@ export function PracticalValidationDecisionWorkspace({
           </h1>
           <p>{workspace.header.detail}</p>
         </div>
-        <aside>
+        <aside className="pv2-target-context">
+          <span className="pv2-target-label">검증 대상</span>
           <strong>{workspace.candidate.title}</strong>
-          <span>{workspace.candidate.as_of || "기준일 미측정"}</span>
+          <span>
+            {workspace.candidate.source_type_label} ·{" "}
+            {workspace.candidate.as_of || "기준일 미측정"}
+          </span>
         </aside>
       </header>
 
@@ -173,14 +177,6 @@ export function PracticalValidationDecisionWorkspace({
                 <span>{option.source_type_label}</span>
               </button>
             ))}
-          </div>
-          <div className="pv2-candidate-summary">
-            <span>현재 검증 후보</span>
-            <strong>{workspace.candidate.title}</strong>
-            <small>
-              {workspace.candidate.source_type_label} ·{" "}
-              {workspace.candidate.as_of || "기준일 미측정"}
-            </small>
           </div>
         </div>
         <div className="pv2-selection-section pv2-policy-section">

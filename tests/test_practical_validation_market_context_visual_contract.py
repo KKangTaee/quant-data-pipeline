@@ -97,6 +97,29 @@ class PracticalValidationMarketContextVisualContractTests(unittest.TestCase):
         self.assertIn("new ResizeObserver", source)
         self.assertIn("Streamlit.setFrameHeight()", source)
 
+    def test_selected_candidate_context_is_kept_in_header_not_below_candidate_grid(
+        self,
+    ) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+
+        self.assertIn("검증 대상", source)
+        self.assertIn("workspace.candidate.source_type_label", source)
+        self.assertNotIn("pv2-candidate-summary", source)
+
+    def test_five_validation_profiles_use_centered_three_plus_two_layout(self) -> None:
+        style = STYLE.read_text(encoding="utf-8")
+        responsive = style.split("@media (max-width: 760px)", 1)[1]
+
+        self.assertIn(
+            ".pv2-profile-grid {\n  grid-template-columns: repeat(6, minmax(0, 1fr));",
+            style,
+        )
+        self.assertIn(
+            ".pv2-profile-grid button:nth-child(4) {\n  grid-column: 2 / span 2;",
+            style,
+        )
+        self.assertIn("grid-column: auto;", responsive)
+
 
 if __name__ == "__main__":
     unittest.main()

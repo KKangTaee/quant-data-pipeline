@@ -126,6 +126,13 @@ summary:focus-visible {
   font-size: 12px;
 }
 
+.pv2-header > aside .pv2-target-label {
+  color: var(--pv2-blue);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
 .pv2-step,
 .pv2-verdict {
   padding: 22px 24px;
@@ -223,19 +230,16 @@ summary:focus-visible {
   margin-top: 0;
 }
 
-.pv2-candidate-summary {
-  display: grid;
-  gap: 4px;
-  padding: 12px 13px;
-  border-left: 3px solid #6f91a7;
-  border-radius: 12px;
-  background: #fff;
+.pv2-profile-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
-.pv2-candidate-summary span,
-.pv2-candidate-summary small {
-  color: var(--pv2-muted);
-  font-size: 10px;
+.pv2-profile-grid button {
+  grid-column: span 2;
+}
+
+.pv2-profile-grid button:nth-child(4) {
+  grid-column: 2 / span 2;
 }
 
 .pv2-choice-grid button,
@@ -643,6 +647,11 @@ button:disabled {
 
   .pv2-final-action button {
     width: 100%;
+  }
+
+  .pv2-profile-grid button,
+  .pv2-profile-grid button:nth-child(4) {
+    grid-column: auto;
   }
 
   .pv2-header,
