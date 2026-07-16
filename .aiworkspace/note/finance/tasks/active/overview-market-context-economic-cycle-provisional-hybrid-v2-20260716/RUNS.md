@@ -11,3 +11,6 @@ Last Updated: 2026-07-16
 - Browser QA: desktop and 420px screenshots captured; custom Chromium checks verified visible provisional cards/quadrant/paths, 123 ribbon cells, zero console/page errors, and mobile overflow <= 1px.
 - Final review regressions: a malformed single-horizon artifact is isolated to that horizon, and unavailable history/forecast points now break chart segments instead of being visually interpolated.
 - Final focused verification: 116 passed, Python compile passed, and the economic-cycle React production build passed.
+- Display-window follow-up: TDD changed the read model from 121 to 60 history rows and the Cycle Map from 18 to 12 months without rewriting DB snapshots.
+- Display-window Browser QA: visible 12-month/5-year copy, 62 ribbon cells, zero console/page errors, and 420px overflow <= 1px.
+- Display-window final verification: 117 focused tests passed, Python compile and React production build passed, and `git diff --check` was clean.

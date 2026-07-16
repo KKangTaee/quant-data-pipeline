@@ -49,6 +49,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
 
+### 2026-07-16 - 경제 사이클 첫 화면은 12개월 경로와 5년 ribbon으로 단순화한다
+
+- User request: 18개월 Cycle Map이 복잡하고 10년 ribbon은 길어 보이므로 첫 화면을 더 짧게 보여 달라고 요청함.
+- Interpreted goal: 모델 계산과 DB history를 줄이지 않고 사용자가 현재 위치와 최근 변화에 집중하도록 표시 기간만 축소한다.
+- Analysis result: Cycle Map은 최근 12개월, Regime Ribbon은 최근 60개월과 +2개월 전망을 표시한다. DB의 121개월 replay와 현재/+1M/+2M forecast, 잠정/검증/판단불가 상태 계약은 유지한다.
+- Follow-up: service read window와 React copy를 변경하고 desktop/420px에서 62개 ribbon cell, browser error 0, horizontal overflow 0을 확인했다.
+
 ### 2026-07-16 - 경제 사이클 계산 결과와 검증 상태를 분리한다
 
 - User request: 모든 결과가 판단 제한으로 가려진 화면을 개선하고, 잠정 추정과 검증된 추정을 구분하며 처음 선택한 2×2 혼합형 시각화를 구현해 달라고 요청함.

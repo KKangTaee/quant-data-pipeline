@@ -200,7 +200,7 @@ function HorizonCard({ horizon }: { horizon: Horizon }) {
 }
 
 function QuadrantChart({ payload }: { payload: CyclePayload }) {
-  const recent = payload.history.slice(-18);
+  const recent = payload.history.slice(-12);
   const observedSegments = splitPointSegments(
     recent.map((item) => item.probabilities ? probabilityCoordinate(item.probabilities) : null),
   );
@@ -223,7 +223,7 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
       <div className="section-heading">
         <div><span>Cycle map</span><h3 id="cycle-map-title">레벨과 모멘텀으로 읽는 순환 위치</h3></div>
-        <small>실선은 최근 18개월 · 점선은 현재부터 +2개월</small>
+        <small>실선은 최근 12개월 · 점선은 현재부터 +2개월</small>
       </div>
       <div className="cycle-map-body">
         <svg className="cycle-quadrant" viewBox="0 0 360 320" role="img" aria-label="회복 확장 둔화 침체 2×2 경제사이클 경로">
@@ -295,7 +295,7 @@ function RegimeRibbon({ history, horizons }: { history: HistoryPoint[]; horizons
   const forecast = horizons.filter((item) => item.horizon_months > 0);
   return (
     <section className="ribbon-section" aria-labelledby="ribbon-title">
-      <div className="section-heading"><div><span>Regime ribbon</span><h3 id="ribbon-title">과거·현재·미래를 한 시간축으로 보기</h3></div><small>최근 121개 월말 + 2개월 전망</small></div>
+      <div className="section-heading"><div><span>Regime ribbon</span><h3 id="ribbon-title">과거·현재·미래를 한 시간축으로 보기</h3></div><small>최근 5년 + 2개월 전망</small></div>
       <div className="ribbon-legend"><span className="legend-model">모델 우세 국면</span><span className="nber-recession">NBER 침체</span><span className="limited-hatch">잠정 추정</span></div>
       <div className="regime-ribbon" role="list" aria-label="월별 경제 국면 이력과 전망">
         {history.map((item, index) => (

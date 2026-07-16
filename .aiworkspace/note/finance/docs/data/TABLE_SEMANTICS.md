@@ -436,7 +436,7 @@ PIT / publication 계약:
 - historical origin은 `realtime_start <= origin <= realtime_end`인 version 중 최신 eligible row 하나만 읽는다. 이후 발표·수정값은 관측일이 과거여도 사용할 수 없다.
 - feature scaling은 expanding history만, calibration/validation은 rolling-origin out-of-fold만 사용한다. retrospective label은 activity/labor와 해당 origin에 eligible한 `USREC`만 사용한다.
 - 각 h0/h1/h2 horizon은 독립적으로 `READY/LIMITED`를 판정한다. 유효한 LIMITED 확률은 reason evidence와 함께 snapshot에 보존하고 UI에서 `잠정 모델 추정`으로 표시한다. READY는 `검증된 모델 추정`이며 phase support·parameter·입력이 불완전한 horizon만 numeric probabilities를 비우고 `판단 불가`로 둔다.
-- raw full series와 model parameter는 DB에 남고 UI service는 최대 121개월 compact history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
+- raw full series, model parameter, 121개월 replay snapshot은 DB에 남고 UI service는 최근 최대 60개월 compact history/evidence만 읽는다. UI render 중 provider fetch, fit, materialization, DB write를 실행하지 않는다.
 
 주의:
 

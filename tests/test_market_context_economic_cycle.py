@@ -232,7 +232,9 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         '1: "1개월 후"',
         '2: "2개월 후"',
         'className="probability-bar"',
-        ".slice(-18)",
+        ".slice(-12)",
+        "실선은 최근 12개월",
+        "최근 5년 + 2개월 전망",
         'className="cycle-quadrant"',
         'className="observed-path"',
         'className="forecast-path"',
@@ -274,7 +276,7 @@ def test_cycle_component_breaks_paths_at_unavailable_months_and_horizons() -> No
     ).read_text()
 
     assert "splitPointSegments" in source
-    assert "payload.history.slice(-18)" in source
+    assert "payload.history.slice(-12)" in source
     assert "const forecastSlots = [0, 1, 2].map" in source
     assert "observedSegments.map" in source
     assert "forecastSegments.map" in source

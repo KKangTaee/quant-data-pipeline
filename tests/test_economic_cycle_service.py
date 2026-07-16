@@ -130,7 +130,7 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         "중립",
     }
     assert all(item["source_date"] for item in model["sources"])
-    assert len(model["history"]) == 121
+    assert len(model["history"]) == 60
     assert model["history"] == sorted(model["history"], key=lambda item: item["date"])
     assert all("nber_recession" in item for item in model["history"])
     assert all(
@@ -226,9 +226,26 @@ def test_service_truncates_evidence_and_history_without_recalculation() -> None:
     )
 
     assert len(model["evidence"]) == 10
-    assert len(model["history"]) == 121
-    assert model["history"][0]["date"] > "2015-01-01"
+    assert len(model["history"]) == 60
+    assert model["history"][0]["date"] > "2020-01-01"
     assert all(item["status"] in {"READY", "LIMITED"} for item in model["history"])
+
+
+def test_service_requests_only_the_recent_sixty_month_display_window() -> None:
+    service = _load_service()
+    requested: dict[str, object] = {}
+
+    def load_history(**kwargs):
+        requested.update(kwargs)
+        return _history_rows(60)
+
+    service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        history_loader=load_history,
+    )
+
+    assert str(requested["start_date"]) == "2021-07-30"
+    assert str(requested["end_date"]) == "2026-06-30"
 
 
 def test_market_implications_are_conditional_context_not_directional_predictions() -> (

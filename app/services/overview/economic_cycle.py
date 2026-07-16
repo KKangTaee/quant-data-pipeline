@@ -182,7 +182,7 @@ def _history(rows: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
             }
         )
     ordered = sorted(normalized, key=lambda item: item["date"])
-    return ordered[-121:]
+    return ordered[-60:]
 
 
 def _evidence(snapshot: Mapping[str, object]) -> list[dict[str, object]]:
@@ -270,7 +270,7 @@ def build_economic_cycle_read_model(
     snapshot_date = str(resolved_snapshot.get("as_of_date") or as_of_date or "")[:10]
     try:
         end = pd.Timestamp(snapshot_date).date()
-        start = (pd.Timestamp(end) - pd.DateOffset(months=120)).date()
+        start = (pd.Timestamp(end) - pd.DateOffset(months=59)).date()
         history_rows = load_history(start_date=start, end_date=end)
     except Exception:
         return _empty_model(
@@ -321,7 +321,7 @@ def build_economic_cycle_read_model(
             "phase_order": list(PHASES),
             "recent_path": [
                 {"date": item["date"], "phase": item["phase"], "status": item["status"]}
-                for item in history[-18:]
+                for item in history[-12:]
             ],
             "forecast_markers": forecast_markers,
             "expected_transition": resolved_snapshot.get("expected_transition"),
