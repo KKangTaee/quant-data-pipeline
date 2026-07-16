@@ -17,6 +17,10 @@ from app.services.backtest_final_review_decision_brief import (
     build_final_review_candidate_selector,
     build_final_review_decision_brief,
 )
+from app.services.backtest_final_review_refresh import (
+    build_final_review_refresh_status,
+    run_final_review_observation_refresh,
+)
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_OPTIONS,
@@ -772,6 +776,7 @@ def _consume_final_review_decision_intent(
     decision_id: str,
     decision_id_key: str,
     existing_decision_ids: set[str],
+    observation_freshness: dict[str, Any] | None = None,
 ) -> None:
     """Validate one component intent and append the authoritative Python decision row once."""
 
@@ -800,6 +805,7 @@ def _consume_final_review_decision_intent(
         decision_route=decision_route,
         operator_reason=operator_reason,
         existing_decision_ids=existing_decision_ids,
+        observation_freshness=observation_freshness,
     )
     if not bool(save_evaluation.get("can_save")):
         st.error(str(save_evaluation.get("verdict") or "판단 기록을 저장할 수 없습니다."))
@@ -832,6 +838,72 @@ def _consume_final_review_decision_intent(
         "이 기록은 실제 투자 승인이나 주문 지시가 아닙니다."
     )
     st.session_state.pop(decision_id_key, None)
+    st.rerun()
+
+
+def _refresh_result_state_key(selection_source_id: Any) -> str:
+    return (
+        "final_review_observation_refresh_result_"
+        f"{_paper_ledger_slug(selection_source_id)}"
+    )
+
+
+def _consume_final_review_observation_refresh_intent(
+    intent: dict[str, Any] | None,
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    observation_freshness: dict[str, Any],
+) -> None:
+    """Validate one refresh intent and run the Python-owned append workflow once."""
+
+    payload = dict(intent or {})
+    if payload.get("action") != "refresh_observation":
+        return
+    intent_id = str(payload.get("intent_id") or "").strip()
+    selection_source_id = str(validation.get("selection_source_id") or "").strip()
+    validation_id = str(validation.get("validation_id") or "").strip()
+    requested_source_id = str(payload.get("source_id") or "").strip()
+    requested_validation_id = str(payload.get("validation_id") or "").strip()
+    consumed_key = (
+        "final_review_consumed_observation_refresh_"
+        f"{_paper_ledger_slug(selection_source_id)}"
+    )
+    if not intent_id or st.session_state.get(consumed_key) == intent_id:
+        return
+    if requested_source_id != selection_source_id or requested_validation_id != validation_id:
+        st.error("현재 검토 중인 후보와 최신화 요청의 identity가 다릅니다. 화면을 다시 확인하세요.")
+        return
+    if (
+        str(observation_freshness.get("selection_source_id") or selection_source_id)
+        != selection_source_id
+        or str(observation_freshness.get("validation_id") or validation_id)
+        != validation_id
+    ):
+        st.error("현재 표시된 최신성 상태가 다른 검증 결과에 속합니다. 화면을 새로 확인하세요.")
+        return
+    if not bool(observation_freshness.get("can_refresh")):
+        st.error("현재 후보에는 자동으로 실행할 최신 관측 갱신이 없습니다.")
+        return
+
+    st.session_state[consumed_key] = intent_id
+    with st.spinner("최신 가격을 확인하고 같은 전략을 다시 계산하는 중입니다..."):
+        result = run_final_review_observation_refresh(
+            source=dict(validation.get("selection_source_snapshot") or source),
+            validation=validation,
+        )
+    st.session_state[_refresh_result_state_key(selection_source_id)] = dict(result)
+    status = str(result.get("status") or "")
+    message = str(result.get("message") or "최신 관측 갱신을 확인했습니다.")
+    st.session_state["final_review_observation_refresh_notice"] = {
+        "status": status,
+        "message": message,
+    }
+    new_validation_id = str(result.get("new_validation_id") or "").strip()
+    if bool(result.get("validation_saved")) and new_validation_id:
+        st.session_state["final_review_active_decision_brief_source_id"] = (
+            f"practical_validation_result:{new_validation_id}"
+        )
     st.rerun()
 
 
@@ -898,10 +970,20 @@ def render_final_review_workspace() -> None:
     final_practical_notice = st.session_state.pop("final_review_practical_validation_notice", None)
 
     final_notice = st.session_state.pop("final_review_decision_notice", None)
+    refresh_notice = st.session_state.pop("final_review_observation_refresh_notice", None)
     if final_practical_notice:
         st.success(str(final_practical_notice))
     if final_notice:
         st.success(str(final_notice))
+    if isinstance(refresh_notice, dict):
+        refresh_status = str(refresh_notice.get("status") or "")
+        refresh_message = str(refresh_notice.get("message") or "")
+        if refresh_status == "refreshed":
+            st.success(refresh_message)
+        elif refresh_status in {"partial_refresh", "up_to_date"}:
+            st.warning(refresh_message)
+        else:
+            st.error(refresh_message)
 
     source_options = _build_final_review_source_options(
         current_rows,
@@ -967,6 +1049,16 @@ def render_final_review_workspace() -> None:
     if not str(st.session_state.get(decision_id_key) or "").strip():
         st.session_state[decision_id_key] = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
     decision_id = str(st.session_state[decision_id_key])
+    observation_freshness = build_final_review_refresh_status(
+        source=source,
+        validation=validation,
+    )
+    selection_source_id = str(validation.get("selection_source_id") or "").strip()
+    last_refresh_result = st.session_state.get(
+        _refresh_result_state_key(selection_source_id)
+    )
+    if isinstance(last_refresh_result, dict):
+        observation_freshness["last_result"] = dict(last_refresh_result)
     decision_brief = build_final_review_decision_brief(
         source=source,
         validation=validation,
@@ -975,6 +1067,7 @@ def render_final_review_workspace() -> None:
         investability_packet=investability_packet,
         decision_id=decision_id,
         existing_decision_ids=existing_decision_ids,
+        observation_freshness=observation_freshness,
     )
     workspace_intent = _render_final_review_decision_workspace(
         decision_brief,
@@ -984,6 +1077,12 @@ def render_final_review_workspace() -> None:
     _consume_final_review_candidate_intent(
         workspace_intent,
         source_options=list(candidate_selector.get("options") or []),
+    )
+    _consume_final_review_observation_refresh_intent(
+        workspace_intent,
+        source=source,
+        validation=validation,
+        observation_freshness=observation_freshness,
     )
     _consume_final_review_decision_intent(
         workspace_intent,
@@ -996,4 +1095,5 @@ def render_final_review_workspace() -> None:
         decision_id=decision_id,
         decision_id_key=decision_id_key,
         existing_decision_ids=existing_decision_ids,
+        observation_freshness=observation_freshness,
     )

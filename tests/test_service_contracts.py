@@ -28612,6 +28612,120 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             operator_next_action="next",
         )
 
+    def test_final_review_refresh_intent_runs_once_and_selects_new_validation(self) -> None:
+        import app.web.backtest_final_review.page as page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        refresh_runner = MagicMock(
+            return_value={
+                "status": "refreshed",
+                "message": "2026-07-15까지 다시 계산했습니다.",
+                "selection_source_id": "selection-a",
+                "new_validation_id": "validation-new",
+                "validation_saved": True,
+            }
+        )
+        intent = {
+            "action": "refresh_observation",
+            "intent_id": "refresh-once",
+            "source_id": "selection-a",
+            "validation_id": "validation-old",
+        }
+
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "run_final_review_observation_refresh",
+                refresh_runner,
+            ),
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            page._consume_final_review_observation_refresh_intent(
+                intent,
+                source={"source_id": "validation-old"},
+                validation={
+                    "validation_id": "validation-old",
+                    "selection_source_id": "selection-a",
+                    "selection_source_snapshot": {"selection_source_id": "selection-a"},
+                },
+                observation_freshness={
+                    "can_refresh": True,
+                    "selection_source_id": "selection-a",
+                    "validation_id": "validation-old",
+                },
+            )
+
+        refresh_runner.assert_called_once()
+        self.assertEqual(
+            fake_st.session_state["final_review_active_decision_brief_source_id"],
+            "practical_validation_result:validation-new",
+        )
+        self.assertEqual(
+            fake_st.session_state[
+                "final_review_observation_refresh_result_selection_a"
+            ]["status"],
+            "refreshed",
+        )
+
+    def test_final_review_refresh_intent_rejects_stale_identity(self) -> None:
+        import app.web.backtest_final_review.page as page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        refresh_runner = MagicMock()
+
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "run_final_review_observation_refresh",
+                refresh_runner,
+            ),
+        ):
+            page._consume_final_review_observation_refresh_intent(
+                {
+                    "action": "refresh_observation",
+                    "intent_id": "refresh-stale",
+                    "source_id": "selection-other",
+                    "validation_id": "validation-old",
+                },
+                source={"source_id": "validation-old"},
+                validation={
+                    "validation_id": "validation-old",
+                    "selection_source_id": "selection-a",
+                },
+                observation_freshness={"can_refresh": True},
+            )
+
+        refresh_runner.assert_not_called()
+        fake_st.error.assert_called_once()
+
+    def test_final_review_selected_save_guard_rechecks_observation_freshness(self) -> None:
+        from app.web.backtest_final_review_helpers import (
+            _build_final_review_save_evaluation,
+        )
+
+        result = _build_final_review_save_evaluation(
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet={
+                "selection_gate_policy_snapshot": {"select_allowed": True}
+            },
+            decision_id="decision-freshness",
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+            operator_reason="현재 관측을 확인했다.",
+            existing_decision_ids=set(),
+            observation_freshness={
+                "selection_blocked": True,
+                "status": "price_refresh_available",
+            },
+        )
+
+        self.assertFalse(result["can_save"])
+        self.assertIn("Observation freshness", result["blockers"])
+
     def test_final_review_page_uses_decision_brief_not_legacy_investment_report(self) -> None:
         page_source = Path("app/web/backtest_final_review/page.py").read_text(encoding="utf-8")
         render_body = page_source.split("def render_final_review_workspace", 1)[1]

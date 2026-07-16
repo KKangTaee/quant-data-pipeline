@@ -52,6 +52,7 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
             },
             "decision_id": "final-review-grs-current",
             "existing_decision_ids": set(),
+            "observation_freshness": {},
         }
 
     def _build(self, inputs: dict[str, object] | None = None) -> dict[str, object]:
@@ -147,6 +148,58 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
                 self.assertGreater(brief["eligibility"]["pre_selection_unresolved_count"], 0)
                 self.assertEqual(brief["verdict"]["route"], "RE_REVIEW_REQUIRED")
                 self.assertFalse(brief["capabilities"]["can_select_for_monitoring"])
+
+    def test_refreshable_stale_observation_blocks_only_selected_route(self) -> None:
+        inputs = self._inputs()
+        inputs["observation_freshness"] = {
+            "schema_version": "final_review_observation_freshness_v1",
+            "status": "price_refresh_available",
+            "selection_blocked": True,
+            "can_refresh": True,
+            "button_label": "최신 데이터로 다시 계산",
+        }
+
+        brief = self._build(inputs)
+        options = {
+            row["route"]: row for row in brief["decision_action"]["options"]
+        }
+
+        self.assertEqual(
+            brief["observation_freshness"]["status"],
+            "price_refresh_available",
+        )
+        self.assertFalse(
+            options["SELECT_FOR_PRACTICAL_PORTFOLIO"]["recordable"]
+        )
+        self.assertIn(
+            "최신 데이터",
+            options["SELECT_FOR_PRACTICAL_PORTFOLIO"]["disabled_reason"],
+        )
+        self.assertTrue(options["HOLD_FOR_MORE_PAPER_TRACKING"]["recordable"])
+        self.assertTrue(options["REJECT_FOR_PRACTICAL_USE"]["recordable"])
+        self.assertTrue(options["RE_REVIEW_REQUIRED"]["recordable"])
+        self.assertTrue(brief["capabilities"]["can_refresh_observation"])
+        self.assertFalse(brief["capabilities"]["provider_fetch"])
+        self.assertFalse(brief["capabilities"]["validation_rerun"])
+
+    def test_up_to_date_observation_keeps_selected_route_recordable(self) -> None:
+        inputs = self._inputs()
+        inputs["observation_freshness"] = {
+            "schema_version": "final_review_observation_freshness_v1",
+            "status": "up_to_date",
+            "selection_blocked": False,
+            "can_refresh": False,
+        }
+
+        brief = self._build(inputs)
+        selected = next(
+            row
+            for row in brief["decision_action"]["options"]
+            if row["route"] == "SELECT_FOR_PRACTICAL_PORTFOLIO"
+        )
+
+        self.assertTrue(selected["recordable"])
+        self.assertFalse(brief["capabilities"]["can_refresh_observation"])
 
     def test_route_labels_preserve_canonical_persistence_values(self) -> None:
         brief = self._build()

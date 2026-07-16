@@ -269,14 +269,19 @@ def _build_decision_action(
     eligibility: dict[str, Any],
     decision_id: str,
     existing_decision_ids: set[str],
+    observation_freshness: dict[str, Any],
 ) -> dict[str, Any]:
     normalized_decision_id = str(decision_id or "").strip()
     duplicate = bool(normalized_decision_id and normalized_decision_id in existing_decision_ids)
     options: list[dict[str, Any]] = []
+    refresh_blocked = bool(observation_freshness.get("selection_blocked"))
     for option_route, label in DECISION_BRIEF_ROUTE_PRESENTATION.items():
         selected_route_blocked = (
             option_route == SELECT_FOR_PRACTICAL_PORTFOLIO
-            and not bool(eligibility.get("select_allowed"))
+            and (
+                not bool(eligibility.get("select_allowed"))
+                or refresh_blocked
+            )
         )
         recordable = bool(normalized_decision_id) and not duplicate and not selected_route_blocked
         if duplicate:
@@ -284,7 +289,11 @@ def _build_decision_action(
         elif not normalized_decision_id:
             disabled_reason = "Decision ID가 없어 판단을 기록할 수 없습니다."
         elif selected_route_blocked:
-            disabled_reason = "선정 전 미해결 근거가 있어 계속 추적으로 기록할 수 없습니다."
+            disabled_reason = (
+                "최신 데이터로 다시 계산한 뒤 계속 추적으로 기록할 수 있습니다."
+                if refresh_blocked
+                else "선정 전 미해결 근거가 있어 계속 추적으로 기록할 수 없습니다."
+            )
         else:
             disabled_reason = ""
         presentation = _ROUTE_PRESENTATION[option_route]
@@ -1155,6 +1164,7 @@ def build_final_review_decision_brief(
     investability_packet: dict[str, Any],
     decision_id: str,
     existing_decision_ids: set[str],
+    observation_freshness: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Project stored Final Review evidence into the current Decision Brief."""
 
@@ -1163,6 +1173,7 @@ def build_final_review_decision_brief(
     paper_observation = _as_dict(paper_observation)
     decision_evidence = _as_dict(decision_evidence)
     investability_packet = _as_dict(investability_packet)
+    observation_freshness = _as_dict(observation_freshness)
     eligibility, unresolved_issues = _build_eligibility(
         validation=validation,
         investability_packet=investability_packet,
@@ -1194,6 +1205,7 @@ def build_final_review_decision_brief(
         eligibility=eligibility,
         decision_id=decision_id,
         existing_decision_ids={str(value) for value in existing_decision_ids},
+        observation_freshness=observation_freshness,
     )
     closure = _as_dict(validation.get("evidence_closure"))
     closure_issues = [_as_dict(row) for row in list(closure.get("issues") or []) if isinstance(row, dict)]
@@ -1241,6 +1253,7 @@ def build_final_review_decision_brief(
         "provider_fetch": False,
         "validation_rerun": False,
         "storage_append_in_react": False,
+        "can_refresh_observation": bool(observation_freshness.get("can_refresh")),
     }
     return {
         "schema_version": DECISION_BRIEF_SCHEMA_VERSION,
@@ -1277,6 +1290,7 @@ def build_final_review_decision_brief(
         "weaknesses": weaknesses,
         "monitoring_conditions": monitoring_conditions,
         "decision_action": decision_action,
+        "observation_freshness": observation_freshness,
         "disclosures": disclosures,
         "capabilities": capabilities,
     }

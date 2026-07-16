@@ -422,6 +422,7 @@ def _build_final_review_save_evaluation(
     decision_route: str,
     operator_reason: str,
     existing_decision_ids: set[str],
+    observation_freshness: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Check whether the final review can be recorded as one durable decision row."""
     decision_id_clean = str(decision_id or "").strip()
@@ -456,6 +457,15 @@ def _build_final_review_save_evaluation(
             "Ready": (not selected_route) or evidence.get("route") == "READY_FOR_FINAL_DECISION",
             "Current": evidence.get("route") or "-",
             "Meaning": "모니터링 후보 선정은 blocker가 없을 때만 저장합니다. non-select route는 판단 기록으로 남길 수 있습니다.",
+        },
+        {
+            "Criteria": "Observation freshness",
+            "Ready": (
+                not selected_route
+                or not bool(dict(observation_freshness or {}).get("selection_blocked"))
+            ),
+            "Current": dict(observation_freshness or {}).get("status") or "not_provided",
+            "Meaning": "계속 추적 선정은 현재 확보 가능한 관측 기간을 반영한 뒤 저장합니다.",
         },
         packet_gate,
     ]
