@@ -1,6 +1,6 @@
 # Overview Market Context U.S. Economic Cycle V1 Plan
 
-Status: Specification Approved — Implementation Not Started
+Status: Active — 1차 Complete, 2차 Next
 Last Updated: 2026-07-16
 
 ## 이걸 하는 이유?
@@ -36,7 +36,7 @@ Last Updated: 2026-07-16
    - 범위: actual run, desktop/420px QA, data/architecture/runbook/roadmap/task docs.
    - 완료 조건: 검증 통과 horizon만 숫자를 표시하며 관련 회귀와 문서가 일치한다.
 
-현재 완료 범위는 명세 승인과 구현 계획 작성까지이며, 구현 진행률은 `0/5`다.
+현재 완료 범위는 명세 승인, 구현 계획, 1차 vintage 데이터 계약이며 구현 진행률은 `1/5`다.
 
 ## Scope
 

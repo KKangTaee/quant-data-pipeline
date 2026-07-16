@@ -839,6 +839,40 @@ PROVIDER_SCHEMAS = {
           KEY ix_category_date (category, observation_date),
           KEY ix_coverage_status (coverage_status)
         );
+    """,
+    "macro_series_vintage_observation": """
+        CREATE TABLE IF NOT EXISTS macro_series_vintage_observation (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          series_id VARCHAR(64) NOT NULL,
+          observation_date DATE NOT NULL,
+          realtime_start DATE NOT NULL,
+          realtime_end DATE NOT NULL,
+          source VARCHAR(64) NOT NULL DEFAULT 'fred',
+          source_type ENUM('official','database_bridge','computed_proxy') NOT NULL DEFAULT 'official',
+          source_mode VARCHAR(64) NOT NULL DEFAULT 'fred_output_type_2',
+          source_ref VARCHAR(1024) NULL,
+
+          series_name VARCHAR(255) NULL,
+          factor_group VARCHAR(64) NOT NULL,
+          frequency VARCHAR(32) NULL,
+          units VARCHAR(64) NULL,
+          value DECIMAL(24,10) NULL,
+          release_lag_days INT NULL,
+
+          coverage_status ENUM('actual','partial','missing','error') NOT NULL DEFAULT 'actual',
+          missing_fields_json TEXT NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_series_observation_realtime_source (series_id, observation_date, realtime_start, source),
+          KEY ix_series_realtime_observation (series_id, realtime_start, observation_date),
+          KEY ix_factor_observation (factor_group, observation_date),
+          KEY ix_vintage_coverage_status (coverage_status)
+        );
     """
 }
 

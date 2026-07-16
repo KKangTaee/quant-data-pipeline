@@ -12,4 +12,10 @@ Last Updated: 2026-07-16
 
 ## Implementation Runs
 
-None. Add RED/GREEN commands and actual outputs here as each task executes.
+### 1차 — Vintage data contract
+
+- Baseline: `uv run --with pytest ... tests/test_market_context_valuation.py` 28 passed; Market Context service contracts 35 passed.
+- Task 1 RED: 3 expected catalog/schema failures. GREEN: focused 3 passed; schema regression 4 passed.
+- Task 2 RED: 5 expected collector module failures. GREEN: focused 5 passed; vintage suite 8 passed.
+- Task 3 RED: 4 expected loader module failures. GREEN: focused 5 passed; full vintage suite 12 passed.
+- `git diff --check`: passed before the 1차 commit.

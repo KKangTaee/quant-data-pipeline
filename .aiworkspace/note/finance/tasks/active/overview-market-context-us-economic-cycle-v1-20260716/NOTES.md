@@ -18,3 +18,10 @@ Last Updated: 2026-07-16
 ## Interpretation Boundary
 
 The model estimates a data-defined macro regime with uncertainty. It does not replace the NBER chronology, predict asset returns, or produce a trade instruction. Rates/credit/inflation can change forecast odds but cannot rewrite the current real-economy phase label.
+
+## 1차 Decisions
+
+- Raw business key is `(series_id, observation_date, realtime_start, source)`; `realtime_end` is updateable interval metadata.
+- Official vintage mode is FRED `output_type=2` with explicit `1776-07-04` to `9999-12-31` real-time bounds and pagination.
+- `.` and non-finite values persist as explicit missing rows; they are never coerced to zero or dropped.
+- Loader applies both SQL window selection and a defensive Python as-of filter for injected/legacy duplicate readers.
