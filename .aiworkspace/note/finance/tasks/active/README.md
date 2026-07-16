@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `practical-validation-level2-decision-workspace-v1-20260716` | Planning | Level2 검증 의미, 4단계 사용자 흐름, Final Review 시각 언어 기반 one-shell read model / UI 개편을 설계하고 구현 계획을 작성한다. |
+| `practical-validation-level2-decision-workspace-v1-20260716` | Ready for implementation | Level2 검증 의미, 4단계 사용자 흐름, Final Review 시각 언어 기반 one-shell read model / UI 개편의 DESIGN과 상세 PLAN이 완료됐다. |
 
 ## Recent Completed / Retained Current Work
 

@@ -1,6 +1,6 @@
 # Status
 
-Status: Planning
+Status: Ready for implementation
 Last Updated: 2026-07-16
 
 ## 전체 Roadmap
@@ -16,8 +16,8 @@ Last Updated: 2026-07-16
 - [x] Level3 Decision Workspace 영향 분석
 - [x] B안 Hybrid One-Shell 방향 사용자 승인
 - [x] DESIGN.md 작성과 self-review
-- [ ] PLAN.md 작성과 self-review
-- [ ] 계획 커밋
+- [x] PLAN.md 작성과 self-review
+- [x] 계획 커밋
 
 ## Current Position
 
@@ -25,4 +25,4 @@ Last Updated: 2026-07-16
 
 ## Next Action
 
-`superpowers:writing-plans` 절차로 함수·테스트·commit 단위의 PLAN.md를 작성하고 계획 커밋을 만든다.
+PLAN.md를 계획 커밋으로 고정한 뒤 새 세션에서 `superpowers:executing-plans`로 1차 RED부터 시작한다.

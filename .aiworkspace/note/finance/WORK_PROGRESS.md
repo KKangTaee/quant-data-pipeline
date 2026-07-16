@@ -6247,4 +6247,5 @@ Detailed historical logs were archived on `2026-04-13`.
 
 - Level3 개편 뒤 Level2의 검증 의미, 4/5-flow drift, square multi-surface UI, closure handoff 누락을 재진단했다.
 - `후보와 기준 확인 -> 최신 재검증 -> 결과 해석과 해결 구분 -> 저장 / Final Review 이동`의 4단계 Hybrid One-Shell 설계를 채택했다.
-- 새 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-level2-decision-workspace-v1-20260716/`이며 다음 작업은 상세 PLAN 작성과 계획 커밋이다.
+- 새 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-level2-decision-workspace-v1-20260716/`이며 DESIGN과 1~4차 상세 PLAN을 완료했다.
+- 다음 작업은 새 세션에서 PLAN의 1차 Validation Truth RED부터 실행하는 것이다.
