@@ -29,6 +29,7 @@ Last Verified: 2026-06-02
 
 | Research | Focus |
 | --- | --- |
+| `active/2026-07-us-economic-cycle-regime-forecast/` | 미국 경제의 회복·확장·둔화·침체 국면을 실시간 공식 데이터로 판단하고 1·2개월 확률 전망과 과거/현재/미래 시각화로 연결하기 위한 방법론·데이터·UX 리서치 |
 | `active/2026-07-nasdaq100-index-eps-source/` | S&P 500 가치평가 로직을 Nasdaq-100으로 확장하기 위한 index-level trailing P/E/EPS 조달 경로, GuruFocus/FactSet/LSEG/Nasdaq+SEC 비교와 source contract 권고 |
 | `active/2026-07-institutional-portfolios-source-extension/` | Institutional Portfolios의 OHLCV 출처, guru/watchlist alias 구조, Dataroma / WhaleWisdom / Fintel / OpenFIGI source-extension 가능성 조사 |
 | `active/2026-07-practical-validation-validation-audit/` | Practical Validation Flow 4를 Final Review 이동 기준 중심이 아니라 카테고리별 검증 결과 중심으로 재정리하기 위한 현행 module / gate / evidence 감사와 구현 가이드 |
