@@ -40,6 +40,8 @@ type Evidence = {
 };
 
 type AssetAssessment = "FAVORABLE" | "BURDEN" | "MIXED" | "INSUFFICIENT";
+type PriceStatus = "RISING" | "FALLING" | "MIXED" | "UNAVAILABLE";
+type AlignmentStatus = "ALIGNED" | "DIVERGENCE" | "MIXED" | "PRICE_PENDING";
 
 type ImplicationDriver = {
   factor: string;
@@ -52,15 +54,31 @@ type ImplicationDriver = {
 };
 
 type MarketImplication = {
-  asset_group: "rates" | "equities" | "gold_dollar" | "commodities";
+  asset_group: "rates" | "equities" | "gold" | "dollar" | "commodities";
   label: string;
   phase_context: string;
+  economic_as_of_date?: string | null;
   assessment: AssetAssessment;
   assessment_label: "우호" | "부담" | "혼재" | "자료 부족";
   summary: string;
   context: string;
   drivers: ImplicationDriver[];
   change_condition: string;
+  price_context?: {
+    symbol: string;
+    as_of_date?: string | null;
+    status: PriceStatus;
+    status_label: "상승 확인" | "하락 확인" | "방향 혼재" | "자료 부족";
+    reason_code?: string | null;
+    returns: {
+      one_week: number | null;
+      one_month: number | null;
+      three_months: number | null;
+    };
+    source_basis: string;
+  };
+  alignment?: AlignmentStatus;
+  alignment_label?: "배경과 가격 일치" | "배경과 가격 불일치" | "종합 혼재" | "가격 확인 대기";
   is_directional_forecast: false;
 };
 
@@ -128,6 +146,9 @@ const FACTOR_LABEL: Record<string, string> = {
 };
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
+const formatSignedPercent = (value: number | null) => value == null
+  ? "-"
+  : `${value > 0 ? "+" : ""}${(value * 100).toFixed(1)}%`;
 const formatMonth = (value?: string | null) => value ? value.slice(0, 7).replace("-", ".") : "-";
 
 function probabilityCoordinate(probabilities: Probabilities): PlotPoint {
@@ -395,19 +416,65 @@ function EvidenceGroup({ title, subtitle, rows }: { title: string; subtitle: str
   );
 }
 
-function MarketImplicationCard({ item }: { item: MarketImplication }) {
+function PriceConfirmation({ item }: { item: MarketImplication }) {
+  const price = item.price_context;
+  if (!price) return null;
+  const windows = [
+    ["1주", price.returns.one_week],
+    ["1개월", price.returns.one_month],
+    ["3개월", price.returns.three_months],
+  ] as const;
   return (
-    <article className="implication-card" tabIndex={0}>
+    <section className="price-confirmation" aria-label={`${item.label} 경제 배경과 가격 확인`}>
+      <div className="context-status-grid">
+        <div>
+          <span>경제 배경</span>
+          <b className={`implication-status assessment-${item.assessment.toLowerCase()}`}>
+            {item.assessment_label}
+          </b>
+        </div>
+        <div>
+          <span>가격 확인</span>
+          <b className={`price-status price-${price.status.toLowerCase()}`}>
+            {price.status_label}
+          </b>
+        </div>
+      </div>
+      <div className="price-return-grid" aria-label={`${item.label} 기간별 가격 수익률`}>
+        {windows.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong className={value == null ? "return-empty" : value > 0 ? "return-positive" : value < 0 ? "return-negative" : "return-flat"}>
+              {formatSignedPercent(value)}
+            </strong>
+          </div>
+        ))}
+      </div>
+      <p className="implication-basis">경제 {formatMonth(item.economic_as_of_date)} · 가격 {formatMonth(price.as_of_date)} · {price.symbol}</p>
+    </section>
+  );
+}
+
+function MarketImplicationCard({ item }: { item: MarketImplication }) {
+  const priceAware = Boolean(item.price_context);
+  return (
+    <article className={`implication-card ${priceAware ? "is-price-aware" : ""}`} tabIndex={0}>
       <header>
         <div>
           <span>{item.label}</span>
-          <strong>{item.phase_context} 국면</strong>
+          <strong>경제 국면: {item.phase_context}</strong>
         </div>
-        <b className={`implication-status assessment-${item.assessment.toLowerCase()}`}>
-          {item.assessment_label}
-        </b>
+        <div className="implication-overall">
+          {priceAware ? <span>종합 판단</span> : null}
+          <b className={priceAware
+            ? `implication-status alignment-${(item.alignment || "PRICE_PENDING").toLowerCase()}`
+            : `implication-status assessment-${item.assessment.toLowerCase()}`}>
+            {priceAware ? item.alignment_label : item.assessment_label}
+          </b>
+        </div>
       </header>
       <p className="implication-summary">{item.summary || item.context}</p>
+      <PriceConfirmation item={item} />
       <div className="implication-drivers" aria-label={`${item.label} 주요 근거`}>
         {item.drivers.length ? item.drivers.map((driver) => (
           <div key={driver.factor}>
@@ -520,7 +587,7 @@ function EconomicCycleWorkbench({ args }: Props) {
       <RegimeRibbon history={payload.history} horizons={payload.horizons} />
 
       <section className="market-implications" aria-labelledby="implication-title">
-        <div className="section-heading"><div><span>Conditional market context</span><h3 id="implication-title">자산별 확인 포인트</h3></div><small>매매 신호가 아닌 조건부 점검</small></div>
+        <div className="section-heading"><div><span>Conditional market context</span><h3 id="implication-title">자산별 확인 포인트</h3></div><small>경제 배경과 실제 가격을 분리해 확인</small></div>
         <div className="implication-grid">
           {payload.market_implications.map((item) => <MarketImplicationCard key={item.asset_group} item={item} />)}
         </div>
@@ -529,7 +596,7 @@ function EconomicCycleWorkbench({ args }: Props) {
       <details className="method-disclosure">
         <summary>방법론과 품질</summary>
         <div className="method-grid"><div><span>모델 버전</span><strong>{payload.model_version || "-"}</strong></div><div><span>기준일</span><strong>{payload.as_of_date || "-"}</strong></div><div><span>검증 상태</span><strong>{ESTIMATE_LABEL[currentState]}</strong></div></div>
-        <p>잠정 모델 추정은 계산 결과를 보여주되 검증 미달 사유를 함께 표시합니다. 모델과 NBER 이력을 분리해 표시하며, 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
+        <p>잠정 모델 추정은 계산 결과를 보여주되 검증 미달 사유를 함께 표시합니다. 모델과 NBER 이력을 분리해 표시하며, 금·달러 가격은 저장된 연속선물 일봉이라 계약 교체 효과가 포함될 수 있습니다. 이 결과는 NBER의 공식 경기판정이 아니고 수익률 예측이나 매매 지시가 아닙니다.</p>
         <ul>{payload.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
       </details>
     </main>
