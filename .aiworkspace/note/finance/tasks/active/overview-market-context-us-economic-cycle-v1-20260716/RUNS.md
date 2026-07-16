@@ -26,3 +26,11 @@ Last Updated: 2026-07-16
 - Task 5 RED: 5 expected label module failures. GREEN: 5 label tests; combined feature/label suite 10 passed.
 - Task 6 RED: 5 expected model module failures. GREEN: 5 h0 fit/allowlist/support/simplex/explanation tests passed.
 - Task 7 RED: 4 expected result schema/module/loader failures. GREEN: 4 artifact/snapshot persistence tests passed.
+
+### 3차 — Forecast, validation, and publication gate
+
+- Task 8 RED: transition/direct-horizon/financial-context/blend contracts failed as expected. GREEN: full model suite 9 passed.
+- Task 9 RED: 4 missing calibration contracts failed. GREEN: horizon temperature suite 4 and full model suite 13 passed.
+- Task 10 RED: 6 missing rolling-origin/gate contracts failed. GREEN: validation suite 6; combined model/validation suite 19 passed.
+- Task 11 RED: 5 missing pipeline/job contracts failed. GREEN: pipeline suite 6, including a forecast-origin cache leakage regression.
+- Full economic-cycle verification: 51 tests passed; Python compile and `git diff --check` passed. Three existing `edgar` deprecation warnings remain unrelated.

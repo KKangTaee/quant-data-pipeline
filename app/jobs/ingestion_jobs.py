@@ -21,6 +21,7 @@ from finance.data.data import store_ohlcv_to_mysql
 from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
 from finance.data.financial_statements import upsert_financial_statements
 from finance.data.fundamentals import upsert_fundamentals, upsert_statement_fundamentals_shadow
+from finance.data.economic_cycle_vintages import collect_economic_cycle_vintages
 from finance.data.asset_profile import collect_and_store_asset_profiles
 from finance.data.computed_lifecycle import collect_and_store_computed_snapshot_lifecycle
 from finance.data.etf_provider import (
@@ -67,6 +68,126 @@ from finance.data.market_intelligence import (
 from finance.data.sec_company_tickers import collect_and_store_sec_company_ticker_crosscheck
 from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
 from finance.data.symbol_directory import collect_and_store_symbol_directory_snapshots
+from finance.economic_cycle_pipeline import materialize_economic_cycle_snapshot
+
+
+def run_collect_economic_cycle_vintages(
+    *,
+    api_key: str | None = None,
+    collector: Callable[..., dict[str, object]] = collect_economic_cycle_vintages,
+) -> JobResult:
+    """Collect the locked FRED/ALFRED vintage catalog on explicit invocation."""
+
+    job_name = "collect_economic_cycle_vintages"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        summary = collector(api_key=api_key)
+        rows_written = int(summary.get("stored") or 0)
+        failed = _failed_item_ids(
+            summary.get("failed") or [], id_keys=("series_id",)
+        )
+        requested = int(
+            summary.get("requested_series") or summary.get("requested") or 0
+        )
+        status = _status_from_provider_summary(
+            rows_written=rows_written,
+            failed_items=failed,
+            missing_items=summary.get("missing") or [],
+        )
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=requested,
+            symbols_processed=max(requested - len(failed), 0),
+            failed_symbols=failed,
+            message=(
+                "Economic-cycle vintage collection completed."
+                if status == "success"
+                else "Economic-cycle vintage collection completed with gaps."
+            ),
+            details={
+                "source": summary.get("source") or "fred",
+                "source_mode": summary.get("source_mode")
+                or "fred_output_type_2",
+                "coverage": summary.get("coverage") or {},
+                "missing": summary.get("missing") or [],
+                "target_table": "finance_meta.macro_series_vintage_observation",
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Economic-cycle vintage collection failed: {exc}",
+            details={
+                "source": "fred",
+                "source_mode": "fred_output_type_2",
+                "target_table": "finance_meta.macro_series_vintage_observation",
+            },
+        )
+
+
+def run_materialize_economic_cycle(
+    *,
+    as_of_date: str | None = None,
+    materializer: Callable[..., object] = materialize_economic_cycle_snapshot,
+) -> JobResult:
+    """Materialize a DB-only cycle snapshot without any provider access."""
+
+    job_name = "materialize_economic_cycle"
+    started_at = _now_str()
+    t0 = perf_counter()
+    resolved_date = as_of_date or datetime.now().date().isoformat()
+    try:
+        snapshot = materializer(as_of_date=resolved_date)
+        snapshot_status = str(getattr(snapshot, "status", "LIMITED"))
+        status = "success" if snapshot_status == "READY" else "partial_success"
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=1,
+            message=(
+                "Economic-cycle snapshot materialized."
+                if status == "success"
+                else "Economic-cycle snapshot materialized with limited horizons."
+            ),
+            details={
+                "as_of_date": resolved_date,
+                "model_version": getattr(snapshot, "model_version", None),
+                "publication_status": snapshot_status,
+                "target_table": "finance_meta.economic_cycle_snapshot",
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"Economic-cycle materialization failed: {exc}",
+            details={
+                "as_of_date": resolved_date,
+                "target_table": "finance_meta.economic_cycle_snapshot",
+            },
+        )
 
 
 def run_collect_ohlcv(

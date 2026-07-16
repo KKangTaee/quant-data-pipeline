@@ -33,3 +33,12 @@ The model estimates a data-defined macro regime with uncertainty. It does not re
 - Retrospective current labels use only activity/labor level and three-month momentum, with origin-eligible `USREC` as an override.
 - The h0 Gaussian artifact rejects financial/inflation features by contract and cannot publish if any phase has no training support.
 - Full model parameters live in `economic_cycle_model_artifact`; UI/history reads compact `economic_cycle_snapshot` rows only.
+
+## 3차 Decisions
+
+- h1/h2 fit direct shifted targets; the smoothed transition matrix is context/prior rather than a substitute for direct horizon evidence.
+- Temperature selection uses only earlier eligible out-of-fold targets at each rolling origin and is stored separately per horizon.
+- Publication gates are horizon-specific. A bundle can remain usable when h0 is READY and h1/h2 are LIMITED, but numeric fields for every LIMITED horizon are persisted as absent.
+- Artifact hashes include the training cutoff, horizon parameters, and decisions; replay always passes its origin-specific artifact directly instead of selecting a later current artifact.
+- Replay caches a strict vintage read only under its true forecast origin. The origin row is never bound to the preceding training cutoff.
+- Manual collection and materialization jobs were added without an unattended schedule or a visible run/status panel.
