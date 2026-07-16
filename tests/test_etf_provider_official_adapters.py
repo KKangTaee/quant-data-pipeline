@@ -61,6 +61,44 @@ def _vanguard_payload() -> dict[str, object]:
     }
 
 
+def _ishares_duplicate_bond_workbook_bytes() -> bytes:
+    return b'''<ss:Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <ss:Worksheet ss:Name="Holdings"><ss:Table>
+    <ss:Row><ss:Cell><ss:Data ss:Type="String">Fund Holdings as of</ss:Data></ss:Cell><ss:Cell><ss:Data ss:Type="String">Jul 15, 2026</ss:Data></ss:Cell></ss:Row>
+    <ss:Row>
+      <ss:Cell><ss:Data ss:Type="String">Name</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Asset Class</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Market Value</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Weight (%)</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Par Value</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Maturity</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Coupon (%)</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Effective Date</ss:Data></ss:Cell>
+    </ss:Row>
+    <ss:Row>
+      <ss:Cell><ss:Data ss:Type="String">HSBC HOLDINGS PLC</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Fixed Income</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">13293137.89</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">0.0379</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">12141000</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Sep 15, 2037</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">6.5</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Sep 12, 2007</ss:Data></ss:Cell>
+    </ss:Row>
+    <ss:Row>
+      <ss:Cell><ss:Data ss:Type="String">HSBC HOLDINGS PLC</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Fixed Income</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">10723636.54</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">0.03057</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">9957000</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Sep 15, 2037</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="Number">6.5</ss:Data></ss:Cell>
+      <ss:Cell><ss:Data ss:Type="String">Sep 16, 2022</ss:Data></ss:Cell>
+    </ss:Row>
+  </ss:Table></ss:Worksheet>
+</ss:Workbook>'''
+
+
 class EtfProviderOfficialAdapterTests(unittest.TestCase):
     def test_ishares_discovery_uses_current_workbook_contract(self) -> None:
         from finance.data import etf_provider
@@ -107,6 +145,23 @@ class EtfProviderOfficialAdapterTests(unittest.TestCase):
         self.assertEqual(rows[0]["holding_name"], "Example Holding")
         self.assertEqual(rows[0]["weight_pct"], 12.5)
         self.assertEqual(rows[0]["coverage_status"], "partial")
+
+    def test_ishares_bonds_with_same_name_maturity_and_coupon_keep_unique_ids(self) -> None:
+        from finance.data import etf_provider
+
+        rows = etf_provider._parse_ishares_holdings_workbook(
+            "LQD",
+            {
+                "source": "ishares",
+                "url": "https://official.example/lqd.xls",
+            },
+            _ishares_duplicate_bond_workbook_bytes(),
+            as_of_fallback=None,
+            collected_at="2026-07-17 00:00:00",
+        )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(len({row["holding_id"] for row in rows}), 2)
 
     def test_vanguard_discovery_and_json_parser_normalize_vnq(self) -> None:
         from finance.data import etf_provider

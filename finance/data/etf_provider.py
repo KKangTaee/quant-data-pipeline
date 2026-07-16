@@ -1124,7 +1124,20 @@ def _holding_id_from_fields(row: dict[str, Any], row_number: int) -> str:
     name = _clean_text(row.get("holding_name"))
     maturity = _clean_text(row.get("maturity"))
     coupon = _clean_text(row.get("coupon"))
-    parts = [part for part in (symbol, name, maturity, coupon) if part]
+    effective_date = _clean_text(row.get("effective_date"))
+    accrual_date = _clean_text(row.get("accrual_date"))
+    parts = [
+        part
+        for part in (
+            symbol,
+            name,
+            maturity,
+            coupon,
+            effective_date,
+            accrual_date,
+        )
+        if part
+    ]
     if parts:
         return "|".join(parts).upper()[:255]
     return f"ROW_{row_number:06d}"
@@ -1765,6 +1778,8 @@ def _parse_ishares_holdings_csv(
                 "holding_name": row["holding_name"],
                 "maturity": record.get("Maturity"),
                 "coupon": record.get("Coupon (%)"),
+                "effective_date": record.get("Effective Date"),
+                "accrual_date": record.get("Accrual Date"),
             },
             row_number,
         )
@@ -1841,6 +1856,8 @@ def _parse_ishares_holdings_workbook(
                 "holding_name": row["holding_name"],
                 "maturity": record.get("Maturity"),
                 "coupon": record.get("Coupon (%)"),
+                "effective_date": record.get("Effective Date"),
+                "accrual_date": record.get("Accrual Date"),
             },
             row_number,
         )
