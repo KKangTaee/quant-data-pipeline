@@ -28173,7 +28173,7 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
         self.assertEqual(gate["items"][0]["category"], "operability")
         self.assertEqual(gate["items"][0]["symbols"], ["XYZ"])
 
-    def test_unsupported_verified_holdings_parser_requires_engineering_not_retry(
+    def test_supported_ishares_workbook_contract_is_collectable(
         self,
     ) -> None:
         from app.services import backtest_practical_validation as service
@@ -28216,18 +28216,15 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
                 provider_plan=plan,
             )
 
-        self.assertEqual(plan["holdings_exposure"], [])
+        self.assertEqual(plan["holdings_exposure"], ["LQD"])
         self.assertEqual(plan["source_map_discovery"], [])
-        self.assertEqual(plan["mapping_needed"], ["LQD"])
-        self.assertFalse(gate["required"])
-        self.assertFalse(gate["blocking"])
-        self.assertTrue(gate["engineering_required"])
-        self.assertEqual(
-            gate["engineering_items"][0]["symbols"],
-            ["LQD"],
-        )
+        self.assertEqual(plan["mapping_needed"], [])
+        self.assertTrue(gate["required"])
+        self.assertTrue(gate["blocking"])
+        self.assertFalse(gate["engineering_required"])
+        self.assertEqual(gate["items"][0]["symbols"], ["LQD"])
 
-    def test_failed_source_discovery_becomes_engineering_gap_instead_of_repeat_action(
+    def test_failed_legacy_ishares_csv_uses_current_static_workbook_contract(
         self,
     ) -> None:
         from app.services import backtest_practical_validation as service
@@ -28267,9 +28264,10 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
             plan = service.build_provider_gap_collection_plan(validation)
 
         self.assertEqual(plan["source_map_discovery"], [])
-        self.assertEqual(plan["mapping_needed"], ["COMT"])
+        self.assertEqual(plan["holdings_exposure"], ["COMT"])
+        self.assertEqual(plan["mapping_needed"], [])
 
-    def test_attempted_discovery_without_source_contract_does_not_repeat_action(
+    def test_attempted_vanguard_discovery_uses_current_static_contract(
         self,
     ) -> None:
         from app.services import backtest_practical_validation as service
@@ -28322,7 +28320,8 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
             plan = service.build_provider_gap_collection_plan(validation)
 
         self.assertEqual(plan["source_map_discovery"], [])
-        self.assertEqual(plan["mapping_needed"], ["VNQ"])
+        self.assertEqual(plan["holdings_exposure"], ["VNQ"])
+        self.assertEqual(plan["mapping_needed"], [])
 
     def test_failed_discovery_run_preserves_requested_symbols_for_lifecycle(
         self,
@@ -28373,7 +28372,8 @@ class ProviderGapCollectionServiceContractTests(unittest.TestCase):
             plan = service.build_provider_gap_collection_plan(validation)
 
         self.assertEqual(plan["source_map_discovery"], [])
-        self.assertEqual(plan["mapping_needed"], ["VNQ"])
+        self.assertEqual(plan["holdings_exposure"], ["VNQ"])
+        self.assertEqual(plan["mapping_needed"], [])
 
     def test_unverified_candidate_source_contract_stays_discoverable(
         self,

@@ -31,6 +31,14 @@ OFFICIAL_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 )
+ISHARES_FUND_DOWNLOAD_URL_TEMPLATE = (
+    "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/"
+    "get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&"
+    "locale=en_US&portfolioId={product_id}&component=fundDownload&userType=individual"
+)
+VANGUARD_HOLDINGS_URL_TEMPLATE = (
+    "https://investor.vanguard.com/vmf/api/{symbol}/portfolio-holding/stock.json"
+)
 OFFICIAL_PROVIDER_SOURCES: dict[str, dict[str, Any]] = {
     "AOR": {
         "source": "ishares",
@@ -99,18 +107,45 @@ OFFICIAL_PROVIDER_SOURCES: dict[str, dict[str, Any]] = {
 HOLDINGS_PROVIDER_SOURCES: dict[str, dict[str, Any]] = {
     "AOR": {
         "source": "ishares",
-        "parser": "ishares_csv",
-        "url": "https://www.ishares.com/us/products/239756/ishares-core-60-40-balanced-allocation-etf/1467271812596.ajax?fileType=csv&fileName=AOR_holdings&dataType=fund",
+        "parser": "ishares_workbook",
+        "url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(product_id="239756"),
     },
     "IEF": {
         "source": "ishares",
-        "parser": "ishares_csv",
-        "url": "https://www.ishares.com/us/products/239456/ishares-7-10-year-treasury-bond-etf/1467271812596.ajax?fileType=csv&fileName=IEF_holdings&dataType=fund",
+        "parser": "ishares_workbook",
+        "url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(product_id="239456"),
     },
     "TLT": {
         "source": "ishares",
-        "parser": "ishares_csv",
-        "url": "https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/1467271812596.ajax?fileType=csv&fileName=TLT_holdings&dataType=fund",
+        "parser": "ishares_workbook",
+        "url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(product_id="239454"),
+    },
+    "COMT": {
+        "source": "ishares",
+        "parser": "ishares_workbook",
+        "url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(product_id="270319"),
+    },
+    "EFA": {
+        "source": "ishares",
+        "parser": "ishares_workbook",
+        "url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(product_id="239623"),
+    },
+    "LQD": {
+        "source": "ishares",
+        "parser": "ishares_workbook",
+        "url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(product_id="239566"),
+    },
+    "TIP": {
+        "source": "ishares",
+        "parser": "ishares_workbook",
+        "url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(product_id="239467"),
+    },
+    "VNQ": {
+        "source": "vanguard",
+        "parser": "vanguard_json",
+        "url": VANGUARD_HOLDINGS_URL_TEMPLATE.format(symbol="VNQ"),
+        "page_url": "https://investor.vanguard.com/investment-products/etfs/profile/vnq",
+        "asset_class": "Equity",
     },
     "SPY": {
         "source": "ssga",
@@ -208,9 +243,8 @@ def _fetch_ishares_product_index(timeout: int = OFFICIAL_REQUEST_TIMEOUT) -> dic
             "product_id": match.group("product_id"),
             "product_slug": match.group("slug"),
             "product_url": f"https://www.ishares.com{href}",
-            "holdings_url": (
-                f"https://www.ishares.com{href}/1467271812596.ajax?"
-                f"fileType=csv&fileName={symbol}_holdings&dataType=fund"
+            "holdings_url": ISHARES_FUND_DOWNLOAD_URL_TEMPLATE.format(
+                product_id=match.group("product_id")
             ),
         }
     return index
@@ -321,6 +355,15 @@ def _verify_provider_source(row: dict[str, Any], *, timeout: int = OFFICIAL_REQU
             ok = len(data) > 100 and (b"Fund Holdings as of" in data[:1000] or b"Ticker,Name" in data[:3000])
             if not ok:
                 raise RuntimeError("iShares holdings CSV did not contain holdings content")
+        elif parser == "ishares_workbook":
+            data = _fetch_official_bytes(
+                source_url,
+                timeout=timeout,
+                accept="application/vnd.ms-excel,application/xml,text/xml,*/*",
+            )
+            sheet_rows = _spreadsheetml_sheet_rows(data, worksheet_name="Holdings")
+            if not any("Name" in row and "Weight (%)" in row for row in sheet_rows):
+                raise RuntimeError("iShares holdings workbook header not found")
         elif parser == "ssga_xlsx":
             data = _fetch_official_bytes(
                 source_url,
@@ -333,6 +376,11 @@ def _verify_provider_source(row: dict[str, Any], *, timeout: int = OFFICIAL_REQU
             payload = _fetch_official_json(source_url, timeout=timeout)
             if "holdings" not in payload:
                 raise RuntimeError("Invesco holdings payload has no holdings key")
+        elif parser == "vanguard_json":
+            payload = _fetch_official_json(source_url, timeout=timeout)
+            holdings = dict(payload.get("fund") or {}).get("entity")
+            if not isinstance(holdings, list) or not holdings:
+                raise RuntimeError("Vanguard holdings payload has no fund entity list")
         elif parser == "invesco_sector_json":
             payload = _fetch_official_json(source_url, timeout=timeout)
             if "holdingWeights" not in payload:
@@ -423,7 +471,7 @@ def _candidate_source_rows_for_universe_row(
                 symbol=symbol,
                 provider="ishares",
                 data_kind="holdings",
-                parser="ishares_csv",
+                parser="ishares_workbook",
                 source_url=product["holdings_url"],
                 source_ref=product["product_url"],
                 source_status="candidate",
@@ -472,6 +520,21 @@ def _candidate_source_rows_for_universe_row(
                 source_status="candidate",
                 fund_family=fund_family,
                 discovered_from="invesco_symbol_pattern",
+            )
+        )
+    elif provider == "vanguard":
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider="vanguard",
+                data_kind="holdings",
+                parser="vanguard_json",
+                source_url=VANGUARD_HOLDINGS_URL_TEMPLATE.format(symbol=symbol),
+                source_ref=str(row.get("url") or "") or None,
+                source_status="candidate",
+                fund_family=fund_family or "Vanguard",
+                discovered_from="vanguard_symbol_pattern",
+                metadata={"asset_class": "Equity"},
             )
         )
 
@@ -967,6 +1030,58 @@ def _xlsx_first_sheet_rows(data: bytes) -> list[list[str]]:
                         text = shared_strings[int(text)]
                 values[cell_idx] = str(text).strip()
             rows.append(values)
+    return rows
+
+
+def _spreadsheetml_sheet_rows(
+    data: bytes,
+    *,
+    worksheet_name: str,
+) -> list[list[str]]:
+    """Read one SpreadsheetML worksheet while ignoring malformed disclaimer XML."""
+
+    escaped_name = re.escape(str(worksheet_name).encode("utf-8"))
+    match = re.search(
+        rb'<ss:Worksheet\s+ss:Name=["\']'
+        + escaped_name
+        + rb'["\'][^>]*>.*?</ss:Worksheet>',
+        data,
+        flags=re.DOTALL,
+    )
+    if match is None:
+        raise RuntimeError(f"SpreadsheetML worksheet not found: {worksheet_name}")
+    worksheet = re.sub(
+        rb"&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9A-Fa-f]+;)",
+        b"&amp;",
+        match.group(0),
+    )
+    document = (
+        b'<ss:Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+        + worksheet
+        + b"</ss:Workbook>"
+    )
+    try:
+        root = ET.fromstring(document)
+    except ET.ParseError as exc:
+        raise RuntimeError("SpreadsheetML holdings payload is malformed") from exc
+
+    namespace = "urn:schemas-microsoft-com:office:spreadsheet"
+    rows: list[list[str]] = []
+    for row_node in root.findall(f".//{{{namespace}}}Row"):
+        values: list[str] = []
+        for cell_node in row_node.findall(f"{{{namespace}}}Cell"):
+            index_value = cell_node.attrib.get(f"{{{namespace}}}Index")
+            if index_value:
+                try:
+                    target_idx = max(int(index_value) - 1, 0)
+                except ValueError:
+                    target_idx = len(values)
+                while len(values) < target_idx:
+                    values.append("")
+            data_node = cell_node.find(f"{{{namespace}}}Data")
+            text = "" if data_node is None else "".join(data_node.itertext()).strip()
+            values.append(text)
+        rows.append(values)
     return rows
 
 
@@ -1657,6 +1772,82 @@ def _parse_ishares_holdings_csv(
     return _apply_holdings_coverage(rows)
 
 
+def _parse_ishares_holdings_workbook(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    data: bytes,
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    sheet_rows = _spreadsheetml_sheet_rows(data, worksheet_name="Holdings")
+    as_of = as_of_fallback
+    header_idx: int | None = None
+    for idx, raw_row in enumerate(sheet_rows):
+        row = [_clean_text(item) or "" for item in raw_row]
+        if row and row[0].lower().startswith("fund holdings as of") and len(row) > 1:
+            as_of = _parse_holdings_as_of(row[1]) or as_of
+        if "Name" in row and "Weight (%)" in row:
+            header_idx = idx
+            break
+    if header_idx is None:
+        raise RuntimeError("iShares holdings workbook header not found")
+
+    headers = [_clean_text(item) or "" for item in sheet_rows[header_idx]]
+    rows: list[dict[str, Any]] = []
+    for row_number, raw_values in enumerate(sheet_rows[header_idx + 1 :], start=1):
+        if not raw_values or not any(_clean_text(value) for value in raw_values):
+            continue
+        record = {
+            headers[idx]: raw_values[idx] if idx < len(raw_values) else None
+            for idx in range(len(headers))
+        }
+        weight = _parse_float_value(record.get("Weight (%)"))
+        name = _clean_text(record.get("Name"))
+        if weight is None or name is None:
+            continue
+        row = _holdings_row_base(
+            fund_symbol,
+            source_info,
+            as_of_date=as_of or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+            collected_at=collected_at,
+        )
+        row.update(
+            {
+                "holding_symbol": _clean_text(record.get("Ticker")),
+                "holding_name": name,
+                "holding_type": (
+                    _clean_text(record.get("Type"))
+                    or _clean_text(record.get("Security Type"))
+                    or _clean_text(record.get("Asset Class"))
+                ),
+                "weight_pct": weight,
+                "shares": _parse_float_value(
+                    record.get("Quantity")
+                    or record.get("Shares")
+                    or record.get("Par Value")
+                ),
+                "market_value": _parse_float_value(record.get("Market Value")),
+                "sector": _clean_text(record.get("Sector")),
+                "asset_class": _clean_text(record.get("Asset Class")) or source_info.get("asset_class"),
+                "country": _clean_text(record.get("Location")),
+                "currency": _clean_text(record.get("Currency") or record.get("Market Currency")),
+            }
+        )
+        row["holding_id"] = _holding_id_from_fields(
+            {
+                "holding_id": record.get("CUSIP") or record.get("ISIN") or record.get("SEDOL"),
+                "holding_symbol": row["holding_symbol"],
+                "holding_name": row["holding_name"],
+                "maturity": record.get("Maturity"),
+                "coupon": record.get("Coupon (%)"),
+            },
+            row_number,
+        )
+        rows.append(row)
+    return _apply_holdings_coverage(rows)
+
+
 def _parse_ssga_holdings_xlsx(
     fund_symbol: str,
     source_info: dict[str, Any],
@@ -1772,6 +1963,59 @@ def _parse_invesco_holdings_json(
     return _apply_holdings_coverage(rows)
 
 
+def _parse_vanguard_holdings_json(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    holdings = dict(payload.get("fund") or {}).get("entity")
+    if not isinstance(holdings, list):
+        raise RuntimeError("Vanguard holdings payload has no fund entity list")
+    as_of = _date_string(payload.get("asOfDate")) or as_of_fallback
+    rows: list[dict[str, Any]] = []
+    for row_number, item in enumerate(holdings, start=1):
+        if not isinstance(item, dict):
+            continue
+        weight = _parse_float_value(item.get("percentWeight"))
+        name = _clean_text(item.get("longName") or item.get("shortName"))
+        if weight is None or name is None:
+            continue
+        row = _holdings_row_base(
+            fund_symbol,
+            source_info,
+            as_of_date=_date_string(item.get("asOfDate")) or as_of or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+            collected_at=collected_at,
+        )
+        row.update(
+            {
+                "holding_symbol": _clean_text(item.get("ticker")),
+                "holding_name": name,
+                "holding_type": (
+                    _clean_text(item.get("holdingType"))
+                    or _clean_text(item.get("secSubType"))
+                    or _clean_text(item.get("secMainType"))
+                ),
+                "weight_pct": weight,
+                "shares": _parse_float_value(item.get("sharesHeld")),
+                "market_value": _parse_float_value(item.get("marketValue")),
+                "asset_class": _clean_text(item.get("secMainType")) or source_info.get("asset_class"),
+            }
+        )
+        row["holding_id"] = _holding_id_from_fields(
+            {
+                "holding_id": item.get("cusip") or item.get("isin") or item.get("sedol"),
+                "holding_symbol": row["holding_symbol"],
+                "holding_name": row["holding_name"],
+            },
+            row_number,
+        )
+        rows.append(row)
+    return _apply_holdings_coverage(rows)
+
+
 def _build_commodity_gold_holdings_rows(
     fund_symbol: str,
     source_info: dict[str, Any],
@@ -1836,6 +2080,21 @@ def _build_official_holdings_rows(
                         collected_at=collected_at,
                     )
                 )
+            elif parser == "ishares_workbook":
+                data = _fetch_official_bytes(
+                    str(source_info["url"]),
+                    timeout=timeout,
+                    accept="application/vnd.ms-excel,application/xml,text/xml,*/*",
+                )
+                rows.extend(
+                    _parse_ishares_holdings_workbook(
+                        symbol,
+                        source_info,
+                        data,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
             elif parser == "ssga_xlsx":
                 data = _fetch_official_bytes(
                     str(source_info["url"]),
@@ -1855,6 +2114,17 @@ def _build_official_holdings_rows(
                 payload = _fetch_official_json(str(source_info["url"]), timeout=timeout)
                 rows.extend(
                     _parse_invesco_holdings_json(
+                        symbol,
+                        source_info,
+                        payload,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+            elif parser == "vanguard_json":
+                payload = _fetch_official_json(str(source_info["url"]), timeout=timeout)
+                rows.extend(
+                    _parse_vanguard_holdings_json(
                         symbol,
                         source_info,
                         payload,
@@ -2459,14 +2729,14 @@ def collect_and_store_etf_holdings(
         }
 
     normalized_provider = str(provider or "official").strip().lower()
-    if normalized_provider not in {"official", "auto", "ishares", "ssga", "invesco"}:
+    if normalized_provider not in {"official", "auto", "ishares", "ssga", "invesco", "vanguard"}:
         raise NotImplementedError("Unsupported ETF holdings provider.")
     normalized_refresh = str(refresh_mode or "canonical_refresh").strip().lower()
     if normalized_refresh not in {"canonical_refresh", "upsert"}:
         raise NotImplementedError("Only canonical_refresh and upsert refresh modes are supported for ETF holdings.")
 
     as_of = _date_string(as_of_date) if as_of_date is not None else None
-    only_source = normalized_provider if normalized_provider in {"ishares", "ssga", "invesco"} else None
+    only_source = normalized_provider if normalized_provider in {"ishares", "ssga", "invesco", "vanguard"} else None
     rows, missing, failed = _build_official_holdings_rows(
         normalized_symbols,
         as_of_date=as_of,

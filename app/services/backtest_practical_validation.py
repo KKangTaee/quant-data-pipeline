@@ -43,7 +43,9 @@ SUPPORTED_HOLDINGS_COLLECTOR_PARSERS = frozenset(
         "commodity_gold",
         "invesco_json",
         "ishares_csv",
+        "ishares_workbook",
         "ssga_xlsx",
+        "vanguard_json",
     }
 )
 
