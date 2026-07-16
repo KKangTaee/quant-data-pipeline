@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete — Market Context visual fidelity correction
+Status: In Progress — Final Review chart interaction and content polish
 Last Updated: 2026-07-16
 
 ## Progress
@@ -32,10 +32,17 @@ Last Updated: 2026-07-16
 - [x] React presentation 교정과 production build
 - [x] 1440px / 760px side-by-side Browser QA
 - [x] correction docs closeout
+- [x] 후속 UI root cause 확인과 A안 사용자 승인
+- [x] chart interaction / title / observation polish DESIGN 작성과 self-review
+- [ ] implementation PLAN 작성과 계획 커밋
+- [ ] visual contract RED → GREEN
+- [ ] React chart / layout 구현과 production build
+- [ ] desktop hover / 760px Browser QA
+- [ ] closeout docs와 distinct commit
 
 ## Next Action
 
-Decision Workspace 기능 1~4차와 승인 A안의 Market Context visual language 교정을 모두 완료했다. 다음 제품 위험은 dynamic historical universe용 PIT membership / delisting provider 부재이며, 이 범위는 별도 승인 전까지 critical blocker로 유지한다.
+승인한 A안의 visual fidelity 교정은 완료했다. 현재 continuation은 같은 React presentation owner에서 섹션 제목 정렬, SVG hover/X·Y축, Underwater 의미 설명, observation strip 빈 면과 긴 값 clipping을 보정한다. Python/Gate/persistence는 유지한다.
 
 ## Commits
 

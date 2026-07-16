@@ -378,3 +378,47 @@ role별 고정 `-6 / -4` 정책은 제거한다.
 3. chart, metric, finding, monitoring, decision, disclosure가 Market Context의 radius/palette/shadow rhythm을 공유한다.
 4. 1440px와 760px Browser QA에서 기준 화면과 나란히 비교하고, 760px document/component horizontal overflow가 0이다.
 5. source-contract test가 canonical token, question-first hierarchy, chart palette를 고정해 같은 drift를 다시 허용하지 않는다.
+
+## 2026-07-16 Chart Interaction And Content Polish
+
+사용자가 Market Context visual fidelity 교정 결과를 확인한 뒤, 섹션 제목의 잘못된 가로 정렬, 의미가 부족한 차트 축, hover 부재, observation strip의 빈 면과 긴 값 clipping을 지적했다. 승인안 A는 기존 dependency-free SVG와 Python projection을 유지하면서 React presentation만 보강한다.
+
+### Root cause
+
+- `SectionHeading`은 eyebrow, title, detail을 flex의 세 독립 항목으로 렌더해 한글 제목이 영문 eyebrow 아래가 아니라 가운데 열에 놓인다.
+- `SvgLineChart`는 series path와 수평 grid만 그리며 pointer state, X/Y tick label, crosshair, tooltip이 없다. 아래의 start/min-max/end 문자열은 실제 축이 아니다.
+- `Underwater drawdown`은 running peak 대비 하락률이지만 제목과 화면 설명이 영문 contract에 머물러 사용자가 의미를 추론해야 한다.
+- `.db-observation-strip`은 `auto-fit minmax(180px, 1fr)`와 회색 container background를 함께 사용한다. viewport에 따라 5+1 track이 생겨 마지막 행의 미사용 면이 큰 빈칸처럼 보인다.
+- observation value와 comparator는 긴 snake-case token을 줄바꿈하는 규칙이 없어 chart shell의 `overflow: hidden` 경계에서 잘린다.
+
+### Chosen approach A
+
+- chart library를 추가하지 않고 현재 SVG를 확장한다. Market Context의 `pointerIndex`, hover rule, focus dot, inspector pattern을 Final Review에 맞게 재사용한다.
+- `SectionHeading`은 eyebrow와 한글 title을 `.db-section-heading-copy`로 묶고, detail만 오른쪽 설명으로 유지한다. 760px 이하에서는 두 묶음을 한 열로 쌓는다.
+- `SvgLineChart`는 plot margin을 명시하고 X/Y scale, 5~6개 date tick, 5개 value tick을 그린다. 누적 성과 Y축은 시작값 100의 rebased index, drawdown Y축은 `%` 단위다.
+- pointer hover는 가장 가까운 point index를 선택해 vertical crosshair, series별 focus dot, 날짜와 모든 series 값을 담은 tooltip을 표시한다. mouse leave 시 latest point로 돌아가며 keyboard/screen-reader용 chart description과 수치 표 fallback을 유지한다.
+- 누적 성과 chart subtitle은 `100은 관측 시작일의 기준값`을 설명한다.
+- Underwater 제목은 `고점 대비 낙폭 (Underwater)`으로 바꾸고 `0%는 이전 최고점 회복, 음수는 최고점 대비 하락률`을 설명한다. Python running-peak 계산은 변경하지 않는다.
+- observation strip은 desktop 3열, tablet 2열, mobile 1열로 고정한다. container의 미사용 회색 면을 없애고 각 article이 자체 border/background/radius를 가진다.
+- observation `strong`, `p`, `small`은 `overflow-wrap: anywhere`와 안전한 `word-break`를 사용해 raw evidence token과 comparator 전체를 표시한다.
+
+### Alternatives rejected
+
+- Recharts 도입은 axis/tooltip 구현을 단순화하지만 새 dependency와 bundle 증가, existing Market Context SVG와의 visual drift를 만든다.
+- axis label만 추가하는 최소안은 hover와 point-level 비교 요구를 충족하지 못한다.
+
+### Ownership and safety
+
+- 수정 owner는 `DecisionBriefWorkspace.tsx`, `DecisionBriefCharts.tsx`, `style.css`, tracked Vite build다.
+- visual source contract test가 title grouping, hover/axis/tooltip, Korean underwater semantics, observation wrapping/grid를 고정한다.
+- Python Decision Brief, exact-common alignment, running-peak drawdown, Gate, route, save, registry, Monitoring snapshot은 변경하지 않는다.
+- hover는 read-only presentation state이며 registry append나 Streamlit rerun을 만들지 않는다.
+
+### Acceptance criteria
+
+1. 모든 `SectionHeading`에서 영문 eyebrow 바로 아래에 한글 title이 놓이고 설명은 desktop 오른쪽, narrow viewport 아래에 배치된다.
+2. 누적 성과 chart는 5~6개 X date tick, 5개 rebased-index Y tick, hover 날짜와 후보/Benchmark 값을 제공한다.
+3. 고점 대비 낙폭 chart는 의미 설명, percent Y tick, hover 날짜/낙폭 값을 제공한다.
+4. observation 6개는 desktop 3×2, 760px 2×3, 460px 1×6으로 배치되고 큰 빈 회색 면이 없다.
+5. `weak_source_or_proxy_liquidity_evidence`와 `official_fresh_capacity_evidence` 같은 긴 값이 잘리지 않고 여러 줄로 표시된다.
+6. 기존 수치 표, SVG 접근성 label, chart series 계산, Python/data contract가 유지된다.
