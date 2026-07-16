@@ -54,13 +54,26 @@ Last Updated: 2026-07-16
 - [x] current GRS read-only runtime projection 확인
 - [x] focused 123 tests / target compile / diff check
 - [ ] current GRS desktop / 760px Browser visual QA
+- [x] Final Review observation freshness DESIGN / PLAN / self-review / 계획 커밋
+- [x] 1차 source-specific freshness truth와 selected-route Gate
+- [x] 2차 price refresh → replay → 새 validation append orchestration
+- [x] 3차 Decision Brief / authoritative save guard / Streamlit intent 연결
+- [x] 4차 compact freshness strip / fallback / production build / read-only current GRS probe
+- [ ] observation freshness desktop / 760px Browser visual QA
 
 ## Next Action
 
-8505 앱은 새 Python 계약으로 재시작됐다. 브라우저 visual QA 도구가 다시 사용 가능해지면 current GRS의 `낙폭 관리선 이탈 재검토`, `Benchmark 상대 성과 재검토` 카드와 760px overflow를 확인한다. 이후 후속 검토는 `RISKS.md`의 CAGR / Data Trust explicit threshold producer, 국면 의존 근거, turnover/cost review criterion 순서로 본다.
+브라우저 visual QA 도구가 다시 사용 가능해지면 current GRS의 freshness strip과 기존 Monitoring 조건을 desktop / 760px에서 함께 확인한다. refresh/save CTA는 protected registry를 위해 클릭하지 않는다. 이후 후속 검토는 `RISKS.md`의 CAGR / Data Trust explicit threshold producer, 국면 의존 근거, turnover/cost review criterion 순서로 본다.
 
 ## Commits
 
+- `2535a9da` Final Review 최신 관측 갱신 UI 완성
+- `e80908b8` Final Review 최신 관측 intent와 선정 Gate 연결
+- `f163e7a2` Final Review 최신 관측 재계산 오케스트레이션
+- `1ac0dae1` Final Review 최신 관측 상태 계약 추가
+- `f0391dc0` Final Review 갱신 실행 조건 보정
+- `a00c9754` Final Review 최신 관측 갱신 구현 계획 수립
+- `dfca85c8` Final Review 최신 관측 갱신 설계
 - `04a32c1d` Final Review Monitoring 변화 조건 생성
 - `a783b16a` Final Review Monitoring 조건 구현 계획 수립
 - `f9513204` Final Review Monitoring 조건 producer 설계

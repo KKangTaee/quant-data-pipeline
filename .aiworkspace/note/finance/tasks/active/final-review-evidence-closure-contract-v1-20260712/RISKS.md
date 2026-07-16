@@ -58,3 +58,10 @@
 - 생성된 조건은 자동 경보나 주문 신호가 아니라 Final Review 판단 snapshot과 향후 재검토 기준이다. 실제 Monitoring alert 실행 주기와 notification은 Portfolio Monitoring 범위다.
 - drawdown / Benchmark observation은 현재 강점·약점 설명과 미래 변화 조건에 모두 사용되지만, 서로 다른 stable id와 primary role을 사용해 card/closure/score 중복 반영과 구분한다.
 - current GRS runtime payload는 확인했지만, desktop / 760px visual Browser QA와 screenshot은 브라우저 조작 도구 부재로 남아 있다.
+
+## Observation Freshness Refresh Residuals
+
+- desktop / 760px freshness strip visual QA는 브라우저 조작 도구 부재로 남아 있다. source/build responsive contract와 production build는 통과했지만 실제 iframe 배치는 다음 Browser 세션에서 확인해야 한다.
+- 실제 refresh CTA는 protected `PRACTICAL_VALIDATION_RESULTS.jsonl` append와 OHLCV DB write를 발생시키므로 이번 QA에서는 실행하지 않았다. 실행 경로는 dependency-injected orchestration contract로 검증했다.
+- provider가 목표일까지 row를 주지 않으면 common curve가 전진하지 않을 수 있다. 이 경우 validation을 저장하지 않고 `partial_refresh`와 provider gap을 반환한다.
+- 가격 row가 저장된 뒤 replay가 실패하면 DB rollback을 하지 않고 `failed_after_price_refresh`로 남긴다. 재시도는 최신 freshness를 다시 읽고 이어간다.

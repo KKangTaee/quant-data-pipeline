@@ -9530,3 +9530,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Market Context visual language를 유지하면서 사용자가 날짜별 성과와 손실 깊이를 직접 읽고, 관측 근거 카드에서 정보 누락 없이 검토할 수 있어야 한다.
 - Analysis result: heading grid grouping, 축 없는 static SVG, 5열 fixed observation band가 각각 title misalignment, 값 해석 부족, 빈 면/clipping의 직접 원인이었다. Python calculation이나 Gate 문제는 아니었다.
 - Follow-up: React local hover와 실제 date/index/percent 축, Underwater 설명, 3/2/1열 wrapping grid를 적용했다. 115-test regression과 desktop/760 Browser QA를 통과했으며 save CTA와 protected registry는 건드리지 않았다.
+
+### 2026-07-16 - Final Review의 오래된 성과 관측은 Level2 회귀 없이 명시적으로 최신화한다
+
+- User request: 포트폴리오 설계 시점에 머문 누적 성과와 고점 대비 낙폭을 현재 확보 가능한 데이터까지 Final Review에서 최신화하고 싶다고 요청함.
+- Interpreted goal: Level2 검증 의미를 바꾸지 않으면서 사용자가 같은 후보를 한 번의 action으로 최신 가격까지 다시 계산하고 새 validation을 기준으로 판단해야 함.
+- Analysis result: current GRS는 curve `2026-06-26`, 최신 완료 session `2026-07-15`, DB common `2026-06-26`, limiter `BIL`이었다. replay만으로는 늘어나지 않아 기존 OHLCV 수집을 먼저 연결해야 했다.
+- Follow-up: Python one-click price refresh → replay → append-only validation orchestration, selected-route-only freshness Gate, Market Context 계열 compact strip을 구현했다. React는 intent/presentation만 맡고 실제 refresh/save UI 실행은 protected registry 때문에 QA에서 수행하지 않았다.

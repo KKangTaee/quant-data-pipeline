@@ -123,3 +123,15 @@
 - Streamlit 8505 프로세스는 `--fileWatcherType none`이므로 구현 뒤 재시작했다.
 - 현재 세션에 in-app Browser 조작 도구가 노출되지 않아 desktop / 760px visual screenshot QA는 완료하지 못했다. save CTA와 protected registry는 건드리지 않았다.
 - fresh completion verification: focused 123 tests `OK`, React production build 177 modules `OK`, Decision Brief service / Final Review page / component `py_compile`, `git diff --check` 모두 통과했다.
+
+## 2026-07-16 Final Review Observation Freshness Refresh
+
+- baseline: existing Final Review focused suite 105 tests `OK`.
+- 1차 RED: freshness status 5 tests가 새 service 부재로 5 errors. GREEN과 adapter regression: 113 tests `OK`.
+- 2차 RED: orchestration 5 tests가 missing function으로 5 errors. GREEN: refresh/replay/validation service 40 tests와 existing Final Review 105 tests `OK`.
+- 3차 RED: Decision Brief / Streamlit / save guard 5 tests가 missing parameter/consumer로 5 errors. GREEN focused suite 113 tests `OK`.
+- 4차 RED/GREEN: compact freshness visual contract와 DB loader failure contract를 추가했다. completion suite는 refresh / Decision Brief / visual / Final Review read model / replay / GRS 130 tests `OK`.
+- React Vite production build: 177 modules, CSS 18.55 kB, JS 340.29 kB, `OK`.
+- target `py_compile`, `git diff --check`, read-only current GRS runtime probe `OK`.
+- current GRS probe: `price_refresh_available`, curve `2026-06-26`, latest session `2026-07-15`, DB common `2026-06-26`, limiter `BIL`, `selection_blocked=True`.
+- Browser QA는 인앱 브라우저 조작 실행 도구가 세션에 노출되지 않아 미실행이다. 실제 refresh/save는 실행하지 않았고 protected registry / run history를 stage하지 않았다.

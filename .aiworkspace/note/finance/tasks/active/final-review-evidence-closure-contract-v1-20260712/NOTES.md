@@ -114,3 +114,11 @@
   - 낙폭: 현재 `-12.43%`, 재검토선 `-15.00%`, 월간 또는 리밸런싱 시점
   - Benchmark: 현재 `+347.35%p`, 재검토선 `0.00%p 이하`, 월간 또는 리밸런싱 시점
 - CAGR deterioration과 Data Trust refresh는 explicit numeric threshold가 없으므로 구조화 조건으로 승격하지 않는다.
+
+## 2026-07-16 Final Review Observation Freshness Refresh
+
+- current GRS stored curve는 `2026-06-26`, 최신 완료 NYSE session은 `2026-07-15`, source DB common date는 `2026-06-26`, limiting symbol은 `BIL`이다.
+- DB common date가 curve보다 조금 최신이어도 목표일까지 자동 수집 가능한 stale symbol이 남아 있으면 one-click에서 가격 수집을 먼저 수행한다. replay-only는 자동 가격 gap이 없을 때만 사용한다.
+- refresh는 기존 `run_backtest_price_refresh`, `run_practical_validation_actual_replay`, `build_practical_validation_result`, append writer를 재사용한다. Final Review가 별도 provider/runtime을 만들지 않는다.
+- 새 validation이 같은 selection source이고 Final Review Gate를 통과하며 curve가 실제로 전진했을 때만 append한다. 기존 JSONL row는 rewrite하지 않는다.
+- freshness가 stale이면 selected route만 차단한다. 보류 / 거절 / 재검토 route는 현재 판단으로 계속 기록할 수 있다.

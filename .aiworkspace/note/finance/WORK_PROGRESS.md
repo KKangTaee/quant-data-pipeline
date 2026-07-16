@@ -6235,3 +6235,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - 집중/낙폭/회전/비용은 criterion 유무와 무관하게 표시하고, `기준 미설정`과 `분석 근거 없음`을 구분한다. Python이 projection/comparison을 소유한다.
 - 구현 커밋은 `86170a91`, `bbe4449d`; focused 120 tests, 177-module build, py_compile, desktop/760 Browser QA를 통과했다.
 - 다음 검토 위치는 active task `STATUS.md`, `RUNS.md`, `RISKS.md`이며 registry/run history/screenshot은 stage하지 않았다.
+
+## 2026-07-16 - Final Review Observation Freshness Refresh
+
+- Final Review에서 stored curve end / latest completed session / source DB common date / limiting symbol을 구분하고 one-click 최신화 계약을 구현했다.
+- 가격 gap은 기존 OHLCV 수집 → 동일 source replay → 새 Practical Validation append 순으로 Python이 처리하며, selected route만 freshness Gate로 잠근다.
+- 구현 커밋은 `1ac0dae1`, `f163e7a2`, `e80908b8`, `2535a9da`; focused completion 130 tests와 production build/read-only GRS probe를 통과했다.
+- Browser visual QA는 도구 부재로 남았으며 protected registry / run history는 stage하지 않았다. 상세는 active task `RUNS.md`, `RISKS.md`를 본다.
