@@ -217,6 +217,10 @@ def calculate_factor_scores(panel: pd.DataFrame) -> pd.DataFrame:
         output[f"{factor}_available_count"] = available
         output[f"{factor}_score"] = numeric.mean(axis=1).where(available >= 2)
         output[f"{factor}_stale"] = output[stale_columns].fillna(False).astype(bool).any(axis=1)
+    for factor in ("activity", "labor_income"):
+        output[f"{factor}_momentum_3m"] = pd.to_numeric(
+            output[f"{factor}_score"], errors="coerce"
+        ).diff(3)
 
     all_z_columns = [f"{item.series_id}_z" for item in catalog]
     available_count = (

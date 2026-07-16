@@ -156,6 +156,25 @@ def test_factor_scores_require_two_indicators_and_75_percent_coverage() -> None:
     assert coverage_limited.loc[0, "data_quality_status"] == "LIMITED"
 
 
+def test_factor_panel_persists_trailing_three_month_momentum_for_models() -> None:
+    module = _load_module()
+    modeled = [
+        item for item in get_economic_cycle_catalog() if item.role != "label_anchor"
+    ]
+    rows = []
+    for value in (1.0, 2.0, 4.0, 8.0):
+        row = {f"{item.series_id}_z": value for item in modeled}
+        row.update({f"{item.series_id}_stale": False for item in modeled})
+        rows.append(row)
+
+    panel = module.calculate_factor_scores(pd.DataFrame(rows))
+
+    assert panel["activity_momentum_3m"].iloc[:3].isna().all()
+    assert panel["labor_income_momentum_3m"].iloc[:3].isna().all()
+    assert panel.loc[3, "activity_momentum_3m"] == 7.0
+    assert panel.loc[3, "labor_income_momentum_3m"] == 7.0
+
+
 def test_staleness_thresholds_are_frequency_aware() -> None:
     module = _load_module()
     origin = date(2026, 7, 31)
