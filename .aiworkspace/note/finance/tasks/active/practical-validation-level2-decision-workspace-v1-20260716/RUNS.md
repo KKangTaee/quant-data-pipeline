@@ -23,3 +23,40 @@
 - self-review에서 provider CTA와 실제 callable handler의 커밋 순서를 맞추고, `validation_result_id`를 read model 최상위 계약으로 고정했다.
 - `source_required`, explicit measurement 기반 `measured_caution`, method audit의 actual PASS / remaining REVIEW 분리, 동일 root 중복 방지, React fallback / ResizeObserver / stale intent guard를 계획에 보강했다.
 - current saved GRS-shaped row의 Validation Efficacy audit는 walk-forward REVIEW 1개와 OOS / regime PASS 2개를 실제로 보유하므로 generic module 문구만 first-read에 쓰지 않도록 projection 기준을 명시했다.
+
+## 2026-07-16 Implementation / TDD
+
+- 1차 RED: single component applicability, provider callable action, closure class count contract 실패를 확인했다.
+- 1차 GREEN: focused 49 tests, py_compile, diff-check 통과.
+- commit: `a2352f01 Practical Validation 검증 의미 계약 보정`.
+- 2차 RED: 새 Decision Workspace service import failure 6건을 확인했다.
+- 2차 GREEN: focused 58 tests, py_compile, diff-check 통과.
+- commit: `0e180f93 Practical Validation 판단 워크스페이스 모델 도입`.
+- 3차 RED: one-shell component / active render / visual contract 부재로 boundary / visual tests가 실패함을 확인했다.
+- 3차 review RED: 동일 replay/profile에서 validation UUID가 rerun마다 바뀌는 stale intent 결함과 제거된 import를 참조하는 legacy command-center `NameError`를 각각 failing test로 고정했다.
+- 3차 GREEN: focused 52 tests, React production build 175 modules, target py_compile, diff-check 통과.
+- commit: `b661e83a Practical Validation Level2 원셸 UI 전환`.
+
+## 2026-07-16 Completion Verification
+
+- command:
+  - `.venv/bin/python -m unittest tests.test_backtest_practical_validation_decision_workspace tests.test_practical_validation_market_context_visual_contract tests.test_backtest_evidence_closure tests.test_backtest_refactor_boundaries tests.test_service_contracts.PracticalValidationServiceContractTests tests.test_service_contracts.PracticalValidationReplayServiceContractTests`
+- result: 82 tests, `OK`, 6.907s.
+- React: Vite 5.4.21 production build, 175 modules, 458ms.
+- py_compile: construction risk, evidence closure, practical validation wrapper, decision workspace, legacy workspace, page, fallback panel, component wrapper 8 targets 통과.
+- `git diff --check`: 통과.
+- read-only projection:
+  - source `selection_rebuilt_grs_macro_top1_ma200_aef1f226`
+  - Final Review latest-per-source selector validation `validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_d289e7e8`
+  - `ready_with_handoff / resolve_now 0 / engineering 0 / missing_contract 0 / accepted_limit 6 / final_decision 1`
+- Streamlit:
+  - 기존 backtest-dev 8505 process만 중지하고 same command로 재시작.
+  - new PID `60347`.
+  - `GET /backtest` HTTP 200, `/_stcore/health` = `ok`.
+- Browser QA:
+  - Browser / Computer Use skill이 요구하는 Node JS UI control tool이 현재 세션에 노출되지 않아 desktop / 760px visual, console, overflow, screenshot QA는 실행하지 못했다.
+  - provider collection, audit save, Final Review save는 실행하지 않았다.
+- protected scope:
+  - `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` unstaged.
+  - `.aiworkspace/note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` untracked / unstaged.
+  - saved JSONL, generated screenshots, `.superpowers/` unstaged.

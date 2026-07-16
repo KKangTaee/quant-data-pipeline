@@ -17,9 +17,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - latest completed phase:
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
+  - Current active task is [practical-validation-level2-decision-workspace-v1-20260716](./tasks/active/practical-validation-level2-decision-workspace-v1-20260716/STATUS.md). Implementation / non-visual verification complete, Browser QA pending.
   - Latest completed task is [institutional-portfolios-security-detail-chart-layout-v1-20260712](./tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/STATUS.md).
   - Previous completed Institutional Portfolios task is [institutional-portfolios-watchlist-mapping-v1-20260712](./tasks/active/institutional-portfolios-watchlist-mapping-v1-20260712/STATUS.md).
-  - Current active task is none.
   - Recent completed Final Review task is [final-review-evidence-closure-contract-v1-20260712](./tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md).
   - Previous completed Overview / Market Context task is [overview-market-context-sp500-valuation-v1-20260712](./tasks/active/overview-market-context-sp500-valuation-v1-20260712/STATUS.md).
   - Latest completed Practical Validation / Final Review boundary task is [practical-validation-recheck-handoff-loop-fix-v1-20260712](./tasks/active/practical-validation-recheck-handoff-loop-fix-v1-20260712/STATUS.md).
@@ -41,6 +41,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-07-16 - Practical Validation Level2는 수리와 최종 판단을 분리하는 one-shell이어야 한다
+
+- User request: 확정된 DESIGN / PLAN 기준으로 Level2 1~4차를 TDD, Korean commit, Browser QA, docs sync 순서로 구현해 달라고 요청함.
+- Interpreted goal: 사용자가 `이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?`에 답하면서 현재 해결할 일과 Final Review로 넘길 판단을 한 화면에서 혼동 없이 구분해야 한다.
+- Analysis result: Python이 root issue / applicability / handler / Gate / replay / persistence를 소유하고 React는 four-step presentation과 intent만 소유한다. accepted limit / final decision / monitoring transfer는 Level2 repair queue가 아니며 current eligible은 unresolved actionable / critical engineering / missing contract가 모두 0이어야 한다.
+- Follow-up: truth contract, `practical_validation_decision_workspace_v1`, one-shell React/fallback, stable validation id, focused 82 tests와 runtime projection을 구현했다. Browser JS control tool 부재로 desktop / 760px visual QA와 screenshot만 active closeout gate로 남겼다.
 
 ### 2026-07-16 - Final Review Monitoring 빈칸은 관찰값이 아니라 producer 공백이다
 

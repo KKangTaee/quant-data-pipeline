@@ -10,3 +10,6 @@
 - structured measurement가 없는 prose를 `measured_caution`으로 해석하면 숫자를 발명하게 된다. observation과 threshold / comparator가 모두 있는 경우만 해당 finding_kind를 만든다.
 - React build와 Python payload schema를 함께 변경한 뒤 장기 실행 Streamlit process가 stale module / bundle을 들 수 있으므로 Browser QA 전 재기동이 필요하다.
 - protected registry와 run history는 사용자 실사용 결과다. 구현 / QA / docs commit에서 stage하거나 rewrite하지 않는다.
+- current session에는 Browser / Computer Use가 요구하는 Node JS UI control tool이 노출되지 않았다. automated / HTTP verification만으로는 desktop / 760px layout, component console, outer/component overflow, screenshot을 증명할 수 없으므로 task closeout 전 visual QA가 필요하다.
+- `npm install`은 transitive dependency에서 moderate 1건, high 1건을 보고했다. `npm audit fix --force`는 Vite / Streamlit component compatibility를 깨뜨릴 수 있어 이번 scope에서 실행하지 않았으며 별도 dependency upgrade 검토가 필요하다.
+- legacy Fix Queue / Data Action Board는 active path에서 제거됐지만 물리 파일은 남아 있다. usage audit 없이 삭제하지 않는다.

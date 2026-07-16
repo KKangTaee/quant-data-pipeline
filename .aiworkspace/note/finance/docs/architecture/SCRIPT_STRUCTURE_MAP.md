@@ -62,11 +62,11 @@
 | `app/web/components/backtest_price_refresh_action/` | Backtest Data Trust 가격 업데이트용 React action card. 보이는 `가격 데이터 업데이트` 카드 / 버튼 / submit event만 담당하고, OHLCV 수집 실행과 session feedback은 Python path가 소유한다 |
 | `app/web/components/backtest_price_freshness_preflight/` | Strict Quality / Value 계열 form-level 가격 최신성 preflight React panel. 보이는 price freshness 요약만 담당하며, Vite build asset은 Streamlit component iframe 안에서 동작하도록 relative path를 사용해야 한다 |
 | `app/web/backtest_practical_validation/components.py` | Practical Validation 전용 visual shell. White square Command Center, section header, card grid, step rail, alert panel CSS / HTML helper를 제공하며 service/gate 로직은 포함하지 않는다 |
-| `app/web/backtest_practical_validation/page.py` | `Backtest > Practical Validation` 5-flow 화면 orchestration. 후보 Source 확인, 검증 기준 설정 / 실전 재검증 실행, 검증 기준 상세, `데이터 보강 / 수집 실행` action center, 저장 / Final Review 이동, source / validation profile / replay / provider collection session state wiring을 소유한다 |
-| `app/web/backtest_practical_validation/workspace_panel.py` | Practical Validation Flow 3 first-read workspace render. Practical Validation outcome과 카테고리별 통과 / 실패 요약, React component availability, Streamlit fallback을 소유한다 |
+| `app/web/backtest_practical_validation/page.py` | `Backtest > Practical Validation` current one-shell orchestration. 후보/기준, 최신 replay, 결과/해결 구분, 저장/Final Review 이동의 4단계를 렌더링하고 Python intent validation / execution / persistence boundary를 소유한다 |
+| `app/web/backtest_practical_validation/workspace_panel.py` | `practical_validation_decision_workspace_v1` 기반 four-step Streamlit fallback과 legacy Flow 3 compatibility renderer를 소유한다 |
 | `app/web/backtest_practical_validation/status_display.py` | Practical Validation UI status display helper. Raw route-like status를 first-read `PASS / REVIEW / NEEDS_INPUT / BLOCKED / NOT_RUN / NOT_APPLICABLE` labels / tones로 정규화한다 |
-| `app/web/components/practical_validation_fix_queue/` | Practical Validation Flow 3 React component. Compatibility path name은 Fix Queue지만, visible UI는 검증 결론과 카테고리별 검증 요약을 read-only card로 렌더링한다. validation execution, gate calculation, provider action, registry persistence, handoff는 Python path가 소유한다 |
-| `app/web/components/practical_validation_data_action_board/` | Practical Validation Flow 4 React component. Python workspace read model의 `data_action_board` props만 받아 `데이터 보강 / 수집 실행` action center의 `데이터 보강 대상` card / chip / availability를 표시한다. provider/FRED/API/DB fetch, validation calculation, collection execution, gate, registry persistence, handoff는 Python path가 소유한다 |
+| `app/web/components/practical_validation_decision_workspace/` | current Level2 React one-shell. Final Review visual token, four-step flow, non-empty lane, Step 3 disclosure, 760px single-column, ResizeObserver height sync를 담당하고 intent만 반환한다 |
+| `app/web/components/practical_validation_fix_queue/`, `app/web/components/practical_validation_data_action_board/` | compatibility-only legacy React components. active first-read에서는 렌더링하지 않는다 |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Latest / History result draft 생성, Practical Validation entry gate와 strict compare gate를 분리한 handoff readiness snapshot 보존, Pre-Live status 추천 / Proposal readiness 평가, display table helper |
 | `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, 저장 proposal monitoring / feedback 화면 render |
@@ -103,6 +103,7 @@
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize / compact records / curve provenance / benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free Practical Validation provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage, provenance, freshness, diagnostic evidence, look-through board로 변환 |
 | `app/services/backtest_practical_validation_workspace.py` | Streamlit-free Practical Validation workspace read model. result에서 gate summary, category-first criteria groups, Flow 4 `resolution_guide` action guide, display-only `data_action_board`, handoff summary, core / conditional / downstream evidence groups, technical details를 묶어 Flow 3 / Flow 4가 같은 screen-oriented contract를 읽게 한다. Flow 4 guide는 해결해야 할 항목, 번호형 `action_steps`, 통과 기준, 위치를 함께 제공한다 |
+| `app/services/backtest_practical_validation_decision_workspace.py` | current Level2 pure projection. root issue dedup, verified / measured caution / resolve-now / engineering-required / Final Review handoff 분리, top-level `validation_result_id`, state machine과 seven counts를 소유한다 |
 | `app/services/backtest_validation_status_policy.py` | Streamlit-free validation status policy. `PASS / READY / REVIEW / NOT_RUN / NEEDS_INPUT / BLOCKED` normalization과 rank를 소유한다 |
 | `app/services/backtest_practical_validation_modules.py` | Streamlit-free Practical Validation module planner. source traits와 profile / input checks / diagnostics / audit rows를 읽어 필수 / 조건부 / 후속 참고 module, gate effect, gate reason, Final Review 이동 gate, evidence board 연결을 만든다. Status normalization은 `backtest_validation_status_policy.py`를 사용한다 |
 | `app/services/backtest_practical_validation_board_registry.py` | Streamlit-free Practical Validation board registry. 화면 보드가 어떤 validation module을 설명하는지, 현재 후보에 적용되는지, 어떤 gate effect를 갖는지 board map으로 변환 |
@@ -208,6 +209,8 @@
 |---|---|
 | `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, Overview structure / boundary guard, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
 | `tests/test_backtest_evidence_closure.py` | root issue dedup, action handler, eligibility, GRS market-date contract, survivorship applicability, terminal-state finalization, measured-only score 계약 검증 |
+| `tests/test_backtest_practical_validation_decision_workspace.py` | Level2 truth/applicability, closure class counts, action handler, state/read-model dedup, measured caution, stable validation id 계약 검증 |
+| `tests/test_practical_validation_market_context_visual_contract.py` | four-step order, Level3-compatible visual token, zero-action lane omission, 760px layout, ResizeObserver 계약 검증 |
 
 ## Backtest Evidence Closure
 

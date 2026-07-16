@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| `practical-validation-level2-decision-workspace-v1-20260716` | Ready for implementation | Level2 검증 의미, 4단계 사용자 흐름, Final Review 시각 언어 기반 one-shell read model / UI 개편의 DESIGN과 상세 PLAN이 완료됐다. |
+| `practical-validation-level2-decision-workspace-v1-20260716` | Browser QA pending | 1~3차 구현과 focused 82 tests / React build / py_compile / diff-check / read-only runtime projection / docs sync 완료. desktop / 760px Browser QA와 screenshot만 남았다. |
 
 ## Recent Completed / Retained Current Work
 

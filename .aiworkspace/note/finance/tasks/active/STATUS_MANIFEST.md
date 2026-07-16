@@ -13,6 +13,10 @@ Latest completed task:
 
 - `institutional-portfolios-security-detail-chart-layout-v1-20260712`
 
+Current active task status:
+
+- `practical-validation-level2-decision-workspace-v1-20260716`: implementation and non-visual verification complete; desktop / 760px Browser QA pending.
+
 Previous completed task:
 
 - `institutional-portfolios-watchlist-mapping-v1-20260712`
