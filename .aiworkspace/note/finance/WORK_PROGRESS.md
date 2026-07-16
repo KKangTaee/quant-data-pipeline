@@ -24,7 +24,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 일봉의 1주·1개월·3개월 가격 흐름과 경제 배경의 일치·불일치를 표시한다.
+  - Latest completed task is [overview-economic-cycle-asset-signal-copy-v1-20260717](./tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md). 자산별 미국 경기 신호·실제 가격·두 신호 관계와 5/21/63거래일 표기를 사용자 언어로 정리했다.
+  - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 일봉의 1주·1개월·3개월 가격 흐름과 경제 배경의 일치·불일치를 표시한다.
   - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
   - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 유효 LIMITED 확률을 잠정 추정으로 공개하고 READY/계산불가와 분리했으며, 최근 12개월 2×2 hover 경로·실제 월수 기반 최근 60개월+2개월 ribbon·actual 122 snapshot 보존을 완료했다.
   - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 17-series vintage/PIT engine과 horizon별 publication gate를 구현했다.
@@ -58,6 +59,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### Overview / Market Context Track
 
+- Economic Cycle Asset Signal Copy V1:
+  - `경제 국면: 회복` 반복을 제거하고 금·달러는 `미국 경기 신호 / 실제 가격 / 두 신호 관계`, 나머지는 `현재 환경`으로 읽게 했다.
+  - Actual 금은 `금을 지지 / 하락 / 서로 다른 방향`, 달러는 `달러에 부담 / 상승 / 서로 다른 방향`이며 5/21/63거래일을 명시한다.
+  - Focused 35 tests, React build, actual read model, HTTP 200, desktop/420px overflow와 console error 0건을 확인했다.
 - Economic Cycle Gold / Dollar Price Confirmation V1:
   - 금과 달러를 별도 카드로 분리하고 `GC=F` / `DX-Y.NYB` 저장 일봉의 5/21/63거래일 가격 흐름을 경제 배경과 독립 표시한다.
   - Actual 2026-07-16은 금 `하락 확인`, 달러 `상승 확인`이며 두 카드 모두 2026-06-30 경제 배경과 불일치한다. 달러의 1주 하락도 1·3개월 상승과 함께 그대로 보인다.

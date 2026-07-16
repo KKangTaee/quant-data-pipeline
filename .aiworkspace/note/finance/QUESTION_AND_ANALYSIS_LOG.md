@@ -18,7 +18,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
+  - Latest completed task is [overview-economic-cycle-asset-signal-copy-v1-20260717](./tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md). 경제 전체 국면과 자산별 상태를 분리하고 미국 경기 신호·실제 가격·관계를 사용자 언어로 읽는 `3/3` 개선을 완료했다.
+  - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
   - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 경제사이클 evidence를 자산별 우호/부담/혼재/자료 부족과 두 근거/변경 조건으로 번역하는 `2/2` 개선을 완료했다.
   - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 계산 결과와 검증 상태를 분리하고 2×2 혼합형·actual 잠정 확률·Browser QA를 `5/5` 완료했다.
   - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Vintage/PIT engine과 horizon별 publication gate를 구현했다.
@@ -50,6 +51,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Entries
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
+
+### 2026-07-17 - 경제 전체 국면과 자산별 신호·가격 관계를 분리한다
+
+- User request: 모든 자산 카드가 `경제 국면: 회복`으로 보여 자산도 회복 중인 것처럼 읽히고, `우호 / 가격 확인 / 배경과 가격 불일치`가 어렵다며 자산의 현재 상황과 향후 확인 방향이 드러나게 개선을 승인함.
+- Interpreted goal: 미국 경제 전체 국면은 상위 영역에만 남기고, 금·달러는 경기지표가 자산에 주는 조건, 실제 가격 방향, 두 신호 관계를 한 카드에서 바로 이해하게 한다.
+- Analysis result: actual은 금 `금을 지지 / 하락 / 서로 다른 방향`, 달러 `달러에 부담 / 상승 / 서로 다른 방향`이다. 가격은 5/21/63거래일 후행 수익률이며, 두 신호의 차이는 가격 원인이나 전망을 증명하지 않는다.
+- Follow-up: 동적 설명, 세 항목 비교, `향후 확인 조건`, 정확한 거래일 표기를 구현했다. Focused 35 tests, build, actual read model, desktop/420px Browser QA를 통과했다.
 
 ### 2026-07-17 - 금·달러의 경제 배경과 실제 가격은 따로 읽고 다시 종합한다
 

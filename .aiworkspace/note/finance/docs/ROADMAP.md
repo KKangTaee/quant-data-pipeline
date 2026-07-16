@@ -9,7 +9,15 @@ Last Verified: 2026-07-17
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/`다.
+
+- 목적: 경제 전체의 `회복` 국면을 모든 자산의 현재 상태처럼 반복하고 `우호 / 가격 확인`을 사용자가 다시 해석해야 하던 문제를 해소한다.
+- 완료: 1차 자산별 사용자 문구·동적 설명, 2차 금/달러 3항목 비교·5/21/63거래일 표기, 3차 actual/desktop/420px Browser QA·docs를 닫았다.
+- actual 상태: 금은 `금을 지지 / 하락 / 서로 다른 방향`, 달러는 `달러에 부담 / 상승 / 서로 다른 방향`이다. 이는 미국 경기 조건과 실제 가격의 관계이며 가격 원인이나 향후 수익률을 단정하지 않는다.
+- 품질 경계: factor score, 가격 계산, publication gate, provider/DB 경계, 목표가격·매매 신호는 변경하지 않았다.
+- 상세 설계·계획: `docs/superpowers/specs/2026-07-17-economic-cycle-asset-signal-card-copy-design.md`, `docs/superpowers/plans/2026-07-17-economic-cycle-asset-signal-card-copy.md`.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/`다.
 
 - 목적: `금·달러 회복 국면`이라는 한 문장이 경제 배경과 실제 가격을 혼동하게 하던 문제를 해소한다.
 - 완료: 1차 달러인덱스 종목·DB-only 가격 loader, 2차 금/달러 분리·5/21/63거래일 가격 판정·service error isolation, 3차 5개 React 카드·actual backfill·regression/docs를 닫았다.
@@ -834,11 +842,11 @@ Current active task:
 
 Latest completed task:
 
-- `overview-market-context-turnaround-derived-quarter-provenance-v1-20260716` — 1차~4차 complete
+- `overview-economic-cycle-asset-signal-copy-v1-20260717` — 1차~3차 complete
 
 Previous completed task:
 
-- `overview-market-context-turnaround-stage-semantics-fix-v1-20260716` — 1차~3차 complete
+- `overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717` — 1차~3차 complete
 
 Recent completed docs cleanup tasks:
 
