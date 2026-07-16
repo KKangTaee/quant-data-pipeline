@@ -1,6 +1,6 @@
 # Status
 
-Status: In Progress — Final Review chart interaction and content polish
+Status: Complete — Final Review chart interaction and content polish
 Last Updated: 2026-07-16
 
 ## Progress
@@ -35,17 +35,21 @@ Last Updated: 2026-07-16
 - [x] 후속 UI root cause 확인과 A안 사용자 승인
 - [x] chart interaction / title / observation polish DESIGN 작성과 self-review
 - [x] implementation PLAN 작성과 계획 커밋
-- [ ] visual contract RED → GREEN
-- [ ] React chart / layout 구현과 production build
-- [ ] desktop hover / 760px Browser QA
-- [ ] closeout docs와 distinct commit
+- [x] visual contract RED → GREEN
+- [x] React chart / layout 구현과 production build
+- [x] desktop hover / 760px Browser QA
+- [x] closeout docs와 distinct commit
 
 ## Next Action
 
-승인한 A안의 visual fidelity 교정은 완료했다. 현재 continuation은 같은 React presentation owner에서 섹션 제목 정렬, SVG hover/X·Y축, Underwater 의미 설명, observation strip 빈 면과 긴 값 clipping을 보정한다. Python/Gate/persistence는 유지한다.
+차트 상호작용과 content polish까지 완료했다. 다음 검토 위치는 dynamic historical universe용 PIT membership / delisting provider 승인 여부이며, 이번 후속 작업에서도 Python/Gate/persistence는 변경하지 않았다.
 
 ## Commits
 
+- `54b11008` Final Review 차트 축과 hover 상호작용 개선
+- `88fc62c7` Final Review 제목 계층과 관측 목록 보정
+- `95cc2341` Final Review 차트 상호작용 구현 계획 수립
+- `35c0ff5a` Final Review 차트 상호작용 보정 설계 확정
 - `587757e9` Final Review 시장 맥락 시각 체계 적용
 - `a6ed5a02` Final Review 시장 맥락 시각 교정 계획 수립
 - `eaa8ce6a` Final Review Decision Brief 계약 도입

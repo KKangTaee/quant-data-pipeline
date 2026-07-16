@@ -6214,3 +6214,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - React workspace에 blue-gray palette, rounded surface, soft shadow, compact type과 responsive hierarchy를 적용했고 Python/Gate/persistence는 유지했다.
 - 구현 커밋은 `587757e9`; focused 112 tests, Vite build, 1280/1440/760 Browser QA와 console error 0건을 확인했다.
 - 다음 검토 위치는 동일 active task의 `STATUS.md`, `RUNS.md`, `RISKS.md`다.
+
+## 2026-07-16 - Final Review Chart Interaction And Content Polish
+
+- 영문 eyebrow를 한글 section title 위로 정렬하고 observation strip을 3/2/1열 card grid로 바꿔 빈 면과 긴 값 clipping을 제거했다.
+- 누적 성과와 고점 대비 낙폭 chart에 실제 X/Y축, crosshair, focus dot, date/value hover를 추가하고 Underwater의 0%/음수 의미를 명시했다.
+- 구현 커밋은 `88fc62c7`, `54b11008`; focused 115 tests, 176-module build, desktop/760 Browser QA를 통과했다.
+- 상세 RED/GREEN과 잔여 위험은 active task `RUNS.md`, `RISKS.md`를 본다. protected registry와 run history는 변경하거나 stage하지 않았다.

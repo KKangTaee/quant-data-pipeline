@@ -1951,7 +1951,7 @@ git status --short
 - Consumes: existing `SectionHeading({eyebrow, title, detail})` and `DecisionBriefObservation[]`.
 - Produces: `.db-section-heading-copy` DOM grouping and `.db-observation-strip` 3/2/1-column responsive contract.
 
-- [ ] **Step 1: Write failing heading and observation source-contract tests**
+- [x] **Step 1: Write failing heading and observation source-contract tests**
 
 Add to `FinalReviewMarketContextVisualContractTests`:
 
@@ -1972,7 +1972,7 @@ def test_observation_strip_has_complete_responsive_grid_and_wraps_long_values(se
     self.assertNotIn("background: #e1e8f0;", observation_block)
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -1984,7 +1984,7 @@ Run:
 
 Expected: 2 failures because `.db-section-heading-copy`, explicit 3-column observation grid and wrap rules are absent.
 
-- [ ] **Step 3: Group eyebrow and title**
+- [x] **Step 3: Group eyebrow and title**
 
 Replace `SectionHeading` body with:
 
@@ -2000,7 +2000,7 @@ return (
 )
 ```
 
-- [ ] **Step 4: Apply complete observation layout and wrapping**
+- [x] **Step 4: Apply complete observation layout and wrapping**
 
 Use:
 
@@ -2016,7 +2016,7 @@ Use:
 
 At `max-width: 760px`, use 2 columns; at `max-width: 460px`, use 1 column. Update the existing detail selector from `.db-section-heading > p:last-child` to `.db-section-detail`.
 
-- [ ] **Step 5: Run GREEN and focused visual regression**
+- [x] **Step 5: Run GREEN and focused visual regression**
 
 Run:
 
@@ -2027,7 +2027,7 @@ git diff --check
 
 Expected: 5 visual contract tests pass; diff check exits 0.
 
-- [ ] **Step 6: Commit heading/list implementation unit**
+- [x] **Step 6: Commit heading/list implementation unit**
 
 Stage only the test, workspace and style source files; verify the registry is excluded.
 
@@ -2050,7 +2050,7 @@ git commit -m "Final Review 제목 계층과 관측 목록 보정"
 - Produces: `buildYTicks(minimum: number, maximum: number, count?: number) -> number[]`.
 - Consumes: existing `LineSeries[]`, exact-common `SeriesPoint[]`, `EvidenceTable`.
 
-- [ ] **Step 1: Write failing chart interaction source-contract test**
+- [x] **Step 1: Write failing chart interaction source-contract test**
 
 Add:
 
@@ -2075,7 +2075,7 @@ def test_charts_expose_ticks_hover_tooltip_and_underwater_meaning(self) -> None:
         self.assertIn(token, source + style)
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -2086,7 +2086,7 @@ Run:
 
 Expected: failure because chart scale helpers, pointer handler, tooltip classes and Korean Underwater copy are absent.
 
-- [ ] **Step 3: Add chart geometry and tick helpers**
+- [x] **Step 3: Add chart geometry and tick helpers**
 
 In `DecisionBriefCharts.tsx`, import `useEffect`, `useState` and add:
 
@@ -2151,7 +2151,7 @@ function pointerIndex(event: React.PointerEvent<SVGSVGElement>, count: number): 
 }
 ```
 
-- [ ] **Step 4: Implement interactive `SvgLineChart`**
+- [x] **Step 4: Implement interactive `SvgLineChart`**
 
 Extend props with `subtitle: string` and `unit: ChartUnit`. Use `useState` for `activeIndex`, reset to the latest point when point count changes, and replace the complete function with:
 
@@ -2260,7 +2260,7 @@ function SvgLineChart({
 
 Keep `EvidenceTable` immediately after the plot. Remove the old `.db-chart-axis` start/min-max/end row because the SVG now owns actual axes.
 
-- [ ] **Step 5: Apply chart copy and unit semantics**
+- [x] **Step 5: Apply chart copy and unit semantics**
 
 Use cumulative props:
 
@@ -2280,11 +2280,11 @@ unit="percent"
 
 Keep the Python running-peak description in the SVG `desc`.
 
-- [ ] **Step 6: Add chart axis and tooltip CSS**
+- [x] **Step 6: Add chart axis and tooltip CSS**
 
 Add `.db-chart-subtitle`, `.db-chart-plot`, `.db-chart-y-label`, `.db-chart-x-label`, `.db-chart-hover-rule`, `.db-chart-focus-dot`, `.db-chart-tooltip` and `.db-chart-tooltip.is-right`. Tooltip is absolute, pointer-events none, white translucent, rounded 11px and uses the existing blue-gray palette. At 460px reduce tooltip padding and type size without hiding values.
 
-- [ ] **Step 7: Run GREEN, focused regression and production build**
+- [x] **Step 7: Run GREEN, focused regression and production build**
 
 Run:
 
@@ -2300,7 +2300,7 @@ git diff --check
 
 Expected: 115 focused tests pass after adding 3 new visual tests to the previous 112-test suite; Vite exits 0; diff check exits 0.
 
-- [ ] **Step 8: Browser QA**
+- [x] **Step 8: Browser QA**
 
 Desktop:
 
@@ -2317,7 +2317,7 @@ Narrow 760px:
 
 Save one generated screenshot as `qa-final-review-chart-hover-content-polish-760.png` and do not stage it.
 
-- [ ] **Step 9: Commit chart interaction implementation unit**
+- [x] **Step 9: Commit chart interaction implementation unit**
 
 Stage test/chart/style and tracked build output only. Verify cached names exclude registry, run history, screenshots and `.superpowers`.
 
@@ -2335,10 +2335,10 @@ git commit -m "Final Review 차트 축과 hover 상호작용 개선"
 **Interfaces:**
 - Documents implemented presentation behavior only; no roadmap, architecture map or data contract changes.
 
-- [ ] **Step 1: Record root cause, RED/GREEN/build and Browser QA evidence** in the active task docs.
-- [ ] **Step 2: Add one durable flow sentence** that Final Review behavior charts expose date/value axes and hover while Underwater means running-peak drawdown.
-- [ ] **Step 3: Add concise root handoff milestones** without copying command logs.
-- [ ] **Step 4: Run fresh completion verification**:
+- [x] **Step 1: Record root cause, RED/GREEN/build and Browser QA evidence** in the active task docs.
+- [x] **Step 2: Add one durable flow sentence** that Final Review behavior charts expose date/value axes and hover while Underwater means running-peak drawdown.
+- [x] **Step 3: Add concise root handoff milestones** without copying command logs.
+- [x] **Step 4: Run fresh completion verification**:
 
 ```bash
 .venv/bin/python -m unittest \
@@ -2357,7 +2357,7 @@ git status --short
 
 Expected: 115 tests pass, 176-module Vite build exits 0, py_compile and diff check exit 0; only protected/generated files remain outside the staged doc set.
 
-- [ ] **Step 5: Commit closeout docs**:
+- [x] **Step 5: Commit closeout docs**:
 
 ```bash
 git commit -m "Final Review 차트 상호작용 QA와 문서 동기화"

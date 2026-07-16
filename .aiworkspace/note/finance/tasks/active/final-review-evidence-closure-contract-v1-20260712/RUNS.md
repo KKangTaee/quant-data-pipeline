@@ -88,3 +88,14 @@
 - QA screenshot: `qa-final-review-market-context-visual-parity-760.png`를 generated artifact로 남기고 stage하지 않는다.
 - commit: `587757e9 Final Review 시장 맥락 시각 체계 적용`.
 - fresh completion verification: 같은 focused suite 112 tests `OK`, Vite 176-module build `OK`, Decision Brief service / Final Review page / component target `py_compile`, `git diff --check` 모두 통과했다.
+
+## 2026-07-16 Chart Interaction And Content Polish
+
+- heading/list RED: 새 source-contract 2개가 `.db-section-heading-copy`, 3열 observation grid와 wrap 규칙 부재로 2 failures를 냈다.
+- heading/list GREEN: visual contract 5 tests `OK`; 구현 커밋 `88fc62c7`.
+- chart RED: hover/tick/tooltip/Underwater semantics contract가 `type ChartUnit` 부재로 실패했다.
+- chart GREEN: visual contract 6 tests `OK`; focused Decision Brief / Final Review read-model / boundary suite 115 tests `OK`; Vite production build 176 modules `OK`; 구현 커밋 `54b11008`.
+- desktop Browser QA: 누적 성과 hover가 latest `2026-06-26 / 530 / 183`에서 과거 `2018-09-28 / 162 / 120`으로 갱신됐고, Underwater도 `2018-07-31 / 0.00%`로 갱신됐다. 두 crosshair와 총 3개 focus dot을 확인했다.
+- 760px Browser QA: component `717/717`로 horizontal overflow 0, chart 1열, observation 2×3, 긴 `weak_source_or_proxy_liquidity_evidence` 전체 줄바꿈, tooltip card 내부 유지, 섹션 detail이 title copy 아래로 배치됨을 확인했다.
+- QA screenshot: `qa-final-review-chart-hover-content-polish-760.png`는 generated artifact로 남기고 stage하지 않는다. Final Review save CTA는 클릭하지 않았다.
+- fresh completion verification: focused 115 tests `OK`, Vite 176-module production build `OK`, Decision Brief service / Final Review page / component `py_compile`와 `git diff --check` 모두 통과했다. status에는 protected registry, run history와 generated artifact만 의도대로 남았다.

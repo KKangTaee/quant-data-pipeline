@@ -39,3 +39,9 @@
 - 긴 validation id는 compact candidate summary에서 ellipsis로 낮췄다. 사용자가 전체 provenance를 확인할 때는 disclosure/source detail이 canonical 위치다.
 - current GRS row의 structured Monitoring condition 미측정은 시각 교정으로 감추지 않았다. producer가 measurement / comparator / cadence / action을 제공하기 전까지 empty state가 정상이다.
 - 1440px in-app screenshot capture는 브라우저 surface가 빈 shell을 반환한 적이 있으나 live DOM/computed layout은 1269px workbench, 2열 header/chart, 4열 route를 확인했다. 760px screenshot과 1280px visual comparison을 delivery evidence로 사용한다.
+
+## Chart Interaction And Content Polish Residuals
+
+- hover는 pointer presentation이며 수치 표 fallback과 SVG title/desc는 유지했다. 별도 keyboard cursor 탐색은 이번 요청 범위에 포함하지 않았다.
+- visual source contract는 DOM/class/semantic copy 회귀를 막고 Browser QA는 current GRS fixture의 실제 배치를 검증한다. 모든 데이터 길이와 언어 조합을 pixel snapshot으로 고정하지는 않는다.
+- legend의 raw series label `Underwater drawdown`은 Python projection provenance와 호환을 위해 유지했다. 사용자 의미는 한글 제목과 0%/음수 설명에서 명시한다.

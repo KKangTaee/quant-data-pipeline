@@ -86,3 +86,11 @@
 - Python Decision Brief, Gate, route, persistence, Monitoring snapshot은 변경하지 않고 React presentation owner와 source contract test만 교정했다.
 - canonical visual contract는 `#152033 / #647589 / #dae4ee`, outer radius 20px, chart radius 17px, metric radius 14px, 18px one-column rhythm, compact 23/20/18px heading이다.
 - chart는 계산을 유지한 채 candidate `#274764`, benchmark `#269789`, underwater `#e2763b` presentation palette만 적용했다.
+
+## 2026-07-16 Chart Interaction And Content Polish
+
+- 섹션 heading이 eyebrow / title / detail을 같은 가로 grid item으로 취급해 영문 eyebrow가 한글 title 위가 아니라 왼쪽 칸에 놓였다. eyebrow와 title을 `.db-section-heading-copy`로 묶고 detail만 별도 열로 유지했다.
+- observation strip은 5열 고정 band와 부모 배경 때문에 6번째 항목 아래에 큰 회색 빈 면이 생겼고 긴 source token은 한 줄 값으로 잘렸다. 3/2/1열 responsive grid와 card별 surface, `overflow-wrap: anywhere`를 적용했다.
+- 누적 성과는 관측 시작일을 100으로 rebasing한 index다. X축은 실제 관측 날짜, Y축은 index 값을 표시하며 hover는 같은 날짜의 후보와 Benchmark 값을 함께 읽는다.
+- Underwater는 현재 값이 이전 running peak보다 얼마나 낮은지를 뜻한다. 0%는 이전 최고점 회복, 음수는 최고점 대비 하락률이며 percent scale의 상단은 정확히 0%로 고정했다.
+- chart hover는 React local presentation state다. Python curve, exact-common alignment, running-peak 계산, Gate, route, registry append에는 영향을 주지 않는다.

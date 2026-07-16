@@ -9509,3 +9509,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 질문 중심 정보 순서만 유지하는 것이 아니라 기존 제품의 blue-gray palette, rounded surface, soft shadow, compact type hierarchy까지 Final Review에 적용해야 함.
 - Analysis result: research audit의 `색상이 아니라 projection` 문장이 구현 범위를 과도하게 좁혀 12-column·각진 green editorial report로 drift했다. Python Decision Brief와 저장 계약은 정상이라 React presentation만 교정하는 것이 맞았다.
 - Follow-up: visual contract RED/GREEN, React/CSS/chart palette 교정, 112-test regression, build, 1280/1440/760 Browser QA를 완료하고 protected registry 저장은 실행하지 않았다.
+
+### 2026-07-16 - Final Review 행동 차트는 축과 hover로 직접 읽혀야 한다
+
+- User request: section title의 영문/한글 계층, 누적 성과와 Benchmark chart hover/X·Y축, Underwater 의미, observation 빈 면과 긴 글자 잘림을 수정해 달라고 요청함.
+- Interpreted goal: Market Context visual language를 유지하면서 사용자가 날짜별 성과와 손실 깊이를 직접 읽고, 관측 근거 카드에서 정보 누락 없이 검토할 수 있어야 한다.
+- Analysis result: heading grid grouping, 축 없는 static SVG, 5열 fixed observation band가 각각 title misalignment, 값 해석 부족, 빈 면/clipping의 직접 원인이었다. Python calculation이나 Gate 문제는 아니었다.
+- Follow-up: React local hover와 실제 date/index/percent 축, Underwater 설명, 3/2/1열 wrapping grid를 적용했다. 115-test regression과 desktop/760 Browser QA를 통과했으며 save CTA와 protected registry는 건드리지 않았다.
