@@ -284,6 +284,56 @@ def test_cycle_component_breaks_paths_at_unavailable_months_and_horizons() -> No
     assert "payload.horizons\n    .filter" not in source
 
 
+def test_cycle_component_ribbon_grid_uses_actual_history_month_count() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+    css = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    assert "--history-month-count" in source
+    assert "Math.max(history.length, 1)" in source
+    assert "repeat(var(--history-month-count)" in css
+    assert "repeat(121" not in css
+
+
+def test_cycle_component_cycle_points_expose_hover_and_focus_tooltips() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+    css = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    for token in (
+        "cycle-hover-target",
+        "cycle-hover-area",
+        "cycle-tooltip",
+        "cycleTooltipPosition",
+        "cyclePointLabel",
+        "tabIndex={0}",
+        "aria-label={label}",
+    ):
+        assert token in source
+    assert ".cycle-tooltip { opacity: 0" in css
+    assert ".cycle-hover-target:hover .cycle-tooltip" in css
+    assert ".cycle-hover-target:focus .cycle-tooltip" in css
+
+
+def test_cycle_component_ribbon_preserves_empty_history_and_forecast_slots() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+
+    assert "const forecastSlots = [1, 2].map" in source
+    assert "forecastSlots.map" in source
+    assert "ribbon-empty-history" in source
+    assert "horizons.filter((item) => item.horizon_months > 0)" not in source
+    assert 'role="group"' in source
+    assert 'role="img"' in source
+
+
 def test_cycle_component_has_no_fetch_job_trading_or_refresh_loop() -> None:
     root = Path("app/web/streamlit_components/economic_cycle_workbench")
     source = "\n".join(

@@ -24,7 +24,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 유효 LIMITED 확률을 잠정 추정으로 공개하고 READY/계산불가와 분리했으며, 최근 12개월 2×2 경로·최근 60개월+2개월 ribbon·actual 122 snapshot 보존을 완료했다.
+  - Latest completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 유효 LIMITED 확률을 잠정 추정으로 공개하고 READY/계산불가와 분리했으며, 최근 12개월 2×2 hover 경로·실제 월수 기반 최근 60개월+2개월 ribbon·actual 122 snapshot 보존을 완료했다.
   - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 17-series vintage/PIT engine과 horizon별 publication gate를 구현했다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Explicit concept family의 확정 공시로 missing Q4를 안전하게 산출하고 provenance와 `공시 기반 산출` 표시를 1차~4차로 완료했다.
   - Previous completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
@@ -59,6 +59,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Economic Cycle Provisional Hybrid V2:
   - `잠정 모델 추정 / 검증된 모델 추정 / 판단 불가`를 유효 확률·publication status·계산 가능성으로 분리했다.
   - 원형 clock을 2×2 국면 좌표, 최근 12개월 실선, 현재~+2M 점선, 최근 60개월+2개월 ribbon으로 교체했다. DB의 121개월 replay는 유지한다.
+  - 60개월 전환 뒤 남아 있던 121열 CSS를 실제 history 개수 기반 grid로 바꿔 ribbon이 전체 너비를 채우게 했고, Cycle Map 지점은 hover/focus 때만 날짜·우세 국면·확률·추정 상태를 표시한다.
   - Actual 현재/+1M/+2M은 모두 회복 우세 `46.7% / 40.5% / 47.4%`의 PROVISIONAL이며 threshold와 PIT 원칙은 유지했다. desktop/420px console·overflow QA를 통과했다.
 - U.S. Economic Cycle V1:
   - 현재·1개월 후·2개월 후의 회복/확장/둔화/침체 확률을 vintage-aware 데이터와 rolling-origin publication gate로 계산하는 17개 TDD task를 `5/5` 완료했다.

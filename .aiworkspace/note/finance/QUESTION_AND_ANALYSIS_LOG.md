@@ -49,6 +49,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
 
+### 2026-07-16 - 경제 사이클 ribbon은 실제 월수로 채우고 Cycle Map 세부값은 hover로 읽는다
+
+- User request: 5년 ribbon이 중간에서 끊겨 보이는 문제를 지적하고, 최근 12개월 Cycle Map에 커서를 올릴 때만 세부값이 나타나는 hover를 요청함.
+- Interpreted goal: 첫 화면의 단순함을 유지하면서 ribbon의 시간축을 온전히 표시하고 필요할 때만 월별 확률 정보를 읽게 한다.
+- Analysis result: service는 정상적으로 60개월을 전달했지만 CSS가 `repeat(121, ...)`을 유지해 왼쪽 절반만 채웠다. Grid 열 수를 실제 `history.length`로 변경하고, probability가 있는 과거/forecast 점에만 hover/focus tooltip을 추가한다.
+- Follow-up: 62개 ribbon cell의 마지막 칸과 컨테이너 오른쪽 경계 차이 <= 2px, tooltip 기본 opacity 0/hover·focus opacity 1, browser error 0, 420px overflow 0을 확인했다.
+
 ### 2026-07-16 - 경제 사이클 첫 화면은 12개월 경로와 5년 ribbon으로 단순화한다
 
 - User request: 18개월 Cycle Map이 복잡하고 10년 ribbon은 길어 보이므로 첫 화면을 더 짧게 보여 달라고 요청함.

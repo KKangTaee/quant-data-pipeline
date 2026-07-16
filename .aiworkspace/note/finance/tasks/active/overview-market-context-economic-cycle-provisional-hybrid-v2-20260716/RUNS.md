@@ -14,3 +14,7 @@ Last Updated: 2026-07-16
 - Display-window follow-up: TDD changed the read model from 121 to 60 history rows and the Cycle Map from 18 to 12 months without rewriting DB snapshots.
 - Display-window Browser QA: visible 12-month/5-year copy, 62 ribbon cells, zero console/page errors, and 420px overflow <= 1px.
 - Display-window final verification: 117 focused tests passed, Python compile and React production build passed, and `git diff --check` was clean.
+- Ribbon/hover TDD: source contract reproduced the stale `repeat(121, ...)` grid and missing tooltip, then passed with dynamic `--history-month-count` and accessible SVG hover groups.
+- Ribbon/hover Browser QA: 62 cells fill the ribbon to within 2px of the right edge; tooltip opacity is 0 by default and 1 on pointer hover/keyboard focus; browser errors 0 and 420px overflow <= 1px.
+- Ribbon/hover final verification: 120 focused tests passed, Python compile and React production build passed, and `git diff --check` was clean.
+- Review follow-up: empty history and missing h1 fixtures now preserve the wide history placeholder and fixed +1M/+2M slots; re-review found no remaining Critical/Important issue.

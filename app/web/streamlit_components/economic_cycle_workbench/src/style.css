@@ -137,6 +137,15 @@ button, input, summary { font: inherit; }
 .forecast-point text { fill: #8b641f; font-size: 9px; font-weight: 900; }
 .forecast-point.estimate-verified circle { stroke: #23856b; }
 .forecast-point.estimate-verified text { fill: #1d6d5d; }
+.cycle-hover-target { cursor: help; outline: none; }
+.cycle-hover-area { fill: transparent; stroke: transparent; pointer-events: all; }
+.cycle-tooltip { opacity: 0; pointer-events: none; transition: opacity .14s ease; }
+.cycle-hover-target:hover .cycle-tooltip,
+.cycle-hover-target:focus .cycle-tooltip { opacity: 1; }
+.cycle-tooltip rect { fill: rgba(24, 43, 57, .94); stroke: rgba(255, 255, 255, .7); stroke-width: .7; filter: drop-shadow(0 2px 4px rgba(16, 34, 47, .2)); }
+.cycle-tooltip text { fill: #fff; font-size: 7.5px; }
+.cycle-tooltip-title { font-weight: 850; }
+.cycle-tooltip-detail { opacity: .82; }
 .cycle-map-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 13px; color: #6e7f8d; font-size: 9px; }
 .cycle-map-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .cycle-map-legend i { display: inline-block; width: 18px; height: 4px; border-radius: 999px; }
@@ -166,7 +175,7 @@ button, input, summary { font: inherit; }
 .legend-model::before { background: var(--expansion); }
 .ribbon-legend .nber-recession::before { background: repeating-linear-gradient(90deg, #263746 0, #263746 2px, transparent 2px, transparent 4px); }
 .ribbon-legend .limited-hatch::before { border: 1px solid #9a7e58; background: repeating-linear-gradient(135deg, transparent 0, transparent 2px, #b79667 2px, #b79667 3px); }
-.regime-ribbon { display: grid; grid-template-columns: repeat(121, minmax(2px, 1fr)) 11px 11px; min-height: 57px; overflow: hidden; border: 1px solid #d9e3e8; border-radius: 12px; background: #eef2f4; }
+.regime-ribbon { display: grid; grid-template-columns: repeat(var(--history-month-count), minmax(2px, 1fr)) 11px 11px; min-height: 57px; overflow: hidden; border: 1px solid #d9e3e8; border-radius: 12px; background: #eef2f4; }
 .ribbon-month { position: relative; min-width: 0; outline: none; }
 .ribbon-month.phase-recovery { background: var(--recovery); }
 .ribbon-month.phase-expansion { background: var(--expansion); }
@@ -227,7 +236,7 @@ button, input, summary { font: inherit; }
   .cycle-quadrant { width: 100%; max-width: 340px; }
   .implication-grid,
   .method-grid { grid-template-columns: 1fr; }
-  .regime-ribbon { width: 100%; min-height: 74px; grid-template-columns: repeat(121, minmax(1px, 1fr)) 9px 9px; }
+  .regime-ribbon { width: 100%; min-height: 74px; grid-template-columns: repeat(var(--history-month-count), minmax(1px, 1fr)) 9px 9px; }
   .ribbon-axis span:nth-child(2) { display: none; }
   .ribbon-axis { grid-template-columns: 1fr auto auto; }
 }

@@ -82,6 +82,7 @@ type CyclePayload = {
 
 type Props = ComponentProps & { args: { payload?: CyclePayload } };
 type PlotPoint = { x: number; y: number };
+type RibbonStyle = React.CSSProperties & { "--history-month-count": number };
 
 const PHASE_ORDER: Phase[] = ["recovery", "expansion", "slowdown", "recession"];
 const PHASE_LABEL: Record<Phase, string> = {
@@ -140,6 +141,52 @@ function resolveEstimateStatus(item: {
 
 function pointList(points: PlotPoint[]) {
   return points.map((point) => `${point.x},${point.y}`).join(" ");
+}
+
+function dominantProbabilityPhase(probabilities: Probabilities): Phase {
+  return PHASE_ORDER.reduce((winner, phase) =>
+    probabilities[phase] > probabilities[winner] ? phase : winner
+  );
+}
+
+function cycleTooltipPosition(point: PlotPoint) {
+  return {
+    x: Math.min(210, Math.max(28, point.x - 58)),
+    y: point.y < 74 ? point.y + 14 : point.y - 46,
+  };
+}
+
+function cyclePointLabel(
+  period: string,
+  phase: Phase,
+  confidence: number,
+  estimateStatus: EstimateStatus,
+) {
+  return `${period} · ${PHASE_LABEL[phase]} 우세 · ${formatPercent(confidence)} · ${ESTIMATE_LABEL[estimateStatus]}`;
+}
+
+function CyclePointTooltip({
+  point,
+  label,
+  title,
+  detail,
+}: {
+  point: PlotPoint;
+  label: string;
+  title: string;
+  detail: string;
+}) {
+  const position = cycleTooltipPosition(point);
+  return (
+    <g className="cycle-hover-target" role="img" tabIndex={0} aria-label={label}>
+      <circle className="cycle-hover-area" cx={point.x} cy={point.y} r="10" />
+      <g className="cycle-tooltip" transform={`translate(${position.x} ${position.y})`}>
+        <rect width="122" height="36" rx="7" />
+        <text className="cycle-tooltip-title" x="8" y="14">{title}</text>
+        <text className="cycle-tooltip-detail" x="8" y="27">{detail}</text>
+      </g>
+    </g>
+  );
 }
 
 function splitPointSegments(points: Array<PlotPoint | null>): PlotPoint[][] {
@@ -204,6 +251,20 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
   const observedSegments = splitPointSegments(
     recent.map((item) => item.probabilities ? probabilityCoordinate(item.probabilities) : null),
   );
+  const observedHoverPoints = recent.flatMap((item) => {
+    if (!item.probabilities) return [];
+    const phase = item.phase || dominantProbabilityPhase(item.probabilities);
+    const estimateStatus = resolveEstimateStatus(item);
+    const confidence = item.probabilities[phase];
+    const period = formatMonth(item.date);
+    return [{
+      key: item.date,
+      point: probabilityCoordinate(item.probabilities),
+      label: cyclePointLabel(period, phase, confidence, estimateStatus),
+      title: `${period} · ${PHASE_LABEL[phase]} 우세`,
+      detail: `${formatPercent(confidence)} · ${ESTIMATE_LABEL[estimateStatus]}`,
+    }];
+  });
   const recentObservedDots = recent
     .slice(-6)
     .flatMap((item) => item.probabilities ? [probabilityCoordinate(item.probabilities)] : []);
@@ -226,7 +287,7 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
         <small>실선은 최근 12개월 · 점선은 현재부터 +2개월</small>
       </div>
       <div className="cycle-map-body">
-        <svg className="cycle-quadrant" viewBox="0 0 360 320" role="img" aria-label="회복 확장 둔화 침체 2×2 경제사이클 경로">
+        <svg className="cycle-quadrant" viewBox="0 0 360 320" role="group" aria-label="회복 확장 둔화 침체 2×2 경제사이클 경로">
           <rect className="quadrant recovery-zone" x="24" y="24" width="156" height="136" />
           <rect className="quadrant expansion-zone" x="180" y="24" width="156" height="136" />
           <rect className="quadrant recession-zone" x="24" y="160" width="156" height="136" />
@@ -263,6 +324,32 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
               </g>
             );
           })}
+          {observedHoverPoints.map((item) => (
+            <CyclePointTooltip
+              key={`history-tooltip-${item.key}`}
+              point={item.point}
+              label={item.label}
+              title={item.title}
+              detail={item.detail}
+            />
+          ))}
+          {forecastHorizons.map((item) => {
+            const point = probabilityCoordinate(item.probabilities);
+            const phase = item.dominant_phase || dominantProbabilityPhase(item.probabilities);
+            const estimateStatus = resolveEstimateStatus(item);
+            const confidence = item.confidence ?? item.probabilities[phase];
+            const period = HORIZON_LABEL[item.horizon_months] || item.label;
+            const label = cyclePointLabel(period, phase, confidence, estimateStatus);
+            return (
+              <CyclePointTooltip
+                key={`forecast-tooltip-${item.horizon_months}`}
+                point={point}
+                label={label}
+                title={`${period} · ${PHASE_LABEL[phase]} 우세`}
+                detail={`${formatPercent(confidence)} · ${ESTIMATE_LABEL[estimateStatus]}`}
+              />
+            );
+          })}
         </svg>
         <div className="cycle-map-legend">
           <span><i className="legend-observed" />과거 관측 경로</span>
@@ -292,24 +379,45 @@ function EvidenceGroup({ title, subtitle, rows }: { title: string; subtitle: str
 }
 
 function RegimeRibbon({ history, horizons }: { history: HistoryPoint[]; horizons: Horizon[] }) {
-  const forecast = horizons.filter((item) => item.horizon_months > 0);
+  const forecastSlots = [1, 2].map((horizon) =>
+    horizons.find((item) => item.horizon_months === horizon) || null
+  );
+  const ribbonStyle: RibbonStyle = {
+    "--history-month-count": Math.max(history.length, 1),
+  };
   return (
     <section className="ribbon-section" aria-labelledby="ribbon-title">
       <div className="section-heading"><div><span>Regime ribbon</span><h3 id="ribbon-title">과거·현재·미래를 한 시간축으로 보기</h3></div><small>최근 5년 + 2개월 전망</small></div>
       <div className="ribbon-legend"><span className="legend-model">모델 우세 국면</span><span className="nber-recession">NBER 침체</span><span className="limited-hatch">잠정 추정</span></div>
-      <div className="regime-ribbon" role="list" aria-label="월별 경제 국면 이력과 전망">
-        {history.map((item, index) => (
+      <div className="regime-ribbon" role="list" aria-label="월별 경제 국면 이력과 전망" style={ribbonStyle}>
+        {history.length ? history.map((item, index) => (
           <div className={`ribbon-month ${item.phase ? `phase-${item.phase}` : "phase-missing"} ${resolveEstimateStatus(item) === "PROVISIONAL" ? "is-limited" : ""}`} role="listitem" tabIndex={0} key={`${item.date}-${index}`} title={`${formatMonth(item.date)} · ${item.phase ? PHASE_LABEL[item.phase] : "판단 불가"} · ${ESTIMATE_LABEL[resolveEstimateStatus(item)]} · NBER ${item.nber_recession ? "침체" : "비침체"}`}>
             {item.nber_recession ? <i className="nber-recession" aria-label="NBER 침체" /> : null}
             {resolveEstimateStatus(item) === "PROVISIONAL" ? <i className="limited-hatch" aria-label="잠정 모델 추정" /> : null}
             {index === history.length - 1 ? <i className="current-marker" aria-label="현재" /> : null}
           </div>
-        ))}
-        {forecast.map((item) => (
-          <div className={`ribbon-month forecast-ribbon ${item.dominant_phase ? `phase-${item.dominant_phase}` : "phase-missing"}`} role="listitem" tabIndex={0} key={`forecast-${item.horizon_months}`} title={`+${item.horizon_months}M · ${item.dominant_phase ? PHASE_LABEL[item.dominant_phase] : "판단 불가"} · ${ESTIMATE_LABEL[resolveEstimateStatus(item)]}`}>
-            {resolveEstimateStatus(item) === "PROVISIONAL" ? <i className="limited-hatch" aria-label="잠정 모델 추정" /> : null}
-          </div>
-        ))}
+        )) : (
+          <div className="ribbon-month ribbon-empty-history phase-missing" role="listitem" aria-label="과거 경제사이클 이력 없음" />
+        )}
+        {forecastSlots.map((item, index) => {
+          const horizon = index + 1;
+          if (!item) {
+            return (
+              <div
+                className="ribbon-month forecast-ribbon phase-missing"
+                role="listitem"
+                tabIndex={0}
+                key={`forecast-missing-${horizon}`}
+                title={`+${horizon}M · 판단 불가`}
+              />
+            );
+          }
+          return (
+            <div className={`ribbon-month forecast-ribbon ${item.dominant_phase ? `phase-${item.dominant_phase}` : "phase-missing"}`} role="listitem" tabIndex={0} key={`forecast-${item.horizon_months}`} title={`+${item.horizon_months}M · ${item.dominant_phase ? PHASE_LABEL[item.dominant_phase] : "판단 불가"} · ${ESTIMATE_LABEL[resolveEstimateStatus(item)]}`}>
+              {resolveEstimateStatus(item) === "PROVISIONAL" ? <i className="limited-hatch" aria-label="잠정 모델 추정" /> : null}
+            </div>
+          );
+        })}
       </div>
       <div className="ribbon-axis"><span>{formatMonth(history[0]?.date)}</span><span>{formatMonth(history[Math.floor(history.length / 2)]?.date)}</span><span>현재</span><span>+2M</span></div>
     </section>
