@@ -1905,3 +1905,470 @@ git status --short
 - [x] Browser QA includes side-by-side reference comparison at 1440px and overflow/interaction checks at 760px.
 - [x] Protected registry, run history, `.superpowers`, screenshots and saved JSONL remain unstaged.
 - [x] Implementation and closeout docs are distinct Korean commits.
+
+# Final Review Chart Interaction And Content Polish Implementation Plan — 2026-07-16
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` for inline execution. Every behavior change follows `superpowers:test-driven-development`; completion and commits follow `superpowers:verification-before-completion`. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Final Review의 섹션 제목 계층, 누적 성과/고점 대비 낙폭 chart hover와 X·Y축, observation strip의 빈 면과 긴 값 clipping을 보정한다.
+
+**Architecture:** 기존 `decision_brief_v1` payload와 dependency-free React SVG를 유지한다. `DecisionBriefWorkspace.tsx`는 heading DOM grouping만, `DecisionBriefCharts.tsx`는 nice extent/tick/pointer/tooltip presentation state만, `style.css`는 responsive grid/wrapping/tooltip visual만 소유한다. Python 계산, exact-common alignment, running-peak drawdown, Gate, route, save, registry는 변경하지 않는다.
+
+**Tech Stack:** React 18, TypeScript, dependency-free SVG, CSS, Python `unittest` source contract, Vite production build, in-app Browser QA.
+
+## Global Constraints
+
+- 현재 active task와 `codex/backtest-dev` worktree를 계속 사용하고 새 task/worktree를 만들지 않는다.
+- `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`, run history, `.superpowers/`, screenshot/run artifact를 stage/commit하지 않는다.
+- chart library나 npm dependency를 추가하지 않는다.
+- Python Decision Brief, Gate, score, route, persistence, Monitoring snapshot을 수정하지 않는다.
+- hover는 React local presentation state이며 Streamlit rerun이나 registry append를 만들지 않는다.
+- 기존 수치 표 fallback과 SVG `title` / `desc` 접근성 contract를 유지한다.
+- RED → GREEN → focused regression → build → Browser QA → `git diff --check` 순서를 지킨다.
+
+---
+
+## File Structure And Interfaces
+
+- Modify: `tests/test_final_review_market_context_visual_contract.py`
+  - heading grouping, hover/axis/tooltip, Underwater 한글 semantics, observation grid/wrap source contract를 고정한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+  - `SectionHeading`의 eyebrow/title DOM grouping만 변경한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx`
+  - `ChartUnit`, `niceExtent`, `buildTickIndices`, `buildYTicks`, `pointerIndex`, interactive `SvgLineChart`를 소유한다.
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+  - heading copy, chart plot/axis/tooltip, observation 3/2/1열과 wrap contract를 소유한다.
+- Modify: tracked production bundle under `app/web/components/final_review_investment_report/frontend/build/` after GREEN.
+
+## Task 8.1: Heading Hierarchy And Observation Layout
+
+**Files:**
+- Modify: `tests/test_final_review_market_context_visual_contract.py`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+
+**Interfaces:**
+- Consumes: existing `SectionHeading({eyebrow, title, detail})` and `DecisionBriefObservation[]`.
+- Produces: `.db-section-heading-copy` DOM grouping and `.db-observation-strip` 3/2/1-column responsive contract.
+
+- [ ] **Step 1: Write failing heading and observation source-contract tests**
+
+Add to `FinalReviewMarketContextVisualContractTests`:
+
+```python
+def test_section_heading_groups_eyebrow_above_korean_title(self) -> None:
+    source = WORKSPACE.read_text(encoding="utf-8")
+    heading = source.split("function SectionHeading", 1)[1].split("function CandidateSelector", 1)[0]
+    self.assertIn('className="db-section-heading-copy"', heading)
+    self.assertLess(heading.index('{eyebrow}'), heading.index("<h2>{title}</h2>"))
+
+def test_observation_strip_has_complete_responsive_grid_and_wraps_long_values(self) -> None:
+    style = STYLE.read_text(encoding="utf-8")
+    self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", style)
+    self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", style)
+    self.assertIn("overflow-wrap: anywhere;", style)
+    self.assertIn("word-break: break-word;", style)
+    observation_block = style.split(".db-observation-strip {", 1)[1].split(".db-empty,", 1)[0]
+    self.assertNotIn("background: #e1e8f0;", observation_block)
+```
+
+- [ ] **Step 2: Run RED**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract.FinalReviewMarketContextVisualContractTests.test_section_heading_groups_eyebrow_above_korean_title \
+  tests.test_final_review_market_context_visual_contract.FinalReviewMarketContextVisualContractTests.test_observation_strip_has_complete_responsive_grid_and_wraps_long_values -v
+```
+
+Expected: 2 failures because `.db-section-heading-copy`, explicit 3-column observation grid and wrap rules are absent.
+
+- [ ] **Step 3: Group eyebrow and title**
+
+Replace `SectionHeading` body with:
+
+```tsx
+return (
+  <header className="db-section-heading">
+    <div className="db-section-heading-copy">
+      <p className="db-kicker">{eyebrow}</p>
+      <h2>{title}</h2>
+    </div>
+    {detail && <p className="db-section-detail">{detail}</p>}
+  </header>
+)
+```
+
+- [ ] **Step 4: Apply complete observation layout and wrapping**
+
+Use:
+
+```css
+.db-section-heading-copy { min-width: 0; }
+.db-section-detail { max-width: 430px; margin: 2px 0 0; text-align: right; }
+.db-observation-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; overflow: visible; border: 0; background: transparent; }
+.db-observation-strip article { border: 1px solid #e1e8f0; border-radius: 14px; }
+.db-observation-strip strong,
+.db-observation-strip p,
+.db-observation-strip small { overflow-wrap: anywhere; word-break: break-word; }
+```
+
+At `max-width: 760px`, use 2 columns; at `max-width: 460px`, use 1 column. Update the existing detail selector from `.db-section-heading > p:last-child` to `.db-section-detail`.
+
+- [ ] **Step 5: Run GREEN and focused visual regression**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest tests.test_final_review_market_context_visual_contract -v
+git diff --check
+```
+
+Expected: 5 visual contract tests pass; diff check exits 0.
+
+- [ ] **Step 6: Commit heading/list implementation unit**
+
+Stage only the test, workspace and style source files; verify the registry is excluded.
+
+```bash
+git commit -m "Final Review 제목 계층과 관측 목록 보정"
+```
+
+## Task 8.2: Interactive SVG Axes And Tooltip
+
+**Files:**
+- Modify: `tests/test_final_review_market_context_visual_contract.py`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefCharts.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+- Modify: tracked `frontend/build/` output after build
+
+**Interfaces:**
+- Produces: `type ChartUnit = "index" | "percent"`.
+- Produces: `niceExtent(values: number[], unit: ChartUnit) -> [number, number]`.
+- Produces: `buildTickIndices(count: number, maximumTicks?: number) -> number[]`.
+- Produces: `buildYTicks(minimum: number, maximum: number, count?: number) -> number[]`.
+- Consumes: existing `LineSeries[]`, exact-common `SeriesPoint[]`, `EvidenceTable`.
+
+- [ ] **Step 1: Write failing chart interaction source-contract test**
+
+Add:
+
+```python
+def test_charts_expose_ticks_hover_tooltip_and_underwater_meaning(self) -> None:
+    source = CHARTS.read_text(encoding="utf-8")
+    style = STYLE.read_text(encoding="utf-8")
+    for token in (
+        "type ChartUnit",
+        "function niceExtent",
+        "function buildTickIndices",
+        "function buildYTicks",
+        "function pointerIndex",
+        "onPointerMove",
+        "db-chart-hover-rule",
+        "db-chart-focus-dot",
+        "db-chart-tooltip",
+        'unit="percent"',
+        "고점 대비 낙폭 (Underwater)",
+        "0%는 이전 최고점 회복",
+    ):
+        self.assertIn(token, source + style)
+```
+
+- [ ] **Step 2: Run RED**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract.FinalReviewMarketContextVisualContractTests.test_charts_expose_ticks_hover_tooltip_and_underwater_meaning -v
+```
+
+Expected: failure because chart scale helpers, pointer handler, tooltip classes and Korean Underwater copy are absent.
+
+- [ ] **Step 3: Add chart geometry and tick helpers**
+
+In `DecisionBriefCharts.tsx`, import `useEffect`, `useState` and add:
+
+```tsx
+type ChartUnit = "index" | "percent"
+const CHART = { width: 720, height: 300, left: 58, right: 16, top: 20, bottom: 44 }
+
+function niceExtent(values: number[], unit: ChartUnit): [number, number] {
+  if (!values.length) return unit === "percent" ? [-5, 0] : [0, 100]
+  const rawMin = unit === "percent" ? Math.min(...values, 0) : Math.min(...values)
+  const rawMax = unit === "percent" ? 0 : Math.max(...values)
+  const rawRange = Math.max(1, rawMax - rawMin)
+  const lower = rawMin - rawRange * .08
+  const upper = unit === "percent" ? 0 : rawMax + rawRange * .08
+  const roughStep = Math.max(.01, (upper - lower) / 4)
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep))
+  const normalized = roughStep / magnitude
+  const step = (normalized <= 1.5 ? 1 : normalized <= 3 ? 2 : normalized <= 7 ? 5 : 10) * magnitude
+  return [Math.floor(lower / step) * step, unit === "percent" ? 0 : Math.ceil(upper / step) * step]
+}
+
+function buildTickIndices(count: number, maximumTicks = 6): number[] {
+  if (count <= 0) return []
+  const tickCount = Math.min(count, maximumTicks)
+  return Array.from(new Set(Array.from({ length: tickCount }, (_, index) =>
+    Math.round(index * (count - 1) / Math.max(1, tickCount - 1)),
+  )))
+}
+
+function buildYTicks(minimum: number, maximum: number, count = 5): number[] {
+  return Array.from({ length: count }, (_, index) =>
+    maximum - index * (maximum - minimum) / Math.max(1, count - 1),
+  )
+}
+
+const plotWidth = CHART.width - CHART.left - CHART.right
+const plotBottom = CHART.height - CHART.bottom
+const plotHeight = plotBottom - CHART.top
+
+function xAt(index: number, count: number): number {
+  return count <= 1
+    ? CHART.left + plotWidth / 2
+    : CHART.left + index / (count - 1) * plotWidth
+}
+
+function yAt(value: number, minimum: number, maximum: number): number {
+  return plotBottom - (value - minimum) / Math.max(.0001, maximum - minimum) * plotHeight
+}
+
+function linePath(points: SeriesPoint[], minimum: number, maximum: number): string {
+  return points.map((point, index) =>
+    `${index ? "L" : "M"} ${xAt(index, points.length).toFixed(2)} ${yAt(point.value, minimum, maximum).toFixed(2)}`,
+  ).join(" ")
+}
+
+function pointerIndex(event: React.PointerEvent<SVGSVGElement>, count: number): number {
+  if (count <= 1) return 0
+  const rect = event.currentTarget.getBoundingClientRect()
+  const cursor = (event.clientX - rect.left) / Math.max(1, rect.width) * CHART.width
+  const ratio = Math.max(0, Math.min(1, (cursor - CHART.left) / plotWidth))
+  return Math.round(ratio * (count - 1))
+}
+```
+
+- [ ] **Step 4: Implement interactive `SvgLineChart`**
+
+Extend props with `subtitle: string` and `unit: ChartUnit`. Use `useState` for `activeIndex`, reset to the latest point when point count changes, and replace the complete function with:
+
+```tsx
+function formatChartValue(value: number | undefined, unit: ChartUnit): string {
+  if (value == null || !Number.isFinite(value)) return "-"
+  const formatted = Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(2)
+  return unit === "percent" ? `${formatted}%` : formatted
+}
+
+function SvgLineChart({
+  title,
+  subtitle,
+  description,
+  unit,
+  series,
+}: {
+  title: string
+  subtitle: string
+  description: string
+  unit: ChartUnit
+  series: LineSeries[]
+}) {
+  const chartId = useId()
+  const pointCount = series[0]?.points.length ?? 0
+  const [activeIndex, setActiveIndex] = useState(Math.max(0, pointCount - 1))
+  useEffect(() => setActiveIndex(Math.max(0, pointCount - 1)), [pointCount])
+  const safeIndex = Math.min(activeIndex, Math.max(0, pointCount - 1))
+  const values = series.flatMap((item) => item.points.map((point) => point.value))
+  const [minY, maxY] = niceExtent(values, unit)
+  const yTicks = buildYTicks(minY, maxY)
+  const xTickIndices = buildTickIndices(pointCount)
+  const activeX = xAt(safeIndex, pointCount)
+  const activeDate = series[0]?.points[safeIndex]?.date ?? "-"
+  const tooltipRight = activeX > CHART.width * .68
+  const tooltipStyle = { left: `${activeX / CHART.width * 100}%` }
+
+  return (
+    <div className="db-chart-shell">
+      <div className="db-chart-heading">
+        <div>
+          <p className="db-kicker">Portfolio behavior</p>
+          <h3>{title}</h3>
+          <p className="db-chart-subtitle">{subtitle}</p>
+        </div>
+        <div className="db-legend" aria-label="차트 범례">
+          {series.map((item) => (
+            <span key={item.label}><i style={{ background: item.color }} />{item.label}</span>
+          ))}
+        </div>
+      </div>
+      <div className="db-chart-plot">
+        <svg
+          className="db-line-chart"
+          viewBox={`0 0 ${CHART.width} ${CHART.height}`}
+          role="img"
+          aria-labelledby={`${chartId}-title ${chartId}-desc`}
+          onPointerMove={(event) => setActiveIndex(pointerIndex(event, pointCount))}
+          onPointerLeave={() => setActiveIndex(Math.max(0, pointCount - 1))}
+        >
+          <title id={`${chartId}-title`}>{title}</title>
+          <desc id={`${chartId}-desc`}>{description}</desc>
+          {yTicks.map((value) => {
+            const y = yAt(value, minY, maxY)
+            return (
+              <g key={value}>
+                <line x1={CHART.left} x2={CHART.width - CHART.right} y1={y} y2={y} className="db-grid-line" />
+                <text x={CHART.left - 10} y={y + 4} textAnchor="end" className="db-chart-y-label">
+                  {formatChartValue(value, unit)}
+                </text>
+              </g>
+            )
+          })}
+          {xTickIndices.map((index) => (
+            <text key={index} x={xAt(index, pointCount)} y={CHART.height - 12} textAnchor="middle" className="db-chart-x-label">
+              {series[0]?.points[index]?.date ?? "-"}
+            </text>
+          ))}
+          {series.map((item) => (
+            <path key={item.label} d={linePath(item.points, minY, maxY)} fill="none" stroke={item.color} strokeWidth="2" />
+          ))}
+          <line className="db-chart-hover-rule" x1={activeX} x2={activeX} y1={CHART.top} y2={plotBottom} />
+          {series.map((item) => {
+            const point = item.points[safeIndex]
+            return point ? (
+              <circle key={item.label} className="db-chart-focus-dot" cx={activeX} cy={yAt(point.value, minY, maxY)} r="4" style={{ fill: item.color }} />
+            ) : null
+          })}
+        </svg>
+        <div className={`db-chart-tooltip ${tooltipRight ? "is-right" : ""}`} style={tooltipStyle}>
+          <span>{activeDate}</span>
+          {series.map((item) => (
+            <div key={item.label}>
+              <i style={{ background: item.color }} />
+              <small>{item.label}</small>
+              <strong>{formatChartValue(item.points[safeIndex]?.value, unit)}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+      <EvidenceTable series={series} />
+    </div>
+  )
+}
+```
+
+Keep `EvidenceTable` immediately after the plot. Remove the old `.db-chart-axis` start/min-max/end row because the SVG now owns actual axes.
+
+- [ ] **Step 5: Apply chart copy and unit semantics**
+
+Use cumulative props:
+
+```tsx
+title="누적 성과와 Benchmark"
+subtitle="100은 관측 시작일의 기준값입니다. 같은 날짜의 후보와 Benchmark 경로를 비교합니다."
+unit="index"
+```
+
+Use drawdown props:
+
+```tsx
+title="고점 대비 낙폭 (Underwater)"
+subtitle="0%는 이전 최고점 회복, 음수는 최고점 대비 하락률입니다."
+unit="percent"
+```
+
+Keep the Python running-peak description in the SVG `desc`.
+
+- [ ] **Step 6: Add chart axis and tooltip CSS**
+
+Add `.db-chart-subtitle`, `.db-chart-plot`, `.db-chart-y-label`, `.db-chart-x-label`, `.db-chart-hover-rule`, `.db-chart-focus-dot`, `.db-chart-tooltip` and `.db-chart-tooltip.is-right`. Tooltip is absolute, pointer-events none, white translucent, rounded 11px and uses the existing blue-gray palette. At 460px reduce tooltip padding and type size without hiding values.
+
+- [ ] **Step 7: Run GREEN, focused regression and production build**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+npm run build --prefix app/web/components/final_review_investment_report/frontend
+git diff --check
+```
+
+Expected: 115 focused tests pass after adding 3 new visual tests to the previous 112-test suite; Vite exits 0; diff check exits 0.
+
+- [ ] **Step 8: Browser QA**
+
+Desktop:
+
+- verify eyebrow is immediately above Korean title for Behavior, Findings, Trait, Monitoring and Decision sections;
+- hover the cumulative chart at left/center/right and verify date, candidate and Benchmark values update with crosshair/dots;
+- verify X date ticks and Y rebased-index ticks are readable and do not overlap;
+- hover drawdown and verify date/value plus percent Y ticks; confirm its upper bound is 0%, not padded positive;
+- verify six observations render 3×2 with no large gray unused area and long liquidity/comparator tokens wrap fully.
+
+Narrow 760px:
+
+- verify chart tooltip stays inside each card, axes remain readable, observations render 2×3 and component/document horizontal overflow is 0;
+- do not click the Final Review save CTA or mutate protected registry.
+
+Save one generated screenshot as `qa-final-review-chart-hover-content-polish-760.png` and do not stage it.
+
+- [ ] **Step 9: Commit chart interaction implementation unit**
+
+Stage test/chart/style and tracked build output only. Verify cached names exclude registry, run history, screenshots and `.superpowers`.
+
+```bash
+git commit -m "Final Review 차트 축과 hover 상호작용 개선"
+```
+
+## Task 8.3: Closeout Documentation And Verification
+
+**Files:**
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`, `PLAN.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: root `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`
+
+**Interfaces:**
+- Documents implemented presentation behavior only; no roadmap, architecture map or data contract changes.
+
+- [ ] **Step 1: Record root cause, RED/GREEN/build and Browser QA evidence** in the active task docs.
+- [ ] **Step 2: Add one durable flow sentence** that Final Review behavior charts expose date/value axes and hover while Underwater means running-peak drawdown.
+- [ ] **Step 3: Add concise root handoff milestones** without copying command logs.
+- [ ] **Step 4: Run fresh completion verification**:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests
+npm run build --prefix app/web/components/final_review_investment_report/frontend
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review/page.py \
+  app/web/components/final_review_investment_report/component.py
+git diff --check
+git status --short
+```
+
+Expected: 115 tests pass, 176-module Vite build exits 0, py_compile and diff check exit 0; only protected/generated files remain outside the staged doc set.
+
+- [ ] **Step 5: Commit closeout docs**:
+
+```bash
+git commit -m "Final Review 차트 상호작용 QA와 문서 동기화"
+```
+
+## Chart Polish Plan Self-Review
+
+- [x] Heading, axes, hover, Underwater meaning, empty strip area and long-token clipping each map to an implementation task.
+- [x] Function names and `ChartUnit` props are consistent between helper and render steps.
+- [x] Python/data/Gate/persistence are explicitly out of scope.
+- [x] RED commands fail on missing DOM/classes/helpers before source changes.
+- [x] Desktop and 760px Browser QA cover hover, axes, wrapping and overflow without save mutation.
+- [x] Plan, heading/list, chart interaction and closeout docs are distinct Korean commits.
+- [x] 금지된 미완성 표식과 구체화되지 않은 오류 처리 단계가 새 계획 구간에 남아 있지 않다.

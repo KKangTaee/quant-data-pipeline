@@ -34,7 +34,7 @@ Last Updated: 2026-07-16
 - [x] correction docs closeout
 - [x] 후속 UI root cause 확인과 A안 사용자 승인
 - [x] chart interaction / title / observation polish DESIGN 작성과 self-review
-- [ ] implementation PLAN 작성과 계획 커밋
+- [x] implementation PLAN 작성과 계획 커밋
 - [ ] visual contract RED → GREEN
 - [ ] React chart / layout 구현과 production build
 - [ ] desktop hover / 760px Browser QA
