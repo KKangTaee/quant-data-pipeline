@@ -58,3 +58,27 @@ candidate/policy separation, readable evidence, empty-action suppression을
 - `e3797e9f` Practical Validation 검증 설명과 상세 근거 개선
 - `4ac2a83a` Practical Validation 미검증 항목과 집계 기준 보강
 - `d968b6a4` Practical Validation Final Review 인계 분류 보정
+- `6b0629be` Practical Validation 후보와 검증 관점 배치 개선
+- `bfafdc5c` Practical Validation 해결 작업 재노출 수정
+- `96e15fc2` Practical Validation 해결 생명주기 경계 강화
+
+## 2026-07-16 Follow-up Status
+
+- [x] 선택 후보 반복 요약을 후보 목록 아래에서 one-shell header `검증 대상`으로 이동
+- [x] 데스크톱 검증 관점 5개를 3 + 가운데 정렬 2로 재배치하고 760px 1열 유지
+- [x] provider action pending 상태와 provider -> replay 순서 고정
+- [x] 실행된 provider 보강 뒤 replay / decision-result cache 무효화
+- [x] 이미 시도한 source 탐색과 미지원 parser를 `engineering_required`로 전환
+- [x] 완료된 actual partial-month replay를 Monitoring handoff로 종결
+- [x] 장기 replay gap / discovery 예외 / candidate source code-review 보정
+- [x] 지정 후보 actual replay / provider plan / decision workspace read-only 재검증
+- [x] fresh focused 154 tests, React 175 modules build, target py_compile, diff-check
+- [x] final code review Critical / Important 잔여 0건
+- [ ] desktop / 760px Browser interaction / overflow / screenshot QA
+
+지정 후보 `GTAA U3/U5 + GRS Compact Monitoring Candidate 20260608`의
+current 투영은 replay PASS, resolve-now 0, engineering blocker 3,
+Final Review handoff 3이었다. 즉 두 `지금 해결` 항목의 반복 노출은 버그였고,
+자동 처리 불가능한 ETF holdings/exposure 계약과 미구현 검증기는 Level2
+개발 필요 항목으로 남긴다. code-review 보정 뒤 동일 actual projection과
+전체 completion suite를 다시 실행해 유지됨을 확인했다.

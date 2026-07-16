@@ -180,3 +180,86 @@
   - `BACKTEST_RUN_HISTORY.jsonl`, generated screenshot, `.superpowers/`
     untracked / unstaged.
   - saved JSONL과 run artifact는 stage하지 않음.
+
+## 2026-07-16 Follow-up Verification
+
+- 지정 후보 actual replay / current read model:
+  - candidate:
+    `selection_weighted_portfolio_mix_monitoring_candidate_gtaa_u3_u5_grs_20260608_4bdb4dbe`
+  - replay `PASS`, period coverage `PASS`
+  - requested market `2026-07-15`
+  - latest common price `2026-06-26`
+  - last complete rebalance `2026-06-30`
+  - latest valuation `2026-07-06`
+  - limiting symbols `COMT / TIP / XLE`
+  - source-map discovery `0`
+  - mapping-needed:
+    `COMT / EFA / IWD / IWM / IWN / LQD / TIP / VNQ`
+  - workspace `resolution_required`
+  - resolve-now `0`, engineering blocker `3`
+  - accepted limit `1`, final decision `1`, monitoring transfer `1`
+- first completion run:
+  - focused closure / workspace / explanation / hardening / visual contract:
+    `Ran 60 tests`, `OK`
+  - provider gap / Final Review evidence / replay-cache boundary:
+    `Ran 87 tests`, `OK`
+  - total fresh focused tests: `147`
+  - React Vite `5.4.21`, `175 modules transformed`
+  - target `py_compile`, `git diff --check`, cached diff-check: exit 0
+- code review RED:
+  - 장기 replay gap이 Monitoring으로 낮아지는 failure 1건
+  - discovery exception requested symbol 유실 error 1건
+  - candidate source의 조기 engineering 분류 failure 1건
+- code review GREEN:
+  - targeted replay lifecycle 2 tests `OK`
+  - targeted provider lifecycle 5 tests `OK`
+- code-review 보정 뒤 completion rerun:
+  - focused closure / workspace / explanation / hardening / visual contract:
+    `Ran 61 tests`, `OK`
+  - provider gap / Final Review evidence / replay-cache boundary:
+    `Ran 89 tests`, `OK`
+  - total fresh focused tests: `150`
+  - 지정 후보 actual replay `PASS`, period coverage `PASS`
+  - resolve-now `0`
+  - engineering roots:
+    `backtest_realism / selected_route_preflight / pre_final_data_contract`
+  - handoff:
+    `replay_period_coverage / monitoring_transfer`,
+    `historical_universe_coverage / accepted_limit`,
+    `tax_account_scope / final_decision`
+  - React Vite `5.4.21`, `175 modules transformed`
+  - target `py_compile`, `git diff --check`, cached diff-check: exit 0
+- second code review RED:
+  - 모순된 partial-month 날짜 계약의 Monitoring 우회 failure 1건
+  - unrelated operability 계약의 holdings 조기 종결 failure 1건
+  - candidate / failed row-order 의존 failure 1건
+- second code review GREEN / final completion rerun:
+  - focused closure / workspace / explanation / hardening / visual contract:
+    `Ran 62 tests`, `OK`
+  - provider gap / Final Review evidence / replay-cache boundary:
+    `Ran 91 tests`, `OK`
+  - total fresh focused tests: `153`
+  - 지정 후보 actual replay / period coverage `PASS`
+  - resolve-now `0`, engineering blocker `3`, Final Review handoff `3`
+  - React Vite `5.4.21`, `175 modules transformed`
+  - target `py_compile`, `git diff --check`, cached diff-check: exit 0
+- final code review RED / GREEN:
+  - multiple verified holdings row-order failure 1건 재현
+  - supported verified parser priority 적용 후 양방향 order test `OK`
+  - final focused completion:
+    - closure / workspace / explanation / hardening / visual contract
+      `Ran 62 tests`, `OK`
+    - provider gap / Final Review evidence / replay-cache boundary
+      `Ran 92 tests`, `OK`
+    - total `154 tests`, `OK`
+  - 지정 후보 actual replay / period coverage `PASS`
+  - resolve-now `0`, engineering blocker `3`, Final Review handoff `3`
+  - React Vite `5.4.21`, `175 modules transformed`
+  - target `py_compile`, `git diff --check`, cached diff-check: exit 0
+  - final reviewer: Critical / Important 잔여 finding 없음
+  - implementation commit:
+    `96e15fc2 Practical Validation 해결 생명주기 경계 강화`
+- Browser QA:
+  - Browser skill이 요구하는 Node JS control tool이 현재 tool surface에 없어
+    desktop / 760px interaction, console, overflow, 새 screenshot은 실행하지 못함.
+  - generated artifact와 기존 screenshot은 stage하지 않음.

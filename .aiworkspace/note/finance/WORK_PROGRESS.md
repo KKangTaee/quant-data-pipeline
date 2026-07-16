@@ -6268,3 +6268,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - desktop / 760px Browser QA와 새 screenshot은 Browser JS 제어 도구가
   노출되는 세션에서 이어서 확인한다. 상세는 active task `RUNS.md`와
   `RISKS.md`를 본다.
+
+## 2026-07-16 - Practical Validation 선택 배치 / 해결 재노출 보정
+
+- 선택 후보 요약을 one-shell header로 옮기고 5개 검증 관점을 데스크톱
+  3 + 가운데 정렬 2, 760px 1열로 정리했다.
+- 지정 GTAA U3/U5 + GRS 후보의 두 `지금 해결` 재노출은 정상 스펙이 아니라
+  실행 이력과 parser 지원 여부를 무시한 action lifecycle 버그로 확인했다.
+- 이미 시도했거나 자동 처리 불가능한 provider gap은 engineering blocker,
+  실제 월중 평가 계약은 Monitoring handoff로 전환했다.
+- 커밋 `6b0629be`, `bfafdc5c`, `96e15fc2`; code-review 경계를 추가 보정한 뒤
+  fresh 154 tests / 175-module build / py_compile / diff-check와 지정 후보
+  actual projection을 통과했고 Critical / Important 잔여 finding은 없다.
+  Browser QA는 control tool 부재로 남아 있다.

@@ -9566,3 +9566,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: 1A/1B UI, fragment rerun, pure explanation service, 5개 category,
   evidence state/missing-validator Gate, handoff class 보정을 구현했다.
   automated verification은 완료했고 Browser QA만 도구 제약으로 남았다.
+
+### 2026-07-16 - 실행한 Level2 작업은 같은 CTA로 반복 노출하지 않는다
+
+- User request: 선택 후보 반복 표기 위치와 5개 검증 관점의 빈 열을 개선하고,
+  지정 GTAA U3/U5 + GRS 후보에서 두 `지금 해결`을 실행했는데 다시 보이는
+  것이 정상인지 확인해 달라고 요청함.
+- Interpreted goal: 선택 context는 후보/정책 구분을 방해하지 않아야 하고,
+  사용자가 실행한 작업은 결과에 따라 재검증·개발 필요·Monitoring 인계 중
+  하나로 진행되어 같은 실행 CTA로 되돌아오지 않아야 한다.
+- Analysis result: provider 보강 실행 이력은 있었지만 source-map 실패와
+  미지원 parser가 다시 callable action으로 분류됐고, 완료된 partial-month
+  replay도 재실행 대상으로 남았다. 이는 정상 스펙이 아니라 lifecycle 버그다.
+- Follow-up: 후보 context를 header로 이동하고 5개 관점을 3+2로 배치했다.
+  provider -> replay cache invalidation, attempted/unsupported ->
+  engineering-required, verified monthly partial-month -> monitoring-transfer
+  계약을 적용했다. 지정 후보의 current resolve-now는 0건이다.

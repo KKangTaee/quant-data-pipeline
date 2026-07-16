@@ -23,3 +23,24 @@
 - current automated verification은 measured accepted-limit / final-decision
   handoff lane 회귀를 잡았지만, 실제 화면에서 두 handoff 카드가 의도한
   정보 밀도로 보이는지는 desktop / 760px Browser QA가 남아 있다.
+- 지정 후보는 resolve-now 재노출은 제거됐지만 `backtest_realism`,
+  `selected_route_preflight`, `pre_final_data_contract` 3개 engineering
+  blocker가 남는다. UI에서 이를 자동 해결 가능한 action처럼 보이지 않게
+  유지해야 한다.
+- COMT / EFA / IWD / IWM / IWN / LQD / TIP / VNQ holdings/exposure는
+  공식 source 계약 또는 지원 parser/evidence adapter 개발 전까지
+  Final Review eligible로 승격할 수 없다.
+- provider source-map discovery 시도 여부는 bounded run history를 읽어
+  반복 CTA를 방지한다. 장기적으로 이 lifecycle을 durable source-contract
+  상태에 저장할지 검토할 수 있지만, protected run history/schema 재설계는
+  이번 범위 밖이다.
+- 현재 lookup은 전역 run history 최근 500건 범위다. 다른 pipeline 실행이
+  누적되어 failed/exception discovery 기록이 범위 밖으로 밀리면 같은 CTA가
+  장기적으로 다시 나타날 수 있다. durable source-attempt persistence는
+  schema/source-contract 확장 승인이 필요한 후속 위험이다.
+- partial-month Monitoring 판정은 월 단위 cadence 계약이다. 월간 전략이 아닌
+  다른 cadence가 같은 필드를 쓰게 되면 strategy cadence를 explicit input으로
+  확장해야 하며, 현재는 설명되지 않은 장기 gap을 보수적으로 차단한다.
+- 공통 가격일의 월말 허용 범위는 주말/휴장을 포함한 7일이다. 비월간 cadence나
+  더 긴 시장 휴장이 필요한 source는 이 숫자를 재사용하지 말고 source cadence
+  contract를 별도로 제공해야 한다.

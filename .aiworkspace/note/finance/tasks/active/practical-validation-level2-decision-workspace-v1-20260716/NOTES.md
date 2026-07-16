@@ -70,3 +70,40 @@
 - measured caution은 `validated_caution`에만 적용하고 accepted limit /
   final decision / monitoring transfer는 measurement가 있어도 원래
   handoff class를 유지하도록 TDD로 보정했다.
+
+## 2026-07-16 Action Lifecycle Follow-up
+
+- 선택 후보를 후보 grid 바로 아래에 다시 크게 표시하면 후보 선택과 검증 관점
+  사이에 불필요한 중복 context가 생긴다. 현재 선택은 one-shell header의
+  `검증 대상` context로 이동했다.
+- 5개 검증 관점은 4 + 1보다 3 + 가운데 정렬 2가 데스크톱 카드 밀도와
+  선택 관계를 더 안정적으로 보여준다. 760px에서는 기존처럼 1열이다.
+- 지정 후보에서 2026-07-16 provider gap action 실행 이력이 실제로 있었지만,
+  source-map 탐색 실패와 미지원 `ishares_workbook` parser가 다시 callable
+  action으로 분류됐다. 사용자가 클릭하지 않은 것이 아니라 action lifecycle
+  판정 버그였다.
+- provider 보강과 replay는 독립 병렬 action이 아니다. provider 결과는 기존
+  replay / decision cache를 무효화하고, 다음 단계 replay가 새 DB 근거로
+  validation을 다시 계산해야 한다.
+- 공식 source 탐색을 이미 시도했지만 계약이 없거나 parser가 현재 수집기에서
+  지원되지 않으면 `resolve_now`를 반복하지 않고 `engineering_required`로
+  전환한다. 아직 `candidate` 상태라 검증하지 않은 source는 최초 discovery
+  action을 유지한다.
+- discovery job 예외 결과에도 요청 symbol을 run metadata에 남겨 다음 read
+  model이 같은 CTA를 다시 만들지 않게 한다.
+- partial-month Monitoring은 날짜 필드 존재만으로 인정하지 않는다. 요청 월의
+  평가일, 바로 이전 월의 완결 리밸런싱과 동일한 실제 결과일, 월말 7일 이내
+  공통 가격일, 31일 이내 gap이 함께 맞을 때만 종결한다. 장기 또는 모순된
+  gap은 engineering blocker다.
+- provider 계약은 target data-kind별로 판단한다. holdings 누락을 operability
+  계약만으로 개발 필요 처리하지 않으며, 동일 symbol/data-kind의 candidate와
+  failed row 순서가 달라도 terminal 상태를 우선한다.
+- 동일 symbol/data-kind에 verified holdings 계약이 여러 개면 현재 자동
+  수집기가 지원하는 parser를 우선해, row 정렬 순서 때문에 실행 가능한
+  계약을 engineering blocker로 낮추지 않는다.
+- 지정 후보의 actual replay는 전체 PASS이며 period coverage도 PASS다.
+  최신 시장 요청일은 2026-07-15, 공통 가격일은 2026-06-26, 마지막 완결
+  리밸런싱은 2026-06-30, 최신 평가는 2026-07-06이고 제한 종목은
+  COMT / TIP / XLE다.
+- 현재 자동 수집기로 해결할 수 없는 holdings/exposure 계약은
+  COMT / EFA / IWD / IWM / IWN / LQD / TIP / VNQ 8종이다.
