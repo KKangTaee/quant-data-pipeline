@@ -732,6 +732,20 @@ def _complete_provider_gap_collection(
     )
 
 
+def _execute_practical_validation_provider_gap_collection(
+    validation_result: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Run the registered provider-gap action and invalidate stale replay proof."""
+
+    results = list(run_provider_gap_collection(validation_result) or [])
+    _complete_provider_gap_collection(
+        validation_result,
+        results,
+        origin="decision_workspace",
+    )
+    return results
+
+
 def _has_current_session_replay_result(replay_result: Any) -> bool:
     """Return True only after the user has attempted Flow 2 replay in this session."""
 

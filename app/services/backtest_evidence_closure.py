@@ -18,6 +18,13 @@ ACTION_HANDLER_CONTRACTS = {
         "owner_stage": "practical_validation",
         "handler": "app.web.backtest_practical_validation.page:_render_actual_replay_panel",
     },
+    "run_practical_validation_provider_gap_collection": {
+        "owner_stage": "practical_validation",
+        "handler": (
+            "app.web.backtest_practical_validation.page:"
+            "_execute_practical_validation_provider_gap_collection"
+        ),
+    },
 }
 
 _RESOLUTION_ACTION_LABELS = {
@@ -226,6 +233,7 @@ def _base_issue(
     gate_effect: str,
     terminal_state: str = "open",
     period: dict[str, Any] | None = None,
+    measurement: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "root_issue_id": root_issue_id,
@@ -246,6 +254,7 @@ def _base_issue(
         "monitoring_condition": None,
         "terminal_state": terminal_state,
         "period": dict(period or {}),
+        "measurement": dict(measurement or {}),
         "score_impact": 0,
     }
 
@@ -356,15 +365,34 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         )
     if not known_root:
         return None
-    if role == "monitoring_followup":
+    action_id = str(module.get("action_id") or "").strip() or None
+    if role == "final_readiness_blocker":
+        if has_action_handler(action_id):
+            resolution_class = "resolve_now"
+            owner_stage = "practical_validation"
+            criticality = "critical"
+            gate_effect = "block_final_review"
+        else:
+            resolution_class = "engineering_required"
+            owner_stage = "development"
+            criticality = "critical"
+            gate_effect = "block_final_review"
+            action_id = None
+    elif role == "monitoring_followup":
         resolution_class = "monitoring_transfer"
         owner_stage = "final_review"
+        criticality = "noncritical"
+        gate_effect = "final_review_closure"
     elif role == "final_decision_input":
         resolution_class = "final_decision"
         owner_stage = "final_review"
+        criticality = "noncritical"
+        gate_effect = "final_review_closure"
     else:
         resolution_class = "accepted_limit"
         owner_stage = "final_review"
+        criticality = "noncritical"
+        gate_effect = "final_review_closure"
     return _base_issue(
         root_issue_id=known_root,
         title=str(module.get("label") or module.get("Module") or module_id),
@@ -374,12 +402,18 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         derived_checks=[module_id],
         resolution_class=resolution_class,
         owner_stage=owner_stage,
-        actionable_now=False,
-        action_id=None,
+        actionable_now=resolution_class == "resolve_now",
+        action_id=action_id,
         completion_criteria="Final Review route/reason or Monitoring condition records terminal state",
         applicability="module_applies",
-        criticality="noncritical",
-        gate_effect="final_review_closure",
+        criticality=criticality,
+        gate_effect=gate_effect,
+        terminal_state=(
+            "deferred"
+            if resolution_class == "engineering_required"
+            else "open"
+        ),
+        measurement=dict(module.get("measurement") or {}),
     )
 
 
@@ -404,6 +438,20 @@ def _merge_root_issues(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]
 
 
 def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
+    resolution_counts = {
+        resolution_class: sum(
+            1
+            for issue in issues
+            if issue.get("resolution_class") == resolution_class
+        )
+        for resolution_class in (
+            "resolve_now",
+            "engineering_required",
+            "accepted_limit",
+            "final_decision",
+            "monitoring_transfer",
+        )
+    }
     unresolved_actionable_count = sum(
         1
         for issue in issues
@@ -424,6 +472,11 @@ def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
         "unresolved_actionable_count": unresolved_actionable_count,
         "critical_engineering_count": critical_engineering_count,
         "missing_contract_count": missing_contract_count,
+        "resolve_now_count": resolution_counts["resolve_now"],
+        "engineering_required_count": resolution_counts["engineering_required"],
+        "accepted_limit_count": resolution_counts["accepted_limit"],
+        "final_decision_count": resolution_counts["final_decision"],
+        "monitoring_transfer_count": resolution_counts["monitoring_transfer"],
     }
 
 

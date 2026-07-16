@@ -525,6 +525,12 @@ def _apply_pre_final_enrichment_gate(
         "gate_reason": "Final Review 이동 전 수집 가능한 필수 외부 데이터를 보강하고 재검증해야 합니다.",
         "review_role": "final_readiness_blocker",
         "review_role_label": "저장 전 보강",
+        "action_id": "run_practical_validation_provider_gap_collection",
+        "actionable_now": True,
+        "completion_criteria": (
+            "필수 데이터 보강 실행 후 current-session replay를 다시 실행하고 "
+            "새 validation을 저장합니다."
+        ),
         "stage_decision_surface": "Practical Validation",
         "pv_visibility": "handoff_reference",
         "final_review_visibility": "selected_route_gate",

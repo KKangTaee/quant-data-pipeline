@@ -19,6 +19,7 @@ CONSTRUCTION_RISK_ROUTE_LABELS = {
 
 _STATUS_RANK = {
     "PASS": 0,
+    "NOT_APPLICABLE": 0,
     "REVIEW": 1,
     "NEEDS_INPUT": 2,
     "BLOCKED": 3,
@@ -87,7 +88,7 @@ def _row(
     return {
         "Criteria": criteria,
         "Status": normalized,
-        "Ready": normalized == "PASS",
+        "Ready": normalized in {"PASS", "NOT_APPLICABLE"},
         "Current": _safe_text(current),
         "Evidence": _safe_text(evidence),
         "Source Strength": source_strength,
@@ -160,20 +161,28 @@ def _component_weight_row(validation: dict[str, Any], diagnostic: dict[str, Any]
     review_line = _profile_threshold(validation, "max_weight_review", _DEFAULT_MAX_COMPONENT_WEIGHT)
     if active_components <= 0:
         status = "BLOCKED"
+        current = "active component 없음"
         next_action = "Backtest Analysis에서 active component가 있는 source를 다시 선택합니다."
+    elif active_components == 1 and abs(weight_total - 100.0) <= 0.01:
+        status = "NOT_APPLICABLE"
+        current = "단일 component 100.0% / mix concentration 비적용"
+        next_action = "단일 전략의 underlying holdings 집중은 별도 look-through 근거에서 확인합니다."
     elif abs(weight_total - 100.0) > 0.01:
         status = "BLOCKED"
+        current = f"max {max_weight:.1f}% / total {weight_total:.1f}% / components {active_components}"
         next_action = "target weight 합계를 100%로 맞춘 뒤 다시 검증합니다."
     elif max_weight > review_line:
         status = "REVIEW"
+        current = f"max {max_weight:.1f}% / total {weight_total:.1f}% / components {active_components}"
         next_action = "최대 component 비중이 profile 기준을 넘는 이유를 Final Review 근거에 남깁니다."
     else:
         status = "PASS"
+        current = f"max {max_weight:.1f}% / total {weight_total:.1f}% / components {active_components}"
         next_action = "추가 조치 없음"
     return _row(
         criteria="Component weight concentration",
         status=status,
-        current=f"max {max_weight:.1f}% / total {weight_total:.1f}% / components {active_components}",
+        current=current,
         evidence=diagnostic.get("summary") or f"review line {review_line:.1f}%",
         next_action=next_action,
         meaning="목표 비중 자체가 한 component에 과도하게 집중됐는지 확인합니다.",
