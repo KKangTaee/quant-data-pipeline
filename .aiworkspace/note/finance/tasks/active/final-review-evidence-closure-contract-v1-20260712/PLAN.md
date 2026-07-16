@@ -3455,3 +3455,1868 @@ git commit -m "Final Review Monitoring 조건 QA와 문서 동기화"
 - [x] registry rewrite, provider/replay/DB, Gate/route/score changes are excluded.
 - [x] RED/GREEN commands, focused counts, Browser QA, commit boundaries are concrete.
 - [x] no undefined function, placeholder, `TBD`, or incomplete error policy remains.
+
+---
+
+# Final Review Observation Freshness Refresh Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task in the current approved worktree. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Final Review에서 현재 후보의 누적 성과와 underwater 관측 기간이 오래됐을 때 Level2로 이동하지 않고, 한 번의 사용자 action으로 기존 가격 수집 → 동일 전략 replay → 새 Practical Validation append → 최신 chart 재선택을 완료한다.
+
+**Architecture:** 새 Python service가 source-specific freshness read model과 갱신 orchestration을 소유한다. 기존 price refresh / Practical Validation replay / validation builder / append writer를 dependency-injected adapter로 재사용하고, Decision Brief는 compact freshness projection과 selected-route-only Gate를 제공한다. React는 freshness 상태를 표시하고 `refresh_observation` intent만 보내며 Streamlit Python이 stable identity, 실행, 저장, rerun을 담당한다.
+
+**Tech Stack:** Python 3.12, pandas, Streamlit, unittest, React 18, TypeScript, Vite, append-only JSONL registry.
+
+## 이걸 하는 이유?
+
+current GRS의 stored replay curve는 `2026-06-26`에서 끝나지만 현재 최신 완료 NYSE session은 `2026-07-15`다. DB의 BIL 가격이 `2026-06-26`에 머물러 있어 replay만으로는 관측 기간이 늘어나지 않는다. 사용자가 Final Review에서 같은 후보를 판단하다가 이 문제만을 위해 Practical Validation Flow 2로 이동하는 것은 불필요한 단계 회귀이므로, Final Review 안에서 명시적으로 요청한 최신화만 Python orchestration 예외로 허용한다.
+
+## Global Constraints
+
+- worktree는 `/Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev`, branch는 `codex/backtest-dev`를 그대로 사용한다.
+- 새 task, 새 phase, 새 worktree를 만들지 않는다.
+- `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`의 현재 사용자 변경을 stage, commit, rewrite, delete하지 않는다.
+- `.aiworkspace/note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl`을 stage 또는 commit하지 않는다.
+- generated screenshot, browser artifact, `.superpowers/`를 commit하지 않는다.
+- registry 기존 row를 수정하지 않고 새 validation만 append한다.
+- Browser QA에서 실제 refresh 또는 Final Review save를 눌러 protected registry에 row를 쓰지 않는다.
+- historical universe / delisting provider, background scheduler, live approval, broker order, account sync, auto rebalance는 범위 밖이다.
+- React는 presentation과 intent만 담당한다. 날짜 판정, symbol freshness, ingestion, replay, Gate, validation build, append는 Python이 소유한다.
+- 월간 GRS latest valuation row는 signal / rebalance row와 분리해 가짜 rebalance를 만들지 않는다.
+
+## File Structure And Interfaces
+
+### New Python owner
+
+- Create: `app/services/backtest_final_review_refresh.py`
+  - source / validation stable identity 확인
+  - stored curve end / latest completed market date / DB common date / limiting symbol projection
+  - price refresh meta adapter
+  - price refresh → replay → validation build → Gate → append orchestration
+  - partial / failure / retry result contract
+
+### Existing Python owners to modify
+
+- Modify: `app/services/backtest_price_refresh.py`
+  - `latest_completed_nyse_session()` public wrapper 추가
+- Modify: `app/services/backtest_practical_validation_replay.py`
+  - `replay_component_symbols()` public helper
+  - `build_replay_market_date_contract(..., freshness_loader=...)`
+  - `symbol_latest_dates`, `stale_symbols` projection
+- Modify: `app/services/backtest_final_review_decision_brief.py`
+  - `observation_freshness` payload
+  - refresh 가능한 stale 상태에서 selected route만 recordable false
+  - `can_refresh_observation` capability
+- Modify: `app/web/backtest_final_review_helpers.py`
+  - authoritative save evaluation에 optional freshness selected-route guard
+- Modify: `app/web/backtest_final_review/page.py`
+  - refresh status build
+  - session result merge
+  - refresh intent stable identity / duplicate guard / spinner / rerun
+  - fallback freshness action
+- Modify: `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`
+  - freshness payload와 `RefreshObservationIntent`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+  - chart 위 compact freshness strip
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+  - Market Context 계열 responsive freshness layout
+
+### Test owners
+
+- Create: `tests/test_backtest_final_review_refresh.py`
+- Modify: `tests/test_backtest_final_review_decision_brief.py`
+- Modify: `tests/test_service_contracts.py`
+- Modify: `tests/test_final_review_market_context_visual_contract.py`
+
+### Stable interfaces
+
+```python
+def latest_completed_nyse_session(now: datetime | None = None) -> date:
+    """Return the latest NYSE session whose regular or early close has completed."""
+```
+
+```python
+def replay_component_symbols(source: dict[str, Any]) -> list[str]:
+    """Return the active symbols required by the existing replay contract."""
+```
+
+```python
+def build_replay_market_date_contract(
+    source: dict[str, Any],
+    *,
+    requested_end: Any | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] | None = None,
+) -> dict[str, Any]:
+    """Return source-specific common coverage and per-symbol latest dates."""
+```
+
+```python
+def build_final_review_refresh_status(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    now: datetime | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] | None = None,
+) -> dict[str, Any]:
+    """Build a read-only observation freshness model for one current validation."""
+```
+
+```python
+def run_final_review_observation_refresh(
+    *,
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    now: datetime | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] | None = None,
+    price_refresh_runner: Callable[..., Mapping[str, Any]] | None = None,
+    replay_runner: Callable[..., dict[str, Any]] | None = None,
+    validation_builder: Callable[..., dict[str, Any]] | None = None,
+    validation_saver: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Refresh stored observations and append a new validation only after a safe replay."""
+```
+
+Freshness payload:
+
+```python
+{
+    "schema_version": "final_review_observation_freshness_v1",
+    "status": "up_to_date | replay_available | price_refresh_available | partial_refresh | blocked",
+    "tone": "positive | warning | danger | neutral",
+    "label": "최신 | 재계산 가능 | 가격 최신화 필요 | 일부 최신화 | 갱신 불가",
+    "summary": str,
+    "detail": str,
+    "selection_source_id": str,
+    "validation_id": str,
+    "stored_curve_end": str | None,
+    "latest_completed_market_date": str | None,
+    "db_common_price_date": str | None,
+    "refresh_target_date": str | None,
+    "limiting_symbols": list[str],
+    "stale_symbols": list[str],
+    "missing_symbols": list[str],
+    "provider_gap_symbols": list[str],
+    "refreshable_symbols": list[str],
+    "can_refresh": bool,
+    "selection_blocked": bool,
+    "button_label": "최신 데이터로 다시 계산",
+}
+```
+
+Refresh result:
+
+```python
+{
+    "schema_version": "final_review_observation_refresh_result_v1",
+    "status": "refreshed | partial_refresh | up_to_date | blocked | failed | failed_after_price_refresh",
+    "message": str,
+    "selection_source_id": str,
+    "previous_validation_id": str,
+    "new_validation_id": str | None,
+    "previous_curve_end": str | None,
+    "refreshed_curve_end": str | None,
+    "target_market_date": str | None,
+    "db_common_price_date": str | None,
+    "limiting_symbols": list[str],
+    "provider_gap_symbols": list[str],
+    "price_refresh_executed": bool,
+    "price_rows_written": int,
+    "replay_executed": bool,
+    "validation_saved": bool,
+}
+```
+
+## 1차: Freshness Truth And Selected-Route Gate
+
+### Task 11.1: source-specific freshness model과 public date adapter
+
+**Files:**
+
+- Create: `tests/test_backtest_final_review_refresh.py`
+- Create: `app/services/backtest_final_review_refresh.py`
+- Modify: `app/services/backtest_price_refresh.py`
+- Modify: `app/services/backtest_practical_validation_replay.py`
+
+**Interfaces:**
+
+- Consumes: current validation의 `selection_source_snapshot`, `curve_evidence.replay_attempt.portfolio_curve`, `observation_refresh_snapshot`
+- Produces: `latest_completed_nyse_session`, `replay_component_symbols`, `build_final_review_refresh_status`
+
+- [ ] **Step 1: Write the failing freshness tests**
+
+Create `tests/test_backtest_final_review_refresh.py` with reusable fixtures and the first five contracts:
+
+```python
+from __future__ import annotations
+
+import unittest
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+import pandas as pd
+
+
+ET = ZoneInfo("America/New_York")
+
+
+def source_fixture() -> dict[str, object]:
+    return {
+        "selection_source_id": "selection-grs-current",
+        "source_kind": "single_candidate",
+        "period": {"actual_start": "2016-01-29", "actual_end": "2026-06-26"},
+        "components": [
+            {
+                "component_id": "grs",
+                "title": "Global Relative Strength",
+                "target_weight": 100.0,
+                "strategy_key": "global_relative_strength",
+                "contract": {
+                    "tickers": ["SPY", "QQQ", "GLD", "IEF", "TLT"],
+                    "cash_ticker": "BIL",
+                },
+            }
+        ],
+    }
+
+
+def validation_fixture(*, curve_end: str = "2026-06-26") -> dict[str, object]:
+    return {
+        "validation_id": "validation-grs-current",
+        "selection_source_id": "selection-grs-current",
+        "selection_source_snapshot": source_fixture(),
+        "validation_profile": {
+            "profile_id": "balanced_core",
+            "answers": {"capital_priority": "balanced"},
+        },
+        "curve_evidence": {
+            "replay_attempt": {
+                "portfolio_curve": [
+                    {"Date": "2016-01-29", "Total Balance": 10000.0},
+                    {"Date": curve_end, "Total Balance": 53000.0},
+                ]
+            }
+        },
+    }
+
+
+def freshness_frame(bil: str, others: str) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {"symbol": "SPY", "latest_date": others, "row_count": 2500},
+            {"symbol": "QQQ", "latest_date": others, "row_count": 2500},
+            {"symbol": "GLD", "latest_date": others, "row_count": 2500},
+            {"symbol": "IEF", "latest_date": others, "row_count": 2500},
+            {"symbol": "TLT", "latest_date": others, "row_count": 2500},
+            {"symbol": "BIL", "latest_date": bil, "row_count": 2500},
+        ]
+    )
+
+
+class FinalReviewRefreshStatusTests(unittest.TestCase):
+    def test_current_grs_requires_price_refresh_and_names_bil_limiter(self) -> None:
+        from app.services.backtest_final_review_refresh import (
+            build_final_review_refresh_status,
+        )
+
+        status = build_final_review_refresh_status(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: freshness_frame("2026-06-26", "2026-07-10"),
+        )
+
+        self.assertEqual(status["status"], "price_refresh_available")
+        self.assertEqual(status["stored_curve_end"], "2026-06-26")
+        self.assertEqual(status["latest_completed_market_date"], "2026-07-15")
+        self.assertEqual(status["db_common_price_date"], "2026-06-26")
+        self.assertEqual(status["limiting_symbols"], ["BIL"])
+        self.assertIn("BIL", status["refreshable_symbols"])
+        self.assertTrue(status["selection_blocked"])
+
+    def test_db_common_date_newer_than_curve_requires_replay_only(self) -> None:
+        from app.services.backtest_final_review_refresh import build_final_review_refresh_status
+
+        status = build_final_review_refresh_status(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: freshness_frame("2026-07-10", "2026-07-10"),
+        )
+
+        self.assertEqual(status["status"], "replay_available")
+        self.assertEqual(status["db_common_price_date"], "2026-07-10")
+        self.assertTrue(status["can_refresh"])
+
+    def test_curve_at_target_is_up_to_date(self) -> None:
+        from app.services.backtest_final_review_refresh import build_final_review_refresh_status
+
+        status = build_final_review_refresh_status(
+            source=source_fixture(),
+            validation=validation_fixture(curve_end="2026-07-15"),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: freshness_frame("2026-07-15", "2026-07-15"),
+        )
+
+        self.assertEqual(status["status"], "up_to_date")
+        self.assertFalse(status["can_refresh"])
+        self.assertFalse(status["selection_blocked"])
+
+    def test_known_provider_gap_is_partial_not_endless_refresh(self) -> None:
+        from app.services.backtest_final_review_refresh import build_final_review_refresh_status
+
+        validation = validation_fixture()
+        validation["observation_refresh_snapshot"] = {
+            "target_market_date": "2026-07-15",
+            "provider_gap_symbols": ["BIL"],
+        }
+        status = build_final_review_refresh_status(
+            source=source_fixture(),
+            validation=validation,
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: freshness_frame("2026-06-26", "2026-07-10"),
+        )
+
+        self.assertEqual(status["status"], "partial_refresh")
+        self.assertEqual(status["provider_gap_symbols"], ["BIL"])
+        self.assertFalse(status["can_refresh"])
+        self.assertFalse(status["selection_blocked"])
+
+    def test_missing_selection_source_contract_is_blocked(self) -> None:
+        from app.services.backtest_final_review_refresh import build_final_review_refresh_status
+
+        status = build_final_review_refresh_status(
+            source={},
+            validation={"validation_id": "validation-missing"},
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: pd.DataFrame(),
+        )
+
+        self.assertEqual(status["status"], "blocked")
+        self.assertFalse(status["can_refresh"])
+        self.assertTrue(status["selection_blocked"])
+```
+
+- [ ] **Step 2: Run RED and verify the missing service/API failure**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_refresh.FinalReviewRefreshStatusTests -v
+```
+
+Expected: `ModuleNotFoundError: No module named 'app.services.backtest_final_review_refresh'` or missing public adapter errors. The tests must not fail because of fixture syntax.
+
+- [ ] **Step 3: Expose the latest completed session and replay symbols**
+
+In `app/services/backtest_price_refresh.py` add:
+
+```python
+def latest_completed_nyse_session(now: datetime | None = None) -> date:
+    """Return the latest NYSE session whose regular or early close has completed."""
+
+    return _latest_completed_nyse_session(now)
+```
+
+In `app/services/backtest_practical_validation_replay.py` rename the private symbol helper through a public wrapper and inject the loader:
+
+```python
+def replay_component_symbols(source: dict[str, Any]) -> list[str]:
+    """Collect only the active source tickers required by the replay runtime."""
+
+    return _replay_component_symbols(source)
+```
+
+```python
+def build_replay_market_date_contract(
+    source: dict[str, Any],
+    *,
+    requested_end: Any | None = None,
+    freshness_loader: Callable[..., pd.DataFrame] | None = None,
+) -> dict[str, Any]:
+    selected_loader = freshness_loader or load_price_freshness_summary
+    freshness = selected_loader(
+        symbols=symbols,
+        end=requested_market_date,
+        timeframe="1d",
+    )
+```
+
+Return the additional keys:
+
+```python
+symbol_latest_dates = {
+    symbol: _date_text(rows.loc[rows["symbol"] == symbol, "latest_date"].iloc[-1])
+    for symbol in symbols
+    if not rows.loc[rows["symbol"] == symbol, "latest_date"].empty
+}
+stale_symbols = [
+    symbol
+    for symbol in symbols
+    if symbol not in symbol_latest_dates
+    or (
+        requested_market_date
+        and symbol_latest_dates[symbol] < requested_market_date
+    )
+]
+```
+
+```python
+{
+    "symbol_latest_dates": symbol_latest_dates,
+    "stale_symbols": stale_symbols,
+}
+```
+
+Keep all existing market-date keys unchanged.
+
+- [ ] **Step 4: Implement the minimal freshness service**
+
+Create `app/services/backtest_final_review_refresh.py` with:
+
+```python
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from datetime import datetime
+from typing import Any
+
+import pandas as pd
+
+from app.services.backtest_price_refresh import latest_completed_nyse_session
+from app.services.backtest_practical_validation_replay import (
+    build_replay_market_date_contract,
+)
+
+
+FRESHNESS_SCHEMA_VERSION = "final_review_observation_freshness_v1"
+REFRESH_RESULT_SCHEMA_VERSION = "final_review_observation_refresh_result_v1"
+
+
+def _date_text(value: Any) -> str | None:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _selection_source(
+    source: Mapping[str, Any],
+    validation: Mapping[str, Any],
+) -> dict[str, Any]:
+    snapshot = dict(validation.get("selection_source_snapshot") or {})
+    if snapshot:
+        return snapshot
+    row = dict(source.get("row") or {})
+    nested = dict(row.get("selection_source_snapshot") or {})
+    if nested:
+        return nested
+    return dict(source or {})
+
+
+def _stored_curve_end(validation: Mapping[str, Any]) -> str | None:
+    replay = dict(dict(validation.get("curve_evidence") or {}).get("replay_attempt") or {})
+    points = [
+        dict(row)
+        for row in list(replay.get("portfolio_curve") or [])
+        if isinstance(row, Mapping)
+    ]
+    dates = [_date_text(row.get("Date") or row.get("date")) for row in points]
+    dates = [value for value in dates if value]
+    if dates:
+        return max(dates)
+    period = dict(replay.get("actual_period") or {})
+    coverage = dict(replay.get("period_coverage") or {})
+    coverage_period = dict(coverage.get("actual_period") or {})
+    return _date_text(
+        period.get("end")
+        or coverage_period.get("end")
+        or dict(validation.get("input_evidence") or {}).get("source_period", {}).get("actual_end")
+    )
+```
+
+Implement `build_final_review_refresh_status()` so it:
+
+1. resolves the selection source;
+2. computes target with `latest_completed_nyse_session(now).isoformat()`;
+3. calls `build_replay_market_date_contract(..., freshness_loader=freshness_loader)`;
+4. subtracts same-target `observation_refresh_snapshot.provider_gap_symbols` from stale symbols;
+5. returns `replay_available` when common date is newer than curve;
+6. returns `price_refresh_available` when refreshable stale/missing symbols remain;
+7. returns `partial_refresh` when only known provider gaps remain;
+8. returns `up_to_date` when curve/common/target are aligned;
+9. returns `blocked` when source, symbols, curve, or date contract is missing.
+
+Use explicit state mapping:
+
+```python
+presentation = {
+    "up_to_date": ("positive", "최신"),
+    "replay_available": ("warning", "재계산 가능"),
+    "price_refresh_available": ("warning", "가격 최신화 필요"),
+    "partial_refresh": ("neutral", "일부 최신화"),
+    "blocked": ("danger", "갱신 불가"),
+}
+```
+
+Only `replay_available` and `price_refresh_available` set `can_refresh=True`. They also set `selection_blocked=True`. `partial_refresh` sets both false because no automatic refresh target remains; existing evidence closure Gate still owns critical period gaps.
+
+- [ ] **Step 5: Run GREEN and focused replay regression**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_refresh.FinalReviewRefreshStatusTests \
+  tests.test_service_contracts.PracticalValidationReplayServiceContractTests -v
+```
+
+Expected: all tests `OK`.
+
+- [ ] **Step 6: Commit 1차**
+
+```bash
+git add \
+  app/services/backtest_final_review_refresh.py \
+  app/services/backtest_price_refresh.py \
+  app/services/backtest_practical_validation_replay.py \
+  tests/test_backtest_final_review_refresh.py
+git diff --cached --check
+git commit -m "Final Review 관측 최신성 계약 도입"
+```
+
+Do not stage registry, run history, screenshots, or `.superpowers/`.
+
+## 2차: Python One-Click Refresh Orchestration
+
+### Task 11.2: price refresh → replay → validation append
+
+**Files:**
+
+- Modify: `tests/test_backtest_final_review_refresh.py`
+- Modify: `app/services/backtest_final_review_refresh.py`
+
+**Interfaces:**
+
+- Consumes: Task 11.1 freshness payload, `run_backtest_price_refresh`, `run_practical_validation_actual_replay`, `build_practical_validation_result`, `save_practical_validation_result`
+- Produces: `run_final_review_observation_refresh`, compact `observation_refresh_snapshot`
+
+- [ ] **Step 1: Write RED orchestration tests**
+
+Append to `tests/test_backtest_final_review_refresh.py`:
+
+```python
+from unittest.mock import MagicMock
+
+
+def replay_result(*, end: str = "2026-07-10", status: str = "PASS") -> dict[str, object]:
+    return {
+        "status": status,
+        "portfolio_curve": [
+            {"Date": "2016-01-29", "Total Balance": 10000.0},
+            {"Date": end, "Total Balance": 54000.0},
+        ],
+        "period_coverage": {
+            "status": "PASS",
+            "actual_period": {"start": "2016-01-29", "end": end},
+        },
+        "market_date_contract": {
+            "requested_market_date": "2026-07-15",
+            "latest_common_price_date": end,
+            "limiting_symbols": ["BIL"] if end < "2026-07-15" else [],
+        },
+    }
+
+
+class FinalReviewRefreshOrchestrationTests(unittest.TestCase):
+    def test_replay_available_skips_ingestion_and_appends_new_validation(self) -> None:
+        from app.services.backtest_final_review_refresh import (
+            run_final_review_observation_refresh,
+        )
+
+        price_runner = MagicMock()
+        replay_runner = MagicMock(return_value=replay_result(end="2026-07-10"))
+        validation_builder = MagicMock(
+            return_value={
+                "validation_id": "validation-grs-refreshed",
+                "selection_source_id": "selection-grs-current",
+                "final_review_gate": {"can_save_and_move": True},
+            }
+        )
+        saver = MagicMock()
+
+        result = run_final_review_observation_refresh(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: freshness_frame("2026-07-10", "2026-07-10"),
+            price_refresh_runner=price_runner,
+            replay_runner=replay_runner,
+            validation_builder=validation_builder,
+            validation_saver=saver,
+        )
+
+        price_runner.assert_not_called()
+        replay_runner.assert_called_once()
+        saver.assert_called_once()
+        self.assertEqual(result["status"], "partial_refresh")
+        self.assertEqual(result["new_validation_id"], "validation-grs-refreshed")
+        self.assertTrue(result["validation_saved"])
+
+    def test_price_refresh_runs_before_replay_when_common_date_is_stale(self) -> None:
+        from app.services.backtest_final_review_refresh import (
+            run_final_review_observation_refresh,
+        )
+
+        frames = iter(
+            [
+                freshness_frame("2026-06-26", "2026-07-10"),
+                freshness_frame("2026-07-15", "2026-07-15"),
+            ]
+        )
+        price_runner = MagicMock(
+            return_value={
+                "status": "success",
+                "rows_written": 18,
+                "details": {
+                    "post_refresh_unresolved_symbols": [],
+                    "post_refresh_price_freshness": {"details": {"classification_rows": []}},
+                },
+            }
+        )
+        replay_runner = MagicMock(return_value=replay_result(end="2026-07-15"))
+        validation_builder = MagicMock(
+            return_value={
+                "validation_id": "validation-grs-latest",
+                "selection_source_id": "selection-grs-current",
+                "final_review_gate": {"can_save_and_move": True},
+            }
+        )
+        saver = MagicMock()
+
+        result = run_final_review_observation_refresh(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: next(frames),
+            price_refresh_runner=price_runner,
+            replay_runner=replay_runner,
+            validation_builder=validation_builder,
+            validation_saver=saver,
+        )
+
+        refresh_meta = price_runner.call_args.args[0]
+        self.assertEqual(refresh_meta["end"], "2026-07-15")
+        self.assertIn("BIL", refresh_meta["price_freshness"]["details"]["stale_symbols_all"])
+        replay_runner.assert_called_once()
+        saver.assert_called_once()
+        self.assertEqual(result["status"], "refreshed")
+        self.assertEqual(result["refreshed_curve_end"], "2026-07-15")
+
+    def test_replay_failure_after_price_refresh_never_saves_validation(self) -> None:
+        from app.services.backtest_final_review_refresh import (
+            run_final_review_observation_refresh,
+        )
+
+        frames = iter(
+            [
+                freshness_frame("2026-06-26", "2026-07-10"),
+                freshness_frame("2026-07-15", "2026-07-15"),
+            ]
+        )
+        saver = MagicMock()
+        result = run_final_review_observation_refresh(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: next(frames),
+            price_refresh_runner=MagicMock(
+                return_value={"status": "success", "rows_written": 12, "details": {}}
+            ),
+            replay_runner=MagicMock(return_value=replay_result(status="BLOCKED")),
+            validation_builder=MagicMock(),
+            validation_saver=saver,
+        )
+
+        self.assertEqual(result["status"], "failed_after_price_refresh")
+        self.assertFalse(result["validation_saved"])
+        saver.assert_not_called()
+
+    def test_blocked_new_validation_is_not_appended(self) -> None:
+        from app.services.backtest_final_review_refresh import (
+            run_final_review_observation_refresh,
+        )
+
+        saver = MagicMock()
+        result = run_final_review_observation_refresh(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: freshness_frame("2026-07-10", "2026-07-10"),
+            price_refresh_runner=MagicMock(),
+            replay_runner=MagicMock(return_value=replay_result(end="2026-07-10")),
+            validation_builder=MagicMock(
+                return_value={
+                    "validation_id": "validation-blocked",
+                    "selection_source_id": "selection-grs-current",
+                    "final_review_gate": {"can_save_and_move": False},
+                }
+            ),
+            validation_saver=saver,
+        )
+
+        self.assertEqual(result["status"], "blocked")
+        self.assertFalse(result["validation_saved"])
+        saver.assert_not_called()
+
+    def test_no_curve_progress_returns_partial_without_append(self) -> None:
+        from app.services.backtest_final_review_refresh import (
+            run_final_review_observation_refresh,
+        )
+
+        frames = iter(
+            [
+                freshness_frame("2026-06-26", "2026-07-10"),
+                freshness_frame("2026-06-26", "2026-07-10"),
+            ]
+        )
+        saver = MagicMock()
+        result = run_final_review_observation_refresh(
+            source=source_fixture(),
+            validation=validation_fixture(),
+            now=datetime(2026, 7, 16, 5, 0, tzinfo=ET),
+            freshness_loader=lambda **_: next(frames),
+            price_refresh_runner=MagicMock(
+                return_value={
+                    "status": "partial_success",
+                    "rows_written": 5,
+                    "details": {
+                        "post_refresh_unresolved_symbols": ["BIL"],
+                        "post_refresh_price_freshness": {
+                            "details": {
+                                "classification_rows": [
+                                    {
+                                        "symbol": "BIL",
+                                        "reason": "persistent_source_gap_or_symbol_issue",
+                                    }
+                                ]
+                            }
+                        },
+                    },
+                }
+            ),
+            replay_runner=MagicMock(),
+            validation_builder=MagicMock(),
+            validation_saver=saver,
+        )
+
+        self.assertEqual(result["status"], "partial_refresh")
+        self.assertEqual(result["provider_gap_symbols"], ["BIL"])
+        self.assertFalse(result["replay_executed"])
+        saver.assert_not_called()
+```
+
+- [ ] **Step 2: Run RED and verify the orchestration function is missing**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_refresh.FinalReviewRefreshOrchestrationTests -v
+```
+
+Expected: import or attribute failures for `run_final_review_observation_refresh`.
+
+- [ ] **Step 3: Implement price refresh meta and result helpers**
+
+In `app/services/backtest_final_review_refresh.py` add:
+
+```python
+def _price_refresh_meta(
+    *,
+    selection_source: Mapping[str, Any],
+    freshness: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "tickers": list(freshness.get("symbols") or []),
+        "symbols": list(freshness.get("symbols") or []),
+        "start": dict(selection_source.get("period") or {}).get("actual_start")
+        or dict(selection_source.get("period") or {}).get("start"),
+        "end": freshness.get("refresh_target_date"),
+        "actual_result_end": freshness.get("stored_curve_end"),
+        "price_freshness": {
+            "status": "warning",
+            "details": {
+                "common_latest_date": freshness.get("db_common_price_date"),
+                "effective_end_date": freshness.get("refresh_target_date"),
+                "stale_symbols_all": list(freshness.get("refreshable_symbols") or []),
+                "missing_symbols_all": list(freshness.get("missing_symbols") or []),
+                "refresh_symbols_all": list(freshness.get("refreshable_symbols") or []),
+                "classification_rows": [],
+            },
+        },
+    }
+```
+
+```python
+def _provider_gap_symbols(result: Mapping[str, Any]) -> list[str]:
+    details = dict(result.get("details") or {})
+    post = dict(details.get("post_refresh_price_freshness") or {})
+    rows = list(dict(post.get("details") or {}).get("classification_rows") or [])
+    markers = (
+        "persistent_source_gap",
+        "provider_source_gap",
+        "provider_no_data",
+        "likely_delisted",
+        "symbol_changed",
+        "asset_profile_error",
+        "unavailable_from_provider",
+    )
+    return sorted(
+        {
+            str(row.get("symbol") or "").strip().upper()
+            for row in rows
+            if isinstance(row, Mapping)
+            and any(marker in str(row.get("reason") or "").lower() for marker in markers)
+            and str(row.get("symbol") or "").strip()
+        }
+    )
+```
+
+- [ ] **Step 4: Implement the orchestration**
+
+Select defaults lazily inside `run_final_review_observation_refresh()` to avoid import cycles:
+
+```python
+if price_refresh_runner is None:
+    from app.services.backtest_price_refresh import run_backtest_price_refresh
+    price_refresh_runner = run_backtest_price_refresh
+if replay_runner is None:
+    from app.services.backtest_practical_validation_replay import (
+        run_practical_validation_actual_replay,
+    )
+    replay_runner = run_practical_validation_actual_replay
+if validation_builder is None or validation_saver is None:
+    from app.services.backtest_practical_validation import (
+        build_practical_validation_result,
+        save_practical_validation_result,
+    )
+    validation_builder = validation_builder or build_practical_validation_result
+    validation_saver = validation_saver or save_practical_validation_result
+```
+
+Required execution rules:
+
+```python
+initial = build_final_review_refresh_status(
+    source=source,
+    validation=validation,
+    now=now,
+    freshness_loader=freshness_loader,
+)
+```
+
+- `up_to_date`: return without runner calls.
+- `blocked`: return without runner calls.
+- `price_refresh_available`: call price runner with `_price_refresh_meta`, then rebuild status.
+- if post-refresh common date is not later than `stored_curve_end`, return `partial_refresh` without replay/save.
+- otherwise call:
+
+```python
+replay = replay_runner(
+    selection_source,
+    mode="extend_to_latest",
+    end_override=post_status.get("refresh_target_date"),
+)
+```
+
+- require replay status `PASS` or `REVIEW`, non-empty portfolio curve, and `refreshed_curve_end > previous_curve_end`.
+- preserve current validation profile:
+
+```python
+profile = dict(validation.get("validation_profile") or {})
+validation_profile = {
+    "profile_id": profile.get("profile_id") or "balanced_core",
+    "answers": dict(profile.get("answers") or {}),
+}
+new_validation = validation_builder(
+    selection_source,
+    validation_profile=validation_profile,
+    replay_result=replay,
+)
+```
+
+- require same `selection_source_id` and `final_review_gate.can_save_and_move=True`.
+- attach before save:
+
+```python
+new_validation["observation_refresh_snapshot"] = {
+    "schema_version": "final_review_observation_refresh_snapshot_v1",
+    "attempted_at": datetime.now().isoformat(timespec="seconds"),
+    "target_market_date": post_status.get("refresh_target_date"),
+    "previous_curve_end": previous_curve_end,
+    "refreshed_curve_end": refreshed_curve_end,
+    "db_common_price_date": post_status.get("db_common_price_date"),
+    "limiting_symbols": list(post_status.get("limiting_symbols") or []),
+    "provider_gap_symbols": provider_gap_symbols,
+    "price_refresh_executed": price_refresh_executed,
+    "price_rows_written": price_rows_written,
+}
+```
+
+- call `validation_saver(new_validation)` only after all guards.
+- result status is `refreshed` when curve reaches target, otherwise `partial_refresh`.
+
+Catch exceptions at orchestration boundaries. If price rows were already written, use `failed_after_price_refresh`; otherwise use `failed`. Never attempt DB rollback.
+
+- [ ] **Step 5: Run GREEN and append-writer regression**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_refresh \
+  tests.test_service_contracts.PracticalValidationReplayServiceContractTests \
+  tests.test_service_contracts.PracticalValidationServiceContractTests -v
+```
+
+Expected: all tests `OK`.
+
+- [ ] **Step 6: Commit 2차**
+
+```bash
+git add \
+  app/services/backtest_final_review_refresh.py \
+  tests/test_backtest_final_review_refresh.py
+git diff --cached --check
+git commit -m "Final Review 최신 관측 재계산 오케스트레이션"
+```
+
+## 3차: Decision Brief Gate And Streamlit Intent
+
+### Task 11.3: selected-route-only Gate, stable intent, rerun
+
+**Files:**
+
+- Modify: `tests/test_backtest_final_review_decision_brief.py`
+- Modify: `tests/test_service_contracts.py`
+- Modify: `app/services/backtest_final_review_decision_brief.py`
+- Modify: `app/web/backtest_final_review_helpers.py`
+- Modify: `app/web/backtest_final_review/page.py`
+
+**Interfaces:**
+
+- Consumes: Task 11.1 freshness status, Task 11.2 refresh result
+- Produces: Decision Brief `observation_freshness`, Python refresh intent consumer, authoritative selected-route save guard
+
+- [ ] **Step 1: Write RED Decision Brief Gate tests**
+
+Append to `tests/test_backtest_final_review_decision_brief.py`:
+
+```python
+    def test_refreshable_stale_observation_blocks_only_selected_route(self) -> None:
+        inputs = self._inputs()
+        inputs["observation_freshness"] = {
+            "schema_version": "final_review_observation_freshness_v1",
+            "status": "price_refresh_available",
+            "selection_blocked": True,
+            "can_refresh": True,
+            "button_label": "최신 데이터로 다시 계산",
+        }
+
+        brief = self._build(inputs)
+        options = {
+            row["route"]: row for row in brief["decision_action"]["options"]
+        }
+
+        self.assertEqual(
+            brief["observation_freshness"]["status"],
+            "price_refresh_available",
+        )
+        self.assertFalse(
+            options["SELECT_FOR_PRACTICAL_PORTFOLIO"]["recordable"]
+        )
+        self.assertIn(
+            "최신 데이터",
+            options["SELECT_FOR_PRACTICAL_PORTFOLIO"]["disabled_reason"],
+        )
+        self.assertTrue(options["HOLD_FOR_MORE_PAPER_TRACKING"]["recordable"])
+        self.assertTrue(options["REJECT_FOR_PRACTICAL_USE"]["recordable"])
+        self.assertTrue(options["RE_REVIEW_REQUIRED"]["recordable"])
+        self.assertTrue(brief["capabilities"]["can_refresh_observation"])
+        self.assertFalse(brief["capabilities"]["provider_fetch"])
+        self.assertFalse(brief["capabilities"]["validation_rerun"])
+
+    def test_up_to_date_observation_keeps_selected_route_recordable(self) -> None:
+        inputs = self._inputs()
+        inputs["observation_freshness"] = {
+            "schema_version": "final_review_observation_freshness_v1",
+            "status": "up_to_date",
+            "selection_blocked": False,
+            "can_refresh": False,
+        }
+
+        brief = self._build(inputs)
+        selected = next(
+            row
+            for row in brief["decision_action"]["options"]
+            if row["route"] == "SELECT_FOR_PRACTICAL_PORTFOLIO"
+        )
+
+        self.assertTrue(selected["recordable"])
+        self.assertFalse(brief["capabilities"]["can_refresh_observation"])
+```
+
+Update `_inputs()` so it accepts the new optional parameter through the build call:
+
+```python
+"observation_freshness": {},
+```
+
+- [ ] **Step 2: Write RED Streamlit consumer tests**
+
+Add focused tests to the current Final Review contract class in `tests/test_service_contracts.py`:
+
+```python
+    def test_final_review_refresh_intent_runs_once_and_selects_new_validation(self) -> None:
+        import app.web.backtest_final_review.page as page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        fake_st.rerun.side_effect = RuntimeError("rerun")
+        refresh_runner = MagicMock(
+            return_value={
+                "status": "refreshed",
+                "message": "2026-07-15까지 다시 계산했습니다.",
+                "selection_source_id": "selection-a",
+                "new_validation_id": "validation-new",
+                "validation_saved": True,
+            }
+        )
+        intent = {
+            "action": "refresh_observation",
+            "intent_id": "refresh-once",
+            "source_id": "selection-a",
+            "validation_id": "validation-old",
+        }
+
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "run_final_review_observation_refresh",
+                refresh_runner,
+            ),
+            self.assertRaisesRegex(RuntimeError, "rerun"),
+        ):
+            page._consume_final_review_observation_refresh_intent(
+                intent,
+                source={"source_id": "validation-old"},
+                validation={
+                    "validation_id": "validation-old",
+                    "selection_source_id": "selection-a",
+                    "selection_source_snapshot": {"selection_source_id": "selection-a"},
+                },
+                observation_freshness={
+                    "can_refresh": True,
+                    "selection_source_id": "selection-a",
+                    "validation_id": "validation-old",
+                },
+            )
+
+        refresh_runner.assert_called_once()
+        self.assertEqual(
+            fake_st.session_state["final_review_active_decision_brief_source_id"],
+            "practical_validation_result:validation-new",
+        )
+        self.assertEqual(
+            fake_st.session_state[
+                "final_review_observation_refresh_result_selection-a"
+            ]["status"],
+            "refreshed",
+        )
+
+    def test_final_review_refresh_intent_rejects_stale_identity(self) -> None:
+        import app.web.backtest_final_review.page as page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        refresh_runner = MagicMock()
+
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "run_final_review_observation_refresh",
+                refresh_runner,
+            ),
+        ):
+            page._consume_final_review_observation_refresh_intent(
+                {
+                    "action": "refresh_observation",
+                    "intent_id": "refresh-stale",
+                    "source_id": "selection-other",
+                    "validation_id": "validation-old",
+                },
+                source={"source_id": "validation-old"},
+                validation={
+                    "validation_id": "validation-old",
+                    "selection_source_id": "selection-a",
+                },
+                observation_freshness={"can_refresh": True},
+            )
+
+        refresh_runner.assert_not_called()
+        fake_st.error.assert_called_once()
+
+    def test_final_review_selected_save_guard_rechecks_observation_freshness(self) -> None:
+        from app.web.backtest_final_review_helpers import (
+            _build_final_review_save_evaluation,
+        )
+
+        result = _build_final_review_save_evaluation(
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet={
+                "selection_gate_policy_snapshot": {"select_allowed": True}
+            },
+            decision_id="decision-freshness",
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+            operator_reason="현재 관측을 확인했다.",
+            existing_decision_ids=set(),
+            observation_freshness={
+                "selection_blocked": True,
+                "status": "price_refresh_available",
+            },
+        )
+
+        self.assertFalse(result["can_save"])
+        self.assertIn("Observation freshness", result["blockers"])
+```
+
+- [ ] **Step 3: Run RED**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_refreshable_stale_observation_blocks_only_selected_route \
+  tests.test_backtest_final_review_decision_brief.FinalReviewDecisionBriefContractTests.test_up_to_date_observation_keeps_selected_route_recordable \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_refresh_intent_runs_once_and_selects_new_validation \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_refresh_intent_rejects_stale_identity \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests.test_final_review_selected_save_guard_rechecks_observation_freshness -v
+```
+
+Expected: missing `observation_freshness` parameter, missing consumer, or missing save guard failures.
+
+- [ ] **Step 4: Extend Decision Brief without changing React authority**
+
+In `build_final_review_decision_brief()` add:
+
+```python
+observation_freshness: dict[str, Any] | None = None,
+```
+
+Normalize it:
+
+```python
+observation_freshness = _as_dict(observation_freshness)
+```
+
+Pass it to `_build_decision_action()`:
+
+```python
+decision_action = _build_decision_action(
+    route=route,
+    eligibility=eligibility,
+    decision_id=decision_id,
+    existing_decision_ids={str(value) for value in existing_decision_ids},
+    observation_freshness=observation_freshness,
+)
+```
+
+Modify `_build_decision_action()`:
+
+```python
+refresh_blocked = bool(observation_freshness.get("selection_blocked"))
+selected_route_blocked = (
+    option_route == SELECT_FOR_PRACTICAL_PORTFOLIO
+    and (
+        not bool(eligibility.get("select_allowed"))
+        or refresh_blocked
+    )
+)
+```
+
+Use `"최신 데이터로 다시 계산한 뒤 계속 추적으로 기록할 수 있습니다."` when refresh is the reason.
+
+Return:
+
+```python
+"observation_freshness": observation_freshness,
+```
+
+and capability:
+
+```python
+"can_refresh_observation": bool(observation_freshness.get("can_refresh")),
+```
+
+Keep `provider_fetch=False`, `validation_rerun=False`, `storage_append_in_react=False`.
+
+- [ ] **Step 5: Add the authoritative save guard**
+
+Extend `_build_final_review_save_evaluation()`:
+
+```python
+observation_freshness: dict[str, Any] | None = None,
+```
+
+Add one check:
+
+```python
+{
+    "Criteria": "Observation freshness",
+    "Ready": (
+        not selected_route
+        or not bool(dict(observation_freshness or {}).get("selection_blocked"))
+    ),
+    "Current": dict(observation_freshness or {}).get("status") or "not_provided",
+    "Meaning": "계속 추적 선정은 현재 확보 가능한 관측 기간을 반영한 뒤 저장합니다.",
+}
+```
+
+All existing callers remain valid because the parameter defaults to `None`. `_consume_final_review_decision_intent()` must receive and pass the current freshness model so a forged React intent cannot bypass the button state.
+
+- [ ] **Step 6: Implement Streamlit freshness build and intent consumer**
+
+Import:
+
+```python
+from app.services.backtest_final_review_refresh import (
+    build_final_review_refresh_status,
+    run_final_review_observation_refresh,
+)
+```
+
+Add:
+
+```python
+def _refresh_result_state_key(selection_source_id: Any) -> str:
+    return (
+        "final_review_observation_refresh_result_"
+        f"{_paper_ledger_slug(selection_source_id)}"
+    )
+```
+
+Implement `_consume_final_review_observation_refresh_intent()` with these guards:
+
+```python
+if payload.get("action") != "refresh_observation":
+    return
+if payload source_id != validation.selection_source_id:
+    st.error(...)
+    return
+if payload validation_id != validation.validation_id:
+    st.error(...)
+    return
+if not observation_freshness.get("can_refresh"):
+    st.error(...)
+    return
+if consumed intent id matches:
+    return
+```
+
+Run under:
+
+```python
+with st.spinner(
+    "최신 가격을 확인하고 같은 전략을 다시 계산하는 중입니다...",
+    show_time=True,
+):
+    result = run_final_review_observation_refresh(
+        source=dict(validation.get("selection_source_snapshot") or {}),
+        validation=validation,
+    )
+```
+
+Store result by `selection_source_id`. If `validation_saved` and `new_validation_id` are present:
+
+```python
+st.session_state["final_review_active_decision_brief_source_id"] = (
+    f"practical_validation_result:{new_validation_id}"
+)
+```
+
+Set a success/warning/error notice from result status, then `st.rerun()`.
+
+In `render_final_review_workspace()`:
+
+1. build status before Decision Brief;
+2. merge `last_result` from session;
+3. pass it to `build_final_review_decision_brief`;
+4. consume candidate intent;
+5. consume refresh intent;
+6. consume decision intent with the same freshness model.
+
+In the Streamlit fallback, show the four dates/limiter and return the same refresh intent button before charts.
+
+- [ ] **Step 7: Run GREEN and focused Final Review regression**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_refresh \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests -v
+```
+
+Expected: all tests `OK`.
+
+- [ ] **Step 8: Commit 3차**
+
+```bash
+git add \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review_helpers.py \
+  app/web/backtest_final_review/page.py \
+  tests/test_backtest_final_review_decision_brief.py \
+  tests/test_service_contracts.py
+git diff --cached --check
+git commit -m "Final Review 최신 관측 intent와 선정 Gate 연결"
+```
+
+## 4차: React Freshness UI, Browser QA, Docs
+
+### Task 11.4: compact freshness strip와 closeout
+
+**Files:**
+
+- Modify: `tests/test_final_review_market_context_visual_contract.py`
+- Modify: `tests/test_service_contracts.py`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+- Modify: `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/ROADMAP.md`
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+
+**Interfaces:**
+
+- Consumes: Decision Brief `observation_freshness`
+- Produces: `RefreshObservationIntent`, compact chart-adjacent freshness UI, durable flow documentation
+
+- [ ] **Step 1: Write RED React source contract**
+
+Append to `tests/test_final_review_market_context_visual_contract.py`:
+
+```python
+    def test_observation_freshness_is_compact_and_intent_only(self) -> None:
+        workspace = WORKSPACE.read_text(encoding="utf-8")
+        types = (FINAL_REVIEW_ROOT / "decisionBriefTypes.ts").read_text(
+            encoding="utf-8"
+        )
+        style = STYLE.read_text(encoding="utf-8")
+
+        behavior_body = workspace.split("function BehaviorBoard", 1)[1]
+        behavior_body = behavior_body.split("function FindingColumn", 1)[0]
+
+        self.assertIn("ObservationFreshness", behavior_body)
+        self.assertIn("현재 차트", workspace)
+        self.assertIn("최신 완료 시장일", workspace)
+        self.assertIn("DB 공통일", workspace)
+        self.assertIn("제한 종목", workspace)
+        self.assertIn("최신 데이터로 다시 계산", workspace)
+        self.assertIn('action: "refresh_observation"', workspace)
+        self.assertIn("RefreshObservationIntent", types)
+        self.assertIn(".db-freshness-strip", style)
+        self.assertIn(".db-freshness-action", style)
+        self.assertNotIn("fetch(", workspace)
+        self.assertNotIn("registry", workspace.lower())
+        self.assertNotIn("run_practical_validation", workspace)
+```
+
+Update the Final Review source contract in `tests/test_service_contracts.py` to require `refresh_observation` in source and built assets while continuing to forbid React DB/provider/replay imports.
+
+- [ ] **Step 2: Run RED**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_final_review_market_context_visual_contract.FinalReviewMarketContextVisualContractTests.test_observation_freshness_is_compact_and_intent_only -v
+```
+
+Expected: missing type/component/class failures.
+
+- [ ] **Step 3: Add the TypeScript contract**
+
+In `decisionBriefTypes.ts` add:
+
+```typescript
+export type ObservationFreshness = {
+  schema_version: "final_review_observation_freshness_v1"
+  status: "up_to_date" | "replay_available" | "price_refresh_available" | "partial_refresh" | "blocked"
+  tone: Tone
+  label: string
+  summary: string
+  detail: string
+  selection_source_id: string
+  validation_id: string
+  stored_curve_end: string | null
+  latest_completed_market_date: string | null
+  db_common_price_date: string | null
+  refresh_target_date: string | null
+  limiting_symbols: string[]
+  stale_symbols: string[]
+  missing_symbols: string[]
+  provider_gap_symbols: string[]
+  refreshable_symbols: string[]
+  can_refresh: boolean
+  selection_blocked: boolean
+  button_label: string
+  last_result?: {
+    status: string
+    message: string
+    previous_curve_end?: string | null
+    refreshed_curve_end?: string | null
+  }
+}
+```
+
+Add `observation_freshness: ObservationFreshness` to `DecisionBrief`.
+
+Add:
+
+```typescript
+export type RefreshObservationIntent = {
+  action: "refresh_observation"
+  intent_id: string
+  source_id: string
+  validation_id: string
+}
+```
+
+Extend:
+
+```typescript
+export type DecisionWorkspaceIntent =
+  | CandidateSelectionIntent
+  | RefreshObservationIntent
+  | FinalDecisionIntent
+```
+
+- [ ] **Step 4: Render the compact freshness strip**
+
+In `DecisionBriefWorkspace.tsx` add:
+
+```tsx
+function ObservationFreshness({
+  brief,
+  onIntent,
+}: {
+  brief: DecisionBrief
+  onIntent: WorkspaceProps["onIntent"]
+}) {
+  const freshness = brief.observation_freshness
+  const [pending, setPending] = useState(false)
+  const limiter = freshness.limiting_symbols.length
+    ? freshness.limiting_symbols.join(", ")
+    : "없음"
+
+  return (
+    <section
+      className={`db-freshness-strip db-tone-${freshness.tone}`}
+      aria-label="관측 최신성"
+    >
+      <div className="db-freshness-state">
+        <span>{freshness.label}</span>
+        <strong>{freshness.summary}</strong>
+        <p>{freshness.detail}</p>
+      </div>
+      <dl className="db-freshness-dates">
+        <div><dt>현재 차트</dt><dd>{freshness.stored_curve_end || "미측정"}</dd></div>
+        <div><dt>최신 완료 시장일</dt><dd>{freshness.latest_completed_market_date || "미측정"}</dd></div>
+        <div><dt>DB 공통일</dt><dd>{freshness.db_common_price_date || "미측정"}</dd></div>
+        <div><dt>제한 종목</dt><dd>{limiter}</dd></div>
+      </dl>
+      {freshness.last_result?.message && (
+        <p className="db-freshness-result">{freshness.last_result.message}</p>
+      )}
+      {freshness.can_refresh && (
+        <button
+          type="button"
+          className="db-freshness-action"
+          disabled={pending}
+          onClick={() => {
+            if (pending) return
+            setPending(true)
+            onIntent({
+              action: "refresh_observation",
+              intent_id: nextIntentId("refresh"),
+              source_id: freshness.selection_source_id,
+              validation_id: freshness.validation_id,
+            })
+          }}
+        >
+          {pending ? "다시 계산하는 중..." : freshness.button_label}
+        </button>
+      )}
+    </section>
+  )
+}
+```
+
+Render it in `BehaviorBoard` after `SectionHeading` and before `.db-chart-grid`:
+
+```tsx
+<ObservationFreshness brief={brief} onIntent={onIntent} />
+```
+
+Update `BehaviorBoard` to receive `onIntent` and pass it from the workspace.
+
+- [ ] **Step 5: Apply the approved visual language**
+
+Add CSS:
+
+```css
+.db-freshness-strip {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(360px, 1.8fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid #dae4ee;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f3f7f8 100%);
+}
+
+.db-freshness-state {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.db-freshness-state span {
+  color: #284e69;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.db-freshness-state strong {
+  color: #152033;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.db-freshness-state p,
+.db-freshness-result {
+  margin: 0;
+  color: #647589;
+  font-size: 10px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.db-freshness-dates {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid #dae4ee;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .86);
+}
+
+.db-freshness-dates div {
+  min-width: 0;
+  padding: 10px 11px;
+  border-right: 1px solid #dae4ee;
+}
+
+.db-freshness-dates div:last-child {
+  border-right: 0;
+}
+
+.db-freshness-dates dt {
+  color: #7a8998;
+  font-size: 9px;
+}
+
+.db-freshness-dates dd {
+  margin: 3px 0 0;
+  color: #24364a;
+  font-size: 11px;
+  font-weight: 760;
+  overflow-wrap: anywhere;
+}
+
+.db-freshness-action {
+  min-height: 42px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: #284e69;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.db-freshness-action:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.db-freshness-result {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid #dae4ee;
+}
+```
+
+At `max-width: 960px`, use one column and keep dates four columns. At `max-width: 760px`, make dates two columns and remove every second vertical border correctly. At `max-width: 460px`, make dates one column and use bottom borders. No horizontal overflow.
+
+- [ ] **Step 6: Run GREEN, build, and Python regressions**
+
+Run:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_refresh \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_service_contracts.PracticalValidationReplayServiceContractTests \
+  tests.test_global_relative_strength_strategy -v
+```
+
+Run:
+
+```bash
+cd app/web/components/final_review_investment_report/frontend
+npm run build
+```
+
+Run:
+
+```bash
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_refresh.py \
+  app/services/backtest_price_refresh.py \
+  app/services/backtest_practical_validation_replay.py \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review_helpers.py \
+  app/web/backtest_final_review/page.py \
+  app/web/components/final_review_investment_report/component.py
+git diff --check
+```
+
+Expected: all unittest modules `OK`, Vite production build success, py_compile success, no diff-check output.
+
+- [ ] **Step 7: Run read-only current GRS runtime probe**
+
+Use the current registry loader and latest-row policy without saving:
+
+```bash
+.venv/bin/python - <<'PY'
+from app.runtime import load_practical_validation_results
+from app.web.backtest_final_review_helpers import (
+    _latest_practical_validation_rows_by_source,
+)
+from app.services.backtest_final_review_refresh import (
+    build_final_review_refresh_status,
+)
+
+rows = _latest_practical_validation_rows_by_source(
+    load_practical_validation_results(limit=100)
+)
+row = next(
+    item
+    for item in rows
+    if item.get("validation_id")
+    == "validation_selection_rebuilt_grs_macro_top1_ma200_aef1f226_7bca4e1a"
+)
+status = build_final_review_refresh_status(
+    source=dict(row.get("selection_source_snapshot") or {}),
+    validation=row,
+)
+print(
+    status["status"],
+    status["stored_curve_end"],
+    status["latest_completed_market_date"],
+    status["db_common_price_date"],
+    status["limiting_symbols"],
+)
+PY
+```
+
+Expected before executing real refresh: `price_refresh_available 2026-06-26 2026-07-15 2026-06-26 ['BIL']`.
+
+- [ ] **Step 8: Restart the local app and run Browser QA**
+
+Read and use `browser:control-in-app-browser` before Browser QA.
+
+Restart the 8505 Streamlit process after the tracked React build if its watcher is disabled.
+
+Browser QA, without clicking the actual refresh or final decision save:
+
+1. Open `http://localhost:8505/backtest`.
+2. Navigate to Final Review current GRS.
+3. Desktop:
+   - freshness strip is between section heading and charts;
+   - current chart `2026-06-26`;
+   - latest completed market `2026-07-15`;
+   - DB common `2026-06-26`;
+   - limiter `BIL`;
+   - button label `최신 데이터로 다시 계산`;
+   - selected route is disabled while hold / reject / re-review remain selectable;
+   - cumulative and underwater hover still work.
+4. 760px:
+   - freshness state, dates, action stack without clipping;
+   - date cells become two columns;
+   - charts and observation cards remain one-column/two-column as designed;
+   - outer and component `scrollWidth == clientWidth`;
+   - no console errors.
+5. Save one screenshot as `qa-final-review-observation-refresh-760.png`.
+6. Do not click refresh because that would append a real validation row after ingestion/replay.
+
+- [ ] **Step 9: Synchronize durable documentation**
+
+Read and use `finance-doc-sync`.
+
+Document:
+
+- Final Review can request a bounded Python-owned observation refresh without routing to Level2.
+- this is explicit user action, not auto refresh;
+- ingestion still uses the existing job and DB boundary;
+- replay uses the same source contract and creates no new strategy;
+- success appends a new Practical Validation row;
+- selected route is blocked only while an automatic refresh path remains;
+- hold / reject / re-review remain recordable;
+- React stays intent-only;
+- Browser QA does not execute the mutating action against the protected registry.
+
+Update active task:
+
+- `STATUS.md`: four slices completed or exact remaining blocker
+- `NOTES.md`: root cause, chosen one-click boundary, provider-gap semantics
+- `RUNS.md`: every RED/GREEN/build/compile/runtime/Browser result and commit id
+- `RISKS.md`: provider no-data partial refresh, long-running synchronous job, QA non-click residual
+
+Keep root logs to 3–5 concise lines with a pointer to the active task.
+
+- [ ] **Step 10: Fresh completion verification**
+
+Read and use `superpowers:verification-before-completion`.
+
+Run the complete focused suite again from a clean test invocation:
+
+```bash
+.venv/bin/python -m unittest \
+  tests.test_backtest_final_review_refresh \
+  tests.test_backtest_final_review_decision_brief \
+  tests.test_final_review_market_context_visual_contract \
+  tests.test_service_contracts.FinalReviewEvidenceReadModelContractTests \
+  tests.test_service_contracts.PracticalValidationReplayServiceContractTests \
+  tests.test_service_contracts.PracticalValidationServiceContractTests \
+  tests.test_global_relative_strength_strategy -v
+```
+
+Run:
+
+```bash
+cd app/web/components/final_review_investment_report/frontend
+npm run build
+```
+
+Run:
+
+```bash
+.venv/bin/python -m py_compile \
+  app/services/backtest_final_review_refresh.py \
+  app/services/backtest_price_refresh.py \
+  app/services/backtest_practical_validation_replay.py \
+  app/services/backtest_final_review_decision_brief.py \
+  app/web/backtest_final_review_helpers.py \
+  app/web/backtest_final_review/page.py \
+  app/web/components/final_review_investment_report/component.py
+git diff --check
+git status --short
+```
+
+Verify `git status` contains no staged or committed protected registry, run history, `.superpowers/`, or QA artifact.
+
+- [ ] **Step 11: Commit 4차 closeout**
+
+```bash
+git add \
+  app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts \
+  app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx \
+  app/web/components/final_review_investment_report/frontend/src/style.css \
+  app/web/components/final_review_investment_report/frontend/build \
+  tests/test_final_review_market_context_visual_contract.py \
+  tests/test_service_contracts.py \
+  .aiworkspace/note/finance/docs/PROJECT_MAP.md \
+  .aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md \
+  .aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md \
+  .aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md \
+  .aiworkspace/note/finance/docs/ROADMAP.md \
+  .aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/STATUS.md \
+  .aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/NOTES.md \
+  .aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/RUNS.md \
+  .aiworkspace/note/finance/tasks/active/final-review-evidence-closure-contract-v1-20260712/RISKS.md \
+  .aiworkspace/note/finance/WORK_PROGRESS.md \
+  .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md
+git diff --cached --check
+git commit -m "Final Review 최신 관측 UI와 문서 동기화"
+```
+
+Do not add `qa-final-review-observation-refresh-760.png`.
+
+## Stop Conditions
+
+Stop and report before implementation expansion only if:
+
+1. current selection source snapshot cannot reconstruct the existing replay contract;
+2. price refresh would require a new provider or DB schema rather than the existing OHLCV job;
+3. new validation cannot preserve the current validation profile without changing user meaning;
+4. latest valuation extension creates a signal/rebalance row in the GRS regression;
+5. append safety requires rewriting existing registry rows;
+6. the actual Final Review source identity cannot be made stable without replacing the current selector contract.
+
+Do not stop for a normal provider gap, partial refresh result, or a test-discovered implementation detail that fits the approved boundaries.
+
+## Observation Refresh Plan Self-Review
+
+### Spec coverage
+
+- [x] Level2 이동 없이 Final Review one-click action을 구현한다.
+- [x] 현재 chart end / latest session / DB common / limiter를 구분한다.
+- [x] replay-only와 price-refresh-then-replay 경로가 분리돼 있다.
+- [x] existing validation profile을 재사용하고 새 row만 append한다.
+- [x] selected route만 stale Gate 영향을 받고 다른 route는 유지한다.
+- [x] failure와 partial result에서 기존 chart를 보존한다.
+- [x] React intent-only와 Python authority를 유지한다.
+- [x] current GRS, GRS valuation row, build, Browser QA, docs, protected files 검증이 포함됐다.
+
+### Placeholder scan
+
+- [x] 새 plan section에 미정 placeholder나 추상적인 “테스트 추가” 문구가 없다.
+- [x] 모든 production code step에 함수명, payload key, 분기 규칙이 있다.
+- [x] 모든 test step에 실제 test name, command, expected failure/pass가 있다.
+
+### Type and ownership consistency
+
+- [x] Python `observation_freshness`와 TypeScript `ObservationFreshness` key가 일치한다.
+- [x] `refresh_observation` intent의 `source_id`, `validation_id`, `intent_id`가 Python consumer와 일치한다.
+- [x] refresh result와 saved `observation_refresh_snapshot`의 date/provider fields가 일치한다.
+- [x] latest session owner는 price refresh, common date owner는 replay contract, orchestration owner는 새 Final Review refresh service다.
+- [x] append writer는 기존 `save_practical_validation_result`를 재사용하고 React/Streamlit wrapper는 registry path를 소유하지 않는다.
