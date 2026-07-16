@@ -42,6 +42,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-07-16 - Final Review Monitoring 빈칸은 관찰값이 아니라 producer 공백이다
+
+- User request: `무엇이 바뀌면 다시 판단할 것인가` 영역이 비어 있는 원인이 개발 문제인지 데이터 문제인지 분석하고 개발해 달라고 요청함.
+- Interpreted goal: Final Review가 이미 가진 포트폴리오 관찰값 중 실제 임계값이 있는 항목을 사용자에게 재검토 조건으로 보여주되, 임의 기준이나 Level2 remediation을 만들지 않아야 함.
+- Analysis result: current GRS에는 낙폭, Benchmark 상대 성과, cadence가 저장돼 있지만 consumer가 존재하지 않는 `review_trigger_details`만 읽어 조건이 0개였다. CAGR / Data Trust는 문장형 trigger만 있고 explicit threshold는 없다.
+- Follow-up: stored detail 우선 정책을 유지하면서 drawdown `-15%`, Benchmark `0%p` 조건만 Python에서 파생했다. current findings는 별도 stable id로 보존하고 CAGR / Data Trust는 disclosure에 남겼다.
+
 ### 2026-07-16 - Final Review actual character와 review pressure는 서로 다른 정보다
 
 - User request: 사용자는 기존 포트폴리오 성격 지도에서 대부분이 `미측정`으로 보여 원하는 포트폴리오 성격을 알 수 없다고 지적하고 실제 성격이 노출되도록 개선을 승인함.

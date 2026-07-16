@@ -3179,7 +3179,7 @@ def _build_monitoring_conditions(
   - `monitoring:benchmark-underperformance`
 - Complete condition fields remain `observation_id`, `root_issue_id`, `title`, `interpretation`, `measured_value`, `display_value`, `threshold_or_comparator`, `evidence_refs`, `as_of`, `observation`, `threshold`, `cadence`, `re_review_action`, `primary_role`.
 
-- [ ] **Step 1: Add the current production-shape helper and failing tests**
+- [x] **Step 1: Add the current production-shape helper and failing tests**
 
 Add:
 
@@ -3255,7 +3255,7 @@ def test_monitoring_producer_does_not_invent_cagr_or_data_trust_thresholds(self)
     self.assertNotIn("deterioration", serialized)
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run:
 
@@ -3268,7 +3268,7 @@ Run:
 
 Expected: first test fails because current production-shaped input yields zero conditions. The finding test may pass before implementation; if so, keep it as a regression guard and verify the first test is the required RED.
 
-- [ ] **Step 3: Add cadence normalization and complete stored-row adapter**
+- [x] **Step 3: Add cadence normalization and complete stored-row adapter**
 
 Add:
 
@@ -3292,7 +3292,7 @@ def _monitoring_cadence(
 
 Refactor the current `review_trigger_details` loop into a helper that returns a complete condition or `None`. Keep incomplete stored detail titles in `unstructured_monitoring_triggers`.
 
-- [ ] **Step 4: Derive the two safe conditions**
+- [x] **Step 4: Derive the two safe conditions**
 
 Index observations by `observation_id`. When the required numeric value/comparator/comparison, cadence, evidence refs, and as-of exist, build:
 
@@ -3338,7 +3338,7 @@ and:
 
 Use a canonical id set to prevent duplicate stored/derived conditions. Stored complete details remain first. Keep the four-condition cap.
 
-- [ ] **Step 5: Wire the builder**
+- [x] **Step 5: Wire the builder**
 
 Change:
 
@@ -3352,7 +3352,7 @@ projected_conditions, unstructured_triggers = _build_monitoring_conditions(
 
 Do not change React types, fallback, snapshot schema, Gate, route, or persistence.
 
-- [ ] **Step 6: Run GREEN and focused regression**
+- [x] **Step 6: Run GREEN and focused regression**
 
 Run:
 
@@ -3371,7 +3371,7 @@ git diff --check
 
 Expected: Decision Brief 26 tests and full focused suite 123 tests pass.
 
-- [ ] **Step 7: Commit the producer**
+- [x] **Step 7: Commit the producer**
 
 Stage only service and its contract test:
 
@@ -3412,11 +3412,11 @@ Restart the Streamlit process after Python contract changes. Open `Backtest > Fi
 
 Set viewport `760×900`, verify the two condition cards fit without horizontal overflow or clipped copy, capture `qa-final-review-monitoring-conditions-760.png`, and reset the viewport. Treat the screenshot as generated and do not stage it.
 
-- [ ] **Step 3: Synchronize task and durable docs**
+- [x] **Step 3: Synchronize task and durable docs**
 
 Record the production contract gap, derived-condition policy, verification results, commit ids, and residuals. Do not mark CAGR/Data Trust as implemented conditions.
 
-- [ ] **Step 4: Run fresh completion verification**
+- [x] **Step 4: Run fresh completion verification**
 
 Run:
 
@@ -3437,7 +3437,7 @@ git status --short
 
 Expected: 123 focused tests, 177-module production build, compile/diff check exit 0; only protected registry, run history, `.superpowers`, and generated QA artifacts remain unstaged.
 
-- [ ] **Step 5: Commit closeout docs**
+- [x] **Step 5: Commit closeout docs**
 
 Stage only the listed docs and commit:
 

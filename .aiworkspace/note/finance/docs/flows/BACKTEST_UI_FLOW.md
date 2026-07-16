@@ -930,7 +930,9 @@ Practical Validation Gate 통과 후보
 - Decision Workspace의 visual contract는 `Workspace > Overview > 시장 맥락`을 projection뿐 아니라 시각 언어의 기준으로 사용한다. 질문/후보 header, 결론, chart, observation, finding, Monitoring, decision, disclosure는 blue-gray palette, rounded surface, soft shadow, compact type hierarchy를 공유하고 760px에서 가로 overflow 없이 접힌다. React가 이 presentation을 소유하되 Python payload와 intent 경계는 바뀌지 않는다.
 - Decision Workspace의 behavior chart는 실제 관측 날짜 X축, index/percent Y축과 hover date/value를 제공한다. 누적 성과는 시작일 100 기준이며 `고점 대비 낙폭 (Underwater)`은 running peak 대비 하락률로 0%가 이전 최고점 회복 상태다.
 - Decision Workspace의 `포트폴리오 실제 성격`은 집중, 손실, 회전, 비용, 국면 의존의 저장 관측값을 criterion 없이도 표시한다. `관리 기준 대비 압력`은 Python이 explicit criterion과 비교해 `기준 이내 / 기준 초과 / 기준 미설정 / 분석 근거 없음`을 전달한다. legacy `mdd_review_line`은 drawdown 관리선 alias이며 거래비용 가정 `one_way_cost_bps`는 review limit가 아니다.
-- Level2 remediation과 조건부 pattern guide는 current Decision Workspace에 렌더링하지 않는다. blocker가 남은 후보는 eligibility와 canonical `RE_REVIEW_REQUIRED` route로 처리하고, structured Monitoring condition은 저장된 measurement / comparator / cadence / action이 모두 있는 경우에만 표시한다.
+- Level2 remediation과 조건부 pattern guide는 current Decision Workspace에 렌더링하지 않는다. blocker가 남은 후보는 eligibility와 canonical `RE_REVIEW_REQUIRED` route로 처리한다.
+- structured Monitoring condition은 complete stored detail을 우선한다. stored detail이 없더라도 같은 Decision Brief가 이미 만든 drawdown / Benchmark observation에 explicit measurement, comparator, comparison, cadence, evidence, as-of가 모두 있으면 Python이 안전한 변화 조건을 파생한다. React는 전달된 condition을 표시만 한다.
+- CAGR / Data Trust처럼 explicit threshold가 없는 문장형 trigger는 숫자를 추측하거나 parsing해 조건으로 만들지 않고 disclosure에 남긴다. Final Review는 이 fallback 과정에서 provider fetch, replay, DB ingestion, registry rewrite를 실행하지 않는다.
 - Phase 31 이후 `Validation Pack`의 사용자 판단에 필요한 내용은 `남은 판단 근거`의 stored audit trace로 읽는다. 별도 Evidence Appendix는 렌더링하지 않으며 raw validation detail은 Practical Validation stage가 소유한다.
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
 - Phase 32의 robustness / stress 요약도 report score와 stored audit trace로 읽으며 Final Review에서 재검증하거나 별도 Appendix로 반복 표시하지 않는다.

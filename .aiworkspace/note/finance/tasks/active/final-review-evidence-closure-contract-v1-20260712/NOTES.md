@@ -102,3 +102,15 @@
 - drawdown은 profile의 `max_drawdown_review_pct`를 우선하고 legacy `mdd_review_line`을 alias로 읽는다. 화면에는 signed 값과 관리선을 유지하되 비교와 차이는 절댓값 기준이다.
 - `one_way_cost_bps`는 거래비용 가정이지 허용 한계가 아니므로 cost review criterion으로 승격하지 않는다. turnover와 cost의 별도 criterion이 없으면 `기준 미설정`이 정상이다.
 - Python이 분류·비교·상태를 소유하고 React/Streamlit fallback은 `character_profile`과 `review_pressure`를 표현만 한다. Gate, route, persistence, Monitoring snapshot은 변경하지 않았다.
+
+## 2026-07-16 Monitoring Change Condition Producer
+
+- current GRS의 `paper_observation`에는 `review_cadence`와 문장형 `review_triggers`는 있지만 structured `review_trigger_details`가 없다.
+- 기존 `_build_monitoring_conditions()`는 `review_trigger_details`만 읽어, 이미 behavior observation에 낙폭·Benchmark measurement와 comparator가 있어도 빈 배열을 반환했다.
+- fallback은 prose parsing이 아니라 동일 Python service가 만든 internal observation만 읽는다. cadence, numeric measurement/comparator, comparison, evidence ref, as-of가 모두 있어야 조건을 만든다.
+- stored complete detail은 우선하며 drawdown / Benchmark semantic condition은 stored/derived 간 한 번만 반영한다.
+- derived condition은 future re-review 조건이므로 current finding과 다른 stable id를 사용한다. 하나의 관찰값이 현재 상태 설명과 미래 변화 조건이라는 서로 다른 역할로 노출될 수 있다.
+- current GRS read-only runtime projection:
+  - 낙폭: 현재 `-12.43%`, 재검토선 `-15.00%`, 월간 또는 리밸런싱 시점
+  - Benchmark: 현재 `+347.35%p`, 재검토선 `0.00%p 이하`, 월간 또는 리밸런싱 시점
+- CAGR deterioration과 Data Trust refresh는 explicit numeric threshold가 없으므로 구조화 조건으로 승격하지 않는다.

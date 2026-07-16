@@ -109,3 +109,17 @@
 - 기존 장기 실행 Streamlit 프로세스에서는 새 React bundle과 캐시된 구 Python payload가 잠시 충돌해 component error를 재현했다. 프로세스 재기동 후 새 계약으로 정상 렌더링됐고 이후 component error는 재현되지 않았다. Final Review save CTA는 클릭하지 않았다.
 - QA screenshot: `qa-final-review-chart-hover-content-polish-760.png`는 generated artifact로 남기고 stage하지 않는다. Final Review save CTA는 클릭하지 않았다.
 - fresh completion verification: focused 115 tests `OK`, Vite 176-module production build `OK`, Decision Brief service / Final Review page / component `py_compile`와 `git diff --check` 모두 통과했다. status에는 protected registry, run history와 generated artifact만 의도대로 남았다.
+
+## 2026-07-16 Monitoring Change Condition Producer
+
+- RED: current production-shaped 3-test run에서 조건 id set이 빈 배열이라 1 failure, finding 보존 / 임의 threshold 금지 2 tests는 `OK`.
+- GREEN: 같은 3 tests `OK`.
+- Decision Brief module: 26 tests, `OK`.
+- focused visual / Decision Brief / Final Review read-model / boundary suite: 123 tests, `OK`.
+- target Decision Brief service / Final Review page `py_compile`, `git diff --check` 통과.
+- read-only current runtime probe는 실제 registry loader → eligible source option → candidate context → Decision Brief projection 경로를 통과했다.
+- runtime probe 결과: eligible `True`, drawdown `-12.43% / -15.00%`, Benchmark `+347.35%p / 0.00%p`, strengths 2개와 concentration weakness 1개 유지, unstructured trigger는 CAGR / Data Trust 2개다.
+- 구현 커밋: `04a32c1d Final Review Monitoring 변화 조건 생성`.
+- Streamlit 8505 프로세스는 `--fileWatcherType none`이므로 구현 뒤 재시작했다.
+- 현재 세션에 in-app Browser 조작 도구가 노출되지 않아 desktop / 760px visual screenshot QA는 완료하지 못했다. save CTA와 protected registry는 건드리지 않았다.
+- fresh completion verification: focused 123 tests `OK`, React production build 177 modules `OK`, Decision Brief service / Final Review page / component `py_compile`, `git diff --check` 모두 통과했다.

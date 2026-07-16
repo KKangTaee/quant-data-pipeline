@@ -51,3 +51,10 @@
 - 국면 의존은 current stored validation에 regime별 성과 분산 structured evidence가 없어 `분석 근거 없음`으로 남는다. UI가 임의 점수나 proxy로 채우지 않는다.
 - turnover와 cost는 관측값은 있지만 별도 review criterion이 없어 `기준 미설정`이다. future producer가 명시적 criterion을 저장하기 전까지 quality/pressure 결론으로 과해석하지 않는다.
 - tracked React build와 Python payload schema를 동시에 바꿀 때 장기 실행 Streamlit 프로세스는 구 module cache를 들고 있을 수 있다. 배포/QA에서는 production build 뒤 앱 프로세스를 재기동해 contract parity를 확인한다.
+
+## Monitoring Condition Producer Residuals
+
+- current GRS의 CAGR / Data Trust trigger는 explicit measurement threshold가 없어 구조화 Monitoring condition으로 만들지 않았다. future producer는 measurement, comparator, cadence, evidence, as-of, action을 함께 저장해야 한다.
+- 생성된 조건은 자동 경보나 주문 신호가 아니라 Final Review 판단 snapshot과 향후 재검토 기준이다. 실제 Monitoring alert 실행 주기와 notification은 Portfolio Monitoring 범위다.
+- drawdown / Benchmark observation은 현재 강점·약점 설명과 미래 변화 조건에 모두 사용되지만, 서로 다른 stable id와 primary role을 사용해 card/closure/score 중복 반영과 구분한다.
+- current GRS runtime payload는 확인했지만, desktop / 760px visual Browser QA와 screenshot은 브라우저 조작 도구 부재로 남아 있다.

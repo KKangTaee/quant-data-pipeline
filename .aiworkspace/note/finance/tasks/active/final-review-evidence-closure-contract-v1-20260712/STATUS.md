@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete — portfolio character / review pressure separation
+Status: Implementation Complete — Monitoring producer; Browser visual QA pending
 Last Updated: 2026-07-16
 
 ## Progress
@@ -48,13 +48,22 @@ Last Updated: 2026-07-16
 - [x] 1차 Python character/review contract 구현
 - [x] 2차 React/fallback presentation 구현과 Browser QA
 - [x] 3차 fresh verification / docs closeout
+- [x] Monitoring empty-state production input / consumer gap 분석
+- [x] Monitoring producer DESIGN addendum / 상세 PLAN / self-review
+- [x] stored detail 우선 + drawdown / Benchmark safe fallback 구현
+- [x] current GRS read-only runtime projection 확인
+- [x] focused 123 tests / target compile / diff check
+- [ ] current GRS desktop / 760px Browser visual QA
 
 ## Next Action
 
-후속 검토가 필요하면 `RISKS.md`의 국면 의존 근거와 turnover/cost review criterion producer 여부부터 확인한다. dynamic historical universe provider는 계속 별도 승인 범위다.
+8505 앱은 새 Python 계약으로 재시작됐다. 브라우저 visual QA 도구가 다시 사용 가능해지면 current GRS의 `낙폭 관리선 이탈 재검토`, `Benchmark 상대 성과 재검토` 카드와 760px overflow를 확인한다. 이후 후속 검토는 `RISKS.md`의 CAGR / Data Trust explicit threshold producer, 국면 의존 근거, turnover/cost review criterion 순서로 본다.
 
 ## Commits
 
+- `04a32c1d` Final Review Monitoring 변화 조건 생성
+- `a783b16a` Final Review Monitoring 조건 구현 계획 수립
+- `f9513204` Final Review Monitoring 조건 producer 설계
 - `bbe4449d` Final Review 실제 성격과 관리 압력 UI 분리
 - `86170a91` Final Review 실제 성격과 관리 압력 계약 도입
 - `b4c4d73d` Final Review 실제 성격 분리 구현 계획 수립
@@ -85,6 +94,14 @@ Last Updated: 2026-07-16
 - Approved order: 결론 → 행동 근거 → 실제 강점/약점 → 실제 성격/관리 압력 → Monitoring 변화 조건 → 최종 판단 → disclosure
 - Score policy: overall investment score와 기존 3개 headline score 제거, evidence confidence만 보조 metadata로 유지
 - Visual policy: cumulative vs benchmark와 underwater가 주 visual이며, 실제 성격은 raw observation card, 관리 압력은 explicit criterion comparison row로 분리한다. radar와 임의 0~100 normalization은 사용하지 않는다.
+
+## Monitoring Condition Producer Result
+
+- 빈 Monitoring 영역의 직접 원인은 current GRS에 관찰값이 없는 것이 아니라 `paper_observation.review_trigger_details`만 소비하던 Python producer 공백이었다.
+- complete stored detail은 계속 우선한다. 저장 상세가 없을 때만 internal observation의 explicit measurement / comparator / evidence / as-of와 review cadence를 사용한다.
+- current GRS에는 `monitoring:drawdown-breach`, `monitoring:benchmark-underperformance` 두 조건이 생성된다.
+- 조건용 stable id를 별도로 사용해 현재 강점의 `drawdown-recovery-path`, `benchmark-relative-terminal`과 약점의 `concentration-pressure`를 제거하지 않는다.
+- CAGR / Data Trust는 explicit threshold가 없으므로 조건으로 만들지 않고 legacy disclosure에 남긴다.
 
 ## Follow-up UX Result
 

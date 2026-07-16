@@ -48,6 +48,13 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Recent Milestones
 
+### 2026-07-16 - Final Review Monitoring Condition Producer
+
+- 빈 Monitoring 영역은 관찰 데이터 전체 부재가 아니라 structured trigger producer 공백으로 확인했다.
+- Python Decision Brief가 stored complete detail을 우선하고, explicit drawdown / Benchmark observation에서만 안전한 fallback condition을 만든다.
+- 구현 커밋은 `04a32c1d`; Decision Brief 26 tests와 focused 123 tests, current GRS read-only runtime projection을 확인했다.
+- CAGR / Data Trust는 threshold를 지어내지 않고 disclosure에 남겼으며 registry / run history / save CTA는 건드리지 않았다.
+
 ### Institutional Portfolios Track
 
 - Institutional Portfolios Security Detail Chart Layout V1 2026-07-12:
