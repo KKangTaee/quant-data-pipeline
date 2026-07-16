@@ -113,3 +113,26 @@
   - explanation / decision workspace / fallback target py_compile과
     `git diff --check` 통과.
 - protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.
+
+## 2026-07-16 Correction Task 8
+
+- RED:
+  - 계산되지 않은 walk-forward / OOS / regime 방법론 row가 `REVIEW`로
+    생성되어 computed caution처럼 종결됨을 확인.
+  - 모든 historical stress window가 후보 기간 밖이어도 `NOT_RUN`으로
+    집계되어 validator 누락과 구별되지 않음을 확인.
+  - producer가 받은 `NOT_APPLICABLE`을 NEEDS_INPUT / REVIEW로 coercion하는
+    경계를 확인.
+- GREEN:
+  - 실제 미실행 필수 방법론은 `NEEDS_INPUT`, module evidence state
+    `missing`, closure `engineering_required / deferred`로 연결.
+  - 기간 밖 stress는 `NOT_APPLICABLE`, covered-but-uncomputed만
+    `missing_validator_count`로 분리.
+  - PASS와 NOT_APPLICABLE row는 audit ready count에 포함하고 REVIEW를
+    만들지 않도록 validation efficacy / realism aggregation 보정.
+  - 수집 가능한 provider gap은 기존
+    `run_practical_validation_provider_gap_collection` handler를 가진
+    `resolve_now`로 유지하는 회귀 계약 추가.
+  - focused producer / module / closure 75 tests `OK`.
+  - 6 target py_compile과 `git diff --check` 통과.
+- protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.

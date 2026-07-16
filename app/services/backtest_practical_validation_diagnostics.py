@@ -340,7 +340,13 @@ def _diagnostic_score(
 ) -> float:
     if hard_blockers:
         return 0.0
-    status_weights = {"PASS": 1.0, "REVIEW": 0.65, "NOT_RUN": 0.35, "BLOCKED": 0.0}
+    status_weights = {
+        "PASS": 1.0,
+        "NOT_APPLICABLE": 1.0,
+        "REVIEW": 0.65,
+        "NOT_RUN": 0.35,
+        "BLOCKED": 0.0,
+    }
     domain_weights = dict((profile or {}).get("domain_weights") or {})
     if not diagnostics:
         return 0.0
@@ -357,7 +363,13 @@ def _diagnostic_score(
 
 
 def _profile_score_rows(diagnostics: list[dict[str, Any]], profile: dict[str, Any]) -> list[dict[str, Any]]:
-    status_weights = {"PASS": 1.0, "REVIEW": 0.65, "NOT_RUN": 0.35, "BLOCKED": 0.0}
+    status_weights = {
+        "PASS": 1.0,
+        "NOT_APPLICABLE": 1.0,
+        "REVIEW": 0.65,
+        "NOT_RUN": 0.35,
+        "BLOCKED": 0.0,
+    }
     domain_weights = dict(profile.get("domain_weights") or {})
     rows: list[dict[str, Any]] = []
     for item in diagnostics:

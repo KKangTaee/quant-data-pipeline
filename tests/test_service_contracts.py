@@ -3896,9 +3896,9 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         self.assertEqual(proxy_evidence["status"], "REVIEW")
         self.assertTrue(proxy_evidence["metrics"]["proxy_evidence"])
 
-    def test_missing_method_evidence_is_review_not_runtime_provider_gap(self) -> None:
+    def test_missing_method_evidence_is_needs_input_not_runtime_provider_gap(self) -> None:
         from app.services.backtest_validation_efficacy import (
-            VALIDATION_EFFICACY_REVIEW,
+            VALIDATION_EFFICACY_NEEDS_INPUT,
             build_validation_efficacy_audit,
         )
 
@@ -3924,7 +3924,7 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         )
 
         rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
-        self.assertEqual(audit["route"], VALIDATION_EFFICACY_REVIEW)
+        self.assertEqual(audit["route"], VALIDATION_EFFICACY_NEEDS_INPUT)
         self.assertEqual(
             set(rows_by_criteria),
             {
@@ -3933,9 +3933,9 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
                 "Regime split validation",
             },
         )
-        self.assertEqual(rows_by_criteria["Walk-forward temporal validation"]["Status"], "REVIEW")
-        self.assertEqual(rows_by_criteria["OOS holdout validation"]["Status"], "REVIEW")
-        self.assertEqual(rows_by_criteria["Regime split validation"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Walk-forward temporal validation"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["OOS holdout validation"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Regime split validation"]["Status"], "NEEDS_INPUT")
         self.assertNotIn("Runtime replay evidence", rows_by_criteria)
         self.assertNotIn("Provider / freshness evidence", rows_by_criteria)
         self.assertNotIn("Survivorship / universe guard", rows_by_criteria)

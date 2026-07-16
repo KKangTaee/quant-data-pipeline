@@ -19,6 +19,7 @@ BACKTEST_REALISM_ROUTE_LABELS = {
 
 _STATUS_RANK = {
     "PASS": 0,
+    "NOT_APPLICABLE": 0,
     "REVIEW": 1,
     "NEEDS_INPUT": 2,
     "BLOCKED": 3,
@@ -70,6 +71,8 @@ def _status(value: Any, *, default: str = "NEEDS_INPUT") -> str:
         return "BLOCKED"
     if text in {"NOT_RUN", "MISSING", "NO_DATA", "UNAVAILABLE"}:
         return "NEEDS_INPUT"
+    if text in {"NOT_APPLICABLE", "NOT APPLICABLE"}:
+        return "NOT_APPLICABLE"
     if text in {"PASS", "OK", "READY", "SUCCESS", "COMPLETE", "COMPLETED"}:
         return "PASS"
     if text.startswith("READY_"):
@@ -92,7 +95,7 @@ def _row(
     return {
         "Criteria": criteria,
         "Status": normalized,
-        "Ready": normalized == "PASS",
+        "Ready": normalized in {"PASS", "NOT_APPLICABLE"},
         "Current": _safe_text(current),
         "Evidence": _safe_text(evidence),
         "Next Action": next_action,
@@ -1225,9 +1228,12 @@ def build_backtest_realism_audit(validation: dict[str, Any]) -> dict[str, Any]:
         "liquidity_capacity_contract": liquidity_capacity_contract,
         "rows": rows,
         "metrics": {
-            "ready_rows": status_counts["PASS"],
+            "ready_rows": (
+                status_counts["PASS"] + status_counts["NOT_APPLICABLE"]
+            ),
             "total_rows": len(rows),
             "pass": status_counts["PASS"],
+            "not_applicable": status_counts["NOT_APPLICABLE"],
             "review": status_counts["REVIEW"],
             "needs_input": status_counts["NEEDS_INPUT"],
             "blocked": status_counts["BLOCKED"],

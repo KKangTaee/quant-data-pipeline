@@ -34,6 +34,8 @@ def _robustness_status(value: Any) -> str:
         return "REVIEW"
     if text in {"PASS", "READY", "COMPUTED", "OK"}:
         return "PASS"
+    if text in {"NOT_APPLICABLE", "NOT APPLICABLE"}:
+        return "NOT_APPLICABLE"
     if text in {"NOT_RUN", "MISSING", "NEEDS_INPUT", ""}:
         return "NOT_RUN"
     return text
@@ -43,6 +45,12 @@ def _combine_robustness_status(statuses: list[Any]) -> str:
     normalized = [_robustness_status(status) for status in statuses if str(status or "").strip()]
     if not normalized:
         return "NOT_RUN"
+    applicable = [
+        status for status in normalized if status != "NOT_APPLICABLE"
+    ]
+    if not applicable:
+        return "NOT_APPLICABLE"
+    normalized = applicable
     if "BLOCKED" in normalized:
         return "BLOCKED"
     if "REVIEW" in normalized:
@@ -64,7 +72,12 @@ def _compact_text(value: Any, fallback: str = "-") -> str:
 
 
 def _stress_detail_row(row: dict[str, Any]) -> dict[str, Any]:
-    status = _row_status(row)
+    status = (
+        "NOT_APPLICABLE"
+        if row.get("Coverage") == "NOT_COVERED"
+        and row.get("Judgment") == "기간 미포함"
+        else _row_status(row)
+    )
     current_parts = [
         f"return {_format_percent(row.get('Portfolio Return'))}",
         f"MDD {_format_percent(row.get('Portfolio MDD'))}",
@@ -217,7 +230,12 @@ def build_robustness_lab_board(
         },
     ]
     follow_up_rows = _limited_rows(
-        [row for row in summary_rows + stress_detail_rows + sensitivity_detail_rows if _robustness_status(row.get("Status")) != "PASS"],
+        [
+            row
+            for row in summary_rows + stress_detail_rows + sensitivity_detail_rows
+            if _robustness_status(row.get("Status"))
+            not in {"PASS", "NOT_APPLICABLE"}
+        ],
         limit=12,
     )
     limitations = [
@@ -499,8 +517,8 @@ def _stress_interpretation_result(
         status = "NOT_RUN"
         summary = "stress calendar를 읽지 못해 scenario 해석을 만들지 못했습니다."
     elif not covered_rows:
-        status = "NOT_RUN"
-        summary = "후보 기간과 겹치는 static stress window가 없어 별도 scenario 해석이 없습니다."
+        status = "NOT_APPLICABLE"
+        summary = "저장된 stress window가 모두 후보 기간 밖이므로 미실행 검증이 아니라 적용 제외로 분류합니다."
     elif computed_rows and not trigger_reasons:
         status = "PASS"
         summary = (
@@ -517,28 +535,52 @@ def _stress_interpretation_result(
     interpretation_rows = [
         {
             "Check": "Stress coverage",
-            "Status": status if covered_rows else "NOT_RUN",
+            "Status": status,
             "Finding": f"{len(computed_rows)}/{len(covered_rows)} covered windows computed",
             "Why It Matters": "후보 기간에 포함된 위기 구간을 실제 curve로 잘라 볼 수 있는지 확인합니다.",
             "Next Check": "NOT_RUN covered window는 daily runtime replay로 다시 계산합니다.",
         },
         {
             "Check": "Worst computed MDD",
-            "Status": "REVIEW" if worst_mdd is not None and worst_mdd < -0.20 else "PASS" if worst_mdd is not None else "NOT_RUN",
+            "Status": (
+                "NOT_APPLICABLE"
+                if status == "NOT_APPLICABLE"
+                else (
+                    "REVIEW"
+                    if worst_mdd is not None and worst_mdd < -0.20
+                    else "PASS" if worst_mdd is not None else "NOT_RUN"
+                )
+            ),
             "Finding": f"{worst_mdd_row.get('Scenario') or '-'} / MDD {_format_percent(worst_mdd)}",
             "Why It Matters": "위기 구간에서 손실 방어가 선택 기준과 맞는지 확인합니다.",
             "Next Check": "MDD가 커지면 해당 구간의 component와 asset exposure를 확인합니다.",
         },
         {
             "Check": "Benchmark spread",
-            "Status": "REVIEW" if worst_spread is not None and worst_spread < -0.05 else "PASS" if worst_spread is not None else "NOT_RUN",
+            "Status": (
+                "NOT_APPLICABLE"
+                if status == "NOT_APPLICABLE"
+                else (
+                    "REVIEW"
+                    if worst_spread is not None and worst_spread < -0.05
+                    else "PASS" if worst_spread is not None else "NOT_RUN"
+                )
+            ),
             "Finding": f"{worst_spread_row.get('Scenario') or '-'} / spread {_format_percent(worst_spread)}",
             "Why It Matters": "위기 구간에서 단순 benchmark보다 방어 또는 회복이 약했는지 봅니다.",
             "Next Check": "benchmark보다 5%p 이상 약하면 후보 목적을 다시 확인합니다.",
         },
         {
             "Check": "Return shock",
-            "Status": "REVIEW" if worst_return is not None and worst_return < -0.10 else "PASS" if worst_return is not None else "NOT_RUN",
+            "Status": (
+                "NOT_APPLICABLE"
+                if status == "NOT_APPLICABLE"
+                else (
+                    "REVIEW"
+                    if worst_return is not None and worst_return < -0.10
+                    else "PASS" if worst_return is not None else "NOT_RUN"
+                )
+            ),
             "Finding": f"{worst_return_row.get('Scenario') or '-'} / return {_format_percent(worst_return)}",
             "Why It Matters": "stress window의 절대 손실이 운영 감내선 안에 있는지 봅니다.",
             "Next Check": "절대 손실이 크면 monitoring trigger를 더 엄격하게 둡니다.",
@@ -558,6 +600,13 @@ def _stress_interpretation_result(
         "covered_count": len(covered_rows),
         "computed_count": len(computed_rows),
         "uncomputed_count": len(uncomputed_rows),
+        "period_outside_count": sum(
+            1
+            for row in rows
+            if row.get("Coverage") == "NOT_COVERED"
+            and row.get("Judgment") == "기간 미포함"
+        ),
+        "missing_validator_count": len(uncomputed_rows),
         "review_count": len(review_rows),
         "worst_mdd": worst_mdd,
         "worst_mdd_scenario": worst_mdd_row.get("Scenario"),

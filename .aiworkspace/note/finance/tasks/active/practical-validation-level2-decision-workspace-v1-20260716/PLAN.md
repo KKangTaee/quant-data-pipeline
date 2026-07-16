@@ -2911,15 +2911,15 @@ focused regression, 한국어 commit 순서로 실행한다.
 - Do not redesign DB schema or strategy runtime.
 - Reuse existing replay / provider collection handlers only.
 
-- [ ] Add RED tests proving PASS / NOT_APPLICABLE rows do not keep a module in
+- [x] Add RED tests proving PASS / NOT_APPLICABLE rows do not keep a module in
   REVIEW solely because of an irrelevant row.
-- [ ] Add RED tests distinguishing stress `기간 미포함` from a missing validator.
-- [ ] Add RED tests ensuring required strategy-specific validation that is
+- [x] Add RED tests distinguishing stress `기간 미포함` from a missing validator.
+- [x] Add RED tests ensuring required strategy-specific validation that is
   genuinely NOT_RUN becomes engineering-required rather than handoff.
-- [ ] Connect refreshable provider gaps to the existing registered Level2
+- [x] Connect refreshable provider gaps to the existing registered Level2
   collection action; leave non-refreshable missing validators blocked.
-- [ ] Run focused producer / module / closure regressions and py_compile.
-- [ ] Commit: `Practical Validation 미검증 항목과 집계 기준 보강`.
+- [x] Run focused producer / module / closure regressions and py_compile.
+- [x] Commit: `Practical Validation 미검증 항목과 집계 기준 보강`.
 
 ### Task 9: Runtime QA, Documentation, And Closeout
 
