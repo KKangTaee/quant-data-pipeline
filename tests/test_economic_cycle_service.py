@@ -253,9 +253,15 @@ def test_market_implications_are_conditional_context_not_directional_predictions
 ):
     interpretation = importlib.import_module("finance.economic_cycle_interpretation")
     horizons = json.loads(str(_ready_snapshot()["forecast_path_json"]))
+    evidence = [
+        {"factor": "activity_score", "value": -0.82},
+        {"factor": "labor_income_score", "value": -0.44},
+        {"factor": "financial_leading_score", "value": 0.22},
+        {"factor": "inflation_policy_score", "value": 0.79},
+    ]
     implications = interpretation.build_market_implications(
         horizons,
-        json.loads(str(_ready_snapshot()["top_evidence_json"])),
+        evidence,
     )
 
     assert [item["asset_group"] for item in implications] == [
@@ -264,11 +270,49 @@ def test_market_implications_are_conditional_context_not_directional_predictions
         "gold_dollar",
         "commodities",
     ]
+    assert [item["assessment"] for item in implications] == [
+        "MIXED",
+        "BURDEN",
+        "FAVORABLE",
+        "MIXED",
+    ]
+    assert [item["assessment_label"] for item in implications] == [
+        "혼재",
+        "부담",
+        "우호",
+        "혼재",
+    ]
+    assert all(len(item["drivers"]) == 2 for item in implications)
+    assert {
+        driver["impact"]
+        for driver in implications[0]["drivers"]
+    } == {"FAVORABLE", "BURDEN"}
+    assert {
+        driver["impact"]
+        for driver in implications[3]["drivers"]
+    } == {"FAVORABLE", "BURDEN"}
+    assert all(item["change_condition"] for item in implications)
     assert all(item["is_directional_forecast"] is False for item in implications)
     serialized = json.dumps(implications, ensure_ascii=False).lower()
     for forbidden in ("target price", "buy", "sell", "directional return"):
         assert forbidden not in serialized
-    assert all("조건" in item["context"] for item in implications)
+    assert all(item["context"] == item["summary"] for item in implications)
+
+
+def test_market_implications_do_not_invent_reasons_when_factor_coverage_is_low() -> (
+    None
+):
+    interpretation = importlib.import_module("finance.economic_cycle_interpretation")
+
+    implications = interpretation.build_market_implications(
+        [],
+        [{"factor": "activity_score", "value": -0.4}],
+    )
+
+    assert all(item["assessment"] == "INSUFFICIENT" for item in implications)
+    assert all(item["assessment_label"] == "자료 부족" for item in implications)
+    assert all(item["drivers"] == [] for item in implications)
+    assert all("2개 이상" in item["change_condition"] for item in implications)
 
 
 def test_all_stable_reason_codes_have_concise_korean_labels() -> None:

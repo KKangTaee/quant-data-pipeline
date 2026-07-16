@@ -9,7 +9,16 @@ Last Verified: 2026-07-16
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-context-v1-20260716/`다.
+
+- 목적: 경제사이클 결과 아래의 정적인 네 문장을 실제 evidence 기반 자산별 확인 흐름으로 바꾼다.
+- 완료: 1차 자산별 orientation/read model, 2차 2×2 React 카드·actual read model·regression/docs를 닫았다.
+- 판정 계약: 네 canonical factor 중 비중립 근거가 두 개 미만이면 `자료 부족`, 우호/부담 개수 차이가 두 개 이상이면 우세 상태, 나머지는 `혼재`다. 국면은 설명 맥락으로만 사용한다.
+- actual 상태: 2026-06-30 기준 `채권·금리 혼재 / 주식 부담 / 금·달러 우호 / 원자재 혼재`이며 카드마다 두 근거와 바뀌는 조건을 표시한다.
+- 품질 경계: 수익률·목표가격·매수/매도 예측이 아니며 별도 가격/provider 수집과 경제사이클 validation gate는 변경하지 않았다.
+- 상세 계획: `docs/superpowers/plans/2026-07-16-economic-cycle-asset-context.md`.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/`다.
 
 - 목적: 계산 가능한 `LIMITED` 결과를 전부 숨기던 V1을 `잠정 모델 추정 / 검증된 모델 추정 / 판단 불가`로 분리하고, 원형 clock을 승인된 2×2 혼합형으로 교체한다.
 - 완료: 1차 contract 확인, 2차 provisional persistence/read model, 3차 2×2 확률 경로·ribbon, 4차 122 snapshot 재물질화·desktop/420px Browser QA, 5차 docs/regression을 닫았다.

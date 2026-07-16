@@ -24,7 +24,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - [Finance Project Map](./docs/PROJECT_MAP.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 유효 LIMITED 확률을 잠정 추정으로 공개하고 READY/계산불가와 분리했으며, 최근 12개월 2×2 hover 경로·실제 월수 기반 최근 60개월+2개월 ribbon·actual 122 snapshot 보존을 완료했다.
+  - Latest completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 정적 시장 질문을 evidence 기반 자산별 확인 포인트로 바꾸고 우호/부담/혼재/자료 부족, 두 근거, 바뀌는 조건을 2×2 카드로 표시한다.
+  - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 유효 LIMITED 확률을 잠정 추정으로 공개하고 READY/계산불가와 분리했으며, 최근 12개월 2×2 hover 경로·실제 월수 기반 최근 60개월+2개월 ribbon·actual 122 snapshot 보존을 완료했다.
   - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). 17-series vintage/PIT engine과 horizon별 publication gate를 구현했다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Explicit concept family의 확정 공시로 missing Q4를 안전하게 산출하고 provenance와 `공시 기반 산출` 표시를 1차~4차로 완료했다.
   - Previous completed Overview / Market Context task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL canonical EPS reader와 six-rail transition/already-positive semantics를 1차~3차로 완료했다.
@@ -56,6 +57,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### Overview / Market Context Track
 
+- Economic Cycle Asset Context V1:
+  - 정적 네 문장을 `자산별 확인 포인트` 2×2 카드로 교체하고 상태 → 두 근거 → 바뀌는 조건 순서로 읽게 했다.
+  - 네 canonical factor를 자산별로 번역하되 우호/부담 차이가 작으면 `혼재`, 비중립 근거가 두 개 미만이면 `자료 부족`으로 남긴다.
+  - Actual 2026-06-30은 채권·금리 혼재, 주식 부담, 금·달러 우호, 원자재 혼재다. 수익률·매매 신호와 별도 provider 수집은 추가하지 않았다.
 - Economic Cycle Provisional Hybrid V2:
   - `잠정 모델 추정 / 검증된 모델 추정 / 판단 불가`를 유효 확률·publication status·계산 가능성으로 분리했다.
   - 원형 clock을 2×2 국면 좌표, 최근 12개월 실선, 현재~+2M 점선, 최근 60개월+2개월 ribbon으로 교체했다. DB의 121개월 replay는 유지한다.

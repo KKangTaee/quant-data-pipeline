@@ -18,7 +18,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 계산 결과와 검증 상태를 분리하고 2×2 혼합형·actual 잠정 확률·Browser QA를 `5/5` 완료했다.
+  - Latest completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 경제사이클 evidence를 자산별 우호/부담/혼재/자료 부족과 두 근거/변경 조건으로 번역하는 `2/2` 개선을 완료했다.
+  - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 계산 결과와 검증 상태를 분리하고 2×2 혼합형·actual 잠정 확률·Browser QA를 `5/5` 완료했다.
   - Previous completed task is [overview-market-context-us-economic-cycle-v1-20260716](./tasks/active/overview-market-context-us-economic-cycle-v1-20260716/STATUS.md). Vintage/PIT engine과 horizon별 publication gate를 구현했다.
   - Previous completed task is [overview-market-context-turnaround-derived-quarter-provenance-v1-20260716](./tasks/active/overview-market-context-turnaround-derived-quarter-provenance-v1-20260716/STATUS.md). Missing Q4의 guarded filing-derived 계산과 provenance 표시를 완료했다.
   - Previous completed task is [overview-market-context-turnaround-stage-semantics-fix-v1-20260716](./tasks/active/overview-market-context-turnaround-stage-semantics-fix-v1-20260716/STATUS.md). AAPL EPS loader gap과 transition/already-positive rail semantics를 보정했다.
@@ -48,6 +49,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Entries
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
+
+### 2026-07-16 - 경제 사이클 다음 질문은 자산별 상태·근거·변경 조건으로 읽는다
+
+- User request: 정적인 금리/주식/금·달러/원자재 설명이 무엇을 말하는지 질문하고 실제 판단에 도움이 되도록 개선을 승인함.
+- Interpreted goal: 경제사이클 결과를 매매 신호로 확대하지 않으면서 사용자가 자산별로 현재 우호·부담 요인과 다음 확인 조건을 바로 읽게 한다.
+- Analysis result: 네 canonical factor를 자산별 orientation으로 번역하고, 개수 차이가 두 개 이상일 때만 우호/부담을 표시한다. 충돌하면 혼재, 비중립 근거가 두 개 미만이면 자료 부족이다. 국면은 중복 점수화하지 않는다.
+- Follow-up: 2×2 카드에 상태, 가장 강한 두 근거, 바뀌는 조건을 표시했다. Actual 2026-06-30은 채권·금리 혼재, 주식 부담, 금·달러 우호, 원자재 혼재이며 수익률·매매 예측은 아니다.
 
 ### 2026-07-16 - 경제 사이클 ribbon은 실제 월수로 채우고 Cycle Map 세부값은 hover로 읽는다
 

@@ -39,11 +39,28 @@ type Evidence = {
   source_basis?: string;
 };
 
+type AssetAssessment = "FAVORABLE" | "BURDEN" | "MIXED" | "INSUFFICIENT";
+
+type ImplicationDriver = {
+  factor: string;
+  label: string;
+  direction: "강화" | "약화" | "중립";
+  impact: "FAVORABLE" | "BURDEN";
+  impact_label: "우호" | "부담";
+  text: string;
+  value?: number | null;
+};
+
 type MarketImplication = {
   asset_group: "rates" | "equities" | "gold_dollar" | "commodities";
   label: string;
   phase_context: string;
+  assessment: AssetAssessment;
+  assessment_label: "우호" | "부담" | "혼재" | "자료 부족";
+  summary: string;
   context: string;
+  drivers: ImplicationDriver[];
+  change_condition: string;
   is_directional_forecast: false;
 };
 
@@ -378,6 +395,37 @@ function EvidenceGroup({ title, subtitle, rows }: { title: string; subtitle: str
   );
 }
 
+function MarketImplicationCard({ item }: { item: MarketImplication }) {
+  return (
+    <article className="implication-card" tabIndex={0}>
+      <header>
+        <div>
+          <span>{item.label}</span>
+          <strong>{item.phase_context} 국면</strong>
+        </div>
+        <b className={`implication-status assessment-${item.assessment.toLowerCase()}`}>
+          {item.assessment_label}
+        </b>
+      </header>
+      <p className="implication-summary">{item.summary || item.context}</p>
+      <div className="implication-drivers" aria-label={`${item.label} 주요 근거`}>
+        {item.drivers.length ? item.drivers.map((driver) => (
+          <div key={driver.factor}>
+            <span>{driver.label} {driver.direction}</span>
+            <b className={`driver-impact impact-${driver.impact.toLowerCase()}`}>
+              {driver.impact_label}
+            </b>
+          </div>
+        )) : <p>표시할 자산별 근거가 아직 부족합니다.</p>}
+      </div>
+      <div className="change-condition">
+        <span>바뀌는 조건</span>
+        <p>{item.change_condition}</p>
+      </div>
+    </article>
+  );
+}
+
 function RegimeRibbon({ history, horizons }: { history: HistoryPoint[]; horizons: Horizon[] }) {
   const forecastSlots = [1, 2].map((horizon) =>
     horizons.find((item) => item.horizon_months === horizon) || null
@@ -472,8 +520,10 @@ function EconomicCycleWorkbench({ args }: Props) {
       <RegimeRibbon history={payload.history} horizons={payload.horizons} />
 
       <section className="market-implications" aria-labelledby="implication-title">
-        <div className="section-heading"><div><span>Conditional market context</span><h3 id="implication-title">시장의 다음 질문</h3></div><small>전망·행동 신호가 아닌 조건부 맥락</small></div>
-        <div className="implication-grid">{payload.market_implications.map((item) => <article key={item.asset_group} tabIndex={0}><span>{item.label}</span><strong>{item.phase_context} 맥락</strong><p>{item.context}</p></article>)}</div>
+        <div className="section-heading"><div><span>Conditional market context</span><h3 id="implication-title">자산별 확인 포인트</h3></div><small>매매 신호가 아닌 조건부 점검</small></div>
+        <div className="implication-grid">
+          {payload.market_implications.map((item) => <MarketImplicationCard key={item.asset_group} item={item} />)}
+        </div>
       </section>
 
       <details className="method-disclosure">
