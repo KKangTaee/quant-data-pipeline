@@ -23,6 +23,8 @@ Last Updated: 2026-07-16
 - [x] current eligible GRS read-only projection과 8505 restart / HTTP health
 - [x] canonical docs와 active task / root handoff sync
 - [ ] desktop / 760px Browser QA, console / overflow 확인, screenshot
+- [x] correction Task 5: Level2-owned caution / evidence-state contract
+- [ ] correction Task 6: 후보/검증 정책 분리와 fragment 재검증
 
 ## Current Position
 
@@ -33,7 +35,7 @@ Task 5~9를 진행한다.
 
 ## Next Action
 
-Task 5의 Level2-owned caution / evidence-state RED 테스트부터 구현한다.
+Task 6의 후보/검증 정책 분리와 fragment-scoped rerun RED 테스트부터 구현한다.
 
 남은 제품 위험은 dynamic historical universe의 PIT membership / delisting provider이며 별도 승인 전까지 critical blocker로 유지한다.
 

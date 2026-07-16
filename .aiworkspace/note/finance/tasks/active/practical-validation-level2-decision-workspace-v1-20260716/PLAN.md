@@ -2816,17 +2816,17 @@ focused regression, 한국어 commit 순서로 실행한다.
 - Preserves explicit static-universe `accepted_limit`
 - Blocks missing required validation as `engineering_required`
 
-- [ ] Add a RED test proving a `pv_practical_caution` module with
+- [x] Add a RED test proving a `pv_practical_caution` module with
   `evidence_state=computed` becomes `validated_caution`, owner
   `practical_validation`, terminal `resolved`.
-- [ ] Add a RED test proving the same role with `evidence_state=missing`
+- [x] Add a RED test proving the same role with `evidence_state=missing`
   becomes critical `engineering_required`.
-- [ ] Change the current six-default-accepted-limit GRS fixture so Level2
+- [x] Change the current six-default-accepted-limit GRS fixture so Level2
   cautions no longer appear in `final_review_handoff`.
-- [ ] Add explicit module evidence-state projection from audit / diagnostic
+- [x] Add explicit module evidence-state projection from audit / diagnostic
   status without parsing prose into fabricated measurements.
-- [ ] Run focused closure / workspace / service regressions and py_compile.
-- [ ] Commit: `Practical Validation Level2 주의 종결 계약 보정`.
+- [x] Run focused closure / workspace / service regressions and py_compile.
+- [x] Commit: `Practical Validation Level2 주의 종결 계약 보정`.
 
 ### Task 6: Candidate/Policy Separation And Fragment Revalidation
 

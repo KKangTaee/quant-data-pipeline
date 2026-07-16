@@ -62,6 +62,64 @@ def _grs_validation_fixture() -> dict[str, object]:
 
 
 class EvidenceClosureContractTests(unittest.TestCase):
+    def test_module_plan_marks_computed_and_missing_evidence_explicitly(self) -> None:
+        from app.services.backtest_practical_validation_modules import (
+            build_validation_module_plan,
+        )
+
+        plan = build_validation_module_plan(
+            source={
+                "source_kind": "latest_backtest_run",
+                "components": [
+                    {
+                        "strategy_key": "quality_factor",
+                        "target_weight": 100.0,
+                    }
+                ],
+            },
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            checks=[],
+            diagnostics=[
+                {
+                    "domain": "stress_scenario_diagnostics",
+                    "status": "NOT_RUN",
+                },
+                {
+                    "domain": "robustness_sensitivity_overfit",
+                    "status": "NOT_RUN",
+                },
+            ],
+            validation_efficacy_rows=[
+                {
+                    "Criteria": "Walk-forward temporal validation",
+                    "Status": "REVIEW",
+                    "Current": "windows=103",
+                    "Evidence": "worst excess -4.46%",
+                }
+            ],
+            data_coverage_rows=[],
+            construction_risk_rows=[],
+            risk_contribution_rows=[],
+            component_role_weight_rows=[],
+            backtest_realism_rows=[],
+        )
+        modules = {
+            row["module_id"]: row
+            for row in plan["modules"]
+        }
+
+        self.assertEqual(
+            modules["validation_efficacy"]["evidence_state"],
+            "computed",
+        )
+        self.assertEqual(
+            modules["stress_robustness"]["evidence_state"],
+            "missing",
+        )
+
     def test_selected_decision_finalizes_limits_and_monitoring_for_same_validation(self) -> None:
         from app.services.backtest_evidence_closure import finalize_evidence_closure
 

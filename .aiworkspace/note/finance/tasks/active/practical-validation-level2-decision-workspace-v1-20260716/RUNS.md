@@ -60,3 +60,19 @@
   - `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` unstaged.
   - `.aiworkspace/note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` untracked / unstaged.
   - saved JSONL, generated screenshots, `.superpowers/` unstaged.
+
+## 2026-07-16 Correction Task 5
+
+- RED:
+  - computed `pv_practical_caution`이 `accepted_limit`로 잘못 분류됨을 확인.
+  - missing Level2 validation도 `accepted_limit`로 우회됨을 확인.
+  - module producer에 `evidence_state`, closure/workspace에
+    `validated_caution_count`가 없음을 확인.
+- GREEN:
+  - module audit / diagnostic status에서 `verified / computed / missing /
+    not_applicable` evidence state를 명시.
+  - evidence가 있는 Level2 caution은 `validated_caution / resolved`,
+    missing required validation은 `engineering_required / deferred`로 분리.
+  - focused closure / workspace / boundary / service 85 tests `OK`.
+  - target py_compile과 `git diff --check` 통과.
+- protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.

@@ -329,6 +329,7 @@ def _summary(
         )
         for finding_kind in (
             "measured_caution",
+            "validated_caution",
             "resolve_now",
             "accepted_limit",
             "final_decision",
@@ -346,6 +347,11 @@ def _summary(
     return {
         "verified_count": verified_count,
         "measured_caution_count": finding_counts["measured_caution"],
+        "validated_caution_count": sum(
+            1
+            for issue in issues
+            if issue.get("resolution_class") == "validated_caution"
+        ),
         "resolve_now_count": finding_counts["resolve_now"],
         "engineering_blocker_count": engineering_blocker_count,
         "accepted_limit_count": finding_counts["accepted_limit"],
@@ -453,7 +459,14 @@ def build_practical_validation_decision_workspace(
         issues.append(issue)
     verified = _verified_findings(validation)
     measured_cautions = [
-        issue for issue in issues if issue["finding_kind"] == "measured_caution"
+        issue
+        for issue in issues
+        if issue["finding_kind"] in {"measured_caution", "validated_caution"}
+    ]
+    validated_cautions = [
+        issue
+        for issue in issues
+        if issue["resolution_class"] == "validated_caution"
     ]
     summary = _summary(
         verified_count=len(verified),
@@ -536,6 +549,7 @@ def build_practical_validation_decision_workspace(
         "verdict": _verdict(state, summary),
         "summary": summary,
         "verified_findings": verified,
+        "validated_cautions": validated_cautions,
         "measured_cautions": measured_cautions,
         "resolution_lanes": {
             "resolve_now": resolve_now,

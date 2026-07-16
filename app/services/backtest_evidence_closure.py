@@ -31,6 +31,7 @@ ACTION_HANDLER_CONTRACTS = {
 }
 
 _RESOLUTION_ACTION_LABELS = {
+    "validated_caution": "Level2에서 검증 완료",
     "resolve_now": "지금 해결",
     "engineering_required": "개발 후 재검토",
     "accepted_limit": "Final Review에서 한계 인수",
@@ -347,6 +348,10 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         return None
     requirement = str(module.get("requirement") or module.get("Requirement") or "").upper()
     role = str(module.get("review_role") or "")
+    evidence_state = str(module.get("evidence_state") or "missing").strip().lower()
+    explicit_resolution_class = str(
+        module.get("resolution_class") or ""
+    ).strip()
     known_root = _KNOWN_MODULE_ROOTS.get(module_id)
     if not known_root and requirement == "REQUIRED":
         return _base_issue(
@@ -369,7 +374,16 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
     if not known_root:
         return None
     action_id = str(module.get("action_id") or "").strip() or None
-    if role == "final_readiness_blocker":
+    if (
+        explicit_resolution_class == "accepted_limit"
+        and evidence_state in {"computed", "observed", "verified"}
+    ):
+        resolution_class = "accepted_limit"
+        owner_stage = "final_review"
+        criticality = "noncritical"
+        gate_effect = "final_review_closure"
+        terminal_state = "open"
+    elif role == "final_readiness_blocker":
         if has_action_handler(action_id):
             resolution_class = "resolve_now"
             owner_stage = "practical_validation"
@@ -381,21 +395,44 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
             criticality = "critical"
             gate_effect = "block_final_review"
             action_id = None
+        terminal_state = (
+            "open"
+            if resolution_class == "resolve_now"
+            else "deferred"
+        )
     elif role == "monitoring_followup":
         resolution_class = "monitoring_transfer"
         owner_stage = "final_review"
         criticality = "noncritical"
         gate_effect = "final_review_closure"
+        terminal_state = "open"
     elif role == "final_decision_input":
         resolution_class = "final_decision"
         owner_stage = "final_review"
         criticality = "noncritical"
         gate_effect = "final_review_closure"
+        terminal_state = "open"
+    elif role in {"pv_data_caution", "pv_practical_caution"}:
+        if evidence_state in {"computed", "observed", "verified"}:
+            resolution_class = "validated_caution"
+            owner_stage = "practical_validation"
+            criticality = "noncritical"
+            gate_effect = "level2_resolved"
+            terminal_state = "resolved"
+        else:
+            resolution_class = "engineering_required"
+            owner_stage = "development"
+            criticality = "critical"
+            gate_effect = "block_final_review"
+            action_id = None
+            terminal_state = "deferred"
     else:
-        resolution_class = "accepted_limit"
-        owner_stage = "final_review"
-        criticality = "noncritical"
-        gate_effect = "final_review_closure"
+        resolution_class = "engineering_required"
+        owner_stage = "development"
+        criticality = "critical"
+        gate_effect = "block_final_review"
+        action_id = None
+        terminal_state = "deferred"
     return _base_issue(
         root_issue_id=known_root,
         title=str(module.get("label") or module.get("Module") or module_id),
@@ -407,15 +444,19 @@ def _generic_module_issue(module: dict[str, Any]) -> dict[str, Any] | None:
         owner_stage=owner_stage,
         actionable_now=resolution_class == "resolve_now",
         action_id=action_id,
-        completion_criteria="Final Review route/reason or Monitoring condition records terminal state",
-        applicability="module_applies",
+        completion_criteria=(
+            "Level2 계산 / 관측 근거와 주의 판정을 저장함"
+            if resolution_class == "validated_caution"
+            else (
+                "required validator 또는 evidence adapter 구현 후 새 validation 저장"
+                if resolution_class == "engineering_required"
+                else "Final Review route/reason or Monitoring condition records terminal state"
+            )
+        ),
+        applicability=str(module.get("applicability") or "module_applies"),
         criticality=criticality,
         gate_effect=gate_effect,
-        terminal_state=(
-            "deferred"
-            if resolution_class == "engineering_required"
-            else "open"
-        ),
+        terminal_state=terminal_state,
         measurement=dict(module.get("measurement") or {}),
     )
 
@@ -448,6 +489,7 @@ def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
             if issue.get("resolution_class") == resolution_class
         )
         for resolution_class in (
+            "validated_caution",
             "resolve_now",
             "engineering_required",
             "accepted_limit",
@@ -475,6 +517,7 @@ def _closure_summary(issues: list[dict[str, Any]]) -> dict[str, int]:
         "unresolved_actionable_count": unresolved_actionable_count,
         "critical_engineering_count": critical_engineering_count,
         "missing_contract_count": missing_contract_count,
+        "validated_caution_count": resolution_counts["validated_caution"],
         "resolve_now_count": resolution_counts["resolve_now"],
         "engineering_required_count": resolution_counts["engineering_required"],
         "accepted_limit_count": resolution_counts["accepted_limit"],

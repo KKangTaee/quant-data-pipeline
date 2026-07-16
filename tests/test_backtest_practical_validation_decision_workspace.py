@@ -82,6 +82,7 @@ class PracticalValidationTruthContractTests(unittest.TestCase):
                 "status": "REVIEW",
                 "requirement": "REQUIRED",
                 "review_role": "pv_practical_caution",
+                "evidence_state": "computed",
             }
             for module_id in (
                 "validation_efficacy",
@@ -110,10 +111,72 @@ class PracticalValidationTruthContractTests(unittest.TestCase):
             }
         )["summary"]
 
-        self.assertEqual(summary["accepted_limit_count"], 6)
+        self.assertEqual(summary["validated_caution_count"], 6)
+        self.assertEqual(summary["accepted_limit_count"], 0)
         self.assertEqual(summary["final_decision_count"], 1)
         self.assertEqual(summary["resolve_now_count"], 0)
         self.assertEqual(summary["critical_engineering_count"], 0)
+
+    def test_computed_level2_caution_is_resolved_without_final_review_handoff(
+        self,
+    ) -> None:
+        from app.services.backtest_evidence_closure import (
+            build_evidence_closure_contract,
+        )
+
+        contract = build_evidence_closure_contract(
+            {
+                "validation_id": "validation-computed-caution",
+                "selection_source_id": "source-computed-caution",
+                "validation_modules": [
+                    {
+                        "module_id": "validation_efficacy",
+                        "label": "Validation Method Strength",
+                        "status": "REVIEW",
+                        "requirement": "REQUIRED",
+                        "review_role": "pv_practical_caution",
+                        "evidence_state": "computed",
+                    }
+                ],
+            }
+        )
+
+        issue = contract["issues"][0]
+        self.assertEqual(issue["resolution_class"], "validated_caution")
+        self.assertEqual(issue["owner_stage"], "practical_validation")
+        self.assertEqual(issue["terminal_state"], "resolved")
+        self.assertEqual(contract["summary"]["validated_caution_count"], 1)
+        self.assertEqual(contract["summary"]["accepted_limit_count"], 0)
+        self.assertTrue(contract["current_final_review_eligible"])
+
+    def test_missing_level2_validation_is_engineering_blocker(self) -> None:
+        from app.services.backtest_evidence_closure import (
+            build_evidence_closure_contract,
+        )
+
+        contract = build_evidence_closure_contract(
+            {
+                "validation_id": "validation-missing-caution",
+                "selection_source_id": "source-missing-caution",
+                "validation_modules": [
+                    {
+                        "module_id": "stress_robustness",
+                        "label": "Stress / Robustness",
+                        "status": "REVIEW",
+                        "requirement": "REQUIRED",
+                        "review_role": "pv_practical_caution",
+                        "evidence_state": "missing",
+                    }
+                ],
+            }
+        )
+
+        issue = contract["issues"][0]
+        self.assertEqual(issue["resolution_class"], "engineering_required")
+        self.assertEqual(issue["owner_stage"], "development")
+        self.assertEqual(issue["criticality"], "critical")
+        self.assertEqual(issue["terminal_state"], "deferred")
+        self.assertFalse(contract["current_final_review_eligible"])
 
     def test_registered_provider_action_resolves_to_callable_python_handler(
         self,
@@ -141,18 +204,18 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         }
 
     def _validation(self) -> dict[str, object]:
-        accepted = [
+        level2_cautions = [
             {
                 "root_issue_id": root_id,
                 "title": title,
-                "resolution_class": "accepted_limit",
+                "resolution_class": "validated_caution",
                 "criticality": "noncritical",
-                "terminal_state": "open",
+                "terminal_state": "resolved",
+                "owner_stage": "practical_validation",
                 "actionable_now": False,
                 "derived_checks": [root_id],
             }
             for root_id, title in (
-                ("historical_universe_coverage", "과거 universe와 상장폐지 반영 범위"),
                 ("validation_method_strength", "Validation Method Strength"),
                 ("construction_risk", "Construction Risk"),
                 ("backtest_realism", "Backtest Realism"),
@@ -160,6 +223,16 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
                 ("provider_investability", "Provider Investability"),
             )
         ]
+        accepted_limit = {
+            "root_issue_id": "historical_universe_coverage",
+            "title": "과거 universe와 상장폐지 반영 범위",
+            "resolution_class": "accepted_limit",
+            "criticality": "noncritical",
+            "terminal_state": "open",
+            "owner_stage": "final_review",
+            "actionable_now": False,
+            "derived_checks": ["historical_universe_coverage"],
+        }
         final_decision = {
             "root_issue_id": "tax_account_scope",
             "title": "세금 / 계좌 적용 범위",
@@ -180,7 +253,7 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
                 "review_modules": [],
             },
             "evidence_closure": {
-                "issues": [*accepted, final_decision],
+                "issues": [*level2_cautions, accepted_limit, final_decision],
                 "summary": {
                     "total": 7,
                     "unresolved_actionable_count": 0,
@@ -188,7 +261,8 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
                     "missing_contract_count": 0,
                     "resolve_now_count": 0,
                     "engineering_required_count": 0,
-                    "accepted_limit_count": 6,
+                    "validated_caution_count": 5,
+                    "accepted_limit_count": 1,
                     "final_decision_count": 1,
                     "monitoring_transfer_count": 0,
                 },
@@ -241,10 +315,12 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertEqual(model["validation_result_id"], "validation-grs-current")
         self.assertEqual(model["summary"]["resolve_now_count"], 0)
         self.assertEqual(model["summary"]["engineering_blocker_count"], 0)
-        self.assertEqual(model["summary"]["accepted_limit_count"], 6)
+        self.assertEqual(model["summary"]["validated_caution_count"], 5)
+        self.assertEqual(model["summary"]["accepted_limit_count"], 1)
         self.assertEqual(model["summary"]["final_decision_count"], 1)
         self.assertEqual(model["resolution_lanes"]["resolve_now"], [])
-        self.assertEqual(len(model["resolution_lanes"]["final_review_handoff"]), 7)
+        self.assertEqual(len(model["validated_cautions"]), 5)
+        self.assertEqual(len(model["resolution_lanes"]["final_review_handoff"]), 2)
         self.assertIn("Final Review로 이동할 수 있습니다", model["verdict"]["headline"])
 
     def test_source_required_disables_replay_and_save(self) -> None:
@@ -433,7 +509,7 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         verified_titles = {row["title"] for row in model["verified_findings"]}
         method_issue = next(
             row
-            for row in model["resolution_lanes"]["final_review_handoff"]
+            for row in model["validated_cautions"]
             if row["root_issue_id"] == "validation_method_strength"
         )
         self.assertIn("OOS holdout validation", verified_titles)
