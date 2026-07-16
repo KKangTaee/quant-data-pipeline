@@ -2881,19 +2881,19 @@ focused regression, 한국어 commit 순서로 실행한다.
   `technical_trace`
 - Produces five normalized evidence categories and per-category counts
 
-- [ ] Add RED tests for walk-forward, regime split, provider freshness,
+- [x] Add RED tests for walk-forward, regime split, provider freshness,
   cost sensitivity, tax/account, NOT_RUN, and NOT_APPLICABLE explanations.
-- [ ] Add RED tests proving first-read text contains no raw function path and
+- [x] Add RED tests proving first-read text contains no raw function path and
   technical trace is nested separately.
-- [ ] Implement the pure explanation mapping without importing private Final
+- [x] Implement the pure explanation mapping without importing private Final
   Review functions.
-- [ ] Project verified findings, cautions, and technical rows through the new
+- [x] Project verified findings, cautions, and technical rows through the new
   explanation contract.
-- [ ] Replace the all-expanded detail list with category selectors and one
+- [x] Replace the all-expanded detail list with category selectors and one
   active category panel.
-- [ ] Mirror the same explanation order in Python fallback.
-- [ ] Run focused service / visual contract tests, React build, py_compile.
-- [ ] Commit: `Practical Validation 검증 설명과 상세 근거 개선`.
+- [x] Mirror the same explanation order in Python fallback.
+- [x] Run focused service / visual contract tests, React build, py_compile.
+- [x] Commit: `Practical Validation 검증 설명과 상세 근거 개선`.
 
 ### Task 8: In-Scope Missing Validation And Aggregation Hardening
 

@@ -545,16 +545,89 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             source_options=[self._source()],
         )
 
-        verified_titles = {row["title"] for row in model["verified_findings"]}
+        verified_titles = {
+            row["display_title"] for row in model["verified_findings"]
+        }
         method_issue = next(
             row
             for row in model["validated_cautions"]
             if row["root_issue_id"] == "validation_method_strength"
         )
-        self.assertIn("OOS holdout validation", verified_titles)
-        self.assertIn("Regime split validation", verified_titles)
-        self.assertIn("windows=103", method_issue["observed"])
+        self.assertIn("학습 구간 밖 성과 검증", verified_titles)
+        self.assertIn("시장 국면별 성과 검증", verified_titles)
+        self.assertIn("반복 검증 103개", method_issue["observed"])
         self.assertNotIn("근거 없음", method_issue["observed"])
+
+    def test_detail_projection_uses_plain_language_and_five_categories(
+        self,
+    ) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        validation = self._validation()
+        validation["validation_efficacy_audit"] = {
+            "overall_status": "REVIEW",
+            "rows": [
+                {
+                    "Criteria": "Walk-forward temporal validation",
+                    "Status": "REVIEW",
+                    "Current": (
+                        "REVIEW / windows=103 / "
+                        "source=actual_runtime_latest_recheck"
+                    ),
+                    "Evidence": "worst excess -4.46%",
+                },
+                {
+                    "Criteria": "Regime split validation",
+                    "Status": "PASS",
+                    "Current": "PASS / buckets=3 / months=126",
+                    "Evidence": "worst excess 19.88%",
+                },
+            ],
+        }
+
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result={"status": "PASS", "replay_id": "replay-current"},
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        self.assertEqual(len(model["category_disclosures"]), 5)
+        self.assertEqual(
+            [row["category_id"] for row in model["category_disclosures"]],
+            [
+                "data_and_bias",
+                "validation_method",
+                "portfolio_structure",
+                "realism_and_cost",
+                "stress_and_robustness",
+            ],
+        )
+        method = next(
+            row
+            for row in model["category_disclosures"]
+            if row["category_id"] == "validation_method"
+        )
+        self.assertEqual(method["summary"]["total_count"], 2)
+        self.assertEqual(method["summary"]["verified_count"], 1)
+        self.assertEqual(method["summary"]["review_count"], 1)
+        first_read = " ".join(
+            str(value)
+            for row in method["explanations"]
+            for key, value in row.items()
+            if key != "technical_trace"
+        )
+        self.assertNotIn("actual_runtime_latest_recheck", first_read)
+        self.assertIn(
+            "actual_runtime_latest_recheck",
+            str(method["explanations"][0]["technical_trace"]),
+        )
 
     def test_engineering_blockers_are_counted_once_per_root_issue(self) -> None:
         from app.services.backtest_practical_validation_decision_workspace import (

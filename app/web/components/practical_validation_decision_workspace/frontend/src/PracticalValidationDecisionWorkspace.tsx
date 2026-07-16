@@ -68,7 +68,15 @@ export function PracticalValidationDecisionWorkspace({
 }: {
   workspace: DecisionWorkspace
 }) {
+  const evidenceCategories = workspace.category_disclosures
   const [pendingAction, setPendingAction] = useState<string | null>(null)
+  const [activeEvidenceCategory, setActiveEvidenceCategory] = useState(
+    evidenceCategories.find(
+      (category) => category.summary.total_count > 0,
+    )?.category_id ??
+      evidenceCategories[0]?.category_id ??
+      "",
+  )
 
   useEffect(() => {
     const resize = () => Streamlit.setFrameHeight()
@@ -82,6 +90,22 @@ export function PracticalValidationDecisionWorkspace({
     setPendingAction(null)
   }, [workspace.replay.replay_id, workspace.validation_result_id])
 
+  useEffect(() => {
+    if (
+      !evidenceCategories.some(
+        (category) => category.category_id === activeEvidenceCategory,
+      )
+    ) {
+      setActiveEvidenceCategory(
+        evidenceCategories.find(
+          (category) => category.summary.total_count > 0,
+        )?.category_id ??
+          evidenceCategories[0]?.category_id ??
+          "",
+      )
+    }
+  }, [evidenceCategories, activeEvidenceCategory])
+
   const resolveNow = workspace.resolution_lanes.resolve_now ?? []
   const engineeringRequired =
     workspace.resolution_lanes.engineering_required ?? []
@@ -90,6 +114,9 @@ export function PracticalValidationDecisionWorkspace({
   const visibleVerified = workspace.verified_findings.slice(0, 8)
   const validationResultId = workspace.validation_result_id
   const replayPending = pendingAction === "run_replay"
+  const activeEvidence = evidenceCategories.find(
+    (category) => category.category_id === activeEvidenceCategory,
+  )
 
   return (
     <main className="pv2-workspace">
@@ -283,8 +310,13 @@ export function PracticalValidationDecisionWorkspace({
             <div className="pv2-card-grid">
               {visibleVerified.map((item) => (
                 <article key={item.finding_id}>
-                  <strong>{item.title}</strong>
-                  <p>{item.detail}</p>
+                  <div className="pv2-evidence-title">
+                    <strong>{item.display_title}</strong>
+                    <span>{item.status_label}</span>
+                  </div>
+                  <small>{item.what_was_checked}</small>
+                  <p>{item.result_summary}</p>
+                  <p className="pv2-evidence-meaning">{item.meaning}</p>
                 </article>
               ))}
             </div>
@@ -355,22 +387,101 @@ export function PracticalValidationDecisionWorkspace({
         )}
         <details className="pv2-disclosure">
           <summary>상세 검증 근거</summary>
-          {workspace.category_disclosures.map((group) => (
-            <article key={group.category_id}>
-              <strong>{group.title}</strong>
-              <span>{group.outcome}</span>
-              <p>{group.question}</p>
-              <ul>
-                {group.technical_rows.map((row) => (
-                  <li key={`${group.category_id}-${row.row_id}`}>
-                    <b>{row.title}</b>
-                    <span>{row.status}</span>
-                    <p>{row.detail}</p>
-                  </li>
-                ))}
-              </ul>
+          <div
+            className="pv2-evidence-category-tabs"
+            role="tablist"
+            aria-label="상세 검증 범주"
+          >
+            {evidenceCategories.map((group) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={group.category_id === activeEvidenceCategory}
+                className={
+                  group.category_id === activeEvidenceCategory
+                    ? "is-selected"
+                    : ""
+                }
+                key={group.category_id}
+                onClick={() => setActiveEvidenceCategory(group.category_id)}
+              >
+                <strong>{group.title}</strong>
+                <span>{group.summary.total_count}개 · {group.outcome}</span>
+              </button>
+            ))}
+          </div>
+          {activeEvidence && (
+            <article className="pv2-evidence-panel" role="tabpanel">
+              <header>
+                <div>
+                  <strong>{activeEvidence.title}</strong>
+                  <p>{activeEvidence.question}</p>
+                </div>
+                <span>{activeEvidence.outcome}</span>
+              </header>
+              <dl className="pv2-evidence-summary">
+                <div>
+                  <dt>확인 완료</dt>
+                  <dd>{activeEvidence.summary.verified_count}</dd>
+                </div>
+                <div>
+                  <dt>주의</dt>
+                  <dd>{activeEvidence.summary.review_count}</dd>
+                </div>
+                <div>
+                  <dt>보강 필요</dt>
+                  <dd>{activeEvidence.summary.missing_count}</dd>
+                </div>
+                <div>
+                  <dt>해당 없음</dt>
+                  <dd>{activeEvidence.summary.not_applicable_count}</dd>
+                </div>
+              </dl>
+              {activeEvidence.explanations.length > 0 ? (
+                <ul>
+                  {activeEvidence.explanations.map((row, index) => (
+                    <li
+                      key={`${activeEvidence.category_id}-${row.technical_trace.criterion}-${index}`}
+                    >
+                      <div className="pv2-evidence-title">
+                        <b>{row.display_title}</b>
+                        <span>{row.status_label}</span>
+                      </div>
+                      <dl className="pv2-explanation-grid">
+                        <div>
+                          <dt>무엇을 확인했나</dt>
+                          <dd>{row.what_was_checked}</dd>
+                        </div>
+                        <div>
+                          <dt>확인 결과</dt>
+                          <dd>{row.result_summary}</dd>
+                        </div>
+                        <div>
+                          <dt>이 결과의 의미</dt>
+                          <dd>{row.meaning}</dd>
+                        </div>
+                        <div>
+                          <dt>다음 조치</dt>
+                          <dd>{row.next_action}</dd>
+                        </div>
+                      </dl>
+                      <details className="pv2-technical-trace">
+                        <summary>기술 원문</summary>
+                        <p>Criteria: {row.technical_trace.criterion || "-"}</p>
+                        <p>Status: {row.technical_trace.status || "-"}</p>
+                        <p>Current: {row.technical_trace.current || "-"}</p>
+                        <p>Evidence: {row.technical_trace.evidence || "-"}</p>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="pv2-empty-evidence">
+                  이 범주에 저장된 상세 검증 근거가 없습니다.
+                </p>
+              )}
             </article>
-          ))}
+          )}
         </details>
       </section>
 

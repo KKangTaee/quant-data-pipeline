@@ -93,3 +93,23 @@
   - focused 89 tests `OK`, React production build 175 modules 통과.
   - target py_compile과 `git diff --check` 통과.
 - protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.
+
+## 2026-07-16 Correction Task 7
+
+- RED:
+  - explanation service import가 없고 audit row가 `Criteria / Current /
+    Evidence` 원문으로 바로 노출됨을 확인.
+  - 상세 근거가 비정규 category 2개로 projection되고 모든 group을 한꺼번에
+    렌더링함을 확인.
+- GREEN:
+  - pure `explain_practical_validation_row` 계약으로 검증 항목, 확인 결과,
+    의미, 다음 조치를 사용자 언어로 분리.
+  - raw function path와 status trace는 `technical_trace` disclosure 안으로 이동.
+  - 데이터/편향, 검증 방법, 포트폴리오 구성, 실전 현실성, 스트레스/강건성
+    5개 고정 category와 상호 배타 count를 projection.
+  - React는 category selector와 active panel 하나만 렌더링하고 Streamlit
+    fallback도 동일 설명 순서를 유지.
+  - focused 98 tests `OK`, React production build 175 modules 통과.
+  - explanation / decision workspace / fallback target py_compile과
+    `git diff --check` 통과.
+- protected registry, run history, saved JSONL, generated artifact는 stage하지 않음.

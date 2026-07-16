@@ -66,6 +66,24 @@ class PracticalValidationMarketContextVisualContractTests(unittest.TestCase):
         self.assertIn("상세 검증 근거", source)
         self.assertNotIn("현재 표시할 항목이 없습니다.", source)
 
+    def test_detail_evidence_uses_category_selector_and_one_active_panel(
+        self,
+    ) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+
+        self.assertIn("activeEvidenceCategory", source)
+        self.assertIn("pv2-evidence-category-tabs", source)
+        self.assertIn("pv2-evidence-panel", source)
+        self.assertIn("what_was_checked", source)
+        self.assertIn("result_summary", source)
+        self.assertIn("meaning", source)
+        self.assertIn("next_action", source)
+        self.assertIn("기술 원문", source)
+        self.assertNotIn(
+            "workspace.category_disclosures.map((group) => (",
+            source,
+        )
+
     def test_760_layout_collapses_to_one_column(self) -> None:
         style = STYLE.read_text(encoding="utf-8")
         responsive = style.split("@media (max-width: 760px)", 1)[1]

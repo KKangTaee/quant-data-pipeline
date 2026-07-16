@@ -25,6 +25,7 @@ Last Updated: 2026-07-16
 - [ ] desktop / 760px Browser QA, console / overflow 확인, screenshot
 - [x] correction Task 5: Level2-owned caution / evidence-state contract
 - [x] correction Task 6: 후보/검증 정책 분리와 fragment 재검증
+- [x] correction Task 7: 사용자 설명 계약과 범주별 상세 검증 UI
 
 ## Current Position
 
@@ -35,7 +36,7 @@ Task 5~9를 진행한다.
 
 ## Next Action
 
-Task 7의 사용자 설명 계약과 범주별 상세 검증 UI RED 테스트부터 구현한다.
+Task 8의 누락 검증과 audit 집계 경계 RED 테스트부터 구현한다.
 
 남은 제품 위험은 dynamic historical universe의 PIT membership / delisting provider이며 별도 승인 전까지 critical blocker로 유지한다.
 
@@ -46,3 +47,4 @@ Task 7의 사용자 설명 계약과 범주별 상세 검증 UI RED 테스트부
 - `b661e83a` Practical Validation Level2 원셸 UI 전환
 - `8be7ba2e` Practical Validation Level2 보정 설계 반영
 - `96571a15` Practical Validation Level2 주의 종결 계약 보정
+- `d26fccb6` Practical Validation 후보 선택과 부분 재검증 개선

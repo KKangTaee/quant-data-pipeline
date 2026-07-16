@@ -555,8 +555,13 @@ def render_practical_validation_decision_workspace_fallback(
         st.markdown("##### 검증된 내용")
         for item in verified:
             with st.container(border=True):
-                st.markdown(f"**{item.get('title') or '검증 통과'}**")
-                st.caption(str(item.get("detail") or ""))
+                st.markdown(
+                    f"**{item.get('display_title') or '검증 통과'}** "
+                    f"· {item.get('status_label') or '확인 완료'}"
+                )
+                st.caption(str(item.get("what_was_checked") or ""))
+                st.write(str(item.get("result_summary") or ""))
+                st.caption(str(item.get("meaning") or ""))
 
     intent = _render_workspace_issue_lane(
         title="주의해서 볼 결과",
@@ -608,27 +613,67 @@ def render_practical_validation_decision_workspace_fallback(
         return intent
 
     with st.expander("상세 검증 근거", expanded=False):
-        for group in [
+        groups = [
             dict(row)
             for row in list(workspace.get("category_disclosures") or [])
             if isinstance(row, dict)
-        ]:
-            st.markdown(
-                f"**{group.get('title') or group.get('category_id') or '검증 카테고리'}** "
-                f"· {group.get('outcome') or 'NOT_RUN'}"
+        ]
+        if groups:
+            group_labels = {
+                str(group.get("category_id") or index): (
+                    f"{group.get('title') or '검증 범주'} · "
+                    f"{dict(group.get('summary') or {}).get('total_count') or 0}개"
+                )
+                for index, group in enumerate(groups)
+            }
+            selected_group_id = st.selectbox(
+                "상세 검증 범주",
+                options=list(group_labels),
+                format_func=lambda value: group_labels[value],
+                key="pv2-fallback-evidence-category",
             )
-            if group.get("question"):
-                st.caption(str(group.get("question")))
-            for row in [
+            group = next(
+                row
+                for row in groups
+                if str(row.get("category_id") or groups.index(row))
+                == selected_group_id
+            )
+            st.markdown(
+                f"**{group.get('title') or '검증 범주'}** · "
+                f"{group.get('outcome') or '근거 없음'}"
+            )
+            st.caption(str(group.get("question") or ""))
+            for explanation in [
                 dict(item)
-                for item in list(group.get("technical_rows") or [])
+                for item in list(group.get("explanations") or [])
                 if isinstance(item, dict)
             ]:
-                st.markdown(
-                    f"- {row.get('title') or '-'} · "
-                    f"{row.get('status') or 'NOT_RUN'}: "
-                    f"{row.get('detail') or '-'}"
-                )
+                with st.container(border=True):
+                    st.markdown(
+                        f"**{explanation.get('display_title') or '검증 항목'}** "
+                        f"· {explanation.get('status_label') or '확인 필요'}"
+                    )
+                    st.caption(
+                        f"무엇을 확인했나 · "
+                        f"{explanation.get('what_was_checked') or '-'}"
+                    )
+                    st.write(
+                        f"확인 결과 · "
+                        f"{explanation.get('result_summary') or '-'}"
+                    )
+                    st.write(
+                        f"이 결과의 의미 · "
+                        f"{explanation.get('meaning') or '-'}"
+                    )
+                    st.info(
+                        f"다음 조치 · "
+                        f"{explanation.get('next_action') or '-'}"
+                    )
+                    with st.expander("기술 원문", expanded=False):
+                        st.json(
+                            dict(explanation.get("technical_trace") or {}),
+                            expanded=False,
+                        )
 
     st.markdown("#### 4. 저장하고 Final Review로 이동")
     save_only = dict(actions.get("save_audit_only") or {})

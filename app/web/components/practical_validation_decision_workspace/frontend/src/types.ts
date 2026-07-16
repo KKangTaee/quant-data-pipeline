@@ -1,5 +1,23 @@
 export type Tone = "positive" | "warning" | "danger" | "neutral"
 
+export type EvidenceExplanation = {
+  display_title: string
+  status_label: string
+  what_was_checked: string
+  result_summary: string
+  meaning: string
+  next_action: string
+  evidence_state: string
+  stage_owner: string
+  technical_trace: {
+    criterion: string
+    status: string
+    current: string
+    evidence: string
+    next_action: string
+  }
+}
+
 export type WorkspaceIntent =
   | {
       action: "select_source"
@@ -57,6 +75,7 @@ export type Issue = {
   completion_criteria: string
   derived_checks: string[]
   measurement: Record<string, unknown>
+  explanations: EvidenceExplanation[]
 }
 
 export type DecisionWorkspace = {
@@ -97,10 +116,8 @@ export type DecisionWorkspace = {
   verified_findings: Array<{
     finding_id: string
     finding_kind: "verified"
-    title: string
-    detail: string
     category_id: string
-  }>
+  } & EvidenceExplanation>
   validated_cautions: Issue[]
   measured_cautions: Issue[]
   resolution_lanes: {
@@ -113,14 +130,16 @@ export type DecisionWorkspace = {
     title: string
     question: string
     outcome: string
+    summary: {
+      total_count: number
+      verified_count: number
+      review_count: number
+      missing_count: number
+      not_applicable_count: number
+    }
     verified_items: string[]
     root_issue_ids: string[]
-    technical_rows: Array<{
-      row_id: string
-      title: string
-      status: string
-      detail: string
-    }>
+    explanations: EvidenceExplanation[]
   }>
   actions: {
     run_replay: { id: string; label: string; enabled: boolean }

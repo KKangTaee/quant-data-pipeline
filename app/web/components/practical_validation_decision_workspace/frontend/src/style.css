@@ -373,6 +373,35 @@ summary:focus-visible {
   font-size: 12px;
 }
 
+.pv2-card-grid article small {
+  display: block;
+  margin-top: 7px;
+  color: var(--pv2-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.pv2-evidence-title {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.pv2-evidence-title > span {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--pv2-blue);
+  background: #e9f1f5;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.pv2-evidence-meaning {
+  color: var(--pv2-muted);
+}
+
 .pv2-issue-card > div {
   display: flex;
   flex-wrap: wrap;
@@ -401,46 +430,161 @@ summary:focus-visible {
   font-weight: 800;
 }
 
-.pv2-disclosure article {
-  padding: 14px 0;
-  border-top: 1px solid var(--pv2-line-soft);
+.pv2-evidence-category-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
 }
 
-.pv2-disclosure article:first-of-type {
-  margin-top: 12px;
+.pv2-evidence-category-tabs button {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 14px;
+  color: var(--pv2-ink);
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
 }
 
-.pv2-disclosure article > span {
-  margin-left: 8px;
+.pv2-evidence-category-tabs button.is-selected {
+  border-color: #6f91a7;
+  background: #eef5f8;
+  box-shadow: inset 0 0 0 1px #6f91a7;
+}
+
+.pv2-evidence-category-tabs button span {
   color: var(--pv2-muted);
   font-size: 10px;
 }
 
-.pv2-disclosure ul {
+.pv2-evidence-panel {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 17px;
+  background: #fbfcfd;
+}
+
+.pv2-evidence-panel > header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.pv2-evidence-panel > header p {
+  margin: 5px 0 0;
+  color: var(--pv2-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pv2-evidence-panel > header > span {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--pv2-blue);
+  background: #e9f1f5;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pv2-evidence-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.pv2-evidence-summary > div {
+  padding: 8px 10px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.pv2-evidence-summary dt {
+  color: var(--pv2-muted);
+  font-size: 9px;
+}
+
+.pv2-evidence-summary dd {
+  margin: 3px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.pv2-evidence-panel > ul {
   display: grid;
   gap: 8px;
-  margin: 10px 0 0;
+  margin: 14px 0 0;
   padding: 0;
   list-style: none;
 }
 
-.pv2-disclosure li {
+.pv2-evidence-panel > ul > li {
   min-width: 0;
-  padding: 10px 12px;
+  padding: 13px;
+  border: 1px solid var(--pv2-line-soft);
   border-radius: 14px;
-  background: var(--pv2-wash);
+  background: #fff;
   overflow-wrap: anywhere;
 }
 
-.pv2-disclosure li > span {
-  margin-left: 7px;
-  color: var(--pv2-muted);
-  font-size: 10px;
+.pv2-explanation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 12px 0 0;
 }
 
-.pv2-disclosure li p {
+.pv2-explanation-grid > div {
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: var(--pv2-wash);
+}
+
+.pv2-explanation-grid dt {
+  color: var(--pv2-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.pv2-explanation-grid dd {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.pv2-technical-trace {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--pv2-line-soft);
+}
+
+.pv2-technical-trace summary {
+  color: var(--pv2-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pv2-technical-trace p {
   margin: 5px 0 0;
   color: var(--pv2-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.pv2-empty-evidence {
+  margin: 14px 0 0;
+  padding: 14px;
+  border-radius: 12px;
+  color: var(--pv2-muted);
+  background: var(--pv2-wash);
   font-size: 11px;
 }
 
@@ -478,8 +622,18 @@ button:disabled {
   .pv2-choice-grid,
   .pv2-profile-grid,
   .pv2-card-grid,
-  .pv2-subsection-title {
+  .pv2-subsection-title,
+  .pv2-evidence-summary,
+  .pv2-explanation-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pv2-evidence-category-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pv2-evidence-panel > header {
+    display: grid;
   }
 
   .pv2-final-action > div {

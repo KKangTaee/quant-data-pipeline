@@ -3,6 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.backtest_evidence_closure import has_action_handler
+from app.services.backtest_practical_validation_explanation import (
+    PRACTICAL_VALIDATION_EVIDENCE_CATEGORIES,
+    explain_practical_validation_row,
+)
 from app.services.backtest_practical_validation_source import (
     VALIDATION_PROFILE_OPTIONS,
 )
@@ -58,30 +62,24 @@ def _audit_rows(
     return _dict_rows(dict(validation_result.get(audit_key) or {}).get("rows"))
 
 
-def _technical_row(row: dict[str, Any]) -> dict[str, str]:
-    return {
-        "row_id": str(
-            row.get("module_id")
-            or row.get("Criteria")
-            or row.get("label")
-            or row.get("display_label")
-            or "row"
-        ),
-        "title": str(
-            row.get("Criteria")
-            or row.get("display_label")
-            or row.get("label")
-            or "검증 항목"
-        ),
-        "status": str(row.get("Status") or row.get("status") or "NOT_RUN"),
-        "detail": str(
-            row.get("Evidence")
-            or row.get("checked_evidence")
-            or row.get("Current")
-            or row.get("current_problem")
-            or "-"
-        ),
-    }
+def _stage_owner(row: dict[str, Any], *, default: str = "practical_validation") -> str:
+    owner = str(row.get("stage_owner") or "").strip()
+    if owner:
+        return owner
+    criterion = str(
+        row.get("Criteria")
+        or row.get("display_label")
+        or row.get("label")
+        or ""
+    ).lower().replace("/", " ")
+    return "final_review" if "tax" in criterion and "account" in criterion else default
+
+
+def _explanation(row: dict[str, Any]) -> dict[str, Any]:
+    return explain_practical_validation_row(
+        row,
+        stage_owner=_stage_owner(row),
+    )
 
 
 def _source_type_label(row: dict[str, Any]) -> str:
@@ -172,26 +170,59 @@ def _issue_model(
             for row in evidence_rows
             if str(row.get("Criteria") or "") in criteria_filter
         ]
-    observed_rows = [
-        f"{row.get('Criteria')}: {row.get('Current') or row.get('Evidence')}"
-        for row in evidence_rows
-        if row.get("Criteria") and (row.get("Current") or row.get("Evidence"))
-    ]
-    remaining_rows = [
-        str(row.get("Next Action") or "")
+    relevant_rows = [
+        row
         for row in evidence_rows
         if str(row.get("Status") or "").upper()
         not in {"PASS", "READY", "NOT_APPLICABLE"}
-        and str(row.get("Next Action") or "").strip()
-    ]
+    ] or evidence_rows
+    explanations = [_explanation(row) for row in relevant_rows]
+    if not explanations:
+        pseudo_status = (
+            "NOT_RUN"
+            if resolution_class == "engineering_required"
+            else "REVIEW"
+        )
+        explanations = [
+            explain_practical_validation_row(
+                {
+                    "Criteria": issue.get("title") or root_issue_id,
+                    "Status": pseudo_status,
+                    "Evidence": issue.get("observed") or "",
+                },
+                stage_owner=str(
+                    issue.get("stage_owner")
+                    or (
+                        "final_review"
+                        if resolution_class
+                        in {"accepted_limit", "final_decision", "monitoring_transfer"}
+                        else "practical_validation"
+                    )
+                ),
+            )
+        ]
     return {
         "root_issue_id": root_issue_id,
-        "title": str(issue.get("title") or root_issue_id or "검증 항목"),
+        "title": str(
+            explanations[0].get("display_title")
+            or issue.get("title")
+            or root_issue_id
+            or "검증 항목"
+        ),
         "finding_kind": "measured_caution" if measured_caution else resolution_class,
         "resolution_class": resolution_class,
-        "observed": " / ".join(observed_rows) or str(issue.get("observed") or ""),
-        "expected": " / ".join(dict.fromkeys(remaining_rows))
-        or str(issue.get("expected") or ""),
+        "observed": " ".join(
+            str(row.get("result_summary") or "")
+            for row in explanations
+            if row.get("result_summary")
+        ),
+        "expected": " ".join(
+            dict.fromkeys(
+                str(row.get("next_action") or "")
+                for row in explanations
+                if row.get("next_action")
+            )
+        ),
         "cause": str(issue.get("cause") or ""),
         "criticality": str(issue.get("criticality") or "noncritical"),
         "terminal_state": terminal_state,
@@ -201,6 +232,7 @@ def _issue_model(
         "completion_criteria": str(issue.get("completion_criteria") or ""),
         "derived_checks": list(issue.get("derived_checks") or []),
         "measurement": measurement,
+        "explanations": explanations,
     }
 
 
@@ -217,17 +249,13 @@ def _verified_findings(validation_result: dict[str, Any]) -> list[dict[str, Any]
             if stable_id in seen:
                 continue
             seen.add(stable_id)
+            explanation = _explanation(row)
             findings.append(
                 {
                     "finding_id": stable_id,
                     "finding_kind": "verified",
-                    "title": str(row.get("Criteria") or audit_label),
-                    "detail": str(
-                        row.get("Evidence")
-                        or row.get("Current")
-                        or "기준을 충족했습니다."
-                    ),
                     "category_id": audit_key,
+                    **explanation,
                 }
             )
     for group in _dict_rows(
@@ -246,25 +274,53 @@ def _verified_findings(validation_result: dict[str, Any]) -> list[dict[str, Any]
             if stable_id in seen:
                 continue
             seen.add(stable_id)
+            explanation = _explanation(card)
             findings.append(
                 {
                     "finding_id": stable_id,
                     "finding_kind": "verified",
-                    "title": str(
-                        card.get("display_label")
-                        or card.get("label")
-                        or "검증 통과"
-                    ),
-                    "detail": str(
-                        card.get("checked_evidence")
-                        or card.get("evidence")
-                        or card.get("explanation")
-                        or "기준을 충족했습니다."
-                    ),
                     "category_id": group_id,
+                    **explanation,
                 }
             )
     return findings
+
+
+def _category_for_group(group: dict[str, Any]) -> str | None:
+    haystack = " ".join(
+        str(group.get(key) or "")
+        for key in ("group_id", "label", "display_label", "purpose")
+    ).lower()
+    for category in PRACTICAL_VALIDATION_EVIDENCE_CATEGORIES:
+        if any(
+            str(token).lower() in haystack
+            for token in category.get("group_tokens", ())
+        ):
+            return str(category["category_id"])
+    return None
+
+
+def _category_summary(explanations: list[dict[str, Any]]) -> dict[str, int]:
+    states = [str(row.get("evidence_state") or "missing") for row in explanations]
+    return {
+        "total_count": len(explanations),
+        "verified_count": states.count("verified"),
+        "review_count": states.count("computed"),
+        "missing_count": states.count("missing"),
+        "not_applicable_count": states.count("not_applicable"),
+    }
+
+
+def _category_outcome(summary: dict[str, int]) -> str:
+    if summary["missing_count"]:
+        return "보강 필요"
+    if summary["review_count"]:
+        return "주의 확인"
+    if summary["verified_count"]:
+        return "확인 완료"
+    if summary["not_applicable_count"]:
+        return "해당 없음"
+    return "근거 없음"
 
 
 def _category_disclosures(
@@ -275,57 +331,56 @@ def _category_disclosures(
         workspace.get("visible_criteria_detail_groups")
         or workspace.get("criteria_detail_groups")
     )
-    disclosures = [
-        {
-            "category_id": str(group.get("group_id") or group.get("label") or ""),
-            "title": str(
-                group.get("display_label")
-                or group.get("label")
-                or "검증 카테고리"
-            ),
-            "question": str(group.get("purpose") or ""),
-            "outcome": str(
-                group.get("display_status")
-                or group.get("status")
-                or "NOT_RUN"
-            ),
-            "verified_items": list(group.get("passed_criteria") or []),
-            "root_issue_ids": [],
-            "technical_rows": [
-                _technical_row(row)
-                for row in _dict_rows(group.get("criteria_cards"))
-            ],
-        }
-        for group in groups
-    ]
-    known_ids = {row["category_id"] for row in disclosures}
-    for audit_key, audit_label in _AUDIT_LABELS.items():
-        rows = _audit_rows(validation_result, audit_key)
-        if not rows or audit_key in known_ids:
-            continue
+    disclosures: list[dict[str, Any]] = []
+    seen_rows: set[tuple[str, str]] = set()
+    for category in PRACTICAL_VALIDATION_EVIDENCE_CATEGORIES:
+        category_id = str(category["category_id"])
+        explanations: list[dict[str, Any]] = []
+        for audit_key in category.get("audit_keys", ()):
+            for row in _audit_rows(validation_result, str(audit_key)):
+                explanation = _explanation(row)
+                trace = dict(explanation.get("technical_trace") or {})
+                stable_key = (
+                    category_id,
+                    str(trace.get("criterion") or ""),
+                )
+                if stable_key in seen_rows:
+                    continue
+                seen_rows.add(stable_key)
+                explanations.append(explanation)
+        for group in groups:
+            if _category_for_group(group) != category_id:
+                continue
+            for row in _dict_rows(group.get("criteria_cards")):
+                explanation = _explanation(row)
+                trace = dict(explanation.get("technical_trace") or {})
+                stable_key = (
+                    category_id,
+                    str(trace.get("criterion") or ""),
+                )
+                if stable_key in seen_rows:
+                    continue
+                seen_rows.add(stable_key)
+                explanations.append(explanation)
+        summary = _category_summary(explanations)
         disclosures.append(
             {
-                "category_id": audit_key,
-                "title": audit_label,
-                "question": "실제 계산된 row와 남은 REVIEW 근거를 함께 확인합니다.",
-                "outcome": str(
-                    dict(validation_result.get(audit_key) or {}).get(
-                        "overall_status"
-                    )
-                    or "NOT_RUN"
-                ),
+                "category_id": category_id,
+                "title": str(category["title"]),
+                "question": str(category["question"]),
+                "outcome": _category_outcome(summary),
+                "summary": summary,
                 "verified_items": [
-                    str(row.get("Criteria") or "")
-                    for row in rows
-                    if str(row.get("Status") or "").upper()
-                    in {"PASS", "READY"}
+                    str(row.get("display_title") or "")
+                    for row in explanations
+                    if row.get("evidence_state") == "verified"
                 ],
                 "root_issue_ids": [
                     root_issue_id
                     for root_issue_id, mapped_key in _ROOT_AUDIT_KEYS.items()
-                    if mapped_key == audit_key
+                    if mapped_key in set(category.get("audit_keys", ()))
                 ],
-                "technical_rows": [_technical_row(row) for row in rows],
+                "explanations": explanations,
             }
         )
     return disclosures
