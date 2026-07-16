@@ -1,7 +1,7 @@
 # Active Finance Tasks
 
 Status: Active
-Last Verified: 2026-07-12
+Last Verified: 2026-07-16
 
 이 폴더는 현재 실행 중인 task 기록과, 아직 archive / done 이동을 하지 않은 retained task 기록을 함께 둔다.
 
@@ -27,7 +27,7 @@ tasks/active/<task-name>/
 
 | Task | Status | Notes |
 |---|---|---|
-| none | - | No active task after `institutional-portfolios-security-detail-chart-layout-v1-20260712` closeout. |
+| `practical-validation-level2-decision-workspace-v1-20260716` | Planning | Level2 검증 의미, 4단계 사용자 흐름, Final Review 시각 언어 기반 one-shell read model / UI 개편을 설계하고 구현 계획을 작성한다. |
 
 ## Recent Completed / Retained Current Work
 

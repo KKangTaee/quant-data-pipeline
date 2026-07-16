@@ -7,7 +7,12 @@ Last Verified: 2026-07-16
 
 현재 active phase는 없다.
 
-현재 active task는 없다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-level2-decision-workspace-v1-20260716/`다.
+
+- 목적: Practical Validation Level2를 `후보와 기준 확인 -> 최신 재검증 -> 결과 해석과 해결 구분 -> 저장 / Final Review 이동`의 4단계 question-first workspace로 재구성한다.
+- 설계 방향: Python이 finding / applicability / root dedup / Gate / action / persistence를 소유하고, React는 Final Review와 같은 visual language로 one-shell presentation과 intent만 담당한다.
+- 현재 상태: 진단과 DESIGN 작성 완료, 함수·테스트·커밋 단위 PLAN 작성 중.
+- 이번 task에서 하지 않는 일: historical universe / delisting provider, DB schema, strategy runtime 재설계, Final Review route 변경, live approval / broker order / auto rebalance.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
 

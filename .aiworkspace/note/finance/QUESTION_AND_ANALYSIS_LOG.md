@@ -9537,3 +9537,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: Level2 검증 의미를 바꾸지 않으면서 사용자가 같은 후보를 한 번의 action으로 최신 가격까지 다시 계산하고 새 validation을 기준으로 판단해야 함.
 - Analysis result: current GRS는 curve `2026-06-26`, 최신 완료 session `2026-07-15`, DB common `2026-06-26`, limiter `BIL`이었다. replay만으로는 늘어나지 않아 기존 OHLCV 수집을 먼저 연결해야 했다.
 - Follow-up: Python one-click price refresh → replay → append-only validation orchestration, selected-route-only freshness Gate, Market Context 계열 compact strip을 구현했다. React는 intent/presentation만 맡고 실제 refresh/save UI 실행은 protected registry 때문에 QA에서 수행하지 않았다.
+
+### 2026-07-16 - Practical Validation은 module console이 아니라 Final Review 준비 질문에 답해야 한다
+
+- User request: Level3 개편 영향을 반영해 Level2 검증 flow, 접근법, UI를 다시 진단하고 Level3 스타일로 이해하기 쉽게 개편할 방향을 요청함.
+- Interpreted goal: 사용자가 어떤 후보를 어떤 기준으로 재검증했고, 지금 해결할 일과 Final Review로 넘길 한계를 한 화면에서 구분해야 함.
+- Analysis result: 현재 contract test는 정상이나 REVIEW 의미 혼합, accepted limit / final decision handoff 불완전, empty action board, module-level 중복, square Streamlit / React surface가 사용자 판단을 흐린다.
+- Follow-up: 4단계 Hybrid One-Shell, Python-owned finding/applicability/Gate/action contract, Level3 visual token, technical disclosure 구조를 DESIGN에 고정하고 상세 PLAN을 작성한다.

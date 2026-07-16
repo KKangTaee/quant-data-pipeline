@@ -6242,3 +6242,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - 가격 gap은 기존 OHLCV 수집 → 동일 source replay → 새 Practical Validation append 순으로 Python이 처리하며, selected route만 freshness Gate로 잠근다.
 - 구현 커밋은 `1ac0dae1`, `f163e7a2`, `e80908b8`, `2535a9da`; focused completion 130 tests와 production build/read-only GRS probe를 통과했다.
 - Browser visual QA는 도구 부재로 남았으며 protected registry / run history는 stage하지 않았다. 상세는 active task `RUNS.md`, `RISKS.md`를 본다.
+
+## 2026-07-16 - Practical Validation Level2 Decision Workspace 설계
+
+- Level3 개편 뒤 Level2의 검증 의미, 4/5-flow drift, square multi-surface UI, closure handoff 누락을 재진단했다.
+- `후보와 기준 확인 -> 최신 재검증 -> 결과 해석과 해결 구분 -> 저장 / Final Review 이동`의 4단계 Hybrid One-Shell 설계를 채택했다.
+- 새 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-level2-decision-workspace-v1-20260716/`이며 다음 작업은 상세 PLAN 작성과 계획 커밋이다.
