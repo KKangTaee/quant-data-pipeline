@@ -209,9 +209,10 @@ button, input, summary { font: inherit; }
 .alignment-price_pending { color: #687985; background: #e9eef1; }
 .implication-summary { min-height: 31px; color: #526b7d; font-size: 11px; line-height: 1.55; }
 .price-confirmation { display: grid; gap: 9px; padding: 11px; border: 1px solid #dce6eb; border-radius: 12px; background: rgba(255, 255, 255, .82); }
-.context-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.context-status-grid > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.context-status-grid span { color: #688092; font-size: 9px; font-weight: 850; }
+.signal-comparison-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.signal-comparison-grid > div { display: grid; min-width: 0; justify-items: start; gap: 5px; padding: 8px; border: 1px solid #e4eaee; border-radius: 9px; background: #fff; }
+.signal-comparison-grid span { color: #688092; font-size: 9px; font-weight: 850; }
+.signal-comparison-grid b { max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
 .price-status { min-width: 49px; padding: 5px 7px; border-radius: 999px; font-size: 8px; font-weight: 900; text-align: center; white-space: nowrap; }
 .price-rising { color: #1d6d5d; background: #e7f4ef; }
 .price-falling { color: #a55749; background: #fbeeea; }
@@ -255,6 +256,7 @@ button, input, summary { font: inherit; }
   .implication-grid { grid-template-columns: 1fr; }
   .implication-card:last-child:nth-child(odd) { grid-column: auto; }
   .cycle-layout { align-items: start; }
+  .signal-comparison-grid { grid-template-columns: 1fr; }
   .regime-ribbon { min-height: 66px; }
 }
 

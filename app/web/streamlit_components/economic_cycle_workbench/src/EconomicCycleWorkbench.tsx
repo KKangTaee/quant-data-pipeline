@@ -60,6 +60,7 @@ type MarketImplication = {
   economic_as_of_date?: string | null;
   assessment: AssetAssessment;
   assessment_label: "우호" | "부담" | "혼재" | "자료 부족";
+  current_environment_label: "지지 요인 우세" | "부담 요인 우세" | "신호 혼재" | "자료 부족";
   summary: string;
   context: string;
   drivers: ImplicationDriver[];
@@ -79,6 +80,9 @@ type MarketImplication = {
   };
   alignment?: AlignmentStatus;
   alignment_label?: "배경과 가격 일치" | "배경과 가격 불일치" | "종합 혼재" | "가격 확인 대기";
+  macro_signal_label?: string;
+  price_direction_label?: "상승" | "하락" | "방향 혼재" | "확인 대기";
+  relationship_label?: "같은 방향" | "서로 다른 방향" | "판단 유보" | "비교 대기";
   is_directional_forecast: false;
 };
 
@@ -420,23 +424,29 @@ function PriceConfirmation({ item }: { item: MarketImplication }) {
   const price = item.price_context;
   if (!price) return null;
   const windows = [
-    ["1주", price.returns.one_week],
-    ["1개월", price.returns.one_month],
-    ["3개월", price.returns.three_months],
+    ["1주(5거래일)", price.returns.one_week],
+    ["1개월(21거래일)", price.returns.one_month],
+    ["3개월(63거래일)", price.returns.three_months],
   ] as const;
   return (
-    <section className="price-confirmation" aria-label={`${item.label} 경제 배경과 가격 확인`}>
-      <div className="context-status-grid">
+    <section className="price-confirmation" aria-label={`${item.label} 미국 경기 신호와 시장 가격 비교`}>
+      <div className="signal-comparison-grid">
         <div>
-          <span>경제 배경</span>
+          <span>미국 경기 신호</span>
           <b className={`implication-status assessment-${item.assessment.toLowerCase()}`}>
-            {item.assessment_label}
+            {item.macro_signal_label || "판단 자료 부족"}
           </b>
         </div>
         <div>
-          <span>가격 확인</span>
+          <span>실제 가격</span>
           <b className={`price-status price-${price.status.toLowerCase()}`}>
-            {price.status_label}
+            {item.price_direction_label || "확인 대기"}
+          </b>
+        </div>
+        <div>
+          <span>두 신호 관계</span>
+          <b className={`implication-status alignment-${(item.alignment || "PRICE_PENDING").toLowerCase()}`}>
+            {item.relationship_label || "비교 대기"}
           </b>
         </div>
       </div>
@@ -462,14 +472,17 @@ function MarketImplicationCard({ item }: { item: MarketImplication }) {
       <header>
         <div>
           <span>{item.label}</span>
-          <strong>경제 국면: {item.phase_context}</strong>
+          <strong>
+            {priceAware
+              ? "미국 경기 신호와 시장 가격 비교"
+              : `현재 환경: ${item.current_environment_label}`}
+          </strong>
         </div>
         <div className="implication-overall">
-          {priceAware ? <span>종합 판단</span> : null}
           <b className={priceAware
             ? `implication-status alignment-${(item.alignment || "PRICE_PENDING").toLowerCase()}`
             : `implication-status assessment-${item.assessment.toLowerCase()}`}>
-            {priceAware ? item.alignment_label : item.assessment_label}
+            {priceAware ? item.relationship_label : item.current_environment_label}
           </b>
         </div>
       </header>
@@ -486,7 +499,7 @@ function MarketImplicationCard({ item }: { item: MarketImplication }) {
         )) : <p>표시할 자산별 근거가 아직 부족합니다.</p>}
       </div>
       <div className="change-condition">
-        <span>바뀌는 조건</span>
+        <span>향후 확인 조건</span>
         <p>{item.change_condition}</p>
       </div>
     </article>

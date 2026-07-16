@@ -247,18 +247,19 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'className="market-implications"',
         "자산별 확인 포인트",
         "경제 배경과 실제 가격을 분리해 확인",
-        "경제 국면:",
-        "경제 배경",
-        "가격 확인",
-        "종합 판단",
-        "1주",
-        "1개월",
-        "3개월",
-        "배경과 가격 불일치",
+        "미국 경기 신호와 시장 가격 비교",
+        "현재 환경:",
+        "미국 경기 신호",
+        "실제 가격",
+        "두 신호 관계",
+        "1주(5거래일)",
+        "1개월(21거래일)",
+        "3개월(63거래일)",
         'className="price-confirmation"',
+        'className="signal-comparison-grid"',
         'className={`implication-status assessment-${item.assessment.toLowerCase()}`}',
         'className="implication-drivers"',
-        "바뀌는 조건",
+        "향후 확인 조건",
         'className="regime-ribbon"',
         'className="nber-recession"',
         'className="limited-hatch"',
@@ -267,6 +268,9 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         "수익률 예측이나 매매 지시가 아닙니다",
     ):
         assert token in source
+
+    assert "경제 국면:" not in source
+    assert "바뀌는 조건" not in source
 
 
 def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> None:
