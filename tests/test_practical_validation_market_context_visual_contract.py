@@ -66,6 +66,15 @@ class PracticalValidationMarketContextVisualContractTests(unittest.TestCase):
         self.assertIn("상세 검증 근거", source)
         self.assertNotIn("현재 표시할 항목이 없습니다.", source)
 
+    def test_level2_handoff_is_compact_and_does_not_repeat_issue_cards(self) -> None:
+        source = WORKSPACE.read_text(encoding="utf-8")
+
+        self.assertIn("workspace.handoff_summary", source)
+        self.assertIn("pv2-handoff-summary", source)
+        self.assertIn("<h3>{workspace.handoff_summary.title}</h3>", source)
+        self.assertIn("handoff_summary.items.map", source)
+        self.assertNotIn("handoff.map((issue)", source)
+
     def test_detail_evidence_uses_category_selector_and_one_active_panel(
         self,
     ) -> None:

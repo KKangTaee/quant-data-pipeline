@@ -117,7 +117,6 @@ export function PracticalValidationDecisionWorkspace({
   const resolveNow = workspace.resolution_lanes.resolve_now ?? []
   const engineeringRequired =
     workspace.resolution_lanes.engineering_required ?? []
-  const handoff = workspace.resolution_lanes.final_review_handoff ?? []
   const measuredCautions = workspace.measured_cautions ?? []
   const visibleVerified = workspace.verified_findings.slice(0, 8)
   const validationResultId = workspace.validation_result_id
@@ -377,19 +376,34 @@ export function PracticalValidationDecisionWorkspace({
             </div>
           </div>
         )}
-        {handoff.length > 0 && (
-          <div className="pv2-lane">
-            <h3>{workspace.handoff_presentation.title}</h3>
-            <p className="pv2-lane-detail">
-              {workspace.handoff_presentation.detail}
-            </p>
-            <div className="pv2-card-grid">
-              {handoff.map((issue) => (
-                <IssueCard
-                  issue={issue}
-                  workspace={workspace}
-                  key={issue.root_issue_id}
-                />
+        {workspace.handoff_summary.items.length > 0 && (
+          <div className="pv2-handoff-summary">
+            <header>
+              <div>
+                <span>Final Review handoff</span>
+                <h3>{workspace.handoff_summary.title}</h3>
+                <p>{workspace.handoff_summary.detail}</p>
+              </div>
+              <dl>
+                {workspace.handoff_summary.counts.accepted_limit > 0 && (
+                  <div><dt>인수할 한계</dt><dd>{workspace.handoff_summary.counts.accepted_limit}</dd></div>
+                )}
+                {workspace.handoff_summary.counts.final_decision > 0 && (
+                  <div><dt>최종 판단</dt><dd>{workspace.handoff_summary.counts.final_decision}</dd></div>
+                )}
+                {workspace.handoff_summary.counts.monitoring_transfer > 0 && (
+                  <div><dt>Monitoring</dt><dd>{workspace.handoff_summary.counts.monitoring_transfer}</dd></div>
+                )}
+              </dl>
+            </header>
+            <div className="pv2-handoff-items">
+              {workspace.handoff_summary.items.map((item) => (
+                <article key={item.root_issue_id}>
+                  <span>{item.handoff_label}</span>
+                  <strong>{item.title}</strong>
+                  <p>{item.summary}</p>
+                  <small>{item.next_stage_action}</small>
+                </article>
               ))}
             </div>
           </div>

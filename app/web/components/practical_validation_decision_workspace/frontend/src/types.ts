@@ -130,6 +130,24 @@ export type DecisionWorkspace = {
     title: string
     detail: string
   }
+  handoff_summary: {
+    state: "prospective" | "promoted"
+    title: string
+    detail: string
+    counts: {
+      final_decision: number
+      accepted_limit: number
+      monitoring_transfer: number
+    }
+    items: Array<{
+      root_issue_id: string
+      handoff_kind: "final_decision" | "accepted_limit" | "monitoring_transfer"
+      handoff_label: string
+      title: string
+      summary: string
+      next_stage_action: string
+    }>
+  }
   category_disclosures: Array<{
     category_id: string
     title: string

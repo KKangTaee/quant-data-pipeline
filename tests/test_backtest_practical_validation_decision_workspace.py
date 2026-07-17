@@ -333,6 +333,51 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             "Final Review에서 이어서 판단할 항목",
         )
 
+    def test_ready_handoff_projects_compact_stage_actions_once_per_root(self) -> None:
+        from app.services.backtest_practical_validation_decision_workspace import (
+            build_practical_validation_decision_workspace,
+        )
+
+        validation = self._validation()
+        validation["evidence_closure"]["issues"].append(
+            {
+                **validation["evidence_closure"]["issues"][-1],
+                "title": "중복 최종 판단",
+            }
+        )
+        model = build_practical_validation_decision_workspace(
+            source=self._source(),
+            validation_profile={
+                "profile_id": "balanced_core",
+                "profile_label": "균형형",
+            },
+            replay_result={"status": "PASS", "replay_id": "replay-current"},
+            validation_result=validation,
+            source_options=[self._source()],
+        )
+
+        handoff = model["handoff_summary"]
+        self.assertEqual(handoff["state"], "promoted")
+        self.assertEqual(handoff["title"], "Final Review 인계 준비 완료")
+        self.assertEqual(
+            handoff["counts"],
+            {
+                "final_decision": 1,
+                "accepted_limit": 1,
+                "monitoring_transfer": 0,
+            },
+        )
+        self.assertEqual(
+            [row["root_issue_id"] for row in handoff["items"]],
+            ["historical_universe_coverage", "tax_account_scope"],
+        )
+        self.assertEqual(
+            [row["handoff_label"] for row in handoff["items"]],
+            ["한계 인수 판단", "Final Review에서 결정"],
+        )
+        self.assertTrue(all(row["summary"] for row in handoff["items"]))
+        self.assertTrue(all(row["next_stage_action"] for row in handoff["items"]))
+
     def test_blocked_workspace_labels_handoff_as_prospective(self) -> None:
         from app.services.backtest_practical_validation_decision_workspace import (
             build_practical_validation_decision_workspace,

@@ -366,6 +366,79 @@ summary:focus-visible {
   font-size: 12px;
 }
 
+.pv2-handoff-summary {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #b9cfdb;
+  border-radius: 17px;
+  background: #f3f8fb;
+}
+
+.pv2-handoff-summary > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pv2-handoff-summary > header span,
+.pv2-handoff-items article > span {
+  color: var(--pv2-blue);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.pv2-handoff-summary h3,
+.pv2-handoff-summary p {
+  margin: 4px 0 0;
+}
+
+.pv2-handoff-summary > header dl {
+  display: flex;
+  gap: 7px;
+  margin: 0;
+}
+
+.pv2-handoff-summary > header dl > div {
+  min-width: 70px;
+  padding: 7px 9px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.pv2-handoff-summary dt {
+  color: var(--pv2-muted);
+  font-size: 9px;
+}
+
+.pv2-handoff-summary dd {
+  margin: 3px 0 0;
+  font-weight: 800;
+}
+
+.pv2-handoff-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pv2-handoff-items article {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--pv2-line-soft);
+  border-radius: 14px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.pv2-handoff-items p,
+.pv2-handoff-items small {
+  margin: 0;
+  color: var(--pv2-muted);
+}
+
 .pv2-card-grid article,
 .pv2-issue-card {
   min-width: 0;
@@ -634,6 +707,12 @@ button:disabled {
   .pv2-subsection-title,
   .pv2-evidence-summary,
   .pv2-explanation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pv2-handoff-summary > header,
+  .pv2-handoff-summary > header dl {
+    display: grid;
     grid-template-columns: 1fr;
   }
 

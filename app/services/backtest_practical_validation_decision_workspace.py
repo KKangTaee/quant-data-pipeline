@@ -280,6 +280,72 @@ def _handoff_presentation(state: str) -> dict[str, str]:
     }
 
 
+def _handoff_summary(
+    state: str,
+    issues: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Summarize promoted roots without repeating Final Review detail lanes."""
+
+    labels = {
+        "final_decision": "Final Review에서 결정",
+        "accepted_limit": "한계 인수 판단",
+        "monitoring_transfer": "Monitoring 자동 이관",
+    }
+    next_actions = {
+        "final_decision": "최종 route 사유에 이 판단을 반영합니다.",
+        "accepted_limit": "한계를 인수할지 Level2로 되돌릴지 선택합니다.",
+        "monitoring_transfer": "저장된 조건을 Monitoring으로 자동 이관합니다.",
+    }
+    items: list[dict[str, str]] = []
+    counts = {key: 0 for key in labels}
+    seen: set[str] = set()
+    for issue in issues:
+        root_issue_id = str(issue.get("root_issue_id") or "").strip()
+        handoff_kind = str(issue.get("resolution_class") or "").strip()
+        if (
+            not root_issue_id
+            or root_issue_id in seen
+            or handoff_kind not in labels
+        ):
+            continue
+        seen.add(root_issue_id)
+        counts[handoff_kind] += 1
+        explanations = [
+            dict(row)
+            for row in list(issue.get("explanations") or [])
+            if isinstance(row, dict)
+        ]
+        summary = str(issue.get("observed") or "").strip()
+        if not summary and explanations:
+            summary = str(explanations[0].get("meaning") or "").strip()
+        items.append(
+            {
+                "root_issue_id": root_issue_id,
+                "handoff_kind": handoff_kind,
+                "handoff_label": labels[handoff_kind],
+                "title": str(issue.get("title") or root_issue_id),
+                "summary": summary or "Level2에서 필요한 근거를 확인했습니다.",
+                "next_stage_action": next_actions[handoff_kind],
+            }
+        )
+    promoted = state in {"ready", "ready_with_handoff"}
+    return {
+        "state": "promoted" if promoted else "prospective",
+        "title": (
+            "Final Review 인계 준비 완료"
+            if promoted
+            else "검증 통과 후 Final Review에서 확인할 항목"
+        ),
+        "detail": (
+            "Level2에서 확인한 근거만 넘기며, 실제 인수와 최종 판단은 Final Review에서 완료합니다."
+            if promoted
+            else "Level2 차단 항목이 해결되기 전에는 실제 판단으로 승격되지 않습니다."
+        ),
+        "counts": counts,
+        "items": items,
+    }
+
+
 def _verified_findings(validation_result: dict[str, Any]) -> list[dict[str, Any]]:
     workspace = dict(validation_result.get("practical_validation_workspace") or {})
     findings: list[dict[str, Any]] = []
@@ -676,6 +742,7 @@ def build_practical_validation_decision_workspace(
             "final_review_handoff": final_review_handoff,
         },
         "handoff_presentation": _handoff_presentation(state),
+        "handoff_summary": _handoff_summary(state, final_review_handoff),
         "category_disclosures": _category_disclosures(validation),
         "actions": {
             "run_replay": {

@@ -602,25 +602,23 @@ def render_practical_validation_decision_workspace_fallback(
     )
     if intent:
         return intent
-    intent = _render_workspace_issue_lane(
-        title=str(
-            dict(workspace.get("handoff_presentation") or {}).get("title")
-            or "Final Review에서 이어서 판단할 항목"
-        ),
-        issues=[
-            dict(row)
-            for row in list(resolution_lanes.get("final_review_handoff") or [])
-            if isinstance(row, dict)
-        ],
-        workspace=workspace,
-        action_enabled=False,
-        detail=str(
-            dict(workspace.get("handoff_presentation") or {}).get("detail")
-            or ""
-        ),
-    )
-    if intent:
-        return intent
+    handoff_summary = dict(workspace.get("handoff_summary") or {})
+    handoff_items = [
+        dict(row)
+        for row in list(handoff_summary.get("items") or [])
+        if isinstance(row, dict)
+    ]
+    if handoff_items:
+        st.markdown(
+            f"##### {handoff_summary.get('title') or 'Final Review 인계 준비'}"
+        )
+        st.caption(str(handoff_summary.get("detail") or ""))
+        for item in handoff_items:
+            with st.container(border=True):
+                st.caption(str(item.get("handoff_label") or "Final Review 인계"))
+                st.markdown(f"**{item.get('title') or item.get('root_issue_id')}**")
+                st.write(str(item.get("summary") or ""))
+                st.caption(str(item.get("next_stage_action") or ""))
 
     with st.expander("상세 검증 근거", expanded=False):
         groups = [
