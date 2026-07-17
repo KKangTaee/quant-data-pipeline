@@ -317,3 +317,97 @@ def test_failed_runner_preserves_previous_successful_bundle() -> None:
 
     assert fake_streamlit.session_state.backtest_last_bundle is previous
     assert fake_streamlit.session_state.backtest_last_error_kind == "data"
+
+
+def test_explicit_save_and_move_intent_queues_current_bundle_once() -> None:
+    from app.web import backtest_analysis_workspace
+
+    bundle = _successful_bundle()
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_last_bundle": bundle,
+            "backtest_analysis_consumed_nonce": None,
+        }
+    )
+    workspace = {
+        "workspace_kind": "single_strategy",
+        "actions": {
+            "save_and_move": {
+                "id": "save_and_move",
+                "enabled": True,
+            }
+        },
+    }
+    with (
+        patch.object(backtest_analysis_workspace, "st", fake_streamlit),
+        patch.object(
+            backtest_analysis_workspace,
+            "build_current_backtest_analysis_workspace",
+            return_value=workspace,
+        ),
+        patch.object(
+            backtest_analysis_workspace,
+            "_candidate_review_draft_from_bundle",
+            return_value={"draft_id": "draft-1"},
+        ) as draft_from_bundle,
+        patch.object(
+            backtest_analysis_workspace,
+            "_queue_candidate_review_draft",
+        ) as queue_draft,
+    ):
+        intent = {
+            "action": "save_and_move",
+            "payload": {},
+            "nonce": "handoff-1",
+        }
+        backtest_analysis_workspace.consume_backtest_analysis_intent(
+            intent,
+            allowed_actions={"save_and_move"},
+        )
+        backtest_analysis_workspace.consume_backtest_analysis_intent(
+            intent,
+            allowed_actions={"save_and_move"},
+        )
+
+    draft_from_bundle.assert_called_once_with(bundle)
+    queue_draft.assert_called_once_with({"draft_id": "draft-1"})
+    assert (
+        fake_streamlit.session_state.backtest_analysis_consumed_nonce
+        == "handoff-1"
+    )
+
+
+def test_save_and_move_intent_rejects_disabled_or_missing_result() -> None:
+    from app.web import backtest_analysis_workspace
+
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {"backtest_analysis_consumed_nonce": None}
+    )
+    workspace = {
+        "workspace_kind": "single_strategy",
+        "actions": {},
+    }
+    with (
+        patch.object(backtest_analysis_workspace, "st", fake_streamlit),
+        patch.object(
+            backtest_analysis_workspace,
+            "build_current_backtest_analysis_workspace",
+            return_value=workspace,
+        ),
+        patch.object(
+            backtest_analysis_workspace,
+            "_queue_candidate_review_draft",
+        ) as queue_draft,
+    ):
+        backtest_analysis_workspace.consume_backtest_analysis_intent(
+            {
+                "action": "save_and_move",
+                "payload": {},
+                "nonce": "handoff-disabled",
+            },
+            allowed_actions={"save_and_move"},
+        )
+
+    queue_draft.assert_not_called()

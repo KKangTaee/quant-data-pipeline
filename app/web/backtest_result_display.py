@@ -23,6 +23,10 @@ from app.services.backtest_price_refresh import (
     run_backtest_price_refresh,
 )
 from app.web.backtest_common import *  # noqa: F401,F403
+from app.web.backtest_analysis_workspace import (
+    build_current_backtest_analysis_workspace,
+    render_backtest_analysis_decision_surface,
+)
 from app.web.backtest_ui_components import (
     render_badge_strip,
     render_status_card_grid,
@@ -2164,8 +2168,8 @@ def _render_backtest_rerun_required_notice(bundle: dict[str, Any] | None, result
     ticker_count = int(plan.get("ticker_count") or len(plan.get("tickers") or []) or 0)
     message = str((result or {}).get("message") or "Coverage 최신화가 완료되었습니다.") if isinstance(result, dict) else "Coverage 최신화가 완료되었습니다."
     st.warning(
-        "가격 데이터가 업데이트되어 이전 백테스트 결과를 숨겼습니다. "
-        "최신 가격 기준 성과와 2차 단계 진입 판단을 보려면 같은 설정으로 `Run Backtest`를 다시 실행하세요."
+        "가격 데이터가 업데이트되어 기존 백테스트 결과는 참고용으로 유지됩니다. "
+        "최신 가격 기준 성과와 Level2 진입 판단을 갱신하려면 같은 설정으로 `Run Backtest`를 다시 실행하세요."
     )
     notice_df = pd.DataFrame(
         [
@@ -2196,13 +2200,22 @@ def _render_last_run() -> None:
         else:
             st.error(error)
 
+    workspace = build_current_backtest_analysis_workspace()
+    render_backtest_analysis_decision_surface(workspace)
+
     if not bundle:
         return
 
     if st.session_state.get("backtest_last_result_requires_rerun"):
         refresh_result = st.session_state.get("backtest_last_result_refresh_result")
         _render_backtest_rerun_required_notice(bundle, refresh_result if isinstance(refresh_result, dict) else None)
-        return
+
+    with st.expander("상세 근거", expanded=False):
+        _render_last_run_details(bundle)
+
+
+def _render_last_run_details(bundle: dict[str, Any]) -> None:
+    """Render technical result evidence without owning the Level2 handoff."""
 
     summary_df = bundle["summary_df"]
     chart_df = bundle["chart_df"]
@@ -2225,7 +2238,6 @@ def _render_last_run() -> None:
     _render_backtest_result_header(bundle, summary_df)
     _render_data_trust_summary(meta)
     _render_post_run_factor_readiness_panel(bundle)
-    _render_practical_validation_next_action(bundle)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:

@@ -22,10 +22,10 @@ from app.web.reference_contextual_help import render_reference_contextual_help
 from app.web.backtest_compare import render_compare_portfolio_workspace
 from app.web.backtest_analysis_workspace import (
     _CONTEXT_ACTIONS,
-    _DECISION_ACTIONS,
     build_current_backtest_analysis_workspace,
     consume_backtest_analysis_component_change,
     consume_backtest_analysis_intent,
+    render_backtest_analysis_decision_surface,
 )
 from app.web.backtest_analysis_workspace_panel import (
     render_backtest_analysis_workspace_fallback,
@@ -615,25 +615,5 @@ def _render_backtest_analysis_work_fragment() -> None:
             st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
         render_single_strategy_workspace()
 
-    workspace = build_current_backtest_analysis_workspace()
-    component_key = "backtest-analysis-decision-workspace-decision"
-    if is_backtest_analysis_decision_workspace_available():
-        intent = render_backtest_analysis_decision_workspace(
-            workspace=workspace,
-            surface="decision",
-            key=component_key,
-            on_change=partial(
-                consume_backtest_analysis_component_change,
-                component_key=component_key,
-                allowed_actions=_DECISION_ACTIONS,
-            ),
-        )
-    else:
-        intent = render_backtest_analysis_workspace_fallback(
-            workspace,
-            surface="decision",
-        )
-    consume_backtest_analysis_intent(
-        intent,
-        allowed_actions=_DECISION_ACTIONS,
-    )
+    if st.session_state.backtest_analysis_mode == BACKTEST_ANALYSIS_MODE_COMPARE:
+        render_backtest_analysis_decision_surface()

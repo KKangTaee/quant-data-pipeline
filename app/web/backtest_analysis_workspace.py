@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from functools import partial
 from typing import Any
 
 import streamlit as st
@@ -11,6 +12,17 @@ from app.services.backtest_analysis_decision_workspace import (
     build_level1_configuration_fingerprint,
 )
 from app.services.backtest_single_payload import normalize_single_strategy_payload
+from app.web.backtest_analysis_workspace_panel import (
+    render_backtest_analysis_workspace_fallback,
+)
+from app.web.backtest_candidate_review_helpers import (
+    _candidate_review_draft_from_bundle,
+    _queue_candidate_review_draft,
+)
+from app.web.components.backtest_analysis_decision_workspace import (
+    is_backtest_analysis_decision_workspace_available,
+    render_backtest_analysis_decision_workspace,
+)
 from app.web.backtest_strategy_catalog import (
     DEFAULT_SINGLE_STRATEGY_OPTION,
     SINGLE_STRATEGY_OPTIONS,
@@ -132,6 +144,11 @@ def build_current_backtest_analysis_workspace() -> dict[str, Any]:
         last_error_kind = st.session_state.get("backtest_compare_error_kind")
         component_bundles = bundles
 
+    action_handlers = (
+        {"save_and_move": _queue_candidate_review_draft}
+        if workspace_kind == "single_strategy"
+        else {}
+    )
     return build_backtest_analysis_decision_workspace(
         workspace_kind=workspace_kind,
         selection=selection,
@@ -143,7 +160,7 @@ def build_current_backtest_analysis_workspace() -> dict[str, Any]:
         saved_mixes=_saved_mix_summaries(),
         last_error=str(last_error) if last_error else None,
         last_error_kind=str(last_error_kind) if last_error_kind else None,
-        action_handlers={},
+        action_handlers=action_handlers,
         component_bundles=component_bundles,
     )
 
@@ -174,7 +191,22 @@ def consume_backtest_analysis_intent(
     nonce = str(payload.get("nonce") or "")
     action_payload = dict(payload.get("payload") or {})
 
-    if action == "select_workspace_kind":
+    if action == "save_and_move":
+        workspace = build_current_backtest_analysis_workspace()
+        action_state = dict(
+            dict(workspace.get("actions") or {}).get("save_and_move") or {}
+        )
+        bundle = st.session_state.get("backtest_last_bundle")
+        if (
+            workspace.get("workspace_kind") != "single_strategy"
+            or not action_state.get("enabled")
+            or not isinstance(bundle, dict)
+        ):
+            return
+        _queue_candidate_review_draft(
+            _candidate_review_draft_from_bundle(bundle)
+        )
+    elif action == "select_workspace_kind":
         workspace_kind = str(action_payload.get("workspace_kind") or "")
         if workspace_kind == "portfolio_mix":
             st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE
@@ -192,6 +224,35 @@ def consume_backtest_analysis_intent(
 
     st.session_state.backtest_analysis_consumed_nonce = nonce
     st.rerun(scope="app")
+
+
+def render_backtest_analysis_decision_surface(
+    workspace: dict[str, Any] | None = None,
+) -> None:
+    """Render and consume the Python-owned Level1 decision surface."""
+
+    current_workspace = workspace or build_current_backtest_analysis_workspace()
+    component_key = "backtest-analysis-decision-workspace-decision"
+    if is_backtest_analysis_decision_workspace_available():
+        intent = render_backtest_analysis_decision_workspace(
+            workspace=current_workspace,
+            surface="decision",
+            key=component_key,
+            on_change=partial(
+                consume_backtest_analysis_component_change,
+                component_key=component_key,
+                allowed_actions=_DECISION_ACTIONS,
+            ),
+        )
+    else:
+        intent = render_backtest_analysis_workspace_fallback(
+            current_workspace,
+            surface="decision",
+        )
+    consume_backtest_analysis_intent(
+        intent,
+        allowed_actions=_DECISION_ACTIONS,
+    )
 
 
 def consume_backtest_analysis_component_change(
@@ -213,4 +274,5 @@ __all__ = [
     "consume_backtest_analysis_component_change",
     "consume_backtest_analysis_intent",
     "record_single_strategy_draft",
+    "render_backtest_analysis_decision_surface",
 ]

@@ -576,7 +576,7 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         )[1]
 
         self.assertIn('surface="context"', render_prefix)
-        self.assertIn('surface="decision"', fragment)
+        self.assertIn("render_backtest_analysis_decision_surface()", fragment)
         self.assertNotIn('surface="context"', fragment)
 
     def test_single_strategy_change_marks_stale_without_clearing_bundle(
@@ -609,6 +609,23 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         combined = "\n".join(path.read_text() for path in form_paths)
         self.assertNotIn('st.expander("Promotion Policy Signal"', combined)
         self.assertIn("비용·Guardrail", combined)
+
+    def test_single_result_renders_decision_before_collapsed_evidence(self) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_result_display.py").read_text()
+        wrapper = source.split("def _render_last_run()", 1)[1].split(
+            "\ndef ", 1
+        )[0]
+        details = source.split("def _render_last_run_details", 1)[1].split(
+            "\ndef ", 1
+        )[0]
+
+        self.assertLess(
+            wrapper.index("render_backtest_analysis_decision_surface"),
+            wrapper.index('st.expander("상세 근거"'),
+        )
+        self.assertIn("_render_last_run_details(bundle)", wrapper)
+        self.assertNotIn("return\n", wrapper.split("backtest_last_result_requires_rerun", 1)[1])
+        self.assertNotIn("_render_practical_validation_next_action", details)
 
 
 if __name__ == "__main__":

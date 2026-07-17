@@ -868,20 +868,16 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
         self.assertEqual(checks_by_id["price_freshness"]["symbols"], ["ALLY"])
         self.assertNotIn("BK", checks_by_id["price_freshness"]["action"]["symbols"])
 
-    def test_backtest_result_display_renders_post_run_factor_readiness_before_handoff(self) -> None:
+    def test_backtest_result_display_keeps_factor_readiness_in_detailed_evidence(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
-        last_run_body = source.split("def _render_last_run", 1)[1].split("def ", 1)[0]
+        details_body = source.split("def _render_last_run_details", 1)[1].split("def ", 1)[0]
 
         self.assertIn("build_post_run_factor_readiness_panel_model", source)
         self.assertIn("render_backtest_factor_readiness_panel", source)
-        self.assertIn("_render_post_run_factor_readiness_panel(bundle)", last_run_body)
+        self.assertIn("_render_post_run_factor_readiness_panel(bundle)", details_body)
         self.assertLess(
-            last_run_body.index("_render_data_trust_summary(meta)"),
-            last_run_body.index("_render_post_run_factor_readiness_panel(bundle)"),
-        )
-        self.assertLess(
-            last_run_body.index("_render_post_run_factor_readiness_panel(bundle)"),
-            last_run_body.index("_render_practical_validation_next_action(bundle)"),
+            details_body.index("_render_data_trust_summary(meta)"),
+            details_body.index("_render_post_run_factor_readiness_panel(bundle)"),
         )
 
     def test_strict_factor_single_annual_forms_use_post_run_readiness_panel(self) -> None:
@@ -15256,26 +15252,30 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("st.warning(", last_run_body)
         self.assertNotIn("이번 실행에서 같이 봐야 할 주의 사항", last_run_body)
 
-    def test_latest_backtest_run_prioritizes_result_then_data_trust_then_handoff_then_tabs(self) -> None:
+    def test_latest_backtest_run_prioritizes_decision_then_detailed_evidence(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         last_run_start = source.index("def _render_last_run")
         last_run_body = source[last_run_start:]
         last_run_body = last_run_body[: last_run_body.index("\ndef ", 1)]
+        details_start = source.index("def _render_last_run_details")
+        details_body = source[details_start:]
+        details_body = details_body[: details_body.index("\ndef ", 1)]
 
-        self.assertIn("_render_backtest_result_header(bundle, summary_df)", last_run_body)
-        self.assertNotIn("_render_summary_metrics(summary_df)", last_run_body)
-        self.assertIn("_render_data_trust_summary(meta)", last_run_body)
-        self.assertIn("_render_practical_validation_next_action(bundle)", last_run_body)
-        self.assertNotIn("Latest Backtest Run", last_run_body)
+        self.assertIn("render_backtest_analysis_decision_surface", last_run_body)
+        self.assertIn('st.expander("상세 근거"', last_run_body)
+        self.assertIn("_render_last_run_details(bundle)", last_run_body)
+        self.assertIn("_render_backtest_result_header(bundle, summary_df)", details_body)
+        self.assertNotIn("_render_summary_metrics(summary_df)", details_body)
+        self.assertIn("_render_data_trust_summary(meta)", details_body)
+        self.assertNotIn("_render_practical_validation_next_action(bundle)", details_body)
+        self.assertNotIn("Latest Backtest Run", details_body)
 
-        header_pos = last_run_body.index("_render_backtest_result_header(bundle, summary_df)")
-        data_trust_pos = last_run_body.index("_render_data_trust_summary(meta)")
-        tabs_pos = last_run_body.index("tabs = st.tabs(tab_labels)")
-        handoff_pos = last_run_body.index("_render_practical_validation_next_action(bundle)")
+        header_pos = details_body.index("_render_backtest_result_header(bundle, summary_df)")
+        data_trust_pos = details_body.index("_render_data_trust_summary(meta)")
+        tabs_pos = details_body.index("tabs = st.tabs(tab_labels)")
 
         self.assertLess(header_pos, data_trust_pos)
-        self.assertLess(data_trust_pos, handoff_pos)
-        self.assertLess(handoff_pos, tabs_pos)
+        self.assertLess(data_trust_pos, tabs_pos)
 
     def test_backtest_result_header_owns_integrated_kpi_band(self) -> None:
         source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")

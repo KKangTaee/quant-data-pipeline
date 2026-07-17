@@ -65,3 +65,13 @@
 - GREEN focused + boundary: `41 passed`
 - existing single / latest run / history regression: `4 passed, 828 deselected`
 - target py_compile / import smoke / `git diff --check`: 통과
+
+## 2026-07-18 Task 6 RED -> GREEN
+
+- RED: explicit handoff handler 부재 2건과 decision-first 상세 근거 분리 부재 1건 실패
+- GREEN focused decision / boundary: `44 passed`
+- 관련 service contract: `4 passed, 828 deselected`
+- 계획 선택 회귀: `20 passed, 856 deselected`
+- React production build: Vite 5.4.21, 175 modules transformed, 성공
+- target py_compile / `git diff --check`: 통과
+- stale 결과는 삭제·숨김 없이 참고용 상세 근거로 유지하고 Level2 인계만 차단

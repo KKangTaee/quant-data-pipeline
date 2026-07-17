@@ -870,7 +870,7 @@ git commit -m "Backtest Analysis 단일 전략 안정 컨텍스트 연결"
 - Consumes: Task 3 projection, current bundle, `_candidate_review_draft_from_bundle`, `_queue_candidate_review_draft`.
 - Produces: React / fallback Step 3 + 4, `_render_last_run_details(bundle)`, explicit validated handoff.
 
-- [ ] **Step 1: Write failing order and persistence tests**
+- [x] **Step 1: Write failing order and persistence tests**
 
 Add a boundary test asserting the decision surface renders before `상세 근거`, and the detailed renderer does not call `_render_practical_validation_next_action(bundle)`.
 
@@ -904,13 +904,13 @@ def test_explicit_intent_queues_candidate_once() -> None:
 
 The Task 5 runner test remains the proof that successful execution itself never calls `_queue_candidate_review_draft`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q -k "decision_first or explicit_intent or does_not_queue_candidate"`
 
 Expected: failures because the current result screen renders header / trust / handoff directly.
 
-- [ ] **Step 3: Split first-read from details**
+- [x] **Step 3: Split first-read from details**
 
 Keep `_render_last_run()` as the compatibility entry. Extract current tabs, charts, tables, policy signals, and raw meta into `_render_last_run_details(bundle)`. Remove `_render_practical_validation_next_action(bundle)` from details. Render:
 
@@ -920,7 +920,7 @@ with st.expander("상세 근거", expanded=False):
     _render_last_run_details(bundle)
 ```
 
-- [ ] **Step 4: Consume only an enabled explicit handoff**
+- [x] **Step 4: Consume only an enabled explicit handoff**
 
 ```python
 if action == "save_and_move":
@@ -936,7 +936,7 @@ if action == "save_and_move":
 
 The fallback reads the same decision / actions and does not reconstruct Gate from raw meta.
 
-- [ ] **Step 5: Run GREEN, build, and compile**
+- [x] **Step 5: Run GREEN, build, and compile**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q -k "backtest_analysis or latest_run or candidate_review_draft"
@@ -947,7 +947,7 @@ cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
 
 Expected: selected tests, build, and compilation pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/web/backtest_result_display.py app/web/backtest_analysis_workspace.py app/web/backtest_analysis_workspace_panel.py app/web/backtest_single_strategy.py tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py
