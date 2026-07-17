@@ -431,6 +431,38 @@ def test_cycle_component_responsive_contract_avoids_mobile_horizontal_scroll() -
     assert ".regime-ribbon" in css
 
 
+def test_cycle_component_has_collapsed_monthly_signal_usage_guide() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+    css = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    for token in (
+        '<details className="cycle-usage-guide">',
+        "월별 사이클 신호 활용법",
+        "한 달 신호",
+        "같은 방향이 여러 달",
+        "실물·금융·가격",
+        "회복 신호",
+        "확장 신호",
+        "둔화 신호",
+        "침체 신호",
+        "침체 → 회복",
+        "회복 → 확장",
+        "확장 → 둔화",
+        "둔화 → 침체",
+    ):
+        assert token in source
+
+    assert ".cycle-guide-phase-grid" in css
+    assert ".cycle-guide-transition-grid" in css
+    guide_start = css.index(".cycle-usage-guide")
+    guide_end = css.index(".method-disclosure", guide_start)
+    assert "border-left" not in css[guide_start:guide_end]
+
+
 def test_valuation_component_honors_hidden_selector_with_legacy_default() -> None:
     source = Path(
         "app/web/streamlit_components/market_context_valuation/src/MarketContextValuation.tsx"
