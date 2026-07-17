@@ -713,3 +713,42 @@ persistence, live-approval 금지 경계는 변경하지 않는다.
     보존한다.
 27. React 미가용 fallback도 동일한 선택과 Python 검증 계약을 사용한다.
 28. desktop / 760px에서 handoff action과 replay pending 상태가 overflow 없이 읽힌다.
+
+## 2026-07-17 Approved Stable Context / Refresh Surface Correction
+
+Task 13은 component callback 뒤의 두 번째 명시적 fragment rerun을 제거했지만,
+상단 후보·검증 기준과 하단 재검증 결과가 하나의 custom-component iframe과 하나의
+`st.fragment` 안에 남아 있었다. `Streamlit.setComponentValue()` 자체가 widget
+rerun을 시작하므로 명시적 rerun이 없어도 그 iframe 전체가 다시 mount된다. 따라서
+기존 설계의 직접 원인 설명과 acceptance criterion 21은 실제 Browser 동작을 충분히
+보장하지 못했다.
+
+이번 보정은 같은 read model을 두 개의 렌더 surface로 나눈다.
+
+- `context` surface: 검증 대상 후보, 후보 목록, 검증 관점. replay fragment 밖에
+  두어 최신 재검증 중에도 mount와 사용자 위치를 유지한다.
+- `decision` surface: 최신 데이터 재검증, 결과 해석, Level2 해결/Final Review
+  handoff, 저장. 별도 fragment 안에서만 다시 projection한다.
+- 후보/검증 관점 변경은 전체 workspace context가 바뀌는 동작이므로 app rerun을
+  허용한다. 최신 재검증과 Level2 해결 action은 하단 fragment rerun만 사용한다.
+- 두 surface는 동일 React bundle, 동일 Python read model, 동일 visual language를
+  사용한다. React는 `surface`에 따라 presentation과 intent만 노출하며 Gate, replay,
+  handler 검증, 저장은 계속 Python이 소유한다.
+- React 미가용 fallback도 context와 decision 영역을 같은 경계로 나눈다.
+- action allow-list를 surface별로 제한해 stale/cross-surface intent가 다른 영역의
+  handler를 실행하지 못하게 한다.
+
+재검증 notice와 pending/완료 상태는 decision surface가 소유한다. 상단 context는
+하단 계산 중 숨기거나 skeleton으로 바꾸지 않는다. 두 iframe의 외곽은 연결된 한
+workspace처럼 보이게 하되 실제 mount 경계는 분리한다.
+
+### Superseding acceptance criteria
+
+29. replay click 뒤 `context` component instance는 fragment rerun 대상이 아니며
+    DOM에서 unmount되지 않는다.
+30. replay event는 `decision` fragment만 새 projection으로 교체하고 후보/검증 관점
+    카드의 선택 상태와 스크롤 context를 유지한다.
+31. `context` surface는 source/profile intent만, `decision` surface는 replay/
+    resolution/save intent만 처리한다.
+32. desktop과 760px에서 두 surface가 하나의 연속된 workspace로 읽히고 iframe
+    seam, 중복 heading, outer/component overflow가 없다.

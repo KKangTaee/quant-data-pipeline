@@ -3124,3 +3124,52 @@ append-only registry 계약은 유지한다.
 - [x] Confirm registry, run history, saved JSONL, screenshots, `.superpowers/`, and
   run artifacts are absent from staged files.
 - [x] Commit `Practical Validation 인계 UX QA와 문서 동기화`.
+
+---
+
+## Approved Stable Context / Refresh Surface Execution
+
+2026-07-17 사용자 재확인으로 Task 13의 callback-only 보정이 실제 iframe
+unmount를 막지 못한 것을 확인했다. 기존 task와 branch에서 아래 Task 17~18을
+이어 실행한다.
+
+### Task 17: Stable Context / Decision Fragment Boundary
+
+**Files:**
+- Modify: `app/web/backtest_practical_validation/page.py`
+- Modify: `app/web/backtest_practical_validation/workspace_panel.py`
+- Modify: `app/web/components/practical_validation_decision_workspace/component.py`
+- Modify: Practical Validation React `src/` files
+- Modify: `tests/test_backtest_practical_validation_decision_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: focused visual contract tests where needed
+
+**Interfaces:**
+- `render_practical_validation_decision_workspace(..., surface="context" | "decision")`
+- context surface owns source/profile intent outside replay fragment
+- decision surface owns replay/resolution/save intent inside replay fragment
+- Python callback consumer validates a per-surface action allow-list
+
+- [ ] Add RED wrapper/React tests proving the explicit context/decision surface contract.
+- [ ] Add RED page boundary tests proving context render is outside the decision fragment.
+- [ ] Add RED callback tests rejecting cross-surface replay/profile intents.
+- [ ] Implement the two render boundaries without changing replay, Gate, or persistence truth.
+- [ ] Keep Python fallback aligned with the same two surfaces.
+- [ ] Run focused tests, Practical React production build, target py_compile, diff-check.
+- [ ] Commit `Practical Validation 재검증 렌더 경계 분리`.
+
+### Task 18: Runtime QA, Documentation, And Closeout
+
+**Files:**
+- Modify canonical Backtest architecture / flow docs only where behavior changed.
+- Modify active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
+- Modify root handoff logs.
+
+- [ ] Restart only this worktree's Streamlit server when the current build is stale.
+- [ ] Browser QA desktop and 760px: replay click, stable upper context, lower pending/result
+  replacement, scroll preservation, iframe seam, overflow, console error.
+- [ ] Capture generated screenshots and keep them unstaged.
+- [ ] Run fresh focused/completion suites, React build, py_compile, diff-check.
+- [ ] Synchronize canonical docs, active task, and root handoff logs.
+- [ ] Confirm protected registry/run-history/saved/artifact files are not staged or committed.
+- [ ] Commit `Practical Validation 재검증 경계 QA와 문서 동기화`.
