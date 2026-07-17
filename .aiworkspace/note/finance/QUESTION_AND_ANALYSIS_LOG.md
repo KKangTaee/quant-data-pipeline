@@ -18,7 +18,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - [Phase 13 First-Cycle Hardening Closeout](./phases/done/phase13-hardening-cycle-closeout.md)
 - current candidate summary:
   - Current active task is none.
-  - Latest completed task is [overview-economic-cycle-asset-signal-copy-v1-20260717](./tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/STATUS.md). 경제 전체 국면과 자산별 상태를 분리하고 미국 경기 신호·실제 가격·관계를 사용자 언어로 읽는 `3/3` 개선을 완료했다.
+  - Latest completed task is [overview-economic-cycle-asset-pathways-stages3-5-v1-20260717](./tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/STATUS.md). 채권·금리, S&P 500, WTI·구리·금의 측정 경로와 공통 관측 UI를 연결해 전체 자산경로 roadmap `5/5`를 완료했다.
+  - Previous completed task is [overview-economic-cycle-multichannel-asset-interpretation-v1-20260717](./tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/STATUS.md). 공통 판정기와 금·달러 파일럿에서 비인과적 `economic_cycle_v2` 계약을 확립했다.
   - Previous completed task is [overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717](./tasks/active/overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717/STATUS.md). 금·달러를 분리하고 저장 가격의 1주·1개월·3개월 흐름을 경제 배경과 독립 판정하는 `3/3` 개선을 완료했다.
   - Previous completed task is [overview-economic-cycle-asset-context-v1-20260716](./tasks/active/overview-economic-cycle-asset-context-v1-20260716/STATUS.md). 경제사이클 evidence를 자산별 우호/부담/혼재/자료 부족과 두 근거/변경 조건으로 번역하는 `2/2` 개선을 완료했다.
   - Previous completed task is [overview-market-context-economic-cycle-provisional-hybrid-v2-20260716](./tasks/active/overview-market-context-economic-cycle-provisional-hybrid-v2-20260716/STATUS.md). 계산 결과와 검증 상태를 분리하고 2×2 혼합형·actual 잠정 확률·Browser QA를 `5/5` 완료했다.
@@ -51,6 +52,13 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Entries
 
 > Track: Overview / Market Context. Entries in this track are newest-first.
+
+### 2026-07-17 - 자산군은 공통 설명 틀 안에서 서로 다른 측정 빈도와 경로를 유지한다
+
+- User request: 금·달러 파일럿 다음 단계로 채권은 2년·10년 금리구조, 주식은 S&P 500 단일 대표지수, 원자재는 WTI·구리·금 3개만 사용해 3·4·5차 개발을 승인함.
+- Interpreted goal: 미국 경제상태를 자산가격의 정답으로 두지 않고 각 자산의 실제 움직임, 함께 관찰된 경로, 현재 해석, 다음 확인 조건을 측정 가능한 데이터만으로 읽게 한다.
+- Analysis result: daily 가격·금리는 5/21/63거래일, EIA weekly는 최근 4주·전년 대비, actual EPS는 완료 분기 TTM 전년 대비로 분리한다. actual EPS 부재·해외 상대금리 미연결·구리 미국 활동 한정은 자산 전체 실패가 아니라 개별 `PARTIAL/UNAVAILABLE` 경로다.
+- Follow-up: 전체 roadmap `5/5`, actual data 적재, focused `104 passed`, TypeScript/build, desktop/mobile Browser QA를 완료했다. 가격 원인·확률·매매 신호는 추가하지 않았다.
 
 ### 2026-07-17 - 경제 전체 국면과 자산별 신호·가격 관계를 분리한다
 

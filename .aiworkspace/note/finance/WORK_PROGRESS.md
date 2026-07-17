@@ -6368,3 +6368,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - FRED 5개 경로 시계열 6,698행을 저장했다. Actual은 금 `SUFFICIENT`, 달러 `PARTIAL`이며 가격 원인·확률·매매 결론은 만들지 않는다.
 - Focused 48 tests, compile, React build, actual smoke, desktop/420px Browser QA를 통과했다. 상세는 `tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/`를 본다.
 - 3차 채권·금리, 4차 주식, 5차 원자재는 자체 데이터 경로를 별도 승인한 뒤 이어간다.
+
+## 2026-07-17 - 경제사이클 자산 경로 3·4·5차 완료
+
+- 채권·금리는 2년·10년·10년-2년 구조와 실질금리·기대인플레이션, 주식은 `^GSPC`와 실질금리·신용·VIX·actual EPS, 원자재는 WTI·EIA 수급·구리·달러·미국 활동·금을 연결했다.
+- T10YIE·EIA 3계열 `8,049` rows, S&P 가격 `5,026` rows, futures 4종 `10,055` rows를 actual DB에 적재했다. 실제 S&P EPS 완료 분기는 없어 해당 경로만 자료 부족으로 유지했다.
+- 공통 관측 UI, desktop 2열/mobile 1열, hover/focus 상세와 채권 내부 1열 지표 목록을 확인했다. Focused `104 passed`, TypeScript와 React production build를 통과했다.
+- 전체 자산경로 roadmap은 `5/5` 완료다. 해외 상대금리와 승인된 글로벌 구리 활동지표는 후속 범위다.

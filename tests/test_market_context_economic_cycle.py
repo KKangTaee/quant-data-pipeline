@@ -305,6 +305,7 @@ def test_economic_cycle_asset_ui_uses_observation_sections_without_left_rails() 
     observation_style = style[observation_start : observation_start + 900]
     assert "border-left" not in observation_style
     assert "background: #f7fafb" in observation_style
+    assert ".implication-card .movement-grid { grid-template-columns: 1fr; }" in style
 
 
 def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> None:

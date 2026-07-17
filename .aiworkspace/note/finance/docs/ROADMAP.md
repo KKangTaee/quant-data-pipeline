@@ -9,14 +9,16 @@ Last Verified: 2026-07-17
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-pathways-stages3-5-v1-20260717/`다.
 
-- 목적: 미국 경제상태를 자산가격의 기준 방향으로 두던 단정적 `우호/부담`, `배경과 가격 일치/불일치`를 측정 가능한 복수 시장경로 설명으로 교체한다.
-- 완료: 전체 5차 중 1차 공통 5/21/63거래일 변화·5년 중요도·최신성 판정기와 2차 금·달러 파일럿·`economic_cycle_v2`·흰색 경로 카드·actual/desktop/420px QA를 닫았다.
-- actual 상태: 2026-07-17 기준 금은 `SUFFICIENT`이며 실질금리 경로가 하락 요인, 실제 가격은 21/63거래일 하락이다. 달러는 해외 상대금리 부재로 `PARTIAL`이며 실질금리 경로가 상승 요인, 실제 가격은 materiality 기준 중립이다.
-- 품질 경계: 함께 관측된 경로를 원인·확률·가격예측으로 표현하지 않는다. 공식기관/ETF 수급과 뉴스·지정학은 현재 범위 밖이며 UI는 DB-only다.
-- 후속: 3차 채권·금리, 4차 주식, 5차 원자재는 각각 자산 내부 데이터 경로를 별도 승인한 뒤 구현한다.
-- 상세 설계·계획: `docs/superpowers/specs/2026-07-17-economic-cycle-multichannel-asset-interpretation-design.md`, `docs/superpowers/plans/2026-07-17-economic-cycle-multichannel-asset-interpretation.md`.
+- 목적: 승인된 3차 채권·금리, 4차 S&P 500, 5차 WTI·구리·금 경로를 같은 측정 계약과 공통 UI로 완성한다.
+- 완료: 전체 자산경로 roadmap `5/5`를 닫았다. FRED 금리구조·기대인플레이션, EIA weekly 수급, `^GSPC`, CL/HG/GC/DX 저장 가격과 엄격한 actual EPS reader를 DB-only로 연결했다.
+- actual 상태: 채권·금리와 금은 `SUFFICIENT`, S&P 500·달러·원자재는 `PARTIAL`이다. S&P actual EPS 완료 분기 부재, 달러 해외 상대금리 미연결, 구리 미국 활동지표 한정이 각각의 visible coverage 이유다.
+- 품질 경계: daily·weekly·quarterly 지평을 혼합하지 않고 함께 관찰된 값을 원인·확률·가격예측으로 표현하지 않는다. 경제사이클 publication status와 자산 coverage는 별도이며 UI는 DB-only다.
+- 검증: focused `104 passed`, TypeScript, React production build, actual desktop/mobile Browser QA를 통과했다.
+- 상세 설계·계획: `docs/superpowers/specs/2026-07-17-economic-cycle-rates-equities-commodities-pathways-design.md`, `docs/superpowers/plans/2026-07-17-economic-cycle-rates-equities-commodities-pathways.md`.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/`다.
 
 Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/`다.
 

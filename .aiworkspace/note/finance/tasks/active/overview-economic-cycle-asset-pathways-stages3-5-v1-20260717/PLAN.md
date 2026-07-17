@@ -14,3 +14,10 @@
 ## Stop Condition
 
 3·4·5차가 `PATHWAYS_NOT_CONNECTED` 없이 실제 저장 데이터를 표시하고, 인과·확률·매매 문구 없이 focused tests·React build·browser QA를 통과하면 종료한다.
+
+## Completion
+
+- 3차 채권·금리 구조: 완료
+- 4차 S&P 500 단일 대표지수: 완료
+- 5차 WTI·구리·금: 완료
+- 실제 데이터 적재·desktop/mobile Browser QA·문서 동기화: 완료

@@ -221,6 +221,7 @@ button, input, summary { font: inherit; }
 .observation-block ul { display: grid; gap: 6px; margin: 0; padding-left: 17px; color: #587082; }
 .observation-block li { font-size: 9px; line-height: 1.55; }
 .movement-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.implication-card .movement-grid { grid-template-columns: 1fr; }
 .movement-item { display: grid; min-width: 0; gap: 7px; padding: 10px; border: 1px solid #e1e8ec; border-radius: 10px; background: #fff; }
 .movement-item > header { display: flex; justify-content: space-between; gap: 8px; color: #385468; font-size: 9px; }
 .observed-pathways-block .pathway-item > p { color: #617585; font-size: 9px; line-height: 1.5; }
