@@ -33,3 +33,10 @@
 - GREEN: `3 passed`
 - compile: strategy catalog / decision workspace service 통과
 - `git diff --check`: 통과
+
+## 2026-07-18 Task 2 RED -> GREEN
+
+- RED: readiness projection / root dedup import 부재로 collection 실패
+- GREEN focused: `6 passed`
+- existing handoff regression: `3 passed, 829 deselected`
+- target compile / `git diff --check`: 통과

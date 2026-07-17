@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from app.services.backtest_analysis_decision_workspace import (
+    _deduplicate_reasons,
     build_level1_configuration_fingerprint,
+    build_level1_readiness_projection,
     build_level1_strategy_catalog,
     level1_strategy_maturity,
 )
@@ -49,3 +51,51 @@ def test_configuration_fingerprint_is_order_independent_and_sensitive() -> None:
 
     assert left == reordered
     assert left != changed
+
+
+def test_stale_result_is_preserved_and_handoff_blocked() -> None:
+    projection = build_level1_readiness_projection(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle={"meta": {"strategy_key": "gtaa"}},
+        current_configuration_fingerprint="current",
+        result_configuration_fingerprint="previous",
+        action_handlers={"save_and_move": lambda: None},
+    )
+
+    assert projection["result_freshness"] == "stale"
+    assert projection["handoff_state"] == "blocked"
+    assert projection["result_available"] is True
+
+
+def test_development_or_missing_handler_has_no_cta() -> None:
+    development = build_level1_readiness_projection(
+        workspace_kind="single_strategy",
+        strategy_choice="Risk-On Momentum 5D",
+        result_bundle={"meta": {"strategy_key": "risk_on_momentum_5d"}},
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        action_handlers={"save_and_move": lambda: None},
+    )
+    missing = build_level1_readiness_projection(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle={"meta": {"strategy_key": "gtaa"}},
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        action_handlers={"save_and_move": None},
+    )
+
+    assert "save_and_move" not in development["actions"]
+    assert "save_and_move" not in missing["actions"]
+
+
+def test_duplicate_root_reason_is_counted_once() -> None:
+    rows = _deduplicate_reasons(
+        [
+            {"root_issue_id": "price", "message": "가격 확인"},
+            {"root_issue_id": "price", "message": "가격 확인"},
+        ]
+    )
+
+    assert rows == [{"root_issue_id": "price", "message": "가격 확인"}]

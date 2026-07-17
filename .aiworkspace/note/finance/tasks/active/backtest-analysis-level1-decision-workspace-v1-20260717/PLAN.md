@@ -226,7 +226,7 @@ git commit -m "Backtest Analysis 전략 분류와 설정 지문 계약 추가"
 - Consumes: `build_next_step_readiness_evaluation()`, `build_handoff_gate_summary()`, fingerprints, action handler mapping.
 - Produces: `build_level1_readiness_projection()`, `_deduplicate_reasons()`.
 
-- [ ] **Step 1: Write failing truth tests**
+- [x] **Step 1: Write failing truth tests**
 
 ```python
 def test_stale_result_is_preserved_and_handoff_blocked() -> None:
@@ -267,13 +267,13 @@ def test_duplicate_root_reason_is_counted_once() -> None:
     assert rows == [{"root_issue_id": "price", "message": "가격 확인"}]
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py -q`
 
 Expected: failures because readiness and dedup functions do not exist.
 
-- [ ] **Step 3: Implement readiness truth**
+- [x] **Step 3: Implement readiness truth**
 
 ```python
 from app.services.backtest_handoff_readiness import build_handoff_gate_summary, build_next_step_readiness_evaluation
@@ -312,7 +312,7 @@ def build_level1_readiness_projection(
     }
 ```
 
-- [ ] **Step 4: Run GREEN and existing handoff regression**
+- [x] **Step 4: Run GREEN and existing handoff regression**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
@@ -321,7 +321,7 @@ def build_level1_readiness_projection(
 
 Expected: all new tests and selected existing tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/services/backtest_analysis_decision_workspace.py tests/test_backtest_analysis_decision_workspace.py
