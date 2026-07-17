@@ -75,3 +75,12 @@
 - React production build: Vite 5.4.21, 175 modules transformed, 성공
 - target py_compile / `git diff --check`: 통과
 - stale 결과는 삭제·숨김 없이 참고용 상세 근거로 유지하고 Level2 인계만 차단
+
+## 2026-07-18 Task 7 RED -> GREEN
+
+- RED: pure Mix role / weight, legacy role inference, Mix read-model 계약 3건 실패
+- GREEN pure contract: `3 passed`
+- Mix / saved portfolio 관련 회귀: `12 passed, 837 deselected`
+- web-owned weighted Mix Gate를 pure service로 이동하고 직접 caller를 public API로 전환
+- weighted bundle / saved replay에 component roles를 추가하되 legacy role-less record는 추론으로 호환
+- target py_compile / `git diff --check`: 통과

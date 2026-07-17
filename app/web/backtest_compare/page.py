@@ -3,7 +3,10 @@ from __future__ import annotations
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
 from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation
-from app.services.backtest_portfolio_mix_readiness import weighted_strategy_role_flags
+from app.services.backtest_portfolio_mix_readiness import (
+    build_weighted_mix_candidate_readiness_evaluation,
+    weighted_strategy_role_flags,
+)
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
 from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_record
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
@@ -850,226 +853,6 @@ def _build_saved_mix_validation_evaluation(
         "requested_end": requested_end,
         "shortened_days": shortened_days,
         "cadence_alignments": cadence_alignments,
-    }
-
-# Evaluate the just-built weighted mix as one first-stage candidate. Component
-# comparisons remain evidence for choosing weights; only the mix candidate is
-# handed off from Portfolio Mix Builder.
-def _build_weighted_mix_candidate_readiness_evaluation(
-    weighted_bundle: dict[str, Any] | None,
-    bundles: list[dict[str, Any]] | None,
-) -> dict[str, Any]:
-    component_bundles = list(bundles or [])
-    replay_ready = (
-        isinstance(weighted_bundle, dict)
-        and isinstance(weighted_bundle.get("summary_df"), pd.DataFrame)
-        and not weighted_bundle["summary_df"].empty
-        and isinstance(weighted_bundle.get("result_df"), pd.DataFrame)
-        and not weighted_bundle["result_df"].empty
-    )
-    component_names = list((weighted_bundle or {}).get("component_strategy_names") or [])
-    input_weights = [
-        float(weight)
-        for weight in list((weighted_bundle or {}).get("component_input_weights") or [])
-        if weight is not None
-    ]
-    if not input_weights:
-        input_weights = [
-            round(float(weight) * 100.0, 4)
-            for weight in list((weighted_bundle or {}).get("component_weights") or [])
-            if weight is not None
-        ]
-    target_weight_total = round(sum(input_weights), 4)
-    positive_weight_count = sum(1 for weight in input_weights if float(weight) > 0.0)
-    date_policy = str((weighted_bundle or {}).get("date_policy") or dict((weighted_bundle or {}).get("meta") or {}).get("date_policy") or "-")
-
-    replay_score = 2.0 if replay_ready else 0.0
-    replay_status = "PASS" if replay_ready else "FAIL"
-    replay_judgment = "weighted mix result가 생성됨" if replay_ready else "weighted mix result를 먼저 생성해야 함"
-
-    if abs(target_weight_total - 100.0) <= 0.01 and positive_weight_count >= 2:
-        weight_status = "PASS"
-        weight_score = 2.0
-        weight_judgment = "2개 이상 구성 전략의 target weight 합계가 100%"
-    elif abs(target_weight_total - 100.0) <= 0.01:
-        weight_status = "FAIL"
-        weight_score = 0.0
-        weight_judgment = "positive weight가 1개뿐이면 mix 후보가 아니라 단일 후보에 가까움"
-    elif positive_weight_count >= 2:
-        weight_status = "FAIL"
-        weight_score = 0.0
-        weight_judgment = "positive weight는 2개 이상이지만 target weight 합계가 100%가 아님"
-    else:
-        weight_status = "FAIL"
-        weight_score = 0.0
-        weight_judgment = "2개 이상 구성 전략과 100% target weight가 필요함"
-
-    data_rows = list((weighted_bundle or {}).get("component_data_trust_rows") or [])
-    component_data_assessments = [_build_compare_data_trust_assessment(bundle) for bundle in component_bundles]
-    cadence_alignments = [
-        dict(assessment.get("cadence_alignment") or {})
-        for assessment in component_data_assessments
-        if assessment.get("cadence_alignment")
-    ]
-    has_component_error = any(
-        str(row.get("Price Freshness") or "").strip().lower() == "error"
-        for row in data_rows
-    ) or any(str(assessment.get("gate_status") or "").strip().lower() == "blocked" for assessment in component_data_assessments)
-    has_component_review = any(
-        str(row.get("Interpretation") or "").strip() not in {"", "-", "눈에 띄는 데이터 이슈 없음"}
-        or _safe_int_value(row.get("Warnings")) > 0
-        or _safe_int_value(row.get("Excluded Tickers")) > 0
-        or _safe_int_value(row.get("Malformed Tickers")) > 0
-        for row in data_rows
-    ) or any(str(assessment.get("gate_status") or "").strip().lower() == "warning" for assessment in component_data_assessments)
-    if not replay_ready:
-        data_status = "FAIL"
-        data_score = 0.0
-        data_judgment = "mix result가 없어 component data trust를 확정할 수 없음"
-    elif has_component_error:
-        data_status = "FAIL"
-        data_score = 0.0
-        data_judgment = "구성 전략 데이터에 hard blocker가 있음"
-    elif cadence_alignments:
-        data_status = "CADENCE ALIGNED"
-        data_score = 1.5
-        data_judgment = "구성 전략 종료일 차이 중 정상 cadence로 보이는 항목이 있음"
-    elif has_component_review:
-        data_status = "REVIEW"
-        data_score = 1.0
-        data_judgment = "구성 전략 데이터 warning / 제외 ticker / 기간 확인 필요"
-    else:
-        data_status = "PASS"
-        data_score = 2.0
-        data_judgment = "구성 전략 data trust가 mix 생성을 막지 않음"
-
-    component_readiness_rows: list[dict[str, Any]] = []
-    component_blockers: list[str] = []
-    component_reviews: list[str] = []
-    component_scores: list[float] = []
-    for bundle in component_bundles:
-        strategy_name = str(bundle.get("strategy_name") or dict(bundle.get("meta") or {}).get("strategy_name") or "-")
-        meta = dict(bundle.get("meta") or {})
-        readiness = build_next_step_readiness_evaluation(meta)
-        component_scores.append(float(readiness.get("score") or 0.0))
-        if not bool(readiness.get("can_move_to_compare")):
-            component_blockers.extend(f"{strategy_name}: {reason}" for reason in readiness.get("blocking_reasons") or [])
-        component_reviews.extend(f"{strategy_name}: {reason}" for reason in readiness.get("review_reasons") or [])
-        component_readiness_rows.append(
-            {
-                "Component": strategy_name,
-                "Promotion": meta.get("promotion_decision") or "-",
-                "Readiness": readiness.get("verdict") or "-",
-                "Score": readiness.get("score"),
-                "Blockers": len(readiness.get("blocking_reasons") or []),
-                "Review": len(readiness.get("review_reasons") or []),
-            }
-        )
-    if not component_bundles:
-        component_status = "FAIL"
-        component_score = 0.0
-        component_judgment = "구성 전략 실행 결과가 없음"
-    elif component_blockers:
-        component_status = "FAIL"
-        component_score = 0.0
-        component_judgment = "구성 전략 중 1차 후보 blocker가 있음"
-    elif component_reviews:
-        component_status = "REVIEW"
-        component_score = min(4.0, round((sum(component_scores) / max(len(component_scores), 1)) / 10.0 * 4.0, 1))
-        component_judgment = "구성 전략은 이동 가능하지만 review 항목이 있음"
-    else:
-        component_status = "PASS"
-        component_score = 4.0
-        component_judgment = "구성 전략 1차 후보 판단이 mix handoff를 막지 않음"
-
-    score = round(replay_score + weight_score + data_score + component_score, 1)
-    hard_blocked = (
-        replay_status == "FAIL"
-        or weight_status == "FAIL"
-        or data_status == "FAIL"
-        or component_status == "FAIL"
-    )
-    can_send = not hard_blocked
-    if can_send and score >= 8.0 and data_status == "PASS" and weight_status == "PASS" and component_status == "PASS":
-        stage_status = "PASS"
-        verdict = "PASS: mix 후보를 Practical Validation으로 보낼 수 있습니다."
-        tone = "success"
-        next_action = "mix 전체를 2차 실전성 검증 source로 등록합니다."
-    elif can_send:
-        stage_status = "CONDITIONAL"
-        verdict = "CONDITIONAL: review 항목을 남기고 Practical Validation으로 보낼 수 있습니다."
-        tone = "warning"
-        next_action = "Practical Validation에서 component warning과 weight / data trust 확인을 이어갑니다."
-    else:
-        stage_status = "HOLD"
-        verdict = "HOLD: mix 후보를 보내기 전에 blocker를 해결해야 합니다."
-        tone = "error"
-        next_action = "weight 합계, component promotion, data trust blocker를 먼저 정리합니다."
-
-    blocking_reasons: list[str] = []
-    if replay_status == "FAIL":
-        blocking_reasons.append(replay_judgment)
-    if weight_status == "FAIL":
-        blocking_reasons.append(weight_judgment)
-    if data_status == "FAIL":
-        blocking_reasons.append(data_judgment)
-    blocking_reasons.extend(component_blockers)
-
-    review_reasons: list[str] = []
-    if weight_status == "REVIEW":
-        review_reasons.append(weight_judgment)
-    if data_status in {"REVIEW", "CADENCE ALIGNED"}:
-        review_reasons.append(data_judgment)
-    review_reasons.extend(component_reviews)
-
-    criteria_rows = [
-        {
-            "기준": "Mix Result",
-            "상태": replay_status,
-            "현재 값": "created" if replay_ready else "missing",
-            "점수": f"{replay_score:g} / 2",
-            "판단": replay_judgment,
-        },
-        {
-            "기준": "Weight Discipline",
-            "상태": weight_status,
-            "현재 값": f"{target_weight_total:.1f}% / positive {positive_weight_count}",
-            "점수": f"{weight_score:g} / 2",
-            "판단": weight_judgment,
-        },
-        {
-            "기준": "Component Data Trust",
-            "상태": data_status,
-            "현재 값": f"{len(data_rows)}개 component row",
-            "점수": f"{data_score:g} / 2",
-            "판단": data_judgment,
-        },
-        {
-            "기준": "Component 1차 후보 판단",
-            "상태": component_status,
-            "현재 값": f"{len(component_bundles)}개 component",
-            "점수": f"{component_score:g} / 4",
-            "판단": component_judgment,
-        },
-    ]
-
-    return {
-        "score": score,
-        "stage_status": stage_status,
-        "verdict": verdict,
-        "tone": tone,
-        "next_action": next_action,
-        "can_send_to_practical_validation": can_send,
-        "component_count": len(component_names),
-        "target_weight_total": target_weight_total,
-        "positive_weight_count": positive_weight_count,
-        "date_policy": date_policy,
-        "criteria_rows": criteria_rows,
-        "component_readiness_rows": component_readiness_rows,
-        "data_rows": data_rows,
-        "cadence_alignments": cadence_alignments,
-        "blocking_reasons": blocking_reasons,
-        "review_reasons": review_reasons,
     }
 
 # Extract the replay period from a result bundle so a saved mix proposal can
@@ -2653,7 +2436,10 @@ def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[
     if not compare_bundles or not weighted_bundle:
         return
 
-    evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, compare_bundles)
+    evaluation = build_weighted_mix_candidate_readiness_evaluation(
+        weighted_bundle,
+        compare_bundles,
+    )
     target_weight_total = float(evaluation.get("target_weight_total") or 0.0)
     date_policy = str(evaluation.get("date_policy") or "-")
     can_send = bool(evaluation.get("can_send_to_practical_validation"))
@@ -4296,7 +4082,7 @@ def _render_strategy_compare_workspace() -> None:
     current_can_send: bool | None = None
     if current_mix_ready:
         current_can_send = bool(
-            _build_weighted_mix_candidate_readiness_evaluation(
+            build_weighted_mix_candidate_readiness_evaluation(
                 current_weighted_bundle,
                 list(st.session_state.get("backtest_compare_bundles") or []),
             ).get("can_send_to_practical_validation")

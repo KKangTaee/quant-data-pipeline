@@ -15290,7 +15290,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("backtest-result-hero__chips", header_body)
 
     def test_portfolio_mix_candidate_gate_allows_ready_mix(self) -> None:
-        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
 
         def _bundle(strategy_name: str) -> dict:
             return {
@@ -15334,7 +15336,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "date_policy": "intersection",
         }
 
-        evaluation = _build_weighted_mix_candidate_readiness_evaluation(
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
+
+        evaluation = build_weighted_mix_candidate_readiness_evaluation(
             weighted_bundle,
             [_bundle("GTAA"), _bundle("Equal Weight")],
         )
@@ -15346,7 +15352,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["Component 1차 후보 판단"]["상태"], "PASS")
 
     def test_portfolio_mix_candidate_gate_blocks_hold_component(self) -> None:
-        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
 
         ready_meta = {
             "end": "2025-12-31",
@@ -15387,7 +15395,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "date_policy": "intersection",
         }
 
-        evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, bundles)
+        evaluation = build_weighted_mix_candidate_readiness_evaluation(
+            weighted_bundle,
+            bundles,
+        )
 
         self.assertFalse(evaluation["can_send_to_practical_validation"])
         self.assertEqual(evaluation["stage_status"], "HOLD")
@@ -15396,7 +15407,9 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertEqual(criteria["Component 1차 후보 판단"]["상태"], "FAIL")
 
     def test_portfolio_mix_candidate_gate_blocks_non_100_weight_total(self) -> None:
-        from app.web.backtest_compare import _build_weighted_mix_candidate_readiness_evaluation
+        from app.services.backtest_portfolio_mix_readiness import (
+            build_weighted_mix_candidate_readiness_evaluation,
+        )
 
         meta = {
             "end": "2025-12-31",
@@ -15432,7 +15445,10 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             "date_policy": "intersection",
         }
 
-        evaluation = _build_weighted_mix_candidate_readiness_evaluation(weighted_bundle, bundles)
+        evaluation = build_weighted_mix_candidate_readiness_evaluation(
+            weighted_bundle,
+            bundles,
+        )
 
         self.assertFalse(evaluation["can_send_to_practical_validation"])
         criteria = {row["기준"]: row for row in evaluation["criteria_rows"]}

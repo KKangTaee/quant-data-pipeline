@@ -15,6 +15,10 @@ from app.services.backtest_handoff_readiness import (
     build_handoff_gate_summary,
     build_next_step_readiness_evaluation,
 )
+from app.services.backtest_portfolio_mix_readiness import (
+    build_mix_role_weight_rows,
+    build_weighted_mix_candidate_readiness_evaluation,
+)
 
 
 BACKTEST_ANALYSIS_DECISION_WORKSPACE_SCHEMA_VERSION = (
@@ -129,6 +133,7 @@ def build_level1_readiness_projection(
     current_configuration_fingerprint: str,
     result_configuration_fingerprint: str | None,
     action_handlers: Mapping[str, Callable[..., Any] | None],
+    component_bundles: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Project existing handoff truth together with result freshness and handlers."""
 
@@ -146,10 +151,17 @@ def build_level1_readiness_projection(
         else "production"
     )
     meta = dict((result_bundle or {}).get("meta") or {})
-    evaluation = (
-        build_next_step_readiness_evaluation(meta) if result_available else {}
-    )
-    can_enter = bool(evaluation.get("can_enter_practical_validation"))
+    if workspace_kind == "portfolio_mix":
+        evaluation = build_weighted_mix_candidate_readiness_evaluation(
+            result_bundle,
+            [dict(bundle) for bundle in component_bundles],
+        )
+        can_enter = bool(evaluation.get("can_send_to_practical_validation"))
+    else:
+        evaluation = (
+            build_next_step_readiness_evaluation(meta) if result_available else {}
+        )
+        can_enter = bool(evaluation.get("can_enter_practical_validation"))
     handoff_state = (
         "ready"
         if (
@@ -177,7 +189,11 @@ def build_level1_readiness_projection(
         "actions": actions,
         "evaluation": evaluation,
         "gate_summary": (
-            build_handoff_gate_summary(meta) if result_available else {}
+            evaluation
+            if workspace_kind == "portfolio_mix"
+            else build_handoff_gate_summary(meta)
+            if result_available
+            else {}
         ),
     }
 
@@ -247,6 +263,7 @@ def build_backtest_analysis_decision_workspace(
         current_configuration_fingerprint=fingerprint,
         result_configuration_fingerprint=result_configuration_fingerprint,
         action_handlers=action_handlers,
+        component_bundles=component_bundles,
     )
     meta = dict((result_bundle or {}).get("meta") or {})
     phase = (
@@ -288,7 +305,7 @@ def build_backtest_analysis_decision_workspace(
         "metrics": _metric_items((result_bundle or {}).get("summary_df")),
         "result_available": readiness["result_available"],
     }
-    return {
+    workspace = {
         "schema_version": BACKTEST_ANALYSIS_DECISION_WORKSPACE_SCHEMA_VERSION,
         "workspace_id": fingerprint[:16],
         "workspace_kind": workspace_kind,
@@ -319,6 +336,28 @@ def build_backtest_analysis_decision_workspace(
             "python_validates_intent": True,
         },
     }
+    if workspace_kind == "portfolio_mix":
+        strategy_names = [
+            str(name) for name in list(configuration.get("strategy_names") or [])
+        ]
+        weights_percent = [
+            float(weight)
+            for weight in list(configuration.get("weights_percent") or [])
+        ]
+        component_roles = [
+            str(role)
+            for role in list(configuration.get("component_roles") or [])
+        ]
+        workspace["mix"] = {
+            "role_weight_rows": build_mix_role_weight_rows(
+                strategy_names=strategy_names,
+                weights_percent=weights_percent,
+                component_roles=component_roles,
+            ),
+            "total_weight_percent": round(sum(weights_percent), 4),
+            "saved_entry_mode": str(selection.get("mix_mode") or "new"),
+        }
+    return workspace
 
 
 __all__ = [

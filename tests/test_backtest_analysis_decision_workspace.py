@@ -411,3 +411,58 @@ def test_save_and_move_intent_rejects_disabled_or_missing_result() -> None:
         )
 
     queue_draft.assert_not_called()
+
+
+def test_mix_roles_and_weights_are_python_owned() -> None:
+    from app.services.backtest_portfolio_mix_readiness import (
+        build_mix_role_weight_rows,
+    )
+
+    rows = build_mix_role_weight_rows(
+        strategy_names=[
+            "GTAA",
+            "Global Relative Strength",
+            "Risk Parity Trend",
+        ],
+        weights_percent=[45.0, 35.0, 20.0],
+        component_roles=["core", "growth", "defense"],
+    )
+
+    assert [row["role"] for row in rows] == ["core", "growth", "defense"]
+    assert sum(row["weight_percent"] for row in rows) == 100.0
+    assert all(row["valid"] for row in rows)
+
+
+def test_legacy_saved_mix_without_roles_uses_inferred_roles() -> None:
+    from app.services.backtest_saved_portfolio_replay import (
+        resolve_saved_mix_component_roles,
+    )
+
+    roles = resolve_saved_mix_component_roles(
+        {"portfolio_context": {}},
+        strategy_names=["GTAA", "Risk Parity Trend"],
+    )
+
+    assert roles == ["core", "defense"]
+
+
+def test_mix_workspace_uses_role_weight_projection() -> None:
+    workspace = build_backtest_analysis_decision_workspace(
+        workspace_kind="portfolio_mix",
+        selection={"mix_mode": "new"},
+        configuration={
+            "strategy_names": ["GTAA", "Risk Parity Trend"],
+            "weights_percent": [50.0, 50.0],
+            "component_roles": ["core", "defense"],
+        },
+        result_bundle=None,
+        result_configuration_fingerprint=None,
+        saved_mixes=[],
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={},
+        component_bundles=(),
+    )
+
+    assert workspace["mix"]["role_weight_rows"][0]["role_label"] == "Core"
+    assert workspace["mix"]["total_weight_percent"] == 100.0

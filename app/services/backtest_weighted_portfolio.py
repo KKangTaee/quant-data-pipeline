@@ -6,6 +6,7 @@ from app.services.backtest_result_read_model import (
     build_monthly_component_balance_views,
     build_strategy_data_trust_rows,
 )
+from app.services.backtest_portfolio_mix_readiness import infer_mix_role
 from app.runtime.backtest import build_backtest_result_bundle
 from finance.performance import make_monthly_weighted_portfolio
 
@@ -19,8 +20,12 @@ def build_weighted_portfolio_bundle(
     portfolio_id: str | None = None,
     source_kind: str = "weighted_builder",
     compare_source_context: dict[str, Any] | None = None,
+    component_roles: list[str] | None = None,
 ) -> dict[str, Any]:
     strategy_names = [bundle["strategy_name"] for bundle in bundles]
+    resolved_roles = [str(role) for role in list(component_roles or [])]
+    if len(resolved_roles) != len(strategy_names):
+        resolved_roles = [infer_mix_role(name) for name in strategy_names]
     total_weight = sum(float(weight) for weight in weights_percent)
     if total_weight <= 0:
         raise ValueError("At least one strategy weight must be greater than zero.")
@@ -64,6 +69,7 @@ def build_weighted_portfolio_bundle(
     weighted_bundle["component_input_weights"] = [float(weight) for weight in weights_percent]
     weighted_bundle["component_weights"] = normalized_weights
     weighted_bundle["component_strategy_names"] = strategy_names
+    weighted_bundle["component_roles"] = resolved_roles
     weighted_bundle["date_policy"] = date_policy
     weighted_bundle["meta"] = dict(weighted_bundle.get("meta") or {})
     weighted_bundle["meta"].update(
@@ -72,6 +78,7 @@ def build_weighted_portfolio_bundle(
             "portfolio_id": portfolio_id,
             "portfolio_source_kind": source_kind,
             "selected_strategies": strategy_names,
+            "component_roles": resolved_roles,
             "date_policy": date_policy,
             "input_weights_percent": [float(weight) for weight in weights_percent],
             "normalized_weights": normalized_weights,

@@ -973,7 +973,7 @@ git commit -m "Backtest Analysis 단일 전략 판단과 명시적 인계 연결
 - Consumes: web-owned `_build_weighted_mix_candidate_readiness_evaluation`, weighted inputs, legacy role-less saved records.
 - Produces: `build_weighted_mix_candidate_readiness_evaluation()`, `build_mix_role_weight_rows()`, `resolve_saved_mix_component_roles()`, optional persisted `component_roles`.
 
-- [ ] **Step 1: Write failing pure Mix tests**
+- [x] **Step 1: Write failing pure Mix tests**
 
 ```python
 def test_mix_roles_and_weights_are_python_owned() -> None:
@@ -1010,13 +1010,13 @@ def test_mix_workspace_uses_role_weight_projection() -> None:
     assert workspace["mix"]["role_weight_rows"][0]["role_label"] == "Core"
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_service_contracts.py -q -k "mix_roles or inferred_roles or role_weight_projection"`
 
 Expected: failures because pure role and readiness contracts do not exist.
 
-- [ ] **Step 3: Move Mix readiness into the service layer**
+- [x] **Step 3: Move Mix readiness into the service layer**
 
 Move the complete body of `_build_weighted_mix_candidate_readiness_evaluation` from `app/web/backtest_compare/page.py` to `app/services/backtest_portfolio_mix_readiness.py` as:
 
@@ -1029,7 +1029,7 @@ def build_weighted_mix_candidate_readiness_evaluation(
 
 Replace web call sites with this public import. Use a temporary compatibility alias only if `rg` shows a direct external import; delete the alias once tests confirm no caller needs it.
 
-- [ ] **Step 4: Implement role / weight truth**
+- [x] **Step 4: Implement role / weight truth**
 
 ```python
 MIX_ROLE_OPTIONS = ("core", "growth", "defense", "satellite")
@@ -1065,7 +1065,7 @@ def build_mix_role_weight_rows(
     ]
 ```
 
-- [ ] **Step 5: Persist roles without breaking saved records**
+- [x] **Step 5: Persist roles without breaking saved records**
 
 Add `component_roles: list[str] | None = None` to `build_weighted_portfolio_bundle`. Store supplied or inferred roles in `weighted_bundle["component_roles"]` and `weighted_bundle["meta"]["component_roles"]`.
 
@@ -1082,7 +1082,7 @@ def resolve_saved_mix_component_roles(record: dict[str, Any], *, strategy_names:
 
 Saved replay calls this helper and passes the list into the weighted builder. Do not reject legacy records.
 
-- [ ] **Step 6: Extend the Level1 read model for Mix**
+- [x] **Step 6: Extend the Level1 read model for Mix**
 
 For `workspace_kind == "portfolio_mix"`, add:
 
@@ -1102,7 +1102,7 @@ Use `build_weighted_mix_candidate_readiness_evaluation` for Mix handoff; do not 
 
 Call it with the stable optional `component_bundles` argument introduced in Task 3.
 
-- [ ] **Step 7: Run GREEN and commit**
+- [x] **Step 7: Run GREEN and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_service_contracts.py -q -k "weighted_mix or saved_portfolio_replay or mix_role"
