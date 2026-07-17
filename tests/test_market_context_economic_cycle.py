@@ -246,20 +246,18 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'evidence.group === "forecast_context"',
         'className="market-implications"',
         "자산별 확인 포인트",
-        "경제 배경과 실제 가격을 분리해 확인",
-        "미국 경기 신호와 시장 가격 비교",
-        "현재 환경:",
-        "미국 경기 신호",
-        "실제 가격",
-        "두 신호 관계",
+        "관측된 경제 상태",
+        "상승 요인이 될 수 있는 측정 경로",
+        "하락 요인이 될 수 있는 측정 경로",
+        "실제 가격 흐름",
+        "현재 데이터 범위 밖",
+        "데이터 범위",
         "1주(5거래일)",
         "1개월(21거래일)",
         "3개월(63거래일)",
-        'className="price-confirmation"',
-        'className="signal-comparison-grid"',
-        'className={`implication-status assessment-${item.assessment.toLowerCase()}`}',
-        'className="implication-drivers"',
-        "향후 확인 조건",
+        'className="pathway-group"',
+        'className="price-pathway"',
+        'className="pathway-details"',
         'className="regime-ribbon"',
         'className="nber-recession"',
         'className="limited-hatch"',
@@ -271,6 +269,38 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
 
     assert "경제 국면:" not in source
     assert "바뀌는 조건" not in source
+    assert "alignment" not in source
+    assert "assessment" not in source
+
+
+def _pathway_style_block(style: str) -> str:
+    start = style.index(".pathway-group")
+    end = style.index(".method-disclosure", start)
+    return style[start:end]
+
+
+def test_multichannel_asset_cards_use_approved_white_pathway_blocks() -> None:
+    source = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
+    ).read_text()
+    style = Path(
+        "app/web/streamlit_components/economic_cycle_workbench/src/style.css"
+    ).read_text()
+
+    for token in (
+        'schema_version: "economic_cycle_v2"',
+        "관측된 경제 상태",
+        "상승 요인이 될 수 있는 측정 경로",
+        "하락 요인이 될 수 있는 측정 경로",
+        "현재 데이터 범위 밖",
+        "21거래일",
+        "63거래일",
+    ):
+        assert token in source
+    pathway_style = _pathway_style_block(style)
+    assert "border-left" not in pathway_style
+    assert ".pathway-item" in pathway_style
+    assert "background: #fff" in pathway_style
 
 
 def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> None:

@@ -39,55 +39,80 @@ type Evidence = {
   source_basis?: string;
 };
 
-type AssetAssessment = "FAVORABLE" | "BURDEN" | "MIXED" | "INSUFFICIENT";
-type PriceStatus = "RISING" | "FALLING" | "MIXED" | "UNAVAILABLE";
-type AlignmentStatus = "ALIGNED" | "DIVERGENCE" | "MIXED" | "PRICE_PENDING";
+type PathwayStatus = "SUPPORTS_RISE" | "SUPPORTS_FALL" | "MIXED" | "NEUTRAL" | "UNAVAILABLE";
+type CoverageStatus = "SUFFICIENT" | "PARTIAL" | "INSUFFICIENT";
+type PriceStatus = "RISING" | "FALLING" | "MIXED" | "NEUTRAL" | "UNAVAILABLE";
 
-type ImplicationDriver = {
-  factor: string;
+type SeriesEvaluation = {
+  series_id: string;
+  as_of_date?: string | null;
+  unit?: "percent" | "bp" | null;
+  freshness: "CURRENT" | "UNAVAILABLE";
+  reason_code?: string | null;
+  changes: { "5d": number | null; "21d": number | null; "63d": number | null };
+  thresholds: { "21d": number | null; "63d": number | null };
+  directions: { "21d": string; "63d": string };
+};
+
+type AssetPathway = {
+  pathway_id: string;
   label: string;
-  direction: "강화" | "약화" | "중립";
-  impact: "FAVORABLE" | "BURDEN";
-  impact_label: "우호" | "부담";
-  text: string;
-  value?: number | null;
+  status: PathwayStatus;
+  status_label: string;
+  reason_code?: string | null;
+  core?: boolean;
+  series: { series_id: string; status: PathwayStatus; evaluation: SeriesEvaluation }[];
+};
+
+type EconomicState = {
+  summary: string;
+  observations: {
+    factor: string;
+    label: string;
+    direction: "STRENGTHENING" | "WEAKENING" | "NEUTRAL" | "UNAVAILABLE";
+    value?: number | null;
+    source_date?: string | null;
+  }[];
+};
+
+type PriceContext = {
+  symbol: string;
+  as_of_date?: string | null;
+  status: PriceStatus;
+  reason_code?: string | null;
+  returns: {
+    one_week: number | null;
+    one_month: number | null;
+    three_months: number | null;
+  };
+  freshness?: "CURRENT" | "UNAVAILABLE";
+  source_basis: string;
+};
+
+type UnmeasuredPathway = {
+  pathway_id: string;
+  label: string;
+  reason_code: string;
 };
 
 type MarketImplication = {
   asset_group: "rates" | "equities" | "gold" | "dollar" | "commodities";
   label: string;
-  phase_context: string;
   economic_as_of_date?: string | null;
-  assessment: AssetAssessment;
-  assessment_label: "우호" | "부담" | "혼재" | "자료 부족";
-  current_environment_label: "지지 요인 우세" | "부담 요인 우세" | "신호 혼재" | "자료 부족";
+  analysis_status: "READY" | "PARTIAL" | "LIMITED" | "PATHWAYS_NOT_CONNECTED";
+  coverage: CoverageStatus;
+  economic_state: EconomicState;
+  pathways: AssetPathway[];
+  unmeasured_pathways: UnmeasuredPathway[];
+  narrative: string;
   summary: string;
   context: string;
-  drivers: ImplicationDriver[];
-  change_condition: string;
-  price_context?: {
-    symbol: string;
-    as_of_date?: string | null;
-    status: PriceStatus;
-    status_label: "상승 확인" | "하락 확인" | "방향 혼재" | "자료 부족";
-    reason_code?: string | null;
-    returns: {
-      one_week: number | null;
-      one_month: number | null;
-      three_months: number | null;
-    };
-    source_basis: string;
-  };
-  alignment?: AlignmentStatus;
-  alignment_label?: "배경과 가격 일치" | "배경과 가격 불일치" | "종합 혼재" | "가격 확인 대기";
-  macro_signal_label?: string;
-  price_direction_label?: "상승" | "하락" | "방향 혼재" | "확인 대기";
-  relationship_label?: "같은 방향" | "서로 다른 방향" | "판단 유보" | "비교 대기";
+  price_context?: PriceContext | null;
   is_directional_forecast: false;
 };
 
 type CyclePayload = {
-  schema_version: "economic_cycle_v1";
+  schema_version: "economic_cycle_v2";
   status: "READY" | "LIMITED" | "ERROR";
   as_of_date?: string | null;
   model_version?: string | null;
@@ -152,8 +177,32 @@ const FACTOR_LABEL: Record<string, string> = {
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 const formatSignedPercent = (value: number | null) => value == null
   ? "-"
-  : `${value > 0 ? "+" : ""}${(value * 100).toFixed(1)}%`;
+  : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+const formatSeriesChange = (value: number | null, unit?: "percent" | "bp" | null) => value == null
+  ? "-"
+  : `${value > 0 ? "+" : ""}${value.toFixed(1)}${unit === "bp" ? "bp" : "%"}`;
 const formatMonth = (value?: string | null) => value ? value.slice(0, 7).replace("-", ".") : "-";
+
+const ECONOMIC_DIRECTION_LABEL: Record<EconomicState["observations"][number]["direction"], string> = {
+  STRENGTHENING: "강화",
+  WEAKENING: "약화",
+  NEUTRAL: "중립",
+  UNAVAILABLE: "자료 부족",
+};
+
+const COVERAGE_LABEL: Record<CoverageStatus, string> = {
+  SUFFICIENT: "핵심 경로 충족",
+  PARTIAL: "일부 경로 측정",
+  INSUFFICIENT: "측정 경로 부족",
+};
+
+const PRICE_STATUS_LABEL: Record<PriceStatus, string> = {
+  RISING: "상승",
+  FALLING: "하락",
+  MIXED: "기간별 혼재",
+  NEUTRAL: "중립",
+  UNAVAILABLE: "확인 불가",
+};
 
 function probabilityCoordinate(probabilities: Probabilities): PlotPoint {
   const level = probabilities.expansion + probabilities.slowdown
@@ -420,7 +469,74 @@ function EvidenceGroup({ title, subtitle, rows }: { title: string; subtitle: str
   );
 }
 
-function PriceConfirmation({ item }: { item: MarketImplication }) {
+function EconomicStateBlock({ state }: { state: EconomicState }) {
+  return (
+    <section className="economic-state-block">
+      <h5>관측된 경제 상태</h5>
+      <p>{state.summary}</p>
+      <div className="economic-observations">
+        {state.observations.map((observation) => (
+          <span key={observation.factor} className={`economic-${observation.direction.toLowerCase()}`}>
+            {observation.label} · {ECONOMIC_DIRECTION_LABEL[observation.direction]}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SeriesMetrics({ evaluation }: { evaluation: SeriesEvaluation }) {
+  const details = (
+    <>
+      <span>1주(5거래일) {formatSeriesChange(evaluation.changes["5d"], evaluation.unit)}</span>
+      <span>기준일 {evaluation.as_of_date || "-"}</span>
+      <span>최신성 {evaluation.freshness === "CURRENT" ? "정상" : "자료 부족"}</span>
+    </>
+  );
+  return (
+    <div className="series-metrics" tabIndex={0}>
+      <div className="series-primary-metrics">
+        <strong>{evaluation.series_id}</strong>
+        <span>1개월(21거래일) {formatSeriesChange(evaluation.changes["21d"], evaluation.unit)}</span>
+        <span>3개월(63거래일) {formatSeriesChange(evaluation.changes["63d"], evaluation.unit)}</span>
+      </div>
+      <div className="pathway-hover-details" role="tooltip">{details}</div>
+      <details className="pathway-details">
+        <summary>세부 데이터</summary>
+        <div>{details}</div>
+      </details>
+    </div>
+  );
+}
+
+function PathwayGroup({
+  title,
+  pathways,
+}: {
+  title: string;
+  pathways: AssetPathway[];
+}) {
+  return (
+    <section className="pathway-group">
+      <h5>{title}</h5>
+      <div className="pathway-list">
+        {pathways.length ? pathways.map((pathway) => (
+          <article className={`pathway-item pathway-${pathway.status.toLowerCase()}`} key={pathway.pathway_id}>
+            <header>
+              <strong>{pathway.label}</strong>
+              <span>{pathway.status_label}</span>
+            </header>
+            {pathway.series.map((series) => (
+              <SeriesMetrics key={series.series_id} evaluation={series.evaluation} />
+            ))}
+          </article>
+        )) : <p className="pathway-empty">해당 방향으로 확인된 측정 경로가 없습니다.</p>}
+      </div>
+    </section>
+  );
+}
+
+function PricePathway({ item }: { item: MarketImplication }) {
   const price = item.price_context;
   if (!price) return null;
   const windows = [
@@ -429,28 +545,14 @@ function PriceConfirmation({ item }: { item: MarketImplication }) {
     ["3개월(63거래일)", price.returns.three_months],
   ] as const;
   return (
-    <section className="price-confirmation" aria-label={`${item.label} 미국 경기 신호와 시장 가격 비교`}>
-      <div className="signal-comparison-grid">
-        <div>
-          <span>미국 경기 신호</span>
-          <b className={`implication-status assessment-${item.assessment.toLowerCase()}`}>
-            {item.macro_signal_label || "판단 자료 부족"}
-          </b>
-        </div>
-        <div>
-          <span>실제 가격</span>
-          <b className={`price-status price-${price.status.toLowerCase()}`}>
-            {item.price_direction_label || "확인 대기"}
-          </b>
-        </div>
-        <div>
-          <span>두 신호 관계</span>
-          <b className={`implication-status alignment-${(item.alignment || "PRICE_PENDING").toLowerCase()}`}>
-            {item.relationship_label || "비교 대기"}
-          </b>
-        </div>
-      </div>
-      <div className="price-return-grid" aria-label={`${item.label} 기간별 가격 수익률`}>
+    <section className="price-pathway">
+      <header>
+        <h5>실제 가격 흐름</h5>
+        <b className={`price-status price-${price.status.toLowerCase()}`}>
+          {PRICE_STATUS_LABEL[price.status]}
+        </b>
+      </header>
+      <div className="price-return-grid" aria-label={`${item.label} 기간별 가격 변화율`}>
         {windows.map(([label, value]) => (
           <div key={label}>
             <span>{label}</span>
@@ -465,43 +567,54 @@ function PriceConfirmation({ item }: { item: MarketImplication }) {
   );
 }
 
-function MarketImplicationCard({ item }: { item: MarketImplication }) {
-  const priceAware = Boolean(item.price_context);
+function UnmeasuredPathways({ rows }: { rows: UnmeasuredPathway[] }) {
   return (
-    <article className={`implication-card ${priceAware ? "is-price-aware" : ""}`} tabIndex={0}>
+    <section className="unmeasured-pathways">
+      <h5>현재 데이터 범위 밖</h5>
+      <div>
+        {rows.map((row) => (
+          <span key={row.pathway_id}>{row.label}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MarketImplicationCard({ item }: { item: MarketImplication }) {
+  const rise = item.pathways.filter((pathway) => pathway.status === "SUPPORTS_RISE");
+  const fall = item.pathways.filter((pathway) => pathway.status === "SUPPORTS_FALL");
+  const unresolved = item.pathways.filter((pathway) => !["SUPPORTS_RISE", "SUPPORTS_FALL"].includes(pathway.status));
+  const connected = item.analysis_status !== "PATHWAYS_NOT_CONNECTED";
+  return (
+    <article className={`implication-card ${connected ? "is-connected" : "is-unconnected"}`} tabIndex={0}>
       <header>
         <div>
           <span>{item.label}</span>
-          <strong>
-            {priceAware
-              ? "미국 경기 신호와 시장 가격 비교"
-              : `현재 환경: ${item.current_environment_label}`}
-          </strong>
+          <strong>{connected ? "측정된 시장 경로와 실제 가격" : "자산 내부 시장 경로 미연결"}</strong>
         </div>
         <div className="implication-overall">
-          <b className={priceAware
-            ? `implication-status alignment-${(item.alignment || "PRICE_PENDING").toLowerCase()}`
-            : `implication-status assessment-${item.assessment.toLowerCase()}`}>
-            {priceAware ? item.relationship_label : item.current_environment_label}
+          <span>데이터 범위</span>
+          <b className={`coverage-status coverage-${item.coverage.toLowerCase()}`}>
+            {connected ? COVERAGE_LABEL[item.coverage] : "시장 경로 미연결"}
           </b>
         </div>
       </header>
-      <p className="implication-summary">{item.summary || item.context}</p>
-      <PriceConfirmation item={item} />
-      <div className="implication-drivers" aria-label={`${item.label} 주요 근거`}>
-        {item.drivers.length ? item.drivers.map((driver) => (
-          <div key={driver.factor}>
-            <span>{driver.label} {driver.direction}</span>
-            <b className={`driver-impact impact-${driver.impact.toLowerCase()}`}>
-              {driver.impact_label}
-            </b>
-          </div>
-        )) : <p>표시할 자산별 근거가 아직 부족합니다.</p>}
-      </div>
-      <div className="change-condition">
-        <span>향후 확인 조건</span>
-        <p>{item.change_condition}</p>
-      </div>
+      <p className="implication-summary">{item.narrative || item.summary || item.context}</p>
+      {connected ? (
+        <>
+          <EconomicStateBlock state={item.economic_state} />
+          <PathwayGroup title="상승 요인이 될 수 있는 측정 경로" pathways={rise} />
+          <PathwayGroup title="하락 요인이 될 수 있는 측정 경로" pathways={fall} />
+          {unresolved.length ? <PathwayGroup title="방향이 아직 뚜렷하지 않은 측정 경로" pathways={unresolved} /> : null}
+          <PricePathway item={item} />
+          <UnmeasuredPathways rows={item.unmeasured_pathways} />
+        </>
+      ) : (
+        <section className="unconnected-pathway-note">
+          <h5>현재 단계</h5>
+          <p>관측된 경제 상태만 표시하며, 이 자산의 방향은 판단하지 않습니다.</p>
+        </section>
+      )}
     </article>
   );
 }
@@ -562,7 +675,7 @@ function EconomicCycleWorkbench({ args }: Props) {
     observer.observe(rootRef.current);
     return () => observer.disconnect();
   }, [payload]);
-  if (!payload || payload.schema_version !== "economic_cycle_v1") return null;
+  if (!payload || payload.schema_version !== "economic_cycle_v2") return null;
 
   const current = payload.horizons.find((item) => item.horizon_months === 0);
   const currentState = current ? resolveEstimateStatus(current) : "UNAVAILABLE";
@@ -600,7 +713,7 @@ function EconomicCycleWorkbench({ args }: Props) {
       <RegimeRibbon history={payload.history} horizons={payload.horizons} />
 
       <section className="market-implications" aria-labelledby="implication-title">
-        <div className="section-heading"><div><span>Conditional market context</span><h3 id="implication-title">자산별 확인 포인트</h3></div><small>경제 배경과 실제 가격을 분리해 확인</small></div>
+        <div className="section-heading"><div><span>Measured market pathways</span><h3 id="implication-title">자산별 확인 포인트</h3></div><small>경제 상태·측정 경로·실제 가격을 분리해 확인</small></div>
         <div className="implication-grid">
           {payload.market_implications.map((item) => <MarketImplicationCard key={item.asset_group} item={item} />)}
         </div>
