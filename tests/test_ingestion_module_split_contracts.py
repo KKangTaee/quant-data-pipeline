@@ -125,6 +125,21 @@ class IngestionModuleSplitContractsTest(unittest.TestCase):
         self.assertIs(page._render_ingestion_manual_section, sections.render_manual_section)
         self.assertIs(page._render_selected_ingestion_collection_section, sections.render_selected_section)
 
+    def test_sp500_actual_eps_upload_is_visible_in_operational_section(self) -> None:
+        source = Path("app/web/ingestion/sections.py").read_text(encoding="utf-8")
+
+        self.assertIn('"S&P 500 실제 EPS 등록"', source)
+        self.assertIn('type=["xlsx"]', source)
+        self.assertIn('"import_sp500_index_earnings_xlsx"', source)
+        self.assertIn(
+            '"https://www.spglobal.com/spdji/en/indices/equity/sp-500/"',
+            source,
+        )
+        self.assertIn(
+            "disabled=_has_running_job() or sp500_eps_file is None",
+            source,
+        )
+
     def test_ingestion_job_common_helpers_live_in_ingestion_jobs_package(self) -> None:
         from app.jobs import ingestion_jobs
         from app.jobs.ingestion import common
