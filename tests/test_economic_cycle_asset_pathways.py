@@ -271,6 +271,71 @@ def test_evaluate_series_excludes_points_after_reference_date() -> None:
     assert result["changes"]["5d"] == pytest.approx(0.5)
 
 
+def test_spread_uses_same_horizon_long_minus_short_changes() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    dgs10_points = _daily_points(
+        start="2021-03-01", count=1400, start_value=3.0, step=0.002
+    )
+    dgs2_points = _daily_points(
+        start="2021-03-01", count=1400, start_value=2.0, step=0.001
+    )
+    reference = dgs10_points[-1]["date"]
+
+    spread = pathways.evaluate_spread(
+        dgs10_points,
+        dgs2_points,
+        reference_date=reference,
+    )
+
+    assert spread["changes"]["21d"] > 0
+    assert spread["structure_status"] == "STEEPENING"
+    assert spread["current_level_bp"] > 0
+
+
+def test_weekly_evaluator_separates_four_week_and_year_over_year() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    weekly_points = [
+        {"date": timestamp.date(), "value": 400_000.0 + index * 100.0}
+        for index, timestamp in enumerate(
+            pd.date_range(end="2026-07-10", periods=260, freq="W-FRI")
+        )
+    ]
+
+    result = pathways.evaluate_weekly_series(
+        weekly_points,
+        series_id="WCESTUS1",
+        reference_date="2026-07-17",
+    )
+
+    assert set(result["changes"]) == {"4w", "52w"}
+    assert result["freshness"] == "CURRENT"
+    assert result["unit"] == "percent"
+
+
+def test_observed_pathway_preserves_measurement_and_interpretation() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    evaluation = {
+        "series_id": "DFII10",
+        "as_of_date": "2026-07-16",
+        "unit": "bp",
+        "freshness": "CURRENT",
+        "reason_code": None,
+        "changes": {"5d": 2.0, "21d": 5.0, "63d": 8.0},
+        "directions": {"21d": "UP", "63d": "UP"},
+    }
+
+    pathway = pathways.build_observed_pathway(
+        "real_yield",
+        "10년 실질금리",
+        evaluation,
+        interpretation="최근 1개월과 3개월 모두 상승했습니다.",
+    )
+
+    assert pathway["pathway_id"] == "real_yield"
+    assert pathway["series"] == evaluation
+    assert pathway["interpretation"].startswith("최근 1개월")
+
+
 def test_gold_pathways_separate_real_yield_dollar_and_risk_directions() -> None:
     pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
 

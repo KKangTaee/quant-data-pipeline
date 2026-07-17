@@ -125,6 +125,7 @@ def _unavailable(
     return {
         "series_id": series_id,
         "as_of_date": as_of_date.isoformat() if as_of_date else None,
+        "current_value": None,
         "unit": None,
         "freshness": "UNAVAILABLE",
         "reason_code": reason_code,
@@ -196,6 +197,7 @@ def evaluate_series(
     return {
         "series_id": series_id,
         "as_of_date": latest_date.isoformat(),
+        "current_value": values[-1],
         "unit": unit,
         "freshness": "CURRENT",
         "reason_code": None,
@@ -205,6 +207,142 @@ def evaluate_series(
             key: _direction(changes[key], threshold=thresholds[key])
             for key in ("21d", "63d")
         },
+    }
+
+
+def evaluate_spread(
+    long_points: Sequence[Mapping[str, object]],
+    short_points: Sequence[Mapping[str, object]],
+    *,
+    reference_date: object,
+    series_id: str = "DGS10-DGS2",
+) -> dict[str, object]:
+    """Evaluate an aligned long-minus-short yield spread without interpolation."""
+    reference = _as_date(reference_date)
+
+    def values_by_date(
+        points: Sequence[Mapping[str, object]],
+    ) -> dict[date, float]:
+        normalized: dict[date, float] = {}
+        for row in points:
+            try:
+                row_date = _as_date(row["date"])
+                value = float(row["value"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if row_date <= reference:
+                normalized[row_date] = value
+        return normalized
+
+    long_by_date = values_by_date(long_points)
+    short_by_date = values_by_date(short_points)
+    common_dates = sorted(set(long_by_date) & set(short_by_date))
+    aligned = [
+        {
+            "date": row_date,
+            "value": long_by_date[row_date] - short_by_date[row_date],
+        }
+        for row_date in common_dates
+    ]
+    result = evaluate_series(
+        aligned,
+        series_id=series_id,
+        reference_date=reference,
+        change_mode="BASIS_POINT",
+    )
+    if result.get("reason_code"):
+        result["current_level_bp"] = None
+        result["structure_status"] = "UNAVAILABLE"
+        return result
+    current_value = result.get("current_value")
+    result["current_level_bp"] = (
+        float(current_value) * 100.0 if current_value is not None else None
+    )
+    directions = result.get("directions") or {}
+    if directions.get("21d") == directions.get("63d") == "UP":
+        result["structure_status"] = "STEEPENING"
+    elif directions.get("21d") == directions.get("63d") == "DOWN":
+        result["structure_status"] = "FLATTENING"
+    else:
+        result["structure_status"] = "MIXED"
+    return result
+
+
+def evaluate_weekly_series(
+    points: Sequence[Mapping[str, object]],
+    *,
+    series_id: str,
+    reference_date: object,
+) -> dict[str, object]:
+    """Evaluate official weekly observations at 4-week and year-over-year horizons."""
+    reference = _as_date(reference_date)
+    by_date: dict[date, float] = {}
+    for row in points:
+        try:
+            row_date = _as_date(row["date"])
+            value = float(row["value"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if row_date <= reference and value > 0:
+            by_date[row_date] = value
+    ordered = sorted(by_date.items())
+
+    def unavailable(reason_code: str) -> dict[str, object]:
+        latest = ordered[-1][0] if ordered else None
+        return {
+            "series_id": series_id,
+            "as_of_date": latest.isoformat() if latest else None,
+            "current_value": None,
+            "unit": None,
+            "freshness": "UNAVAILABLE",
+            "reason_code": reason_code,
+            "changes": {"4w": None, "52w": None},
+            "directions": {"4w": "UNAVAILABLE", "52w": "UNAVAILABLE"},
+        }
+
+    if not ordered:
+        return unavailable("MISSING_SERIES")
+    latest_date = ordered[-1][0]
+    if (reference - latest_date).days > 14:
+        return unavailable("STALE_SERIES")
+    if len(ordered) < 53:
+        return unavailable("INSUFFICIENT_HISTORY")
+    values = [value for _, value in ordered]
+    changes = {
+        "4w": _change(values[-1], values[-5], "PERCENT_RETURN"),
+        "52w": _change(values[-1], values[-53], "PERCENT_RETURN"),
+    }
+    return {
+        "series_id": series_id,
+        "as_of_date": latest_date.isoformat(),
+        "current_value": values[-1],
+        "unit": "percent",
+        "freshness": "CURRENT",
+        "reason_code": None,
+        "changes": changes,
+        "directions": {
+            key: _direction(value, threshold=0.0)
+            for key, value in changes.items()
+        },
+    }
+
+
+def build_observed_pathway(
+    pathway_id: str,
+    label: str,
+    series: Mapping[str, object],
+    *,
+    interpretation: str,
+) -> dict[str, object]:
+    """Shape one measured series and its factual interpretation for the UI."""
+    return {
+        "pathway_id": pathway_id,
+        "label": label,
+        "status": (
+            "UNAVAILABLE" if series.get("reason_code") else "OBSERVED"
+        ),
+        "series": dict(series),
+        "interpretation": interpretation,
     }
 
 
