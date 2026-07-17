@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete / 1~5차 Closeout
+Status: Design Review / 6차 Single Settings Corrective
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -19,6 +19,11 @@ Last Updated: 2026-07-18
 - [x] 3차 Single Strategy One-Shell
 - [x] 4차 Portfolio Mix One-Shell
 - [x] 5차 Runtime QA / Docs / Closeout
+- [x] 6차 current settings flow / state / payload audit
+- [x] 6차 corrective design 작성과 self-review
+- [ ] 6차 사용자 design review
+- [ ] 6차 implementation plan
+- [ ] 6차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -27,13 +32,13 @@ Last Updated: 2026-07-18
 3. Single Strategy One-Shell
 4. Portfolio Mix One-Shell
 5. Runtime QA / Docs / Closeout
+6. Single Strategy Settings Workspace Corrective
 
-## Completion Summary
+## Current Corrective Position
 
-- Level1 truth / read model / Single / Mix one-shell / closeout 5차를 완료했다.
-- Browser QA에서 발견한 nested rerun 경고, 새 실행 즉시 stale 지문 불일치,
-  Streamlit dark theme 대비를 추가 RED -> GREEN으로 보정했다.
-- current Level1은 실행 성공과 Level2 handoff를 분리하고, fresh result와 Python
-  Gate가 유효할 때만 명시적 인계 action을 제공한다.
-- 다음 구현 task는 없다. 남은 baseline contract debt와 frontend dependency audit은
-  `RISKS.md`에서 추적한다.
+- 1~5차 기능 / 판단 계약은 완료 상태를 유지한다.
+- 사용자 Browser review에서 Single Strategy Step 2가 legacy form hierarchy와 중복
+  Strategy / Variant picker를 유지한 implementation gap을 확인했다.
+- 13개 strategy/variant form, React intent, session state, prefill, shared runner를
+  감사하고 shared Python settings shell corrective design을 추가했다.
+- user design review 뒤 PLAN을 6차 unit으로 확장하고 TDD implementation을 시작한다.

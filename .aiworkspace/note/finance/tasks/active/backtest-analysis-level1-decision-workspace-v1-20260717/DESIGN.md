@@ -556,3 +556,164 @@ source이며 이번 개편의 재설계 대상이 아니다.
 - historical universe / delisting 신규 provider
 - broker order, live approval, account sync, auto rebalance
 - registry / run history / saved JSONL 정리 또는 재작성
+
+## 6차 Corrective Design: Single Strategy Settings Workspace
+
+### 이걸 하는 이유?
+
+1~5차는 Level1의 고정 질문, 목적별 전략 선택, stable context, 결과 판단과
+명시적 인계를 개편했지만 Single Strategy Step 2는 기존 Streamlit form을 거의
+그대로 보존했다. 그 결과 새 React context에서 이미 선택한 Strategy / Variant를
+다시 selectbox로 고르게 하고, 영문 기술 문구와 긴 universe 근거가 기본 설정보다
+먼저 노출된다. 이는 Acceptance Criteria 4, 9, 22의 사용자 경험을 충분히
+만족하지 못한다.
+
+### Current Flow Audit
+
+```text
+React purpose catalog
+  -> select_strategy intent
+  -> Python backtest_strategy_choice session state
+  -> render_single_strategy_workspace()
+  -> duplicate Strategy / Variant Streamlit selectbox
+  -> 13 strategy/variant render functions in 7 files
+  -> universe controls outside form
+  -> date / primary settings in form
+  -> nested strategy / overlay / cost / guardrail expanders
+  -> shared _handle_backtest_run(payload, strategy_name)
+  -> result fingerprint / Run History / decision surface
+```
+
+확인된 구조적 원인은 다음과 같다.
+
+- React와 Python이 같은 `backtest_strategy_choice`를 공유하지만 두 surface가 모두
+  strategy picker를 렌더링한다.
+- 13개 form은 payload와 validation이 서로 달라 완전한 React editor로 옮기면
+  session state / validation / prefill을 이중 구현해야 한다.
+- 기존 boundary test는 `Advanced Inputs`가 `전략·보유 규칙`으로 바뀌었는지만
+  확인해 실제 hierarchy, 중복 picker, 사용자 문구를 검증하지 못한다.
+- Strict factor 7개 variant는 universe readiness와 PIT contract가 길고 기술적이라
+  first-read를 압도한다.
+
+### Approaches Considered
+
+#### A. Shared Python Settings Shell — Selected
+
+Python widget, payload, validation, prefill을 유지하면서 공통 Step 2 shell과 section
+helper를 추가한다. React는 전략 선택만 소유하고 Streamlit은 선택 전략의 설정만
+렌더링한다.
+
+- 장점: runtime / payload / form submit 의미를 유지하고 13개 form을 같은 IA로
+  통일할 수 있다.
+- 단점: React와 완전히 동일한 card component는 아니며 Streamlit layout 제약이
+  남는다.
+
+#### B. Full React Settings Editor
+
+모든 입력을 React에서 편집하고 intent payload로 Python에 전달한다.
+
+- 장점: 가장 강한 visual consistency.
+- 단점: 13개 form의 field, validation, prefill, immediate universe selector를
+  중복 구현하고 Python-owned intent contract가 과도하게 커진다. 이번 corrective
+  범위를 벗어난다.
+
+#### C. Quality + Value Only Cleanup
+
+현재 신고된 Strict Annual form만 재배치한다.
+
+- 장점: 수정량이 가장 작다.
+- 단점: 전략을 바꾸면 다시 legacy hierarchy가 나타나 Level1 전체 흐름이
+  일관되지 않다.
+
+### Selected User Flow
+
+```text
+1. React에서 목적과 전략 선택
+2. 선택 전략 compact summary
+   - 전략명 / variant / 목적 / 현재 maturity
+   - 전략 변경은 위 catalog에서 수행
+3. 핵심 실행 설정
+   - 기간
+   - 핵심 전략 파라미터(Top N, 리밸런싱, 신호 주기 등)
+4. 투자 대상 Universe
+   - Preset / 직접 입력
+   - 현재 선택 수와 대표 ticker
+   - PIT / data readiness는 한 줄 상태 요약
+   - 기술 계약은 접힌 `Universe 근거`에서 확인
+5. 선택·보유 규칙
+   - factor, overlay, weighting, defensive rule
+6. 비용·위험 기준
+   - transaction cost, benchmark, liquidity, guardrail
+7. `이 설정으로 백테스트 실행`
+8. 기존 decision surface에서 결과 판단 / Level2 인계
+```
+
+### UI Contract
+
+- visible Strategy / Variant selectbox를 제거한다. React catalog와 current summary가
+  유일한 first-read selection surface다.
+- saved history prefill이 strategy를 바꾸는 경우에도 session state를 먼저 갱신한 뒤
+  같은 summary와 form을 렌더링한다.
+- 모든 13개 form은 `선택 전략 -> 핵심 실행 설정 -> Universe -> 선택·보유 규칙 ->
+  비용·위험 기준 -> 실행` 순서를 사용한다.
+- desktop primary setting은 최대 2열, 760px 이하는 1열로 읽힌다.
+- 영문 technical label은 payload key를 바꾸지 않고 사용자용 한국어 label / help로
+  교체한다. 원본 mode / callable / raw contract는 disclosure에만 남긴다.
+- long ticker list는 `종목 N개 · 대표 ...` summary로 줄이고 전체 목록은 disclosure에
+  둔다.
+- readiness는 실행 전 blocker 또는 확인점만 요약하고, 실행 후 실제 Factor
+  Readiness가 최종 근거를 소유한다.
+- development 전략은 설정과 실행 surface를 유지하되 기존대로 Level2 handoff가
+  blocked다.
+
+### Component Boundary
+
+- 새 `app/web/backtest_single_settings_workspace.py`
+  - common selected-strategy summary
+  - section heading / note / compact ticker summary
+  - consistent Korean label dictionary
+  - no runtime execution or persistence
+- `app/web/backtest_single_strategy.py`
+  - duplicate picker 제거
+  - session selection validation과 selected summary / strategy dispatch만 소유
+- `app/web/backtest_single_forms/*.py`
+  - strategy-specific widget와 payload / validation 유지
+  - common section helper를 사용해 hierarchy와 copy 정렬
+- `app/web/backtest_common.py`
+  - existing universe / readiness helper는 data resolution만 유지하고 first-read raw
+    copy를 공통 shell에 맞게 compact projection한다.
+
+### State And Error Contract
+
+- widget key와 payload key는 바꾸지 않아 saved history prefill을 보존한다.
+- form submit 이전 변경값이 Python draft에 반영되지 않는 Streamlit contract는
+  유지한다. submit 시 shared runner가 normalized fingerprint를 기록한다.
+- validation error는 영어 raw 문장 대신 해당 section 바로 아래의 사용자 설명으로
+  표시한다.
+- 실행 실패 시 설정과 이전 성공 결과를 보존한다.
+
+### Corrective Acceptance Criteria
+
+1. Single Strategy Step 2에 visible `Strategy` / `Variant` selectbox가 없다.
+2. current strategy / variant / purpose / maturity summary가 설정 시작점에 한 번만
+   나타난다.
+3. 13개 form 모두 같은 5-section ordering을 사용한다.
+4. Quality + Value Strict Annual의 first-read에 영문 strategy 설명, raw mode,
+   전체 300 ticker preview가 없다.
+5. 기본 설정과 universe 선택은 고급 factor / overlay / cost보다 먼저 나타난다.
+6. full ticker / PIT / readiness technical evidence는 disclosure에 보존된다.
+7. submit label은 `이 설정으로 백테스트 실행` 의미의 한국어 문구다.
+8. 기존 widget key, payload, validation, prefill, execution handler는 호환된다.
+9. strategy change / run 중 stable React context와 stale-result contract가 유지된다.
+10. desktop / 760px Browser QA에서 section hierarchy와 zero horizontal overflow를
+    확인한다.
+11. 보호 registry / run history / saved JSONL / generated screenshot / `.superpowers/`는
+    stage / commit하지 않는다.
+
+### Corrective Out Of Scope
+
+- strategy runtime / payload schema 재설계
+- 모든 설정을 React-controlled form으로 이동
+- 신규 preset / provider / universe contract 추가
+- Factor Readiness 판정 로직 변경
+- Level2 / Level3 route 또는 Gate 변경

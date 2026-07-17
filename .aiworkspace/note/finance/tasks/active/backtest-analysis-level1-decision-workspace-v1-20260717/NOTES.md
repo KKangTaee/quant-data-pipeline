@@ -77,3 +77,15 @@ generated artifact이므로 commit하지 않는다.
 - 실제 GTAA + Equal Weight Mix는 role `Core / Core`, weight `50 / 50`, total 100%,
   weighted result와 `Mix 저장` action을 표시했다. Gate가 막힌 상태에서는 invalid
   Level2 CTA를 만들지 않는다.
+
+## 2026-07-18 6차 Single Settings Corrective Audit
+
+- React `select_strategy` intent와 legacy Streamlit `Strategy` selectbox가 같은
+  `backtest_strategy_choice`를 쓰면서 picker가 중복 노출된다.
+- Single runtime은 7개 form 파일의 13개 renderer로 구성되며 shared runner 이전의
+  widget / payload / validation / prefill은 strategy-specific이다.
+- full React editor는 이 계약을 이중 구현하므로 Python shared settings shell이
+  가장 작은 안전한 corrective boundary다.
+- 기존 boundary test는 label rename만 확인해 실제 information hierarchy 누락을
+  잡지 못했다. 6차는 duplicate picker, section ordering, Korean first-read,
+  compact universe, submit copy를 RED contract로 먼저 고정한다.
