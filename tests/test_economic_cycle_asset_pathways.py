@@ -336,6 +336,39 @@ def test_observed_pathway_preserves_measurement_and_interpretation() -> None:
     assert pathway["interpretation"].startswith("최근 1개월")
 
 
+def test_rates_context_explains_two_ten_spread_and_ten_year_components() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    rows = _macro_history(
+        {
+            "DGS2": "UP",
+            "DGS10": "UP",
+            "DFII10": "UP",
+            "T10YIE": "DOWN",
+        }
+    )
+
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=rows,
+        price_rows=[],
+        reference_date="2026-07-17",
+    )
+
+    rates = contexts["rates"]
+    assert rates["coverage"] == "SUFFICIENT"
+    assert {row["metric_id"] for row in rates["current_movement"]} == {
+        "DGS2",
+        "DGS10",
+        "DGS10-DGS2",
+    }
+    assert {row["pathway_id"] for row in rates["observed_pathways"]} == {
+        "real_yield",
+        "breakeven_inflation",
+    }
+    assert rates["next_check_conditions"]
+    assert "원인" not in rates["narrative"]
+
+
 def test_gold_pathways_separate_real_yield_dollar_and_risk_directions() -> None:
     pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
 

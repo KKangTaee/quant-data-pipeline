@@ -515,6 +515,153 @@ def _pathway_narrative(
     return " ".join(clause for clause in clauses if clause)
 
 
+def _daily_direction_text(evaluation: Mapping[str, object]) -> str:
+    if evaluation.get("reason_code"):
+        return "자료가 부족합니다."
+    directions = evaluation.get("directions") or {}
+    one_month = str(directions.get("21d") or "UNAVAILABLE")
+    three_months = str(directions.get("63d") or "UNAVAILABLE")
+    labels = {
+        "UP": "상승",
+        "DOWN": "하락",
+        "NEUTRAL": "중립",
+        "UNAVAILABLE": "확인 불가",
+    }
+    if one_month == three_months:
+        return f"최근 1개월과 3개월 모두 {labels[one_month]}했습니다."
+    return (
+        f"최근 1개월은 {labels[one_month]}, "
+        f"3개월은 {labels[three_months]}으로 기간별 흐름이 엇갈립니다."
+    )
+
+
+def _movement_metric(
+    metric_id: str,
+    label: str,
+    evaluation: Mapping[str, object],
+    *,
+    level_unit: str,
+    current_value: object | None = None,
+) -> dict[str, object]:
+    return {
+        "metric_id": metric_id,
+        "label": label,
+        "as_of_date": evaluation.get("as_of_date"),
+        "current_value": (
+            evaluation.get("current_value")
+            if current_value is None
+            else current_value
+        ),
+        "level_unit": level_unit,
+        "change_unit": evaluation.get("unit"),
+        "changes": dict(evaluation.get("changes") or {}),
+        "directions": dict(evaluation.get("directions") or {}),
+        "freshness": evaluation.get("freshness"),
+        "reason_code": evaluation.get("reason_code"),
+    }
+
+
+def build_rates_context(
+    *,
+    evaluations: Mapping[str, Mapping[str, object]],
+    economic_state: Mapping[str, object],
+) -> dict[str, object]:
+    """Build a factual rates-structure context from stored yield observations."""
+    dgs2 = evaluations["DGS2"]
+    dgs10 = evaluations["DGS10"]
+    spread = evaluations["DGS10-DGS2"]
+    real_yield = evaluations["DFII10"]
+    breakeven = evaluations["T10YIE"]
+    current_movement = [
+        _movement_metric("DGS2", "미국 2년 국채 수익률", dgs2, level_unit="percent"),
+        _movement_metric(
+            "DGS10", "미국 10년 국채 수익률", dgs10, level_unit="percent"
+        ),
+        _movement_metric(
+            "DGS10-DGS2",
+            "10년-2년 금리차",
+            spread,
+            level_unit="bp",
+            current_value=spread.get("current_level_bp"),
+        ),
+    ]
+    observed_pathways = [
+        build_observed_pathway(
+            "real_yield",
+            "10년 실질금리",
+            real_yield,
+            interpretation=_daily_direction_text(real_yield),
+        ),
+        build_observed_pathway(
+            "breakeven_inflation",
+            "10년 기대인플레이션",
+            breakeven,
+            interpretation=_daily_direction_text(breakeven),
+        ),
+    ]
+    core_available = all(
+        not evaluation.get("reason_code") for evaluation in (dgs2, dgs10, spread)
+    )
+    component_count = sum(
+        not evaluation.get("reason_code") for evaluation in (real_yield, breakeven)
+    )
+    if core_available and component_count == 2:
+        coverage = "SUFFICIENT"
+    elif core_available or component_count:
+        coverage = "PARTIAL"
+    else:
+        coverage = "INSUFFICIENT"
+
+    spread_label = {
+        "STEEPENING": "10년-2년 금리차는 최근 1개월과 3개월에 걸쳐 확대됐습니다.",
+        "FLATTENING": "10년-2년 금리차는 최근 1개월과 3개월에 걸쳐 축소됐습니다.",
+        "MIXED": "10년-2년 금리차의 1개월과 3개월 흐름은 엇갈립니다.",
+        "UNAVAILABLE": "10년-2년 금리차를 계산할 자료가 부족합니다.",
+    }[str(spread.get("structure_status") or "UNAVAILABLE")]
+    component_directions = [
+        str((evaluation.get("directions") or {}).get("21d") or "UNAVAILABLE")
+        for evaluation in (real_yield, breakeven)
+    ]
+    if component_directions == ["UP", "UP"]:
+        component_text = "실질금리와 기대인플레이션은 최근 1개월 모두 상승했습니다."
+    elif component_directions == ["DOWN", "DOWN"]:
+        component_text = "실질금리와 기대인플레이션은 최근 1개월 모두 하락했습니다."
+    elif "UNAVAILABLE" in component_directions:
+        component_text = "10년물 구성 경로는 계산 가능한 자료만 표시합니다."
+    else:
+        component_text = "실질금리와 기대인플레이션의 최근 1개월 방향은 엇갈립니다."
+    current_interpretation = [
+        f"2년물은 {_daily_direction_text(dgs2)}",
+        f"10년물은 {_daily_direction_text(dgs10)}",
+        spread_label,
+        component_text,
+    ]
+    limitations = [
+        "금리 변화와 경제지표의 동행을 인과관계로 해석하지 않습니다."
+    ]
+    if coverage != "SUFFICIENT":
+        limitations.append("일부 금리 경로의 최신성 또는 이력이 부족합니다.")
+    return {
+        "asset_group": "rates",
+        "coverage": coverage,
+        "economic_state": dict(economic_state),
+        "current_movement": current_movement,
+        "observed_pathways": observed_pathways,
+        "current_interpretation": current_interpretation,
+        "next_check_conditions": [
+            "2년물의 1개월 변화 방향이 다음 관측에서도 이어지는지 확인합니다.",
+            "10년-2년 금리차의 확대·축소가 이어지는지 확인합니다.",
+            "실질금리와 기대인플레이션의 방향이 함께 움직이는지 확인합니다.",
+        ],
+        "provenance": [
+            "FRED DGS2·DGS10·DFII10·T10YIE 저장 관측치",
+            "10년-2년 금리차는 동일 관측일의 DGS10-DGS2 계산값",
+        ],
+        "limitations": limitations,
+        "narrative": " ".join(current_interpretation),
+    }
+
+
 def build_asset_pathway_contexts(
     *,
     evidence: Sequence[Mapping[str, object]],
@@ -522,10 +669,17 @@ def build_asset_pathway_contexts(
     price_rows: Sequence[Mapping[str, object]],
     reference_date: object,
 ) -> dict[str, dict[str, object]]:
-    """Build deterministic gold and dollar contexts from measured market paths."""
+    """Build deterministic asset contexts from measured market paths."""
 
     evaluations: dict[str, dict[str, object]] = {}
-    for series_id in ("DGS2", "DGS10", "DFII10", "VIXCLS", "BAA10Y"):
+    for series_id in (
+        "DGS2",
+        "DGS10",
+        "DFII10",
+        "T10YIE",
+        "VIXCLS",
+        "BAA10Y",
+    ):
         mode: ChangeMode = "PERCENT_RETURN" if series_id == "VIXCLS" else "BASIS_POINT"
         evaluations[series_id] = evaluate_series(
             _series_points(
@@ -539,6 +693,23 @@ def build_asset_pathway_contexts(
             reference_date=reference_date,
             change_mode=mode,
         )
+    evaluations["DGS10-DGS2"] = evaluate_spread(
+        _series_points(
+            market_rows,
+            id_key="series_id",
+            series_id="DGS10",
+            date_key="observation_date",
+            value_key="value",
+        ),
+        _series_points(
+            market_rows,
+            id_key="series_id",
+            series_id="DGS2",
+            date_key="observation_date",
+            value_key="value",
+        ),
+        reference_date=reference_date,
+    )
     for symbol in ("GC=F", "DX-Y.NYB"):
         evaluations[symbol] = evaluate_series(
             _series_points(
@@ -554,7 +725,12 @@ def build_asset_pathway_contexts(
         )
 
     economic_state = _economic_state(evidence)
-    contexts: dict[str, dict[str, object]] = {}
+    contexts: dict[str, dict[str, object]] = {
+        "rates": build_rates_context(
+            evaluations=evaluations,
+            economic_state=economic_state,
+        )
+    }
     for asset_group, specs in PATHWAY_SPECS.items():
         pathways: list[dict[str, object]] = []
         for spec in specs:
