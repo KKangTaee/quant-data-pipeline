@@ -227,6 +227,10 @@ const formatSignedPercent = (value: number | null) => value == null
 const formatSeriesChange = (value: number | null, unit?: string | null) => value == null
   ? "-"
   : `${value > 0 ? "+" : ""}${value.toFixed(1)}${unit === "bp" ? "bp" : "%"}`;
+const formatMovementLevel = (value: number | null, unit?: string | null) => value == null
+  ? "-"
+  : unit === "percent" ? `연 ${value.toFixed(2)}%`
+  : `${value.toFixed(2)} ${unit || ""}`.trim();
 const formatMonth = (value?: string | null) => value ? value.slice(0, 7).replace("-", ".") : "-";
 
 const ECONOMIC_DIRECTION_LABEL: Record<EconomicState["observations"][number]["direction"], string> = {
@@ -643,14 +647,16 @@ function CurrentMovementBlock({
     economic_as_of_date: economicAsOfDate,
     price_context: price,
   } as MarketImplication : null;
+  const hasRateUnit = rows.some((row) => row.level_unit === "percent" || row.level_unit === "bp");
   return (
     <section className="observation-block current-movement-block">
       <h5>현재 움직임</h5>
+      {hasRateUnit ? <p className="movement-unit-note">현재 값은 최신 저장 관측치이며, 금리 변화는 bp 기준입니다.</p> : null}
       {priceItem ? <PricePathway item={priceItem} /> : (
         <div className="movement-grid">
           {rows.length ? rows.map((row) => (
             <article className="movement-item" key={row.metric_id}>
-              <header><strong>{row.label}</strong><span>{row.current_value == null ? "-" : row.current_value.toFixed(2)} {row.level_unit || ""}</span></header>
+              <header><strong>{row.label}</strong><span>{formatMovementLevel(row.current_value, row.level_unit)}</span></header>
               <SeriesMetrics evaluation={{
                 series_id: row.metric_id,
                 as_of_date: row.as_of_date,
