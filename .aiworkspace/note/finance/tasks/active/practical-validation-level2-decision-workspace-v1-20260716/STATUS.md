@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete
+Status: In Progress - Step 1 Selection IA Follow-up
 Last Updated: 2026-07-17
 
 ## 전체 Roadmap
@@ -10,6 +10,17 @@ Last Updated: 2026-07-17
 - [x] 3차 One-Shell UI / Intent Integration
 - [x] 4차 QA / Docs / Closeout
 - [x] 사용자 피드백 기반 계약 / 상호작용 / 설명 보정
+- [ ] Step 1 선택 정보 구조 compact follow-up
+
+## 2026-07-17 Step 1 Selection IA Follow-up
+
+- [x] 현재 hero / 후보 card grid / profile grid 구조와 context ownership 확인
+- [x] visual companion으로 가로 strip / compact selector / 세로 list 3안 비교
+- [x] 사용자 B안 `선택 요약 + 컴팩트 컨트롤` 승인
+- [x] 760px profile 2열 줄바꿈과 마지막 option full-span 승인
+- [x] approved design을 `DESIGN.md` acceptance criteria 33~40으로 기록
+- [ ] detailed implementation plan 승인
+- [ ] TDD 구현, Browser QA, docs closeout
 
 ## Current Progress
 

@@ -752,3 +752,107 @@ workspace처럼 보이게 하되 실제 mount 경계는 분리한다.
     resolution/save intent만 처리한다.
 32. desktop과 760px에서 두 surface가 하나의 연속된 workspace로 읽히고 iframe
     seam, 중복 heading, outer/component overflow가 없다.
+
+## 2026-07-17 Approved Step 1 Selection Information Architecture
+
+### 문제와 목적
+
+현재 context surface는 고정된 Level2 질문과 선택 후보 요약을 같은 hero에 둔다.
+후보를 바꾸면 hero 오른쪽 제목이 바뀌어 화면의 최상위 질문 자체가 바뀌는 것처럼
+읽힌다. Step 1의 1A 후보 카드와 1B 검증 관점 카드도 모두 상시 펼쳐져 있어 후보가
+6개만 되어도 본문 높이가 커지고, 사용자가 실제로 확정한 `후보 + 판정 기준`을 한
+곳에서 읽기 어렵다.
+
+승인된 목표는 최상위 Level2 질문을 고정하고, 선택 결과와 변경 control을 Step 1
+안에 모으는 것이다. 기본 상태에서는 현재 무엇을 어떤 기준으로 검증하는지가 먼저
+읽히고, 후보 전체 목록은 사용자가 변경하려 할 때만 펼친다.
+
+### 승인된 레이아웃
+
+선택안은 visual companion의 B안 `선택 요약 + 컴팩트 컨트롤`이다.
+
+1. context hero는 kicker, Level2 질문, 설명만 표시한다. 기존 오른쪽 `검증 대상`
+   aside를 제거하고 후보 선택과 무관한 고정 heading으로 만든다.
+2. `1. 후보와 검증 기준 / 무엇을 어떤 기준으로 검증하는가` 제목 바로 아래에
+   `검증 대상`과 `판정 기준` 두 칸의 compact selection summary를 둔다.
+3. 1A는 상시 후보 card grid를 렌더링하지 않는다. `후보 변경` toggle을 누르면
+   한 열짜리 inline candidate list가 같은 Step 1 안에서 펼쳐진다.
+4. 1B는 preset을 즉시 비교하고 선택하는 compact button group으로 유지한다.
+5. 선택 후보나 profile이 바뀌면 hero가 아니라 Step 1 selection summary만 새
+   projection으로 갱신된다.
+
+### 1A Candidate Selector Contract
+
+- 닫힌 상태에서는 Step 1 summary가 현재 후보를 소유하고 1A에는 `후보 변경`
+  action만 표시해 후보명을 불필요하게 반복하지 않는다.
+- `후보 변경`은 React local display state만 열고 registry/session/Python state를
+  바꾸지 않는다. `aria-expanded`로 열린 상태를 노출한다.
+- 펼쳐진 목록은 option 하나당 한 행의 실제 button을 사용한다. 후보명과 source type을
+  표시하고 current option은 `aria-pressed`와 selected style로 구분한다.
+- option 수가 고정 높이를 넘을 때만 목록 안에 세로 scroll을 사용한다. page 또는
+  Step 1 전체에 별도 내부 scroll을 만들지 않는다.
+- ineligible option은 비활성으로 유지한다. 선택 가능한 다른 option을 누른 경우에만
+  기존 `select_source` intent를 발행한다.
+- Python은 기존 allowed source, selection key, validation result identity를 다시
+  검증한다. 성공한 app rerun 뒤 selector는 닫힌 기본 상태로 돌아가고 summary가
+  선택된 후보로 바뀐다.
+- option이 없거나 current source가 option set과 일치하지 않으면 Python read model의
+  보수적 empty/disabled 상태를 표시하고 임의 후보를 React에서 선택하지 않는다.
+
+### 1B Profile Selector Contract
+
+- desktop에서는 5개 preset을 동일 폭 한 행으로 표시한다.
+- 760px 이하에서는 두 열로 줄바꿈한다. 홀수 번째 마지막 `사용자 지정`은 두 열
+  전체를 차지해 빈 오른쪽 칸이 남지 않게 한다.
+- 가로 scroll과 carousel arrow는 사용하지 않는다. 숨겨진 option 없이 모든 preset이
+  first-read에서 보여야 한다.
+- 선택 style, `aria-pressed`, `select_profile_preset` intent와 Python allow-list는
+  유지한다. React는 profile applicability나 Gate를 계산하지 않는다.
+
+### Render, State, And Fallback Boundary
+
+- 변경은 기존 fragment 밖 `context` surface 내부의 정보 구조만 바꾼다.
+  `decision` surface와 재검증 mount boundary는 변경하지 않는다.
+- 후보 목록의 open/close만 React local state다. 선택 후보와 profile truth는 계속
+  Python session/read model이 소유한다.
+- 후보/profile intent는 기존 context allow-list만 사용하며 replay/resolution/save
+  action을 새 control에서 발행하지 않는다.
+- React 미가용 Python fallback도 고정 hero, Step 1 selection summary, 접힌 후보
+  변경 목록, desktop/좁은 화면 profile 순서라는 같은 사용자 흐름을 제공한다.
+- ResizeObserver height sync는 inline list open/close 높이 변화를 반영한다.
+
+### 예상 소유 파일
+
+- `app/web/components/practical_validation_decision_workspace/frontend/src/PracticalValidationDecisionWorkspace.tsx`
+- `app/web/components/practical_validation_decision_workspace/frontend/src/style.css`
+- `app/web/backtest_practical_validation/workspace_panel.py`
+- `tests/test_backtest_practical_validation_decision_workspace.py`
+- `tests/test_backtest_refactor_boundaries.py`
+- `tests/test_practical_validation_market_context_visual_contract.py`
+
+read model schema와 Python Gate/service는 현재 계약으로 충분하므로 새 field가 실제로
+필요하다는 RED evidence가 없으면 변경하지 않는다.
+
+### Trade-off And Non-goals
+
+후보 전체를 보려면 `후보 변경`을 한 번 눌러야 한다. 대신 평상시 높이와 반복 정보가
+줄고, 선택 결과가 Step 1의 질문에 직접 연결된다. 후보 검색, 정렬, 즐겨찾기, registry
+재설계, source eligibility 변경, validation profile 추가는 이번 범위가 아니다.
+
+### Acceptance Criteria
+
+33. context hero는 후보에 따라 바뀌는 `검증 대상` aside 없이 고정 Level2 질문만
+    표시한다.
+34. 현재 후보와 profile은 Step 1 title 직후의 compact summary에서 함께 읽힌다.
+35. 1A 후보 목록은 기본적으로 닫혀 있고 `후보 변경`을 눌렀을 때만 한 열 inline
+    list로 열린다.
+36. 후보 목록은 필요한 경우에만 자체 세로 scroll을 쓰며 candidate card grid나
+    가로 carousel을 렌더링하지 않는다.
+37. desktop 1B는 5개 동일 폭 한 행, 760px은 두 열이며 마지막 홀수 option이 두 열
+    전체를 차지한다.
+38. 후보/profile 선택은 기존 context intent와 Python validation만 사용하고 Gate,
+    replay, persistence truth를 바꾸지 않는다.
+39. fallback과 React가 같은 선택 순서와 selected/disabled 의미를 제공한다.
+40. focused RED -> GREEN tests, React production build, target py_compile, diff-check,
+    desktop/760px Browser QA에서 summary 위치, toggle, overflow, iframe height sync를
+    확인한다.
