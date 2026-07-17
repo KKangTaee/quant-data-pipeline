@@ -228,6 +228,74 @@ def _normalize_explicit_earnings_sheet(
     )
 
 
+def _normalize_official_quarterly_data_sheet(
+    frame: pd.DataFrame,
+    *,
+    source_release_date: str,
+    source_ref: str,
+    collected_at: str | None,
+) -> list[dict[str, Any]]:
+    """Read the labeled historical EPS columns from S&P's QUARTERLY DATA sheet."""
+    heading_text = " ".join(
+        str(value).strip().upper()
+        for value in frame.iloc[:3].to_numpy().ravel()
+        if not pd.isna(value)
+    )
+    if "S&P 500 QUARTERLY DATA" not in heading_text:
+        raise ValueError("S&P 500 QUARTERLY DATA 제목을 확인할 수 없습니다.")
+
+    header_window = frame.iloc[:10]
+    signatures = {
+        column: " ".join(
+            str(value).strip().upper()
+            for value in header_window[column].tolist()
+            if not pd.isna(value)
+        )
+        for column in frame.columns
+    }
+
+    def find_column(*tokens: str) -> Any:
+        return next(
+            (
+                column
+                for column, signature in signatures.items()
+                if all(token in signature for token in tokens)
+            ),
+            None,
+        )
+
+    period_column = find_column("QUARTER", "END")
+    operating_column = find_column("OPERATING", "EARNINGS", "PER SHR")
+    as_reported_column = find_column("AS REPORTED", "EARNINGS", "PER SHR")
+    if period_column is None or operating_column is None or as_reported_column is None:
+        raise ValueError("공식 QUARTERLY DATA의 EPS 머리글을 확인할 수 없습니다.")
+
+    release_date = pd.to_datetime(source_release_date, errors="coerce")
+    records: list[dict[str, Any]] = []
+    for _, item in frame.iterrows():
+        period_end = pd.to_datetime(item.get(period_column), errors="coerce")
+        if pd.isna(period_end) or pd.isna(release_date) or period_end > release_date:
+            continue
+        records.append(
+            {
+                "period_end": period_end,
+                "period_type": "quarterly",
+                "status": "actual",
+                "operating_eps": item.get(operating_column),
+                "as_reported_eps": item.get(as_reported_column),
+            }
+        )
+    rows = normalize_index_earnings_frame(
+        pd.DataFrame(records),
+        source_release_date=source_release_date,
+        source_ref=source_ref,
+        collected_at=collected_at,
+    )
+    if not rows:
+        raise ValueError("공식 QUARTERLY DATA에서 완료된 EPS 값을 찾지 못했습니다.")
+    return rows
+
+
 def read_sp500_index_earnings_workbook(
     workbook_path: str | Path | bytes | BinaryIO,
     *,
@@ -235,10 +303,11 @@ def read_sp500_index_earnings_workbook(
     source_ref: str | None = None,
     collected_at: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Read a normalized S&P index-earnings workbook supplied by the operator.
+    """Read an official or normalized S&P index-earnings workbook.
 
-    The importer intentionally requires explicit period/status columns. It does not
-    infer whether a value is actual or estimated from workbook color or position.
+    The official path validates the QUARTERLY DATA title and multi-row Operating /
+    As-Reported headings. The compatibility path requires explicit status columns.
+    Neither path uses workbook color to infer status.
     """
     workbook_source: Any = (
         BytesIO(workbook_path) if isinstance(workbook_path, bytes) else workbook_path
@@ -250,6 +319,19 @@ def read_sp500_index_earnings_workbook(
 
     resolved_source_ref = source_ref or SP500_INDEX_EARNINGS_URL
     for sheet_name in excel.sheet_names:
+        if re.sub(r"\s+", " ", str(sheet_name).strip().upper()) == "QUARTERLY DATA":
+            raw_frame = pd.read_excel(excel, sheet_name=sheet_name, header=None)
+            try:
+                rows = _normalize_official_quarterly_data_sheet(
+                    raw_frame,
+                    source_release_date=source_release_date,
+                    source_ref=resolved_source_ref,
+                    collected_at=collected_at,
+                )
+            except ValueError:
+                pass
+            else:
+                return rows
         frame = pd.read_excel(excel, sheet_name=sheet_name)
         try:
             rows = _normalize_explicit_earnings_sheet(

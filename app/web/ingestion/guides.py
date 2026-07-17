@@ -96,7 +96,7 @@ JOB_GUIDE: dict[str, dict[str, Any]] = {
         "targets": ["finance_meta.sp500_index_earnings"],
         "used_by": ["Workspace > Overview > 시장맥락 > 경제 사이클"],
         "caveats": [
-            "공식 workbook에서 period, actual/estimate 상태, EPS basis를 명시적으로 확인할 수 있어야 합니다.",
+            "공식 workbook의 QUARTERLY DATA 제목과 Operating/As-Reported 분기 머리글을 확인할 수 있어야 합니다.",
             "경제 사이클의 current/prior TTM 비교에는 완료 actual As-Reported 분기 8개가 필요합니다.",
         ],
         "next_action": "등록 결과에서 확보 분기 수와 최신 완료 분기를 확인한 뒤 경제 사이클을 다시 여세요.",

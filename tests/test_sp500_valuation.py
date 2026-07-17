@@ -16,6 +16,14 @@ def xlsx_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
     return buffer.getvalue()
 
 
+def raw_xlsx_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        for sheet_name, frame in sheets.items():
+            frame.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+    return buffer.getvalue()
+
+
 def monthly_pe_frame(months: int, start: str = "2020-01-01") -> pd.DataFrame:
     dates = pd.date_range(start, periods=months, freq="MS")
     return pd.DataFrame(
@@ -260,6 +268,43 @@ class Sp500ValuationDataTests(unittest.TestCase):
         )
         self.assertTrue(
             all(row["source_ref"] == SP500_INDEX_EARNINGS_URL for row in rows)
+        )
+
+    def test_index_earnings_reader_parses_official_quarterly_data_layout(self) -> None:
+        from finance.data.sp500_valuation import read_sp500_index_earnings_workbook
+
+        workbook = raw_xlsx_bytes(
+            {
+                "QUARTERLY DATA": pd.DataFrame(
+                    [
+                        ["S&P Dow Jones Indices", None, None],
+                        ["S&P 500 QUARTERLY DATA", None, None],
+                        [None, None, None],
+                        [None, "OPERATING", "AS REPORTED"],
+                        ["QUARTER", "EARNINGS", "EARNINGS"],
+                        ["END", "PER SHR", "PER SHR"],
+                        [pd.Timestamp("2026-03-31"), None, None],
+                        [pd.Timestamp("2025-12-31"), 70.0, 63.0],
+                        [pd.Timestamp("2025-09-30"), 68.0, 61.0],
+                    ]
+                )
+            }
+        )
+
+        rows = read_sp500_index_earnings_workbook(
+            workbook,
+            source_release_date="2026-05-15",
+        )
+
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(
+            {(row["period_end"], row["earnings_basis"], row["value_status"]) for row in rows},
+            {
+                ("2025-12-31", "operating", "actual"),
+                ("2025-12-31", "as_reported", "actual"),
+                ("2025-09-30", "operating", "actual"),
+                ("2025-09-30", "as_reported", "actual"),
+            },
         )
 
     def test_index_earnings_reader_keeps_normalized_first_sheet_compatibility(self) -> None:

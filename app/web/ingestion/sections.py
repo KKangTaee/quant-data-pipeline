@@ -555,7 +555,7 @@ def render_operational_section() -> Any:
             use_container_width=True,
         )
         st.caption(
-            "앱은 actual/estimate 상태와 As-Reported/Operating 구분이 명시된 분기만 반영합니다. "
+            "앱은 공식 `QUARTERLY DATA` 시트에서 완료 값이 있는 As-Reported/Operating 분기만 반영합니다. "
             "경제 사이클의 현재·전년 TTM 비교에는 실제 As-Reported 분기 8개가 필요합니다."
         )
         sp500_eps_file = st.file_uploader(
