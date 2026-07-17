@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import streamlit.components.v1 as components
 
@@ -27,6 +27,7 @@ def render_practical_validation_decision_workspace(
     *,
     workspace: dict[str, Any],
     key: str | None = None,
+    on_change: Callable[[], None] | None = None,
 ) -> dict[str, Any] | None:
     """Render the Python-owned Level2 projection and return presentation intent."""
 
@@ -36,5 +37,6 @@ def render_practical_validation_decision_workspace(
         workspace=workspace,
         key=key,
         default=None,
+        on_change=on_change,
     )
     return value if isinstance(value, dict) else None

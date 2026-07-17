@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from html import escape
 from typing import Any
 
@@ -2596,10 +2597,40 @@ def _consume_practical_validation_decision_workspace_intent(
 def _rerun_practical_validation_workspace(*, scope: str = "app") -> None:
     """Rerun only the interaction fragment unless navigation changes the route."""
 
+    if scope == "none":
+        return
     if scope == "fragment":
         st.rerun(scope="fragment")
         return
     st.rerun(scope="app")
+
+
+def _consume_practical_validation_component_change(
+    *,
+    component_key: str,
+    sources: list[dict[str, Any]],
+    source: dict[str, Any],
+    validation_result: dict[str, Any] | None,
+    replay_result: dict[str, Any] | None,
+) -> None:
+    """Consume local component intents before the fragment projects new state."""
+
+    intent = st.session_state.get(component_key)
+    if not isinstance(intent, dict) or intent.get("action") not in {
+        "select_source",
+        "select_profile_preset",
+        "run_replay",
+        "run_resolution_action",
+    }:
+        return
+    _consume_practical_validation_decision_workspace_intent(
+        intent,
+        sources=sources,
+        source=source,
+        validation_result=validation_result,
+        replay_result=replay_result,
+        rerun_scope="none",
+    )
 
 
 def _consume_practical_validation_next_stage_action(
@@ -2845,12 +2876,21 @@ def _render_practical_validation_decision_workspace_fragment() -> None:
         source_options=selectable_sources,
     )
 
+    component_key = (
+        "practical-validation-decision-workspace-"
+        f"{selected_source_id or 'source-required'}"
+    )
     if is_practical_validation_decision_workspace_available():
         intent = render_practical_validation_decision_workspace(
             workspace=workspace_model,
-            key=(
-                "practical-validation-decision-workspace-"
-                f"{selected_source_id or 'source-required'}"
+            key=component_key,
+            on_change=partial(
+                _consume_practical_validation_component_change,
+                component_key=component_key,
+                sources=selectable_sources,
+                source=source,
+                validation_result=validation_result,
+                replay_result=replay_result,
             ),
         )
     else:

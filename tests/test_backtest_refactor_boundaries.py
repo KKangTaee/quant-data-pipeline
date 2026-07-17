@@ -386,6 +386,23 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn('rerun_scope="fragment"', source)
         self.assertIn('st.rerun(scope="app")', source)
 
+    def test_practical_validation_replay_is_consumed_before_fragment_projection(
+        self,
+    ) -> None:
+        source = (
+            PROJECT_ROOT / "app/web/backtest_practical_validation/page.py"
+        ).read_text()
+        callback_body = source.split(
+            "def _consume_practical_validation_component_change", 1
+        )[1].split("\ndef ", 1)[0]
+        fragment_body = source.split(
+            "def _render_practical_validation_decision_workspace_fragment", 1
+        )[1]
+
+        self.assertIn('rerun_scope="none"', callback_body)
+        self.assertNotIn("_rerun_practical_validation_workspace", callback_body)
+        self.assertIn("on_change=", fragment_body)
+
     def test_final_review_decision_brief_service_owns_domain_projection(self) -> None:
         service_source = (
             PROJECT_ROOT / "app/services/backtest_final_review_decision_brief.py"
