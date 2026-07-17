@@ -106,28 +106,42 @@ class PracticalValidationMarketContextVisualContractTests(unittest.TestCase):
         self.assertIn("new ResizeObserver", source)
         self.assertIn("Streamlit.setFrameHeight()", source)
 
-    def test_selected_candidate_context_is_kept_in_header_not_below_candidate_grid(
+    def test_selected_candidate_context_is_inside_step_one_not_header(
         self,
     ) -> None:
         source = WORKSPACE.read_text(encoding="utf-8")
+        header = source.split('<header className="pv2-header">', 1)[1].split(
+            "</header>", 1
+        )[0]
+        step_one = source.split('<section className="pv2-step">', 1)[1]
 
-        self.assertIn("검증 대상", source)
-        self.assertIn("workspace.candidate.source_type_label", source)
-        self.assertNotIn("pv2-candidate-summary", source)
+        self.assertNotIn("pv2-target-context", header)
+        self.assertIn("pv2-selection-summary", step_one)
+        self.assertIn("검증 대상", step_one)
+        self.assertIn("판정 기준", step_one)
+        self.assertLess(
+            step_one.index("pv2-selection-summary"),
+            step_one.index("pv2-candidate-toggle"),
+        )
 
-    def test_five_validation_profiles_use_centered_three_plus_two_layout(self) -> None:
+    def test_validation_profiles_use_five_columns_and_two_column_mobile_wrap(
+        self,
+    ) -> None:
         style = STYLE.read_text(encoding="utf-8")
         responsive = style.split("@media (max-width: 760px)", 1)[1]
 
         self.assertIn(
-            ".pv2-profile-grid {\n  grid-template-columns: repeat(6, minmax(0, 1fr));",
+            "grid-template-columns: repeat(5, minmax(0, 1fr));",
             style,
         )
         self.assertIn(
-            ".pv2-profile-grid button:nth-child(4) {\n  grid-column: 2 / span 2;",
-            style,
+            ".pv2-profile-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));",
+            responsive,
         )
-        self.assertIn("grid-column: auto;", responsive)
+        self.assertIn(
+            ".pv2-profile-grid button:last-child:nth-child(odd)", responsive
+        )
+        self.assertIn("grid-column: 1 / -1;", responsive)
 
 
 if __name__ == "__main__":

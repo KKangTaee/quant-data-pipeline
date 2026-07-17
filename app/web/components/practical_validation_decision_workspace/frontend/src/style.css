@@ -62,7 +62,7 @@ summary:focus-visible {
 
 .pv2-header {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(260px, .72fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   padding: 22px 24px;
   border: 1px solid var(--pv2-line);
@@ -71,7 +71,6 @@ summary:focus-visible {
 }
 
 .pv2-header > div,
-.pv2-header > aside,
 .pv2-step-title > div,
 .pv2-replay > div,
 .pv2-issue-card > div {
@@ -108,7 +107,6 @@ summary:focus-visible {
   line-height: 1.58;
 }
 
-.pv2-header > aside,
 .pv2-replay,
 .pv2-final-action > div,
 .pv2-disclosure {
@@ -116,29 +114,6 @@ summary:focus-visible {
   border: 1px solid var(--pv2-line);
   border-radius: 14px;
   background: rgba(255, 255, 255, .82);
-}
-
-.pv2-header > aside {
-  display: grid;
-  gap: 5px;
-  align-content: start;
-}
-
-.pv2-header > aside strong,
-.pv2-header > aside span {
-  overflow-wrap: anywhere;
-}
-
-.pv2-header > aside span {
-  color: var(--pv2-muted);
-  font-size: 12px;
-}
-
-.pv2-header > aside .pv2-target-label {
-  color: var(--pv2-blue);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .04em;
 }
 
 .pv2-step,
@@ -175,7 +150,6 @@ summary:focus-visible {
   font-size: 12px;
 }
 
-.pv2-choice-grid,
 .pv2-profile-grid,
 .pv2-card-grid {
   display: grid;
@@ -193,12 +167,53 @@ summary:focus-visible {
   border-radius: 14px;
 }
 
+.pv2-selection-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(180px, .4fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.pv2-selection-summary > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--pv2-line);
+  border-radius: 12px;
+  background: var(--pv2-wash);
+}
+
+.pv2-selection-summary span {
+  color: var(--pv2-blue);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.pv2-selection-summary strong,
+.pv2-selection-summary small {
+  overflow-wrap: anywhere;
+}
+
+.pv2-selection-summary small {
+  color: var(--pv2-muted);
+  font-size: 11px;
+}
+
 .pv2-candidate-section {
   background: #f8fbfd;
 }
 
 .pv2-policy-section {
   background: #fbfaf7;
+}
+
+.pv2-selection-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
 }
 
 .pv2-subsection-title {
@@ -233,31 +248,35 @@ summary:focus-visible {
   line-height: 1.5;
 }
 
-.pv2-selection-section .pv2-choice-grid,
 .pv2-selection-section .pv2-profile-grid {
   margin-top: 0;
 }
 
 .pv2-profile-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .pv2-profile-grid button {
-  grid-column: span 2;
+  grid-column: auto;
 }
 
-.pv2-profile-grid button:nth-child(4) {
-  grid-column: 2 / span 2;
+.pv2-candidate-list {
+  display: grid;
+  max-height: 264px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 8px;
+  padding-right: 3px;
 }
 
-.pv2-choice-grid button,
+.pv2-candidate-list button,
 .pv2-profile-grid button {
   display: grid;
   gap: 5px;
   text-align: left;
 }
 
-.pv2-choice-grid button span,
+.pv2-candidate-list button span,
 .pv2-profile-grid button span {
   color: var(--pv2-muted);
   font-size: 11px;
@@ -299,7 +318,8 @@ summary:focus-visible {
   margin-top: 14px;
 }
 
-.pv2-choice-grid button,
+.pv2-candidate-toggle,
+.pv2-candidate-list button,
 .pv2-profile-grid button,
 .pv2-replay button,
 .pv2-final-action button,
@@ -313,7 +333,7 @@ summary:focus-visible {
   cursor: pointer;
 }
 
-.pv2-choice-grid button.is-selected,
+.pv2-candidate-list button.is-selected,
 .pv2-profile-grid button.is-selected {
   border-color: #6f91a7;
   background: #eef5f8;
@@ -709,13 +729,28 @@ button:disabled {
   .pv2-step-title,
   .pv2-replay,
   .pv2-verdict dl,
-  .pv2-choice-grid,
-  .pv2-profile-grid,
   .pv2-card-grid,
   .pv2-subsection-title,
   .pv2-evidence-summary,
   .pv2-explanation-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pv2-selection-summary,
+  .pv2-selection-control-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pv2-profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pv2-profile-grid button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .pv2-candidate-toggle {
+    width: 100%;
   }
 
   .pv2-handoff-summary > header,
@@ -739,11 +774,6 @@ button:disabled {
 
   .pv2-final-action button {
     width: 100%;
-  }
-
-  .pv2-profile-grid button,
-  .pv2-profile-grid button:nth-child(4) {
-    grid-column: auto;
   }
 
   .pv2-header,

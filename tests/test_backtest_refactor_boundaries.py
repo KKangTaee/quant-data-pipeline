@@ -360,13 +360,30 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
             "style.css"
         ).read_text()
 
-        self.assertIn("1A. 검증할 후보 선택", source)
+        self.assertIn("1A. 검증할 후보", source)
         self.assertIn("1B. 어떤 관점으로 검증할까요?", source)
         self.assertIn('aria-pressed={option.selected}', source)
         self.assertNotIn("disabled={option.selected || !option.eligible}", source)
         self.assertNotIn("disabled={option.selected}", source)
         self.assertIn(".pv2-candidate-section", style)
         self.assertIn(".pv2-policy-section", style)
+
+    def test_practical_validation_candidate_selector_is_collapsed_inline_list(
+        self,
+    ) -> None:
+        source = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/"
+            "PracticalValidationDecisionWorkspace.tsx"
+        ).read_text()
+        context = source.split('{surface === "context"', 1)[1].split(
+            '{surface === "decision"', 1
+        )[0]
+
+        self.assertIn("candidateListOpen", context)
+        self.assertIn("aria-expanded={candidateListOpen}", context)
+        self.assertIn("pv2-candidate-list", context)
+        self.assertNotIn('<div className="pv2-choice-grid">', context)
 
     def test_practical_validation_workspace_uses_fragment_interaction_boundary(
         self,

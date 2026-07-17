@@ -3197,7 +3197,7 @@ read model schema는 변경하지 않는다.
 - Produces only existing `select_source` and `select_profile_preset` intents.
 - `candidateListOpen: boolean` is React-local presentation state and is never sent to Python.
 
-- [ ] **Step 1: Replace the old header/grid visual assertions with RED selection-IA tests**
+- [x] **Step 1: Replace the old header/grid visual assertions with RED selection-IA tests**
 
   Update `tests/test_practical_validation_market_context_visual_contract.py` with explicit
   source-order and responsive contracts:
@@ -3240,7 +3240,7 @@ read model schema는 변경하지 않는다.
       self.assertNotIn('<div className="pv2-choice-grid">', context)
   ```
 
-- [ ] **Step 2: Run RED tests and confirm the old layout fails for the expected reasons**
+- [x] **Step 2: Run RED tests and confirm the old layout fails for the expected reasons**
 
   Run:
 
@@ -3253,7 +3253,7 @@ read model schema는 변경하지 않는다.
   Expected: FAIL because the header still owns `pv2-target-context`, the candidate grid is
   always open, and profile CSS is still 6-column `3 + 2`.
 
-- [ ] **Step 3: Implement the compact React selection surface**
+- [x] **Step 3: Implement the compact React selection surface**
 
   In `PracticalValidationDecisionWorkspace.tsx`, add local state and replace the context
   header/Step 1 selection markup with this contract:
@@ -3339,7 +3339,7 @@ read model schema는 변경하지 않는다.
 
   Display `selectedProfile?.label || "판정 기준 미선택"` in the summary.
 
-- [ ] **Step 4: Implement exact desktop and 760px CSS behavior**
+- [x] **Step 4: Implement exact desktop and 760px CSS behavior**
 
   In `style.css`, remove the old target aside, choice grid, 6-column profile, and centered
   fourth-button rules. Add:
@@ -3379,7 +3379,7 @@ read model schema는 변경하지 않는다.
   .pv2-candidate-toggle { width: 100%; }
   ```
 
-- [ ] **Step 5: Run GREEN tests and production build**
+- [x] **Step 5: Run GREEN tests and production build**
 
   Run the Step 2 command again. Expected: all tests pass.
 
@@ -3392,7 +3392,7 @@ read model schema는 변경하지 않는다.
 
   Expected: Vite production build succeeds and tracked `build/` references the new bundle.
 
-- [ ] **Step 6: Commit the React implementation unit**
+- [x] **Step 6: Commit the React implementation unit**
 
   Stage only the two tests, React source/CSS, and generated Practical build files. Confirm
   protected paths are absent, then commit:

@@ -85,6 +85,7 @@ export function PracticalValidationDecisionWorkspace({
 }) {
   const evidenceCategories = workspace.category_disclosures
   const [pendingAction, setPendingAction] = useState<string | null>(null)
+  const [candidateListOpen, setCandidateListOpen] = useState(false)
   const [activeEvidenceCategory, setActiveEvidenceCategory] = useState(
     evidenceCategories.find(
       (category) => category.summary.total_count > 0,
@@ -131,6 +132,9 @@ export function PracticalValidationDecisionWorkspace({
   const activeEvidence = evidenceCategories.find(
     (category) => category.category_id === activeEvidenceCategory,
   )
+  const selectedProfile = workspace.profile.options.find(
+    (option) => option.selected,
+  )
 
   return (
     <main className="pv2-workspace" data-surface={surface}>
@@ -147,14 +151,6 @@ export function PracticalValidationDecisionWorkspace({
           </h1>
           <p>{workspace.header.detail}</p>
         </div>
-        <aside className="pv2-target-context">
-          <span className="pv2-target-label">검증 대상</span>
-          <strong>{workspace.candidate.title}</strong>
-          <span>
-            {workspace.candidate.source_type_label} ·{" "}
-            {workspace.candidate.as_of || "기준일 미측정"}
-          </span>
-        </aside>
       </header>
 
       <section className="pv2-step">
@@ -163,37 +159,66 @@ export function PracticalValidationDecisionWorkspace({
           title="무엇을 어떤 기준으로 검증하는가"
           detail="후보와 판정 기준을 먼저 고정합니다."
         />
+        <div className="pv2-selection-summary">
+          <div>
+            <span>검증 대상</span>
+            <strong>{workspace.candidate.title}</strong>
+            <small>
+              {workspace.candidate.source_type_label} ·{" "}
+              {workspace.candidate.as_of || "기준일 미측정"}
+            </small>
+          </div>
+          <div>
+            <span>판정 기준</span>
+            <strong>{selectedProfile?.label || "판정 기준 미선택"}</strong>
+          </div>
+        </div>
         <div className="pv2-selection-section pv2-candidate-section">
-          <div className="pv2-subsection-title">
-            <span>1A</span>
-            <div>
-              <h3>1A. 검증할 후보 선택</h3>
-              <p>목록에서 실제로 재검증할 포트폴리오를 고릅니다.</p>
+          <div className="pv2-selection-control-row">
+            <div className="pv2-subsection-title">
+              <span>1A</span>
+              <div>
+                <h3>1A. 검증할 후보</h3>
+                <p>현재 후보를 바꾸려면 목록을 여세요.</p>
+              </div>
             </div>
+            <button
+              type="button"
+              className="pv2-candidate-toggle"
+              aria-expanded={candidateListOpen}
+              onClick={() => setCandidateListOpen((open) => !open)}
+            >
+              {candidateListOpen ? "후보 목록 닫기" : "후보 변경"}
+            </button>
           </div>
-          <div className="pv2-choice-grid">
-            {workspace.candidate_selector.options.map((option) => (
-              <button
-                type="button"
-                className={option.selected ? "is-selected" : ""}
-                aria-pressed={option.selected}
-                disabled={!option.eligible}
-                key={option.selection_source_id}
-                onClick={() => {
-                  if (option.selected) return
-                  emit({
-                    action: "select_source",
-                    intent_id: intentId("source"),
-                    selection_source_id: option.selection_source_id,
-                    validation_result_id: workspace.validation_result_id,
-                  })
-                }}
-              >
-                <strong>{option.title}</strong>
-                <span>{option.source_type_label}</span>
-              </button>
-            ))}
-          </div>
+          {candidateListOpen && (
+            <div className="pv2-candidate-list">
+              {workspace.candidate_selector.options.map((option) => (
+                <button
+                  type="button"
+                  className={option.selected ? "is-selected" : ""}
+                  aria-pressed={option.selected}
+                  disabled={!option.eligible}
+                  key={option.selection_source_id}
+                  onClick={() => {
+                    if (option.selected) {
+                      setCandidateListOpen(false)
+                      return
+                    }
+                    emit({
+                      action: "select_source",
+                      intent_id: intentId("source"),
+                      selection_source_id: option.selection_source_id,
+                      validation_result_id: workspace.validation_result_id,
+                    })
+                  }}
+                >
+                  <strong>{option.title}</strong>
+                  <span>{option.source_type_label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="pv2-selection-section pv2-policy-section">
           <div className="pv2-subsection-title">
