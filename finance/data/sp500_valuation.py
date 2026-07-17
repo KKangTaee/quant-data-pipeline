@@ -601,7 +601,7 @@ def collect_and_store_shiller_monthly_valuation(
 
 
 def import_and_store_sp500_index_earnings(
-    workbook_path: str | Path,
+    workbook_path: str | Path | bytes | BinaryIO,
     *,
     source_release_date: str,
     workbook_reader: Any = read_sp500_index_earnings_workbook,
@@ -619,21 +619,49 @@ def import_and_store_sp500_index_earnings(
     rows = workbook_reader(
         workbook_path,
         source_release_date=release_text,
-        source_ref=str(workbook_path),
+        source_ref=SP500_INDEX_EARNINGS_URL,
     )
+    for row in rows:
+        row["source"] = SP500_EARNINGS_SOURCE
+        row["source_ref"] = SP500_INDEX_EARNINGS_URL
     db = _open_meta_db(
         db_factory, host=host, user=user, password=password, port=port
     )
     try:
         _ensure_table(db, "sp500_index_earnings")
-        _upsert_earnings_rows(db, rows)
+        db.begin()
+        try:
+            _upsert_earnings_rows(db, rows)
+            coverage_rows = db.query(
+                """
+                SELECT COUNT(DISTINCT period_end) AS actual_quarter_count,
+                       MAX(period_end) AS latest_actual_period_end
+                FROM sp500_index_earnings
+                WHERE period_type = 'quarterly'
+                  AND earnings_basis = 'as_reported'
+                  AND value_status = 'actual'
+                  AND eps > 0
+                """
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
     finally:
         db.close()
+    coverage = coverage_rows[0] if coverage_rows else {}
+    actual_quarter_count = int(coverage.get("actual_quarter_count") or 0)
+    latest_actual_period_end = coverage.get("latest_actual_period_end")
+    if latest_actual_period_end is not None:
+        latest_actual_period_end = str(latest_actual_period_end)[:10]
     return {
         "rows_written": len(rows),
         "source": SP500_EARNINGS_SOURCE,
-        "source_ref": str(workbook_path),
+        "source_ref": SP500_INDEX_EARNINGS_URL,
         "release_date": release_text,
+        "actual_quarter_count": actual_quarter_count,
+        "latest_actual_period_end": latest_actual_period_end,
+        "remaining_quarters": max(0, 8 - actual_quarter_count),
         "warnings": [] if rows else ["명시적 상태가 있는 S&P EPS 행이 없습니다."],
     }
 

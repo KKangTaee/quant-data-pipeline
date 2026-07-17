@@ -419,6 +419,99 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["release_date"], "2026-05-15")
         self.assertEqual(db.executemany.call_args.args[1][0]["value_status"], "actual")
 
+    def test_index_earnings_import_reports_actual_coverage_and_commits(self) -> None:
+        from finance.data.sp500_valuation import (
+            SP500_INDEX_EARNINGS_URL,
+            import_and_store_sp500_index_earnings,
+        )
+
+        db = Mock()
+        db.query.side_effect = [
+            [{"cnt": 0}],
+            [
+                {
+                    "actual_quarter_count": 6,
+                    "latest_actual_period_end": "2026-03-31",
+                }
+            ],
+        ]
+        reader = Mock(
+            return_value=[
+                {
+                    "period_end": "2026-03-31",
+                    "period_type": "quarterly",
+                    "earnings_basis": "as_reported",
+                    "value_status": "actual",
+                    "eps": 72.0,
+                    "source": "sp_dow_jones_index_earnings",
+                    "source_ref": "uploaded-file.xlsx",
+                    "source_release_date": "2026-05-15",
+                    "collected_at": None,
+                    "error_msg": None,
+                }
+            ]
+        )
+
+        result = import_and_store_sp500_index_earnings(
+            b"xlsx",
+            source_release_date="2026-05-15",
+            workbook_reader=reader,
+            db_factory=lambda *_args, **_kwargs: db,
+        )
+
+        self.assertEqual(result["actual_quarter_count"], 6)
+        self.assertEqual(result["latest_actual_period_end"], "2026-03-31")
+        self.assertEqual(result["remaining_quarters"], 2)
+        self.assertEqual(result["source_ref"], SP500_INDEX_EARNINGS_URL)
+        self.assertEqual(
+            db.executemany.call_args.args[1][0]["source_ref"],
+            SP500_INDEX_EARNINGS_URL,
+        )
+        reader.assert_called_once_with(
+            b"xlsx",
+            source_release_date="2026-05-15",
+            source_ref=SP500_INDEX_EARNINGS_URL,
+        )
+        db.begin.assert_called_once()
+        db.commit.assert_called_once()
+        db.rollback.assert_not_called()
+
+    def test_index_earnings_import_rolls_back_failed_batch(self) -> None:
+        from finance.data.sp500_valuation import import_and_store_sp500_index_earnings
+
+        db = Mock()
+        db.query.return_value = [{"cnt": 0}]
+        db.executemany.side_effect = RuntimeError("write failed")
+        reader = Mock(
+            return_value=[
+                {
+                    "period_end": "2026-03-31",
+                    "period_type": "quarterly",
+                    "earnings_basis": "as_reported",
+                    "value_status": "actual",
+                    "eps": 72.0,
+                    "source": "sp_dow_jones_index_earnings",
+                    "source_ref": None,
+                    "source_release_date": "2026-05-15",
+                    "collected_at": None,
+                    "error_msg": None,
+                }
+            ]
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "write failed"):
+            import_and_store_sp500_index_earnings(
+                b"xlsx",
+                source_release_date="2026-05-15",
+                workbook_reader=reader,
+                db_factory=lambda *_args, **_kwargs: db,
+            )
+
+        db.begin.assert_called_once()
+        db.rollback.assert_called_once()
+        db.commit.assert_not_called()
+        db.close.assert_called_once()
+
     def test_sep_collector_discovers_latest_release_and_preserves_vintage(self) -> None:
         from finance.data.sp500_valuation import collect_and_store_fomc_sep
 
