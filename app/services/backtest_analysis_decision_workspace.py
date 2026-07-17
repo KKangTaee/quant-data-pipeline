@@ -20,6 +20,11 @@ from app.services.backtest_handoff_readiness import (
 BACKTEST_ANALYSIS_DECISION_WORKSPACE_SCHEMA_VERSION = (
     "backtest_analysis_decision_workspace_v1"
 )
+_ERROR_KIND_MAP = {
+    "input": "configuration_required",
+    "data": "data_required",
+    "system": "execution_failed",
+}
 
 
 def _json_ready(value: Any) -> Any:
@@ -29,7 +34,15 @@ def _json_ready(value: Any) -> Any:
         return {str(key): _json_ready(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
         return [_json_ready(item) for item in value]
-    return value
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    scalar_item = getattr(value, "item", None)
+    if callable(scalar_item):
+        try:
+            return _json_ready(scalar_item())
+        except (TypeError, ValueError):
+            pass
+    return str(value)
 
 
 def build_level1_configuration_fingerprint(
@@ -169,8 +182,148 @@ def build_level1_readiness_projection(
     }
 
 
+def _metric_items(summary_df: Any) -> list[dict[str, Any]]:
+    if summary_df is None or getattr(summary_df, "empty", True):
+        return []
+    row = summary_df.iloc[0]
+    definitions = [
+        ("cagr", "연환산 수익률", "CAGR"),
+        ("maximum_drawdown", "최대 낙폭", "Maximum Drawdown"),
+        ("sharpe_ratio", "위험 대비 수익", "Sharpe Ratio"),
+        ("volatility", "변동성", "Standard Deviation"),
+    ]
+    return [
+        {
+            "metric_id": key,
+            "label": label,
+            "value": _json_ready(row.get(column)),
+        }
+        for key, label, column in definitions
+        if column in row.index
+    ]
+
+
+def _plain_reasons(readiness: Mapping[str, Any]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    gate_summary = dict(readiness.get("gate_summary") or {})
+    for index, message in enumerate(list(gate_summary.get("action_items") or [])):
+        text = str(message)
+        if "app." in text or "result_df." in text:
+            text = "실행 계약의 기술 근거를 상세 근거에서 확인해야 합니다."
+        rows.append(
+            {
+                "root_issue_id": f"gate:{index}:{text}",
+                "message": text,
+            }
+        )
+    return _deduplicate_reasons(rows)[:3]
+
+
+def build_backtest_analysis_decision_workspace(
+    *,
+    workspace_kind: str,
+    selection: Mapping[str, Any],
+    configuration: Mapping[str, Any],
+    result_bundle: dict[str, Any] | None,
+    result_configuration_fingerprint: str | None,
+    saved_mixes: Sequence[Mapping[str, Any]],
+    last_error: str | None,
+    last_error_kind: str | None,
+    action_handlers: Mapping[str, Callable[..., Any] | None],
+    component_bundles: Sequence[Mapping[str, Any]] = (),
+) -> dict[str, Any]:
+    """Build the Python-owned Level1 read model consumed by all UI surfaces."""
+
+    fingerprint = build_level1_configuration_fingerprint(
+        workspace_kind=workspace_kind,
+        selection=selection,
+        configuration=configuration,
+    )
+    strategy_choice = str(selection.get("strategy_choice") or "") or None
+    readiness = build_level1_readiness_projection(
+        workspace_kind=workspace_kind,
+        strategy_choice=strategy_choice,
+        result_bundle=result_bundle,
+        current_configuration_fingerprint=fingerprint,
+        result_configuration_fingerprint=result_configuration_fingerprint,
+        action_handlers=action_handlers,
+    )
+    meta = dict((result_bundle or {}).get("meta") or {})
+    phase = (
+        "error"
+        if last_error
+        else "result"
+        if result_bundle
+        else "configuring"
+        if selection
+        else "selecting"
+    )
+    maturity = readiness["strategy_maturity"]
+    if maturity == "development":
+        headline = "개발 중이므로 현재 Level2로 보낼 수 없습니다"
+    elif readiness["handoff_state"] == "ready":
+        headline = "Level2 검증 후보로 보낼 수 있습니다"
+    else:
+        headline = "Level1에서 먼저 해결할 항목이 있습니다"
+
+    error = None
+    if last_error:
+        error = {
+            "kind": _ERROR_KIND_MAP.get(
+                str(last_error_kind or ""), "execution_failed"
+            ),
+            "message": str(last_error),
+        }
+    current_work = {
+        "title": strategy_choice
+        or str(selection.get("mix_name") or "Portfolio Mix"),
+        "workspace_kind": workspace_kind,
+    }
+    decision = {
+        "headline": headline,
+        "summary": (
+            "성과만으로 판단하지 않고 실행·데이터·인계 준비 상태를 함께 확인합니다."
+        ),
+        "reasons": _plain_reasons(readiness),
+        "metrics": _metric_items((result_bundle or {}).get("summary_df")),
+        "result_available": readiness["result_available"],
+    }
+    return {
+        "schema_version": BACKTEST_ANALYSIS_DECISION_WORKSPACE_SCHEMA_VERSION,
+        "workspace_id": fingerprint[:16],
+        "workspace_kind": workspace_kind,
+        "configuration_fingerprint": fingerprint,
+        "run_result_id": meta.get("run_id"),
+        "candidate_source_id": meta.get("selection_source_id"),
+        "workspace_phase": phase,
+        "result_freshness": readiness["result_freshness"],
+        "handoff_state": readiness["handoff_state"],
+        "strategy_maturity": maturity,
+        "header": {
+            "question": "이 전략 또는 조합을 Level2 검증 후보로 만들 수 있는가?"
+        },
+        "current_work": current_work,
+        "strategy_catalog": build_level1_strategy_catalog(),
+        "configuration_summary": _json_ready(dict(configuration)),
+        "saved_mixes": [_json_ready(dict(row)) for row in saved_mixes],
+        "component_bundle_count": len(component_bundles),
+        "decision": decision,
+        "error": error,
+        "actions": readiness["actions"],
+        "details": {"technical_evidence": {"meta": _json_ready(meta)}},
+        "boundaries": {
+            "react_executes_backtest": False,
+            "react_writes_history": False,
+            "react_writes_saved_mix": False,
+            "react_writes_candidate_source": False,
+            "python_validates_intent": True,
+        },
+    }
+
+
 __all__ = [
     "BACKTEST_ANALYSIS_DECISION_WORKSPACE_SCHEMA_VERSION",
+    "build_backtest_analysis_decision_workspace",
     "build_level1_configuration_fingerprint",
     "build_level1_readiness_projection",
     "build_level1_strategy_catalog",

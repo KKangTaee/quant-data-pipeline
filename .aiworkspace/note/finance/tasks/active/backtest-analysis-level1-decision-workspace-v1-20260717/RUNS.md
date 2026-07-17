@@ -40,3 +40,11 @@
 - GREEN focused: `6 passed`
 - existing handoff regression: `3 passed, 829 deselected`
 - target compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 3 RED -> GREEN
+
+- RED 1: complete workspace builder import 부재로 collection 실패
+- GREEN 1: decision / KPI / error projection 포함 `8 passed`
+- RED 2: date가 포함된 configuration / meta / saved Mix JSON 직렬화 실패
+- GREEN 2: JSON-ready projection 보강 후 `9 passed`
+- target compile / `git diff --check`: 통과

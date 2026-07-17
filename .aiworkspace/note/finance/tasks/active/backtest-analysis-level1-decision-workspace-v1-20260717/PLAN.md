@@ -342,7 +342,7 @@ git commit -m "Backtest Analysis 결과 최신성과 인계 진실 계약 추가
 - Consumes: Task 1~2 contracts, result bundle, saved Mix summaries, last error.
 - Produces: `build_backtest_analysis_decision_workspace()` with stable identity, status axes, user explanation, details, actions, boundaries.
 
-- [ ] **Step 1: Write failing full-projection tests**
+- [x] **Step 1: Write failing full-projection tests**
 
 ```python
 import pandas as pd
@@ -393,13 +393,13 @@ def test_first_read_hides_raw_path_and_error_preserves_result() -> None:
     assert "app.runtime" not in str(workspace["decision"])
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py -q`
 
 Expected: failures because the complete builder does not exist.
 
-- [ ] **Step 3: Implement error, KPI, and plain-reason helpers**
+- [x] **Step 3: Implement error, KPI, and plain-reason helpers**
 
 ```python
 _ERROR_KIND_MAP = {"input": "configuration_required", "data": "data_required", "system": "execution_failed"}
@@ -423,7 +423,7 @@ def _plain_reasons(readiness: Mapping[str, Any]) -> list[dict[str, str]]:
     return _deduplicate_reasons(rows)[:3]
 ```
 
-- [ ] **Step 4: Implement the complete builder**
+- [x] **Step 4: Implement the complete builder**
 
 The function body is fixed to compute every projected variable before returning it:
 
@@ -503,7 +503,7 @@ def build_backtest_analysis_decision_workspace(
     }
 ```
 
-- [ ] **Step 5: Run GREEN, compile, and diff-check**
+- [x] **Step 5: Run GREEN, compile, and diff-check**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
@@ -513,7 +513,7 @@ git diff --check
 
 Expected: all commands exit 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/services/backtest_analysis_decision_workspace.py tests/test_backtest_analysis_decision_workspace.py
