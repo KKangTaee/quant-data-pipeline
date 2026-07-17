@@ -385,6 +385,27 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("pv2-candidate-list", context)
         self.assertNotIn('<div className="pv2-choice-grid">', context)
 
+    def test_practical_validation_fallback_summarizes_selection_before_change_controls(
+        self,
+    ) -> None:
+        source = (
+            PROJECT_ROOT / "app/web/backtest_practical_validation/workspace_panel.py"
+        ).read_text()
+        body = source.split(
+            "def _render_practical_validation_context_surface_fallback", 1
+        )[1].split("\ndef ", 1)[0]
+
+        self.assertIn('st.markdown("#### 1. 후보와 검증 기준")', body)
+        self.assertIn('st.caption("검증 대상")', body)
+        self.assertIn('st.caption("판정 기준")', body)
+        self.assertIn(
+            'with st.expander("1A. 후보 변경", expanded=False):', body
+        )
+        self.assertLess(
+            body.index('st.caption("검증 대상")'),
+            body.index('with st.expander("1A. 후보 변경"'),
+        )
+
     def test_practical_validation_workspace_uses_fragment_interaction_boundary(
         self,
     ) -> None:

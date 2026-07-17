@@ -441,59 +441,70 @@ def _render_practical_validation_context_surface_fallback(
     candidate = dict(workspace.get("candidate") or {})
     selector = dict(workspace.get("candidate_selector") or {})
     profile = dict(workspace.get("profile") or {})
-
-    st.markdown(
-        f"### {header.get('question') or '이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?'}"
-    )
-    st.caption(str(header.get("detail") or ""))
-    st.caption(
-        f"후보: {candidate.get('title') or '-'} · "
-        f"기준일: {candidate.get('as_of') or '-'}"
-    )
-
-    st.markdown("#### 1. 후보와 검증 기준")
-    st.markdown("##### 1A. 검증할 후보 선택")
-    st.caption("목록에서 실제로 재검증할 포트폴리오를 고릅니다.")
     source_options = [
         dict(row)
         for row in list(selector.get("options") or [])
         if isinstance(row, dict)
     ]
-    if source_options:
-        for option in source_options:
-            option_id = str(option.get("selection_source_id") or "")
-            if bool(option.get("selected")):
-                with st.container(border=True):
-                    st.markdown(
-                        f"**✓ {option.get('title') or option_id or '후보'}**"
+    profile_options = [
+        dict(row)
+        for row in list(profile.get("options") or [])
+        if isinstance(row, dict)
+    ]
+    selected_profile = next(
+        (row for row in profile_options if bool(row.get("selected"))),
+        {},
+    )
+
+    st.markdown(
+        f"### {header.get('question') or '이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?'}"
+    )
+    st.caption(str(header.get("detail") or ""))
+    st.markdown("#### 1. 후보와 검증 기준")
+    summary_columns = st.columns((3, 1))
+    with summary_columns[0]:
+        st.caption("검증 대상")
+        st.markdown(f"**{candidate.get('title') or '-'}**")
+        st.caption(
+            f"{candidate.get('source_type_label') or '-'} · "
+            f"{candidate.get('as_of') or '-'}"
+        )
+    with summary_columns[1]:
+        st.caption("판정 기준")
+        st.markdown(f"**{selected_profile.get('label') or '미선택'}**")
+
+    with st.expander("1A. 후보 변경", expanded=False):
+        if source_options:
+            for option in source_options:
+                option_id = str(option.get("selection_source_id") or "")
+                if bool(option.get("selected")):
+                    with st.container(border=True):
+                        st.markdown(
+                            f"**✓ {option.get('title') or option_id or '후보'}**"
+                        )
+                        st.caption(
+                            str(option.get("source_type_label") or "검증 후보")
+                        )
+                    continue
+                if st.button(
+                    str(option.get("title") or option_id or "후보"),
+                    key=f"pv2-fallback-source-{option_id}",
+                    width="stretch",
+                    disabled=not bool(option.get("eligible", True)),
+                ):
+                    return _workspace_intent(
+                        "select_source",
+                        workspace=workspace,
+                        selection_source_id=option_id,
                     )
-                    st.caption(
-                        str(option.get("source_type_label") or "검증 후보")
-                    )
-                continue
-            if st.button(
-                str(option.get("title") or option_id or "후보"),
-                key=f"pv2-fallback-source-{option_id}",
-                width="stretch",
-                disabled=not bool(option.get("eligible", True)),
-            ):
-                return _workspace_intent(
-                    "select_source",
-                    workspace=workspace,
-                    selection_source_id=option_id,
-                )
-    else:
-        st.info("Backtest Analysis에서 검증할 후보를 먼저 보내세요.")
+        else:
+            st.info("Backtest Analysis에서 검증할 후보를 먼저 보내세요.")
 
     st.markdown("##### 1B. 어떤 관점으로 검증할까요?")
     st.caption(
         "포트폴리오 설계가 아니라 손실 허용도와 운용 목적에 맞는 판정 기준입니다."
     )
-    for option in [
-        dict(row)
-        for row in list(profile.get("options") or [])
-        if isinstance(row, dict)
-    ]:
+    for option in profile_options:
         profile_id = str(option.get("profile_id") or "")
         if bool(option.get("selected")):
             with st.container(border=True):

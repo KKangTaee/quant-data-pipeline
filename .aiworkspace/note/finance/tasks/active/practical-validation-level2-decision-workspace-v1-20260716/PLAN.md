@@ -3413,7 +3413,7 @@ read model schema는 변경하지 않는다.
   `select_source` and `select_profile_preset`.
 - Does not add session keys, registry writes, Gate calculation, or replay actions.
 
-- [ ] **Step 1: Add a RED fallback structure test**
+- [x] **Step 1: Add a RED fallback structure test**
 
   Add to `tests/test_backtest_refactor_boundaries.py`:
 
@@ -3429,7 +3429,7 @@ read model schema는 변경하지 않는다.
       self.assertLess(body.index('st.caption("검증 대상")'), body.index('with st.expander("1A. 후보 변경"')))
   ```
 
-- [ ] **Step 2: Run the focused fallback test and verify RED**
+- [x] **Step 2: Run the focused fallback test and verify RED**
 
   Run:
 
@@ -3441,7 +3441,7 @@ read model schema는 변경하지 않는다.
   Expected: FAIL because fallback currently puts the candidate caption above Step 1 and
   renders all candidates without an expander.
 
-- [ ] **Step 3: Align the Python fallback information order**
+- [x] **Step 3: Align the Python fallback information order**
 
   Change `_render_practical_validation_context_surface_fallback` to render the fixed hero,
   Step 1 summary, and collapsed candidate list in this exact order:
@@ -3497,7 +3497,7 @@ read model schema는 변경하지 않는다.
 
   Keep the existing 1B option order and intent behavior below the expander.
 
-- [ ] **Step 4: Run fallback and full focused GREEN tests**
+- [x] **Step 4: Run fallback and full focused GREEN tests**
 
   Run:
 
@@ -3510,7 +3510,7 @@ read model schema는 변경하지 않는다.
 
   Expected: all focused tests pass.
 
-- [ ] **Step 5: Run target py_compile and commit fallback parity**
+- [x] **Step 5: Run target py_compile and commit fallback parity**
 
   Run:
 
