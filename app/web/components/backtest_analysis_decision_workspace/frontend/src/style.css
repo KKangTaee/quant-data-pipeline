@@ -110,7 +110,8 @@ button {
 .bt1-entry-grid,
 .bt1-purpose-grid,
 .bt1-metric-grid,
-.bt1-reason-grid {
+.bt1-reason-grid,
+.bt1-saved-mix-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -311,6 +312,94 @@ button {
   cursor: pointer;
 }
 
+.bt1-mix-entry {
+  display: grid;
+  gap: 14px;
+}
+
+.bt1-mix-summary {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #d8e3ec;
+  border-radius: 14px;
+  background: #f9fbfc;
+}
+
+.bt1-mix-summary article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+}
+
+.bt1-mix-summary p {
+  margin: 4px 0 0;
+  font-weight: 800;
+}
+
+.bt1-saved-mix-list article {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #d8e3ec;
+  border-radius: 14px;
+  background: #f9fbfc;
+}
+
+.bt1-saved-mix-list strong,
+.bt1-saved-mix-list span {
+  overflow-wrap: anywhere;
+}
+
+.bt1-saved-mix-list span,
+.bt1-saved-mix-list small,
+.bt1-save-mix-form label > span {
+  color: #6d8095;
+}
+
+.bt1-save-mix-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bt1-save-mix-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.bt1-save-mix-form input,
+.bt1-save-mix-form textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #cfdbe4;
+  border-radius: 12px;
+  color: #152033;
+  background: #fff;
+  font: inherit;
+}
+
+.bt1-save-mix-form textarea {
+  min-height: 44px;
+  resize: vertical;
+}
+
+.bt1-secondary-action-button {
+  align-self: end;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid #7898ad;
+  border-radius: 12px;
+  color: #315c78;
+  background: #eef5f8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .bt1-empty {
   padding: 18px;
   color: #64748b;
@@ -321,6 +410,7 @@ button {
   .bt1-purpose-grid,
   .bt1-metric-grid,
   .bt1-reason-grid,
+  .bt1-saved-mix-list,
   .bt1-configuration-summary {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -337,7 +427,13 @@ button {
     padding: 18px;
   }
 
-  .bt1-action-button {
+  .bt1-save-mix-form,
+  .bt1-mix-summary article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bt1-action-button,
+  .bt1-secondary-action-button {
     width: 100%;
   }
 }

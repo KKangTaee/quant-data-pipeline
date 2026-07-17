@@ -1,6 +1,6 @@
 # Status
 
-Status: Execution In Progress / 3차 Complete
+Status: Execution In Progress / 4차 Complete
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -17,7 +17,7 @@ Last Updated: 2026-07-18
 - [x] 1차 Truth / Handoff Contract
 - [x] 2차 Decision Workspace Read Model
 - [x] 3차 Single Strategy One-Shell
-- [ ] 4차 Portfolio Mix One-Shell
+- [x] 4차 Portfolio Mix One-Shell
 - [ ] 5차 Runtime QA / Docs / Closeout
 
 ## Approved Roadmap
@@ -30,5 +30,5 @@ Last Updated: 2026-07-18
 
 ## Next Action
 
-`PLAN.md`의 Task 7부터 Portfolio Mix role / weight / replay 계약을
-RED -> GREEN 순서로 실행한다.
+`PLAN.md`의 Task 9에서 fresh test / build / compile, desktop / 760px
+Browser QA, finance canonical docs와 root handoff log 동기화를 실행한다.

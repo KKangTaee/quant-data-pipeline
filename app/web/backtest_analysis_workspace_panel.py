@@ -61,6 +61,23 @@ def render_backtest_analysis_workspace_fallback(
                                 "select_strategy",
                                 {"strategy_choice": choice},
                             )
+        else:
+            st.markdown("**Portfolio Mix 시작 방식**")
+            new_col, saved_col = st.columns(2)
+            with new_col:
+                if st.button(
+                    "새 Mix 만들기",
+                    key="backtest_analysis_fallback_new_mix",
+                    use_container_width=True,
+                ):
+                    return _intent("select_mix_mode", {"mix_mode": "new"})
+            with saved_col:
+                if st.button(
+                    "저장된 Mix 불러오기",
+                    key="backtest_analysis_fallback_saved_mix",
+                    use_container_width=True,
+                ):
+                    return _intent("select_mix_mode", {"mix_mode": "saved"})
         return None
 
     decision = dict(workspace.get("decision") or {})
@@ -78,9 +95,29 @@ def render_backtest_analysis_workspace_fallback(
                 str(metric.get("label") or "-"),
                 str(metric.get("value") if metric.get("value") is not None else "-"),
             )
-    action = dict(dict(workspace.get("actions") or {}).get("save_and_move") or {})
-    if action.get("enabled") and st.button(
-        str(action.get("label") or "후보로 저장하고 Level2로 이동"),
+    actions = dict(workspace.get("actions") or {})
+    save_mix = dict(actions.get("save_mix") or {})
+    if save_mix.get("enabled"):
+        mix_name = st.text_input(
+            "Mix 이름",
+            key="backtest_analysis_fallback_mix_name",
+        )
+        description = st.text_area(
+            "메모",
+            key="backtest_analysis_fallback_mix_description",
+        )
+        if st.button(
+            str(save_mix.get("label") or "Mix 저장"),
+            key="backtest_analysis_fallback_save_mix",
+            use_container_width=True,
+        ):
+            return _intent(
+                "save_mix",
+                {"name": mix_name, "description": description},
+            )
+    save_and_move = dict(actions.get("save_and_move") or {})
+    if save_and_move.get("enabled") and st.button(
+        str(save_and_move.get("label") or "후보로 저장하고 Level2로 이동"),
         key="backtest_analysis_fallback_save_and_move",
         use_container_width=True,
     ):

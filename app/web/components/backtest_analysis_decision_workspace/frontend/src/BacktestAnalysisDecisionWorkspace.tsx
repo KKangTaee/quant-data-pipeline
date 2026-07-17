@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 import { Streamlit } from "streamlit-component-lib"
 import {
   BacktestAnalysisWorkspace,
@@ -37,6 +37,9 @@ export function BacktestAnalysisDecisionWorkspace({
   surface: WorkspaceSurface
 }) {
   const saveAndMove = workspace.actions.save_and_move
+  const saveMix = workspace.actions.save_mix
+  const [mixName, setMixName] = useState("")
+  const [mixDescription, setMixDescription] = useState("")
   const configurationRows = Object.entries(workspace.configuration_summary).slice(
     0,
     6,
@@ -139,6 +142,64 @@ export function BacktestAnalysisDecisionWorkspace({
                 ))}
               </div>
             )}
+            {workspace.workspace_kind === "portfolio_mix" && (
+              <div className="bt1-mix-entry">
+                <div className="bt1-entry-grid">
+                  <button
+                    type="button"
+                    className={
+                      workspace.mix?.saved_entry_mode === "new"
+                        ? "is-selected"
+                        : ""
+                    }
+                    onClick={() => emitIntent("select_mix_mode", { mix_mode: "new" })}
+                  >
+                    <strong>새 Mix 만들기</strong>
+                    <span>구성 전략을 실행한 뒤 역할과 비중을 새로 정합니다.</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      workspace.mix?.saved_entry_mode === "saved"
+                        ? "is-selected"
+                        : ""
+                    }
+                    onClick={() => emitIntent("select_mix_mode", { mix_mode: "saved" })}
+                  >
+                    <strong>저장된 Mix 불러오기</strong>
+                    <span>재사용 가능한 저장 setup을 골라 이어서 검토합니다.</span>
+                  </button>
+                </div>
+                {workspace.mix?.role_weight_rows.length ? (
+                  <div className="bt1-mix-summary">
+                    {workspace.mix.role_weight_rows.map((row) => (
+                      <article key={`${row.strategy_name}-${row.role}`}>
+                        <strong>{row.strategy_name}</strong>
+                        <span>{row.role_label}</span>
+                        <span>{displayValue(row.weight_percent)}%</span>
+                      </article>
+                    ))}
+                    <p>총 비중 {displayValue(workspace.mix.total_weight_percent)}%</p>
+                  </div>
+                ) : null}
+                {workspace.mix?.saved_entry_mode === "saved" &&
+                  workspace.saved_mixes.length > 0 && (
+                    <div className="bt1-saved-mix-list">
+                      {workspace.saved_mixes.slice(0, 6).map((item, index) => (
+                        <article key={String(item.portfolio_id ?? index)}>
+                          <strong>{displayValue(item.name)}</strong>
+                          <span>
+                            {Array.isArray(item.strategy_names)
+                              ? item.strategy_names.join(" · ")
+                              : "-"}
+                          </span>
+                          <small>{displayValue(item.updated_at)}</small>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+              </div>
+            )}
             {configurationRows.length > 0 && (
               <dl className="bt1-configuration-summary">
                 {configurationRows.map(([key, value]) => (
@@ -199,22 +260,56 @@ export function BacktestAnalysisDecisionWorkspace({
             )}
           </section>
 
-          {saveAndMove?.enabled === true && (
+          {(saveMix?.enabled === true || saveAndMove?.enabled === true) && (
             <section className="bt1-step bt1-final-action">
               <div className="bt1-step-heading">
                 <span>4</span>
                 <div>
-                  <h2>저장하고 Level2로 이동</h2>
-                  <p>명시적으로 선택할 때만 검증 후보 source를 등록합니다.</p>
+                  <h2>저장 또는 Level2 이동</h2>
+                  <p>Mix setup 저장과 검증 후보 등록은 서로 다른 작업입니다.</p>
                 </div>
               </div>
-              <button
-                type="button"
-                className="bt1-action-button"
-                onClick={() => emitIntent("save_and_move")}
-              >
-                {saveAndMove.label}
-              </button>
+              {saveMix?.enabled === true && (
+                <div className="bt1-save-mix-form">
+                  <label>
+                    <span>Mix 이름</span>
+                    <input
+                      value={mixName}
+                      onChange={(event) => setMixName(event.target.value)}
+                      placeholder="다시 찾기 쉬운 이름"
+                    />
+                  </label>
+                  <label>
+                    <span>메모</span>
+                    <textarea
+                      value={mixDescription}
+                      onChange={(event) => setMixDescription(event.target.value)}
+                      placeholder="저장 목적과 다시 볼 조건"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="bt1-secondary-action-button"
+                    onClick={() =>
+                      emitIntent("save_mix", {
+                        name: mixName,
+                        description: mixDescription,
+                      })
+                    }
+                  >
+                    {saveMix.label}
+                  </button>
+                </div>
+              )}
+              {saveAndMove?.enabled === true && (
+                <button
+                  type="button"
+                  className="bt1-action-button"
+                  onClick={() => emitIntent("save_and_move")}
+                >
+                  {saveAndMove.label}
+                </button>
+              )}
             </section>
           )}
         </>

@@ -466,3 +466,105 @@ def test_mix_workspace_uses_role_weight_projection() -> None:
 
     assert workspace["mix"]["role_weight_rows"][0]["role_label"] == "Core"
     assert workspace["mix"]["total_weight_percent"] == 100.0
+
+
+def test_mix_save_and_candidate_handoff_use_different_handlers() -> None:
+    from app.web.backtest_analysis_workspace import (
+        build_backtest_analysis_action_handlers,
+    )
+
+    handlers = build_backtest_analysis_action_handlers(
+        workspace_kind="portfolio_mix"
+    )
+
+    assert callable(handlers["save_mix"])
+    assert callable(handlers["save_and_move"])
+    assert handlers["save_mix"] is not handlers["save_and_move"]
+
+
+def test_zero_actions_do_not_render_empty_action_board() -> None:
+    workspace = build_backtest_analysis_decision_workspace(
+        workspace_kind="portfolio_mix",
+        selection={"mix_mode": "new"},
+        configuration={
+            "strategy_names": [],
+            "weights_percent": [],
+            "component_roles": [],
+        },
+        result_bundle=None,
+        result_configuration_fingerprint=None,
+        saved_mixes=[],
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={},
+        component_bundles=(),
+    )
+
+    assert workspace["actions"] == {}
+
+
+def test_mix_save_and_handoff_adapters_keep_persistence_separate() -> None:
+    from app.web.backtest_compare import page
+
+    weighted_bundle = {
+        "strategy_name": "Weighted Portfolio",
+        "component_strategy_names": ["GTAA", "Risk Parity Trend"],
+        "component_input_weights": [60.0, 40.0],
+        "component_roles": ["core", "defense"],
+        "date_policy": "intersection",
+        "meta": {},
+    }
+    bundles = [
+        {"strategy_name": "GTAA", "meta": {}},
+        {"strategy_name": "Risk Parity Trend", "meta": {}},
+    ]
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_compare_bundles": bundles,
+            "backtest_weighted_bundle": weighted_bundle,
+            "backtest_compare_source_context": {"source_kind": "manual_compare"},
+        }
+    )
+    with (
+        patch.object(page, "st", fake_streamlit),
+        patch.object(
+            page,
+            "_build_saved_portfolio_compare_context",
+            return_value={"selected_strategies": ["GTAA", "Risk Parity Trend"]},
+        ),
+        patch.object(
+            page,
+            "_build_saved_portfolio_context",
+            return_value={"component_roles": ["core", "defense"]},
+        ),
+        patch.object(
+            page,
+            "save_saved_portfolio",
+            return_value={"name": "Core Defense"},
+        ) as save_mix,
+        patch.object(
+            page,
+            "_build_weighted_mix_practical_validation_prefill_payload",
+            return_value={"source_kind": "weighted_portfolio_mix"},
+        ),
+        patch.object(
+            page,
+            "build_selection_source_from_weighted_mix_prefill",
+            return_value={"selection_source_id": "mix-source-1"},
+        ),
+        patch.object(
+            page,
+            "_apply_practical_validation_source_handoff",
+        ) as handoff_mix,
+    ):
+        page._save_current_weighted_mix(
+            {"name": "Core Defense", "description": "reusable setup"}
+        )
+        save_mix.assert_called_once()
+        handoff_mix.assert_not_called()
+
+        page._handoff_current_weighted_mix({})
+
+    save_mix.assert_called_once()
+    handoff_mix.assert_called_once_with({"selection_source_id": "mix-source-1"})

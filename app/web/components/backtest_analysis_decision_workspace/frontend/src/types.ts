@@ -7,7 +7,12 @@ export type WorkspaceAction = {
 }
 
 export type WorkspaceIntent = {
-  action: "select_workspace_kind" | "select_strategy" | "save_and_move"
+  action:
+    | "select_workspace_kind"
+    | "select_strategy"
+    | "select_mix_mode"
+    | "save_mix"
+    | "save_and_move"
   payload: Record<string, unknown>
   nonce: string
 }
@@ -39,6 +44,17 @@ export type BacktestAnalysisWorkspace = {
   }>
   configuration_summary: Record<string, unknown>
   saved_mixes: Array<Record<string, unknown>>
+  mix?: {
+    role_weight_rows: Array<{
+      strategy_name: string
+      role: string
+      role_label: string
+      weight_percent: number
+      valid: boolean
+    }>
+    total_weight_percent: number
+    saved_entry_mode: "new" | "saved"
+  }
   decision: {
     headline: string
     summary: string

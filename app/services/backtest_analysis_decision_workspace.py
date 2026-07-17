@@ -174,6 +174,17 @@ def build_level1_readiness_projection(
     )
 
     actions: dict[str, dict[str, Any]] = {}
+    if (
+        workspace_kind == "portfolio_mix"
+        and result_available
+        and freshness == "current"
+        and callable(action_handlers.get("save_mix"))
+    ):
+        actions["save_mix"] = {
+            "id": "save_mix",
+            "label": "Mix 저장",
+            "enabled": True,
+        }
     if handoff_state == "ready" and callable(action_handlers.get("save_and_move")):
         actions["save_and_move"] = {
             "id": "save_and_move",

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from functools import partial
 from typing import Any
 
@@ -33,14 +33,54 @@ from app.web.backtest_workflow_routes import (
 )
 
 
-_CONTEXT_ACTIONS = {"select_workspace_kind", "select_strategy"}
-_DECISION_ACTIONS = {"save_and_move"}
+_CONTEXT_ACTIONS = {
+    "select_workspace_kind",
+    "select_strategy",
+    "select_mix_mode",
+}
+_DECISION_ACTIONS = {"save_mix", "save_and_move"}
 
 
 def _workspace_kind_from_mode(mode: str | None) -> str:
     if mode == BACKTEST_ANALYSIS_MODE_COMPARE:
         return "portfolio_mix"
     return "single_strategy"
+
+
+def _handoff_current_single_strategy(payload: Mapping[str, Any]) -> None:
+    del payload
+    bundle = st.session_state.get("backtest_last_bundle")
+    if not isinstance(bundle, dict):
+        raise ValueError("Current single-strategy result is required.")
+    _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+
+
+def _save_current_weighted_mix_action(
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    from app.web.backtest_compare.page import _save_current_weighted_mix
+
+    return _save_current_weighted_mix(payload)
+
+
+def _handoff_current_weighted_mix_action(payload: Mapping[str, Any]) -> None:
+    from app.web.backtest_compare.page import _handoff_current_weighted_mix
+
+    _handoff_current_weighted_mix(payload)
+
+
+def build_backtest_analysis_action_handlers(
+    *,
+    workspace_kind: str,
+) -> dict[str, Callable[[Mapping[str, Any]], Any]]:
+    """Expose distinct Python-owned persistence handlers by workspace kind."""
+
+    if workspace_kind == "portfolio_mix":
+        return {
+            "save_mix": _save_current_weighted_mix_action,
+            "save_and_move": _handoff_current_weighted_mix_action,
+        }
+    return {"save_and_move": _handoff_current_single_strategy}
 
 
 def record_single_strategy_draft(payload: dict, *, strategy_name: str) -> str:
@@ -121,13 +161,17 @@ def build_current_backtest_analysis_workspace() -> dict[str, Any]:
     else:
         weighted_bundle = st.session_state.get("backtest_weighted_bundle")
         bundles = list(st.session_state.get("backtest_compare_bundles") or [])
-        selection = {
-            "mix_name": dict(weighted_bundle or {}).get("strategy_name")
-            or "Portfolio Mix",
-            "mix_mode": st.session_state.get(
+        raw_mix_mode = str(
+            st.session_state.get(
                 "backtest_compare_workspace_mode",
-                "전략 비교",
-            ),
+                "새 Mix 만들기",
+            )
+        )
+        selection = {
+            "mix_name": "Portfolio Mix",
+            "mix_mode": "saved"
+            if "저장" in raw_mix_mode
+            else "new",
         }
         configuration = dict(
             st.session_state.get("backtest_current_mix_configuration") or {}
@@ -144,10 +188,8 @@ def build_current_backtest_analysis_workspace() -> dict[str, Any]:
         last_error_kind = st.session_state.get("backtest_compare_error_kind")
         component_bundles = bundles
 
-    action_handlers = (
-        {"save_and_move": _queue_candidate_review_draft}
-        if workspace_kind == "single_strategy"
-        else {}
+    action_handlers = build_backtest_analysis_action_handlers(
+        workspace_kind=workspace_kind,
     )
     return build_backtest_analysis_decision_workspace(
         workspace_kind=workspace_kind,
@@ -191,21 +233,16 @@ def consume_backtest_analysis_intent(
     nonce = str(payload.get("nonce") or "")
     action_payload = dict(payload.get("payload") or {})
 
-    if action == "save_and_move":
+    if action in _DECISION_ACTIONS:
         workspace = build_current_backtest_analysis_workspace()
-        action_state = dict(
-            dict(workspace.get("actions") or {}).get("save_and_move") or {}
+        action_state = dict(dict(workspace.get("actions") or {}).get(action) or {})
+        handlers = build_backtest_analysis_action_handlers(
+            workspace_kind=str(workspace.get("workspace_kind") or ""),
         )
-        bundle = st.session_state.get("backtest_last_bundle")
-        if (
-            workspace.get("workspace_kind") != "single_strategy"
-            or not action_state.get("enabled")
-            or not isinstance(bundle, dict)
-        ):
+        handler = handlers.get(action)
+        if not action_state.get("enabled") or not callable(handler):
             return
-        _queue_candidate_review_draft(
-            _candidate_review_draft_from_bundle(bundle)
-        )
+        handler(action_payload)
     elif action == "select_workspace_kind":
         workspace_kind = str(action_payload.get("workspace_kind") or "")
         if workspace_kind == "portfolio_mix":
@@ -219,6 +256,15 @@ def consume_backtest_analysis_intent(
         if strategy_choice not in SINGLE_STRATEGY_OPTIONS:
             return
         st.session_state.backtest_strategy_choice = strategy_choice
+    elif action == "select_mix_mode":
+        mix_mode = str(action_payload.get("mix_mode") or "")
+        if mix_mode == "new":
+            requested_mode = "새 Mix 만들기"
+        elif mix_mode == "saved":
+            requested_mode = "저장된 Mix 불러오기"
+        else:
+            return
+        st.session_state.backtest_compare_workspace_mode_request = requested_mode
     else:
         return
 
@@ -270,6 +316,7 @@ def consume_backtest_analysis_component_change(
 __all__ = [
     "_CONTEXT_ACTIONS",
     "_DECISION_ACTIONS",
+    "build_backtest_analysis_action_handlers",
     "build_current_backtest_analysis_workspace",
     "consume_backtest_analysis_component_change",
     "consume_backtest_analysis_intent",

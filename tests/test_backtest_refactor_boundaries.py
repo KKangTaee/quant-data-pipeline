@@ -77,9 +77,10 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
 
         compare_source = (PROJECT_ROOT / "app/web/backtest_compare/page.py").read_text()
         self.assertIn(
-            "from app.services.backtest_portfolio_mix_readiness import weighted_strategy_role_flags",
+            "from app.services.backtest_portfolio_mix_readiness import (",
             compare_source,
         )
+        self.assertIn("weighted_strategy_role_flags,", compare_source)
         self.assertIn("return weighted_strategy_role_flags(strategy_names)", compare_source)
         self.assertTrue((PROJECT_ROOT / "app/web/backtest_compare/__init__.py").exists())
         self.assertTrue((PROJECT_ROOT / "app/web/backtest_compare/weight_builder.py").exists())
@@ -626,6 +627,28 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("_render_last_run_details(bundle)", wrapper)
         self.assertNotIn("return\n", wrapper.split("backtest_last_result_requires_rerun", 1)[1])
         self.assertNotIn("_render_practical_validation_next_action", details)
+
+    def test_portfolio_mix_workspace_uses_inner_mode_roles_and_common_decision(
+        self,
+    ) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_compare/page.py").read_text()
+        builder = source.split(
+            "def _render_weighted_portfolio_builder", 1
+        )[1].split("\ndef ", 1)[0]
+        react = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx"
+        ).read_text()
+
+        self.assertIn("새 Mix 만들기", source)
+        self.assertIn("저장된 Mix 불러오기", source)
+        self.assertIn("mix_role_", builder)
+        self.assertNotIn(
+            "_render_weighted_portfolio_practical_validation_panel(weighted_bundle)",
+            builder,
+        )
+        self.assertIn('emitIntent("select_mix_mode"', react)
+        self.assertIn('emitIntent("save_mix"', react)
 
 
 if __name__ == "__main__":

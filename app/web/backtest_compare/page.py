@@ -1,14 +1,25 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
+from app.services.backtest_analysis_decision_workspace import (
+    build_level1_configuration_fingerprint,
+)
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
 from app.services.backtest_handoff_readiness import build_next_step_readiness_evaluation
 from app.services.backtest_portfolio_mix_readiness import (
+    MIX_ROLE_LABELS,
+    MIX_ROLE_OPTIONS,
     build_weighted_mix_candidate_readiness_evaluation,
+    infer_mix_role,
     weighted_strategy_role_flags,
 )
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
-from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_record
+from app.services.backtest_saved_portfolio_replay import (
+    replay_saved_portfolio_record,
+    resolve_saved_mix_component_roles,
+)
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.web.backtest_common import *  # noqa: F401,F403
@@ -2044,7 +2055,25 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     st.session_state.backtest_compare_bundles = replay_result.bundles
     st.session_state.backtest_compare_error = None
     st.session_state.backtest_compare_error_kind = None
-    st.session_state.backtest_weighted_bundle = replay_result.weighted_bundle
+    mix_configuration = {
+        "strategy_names": replay_result.selected_strategies,
+        "weights_percent": replay_result.weights_percent,
+        "component_roles": replay_result.component_roles,
+        "date_policy": replay_result.date_policy,
+        "compare_source_context": replay_result.replay_source_context,
+    }
+    fingerprint = build_level1_configuration_fingerprint(
+        workspace_kind="portfolio_mix",
+        selection={"mix_name": "Portfolio Mix", "mix_mode": "saved"},
+        configuration=mix_configuration,
+    )
+    weighted_bundle = replay_result.weighted_bundle
+    weighted_bundle["meta"] = dict(weighted_bundle.get("meta") or {})
+    weighted_bundle["meta"]["level1_configuration_fingerprint"] = fingerprint
+    st.session_state.backtest_current_mix_configuration = mix_configuration
+    st.session_state.backtest_current_mix_configuration_fingerprint = fingerprint
+    st.session_state.backtest_last_mix_configuration_fingerprint = fingerprint
+    st.session_state.backtest_weighted_bundle = weighted_bundle
     st.session_state.backtest_weighted_error = None
     st.session_state.backtest_compare_source_context = replay_result.replay_source_context
     st.session_state.backtest_saved_portfolio_replay_id = str(record.get("portfolio_id") or "")
@@ -2120,6 +2149,14 @@ def _render_weighted_portfolio_builder() -> None:
     with st.form("weighted_portfolio_builder_form", clear_on_submit=False):
         weight_cols = st.columns(min(len(strategy_names), 4))
         weights = []
+        component_roles = []
+        current_weighted_bundle = dict(
+            st.session_state.get("backtest_weighted_bundle") or {}
+        )
+        current_names = list(
+            current_weighted_bundle.get("component_strategy_names") or []
+        )
+        current_roles = list(current_weighted_bundle.get("component_roles") or [])
         for idx, strategy_name in enumerate(strategy_names):
             with weight_cols[idx % len(weight_cols)]:
                 weight = st.number_input(
@@ -2131,6 +2168,22 @@ def _render_weighted_portfolio_builder() -> None:
                     key=f"weight_{strategy_name}",
                 )
                 weights.append(weight)
+                inferred_role = infer_mix_role(strategy_name)
+                saved_role = (
+                    str(current_roles[idx])
+                    if current_names == strategy_names and idx < len(current_roles)
+                    else inferred_role
+                )
+                if saved_role not in MIX_ROLE_OPTIONS:
+                    saved_role = inferred_role
+                role = st.selectbox(
+                    f"{strategy_name} 역할",
+                    options=list(MIX_ROLE_OPTIONS),
+                    index=list(MIX_ROLE_OPTIONS).index(saved_role),
+                    format_func=lambda value: MIX_ROLE_LABELS[value],
+                    key=f"mix_role_{strategy_name}",
+                )
+                component_roles.append(role)
 
         total_weight = sum(weights)
         st.progress(min(max(total_weight / 100.0, 0.0), 1.0))
@@ -2159,8 +2212,6 @@ def _render_weighted_portfolio_builder() -> None:
                 "생성된 weighted portfolio 결과를 먼저 확인한 뒤, 아래 1차 판단에서 Practical Validation으로 보낼 수 있는지 봅니다.",
             )
             _render_weighted_portfolio_result(weighted_bundle)
-            _render_weighted_portfolio_practical_validation_panel(weighted_bundle)
-            _render_save_weighted_portfolio_panel(weighted_bundle)
         return
 
     total_weight = sum(weights)
@@ -2170,6 +2221,21 @@ def _render_weighted_portfolio_builder() -> None:
         st.error(st.session_state.backtest_weighted_error)
         return
 
+    mix_configuration = {
+        "strategy_names": strategy_names,
+        "weights_percent": [float(weight) for weight in weights],
+        "component_roles": component_roles,
+        "date_policy": date_policy,
+        "compare_source_context": compare_source_context,
+    }
+    fingerprint = build_level1_configuration_fingerprint(
+        workspace_kind="portfolio_mix",
+        selection={"mix_name": "Portfolio Mix", "mix_mode": "new"},
+        configuration=mix_configuration,
+    )
+    st.session_state.backtest_current_mix_configuration = mix_configuration
+    st.session_state.backtest_current_mix_configuration_fingerprint = fingerprint
+
     try:
         weighted_bundle = build_weighted_portfolio_bundle(
             bundles=bundles,
@@ -2177,6 +2243,7 @@ def _render_weighted_portfolio_builder() -> None:
             date_policy=date_policy,
             source_kind="weighted_builder",
             compare_source_context=compare_source_context,
+            component_roles=component_roles,
         )
     except Exception as exc:
         st.session_state.backtest_weighted_bundle = None
@@ -2184,7 +2251,10 @@ def _render_weighted_portfolio_builder() -> None:
         st.error(st.session_state.backtest_weighted_error)
         return
 
+    weighted_bundle["meta"] = dict(weighted_bundle.get("meta") or {})
+    weighted_bundle["meta"]["level1_configuration_fingerprint"] = fingerprint
     st.session_state.backtest_weighted_bundle = weighted_bundle
+    st.session_state.backtest_last_mix_configuration_fingerprint = fingerprint
     st.session_state.backtest_weighted_error = None
     append_backtest_run_history(
         bundle=weighted_bundle,
@@ -2193,6 +2263,8 @@ def _render_weighted_portfolio_builder() -> None:
             "selected_strategies": strategy_names,
             "date_policy": date_policy,
             "weights_percent": weights,
+            "component_roles": component_roles,
+            "level1_configuration_fingerprint": fingerprint,
             "component_data_trust_rows": weighted_bundle.get("component_data_trust_rows") or [],
             "compare_source_context": compare_source_context,
         },
@@ -2430,128 +2502,56 @@ def _sync_saved_portfolio_name_suggestion(weighted_bundle: dict[str, Any]) -> st
         st.session_state["saved_portfolio_name_signature"] = signature
     return suggested_name
 
-# Send the current weighted mix itself into the current workflow validation flow.
-def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[str, Any]) -> None:
-    compare_bundles = st.session_state.get("backtest_compare_bundles") or []
-    if not compare_bundles or not weighted_bundle:
-        return
 
-    evaluation = build_weighted_mix_candidate_readiness_evaluation(
-        weighted_bundle,
-        compare_bundles,
+def _save_current_weighted_mix(
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Save only the current reusable Mix setup after validated intent."""
+
+    bundles = list(st.session_state.get("backtest_compare_bundles") or [])
+    weighted_bundle = st.session_state.get("backtest_weighted_bundle")
+    if not bundles or not isinstance(weighted_bundle, dict):
+        raise ValueError("Current weighted Mix result is required.")
+    name = str(payload.get("name") or "").strip() or _suggest_weighted_portfolio_name(
+        weighted_bundle
     )
-    target_weight_total = float(evaluation.get("target_weight_total") or 0.0)
-    date_policy = str(evaluation.get("date_policy") or "-")
-    can_send = bool(evaluation.get("can_send_to_practical_validation"))
+    record = save_saved_portfolio(
+        name=name,
+        description=str(payload.get("description") or "").strip(),
+        compare_context=_build_saved_portfolio_compare_context(bundles),
+        portfolio_context=_build_saved_portfolio_context(
+            bundles=bundles,
+            weighted_bundle=weighted_bundle,
+        ),
+        source_context={
+            "created_from": "backtest_analysis_decision_workspace",
+            "source_strategy_names": [
+                str(bundle.get("strategy_name") or "") for bundle in bundles
+            ],
+            "compare_source_context": dict(
+                st.session_state.get("backtest_compare_source_context") or {}
+            ),
+        },
+    )
+    st.session_state.backtest_saved_portfolio_notice = (
+        f"저장된 portfolio mix `{record.get('name')}`를 만들었습니다. "
+        "`저장된 Mix 불러오기`에서 확인할 수 있습니다."
+    )
+    return record
 
-    with st.container(border=True):
-        st.markdown("#### Mix 후보 1차 판단")
-        tone_class = {
-            "success": "pass",
-            "warning": "review",
-        }.get(str(evaluation.get("tone") or ""), "fail")
-        message = str(evaluation.get("verdict") or "-")
-        st.markdown(
-            f'<div class="pmx-handoff-card {tone_class}">'
-            f'<span class="pmx-handoff-title">{_html_text(message)}</span>'
-            '<span class="pmx-handoff-body">'
-            '현재 화면에서 만든 weighted portfolio mix 전체를 하나의 1차 후보로 봅니다. '
-            '구성 전략의 promotion / 실행 원천 / 검증 원천, data trust, weight discipline이 막지 않을 때만 '
-            '2차 실전성 검증으로 보냅니다.'
-            '</span>'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-        metric_cols = st.columns(4, gap="small")
-        metric_cols[0].metric("판정", str(evaluation.get("stage_status") or "-"))
-        metric_cols[1].metric("Target Weight", f"{target_weight_total:.1f}%")
-        metric_cols[2].metric("Date Policy", date_policy)
-        metric_cols[3].metric("Score", f"{float(evaluation.get('score') or 0.0):.1f} / 10")
-        st.caption(f"{str(evaluation.get('next_action') or '')} 최종 선택, 투자 추천, live 승인, 주문 지시는 여기서 발생하지 않습니다.")
-        if evaluation.get("blocking_reasons"):
-            st.error("보내기 비활성화 사유: " + "; ".join(str(reason) for reason in evaluation["blocking_reasons"]))
-        elif evaluation.get("review_reasons"):
-            st.caption("Practical Validation에서 같이 볼 항목: " + "; ".join(str(reason) for reason in evaluation["review_reasons"]))
-        with st.expander("판단 기준 상세", expanded=False):
-            st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
-        if evaluation.get("component_readiness_rows"):
-            with st.expander("Component 1차 후보 판단 보기", expanded=False):
-                st.dataframe(pd.DataFrame(evaluation["component_readiness_rows"]), use_container_width=True, hide_index=True)
-        action_cols = st.columns([0.36, 0.64], gap="small")
-        with action_cols[0]:
-            if st.button(
-                "실전성 검증으로 보내기",
-                key="weighted_mix_send_practical_validation",
-                disabled=not can_send,
-                use_container_width=True,
-            ):
-                try:
-                    prefill = _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle)
-                    source = build_selection_source_from_weighted_mix_prefill(prefill)
-                    _apply_practical_validation_source_handoff(source)
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"Practical Validation handoff failed: {exc}")
-        with action_cols[1]:
-            st.caption(
-                "이 버튼은 개별 전략 후보가 아니라 mix 전체를 하나의 current selection source로 보냅니다. "
-                "최종 선정 저장은 Final Review에서 selected-route gate를 통과했을 때만 가능합니다."
-            )
 
-# Save the just-built weighted result as a reusable setup, separate from formal registries.
-def _render_save_weighted_portfolio_panel(weighted_bundle: dict[str, Any]) -> None:
-    compare_bundles = st.session_state.backtest_compare_bundles
-    if not compare_bundles or not weighted_bundle:
-        return
+def _handoff_current_weighted_mix(payload: Mapping[str, Any]) -> None:
+    """Register only the current weighted Mix as a Level2 source."""
 
-    compare_source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
-    with st.container(border=True):
-        st.markdown("#### 저장")
-        st.caption(
-            "지금 확인한 strategy mix를 다시 열 수 있는 저장 항목으로 남깁니다. "
-            "후보 registry가 아니라 재현 가능한 weighted portfolio setup입니다."
-        )
-        st.caption(f"저장 위치: `{SAVED_PORTFOLIO_FILE}`")
-        suggested_name = _sync_saved_portfolio_name_suggestion(weighted_bundle)
-        with st.form("save_saved_portfolio_form", clear_on_submit=False):
-            portfolio_name = st.text_input(
-                "Portfolio Mix Name",
-                value=suggested_name or "",
-                placeholder="예: GTAA Clean-6 70 + Equal Weight Growth 30",
-                help="저장된 Mix 화면의 목록에 표시될 이름입니다.",
-                key="saved_portfolio_name_input",
-            )
-            portfolio_description = st.text_area(
-                "Memo",
-                value="",
-                placeholder="이 mix를 왜 저장하는지, 어떤 용도로 다시 볼지 간단히 남깁니다.",
-                help="나중에 저장된 mix를 다시 열었을 때 용도를 빠르게 떠올릴 수 있게 해줍니다.",
-                key="saved_portfolio_description_input",
-            )
-            save_submitted = st.form_submit_button("Save Portfolio Mix", use_container_width=True)
-        if save_submitted:
-            try:
-                record = save_saved_portfolio(
-                    name=portfolio_name,
-                    description=portfolio_description,
-                    compare_context=_build_saved_portfolio_compare_context(compare_bundles),
-                    portfolio_context=_build_saved_portfolio_context(
-                        bundles=compare_bundles,
-                        weighted_bundle=weighted_bundle,
-                    ),
-                    source_context={
-                        "created_from": "weighted_portfolio_builder",
-                        "source_strategy_names": [bundle["strategy_name"] for bundle in compare_bundles],
-                        "compare_source_context": compare_source_context,
-                    },
-                )
-                st.session_state.backtest_saved_portfolio_notice = (
-                    f"저장된 portfolio mix `{record.get('name')}`를 만들었습니다. `저장된 Mix` 화면에서 확인할 수 있습니다."
-                )
-                st.rerun()
-            except Exception as exc:
-                st.error(f"Portfolio mix save failed: {exc}")
-
+    del payload
+    weighted_bundle = st.session_state.get("backtest_weighted_bundle")
+    if not isinstance(weighted_bundle, dict):
+        raise ValueError("Current weighted Mix result is required.")
+    prefill = _build_weighted_mix_practical_validation_prefill_payload(
+        weighted_bundle
+    )
+    source = build_selection_source_from_weighted_mix_prefill(prefill)
+    _apply_practical_validation_source_handoff(source)
 def _render_saved_portfolio_workspace() -> None:
     st.markdown("### 저장된 Mix")
     st.caption(
@@ -2583,6 +2583,40 @@ def _render_saved_portfolio_workspace() -> None:
     compare_context = selected_record.get("compare_context") or {}
     portfolio_context = selected_record.get("portfolio_context") or {}
     source_context = selected_record.get("source_context") or {}
+    selected_strategy_names = [
+        str(name) for name in list(compare_context.get("selected_strategies") or [])
+    ]
+    selected_roles = resolve_saved_mix_component_roles(
+        selected_record,
+        strategy_names=selected_strategy_names,
+    )
+    selected_weights = [
+        float(weight)
+        for weight in list(portfolio_context.get("weights_percent") or [])
+    ]
+
+    with st.container(border=True):
+        st.markdown(f"#### {selected_record.get('name') or '저장된 Mix'}")
+        st.caption(str(selected_record.get("description") or "저장된 Mix setup"))
+        summary_cols = st.columns(4, gap="small")
+        summary_cols[0].metric("구성 전략", len(selected_strategy_names))
+        summary_cols[1].metric("총 비중", f"{sum(selected_weights):.1f}%")
+        summary_cols[2].metric("역할", len(set(selected_roles)))
+        summary_cols[3].metric(
+            "업데이트",
+            str(selected_record.get("updated_at") or selected_record.get("saved_at") or "-"),
+        )
+        st.markdown(
+            " · ".join(
+                f"**{name}** · {MIX_ROLE_LABELS.get(role, role)} · {weight:.1f}%"
+                for name, role, weight in zip(
+                    selected_strategy_names,
+                    selected_roles,
+                    selected_weights,
+                )
+            )
+            or "구성 정보가 없습니다."
+        )
 
     _render_saved_portfolio_replay_parity_snapshot(selected_record)
 
@@ -2642,7 +2676,7 @@ def _render_saved_portfolio_workspace() -> None:
             except Exception as exc:
                 st.error(f"Saved mix run failed: {exc}")
     with action_cols[1]:
-        if st.button("전략 비교에서 수정하기", key="saved_portfolio_load_into_compare", use_container_width=True):
+        if st.button("이 Mix로 계속", key="saved_portfolio_load_into_compare", use_container_width=True):
             _queue_saved_portfolio_compare_prefill(selected_record)
             st.rerun()
     with action_cols[2]:
@@ -3124,6 +3158,9 @@ def _build_saved_portfolio_context(
     strategy_names = list(weighted_bundle.get("component_strategy_names") or [bundle["strategy_name"] for bundle in bundles])
     input_weights = list(weighted_bundle.get("component_input_weights") or [])
     normalized_weights = list(weighted_bundle.get("component_weights") or [])
+    component_roles = list(weighted_bundle.get("component_roles") or [])
+    if len(component_roles) != len(strategy_names):
+        component_roles = [infer_mix_role(name) for name in strategy_names]
     if not input_weights and normalized_weights:
         input_weights = [round(float(weight) * 100.0, 4) for weight in normalized_weights]
     if not normalized_weights and input_weights:
@@ -3137,16 +3174,18 @@ def _build_saved_portfolio_context(
         "strategy_names": strategy_names,
         "weights_percent": [float(weight) for weight in input_weights],
         "normalized_weights": [float(weight) for weight in normalized_weights],
+        "component_roles": [str(role) for role in component_roles],
         "date_policy": weighted_bundle.get("date_policy") or "intersection",
     }
 
 COMPARE_MODE_STRATEGY = "새 Mix 만들기"
-COMPARE_MODE_SAVED_MIX = "저장된 Mix"
+COMPARE_MODE_SAVED_MIX = "저장된 Mix 불러오기"
 LEGACY_COMPARE_MODE_LABELS = {
     "전략 비교": COMPARE_MODE_STRATEGY,
     "개별 전략 비교": COMPARE_MODE_STRATEGY,
     "저장 Mix 다시 열기": COMPARE_MODE_SAVED_MIX,
     "저장된 비중 조합": COMPARE_MODE_SAVED_MIX,
+    "저장된 Mix": COMPARE_MODE_SAVED_MIX,
 }
 
 
@@ -3168,13 +3207,12 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     st.session_state.backtest_compare_error = None
     st.session_state.backtest_compare_error_kind = None
     st.session_state.backtest_compare_result_notice = None
-    st.session_state.backtest_weighted_bundle = None
     st.session_state.backtest_weighted_error = None
     st.session_state.backtest_compare_workspace_mode_request = COMPARE_MODE_STRATEGY
     st.session_state.backtest_compare_prefill_notice = (
         f"저장된 Mix `{saved_portfolio.get('name')}`의 전략/기간/세부 설정과 "
         "weight/date alignment를 새 Mix 만들기 form에 다시 채웠습니다. "
-        "이전 결과는 숨기고, 저장된 설정을 수정할 수 있는 form-first 상태로 전환했습니다."
+        "이전 결과는 참고용으로 유지하고, 저장된 설정을 수정할 수 있는 form-first 상태로 전환했습니다."
     )
     st.session_state.backtest_compare_source_context = {
         "source_kind": "saved_portfolio",
@@ -3188,6 +3226,7 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     st.session_state.backtest_weighted_portfolio_prefill = {
         "strategy_names": list(portfolio_context.get("strategy_names") or []),
         "weights_percent": list(portfolio_context.get("weights_percent") or []),
+        "component_roles": list(portfolio_context.get("component_roles") or []),
         "date_policy": portfolio_context.get("date_policy") or "intersection",
     }
     st.session_state.backtest_requested_panel = "Portfolio Mix Builder"
@@ -3883,6 +3922,11 @@ def _apply_weighted_portfolio_prefill(strategy_names: list[str]) -> None:
 
     for strategy_name, weight in zip(saved_strategy_names, payload.get("weights_percent") or []):
         st.session_state[f"weight_{strategy_name}"] = float(weight)
+    roles = list(payload.get("component_roles") or [])
+    if len(roles) != len(saved_strategy_names):
+        roles = [infer_mix_role(name) for name in saved_strategy_names]
+    for strategy_name, role in zip(saved_strategy_names, roles):
+        st.session_state[f"mix_role_{strategy_name}"] = str(role)
     st.session_state["weighted_portfolio_date_policy"] = payload.get("date_policy") or "intersection"
     st.session_state.backtest_weighted_portfolio_prefill = None
 
@@ -5710,24 +5754,6 @@ def render_compare_portfolio_workspace() -> None:
     if current_mode not in mode_options:
         current_mode = COMPARE_MODE_STRATEGY
     st.session_state.backtest_compare_workspace_mode = current_mode
-    if hasattr(st, "segmented_control"):
-        st.segmented_control(
-            "Portfolio Mix Workspace",
-            options=mode_options,
-            selection_mode="single",
-            required=True,
-            key="backtest_compare_workspace_mode",
-            label_visibility="collapsed",
-            width="stretch",
-        )
-    else:
-        st.radio(
-            "Portfolio Mix Workspace",
-            options=mode_options,
-            horizontal=True,
-            key="backtest_compare_workspace_mode",
-            label_visibility="collapsed",
-        )
 
     if st.session_state.backtest_compare_workspace_mode == COMPARE_MODE_STRATEGY:
         _render_strategy_compare_workspace()

@@ -84,3 +84,14 @@
 - web-owned weighted Mix Gate를 pure service로 이동하고 직접 caller를 public API로 전환
 - weighted bundle / saved replay에 component roles를 추가하되 legacy role-less record는 추론으로 호환
 - target py_compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 8 RED -> GREEN
+
+- RED: distinct Mix action handlers 부재와 inner mode / role UI 부재 2건 실패
+- GREEN focused Task 8: `7 passed, 876 deselected`
+- decision + boundary 전체: `51 passed`
+- Portfolio / Mix service 회귀: `60 passed, 772 deselected`
+- React production build: Vite 5.4.21, 175 modules transformed, 성공
+- save Mix와 Level2 source handoff를 별도 Python adapter로 분리하고 mocked persistence로 상호 비호출 확인
+- 역할 / 비중 / source context fingerprint를 weighted result와 history context에 기록
+- target py_compile / `git diff --check`: 통과

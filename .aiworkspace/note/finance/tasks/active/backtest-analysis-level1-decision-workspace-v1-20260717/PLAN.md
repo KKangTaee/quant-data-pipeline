@@ -1130,7 +1130,7 @@ Expected: selected tests pass before the commit.
 - Consumes: Task 7 pure contract, `load_saved_portfolios`, `save_saved_portfolio`, replay and source handoff handlers.
 - Produces: P1 inner mode, role selects, weighted fingerprint, `build_backtest_analysis_action_handlers()`, distinct `select_mix_mode` / `save_mix` / `save_and_move` intents.
 
-- [ ] **Step 1: Write failing UI and persistence tests**
+- [x] **Step 1: Write failing UI and persistence tests**
 
 ```python
 def test_mix_save_and_candidate_handoff_use_different_handlers() -> None:
@@ -1158,13 +1158,13 @@ def test_zero_actions_do_not_render_empty_action_board() -> None:
 
 Add source assertions for `새 Mix 만들기`, `저장된 Mix 불러오기`, `mix_role_`, and absence of the visible call `_render_weighted_portfolio_practical_validation_panel(weighted_bundle)`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q -k "mix_save or zero_actions or portfolio_mix_workspace"`
 
 Expected: failures because roles and distinct actions are not integrated.
 
-- [ ] **Step 3: Put saved Mix inside Step 1**
+- [x] **Step 3: Put saved Mix inside Step 1**
 
 Keep `COMPARE_MODE_STRATEGY` and `COMPARE_MODE_SAVED_MIX`, but display them under Step 1 as `새 Mix 만들기` and `저장된 Mix 불러오기`. Do not create a third top-level Level1 card.
 
@@ -1182,7 +1182,7 @@ def build_backtest_analysis_action_handlers() -> dict[str, Callable[..., Any]]:
 
 The two values must remain different callables and are used only after nonce and current projection validation.
 
-- [ ] **Step 4: Add roles beside weights**
+- [x] **Step 4: Add roles beside weights**
 
 ```python
 role = st.selectbox(
@@ -1195,7 +1195,7 @@ role = st.selectbox(
 
 Build `component_roles` in strategy order, show total weight and alignment from the pure service, and pass roles to `build_weighted_portfolio_bundle`.
 
-- [ ] **Step 5: Stamp the weighted draft and result**
+- [x] **Step 5: Stamp the weighted draft and result**
 
 Build the fingerprint from selected strategies, roles, weights, date policy, and compare source context before submit. Store it in:
 
@@ -1206,7 +1206,7 @@ weighted_bundle["meta"]["level1_configuration_fingerprint"]
 
 If fingerprints differ, preserve the weighted result as stale and disable save / handoff actions requiring a current result.
 
-- [ ] **Step 6: Keep persistence handlers separate**
+- [x] **Step 6: Keep persistence handlers separate**
 
 Extract the current save and handoff blocks into these adapter signatures:
 
@@ -1246,11 +1246,11 @@ def _handoff_current_weighted_mix(payload: Mapping[str, Any]) -> None:
 
 Patch `SAVED_PORTFOLIO_FILE` and Practical Validation source persistence to temporary paths in tests.
 
-- [ ] **Step 7: Replace the duplicate visible handoff panel**
+- [x] **Step 7: Replace the duplicate visible handoff panel**
 
 After `_render_weighted_portfolio_result`, call the common Level1 decision surface. Remove the visible call to `_render_weighted_portfolio_practical_validation_panel(weighted_bundle)`. Delete the old function only after `rg` confirms there are no remaining imports or test contracts.
 
-- [ ] **Step 8: Run GREEN, build, compile, and commit**
+- [x] **Step 8: Run GREEN, build, compile, and commit**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q -k "portfolio_mix or weighted_mix or saved_portfolio"
