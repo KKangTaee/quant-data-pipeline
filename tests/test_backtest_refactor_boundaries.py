@@ -423,6 +423,11 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
 
         self.assertIn('surface: "context" | "decision"', index_source)
         self.assertIn('surface={args.surface ?? "decision"}', index_source)
+        self.assertTrue(
+            index_source.rstrip().endswith(
+                'render(<Component />)'
+            )
+        )
         self.assertIn("data-surface={surface}", react_source)
         self.assertIn('surface: Literal["context", "decision"]', fallback_source)
         self.assertIn('if surface == "context"', fallback_source)

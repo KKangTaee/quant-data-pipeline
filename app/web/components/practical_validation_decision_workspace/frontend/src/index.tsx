@@ -35,4 +35,3 @@ function App({ args }: AppProps) {
 
 const Component = withStreamlitConnection(App)
 createRoot(document.getElementById("root") as HTMLElement).render(<Component />)
-Streamlit.setFrameHeight()
