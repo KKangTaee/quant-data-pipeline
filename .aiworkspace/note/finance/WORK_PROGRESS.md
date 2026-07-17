@@ -6312,3 +6312,12 @@ Detailed historical logs were archived on `2026-04-13`.
 - 지정 후보 desktop replay pending/결과 교체와 760px 717/717 iframe overflow 0을
   current 8505 build에서 확인했다. 상세와 screenshot은 active task `RUNS.md`다.
 - protected registry/run history/saved JSONL과 generated screenshot은 commit하지 않는다.
+
+## 2026-07-17 - Practical Validation Step 1 Selection IA Closeout
+
+- hero를 고정 Level2 질문으로 복원하고 현재 후보/판정 기준을 Step 1 summary로 이동했다.
+- 후보는 기본 닫힘 세로 목록, 판정 기준은 데스크톱 5열·760px 2열로 정리했다.
+- 커밋 `9f3b451a`, `d3f09c53`, `092072ab`, `7b9d262f`; fresh 136 tests,
+  React build, py_compile, diff-check와 desktop/760px Browser QA를 통과했다.
+- protected registry/run history/saved JSONL, `.superpowers/`, generated screenshot은
+  commit하지 않는다. 상세 근거는 active task `RUNS.md`를 본다.

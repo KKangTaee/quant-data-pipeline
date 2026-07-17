@@ -53,3 +53,10 @@
 - `fileWatcherType none` QA server는 React/Python 계약을 함께 바꾼 뒤 반드시
   재기동해야 한다. 그렇지 않으면 새 bundle이 stale read model을 받아 component
   error처럼 보일 수 있으며, 이는 배포 bundle 자체의 schema fallback을 대신하지 않는다.
+- 1A 후보 목록은 열렸을 때만 264px 내부 scroll을 사용한다. 후보 수가 크게 늘어
+  검색이 필요해지면 compact selector 안에 검색을 추가하되 always-open card grid로
+  되돌리지 않는다.
+- Streamlit 또는 custom-component lifecycle 업그레이드 시 후보 목록 open/close의
+  ResizeObserver 높이 동기화와 760px 2열/full-span 레이아웃을 다시 검증한다.
+- 초기 Backtest 결과가 비어 있을 때의 Altair `Infinite extent` warning은 이번
+  Step 1 변경과 무관하며 console error는 0이다. chart empty-state 개선은 별도 범위다.

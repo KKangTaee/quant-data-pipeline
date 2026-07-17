@@ -3540,13 +3540,13 @@ read model schema는 변경하지 않는다.
 - Documents the approved Step 1 compact selection IA without changing runtime contracts.
 - QA uses current worktree Streamlit and generated screenshots only; screenshots remain unstaged.
 
-- [ ] **Step 1: Restart only this worktree's stale Streamlit process and open Practical Validation**
+- [x] **Step 1: Restart only this worktree's stale Streamlit process and open Practical Validation**
 
   Use the existing worktree run command and select
   `GTAA U3/U5 + GRS Compact Monitoring Candidate 20260608`. Do not write the Practical
   Validation registry during QA.
 
-- [ ] **Step 2: Execute desktop Browser QA**
+- [x] **Step 2: Execute desktop Browser QA**
 
   Confirm all of the following on the current build:
 
@@ -3559,13 +3559,13 @@ read model schema는 변경하지 않는다.
   - 1B shows five equal-width buttons in one row;
   - opening/closing the list updates iframe height without clipping or page horizontal overflow.
 
-- [ ] **Step 3: Execute 760px Browser QA**
+- [x] **Step 3: Execute 760px Browser QA**
 
   Confirm candidate summary/control is one column, 1B is two columns, `사용자 지정` spans
   both columns, candidate list vertical scroll is usable, and component/outer widths have no
   overflow. Capture desktop and 760px screenshots outside tracked paths.
 
-- [ ] **Step 4: Run fresh completion verification**
+- [x] **Step 4: Run fresh completion verification**
 
   Run:
 
@@ -3589,14 +3589,14 @@ read model schema는 변경하지 않는다.
 
   Expected: all Python tests, React production build, py_compile, and diff-check pass freshly.
 
-- [ ] **Step 5: Synchronize durable documentation and active task evidence**
+- [x] **Step 5: Synchronize durable documentation and active task evidence**
 
   Record the compact Step 1 ownership in the four canonical docs, RED/GREEN commands and QA
   screenshot paths in active task `RUNS.md`, completed status in `STATUS.md`, future Streamlit
   responsive/lifecycle risk in `RISKS.md`, and 3~5-line milestone entries in both root handoff
   logs. Do not copy transient command output into canonical docs.
 
-- [ ] **Step 6: Audit protected paths and create the closeout commit**
+- [x] **Step 6: Audit protected paths and create the closeout commit**
 
   Confirm staged files exclude registries, run history, saved JSONL, screenshots,
   `.superpowers/`, and run artifacts. Commit only docs/task/root logs:

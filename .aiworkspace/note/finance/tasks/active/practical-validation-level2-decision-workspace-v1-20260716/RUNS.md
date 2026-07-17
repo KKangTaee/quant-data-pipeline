@@ -415,3 +415,43 @@
 - fresh completion suite: `Ran 134 tests in 2.028s`, `OK`.
 - Practical Validation build 175 modules, Final Review build 177 modules, target
   py_compile, `git diff --check`: exit 0.
+
+## 2026-07-17 Task 19 Step 1 React RED / GREEN
+
+- baseline: market-context visual + boundary 31 tests, `OK`.
+- RED: hero candidate context, always-open candidate card grid, 기존 profile responsive
+  배치를 새 계약이 거부해 의도한 3건 실패를 확인했다.
+- GREEN: fixed hero, Step 1 summary, local-state candidate list, desktop 5열,
+  760px 2열 + 마지막 full-span 구현 뒤 focused 32 tests `OK`.
+- React production build: Vite 5.4.21, 175 modules, success.
+- commit: `092072ab Practical Validation Step1 선택 UI 개선`.
+
+## 2026-07-17 Task 20 Fallback RED / GREEN
+
+- RED: fallback이 후보 caption을 Step 1 위에 두고 접힌 변경 control이 없어
+  boundary 1건이 의도대로 실패했다.
+- GREEN: fallback도 Step 1 summary 뒤 `1A. 후보 변경` expander를 사용하도록 정렬.
+- focused workspace / boundary suite: `Ran 58 tests`, `OK`.
+- target py_compile과 `git diff --check`: exit 0.
+- commit: `7b9d262f Practical Validation Step1 fallback 선택 흐름 정렬`.
+
+## 2026-07-17 Task 21 Browser QA / Completion
+
+- current backtest-dev Streamlit을 port 8505에서 current build로 재시작하고
+  `GTAA U3/U5 + GRS Compact Monitoring Candidate 20260608`을 선택했다.
+- desktop: 고정 hero, Step 1 후보/기준 summary, 기본 닫힘 후보 목록, 후보 변경 뒤
+  Step 1 context 갱신, profile 한 행 5열을 확인했다. 목록 open 시 context iframe은
+  673px에서 949px로 동기화됐고 outer horizontal overflow는 없었다.
+- 760px: outer 760/760, context iframe inner/outer 717/717, profile computed columns
+  `315.5px 315.5px`, 마지막 `사용자 지정` 641px full-span을 확인했다. 후보 목록은
+  clientHeight 264px / scrollHeight 418px의 내부 세로 scroll이며 가로 overflow는 없다.
+- console error 0. 기존 빈 result Altair `Infinite extent` warning만 관찰했다.
+- screenshots (generated, unstaged):
+  - `/tmp/practical-validation-step1-compact-desktop-20260717.png`
+  - `/tmp/practical-validation-step1-candidate-list-desktop-20260717.png`
+  - `/tmp/practical-validation-step1-compact-760-20260717.png`
+  - `/tmp/practical-validation-step1-profile-760-20260717.png`
+  - `/tmp/practical-validation-step1-candidate-list-760-20260717.png`
+- fresh completion suite after docs sync: `Ran 136 tests in 2.086s`, `OK`.
+- Practical Validation React build 175 modules, target py_compile, `git diff --check`:
+  exit 0.

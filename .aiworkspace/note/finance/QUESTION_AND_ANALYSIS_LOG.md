@@ -9621,3 +9621,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: 같은 read model/React bundle을 fragment 밖 `context`와 fragment 안
   `decision` surface로 분리했다. desktop replay 중 context+pending 동시 유지,
   760px overflow 0, console error/component-ready warning 0을 확인했다.
+
+### 2026-07-17 - 후보와 판정 기준은 고정 질문 아래의 compact Step 1에서 선택한다
+
+- User request: 후보 선택에 따라 hero 타이틀이 바뀌는 구조와 항상 펼쳐진 1A/1B의
+  큰 카드 영역을 검토하고, B안 목록형 선택기와 760px 2열 줄바꿈으로 개선 요청함.
+- Interpreted goal: Level2 질문은 고정하고 현재 작업 대상과 판정 policy를 같은
+  Step 1 안에서 구별해, 후보 변경과 기준 비교를 더 짧은 흐름으로 끝내야 함.
+- Analysis result: 이전 계약이 후보 context를 hero에 두고 3+2/모바일 1열을 강제한
+  것이 원인이며 validation read model이나 Gate 변경은 필요하지 않았다.
+- Follow-up: fixed hero, 후보/판정 summary, 기본 닫힘 후보 목록, desktop 5열과
+  760px 2열/full-span을 React와 fallback에 적용하고 Browser QA로 높이/overflow를 확인했다.

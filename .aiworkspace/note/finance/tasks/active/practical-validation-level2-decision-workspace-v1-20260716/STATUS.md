@@ -1,6 +1,6 @@
 # Status
 
-Status: In Progress - Step 1 Selection IA Follow-up
+Status: Complete
 Last Updated: 2026-07-17
 
 ## 전체 Roadmap
@@ -10,7 +10,7 @@ Last Updated: 2026-07-17
 - [x] 3차 One-Shell UI / Intent Integration
 - [x] 4차 QA / Docs / Closeout
 - [x] 사용자 피드백 기반 계약 / 상호작용 / 설명 보정
-- [ ] Step 1 선택 정보 구조 compact follow-up
+- [x] Step 1 선택 정보 구조 compact follow-up
 
 ## 2026-07-17 Step 1 Selection IA Follow-up
 
@@ -20,7 +20,20 @@ Last Updated: 2026-07-17
 - [x] 760px profile 2열 줄바꿈과 마지막 option full-span 승인
 - [x] approved design을 `DESIGN.md` acceptance criteria 33~40으로 기록
 - [x] detailed implementation plan 작성과 current-session inline execution 승인
-- [ ] TDD 구현, Browser QA, docs closeout
+- [x] TDD 구현, Browser QA, docs closeout
+
+## 2026-07-17 Step 1 Selection IA Closeout
+
+- [x] 고정 Level2 hero와 Step 1 후보/판정 기준 summary 적용
+- [x] 기본 닫힘 상태의 `1A. 후보 변경` 세로 목록 적용
+- [x] `1B` 데스크톱 5열, 760px 2열 및 마지막 option full-span 적용
+- [x] React/Python fallback 같은 정보 순서와 기존 intent 계약 유지
+- [x] desktop / 760px Browser interaction, ResizeObserver 높이, overflow QA
+- [x] fresh 136 tests, React 175 modules build, target py_compile, diff-check
+
+커밋: `9f3b451a` 설계, `d3f09c53` 계획, `092072ab` React UI,
+`7b9d262f` Python fallback. 2026-07-16 Follow-up의 hero 후보 context와
+`3 + 2 / 760px 1열` 배치는 이번 승인안으로 대체됐다.
 
 ## Current Progress
 
@@ -30,7 +43,7 @@ Last Updated: 2026-07-17
 - [x] root issue dedup, measured caution, verified / handoff 분리
 - [x] four-step React one-shell과 same-read-model Streamlit fallback
 - [x] Python intent validation / replay / provider action / save boundary
-- [x] final focused 124 tests, React 175 modules build, target py_compile, diff-check
+- [x] final focused 136 tests, React 175 modules build, target py_compile, diff-check
 - [x] current eligible GRS read-only projection과 8505 restart / HTTP health
 - [x] canonical docs와 active task / root handoff sync
 - [x] desktop / 760px Browser QA, overflow 확인, screenshot
@@ -80,6 +93,8 @@ raw 기술 근거, 반복 action lifecycle을 보정했다. 이어서 실제 공
 - `6cf1db11` Practical Validation component ready 경고 제거
 
 ## 2026-07-16 Follow-up Status
+
+아래 첫 두 항목의 당시 배치는 2026-07-17 Step 1 Selection IA 승인안으로 대체됐다.
 
 - [x] 선택 후보 반복 요약을 후보 목록 아래에서 one-shell header `검증 대상`으로 이동
 - [x] 데스크톱 검증 관점 5개를 3 + 가운데 정렬 2로 재배치하고 760px 1열 유지

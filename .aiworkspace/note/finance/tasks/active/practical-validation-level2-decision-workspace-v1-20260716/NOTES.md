@@ -153,6 +153,21 @@
   Python payload가 섞일 수 있다. 이번 browser 진입의 `handoff_summary.items`
   오류는 current code defect가 아니라 08:13부터 떠 있던 stale 8506 process였다.
 
+## 2026-07-17 Step 1 Selection IA Decision
+
+- 후보 선택 뒤 상단 hero가 바뀌는 현상은 runtime 분류나 Python rerun 문제가
+  아니라 이전 UI 계약이 후보 context를 hero 안에 두도록 명시한 결과였다.
+- Level2의 핵심 질문은 후보와 무관하게 유지해야 하므로 hero를 고정하고, 현재
+  후보와 판정 기준은 `무엇을 어떤 기준으로 검증하는가` 안의 summary로 옮겼다.
+- 후보는 작업의 주 대상이고 판정 기준은 그 후보에 적용하는 policy이므로 항상
+  열린 두 card grid 대신 `현재 선택 요약 -> 필요할 때 후보 변경 -> 기준 선택`
+  순서로 분리했다.
+- 후보 목록의 열림/닫힘은 React-local presentation state다. 후보 변경 intent와
+  판정 기준 선택 intent, Gate, replay, 저장 ownership은 기존 Python 계약을 유지한다.
+- 데스크톱 5열은 다섯 기준을 한눈에 비교하는 데 적합하고, 760px 2열은 1열보다
+  이동 거리를 줄이면서 카드 문장을 읽을 폭을 보장한다. 다섯 번째 홀수 option은
+  full-span으로 처리해 빈 두 번째 열을 남기지 않는다.
+
 ## 2026-07-17 Stable Context / Refresh Surface Correction
 
 - `Streamlit.setComponentValue()` 자체가 custom component widget rerun을 시작한다.
