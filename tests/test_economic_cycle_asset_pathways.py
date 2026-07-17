@@ -369,6 +369,87 @@ def test_rates_context_explains_two_ten_spread_and_ten_year_components() -> None
     assert "원인" not in rates["narrative"]
 
 
+def _ready_sp500_earnings() -> dict[str, object]:
+    return {
+        "status": "READY",
+        "quarter_count": 8,
+        "current_ttm_eps": 280.0,
+        "prior_ttm_eps": 260.0,
+        "growth_pct": 7.6923,
+        "latest_period_end": "2026-03-31",
+        "latest_release_date": "2026-05-15",
+        "source_basis": "S&P official actual as-reported EPS",
+    }
+
+
+def test_equities_context_prefers_spx_and_keeps_paths_parallel() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    market_rows = _macro_history(
+        {"DFII10": "UP", "BAA10Y": "DOWN", "VIXCLS": "DOWN"}
+    )
+    price_rows = _price_history({"^GSPC": "UP", "SPY": "DOWN"})
+
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=market_rows,
+        price_rows=price_rows,
+        sp500_earnings=_ready_sp500_earnings(),
+        reference_date="2026-07-17",
+    )
+
+    equities = contexts["equities"]
+    assert equities["price_context"]["symbol"] == "^GSPC"
+    assert {row["pathway_id"] for row in equities["observed_pathways"]} == {
+        "real_yield",
+        "credit_spread",
+        "volatility",
+        "actual_earnings",
+    }
+    assert "때문" not in equities["narrative"]
+
+
+def test_equities_context_falls_back_to_spy_and_marks_provenance() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=_macro_history(
+            {"DFII10": "UP", "BAA10Y": "DOWN", "VIXCLS": "DOWN"}
+        ),
+        price_rows=_price_history({"SPY": "UP"}),
+        sp500_earnings=_ready_sp500_earnings(),
+        reference_date="2026-07-17",
+    )
+
+    equities = contexts["equities"]
+    assert equities["price_context"]["symbol"] == "SPY"
+    assert any("S&P 500 ETF fallback" in row for row in equities["provenance"])
+
+
+def test_equities_keeps_market_paths_when_earnings_are_unavailable() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=_macro_history(
+            {"DFII10": "UP", "BAA10Y": "DOWN", "VIXCLS": "DOWN"}
+        ),
+        price_rows=_price_history({"^GSPC": "UP"}),
+        sp500_earnings={
+            "status": "UNAVAILABLE",
+            "reason_code": "EARNINGS_READ_ERROR",
+        },
+        reference_date="2026-07-17",
+    )
+
+    rows = {
+        row["pathway_id"]: row for row in contexts["equities"]["observed_pathways"]
+    }
+    assert rows["actual_earnings"]["status"] == "UNAVAILABLE"
+    assert all(
+        rows[pathway_id]["status"] == "OBSERVED"
+        for pathway_id in ("real_yield", "credit_spread", "volatility")
+    )
+
+
 def test_gold_pathways_separate_real_yield_dollar_and_risk_directions() -> None:
     pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
 

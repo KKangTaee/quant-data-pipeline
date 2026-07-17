@@ -455,6 +455,8 @@ def _economic_state(
 def _price_context(
     symbol: str,
     evaluation: Mapping[str, object],
+    *,
+    source_basis: str = "stored continuous futures daily OHLCV",
 ) -> dict[str, object]:
     status = _series_status(evaluation, "UP")
     price_status = {
@@ -476,7 +478,7 @@ def _price_context(
             "three_months": changes.get("63d"),
         },
         "freshness": evaluation.get("freshness"),
-        "source_basis": "stored continuous futures daily OHLCV",
+        "source_basis": source_basis,
     }
 
 
@@ -662,12 +664,161 @@ def build_rates_context(
     }
 
 
+def build_equities_context(
+    *,
+    evaluations: Mapping[str, Mapping[str, object]],
+    economic_state: Mapping[str, object],
+    sp500_earnings: Mapping[str, object] | None,
+) -> dict[str, object]:
+    """Build an S&P 500 context with parallel market and actual-earnings paths."""
+    spx = evaluations["^GSPC"]
+    spy = evaluations["SPY"]
+    if not spx.get("reason_code"):
+        price_symbol = "^GSPC"
+        price_evaluation = spx
+        provenance = ["^GSPC stored S&P 500 index daily OHLCV"]
+    elif not spy.get("reason_code"):
+        price_symbol = "SPY"
+        price_evaluation = spy
+        provenance = ["SPY stored S&P 500 ETF fallback daily OHLCV"]
+    else:
+        price_symbol = "^GSPC"
+        price_evaluation = spx
+        provenance = ["^GSPC와 SPY 저장 가격이 모두 부족함"]
+    price_context = _price_context(
+        price_symbol,
+        price_evaluation,
+        source_basis=(
+            "stored S&P 500 index daily OHLCV"
+            if price_symbol == "^GSPC"
+            else "stored S&P 500 ETF fallback daily OHLCV"
+        ),
+    )
+
+    observed_pathways = [
+        build_observed_pathway(
+            "real_yield",
+            "10년 실질금리",
+            evaluations["DFII10"],
+            interpretation=_daily_direction_text(evaluations["DFII10"]),
+        ),
+        build_observed_pathway(
+            "credit_spread",
+            "Baa 회사채-10년 국채 스프레드",
+            evaluations["BAA10Y"],
+            interpretation=_daily_direction_text(evaluations["BAA10Y"]),
+        ),
+        build_observed_pathway(
+            "volatility",
+            "VIX",
+            evaluations["VIXCLS"],
+            interpretation=_daily_direction_text(evaluations["VIXCLS"]),
+        ),
+    ]
+
+    earnings = dict(sp500_earnings or {})
+    earnings_reason = earnings.get("reason_code")
+    growth = earnings.get("growth_pct")
+    if earnings.get("status") != "READY" or growth is None:
+        earnings_reason = earnings_reason or "INSUFFICIENT_EARNINGS_HISTORY"
+    latest_release = earnings.get("latest_release_date")
+    reference_candidates = [
+        evaluation.get("as_of_date")
+        for evaluation in evaluations.values()
+        if evaluation.get("as_of_date")
+    ]
+    if not earnings_reason and latest_release and reference_candidates:
+        reference = max(_as_date(value) for value in reference_candidates)
+        if (reference - _as_date(latest_release)).days > 180:
+            earnings_reason = "STALE_EARNINGS"
+    earnings_series = {
+        "series_id": "SP500_ACTUAL_TTM_EPS",
+        "as_of_date": earnings.get("latest_period_end"),
+        "release_date": latest_release,
+        "current_value": earnings.get("current_ttm_eps"),
+        "prior_value": earnings.get("prior_ttm_eps"),
+        "unit": "percent",
+        "freshness": "UNAVAILABLE" if earnings_reason else "CURRENT",
+        "reason_code": earnings_reason,
+        "changes": {"yoy_ttm": growth if not earnings_reason else None},
+        "directions": {
+            "yoy_ttm": (
+                "UNAVAILABLE"
+                if earnings_reason
+                else _direction(float(growth), threshold=0.0)
+            )
+        },
+    }
+    earnings_interpretation = (
+        "최근 완료 분기 8개로 실제 TTM EPS의 전년 대비 변화를 계산했습니다."
+        if not earnings_reason
+        else "완료된 실제 EPS 분기 자료가 부족하거나 최신성이 제한됩니다."
+    )
+    observed_pathways.append(
+        build_observed_pathway(
+            "actual_earnings",
+            "실제 TTM EPS",
+            earnings_series,
+            interpretation=earnings_interpretation,
+        )
+    )
+    price_available = price_context["status"] != "UNAVAILABLE"
+    available_paths = sum(row["status"] == "OBSERVED" for row in observed_pathways)
+    if price_available and available_paths == 4:
+        coverage = "SUFFICIENT"
+    elif price_available and available_paths:
+        coverage = "PARTIAL"
+    else:
+        coverage = "INSUFFICIENT"
+    current_interpretation = [
+        f"S&P 500 가격은 {_daily_direction_text(price_evaluation)}",
+        *[
+            f"{row['label']}은 {row['interpretation']}"
+            for row in observed_pathways
+        ],
+    ]
+    limitations = [
+        "가격·금리·신용·변동성·이익의 동시 변화를 인과관계로 합산하지 않습니다."
+    ]
+    if earnings_reason:
+        limitations.append("실제 EPS 경로는 완료된 8개 분기 기준을 충족하지 못했습니다.")
+    return {
+        "asset_group": "equities",
+        "coverage": coverage,
+        "economic_state": dict(economic_state),
+        "price_context": price_context,
+        "current_movement": [
+            _movement_metric(
+                price_symbol,
+                "S&P 500",
+                price_evaluation,
+                level_unit="index",
+            )
+        ],
+        "observed_pathways": observed_pathways,
+        "current_interpretation": current_interpretation,
+        "next_check_conditions": [
+            "S&P 500의 1개월·3개월 흐름이 같은 방향으로 이어지는지 확인합니다.",
+            "실질금리·신용스프레드·VIX의 측정 방향이 유지되는지 확인합니다.",
+            "새 실제 분기 EPS가 발표되면 TTM 전년 대비 변화를 갱신합니다.",
+        ],
+        "provenance": [
+            *provenance,
+            "FRED DFII10·BAA10Y·VIXCLS 저장 관측치",
+            "S&P official actual as-reported EPS",
+        ],
+        "limitations": limitations,
+        "narrative": " ".join(current_interpretation),
+    }
+
+
 def build_asset_pathway_contexts(
     *,
     evidence: Sequence[Mapping[str, object]],
     market_rows: Sequence[Mapping[str, object]],
     price_rows: Sequence[Mapping[str, object]],
     reference_date: object,
+    sp500_earnings: Mapping[str, object] | None = None,
 ) -> dict[str, dict[str, object]]:
     """Build deterministic asset contexts from measured market paths."""
 
@@ -710,7 +861,7 @@ def build_asset_pathway_contexts(
         ),
         reference_date=reference_date,
     )
-    for symbol in ("GC=F", "DX-Y.NYB"):
+    for symbol in ("GC=F", "DX-Y.NYB", "^GSPC", "SPY"):
         evaluations[symbol] = evaluate_series(
             _series_points(
                 price_rows,
@@ -729,7 +880,12 @@ def build_asset_pathway_contexts(
         "rates": build_rates_context(
             evaluations=evaluations,
             economic_state=economic_state,
-        )
+        ),
+        "equities": build_equities_context(
+            evaluations=evaluations,
+            economic_state=economic_state,
+            sp500_earnings=sp500_earnings,
+        ),
     }
     for asset_group, specs in PATHWAY_SPECS.items():
         pathways: list[dict[str, object]] = []
