@@ -22,6 +22,7 @@ from finance.loaders.economic_cycle_assets import (
     load_economic_cycle_asset_prices,
     load_economic_cycle_market_series,
 )
+from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
 
 SCHEMA_VERSION = "economic_cycle_v2"
 HORIZON_LABELS = {0: "현재", 1: "1개월 후", 2: "2개월 후"}
@@ -258,6 +259,7 @@ def build_economic_cycle_read_model(
     history_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
     market_series_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
     asset_price_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
+    sp500_earnings_loader: Callable[..., Mapping[str, object]] | None = None,
     price_reference_date: str | date | None = None,
 ) -> dict[str, object]:
     """Adapt persisted compact rows; never fetch, fit, write, or mutate UI state."""
@@ -313,11 +315,20 @@ def build_economic_cycle_read_model(
         )
     except Exception:
         asset_price_rows = []
+    load_sp500_earnings = sp500_earnings_loader or load_sp500_actual_eps_history
+    try:
+        sp500_earnings = dict(load_sp500_earnings(end_date=market_reference))
+    except Exception:
+        sp500_earnings = {
+            "status": "UNAVAILABLE",
+            "reason_code": "EARNINGS_READ_ERROR",
+        }
     market_implications = build_market_implications(
         horizons,
         evidence,
         asset_price_rows,
         market_rows=market_rows,
+        sp500_earnings=sp500_earnings,
         economic_as_of_date=snapshot_date or None,
         price_reference_date=market_reference,
     )

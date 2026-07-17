@@ -461,6 +461,7 @@ def build_market_implications(
     price_rows: Sequence[Mapping[str, object]] = (),
     *,
     market_rows: Sequence[Mapping[str, object]] = (),
+    sp500_earnings: Mapping[str, object] | None = None,
     economic_as_of_date: object = None,
     price_reference_date: object = None,
 ) -> list[dict[str, object]]:
@@ -472,13 +473,14 @@ def build_market_implications(
         or _date_value(economic_as_of_date)
         or date.today()
     )
-    pilot_contexts = build_asset_pathway_contexts(
+    contexts = build_asset_pathway_contexts(
         evidence=evidence,
         market_rows=market_rows,
         price_rows=price_rows,
         reference_date=reference,
+        sp500_earnings=sp500_earnings,
     )
-    economic_state = pilot_contexts["gold"]["economic_state"]
+    economic_state = contexts["gold"]["economic_state"]
     labels = {
         "rates": "채권·금리",
         "equities": "주식",
@@ -488,9 +490,31 @@ def build_market_implications(
     }
     implications: list[dict[str, object]] = []
     for asset_group in ("rates", "equities", "gold", "dollar", "commodities"):
-        if asset_group in pilot_contexts:
-            item = dict(pilot_contexts[asset_group])
-            coverage = str(item["coverage"])
+        context = contexts.get(asset_group)
+        if context is None:
+            narrative = f"{labels[asset_group]}의 저장된 관측 경로를 구성하지 못했습니다."
+            item = {
+                "asset_group": asset_group,
+                "label": labels[asset_group],
+                "analysis_status": "LIMITED",
+                "coverage": "INSUFFICIENT",
+                "coverage_status": "INSUFFICIENT",
+                "economic_state": economic_state,
+                "current_movement": [],
+                "observed_pathways": [],
+                "current_interpretation": [],
+                "next_check_conditions": [],
+                "provenance": [],
+                "limitations": ["저장된 관측 경로 구성이 제한됐습니다."],
+                "narrative": narrative,
+                "summary": narrative,
+                "context": narrative,
+                "is_directional_forecast": False,
+            }
+        else:
+            item = dict(context)
+            coverage = str(item.get("coverage") or "INSUFFICIENT")
+            narrative = str(item.get("narrative") or "")
             item.update(
                 {
                     "label": labels[asset_group],
@@ -498,35 +522,12 @@ def build_market_implications(
                         "SUFFICIENT": "READY",
                         "PARTIAL": "PARTIAL",
                         "INSUFFICIENT": "LIMITED",
-                    }[coverage],
-                    "summary": item["narrative"],
-                    "context": item["narrative"],
+                    }.get(coverage, "LIMITED"),
+                    "coverage_status": coverage,
+                    "summary": narrative,
+                    "context": narrative,
                     "is_directional_forecast": False,
                 }
             )
-        else:
-            narrative = (
-                f"{economic_state['summary']} {labels[asset_group]}의 세부 시장경로는 "
-                "아직 연결하지 않아 자산 방향으로 해석하지 않습니다."
-            )
-            item = {
-                "asset_group": asset_group,
-                "label": labels[asset_group],
-                "analysis_status": "PATHWAYS_NOT_CONNECTED",
-                "coverage": "INSUFFICIENT",
-                "economic_state": economic_state,
-                "pathways": [],
-                "unmeasured_pathways": [
-                    {
-                        "pathway_id": f"{asset_group}_market_paths",
-                        "label": "자산 내부 시장경로",
-                        "reason_code": "PATHWAYS_NOT_CONNECTED",
-                    }
-                ],
-                "narrative": narrative,
-                "summary": narrative,
-                "context": narrative,
-                "is_directional_forecast": False,
-            }
         implications.append(item)
     return implications

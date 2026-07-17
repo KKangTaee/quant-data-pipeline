@@ -272,13 +272,10 @@ def test_market_implications_are_conditional_context_not_directional_predictions
         "dollar",
         "commodities",
     ]
-    nonpilot = [
-        item
+    assert all(
+        item["analysis_status"] != "PATHWAYS_NOT_CONNECTED"
         for item in implications
-        if item["asset_group"] in {"rates", "equities", "commodities"}
-    ]
-    assert all(item["analysis_status"] == "PATHWAYS_NOT_CONNECTED" for item in nonpilot)
-    assert all(item["pathways"] == [] for item in nonpilot)
+    )
     gold = next(item for item in implications if item["asset_group"] == "gold")
     dollar = next(item for item in implications if item["asset_group"] == "dollar")
     assert {row["pathway_id"] for row in gold["pathways"]} == {
@@ -362,7 +359,7 @@ def test_unavailable_pathways_stay_conservative() -> None:
     rates = next(row for row in implications if row["asset_group"] == "rates")
     gold = next(row for row in implications if row["asset_group"] == "gold")
 
-    assert rates["analysis_status"] == "PATHWAYS_NOT_CONNECTED"
+    assert rates["analysis_status"] == "LIMITED"
     assert gold["coverage"] == "INSUFFICIENT"
     assert all(row["status"] == "UNAVAILABLE" for row in gold["pathways"])
     assert gold["price_context"]["status"] == "UNAVAILABLE"
@@ -429,12 +426,17 @@ def test_service_uses_one_reference_date_for_market_pathway_reads() -> None:
         calls["price"] = kwargs
         return []
 
+    def earnings_loader(**kwargs):
+        calls["earnings"] = kwargs
+        return {"status": "INSUFFICIENT_HISTORY", "quarter_count": 0}
+
     model = service.build_economic_cycle_read_model(
         as_of_date="2026-06-30",
         snapshot_loader=lambda **_kwargs: _ready_snapshot(),
         history_loader=lambda **_kwargs: [],
         market_series_loader=market_loader,
         asset_price_loader=price_loader,
+        sp500_earnings_loader=earnings_loader,
         price_reference_date="2026-06-30",
     )
 
@@ -444,6 +446,74 @@ def test_service_uses_one_reference_date_for_market_pathway_reads() -> None:
         "lookback_rows": 1500,
         "end_date": date(2026, 6, 30),
     }
+    assert calls["earnings"] == {"end_date": date(2026, 6, 30)}
+
+
+def test_all_five_asset_groups_expose_connected_observation_contracts() -> None:
+    interpretation = importlib.import_module("finance.economic_cycle_interpretation")
+    implications = interpretation.build_market_implications(
+        [],
+        [
+            {"factor": "activity_score", "value": -0.4},
+            {"factor": "labor_income_score", "value": -0.3},
+            {"factor": "financial_leading_score", "value": 0.2},
+            {"factor": "inflation_policy_score", "value": 0.3},
+        ],
+        sp500_earnings={"status": "INSUFFICIENT_HISTORY", "quarter_count": 0},
+        price_reference_date="2026-07-17",
+    )
+
+    assert [row["asset_group"] for row in implications] == [
+        "rates",
+        "equities",
+        "gold",
+        "dollar",
+        "commodities",
+    ]
+    assert all(
+        row["analysis_status"] != "PATHWAYS_NOT_CONNECTED"
+        for row in implications
+    )
+    assert all(row["is_directional_forecast"] is False for row in implications)
+    for item in implications:
+        text = " ".join(
+            [
+                str(item.get("narrative") or ""),
+                *map(str, item.get("current_interpretation") or []),
+            ]
+        )
+        assert not any(
+            term in text for term in ("때문에", "원인입니다", "확률", "매수", "매도")
+        )
+
+
+def test_earnings_loader_failure_is_local_to_equities_earnings_path() -> None:
+    service = _load_service()
+
+    def broken_earnings_loader(**_kwargs):
+        raise RuntimeError("earnings table unavailable")
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=lambda **_kwargs: [],
+        asset_price_loader=lambda **_kwargs: [],
+        sp500_earnings_loader=broken_earnings_loader,
+        price_reference_date="2026-07-17",
+    )
+
+    equities = next(
+        row
+        for row in model["market_implications"]
+        if row["asset_group"] == "equities"
+    )
+    earnings = next(
+        row
+        for row in equities["observed_pathways"]
+        if row["pathway_id"] == "actual_earnings"
+    )
+    assert earnings["status"] == "UNAVAILABLE"
+    assert "earnings table unavailable" not in json.dumps(model, ensure_ascii=False)
 
 
 def test_market_loader_failure_limits_cards_without_hiding_cycle_model() -> None:
