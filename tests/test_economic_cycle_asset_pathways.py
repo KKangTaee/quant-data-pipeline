@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from finance.data.macro import DEFAULT_MACRO_SERIES, FRED_SERIES_CONFIG
+from finance.data.eia_petroleum import EIA_WEEKLY_PETROLEUM_SERIES
 from finance.loaders import economic_cycle_assets
 
 
@@ -96,6 +97,16 @@ def test_asset_pathway_fred_series_are_registered_for_default_collection() -> No
     }
     assert FRED_SERIES_CONFIG["DGS10"]["category"] == "treasury_yield"
     assert FRED_SERIES_CONFIG["DFII10"]["category"] == "real_yield"
+
+
+def test_rates_and_eia_series_catalogs_are_exact() -> None:
+    assert "T10YIE" in DEFAULT_MACRO_SERIES
+    assert FRED_SERIES_CONFIG["T10YIE"]["category"] == "inflation_expectation"
+    assert set(EIA_WEEKLY_PETROLEUM_SERIES) == {
+        "WCESTUS1",
+        "WCRFPUS2",
+        "WRPUPUS2",
+    }
 
 
 def test_market_series_loader_requests_only_the_pathway_window() -> None:

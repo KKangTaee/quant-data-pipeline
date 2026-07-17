@@ -35,8 +35,16 @@ from finance.data.futures_market import (
     collect_and_store_futures_ohlcv,
     normalize_futures_symbols,
 )
+from finance.data.eia_petroleum import (
+    EIA_WEEKLY_PETROLEUM_SERIES,
+    collect_and_store_eia_weekly_petroleum,
+)
 from finance.data.institutional_13f import collect_and_store_sec_13f_dataset
-from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
+from finance.data.macro import (
+    DEFAULT_MACRO_SERIES,
+    FRED_SERIES_CONFIG,
+    collect_and_store_macro_series,
+)
 from finance.data.nasdaq100_valuation import (
     collect_and_store_qqq_sec_holdings,
     ensure_nasdaq100_valuation_schemas,
@@ -2800,12 +2808,27 @@ def run_collect_macro_market_context(
     source_mode: str = "auto",
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
-    """Run the FRED market-context connector for Practical Validation macro diagnostics."""
+    """Collect supported FRED and EIA market-context series into the canonical table."""
     job_name = "collect_macro_market_context"
     started_at = _now_str()
     t0 = perf_counter()
-    effective_series = DEFAULT_MACRO_SERIES if series_ids is None or (isinstance(series_ids, str) and not series_ids.strip()) else series_ids
+    effective_series = (
+        (*DEFAULT_MACRO_SERIES, *EIA_WEEKLY_PETROLEUM_SERIES)
+        if series_ids is None
+        or (isinstance(series_ids, str) and not series_ids.strip())
+        else series_ids
+    )
     parsed, invalid_symbols = split_valid_invalid_symbols(effective_series)
+    fred_series = [series_id for series_id in parsed if series_id in FRED_SERIES_CONFIG]
+    eia_series = [
+        series_id for series_id in parsed if series_id in EIA_WEEKLY_PETROLEUM_SERIES
+    ]
+    unsupported_series = [
+        series_id
+        for series_id in parsed
+        if series_id not in FRED_SERIES_CONFIG
+        and series_id not in EIA_WEEKLY_PETROLEUM_SERIES
+    ]
 
     if not parsed:
         finished_at = _now_str()
@@ -2828,22 +2851,49 @@ def run_collect_macro_market_context(
         progress_callback({"event": "stage_start", "stage": "macro_market_context", "stage_index": 1, "total_stages": 1})
 
     try:
-        summary = collect_and_store_macro_series(
-            parsed,
-            start=start or None,
-            end=end or None,
-            provider="fred",
-            source_mode=source_mode,
-        )
+        summaries: list[dict[str, Any]] = []
+        if fred_series:
+            summaries.append(
+                collect_and_store_macro_series(
+                    fred_series,
+                    start=start or None,
+                    end=end or None,
+                    provider="fred",
+                    source_mode=source_mode,
+                )
+            )
+        if eia_series:
+            summaries.append(collect_and_store_eia_weekly_petroleum(eia_series))
         if progress_callback is not None:
             progress_callback({"event": "stage_complete", "stage": "macro_market_context", "stage_index": 1, "total_stages": 1})
-        rows_written = int(summary.get("stored") or 0)
-        missing_series = list(summary.get("missing") or [])
-        failed_series = _failed_item_ids(summary.get("failed") or [], id_keys=("series_id", "symbol"))
-        all_failed = invalid_symbols + failed_series + [series_id for series_id in missing_series if series_id not in failed_series]
+        rows_written = sum(int(summary.get("stored") or 0) for summary in summaries)
+        missing_series = [
+            str(series_id)
+            for summary in summaries
+            for series_id in (summary.get("missing") or [])
+        ]
+        failed_entries = [
+            entry
+            for summary in summaries
+            for entry in (summary.get("failed") or [])
+        ]
+        failed_series = _failed_item_ids(
+            failed_entries,
+            id_keys=("series_id", "symbol"),
+        )
+        all_failed = (
+            invalid_symbols
+            + unsupported_series
+            + failed_series
+            + [
+                series_id
+                for series_id in missing_series
+                if series_id not in failed_series
+            ]
+        )
         status = _status_from_provider_summary(
             rows_written=rows_written,
-            failed_items=failed_series + invalid_symbols,
+            failed_items=failed_series + invalid_symbols + unsupported_series,
             missing_items=missing_series,
         )
         finished_at = _now_str()
@@ -2855,7 +2905,15 @@ def run_collect_macro_market_context(
             duration_sec=perf_counter() - t0,
             rows_written=rows_written,
             symbols_requested=len(parsed),
-            symbols_processed=max(len(parsed) - len(set(missing_series + failed_series)), 0) if rows_written > 0 else 0,
+            symbols_processed=(
+                max(
+                    len(parsed)
+                    - len(set(missing_series + failed_series + unsupported_series)),
+                    0,
+                )
+                if rows_written > 0
+                else 0
+            ),
             failed_symbols=all_failed[:50],
             message=(
                 "Macro market-context snapshot completed."
@@ -2866,13 +2924,28 @@ def run_collect_macro_market_context(
             ),
             details={
                 "series_ids": parsed,
-                "start": summary.get("start") or start,
-                "end": summary.get("end") or end,
-                "source": summary.get("source") or "fred",
-                "source_mode": summary.get("source_mode") or source_mode,
-                "coverage": summary.get("coverage") or {},
+                "fred_series_ids": fred_series,
+                "eia_series_ids": eia_series,
+                "unsupported_series_ids": unsupported_series,
+                "start": start,
+                "end": end,
+                "sources": [summary.get("source") for summary in summaries],
+                "source_modes": [
+                    summary.get("source_mode") for summary in summaries
+                ],
+                "coverage": {
+                    str(status_key): sum(
+                        int((summary.get("coverage") or {}).get(status_key) or 0)
+                        for summary in summaries
+                    )
+                    for status_key in {
+                        str(key)
+                        for summary in summaries
+                        for key in (summary.get("coverage") or {})
+                    }
+                },
                 "missing": missing_series,
-                "failed": summary.get("failed") or [],
+                "failed": failed_entries,
                 "target_table": "finance_meta.macro_series_observation",
             },
         )
@@ -2893,7 +2966,7 @@ def run_collect_macro_market_context(
                 "series_ids": parsed,
                 "start": start,
                 "end": end,
-                "source": "fred",
+                "sources": ["fred", "eia"],
                 "source_mode": source_mode,
                 "target_table": "finance_meta.macro_series_observation",
             },
