@@ -899,9 +899,9 @@ function EconomicCycleWorkbench({ args }: Props) {
       <div className="cycle-layout">
         <QuadrantChart payload={payload} />
         <section className="evidence-panel" aria-labelledby="evidence-title">
-          <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">국면을 움직인 근거</h3></div><small>강화 · 약화 · 중립</small></div>
-          <EvidenceGroup title="실물경제 근거" subtitle="현재 국면을 정하는 생산·고용·소득" rows={realEvidence} />
-          <EvidenceGroup title="전망 맥락" subtitle="1·2개월 확률을 조정하는 금융·물가·정책" rows={forecastEvidence} />
+          <div className="section-heading"><div><span>Evidence</span><h3 id="evidence-title">현재와 전망의 판단 근거</h3></div><small>강화 · 약화 · 중립</small></div>
+          <EvidenceGroup title="현재 위치의 근거" subtitle="현재점에 반영되는 생산·소비와 고용·소득" rows={realEvidence} />
+          <EvidenceGroup title="1·2개월 전망에 추가되는 근거" subtitle="현재 근거에 더해 미래 확률을 조정하는 금융·선행 여건과 물가·정책" rows={forecastEvidence} />
         </section>
       </div>
 

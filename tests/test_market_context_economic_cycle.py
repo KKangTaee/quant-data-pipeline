@@ -244,6 +244,11 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         "검증된 모델 추정",
         'evidence.group === "real_economy"',
         'evidence.group === "forecast_context"',
+        "현재와 전망의 판단 근거",
+        "현재 위치의 근거",
+        "현재점에 반영되는 생산·소비와 고용·소득",
+        "1·2개월 전망에 추가되는 근거",
+        "현재 근거에 더해 미래 확률을 조정하는 금융·선행 여건과 물가·정책",
         'className="market-implications"',
         "자산별 확인 포인트",
         "관측된 경제 상태",
@@ -273,6 +278,9 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
     assert "assessment" not in source
     assert "상승 요인이 될 수 있는 측정 경로" not in source
     assert "하락 요인이 될 수 있는 측정 경로" not in source
+    assert "국면을 움직인 근거" not in source
+    assert 'title="실물경제 근거"' not in source
+    assert 'title="전망 맥락"' not in source
 
 
 def _pathway_style_block(style: str) -> str:
