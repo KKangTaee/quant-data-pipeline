@@ -567,6 +567,20 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("Streamlit.setFrameHeight", index)
         self.assertIn("@media (max-width: 760px)", style)
 
+    def test_backtest_analysis_light_cards_pin_readable_text_in_dark_theme(
+        self,
+    ) -> None:
+        style = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css"
+        ).read_text()
+
+        self.assertIn("color-scheme: light", style)
+        self.assertIn(".bt1-workspace h1", style)
+        self.assertIn(".bt1-workspace h2", style)
+        self.assertIn(".bt1-workspace dd", style)
+        self.assertIn("color: #152033", style)
+
     def test_backtest_analysis_context_is_outside_work_fragment(self) -> None:
         source = (PROJECT_ROOT / "app/web/backtest_analysis.py").read_text()
         render_prefix = source.split(

@@ -1,6 +1,7 @@
 :root {
   font-family:
     Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color-scheme: light;
   color: #152033;
   background: transparent;
   font-synthesis: none;
@@ -30,6 +31,15 @@ button {
   width: 100%;
   min-width: 0;
   padding: 2px;
+  color: #152033;
+}
+
+.bt1-workspace h1,
+.bt1-workspace h2,
+.bt1-workspace h3,
+.bt1-workspace strong,
+.bt1-workspace dd {
+  color: #152033;
 }
 
 .bt1-header,
