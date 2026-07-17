@@ -413,6 +413,36 @@ def test_save_and_move_intent_rejects_disabled_or_missing_result() -> None:
     queue_draft.assert_not_called()
 
 
+def test_component_change_consumes_selection_without_nested_rerun() -> None:
+    from app.web import backtest_analysis_workspace
+
+    component_key = "backtest-analysis-decision-workspace-context"
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            component_key: {
+                "action": "select_strategy",
+                "payload": {"strategy_choice": "GTAA"},
+                "nonce": "strategy-gtaa-1",
+            },
+            "backtest_analysis_consumed_nonce": None,
+        }
+    )
+
+    with patch.object(backtest_analysis_workspace, "st", fake_streamlit):
+        backtest_analysis_workspace.consume_backtest_analysis_component_change(
+            component_key=component_key,
+            allowed_actions={"select_strategy"},
+        )
+
+    assert fake_streamlit.session_state.backtest_strategy_choice == "GTAA"
+    assert (
+        fake_streamlit.session_state.backtest_analysis_consumed_nonce
+        == "strategy-gtaa-1"
+    )
+    fake_streamlit.rerun.assert_not_called()
+
+
 def test_mix_roles_and_weights_are_python_owned() -> None:
     from app.services.backtest_portfolio_mix_readiness import (
         build_mix_role_weight_rows,

@@ -220,6 +220,7 @@ def consume_backtest_analysis_intent(
     intent: dict[str, Any] | None,
     *,
     allowed_actions: set[str] | None = None,
+    rerun_scope: str = "app",
 ) -> None:
     """Validate a presentation intent before changing Python-owned state."""
 
@@ -269,7 +270,8 @@ def consume_backtest_analysis_intent(
         return
 
     st.session_state.backtest_analysis_consumed_nonce = nonce
-    st.rerun(scope="app")
+    if rerun_scope != "none":
+        st.rerun(scope="app")
 
 
 def render_backtest_analysis_decision_surface(
@@ -310,6 +312,7 @@ def consume_backtest_analysis_component_change(
     consume_backtest_analysis_intent(
         intent if isinstance(intent, dict) else None,
         allowed_actions=allowed_actions,
+        rerun_scope="none",
     )
 
 
