@@ -1,0 +1,30 @@
+# Status
+
+Status: Design Approved / Detailed Plan Pending
+Last Updated: 2026-07-17
+
+## Current Position
+
+- [x] current Level1 code, docs, browser surface audit
+- [x] visual companion을 사용한 UX 대안 비교
+- [x] product scope와 사용자 수준 합의
+- [x] single / Mix flow, result hierarchy, advanced settings 합의
+- [x] development strategy, strategy catalog, saved Mix entry 합의
+- [x] T2 pure read model + one-shell 접근 합의
+- [x] product / state / result / responsive / test design 승인
+- [ ] approved design self-review
+- [ ] detailed implementation PLAN 작성
+- [ ] 1~5차 구현
+
+## Approved Roadmap
+
+1. Level1 Truth / Handoff Contract
+2. Level1 Decision Workspace Read Model
+3. Single Strategy One-Shell
+4. Portfolio Mix One-Shell
+5. Runtime QA / Docs / Closeout
+
+## Next Action
+
+`DESIGN.md`를 acceptance criteria와 current code boundary에 대조해 자체 검토하고,
+사용자 확인 뒤 detailed `PLAN.md`를 작성한다.
