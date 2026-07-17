@@ -20,7 +20,7 @@ def _render_equal_weight_form() -> None:
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="eq_end")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="eq_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="eq_option")
             rebalance_interval = st.number_input(
@@ -35,7 +35,7 @@ def _render_equal_weight_form() -> None:
                 ),
                 key="eq_rebalance_interval",
             )
-        with st.expander("Promotion Policy Signal", expanded=False):
+        with st.expander("비용·Guardrail", expanded=False):
             (
                 min_price_filter,
                 transaction_cost_bps,

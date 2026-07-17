@@ -45,7 +45,7 @@ def _render_risk_parity_form() -> None:
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="rp_end")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="rp_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="rp_option")
             rebalance_interval = int(
@@ -69,7 +69,7 @@ def _render_risk_parity_form() -> None:
                 )
             )
             _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
-            with st.expander("Promotion Policy Signal", expanded=False):
+            with st.expander("비용·Guardrail", expanded=False):
                 (
                     min_price_filter,
                     transaction_cost_bps,

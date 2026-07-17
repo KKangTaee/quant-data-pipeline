@@ -713,7 +713,7 @@ git commit -m "Backtest Analysis 원셸 React 화면 추가"
 - Consumes: Task 3 builder, Task 4 component, existing forms and `_handle_backtest_run`.
 - Produces: `record_single_strategy_draft()`, `build_current_backtest_analysis_workspace()`, `consume_backtest_analysis_intent()`, context outside fragment and work inside fragment.
 
-- [ ] **Step 1: Write failing boundary and runner tests**
+- [x] **Step 1: Write failing boundary and runner tests**
 
 ```python
 def test_backtest_analysis_context_is_outside_work_fragment(self) -> None:
@@ -734,13 +734,13 @@ def test_single_strategy_change_marks_stale_without_clearing_bundle(self) -> Non
 
 Add a mocked runner test that asserts a successful bundle meta and Run History context carry the same `level1_configuration_fingerprint` and `_queue_candidate_review_draft` is never called.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py -q -k "draft or context_is_outside or marks_stale"`
 
 Expected: failures because adapter, fragment, and stale marker do not exist.
 
-- [ ] **Step 3: Implement validated intent and fallback contracts**
+- [x] **Step 3: Implement validated intent and fallback contracts**
 
 `app/web/backtest_analysis_workspace.py` gathers current mode, selection, current draft, last result / error, and saved Mix summaries. It passes only callable handlers into the pure builder and uses:
 
@@ -764,7 +764,7 @@ def render_backtest_analysis_workspace_fallback(
 
 The fallback reads only the read model. It must not execute runtime, history, saved-store, or candidate-source functions.
 
-- [ ] **Step 4: Replace the radio with stable context and fragment**
+- [x] **Step 4: Replace the radio with stable context and fragment**
 
 ```python
 def render_backtest_analysis_workspace() -> None:
@@ -783,7 +783,7 @@ def _render_backtest_analysis_work_fragment() -> None:
 
 Workspace / strategy selection uses app rerun. Strategy execution and result refresh remain inside the fragment.
 
-- [ ] **Step 5: Preserve old result as stale**
+- [x] **Step 5: Preserve old result as stale**
 
 Rename `_clear_last_run_if_strategy_selection_changed` to `_mark_last_run_stale_if_strategy_selection_changed`. Replace bundle clearing with:
 
@@ -795,7 +795,7 @@ st.session_state.backtest_last_result_reset_notice = (
 )
 ```
 
-- [ ] **Step 6: Record every current draft payload**
+- [x] **Step 6: Record the submitted current draft payload**
 
 Add:
 
@@ -811,13 +811,16 @@ def record_single_strategy_draft(payload: dict, *, strategy_name: str) -> str:
     return fingerprint
 ```
 
-In all six non-factor forms and six strict factor variant forms, build the existing payload before `if not submitted: return`, call `record_single_strategy_draft`, and keep the runtime payload keys / defaults unchanged. Relabel groups as:
+Streamlit forms do not send changed widget values to Python until submit. Keep every form's
+runtime payload keys / defaults unchanged and record the normalized payload at the shared
+runner boundary before execution. This avoids duplicating twelve payload builders while still
+making a failed new execution mark the preserved prior result stale. Relabel groups as:
 
 - universe controls: `Universe 상세`
 - `Advanced Inputs`: `전략·보유 규칙`
 - promotion / cost / guardrail: `비용·Guardrail`
 
-- [ ] **Step 7: Stamp result and history fingerprint**
+- [x] **Step 7: Stamp result and history fingerprint**
 
 In `_handle_backtest_run`:
 
@@ -836,7 +839,7 @@ append_backtest_run_history(
 
 Do not add candidate-source persistence here.
 
-- [ ] **Step 8: Run GREEN and compatibility tests**
+- [x] **Step 8: Run GREEN and compatibility tests**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py -q -k "draft or backtest_analysis_context or marks_stale"
@@ -845,7 +848,7 @@ Do not add candidate-source persistence here.
 
 Expected: all selected tests pass without touching actual JSONL paths.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/web/backtest_analysis_workspace.py app/web/backtest_analysis_workspace_panel.py app/web/backtest_analysis.py app/web/backtest_single_strategy.py app/web/backtest_single_runner.py app/web/backtest_single_forms tests/test_backtest_analysis_decision_workspace.py tests/test_backtest_refactor_boundaries.py

@@ -566,6 +566,50 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("Streamlit.setFrameHeight", index)
         self.assertIn("@media (max-width: 760px)", style)
 
+    def test_backtest_analysis_context_is_outside_work_fragment(self) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_analysis.py").read_text()
+        render_prefix = source.split(
+            "def render_backtest_analysis_workspace", 1
+        )[1].split("@st.fragment", 1)[0]
+        fragment = source.split(
+            "def _render_backtest_analysis_work_fragment", 1
+        )[1]
+
+        self.assertIn('surface="context"', render_prefix)
+        self.assertIn('surface="decision"', fragment)
+        self.assertNotIn('surface="context"', fragment)
+
+    def test_single_strategy_change_marks_stale_without_clearing_bundle(
+        self,
+    ) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_single_strategy.py").read_text()
+        body = source.split(
+            "def _mark_last_run_stale_if_strategy_selection_changed", 1
+        )[1].split("\ndef ", 1)[0]
+
+        self.assertIn("backtest_last_result_requires_rerun", body)
+        self.assertNotIn("backtest_last_bundle = None", body)
+
+    def test_single_strategy_forms_use_contextual_setting_labels(self) -> None:
+        form_paths = [
+            PROJECT_ROOT / "app/web/backtest_single_forms/equal_weight.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/gtaa.py",
+            PROJECT_ROOT
+            / "app/web/backtest_single_forms/global_relative_strength.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/risk_parity.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/dual_momentum.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/risk_on_momentum.py",
+            PROJECT_ROOT / "app/web/backtest_single_forms/strict_factor.py",
+        ]
+
+        for path in form_paths:
+            source = path.read_text()
+            self.assertNotIn('st.expander("Advanced Inputs"', source, path.name)
+            self.assertIn("전략·보유 규칙", source, path.name)
+        combined = "\n".join(path.read_text() for path in form_paths)
+        self.assertNotIn('st.expander("Promotion Policy Signal"', combined)
+        self.assertIn("비용·Guardrail", combined)
+
 
 if __name__ == "__main__":
     unittest.main()

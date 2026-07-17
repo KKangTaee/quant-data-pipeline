@@ -56,3 +56,12 @@
 - GREEN boundary: `2 passed, 24 deselected`
 - ResizeObserver / two-surface / intent-only / 760px contract 확인
 - build / node_modules는 `.gitignore` 적용, stage 제외
+
+## 2026-07-18 Task 5 RED -> GREEN
+
+- RED: adapter / fragment / stale marker / fingerprint stamp 부재 4건 실패
+- 추가 RED: failed execution이 이전 성공 bundle을 지우는 회귀 재현
+- 추가 RED: legacy `Advanced Inputs` / `Promotion Policy Signal` label 재현
+- GREEN focused + boundary: `41 passed`
+- existing single / latest run / history regression: `4 passed, 828 deselected`
+- target py_compile / import smoke / `git diff --check`: 통과

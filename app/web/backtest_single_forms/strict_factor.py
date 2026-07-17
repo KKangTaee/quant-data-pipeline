@@ -103,7 +103,7 @@ def _render_quality_snapshot_form() -> None:
 
         st.caption("Hidden defaults in this first pass: `monthly rebalance`, `equal-weight holding`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qs_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="qs_option")
             factor_freq = st.selectbox(
@@ -243,7 +243,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
 
         st.caption("Hidden defaults in this first pass: `annual statement snapshots`, `monthly rebalance`, `equal-weight holding by default`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qss_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="qss_option")
             rebalance_interval = st.number_input(
@@ -306,7 +306,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     key_prefix="qss",
                     label_prefix="Strict Annual Quality",
                 )
-            with st.expander("Promotion Policy Signal", expanded=False):
+            with st.expander("비용·Guardrail", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,
@@ -509,7 +509,7 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
 
         st.caption("Defaults: `quarterly statement snapshots`, `monthly rebalance`, `equal-weight holding`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qsqp_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="qsqp_option")
             rebalance_interval = st.number_input(
@@ -730,7 +730,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
 
         st.caption("Defaults: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vsqp_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="vsqp_option")
             rebalance_interval = st.number_input(
@@ -947,7 +947,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
 
         st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding by default`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vss_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="vss_option")
             rebalance_interval = st.number_input(
@@ -1010,7 +1010,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     key_prefix="vss",
                     label_prefix="Strict Annual Value",
                 )
-            with st.expander("Promotion Policy Signal", expanded=False):
+            with st.expander("비용·Guardrail", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,
@@ -1216,7 +1216,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
 
         st.caption("Defaults: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvqp_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="qvqp_option")
             rebalance_interval = st.number_input(
@@ -1445,7 +1445,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
 
         st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding by default`.")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvss_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="qvss_option")
             rebalance_interval = st.number_input(
@@ -1513,7 +1513,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     key_prefix="qvss",
                     label_prefix="Strict Annual Multi-Factor",
                 )
-            with st.expander("Promotion Policy Signal", expanded=False):
+            with st.expander("비용·Guardrail", expanded=False):
                 (
                     benchmark_contract,
                     min_price_filter,

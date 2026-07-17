@@ -47,26 +47,25 @@ def _selection_signature(strategy_choice: str | None, selected_variant: str | No
     return f"{strategy_choice or '-'}::{selected_variant or '-'}"
 
 
-def _clear_last_run_if_strategy_selection_changed(
+def _mark_last_run_stale_if_strategy_selection_changed(
     strategy_choice: str | None,
     selected_variant: str | None = None,
 ) -> None:
     bundle = st.session_state.get("backtest_last_bundle")
     current_signature = _selection_signature(strategy_choice, selected_variant)
     previous_signature = st.session_state.get("backtest_last_strategy_selection_signature")
-    should_clear = bool(bundle) and (
+    should_mark_stale = bool(bundle) and (
         not _last_run_matches_strategy_selection(bundle, strategy_choice, selected_variant)
         or (previous_signature is not None and previous_signature != current_signature)
     )
-    if should_clear:
-        st.session_state.backtest_last_bundle = None
+    if should_mark_stale:
         st.session_state.backtest_last_error = None
         st.session_state.backtest_last_error_kind = None
-        st.session_state.backtest_last_result_requires_rerun = False
+        st.session_state.backtest_last_result_requires_rerun = True
         st.session_state.backtest_last_result_refresh_result = None
         st.session_state.backtest_last_result_reset_notice = (
-            "전략 선택이 바뀌어 이전 백테스트 결과를 숨겼습니다. "
-            "현재 선택한 전략의 결과를 보려면 `Run Backtest`를 다시 실행하세요."
+            "현재 선택이 이전 실행과 달라 기존 결과를 참고용으로 유지합니다. "
+            "현재 설정으로 다시 실행해야 Level2 전송이 열립니다."
         )
     st.session_state.backtest_last_strategy_selection_signature = current_signature
 
@@ -148,7 +147,7 @@ def render_single_strategy_workspace() -> None:
         _render_single_strategy_family_form(strategy_choice, selected_variant=selected_variant)
     st.divider()
     selected_variant = selected_variant or _selected_strategy_variant(strategy_choice)
-    _clear_last_run_if_strategy_selection_changed(strategy_choice, selected_variant)
+    _mark_last_run_stale_if_strategy_selection_changed(strategy_choice, selected_variant)
     reset_notice = st.session_state.get("backtest_last_result_reset_notice")
     if reset_notice:
         st.info(str(reset_notice))

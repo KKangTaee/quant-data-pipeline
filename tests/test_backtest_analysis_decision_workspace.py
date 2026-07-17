@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -14,6 +15,11 @@ from app.services.backtest_analysis_decision_workspace import (
     build_level1_strategy_catalog,
     level1_strategy_maturity,
 )
+
+
+class _SessionState(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
 
 
 def test_level1_catalog_groups_each_strategy_once() -> None:
@@ -213,3 +219,101 @@ def test_workspace_projection_is_json_serializable() -> None:
     )
 
     json.dumps(workspace, ensure_ascii=False)
+
+
+def test_record_single_strategy_draft_stores_normalized_fingerprint() -> None:
+    from app.web import backtest_analysis_workspace
+
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {"backtest_strategy_choice": "GTAA"}
+    )
+    with patch.object(backtest_analysis_workspace, "st", fake_streamlit):
+        fingerprint = backtest_analysis_workspace.record_single_strategy_draft(
+            {"strategy_key": "gtaa", "tickers": ("SPY", "TLT")},
+            strategy_name="GTAA",
+        )
+
+    assert fake_streamlit.session_state.backtest_current_draft_payload["tickers"] == [
+        "SPY",
+        "TLT",
+    ]
+    assert (
+        fake_streamlit.session_state.backtest_current_configuration_fingerprint
+        == fingerprint
+    )
+
+
+def test_successful_runner_stamps_fingerprint_without_candidate_handoff() -> None:
+    from app.web import backtest_single_runner
+
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState()
+    result = SimpleNamespace(
+        ok=True,
+        bundle={"strategy_name": "GTAA", "meta": {"strategy_key": "gtaa"}},
+        elapsed_seconds=0.01,
+    )
+    with (
+        patch.object(backtest_single_runner, "st", fake_streamlit),
+        patch.object(
+            backtest_single_runner,
+            "execute_single_backtest",
+            return_value=result,
+        ),
+        patch.object(
+            backtest_single_runner,
+            "record_single_strategy_draft",
+            return_value="fingerprint-1",
+        ),
+        patch.object(backtest_single_runner, "append_backtest_run_history") as history,
+    ):
+        assert backtest_single_runner._handle_backtest_run(
+            {"strategy_key": "gtaa"}, strategy_name="GTAA"
+        )
+
+    bundle = fake_streamlit.session_state.backtest_last_bundle
+    assert bundle["meta"]["level1_configuration_fingerprint"] == "fingerprint-1"
+    history.assert_called_once_with(
+        bundle=bundle,
+        run_kind="single_strategy",
+        context={"level1_configuration_fingerprint": "fingerprint-1"},
+    )
+    assert "_queue_candidate_review_draft" not in (
+        __import__("pathlib").Path("app/web/backtest_single_runner.py").read_text()
+    )
+
+
+def test_failed_runner_preserves_previous_successful_bundle() -> None:
+    from app.web import backtest_single_runner
+
+    previous = {"strategy_name": "GTAA", "meta": {"strategy_key": "gtaa"}}
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState({"backtest_last_bundle": previous})
+    result = SimpleNamespace(
+        ok=False,
+        bundle=None,
+        error_kind="data",
+        error_message="missing SPY",
+        elapsed_seconds=0.01,
+    )
+    with (
+        patch.object(backtest_single_runner, "st", fake_streamlit),
+        patch.object(
+            backtest_single_runner,
+            "execute_single_backtest",
+            return_value=result,
+        ),
+        patch.object(
+            backtest_single_runner,
+            "record_single_strategy_draft",
+            return_value="fingerprint-1",
+            create=True,
+        ),
+    ):
+        assert not backtest_single_runner._handle_backtest_run(
+            {"strategy_key": "gtaa"}, strategy_name="GTAA"
+        )
+
+    assert fake_streamlit.session_state.backtest_last_bundle is previous
+    assert fake_streamlit.session_state.backtest_last_error_kind == "data"

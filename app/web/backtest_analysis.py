@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import partial
+
 import pandas as pd
 import streamlit as st
 
@@ -18,7 +20,21 @@ from app.services.backtest_strategy_evidence_inventory import (
 )
 from app.web.reference_contextual_help import render_reference_contextual_help
 from app.web.backtest_compare import render_compare_portfolio_workspace
+from app.web.backtest_analysis_workspace import (
+    _CONTEXT_ACTIONS,
+    _DECISION_ACTIONS,
+    build_current_backtest_analysis_workspace,
+    consume_backtest_analysis_component_change,
+    consume_backtest_analysis_intent,
+)
+from app.web.backtest_analysis_workspace_panel import (
+    render_backtest_analysis_workspace_fallback,
+)
 from app.web.backtest_single_strategy import render_single_strategy_workspace
+from app.web.components.backtest_analysis_decision_workspace import (
+    is_backtest_analysis_decision_workspace_available,
+    render_backtest_analysis_decision_workspace,
+)
 from app.web.backtest_workflow_routes import (
     BACKTEST_ANALYSIS_MODE_COMPARE,
     BACKTEST_ANALYSIS_MODE_OPTIONS,
@@ -559,25 +575,65 @@ def _render_backtest_analysis_research_reference_board() -> None:
 
 
 def render_backtest_analysis_workspace() -> None:
-    st.markdown("### Backtest Analysis")
-    st.caption(
-        "전략 실행, 전략 비교, 후보 생성을 먼저 진행합니다."
-    )
     current_mode = st.session_state.get("backtest_analysis_mode")
     if current_mode == BACKTEST_LEGACY_ANALYSIS_MODE_COMPARE:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_COMPARE
     elif current_mode not in BACKTEST_ANALYSIS_MODE_OPTIONS:
         st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
-    mode = st.radio(
-        "Analysis Mode",
-        options=BACKTEST_ANALYSIS_MODE_OPTIONS,
-        horizontal=True,
-        key="backtest_analysis_mode",
-        label_visibility="collapsed",
+
+    workspace = build_current_backtest_analysis_workspace()
+    component_key = "backtest-analysis-decision-workspace-context"
+    if is_backtest_analysis_decision_workspace_available():
+        intent = render_backtest_analysis_decision_workspace(
+            workspace=workspace,
+            surface="context",
+            key=component_key,
+            on_change=partial(
+                consume_backtest_analysis_component_change,
+                component_key=component_key,
+                allowed_actions=_CONTEXT_ACTIONS,
+            ),
+        )
+    else:
+        intent = render_backtest_analysis_workspace_fallback(
+            workspace,
+            surface="context",
+        )
+    consume_backtest_analysis_intent(
+        intent,
+        allowed_actions=_CONTEXT_ACTIONS,
     )
-    if mode == BACKTEST_ANALYSIS_MODE_COMPARE:
+    _render_backtest_analysis_work_fragment()
+
+
+@st.fragment
+def _render_backtest_analysis_work_fragment() -> None:
+    if st.session_state.backtest_analysis_mode == BACKTEST_ANALYSIS_MODE_COMPARE:
         render_compare_portfolio_workspace()
     else:
-        if mode != BACKTEST_ANALYSIS_MODE_SINGLE:
+        if st.session_state.backtest_analysis_mode != BACKTEST_ANALYSIS_MODE_SINGLE:
             st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
         render_single_strategy_workspace()
+
+    workspace = build_current_backtest_analysis_workspace()
+    component_key = "backtest-analysis-decision-workspace-decision"
+    if is_backtest_analysis_decision_workspace_available():
+        intent = render_backtest_analysis_decision_workspace(
+            workspace=workspace,
+            surface="decision",
+            key=component_key,
+            on_change=partial(
+                consume_backtest_analysis_component_change,
+                component_key=component_key,
+                allowed_actions=_DECISION_ACTIONS,
+            ),
+        )
+    else:
+        intent = render_backtest_analysis_workspace_fallback(
+            workspace,
+            surface="decision",
+        )
+    consume_backtest_analysis_intent(
+        intent,
+        allowed_actions=_DECISION_ACTIONS,
+    )

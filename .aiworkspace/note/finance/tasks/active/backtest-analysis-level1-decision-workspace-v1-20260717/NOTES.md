@@ -52,3 +52,11 @@ generated artifact이므로 commit하지 않는다.
   고정했다.
 - placeholder, 불균형 code fence, undefined test fixture를 재검사했고 남은 항목은
   발견하지 않았다.
+
+## 2026-07-18 Task 5 Execution Decision
+
+- Streamlit form 안의 widget 변경값은 submit 전 Python에 전달되지 않는다.
+- 각 form의 payload builder를 복제해 draft를 만들지 않고 모든 single 실행이 통과하는
+  shared runner에서 normalized draft와 fingerprint를 기록한다.
+- 새 실행 실패 시 이전 성공 bundle은 유지되고 새 draft fingerprint와 달라져 stale이
+  되므로 설계의 보존·차단 contract를 만족한다.

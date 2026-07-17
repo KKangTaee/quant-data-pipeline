@@ -39,7 +39,7 @@ def _render_global_relative_strength_form() -> None:
         with col2:
             end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="grs_end")
 
-        with st.expander("Advanced Inputs", expanded=False):
+        with st.expander("전략·보유 규칙", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="grs_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="grs_option")
             cash_ticker = st.text_input(
@@ -78,7 +78,7 @@ def _render_global_relative_strength_form() -> None:
                 help="가격이 이 이동평균 아래에 있으면 cash ticker로 대피합니다.",
                 key="grs_trend_filter_window",
             )
-            with st.expander("Promotion Policy Signal", expanded=False):
+            with st.expander("비용·Guardrail", expanded=False):
                 (
                     min_price_filter,
                     transaction_cost_bps,

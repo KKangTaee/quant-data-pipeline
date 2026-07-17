@@ -43,7 +43,7 @@ def _render_risk_on_momentum_5d_form() -> None:
                 key="rom_start_balance",
             )
 
-        with st.expander("Execution / Exit", expanded=True):
+        with st.expander("전략·보유 규칙 · 실행/청산", expanded=True):
             exec_col, exit_col = st.columns(2)
             with exec_col:
                 execution_mode = st.selectbox("Execution Mode", options=["close_based"], index=0, key="rom_execution_mode")
@@ -126,7 +126,7 @@ def _render_risk_on_momentum_5d_form() -> None:
                         key="rom_take_profit_atr_multiple",
                     )
 
-        with st.expander("Macro / Candidate Filters", expanded=True):
+        with st.expander("전략·보유 규칙 · Macro/후보", expanded=True):
             macro_filter_mode = st.selectbox(
                 "Macro Filter Mode",
                 options=["hard_filter", "ranking_penalty", "off"],
@@ -195,7 +195,7 @@ def _render_risk_on_momentum_5d_form() -> None:
                     )
                 )
 
-        with st.expander("Cost / Comparison", expanded=False):
+        with st.expander("비용·Guardrail", expanded=False):
             cost_cols = st.columns(4)
             with cost_cols[0]:
                 transaction_cost_bps = st.number_input(
