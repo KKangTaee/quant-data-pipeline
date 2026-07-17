@@ -3026,3 +3026,99 @@ Final Review handoff 소비 불일치를 아래 Task 10~12로 보정한다.
 - [x] Synchronize canonical docs, active task, and root handoff logs.
 - [x] Confirm protected registry/run-history/saved/artifact files are not committed.
 - [x] Commit: `ETF 수집과 Final Review 인계 QA 문서 동기화`.
+
+---
+
+## Approved Atomic Revalidation And Actionable Handoff Execution
+
+2026-07-17 사용자 승인에 따라 재검증 one-shell 공백 회귀와 정적인 Final Review
+handoff를 아래 Task 13~16으로 보정한다. 기존 validation 계산, canonical route,
+append-only registry 계약은 유지한다.
+
+### Task 13: Atomic Practical Validation Revalidation
+
+**Files:**
+- Modify: `app/web/components/practical_validation_decision_workspace/component.py`
+- Modify: `app/web/backtest_practical_validation/page.py`
+- Modify: `tests/test_backtest_practical_validation_decision_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+
+**Interfaces:**
+- `render_practical_validation_decision_workspace(..., on_change: Callable[[], None] | None)`
+- `_consume_practical_validation_component_change(*, component_key, sources, source, validation_result, replay_result)`
+- `_consume_practical_validation_decision_workspace_intent(..., rerun_scope="none")`
+
+- [ ] Add a RED wrapper test proving `on_change` reaches the declared component.
+- [ ] Add a RED callback test proving replay is consumed before projection and does not call `st.rerun`.
+- [ ] Add a RED boundary test rejecting explicit fragment rerun for local replay intent.
+- [ ] Implement callback-first local intent consumption and keep app rerun only for route movement.
+- [ ] Run:
+  `.venv/bin/python -m pytest tests/test_backtest_practical_validation_decision_workspace.py tests/test_backtest_refactor_boundaries.py -q`.
+- [ ] Run target py_compile and commit `Practical Validation 재검증 화면 유지 보정`.
+
+### Task 14: Compact Level2 Handoff Summary
+
+**Files:**
+- Modify: `app/services/backtest_practical_validation_decision_workspace.py`
+- Modify: `app/web/backtest_practical_validation/workspace_panel.py`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/PracticalValidationDecisionWorkspace.tsx`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/types.ts`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/style.css`
+- Modify: `tests/test_backtest_practical_validation_decision_workspace.py`
+- Modify: `tests/test_practical_validation_market_context_visual_contract.py`
+
+**Interfaces:**
+- Produces `handoff_summary.state/title/detail/counts/items`.
+- Each item contains `root_issue_id`, `handoff_kind`, `handoff_label`, `title`,
+  `summary`, `next_stage_action`.
+- Keeps legacy `resolution_lanes.final_review_handoff` for compatibility only.
+
+- [ ] Add a RED service test for compact class labels and root deduplication.
+- [ ] Add a RED visual contract test proving the first-read uses
+  `Final Review 인계 준비 완료` and does not render three empty lanes.
+- [ ] Implement the pure projection, React compact summary, and Python fallback.
+- [ ] Run focused service / visual tests and React production build.
+- [ ] Commit `Practical Validation Final Review 인계 요약 개선`.
+
+### Task 15: Actionable Final Review Handoff
+
+**Files:**
+- Modify: `app/services/backtest_final_review_decision_brief.py`
+- Modify: `app/web/backtest_final_review_helpers.py`
+- Modify: `app/web/backtest_final_review/page.py`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/DecisionBriefWorkspace.tsx`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/decisionBriefTypes.ts`
+- Modify: `app/web/components/final_review_investment_report/frontend/src/style.css`
+- Modify: `tests/test_backtest_final_review_decision_brief.py`
+- Modify: relevant `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Intent field `accepted_limit_acknowledgements: Array<{root_issue_id: string, decision: "accepted" | "return_to_level2"}>`.
+- Python validator returns normalized root-deduplicated acknowledgements or one user-facing error.
+- Persistence field `decision_brief_snapshot.accepted_limit_acknowledgements`.
+
+- [ ] Add RED pure-service tests for expected roots, duplicate/unknown roots, allowed decisions, and route consistency.
+- [ ] Add a RED page test proving missing acknowledgements do not append a decision row.
+- [ ] Add a RED persistence test proving normalized acknowledgements are stored.
+- [ ] Add RED React contract assertions for the two accepted-limit choices and intent payload.
+- [ ] Implement Python validation, React inputs, fallback inputs, and append-only snapshot persistence.
+- [ ] Run focused Final Review service / page / persistence / visual tests and React build.
+- [ ] Commit `Final Review 인계 한계 판단 기록 추가`.
+
+### Task 16: Runtime QA, Documentation, And Closeout
+
+**Files:**
+- Modify canonical Backtest architecture / flow docs only where behavior changed.
+- Modify active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
+- Modify root handoff logs.
+
+- [ ] Run all focused Practical Validation / Final Review / closure / boundary tests freshly.
+- [ ] Run both React production builds, target py_compile, and `git diff --check`.
+- [ ] Browser QA desktop and 760px: replay pending, no one-shell disappearance,
+  compact Level2 handoff, accepted-limit choice, return-to-Level2 route, overflow,
+  and console errors.
+- [ ] Keep QA screenshots generated and unstaged.
+- [ ] Synchronize canonical docs, active task, and root handoff logs.
+- [ ] Confirm registry, run history, saved JSONL, screenshots, `.superpowers/`, and
+  run artifacts are absent from staged files.
+- [ ] Commit `Practical Validation 인계 UX QA와 문서 동기화`.

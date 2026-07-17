@@ -640,3 +640,76 @@ Monitoring 조건`으로 분리한다. 동일 root issue는 한 section과 count
 19. 구조화 근거가 부족한 REVIEW는 Final Review handoff로 승격되지 않고 Level2
     engineering blocker로 남는다.
 20. blocked workspace는 prospective handoff를 실제 승격처럼 표현하지 않는다.
+
+## 2026-07-17 Approved Atomic Revalidation And Actionable Handoff Correction
+
+사용자 실화면 재검증에서 완료 notice가 나타나는 동안 Level2 one-shell 전체가
+사라지고 advanced disclosure만 남는 회귀를 재현했다. 또한 기존 Final Review
+handoff는 세 lane을 읽을 수 있게 만들었지만 `accepted_limit`을 사용자가 실제로
+인수했는지 또는 Level2로 되돌렸는지를 기록하지 않아, 인계가 설명에서 끝났다.
+
+### Atomic revalidation boundary
+
+custom component의 `Streamlit.setComponentValue()`가 fragment rerun을 시작한 뒤
+Python intent consumer가 다시 `st.rerun(scope="fragment")`을 호출한다. 이 두 번째
+rerun이 이미 그린 component delta를 중단하고 one-shell iframe을 다시 mount하게
+만드는 직접 원인이다.
+
+Practical Validation component wrapper는 Streamlit 1.57의 `on_change` callback을
+지원한다. callback은 component key의 current intent를 읽고 source / validation
+identity를 Python에서 검증한 뒤 local intent를 projection 전에 소비한다.
+
+- source / profile / replay / Level2 resolution은 callback에서 처리하며 별도
+  fragment rerun을 호출하지 않는다.
+- widget event가 시작한 한 번의 fragment rerun 본문이 최신 session state로
+  workspace model을 만들고 같은 component key에 전달한다.
+- Final Review route 이동은 기존 app rerun을 유지한다.
+- 성공 notice는 one-shell 밖의 독립 block으로 남겨 component mount 순서를
+  흔들지 않고, React Step 2에 완료 상태를 함께 표시한다.
+- 후보 / 검증 기준과 기존 Step 3~4 결과는 replay 계산 중에도 유지한다.
+
+### Compact Level2 handoff
+
+Level2 first-read는 Final Review의 세 lane 상세를 반복하지 않는다. eligible
+workspace에서는 `Final Review 인계 준비 완료` summary 아래에 root issue별 한 줄
+요약만 표시한다.
+
+- `final_decision`: `Final Review에서 결정`
+- `accepted_limit`: `한계 인수 판단`
+- `monitoring_transfer`: `Monitoring 자동 이관`
+
+각 항목은 Level2에서 확인된 근거의 의미와 다음 stage action만 보여준다. 상세
+관측값과 evidence ref는 `상세 검증 근거` 또는 Final Review에서 확인한다. blocked
+workspace는 기존처럼 prospective copy를 사용하며 실제 승격으로 표현하지 않는다.
+
+### Actionable Final Review handoff
+
+Final Review는 eligible Level2 handoff를 다음처럼 완료한다.
+
+1. `final_decision`은 최종 route 사유에 반영할 판단 질문으로 표시한다.
+2. `accepted_limit`은 root issue마다 `accepted` 또는 `return_to_level2`를 반드시
+   선택한다.
+3. 하나라도 `return_to_level2`이면 저장 route는 `RE_REVIEW_REQUIRED`여야 한다.
+4. `monitoring_transfer`는 observation / threshold / cadence / re-review action /
+   evidence reference가 모두 있는 구조화 조건만 자동 이관한다.
+5. Final Review React는 입력 intent만 만들고 Python이 expected root set, 중복,
+   허용값, route consistency를 검증한다.
+6. 검증된 acknowledgement는 append-only final decision row의
+   `decision_brief_snapshot.accepted_limit_acknowledgements`에 저장한다.
+
+빈 handoff lane은 렌더링하지 않는다. 기존 route 값, eligibility Gate, append-only
+persistence, live-approval 금지 경계는 변경하지 않는다.
+
+### Additional acceptance criteria
+
+21. replay click 뒤 후보 / 검증 기준 / 기존 결과 component가 DOM에서 사라지지 않는다.
+22. replay event 한 건은 Python local intent 한 번과 fragment projection 한 번으로
+    끝나며 explicit fragment rerun을 추가로 호출하지 않는다.
+23. Level2 handoff는 compact summary이며 Final Review 상세 lane을 복제하지 않는다.
+24. accepted limit가 있으면 Final Review 저장 전에 모든 root issue의 인수 또는
+    Level2 반환 선택이 필요하다.
+25. `return_to_level2` acknowledgement는 `RE_REVIEW_REQUIRED` route와만 저장된다.
+26. 저장 row는 accepted-limit acknowledgement와 Monitoring condition snapshot을
+    보존한다.
+27. React 미가용 fallback도 동일한 선택과 Python 검증 계약을 사용한다.
+28. desktop / 760px에서 handoff action과 replay pending 상태가 overflow 없이 읽힌다.
