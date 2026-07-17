@@ -6,11 +6,13 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 from finance.data.db.mysql import MySQLClient
+from finance.loaders.macro import load_macro_series_observations
 
 
 QueryFn = Callable[[str, str, tuple[Any, ...]], list[dict[str, Any]]]
 DB_PRICE = "finance_price"
 DEFAULT_ASSET_SYMBOLS = ("GC=F", "DX-Y.NYB")
+DEFAULT_PATHWAY_SERIES = ("DGS2", "DGS10", "DFII10", "VIXCLS", "BAA10Y")
 
 
 def _query(
@@ -33,7 +35,8 @@ def _query(
 def load_economic_cycle_asset_prices(
     *,
     symbols: Sequence[str] = DEFAULT_ASSET_SYMBOLS,
-    lookback_rows: int = 80,
+    lookback_rows: int = 1500,
+    end_date: object = None,
     query_fn: QueryFn | None = None,
 ) -> list[dict[str, object]]:
     """Return a bounded daily close window per symbol without provider access."""
@@ -44,8 +47,13 @@ def load_economic_cycle_asset_prices(
     normalized = tuple(symbol for symbol in normalized if symbol)
     if not normalized:
         return []
-    bounded_rows = max(64, min(int(lookback_rows), 512))
+    bounded_rows = max(315, min(int(lookback_rows), 2000))
     placeholders = ", ".join(["%s"] * len(normalized))
+    end_clause = ""
+    params: tuple[object, ...] = normalized
+    if end_date is not None:
+        end_clause = "AND candle_time_utc < DATE_ADD(%s, INTERVAL 1 DAY)"
+        params = (*params, str(end_date)[:10])
     sql = f"""
     WITH ranked_rows AS (
       SELECT provider_symbol, candle_time_utc, close, source, provider_status,
@@ -58,6 +66,7 @@ def load_economic_cycle_asset_prices(
         AND provider_symbol IN ({placeholders})
         AND close IS NOT NULL
         AND provider_status = 'ok'
+        {end_clause}
     )
     SELECT provider_symbol, candle_time_utc, close, source, provider_status
     FROM ranked_rows
@@ -67,7 +76,26 @@ def load_economic_cycle_asset_prices(
     rows = _query(
         DB_PRICE,
         sql,
-        (*normalized, bounded_rows),
+        (*params, bounded_rows),
         query_fn=query_fn,
     )
     return [dict(row) for row in rows]
+
+
+def load_economic_cycle_market_series(
+    *,
+    series_ids: Sequence[str] = DEFAULT_PATHWAY_SERIES,
+    start_date: object,
+    end_date: object,
+    macro_loader: Callable[..., object] = load_macro_series_observations,
+) -> list[dict[str, object]]:
+    """Return bounded stored market-pathway observations without provider access."""
+
+    frame = macro_loader(
+        series_ids=series_ids,
+        start=str(start_date)[:10],
+        end=str(end_date)[:10],
+    )
+    if hasattr(frame, "to_dict"):
+        return list(frame.to_dict("records"))
+    return [dict(row) for row in frame]

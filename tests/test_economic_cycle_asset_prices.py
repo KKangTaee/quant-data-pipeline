@@ -20,7 +20,7 @@ def test_dollar_index_is_a_core_daily_futures_instrument() -> None:
     assert instrument["futures_group"] == "FX Futures"
 
 
-def test_asset_price_loader_reads_only_bounded_stored_daily_rows() -> None:
+def test_asset_price_loader_applies_reference_date_before_row_rank() -> None:
     spec = importlib.util.find_spec("finance.loaders.economic_cycle_assets")
     assert spec is not None
     loader = importlib.import_module("finance.loaders.economic_cycle_assets")
@@ -45,7 +45,8 @@ def test_asset_price_loader_reads_only_bounded_stored_daily_rows() -> None:
 
     rows = loader.load_economic_cycle_asset_prices(
         symbols=("GC=F", "DX-Y.NYB"),
-        lookback_rows=80,
+        lookback_rows=1500,
+        end_date="2026-07-17",
         query_fn=fake_query,
     )
 
@@ -53,7 +54,10 @@ def test_asset_price_loader_reads_only_bounded_stored_daily_rows() -> None:
     assert captured["database"] == "finance_price"
     assert "FROM futures_ohlcv" in str(captured["sql"])
     assert "interval_code = '1d'" in str(captured["sql"])
-    assert captured["params"][-1] == 80
+    assert "candle_time_utc < DATE_ADD(%s, INTERVAL 1 DAY)" in str(
+        captured["sql"]
+    )
+    assert captured["params"][-2:] == ("2026-07-17", 1500)
 
 
 def _price_rows(symbol: str, *, latest: float, end_date: date) -> list[dict[str, object]]:
