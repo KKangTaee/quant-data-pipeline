@@ -812,6 +812,208 @@ def build_equities_context(
     }
 
 
+def _weekly_direction_text(evaluation: Mapping[str, object]) -> str:
+    if evaluation.get("reason_code"):
+        return "주간 자료가 부족하거나 최신성이 제한됩니다."
+    changes = evaluation.get("changes") or {}
+    four_week = float(changes.get("4w") or 0.0)
+    year = float(changes.get("52w") or 0.0)
+    return (
+        f"최근 4주 {four_week:+.1f}%, 전년 동기 대비 {year:+.1f}% 변했습니다."
+    )
+
+
+def build_commodities_context(
+    *,
+    evaluations: Mapping[str, Mapping[str, object]],
+    economic_state: Mapping[str, object],
+    gold_context: Mapping[str, object],
+) -> dict[str, object]:
+    """Build separate WTI, copper, and reused-gold observation contexts."""
+    wti_price = evaluations["CL=F"]
+    wti_price_context = _price_context("CL=F", wti_price)
+    wti_specs = (
+        ("inventory", "미국 원유 재고", "WCESTUS1"),
+        ("production", "미국 원유 생산", "WCRFPUS2"),
+        ("product_supplied", "미국 석유제품 공급량", "WRPUPUS2"),
+    )
+    wti_paths = [
+        build_observed_pathway(
+            pathway_id,
+            label,
+            evaluations[series_id],
+            interpretation=_weekly_direction_text(evaluations[series_id]),
+        )
+        for pathway_id, label, series_id in wti_specs
+    ]
+    wti_paths.append(
+        build_observed_pathway(
+            "dollar",
+            "미국 달러지수",
+            evaluations["DX-Y.NYB"],
+            interpretation=_daily_direction_text(evaluations["DX-Y.NYB"]),
+        )
+    )
+    wti_available_paths = sum(row["status"] == "OBSERVED" for row in wti_paths)
+    if wti_price_context["status"] != "UNAVAILABLE" and wti_available_paths == 4:
+        wti_coverage = "SUFFICIENT"
+    elif wti_price_context["status"] != "UNAVAILABLE" and wti_available_paths:
+        wti_coverage = "PARTIAL"
+    else:
+        wti_coverage = "INSUFFICIENT"
+    wti_interpretation = [
+        f"WTI 가격은 {_daily_direction_text(wti_price)}",
+        *[f"{row['label']}은 {row['interpretation']}" for row in wti_paths],
+    ]
+    wti = {
+        "asset_id": "wti",
+        "label": "WTI 원유",
+        "coverage": wti_coverage,
+        "price_context": wti_price_context,
+        "current_movement": [
+            _movement_metric("CL=F", "WTI 원유", wti_price, level_unit="USD")
+        ],
+        "observed_pathways": wti_paths,
+        "current_interpretation": wti_interpretation,
+        "next_check_conditions": [
+            "WTI의 1개월·3개월 가격 흐름이 이어지는지 확인합니다.",
+            "EIA 재고·생산·제품 공급량의 최근 4주 변화가 이어지는지 확인합니다.",
+            "달러지수의 1개월 변화 방향이 유지되는지 확인합니다.",
+        ],
+        "provenance": [
+            "stored CL=F continuous futures daily OHLCV",
+            "EIA WCESTUS1·WCRFPUS2·WRPUPUS2 official weekly XLS",
+            "stored DX-Y.NYB continuous futures daily OHLCV",
+        ],
+        "limitations": [
+            "EIA 주간 수급과 WTI 일별 가격은 서로 다른 관측 주기를 유지합니다.",
+            "동시에 관찰된 수급·달러 변화를 WTI 가격의 인과관계로 확정하지 않습니다.",
+        ],
+        "narrative": " ".join(wti_interpretation),
+    }
+
+    copper_price = evaluations["HG=F"]
+    copper_price_context = _price_context("HG=F", copper_price)
+    activity = next(
+        (
+            row
+            for row in economic_state.get("observations") or []
+            if row.get("factor") == "activity_score"
+        ),
+        {},
+    )
+    activity_reason = (
+        None if activity.get("direction") != "UNAVAILABLE" else "MISSING_ACTIVITY"
+    )
+    activity_series = {
+        "series_id": "activity_score",
+        "as_of_date": activity.get("source_date"),
+        "current_value": activity.get("value"),
+        "unit": "score",
+        "freshness": "CURRENT" if not activity_reason else "UNAVAILABLE",
+        "reason_code": activity_reason,
+        "changes": {},
+        "directions": {"current": activity.get("direction")},
+    }
+    copper_paths = [
+        build_observed_pathway(
+            "dollar",
+            "미국 달러지수",
+            evaluations["DX-Y.NYB"],
+            interpretation=_daily_direction_text(evaluations["DX-Y.NYB"]),
+        ),
+        build_observed_pathway(
+            "us_activity",
+            "미국 생산·소비 활동",
+            activity_series,
+            interpretation=(
+                f"현재 측정 방향은 {activity.get('direction')}입니다."
+                if not activity_reason
+                else "활동지표 자료가 부족합니다."
+            ),
+        ),
+    ]
+    copper_available_paths = sum(
+        row["status"] == "OBSERVED" for row in copper_paths
+    )
+    copper_coverage = (
+        "PARTIAL"
+        if copper_price_context["status"] != "UNAVAILABLE"
+        and copper_available_paths
+        else "INSUFFICIENT"
+    )
+    copper_interpretation = [
+        f"구리 가격은 {_daily_direction_text(copper_price)}",
+        *[f"{row['label']}은 {row['interpretation']}" for row in copper_paths],
+    ]
+    copper = {
+        "asset_id": "copper",
+        "label": "구리",
+        "coverage": copper_coverage,
+        "price_context": copper_price_context,
+        "current_movement": [
+            _movement_metric("HG=F", "구리", copper_price, level_unit="USD")
+        ],
+        "observed_pathways": copper_paths,
+        "current_interpretation": copper_interpretation,
+        "next_check_conditions": [
+            "구리의 1개월·3개월 가격 흐름이 이어지는지 확인합니다.",
+            "달러지수와 미국 활동지표의 측정 방향을 각각 확인합니다.",
+        ],
+        "provenance": [
+            "stored HG=F continuous futures daily OHLCV",
+            "stored DX-Y.NYB continuous futures daily OHLCV",
+            "economic-cycle canonical U.S. activity observation",
+        ],
+        "limitations": [
+            "연결된 산업활동 자료는 미국 중심이며 글로벌 구리 수요를 대표하지 않습니다.",
+            "가격·달러·활동지표의 동시 변화를 인과관계로 확정하지 않습니다.",
+        ],
+        "narrative": " ".join(copper_interpretation),
+    }
+
+    gold_narrative = str(gold_context.get("narrative") or "")
+    gold = {
+        "asset_id": "gold",
+        "label": "금",
+        "coverage": gold_context.get("coverage") or "INSUFFICIENT",
+        "price_context": dict(gold_context.get("price_context") or {}),
+        "current_movement": [],
+        "observed_pathways": [
+            dict(row) for row in gold_context.get("pathways") or []
+        ],
+        "current_interpretation": [gold_narrative] if gold_narrative else [],
+        "next_check_conditions": [
+            "금 가격과 실질금리·달러 경로의 다음 측정값을 각각 확인합니다."
+        ],
+        "provenance": ["기존 2차 금 관측 컨텍스트 재사용"],
+        "limitations": [
+            str(row.get("label") or row.get("reason_code") or "")
+            for row in gold_context.get("unmeasured_pathways") or []
+        ],
+        "narrative": gold_narrative,
+    }
+    assets = [wti, copper, gold]
+    coverage = (
+        "INSUFFICIENT"
+        if all(row["coverage"] == "INSUFFICIENT" for row in assets)
+        else "PARTIAL"
+        if any(row["coverage"] != "SUFFICIENT" for row in assets)
+        else "SUFFICIENT"
+    )
+    return {
+        "asset_group": "commodities",
+        "coverage": coverage,
+        "economic_state": dict(economic_state),
+        "assets": assets,
+        "current_movement": [],
+        "observed_pathways": [],
+        "current_interpretation": [],
+        "next_check_conditions": [],
+        "provenance": ["WTI·구리 신규 경로와 기존 금 컨텍스트의 결합"],
+        "limitations": [],
+        "narrative": "WTI·구리·금은 서로 다른 측정 경로로 구분합니다.",
+    }
 def build_asset_pathway_contexts(
     *,
     evidence: Sequence[Mapping[str, object]],
@@ -861,7 +1063,7 @@ def build_asset_pathway_contexts(
         ),
         reference_date=reference_date,
     )
-    for symbol in ("GC=F", "DX-Y.NYB", "^GSPC", "SPY"):
+    for symbol in ("GC=F", "DX-Y.NYB", "CL=F", "HG=F", "^GSPC", "SPY"):
         evaluations[symbol] = evaluate_series(
             _series_points(
                 price_rows,
@@ -873,6 +1075,18 @@ def build_asset_pathway_contexts(
             series_id=symbol,
             reference_date=reference_date,
             change_mode="PERCENT_RETURN",
+        )
+    for series_id in ("WCESTUS1", "WCRFPUS2", "WRPUPUS2"):
+        evaluations[series_id] = evaluate_weekly_series(
+            _series_points(
+                market_rows,
+                id_key="series_id",
+                series_id=series_id,
+                date_key="observation_date",
+                value_key="value",
+            ),
+            series_id=series_id,
+            reference_date=reference_date,
         )
 
     economic_state = _economic_state(evidence)
@@ -957,4 +1171,9 @@ def build_asset_pathway_contexts(
             pathways=pathways,
             price_context=price_context,
         )
+    contexts["commodities"] = build_commodities_context(
+        evaluations=evaluations,
+        economic_state=economic_state,
+        gold_context=contexts["gold"],
+    )
     return contexts

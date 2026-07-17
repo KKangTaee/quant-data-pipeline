@@ -450,6 +450,59 @@ def test_equities_keeps_market_paths_when_earnings_are_unavailable() -> None:
     )
 
 
+def _weekly_market_history(series_ids: tuple[str, ...]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    dates = pd.date_range(end="2026-07-10", periods=260, freq="W-FRI")
+    for series_offset, series_id in enumerate(series_ids):
+        rows.extend(
+            {
+                "series_id": series_id,
+                "observation_date": timestamp.date(),
+                "value": 100_000.0 + series_offset * 10_000 + index * 100.0,
+            }
+            for index, timestamp in enumerate(dates)
+        )
+    return rows
+
+
+def test_commodities_keep_wti_copper_and_gold_separate() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+    market_rows = [
+        *_macro_history(
+            {
+                "DGS2": "UP",
+                "DGS10": "UP",
+                "DFII10": "UP",
+                "T10YIE": "DOWN",
+                "VIXCLS": "DOWN",
+                "BAA10Y": "DOWN",
+            }
+        ),
+        *_weekly_market_history(("WCESTUS1", "WCRFPUS2", "WRPUPUS2")),
+    ]
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=market_rows,
+        price_rows=_price_history(
+            {"CL=F": "UP", "HG=F": "DOWN", "GC=F": "UP", "DX-Y.NYB": "DOWN"}
+        ),
+        sp500_earnings=_ready_sp500_earnings(),
+        reference_date="2026-07-17",
+    )
+
+    assets = {row["asset_id"]: row for row in contexts["commodities"]["assets"]}
+    assert set(assets) == {"wti", "copper", "gold"}
+    assert {row["pathway_id"] for row in assets["wti"]["observed_pathways"]} == {
+        "inventory",
+        "production",
+        "product_supplied",
+        "dollar",
+    }
+    assert assets["copper"]["coverage"] == "PARTIAL"
+    assert assets["gold"]["price_context"] == contexts["gold"]["price_context"]
+    assert assets["gold"]["narrative"] == contexts["gold"]["narrative"]
+
+
 def test_gold_pathways_separate_real_yield_dollar_and_risk_directions() -> None:
     pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
 
