@@ -9708,3 +9708,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 경제 factor는 관측 상태로 유지하고, 금리·실질금리·달러·위험회피·실제 가격을 독립 경로로 표시하며 미측정 요인과 데이터 한계를 공개해야 함.
 - Analysis result: 5/21/63거래일 변화, 5년 materiality, 최신성 기반 공통 evaluator와 금·달러 파일럿을 구현했다. Actual은 금 `SUFFICIENT`, 달러는 해외 상대금리 부재로 `PARTIAL`이다.
 - Follow-up: 전체 5차 중 2차까지 완료했다. 채권·금리, 주식, 원자재는 기존 방향 결론을 제거하고 `시장 경로 미연결`로 두며 별도 명세 후 3~5차로 확장한다.
+
+### 2026-07-18 - Institutional Portfolios는 선택 기관 맥락을 먼저 읽는다
+
+- User request: Institutional Portfolios를 Overview 시장 맥락의 디자인 문법으로 바꾸고, 불편한 UX와 노출되지 않는 종목을 전체적으로 개선해 달라고 요청함.
+- Interpreted goal: 그래프는 유지하면서 선택 기관의 포트폴리오 특징을 먼저 이해하고, 모든 보유 종목과 특정 종목 상세를 누락 없이 탐색해야 함.
+- Analysis result: current React는 전체 보유를 80개로 잘라 Bridgewater 993개 중 913개를 숨기고, primary 종목 검색이 없으며, mapping coverage와 previous-quarter 부재가 sector / chart / change 의미를 제한한다.
+- Follow-up: selected-manager context-first 방향을 승인받아 active task written spec을 작성했다. 사용자 spec review 후 3차 detailed TDD implementation plan으로 전환한다.

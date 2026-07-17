@@ -1,13 +1,13 @@
 # Active Task State Manifest
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-18
 
 ## Current State
 
 Current active task:
 
-- none
+- `institutional-portfolios-context-first-redesign-v1-20260718` — 1차 audit complete; 2차 written spec review for selected-manager context-first IA, complete holdings explorer, direct security search, mapping coverage, and comparison-state correctness
 
 Latest completed task:
 

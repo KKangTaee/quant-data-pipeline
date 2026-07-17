@@ -6375,3 +6375,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - T10YIE·EIA 3계열 `8,049` rows, S&P 가격 `5,026` rows, futures 4종 `10,055` rows를 actual DB에 적재했다. 실제 S&P EPS 완료 분기는 없어 해당 경로만 자료 부족으로 유지했다.
 - 공통 관측 UI, desktop 2열/mobile 1열, hover/focus 상세와 채권 내부 1열 지표 목록을 확인했다. Focused `104 passed`, TypeScript와 React production build를 통과했다.
 - 전체 자산경로 roadmap은 `5/5` 완료다. 해외 상대금리와 승인된 글로벌 구리 활동지표는 후속 범위다.
+
+## 2026-07-18 - Institutional Portfolios 맥락 우선 개편 설계
+
+- 선택 기관의 포트폴리오 맥락 이해를 첫 화면의 주인공으로 확정하고, manager discovery는 보조 switcher / search로 낮췄다.
+- Bridgewater 993개 중 current UI 80개만 표시, primary 종목 직접 검색 부재, 낮은 mapping coverage, 이전 분기 없음 상태를 핵심 기능 gap으로 확인했다.
+- 전체 보유 pagination / 검색 / filter, mapping count·weight coverage, change-board correctness, Overview형 context hero를 written spec으로 고정했다.
+- 현재 전체 roadmap `1/4` complete, `2차` spec review 단계다. 상세는 `tasks/active/institutional-portfolios-context-first-redesign-v1-20260718/DESIGN.md`를 본다.
