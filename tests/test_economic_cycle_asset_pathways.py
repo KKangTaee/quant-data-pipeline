@@ -131,7 +131,17 @@ def test_market_series_loader_requests_only_the_pathway_window() -> None:
     )
 
     assert captured == {
-        "series_ids": ("DGS2", "DGS10", "DFII10", "VIXCLS", "BAA10Y"),
+        "series_ids": (
+            "DGS2",
+            "DGS10",
+            "DFII10",
+            "T10YIE",
+            "VIXCLS",
+            "BAA10Y",
+            "WCESTUS1",
+            "WCRFPUS2",
+            "WRPUPUS2",
+        ),
         "start": "2021-03-01",
         "end": "2026-07-17",
     }

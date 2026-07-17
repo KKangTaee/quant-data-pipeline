@@ -46,6 +46,7 @@ def test_asset_price_loader_applies_reference_date_before_row_rank() -> None:
 
     rows = loader.load_economic_cycle_asset_prices(
         symbols=("GC=F", "DX-Y.NYB"),
+        equity_symbols=(),
         lookback_rows=1500,
         end_date="2026-07-17",
         query_fn=fake_query,
@@ -59,6 +60,43 @@ def test_asset_price_loader_applies_reference_date_before_row_rank() -> None:
         captured["sql"]
     )
     assert captured["params"][-2:] == ("2026-07-17", 1500)
+
+
+def test_asset_loader_combines_futures_and_equity_rows_before_reference_date() -> None:
+    loader = importlib.import_module("finance.loaders.economic_cycle_assets")
+    calls: list[tuple[str, str, tuple[object, ...]]] = []
+
+    def fake_query(database: str, sql: str, params: tuple[object, ...]):
+        calls.append((database, sql, params))
+        if "futures_ohlcv" in sql:
+            return [
+                {
+                    "provider_symbol": "CL=F",
+                    "candle_time_utc": "2026-07-16",
+                    "close": 70.0,
+                    "source": "yfinance",
+                    "provider_status": "ok",
+                }
+            ]
+        return [
+            {
+                "provider_symbol": "^GSPC",
+                "candle_time_utc": "2026-07-16",
+                "close": 6200.0,
+                "source": "nyse_price_history",
+                "provider_status": "ok",
+            }
+        ]
+
+    rows = loader.load_economic_cycle_asset_prices(
+        end_date="2026-07-17",
+        query_fn=fake_query,
+    )
+
+    assert {row["provider_symbol"] for row in rows} == {"CL=F", "^GSPC"}
+    assert len(calls) == 2
+    assert "`date` < DATE_ADD(%s, INTERVAL 1 DAY)" in calls[1][1]
+    assert calls[0][0] == calls[1][0] == "finance_price"
 
 
 def _price_rows(

@@ -542,6 +542,44 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["value_status"], "actual")
         self.assertEqual(result["basis"], "as_reported")
 
+    def test_actual_eps_history_requires_eight_distinct_completed_quarters(self) -> None:
+        from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
+
+        period_ends = [
+            "2026-03-31",
+            "2025-12-31",
+            "2025-09-30",
+            "2025-06-30",
+            "2025-03-31",
+            "2024-12-31",
+            "2024-09-30",
+            "2024-06-30",
+        ]
+        rows = [
+            {
+                "period_end": period_end,
+                "eps": 72.0 - index * 2.0,
+                "source_release_date": period_end,
+            }
+            for index, period_end in enumerate(period_ends)
+        ]
+
+        result = load_sp500_actual_eps_history(
+            query_fn=lambda _sql, _params: rows
+        )
+
+        self.assertEqual(result["status"], "READY")
+        self.assertEqual(result["quarter_count"], 8)
+        self.assertAlmostEqual(
+            result["current_ttm_eps"],
+            sum(row["eps"] for row in rows[:4]),
+        )
+        self.assertAlmostEqual(
+            result["prior_ttm_eps"],
+            sum(row["eps"] for row in rows[4:8]),
+        )
+        self.assertIsNotNone(result["growth_pct"])
+
     def test_sep_history_loader_returns_all_release_vintages(self) -> None:
         from finance.loaders.sp500_valuation import load_fomc_sep_projection_history
 
