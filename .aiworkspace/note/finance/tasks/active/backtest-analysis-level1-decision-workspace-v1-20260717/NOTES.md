@@ -27,3 +27,13 @@
 
 시각 companion 산출물은 `.superpowers/brainstorm/57312-1784291161/`에 있으며
 generated artifact이므로 commit하지 않는다.
+
+## 2026-07-17 Design Self-Review
+
+- C1 목적 그룹에 포함되는 초기 운영 전략과 development 전략을 명시했다.
+- Strict Annual / Quarterly variant는 strategy card가 아니라 Step 2 설정으로
+  유지하도록 경계를 명시했다.
+- 전체 화면 reset 회귀를 막기 위해 같은 frontend bundle 안에서 stable context와
+  mutable result를 별도 mount로 두는 physical render contract를 추가했다.
+- 합의된 A / B / S1 / M1 / R1 / G1 / C1 / P1 / T2 결정과 out-of-scope를
+  acceptance criteria에 대조했고 추가 미결정 사항은 발견하지 않았다.

@@ -159,6 +159,19 @@ saved Mix는 세 번째 후보 유형이 아니다. Portfolio Mix Step 1에서 `
 
 완료된 상위 단계는 사라지지 않고 compact summary가 된다.
 
+초기 운영 전략 매핑은 아래를 기준으로 한다. 이 분류는 React에 hard-code하지 않고
+Python strategy metadata에서 projection한다.
+
+| 목적 그룹 | 초기 전략 |
+|---|---|
+| 팩터 기반 종목 선정 | Quality + Value, Quality, Value |
+| 모멘텀·전술 자산배분 | GTAA, Global Relative Strength, Dual Momentum |
+| 분산·기본 포트폴리오 | Risk Parity Trend, Equal Weight |
+| 개발 중 전략 | Risk-On Momentum 5D |
+
+Strict Annual / Quarterly 같은 동일 전략의 실행 variant는 별도 전략 카드로
+중복시키지 않고 해당 전략을 고른 뒤 Step 2 설정에서 선택한다.
+
 ### Portfolio Mix Four Steps
 
 1. `구성 전략`
@@ -280,6 +293,26 @@ candidate_source_id
 
 Streamlit의 script rerun 자체를 없애는 것이 목표가 아니다. 사용자에게 보이는
 workspace identity와 stable projection을 rerun 전후에 유지하는 것이 계약이다.
+
+### Physical Render Boundary
+
+시각적으로는 하나의 workspace지만 실행 lifecycle은 같은 frontend bundle의 두
+surface mode로 나눈다.
+
+```text
+context surface:
+  hero + current work + Step 1 + Step 2
+  fragment 밖의 stable mount
+
+result surface:
+  Step 3 + Step 4
+  fragment 안의 mutable mount
+```
+
+`context` surface는 후보 유형 / 전략 / 설정 intent만 반환하고, `result` surface는
+실행 / 저장 / Level2 이동 intent만 반환한다. 실행 결과 갱신 때문에 result fragment가
+rerun되어도 context iframe을 다시 mount하지 않는다. 두 surface는 같은 design token과
+read model version을 사용해 사용자에게는 하나의 shell로 보인다.
 
 ## Result Interpretation Contract
 
@@ -510,6 +543,8 @@ source이며 이번 개편의 재설계 대상이 아니다.
 30. desktop / 760px Browser QA와 fresh completion verification을 통과한다.
 31. registry, run history, saved JSONL, generated QA artifact, `.superpowers/`는 명시
     요청 없이 stage / commit하지 않는다.
+32. 실행 결과 갱신은 mutable result surface만 다시 mount하며 stable context surface를
+    유지한다.
 
 ## Out Of Scope
 

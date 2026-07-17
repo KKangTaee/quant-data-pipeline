@@ -12,7 +12,7 @@ Last Updated: 2026-07-17
 - [x] development strategy, strategy catalog, saved Mix entry 합의
 - [x] T2 pure read model + one-shell 접근 합의
 - [x] product / state / result / responsive / test design 승인
-- [ ] approved design self-review
+- [x] approved design self-review
 - [ ] detailed implementation PLAN 작성
 - [ ] 1~5차 구현
 
@@ -26,5 +26,4 @@ Last Updated: 2026-07-17
 
 ## Next Action
 
-`DESIGN.md`를 acceptance criteria와 current code boundary에 대조해 자체 검토하고,
-사용자 확인 뒤 detailed `PLAN.md`를 작성한다.
+사용자 확인 뒤 approved `DESIGN.md`를 기준으로 detailed `PLAN.md`를 작성한다.
