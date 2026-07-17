@@ -92,7 +92,6 @@ def record_single_strategy_draft(payload: dict, *, strategy_name: str) -> str:
     )
     selection = {
         "strategy_choice": st.session_state.get("backtest_strategy_choice"),
-        "strategy_name": strategy_name,
     }
     fingerprint = build_level1_configuration_fingerprint(
         workspace_kind="single_strategy",

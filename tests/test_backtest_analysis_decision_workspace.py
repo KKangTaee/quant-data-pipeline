@@ -242,6 +242,11 @@ def test_record_single_strategy_draft_stores_normalized_fingerprint() -> None:
         fake_streamlit.session_state.backtest_current_configuration_fingerprint
         == fingerprint
     )
+    assert fingerprint == build_level1_configuration_fingerprint(
+        workspace_kind="single_strategy",
+        selection={"strategy_choice": "GTAA"},
+        configuration=fake_streamlit.session_state.backtest_current_draft_payload,
+    )
 
 
 def test_successful_runner_stamps_fingerprint_without_candidate_handoff() -> None:
