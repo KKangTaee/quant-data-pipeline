@@ -116,7 +116,7 @@ def test_ready_read_model_maps_horizons_evidence_sources_and_separate_history() 
         "sources",
         "limitations",
     ]
-    assert model["schema_version"] == "economic_cycle_v1"
+    assert model["schema_version"] == "economic_cycle_v2"
     assert [item["label"] for item in model["horizons"]] == [
         "현재",
         "1개월 후",
@@ -389,7 +389,7 @@ def test_asset_price_loader_is_db_only_and_price_failure_is_isolated() -> None:
     model = service.build_economic_cycle_read_model(
         snapshot_loader=lambda **_kwargs: _ready_snapshot(),
         history_loader=lambda **_kwargs: [],
-        asset_price_loader=lambda: calls.append("prices") or price_rows,
+        asset_price_loader=lambda **_kwargs: calls.append("prices") or price_rows,
         price_reference_date=date(2026, 7, 17),
     )
 
@@ -401,7 +401,7 @@ def test_asset_price_loader_is_db_only_and_price_failure_is_isolated() -> None:
         for item in model["market_implications"]
     )
 
-    def broken_price_loader():
+    def broken_price_loader(**_kwargs):
         raise RuntimeError("price table unavailable")
 
     isolated = service.build_economic_cycle_read_model(
@@ -415,6 +415,57 @@ def test_asset_price_loader_is_db_only_and_price_failure_is_isolated() -> None:
     assert isolated["market_implications"][2]["price_context"]["status"] == "UNAVAILABLE"
     assert isolated["market_implications"][3]["price_context"]["status"] == "UNAVAILABLE"
     assert "price table unavailable" not in json.dumps(isolated, ensure_ascii=False)
+
+
+def test_service_uses_one_reference_date_for_market_pathway_reads() -> None:
+    service = _load_service()
+    calls: dict[str, object] = {}
+
+    def market_loader(**kwargs):
+        calls["market"] = kwargs
+        return []
+
+    def price_loader(**kwargs):
+        calls["price"] = kwargs
+        return []
+
+    model = service.build_economic_cycle_read_model(
+        as_of_date="2026-06-30",
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=market_loader,
+        asset_price_loader=price_loader,
+        price_reference_date="2026-06-30",
+    )
+
+    assert model["schema_version"] == "economic_cycle_v2"
+    assert calls["market"]["end_date"] == date(2026, 6, 30)
+    assert calls["price"] == {
+        "lookback_rows": 1500,
+        "end_date": date(2026, 6, 30),
+    }
+
+
+def test_market_loader_failure_limits_cards_without_hiding_cycle_model() -> None:
+    service = _load_service()
+
+    def broken_market_loader(**_kwargs):
+        raise RuntimeError("macro table unavailable")
+
+    model = service.build_economic_cycle_read_model(
+        snapshot_loader=lambda **_kwargs: _ready_snapshot(),
+        history_loader=lambda **_kwargs: [],
+        market_series_loader=broken_market_loader,
+        asset_price_loader=lambda **_kwargs: [],
+        price_reference_date="2026-07-17",
+    )
+
+    assert model["status"] == "READY"
+    gold = next(
+        row for row in model["market_implications"] if row["asset_group"] == "gold"
+    )
+    assert gold["coverage"] in {"PARTIAL", "INSUFFICIENT"}
+    assert "macro table unavailable" not in json.dumps(model, ensure_ascii=False)
 
 
 def test_all_stable_reason_codes_have_concise_korean_labels() -> None:

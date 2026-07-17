@@ -18,9 +18,12 @@ from finance.economic_cycle_interpretation import (
 )
 from finance.economic_cycle_model import PHASES
 from finance.loaders.economic_cycle import load_cycle_history, load_cycle_snapshot
-from finance.loaders.economic_cycle_assets import load_economic_cycle_asset_prices
+from finance.loaders.economic_cycle_assets import (
+    load_economic_cycle_asset_prices,
+    load_economic_cycle_market_series,
+)
 
-SCHEMA_VERSION = "economic_cycle_v1"
+SCHEMA_VERSION = "economic_cycle_v2"
 HORIZON_LABELS = {0: "현재", 1: "1개월 후", 2: "2개월 후"}
 PHASE_LABELS = {
     "recovery": "회복",
@@ -253,7 +256,8 @@ def build_economic_cycle_read_model(
     as_of_date: str | date | None = None,
     snapshot_loader: Callable[..., Mapping[str, object] | None] | None = None,
     history_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
-    asset_price_loader: Callable[[], Sequence[Mapping[str, object]]] | None = None,
+    market_series_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
+    asset_price_loader: Callable[..., Sequence[Mapping[str, object]]] | None = None,
     price_reference_date: str | date | None = None,
 ) -> dict[str, object]:
     """Adapt persisted compact rows; never fetch, fit, write, or mutate UI state."""
@@ -287,16 +291,35 @@ def build_economic_cycle_read_model(
     horizons = _horizons(resolved_snapshot)
     history = _history(history_rows)
     evidence = _evidence(resolved_snapshot)
+
+    market_reference = pd.Timestamp(
+        price_reference_date or as_of_date or date.today()
+    ).date()
+    market_start = (
+        pd.Timestamp(market_reference) - pd.DateOffset(years=5, months=4)
+    ).date()
+    load_market_series = market_series_loader or load_economic_cycle_market_series
+    try:
+        market_rows = list(
+            load_market_series(start_date=market_start, end_date=market_reference)
+        )
+    except Exception:
+        market_rows = []
+
     load_asset_prices = asset_price_loader or load_economic_cycle_asset_prices
     try:
-        asset_price_rows = list(load_asset_prices())
+        asset_price_rows = list(
+            load_asset_prices(lookback_rows=1500, end_date=market_reference)
+        )
     except Exception:
         asset_price_rows = []
     market_implications = build_market_implications(
         horizons,
         evidence,
         asset_price_rows,
-        price_reference_date=price_reference_date,
+        market_rows=market_rows,
+        economic_as_of_date=snapshot_date or None,
+        price_reference_date=market_reference,
     )
     for item in market_implications:
         item["economic_as_of_date"] = snapshot_date or None
