@@ -340,3 +340,50 @@
   workspace, both Python pages/fallback, ETF provider/loader, ingestion job targets
   exit 0.
 - `git diff --check`, cached diff-check, committed continuation diff-check exit 0.
+
+## 2026-07-17 Task 13 Atomic Revalidation RED / GREEN
+
+- RED: wrapper가 `on_change`를 받지 못했고 replay callback이 없었으며 local
+  intent 뒤 app/fragment rerun이 다시 호출됐다.
+- GREEN: component wrapper `on_change`, callback-first intent consumption,
+  `rerun_scope="none"`을 구현했다.
+- focused `tests.test_backtest_practical_validation_decision_workspace`와
+  `tests.test_backtest_refactor_boundaries`: `Ran 43 tests`, `OK`.
+- commit: `f94b4f50 Practical Validation 재검증 화면 유지 보정`.
+
+## 2026-07-17 Task 14 Compact Handoff RED / GREEN
+
+- RED: `handoff_summary` contract와 compact visual source assertion이 없었다.
+- GREEN: root-dedup `state/title/detail/counts/items`, class별 사용자 label,
+  React/Python fallback compact summary와 empty suppression을 구현했다.
+- focused workspace/visual tests: `Ran 33 tests`, `OK`.
+- Practical Validation Vite build: 175 modules, success.
+- commit: `1003488d Practical Validation Final Review 인계 요약 개선`.
+
+## 2026-07-17 Task 15 Actionable Final Review RED / GREEN
+
+- RED 6건: validator import 부재, missing choice append 허용, React intent 부재,
+  persistence keyword 부재를 확인했다.
+- GREEN: expected-root 순서 정규화, duplicate/unknown/invalid choice 거부,
+  return-to-Level2 route consistency, React/fallback choices, compact snapshot 저장.
+- focused Final Review / persistence class: `Ran 112 tests`, `OK`.
+- Final Review Vite build: 177 modules, success.
+- commit: `3fe41c2a Final Review 인계 한계 판단 기록 추가`.
+
+## 2026-07-17 Fresh Correction Verification And Browser Attempt
+
+- focused Practical Validation / boundary / visual / Final Review / closure suite:
+  `Ran 188 tests in 1.967s`, `OK`.
+- Practical Validation production build: Vite 5.4.21, 175 modules, success.
+- Final Review production build: Vite 5.4.21, 177 modules, success.
+- target `py_compile` and `git diff --check`: exit 0.
+- Browser first attempt reached Practical Validation but showed
+  `Cannot read properties of undefined (reading 'items')` because port 8506 had
+  run since 08:13 with `--server.fileWatcherType none`; current React bundle was
+  paired with stale Python payload.
+- port 8506만 current commit으로 재시작했고 HTTP health `ok`를 확인했다.
+  이후 in-app Browser local URL policy가 reload와 read-only snapshot을 모두
+  차단해 desktop / 760px correction capture는 실행하지 못했다. 다른 browser,
+  raw CDP, standalone Playwright로 우회하지 않았다.
+- incomplete/error 화면은 correction QA screenshot으로 보존하거나 보고하지
+  않았고 registry/save action도 실행하지 않았다.

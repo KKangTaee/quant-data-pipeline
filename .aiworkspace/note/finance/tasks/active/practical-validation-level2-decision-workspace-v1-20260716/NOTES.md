@@ -133,3 +133,22 @@
 - Browser QA에서는 protected validation registry에 새 save row를 쓰지 않았다.
   지정 후보는 사용자가 Step 4에서 저장·이동을 실행할 때 append되고,
   Final Review UI 구조는 기존 eligible row로 세 lane 표시를 확인했다.
+
+## 2026-07-17 Atomic Revalidation / Actionable Handoff Correction
+
+- custom component value 변경 뒤 Python이 다시 `st.rerun(scope="fragment")`를
+  호출한 것이 one-shell 전체가 잠시 사라지는 직접 원인이었다. declared
+  component의 `on_change`에서 local intent를 먼저 소비하고 같은 rerun 안에서
+  새 projection을 만들면 상단 후보/정책 shell은 유지된다.
+- Level2 first-read의 handoff는 세 개의 큰 lane이 아니라 root-dedup compact
+  summary로 읽는다. eligible이면 `Final Review 인계 준비 완료`, blocked면
+  prospective copy를 사용하고 0건 handoff는 렌더링하지 않는다.
+- accepted limit는 Final Review에 단순 안내로 남기지 않는다. 사용자는 각 root를
+  계속 인수하거나 Level2로 되돌려야 하며, 반환이 하나라도 있으면 canonical
+  route는 `RE_REVIEW_REQUIRED`여야 한다.
+- React와 Python fallback은 같은 선택 intent를 만들고, Python pure validator가
+  expected root, duplicate/unknown root, allowed decision, route consistency를
+  검증한다. 저장 row에는 normalized acknowledgment만 compact snapshot으로 남긴다.
+- QA 서버가 `fileWatcherType none`으로 장기 실행되면 새 React build와 stale
+  Python payload가 섞일 수 있다. 이번 browser 진입의 `handoff_summary.items`
+  오류는 current code defect가 아니라 08:13부터 떠 있던 stale 8506 process였다.

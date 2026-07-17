@@ -43,3 +43,11 @@
 - 공통 가격일의 월말 허용 범위는 주말/휴장을 포함한 7일이다. 비월간 cadence나
   더 긴 시장 휴장이 필요한 source는 이 숫자를 재사용하지 말고 source cadence
   contract를 별도로 제공해야 한다.
+- correction desktop / 760px Browser QA가 남아 있다. 8506 stale no-watch process를
+  current commit으로 재시작한 뒤 in-app Browser local URL security policy가
+  reload와 snapshot을 차단했다. automated 188-test suite와 두 production build는
+  통과했지만 실제 replay pending → 결과 shell 유지, accepted-limit 선택,
+  return-to-Level2 route, 760px overflow는 같은 current build에서 다시 확인해야 한다.
+- `fileWatcherType none` QA server는 React/Python 계약을 함께 바꾼 뒤 반드시
+  재기동해야 한다. 그렇지 않으면 새 bundle이 stale read model을 받아 component
+  error처럼 보일 수 있으며, 이는 배포 bundle 자체의 schema fallback을 대신하지 않는다.

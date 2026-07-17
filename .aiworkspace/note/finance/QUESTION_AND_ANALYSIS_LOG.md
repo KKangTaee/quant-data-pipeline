@@ -9596,3 +9596,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: 두 provider adapter와 bond identity 보정을 기존 job에 연결하고,
   Level2 handoff를 final decision / accepted limit / structured monitoring 세 lane으로
   구현했다. 지정 후보는 actual replay에서 engineering blocker 0이 됐다.
+
+### 2026-07-17 - 재검증은 one-shell을 유지하고 Final Review 한계는 명시적으로 결정한다
+
+- User request: 실전 검증 버튼 뒤 전체 shell이 reset되는 현상이 정상인지 확인하고,
+  정적인 Final Review 인계 항목을 더 나은 사용자 행동으로 개선해 달라고 요청함.
+- Interpreted goal: replay 결과 영역만 갱신하고, Level2에서 근거를 확인한 한계는
+  Final Review에서 실제 인수 또는 Level2 반환 판단으로 종결해야 함.
+- Analysis result: component value rerun 뒤 Python의 두 번째 fragment rerun이 공백을
+  만들었고, accepted limit는 저장 전 acknowledgment 계약이 없어 안내로만 남았다.
+- Follow-up: callback-first replay projection, compact Level2 summary, per-root
+  accepted/return choice, Python route validation과 compact snapshot 저장을 구현했다.
+  non-visual 검증은 완료했고 Browser policy로 desktop/760px 재확인이 남았다.

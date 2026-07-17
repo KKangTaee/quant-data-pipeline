@@ -6292,3 +6292,13 @@ Detailed historical logs were archived on `2026-04-13`.
   RED/GREEN, screenshot 경로는 active task `RUNS.md`를 본다.
 - protected registry/run history/saved data와 generated screenshot은 closeout
   commit에서 제외한다.
+
+## 2026-07-17 - Practical Validation Atomic Revalidation / Handoff Correction
+
+- 재검증 intent를 component `on_change`에서 먼저 소비해 one-shell 이중 rerun을
+  제거하고, Level2 handoff를 compact root-dedup summary로 바꿨다.
+- Final Review accepted limit는 각 root의 계속 인수 / Level2 반환 선택이 되었고,
+  Python 검증 뒤 compact decision snapshot에 저장된다.
+- 커밋 `c038c938`, `f94b4f50`, `1003488d`, `3fe41c2a`; fresh 188 tests와
+  두 production build를 통과했다. desktop / 760px correction Browser QA는
+  local URL security policy 차단으로 active task `RISKS.md`에 남아 있다.

@@ -3048,13 +3048,13 @@ append-only registry 계약은 유지한다.
 - `_consume_practical_validation_component_change(*, component_key, sources, source, validation_result, replay_result)`
 - `_consume_practical_validation_decision_workspace_intent(..., rerun_scope="none")`
 
-- [ ] Add a RED wrapper test proving `on_change` reaches the declared component.
-- [ ] Add a RED callback test proving replay is consumed before projection and does not call `st.rerun`.
-- [ ] Add a RED boundary test rejecting explicit fragment rerun for local replay intent.
-- [ ] Implement callback-first local intent consumption and keep app rerun only for route movement.
-- [ ] Run:
+- [x] Add a RED wrapper test proving `on_change` reaches the declared component.
+- [x] Add a RED callback test proving replay is consumed before projection and does not call `st.rerun`.
+- [x] Add a RED boundary test rejecting explicit fragment rerun for local replay intent.
+- [x] Implement callback-first local intent consumption and keep app rerun only for route movement.
+- [x] Run:
   `.venv/bin/python -m pytest tests/test_backtest_practical_validation_decision_workspace.py tests/test_backtest_refactor_boundaries.py -q`.
-- [ ] Run target py_compile and commit `Practical Validation 재검증 화면 유지 보정`.
+- [x] Run target py_compile and commit `Practical Validation 재검증 화면 유지 보정`.
 
 ### Task 14: Compact Level2 Handoff Summary
 
@@ -3073,12 +3073,12 @@ append-only registry 계약은 유지한다.
   `summary`, `next_stage_action`.
 - Keeps legacy `resolution_lanes.final_review_handoff` for compatibility only.
 
-- [ ] Add a RED service test for compact class labels and root deduplication.
-- [ ] Add a RED visual contract test proving the first-read uses
+- [x] Add a RED service test for compact class labels and root deduplication.
+- [x] Add a RED visual contract test proving the first-read uses
   `Final Review 인계 준비 완료` and does not render three empty lanes.
-- [ ] Implement the pure projection, React compact summary, and Python fallback.
-- [ ] Run focused service / visual tests and React production build.
-- [ ] Commit `Practical Validation Final Review 인계 요약 개선`.
+- [x] Implement the pure projection, React compact summary, and Python fallback.
+- [x] Run focused service / visual tests and React production build.
+- [x] Commit `Practical Validation Final Review 인계 요약 개선`.
 
 ### Task 15: Actionable Final Review Handoff
 
@@ -3097,13 +3097,13 @@ append-only registry 계약은 유지한다.
 - Python validator returns normalized root-deduplicated acknowledgements or one user-facing error.
 - Persistence field `decision_brief_snapshot.accepted_limit_acknowledgements`.
 
-- [ ] Add RED pure-service tests for expected roots, duplicate/unknown roots, allowed decisions, and route consistency.
-- [ ] Add a RED page test proving missing acknowledgements do not append a decision row.
-- [ ] Add a RED persistence test proving normalized acknowledgements are stored.
-- [ ] Add RED React contract assertions for the two accepted-limit choices and intent payload.
-- [ ] Implement Python validation, React inputs, fallback inputs, and append-only snapshot persistence.
-- [ ] Run focused Final Review service / page / persistence / visual tests and React build.
-- [ ] Commit `Final Review 인계 한계 판단 기록 추가`.
+- [x] Add RED pure-service tests for expected roots, duplicate/unknown roots, allowed decisions, and route consistency.
+- [x] Add a RED page test proving missing acknowledgements do not append a decision row.
+- [x] Add a RED persistence test proving normalized acknowledgements are stored.
+- [x] Add RED React contract assertions for the two accepted-limit choices and intent payload.
+- [x] Implement Python validation, React inputs, fallback inputs, and append-only snapshot persistence.
+- [x] Run focused Final Review service / page / persistence / visual tests and React build.
+- [x] Commit `Final Review 인계 한계 판단 기록 추가`.
 
 ### Task 16: Runtime QA, Documentation, And Closeout
 
@@ -3112,13 +3112,15 @@ append-only registry 계약은 유지한다.
 - Modify active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
 - Modify root handoff logs.
 
-- [ ] Run all focused Practical Validation / Final Review / closure / boundary tests freshly.
-- [ ] Run both React production builds, target py_compile, and `git diff --check`.
+- [x] Run all focused Practical Validation / Final Review / closure / boundary tests freshly.
+- [x] Run both React production builds, target py_compile, and `git diff --check`.
 - [ ] Browser QA desktop and 760px: replay pending, no one-shell disappearance,
   compact Level2 handoff, accepted-limit choice, return-to-Level2 route, overflow,
-  and console errors.
-- [ ] Keep QA screenshots generated and unstaged.
-- [ ] Synchronize canonical docs, active task, and root handoff logs.
-- [ ] Confirm registry, run history, saved JSONL, screenshots, `.superpowers/`, and
+  and console errors. Current 8506 restart 후 in-app Browser local URL security
+  policy가 reload/snapshot을 차단해 같은 current build 검증이 남았다.
+- [ ] Keep QA screenshots generated and unstaged. Browser security policy blocked the
+  post-restart capture; no incomplete screenshot is presented as correction QA.
+- [x] Synchronize canonical docs, active task, and root handoff logs.
+- [x] Confirm registry, run history, saved JSONL, screenshots, `.superpowers/`, and
   run artifacts are absent from staged files.
-- [ ] Commit `Practical Validation 인계 UX QA와 문서 동기화`.
+- [x] Commit `Practical Validation 인계 UX QA와 문서 동기화`.

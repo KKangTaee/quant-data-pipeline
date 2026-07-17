@@ -1,6 +1,6 @@
 # Status
 
-Status: Complete
+Status: Implementation Complete / Browser QA Pending
 Last Updated: 2026-07-17
 
 ## 전체 Roadmap
@@ -60,6 +60,10 @@ raw 기술 근거, 반복 action lifecycle을 보정했다. 이어서 실제 공
 - `f9cc47a9` ETF 공식 보유종목 수집 어댑터 보강
 - `ebe29cd6` Final Review Level2 인계 판단 화면 보강
 - `c95765a3` ETF 채권 보유종목 식별자 충돌 수정
+- `c038c938` Practical Validation 인계 UX 보정 설계 반영
+- `f94b4f50` Practical Validation 재검증 화면 유지 보정
+- `1003488d` Practical Validation Final Review 인계 요약 개선
+- `3fe41c2a` Final Review 인계 한계 판단 기록 추가
 
 ## 2026-07-16 Follow-up Status
 
@@ -81,3 +85,20 @@ accepted limit 1, monitoring transfer 1이며 save-and-move가 활성화됐다.
 COMT/EFA/IWD/IWM/IWN/LQD/TIP/VNQ는 기존 DB snapshot 경로로 공식
 holdings/exposure를 읽는다. Final Review는 eligible row에서 Level2 handoff를
 `최종 판단 입력 / 인수한 검증 한계 / Monitoring 이관 조건`으로 분리한다.
+
+## 2026-07-17 Atomic Revalidation / Actionable Handoff Correction
+
+- [x] component `on_change` callback이 replay / profile / Level2 resolution intent를
+  projection 전에 소비하고 별도 fragment rerun을 호출하지 않음
+- [x] Level2 handoff를 root-dedup compact summary로 표시하고 0건 lane을 숨김
+- [x] Final Review accepted limit마다 `한계를 인수하고 계속` 또는
+  `Level2로 되돌리기`를 선택하도록 하고 Python이 route 일관성을 검증
+- [x] normalized 선택을
+  `decision_brief_snapshot.accepted_limit_acknowledgements`에 append-only 저장
+- [x] fresh focused 188 tests, Practical 175-module build, Final Review
+  177-module build, target py_compile, diff-check
+- [ ] correction desktop / 760px Browser QA: 8506의 stale no-watch server 원인은
+  확인했으나 재시작 직후 local URL Browser security policy가 후속 접근을 차단함
+
+코드와 비시각 계약은 완료됐다. 작업 상태를 `Complete`로 과장하지 않고,
+동일 current build의 desktop / 760px 상호작용과 screenshot 확인만 남긴다.

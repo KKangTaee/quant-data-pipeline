@@ -933,6 +933,8 @@ Practical Validation Gate 통과 후보
      -> 실제 강점 / 약점
      -> 실제 성격 / 관리 기준 대비 압력, Monitoring 변화 조건
   -> 3. 최종 판단과 사유
+     -> Level2 accepted limit마다 계속 인수 / Level2 반환 선택
+     -> Level2 반환이 하나라도 있으면 RE_REVIEW_REQUIRED route만 허용
      -> canonical route 선택, 사용자 판단 사유 입력, gate 기반 CTA 활성 / 비활성
      -> React는 intent만 전달하고 Python이 save evaluation / 자동 ID / append 수행
      -> selection gate 통과 selected route만 Portfolio Monitoring 추적 후보 handoff
@@ -953,6 +955,7 @@ Practical Validation Gate 통과 후보
 - Decision Workspace의 behavior chart는 실제 관측 날짜 X축, index/percent Y축과 hover date/value를 제공한다. 누적 성과는 시작일 100 기준이며 `고점 대비 낙폭 (Underwater)`은 running peak 대비 하락률로 0%가 이전 최고점 회복 상태다.
 - Decision Workspace의 `포트폴리오 실제 성격`은 집중, 손실, 회전, 비용, 국면 의존의 저장 관측값을 criterion 없이도 표시한다. `관리 기준 대비 압력`은 Python이 explicit criterion과 비교해 `기준 이내 / 기준 초과 / 기준 미설정 / 분석 근거 없음`을 전달한다. legacy `mdd_review_line`은 drawdown 관리선 alias이며 거래비용 가정 `one_way_cost_bps`는 review limit가 아니다.
 - Level2 remediation과 조건부 pattern guide는 current Decision Workspace에 렌더링하지 않는다. blocker가 남은 후보는 eligibility와 canonical `RE_REVIEW_REQUIRED` route로 처리한다.
+- eligible Level2 handoff는 root issue당 한 번만 `최종 판단 입력 / 인수한 검증 한계 / Monitoring 이관 조건`으로 소비하고 0건 lane은 렌더링하지 않는다. accepted limit는 정적 설명 카드가 아니라 각 root의 `한계를 인수하고 계속 / Level2로 되돌리기` 선택이다. Python이 선택 완결성, 중복·stale root, route 일관성을 검증하고 normalized 선택을 `decision_brief_snapshot.accepted_limit_acknowledgements`에 저장한다.
 - structured Monitoring condition은 complete stored detail을 우선한다. stored detail이 없더라도 같은 Decision Brief가 이미 만든 drawdown / Benchmark observation에 explicit measurement, comparator, comparison, cadence, evidence, as-of가 모두 있으면 Python이 안전한 변화 조건을 파생한다. React는 전달된 condition을 표시만 한다.
 - CAGR / Data Trust처럼 explicit threshold가 없는 문장형 trigger는 숫자를 추측하거나 parsing해 조건으로 만들지 않고 disclosure에 남긴다. Final Review는 이 fallback 과정에서 provider fetch, replay, DB ingestion, registry rewrite를 실행하지 않는다.
 - Phase 31 이후 `Validation Pack`의 사용자 판단에 필요한 내용은 `남은 판단 근거`의 stored audit trace로 읽는다. 별도 Evidence Appendix는 렌더링하지 않으며 raw validation detail은 Practical Validation stage가 소유한다.
