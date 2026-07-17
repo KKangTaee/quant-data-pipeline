@@ -216,6 +216,22 @@ button, input, summary { font: inherit; }
 .economic-weakening { color: #a55749; background: #fbeeea; }
 .economic-neutral, .economic-unavailable { color: #687985; background: #edf1f3; }
 
+.observation-block { display: grid; gap: 9px; padding: 12px; border: 1px solid #dfe7ec; border-radius: 12px; background: #f7fafb; }
+.observation-block > h5 { margin: 0; color: #37556a; font-size: 10px; font-weight: 900; }
+.observation-block ul { display: grid; gap: 6px; margin: 0; padding-left: 17px; color: #587082; }
+.observation-block li { font-size: 9px; line-height: 1.55; }
+.movement-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.movement-item { display: grid; min-width: 0; gap: 7px; padding: 10px; border: 1px solid #e1e8ec; border-radius: 10px; background: #fff; }
+.movement-item > header { display: flex; justify-content: space-between; gap: 8px; color: #385468; font-size: 9px; }
+.observed-pathways-block .pathway-item > p { color: #617585; font-size: 9px; line-height: 1.5; }
+.observation-block .price-pathway { padding: 0; border: 0; background: transparent; }
+.observation-block .price-pathway > header h5 { display: none; }
+.commodity-asset-grid { display: grid; gap: 12px; }
+.commodity-asset-card { display: grid; gap: 11px; padding: 14px; border: 1px solid #dfe7ec; border-radius: 14px; background: #fff; }
+.commodity-asset-card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.commodity-asset-card > header strong { color: #29495f; font-size: 12px; }
+.commodity-asset-card > p { color: #627786; font-size: 9px; line-height: 1.55; }
+
 .pathway-group { display: grid; gap: 8px; }
 .pathway-list { display: grid; gap: 7px; }
 .pathway-item { display: grid; gap: 9px; padding: 11px; border: 1px solid #dfe7ec; border-radius: 12px; background: #fff; }
@@ -277,6 +293,7 @@ button, input, summary { font: inherit; }
   .implication-grid { grid-template-columns: 1fr; }
   .implication-card:last-child:nth-child(odd) { grid-column: auto; }
   .cycle-layout { align-items: start; }
+  .movement-grid { grid-template-columns: 1fr; }
   .pathway-hover-details { display: none; }
   .pathway-details { display: block; margin-top: 7px; color: #687b89; font-size: 8px; }
   .pathway-details summary { cursor: pointer; font-weight: 850; }
@@ -307,6 +324,7 @@ button, input, summary { font: inherit; }
   .implication-card > header { display: grid; }
   .implication-overall { justify-items: start; }
   .series-primary-metrics { grid-template-columns: 1fr; }
+  .movement-grid { grid-template-columns: 1fr; }
   .price-return-grid { grid-template-columns: 1fr; }
   .regime-ribbon { width: 100%; min-height: 74px; grid-template-columns: repeat(var(--history-month-count), minmax(1px, 1fr)) 9px 9px; }
   .ribbon-axis span:nth-child(2) { display: none; }

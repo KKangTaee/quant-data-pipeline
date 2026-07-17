@@ -46,12 +46,14 @@ type PriceStatus = "RISING" | "FALLING" | "MIXED" | "NEUTRAL" | "UNAVAILABLE";
 type SeriesEvaluation = {
   series_id: string;
   as_of_date?: string | null;
-  unit?: "percent" | "bp" | null;
+  release_date?: string | null;
+  current_value?: number | null;
+  unit?: string | null;
   freshness: "CURRENT" | "UNAVAILABLE";
   reason_code?: string | null;
-  changes: { "5d": number | null; "21d": number | null; "63d": number | null };
-  thresholds: { "21d": number | null; "63d": number | null };
-  directions: { "21d": string; "63d": string };
+  changes: Record<string, number | null>;
+  thresholds?: Record<string, number | null>;
+  directions: Record<string, string>;
 };
 
 type AssetPathway = {
@@ -62,6 +64,29 @@ type AssetPathway = {
   reason_code?: string | null;
   core?: boolean;
   series: { series_id: string; status: PathwayStatus; evaluation: SeriesEvaluation }[];
+};
+
+type MovementMetric = {
+  metric_id: string;
+  label: string;
+  as_of_date?: string | null;
+  current_value?: number | null;
+  level_unit?: string | null;
+  change_unit?: string | null;
+  changes: Record<string, number | null>;
+  directions?: Record<string, string>;
+  freshness?: "CURRENT" | "UNAVAILABLE";
+  reason_code?: string | null;
+};
+
+type ObservedPathway = {
+  pathway_id: string;
+  label: string;
+  status: "OBSERVED" | "UNAVAILABLE" | PathwayStatus;
+  status_label?: string;
+  reason_code?: string | null;
+  series: SeriesEvaluation | { series_id: string; status: PathwayStatus; evaluation: SeriesEvaluation }[];
+  interpretation?: string;
 };
 
 type EconomicState = {
@@ -99,16 +124,37 @@ type MarketImplication = {
   asset_group: "rates" | "equities" | "gold" | "dollar" | "commodities";
   label: string;
   economic_as_of_date?: string | null;
-  analysis_status: "READY" | "PARTIAL" | "LIMITED" | "PATHWAYS_NOT_CONNECTED";
+  analysis_status: "READY" | "PARTIAL" | "LIMITED";
   coverage: CoverageStatus;
   economic_state: EconomicState;
-  pathways: AssetPathway[];
-  unmeasured_pathways: UnmeasuredPathway[];
+  pathways?: AssetPathway[];
+  unmeasured_pathways?: UnmeasuredPathway[];
+  current_movement?: MovementMetric[];
+  observed_pathways?: ObservedPathway[];
+  current_interpretation?: string[];
+  next_check_conditions?: string[];
+  provenance?: string[];
+  limitations?: string[];
+  assets?: CommodityAsset[];
   narrative: string;
   summary: string;
   context: string;
   price_context?: PriceContext | null;
   is_directional_forecast: false;
+};
+
+type CommodityAsset = {
+  asset_id: "wti" | "copper" | "gold";
+  label: string;
+  coverage: CoverageStatus;
+  price_context?: PriceContext | null;
+  current_movement?: MovementMetric[];
+  observed_pathways?: ObservedPathway[];
+  current_interpretation?: string[];
+  next_check_conditions?: string[];
+  provenance?: string[];
+  limitations?: string[];
+  narrative: string;
 };
 
 type CyclePayload = {
@@ -144,7 +190,7 @@ type CyclePayload = {
   limitations: string[];
 };
 
-type Props = ComponentProps & { args: { payload?: CyclePayload } };
+type Props = Omit<ComponentProps, "args"> & { args: { payload?: CyclePayload } };
 type PlotPoint = { x: number; y: number };
 type RibbonStyle = React.CSSProperties & { "--history-month-count": number };
 
@@ -178,7 +224,7 @@ const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 const formatSignedPercent = (value: number | null) => value == null
   ? "-"
   : `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
-const formatSeriesChange = (value: number | null, unit?: "percent" | "bp" | null) => value == null
+const formatSeriesChange = (value: number | null, unit?: string | null) => value == null
   ? "-"
   : `${value > 0 ? "+" : ""}${value.toFixed(1)}${unit === "bp" ? "bp" : "%"}`;
 const formatMonth = (value?: string | null) => value ? value.slice(0, 7).replace("-", ".") : "-";
@@ -202,6 +248,15 @@ const PRICE_STATUS_LABEL: Record<PriceStatus, string> = {
   MIXED: "기간별 혼재",
   NEUTRAL: "중립",
   UNAVAILABLE: "확인 불가",
+};
+
+const CHANGE_LABEL: Record<string, string> = {
+  "5d": "1주(5거래일)",
+  "21d": "1개월(21거래일)",
+  "63d": "3개월(63거래일)",
+  "4w": "최근 4주",
+  "52w": "전년 동기",
+  yoy_ttm: "완료 분기 TTM 전년 대비",
 };
 
 function probabilityCoordinate(probabilities: Probabilities): PlotPoint {
@@ -296,7 +351,8 @@ function splitPointSegments(points: Array<PlotPoint | null>): PlotPoint[][] {
 }
 
 function HorizonCard({ horizon }: { horizon: Horizon }) {
-  const available = Boolean(horizon.probabilities && horizon.dominant_phase);
+  const probabilities = horizon.probabilities;
+  const available = Boolean(probabilities && horizon.dominant_phase);
   const estimateStatus = resolveEstimateStatus(horizon);
   const provisional = horizon.estimate_status === "PROVISIONAL" || estimateStatus === "PROVISIONAL";
   const verified = horizon.estimate_status === "VERIFIED" || estimateStatus === "VERIFIED";
@@ -315,16 +371,16 @@ function HorizonCard({ horizon }: { horizon: Horizon }) {
           {available && horizon.confidence != null ? <em>{formatPercent(horizon.confidence)}</em> : null}
         </div>
       </header>
-      {available && horizon.probabilities ? (
+      {available && probabilities ? (
         <>
           <div className="probability-list" aria-label={`${horizon.label} 국면 확률`}>
             {PHASE_ORDER.map((phase) => (
               <div className="probability-row" key={phase}>
                 <span>{PHASE_LABEL[phase]}</span>
-                <div className="probability-bar" aria-label={`${PHASE_LABEL[phase]} ${formatPercent(horizon.probabilities[phase])}`}>
-                  <i className={`phase-${phase}`} style={{ width: formatPercent(horizon.probabilities[phase]) }} />
+                <div className="probability-bar" aria-label={`${PHASE_LABEL[phase]} ${formatPercent(probabilities[phase])}`}>
+                  <i className={`phase-${phase}`} style={{ width: formatPercent(probabilities[phase]) }} />
                 </div>
-                <strong>{formatPercent(horizon.probabilities[phase])}</strong>
+                <strong>{formatPercent(probabilities[phase])}</strong>
               </div>
             ))}
           </div>
@@ -369,7 +425,8 @@ function QuadrantChart({ payload }: { payload: CyclePayload }) {
     (item): item is Horizon & { probabilities: Probabilities } => Boolean(item?.probabilities),
   );
   const current = forecastSlots[0]?.probabilities ? forecastSlots[0] : null;
-  const currentPoint = current ? probabilityCoordinate(current.probabilities) : null;
+  const currentProbabilities = current?.probabilities;
+  const currentPoint = currentProbabilities ? probabilityCoordinate(currentProbabilities) : null;
 
   return (
     <section className="cycle-map-panel" aria-labelledby="cycle-map-title">
@@ -486,19 +543,22 @@ function EconomicStateBlock({ state }: { state: EconomicState }) {
 }
 
 function SeriesMetrics({ evaluation }: { evaluation: SeriesEvaluation }) {
-  const details = (
-    <>
-      <span>1주(5거래일) {formatSeriesChange(evaluation.changes["5d"], evaluation.unit)}</span>
-      <span>기준일 {evaluation.as_of_date || "-"}</span>
-      <span>최신성 {evaluation.freshness === "CURRENT" ? "정상" : "자료 부족"}</span>
-    </>
-  );
+  const changes = Object.entries(evaluation.changes || {});
+  const primary = changes.filter(([key]) => key !== "5d").slice(0, 2);
+  const details = <>
+    {changes.map(([key, value]) => (
+      <span key={key}>{CHANGE_LABEL[key] || key} {formatSeriesChange(value, evaluation.unit)}</span>
+    ))}
+    <span>기준일 {evaluation.as_of_date || evaluation.release_date || "-"}</span>
+    <span>최신성 {evaluation.freshness === "CURRENT" ? "정상" : "자료 부족"}</span>
+  </>;
   return (
     <div className="series-metrics" tabIndex={0}>
       <div className="series-primary-metrics">
         <strong>{evaluation.series_id}</strong>
-        <span>1개월(21거래일) {formatSeriesChange(evaluation.changes["21d"], evaluation.unit)}</span>
-        <span>3개월(63거래일) {formatSeriesChange(evaluation.changes["63d"], evaluation.unit)}</span>
+        {primary.length ? primary.map(([key, value]) => (
+          <span key={key}>{CHANGE_LABEL[key] || key} {formatSeriesChange(value, evaluation.unit)}</span>
+        )) : <span>측정값 {evaluation.current_value == null ? "-" : evaluation.current_value.toFixed(2)}</span>}
       </div>
       <div className="pathway-hover-details" role="tooltip">{details}</div>
       <details className="pathway-details">
@@ -547,7 +607,7 @@ function PricePathway({ item }: { item: MarketImplication }) {
   return (
     <section className="price-pathway">
       <header>
-        <h5>실제 가격 흐름</h5>
+        <h5>현재 움직임</h5>
         <b className={`price-status price-${price.status.toLowerCase()}`}>
           {PRICE_STATUS_LABEL[price.status]}
         </b>
@@ -567,6 +627,124 @@ function PricePathway({ item }: { item: MarketImplication }) {
   );
 }
 
+function CurrentMovementBlock({
+  label,
+  economicAsOfDate,
+  price,
+  rows = [],
+}: {
+  label: string;
+  economicAsOfDate?: string | null;
+  price?: PriceContext | null;
+  rows?: MovementMetric[];
+}) {
+  const priceItem = price ? {
+    label,
+    economic_as_of_date: economicAsOfDate,
+    price_context: price,
+  } as MarketImplication : null;
+  return (
+    <section className="observation-block current-movement-block">
+      <h5>현재 움직임</h5>
+      {priceItem ? <PricePathway item={priceItem} /> : (
+        <div className="movement-grid">
+          {rows.length ? rows.map((row) => (
+            <article className="movement-item" key={row.metric_id}>
+              <header><strong>{row.label}</strong><span>{row.current_value == null ? "-" : row.current_value.toFixed(2)} {row.level_unit || ""}</span></header>
+              <SeriesMetrics evaluation={{
+                series_id: row.metric_id,
+                as_of_date: row.as_of_date,
+                current_value: row.current_value,
+                unit: row.change_unit,
+                freshness: row.freshness || "UNAVAILABLE",
+                reason_code: row.reason_code,
+                changes: row.changes || {},
+                directions: row.directions || {},
+              }} />
+            </article>
+          )) : <p className="pathway-empty">표시할 현재 움직임이 없습니다.</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ObservedPathwaysBlock({
+  observed = [],
+  legacy = [],
+}: {
+  observed?: ObservedPathway[];
+  legacy?: AssetPathway[];
+}) {
+  if (!observed.length && legacy.length) {
+    return <section className="observation-block"><PathwayGroup title="함께 관찰된 경로" pathways={legacy} /></section>;
+  }
+  return (
+    <section className="observation-block observed-pathways-block">
+      <h5>함께 관찰된 경로</h5>
+      <div className="pathway-list">
+        {observed.length ? observed.map((pathway) => {
+          const seriesRows = Array.isArray(pathway.series)
+            ? pathway.series.map((row) => row.evaluation)
+            : [pathway.series];
+          return (
+            <article className={`pathway-item pathway-${String(pathway.status).toLowerCase()}`} key={pathway.pathway_id}>
+              <header><strong>{pathway.label}</strong><span>{pathway.status === "UNAVAILABLE" ? "자료 부족" : "관찰됨"}</span></header>
+              {pathway.interpretation ? <p>{pathway.interpretation}</p> : null}
+              {seriesRows.map((series) => <SeriesMetrics key={series.series_id} evaluation={series} />)}
+            </article>
+          );
+        }) : <p className="pathway-empty">표시할 관찰 경로가 없습니다.</p>}
+      </div>
+    </section>
+  );
+}
+
+function InterpretationBlock({ rows }: { rows: string[] }) {
+  return (
+    <section className="observation-block interpretation-block">
+      <h5>현재 해석</h5>
+      <ul>{rows.map((row, index) => <li key={`${row}-${index}`}>{row}</li>)}</ul>
+    </section>
+  );
+}
+
+function NextCheckBlock({ rows }: { rows: string[] }) {
+  return (
+    <section className="observation-block next-check-block">
+      <h5>향후 1·2개월 확인 조건</h5>
+      <ul>{rows.map((row, index) => <li key={`${row}-${index}`}>{row}</li>)}</ul>
+    </section>
+  );
+}
+
+function AssetObservationBody({
+  label,
+  economicAsOfDate,
+  price,
+  movement,
+  observed,
+  legacy,
+  interpretation,
+  nextChecks,
+}: {
+  label: string;
+  economicAsOfDate?: string | null;
+  price?: PriceContext | null;
+  movement?: MovementMetric[];
+  observed?: ObservedPathway[];
+  legacy?: AssetPathway[];
+  interpretation: string[];
+  nextChecks: string[];
+}) {
+  return <>
+    <CurrentMovementBlock label={label} economicAsOfDate={economicAsOfDate} price={price} rows={movement} />
+    <ObservedPathwaysBlock observed={observed} legacy={legacy} />
+    <InterpretationBlock rows={interpretation} />
+    <NextCheckBlock rows={nextChecks} />
+  </>;
+}
+
 function UnmeasuredPathways({ rows }: { rows: UnmeasuredPathway[] }) {
   return (
     <section className="unmeasured-pathways">
@@ -581,40 +759,57 @@ function UnmeasuredPathways({ rows }: { rows: UnmeasuredPathway[] }) {
 }
 
 function MarketImplicationCard({ item }: { item: MarketImplication }) {
-  const rise = item.pathways.filter((pathway) => pathway.status === "SUPPORTS_RISE");
-  const fall = item.pathways.filter((pathway) => pathway.status === "SUPPORTS_FALL");
-  const unresolved = item.pathways.filter((pathway) => !["SUPPORTS_RISE", "SUPPORTS_FALL"].includes(pathway.status));
-  const connected = item.analysis_status !== "PATHWAYS_NOT_CONNECTED";
+  const interpretation = item.current_interpretation?.length ? item.current_interpretation : [item.narrative || item.summary || item.context];
+  const nextChecks = item.next_check_conditions?.length
+    ? item.next_check_conditions
+    : ["다음 월의 가격과 관찰 경로가 같은 방향을 유지하는지 확인합니다."];
   return (
-    <article className={`implication-card ${connected ? "is-connected" : "is-unconnected"}`} tabIndex={0}>
+    <article className="implication-card is-connected" tabIndex={0}>
       <header>
         <div>
           <span>{item.label}</span>
-          <strong>{connected ? "측정된 시장 경로와 실제 가격" : "자산 내부 시장 경로 미연결"}</strong>
+          <strong>측정된 시장 경로와 현재 움직임</strong>
         </div>
         <div className="implication-overall">
           <span>데이터 범위</span>
           <b className={`coverage-status coverage-${item.coverage.toLowerCase()}`}>
-            {connected ? COVERAGE_LABEL[item.coverage] : "시장 경로 미연결"}
+            {COVERAGE_LABEL[item.coverage]}
           </b>
         </div>
       </header>
       <p className="implication-summary">{item.narrative || item.summary || item.context}</p>
-      {connected ? (
-        <>
-          <EconomicStateBlock state={item.economic_state} />
-          <PathwayGroup title="상승 요인이 될 수 있는 측정 경로" pathways={rise} />
-          <PathwayGroup title="하락 요인이 될 수 있는 측정 경로" pathways={fall} />
-          {unresolved.length ? <PathwayGroup title="방향이 아직 뚜렷하지 않은 측정 경로" pathways={unresolved} /> : null}
-          <PricePathway item={item} />
-          <UnmeasuredPathways rows={item.unmeasured_pathways} />
-        </>
+      <EconomicStateBlock state={item.economic_state} />
+      {item.assets?.length ? (
+        <div className="commodity-asset-grid">
+          {item.assets.map((asset) => (
+            <article className="commodity-asset-card" key={asset.asset_id}>
+              <header><strong>{asset.label}</strong><span className={`coverage-status coverage-${asset.coverage.toLowerCase()}`}>{COVERAGE_LABEL[asset.coverage]}</span></header>
+              <p>{asset.narrative}</p>
+              <AssetObservationBody
+                label={asset.label}
+                economicAsOfDate={item.economic_as_of_date}
+                price={asset.price_context}
+                movement={asset.current_movement}
+                observed={asset.observed_pathways}
+                interpretation={asset.current_interpretation?.length ? asset.current_interpretation : [asset.narrative]}
+                nextChecks={asset.next_check_conditions?.length ? asset.next_check_conditions : nextChecks}
+              />
+            </article>
+          ))}
+        </div>
       ) : (
-        <section className="unconnected-pathway-note">
-          <h5>현재 단계</h5>
-          <p>관측된 경제 상태만 표시하며, 이 자산의 방향은 판단하지 않습니다.</p>
-        </section>
+        <AssetObservationBody
+          label={item.label}
+          economicAsOfDate={item.economic_as_of_date}
+          price={item.price_context}
+          movement={item.current_movement}
+          observed={item.observed_pathways}
+          legacy={item.pathways}
+          interpretation={interpretation}
+          nextChecks={nextChecks}
+        />
       )}
+      {item.unmeasured_pathways?.length ? <UnmeasuredPathways rows={item.unmeasured_pathways} /> : null}
     </article>
   );
 }

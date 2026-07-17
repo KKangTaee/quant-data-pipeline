@@ -247,10 +247,10 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
         'className="market-implications"',
         "자산별 확인 포인트",
         "관측된 경제 상태",
-        "상승 요인이 될 수 있는 측정 경로",
-        "하락 요인이 될 수 있는 측정 경로",
-        "실제 가격 흐름",
-        "현재 데이터 범위 밖",
+        "현재 움직임",
+        "함께 관찰된 경로",
+        "현재 해석",
+        "향후 1·2개월 확인 조건",
         "데이터 범위",
         "1주(5거래일)",
         "1개월(21거래일)",
@@ -271,6 +271,8 @@ def test_cycle_component_source_contract_covers_full_reading_flow() -> None:
     assert "바뀌는 조건" not in source
     assert "alignment" not in source
     assert "assessment" not in source
+    assert "상승 요인이 될 수 있는 측정 경로" not in source
+    assert "하락 요인이 될 수 있는 측정 경로" not in source
 
 
 def _pathway_style_block(style: str) -> str:
@@ -279,7 +281,7 @@ def _pathway_style_block(style: str) -> str:
     return style[start:end]
 
 
-def test_multichannel_asset_cards_use_approved_white_pathway_blocks() -> None:
+def test_economic_cycle_asset_ui_uses_observation_sections_without_left_rails() -> None:
     source = Path(
         "app/web/streamlit_components/economic_cycle_workbench/src/EconomicCycleWorkbench.tsx"
     ).read_text()
@@ -290,17 +292,19 @@ def test_multichannel_asset_cards_use_approved_white_pathway_blocks() -> None:
     for token in (
         'schema_version: "economic_cycle_v2"',
         "관측된 경제 상태",
-        "상승 요인이 될 수 있는 측정 경로",
-        "하락 요인이 될 수 있는 측정 경로",
-        "현재 데이터 범위 밖",
+        "현재 움직임",
+        "함께 관찰된 경로",
+        "현재 해석",
+        "향후 1·2개월 확인 조건",
         "21거래일",
         "63거래일",
     ):
         assert token in source
-    pathway_style = _pathway_style_block(style)
-    assert "border-left" not in pathway_style
-    assert ".pathway-item" in pathway_style
-    assert "background: #fff" in pathway_style
+    assert "상승 요인이 될 수 있는 측정 경로" not in source
+    observation_start = style.index(".observation-block")
+    observation_style = style[observation_start : observation_start + 900]
+    assert "border-left" not in observation_style
+    assert "background: #f7fafb" in observation_style
 
 
 def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> None:
@@ -312,7 +316,7 @@ def test_cycle_component_ready_and_limited_probability_semantics_are_safe() -> N
     assert "horizon.probabilities" in source
     assert 'horizon.estimate_status === "PROVISIONAL"' in source
     assert 'horizon.estimate_status === "VERIFIED"' in source
-    assert "formatPercent(horizon.probabilities[phase])" in source
+    assert "formatPercent(probabilities[phase])" in source
     assert "horizon.probabilities ?? { recovery: 0" not in source
     assert "formatPercent(0)" not in source
     assert "판단 불가" in source
