@@ -19,7 +19,7 @@ Last Updated: 2026-07-17
 - [x] 사용자 B안 `선택 요약 + 컴팩트 컨트롤` 승인
 - [x] 760px profile 2열 줄바꿈과 마지막 option full-span 승인
 - [x] approved design을 `DESIGN.md` acceptance criteria 33~40으로 기록
-- [ ] detailed implementation plan 승인
+- [x] detailed implementation plan 작성과 current-session inline execution 승인
 - [ ] TDD 구현, Browser QA, docs closeout
 
 ## Current Progress

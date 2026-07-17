@@ -3172,3 +3172,435 @@ unmount를 막지 못한 것을 확인했다. 기존 task와 branch에서 아래
 - [x] Synchronize canonical docs, active task, and root handoff logs.
 - [x] Confirm protected registry/run-history/saved/artifact files are not staged or committed.
 - [x] Commit `Practical Validation 재검증 경계 QA와 문서 동기화`.
+
+---
+
+## Approved Step 1 Selection IA Execution
+
+2026-07-17 사용자는 visual companion의 B안 `선택 요약 + 컴팩트 컨트롤`과
+760px profile 2열 줄바꿈을 승인했다. Task 19~21은 `DESIGN.md` acceptance
+criteria 33~40만 구현하며 decision surface, replay lifecycle, Gate, persistence,
+read model schema는 변경하지 않는다.
+
+### Task 19: React Step 1 Compact Selection Surface
+
+**Files:**
+- Modify: `tests/test_practical_validation_market_context_visual_contract.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/PracticalValidationDecisionWorkspace.tsx`
+- Modify: `app/web/components/practical_validation_decision_workspace/frontend/src/style.css`
+- Modify generated build files under `app/web/components/practical_validation_decision_workspace/frontend/build/`
+
+**Interfaces:**
+- Consumes existing `workspace.candidate`, `workspace.candidate_selector.options`, and
+  `workspace.profile.options` without a schema change.
+- Produces only existing `select_source` and `select_profile_preset` intents.
+- `candidateListOpen: boolean` is React-local presentation state and is never sent to Python.
+
+- [ ] **Step 1: Replace the old header/grid visual assertions with RED selection-IA tests**
+
+  Update `tests/test_practical_validation_market_context_visual_contract.py` with explicit
+  source-order and responsive contracts:
+
+  ```python
+  def test_selected_candidate_context_is_inside_step_one_not_header(self) -> None:
+      source = WORKSPACE.read_text(encoding="utf-8")
+      header = source.split('<header className="pv2-header">', 1)[1].split("</header>", 1)[0]
+      step_one = source.split('<section className="pv2-step">', 1)[1]
+
+      self.assertNotIn("pv2-target-context", header)
+      self.assertIn("pv2-selection-summary", step_one)
+      self.assertIn("검증 대상", step_one)
+      self.assertIn("판정 기준", step_one)
+      self.assertLess(
+          step_one.index("pv2-selection-summary"),
+          step_one.index("pv2-candidate-toggle"),
+      )
+
+  def test_validation_profiles_use_five_columns_and_two_column_mobile_wrap(self) -> None:
+      style = STYLE.read_text(encoding="utf-8")
+      responsive = style.split("@media (max-width: 760px)", 1)[1]
+
+      self.assertIn("grid-template-columns: repeat(5, minmax(0, 1fr));", style)
+      self.assertIn(".pv2-profile-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));", responsive)
+      self.assertIn(".pv2-profile-grid button:last-child:nth-child(odd)", responsive)
+      self.assertIn("grid-column: 1 / -1;", responsive)
+  ```
+
+  Extend `tests/test_backtest_refactor_boundaries.py`:
+
+  ```python
+  def test_practical_validation_candidate_selector_is_collapsed_inline_list(self) -> None:
+      source = (PROJECT_ROOT / "app/web/components/practical_validation_decision_workspace/frontend/src/PracticalValidationDecisionWorkspace.tsx").read_text()
+      context = source.split('{surface === "context"', 1)[1].split('{surface === "decision"', 1)[0]
+
+      self.assertIn("candidateListOpen", context)
+      self.assertIn('aria-expanded={candidateListOpen}', context)
+      self.assertIn("pv2-candidate-list", context)
+      self.assertNotIn('<div className="pv2-choice-grid">', context)
+  ```
+
+- [ ] **Step 2: Run RED tests and confirm the old layout fails for the expected reasons**
+
+  Run:
+
+  ```bash
+  .venv/bin/python -m unittest \
+    tests.test_practical_validation_market_context_visual_contract \
+    tests.test_backtest_refactor_boundaries
+  ```
+
+  Expected: FAIL because the header still owns `pv2-target-context`, the candidate grid is
+  always open, and profile CSS is still 6-column `3 + 2`.
+
+- [ ] **Step 3: Implement the compact React selection surface**
+
+  In `PracticalValidationDecisionWorkspace.tsx`, add local state and replace the context
+  header/Step 1 selection markup with this contract:
+
+  ```tsx
+  const [candidateListOpen, setCandidateListOpen] = useState(false)
+
+  <header className="pv2-header">
+    <div>
+      <p className="pv2-kicker">Practical Validation Decision Workspace</p>
+      <h1>{workspace.header.question || "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?"}</h1>
+      <p>{workspace.header.detail}</p>
+    </div>
+  </header>
+
+  <div className="pv2-selection-summary">
+    <div>
+      <span>검증 대상</span>
+      <strong>{workspace.candidate.title}</strong>
+      <small>{workspace.candidate.source_type_label} · {workspace.candidate.as_of || "기준일 미측정"}</small>
+    </div>
+    <div>
+      <span>판정 기준</span>
+      <strong>{selectedProfile?.label || "판정 기준 미선택"}</strong>
+    </div>
+  </div>
+
+  <div className="pv2-selection-section pv2-candidate-section">
+    <div className="pv2-selection-control-row">
+      <div className="pv2-subsection-title">
+        <span>1A</span>
+        <div>
+          <h3>1A. 검증할 후보</h3>
+          <p>현재 후보를 바꾸려면 목록을 여세요.</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        className="pv2-candidate-toggle"
+        aria-expanded={candidateListOpen}
+        onClick={() => setCandidateListOpen((open) => !open)}
+      >
+        {candidateListOpen ? "후보 목록 닫기" : "후보 변경"}
+      </button>
+    </div>
+    {candidateListOpen && (
+      <div className="pv2-candidate-list">
+        {workspace.candidate_selector.options.map((option) => (
+          <button
+            type="button"
+            className={option.selected ? "is-selected" : ""}
+            aria-pressed={option.selected}
+            disabled={!option.eligible}
+            key={option.selection_source_id}
+            onClick={() => {
+              if (option.selected) {
+                setCandidateListOpen(false)
+                return
+              }
+              emit({
+                action: "select_source",
+                intent_id: intentId("source"),
+                selection_source_id: option.selection_source_id,
+                validation_result_id: workspace.validation_result_id,
+              })
+            }}
+          >
+            <strong>{option.title}</strong>
+            <span>{option.source_type_label}</span>
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+  ```
+
+  Resolve the selected profile label from the existing option list in React rather than
+  adding a read-model field:
+
+  ```tsx
+  const selectedProfile = workspace.profile.options.find((option) => option.selected)
+  ```
+
+  Display `selectedProfile?.label || "판정 기준 미선택"` in the summary.
+
+- [ ] **Step 4: Implement exact desktop and 760px CSS behavior**
+
+  In `style.css`, remove the old target aside, choice grid, 6-column profile, and centered
+  fourth-button rules. Add:
+
+  ```css
+  .pv2-header { grid-template-columns: minmax(0, 1fr); }
+  .pv2-selection-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(180px, .4fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .pv2-selection-control-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .pv2-candidate-list {
+    display: grid;
+    max-height: 264px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    gap: 8px;
+  }
+  .pv2-profile-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .pv2-profile-grid button { grid-column: auto; }
+  ```
+
+  Under `@media (max-width: 760px)` add:
+
+  ```css
+  .pv2-selection-summary,
+  .pv2-selection-control-row { grid-template-columns: 1fr; }
+  .pv2-profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pv2-profile-grid button:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .pv2-candidate-toggle { width: 100%; }
+  ```
+
+- [ ] **Step 5: Run GREEN tests and production build**
+
+  Run the Step 2 command again. Expected: all tests pass.
+
+  Run:
+
+  ```bash
+  cd app/web/components/practical_validation_decision_workspace/frontend
+  npm run build
+  ```
+
+  Expected: Vite production build succeeds and tracked `build/` references the new bundle.
+
+- [ ] **Step 6: Commit the React implementation unit**
+
+  Stage only the two tests, React source/CSS, and generated Practical build files. Confirm
+  protected paths are absent, then commit:
+
+  ```bash
+  git commit -m "Practical Validation Step1 선택 UI 개선"
+  ```
+
+### Task 20: Python Fallback Selection Parity
+
+**Files:**
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `app/web/backtest_practical_validation/workspace_panel.py`
+
+**Interfaces:**
+- Consumes the same workspace candidate, selector options, and profile options.
+- Produces the existing `_workspace_intent(action, workspace=workspace, **payload)` for
+  `select_source` and `select_profile_preset`.
+- Does not add session keys, registry writes, Gate calculation, or replay actions.
+
+- [ ] **Step 1: Add a RED fallback structure test**
+
+  Add to `tests/test_backtest_refactor_boundaries.py`:
+
+  ```python
+  def test_practical_validation_fallback_summarizes_selection_before_change_controls(self) -> None:
+      source = (PROJECT_ROOT / "app/web/backtest_practical_validation/workspace_panel.py").read_text()
+      body = source.split("def _render_practical_validation_context_surface_fallback", 1)[1].split("\ndef ", 1)[0]
+
+      self.assertIn('st.markdown("#### 1. 후보와 검증 기준")', body)
+      self.assertIn('st.caption("검증 대상")', body)
+      self.assertIn('st.caption("판정 기준")', body)
+      self.assertIn('with st.expander("1A. 후보 변경", expanded=False):', body)
+      self.assertLess(body.index('st.caption("검증 대상")'), body.index('with st.expander("1A. 후보 변경"')))
+  ```
+
+- [ ] **Step 2: Run the focused fallback test and verify RED**
+
+  Run:
+
+  ```bash
+  .venv/bin/python -m unittest \
+    tests.test_backtest_refactor_boundaries.BacktestRefactorBoundaryTests.test_practical_validation_fallback_summarizes_selection_before_change_controls
+  ```
+
+  Expected: FAIL because fallback currently puts the candidate caption above Step 1 and
+  renders all candidates without an expander.
+
+- [ ] **Step 3: Align the Python fallback information order**
+
+  Change `_render_practical_validation_context_surface_fallback` to render the fixed hero,
+  Step 1 summary, and collapsed candidate list in this exact order:
+
+  ```python
+  st.markdown(
+      f"### {header.get('question') or '이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?'}"
+  )
+  st.caption(str(header.get("detail") or ""))
+  st.markdown("#### 1. 후보와 검증 기준")
+
+  profile_options = [
+      dict(row)
+      for row in list(profile.get("options") or [])
+      if isinstance(row, dict)
+  ]
+  selected_profile = next(
+      (row for row in profile_options if bool(row.get("selected"))),
+      {},
+  )
+  summary_columns = st.columns((3, 1))
+  with summary_columns[0]:
+      st.caption("검증 대상")
+      st.markdown(f"**{candidate.get('title') or '-'}**")
+      st.caption(f"{candidate.get('source_type_label') or '-'} · {candidate.get('as_of') or '-'}")
+  with summary_columns[1]:
+      st.caption("판정 기준")
+      st.markdown(f"**{selected_profile.get('label') or '미선택'}**")
+
+  with st.expander("1A. 후보 변경", expanded=False):
+      if source_options:
+          for option in source_options:
+              option_id = str(option.get("selection_source_id") or "")
+              if bool(option.get("selected")):
+                  with st.container(border=True):
+                      st.markdown(f"**✓ {option.get('title') or option_id or '후보'}**")
+                      st.caption(str(option.get("source_type_label") or "검증 후보"))
+                  continue
+              if st.button(
+                  str(option.get("title") or option_id or "후보"),
+                  key=f"pv2-fallback-source-{option_id}",
+                  width="stretch",
+                  disabled=not bool(option.get("eligible", True)),
+              ):
+                  return _workspace_intent(
+                      "select_source",
+                      workspace=workspace,
+                      selection_source_id=option_id,
+                  )
+      else:
+          st.info("Backtest Analysis에서 검증할 후보를 먼저 보내세요.")
+  ```
+
+  Keep the existing 1B option order and intent behavior below the expander.
+
+- [ ] **Step 4: Run fallback and full focused GREEN tests**
+
+  Run:
+
+  ```bash
+  .venv/bin/python -m unittest \
+    tests.test_backtest_practical_validation_decision_workspace \
+    tests.test_backtest_refactor_boundaries \
+    tests.test_practical_validation_market_context_visual_contract
+  ```
+
+  Expected: all focused tests pass.
+
+- [ ] **Step 5: Run target py_compile and commit fallback parity**
+
+  Run:
+
+  ```bash
+  .venv/bin/python -m py_compile app/web/backtest_practical_validation/workspace_panel.py
+  git diff --check
+  ```
+
+  Stage only the fallback source and boundary test, then commit:
+
+  ```bash
+  git commit -m "Practical Validation Step1 fallback 선택 흐름 정렬"
+  ```
+
+### Task 21: Runtime QA, Documentation, And Closeout
+
+**Files:**
+- Modify: `.aiworkspace/note/finance/docs/ROADMAP.md`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+
+**Interfaces:**
+- Documents the approved Step 1 compact selection IA without changing runtime contracts.
+- QA uses current worktree Streamlit and generated screenshots only; screenshots remain unstaged.
+
+- [ ] **Step 1: Restart only this worktree's stale Streamlit process and open Practical Validation**
+
+  Use the existing worktree run command and select
+  `GTAA U3/U5 + GRS Compact Monitoring Candidate 20260608`. Do not write the Practical
+  Validation registry during QA.
+
+- [ ] **Step 2: Execute desktop Browser QA**
+
+  Confirm all of the following on the current build:
+
+  - hero contains the fixed Level2 question and no candidate-specific aside;
+  - Step 1 summary contains the selected candidate and profile;
+  - candidate list is closed initially, opens inline from `후보 변경`, and selected/ineligible
+    meaning is visible;
+  - choosing another eligible candidate updates only Step 1 selection context after the
+    expected app rerun;
+  - 1B shows five equal-width buttons in one row;
+  - opening/closing the list updates iframe height without clipping or page horizontal overflow.
+
+- [ ] **Step 3: Execute 760px Browser QA**
+
+  Confirm candidate summary/control is one column, 1B is two columns, `사용자 지정` spans
+  both columns, candidate list vertical scroll is usable, and component/outer widths have no
+  overflow. Capture desktop and 760px screenshots outside tracked paths.
+
+- [ ] **Step 4: Run fresh completion verification**
+
+  Run:
+
+  ```bash
+  .venv/bin/python -m unittest \
+    tests.test_backtest_evidence_closure \
+    tests.test_backtest_final_review_decision_brief \
+    tests.test_backtest_practical_validation_decision_workspace \
+    tests.test_backtest_practical_validation_explanation \
+    tests.test_backtest_refactor_boundaries \
+    tests.test_final_review_market_context_visual_contract \
+    tests.test_practical_validation_level2_hardening \
+    tests.test_practical_validation_market_context_visual_contract
+  npm --prefix app/web/components/practical_validation_decision_workspace/frontend run build
+  .venv/bin/python -m py_compile \
+    app/web/backtest_practical_validation/page.py \
+    app/web/backtest_practical_validation/workspace_panel.py \
+    app/web/components/practical_validation_decision_workspace/component.py
+  git diff --check
+  ```
+
+  Expected: all Python tests, React production build, py_compile, and diff-check pass freshly.
+
+- [ ] **Step 5: Synchronize durable documentation and active task evidence**
+
+  Record the compact Step 1 ownership in the four canonical docs, RED/GREEN commands and QA
+  screenshot paths in active task `RUNS.md`, completed status in `STATUS.md`, future Streamlit
+  responsive/lifecycle risk in `RISKS.md`, and 3~5-line milestone entries in both root handoff
+  logs. Do not copy transient command output into canonical docs.
+
+- [ ] **Step 6: Audit protected paths and create the closeout commit**
+
+  Confirm staged files exclude registries, run history, saved JSONL, screenshots,
+  `.superpowers/`, and run artifacts. Commit only docs/task/root logs:
+
+  ```bash
+  git commit -m "Practical Validation Step1 선택 UX QA와 문서 동기화"
+  ```
