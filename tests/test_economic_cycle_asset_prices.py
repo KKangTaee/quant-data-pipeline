@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
-from datetime import date, timedelta
+from datetime import date
 
+import pandas as pd
 import pytest
 
 
@@ -60,18 +61,53 @@ def test_asset_price_loader_applies_reference_date_before_row_rank() -> None:
     assert captured["params"][-2:] == ("2026-07-17", 1500)
 
 
-def _price_rows(symbol: str, *, latest: float, end_date: date) -> list[dict[str, object]]:
-    start = end_date - timedelta(days=63)
+def _price_rows(
+    symbol: str,
+    *,
+    direction: str,
+    end_date: date,
+    count: int = 1400,
+) -> list[dict[str, object]]:
+    dates = pd.bdate_range(end=end_date, periods=count)
+    multiplier = 1.001 if direction == "UP" else 0.999
     return [
         {
             "provider_symbol": symbol,
-            "candle_time_utc": start + timedelta(days=index),
-            "close": latest if index == 63 else 100.0,
+            "candle_time_utc": timestamp.date(),
+            "close": 100.0 * (multiplier**index),
             "source": "yfinance",
             "provider_status": "ok",
         }
-        for index in range(64)
+        for index, timestamp in enumerate(dates)
     ]
+
+
+def _market_rows(end_date: date) -> list[dict[str, object]]:
+    dates = pd.bdate_range(end=end_date, periods=1400)
+    directions = {
+        "DGS2": "UP",
+        "DGS10": "UP",
+        "DFII10": "UP",
+        "VIXCLS": "DOWN",
+        "BAA10Y": "DOWN",
+    }
+    rows: list[dict[str, object]] = []
+    for series_id, direction in directions.items():
+        for index, timestamp in enumerate(dates):
+            if series_id == "VIXCLS":
+                multiplier = 1.001 if direction == "UP" else 0.999
+                value = 20.0 * (multiplier**index)
+            else:
+                step = 0.001 if direction == "UP" else -0.001
+                value = 5.0 + step * index
+            rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": timestamp.date(),
+                    "value": value,
+                }
+            )
+    return rows
 
 
 def _recovery_horizons() -> list[dict[str, object]]:
@@ -91,18 +127,19 @@ def _actual_evidence() -> list[dict[str, object]]:
     ]
 
 
-def test_gold_and_dollar_split_macro_background_from_price_confirmation() -> None:
+def test_gold_and_dollar_expose_measured_pathways_without_alignment_claims() -> None:
     interpretation = importlib.import_module("finance.economic_cycle_interpretation")
     end = date(2026, 7, 16)
     price_rows = [
-        *_price_rows("GC=F", latest=90.0, end_date=end),
-        *_price_rows("DX-Y.NYB", latest=110.0, end_date=end),
+        *_price_rows("GC=F", direction="DOWN", end_date=end),
+        *_price_rows("DX-Y.NYB", direction="UP", end_date=end),
     ]
 
     implications = interpretation.build_market_implications(
         _recovery_horizons(),
         _actual_evidence(),
         price_rows,
+        market_rows=_market_rows(end),
         price_reference_date=date(2026, 7, 17),
     )
 
@@ -115,24 +152,23 @@ def test_gold_and_dollar_split_macro_background_from_price_confirmation() -> Non
     ]
     gold = implications[2]
     dollar = implications[3]
-    assert gold["assessment"] == "FAVORABLE"
     assert gold["price_context"]["status"] == "FALLING"
-    assert gold["alignment"] == "DIVERGENCE"
-    assert gold["alignment_label"] == "배경과 가격 불일치"
-    assert gold["price_context"]["returns"] == pytest.approx(
-        {"one_week": -0.1, "one_month": -0.1, "three_months": -0.1}
-    )
-    assert dollar["assessment"] == "BURDEN"
     assert dollar["price_context"]["status"] == "RISING"
-    assert dollar["alignment"] == "DIVERGENCE"
     assert dollar["price_context"]["as_of_date"] == "2026-07-16"
+    assert gold["coverage"] == "SUFFICIENT"
+    assert dollar["coverage"] == "PARTIAL"
+    for item in (gold, dollar):
+        assert "assessment" not in item
+        assert "alignment" not in item
+        assert "macro_signal_label" not in item
+        assert item["is_directional_forecast"] is False
 
 
 @pytest.mark.parametrize(
     ("row_count", "latest_date", "expected_reason"),
     [
-        (63, date(2026, 7, 16), "INSUFFICIENT_HISTORY"),
-        (64, date(2026, 7, 10), "STALE"),
+        (314, date(2026, 7, 16), "INSUFFICIENT_HISTORY"),
+        (400, date(2026, 7, 9), "STALE_SERIES"),
     ],
 )
 def test_asset_price_confirmation_stays_unavailable_for_short_or_stale_history(
@@ -141,7 +177,12 @@ def test_asset_price_confirmation_stays_unavailable_for_short_or_stale_history(
     expected_reason: str,
 ) -> None:
     interpretation = importlib.import_module("finance.economic_cycle_interpretation")
-    rows = _price_rows("GC=F", latest=90.0, end_date=latest_date)[-row_count:]
+    rows = _price_rows(
+        "GC=F",
+        direction="DOWN",
+        end_date=latest_date,
+        count=row_count,
+    )
 
     gold = interpretation.build_market_implications(
         _recovery_horizons(),
@@ -152,4 +193,4 @@ def test_asset_price_confirmation_stays_unavailable_for_short_or_stale_history(
 
     assert gold["price_context"]["status"] == "UNAVAILABLE"
     assert gold["price_context"]["reason_code"] == expected_reason
-    assert gold["alignment"] == "PRICE_PENDING"
+    assert "alignment" not in gold

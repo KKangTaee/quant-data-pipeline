@@ -19,6 +19,69 @@ def _daily_points(
     ]
 
 
+def _economic_evidence() -> list[dict[str, object]]:
+    return [
+        {
+            "factor": "activity_score",
+            "value": -0.8,
+            "source_date": "2026-06-30",
+        },
+        {
+            "factor": "labor_income_score",
+            "value": -0.5,
+            "source_date": "2026-06-30",
+        },
+        {
+            "factor": "financial_leading_score",
+            "value": 0.2,
+            "source_date": "2026-06-30",
+        },
+        {
+            "factor": "inflation_policy_score",
+            "value": 0.7,
+            "source_date": "2026-06-30",
+        },
+    ]
+
+
+def _macro_history(directions: dict[str, str]) -> list[dict[str, object]]:
+    dates = pd.bdate_range(start="2021-03-01", periods=1400)
+    rows: list[dict[str, object]] = []
+    for series_id, direction in directions.items():
+        for index, timestamp in enumerate(dates):
+            if series_id == "VIXCLS":
+                daily_multiplier = 1.001 if direction == "UP" else 0.999
+                value = 20.0 * (daily_multiplier**index)
+            else:
+                daily_step = 0.001 if direction == "UP" else -0.001
+                value = 5.0 + daily_step * index
+            rows.append(
+                {
+                    "series_id": series_id,
+                    "observation_date": timestamp.date(),
+                    "value": value,
+                }
+            )
+    return rows
+
+
+def _price_history(directions: dict[str, str]) -> list[dict[str, object]]:
+    dates = pd.bdate_range(start="2021-03-01", periods=1400)
+    rows: list[dict[str, object]] = []
+    for symbol, direction in directions.items():
+        daily_multiplier = 1.001 if direction == "UP" else 0.999
+        rows.extend(
+            {
+                "provider_symbol": symbol,
+                "candle_time_utc": timestamp.date(),
+                "close": 100.0 * (daily_multiplier**index),
+                "provider_status": "ok",
+            }
+            for index, timestamp in enumerate(dates)
+        )
+    return rows
+
+
 def test_asset_pathway_fred_series_are_registered_for_default_collection() -> None:
     expected = {"DGS2", "DGS10", "DFII10"}
 
@@ -185,3 +248,74 @@ def test_evaluate_series_excludes_points_after_reference_date() -> None:
 
     assert result["as_of_date"] == str(reference)
     assert result["changes"]["5d"] == pytest.approx(0.5)
+
+
+def test_gold_pathways_separate_real_yield_dollar_and_risk_directions() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=_macro_history(
+            {
+                "DFII10": "UP",
+                "DGS2": "UP",
+                "VIXCLS": "DOWN",
+                "BAA10Y": "DOWN",
+            }
+        ),
+        price_rows=_price_history({"GC=F": "DOWN", "DX-Y.NYB": "UP"}),
+        reference_date="2026-07-17",
+    )
+
+    gold = contexts["gold"]
+    statuses = {row["pathway_id"]: row["status"] for row in gold["pathways"]}
+    assert statuses == {
+        "real_yield": "SUPPORTS_FALL",
+        "dollar": "SUPPORTS_FALL",
+        "short_rate": "SUPPORTS_FALL",
+        "risk_aversion": "SUPPORTS_FALL",
+    }
+    assert gold["coverage"] == "SUFFICIENT"
+    assert gold["price_context"]["status"] == "FALLING"
+    assert "가격 원인을 확정" in gold["narrative"]
+    assert {row["pathway_id"] for row in gold["unmeasured_pathways"]} == {
+        "official_flows",
+        "external_events",
+    }
+
+
+def test_dollar_is_partial_until_relative_rates_are_collected() -> None:
+    pathways = importlib.import_module("finance.economic_cycle_asset_pathways")
+
+    contexts = pathways.build_asset_pathway_contexts(
+        evidence=_economic_evidence(),
+        market_rows=_macro_history(
+            {
+                "DGS2": "UP",
+                "DGS10": "UP",
+                "DFII10": "UP",
+                "VIXCLS": "UP",
+                "BAA10Y": "UP",
+            }
+        ),
+        price_rows=_price_history({"GC=F": "DOWN", "DX-Y.NYB": "UP"}),
+        reference_date="2026-07-17",
+    )
+
+    dollar = contexts["dollar"]
+    statuses = {
+        row["pathway_id"]: row["status"] for row in dollar["pathways"]
+    }
+    assert statuses == {
+        "us_nominal_yield": "SUPPORTS_RISE",
+        "us_real_yield": "SUPPORTS_RISE",
+        "risk_aversion": "SUPPORTS_RISE",
+    }
+    assert dollar["coverage"] == "PARTIAL"
+    relative_rates = next(
+        row
+        for row in dollar["unmeasured_pathways"]
+        if row["pathway_id"] == "relative_rates"
+    )
+    assert relative_rates["reason_code"] == "RELATIVE_RATE_NOT_COLLECTED"
+    assert "해외 상대금리" in dollar["narrative"]

@@ -272,35 +272,37 @@ def test_market_implications_are_conditional_context_not_directional_predictions
         "dollar",
         "commodities",
     ]
-    assert [item["assessment"] for item in implications] == [
-        "MIXED",
-        "BURDEN",
-        "FAVORABLE",
-        "BURDEN",
-        "MIXED",
+    nonpilot = [
+        item
+        for item in implications
+        if item["asset_group"] in {"rates", "equities", "commodities"}
     ]
-    assert [item["assessment_label"] for item in implications] == [
-        "혼재",
-        "부담",
-        "우호",
-        "부담",
-        "혼재",
-    ]
-    assert all(len(item["drivers"]) == 2 for item in implications)
-    assert {
-        driver["impact"]
-        for driver in implications[0]["drivers"]
-    } == {"FAVORABLE", "BURDEN"}
-    assert {
-        driver["impact"]
-        for driver in implications[4]["drivers"]
-    } == {"FAVORABLE", "BURDEN"}
-    assert all(item["change_condition"] for item in implications)
+    assert all(item["analysis_status"] == "PATHWAYS_NOT_CONNECTED" for item in nonpilot)
+    assert all(item["pathways"] == [] for item in nonpilot)
+    gold = next(item for item in implications if item["asset_group"] == "gold")
+    dollar = next(item for item in implications if item["asset_group"] == "dollar")
+    assert {row["pathway_id"] for row in gold["pathways"]} == {
+        "real_yield",
+        "dollar",
+        "short_rate",
+        "risk_aversion",
+    }
+    assert any(
+        row["pathway_id"] == "relative_rates"
+        for row in dollar["unmeasured_pathways"]
+    )
     assert all(item["is_directional_forecast"] is False for item in implications)
     serialized = json.dumps(implications, ensure_ascii=False).lower()
-    for forbidden in ("target price", "buy", "sell", "directional return"):
+    for forbidden in (
+        "target price",
+        "buy",
+        "sell",
+        "directional return",
+        "alignment",
+        "assessment",
+        "macro_signal_label",
+    ):
         assert forbidden not in serialized
-    assert all(item["context"] == item["summary"] for item in implications)
 
 
 def test_market_implications_do_not_invent_reasons_when_factor_coverage_is_low() -> (
@@ -313,15 +315,17 @@ def test_market_implications_do_not_invent_reasons_when_factor_coverage_is_low()
         [{"factor": "activity_score", "value": -0.4}],
     )
 
-    assert all(item["assessment"] == "INSUFFICIENT" for item in implications)
-    assert all(item["assessment_label"] == "자료 부족" for item in implications)
-    assert all(item["drivers"] == [] for item in implications)
-    assert all("2개 이상" in item["change_condition"] for item in implications)
+    gold = next(item for item in implications if item["asset_group"] == "gold")
+    observations = gold["economic_state"]["observations"]
+    activity = next(row for row in observations if row["factor"] == "activity_score")
+    assert activity["direction"] == "WEAKENING"
+    assert sum(row["direction"] == "UNAVAILABLE" for row in observations) == 3
+    assert gold["coverage"] == "INSUFFICIENT"
+    assert "원인" not in gold["economic_state"]["summary"]
 
 
-def test_price_aware_implications_explain_macro_price_relationship() -> None:
+def test_market_implications_separate_observed_state_from_asset_pathways() -> None:
     interpretation = importlib.import_module("finance.economic_cycle_interpretation")
-    end = date(2026, 7, 16)
     horizons = json.loads(str(_ready_snapshot()["forecast_path_json"]))
     evidence = [
         {"factor": "activity_score", "value": -0.82},
@@ -329,39 +333,23 @@ def test_price_aware_implications_explain_macro_price_relationship() -> None:
         {"factor": "financial_leading_score", "value": 0.22},
         {"factor": "inflation_policy_score", "value": 0.79},
     ]
-    price_rows = [
-        {
-            "provider_symbol": symbol,
-            "candle_time_utc": end - timedelta(days=63 - index),
-            "close": latest if index == 63 else 100.0,
-        }
-        for symbol, latest in (("GC=F", 90.0), ("DX-Y.NYB", 110.0))
-        for index in range(64)
-    ]
-
     implications = interpretation.build_market_implications(
         horizons,
         evidence,
-        price_rows,
         price_reference_date=date(2026, 7, 17),
     )
     gold = next(row for row in implications if row["asset_group"] == "gold")
     dollar = next(row for row in implications if row["asset_group"] == "dollar")
 
-    assert gold["macro_signal_label"] == "금을 지지"
-    assert gold["price_direction_label"] == "하락"
-    assert gold["relationship_label"] == "서로 다른 방향"
-    assert "미국 경기지표에서는" in gold["summary"]
-    assert "생산·소비 활동 약화" in gold["summary"]
-    assert "고용·소득 약화" in gold["summary"]
-    assert "실제 가격은 최근 1개월과 3개월 모두 하락" in gold["summary"]
-    assert dollar["macro_signal_label"] == "달러에 부담"
-    assert dollar["price_direction_label"] == "상승"
-    assert dollar["relationship_label"] == "서로 다른 방향"
-    assert "실제 달러지수는 최근 1개월과 3개월 모두 상승" in dollar["summary"]
+    assert gold["economic_state"] == dollar["economic_state"]
+    assert "생산·소비 활동, 고용·소득은 약화" in gold["narrative"]
+    assert "가격 원인을 확정하지 않습니다" in gold["narrative"]
+    assert "해외 상대금리" in dollar["narrative"]
+    assert gold["price_context"]["status"] == "UNAVAILABLE"
+    assert dollar["price_context"]["status"] == "UNAVAILABLE"
 
 
-def test_signal_labels_keep_mixed_and_price_pending_conservative() -> None:
+def test_unavailable_pathways_stay_conservative() -> None:
     interpretation = importlib.import_module("finance.economic_cycle_interpretation")
     evidence = [
         {"factor": "activity_score", "value": -0.82},
@@ -374,11 +362,12 @@ def test_signal_labels_keep_mixed_and_price_pending_conservative() -> None:
     rates = next(row for row in implications if row["asset_group"] == "rates")
     gold = next(row for row in implications if row["asset_group"] == "gold")
 
-    assert rates["current_environment_label"] == "신호 혼재"
-    assert gold["price_direction_label"] == "확인 대기"
-    assert gold["relationship_label"] == "비교 대기"
-    assert "실제 가격 자료가 부족" in gold["summary"]
-    assert "실제 가격은 최근" not in gold["summary"]
+    assert rates["analysis_status"] == "PATHWAYS_NOT_CONNECTED"
+    assert gold["coverage"] == "INSUFFICIENT"
+    assert all(row["status"] == "UNAVAILABLE" for row in gold["pathways"])
+    assert gold["price_context"]["status"] == "UNAVAILABLE"
+    assert "alignment" not in gold
+    assert "assessment" not in gold
 
 
 def test_asset_price_loader_is_db_only_and_price_failure_is_isolated() -> None:
@@ -405,8 +394,8 @@ def test_asset_price_loader_is_db_only_and_price_failure_is_isolated() -> None:
     )
 
     assert calls == ["prices"]
-    assert model["market_implications"][2]["price_context"]["status"] == "FALLING"
-    assert model["market_implications"][3]["price_context"]["status"] == "RISING"
+    assert model["market_implications"][2]["price_context"]["status"] == "UNAVAILABLE"
+    assert model["market_implications"][3]["price_context"]["status"] == "UNAVAILABLE"
     assert all(
         item["economic_as_of_date"] == "2026-06-30"
         for item in model["market_implications"]

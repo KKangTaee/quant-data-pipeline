@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 
+from finance.economic_cycle_asset_pathways import build_asset_pathway_contexts
+
 REASON_LABELS = {
     "NOT_COLLECTED": "필수 지표가 아직 수집되지 않았습니다.",
     "STALE": "일부 지표의 최신성이 부족합니다.",
@@ -458,123 +460,73 @@ def build_market_implications(
     evidence: Sequence[Mapping[str, object]],
     price_rows: Sequence[Mapping[str, object]] = (),
     *,
+    market_rows: Sequence[Mapping[str, object]] = (),
+    economic_as_of_date: object = None,
     price_reference_date: object = None,
 ) -> list[dict[str, object]]:
-    """Translate cycle evidence into conditional asset context, not return forecasts."""
+    """Expose measured paths without turning the cycle model into a causal claim."""
 
-    phase = _dominant_forecast_phase(horizons)
-    phase_label = {
-        "recovery": "회복",
-        "expansion": "확장",
-        "slowdown": "둔화",
-        "recession": "침체",
-        "limited": "판단 제한",
-    }.get(phase, "판단 제한")
-    canonical = _canonical_factor_evidence(evidence)
+    del horizons  # The economic state is evidence-based, not phase-label driven.
+    reference = (
+        _date_value(price_reference_date)
+        or _date_value(economic_as_of_date)
+        or date.today()
+    )
+    pilot_contexts = build_asset_pathway_contexts(
+        evidence=evidence,
+        market_rows=market_rows,
+        price_rows=price_rows,
+        reference_date=reference,
+    )
+    economic_state = pilot_contexts["gold"]["economic_state"]
+    labels = {
+        "rates": "채권·금리",
+        "equities": "주식",
+        "gold": "금",
+        "dollar": "달러",
+        "commodities": "원자재",
+    }
     implications: list[dict[str, object]] = []
-
-    for asset_group, config in ASSET_CONTEXT.items():
-        orientations = config["orientations"]
-        drivers = []
-        for factor, row in canonical.items():
-            signal = _factor_signal(row.get("value"))
-            if signal == 0:
-                continue
-            impact_score = signal * int(orientations[factor])
-            impact = "FAVORABLE" if impact_score > 0 else "BURDEN"
-            direction = evidence_direction(row.get("value"))
-            drivers.append(
+    for asset_group in ("rates", "equities", "gold", "dollar", "commodities"):
+        if asset_group in pilot_contexts:
+            item = dict(pilot_contexts[asset_group])
+            coverage = str(item["coverage"])
+            item.update(
                 {
-                    "factor": factor,
-                    "label": FACTOR_LABELS[factor],
-                    "direction": direction,
-                    "impact": impact,
-                    "impact_label": ASSESSMENT_LABELS[impact],
-                    "text": (
-                        f"{FACTOR_LABELS[factor]} {direction} · "
-                        f"{ASSESSMENT_LABELS[impact]} 요인"
-                    ),
-                    "value": row.get("value"),
+                    "label": labels[asset_group],
+                    "analysis_status": {
+                        "SUFFICIENT": "READY",
+                        "PARTIAL": "PARTIAL",
+                        "INSUFFICIENT": "LIMITED",
+                    }[coverage],
+                    "summary": item["narrative"],
+                    "context": item["narrative"],
+                    "is_directional_forecast": False,
                 }
             )
-
-        favorable_count = sum(
-            driver["impact"] == "FAVORABLE" for driver in drivers
-        )
-        burden_count = sum(driver["impact"] == "BURDEN" for driver in drivers)
-        if len(drivers) < 2:
-            assessment = "INSUFFICIENT"
-            displayed_drivers: list[dict[str, object]] = []
-            change_condition = (
-                "서로 다른 경제 요인 2개 이상이 확보되면 자산별 조건을 판정합니다."
-            )
-        elif favorable_count >= burden_count + 2:
-            assessment = "FAVORABLE"
-            displayed_drivers = _display_drivers(drivers, assessment=assessment)
-            change_condition = str(config["change_condition"])
-        elif burden_count >= favorable_count + 2:
-            assessment = "BURDEN"
-            displayed_drivers = _display_drivers(drivers, assessment=assessment)
-            change_condition = str(config["change_condition"])
         else:
-            assessment = "MIXED"
-            displayed_drivers = _display_drivers(drivers, assessment=assessment)
-            change_condition = str(config["change_condition"])
-
-        asset_label = str(config["label"])
-        summary = _environment_summary(
-            asset_label=asset_label,
-            assessment=assessment,
-            drivers=drivers,
-        )
-        implications.append(
-            {
+            narrative = (
+                f"{economic_state['summary']} {labels[asset_group]}의 세부 시장경로는 "
+                "아직 연결하지 않아 자산 방향으로 해석하지 않습니다."
+            )
+            item = {
                 "asset_group": asset_group,
-                "label": asset_label,
-                "phase_context": phase_label,
-                "assessment": assessment,
-                "assessment_label": ASSESSMENT_LABELS[assessment],
-                "current_environment_label": CURRENT_ENVIRONMENT_LABELS[assessment],
-                "summary": summary,
-                "context": summary,
-                "drivers": displayed_drivers,
-                "change_condition": change_condition,
-                "evidence_count": len(canonical),
+                "label": labels[asset_group],
+                "analysis_status": "PATHWAYS_NOT_CONNECTED",
+                "coverage": "INSUFFICIENT",
+                "economic_state": economic_state,
+                "pathways": [],
+                "unmeasured_pathways": [
+                    {
+                        "pathway_id": f"{asset_group}_market_paths",
+                        "label": "자산 내부 시장경로",
+                        "reason_code": "PATHWAYS_NOT_CONNECTED",
+                    }
+                ],
+                "narrative": narrative,
+                "summary": narrative,
+                "context": narrative,
                 "is_directional_forecast": False,
             }
-        )
-
-        price_symbol = str(config.get("price_symbol") or "")
-        if price_symbol:
-            price_context = _price_context(
-                price_symbol,
-                price_rows,
-                reference_date=price_reference_date,
-            )
-            alignment = _alignment(assessment, str(price_context["status"]))
-            macro_signal_labels = config.get("macro_signal_labels") or {}
-            summary = _price_aware_summary(
-                asset_group=asset_group,
-                assessment=assessment,
-                drivers=drivers,
-                price_status=str(price_context["status"]),
-                alignment=alignment,
-            )
-            implications[-1].update(
-                {
-                    "price_context": price_context,
-                    "alignment": alignment,
-                    "alignment_label": ALIGNMENT_LABELS[alignment],
-                    "macro_signal_label": str(
-                        macro_signal_labels.get(assessment) or "판단 자료 부족"
-                    ),
-                    "price_direction_label": PRICE_DIRECTION_LABELS[
-                        str(price_context["status"])
-                    ],
-                    "relationship_label": RELATIONSHIP_LABELS[alignment],
-                    "summary": summary,
-                    "context": summary,
-                }
-            )
-
+        implications.append(item)
     return implications
