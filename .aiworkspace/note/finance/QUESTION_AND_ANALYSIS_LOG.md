@@ -9708,3 +9708,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 경제 factor는 관측 상태로 유지하고, 금리·실질금리·달러·위험회피·실제 가격을 독립 경로로 표시하며 미측정 요인과 데이터 한계를 공개해야 함.
 - Analysis result: 5/21/63거래일 변화, 5년 materiality, 최신성 기반 공통 evaluator와 금·달러 파일럿을 구현했다. Actual은 금 `SUFFICIENT`, 달러는 해외 상대금리 부재로 `PARTIAL`이다.
 - Follow-up: 전체 5차 중 2차까지 완료했다. 채권·금리, 주식, 원자재는 기존 방향 결론을 제거하고 `시장 경로 미연결`로 두며 별도 명세 후 3~5차로 확장한다.
+
+### 2026-07-18 - S&P 500 실제 EPS는 공식 workbook 등록과 release vintage로 보강한다
+
+- User request: 주식 확인 포인트의 `실제 TTM EPS`가 자료 부족인 원인을 해결하고 기존 S&P 멀티플/예상실적 EPS와 연결해 달라고 요청함.
+- Interpreted goal: Shiller 보간 EPS를 actual로 오인하지 않고, 사용자가 받은 공식 S&P Index Earnings XLSX를 등록해 Economic Cycle이 완료 분기 actual As-Reported를 자동으로 읽어야 함.
+- Analysis result: DB가 비어 있었고 기존 importer는 normalized status 열만 지원했으며 loader는 기준일 이후 release vintage를 막지 않았다. 공식 raw workbook은 `QUARTERLY DATA` 제목과 다단 Operating/As-Reported 머리글을 사용하므로 전용 parser, transactional UPSERT, PIT guard, 8분기 coverage UI를 연결했다.
+- Follow-up: 제품 경로와 parser 구조 검증은 완료했다. 사용자가 직접 받은 최신 공식 XLSX를 등록해 DB 8분기 coverage와 Economic Cycle 실제 TTM 활성화를 확인하는 실제 데이터 단계가 남아 있다.

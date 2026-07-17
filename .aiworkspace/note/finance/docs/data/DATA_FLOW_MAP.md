@@ -130,8 +130,10 @@ Robert Shiller official page -> current ie_data.xls discovery
   -> finance.data.sp500_valuation.collect_and_store_shiller_monthly_valuation()
   -> finance_meta.sp500_monthly_valuation
 
-operator-supplied S&P Index Earnings workbook + source release date
-  -> import_and_store_sp500_index_earnings()
+Workspace > Ingestion official S&P Index Earnings XLSX + source release date
+  -> run_import_sp500_index_earnings_xlsx()
+  -> official QUARTERLY DATA title + multi-row basis header validation
+  -> import_and_store_sp500_index_earnings() transactional release-vintage UPSERT
   -> finance_meta.sp500_index_earnings
 
 Federal Reserve official SEP history + FOMC calendar latest material
@@ -145,6 +147,11 @@ finance.loaders.sp500_valuation + finance.loaders.price
   -> official actual TTM first, latest Shiller interpolated TTM fallback, all SEP vintages
   -> app.services.overview.sp500_valuation.build_sp500_valuation_read_model()
   -> React Market Context valuation component
+
+finance.loaders.sp500_valuation.load_sp500_actual_eps_history(as_of)
+  -> period_end <= as_of + source_release_date <= as_of
+  -> eight distinct actual As-Reported quarters
+  -> Economic Cycle current/prior TTM YoY asset pathway
 ```
 
 의미:

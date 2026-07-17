@@ -6375,3 +6375,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - T10YIE·EIA 3계열 `8,049` rows, S&P 가격 `5,026` rows, futures 4종 `10,055` rows를 actual DB에 적재했다. 실제 S&P EPS 완료 분기는 없어 해당 경로만 자료 부족으로 유지했다.
 - 공통 관측 UI, desktop 2열/mobile 1열, hover/focus 상세와 채권 내부 1열 지표 목록을 확인했다. Focused `104 passed`, TypeScript와 React production build를 통과했다.
 - 전체 자산경로 roadmap은 `5/5` 완료다. 해외 상대금리와 승인된 글로벌 구리 활동지표는 후속 범위다.
+
+## 2026-07-18 - S&P 500 실제 EPS 등록 경로 구현
+
+- Workspace Ingestion에 공식 Index Earnings XLSX와 발표일을 등록하는 사용자 흐름을 추가했다.
+- 공식 `QUARTERLY DATA` 다단 머리글과 normalized 호환 형식을 검증하고, actual As-Reported release vintage를 transaction으로 저장한다.
+- S&P 가치평가는 actual 4분기 current TTM, Economic Cycle은 actual 8분기 current/prior TTM YoY를 사용하며 모든 as-of read에 발표 vintage 기준을 적용했다.
+- 현재 공식 최신 파일을 직접 받지 못해 DB 실제 적재는 남아 있다. 상세는 `tasks/active/overview-economic-cycle-sp500-actual-eps-registration-v1-20260718/`를 본다.

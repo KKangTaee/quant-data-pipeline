@@ -51,7 +51,7 @@ external source
 | Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
 | Robert Shiller `ie_data.xls` | Market Context 월별 SPX 가격·보간 EPS·CAPE source. 공식 Shiller 페이지에서 현재 XLS 링크를 발견하며 EPS 미발표 최신 월도 price-only row로 `sp500_monthly_valuation`에 저장 |
 | SEC QQQ N-PORT / N-30B-2 | Market Context Nasdaq-100 QQQ proxy holdings source. CUSIP/ISIN/LEI, filing/accession, annual/quarterly anchor를 `etf_holdings_snapshot`에 저장하며 공식 Nasdaq aggregate로 취급하지 않는다 |
-| S&P Index Earnings workbook | Market Context index EPS source. explicit period/status/EPS columns와 release date가 있는 operator-supplied workbook만 import하며 actual/estimate를 위치나 색상으로 추론하지 않음 |
+| S&P Index Earnings workbook | Market Context와 Economic Cycle index EPS source. Workspace Ingestion에서 공식 XLSX와 release date를 등록하고 `QUARTERLY DATA` 제목·다단 Operating/As-Reported 머리글을 검증한다. 완료 값만 actual release vintage로 저장하며 색상이나 행 위치로 status를 추론하지 않는다. normalized 호환 파일은 explicit status를 요구한다 |
 | Federal Reserve SEP accessible HTML | Market Context GDP/PCE projection source. 2025-06 이후 공식 history 중 missing vintage를 backfill하고 FOMC calendar의 최신 material을 매일 확인해 `fomc_sep_projection`에 release별 저장 |
 | BLS official release schedule HTML / `.ics` file | Overview Events macro calendar source. CPI / PPI / Employment Situation release dates를 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT` row로 저장. 네트워크 정책상 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있다 |
 | BEA official release schedule HTML | Overview Events macro calendar source. national GDP release dates를 `MACRO_GDP` row로 저장 |

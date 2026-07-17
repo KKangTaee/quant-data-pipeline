@@ -4,4 +4,18 @@
   - baseline: 40 passed, 3 unrelated edgar deprecation warnings
 - official XLSX direct download
   - result: HTTP 403 / browser download timeout
-
+- archived official workbook parser smoke
+  - `QUARTERLY DATA`에서 300 basis rows, actual As-Reported 150개, 1988-03-31~2025-09-30을 구조 검증함
+- focused TDD checkpoints
+  - parser 4 passed
+  - importer/PIT/job/UI 누적 59 passed, 3 unrelated edgar deprecation warnings
+- Browser QA
+  - 최신 Streamlit process를 재시작한 뒤 `Workspace > Ingestion > 일상 운영 / 검증 데이터`의 `S&P 500 실제 EPS 등록` expander를 확인했다.
+  - 공식 페이지 링크, XLSX uploader, 자료 발표일, 완료 actual 8분기 안내를 확인했다.
+  - 파일을 선택하지 않은 초기 상태에서 `실제 EPS 반영` 버튼이 disabled인 것을 확인했다.
+  - QA screenshot: `/tmp/codex-browser-qa/sp500-actual-eps-registration.png` (generated artifact, commit 제외)
+- final verification
+  - S&P valuation / Ingestion split / Economic Cycle asset pathway·service focused: `99 passed`, 3 unrelated edgar deprecation warnings
+  - Ingestion service contracts: `50 passed`, `756 deselected`, `25 subtests passed`, 3 unrelated edgar deprecation warnings
+  - modified Python modules `py_compile`: exit 0
+  - `git diff --check`: exit 0

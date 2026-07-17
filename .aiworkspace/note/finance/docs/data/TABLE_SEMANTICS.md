@@ -652,8 +652,10 @@ PIT / publication 계약:
 주의:
 
 - Market Context TTM actual은 최신 네 개의 distinct `quarterly + as_reported + actual` row만 합산한다.
+- Economic Cycle의 실제 EPS 경로는 서로 다른 완료 분기 8개가 있어야 current/prior TTM과 전년 대비 변화를 계산한다. 이 경로에는 Shiller proxy를 넣지 않는다.
 - `estimate` 또는 `mixed` row는 actual 부족을 채우는 fallback이 아니다.
-- importer는 workbook 색상이나 위치로 상태를 추론하지 않고 explicit status column을 요구한다.
+- Ingestion importer는 공식 `QUARTERLY DATA` 제목과 `QUARTER END`, `OPERATING EARNINGS PER SHR`, `AS REPORTED EARNINGS PER SHR` 다단 머리글을 함께 검증한다. 공식 시트에서 값이 있는 완료 분기는 actual로 읽고 빈 최신 분기는 저장하지 않는다. normalized 호환 파일은 explicit status column을 요구한다.
+- 모든 read-as-of는 `period_end`뿐 아니라 `source_release_date`도 기준일 이하인 release vintage만 사용한다. 같은 분기 여러 vintage 중 당시 알려진 최신 row를 선택한다.
 
 ## `fomc_sep_projection`
 
