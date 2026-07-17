@@ -387,3 +387,31 @@
   raw CDP, standalone Playwright로 우회하지 않았다.
 - incomplete/error 화면은 correction QA screenshot으로 보존하거나 보고하지
   않았고 registry/save action도 실행하지 않았다.
+
+## 2026-07-17 Task 17 Stable Render Boundary RED / GREEN
+
+- RED 5건: wrapper `surface` 부재, surface action allow-list 부재, context가 fragment
+  안에 남음, React/fallback two-surface contract 부재를 확인했다.
+- GREEN: context component를 fragment 밖에, decision component를 fragment 안에
+  렌더링하고 React/Python fallback에 `context | decision` surface를 추가했다.
+- focused workspace/boundary/visual: `Ran 56 tests`, `OK`.
+- Practical Validation Vite build: 175 modules, success.
+- commits: `9d7b6cdc Practical Validation 재검증 렌더 경계 분리`,
+  `6cf1db11 Practical Validation component ready 경고 제거`.
+
+## 2026-07-17 Stable Boundary Browser QA And Fresh Verification
+
+- port 8505의 backtest-dev no-watch process만 current commit으로 재시작했다.
+- desktop 실제 replay 중 지정 후보 context와 하단 pending shell이 동시에 유지됐고,
+  완료 뒤 PASS / verified 27 / resolve-now 0 / engineering 0 / accepted limit 1 /
+  monitoring transfer 1로 교체됐다.
+- 760px outer 760/760, context iframe 717/717, decision iframe 717/717로 overflow 0.
+- current build console error 0, `setFrameHeight before componentReady` warning 0.
+  기존 빈 결과 Altair chart의 `Infinite extent` warning만 남았다.
+- screenshots (generated, unstaged):
+  - `/tmp/practical-validation-stable-revalidation-desktop-20260717.png`
+  - `/tmp/practical-validation-stable-revalidation-desktop-pending-current-20260717.png`
+  - `/tmp/practical-validation-stable-revalidation-760-20260717.png`
+- fresh completion suite: `Ran 134 tests in 2.028s`, `OK`.
+- Practical Validation build 175 modules, Final Review build 177 modules, target
+  py_compile, `git diff --check`: exit 0.

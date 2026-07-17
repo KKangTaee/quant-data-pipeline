@@ -6302,3 +6302,13 @@ Detailed historical logs were archived on `2026-04-13`.
 - 커밋 `c038c938`, `f94b4f50`, `1003488d`, `3fe41c2a`; fresh 188 tests와
   두 production build를 통과했다. desktop / 760px correction Browser QA는
   local URL security policy 차단으로 active task `RISKS.md`에 남아 있다.
+
+## 2026-07-17 - Practical Validation Stable Revalidation Boundary Closeout
+
+- callback-only 보정 뒤에도 남은 whole-iframe rerun을 `context / decision` 두 mount
+  boundary로 분리했다. 후보/검증 기준은 고정되고 replay/결과만 갱신된다.
+- 커밋 `f88daf01`, `9d7b6cdc`, `6cf1db11`; fresh 134 tests, 두 React build,
+  py_compile, diff-check를 통과했다.
+- 지정 후보 desktop replay pending/결과 교체와 760px 717/717 iframe overflow 0을
+  current 8505 build에서 확인했다. 상세와 screenshot은 active task `RUNS.md`다.
+- protected registry/run history/saved JSONL과 generated screenshot은 commit하지 않는다.

@@ -9608,3 +9608,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: callback-first replay projection, compact Level2 summary, per-root
   accepted/return choice, Python route validation과 compact snapshot 저장을 구현했다.
   non-visual 검증은 완료했고 Browser policy로 desktop/760px 재확인이 남았다.
+
+### 2026-07-17 - 재검증은 상단 context와 하단 decision의 mount 경계를 분리한다
+
+- User request: callback 보정 뒤에도 최신 데이터 재검증 시 화면 전체와 해당 영역이
+  사라졌다 다시 나타나는 현상이 같은지 확인하고 다시 수정해 달라고 요청함.
+- Interpreted goal: 후보/검증 기준은 재검증 동안 그대로 유지하고, 하단 replay와
+  결과만 pending 상태를 거쳐 새 projection으로 교체되어야 함.
+- Analysis result: 두 번째 명시적 rerun 제거는 불충분했다. custom component iframe
+  전체가 하나의 fragment 안에 있어 `setComponentValue()` widget rerun만으로도
+  상단까지 같은 mount boundary에 포함됐다.
+- Follow-up: 같은 read model/React bundle을 fragment 밖 `context`와 fragment 안
+  `decision` surface로 분리했다. desktop replay 중 context+pending 동시 유지,
+  760px overflow 0, console error/component-ready warning 0을 확인했다.

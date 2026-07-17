@@ -152,3 +152,17 @@
 - QA 서버가 `fileWatcherType none`으로 장기 실행되면 새 React build와 stale
   Python payload가 섞일 수 있다. 이번 browser 진입의 `handoff_summary.items`
   오류는 current code defect가 아니라 08:13부터 떠 있던 stale 8506 process였다.
+
+## 2026-07-17 Stable Context / Refresh Surface Correction
+
+- `Streamlit.setComponentValue()` 자체가 custom component widget rerun을 시작한다.
+  두 번째 명시적 fragment rerun만 제거해도 하나의 iframe 전체가 fragment 안에
+  있으면 mount 공백은 남는다.
+- 후보/검증 기준을 `context`, Step 2~4를 `decision` surface로 나누고 context를
+  fragment 밖에 두어 replay가 하단만 갱신하게 했다. 두 surface는 같은 Python
+  read model과 React bundle을 사용한다.
+- desktop Browser replay 중 DOM snapshot에서 지정 후보와 `최신 데이터로 재검증 중`
+  상태가 동시에 존재했고, 완료 뒤 PASS/verified 27 projection으로 교체됐다.
+- 760px에서는 outer 760/760, 두 iframe 717/717로 가로 overflow가 없었다.
+- module-level `Streamlit.setFrameHeight()`는 component-ready 전 경고를 만들므로
+  제거하고 연결 뒤 effect/ResizeObserver만 높이를 동기화하도록 유지했다.

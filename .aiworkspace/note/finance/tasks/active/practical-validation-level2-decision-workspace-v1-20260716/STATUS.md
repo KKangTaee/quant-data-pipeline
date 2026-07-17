@@ -1,6 +1,6 @@
 # Status
 
-Status: Implementation Complete / Browser QA Pending
+Status: Complete
 Last Updated: 2026-07-17
 
 ## 전체 Roadmap
@@ -64,6 +64,9 @@ raw 기술 근거, 반복 action lifecycle을 보정했다. 이어서 실제 공
 - `f94b4f50` Practical Validation 재검증 화면 유지 보정
 - `1003488d` Practical Validation Final Review 인계 요약 개선
 - `3fe41c2a` Final Review 인계 한계 판단 기록 추가
+- `f88daf01` Practical Validation 재검증 렌더 경계 설계 반영
+- `9d7b6cdc` Practical Validation 재검증 렌더 경계 분리
+- `6cf1db11` Practical Validation component ready 경고 제거
 
 ## 2026-07-16 Follow-up Status
 
@@ -97,8 +100,25 @@ holdings/exposure를 읽는다. Final Review는 eligible row에서 Level2 handof
   `decision_brief_snapshot.accepted_limit_acknowledgements`에 append-only 저장
 - [x] fresh focused 188 tests, Practical 175-module build, Final Review
   177-module build, target py_compile, diff-check
-- [ ] correction desktop / 760px Browser QA: 8506의 stale no-watch server 원인은
-  확인했으나 재시작 직후 local URL Browser security policy가 후속 접근을 차단함
+- [x] correction desktop / 760px Browser QA: 당시 8506 Browser policy 차단분을
+  Task 17~18의 current 8505 build replay/overflow/screenshot QA로 대체함
 
-코드와 비시각 계약은 완료됐다. 작업 상태를 `Complete`로 과장하지 않고,
-동일 current build의 desktop / 760px 상호작용과 screenshot 확인만 남긴다.
+callback-only correction의 남은 화면 수명주기 문제는 아래 stable boundary
+closeout에서 해결하고 current build로 재검증했다.
+
+## 2026-07-17 Stable Context / Refresh Surface Closeout
+
+- [x] 후보/검증 기준 `context`를 replay fragment 밖의 별도 component로 고정
+- [x] replay/결과/해결/save `decision`만 fragment에서 갱신
+- [x] context는 source/profile, decision은 replay/resolution/save intent만 허용
+- [x] React 미가용 fallback도 같은 두 surface 경계 사용
+- [x] desktop 실제 replay 중 context + pending shell 동시 유지와 PASS 교체 확인
+- [x] 760px outer 760/760, context/decision iframe 717/717 overflow 0 확인
+- [x] current build console error와 component-ready warning 0건
+- [x] fresh focused/completion 134 tests, Practical 175-module build, Final Review
+  177-module build, target py_compile, diff-check
+
+Task 13의 callback-only 보정은 두 번째 명시적 rerun만 제거했고 custom component
+전체가 하나의 fragment에 남는 문제를 놓쳤다. Task 17은 실제 mount 경계를
+나눴으며, 지정 후보는 verified 27, Level2 caution 7, resolve-now/engineering 0,
+accepted limit 1, monitoring transfer 1의 이동 가능 상태를 유지한다.

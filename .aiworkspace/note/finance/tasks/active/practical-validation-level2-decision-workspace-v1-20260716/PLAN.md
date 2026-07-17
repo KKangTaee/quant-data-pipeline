@@ -3114,12 +3114,11 @@ append-only registry 계약은 유지한다.
 
 - [x] Run all focused Practical Validation / Final Review / closure / boundary tests freshly.
 - [x] Run both React production builds, target py_compile, and `git diff --check`.
-- [ ] Browser QA desktop and 760px: replay pending, no one-shell disappearance,
-  compact Level2 handoff, accepted-limit choice, return-to-Level2 route, overflow,
-  and console errors. Current 8506 restart 후 in-app Browser local URL security
-  policy가 reload/snapshot을 차단해 같은 current build 검증이 남았다.
-- [ ] Keep QA screenshots generated and unstaged. Browser security policy blocked the
-  post-restart capture; no incomplete screenshot is presented as correction QA.
+- [x] Browser QA desktop and 760px: replay pending, no one-shell disappearance,
+  compact Level2 handoff, overflow, and console errors. 당시 8506 Browser policy
+  차단분은 Task 17~18의 current 8505 build QA로 대체했다. accepted-limit 선택과
+  return-to-Level2 route의 비시각 계약은 focused tests에서 확인했다.
+- [x] Keep Task 17~18 current-build QA screenshots generated and unstaged.
 - [x] Synchronize canonical docs, active task, and root handoff logs.
 - [x] Confirm registry, run history, saved JSONL, screenshots, `.superpowers/`, and
   run artifacts are absent from staged files.
@@ -3150,13 +3149,13 @@ unmount를 막지 못한 것을 확인했다. 기존 task와 branch에서 아래
 - decision surface owns replay/resolution/save intent inside replay fragment
 - Python callback consumer validates a per-surface action allow-list
 
-- [ ] Add RED wrapper/React tests proving the explicit context/decision surface contract.
-- [ ] Add RED page boundary tests proving context render is outside the decision fragment.
-- [ ] Add RED callback tests rejecting cross-surface replay/profile intents.
-- [ ] Implement the two render boundaries without changing replay, Gate, or persistence truth.
-- [ ] Keep Python fallback aligned with the same two surfaces.
-- [ ] Run focused tests, Practical React production build, target py_compile, diff-check.
-- [ ] Commit `Practical Validation 재검증 렌더 경계 분리`.
+- [x] Add RED wrapper/React tests proving the explicit context/decision surface contract.
+- [x] Add RED page boundary tests proving context render is outside the decision fragment.
+- [x] Add RED callback tests rejecting cross-surface replay/profile intents.
+- [x] Implement the two render boundaries without changing replay, Gate, or persistence truth.
+- [x] Keep Python fallback aligned with the same two surfaces.
+- [x] Run focused tests, Practical React production build, target py_compile, diff-check.
+- [x] Commit `Practical Validation 재검증 렌더 경계 분리`.
 
 ### Task 18: Runtime QA, Documentation, And Closeout
 
@@ -3165,11 +3164,11 @@ unmount를 막지 못한 것을 확인했다. 기존 task와 branch에서 아래
 - Modify active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`.
 - Modify root handoff logs.
 
-- [ ] Restart only this worktree's Streamlit server when the current build is stale.
-- [ ] Browser QA desktop and 760px: replay click, stable upper context, lower pending/result
+- [x] Restart only this worktree's Streamlit server when the current build is stale.
+- [x] Browser QA desktop and 760px: replay click, stable upper context, lower pending/result
   replacement, scroll preservation, iframe seam, overflow, console error.
-- [ ] Capture generated screenshots and keep them unstaged.
-- [ ] Run fresh focused/completion suites, React build, py_compile, diff-check.
-- [ ] Synchronize canonical docs, active task, and root handoff logs.
-- [ ] Confirm protected registry/run-history/saved/artifact files are not staged or committed.
-- [ ] Commit `Practical Validation 재검증 경계 QA와 문서 동기화`.
+- [x] Capture generated screenshots and keep them unstaged.
+- [x] Run fresh focused/completion suites, React build, py_compile, diff-check.
+- [x] Synchronize canonical docs, active task, and root handoff logs.
+- [x] Confirm protected registry/run-history/saved/artifact files are not staged or committed.
+- [x] Commit `Practical Validation 재검증 경계 QA와 문서 동기화`.
