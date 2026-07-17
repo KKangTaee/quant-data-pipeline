@@ -1,6 +1,6 @@
 # Status
 
-Status: Design Approved / Detailed Plan Pending
+Status: Detailed Plan Complete / Execution Pending
 Last Updated: 2026-07-17
 
 ## Current Position
@@ -13,7 +13,7 @@ Last Updated: 2026-07-17
 - [x] T2 pure read model + one-shell 접근 합의
 - [x] product / state / result / responsive / test design 승인
 - [x] approved design self-review
-- [ ] detailed implementation PLAN 작성
+- [x] detailed implementation PLAN 작성
 - [ ] 1~5차 구현
 
 ## Approved Roadmap
@@ -26,4 +26,6 @@ Last Updated: 2026-07-17
 
 ## Next Action
 
-사용자 확인 뒤 approved `DESIGN.md`를 기준으로 detailed `PLAN.md`를 작성한다.
+`PLAN.md`의 Task 1부터 RED -> GREEN 순서로 실행한다. 실행 방식은
+`superpowers:subagent-driven-development` 또는 `superpowers:executing-plans` 중
+선택한다.

@@ -37,3 +37,18 @@ generated artifact이므로 commit하지 않는다.
   mutable result를 별도 mount로 두는 physical render contract를 추가했다.
 - 합의된 A / B / S1 / M1 / R1 / G1 / C1 / P1 / T2 결정과 out-of-scope를
   acceptance criteria에 대조했고 추가 미결정 사항은 발견하지 않았다.
+
+## 2026-07-17 Detailed Plan Self-Review
+
+- 5차 roadmap을 9개 distinct implementation unit으로 분해하고 각 unit에 정확한
+  소유 파일, RED 테스트, GREEN 명령, 한국어 commit을 지정했다.
+- Single / Mix 공통 read model의 complete builder가 모든 projected variable을
+  계산한 뒤 반환하도록 계획 예시를 보강했다.
+- Mix legacy replay 예시는 실제 입력으로 교체했고, saved Mix 저장과 Level2 handoff가
+  서로 다른 handler를 사용하도록 검증 단위를 고정했다.
+- saved Mix 저장 adapter가 기존 `source_strategy_names`와
+  `compare_source_context`를 잃지 않도록 persistence compatibility를 보강했다.
+- protected path 검사 명령은 match 시 즉시 실패하는 명시적 shell condition으로
+  고정했다.
+- placeholder, 불균형 code fence, undefined test fixture를 재검사했고 남은 항목은
+  발견하지 않았다.
