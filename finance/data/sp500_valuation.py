@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import re
 from html import unescape
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
@@ -20,6 +20,10 @@ SHILLER_SOURCE = "robert_shiller_irrational_exuberance"
 SHILLER_PAGE_URL = "https://shillerdata.com/"
 SHILLER_SOURCE_URL = SHILLER_PAGE_URL
 SP500_EARNINGS_SOURCE = "sp_dow_jones_index_earnings"
+SP500_INDEX_EARNINGS_URL = (
+    "https://www.spglobal.com/spdji/en/documents/additional-material/"
+    "sp-500-eps-est.xlsx"
+)
 FOMC_SEP_SOURCE = "federal_reserve_sep"
 DB_META = "finance_meta"
 
@@ -174,8 +178,58 @@ def normalize_index_earnings_frame(
     return rows
 
 
+_INDEX_EARNINGS_COLUMN_ALIASES = {
+    "period end": "period_end",
+    "period_end": "period_end",
+    "quarter end": "period_end",
+    "quarter_end": "period_end",
+    "period type": "period_type",
+    "period_type": "period_type",
+    "status": "status",
+    "value status": "status",
+    "value_status": "status",
+    "actual / estimate": "status",
+    "actual/estimate": "status",
+    "as reported eps": "as_reported_eps",
+    "as-reported eps": "as_reported_eps",
+    "as_reported_eps": "as_reported_eps",
+    "operating eps": "operating_eps",
+    "operating_eps": "operating_eps",
+}
+
+
+def _normalize_explicit_earnings_sheet(
+    frame: pd.DataFrame,
+    *,
+    source_release_date: str,
+    source_ref: str,
+    collected_at: str | None,
+) -> list[dict[str, Any]]:
+    """Normalize a sheet only when period, status, and EPS basis are explicit."""
+    renamed = {
+        column: _INDEX_EARNINGS_COLUMN_ALIASES.get(
+            re.sub(r"\s+", " ", str(column).strip().lower())
+        )
+        for column in frame.columns
+    }
+    frame = frame.rename(columns={key: value for key, value in renamed.items() if value})
+    if not {"period_end", "status"}.issubset(frame.columns) or not {
+        "as_reported_eps",
+        "operating_eps",
+    }.intersection(frame.columns):
+        raise ValueError(
+            "period, actual/estimate 상태, EPS basis 열을 명시적으로 확인할 수 없습니다."
+        )
+    return normalize_index_earnings_frame(
+        frame,
+        source_release_date=source_release_date,
+        source_ref=source_ref,
+        collected_at=collected_at,
+    )
+
+
 def read_sp500_index_earnings_workbook(
-    workbook_path: str | Path,
+    workbook_path: str | Path | bytes | BinaryIO,
     *,
     source_release_date: str,
     source_ref: str | None = None,
@@ -186,39 +240,31 @@ def read_sp500_index_earnings_workbook(
     The importer intentionally requires explicit period/status columns. It does not
     infer whether a value is actual or estimated from workbook color or position.
     """
-    frame = pd.read_excel(workbook_path)
-    aliases = {
-        "period end": "period_end",
-        "period_end": "period_end",
-        "period type": "period_type",
-        "period_type": "period_type",
-        "status": "status",
-        "value status": "status",
-        "value_status": "status",
-        "as reported eps": "as_reported_eps",
-        "as-reported eps": "as_reported_eps",
-        "as_reported_eps": "as_reported_eps",
-        "operating eps": "operating_eps",
-        "operating_eps": "operating_eps",
-    }
-    renamed = {
-        column: aliases.get(re.sub(r"\s+", " ", str(column).strip().lower()))
-        for column in frame.columns
-    }
-    frame = frame.rename(columns={key: value for key, value in renamed.items() if value})
-    required = {"period_end", "status"}
-    if not required.issubset(frame.columns) or not {
-        "as_reported_eps",
-        "operating_eps",
-    }.intersection(frame.columns):
-        raise ValueError(
-            "S&P earnings workbook requires period_end, status, and at least one EPS column."
-        )
-    return normalize_index_earnings_frame(
-        frame,
-        source_release_date=source_release_date,
-        source_ref=source_ref or str(workbook_path),
-        collected_at=collected_at,
+    workbook_source: Any = (
+        BytesIO(workbook_path) if isinstance(workbook_path, bytes) else workbook_path
+    )
+    try:
+        excel = pd.ExcelFile(workbook_source)
+    except Exception as exc:
+        raise ValueError(f"S&P earnings XLSX 파일을 열 수 없습니다: {exc}") from exc
+
+    resolved_source_ref = source_ref or SP500_INDEX_EARNINGS_URL
+    for sheet_name in excel.sheet_names:
+        frame = pd.read_excel(excel, sheet_name=sheet_name)
+        try:
+            rows = _normalize_explicit_earnings_sheet(
+                frame,
+                source_release_date=source_release_date,
+                source_ref=resolved_source_ref,
+                collected_at=collected_at,
+            )
+        except ValueError:
+            continue
+        if rows:
+            return rows
+    raise ValueError(
+        "S&P workbook에서 period, actual/estimate 상태, EPS basis를 "
+        "명시적으로 확인할 수 없습니다."
     )
 
 

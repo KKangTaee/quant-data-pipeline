@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from io import BytesIO
 import unittest
 from unittest.mock import Mock
 from unittest.mock import patch
 
 import pandas as pd
+
+
+def xlsx_bytes(sheets: dict[str, pd.DataFrame]) -> bytes:
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        for sheet_name, frame in sheets.items():
+            frame.to_excel(writer, sheet_name=sheet_name, index=False)
+    return buffer.getvalue()
 
 
 def monthly_pe_frame(months: int, start: str = "2020-01-01") -> pd.DataFrame:
@@ -212,6 +221,91 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(rows[0]["earnings_basis"], "as_reported")
         self.assertEqual(rows[0]["value_status"], "actual")
         self.assertEqual(rows[0]["period_type"], "quarterly")
+
+    def test_index_earnings_reader_accepts_explicit_official_quarterly_sheet(self) -> None:
+        from finance.data.sp500_valuation import (
+            SP500_INDEX_EARNINGS_URL,
+            read_sp500_index_earnings_workbook,
+        )
+
+        workbook = xlsx_bytes(
+            {
+                "README": pd.DataFrame({"Notes": ["S&P 500 Index Earnings"]}),
+                "QUARTERLY DATA": pd.DataFrame(
+                    {
+                        "Quarter End": ["2025-12-31", "2026-03-31", "2026-06-30"],
+                        "Status": ["Actual", "Actual", "Estimate"],
+                        "As Reported EPS": [70.0, 72.0, 74.0],
+                        "Operating EPS": [71.0, 73.0, 75.0],
+                    }
+                ),
+            }
+        )
+
+        rows = read_sp500_index_earnings_workbook(
+            workbook,
+            source_release_date="2026-05-15",
+            source_ref=SP500_INDEX_EARNINGS_URL,
+        )
+
+        self.assertEqual(len(rows), 6)
+        self.assertEqual(
+            {(row["earnings_basis"], row["value_status"]) for row in rows},
+            {
+                ("as_reported", "actual"),
+                ("as_reported", "estimate"),
+                ("operating", "actual"),
+                ("operating", "estimate"),
+            },
+        )
+        self.assertTrue(
+            all(row["source_ref"] == SP500_INDEX_EARNINGS_URL for row in rows)
+        )
+
+    def test_index_earnings_reader_keeps_normalized_first_sheet_compatibility(self) -> None:
+        from finance.data.sp500_valuation import read_sp500_index_earnings_workbook
+
+        workbook = xlsx_bytes(
+            {
+                "Sheet1": pd.DataFrame(
+                    {
+                        "period_end": ["2026-03-31"],
+                        "period_type": ["quarterly"],
+                        "status": ["actual"],
+                        "as_reported_eps": [72.0],
+                    }
+                )
+            }
+        )
+
+        rows = read_sp500_index_earnings_workbook(
+            workbook,
+            source_release_date="2026-05-15",
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["value_status"], "actual")
+        self.assertEqual(rows[0]["earnings_basis"], "as_reported")
+
+    def test_index_earnings_reader_rejects_workbook_without_explicit_status(self) -> None:
+        from finance.data.sp500_valuation import read_sp500_index_earnings_workbook
+
+        workbook = xlsx_bytes(
+            {
+                "QUARTERLY DATA": pd.DataFrame(
+                    {
+                        "Quarter End": ["2026-03-31"],
+                        "As Reported EPS": [72.0],
+                    }
+                )
+            }
+        )
+
+        with self.assertRaisesRegex(ValueError, "actual/estimate 상태"):
+            read_sp500_index_earnings_workbook(
+                workbook,
+                source_release_date="2026-05-15",
+            )
 
     def test_fomc_calendar_discovery_uses_latest_accessible_projection(self) -> None:
         from finance.data.sp500_valuation import discover_latest_fomc_sep_url
