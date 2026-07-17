@@ -72,6 +72,7 @@ def load_latest_sp500_ttm_actual_eps(
           AND value_status = 'actual'
           AND eps > 0
           AND period_end <= CURRENT_DATE()
+          AND source_release_date <= CURRENT_DATE()
         ORDER BY period_end DESC, source_release_date DESC
         """,
         (),
@@ -132,11 +133,15 @@ def load_sp500_actual_eps_history(
     """Return strict current/prior TTM growth from eight actual S&P quarters."""
     limit = max(8, int(quarter_count))
     if end_date is None:
-        end_clause = "AND period_end <= CURRENT_DATE()"
+        end_clause = (
+            "AND period_end <= CURRENT_DATE() "
+            "AND source_release_date <= CURRENT_DATE()"
+        )
         params: tuple[Any, ...] = ()
     else:
-        end_clause = "AND period_end <= %s"
-        params = (str(end_date)[:10],)
+        end_clause = "AND period_end <= %s AND source_release_date <= %s"
+        as_of_date = str(end_date)[:10]
+        params = (as_of_date, as_of_date)
     rows = _query_meta(
         f"""
         SELECT period_end, eps, source, source_ref, source_release_date, collected_at

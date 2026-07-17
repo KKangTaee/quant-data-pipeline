@@ -729,6 +729,21 @@ class Sp500ValuationDataTests(unittest.TestCase):
         self.assertEqual(result["value_status"], "actual")
         self.assertEqual(result["basis"], "as_reported")
 
+    def test_ttm_loader_excludes_future_release_vintages(self) -> None:
+        from finance.loaders.sp500_valuation import load_latest_sp500_ttm_actual_eps
+
+        captured: dict[str, object] = {}
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return []
+
+        load_latest_sp500_ttm_actual_eps(query_fn=query)
+
+        self.assertIn("source_release_date <= CURRENT_DATE()", captured["sql"])
+        self.assertEqual(captured["params"], ())
+
     def test_actual_eps_history_requires_eight_distinct_completed_quarters(self) -> None:
         from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
 
@@ -766,6 +781,41 @@ class Sp500ValuationDataTests(unittest.TestCase):
             sum(row["eps"] for row in rows[4:8]),
         )
         self.assertIsNotNone(result["growth_pct"])
+
+    def test_actual_eps_history_bounds_period_and_release_vintage_by_as_of_date(self) -> None:
+        from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
+
+        captured: dict[str, object] = {}
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return []
+
+        load_sp500_actual_eps_history(
+            end_date="2026-03-31",
+            query_fn=query,
+        )
+
+        self.assertIn("period_end <= %s", captured["sql"])
+        self.assertIn("source_release_date <= %s", captured["sql"])
+        self.assertEqual(captured["params"], ("2026-03-31", "2026-03-31"))
+
+    def test_actual_eps_history_bounds_default_release_vintage_to_current_date(self) -> None:
+        from finance.loaders.sp500_valuation import load_sp500_actual_eps_history
+
+        captured: dict[str, object] = {}
+
+        def query(sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+            captured["sql"] = sql
+            captured["params"] = params
+            return []
+
+        load_sp500_actual_eps_history(query_fn=query)
+
+        self.assertIn("period_end <= CURRENT_DATE()", captured["sql"])
+        self.assertIn("source_release_date <= CURRENT_DATE()", captured["sql"])
+        self.assertEqual(captured["params"], ())
 
     def test_sep_history_loader_returns_all_release_vintages(self) -> None:
         from finance.loaders.sp500_valuation import load_fomc_sep_projection_history
