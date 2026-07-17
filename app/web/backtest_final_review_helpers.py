@@ -508,6 +508,7 @@ def _build_final_review_decision_row(
     operator_reason: str,
     operator_constraints: str,
     operator_next_action: str,
+    accepted_limit_acknowledgements: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Create one final review record that includes validation, observation, and decision evidence."""
     now = datetime.now().isoformat(timespec="seconds")
@@ -560,7 +561,8 @@ def _build_final_review_decision_row(
         "open_review_items": open_review_items,
         "evidence_closure_snapshot": closure_snapshot,
         "decision_brief_snapshot": build_final_review_decision_brief_snapshot(
-            dict(decision_brief or {})
+            dict(decision_brief or {}),
+            accepted_limit_acknowledgements=accepted_limit_acknowledgements,
         ),
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),

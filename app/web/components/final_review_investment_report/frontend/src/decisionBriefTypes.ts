@@ -232,6 +232,10 @@ export type FinalDecisionIntent = {
   intent_id: string
   decision_route: string
   operator_reason: string
+  accepted_limit_acknowledgements: Array<{
+    root_issue_id: string
+    decision: "accepted" | "return_to_level2"
+  }>
 }
 
 export type RefreshObservationIntent = {

@@ -305,6 +305,59 @@ def _build_level2_handoff(
     }
 
 
+def validate_accepted_limit_acknowledgements(
+    *,
+    level2_handoff: dict[str, Any],
+    acknowledgements: Any,
+    decision_route: str,
+) -> tuple[list[dict[str, str]], str]:
+    """Validate one explicit Final Review decision for every promoted Level2 limit."""
+
+    expected_root_issue_ids: list[str] = []
+    for raw_item in list(_as_dict(level2_handoff).get("accepted_limits") or []):
+        root_issue_id = str(_as_dict(raw_item).get("root_issue_id") or "").strip()
+        if root_issue_id and root_issue_id not in expected_root_issue_ids:
+            expected_root_issue_ids.append(root_issue_id)
+
+    raw_acknowledgements = (
+        list(acknowledgements) if isinstance(acknowledgements, list) else []
+    )
+    decisions_by_root: dict[str, str] = {}
+    allowed_decisions = {"accepted", "return_to_level2"}
+    for raw_acknowledgement in raw_acknowledgements:
+        acknowledgement = _as_dict(raw_acknowledgement)
+        root_issue_id = str(acknowledgement.get("root_issue_id") or "").strip()
+        decision = str(acknowledgement.get("decision") or "").strip()
+        if not root_issue_id:
+            return [], "인수한 검증 한계의 식별값이 비어 있습니다."
+        if root_issue_id in decisions_by_root:
+            return [], "같은 검증 한계에 대한 선택이 중복되었습니다."
+        if root_issue_id not in expected_root_issue_ids:
+            return [], "현재 Final Review 인계 항목이 아닌 검증 한계가 포함되었습니다."
+        if decision not in allowed_decisions:
+            return [], "인수한 검증 한계에 지원하지 않는 선택값이 포함되었습니다."
+        decisions_by_root[root_issue_id] = decision
+
+    if any(root_issue_id not in decisions_by_root for root_issue_id in expected_root_issue_ids):
+        return [], "모든 인수한 검증 한계에 대해 계속 인수할지 Level2로 되돌릴지 선택하세요."
+    if any(
+        decision == "return_to_level2"
+        for decision in decisions_by_root.values()
+    ) and str(decision_route or "").strip() != "RE_REVIEW_REQUIRED":
+        return [], "Level2로 돌려보내기를 선택하면 최종 판단도 재검토 필요로 기록해야 합니다."
+
+    return (
+        [
+            {
+                "root_issue_id": root_issue_id,
+                "decision": decisions_by_root[root_issue_id],
+            }
+            for root_issue_id in expected_root_issue_ids
+        ],
+        "",
+    )
+
+
 def _build_eligibility(
     *,
     validation: dict[str, Any],
@@ -1428,6 +1481,8 @@ def build_final_review_decision_brief(
 
 def build_final_review_decision_brief_snapshot(
     decision_brief: dict[str, Any],
+    *,
+    accepted_limit_acknowledgements: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Keep durable judgment and Monitoring fields without chart payload bulk."""
 
@@ -1482,6 +1537,18 @@ def build_final_review_decision_brief_snapshot(
             list(disclosures.get("accepted_limits") or []),
             "root_issue_id",
         ),
+        "accepted_limit_acknowledgements": [
+            {
+                "root_issue_id": str(row.get("root_issue_id") or "").strip(),
+                "decision": str(row.get("decision") or "").strip(),
+            }
+            for row in (
+                _as_dict(raw_row)
+                for raw_row in list(accepted_limit_acknowledgements or [])
+            )
+            if str(row.get("root_issue_id") or "").strip()
+            and str(row.get("decision") or "").strip()
+        ],
         "source_gaps": [
             str(value).strip()
             for value in list(disclosures.get("source_gaps") or [])
@@ -1496,4 +1563,5 @@ __all__ = [
     "build_final_review_candidate_selector",
     "build_final_review_decision_brief",
     "build_final_review_decision_brief_snapshot",
+    "validate_accepted_limit_acknowledgements",
 ]

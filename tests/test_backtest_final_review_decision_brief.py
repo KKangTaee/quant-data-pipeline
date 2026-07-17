@@ -4,6 +4,7 @@ import json
 import unittest
 from copy import deepcopy
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 
 class FinalReviewDecisionBriefContractTests(unittest.TestCase):
@@ -234,6 +235,166 @@ class FinalReviewDecisionBriefContractTests(unittest.TestCase):
         self.assertEqual(brief["level2_handoff"]["state"], "blocked")
         self.assertEqual(brief["level2_handoff"]["monitoring_conditions"], [])
         self.assertEqual(brief["verdict"]["route"], "RE_REVIEW_REQUIRED")
+
+    def test_accepted_limit_acknowledgements_are_normalized_in_expected_order(
+        self,
+    ) -> None:
+        from app.services.backtest_final_review_decision_brief import (
+            validate_accepted_limit_acknowledgements,
+        )
+
+        normalized, error = validate_accepted_limit_acknowledgements(
+            level2_handoff={
+                "accepted_limits": [
+                    {"root_issue_id": "limit-a"},
+                    {"root_issue_id": "limit-b"},
+                ]
+            },
+            acknowledgements=[
+                {"root_issue_id": "limit-b", "decision": "accepted"},
+                {"root_issue_id": "limit-a", "decision": "return_to_level2"},
+            ],
+            decision_route="RE_REVIEW_REQUIRED",
+        )
+
+        self.assertEqual(error, "")
+        self.assertEqual(
+            normalized,
+            [
+                {"root_issue_id": "limit-a", "decision": "return_to_level2"},
+                {"root_issue_id": "limit-b", "decision": "accepted"},
+            ],
+        )
+
+    def test_accepted_limit_acknowledgements_reject_incomplete_or_stale_roots(
+        self,
+    ) -> None:
+        from app.services.backtest_final_review_decision_brief import (
+            validate_accepted_limit_acknowledgements,
+        )
+
+        handoff = {
+            "accepted_limits": [
+                {"root_issue_id": "limit-a"},
+                {"root_issue_id": "limit-b"},
+            ]
+        }
+        invalid_cases = (
+            ([{"root_issue_id": "limit-a", "decision": "accepted"}], "모든"),
+            (
+                [
+                    {"root_issue_id": "limit-a", "decision": "accepted"},
+                    {"root_issue_id": "limit-a", "decision": "accepted"},
+                    {"root_issue_id": "limit-b", "decision": "accepted"},
+                ],
+                "중복",
+            ),
+            (
+                [
+                    {"root_issue_id": "limit-a", "decision": "accepted"},
+                    {"root_issue_id": "limit-b", "decision": "accepted"},
+                    {"root_issue_id": "stale-limit", "decision": "accepted"},
+                ],
+                "현재",
+            ),
+            (
+                [
+                    {"root_issue_id": "limit-a", "decision": "unknown"},
+                    {"root_issue_id": "limit-b", "decision": "accepted"},
+                ],
+                "선택값",
+            ),
+        )
+        for acknowledgements, expected_message in invalid_cases:
+            with self.subTest(acknowledgements=acknowledgements):
+                normalized, error = validate_accepted_limit_acknowledgements(
+                    level2_handoff=handoff,
+                    acknowledgements=acknowledgements,
+                    decision_route="RE_REVIEW_REQUIRED",
+                )
+                self.assertEqual(normalized, [])
+                self.assertIn(expected_message, error)
+
+    def test_return_to_level2_requires_re_review_route(self) -> None:
+        from app.services.backtest_final_review_decision_brief import (
+            validate_accepted_limit_acknowledgements,
+        )
+
+        normalized, error = validate_accepted_limit_acknowledgements(
+            level2_handoff={"accepted_limits": [{"root_issue_id": "limit-a"}]},
+            acknowledgements=[
+                {"root_issue_id": "limit-a", "decision": "return_to_level2"}
+            ],
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+        )
+
+        self.assertEqual(normalized, [])
+        self.assertIn("Level2로 돌려보내기", error)
+
+    def test_missing_accepted_limit_decision_does_not_append_final_row(self) -> None:
+        from app.web.backtest_final_review import page
+
+        fake_st = MagicMock()
+        fake_st.session_state = {}
+        append_row = MagicMock()
+        decision_brief = {
+            "level2_handoff": {
+                "accepted_limits": [{"root_issue_id": "limit-a"}]
+            }
+        }
+        with (
+            patch.object(page, "st", fake_st),
+            patch.object(
+                page,
+                "build_final_review_decision_record_guide",
+                return_value={"route_templates": {}},
+            ),
+            patch.object(
+                page,
+                "_build_final_review_save_evaluation",
+                return_value={"can_save": True},
+            ),
+            patch.object(page, "append_current_final_selection_decision", append_row),
+        ):
+            page._consume_final_review_decision_intent(
+                {
+                    "action": "record_final_decision",
+                    "intent_id": "missing-limit-ack",
+                    "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "operator_reason": "한계 확인 후 계속 추적합니다.",
+                },
+                source={"source_id": "candidate-a"},
+                validation={"validation_id": "validation-a"},
+                paper_observation={},
+                evidence={},
+                investability_packet={},
+                decision_brief=decision_brief,
+                decision_id="decision-a",
+                decision_id_key="decision-key-a",
+                existing_decision_ids=set(),
+            )
+
+        append_row.assert_not_called()
+        fake_st.error.assert_called_once()
+
+    def test_final_review_react_emits_accepted_limit_acknowledgements(self) -> None:
+        source = Path(
+            "app/web/components/final_review_investment_report/frontend/src/"
+            "DecisionBriefWorkspace.tsx"
+        ).read_text(encoding="utf-8")
+        types = Path(
+            "app/web/components/final_review_investment_report/frontend/src/"
+            "decisionBriefTypes.ts"
+        ).read_text(encoding="utf-8")
+
+        for token in (
+            "한계를 인수하고 계속",
+            "Level2로 되돌리기",
+            "acceptedLimitDecisions",
+            "accepted_limit_acknowledgements",
+            "return_to_level2",
+        ):
+            self.assertIn(token, source + types)
 
     def test_refreshable_stale_observation_blocks_only_selected_route(self) -> None:
         inputs = self._inputs()

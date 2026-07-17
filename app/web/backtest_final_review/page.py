@@ -16,6 +16,7 @@ from app.services.backtest_evidence_read_model import (
 from app.services.backtest_final_review_decision_brief import (
     build_final_review_candidate_selector,
     build_final_review_decision_brief,
+    validate_accepted_limit_acknowledgements,
 )
 from app.services.backtest_final_review_refresh import (
     build_final_review_refresh_status,
@@ -186,6 +187,9 @@ def _render_final_review_decision_fallback(
     decision_action: dict[str, Any],
     *,
     key: str,
+    accepted_limit_acknowledgements: list[dict[str, str]] | None = None,
+    accepted_limits_complete: bool = True,
+    requires_re_review_route: bool = False,
 ) -> dict[str, Any] | None:
     """Keep the same compact action contract if the optional React build is unavailable."""
 
@@ -210,9 +214,16 @@ def _render_final_review_decision_fallback(
         placeholder=str(selected.get("reason_placeholder") or "왜 이 판단을 선택했는지 직접 작성합니다."),
         key=f"{key}_reason_{_paper_ledger_slug(selected_route)}",
     )
-    can_submit = bool(selected.get("recordable")) and bool(str(reason or "").strip())
+    can_submit = (
+        bool(selected.get("recordable"))
+        and bool(str(reason or "").strip())
+        and accepted_limits_complete
+        and (not requires_re_review_route or selected_route == "RE_REVIEW_REQUIRED")
+    )
     if not bool(selected.get("recordable")):
         st.error(str(selected.get("disabled_reason") or "현재 조건에서는 이 판단을 저장할 수 없습니다."))
+    if requires_re_review_route and selected_route != "RE_REVIEW_REQUIRED":
+        st.error("Level2로 되돌리기를 선택했으므로 최종 판단도 재검토 필요를 선택하세요.")
     if st.button(
         str(selected.get("button_label") or "최종 판단 저장"),
         key=f"{key}_submit",
@@ -224,6 +235,9 @@ def _render_final_review_decision_fallback(
             "intent_id": uuid4().hex,
             "decision_route": selected_route,
             "operator_reason": str(reason or "").strip(),
+            "accepted_limit_acknowledgements": list(
+                accepted_limit_acknowledgements or []
+            ),
         }
     st.caption(str(decision_action.get("boundary_note") or ""))
     return None
@@ -747,6 +761,8 @@ def _render_final_review_decision_brief_fallback(
         "Level2에서 해결할 일은 끝났습니다. 확인된 근거만 최종 route 사유와 "
         "Monitoring 조건에 반영합니다."
     )
+    accepted_limit_acknowledgements: list[dict[str, str]] = []
+    accepted_limits = list(level2_handoff.get("accepted_limits") or [])
     if level2_handoff.get("state") == "blocked":
         st.warning(
             "Level2 차단 항목이 남아 있어 아직 Final Review 판단으로 "
@@ -755,27 +771,29 @@ def _render_final_review_decision_brief_fallback(
     else:
         handoff_groups = (
             (
+                "final_decision",
                 "최종 판단 입력",
                 "계좌·운용 목적처럼 이 화면에서 route 사유로 결정할 내용입니다.",
                 list(level2_handoff.get("final_decisions") or []),
             ),
             (
-                "인수한 검증 한계",
-                "Level2에서 근거를 확인했지만 결과 해석에 남겨야 하는 제한입니다.",
-                list(level2_handoff.get("accepted_limits") or []),
+                "accepted_limit",
+                "인수한 검증 한계 · 처리 선택",
+                "근거를 확인한 뒤 계속 인수할지, Level2 검증으로 되돌릴지 항목별로 결정합니다.",
+                accepted_limits,
             ),
             (
+                "monitoring_transfer",
                 "Monitoring 이관 조건",
                 "관측값·조건·주기·재검토 행동이 모두 확인된 항목만 전달됩니다.",
                 list(level2_handoff.get("monitoring_conditions") or []),
             ),
         )
-        for title, detail, rows in handoff_groups:
+        for handoff_kind, title, detail, rows in handoff_groups:
+            if not rows:
+                continue
             st.markdown(f"###### {title} · {len(rows)}")
             st.caption(detail)
-            if not rows:
-                st.caption("해당 항목 없음")
-                continue
             for row in rows:
                 item = dict(row or {})
                 with st.container(border=True):
@@ -793,6 +811,27 @@ def _render_final_review_decision_brief_fallback(
                         )
                     if item.get("re_review_action"):
                         st.caption(f"다시 할 판단: {item['re_review_action']}")
+                    if handoff_kind == "accepted_limit":
+                        root_issue_id = str(item.get("root_issue_id") or "").strip()
+                        decision = st.radio(
+                            "처리 방향",
+                            options=("accepted", "return_to_level2"),
+                            index=None,
+                            format_func=lambda value: (
+                                "한계를 인수하고 계속"
+                                if value == "accepted"
+                                else "Level2로 되돌리기"
+                            ),
+                            horizontal=True,
+                            key=f"{key}_accepted_limit_{_paper_ledger_slug(root_issue_id)}",
+                        )
+                        if decision:
+                            accepted_limit_acknowledgements.append(
+                                {
+                                    "root_issue_id": root_issue_id,
+                                    "decision": str(decision),
+                                }
+                            )
 
     st.markdown("##### Monitoring 변화 조건")
     if monitoring_conditions:
@@ -800,7 +839,22 @@ def _render_final_review_decision_brief_fallback(
     else:
         st.info("구조화된 Monitoring 변화 조건이 미측정입니다.")
 
-    decision_intent = _render_final_review_decision_fallback(decision_action, key=key)
+    accepted_limits_complete = len(accepted_limit_acknowledgements) == len(
+        accepted_limits
+    )
+    requires_re_review_route = any(
+        row.get("decision") == "return_to_level2"
+        for row in accepted_limit_acknowledgements
+    )
+    if requires_re_review_route:
+        decision_action = {**decision_action, "suggested_route": "RE_REVIEW_REQUIRED"}
+    decision_intent = _render_final_review_decision_fallback(
+        decision_action,
+        key=key,
+        accepted_limit_acknowledgements=accepted_limit_acknowledgements,
+        accepted_limits_complete=accepted_limits_complete,
+        requires_re_review_route=requires_re_review_route,
+    )
     with st.expander("Evidence confidence / accepted limits / provenance", expanded=False):
         st.json(disclosures)
     return decision_intent
@@ -881,6 +935,16 @@ def _consume_final_review_decision_intent(
 
     decision_route = str(payload.get("decision_route") or "").strip()
     operator_reason = str(payload.get("operator_reason") or "").strip()
+    accepted_limit_acknowledgements, acknowledgement_error = (
+        validate_accepted_limit_acknowledgements(
+            level2_handoff=dict(decision_brief.get("level2_handoff") or {}),
+            acknowledgements=payload.get("accepted_limit_acknowledgements"),
+            decision_route=decision_route,
+        )
+    )
+    if acknowledgement_error:
+        st.error(acknowledgement_error)
+        return
     guide = build_final_review_decision_record_guide(
         decision_route=decision_route,
         decision_evidence=evidence,
@@ -914,6 +978,7 @@ def _consume_final_review_decision_intent(
         operator_reason=operator_reason,
         operator_constraints=str(route_templates.get("constraints") or ""),
         operator_next_action=str(route_templates.get("next_action") or ""),
+        accepted_limit_acknowledgements=accepted_limit_acknowledgements,
     )
     append_current_final_selection_decision(final_row)
     decision_label = FINAL_REVIEW_DECISION_LABELS.get(decision_route, decision_route)

@@ -21,6 +21,9 @@ type WorkspaceProps = {
   onIntent: (intent: DecisionWorkspaceIntent) => void
 }
 
+type AcceptedLimitDecision = "accepted" | "return_to_level2"
+type AcceptedLimitDecisions = Record<string, AcceptedLimitDecision>
+
 function nextIntentId(prefix: string) {
   const generated = globalThis.crypto?.randomUUID?.()
   return generated ? `${prefix}-${generated}` : `${prefix}-${Date.now()}`
@@ -311,7 +314,54 @@ function HandoffMonitoringCard({ item }: { item: Level2MonitoringCondition }) {
   )
 }
 
-function Level2Handoff({ brief }: { brief: DecisionBrief }) {
+function AcceptedLimitCard({
+  item,
+  decision,
+  onDecision,
+}: {
+  item: Level2HandoffItem
+  decision?: AcceptedLimitDecision
+  onDecision: (rootIssueId: string, decision: AcceptedLimitDecision) => void
+}) {
+  return (
+    <article className="db-handoff-card db-accepted-limit-card">
+      <h4>{item.title}</h4>
+      {item.observed && <p>{item.observed}</p>}
+      {item.decision_guidance && <strong>{item.decision_guidance}</strong>}
+      <div className="db-accepted-limit-actions" role="radiogroup" aria-label={`${item.title} 처리`}>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={decision === "accepted"}
+          className={decision === "accepted" ? "is-selected" : ""}
+          onClick={() => onDecision(item.root_issue_id, "accepted")}
+        >
+          한계를 인수하고 계속
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={decision === "return_to_level2"}
+          className={decision === "return_to_level2" ? "is-selected is-return" : ""}
+          onClick={() => onDecision(item.root_issue_id, "return_to_level2")}
+        >
+          Level2로 되돌리기
+        </button>
+      </div>
+      <small>Level2에서 확인한 근거 {item.evidence_refs.length}개</small>
+    </article>
+  )
+}
+
+function Level2Handoff({
+  brief,
+  acceptedLimitDecisions,
+  onAcceptedLimitDecision,
+}: {
+  brief: DecisionBrief
+  acceptedLimitDecisions: AcceptedLimitDecisions
+  onAcceptedLimitDecision: (rootIssueId: string, decision: AcceptedLimitDecision) => void
+}) {
   const handoff = brief.level2_handoff
   return (
     <section className="db-section db-handoff" aria-labelledby="db-handoff-title">
@@ -324,27 +374,32 @@ function Level2Handoff({ brief }: { brief: DecisionBrief }) {
         <div className="db-empty">Level2 차단 항목이 남아 있어 아직 Final Review 판단으로 승격되지 않았습니다.</div>
       ) : (
         <div className="db-handoff-grid">
-          <div className="db-handoff-lane">
+          {handoff.final_decisions.length > 0 && <div className="db-handoff-lane">
             <header><h3>최종 판단 입력</h3><span>{handoff.summary.final_decision_count}</span></header>
             <p>계좌·운용 목적처럼 이 화면에서 route 사유로 결정할 내용입니다.</p>
-            {handoff.final_decisions.length ? handoff.final_decisions.map((item) => (
+            {handoff.final_decisions.map((item) => (
               <HandoffItemCard item={item} key={item.root_issue_id} />
-            )) : <small className="db-handoff-empty">추가 판단 입력 없음</small>}
-          </div>
-          <div className="db-handoff-lane">
-            <header><h3>인수한 검증 한계</h3><span>{handoff.summary.accepted_limit_count}</span></header>
-            <p>Level2에서 근거를 확인했지만 결과 해석에 남겨야 하는 제한입니다.</p>
-            {handoff.accepted_limits.length ? handoff.accepted_limits.map((item) => (
-              <HandoffItemCard item={item} key={item.root_issue_id} />
-            )) : <small className="db-handoff-empty">인수할 추가 한계 없음</small>}
-          </div>
-          <div className="db-handoff-lane">
+            ))}
+          </div>}
+          {handoff.accepted_limits.length > 0 && <div className="db-handoff-lane db-handoff-lane-actionable">
+            <header><h3>인수한 검증 한계 · 처리 선택</h3><span>{handoff.summary.accepted_limit_count}</span></header>
+            <p>근거를 확인한 뒤 계속 인수할지, Level2 검증으로 되돌릴지 항목별로 결정합니다.</p>
+            {handoff.accepted_limits.map((item) => (
+              <AcceptedLimitCard
+                item={item}
+                decision={acceptedLimitDecisions[item.root_issue_id]}
+                onDecision={onAcceptedLimitDecision}
+                key={item.root_issue_id}
+              />
+            ))}
+          </div>}
+          {handoff.monitoring_conditions.length > 0 && <div className="db-handoff-lane">
             <header><h3>Monitoring 이관 조건</h3><span>{handoff.summary.monitoring_condition_count}</span></header>
             <p>관측값·조건·주기·재검토 행동이 모두 확인된 항목만 전달됩니다.</p>
-            {handoff.monitoring_conditions.length ? handoff.monitoring_conditions.map((item) => (
+            {handoff.monitoring_conditions.map((item) => (
               <HandoffMonitoringCard item={item} key={item.root_issue_id} />
-            )) : <small className="db-handoff-empty">구조화된 이관 조건 없음</small>}
-          </div>
+            ))}
+          </div>}
         </div>
       )}
     </section>
@@ -392,9 +447,11 @@ function MonitoringConditions({ brief }: { brief: DecisionBrief }) {
 function DecisionAction({
   brief,
   onIntent,
+  acceptedLimitDecisions,
 }: {
   brief: DecisionBrief
   onIntent: WorkspaceProps["onIntent"]
+  acceptedLimitDecisions: AcceptedLimitDecisions
 }) {
   const action = brief.decision_action
   const [route, setRoute] = useState(action.suggested_route)
@@ -403,8 +460,25 @@ function DecisionAction({
     setRoute(action.suggested_route)
     setReason("")
   }, [brief.candidate.source_id, action.suggested_route])
+  const acceptedLimitRootIssueIds = brief.level2_handoff.accepted_limits.map(
+    (item) => item.root_issue_id,
+  )
+  const acceptedLimitsComplete = acceptedLimitRootIssueIds.every(
+    (rootIssueId) => Boolean(acceptedLimitDecisions[rootIssueId]),
+  )
+  const returnsToLevel2 = acceptedLimitRootIssueIds.some(
+    (rootIssueId) => acceptedLimitDecisions[rootIssueId] === "return_to_level2",
+  )
+  useEffect(() => {
+    if (returnsToLevel2) setRoute("RE_REVIEW_REQUIRED")
+  }, [returnsToLevel2])
   const selected = action.options.find((option) => option.route === route) ?? action.options[0]
-  const canSubmit = Boolean(selected?.recordable && reason.trim())
+  const canSubmit = Boolean(
+    selected?.recordable
+    && reason.trim()
+    && acceptedLimitsComplete
+    && (!returnsToLevel2 || route === "RE_REVIEW_REQUIRED")
+  )
 
   return (
     <section className="db-section db-decision" aria-labelledby="db-decision-title">
@@ -439,6 +513,9 @@ function DecisionAction({
         <small>{action.reason_help}</small>
       </label>
       {!selected?.recordable && <p className="db-disabled-reason" role="alert">{selected?.disabled_reason}</p>}
+      {!acceptedLimitsComplete && (
+        <p className="db-disabled-reason" role="alert">인수할 검증 한계의 처리 방향을 모두 선택하세요.</p>
+      )}
       <button
         type="button"
         className="db-submit"
@@ -450,6 +527,10 @@ function DecisionAction({
             intent_id: nextIntentId("decision"),
             decision_route: selected.route,
             operator_reason: reason.trim(),
+            accepted_limit_acknowledgements: acceptedLimitRootIssueIds.map((rootIssueId) => ({
+              root_issue_id: rootIssueId,
+              decision: acceptedLimitDecisions[rootIssueId],
+            })),
           })
         }}
       >
@@ -489,10 +570,21 @@ function EvidenceDisclosure({ brief }: { brief: DecisionBrief }) {
 
 export function DecisionBriefWorkspace({ decisionBrief, candidateSelector, onIntent }: WorkspaceProps) {
   const hasBrief = decisionBrief?.schema_version === "decision_brief_v1"
+  const [acceptedLimitDecisions, setAcceptedLimitDecisions] = useState<AcceptedLimitDecisions>({})
   const selectedCandidate = useMemo(
     () => candidateSelector.options.find((option) => option.selected),
     [candidateSelector.options],
   )
+  useEffect(() => {
+    setAcceptedLimitDecisions({})
+  }, [decisionBrief.candidate.source_id, decisionBrief.candidate.validation_id])
+
+  const onAcceptedLimitDecision = (
+    rootIssueId: string,
+    decision: AcceptedLimitDecision,
+  ) => {
+    setAcceptedLimitDecisions((current) => ({ ...current, [rootIssueId]: decision }))
+  }
 
   if (!hasBrief) {
     return <div className="db-workspace db-empty">Decision Brief payload를 읽을 수 없습니다.</div>
@@ -505,9 +597,17 @@ export function DecisionBriefWorkspace({ decisionBrief, candidateSelector, onInt
       <BehaviorBoard brief={decisionBrief} onIntent={onIntent} />
       <StrengthWeaknessSection brief={decisionBrief} />
       <PortfolioCharacterSection brief={decisionBrief} />
-      <Level2Handoff brief={decisionBrief} />
+      <Level2Handoff
+        brief={decisionBrief}
+        acceptedLimitDecisions={acceptedLimitDecisions}
+        onAcceptedLimitDecision={onAcceptedLimitDecision}
+      />
       <MonitoringConditions brief={decisionBrief} />
-      <DecisionAction brief={decisionBrief} onIntent={onIntent} />
+      <DecisionAction
+        brief={decisionBrief}
+        onIntent={onIntent}
+        acceptedLimitDecisions={acceptedLimitDecisions}
+      />
       <EvidenceDisclosure brief={decisionBrief} />
     </main>
   )

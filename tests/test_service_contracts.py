@@ -29011,6 +29011,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         validation: dict[str, Any] | None = None,
         investability_packet: dict[str, Any] | None = None,
         operator_reason: str = "저장된 관측값을 근거로 판단함",
+        accepted_limit_acknowledgements: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         from app.web.backtest_final_review_helpers import _build_final_review_decision_row
 
@@ -29026,6 +29027,11 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             "gate_policy_snapshot": ready_policy,
             "selection_gate_policy_snapshot": ready_policy,
         }
+        acknowledgement_kwargs = (
+            {"accepted_limit_acknowledgements": accepted_limit_acknowledgements}
+            if accepted_limit_acknowledgements is not None
+            else {}
+        )
         return _build_final_review_decision_row(
             source={"source_id": "source-persistence", "source_type": "practical_validation_result"},
             validation=validation
@@ -29043,6 +29049,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             operator_reason=operator_reason,
             operator_constraints="constraints",
             operator_next_action="next",
+            **acknowledgement_kwargs,
         )
 
     def test_final_review_refresh_intent_runs_once_and_selects_new_validation(self) -> None:
@@ -32908,6 +32915,28 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(snapshot["monitoring_conditions"][0]["observation_id"], "drawdown-recovery-path")
         self.assertEqual(snapshot["accepted_limit_root_issue_ids"], ["static-universe-limit"])
         self.assertEqual(snapshot["source_gaps"], ["거래비용 적용 증명이 없습니다."])
+
+    def test_final_review_decision_row_stores_accepted_limit_acknowledgements(
+        self,
+    ) -> None:
+        row = self._build_persistence_row(
+            accepted_limit_acknowledgements=[
+                {
+                    "root_issue_id": "static-universe-limit",
+                    "decision": "accepted",
+                }
+            ]
+        )
+
+        self.assertEqual(
+            row["decision_brief_snapshot"]["accepted_limit_acknowledgements"],
+            [
+                {
+                    "root_issue_id": "static-universe-limit",
+                    "decision": "accepted",
+                }
+            ],
+        )
 
     def test_selected_route_still_requires_existing_gate_and_closed_evidence(self) -> None:
         blocked_packet = {
