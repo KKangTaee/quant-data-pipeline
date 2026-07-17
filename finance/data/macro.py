@@ -22,7 +22,14 @@ from .db.schema import PROVIDER_SCHEMAS, sync_table_schema
 
 DB_META = "finance_meta"
 MACRO_TABLE = "macro_series_observation"
-DEFAULT_MACRO_SERIES = ("VIXCLS", "T10Y3M", "BAA10Y")
+DEFAULT_MACRO_SERIES = (
+    "VIXCLS",
+    "T10Y3M",
+    "BAA10Y",
+    "DGS2",
+    "DGS10",
+    "DFII10",
+)
 FRED_API_URL = "https://api.stlouisfed.org/fred/series/observations"
 FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 FRED_USER_AGENT = f"Python-urllib/{sys.version_info.major}.{sys.version_info.minor}"
@@ -47,6 +54,24 @@ FRED_SERIES_CONFIG: dict[str, dict[str, Any]] = {
     "BAA10Y": {
         "series_name": "Moody's Seasoned Baa Corporate Bond Yield Relative to Yield on 10-Year Treasury",
         "category": "credit_spread",
+        "frequency": "daily",
+        "units": "percent",
+    },
+    "DGS2": {
+        "series_name": "Market Yield on U.S. Treasury Securities at 2-Year Constant Maturity",
+        "category": "treasury_yield",
+        "frequency": "daily",
+        "units": "percent",
+    },
+    "DGS10": {
+        "series_name": "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity",
+        "category": "treasury_yield",
+        "frequency": "daily",
+        "units": "percent",
+    },
+    "DFII10": {
+        "series_name": "Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Inflation-Indexed",
+        "category": "real_yield",
         "frequency": "daily",
         "units": "percent",
     },
