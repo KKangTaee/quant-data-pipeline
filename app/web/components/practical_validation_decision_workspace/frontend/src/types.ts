@@ -1,4 +1,5 @@
 export type Tone = "positive" | "warning" | "danger" | "neutral"
+export type WorkspaceSurface = "context" | "decision"
 
 export type EvidenceExplanation = {
   display_title: string

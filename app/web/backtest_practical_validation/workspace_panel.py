@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import streamlit as st
@@ -432,20 +432,15 @@ def _render_workspace_issue_lane(
     return None
 
 
-def render_practical_validation_decision_workspace_fallback(
+def _render_practical_validation_context_surface_fallback(
     workspace: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Render the same Python-owned read model when the React build is unavailable."""
+    """Render only candidate and policy selection outside the replay fragment."""
 
     header = dict(workspace.get("header") or {})
     candidate = dict(workspace.get("candidate") or {})
     selector = dict(workspace.get("candidate_selector") or {})
     profile = dict(workspace.get("profile") or {})
-    replay = dict(workspace.get("replay") or {})
-    verdict = dict(workspace.get("verdict") or {})
-    summary = dict(workspace.get("summary") or {})
-    resolution_lanes = dict(workspace.get("resolution_lanes") or {})
-    actions = dict(workspace.get("actions") or {})
 
     st.markdown(
         f"### {header.get('question') or '이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가?'}"
@@ -517,6 +512,24 @@ def render_practical_validation_decision_workspace_fallback(
                 workspace=workspace,
                 profile_id=profile_id,
             )
+    return None
+
+
+def render_practical_validation_decision_workspace_fallback(
+    workspace: dict[str, Any],
+    *,
+    surface: Literal["context", "decision"] = "decision",
+) -> dict[str, Any] | None:
+    """Render one Python fallback surface from the shared read model."""
+
+    if surface == "context":
+        return _render_practical_validation_context_surface_fallback(workspace)
+
+    replay = dict(workspace.get("replay") or {})
+    verdict = dict(workspace.get("verdict") or {})
+    summary = dict(workspace.get("summary") or {})
+    resolution_lanes = dict(workspace.get("resolution_lanes") or {})
+    actions = dict(workspace.get("actions") or {})
 
     st.markdown("#### 2. 최신 데이터 기준 재검증")
     st.caption(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import streamlit.components.v1 as components
 
@@ -26,6 +26,7 @@ def is_practical_validation_decision_workspace_available() -> bool:
 def render_practical_validation_decision_workspace(
     *,
     workspace: dict[str, Any],
+    surface: Literal["context", "decision"] = "decision",
     key: str | None = None,
     on_change: Callable[[], None] | None = None,
 ) -> dict[str, Any] | None:
@@ -35,6 +36,7 @@ def render_practical_validation_decision_workspace(
         return None
     value = _component(
         workspace=workspace,
+        surface=surface,
         key=key,
         default=None,
         on_change=on_change,

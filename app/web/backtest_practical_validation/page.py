@@ -2608,6 +2608,7 @@ def _rerun_practical_validation_workspace(*, scope: str = "app") -> None:
 def _consume_practical_validation_component_change(
     *,
     component_key: str,
+    allowed_actions: set[str] | frozenset[str],
     sources: list[dict[str, Any]],
     source: dict[str, Any],
     validation_result: dict[str, Any] | None,
@@ -2616,12 +2617,10 @@ def _consume_practical_validation_component_change(
     """Consume local component intents before the fragment projects new state."""
 
     intent = st.session_state.get(component_key)
-    if not isinstance(intent, dict) or intent.get("action") not in {
-        "select_source",
-        "select_profile_preset",
-        "run_replay",
-        "run_resolution_action",
-    }:
+    if (
+        not isinstance(intent, dict)
+        or str(intent.get("action") or "") not in allowed_actions
+    ):
         return
     _consume_practical_validation_decision_workspace_intent(
         intent,
@@ -2779,21 +2778,11 @@ def render_practical_validation_workspace() -> None:
         "이 후보는 Final Review에서 실제 투자 판단을 할 만큼 검증되었는가? "
         "해결할 항목과 Final Review에서 판단할 항목을 구분해 확인합니다."
     )
-    _render_practical_validation_decision_workspace_fragment()
-
-
-@st.fragment
-def _render_practical_validation_decision_workspace_fragment() -> None:
-    """Render selection, replay, and result updates without resetting the page."""
-
     sources = load_portfolio_selection_sources(limit=100)
     session_source = st.session_state.get("backtest_practical_validation_source")
-    notice = st.session_state.pop("backtest_practical_validation_notice", None)
     if st.session_state.pop("practical_validation_reset_replay_on_entry", False):
         _clear_practical_validation_replay_state()
         st.session_state.pop("practical_validation_active_source_id", None)
-    if notice:
-        st.success(str(notice))
 
     selectable_sources: list[dict[str, Any]] = []
     if isinstance(session_source, dict) and session_source:
@@ -2838,6 +2827,66 @@ def _render_practical_validation_decision_workspace_fragment() -> None:
     ] = selected_source_id
 
     validation_profile = _current_validation_profile_from_session()
+    context_workspace_model = build_practical_validation_decision_workspace(
+        source=source,
+        validation_profile=validation_profile,
+        replay_result=None,
+        validation_result=None,
+        source_options=selectable_sources,
+    )
+    context_component_key = (
+        "practical-validation-decision-workspace-context-"
+        f"{selected_source_id or 'source-required'}"
+    )
+    if is_practical_validation_decision_workspace_available():
+        context_intent = render_practical_validation_decision_workspace(
+            workspace=context_workspace_model,
+            surface="context",
+            key=context_component_key,
+            on_change=partial(
+                _consume_practical_validation_component_change,
+                component_key=context_component_key,
+                allowed_actions={"select_source", "select_profile_preset"},
+                sources=selectable_sources,
+                source=source,
+                validation_result=None,
+                replay_result=None,
+            ),
+        )
+    else:
+        context_intent = render_practical_validation_decision_workspace_fallback(
+            context_workspace_model,
+            surface="context",
+        )
+    _consume_practical_validation_decision_workspace_intent(
+        context_intent,
+        sources=selectable_sources,
+        source=source,
+        validation_result=None,
+        replay_result=None,
+        rerun_scope="app",
+    )
+
+    _render_practical_validation_decision_workspace_fragment(
+        selectable_sources,
+        source,
+        validation_profile,
+    )
+
+
+@st.fragment
+def _render_practical_validation_decision_workspace_fragment(
+    selectable_sources: list[dict[str, Any]],
+    source: dict[str, Any],
+    validation_profile: dict[str, Any],
+) -> None:
+    """Refresh replay and decisions while the upper context stays mounted."""
+
+    notice = st.session_state.pop("backtest_practical_validation_notice", None)
+    if notice:
+        st.success(str(notice))
+
+    selected_source_id = str(source.get("selection_source_id") or "")
     replay_result: dict[str, Any] | None = None
     validation_result: dict[str, Any] | None = None
     if source:
@@ -2877,16 +2926,23 @@ def _render_practical_validation_decision_workspace_fragment() -> None:
     )
 
     component_key = (
-        "practical-validation-decision-workspace-"
+        "practical-validation-decision-workspace-decision-"
         f"{selected_source_id or 'source-required'}"
     )
     if is_practical_validation_decision_workspace_available():
         intent = render_practical_validation_decision_workspace(
             workspace=workspace_model,
+            surface="decision",
             key=component_key,
             on_change=partial(
                 _consume_practical_validation_component_change,
                 component_key=component_key,
+                allowed_actions={
+                    "run_replay",
+                    "run_resolution_action",
+                    "save_audit_only",
+                    "save_and_move",
+                },
                 sources=selectable_sources,
                 source=source,
                 validation_result=validation_result,
@@ -2895,7 +2951,8 @@ def _render_practical_validation_decision_workspace_fragment() -> None:
         )
     else:
         intent = render_practical_validation_decision_workspace_fallback(
-            workspace_model
+            workspace_model,
+            surface="decision",
         )
     _consume_practical_validation_decision_workspace_intent(
         intent,

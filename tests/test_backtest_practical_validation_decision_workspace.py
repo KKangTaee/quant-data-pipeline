@@ -907,7 +907,7 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertEqual(second["validation_id"], "validation-stable")
         self.assertEqual(builder.call_count, 1)
 
-    def test_component_wrapper_forwards_on_change_callback(self) -> None:
+    def test_component_wrapper_forwards_surface_and_on_change_callback(self) -> None:
         from app.web.components.practical_validation_decision_workspace import (
             component,
         )
@@ -917,6 +917,7 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         with patch.object(component, "_component", fake_component):
             result = component.render_practical_validation_decision_workspace(
                 workspace={"schema_version": "practical_validation_decision_workspace_v1"},
+                surface="context",
                 key="practical-validation-callback",
                 on_change=on_change,
             )
@@ -924,6 +925,7 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         self.assertIsNone(result)
         fake_component.assert_called_once_with(
             workspace={"schema_version": "practical_validation_decision_workspace_v1"},
+            surface="context",
             key="practical-validation-callback",
             default=None,
             on_change=on_change,
@@ -957,6 +959,7 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
         ):
             page._consume_practical_validation_component_change(
                 component_key=component_key,
+                allowed_actions={"run_replay", "run_resolution_action"},
                 sources=[source],
                 source=source,
                 validation_result=None,
@@ -975,6 +978,46 @@ class PracticalValidationDecisionWorkspaceTests(unittest.TestCase):
             fake_streamlit.session_state["backtest_practical_validation_notice"],
             "최신 데이터 기준 재검증을 완료했습니다.",
         )
+
+    def test_context_surface_rejects_replay_intent(self) -> None:
+        from app.web.backtest_practical_validation import page
+
+        component_key = "practical-validation-decision-workspace-context"
+        source = self._source()
+        fake_streamlit = SimpleNamespace(
+            session_state={
+                component_key: {
+                    "action": "run_replay",
+                    "intent_id": "intent-cross-surface-replay",
+                    "selection_source_id": "source-grs-current",
+                    "validation_result_id": "",
+                }
+            },
+            rerun=MagicMock(),
+        )
+        with (
+            patch.object(page, "st", fake_streamlit),
+            patch.object(
+                page,
+                "_execute_practical_validation_replay",
+                return_value={"status": "PASS"},
+            ) as replay,
+        ):
+            page._consume_practical_validation_component_change(
+                component_key=component_key,
+                allowed_actions={"select_source", "select_profile_preset"},
+                sources=[source],
+                source=source,
+                validation_result=None,
+                replay_result=None,
+            )
+
+        replay.assert_not_called()
+        self.assertNotIn(
+            "practical_validation_workspace_last_intent_id",
+            fake_streamlit.session_state,
+        )
+        fake_streamlit.rerun.assert_not_called()
 
     def test_replay_intent_can_skip_explicit_rerun_in_component_callback(self) -> None:
         from app.web.backtest_practical_validation import page

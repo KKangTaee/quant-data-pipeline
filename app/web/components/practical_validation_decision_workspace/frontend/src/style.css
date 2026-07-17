@@ -52,6 +52,14 @@ summary:focus-visible {
   color: var(--pv2-ink);
 }
 
+.pv2-workspace[data-surface="context"] {
+  padding-bottom: 4px;
+}
+
+.pv2-workspace[data-surface="decision"] {
+  padding-top: 0;
+}
+
 .pv2-header {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(260px, .72fr);

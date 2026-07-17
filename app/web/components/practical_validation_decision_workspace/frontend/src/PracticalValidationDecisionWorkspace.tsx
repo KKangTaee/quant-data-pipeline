@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react"
 import { Streamlit } from "streamlit-component-lib"
-import { DecisionWorkspace, Issue, WorkspaceIntent } from "./types"
+import {
+  DecisionWorkspace,
+  Issue,
+  WorkspaceIntent,
+  WorkspaceSurface,
+} from "./types"
 
 const intentId = (prefix: string) =>
   `${prefix}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`
@@ -73,8 +78,10 @@ function IssueCard({
 
 export function PracticalValidationDecisionWorkspace({
   workspace,
+  surface,
 }: {
   workspace: DecisionWorkspace
+  surface: WorkspaceSurface
 }) {
   const evidenceCategories = workspace.category_disclosures
   const [pendingAction, setPendingAction] = useState<string | null>(null)
@@ -126,7 +133,9 @@ export function PracticalValidationDecisionWorkspace({
   )
 
   return (
-    <main className="pv2-workspace">
+    <main className="pv2-workspace" data-surface={surface}>
+      {surface === "context" && (
+        <>
       <header className="pv2-header">
         <div>
           <p className="pv2-kicker">
@@ -224,6 +233,11 @@ export function PracticalValidationDecisionWorkspace({
         </div>
       </section>
 
+        </>
+      )}
+
+      {surface === "decision" && (
+        <>
       <section
         className={`pv2-step pv2-replay-step ${
           replayPending ? "is-pending" : ""
@@ -545,6 +559,8 @@ export function PracticalValidationDecisionWorkspace({
           </button>
         </div>
       </section>
+        </>
+      )}
     </main>
   )
 }

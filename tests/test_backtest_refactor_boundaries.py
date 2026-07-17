@@ -380,11 +380,52 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
 
         self.assertIn("@st.fragment", source)
         self.assertIn(
-            "_render_practical_validation_decision_workspace_fragment()",
+            "_render_practical_validation_decision_workspace_fragment(",
             render_body,
         )
         self.assertIn('rerun_scope="fragment"', source)
         self.assertIn('st.rerun(scope="app")', source)
+
+    def test_practical_validation_context_is_outside_decision_fragment(self) -> None:
+        source = (
+            PROJECT_ROOT / "app/web/backtest_practical_validation/page.py"
+        ).read_text()
+        render_body = source.split(
+            "def render_practical_validation_workspace", 1
+        )[1].split("@st.fragment", 1)[0]
+        fragment_body = source.split(
+            "def _render_practical_validation_decision_workspace_fragment", 1
+        )[1]
+
+        self.assertIn('surface="context"', render_body)
+        self.assertIn(
+            "_render_practical_validation_decision_workspace_fragment(",
+            render_body,
+        )
+        self.assertIn('surface="decision"', fragment_body)
+        self.assertNotIn('surface="context"', fragment_body)
+
+    def test_practical_validation_react_and_fallback_define_two_surfaces(
+        self,
+    ) -> None:
+        react_source = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/"
+            "PracticalValidationDecisionWorkspace.tsx"
+        ).read_text()
+        index_source = (
+            PROJECT_ROOT
+            / "app/web/components/practical_validation_decision_workspace/frontend/src/index.tsx"
+        ).read_text()
+        fallback_source = (
+            PROJECT_ROOT / "app/web/backtest_practical_validation/workspace_panel.py"
+        ).read_text()
+
+        self.assertIn('surface: "context" | "decision"', index_source)
+        self.assertIn('surface={args.surface ?? "decision"}', index_source)
+        self.assertIn("data-surface={surface}", react_source)
+        self.assertIn('surface: Literal["context", "decision"]', fallback_source)
+        self.assertIn('if surface == "context"', fallback_source)
 
     def test_practical_validation_replay_is_consumed_before_fragment_projection(
         self,

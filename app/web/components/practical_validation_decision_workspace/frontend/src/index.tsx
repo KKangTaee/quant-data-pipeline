@@ -5,7 +5,10 @@ import { PracticalValidationDecisionWorkspace } from "./PracticalValidationDecis
 import { DecisionWorkspace } from "./types"
 import "./style.css"
 
-type StreamlitArgs = { workspace?: DecisionWorkspace }
+type StreamlitArgs = {
+  workspace?: DecisionWorkspace
+  surface: "context" | "decision"
+}
 
 type AppProps = {
   args: StreamlitArgs
@@ -22,7 +25,12 @@ function App({ args }: AppProps) {
       </div>
     )
   }
-  return <PracticalValidationDecisionWorkspace workspace={args.workspace} />
+  return (
+    <PracticalValidationDecisionWorkspace
+      workspace={args.workspace}
+      surface={args.surface ?? "decision"}
+    />
+  )
 }
 
 const Component = withStreamlitConnection(App)
