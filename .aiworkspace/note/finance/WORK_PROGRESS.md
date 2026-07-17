@@ -6321,3 +6321,14 @@ Detailed historical logs were archived on `2026-04-13`.
   React build, py_compile, diff-check와 desktop/760px Browser QA를 통과했다.
 - protected registry/run history/saved JSONL, `.superpowers/`, generated screenshot은
   commit하지 않는다. 상세 근거는 active task `RUNS.md`를 본다.
+
+## 2026-07-18 - Backtest Analysis Level1 Decision Workspace Closeout
+
+- Level1을 fixed question / purpose catalog / stable context / decision-first result의
+  Single·Mix one-shell로 개편하고 실행, setup 저장, Level2 인계를 분리했다.
+- Browser QA에서 nested rerun 경고, fresh fingerprint 불일치, dark-theme 대비를
+  추가 보정했고 desktop / 760px actual Single·Mix 흐름을 확인했다.
+- focused Level1 53 tests와 React 175-module build / target py_compile을 통과했다.
+  전체 service 11건은 기존 Sentiment / Level2·3 legacy contract debt다.
+- 상세 commit / QA / risk는 active task `RUNS.md`, `RISKS.md`를 본다. protected
+  JSONL, `.superpowers/`, generated screenshot은 closeout commit에서 제외한다.

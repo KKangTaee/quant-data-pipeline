@@ -1,18 +1,18 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-07-16
+Last Verified: 2026-07-18
 
 ## Current State After Master Merge
 
 현재 active phase는 없다.
 
-현재 active task는 `.aiworkspace/note/finance/tasks/active/practical-validation-level2-decision-workspace-v1-20260716/`다.
+현재 active task는 `.aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717/`다.
 
-- 목적: Practical Validation Level2를 `후보와 기준 확인 -> 최신 재검증 -> 결과 해석과 해결 구분 -> 저장 / Final Review 이동`의 4단계 question-first workspace로 재구성한다.
-- 설계 방향: Python이 finding / applicability / root dedup / Gate / action / persistence를 소유하고, React는 Final Review와 같은 visual language로 one-shell presentation과 intent만 담당한다.
-- 현재 상태: 1차 truth contract, 2차 pure Decision Workspace read model, 3차 one-shell React / Python intent integration과 사용자 피드백 보정을 완료했다. 후보/검증 관점 분리, fragment replay, 사용자 설명/5개 상세 category, missing-validator blocker, measured handoff 분류를 반영했고 latest GRS read-only projection, focused 124 tests, React build, py_compile, diff-check, docs sync를 통과했다. desktop / 760px Browser QA는 현재 세션의 Browser JS 제어 도구가 노출되지 않아 closeout gate로 남아 있다.
-- 이번 task에서 하지 않는 일: historical universe / delisting provider, DB schema, strategy runtime 재설계, Final Review route 변경, live approval / broker order / auto rebalance.
+- 목적: Backtest Analysis Level1을 `Single / Mix 선택 -> 설정과 실행 -> 결과 판단 -> 명시적 Level2 인계`의 question-first decision workspace로 재구성한다.
+- 설계 방향: Python이 strategy maturity, configuration fingerprint, fresh / stale, Gate, handler 검증, 저장·인계를 소유하고 React는 고정 context와 decision presentation / intent만 담당한다.
+- 현재 상태: 1차 truth / handoff, 2차 pure read model, 3차 Single one-shell, 4차 Mix one-shell, 5차 runtime QA / docs closeout을 완료했다. actual Single·Mix desktop / 760px Browser QA와 focused 53 tests, React build, target py_compile, diff-check를 확인했다.
+- 이번 task에서 하지 않은 일: development 전략 runtime 완성, historical universe / delisting provider, DB schema / strategy runtime 재설계, Level2 / Level3 route 변경, live approval / broker order / auto rebalance.
 
 Latest completed task는 `.aiworkspace/note/finance/tasks/active/institutional-portfolios-security-detail-chart-layout-v1-20260712/`다.
 
@@ -643,7 +643,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 |---|---|---|---|
 | Data Collection / Data Trust | DB-backed ingestion baseline complete | `Workspace > Ingestion`, MySQL, loaders | UI에서 provider / FRED / external source를 직접 fetch하지 않는다. Overview bounded refresh는 `app/jobs/overview_actions.py` facade만 통과한다 |
 | Overview / Market Context | Production baseline plus recent sentiment / Why It Moved work complete | `Workspace > Overview` | Market context and investigation only; bounded refresh action allowed through facade; no trade signal, approval, order, registry rewrite |
-| Backtest Analysis | Candidate creation plus compact Korean-first stage navigation cleanup complete | `Backtest > Backtest Analysis` | 후보 source 생성 단계; final decision / monitoring governance는 후속 단계 |
+| Backtest Analysis | Level1 decision workspace one-shell complete | `Backtest > Backtest Analysis` | Single / Mix 실행 결과의 fresh / data / execution readiness를 판단하고 명시적으로 후보 source를 만든다. setup 저장, 실행, Level2 handoff는 distinct action이며 final investment decision / monitoring governance는 후속 단계다 |
 | Practical Validation / Final Review | Investability evidence workflow complete through P2 / P3 and first hardening cycle | `Backtest > Practical Validation`, `Backtest > Final Review` | PASS / BLOCKER / selected-route gate는 validation evidence가 소유; sentiment overlay is context-only |
 | Operations / Portfolio Monitoring | Operations Console now opens with portfolio-first status summary, evidence health strip, and priority/evidence ordered review queue, while Portfolio Monitoring remains daily-monitoring-first | `Operations > Operations Console`, `Operations > Portfolio Monitoring`, `System / Data Health` | Read-only monitoring and explicit scenario update; no live approval, broker order, account sync, auto rebalance |
 | UI / Engine Boundary | Service/runtime boundary and lint baseline complete | `app/services`, `app/runtime`, `app/web` | UI handles render/session state; runtime / service owns engine dispatch, JSONL helpers, read models |
@@ -652,6 +652,7 @@ Recent Backtest strategy contract work retained from `backtest-dev`:
 
 | Workstream | Status | Durable Notes |
 |---|---|---|
+| Backtest Analysis Level1 Decision Workspace V1 | Complete | Fixed Level1 question, purpose-grouped Single catalog, new / saved Mix inner mode, Python-owned maturity / fingerprint / Gate / handler validation, two-surface React/fallback, decision-first result, stale-result preservation, distinct Mix save / Level2 handoff, 760px and dark-theme readable layout are complete. Strategy runtime, provider, DB schema, Level2 / Level3 route semantics remain unchanged. |
 | Overview Legacy Dashboard Removal V17-V24 | Complete | `app/web/overview/legacy_dashboard.py` was physically removed after remaining helper ownership moved into tab-local helper modules. `app/web/overview_dashboard.py` now keeps explicit compatibility exports only, while active page / tab / helper ownership lives under `app/web/overview/`. |
 | Overview Tab Helper Extraction V11-V16 | Complete | Market Context, Events, Futures Macro, Market Movers, and Sentiment primary tab entry modules now call tab-local helper bridges instead of importing `legacy_dashboard.py` directly. |
 | Overview Legacy Cleanup V6-V10 | Complete | Overview navigation moved to `app/web/overview/navigation.py`, IA read-model ownership moved to `app/services/overview/ia.py`, confirmed unused standalone wrappers / Candidate Ops helpers were removed, and guard tests prevent reintroduction. |

@@ -1284,7 +1284,7 @@ Expected: tests, build, and compilation pass before commit.
 - Consumes: completed Task 1~8.
 - Produces: fresh test / build / compile / Browser evidence and synchronized durable docs.
 
-- [ ] **Step 1: Run fresh test suites**
+- [x] **Step 1: Run fresh test suites**
 
 ```bash
 .venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
@@ -1292,9 +1292,10 @@ Expected: tests, build, and compilation pass before commit.
 .venv/bin/python -m pytest tests/test_service_contracts.py -q
 ```
 
-Expected: zero failures. Record exact passed / skipped counts in `RUNS.md`.
+Expected: Level1 신규 failure 0. Repository baseline에 이미 존재하는 실패는 시작 전
+목록과 정확히 대조하고 exact count를 `RUNS.md`에 기록한다.
 
-- [ ] **Step 2: Run fresh React build**
+- [x] **Step 2: Run fresh React build**
 
 ```bash
 cd app/web/components/backtest_analysis_decision_workspace/frontend
@@ -1303,7 +1304,7 @@ npm run build
 
 Expected: Vite exits 0. Record transformed module count and output files.
 
-- [ ] **Step 3: Run target compilation**
+- [x] **Step 3: Run target compilation**
 
 ```bash
 cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
@@ -1324,7 +1325,7 @@ cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
 
 Expected: exit 0 with no output.
 
-- [ ] **Step 4: Run desktop Browser QA**
+- [x] **Step 4: Run desktop Browser QA**
 
 Use `http://localhost:8505/backtest`. Restart only if the current process does not serve the new build. Verify:
 
@@ -1343,13 +1344,13 @@ Use `http://localhost:8505/backtest`. Restart only if the current process does n
 
 Capture `backtest-analysis-level1-decision-workspace-desktop-qa.png` with result and action visible.
 
-- [ ] **Step 5: Run 760px Browser QA**
+- [x] **Step 5: Run 760px Browser QA**
 
 At 760px verify outer page and both iframes have zero horizontal overflow, all grids are one column, long names wrap, CTAs use full width, ResizeObserver updates height, and context remains visible during result fragment refresh.
 
 Capture `backtest-analysis-level1-decision-workspace-760-qa.png`.
 
-- [ ] **Step 6: Run pre-doc diff and protection audit**
+- [x] **Step 6: Run pre-doc diff and protection audit**
 
 ```bash
 git diff --check
@@ -1359,14 +1360,14 @@ git diff --cached --name-only
 
 Expected: diff-check exits 0; registry, run history, saved JSONL, screenshots, build output, `.superpowers/` remain unstaged.
 
-- [ ] **Step 7: Synchronize durable docs with `finance-doc-sync`**
+- [x] **Step 7: Synchronize durable docs with `finance-doc-sync`**
 
 - `BACKTEST_UI_FLOW.md`: Level1 question and Single / Mix four-step flow.
 - `PROJECT_MAP.md`, `SCRIPT_STRUCTURE_MAP.md`: pure service, adapter, two surfaces, fragment ownership.
 - task docs: completed 1~5 roadmap, commits, exact verification and Browser evidence.
 - root logs: 3~5 line milestone / decision / handoff only.
 
-- [ ] **Step 8: Repeat completion verification after docs edits**
+- [x] **Step 8: Repeat completion verification after docs edits**
 
 Repeat Steps 1~3 and run:
 
@@ -1377,7 +1378,7 @@ git diff --name-only
 
 Do not reuse pre-doc output as final evidence.
 
-- [ ] **Step 9: Stage only closeout docs and verify exclusions**
+- [x] **Step 9: Stage only closeout docs and verify exclusions**
 
 ```bash
 git add \
@@ -1397,7 +1398,7 @@ fi
 
 Expected: staged diff-check passes and protected-path search returns no match.
 
-- [ ] **Step 10: Commit closeout**
+- [x] **Step 10: Commit closeout**
 
 ```bash
 git commit -m "Backtest Analysis Level1 QA와 문서 동기화"

@@ -769,7 +769,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
                 body.index("_render_strict_factor_prerun_preview("),
                 body.index("with st.form("),
             )
-            advanced_body = body.split('with st.expander("Advanced Inputs"', 1)[1].split(
+            advanced_body = body.split('with st.expander("전략·보유 규칙"', 1)[1].split(
                 "submitted = st.form_submit_button", 1
             )[0]
             self.assertNotIn("_render_strict_universe_contract_selectbox(", advanced_body)
@@ -1024,7 +1024,7 @@ class BacktestCandidateAnalysisHardeningTests(unittest.TestCase):
             self.assertNotIn("Strategy Detail", source)
             self.assertNotIn("backtest_strategy_detail", source)
             self.assertNotIn("runtime wrapper", source)
-            self.assertIn('with st.expander("Advanced Inputs", expanded=False)', source)
+            self.assertIn('with st.expander("전략·보유 규칙", expanded=False)', source)
 
     def test_portfolio_mix_builder_remains_streamlit_owned_with_strict_preset_copy(self) -> None:
         source = Path("app/web/backtest_compare/page.py").read_text(encoding="utf-8")
@@ -15193,7 +15193,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
             )
         )
 
-    def test_price_refresh_hides_stale_backtest_result_until_rerun(self) -> None:
+    def test_price_refresh_preserves_stale_result_and_blocks_handoff_until_rerun(self) -> None:
         result_display_source = Path("app/web/backtest_result_display.py").read_text(encoding="utf-8")
         runner_source = Path("app/web/backtest_single_runner.py").read_text(encoding="utf-8")
         strategy_source = Path("app/web/backtest_single_strategy.py").read_text(encoding="utf-8")
@@ -15209,10 +15209,11 @@ class BacktestRuntimeContractTests(unittest.TestCase):
         self.assertIn("_render_backtest_rerun_required_notice", last_run_body)
         self.assertIn("backtest_last_result_refresh_result", result_display_source)
         self.assertIn("backtest_last_result_requires_rerun = False", runner_source)
-        self.assertIn("backtest_last_result_requires_rerun = False", strategy_source)
+        self.assertIn("backtest_last_result_requires_rerun = True", strategy_source)
+        self.assertIn("기존 결과를 참고용으로 유지합니다", strategy_source)
         self.assertLess(
             last_run_body.index("_render_backtest_rerun_required_notice"),
-            last_run_body.index("_render_backtest_result_header(bundle, summary_df)"),
+            last_run_body.index("_render_last_run_details(bundle)"),
         )
 
     def test_data_trust_summary_renderer_keeps_warnings_inside_compact_panel(self) -> None:

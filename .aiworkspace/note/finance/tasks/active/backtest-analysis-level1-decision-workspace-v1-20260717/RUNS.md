@@ -95,3 +95,53 @@
 - save Mix와 Level2 source handoff를 별도 Python adapter로 분리하고 mocked persistence로 상호 비호출 확인
 - 역할 / 비중 / source context fingerprint를 weighted result와 history context에 기록
 - target py_compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 9 Runtime QA Findings RED -> GREEN
+
+- fresh pre-doc focused: decision workspace `20 passed`, boundary `31 passed`
+- fresh pre-doc service: `821 passed, 11 failed, 35 subtests passed`
+- 11 failures는 implementation 전 baseline과 동일한 Sentiment React 1건,
+  Practical Validation / Final Review legacy source contract 10건이다.
+- stale Level1 expectation 3건은 새 current contract로 정렬 후 focused
+  `3 passed, 829 deselected`를 확인했다.
+- Browser RED 1: GTAA component 선택 뒤 callback nested rerun warning 노출
+- GREEN 1: callback rerun suppression test 추가 후 focused + boundary `52 passed`
+- Browser RED 2: Equal Weight 새 실행 직후 `이전 설정 결과` 판정
+- GREEN 2: runner / read model selection fingerprint shape 통일 후 fresh result,
+  GTAA 변경 뒤 stale result 보존을 실제 실행으로 확인
+- Browser RED 3: Streamlit dark theme에서 밝은 Level1 card 제목 / KPI 대비 소실
+- GREEN 3: light color-scheme / scoped text token 적용, focused + boundary
+  `53 passed`, React Vite 5.4.21 `175 modules transformed`
+- target 12-module py_compile: 통과
+
+## 2026-07-18 Task 9 Browser QA
+
+- desktop 1440x1000: fixed Level1 title, Single / Mix entry, purpose catalog,
+  Risk-On development/no handoff, contextual disclosures, context-preserving run,
+  decision -> KPI -> reason -> detail, fresh -> stale preservation 확인
+- Equal Weight actual run: CAGR 0.116, MDD -0.173, Sharpe 1.002, volatility 0.117;
+  실행 직후 fresh, GTAA 선택 뒤 `이전 설정 결과`
+- Mix actual run: GTAA + Equal Weight, role Core/Core, 50/50, total 100%,
+  weighted CAGR 9.23%, Mix setup save action과 Gate-blocked handoff 분리 확인
+- 760x1000: outer 760/760, context iframe 717/717, decision iframe 717/717,
+  internal overflow 0, grids single-column, button text normal wrap, CTA 675/675,
+  ResizeObserver height desktop 1047/586 -> 760px 1442/820 확인
+- screenshots (generated, unstaged):
+  `backtest-analysis-level1-decision-workspace-desktop-qa.png`,
+  `backtest-analysis-level1-decision-workspace-760-qa.png`
+
+## 2026-07-18 Completion Verification
+
+- decision workspace focused: `21 passed, 3 warnings`
+- refactor boundary / visual contract: `32 passed, 3 warnings`
+- full service contracts: `821 passed, 11 failed, 3 warnings, 35 subtests passed`
+- service의 11 failures는 execution baseline과 동일한 Sentiment React 1건,
+  Practical Validation / Final Review legacy source contract 10건이며 Level1 신규
+  failure는 0건이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공
+  - `build/index.html` 0.42 kB
+  - `build/assets/index-DWUGOc0n.css` 5.74 kB
+  - `build/assets/index-DIdElWXi.js` 328.41 kB
+- target 12-module `py_compile`: exit 0, output 없음
+- Browser QA screenshots와 runtime JSONL은 generated / protected artifact로
+  stage하지 않는다.

@@ -9632,3 +9632,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   것이 원인이며 validation read model이나 Gate 변경은 필요하지 않았다.
 - Follow-up: fixed hero, 후보/판정 summary, 기본 닫힘 후보 목록, desktop 5열과
   760px 2열/full-span을 React와 fallback에 적용하고 Browser QA로 높이/overflow를 확인했다.
+
+### 2026-07-18 - Level1은 실행 화면이 아니라 명시적 후보 판단 workspace다
+
+- User request: Level2를 마친 뒤 Level1 UI와 기능을 Level2/3 수준으로 전반 개편하고,
+  합의한 A/B/S1/M1/R1/G1/C1/P1/T2 흐름을 이 세션에서 순차 구현해 달라고 요청함.
+- Interpreted goal: Single 전략과 weighted Mix를 같은 질문 아래에서 구성하되 실행,
+  stale 근거, setup 저장, Level2 후보 인계를 섞지 않고 사용자가 다음 행동을 이해해야 함.
+- Analysis result: 기존 기능 부족보다 Streamlit mode/form/result/handoff의 분산 ownership,
+  설정 지문 불일치와 callback rerun, dark-theme token 충돌이 실제 사용 흐름을 흐렸다.
+- Follow-up: Python-owned truth/read model/handler Gate와 two-surface React/fallback을 구현하고,
+  actual Single·Mix desktop/760 QA에서 fresh/stale, role/weight, explicit action을 확인했다.

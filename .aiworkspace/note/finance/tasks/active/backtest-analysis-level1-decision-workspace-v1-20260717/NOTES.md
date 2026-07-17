@@ -60,3 +60,20 @@ generated artifact이므로 commit하지 않는다.
   shared runner에서 normalized draft와 fingerprint를 기록한다.
 - 새 실행 실패 시 이전 성공 bundle은 유지되고 새 draft fingerprint와 달라져 stale이
   되므로 설계의 보존·차단 contract를 만족한다.
+
+## 2026-07-18 Task 9 Browser Findings
+
+- React component `on_change` callback은 이미 Streamlit rerun lifecycle 안에서
+  실행된다. callback에서 다시 `st.rerun(scope="app")`을 호출하면 no-op 경고가
+  사용자 화면에 노출되므로 callback consume path는 `rerun_scope="none"`을 사용한다.
+- Single draft fingerprint는 current read model과 같은 selection shape
+  (`strategy_choice`만)로 계산해야 한다. 실행 path만 `strategy_name`을 selection에
+  중복 포함하면 방금 실행한 result도 즉시 stale이 된다.
+- Streamlit dark theme는 custom component iframe body / heading에 밝은 text color를
+  주입한다. Level2/3와 같은 밝은 card language를 쓰는 Level1 component는
+  `color-scheme: light`와 workspace-scoped heading / KPI color를 명시해야 한다.
+- 실제 Equal Weight 실행은 context mount를 유지한 채 fresh result를 만들었고,
+  GTAA 선택 뒤 같은 result가 `이전 설정 결과`로 보존되는 것을 확인했다.
+- 실제 GTAA + Equal Weight Mix는 role `Core / Core`, weight `50 / 50`, total 100%,
+  weighted result와 `Mix 저장` action을 표시했다. Gate가 막힌 상태에서는 invalid
+  Level2 CTA를 만들지 않는다.
