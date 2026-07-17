@@ -19,3 +19,17 @@
 - 108개 Markdown code fence 균형 확인
 - placeholder / undefined fixture / 보호 파일 검사 명령 self-review 완료
 - `git diff --check`와 staged protected-path audit은 계획 commit 직전에 fresh 실행
+
+## 2026-07-18 Execution Baseline
+
+- `.venv`에는 pytest가 없어 `uv run --with pytest`로 repository 변경 없이 runner 주입
+- existing boundary + service baseline: 845 passed, 11 failed, 35 subtests passed
+- 기존 실패 범위: Sentiment React contract 1건, 이전 Practical Validation / Final Review
+  source contract 10건; Level1 소유 파일 변경 전 baseline debt로 기록
+
+## 2026-07-18 Task 1 RED -> GREEN
+
+- RED: 새 `backtest_analysis_decision_workspace` service import 부재로 collection 실패
+- GREEN: `3 passed`
+- compile: strategy catalog / decision workspace service 통과
+- `git diff --check`: 통과

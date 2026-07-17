@@ -74,7 +74,7 @@
 - Consumes: `SINGLE_STRATEGY_OPTIONS`, `STRATEGY_FAMILY_VARIANTS`.
 - Produces: `build_level1_strategy_catalog()`, `level1_strategy_maturity()`, `build_level1_configuration_fingerprint()`.
 
-- [ ] **Step 1: Write failing catalog and fingerprint tests**
+- [x] **Step 1: Write failing catalog and fingerprint tests**
 
 ```python
 from app.services.backtest_analysis_decision_workspace import (
@@ -120,13 +120,13 @@ def test_configuration_fingerprint_is_order_independent_and_sensitive() -> None:
     assert left != changed
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py -q`
 
 Expected: import error because the new service and functions do not exist.
 
-- [ ] **Step 3: Add purpose and maturity metadata**
+- [x] **Step 3: Add purpose and maturity metadata**
 
 Add to `app/services/backtest_strategy_catalog.py` and export through `__all__`:
 
@@ -145,7 +145,7 @@ LEVEL1_STRATEGY_MATURITY = {
 }
 ```
 
-- [ ] **Step 4: Implement catalog and fingerprint**
+- [x] **Step 4: Implement catalog and fingerprint**
 
 Create the service with these exact foundations:
 
@@ -203,13 +203,13 @@ def build_level1_strategy_catalog() -> list[dict[str, Any]]:
     return groups
 ```
 
-- [ ] **Step 5: Run GREEN**
+- [x] **Step 5: Run GREEN**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_analysis_decision_workspace.py -q`
 
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/services/backtest_strategy_catalog.py app/services/backtest_analysis_decision_workspace.py tests/test_backtest_analysis_decision_workspace.py
