@@ -11,3 +11,9 @@
 ## UI Contract
 
 White pathway cards, no left color accent, no colored group background, and essential 21/63-day values visible without hover.
+
+## Implemented Result
+
+- `economic_cycle_v2` separates observed economic state, measured rise/fall pathways, actual price, and unmeasured scope.
+- Desktop hover/focus and mobile details expose 5-day change, source date, and freshness; 21/63-day changes remain visible.
+- Rates, equities, and commodities expose `PATHWAYS_NOT_CONNECTED` instead of reusing the former favorable/burden conclusion.

@@ -9,7 +9,16 @@ Last Verified: 2026-07-17
 
 현재 active task는 없다.
 
-Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/`다.
+Latest completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/`다.
+
+- 목적: 미국 경제상태를 자산가격의 기준 방향으로 두던 단정적 `우호/부담`, `배경과 가격 일치/불일치`를 측정 가능한 복수 시장경로 설명으로 교체한다.
+- 완료: 전체 5차 중 1차 공통 5/21/63거래일 변화·5년 중요도·최신성 판정기와 2차 금·달러 파일럿·`economic_cycle_v2`·흰색 경로 카드·actual/desktop/420px QA를 닫았다.
+- actual 상태: 2026-07-17 기준 금은 `SUFFICIENT`이며 실질금리 경로가 하락 요인, 실제 가격은 21/63거래일 하락이다. 달러는 해외 상대금리 부재로 `PARTIAL`이며 실질금리 경로가 상승 요인, 실제 가격은 materiality 기준 중립이다.
+- 품질 경계: 함께 관측된 경로를 원인·확률·가격예측으로 표현하지 않는다. 공식기관/ETF 수급과 뉴스·지정학은 현재 범위 밖이며 UI는 DB-only다.
+- 후속: 3차 채권·금리, 4차 주식, 5차 원자재는 각각 자산 내부 데이터 경로를 별도 승인한 뒤 구현한다.
+- 상세 설계·계획: `docs/superpowers/specs/2026-07-17-economic-cycle-multichannel-asset-interpretation-design.md`, `docs/superpowers/plans/2026-07-17-economic-cycle-multichannel-asset-interpretation.md`.
+
+Previous completed task는 `.aiworkspace/note/finance/tasks/active/overview-economic-cycle-asset-signal-copy-v1-20260717/`다.
 
 - 목적: 경제 전체의 `회복` 국면을 모든 자산의 현재 상태처럼 반복하고 `우호 / 가격 확인`을 사용자가 다시 해석해야 하던 문제를 해소한다.
 - 완료: 1차 자산별 사용자 문구·동적 설명, 2차 금/달러 3항목 비교·5/21/63거래일 표기, 3차 actual/desktop/420px Browser QA·docs를 닫았다.

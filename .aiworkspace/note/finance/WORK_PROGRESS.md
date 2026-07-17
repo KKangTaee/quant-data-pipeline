@@ -6361,3 +6361,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - `경제 사이클 | S&P 500 | 미국 개별주식` same-level selector와 별도 React workbench를 연결하고 desktop/420px Browser QA를 완료했다.
 - 후속 actual bootstrap으로 17-series `1,232,856`행과 121개월 replay를 적재했다. h0/h1/h2는 각각 coverage/calibration/origin/baseline gate 미통과로 `LIMITED`이며 숫자를 표시하지 않는다.
 - 전체 roadmap `5/5` 완료. 향후 숫자 publication은 더 많은 forecast-safe 증거를 확보해 horizon별 gate를 통과할 때만 가능하다.
+
+## 2026-07-17 - 경제사이클 금·달러 다중 경로 파일럿 완료
+
+- 전체 5차 중 1차 공통 시계열 판정기와 2차 금·달러 파일럿을 완료하고, 단정적 우호/부담·일치/불일치 계약을 `economic_cycle_v2` 다중 경로로 교체했다.
+- FRED 5개 경로 시계열 6,698행을 저장했다. Actual은 금 `SUFFICIENT`, 달러 `PARTIAL`이며 가격 원인·확률·매매 결론은 만들지 않는다.
+- Focused 48 tests, compile, React build, actual smoke, desktop/420px Browser QA를 통과했다. 상세는 `tasks/active/overview-economic-cycle-multichannel-asset-interpretation-v1-20260717/`를 본다.
+- 3차 채권·금리, 4차 주식, 5차 원자재는 자체 데이터 경로를 별도 승인한 뒤 이어간다.

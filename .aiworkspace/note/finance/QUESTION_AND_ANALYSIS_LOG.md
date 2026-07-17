@@ -9693,3 +9693,10 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal: 당시 공개된 vintage만 사용하는 미국 4국면 확률 기능을 만들고, 검증되지 않은 horizon은 숫자를 숨기며 기존 S&P 500/개별주식 흐름을 보존해야 함.
 - Analysis result: 17-series revision ledger, strict as-of feature/label/model, horizon별 rolling-origin gate, compact artifact/snapshot, same-level React UI를 1차~5차로 완료했다. Actual bootstrap은 `1,232,856` raw intervals와 121개월 replay를 만들었고, 세 horizon은 validation gate 미통과로 `LIMITED`다.
 - Follow-up: 필수 구현과 actual bootstrap은 완료했다. 숫자 공개를 개선하려면 더 긴 PIT source와 forecast-safe calibration을 별도 연구하며 현재 threshold를 낮추지 않는다. ADS/WEI나 다국가는 별도 승인 범위다.
+
+### 2026-07-17 - 경제상태를 가격의 정답으로 두지 않고 측정 경로를 분리한다
+
+- User request: 금·달러를 포함한 자산 설명이 `미국 경제상태상 올라야 하지만 실제 가격은 반대`처럼 단정적으로 읽히지 않도록 측정 가능한 데이터만으로 입체화해 달라고 요청함.
+- Interpreted goal: 경제 factor는 관측 상태로 유지하고, 금리·실질금리·달러·위험회피·실제 가격을 독립 경로로 표시하며 미측정 요인과 데이터 한계를 공개해야 함.
+- Analysis result: 5/21/63거래일 변화, 5년 materiality, 최신성 기반 공통 evaluator와 금·달러 파일럿을 구현했다. Actual은 금 `SUFFICIENT`, 달러는 해외 상대금리 부재로 `PARTIAL`이다.
+- Follow-up: 전체 5차 중 2차까지 완료했다. 채권·금리, 주식, 원자재는 기존 방향 결론을 제거하고 `시장 경로 미연결`로 두며 별도 명세 후 3~5차로 확장한다.

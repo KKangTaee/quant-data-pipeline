@@ -45,7 +45,7 @@ external source
 | ETF provider source map | `nyse_etf` / `nyse_asset_profile`와 issuer 공식 URL 검증을 이용해 ETF별 수집 endpoint / parser mapping을 저장 |
 | ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
 | ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
-| FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
+| FRED official API / CSV download | Practical Validation market-context와 Overview 경제사이클 자산 경로 source. `VIXCLS`, `T10Y3M`, `BAA10Y`, `DGS2`, `DGS10`, `DFII10`을 기존 observation table에 저장한다 |
 | FRED/ALFRED `series/vintagedates` + observations API `output_type=1` | Overview 경제 사이클 17-series long-form revision interval source. `FRED_API_KEY`가 필수이며 revised CSV fallback은 금지한다 |
 | Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
 | Robert Shiller `ie_data.xls` | Market Context 월별 SPX 가격·보간 EPS·CAPE source. 공식 Shiller 페이지에서 현재 XLS 링크를 발견하며 EPS 미발표 최신 월도 price-only row로 `sp500_monthly_valuation`에 저장 |
@@ -76,7 +76,7 @@ external source
 | `finance/data/futures_market.py` | Overview futures OHLCV 수집 / 저장 경계. yfinance futures provider symbol preset, 1m / daily OHLCV UPSERT, 1d / 1m empty / sparse symbol fallback, 수집 run diagnostics를 `futures_instrument`, `futures_ohlcv`, `futures_market_monitor_run`에 저장한다. Core preset은 Economic Cycle 달러 가격 확인용 `DX-Y.NYB`를 포함한다. `app/services/futures_market_monitoring.py`는 stored 1m candle chart / diagnostic context를 최신 저장 candle 기준으로 읽고 stale 여부를 별도 계산한다. `Futures Macro`는 stored daily futures rows를 읽어 current scoring과 lazy historical validation을 만들며, validation은 read-only이고 새 materialized table을 만들지 않는다 |
 | `finance/loaders/economic_cycle_assets.py` | Economic Cycle 금·달러 가격 확인용 DB-only reader. `futures_ohlcv`에서 `GC=F` / `DX-Y.NYB` daily row를 종목당 최근 80개로 제한해 읽으며 provider 호출이나 저장을 수행하지 않는다 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
-| `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
+| `finance/data/macro.py` | FRED macro context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다. Economic Cycle pathway는 `DGS2`, `DGS10`, `DFII10`, `VIXCLS`, `BAA10Y`를 포함한다 |
 | `finance/data/economic_cycle_vintages.py` | 경제 사이클 catalog를 FRED/ALFRED vintage mode로 수집·정규화하고 `(series_id, observation_date, realtime_start, source)` key로 `macro_series_vintage_observation`에 UPSERT한다. API key 부재와 missing value를 명시적으로 보존한다 |
 | `finance/data/economic_cycle_results.py` | validation artifact와 current/historical replay compact snapshot의 serialize/UPSERT 경계. 계산 가능한 LIMITED 확률과 publication reason을 함께 보존한다 |
 | `finance/economic_cycle_features.py` / `economic_cycle_labels.py` / `economic_cycle_model.py` / `economic_cycle_validation.py` / `economic_cycle_pipeline.py` | strict origin input을 월별 factor/real-economy label로 변환하고 h0/h1/h2 direct model, rolling-origin calibration/publication gate, artifact/current/replay materialization을 수행한다. Pipeline의 explicit provisional scoring만 LIMITED artifact를 계산하며 artifact validation status 자체는 바꾸지 않는다 |
@@ -114,6 +114,8 @@ external source
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
 | `finance/loaders/economic_cycle.py` | `realtime_start <= as_of_date <= realtime_end`를 적용해 origin별 eligible revision 하나를 선택하고 coverage, approved artifact, compact snapshot/history를 읽는다. provider 호출과 UI import가 없다 |
 | `finance/loaders/sentiment.py` | Overview sentiment read path. `macro_series_observation`에서 CNN / AAII latest snapshot과 history를 읽는다 |
+| `finance/loaders/economic_cycle_assets.py` | Overview Economic Cycle DB-only market-path reader. 기준일 뒤 observation을 제외하고 5년+ FRED history와 최대 1,500개 `GC=F` / `DX-Y.NYB` 일봉을 읽는다 |
+| `finance/economic_cycle_asset_pathways.py` | 5/21/63거래일 변화, 5년 동일 지평 절대변화 중앙값, 5 business-day 최신성, 금·달러 경로와 coverage를 계산하는 pure layer |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement filing metadata / values / labels / strict snapshot / timing audit 조회 |
@@ -141,7 +143,7 @@ external source
   `etf_holdings_snapshot`은 official holdings download/API row를 저장하고,
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
   `macro_series_observation`은 FRED market-context observation과 CNN / AAII sentiment observation을 long-form으로 저장하고,
-  `finance/loaders/macro.py`가 validation 기준일 근처 FRED snapshot과 staleness를 읽으며 `finance/loaders/sentiment.py`가 Overview Sentiment latest/history를 읽는다.
+  `finance/loaders/macro.py`가 validation 기준일 근처 FRED snapshot과 staleness를 읽으며 `finance/loaders/sentiment.py`가 Overview Sentiment latest/history를 읽는다. Economic Cycle asset path는 `finance/loaders/economic_cycle_assets.py -> finance/economic_cycle_asset_pathways.py -> finance/economic_cycle_interpretation.py -> app/services/overview/economic_cycle.py -> React` 순서로만 전달된다.
   `regime-split-validation-v1`부터 Practical Validation은 같은 loader의 historical observation read path를 사용해
   VIX / yield curve / credit spread 월별 regime bucket evidence를 read-only로 계산한다.
   `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,

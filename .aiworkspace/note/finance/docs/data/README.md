@@ -62,7 +62,7 @@ Last Verified: 2026-07-17
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |
 | `etf_holdings_snapshot` | ETF holdings row snapshot. QQQ SEC rows는 CUSIP/ISIN/LEI/CIK, filing/accession, anchor quality를 함께 보존한다. |
 | `etf_exposure_snapshot` | holdings 또는 provider aggregate 기반 exposure summary |
-| `macro_series_observation` | FRED VIX / yield curve / credit spread observation plus Overview CNN Fear & Greed / AAII sentiment context series |
+| `macro_series_observation` | FRED VIX / yield curve / credit spread plus Economic Cycle asset-path series (`DGS2`, `DGS10`, `DFII10`, `VIXCLS`, `BAA10Y`) and Overview CNN Fear & Greed / AAII sentiment context. 경제사이클 자산 경로는 기준일 이전 5년+ 이력만 DB loader로 읽으며 UI가 직접 수집하지 않는다 |
 | `macro_series_vintage_observation` | 미국 경제 사이클 17개 지표의 FRED/ALFRED real-time revision ledger. 발표 당시 값을 보존하며 revised CSV로 대체하지 않는다 |
 | `economic_cycle_model_artifact` | 학습 cutoff, horizon별 calibration/validation/publication 판정을 포함한 경제 사이클 model artifact |
 | `economic_cycle_snapshot` | 현재 및 historical replay의 compact 국면 확률·근거 snapshot. Overview가 읽는 source-of-truth |
