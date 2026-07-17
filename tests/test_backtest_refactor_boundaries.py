@@ -521,6 +521,51 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, react_source)
 
+    def test_backtest_analysis_react_is_intent_only(self) -> None:
+        source = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/"
+            "BacktestAnalysisDecisionWorkspace.tsx"
+        ).read_text()
+
+        for action in (
+            "select_workspace_kind",
+            "select_strategy",
+            "save_and_move",
+        ):
+            self.assertIn(action, source)
+        for forbidden in (
+            "fetch(",
+            "promotion_decision ===",
+            "append_backtest_run_history(",
+            "save_saved_portfolio(",
+            "_queue_candidate_review_draft(",
+        ):
+            self.assertNotIn(forbidden, source)
+
+    def test_backtest_analysis_react_has_two_surfaces_and_resize_observer(
+        self,
+    ) -> None:
+        component = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/"
+            "BacktestAnalysisDecisionWorkspace.tsx"
+        ).read_text()
+        index = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/index.tsx"
+        ).read_text()
+        style = (
+            PROJECT_ROOT
+            / "app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css"
+        ).read_text()
+
+        self.assertIn('surface: "context" | "decision"', index)
+        self.assertIn("data-surface={surface}", component)
+        self.assertIn("ResizeObserver", index)
+        self.assertIn("Streamlit.setFrameHeight", index)
+        self.assertIn("@media (max-width: 760px)", style)
+
 
 if __name__ == "__main__":
     unittest.main()

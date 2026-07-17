@@ -34,3 +34,9 @@ data readiness, contract freshness만 소유하며 실제 투자 판단은 Level
 
 Risk-On Momentum 5D runtime 완성, 신규 provider, DB / strategy runtime 재설계는
 별도 승인 없이는 이번 task에 포함하지 않는다.
+
+### Frontend Dependency Audit
+
+신규 component의 기존 Vite / React pattern으로 `npm install`한 결과 audit 경고는
+moderate 1건, high 1건이다. production build에는 성공했지만 breaking dependency
+upgrade는 이번 UI workflow 범위를 벗어나므로 closeout의 남은 위험으로 기록한다.

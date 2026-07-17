@@ -544,7 +544,7 @@ git commit -m "Backtest Analysis 판단 워크스페이스 모델 도입"
 - Consumes: Task 3 JSON-compatible workspace.
 - Produces: `is_backtest_analysis_decision_workspace_available()`, `render_backtest_analysis_decision_workspace(...)`; intents `select_workspace_kind`, `select_strategy`, `save_and_move`.
 
-- [ ] **Step 1: Write failing intent-only and responsive tests**
+- [x] **Step 1: Write failing intent-only and responsive tests**
 
 ```python
 def test_backtest_analysis_react_is_intent_only(self) -> None:
@@ -566,13 +566,13 @@ def test_backtest_analysis_react_has_two_surfaces_and_resize_observer(self) -> N
     self.assertIn("@media (max-width: 760px)", style)
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.venv/bin/python -m pytest tests/test_backtest_refactor_boundaries.py -q -k "backtest_analysis_react"`
 
 Expected: failures because the component files do not exist.
 
-- [ ] **Step 3: Create the Python wrapper**
+- [x] **Step 3: Create the Python wrapper**
 
 ```python
 from __future__ import annotations
@@ -603,7 +603,7 @@ def render_backtest_analysis_decision_workspace(
 
 Export both functions from `__init__.py`.
 
-- [ ] **Step 4: Create TypeScript types and intent-only presentation**
+- [x] **Step 4: Create TypeScript types and intent-only presentation**
 
 `types.ts` defines the Task 3 schema, nullable identities, Python-owned `actions`, and:
 
@@ -626,7 +626,7 @@ function emitIntent(action: WorkspaceIntent["action"], payload: Record<string, u
 
 The context surface renders the fixed question, two workspace-kind cards, current-work summary, purpose groups, selected strategy, and Step 2 summary. The decision surface renders Step 3 headline / reasons / metrics, optional error, and Step 4 only when `actions.save_and_move?.enabled === true`.
 
-- [ ] **Step 5: Add continuous height sync**
+- [x] **Step 5: Add continuous height sync**
 
 `src/index.tsx` contains:
 
@@ -646,7 +646,7 @@ function App({ args }: AppProps) {
 }
 ```
 
-- [ ] **Step 6: Add visual tokens and 760px CSS**
+- [x] **Step 6: Add visual tokens and 760px CSS**
 
 Use `#152033` ink, blue-gray lines, 20px hero radius, 17px step radius, 14px compact controls, and soft shadow. Include:
 
@@ -663,7 +663,7 @@ Use `#152033` ink, blue-gray lines, 20px hero radius, 17px step radius, 14px com
 }
 ```
 
-- [ ] **Step 7: Install, build, and run GREEN**
+- [x] **Step 7: Install, build, and run GREEN**
 
 ```bash
 cd app/web/components/backtest_analysis_decision_workspace/frontend
@@ -675,7 +675,7 @@ cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
 
 Expected: Vite exits 0 and both new boundary tests pass.
 
-- [ ] **Step 8: Commit without `frontend/build`**
+- [x] **Step 8: Commit without `frontend/build`**
 
 ```bash
 git add \

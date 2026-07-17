@@ -48,3 +48,11 @@
 - RED 2: date가 포함된 configuration / meta / saved Mix JSON 직렬화 실패
 - GREEN 2: JSON-ready projection 보강 후 `9 passed`
 - target compile / `git diff --check`: 통과
+
+## 2026-07-18 Task 4 RED -> GREEN
+
+- RED: Level1 React source 부재로 boundary test 2건 실패
+- React production build: Vite 5.4.21, 175 modules transformed, 성공
+- GREEN boundary: `2 passed, 24 deselected`
+- ResizeObserver / two-surface / intent-only / 760px contract 확인
+- build / node_modules는 `.gitignore` 적용, stage 제외
