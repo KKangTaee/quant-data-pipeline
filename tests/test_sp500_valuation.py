@@ -1218,6 +1218,37 @@ class Sp500ValuationDataTests(unittest.TestCase):
             any(step["label"] == "Federal Reserve SEP history" for step in result["details"]["steps"])
         )
 
+    def test_sp500_index_earnings_upload_job_reports_economic_cycle_readiness(self) -> None:
+        from app.jobs.ingestion_jobs import run_import_sp500_index_earnings_xlsx
+
+        with patch(
+            "app.jobs.ingestion_jobs.import_and_store_sp500_index_earnings",
+            return_value={
+                "rows_written": 16,
+                "actual_quarter_count": 8,
+                "latest_actual_period_end": "2026-03-31",
+                "remaining_quarters": 0,
+                "release_date": "2026-05-15",
+                "source_ref": "https://www.spglobal.com/spdji/en/documents/additional-material/sp-500-eps-est.xlsx",
+            },
+        ) as importer:
+            result = run_import_sp500_index_earnings_xlsx(
+                workbook_content=b"xlsx",
+                source_release_date="2026-05-15",
+                source_name="sp-500-eps-est.xlsx",
+            )
+
+        importer.assert_called_once_with(
+            b"xlsx",
+            source_release_date="2026-05-15",
+        )
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 16)
+        self.assertIn("8/8", result["message"])
+        self.assertIn("계산할 수 있습니다", result["message"])
+        self.assertEqual(result["details"]["remaining_quarters"], 0)
+        self.assertNotIn("workbook_content", result["details"])
+
     def test_overview_automation_includes_daily_sep_vintage_check(self) -> None:
         from app.jobs.overview_automation import OVERVIEW_AUTOMATION_JOB_SPECS
 

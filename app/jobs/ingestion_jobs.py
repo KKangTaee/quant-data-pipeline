@@ -449,6 +449,68 @@ def run_collect_sp500_valuation_context(
     )
 
 
+def run_import_sp500_index_earnings_xlsx(
+    *,
+    workbook_content: bytes,
+    source_release_date: str,
+    source_name: str | None = None,
+) -> JobResult:
+    """Register an operator-downloaded official S&P Index Earnings workbook."""
+    job_name = "import_sp500_index_earnings_xlsx"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        if not workbook_content:
+            raise ValueError("업로드한 XLSX 파일이 비어 있습니다.")
+        result = import_and_store_sp500_index_earnings(
+            workbook_content,
+            source_release_date=source_release_date,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        actual_quarter_count = int(result.get("actual_quarter_count") or 0)
+        remaining_quarters = int(result.get("remaining_quarters") or 0)
+        status = "success" if rows_written > 0 else "failed"
+        if rows_written <= 0:
+            message = "명시적으로 확인 가능한 S&P 500 EPS 분기를 찾지 못했습니다."
+        elif remaining_quarters == 0:
+            message = (
+                f"S&P 500 실제 EPS {actual_quarter_count}/8개 분기를 확보했습니다. "
+                "경제 사이클의 실제 TTM EPS를 계산할 수 있습니다."
+            )
+        else:
+            message = (
+                f"S&P 500 실제 EPS {actual_quarter_count}/8개 분기를 확보했습니다. "
+                f"계산까지 {remaining_quarters}개 분기가 더 필요합니다."
+            )
+        details = dict(result)
+        if source_name:
+            details["source_name"] = source_name
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            message=message,
+            details=details,
+        )
+    except Exception as exc:
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"S&P 500 실제 EPS 등록에 실패했습니다: {exc}",
+            details={
+                "source_name": source_name,
+                "source_release_date": source_release_date,
+            },
+        )
+
+
 def run_collect_nasdaq100_valuation_context() -> JobResult:
     """Refresh official QQQ holdings and the gated Nasdaq-100 monthly proxy."""
     job_name = "collect_nasdaq100_valuation_context"

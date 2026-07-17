@@ -132,6 +132,15 @@ INGESTION_ACTION_REGISTRY: dict[str, dict[str, Any]] = {
         "target_tables": ["finance_meta.market_event_calendar"],
         "progress": "stage",
     },
+    "import_sp500_index_earnings_xlsx": {
+        "section": INGESTION_COLLECTION_OPERATIONAL,
+        "mode": "manual_official_file_import",
+        "active": True,
+        "compatibility": False,
+        "write_behavior": "db_write",
+        "target_tables": ["finance_meta.sp500_index_earnings"],
+        "progress": "none",
+    },
     "collect_earnings_calendar": {
         "section": INGESTION_COLLECTION_OPERATIONAL,
         "mode": "operational_low_frequency",
