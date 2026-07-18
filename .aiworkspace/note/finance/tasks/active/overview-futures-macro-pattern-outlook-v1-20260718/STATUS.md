@@ -51,3 +51,12 @@
 Actual 5D path terminal is `(-0.5625, 0.0169)` with bounds x `[-1.0959, 0.0836]`, y `[-0.3391, 0.3319]`; 20D terminal is `(-0.4364, 0.0579)` with bounds x `[-1.0982, 0.0115]`, y `[-0.2545, 0.4981]`.
 Both horizons have 6 evaluated chronological folds; their path errors trail baseline and middle-50% coverage is near 0.30, so neither is promoted above `PROVISIONAL`.
 다음 작업은 사용자가 선택하면 이 경험적 경로의 실사용 피드백이나 별도 데이터 확장 후보를 새 task로 시작한다.
+
+## 2026-07-18 Conditional Path Readability Follow-up
+
+- User found the three q25~q75 boxes, large endpoint arrows, current marker, and terminal marker too concentrated to read.
+- User approved A안: preserve the empirical path and four-quadrant color system, render only the selected horizon terminal range as one subtle shaded rectangle, and keep probability / validation logic unchanged.
+- Approved marker contract: current `r=10`, terminal `r=8`, fixed 9-unit arrows with `markerUnits=userSpaceOnUse`, arrows on mid-line direction segments rather than endpoint circles.
+- Approved copy: `5일 후 예상 위치` / `20일 후 예상 위치`; detailed episode and q25~q75 text leaves the graph and stays in reading / method disclosure.
+- Written design: `CONDITIONAL_PATH_READABILITY_DESIGN.md`.
+- Current stage: written design review before TDD implementation plan.
