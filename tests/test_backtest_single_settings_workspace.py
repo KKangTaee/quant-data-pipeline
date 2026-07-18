@@ -32,10 +32,53 @@ RUNTIME_OPTIONS = {
     "presets": {
         "Equal Weight": {
             "Dividend ETFs": ["VIG", "SCHD", "DGRO", "GLD"],
-        }
+        },
+        "GTAA": {
+            "GTAA Universe": ["SPY", "IWD", "IWM", "TLT", "GLD"],
+        },
+        "Global Relative Strength": {
+            "Global Relative Strength Core ETF Universe": [
+                "SPY",
+                "EFA",
+                "TLT",
+                "GLD",
+            ],
+        },
+        "Risk Parity": {
+            "Risk Parity Universe": ["SPY", "TLT", "GLD", "IEF", "LQD"],
+        },
+        "Dual Momentum": {
+            "Dual Momentum Universe": ["QQQ", "SPY", "IWM", "SOXX", "BIL"],
+        },
     },
-    "tickers": ["VIG", "SCHD", "DGRO", "GLD", "SPY"],
-    "benchmarks": ["SPY", "ACWI"],
+    "tickers": [
+        "VIG",
+        "SCHD",
+        "DGRO",
+        "GLD",
+        "SPY",
+        "IWD",
+        "IWM",
+        "TLT",
+        "EFA",
+        "IEF",
+        "LQD",
+        "QQQ",
+        "SOXX",
+        "BIL",
+    ],
+    "benchmarks": ["SPY", "ACWI", "QQQ", "VTI"],
+    "score_horizons": [1, 3, 6, 12],
+    "market_regime_benchmarks": ["SPY", "QQQ", "VTI", "IWM"],
+    "policy_defaults": {
+        "promotion_min_benchmark_coverage": 0.95,
+        "promotion_min_net_cagr_spread": -0.02,
+        "promotion_min_liquidity_clean_coverage": 0.9,
+        "promotion_max_underperformance_share": 0.55,
+        "promotion_min_worst_rolling_excess_return": -0.15,
+        "promotion_max_strategy_drawdown": -0.35,
+        "promotion_max_drawdown_gap_vs_benchmark": 0.08,
+    },
 }
 
 
@@ -45,6 +88,202 @@ def _fields(workspace: dict[str, object]) -> list[dict[str, object]]:
         for section in workspace["sections"]
         for field in section["fields"]
     ]
+
+
+def _visible_draft(workspace: dict[str, object]) -> dict[str, object]:
+    values = {field["field_id"]: field["value"] for field in _fields(workspace)}
+    return {
+        field["field_id"]: field["value"]
+        for field in _fields(workspace)
+        if not field.get("visible_when")
+        or all(
+            values.get(dependency) == expected
+            for dependency, expected in field["visible_when"].items()
+        )
+    }
+
+
+PROMOTION_POLICY_KEYS = {
+    "promotion_min_benchmark_coverage",
+    "promotion_min_net_cagr_spread",
+    "promotion_min_liquidity_clean_coverage",
+    "promotion_max_underperformance_share",
+    "promotion_min_worst_rolling_excess_return",
+    "promotion_max_strategy_drawdown",
+    "promotion_max_drawdown_gap_vs_benchmark",
+}
+
+
+TACTICAL_EXPECTED_KEYS = {
+    "Equal Weight": {
+        "strategy_key",
+        "tickers",
+        "start",
+        "end",
+        "timeframe",
+        "option",
+        "rebalance_interval",
+        "min_price_filter",
+        "transaction_cost_bps",
+        "benchmark_ticker",
+        "promotion_min_etf_aum_b",
+        "promotion_max_bid_ask_spread_pct",
+        "universe_mode",
+        "preset_name",
+    },
+    "GTAA": {
+        "strategy_key",
+        "tickers",
+        "start",
+        "end",
+        "timeframe",
+        "option",
+        "top",
+        "interval",
+        "score_lookback_months",
+        "score_return_columns",
+        "score_weights",
+        "trend_filter_window",
+        "risk_off_mode",
+        "defensive_tickers",
+        "market_regime_enabled",
+        "market_regime_window",
+        "market_regime_benchmark",
+        "crash_guardrail_enabled",
+        "crash_guardrail_drawdown_threshold",
+        "crash_guardrail_lookback_months",
+        "min_price_filter",
+        "min_avg_dollar_volume_20d_m_filter",
+        "transaction_cost_bps",
+        "benchmark_ticker",
+        "promotion_min_etf_aum_b",
+        "promotion_max_bid_ask_spread_pct",
+        "underperformance_guardrail_enabled",
+        "underperformance_guardrail_window_months",
+        "underperformance_guardrail_threshold",
+        "drawdown_guardrail_enabled",
+        "drawdown_guardrail_window_months",
+        "drawdown_guardrail_strategy_threshold",
+        "drawdown_guardrail_gap_threshold",
+        "universe_mode",
+        "preset_name",
+    }
+    | PROMOTION_POLICY_KEYS,
+    "Global Relative Strength": {
+        "strategy_key",
+        "tickers",
+        "cash_ticker",
+        "start",
+        "end",
+        "timeframe",
+        "option",
+        "top",
+        "interval",
+        "score_lookback_months",
+        "score_return_columns",
+        "score_weights",
+        "trend_filter_enabled",
+        "trend_filter_window",
+        "min_price_filter",
+        "transaction_cost_bps",
+        "benchmark_ticker",
+        "promotion_min_etf_aum_b",
+        "promotion_max_bid_ask_spread_pct",
+        "universe_mode",
+        "preset_name",
+    }
+    | PROMOTION_POLICY_KEYS,
+    "Risk Parity": {
+        "strategy_key",
+        "tickers",
+        "start",
+        "end",
+        "timeframe",
+        "option",
+        "rebalance_interval",
+        "vol_window",
+        "min_price_filter",
+        "transaction_cost_bps",
+        "benchmark_ticker",
+        "promotion_min_etf_aum_b",
+        "promotion_max_bid_ask_spread_pct",
+        "underperformance_guardrail_enabled",
+        "underperformance_guardrail_window_months",
+        "underperformance_guardrail_threshold",
+        "drawdown_guardrail_enabled",
+        "drawdown_guardrail_window_months",
+        "drawdown_guardrail_strategy_threshold",
+        "drawdown_guardrail_gap_threshold",
+        "universe_mode",
+        "preset_name",
+    }
+    | PROMOTION_POLICY_KEYS,
+    "Dual Momentum": {
+        "strategy_key",
+        "tickers",
+        "start",
+        "end",
+        "timeframe",
+        "option",
+        "top",
+        "rebalance_interval",
+        "min_price_filter",
+        "transaction_cost_bps",
+        "benchmark_ticker",
+        "promotion_min_etf_aum_b",
+        "promotion_max_bid_ask_spread_pct",
+        "underperformance_guardrail_enabled",
+        "underperformance_guardrail_window_months",
+        "underperformance_guardrail_threshold",
+        "drawdown_guardrail_enabled",
+        "drawdown_guardrail_window_months",
+        "drawdown_guardrail_strategy_threshold",
+        "drawdown_guardrail_gap_threshold",
+        "universe_mode",
+        "preset_name",
+    }
+    | PROMOTION_POLICY_KEYS,
+    "Risk-On Momentum 5D": {
+        "strategy_key",
+        "tickers",
+        "start",
+        "end",
+        "timeframe",
+        "option",
+        "universe_mode",
+        "preset_name",
+        "universe_limit",
+        "start_balance",
+        "execution_mode",
+        "exit_mode",
+        "max_holding_days",
+        "stop_loss_pct",
+        "take_profit_pct",
+        "atr_period",
+        "stop_atr_multiple",
+        "take_profit_atr_multiple",
+        "max_new_positions_per_day",
+        "max_total_positions",
+        "transaction_cost_bps",
+        "slippage_bps",
+        "macro_filter_enabled",
+        "macro_filter_mode",
+        "risk_on_min",
+        "rate_pressure_max",
+        "dollar_pressure_max",
+        "safe_haven_max",
+        "rate_pressure_penalty_weight",
+        "dollar_pressure_penalty_weight",
+        "safe_haven_penalty_weight",
+        "min_price",
+        "min_avg_dollar_volume_20d",
+        "min_avg_volume_20d",
+        "random_iterations",
+        "scanner_top_n_per_day",
+        "run_comparison_suite",
+        "run_sensitivity_suite",
+    },
+}
 
 
 def test_schema_covers_every_concrete_variant_once() -> None:
@@ -159,9 +398,16 @@ def test_validator_rejects_unknown_hidden_range_and_invalid_option() -> None:
         ({"universe_mode": ["preset"]}, "universe_mode", "선택"),
         ({"transaction_cost_bps": "10"}, "transaction_cost_bps", "숫자"),
         ({"benchmark_ticker": ["SPY"]}, "benchmark_ticker", "선택"),
-        ({"universe_mode": "manual", "tickers": "VIG"}, "tickers", "목록"),
         (
-            {"universe_mode": "manual", "tickers": ["VIG", "VIG"]},
+            {"universe_mode": "manual_tickers", "tickers": "VIG"},
+            "tickers",
+            "목록",
+        ),
+        (
+            {
+                "universe_mode": "manual_tickers",
+                "tickers": ["VIG", "VIG"],
+            },
             "tickers",
             "중복",
         ),
@@ -209,7 +455,130 @@ def test_projector_uses_only_visible_declared_fields_and_constants() -> None:
     payload = project_single_settings_payload(workspace, submitted)
 
     assert payload["strategy_key"] == "equal_weight"
-    assert payload["option"] == "backtest"
+    assert payload["option"] == "month_end"
     assert payload["universe_mode"] == "preset"
     assert "unknown" not in payload
-    assert "tickers" not in payload
+    assert payload["tickers"] == ["VIG", "SCHD", "DGRO", "GLD"]
+
+
+@pytest.mark.parametrize("strategy_choice", tuple(TACTICAL_EXPECTED_KEYS))
+def test_tactical_strategy_default_payload_has_exact_legacy_key_set(
+    strategy_choice: str,
+) -> None:
+    workspace = build_single_settings_workspace(
+        strategy_choice,
+        None,
+        {},
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert set(payload) == TACTICAL_EXPECTED_KEYS[strategy_choice]
+
+
+def test_equal_weight_representative_payload_matches_legacy_contract() -> None:
+    workspace = build_single_settings_workspace(
+        "Equal Weight",
+        None,
+        {
+            "start": "2016-01-01",
+            "end": "2026-07-18",
+            "rebalance_interval": 12,
+            "universe_mode": "preset",
+            "preset_name": "Dividend ETFs",
+            "min_price_filter": 5.0,
+            "transaction_cost_bps": 10.0,
+            "benchmark_ticker": "SPY",
+            "promotion_min_etf_aum_b": 1.0,
+            "promotion_max_bid_ask_spread_pct": 0.005,
+        },
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert payload == {
+        "strategy_key": "equal_weight",
+        "tickers": ["VIG", "SCHD", "DGRO", "GLD"],
+        "start": "2016-01-01",
+        "end": "2026-07-18",
+        "timeframe": "1d",
+        "option": "month_end",
+        "rebalance_interval": 12,
+        "min_price_filter": 5.0,
+        "transaction_cost_bps": 10.0,
+        "benchmark_ticker": "SPY",
+        "promotion_min_etf_aum_b": 1.0,
+        "promotion_max_bid_ask_spread_pct": 0.005,
+        "universe_mode": "preset",
+        "preset_name": "Dividend ETFs",
+    }
+
+
+def test_gtaa_projection_derives_score_columns_weights_and_percent_ratios() -> None:
+    workspace = build_single_settings_workspace(
+        "GTAA",
+        None,
+        {
+            "score_lookback_months": [1, 6],
+            "crash_guardrail_drawdown_threshold": 15.0,
+            "underperformance_guardrail_threshold": -10.0,
+            "drawdown_guardrail_strategy_threshold": -35.0,
+            "drawdown_guardrail_gap_threshold": 8.0,
+        },
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert payload["score_return_columns"] == ["1MReturn", "6MReturn"]
+    assert payload["score_weights"] == {"1MReturn": 1.0, "6MReturn": 1.0}
+    assert payload["crash_guardrail_drawdown_threshold"] == 0.15
+    assert payload["underperformance_guardrail_threshold"] == -0.1
+    assert payload["drawdown_guardrail_strategy_threshold"] == -0.35
+    assert payload["drawdown_guardrail_gap_threshold"] == 0.08
+
+
+def test_risk_on_projection_derives_universe_and_dollar_volume_contract() -> None:
+    workspace = build_single_settings_workspace(
+        "Risk-On Momentum 5D",
+        None,
+        {
+            "universe_mode": "top1000",
+            "min_avg_dollar_volume_20d_m": 20.0,
+            "macro_filter_mode": "off",
+        },
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert payload["preset_name"] == "Top1000"
+    assert payload["universe_limit"] == 1000
+    assert payload["min_avg_dollar_volume_20d"] == 20_000_000.0
+    assert payload["macro_filter_enabled"] is False
+
+
+def test_tactical_default_values_match_current_renderer_defaults() -> None:
+    gtaa = build_single_settings_workspace("GTAA", None, {}, RUNTIME_OPTIONS)
+    grs = build_single_settings_workspace(
+        "Global Relative Strength", None, {}, RUNTIME_OPTIONS
+    )
+    risk_on = build_single_settings_workspace(
+        "Risk-On Momentum 5D", None, {}, RUNTIME_OPTIONS
+    )
+    gtaa_values = {field["field_id"]: field["value"] for field in _fields(gtaa)}
+    grs_values = {field["field_id"]: field["value"] for field in _fields(grs)}
+    risk_on_values = {field["field_id"]: field["value"] for field in _fields(risk_on)}
+
+    assert gtaa_values["top"] == 3
+    assert gtaa_values["interval"] == 1
+    assert gtaa_values["score_lookback_months"] == [1, 3, 6, 12]
+    assert gtaa_values["trend_filter_window"] == 200
+    assert grs_values["top"] == 4
+    assert grs_values["cash_ticker"] == "BIL"
+    assert grs_values["trend_filter_window"] == 200
+    assert risk_on_values["start"] == "2021-06-01"
+    assert risk_on_values["start_balance"] == 10_000.0
+    assert risk_on_values["max_holding_days"] == 5

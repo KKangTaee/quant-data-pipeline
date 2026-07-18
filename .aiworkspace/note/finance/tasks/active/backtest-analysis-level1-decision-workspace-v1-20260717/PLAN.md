@@ -2048,7 +2048,7 @@ git commit -m "Backtest Analysis React 설정 스키마 기반 구축"
 - Produces: complete Equal Weight, GTAA, Global Relative Strength, Risk Parity, Dual Momentum,
   Risk-On Momentum 5D schemas and payloads compatible with existing runners.
 
-- [ ] **Step 1: Write RED golden payload tests for the six strategy groups**
+- [x] **Step 1: Write RED golden payload tests for the six strategy groups**
 
 For representative drafts assert exact payload dictionaries, including:
 
@@ -2067,7 +2067,7 @@ Add complete expected key sets for GTAA (including score/trend/regime/crash and 
 Risk Parity, Dual Momentum, and Risk-On (execution/exit/ATR/macro/liquidity/random/comparison flags).
 Assert Python defaults reproduce current renderer defaults when `values={}`.
 
-- [ ] **Step 2: Run RED and record missing field/key failures**
+- [x] **Step 2: Run RED and record missing field/key failures**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2078,7 +2078,7 @@ uv run --with pytest python -m pytest \
 
 Expected: exact payload tests fail because Task 14 only provides base schema fields.
 
-- [ ] **Step 3: Add the six complete declarative schemas**
+- [x] **Step 3: Add the six complete declarative schemas**
 
 Map every existing renderer payload key to one field or an explicit schema-owned constant. Place
 date/timeframe/rebalance/holding count in `execution`; preset/manual/tickers/cash/benchmark universe
@@ -2089,7 +2089,7 @@ technical disclosure without changing payload availability.
 The service must receive preset members and option labels through `runtime_options`; it must not
 copy `EQUAL_WEIGHT_PRESETS`, `GTAA_PRESETS`, or other `app.web.backtest_common` constants.
 
-- [ ] **Step 4: Run GREEN and compare exact payload keys**
+- [x] **Step 4: Run GREEN and compare exact payload keys**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2103,7 +2103,7 @@ git diff --check
 Expected: six strategy groups have no missing/extra payload key and existing handler signatures are
 unchanged.
 
-- [ ] **Step 5: Commit Task 15**
+- [x] **Step 5: Commit Task 15**
 
 ```bash
 git add app/services/backtest_single_settings_workspace.py \
