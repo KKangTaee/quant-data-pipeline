@@ -55,3 +55,17 @@ upgrade는 이번 UI workflow 범위를 벗어나므로 closeout의 남은 위�
   current Level1 동작 / layout blocker는 아니며 broad compatibility cleanup 범위다.
 - frontend dependency audit moderate 1 / high 1은 production build를 막지 않지만,
   breaking upgrade 전 별도 dependency compatibility task가 필요하다.
+
+## 6차 Corrective Closeout Assessment
+
+- 공통 shell은 UI 계층만 소유하고 strategy key / widget key / payload / runtime /
+  Level2 Gate는 기존 Python owner를 유지한다.
+- Browser QA actual run으로 Equal Weight와 strict multi-factor handler를 확인했고,
+  760px outer overflow는 0이다.
+- full service baseline 11 failures와 frontend audit moderate 1 / high 1은 그대로다.
+  이번 corrective에서 새 failure나 dependency upgrade는 만들지 않았다.
+- QA 중 보호 대상 registry / run history는 runtime side effect로 남아 있으며 commit하지
+  않는다. saved JSONL, `.superpowers/`, generated screenshot도 stage 대상이 아니다.
+- current regression은 source contract 비중이 높다. 후속으로 Streamlit AppTest 또는
+  renderer fake를 추가해 variant 변경 -> family dispatch -> stale 판정을 한 경로로
+  검증하면 UI runtime 회귀 방어를 더 강화할 수 있다.

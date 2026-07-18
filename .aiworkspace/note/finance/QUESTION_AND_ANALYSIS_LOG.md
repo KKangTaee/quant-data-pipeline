@@ -9643,3 +9643,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   설정 지문 불일치와 callback rerun, dark-theme token 충돌이 실제 사용 흐름을 흐렸다.
 - Follow-up: Python-owned truth/read model/handler Gate와 two-surface React/fallback을 구현하고,
   actual Single·Mix desktop/760 QA에서 fresh/stale, role/weight, explicit action을 확인했다.
+
+### 2026-07-18 - Single strategy 설정은 선택이 아니라 현재 후보를 구성하는 단계다
+
+- User request: Quality + Value 화면에 남은 legacy select/form 흐름이 Level2/3와 달라
+  개선되지 않은 것으로 보이므로 구조와 실행 흐름을 다시 파악해 개선해 달라고 요청함.
+- Interpreted goal: strategy를 다시 고르는 중복 UI를 없애고, 현재 후보의 universe,
+  선택·보유 규칙, 비용·위험 기준을 일반 사용자가 한 방향으로 읽고 실행해야 함.
+- Analysis result: React catalog와 Streamlit Strategy select가 선택 ownership을 중복했고,
+  13개 form의 field 순서와 raw ticker/PIT 진단 노출이 서로 달라 판단 흐름을 끊었다.
+- Follow-up: React-owned unique selection, family variant segmented control, 공통 current
+  settings summary와 4-section form hierarchy를 적용했다. actual 두 전략 실행과
+  desktop/760px QA로 payload/runtime/Level2 Gate 보존을 확인했다.

@@ -89,3 +89,15 @@ generated artifact이므로 commit하지 않는다.
 - 기존 boundary test는 label rename만 확인해 실제 information hierarchy 누락을
   잡지 못했다. 6차는 duplicate picker, section ordering, Korean first-read,
   compact universe, submit copy를 RED contract로 먼저 고정한다.
+
+## 2026-07-18 6차 Single Settings Runtime Decision
+
+- strategy 선택은 React purpose catalog 하나만 소유하고 Python은 선택값의 유효성,
+  family variant와 form dispatch를 소유한다.
+- Strict Annual / Quarterly는 별도 strategy card가 아니라 현재 family 설정의
+  segmented control이며, 변경 시 같은 current settings summary를 갱신한다.
+- 전체 ticker와 PIT / statement / coverage 진단을 첫 화면에 펼치면 설정 결정과
+  근거 확인이 섞인다. first-read는 대표 ticker 요약만 보여주고 전체 원문은
+  `전체 종목 보기`, 데이터 계약은 `Universe 근거`로 둔다.
+- 실제 QA 서버가 `fileWatcherType none`으로 떠 있어 최초 확인 화면은 이전 build였다.
+  동일 worktree 8505 프로세스를 재시작한 뒤 새 코드 기준으로 Browser QA를 다시 했다.

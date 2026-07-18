@@ -6332,3 +6332,14 @@ Detailed historical logs were archived on `2026-04-13`.
   전체 service 11건은 기존 Sentiment / Level2·3 legacy contract debt다.
 - 상세 commit / QA / risk는 active task `RUNS.md`, `RISKS.md`를 본다. protected
   JSONL, `.superpowers/`, generated screenshot은 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Level1 Single Settings Corrective
+
+- React purpose catalog를 Single strategy 선택의 유일한 owner로 두고 중복 Strategy
+  dropdown을 제거했다. Strict Annual / Quarterly는 설정 영역 segmented control로 둔다.
+- 13개 current form을 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 ->
+  비용·위험 기준`으로 통일하고, 전체 ticker와 데이터 계약은 disclosure로 낮췄다.
+- actual Equal Weight / Quality + Value Strict Annual 실행과 desktop / 760px Browser QA를
+  통과했다. 상세 검증과 screenshot 경로는 active task `RUNS.md`를 본다.
+- protected registry/run history/saved JSONL, `.superpowers/`, generated screenshot은
+  corrective closeout commit에서 제외한다.

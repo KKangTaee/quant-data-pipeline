@@ -1792,7 +1792,7 @@ git commit -m "Backtest Analysis 팩터 전략 설정 흐름 통일"
 - Consumes: Task 10~12.
 - Produces: actual runtime evidence, responsive screenshots, canonical docs, protected-path audit.
 
-- [ ] **Step 1: Run fresh verification**
+- [x] **Step 1: Run fresh verification**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
@@ -1810,7 +1810,7 @@ git diff --check
 
 Record exact counts and compare service failures to the known 11-failure baseline.
 
-- [ ] **Step 2: Run desktop Browser QA**
+- [x] **Step 2: Run desktop Browser QA**
 
 At `http://localhost:8505/backtest`, verify Quality + Value Strict Annual first, then Equal
 Weight, GTAA, Risk Parity, Dual Momentum, GRS, and development Risk-On:
@@ -1827,19 +1827,19 @@ Weight, GTAA, Risk Parity, Dual Momentum, GRS, and development Risk-On:
 
 Capture `backtest-analysis-level1-single-settings-desktop-qa.png`.
 
-- [ ] **Step 3: Run 760px Browser QA**
+- [x] **Step 3: Run 760px Browser QA**
 
 Verify summary grid, segmented control, setting cards, disclosures, input labels, and CTA have
 zero horizontal overflow and readable one-column flow. Capture
 `backtest-analysis-level1-single-settings-760-qa.png`.
 
-- [ ] **Step 4: Synchronize docs and task evidence**
+- [x] **Step 4: Synchronize docs and task evidence**
 
 Use `finance-doc-sync` to document the shared settings shell, unique selection ownership,
 variant segmented control, five-section form hierarchy, verification counts, Browser evidence,
 and remaining baseline risks.
 
-- [ ] **Step 5: Stage only closeout files and audit protection**
+- [x] **Step 5: Stage only closeout files and audit protection**
 
 ```bash
 git diff --check
@@ -1855,7 +1855,7 @@ if git diff --cached --name-only | rg -q 'registries/|run_history/|saved/|\.supe
 fi
 ```
 
-- [ ] **Step 6: Commit corrective closeout**
+- [x] **Step 6: Commit corrective closeout**
 
 ```bash
 git commit -m "Backtest Analysis 단일 전략 설정 QA와 문서 동기화"

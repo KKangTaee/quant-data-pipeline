@@ -177,3 +177,43 @@
 - strict factor `py_compile` / `git diff --check`: 통과
 - annual / quarterly widget key, strategy key, factor array, Universe 계약과 handler는
   유지하고 300종목 원문·PIT·coverage 근거는 `Universe 근거`로 이동
+
+## 2026-07-18 6차 Task 13 Browser QA
+
+- desktop 1440x1000: 중복 Strategy dropdown 없음, Quality + Value Annual / Quarterly
+  segmented control, 단일 current settings summary, 공통 4-section order, compact
+  300-ticker summary와 collapsed full evidence를 확인했다.
+- 실제 Equal Weight 실행 완료 `2.997s`; actual KPI는 CAGR `0.116`, MDD `-0.173`,
+  Sharpe `1.002`, volatility `0.117`이다.
+- 실제 Quality + Value Snapshot (Strict Annual) 실행 완료 `22.321s`.
+- 실행 후 strategy 변경 시 result는 `이전 설정 결과`로 보존되고 자동 Level2
+  handoff는 일어나지 않았다. Risk-On은 `개발 중이므로 현재 Level2로 보낼 수 없음`을
+  유지했다.
+- GTAA, Global Relative Strength, Dual Momentum, Risk Parity 선택과 공통 summary /
+  section render를 확인했다.
+- 760x1000: outer width `760/760`, active context / decision iframe `717/717`, outer
+  horizontal overflow `0`, catalog와 settings가 one-column로 줄바꿈됨을 확인했다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-single-settings-desktop-qa.png`,
+  `backtest-analysis-level1-single-settings-760-qa.png`.
+
+## 2026-07-18 6차 Task 13 Fresh Verification
+
+- Level1 decision workspace: `23 passed, 3 warnings`
+- refactor boundary / visual contract: `37 passed, 3 warnings`
+- full service contracts: `821 passed, 11 failed, 3 warnings, 35 subtests passed`
+- 11 failures는 기존 baseline과 동일한 Sentiment React 1건, Practical Validation /
+  Final Review legacy source contract 10건이며 이번 Level1 신규 failure는 0건이다.
+- React production build, target form py_compile, `git diff --check`: 통과.
+
+## 2026-07-18 6차 Task 13 Code Review
+
+- review range: `e2d489a9..54a66cbe`
+- Critical / Important / Minor finding: `0 / 0 / 0`, verdict `Ready to merge: Yes`
+- reviewer fresh verification: decision + boundary `60 passed`, 관련 service
+  `31 passed, 801 deselected`, diff-check / 11개 영향 Python AST parse 통과.
+- 기준/HEAD AST 비교에서 payload key/value와 `_handle_backtest_run()` 호출은 동일했다.
+  허용값이 하나였던 fixed `timeframe` / `option` widget만 계획대로 동일 payload 상수로
+  바뀐 의도적 예외다.
+- 지정 range와 closeout staging 모두 registry / run history / saved / `.superpowers/` /
+  screenshot을 제외한다.

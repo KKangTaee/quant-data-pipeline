@@ -8,7 +8,7 @@ Last Verified: 2026-07-18
 이 문서는 Streamlit Backtest 화면의 single strategy, Portfolio Mix Builder, Practical Validation, Final Review, Operations Console, Portfolio Monitoring 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
 
-2026-07-18 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. strategy-specific input과 Portfolio Mix component 실행은 기존 Streamlit form을 유지한다. 별도 `Strategy Detail` panel은 active flow가 아니다. Quality / Value strict form의 visible `Universe Contract`는 `PIT Monthly Snapshot Universe`만 노출하며, Static Managed Research / Historical Dynamic PIT는 legacy replay compatibility path다.
+2026-07-18 기준으로 Backtest Analysis는 Python `backtest_analysis_decision_workspace_v1`을 공통 계약으로 쓰는 Level1 one-shell이다. React는 고정 질문, Single / Portfolio Mix entry, 목적별 catalog, 결과 판단과 intent만 렌더링하고, Python은 strategy maturity, configuration fingerprint, fresh / stale, Gate, handler 존재, 실행, 저장, Level2 인계를 소유한다. Single strategy 선택은 React catalog 한 곳이 소유하고 Strict Annual / Quarterly는 설정 영역의 segmented control로만 바꾼다. strategy-specific input과 Portfolio Mix component 실행은 기존 Streamlit form을 유지한다. 별도 `Strategy Detail` panel은 active flow가 아니다. Quality / Value strict form의 visible `Universe Contract`는 `PIT Monthly Snapshot Universe`만 노출하며, Static Managed Research / Historical Dynamic PIT는 legacy replay compatibility path다.
 
 ## 핵심 파일
 
@@ -33,8 +33,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. 고정 `context` React surface를 fragment 밖에 두고 Single / Mix work와 mutable `decision` surface만 fragment 안에서 갱신한다. Reference / research 보조 패널은 기본 render path에서 제외한다 |
 | `app/web/backtest_analysis_workspace.py` | current session을 pure read model로 adapt하고 component intent allow-list, configuration fingerprint, distinct save / handoff Python handler를 검증한다 |
 | `app/web/components/backtest_analysis_decision_workspace/` | Level1 React one-shell. fixed question, purpose-grouped strategy catalog, new / saved Mix inner mode, decision-first KPI / 이유 / action, 760px layout와 ResizeObserver를 담당하며 분류 / Gate / persistence는 하지 않는다 |
-| `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. Strategy dropdown, prefill notice, form dispatch, latest result 연결을 소유한다. 전략 변경 시 하단 form이 바뀌며, 별도 Strategy Detail panel은 렌더링하지 않는다 |
-| `app/web/backtest_single_forms/` | Single Strategy strategy-specific form render. Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Risk-On Momentum 5D, Quality / Value 계열. Quality / Value strict form은 compact preset basis, Factor Readiness action panel, date/top-N, collapsed advanced contracts 순서로 읽는다 |
+| `app/web/backtest_single_settings_workspace.py` | 현재 설정 대상 summary, 공통 section card, compact ticker / 전체 종목 disclosure와 760px responsive layout을 제공하는 Python visual shell |
+| `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. React catalog의 strategy intent, prefill notice, family variant segmented control, 공통 summary, form dispatch, latest result 연결을 소유한다. 중복 Strategy dropdown과 별도 Strategy Detail panel은 렌더링하지 않는다 |
+| `app/web/backtest_single_forms/` | Single Strategy strategy-specific form render. Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Risk-On Momentum 5D, Quality / Value 계열. current form은 `핵심 실행 설정 -> 투자 대상 Universe -> 선택·보유 규칙 -> 비용·위험 기준`으로 읽고, full ticker / PIT / statement / coverage 원문은 `Universe 근거`로 낮춘다 |
 | `app/web/backtest_single_runner.py` | Single Strategy service-facing payload 표시, execution service 호출, latest bundle state 저장, run history append |
 | `app/services/backtest_single_payload.py` | Streamlit-free Single Strategy payload normalization helper |
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. DB-backed runtime dispatch, input/data/system error normalization, runtime owner metadata attach 담당 |
