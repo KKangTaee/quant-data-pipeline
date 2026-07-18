@@ -49,7 +49,7 @@ SIMILARITY_SUFFIXES = (
     "breadth",
     "volatility_ratio",
 )
-PATTERN_ALGORITHM_VERSION = "pattern_outlook_v1"
+PATTERN_ALGORITHM_VERSION = "pattern_outlook_v2_empirical_path"
 PATTERN_OUTLOOK_CACHE_TTL_SECONDS = 900
 PATTERN_OUTLOOK_LIMITATIONS = (
     "유사 episode는 조건부 빈도이며 미래 수익이나 체제를 보장하지 않습니다.",
@@ -543,6 +543,116 @@ def _walk_forward_metrics(
     }
 
 
+def _euclidean_error(
+    actual_x: float,
+    actual_y: float,
+    predicted_x: float,
+    predicted_y: float,
+) -> float:
+    return float(
+        ((actual_x - predicted_x) ** 2 + (actual_y - predicted_y) ** 2) ** 0.5
+    )
+
+
+def _walk_forward_path_metrics(
+    *,
+    feature_frame: pd.DataFrame,
+    coordinates: pd.DataFrame,
+    horizon: int,
+) -> dict[str, float | int | None]:
+    """Evaluate terminal analog coordinates using chronological train-only rows."""
+
+    terminal = coordinates[
+        (coordinates["horizon"] == horizon)
+        & (coordinates["step"] == horizon)
+    ].dropna(subset=["delta_x", "delta_y"])
+    errors: list[float] = []
+    baseline_errors: list[float] = []
+    coverage_rows: list[float] = []
+    evaluated_folds = 0
+    for fold in build_walk_forward_folds(feature_frame, horizon=horizon):
+        train = terminal[terminal["as_of_date"] <= fold.train_end]
+        test = terminal[
+            (terminal["as_of_date"] >= fold.test_start)
+            & (terminal["as_of_date"] <= fold.test_end)
+        ].iloc[:: max(1, horizon)]
+        if train.empty or test.empty:
+            continue
+        fold_predictions = 0
+        baseline_x = float(train["delta_x"].median())
+        baseline_y = float(train["delta_y"].median())
+        for _, actual in test.iterrows():
+            test_date = pd.Timestamp(actual["as_of_date"])
+            matches = select_similar_episodes(
+                feature_frame,
+                current_date=test_date,
+                horizon=horizon,
+            )
+            analogs = matches.merge(
+                train[["as_of_date", "delta_x", "delta_y"]],
+                on="as_of_date",
+                how="inner",
+            )
+            if len(analogs) < 10:
+                continue
+            lower_x, predicted_x, upper_x = (
+                analogs["delta_x"].quantile([0.25, 0.5, 0.75]).tolist()
+            )
+            lower_y, predicted_y, upper_y = (
+                analogs["delta_y"].quantile([0.25, 0.5, 0.75]).tolist()
+            )
+            actual_x = float(actual["delta_x"])
+            actual_y = float(actual["delta_y"])
+            errors.append(
+                _euclidean_error(actual_x, actual_y, predicted_x, predicted_y)
+            )
+            baseline_errors.append(
+                _euclidean_error(actual_x, actual_y, baseline_x, baseline_y)
+            )
+            coverage_rows.append(
+                float(
+                    lower_x <= actual_x <= upper_x
+                    and lower_y <= actual_y <= upper_y
+                )
+            )
+            fold_predictions += 1
+        evaluated_folds += int(fold_predictions > 0)
+    return {
+        "median_error": float(pd.Series(errors).median()) if errors else None,
+        "baseline_median_error": (
+            float(pd.Series(baseline_errors).median()) if baseline_errors else None
+        ),
+        "coverage_50": (
+            float(sum(coverage_rows) / len(coverage_rows))
+            if coverage_rows
+            else None
+        ),
+        "evaluated_fold_count": evaluated_folds,
+    }
+
+
+def path_publication_status(
+    *,
+    episode_count: int,
+    median_error: float | None,
+    baseline_median_error: float | None,
+    coverage_50: float | None,
+    evaluated_fold_count: int,
+) -> str:
+    if episode_count < MIN_INDEPENDENT_EPISODES:
+        return "UNAVAILABLE"
+    verified = (
+        episode_count >= VERIFIED_EPISODES
+        and median_error is not None
+        and baseline_median_error is not None
+        and median_error < baseline_median_error
+        and coverage_50 is not None
+        and 0.35 <= coverage_50 <= 0.65
+        and evaluated_fold_count >= 2
+    )
+    return "VERIFIED" if verified else "PROVISIONAL"
+
+
 def _asset_pathways(rows: pd.DataFrame) -> dict[str, dict[str, float | None]]:
     family_map = {
         "risk_assets": "risk_on",
@@ -627,7 +737,9 @@ def _build_horizon_outlook(
     horizon: int,
     feature_frame: pd.DataFrame,
     outcomes: pd.DataFrame,
+    coordinates: pd.DataFrame,
     current_date: pd.Timestamp,
+    current_location: dict[str, Any],
 ) -> dict[str, Any]:
     matches = select_similar_episodes(
         feature_frame,
@@ -637,6 +749,11 @@ def _build_horizon_outlook(
     horizon_outcomes = outcomes[outcomes["horizon"] == horizon].copy()
     selected = matches.merge(horizon_outcomes, on="as_of_date", how="inner")
     episode_count = int(len(selected))
+    selected_paths = matches[["as_of_date"]].merge(
+        coordinates[coordinates["horizon"] == horizon],
+        on="as_of_date",
+        how="inner",
+    )
     current_position = int(feature_frame.index.get_loc(current_date))
     eligible_position = current_position - int(horizon) - 1
     baseline_cutoff = feature_frame.index[max(0, eligible_position)]
@@ -660,6 +777,19 @@ def _build_horizon_outlook(
             "fold_improvement_ratio": 0.0,
             "closest_episodes": _closest_episode_rows(selected),
             "asset_pathways": {},
+            "conditional_path": _conditional_path_payload(
+                selected_paths,
+                current_location=current_location,
+                horizon=horizon,
+                episode_count=episode_count,
+                status="UNAVAILABLE",
+                validation={
+                    "median_error": None,
+                    "baseline_median_error": None,
+                    "coverage_50": None,
+                    "evaluated_fold_count": 0,
+                },
+            ),
         }
     probabilities = _regime_probabilities(selected)
     lift = {
@@ -677,6 +807,23 @@ def _build_horizon_outlook(
         baseline_brier_score=metrics["baseline_brier_score"],
         calibration_error=metrics["calibration_error"],
         fold_improvement_ratio=float(metrics["fold_improvement_ratio"] or 0.0),
+    )
+    path_metrics = _walk_forward_path_metrics(
+        feature_frame=feature_frame,
+        coordinates=coordinates,
+        horizon=horizon,
+    )
+    path_status = path_publication_status(
+        episode_count=episode_count,
+        median_error=path_metrics["median_error"],
+        baseline_median_error=path_metrics["baseline_median_error"],
+        coverage_50=path_metrics["coverage_50"],
+        evaluated_fold_count=int(path_metrics["evaluated_fold_count"] or 0),
+    )
+    status_rank = {"UNAVAILABLE": 0, "PROVISIONAL": 1, "VERIFIED": 2}
+    conditional_status = min(
+        (estimate_status, path_status),
+        key=lambda value: status_rank[value],
     )
     dominant = max(probabilities, key=probabilities.get)
     edge_regime = max(lift, key=lift.get)
@@ -714,6 +861,14 @@ def _build_horizon_outlook(
         **metrics,
         "closest_episodes": _closest_episode_rows(selected),
         "asset_pathways": _asset_pathways(selected),
+        "conditional_path": _conditional_path_payload(
+            selected_paths,
+            current_location=current_location,
+            horizon=horizon,
+            episode_count=episode_count,
+            status=conditional_status,
+            validation=path_metrics,
+        ),
     }
 
 
@@ -745,6 +900,19 @@ def build_pattern_outlook_snapshot(
                 "fold_improvement_ratio": 0.0,
                 "closest_episodes": [],
                 "asset_pathways": {},
+                "conditional_path": {
+                    "status": "UNAVAILABLE",
+                    "episode_count": 0,
+                    "band_label": "과거 유사 패턴 가운데 50%",
+                    "points": [],
+                    "terminal": None,
+                    "validation": {
+                        "median_error": None,
+                        "baseline_median_error": None,
+                        "coverage_50": None,
+                        "evaluated_fold_count": 0,
+                    },
+                },
             }
             for horizon in OUTLOOK_HORIZONS
         ]
@@ -754,13 +922,22 @@ def build_pattern_outlook_snapshot(
             feature_frame,
             selected_symbols=selected_symbols,
         )
+        coordinates = build_forward_coordinate_frame(
+            candles,
+            feature_frame,
+            selected_symbols=selected_symbols,
+        )
         current_date = pd.Timestamp(feature_frame.index[-1])
+        path_rows = list(current_pattern.get("path") or [])
+        current_location = dict(path_rows[-1]) if path_rows else {"x": 0.0, "y": 0.0}
         horizons = [
             _build_horizon_outlook(
                 horizon=horizon,
                 feature_frame=feature_frame,
                 outcomes=outcomes,
+                coordinates=coordinates,
                 current_date=current_date,
+                current_location=current_location,
             )
             for horizon in OUTLOOK_HORIZONS
         ]
@@ -782,6 +959,10 @@ def build_pattern_outlook_snapshot(
             "brier": {str(item["horizon"]): item["brier_score"] for item in horizons},
             "baseline_brier": {str(item["horizon"]): item["baseline_brier_score"] for item in horizons},
             "calibration": {str(item["horizon"]): item["calibration_error"] for item in horizons},
+            "path_validation": {
+                str(item["horizon"]): dict(item["conditional_path"]["validation"])
+                for item in horizons
+            },
         },
         "limitations": list(PATTERN_OUTLOOK_LIMITATIONS),
     }

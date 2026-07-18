@@ -269,7 +269,7 @@ Expected: tests pass and checks exit 0 before the commit.
 - Produces: `_walk_forward_path_metrics(*, feature_frame: pd.DataFrame, coordinates: pd.DataFrame, horizon: int) -> dict[str, float | int | None]`.
 - Produces: `path_publication_status(*, episode_count, median_error, baseline_median_error, coverage_50, evaluated_fold_count) -> str` and horizon `conditional_path`.
 
-- [ ] **Step 1: Write validation RED tests**
+- [x] **Step 1: Write validation RED tests**
 
 ```python
 def test_path_status_requires_error_improvement_coverage_and_two_folds(self) -> None:
@@ -299,7 +299,7 @@ def test_outlook_attaches_distinct_horizon_conditional_paths(self) -> None:
     self.assertIn(paths[5]["status"], {"VERIFIED", "PROVISIONAL"})
 ```
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern_validation.FuturesMacroPatternPublicationTests -v
@@ -307,7 +307,7 @@ def test_outlook_attaches_distinct_horizon_conditional_paths(self) -> None:
 
 Expected: missing status function and missing `conditional_path` failures.
 
-- [ ] **Step 3: Implement path metrics and status**
+- [x] **Step 3: Implement path metrics and status**
 
 ```python
 def _euclidean_error(actual_x: float, actual_y: float, predicted_x: float, predicted_y: float) -> float:
@@ -395,7 +395,7 @@ def _walk_forward_path_metrics(
     }
 ```
 
-- [ ] **Step 4: Integrate horizon paths**
+- [x] **Step 4: Integrate horizon paths**
 
 Compute coordinates once in `build_pattern_outlook_snapshot()`. Extend `_build_horizon_outlook()` with `coordinates` and `current_location`. For each horizon, inner-join selected episode dates with that horizon's coordinate rows, compute path metrics/status, choose the more conservative of probability and path status, and attach:
 
@@ -412,7 +412,7 @@ conditional_path = _conditional_path_payload(
 
 Every unavailable horizon returns `conditional_path` with status `UNAVAILABLE`, empty points, and `terminal=None`.
 
-- [ ] **Step 5: Run GREEN, measure, and commit**
+- [x] **Step 5: Run GREEN, measure, and commit**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern_validation -v
@@ -669,7 +669,7 @@ Expected: tests/build/checks pass before commit; generated screenshot and unrela
 ## Completion Checklist
 
 - [x] Task 1: stepwise historical coordinate paths.
-- [ ] Task 2: chronological path validation and horizon integration.
+- [x] Task 2: chronological path validation and horizon integration.
 - [ ] Task 3: payload and empirical path UI.
 - [ ] Task 4: actual QA, documentation sync, and closeout.
 
@@ -677,6 +677,6 @@ Expected: tests/build/checks pass before commit; generated screenshot and unrela
 
 - 1차 empirical path 설계: approved and committed (`5ad4eed5`).
 - 2차 detailed TDD plan: this document.
-- 3차 service / validation: pending.
+- 3차 service / validation: complete.
 - 4차 payload / React UI: pending.
 - 5차 actual QA / docs closeout: pending.

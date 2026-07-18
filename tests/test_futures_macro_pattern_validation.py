@@ -253,6 +253,61 @@ class FuturesMacroPatternOutcomeTests(unittest.TestCase):
 
 
 class FuturesMacroPatternPublicationTests(unittest.TestCase):
+    def test_snapshot_publishes_empirical_path_algorithm_version(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            build_pattern_outlook_snapshot,
+        )
+
+        snapshot = build_pattern_outlook_snapshot(**_outlook_fixture(days=100))
+
+        self.assertEqual(
+            snapshot["method"]["algorithm_version"],
+            "pattern_outlook_v2_empirical_path",
+        )
+
+    def test_path_status_requires_error_improvement_coverage_and_two_folds(self) -> None:
+        import app.services.futures_macro_pattern_validation as service
+
+        self.assertTrue(hasattr(service, "path_publication_status"))
+        cases = (
+            (29, 0.5, 0.8, 0.5, 3, "UNAVAILABLE"),
+            (40, 0.5, 0.8, 0.5, 3, "PROVISIONAL"),
+            (60, 0.5, 0.8, 0.5, 2, "VERIFIED"),
+            (60, 0.9, 0.8, 0.5, 3, "PROVISIONAL"),
+            (60, 0.5, 0.8, 0.8, 3, "PROVISIONAL"),
+        )
+        for episodes, error, baseline, coverage, folds, expected in cases:
+            with self.subTest(episodes=episodes, error=error, coverage=coverage):
+                self.assertEqual(
+                    service.path_publication_status(
+                        episode_count=episodes,
+                        median_error=error,
+                        baseline_median_error=baseline,
+                        coverage_50=coverage,
+                        evaluated_fold_count=folds,
+                    ),
+                    expected,
+                )
+
+    def test_outlook_attaches_distinct_horizon_conditional_paths(self) -> None:
+        from app.services.futures_macro_pattern_validation import (
+            build_pattern_outlook_snapshot,
+        )
+
+        snapshot = build_pattern_outlook_snapshot(**_outlook_fixture(days=900))
+        self.assertTrue(
+            all("conditional_path" in item for item in snapshot["horizons"])
+        )
+        paths = {
+            item["horizon"]: item["conditional_path"]
+            for item in snapshot["horizons"]
+        }
+
+        self.assertEqual(len(paths[5]["points"]), 5)
+        self.assertEqual(len(paths[20]["points"]), 20)
+        self.assertNotEqual(paths[5]["terminal"], paths[20]["terminal"])
+        self.assertIn(paths[5]["status"], {"VERIFIED", "PROVISIONAL"})
+
     def test_publication_status_requires_sample_brier_and_calibration(self) -> None:
         from app.services.futures_macro_pattern_validation import publication_status_for_metrics
 

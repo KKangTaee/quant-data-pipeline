@@ -115,3 +115,13 @@
 - GREEN: outcome class passed 9 tests in 3.193s and current-pattern regression passed 7 tests in 0.444s.
 - Completed-origin stability excludes incomplete forward rows; adding later candles does not change an already completed 20D coordinate path.
 - The service now emits 1..5 / 1..20 standardized `delta_x / delta_y` rows and aggregates current-location-adjusted median plus q25/q75 bounds. Below 30 episodes exposes no coordinates.
+
+## 2026-07-18 Empirical Path Task 2 — Chronological Validation
+
+- RED: path publication cases failed on missing `path_publication_status`; horizon integration failed because `conditional_path` was absent.
+- A 760-day fixture produced only 25 independent 20D episodes and correctly remained unavailable. The fixture was extended to 900 days; the 30-episode gate was not changed.
+- GREEN: publication class passed 8 tests in 4.555s; full validation passed 17 tests in 8.066s and current-pattern regression passed 7 tests in 0.446s.
+- Added chronological terminal Euclidean error, unconditional median baseline error, empirical 50% rectangle coverage, evaluated-fold count, and conservative probability/path status combination.
+- Actual uncached snapshot: 9.491s. 5D `120 episodes / PROVISIONAL / 5 points`, 20D `42 episodes / PROVISIONAL / 20 points`.
+- Actual 5D terminal `(-0.5625, 0.0169)`, 20D terminal `(-0.4364, 0.0579)`; terminals differ. Both path errors trail baseline and coverage is near 0.30, so neither path is promoted above `PROVISIONAL`.
+- Bumped cache / method algorithm version to `pattern_outlook_v2_empirical_path` through a dedicated RED/GREEN contract.
