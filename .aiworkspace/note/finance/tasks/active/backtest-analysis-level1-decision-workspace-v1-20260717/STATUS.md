@@ -1,6 +1,6 @@
 # Status
 
-Status: Design Review / 8차 Modifier-Free Multi-Select Controls
+Status: Implementation Complete / 8차 Modifier-Free Multi-Select Controls
 Last Updated: 2026-07-18
 
 ## Current Position
@@ -35,7 +35,7 @@ Last Updated: 2026-07-18
 - [x] 8차 corrective design 작성과 self-review
 - [x] 8차 written design 사용자 review
 - [x] 8차 implementation plan
-- [ ] 8차 RED -> GREEN implementation / Browser QA / closeout
+- [x] 8차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
 
@@ -94,3 +94,10 @@ Last Updated: 2026-07-18
   쓰는 adaptive C안을 사용자 승인에 따라 DESIGN에 추가했다.
 - 작성된 설계를 사용자 승인받았고 PLAN Task 21~22로 TDD 구현, Browser QA와 docs
   closeout을 확정했다.
+- native multi-select를 option 20개 이하 checkbox-card, 21개 이상 search/list/chip
+  control로 교체하고 catalog-order 배열과 기존 Python 실행 계약을 보존했다.
+- actual Quality 5→6→7, GTAA 2→3→4, 1,031-option 방어 자산의 100-row cap과 SPY
+  search/add/chip-remove를 desktop에서 확인했다. 760px outer/settings/search overflow는 0이고
+  compact grid는 2열이다.
+- focused 114 tests, React 175-module production build와 target py_compile은 통과했다.
+  service 11 failures는 pre-7차와 같은 repository baseline이며 신규 Level1 failure는 0이다.

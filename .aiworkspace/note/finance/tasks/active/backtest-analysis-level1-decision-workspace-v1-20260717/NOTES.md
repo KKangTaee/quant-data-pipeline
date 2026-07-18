@@ -157,3 +157,19 @@ generated artifact이므로 commit하지 않는다.
   finance docs와 root handoff sync, protected-path audit만 소유한다.
 - option identity, helper signature, threshold, CSS selector와 test token을 대조했고 모두
   일치한다. placeholder, 조건부 소유 파일, 불균형 code fence는 남기지 않았다.
+
+## 2026-07-18 8차 Runtime Decisions And QA Findings
+
+- compact와 search control은 같은 `normalizeMultiSelectValues()`를 사용해 클릭 순서가
+  아니라 schema catalog 순서로 array를 만든다. 설정 edit는 local draft만 바꾸고 submit
+  전에는 component intent나 Python rerun을 만들지 않는다.
+- actual Quality에서 modifier 없이 두 항목을 추가해 5→6→7과 기존 선택 유지, Quality
+  한정 clear/select-all, Value selection 보존을 확인했다.
+- actual GTAA는 6·12개월을 제거한 뒤 modifier 없이 다시 추가해 2→3→4와 1개월 선택
+  유지를 확인했다. 첫 strategy 전환 직후 한 번 Quality로 복귀했지만 controlled retry는
+  GTAA가 5초 이상 유지됐고 이후 전체 interaction에서 재발하지 않았다.
+- defensive asset은 1,031 options 중 첫 100 row와 remaining 931 안내만 렌더링했다.
+  SPY 검색 결과 1개, add 후 catalog-order 4-item summary, chip remove 후 3-item 복귀를 확인했다.
+- Browser runtime의 Tab key 전달은 iframe input에서 focus를 이동시키지 못해 actual focus-ring
+  visual은 자동 판독하지 못했다. `:focus-visible` source contract와 production CSS build는
+  통과했으며 이는 남은 수동 accessibility QA gap이다.

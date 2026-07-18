@@ -279,3 +279,42 @@
   `index.html` 0.42 kB, CSS 9.29 kB, JS 333.78 kB.
 - target 5-module `py_compile`: exit 0, output 없음.
 - post-doc `git diff --check`: exit 0, output 없음.
+
+## 2026-07-18 8차 Task 21 RED -> GREEN
+
+- RED: modifier-free adaptive source contract `1 failed`; native
+  `event.target.selectedOptions`가 남아 있는 의도한 원인으로 실패했다.
+- GREEN: 새 focused contract `1 passed`.
+- full refactor boundary / visual contract: `41 passed, 3 warnings`.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+- implementation commit: `c70e722f Backtest Analysis 복수 선택 상호작용 개선`.
+
+## 2026-07-18 8차 Task 22 Browser QA
+
+- desktop 1280x720: outer `scrollWidth=clientWidth=1280`.
+- Quality + Value Strict Annual: 기본 5개에서 `fcf_margin`, `gross_margin`을 modifier 없이
+  추가해 6→7, 두 button `aria-pressed=true`, 기존 5개 유지 확인. Quality clear/select-all은
+  0/14로 바뀌고 Value 5개는 유지됐다.
+- GTAA: 6·12개월을 해제해 2개, 순서대로 다시 클릭해 3→4, 1개월 기존 선택 유지 확인.
+- GTAA defensive asset: total 1,031 options, initial 100 rows + remaining 931, `SPY` 검색 결과
+  1개, add/chip/remove와 summary 3→4→3 확인.
+- 760x900: outer `760/760`, settings main `717/717`, search `675/675`로 horizontal
+  overflow 0. compact grid `333.5px + 333.5px` 2열 확인.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-multi-select-desktop-qa.png`,
+  `backtest-analysis-level1-multi-select-760-qa.png`.
+
+## 2026-07-18 8차 Task 22 Fresh Verification
+
+- pure settings service: `43 passed`.
+- Level1 decision / adapter: `30 passed, 3 warnings`.
+- refactor boundary / visual contract: `41 passed, 3 warnings`.
+- focused total: `114 passed`; warning은 기존 edgar deprecation이다.
+- full service contracts: `821 passed, 11 failed, 35 subtests passed, 3 warnings`.
+  11 failures는 pre-7차 baseline과 같은 Sentiment React 1, Final Review 4,
+  Practical Validation 6이며 신규 Level1 failure는 0이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+  `index.html` 0.42 kB, CSS 11.10 kB, JS 335.97 kB.
+- target 5-module `py_compile`: exit 0, output 없음.
+- pre-doc `git diff --check`: exit 0, output 없음.
+- post-doc `git diff --check`: exit 0, output 없음.

@@ -430,7 +430,11 @@ Phase 30 third work unit status:
 - Portfolio Proposal은 `app/web/backtest_portfolio_proposal.py`와 `app/web/backtest_portfolio_proposal_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper만 남아 있다.
 - Final Review는 `app/web/backtest_final_review/page.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
 - Phase35 보정 이후 Post-Selection Guide module과 panel dispatch는 제거했다. Final Review가 현재 workflow의 마지막 active panel이다.
-- Single Strategy는 `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms/`, `app/web/backtest_single_runner.py`로 분리되어, form render와 runtime dispatch를 page shell에서 제거했다. strategy selector와 family variant selector는 Streamlit이 소유하고, 선택이 바뀌면 바로 해당 strategy-specific form을 렌더링한다.
+- Single Strategy primary route는 `app/services/backtest_single_settings_workspace.py`가 설정
+  schema·validation·payload projection을, `app/web/backtest_single_settings_workspace.py`가
+  Streamlit intent adapter/fallback을, 공통 React editor가 실제 설정 UI를 소유한다.
+  `app/web/backtest_single_forms/`는 history/replay compatibility를 위해 남아 있지만 current
+  primary route에서는 strategy-specific native form을 dispatch하지 않는다.
 - Portfolio Mix Builder는 `app/web/backtest_compare/page.py`로 분리되어, component 실행 / weighted portfolio service 호출, saved portfolio replay / load, current-candidate prefill을 page shell에서 제거했다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
 - 공용 preset, session state, 입력 컴포넌트, status label은 `app/web/backtest_common.py`가 담당한다. 이 파일은 다음 리팩토링에서 더 잘게 나눌 수 있는 transitional shared module이다.
@@ -441,8 +445,8 @@ Phase 30 third work unit status:
 ```text
 고정 Level1 질문 / Single Strategy 선택
   -> 목적별 catalog에서 strategy 선택
-  -> family strategy면 variant와 contextual advanced 설정
-  -> strategy-specific form 입력
+  -> Python-owned schema에서 family variant와 visible field 확정
+  -> React 4-section editor에서 현재 후보 설정 입력
   -> _handle_backtest_run(...)
   -> app/runtime/backtest/ run_*_backtest_from_db(...)
   -> normalized configuration fingerprint와 latest result / history 저장
@@ -457,6 +461,10 @@ Phase 30 third work unit status:
 - 실행 직후 result fingerprint가 current 설정과 같으면 fresh다. 전략 / variant / form 설정이 바뀌면 이전 결과를 없애지 않고 `이전 설정 결과`로 보존하며 Level2 action만 차단한다.
 - 실행 성공은 자동 handoff가 아니다. Python read model이 maturity / data / execution / handler Gate를 통과시키고 사용자가 인계 action을 눌러야 source가 생성된다.
 - `Risk-On Momentum 5D`는 development 전략이며 실행 surface는 유지하되 현재 Level2 CTA는 제공하지 않는다.
+- React `multi_select`는 option 20개 이하에서 modifier key가 필요 없는 checkbox-card,
+  21개 이상에서 검색·bounded checkbox list·selected chip을 사용한다. 선택 결과는 schema
+  catalog 순서의 배열로 정규화하며 React local edit만으로 Streamlit rerun을 만들지 않는다.
+  required·unknown option·payload·runner 판단은 기존 Python owner를 유지한다.
 - selection history가 있는 전략은 latest result의 `Selection History Table` / `Interpretation Summary`에서 상세를 본다. 5A 이후 Global Relative Strength도 기존 Selection History 뷰에서 리밸런싱별 raw selected / final selected / cash-retained slot을 확인한다.
 
 ## Stage / Checkpoint 용어 기준

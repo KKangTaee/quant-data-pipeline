@@ -9666,3 +9666,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   visual/payload drift가 났고, compatibility Snapshot과 hidden default가 primary 실행을 막을 수 있었다.
 - Follow-up: Python schema/validation/payload + React intent/editor로 primary route를 통일하고
   replay compatibility를 격리했다. 전체 전략 매트릭스, actual 3개 실행, desktop/760 QA를 완료했다.
+
+### 2026-07-18 - 복수 선택은 modifier key가 아니라 option 규모에 맞는 control을 사용한다
+
+- User request: Quality 지표와 GTAA 선택·보유 규칙에서 한 번에 한 항목만 선택되는 것처럼
+  보이므로 여러 항목을 쉽게 선택할 수 있게 개선 요청함.
+- Interpreted goal: Python 실행 계약은 유지하면서 일반 사용자가 Command/Ctrl 없이 기존
+  선택을 보존한 채 항목을 추가·제거하고 현재 selection을 항상 확인해야 함.
+- Analysis result: schema/payload는 이미 list를 지원했고 browser-native `<select multiple>`의
+  modifier interaction이 원인이었다. option 수는 compact 4·14, large 1,031로 양극화됐다.
+- Follow-up: 20개 이하 checkbox-card, 21개 이상 search/list/chip을 공통 React renderer에
+  적용하고 actual Quality·GTAA·large option desktop/760 QA를 완료했다.

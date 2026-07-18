@@ -2561,7 +2561,7 @@ Streamlit custom component Browser QA.
 - Preserves: `SingleSettingsEditor` local draft, `emitSettingsIntent`, Python intent adapter,
   schema validator and payload projector.
 
-- [ ] **Step 1: Write the failing adaptive-control source contract**
+- [x] **Step 1: Write the failing adaptive-control source contract**
 
 Add this test next to `test_react_settings_surface_is_schema_driven_and_responsive`:
 
@@ -2606,7 +2606,7 @@ def test_react_multi_select_is_modifier_free_and_adaptive(self) -> None:
     self.assertIn(".bt1-multi-select-compact", responsive)
 ```
 
-- [ ] **Step 2: Run RED and confirm the intended failure**
+- [x] **Step 2: Run RED and confirm the intended failure**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2617,7 +2617,7 @@ uv run --with pytest python -m pytest \
 Expected: FAIL because `event.target.selectedOptions` and native `select[multiple]` still exist and
 adaptive constants/components are absent. A collection/import error is not an accepted RED.
 
-- [ ] **Step 3: Add catalog-order selection helpers and the custom control**
+- [x] **Step 3: Add catalog-order selection helpers and the custom control**
 
 Add below `optionFromString()`:
 
@@ -2785,7 +2785,7 @@ Exclude the custom group from `htmlFor` just as the segmented control is exclude
 >
 ```
 
-- [ ] **Step 4: Add compact/search/chip/focus/responsive styling**
+- [x] **Step 4: Add compact/search/chip/focus/responsive styling**
 
 Remove `.bt1-settings-field select[multiple]` and add:
 
@@ -2908,7 +2908,7 @@ Add inside the existing `@media (max-width: 760px)` block:
 }
 ```
 
-- [ ] **Step 5: Run GREEN, focused regression and production build**
+- [x] **Step 5: Run GREEN, focused regression and production build**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2923,7 +2923,7 @@ git diff --check
 
 Expected: new test and full boundary suite pass, TypeScript/Vite build exits 0, diff-check exits 0.
 
-- [ ] **Step 6: Commit Task 21**
+- [x] **Step 6: Commit Task 21**
 
 ```bash
 git add \
@@ -2949,7 +2949,7 @@ git commit -m "Backtest Analysis 복수 선택 상호작용 개선"
 - Produces: actual Quality/GTAA/large option interaction evidence, fresh automated verification,
   canonical flow alignment, protected-path audit and closeout commit.
 
-- [ ] **Step 1: Run actual desktop Browser QA**
+- [x] **Step 1: Run actual desktop Browser QA**
 
 At `http://localhost:8505/backtest`, choose `Quality + Value / Strict Annual` and click two
 unselected Quality indicators without Command/Ctrl. Confirm the
@@ -2959,14 +2959,14 @@ two score lookback options. Open `고급 설정과 기술 근거`, locate the la
 search `SPY`, add it, confirm the chip, remove it through the chip, and verify initial results render
 at most 100 rows. Capture the desktop screenshot without committing it.
 
-- [ ] **Step 2: Run 760px Browser QA**
+- [x] **Step 2: Run 760px Browser QA**
 
 Set viewport width 760px. Confirm compact options wrap to two columns, search input/chips/toolbar,
 result list and CTA have horizontal overflow 0, keyboard focus is visible, iframe height follows
 content, and strategy/field edits do not blank the fixed Level1 context. Capture the 760px screenshot
 without committing it.
 
-- [ ] **Step 3: Use verification-before-completion for fresh automated checks**
+- [x] **Step 3: Use verification-before-completion for fresh automated checks**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
@@ -2987,11 +2987,11 @@ git diff --check
 Record exact pass/fail counts and any pre-existing service baseline mismatch in `RUNS.md` and
 `RISKS.md`; do not mask unrelated failures.
 
-- [ ] **Step 4: Use finance-doc-sync and audit protected paths**
+- [x] **Step 4: Use finance-doc-sync and audit protected paths**
 
 Update the active task/root handoff logs and `BACKTEST_UI_FLOW.md` with adaptive multi-select
 ownership, Python contract preservation, automated counts, Browser QA range/screenshots and remaining
-risk. Update `SCRIPT_STRUCTURE_MAP.md` only if responsibility wording is stale. Then run:
+risk. Then run:
 
 ```bash
 git diff --check
@@ -3009,7 +3009,7 @@ fi
 
 Expected: no registry, run history, saved JSONL, `.superpowers/`, screenshot or run artifact is staged.
 
-- [ ] **Step 5: Commit Task 22**
+- [x] **Step 5: Commit Task 22**
 
 ```bash
 git commit -m "Backtest Analysis 복수 선택 QA와 문서 동기화"

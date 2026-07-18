@@ -6354,3 +6354,13 @@ Detailed historical logs were archived on `2026-04-13`.
   통과했다. 전체 service 11 failures는 기존 Sentiment/Level2/3 source-contract debt다.
 - 상세 commit/QA/risk는 active task `RUNS.md`, `RISKS.md`를 본다. runtime JSONL,
   `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Modifier-Free Multi-Select Closeout
+
+- 모든 React `multi_select`를 20개 이하 checkbox-card와 21개 이상 search/list/chip으로
+  교체해 Quality/Value와 GTAA에서 modifier 없이 여러 항목을 추가·제거할 수 있게 했다.
+- Python schema/validation/payload/runner는 유지하고 selection array만 catalog 순서로
+  정규화했다. actual Quality 5→6→7, GTAA 2→3→4와 1,031-option 검색을 확인했다.
+- focused 114 tests, React build, target py_compile, desktop/760px overflow QA를 완료했다.
+  상세 증거와 baseline risk는 active task `RUNS.md`, `RISKS.md`를 본다.
+- protected JSONL, `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.
