@@ -347,7 +347,7 @@ git status --short
 
 Expected: all checks pass; only intended documentation changes and pre-existing user-owned PNG files remain unstaged.
 
-- [ ] **Step 4: Commit documentation closeout**
+- [x] **Step 4: Commit documentation closeout**
 
 ```bash
 git add \
@@ -357,7 +357,7 @@ git add \
 git commit -m "기관 포트폴리오 카드 레일 QA 정리"
 ```
 
-- [ ] **Step 5: Inspect final history and handoff state**
+- [x] **Step 5: Inspect final history and handoff state**
 
 ```bash
 git log -4 --oneline
