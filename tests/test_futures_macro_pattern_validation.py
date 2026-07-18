@@ -34,6 +34,109 @@ def _outlook_fixture(*, days: int) -> dict[str, object]:
 
 
 class FuturesMacroPatternOutcomeTests(unittest.TestCase):
+    def test_conditional_path_uses_step_medians_and_middle_fifty_percent(self) -> None:
+        import app.services.futures_macro_pattern_validation as service
+
+        self.assertTrue(hasattr(service, "_conditional_path_payload"))
+        selected = pd.DataFrame(
+            [
+                {"step": 1, "delta_x": 0.0, "delta_y": -1.0},
+                {"step": 1, "delta_x": 2.0, "delta_y": 1.0},
+                {"step": 2, "delta_x": 1.0, "delta_y": 0.0},
+                {"step": 2, "delta_x": 3.0, "delta_y": 2.0},
+            ]
+        )
+        result = service._conditional_path_payload(
+            selected,
+            current_location={"x": -0.5, "y": 0.5},
+            horizon=2,
+            episode_count=40,
+            status="PROVISIONAL",
+            validation={},
+        )
+
+        self.assertEqual(len(result["points"]), 2)
+        self.assertAlmostEqual(result["points"][0]["x"], 0.5)
+        self.assertAlmostEqual(result["points"][0]["y"], 0.5)
+        self.assertLess(
+            result["points"][0]["lower_x"],
+            result["points"][0]["upper_x"],
+        )
+        self.assertEqual(result["terminal"], result["points"][-1])
+
+    def test_conditional_path_hides_coordinates_below_minimum_sample(self) -> None:
+        import app.services.futures_macro_pattern_validation as service
+
+        self.assertTrue(hasattr(service, "_conditional_path_payload"))
+        result = service._conditional_path_payload(
+            pd.DataFrame([{"step": 1, "delta_x": 0.1, "delta_y": 0.2}]),
+            current_location={"x": 0.0, "y": 0.0},
+            horizon=5,
+            episode_count=29,
+            status="UNAVAILABLE",
+            validation={},
+        )
+
+        self.assertEqual(result["points"], [])
+        self.assertIsNone(result["terminal"])
+
+    def test_forward_coordinate_frame_has_5d_and_20d_steps(self) -> None:
+        import app.services.futures_macro_pattern_validation as service
+
+        self.assertTrue(hasattr(service, "build_forward_coordinate_frame"))
+        build_forward_coordinate_frame = service.build_forward_coordinate_frame
+
+        candles, features = _validation_fixture(days=180)
+        coordinates = build_forward_coordinate_frame(
+            candles,
+            features,
+            selected_symbols=SYMBOLS,
+        )
+        completed = coordinates.dropna(subset=["delta_x", "delta_y"])
+        counts = completed.groupby(["as_of_date", "horizon"])["step"].nunique()
+
+        self.assertTrue({5, 20}.issubset(set(coordinates["horizon"])))
+        self.assertTrue(
+            (counts[counts.index.get_level_values("horizon") == 5] <= 5).all()
+        )
+        self.assertTrue(
+            (counts[counts.index.get_level_values("horizon") == 20] <= 20).all()
+        )
+        self.assertTrue(coordinates["step"].ge(1).all())
+
+    def test_completed_coordinate_path_is_stable_after_later_rows_are_appended(self) -> None:
+        import app.services.futures_macro_pattern_validation as service
+
+        self.assertTrue(hasattr(service, "build_forward_coordinate_frame"))
+        build_forward_coordinate_frame = service.build_forward_coordinate_frame
+
+        base_candles, base_features = _validation_fixture(days=160)
+        more_candles, more_features = _validation_fixture(days=180)
+        before = build_forward_coordinate_frame(
+            base_candles,
+            base_features,
+            selected_symbols=SYMBOLS,
+        )
+        after = build_forward_coordinate_frame(
+            more_candles,
+            more_features,
+            selected_symbols=SYMBOLS,
+        )
+        completed = before[
+            (before["horizon"] == 20)
+            & before["delta_x"].notna()
+            & before["delta_y"].notna()
+        ].groupby("as_of_date")["step"].nunique()
+        origin = completed[completed == 20].index[-1]
+        left = before[
+            (before["as_of_date"] == origin) & (before["horizon"] == 20)
+        ].reset_index(drop=True)
+        right = after[
+            (after["as_of_date"] == origin) & (after["horizon"] == 20)
+        ].reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(left, right)
+
     def test_vectorized_path_statistics_match_single_date_reference(self) -> None:
         from app.services.futures_macro_pattern import _pattern_close_matrix
         from app.services.futures_macro_pattern_validation import (

@@ -107,3 +107,11 @@
 - User approved the written spec and requested continuation.
 - Added `EMPIRICAL_PATH_PLAN.md` with four sequential TDD tasks: stepwise coordinates, chronological path validation, payload / React UI, and actual QA / documentation closeout.
 - Plan self-review covers the written spec requirements, exact interfaces, RED/GREEN commands, type consistency, unavailable suppression, and 5D / 20D actual-coordinate comparison.
+
+## 2026-07-18 Empirical Path Task 1 — Stepwise Coordinates
+
+- Baseline linked-worktree check: `codex/sub-dev`; pattern suites passed 18 tests and thermometer contracts passed 26 tests.
+- RED: two coordinate tests failed on missing `build_forward_coordinate_frame`; aggregate tests failed on missing `_conditional_path_payload`.
+- GREEN: outcome class passed 9 tests in 3.193s and current-pattern regression passed 7 tests in 0.444s.
+- Completed-origin stability excludes incomplete forward rows; adding later candles does not change an already completed 20D coordinate path.
+- The service now emits 1..5 / 1..20 standardized `delta_x / delta_y` rows and aggregates current-location-adjusted median plus q25/q75 bounds. Below 30 episodes exposes no coordinates.

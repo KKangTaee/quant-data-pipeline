@@ -128,23 +128,23 @@ def _forward_path_statistics(
     }
 
 
-def _forward_path_stat_frame(
+def _forward_family_step_frame(
     *,
     close: pd.DataFrame,
     as_of_volatility: pd.DataFrame,
     horizon: int,
     definition: ScoreDefinition,
 ) -> pd.DataFrame:
-    """Vectorize every as-of path while keeping volatility fixed at each origin."""
+    """Return every cumulative family move with scale fixed at each origin."""
 
     member_columns = [symbol for symbol in definition.members if symbol in close.columns]
     if not member_columns:
         return pd.DataFrame(
             index=close.index,
-            columns=["median_path_z", "path_iqr_z", "max_adverse_z"],
+            columns=range(1, int(horizon) + 1),
             dtype=float,
         )
-    step_values: dict[int, pd.Series] = {}
+    output = pd.DataFrame(index=close.index)
     for step in range(1, int(horizon) + 1):
         forward_return = close[member_columns].shift(-step).divide(close[member_columns]).sub(1.0)
         scale = as_of_volatility[member_columns].mul(step**0.5).replace(0, pd.NA)
@@ -156,8 +156,25 @@ def _forward_path_stat_frame(
             ],
             axis=1,
         )
-        step_values[step] = weighted.mean(axis=1, skipna=True)
-    paths = pd.DataFrame(step_values, index=close.index)
+        output[step] = weighted.mean(axis=1, skipna=True)
+    return output
+
+
+def _forward_path_stat_frame(
+    *,
+    close: pd.DataFrame,
+    as_of_volatility: pd.DataFrame,
+    horizon: int,
+    definition: ScoreDefinition,
+) -> pd.DataFrame:
+    """Vectorize every as-of path while keeping volatility fixed at each origin."""
+
+    paths = _forward_family_step_frame(
+        close=close,
+        as_of_volatility=as_of_volatility,
+        horizon=horizon,
+        definition=definition,
+    )
     lower = paths.quantile(0.25, axis=1)
     upper = paths.quantile(0.75, axis=1)
     return pd.DataFrame(
@@ -167,6 +184,66 @@ def _forward_path_stat_frame(
             "max_adverse_z": paths.min(axis=1, skipna=True).clip(upper=0.0),
         },
         index=close.index,
+    )
+
+
+def build_forward_coordinate_frame(
+    candles: pd.DataFrame,
+    feature_frame: pd.DataFrame,
+    *,
+    selected_symbols: Sequence[str],
+) -> pd.DataFrame:
+    """Build point-in-time two-dimensional paths for every completed origin."""
+
+    columns = ["as_of_date", "horizon", "step", "delta_x", "delta_y"]
+    close = _pattern_close_matrix(candles, selected_symbols)
+    if close.empty or feature_frame.empty:
+        return pd.DataFrame(columns=columns)
+    returns = close.pct_change(fill_method=None)
+    volatility = returns.rolling(60, min_periods=60).std(ddof=0)
+    definitions = {
+        SCORE_TO_FAMILY_KEY[definition.name]: definition
+        for definition in SCORE_DEFINITIONS
+    }
+    origins = feature_frame.index.intersection(close.index)
+    rows: list[dict[str, Any]] = []
+    for horizon in OUTLOOK_HORIZONS:
+        frames = {
+            family: _forward_family_step_frame(
+                close=close,
+                as_of_volatility=volatility,
+                horizon=horizon,
+                definition=definition,
+            )
+            for family, definition in definitions.items()
+        }
+        for origin in origins:
+            for step in range(1, horizon + 1):
+                pressure = pd.Series(
+                    [
+                        frames[family].at[origin, step]
+                        for family in (
+                            "rate_pressure",
+                            "dollar_pressure",
+                            "inflation_pressure",
+                        )
+                    ],
+                    dtype=float,
+                ).dropna()
+                risk_on = frames["risk_on"].at[origin, step]
+                rows.append(
+                    {
+                        "as_of_date": pd.Timestamp(origin),
+                        "horizon": horizon,
+                        "step": step,
+                        "delta_x": float(risk_on) if pd.notna(risk_on) else None,
+                        "delta_y": float(pressure.mean()) if not pressure.empty else None,
+                    }
+                )
+    return (
+        pd.DataFrame(rows, columns=columns)
+        .sort_values(["as_of_date", "horizon", "step"])
+        .reset_index(drop=True)
     )
 
 
@@ -496,6 +573,53 @@ def _closest_episode_rows(rows: pd.DataFrame) -> list[dict[str, Any]]:
         }
         for _, row in rows.head(5).iterrows()
     ]
+
+
+def _conditional_path_payload(
+    selected_paths: pd.DataFrame,
+    *,
+    current_location: dict[str, Any],
+    horizon: int,
+    episode_count: int,
+    status: str,
+    validation: dict[str, Any],
+) -> dict[str, Any]:
+    """Translate analog path deltas onto the current map location."""
+
+    base = {
+        "status": str(status),
+        "episode_count": int(episode_count),
+        "band_label": "과거 유사 패턴 가운데 50%",
+        "validation": dict(validation),
+    }
+    if (
+        str(status) == "UNAVAILABLE"
+        or episode_count < MIN_INDEPENDENT_EPISODES
+        or selected_paths.empty
+    ):
+        return {**base, "status": "UNAVAILABLE", "points": [], "terminal": None}
+    current_x = float(current_location.get("x") or 0.0)
+    current_y = float(current_location.get("y") or 0.0)
+    points: list[dict[str, float | int]] = []
+    for step, rows in selected_paths.groupby("step", sort=True):
+        x_values = pd.to_numeric(rows["delta_x"], errors="coerce").dropna()
+        y_values = pd.to_numeric(rows["delta_y"], errors="coerce").dropna()
+        if x_values.empty or y_values.empty:
+            continue
+        points.append(
+            {
+                "step": int(step),
+                "x": current_x + float(x_values.median()),
+                "y": current_y + float(y_values.median()),
+                "lower_x": current_x + float(x_values.quantile(0.25)),
+                "upper_x": current_x + float(x_values.quantile(0.75)),
+                "lower_y": current_y + float(y_values.quantile(0.25)),
+                "upper_y": current_y + float(y_values.quantile(0.75)),
+            }
+        )
+    if len(points) < max(1, (int(horizon) + 1) // 2):
+        return {**base, "status": "UNAVAILABLE", "points": [], "terminal": None}
+    return {**base, "points": points, "terminal": points[-1]}
 
 
 def _build_horizon_outlook(

@@ -48,4 +48,5 @@
 고정 categorical branch를 제거하고 probability card는 유지한다.
 사용자가 written spec을 승인했다.
 별도 `EMPIRICAL_PATH_PLAN.md`에 4개 TDD task와 정확한 service / payload / UI / QA 계약을 작성했다.
-현재 단계는 inline execution 시작 전이며 구현 코드는 아직 변경하지 않았다.
+Empirical path Task 1 complete: stepwise 5D / 20D coordinates, completed-origin stability, median and q25/q75 aggregation, and sub-30 suppression are implemented with RED/GREEN evidence.
+Current stage: Task 2 chronological path validation and horizon integration.

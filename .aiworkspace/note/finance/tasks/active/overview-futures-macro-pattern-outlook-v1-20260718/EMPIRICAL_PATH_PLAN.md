@@ -44,7 +44,7 @@
 - Produces: `build_forward_coordinate_frame(candles, feature_frame, *, selected_symbols) -> pd.DataFrame` with `as_of_date`, `horizon`, `step`, `delta_x`, `delta_y`.
 - Produces: `_conditional_path_payload(selected_paths, *, current_location, horizon, episode_count, status, validation) -> dict[str, Any]`.
 
-- [ ] **Step 1: Write coordinate RED tests**
+- [x] **Step 1: Write coordinate RED tests**
 
 ```python
 def test_forward_coordinate_frame_has_5d_and_20d_steps(self) -> None:
@@ -75,7 +75,7 @@ def test_completed_coordinate_path_is_stable_after_later_rows_are_appended(self)
     pd.testing.assert_frame_equal(left, right)
 ```
 
-- [ ] **Step 2: Run coordinate RED**
+- [x] **Step 2: Run coordinate RED**
 
 Run:
 
@@ -85,7 +85,7 @@ Run:
 
 Expected: both new tests fail because `build_forward_coordinate_frame` is absent.
 
-- [ ] **Step 3: Implement reusable step frames and coordinate frame**
+- [x] **Step 3: Implement reusable step frames and coordinate frame**
 
 ```python
 def _forward_family_step_frame(
@@ -155,7 +155,7 @@ def build_forward_coordinate_frame(
 
 Refactor `_forward_path_stat_frame()` to call `_forward_family_step_frame()` and preserve existing parity tests.
 
-- [ ] **Step 4: Write aggregate RED tests**
+- [x] **Step 4: Write aggregate RED tests**
 
 ```python
 def test_conditional_path_uses_step_medians_and_middle_fifty_percent(self) -> None:
@@ -199,7 +199,7 @@ def test_conditional_path_hides_coordinates_below_minimum_sample(self) -> None:
     self.assertIsNone(result["terminal"])
 ```
 
-- [ ] **Step 5: Run aggregate RED and implement aggregate**
+- [x] **Step 5: Run aggregate RED and implement aggregate**
 
 After confirming the missing helper failure, implement:
 
@@ -243,7 +243,7 @@ def _conditional_path_payload(
     return {**base, "points": points, "terminal": points[-1]}
 ```
 
-- [ ] **Step 6: Run GREEN and commit**
+- [x] **Step 6: Run GREEN and commit**
 
 ```bash
 .venv/bin/python -m unittest tests.test_futures_macro_pattern_validation.FuturesMacroPatternOutcomeTests -v
@@ -668,7 +668,7 @@ Expected: tests/build/checks pass before commit; generated screenshot and unrela
 
 ## Completion Checklist
 
-- [ ] Task 1: stepwise historical coordinate paths.
+- [x] Task 1: stepwise historical coordinate paths.
 - [ ] Task 2: chronological path validation and horizon integration.
 - [ ] Task 3: payload and empirical path UI.
 - [ ] Task 4: actual QA, documentation sync, and closeout.
