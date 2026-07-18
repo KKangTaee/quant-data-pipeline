@@ -792,6 +792,23 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertNotIn("_render_equal_weight_form", source)
         self.assertNotIn("_render_gtaa_form", source)
 
+    def test_single_settings_fallback_applies_preset_profiles_before_submit(
+        self,
+    ) -> None:
+        source = (
+            PROJECT_ROOT / "app/web/backtest_single_settings_workspace.py"
+        ).read_text()
+        body = source.split("def render_single_settings_fallback", 1)[1].split(
+            "\n\n__all__", 1
+        )[0]
+
+        self.assertIn("def _apply_fallback_preset_profile", source)
+        self.assertIn("apply_single_settings_preset(", source)
+        self.assertIn("on_change=", body)
+        self.assertIn("st.button(", body)
+        self.assertNotIn("with st.form(", body)
+        self.assertNotIn("st.form_submit_button(", body)
+
     def test_react_settings_surface_is_schema_driven_and_responsive(self) -> None:
         root = (
             PROJECT_ROOT

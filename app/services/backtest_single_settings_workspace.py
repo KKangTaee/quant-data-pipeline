@@ -1607,6 +1607,103 @@ def _payload_constants(
     return constants
 
 
+_PRESET_PRESERVED_FIELD_IDS = frozenset({"start", "end", "tickers"})
+
+
+def _build_preset_profiles(
+    workspace: Mapping[str, object],
+    *,
+    concrete_strategy_key: str,
+    runtime_options: Mapping[str, object],
+) -> dict[str, dict[str, object]]:
+    """Build complete preset-owned field patches from schema defaults and evidence."""
+
+    fields = _all_fields(workspace)
+    field_by_id = {str(field["field_id"]): field for field in fields}
+    if "preset_name" not in field_by_id:
+        return {}
+
+    default_values = {
+        field_id: deepcopy(field.get("value"))
+        for field_id, field in field_by_id.items()
+        if field_id not in _PRESET_PRESERVED_FIELD_IDS
+    }
+    runtime_context = workspace.get("runtime_context")
+    context = dict(runtime_context) if isinstance(runtime_context, Mapping) else {}
+    preset_members = context.get("preset_members")
+    members = dict(preset_members) if isinstance(preset_members, Mapping) else {}
+    all_overrides = runtime_options.get("preset_parameter_defaults_by_strategy_key")
+    strategy_overrides = (
+        dict(all_overrides.get(concrete_strategy_key, {}))
+        if isinstance(all_overrides, Mapping)
+        and isinstance(all_overrides.get(concrete_strategy_key), Mapping)
+        else {}
+    )
+
+    profiles: dict[str, dict[str, object]] = {}
+    for preset_name in members:
+        raw_overrides = strategy_overrides.get(preset_name)
+        overrides = dict(raw_overrides) if isinstance(raw_overrides, Mapping) else {}
+        for field_id, value in overrides.items():
+            field = field_by_id.get(str(field_id))
+            if field is None:
+                raise ValueError(
+                    f"{concrete_strategy_key} preset `{preset_name}`의 알 수 없는 설정입니다: {field_id}"
+                )
+            if message := _value_error(field, value):
+                raise ValueError(
+                    f"{concrete_strategy_key} preset `{preset_name}`의 `{field_id}`: {message}"
+                )
+
+        values = {
+            **deepcopy(default_values),
+            **deepcopy(overrides),
+            "universe_mode": "preset",
+            "preset_name": str(preset_name),
+        }
+        has_override = bool(overrides)
+        profiles[str(preset_name)] = {
+            "application_kind": (
+                "validated_override" if has_override else "strategy_default"
+            ),
+            "source_label": (
+                "검증된 프리셋 설정을 적용했습니다."
+                if has_override
+                else "전략 기본 규칙을 적용했습니다."
+            ),
+            "values": values,
+        }
+    return profiles
+
+
+def apply_single_settings_preset(
+    workspace: Mapping[str, object],
+    values: Mapping[str, object] | None,
+    preset_name: str,
+) -> dict[str, object]:
+    """Apply one Python-owned preset patch without touching runner or persistence state."""
+
+    profiles = workspace.get("preset_profiles")
+    profile = profiles.get(preset_name) if isinstance(profiles, Mapping) else None
+    if not isinstance(profile, Mapping):
+        raise ValueError(f"알 수 없는 preset입니다: {preset_name}")
+    profile_values = profile.get("values")
+    updated = deepcopy(dict(values or {}))
+    applied_field_ids: list[str] = []
+    if isinstance(profile_values, Mapping):
+        applied_field_ids = [str(field_id) for field_id in profile_values]
+        updated.update(deepcopy(dict(profile_values)))
+    return {
+        "values": updated,
+        "application": {
+            "preset_name": preset_name,
+            "application_kind": profile.get("application_kind"),
+            "source_label": profile.get("source_label"),
+            "applied_field_ids": applied_field_ids,
+        },
+    }
+
+
 def build_single_settings_workspace(
     strategy_choice: str,
     variant: str | None,
@@ -1677,6 +1774,39 @@ def build_single_settings_workspace(
         },
     }
     supplied = dict(values or {})
+    workspace["preset_profiles"] = _build_preset_profiles(
+        workspace,
+        concrete_strategy_key=concrete_strategy_key,
+        runtime_options=runtime,
+    )
+    preset_name_field = next(
+        (
+            field
+            for field in _all_fields(workspace)
+            if str(field.get("field_id") or "") == "preset_name"
+        ),
+        None,
+    )
+    selected_preset = supplied.get(
+        "preset_name",
+        preset_name_field.get("value")
+        if isinstance(preset_name_field, Mapping)
+        else None,
+    )
+    profiles = workspace.get("preset_profiles")
+    selected_profile = (
+        profiles.get(str(selected_preset))
+        if isinstance(profiles, Mapping)
+        else None
+    )
+    if isinstance(selected_profile, Mapping) and isinstance(
+        selected_profile.get("values"), Mapping
+    ):
+        profile_values = dict(selected_profile["values"])
+        for field in _all_fields(workspace):
+            field_id = str(field["field_id"])
+            if field_id in profile_values:
+                field["value"] = deepcopy(profile_values[field_id])
     for field in _all_fields(workspace):
         field_id = str(field["field_id"])
         if field_id in supplied:
@@ -1831,6 +1961,7 @@ __all__ = [
     "SETTINGS_SCHEMA_VERSION",
     "SINGLE_SETTINGS_CONCRETE_KEYS",
     "SettingsValidationError",
+    "apply_single_settings_preset",
     "build_single_settings_workspace",
     "project_single_settings_payload",
     "validate_single_settings_draft",

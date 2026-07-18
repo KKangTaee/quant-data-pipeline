@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from copy import deepcopy
 from html import escape
 from datetime import date
 from typing import Any, Callable, Iterator, Mapping, Sequence
@@ -9,6 +10,7 @@ import streamlit as st
 
 from app.services.backtest_single_settings_workspace import (
     SettingsValidationError,
+    apply_single_settings_preset,
     build_single_settings_workspace,
     project_single_settings_payload,
 )
@@ -283,6 +285,9 @@ def build_single_settings_runtime_options() -> dict[str, object]:
             key: dict(value) for key, value in presets_by_strategy_key.items()
         },
         "preset_target_sizes": dict(common.STRICT_ANNUAL_MANAGED_PRESET_SPECS),
+        "preset_parameter_defaults_by_strategy_key": {
+            "gtaa": deepcopy(common.GTAA_PRESET_PARAMETER_DEFAULTS),
+        },
         "tickers": list(dict.fromkeys(item for item in ticker_values if item)),
         "benchmarks": ["SPY", "ACWI", "QQQ", "VTI", "IWM"],
         "score_horizons": list(common.GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS),
@@ -518,6 +523,8 @@ def _render_fallback_field(
     field: Mapping[str, object],
     *,
     key_prefix: str,
+    on_change: Callable[[], object] | None = None,
+    on_change_args: tuple[object, ...] = (),
 ) -> object:
     field_id = str(field["field_id"])
     label = str(field.get("label") or field_id)
@@ -525,11 +532,25 @@ def _render_fallback_field(
     help_text = str(field.get("help") or "") or None
     key = f"{key_prefix}:{field_id}"
     control = str(field.get("control") or "")
+    callback_kwargs: dict[str, object] = {}
+    if callable(on_change):
+        callback_kwargs = {"on_change": on_change, "args": on_change_args}
     if control == "date":
         initial = date.fromisoformat(str(value)) if value else date.today()
-        return st.date_input(label, value=initial, key=key, help=help_text).isoformat()
+        return st.date_input(
+            label,
+            value=initial,
+            key=key,
+            help=help_text,
+            **callback_kwargs,
+        ).isoformat()
     if control == "number":
-        kwargs: dict[str, object] = {"value": value, "key": key, "help": help_text}
+        kwargs: dict[str, object] = {
+            "value": value,
+            "key": key,
+            "help": help_text,
+            **callback_kwargs,
+        }
         if isinstance(field.get("min"), (int, float)):
             kwargs["min_value"] = field["min"]
         if isinstance(field.get("max"), (int, float)):
@@ -538,19 +559,100 @@ def _render_fallback_field(
             kwargs["step"] = field["step"]
         return st.number_input(label, **kwargs)
     if control == "text":
-        return st.text_input(label, value=str(value or ""), key=key, help=help_text)
+        return st.text_input(
+            label,
+            value=str(value or ""),
+            key=key,
+            help=help_text,
+            **callback_kwargs,
+        )
     if control in {"single_select", "segmented", "multi_select"}:
         options, labels = _option_pairs(field)
         formatter = lambda item: labels.get(item, str(item))
         if control == "multi_select":
-            return st.multiselect(label, options, default=list(value or []), format_func=formatter, key=key, help=help_text)
+            return st.multiselect(
+                label,
+                options,
+                default=list(value or []),
+                format_func=formatter,
+                key=key,
+                help=help_text,
+                **callback_kwargs,
+            )
         if control == "segmented":
-            return st.segmented_control(label, options, default=value, format_func=formatter, key=key, help=help_text)
+            return st.segmented_control(
+                label,
+                options,
+                default=value,
+                format_func=formatter,
+                key=key,
+                help=help_text,
+                **callback_kwargs,
+            )
         index = options.index(value) if value in options else 0
-        return st.selectbox(label, options, index=index, format_func=formatter, key=key, help=help_text)
+        return st.selectbox(
+            label,
+            options,
+            index=index,
+            format_func=formatter,
+            key=key,
+            help=help_text,
+            **callback_kwargs,
+        )
     if control == "toggle":
-        return st.toggle(label, value=bool(value), key=key, help=help_text)
+        return st.toggle(
+            label,
+            value=bool(value),
+            key=key,
+            help=help_text,
+            **callback_kwargs,
+        )
     return value
+
+
+def _fallback_widget_value(
+    field: Mapping[str, object],
+    *,
+    key_prefix: str,
+) -> object:
+    value = st.session_state.get(
+        f"{key_prefix}:{field['field_id']}",
+        field.get("value"),
+    )
+    return value.isoformat() if isinstance(value, date) else value
+
+
+def _apply_fallback_preset_profile(
+    workspace: Mapping[str, object],
+    key_prefix: str,
+) -> None:
+    """Apply the Python-owned preset patch before the fallback widgets rerender."""
+
+    fields = _workspace_fields(workspace)
+    values = {
+        str(field["field_id"]): _fallback_widget_value(
+            field,
+            key_prefix=key_prefix,
+        )
+        for field in fields
+    }
+    feedback_key = f"{key_prefix}:preset_application_feedback"
+    if values.get("universe_mode") != "preset":
+        st.session_state.pop(feedback_key, None)
+        return
+    preset_name = str(values.get("preset_name") or "")
+    applied = apply_single_settings_preset(workspace, values, preset_name)
+    application = dict(applied.get("application") or {})
+    applied_values = dict(applied["values"])
+    applied_field_ids = application.get("applied_field_ids")
+    for field_id in (
+        applied_field_ids if isinstance(applied_field_ids, list) else []
+    ):
+        if field_id in {"universe_mode", "preset_name"}:
+            continue
+        value = applied_values.get(str(field_id))
+        st.session_state[f"{key_prefix}:{field_id}"] = value
+    st.session_state[feedback_key] = str(application.get("source_label") or "")
 
 
 def render_single_settings_fallback(
@@ -562,32 +664,45 @@ def render_single_settings_fallback(
 
     draft_key = str(workspace.get("draft_key") or "single-settings")
     values = {str(field["field_id"]): field.get("value") for field in _workspace_fields(workspace)}
-    with st.form(f"single_settings_fallback:{draft_key}", clear_on_submit=False):
-        for section in workspace.get("sections", []):
-            if not isinstance(section, Mapping):
+    for section in workspace.get("sections", []):
+        if not isinstance(section, Mapping):
+            continue
+        st.markdown(f"#### {section.get('title') or ''}")
+        st.caption(str(section.get("description") or ""))
+        for field in section.get("fields", []):
+            if not isinstance(field, Mapping):
                 continue
-            st.markdown(f"#### {section.get('title') or ''}")
-            st.caption(str(section.get("description") or ""))
-            for field in section.get("fields", []):
-                if not isinstance(field, Mapping):
-                    continue
-                visible_when = field.get("visible_when")
-                if isinstance(visible_when, Mapping) and not all(
-                    values.get(str(name)) == expected
-                    for name, expected in visible_when.items()
-                ):
-                    continue
-                values[str(field["field_id"])] = _render_fallback_field(
-                    field,
-                    key_prefix=draft_key,
+            visible_when = field.get("visible_when")
+            if isinstance(visible_when, Mapping) and not all(
+                values.get(str(name)) == expected
+                for name, expected in visible_when.items()
+            ):
+                continue
+            field_id = str(field["field_id"])
+            applies_preset = field_id in {"universe_mode", "preset_name"}
+            values[field_id] = _render_fallback_field(
+                field,
+                key_prefix=draft_key,
+                on_change=(
+                    _apply_fallback_preset_profile if applies_preset else None
+                ),
+                on_change_args=(workspace, draft_key),
+            )
+            if field_id == "preset_name":
+                feedback = st.session_state.get(
+                    f"{draft_key}:preset_application_feedback"
                 )
-                error = dict(workspace.get("validation_errors") or {}).get(str(field["field_id"]))
-                if error:
-                    st.error(str(error))
-        submitted = st.form_submit_button(
-            str(dict(workspace.get("action") or {}).get("label") or "실행"),
-            use_container_width=True,
-        )
+                if feedback:
+                    st.caption(str(feedback))
+            error = dict(workspace.get("validation_errors") or {}).get(field_id)
+            if error:
+                st.error(str(error))
+    submitted = st.button(
+        str(dict(workspace.get("action") or {}).get("label") or "실행"),
+        key=f"single_settings_fallback_submit:{draft_key}",
+        use_container_width=True,
+        type="primary",
+    )
     if not submitted:
         return None
     if callable(on_submit):

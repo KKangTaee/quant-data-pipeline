@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import date
+from types import SimpleNamespace
 
 import pytest
+
+import app.services.backtest_single_settings_workspace as settings_service
+import app.web.backtest_single_settings_workspace as settings_web
 
 from app.services.backtest_single_settings_workspace import (
     ALLOWED_CONTROLS,
@@ -163,6 +168,29 @@ def _visible_draft(workspace: dict[str, object]) -> dict[str, object]:
             for dependency, expected in field["visible_when"].items()
         )
     }
+
+
+def _field_values(workspace: dict[str, object]) -> dict[str, object]:
+    return {field["field_id"]: field["value"] for field in _fields(workspace)}
+
+
+def _runtime_with_gtaa_evidence_preset() -> dict[str, object]:
+    runtime = deepcopy(RUNTIME_OPTIONS)
+    runtime["presets"]["GTAA"] = {
+        "GTAA Universe": ["SPY", "TLT", "GLD"],
+        "GTAA Evidence": ["QQQ", "IEF", "TLT"],
+    }
+    runtime["preset_parameter_defaults_by_strategy_key"] = {
+        "gtaa": {
+            "GTAA Evidence": {
+                "top": 2,
+                "interval": 4,
+                "score_lookback_months": [1, 6],
+                "defensive_tickers": ["IEF", "TLT"],
+            }
+        }
+    }
+    return runtime
 
 
 PROMOTION_POLICY_KEYS = {
@@ -493,6 +521,158 @@ def test_workspace_returns_isolated_json_ready_copies() -> None:
     )
 
     assert second == original
+
+
+def test_every_named_preset_has_schema_safe_complete_profile() -> None:
+    workspace = build_single_settings_workspace(
+        "GTAA",
+        None,
+        {},
+        _runtime_with_gtaa_evidence_preset(),
+    )
+    field_ids = {field["field_id"] for field in _fields(workspace)}
+
+    assert "preset_profiles" in workspace
+    assert set(workspace["preset_profiles"]) == {
+        "GTAA Universe",
+        "GTAA Evidence",
+    }
+    assert set(workspace["preset_profiles"]["GTAA Universe"]["values"]) <= field_ids
+    assert (
+        workspace["preset_profiles"]["GTAA Universe"]["application_kind"]
+        == "strategy_default"
+    )
+    assert (
+        workspace["preset_profiles"]["GTAA Evidence"]["application_kind"]
+        == "validated_override"
+    )
+    assert workspace["preset_profiles"]["GTAA Evidence"]["values"]["top"] == 2
+    assert workspace["preset_profiles"]["GTAA Evidence"]["values"]["interval"] == 4
+
+
+@pytest.mark.parametrize(
+    ("strategy_choice", "variant"),
+    [
+        ("Equal Weight", None),
+        ("GTAA", None),
+        ("Global Relative Strength", None),
+        ("Risk Parity Trend", None),
+        ("Dual Momentum", None),
+        ("Quality", "Annual"),
+        ("Quality", "Quarterly"),
+        ("Quality", "Snapshot"),
+        ("Value", "Annual"),
+        ("Value", "Quarterly"),
+        ("Quality + Value", "Annual"),
+        ("Quality + Value", "Quarterly"),
+    ],
+)
+def test_all_named_preset_families_publish_complete_profiles(
+    strategy_choice: str,
+    variant: str | None,
+) -> None:
+    workspace = build_single_settings_workspace(
+        strategy_choice,
+        variant,
+        {},
+        RUNTIME_OPTIONS,
+    )
+    members = workspace["runtime_context"]["preset_members"]
+
+    assert "preset_profiles" in workspace
+    assert set(workspace["preset_profiles"]) == set(members)
+    assert all(
+        profile["values"] for profile in workspace["preset_profiles"].values()
+    )
+
+
+def test_apply_preset_resets_owned_fields_but_preserves_dates_and_manual_tickers() -> None:
+    workspace = build_single_settings_workspace(
+        "GTAA",
+        None,
+        {},
+        _runtime_with_gtaa_evidence_preset(),
+    )
+
+    assert hasattr(settings_service, "apply_single_settings_preset")
+    applied = settings_service.apply_single_settings_preset(
+        workspace,
+        {
+            "start": "2020-01-01",
+            "end": "2025-12-31",
+            "tickers": ["CUSTOM"],
+            "top": 9,
+            "interval": 9,
+            "score_lookback_months": [12],
+        },
+        "GTAA Evidence",
+    )
+
+    assert applied["values"]["start"] == "2020-01-01"
+    assert applied["values"]["end"] == "2025-12-31"
+    assert applied["values"]["tickers"] == ["CUSTOM"]
+    assert applied["values"]["universe_mode"] == "preset"
+    assert applied["values"]["preset_name"] == "GTAA Evidence"
+    assert applied["values"]["top"] == 2
+    assert applied["values"]["interval"] == 4
+    assert applied["values"]["score_lookback_months"] == [1, 6]
+    assert applied["application"]["application_kind"] == "validated_override"
+
+
+def test_initial_explicit_prefill_wins_over_selected_preset_profile() -> None:
+    workspace = build_single_settings_workspace(
+        "GTAA",
+        None,
+        {
+            "preset_name": "GTAA Evidence",
+            "top": 5,
+            "score_lookback_months": [3, 12],
+        },
+        _runtime_with_gtaa_evidence_preset(),
+    )
+    values = _field_values(workspace)
+
+    assert values["preset_name"] == "GTAA Evidence"
+    assert values["top"] == 5
+    assert values["score_lookback_months"] == [3, 12]
+    assert values["interval"] == 4
+
+
+def test_fallback_preset_callback_preserves_widget_typed_dates_and_manual_tickers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = build_single_settings_workspace(
+        "GTAA",
+        None,
+        {},
+        _runtime_with_gtaa_evidence_preset(),
+    )
+    key_prefix = "gtaa-draft"
+    session_state = {
+        f"{key_prefix}:start": date(2020, 1, 1),
+        f"{key_prefix}:end": date(2025, 12, 31),
+        f"{key_prefix}:tickers": ["CUSTOM"],
+        f"{key_prefix}:universe_mode": "preset",
+        f"{key_prefix}:preset_name": "GTAA Evidence",
+        f"{key_prefix}:top": 9,
+        f"{key_prefix}:interval": 9,
+    }
+    monkeypatch.setattr(
+        settings_web,
+        "st",
+        SimpleNamespace(session_state=session_state),
+    )
+
+    settings_web._apply_fallback_preset_profile(workspace, key_prefix)
+
+    assert session_state[f"{key_prefix}:start"] == date(2020, 1, 1)
+    assert session_state[f"{key_prefix}:end"] == date(2025, 12, 31)
+    assert session_state[f"{key_prefix}:tickers"] == ["CUSTOM"]
+    assert session_state[f"{key_prefix}:top"] == 2
+    assert session_state[f"{key_prefix}:interval"] == 4
+    assert session_state[f"{key_prefix}:preset_application_feedback"] == (
+        "검증된 프리셋 설정을 적용했습니다."
+    )
 
 
 @pytest.mark.parametrize(

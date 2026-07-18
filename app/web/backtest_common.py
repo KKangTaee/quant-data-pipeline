@@ -185,6 +185,29 @@ GTAA_PRESETS = {
 }
 
 GTAA_PRESET_PARAMETER_DEFAULTS = {
+    "GTAA Universe (U3 Commodity Candidate Base)": {
+        "top": 2,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6],
+    },
+    "GTAA Universe (U1 Offensive Candidate Base)": {
+        "top": 2,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6, 12],
+    },
+    "GTAA Universe (U5 Smallcap Value Candidate Base)": {
+        "top": 3,
+        "interval": 3,
+        "score_lookback_months": [1, 3, 6, 12],
+    },
+    "GTAA SPY Low-MDD Style Top-3": {
+        "top": 3,
+        "interval": 3,
+        "score_lookback_months": [1, 6],
+        "trend_filter_window": 250,
+        "risk_off_mode": "cash_only",
+        "benchmark_ticker": "SPY",
+    },
     "GTAA SPY Low-MDD Style Top-2 ADV20": {
         "top": 2,
         "interval": 4,
