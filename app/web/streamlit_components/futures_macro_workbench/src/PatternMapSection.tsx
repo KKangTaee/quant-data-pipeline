@@ -71,34 +71,28 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
       ? [item.conditional_path]
       : []
   ));
-  const scaleForecastPoints = scalePaths.flatMap((path) => path.points || []);
   const scaleTerminalPoints = scalePaths.flatMap((path) => (
     path.terminal ? [path.terminal] : []
   ));
   const xValues = [
     ...anchors.map((point) => point.x),
-    ...scaleForecastPoints.map((point) => point.x),
-    ...scaleTerminalPoints.flatMap((point) => [point.lower_x, point.upper_x]),
+    ...scaleTerminalPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x]),
   ];
   const yValues = [
     ...anchors.map((point) => point.y),
-    ...scaleForecastPoints.map((point) => point.y),
-    ...scaleTerminalPoints.flatMap((point) => [point.lower_y, point.upper_y]),
+    ...scaleTerminalPoints.flatMap((point) => [point.y, point.lower_y, point.upper_y]),
   ];
   const xBound = Math.max(1.25, ...xValues.map((value) => Math.abs(value) * 1.12));
   const yBound = Math.max(1.1, ...yValues.map((value) => Math.abs(value) * 1.12));
   const sx = (value: number) => PAD_X + ((value + xBound) / (xBound * 2)) * (WIDTH - PAD_X * 2);
   const sy = (value: number) => HEIGHT - PAD_Y - ((value + yBound) / (yBound * 2)) * (HEIGHT - PAD_Y * 2);
   const observedPoints = anchors.map((point) => `${sx(point.x)},${sy(point.y)}`).join(" ");
-  const forecastPolyline = latest
-    ? [`${sx(latest.x)},${sy(latest.y)}`, ...forecastPoints.map((point) => `${sx(point.x)},${sy(point.y)}`)].join(" ")
-    : "";
   const uncertaintyStep = forecastPoints.at(-1);
   const selectedDays = selectedHorizon === "observed"
     ? undefined
     : Number.parseInt(selectedHorizon, 10);
   const expectedPositionLabel = selectedDays ? `${selectedDays}일 후 예상 위치` : "";
-  const forecastLegend = selectedDays ? `1~${selectedDays}일 예상 이동` : "예상 이동";
+  const forecastLegend = selectedDays ? `${selectedDays}일 예상 순이동` : "예상 순이동";
   const rangeLegend = selectedDays ? `${selectedDays}일 후 도착 범위` : "도착 범위";
   const showForecast = selectedHorizon !== "observed" && Boolean(latest) && forecastPoints.length > 0;
   const pathStatus = conditionalPath?.status || "UNAVAILABLE";
@@ -163,11 +157,14 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
                 <title>{selectedDays}일 후 · {conditionalPath?.band_label}</title>
               </rect>
             ) : null}
-            {showForecast ? (
-              <polyline
+            {showForecast && latest && terminal ? (
+              <line
                 className="fm-pattern-map__conditional-path"
                 data-forecast-horizon={selectedHorizon}
-                points={forecastPolyline}
+                x1={sx(latest.x)}
+                y1={sy(latest.y)}
+                x2={sx(terminal.x)}
+                y2={sy(terminal.y)}
               />
             ) : null}
             {observedPoints ? <polyline className="fm-pattern-map__observed" points={observedPoints} /> : null}
@@ -237,7 +234,7 @@ function PatternMapSection({ patternMap, horizons }: { patternMap: PatternMapPay
                 </dl>
               ) : <div className="fm-pattern-map__unavailable">확률을 표시할 근거가 부족합니다.</div>}
               {!showForecast ? <div className="fm-pattern-map__unavailable">조건부 경로를 표시할 독립 표본 또는 검증 근거가 부족합니다.</div> : null}
-              <p>{conditionalPath?.episode_count ? `독립 표본 ${conditionalPath.episode_count}개 · ` : ""}점선은 과거 유사 흐름 기반 예상 이동이며 실제 미래 경로를 보장하지 않습니다.</p>
+              <p>{conditionalPath?.episode_count ? `독립 표본 ${conditionalPath.episode_count}개 · ` : ""}점선은 과거 유사 흐름의 시작점에서 말일 중앙 위치까지의 예상 순이동이며, 중간 일별 경로가 아닙니다. 실제 미래 경로를 보장하지 않습니다.</p>
               {selectedCard?.status_reason ? <small>{selectedCard.status_reason}</small> : null}
             </>
           )}

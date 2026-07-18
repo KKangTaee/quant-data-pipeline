@@ -8301,7 +8301,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertEqual(pattern_map.count('className="fm-pattern-map__uncertainty"'), 1)
         self.assertIn("data-forecast-step={uncertaintyStep.step}", pattern_map)
         self.assertIn("일 후 예상 위치", pattern_map)
-        self.assertIn("일 예상 이동", pattern_map)
+        self.assertIn("일 예상 순이동", pattern_map)
         self.assertIn("일 후 도착 범위", pattern_map)
         self.assertNotIn("유사 패턴 중앙 위치", pattern_map)
         self.assertIn("실제 미래 경로를 보장하지 않습니다", pattern_map)
@@ -8322,22 +8322,40 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("fm-pattern-map__leader", pattern_map)
         self.assertIn("fm-pattern-map__direction", style)
 
+    def test_futures_macro_pattern_map_renders_terminal_net_direction_without_stepwise_zigzag(self) -> None:
+        pattern_map = Path(
+            "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('className="fm-pattern-map__conditional-path"', pattern_map)
+        self.assertIn("x1={sx(latest.x)}", pattern_map)
+        self.assertIn("y1={sy(latest.y)}", pattern_map)
+        self.assertIn("x2={sx(terminal.x)}", pattern_map)
+        self.assertIn("y2={sy(terminal.y)}", pattern_map)
+        self.assertNotIn("const forecastPolyline", pattern_map)
+        self.assertNotIn(
+            "...forecastPoints.map((point) => `${sx(point.x)},${sy(point.y)}`)",
+            pattern_map,
+        )
+        self.assertNotIn("const scaleForecastPoints", pattern_map)
+        self.assertNotIn("...scaleForecastPoints.map", pattern_map)
+        self.assertIn("일 예상 순이동", pattern_map)
+        self.assertIn("중간 일별 경로가 아닙니다", pattern_map)
+
     def test_futures_macro_pattern_map_keeps_observed_anchors_on_one_shared_scale(self) -> None:
         pattern_map = Path(
             "app/web/streamlit_components/futures_macro_workbench/src/PatternMapSection.tsx"
         ).read_text(encoding="utf-8")
 
         self.assertIn("const scalePaths = horizons.flatMap", pattern_map)
-        self.assertIn("const scaleForecastPoints = scalePaths.flatMap", pattern_map)
         self.assertIn("const scaleTerminalPoints = scalePaths.flatMap", pattern_map)
-        self.assertIn("...scaleForecastPoints.map((point) => point.x)", pattern_map)
+        self.assertNotIn("const scaleForecastPoints", pattern_map)
         self.assertIn(
-            "...scaleTerminalPoints.flatMap((point) => [point.lower_x, point.upper_x])",
+            "...scaleTerminalPoints.flatMap((point) => [point.x, point.lower_x, point.upper_x])",
             pattern_map,
         )
-        self.assertIn("...scaleForecastPoints.map((point) => point.y)", pattern_map)
         self.assertIn(
-            "...scaleTerminalPoints.flatMap((point) => [point.lower_y, point.upper_y])",
+            "...scaleTerminalPoints.flatMap((point) => [point.y, point.lower_y, point.upper_y])",
             pattern_map,
         )
         self.assertNotIn(
