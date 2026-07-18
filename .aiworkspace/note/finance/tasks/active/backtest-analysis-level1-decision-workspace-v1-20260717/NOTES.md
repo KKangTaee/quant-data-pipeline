@@ -146,3 +146,14 @@ generated artifact이므로 commit하지 않는다.
   변경하지 않으며 required 0개 선택은 기존 실행 전 검증이 소유한다.
 - desktop / 760px, keyboard focus, initial DOM 상한, actual Quality / GTAA / large ticker QA를
   acceptance에 포함했다. placeholder, 미결정 UX, 범위 충돌은 발견하지 않았다.
+
+## 2026-07-18 8차 Written Design Approval And Plan Self-Review
+
+- 사용자가 adaptive C안의 written design을 승인해 같은 worktree에서 inline execution으로
+  이어가기로 했다.
+- Task 21은 source contract RED를 먼저 확인한 뒤 catalog-order helper, compact/search control,
+  CSS와 React build를 하나의 reviewable implementation unit으로 묶었다.
+- Task 22는 actual Quality/GTAA/large option desktop·760px QA, fresh full verification,
+  finance docs와 root handoff sync, protected-path audit만 소유한다.
+- option identity, helper signature, threshold, CSS selector와 test token을 대조했고 모두
+  일치한다. placeholder, 조건부 소유 파일, 불균형 code fence는 남기지 않았다.

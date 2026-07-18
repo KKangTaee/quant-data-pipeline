@@ -33,8 +33,8 @@ Last Updated: 2026-07-18
 - [x] 8차 native multi-select root cause / option count audit
 - [x] 8차 adaptive multi-select 접근 사용자 승인
 - [x] 8차 corrective design 작성과 self-review
-- [ ] 8차 written design 사용자 review
-- [ ] 8차 implementation plan
+- [x] 8차 written design 사용자 review
+- [x] 8차 implementation plan
 - [ ] 8차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
@@ -92,4 +92,5 @@ Last Updated: 2026-07-18
   strategy contract가 아니라 공통 React `multi_select` renderer 문제로 범위를 고정했다.
 - 옵션 수 20개 이하는 checkbox-card grid, 21개 이상은 검색·checkbox list·selected chip을
   쓰는 adaptive C안을 사용자 승인에 따라 DESIGN에 추가했다.
-- 작성된 설계의 사용자 review 뒤 상세 PLAN과 TDD 구현으로 넘어간다.
+- 작성된 설계를 사용자 승인받았고 PLAN Task 21~22로 TDD 구현, Browser QA와 docs
+  closeout을 확정했다.
