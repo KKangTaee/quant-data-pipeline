@@ -2201,7 +2201,7 @@ git commit -m "Backtest Analysis 팩터 전략 React 설정 계약 이관"
   `consume_single_settings_intent(intent, *, run_handler)`,
   `render_single_settings_fallback(workspace, *, on_submit)`, and a settings component callback.
 
-- [ ] **Step 1: Write RED intent-boundary and fallback tests**
+- [x] **Step 1: Write RED intent-boundary and fallback tests**
 
 ```python
 def test_run_intent_validates_before_calling_handler():
@@ -2224,7 +2224,7 @@ intent id, unknown/hidden field, invalid option/range. Assert fallback imports t
 `build_single_settings_workspace` and `project_single_settings_payload` rather than form-specific
 renderers.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2236,14 +2236,14 @@ uv run --with pytest python -m pytest \
 
 Expected: new adapter/consumer functions are absent.
 
-- [ ] **Step 3: Implement runtime option and prefill adapter**
+- [x] **Step 3: Implement runtime option and prefill adapter**
 
 Build one JSON-ready runtime option catalog from existing `backtest_common` presets/helpers, current
 DB-backed ticker choices, benchmark/options, and selected history prefill. The adapter passes those
 values into the pure service and never lets React import or infer them. Persist selected variant and
 validation errors under keys scoped by `draft_key`.
 
-- [ ] **Step 4: Implement callable-verified intent consumer and fallback**
+- [x] **Step 4: Implement callable-verified intent consumer and fallback**
 
 `select_strategy_variant` accepts only the current family option and updates Python session state.
 `run_single_strategy` checks current identity, consumes a unique intent id once, calls pure
@@ -2252,7 +2252,7 @@ and submitted values without clearing prior successful result. The generic fallb
 same sections/fields and maps seven allowed controls to Streamlit widgets; it is invoked only when
 the component is unavailable or raises during render.
 
-- [ ] **Step 5: Run GREEN and state/persistence regressions**
+- [x] **Step 5: Run GREEN and state/persistence regressions**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2270,7 +2270,7 @@ git diff --check
 Expected: invalid intents make zero runner/registry/history calls; valid intents call the unchanged
 runner once; failure/stale/prefill contracts remain green.
 
-- [ ] **Step 6: Commit Task 17**
+- [x] **Step 6: Commit Task 17**
 
 ```bash
 git add app/web/backtest_single_settings_workspace.py \

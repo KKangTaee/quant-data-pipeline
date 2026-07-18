@@ -637,3 +637,221 @@ def test_mix_save_and_handoff_adapters_keep_persistence_separate() -> None:
 
     save_mix.assert_called_once()
     handoff_mix.assert_called_once_with({"selection_source_id": "mix-source-1"})
+
+
+def _equal_weight_settings_runtime() -> dict:
+    return {
+        "presets": {
+            "Equal Weight": {
+                "Dividend ETFs": ["VIG", "SCHD", "DGRO", "GLD"],
+            }
+        },
+        "tickers": ["VIG", "SCHD", "DGRO", "GLD", "SPY"],
+        "benchmarks": ["SPY"],
+    }
+
+
+def _visible_settings_values(workspace: dict) -> dict:
+    fields = [
+        field
+        for section in workspace["sections"]
+        for field in section["fields"]
+    ]
+    all_values = {field["field_id"]: field["value"] for field in fields}
+    return {
+        field["field_id"]: field["value"]
+        for field in fields
+        if not field.get("visible_when")
+        or all(
+            all_values.get(dependency) == expected
+            for dependency, expected in field["visible_when"].items()
+        )
+    }
+
+
+def test_single_settings_schema_uses_current_strategy_catalog_names() -> None:
+    from app.services.backtest_single_settings_workspace import (
+        SINGLE_SETTINGS_CONCRETE_KEYS,
+    )
+
+    assert "Risk Parity Trend" in SINGLE_SETTINGS_CONCRETE_KEYS
+    assert "Risk Parity" not in SINGLE_SETTINGS_CONCRETE_KEYS
+
+
+def test_single_settings_run_intent_validates_then_calls_handler_once() -> None:
+    from app.services.backtest_single_settings_workspace import (
+        build_single_settings_workspace,
+    )
+    from app.web import backtest_single_settings_workspace as settings_workspace
+
+    runtime = _equal_weight_settings_runtime()
+    workspace = build_single_settings_workspace(
+        "Equal Weight",
+        None,
+        {},
+        runtime,
+    )
+    calls = []
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_strategy_choice": "Equal Weight",
+            "backtest_single_settings_consumed_intent_ids": [],
+        }
+    )
+    intent = {
+        "action": "run_single_strategy",
+        "intent_id": "run-equal-1",
+        "strategy_choice": "Equal Weight",
+        "variant": None,
+        "values": _visible_settings_values(workspace),
+    }
+
+    with patch.object(settings_workspace, "st", fake_streamlit):
+        first = settings_workspace.consume_single_settings_intent(
+            intent,
+            run_handler=lambda payload, strategy_name: calls.append(
+                (payload, strategy_name)
+            ),
+            runtime_options=runtime,
+        )
+        second = settings_workspace.consume_single_settings_intent(
+            intent,
+            run_handler=lambda payload, strategy_name: calls.append(
+                (payload, strategy_name)
+            ),
+            runtime_options=runtime,
+        )
+
+    assert first["ok"] is True
+    assert second["duplicate"] is True
+    assert len(calls) == 1
+    assert calls[0][0]["strategy_key"] == "equal_weight"
+    assert calls[0][1] == "Equal Weight"
+
+
+def test_single_settings_invalid_or_mismatched_intent_never_runs() -> None:
+    from app.web import backtest_single_settings_workspace as settings_workspace
+
+    calls = []
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_strategy_choice": "Equal Weight",
+            "backtest_single_settings_consumed_intent_ids": [],
+        }
+    )
+    with patch.object(settings_workspace, "st", fake_streamlit):
+        mismatch = settings_workspace.consume_single_settings_intent(
+            {
+                "action": "run_single_strategy",
+                "intent_id": "mismatch-1",
+                "strategy_choice": "GTAA",
+                "variant": None,
+                "values": {},
+            },
+            run_handler=lambda payload, strategy_name: calls.append(payload),
+            runtime_options=_equal_weight_settings_runtime(),
+        )
+        invalid = settings_workspace.consume_single_settings_intent(
+            {
+                "action": "run_single_strategy",
+                "intent_id": "invalid-1",
+                "strategy_choice": "Equal Weight",
+                "variant": None,
+                "values": {"unknown": "injected"},
+            },
+            run_handler=lambda payload, strategy_name: calls.append(payload),
+            runtime_options=_equal_weight_settings_runtime(),
+        )
+        missing_handler = settings_workspace.consume_single_settings_intent(
+            {
+                "action": "run_single_strategy",
+                "intent_id": "handler-1",
+                "strategy_choice": "Equal Weight",
+                "variant": None,
+                "values": {},
+            },
+            run_handler=None,
+            runtime_options=_equal_weight_settings_runtime(),
+        )
+
+    assert mismatch["ok"] is False
+    assert invalid["errors"]["unknown"] == "허용되지 않은 설정입니다."
+    assert missing_handler["ok"] is False
+    assert calls == []
+
+
+def test_single_settings_variant_intent_updates_only_allowed_family_variant() -> None:
+    from app.web import backtest_single_settings_workspace as settings_workspace
+
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_strategy_choice": "Quality + Value",
+            "backtest_quality_value_variant": "Strict Annual",
+            "backtest_single_settings_consumed_intent_ids": [],
+        }
+    )
+    with (
+        patch.object(settings_workspace, "st", fake_streamlit),
+        patch.object(
+            settings_workspace,
+            "_variant_session_key",
+            return_value="backtest_quality_value_variant",
+        ),
+    ):
+        result = settings_workspace.consume_single_settings_intent(
+            {
+                "action": "select_strategy_variant",
+                "intent_id": "variant-1",
+                "strategy_choice": "Quality + Value",
+                "variant": "Quarterly",
+                "values": {},
+            },
+            run_handler=None,
+            runtime_options={},
+        )
+
+    assert result["ok"] is True
+    assert (
+        fake_streamlit.session_state["backtest_quality_value_variant"]
+        == "Strict Quarterly"
+    )
+
+
+def test_current_single_settings_workspace_projects_prefill_back_to_editor_values() -> None:
+    from app.web import backtest_single_settings_workspace as settings_workspace
+
+    runtime = _equal_weight_settings_runtime()
+    fake_streamlit = MagicMock()
+    fake_streamlit.session_state = _SessionState(
+        {
+            "backtest_strategy_choice": "Equal Weight",
+            "backtest_prefill_payload": {
+                "strategy_key": "equal_weight",
+                "start": "2020-01-01",
+                "end": "2024-12-31",
+                "rebalance_interval": 6,
+                "universe_mode": "preset",
+                "preset_name": "Dividend ETFs",
+                "transaction_cost_bps": 12.0,
+            },
+        }
+    )
+
+    with patch.object(settings_workspace, "st", fake_streamlit):
+        workspace = settings_workspace.build_current_single_settings_workspace(
+            selected_variant=None,
+            runtime_options=runtime,
+        )
+
+    values = {
+        field["field_id"]: field["value"]
+        for section in workspace["sections"]
+        for field in section["fields"]
+    }
+    assert values["start"] == "2020-01-01"
+    assert values["end"] == "2024-12-31"
+    assert values["rebalance_interval"] == 6
+    assert values["transaction_cost_bps"] == 12.0

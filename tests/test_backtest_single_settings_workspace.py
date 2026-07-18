@@ -19,7 +19,7 @@ EXPECTED_CONCRETE_KEYS = {
     "Equal Weight": (None,),
     "GTAA": (None,),
     "Global Relative Strength": (None,),
-    "Risk Parity": (None,),
+    "Risk Parity Trend": (None,),
     "Dual Momentum": (None,),
     "Risk-On Momentum 5D": (None,),
     "Quality": ("Annual", "Quarterly", "Snapshot"),
@@ -44,7 +44,7 @@ RUNTIME_OPTIONS = {
                 "GLD",
             ],
         },
-        "Risk Parity": {
+        "Risk Parity Trend": {
             "Risk Parity Universe": ["SPY", "TLT", "GLD", "IEF", "LQD"],
         },
         "Dual Momentum": {
@@ -255,7 +255,7 @@ TACTICAL_EXPECTED_KEYS = {
         "preset_name",
     }
     | PROMOTION_POLICY_KEYS,
-    "Risk Parity": {
+    "Risk Parity Trend": {
         "strategy_key",
         "tickers",
         "start",

@@ -24,7 +24,7 @@ SINGLE_SETTINGS_CONCRETE_KEYS: dict[str, tuple[str | None, ...]] = {
     "Equal Weight": (None,),
     "GTAA": (None,),
     "Global Relative Strength": (None,),
-    "Risk Parity": (None,),
+    "Risk Parity Trend": (None,),
     "Dual Momentum": (None,),
     "Risk-On Momentum 5D": (None,),
     "Quality": ("Annual", "Quarterly", "Snapshot"),
@@ -36,7 +36,7 @@ _CONCRETE_STRATEGY_KEYS: dict[tuple[str, str | None], str] = {
     ("Equal Weight", None): "equal_weight",
     ("GTAA", None): "gtaa",
     ("Global Relative Strength", None): "global_relative_strength",
-    ("Risk Parity", None): "risk_parity_trend",
+    ("Risk Parity Trend", None): "risk_parity_trend",
     ("Dual Momentum", None): "dual_momentum",
     ("Risk-On Momentum 5D", None): "risk_on_momentum_5d",
     ("Quality", "Annual"): "quality_snapshot_strict_annual",
@@ -79,8 +79,8 @@ _PROFILES: dict[str, dict[str, str]] = {
         "holding_rule": "신호 갱신 시 순위를 다시 계산하고 필요하면 현금성 자산으로 이동합니다.",
         "risk_note": "관찰 기간과 추세 필터가 교체 빈도와 낙폭에 영향을 줍니다.",
     },
-    "Risk Parity": {
-        "display_name": "Risk Parity",
+    "Risk Parity Trend": {
+        "display_name": "Risk Parity Trend",
         "purpose_label": "위험 균형 자산배분",
         "maturity_label": "운영 전략",
         "description": "자산별 변동성을 반영해 위험 기여도를 균형 있게 배분합니다.",
@@ -723,7 +723,7 @@ def _standard_tactical_sections(
                 ),
             ]
         )
-    elif strategy_choice == "Risk Parity":
+    elif strategy_choice == "Risk Parity Trend":
         execution.extend(
             [
                 _field(
@@ -1413,7 +1413,7 @@ def _strategy_sections(
         "Equal Weight",
         "GTAA",
         "Global Relative Strength",
-        "Risk Parity",
+        "Risk Parity Trend",
         "Dual Momentum",
     }:
         return _standard_tactical_sections(strategy_choice, runtime_options)
@@ -1550,7 +1550,7 @@ def _payload_constants(
     if strategy_choice in {
         "GTAA",
         "Global Relative Strength",
-        "Risk Parity",
+        "Risk Parity Trend",
         "Dual Momentum",
     }:
         policy_defaults = runtime_options.get("policy_defaults")

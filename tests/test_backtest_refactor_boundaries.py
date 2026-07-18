@@ -769,6 +769,24 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn('emitIntent("select_mix_mode"', react)
         self.assertIn('emitIntent("save_mix"', react)
 
+    def test_single_settings_fallback_uses_the_same_pure_schema_and_projector(
+        self,
+    ) -> None:
+        source = (
+            PROJECT_ROOT / "app/web/backtest_single_settings_workspace.py"
+        ).read_text()
+
+        self.assertIn(
+            "from app.services.backtest_single_settings_workspace import (",
+            source,
+        )
+        self.assertIn("build_single_settings_workspace", source)
+        self.assertIn("project_single_settings_payload", source)
+        self.assertIn("def render_single_settings_fallback", source)
+        self.assertIn('"run_single_strategy"', source)
+        self.assertNotIn("_render_equal_weight_form", source)
+        self.assertNotIn("_render_gtaa_form", source)
+
 
 if __name__ == "__main__":
     unittest.main()
