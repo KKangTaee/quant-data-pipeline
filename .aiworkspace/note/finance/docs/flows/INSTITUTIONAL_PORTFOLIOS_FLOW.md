@@ -42,6 +42,7 @@ Workspace > Ingestion
 - 첫 화면은 선택 기관의 concentration, largest mapped sector, ticker mapping coverage, previous-quarter readiness를 먼저 요약한다.
 - `coverage`는 holding count mapping, mapped reported-value weight, performance-covered weight를 분리한다.
 - `holdings_explorer.rows`는 service가 만든 전체 logical holding rows다. React는 이를 조용히 절단하지 않고 50개 고정 page로 렌더링한다.
+- 현재 전체 holdings array는 component payload에 계속 직렬화된다. 50-row pagination은 렌더링 DOM만 제한하므로 대형 포트폴리오에서는 payload 크기와 Streamlit rerun latency가 커질 수 있으며, 이것이 실제 병목이 되면 server-side pagination을 후속 선택지로 검토한다.
 - holdings search / mapping filter / sector filter / sort / page는 React local state이며 Streamlit rerun을 요구하지 않는다.
 - manager selection, manager search, security drilldown / explicit search, popularity load, price collection은 명시 event로 Streamlit에 전달한다.
 - 이전 comparable filing이 없으면 `comparison_available=false`, change groups는 비우고 unavailable reason만 표시한다. 현재 row를 신규 매수처럼 표현하지 않는다.

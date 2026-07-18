@@ -38,3 +38,12 @@
 - Desktop: context hero, compact manager search / rail, Bridgewater `1–50 / 993` and `51–100 / 993`, 20 pages, NVDA search, mapped/unmapped filter, unresolved identity notice, NVDA chart / 100 holders verified.
 - 420px: hero and controls use one grid column; four holdings controls each use full available width; page and iframe document report no horizontal overflow.
 - Final generated screenshot: `.playwright-mcp/institutional-portfolios-context-first-v2-final.png` (not staged).
+
+## 2026-07-18 Reviewer Follow-Up: 420px Interaction QA
+
+- Separate Streamlit server: port `8519`; stopped after QA. Browser viewport override was reset and the QA tab was finalized.
+- Requested viewport `420 × 900`에서 primary `종목 분석` 탭과 secondary `종목 상세` / `기관 보유 랭킹` 탭을 실제 클릭해 전환했다. 랭킹 화면의 `기관 보유 랭킹 불러오기` action도 노출됨을 확인했다.
+- `포트폴리오 > 전체 보유`로 돌아와 mapping filter `ticker 미연결 / mapping 확인 필요`를 선택했다. Berkshire 결과는 `1–10 / 10`이며 10개 row 모두 `ticker 연결 전`으로 표시됐다.
+- 미연결 `CONSTELLATION BRANDS INC` row를 선택해 `CUSIP 21036P108 · Unmapped` identity notice와 `ticker가 안전하게 연결되기 전에는 종목 차트나 가격 수집을 열지 않습니다.` 안내를 확인했다. `.ip-price-action`과 `.ip-security-detail`은 모두 `0`개였다.
+- mapping filter를 `ticker 연결됨`으로 전환하고 holdings search에 `AAPL`을 입력해 `1–1 / 1`을 확인했다. AAPL row 선택 후 종목 상세, CUSIP `037833100`, 포트폴리오 비중 `22.0%`, 보고 평가액 `57.8B`, 보유 기관 `100`, interactive chart가 노출됐다.
+- Mobile interaction screenshot: `.playwright-mcp/institutional-portfolios-context-first-v2-mobile-interaction.png` (not staged).

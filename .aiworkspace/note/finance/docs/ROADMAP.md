@@ -867,11 +867,11 @@ Current active task:
 
 Latest completed task:
 
-- `overview-economic-cycle-asset-signal-copy-v1-20260717` — 1차~3차 complete
+- `institutional-portfolios-context-first-redesign-v1-20260718` — 전체 roadmap `4/4` complete
 
 Previous completed task:
 
-- `overview-economic-cycle-gold-dollar-price-confirmation-v1-20260717` — 1차~3차 complete
+- `overview-economic-cycle-asset-signal-copy-v1-20260717` — 1차~3차 complete
 
 Recent completed docs cleanup tasks:
 
