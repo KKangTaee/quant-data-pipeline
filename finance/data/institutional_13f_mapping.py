@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from .db.mysql import MySQLClient
+from .db.schema import INSTITUTIONAL_13F_SCHEMAS, sync_table_schema
 
 
 OPENFIGI_MAPPING_URL = "https://api.openfigi.com/v3/mapping"
@@ -231,3 +236,138 @@ def collect_openfigi_resolutions(
         if batch_index < len(batches) - 1 and rate.get("remaining") == 0:
             sleep_fn(max(0.0, float(rate.get("reset") or 0.0)))
     return output
+
+
+def _normalize_cik(value: Any) -> str | None:
+    digits = "".join(character for character in str(value or "").strip() if character.isdigit())
+    return digits.zfill(10)[-10:] if digits else None
+
+
+def load_latest_13f_identifier_rows(
+    db: MySQLClient,
+    ciks: Iterable[str],
+    *,
+    refresh_existing: bool = False,
+) -> list[dict[str, Any]]:
+    """Load one row per latest-filing identifier for an explicit manager scope."""
+    selected_ciks: list[str] = []
+    for value in ciks:
+        cik = _normalize_cik(value)
+        if cik and cik not in selected_ciks:
+            selected_ciks.append(cik)
+    if not selected_ciks:
+        return []
+
+    placeholders = ", ".join(["%s"] * len(selected_ciks))
+    retry_scope = ""
+    if not refresh_existing:
+        retry_scope = "AND (ir.identifier_value IS NULL OR ir.last_attempt_status = 'error')"
+    sql = f"""
+        SELECT
+          h.cusip AS identifier_value,
+          MAX(h.issuer_name) AS issuer_name
+        FROM institutional_13f_manager m
+        JOIN institutional_13f_holding h
+          ON m.latest_accession_number = h.accession_number
+        LEFT JOIN institutional_13f_identifier_resolution ir
+          ON h.cusip = ir.identifier_value
+         AND ir.source = 'openfigi_v3'
+        WHERE m.cik IN ({placeholders})
+          {retry_scope}
+        GROUP BY h.cusip
+        ORDER BY h.cusip
+    """
+    raw_rows = db.query(sql, tuple(selected_ciks))
+    return _dedupe_identifier_rows(raw_rows)
+
+
+def upsert_13f_identifier_resolutions(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
+    """Persist current provider decisions without erasing good state on request errors."""
+    if not rows:
+        return 0
+    sql = """
+        INSERT INTO institutional_13f_identifier_resolution (
+          identifier_value, identifier_type, source, resolution_status, symbol,
+          provider_name, figi, candidate_count, candidates_json, source_ref,
+          warning_text, error_text, last_attempt_status, attempted_at, resolved_at
+        ) VALUES (
+          %(identifier_value)s, %(identifier_type)s, %(source)s, %(resolution_status)s, %(symbol)s,
+          %(provider_name)s, %(figi)s, %(candidate_count)s, %(candidates_json)s, %(source_ref)s,
+          %(warning_text)s, %(error_text)s, %(last_attempt_status)s, %(attempted_at)s, %(resolved_at)s
+        )
+        ON DUPLICATE KEY UPDATE
+          identifier_type = VALUES(identifier_type),
+          resolution_status = IF(VALUES(last_attempt_status) = 'error', resolution_status, VALUES(resolution_status)),
+          symbol = IF(VALUES(last_attempt_status) = 'error', symbol, VALUES(symbol)),
+          provider_name = IF(VALUES(last_attempt_status) = 'error', provider_name, VALUES(provider_name)),
+          figi = IF(VALUES(last_attempt_status) = 'error', figi, VALUES(figi)),
+          candidate_count = IF(VALUES(last_attempt_status) = 'error', candidate_count, VALUES(candidate_count)),
+          candidates_json = IF(VALUES(last_attempt_status) = 'error', candidates_json, VALUES(candidates_json)),
+          source_ref = VALUES(source_ref),
+          warning_text = IF(VALUES(last_attempt_status) = 'error', warning_text, VALUES(warning_text)),
+          error_text = VALUES(error_text),
+          last_attempt_status = VALUES(last_attempt_status),
+          attempted_at = VALUES(attempted_at),
+          resolved_at = IF(VALUES(last_attempt_status) = 'error', resolved_at, VALUES(resolved_at))
+    """
+    db.executemany(sql, rows)
+    return len(rows)
+
+
+def collect_and_store_openfigi_13f_mappings(
+    *,
+    ciks: Iterable[str],
+    api_key: str | None = None,
+    refresh_existing: bool = False,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    opener: Any = urlopen,
+    sleep_fn: Any = time.sleep,
+    timeout: float = 30.0,
+    max_retries: int = 2,
+) -> dict[str, Any]:
+    """Resolve and persist latest 13F identities for a selected manager scope."""
+    db = MySQLClient(host, user, password, port)
+    identifiers: list[dict[str, Any]] = []
+    resolutions: list[dict[str, Any]] = []
+    rows_written = 0
+    configured_api_key = api_key or os.getenv("OPENFIGI_API_KEY")
+    try:
+        db.use_db("finance_meta")
+        sync_table_schema(
+            db,
+            "institutional_13f_identifier_resolution",
+            INSTITUTIONAL_13F_SCHEMAS["institutional_13f_identifier_resolution"],
+            "finance_meta",
+        )
+        identifiers = load_latest_13f_identifier_rows(db, ciks, refresh_existing=refresh_existing)
+        resolutions = collect_openfigi_resolutions(
+            identifiers,
+            api_key=configured_api_key,
+            opener=opener,
+            sleep_fn=sleep_fn,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+        rows_written = upsert_13f_identifier_resolutions(db, resolutions)
+    finally:
+        db.close()
+
+    counts = Counter(
+        row["resolution_status"] if row["last_attempt_status"] != "error" else "error"
+        for row in resolutions
+    )
+    return {
+        "source": OPENFIGI_SOURCE,
+        "source_ref": OPENFIGI_SOURCE_REF,
+        "identifiers_requested": len(identifiers),
+        "rows_written": rows_written,
+        "mapped": counts["mapped"],
+        "ambiguous": counts["ambiguous"],
+        "unmapped": counts["unmapped"],
+        "errors": counts["error"],
+        "api_key_used": bool(configured_api_key),
+        "target_table": "finance_meta.institutional_13f_identifier_resolution",
+    }

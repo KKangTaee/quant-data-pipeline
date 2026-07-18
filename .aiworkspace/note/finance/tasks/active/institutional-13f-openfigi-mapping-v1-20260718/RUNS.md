@@ -27,3 +27,10 @@ No implementation code or DB writes were performed during design investigation.
 - RED: the new resolver suite failed with five `ModuleNotFoundError` errors before the module existed.
 - GREEN: `tests/test_institutional_13f_mapping.py` passed 5/5 after implementing identifier normalization, US Equity jobs, safe candidate classification, provider batching, bounded retry, and proactive rate-reset pacing.
 - `py_compile` and `git diff --check` passed for Task 1.
+
+## 2026-07-18 Task 2
+
+- RED: four persistence tests failed because the resolution table, selected-CIK reader, and conditional UPSERT did not exist.
+- GREEN: the resolver/persistence suite passed 9/9 and the pre-existing Institutional Portfolios suite remained 57/57.
+- Added current-state schema keyed by `(identifier_value, source)`, latest-accession selection for explicit CIKs, default missing/error retry scope, and error-preserving UPSERT semantics.
+- `py_compile` and `git diff --check` passed for the schema and mapping module.

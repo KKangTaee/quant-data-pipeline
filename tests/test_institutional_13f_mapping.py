@@ -168,5 +168,91 @@ class OpenFigiResolverTests(unittest.TestCase):
         self.assertEqual(sleeps, [2.0])
 
 
+class ResolutionPersistenceTests(unittest.TestCase):
+    def test_schema_defines_identifier_resolution_current_state(self) -> None:
+        from finance.data.db.schema import INSTITUTIONAL_13F_SCHEMAS
+
+        sql = INSTITUTIONAL_13F_SCHEMAS["institutional_13f_identifier_resolution"]
+        self.assertIn("UNIQUE KEY uk_identifier_source (identifier_value, source)", sql)
+        self.assertIn("resolution_status", sql)
+        self.assertIn("last_attempt_status", sql)
+        self.assertIn("candidates_json JSON", sql)
+
+    def test_resolution_upsert_preserves_normal_state_on_error_attempt(self) -> None:
+        from finance.data.institutional_13f_mapping import upsert_13f_identifier_resolutions
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.executemany_calls: list[tuple[str, list[dict[str, object]]]] = []
+
+            def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+                self.executemany_calls.append((sql, rows))
+
+        fake_db = FakeDB()
+        error_row = {
+            "identifier_value": "632307104",
+            "identifier_type": "ID_CUSIP",
+            "source": "openfigi_v3",
+            "resolution_status": "unmapped",
+            "symbol": None,
+            "provider_name": None,
+            "figi": None,
+            "candidate_count": 0,
+            "candidates_json": "[]",
+            "source_ref": "https://www.openfigi.com/api/documentation",
+            "warning_text": None,
+            "error_text": "OpenFIGI HTTP 503: unavailable",
+            "last_attempt_status": "error",
+            "attempted_at": "2026-07-18 12:00:00",
+            "resolved_at": None,
+        }
+        count = upsert_13f_identifier_resolutions(fake_db, [error_row])
+        sql, params = fake_db.executemany_calls[0]
+        self.assertEqual(count, 1)
+        self.assertIn("IF(VALUES(last_attempt_status) = 'error', resolution_status", sql)
+        self.assertIn("IF(VALUES(last_attempt_status) = 'error', symbol", sql)
+        self.assertEqual(params[0]["last_attempt_status"], "error")
+
+    def test_latest_13f_identifier_selection_uses_latest_accessions_and_default_retry_scope(self) -> None:
+        from finance.data.institutional_13f_mapping import load_latest_13f_identifier_rows
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.query_calls: list[tuple[str, tuple[object, ...]]] = []
+
+            def query(self, sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+                self.query_calls.append((sql, params))
+                return [
+                    {"identifier_value": "632307104", "issuer_name": "Natera Inc"},
+                    {"identifier_value": "632307104", "issuer_name": "Natera Inc"},
+                    {"identifier_value": " n62509109 ", "issuer_name": "NewAmsterdam"},
+                ]
+
+        fake_db = FakeDB()
+        rows = load_latest_13f_identifier_rows(fake_db, ["1536411", "0001067983"])
+        sql, params = fake_db.query_calls[0]
+        self.assertIn("m.latest_accession_number = h.accession_number", sql)
+        self.assertIn("m.cik IN (%s, %s)", sql)
+        self.assertIn("ir.identifier_value IS NULL", sql)
+        self.assertIn("ir.last_attempt_status = 'error'", sql)
+        self.assertEqual(params, ("0001536411", "0001067983"))
+        self.assertEqual([row["identifier_value"] for row in rows], ["632307104", "N62509109"])
+
+    def test_latest_13f_identifier_refresh_existing_omits_retry_filter(self) -> None:
+        from finance.data.institutional_13f_mapping import load_latest_13f_identifier_rows
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.sql = ""
+
+            def query(self, sql: str, params: tuple[object, ...]) -> list[dict[str, object]]:
+                self.sql = sql
+                return []
+
+        fake_db = FakeDB()
+        load_latest_13f_identifier_rows(fake_db, ["0001536411"], refresh_existing=True)
+        self.assertNotIn("ir.last_attempt_status = 'error'", fake_db.sql)
+
+
 if __name__ == "__main__":
     unittest.main()
