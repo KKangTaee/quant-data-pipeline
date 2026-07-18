@@ -619,8 +619,9 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
 
         self.assertNotIn('st.selectbox(\n        "Strategy"', source)
         self.assertNotIn('f"{strategy_choice} Variant"', source)
-        self.assertIn("render_single_strategy_settings_header(", source)
-        self.assertIn("st.segmented_control(", settings_source)
+        self.assertIn("build_current_single_settings_workspace(", source)
+        self.assertIn("render_single_settings_fallback(", source)
+        self.assertIn("build_single_settings_workspace", settings_source)
 
     def test_single_context_keeps_current_work_summary_for_mix_only(self) -> None:
         source = (
@@ -831,6 +832,28 @@ class BacktestRefactorBoundaryTests(unittest.TestCase):
         self.assertIn("ResizeObserver", index)
         self.assertNotIn("dangerouslySetInnerHTML", component)
         self.assertNotIn("execute_single_backtest", component)
+
+    def test_primary_single_settings_route_has_no_legacy_form_dispatch(self) -> None:
+        source = (PROJECT_ROOT / "app/web/backtest_single_strategy.py").read_text()
+        render_body = source.split("def render_single_strategy_workspace", 1)[1]
+
+        self.assertIn("build_current_single_settings_workspace", source)
+        self.assertIn("render_backtest_analysis_decision_workspace", source)
+        self.assertIn('surface="settings"', source)
+        self.assertIn("consume_single_settings_intent", source)
+        self.assertIn("render_single_settings_fallback", source)
+        self.assertIn("_handle_backtest_run", source)
+        self.assertNotIn("from app.web.backtest_single_forms import", source)
+        for legacy_renderer in (
+            "_render_equal_weight_form",
+            "_render_gtaa_form",
+            "_render_global_relative_strength_form",
+            "_render_risk_parity_form",
+            "_render_dual_momentum_form",
+            "_render_risk_on_momentum_5d_form",
+            "_render_single_strategy_family_form",
+        ):
+            self.assertNotIn(legacy_renderer, render_body)
 
 
 if __name__ == "__main__":

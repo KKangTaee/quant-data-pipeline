@@ -1,19 +1,20 @@
 from __future__ import annotations
 
+from functools import partial
+from uuid import uuid4
+
 from app.web.backtest_common import *  # noqa: F401,F403
-from app.web.backtest_strategy_catalog import is_family_strategy
 from app.web.backtest_result_display import _render_last_run
-from app.web.backtest_single_forms import (
-    _render_dual_momentum_form,
-    _render_equal_weight_form,
-    _render_global_relative_strength_form,
-    _render_gtaa_form,
-    _render_risk_parity_form,
-    _render_risk_on_momentum_5d_form,
-    _render_single_strategy_family_form,
+from app.web.backtest_single_runner import _handle_backtest_run
+from app.web.components.backtest_analysis_decision_workspace import (
+    is_backtest_analysis_decision_workspace_available,
+    render_backtest_analysis_decision_workspace,
 )
 from app.web.backtest_single_settings_workspace import (
-    render_single_strategy_settings_header,
+    build_current_single_settings_workspace,
+    build_single_settings_runtime_options,
+    consume_single_settings_intent,
+    render_single_settings_fallback,
 )
 
 
@@ -73,6 +74,90 @@ def _mark_last_run_stale_if_strategy_selection_changed(
     st.session_state.backtest_last_strategy_selection_signature = current_signature
 
 
+def _run_single_settings_payload(payload: dict, strategy_name: str) -> bool:
+    return _handle_backtest_run(payload, strategy_name=strategy_name)
+
+
+def _consume_single_settings_component_change(
+    *,
+    component_key: str,
+    runtime_options: dict[str, object],
+) -> None:
+    intent = st.session_state.get(component_key)
+    consume_single_settings_intent(
+        intent if isinstance(intent, dict) else None,
+        run_handler=_run_single_settings_payload,
+        runtime_options=runtime_options,
+    )
+
+
+def _render_single_settings_surface(
+    *,
+    selected_variant: str | None,
+) -> None:
+    runtime_options = build_single_settings_runtime_options()
+    workspace = build_current_single_settings_workspace(
+        selected_variant=selected_variant,
+        runtime_options=runtime_options,
+    )
+    component_key = (
+        "backtest-analysis-single-settings-"
+        f"{str(workspace.get('draft_key') or 'current')}"
+    )
+    intent = None
+    if is_backtest_analysis_decision_workspace_available():
+        try:
+            intent = render_backtest_analysis_decision_workspace(
+                workspace=workspace,
+                surface="settings",
+                key=component_key,
+                on_change=partial(
+                    _consume_single_settings_component_change,
+                    component_key=component_key,
+                    runtime_options=runtime_options,
+                ),
+            )
+        except Exception as exc:  # component availability must not block execution
+            st.warning(
+                "React 설정 화면을 열지 못해 같은 설정 계약의 기본 화면으로 전환했습니다. "
+                f"({exc})"
+            )
+            render_single_settings_fallback(
+                workspace,
+                on_submit=lambda values: consume_single_settings_intent(
+                    {
+                        "action": "run_single_strategy",
+                        "intent_id": f"fallback-{uuid4()}",
+                        "strategy_choice": workspace["strategy_choice"],
+                        "variant": dict(workspace.get("variant") or {}).get("value"),
+                        "values": values,
+                    },
+                    run_handler=_run_single_settings_payload,
+                    runtime_options=runtime_options,
+                ),
+            )
+    else:
+        render_single_settings_fallback(
+            workspace,
+            on_submit=lambda values: consume_single_settings_intent(
+                {
+                    "action": "run_single_strategy",
+                    "intent_id": f"fallback-{uuid4()}",
+                    "strategy_choice": workspace["strategy_choice"],
+                    "variant": dict(workspace.get("variant") or {}).get("value"),
+                    "values": values,
+                },
+                run_handler=_run_single_settings_payload,
+                runtime_options=runtime_options,
+            ),
+        )
+    consume_single_settings_intent(
+        intent,
+        run_handler=_run_single_settings_payload,
+        runtime_options=runtime_options,
+    )
+
+
 # Render and operate the Single Strategy workspace.
 def render_single_strategy_workspace() -> None:
     prefill_notice = st.session_state.get("backtest_prefill_notice")
@@ -123,31 +208,13 @@ def render_single_strategy_workspace() -> None:
         st.session_state.backtest_strategy_choice = strategy_choice
 
     selected_variant = _selected_strategy_variant(strategy_choice)
-    variant_key = None
-    variant_options: list[str] = []
-    if is_family_strategy(strategy_choice):
-        variant_key = _single_family_variant_session_key(strategy_choice)
-        variant_options = family_variant_options(strategy_choice)
-    selected_variant = render_single_strategy_settings_header(
-        strategy_choice=strategy_choice,
-        selected_variant=selected_variant,
-        variant_key=variant_key,
-        variant_options=variant_options,
-    )
-    if strategy_choice == "Equal Weight":
-        _render_equal_weight_form()
-    elif strategy_choice == "GTAA":
-        _render_gtaa_form()
-    elif strategy_choice == "Global Relative Strength":
-        _render_global_relative_strength_form()
-    elif strategy_choice == "Risk Parity Trend":
-        _render_risk_parity_form()
-    elif strategy_choice == "Dual Momentum":
-        _render_dual_momentum_form()
-    elif strategy_choice == "Risk-On Momentum 5D":
-        _render_risk_on_momentum_5d_form()
-    else:
-        _render_single_strategy_family_form(strategy_choice, selected_variant=selected_variant)
+    variant_key = _single_family_variant_session_key(strategy_choice)
+    variant_options = family_variant_options(strategy_choice)
+    if variant_key and selected_variant not in variant_options:
+        selected_variant = variant_options[0]
+        st.session_state[variant_key] = selected_variant
+    _render_single_settings_surface(selected_variant=selected_variant)
+    st.session_state.backtest_prefill_pending = False
     st.divider()
     selected_variant = selected_variant or _selected_strategy_variant(strategy_choice)
     _mark_last_run_stale_if_strategy_selection_changed(strategy_choice, selected_variant)

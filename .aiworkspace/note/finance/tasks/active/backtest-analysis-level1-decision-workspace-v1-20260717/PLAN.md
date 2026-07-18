@@ -2365,7 +2365,7 @@ git commit -m "Backtest Analysis 전체 전략 React 설정 화면 구현"
 - Produces: every active Single Strategy selection uses React settings first; legacy renderer files
   are not imported/called by the primary route.
 
-- [ ] **Step 1: Write RED active-route and 13-variant smoke tests**
+- [x] **Step 1: Write RED active-route and 13-variant smoke tests**
 
 Assert `render_single_strategy_workspace()` calls the current settings builder/component and does not
 dispatch `render_equal_weight_form`, `render_gtaa_form`, `render_global_relative_strength_form`,
@@ -2373,7 +2373,7 @@ dispatch `render_equal_weight_form`, `render_gtaa_form`, `render_global_relative
 functions on the normal path. Parameterize 13 variants and assert profile, four sections, CTA,
 projected payload, and runner strategy name are available.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2383,7 +2383,7 @@ uv run --with pytest python -m pytest \
 
 Expected: route still dispatches native strategy forms.
 
-- [ ] **Step 3: Cut over the primary route and isolate compatibility code**
+- [x] **Step 3: Cut over the primary route and isolate compatibility code**
 
 Render selected strategy profile/settings once through the React component. Keep the prior successful
 result and existing decision surface after the settings component. On component failure call only
@@ -2391,7 +2391,7 @@ the generic same-schema fallback. Remove duplicate selected header/native shell 
 do not delete legacy files in this task because service/history compatibility tests may still import
 their pure helpers.
 
-- [ ] **Step 4: Run focused and full regressions**
+- [x] **Step 4: Run focused and full regressions**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_single_settings_workspace.py -q
@@ -2409,7 +2409,7 @@ git diff --check
 Expected: new focused suites pass; service suite is no worse than the recorded pre-7차 baseline and
 any unrelated baseline failure is documented rather than masked.
 
-- [ ] **Step 5: Commit Task 19**
+- [x] **Step 5: Commit Task 19**
 
 ```bash
 git add app/web/backtest_single_strategy.py \
