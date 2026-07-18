@@ -1870,3 +1870,644 @@ git commit -m "Backtest Analysis 단일 전략 설정 QA와 문서 동기화"
 - desktop / 760px QA scope and screenshot links;
 - protected registry / history / saved / `.superpowers/` / screenshots exclusion;
 - remaining risks and active task location.
+
+---
+
+## 7차: Unified React Strategy Settings Workspace
+
+### 7차 Goal And Architecture Amendment
+
+6차에서 공통 정보 계층만 적용하고 보존했던 strategy-specific native Streamlit form을
+primary 경로에서 제거한다. Python pure service가 9개 strategy choice / 13개 concrete
+variant의 profile, field schema, option, default, validation, payload projection을 소유하고,
+기존 `backtest_analysis_decision_workspace` React bundle은 supplied schema를 동일한 visual
+language로 렌더링한다. React는 `{strategy_choice, variant, values}` intent만 전달하며
+Python이 current selection, allow-list, type, range, option, visibility를 검증한 뒤 기존
+`_handle_backtest_run(payload, strategy_name)`을 호출한다.
+
+### 7차 File Ownership Map
+
+- Create `app/services/backtest_single_settings_workspace.py`: pure schema catalog, draft
+  validation, payload projection, field/user error projection.
+- Create `tests/test_backtest_single_settings_workspace.py`: 13-variant coverage, payload parity,
+  invalid draft, hidden-field, unknown-option contracts.
+- Modify `app/web/backtest_single_settings_workspace.py`: runtime option/session/prefill adapter,
+  component callback, same-read-model generic fallback.
+- Modify `app/web/backtest_single_strategy.py`: primary React settings route, variant routing,
+  stale-result preservation.
+- Modify `app/web/backtest_analysis_workspace.py`: settings intent allow-list and callable handler
+  dispatch.
+- Modify `app/web/components/backtest_analysis_decision_workspace/component.py`: `settings`
+  surface Python wrapper contract.
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts`:
+  settings read model and intent TypeScript types.
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/index.tsx`:
+  settings surface selection without changing `ResizeObserver` height sync.
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx`:
+  schema-driven profile, fields, disclosure, validation, CTA.
+- Modify `app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css`:
+  desktop two-column and 760px one-column settings layout.
+- Modify `tests/test_backtest_analysis_decision_workspace.py`: Python intent/handler/state
+  integration.
+- Modify `tests/test_backtest_refactor_boundaries.py`: React source/build, primary-route, fallback,
+  protected-boundary contracts.
+- Modify `tests/test_service_contracts.py`: representative runtime payload/prefill compatibility.
+- Keep `app/web/backtest_single_forms/*.py` temporarily as non-primary compatibility references;
+  do not call them from the normal React route after Task 19.
+
+### Task 14: Pure Settings Schema, Validation, And Projection Foundation
+
+**Files:**
+- Create: `app/services/backtest_single_settings_workspace.py`
+- Create: `tests/test_backtest_single_settings_workspace.py`
+
+**Interfaces:**
+- Consumes: JSON-ready scalar/list inputs and runtime-supplied option catalogs only; it does not
+  import Streamlit or `app.web`.
+- Produces: `SETTINGS_SCHEMA_VERSION`, `SINGLE_SETTINGS_CONCRETE_KEYS`,
+  `build_single_settings_workspace(strategy_choice, variant, values, runtime_options)`,
+  `validate_single_settings_draft(workspace, values)`, and
+  `project_single_settings_payload(workspace, values)`.
+
+- [ ] **Step 1: Write RED coverage and schema-shape tests**
+
+```python
+EXPECTED = {
+    "Equal Weight": (None,),
+    "GTAA": (None,),
+    "Global Relative Strength": (None,),
+    "Risk Parity": (None,),
+    "Dual Momentum": (None,),
+    "Risk-On Momentum 5D": (None,),
+    "Quality": ("Annual", "Quarterly", "Snapshot"),
+    "Value": ("Annual", "Quarterly"),
+    "Quality + Value": ("Annual", "Quarterly"),
+}
+
+def test_schema_covers_every_concrete_variant_once():
+    assert SINGLE_SETTINGS_CONCRETE_KEYS == EXPECTED
+    for choice, variants in EXPECTED.items():
+        for variant in variants:
+            workspace = build_single_settings_workspace(
+                choice, variant, {}, runtime_options={}
+            )
+            assert workspace["schema_version"] == "backtest_single_settings_workspace_v2"
+            assert [section["section_id"] for section in workspace["sections"]] == [
+                "execution", "universe", "rules", "risk"
+            ]
+            assert workspace["action"]["id"] == "run_single_strategy"
+```
+
+Also assert field ids and payload keys are unique, controls are one of `date`, `number`, `text`,
+`single_select`, `multi_select`, `segmented`, `toggle`, profile badges are plain strings, and every
+field has Korean first-read `label` and `help`.
+
+- [ ] **Step 2: Run RED and confirm the module is absent**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_single_settings_workspace.py -q \
+  -k "schema or concrete_variant or control"
+```
+
+Expected: collection fails with `ModuleNotFoundError` for the new pure service.
+
+- [ ] **Step 3: Implement immutable schema primitives and four-section projection**
+
+Define typed dictionaries/dataclasses equivalent to:
+
+```python
+SETTINGS_SCHEMA_VERSION = "backtest_single_settings_workspace_v2"
+ALLOWED_CONTROLS = frozenset({
+    "date", "number", "text", "single_select", "multi_select", "segmented", "toggle"
+})
+
+def field(field_id, payload_key, label, control, default, **metadata): ...
+def section(section_id, title, description, fields, disclosures=()): ...
+def build_single_settings_workspace(
+    strategy_choice: str,
+    variant: str | None,
+    values: Mapping[str, object] | None,
+    runtime_options: Mapping[str, object] | None,
+) -> dict[str, object]: ...
+```
+
+Return JSON-ready copies so callers cannot mutate module-level definitions. Implement the 13-key
+registry and explicit invalid strategy/variant `ValueError` messages before strategy-specific
+payload fields are added in Tasks 15~16.
+
+- [ ] **Step 4: Add RED validator tests for injection and type/range/option errors**
+
+```python
+def test_validator_rejects_unknown_hidden_and_invalid_fields():
+    workspace = build_single_settings_workspace("Equal Weight", None, {}, RUNTIME_OPTIONS)
+    errors = validate_single_settings_draft(workspace, {
+        "unknown": "x", "rebalance_interval": 0, "preset_name": "not-allowed"
+    })
+    assert errors["unknown"] == "허용되지 않은 설정입니다."
+    assert "최솟값" in errors["rebalance_interval"]
+    assert "선택할 수 없는 값" in errors["preset_name"]
+```
+
+Add a conditional field fixture and assert a submitted hidden value is rejected. Assert invalid
+date, number, toggle, text, list, required value, and duplicate multi-select option errors.
+
+- [ ] **Step 5: Implement validator and payload projector, then run GREEN**
+
+Validation order is identity -> unknown field -> visibility -> required -> control type -> range
+-> supplied options. `project_single_settings_payload()` must raise `SettingsValidationError`
+containing field errors and must only copy declared `payload_key` values plus schema-owned constant
+payload values.
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_single_settings_workspace.py -q
+.venv/bin/python -m py_compile app/services/backtest_single_settings_workspace.py
+git diff --check
+```
+
+Expected: foundation tests pass with no Streamlit import in the service.
+
+- [ ] **Step 6: Commit Task 14**
+
+```bash
+git add app/services/backtest_single_settings_workspace.py \
+  tests/test_backtest_single_settings_workspace.py
+git commit -m "Backtest Analysis React 설정 스키마 기반 구축"
+```
+
+### Task 15: Tactical And Allocation Strategy Payload Parity
+
+**Files:**
+- Modify: `app/services/backtest_single_settings_workspace.py`
+- Modify: `tests/test_backtest_single_settings_workspace.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: Task 14 schema primitives and runtime option names `presets`, `tickers`,
+  `defensive_tickers`, `benchmarks`, `score_horizons`, `policy_signal_options`.
+- Produces: complete Equal Weight, GTAA, Global Relative Strength, Risk Parity, Dual Momentum,
+  Risk-On Momentum 5D schemas and payloads compatible with existing runners.
+
+- [ ] **Step 1: Write RED golden payload tests for the six strategy groups**
+
+For representative drafts assert exact payload dictionaries, including:
+
+```python
+assert project("Equal Weight", values) == {
+    "strategy_key": "equal_weight", "tickers": ["VIG", "SCHD"],
+    "start": "2016-01-01", "end": "2026-07-18", "timeframe": "1Day",
+    "option": "backtest", "rebalance_interval": 12, "min_price_filter": 5.0,
+    "transaction_cost_bps": 10.0, "benchmark_ticker": "SPY",
+    "promotion_min_etf_aum_b": 1.0, "promotion_max_bid_ask_spread_pct": 0.25,
+    "universe_mode": "preset", "preset_name": "Dividend ETFs",
+}
+```
+
+Add complete expected key sets for GTAA (including score/trend/regime/crash and guardrails), GRS,
+Risk Parity, Dual Momentum, and Risk-On (execution/exit/ATR/macro/liquidity/random/comparison flags).
+Assert Python defaults reproduce current renderer defaults when `values={}`.
+
+- [ ] **Step 2: Run RED and record missing field/key failures**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_single_settings_workspace.py \
+  tests/test_service_contracts.py -q \
+  -k "equal_weight or gtaa or global_relative_strength or risk_parity or dual_momentum or risk_on"
+```
+
+Expected: exact payload tests fail because Task 14 only provides base schema fields.
+
+- [ ] **Step 3: Add the six complete declarative schemas**
+
+Map every existing renderer payload key to one field or an explicit schema-owned constant. Place
+date/timeframe/rebalance/holding count in `execution`; preset/manual/tickers/cash/benchmark universe
+inputs in `universe`; score/trend/regime/exit/macro rules in `rules`; cost/liquidity/promotion/
+guardrail fields in `risk`. Mark secondary controls `advanced=True` so React puts them in the
+technical disclosure without changing payload availability.
+
+The service must receive preset members and option labels through `runtime_options`; it must not
+copy `EQUAL_WEIGHT_PRESETS`, `GTAA_PRESETS`, or other `app.web.backtest_common` constants.
+
+- [ ] **Step 4: Run GREEN and compare exact payload keys**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_single_settings_workspace.py \
+  tests/test_service_contracts.py -q \
+  -k "settings_workspace and (equal_weight or gtaa or global_relative_strength or risk_parity or dual_momentum or risk_on)"
+.venv/bin/python -m py_compile app/services/backtest_single_settings_workspace.py
+git diff --check
+```
+
+Expected: six strategy groups have no missing/extra payload key and existing handler signatures are
+unchanged.
+
+- [ ] **Step 5: Commit Task 15**
+
+```bash
+git add app/services/backtest_single_settings_workspace.py \
+  tests/test_backtest_single_settings_workspace.py tests/test_service_contracts.py
+git commit -m "Backtest Analysis 전술 전략 React 설정 계약 이관"
+```
+
+### Task 16: Strict Factor Seven-Variant Payload Parity
+
+**Files:**
+- Modify: `app/services/backtest_single_settings_workspace.py`
+- Modify: `tests/test_backtest_single_settings_workspace.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: Task 14 projection and runtime options for PIT universe, factor families, weighting,
+  overlays, benchmarks, guardrails, promotion thresholds.
+- Produces: Quality Annual/Quarterly/Snapshot, Value Annual/Quarterly, Quality + Value
+  Annual/Quarterly schemas and exact payload projection.
+
+- [ ] **Step 1: Write RED annual/quarterly/snapshot parity tests**
+
+Assert exact concrete strategy keys and complete key sets for all seven variants. Required invariant
+examples:
+
+```python
+assert annual["statement_freq"] == "annual"
+assert quarterly["statement_freq"] == "quarterly"
+assert snapshot["strategy_key"] == "quality_snapshot"
+assert annual["universe_contract"] == "pit_monthly_snapshot"
+assert annual["quality_factors"] == submitted_quality_factors
+assert value_annual["value_factors"] == submitted_value_factors
+assert combined["quality_factors"] and combined["value_factors"]
+```
+
+Also assert Top N, factor coverage, rejected-slot policy, overlay, defensive holding, weighting,
+cost, liquidity, promotion, benchmark, underperformance/drawdown guardrails, preset/manual and PIT
+membership values survive projection without renaming.
+
+- [ ] **Step 2: Run RED and capture missing strict-field failures**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_single_settings_workspace.py \
+  tests/test_service_contracts.py -q \
+  -k "settings_workspace and (quality or value or strict or snapshot)"
+```
+
+Expected: strict-factor key/constant/default assertions fail.
+
+- [ ] **Step 3: Add seven concrete schema builders without factor-domain duplication**
+
+Use shared schema fragments for dates, PIT universe, factor selection, rejected slots, overlays,
+weighting, cost/liquidity, and guardrails. Each concrete registration must explicitly supply its
+`strategy_key`, `statement_freq`, allowed factor families, default factor arrays, and variant label.
+Snapshot omits fields its existing payload does not accept rather than submitting empty annual
+fields. All detailed PIT/readiness text goes in supplied evidence/disclosure, not first-read fields.
+
+- [ ] **Step 4: Run GREEN, legacy prefill regressions, and compile**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_single_settings_workspace.py \
+  tests/test_service_contracts.py -q \
+  -k "settings_workspace or strict_annual or strict_quarterly or quality_snapshot or prefill"
+.venv/bin/python -m py_compile app/services/backtest_single_settings_workspace.py
+git diff --check
+```
+
+Expected: all seven concrete variants project compatible payloads and legacy history prefill
+contracts still pass.
+
+- [ ] **Step 5: Commit Task 16**
+
+```bash
+git add app/services/backtest_single_settings_workspace.py \
+  tests/test_backtest_single_settings_workspace.py tests/test_service_contracts.py
+git commit -m "Backtest Analysis 팩터 전략 React 설정 계약 이관"
+```
+
+### Task 17: Python Runtime Adapter, Validated Intent, And Generic Fallback
+
+**Files:**
+- Modify: `app/web/backtest_single_settings_workspace.py`
+- Modify: `app/web/backtest_analysis_workspace.py`
+- Modify: `app/web/backtest_single_strategy.py`
+- Modify: `tests/test_backtest_analysis_decision_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: Task 14~16 pure workspace, existing session selection/prefill and
+  `_handle_backtest_run(payload, strategy_name)`.
+- Produces: `build_current_single_settings_workspace()`,
+  `consume_single_settings_intent(intent, *, run_handler)`,
+  `render_single_settings_fallback(workspace, *, on_submit)`, and a settings component callback.
+
+- [ ] **Step 1: Write RED intent-boundary and fallback tests**
+
+```python
+def test_run_intent_validates_before_calling_handler():
+    calls = []
+    result = consume_single_settings_intent(
+        {"action": "run_single_strategy", "strategy_choice": "GTAA",
+         "variant": None, "values": valid_gtaa_values},
+        run_handler=lambda payload, name: calls.append((payload, name)),
+    )
+    assert result["ok"] is True
+    assert len(calls) == 1
+
+def test_invalid_or_mismatched_intent_never_runs_or_persists():
+    ...
+    assert calls == []
+```
+
+Cover unknown action, missing/non-callable handler, strategy mismatch, variant mismatch, replayed
+intent id, unknown/hidden field, invalid option/range. Assert fallback imports the same
+`build_single_settings_workspace` and `project_single_settings_payload` rather than form-specific
+renderers.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py -q \
+  -k "single_settings_intent or settings_fallback or current_settings_workspace"
+```
+
+Expected: new adapter/consumer functions are absent.
+
+- [ ] **Step 3: Implement runtime option and prefill adapter**
+
+Build one JSON-ready runtime option catalog from existing `backtest_common` presets/helpers, current
+DB-backed ticker choices, benchmark/options, and selected history prefill. The adapter passes those
+values into the pure service and never lets React import or infer them. Persist selected variant and
+validation errors under keys scoped by `draft_key`.
+
+- [ ] **Step 4: Implement callable-verified intent consumer and fallback**
+
+`select_strategy_variant` accepts only the current family option and updates Python session state.
+`run_single_strategy` checks current identity, consumes a unique intent id once, calls pure
+validation/projection, and then calls the supplied runner. Validation failure returns field errors
+and submitted values without clearing prior successful result. The generic fallback iterates the
+same sections/fields and maps seven allowed controls to Streamlit widgets; it is invoked only when
+the component is unavailable or raises during render.
+
+- [ ] **Step 5: Run GREEN and state/persistence regressions**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py -q \
+  -k "single_settings or stale or prefill or history or practical_validation"
+.venv/bin/python -m py_compile \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_analysis_workspace.py \
+  app/web/backtest_single_strategy.py
+git diff --check
+```
+
+Expected: invalid intents make zero runner/registry/history calls; valid intents call the unchanged
+runner once; failure/stale/prefill contracts remain green.
+
+- [ ] **Step 6: Commit Task 17**
+
+```bash
+git add app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_analysis_workspace.py app/web/backtest_single_strategy.py \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py
+git commit -m "Backtest Analysis React 설정 intent와 fallback 연결"
+```
+
+### Task 18: React Schema-Driven Settings Surface
+
+**Files:**
+- Modify: `app/web/components/backtest_analysis_decision_workspace/component.py`
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts`
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/index.tsx`
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx`
+- Modify: `app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+
+**Interfaces:**
+- Consumes: Task 17 JSON read model and emits only `select_strategy_variant` or
+  `run_single_strategy` intents.
+- Produces: `settings` surface with local draft state, all seven field controls, errors, disclosure,
+  pending lock, and responsive layout.
+
+- [ ] **Step 1: Write RED source and component-boundary tests**
+
+Assert `WorkspaceSurface` includes `settings`, the wrapper accepts the new surface, TS types contain
+`SettingsField` and `SingleSettingsWorkspace`, and source contains render paths for all seven
+controls. Assert the source does not classify raw strategy status/maturity/Gate, does not call the
+runner, and does not render `dangerouslySetInnerHTML`. Assert CSS includes a two-column settings grid
+and `@media (max-width: 760px)` one-column override.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q \
+  -k "react_settings_surface or settings_control or responsive_settings"
+```
+
+Expected: `settings` surface/type/control assertions fail.
+
+- [ ] **Step 3: Extend wrapper/types/index with the settings read model**
+
+Add the schema/profile/variant/section/field/evidence/action/error interfaces exactly matching Task
+14. Keep `ResizeObserver` and `Streamlit.setFrameHeight()` in `index.tsx`; route `surface ===
+\"settings\"` to the same component with supplied data.
+
+- [ ] **Step 4: Implement local editor, profile, four sections, disclosure, and intent emission**
+
+Initialize local values from `draft_key`; reset only when `draft_key` changes. Field edits stay in
+React state. Variant clicks immediately emit `select_strategy_variant`. Submit emits one
+`run_single_strategy` intent with `intent_id`, strategy, variant and complete values; disable the CTA
+while pending. Render badges as text nodes, errors at field/section position, full-width wide fields,
+and advanced/evidence rows inside `고급 설정과 기술 근거`.
+
+- [ ] **Step 5: Implement responsive CSS and run GREEN/build**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q \
+  -k "react_settings_surface or settings_control or responsive_settings or resize_observer"
+cd app/web/components/backtest_analysis_decision_workspace/frontend
+npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+git diff --check
+```
+
+Expected: focused source tests pass and Vite production build exits 0.
+
+- [ ] **Step 6: Commit Task 18**
+
+```bash
+git add app/web/components/backtest_analysis_decision_workspace/component.py \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/types.ts \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/index.tsx \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/BacktestAnalysisDecisionWorkspace.tsx \
+  app/web/components/backtest_analysis_decision_workspace/frontend/src/style.css \
+  tests/test_backtest_refactor_boundaries.py
+git commit -m "Backtest Analysis 전체 전략 React 설정 화면 구현"
+```
+
+### Task 19: Primary Route Cutover And Legacy Form Isolation
+
+**Files:**
+- Modify: `app/web/backtest_single_strategy.py`
+- Modify: `app/web/backtest_single_settings_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: Task 17 adapter and Task 18 settings surface.
+- Produces: every active Single Strategy selection uses React settings first; legacy renderer files
+  are not imported/called by the primary route.
+
+- [ ] **Step 1: Write RED active-route and 13-variant smoke tests**
+
+Assert `render_single_strategy_workspace()` calls the current settings builder/component and does not
+dispatch `render_equal_weight_form`, `render_gtaa_form`, `render_global_relative_strength_form`,
+`render_risk_parity_form`, `render_dual_momentum_form`, `render_risk_on_form`, or strict renderer
+functions on the normal path. Parameterize 13 variants and assert profile, four sections, CTA,
+projected payload, and runner strategy name are available.
+
+- [ ] **Step 2: Run RED**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py -q \
+  -k "primary_single_settings_route or every_single_variant or no_legacy_form_dispatch"
+```
+
+Expected: route still dispatches native strategy forms.
+
+- [ ] **Step 3: Cut over the primary route and isolate compatibility code**
+
+Render selected strategy profile/settings once through the React component. Keep the prior successful
+result and existing decision surface after the settings component. On component failure call only
+the generic same-schema fallback. Remove duplicate selected header/native shell from the active path;
+do not delete legacy files in this task because service/history compatibility tests may still import
+their pure helpers.
+
+- [ ] **Step 4: Run focused and full regressions**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_single_settings_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
+uv run --with pytest python -m pytest tests/test_service_contracts.py -q --tb=short
+.venv/bin/python -m py_compile \
+  app/services/backtest_single_settings_workspace.py \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_single_strategy.py \
+  app/web/backtest_analysis_workspace.py
+git diff --check
+```
+
+Expected: new focused suites pass; service suite is no worse than the recorded pre-7차 baseline and
+any unrelated baseline failure is documented rather than masked.
+
+- [ ] **Step 5: Commit Task 19**
+
+```bash
+git add app/web/backtest_single_strategy.py \
+  app/web/backtest_single_settings_workspace.py \
+  tests/test_backtest_refactor_boundaries.py tests/test_service_contracts.py
+git commit -m "Backtest Analysis 단일 전략 React 설정 경로 전환"
+```
+
+### Task 20: Runtime QA, Finance Docs, And 7차 Closeout
+
+**Files:**
+- Modify: active task `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`, `PLAN.md`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate, never stage: `backtest-analysis-level1-react-settings-desktop-qa.png`
+- Generate, never stage: `backtest-analysis-level1-react-settings-760-qa.png`
+
+**Interfaces:**
+- Consumes: Task 14~19.
+- Produces: fresh verification evidence, all-strategy visual/runtime QA, canonical docs, protected
+  path audit, closeout commit.
+
+- [ ] **Step 1: Use verification-before-completion and rerun fresh automated checks**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_single_settings_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
+uv run --with pytest python -m pytest tests/test_service_contracts.py -q --tb=short
+cd app/web/components/backtest_analysis_decision_workspace/frontend && npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+.venv/bin/python -m py_compile \
+  app/services/backtest_single_settings_workspace.py \
+  app/web/backtest_single_settings_workspace.py \
+  app/web/backtest_single_strategy.py \
+  app/web/backtest_analysis_workspace.py \
+  app/web/components/backtest_analysis_decision_workspace/component.py
+git diff --check
+```
+
+Record exact pass/fail counts and compare `tests/test_service_contracts.py` to the pre-7차 baseline.
+
+- [ ] **Step 2: Run desktop Browser QA across all choices and variants**
+
+At `http://localhost:8505/backtest`, visit Equal Weight, GTAA, Global Relative Strength, Risk
+Parity, Dual Momentum, Risk-On Momentum 5D, Quality Annual/Quarterly/Snapshot, Value
+Annual/Quarterly, Quality + Value Annual/Quarterly. Verify each has one profile, the same four
+sections, Korean first-read labels, collapsed technical disclosure and one CTA; verify no raw
+`<span>`, legacy `Score Horizons`, duplicate strategy picker, or primary native form. Actually run
+Equal Weight, GTAA, and Quality + Value Annual and verify result fresh/stale behavior and explicit
+Level2 handoff separation. Capture the desktop screenshot.
+
+- [ ] **Step 3: Run 760px Browser QA**
+
+Set viewport width 760px and verify all 13 variant surfaces use one column, segmented controls wrap,
+multi-selects/disclosures/CTA do not overflow, iframe height follows content, and strategy or variant
+change does not blank the fixed Level1 context. Capture the 760px screenshot.
+
+- [ ] **Step 4: Use finance-doc-sync for canonical and task handoff alignment**
+
+Document pure schema ownership, React intent boundary, generic fallback, primary route cutover,
+payload/stale/handoff preservation, automated counts, Browser scope/screenshots, and remaining risks
+in canonical architecture/flow docs, task evidence files, and 3~5-line root handoff entries.
+
+- [ ] **Step 5: Audit staged paths and protected artifacts**
+
+```bash
+git diff --check
+git add \
+  .aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md \
+  .aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md \
+  .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717 \
+  .aiworkspace/note/finance/WORK_PROGRESS.md \
+  .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md
+git diff --cached --check
+if git diff --cached --name-only | rg -q \
+  'registries/|run_history/|saved/|\.superpowers/|\.png$|run_artifacts/'; then
+  exit 1
+fi
+```
+
+Expected: no protected JSONL, saved record, `.superpowers/`, screenshot or generated artifact is
+staged.
+
+- [ ] **Step 6: Commit Task 20**
+
+```bash
+git commit -m "Backtest Analysis 전체 전략 React 설정 QA와 문서 동기화"
+```
+
+## 7차 Completion Report Contract
+
+- 전체 roadmap 1~7차 완료 상태와 남은 차수;
+- Task 14~20 한국어 commit 목록;
+- focused / boundary / service exact counts and baseline comparison;
+- React production build / target `py_compile` / `git diff --check` 결과;
+- desktop / 760px QA 범위와 screenshot absolute links;
+- registry / run history / saved / `.superpowers/` / screenshot 보호 감사;
+- remaining risks and next handoff location.

@@ -27,8 +27,8 @@ Last Updated: 2026-07-18
 - [x] 7차 all-strategy UI / renderer / runtime boundary audit
 - [x] 7차 Schema-Driven React Settings 접근 사용자 승인
 - [x] 7차 corrective design 작성과 self-review
-- [ ] 7차 written design 사용자 review
-- [ ] 7차 implementation plan
+- [x] 7차 written design 사용자 review
+- [x] 7차 implementation plan
 - [ ] 7차 RED -> GREEN implementation / Browser QA / closeout
 
 ## Approved Roadmap
@@ -66,3 +66,5 @@ Last Updated: 2026-07-18
   React settings surface를 결합한 C안을 승인했다.
 - 7차 DESIGN은 6차에서 out-of-scope였던 full React editor를 범위 안으로 옮기되
   Python validation / payload / execution / Gate ownership을 유지한다.
+- 사용자 승인 후 PLAN Task 14~20으로 pure schema, 전술·팩터 payload parity, Python
+  intent/fallback, React settings, primary route cutover, Browser QA/docs closeout을 확정했다.
