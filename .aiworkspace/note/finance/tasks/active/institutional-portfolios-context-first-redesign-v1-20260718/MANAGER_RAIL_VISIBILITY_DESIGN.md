@@ -16,6 +16,7 @@ Context-First hero와 controls의 열 경계는 정렬됐지만, manager rail은
 - `.ip-manager-rail`은 가로 `flex`이고 `overflow-x: auto`다.
 - compact card는 `min-width: 150px`지만 rail 너비와 visible card count 사이에 계약이 없다.
 - 따라서 첫 화면에서 네 장 뒤의 다섯 번째 카드 일부가 남는 너비만큼 노출된다.
+- 같은 DOM element의 뒤쪽 `.ip-manager-favorites` 규칙이 rail의 `margin-bottom: 12px`과 `padding-bottom: 8px`을 `0`과 `3px`으로 덮어써 native scrollbar가 카드에 붙어 보인다.
 - `.ip-manager-tab strong, .ip-manager-tab span`은 모두 `overflow: hidden`, `text-overflow: ellipsis`, `white-space: nowrap`을 사용한다.
 - 최근 hero layout follow-up은 hero / controls column alignment만 소유했고 manager rail의 카드 단위 노출 계약은 변경하지 않았다.
 
