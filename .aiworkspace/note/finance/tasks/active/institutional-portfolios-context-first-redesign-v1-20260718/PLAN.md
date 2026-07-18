@@ -1,6 +1,6 @@
 # Institutional Portfolios Context-First Redesign V1 Plan
 
-Status: Design Review
+Status: Implementation In Progress
 Started: 2026-07-18
 
 ## 이걸 하는 이유?
@@ -24,7 +24,7 @@ Started: 2026-07-18
 - 목적: 선택 기관의 포트폴리오 맥락을 첫 화면의 주인공으로 두고, 종목 노출과 데이터 상태 계약을 고정한다.
 - 화면 / 파일 범위: task `DESIGN.md`, 향후 `app/services/institutional_portfolios.py`, `app/web/institutional_portfolios.py`, Institutional Portfolios React workbench.
 - 완료 조건: 정보 구조, payload, 상태, 오류, responsive, QA 계약을 사용자가 승인한다.
-- 상태: 현재 차수. Written spec review 대기.
+- 상태: 완료. 사용자가 Context-First written spec을 승인했다.
 
 ### 3차: 기능 정확성 / 노출 계약과 Context-First UI 구현
 
@@ -36,7 +36,7 @@ Started: 2026-07-18
   - 이전 분기 없음 상태의 change board suppression.
   - 선택 기관 context hero와 section flow.
 - 완료 조건: focused TDD, React build, actual DB smoke, desktop / 420px Browser QA.
-- 상태: 미착수. Detailed implementation plan과 사용자 spec 승인 전에는 코드를 변경하지 않는다.
+- 상태: 현재 차수. `IMPLEMENTATION_PLAN.md` 기준 TDD 구현과 QA를 진행한다.
 
 ### 4차: 실사용 미세 조정 / 데이터 깊이 / 문서 closeout
 
