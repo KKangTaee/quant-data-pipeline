@@ -10,7 +10,9 @@
 - Detailed TDD implementation plan is written in `PLAN.md` with seven independently reviewable tasks.
 - Current stage: inline execution started; linked worktree and baseline environment are being verified before Task 1 RED.
 - Baseline investigation confirmed the repository-local runner is `unittest`; the implementation plan now records unittest equivalents instead of adding pytest.
-- No application code, DB schema, provider, registry, or saved setup has been changed.
+- Task 1 complete: point-in-time 1D / 5D / 20D family features reuse existing score weights and preserve trailing-only calculations.
+- Current stage: Task 2 current regime / transition semantics.
+- No DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
 
@@ -22,4 +24,4 @@
 
 ## Next Action
 
-Task 1의 point-in-time multi-window feature test를 RED로 만든 뒤 최소 구현을 시작한다.
+Task 2의 persistence / transition attempt / conflict / low-signal state tests를 RED로 만든다.

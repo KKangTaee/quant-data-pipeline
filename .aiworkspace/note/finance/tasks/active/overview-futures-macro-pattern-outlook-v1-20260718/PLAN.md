@@ -102,7 +102,7 @@
   - `build_pattern_feature_frame(candles: pd.DataFrame, *, selected_symbols: Sequence[str]) -> pd.DataFrame`
   - one row per normalized date, index name `Date`, numeric wide columns such as `risk_on__1d_z`, `risk_on__5d_z`, `risk_on__20d_z`, `risk_on__5d_slope`, `risk_on__20d_slope`, `risk_on__acceleration`, `risk_on__5d_persistence`, `risk_on__20d_persistence`, `risk_on__breadth`, `risk_on__volatility_ratio`, plus `available_symbol_count`.
 
-- [ ] **Step 1: Write deterministic feature tests**
+- [x] **Step 1: Write deterministic feature tests**
 
 Create fixtures with 90 dates and at least `ES=F`, `NQ=F`, `RTY=F`, `ZN=F`, `ZB=F`, `GC=F`, `CL=F`, `HG=F`, `6E=F`, `6J=F`. Assert:
 
@@ -136,7 +136,7 @@ def test_pattern_feature_frame_requires_past_sixty_day_volatility():
     assert frame.empty
 ```
 
-- [ ] **Step 2: Run the focused test and confirm RED**
+- [x] **Step 2: Run the focused test and confirm RED**
 
 Run:
 
@@ -146,7 +146,7 @@ Run:
 
 Expected: collection/import failure because `app.services.futures_macro_pattern` does not exist.
 
-- [ ] **Step 3: Implement family mapping and trailing feature frame**
+- [x] **Step 3: Implement family mapping and trailing feature frame**
 
 Use exact family keys and map existing score definitions without duplicating weights:
 
@@ -237,7 +237,7 @@ def build_pattern_feature_frame(
 
 Implement `_pattern_close_matrix()` with normalized dates and no forward fill across missing symbol observations. Implement `_dominant_sign_ratio()` as `max(positive_count, negative_count) / non_zero_count`, returning `0.0` for an all-zero window.
 
-- [ ] **Step 4: Run focused tests and existing thermometer regression**
+- [x] **Step 4: Run focused tests and existing thermometer regression**
 
 Run:
 
@@ -248,7 +248,7 @@ Run:
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add app/services/futures_macro_pattern.py tests/test_futures_macro_pattern.py
@@ -1433,7 +1433,7 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 
 ## Implementation Completion Checklist
 
-- [ ] Task 1: point-in-time multi-window feature frame
+- [x] Task 1: point-in-time multi-window feature frame
 - [ ] Task 2: current regime / transition / path / change conditions
 - [ ] Task 3: forward outcomes / independent similar episodes
 - [ ] Task 4: chronological validation / publication gate / cache

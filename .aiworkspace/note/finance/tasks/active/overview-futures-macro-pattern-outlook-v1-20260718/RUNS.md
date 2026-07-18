@@ -26,3 +26,10 @@
 - Baseline `pytest` command stopped before collection because `.venv` has no pytest module.
 - Root-cause check confirmed `pyproject.toml` has no pytest dependency and durable finance docs identify `unittest` as the current local verification path.
 - `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests` passed 23 tests; only existing third-party deprecation warnings appeared.
+
+## 2026-07-18 Task 1 — Multi-Window Features
+
+- RED: `.venv/bin/python -m unittest tests.test_futures_macro_pattern` failed 3 tests because `app.services.futures_macro_pattern` did not exist.
+- GREEN: the same command passed 3 tests after adding trailing-only 1D / 5D / 20D family features.
+- Regression: `.venv/bin/python -m unittest tests.test_service_contracts.FuturesMacroThermometerContractTests` passed 23 tests.
+- `.venv/bin/python -m py_compile app/services/futures_macro_pattern.py` and `git diff --check` passed.
