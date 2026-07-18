@@ -217,3 +217,65 @@
   바뀐 의도적 예외다.
 - 지정 range와 closeout staging 모두 registry / run history / saved / `.superpowers/` /
   screenshot을 제외한다.
+
+## 2026-07-18 7차 Task 14~19 RED -> GREEN
+
+- Task 14 pure schema foundation: 9개 user choice, field type/range/option/visibility,
+  validation error와 draft key를 Streamlit-free service로 만들었다.
+- Task 15 tactical/allocation: Equal Weight, GTAA, GRS, Risk Parity Trend, Dual Momentum,
+  Risk-On Momentum 5D의 exact legacy payload key/value parity를 고정했다.
+- Task 16 strict factor: Quality / Value / Quality+Value Annual·Quarterly와 replay-only
+  Quality Snapshot의 factor/universe/overlay/guardrail payload parity를 고정했다.
+- Task 17 Python adapter: current catalog option, prefill/draft, intent dedup/allow-list,
+  callable runner 확인과 same-schema fallback을 연결했다.
+- Task 18 React settings: profile, variant, 4-section schema renderer, 7 control type,
+  advanced disclosure, pending lock, ResizeObserver와 760px responsive CSS를 구현했다.
+- Task 19 primary cutover: `backtest_single_strategy.py`에서 legacy form dispatch를 제거하고
+  React settings -> validated Python intent -> existing runner 경로로 전환했다.
+- 구현 단위 commit: `9c7deb90`, `f7fbb3ca`, `b1d18fe4`, `444a50fd`, `9e04fade`,
+  `98bdfb50`.
+
+## 2026-07-18 7차 Task 20 QA Findings RED -> GREEN
+
+- Browser RED 1: current Quality picker에 replay-only `기존 스냅샷`이 노출되고 Python
+  current catalog allow-list와 불일치했다.
+- GREEN 1: primary variant options를 current `family_variant_options()`로 제한하고 focused
+  analysis tests `29 passed`; commit `3a327c60`.
+- Browser RED 2: React가 보존한 hidden direct-ticker default를 validator가 inactive field로
+  거부해 actual 실행이 기록되지 않았다.
+- GREEN 2: Python adapter가 schema dependency로 visible submitted branch만 projector에
+  전달하고 unknown key rejection은 유지했다. focused analysis tests `30 passed`; commit
+  `0e65bbb4`.
+- 새 서버 직후 QA tab의 pending 고착은 console의 WebSocket `/health` 오류로 browser
+  disconnect임을 구분했다. 안정된 서버에 reload한 뒤 같은 intent로 actual run을 완료했다.
+
+## 2026-07-18 7차 Task 20 Browser QA
+
+- desktop 1440x1000: Quality+Value, Quality, Value, GTAA, GRS, Dual Momentum,
+  Risk Parity Trend, Equal Weight, Risk-On Momentum 5D 모두 profile 1개, 공통 section 4개,
+  CTA 1개를 확인했다. Quality에는 Annual/Quarterly 2개만 노출된다.
+- actual Equal Weight: `equal_weight`, 2016-01-01~2026-07-18, 4 ticker, `2.955s`.
+- actual GTAA: `gtaa`, 2016-01-01~2026-07-18, `3.160s`.
+- actual Quality+Value Annual: `quality_value_snapshot_strict_annual`,
+  2021-07-18~2026-07-18, `22.492s`.
+- 세 실행 모두 새 Run History row와 Level1 decision projection을 만들었고 실행 자체가
+  Level2 source를 등록하지 않는 explicit handoff separation을 유지했다.
+- 760x1000: settings main `clientWidth=717`, `scrollWidth=717`, 첫 grid single column
+  `675px`, section 4개, CTA 1개, variant control wrap과 iframe height sync를 확인했다.
+- screenshots generated / unstaged:
+  `backtest-analysis-level1-react-settings-desktop-qa.png`,
+  `backtest-analysis-level1-react-settings-760-qa.png`.
+
+## 2026-07-18 7차 Task 20 Fresh Verification
+
+- pure settings service: `43 passed`.
+- Level1 decision / adapter: `30 passed, 3 warnings`.
+- refactor boundary / visual contract: `40 passed, 3 warnings`.
+- focused total: `113 passed`; warning은 기존 edgar deprecation 3건이다.
+- full service contracts: `821 passed, 11 failed, 35 subtests passed, 3 warnings`.
+  11 failures는 pre-7차 baseline과 같은 Sentiment React 1건, Final Review 4건,
+  Practical Validation 6건이며 신규 Level1 failure는 0건이다.
+- React production build: Vite 5.4.21, `175 modules transformed`, 성공.
+  `index.html` 0.42 kB, CSS 9.29 kB, JS 333.78 kB.
+- target 5-module `py_compile`: exit 0, output 없음.
+- post-doc `git diff --check`: exit 0, output 없음.

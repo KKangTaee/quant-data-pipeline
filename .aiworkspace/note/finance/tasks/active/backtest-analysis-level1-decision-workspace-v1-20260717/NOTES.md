@@ -116,3 +116,20 @@ generated artifact이므로 commit하지 않는다.
   만들어 maturity `<span>`을 code text로 노출한다. plain React text badge로 제거한다.
 - 7차는 6차의 full React editor out-of-scope 결정을 명시적으로 뒤집는 승인된 범위
   확장이다. strategy runtime, DB, Level2 / Level3 Gate는 확장하지 않는다.
+
+## 2026-07-18 7차 Runtime Decisions And QA Corrections
+
+- settings contract는 9개 user choice와 12개 primary concrete variant를 제공한다.
+  pure service의 legacy `Quality / Snapshot`은 history/replay 호환을 위해 유지하지만
+  current catalog allow-list에 없으므로 primary variant picker에는 노출하지 않는다.
+- React는 schema의 field/value를 보존하는 editor이므로 숨은 branch 기본값도 intent에
+  포함될 수 있다. Python adapter가 current dependency value로 visible branch를 다시
+  계산해 payload projector에 넘기고, unknown key는 그대로 validator에 전달해 거부한다.
+- strategy/variant 전환, field visibility, type/range/option, exact runner payload,
+  callable handler와 intent dedup은 Python owner다. React는 profile/section/control을
+  렌더링하고 `select_strategy_variant` / `run_single_strategy` intent만 보낸다.
+- 새 서버 직후 disconnected Browser tab에서는 React local pending만 남을 수 있다.
+  console의 WebSocket/health error로 QA 환경 문제를 구분한 뒤 안정된 서버에 reload해
+  actual execution을 재검증했다.
+- actual run은 실행 성공과 Run History append까지만 수행했다. Level2 source 등록은
+  decision Gate 뒤 명시적 handoff action으로 계속 분리되어 있다.

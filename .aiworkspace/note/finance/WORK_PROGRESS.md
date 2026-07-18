@@ -6343,3 +6343,14 @@ Detailed historical logs were archived on `2026-04-13`.
   통과했다. 상세 검증과 screenshot 경로는 active task `RUNS.md`를 본다.
 - protected registry/run history/saved JSONL, `.superpowers/`, generated screenshot은
   corrective closeout commit에서 제외한다.
+
+## 2026-07-18 - Backtest Analysis Unified React Strategy Settings Closeout
+
+- 9개 Single strategy choice / 12개 primary concrete variant를 Python-owned schema와
+  같은 React 4-section editor로 통일하고 legacy native form dispatch를 primary에서 제거했다.
+- replay-only Quality Snapshot 노출과 hidden-field 실행 거부를 Browser RED -> GREEN으로
+  보정했으며 actual Equal Weight / GTAA / Quality+Value Annual 실행을 완료했다.
+- focused 113 tests, React 175-module build, target py_compile, desktop/760px overflow QA를
+  통과했다. 전체 service 11 failures는 기존 Sentiment/Level2/3 source-contract debt다.
+- 상세 commit/QA/risk는 active task `RUNS.md`, `RISKS.md`를 본다. runtime JSONL,
+  `.superpowers/`, generated screenshots는 closeout commit에서 제외한다.

@@ -2434,7 +2434,7 @@ git commit -m "Backtest Analysis 단일 전략 React 설정 경로 전환"
 - Produces: fresh verification evidence, all-strategy visual/runtime QA, canonical docs, protected
   path audit, closeout commit.
 
-- [ ] **Step 1: Use verification-before-completion and rerun fresh automated checks**
+- [x] **Step 1: Use verification-before-completion and rerun fresh automated checks**
 
 ```bash
 uv run --with pytest python -m pytest tests/test_backtest_single_settings_workspace.py -q
@@ -2454,7 +2454,7 @@ git diff --check
 
 Record exact pass/fail counts and compare `tests/test_service_contracts.py` to the pre-7차 baseline.
 
-- [ ] **Step 2: Run desktop Browser QA across all choices and variants**
+- [x] **Step 2: Run desktop Browser QA across all choices and variants**
 
 At `http://localhost:8505/backtest`, visit Equal Weight, GTAA, Global Relative Strength, Risk
 Parity, Dual Momentum, Risk-On Momentum 5D, Quality Annual/Quarterly/Snapshot, Value
@@ -2464,19 +2464,19 @@ sections, Korean first-read labels, collapsed technical disclosure and one CTA; 
 Equal Weight, GTAA, and Quality + Value Annual and verify result fresh/stale behavior and explicit
 Level2 handoff separation. Capture the desktop screenshot.
 
-- [ ] **Step 3: Run 760px Browser QA**
+- [x] **Step 3: Run 760px Browser QA**
 
 Set viewport width 760px and verify all 13 variant surfaces use one column, segmented controls wrap,
 multi-selects/disclosures/CTA do not overflow, iframe height follows content, and strategy or variant
 change does not blank the fixed Level1 context. Capture the 760px screenshot.
 
-- [ ] **Step 4: Use finance-doc-sync for canonical and task handoff alignment**
+- [x] **Step 4: Use finance-doc-sync for canonical and task handoff alignment**
 
 Document pure schema ownership, React intent boundary, generic fallback, primary route cutover,
 payload/stale/handoff preservation, automated counts, Browser scope/screenshots, and remaining risks
 in canonical architecture/flow docs, task evidence files, and 3~5-line root handoff entries.
 
-- [ ] **Step 5: Audit staged paths and protected artifacts**
+- [x] **Step 5: Audit staged paths and protected artifacts**
 
 ```bash
 git diff --check
@@ -2496,7 +2496,7 @@ fi
 Expected: no protected JSONL, saved record, `.superpowers/`, screenshot or generated artifact is
 staged.
 
-- [ ] **Step 6: Commit Task 20**
+- [x] **Step 6: Commit Task 20**
 
 ```bash
 git commit -m "Backtest Analysis 전체 전략 React 설정 QA와 문서 동기화"

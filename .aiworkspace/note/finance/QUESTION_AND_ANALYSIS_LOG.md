@@ -9655,3 +9655,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up: React-owned unique selection, family variant segmented control, 공통 current
   settings summary와 4-section form hierarchy를 적용했다. actual 두 전략 실행과
   desktop/760px QA로 payload/runtime/Level2 Gate 보존을 확인했다.
+
+### 2026-07-18 - 모든 Single strategy 설정은 같은 제품 UI와 Python 계약을 사용한다
+
+- User request: Quality+Value에만 적용된 정리 수준을 넘어서 GTAA, Equal Weight 등
+  모든 전략의 strategy-specific Streamlit UI를 Level2/3와 같은 디자인으로 통일해 달라고 요청함.
+- Interpreted goal: 전략을 바꿔도 설정 구조와 행동이 달라지지 않고, 일반 사용자가
+  Universe·선택/보유·비용/위험을 같은 순서로 이해해 기존 runner를 안전하게 실행해야 함.
+- Analysis result: 9개 선택이 13개 native renderer와 167개 이상 widget call로 분산돼
+  visual/payload drift가 났고, compatibility Snapshot과 hidden default가 primary 실행을 막을 수 있었다.
+- Follow-up: Python schema/validation/payload + React intent/editor로 primary route를 통일하고
+  replay compatibility를 격리했다. 전체 전략 매트릭스, actual 3개 실행, desktop/760 QA를 완료했다.
