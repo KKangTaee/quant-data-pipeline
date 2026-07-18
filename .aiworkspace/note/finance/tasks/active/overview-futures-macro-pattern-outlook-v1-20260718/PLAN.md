@@ -793,7 +793,7 @@ git commit -m "선물 매크로 시간순 전망 검증 추가"
   - schema `futures_macro_react_workbench_v2`
   - payload keys `command`, `hero`, `horizons`, `pattern_map`, `evidence`, `ribbon`, `asset_pathways`, `method`, `action_boundary`, `boundary_note`.
 
-- [ ] **Step 1: Replace lazy validation contract tests with V2 payload tests**
+- [x] **Step 1: Replace lazy validation contract tests with V2 payload tests**
 
 ```python
 def test_futures_macro_v2_payload_separates_current_observation_and_future_probabilities(self):
@@ -842,7 +842,7 @@ def test_futures_macro_streamlit_fallback_does_not_render_legacy_validation_cont
     self.assertIn("_render_futures_pattern_outlook_fallback(", panel)
 ```
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 ```bash
 .venv/bin/python -m pytest tests/test_service_contracts.py -q -k 'futures_macro_v2 or pattern_outlook_cache'
@@ -850,7 +850,7 @@ def test_futures_macro_streamlit_fallback_does_not_render_legacy_validation_cont
 
 Expected: V2 schema and new signature failures.
 
-- [ ] **Step 3: Attach current pattern to thermometer snapshot**
+- [x] **Step 3: Attach current pattern to thermometer snapshot**
 
 In `build_macro_thermometer_read_model()` call Task 1 / Task 2 using the already normalized current candle frame:
 
@@ -867,7 +867,7 @@ return {
 
 Do not serialize `pattern_feature_frame` into React payload or logs. It is internal service handoff only.
 
-- [ ] **Step 4: Load pattern outlook by default in the tab helper**
+- [x] **Step 4: Load pattern outlook by default in the tab helper**
 
 In the render path, replace `_futures_macro_session_validation()` and lazy `load_validation` handling with one default read used by both React and fallback:
 
@@ -881,7 +881,7 @@ payload = build_futures_macro_react_workbench_payload(
 
 When React static build is unavailable, call `_render_futures_pattern_outlook_fallback(pattern_outlook)` after the today brief. The fallback renders current regime / transition, two horizon status rows, and change conditions with native Streamlit; it never renders the legacy historical-validation load button. Daily refresh and reload call both `clear_overview_futures_macro_snapshot_cache()` and `clear_futures_macro_pattern_validation_cache()`. Keep legacy session keys only long enough to delete stale state safely; do not render their data.
 
-- [ ] **Step 5: Implement exact V2 payload shape**
+- [x] **Step 5: Implement exact V2 payload shape**
 
 ```python
 def build_futures_macro_react_workbench_payload(
@@ -918,7 +918,7 @@ def build_futures_macro_react_workbench_payload(
 
 `_future_pattern_horizon()` emits probability rows ordered `risk_seeking`, `defensive`, `inflation_rate_pressure`, `mixed`; when unavailable it emits an empty list and a reason. `_pattern_asset_pathways()` always emits the five canonical groups in the design order.
 
-- [ ] **Step 6: Run focused and full Futures Macro Python contracts**
+- [x] **Step 6: Run focused and full Futures Macro Python contracts**
 
 ```bash
 .venv/bin/python -m pytest tests/test_futures_macro_pattern.py tests/test_futures_macro_pattern_validation.py -q
@@ -928,7 +928,7 @@ def build_futures_macro_react_workbench_payload(
 
 Expected: all selected tests pass.
 
-- [ ] **Step 7: Commit Task 5**
+- [x] **Step 7: Commit Task 5**
 
 ```bash
 git add app/services/futures_macro_thermometer.py app/web/overview/futures_macro_helpers.py tests/test_service_contracts.py
@@ -1437,7 +1437,7 @@ Do not stage the QA screenshot, `.playwright-mcp/`, registries, saved setups, ru
 - [x] Task 2: current regime / transition / path / change conditions
 - [x] Task 3: forward outcomes / independent similar episodes
 - [x] Task 4: chronological validation / publication gate / cache
-- [ ] Task 5: default service integration / Python React payload V2
+- [x] Task 5: default service integration / Python React payload V2
 - [ ] Task 6: Market Context-style React workbench V2 / build
 - [ ] Task 7: actual QA / performance gate / docs sync / closeout
 

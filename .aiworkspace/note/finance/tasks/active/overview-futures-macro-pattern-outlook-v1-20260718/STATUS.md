@@ -14,7 +14,9 @@
 - Task 2 complete: current regime, transition phase, 60D path / ribbon, evidence, and change conditions are separated from future probabilities.
 - Task 3 complete: 5D / 20D forward outcomes use as-of volatility, and similar dates are de-overlapped by trading-row episode spacing.
 - Task 4 complete: chronological publication metrics, strict 30 / 60 episode gates, unavailable-number suppression, and latest-row cache are implemented.
-- Current stage: Task 5 default service integration and React payload V2.
+- Task 5 complete: the thermometer snapshot now carries the current pattern, the tab loads the conditional outlook by default, and the V2 payload separates current observation from 5D / 20D probability estimates.
+- Legacy historical-validation loading is no longer part of the active render path; refresh and reload clear the new latest-marker cache.
+- Current stage: Task 6 Market Context-style React Workbench V2.
 - No DB schema, provider, registry, or saved setup has been changed.
 
 ## Roadmap State
@@ -27,4 +29,4 @@
 
 ## Next Action
 
-Task 5의 default outlook loading, V2 payload, unavailable probability suppression, and refresh cache clearing tests를 RED로 만든다.
+Task 6에서 V1 React reading order와 lazy historical-validation panel을 A안의 horizon / path / ribbon / asset pathways / method sections로 교체한다.

@@ -1178,6 +1178,11 @@ def build_macro_thermometer_read_model(
     daily_rows: Sequence[dict[str, Any]] | None = None,
     as_of_date: str | None = None,
 ) -> dict[str, Any]:
+    from app.services.futures_macro_pattern import (
+        build_current_pattern_snapshot,
+        build_pattern_feature_frame,
+    )
+
     symbol_metrics = compute_symbol_metrics(candles, instruments=instruments, selected_symbols=selected_symbols)
     score_rows, component_rows = compute_macro_scores(symbol_metrics)
     coverage = _coverage(symbol_metrics, daily_rows or [])
@@ -1186,6 +1191,11 @@ def build_macro_thermometer_read_model(
     evidence_groups = build_current_evidence_groups(score_rows, component_rows, symbol_metrics)
     weekly_context = build_weekly_macro_context(symbol_metrics)
     flow_context = build_macro_flow_context(symbol_metrics)
+    pattern_feature_frame = build_pattern_feature_frame(
+        candles,
+        selected_symbols=selected_symbols,
+    )
+    pattern = build_current_pattern_snapshot(pattern_feature_frame)
     return {
         "status": _status(coverage, warnings),
         "coverage": coverage,
@@ -1200,6 +1210,8 @@ def build_macro_thermometer_read_model(
         "evidence_reading": build_macro_evidence_reading(evidence_groups),
         "weekly_context": weekly_context,
         "flow_context": flow_context,
+        "pattern": pattern,
+        "pattern_feature_frame": pattern_feature_frame,
         "cautions": list(CAUTION_LINES),
         "source_note": "Uses stored yfinance futures daily OHLCV; scores are standardized by recent 60D daily volatility.",
         "as_of_date": as_of_date or date.today().isoformat(),

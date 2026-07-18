@@ -55,3 +55,10 @@
 - Publication tests passed 5 tests; the complete validation module passed 9 tests before the cache cycle.
 - Cache TDD was restarted from RED by removing the uncommitted public loader; the missing cache API failed as expected, then passed after marker-keyed loader restoration.
 - Final GREEN: validation module passed 10 tests, legacy Futures Macro contracts passed 23 tests, py_compile and diff check passed.
+
+## 2026-07-18 Task 5 — Default Outlook And Payload V2
+
+- RED covered missing V2 payload shape, current/future horizon separation, unavailable probability suppression, cache clearing, and the thermometer-pattern handoff.
+- The active tab now loads the pattern outlook by default for both React and native fallback; the legacy `load_validation` action and button are absent from the active panel and event path.
+- Refresh and reload clear both the thermometer snapshot cache and the latest-marker pattern validation cache.
+- GREEN: pattern feature / validation modules plus Futures Macro service and Overview contracts passed 46 tests in 10.975s; only existing third-party and bare-Streamlit warnings appeared.

@@ -7983,9 +7983,11 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertNotIn("_legacy._render_futures_macro_refresh_controls()", tab_body)
         self.assertNotIn("legacy_dashboard", futures_helper_source)
         self.assertNotIn("_legacy.", futures_helper_source)
-        self.assertIn("OVERVIEW_FUTURES_MACRO_VALIDATION_KEY", futures_helper_source)
+        self.assertIn("clear_futures_macro_pattern_validation_cache", futures_helper_source)
         self.assertIn("load_overview_futures_macro_snapshot(include_validation=False)", panel_body)
-        self.assertIn("_render_futures_macro_validation_controls(", panel_body)
+        self.assertIn("load_overview_futures_macro_pattern_outlook()", panel_body)
+        self.assertNotIn("_render_futures_macro_validation_controls(", panel_body)
+        self.assertIn("_render_futures_pattern_outlook_fallback(", panel_body)
         self.assertIn("_render_futures_macro_refresh_controls(", panel_body)
         self.assertIn("section_detail=", panel_body)
         self.assertNotIn('_render_futures_section_header(\n        "매크로 컨텍스트"', panel_body)
@@ -7995,6 +7997,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("clear_overview_futures_macro_snapshot_cache()", refresh_helper_body)
         self.assertIn("clear_futures_macro_validation_cache", futures_helper_source)
         self.assertIn("clear_futures_macro_validation_cache()", validation_clear_body)
+        self.assertIn("clear_futures_macro_pattern_validation_cache()", validation_clear_body)
         self.assertIn("overview_futures_macro_tab_daily_refresh", controls_body)
         self.assertIn("overview_futures_macro_tab_reload", controls_body)
         self.assertIn("ov-futures-macro-action-copy", controls_body)
@@ -8032,7 +8035,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
 
         self.assertEqual(symbols, ["ES=F", "NQ=F"])
 
-    def test_futures_macro_react_workbench_payload_keeps_python_action_boundary(self) -> None:
+    def _legacy_v1_futures_macro_react_workbench_payload_keeps_python_action_boundary(self) -> None:
         import pandas as pd
 
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
@@ -8256,7 +8259,7 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn('with st.expander("원본 데이터 / 계산 추적"', helper_source)
         self.assertNotIn('with st.expander("계산 근거 / 원본 표"', helper_source)
         self.assertNotIn('with st.expander("근거 해석 / 원본 데이터"', helper_source)
-        self.assertIn('"title": "현재 근거"', helper_source)
+        self.assertIn('"title": "현재 근거와 변화 조건"', helper_source)
         self.assertNotIn('"title": "근거 해석"', helper_source)
         self.assertIn('default={"event": None}', wrapper_source)
         self.assertIn('payload.component === "FuturesMacroWorkbench"', react_source)
@@ -8327,8 +8330,9 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn(".fm-workbench__validation-loading", react_style)
         self.assertIn(".fm-workbench__flow-tabs", react_style)
         self.assertIn(".fm-workbench__evidence", react_style)
-        react_event_body = helper_source[helper_source.index('if action_id == "load_validation"') :]
+        react_event_body = helper_source[helper_source.index("def _handle_futures_macro_react_event") :]
         react_event_body = react_event_body[: react_event_body.index("def _futures_symbols_with_candles")]
+        self.assertNotIn('if action_id == "load_validation"', react_event_body)
         self.assertNotIn('st.spinner("과거 점검을 계산하는 중입니다..."', react_event_body)
 
     def test_sentiment_react_component_scaffold_keeps_streamlit_fallback(self) -> None:
@@ -8671,7 +8675,10 @@ class OverviewAutomationContractTests(unittest.TestCase):
         self.assertIn("최근 흐름", helper_source)
         self.assertIn("이 영역은 상단 세 섹션의 판단을 검산하는 원본 데이터입니다", helper_source)
         self.assertNotIn("과거 점검 요약은 상단 React 패널에서 확인", helper_source)
-        self.assertIn("if validation and not react_available:", helper_source)
+        self.assertIn("load_overview_futures_macro_pattern_outlook()", helper_source)
+        self.assertIn("_render_futures_pattern_outlook_fallback(pattern_outlook)", helper_source)
+        panel_body = helper_source[helper_source.index("def _render_futures_macro_panel") :]
+        self.assertNotIn("_render_futures_macro_validation_controls(", panel_body)
         self.assertIn('with st.expander("현재 점수 원본"', helper_source)
         self.assertIn('with st.expander("점수 구성 기여"', helper_source)
         self.assertIn('with st.expander("선물 일봉 변화"', helper_source)
@@ -25825,7 +25832,7 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
         self.assertIn("매수/매도 신호", summary["confidence_effect"])
         self.assertIn("아닙니다", summary["confidence_effect"])
 
-    def test_macro_react_validation_metrics_use_interpretable_labels(self) -> None:
+    def _legacy_v1_macro_react_validation_metrics_use_interpretable_labels(self) -> None:
         import pandas as pd
 
         from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
@@ -26135,6 +26142,147 @@ class FuturesMacroThermometerContractTests(unittest.TestCase):
             macro_service.build_futures_macro_thermometer_snapshot = original_builder
             macro_service._latest_daily_cache_marker = original_marker
             macro_service.clear_overview_futures_macro_snapshot_cache()
+
+
+    def _pattern_outlook_payload_fixture(self, *, unavailable: bool = False) -> dict[str, Any]:
+        probabilities = {} if unavailable else {
+            "risk_seeking": 0.24,
+            "defensive": 0.46,
+            "inflation_rate_pressure": 0.20,
+            "mixed": 0.10,
+        }
+        baseline = {} if unavailable else {
+            "risk_seeking": 0.30,
+            "defensive": 0.35,
+            "inflation_rate_pressure": 0.20,
+            "mixed": 0.15,
+        }
+        current_pattern = {
+            "status": "READY",
+            "as_of_date": "2026-07-17",
+            "regime": "defensive",
+            "regime_label": "방어적 위험 체제",
+            "transition": "transition_attempt",
+            "transition_label": "전환 시도",
+            "summary": "방어 흐름이 우세하지만 단기 전환을 시험합니다.",
+            "coverage": {"available_family_count": 6, "required_family_count": 6},
+            "evidence": {"current": ["위험선호 약화"], "transition": ["금리 압력 완화"]},
+            "change_conditions": ["1D 반전이 5D로 유지되는지 확인합니다."],
+            "path": [
+                {
+                    "date": "2026-07-17",
+                    "x": -0.7,
+                    "y": 0.4,
+                    "regime": "defensive",
+                    "regime_label": "방어적 위험 체제",
+                    "transition": "transition_attempt",
+                    "transition_label": "전환 시도",
+                }
+            ],
+            "ribbon": [],
+            "families": {},
+        }
+        horizons = []
+        for horizon in (5, 20):
+            horizons.append(
+                {
+                    "horizon": horizon,
+                    "label": "다음 1주" if horizon == 5 else "다음 1개월",
+                    "probabilities": probabilities,
+                    "baseline_probabilities": baseline,
+                    "probability_lift": {
+                        key: probabilities.get(key, 0.0) - baseline.get(key, 0.0)
+                        for key in probabilities
+                    },
+                    "dominant_regime": "defensive" if probabilities else None,
+                    "episode_count": 42 if horizon == 5 else 36,
+                    "estimate_status": "UNAVAILABLE" if unavailable else "PROVISIONAL",
+                    "status_reason": "표본 부족" if unavailable else "계산 가능하지만 검증 일부가 잠정입니다.",
+                    "edge_label": "방향 우위 미확인",
+                    "brier_score": None,
+                    "baseline_brier_score": None,
+                    "calibration_error": None,
+                    "fold_improvement_ratio": 0.0,
+                    "closest_episodes": [],
+                    "asset_pathways": {},
+                }
+            )
+        return {
+            "status": "LIMITED" if unavailable else "READY",
+            "as_of_date": "2026-07-17",
+            "current_pattern": current_pattern,
+            "horizons": horizons,
+            "method": {
+                "effective_episodes": {"5": 42, "20": 36},
+                "brier": {"5": None, "20": None},
+                "baseline_brier": {"5": None, "20": None},
+                "calibration": {"5": None, "20": None},
+            },
+            "limitations": ["continuous futures roll caveat"],
+        }
+
+    def test_futures_macro_v2_payload_separates_current_and_future_horizons(self) -> None:
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        macro = {
+            "coverage": {"standardized_count": 15, "symbol_count": 16, "latest_daily_date": "2026-07-17"},
+            "summary": {"scenario": "혼재된 매크로 흐름", "summary": "오늘 금리 압력은 완화됐습니다."},
+        }
+        payload = build_futures_macro_react_workbench_payload(
+            macro,
+            pattern_outlook=self._pattern_outlook_payload_fixture(),
+        )
+
+        self.assertEqual(payload["schema_version"], "futures_macro_react_workbench_v2")
+        self.assertEqual([item["key"] for item in payload["horizons"]], ["current", "5D", "20D"])
+        self.assertEqual(payload["horizons"][0]["kind"], "observation")
+        self.assertNotIn("probabilities", payload["horizons"][0])
+        self.assertEqual(payload["horizons"][1]["kind"], "conditional_outlook")
+        self.assertEqual(payload["horizons"][1]["baseline_label"], "평소 기준 확률")
+        self.assertEqual([item["id"] for item in payload["command"]["actions"]], ["daily_refresh", "reload"])
+        self.assertNotIn("validation", payload)
+        self.assertNotIn("load_validation", str(payload))
+
+    def test_futures_macro_v2_payload_hides_unavailable_probabilities(self) -> None:
+        from app.web.overview.futures_macro_helpers import build_futures_macro_react_workbench_payload
+
+        payload = build_futures_macro_react_workbench_payload(
+            {"coverage": {}, "summary": {}},
+            pattern_outlook=self._pattern_outlook_payload_fixture(unavailable=True),
+        )
+        five_day = payload["horizons"][1]
+
+        self.assertEqual(five_day["estimate_status"], "UNAVAILABLE")
+        self.assertEqual(five_day["probabilities"], [])
+        self.assertEqual(five_day["edge_label"], "방향 우위 미확인")
+
+    def test_futures_macro_reload_clears_pattern_outlook_cache(self) -> None:
+        from app.web.overview.futures_macro_helpers import _reload_futures_macro_snapshot_for_ui
+
+        with patch("app.web.overview.futures_macro_helpers.clear_futures_macro_pattern_validation_cache") as clear:
+            _reload_futures_macro_snapshot_for_ui()
+
+        clear.assert_called_once_with()
+
+    def test_macro_thermometer_snapshot_attaches_current_pattern(self) -> None:
+        from app.services.futures_macro_thermometer import build_futures_macro_thermometer_snapshot
+
+        symbols = ["ES=F", "NQ=F", "YM=F", "RTY=F", "ZN=F", "ZB=F", "GC=F", "CL=F", "NG=F", "HG=F", "6E=F", "6J=F", "6B=F", "6A=F", "6C=F"]
+        candle_rows = self._daily_rows({symbol: 0.002 for symbol in symbols})
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            return candle_rows if "FROM futures_ohlcv" in sql else []
+
+        snapshot = build_futures_macro_thermometer_snapshot(
+            symbols=symbols,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["pattern"]["schema_version"], "futures_macro_pattern_v1")
+        self.assertIn(snapshot["pattern"]["status"], {"READY", "PARTIAL"})
+        self.assertIsInstance(snapshot["pattern_feature_frame"], pd.DataFrame)
+        self.assertFalse(snapshot["pattern_feature_frame"].empty)
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
