@@ -1385,6 +1385,88 @@ class InstitutionalPortfoliosNavigationTests(unittest.TestCase):
         self.assertNotIn("slice(0,80)", runtime_javascript)
         self.assertNotIn("slice(0, 80)", runtime_javascript)
 
+    def test_manager_rail_shows_complete_cards_and_wraps_labels(self) -> None:
+        style_source = _component_style_source()
+        rail_rule = _css_rule(style_source, ".ip-manager-rail")
+        favorites_rule = _css_rule(style_source, ".ip-manager-favorites")
+        compact_card_rule = _css_rule(style_source, ".ip-manager-favorites .ip-manager-tab")
+        text_rule = _css_rule(style_source, ".ip-manager-tab strong", ".ip-manager-tab span")
+        tablet_style = style_source[
+            style_source.index("@media (max-width: 980px) {") : style_source.index("@media (max-width: 720px) {")
+        ]
+        mobile_style = style_source[
+            style_source.index("@media (max-width: 720px) {") : style_source.index("@media (max-width: 420px) {")
+        ]
+        for declaration in (
+            "display: grid;",
+            "grid-auto-flow: column;",
+            "grid-auto-columns: var(--ip-manager-card-width);",
+            "align-items: stretch;",
+            "--ip-manager-card-width: calc((100% - 24px) / 4);",
+            "scroll-snap-type: x mandatory;",
+        ):
+            self.assertIn(declaration, rail_rule)
+        self.assertIn("margin: 0 0 12px;", favorites_rule)
+        self.assertIn("padding-bottom: 10px;", favorites_rule)
+        self.assertIn("min-width: 0;", compact_card_rule)
+        self.assertIn("width: 100%;", compact_card_rule)
+        self.assertIn("height: auto;", compact_card_rule)
+        self.assertIn("scroll-snap-align: start;", compact_card_rule)
+        self.assertIn("scroll-snap-stop: always;", compact_card_rule)
+        for declaration in (
+            "overflow: visible;",
+            "text-overflow: clip;",
+            "white-space: normal;",
+            "overflow-wrap: anywhere;",
+        ):
+            self.assertIn(declaration, text_rule)
+        tablet_rail_rule = _css_rule(tablet_style, ".ip-manager-rail")
+        mobile_rail_rule = _css_rule(mobile_style, ".ip-manager-rail")
+        self.assertIn("--ip-manager-card-width: calc((100% - 16px) / 3);", tablet_rail_rule)
+        self.assertIn("--ip-manager-card-width: 100%;", mobile_rail_rule)
+
+        build_dir = Path("app/web/streamlit_components/institutional_portfolios_workbench/component_static")
+        index_source = (build_dir / "index.html").read_text(encoding="utf-8")
+        css_paths = re.findall(r'href="\./(assets/[^"]+\.css)"', index_source)
+        self.assertEqual(len(css_paths), 1)
+        runtime_css = (build_dir / css_paths[0]).read_text(encoding="utf-8")
+        runtime_rail_rule = _css_rule(runtime_css, ".ip-manager-rail")
+        runtime_favorites_rule = _css_rule(runtime_css, ".ip-manager-favorites")
+        runtime_card_rule = _css_rule(runtime_css, ".ip-manager-favorites .ip-manager-tab")
+        runtime_text_rule = _css_rule(runtime_css, ".ip-manager-tab strong", ".ip-manager-tab span")
+        runtime_tablet_marker = "@media(max-width:980px){"
+        runtime_mobile_marker = "@media(max-width:720px){"
+        runtime_tablet_style = runtime_css[
+            runtime_css.index(runtime_tablet_marker) + len(runtime_tablet_marker) : runtime_css.index(
+                runtime_mobile_marker
+            )
+        ]
+        runtime_mobile_style = runtime_css[
+            runtime_css.index(runtime_mobile_marker) + len(runtime_mobile_marker) : runtime_css.index(
+                "@media(max-width:420px){"
+            )
+        ]
+        runtime_tablet_rule = _css_rule(runtime_tablet_style, ".ip-manager-rail")
+        runtime_mobile_rule = _css_rule(runtime_mobile_style, ".ip-manager-rail")
+        runtime_rail_compact = re.sub(r"\s+", "", runtime_rail_rule)
+        runtime_tablet_compact = re.sub(r"\s+", "", runtime_tablet_rule)
+        runtime_mobile_compact = re.sub(r"\s+", "", runtime_mobile_rule)
+
+        self.assertIn("display:grid", runtime_rail_rule)
+        self.assertIn("grid-auto-flow:column", runtime_rail_rule)
+        self.assertIn("grid-auto-columns:var(--ip-manager-card-width)", runtime_rail_rule)
+        self.assertIn("align-items:stretch", runtime_rail_rule)
+        self.assertIn("--ip-manager-card-width:calc((100%-24px)/4)", runtime_rail_compact)
+        self.assertIn("scroll-snap-type:x mandatory", runtime_rail_rule)
+        self.assertIn("margin:0 0 12px", runtime_favorites_rule)
+        self.assertIn("padding-bottom:10px", runtime_favorites_rule)
+        self.assertIn("scroll-snap-align:start", runtime_card_rule)
+        self.assertIn("scroll-snap-stop:always", runtime_card_rule)
+        self.assertIn("white-space:normal", runtime_text_rule)
+        self.assertIn("overflow-wrap:anywhere", runtime_text_rule)
+        self.assertIn("--ip-manager-card-width:calc((100%-16px)/3)", runtime_tablet_compact)
+        self.assertIn("--ip-manager-card-width:100%", runtime_mobile_compact)
+
     def test_workbench_v2_has_complete_holdings_explorer_and_explicit_security_search(self) -> None:
         component_source = _component_source()
         self.assertIn('schema_version: "institutional_portfolios_workbench_v2"', component_source)
