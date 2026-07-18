@@ -79,6 +79,68 @@ RUNTIME_OPTIONS = {
         "promotion_max_strategy_drawdown": -0.35,
         "promotion_max_drawdown_gap_vs_benchmark": 0.08,
     },
+    "presets_by_strategy_key": {
+        "quality_snapshot": {
+            "Big Tech Quality Trial": ["AAPL", "MSFT", "GOOG"],
+        },
+        "quality_snapshot_strict_annual": {
+            "US Statement Coverage 100": ["AAPL", "MSFT", "GOOG"],
+            "US Statement Coverage 300": ["AAPL", "MSFT", "GOOG", "AMZN"],
+        },
+        "quality_snapshot_strict_quarterly_prototype": {
+            "US Statement Coverage 100": ["AAPL", "MSFT", "GOOG"],
+        },
+        "value_snapshot_strict_annual": {
+            "US Statement Coverage 100": ["AAPL", "MSFT", "GOOG"],
+            "US Statement Coverage 300": ["AAPL", "MSFT", "GOOG", "AMZN"],
+        },
+        "value_snapshot_strict_quarterly_prototype": {
+            "US Statement Coverage 100": ["AAPL", "MSFT", "GOOG"],
+        },
+        "quality_value_snapshot_strict_annual": {
+            "US Statement Coverage 100": ["AAPL", "MSFT", "GOOG"],
+            "US Statement Coverage 300": ["AAPL", "MSFT", "GOOG", "AMZN"],
+        },
+        "quality_value_snapshot_strict_quarterly_prototype": {
+            "US Statement Coverage 100": ["AAPL", "MSFT", "GOOG"],
+        },
+    },
+    "preset_target_sizes": {
+        "US Statement Coverage 100": 100,
+        "US Statement Coverage 300": 300,
+    },
+    "quality_factor_options": [
+        "roe",
+        "roa",
+        "net_margin",
+        "asset_turnover",
+        "current_ratio",
+        "cash_ratio",
+        "operating_margin",
+        "interest_coverage",
+        "ocf_margin",
+        "fcf_margin",
+        "net_debt_to_equity",
+        "debt_to_assets",
+        "debt_ratio",
+        "gross_margin",
+    ],
+    "value_factor_options": [
+        "book_to_market",
+        "earnings_yield",
+        "sales_yield",
+        "ocf_yield",
+        "fcf_yield",
+        "operating_income_yield",
+        "liquidation_value",
+        "per",
+        "pbr",
+        "psr",
+        "pcr",
+        "pfcr",
+        "ev_ebit",
+        "por",
+    ],
 }
 
 
@@ -283,6 +345,92 @@ TACTICAL_EXPECTED_KEYS = {
         "run_comparison_suite",
         "run_sensitivity_suite",
     },
+}
+
+
+STRICT_COMMON_KEYS = {
+    "strategy_key",
+    "tickers",
+    "start",
+    "end",
+    "timeframe",
+    "option",
+    "top",
+    "rebalance_interval",
+    "factor_freq",
+    "snapshot_mode",
+    "trend_filter_enabled",
+    "trend_filter_window",
+    "weighting_mode",
+    "rejected_slot_handling_mode",
+    "rejected_slot_fill_enabled",
+    "partial_cash_retention_enabled",
+    "risk_off_mode",
+    "defensive_tickers",
+    "market_regime_enabled",
+    "market_regime_window",
+    "market_regime_benchmark",
+    "universe_contract",
+    "dynamic_candidate_tickers",
+    "dynamic_target_size",
+    "universe_mode",
+    "preset_name",
+}
+
+STRICT_ANNUAL_RISK_KEYS = {
+    "min_price_filter",
+    "min_history_months_filter",
+    "min_avg_dollar_volume_20d_m_filter",
+    "transaction_cost_bps",
+    "benchmark_contract",
+    "benchmark_ticker",
+    "guardrail_reference_ticker",
+    "promotion_min_benchmark_coverage",
+    "promotion_min_net_cagr_spread",
+    "promotion_min_liquidity_clean_coverage",
+    "promotion_max_underperformance_share",
+    "promotion_min_worst_rolling_excess_return",
+    "promotion_max_strategy_drawdown",
+    "promotion_max_drawdown_gap_vs_benchmark",
+    "underperformance_guardrail_enabled",
+    "underperformance_guardrail_window_months",
+    "underperformance_guardrail_threshold",
+    "drawdown_guardrail_enabled",
+    "drawdown_guardrail_window_months",
+    "drawdown_guardrail_strategy_threshold",
+    "drawdown_guardrail_gap_threshold",
+}
+
+STRICT_EXPECTED_KEYS = {
+    ("Quality", "Snapshot"): {
+        "strategy_key",
+        "tickers",
+        "start",
+        "end",
+        "timeframe",
+        "option",
+        "top",
+        "factor_freq",
+        "rebalance_freq",
+        "snapshot_mode",
+        "quality_factors",
+        "universe_mode",
+        "preset_name",
+    },
+    ("Quality", "Annual"): STRICT_COMMON_KEYS
+    | STRICT_ANNUAL_RISK_KEYS
+    | {"quality_factors"},
+    ("Quality", "Quarterly"): STRICT_COMMON_KEYS | {"quality_factors"},
+    ("Value", "Annual"): STRICT_COMMON_KEYS
+    | STRICT_ANNUAL_RISK_KEYS
+    | {"snapshot_source", "value_factors"},
+    ("Value", "Quarterly"): STRICT_COMMON_KEYS
+    | {"snapshot_source", "value_factors"},
+    ("Quality + Value", "Annual"): STRICT_COMMON_KEYS
+    | STRICT_ANNUAL_RISK_KEYS
+    | {"snapshot_source", "quality_factors", "value_factors"},
+    ("Quality + Value", "Quarterly"): STRICT_COMMON_KEYS
+    | {"snapshot_source", "quality_factors", "value_factors"},
 }
 
 
@@ -582,3 +730,170 @@ def test_tactical_default_values_match_current_renderer_defaults() -> None:
     assert risk_on_values["start"] == "2021-06-01"
     assert risk_on_values["start_balance"] == 10_000.0
     assert risk_on_values["max_holding_days"] == 5
+
+
+@pytest.mark.parametrize(("strategy_choice", "variant"), tuple(STRICT_EXPECTED_KEYS))
+def test_strict_variant_payload_has_exact_legacy_key_set(
+    strategy_choice: str,
+    variant: str,
+) -> None:
+    workspace = build_single_settings_workspace(
+        strategy_choice,
+        variant,
+        {},
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert set(payload) == STRICT_EXPECTED_KEYS[(strategy_choice, variant)]
+
+
+@pytest.mark.parametrize(
+    ("strategy_choice", "variant", "strategy_key", "factor_freq", "snapshot_mode"),
+    [
+        (
+            "Quality",
+            "Annual",
+            "quality_snapshot_strict_annual",
+            "annual",
+            "strict_statement_annual",
+        ),
+        (
+            "Quality",
+            "Quarterly",
+            "quality_snapshot_strict_quarterly_prototype",
+            "quarterly",
+            "strict_statement_quarterly",
+        ),
+        (
+            "Value",
+            "Annual",
+            "value_snapshot_strict_annual",
+            "annual",
+            "strict_statement_annual",
+        ),
+        (
+            "Value",
+            "Quarterly",
+            "value_snapshot_strict_quarterly_prototype",
+            "quarterly",
+            "strict_statement_quarterly",
+        ),
+        (
+            "Quality + Value",
+            "Annual",
+            "quality_value_snapshot_strict_annual",
+            "annual",
+            "strict_statement_annual",
+        ),
+        (
+            "Quality + Value",
+            "Quarterly",
+            "quality_value_snapshot_strict_quarterly_prototype",
+            "quarterly",
+            "strict_statement_quarterly",
+        ),
+    ],
+)
+def test_strict_variant_projects_concrete_frequency_and_snapshot_contract(
+    strategy_choice: str,
+    variant: str,
+    strategy_key: str,
+    factor_freq: str,
+    snapshot_mode: str,
+) -> None:
+    workspace = build_single_settings_workspace(
+        strategy_choice,
+        variant,
+        {},
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert payload["strategy_key"] == strategy_key
+    assert payload["factor_freq"] == factor_freq
+    assert payload["snapshot_mode"] == snapshot_mode
+    assert payload["universe_contract"] == "pit_monthly_snapshot"
+    assert payload["dynamic_candidate_tickers"] == []
+    expected_target = 300 if variant == "Annual" else 100
+    assert payload["dynamic_target_size"] == expected_target
+
+
+def test_strict_factor_arrays_and_rejection_mode_survive_projection() -> None:
+    workspace = build_single_settings_workspace(
+        "Quality + Value",
+        "Annual",
+        {
+            "quality_factors": ["roe", "roa"],
+            "value_factors": ["book_to_market", "earnings_yield"],
+            "rejected_slot_handling_mode": "fill_then_retain_cash",
+            "promotion_min_benchmark_coverage_pct": 95.0,
+            "promotion_min_net_cagr_spread_pct": -2.0,
+        },
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert payload["quality_factors"] == ["roe", "roa"]
+    assert payload["value_factors"] == ["book_to_market", "earnings_yield"]
+    assert payload["rejected_slot_fill_enabled"] is True
+    assert payload["partial_cash_retention_enabled"] is True
+    assert payload["promotion_min_benchmark_coverage"] == 0.95
+    assert payload["promotion_min_net_cagr_spread"] == -0.02
+
+
+def test_quality_snapshot_preserves_legacy_broad_replay_contract() -> None:
+    workspace = build_single_settings_workspace(
+        "Quality",
+        "Snapshot",
+        {},
+        runtime_options=RUNTIME_OPTIONS,
+    )
+
+    payload = project_single_settings_payload(workspace, _visible_draft(workspace))
+
+    assert payload["strategy_key"] == "quality_snapshot"
+    assert payload["factor_freq"] == "annual"
+    assert payload["rebalance_freq"] == "monthly"
+    assert payload["snapshot_mode"] == "broad_research"
+    assert payload["quality_factors"] == [
+        "roe",
+        "gross_margin",
+        "operating_margin",
+        "debt_ratio",
+    ]
+
+
+def test_strict_default_factor_and_overlay_values_match_current_renderers() -> None:
+    workspace = build_single_settings_workspace(
+        "Quality + Value",
+        "Annual",
+        {},
+        runtime_options=RUNTIME_OPTIONS,
+    )
+    values = {field["field_id"]: field["value"] for field in _fields(workspace)}
+
+    assert values["start"] == "2021-07-18"
+    assert values["top"] == 10
+    assert values["rebalance_interval"] == 1
+    assert values["quality_factors"] == [
+        "roe",
+        "roa",
+        "net_margin",
+        "asset_turnover",
+        "current_ratio",
+    ]
+    assert values["value_factors"] == [
+        "book_to_market",
+        "earnings_yield",
+        "sales_yield",
+        "ocf_yield",
+        "operating_income_yield",
+    ]
+    assert values["trend_filter_enabled"] is False
+    assert values["trend_filter_window"] == 200
+    assert values["weighting_mode"] == "equal_weight"
+    assert values["risk_off_mode"] == "cash_only"

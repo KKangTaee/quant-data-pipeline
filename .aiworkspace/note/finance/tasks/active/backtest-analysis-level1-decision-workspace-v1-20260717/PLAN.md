@@ -2124,7 +2124,7 @@ git commit -m "Backtest Analysis 전술 전략 React 설정 계약 이관"
 - Produces: Quality Annual/Quarterly/Snapshot, Value Annual/Quarterly, Quality + Value
   Annual/Quarterly schemas and exact payload projection.
 
-- [ ] **Step 1: Write RED annual/quarterly/snapshot parity tests**
+- [x] **Step 1: Write RED annual/quarterly/snapshot parity tests**
 
 Assert exact concrete strategy keys and complete key sets for all seven variants. Required invariant
 examples:
@@ -2143,7 +2143,7 @@ Also assert Top N, factor coverage, rejected-slot policy, overlay, defensive hol
 cost, liquidity, promotion, benchmark, underperformance/drawdown guardrails, preset/manual and PIT
 membership values survive projection without renaming.
 
-- [ ] **Step 2: Run RED and capture missing strict-field failures**
+- [x] **Step 2: Run RED and capture missing strict-field failures**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2154,7 +2154,7 @@ uv run --with pytest python -m pytest \
 
 Expected: strict-factor key/constant/default assertions fail.
 
-- [ ] **Step 3: Add seven concrete schema builders without factor-domain duplication**
+- [x] **Step 3: Add seven concrete schema builders without factor-domain duplication**
 
 Use shared schema fragments for dates, PIT universe, factor selection, rejected slots, overlays,
 weighting, cost/liquidity, and guardrails. Each concrete registration must explicitly supply its
@@ -2162,7 +2162,7 @@ weighting, cost/liquidity, and guardrails. Each concrete registration must expli
 Snapshot omits fields its existing payload does not accept rather than submitting empty annual
 fields. All detailed PIT/readiness text goes in supplied evidence/disclosure, not first-read fields.
 
-- [ ] **Step 4: Run GREEN, legacy prefill regressions, and compile**
+- [x] **Step 4: Run GREEN, legacy prefill regressions, and compile**
 
 ```bash
 uv run --with pytest python -m pytest \
@@ -2176,7 +2176,7 @@ git diff --check
 Expected: all seven concrete variants project compatible payloads and legacy history prefill
 contracts still pass.
 
-- [ ] **Step 5: Commit Task 16**
+- [x] **Step 5: Commit Task 16**
 
 ```bash
 git add app/services/backtest_single_settings_workspace.py \

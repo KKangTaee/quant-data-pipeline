@@ -1008,6 +1008,391 @@ def _generic_sections(
             integer=True,
         )
     ]
+
+
+def _concrete_preset_catalog(
+    strategy_choice: str,
+    concrete_strategy_key: str,
+    runtime_options: Mapping[str, object],
+) -> dict[str, list[str]]:
+    by_key = runtime_options.get("presets_by_strategy_key")
+    if isinstance(by_key, Mapping):
+        concrete = by_key.get(concrete_strategy_key)
+        if isinstance(concrete, Mapping):
+            normalized = {
+                str(name): [str(ticker) for ticker in members]
+                for name, members in concrete.items()
+                if isinstance(members, Sequence)
+                and not isinstance(members, (str, bytes))
+            }
+            if normalized:
+                return normalized
+    return _preset_catalog(strategy_choice, runtime_options)
+
+
+def _strict_universe_fields(
+    presets: Mapping[str, Sequence[str]],
+    *,
+    default_preset: str,
+    runtime_options: Mapping[str, object],
+    include_contract: bool,
+) -> list[dict[str, object]]:
+    preset_names = list(presets)
+    selected_default = (
+        default_preset if default_preset in presets else preset_names[0]
+    )
+    ticker_options = [
+        str(value) for value in _runtime_sequence(runtime_options, "tickers", [])
+    ]
+    fields = [
+        _field(
+            "universe_mode",
+            "universe_mode",
+            "투자 대상 선택 방식",
+            "segmented",
+            "preset",
+            "목적별 기본 구성 또는 직접 입력 중 하나를 선택합니다.",
+            options=[
+                _option("preset", "목적별 기본 구성"),
+                _option("manual_tickers", "종목 직접 입력"),
+            ],
+        ),
+        _field(
+            "preset_name",
+            "preset_name",
+            "기본 구성",
+            "single_select",
+            selected_default,
+            "재무 데이터 coverage 기준으로 준비된 후보군을 선택합니다.",
+            options=[_option(name) for name in preset_names],
+            visible_when={"universe_mode": "preset"},
+        ),
+        _field(
+            "tickers",
+            "tickers",
+            "직접 입력할 종목",
+            "multi_select",
+            list(presets[selected_default]),
+            "직접 검증할 주식 종목을 하나 이상 선택합니다.",
+            options=[_option(value) for value in ticker_options],
+            visible_when={"universe_mode": "manual_tickers"},
+        ),
+    ]
+    if include_contract:
+        fields.append(
+            _field(
+                "universe_contract",
+                "universe_contract",
+                "과거 Universe 기준",
+                "single_select",
+                "pit_monthly_snapshot",
+                "사전에 저장된 월말 snapshot을 리밸런싱 날짜별로 읽습니다.",
+                options=[
+                    _option("pit_monthly_snapshot", "PIT 월말 Snapshot Universe")
+                ],
+                advanced=True,
+            )
+        )
+    return fields
+
+
+def _strict_factor_field(
+    factor_family: str,
+    runtime_options: Mapping[str, object],
+) -> dict[str, object]:
+    if factor_family == "quality":
+        options = [
+            str(value)
+            for value in _runtime_sequence(
+                runtime_options,
+                "quality_factor_options",
+                [
+                    "roe",
+                    "roa",
+                    "net_margin",
+                    "asset_turnover",
+                    "current_ratio",
+                    "cash_ratio",
+                    "operating_margin",
+                    "interest_coverage",
+                    "ocf_margin",
+                    "fcf_margin",
+                    "net_debt_to_equity",
+                    "debt_to_assets",
+                    "debt_ratio",
+                    "gross_margin",
+                ],
+            )
+        ]
+        default = ["roe", "roa", "net_margin", "asset_turnover", "current_ratio"]
+        return _field(
+            "quality_factors",
+            "quality_factors",
+            "Quality 지표",
+            "multi_select",
+            default,
+            "수익성·효율성·재무 안정성을 함께 평가할 지표입니다.",
+            options=[_option(value) for value in options],
+        )
+    options = [
+        str(value)
+        for value in _runtime_sequence(
+            runtime_options,
+            "value_factor_options",
+            [
+                "book_to_market",
+                "earnings_yield",
+                "sales_yield",
+                "ocf_yield",
+                "fcf_yield",
+                "operating_income_yield",
+                "liquidation_value",
+                "per",
+                "pbr",
+                "psr",
+                "pcr",
+                "pfcr",
+                "ev_ebit",
+                "por",
+            ],
+        )
+    ]
+    default = [
+        "book_to_market",
+        "earnings_yield",
+        "sales_yield",
+        "ocf_yield",
+        "operating_income_yield",
+    ]
+    return _field(
+        "value_factors",
+        "value_factors",
+        "Value 지표",
+        "multi_select",
+        default,
+        "가격 대비 기업가치를 비교할 지표입니다.",
+        options=[_option(value) for value in options],
+    )
+
+
+def _strict_overlay_fields(
+    runtime_options: Mapping[str, object],
+) -> list[dict[str, object]]:
+    tickers = [str(value) for value in _runtime_sequence(runtime_options, "tickers", [])]
+    regime_benchmarks = [
+        str(value)
+        for value in _runtime_sequence(
+            runtime_options,
+            "market_regime_benchmarks",
+            ["SPY", "QQQ", "VTI", "IWM"],
+        )
+    ]
+    return [
+        _field(
+            "trend_filter_enabled",
+            "trend_filter_enabled",
+            "추세 필터 사용",
+            "toggle",
+            False,
+            "장기 추세가 약한 종목을 최종 보유 대상에서 제외합니다.",
+            advanced=True,
+        ),
+        _field(
+            "trend_filter_window",
+            "trend_filter_window",
+            "추세 판단 기간",
+            "number",
+            200,
+            "장기 추세를 확인할 이동평균 거래일 수입니다.",
+            min=20,
+            max=400,
+            step=10,
+            integer=True,
+            advanced=True,
+        ),
+        _field(
+            "weighting_mode",
+            "weighting_mode",
+            "보유 비중 방식",
+            "single_select",
+            "equal_weight",
+            "최종 후보를 동일 비중 또는 순위 완만 가중으로 보유합니다.",
+            options=[
+                _option("equal_weight", "동일 비중"),
+                _option("rank_tapered", "순위 완만 가중"),
+            ],
+            advanced=True,
+        ),
+        _field(
+            "rejected_slot_handling_mode",
+            "rejected_slot_handling_mode",
+            "탈락 슬롯 처리 방식",
+            "single_select",
+            "reweight_survivors",
+            "추세 기준에서 탈락한 빈 자리를 다시 채우거나 현금으로 남깁니다.",
+            options=[
+                _option("reweight_survivors", "생존 종목 재배분"),
+                _option("retain_unfilled_as_cash", "빈 자리 현금 보유"),
+                _option("fill_then_reweight", "후순위 보충 후 재배분"),
+                _option("fill_then_retain_cash", "후순위 보충 후 남은 현금 보유"),
+            ],
+            advanced=True,
+        ),
+        _field(
+            "risk_off_mode",
+            "risk_off_mode",
+            "시장 위험회피 방식",
+            "single_select",
+            "cash_only",
+            "시장 전체가 약할 때 현금 또는 방어 ETF로 이동합니다.",
+            options=[
+                _option("cash_only", "현금 보유"),
+                _option("defensive_sleeve_preference", "방어 ETF 우선"),
+            ],
+            advanced=True,
+        ),
+        _field(
+            "defensive_tickers",
+            "defensive_tickers",
+            "방어 ETF",
+            "multi_select",
+            ["BIL", "SHY", "LQD"],
+            "시장 위험회피 시 사용할 방어 자산 후보입니다.",
+            options=[
+                _option(value)
+                for value in dict.fromkeys([*tickers, "BIL", "SHY", "LQD"])
+            ],
+            advanced=True,
+        ),
+        _field(
+            "market_regime_enabled",
+            "market_regime_enabled",
+            "시장 국면 필터 사용",
+            "toggle",
+            False,
+            "대표 지수의 추세로 위험 국면을 추가 판단합니다.",
+            advanced=True,
+        ),
+        _field(
+            "market_regime_window",
+            "market_regime_window",
+            "시장 국면 확인 기간",
+            "number",
+            200,
+            "시장 국면을 판단할 이동평균 거래일 수입니다.",
+            min=20,
+            max=400,
+            step=10,
+            integer=True,
+            advanced=True,
+        ),
+        _field(
+            "market_regime_benchmark",
+            "market_regime_benchmark",
+            "시장 국면 기준 자산",
+            "single_select",
+            "SPY",
+            "시장 위험 국면을 판단할 대표 자산입니다.",
+            options=[_option(value) for value in regime_benchmarks],
+            advanced=True,
+        ),
+    ]
+
+
+def _strict_annual_risk_fields(
+    runtime_options: Mapping[str, object],
+) -> list[dict[str, object]]:
+    return [
+        _field("min_price_filter", "min_price_filter", "최소 가격", "number", 5.0, "이 가격보다 낮은 종목을 후보에서 제외합니다.", min=0.0, max=1000.0, step=1.0, advanced=True),
+        _field("min_history_months_filter", "min_history_months_filter", "최소 가격 이력(개월)", "number", 0, "종목이 가져야 하는 최소 가격 이력입니다.", min=0, max=120, step=1, integer=True, advanced=True),
+        _field("min_avg_dollar_volume_20d_m_filter", "min_avg_dollar_volume_20d_m_filter", "최소 20일 평균 거래대금($M)", "number", 0.0, "유동성이 낮은 종목을 후보에서 제외하는 기준입니다.", min=0.0, max=5000.0, step=1.0, advanced=True),
+        _field("transaction_cost_bps", "transaction_cost_bps", "거래비용(bps)", "number", 10.0, "리밸런싱 turnover에 반영할 거래비용입니다.", min=0.0, max=500.0, step=1.0),
+        _field("benchmark_contract", "benchmark_contract", "비교 기준 방식", "single_select", "ticker", "대표 ETF 또는 동일 후보군 단순 균등 비중과 비교합니다.", options=[_option("ticker", "대표 ETF"), _option("candidate_universe_equal_weight", "후보군 동일 비중")], advanced=True),
+        _field("benchmark_ticker", "benchmark_ticker", "비교 기준 자산", "text", "SPY", "대표 ETF 비교 방식에 사용할 ticker입니다.", uppercase=True),
+        _field("guardrail_reference_ticker", "guardrail_reference_ticker", "방어 규칙 기준 자산", "text", "", "비워두면 비교 기준 자산과 같은 ticker를 사용합니다.", required=False, uppercase=True, advanced=True),
+        _field("promotion_min_benchmark_coverage_pct", "promotion_min_benchmark_coverage", "최소 기준 자산 겹침(%)", "number", 95.0, "기준 자산과 날짜가 충분히 겹쳐야 하는 최소 비율입니다.", min=0.0, max=100.0, step=1.0, payload_scale=0.01, advanced=True),
+        _field("promotion_min_net_cagr_spread_pct", "promotion_min_net_cagr_spread", "최소 순 CAGR 차이(%)", "number", -2.0, "비용 반영 CAGR이 기준보다 허용될 최소 차이입니다.", min=-100.0, max=100.0, step=1.0, payload_scale=0.01, advanced=True),
+        _field("promotion_min_liquidity_clean_coverage_pct", "promotion_min_liquidity_clean_coverage", "최소 유동성 통과 비율(%)", "number", 90.0, "유동성 제외 없이 계산된 리밸런싱의 최소 비율입니다.", min=0.0, max=100.0, step=1.0, payload_scale=0.01, advanced=True),
+        _field("promotion_max_underperformance_share_pct", "promotion_max_underperformance_share", "최대 상대부진 구간 비율(%)", "number", 55.0, "기준 자산보다 뒤처진 rolling 구간의 허용 최대 비율입니다.", min=0.0, max=100.0, step=1.0, payload_scale=0.01, advanced=True),
+        _field("promotion_min_worst_rolling_excess_return_pct", "promotion_min_worst_rolling_excess_return", "최악 rolling 초과수익 하한(%)", "number", -15.0, "가장 약했던 rolling 구간의 허용 초과수익 하한입니다.", min=-100.0, max=100.0, step=1.0, payload_scale=0.01, advanced=True),
+        _field("promotion_max_strategy_drawdown_pct", "promotion_max_strategy_drawdown", "전략 최대 낙폭 하한(%)", "number", -35.0, "실전 후보가 허용할 전략 자체 최대 낙폭입니다.", min=-100.0, max=0.0, step=1.0, payload_scale=0.01, advanced=True),
+        _field("promotion_max_drawdown_gap_vs_benchmark_pct", "promotion_max_drawdown_gap_vs_benchmark", "기준 대비 최대 낙폭 차이(%)", "number", 8.0, "기준 자산보다 더 나쁜 낙폭의 허용 차이입니다.", min=0.0, max=100.0, step=1.0, payload_scale=0.01, advanced=True),
+        *_guardrail_fields(),
+    ]
+
+
+def _strict_factor_sections(
+    strategy_choice: str,
+    variant: str,
+    concrete_strategy_key: str,
+    runtime_options: Mapping[str, object],
+) -> list[dict[str, object]]:
+    presets = _concrete_preset_catalog(
+        strategy_choice,
+        concrete_strategy_key,
+        runtime_options,
+    )
+    if variant == "Snapshot":
+        execution = _date_fields() + [
+            _field("top", "top", "최종 보유 종목 수", "number", 2, "Quality 점수 상위에서 보유할 종목 수입니다.", min=1, max=20, step=1, integer=True)
+        ]
+        universe = _strict_universe_fields(
+            presets,
+            default_preset="Big Tech Quality Trial",
+            runtime_options=runtime_options,
+            include_contract=False,
+        )
+        rules = [
+            _field(
+                "quality_factors",
+                "quality_factors",
+                "Quality 지표",
+                "multi_select",
+                ["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                "저장된 broad 연구 결과를 재현할 품질 지표입니다.",
+                options=[
+                    _option(value)
+                    for value in ["roe", "gross_margin", "operating_margin", "debt_ratio"]
+                ],
+            )
+        ]
+        return [
+            _section("execution", execution),
+            _section("universe", universe),
+            _section("rules", rules),
+            _section("risk", []),
+        ]
+
+    top_default = 2 if strategy_choice == "Quality" else 10
+    top_max = 20 if strategy_choice == "Quality" else (50 if strategy_choice == "Value" else 30)
+    default_preset = (
+        "US Statement Coverage 300"
+        if variant == "Annual"
+        else "US Statement Coverage 100"
+    )
+    execution = _date_fields(start="2021-07-18") + [
+        _field("top", "top", "최종 보유 종목 수", "number", top_default, "복합 점수 상위에서 보유할 종목 수입니다.", min=1, max=top_max, step=1, integer=True),
+        _field("rebalance_interval", "rebalance_interval", "리밸런싱 간격(개월)", "number", 1, "재무 지표와 순위를 다시 평가하는 주기입니다.", min=1, max=12, step=1, integer=True),
+    ]
+    universe = _strict_universe_fields(
+        presets,
+        default_preset=default_preset,
+        runtime_options=runtime_options,
+        include_contract=True,
+    )
+    rules: list[dict[str, object]] = []
+    if strategy_choice in {"Quality", "Quality + Value"}:
+        rules.append(_strict_factor_field("quality", runtime_options))
+    if strategy_choice in {"Value", "Quality + Value"}:
+        rules.append(_strict_factor_field("value", runtime_options))
+    rules.extend(_strict_overlay_fields(runtime_options))
+    risk = _strict_annual_risk_fields(runtime_options) if variant == "Annual" else []
+    return [
+        _section("execution", execution),
+        _section("universe", universe),
+        _section("rules", rules),
+        _section("risk", risk),
+    ]
     return [
         _section("execution", execution),
         _section("universe", _standard_universe_fields(strategy_choice, runtime_options)),
@@ -1018,6 +1403,8 @@ def _generic_sections(
 
 def _strategy_sections(
     strategy_choice: str,
+    variant: str | None,
+    concrete_strategy_key: str,
     runtime_options: Mapping[str, object],
 ) -> list[dict[str, object]]:
     if strategy_choice == "Risk-On Momentum 5D":
@@ -1030,6 +1417,13 @@ def _strategy_sections(
         "Dual Momentum",
     }:
         return _standard_tactical_sections(strategy_choice, runtime_options)
+    if variant is not None:
+        return _strict_factor_sections(
+            strategy_choice,
+            variant,
+            concrete_strategy_key,
+            runtime_options,
+        )
     return _generic_sections(strategy_choice, runtime_options)
 
 
@@ -1144,6 +1538,7 @@ def _value_error(field: Mapping[str, object], value: object) -> str | None:
 
 def _payload_constants(
     strategy_choice: str,
+    variant: str | None,
     concrete_strategy_key: str,
     runtime_options: Mapping[str, object],
 ) -> dict[str, object]:
@@ -1191,6 +1586,24 @@ def _payload_constants(
         constants["trend_filter_enabled"] = True
     if strategy_choice == "Risk-On Momentum 5D":
         constants["option"] = "close_based"
+    if variant == "Snapshot":
+        constants.update(
+            {
+                "factor_freq": "annual",
+                "rebalance_freq": "monthly",
+                "snapshot_mode": "broad_research",
+            }
+        )
+    elif variant in {"Annual", "Quarterly"}:
+        factor_freq = variant.lower()
+        constants.update(
+            {
+                "factor_freq": factor_freq,
+                "snapshot_mode": f"strict_statement_{factor_freq}",
+            }
+        )
+        if strategy_choice in {"Value", "Quality + Value"}:
+            constants["snapshot_source"] = "shadow_factors"
     return constants
 
 
@@ -1204,11 +1617,21 @@ def build_single_settings_workspace(
 
     normalized_variant = _normalized_variant(strategy_choice, variant)
     runtime = dict(runtime_options or {})
-    sections = _strategy_sections(strategy_choice, runtime)
     concrete_strategy_key = _CONCRETE_STRATEGY_KEYS[
         (strategy_choice, normalized_variant)
     ]
-    presets = _preset_catalog(strategy_choice, runtime)
+    sections = _strategy_sections(
+        strategy_choice,
+        normalized_variant,
+        concrete_strategy_key,
+        runtime,
+    )
+    presets = _concrete_preset_catalog(
+        strategy_choice,
+        concrete_strategy_key,
+        runtime,
+    )
+    target_sizes = runtime.get("preset_target_sizes")
     workspace: dict[str, object] = {
         "schema_version": SETTINGS_SCHEMA_VERSION,
         "strategy_choice": strategy_choice,
@@ -1240,11 +1663,17 @@ def build_single_settings_workspace(
         "validation_errors": {},
         "payload_constants": _payload_constants(
             strategy_choice,
+            normalized_variant,
             concrete_strategy_key,
             runtime,
         ),
         "runtime_context": {
             "preset_members": deepcopy(presets),
+            "preset_target_sizes": (
+                deepcopy(dict(target_sizes))
+                if isinstance(target_sizes, Mapping)
+                else {}
+            ),
         },
     }
     supplied = dict(values or {})
@@ -1355,6 +1784,38 @@ def project_single_settings_payload(
         )
         payload["preset_name"] = (
             str(preset_name) if universe_mode == "preset" else None
+        )
+
+    variant_model = workspace.get("variant")
+    variant = (
+        variant_model.get("value")
+        if isinstance(variant_model, Mapping)
+        else None
+    )
+    if variant in {"Annual", "Quarterly"}:
+        rejected_mode = str(
+            effective.get("rejected_slot_handling_mode") or "reweight_survivors"
+        )
+        rejected_flags = {
+            "reweight_survivors": (False, False),
+            "retain_unfilled_as_cash": (False, True),
+            "fill_then_reweight": (True, False),
+            "fill_then_retain_cash": (True, True),
+        }
+        fill_enabled, retain_cash = rejected_flags[rejected_mode]
+        payload["rejected_slot_fill_enabled"] = fill_enabled
+        payload["partial_cash_retention_enabled"] = retain_cash
+        target_sizes = context.get("preset_target_sizes")
+        target_size_by_preset = (
+            dict(target_sizes) if isinstance(target_sizes, Mapping) else {}
+        )
+        selected_tickers = list(payload.get("tickers") or [])
+        payload["dynamic_candidate_tickers"] = []
+        payload["dynamic_target_size"] = (
+            int(target_size_by_preset.get(str(payload.get("preset_name"))))
+            if universe_mode == "preset"
+            and target_size_by_preset.get(str(payload.get("preset_name"))) is not None
+            else len(selected_tickers)
         )
 
     if strategy_choice in {"GTAA", "Global Relative Strength"}:
