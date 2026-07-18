@@ -37,6 +37,7 @@
 | 7차 Unified React Settings | Task 14~20 | schema/intent/payload parity, React editor, route cutover, QA |
 | 8차 Modifier-Free Multi-Select | Task 21~22 | adaptive compact/search control, Browser QA, docs sync |
 | 9차 Deterministic Preset Application | Task 23~25 | Python preset profile, React/fallback application, Browser QA, docs sync |
+| 10차 Result Evidence Workspace | Task 26~30 | truth/read model, React result UI, lifecycle/fallback cutover, QA/docs |
 
 ## File Ownership Map
 
@@ -47,6 +48,14 @@
 - `app/web/backtest_analysis_workspace.py`: Streamlit state adapter, validated intent dispatcher, context / decision renderer.
 - `app/web/backtest_analysis_workspace_panel.py`: same-read-model Python fallback.
 - `app/web/components/backtest_analysis_decision_workspace/`: two-surface React component, wrapper, Vite project, responsive CSS.
+- `app/services/backtest_analysis_result_workspace.py`: Level1 result lifecycle, technical handoff,
+  Level2 questions, performance/chart/holdings/table/evidence projection.
+- `tests/test_backtest_analysis_result_workspace.py`: result truth, holdings, Mix, lifecycle unit tests.
+- `app/web/backtest_analysis_result_workspace.py`: Streamlit state adapter, validated handoff intent,
+  React/fallback mount.
+- `app/web/backtest_analysis_result_workspace_panel.py`: same-read-model Python fallback.
+- `app/web/components/backtest_analysis_result_workspace/`: dedicated result React component,
+  SVG chart, responsive holdings/evidence/table presentation.
 
 ### Existing Files With Narrow Responsibilities
 
@@ -3649,5 +3658,1111 @@ git commit -m "Backtest Analysis 프리셋 적용 QA와 문서 동기화"
 - focused / boundary / decision / service exact test counts;
 - React production build / target `py_compile` / `git diff --check` 결과;
 - desktop / 760px QA 범위와 screenshot absolute links;
+- registry / run history / saved / `.superpowers/` / screenshot 보호 감사;
+- remaining risks and next handoff location.
+
+## 10차 Corrective Plan: Result Evidence And Level2 Handoff Workspace
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to execute
+> Task 26~30 inline in the current worktree. Every behavior change must follow a witnessed
+> RED -> GREEN cycle and every task ends with a Korean commit.
+
+**Goal:** 실행 전에는 결과 영역을 숨기고, 성공 결과를 성과·차트·현재/목표 보유·Level2
+검증 질문·사용자 표의 단일 흐름으로 제공하면서 Level1 technical handoff와 Level2 practical
+validation 책임을 분리한다.
+
+**Architecture:** 새 Python pure service가 lifecycle, result identity, formatted KPI, normalized
+chart, current/target holdings, technical handoff, Level2 questions, evidence groups와 user tables를
+JSON-ready read model로 만든다. 전용 React component와 Python fallback은 같은 read model을
+표시하고, `backtest_result_display.py`는 state adapter와 compatibility appendix만 남긴다.
+
+**Tech Stack:** Python 3.11+, pandas, Streamlit fragment/session state, React 18,
+TypeScript 5.6, dependency-free SVG, Vite 5, pytest/unittest, in-app Browser QA.
+
+### 10차 Global Constraints
+
+- no-run과 first failure에서는 result workspace를 렌더링하지 않는다.
+- 이전 성공 결과는 설정 변경·rerun·rerun failure 동안 reference로 보존한다.
+- Level1 blocker는 실행, settings/result fingerprint, core result identity/contract,
+  production maturity, callable handoff handler뿐이다.
+- benchmark, rolling/split/OOS, cost/turnover, liquidity, ETF operability, concentration,
+  latest-data replay와 evidence development는 Level2 validation question이다.
+- `run_result_id`는 Level1 실행 identity이고 `validation_result_id`는 successful handoff 뒤의
+  Level2 identity다. append-only validation registry row를 overwrite하지 않는다.
+- current holdings는 backtest-simulated last valuation allocation, target은 last valid
+  signal/rebalance allocation이며 broker account나 order가 아니다.
+- React는 raw status classification, Gate, handler validation, percentage, weight,
+  benchmark normalization을 계산하지 않는다.
+- 신규 chart dependency를 추가하지 않는다.
+- protected JSONL, saved setup, `.superpowers/`, screenshots, run artifacts는 stage하지 않는다.
+
+### Task 26: Result Lifecycle, Technical Handoff, And Level2 Question Truth
+
+**Files:**
+- Create: `app/services/backtest_analysis_result_workspace.py`
+- Create: `tests/test_backtest_analysis_result_workspace.py`
+
+**Interfaces:**
+- Consumes: configuration fingerprints, result bundle/meta, last error, strategy maturity,
+  `save_and_move` handler availability.
+- Produces: `build_result_lifecycle(...)`,
+  `build_level1_technical_handoff_readiness(...)`,
+  `build_level2_validation_questions(...)`. Existing runtime cutover is intentionally deferred to
+  Task 29 so this pure-service commit cannot block current handoff before new run identities exist.
+
+- [ ] **Step 1: Write lifecycle and stage-ownership RED tests**
+
+Create `tests/test_backtest_analysis_result_workspace.py` with a reusable result fixture and explicit
+state matrix:
+
+```python
+from __future__ import annotations
+
+import pandas as pd
+
+from app.services.backtest_analysis_result_workspace import (
+    build_level1_technical_handoff_readiness,
+    build_level2_validation_questions,
+    build_result_lifecycle,
+)
+
+
+def result_bundle(*, run_id: str = "run-current") -> dict:
+    return {
+        "strategy_name": "GTAA",
+        "summary_df": pd.DataFrame([{"CAGR": 0.12}]),
+        "chart_df": pd.DataFrame(
+            [{"Date": "2026-06-30", "Total Balance": 100.0}]
+        ),
+        "result_df": pd.DataFrame(
+            [{"Date": "2026-06-30", "Total Balance": 100.0}]
+        ),
+        "meta": {
+            "run_id": run_id,
+            "strategy_key": "gtaa",
+            "benchmark_available": False,
+            "rolling_review_status": "review",
+            "etf_operability_status": "unavailable",
+            "liquidity_policy_status": "caution",
+        },
+    }
+
+
+def test_no_run_is_hidden_and_previous_error_result_is_reference() -> None:
+    hidden = build_result_lifecycle(
+        result_bundle=None,
+        current_configuration_fingerprint="a",
+        result_configuration_fingerprint=None,
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+    )
+    failed_rerun = build_result_lifecycle(
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="new",
+        result_configuration_fingerprint="old",
+        result_requires_rerun=True,
+        is_running=False,
+        last_error="provider timeout",
+        last_error_kind="data",
+    )
+    assert hidden["state"] == "hidden"
+    assert hidden["show_workspace"] is False
+    assert failed_rerun["state"] == "error_with_reference"
+    assert failed_rerun["show_workspace"] is True
+    assert failed_rerun["reference_only"] is True
+
+
+def test_level1_gate_ignores_practical_validation_signals() -> None:
+    lifecycle = build_result_lifecycle(
+        result_bundle=result_bundle(),
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+    )
+    readiness = build_level1_technical_handoff_readiness(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle=result_bundle(),
+        lifecycle=lifecycle,
+        action_handlers={"save_and_move": lambda payload: None},
+    )
+    assert readiness["state"] == "ready"
+    assert readiness["can_handoff"] is True
+    assert readiness["reasons"] == []
+
+
+def test_practical_validation_gaps_become_level2_questions_once() -> None:
+    questions = build_level2_validation_questions(
+        meta=result_bundle()["meta"],
+        workspace_kind="single_strategy",
+        component_bundles=(),
+    )
+    assert {row["question_id"] for row in questions} >= {
+        "benchmark_comparison",
+        "rolling_oos_validation",
+        "etf_operability",
+        "liquidity_realism",
+    }
+    assert len({row["root_issue_id"] for row in questions}) == len(questions)
+```
+
+- [ ] **Step 2: Run RED and witness missing service contracts**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_result_workspace.py -q
+```
+
+Expected RED: import fails because `backtest_analysis_result_workspace.py` and its functions do not
+exist.
+
+- [ ] **Step 3: Implement the lifecycle and Level1 technical gate**
+
+Create the service with the exact state contract:
+
+```python
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any
+
+from app.services.backtest_strategy_catalog import LEVEL1_STRATEGY_MATURITY
+
+
+BACKTEST_ANALYSIS_RESULT_WORKSPACE_SCHEMA_VERSION = (
+    "backtest_analysis_result_workspace_v1"
+)
+
+
+def _strategy_maturity(strategy_choice: str | None) -> str:
+    return LEVEL1_STRATEGY_MATURITY.get(str(strategy_choice or ""), "development")
+
+
+def build_result_lifecycle(
+    *,
+    result_bundle: Mapping[str, Any] | None,
+    current_configuration_fingerprint: str,
+    result_configuration_fingerprint: str | None,
+    result_requires_rerun: bool,
+    is_running: bool,
+    last_error: str | None,
+    last_error_kind: str | None,
+) -> dict[str, Any]:
+    result_available = bool(result_bundle)
+    fingerprint_matches = bool(
+        result_available
+        and result_configuration_fingerprint
+        and current_configuration_fingerprint == result_configuration_fingerprint
+    )
+    reference_only = bool(
+        result_available
+        and (result_requires_rerun or not fingerprint_matches or last_error)
+    )
+    if is_running:
+        state = "running_with_reference" if result_available else "running"
+    elif last_error:
+        state = "error_with_reference" if result_available else "error"
+    elif not result_available:
+        state = "hidden"
+    elif reference_only:
+        state = "stale"
+    else:
+        state = "fresh"
+    display_labels = {
+        "hidden": "",
+        "running": "첫 결과를 만드는 중",
+        "running_with_reference": "새 설정으로 실행 중",
+        "error": "실행 결과를 만들지 못했습니다",
+        "error_with_reference": "이전 설정 결과 · 참고용",
+        "stale": "이전 설정 결과 · 참고용",
+        "fresh": "현재 설정 결과",
+    }
+    return {
+        "state": state,
+        "display_label": display_labels[state],
+        "show_workspace": result_available,
+        "result_available": result_available,
+        "fingerprint_matches": fingerprint_matches,
+        "reference_only": reference_only or state == "running_with_reference",
+        "is_running": is_running,
+        "error": (
+            {"kind": str(last_error_kind or "execution_failed"), "message": str(last_error)}
+            if last_error
+            else None
+        ),
+    }
+
+
+def _core_result_reasons(result_bundle: Mapping[str, Any] | None) -> list[dict[str, str]]:
+    bundle = dict(result_bundle or {})
+    meta = dict(bundle.get("meta") or {})
+    reasons: list[dict[str, str]] = []
+    if not str(meta.get("run_id") or ""):
+        reasons.append({"root_issue_id": "run_identity", "message": "실행 결과 식별자가 없습니다."})
+    for key, label in (("summary_df", "성과 요약"), ("result_df", "결과 표"), ("chart_df", "성과 곡선")):
+        value = bundle.get(key)
+        if value is None or bool(getattr(value, "empty", False)):
+            reasons.append({"root_issue_id": f"core:{key}", "message": f"{label} 계약이 비어 있습니다."})
+    return reasons
+
+
+def build_level1_technical_handoff_readiness(
+    *,
+    workspace_kind: str,
+    strategy_choice: str | None,
+    result_bundle: Mapping[str, Any] | None,
+    lifecycle: Mapping[str, Any],
+    action_handlers: Mapping[str, Callable[..., Any] | None],
+) -> dict[str, Any]:
+    if not lifecycle.get("result_available"):
+        return {"state": "result_required", "label": "결과 준비 필요", "can_handoff": False, "reasons": [], "action": None}
+    if workspace_kind == "single_strategy" and _strategy_maturity(strategy_choice) != "production":
+        return {"state": "unsupported", "label": "인계 기능 미지원", "can_handoff": False, "reasons": [], "action": None}
+    if not callable(action_handlers.get("save_and_move")):
+        return {"state": "unsupported", "label": "인계 기능 미지원", "can_handoff": False, "reasons": [], "action": None}
+    reasons = _core_result_reasons(result_bundle)
+    if lifecycle.get("state") != "fresh":
+        return {"state": "rerun_required", "label": "재실행 필요", "can_handoff": False, "reasons": reasons, "action": None}
+    if reasons:
+        return {"state": "result_required", "label": "결과 준비 필요", "can_handoff": False, "reasons": reasons, "action": None}
+    return {
+        "state": "ready",
+        "label": "Level2 인계 가능",
+        "can_handoff": True,
+        "reasons": [],
+        "action": {"id": "save_and_move", "label": "후보로 저장하고 Level2로 이동", "enabled": True},
+    }
+```
+
+- [ ] **Step 4: Implement deduplicated Level2 question projection**
+
+Use a declarative field map and root deduplication; no practical signal may affect the technical gate:
+
+```python
+_LEVEL2_QUESTION_SPECS = (
+    ("benchmark_comparison", "benchmark", "benchmark_available", {False, None, ""}, "기준지수와 손익·낙폭 비교", "동일 기간 기준지수와의 차이를 Practical Validation에서 확인합니다."),
+    ("rolling_oos_validation", "temporal_validation", "rolling_review_status", {"review", "not_run", "unavailable", ""}, "구간별 성과 지속성", "rolling/OOS 구간에서 결과가 유지되는지 확인합니다."),
+    ("split_oos_validation", "temporal_validation", "out_of_sample_review_status", {"review", "not_run", "unavailable", ""}, "분할·홀드아웃 재검증", "학습 외 구간의 재현성을 확인합니다."),
+    ("cost_turnover_realism", "execution_realism", "net_cost_curve_status", {"not_run", "unavailable", "applied_without_turnover_estimate", ""}, "비용·교체 현실성", "turnover와 거래비용 반영 수준을 확인합니다."),
+    ("liquidity_realism", "execution_realism", "liquidity_policy_status", {"caution", "review", "unavailable", ""}, "유동성 적합성", "보유 후보의 거래 가능 규모를 확인합니다."),
+    ("etf_operability", "execution_realism", "etf_operability_status", {"caution", "review", "unavailable", ""}, "ETF 운용 가능성", "AUM·spread·holdings 근거를 확인합니다."),
+    ("regime_validation", "temporal_validation", "regime_split_validation_status", {"review", "not_run", "unavailable", ""}, "시장 국면별 재현성", "상승·하락·중립 국면에서 결과가 유지되는지 확인합니다."),
+    ("construction_overlap", "execution_realism", "construction_risk_status", {"review", "not_run", "unavailable", ""}, "집중도·중복 구성", "상위 보유 집중도와 구성 간 중복을 확인합니다."),
+    ("latest_data_replay", "temporal_validation", "latest_data_replay_status", {"review", "not_run", "unavailable", ""}, "최신 데이터 재검증", "현재 DB 기준으로 같은 설정을 다시 실행해 차이를 확인합니다."),
+    ("evidence_development", "execution_realism", "evidence_adapter_status", {"review", "not_run", "unavailable", ""}, "추가 검증 근거 필요 여부", "현재 근거로 확인할 수 없는 항목은 Level2에서 adapter 개발 필요성을 판단합니다."),
+)
+
+
+def build_level2_validation_questions(
+    *,
+    meta: Mapping[str, Any],
+    workspace_kind: str,
+    component_bundles: Sequence[Mapping[str, Any]] = (),
+) -> list[dict[str, str]]:
+    del workspace_kind, component_bundles
+    lane_labels = {
+        "benchmark": "성과·위험 검증",
+        "temporal_validation": "기간·재현성 검증",
+        "execution_realism": "실행 현실성 검증",
+    }
+    rows: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for question_id, lane, field, unresolved, title, summary in _LEVEL2_QUESTION_SPECS:
+        raw = meta.get(field)
+        normalized = str(raw).strip().lower() if not isinstance(raw, bool) else raw
+        if normalized not in unresolved:
+            continue
+        root = f"level2:{lane}:{question_id}"
+        if root in seen:
+            continue
+        seen.add(root)
+        rows.append({
+            "question_id": question_id,
+            "root_issue_id": root,
+            "lane": lane,
+            "lane_label": lane_labels[lane],
+            "status": "needs_validation",
+            "title": title,
+            "summary": summary,
+        })
+    return rows
+```
+
+Keep one root id across all lanes and counts.
+
+- [ ] **Step 5: Run GREEN, compile, and commit**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_result_workspace.py -q
+.venv/bin/python -m py_compile app/services/backtest_analysis_result_workspace.py
+git diff --check
+git add \
+  app/services/backtest_analysis_result_workspace.py \
+  tests/test_backtest_analysis_result_workspace.py
+git diff --cached --check
+git commit -m "Backtest Analysis 결과 인계 진실 분리"
+```
+
+Expected: new lifecycle/stage tests pass; compile/diff-check exit 0.
+
+### Task 27: Performance, Holdings, Evidence, And User Table Read Model
+
+**Files:**
+- Modify: `app/services/backtest_analysis_result_workspace.py`
+- Modify: `tests/test_backtest_analysis_result_workspace.py`
+
+**Interfaces:**
+- Consumes: Task 26 lifecycle/readiness/questions, single or weighted result bundle, optional benchmark
+  and component bundles.
+- Produces: `build_backtest_analysis_result_workspace(...)` with identity, formatted KPI, normalized chart,
+  current/target holdings, four evidence groups, performance rows, holding-change rows and JSON-ready
+  technical appendix.
+
+- [ ] **Step 1: Write holdings and result projection RED tests**
+
+Add tests covering direct weight, balance-derived weight, cash-only, non-rebalance latest row, missing
+holdings and partial Mix:
+
+```python
+def test_holdings_projects_current_and_last_valid_signal_without_future_guess() -> None:
+    bundle = result_bundle()
+    bundle["result_df"] = pd.DataFrame([
+        {
+            "Date": "2026-05-31", "Rebalancing": True,
+            "End Ticker": ["SPY"], "End Balance": [100.0],
+            "Next Ticker": ["SPY", "TLT"], "Next Weight": [0.6, 0.4],
+            "Added Ticker": ["TLT"], "Removed Ticker": [],
+            "Cash": 0.0, "Total Balance": 100.0,
+        },
+        {
+            "Date": "2026-06-30", "Rebalancing": False,
+            "End Ticker": ["SPY", "TLT"], "End Balance": [63.0, 39.0],
+            "Next Ticker": ["SPY", "TLT"], "Next Balance": [63.0, 39.0],
+            "Cash": 0.0, "Total Balance": 102.0,
+        },
+    ])
+    model = build_backtest_analysis_result_workspace(
+        workspace_kind="single_strategy",
+        strategy_choice="GTAA",
+        result_bundle=bundle,
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same",
+        result_requires_rerun=False,
+        is_running=False,
+        last_error=None,
+        last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None},
+        component_bundles=(),
+    )
+    assert model["holdings"]["current_allocation"] == [
+        {"ticker": "SPY", "weight": 0.617647, "weight_label": "61.8%"},
+        {"ticker": "TLT", "weight": 0.382353, "weight_label": "38.2%"},
+    ]
+    assert model["holdings"]["target_allocation"][0]["ticker"] == "SPY"
+    assert model["holdings"]["status"] == "hold_current_until_rebalance"
+
+
+def test_cash_only_is_not_an_empty_holding_state() -> None:
+    bundle = result_bundle()
+    bundle["result_df"] = pd.DataFrame([{
+        "Date": "2026-06-30", "Rebalancing": True,
+        "End Ticker": [], "End Balance": [], "Next Ticker": [],
+        "Next Balance": [], "Cash": 100.0, "Total Balance": 100.0,
+    }])
+    model = build_backtest_analysis_result_workspace(
+        workspace_kind="single_strategy", strategy_choice="GTAA",
+        result_bundle=bundle, current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same", result_requires_rerun=False,
+        is_running=False, last_error=None, last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None}, component_bundles=(),
+    )
+    assert model["holdings"]["current_allocation"] == [
+        {"ticker": "현금", "weight": 1.0, "weight_label": "100.0%"}
+    ]
+    assert model["holdings"]["status"] == "cash_only"
+
+
+def test_user_tables_and_chart_use_stable_labels_not_raw_columns() -> None:
+    bundle = result_bundle()
+    bundle["summary_df"] = pd.DataFrame([{
+        "Start Date": "2026-05-31", "End Date": "2026-06-30",
+        "Start Balance": 100.0, "End Balance": 102.0,
+        "CAGR": 0.24, "Maximum Drawdown": -0.05,
+        "Sharpe Ratio": 1.2, "Standard Deviation": 0.15,
+    }])
+    bundle["chart_df"] = pd.DataFrame([
+        {"Date": "2026-05-31", "Total Balance": 100.0},
+        {"Date": "2026-06-30", "Total Balance": 102.0},
+    ])
+    bundle["result_df"] = pd.DataFrame([
+        {"Date": "2026-05-31", "Total Balance": 100.0, "Total Return": 0.0,
+         "End Ticker": [], "End Balance": [], "Next Ticker": ["SPY"],
+         "Next Balance": [100.0], "Rebalancing": True, "Cash": 0.0},
+        {"Date": "2026-06-30", "Total Balance": 102.0, "Total Return": 0.02,
+         "End Ticker": ["SPY"], "End Balance": [102.0], "Next Ticker": ["SPY"],
+         "Next Balance": [102.0], "Rebalancing": False, "Cash": 0.0},
+    ])
+    model = build_backtest_analysis_result_workspace(
+        workspace_kind="single_strategy", strategy_choice="GTAA",
+        result_bundle=bundle,
+        current_configuration_fingerprint="same",
+        result_configuration_fingerprint="same", result_requires_rerun=False,
+        is_running=False, last_error=None, last_error_kind=None,
+        action_handlers={"save_and_move": lambda payload: None}, component_bundles=(),
+    )
+    assert [item["metric_id"] for item in model["performance_summary"]] == [
+        "period", "cumulative_return", "cagr", "maximum_drawdown", "sharpe", "volatility"
+    ]
+    assert model["chart"]["strategy_series"][0]["value"] == 100.0
+    assert list(model["performance_rows"][0]) == [
+        "date", "balance", "period_return", "drawdown", "holding_count", "turnover", "cost"
+    ]
+    assert "Total Balance" not in model["performance_rows"][0]
+```
+
+- [ ] **Step 2: Run RED and witness missing builder**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_result_workspace.py -q
+```
+
+Expected RED: `build_backtest_analysis_result_workspace` and holdings/chart projections are absent.
+
+- [ ] **Step 3: Implement safe scalar/list/date and display helpers**
+
+Add focused helpers that never expose pandas/numpy objects:
+
+```python
+def _format_percent(value: Any) -> str:
+    numeric = _optional_float(value)
+    return "-" if numeric is None else f"{numeric:.1%}"
+
+
+def _allocation_rows(
+    tickers: list[str],
+    *,
+    weights: list[float] | None = None,
+    balances: list[float] | None = None,
+    total_balance: float | None = None,
+    cash: float | None = None,
+) -> list[dict[str, Any]]:
+    resolved = list(weights or [])
+    if not resolved and balances and total_balance and total_balance > 0:
+        resolved = [float(balance) / float(total_balance) for balance in balances[: len(tickers)]]
+    rows = [
+        {
+            "ticker": ticker,
+            "weight": round(resolved[index], 6) if index < len(resolved) else None,
+            "weight_label": _format_percent(resolved[index]) if index < len(resolved) else "비중 근거 없음",
+        }
+        for index, ticker in enumerate(tickers)
+    ]
+    cash_weight = float(cash or 0.0) / float(total_balance or 0.0) if total_balance else 0.0
+    if cash_weight > 0 or (not rows and cash and total_balance):
+        rows.append({"ticker": "현금", "weight": round(cash_weight, 6), "weight_label": _format_percent(cash_weight)})
+    return rows
+```
+
+Use strict list length alignment. If ticker/weight/balance cells cannot be parsed, return an explicit
+`unavailable_reason`; never assume equal weights except where a strategy row already provides equal
+`End Balance` / `Next Balance`.
+
+- [ ] **Step 4: Implement chart, holdings, tables, evidence groups, and top-level builder**
+
+The builder must return the exact shape consumed by Task 28:
+
+```python
+def build_backtest_analysis_result_workspace(
+    *,
+    workspace_kind: str,
+    strategy_choice: str | None,
+    result_bundle: Mapping[str, Any] | None,
+    current_configuration_fingerprint: str,
+    result_configuration_fingerprint: str | None,
+    result_requires_rerun: bool,
+    is_running: bool,
+    last_error: str | None,
+    last_error_kind: str | None,
+    action_handlers: Mapping[str, Callable[..., Any] | None],
+    component_bundles: Sequence[Mapping[str, Any]] = (),
+) -> dict[str, Any]:
+    lifecycle = build_result_lifecycle(
+        result_bundle=result_bundle,
+        current_configuration_fingerprint=current_configuration_fingerprint,
+        result_configuration_fingerprint=result_configuration_fingerprint,
+        result_requires_rerun=result_requires_rerun,
+        is_running=is_running,
+        last_error=last_error,
+        last_error_kind=last_error_kind,
+    )
+    if not lifecycle["show_workspace"]:
+        return {
+            "schema_version": BACKTEST_ANALYSIS_RESULT_WORKSPACE_SCHEMA_VERSION,
+            "visible": False,
+            "lifecycle": lifecycle,
+        }
+    bundle = dict(result_bundle or {})
+    meta = dict(bundle.get("meta") or {})
+    readiness = build_level1_technical_handoff_readiness(
+        workspace_kind=workspace_kind,
+        strategy_choice=strategy_choice,
+        result_bundle=bundle,
+        lifecycle=lifecycle,
+        action_handlers=action_handlers,
+    )
+    return {
+        "schema_version": BACKTEST_ANALYSIS_RESULT_WORKSPACE_SCHEMA_VERSION,
+        "visible": True,
+        "configuration_fingerprint": current_configuration_fingerprint,
+        "lifecycle": lifecycle,
+        "identity": {
+            "run_result_id": str(meta.get("run_id") or ""),
+            "candidate_source_id": str(meta.get("selection_source_id") or ""),
+            "validation_result_id": str(meta.get("validation_result_id") or ""),
+            "strategy_name": str(bundle.get("strategy_name") or strategy_choice or "Portfolio Mix"),
+            "variant_name": str(meta.get("variant") or ""),
+        },
+        "performance_summary": _performance_summary(bundle.get("summary_df"), bundle.get("result_df")),
+        "chart": _chart_projection(bundle),
+        "holdings": _holdings_projection(bundle, component_bundles=component_bundles),
+        "technical_handoff_readiness": readiness,
+        "level2_validation_questions": build_level2_validation_questions(
+            meta=meta, workspace_kind=workspace_kind, component_bundles=component_bundles
+        ),
+        "evidence_groups": _evidence_groups(bundle),
+        "performance_rows": _performance_rows(bundle.get("result_df")),
+        "holding_change_rows": _holding_change_rows(bundle.get("result_df")),
+        "technical_appendix": _technical_appendix(bundle),
+        "actions": {"save_and_move": readiness["action"]} if readiness.get("action") else {},
+        "boundaries": {
+            "react_calculates_gate": False,
+            "react_calculates_weights": False,
+            "react_classifies_status": False,
+            "python_validates_intent": True,
+        },
+    }
+```
+
+Implementation requirements:
+
+- normalize strategy and benchmark curves to `100.0` at the common first valid date;
+- project high, low and maximum-drawdown markers only when calculable;
+- build current allocation from latest valuation `End Ticker`/`End Balance` and cash; for static
+  Equal Weight rows only, allow `Ticker` when its length exactly matches `End Balance`;
+- build target allocation from last valid signal/rebalance `Next Ticker`, explicit `Next Weight` first,
+  then `Next Balance / Total Balance`; for static Equal Weight rows only, allow `Ticker` when its length
+  exactly matches `Next Balance`;
+- when latest row is not a rebalance row set `status=hold_current_until_rebalance`;
+- aggregate Portfolio Mix underlying ticker weights only when all component target evidence exists;
+  otherwise return component allocations plus `evidence_status=partial`;
+- performance rows use only date/balance/period return/drawdown/holding count/turnover/cost;
+- holding-change rows use only date/state/current/target/additions/removals/cash;
+- cap component props to 420 user rows and 100 appendix preview rows while preserving full raw data only
+  in the Python compatibility path.
+
+- [ ] **Step 5: Add all-family result-column boundary matrix**
+
+In `tests/test_backtest_analysis_result_workspace.py`, create a matrix over Equal Weight, GTAA/GRS, Risk Parity,
+Dual Momentum, strict factor and weighted Mix fixture shapes. For each, call the pure builder and assert:
+
+```python
+self.assertTrue(workspace["visible"])
+self.assertEqual(workspace["identity"]["run_result_id"], case["run_id"])
+self.assertIn(workspace["holdings"]["status"], {
+    "available", "cash_only", "hold_current_until_rebalance", "partial", "unavailable"
+})
+self.assertEqual(len({row["root_issue_id"] for row in workspace["level2_validation_questions"]}),
+                 len(workspace["level2_validation_questions"]))
+```
+
+- [ ] **Step 6: Run GREEN, focused service regression, compile, and commit**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_result_workspace.py \
+  tests/test_backtest_analysis_decision_workspace.py -q
+.venv/bin/python -m py_compile app/services/backtest_analysis_result_workspace.py
+git diff --check
+git add \
+  app/services/backtest_analysis_result_workspace.py \
+  tests/test_backtest_analysis_result_workspace.py
+git diff --cached --check
+git commit -m "Backtest Analysis 결과 근거 읽기 모델 구현"
+```
+
+Expected: focused result/decision tests pass; compile/diff-check exit 0.
+
+### Task 28: Dedicated React Result Workspace And Python Fallback
+
+**Files:**
+- Create: `app/web/components/backtest_analysis_result_workspace/__init__.py`
+- Create: `app/web/components/backtest_analysis_result_workspace/component.py`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/package.json`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/package-lock.json`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/tsconfig.json`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/vite.config.ts`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/index.html`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/src/index.tsx`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/src/types.ts`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/src/BacktestAnalysisResultWorkspace.tsx`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/src/ResultWorkspaceChart.tsx`
+- Create: `app/web/components/backtest_analysis_result_workspace/frontend/src/style.css`
+- Create: `app/web/backtest_analysis_result_workspace_panel.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+
+**Interfaces:**
+- Consumes: Task 27 `BacktestAnalysisResultWorkspace` JSON model.
+- Produces: `render_backtest_analysis_result_workspace_component(...)`, availability helper,
+  same-read-model fallback and `save_and_move` presentation intent only.
+
+- [ ] **Step 1: Write RED visual and ownership boundary tests**
+
+Add a focused boundary test that requires dedicated files and forbids React-side domain logic:
+
+```python
+def test_level1_result_workspace_is_dedicated_intent_only_and_responsive(self) -> None:
+    root = PROJECT_ROOT / "app/web/components/backtest_analysis_result_workspace/frontend/src"
+    source = (root / "BacktestAnalysisResultWorkspace.tsx").read_text()
+    chart = (root / "ResultWorkspaceChart.tsx").read_text()
+    types = (root / "types.ts").read_text()
+    css = (root / "style.css").read_text()
+    index = (root / "index.tsx").read_text()
+
+    for token in (
+        "performance_summary", "strategy_series", "current_allocation",
+        "target_allocation", "technical_handoff_readiness",
+        "level2_validation_questions", "evidence_groups",
+        "performance_rows", "holding_change_rows", "technical_appendix",
+    ):
+        self.assertIn(token, types)
+    self.assertIn('emitIntent("save_and_move"', source)
+    self.assertIn("<svg", chart)
+    self.assertIn("ResizeObserver", index)
+    self.assertIn("@media (max-width: 760px)", css)
+    self.assertNotIn("benchmark_available", source)
+    self.assertNotIn("Next Balance", source)
+    self.assertNotIn("canHandoff =", source)
+    self.assertNotIn("/ total", source)
+```
+
+Run only this test and witness RED because the dedicated component does not exist.
+
+- [ ] **Step 2: Create component wrapper, Vite project, and exact read-model types**
+
+Use component name `backtest_analysis_result_workspace`. The Python wrapper accepts only `workspace`,
+`key`, and `on_change`; the TypeScript type mirrors Task 27 fields. Define intent as:
+
+```ts
+export type ResultWorkspaceIntent = {
+  action: "save_and_move"
+  payload: {
+    run_result_id: string
+    current_configuration_fingerprint: string
+  }
+  nonce: string
+}
+```
+
+The component wrapper returns a dict only; availability depends on `frontend/build/index.html`.
+
+- [ ] **Step 3: Implement dependency-free SVG chart and single-flow result UI**
+
+Adapt the Final Review `DecisionBriefCharts.tsx` visual language without importing or adding a package.
+The component order must be exactly:
+
+```tsx
+<main className="bt1r-workspace">
+  <ResultHeader identity={workspace.identity} lifecycle={workspace.lifecycle} />
+  <PerformanceSummary items={workspace.performance_summary} />
+  <ResultWorkspaceChart chart={workspace.chart} />
+  <HoldingsComparison holdings={workspace.holdings} />
+  <HandoffAndQuestions
+    readiness={workspace.technical_handoff_readiness}
+    questions={workspace.level2_validation_questions}
+    onHandoff={() => emitIntent("save_and_move", {
+      run_result_id: workspace.identity.run_result_id,
+      current_configuration_fingerprint: workspace.configuration_fingerprint,
+    })}
+  />
+  <EvidenceGroups groups={workspace.evidence_groups} />
+  <UserTables
+    performanceRows={workspace.performance_rows}
+    holdingRows={workspace.holding_change_rows}
+  />
+  <TechnicalAppendix appendix={workspace.technical_appendix} />
+</main>
+```
+
+Render no action board when `workspace.actions` is empty. Use local disclosure and table-page state only;
+all labels, formatted values, state, count and availability come from Python.
+
+- [ ] **Step 4: Implement same-read-model Python fallback**
+
+Create `render_backtest_analysis_result_workspace_fallback(workspace)`. Return `None` unless the enabled
+`save_and_move` button is clicked. Render the same order with `st.metric`, `st.line_chart` from prepared
+series, holdings/evidence cards, user-facing dataframes and one collapsed technical appendix. Do not call
+`build_next_step_readiness_evaluation()` or calculate weights/status in the fallback.
+
+- [ ] **Step 5: Add responsive and accessibility contract**
+
+- use `color-scheme: light` and workspace-scoped text colors;
+- desktop KPI/holdings/question cards use at most two columns;
+- `@media (max-width: 760px)` makes all grids one column;
+- table shells use bounded internal scrolling without expanding page width;
+- chart has `<title>`, `<desc>`, focusable point/tooltip behavior and visible legend;
+- `ResizeObserver` updates Streamlit frame height after disclosure/table changes;
+- lifecycle reference/running/error uses `role=status` or `role=alert` without removing prior content.
+
+- [ ] **Step 6: Run GREEN boundary, production build, compile, and commit**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
+cd app/web/components/backtest_analysis_result_workspace/frontend
+npm install
+npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+.venv/bin/python -m py_compile \
+  app/web/backtest_analysis_result_workspace_panel.py \
+  app/web/components/backtest_analysis_result_workspace/component.py
+git diff --check
+git add \
+  app/web/components/backtest_analysis_result_workspace \
+  app/web/backtest_analysis_result_workspace_panel.py \
+  tests/test_backtest_refactor_boundaries.py
+git diff --cached --check
+git commit -m "Backtest Analysis 결과 워크스페이스 UI 구현"
+```
+
+Expected: boundary tests, 175+ module Vite production build, py_compile and diff-check pass. Do not
+stage `node_modules/` or generated QA screenshots.
+
+### Task 29: Runtime Lifecycle, Adapter, Fallback Cutover, And Legacy Cleanup
+
+**Files:**
+- Create: `app/web/backtest_analysis_result_workspace.py`
+- Modify: `app/services/backtest_analysis_decision_workspace.py`
+- Modify: `app/web/backtest_result_display.py`
+- Modify: `app/web/backtest_single_strategy.py`
+- Modify: `app/web/backtest_single_runner.py`
+- Modify: `app/web/backtest_compare/page.py`
+- Modify: `app/runtime/backtest/stores/run_history.py`
+- Modify: `app/web/backtest_candidate_review_helpers.py`
+- Modify: `app/services/backtest_practical_validation_source.py`
+- Modify: `tests/test_backtest_analysis_decision_workspace.py`
+- Modify: `tests/test_backtest_refactor_boundaries.py`
+- Modify: `tests/test_service_contracts.py`
+
+**Interfaces:**
+- Consumes: Task 27 pure builder, Task 28 component/fallback, existing Python action handlers.
+- Produces: current session-state adapter, validated `save_and_move` intent, no-run hidden route,
+  preserved stale/running/error result, new run identity and primary legacy-detail cutover.
+
+- [ ] **Step 1: Write RED route, lifecycle, identity, and intent tests**
+
+Add tests asserting:
+
+```python
+def test_result_route_hides_before_first_run_and_removes_legacy_expander() -> None:
+    source = Path("app/web/backtest_result_display.py").read_text()
+    body = source.split("def _render_last_run()", 1)[1].split("\ndef ", 1)[0]
+    assert body.index("if not bundle") < body.index("render_backtest_analysis_result_workspace")
+    assert 'st.expander("상세 근거"' not in body
+    assert "render_backtest_analysis_decision_surface" not in body
+
+
+def test_result_intent_requires_exact_current_run_and_enabled_action() -> None:
+    workspace = {
+        "configuration_fingerprint": "fingerprint-current",
+        "identity": {"run_result_id": "run-current"},
+        "actions": {"save_and_move": {"enabled": True}},
+    }
+    assert validate_result_workspace_intent(
+        {"action": "save_and_move", "payload": {
+            "run_result_id": "run-current",
+            "current_configuration_fingerprint": workspace["configuration_fingerprint"],
+        }, "nonce": "n-1"},
+        workspace=workspace,
+    )["ok"] is True
+    assert validate_result_workspace_intent(
+        {"action": "save_and_move", "payload": {"run_result_id": "run-old"}, "nonce": "n-2"},
+        workspace=workspace,
+    )["ok"] is False
+```
+
+Add runner/page source contracts requiring `meta["run_id"]`, pending single execution, old result
+preservation on weighted failure and removal of `_render_real_money_details_legacy` after a repository-wide
+reference assertion.
+
+- [ ] **Step 2: Build state adapter and validated intent dispatcher**
+
+Create `build_current_backtest_analysis_result_workspace()` by adapting:
+
+- single: `backtest_last_bundle`, current/result fingerprint, rerun flag, pending flag, last error;
+- Mix: `backtest_weighted_bundle`, current/result fingerprint, pending/error, component bundles;
+- action handlers from `build_backtest_analysis_action_handlers()`.
+
+Implement `validate_result_workspace_intent(intent, workspace)` and consume only when:
+
+- nonce is new;
+- action is `save_and_move`;
+- enabled action exists in the current read model;
+- payload run id equals `identity.run_result_id`;
+- payload fingerprint equals current configuration fingerprint;
+- Python resolves a callable handler at dispatch time.
+
+Do not trust component `enabled`, state or handler name.
+
+In the same task, change `build_level1_readiness_projection()` compatibility output so `handoff_state`
+and `save_and_move` availability delegate to Task 26 technical truth. Preserve the old read-model keys
+for the context surface, but expose practical gaps only as
+`evaluation["level2_validation_questions"]`; do not use
+`build_next_step_readiness_evaluation()` to decide the Level2 action.
+
+- [ ] **Step 3: Assign stable run identity before persistence**
+
+In every successful current execution path, before storing bundle and appending history:
+
+```python
+from uuid import uuid4
+
+bundle["meta"] = dict(bundle.get("meta") or {})
+bundle["meta"].setdefault("run_id", f"level1-{uuid4().hex}")
+```
+
+Apply this to single runner, new weighted Mix, and saved Mix replay weighted bundle. Component strategy
+comparison bundles remain component evidence; the weighted result owns the Level1 `run_result_id`.
+
+Persist the same identity across handoff boundaries by inserting these exact entries in the existing
+record/return mappings:
+
+```python
+# app/runtime/backtest/stores/run_history.py
+"run_result_id": meta.get("run_id"),
+
+# app/web/backtest_candidate_review_helpers.py
+"run_result_id": meta.get("run_id"),
+
+# app/services/backtest_practical_validation_source.py
+"run_result_id": draft.get("run_result_id"),
+```
+
+Add the same top-level `run_result_id` to weighted/saved Mix prefill payloads and selection sources. The
+new field is additive and must not change current schema versions or rewrite existing JSONL rows.
+
+- [ ] **Step 4: Queue single execution so the previous result renders during rerun**
+
+Change the validated settings intent handler to queue normalized payload and strategy name in
+`backtest_pending_single_run` instead of executing inside the component callback. At the end of the
+fragment flow:
+
+```python
+pending = st.session_state.get("backtest_pending_single_run")
+_render_last_run(is_running=bool(pending))
+if isinstance(pending, dict):
+    try:
+        _handle_backtest_run(
+            dict(pending["payload"]),
+            strategy_name=str(pending["strategy_name"]),
+        )
+    finally:
+        st.session_state.pop("backtest_pending_single_run", None)
+    st.rerun(scope="fragment")
+```
+
+The React settings button keeps its existing local `실행 요청 중…` state. The result builder receives
+`is_running=True`, so the previous success stays visible with `새 설정으로 실행 중`. First execution has
+no result workspace and shows progress only. Deduplicate the queued intent id before execution.
+
+- [ ] **Step 5: Preserve weighted result on failure and cut over primary result route**
+
+- do not clear `backtest_weighted_bundle` when a new weighted build or saved replay fails;
+- mark the old result reference-only through current/result fingerprint or error state;
+- make `_render_last_run(is_running=False)` return before component mount when bundle is absent;
+- replace old decision surface and collapsed detail expander with the dedicated result workspace renderer;
+- render first-run errors adjacent to settings without an empty result shell;
+- keep full raw table/meta export only inside the new technical appendix/fallback compatibility path.
+
+- [ ] **Step 6: Prove and remove the unused real-money legacy renderer**
+
+Run:
+
+```bash
+rg -n "_render_real_money_details_legacy" app tests
+```
+
+Expected before removal: one definition and no caller. Add a boundary assertion for zero definition/caller,
+then remove the complete function. Do not remove helpers still referenced by history, compare or Practical
+Validation adapters.
+
+- [ ] **Step 7: Run GREEN, focused/full regression, React builds, compile, and commit**
+
+```bash
+uv run --with pytest python -m pytest \
+  tests/test_backtest_analysis_result_workspace.py \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py -q
+uv run --with pytest python -m pytest tests/test_service_contracts.py -q --tb=short
+cd app/web/components/backtest_analysis_decision_workspace/frontend && npm run build
+cd ../../backtest_analysis_result_workspace/frontend && npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+.venv/bin/python -m py_compile \
+  app/services/backtest_analysis_result_workspace.py \
+  app/web/backtest_analysis_result_workspace.py \
+  app/services/backtest_analysis_decision_workspace.py \
+  app/web/backtest_analysis_result_workspace_panel.py \
+  app/web/backtest_result_display.py \
+  app/web/backtest_single_strategy.py \
+  app/web/backtest_single_runner.py \
+  app/web/backtest_compare/page.py \
+  app/runtime/backtest/stores/run_history.py \
+  app/web/backtest_candidate_review_helpers.py \
+  app/services/backtest_practical_validation_source.py
+git diff --check
+git add \
+  app/web/backtest_analysis_result_workspace.py \
+  app/services/backtest_analysis_decision_workspace.py \
+  app/web/backtest_result_display.py \
+  app/web/backtest_single_strategy.py \
+  app/web/backtest_single_runner.py \
+  app/web/backtest_compare/page.py \
+  app/runtime/backtest/stores/run_history.py \
+  app/web/backtest_candidate_review_helpers.py \
+  app/services/backtest_practical_validation_source.py \
+  tests/test_backtest_analysis_decision_workspace.py \
+  tests/test_backtest_refactor_boundaries.py \
+  tests/test_service_contracts.py
+git diff --cached --check
+git commit -m "Backtest Analysis 결과 실행 흐름 전환"
+```
+
+Expected: focused suites pass; full service result matches or improves baseline; both React builds,
+py_compile and diff-check exit 0.
+
+### Task 30: Runtime Browser QA, Finance Docs, And 10차 Closeout
+
+**Files:**
+- Modify: active task `PLAN.md`, `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`
+- Modify: `.aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md`
+- Modify: `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`
+- Modify: `.aiworkspace/note/finance/WORK_PROGRESS.md`
+- Modify: `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Generate, never stage: `backtest-analysis-level1-result-workspace-desktop-qa.png`
+- Generate, never stage: `backtest-analysis-level1-result-workspace-760-qa.png`
+
+**Interfaces:**
+- Consumes: Task 26~29 result truth, read model, UI and runtime lifecycle.
+- Produces: actual all-family evidence, desktop/760px screenshots, fresh verification, canonical docs and
+  protected-file audit.
+
+- [ ] **Step 1: Run desktop Browser QA on current local app**
+
+At the current Backtest route:
+
+1. open fresh Level1 and confirm no Step 3/result/detail shell before first run;
+2. run Equal Weight and verify formatted KPI, normalized strategy chart, current/target holdings,
+   technical handoff state, Level2 question lanes, user tables and technical appendix;
+3. change one setting and verify previous result says `이전 설정 결과 · 참고용` and handoff is locked;
+4. rerun and verify old result remains with running state until atomic fresh replacement;
+5. inject or reproduce one controlled failure and verify old result plus error remains while handoff stays locked;
+6. run GTAA, GRS, Risk Parity, Dual Momentum, one strict factor family and Portfolio Mix; verify each produces
+   the same result hierarchy and no raw code path/decimal-first copy;
+7. verify development Risk-On result can be viewed but says `인계 기능 미지원`;
+8. verify successful `save_and_move` uses current run identity and opens the existing Practical Validation route.
+
+Do not rewrite or stage the validation registry generated by QA. Capture desktop screenshot only as a local
+artifact.
+
+- [ ] **Step 2: Run 760px Browser QA**
+
+Set viewport width to 760px and repeat fresh result, stale result, holdings comparison, chart tooltip,
+questions, user tables and technical appendix. Confirm:
+
+- KPI/holdings/questions are one column;
+- chart labels and holdings do not overlap;
+- internal table scrolling does not expand outer page;
+- `document.documentElement.scrollWidth === clientWidth` for app and component iframe;
+- ResizeObserver updates height after disclosures;
+- no browser console application error.
+
+Capture the 760px screenshot without staging it.
+
+- [ ] **Step 3: Use verification-before-completion for fresh automated checks**
+
+```bash
+uv run --with pytest python -m pytest tests/test_backtest_analysis_result_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_analysis_decision_workspace.py -q
+uv run --with pytest python -m pytest tests/test_backtest_refactor_boundaries.py -q
+uv run --with pytest python -m pytest tests/test_service_contracts.py -q --tb=short
+cd app/web/components/backtest_analysis_decision_workspace/frontend && npm run build
+cd ../../backtest_analysis_result_workspace/frontend && npm run build
+cd /Users/taeho/Project/quant-data-pipeline-worktrees/backtest-dev
+.venv/bin/python -m py_compile \
+  app/services/backtest_analysis_result_workspace.py \
+  app/services/backtest_analysis_decision_workspace.py \
+  app/web/backtest_analysis_result_workspace.py \
+  app/web/backtest_analysis_result_workspace_panel.py \
+  app/web/backtest_result_display.py \
+  app/web/backtest_single_strategy.py \
+  app/web/backtest_single_runner.py \
+  app/web/backtest_compare/page.py \
+  app/runtime/backtest/stores/run_history.py \
+  app/web/backtest_candidate_review_helpers.py \
+  app/services/backtest_practical_validation_source.py \
+  app/web/components/backtest_analysis_result_workspace/component.py
+git diff --check
+```
+
+Record exact test counts, build module counts, compiler results and any repository baseline failure. Do not
+describe an existing failure as a new pass.
+
+- [ ] **Step 4: Use finance-doc-sync and audit protected paths**
+
+Update canonical ownership/flow docs with:
+
+- no-run hidden result surface;
+- technical Level1 handoff versus Level2 validation questions;
+- result workspace service/component/fallback ownership;
+- backtest current/target holdings meaning;
+- stale/running/error preservation and run/validation identity boundary.
+
+Then stage only canonical docs and active task/root handoff logs:
+
+```bash
+git diff --check
+git add \
+  .aiworkspace/note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md \
+  .aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md \
+  .aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md \
+  .aiworkspace/note/finance/tasks/active/backtest-analysis-level1-decision-workspace-v1-20260717 \
+  .aiworkspace/note/finance/WORK_PROGRESS.md \
+  .aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md
+git diff --cached --check
+if git diff --cached --name-only | rg -q \
+  'registries/|run_history/|saved/|\.superpowers/|\.png$|run_artifacts/'; then
+  exit 1
+fi
+```
+
+- [ ] **Step 5: Commit Task 30**
+
+```bash
+git commit -m "Backtest Analysis 결과 워크스페이스 QA와 문서 동기화"
+```
+
+## 10차 Completion Report Contract
+
+- 전체 roadmap 1~10차 완료 상태와 남은 차수;
+- 10차 design / plan / truth / read-model / UI / lifecycle / closeout 한국어 commit 목록;
+- focused result / decision / boundary / service exact test counts;
+- two React production builds / target `py_compile` / `git diff --check` 결과;
+- desktop / 760px Browser QA 범위와 screenshot absolute links;
 - registry / run history / saved / `.superpowers/` / screenshot 보호 감사;
 - remaining risks and next handoff location.

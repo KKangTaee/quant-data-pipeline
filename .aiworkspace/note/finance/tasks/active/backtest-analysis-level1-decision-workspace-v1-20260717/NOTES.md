@@ -237,3 +237,20 @@ generated artifact이므로 commit하지 않는다.
   Level1 handoff와 Level2 questions, 4개 purpose evidence group, user tables, technical appendix 순서다.
 - 새 `app/services/backtest_analysis_result_workspace.py`가 모든 분류·Gate·format·weight·question을
   소유하고 React와 Python fallback은 같은 JSON-ready read model을 표시한다.
+
+## 2026-07-18 10차 Written Design Approval And Plan Self-Review
+
+- 사용자가 written design을 승인해 기존 요청대로 현재 세션에서 Task 26~30을 inline
+  `executing-plans`로 순차 실행한다.
+- 순환 import를 피하려고 새 result service는 decision service가 아니라 strategy catalog의
+  maturity 원본을 직접 읽고, existing decision surface cutover는 run identity가 준비되는
+  Task 29까지 미룬다.
+- Level1 identity는 `run_result_id`, successful Level2 registration identity는
+  `validation_result_id`로 분리한다. run id는 bundle뿐 아니라 Run History와 single/weighted
+  Practical Validation source까지 additive field로 보존한다.
+- lifecycle/readiness/question의 display label, lane label, summary는 Python이 제공하며 React는
+  state나 raw status를 한국어 의미로 재분류하지 않는다.
+- result column 다양성, cash-only/non-rebalance, partial Mix, first/rerun failure를 pure matrix로
+  검증하고 실제 desktop/760px QA로 no-run hidden과 stale→running→fresh를 확인한다.
+- Task 26 pure truth, Task 27 read model, Task 28 dedicated React/fallback, Task 29 runtime cutover,
+  Task 30 QA/docs는 서로 독립된 RED/GREEN과 한국어 commit을 가진다.

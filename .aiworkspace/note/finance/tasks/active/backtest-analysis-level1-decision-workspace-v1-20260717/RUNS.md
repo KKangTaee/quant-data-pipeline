@@ -377,3 +377,12 @@
   append-only validation record를 덮어쓰지 않도록 identity contract를 보정했다.
 - placeholder/ambiguity/code-fence/diff-check/protected-path 검사를 통과한 뒤 design docs만
   commit한다. 이 단계에서는 product code와 protected JSONL을 변경하지 않는다.
+
+## 2026-07-18 10차 Implementation Plan
+
+- user written-spec approval 뒤 `superpowers:writing-plans`로 Task 26~30 상세 계획을 작성했다.
+- exact file/interface, RED fixture, expected failure, minimal GREEN boundary, focused/full command,
+  Korean commit을 각 distinct unit에 지정했다.
+- self-review에서 result/decision service circular import, plan-only cutover의 intermediate runtime
+  regression, missing configuration fingerprint, run/history/source identity 단절을 찾아 수정했다.
+- 새 plan section의 unresolved marker와 불균형 code fence는 0이며 `git diff --check`를 통과했다.
